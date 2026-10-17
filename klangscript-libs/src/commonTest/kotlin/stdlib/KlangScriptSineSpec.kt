@@ -10,6 +10,8 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.OscSineBuilder
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.peekandpoke.klang.script.runtime.NativeObjectValue
@@ -108,7 +110,7 @@ class KlangScriptSineSpec : StringSpec({
 
     "the Kotlin door takes the same lambda" {
         ks("Ignitor.sine(x => x.harmonics(7, 0.5).fundamental(0))") shouldBe
-            KlangScriptIgnitor.sine(configure = { it.harmonics(7.0, 0.5).fundamental(0.0) })
+            KlangScriptIgnitor.sine(configure = { it.harmonics(7.ign, 0.5.ign).fundamental(0.ign) })
     }
 
     // ── the explicit partials (Q26): one partial per call, in the order written ──
@@ -150,17 +152,17 @@ class KlangScriptSineSpec : StringSpec({
     "the Kotlin door: the same chain builds the same partials, and the builder is immutable" {
         ks("Ignitor.sine(x => x.fundamental(0).partial(0.6571, 0.52).partial(0.8714, 0.652, 0.5))") shouldBe
             KlangScriptIgnitor.sine(configure = {
-                it.fundamental(0.0)
-                    .partial(ratio = 0.6571, gain = 0.52)
-                    .partial(ratio = 0.8714, gain = 0.652, phase = 0.5)
+                it.fundamental(0.ign)
+                    .partial(ratio = 0.6571.ign, gain = 0.52.ign)
+                    .partial(ratio = 0.8714.ign, gain = 0.652.ign, phase = 0.5.ign)
             })
 
         val base = OscSineBuilder(node())
-        val one = base.partial(ratio = 1.5)
+        val one = base.partial(ratio = 1.5.ign)
 
         base.node.partials shouldBe emptyList()
         one.node.partials shouldBe listOf(p(1.5))
-        one.partial(ratio = 2.0).node.partials shouldBe listOf(p(1.5), p(2.0))
+        one.partial(ratio = 2.ign).node.partials shouldBe listOf(p(1.5), p(2.0))
         one.node.partials shouldBe listOf(p(1.5))
     }
 

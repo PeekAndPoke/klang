@@ -8,9 +8,8 @@ package io.peekandpoke.klang.sprudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
-import io.peekandpoke.klang.audio_bridge.band
 import io.peekandpoke.klang.audio_bridge.eq
-import io.peekandpoke.klang.audio_bridge.tap
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
 import io.peekandpoke.klang.sprudel.SprudelPattern
@@ -79,11 +78,10 @@ class LangDefaultQSpec : StringSpec({
             .shouldBe(IgnitorDsl.Constant(0.707))
     }
 
-    "ignitor scalar doors: band() and tap() default to q = 0.707" {
-        val eq = IgnitorDsl.Sine().eq()
-        val band = eq.band(1000.0).sections.last() as IgnitorDsl.EqSection.Bell
+    "ignitor Kotlin door: band() and tap() on the eq builder default to q = 0.707" {
+        val band = IgnitorDsl.Sine().eq { it.band(1000.ign) }.sections.last() as IgnitorDsl.EqSection.Bell
         band.q shouldBe IgnitorDsl.Constant(0.707)
-        val tap = eq.tap(1000.0).sections.last() as IgnitorDsl.EqSection.RawTap
+        val tap = IgnitorDsl.Sine().eq { it.tap(1000.ign) }.sections.last() as IgnitorDsl.EqSection.RawTap
         tap.q shouldBe IgnitorDsl.Constant(0.707)
     }
 

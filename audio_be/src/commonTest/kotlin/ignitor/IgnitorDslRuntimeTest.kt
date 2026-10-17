@@ -14,6 +14,7 @@ import io.peekandpoke.klang.audio_bridge.detune
 import io.peekandpoke.klang.audio_bridge.div
 import io.peekandpoke.klang.audio_bridge.drive
 import io.peekandpoke.klang.audio_bridge.fm
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.onepole
 import io.peekandpoke.klang.audio_bridge.plus
@@ -117,9 +118,9 @@ class IgnitorDslRuntimeTest : StringSpec({
     }
 
     "sgpad composition produces non-zero output" {
-        val dsl = (IgnitorDsl.Saw() + IgnitorDsl.Saw().detune(0.1))
+        val dsl = (IgnitorDsl.Saw() + IgnitorDsl.Saw().detune(0.1.ign))
             .div(IgnitorDsl.Param("divisor", 2.0))
-            .onepole(3000.0)
+            .onepole(3000.0.ign)
         val sig = dsl.toExciter(random = testRandom)
         generateBlock(sig).hasNonZeroSamples() shouldBe true
     }
@@ -127,19 +128,22 @@ class IgnitorDslRuntimeTest : StringSpec({
     "sgbell composition produces non-zero output" {
         val dsl = IgnitorDsl.Sine().fm(
             modulator = IgnitorDsl.Sine(),
-            ratio = 1.4,
-            depth = 300.0,
-            attack = 0.001,
-            decay = 0.5,
-            sustain = 0.0,
-            release = 0.05,   // kept in sync with IgnitorDefaults (ledger E10)
-        )
+            ratio = 1.4.ign,
+            depth = 300.0.ign,
+        ) {
+            it.adsr(
+                attack = 0.001.ign,
+                decay = 0.5.ign,
+                sustain = 0.0.ign,
+                release = 0.05.ign, // kept in sync with IgnitorDefaults (ledger E10)
+            )
+        }
         val sig = dsl.toExciter(random = testRandom)
         generateBlock(sig).hasNonZeroSamples() shouldBe true
     }
 
     "sgbuzz composition produces non-zero output" {
-        val dsl = IgnitorDsl.Square().lowpass(2000.0)
+        val dsl = IgnitorDsl.Square().lowpass(2000.0.ign)
         val sig = dsl.toExciter(random = testRandom)
         generateBlock(sig).hasNonZeroSamples() shouldBe true
     }
@@ -252,13 +256,13 @@ class IgnitorDslRuntimeTest : StringSpec({
         val inner = IgnitorDsl.Variants(listOf(IgnitorDsl.Sine(), IgnitorDsl.Square()))
         val outer = IgnitorDsl.Variants(
             listOf(
-                inner.lowpass(2000.0),
-                inner.drive(0.4),
+                inner.lowpass(2000.0.ign),
+                inner.drive(0.4.ign),
             )
         )
 
-        val expectedIndex0 = referenceBlock(IgnitorDsl.Sine().lowpass(2000.0))
-        val expectedIndex1 = referenceBlock(IgnitorDsl.Square().drive(0.4))
+        val expectedIndex0 = referenceBlock(IgnitorDsl.Sine().lowpass(2000.0.ign))
+        val expectedIndex1 = referenceBlock(IgnitorDsl.Square().drive(0.4.ign))
 
         val pickedIndex0 = generateBlock(outer.toExciter(soundIndex = 0, random = testRandom))
         val pickedIndex1 = generateBlock(outer.toExciter(soundIndex = 1, random = testRandom))

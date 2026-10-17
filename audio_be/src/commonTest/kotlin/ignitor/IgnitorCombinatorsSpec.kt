@@ -14,6 +14,7 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.accelerate
 import io.peekandpoke.klang.audio_bridge.fm
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.tremolo
 import io.peekandpoke.klang.audio_bridge.vibrato
 import kotlin.math.abs
@@ -162,7 +163,7 @@ class ExciterCombinatorsSpec : StringSpec({
     "tremolo(rate, depth) - output amplitude varies (min < max)" {
         // Use a long block to capture multiple tremolo cycles
         val blockFrames = 44100 // 1 second
-        val wet = generate(IgnitorDsl.Sine().tremolo(rate = 4.0, depth = 1.0).toExciter(random = testRandom), blockFrames = blockFrames)
+        val wet = generate(IgnitorDsl.Sine().tremolo(rate = 4.0.ign, depth = 1.0.ign).toExciter(random = testRandom), blockFrames = blockFrames)
 
         // Compute RMS in windows to detect amplitude variation
         val windowSize = 2205 // 50ms windows
@@ -329,7 +330,7 @@ class ExciterCombinatorsSpec : StringSpec({
 
     "vibrato(rate, depth) - output differs from plain sine (frequency modulation)" {
         val dry = generate(IgnitorDsl.Sine().toExciter(random = testRandom))
-        val wet = generate(IgnitorDsl.Sine().vibrato(rate = 5.0, semitones = 0.05).toExciter(random = testRandom))
+        val wet = generate(IgnitorDsl.Sine().vibrato(rate = 5.0.ign, semitones = 0.05.ign).toExciter(random = testRandom))
 
         var differs = false
         for (i in dry.indices) {
@@ -350,7 +351,7 @@ class ExciterCombinatorsSpec : StringSpec({
 
     "accelerate(semitones) - pitch changes over time" {
         val blockFrames = 44100 // 1 second
-        val wet = generate(IgnitorDsl.Sine().accelerate(24.0).toExciter(random = testRandom), freqHz = 440.0, blockFrames = blockFrames)
+        val wet = generate(IgnitorDsl.Sine().accelerate(24.0.ign).toExciter(random = testRandom), freqHz = 440.0, blockFrames = blockFrames)
 
         // Count zero crossings in first half vs second half
         fun zeroCrossingsInRange(buf: AudioBuffer, start: Int, end: Int): Int {
@@ -377,7 +378,7 @@ class ExciterCombinatorsSpec : StringSpec({
 
     "fm(modulator, ratio, depth) - output has more harmonic content than carrier alone" {
         val dry = generate(IgnitorDsl.Sine().toExciter(random = testRandom))
-        val wet = generate(IgnitorDsl.Sine().fm(IgnitorDsl.Sine(), ratio = 2.0, depth = 200.0).toExciter(random = testRandom))
+        val wet = generate(IgnitorDsl.Sine().fm(modulator = IgnitorDsl.Sine(), ratio = 2.0.ign, depth = 200.0.ign).toExciter(random = testRandom))
 
         // FM synthesis creates sidebands — the waveform should differ substantially from a pure sine.
         // Compute mean absolute difference between dry and wet signals.

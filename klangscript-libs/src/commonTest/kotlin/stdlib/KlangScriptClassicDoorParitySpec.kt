@@ -14,6 +14,7 @@ import io.peekandpoke.klang.audio_bridge.classic
 import io.peekandpoke.klang.audio_bridge.distort
 import io.peekandpoke.klang.audio_bridge.getParamSlots
 import io.peekandpoke.klang.audio_bridge.highpass
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
@@ -77,7 +78,7 @@ class KlangScriptClassicDoorParitySpec : StringSpec({
 
     "the script door builds the Kotlin door's tree, on an authored instrument" {
         ks("Ignitor.saw().distort(0.4, \"tube\").lowpass(2500, 1.2).classic()") shouldBe
-            IgnitorDsl.Saw().distort(0.4, "tube").lowpass(2500.0, 1.2).classic()
+            IgnitorDsl.Saw().distort(0.4.ign, "tube").lowpass(freq = 2500.0.ign, q = 1.2.ign).classic()
     }
 
     "every Ignitor.slot group property is the Kotlin slot object itself, and it names itself <group>.<param>" {
@@ -98,6 +99,6 @@ class KlangScriptClassicDoorParitySpec : StringSpec({
 
     "a script tail of its own places the same slots, so the same doors fill it" {
         ks("Ignitor.saw().highpass(Ignitor.slot.hpf.freq, Ignitor.slot.hpf.q).lowpass(Ignitor.slot.lpf.freq)") shouldBe
-            IgnitorDsl.Saw().highpass(s.hpf.freq, s.hpf.q).lowpass(s.lpf.freq)
+            IgnitorDsl.Saw().highpass(freq = s.hpf.freq, q = s.hpf.q).lowpass(s.lpf.freq)
     }
 })

@@ -7,38 +7,42 @@
 
 package io.peekandpoke.klang.script.stdlib
 
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.OscImpulseBuilder
+import io.peekandpoke.klang.audio_bridge.OscPluckBuilder
+import io.peekandpoke.klang.audio_bridge.OscPulzeBuilder
+import io.peekandpoke.klang.audio_bridge.OscRampBuilder
+import io.peekandpoke.klang.audio_bridge.OscSawBuilder
+import io.peekandpoke.klang.audio_bridge.OscSineBuilder
+import io.peekandpoke.klang.audio_bridge.OscSquareBuilder
+import io.peekandpoke.klang.audio_bridge.OscSuperPluckBuilder
+import io.peekandpoke.klang.audio_bridge.OscSuperRampBuilder
+import io.peekandpoke.klang.audio_bridge.OscSuperSawBuilder
+import io.peekandpoke.klang.audio_bridge.OscSuperSineBuilder
+import io.peekandpoke.klang.audio_bridge.OscSuperSquareBuilder
+import io.peekandpoke.klang.audio_bridge.OscSuperTriBuilder
+import io.peekandpoke.klang.audio_bridge.OscTriBuilder
+import io.peekandpoke.klang.audio_bridge.OscZampBuilder
+import io.peekandpoke.klang.audio_bridge.OscZawtoothBuilder
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 
 /*
- * The oscillator BUILDERS: what an `Ignitor.*` door hands to its `configure` lambda.
+ * The oscillator builders' SCRIPT knobs: what an `Ignitor.*` door's `configure` lambda can call.
  *
  *     Ignitor.supersaw(x => x.voices(9).spread(0.1).phasePool()).lowpass(800)
  *     //           ^ x: OscSuperSawBuilder                    ^ back on the plain sound
  *
- * One builder per oscillator type, each an immutable value wrapper around its node: every knob
- * returns a NEW builder (`/dsl-design` section 1), the knobs on a builder are exactly that
- * oscillator's fields with a default (section 2, "anything with a default is a knob"), and the
- * base wrappers (`.lowpass()`, `.adsr()`, `.mul()`, ...) do not exist here, so the editor offers
- * inside the lambda only what belongs to the oscillator. The same builders are the Kotlin door:
- * `KlangScriptIgnitor.supersaw { it.voices(9).spread(0.1) }`.
- *
- * Knobs are top-level extension functions registered by KSP from `@KlangScript.Function` (the
- * shape sprudel uses for `SprudelPattern`), so each knob has ONE implementation and ONE KDoc.
- * Doors (`Ignitor.sine(freq, configure)`) live in [KlangScriptIgnitor]; the lambda plumbing and the
- * error contract in `configuredBy`.
+ * The builders themselves live in `audio_bridge` (`IgnitorBuilders.kt` there, since the typed-doors rollout S1 and
+ * S2), one immutable value wrapper per oscillator type with its TYPED member knobs, and are the same builders on the
+ * Kotlin door: `Ign.supersaw { it.voices(9.ign).spread(0.1.ign) }`. The knobs below are `internal` extensions
+ * registered by KSP from `@KlangScript.Function`, each with a Kotlin name of its own (`scriptVoices`, the script word
+ * in `name`) that converts its `Any` arguments and calls the member, so a renamed or retyped member is a compile error,
+ * never a self-call (`/dsl-design` section 3, the typed-door pattern). The user-facing KDoc of every knob lives here
+ * (KSP reads KDoc only from its own module). Doors (`Ignitor.sine(freq, configure)`) live in [KlangScriptIgnitor];
+ * the lambda plumbing and the error contract in `configuredBy`.
  */
 
 // ── Sine ─────────────────────────────────────────────────────────────────
-
-/**
- * Builder for [IgnitorDsl.Sine], handed to the `configure` lambda of `Ignitor.sine(...)`.
- * Knobs: `analog`, `phase`, and the partial banks `harmonics`, `octaves`, `suboctaves`, the explicit `partial` with
- * `fundamental` and `analogSpread` (`docs/tasks-archive/2026-09/20260907-sine-partial-banks-plan.md`). Immutable: every knob returns a new builder.
- * `node` is the configured oscillator.
- */
-data class OscSineBuilder(val node: IgnitorDsl.Sine)
 
 /**
  * Where in its cycle the sine runs: a fraction of one cycle added to its phase every sample (default 0). Phase 0 is
@@ -54,12 +58,14 @@ data class OscSineBuilder(val node: IgnitorDsl.Sine)
  * Ignitor.sine(4, x => x.phase(0.25))   // an LFO that starts at its peak
  * ```
  */
-@KlangScript.Function
-fun OscSineBuilder.phase(phase: IgnitorDslLike): OscSineBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
+@KlangScript.Function(name = "phase")
+internal fun OscSineBuilder.scriptPhase(phase: IgnitorDslLike): OscSineBuilder =
+    this.phase(phase = phase.toIgnitorDsl())
 
 /** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. With partial banks, the depth of every partial. */
-@KlangScript.Function
-fun OscSineBuilder.analog(character: IgnitorDslLike): OscSineBuilder = copy(node = node.copy(analog = character.toIgnitorDsl()))
+@KlangScript.Function(name = "analog")
+internal fun OscSineBuilder.scriptAnalog(character: IgnitorDslLike): OscSineBuilder =
+    this.analog(character = character.toIgnitorDsl())
 
 /**
  * Gain of the sine's own partial (default 1). `0` leaves only the partial banks, so
@@ -70,8 +76,9 @@ fun OscSineBuilder.analog(character: IgnitorDslLike): OscSineBuilder = copy(node
  * Ignitor.sine(x => x.harmonics(7).fundamental(0))    // overtones only, 2f .. 8f
  * ```
  */
-@KlangScript.Function
-fun OscSineBuilder.fundamental(gain: IgnitorDslLike): OscSineBuilder = copy(node = node.copy(fundamental = gain.toIgnitorDsl()))
+@KlangScript.Function(name = "fundamental")
+internal fun OscSineBuilder.scriptFundamental(gain: IgnitorDslLike): OscSineBuilder =
+    this.fundamental(gain = gain.toIgnitorDsl())
 
 /**
  * Adds `count` sine partials at `2f, 3f, 4f ...` of THIS sine's frequency, its harmonic series, rendered in
@@ -88,9 +95,9 @@ fun OscSineBuilder.fundamental(gain: IgnitorDslLike): OscSineBuilder = copy(node
  * Ignitor.sine(x => x.harmonics(8, Ignitor.sine(0.2).range(0.7, 2)))   // breathing brightness
  * ```
  */
-@KlangScript.Function
-fun OscSineBuilder.harmonics(count: IgnitorDslLike, rolloff: IgnitorDslLike = 1.0): OscSineBuilder =
-    copy(node = node.copy(harmonics = count.toIgnitorDsl(), harmonicsRolloff = rolloff.toIgnitorDsl()))
+@KlangScript.Function(name = "harmonics")
+internal fun OscSineBuilder.scriptHarmonics(count: IgnitorDslLike, rolloff: IgnitorDslLike = 1.0): OscSineBuilder =
+    this.harmonics(count = count.toIgnitorDsl(), rolloff = rolloff.toIgnitorDsl())
 
 /**
  * Adds `count` sine partials at `2f, 4f, 8f ...` of THIS sine's frequency, one per octave. A partial at multiple
@@ -102,9 +109,9 @@ fun OscSineBuilder.harmonics(count: IgnitorDslLike, rolloff: IgnitorDslLike = 1.
  * Ignitor.sine(Ignitor.freq().mul(2), x => x.octaves(5)).mul(1/2)   // 2f .. 64f at 1/2 .. 1/64, an octave stack over a saw
  * ```
  */
-@KlangScript.Function
-fun OscSineBuilder.octaves(count: IgnitorDslLike, rolloff: IgnitorDslLike = 1.0): OscSineBuilder =
-    copy(node = node.copy(octaves = count.toIgnitorDsl(), octavesRolloff = rolloff.toIgnitorDsl()))
+@KlangScript.Function(name = "octaves")
+internal fun OscSineBuilder.scriptOctaves(count: IgnitorDslLike, rolloff: IgnitorDslLike = 1.0): OscSineBuilder =
+    this.octaves(count = count.toIgnitorDsl(), rolloff = rolloff.toIgnitorDsl())
 
 /**
  * Adds `count` sine partials at `f/2, f/4, f/8 ...` below THIS sine, the sub oscillator every mono synth has. The
@@ -117,9 +124,9 @@ fun OscSineBuilder.octaves(count: IgnitorDslLike, rolloff: IgnitorDslLike = 1.0)
  * Ignitor.sine(x => x.suboctaves(1, 0))    // f and f/2 at equal level
  * ```
  */
-@KlangScript.Function
-fun OscSineBuilder.suboctaves(count: IgnitorDslLike, rolloff: IgnitorDslLike = 1.0): OscSineBuilder =
-    copy(node = node.copy(suboctaves = count.toIgnitorDsl(), suboctavesRolloff = rolloff.toIgnitorDsl()))
+@KlangScript.Function(name = "suboctaves")
+internal fun OscSineBuilder.scriptSuboctaves(count: IgnitorDslLike, rolloff: IgnitorDslLike = 1.0): OscSineBuilder =
+    this.suboctaves(count = count.toIgnitorDsl(), rolloff = rolloff.toIgnitorDsl())
 
 /**
  * Adds ONE sine partial at `ratio` times THIS sine's frequency, at `gain`, starting `phase` into its cycle; every call
@@ -142,13 +149,9 @@ fun OscSineBuilder.suboctaves(count: IgnitorDslLike, rolloff: IgnitorDslLike = 1
  *   .partial(2.76, Ignitor.constant(0.5).adsr(0.001, 0.3, 0, 0.1)))    // a bell: each mode with its own decay
  * ```
  */
-@KlangScript.Function
-fun OscSineBuilder.partial(ratio: IgnitorDslLike, gain: IgnitorDslLike = 1.0, phase: IgnitorDslLike = 0.0): OscSineBuilder =
-    copy(
-        node = node.copy(
-            partials = node.partials + IgnitorDsl.Sine.Partial(ratio = ratio.toIgnitorDsl(), gain = gain.toIgnitorDsl(), phase = phase.toIgnitorDsl()),
-        ),
-    )
+@KlangScript.Function(name = "partial")
+internal fun OscSineBuilder.scriptPartial(ratio: IgnitorDslLike, gain: IgnitorDslLike = 1.0, phase: IgnitorDslLike = 0.0): OscSineBuilder =
+    this.partial(ratio = ratio.toIgnitorDsl(), gain = gain.toIgnitorDsl(), phase = phase.toIgnitorDsl())
 
 /**
  * How much the partials drift against each other under `analog`, 0 to 1. `1` (default): every partial walks on
@@ -160,17 +163,11 @@ fun OscSineBuilder.partial(ratio: IgnitorDslLike, gain: IgnitorDslLike = 1.0, ph
  * Ignitor.sine(x => x.harmonics(7).analog(3).analogSpread(0))   // one drifting oscillator with seven harmonics
  * ```
  */
-@KlangScript.Function
-fun OscSineBuilder.analogSpread(amount: IgnitorDslLike): OscSineBuilder = copy(node = node.copy(analogSpread = amount.toIgnitorDsl()))
+@KlangScript.Function(name = "analogSpread")
+internal fun OscSineBuilder.scriptAnalogSpread(amount: IgnitorDslLike): OscSineBuilder =
+    this.analogSpread(amount = amount.toIgnitorDsl())
 
 // ── Tri ─────────────────────────────────────────────────────────────────
-
-/**
- * Builder for [IgnitorDsl.Tri], handed to the `configure` lambda of `Ignitor.tri(...)`.
- * Knobs: `analog`, `phase`. Immutable: every knob returns a new builder. `node` is the configured
- * oscillator.
- */
-data class OscTriBuilder(val node: IgnitorDsl.Tri)
 
 /**
  * Where in its cycle the triangle runs: a fraction of one cycle added to its phase every sample (default 0). Phase 0
@@ -182,21 +179,15 @@ data class OscTriBuilder(val node: IgnitorDsl.Tri)
  * Ignitor.tri(2, x => x.phase(0.5))   // starts at its top
  * ```
  */
-@KlangScript.Function
-fun OscTriBuilder.phase(phase: IgnitorDslLike): OscTriBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
+@KlangScript.Function(name = "phase")
+internal fun OscTriBuilder.scriptPhase(phase: IgnitorDslLike): OscTriBuilder = this.phase(phase = phase.toIgnitorDsl())
 
 /** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
-@KlangScript.Function
-fun OscTriBuilder.analog(character: IgnitorDslLike): OscTriBuilder = copy(node = node.copy(analog = character.toIgnitorDsl()))
+@KlangScript.Function(name = "analog")
+internal fun OscTriBuilder.scriptAnalog(character: IgnitorDslLike): OscTriBuilder =
+    this.analog(character = character.toIgnitorDsl())
 
 // ── Zawtooth ─────────────────────────────────────────────────────────────────
-
-/**
- * Builder for [IgnitorDsl.Zawtooth], handed to the `configure` lambda of `Ignitor.zawtooth(...)`.
- * Knobs: `analog`, `phase`. Immutable: every knob returns a new builder. `node` is the configured
- * oscillator.
- */
-data class OscZawtoothBuilder(val node: IgnitorDsl.Zawtooth)
 
 /**
  * Where in its cycle the zawtooth runs: a fraction of one cycle added to its phase every sample (default 0). Phase 0
@@ -208,21 +199,16 @@ data class OscZawtoothBuilder(val node: IgnitorDsl.Zawtooth)
  * Ignitor.zawtooth(x => x.phase(0.5))   // starts mid-rise, at 0
  * ```
  */
-@KlangScript.Function
-fun OscZawtoothBuilder.phase(phase: IgnitorDslLike): OscZawtoothBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
+@KlangScript.Function(name = "phase")
+internal fun OscZawtoothBuilder.scriptPhase(phase: IgnitorDslLike): OscZawtoothBuilder =
+    this.phase(phase = phase.toIgnitorDsl())
 
 /** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
-@KlangScript.Function
-fun OscZawtoothBuilder.analog(character: IgnitorDslLike): OscZawtoothBuilder = copy(node = node.copy(analog = character.toIgnitorDsl()))
+@KlangScript.Function(name = "analog")
+internal fun OscZawtoothBuilder.scriptAnalog(character: IgnitorDslLike): OscZawtoothBuilder =
+    this.analog(character = character.toIgnitorDsl())
 
 // ── Zamp ─────────────────────────────────────────────────────────────────
-
-/**
- * Builder for [IgnitorDsl.Zamp], handed to the `configure` lambda of `Ignitor.zamp(...)`.
- * Knobs: `analog`, `phase`. Immutable: every knob returns a new builder. `node` is the configured
- * oscillator.
- */
-data class OscZampBuilder(val node: IgnitorDsl.Zamp)
 
 /**
  * Where in its cycle the zamp runs: a fraction of one cycle added to its phase every sample (default 0). Phase 0 is
@@ -234,21 +220,16 @@ data class OscZampBuilder(val node: IgnitorDsl.Zamp)
  * Ignitor.zamp(x => x.phase(0.5))   // starts mid-fall, at 0
  * ```
  */
-@KlangScript.Function
-fun OscZampBuilder.phase(phase: IgnitorDslLike): OscZampBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
+@KlangScript.Function(name = "phase")
+internal fun OscZampBuilder.scriptPhase(phase: IgnitorDslLike): OscZampBuilder =
+    this.phase(phase = phase.toIgnitorDsl())
 
 /** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
-@KlangScript.Function
-fun OscZampBuilder.analog(character: IgnitorDslLike): OscZampBuilder = copy(node = node.copy(analog = character.toIgnitorDsl()))
+@KlangScript.Function(name = "analog")
+internal fun OscZampBuilder.scriptAnalog(character: IgnitorDslLike): OscZampBuilder =
+    this.analog(character = character.toIgnitorDsl())
 
 // ── Impulse ─────────────────────────────────────────────────────────────────
-
-/**
- * Builder for [IgnitorDsl.Impulse], handed to the `configure` lambda of `Ignitor.impulse(...)`.
- * Knobs: `analog`, `phase`. Immutable: every knob returns a new builder. `node` is the configured
- * oscillator.
- */
-data class OscImpulseBuilder(val node: IgnitorDsl.Impulse)
 
 /**
  * Where in its cycle the impulse runs: a fraction of one cycle added to its phase every sample (default 0). Phase 0 is
@@ -261,21 +242,16 @@ data class OscImpulseBuilder(val node: IgnitorDsl.Impulse)
  * Ignitor.impulse(2, x => x.phase(0.5))   // the first spike half a cycle in
  * ```
  */
-@KlangScript.Function
-fun OscImpulseBuilder.phase(phase: IgnitorDslLike): OscImpulseBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
+@KlangScript.Function(name = "phase")
+internal fun OscImpulseBuilder.scriptPhase(phase: IgnitorDslLike): OscImpulseBuilder =
+    this.phase(phase = phase.toIgnitorDsl())
 
 /** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
-@KlangScript.Function
-fun OscImpulseBuilder.analog(character: IgnitorDslLike): OscImpulseBuilder = copy(node = node.copy(analog = character.toIgnitorDsl()))
+@KlangScript.Function(name = "analog")
+internal fun OscImpulseBuilder.scriptAnalog(character: IgnitorDslLike): OscImpulseBuilder =
+    this.analog(character = character.toIgnitorDsl())
 
 // ── RawPulze ─────────────────────────────────────────────────────────────────
-
-/**
- * Builder for [IgnitorDsl.RawPulze], handed to the `configure` lambda of `Ignitor.pulze(...)`.
- * Knobs: `duty`, `analog`, `phase`. Immutable: every knob returns a new builder. `node` is the configured
- * oscillator.
- */
-data class OscPulzeBuilder(val node: IgnitorDsl.RawPulze)
 
 /**
  * Where in its cycle the raw pulse runs: a fraction of one cycle added to its phase every sample (default 0). Phase 0
@@ -288,25 +264,21 @@ data class OscPulzeBuilder(val node: IgnitorDsl.RawPulze)
  * Ignitor.pulze(2, x => x.phase(0.5))   // a gate LFO that starts closed (low), then opens
  * ```
  */
-@KlangScript.Function
-fun OscPulzeBuilder.phase(phase: IgnitorDslLike): OscPulzeBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
+@KlangScript.Function(name = "phase")
+internal fun OscPulzeBuilder.scriptPhase(phase: IgnitorDslLike): OscPulzeBuilder =
+    this.phase(phase = phase.toIgnitorDsl())
 
 /** Pulse width / duty cycle: `width` is the share of each cycle the wave is high, 0 to 1 (default 0.5, a square). Accepts an `Ignitor.*` graph for PWM. */
-@KlangScript.Function
-fun OscPulzeBuilder.duty(width: IgnitorDslLike): OscPulzeBuilder = copy(node = node.copy(duty = width.toIgnitorDsl()))
+@KlangScript.Function(name = "duty")
+internal fun OscPulzeBuilder.scriptDuty(width: IgnitorDslLike): OscPulzeBuilder =
+    this.duty(width = width.toIgnitorDsl())
 
 /** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
-@KlangScript.Function
-fun OscPulzeBuilder.analog(character: IgnitorDslLike): OscPulzeBuilder = copy(node = node.copy(analog = character.toIgnitorDsl()))
+@KlangScript.Function(name = "analog")
+internal fun OscPulzeBuilder.scriptAnalog(character: IgnitorDslLike): OscPulzeBuilder =
+    this.analog(character = character.toIgnitorDsl())
 
 // ── Pulze ─────────────────────────────────────────────────────────────────
-
-/**
- * Builder for [IgnitorDsl.Pulze], handed to the `configure` lambda of `Ignitor.square(...)`.
- * Knobs: `duty`, `analog`, `flankSamples`, `riseFlank`, `fallFlank`, `phase`. Immutable: every knob returns a new builder. `node` is the configured
- * oscillator.
- */
-data class OscSquareBuilder(val node: IgnitorDsl.Pulze)
 
 /**
  * Where in its cycle the square runs: a fraction of one cycle added to its phase every sample (default 0). Phase 0 is
@@ -319,37 +291,36 @@ data class OscSquareBuilder(val node: IgnitorDsl.Pulze)
  * Ignitor.square(2, x => x.phase(0.5))   // an LFO that starts on its falling edge
  * ```
  */
-@KlangScript.Function
-fun OscSquareBuilder.phase(phase: IgnitorDslLike): OscSquareBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
+@KlangScript.Function(name = "phase")
+internal fun OscSquareBuilder.scriptPhase(phase: IgnitorDslLike): OscSquareBuilder =
+    this.phase(phase = phase.toIgnitorDsl())
 
 /** Pulse width / duty cycle: `width` is the share of each cycle the wave is high, 0 to 1 (default 0.5, a square). Accepts an `Ignitor.*` graph for PWM. */
-@KlangScript.Function
-fun OscSquareBuilder.duty(width: IgnitorDslLike): OscSquareBuilder = copy(node = node.copy(duty = width.toIgnitorDsl()))
+@KlangScript.Function(name = "duty")
+internal fun OscSquareBuilder.scriptDuty(width: IgnitorDslLike): OscSquareBuilder =
+    this.duty(width = width.toIgnitorDsl())
 
 /** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
-@KlangScript.Function
-fun OscSquareBuilder.analog(character: IgnitorDslLike): OscSquareBuilder = copy(node = node.copy(analog = character.toIgnitorDsl()))
+@KlangScript.Function(name = "analog")
+internal fun OscSquareBuilder.scriptAnalog(character: IgnitorDslLike): OscSquareBuilder =
+    this.analog(character = character.toIgnitorDsl())
 
 /** Minimum flank length in samples, a floor on every edge that softens with pitch (default 2.0). */
-@KlangScript.Function
-fun OscSquareBuilder.flankSamples(flankSamples: Double): OscSquareBuilder = copy(node = node.copy(flankSamples = flankSamples))
+@KlangScript.Function(name = "flankSamples")
+internal fun OscSquareBuilder.scriptFlankSamples(flankSamples: Double): OscSquareBuilder =
+    this.flankSamples(flankSamples = flankSamples)
 
 /** Rising-edge flank fraction of the plateau: 0 = sharpest (the floor), 1 = full ramp (default 0.0). */
-@KlangScript.Function
-fun OscSquareBuilder.riseFlank(riseFlank: Double): OscSquareBuilder = copy(node = node.copy(riseFlank = riseFlank))
+@KlangScript.Function(name = "riseFlank")
+internal fun OscSquareBuilder.scriptRiseFlank(riseFlank: Double): OscSquareBuilder =
+    this.riseFlank(riseFlank = riseFlank)
 
 /** Falling-edge flank fraction of the plateau: 0 = sharpest (the floor), 1 = full ramp (default 0.0). */
-@KlangScript.Function
-fun OscSquareBuilder.fallFlank(fallFlank: Double): OscSquareBuilder = copy(node = node.copy(fallFlank = fallFlank))
+@KlangScript.Function(name = "fallFlank")
+internal fun OscSquareBuilder.scriptFallFlank(fallFlank: Double): OscSquareBuilder =
+    this.fallFlank(fallFlank = fallFlank)
 
 // ── Saw ─────────────────────────────────────────────────────────────────
-
-/**
- * Builder for [IgnitorDsl.Saw], handed to the `configure` lambda of `Ignitor.saw(...)`.
- * Knobs: `analog`, `resetSamples`, `shapeMax`, `phase`. Immutable: every knob returns a new builder. `node` is the configured
- * oscillator.
- */
-data class OscSawBuilder(val node: IgnitorDsl.Saw)
 
 /**
  * Where in its cycle the sawtooth runs: a fraction of one cycle added to its phase every sample (default 0). Phase 0
@@ -362,29 +333,22 @@ data class OscSawBuilder(val node: IgnitorDsl.Saw)
  * Ignitor.saw(x => x.phase(0.5))   // starts mid-rise, at 0
  * ```
  */
-@KlangScript.Function
-fun OscSawBuilder.phase(phase: IgnitorDslLike): OscSawBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
+@KlangScript.Function(name = "phase")
+internal fun OscSawBuilder.scriptPhase(phase: IgnitorDslLike): OscSawBuilder = this.phase(phase = phase.toIgnitorDsl())
 
 /** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
-@KlangScript.Function
-fun OscSawBuilder.analog(character: IgnitorDslLike): OscSawBuilder = copy(node = node.copy(analog = character.toIgnitorDsl()))
+@KlangScript.Function(name = "analog")
+internal fun OscSawBuilder.scriptAnalog(character: IgnitorDslLike): OscSawBuilder = this.analog(character = character.toIgnitorDsl())
 
 /** Analog flyback time in samples: lower = brighter, sharper reset; higher = softer (default 1.0). */
-@KlangScript.Function
-fun OscSawBuilder.resetSamples(resetSamples: Double): OscSawBuilder = copy(node = node.copy(resetSamples = resetSamples))
+@KlangScript.Function(name = "resetSamples")
+internal fun OscSawBuilder.scriptResetSamples(resetSamples: Double): OscSawBuilder = this.resetSamples(resetSamples = resetSamples)
 
 /** Max flyback fraction of a cycle: 0.5 = symmetric-triangle limit; keeps high notes sane (default 0.5). */
-@KlangScript.Function
-fun OscSawBuilder.shapeMax(shapeMax: Double): OscSawBuilder = copy(node = node.copy(shapeMax = shapeMax))
+@KlangScript.Function(name = "shapeMax")
+internal fun OscSawBuilder.scriptShapeMax(shapeMax: Double): OscSawBuilder = this.shapeMax(shapeMax = shapeMax)
 
 // ── Ramp ─────────────────────────────────────────────────────────────────
-
-/**
- * Builder for [IgnitorDsl.Ramp], handed to the `configure` lambda of `Ignitor.ramp(...)`.
- * Knobs: `analog`, `resetSamples`, `shapeMax`, `phase`. Immutable: every knob returns a new builder. `node` is the configured
- * oscillator.
- */
-data class OscRampBuilder(val node: IgnitorDsl.Ramp)
 
 /**
  * Where in its cycle the ramp runs: a fraction of one cycle added to its phase every sample (default 0). Phase 0 is
@@ -397,29 +361,25 @@ data class OscRampBuilder(val node: IgnitorDsl.Ramp)
  * Ignitor.ramp(x => x.phase(0.5))   // starts mid-fall, at 0
  * ```
  */
-@KlangScript.Function
-fun OscRampBuilder.phase(phase: IgnitorDslLike): OscRampBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
+@KlangScript.Function(name = "phase")
+internal fun OscRampBuilder.scriptPhase(phase: IgnitorDslLike): OscRampBuilder =
+    this.phase(phase = phase.toIgnitorDsl())
 
 /** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
-@KlangScript.Function
-fun OscRampBuilder.analog(character: IgnitorDslLike): OscRampBuilder = copy(node = node.copy(analog = character.toIgnitorDsl()))
+@KlangScript.Function(name = "analog")
+internal fun OscRampBuilder.scriptAnalog(character: IgnitorDslLike): OscRampBuilder =
+    this.analog(character = character.toIgnitorDsl())
 
 /** Analog flyback time in samples: lower = brighter, sharper reset; higher = softer (default 1.0). */
-@KlangScript.Function
-fun OscRampBuilder.resetSamples(resetSamples: Double): OscRampBuilder = copy(node = node.copy(resetSamples = resetSamples))
+@KlangScript.Function(name = "resetSamples")
+internal fun OscRampBuilder.scriptResetSamples(resetSamples: Double): OscRampBuilder =
+    this.resetSamples(resetSamples = resetSamples)
 
 /** Max flyback fraction of a cycle: 0.5 = symmetric-triangle limit; keeps high notes sane (default 0.5). */
-@KlangScript.Function
-fun OscRampBuilder.shapeMax(shapeMax: Double): OscRampBuilder = copy(node = node.copy(shapeMax = shapeMax))
+@KlangScript.Function(name = "shapeMax")
+internal fun OscRampBuilder.scriptShapeMax(shapeMax: Double): OscRampBuilder = this.shapeMax(shapeMax = shapeMax)
 
 // ── SuperSaw ─────────────────────────────────────────────────────────────────
-
-/**
- * Builder for [IgnitorDsl.SuperSaw], handed to the `configure` lambda of `Ignitor.supersaw(...)`.
- * Knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`, `phase`. Immutable: every knob returns a new builder. `node` is the configured
- * oscillator.
- */
-data class OscSuperSawBuilder(val node: IgnitorDsl.SuperSaw)
 
 /**
  * Shifts the whole stack in its cycle: a fraction of one cycle added to every voice's phase every sample (default 0),
@@ -434,44 +394,52 @@ data class OscSuperSawBuilder(val node: IgnitorDsl.SuperSaw)
  * Ignitor.supersaw(x => x.voices(5).phase(Ignitor.sine(5).mul(0.2)))   // phase modulation: a 5 Hz wobble on every voice
  * ```
  */
-@KlangScript.Function
-fun OscSuperSawBuilder.phase(phase: IgnitorDslLike): OscSuperSawBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
+@KlangScript.Function(name = "phase")
+internal fun OscSuperSawBuilder.scriptPhase(phase: IgnitorDslLike): OscSuperSawBuilder =
+    this.phase(phase = phase.toIgnitorDsl())
 
 /** Number of detuned voices in the stack (default 8). Accepts a number or an `Ignitor.*` graph (read once per block). */
-@KlangScript.Function
-fun OscSuperSawBuilder.voices(voices: IgnitorDslLike): OscSuperSawBuilder = copy(node = node.copy(voices = voices.toIgnitorDsl()))
+@KlangScript.Function(name = "voices")
+internal fun OscSuperSawBuilder.scriptVoices(voices: IgnitorDslLike): OscSuperSawBuilder =
+    this.voices(voices = voices.toIgnitorDsl())
 
 /** Unison frequency spread between the voices (default 0.2). Same knob as the pattern-level `.spread()`. */
-@KlangScript.Function
-fun OscSuperSawBuilder.spread(spread: IgnitorDslLike): OscSuperSawBuilder = copy(node = node.copy(spread = spread.toIgnitorDsl()))
+@KlangScript.Function(name = "spread")
+internal fun OscSuperSawBuilder.scriptSpread(spread: IgnitorDslLike): OscSuperSawBuilder =
+    this.spread(spread = spread.toIgnitorDsl())
 
 /** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
-@KlangScript.Function
-fun OscSuperSawBuilder.analog(character: IgnitorDslLike): OscSuperSawBuilder = copy(node = node.copy(analog = character.toIgnitorDsl()))
+@KlangScript.Function(name = "analog")
+internal fun OscSuperSawBuilder.scriptAnalog(character: IgnitorDslLike): OscSuperSawBuilder =
+    this.analog(character = character.toIgnitorDsl())
 
 /** How much the voices drift against each other under `analog`, 0 to 1. `1` (default): every voice walks
  *  on its own lane, the organic unison of separate oscillators. `0`: one shared walk, the stack wobbles as
  *  a single oscillator and its unison detune stays static. Between is a blend. Nothing happens while
  *  `analog` is 0. Same knob as on `Ignitor.sine`; named apart from `spread`, which is the static unison detune. */
-@KlangScript.Function
-fun OscSuperSawBuilder.analogSpread(amount: IgnitorDslLike): OscSuperSawBuilder =
-    copy(node = node.copy(analogSpread = amount.toIgnitorDsl()))
+@KlangScript.Function(name = "analogSpread")
+internal fun OscSuperSawBuilder.scriptAnalogSpread(amount: IgnitorDslLike): OscSuperSawBuilder =
+    this.analogSpread(amount = amount.toIgnitorDsl())
 
 /** Detune spacing shape: 1 = even, above 1 concentrates toward the center, below 1 spreads outward. */
-@KlangScript.Function
-fun OscSuperSawBuilder.spreadPower(spreadPower: Double): OscSuperSawBuilder = copy(node = node.copy(spreadPower = spreadPower))
+@KlangScript.Function(name = "spreadPower")
+internal fun OscSuperSawBuilder.scriptSpreadPower(spreadPower: Double): OscSuperSawBuilder =
+    this.spreadPower(spreadPower = spreadPower)
 
 /** Center-dominant gain falloff: 0 = all voices equal, 1 = only the center voice. */
-@KlangScript.Function
-fun OscSuperSawBuilder.sideAtten(sideAtten: Double): OscSuperSawBuilder = copy(node = node.copy(sideAtten = sideAtten))
+@KlangScript.Function(name = "sideAtten")
+internal fun OscSuperSawBuilder.scriptSideAtten(sideAtten: Double): OscSuperSawBuilder =
+    this.sideAtten(sideAtten = sideAtten)
 
 /** Per-voice random amplitude offset (a fraction, plus or minus); 0 = off. */
-@KlangScript.Function
-fun OscSuperSawBuilder.gainJitter(gainJitter: Double): OscSuperSawBuilder = copy(node = node.copy(gainJitter = gainJitter))
+@KlangScript.Function(name = "gainJitter")
+internal fun OscSuperSawBuilder.scriptGainJitter(gainJitter: Double): OscSuperSawBuilder =
+    this.gainJitter(gainJitter = gainJitter)
 
 /** Fraction of `gainJitter` the on-pitch center voice gets: 0 = stable center, 1 = jittered like the sides. */
-@KlangScript.Function
-fun OscSuperSawBuilder.centerJitter(centerJitter: Double): OscSuperSawBuilder = copy(node = node.copy(centerJitterScale = centerJitter))
+@KlangScript.Function(name = "centerJitter")
+internal fun OscSuperSawBuilder.scriptCenterJitter(centerJitter: Double): OscSuperSawBuilder =
+    this.centerJitter(centerJitter = centerJitter)
 
 /**
  * Configure the banded start-phase pool in ONE call. Every param is an optional plain
@@ -500,8 +468,8 @@ fun OscSuperSawBuilder.centerJitter(centerJitter: Double): OscSuperSawBuilder = 
  * @param selection serving mode, `"name[:width[:outliers]]"`, see **Selection modes** above.
  * @param warmup entries seeded eagerly at pool creation (work-capped; 0 = fully lazy).
  */
-@KlangScript.Function
-fun OscSuperSawBuilder.phasePool(
+@KlangScript.Function(name = "phasePool")
+internal fun OscSuperSawBuilder.scriptPhasePool(
     on: Double = 1.0,
     kMin: Double = 0.30,
     kMax: Double = 0.55,
@@ -510,21 +478,18 @@ fun OscSuperSawBuilder.phasePool(
     refreshEvery: Double = 10.0,
     selection: String = "normal",
     warmup: Double = 16.0,
-): OscSuperSawBuilder = copy(
-    node = node.copy(
-        phasePool = on, kMin = kMin, kMax = kMax, drawTries = drawTries,
-        poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-    ),
+): OscSuperSawBuilder = this.phasePool(
+    on = on,
+    kMin = kMin,
+    kMax = kMax,
+    drawTries = drawTries,
+    poolSize = poolSize,
+    refreshEvery = refreshEvery,
+    selection = selection,
+    warmup = warmup,
 )
 
 // ── SuperSine ─────────────────────────────────────────────────────────────────
-
-/**
- * Builder for [IgnitorDsl.SuperSine], handed to the `configure` lambda of `Ignitor.supersine(...)`.
- * Knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`, `phase`. Immutable: every knob returns a new builder. `node` is the configured
- * oscillator.
- */
-data class OscSuperSineBuilder(val node: IgnitorDsl.SuperSine)
 
 /**
  * Shifts the whole stack in its cycle: a fraction of one cycle added to every voice's phase every sample (default 0),
@@ -538,44 +503,52 @@ data class OscSuperSineBuilder(val node: IgnitorDsl.SuperSine)
  * Ignitor.supersine(x => x.voices(5).phase(Ignitor.sine(5).mul(0.2)))   // phase modulation: a 5 Hz wobble on every voice
  * ```
  */
-@KlangScript.Function
-fun OscSuperSineBuilder.phase(phase: IgnitorDslLike): OscSuperSineBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
+@KlangScript.Function(name = "phase")
+internal fun OscSuperSineBuilder.scriptPhase(phase: IgnitorDslLike): OscSuperSineBuilder =
+    this.phase(phase = phase.toIgnitorDsl())
 
 /** Number of detuned voices in the stack (default 8). Accepts a number or an `Ignitor.*` graph (read once per block). */
-@KlangScript.Function
-fun OscSuperSineBuilder.voices(voices: IgnitorDslLike): OscSuperSineBuilder = copy(node = node.copy(voices = voices.toIgnitorDsl()))
+@KlangScript.Function(name = "voices")
+internal fun OscSuperSineBuilder.scriptVoices(voices: IgnitorDslLike): OscSuperSineBuilder =
+    this.voices(voices = voices.toIgnitorDsl())
 
 /** Unison frequency spread between the voices (default 0.2). Same knob as the pattern-level `.spread()`. */
-@KlangScript.Function
-fun OscSuperSineBuilder.spread(spread: IgnitorDslLike): OscSuperSineBuilder = copy(node = node.copy(spread = spread.toIgnitorDsl()))
+@KlangScript.Function(name = "spread")
+internal fun OscSuperSineBuilder.scriptSpread(spread: IgnitorDslLike): OscSuperSineBuilder =
+    this.spread(spread = spread.toIgnitorDsl())
 
 /** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
-@KlangScript.Function
-fun OscSuperSineBuilder.analog(character: IgnitorDslLike): OscSuperSineBuilder = copy(node = node.copy(analog = character.toIgnitorDsl()))
+@KlangScript.Function(name = "analog")
+internal fun OscSuperSineBuilder.scriptAnalog(character: IgnitorDslLike): OscSuperSineBuilder =
+    this.analog(character = character.toIgnitorDsl())
 
 /** How much the voices drift against each other under `analog`, 0 to 1. `1` (default): every voice walks
  *  on its own lane, the organic unison of separate oscillators. `0`: one shared walk, the stack wobbles as
  *  a single oscillator and its unison detune stays static. Between is a blend. Nothing happens while
  *  `analog` is 0. Same knob as on `Ignitor.sine`; named apart from `spread`, which is the static unison detune. */
-@KlangScript.Function
-fun OscSuperSineBuilder.analogSpread(amount: IgnitorDslLike): OscSuperSineBuilder =
-    copy(node = node.copy(analogSpread = amount.toIgnitorDsl()))
+@KlangScript.Function(name = "analogSpread")
+internal fun OscSuperSineBuilder.scriptAnalogSpread(amount: IgnitorDslLike): OscSuperSineBuilder =
+    this.analogSpread(amount = amount.toIgnitorDsl())
 
 /** Detune spacing shape: 1 = even, above 1 concentrates toward the center, below 1 spreads outward. */
-@KlangScript.Function
-fun OscSuperSineBuilder.spreadPower(spreadPower: Double): OscSuperSineBuilder = copy(node = node.copy(spreadPower = spreadPower))
+@KlangScript.Function(name = "spreadPower")
+internal fun OscSuperSineBuilder.scriptSpreadPower(spreadPower: Double): OscSuperSineBuilder =
+    this.spreadPower(spreadPower = spreadPower)
 
 /** Center-dominant gain falloff: 0 = all voices equal, 1 = only the center voice. */
-@KlangScript.Function
-fun OscSuperSineBuilder.sideAtten(sideAtten: Double): OscSuperSineBuilder = copy(node = node.copy(sideAtten = sideAtten))
+@KlangScript.Function(name = "sideAtten")
+internal fun OscSuperSineBuilder.scriptSideAtten(sideAtten: Double): OscSuperSineBuilder =
+    this.sideAtten(sideAtten = sideAtten)
 
 /** Per-voice random amplitude offset (a fraction, plus or minus); 0 = off. */
-@KlangScript.Function
-fun OscSuperSineBuilder.gainJitter(gainJitter: Double): OscSuperSineBuilder = copy(node = node.copy(gainJitter = gainJitter))
+@KlangScript.Function(name = "gainJitter")
+internal fun OscSuperSineBuilder.scriptGainJitter(gainJitter: Double): OscSuperSineBuilder =
+    this.gainJitter(gainJitter = gainJitter)
 
 /** Fraction of `gainJitter` the on-pitch center voice gets: 0 = stable center, 1 = jittered like the sides. */
-@KlangScript.Function
-fun OscSuperSineBuilder.centerJitter(centerJitter: Double): OscSuperSineBuilder = copy(node = node.copy(centerJitterScale = centerJitter))
+@KlangScript.Function(name = "centerJitter")
+internal fun OscSuperSineBuilder.scriptCenterJitter(centerJitter: Double): OscSuperSineBuilder =
+    this.centerJitter(centerJitter = centerJitter)
 
 /**
  * Configure the banded start-phase pool in ONE call. Every param is an optional plain
@@ -604,8 +577,8 @@ fun OscSuperSineBuilder.centerJitter(centerJitter: Double): OscSuperSineBuilder 
  * @param selection serving mode, `"name[:width[:outliers]]"`, see **Selection modes** above.
  * @param warmup entries seeded eagerly at pool creation (work-capped; 0 = fully lazy).
  */
-@KlangScript.Function
-fun OscSuperSineBuilder.phasePool(
+@KlangScript.Function(name = "phasePool")
+internal fun OscSuperSineBuilder.scriptPhasePool(
     on: Double = 1.0,
     kMin: Double = 0.50,
     kMax: Double = 0.80,
@@ -614,21 +587,18 @@ fun OscSuperSineBuilder.phasePool(
     refreshEvery: Double = 10.0,
     selection: String = "normal",
     warmup: Double = 16.0,
-): OscSuperSineBuilder = copy(
-    node = node.copy(
-        phasePool = on, kMin = kMin, kMax = kMax, drawTries = drawTries,
-        poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-    ),
+): OscSuperSineBuilder = this.phasePool(
+    on = on,
+    kMin = kMin,
+    kMax = kMax,
+    drawTries = drawTries,
+    poolSize = poolSize,
+    refreshEvery = refreshEvery,
+    selection = selection,
+    warmup = warmup,
 )
 
 // ── SuperSquare ─────────────────────────────────────────────────────────────────
-
-/**
- * Builder for [IgnitorDsl.SuperSquare], handed to the `configure` lambda of `Ignitor.supersquare(...)`.
- * Knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`, `phase`. Immutable: every knob returns a new builder. `node` is the configured
- * oscillator.
- */
-data class OscSuperSquareBuilder(val node: IgnitorDsl.SuperSquare)
 
 /**
  * Shifts the whole stack in its cycle: a fraction of one cycle added to every voice's phase every sample (default 0),
@@ -643,44 +613,52 @@ data class OscSuperSquareBuilder(val node: IgnitorDsl.SuperSquare)
  * Ignitor.supersquare(x => x.voices(5).phase(Ignitor.sine(5).mul(0.2)))   // phase modulation: a 5 Hz wobble on every voice
  * ```
  */
-@KlangScript.Function
-fun OscSuperSquareBuilder.phase(phase: IgnitorDslLike): OscSuperSquareBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
+@KlangScript.Function(name = "phase")
+internal fun OscSuperSquareBuilder.scriptPhase(phase: IgnitorDslLike): OscSuperSquareBuilder =
+    this.phase(phase = phase.toIgnitorDsl())
 
 /** Number of detuned voices in the stack (default 8). Accepts a number or an `Ignitor.*` graph (read once per block). */
-@KlangScript.Function
-fun OscSuperSquareBuilder.voices(voices: IgnitorDslLike): OscSuperSquareBuilder = copy(node = node.copy(voices = voices.toIgnitorDsl()))
+@KlangScript.Function(name = "voices")
+internal fun OscSuperSquareBuilder.scriptVoices(voices: IgnitorDslLike): OscSuperSquareBuilder =
+    this.voices(voices = voices.toIgnitorDsl())
 
 /** Unison frequency spread between the voices (default 0.2). Same knob as the pattern-level `.spread()`. */
-@KlangScript.Function
-fun OscSuperSquareBuilder.spread(spread: IgnitorDslLike): OscSuperSquareBuilder = copy(node = node.copy(spread = spread.toIgnitorDsl()))
+@KlangScript.Function(name = "spread")
+internal fun OscSuperSquareBuilder.scriptSpread(spread: IgnitorDslLike): OscSuperSquareBuilder =
+    this.spread(spread = spread.toIgnitorDsl())
 
 /** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
-@KlangScript.Function
-fun OscSuperSquareBuilder.analog(character: IgnitorDslLike): OscSuperSquareBuilder = copy(node = node.copy(analog = character.toIgnitorDsl()))
+@KlangScript.Function(name = "analog")
+internal fun OscSuperSquareBuilder.scriptAnalog(character: IgnitorDslLike): OscSuperSquareBuilder =
+    this.analog(character = character.toIgnitorDsl())
 
 /** How much the voices drift against each other under `analog`, 0 to 1. `1` (default): every voice walks
  *  on its own lane, the organic unison of separate oscillators. `0`: one shared walk, the stack wobbles as
  *  a single oscillator and its unison detune stays static. Between is a blend. Nothing happens while
  *  `analog` is 0. Same knob as on `Ignitor.sine`; named apart from `spread`, which is the static unison detune. */
-@KlangScript.Function
-fun OscSuperSquareBuilder.analogSpread(amount: IgnitorDslLike): OscSuperSquareBuilder =
-    copy(node = node.copy(analogSpread = amount.toIgnitorDsl()))
+@KlangScript.Function(name = "analogSpread")
+internal fun OscSuperSquareBuilder.scriptAnalogSpread(amount: IgnitorDslLike): OscSuperSquareBuilder =
+    this.analogSpread(amount = amount.toIgnitorDsl())
 
 /** Detune spacing shape: 1 = even, above 1 concentrates toward the center, below 1 spreads outward. */
-@KlangScript.Function
-fun OscSuperSquareBuilder.spreadPower(spreadPower: Double): OscSuperSquareBuilder = copy(node = node.copy(spreadPower = spreadPower))
+@KlangScript.Function(name = "spreadPower")
+internal fun OscSuperSquareBuilder.scriptSpreadPower(spreadPower: Double): OscSuperSquareBuilder =
+    this.spreadPower(spreadPower = spreadPower)
 
 /** Center-dominant gain falloff: 0 = all voices equal, 1 = only the center voice. */
-@KlangScript.Function
-fun OscSuperSquareBuilder.sideAtten(sideAtten: Double): OscSuperSquareBuilder = copy(node = node.copy(sideAtten = sideAtten))
+@KlangScript.Function(name = "sideAtten")
+internal fun OscSuperSquareBuilder.scriptSideAtten(sideAtten: Double): OscSuperSquareBuilder =
+    this.sideAtten(sideAtten = sideAtten)
 
 /** Per-voice random amplitude offset (a fraction, plus or minus); 0 = off. */
-@KlangScript.Function
-fun OscSuperSquareBuilder.gainJitter(gainJitter: Double): OscSuperSquareBuilder = copy(node = node.copy(gainJitter = gainJitter))
+@KlangScript.Function(name = "gainJitter")
+internal fun OscSuperSquareBuilder.scriptGainJitter(gainJitter: Double): OscSuperSquareBuilder =
+    this.gainJitter(gainJitter = gainJitter)
 
 /** Fraction of `gainJitter` the on-pitch center voice gets: 0 = stable center, 1 = jittered like the sides. */
-@KlangScript.Function
-fun OscSuperSquareBuilder.centerJitter(centerJitter: Double): OscSuperSquareBuilder = copy(node = node.copy(centerJitterScale = centerJitter))
+@KlangScript.Function(name = "centerJitter")
+internal fun OscSuperSquareBuilder.scriptCenterJitter(centerJitter: Double): OscSuperSquareBuilder =
+    this.centerJitter(centerJitter = centerJitter)
 
 /**
  * Configure the banded start-phase pool in ONE call. Every param is an optional plain
@@ -709,8 +687,8 @@ fun OscSuperSquareBuilder.centerJitter(centerJitter: Double): OscSuperSquareBuil
  * @param selection serving mode, `"name[:width[:outliers]]"`, see **Selection modes** above.
  * @param warmup entries seeded eagerly at pool creation (work-capped; 0 = fully lazy).
  */
-@KlangScript.Function
-fun OscSuperSquareBuilder.phasePool(
+@KlangScript.Function(name = "phasePool")
+internal fun OscSuperSquareBuilder.scriptPhasePool(
     on: Double = 1.0,
     kMin: Double = 0.30,
     kMax: Double = 0.55,
@@ -719,21 +697,18 @@ fun OscSuperSquareBuilder.phasePool(
     refreshEvery: Double = 10.0,
     selection: String = "normal",
     warmup: Double = 16.0,
-): OscSuperSquareBuilder = copy(
-    node = node.copy(
-        phasePool = on, kMin = kMin, kMax = kMax, drawTries = drawTries,
-        poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-    ),
+): OscSuperSquareBuilder = this.phasePool(
+    on = on,
+    kMin = kMin,
+    kMax = kMax,
+    drawTries = drawTries,
+    poolSize = poolSize,
+    refreshEvery = refreshEvery,
+    selection = selection,
+    warmup = warmup,
 )
 
 // ── SuperTri ─────────────────────────────────────────────────────────────────
-
-/**
- * Builder for [IgnitorDsl.SuperTri], handed to the `configure` lambda of `Ignitor.supertri(...)`.
- * Knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`, `phase`. Immutable: every knob returns a new builder. `node` is the configured
- * oscillator.
- */
-data class OscSuperTriBuilder(val node: IgnitorDsl.SuperTri)
 
 /**
  * Shifts the whole stack in its cycle: a fraction of one cycle added to every voice's phase every sample (default 0),
@@ -746,44 +721,52 @@ data class OscSuperTriBuilder(val node: IgnitorDsl.SuperTri)
  * Ignitor.supertri(x => x.voices(5).phase(Ignitor.sine(5).mul(0.2)))   // phase modulation: a 5 Hz wobble on every voice
  * ```
  */
-@KlangScript.Function
-fun OscSuperTriBuilder.phase(phase: IgnitorDslLike): OscSuperTriBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
+@KlangScript.Function(name = "phase")
+internal fun OscSuperTriBuilder.scriptPhase(phase: IgnitorDslLike): OscSuperTriBuilder =
+    this.phase(phase = phase.toIgnitorDsl())
 
 /** Number of detuned voices in the stack (default 8). Accepts a number or an `Ignitor.*` graph (read once per block). */
-@KlangScript.Function
-fun OscSuperTriBuilder.voices(voices: IgnitorDslLike): OscSuperTriBuilder = copy(node = node.copy(voices = voices.toIgnitorDsl()))
+@KlangScript.Function(name = "voices")
+internal fun OscSuperTriBuilder.scriptVoices(voices: IgnitorDslLike): OscSuperTriBuilder =
+    this.voices(voices = voices.toIgnitorDsl())
 
 /** Unison frequency spread between the voices (default 0.2). Same knob as the pattern-level `.spread()`. */
-@KlangScript.Function
-fun OscSuperTriBuilder.spread(spread: IgnitorDslLike): OscSuperTriBuilder = copy(node = node.copy(spread = spread.toIgnitorDsl()))
+@KlangScript.Function(name = "spread")
+internal fun OscSuperTriBuilder.scriptSpread(spread: IgnitorDslLike): OscSuperTriBuilder =
+    this.spread(spread = spread.toIgnitorDsl())
 
 /** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
-@KlangScript.Function
-fun OscSuperTriBuilder.analog(character: IgnitorDslLike): OscSuperTriBuilder = copy(node = node.copy(analog = character.toIgnitorDsl()))
+@KlangScript.Function(name = "analog")
+internal fun OscSuperTriBuilder.scriptAnalog(character: IgnitorDslLike): OscSuperTriBuilder =
+    this.analog(character = character.toIgnitorDsl())
 
 /** How much the voices drift against each other under `analog`, 0 to 1. `1` (default): every voice walks
  *  on its own lane, the organic unison of separate oscillators. `0`: one shared walk, the stack wobbles as
  *  a single oscillator and its unison detune stays static. Between is a blend. Nothing happens while
  *  `analog` is 0. Same knob as on `Ignitor.sine`; named apart from `spread`, which is the static unison detune. */
-@KlangScript.Function
-fun OscSuperTriBuilder.analogSpread(amount: IgnitorDslLike): OscSuperTriBuilder =
-    copy(node = node.copy(analogSpread = amount.toIgnitorDsl()))
+@KlangScript.Function(name = "analogSpread")
+internal fun OscSuperTriBuilder.scriptAnalogSpread(amount: IgnitorDslLike): OscSuperTriBuilder =
+    this.analogSpread(amount = amount.toIgnitorDsl())
 
 /** Detune spacing shape: 1 = even, above 1 concentrates toward the center, below 1 spreads outward. */
-@KlangScript.Function
-fun OscSuperTriBuilder.spreadPower(spreadPower: Double): OscSuperTriBuilder = copy(node = node.copy(spreadPower = spreadPower))
+@KlangScript.Function(name = "spreadPower")
+internal fun OscSuperTriBuilder.scriptSpreadPower(spreadPower: Double): OscSuperTriBuilder =
+    this.spreadPower(spreadPower = spreadPower)
 
 /** Center-dominant gain falloff: 0 = all voices equal, 1 = only the center voice. */
-@KlangScript.Function
-fun OscSuperTriBuilder.sideAtten(sideAtten: Double): OscSuperTriBuilder = copy(node = node.copy(sideAtten = sideAtten))
+@KlangScript.Function(name = "sideAtten")
+internal fun OscSuperTriBuilder.scriptSideAtten(sideAtten: Double): OscSuperTriBuilder =
+    this.sideAtten(sideAtten = sideAtten)
 
 /** Per-voice random amplitude offset (a fraction, plus or minus); 0 = off. */
-@KlangScript.Function
-fun OscSuperTriBuilder.gainJitter(gainJitter: Double): OscSuperTriBuilder = copy(node = node.copy(gainJitter = gainJitter))
+@KlangScript.Function(name = "gainJitter")
+internal fun OscSuperTriBuilder.scriptGainJitter(gainJitter: Double): OscSuperTriBuilder =
+    this.gainJitter(gainJitter = gainJitter)
 
 /** Fraction of `gainJitter` the on-pitch center voice gets: 0 = stable center, 1 = jittered like the sides. */
-@KlangScript.Function
-fun OscSuperTriBuilder.centerJitter(centerJitter: Double): OscSuperTriBuilder = copy(node = node.copy(centerJitterScale = centerJitter))
+@KlangScript.Function(name = "centerJitter")
+internal fun OscSuperTriBuilder.scriptCenterJitter(centerJitter: Double): OscSuperTriBuilder =
+    this.centerJitter(centerJitter = centerJitter)
 
 /**
  * Configure the banded start-phase pool in ONE call. Every param is an optional plain
@@ -812,8 +795,8 @@ fun OscSuperTriBuilder.centerJitter(centerJitter: Double): OscSuperTriBuilder = 
  * @param selection serving mode, `"name[:width[:outliers]]"`, see **Selection modes** above.
  * @param warmup entries seeded eagerly at pool creation (work-capped; 0 = fully lazy).
  */
-@KlangScript.Function
-fun OscSuperTriBuilder.phasePool(
+@KlangScript.Function(name = "phasePool")
+internal fun OscSuperTriBuilder.scriptPhasePool(
     on: Double = 1.0,
     kMin: Double = 0.40,
     kMax: Double = 0.65,
@@ -822,21 +805,18 @@ fun OscSuperTriBuilder.phasePool(
     refreshEvery: Double = 10.0,
     selection: String = "normal",
     warmup: Double = 16.0,
-): OscSuperTriBuilder = copy(
-    node = node.copy(
-        phasePool = on, kMin = kMin, kMax = kMax, drawTries = drawTries,
-        poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-    ),
+): OscSuperTriBuilder = this.phasePool(
+    on = on,
+    kMin = kMin,
+    kMax = kMax,
+    drawTries = drawTries,
+    poolSize = poolSize,
+    refreshEvery = refreshEvery,
+    selection = selection,
+    warmup = warmup,
 )
 
 // ── SuperRamp ─────────────────────────────────────────────────────────────────
-
-/**
- * Builder for [IgnitorDsl.SuperRamp], handed to the `configure` lambda of `Ignitor.superramp(...)`.
- * Knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`, `phase`. Immutable: every knob returns a new builder. `node` is the configured
- * oscillator.
- */
-data class OscSuperRampBuilder(val node: IgnitorDsl.SuperRamp)
 
 /**
  * Shifts the whole stack in its cycle: a fraction of one cycle added to every voice's phase every sample (default 0),
@@ -851,44 +831,52 @@ data class OscSuperRampBuilder(val node: IgnitorDsl.SuperRamp)
  * Ignitor.superramp(x => x.voices(5).phase(Ignitor.sine(5).mul(0.2)))   // phase modulation: a 5 Hz wobble on every voice
  * ```
  */
-@KlangScript.Function
-fun OscSuperRampBuilder.phase(phase: IgnitorDslLike): OscSuperRampBuilder = copy(node = node.copy(phase = phase.toIgnitorDsl()))
+@KlangScript.Function(name = "phase")
+internal fun OscSuperRampBuilder.scriptPhase(phase: IgnitorDslLike): OscSuperRampBuilder =
+    this.phase(phase = phase.toIgnitorDsl())
 
 /** Number of detuned voices in the stack (default 8). Accepts a number or an `Ignitor.*` graph (read once per block). */
-@KlangScript.Function
-fun OscSuperRampBuilder.voices(voices: IgnitorDslLike): OscSuperRampBuilder = copy(node = node.copy(voices = voices.toIgnitorDsl()))
+@KlangScript.Function(name = "voices")
+internal fun OscSuperRampBuilder.scriptVoices(voices: IgnitorDslLike): OscSuperRampBuilder =
+    this.voices(voices = voices.toIgnitorDsl())
 
 /** Unison frequency spread between the voices (default 0.2). Same knob as the pattern-level `.spread()`. */
-@KlangScript.Function
-fun OscSuperRampBuilder.spread(spread: IgnitorDslLike): OscSuperRampBuilder = copy(node = node.copy(spread = spread.toIgnitorDsl()))
+@KlangScript.Function(name = "spread")
+internal fun OscSuperRampBuilder.scriptSpread(spread: IgnitorDslLike): OscSuperRampBuilder =
+    this.spread(spread = spread.toIgnitorDsl())
 
 /** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
-@KlangScript.Function
-fun OscSuperRampBuilder.analog(character: IgnitorDslLike): OscSuperRampBuilder = copy(node = node.copy(analog = character.toIgnitorDsl()))
+@KlangScript.Function(name = "analog")
+internal fun OscSuperRampBuilder.scriptAnalog(character: IgnitorDslLike): OscSuperRampBuilder =
+    this.analog(character = character.toIgnitorDsl())
 
 /** How much the voices drift against each other under `analog`, 0 to 1. `1` (default): every voice walks
  *  on its own lane, the organic unison of separate oscillators. `0`: one shared walk, the stack wobbles as
  *  a single oscillator and its unison detune stays static. Between is a blend. Nothing happens while
  *  `analog` is 0. Same knob as on `Ignitor.sine`; named apart from `spread`, which is the static unison detune. */
-@KlangScript.Function
-fun OscSuperRampBuilder.analogSpread(amount: IgnitorDslLike): OscSuperRampBuilder =
-    copy(node = node.copy(analogSpread = amount.toIgnitorDsl()))
+@KlangScript.Function(name = "analogSpread")
+internal fun OscSuperRampBuilder.scriptAnalogSpread(amount: IgnitorDslLike): OscSuperRampBuilder =
+    this.analogSpread(amount = amount.toIgnitorDsl())
 
 /** Detune spacing shape: 1 = even, above 1 concentrates toward the center, below 1 spreads outward. */
-@KlangScript.Function
-fun OscSuperRampBuilder.spreadPower(spreadPower: Double): OscSuperRampBuilder = copy(node = node.copy(spreadPower = spreadPower))
+@KlangScript.Function(name = "spreadPower")
+internal fun OscSuperRampBuilder.scriptSpreadPower(spreadPower: Double): OscSuperRampBuilder =
+    this.spreadPower(spreadPower = spreadPower)
 
 /** Center-dominant gain falloff: 0 = all voices equal, 1 = only the center voice. */
-@KlangScript.Function
-fun OscSuperRampBuilder.sideAtten(sideAtten: Double): OscSuperRampBuilder = copy(node = node.copy(sideAtten = sideAtten))
+@KlangScript.Function(name = "sideAtten")
+internal fun OscSuperRampBuilder.scriptSideAtten(sideAtten: Double): OscSuperRampBuilder =
+    this.sideAtten(sideAtten = sideAtten)
 
 /** Per-voice random amplitude offset (a fraction, plus or minus); 0 = off. */
-@KlangScript.Function
-fun OscSuperRampBuilder.gainJitter(gainJitter: Double): OscSuperRampBuilder = copy(node = node.copy(gainJitter = gainJitter))
+@KlangScript.Function(name = "gainJitter")
+internal fun OscSuperRampBuilder.scriptGainJitter(gainJitter: Double): OscSuperRampBuilder =
+    this.gainJitter(gainJitter = gainJitter)
 
 /** Fraction of `gainJitter` the on-pitch center voice gets: 0 = stable center, 1 = jittered like the sides. */
-@KlangScript.Function
-fun OscSuperRampBuilder.centerJitter(centerJitter: Double): OscSuperRampBuilder = copy(node = node.copy(centerJitterScale = centerJitter))
+@KlangScript.Function(name = "centerJitter")
+internal fun OscSuperRampBuilder.scriptCenterJitter(centerJitter: Double): OscSuperRampBuilder =
+    this.centerJitter(centerJitter = centerJitter)
 
 /**
  * Configure the banded start-phase pool in ONE call. Every param is an optional plain
@@ -917,8 +905,8 @@ fun OscSuperRampBuilder.centerJitter(centerJitter: Double): OscSuperRampBuilder 
  * @param selection serving mode, `"name[:width[:outliers]]"`, see **Selection modes** above.
  * @param warmup entries seeded eagerly at pool creation (work-capped; 0 = fully lazy).
  */
-@KlangScript.Function
-fun OscSuperRampBuilder.phasePool(
+@KlangScript.Function(name = "phasePool")
+internal fun OscSuperRampBuilder.scriptPhasePool(
     on: Double = 1.0,
     kMin: Double = 0.30,
     kMax: Double = 0.55,
@@ -927,83 +915,85 @@ fun OscSuperRampBuilder.phasePool(
     refreshEvery: Double = 10.0,
     selection: String = "normal",
     warmup: Double = 16.0,
-): OscSuperRampBuilder = copy(
-    node = node.copy(
-        phasePool = on, kMin = kMin, kMax = kMax, drawTries = drawTries,
-        poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-    ),
+): OscSuperRampBuilder = this.phasePool(
+    on = on,
+    kMin = kMin,
+    kMax = kMax,
+    drawTries = drawTries,
+    poolSize = poolSize,
+    refreshEvery = refreshEvery,
+    selection = selection,
+    warmup = warmup,
 )
 
 // ── Pluck ─────────────────────────────────────────────────────────────────
 
-/**
- * Builder for [IgnitorDsl.Pluck], handed to the `configure` lambda of `Ignitor.pluck(...)`.
- * Knobs: `feedback`, `brightness`, `pickPosition`, `stiffness`, `analog`. Immutable: every knob returns a new builder. `node` is the configured
- * oscillator.
- */
-data class OscPluckBuilder(val node: IgnitorDsl.Pluck)
-
 /** Loop feedback per pass, 0.9 to 0.999 (default 0.996); higher rings longer. A coefficient, not a time. */
-@KlangScript.Function
-fun OscPluckBuilder.feedback(feedback: IgnitorDslLike): OscPluckBuilder = copy(node = node.copy(feedback = feedback.toIgnitorDsl()))
+@KlangScript.Function(name = "feedback")
+internal fun OscPluckBuilder.scriptFeedback(feedback: IgnitorDslLike): OscPluckBuilder =
+    this.feedback(feedback = feedback.toIgnitorDsl())
 
 /** Initial-burst brightness / pick hardness (default 0.5). 0 = mellow, 1 = bright. */
-@KlangScript.Function
-fun OscPluckBuilder.brightness(brightness: IgnitorDslLike): OscPluckBuilder = copy(node = node.copy(brightness = brightness.toIgnitorDsl()))
+@KlangScript.Function(name = "brightness")
+internal fun OscPluckBuilder.scriptBrightness(brightness: IgnitorDslLike): OscPluckBuilder =
+    this.brightness(brightness = brightness.toIgnitorDsl())
 
 /** Relative pick position along the string (default 0.5). 0 = bridge, 1 = nut. */
-@KlangScript.Function
-fun OscPluckBuilder.pickPosition(pickPosition: IgnitorDslLike): OscPluckBuilder = copy(node = node.copy(pickPosition = pickPosition.toIgnitorDsl()))
+@KlangScript.Function(name = "pickPosition")
+internal fun OscPluckBuilder.scriptPickPosition(pickPosition: IgnitorDslLike): OscPluckBuilder =
+    this.pickPosition(pickPosition = pickPosition.toIgnitorDsl())
 
 /** String stiffness (default 0.0). Higher = more inharmonic, bell-like. */
-@KlangScript.Function
-fun OscPluckBuilder.stiffness(stiffness: IgnitorDslLike): OscPluckBuilder = copy(node = node.copy(stiffness = stiffness.toIgnitorDsl()))
+@KlangScript.Function(name = "stiffness")
+internal fun OscPluckBuilder.scriptStiffness(stiffness: IgnitorDslLike): OscPluckBuilder =
+    this.stiffness(stiffness = stiffness.toIgnitorDsl())
 
 /** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
-@KlangScript.Function
-fun OscPluckBuilder.analog(character: IgnitorDslLike): OscPluckBuilder = copy(node = node.copy(analog = character.toIgnitorDsl()))
+@KlangScript.Function(name = "analog")
+internal fun OscPluckBuilder.scriptAnalog(character: IgnitorDslLike): OscPluckBuilder =
+    this.analog(character = character.toIgnitorDsl())
 
 // ── SuperPluck ─────────────────────────────────────────────────────────────────
 
-/**
- * Builder for [IgnitorDsl.SuperPluck], handed to the `configure` lambda of `Ignitor.superpluck(...)`.
- * Knobs: `voices`, `spread`, `feedback`, `brightness`, `pickPosition`, `stiffness`, `analog`, `analogSpread`. Immutable: every knob returns a new builder. `node` is the configured
- * oscillator.
- */
-data class OscSuperPluckBuilder(val node: IgnitorDsl.SuperPluck)
-
 /** Number of detuned voices in the stack (default 8). Accepts a number or an `Ignitor.*` graph (read once per block). */
-@KlangScript.Function
-fun OscSuperPluckBuilder.voices(voices: IgnitorDslLike): OscSuperPluckBuilder = copy(node = node.copy(voices = voices.toIgnitorDsl()))
+@KlangScript.Function(name = "voices")
+internal fun OscSuperPluckBuilder.scriptVoices(voices: IgnitorDslLike): OscSuperPluckBuilder =
+    this.voices(voices = voices.toIgnitorDsl())
 
 /** Unison frequency spread between the voices (default 0.2). Same knob as the pattern-level `.spread()`. */
-@KlangScript.Function
-fun OscSuperPluckBuilder.spread(spread: IgnitorDslLike): OscSuperPluckBuilder = copy(node = node.copy(spread = spread.toIgnitorDsl()))
+@KlangScript.Function(name = "spread")
+internal fun OscSuperPluckBuilder.scriptSpread(spread: IgnitorDslLike): OscSuperPluckBuilder =
+    this.spread(spread = spread.toIgnitorDsl())
 
 /** Loop feedback per pass, 0.9 to 0.999 (default 0.996); higher rings longer. A coefficient, not a time. */
-@KlangScript.Function
-fun OscSuperPluckBuilder.feedback(feedback: IgnitorDslLike): OscSuperPluckBuilder = copy(node = node.copy(feedback = feedback.toIgnitorDsl()))
+@KlangScript.Function(name = "feedback")
+internal fun OscSuperPluckBuilder.scriptFeedback(feedback: IgnitorDslLike): OscSuperPluckBuilder =
+    this.feedback(feedback = feedback.toIgnitorDsl())
 
 /** Initial-burst brightness / pick hardness (default 0.5). 0 = mellow, 1 = bright. */
-@KlangScript.Function
-fun OscSuperPluckBuilder.brightness(brightness: IgnitorDslLike): OscSuperPluckBuilder = copy(node = node.copy(brightness = brightness.toIgnitorDsl()))
+@KlangScript.Function(name = "brightness")
+internal fun OscSuperPluckBuilder.scriptBrightness(brightness: IgnitorDslLike): OscSuperPluckBuilder =
+    this.brightness(brightness = brightness.toIgnitorDsl())
 
 /** Relative pick position along the string (default 0.5). 0 = bridge, 1 = nut. */
-@KlangScript.Function
-fun OscSuperPluckBuilder.pickPosition(pickPosition: IgnitorDslLike): OscSuperPluckBuilder = copy(node = node.copy(pickPosition = pickPosition.toIgnitorDsl()))
+@KlangScript.Function(name = "pickPosition")
+internal fun OscSuperPluckBuilder.scriptPickPosition(pickPosition: IgnitorDslLike): OscSuperPluckBuilder =
+    this.pickPosition(pickPosition = pickPosition.toIgnitorDsl())
 
 /** String stiffness (default 0.0). Higher = more inharmonic, bell-like. */
-@KlangScript.Function
-fun OscSuperPluckBuilder.stiffness(stiffness: IgnitorDslLike): OscSuperPluckBuilder = copy(node = node.copy(stiffness = stiffness.toIgnitorDsl()))
+@KlangScript.Function(name = "stiffness")
+internal fun OscSuperPluckBuilder.scriptStiffness(stiffness: IgnitorDslLike): OscSuperPluckBuilder =
+    this.stiffness(stiffness = stiffness.toIgnitorDsl())
 
 /** How analog the oscillator is, a unitless character scale: 0 ideal (perfectly stable), 1 to 8 usual, 10 strong; its tell is the pitch drift, about one cent of peak per unit. Latches at note-on. */
-@KlangScript.Function
-fun OscSuperPluckBuilder.analog(character: IgnitorDslLike): OscSuperPluckBuilder = copy(node = node.copy(analog = character.toIgnitorDsl()))
+@KlangScript.Function(name = "analog")
+internal fun OscSuperPluckBuilder.scriptAnalog(character: IgnitorDslLike): OscSuperPluckBuilder =
+    this.analog(character = character.toIgnitorDsl())
 
 /** How much the voices drift against each other under `analog`, 0 to 1. `1` (default): every voice walks
  *  on its own lane, the organic unison of separate oscillators. `0`: one shared walk, the stack wobbles as
  *  a single oscillator and its unison detune stays static. Between is a blend. Nothing happens while
  *  `analog` is 0. Same knob as on `Ignitor.sine`; named apart from `spread`, which is the static unison detune. */
-@KlangScript.Function
-fun OscSuperPluckBuilder.analogSpread(amount: IgnitorDslLike): OscSuperPluckBuilder =
-    copy(node = node.copy(analogSpread = amount.toIgnitorDsl()))
+@KlangScript.Function(name = "analogSpread")
+internal fun OscSuperPluckBuilder.scriptAnalogSpread(amount: IgnitorDslLike): OscSuperPluckBuilder =
+    this.analogSpread(amount = amount.toIgnitorDsl())

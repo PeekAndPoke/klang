@@ -435,6 +435,15 @@ body {
     background-image: url("data:image/svg+xml,%3Csvg width='200' height='200' viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilterWhite'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  1 0 0 0 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilterWhite)' opacity='0.05'/%3E%3C/svg%3E");
 }
 
+/* Editor that fills its host and scrolls itself (the code song page, for the
+   minimap): passes the host's height down through the editor's wrapper divs
+   to .cm-editor, whose height the minimap theme sets to 100%. */
+.klang-editor-fill > div,
+.klang-editor-fill .code-mirror-container,
+.klang-editor-fill .code-mirror-container > div {
+    height: 100%;
+}
+
 /* Black surface with the editor's fine white grain — the code page header
    uses it so header and editor read as one continuous surface.
    The .ui.basic.segment leg out-specifies `.ui.basic.segment { background: transparent !important }`. */

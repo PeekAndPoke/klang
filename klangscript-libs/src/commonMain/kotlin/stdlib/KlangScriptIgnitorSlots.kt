@@ -33,7 +33,7 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
  */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(KlangScriptIgnitorSlots::class)
-object KlangScriptIgnitorSlots {
+internal object KlangScriptIgnitorSlots {
     override fun toString(): String = "[Ignitor.slot]"
 
     /** Open `analog` slot (default 0.0). Mirrors sprudel `.analog(x)`. */

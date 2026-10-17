@@ -22,7 +22,7 @@ class IgnitorDslSpec : StringSpec({
     }
 
     "distort builder produces Shape(Drive(...))" {
-        val dsl = IgnitorDsl.Sine().distort(0.5)
+        val dsl = IgnitorDsl.Sine().distort(0.5.ign)
         val clip = dsl.shouldBeInstanceOf<IgnitorDsl.Shape>()
         clip.inner.shouldBeInstanceOf<IgnitorDsl.Drive>()
     }
@@ -42,7 +42,7 @@ class IgnitorDslSpec : StringSpec({
         // would have produced two different bandwidths from identical-looking source.
         // The Kotlin and script surfaces are pinned to each other by StdLibIgnitorTest.
         val fromWireDefault = IgnitorDsl.EqSection.Bell(freq = IgnitorDsl.Constant(1200.0))
-        val fromSurface = IgnitorDsl.Sine().eq().band(1200.0).sections.single()
+        val fromSurface = IgnitorDsl.Sine().eq { it.band(1200.0.ign) }.sections.single()
 
         (fromWireDefault.q as IgnitorDsl.Constant).value shouldBe
                 ((fromSurface as IgnitorDsl.EqSection.Bell).q as IgnitorDsl.Constant).value
@@ -51,7 +51,7 @@ class IgnitorDslSpec : StringSpec({
     "the RawTap wire defaults and the tap() surface defaults are the SAME" {
         // Same bug class as the Bell row above, pinned before it can happen.
         val fromWireDefault = IgnitorDsl.EqSection.RawTap(freq = IgnitorDsl.Constant(850.0))
-        val fromSurface = IgnitorDsl.Sine().eq().tap(850.0).sections.single()
+        val fromSurface = IgnitorDsl.Sine().eq { it.tap(850.0.ign) }.sections.single()
                 as IgnitorDsl.EqSection.RawTap
 
         (fromWireDefault.q as IgnitorDsl.Constant).value shouldBe
@@ -60,45 +60,26 @@ class IgnitorDslSpec : StringSpec({
                 (fromSurface.gain as IgnitorDsl.Constant).value
     }
 
-    "the DSL-typed and scalar overloads carry the SAME defaults" {
-        // Each method ships two overloads, each with its own default literals. The rows below
-        // exercise only the scalar ones, so without this the DSL-typed copy could drift alone
-        // and every other parity row would stay green (the reverb-size-10x class again).
-        val bandDsl = IgnitorDsl.Sine().eq().band(IgnitorDsl.Constant(1200.0)).sections.single()
-                as IgnitorDsl.EqSection.Bell
-        val bandScalar = IgnitorDsl.Sine().eq().band(1200.0).sections.single()
-                as IgnitorDsl.EqSection.Bell
-        (bandDsl.q as IgnitorDsl.Constant).value shouldBe (bandScalar.q as IgnitorDsl.Constant).value
-        (bandDsl.db as IgnitorDsl.Constant).value shouldBe (bandScalar.db as IgnitorDsl.Constant).value
-
-        val tapDsl = IgnitorDsl.Sine().eq().tap(IgnitorDsl.Constant(850.0)).sections.single()
-                as IgnitorDsl.EqSection.RawTap
-        val tapScalar = IgnitorDsl.Sine().eq().tap(850.0).sections.single()
-                as IgnitorDsl.EqSection.RawTap
-        (tapDsl.q as IgnitorDsl.Constant).value shouldBe (tapScalar.q as IgnitorDsl.Constant).value
-        (tapDsl.gain as IgnitorDsl.Constant).value shouldBe (tapScalar.gain as IgnitorDsl.Constant).value
-    }
-
-    "band extension adds a bell with stdlib-matching defaults" {
-        // band() is receiver-typed on IgnitorDsl.Eq — .eq() is the entry point; a plain
-        // oscillator has no .band() (compile error, the supersaw config-method pattern).
-        val dsl = IgnitorDsl.Sine().eq().band(1200.0)
+    "band on the EqBuilder adds a bell with stdlib-matching defaults" {
+        // band() is a member of the EqBuilder the .eq { } lambda receives; a plain oscillator and
+        // the Eq node have no .band() (compile error, the builder pattern).
+        val dsl = IgnitorDsl.Sine().eq { it.band(1200.0.ign) }
         val bell = dsl.sections.single().shouldBeInstanceOf<IgnitorDsl.EqSection.Bell>()
         (bell.freq as IgnitorDsl.Constant).value shouldBe 1200.0
         (bell.q as IgnitorDsl.Constant).value shouldBe 0.707
         (bell.db as IgnitorDsl.Constant).value shouldBe 0.0
     }
 
-    "band extension appends in list order" {
-        val dsl = IgnitorDsl.Sine().eq().band(300.0, q = 1.0, db = 6.0).band(2500.0)
+    "band appends in list order" {
+        val dsl = IgnitorDsl.Sine().eq { it.band(freq = 300.0.ign, q = 1.0.ign, db = 6.0.ign).band(2500.0.ign) }
         dsl.sections.size shouldBe 2
         ((dsl.sections[0] as IgnitorDsl.EqSection.Bell).freq as IgnitorDsl.Constant).value shouldBe 300.0
         ((dsl.sections[0] as IgnitorDsl.EqSection.Bell).db as IgnitorDsl.Constant).value shouldBe 6.0
         ((dsl.sections[1] as IgnitorDsl.EqSection.Bell).freq as IgnitorDsl.Constant).value shouldBe 2500.0
     }
 
-    "tap extension adds a RawTap with stdlib-matching defaults" {
-        val dsl = IgnitorDsl.Saw().eq().tap(850.0)
+    "tap on the EqBuilder adds a RawTap with stdlib-matching defaults" {
+        val dsl = IgnitorDsl.Saw().eq { it.tap(850.0.ign) }
         val tap = dsl.sections.single().shouldBeInstanceOf<IgnitorDsl.EqSection.RawTap>()
         (tap.freq as IgnitorDsl.Constant).value shouldBe 850.0
         // C1 (filter unification): ONE default q = 0.707 on every surface, tap included.
@@ -107,14 +88,14 @@ class IgnitorDslSpec : StringSpec({
     }
 
     "tap and band append into ONE ordered section list" {
-        val dsl = IgnitorDsl.Saw().eq().tap(freq = 850.0, q = 0.707, gain = 1.7).band(freq = 4000.0, q = 0.7, db = -3.0)
+        val dsl = IgnitorDsl.Saw().eq { it.tap(freq = 850.0.ign, q = 0.707.ign, gain = 1.7.ign).band(freq = 4000.0.ign, q = 0.7.ign, db = (-3.0).ign) }
         dsl.sections.size shouldBe 2
         dsl.sections[0].shouldBeInstanceOf<IgnitorDsl.EqSection.RawTap>()
         dsl.sections[1].shouldBeInstanceOf<IgnitorDsl.EqSection.Bell>()
     }
 
-    "band extension accepts IgnitorDsl params (note tracking)" {
-        val dsl = IgnitorDsl.Saw().eq().band(freq = IgnitorDsl.Freq)
+    "band accepts IgnitorDsl params (note tracking)" {
+        val dsl = IgnitorDsl.Saw().eq { it.band(IgnitorDsl.Freq) }
         (dsl.sections.single() as IgnitorDsl.EqSection.Bell).freq.shouldBeInstanceOf<IgnitorDsl.Freq>()
     }
 

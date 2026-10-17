@@ -24,7 +24,7 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 /** `Ignitor.slot.vibrato`: the vibrato stage's slots. */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(KlangScriptIgnitorVibratoSlots::class)
-object KlangScriptIgnitorVibratoSlots {
+internal object KlangScriptIgnitorVibratoSlots {
     override fun toString(): String = "[Ignitor.slot.vibrato]"
 
     /** The LFO rate in Hz, default 5. Mirrors sprudel's `vibrato.rate`. */
@@ -51,7 +51,7 @@ object KlangScriptIgnitorVibratoSlots {
 /** `Ignitor.slot.fm`: the FM stage's slots. */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(KlangScriptIgnitorFmSlots::class)
-object KlangScriptIgnitorFmSlots {
+internal object KlangScriptIgnitorFmSlots {
     override fun toString(): String = "[Ignitor.slot.fm]"
 
     /** The modulator's frequency as a multiple of the note, default 1. Mirrors sprudel's `fm.ratio`. */
@@ -82,7 +82,7 @@ object KlangScriptIgnitorFmSlots {
 /** `Ignitor.slot.penv`: the pitch envelope stage's slots. */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(KlangScriptIgnitorPenvSlots::class)
-object KlangScriptIgnitorPenvSlots {
+internal object KlangScriptIgnitorPenvSlots {
     override fun toString(): String = "[Ignitor.slot.penv]"
 
     /** The pitch at the envelope's peak in semitones, default 0 (off: no envelope). Mirrors sprudel's `penv.semitones`. */
@@ -109,7 +109,7 @@ object KlangScriptIgnitorPenvSlots {
 /** `Ignitor.slot.penvCurves`: the pitch envelope's curve slots. */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(KlangScriptIgnitorPenvCurvesSlots::class)
-object KlangScriptIgnitorPenvCurvesSlots {
+internal object KlangScriptIgnitorPenvCurvesSlots {
     override fun toString(): String = "[Ignitor.slot.penvCurves]"
 
     /** The attack's curve as its index in the curve list, default `exp`. Mirrors sprudel's `penvCurves(attack = ...)`. */
@@ -128,7 +128,7 @@ object KlangScriptIgnitorPenvCurvesSlots {
 /** `Ignitor.slot.crush`: the crush stage's slot, `bits` (`crush.bits`). */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(KlangScriptIgnitorCrushSlots::class)
-object KlangScriptIgnitorCrushSlots {
+internal object KlangScriptIgnitorCrushSlots {
     override fun toString(): String = "[Ignitor.slot.crush]"
 
     /** Bit depth, default 0 (off; below 1 the stage passes through). Mirrors sprudel's `crush.bits`. */
@@ -139,7 +139,7 @@ object KlangScriptIgnitorCrushSlots {
 /** `Ignitor.slot.coarse`: the coarse stage's slot, `factor` (`coarse.factor`). */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(KlangScriptIgnitorCoarseSlots::class)
-object KlangScriptIgnitorCoarseSlots {
+internal object KlangScriptIgnitorCoarseSlots {
     override fun toString(): String = "[Ignitor.slot.coarse]"
 
     /** Sample-hold factor, default 0 (off; at 1 or less nothing is held). Mirrors sprudel's `coarse.factor`. */
@@ -150,7 +150,7 @@ object KlangScriptIgnitorCoarseSlots {
 /** `Ignitor.slot.distort`: the distort stage's slots. */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(KlangScriptIgnitorDistortSlots::class)
-object KlangScriptIgnitorDistortSlots {
+internal object KlangScriptIgnitorDistortSlots {
     override fun toString(): String = "[Ignitor.slot.distort]"
 
     /** Drive amount, default 0 (off). Mirrors sprudel's `distort.amount`. */
@@ -169,7 +169,7 @@ object KlangScriptIgnitorDistortSlots {
 /** `Ignitor.slot.hpf`: the highpass stage's slots. */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(KlangScriptIgnitorHpfSlots::class)
-object KlangScriptIgnitorHpfSlots {
+internal object KlangScriptIgnitorHpfSlots {
     override fun toString(): String = "[Ignitor.slot.hpf]"
 
     /** Cutoff in Hz, default unset (no filter). Mirrors sprudel's `hpf.freq`. */
@@ -208,7 +208,7 @@ object KlangScriptIgnitorHpfSlots {
 /** `Ignitor.slot.bpf`: the bandpass stage's slots. */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(KlangScriptIgnitorBpfSlots::class)
-object KlangScriptIgnitorBpfSlots {
+internal object KlangScriptIgnitorBpfSlots {
     override fun toString(): String = "[Ignitor.slot.bpf]"
 
     /** Center in Hz, default unset (no filter). Mirrors sprudel's `bpf.freq`. */
@@ -243,7 +243,7 @@ object KlangScriptIgnitorBpfSlots {
 /** `Ignitor.slot.notch`: the notch stage's slots. */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(KlangScriptIgnitorNotchSlots::class)
-object KlangScriptIgnitorNotchSlots {
+internal object KlangScriptIgnitorNotchSlots {
     override fun toString(): String = "[Ignitor.slot.notch]"
 
     /** Center in Hz, default unset (no filter). Mirrors sprudel's `notch.freq`. */
@@ -278,7 +278,7 @@ object KlangScriptIgnitorNotchSlots {
 /** `Ignitor.slot.lpf`: the lowpass stage's slots. */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(KlangScriptIgnitorLpfSlots::class)
-object KlangScriptIgnitorLpfSlots {
+internal object KlangScriptIgnitorLpfSlots {
     override fun toString(): String = "[Ignitor.slot.lpf]"
 
     /** Cutoff in Hz, default unset (no filter). Mirrors sprudel's `lpf.freq`. */
@@ -317,7 +317,7 @@ object KlangScriptIgnitorLpfSlots {
 /** `Ignitor.slot.tremolo`: the tremolo stage's slots. */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(KlangScriptIgnitorTremoloSlots::class)
-object KlangScriptIgnitorTremoloSlots {
+internal object KlangScriptIgnitorTremoloSlots {
     override fun toString(): String = "[Ignitor.slot.tremolo]"
 
     /** Depth, default 0 (off). Mirrors sprudel's `tremolo.depth`. */
@@ -336,7 +336,7 @@ object KlangScriptIgnitorTremoloSlots {
 /** `Ignitor.slot.adsr`: the amplitude envelope's slots. */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(KlangScriptIgnitorAdsrSlots::class)
-object KlangScriptIgnitorAdsrSlots {
+internal object KlangScriptIgnitorAdsrSlots {
     override fun toString(): String = "[Ignitor.slot.adsr]"
 
     /** Attack in seconds, default 0.01. Mirrors sprudel's `adsr.attack`. */
@@ -363,7 +363,7 @@ object KlangScriptIgnitorAdsrSlots {
 /** `Ignitor.slot.adsrCurves`: the amplitude envelope's curve slots. */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(KlangScriptIgnitorAdsrCurvesSlots::class)
-object KlangScriptIgnitorAdsrCurvesSlots {
+internal object KlangScriptIgnitorAdsrCurvesSlots {
     override fun toString(): String = "[Ignitor.slot.adsrCurves]"
 
     /** The attack's curve as its index in the curve list, default `exp`. Mirrors sprudel's `adsrCurves(attack = ...)`. */
@@ -382,7 +382,7 @@ object KlangScriptIgnitorAdsrCurvesSlots {
 /** `Ignitor.slot.hpfCurves`: the highpass envelope's curve slots. */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(KlangScriptIgnitorHpfCurvesSlots::class)
-object KlangScriptIgnitorHpfCurvesSlots {
+internal object KlangScriptIgnitorHpfCurvesSlots {
     override fun toString(): String = "[Ignitor.slot.hpfCurves]"
 
     /** The attack's curve as its index in the curve list, default `exp`. Mirrors sprudel's `hpfCurves(attack = ...)`. */
@@ -401,7 +401,7 @@ object KlangScriptIgnitorHpfCurvesSlots {
 /** `Ignitor.slot.bpfCurves`: the bandpass envelope's curve slots. */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(KlangScriptIgnitorBpfCurvesSlots::class)
-object KlangScriptIgnitorBpfCurvesSlots {
+internal object KlangScriptIgnitorBpfCurvesSlots {
     override fun toString(): String = "[Ignitor.slot.bpfCurves]"
 
     /** The attack's curve as its index in the curve list, default `exp`. Mirrors sprudel's `bpfCurves(attack = ...)`. */
@@ -420,7 +420,7 @@ object KlangScriptIgnitorBpfCurvesSlots {
 /** `Ignitor.slot.notchCurves`: the notch envelope's curve slots. */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(KlangScriptIgnitorNotchCurvesSlots::class)
-object KlangScriptIgnitorNotchCurvesSlots {
+internal object KlangScriptIgnitorNotchCurvesSlots {
     override fun toString(): String = "[Ignitor.slot.notchCurves]"
 
     /** The attack's curve as its index in the curve list, default `exp`. Mirrors sprudel's `notchCurves(attack = ...)`. */
@@ -439,7 +439,7 @@ object KlangScriptIgnitorNotchCurvesSlots {
 /** `Ignitor.slot.lpfCurves`: the lowpass envelope's curve slots. */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(KlangScriptIgnitorLpfCurvesSlots::class)
-object KlangScriptIgnitorLpfCurvesSlots {
+internal object KlangScriptIgnitorLpfCurvesSlots {
     override fun toString(): String = "[Ignitor.slot.lpfCurves]"
 
     /** The attack's curve as its index in the curve list, default `exp`. Mirrors sprudel's `lpfCurves(attack = ...)`. */

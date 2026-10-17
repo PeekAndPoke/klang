@@ -20,45 +20,22 @@ import io.peekandpoke.klang.audio_be.voices.PlaybackCtx
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceFactory
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.Kat
+import io.peekandpoke.klang.audio_bridge.KatalystBuilder
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.distort
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import io.peekandpoke.klang.audio_bridge.kat
 import io.peekandpoke.klang.audio_bridge.plus
+import io.peekandpoke.klang.audio_bridge.range
+import io.peekandpoke.klang.audio_bridge.times
+import io.peekandpoke.klang.audio_bridge.unaryMinus
 import io.peekandpoke.klang.common.infra.KlangMap
 import io.peekandpoke.klang.common.infra.toKlangMap
-import io.peekandpoke.klang.script.stdlib.IgnitorDslLike
-import io.peekandpoke.klang.script.stdlib.Kat
-import io.peekandpoke.klang.script.stdlib.KatalystBuilder
-import io.peekandpoke.klang.script.stdlib.abs
-import io.peekandpoke.klang.script.stdlib.band
-import io.peekandpoke.klang.script.stdlib.bands
-import io.peekandpoke.klang.script.stdlib.body
-import io.peekandpoke.klang.script.stdlib.compressor
-import io.peekandpoke.klang.script.stdlib.cut
-import io.peekandpoke.klang.script.stdlib.delay
-import io.peekandpoke.klang.script.stdlib.distort
-import io.peekandpoke.klang.script.stdlib.div
-import io.peekandpoke.klang.script.stdlib.duck
-import io.peekandpoke.klang.script.stdlib.duty
-import io.peekandpoke.klang.script.stdlib.eq
-import io.peekandpoke.klang.script.stdlib.floor
-import io.peekandpoke.klang.script.stdlib.gain
-import io.peekandpoke.klang.script.stdlib.limiter
-import io.peekandpoke.klang.script.stdlib.max
-import io.peekandpoke.klang.script.stdlib.min
-import io.peekandpoke.klang.script.stdlib.minus
-import io.peekandpoke.klang.script.stdlib.parallel
-import io.peekandpoke.klang.script.stdlib.phaser
-import io.peekandpoke.klang.script.stdlib.plus
-import io.peekandpoke.klang.script.stdlib.pow
-import io.peekandpoke.klang.script.stdlib.range
-import io.peekandpoke.klang.script.stdlib.reverb
-import io.peekandpoke.klang.script.stdlib.tap
-import io.peekandpoke.klang.script.stdlib.times
-import io.peekandpoke.klang.script.stdlib.vowel
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.lang.adsr
 import io.peekandpoke.klang.sprudel.lang.analog
@@ -179,9 +156,8 @@ object AllocationCases {
         "phaser.wet" to 0.5, "phaser.rate" to 0.5, "phaser.sweep" to 800.0, "phaser.floor" to 0.5,
     )
 
-    /** A chain through the Kotlin door, the builder a Kotlin song uses: [build] appends to an empty chain. */
-    internal fun katalyst(build: (KatalystBuilder) -> KatalystBuilder): KatalystDsl =
-        build(KatalystBuilder(KatalystDsl(emptyList()))).node
+    /** A chain through the typed Kotlin door (`Kat.build`), the builder a Kotlin song uses: [build] appends to an empty chain. */
+    internal fun katalyst(build: (KatalystBuilder) -> KatalystBuilder): KatalystDsl = Kat.build(configure = build)
 
     /** A chain slot (`Katalyst.param`) named `arith.<name>`. */
     private fun slot(name: String, default: Double) = KatalystKnobDsl.Param(name = "arith.$name", default = default)
@@ -193,20 +169,20 @@ object AllocationCases {
      * The doors cross on purpose: `max` builds the `Min` stage (the cap), `min` the `Max` stage (the floor).
      */
     private fun arithmetic(
-        times: IgnitorDslLike,
-        plus: IgnitorDslLike,
-        minus: IgnitorDslLike,
-        div: IgnitorDslLike,
-        pow: IgnitorDslLike,
-        cap: IgnitorDslLike,
-        floor: IgnitorDslLike,
+        times: KatalystKnobDsl,
+        plus: KatalystKnobDsl,
+        minus: KatalystKnobDsl,
+        div: KatalystKnobDsl,
+        pow: KatalystKnobDsl,
+        cap: KatalystKnobDsl,
+        floor: KatalystKnobDsl,
     ): KatalystDsl = katalyst {
         it.times(times).plus(plus).minus(minus).div(div).pow(pow).max(cap).min(floor).abs()
     }
 
     /** `E-arith`: every operand a constant, the plain law loops. */
     val arithmeticChain: KatalystDsl =
-        arithmetic(times = 0.9, plus = 0.013, minus = 0.007, div = 1.3, pow = 0.7, cap = 0.45, floor = -0.45)
+        arithmetic(times = 0.9.kat, plus = 0.013.kat, minus = 0.007.kat, div = 1.3.kat, pow = 0.7.kat, cap = 0.45.kat, floor = -0.45.kat)
 
     /** `E-arith-glide`: every operand a slot, its default `E-arith`'s number. */
     private val arithmeticSlots: KatalystDsl = arithmetic(
@@ -252,7 +228,7 @@ object AllocationCases {
     // rows' comparison (`EffectBenchmark`).
 
     /** (a) One sine on the group fader: the plainest modulated knob, one modulator and one `range` per block. */
-    internal val sineChain: KatalystDsl = katalyst { it.gain(Kat.sine(0.7).range(0.45, 0.85)) }
+    internal val sineChain: KatalystDsl = katalyst { it.gain(Kat.sine(0.7.kat).range(from = 0.45.kat, to = 0.85.kat)) }
 
     /**
      * (b) A square whose duty is a SLOT EXPRESSION (`kat.duty`, written by the case's `katp`), on the group fader: the
@@ -260,33 +236,33 @@ object AllocationCases {
      * once per new map, then the `plus` per tick).
      */
     internal val squareChain: KatalystDsl = katalyst {
-        it.gain(Kat.square(1.3) { b -> b.duty(Kat.param("kat.duty", 0.3).plus(0.05)) }.range(0.45, 0.85))
+        it.gain(Kat.square(1.3.kat) { b -> b.duty(Kat.param("kat.duty", 0.3).plus(0.05.kat)) }.range(from = 0.45.kat, to = 0.85.kat))
     }
 
     /** (c) A saw whose freq is a sine: its edges are rebaked every block (`setSawShape`, the `dt` moves). */
     internal val sawFmChain: KatalystDsl = katalyst {
-        it.gain(Kat.saw(Kat.sine(0.3).range(0.6, 1.9)).range(0.45, 0.85))
+        it.gain(Kat.saw(Kat.sine(0.3.kat).range(from = 0.6.kat, to = 1.9.kat)).range(from = 0.45.kat, to = 0.85.kat))
     }
 
     /** (d) A perlin at one octave on the group fader and one at eight on a `times` stage: `fbm` once per tick each. */
     internal val perlinChain: KatalystDsl = katalyst {
-        it.gain(Kat.perlin(0.0031).range(0.45, 0.85)).times(Kat.perlin(0.0031, octaves = 8.0).range(0.8, 1.15))
+        it.gain(Kat.perlin(0.0031.kat).range(from = 0.45.kat, to = 0.85.kat)).times(Kat.perlin(0.0031.kat, octaves = 8.0.kat).range(from = 0.8.kat, to = 1.15.kat))
     }
 
     /** (e) All seven modulator kinds in one chain, the fader and six `times` stages, each near unity. */
     internal val allKindsChain: KatalystDsl = katalyst {
-        it.gain(Kat.sine(0.7).range(0.45, 0.85))
-            .times(Kat.saw(0.53).range(0.85, 1.1))
-            .times(Kat.ramp(0.41).range(0.85, 1.1))
-            .times(Kat.tri(0.67).range(0.85, 1.1))
-            .times(Kat.square(0.37).range(0.85, 1.1))
-            .times(Kat.perlin(0.0031).range(0.85, 1.1))
-            .times(Kat.berlin(0.0027).range(0.85, 1.1))
+        it.gain(Kat.sine(0.7.kat).range(from = 0.45.kat, to = 0.85.kat))
+            .times(Kat.saw(0.53.kat).range(from = 0.85.kat, to = 1.1.kat))
+            .times(Kat.ramp(0.41.kat).range(from = 0.85.kat, to = 1.1.kat))
+            .times(Kat.tri(0.67.kat).range(from = 0.85.kat, to = 1.1.kat))
+            .times(Kat.square(0.37.kat).range(from = 0.85.kat, to = 1.1.kat))
+            .times(Kat.perlin(0.0031.kat).range(from = 0.85.kat, to = 1.1.kat))
+            .times(Kat.berlin(0.0027.kat).range(from = 0.85.kat, to = 1.1.kat))
     }
 
     /** [allKindsChain] with each knob a constant in its range. */
     internal val allKindsConstant: KatalystDsl = katalyst {
-        it.gain(0.65).times(0.97).times(0.97).times(0.97).times(0.97).times(0.97).times(0.97)
+        it.gain(0.65.kat).times(0.97.kat).times(0.97.kat).times(0.97.kat).times(0.97.kat).times(0.97.kat).times(0.97.kat)
     }
 
     /**
@@ -296,15 +272,15 @@ object AllocationCases {
      */
     internal val dynamicsChain: KatalystDsl = katalyst {
         it.compressor(
-            threshold = Kat.sine(0.51).range(-26.5, -12.5),
-            ratio = Kat.tri(0.43).range(2.5, 5.5),
-            knee = Kat.saw(0.37).range(0.5, 5.5),
-            attack = Kat.sine(0.61).range(0.0021, 0.0093),
-            release = Kat.ramp(0.29).range(0.051, 0.187),
+            threshold = Kat.sine(0.51.kat).range(from = -26.5.kat, to = -12.5.kat),
+            ratio = Kat.tri(0.43.kat).range(from = 2.5.kat, to = 5.5.kat),
+            knee = Kat.saw(0.37.kat).range(from = 0.5.kat, to = 5.5.kat),
+            attack = Kat.sine(0.61.kat).range(from = 0.0021.kat, to = 0.0093.kat),
+            release = Kat.ramp(0.29.kat).range(from = 0.051.kat, to = 0.187.kat),
         ).duck(
-            orbit = TRIGGER_ORBIT,
-            depth = Kat.sine(0.45).range(0.25, 0.75),
-            attack = Kat.tri(0.33).range(0.011, 0.047),
+            orbit = TRIGGER_ORBIT.kat,
+            depth = Kat.sine(0.45.kat).range(from = 0.25.kat, to = 0.75.kat),
+            attack = Kat.tri(0.33.kat).range(from = 0.011.kat, to = 0.047.kat),
         )
     }
 
@@ -313,9 +289,9 @@ object AllocationCases {
      * `WetDryMix`'s `coerceIn`). The body's wet crosses 0, so the bypass, its landing and the return from rest run too.
      */
     internal val resonatorChain: KatalystDsl = katalyst {
-        it.body(wet = Kat.sine(0.85).range(-0.2, 0.7), material = "wood") { b ->
-            b.floor(Kat.sine(0.65).range(0.25, 0.6))
-        }.vowel(wet = Kat.tri(0.95).range(0.3, 0.8), vowel = "a") { b -> b.floor(Kat.sine(0.55).range(0.1, 0.45)) }
+        it.body(wet = Kat.sine(0.85.kat).range(from = -0.2.kat, to = 0.7.kat), material = "wood") { b ->
+            b.floor(Kat.sine(0.65.kat).range(from = 0.25.kat, to = 0.6.kat))
+        }.vowel(wet = Kat.tri(0.95.kat).range(from = 0.3.kat, to = 0.8.kat), vowel = "a") { b -> b.floor(Kat.sine(0.55.kat).range(from = 0.1.kat, to = 0.45.kat)) }
     }
 
     /**
@@ -325,8 +301,8 @@ object AllocationCases {
      * too, written into the primitive `Reverb.lowpass` every block (step 5b).
      */
     internal val gatesChain: KatalystDsl = katalyst {
-        it.delay(wet = 0.35, time = Kat.sine(0.3).range(-0.04, 0.26), feedback = 0.45)
-            .reverb(wet = 0.3, size = Kat.sine(0.2).range(-1.5, 6.5), lowpass = Kat.sine(0.27).range(2100.5, 6300.5))
+        it.delay(wet = 0.35.kat, time = Kat.sine(0.3.kat).range(from = -0.04.kat, to = 0.26.kat), feedback = 0.45.kat)
+            .reverb(wet = 0.3.kat, size = Kat.sine(0.2.kat).range(from = -1.5.kat, to = 6.5.kat), lowpass = Kat.sine(0.27.kat).range(from = 2100.5.kat, to = 6300.5.kat))
     }
 
     /**
@@ -334,7 +310,7 @@ object AllocationCases {
      * expression is evaluated on every resolve, the most a slot expression ever costs (a song's map changes per note).
      */
     internal val remapExpressionChain: KatalystDsl = katalyst {
-        it.gain(Kat.param("kat.g", 0.6).times(1.1).plus(0.013))
+        it.gain(Kat.param("kat.g", 0.6).times(1.1.kat).plus(0.013.kat))
     }
 
     /**
@@ -344,46 +320,46 @@ object AllocationCases {
      * trigger orbit.
      */
     internal val mixedChain: KatalystDsl = mixed(
-        bodyWet = Kat.sine(0.85).range(0.2, 0.7),
-        vowelWet = Kat.tri(0.95).range(0.3, 0.8),
-        delayTime = Kat.saw(0.31).range(0.21, 0.26),
-        reverbSize = Kat.perlin(0.0031).range(3.5, 6.5),
-        phaserCenter = Kat.sine(0.23).range(450.0, 1650.0),
-        threshold = Kat.ramp(0.51).range(-26.5, -12.5),
-        gain = Kat.berlin(0.0027).range(0.75, 0.95),
-        duckDepth = Kat.square(0.45).range(0.25, 0.75),
+        bodyWet = Kat.sine(0.85.kat).range(from = 0.2.kat, to = 0.7.kat),
+        vowelWet = Kat.tri(0.95.kat).range(from = 0.3.kat, to = 0.8.kat),
+        delayTime = Kat.saw(0.31.kat).range(from = 0.21.kat, to = 0.26.kat),
+        reverbSize = Kat.perlin(0.0031.kat).range(from = 3.5.kat, to = 6.5.kat),
+        phaserCenter = Kat.sine(0.23.kat).range(from = 450.0.kat, to = 1650.0.kat),
+        threshold = Kat.ramp(0.51.kat).range(from = -26.5.kat, to = -12.5.kat),
+        gain = Kat.berlin(0.0027.kat).range(from = 0.75.kat, to = 0.95.kat),
+        duckDepth = Kat.square(0.45.kat).range(from = 0.25.kat, to = 0.75.kat),
     )
 
     /** [mixedChain] with each moving knob a constant in its range (the sweep's slot expression stays). */
     internal val mixedConstant: KatalystDsl = mixed(
-        bodyWet = 0.45,
-        vowelWet = 0.55,
-        delayTime = 0.235,
-        reverbSize = 5.1,
-        phaserCenter = 1050.0,
-        threshold = -19.5,
-        gain = 0.85,
-        duckDepth = 0.5,
+        bodyWet = 0.45.kat,
+        vowelWet = 0.55.kat,
+        delayTime = 0.235.kat,
+        reverbSize = 5.1.kat,
+        phaserCenter = 1050.0.kat,
+        threshold = -19.5.kat,
+        gain = 0.85.kat,
+        duckDepth = 0.5.kat,
     )
 
     private fun mixed(
-        bodyWet: IgnitorDslLike,
-        vowelWet: IgnitorDslLike,
-        delayTime: IgnitorDslLike,
-        reverbSize: IgnitorDslLike,
-        phaserCenter: IgnitorDslLike,
-        threshold: IgnitorDslLike,
-        gain: IgnitorDslLike,
-        duckDepth: IgnitorDslLike,
+        bodyWet: KatalystKnobDsl,
+        vowelWet: KatalystKnobDsl,
+        delayTime: KatalystKnobDsl,
+        reverbSize: KatalystKnobDsl,
+        phaserCenter: KatalystKnobDsl,
+        threshold: KatalystKnobDsl,
+        gain: KatalystKnobDsl,
+        duckDepth: KatalystKnobDsl,
     ): KatalystDsl = katalyst {
         it.body(wet = bodyWet, material = "wood")
             .vowel(wet = vowelWet, vowel = "a")
-            .delay(wet = 0.3, time = delayTime, feedback = 0.45)
-            .reverb(wet = 0.3, size = reverbSize)
-            .phaser(wet = 0.5, rate = 0.55, center = phaserCenter, sweep = Kat.param("kat.sweep", 600.0).times(1.3))
-            .compressor(threshold = threshold, ratio = 3.5)
+            .delay(wet = 0.3.kat, time = delayTime, feedback = 0.45.kat)
+            .reverb(wet = 0.3.kat, size = reverbSize)
+            .phaser(wet = 0.5.kat, rate = 0.55.kat, center = phaserCenter, sweep = Kat.param("kat.sweep", 600.0).times(1.3.kat))
+            .compressor(threshold = threshold, ratio = 3.5.kat)
             .gain(gain)
-            .duck(orbit = TRIGGER_ORBIT, depth = duckDepth)
+            .duck(orbit = TRIGGER_ORBIT.kat, depth = duckDepth)
     }
 
     /** The cases, in scoreboard order. */
@@ -420,7 +396,7 @@ object AllocationCases {
             name = "tube4x",
             engine = false,
             sound = AUTHORED,
-            dsl = saw().distort(amount = 0.5, shape = "tube", oversample = 4),
+            dsl = saw().distort(amount = 0.5.ign, shape = "tube", oversample = 4.ign),
         ),
         Case(name = "C-full", engine = false, sound = "saw", params = full),
         // A new owner, and so a new param map instance, on the orbit every block: the chain re-resolves its 27 slot
@@ -455,13 +431,13 @@ object AllocationCases {
             newNoteEveryBlocks = GLIDE_NOTE_BLOCKS,
         ),
         // The bus distort at its default 2x oversampling.
-        Case(name = "E-distort", engine = true, sound = "saw", chain = katalyst { it.distort(amount = 0.3) }),
+        Case(name = "E-distort", engine = true, sound = "saw", chain = katalyst { it.distort(amount = 0.3.kat) }),
         // A compressor without lookahead, then a limiter with one (its delay ring); the threshold sits under the saw.
         Case(
             name = "E-comp",
             engine = true,
             sound = "saw",
-            chain = katalyst { it.compressor(threshold = -18.0, ratio = 4.0).limiter(threshold = -6.0, lookahead = 0.002) },
+            chain = katalyst { it.compressor(threshold = -18.0.kat, ratio = 4.0.kat).limiter(threshold = -6.0.kat, lookahead = 0.002) },
         ),
         // Two bells and a tap, the sections the Katalyst `eq` door writes (the crossovers are E-bands').
         Case(
@@ -469,16 +445,16 @@ object AllocationCases {
             engine = true,
             sound = "saw",
             chain = katalyst {
-                it.eq { e -> e.band(freq = 180.0, db = -3.5).band(freq = 2500.0, q = 1.3, db = 4.5).tap(freq = 800.0, gain = 0.6) }
+                it.eq { e -> e.band(freq = 180.0.kat, db = (-3.5).kat).band(freq = 2500.0.kat, q = 1.3.kat, db = 4.5.kat).tap(freq = 800.0.kat, gain = 0.6.kat) }
             },
         ),
-        Case(name = "E-gain", engine = true, sound = "saw", chain = katalyst { it.gain(0.7) }),
+        Case(name = "E-gain", engine = true, sound = "saw", chain = katalyst { it.gain(0.7.kat) }),
         // The duck listens to a second saw on its own orbit; its envelope follows that orbit's mix every block.
         Case(
             name = "E-duck",
             engine = true,
             sound = "saw",
-            chain = katalyst { it.duck(orbit = TRIGGER_ORBIT, depth = 0.6) },
+            chain = katalyst { it.duck(orbit = TRIGGER_ORBIT.kat, depth = 0.6.kat) },
             duckTrigger = true,
         ),
         // Parallel distortion: a distorted branch beside an empty one, which gets the distort's phase twin.
@@ -486,7 +462,7 @@ object AllocationCases {
             name = "E-parallel",
             engine = true,
             sound = "saw",
-            chain = katalyst { it.parallel({ b -> b.distort(amount = 0.4) }, { b -> b }) },
+            chain = katalyst { it.parallel({ b -> b.distort(amount = 0.4.kat) }, { b -> b }) },
         ),
         // Three bands with the mids distorted (the `bands` door's own example): the crossovers, the all-pass matching
         // and the phase twins of the other two bands.
@@ -494,14 +470,14 @@ object AllocationCases {
             name = "E-bands",
             engine = true,
             sound = "saw",
-            chain = katalyst { it.bands { b -> b.cut(150.0).band { m -> m.distort(amount = 0.15) }.cut(5000.0) } },
+            chain = katalyst { it.bands { b -> b.cut(150.0).band { m -> m.distort(amount = 0.15.kat) }.cut(5000.0) } },
         ),
         // A vowel sung through a body: the one resonator class, both kinds.
         Case(
             name = "E-body-vowel",
             engine = true,
             sound = "saw",
-            chain = katalyst { it.body(wet = 0.5, material = "wood").vowel(wet = 0.5, vowel = "a") },
+            chain = katalyst { it.body(wet = 0.5.kat, material = "wood").vowel(wet = 0.5.kat, vowel = "a") },
         ),
         // The knob expressions and the modulators (step 6 of the knob expressions task): each chain moves a knob every
         // block through the chain's hook.

@@ -17,6 +17,7 @@ import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createSynthVoice
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.fm
+import io.peekandpoke.klang.audio_bridge.ign
 import kotlin.random.Random
 
 /**
@@ -139,7 +140,7 @@ class SynthVoiceTest : StringSpec({
         // The FM in the tree, as `classic()`'s FM stage places it for sprudel's `fm` since pitch pipeline step 4.
         val voice = createSynthVoice(
             signal = IgnitorDsl.Sine(analog = IgnitorDsl.Constant(0.0))
-                .fm(modulator = IgnitorDsl.Sine(analog = IgnitorDsl.Constant(0.0)), ratio = 2.0, depth = 100.0)
+                .fm(modulator = IgnitorDsl.Sine(analog = IgnitorDsl.Constant(0.0)), ratio = 2.0.ign, depth = 100.0.ign)
                 .toExciter(random = Random(1)),
             freqHz = 440.0,
             envelope = TestEnvelope(

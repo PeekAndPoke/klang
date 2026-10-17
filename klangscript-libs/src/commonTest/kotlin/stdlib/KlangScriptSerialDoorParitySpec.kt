@@ -11,8 +11,11 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.KatalystBuilder
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
+import io.peekandpoke.klang.audio_bridge.kat
 import io.peekandpoke.klang.audio_bridge.serial
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
@@ -93,16 +96,21 @@ class KlangScriptSerialDoorParitySpec : StringSpec({
 
     "Katalyst: the Kotlin door builds the same chain as the script door" {
         val kotlin = KatalystBuilder(KatalystDsl(emptyList()))
-            .serial({ it.reverb(0.25, 7.0) }, { it.gain(1.4) })
+            .serial({ it.reverb(wet = 0.25.kat, size = 7.kat) }, { it.gain(1.4.kat) })
             .node
 
         kotlin shouldBe katalyst("Katalyst(k => k.serial(k => k.reverb(0.25, 7), k => k.gain(1.4)))")
+        // Written out: the stages first to last.
+        kotlin shouldBe KatalystDsl.of(
+            KatalystStageDsl.Reverb(wet = KatalystKnobDsl.Constant(0.25), size = KatalystKnobDsl.Constant(7.0)),
+            KatalystStageDsl.Gain(gain = KatalystKnobDsl.Constant(1.4)),
+        )
     }
 
     "Katalyst: with no stage, serial() is the chain itself, on both doors" {
         katalyst("Katalyst(k => k.gain(1.4).serial())") shouldBe katalyst("Katalyst(k => k.gain(1.4))")
 
-        val builder = KatalystBuilder(KatalystDsl(emptyList())).gain(1.4)
+        val builder = KatalystBuilder(KatalystDsl(emptyList())).gain(1.4.kat)
         builder.serial() shouldBe builder
     }
 

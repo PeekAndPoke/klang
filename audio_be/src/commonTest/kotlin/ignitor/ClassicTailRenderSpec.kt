@@ -17,6 +17,7 @@ import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_ATTACK_SEC
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_DECAY_SEC
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_SUSTAIN_LEVEL
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.onepole
 import io.peekandpoke.klang.audio_bridge.optimize
 import io.peekandpoke.klang.common.infra.toKlangMap
@@ -35,9 +36,8 @@ class ClassicTailRenderSpec : StringSpec({
     val tail = saw.classic()
 
     val envelopeAlone = saw.adsr(
-        attack = VOICE_ADSR_ATTACK_SEC, decay = VOICE_ADSR_DECAY_SEC, sustain = VOICE_ADSR_SUSTAIN_LEVEL, release = VOICE_ADSR_RELEASE_SEC,
-        declick = ENV_DECLICK_SECONDS,
-    )
+        attack = VOICE_ADSR_ATTACK_SEC.ign, decay = VOICE_ADSR_DECAY_SEC.ign, sustain = VOICE_ADSR_SUSTAIN_LEVEL.ign, release = VOICE_ADSR_RELEASE_SEC.ign,
+    ) { it.declick(ENV_DECLICK_SECONDS.ign) }
 
     "an unwritten classic() renders the envelope alone, bit for bit" {
         val expected = renderVoiceWindows(envelopeAlone)
@@ -53,10 +53,9 @@ class ClassicTailRenderSpec : StringSpec({
         // Since step 10 (it sat on a built-in's source before, the same place): `onepole` 900 is `saw.onepole(900)`
         // under the unwritten envelope, bit for bit, and an unwritten slot builds no onepole (the row above).
         val expected = renderVoiceWindows(
-            saw.onepole(900.0).adsr(
-                attack = VOICE_ADSR_ATTACK_SEC, decay = VOICE_ADSR_DECAY_SEC, sustain = VOICE_ADSR_SUSTAIN_LEVEL, release = VOICE_ADSR_RELEASE_SEC,
-                declick = ENV_DECLICK_SECONDS,
-            ),
+            saw.onepole(900.0.ign).adsr(
+                attack = VOICE_ADSR_ATTACK_SEC.ign, decay = VOICE_ADSR_DECAY_SEC.ign, sustain = VOICE_ADSR_SUSTAIN_LEVEL.ign, release = VOICE_ADSR_RELEASE_SEC.ign,
+            ) { it.declick(ENV_DECLICK_SECONDS.ign) },
         )
 
         withClue("raw tree") { firstBitMismatch(a = expected, b = renderVoiceWindows(tail, mapOf("onepole" to 900.0))) shouldBe -1 }
@@ -64,10 +63,9 @@ class ClassicTailRenderSpec : StringSpec({
         withClue("engaged: the onepole changes the sound") { firstBitMismatch(a = renderVoiceWindows(envelopeAlone), b = expected) shouldNotBe -1 }
         withClue("in front of crush, not behind it: the other order is a different signal") {
             val behind = renderVoiceWindows(
-                IgnitorDsl.Crush(inner = saw, bits = IgnitorDsl.Constant(5.0)).onepole(900.0).adsr(
-                    attack = VOICE_ADSR_ATTACK_SEC, decay = VOICE_ADSR_DECAY_SEC, sustain = VOICE_ADSR_SUSTAIN_LEVEL, release = VOICE_ADSR_RELEASE_SEC,
-                    declick = ENV_DECLICK_SECONDS,
-                ),
+                IgnitorDsl.Crush(inner = saw, bits = IgnitorDsl.Constant(5.0)).onepole(900.0.ign).adsr(
+                    attack = VOICE_ADSR_ATTACK_SEC.ign, decay = VOICE_ADSR_DECAY_SEC.ign, sustain = VOICE_ADSR_SUSTAIN_LEVEL.ign, release = VOICE_ADSR_RELEASE_SEC.ign,
+                ) { it.declick(ENV_DECLICK_SECONDS.ign) },
             )
             val inFront = renderVoiceWindows(tail, mapOf("onepole" to 900.0, "crush.bits" to 5.0))
 

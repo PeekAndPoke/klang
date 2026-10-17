@@ -431,6 +431,8 @@ object Deps {
         fun KotlinDependencyHandler.codemirrorAutocomplete() = npm("@codemirror/autocomplete", "6.20.1")
         // https://www.npmjs.com/package/@codemirror/lint
         fun KotlinDependencyHandler.codemirrorLint() = npm("@codemirror/lint", "6.9.5")
+        // https://www.npmjs.com/package/@replit/codemirror-minimap
+        fun KotlinDependencyHandler.codemirrorMinimap() = npm("@replit/codemirror-minimap", "0.5.2")
         // https://www.npmjs.com/package/@lezer/highlight
         fun KotlinDependencyHandler.lezerHighlight() = npm("@lezer/highlight", "1.2.3")
     }

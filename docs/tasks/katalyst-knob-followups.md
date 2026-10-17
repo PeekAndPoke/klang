@@ -10,7 +10,9 @@
 
 The `eq` sections stay `IgnitorDsl.EqSection`, shared with the voice and with `bands`, and each section knob takes a
 number or a `Kat.param` (E2, the maintainer's choice, "keep shared, slots only"); an expression or a modulator there
-is a script error (`toEqSectionKnob` in `klangscript-libs/.../KatalystBuilders.kt`). E1 is a section hierarchy of the
+is a script error on the script door (`toEqSectionKatalystKnob` in `klangscript-libs/.../KatalystBuilders.kt`) and an
+`IllegalArgumentException` at build time on the typed Kotlin door (Q49; the one helper `eqSectionKnobOrNull` in
+`audio_bridge/.../EffectBuilders.kt`, since the typed-doors rollout S3a). E1 is a section hierarchy of the
 Katalyst's own on `KatalystKnobDsl`, with `eq` and `bands` split per host: its own task when a song wants a swept bus
 EQ.
 
@@ -34,4 +36,7 @@ The Katalyst's `blend` takes a plain number for `wet`, a recorded asymmetry (`au
 `KatalystBuilders.kt`). `blend` is door sugar, not a stage: it appends a `parallel` of two `gain` stages, whose knobs
 are already `KatalystKnobDsl` with a writer, a glide and the per-block tick. Since step 4's arithmetic, lifting Q14 is
 a door-only change: the dry branch's gain `Constant(1.0).minus(wet)`, the effect branch's gain `wet`, on both doors
-with a door-parity row.
+with a door-parity row. Since the typed-doors rollout S6 (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`) the Kotlin door is a typed member,
+`KatalystBuilder.blend(wet: Double, branch)` in `audio_bridge`, plain because the script takes a plain number; lifting
+Q14 therefore also changes that public Kotlin signature to `wet: KatalystKnobDsl` (`blend(0.3.kat) { ... }`), its NaN
+guard reading only a `Constant`, as the Ignitor's does, and its callers move to `.kat`.

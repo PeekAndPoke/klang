@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.sprudel
 
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.common.infra.toMap
 import io.peekandpoke.klang.common.infra.toKlangMap
 import io.kotest.assertions.withClue
@@ -234,7 +235,7 @@ class ClassicDoorRenderParitySpec : StringSpec({
         "DOOR PARITY: sprudel's tremolo(0.5, 5, \"$shape\") renders what the Ignitor door's tremolo(5, 0.5, \"$shape\") renders" {
             val bag = note("a3").tremolo(0.5, 5, shape).queryArc(0.0, 1.0).first().data.toVoiceData().ignitorParams?.toMap() ?: emptyMap()
             val viaSprudel = render(kotlin, bag)
-            val viaIgnitor = render(IgnitorDsl.Saw().ignitorTremolo(5.0, 0.5, shape).classic(), emptyMap())
+            val viaIgnitor = render(IgnitorDsl.Saw().ignitorTremolo(rate = 5.0.ign, depth = 0.5.ign) { it.shape(shape) }.classic(), emptyMap())
             val bare = render(kotlin, emptyMap())
 
             withClue("engagement: the tremolo moved the render") { viaSprudel.toList() shouldNotBe bare.toList() }

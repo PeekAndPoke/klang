@@ -8,18 +8,62 @@
 package io.peekandpoke.klang.script.stdlib
 
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
-import io.peekandpoke.klang.audio_bridge.DistortionShapes
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.KatalystBandsBuilder
+import io.peekandpoke.klang.audio_bridge.KatalystBodyBuilder
+import io.peekandpoke.klang.audio_bridge.KatalystBuilder
+import io.peekandpoke.klang.audio_bridge.KatalystDelayBuilder
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystEqBuilder
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
+import io.peekandpoke.klang.audio_bridge.KatalystPhaserBuilder
+import io.peekandpoke.klang.audio_bridge.KatalystRampBuilder
+import io.peekandpoke.klang.audio_bridge.KatalystSawBuilder
+import io.peekandpoke.klang.audio_bridge.KatalystSineBuilder
+import io.peekandpoke.klang.audio_bridge.KatalystSquareBuilder
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
+import io.peekandpoke.klang.audio_bridge.KatalystTriBuilder
+import io.peekandpoke.klang.audio_bridge.KatalystVowelBuilder
 import io.peekandpoke.klang.audio_bridge.VowelBands
+import io.peekandpoke.klang.audio_bridge.abs
 import io.peekandpoke.klang.audio_bridge.constants.AUTHORED_LIMITER_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.AUTHORED_LIMITER_LOOKAHEAD_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.BODY_WET
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_ATTACK_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_KNEE_DB
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_LOOKAHEAD_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RATIO
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RELEASE_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_THRESHOLD_DB
+import io.peekandpoke.klang.audio_bridge.constants.DELAY_FEEDBACK
+import io.peekandpoke.klang.audio_bridge.constants.DELAY_TIME_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.DELAY_WET
+import io.peekandpoke.klang.audio_bridge.constants.DISTORT_AMOUNT
+import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.DUCK_DEPTH
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_KNEE_DB
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_RATIO
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_RELEASE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_THRESHOLD_DB
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_CENTER_HZ
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_RATE_HZ
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_SWEEP_HZ
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_WET
+import io.peekandpoke.klang.audio_bridge.constants.REVERB_SIZE
+import io.peekandpoke.klang.audio_bridge.constants.REVERB_WET
+import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
+import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
+import io.peekandpoke.klang.audio_bridge.div
+import io.peekandpoke.klang.audio_bridge.eqSectionKnobOrNull
+import io.peekandpoke.klang.audio_bridge.kat
+import io.peekandpoke.klang.audio_bridge.max
+import io.peekandpoke.klang.audio_bridge.min
+import io.peekandpoke.klang.audio_bridge.minus
+import io.peekandpoke.klang.audio_bridge.neg
+import io.peekandpoke.klang.audio_bridge.plus
+import io.peekandpoke.klang.audio_bridge.pow
+import io.peekandpoke.klang.audio_bridge.range
+import io.peekandpoke.klang.audio_bridge.times
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
@@ -54,7 +98,16 @@ import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
  * call; the reason is on [toKatalystKnob]. The chain reads its knobs once per block. The exceptions are the knobs fixed
  * when the chain is built, plain numbers or names: the compressor's and the limiter's `lookahead` (it sizes a delay
  * ring) and `distort`'s `shape` and `oversample`; the `eq` sections, whose knobs take a number or a param only
- * ([toEqSectionKnob]).
+ * ([toEqSectionKatalystKnob], over `eqSectionKnobOrNull` in `audio_bridge`).
+ *
+ * The builders themselves ([KatalystBuilder], its stage builders and the modulators' builders) and the knob arithmetic
+ * live in `audio_bridge` (`KatalystBuilders.kt`, `KatalystKnobDsl.kt` there, since the typed-doors rollout S5) with
+ * TYPED members, the one Kotlin door. Every script knob below is an `internal`, renamed variant (`scriptReverb`, the
+ * script word in `name = "reverb"`) that converts its arguments once ([toKatalystKnob]) and calls the member; an
+ * omitted (`null`) argument becomes the member's own default SYMBOL (`REVERB_WET.kat`), never a retyped literal
+ * (`/dsl-design` section 3, the typed-door pattern). `serial`, `parallel`, `blend` and `bands` are typed members too
+ * since rollout S6; their variants wrap every script stage, branch and band processor in its check ([checkedStage])
+ * and keep the `blend` `wet` check script-side.
  */
 
 /**
@@ -62,7 +115,7 @@ import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
  * [KatalystKnobDsl.Constant], a Katalyst knob (`Kat.param(...)`, `Kat.slot.*`, an expression over them such as
  * `Kat.param("beat", 0.5).div(4)`) as it is. The one conversion of every Katalyst builder knob and of every operand of
  * a knob expression, the Katalyst `eq` sections included (they map the result onto their Ignitor section and refuse
- * an expression, see [toEqSectionKnob]).
+ * an expression, see [toEqSectionKatalystKnob]).
  *
  * ANY [IgnitorDsl] is a [KlangScriptTypeError]: the Katalyst has its own knob language (decision D1 of
  * `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`, `docs/plans/future/signal-graph-engine.md` §6.10), and an
@@ -83,7 +136,7 @@ import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
  * guard (`guardNativeCall` in klangscript) gives them the location of the stage call, so the editor marks
  * `k.reverb(...)`. Guard: `KlangScriptKatalystDoorParitySpec`, "a wrong knob value is reported at the stage call".
  */
-fun IgnitorDslLike.toKatalystKnob(): KatalystKnobDsl = when (this) {
+internal fun IgnitorDslLike.toKatalystKnob(): KatalystKnobDsl = when (this) {
     is KatalystKnobDsl -> this
     is Number -> KatalystKnobDsl.Constant(this.toDouble())
     is IgnitorDsl.Param -> throw KlangScriptTypeError("an Ignitor param in a Katalyst chain; use Kat.param", operation = "Katalyst knob")
@@ -94,45 +147,32 @@ fun IgnitorDslLike.toKatalystKnob(): KatalystKnobDsl = when (this) {
 }
 
 /**
- * A Katalyst knob as the [IgnitorDsl] an EQ section carries: the residue of mixing the two DSLs that decision Q2 of
- * `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md` keeps (maintainer, 2026-10-11, E2: "keep shared, slots only").
- * The `eq`
- * stage's sections are [IgnitorDsl.EqSection], the one section law shared with the voice EQ and with `bands`, so a
- * bus section's knob is an Ignitor leaf: a [KatalystKnobDsl.Constant] becomes an [IgnitorDsl.Constant] and a
- * [KatalystKnobDsl.Param] the [IgnitorDsl.Param] of the same name and default, which the engine reads from the
- * orbit's `katp` state (`KatalystChainBuilder.eqKnob`). Recorded asymmetry: a section knob takes a number or a
- * `Kat.param` only, never what a stage knob may take beyond that: a Katalyst expression is a [KlangScriptTypeError]
- * ("a Katalyst eq section takes a number or a Kat.param; got a Kat expression"), where on a stage knob it listens. A
- * Katalyst section hierarchy (E1) is its own task, for the day a song wants a swept bus EQ.
+ * A Katalyst `eq` section's script argument as its knob: converted like every chain knob ([toKatalystKnob]), then
+ * PRE-CHECKED against the one section helper (`eqSectionKnobOrNull` in `audio_bridge`, with the reason for the
+ * recorded asymmetry): a Katalyst expression is a [KlangScriptTypeError] here, with the script's own words ("a
+ * Katalyst eq section takes a number or a Kat.param; got a Kat expression"), before the typed builder would refuse
+ * it at build time (Q49 of `docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`; `/dsl-design` section 3, the typed-door pattern,
+ * point 5).
  */
-internal fun KatalystKnobDsl.toEqSectionKnob(): IgnitorDsl = when (this) {
-    is KatalystKnobDsl.Constant -> IgnitorDsl.Constant(value)
-    is KatalystKnobDsl.Param -> IgnitorDsl.Param(name = name, default = default, description = description)
-
-    is KatalystKnobDsl.Plus, is KatalystKnobDsl.Minus, is KatalystKnobDsl.Times, is KatalystKnobDsl.Div,
-    is KatalystKnobDsl.Pow, is KatalystKnobDsl.Min, is KatalystKnobDsl.Max, is KatalystKnobDsl.Neg,
-    is KatalystKnobDsl.Abs, is KatalystKnobDsl.Range,
-    is KatalystKnobDsl.Sine, is KatalystKnobDsl.Saw, is KatalystKnobDsl.Ramp, is KatalystKnobDsl.Tri,
-    is KatalystKnobDsl.Square, is KatalystKnobDsl.PerlinNoise, is KatalystKnobDsl.BerlinNoise,
-    -> throw KlangScriptTypeError(
-        "a Katalyst eq section takes a number or a Kat.param; got a Kat expression",
-        operation = "Katalyst eq",
-    )
+internal fun IgnitorDslLike.toEqSectionKatalystKnob(): KatalystKnobDsl = toKatalystKnob().also { knob ->
+    if (knob.eqSectionKnobOrNull() == null) {
+        throw KlangScriptTypeError(
+            "a Katalyst eq section takes a number or a Kat.param; got a Kat expression",
+            operation = "Katalyst eq",
+        )
+    }
 }
 
 // ── The chain ────────────────────────────────────────────────────────────────
 
-/**
- * Builder for a [KatalystDsl] chain, handed to the `configure` lambda of `Katalyst(...)`. Knobs:
+/*
+ * [KatalystBuilder] (`audio_bridge`) is handed to the `configure` lambda of `Katalyst(...)`. Knobs:
  * `classic`, `body`, `vowel`, `delay`, `reverb`, `phaser`, `compressor`, `limiter`, `distort`, `duck`, `eq`,
  * `gain`, the arithmetic of the Ignitor (`plus`, `minus`, `times`, `div`, `neg`, `abs`, `pow`, `min`, `max`, with its
  * aliases), each appending a stage (`limiter` appends a compressor with limiter numbers), `serial`,
  * which runs the builder through functions of stages in order, `parallel`, which runs branches side by side and
  * sums them, and `bands`, which splits the bus into frequency bands.
  */
-data class KatalystBuilder(val node: KatalystDsl) {
-    internal fun append(stage: KatalystStageDsl): KatalystBuilder = copy(node = KatalystDsl(node.stages + stage))
-}
 
 /**
  * Appends the familiar block at once: body, vowel, delay, reverb, phaser, compressor, the group
@@ -154,45 +194,8 @@ data class KatalystBuilder(val node: KatalystDsl) {
  * after it is how you set one: the cylinder runs exactly one ducking effect, so the LAST duck in
  * the chain wins.
  */
-@KlangScript.Function
-fun KatalystBuilder.classic(): KatalystBuilder {
-    if (node.stages.containsInOrder(KatalystDsl.classic.stages)) {
-        return this
-    }
-
-    return copy(node = KatalystDsl(node.stages + KatalystDsl.classic.stages))
-}
-
-/**
- * True when [other] appears in this list as a contiguous run, which is what "the classic block is
- * already in this builder" means. Content equality, not identity: a chain hand-built from the same
- * stages is the same chain everywhere else in the Katalyst, so it must be here too.
- *
- * A plain double loop over two short lists, run once per `classic()` call at construction time and
- * never on an audio path.
- */
-private fun List<KatalystStageDsl>.containsInOrder(other: List<KatalystStageDsl>): Boolean {
-    if (other.isEmpty() || other.size > size) {
-        return false
-    }
-
-    for (start in 0..(size - other.size)) {
-        var matches = true
-
-        for (i in other.indices) {
-            if (this[start + i] != other[i]) {
-                matches = false
-                break
-            }
-        }
-
-        if (matches) {
-            return true
-        }
-    }
-
-    return false
-}
+@KlangScript.Function(name = "classic")
+internal fun KatalystBuilder.scriptClassic(): KatalystBuilder = this.classic()
 
 /**
  * Appends a resonant body: a bank of narrow modes over a broadband floor, the box a sound sits in.
@@ -213,24 +216,15 @@ private fun List<KatalystStageDsl>.containsInOrder(other: List<KatalystStageDsl>
  *   `body(material = "wood")`, or `katp("body.material", n)` for the number.
  * @param configure receives the [KatalystBodyBuilder] (knob: `floor`) and returns it.
  */
-@KlangScript.Function
-fun KatalystBuilder.body(
+@KlangScript.Function(name = "body")
+internal fun KatalystBuilder.scriptBody(
     wet: IgnitorDslLike? = null,
     material: IgnitorDslLike? = null,
     configure: ((KatalystBodyBuilder) -> KatalystBodyBuilder)? = null,
-): KatalystBuilder {
-    val bare = KatalystStageDsl.Body()
-
-    return append(
-        KatalystBodyBuilder(
-            KatalystStageDsl.Body(
-                material = catalogueIndex(material, bare.material, BodyMaterials::indexOf, constant = { KatalystKnobDsl.Constant(it) }, knob = { it.toKatalystKnob() }),
-                wet = wet?.toKatalystKnob() ?: bare.wet,
-                floor = bare.floor,
-            )
-        ).configuredBy("Katalyst body", configure).node
-    )
-}
+): KatalystBuilder = this.body(
+    material = catalogueIndex(material, SLOT_UNSET.kat, BodyMaterials::indexOf, constant = { it.kat }, knob = { it.toKatalystKnob() }),
+    wet = wet?.toKatalystKnob() ?: BODY_WET.kat,
+) { it.configuredBy("Katalyst body", configure) }
 
 /**
  * Appends a formant bank: the vowel a sound sings.
@@ -250,24 +244,15 @@ fun KatalystBuilder.body(
  *   `vowel(vowel = "a")`, or `katp("vowel.vowel", n)` for the number.
  * @param configure receives the [KatalystVowelBuilder] (knob: `floor`) and returns it.
  */
-@KlangScript.Function
-fun KatalystBuilder.vowel(
+@KlangScript.Function(name = "vowel")
+internal fun KatalystBuilder.scriptVowel(
     wet: IgnitorDslLike? = null,
     vowel: IgnitorDslLike? = null,
     configure: ((KatalystVowelBuilder) -> KatalystVowelBuilder)? = null,
-): KatalystBuilder {
-    val bare = KatalystStageDsl.Vowel()
-
-    return append(
-        KatalystVowelBuilder(
-            KatalystStageDsl.Vowel(
-                vowel = catalogueIndex(vowel, bare.vowel, VowelBands::indexOf, constant = { KatalystKnobDsl.Constant(it) }, knob = { it.toKatalystKnob() }),
-                wet = wet?.toKatalystKnob() ?: bare.wet,
-                floor = bare.floor,
-            )
-        ).configuredBy("Katalyst vowel", configure).node
-    )
-}
+): KatalystBuilder = this.vowel(
+    vowel = catalogueIndex(vowel, SLOT_UNSET.kat, VowelBands::indexOf, constant = { it.kat }, knob = { it.toKatalystKnob() }),
+    wet = wet?.toKatalystKnob() ?: VOWEL_WET.kat,
+) { it.configuredBy("Katalyst vowel", configure) }
 
 /**
  * Appends an orbit delay (the shared delay line).
@@ -280,26 +265,17 @@ fun KatalystBuilder.vowel(
  *   `delay(feedback = ...)`.
  * @param configure receives the [KatalystDelayBuilder] (knob: `cap`) and returns it.
  */
-@KlangScript.Function
-fun KatalystBuilder.delay(
+@KlangScript.Function(name = "delay")
+internal fun KatalystBuilder.scriptDelay(
     wet: IgnitorDslLike? = null,
     time: IgnitorDslLike? = null,
     feedback: IgnitorDslLike? = null,
     configure: ((KatalystDelayBuilder) -> KatalystDelayBuilder)? = null,
-): KatalystBuilder {
-    val bare = KatalystStageDsl.Delay()
-
-    return append(
-        KatalystDelayBuilder(
-            KatalystStageDsl.Delay(
-                wet = wet?.toKatalystKnob() ?: bare.wet,
-                time = time?.toKatalystKnob() ?: bare.time,
-                feedback = feedback?.toKatalystKnob() ?: bare.feedback,
-                cap = bare.cap,
-            )
-        ).configuredBy("Katalyst delay", configure).node
-    )
-}
+): KatalystBuilder = this.delay(
+    wet = wet?.toKatalystKnob() ?: DELAY_WET.kat,
+    time = time?.toKatalystKnob() ?: DELAY_TIME_SECONDS.kat,
+    feedback = feedback?.toKatalystKnob() ?: DELAY_FEEDBACK.kat,
+) { it.configuredBy("Katalyst delay", configure) }
 
 /**
  * Appends an orbit reverb (the shared Freeverb). Flat: every knob is a musical input.
@@ -312,22 +288,17 @@ fun KatalystBuilder.delay(
  * @param lowpass high-frequency damping of the tail as a lowpass cutoff in Hz: lower is darker.
  *   Omitted, the engine's fixed default damping applies. Orbit twin: `reverb(lowpass = ...)`.
  */
-@KlangScript.Function
-fun KatalystBuilder.reverb(
+@KlangScript.Function(name = "reverb")
+internal fun KatalystBuilder.scriptReverb(
     wet: IgnitorDslLike? = null,
     size: IgnitorDslLike? = null,
     lowpass: IgnitorDslLike? = null,
-): KatalystBuilder {
-    val bare = KatalystStageDsl.Reverb()
-
-    return append(
-        KatalystStageDsl.Reverb(
-            wet = wet?.toKatalystKnob() ?: bare.wet,
-            size = size?.toKatalystKnob() ?: bare.size,
-            lowpass = lowpass?.toKatalystKnob() ?: bare.lowpass,
-        )
-    )
-}
+): KatalystBuilder = this.reverb(
+    wet = wet?.toKatalystKnob() ?: REVERB_WET.kat,
+    size = size?.toKatalystKnob() ?: REVERB_SIZE.kat,
+    // `null` is the bare stage's own value here (the engine's damping), not a stand-in for a default.
+    lowpass = lowpass?.toKatalystKnob(),
+)
 
 /**
  * Appends an orbit phaser: a sweeping all-pass notch comb.
@@ -342,28 +313,19 @@ fun KatalystBuilder.reverb(
  *   `phaser(sweep = ...)`.
  * @param configure receives the [KatalystPhaserBuilder] (knob: `floor`) and returns it.
  */
-@KlangScript.Function
-fun KatalystBuilder.phaser(
+@KlangScript.Function(name = "phaser")
+internal fun KatalystBuilder.scriptPhaser(
     wet: IgnitorDslLike? = null,
     rate: IgnitorDslLike? = null,
     center: IgnitorDslLike? = null,
     sweep: IgnitorDslLike? = null,
     configure: ((KatalystPhaserBuilder) -> KatalystPhaserBuilder)? = null,
-): KatalystBuilder {
-    val bare = KatalystStageDsl.Phaser()
-
-    return append(
-        KatalystPhaserBuilder(
-            KatalystStageDsl.Phaser(
-                rate = rate?.toKatalystKnob() ?: bare.rate,
-                wet = wet?.toKatalystKnob() ?: bare.wet,
-                center = center?.toKatalystKnob() ?: bare.center,
-                sweep = sweep?.toKatalystKnob() ?: bare.sweep,
-                floor = bare.floor,
-            )
-        ).configuredBy("Katalyst phaser", configure).node
-    )
-}
+): KatalystBuilder = this.phaser(
+    rate = rate?.toKatalystKnob() ?: PHASER_RATE_HZ.kat,
+    wet = wet?.toKatalystKnob() ?: PHASER_WET.kat,
+    center = center?.toKatalystKnob() ?: PHASER_CENTER_HZ.kat,
+    sweep = sweep?.toKatalystKnob() ?: PHASER_SWEEP_HZ.kat,
+) { it.configuredBy("Katalyst phaser", configure) }
 
 /**
  * Appends the orbit compressor: the group dynamics. Flat, like every dynamics stage: each knob is
@@ -388,28 +350,22 @@ fun KatalystBuilder.phaser(
  *   by `floor(lookahead * sampleRate)` frames (none below 8 frames, about 0.2 ms), and nothing
  *   compensates. A plain number fixed with the chain, at most 0.05. No orbit twin: declare it here.
  */
-@KlangScript.Function
-fun KatalystBuilder.compressor(
+@KlangScript.Function(name = "compressor")
+internal fun KatalystBuilder.scriptCompressor(
     threshold: IgnitorDslLike? = null,
     ratio: IgnitorDslLike? = null,
     knee: IgnitorDslLike? = null,
     attack: IgnitorDslLike? = null,
     release: IgnitorDslLike? = null,
     lookahead: Double? = null,
-): KatalystBuilder {
-    val bare = KatalystStageDsl.Compressor()
-
-    return append(
-        KatalystStageDsl.Compressor(
-            threshold = threshold?.toKatalystKnob() ?: bare.threshold,
-            ratio = ratio?.toKatalystKnob() ?: bare.ratio,
-            knee = knee?.toKatalystKnob() ?: bare.knee,
-            attack = attack?.toKatalystKnob() ?: bare.attack,
-            release = release?.toKatalystKnob() ?: bare.release,
-            lookahead = lookahead ?: bare.lookahead,
-        )
-    )
-}
+): KatalystBuilder = this.compressor(
+    threshold = threshold?.toKatalystKnob() ?: COMPRESSOR_THRESHOLD_DB.kat,
+    ratio = ratio?.toKatalystKnob() ?: COMPRESSOR_RATIO.kat,
+    knee = knee?.toKatalystKnob() ?: COMPRESSOR_KNEE_DB.kat,
+    attack = attack?.toKatalystKnob() ?: COMPRESSOR_ATTACK_SECONDS.kat,
+    release = release?.toKatalystKnob() ?: COMPRESSOR_RELEASE_SECONDS.kat,
+    lookahead = lookahead ?: COMPRESSOR_LOOKAHEAD_SECONDS,
+)
 
 /**
  * Appends a limiter: the compressor stage with limiter numbers, a ceiling rather than a squeeze.
@@ -443,23 +399,21 @@ fun KatalystBuilder.compressor(
  *   `floor(lookahead * sampleRate)` frames (none below 8 frames, about 0.2 ms), and nothing
  *   compensates. A plain number fixed with the chain, at most 0.05. No orbit twin: declare it here.
  */
-@KlangScript.Function
-fun KatalystBuilder.limiter(
+@KlangScript.Function(name = "limiter")
+internal fun KatalystBuilder.scriptLimiter(
     threshold: IgnitorDslLike? = null,
     ratio: IgnitorDslLike? = null,
     knee: IgnitorDslLike? = null,
     attack: IgnitorDslLike? = null,
     release: IgnitorDslLike? = null,
     lookahead: Double? = null,
-): KatalystBuilder = append(
-    KatalystStageDsl.Compressor(
-        threshold = threshold?.toKatalystKnob() ?: KatalystKnobDsl.Constant(LIMITER_THRESHOLD_DB),
-        ratio = ratio?.toKatalystKnob() ?: KatalystKnobDsl.Constant(LIMITER_RATIO),
-        knee = knee?.toKatalystKnob() ?: KatalystKnobDsl.Constant(LIMITER_KNEE_DB),
-        attack = attack?.toKatalystKnob() ?: KatalystKnobDsl.Constant(AUTHORED_LIMITER_ATTACK_SECONDS),
-        release = release?.toKatalystKnob() ?: KatalystKnobDsl.Constant(LIMITER_RELEASE_SECONDS),
-        lookahead = lookahead ?: AUTHORED_LIMITER_LOOKAHEAD_SECONDS,
-    )
+): KatalystBuilder = this.limiter(
+    threshold = threshold?.toKatalystKnob() ?: LIMITER_THRESHOLD_DB.kat,
+    ratio = ratio?.toKatalystKnob() ?: LIMITER_RATIO.kat,
+    knee = knee?.toKatalystKnob() ?: LIMITER_KNEE_DB.kat,
+    attack = attack?.toKatalystKnob() ?: AUTHORED_LIMITER_ATTACK_SECONDS.kat,
+    release = release?.toKatalystKnob() ?: LIMITER_RELEASE_SECONDS.kat,
+    lookahead = lookahead ?: AUTHORED_LIMITER_LOOKAHEAD_SECONDS,
 )
 
 /**
@@ -488,22 +442,12 @@ fun KatalystBuilder.limiter(
  *   default is 2x, unlike the voice's 0: a bus bends the whole mix, so its aliasing lands on every note.
  *   `oversample = 1` keeps the raw aliased character.
  */
-@KlangScript.Function
-fun KatalystBuilder.distort(
+@KlangScript.Function(name = "distort")
+internal fun KatalystBuilder.scriptDistort(
     amount: IgnitorDslLike? = null,
     shape: String = "soft",
     oversample: Int = 2,
-): KatalystBuilder {
-    val bare = KatalystStageDsl.Distort()
-
-    return append(
-        KatalystStageDsl.Distort(
-            amount = amount?.toKatalystKnob() ?: bare.amount,
-            shape = DistortionShapes.indexOf(shape).toInt(),
-            oversample = oversample,
-        )
-    )
-}
+): KatalystBuilder = this.distort(amount = amount?.toKatalystKnob() ?: DISTORT_AMOUNT.kat, shape = shape, oversample = oversample)
 
 /**
  * Appends a sidechain duck: this orbit is pulled down whenever the orbit it listens to sounds.
@@ -521,40 +465,28 @@ fun KatalystBuilder.distort(
  * @param attack how fast the duck closes, in seconds (default 0.1). Orbit twin:
  *   `duck(attack = ...)`.
  */
-@KlangScript.Function
-fun KatalystBuilder.duck(
+@KlangScript.Function(name = "duck")
+internal fun KatalystBuilder.scriptDuck(
     orbit: IgnitorDslLike? = null,
     depth: IgnitorDslLike? = null,
     attack: IgnitorDslLike? = null,
-): KatalystBuilder {
-    val bare = KatalystStageDsl.Duck()
-
-    return append(
-        KatalystStageDsl.Duck(
-            orbit = orbit?.toKatalystKnob() ?: bare.orbit,
-            depth = depth?.toKatalystKnob() ?: bare.depth,
-            attack = attack?.toKatalystKnob() ?: bare.attack,
-        )
-    )
-}
+): KatalystBuilder = this.duck(
+    orbit = orbit?.toKatalystKnob() ?: SLOT_UNSET.kat,
+    depth = depth?.toKatalystKnob() ?: DUCK_DEPTH.kat,
+    attack = attack?.toKatalystKnob() ?: DUCK_ATTACK_SECONDS.kat,
+)
 
 /**
  * Appends the mix equalizer: one stage whose sections apply left to right.
  *
- * The same [EqBuilder] the oscillator's `.eq(...)` uses, so a section means the same thing on a
- * voice and on an orbit.
+ * The voice eq's words, defaults and sections on a [KatalystEqBuilder], so a section means the same thing on a
+ * voice and on an orbit; its knobs take a number or a Katalyst param.
  *
- * @param configure receives the [EqBuilder] (knobs: `band`, `tap`) and returns it.
+ * @param configure receives the [KatalystEqBuilder] (knobs: `band`, `tap`) and returns it.
  */
-@KlangScript.Function
-fun KatalystBuilder.eq(configure: ((EqBuilder) -> EqBuilder)? = null): KatalystBuilder {
-    // [EqBuilder] wraps the voice-side [IgnitorDsl.Eq] node, which needs an `inner` to filter.
-    // A chain stage has no inner: it filters whatever the orbit hands it. So the builder gets
-    // [IgnitorDsl.Silence] as a placeholder and only its SECTIONS travel into the stage.
-    val built = EqBuilder(IgnitorDsl.Eq(inner = IgnitorDsl.Silence), onKatalyst = true).configuredBy("Katalyst eq", configure).node
-
-    return append(KatalystStageDsl.Eq(sections = built.sections))
-}
+@KlangScript.Function(name = "eq")
+internal fun KatalystBuilder.scriptEq(configure: ((KatalystEqBuilder) -> KatalystEqBuilder)? = null): KatalystBuilder =
+    this.eq { it.configuredBy("Katalyst eq", configure) }
 
 /**
  * Appends make-up gain on the orbit: the group fader, after the inserts.
@@ -568,9 +500,8 @@ fun KatalystBuilder.eq(configure: ((EqBuilder) -> EqBuilder)? = null): KatalystB
  *
  * @param gain linear gain factor (1.0 = unity, 2.0 is about +6 dB).
  */
-@KlangScript.Function
-fun KatalystBuilder.gain(gain: IgnitorDslLike = 1.0): KatalystBuilder =
-    append(KatalystStageDsl.Gain(gain = gain.toKatalystKnob()))
+@KlangScript.Function(name = "gain")
+internal fun KatalystBuilder.scriptGain(gain: IgnitorDslLike = 1.0): KatalystBuilder = this.gain(gain.toKatalystKnob())
 
 // ── Arithmetic: the Ignitor's operators on the bus ──────────────────────────────────────────────
 //
@@ -591,9 +522,8 @@ fun KatalystBuilder.gain(gain: IgnitorDslLike = 1.0): KatalystBuilder =
  * @param other a number, a `Kat.param` or a Kat expression.
  * @alias add
  */
-@KlangScript.Function
-fun KatalystBuilder.plus(other: IgnitorDslLike): KatalystBuilder =
-    append(KatalystStageDsl.Plus(other = other.toKatalystKnob()))
+@KlangScript.Function(name = "plus")
+internal fun KatalystBuilder.scriptPlus(other: IgnitorDslLike): KatalystBuilder = this.plus(other.toKatalystKnob())
 
 /**
  * Adds [other] to every sample of the bus. Alias for [plus].
@@ -601,8 +531,8 @@ fun KatalystBuilder.plus(other: IgnitorDslLike): KatalystBuilder =
  * @param other a number, a `Kat.param` or a Kat expression.
  * @alias plus
  */
-@KlangScript.Function
-fun KatalystBuilder.add(other: IgnitorDslLike): KatalystBuilder = plus(other)
+@KlangScript.Function(name = "add")
+internal fun KatalystBuilder.scriptAdd(other: IgnitorDslLike): KatalystBuilder = this.plus(other.toKatalystKnob())
 
 /**
  * Subtracts [other] from every sample of the bus. A constant is a DC offset, as with [plus], and keeps its orbit
@@ -611,9 +541,8 @@ fun KatalystBuilder.add(other: IgnitorDslLike): KatalystBuilder = plus(other)
  * @param other a number, a `Kat.param` or a Kat expression.
  * @alias sub
  */
-@KlangScript.Function
-fun KatalystBuilder.minus(other: IgnitorDslLike): KatalystBuilder =
-    append(KatalystStageDsl.Minus(other = other.toKatalystKnob()))
+@KlangScript.Function(name = "minus")
+internal fun KatalystBuilder.scriptMinus(other: IgnitorDslLike): KatalystBuilder = this.minus(other.toKatalystKnob())
 
 /**
  * Subtracts [other] from every sample of the bus. Alias for [minus].
@@ -621,8 +550,8 @@ fun KatalystBuilder.minus(other: IgnitorDslLike): KatalystBuilder =
  * @param other a number, a `Kat.param` or a Kat expression.
  * @alias minus
  */
-@KlangScript.Function
-fun KatalystBuilder.sub(other: IgnitorDslLike): KatalystBuilder = minus(other)
+@KlangScript.Function(name = "sub")
+internal fun KatalystBuilder.scriptSub(other: IgnitorDslLike): KatalystBuilder = this.minus(other.toKatalystKnob())
 
 /**
  * Multiplies every sample of the bus by [other], exactly as the Ignitor's `times`. For a level, `gain` is the word:
@@ -631,9 +560,8 @@ fun KatalystBuilder.sub(other: IgnitorDslLike): KatalystBuilder = minus(other)
  * @param other a number, a `Kat.param` or a Kat expression.
  * @alias mul
  */
-@KlangScript.Function
-fun KatalystBuilder.times(other: IgnitorDslLike): KatalystBuilder =
-    append(KatalystStageDsl.Times(other = other.toKatalystKnob()))
+@KlangScript.Function(name = "times")
+internal fun KatalystBuilder.scriptTimes(other: IgnitorDslLike): KatalystBuilder = this.times(other.toKatalystKnob())
 
 /**
  * Multiplies every sample of the bus by [other]. Alias for [times].
@@ -641,8 +569,8 @@ fun KatalystBuilder.times(other: IgnitorDslLike): KatalystBuilder =
  * @param other a number, a `Kat.param` or a Kat expression.
  * @alias times
  */
-@KlangScript.Function
-fun KatalystBuilder.mul(other: IgnitorDslLike): KatalystBuilder = times(other)
+@KlangScript.Function(name = "mul")
+internal fun KatalystBuilder.scriptMul(other: IgnitorDslLike): KatalystBuilder = this.times(other.toKatalystKnob())
 
 /**
  * Divides every sample of the bus by [other]. A divisor of exactly zero gives silence, as on the Ignitor. A moving
@@ -650,25 +578,24 @@ fun KatalystBuilder.mul(other: IgnitorDslLike): KatalystBuilder = times(other)
  *
  * @param other a number, a `Kat.param` or a Kat expression.
  */
-@KlangScript.Function
-fun KatalystBuilder.div(other: IgnitorDslLike): KatalystBuilder =
-    append(KatalystStageDsl.Div(other = other.toKatalystKnob()))
+@KlangScript.Function(name = "div")
+internal fun KatalystBuilder.scriptDiv(other: IgnitorDslLike): KatalystBuilder = this.div(other.toKatalystKnob())
 
 /**
  * Flips the polarity of the bus: a multiply by -1, as the Ignitor's `neg`.
  *
  * @alias negate
  */
-@KlangScript.Function
-fun KatalystBuilder.neg(): KatalystBuilder = times(-1.0)
+@KlangScript.Function(name = "neg")
+internal fun KatalystBuilder.scriptNeg(): KatalystBuilder = this.neg()
 
 /**
  * Flips the polarity of the bus. Alias for [neg].
  *
  * @alias neg
  */
-@KlangScript.Function
-fun KatalystBuilder.negate(): KatalystBuilder = neg()
+@KlangScript.Function(name = "negate")
+internal fun KatalystBuilder.scriptNegate(): KatalystBuilder = this.neg()
 
 /**
  * The absolute value of every sample: full-wave rectification. On a tone it sounds an octave up, with a DC offset that
@@ -678,8 +605,8 @@ fun KatalystBuilder.negate(): KatalystBuilder = neg()
  * Katalyst(k => k.abs().distort(0.4))
  * ```
  */
-@KlangScript.Function
-fun KatalystBuilder.abs(): KatalystBuilder = append(KatalystStageDsl.Abs)
+@KlangScript.Function(name = "abs")
+internal fun KatalystBuilder.scriptAbs(): KatalystBuilder = this.abs()
 
 /**
  * Raises every sample of the bus to the power of [exp], keeping its sign (a negative sample gives `-(|x|^exp)`), as
@@ -690,9 +617,8 @@ fun KatalystBuilder.abs(): KatalystBuilder = append(KatalystStageDsl.Abs)
  * @param exp a number, a `Kat.param` or a Kat expression.
  * @alias power
  */
-@KlangScript.Function
-fun KatalystBuilder.pow(exp: IgnitorDslLike): KatalystBuilder =
-    append(KatalystStageDsl.Pow(exp = exp.toKatalystKnob()))
+@KlangScript.Function(name = "pow")
+internal fun KatalystBuilder.scriptPow(exp: IgnitorDslLike): KatalystBuilder = this.pow(exp.toKatalystKnob())
 
 /**
  * Raises every sample of the bus to the power of [exp]. Alias for [pow].
@@ -700,8 +626,8 @@ fun KatalystBuilder.pow(exp: IgnitorDslLike): KatalystBuilder =
  * @param exp a number, a `Kat.param` or a Kat expression.
  * @alias pow
  */
-@KlangScript.Function
-fun KatalystBuilder.power(exp: IgnitorDslLike): KatalystBuilder = pow(exp)
+@KlangScript.Function(name = "power")
+internal fun KatalystBuilder.scriptPower(exp: IgnitorDslLike): KatalystBuilder = this.pow(exp.toKatalystKnob())
 
 /**
  * The bus, but at least [other] per sample: anything below it is raised to it, the same meaning `min` carries on a
@@ -710,9 +636,8 @@ fun KatalystBuilder.power(exp: IgnitorDslLike): KatalystBuilder = pow(exp)
  *
  * @param other a number, a `Kat.param` or a Kat expression.
  */
-@KlangScript.Function
-fun KatalystBuilder.min(other: IgnitorDslLike): KatalystBuilder =
-    append(KatalystStageDsl.Max(other = other.toKatalystKnob()))
+@KlangScript.Function(name = "min")
+internal fun KatalystBuilder.scriptMin(other: IgnitorDslLike): KatalystBuilder = this.min(other.toKatalystKnob())
 
 /**
  * The bus, but at most [other] per sample: anything above it is lowered to it, a hard cap on the positive half. A cap
@@ -725,9 +650,8 @@ fun KatalystBuilder.min(other: IgnitorDslLike): KatalystBuilder =
  *
  * @param other a number, a `Kat.param` or a Kat expression.
  */
-@KlangScript.Function
-fun KatalystBuilder.max(other: IgnitorDslLike): KatalystBuilder =
-    append(KatalystStageDsl.Min(other = other.toKatalystKnob()))
+@KlangScript.Function(name = "max")
+internal fun KatalystBuilder.scriptMax(other: IgnitorDslLike): KatalystBuilder = this.max(other.toKatalystKnob())
 
 /**
  * Runs the chain through [stages] in series, in the order written: `k.serial(a, b, c)` is `c(b(a(k)))`, the same
@@ -748,9 +672,10 @@ fun KatalystBuilder.max(other: IgnitorDslLike): KatalystBuilder =
  *
  * @param stages functions from a builder to a builder, applied first to last.
  */
-@KlangScript.Function
-fun KatalystBuilder.serial(vararg stages: (KatalystBuilder) -> KatalystBuilder): KatalystBuilder =
-    runSerialStages("Katalyst serial", this, stages, returns = "builder", example = "k => k.gain(0.8)") { it is KatalystBuilder }
+@KlangScript.Function(name = "serial")
+internal fun KatalystBuilder.scriptSerial(vararg stages: (KatalystBuilder) -> KatalystBuilder): KatalystBuilder = this.serial(
+    *checkedStages(door = "Katalyst serial", noun = "stage", stages = stages, example = "k => k.gain(0.8)"),
+)
 
 /**
  * Runs the bus through [branches] side by side, from this position, and SUMS them: the twin of [serial]. Each branch
@@ -774,27 +699,10 @@ fun KatalystBuilder.serial(vararg stages: (KatalystBuilder) -> KatalystBuilder):
  *
  * @param branches functions from a builder to a builder, each given an empty one.
  */
-@KlangScript.Function
-fun KatalystBuilder.parallel(vararg branches: (KatalystBuilder) -> KatalystBuilder): KatalystBuilder {
-    val built = branches.mapIndexed { index, branch ->
-        runStage<KatalystBuilder, KatalystBuilder>(
-            door = "Katalyst parallel",
-            noun = "branch",
-            index = index,
-            stage = branch,
-            input = KatalystBuilder(KatalystDsl(emptyList())),
-            returns = "builder",
-            example = "b => b.distort(0.5)",
-            isResult = { it is KatalystBuilder },
-        ).node
-    }
-
-    return when (built.size) {
-        0 -> this
-        1 -> copy(node = KatalystDsl(node.stages + built[0].stages))
-        else -> append(KatalystStageDsl.Parallel(branches = built))
-    }
-}
+@KlangScript.Function(name = "parallel")
+internal fun KatalystBuilder.scriptParallel(vararg branches: (KatalystBuilder) -> KatalystBuilder): KatalystBuilder = this.parallel(
+    *checkedStages(door = "Katalyst parallel", noun = "branch", stages = branches, example = "b => b.distort(0.5)"),
+)
 
 /**
  * A dry/wet blend of the bus, the linear law: `k.blend(wet, f)` sums the bus times `1 - wet` with [branch]'s stages
@@ -820,8 +728,9 @@ fun KatalystBuilder.parallel(vararg branches: (KatalystBuilder) -> KatalystBuild
  * @param wet the share of the branch, 0 to 1.
  * @param branch a function from a builder to a builder, given an empty one.
  */
-@KlangScript.Function
-fun KatalystBuilder.blend(wet: IgnitorDslLike, branch: (KatalystBuilder) -> KatalystBuilder): KatalystBuilder {
+@KlangScript.Function(name = "blend")
+internal fun KatalystBuilder.scriptBlend(wet: IgnitorDslLike, branch: (KatalystBuilder) -> KatalystBuilder): KatalystBuilder {
+    // The script-side check (the typed-door pattern, point 5): a plain number, or a Kat constant holding one.
     val number = when (wet) {
         is Number -> wet.toDouble()
         is KatalystKnobDsl.Constant -> wet.value
@@ -831,25 +740,17 @@ fun KatalystBuilder.blend(wet: IgnitorDslLike, branch: (KatalystBuilder) -> Kata
             operation = "Katalyst blend",
         )
     }
-    // NaN-guard on a value the author can write: an unset blend is no blend.
-    val share = if (number.isFinite()) number else 0.0
-    val processed = runStage<KatalystBuilder, KatalystBuilder>(
-        door = "Katalyst blend",
-        noun = "branch",
-        index = 0,
-        stage = branch,
-        input = KatalystBuilder(KatalystDsl(emptyList())),
-        returns = "builder",
-        example = "b => b.distort(0.5)",
-        isResult = { it is KatalystBuilder },
-    )
 
-    return append(
-        KatalystStageDsl.Parallel(
-            branches = listOf(
-                KatalystDsl.of(KatalystStageDsl.Gain(gain = (1.0 - share).toKatalystKnob())),
-                processed.gain(share).node,
-            ),
+    return this.blend(
+        wet = number,
+        branch = checkedStage(
+            door = "Katalyst blend",
+            noun = "branch",
+            index = 0,
+            stage = branch,
+            returns = "builder",
+            example = "b => b.distort(0.5)",
+            isResult = { it is KatalystBuilder },
         ),
     )
 }
@@ -871,9 +772,27 @@ fun KatalystBuilder.blend(wet: IgnitorDslLike, branch: (KatalystBuilder) -> Kata
  *
  * @param configure receives the bands builder and returns it.
  */
-@KlangScript.Function
-fun KatalystBuilder.bands(configure: ((KatalystBandsBuilder) -> KatalystBandsBuilder)? = null): KatalystBuilder =
-    copy(node = KatalystDsl(node.stages + KatalystBandsBuilder().configuredBy("Katalyst bands", configure).split()))
+@KlangScript.Function(name = "bands")
+internal fun KatalystBuilder.scriptBands(configure: ((KatalystBandsBuilder) -> KatalystBandsBuilder)? = null): KatalystBuilder =
+    this.bands { it.configuredBy("Katalyst bands", configure) }
+
+/** Every script-supplied stage or branch of a Katalyst `serial` / `parallel`, wrapped in its check ([checkedStage]). */
+private fun checkedStages(
+    door: String,
+    noun: String,
+    stages: Array<out (KatalystBuilder) -> KatalystBuilder>,
+    example: String,
+): Array<(KatalystBuilder) -> KatalystBuilder> = Array(stages.size) { index ->
+    checkedStage(
+        door = door,
+        noun = noun,
+        index = index,
+        stage = stages[index],
+        returns = "builder",
+        example = example,
+        isResult = { it is KatalystBuilder },
+    )
+}
 
 // ── Knob expressions: the Ignitor's arithmetic on a Katalyst knob ─────────────────────────────────────────────────
 //
@@ -883,8 +802,9 @@ fun KatalystBuilder.bands(configure: ((KatalystBandsBuilder) -> KatalystBandsBui
 // expression, and an Ignitor node is the same script error as on a stage knob. The engine evaluates the expression
 // with the Ignitor's own laws whenever the orbit's `katp` state changes, and once per block when it holds a modulator
 // (`Kat.sine` and the rest, step 5b); a slot leaf that reads a non-finite value makes the whole knob unset (its stage
-// takes its constant). One implementation for both doors: a Kotlin song writes
-// `KlangScriptKatalyst.param("fader", 1.0).times(0.5)`.
+// takes its constant). One implementation for both doors: the typed functions in `audio_bridge` (`KatalystKnobDsl.kt`,
+// since the typed-doors rollout S5), which a Kotlin song calls directly (`Kat.param("fader", 1.0).times(0.5.kat)`); the
+// script words below are `internal`, renamed variants that convert and call them.
 
 /**
  * This knob plus [other]: an offset. The Ignitor's `plus` law, unclamped.
@@ -896,9 +816,8 @@ fun KatalystBuilder.bands(configure: ((KatalystBandsBuilder) -> KatalystBandsBui
  * @param other a number, a `Kat.param` or a Kat expression.
  * @alias add
  */
-@KlangScript.Function
-fun KatalystKnobDsl.plus(other: IgnitorDslLike): KatalystKnobDsl =
-    KatalystKnobDsl.Plus(left = this, right = other.toKatalystKnob())
+@KlangScript.Function(name = "plus")
+internal fun KatalystKnobDsl.scriptPlus(other: IgnitorDslLike): KatalystKnobDsl = this.plus(other.toKatalystKnob())
 
 /**
  * This knob plus [other]. Alias for [plus].
@@ -906,8 +825,8 @@ fun KatalystKnobDsl.plus(other: IgnitorDslLike): KatalystKnobDsl =
  * @param other a number, a `Kat.param` or a Kat expression.
  * @alias plus
  */
-@KlangScript.Function
-fun KatalystKnobDsl.add(other: IgnitorDslLike): KatalystKnobDsl = plus(other)
+@KlangScript.Function(name = "add")
+internal fun KatalystKnobDsl.scriptAdd(other: IgnitorDslLike): KatalystKnobDsl = this.plus(other.toKatalystKnob())
 
 /**
  * This knob minus [other]. The Ignitor's `minus` law, unclamped.
@@ -915,9 +834,8 @@ fun KatalystKnobDsl.add(other: IgnitorDslLike): KatalystKnobDsl = plus(other)
  * @param other a number, a `Kat.param` or a Kat expression.
  * @alias sub
  */
-@KlangScript.Function
-fun KatalystKnobDsl.minus(other: IgnitorDslLike): KatalystKnobDsl =
-    KatalystKnobDsl.Minus(left = this, right = other.toKatalystKnob())
+@KlangScript.Function(name = "minus")
+internal fun KatalystKnobDsl.scriptMinus(other: IgnitorDslLike): KatalystKnobDsl = this.minus(other.toKatalystKnob())
 
 /**
  * This knob minus [other]. Alias for [minus].
@@ -925,8 +843,8 @@ fun KatalystKnobDsl.minus(other: IgnitorDslLike): KatalystKnobDsl =
  * @param other a number, a `Kat.param` or a Kat expression.
  * @alias minus
  */
-@KlangScript.Function
-fun KatalystKnobDsl.sub(other: IgnitorDslLike): KatalystKnobDsl = minus(other)
+@KlangScript.Function(name = "sub")
+internal fun KatalystKnobDsl.scriptSub(other: IgnitorDslLike): KatalystKnobDsl = this.minus(other.toKatalystKnob())
 
 /**
  * This knob times [other]: a scale. The Ignitor's `times` law: the product is clamped to `±1e15` and a product that is
@@ -940,9 +858,8 @@ fun KatalystKnobDsl.sub(other: IgnitorDslLike): KatalystKnobDsl = minus(other)
  * @param other a number, a `Kat.param` or a Kat expression.
  * @alias mul
  */
-@KlangScript.Function
-fun KatalystKnobDsl.times(other: IgnitorDslLike): KatalystKnobDsl =
-    KatalystKnobDsl.Times(left = this, right = other.toKatalystKnob())
+@KlangScript.Function(name = "times")
+internal fun KatalystKnobDsl.scriptTimes(other: IgnitorDslLike): KatalystKnobDsl = this.times(other.toKatalystKnob())
 
 /**
  * This knob times [other]. Alias for [times].
@@ -950,8 +867,8 @@ fun KatalystKnobDsl.times(other: IgnitorDslLike): KatalystKnobDsl =
  * @param other a number, a `Kat.param` or a Kat expression.
  * @alias times
  */
-@KlangScript.Function
-fun KatalystKnobDsl.mul(other: IgnitorDslLike): KatalystKnobDsl = times(other)
+@KlangScript.Function(name = "mul")
+internal fun KatalystKnobDsl.scriptMul(other: IgnitorDslLike): KatalystKnobDsl = this.times(other.toKatalystKnob())
 
 /**
  * This knob divided by [other]. The Ignitor's `div` law: a divisor of exactly zero gives zero.
@@ -963,9 +880,8 @@ fun KatalystKnobDsl.mul(other: IgnitorDslLike): KatalystKnobDsl = times(other)
  *
  * @param other a number, a `Kat.param` or a Kat expression.
  */
-@KlangScript.Function
-fun KatalystKnobDsl.div(other: IgnitorDslLike): KatalystKnobDsl =
-    KatalystKnobDsl.Div(left = this, right = other.toKatalystKnob())
+@KlangScript.Function(name = "div")
+internal fun KatalystKnobDsl.scriptDiv(other: IgnitorDslLike): KatalystKnobDsl = this.div(other.toKatalystKnob())
 
 /**
  * This knob to the power of [exp], keeping its sign (a negative base gives `-(|base|^exp)`). The Ignitor's `pow` law,
@@ -974,9 +890,8 @@ fun KatalystKnobDsl.div(other: IgnitorDslLike): KatalystKnobDsl =
  * @param exp a number, a `Kat.param` or a Kat expression.
  * @alias power
  */
-@KlangScript.Function
-fun KatalystKnobDsl.pow(exp: IgnitorDslLike): KatalystKnobDsl =
-    KatalystKnobDsl.Pow(base = this, exp = exp.toKatalystKnob())
+@KlangScript.Function(name = "pow")
+internal fun KatalystKnobDsl.scriptPow(exp: IgnitorDslLike): KatalystKnobDsl = this.pow(exp.toKatalystKnob())
 
 /**
  * This knob to the power of [exp]. Alias for [pow].
@@ -984,8 +899,8 @@ fun KatalystKnobDsl.pow(exp: IgnitorDslLike): KatalystKnobDsl =
  * @param exp a number, a `Kat.param` or a Kat expression.
  * @alias pow
  */
-@KlangScript.Function
-fun KatalystKnobDsl.power(exp: IgnitorDslLike): KatalystKnobDsl = pow(exp)
+@KlangScript.Function(name = "power")
+internal fun KatalystKnobDsl.scriptPower(exp: IgnitorDslLike): KatalystKnobDsl = this.pow(exp.toKatalystKnob())
 
 /**
  * This knob, but at least [other]: a floor, the same meaning `min` carries on a number, a pattern, a signal and a
@@ -993,9 +908,8 @@ fun KatalystKnobDsl.power(exp: IgnitorDslLike): KatalystKnobDsl = pow(exp)
  *
  * @param other a number, a `Kat.param` or a Kat expression.
  */
-@KlangScript.Function
-fun KatalystKnobDsl.min(other: IgnitorDslLike): KatalystKnobDsl =
-    KatalystKnobDsl.Max(left = this, right = other.toKatalystKnob())
+@KlangScript.Function(name = "min")
+internal fun KatalystKnobDsl.scriptMin(other: IgnitorDslLike): KatalystKnobDsl = this.min(other.toKatalystKnob())
 
 /**
  * This knob, but at most [other]: a cap, the same meaning `max` carries on a number, a pattern, a signal and a stage.
@@ -1008,29 +922,28 @@ fun KatalystKnobDsl.min(other: IgnitorDslLike): KatalystKnobDsl =
  *
  * @param other a number, a `Kat.param` or a Kat expression.
  */
-@KlangScript.Function
-fun KatalystKnobDsl.max(other: IgnitorDslLike): KatalystKnobDsl =
-    KatalystKnobDsl.Min(left = this, right = other.toKatalystKnob())
+@KlangScript.Function(name = "max")
+internal fun KatalystKnobDsl.scriptMax(other: IgnitorDslLike): KatalystKnobDsl = this.max(other.toKatalystKnob())
 
 /**
  * This knob with its sign flipped: a multiply by -1, clamped like `times`, as the Ignitor's `neg`.
  *
  * @alias negate
  */
-@KlangScript.Function
-fun KatalystKnobDsl.neg(): KatalystKnobDsl = KatalystKnobDsl.Neg(inner = this)
+@KlangScript.Function(name = "neg")
+internal fun KatalystKnobDsl.scriptNeg(): KatalystKnobDsl = this.neg()
 
 /**
  * This knob with its sign flipped. Alias for [neg].
  *
  * @alias neg
  */
-@KlangScript.Function
-fun KatalystKnobDsl.negate(): KatalystKnobDsl = neg()
+@KlangScript.Function(name = "negate")
+internal fun KatalystKnobDsl.scriptNegate(): KatalystKnobDsl = this.neg()
 
 /** The absolute value of this knob. */
-@KlangScript.Function
-fun KatalystKnobDsl.abs(): KatalystKnobDsl = KatalystKnobDsl.Abs(inner = this)
+@KlangScript.Function(name = "abs")
+internal fun KatalystKnobDsl.scriptAbs(): KatalystKnobDsl = this.abs()
 
 /**
  * Maps this knob from `-1..1` onto [from]..[to], linearly and unclamped: `from + (x + 1) * 0.5 * (to - from)`, the
@@ -1044,65 +957,50 @@ fun KatalystKnobDsl.abs(): KatalystKnobDsl = KatalystKnobDsl.Abs(inner = this)
  * @param from the value at -1, a number, a `Kat.param` or a Kat expression.
  * @param to the value at 1, a number, a `Kat.param` or a Kat expression.
  */
-@KlangScript.Function
-fun KatalystKnobDsl.range(from: IgnitorDslLike, to: IgnitorDslLike): KatalystKnobDsl =
-    KatalystKnobDsl.Range(inner = this, from = from.toKatalystKnob(), to = to.toKatalystKnob())
+@KlangScript.Function(name = "range")
+internal fun KatalystKnobDsl.scriptRange(from: IgnitorDslLike, to: IgnitorDslLike): KatalystKnobDsl =
+    this.range(from = from.toKatalystKnob(), to = to.toKatalystKnob())
 
 // ── Body ─────────────────────────────────────────────────────────────────────
-
-/** Builder for a [KatalystStageDsl.Body] stage. Knob: `floor`. */
-data class KatalystBodyBuilder(val node: KatalystStageDsl.Body)
+//
+// The stage builders (`KatalystBodyBuilder`, `KatalystVowelBuilder`, `KatalystDelayBuilder`, `KatalystPhaserBuilder`)
+// live in `audio_bridge` with their typed member knobs; the script knobs below convert and call them.
 
 /**
  * Minimum dry share kept in the mix, 0 to 1 (default 0.4). Lower makes the body MORE audible: its
  * modes sit over less dry. Orbit twin: `body(floor = ...)`.
  */
-@KlangScript.Function
-fun KatalystBodyBuilder.floor(floor: IgnitorDslLike): KatalystBodyBuilder =
-    copy(node = node.copy(floor = floor.toKatalystKnob()))
+@KlangScript.Function(name = "floor")
+internal fun KatalystBodyBuilder.scriptFloor(floor: IgnitorDslLike): KatalystBodyBuilder = this.floor(floor.toKatalystKnob())
 
 // ── Vowel ────────────────────────────────────────────────────────────────────
-
-/** Builder for a [KatalystStageDsl.Vowel] stage. Knob: `floor`. */
-data class KatalystVowelBuilder(val node: KatalystStageDsl.Vowel)
 
 /**
  * Minimum dry share kept between the formants, 0 to 1 (default 0.2). Much lower than the body's: a
  * vowel is a source strongly shaped by its formants. Orbit twin: `vowel(floor = ...)`.
  */
-@KlangScript.Function
-fun KatalystVowelBuilder.floor(floor: IgnitorDslLike): KatalystVowelBuilder =
-    copy(node = node.copy(floor = floor.toKatalystKnob()))
+@KlangScript.Function(name = "floor")
+internal fun KatalystVowelBuilder.scriptFloor(floor: IgnitorDslLike): KatalystVowelBuilder = this.floor(floor.toKatalystKnob())
 
 // ── Delay ────────────────────────────────────────────────────────────────────
 
-/** Builder for a [KatalystStageDsl.Delay] stage. Knob: `cap`. */
-data class KatalystDelayBuilder(val node: KatalystStageDsl.Delay)
-
 /** Level the recirculating signal saturates toward (default 1.0). Orbit twin: `delay(cap = ...)`. */
-@KlangScript.Function
-fun KatalystDelayBuilder.cap(cap: IgnitorDslLike): KatalystDelayBuilder =
-    copy(node = node.copy(cap = cap.toKatalystKnob()))
+@KlangScript.Function(name = "cap")
+internal fun KatalystDelayBuilder.scriptCap(cap: IgnitorDslLike): KatalystDelayBuilder = this.cap(cap.toKatalystKnob())
 
 // ── Phaser ───────────────────────────────────────────────────────────────────
 
-/** Builder for a [KatalystStageDsl.Phaser] stage. Knob: `floor`. */
-data class KatalystPhaserBuilder(val node: KatalystStageDsl.Phaser)
-
 /** Minimum dry coefficient of the wet/dry law (default 1.0, purely additive). Orbit twin: `phaser(floor = ...)`. */
-@KlangScript.Function
-fun KatalystPhaserBuilder.floor(floor: IgnitorDslLike): KatalystPhaserBuilder =
-    copy(node = node.copy(floor = floor.toKatalystKnob()))
+@KlangScript.Function(name = "floor")
+internal fun KatalystPhaserBuilder.scriptFloor(floor: IgnitorDslLike): KatalystPhaserBuilder = this.floor(floor.toKatalystKnob())
 
 // ── The modulators' builders ─────────────────────────────────────────────────
 //
 // Handed to the `configure` lambda of the modulator doors on the Katalyst object (`Kat.sine(freq, configure)` and the
 // rest, `KlangScriptKatalyst`): the Ignitor's oscillator builders' shape with only the knobs a bus LFO keeps (Q11 of
 // `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`: `phase` on every periodic shape, `duty` on the square; no
-// `analog`, no flank or reset knobs). Each knob takes a number, a `Kat.param` or a Kat expression.
-
-/** Builder for a [KatalystKnobDsl.Sine], handed to the `configure` lambda of `Kat.sine(...)`. Knob: `phase`. */
-data class KatalystSineBuilder(val node: KatalystKnobDsl.Sine)
+// `analog`, no flank or reset knobs). Each knob takes a number, a `Kat.param` or a Kat expression. The builders live in
+// `audio_bridge` with their typed member knobs; the script knobs below convert and call them.
 
 /**
  * Where in its cycle the sine is read, in cycles (default 0, the upward zero crossing): 0.25 starts it on its peak,
@@ -1112,48 +1010,29 @@ data class KatalystSineBuilder(val node: KatalystKnobDsl.Sine)
  * Katalyst(k => k.gain(Kat.sine(0.5, x => x.phase(0.25)).range(0.5, 1)))   // starts at full level, then dips
  * ```
  */
-@KlangScript.Function
-fun KatalystSineBuilder.phase(phase: IgnitorDslLike): KatalystSineBuilder =
-    copy(node = node.copy(phase = phase.toKatalystKnob()))
-
-/** Builder for a [KatalystKnobDsl.Saw], handed to the `configure` lambda of `Kat.saw(...)`. Knob: `phase`. */
-data class KatalystSawBuilder(val node: KatalystKnobDsl.Saw)
+@KlangScript.Function(name = "phase")
+internal fun KatalystSineBuilder.scriptPhase(phase: IgnitorDslLike): KatalystSineBuilder = this.phase(phase.toKatalystKnob())
 
 /**
  * Where in its cycle the saw is read, in cycles (default 0, the bottom of its rise): 0.5 starts it at 0, mid-rise, and
  * it wraps, no clamp.
  */
-@KlangScript.Function
-fun KatalystSawBuilder.phase(phase: IgnitorDslLike): KatalystSawBuilder =
-    copy(node = node.copy(phase = phase.toKatalystKnob()))
-
-/** Builder for a [KatalystKnobDsl.Ramp], handed to the `configure` lambda of `Kat.ramp(...)`. Knob: `phase`. */
-data class KatalystRampBuilder(val node: KatalystKnobDsl.Ramp)
+@KlangScript.Function(name = "phase")
+internal fun KatalystSawBuilder.scriptPhase(phase: IgnitorDslLike): KatalystSawBuilder = this.phase(phase.toKatalystKnob())
 
 /**
  * Where in its cycle the ramp is read, in cycles (default 0, the top of its fall): 0.5 starts it at 0, mid-fall, and it
  * wraps, no clamp.
  */
-@KlangScript.Function
-fun KatalystRampBuilder.phase(phase: IgnitorDslLike): KatalystRampBuilder =
-    copy(node = node.copy(phase = phase.toKatalystKnob()))
-
-/** Builder for a [KatalystKnobDsl.Tri], handed to the `configure` lambda of `Kat.tri(...)`. Knob: `phase`. */
-data class KatalystTriBuilder(val node: KatalystKnobDsl.Tri)
+@KlangScript.Function(name = "phase")
+internal fun KatalystRampBuilder.scriptPhase(phase: IgnitorDslLike): KatalystRampBuilder = this.phase(phase.toKatalystKnob())
 
 /**
  * Where in its cycle the triangle is read, in cycles (default 0, its lowest point): 0.5 starts it at its top, and it
  * wraps, no clamp.
  */
-@KlangScript.Function
-fun KatalystTriBuilder.phase(phase: IgnitorDslLike): KatalystTriBuilder =
-    copy(node = node.copy(phase = phase.toKatalystKnob()))
-
-/**
- * Builder for a [KatalystKnobDsl.Square], handed to the `configure` lambda of `Kat.square(...)`. Knobs: `duty`,
- * `phase`.
- */
-data class KatalystSquareBuilder(val node: KatalystKnobDsl.Square)
+@KlangScript.Function(name = "phase")
+internal fun KatalystTriBuilder.scriptPhase(phase: IgnitorDslLike): KatalystTriBuilder = this.phase(phase.toKatalystKnob())
 
 /**
  * `width` is the share of each cycle the square spends high, 0 to 1 (default 0.5, a square). A Kat expression moves
@@ -1163,14 +1042,12 @@ data class KatalystSquareBuilder(val node: KatalystKnobDsl.Square)
  * Katalyst(k => k.gain(Kat.square(1, x => x.duty(0.25)).range(0.4, 1)))   // full level a quarter of each second
  * ```
  */
-@KlangScript.Function
-fun KatalystSquareBuilder.duty(width: IgnitorDslLike): KatalystSquareBuilder =
-    copy(node = node.copy(duty = width.toKatalystKnob()))
+@KlangScript.Function(name = "duty")
+internal fun KatalystSquareBuilder.scriptDuty(width: IgnitorDslLike): KatalystSquareBuilder = this.duty(width.toKatalystKnob())
 
 /**
  * Where in its cycle the square is read, in cycles (default 0, the foot of its rising edge): 0.5 starts it on its
  * falling edge, and it wraps, no clamp.
  */
-@KlangScript.Function
-fun KatalystSquareBuilder.phase(phase: IgnitorDslLike): KatalystSquareBuilder =
-    copy(node = node.copy(phase = phase.toKatalystKnob()))
+@KlangScript.Function(name = "phase")
+internal fun KatalystSquareBuilder.scriptPhase(phase: IgnitorDslLike): KatalystSquareBuilder = this.phase(phase.toKatalystKnob())

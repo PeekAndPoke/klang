@@ -15,6 +15,7 @@ import io.peekandpoke.klang.audio_be.ignitor.toExciter
 import io.peekandpoke.klang.audio_bridge.FILTER_MAX_PASSES
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.highpass
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.lowpass
 import kotlin.math.log10
 import kotlin.math.sqrt
@@ -67,10 +68,10 @@ class PassesCascadeSpec : StringSpec({
     }
 
     fun rmsIgnitorLp(passes: Int, freq: Double): Double =
-        rmsIgnitor(IgnitorDsl.Sine().lowpass(freq = 1000.0, q = 0.707, passes = passes), freq)
+        rmsIgnitor(IgnitorDsl.Sine().lowpass(freq = 1000.0.ign, q = 0.707.ign) { it.passes(passes.ign) }, freq)
 
     fun rmsIgnitorHp(passes: Int, freq: Double): Double =
-        rmsIgnitor(IgnitorDsl.Sine().highpass(freq = 1000.0, q = 0.707, passes = passes), freq)
+        rmsIgnitor(IgnitorDsl.Sine().highpass(freq = 1000.0.ign, q = 0.707.ign) { it.passes(passes.ign) }, freq)
 
     "the q ladder: passes = 1 is the user q VERBATIM; passes = 2 is the 4th-order Butterworth pair" {
         butterworthQLadder(1, 1.2).toList() shouldBe listOf(1.2)

@@ -9,6 +9,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.audio_bridge.pitchMod
 import io.peekandpoke.klang.audio_bridge.pitchModSemitones
@@ -37,7 +38,7 @@ class KlangScriptPitchModDoorParitySpec : StringSpec({
 
         ignitor("Ign.saw().pitchModSemitones(7)") shouldBe expected
         ignitor("Ignitor.saw().pitchModSemitones(mod = 7)") shouldBe expected
-        saw.pitchModSemitones(7.0) shouldBe expected
+        saw.pitchModSemitones(7.0.ign) shouldBe expected
         saw.pitchModSemitones(c(7.0)) shouldBe expected
     }
 
@@ -48,7 +49,7 @@ class KlangScriptPitchModDoorParitySpec : StringSpec({
 
         ignitor("Ign.saw().pitchModSemitones(Ign.sine(5).mul(0.5))") shouldBe expected
         ignitor("Ign.saw().pitchModSemitones(mod = Ign.sine(5).mul(0.5))") shouldBe expected
-        saw.pitchModSemitones(lfo.mul(0.5)) shouldBe expected
+        saw.pitchModSemitones(lfo.mul(0.5.ign)) shouldBe expected
     }
 
     "two laws, two nodes: pitchMod builds the linear node on both doors and both Kotlin overloads, never the semitone one" {
@@ -58,7 +59,7 @@ class KlangScriptPitchModDoorParitySpec : StringSpec({
         ignitor("Ign.saw().pitchMod(0.5)") shouldBe linear
         ignitor("Ign.saw().pitchMod(mod = 0.5)") shouldBe linear
         saw.pitchMod(c(0.5)) shouldBe linear
-        saw.pitchMod(0.5) shouldBe linear
+        saw.pitchMod(0.5.ign) shouldBe linear
         ignitor("Ign.saw().pitchModSemitones(0.5)") shouldNotBe linear
     }
 })

@@ -163,7 +163,7 @@ native (`NativeInterop.convertFunctionToKotlin`). Two rules make this pleasant a
 
 ```javascript
 note("c3").superimpose(x => x.transpose(12))              // x: SprudelPattern
-Ignitor.supersaw(x => x.voices(9).spread(0.1)).lowpass(800)   // x: OscSuperSawBuilder (klangscript-libs)
+Ignitor.supersaw(x => x.voices(9).spread(0.1)).lowpass(800)   // x: OscSuperSawBuilder (audio_bridge)
 ```
 
 The conversion is strict both ways (`NativeInterop.convertToKotlin`): a lambda on a non-function slot is a type

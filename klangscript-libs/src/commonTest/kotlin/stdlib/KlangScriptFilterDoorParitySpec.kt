@@ -13,6 +13,9 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.AdsrCurves
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.BandFilterBuilder
+import io.peekandpoke.klang.audio_bridge.FilterBuilder
+import io.peekandpoke.klang.audio_bridge.ModAdsrBuilder
 import io.peekandpoke.klang.audio_bridge.bandpass
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_ATTACK_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_DECAY_SEC
@@ -21,6 +24,7 @@ import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_SUSTAIN_LEVEL
 import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
 import io.peekandpoke.klang.audio_bridge.highpass
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.notch
 import io.peekandpoke.klang.audio_bridge.onepole
@@ -59,11 +63,13 @@ private fun c(v: Double) = IgnitorDsl.Constant(v)
 /**
  * The two doors of the four filters, compared node for node (the filter node's own fields, never
  * whole trees, so how either side builds the upstream oscillator cannot mask or fake a
- * difference). Phase 3 step 3d(i): the script door is `door(freq, q = 0.707, configure)` with the
- * knobs on a builder; the Kotlin door is the flat engine-level function the script door calls
- * after the lambda, so the compound fill runs once, in one place. Every row LOOPS over the
- * family, and each row names the node type it expects, so a door that stopped handling a knob
- * goes red on its own name.
+ * difference). Since the typed-doors rollout S3a both doors have ONE shape, `door(freq, q, configure)`,
+ * on ONE set of builders (`FilterBuilder`, `BandFilterBuilder` in `audio_bridge`); the script door
+ * converts and calls the Kotlin door, where the compound fill runs once. Parity rows cannot see a
+ * builder member that writes the wrong field (both doors share it), so every member knob also has
+ * a row against the node WRITTEN OUT with `.copy()`, from both doors, and every Kotlin door a
+ * default-node row. Every row LOOPS over the family, and each row names the node type it expects,
+ * so a door that stopped handling a knob goes red on its own name.
  */
 class KlangScriptFilterDoorParitySpec : StringSpec({
 
@@ -76,28 +82,85 @@ class KlangScriptFilterDoorParitySpec : StringSpec({
     val saw = IgnitorDsl.Saw()
     val modulated = IgnitorDsl.Param("cut", 800.0)
 
-    /** The Kotlin door, by name, with everything named; `passes` is ignored by the band filters. */
+    /**
+     * The Kotlin door, by name: [configure] runs on the [FilterBuilder] of lowpass and highpass, and its
+     * band-filter half [band] on the [BandFilterBuilder] of bandpass and notch (the two builders differ by `passes`).
+     */
     fun kotlinDoor(
         door: String,
         freq: IgnitorDsl = c(800.0),
-        q: IgnitorDsl = c(0.707),
-        passes: Int = 1,
-        analog: IgnitorDsl = c(0.0),
-        env: IgnitorDsl? = null,
-        a: IgnitorDsl? = null,
-        d: IgnitorDsl? = null,
-        s: IgnitorDsl? = null,
-        r: IgnitorDsl? = null,
-        ac: IgnitorDsl? = null,
-        dc: IgnitorDsl? = null,
-        rc: IgnitorDsl? = null,
-        humanize: Boolean = false,
+        q: IgnitorDsl? = null,
+        configure: (FilterBuilder) -> FilterBuilder = { it },
+        band: (BandFilterBuilder) -> BandFilterBuilder = { it },
     ): IgnitorDsl = when (door) {
-        "lowpass" -> saw.lowpass(freq, q, passes, analog, env, a, d, s, r, ac, dc, rc, humanize)
-        "highpass" -> saw.highpass(freq, q, passes, analog, env, a, d, s, r, ac, dc, rc, humanize)
-        "bandpass" -> saw.bandpass(freq, q, analog, env, a, d, s, r, ac, dc, rc, humanize)
-        "notch" -> saw.notch(freq, q, analog, env, a, d, s, r, ac, dc, rc, humanize)
+        "lowpass" -> if (q == null) saw.lowpass(freq = freq, configure = configure) else saw.lowpass(freq = freq, q = q, configure = configure)
+        "highpass" -> if (q == null) saw.highpass(freq = freq, configure = configure) else saw.highpass(freq = freq, q = q, configure = configure)
+        "bandpass" -> if (q == null) saw.bandpass(freq = freq, configure = band) else saw.bandpass(freq = freq, q = q, configure = band)
+        "notch" -> if (q == null) saw.notch(freq = freq, configure = band) else saw.notch(freq = freq, q = q, configure = band)
         else -> error(door)
+    }
+
+    /** The same knob on both builders: one call site per row for all four filters. */
+    fun kotlinKnob(door: String, knob: (FilterKnobsCall) -> Unit): IgnitorDsl {
+        val call = FilterKnobsCall()
+        knob(call)
+
+        return kotlinDoor(door, configure = { call.full(it) }, band = { call.band(it) })
+    }
+
+    /**
+     * Each Kotlin door's bare node, WRITTEN OUT: the cutoff and the default q (`0.707`), every other field the
+     * node's own default (no analog, one pass, no envelope, the constant stages, the unshaped curves, no lane).
+     */
+    fun bare(door: String): IgnitorDsl = when (door) {
+        "lowpass" -> IgnitorDsl.Lowpass(inner = saw, freq = c(800.0), q = c(0.707))
+        "highpass" -> IgnitorDsl.Highpass(inner = saw, freq = c(800.0), q = c(0.707))
+        "bandpass" -> IgnitorDsl.Bandpass(inner = saw, freq = c(800.0), q = c(0.707))
+        "notch" -> IgnitorDsl.Notch(inner = saw, freq = c(800.0), q = c(0.707))
+        else -> error(door)
+    }
+
+    /** [bare] with the envelope and lane fields written out, through each node's own `copy`. */
+    fun written(
+        door: String,
+        analog: IgnitorDsl? = null,
+        passes: IgnitorDsl? = null,
+        env: IgnitorDsl? = null,
+        stages: List<IgnitorDsl>? = null,
+        curves: List<IgnitorDsl>? = null,
+        humanize: Boolean? = null,
+    ): IgnitorDsl {
+        val n = bare(door)
+        val f = n.filterFields()
+        val a = analog ?: f["analog"] as IgnitorDsl
+        val e = env ?: f["env"] as IgnitorDsl
+        val st = stages ?: listOf(f["attack"], f["decay"], f["sustain"], f["release"]).map { it as IgnitorDsl }
+        val cv = curves ?: listOf(f["attackCurve"], f["decayCurve"], f["releaseCurve"]).map { it as IgnitorDsl }
+        val h = humanize ?: (f["humanize"] as Boolean)
+
+        return when (n) {
+            is IgnitorDsl.Lowpass -> n.copy(
+                analog = a, passes = passes ?: n.passes, env = e, attack = st[0], decay = st[1], sustain = st[2], release = st[3],
+                attackCurve = cv[0], decayCurve = cv[1], releaseCurve = cv[2], humanize = h,
+            )
+
+            is IgnitorDsl.Highpass -> n.copy(
+                analog = a, passes = passes ?: n.passes, env = e, attack = st[0], decay = st[1], sustain = st[2], release = st[3],
+                attackCurve = cv[0], decayCurve = cv[1], releaseCurve = cv[2], humanize = h,
+            )
+
+            is IgnitorDsl.Bandpass -> n.copy(
+                analog = a, env = e, attack = st[0], decay = st[1], sustain = st[2], release = st[3],
+                attackCurve = cv[0], decayCurve = cv[1], releaseCurve = cv[2], humanize = h,
+            )
+
+            is IgnitorDsl.Notch -> n.copy(
+                analog = a, env = e, attack = st[0], decay = st[1], sustain = st[2], release = st[3],
+                attackCurve = cv[0], decayCurve = cv[1], releaseCurve = cv[2], humanize = h,
+            )
+
+            else -> error(door)
+        }
     }
 
     val nodeType = mapOf(
@@ -107,6 +170,7 @@ class KlangScriptFilterDoorParitySpec : StringSpec({
         "notch" to IgnitorDsl.Notch::class,
     )
     val doors = nodeType.keys.toList()
+    val constantStages = listOf(c(FILTER_ENV_ATTACK_SEC), c(FILTER_ENV_DECAY_SEC), c(FILTER_ENV_SUSTAIN_LEVEL), c(FILTER_ENV_RELEASE_SEC))
 
     fun script(door: String, args: String): IgnitorDsl = ks("Ignitor.saw().$door($args)").also {
         withClue("$door builds its own node") { nodeType.getValue(door).isInstance(it) shouldBe true }
@@ -121,50 +185,122 @@ class KlangScriptFilterDoorParitySpec : StringSpec({
                     """.adsr(0.005, 0.3, 0.2, 0.05, e => e.curves("exp", "square", "cube"))""",
             )
             val k = kotlinDoor(
-                door, modulated, c(1.2), passes = 2, analog = c(4.0), env = c(24.0),
-                a = c(0.005), d = c(0.3), s = c(0.2), r = c(0.05),
-                ac = AdsrCurves.knob(AdsrCurve.Exponential), dc = AdsrCurves.knob(AdsrCurve.Square),
-                rc = AdsrCurves.knob(AdsrCurve.Cube), humanize = true,
+                door, modulated, c(1.2),
+                configure = {
+                    it.passes(2.0.ign).analog(4.ign).humanize().env(24.ign)
+                        .adsr(0.005.ign, 0.3.ign, 0.2.ign, 0.05.ign) { e -> e.curves("exp", "square", "cube") }
+                },
+                band = {
+                    it.analog(4.ign).humanize().env(24.ign)
+                        .adsr(0.005.ign, 0.3.ign, 0.2.ign, 0.05.ign) { e -> e.curves("exp", "square", "cube") }
+                },
             )
 
             withClue(door) { s.filterFields() shouldBe k.filterFields() }
         }
     }
 
-    "a bare call and a call with an empty lambda are the filter without envelope, lane or curves" {
-        val defaults = listOf(c(0.0), c(FILTER_ENV_ATTACK_SEC), c(FILTER_ENV_DECAY_SEC), c(FILTER_ENV_SUSTAIN_LEVEL), c(FILTER_ENV_RELEASE_SEC))
-
+    "the default node of each Kotlin door, written out; the script door's bare call is the same node" {
         for (door in doors) {
-            val k = kotlinDoor(door)
-
-            withClue("$door bare") { script(door, "800").filterFields() shouldBe k.filterFields() }
-            withClue("$door x => x") { script(door, "800, x => x").filterFields() shouldBe k.filterFields() }
-            withClue("$door envelope off") { k.envKnobs() shouldBe defaults }
+            withClue("$door kotlin bare") { kotlinDoor(door) shouldBe bare(door) }
+            withClue("$door kotlin x => x") { kotlinDoor(door, configure = { it }, band = { it }) shouldBe bare(door) }
+            withClue("$door script bare") { script(door, "800").filterFields() shouldBe bare(door).filterFields() }
+            withClue("$door script x => x") { script(door, "800, x => x").filterFields() shouldBe bare(door).filterFields() }
+            withClue("$door envelope off") { bare(door).envKnobs() shouldBe listOf(c(0.0)) + constantStages }
+            withClue("$door one pass, the literal") { bare(door).filterFields()["passes"] shouldBe c(1.0) }
             withClue("$door unshaped curves: MOD_ENV_CURVE's knob") {
-                k.filterFields()["attackCurve"] shouldBe AdsrCurves.knob(MOD_ENV_CURVE)
-                k.filterFields()["decayCurve"] shouldBe AdsrCurves.knob(MOD_ENV_CURVE)
-                k.filterFields()["releaseCurve"] shouldBe AdsrCurves.knob(MOD_ENV_CURVE)
+                bare(door).filterFields()["attackCurve"] shouldBe AdsrCurves.knob(MOD_ENV_CURVE)
             }
         }
     }
 
-    "THE COMPOUND FILL at the end of the lambda: env alone gets the constant stages" {
-        val expected = listOf(c(24.0), c(FILTER_ENV_ATTACK_SEC), c(FILTER_ENV_DECAY_SEC), c(FILTER_ENV_SUSTAIN_LEVEL), c(FILTER_ENV_RELEASE_SEC))
+    "each member knob writes its own field, against the node written out, from both doors" {
+        // Distinct values off every default (stages 0.02, 0.3, 0.4, 0.5 against the constants 0.01, 0.1, 1, 0.1).
+        val stages = listOf(c(0.02), c(0.3), c(0.4), c(0.5))
+        val shaped = listOf(AdsrCurves.knob(AdsrCurve.Linear), AdsrCurves.knob(AdsrCurve.Cube), AdsrCurves.knob(AdsrCurve.SCurve))
+        val unshaped = List(3) { AdsrCurves.knob(MOD_ENV_CURVE) }
 
         for (door in doors) {
-            withClue("$door script") { script(door, "800, x => x.env(24)").envKnobs() shouldBe expected }
-            withClue("$door kotlin") { kotlinDoor(door, env = c(24.0)).envKnobs() shouldBe expected }
+            fun row(knob: String, scriptKnob: String, kotlin: (FilterKnobsCall) -> Unit, expected: IgnitorDsl) {
+                withClue("$door $knob from Kotlin") { kotlinKnob(door, kotlin) shouldBe expected }
+                withClue("$door $knob from the script") { script(door, "800, x => x.$scriptKnob").filterFields() shouldBe expected.filterFields() }
+                withClue("$door $knob moves the node off its default") { (expected == bare(door)) shouldBe false }
+            }
+
+            row("analog", "analog(4)", { it.analog = 4.ign }, written(door, analog = c(4.0)))
+            row("humanize", "humanize()", { it.humanize = true }, written(door, humanize = true))
+            row("env", "env(24)", { it.env = 24.ign }, written(door, env = c(24.0)))
+            row(
+                "adsr", "adsr(0.02, 0.3, 0.4, 0.5)", { it.adsr = stages },
+                written(door, env = c(FILTER_ENV_DEPTH_SEMITONES), stages = stages, curves = unshaped),
+            )
+            row(
+                "adsr curves (index)", "adsr(0.02, 0.3, 0.4, 0.5, e => e.curves(0, 2, 3))", { it.adsr = stages; it.curves = shaped },
+                written(door, env = c(FILTER_ENV_DEPTH_SEMITONES), stages = stages, curves = shaped),
+            )
+            row(
+                "adsr curves (names)", """adsr(0.02, 0.3, 0.4, 0.5, e => e.curves("lin", "cube", "scurve"))""",
+                { it.adsr = stages; it.curveNames = listOf("lin", "cube", "scurve") },
+                written(door, env = c(FILTER_ENV_DEPTH_SEMITONES), stages = stages, curves = shaped),
+            )
+
+            if (door == "lowpass" || door == "highpass") {
+                row("passes", "passes(3)", { it.passes = c(3.0) }, written(door, passes = c(3.0)))
+                row(
+                    "passes, a slot", """passes(Ignitor.param("np", 2))""", { it.passes = IgnitorDsl.Param("np", 2.0) },
+                    written(door, passes = IgnitorDsl.Param("np", 2.0)),
+                )
+            }
         }
     }
 
-    "THE COMPOUND FILL: adsr alone switches the envelope on at the constant depth" {
-        val expected = listOf(c(FILTER_ENV_DEPTH_SEMITONES), c(0.005), c(0.3), c(0.2), c(0.05))
+    "curves: an omitted argument is MOD_ENV_CURVE, on both Kotlin forms (index and name) and on the script" {
+        val stages = listOf(c(0.02), c(0.3), c(0.4), c(0.5))
+        val mod = AdsrCurves.knob(MOD_ENV_CURVE)
+        val linear = AdsrCurves.knob(AdsrCurve.Linear)
+
+        for (door in listOf("lowpass", "notch")) {
+            val expected = written(door, env = c(FILTER_ENV_DEPTH_SEMITONES), stages = stages, curves = listOf(linear, mod, mod))
+            val (a, d, s, r) = stages
+
+            withClue("$door script curves(\"lin\")") {
+                script(door, """800, x => x.adsr(0.02, 0.3, 0.4, 0.5, e => e.curves("lin"))""").filterFields() shouldBe
+                    expected.filterFields()
+            }
+            withClue("$door kotlin curves(\"lin\")") {
+                kotlinDoor(
+                    door,
+                    configure = { it.adsr(attack = a, decay = d, sustain = s, release = r) { e -> e.curves("lin") } },
+                    band = { it.adsr(attack = a, decay = d, sustain = s, release = r) { e -> e.curves("lin") } },
+                ) shouldBe expected
+            }
+            withClue("$door kotlin curves(attack = knob(Linear))") {
+                kotlinDoor(
+                    door,
+                    configure = { it.adsr(attack = a, decay = d, sustain = s, release = r) { e -> e.curves(attack = linear) } },
+                    band = { it.adsr(attack = a, decay = d, sustain = s, release = r) { e -> e.curves(attack = linear) } },
+                ) shouldBe expected
+            }
+        }
+    }
+
+    "THE COMPOUND FILL at the end of the lambda: env alone gets the constant stages, on both doors" {
+        for (door in doors) {
+            val expected = written(door, env = c(24.0), stages = constantStages)
+
+            withClue("$door script") { script(door, "800, x => x.env(24)").filterFields() shouldBe expected.filterFields() }
+            withClue("$door kotlin") { kotlinKnob(door) { it.env = 24.ign } shouldBe expected }
+        }
+    }
+
+    "THE COMPOUND FILL: adsr alone switches the envelope on at the constant depth, on both doors" {
+        val stages = listOf(c(0.005), c(0.3), c(0.2), c(0.05))
 
         for (door in doors) {
-            withClue("$door script") { script(door, "800, x => x.adsr(0.005, 0.3, 0.2, 0.05)").envKnobs() shouldBe expected }
-            withClue("$door kotlin") {
-                kotlinDoor(door, a = c(0.005), d = c(0.3), s = c(0.2), r = c(0.05)).envKnobs() shouldBe expected
-            }
+            val expected = written(door, env = c(FILTER_ENV_DEPTH_SEMITONES), stages = stages)
+
+            withClue("$door script") { script(door, "800, x => x.adsr(0.005, 0.3, 0.2, 0.05)").filterFields() shouldBe expected.filterFields() }
+            withClue("$door kotlin") { kotlinKnob(door) { it.adsr = stages } shouldBe expected }
         }
     }
 
@@ -181,8 +317,7 @@ class KlangScriptFilterDoorParitySpec : StringSpec({
     "the curves live INSIDE adsr's own lambda since step 3c: the builder knob adsrCurves is gone" {
         // One `adsr(a, d, s, r, configure)` shape everywhere (maintainer, 2026-09-25). A curve can
         // therefore only be written by a call that also names the stage, so "a curve alone" no longer
-        // exists on this door; the Kotlin door keeps it (a curve with no stage knob leaves the
-        // envelope off, the rule of section 4 of the dsl-design skill).
+        // exists on either door (the Kotlin door's flat `attackCurve` left with the typed-doors rollout S3a).
         for (door in doors) {
             withClue(door) {
                 shouldThrowAny { ks("""Ignitor.saw().$door(800, x => x.adsrCurves("exp", "exp", "exp"))""") }
@@ -190,11 +325,6 @@ class KlangScriptFilterDoorParitySpec : StringSpec({
             }
         }
 
-        for (door in doors) {
-            withClue("$door kotlin: a curve alone leaves the envelope off") {
-                kotlinDoor(door, dc = AdsrCurves.knob(AdsrCurve.Exponential)).envKnobs()[0] shouldBe c(0.0)
-            }
-        }
     }
 
     "curves: an omitted argument and an unknown name both mean the default, and an adsr without a lambda is unshaped" {
@@ -234,6 +364,10 @@ class KlangScriptFilterDoorParitySpec : StringSpec({
             withClue("$door humanize(0)") { script(door, "800, x => x.humanize(0)").filterFields()["humanize"] shouldBe false }
             withClue("$door humanize(true)") { script(door, "800, x => x.humanize(true)").filterFields()["humanize"] shouldBe true }
         }
+
+        // The Kotlin member is a typed Boolean, on by default.
+        saw.lowpass(800.ign) { it.humanize(false) } shouldBe bare("lowpass")
+        saw.notch(800.ign) { it.humanize(on = false) } shouldBe bare("notch")
     }
 
     "passes is a knob of lowpass and highpass only, coerced like before" {
@@ -241,6 +375,11 @@ class KlangScriptFilterDoorParitySpec : StringSpec({
             withClue("$door passes(3)") { script(door, "800, x => x.passes(3)").filterFields()["passes"] shouldBe IgnitorDsl.Constant(3.0) }
             withClue("$door passes(0) coerces to 1") { script(door, "800, x => x.passes(0)").filterFields()["passes"] shouldBe IgnitorDsl.Constant(1.0) }
         }
+
+        // The coercion is the Kotlin door's (the script door calls it): rounded, 1..16.
+        saw.lowpass(800.ign) { it.passes(0.0.ign) } shouldBe bare("lowpass")
+        (saw.highpass(800.ign) { it.passes(2.6.ign) }).passes shouldBe IgnitorDsl.Constant(3.0)
+        (saw.lowpass(800.ign) { it.passes(99.0.ign) }).passes shouldBe IgnitorDsl.Constant(16.0)
 
         for (door in listOf("bandpass", "notch")) {
             withClue("$door offers no passes") { shouldThrowAny { ks("Ignitor.saw().$door(800, x => x.passes(2))") } }
@@ -253,23 +392,60 @@ class KlangScriptFilterDoorParitySpec : StringSpec({
         }
     }
 
-    "onepole: a modulated freq works from Kotlin (it was Double-only)" {
-        val script = ks("""Ignitor.saw().onepole(Ignitor.param("cut", 800))""") as IgnitorDsl.OnePoleLowpass
-        val kotlin = IgnitorDsl.Saw().onepole(modulated)
-        script.freq shouldBe kotlin.freq
-    }
-
-    "the Kotlin scalar overloads wrap in Constant and default the same as the node overloads" {
-        val f = c(800.0)
-
-        withClue("lowpass") { IgnitorDsl.Saw().lowpass(800.0).filterFields() shouldBe IgnitorDsl.Saw().lowpass(f).filterFields() }
-        withClue("highpass") { IgnitorDsl.Saw().highpass(800.0).filterFields() shouldBe IgnitorDsl.Saw().highpass(f).filterFields() }
-        withClue("bandpass") { IgnitorDsl.Saw().bandpass(800.0).filterFields() shouldBe IgnitorDsl.Saw().bandpass(f).filterFields() }
-        withClue("notch") { IgnitorDsl.Saw().notch(800.0).filterFields() shouldBe IgnitorDsl.Saw().notch(f).filterFields() }
-
-        withClue("the scalar overload carries the curves and the fill too") {
-            IgnitorDsl.Saw().lowpass(800.0, decay = 0.3, releaseCurve = AdsrCurve.Cube).filterFields() shouldBe
-                IgnitorDsl.Saw().lowpass(f, decay = c(0.3), releaseCurve = AdsrCurves.knob(AdsrCurve.Cube)).filterFields()
-        }
+    "onepole: one door, the script converts and calls it; its default node written out" {
+        val script = ks("""Ignitor.saw().onepole(Ignitor.param("cut", 800))""")
+        script shouldBe IgnitorDsl.Saw().onepole(modulated)
+        IgnitorDsl.Saw().onepole(800.ign) shouldBe IgnitorDsl.OnePoleLowpass(inner = saw, freq = c(800.0))
+        ks("Ignitor.saw().onepole(800)") shouldBe IgnitorDsl.OnePoleLowpass(inner = saw, freq = c(800.0))
     }
 })
+
+/**
+ * One knob call per row for the two filter builders: the Kotlin rows set a field here, and [full] / [band] replay it
+ * on the builder of the door (only `passes` is lowpass and highpass only).
+ */
+private class FilterKnobsCall {
+    var passes: IgnitorDsl? = null
+    var analog: IgnitorDsl? = null
+    var humanize: Boolean = false
+    var env: IgnitorDsl? = null
+    var adsr: List<IgnitorDsl>? = null
+    var curves: List<IgnitorDsl>? = null
+    var curveNames: List<String>? = null
+
+    private fun shape(e: ModAdsrBuilder): ModAdsrBuilder {
+        val byIndex = curves
+        val byName = curveNames
+
+        return when {
+            byIndex != null -> e.curves(attack = byIndex[0], decay = byIndex[1], release = byIndex[2])
+            byName != null -> e.curves(attack = byName[0], decay = byName[1], release = byName[2])
+            else -> e
+        }
+    }
+
+    fun full(b: FilterBuilder): FilterBuilder {
+        var x = b
+        passes?.let { x = x.passes(n = it) }
+        analog?.let { x = x.analog(character = it) }
+        if (humanize) {
+            x = x.humanize()
+        }
+        env?.let { x = x.env(semitones = it) }
+        adsr?.let { st -> x = x.adsr(attack = st[0], decay = st[1], sustain = st[2], release = st[3]) { e -> shape(e) } }
+
+        return x
+    }
+
+    fun band(b: BandFilterBuilder): BandFilterBuilder {
+        var x = b
+        analog?.let { x = x.analog(character = it) }
+        if (humanize) {
+            x = x.humanize()
+        }
+        env?.let { x = x.env(semitones = it) }
+        adsr?.let { st -> x = x.adsr(attack = st[0], decay = st[1], sustain = st[2], release = st[3]) { e -> shape(e) } }
+
+        return x
+    }
+}

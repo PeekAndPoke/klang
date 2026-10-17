@@ -5,19 +5,20 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
-import io.peekandpoke.klang.common.infra.klangMapOf
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.assertions.withClue
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.LfoShapes
 import io.peekandpoke.klang.audio_bridge.distort
 import io.peekandpoke.klang.audio_bridge.highpass
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.audio_bridge.optimize
 import io.peekandpoke.klang.audio_bridge.plus
 import io.peekandpoke.klang.audio_bridge.tremolo
+import io.peekandpoke.klang.common.infra.klangMapOf
 
 /**
  * The census on hand-counted graphs: each row states the passes and the buffer traffic a reader
@@ -47,7 +48,7 @@ class GraphCensusSpec : StringSpec({
     }
 
     "a filter is one pass in place per stage, and holds a section's state per stage" {
-        GraphCensus.of(saw.lowpass(1000.0)).let {
+        GraphCensus.of(saw.lowpass(1000.0.ign)).let {
             it.passes shouldBe 2
             it.traffic shouldBe 3
             it.bytes shouldBe 64 + 48
@@ -132,7 +133,7 @@ class GraphCensusSpec : StringSpec({
         GraphCensus.oversampleBytes(4) shouldBe 2 * 2 * (8 + 6) * 8
         GraphCensus.oversampleBytes(1) shouldBe 0
 
-        val census = GraphCensus.of(saw.distort(0.5, "soft", 4))
+        val census = GraphCensus.of(saw.distort(amount = 0.5.ign, shape = "soft", oversample = 4.ign))
 
         census.passes shouldBe 3
         census.traffic shouldBe 1 + 2 + (2 * 4 + 2 + 2 + GraphCensus.oversampleTraffic(4))
@@ -152,8 +153,8 @@ class GraphCensusSpec : StringSpec({
     }
 
     "a shared node renders once into a memo, and every consumer copies the memo out" {
-        val filtered = saw.lowpass(1000.0)
-        val census = GraphCensus.of(filtered.plus(filtered.highpass(2000.0)))
+        val filtered = saw.lowpass(1000.0.ign)
+        val census = GraphCensus.of(filtered.plus(filtered.highpass(2000.0.ign)))
 
         // saw 1, lowpass 1, highpass 1, plus 1; the shared filtered subtree is counted once
         census.passes shouldBe 4
@@ -171,7 +172,7 @@ class GraphCensusSpec : StringSpec({
     }
 
     "a pitch-mod node renders its mod block, the ratio loop reads it, the source reads the ratio" {
-        val census = GraphCensus.of(IgnitorDsl.Vibrato(saw.lowpass(1000.0)))
+        val census = GraphCensus.of(IgnitorDsl.Vibrato(saw.lowpass(1000.0.ign)))
 
         census.passes shouldBe 3
         census.traffic shouldBe 3 + 4
@@ -180,7 +181,7 @@ class GraphCensusSpec : StringSpec({
     }
 
     "one variant is counted, the one the sound index picks, and the others make nothing shared" {
-        val variants = IgnitorDsl.Variants(listOf(saw, saw.lowpass(1000.0).highpass(100.0)))
+        val variants = IgnitorDsl.Variants(listOf(saw, saw.lowpass(1000.0.ign).highpass(100.0.ign)))
 
         GraphCensus.of(variants).let {
             it.passes shouldBe 1
@@ -209,7 +210,7 @@ class GraphCensusSpec : StringSpec({
         for (shape in LfoShapes.names) {
             withClue("$shape, a constant depth") {
                 // the saw (1 pass, 1 write) + the LFO (1, 1) + range in place (1, 2) + the multiply (1, 3)
-                GraphCensus.of(saw.tremolo(rate = 4.0, depth = 0.5, shape = shape)).let {
+                GraphCensus.of(saw.tremolo(rate = 4.0.ign, depth = 0.5.ign) { it.shape(shape) }).let {
                     it.passes shouldBe 4
                     it.traffic shouldBe 7
                     it.bytes shouldBe 64 + 64
@@ -270,7 +271,7 @@ class GraphCensusSpec : StringSpec({
 
         // scalar depth and bounds fold to one value per block: the classic tremolo's count
         GraphCensus.of(IgnitorDsl.Tremolo(saw, rate = c(4.0), depth = c(0.5), rangeFrom = c(0.0), rangeTo = c(1.0))) shouldBe
-            GraphCensus.of(saw.tremolo(rate = 4.0, depth = 0.5))
+            GraphCensus.of(saw.tremolo(rate = 4.0.ign, depth = 0.5.ign))
 
         // a signal upper bound, a scalar depth: the saw (1, 1), the LFO (1, 1), the bound's own sine (1, 1),
         // `floored * to` in place over the scalar side (1, 2), `+ 1` in place (1, 2), the range reading both bounds

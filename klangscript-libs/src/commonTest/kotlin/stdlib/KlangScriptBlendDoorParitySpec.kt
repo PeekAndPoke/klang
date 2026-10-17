@@ -10,11 +10,15 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
+import io.peekandpoke.klang.audio_bridge.Ign
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.KatalystBuilder
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.blend
+import io.peekandpoke.klang.audio_bridge.ign
+import io.peekandpoke.klang.audio_bridge.kat
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
@@ -60,7 +64,31 @@ class KlangScriptBlendDoorParitySpec : StringSpec({
     "Ignitor: the Kotlin door builds the same node as the script door" {
         val saw = ignitor("Ignitor.saw()")
 
-        saw.blend(0.25) { it.mul(4.0) } shouldBe ignitor("Ignitor.saw().blend(0.25, y => y.mul(4))")
+        saw.blend(0.25.ign) { it.mul(4.0.ign) } shouldBe ignitor("Ignitor.saw().blend(0.25, y => y.mul(4))")
+        saw.blend(Ign.param("mix", 0.3)) { it.mul(4.0.ign) } shouldBe
+                ignitor("""Ignitor.saw().blend(Ignitor.param("mix", 0.3), y => y.mul(4))""")
+    }
+
+    "Ignitor: the node written out: the dry at 1 - wet, then the branch at wet, from both doors" {
+        val saw = ignitor("Ignitor.saw()")
+        val expected = IgnitorDsl.Parallel(
+            branches = listOf(
+                IgnitorDsl.Times(left = saw, right = c(0.75)),
+                IgnitorDsl.Times(left = IgnitorDsl.Times(left = saw, right = c(4.0)), right = c(0.25)),
+            ),
+        )
+        val mix = IgnitorDsl.Param(name = "mix", default = 0.3)
+        val moving = IgnitorDsl.Parallel(
+            branches = listOf(
+                IgnitorDsl.Times(left = saw, right = IgnitorDsl.Minus(left = c(1.0), right = mix)),
+                IgnitorDsl.Times(left = IgnitorDsl.Times(left = saw, right = c(4.0)), right = mix),
+            ),
+        )
+
+        saw.blend(0.25.ign) { it.mul(4.0.ign) } shouldBe expected
+        ignitor("Ignitor.saw().blend(0.25, y => y.mul(4))") shouldBe expected
+        saw.blend(mix) { it.mul(4.0.ign) } shouldBe moving
+        ignitor("""Ignitor.saw().blend(Ignitor.param("mix", 0.3), y => y.mul(4))""") shouldBe moving
     }
 
     "Ignitor: a slot as wet moves the blend: the dry share is 1 - the slot" {
@@ -71,12 +99,12 @@ class KlangScriptBlendDoorParitySpec : StringSpec({
         dry.right.shouldBeInstanceOf<IgnitorDsl.Param>().name shouldBe "mix"
     }
 
-    "Ignitor: a wet that is not finite is 0, the dry signal, on both doors and both Kotlin overloads" {
+    "Ignitor: a wet that is not finite is 0, the dry signal, on both doors" {
         val saw = ignitor("Ignitor.saw()")
-        val dryOnly = saw.blend(0.0) { it.mul(4.0) }
+        val dryOnly = saw.blend(0.0.ign) { it.mul(4.0.ign) }
 
-        saw.blend(Double.NaN) { it.mul(4.0) } shouldBe dryOnly
-        saw.blend(IgnitorDsl.Constant(Double.POSITIVE_INFINITY)) { it.mul(4.0) } shouldBe dryOnly
+        saw.blend(Double.NaN.ign) { it.mul(4.0.ign) } shouldBe dryOnly
+        saw.blend(IgnitorDsl.Constant(Double.POSITIVE_INFINITY)) { it.mul(4.0.ign) } shouldBe dryOnly
         ignitor("Ignitor.saw().blend(Math.sqrt(-1), y => y.mul(4))") shouldBe dryOnly
 
         val out = dryOnly.shouldBeInstanceOf<IgnitorDsl.Parallel>()
@@ -101,9 +129,22 @@ class KlangScriptBlendDoorParitySpec : StringSpec({
     "Katalyst: the Kotlin door builds the same chain as the script door; a wet that is not finite is 0" {
         val empty = KatalystBuilder(KatalystDsl(emptyList()))
 
-        empty.blend(0.3) { it.distort(0.6) }.node shouldBe katalyst("Katalyst(k => k.blend(0.3, b => b.distort(0.6)))")
+        empty.blend(0.3) { it.distort(amount = 0.6.kat) }.node shouldBe katalyst("Katalyst(k => k.blend(0.3, b => b.distort(0.6)))")
+        // Written out, from the Kotlin door: the bus at 1 - wet first, the branch's stages at wet second.
+        empty.gain(1.5.kat).blend(0.3) { it.distort(amount = 0.6.kat) }.node shouldBe KatalystDsl.of(
+            KatalystStageDsl.Gain(k(1.5)),
+            KatalystStageDsl.Parallel(
+                branches = listOf(
+                    KatalystDsl.of(KatalystStageDsl.Gain(k(0.7))),
+                    KatalystDsl.of(KatalystStageDsl.Distort(amount = k(0.6)), KatalystStageDsl.Gain(k(0.3))),
+                ),
+            ),
+        )
+        // The script also takes a Kat constant, the number it holds.
+        katalyst("Katalyst(k => k.blend(0.3, b => b.distort(0.6)))") shouldBe
+                empty.scriptBlend(wet = 0.3.kat) { it.distort(amount = 0.6.kat) }.node
 
-        val stage = empty.blend(Double.NaN) { it.distort(0.6) }.node.stages.single().shouldBeInstanceOf<KatalystStageDsl.Parallel>()
+        val stage = empty.blend(Double.NaN) { it.distort(amount = 0.6.kat) }.node.stages.single().shouldBeInstanceOf<KatalystStageDsl.Parallel>()
 
         stage.branches[0].stages.single() shouldBe KatalystStageDsl.Gain(k(1.0))
         stage.branches[1].stages.last() shouldBe KatalystStageDsl.Gain(k(0.0))

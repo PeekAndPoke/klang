@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.voices
 
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.common.infra.klangMapOf
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -150,7 +151,7 @@ class VoiceSchedulerCullingSpec : StringSpec({
                 name = "tremsine",
                 // The envelope is the instrument's own (a bare tree since phase 3 step 9 has no voice envelope): its
                 // 1 s release keeps the voice in its release through the tremolo's off-half.
-                dsl = IgnitorDsl.Sine().tremolo(rate = 4.0, depth = 1.0, shape = "square").adsr(attack = 0.001, decay = 0.01, sustain = 1.0, release = 1.0),
+                dsl = IgnitorDsl.Sine().tremolo(rate = 4.0.ign, depth = 1.0.ign) { it.shape("square") }.adsr(attack = 0.001.ign, decay = 0.01.ign, sustain = 1.0.ign, release = 1.0.ign),
             )
         )
     }

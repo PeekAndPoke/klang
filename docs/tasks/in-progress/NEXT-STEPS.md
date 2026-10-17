@@ -30,7 +30,7 @@ and goes to the maintainer.
    `audio_benchmark/alloc-budgets.txt`): 4 (`spluck-a`), 36 (`E-arith`'s second mode), 38 (`E-duck`).
 3. Done 2026-10-15: songs move freely (`../../tasks-archive/2026-10/20261015-song-checks-move-freely.md`).
    Then the behaviour changes decided 2026-10-13: engine follow-up 42 (a delay or reverb switched off fades, Q39, done 2026-10-16: corpus unmoved, a listening pair per stage in `tmp/listening/delay-reverb-fade/`), 43 (solo reacts at once, Q28, done 2026-10-16), 44 (`duty(width)`, Q29, done 2026-10-16). Larger, decided, its own task: typed Kotlin doors
-   ([`../kotlin-typed-doors.md`](../kotlin-typed-doors.md), Q24)
+   ([`../../tasks-archive/2026-10/20261016-kotlin-typed-doors.md`](../../tasks-archive/2026-10/20261016-kotlin-typed-doors.md), Q24, done 2026-10-16: rollout S1 to S7, the script doors internal)
    and the frozen songs' shared orbits ([`../song-orbit-ownership-review.md`](../song-orbit-ownership-review.md), Q20,
    done 2026-10-16: each conflicting pattern on a free orbit, the three frozen rows (the 09-25 count-in too) re-accepted, moved by the text, not the engine; a listening pair per
    text in `tmp/listening/frozen-orbits/`; the live songs in that file stay with the maintainer).
@@ -53,5 +53,7 @@ are the engine stream's (Q38).
   listening rounds before the next songs (C10). A check by ear of engine follow-up 42 (decided, built):
   `tmp/listening/delay-reverb-fade/`.
 - An FM round together: [`../future/fm-revisit.md`](../future/fm-revisit.md).
+- sprudel's own typed Kotlin door (its doors take `PatternLike = Any`): needs its own design and a home, the
+  maintainer's call ([`../../tasks-archive/2026-10/20261016-kotlin-typed-doors.md`](../../tasks-archive/2026-10/20261016-kotlin-typed-doors.md), "Left after the rollout").
 - The stdlib's `hashCode(dynamic)` closure (every Kotlin/JS `HashMap` operation allocates on V8) is noted for an
   upstream report, not filed (engine follow-ups, item 2).

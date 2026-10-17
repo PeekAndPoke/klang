@@ -8,20 +8,21 @@ package io.peekandpoke.klang.audio_benchmark
 import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.KlangAudioRenderer
 import io.peekandpoke.klang.audio_be.StereoBuffer
+import io.peekandpoke.klang.audio_bridge.EqBuilder
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.SoundValue
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
-import io.peekandpoke.klang.audio_bridge.shape
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_bridge.adsr
 import io.peekandpoke.klang.audio_bridge.constants.REVERB_SIZE
 import io.peekandpoke.klang.audio_bridge.constants.REVERB_WET
-import io.peekandpoke.klang.audio_bridge.adsr
-import io.peekandpoke.klang.audio_bridge.band
 import io.peekandpoke.klang.audio_bridge.highpass
+import io.peekandpoke.klang.audio_bridge.ign
+import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.audio_bridge.plus
-import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import io.peekandpoke.klang.audio_bridge.shape
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel.createSprudelVoiceData
 import io.peekandpoke.klang.sprudel.paramBagOf
@@ -218,10 +219,10 @@ class IgnitorBenchmark(
 
         /** The thud as Der Schmetterling wrote it on 2026-09-30: 13 hand-rolled sines, each `Ign.sine(Ign.freq().mul(r)).mul(g)`, summed with `.plus`. */
         private fun thudSines(): IgnitorDsl {
-            fun sine(i: Int): IgnitorDsl = IgnitorDsl.Sine(freq = IgnitorDsl.Freq.mul(THUD_RATIOS[i])).mul(THUD_GAINS[i])
+            fun sine(i: Int): IgnitorDsl = IgnitorDsl.Sine(freq = IgnitorDsl.Freq.mul(THUD_RATIOS[i].ign)).mul(THUD_GAINS[i].ign)
 
             return (1 until THUD_RATIOS.size).fold(sine(0)) { acc, i -> acc.plus(sine(i)) }
-                .adsr(attack = 0.0005, decay = 0.050, sustain = 0.0, release = 0.02).mul(1.245)
+                .adsr(attack = 0.0005.ign, decay = 0.050.ign, sustain = 0.0.ign, release = 0.02.ign).mul(1.245.ign)
         }
 
         /** The same thud as ONE sine with 13 explicit partials: the same ratios, the gains' magnitudes, the signs as phase 0.5. */
@@ -234,7 +235,7 @@ class IgnitorBenchmark(
                     phase = IgnitorDsl.Constant(if (THUD_GAINS[i] < 0.0) 0.5 else 0.0),
                 )
             },
-        ).adsr(attack = 0.0005, decay = 0.050, sustain = 0.0, release = 0.02).mul(1.245)
+        ).adsr(attack = 0.0005.ign, decay = 0.050.ign, sustain = 0.0.ign, release = 0.02.ign).mul(1.245.ign)
 
         /**
          * Standard set of benchmark cases covering individual oscillators, super oscillators,
@@ -419,42 +420,43 @@ class IgnitorBenchmark(
         private fun guitarRig(muls: Boolean, drives: Boolean, oversample: Boolean = true): IgnitorDsl {
             fun IgnitorDsl.level(gain: Double): IgnitorDsl = if (muls) mul(IgnitorDsl.Constant(gain)) else this
 
-            fun IgnitorDsl.newEq(): IgnitorDsl.Eq = IgnitorDsl.Eq(inner = this)
+            // A NEW equalizer each time (`eq` would continue the one before), configured on the voice eq builder.
+            fun IgnitorDsl.newEq(configure: (EqBuilder) -> EqBuilder): IgnitorDsl.Eq = configure(EqBuilder(IgnitorDsl.Eq(inner = this))).node
 
             fun IgnitorDsl.distortion(amount: Double, shape: String, os: Int): IgnitorDsl {
                 val driven = if (drives) IgnitorDsl.Drive(inner = this, amount = IgnitorDsl.Constant(amount)) else this
 
-                return driven.shape(shape, oversample = if (oversample) os else 0)
+                return driven.shape(shape = shape, oversample = (if (oversample) os else 0).ign)
             }
 
             val string = guitarString(muls)
 
             // pickupHumbucker
-            val pickup = string.lowpass(2600.0, 1.6).level(1.2)
+            val pickup = string.lowpass(freq = 2600.0.ign, q = 1.6.ign).level(1.2)
             // pedalScreamer
             val pedal = pickup
-                .plus(pickup.highpass(720.0).distortion(0.35, "soft", 2).level(0.6))
-                .lowpass(3200.0)
+                .plus(pickup.highpass(720.0.ign).distortion(0.35, "soft", 2).level(0.6))
+                .lowpass(3200.0.ign)
                 .level(0.5)
             // preampHighGain
             val preamp = pedal
-                .highpass(120.0)
-                .distortion(0.35, "tube", 4).highpass(100.0)
-                .distortion(0.45, "softsat", 4).highpass(100.0)
+                .highpass(120.0.ign)
+                .distortion(0.35, "tube", 4).highpass(100.0.ign)
+                .distortion(0.45, "softsat", 4).highpass(100.0.ign)
                 .distortion(0.35, "hard", 4)
-                .lowpass(6400.0)
+                .lowpass(6400.0.ign)
                 .level(0.45)
             // powerPushPull, then the snare's room
             val power = preamp
                 .distortion(0.25, "soft", 2)
-                .newEq().band(4000.0, 0.7, 2.0)
+                .newEq { it.band(freq = 4000.0.ign, q = 0.7.ign, db = 2.0.ign) }
                 .level(1.6)
-                .newEq().band(210.0, 2.0, -1.0)
+                .newEq { it.band(freq = 210.0.ign, q = 2.0.ign, db = (-1.0).ign) }
             // cab4x12
 
             return power
-                .newEq().band(110.0, 1.2, 3.0).band(2700.0, 2.0, 4.0)
-                .lowpass(5000.0, 0.707, 3)
+                .newEq { it.band(freq = 110.0.ign, q = 1.2.ign, db = 3.0.ign).band(freq = 2700.0.ign, q = 2.0.ign, db = 4.0.ign) }
+                .lowpass(freq = 5000.0.ign, q = 0.707.ign) { it.passes(3.0.ign) }
                 .level(0.19)
         }
 
@@ -473,8 +475,8 @@ class IgnitorBenchmark(
                 kMax = 0.85,
             )
             val burst = IgnitorDsl.Crackle(chaos = IgnitorDsl.Constant(1.25))
-                .highpass(1000.0)
-                .adsr(0.005, 0.1, 0.0, 0.05)
+                .highpass(1000.0.ign)
+                .adsr(attack = 0.005.ign, decay = 0.1.ign, sustain = 0.0.ign, release = 0.05.ign)
             val plucked = IgnitorDsl.PitchEnvelope(
                 inner = saw,
                 semitones = IgnitorDsl.Constant(0.5),
@@ -483,7 +485,7 @@ class IgnitorBenchmark(
             ).plus(if (muls) burst.mul(IgnitorDsl.Constant(1.0)) else burst)
 
             // Sustain held: the song's 0.0 would end the voice during warmup and leave an empty renderer to measure.
-            return plucked.adsr(0.005, 1.0, 1.0, 0.03)
+            return plucked.adsr(attack = 0.005.ign, decay = 1.0.ign, sustain = 1.0.ign, release = 0.03.ign)
         }
     }
 }

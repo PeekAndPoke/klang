@@ -13,6 +13,7 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.adsr
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.audio_bridge.range
 import kotlin.math.PI
@@ -345,9 +346,9 @@ class SineExplicitPartialsSpec : StringSpec({
     "an envelope on a partial's gain is the partial as its own sine under the same adsr: 0.5 ms and 2 ms attacks, from the peak" {
         for ((attack, decay) in listOf(0.0005 to 0.050, 0.002 to 0.300)) {
             withClue("attack $attack, decay $decay") {
-                val env = IgnitorDsl.Constant(1.0).adsr(attack = attack, decay = decay, sustain = 0.0, release = 0.02)
+                val env = IgnitorDsl.Constant(1.0).adsr(attack = attack.ign, decay = decay.ign, sustain = 0.0.ign, release = 0.02.ign)
                 val partial = render(dslPartial(gain = env, phase = 0.25).toExciter(random = Random(1)), 210.0, count = 24)
-                val own = render(ownSine(0.25).adsr(attack = attack, decay = decay, sustain = 0.0, release = 0.02).toExciter(random = Random(1)), 210.0, count = 24)
+                val own = render(ownSine(0.25).adsr(attack = attack.ign, decay = decay.ign, sustain = 0.0.ign, release = 0.02.ign).toExciter(random = Random(1)), 210.0, count = 24)
 
                 firstSound(partial) shouldBe firstSound(own)
                 firstSound(own) shouldBe 1 // the envelope is 0 at the onset, the sine from its peak just after
@@ -358,7 +359,7 @@ class SineExplicitPartialsSpec : StringSpec({
     }
 
     "a 12 Hz tremolo on a partial's gain is the partial as its own sine times the same tremolo" {
-        val tremolo = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(12.0)).range(from = 0.0, to = 1.0)
+        val tremolo = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(12.0)).range(from = 0.0.ign, to = 1.0.ign)
         val partial = render(dslPartial(gain = tremolo, phase = 0.0).toExciter(random = Random(1)), 210.0, count = 40)
         val own = render(ownSine(0.0).mul(tremolo).toExciter(random = Random(1)), 210.0, count = 40)
 
@@ -483,7 +484,7 @@ class SineExplicitPartialsSpec : StringSpec({
         // The adsr reads the voice clock, so it would land right even if it were skipped; the LFO keeps its own phase,
         // so it shows whether the gain really rendered during the silent block.
         val gains = listOf<Pair<String, () -> Ignitor>>(
-            "adsr" to { IgnitorDsl.Constant(1.0).adsr(attack = 0.002, decay = 0.3, sustain = 0.0, release = 0.02).toExciter(random = Random(1)) },
+            "adsr" to { IgnitorDsl.Constant(1.0).adsr(attack = 0.002.ign, decay = 0.3.ign, sustain = 0.0.ign, release = 0.02.ign).toExciter(random = Random(1)) },
             "LFO" to { Ignitors.sine(freq = const(30.0)) * 0.5 + const(0.5) },
         )
 

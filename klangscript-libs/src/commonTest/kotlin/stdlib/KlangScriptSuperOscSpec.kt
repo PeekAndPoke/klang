@@ -12,6 +12,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.peekandpoke.klang.script.runtime.NativeObjectValue
@@ -39,11 +40,11 @@ class KlangScriptSuperOscSpec : StringSpec({
     fun c(v: Double) = IgnitorDsl.Constant(v)
 
     val doors = listOf(
-        SuperDoor("supersaw", { KlangScriptIgnitor.supersaw() }, { KlangScriptIgnitor.supersaw(configure = { it.voices(11).spread(0.12) }) }),
-        SuperDoor("supersine", { KlangScriptIgnitor.supersine() }, { KlangScriptIgnitor.supersine(configure = { it.voices(11).spread(0.12) }) }),
-        SuperDoor("supersquare", { KlangScriptIgnitor.supersquare() }, { KlangScriptIgnitor.supersquare(configure = { it.voices(11).spread(0.12) }) }),
-        SuperDoor("supertri", { KlangScriptIgnitor.supertri() }, { KlangScriptIgnitor.supertri(configure = { it.voices(11).spread(0.12) }) }),
-        SuperDoor("superramp", { KlangScriptIgnitor.superramp() }, { KlangScriptIgnitor.superramp(configure = { it.voices(11).spread(0.12) }) }),
+        SuperDoor("supersaw", { KlangScriptIgnitor.supersaw() }, { KlangScriptIgnitor.supersaw(configure = { it.voices(11.ign).spread(0.12.ign) }) }),
+        SuperDoor("supersine", { KlangScriptIgnitor.supersine() }, { KlangScriptIgnitor.supersine(configure = { it.voices(11.ign).spread(0.12.ign) }) }),
+        SuperDoor("supersquare", { KlangScriptIgnitor.supersquare() }, { KlangScriptIgnitor.supersquare(configure = { it.voices(11.ign).spread(0.12.ign) }) }),
+        SuperDoor("supertri", { KlangScriptIgnitor.supertri() }, { KlangScriptIgnitor.supertri(configure = { it.voices(11.ign).spread(0.12.ign) }) }),
+        SuperDoor("superramp", { KlangScriptIgnitor.superramp() }, { KlangScriptIgnitor.superramp(configure = { it.voices(11.ign).spread(0.12.ign) }) }),
     )
 
     "every calling form and every knob: script == the default node with the knob's own field written" {

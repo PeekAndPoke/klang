@@ -15,6 +15,7 @@ import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.roundTrip
 import io.peekandpoke.klang.audio_bridge.DistortionShapes
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.audio_bridge.parallel
 import kotlin.math.abs
@@ -134,7 +135,7 @@ class IgnitorParallelSpec : StringSpec({
 
     "the node is the SUM of its branches: x * 0.5 and x * 0.25 side by side are 0.75 of x" {
         val dry = render(saw)
-        val out = render(saw.parallel({ it.mul(0.5) }, { it.mul(0.25) }))
+        val out = render(saw.parallel({ it.mul(0.5.ign) }, { it.mul(0.25.ign) }))
 
         shouldMatch(out) { 0.75 * dry[it] }
     }
@@ -254,7 +255,7 @@ class IgnitorParallelSpec : StringSpec({
         fun rms(signal: DoubleArray): Double = sqrt((768 until signal.size).sumOf { signal[it] * signal[it] } / (signal.size - 768))
 
         for ((factors, freq) in listOf(listOf(2) to 18250.0, listOf(4) to 16750.0, listOf(8) to 18000.0, listOf(2, 4) to 18000.0)) {
-            val sine = IgnitorDsl.Sine(freq = c(freq), analog = c(0.0)).mul(0.4)
+            val sine = IgnitorDsl.Sine(freq = c(freq), analog = c(0.0)).mul(0.4.ign)
             val shapedBranches = factors.map { IgnitorDsl.Shape(inner = sine, shape = hard, oversample = c(it.toDouble())) }
             val dry = render(sine)
             val sum = render(IgnitorDsl.Parallel(branches = shapedBranches + sine))

@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.voices
 
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.common.infra.toKlangMap
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThan
@@ -47,7 +48,7 @@ class PitchModulationTest : StringSpec({
         // renders it through the instrument: depth 0 and a negative depth are gated off (the bare sine), a real
         // depth is the positive control that makes the zero claims falsifiable.
         fun render(rate: Double, semitones: Double?): AudioBuffer {
-            val dsl = if (semitones == null) IgnitorDsl.Sine() else IgnitorDsl.Sine().vibrato(rate = rate, semitones = semitones)
+            val dsl = if (semitones == null) IgnitorDsl.Sine() else IgnitorDsl.Sine().vibrato(rate = rate.ign, semitones = semitones.ign)
             val voice = createSynthVoice(blockFrames = bf, signal = dsl.toExciter(random = Random(1)))
             val ctx = createContext(blockFrames = bf)
             voice.render(ctx)
@@ -71,7 +72,7 @@ class PitchModulationTest : StringSpec({
         // Audit F12. Accelerate is a tree node since pitch pipeline step 3 (`classic()`'s stage), so the voice renders
         // it through the instrument: 0 semitones is gated off (the bare sine), a real glide is the positive control.
         fun render(semitones: Double?): AudioBuffer {
-            val dsl = if (semitones == null) IgnitorDsl.Sine() else IgnitorDsl.Sine().accelerate(semitones = semitones)
+            val dsl = if (semitones == null) IgnitorDsl.Sine() else IgnitorDsl.Sine().accelerate(semitones = semitones.ign)
             val voice = createSynthVoice(blockFrames = bf, signal = dsl.toExciter(random = Random(1)))
             val ctx = createContext(blockFrames = bf)
             voice.render(ctx)

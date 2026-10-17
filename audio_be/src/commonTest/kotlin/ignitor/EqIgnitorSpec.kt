@@ -5,26 +5,25 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
-import io.peekandpoke.klang.common.infra.toKlangMap
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.doubles.shouldBeGreaterThan
+import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.filters.EqCore
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl.EqSection
-import io.peekandpoke.klang.audio_bridge.band
 import io.peekandpoke.klang.audio_bridge.eq
-import io.peekandpoke.klang.audio_bridge.tap
 import io.peekandpoke.klang.audio_bridge.highpass
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.notch
 import io.peekandpoke.klang.audio_bridge.optimize
+import io.peekandpoke.klang.common.infra.toKlangMap
 import kotlin.math.abs
 import kotlin.math.log10
 import kotlin.math.sqrt
-import io.kotest.matchers.doubles.shouldBeGreaterThan
-import io.kotest.matchers.doubles.shouldBeLessThan
 import kotlin.random.Random
 
 /** This file's one seeded stream: every run draws the same, and successive builds still draw
@@ -473,10 +472,10 @@ class EqIgnitorSpec : StringSpec({
                 right = c(5.5),
             ),
         )
-            .notch(freq = 210.0, q = 2.5)
-            .highpass(freq = 440.0, q = 0.707)
-            .lowpass(freq = 5300.0, q = 0.707)
-            .lowpass(freq = 5300.0, q = 0.707)
+            .notch(freq = 210.0.ign, q = 2.5.ign)
+            .highpass(freq = 440.0.ign, q = 0.707.ign)
+            .lowpass(freq = 5300.0.ign, q = 0.707.ign)
+            .lowpass(freq = 5300.0.ign, q = 0.707.ign)
 
         val fused = IgnitorDsl.Eq(
             inner = IgnitorDsl.Saw(),
@@ -492,7 +491,7 @@ class EqIgnitorSpec : StringSpec({
         assertDslParity(chained = legacy, fused = fused)
     }
 
-    "the .eq().tap() SURFACE reproduces the legacy parallel chain bit-exactly" {
+    "the .eq { tap } SURFACE reproduces the legacy parallel chain bit-exactly" {
         // The row above proves a hand-built Eq tree matches the legacy graph. This one proves
         // the authoring SURFACE builds the same thing: .tap() must produce a RawTap with the
         // params in the right slots, or a wrong order / a Bell-instead-of-RawTap would leave
@@ -507,13 +506,11 @@ class EqIgnitorSpec : StringSpec({
             ),
             right = IgnitorDsl.Times(left = IgnitorDsl.Bandpass(inner = sharedLegacy, freq = c(4000.0), q = c(0.85)), right = c(5.5)),
         )
-            .notch(freq = 210.0, q = 2.5)
-            .lowpass(freq = 5300.0, q = 0.707)
+            .notch(freq = 210.0.ign, q = 2.5.ign)
+            .lowpass(freq = 5300.0.ign, q = 0.707.ign)
 
         val authored = IgnitorDsl.Saw()
-            .eq()
-            .tap(freq = 1000.0, q = 0.8, gain = 2.0)
-            .tap(freq = 4000.0, q = 0.85, gain = 5.5)
+            .eq { it.tap(freq = 1000.0.ign, q = 0.8.ign, gain = 2.0.ign).tap(freq = 4000.0.ign, q = 0.85.ign, gain = 5.5.ign) }
             .let {
                 // No section methods for the serial filters yet (they stay chained nodes
                 // until the optimizer folds them), so the tail is appended directly.
@@ -539,8 +536,8 @@ class EqIgnitorSpec : StringSpec({
         val qBell = q / sqrt(aSq)
         val db = 20.0 * log10(aSq)
 
-        val oneTap = IgnitorDsl.Saw().eq().tap(freq = 850.0, q = q, gain = gain)
-        val oneBell = IgnitorDsl.Saw().eq().band(freq = 850.0, q = qBell, db = db)
+        val oneTap = IgnitorDsl.Saw().eq { it.tap(freq = 850.0.ign, q = q.ign, gain = gain.ign) }
+        val oneBell = IgnitorDsl.Saw().eq { it.band(freq = 850.0.ign, q = qBell.ign, db = db.ign) }
 
         maxAbsDiff(a = oneTap, b = oneBell) shouldBeLessThan 1e-9
     }
@@ -566,8 +563,8 @@ class EqIgnitorSpec : StringSpec({
         for ((freq, spec) in bands) {
             val (q, gain) = spec
             val aSq = 1.0 + gain // C2 unity-peak taps: q is out of the level
-            taps = taps.tap(freq = freq, q = q, gain = gain)
-            bells = bells.band(freq = freq, q = q / sqrt(aSq), db = 20.0 * log10(aSq))
+            taps = taps.eq { it.tap(freq = freq.ign, q = q.ign, gain = gain.ign) }
+            bells = bells.eq { it.band(freq = freq.ign, q = (q / sqrt(aSq)).ign, db = (20.0 * log10(aSq)).ign) }
         }
 
         // Far above any rounding: this is a real, audible gap.
@@ -577,7 +574,7 @@ class EqIgnitorSpec : StringSpec({
     "static 0 dB bell is skipped: bit-equal to the chain WITHOUT the bell" {
         // The adapter-owned skip (EqCore KDoc): Param-backed db is per-voice constant, so a
         // 0 dB bell can never move off zero and its slot is retired to passthrough.
-        val without = IgnitorDsl.Saw().lowpass(freq = 2000.0, q = 1.0)
+        val without = IgnitorDsl.Saw().lowpass(freq = 2000.0.ign, q = 1.0.ign)
         val with = IgnitorDsl.Eq(
             inner = IgnitorDsl.Saw(),
             sections = listOf(
@@ -591,7 +588,7 @@ class EqIgnitorSpec : StringSpec({
     "EXPRESSION-backed 0 dB bell stays transparent through the running-state path" {
         // Not static (Times is neither Param nor Constant) -> the core's explicit 0 dB
         // branch runs state every block and emits v0 — still bit-transparent.
-        val without = IgnitorDsl.Saw().lowpass(freq = 2000.0, q = 1.0)
+        val without = IgnitorDsl.Saw().lowpass(freq = 2000.0.ign, q = 1.0.ign)
         val with = IgnitorDsl.Eq(
             inner = IgnitorDsl.Saw(),
             sections = listOf(
@@ -630,7 +627,7 @@ class EqIgnitorSpec : StringSpec({
     }
 
     "production sub-block onset renders bit-equal (offset != 0, partial length, first call)" {
-        val chained = IgnitorDsl.Saw().notch(freq = 210.0, q = 2.5).lowpass(freq = 5300.0, q = 0.707)
+        val chained = IgnitorDsl.Saw().notch(freq = 210.0.ign, q = 2.5.ign).lowpass(freq = 5300.0.ign, q = 0.707.ign)
         val fused = IgnitorDsl.Eq(
             inner = IgnitorDsl.Saw(),
             sections = listOf(

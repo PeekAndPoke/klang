@@ -11,7 +11,6 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl.Freq
 import io.peekandpoke.klang.audio_bridge.abs
 import io.peekandpoke.klang.audio_bridge.accelerate
 import io.peekandpoke.klang.audio_bridge.adsr
-import io.peekandpoke.klang.audio_bridge.band
 import io.peekandpoke.klang.audio_bridge.bandpass
 import io.peekandpoke.klang.audio_bridge.ceil
 import io.peekandpoke.klang.audio_bridge.clamp
@@ -27,6 +26,7 @@ import io.peekandpoke.klang.audio_bridge.floor
 import io.peekandpoke.klang.audio_bridge.fm
 import io.peekandpoke.klang.audio_bridge.frac
 import io.peekandpoke.klang.audio_bridge.highpass
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.lerp
 import io.peekandpoke.klang.audio_bridge.log
 import io.peekandpoke.klang.audio_bridge.lowpass
@@ -55,7 +55,6 @@ import io.peekandpoke.klang.audio_bridge.sign
 import io.peekandpoke.klang.audio_bridge.sq
 import io.peekandpoke.klang.audio_bridge.sqrt
 import io.peekandpoke.klang.audio_bridge.tanh
-import io.peekandpoke.klang.audio_bridge.tap
 import io.peekandpoke.klang.audio_bridge.tremolo
 import io.peekandpoke.klang.audio_bridge.vibrato
 
@@ -127,7 +126,7 @@ object WarmupVocabulary {
             partials = listOf(
                 IgnitorDsl.Sine.Partial(ratio = Constant(0.66), gain = Constant(0.5)),
                 IgnitorDsl.Sine.Partial(ratio = Constant(1.25), gain = Constant(0.5), phase = Constant(0.5)),
-                IgnitorDsl.Sine.Partial(ratio = Constant(2.19), gain = Constant(0.6).adsr(attack = 0.001, decay = 0.3, sustain = 0.2, release = 0.1)),
+                IgnitorDsl.Sine.Partial(ratio = Constant(2.19), gain = Constant(0.6).adsr(attack = 0.001.ign, decay = 0.3.ign, sustain = 0.2.ign, release = 0.1.ign)),
                 IgnitorDsl.Sine.Partial(ratio = Constant(2.76), gain = Constant(0.3), phase = slowPhase()),
             ),
         ),
@@ -179,8 +178,8 @@ object WarmupVocabulary {
         val forward = IgnitorDsl.Affine(affine, mul = Constant(0.9))
         // the fill shape is block-constant, and a Plus folds a block-constant operand as a scalar
         // without rendering it: a filter consumes it unconditionally, so the fill really runs
-        val filled = IgnitorDsl.Affine(Constant(0.25), pre = Constant(0.1), mul = Constant(0.2)).lowpass(1000.0)
-        forward.plus(filled).detune(7.0).optimizer(on = 1).mul(Constant(0.5))
+        val filled = IgnitorDsl.Affine(Constant(0.25), pre = Constant(0.1), mul = Constant(0.2)).lowpass(1000.0.ign)
+        forward.plus(filled).detune(7.0.ign).optimizer(on = 1).mul(Constant(0.5))
     }
 
     /**
@@ -191,18 +190,19 @@ object WarmupVocabulary {
      * guitar takes with its `analog` param (review round 3).
      */
     val filters: IgnitorDsl = IgnitorDsl.Saw()
-        .lowpass(freq = 3000.0, q = 1.2, passes = 2)
-        .highpass(freq = 80.0, q = 0.9)
-        .onepole(freq = 6000.0)
-        .bandpass(freq = 1200.0, q = 2.0)
-        .notch(freq = 900.0, q = 4.0)
-        .lowpass(freq = 4000.0, q = 1.0, analog = 1.0)
-        .highpass(freq = 60.0, q = 0.8, analog = 1.0)
-        .bandpass(freq = 1500.0, q = 1.5, analog = 1.0)
-        .notch(freq = 700.0, q = 3.0, analog = 1.0)
-        .eq()
-        .band(freq = 400.0, q = 1.0, db = 3.0) // EqSection.Bell
-        .tap(freq = 2500.0, q = 3.0, gain = 0.5) // EqSection.RawTap
+        .lowpass(freq = 3000.0.ign, q = 1.2.ign) { it.passes(2.0.ign) }
+        .highpass(freq = 80.0.ign, q = 0.9.ign)
+        .onepole(6000.0.ign)
+        .bandpass(freq = 1200.0.ign, q = 2.0.ign)
+        .notch(freq = 900.0.ign, q = 4.0.ign)
+        .lowpass(freq = 4000.0.ign, q = 1.0.ign) { it.analog(1.0.ign) }
+        .highpass(freq = 60.0.ign, q = 0.8.ign) { it.analog(1.0.ign) }
+        .bandpass(freq = 1500.0.ign, q = 1.5.ign) { it.analog(1.0.ign) }
+        .notch(freq = 700.0.ign, q = 3.0.ign) { it.analog(1.0.ign) }
+        .eq {
+            it.band(freq = 400.0.ign, q = 1.0.ign, db = 3.0.ign) // EqSection.Bell
+                .tap(freq = 2500.0.ign, q = 3.0.ign, gain = 0.5.ign) // EqSection.RawTap
+        }
         .let { eq ->
             eq.copy(
                 sections = eq.sections +
@@ -216,22 +216,22 @@ object WarmupVocabulary {
 
     /** Every envelope, modulation and effect node. */
     val effects: IgnitorDsl = IgnitorDsl.Sine()
-        .fm(modulator = IgnitorDsl.Sine(), ratio = 2.0, depth = 0.3)
-        .adsr(attack = 0.005, decay = 0.1, sustain = 0.6, release = 0.2)
-        .drive(0.4)
+        .fm(modulator = IgnitorDsl.Sine(), ratio = 2.0.ign, depth = 0.3.ign)
+        .adsr(attack = 0.005.ign, decay = 0.1.ign, sustain = 0.6.ign, release = 0.2.ign)
+        .drive(0.4.ign)
         .shape("soft")
-        .distort(0.5, "hard", oversample = 4) // = Drive + Shape (oversampled)
+        .distort(amount = 0.5.ign, shape = "hard", oversample = 4.ign) // = Drive + Shape (oversampled)
         .let { IgnitorDsl.Distort(inner = it, amount = Constant(0.3), oversample = Constant(2.0)) } // the gated drive+shape unit
-        .parallel({ it }, { it.distort(0.3, "soft", oversample = 2) }) // branches summed, the dry one padded to the late one
-        .crush(6.0)
-        .coarse(3.0)
-        .phaser(wet = 0.5, rate = 0.7, center = 800.0)
-        .tremolo(rate = 4.0, depth = 0.4)
-        .tremolo(rate = 3.0, depth = 0.3, shape = "square") // a non-sine LFO, the pulse oscillator with its edge
-        .tremolo(rate = 4.0, depth = 0.3, rangeFrom = 0.0, rangeTo = 1.0) // off the classic range: the general gain
+        .parallel({ it }, { it.distort(amount = 0.3.ign, shape = "soft", oversample = 2.ign) }) // branches summed, the dry one padded to the late one
+        .crush(6.0.ign)
+        .coarse(3.0.ign)
+        .phaser(wet = 0.5.ign, rate = 0.7.ign, center = 800.0.ign)
+        .tremolo(rate = 4.0.ign, depth = 0.4.ign)
+        .tremolo(rate = 3.0.ign, depth = 0.3.ign) { it.shape("square") } // a non-sine LFO, the pulse oscillator with its edge
+        .tremolo(rate = 4.0.ign, depth = 0.3.ign) { it.range(from = 0.0.ign, to = 1.0.ign) } // off the classic range: the general gain
         .shimmer()
-        .vibrato(rate = 5.0, semitones = 0.2)
-        .accelerate(1.0)
+        .vibrato(rate = 5.0.ign, semitones = 0.2.ign)
+        .accelerate(1.0.ign)
         .pitchMod(IgnitorDsl.Sine(freq = Constant(3.0)).mul(Constant(0.1)))
         .pitchModSemitones(IgnitorDsl.Sine(freq = Constant(4.0)).mul(Constant(0.3)))
         .let { IgnitorDsl.PitchEnvelope(inner = it, semitones = Constant(12.0), decay = Constant(0.1)) }

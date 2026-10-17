@@ -10,9 +10,12 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.KatalystBuilder
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
+import io.peekandpoke.klang.audio_bridge.ign
+import io.peekandpoke.klang.audio_bridge.kat
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.audio_bridge.parallel
 import io.peekandpoke.klang.script.klangScript
@@ -61,7 +64,11 @@ class KlangScriptParallelDoorParitySpec : StringSpec({
     "Ignitor: the Kotlin door builds the same node as the script door" {
         val saw = ignitor("Ignitor.saw()")
 
-        saw.parallel({ it.mul(2.0) }, { it.mul(3.0) }) shouldBe ignitor("Ignitor.saw().parallel(x => x.mul(2), x => x.mul(3))")
+        saw.parallel({ it.mul(2.0.ign) }, { it.mul(3.0.ign) }) shouldBe ignitor("Ignitor.saw().parallel(x => x.mul(2), x => x.mul(3))")
+        // Written out: the branches in the order written, each given the same signal.
+        saw.parallel({ it.mul(2.0.ign) }, { it.mul(3.0.ign) }) shouldBe IgnitorDsl.Parallel(
+            branches = listOf(IgnitorDsl.Times(left = saw, right = c(2.0)), IgnitorDsl.Times(left = saw, right = c(3.0))),
+        )
     }
 
     "Ignitor: with no branch, parallel() is the signal itself; with one, that branch, on both doors" {
@@ -70,7 +77,7 @@ class KlangScriptParallelDoorParitySpec : StringSpec({
         ignitor("Ignitor.saw().parallel()") shouldBe saw
         saw.parallel() shouldBe saw
         ignitor("Ignitor.saw().parallel(x => x.mul(2))") shouldBe ignitor("Ignitor.saw().mul(2)")
-        saw.parallel({ it.mul(2.0) }) shouldBe saw.mul(2.0)
+        saw.parallel({ it.mul(2.0.ign) }) shouldBe saw.mul(2.0.ign)
     }
 
     "Ignitor: a broken branch is named" {
@@ -94,10 +101,11 @@ class KlangScriptParallelDoorParitySpec : StringSpec({
         )
 
         katalyst("Katalyst(k => k.gain(2.0).parallel(b => b, b => b.gain(0.5).gain(0.25)))") shouldBe expected
+        start.gain(2.0.kat).parallel({ it }, { it.gain(0.5.kat).gain(0.25.kat) }).node shouldBe expected
     }
 
     "Katalyst: the Kotlin door builds the same chain as the script door" {
-        val kotlin = start.gain(2.0).parallel({ it }, { it.gain(0.5).gain(0.25) }).node
+        val kotlin = start.gain(2.0.kat).parallel({ it }, { it.gain(0.5.kat).gain(0.25.kat) }).node
 
         kotlin shouldBe katalyst("Katalyst(k => k.gain(2.0).parallel(b => b, b => b.gain(0.5).gain(0.25)))")
     }
@@ -105,7 +113,7 @@ class KlangScriptParallelDoorParitySpec : StringSpec({
     "Katalyst: with no branch, parallel() is the chain itself, on both doors" {
         katalyst("Katalyst(k => k.gain(1.4).parallel())") shouldBe katalyst("Katalyst(k => k.gain(1.4))")
 
-        val builder = start.gain(1.4)
+        val builder = start.gain(1.4.kat)
         builder.parallel() shouldBe builder
     }
 
@@ -113,7 +121,8 @@ class KlangScriptParallelDoorParitySpec : StringSpec({
         katalyst("Katalyst(k => k.gain(1.4).parallel(b => b.reverb(0.25, 7)))") shouldBe
                 katalyst("Katalyst(k => k.gain(1.4).reverb(0.25, 7))")
 
-        start.gain(1.4).parallel({ it.reverb(0.25, 7.0) }) shouldBe start.gain(1.4).reverb(0.25, 7.0)
+        start.gain(1.4.kat).parallel({ it.reverb(wet = 0.25.kat, size = 7.kat) }) shouldBe
+                start.gain(1.4.kat).reverb(wet = 0.25.kat, size = 7.kat)
     }
 
     "Katalyst: a group of stages stored in a let is a branch, and parallel nests" {
@@ -129,7 +138,7 @@ class KlangScriptParallelDoorParitySpec : StringSpec({
                     KatalystDsl.of(
                         KatalystStageDsl.Parallel(
                             branches = listOf(
-                                start.distort(0.5).gain(0.25).node,
+                                start.distort(amount = 0.5.kat).gain(0.25.kat).node,
                                 KatalystDsl(emptyList()),
                             ),
                         ),

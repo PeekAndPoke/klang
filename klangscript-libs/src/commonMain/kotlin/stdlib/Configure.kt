@@ -43,32 +43,30 @@ internal fun <B : Any> B.configuredBy(door: String, configure: ((B) -> B)?): B {
 }
 
 /**
- * Runs [start] through script-supplied [stages] for a `serial` door, first to last, each stage checked by [runStage].
+ * A script-supplied [stage] (the [index]th of [door], from 0) wrapped in the check of [runStage], for a typed door to
+ * invoke: the `serial`, `parallel`, `blend` and `bands` script variants hand these to the typed Kotlin doors, which
+ * only call what they are given (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`, rollout S6). The check runs when the typed door
+ * calls the stage, so a broken stage fails at the same point, with the same message, as before the wrapping.
  */
-internal fun <T : Any> runSerialStages(
+internal fun <I : Any, T : Any> checkedStage(
     door: String,
-    start: T,
-    stages: Array<out Any?>,
+    noun: String,
+    index: Int,
+    stage: Any?,
     returns: String,
     example: String,
     isResult: (Any) -> Boolean,
-): T {
-    var current = start
-
-    stages.forEachIndexed { index, stage ->
-        current = runStage(
-            door = door,
-            noun = "stage",
-            index = index,
-            stage = stage,
-            input = current,
-            returns = returns,
-            example = example,
-            isResult = isResult,
-        )
-    }
-
-    return current
+): (I) -> T = { input ->
+    runStage(
+        door = door,
+        noun = noun,
+        index = index,
+        stage = stage,
+        input = input,
+        returns = returns,
+        example = example,
+        isResult = isResult,
+    )
 }
 
 /**
@@ -76,7 +74,8 @@ internal fun <T : Any> runSerialStages(
  * [configuredBy] checks a configure lambda: a script lambda's declared return type is a promise the interpreter cannot
  * keep (a block body without `return` returns null), so the result is read as `Any?` and checked here, with an error
  * that names the door and the stage, instead of a cast failure (JVM) or a silently wrong value (JS) further on. The
- * `serial` and `parallel` doors call it for every stage and branch.
+ * `serial`, `parallel`, `blend` and `bands` doors call it for every stage, branch and band processor, through
+ * [checkedStage].
  *
  * [stage] is read as `Any?` on purpose, see the null check. [noun] is what the door calls it (a `stage`, a `branch`),
  * [returns] names what it must return and [example] shows one, for the message; [isResult] tests it. Not `this::class.isInstance` as in

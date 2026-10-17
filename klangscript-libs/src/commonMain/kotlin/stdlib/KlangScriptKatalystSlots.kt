@@ -36,7 +36,7 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
  */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(KlangScriptKatalystSlots::class)
-object KlangScriptKatalystSlots {
+internal object KlangScriptKatalystSlots {
     override fun toString(): String = "[Katalyst.slot]"
 
     /** The body stage's knobs: `material`, `wet`, `floor`. */
@@ -75,7 +75,7 @@ object KlangScriptKatalystSlots {
 /** `Katalyst.slot.body`: the body stage's knobs. */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(KlangScriptKatalystBodySlots::class)
-object KlangScriptKatalystBodySlots {
+internal object KlangScriptKatalystBodySlots {
     override fun toString(): String = "[Katalyst.slot.body]"
 
     /** `body.material`. The material as its INDEX in the catalogue, default unset (no body). What `body(material = ...)` writes. */
@@ -94,7 +94,7 @@ object KlangScriptKatalystBodySlots {
 /** `Katalyst.slot.vowel`: the vowel stage's knobs. */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(KlangScriptKatalystVowelSlots::class)
-object KlangScriptKatalystVowelSlots {
+internal object KlangScriptKatalystVowelSlots {
     override fun toString(): String = "[Katalyst.slot.vowel]"
 
     /** `vowel.vowel`. The vowel as its INDEX in the catalogue, default unset (no vowel). What `vowel(vowel = ...)` writes. */
@@ -113,7 +113,7 @@ object KlangScriptKatalystVowelSlots {
 /** `Katalyst.slot.delay`: the delay stage's knobs. */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(KlangScriptKatalystDelaySlots::class)
-object KlangScriptKatalystDelaySlots {
+internal object KlangScriptKatalystDelaySlots {
     override fun toString(): String = "[Katalyst.slot.delay]"
 
     /** `delay.wet`. How much of the orbit goes into the delay, default 0 (off). */
@@ -136,7 +136,7 @@ object KlangScriptKatalystDelaySlots {
 /** `Katalyst.slot.reverb`: the reverb stage's knobs. */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(KlangScriptKatalystReverbSlots::class)
-object KlangScriptKatalystReverbSlots {
+internal object KlangScriptKatalystReverbSlots {
     override fun toString(): String = "[Katalyst.slot.reverb]"
 
     /** `reverb.wet`. How much of the orbit goes into the reverb, default 0 (off). */
@@ -155,7 +155,7 @@ object KlangScriptKatalystReverbSlots {
 /** `Katalyst.slot.phaser`: the phaser stage's knobs. */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(KlangScriptKatalystPhaserSlots::class)
-object KlangScriptKatalystPhaserSlots {
+internal object KlangScriptKatalystPhaserSlots {
     override fun toString(): String = "[Katalyst.slot.phaser]"
 
     /** `phaser.rate`. Sweep rate in Hz. */
@@ -182,7 +182,7 @@ object KlangScriptKatalystPhaserSlots {
 /** `Katalyst.slot.compressor`: the compressor stage's knobs, all five unset (off) until one is written. */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(KlangScriptKatalystCompressorSlots::class)
-object KlangScriptKatalystCompressorSlots {
+internal object KlangScriptKatalystCompressorSlots {
     override fun toString(): String = "[Katalyst.slot.compressor]"
 
     /** `compressor.threshold`. Ceiling in dBFS where gain reduction starts. */
@@ -209,7 +209,7 @@ object KlangScriptKatalystCompressorSlots {
 /** `Katalyst.slot.gain`: the group fader's knob. */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(KlangScriptKatalystGainSlots::class)
-object KlangScriptKatalystGainSlots {
+internal object KlangScriptKatalystGainSlots {
     override fun toString(): String = "[Katalyst.slot.gain]"
 
     /** `gain.gain`. The orbit's group fader, default 1 (unity). The stage `gain`, its knob `gain`: `Katalyst.slot.gain.gain` reads oddly and is right. */
@@ -220,7 +220,7 @@ object KlangScriptKatalystGainSlots {
 /** `Katalyst.slot.duck`: the duck stage's knobs. */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(KlangScriptKatalystDuckSlots::class)
-object KlangScriptKatalystDuckSlots {
+internal object KlangScriptKatalystDuckSlots {
     override fun toString(): String = "[Katalyst.slot.duck]"
 
     /** `duck.orbit`. The orbit to listen to, default unset (no ducking). */

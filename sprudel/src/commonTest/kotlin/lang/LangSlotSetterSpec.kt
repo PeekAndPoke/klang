@@ -10,12 +10,12 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_bridge.Ign
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
-import io.peekandpoke.klang.script.stdlib.KlangScriptIgnitor
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
 
@@ -168,7 +168,7 @@ class LangSlotSetterSpec : StringSpec({
             Wrong("the other host's param", otherParamScript, otherParam, wrongHost),
             Wrong("the other host's slot object", otherSlotScript, otherSlot, wrongHost),
             Wrong("a number (Q8)", "42", 42) { expects(it, "a number") },
-            Wrong("a sound", "Ign.sine()", KlangScriptIgnitor.sine()) { expects(it, "a sound") },
+            Wrong("a sound", "Ign.sine()", Ign.sine()) { expects(it, "a sound") },
             Wrong(
                 "an expression over a param", "Ign.param(\"x\", 1).mul(2)",
                 IgnitorDsl.Param("x", 1.0).mul(IgnitorDsl.Constant(2.0)),

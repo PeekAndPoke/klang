@@ -42,7 +42,7 @@ included), nineteen of them with an authored Katalyst chain on the orbit: the ca
 (`KlangCommLink.Cmd.RegisterKatalyst`) and its notes reference it by name (`VoiceData.katalyst`), as a song's do. One, `S-doors`, runs
 sprudel's per-event path (a one-note pattern with voice and bus doors, `toVoiceData`, the wire encode on JS) and
 renders no sound: its flag `makesSound = false` makes the driver check the outputs of its last step, not a peak. The
-chains are built through the Kotlin door (`KatalystBuilder`). `E-arith-glide` moves its chain's slots with notes every
+chains are built through the typed Kotlin door (`Kat.build` and `KatalystBuilder`, `audio_bridge`). `E-arith-glide` moves its chain's slots with notes every
 32 blocks that alternate between two `katp` maps, so its figure includes the note path's (one new voice per 32
 blocks). The nine `E-kat-*` cases move a knob every block through the chain's own modulators (`Kat.sine` and the
 rest, knob expressions step 6): one sine, a square with a slot-expression duty, a saw whose freq is a sine, perlin at

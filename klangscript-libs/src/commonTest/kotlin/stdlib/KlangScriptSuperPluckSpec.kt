@@ -10,6 +10,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.peekandpoke.klang.script.runtime.NativeObjectValue
@@ -98,7 +99,7 @@ class KlangScriptSuperPluckSpec : StringSpec({
 
     "the Kotlin door takes the same lambda" {
         ks("Ignitor.superpluck(x => x.voices(6).spread(0.15))") shouldBe
-                KlangScriptIgnitor.superpluck(configure = { it.voices(6).spread(0.15) })
+                KlangScriptIgnitor.superpluck(configure = { it.voices(6.ign).spread(0.15.ign) })
     }
 
     "named configure binds too" {

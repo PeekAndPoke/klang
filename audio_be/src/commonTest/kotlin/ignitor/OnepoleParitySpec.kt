@@ -13,6 +13,7 @@ import io.peekandpoke.klang.audio_be.filters.onePoleLpfCoeff
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.classic
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.onepole
 import io.peekandpoke.klang.audio_bridge.optimize
 import io.peekandpoke.klang.common.infra.klangMapOf
@@ -109,8 +110,8 @@ class OnepoleParitySpec : StringSpec({
         fun built(tree: IgnitorDsl): Ignitor = tree.optimize().buildExciter(freqHz = 220.0, random = Random(7)).ignitor
 
         val sine = IgnitorDsl.Sine(freq = IgnitorDsl.Freq, analog = IgnitorDsl.Slots.analog)
-        val onSource = render(built(sine.onepole(800.0).classic()))
-        val afterEnvelope = render(built(sine.classic().onepole(800.0)))
+        val onSource = render(built(sine.onepole(800.0.ign).classic()))
+        val afterEnvelope = render(built(sine.classic().onepole(800.0.ign)))
 
         for (i in 0 until frames) {
             viaRegistry[i].toRawBits() shouldBe onSource[i].toRawBits()

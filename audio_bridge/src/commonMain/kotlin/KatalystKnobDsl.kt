@@ -20,7 +20,7 @@ package io.peekandpoke.klang.audio_bridge
  * [Sine], [Saw], [Ramp], [Tri], [Square], [PerlinNoise], [BerlinNoise]). The engine evaluates an expression with the
  * Ignitor's own laws, on a scalar, whenever the orbit's `katp` state changes (`KatalystKnob` in `audio_be`); a
  * modulated one once per block the chain processes (`KatalystKnob.tick`, called by `KatalystChain.process`; step 5b).
- * The script and Kotlin doors of the modulators are `Kat.sine` and the rest (`KlangScriptKatalyst`). The one residue
+ * The doors of the modulators are `Kat.sine` and the rest: the typed [Kat] here, the script `KlangScriptKatalyst` over it. The one residue
  * of mixing is the `eq` stage, whose sections stay [IgnitorDsl.EqSection] shared with the voice (Q2, E2): its door
  * maps a [Param] onto the section's [IgnitorDsl.Param] and refuses an expression.
  *
@@ -218,3 +218,89 @@ sealed interface KatalystKnobDsl {
         val persistence: KatalystKnobDsl = Constant(0.5),
     ) : KatalystKnobDsl
 }
+
+// Numbers into the typed Kotlin door
+
+/**
+ * This number as a Katalyst knob: the way a plain number enters the typed Kotlin door, e.g. `0.3.kat` for a knob
+ * held at 0.3, or `BodyMaterials.indexOf("wood").kat` for a name knob. The same node the script door builds from a
+ * bare `0.3`.
+ *
+ * Boxing a number into a node at build time is fine (maintainer, 2026-10-16): it happens once, when the chain is
+ * written, never in the audio path.
+ */
+val Double.kat: KatalystKnobDsl.Constant get() = KatalystKnobDsl.Constant(this)
+
+/** [Double.kat] for an [Int]: `2.kat` is `KatalystKnobDsl.Constant(2.0)`, the same tree as `2.0.kat`. */
+val Int.kat: KatalystKnobDsl.Constant get() = KatalystKnobDsl.Constant(this.toDouble())
+
+/**
+ * The negated number, still a [KatalystKnobDsl.Constant]: `-1.kat` is `Constant(-1.0)`, the same tree as the script's
+ * `-1`, not a negation node around a constant.
+ *
+ * Kotlin reads `-1.kat` as `-(1.kat)`, so this operator is what keeps the tree flat. Being declared on the precise
+ * `Constant` type, it wins over any extension operator on `KatalystKnobDsl` in this package; keep the general
+ * operators as extensions (a member would win).
+ */
+operator fun KatalystKnobDsl.Constant.unaryMinus(): KatalystKnobDsl.Constant = KatalystKnobDsl.Constant(-value)
+
+// Knob expressions: the Ignitor's arithmetic on a Katalyst knob
+//
+// ONE typed function per word, every operand a KatalystKnobDsl: a number comes in through `.kat`
+// (`Kat.param("fader", 1.0).times(0.5.kat)`), the typed-doors rollout S5 (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`). The script
+// door keeps taking numbers (`Kat.param("fader", 1).times(0.5)`): its `internal`, renamed variants (`scriptTimes`,
+// `klangscript-libs`) convert once and call these. The script's aliases (`add`, `sub`, `mul`, `power`, `negate`) are
+// here too, one-line typed delegates to their main word, so a script ports word for word. The text of each word lives on its script variant. Plain functions, as they
+// always were, no operators; extensions, so `Constant.unaryMinus` keeps winning.
+
+/** This knob plus [other], the Ignitor's `plus` law (script knob `plus`, alias `add`). */
+fun KatalystKnobDsl.plus(other: KatalystKnobDsl): KatalystKnobDsl.Plus = KatalystKnobDsl.Plus(left = this, right = other)
+
+/** This knob minus [other], the Ignitor's `minus` law (script knob `minus`, alias `sub`). */
+fun KatalystKnobDsl.minus(other: KatalystKnobDsl): KatalystKnobDsl.Minus = KatalystKnobDsl.Minus(left = this, right = other)
+
+/** This knob times [other], the Ignitor's `times` law, clamped to `±1e15` (script knob `times`, alias `mul`). */
+fun KatalystKnobDsl.times(other: KatalystKnobDsl): KatalystKnobDsl.Times = KatalystKnobDsl.Times(left = this, right = other)
+
+/** This knob divided by [other], the Ignitor's `div` law (script knob `div`). */
+fun KatalystKnobDsl.div(other: KatalystKnobDsl): KatalystKnobDsl.Div = KatalystKnobDsl.Div(left = this, right = other)
+
+/** This knob to the power of [exp], sign kept, the Ignitor's `pow` law (script knob `pow`, alias `power`). */
+fun KatalystKnobDsl.pow(exp: KatalystKnobDsl): KatalystKnobDsl.Pow = KatalystKnobDsl.Pow(base = this, exp = exp)
+
+/**
+ * This knob, but at least [other]: a floor is the MAXIMUM of the two, so this builds [KatalystKnobDsl.Max]. Do not
+ * "correct" the crossing (guardrail, `CLAUDE.md`) (script knob `min`).
+ */
+fun KatalystKnobDsl.min(other: KatalystKnobDsl): KatalystKnobDsl.Max = KatalystKnobDsl.Max(left = this, right = other)
+
+/**
+ * This knob, but at most [other]: a cap is the MINIMUM of the two, so this builds [KatalystKnobDsl.Min]. Do not
+ * "correct" the crossing (guardrail, `CLAUDE.md`) (script knob `max`).
+ */
+fun KatalystKnobDsl.max(other: KatalystKnobDsl): KatalystKnobDsl.Min = KatalystKnobDsl.Min(left = this, right = other)
+
+/** This knob with its sign flipped, the Ignitor's `neg` (script knob `neg`, alias `negate`). */
+fun KatalystKnobDsl.neg(): KatalystKnobDsl.Neg = KatalystKnobDsl.Neg(inner = this)
+
+/** The absolute value of this knob (script knob `abs`). */
+fun KatalystKnobDsl.abs(): KatalystKnobDsl.Abs = KatalystKnobDsl.Abs(inner = this)
+
+/** This knob mapped from `-1..1` onto [from]..[to], unclamped, the Ignitor's `range` law (script knob `range`). */
+fun KatalystKnobDsl.range(from: KatalystKnobDsl, to: KatalystKnobDsl): KatalystKnobDsl.Range =
+    KatalystKnobDsl.Range(inner = this, from = from, to = to)
+
+/** Alias for [plus], the script's `add`. */
+fun KatalystKnobDsl.add(other: KatalystKnobDsl): KatalystKnobDsl.Plus = plus(other)
+
+/** Alias for [minus], the script's `sub`. */
+fun KatalystKnobDsl.sub(other: KatalystKnobDsl): KatalystKnobDsl.Minus = minus(other)
+
+/** Alias for [times], the script's `mul`. */
+fun KatalystKnobDsl.mul(other: KatalystKnobDsl): KatalystKnobDsl.Times = times(other)
+
+/** Alias for [pow], the script's `power`. */
+fun KatalystKnobDsl.power(exp: KatalystKnobDsl): KatalystKnobDsl.Pow = pow(exp)
+
+/** Alias for [neg], the script's `negate`. */
+fun KatalystKnobDsl.negate(): KatalystKnobDsl.Neg = neg()

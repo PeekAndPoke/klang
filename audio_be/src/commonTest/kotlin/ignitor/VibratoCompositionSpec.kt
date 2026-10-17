@@ -7,9 +7,9 @@ package io.peekandpoke.klang.audio_be.ignitor
 
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
+import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.utils.SAFE_MAX
@@ -18,6 +18,7 @@ import io.peekandpoke.klang.audio_be.utils.fastExp2
 import io.peekandpoke.klang.audio_be.utils.fastSin
 import io.peekandpoke.klang.audio_be.utils.wrapPhase
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.audio_bridge.plus
 import kotlin.math.abs
@@ -162,7 +163,7 @@ class VibratoCompositionSpec : StringSpec({
     "a signal depth is read per sample: every frame reads 2^(lfo * depth / 12) at that frame's depth" {
         // The depth swings from 1 to 2 and down to about 0.1 semitones over the render (20 Hz, 0.64 cycles).
         val rate = 5.0
-        val depth = lfo(20.0).plus(1.0)
+        val depth = lfo(20.0).plus(1.0.ign)
         val lfoValues = render(lfo(rate))
         val depthValues = render(depth)
         val got = ratiosOf(vibrato(rate = c(rate), semitones = depth))
@@ -179,7 +180,7 @@ class VibratoCompositionSpec : StringSpec({
     "a depth sample at or below 0 is no vibrato on that frame, exactly 1.0; above 0 the law holds" {
         // Two semitones at 30 Hz: the depth is below 0 for half of each cycle, crossing 0 inside blocks.
         val rate = 5.0
-        val depth = lfo(30.0).mul(2.0)
+        val depth = lfo(30.0).mul(2.0.ign)
         val lfoValues = render(lfo(rate))
         val depthValues = render(depth)
         val got = ratiosOf(vibrato(rate = c(rate), semitones = depth))
@@ -326,7 +327,7 @@ class VibratoCompositionSpec : StringSpec({
         // A rate swinging 6 +- 4 Hz at 40 Hz, so it moves inside every block. The oracle steps the phase by the rate at
         // each block's first frame, as the sine oscillator reads its frequency.
         val semitones = 3.0
-        val rate = lfo(40.0).mul(4.0).plus(6.0)
+        val rate = lfo(40.0).mul(4.0.ign).plus(6.0.ign)
         val rateValues = render(rate)
         val got = ratiosOf(vibrato(rate = rate, semitones = c(semitones)))
 

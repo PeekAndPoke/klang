@@ -23,6 +23,8 @@ import io.peekandpoke.klang.audio_be.ignitor.toExciter
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.classic
 import io.peekandpoke.klang.audio_bridge.coarse
+import io.peekandpoke.klang.audio_bridge.constants.FM_ENV_RELEASE_SEC
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.tremolo
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
@@ -247,20 +249,17 @@ class BlockFramingInvarianceSpec : StringSpec({
         // decay both land mid-block everywhere, so this red-flags any regression to a block hold.
         "fm with envelope" to IgnitorDsl.Sine().fm(
             modulator = IgnitorDsl.Sine(),
-            ratio = 1.4,
-            depth = 300.0,
-            attack = 0.005,
-            decay = 0.5,
-            sustain = 0.0,
-        ),
+            ratio = 1.4.ign,
+            depth = 300.0.ign,
+        ) { it.adsr(attack = 0.005.ign, decay = 0.5.ign, sustain = 0.0.ign, release = FM_ENV_RELEASE_SEC.ign) },
         "white noise" to IgnitorDsl.WhiteNoise(),
         "pluck" to IgnitorDsl.Pluck(),
         // Graduated after the W-batch (ledger W1/W2): with constant params both are per-sample
         // loops over contiguous state and belong on the bit-identical list. A MODULATED tremolo
         // depth stays off it — the gap's bulk phase advance reassociates the float sum
         // (~4e-15 class, see ModulationClockSpec).
-        "coarse" to IgnitorDsl.Sine().coarse(4.0),
-        "tremolo" to IgnitorDsl.Sine().tremolo(rate = 5.0, depth = 0.5),
+        "coarse" to IgnitorDsl.Sine().coarse(4.0.ign),
+        "tremolo" to IgnitorDsl.Sine().tremolo(rate = 5.0.ign, depth = 0.5.ign),
     )
 
     nodes.forEach { (name, dsl) ->

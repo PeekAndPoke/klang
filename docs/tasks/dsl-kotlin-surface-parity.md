@@ -1,5 +1,9 @@
 # DSL Kotlin-surface parity — every DSL usable from Kotlin directly
 
+Status (2026-10-16): the Kotlin-door half of this task is succeeded by
+[`../tasks-archive/2026-10/20261016-kotlin-typed-doors.md`](../tasks-archive/2026-10/20261016-kotlin-typed-doors.md). Its "`IgnitorDsl` primary plus a scalar overload" shape is
+retired (Q47): the Kotlin door is typed only, numbers enter through `.ign` / `.kat`.
+
 **Principle (maintainer, 2026-08-20):** the foundation of every Klang DSL must allow direct
 use from Kotlin, not only from KlangScript. Sprudel achieved this and is the model. Script
 stdlib and Kotlin extensions are two doors to ONE DSL — every surface addition lands on both
@@ -17,7 +21,9 @@ in the same deliverable.
     on BOTH doors with identical names and defaults. Since 2026-09-06 (S3 of
     `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`) the script door is `.eq(e => e.band(...).tap(...))` on an
     `EqBuilder` in `klangscript-libs`, which delegates to the audio_bridge Kotlin extensions
-    `IgnitorDsl.Eq.band/tap`; future Eq section methods land on both.
+    `IgnitorDsl.Eq.band/tap`; future Eq section methods land on both. (Since the typed-doors rollout S3a, 2026-10-16,
+    `EqBuilder` lives in `audio_bridge` with typed `band`/`tap` members, the Kotlin door is `eq { it.band(...) }` and
+    the flat `IgnitorDsl.Eq.band/tap` are gone; the chain has its own `KatalystEqBuilder`.)
   - **Known gap (D5 round 3):** the Kotlin door ships HOMOGENEOUS overloads (all-IgnitorDsl or
     all-Double), while the script door takes `IgnitorDslLike` per parameter — so the mixed
     `band(someDsl, 0.7, 6.0)` shape compiles in script but not in Kotlin, where the scalars

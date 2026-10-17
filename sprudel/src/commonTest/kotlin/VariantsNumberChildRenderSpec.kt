@@ -9,8 +9,9 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_bridge.Ign
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_engine.KlangOfflineRenderer
-import io.peekandpoke.klang.script.stdlib.KlangScriptIgnitor
 import io.peekandpoke.klang.sprudel.lang.note
 import io.peekandpoke.klang.sprudel.lang.sound
 
@@ -63,7 +64,7 @@ class VariantsNumberChildRenderSpec : StringSpec({
     // the first note (no `:n`) is variant 0, the second (`:1`) variant 1; each lasts half a second
     listOf(
         "KlangScript door" to { script("""note("a4 a4:1").sound(Ignitor.sine(Ignitor.variants(400, 1200)))""") },
-        "Kotlin door" to { note("a4 a4:1").sound(KlangScriptIgnitor.sine(KlangScriptIgnitor.variants(400, 1200))) },
+        "Kotlin door" to { note("a4 a4:1").sound(Ign.sine(Ign.variants(400.ign, 1200.ign))) },
     ).forEach { (door, pattern) ->
         "$door: Ignitor.sine(Ignitor.variants(400, 1200)) plays 400 Hz, then 1200 Hz" {
             val samples = render(pattern())

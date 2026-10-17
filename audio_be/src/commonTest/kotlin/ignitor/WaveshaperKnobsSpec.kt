@@ -15,6 +15,7 @@ import io.peekandpoke.klang.audio_be.parseDistortionShape
 import io.peekandpoke.klang.audio_bridge.DistortionShapes
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.LfoShapes
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.tremolo
 import io.peekandpoke.klang.common.infra.toKlangMap
@@ -246,7 +247,7 @@ class WaveshaperKnobsSpec : StringSpec({
 
     "the tremolo's rate is read per block, so an expression reaches it (the build-time shape knob ignores one)" {
         val source = IgnitorDsl.Saw(freq = IgnitorDsl.Freq)
-        val base = source.tremolo(rate = 37.3, depth = 1.0, shape = "square") as IgnitorDsl.Tremolo
+        val base = source.tremolo(rate = 37.3.ign, depth = 1.0.ign) { it.shape("square") } as IgnitorDsl.Tremolo
         val sum = IgnitorDsl.Plus(left = IgnitorDsl.Constant(18.65), right = IgnitorDsl.Constant(18.65))
 
         render(base.copy(rate = sum)).bits() shouldBe render(base).bits()
@@ -262,9 +263,9 @@ class WaveshaperKnobsSpec : StringSpec({
             shape = IgnitorDsl.Param("t.shape", LfoShapes.SINE_INDEX.toDouble()),
         )
 
-        render(slotted).bits() shouldBe render(source.tremolo(rate = 37.3, depth = 1.0)).bits()
+        render(slotted).bits() shouldBe render(source.tremolo(rate = 37.3.ign, depth = 1.0.ign)).bits()
         render(slotted, mapOf("t.shape" to LfoShapes.indexOf("square"))).bits() shouldBe
-                render(source.tremolo(rate = 37.3, depth = 1.0, shape = "square")).bits()
+                render(source.tremolo(rate = 37.3.ign, depth = 1.0.ign) { it.shape("square") }).bits()
         render(slotted, mapOf("t.shape" to LfoShapes.indexOf("square"))).bits() shouldNotBe render(slotted).bits()
     }
 
@@ -277,14 +278,14 @@ class WaveshaperKnobsSpec : StringSpec({
         val source = IgnitorDsl.Saw(freq = IgnitorDsl.Freq)
 
         withClue("a plain source") { source.gates() shouldBe false }
-        withClue("a built tremolo") { source.tremolo(rate = 4.0, depth = 1.0, shape = "square").gates() shouldBe true }
+        withClue("a built tremolo") { source.tremolo(rate = 4.0.ign, depth = 1.0.ign) { it.shape("square") }.gates() shouldBe true }
         withClue("a sine tremolo too: the strip's rule, depth above 0 whatever the shape") {
-            source.tremolo(rate = 4.0, depth = 0.2).gates() shouldBe true
+            source.tremolo(rate = 4.0.ign, depth = 0.2.ign).gates() shouldBe true
         }
         withClue("under a filter: absorbed along the spine") {
-            source.tremolo(rate = 4.0, depth = 1.0).lowpass(2000.0).gates() shouldBe true
+            source.tremolo(rate = 4.0.ign, depth = 1.0.ign).lowpass(2000.0.ign).gates() shouldBe true
         }
-        withClue("gated off at depth 0: no stage, nothing to report") { source.tremolo(rate = 4.0, depth = 0.0).gates() shouldBe false }
+        withClue("gated off at depth 0: no stage, nothing to report") { source.tremolo(rate = 4.0.ign, depth = 0.0.ign).gates() shouldBe false }
 
         val slotted = IgnitorDsl.Tremolo(inner = source, depth = IgnitorDsl.Param("t.depth", 0.0))
 
@@ -292,7 +293,7 @@ class WaveshaperKnobsSpec : StringSpec({
         withClue("a depth slot, written") { slotted.gates(mapOf("t.depth" to 0.5)) shouldBe true }
 
         withClue("a tremolo in a PARAMETER position silences nothing") {
-            val lfo = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(2.0)).tremolo(rate = 4.0, depth = 1.0, shape = "square")
+            val lfo = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(2.0)).tremolo(rate = 4.0.ign, depth = 1.0.ign) { it.shape("square") }
 
             IgnitorDsl.Lowpass(inner = source, freq = IgnitorDsl.Plus(left = lfo, right = IgnitorDsl.Constant(1000.0))).gates() shouldBe false
         }

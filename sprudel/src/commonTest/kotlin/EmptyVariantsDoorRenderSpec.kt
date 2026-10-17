@@ -10,8 +10,8 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_bridge.Ign
 import io.peekandpoke.klang.audio_engine.KlangOfflineRenderer
-import io.peekandpoke.klang.script.stdlib.KlangScriptIgnitor
 import io.peekandpoke.klang.sprudel.lang.note
 import io.peekandpoke.klang.sprudel.lang.sound
 import kotlin.math.abs
@@ -57,7 +57,7 @@ class EmptyVariantsDoorRenderSpec : StringSpec({
             render(script("""note("c3 e3").sound(Ignitor.variants(Ignitor.sine()))""")).peak shouldBeGreaterThan 0.01
         }
         withClue("Kotlin door") {
-            render(note("c3 e3").sound(KlangScriptIgnitor.variants(KlangScriptIgnitor.sine()))).peak shouldBeGreaterThan 0.01
+            render(note("c3 e3").sound(Ign.variants(Ign.sine()))).peak shouldBeGreaterThan 0.01
         }
     }
 
@@ -68,8 +68,8 @@ class EmptyVariantsDoorRenderSpec : StringSpec({
         out.peak shouldBe 0.0
     }
 
-    "Kotlin door: an empty KlangScriptIgnitor.variants() renders silence and does not throw" {
-        val out = render(note("c3 e3").sound(KlangScriptIgnitor.variants()))
+    "Kotlin door: an empty Ign.variants() renders silence and does not throw" {
+        val out = render(note("c3 e3").sound(Ign.variants()))
 
         out.frames shouldBeGreaterThan 0
         out.peak shouldBe 0.0

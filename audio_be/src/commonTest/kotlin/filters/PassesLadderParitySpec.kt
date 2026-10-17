@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_be.filters
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.optimize
 
@@ -24,7 +25,7 @@ class PassesLadderParitySpec : StringSpec({
         for (n in 2..5) {
             for (userQ in listOf(0.707, 1.0, 1.3)) {
                 val ladder = butterworthQLadder(n, userQ)
-                val eq = IgnitorDsl.Sine().lowpass(freq = 2000.0, q = userQ, passes = n).optimize()
+                val eq = IgnitorDsl.Sine().lowpass(freq = 2000.0.ign, q = userQ.ign) { it.passes(n.ign) }.optimize()
                     as IgnitorDsl.Eq
                 eq.sections.size shouldBe n
                 for (k in 0 until n) {

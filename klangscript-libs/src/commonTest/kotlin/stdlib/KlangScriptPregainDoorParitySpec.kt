@@ -12,6 +12,7 @@ import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.distort
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.audio_bridge.pregain
 import io.peekandpoke.klang.script.klangScript
@@ -67,12 +68,12 @@ class KlangScriptPregainDoorParitySpec : StringSpec({
         // `2.0`, where the shaper saturates and the slot is inaudible: a tree comparison passes at
         // either, but a spec is where a reader copies an instrument from.
         val script = ks("Ignitor.saw().pregain().distort(0.5)")
-        val kotlin = IgnitorDsl.Saw().pregain().distort(0.5)
+        val kotlin = IgnitorDsl.Saw().pregain().distort(0.5.ign)
 
         script shouldBe kotlin
 
         withClue("the slot sits INSIDE the distortion, which is the whole point of the shape") {
-            script shouldNotBe IgnitorDsl.Saw().distort(0.5).pregain()
+            script shouldNotBe IgnitorDsl.Saw().distort(0.5.ign).pregain()
         }
     }
 })

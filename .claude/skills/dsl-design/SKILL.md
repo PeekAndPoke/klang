@@ -57,6 +57,8 @@ Decided 2026-09-05; plan and status in `docs/tasks-archive/2026-09/20260906-dsl-
 door(<construction inputs...>, configure: ((XyzBuilder) -> XyzBuilder)? = null)
 ```
 
+(Both doors: the same builder and the same shape; only the accepted types differ, §3.)
+
 ```javascript
 Ignitor.supersaw(x => x.voices(9).spread(0.1).phasePool()).lowpass(800).adsr(0.01, 0.3, 0.5, 0.5)
 //           ^ inside the braces you configure the oscillator   ^ outside you process it
@@ -122,11 +124,185 @@ script-only surface forces raw constructor calls and splits the vocabulary.
 
 - A surface addition lands on BOTH doors in the same deliverable. A stdlib function without its
   Kotlin twin is a review finding (`docs/tasks/dsl-kotlin-surface-parity.md`).
-- Builders live in `klangscript-libs`, next to their doors, and are annotated for KlangScript
-  directly (KSP runs there like in sprudel): one implementation, one KDoc, no delegate objects.
-  `klangscript-libs` IS the Kotlin door for the builders; `audio_bridge` stays pure wire types.
+- **The layering of the Ignitor and Katalyst DSLs (maintainer, 2026-10-16, option C; in force since the
+  rollout S1 to S7 of `docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`, 2026-10-16):** every new
+  Ignitor or Katalyst door lands in it. sprudel's doors still take `PatternLike = Any` on one shared function
+  until its own typed door is designed (maintainer's call; see the archived task, "Left after the rollout").
+  - The ONE public Kotlin door is typed and lives in `audio_bridge`, next to the wire types: every
+    value parameter is an `IgnitorDsl` / `KatalystKnobDsl`, a number enters as `0.5.ign` /
+    `0.5.kat` (`-1.ign` is `Constant(-1.0)`), so a number or a signal fits each argument on its own
+    with no overloads. It holds each door's logic. Typed Kotlin `Ign` and `Kat` objects mirror the
+    script objects word for word (`Ign.saw()`, `Kat.sine(...)`), so moving between KlangScript and
+    Kotlin costs only the `.ign` / `.kat`: the builders and the shapes are the same
+    (`Ign.saw().vibrato(5.ign, 0.3.ign) { it.range(0.ign, 1.ign) }`).
+  - The KlangScript door (`klangscript-libs`, the `@KlangScript...` functions, objects and
+    builder knobs) is internal to its module, converts its number-or-signal arguments once
+    (`toIgnitorDsl`, `toKatalystKnob`) and calls the typed Kotlin door. It is not the Kotlin door: a
+    Kotlin caller outside the module cannot reach `KlangScriptIgnitor`, `KlangScriptKatalyst`, the
+    script `Ign` / `Kat` or the conversions (S7). Public there only what other modules use and is
+    no audio door: the slot-name resolvers `ignitorSlotName` / `katalystSlotName` with their
+    `IgnitorSlotLike` / `KatalystSlotLike` (sprudel's `ignp` / `katp`), the engine entry
+    (`klangScript()`, `stdlibLib`, `KlangStdLib`), `Interval.ratio` (the one Kotlin door kept in
+    this module, for the interval vocabulary of `tones`, not an audio door) and the script constants
+    `PI` / `E` (no door, left as they were).
+  - In the Ignitor and Katalyst DSLs only KlangScript-exposed functions take `XxxLike = Any`
+    parameters, converted and checked at run time. A shared function (`bands`, `cut`, `serial`, `parallel`, `blend`) may serve both
+    doors only while its signature has no `Any`-typed parameter.
+  - The same builders and shapes on both doors (maintainer, 2026-10-16): where the script takes a
+    configure lambda, so does the Kotlin door, with the same builder; only the accepted types differ.
+  - The one recorded exception, the build-time knobs, by one criterion: **a knob the script takes
+    as a plain number (or string) stays plain on the Kotlin door** (Q51). A number is a plain
+    `Double` (the script's `resetSamples(4)` is Kotlin `resetSamples(4.0)`), no `Int` overloads.
+    This is the one place the criterion lives; other texts point here instead of listing names.
+    Not to be confused with the engine's "build-time knobs" (`buildTimeKnobValue`: shapes, the
+    oversample factor, `passes`): those are read once per voice but FROM THE SLOTS, so they are
+    typed like any knob (maintainer, 2026-10-16). Only a plain node field (a `Double`, `String` or
+    `List` the script also takes plain) stays plain.
+- **The typed-door pattern** (spike S1 of `docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`, 2026-10-16; this
+  is its one home):
+  1. The builder lives in `audio_bridge` (`IgnitorBuilders.kt` / `KatalystBuilders.kt`) under its
+     simple name (the script shows it), its knobs CLASS MEMBERS with typed parameters, each with a
+     one-line KDoc pointing at the script knob.
+  2. The Kotlin door takes `configure: ((B) -> B)? = null` last and ends in
+     `B(node).configured(configure).node`. Its other parameters are NON-null, with the default
+     SYMBOL (`freq: IgnitorDsl = IgnitorDsl.Freq`; a Katalyst stage takes its bare-stage default
+     symbol); no nullable Kotlin parameters for a default. A script door whose parameter is optional
+     keeps its safe literal `null` and substitutes the SAME symbol on `null`, never a retyped literal:
+     `freq?.toIgnitorDsl() ?: IgnitorDsl.Freq` (`orNoteFreq` in `KlangScriptIgnitor.saw` is the
+     example). The default-node row (below) pins that the two agree. A multi-argument chained knob
+     (`phasePool(on, kMin, ...)`) keeps literal defaults on the script variant (KSP) while the Kotlin
+     member takes the engine constants (`SUPERTRI_K_MIN`); the bare-call parity row (`phasePool()`
+     from both doors) guards against the two drifting apart.
+  3. Every script function on a receiver type that delegates to a typed function of the same word
+     gets a Kotlin name of its own and the script word in `name = "..."`, never only the clashing
+     ones: the builder knobs, and as well the Katalyst knob arithmetic (`plus`, `times`, ...) and
+     every other receiver function of that kind:
+     `@KlangScript.Function(name = "range") internal fun VibratoBuilder.scriptRange(from: IgnitorDslLike, to: IgnitorDslLike) = this.range(from = from.toIgnitorDsl(), to = to.toIgnitorDsl())`.
+     A variant that shared the member's name would silently call ITSELF the day the member's
+     parameter names or types drift (a `StackOverflowError`); renamed, the drift is a compile error.
+  4. The user-facing KDoc stays on the script variant, deliberately: KSP reads KDoc only from its
+     own module.
+  5. The script door converts its `Any` arguments, calls the typed door and passes the checking
+     wrapper: `self.vibrato(r, s) { it.configuredBy("vibrato", configure) }`; `configuredBy` stays in
+     `klangscript-libs`. A refusal the maintainer decided (Q49, an eq section given an expression)
+     is pre-checked script-side, with a script error. Everything else follows the stone rule: coerce
+     user-reachable inputs, never `require` them (§6).
+  6. One concept with two value domains gets two typed builders of the same words sharing one
+     helper: the eq is `band` / `tap` on a voice builder (`IgnitorDsl`) and on a Katalyst builder
+     (`KatalystKnobDsl`), one helper for the section conversion and the Q49 refusal.
+  7. The Kotlin door offers the forms the script offers, per knob (coordinator, 2026-10-16, S5): a name knob the
+     script takes as a name OR an index or slot (the Ignitor name knobs and the Katalyst `material` / `vowel`, through
+     `catalogueIndex`) gets a typed `String` member beside the index form (`it.shape("square")`); one the script takes
+     only as a name (the Katalyst `distort`'s `shape`) is only a `String` on Kotlin too. Both go through the lookup
+     helper the script variant uses, which coerces and never uses `require`. A knob with several name arguments
+     (`curves(attack, decay, release)`) has two Kotlin overloads, all-`String` or all-typed; a mixed call (a name
+     beside a slot) writes the names as knobs in the typed form, `curves(attack = AdsrCurves.knob(AdsrCurve.Linear),
+     decay = slot, release = ...)`, since 2^n overloads are what the typed door avoids.
+  8. Sweeps: update `door-shapes.md` and every KDoc citing the old door; a regex sweep skips string
+     literals (KlangScript in Kotlin strings looks like Kotlin); `-1.ign` needs
+     `import io.peekandpoke.klang.audio_bridge.unaryMinus` (a top-level extension).
+  9. Cases met in the rollout, S3a first (the filters and the eq):
+     - A nested builder moves with its parent (`ModAdsrBuilder` with `FilterBuilder.adsr`), even ahead of its own step.
+     - A `String` name form cannot default its first argument: with the index form also all-default, `curves()`
+       would be ambiguous. The index form keeps every default; the name form needs the first.
+     - A script default that is a literal (`q = 0.707`), not `null`, stays a literal (KSP); the default-node row pins
+       it equal to the Kotlin symbol (`FILTER_Q.ign`).
+     - A node-less builder (`FilterKnobs`, which must know what was NAMED for the compound fill) does not end in
+       `.node`: the door builds the node itself after the fill.
+     - A door with no knobs (`onepole`) gets no builder and no `configure`.
+     - Kotlin call sites name arguments that could be swapped (`lowpass(freq = 800.ign, q = 2.ign)`,
+       `band(freq = ..., q = ..., db = ...)`, `/code-style`); a single argument stays positional, and KlangScript stays
+       positional.
+     - Met in rollout S3b and S3c (the envelopes, the effects, the one-value doors):
+       - A builder that only collected nullable knobs, with nothing left to fill (the old `AdsrBuilder`), becomes a node
+         builder: the door builds the default node, the knobs copy onto it, the door ends in `.node`. `FilterKnobs` stays
+         node-less only because its fill must know what was NAMED.
+       - A builder fill that falls back to "the node's default" reads a FRESH default node, never the builder's current
+         node (`PitchEnvelopeBuilder.adsr`), or a second `adsr` call keeps the first one's curves; a row with two calls pins it.
+       - A word the script has and Kotlin lacked gets its Kotlin door in the same step (`pitchEnvelope`, `octaveUp`,
+         `octaveDown`), and the script door delegates.
+       - Before keeping a knob plain (point 3), check the runtime: a knob it reads per event from a slot is typed
+         (`shape`'s and `distort`'s `shape` and `oversample`, maintainer 2026-10-16), whatever the old door took.
+       - A default symbol is the other surface's constant when the meaning is the same (the voice phaser's `center` and
+         `sweep` are `PHASER_CENTER_HZ`, `PHASER_SWEEP_HZ`), otherwise a new constants file (`ShimmerDefaults.kt`); the
+         node's field reads the same symbol.
+       - A one-argument name knob has no ambiguity to dodge: the index form's parameter is `index`, the name form's
+         `name` (`TremoloBuilder.shape`).
+     - Met in rollout S4 (the arithmetic):
+       - A script word on a `@KlangScript.TypeExtensions` object (`fun mul(self, other)`) cannot recurse through
+         `self.mul(...)` (an object member is no extension candidate), but takes point 3 all the same: `internal`,
+         `scriptMul`, `@KlangScript.Method(name = "mul")`. One rule, no case to judge; the generated docs stay
+         byte-identical (they use the script name).
+       - A script alias (`add`, `sub`, `mix`, `rem`, `power`, `negate`, `reciprocal`) calls the typed function of its
+         main word. (Superseded in S5 review round 1, coordinator: Kotlin mirrors the script's words, aliases
+         included; each alias is a one-line typed delegate to its main word, see the S5 sub-points.)
+       - A guardrail that crosses nodes (`min` builds `Max`) lives ONCE, in the typed function; the script variant
+         delegates and never builds the node, so one "correction" turns both doors red together.
+       - A parameter keeps the script's name even where a call site would read better otherwise (`clamp(lo, hi)`):
+         a Kotlin-only rename is a parameter-parity break (§4).
+       - Check what the script's operators do before promising them: the interpreter's binary operators take numbers
+         and strings only, so a signal's script arithmetic is the method (`saw.mul(0.5)`); a row pins `saw * 0.5` as
+         the type error it already was. A recorded asymmetry: Kotlin has `+` / `*` on signals, the script is
+         method-only until `docs/tasks/klangscript-native-object-operators.md` lands (decided 2026-10-07,
+         `__times__` / `__rtimes__`, the goal `saw * 4`); that row then goes red on purpose.
+     - Met in rollout S5 (the Katalyst):
+       - Kotlin mirrors the script's words, aliases included; an alias delegates to its main word (coordinator, S5
+         review round 1: porting is the goal, so the script's `mid.distort(...).mul(0.80)` is Kotlin
+         `mid.distort(...).mul(0.80.kat)`). One line each, `fun IgnitorDsl.mix(other, t) = lerp(other = other, t = t)`,
+         `fun KatalystBuilder.mul(other) = times(other)`; the guardrail crossing stays in the main word only. Each
+         alias has its written-out row.
+       - A stage door's parameters are the bare stage's constants (`delay(time = DELAY_TIME_SECONDS.kat)`), the ones the
+         `KatalystStageDsl` data class reads; the script variant substitutes the same symbol for its `null`. A field
+         whose bare value IS `null` (the reverb's `lowpass`, the engine's own damping, no wire constant) keeps a
+         nullable parameter defaulting to `null`: the node's value, not a stand-in for a default; the variant passes
+         its `null` through.
+       - A name knob that is a DOOR parameter (`body`'s `material`, `vowel`'s `vowel`) gets a second door overload
+         with the name as a required `String` (`body(wet, material: String, configure)`); the index form keeps every
+         default, so `body()` and `body(material = "wood")` never meet. A name knob on a plain node field that the
+         script takes only by name (`distort`'s `shape`, an `Int` on the stage, Q51) is only a `String` on Kotlin
+         too, its default the catalogue's own name (`DistortionShapes.names[SOFT_INDEX]`); an index form there was
+         dropped (coordinator, S5: the doors offer the same forms, point 7).
+       - A member of the same name beats an extension, so a script door that was an extension on the moved builder
+         (`fun KatalystBuilder.reverb(...)`) must take point 3 or Kotlin silently calls the member; the knob arithmetic
+         on `KatalystKnobDsl` is the same (`scriptTimes`), its typed functions plain extensions returning the precise
+         node, no operators (there were none).
+       - The builder's own primitive (`KatalystBuilder.append`) is public. (Since S6 no script function appends
+         through it; it stays a public member, a stage door of its own.)
+       - A door-table spec that omitted parameters through a `null` cannot do so on a typed door: its Kotlin lambda
+         fills the others from the bare data class, the script variant called from Kotlin (`scriptDelay(time = ...)`)
+         carries the omission rows, and the default-node rows, written with literal numbers, pin the typed defaults.
+     - Met in rollout S6 (the composition doors, `serial`, `parallel`, `blend`, `bands`):
+       - A script function that takes a FUNCTION the script supplies (a stage, a branch, a band processor) checks it
+         where it is called, never in the typed door: the variant wraps each one in its check (`checkedStage`, over
+         `runStage`, in `Configure.kt`) and hands the wrapper to the typed door, which only invokes what it gets. The
+         wrapper knows its number when it is made (`band ${processors.size}`, processor `processors.last().size`), so
+         the messages are the ones the script had. The typed door and the typed `split` hold no `runStage`.
+       - A function argument the script refuses at the call (not a function, `null` on a non-vararg parameter: "expected
+         a function, got null") is refused before the variant runs; only a vararg element reaches the null check.
+       - The §3 criterion decides a door parameter as it decides a knob: the Katalyst `blend`'s `wet`, which the script
+         takes as a plain number only, is a plain `Double` on Kotlin; the Ignitor's, a slot or a signal, an
+         `IgnitorDsl`. A `bands` `cut`, written into the EQ sections as a constant and never slot-read, is a plain
+         `Double` on both doors.
+       - The crossover's math lives once beside its builders in `audio_bridge`; the split is pinned against nodes
+         written out by hand (each cut, the bands in order, each processor on its own band), since a parity row shares
+         the split.
+       - KSP: a top-level extension function's entry records its own file as a source (`collectSourceFiles`, pinned by
+         `SourceFilesTest`), or an incremental run that does not dirty that file drops its registrations when its
+         receiver has no file in the module (met when `BandsBuilders.kt` kept only renamed variants; the gap predates
+         S1, sprudel's `lang_structural_chunk.kt` had it too, and the other builder files were dirty only by chance,
+         through `toIgnitorDsl`).
+       - A song in the corpus that reads "edited" is not engine-guarded: refresh its live row (a plain
+         `corpus-accept`, which refuses a red row) before relying on the corpus for a door the song uses.
 - Pin parity with a door-parity spec: the script form and the Kotlin form must produce equal nodes
-  (`KlangScriptFilterDoorParitySpec` is the pattern).
+  (`KlangScriptFilterDoorParitySpec` is the pattern). Since both doors share the builder members, a
+  parity row cannot see a member that writes the wrong field, nor a wrong default in the Kotlin door
+  the script door builds on: every member knob also gets a row against the node WRITTEN OUT with
+  `.copy()`, never through a builder, with a distinct value off its default (`KlangScriptSawRampSpec`
+  is the template), and one row pins each Kotlin door's default node. A repeatable (appending) knob
+  (`partial`) keeps its append logic in the member; a written-out row with two or more calls, the list in written order (`KlangScriptSineSpec`),
+  (`node.copy(partials = listOf(...))`) pins it. A sealed-default door (`pluck`, `superpluck`, whose
+  knobs default to constants, not the node's `Slots.*`) has the sealed node, written out, as its
+  default-node row, not `Node(freq = Freq)`.
 - Script-door param defaults are SAFE LITERALS (number, string, bool, null). Since 2026-10-06 the
   KSP processor refuses any other default (`IgnitorDsl.Slots.rate`, `emptyList()`) with a build error
   naming the door and the parameter. The spec's default thunk returns the literal and fills an
@@ -196,8 +372,8 @@ the bug.
   `env(...)` and `adsr(...)`, and the fill runs once after the lambda. The three CURVES are NOT stage
   knobs (maintainer, 2026-09-23): a curve shapes an envelope, it does not ask for one. Since 3c they
   live only inside the envelope's own builder (`adsr(..., e => e.curves(...))`), so on the script door a
-  curve cannot be written without naming the stage; on the flat Kotlin door a curve alone still leaves
-  the filter untouched. The pitch envelope's builder
+  curve cannot be written without naming the stage, and on the Kotlin door too, which has the same builder since
+  the typed-door rollout S3a. The pitch envelope's builder
   has no depth to fill (the depth is its door input), so the rule has nothing to do there. Sprudel's
   `penv(semitones, attack, decay, sustain, release)` (phase 3 step 5b (c), 2026-09-25; `semitones` was `amount`
   until pitch pipeline step 1, 2026-10-09) is a voice-side door on

@@ -10,6 +10,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.tremolo
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
@@ -21,8 +22,8 @@ import io.peekandpoke.klang.script.runtime.toObjectOrNull
  * default node with exactly its `phase` field written (the expectation never goes through a builder). Every periodic
  * oscillator door is a row. The pluck doors and the noise doors have no `phase`.
  *
- * The tremolo: `range(from, to)` on the script door's builder; the flat Kotlin door in `audio_bridge` takes `rangeFrom`
- * and `rangeTo` (the recorded flat-door asymmetry, the filter doors' precedent).
+ * The tremolo: `range(from, to)` on the `TremoloBuilder`, the same builder on both doors since the typed-doors rollout
+ * S3c (the flat Kotlin `rangeFrom` and `rangeTo` are gone).
  */
 class KlangScriptIgnitorPhaseDoorParitySpec : StringSpec({
 
@@ -42,20 +43,20 @@ class KlangScriptIgnitorPhaseDoorParitySpec : StringSpec({
     )
 
     val doors = listOf(
-        PhaseDoor("sine", { p -> KlangScriptIgnitor.sine(4.0) { it.phase(p) } }, { p -> IgnitorDsl.Sine(freq = c(4.0), phase = p) }),
-        PhaseDoor("saw", { p -> KlangScriptIgnitor.saw(4.0) { it.phase(p) } }, { p -> IgnitorDsl.Saw(freq = c(4.0), phase = p) }),
-        PhaseDoor("ramp", { p -> KlangScriptIgnitor.ramp(4.0) { it.phase(p) } }, { p -> IgnitorDsl.Ramp(freq = c(4.0), phase = p) }),
-        PhaseDoor("square", { p -> KlangScriptIgnitor.square(4.0) { it.phase(p) } }, { p -> IgnitorDsl.Pulze(freq = c(4.0), phase = p) }),
-        PhaseDoor("pulze", { p -> KlangScriptIgnitor.pulze(4.0) { it.phase(p) } }, { p -> IgnitorDsl.RawPulze(freq = c(4.0), phase = p) }),
-        PhaseDoor("tri", { p -> KlangScriptIgnitor.tri(4.0) { it.phase(p) } }, { p -> IgnitorDsl.Tri(freq = c(4.0), phase = p) }),
-        PhaseDoor("zawtooth", { p -> KlangScriptIgnitor.zawtooth(4.0) { it.phase(p) } }, { p -> IgnitorDsl.Zawtooth(freq = c(4.0), phase = p) }),
-        PhaseDoor("zamp", { p -> KlangScriptIgnitor.zamp(4.0) { it.phase(p) } }, { p -> IgnitorDsl.Zamp(freq = c(4.0), phase = p) }),
-        PhaseDoor("impulse", { p -> KlangScriptIgnitor.impulse(4.0) { it.phase(p) } }, { p -> IgnitorDsl.Impulse(freq = c(4.0), phase = p) }),
-        PhaseDoor("supersaw", { p -> KlangScriptIgnitor.supersaw(4.0) { it.phase(p) } }, { p -> IgnitorDsl.SuperSaw(freq = c(4.0), phase = p) }),
-        PhaseDoor("supersine", { p -> KlangScriptIgnitor.supersine(4.0) { it.phase(p) } }, { p -> IgnitorDsl.SuperSine(freq = c(4.0), phase = p) }),
-        PhaseDoor("supersquare", { p -> KlangScriptIgnitor.supersquare(4.0) { it.phase(p) } }, { p -> IgnitorDsl.SuperSquare(freq = c(4.0), phase = p) }),
-        PhaseDoor("supertri", { p -> KlangScriptIgnitor.supertri(4.0) { it.phase(p) } }, { p -> IgnitorDsl.SuperTri(freq = c(4.0), phase = p) }),
-        PhaseDoor("superramp", { p -> KlangScriptIgnitor.superramp(4.0) { it.phase(p) } }, { p -> IgnitorDsl.SuperRamp(freq = c(4.0), phase = p) }),
+        PhaseDoor("sine", { p -> KlangScriptIgnitor.sine(4.0) { it.phase(p.toIgnitorDsl()) } }, { p -> IgnitorDsl.Sine(freq = c(4.0), phase = p) }),
+        PhaseDoor("saw", { p -> KlangScriptIgnitor.saw(4.0) { it.phase(p.toIgnitorDsl()) } }, { p -> IgnitorDsl.Saw(freq = c(4.0), phase = p) }),
+        PhaseDoor("ramp", { p -> KlangScriptIgnitor.ramp(4.0) { it.phase(p.toIgnitorDsl()) } }, { p -> IgnitorDsl.Ramp(freq = c(4.0), phase = p) }),
+        PhaseDoor("square", { p -> KlangScriptIgnitor.square(4.0) { it.phase(p.toIgnitorDsl()) } }, { p -> IgnitorDsl.Pulze(freq = c(4.0), phase = p) }),
+        PhaseDoor("pulze", { p -> KlangScriptIgnitor.pulze(4.0) { it.phase(p.toIgnitorDsl()) } }, { p -> IgnitorDsl.RawPulze(freq = c(4.0), phase = p) }),
+        PhaseDoor("tri", { p -> KlangScriptIgnitor.tri(4.0) { it.phase(p.toIgnitorDsl()) } }, { p -> IgnitorDsl.Tri(freq = c(4.0), phase = p) }),
+        PhaseDoor("zawtooth", { p -> KlangScriptIgnitor.zawtooth(4.0) { it.phase(p.toIgnitorDsl()) } }, { p -> IgnitorDsl.Zawtooth(freq = c(4.0), phase = p) }),
+        PhaseDoor("zamp", { p -> KlangScriptIgnitor.zamp(4.0) { it.phase(p.toIgnitorDsl()) } }, { p -> IgnitorDsl.Zamp(freq = c(4.0), phase = p) }),
+        PhaseDoor("impulse", { p -> KlangScriptIgnitor.impulse(4.0) { it.phase(p.toIgnitorDsl()) } }, { p -> IgnitorDsl.Impulse(freq = c(4.0), phase = p) }),
+        PhaseDoor("supersaw", { p -> KlangScriptIgnitor.supersaw(4.0) { it.phase(p.toIgnitorDsl()) } }, { p -> IgnitorDsl.SuperSaw(freq = c(4.0), phase = p) }),
+        PhaseDoor("supersine", { p -> KlangScriptIgnitor.supersine(4.0) { it.phase(p.toIgnitorDsl()) } }, { p -> IgnitorDsl.SuperSine(freq = c(4.0), phase = p) }),
+        PhaseDoor("supersquare", { p -> KlangScriptIgnitor.supersquare(4.0) { it.phase(p.toIgnitorDsl()) } }, { p -> IgnitorDsl.SuperSquare(freq = c(4.0), phase = p) }),
+        PhaseDoor("supertri", { p -> KlangScriptIgnitor.supertri(4.0) { it.phase(p.toIgnitorDsl()) } }, { p -> IgnitorDsl.SuperTri(freq = c(4.0), phase = p) }),
+        PhaseDoor("superramp", { p -> KlangScriptIgnitor.superramp(4.0) { it.phase(p.toIgnitorDsl()) } }, { p -> IgnitorDsl.SuperRamp(freq = c(4.0), phase = p) }),
     )
 
     "every periodic oscillator door: phase(x) positional, named, on Ign and on the Kotlin door is the node with its phase written" {
@@ -105,12 +106,12 @@ class KlangScriptIgnitorPhaseDoorParitySpec : StringSpec({
         ks("Ignitor.saw().tremolo(4, 0.3, x => x.range(0, 1))") shouldBe expected
         ks("Ignitor.saw().tremolo(4, 0.3, x => x.range(from = 0, to = 1))") shouldBe expected
         ks("Ignitor.saw().tremolo(4, 0.3, x => x.range(to = 1, from = 0))") shouldBe expected
-        KlangScriptIgnitorExtensions.tremolo(saw, 4.0, 0.3) { it.range(0.0, 1.0) } shouldBe expected
-        saw.tremolo(4.0, 0.3, rangeFrom = 0.0, rangeTo = 1.0) shouldBe expected
+        KlangScriptIgnitorExtensions.tremolo(saw, 4.0, 0.3) { it.range(from = 0.0.ign, to = 1.0.ign) } shouldBe expected
+        saw.tremolo(rate = 4.0.ign, depth = 0.3.ign) { it.range(from = 0.0.ign, to = 1.0.ign) } shouldBe expected
 
         // with the shape on the same builder
         ks("""Ignitor.saw().tremolo(4, 0.3, x => x.shape("square").range(-1, 1))""") shouldBe
-            saw.tremolo(4.0, 0.3, shape = "square", rangeFrom = -1.0, rangeTo = 1.0)
+            saw.tremolo(rate = 4.0.ign, depth = 0.3.ign) { it.shape("square").range(from = (-1.0).ign, to = 1.0.ign) }
     }
 
     "the tremolo's default range is (-1, 0), the classic dip, on every door" {
@@ -119,7 +120,7 @@ class KlangScriptIgnitorPhaseDoorParitySpec : StringSpec({
 
         classic.rangeFrom shouldBe c(-1.0)
         classic.rangeTo shouldBe c(0.0)
-        saw.tremolo(4.0, 0.3) shouldBe classic
+        saw.tremolo(rate = 4.0.ign, depth = 0.3.ign) shouldBe classic
         ks("Ignitor.saw().tremolo(4, 0.3, x => x.range(-1, 0))") shouldBe classic
         ks("Ignitor.saw().tremolo(4, 0.3, x => x.range(0, 1))") shouldNotBe classic
     }

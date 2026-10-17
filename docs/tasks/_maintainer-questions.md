@@ -21,7 +21,7 @@ follow-ups 31 to 41, as long as each stays a purely independent performance fix 
 their helpers), Q19 (the disposal order stays, documented in the dispatcher's KDoc), Q20 (fix the frozen songs'
 shared orbits: `song-orbit-ownership-review.md`), Q13 (`progress()` and `elapsed()`, curves as their own future
 feature: `pitch-pipeline-into-the-tree.md` 7f, `future/curves.md`), Q33 and Q32 (accelerate and the pitch envelope both stay nodes: pitch 7d, 7e), Q29 (`duty(width)`: engine follow-up 44), Q24 (typed Kotlin doors with `.ign`/`.kat`, KlangScript keeps its own
-door: `kotlin-typed-doors.md`), Q30 and Q31 (confirmed as decided by default; FM gets its own round with the
+door: `../tasks-archive/2026-10/20261016-kotlin-typed-doors.md`), Q30 and Q31 (confirmed as decided by default; FM gets its own round with the
 maintainer: `future/fm-revisit.md`), Q28 (solo: the latest value wins at once, engine
 follow-up 43).
 
@@ -32,6 +32,13 @@ follow-up 43).
 All answered 2026-10-14: Q40 (C3, NaN in a signal is the author's own; the task archived), Q41 (C5, `randL` and
 `filter` cut), Q42 (C12, the next block-framing round when the nodes are stable: `../plans/block-framing-invariance.md`),
 Q43 (the two laws moved to `audio/ref/`).
+
+---
+
+# Part 0c: Typed Kotlin doors, the design's open points (2026-10-16)
+
+All answered 2026-10-16 (Q44 to Q51): recorded in [`../tasks-archive/2026-10/20261016-kotlin-typed-doors.md`](../tasks-archive/2026-10/20261016-kotlin-typed-doors.md), "The maintainer's
+answers". Q46 adds typed Kotlin `Ign` and `Kat` objects for surface parity.
 
 ---
 

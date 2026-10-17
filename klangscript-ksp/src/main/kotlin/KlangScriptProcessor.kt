@@ -511,12 +511,14 @@ class KlangScriptProcessor(
     // ===== Code generation =====
 
     private fun generateLibraryCode(libraryName: String, entries: LibraryEntries) {
-        val sourceFiles = buildList {
-            entries.objects.forEach { addAll(listOfNotNull(it.cls.containingFile)) }
-            entries.typeExtensions.forEach { addAll(listOfNotNull(it.cls.containingFile)) }
-            entries.functions.forEach { addAll(listOfNotNull(it.fn.containingFile)) }
-            entries.properties.forEach { addAll(listOfNotNull(it.prop.containingFile)) }
-        }.distinct()
+        val sourceFiles = collectSourceFiles(
+            objects = entries.objects.map { SourceRefs(classFile = it.cls.containingFile, methodFiles = emptyList()) },
+            typeExtensions = entries.typeExtensions.map { ext ->
+                SourceRefs(classFile = ext.cls.containingFile, methodFiles = ext.methods.map { it.fn.containingFile })
+            },
+            functionFiles = entries.functions.map { it.fn.containingFile },
+            propertyFiles = entries.properties.map { it.prop.containingFile },
+        )
 
         val capitalizedName = libraryName.replaceFirstChar { it.uppercase() }
         val packageName = "io.peekandpoke.klang.script.generated"

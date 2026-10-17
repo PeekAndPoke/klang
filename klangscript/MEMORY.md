@@ -37,7 +37,8 @@ record), and put the narrative in the task record, which gets archived. The full
   which later locals a closure sees is stated once in `ref/intel-analyzer.md`, "Locals declared further down";
   a local shadows a global for the checker and the param tools alike. `ref/intel-analyzer.md`.
 - **Stdlib doors** (`klangscript-libs`): the oscillator doors are `Ignitor.name(freq?, configure?)` (short `Ign.name`) with the knobs
-  on immutable oscillator builder wrappers (`IgnitorBuilders.kt`); `OscSineBuilder` carries `harmonics`,
+  on immutable oscillator builder wrappers (in `audio_bridge/IgnitorBuilders.kt` with typed members since the typed-doors
+  rollout S2, the script knobs internal renamed variants in `klangscript-libs/.../IgnitorBuilders.kt`); `OscSineBuilder` carries `harmonics`,
   `octaves`, `suboctaves`, `partial` (one explicit partial per call), `fundamental` (a gain), `analog` and `analogSpread`, and the six super builders
   carry `analogSpread` (0 to 1, 1 is a drift lane per voice). Door shapes follow `/dsl-design` §2.
 - **Number methods** on `KlangScriptNumberExtensions`: `pow abs sqrt round floor ceil min max clamp rem mod
@@ -163,3 +164,8 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
   (`docs/tasks-archive/2026-10/20261007-boolean-member-access.md`, `docs/tasks-archive/2026-10/20261007-callable-object-docs.md` "Open items, done").
 - 2026-10-16: the pulse builders' `duty(width)` (was `duty(duty)`) on `Ign.square`, `Ign.pulze` and `Kat.square`, the
   word of sprudel's `duty` door (Q29; `docs/tasks/in-progress/engine-follow-ups.md` item 44, `docs/retired-names.md`).
+- 2026-10-16: typed Kotlin doors S1 to S7 (the rollout done): every builder lives in `audio_bridge` with typed members,
+  the `klangscript-libs` stdlib is the script door only, its doors, objects, knob variants and conversions
+  `internal` (S7); public there only what is no door (`ignitorSlotName` / `katalystSlotName`, `klangScript()`,
+  `stdlibLib`, `KlangStdLib`). A KSP fix on the way: a top-level extension function's own file is a source
+  (`collectSourceFiles`, S6) (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`).
