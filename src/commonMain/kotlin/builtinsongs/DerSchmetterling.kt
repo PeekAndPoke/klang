@@ -297,7 +297,7 @@ export guitar2_pat =
   `<[11 11 9 8  7 7 9 6] [11 11 [13 11] 8  7 7 5 6] [11 11 9 11  7 7 7 8]
     [11 11 [13 9] 4  7 4 2 3]
     [4 4 6 8  4 4 5 6] [4 4 6 8  11 11 9 10] [4 4 3 6  4 4 2 3]
-    [7 11 [3 7] [6 7] [4 4 6 4]!2 [0 2 3 9] 6]>/4`
+    [7 11 [3 7] [6 7] [4 4 6 4]!2 [0 2 4 9] 6]>/4`
 
 export guitar2_shape = x => x.pregain(guitarDyna(2).fast(2)).sound(guitar).adsrOff().unison(voices = 9, spread = 0.08)
   .ignp("decay", guitarDecay(2))
@@ -315,7 +315,7 @@ export guitar3_pat =
   `<[0 0 2 4 0 0 -2 -1] [0 0 2 [4 4 6 4 4 6 4 6]  0 0 -2 -1]
     [0 0 2 4 0 0 -2 -1] [0 0 2 [6 4 6 4]          0 0 -2 -1]
     [0 0 2 4 0 0 -2 -1] [0 0 2 4 7 [7 7 7 0] 2 -1] 
-    [0 0 -1 3  0 0 -2 -1]!1 [0 0 3 [0 -2]  0 0 [0 2 3 9] 6]!1>/4`
+    [0 0 -1 3  0 0 -2 -1]!1 [0 0 3 [0 -2]  0 0 [0 2 4 9] 6]!1>/4`
 
 export guitar3_shape = x => x.pregain(guitarDyna(2).fast(2)).sound(guitar).adsrOff().unison(voices = 9, spread = 0.08)
   .ignp("decay", guitarDecay(2))
@@ -331,7 +331,7 @@ export guitar3 = n(guitar3_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(gu
 // Bass  ------------------------------------------------------------------------------------------------------------------------------------------------------
 export bass_pat =
   `<[0 0 2 4 0 0 -2 -1]!3 [0 0 2 4 0 0 5 6]
-    [0 0 2 4 0 0 -2 -1]!2 [0 0 -1 3  7 0 -2 -1]!1 [0 0 3 [0 -2]  0 0 [0 2 3 9] 6]!1>/8`
+    [0 0 2 4 0 0 -2 -1]!2 [0 0 -1 3  7 0 -2 -1]!1 [0 0 3 [0 -2]  0 0 [0 2 4 9] 6]!1>/8`
 
 export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.40) // . mute()
     .ignp("sub", 1.00).ignp("harmonics", 0.95).clip("0.95".sub(perlin(0.0, 0.05).slow(8)))  // . solo()
@@ -345,7 +345,7 @@ export bass_arrange = x => x.orbit(4) // . mute()
 export bass = n(bass_pat).struct(
   `< x x x [x x]  x x [x x] [x!4]    x x [x x] x  [x x] x x [x!4]
     [x x@2 x]!6 [x x]!2   [x x@2 [x!2]]!4 [x x] [x x@2 x] [x] [x!4]
-    [x x] [x [x x]] [x x] [x [x x]]  [[x x?] [~ x]] [x x] [[x x] x] [x [x x]]    [x x] [x [x x]] [x x] [x x?]  [[x x] [x x?]] [x x]!3
+    [x x] [x [x x]] [x x] [x [x x]]  [[x x?] [~ x]] [x x] [[x x] x] [x [x x]]    [x x] [x [x x]] [x x] [x x?]  [[x x] x] [x x]!3
     [x!4]!4 [[x x] x] [[x x] x] [x!4] [x [x!2]]   [x!2 x@2] [x!2] [x!2 x@2] x [x ~ x@2] [x x x@2] [x@2 x x] [x!4]>`
 ).fast(2).apply(bass_shape).tag("bass")
 
