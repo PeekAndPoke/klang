@@ -73,10 +73,10 @@ let preampCrunch = x => x
 
 let preampHighGain = x => x
   .highpass(120)                                    // tight: no bass into the gain stages
-  .distort(0.40, "tube", 4).highpass(110)
-  .distort(0.55, "softsat", 4).highpass(100)
-  .distort(0.65, "soft", 4)
-  .lowpass(5800)                                   // the fizz
+  .distort(0.35, "tube", 4).highpass(110)
+  .distort(0.35, "softsat", 4).highpass(100)
+  .distort(0.70, "soft", 4)
+  .lowpass(5200)                                   // the fizz
   .mul(0.30)                                       // volume
 
 let powerPushPull = x => x
@@ -90,12 +90,12 @@ let powerClassA = x => x
 
 let cab4x12 = x => x
   .eq(e => e
-    .band(freq =  120, q = 1.0, db =  3.5)         // thump: closed-back box resonance
-    .band(freq =  400, q = 0.5, db =  8.0)         // roar:  low mids
+    .band(freq =  120, q = 0.7, db =  3.2)         // thump: closed-back box resonance
+    .band(freq =  350, q = 0.6, db =  8.0)         // roar:  low mids
     .band(freq = 2700, q = 1.6, db =  3.8)         // bark:  the upper-mid speaker peak
   )
-  .lowpass(5000, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
-  .highpass(100, 0.707, x => x.passes(2))          // the low end
+  .lowpass(5200, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
+  .highpass(105)
 
 let cab1x12 = x => x
   .highpass(120, 0.707, x => x.passes(2))
@@ -138,9 +138,9 @@ let makeGuitar = (rig) => {
     //   x.tap(freq = Ign.constant(3000).add(Ign.freq().times(16).adsr(pAttack, 1.0, 0.0, 0.050)), q = 0.7, gain = 0.5),
     // )
     // noise burst - the pick
-    .plus(Ign.whitenoise().adsr(0.0005, 0.006, 0.0, 0.05).highpass(1200).mul(0.8))
+    .plus(Ign.whitenoise().adsr(0.0005, 0.008, 0.0, 0.05).highpass(1200).mul(0.4))
     // the string - lowpass adsr for the string sound and adsr for the string
-    .adsr(pAttack, pDecay, pSustain, pRelease, e => e.curves("linear", "linear", "linear"))
+    .adsr(pAttack, pDecay, pSustain, pRelease, e => e.curves("exp", "linear", "linear"))
   
   // the string through the rig. No note-following highpass after the cab: the preamp tightens the bass at a fixed
   // frequency, and a filter that moves with every note gave every note the same shape, which the ear reads as
@@ -233,7 +233,7 @@ let bass = (() => {
 
   // Harmonics: sine partials at 2f .. 8f, gain 1/n, the fundamental left to the sub above. On the
   // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
-  let harmonics = Ign.sine(x => x.harmonics(10, 1.2).fundamental(0).analog(pAnalog).analogSpread(0.1)).mul(pHarm)
+  let harmonics = Ign.sine(x => x.harmonics(10, 0.95).fundamental(0).analog(pAnalog).analogSpread(0.1)).mul(pHarm)
 
   return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -2)) // let the snare cut through
@@ -292,8 +292,8 @@ export sing = notes => n(notes.add(7))
 export soar = notes => n(notes.add(14))
   .sound(bright).adsrOff().unison(voices = 15, spread = 0.05)
   .ignp("decay", 2.8).clip(1.5)
-  .hpf(400)                                        // two octaves up, nothing of the melody lives below
-  .lpf(4500)                                       // less fizz, the wall keeps its own
+  .hpf(500)                                        // two octaves up, nothing of the melody lives below
+  .lpf(4400)                                       // less fizz, the wall keeps its own
   .gain(0.42).pan(0.5)
   .orbit(6)
 
@@ -318,7 +318,7 @@ export chug = roots => n(roots.add(-7)).struct("[x x] x@2  [x x] x@2  [x x] x")
   .sound(heavy).adsrOff().unison(voices = 11, spread = 0.08)
   .ignp("decay", "0.4 0.8!2 0.4 0.8!2 0.3!2").clip(1)
   .velocity("1.0 0.90 0.80 0.85  0.90 0.80 0.75 0.85".sub(perlin(0.0, 0.2)))
-  .gain(0.45).late(perlin(0.0002, 0.0008)).apply(
+  .gain(0.50).late(perlin(0.0002, 0.0008)).apply(
     x => x.pan(0.20),
     x => x.pan(0.80),
   )
@@ -360,24 +360,24 @@ export strum = notes => n(notes)
 // The drums, for the second run of the heavy block: the band of Der Schmetterling, heavy and half time. The kick on one,
 // the snare on three, the Trommel rolling in on the off-beats of two and four, a crash on one and open hats on two to
 // four. The kit shares one orbit and one room; the Trommel keeps its own for its membrane.
-let drumRoom = x => x.reverb(wet = 0.2, size = 5)
+let drumRoom = x => x.reverb(wet = 0.3, size = 5)
 
 export kick = pat => sound("bd").struct(pat)
   .sound(metalKick).adsrOff().note("a1").velocity("1.0 0.94 0.96 0.94")
-  .gain(1.18).pan(0.5)
+  .gain(1.20).pan(0.5)
   .orbit(11).apply(drumRoom)
 
 export snare = pat => sound(pat)
   .sound(metalSnare).adsrOff().freq(snareHz)
-  .gain(0.53).pan(0.575)
+  .gain(0.50).pan(0.575)
   .lpf(freq = "11500".add(saw(0, 1200).slow(12)), q = 0.5)
-  .delay(0.35, pure(1/16).div(cps), 0.825, 24) // Snare needs it own orbit for the dalay!
+  .delay(0.35, pure(1/16).div(cps), 0.85, 24) // Snare needs it own orbit for the dalay!
   .orbit(12).apply(drumRoom).late(perlin(0.001, 0.0015))
 
 export hats = pat => sound(pat).n(0)
   .velocity("1.0 0.7 0.85 0.7")
   .hpf(800).lpf(freq = 13500, q = 0.5).adsr(0.005, 0.1, 0.70, 2.0) // some body, less sizzle
-  .gain(1.00).pan(0.425)                            
+  .gain(0.90).pan(0.425)                            
   .orbit(11).apply(drumRoom).late(perlin(0.002, 0.0035))
 
 // Bass: the Schmetterling's bass guitar, on every kick, on the chord's root two octaves down.
@@ -386,7 +386,7 @@ export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
   .ignp("sub", 1.00).ignp("harmonics", 0.95)
   .adsr(0.003, 0.3, 0.5, 0.040).hpf(30).notch(freq = snareHz, q = 1.0)
   .clip(0.90)
-  .gain(1.60).pan(0.5)
+  .gain(1.70).pan(0.5)
   .orbit(15)
 
 // Parts  -----------------------------------------------------------------------------------------------------------
@@ -528,7 +528,10 @@ export song = stack(
     .scale("d3:minor")
     .analog(feel)
 
-  , sound("pink pink").gain(perlin(0.02, 0.04)).bpf(perlin(1400, 1600).slow(4), 0.7)
+  , sound("pink pink").clip(3).adsr(0.5, 0.5, 0.5, 1.5).gain(perlin(0.005, 0.01))
+    .pan(sine(-0.7, 0.7).slow(6))
+    .bpf(perlin(1400, 1600).slow(4), 0.7)
+    .apply(drumRoom)
   
   , master(Katalyst(k => k
     .reverb(0.20, 7, 4800)                         // the hall: one room for the whole band, about 2 s, warm
