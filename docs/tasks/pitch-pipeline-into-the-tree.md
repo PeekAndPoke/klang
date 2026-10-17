@@ -6,7 +6,7 @@ Status: **V1, high priority (maintainer, 2026-10-07).** Next after the voice lif
 section 5, first bullet). Plan context: `docs/plans/signal-flow-redesign.md` section 5.
 **Planned 2026-10-07** (design worker, read-only on code): "The plan" below, six commits (steps 0 to 5) plus the
 composition block; eleven decisions for the maintainer in plan section 8.
-**Paused 2026-10-10** (moved back from `in-progress/`): steps 0 to 5 and the composition steps 7a, 7b, 7c are released (v0.6.1, v0.6.2); 7d and 7e were spiked and stopped on cost (the nodes stay). Waiting on the maintainer: the listening round (`tmp/listening/pp-step4/`; `pp-7b/` heard and accepted 2026-10-17), Q30 and Q31 (decided by default, confirm), Q32 and Q33 (compose the pitch envelope and accelerate or keep the nodes), Q13 (`progress()`, for 7f).
+**Paused 2026-10-10** (moved back from `in-progress/`): steps 0 to 5 and the composition steps 7a, 7b, 7c are released (v0.6.1, v0.6.2); 7d and 7e were spiked and stopped on cost (the nodes stay). Waiting on the maintainer: the listening round (heard 2026-10-17: `pp-7b/` accepted; `pp-step4/` accepted except `sgpad`, which sounds broken, Q31), Q30 (confirmed by ear 2026-10-17) and Q31 (open), Q32 and Q33 (compose the pitch envelope and accelerate or keep the nodes), Q13 (`progress()`, for 7f).
 
 ## What it is
 
