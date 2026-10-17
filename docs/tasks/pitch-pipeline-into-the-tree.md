@@ -6,7 +6,7 @@ Status: **V1, high priority (maintainer, 2026-10-07).** Next after the voice lif
 section 5, first bullet). Plan context: `docs/plans/signal-flow-redesign.md` section 5.
 **Planned 2026-10-07** (design worker, read-only on code): "The plan" below, six commits (steps 0 to 5) plus the
 composition block; eleven decisions for the maintainer in plan section 8.
-**Paused 2026-10-10** (moved back from `in-progress/`): steps 0 to 5 and the composition steps 7a, 7b, 7c are released (v0.6.1, v0.6.2); 7d and 7e were spiked and stopped on cost (the nodes stay). Waiting on the maintainer: the listening round (heard 2026-10-17: `pp-7b/` accepted; `pp-step4/` accepted except `sgpad`, which sounds broken, Q31), Q30 (confirmed by ear 2026-10-17) and Q31 (open), Q32 and Q33 (compose the pitch envelope and accelerate or keep the nodes), Q13 (`progress()`, for 7f).
+**Paused 2026-10-10** (moved back from `in-progress/`): steps 0 to 5 and the composition steps 7a, 7b, 7c are released (v0.6.1, v0.6.2); 7d and 7e were spiked and stopped on cost (the nodes stay). Waiting on the maintainer: the listening round (heard 2026-10-17: `pp-7b/` accepted; `pp-step4/` accepted except `sgpad`, which sounded broken, Q31), Q30 (confirmed by ear 2026-10-17), Q31 (fixed 2026-10-18: `sgpad` rebuilt so its FM reads one pitch, `tmp/listening/pp-step4/sgpad-fixed.wav` to be heard), Q32 and Q33 (compose the pitch envelope and accelerate or keep the nodes), Q13 (`progress()`, for 7f).
 
 ## What it is
 
@@ -199,6 +199,11 @@ one") applied; every clause not named here is kept.
    "note" leaf, so it is a maintainer question). The only built-in with a forking `detune` under `classic()` is
    `sgpad` (checked in `builtInSources()`: `(Saw() + Saw().detune(0.1)) / 2`, then `onepole`); every other built-in
    has one pitch, the super oscillators detune inside one source.
+   **Fixed 2026-10-18 (Q31, maintainer: "fix it now"):** `sgpad`'s second saw reads `Freq * 0.1.semitones()` instead
+   of sitting under a `detune`: the same frequency to the bit, no fork, so the FM serves the note alone, the strip's
+   law. `s("sgpad")` without fm is bit-identical (`BuiltInVoiceMatrixSpec`); with fm it is the same at blocks 128, 64
+   and 37 and equals its two layers rendered as one-pitch voices (`SgpadFmSpec`). No built-in has the shape now; the
+   engine is unchanged, so an authored fm above a forking detune keeps it (the author rule).
 5. **The envelope-free tail** (found in step 4, decision (A)): the strip always ran its depth envelope with a release
    of 0, so it collapsed every FM at the first block from the gate on; the node runs no envelope when every stage is at
    its default (attack 0, decay 0, sustain 1 or more, release 0), so an envelope-free door keeps its depth through the

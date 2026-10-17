@@ -38,9 +38,10 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   D3): the depth envelope per sample (ledger E11 closed), an envelope-free door keeps its depth through the release
   tail (the strip collapsed it at the gate), the rounding order (at most 7.6e-15 at the output before the gate), the
   modulator sine's rng draw (a pitched voice that also draws while it renders, a supersaw, a pluck, `analog > 0`,
-  takes other random values; a noise-only voice is untouched), the modulator following `vib` / `penv` / `accelerate`, and over `sgpad`'s forking detune one
-  modulator for both pitches, block-size dependent (ledger E8: at 128 frames the pad loses its pitch; recorded, kept
-  quiet, `sgpad` the only built-in with that shape).
+  takes other random values; a noise-only voice is untouched), the modulator following `vib` / `penv` / `accelerate`. Over a forking detune one
+  modulator serves both pitches, block-size dependent (ledger E8, the author rule below); no built-in has that shape
+  since `sgpad` reads its second pitch as `Freq * 0.1.semitones()`, not under a `detune` (Q31, 2026-10-18;
+  `SgpadFmSpec`).
 - **Accelerate glides over the GATE and holds** (decision D2, with its hold, 2026-10-09): `2^(semitones / 12 *
   progress)` from the onset to the gate close (`IgniteContext.voiceDurationFrames`, which a note-off never moves),
   then the target through the release, for both doors; a gate of 0 frames holds the target from the first frame
@@ -383,6 +384,10 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-18 `s("sgpad").fm(...)` keeps its pitch (Q31): `sgpad`'s second saw reads `Freq * 0.1.semitones()` instead
+  of a forking `detune`, so the classic FM serves one pitch; without fm bit-identical, with fm block-size independent
+  (`SgpadFmSpec`); no engine change; the corpus moves no row (its three red rows predate it, the same with the fix
+  reverted): `docs/tasks/future/fm-revisit.md` (Q31)
 - 2026-10-17 Knob glide, two ear decisions: the bank crossfade is 50 ms (`BANK_CROSSFADE_SECONDS`, 20 ms before), and a
   compressor move that relaxes on balance (judged by its net reduction at a fixed 0 dBFS) releases at the compressor's
   release time on one shared fraction, never faster than the glide; a 40 dB threshold rise no longer swells 32.2 dB with 10 to

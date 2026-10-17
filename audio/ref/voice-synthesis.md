@@ -205,9 +205,10 @@ the note's pitch: the modulator follows the carrier and the ratio stays exact (a
 alone; on the carrier (`x.vibrato(...).fm(m, ...)`) the carrier alone. Sprudel's own `fm` door is `classic()`'s FM
 stage since pitch pipeline step 4, innermost: its modulator follows `vib`, `penv` and `accelerate`, and over an fm
 instrument (`s("sgbell").fm(...)`) it is an fm over an fm's carrier, so the instrument's own modulator follows it. Over
-`sgpad`, whose `detune` forks the carrier into two pitches, it is the one shape below (recorded, decided to stay quiet):
-block-size dependent (ledger E8), and at the production block of 128 frames the pad loses its pitch (step 4 review round 1).
-`sgpad` is the only built-in with a forking `detune` under `classic()`.
+an authored instrument whose `detune` forks the carrier into two pitches (`(x + x.detune(7)).classic()`) it is the one
+shape below: block-size dependent (ledger E8). No built-in has a forking `detune` under `classic()`: `sgpad` had one
+until 2026-10-18 and lost its pitch under sprudel's `fm` (step 4 review round 1); its second saw now reads
+`Freq * 0.1.semitones()`, the same frequency without a fork (Q31, `SgpadFmSpec`).
 
 The mechanism: the `Fm` arm builds the modulator under the outer mod, read through a `CarrierFreqMod` that asks it at
 the CARRIER's frequency, which the fm pins every block before it renders the modulator. Asked at the modulator's own

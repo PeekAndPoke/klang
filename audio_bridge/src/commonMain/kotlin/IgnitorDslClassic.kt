@@ -365,9 +365,10 @@ class SampleSlots internal constructor() {
  *    modulator sine seeds its drift lane from the voice's random stream on its first block, so a pitched voice that
  *    also draws while it renders (a supersaw's or a pluck's dice, `analog` above 0) takes other random values, the
  *    same statistics (a noise-only voice never renders the modulator and keeps its draws); the modulator now follows
- *    `vib`, `penv` and `accelerate`; over a forking `detune` (`sgpad`, the only built-in with one) the one modulator
- *    serves both pitches and jumps a whole block per pitch, so the sound depends on the block size and the pad loses
- *    its pitch (the author rule's shape, step 3b; ledger E8; recorded, kept quiet). A non-finite knob is dropped at sprudel's boundary and reads as unset (a
+ *    `vib`, `penv` and `accelerate`; over a forking `detune` (an authored `(x + x.detune(7)).classic()`) the one
+ *    modulator serves both pitches and jumps a whole block per pitch, so the sound depends on the block size (the
+ *    author rule's shape, step 3b; ledger E8). No built-in has that shape: `sgpad` reads its second pitch as
+ *    `Freq * 0.1.semitones()` since 2026-10-18 (Q31), so its FM serves the note alone. A non-finite knob is dropped at sprudel's boundary and reads as unset (a
  *    non-finite depth: no FM; a non-finite ratio: ratio 1);
  *  - the pitch envelope is the Ignitor `pitchEnvelope` node, the law the retired pitch strip shared with it
  *    (`renderPitchEnvelopeRatios`), so sprudel's `penv` renders the strip's bits (pitch pipeline step 1); an `fm`

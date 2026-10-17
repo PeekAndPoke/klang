@@ -51,9 +51,10 @@ its one modulator serves one pitch. The shape is an fm whose carrier holds TWO p
   `detune(7)` (line 10): one modulator would serve both pitches. Give each layer its own fm:
   `x.fm(...) + x.fm(...).detune(7)`."
 - The voice still plays today's defined sound.
-- **Out of scope for now:** a sprudel door over a built-in (`s("sgpad").fm(...)`, the classic FM stage above sgpad's
-  detune) stays quiet; the maintainer: "one of the things we can only really decide once they happen to us outside the
-  lab on a real song."
+- **No built-in case left (2026-10-18):** a sprudel door over a built-in was out of scope ("one of the things we can
+  only really decide once they happen to us outside the lab on a real song"), and its one case, `s("sgpad").fm(...)`,
+  is fixed at the source (Q31 of [`fm-revisit.md`](fm-revisit.md)): `sgpad` reads its second pitch as
+  `Freq * 0.1.semitones()`, no forking detune, so the classic FM serves one pitch.
 - **Skip `classic()`'s own FM stage** (an fm whose depth is a slot, `fm.depth`; pitch pipeline step 4 review round 1,
   A5). Since step 4 every `classic()` tree carries that fm innermost, gated off unless a pattern writes `fm.depth`, so
   a static walk would flag every authored instrument with a forking detune that ends in `.classic()`
@@ -61,6 +62,7 @@ its one modulator serves one pitch. The shape is an fm whose carrier holds TWO p
   real when a pattern does write it (reviewer B, step 4 round 1: `s("sgpad").fm(150, 1.5)` is block-size dependent, +2.8
   dB between blocks of 128 and 64 frames, ledger E8, and at 128 frames the pad loses its pitch: 95 percent of the
   energy off the f/2 grid), so the build-time half is the place for it (the gate knows the written depth), not the
-  static walk; today the built-in `sgpad` is the only built-in with a forking detune under `classic()`.
+  static walk. No built-in has a forking detune under `classic()` since 2026-10-18 (`sgpad` rebuilt, Q31); the
+  build-time half is for an authored `(x + x.detune(7)).classic()` whose pattern writes `fm`.
 - Design the diagnostic surface once, since more will follow (the planned "declares no slot" one in
   `docs/plans/signal-flow-redesign.md`).

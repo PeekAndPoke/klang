@@ -10,11 +10,15 @@ was decided by default is collected here, so the round starts from one page.
   an envelope only when one is written, as the Ignitor door's `fm` always did; before pitch step 4, sprudel's strip
   dropped the depth at the gate. `note("c3").s("sine").fm(300, 1.4).release(0.5)`. Listening pair:
   `tmp/listening/pp-step4/`, heard 2026-10-17: "keep the new version".
-- **`s("sgpad").fm(...)` loses its pitch** (Q31, 2026-10-13: kept as recorded, decided when a song wants it): one
-  modulator serves both detuned saw layers and jumps a block of phase at every block boundary (95 % of the energy off
-  the harmonic grid, block-size dependent). The only built-in with that shape; no song uses sprudel's `fm`. Options
-  then: rebuild `sgpad` to read one pitch per FM, or let the diagnostic below name it. Heard 2026-10-17 (listening
-  pair `tmp/listening/pp-step4/sgpad-*.wav`): the after "sounds broken, at least very different".
+- **`s("sgpad").fm(...)` keeps its pitch again** (Q31, fixed 2026-10-18, maintainer: "fix it now"). Heard
+  2026-10-17 (`tmp/listening/pp-step4/sgpad-*.wav`): the after "sounds broken, at least very different": one
+  modulator served both detuned saw layers and jumped a block of phase at every block boundary (block-size
+  dependent, ledger E8). The fix rebuilds `sgpad`, no engine change: its second saw reads its pitch as
+  `Freq * 0.1.semitones()` instead of `Saw().detune(0.1)`, the same frequency to the bit but no forking detune, so
+  the FM serves one pitch, the note, as the strip did. `s("sgpad")` without fm is bit-identical; with fm it is the
+  same at every block size and on the harmonic grid again (`SgpadFmSpec`; new file `sgpad-fixed.wav`, to be heard,
+  measured in `sgpad.md`). No built-in has the shape now; an authored `(x + x.detune(7)).fm(m)` still has it (the
+  author rule and the diagnostic below).
 - **The fm diagnostic** ([`fm-above-forking-detune-diagnostic.md`](fm-above-forking-detune-diagnostic.md),
   C6 of the 2026-10-10 baseline): the first editor diagnostic, for an fm above a forking `detune`.
 - **FM's V8 allocations**: engine follow-ups 10c and 10d

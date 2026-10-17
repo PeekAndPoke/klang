@@ -301,7 +301,8 @@ class BlockFramingInvarianceSpec : StringSpec({
     // The strip's `FmRenderer` could NOT be here: it evaluated its depth envelope once per block (ledger E11, Class 2 on
     // both axes, block size and onset alignment). Since pitch pipeline step 4 sprudel's `fm` is `classic()`'s FM stage,
     // the Ignitor `fm` node, whose depth envelope runs per sample (E1's fix), so E11 is closed and the door joins the
-    // list, for an instrument with one pitch; over a forking `detune` (`sgpad`) it is E8, see the ledger's E11 row.
+    // list, for an instrument with one pitch; over a forking `detune` it is E8, see the ledger's E11 row (`sgpad` no
+    // longer forks since 2026-10-18: `SgpadFmSpec`).
     // (The voice strip's filter modulator, retired in phase 3 step 9, was Class 2 for the same reason.)
     val stripNodes = listOf<Pair<String, (VoiceData) -> VoiceData>>(
         // The vibrato is `classic()`'s stage since pitch pipeline step 2, filled through its `vibrato.*` slots.

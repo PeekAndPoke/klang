@@ -862,7 +862,7 @@ Ignitor.sine(Ignitor.freq().plus(Ignitor.sine(5).mul(10)))  // 5 Hz vibrato, 10 
 | `berlinnoise` | `berlin`                 | BerlinNoise(rate=1, octaves=1, persistence=0.5)                 |
 | `dust`        |                          | Dust(density=0.2, tail=1, bipolar=0)                            |
 | `crackle`     |                          | Crackle(chaos=1.5) — chaotic, NOT a dust alias                  |
-| `sgpad`       |                          | (Saw + Saw.detune(0.1)) / 2 -> onepole(3000)             |
+| `sgpad`       |                          | (Saw + Saw(freq = Freq * 0.1 semitones)) / 2 -> onepole(3000) |
 | `sgbell`      |                          | Sine.fm(Sine, ratio=1.4, depth=300, decay=0.5)                  |
 | `sgbuzz`      |                          | Square.lowpass(2000)                                            |
 
