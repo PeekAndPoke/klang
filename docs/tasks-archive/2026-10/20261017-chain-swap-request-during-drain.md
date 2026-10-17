@@ -1,6 +1,6 @@
 # A chain request while the old chain drains: wait, or not?
 
-Status: **decided 2026-10-17, done** (the option "cut the drain", plus the tail detection fixed; see
+Status: **decided 2026-10-17, done, confirmed by ear 2026-10-17** (maintainer: "The switch between two katalyst settings is now smooth and fast enough") (the option "cut the drain", plus the tail detection fixed; see
 "Decision" and "What was done" at the end). Was: open question for the maintainer's ear (phase 3 step 12, decision
 (g), 2026-09-27: "kept as is for step 12, recorded as an open question for the maintainer's ear later"). Opened as a file 2026-09-28 when the step 12
 plan was archived (`docs/tasks-archive/2026-09/20260928-phase3-step12-master-as-katalyst.md`, section 0 row (g) and
