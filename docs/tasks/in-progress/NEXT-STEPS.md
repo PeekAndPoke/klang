@@ -49,9 +49,8 @@ are the engine stream's (Q38).
 
 ## Open with the maintainer
 
-- Two listening tests: [`../by-ear/knob-glide-listening.md`](../by-ear/knob-glide-listening.md) (C13), and the
-  listening rounds before the next songs (C10). A check by ear of engine follow-up 42 (decided, built):
-  `tmp/listening/delay-reverb-fade/`.
+- The listening rounds before the next songs (C10). The round of 2026-10-17/18 is done (`tmp/listening/00-index.md`):
+  every pair heard and decided, the knob glide (C13) and engine follow-up 42's check among them.
 - An FM round together: [`../future/fm-revisit.md`](../future/fm-revisit.md).
 - sprudel's own typed Kotlin door (its doors take `PatternLike = Any`): needs its own design and a home, the
   maintainer's call ([`../../tasks-archive/2026-10/20261016-kotlin-typed-doors.md`](../../tasks-archive/2026-10/20261016-kotlin-typed-doors.md), "Left after the rollout").

@@ -43,7 +43,7 @@ Pairs: `tmp/listening/knob-glide/` (local, not in git; start at `tmp/listening/0
    against 32.2 dB with 10 to 90 percent in 46 ms before (`tmp/listening/knob-glide/compressor-swing-after.wav`).
 
 Corpus: three rows moved, all by item 1 (a run with item 2 disabled gives the same hashes): Seltsamere Dinge, The
-Synthsale Piper's Last Rave, frozen strangerThings_2026_07_03; nothing accepted.
+Synthsale Piper's Last Rave, frozen strangerThings_2026_07_03; accepted with `corpus-accept-engine` (maintainer, 2026-10-18).
 
 The OFF edge and a falling duck `depth` keep the 50 ms fade (maintainer, 2026-10-17); the decision lives in
 [`../../../audio/ref/knob-glide.md`](../../../audio/ref/knob-glide.md).

@@ -392,7 +392,7 @@ One line per step, newest first. A link to the archived task record where one ex
   compressor move that relaxes on balance (judged by its net reduction at a fixed 0 dBFS) releases at the compressor's
   release time on one shared fraction, never faster than the glide; a 40 dB threshold rise no longer swells 32.2 dB with 10 to
   90 % in 46 ms (`CompressorKnobMove`); corpus: three body songs
-  moved by the crossfade, nothing by the compressor (`docs/tasks/by-ear/knob-glide-listening.md`).
+  moved by the crossfade, nothing by the compressor (`docs/tasks-archive/2026-10/20261017-knob-glide-listening.md`).
 - 2026-10-17 A chain request no longer waits for the ring-out: `ChainSwap` gains `Cutting` (a raised cosine over
   0.15 s from a drain, a release, or a fade's end) on the host's `requestWaiting`; the drain measures its tails
   (`KatalystChain.measureTails`, `TailCeiling.tighten`) against an output-referred floor used only while draining

@@ -14,25 +14,25 @@ engine sound change that moved a frozen text or an unedited live song. An engine
 the same change rides along as INFO, which is why a neutrality proof reads "the corpus GREEN with no live song
 edited (or accept first)".
 
-Accepted on 2026-10-16, tree `a7c25296-dirty`.
+Accepted on 2026-10-18, tree `54de08e6-dirty`.
 
 | song | code | hash | peak |
 |---|---|---|---|
 | Final Synthasy VII Prelude | f286893a239c01cc | f91ffdccb17b59e3 | 0.3866 |
-| Kokon | 62615593294bb4b8 | 7850f2706e06e2ff | 0.7545 |
+| Kokon | 9737162f8a5b74cb | 24bd35b6f0183d0a | 0.7587 |
 | Die Kirschblüte | 77725fe200a5c902 | a18405ffedce68aa | 0.7038 |
-| Der Schmetterling | 2a3cf7d76de2f713 | da2a743be7e77962 | 0.7716 |
+| Der Schmetterling | 85f9b5a15de2ba9d | 85d77883afd6b5f5 | 0.7664 |
 | Gestrandet | a962895a572fc098 | 09ee233fd4a79694 | 0.0550 |
-| Seltsamere Dinge | 064dc0ef445ff932 | 7e832e7e800d6336 | 0.9217 |
+| Seltsamere Dinge | 064dc0ef445ff932 | 4a02a77e0726c0f4 | 0.9217 |
 | Stein um Stein | 8ffa5142260feb48 | 6dfae9e37f91e993 | 0.9066 |
 | Remix: Echo um Echo | 42978eab3f4bf3ba | b2875ce90a8bdc7f | 0.4931 |
 | Greensleeves | d7390440bfa6e83e | bac90329a1dd4b4d | 0.4896 |
 | A Synth Worth Lying For | dd43f145b709cb30 | 852e15e20976fc7e | 0.9220 |
-| The Synthsale Piper's Last Rave | 754f5bd86e3aee07 | 6c614aa345afbdac | 0.9064 |
+| The Synthsale Piper's Last Rave | 754f5bd86e3aee07 | 5a2457590de5fa5a | 0.9064 |
 | Synthsturm | 74464ed7811defad | 9d388ab23f98b3d2 | 0.8641 |
 | The Synthsale Piper's Farewell | 4b9caa4a49e4bf59 | 55cbbd8c4b93e528 | 0.3457 |
 | Smalltown Synth | dc6e828e4b09ee88 | 9643b2874b42c492 | 0.9108 |
 | Drunken Synthlor | f076f371d34fff8c | d274594ba5b2fdc0 | 0.8508 |
 | frozen derSchmetterling_2026_09_25 | ad38dddae123a069 | b0151ba274832b17 | 0.9249 |
-| frozen strangerThings_2026_07_03 | bd29f1f5289c3292 | f8774ba9e1f50b48 | 0.6647 |
+| frozen strangerThings_2026_07_03 | bd29f1f5289c3292 | c79eb3ffed863fef | 0.6647 |
 | frozen piece derSchmetterling_2026_09_16 | 816b24cab402d05a | e37e6174f55c1ab3 | 0.9144 |

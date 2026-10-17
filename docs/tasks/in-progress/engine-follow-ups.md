@@ -1484,7 +1484,7 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
 
 42. **DONE (2026-10-16): a delay or reverb switched off fades its feed instead of cutting it** (added 2026-10-13,
     maintainer Q39: "fade, do not cut"). A sound change, so not part of the performance batch 31 to 41. Plan, cost and
-    the corpus effect: [`../by-ear/delay-reverb-owner-change-cut.md`](../by-ear/delay-reverb-owner-change-cut.md),
+    the corpus effect: [`../../tasks-archive/2026-10/20261016-delay-reverb-owner-change-cut.md`](../../tasks-archive/2026-10/20261016-delay-reverb-owner-change-cut.md),
     option (b). M.
     **The design.** Every off-config (an owner change to a voice that leaves the stage off, a `katp` time or size
     below the gate, an unset or non-finite one) takes the wet glide to 0 over its span (50 ms, one block for a

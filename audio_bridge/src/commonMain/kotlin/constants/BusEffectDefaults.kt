@@ -211,7 +211,7 @@ const val KNOB_GLIDE_SECONDS: Double = 0.05
  * Its own constant since Katalyst step 5c-11 (2026-09-20): a bank swap is not a level move, what
  * travels is a whole filter, so the fade is the time two materials are heard at once. It ran at
  * 20 ms from 5c-11 until 2026-10-17 and is 50 ms since, **decided by ear** (the maintainer, on the
- * pair `tmp/listening/knob-glide/body-low-crossfade-*.wav`, `docs/tasks/by-ear/knob-glide-listening.md`
+ * pair `tmp/listening/knob-glide/body-low-crossfade-*.wav`, `docs/tasks-archive/2026-10/20261017-knob-glide-listening.md`
  * item 1): "i cannot really hear a difference between the 20ms and the 50ms, so i would say to be on
  * the safe side we take the 50ms." So it now has the same VALUE as [KNOB_GLIDE_SECONDS] and stays a
  * constant of its own, because the concept is another one: the swap counts its fade in SAMPLES

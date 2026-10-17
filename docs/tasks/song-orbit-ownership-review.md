@@ -5,6 +5,7 @@ reasonable in what they do** (each conflicting pattern its own orbit, or the set
 reference of the two frozen songs is re-accepted after). **The frozen texts: done 2026-10-16** (each section below
 says what changed; the 09-25 Der Schmetterling's count-in too). The three frozen corpus rows moved because their
 frozen TEXT was edited (Q20), not because the engine changed. The live songs below stay with the maintainer.
+The frozen-orbits pairs (`tmp/listening/frozen-orbits/`) heard 2026-10-18: "all well".
 First noted 2026-10-07 for the maintainer to review in the song code. Found by voice lifecycle step 5
 (`../tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`), measured in review (`tmp/reviews/vl5-r1-B.md`, reviewer B, round 1).
 

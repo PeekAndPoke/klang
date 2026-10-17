@@ -3,7 +3,7 @@
 > Carried out of [`../tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`](../tasks-archive/2026-10/20261012-katalyst-knob-expressions.md)
 > when that task closed (2026-10-12). Nothing here blocks anything; each item waits for a song that asks for it.
 > The V8 items live in [`engine-follow-ups.md`](in-progress/engine-follow-ups.md) (39 to 41), the listening question in
-> [`by-ear/delay-reverb-owner-change-cut.md`](by-ear/delay-reverb-owner-change-cut.md), the duck's orbit switch in
+> [`../tasks-archive/2026-10/20261016-delay-reverb-owner-change-cut.md`](../tasks-archive/2026-10/20261016-delay-reverb-owner-change-cut.md), the duck's orbit switch in
 > [`future/duck-orbit-switch-click.md`](future/duck-orbit-switch-click.md).
 
 ## 1. E1, a Katalyst EQ section hierarchy (decision Q2)
