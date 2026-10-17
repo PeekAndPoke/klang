@@ -6,7 +6,7 @@ Status: **V1, high priority (maintainer, 2026-10-07).** Next after the voice lif
 section 5, first bullet). Plan context: `docs/plans/signal-flow-redesign.md` section 5.
 **Planned 2026-10-07** (design worker, read-only on code): "The plan" below, six commits (steps 0 to 5) plus the
 composition block; eleven decisions for the maintainer in plan section 8.
-**Paused 2026-10-10** (moved back from `in-progress/`): steps 0 to 5 and the composition steps 7a, 7b, 7c are released (v0.6.1, v0.6.2); 7d and 7e were spiked and stopped on cost (the nodes stay). Waiting on the maintainer: the listening round (`tmp/listening/pp-step4/`, `tmp/listening/pp-7b/`), Q30 and Q31 (decided by default, confirm), Q32 and Q33 (compose the pitch envelope and accelerate or keep the nodes), Q13 (`progress()`, for 7f).
+**Paused 2026-10-10** (moved back from `in-progress/`): steps 0 to 5 and the composition steps 7a, 7b, 7c are released (v0.6.1, v0.6.2); 7d and 7e were spiked and stopped on cost (the nodes stay). Waiting on the maintainer: the listening round (`tmp/listening/pp-step4/`; `pp-7b/` heard and accepted 2026-10-17), Q30 and Q31 (decided by default, confirm), Q32 and Q33 (compose the pitch envelope and accelerate or keep the nodes), Q13 (`progress()`, for 7f).
 
 ## What it is
 
@@ -1521,7 +1521,8 @@ After step 5. The doors and the nodes stay as descriptions; the runtime arms com
     a constant depth (`vib(5.5, 0.4)` on a saw: identical at 16 bits), a fast-moving depth (0 to 3 semitones at 23 Hz:
     -12.2 dB, the staircase gone), a slow swell (-39.9 dB, nothing to hear), a supersaw with `vib` (other dice, +2.6
     dB), the most-moved song, the frozen Stranger Things (64 cycles, -1.3 dB), and Die Kirschblüte (64 cycles, -8.2
-    dB, the shakuhachi from 1:00).
+    dB, the shakuhachi from 1:00). **Heard (maintainer, 2026-10-17): accepted.** Constant depth, supersaw and swell
+    sound the same, the fast depth shows no audible difference, Die Kirschblüte and Stranger Things "after" are ok.
   - **Suites.** `audio_bridge` jvmTest 148 and jsTest 268; `audio_be` jvmTest 2,570 and jsBrowserTest 2,466 (7a's
     2,562 and 2,458 plus the eight rows); `sprudel` jvmTest 3,498 (486 skipped); `klangscript-libs` jvmTest 840 and
     jsTest 617; `BuiltInSongsSmokeTest`, `SongBenchmarkCasesCompileSpec`, `DslDocExamplesSpec` green;
