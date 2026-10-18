@@ -65,6 +65,9 @@
 #   6,628, 12 B above the reading (6,616 in every process on two case mixes, HEAD the same; one process 6,520): it tells
 #   none from one Double per note (a mutant with one box per voice build read 6,640, RED), as C-remap's 36 does for its
 #   24. Item 2 allocates nothing on the JVM; the line guards the voice build's bytes there.
+#   Re-set on V8 at the Kotlin 2.4.21 bump (2026-10-18, maintainer: "increase the allocation budget slightly"), from
+#   13,068 to 13,210: the full check read 13,146 (13,033 before the bump, JVM unchanged at 6,608), about 110 B more per
+#   note from the new Kotlin/JS compiler and stdlib, on the per-note path. 64 B above that reading, as at the start.
 #   E-arith to E-body-vowel were added by the Katalyst stage measurements (2026-10-11,
 #   docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md), with their lines set by the same rule from that change's runs (4 runs of
 #   3 rounds, the healthy medians in brackets): E-arith 96 (10 to 52), E-arith-glide 500 (450 to 456), E-distort 232
@@ -265,7 +268,7 @@ E-delay            v8        112     item 1, the orbit delay's sites as a whole 
 E-delay            jvm       6       item 1, the orbit delay
 E-stages           v8        96      item 1: a revert of everything; the delay's sites with all three running; the per-sample class in the reverb and the phaser (the reverb's and the phaser's per-block sites only in part: their KDocs)
 E-stages           jvm       6       item 1, the three orbit stages
-E-C-n1             v8        13068   item 2 steps 3 and 5: the registry and the sound name per note, a needless lowercase (not the dispatcher's map: its comment)
+E-C-n1             v8        13210   item 2 steps 3 and 5: the registry and the sound name per note, a needless lowercase (not the dispatcher's map: its comment)
 E-C-n1             jvm       6628    the voice build per note; one Double per note (item 2 allocates nothing on the JVM)
 E-arith            v8        96      the eight arithmetic stages, constant operands: the per-sample laws and once per block (the KDoc of applyLaw)
 E-arith            jvm       6       the eight arithmetic stages, constant operands

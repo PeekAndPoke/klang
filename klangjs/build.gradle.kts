@@ -27,6 +27,7 @@ kotlin {
                 api(Deps.Npm { codemirrorLanguage() })
                 api(Deps.Npm { codemirrorLangJavascript() })
                 api(Deps.Npm { codemirrorBasicSetup() })
+                api(Deps.Npm { codemirrorAutocomplete() })
                 api(Deps.Npm { codemirrorLint() })
                 api(Deps.Npm { codemirrorMinimap() })
                 api(Deps.Npm { lezerHighlight() })
