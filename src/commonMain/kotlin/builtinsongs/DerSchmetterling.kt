@@ -128,7 +128,7 @@ let cab4x12 = x => x
     .band(freq = 2700, q = 1.6, db =  5.0)         // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
-  .highpass(105)
+  .highpass(110)
 
 // 1x12 open back: the open back cancels the bass, the top chimes and rolls off late and soft.
 let cab1x12 = x => x
@@ -265,11 +265,11 @@ let marimba = (() => {
 export lead_shape = x => x.sound(marimba).adsrOff()
   .velocity(guitarDyna(0)).body(material = "steel", wet = 0.2)
   .hpf(600, 0.7).lpf(7500, 1.2).notch(2700, 0.5)
-  .pan(0.10).superimpose(pan(0.90)) // . solo()
+  .pan(0.05).superimpose(pan(0.95)) // . solo()
   .clip(0.75)
 
 export lead_arrange = x => x.orbit(0) //  .mute()
-  .scale("<e5:minor!48 e6:minor!16>").gain("<0.50!48 0.25!16>").gain(mul(0.35))
+  .scale("<e5:minor!48 e6:minor!16>").gain("<0.50!48 0.30!16>").gain(mul(0.35))
   .velocity()
   .shuffle("<1!80 1!1 4/8!14 1!33>")
   .mute("<1!64 0!32 1!48 0!16 1!16>")
@@ -302,7 +302,7 @@ export guitar2_pat =
 
 export guitar2_shape = x => x.pregain(guitarDyna(2).fast(2)).sound(guitar).adsrOff().unison(voices = 9, spread = 0.08)
   .ignp("decay", guitarDecay(2))
-  .clip(guitarClip(2).fast(2)).pan(0.10).superimpose(pan(0.90))
+  .clip(guitarClip(2).fast(2)).pan(0.15).superimpose(pan(0.85))
   .body(material = "maple", wet = 0.15) 
 
 export guitar2_arrange = x => x.orbit(2)  // . solo()
@@ -313,14 +313,14 @@ export guitar2 = n(guitar2_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(gu
 
 // Guitar 3  --------------------------------------------------------------------------------------------------------------------------------------------------
 export guitar3_pat =
-  `<[0 0  2 4  0 0 -2 -1] [0 0 2 [4 4 4 -1]         0 0 -2 -1]
-    [0 0  2 4  0 0 -2 -1] [0 0 2 [4 4 4  6]         0 0 -2 -1]
-    [0 0  2 4  0 0 -2 -1] [0 [[2 4] 7] 2 [[2 4] 6]  7 [7 0] -2 -1] 
-    [0 0 -1 3  0 0 -2 -1] [0 0 3 [[0 2] -2]         0 0 [0 4 7 9] 6]!1>/4`
+  `<[0 0  2 4  0 0 -2 -1] [0 0 2 [4 4 4 -1]                 0 0 -2 -1]
+    [0 0  2 4  0 0 -2 -1] [0 0 2 [4 4 4  6]                 0 0 -2 -1]
+    [0 0  2 4  0 0 -2 -1] [0 [[0 [2 4]] 7] 2 [[2 [3 4]] 6]  7 [7 0] -2 -1] 
+    [0 0 -1 3  0 0 -2 -1] [0 0 3 [[0 [0 1]] -2]             0 0 [0 4 7 9] 6]>/4`
 
 export guitar3_shape = x => x.pregain(guitarDyna(2).fast(2)).sound(guitar).adsrOff().unison(voices = 9, spread = 0.08)
   .ignp("decay", guitarDecay(2))
-  .clip(guitarClip(2).fast(2)).pan(0.10).superimpose(pan(0.90))
+  .clip(guitarClip(2).fast(2)).pan(0.15).superimpose(pan(0.85))
   .body(material = "mahogany", wet = 0.15) 
 
 export guitar3_arrange = x => x.orbit(3) //  . solo()
@@ -331,12 +331,14 @@ export guitar3 = n(guitar3_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(gu
 
 // Bass  ------------------------------------------------------------------------------------------------------------------------------------------------------
 export bass_pat =
-  `<[0 0 2 4 0 0 -2 -1]!3 [0 0 2 4 0 0 5 6]
-    [0 0 2 4 0 0 -2 -1]!2 [0 0 -1 3  7 0 -2 -1]!1 [0 0 3 [0 -2]  0 0 [0 4 7 9] 6]!1>/8`
+  `<[0 0 2 4 0 0 -2 -1]!2 
+    [0 0 2 4 0 0 -2 -1] [0 0 2 4 0 0 5 6]
+    [0 0 2 4 0 0 -2 -1]!2 
+    [0 0 -1 3  7 0 -2 -1] [0 0 3 [0 -2]  0 0 [0 4 7 9] 6]>/8`
 
-export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.45) // . mute()
-    .ignp("sub", 1.00).ignp("harmonics", 0.95).clip("0.95".sub(perlin(0.0, 0.05).slow(8)))  // . solo()
-    .adsr(0.003, 0.3, 0.50, 0.025).hpf(30)
+export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.42) // . mute()
+    .ignp("sub", 1.00).ignp("harmonics", 1.00).clip("0.95".sub(perlin(0.0, 0.05).slow(8)))  // . solo()
+    .adsr(0.003, 0.3, 0.33, 0.025).hpf(30)
 
 export bass_arrange = x => x.orbit(4) // . mute()
   .scale("e1:minor").notch(freq = snareHz, q = 1.0).mute("<0!128 1!32>")
@@ -379,11 +381,11 @@ export trommel_pat = `<[0 ~ 1 0  ~ ~ 2 ~] [0 ~ 0 -4  -3 ~ -1 ~] [0 ~ -1 0  ~ ~ ~
 
 export trommel_shape = x => x.sound(gummiEimer).adsrOff() // .solo()
   .velocity("1.0 0.8 0.9 0.8".sub(perlin(0.0, 0.02))).body(material = "membrane", wet = 0.4)
-  .hpf(300).lpf("2500".add(perlin(-200, 200)))
-  .pan(0.35).superimpose(pan(0.65))
+  .hpf(300).lpf("2200".add(perlin(-200, 200))).clip(2.0)
+  .pan(0.40).superimpose(pan(0.60))
 
 export trommel_arrange = x => x.orbit(5) // .solo(0.5)
-  .scale("e4:minor").gain(0.145)
+  .scale("e4:minor").gain(0.13)
   .mute("<1!32 0!32 1!32>")                          
   .late(berlin(0.0035, 0.0045).mul(drunk))
 
