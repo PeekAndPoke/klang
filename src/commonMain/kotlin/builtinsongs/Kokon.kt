@@ -91,10 +91,10 @@ let powerClassA = x => x
 let cab4x12 = x => x
   .eq(e => e
     .band(freq =  120, q = 0.7, db =  3.2)         // thump: closed-back box resonance
-    .band(freq =  350, q = 0.6, db =  8.0)         // roar:  low mids
-    .band(freq = 2700, q = 1.6, db =  3.8)         // bark:  the upper-mid speaker peak
+    .band(freq =  380, q = 0.6, db =  8.0)         // roar:  low mids
+    .band(freq = 2700, q = 1.6, db =  5.0)         // bark:  the upper-mid speaker peak
   )
-  .lowpass(5200, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
+  .lowpass(5000, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
   .highpass(105)
 
 let cab1x12 = x => x
