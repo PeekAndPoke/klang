@@ -69,3 +69,7 @@ binds no keymap of its own: Play and Run are buttons.
   stops being one, no editor starts.
 - **The playback highlight** assumes `view.dom` does not scroll and `scrollDOM` does (`CodeMirrorHighlightBuffer.kt`).
 - **The minimap** is pre-1.0; it needs the same state and view instances as the editor.
+- **The playback highlight's Pixi overlay** (found 2026-10-18): webpack 5.108 dropped pixi's side-effect import
+  `app/init.mjs`, so `app.ticker` was undefined ("Failed to initialize PixiJS highlight overlay ... reading 'add'")
+  and the page froze. Fixed by `webpack.config.d/04-pixi-side-effects.js`; after a pixi.js or webpack bump, check
+  that the highlights show and the console is clean.
