@@ -1,5 +1,8 @@
-// config.devtool = false;
-config.devtool = "source-map";
+// Since Kotlin 2.4 the generated config writes the source maps itself (a SourceMapDevToolPlugin, devtool false);
+// a devtool on top writes klang-worklet.js.map twice and webpack fails. Set one only when Kotlin did not.
+if (!(config.plugins || []).some(p => p && p.constructor && p.constructor.name === "SourceMapDevToolPlugin")) {
+    config.devtool = "source-map";
+}
 
 config.output = config.output || {};
 

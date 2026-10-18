@@ -92,6 +92,14 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().con
     }
 }
 
+// Since KSP 2.3.x the platform KSP tasks (kspKotlinJvm, kspKotlinJs) are no compilation tasks: they read the
+// metadata output too and need the same dependency.
+tasks.withType<com.google.devtools.ksp.gradle.KspAATask>().configureEach {
+    if (name != "kspCommonMainKotlinMetadata") {
+        dependsOn("kspCommonMainKotlinMetadata")
+    }
+}
+
 dependencies {
     kspCommonMainMetadata(project(":klangscript-ksp"))
 }

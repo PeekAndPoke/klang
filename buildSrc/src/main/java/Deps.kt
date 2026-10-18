@@ -15,11 +15,11 @@ object Deps {
     }
 
     // Kotlin ////////////////////////////////////////////////////////////////////////////////////
-    const val kotlinVersion = "2.3.10"
+    const val kotlinVersion = "2.4.21"
 
     object Ksp {
         // https://github.com/google/ksp/releases
-        const val version = "2.3.6"
+        const val version = "2.3.12"
         const val symbol_processing = "com.google.devtools.ksp:symbol-processing-api:$version"
 
         // https://mvnrepository.com/artifact/com.github.tschuchortdev/kotlin-compile-testing
@@ -48,7 +48,7 @@ object Deps {
 
     object KotlinLibs {
         // https://central.sonatype.com/artifact/io.peekandpoke.ultra/common
-        private const val ultra_version = "0.108.0"
+        private const val ultra_version = "0.110.0"
 
         object Ultra {
             const val cache = "io.peekandpoke.ultra:cache:$ultra_version"
@@ -155,12 +155,12 @@ object Deps {
 
     object KotlinX {
         // https://github.com/Kotlin/kotlinx.coroutines/releases
-        private const val coroutines_version = "1.10.2"
+        private const val coroutines_version = "1.11.0"
         const val coroutines_core = "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutines_version"
         const val coroutines_reactor = "org.jetbrains.kotlinx:kotlinx-coroutines-reactor:$coroutines_version"
 
         // https://github.com/Kotlin/kotlinx.serialization/releases
-        private const val serialization_version = "1.10.0"
+        private const val serialization_version = "1.11.0"
         const val serialization_core =
             "org.jetbrains.kotlinx:kotlinx-serialization-core:$serialization_version"
         const val serialization_json =
@@ -174,7 +174,7 @@ object Deps {
     object Ktor {
         // https://kotlinlang.org/docs/releases.html
         // https://github.com/ktorio/ktor/releases
-        const val ktor_version = "3.4.1"
+        const val ktor_version = "3.6.0"
 
         object Server {
             object Test {
@@ -301,7 +301,7 @@ object Deps {
 
         object GraalVM {
             // https://mvnrepository.com/artifact/org.graalvm.polyglot/polyglot
-            const val polyglot_version = "25.0.2"
+            const val polyglot_version = "25.0.4"
 
             const val polyglot = "org.graalvm.polyglot:polyglot:$polyglot_version"
             const val js = "org.graalvm.polyglot:js:$polyglot_version"
@@ -370,7 +370,7 @@ object Deps {
         }
 
         // https://mvnrepository.com/artifact/ch.qos.logback/logback-classic
-        private const val logback_version = "1.5.32"
+        private const val logback_version = "1.6.5"
         const val logback_classic = "ch.qos.logback:logback-classic:$logback_version"
 
         // https://mvnrepository.com/artifact/org.slf4j/slf4j-api
@@ -416,25 +416,25 @@ object Deps {
 
         // CodeMirror 6
         // https://www.npmjs.com/package/@codemirror/state
-        fun KotlinDependencyHandler.codemirrorState() = npm("@codemirror/state", "6.6.0")
+        fun KotlinDependencyHandler.codemirrorState() = npm("@codemirror/state", "6.7.6")
         // https://www.npmjs.com/package/@codemirror/view
-        fun KotlinDependencyHandler.codemirrorView() = npm("@codemirror/view", "6.40.0")
+        fun KotlinDependencyHandler.codemirrorView() = npm("@codemirror/view", "6.43.14")
         // https://www.npmjs.com/package/@codemirror/commands
-        fun KotlinDependencyHandler.codemirrorCommands() = npm("@codemirror/commands", "6.10.3")
+        fun KotlinDependencyHandler.codemirrorCommands() = npm("@codemirror/commands", "6.11.1")
         // https://www.npmjs.com/package/@codemirror/language
-        fun KotlinDependencyHandler.codemirrorLanguage() = npm("@codemirror/language", "6.12.3")
+        fun KotlinDependencyHandler.codemirrorLanguage() = npm("@codemirror/language", "6.13.1")
         // https://www.npmjs.com/package/@codemirror/lang-javascript
         fun KotlinDependencyHandler.codemirrorLangJavascript() = npm("@codemirror/lang-javascript", "6.2.5")
         // https://www.npmjs.com/package/codemirror
         fun KotlinDependencyHandler.codemirrorBasicSetup() = npm("codemirror", "6.0.2")
         // https://www.npmjs.com/package/@codemirror/autocomplete
-        fun KotlinDependencyHandler.codemirrorAutocomplete() = npm("@codemirror/autocomplete", "6.20.1")
+        fun KotlinDependencyHandler.codemirrorAutocomplete() = npm("@codemirror/autocomplete", "6.20.3")
         // https://www.npmjs.com/package/@codemirror/lint
-        fun KotlinDependencyHandler.codemirrorLint() = npm("@codemirror/lint", "6.9.5")
+        fun KotlinDependencyHandler.codemirrorLint() = npm("@codemirror/lint", "6.9.7")
         // https://www.npmjs.com/package/@replit/codemirror-minimap
         fun KotlinDependencyHandler.codemirrorMinimap() = npm("@replit/codemirror-minimap", "0.5.2")
         // https://www.npmjs.com/package/@lezer/highlight
-        fun KotlinDependencyHandler.lezerHighlight() = npm("@lezer/highlight", "1.2.3")
+        fun KotlinDependencyHandler.lezerHighlight() = npm("@lezer/highlight", "1.2.5")
     }
 
     // // Test dependencies ////////////////////////////////////////////////////////////////////////
@@ -446,13 +446,13 @@ object Deps {
         }
 
         // https://mvnrepository.com/artifact/ch.qos.logback/logback-classic
-        const val logback_version = "1.5.32"
+        const val logback_version = "1.6.5"
         const val logback_classic = "ch.qos.logback:logback-classic:$logback_version"
 
         // https://plugins.gradle.org/plugin/io.kotest
-        const val kotest_plugin_version = "6.1.7"
+        const val kotest_plugin_version = "6.2.6"
         // https://mvnrepository.com/artifact/io.kotest/kotest-common
-        const val kotest_version = "6.1.7"
+        const val kotest_version = "6.2.6"
 
         const val kotest_framework_engine = "io.kotest:kotest-framework-engine:$kotest_version"
         const val kotest_assertions_core = "io.kotest:kotest-assertions-core:$kotest_version"
