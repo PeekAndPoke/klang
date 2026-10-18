@@ -18,8 +18,9 @@ Created 2026-08-31.
 
 | File | What the ear work is |
 |---|---|
-| [`chain-swap-request-during-drain.md`](chain-swap-request-during-drain.md) | Phase 3 step 12 decision (g): a second chain edit (orbit or master) waits for the old chain's ring-out, up to about 24.5 s. Keep, cut the drain, or let several chains drain? |
-| [`delay-reverb-owner-change-cut.md`](delay-reverb-owner-change-cut.md) | **DONE 2026-10-16** (maintainer Q39 "fade, do not cut", engine follow-up 42): every delay and reverb switch-off fades its feed; the bleed of a new owner into the old room is accepted. The check by ear: `tmp/listening/delay-reverb-fade/` |
+| [`chain-swap-request-during-drain.md`](../../tasks-archive/2026-10/20261017-chain-swap-request-during-drain.md) | **DONE 2026-10-17** (maintainer: "the change should happen more or less immediate"): a request that waits behind a ring-out cuts it over 0.15 s and lands in about 0.2 s; the drain's tail detection fixed. The check by ear: `tmp/listening/chain-swap-drain/second-edit-after.wav` |
+| [`delay-reverb-owner-change-cut.md`](../../tasks-archive/2026-10/20261016-delay-reverb-owner-change-cut.md) | **DONE 2026-10-16** (maintainer Q39 "fade, do not cut", engine follow-up 42): every delay and reverb switch-off fades its feed; the bleed of a new owner into the old room is accepted. The check by ear: `tmp/listening/delay-reverb-fade/`, heard 2026-10-18: "both after versions ok" |
+| [`knob-glide-listening.md`](../../tasks-archive/2026-10/20261017-knob-glide-listening.md) | **DONE 2026-10-17**: the bank crossfade is 50 ms; a compressor knob move that relaxes reduction follows the release time (judged at 0 dBFS). Corpus accepted 2026-10-18 |
 | [`../future/duck-orbit-switch-click.md`](../future/duck-orbit-switch-click.md) | Katalyst step 5c (2026-09-20, measured): moving a ducker's sidechain to a sounding orbit steps the reduction. Leave it, blend the two sources, or dip and return? |
 
 ---

@@ -22,9 +22,44 @@ like two.
 **There are TWO transition times since 2026-09-20 (Katalyst 5c-11), and the split is by KIND.**
 `KNOB_GLIDE_SECONDS` (50 ms) is a LEVEL or a coefficient moving: a wet, a fader, a compressor knob,
 the delay's tap crossfade, the phaser's coefficients, the duck's weight. `BANK_CROSSFADE_SECONDS`
-(20 ms) is the time two MATERIALS are heard at once when a filter bank is swapped, which is not a
-level move at all: it is the width of an overlap, and the maintainer shortened it because at 50 ms
-a run of 32nd notes smears several materials together.
+is the time two MATERIALS are heard at once when a filter bank is swapped, which is not a
+level move at all: it is the width of an overlap. It ran at 20 ms from 5c-11 (shortened then
+because a run of 32nds through the old ten-bank pool smeared several materials together) and is
+**50 ms since 2026-10-17, by ear** (maintainer, on the pair in `tmp/listening/knob-glide/`: "i
+cannot really hear a difference between the 20ms and the 50ms, so i would say to be on the safe
+side we take the 50ms"). The two now share a value and stay two concepts: the swap counts samples,
+the knob glide whole blocks. The price is the rate a material can change at: once every 18 blocks
+(52.2 ms) at 44.1 kHz, 19 (50.7 ms) at 48 kHz, so 16ths pass and 32nds park above about 143 BPM
+(`BANK_CROSSFADE_SECONDS`' KDoc has the table).
+
+**The compressor's direction rule since 2026-10-17 (by ear, maintainer: "the hard swell is not
+really acceptable, or at least not that fast").** The three gain-computer knobs move as ONE
+move, and its law is chosen by its NET effect (review round 2): the reduction the values in force
+give at a FIXED loud input of 0 dBFS (`Compressor.KNOB_MOVE_REFERENCE_DB`), against the
+reduction the targets give there, judged once per new move and never at the signal (review round
+3, the maintainer's decision of 2026-10-17: "judge at a fixed loud level"; loud material is where
+swells and ceilings are heard). A move that reduces no less, more or a tie (both thresholds above
+0 dBFS), glides as above. A move that reduces strictly less (a rising threshold, a
+lower ratio, a narrower knee, or a mix that relaxes on balance) does not glide: it RELEASES, the move's remaining fraction decaying as a one-pole with the compressor's own release
+time constant, so the gain comes back the way it does when the input falls (`CompressorKnobMove`).
+The three knobs always travel as ONE move on one shared fraction, so the path through the gain
+curve is the glide's straight line and only its timing changes: a move of mixed directions
+is judged as a whole (review round 1: with a fraction per knob the adding knob arrived in 50 ms
+while the relaxing one lagged, and the path dipped far below both ends, -29 dB against -17.5 and
+-14.2; review round 2: judging by "any knob relaxes" ran a compressor-to-limiter swap, whose knee
+narrows, at the release, over the new ceiling by +2.9 dB 50 ms in; review round 3: judging at the
+follower's envelope made every relaxing move after a rest a tie, since the envelope had fallen
+toward -100 dB, so it glided, and the next owner's first note met the old threshold moving
+linearly: 16.2 dB of swell in 20 ms, faster than the swell the ear rejected). A crossover,
+threshold and ratio moving in opposite directions, takes the law of its behaviour on loud material;
+a quiet passage may then see the other direction for a moment, bounded by the two curves'
+difference at that level. A loud note landing during a release is under-compressed for up to the
+release time, as by any compressor letting go. Two owners alternating faster than the release likewise reach the relaxing owner's setting only in part (release 0.3 s, 8ths at 120 BPM: 56 percent of the move, at 16ths 34 percent), as a compressor does on alternating loud and quiet material. A release is never faster than the glide: its fraction is the slower of the one-pole's and
+the glide's at every block end, so a release time under about 50 ms still takes the glide's time.
+That is a floor on the transition's speed, the click safety net, not a clamp on the release, which
+still sets the envelope. This is the one place where a knob change is not linear, and it is
+deliberate: a relaxing knob is the compressor letting go, and letting go has a time the author
+already chose. A modulated knob is not part of the move and keeps its one-block ramp.
 
 Measured with 16383-tap Blackman-Harris analysis filters whose stopbands are PRINTED with the
 results (-142 dB at 110 Hz for the sub-60 band, -164 dB at 2970 Hz for the band above 8 kHz), floors
@@ -187,7 +222,7 @@ changes (18 of 18 built-in songs and frozen pieces bit-identical in raw doubles 
     its KDoc; its only state is value, target, start, remaining and the snap flag.
 
 **Engine follow-up 42 (2026-10-16), the delay's and the reverb's switch-off: fade, do not cut** (maintainer Q39,
-2026-10-13; `docs/tasks/by-ear/delay-reverb-owner-change-cut.md` option (b)). Every off-config, an owner change, a
+2026-10-13; `docs/tasks-archive/2026-10/20261016-delay-reverb-owner-change-cut.md` option (b)). Every off-config, an owner change, a
 `katp` time or size below the gate, an unset or non-finite one, takes the `wet` glide to 0 over its span (50 ms, one
 block for a modulated wet) while the stage stays Active and feeds the falling level into the ring or the room; the
 block the glide lands in moves the stage on into the drain at its end. The law is the LEVEL law above, applied to the
@@ -266,6 +301,30 @@ end, exact landing), to the floor. **Glide on the axis the law is linear in:** t
 in threshold (dB), knee, and the SLOPE `1/ratio - 1`, not in the ratio; the first cut glided the
 ratio itself, measured on a 2 to 8 sweep only, and a 20 to 1 or 100 to 1 swing still clicked at
 -41 to -56 dB (review round 1); gliding `1/ratio` puts every swing at its floor. A rising threshold
-swing of 40 dB still reads -62 to -65 dB (25 dB of release in 50 ms), accepted as a safety net. Attack and release are time constants of the smoothed envelope
+swing of 40 dB still read -62 to -65 dB (25 dB of release in 50 ms), accepted then as a safety net; the ear
+did not accept the swell itself (below, 2026-10-17). Attack and release are time constants of the smoothed envelope
 and measured at the floor: no glide. Lesson: a knob feeding a memoryless gain law is a LEVEL knob.
+
+**2026-10-17, the compressor's relaxing moves release** (`docs/tasks-archive/2026-10/20261017-knob-glide-listening.md`, item 2). The
+gain computer has no memory, so whatever moves its knobs moves the gain at once: a 40 dB threshold rise brought 32.2 dB
+of gain back over the 50 ms glide, 10 to 90 percent in 46 ms on the listening pair, which the maintainer heard as a
+hard swell. Now a relaxing move (see section 1) runs as a one-pole at the release coefficient on the move's shared
+fraction: per block the fraction left is multiplied by `exp(-frames / (release * sampleRate))`, but never left smaller
+than the linear glide's, linear per sample inside the block through the existing `Compressor.processGliding`, landing
+on the targets once the glide's time has passed and the fraction is at most 1e-7. Above the knee the curve is linear
+in the threshold and in the inverse ratio, so the reduction in dB then decays like the envelope's release, matched at
+every block end; inside the knee (a parabola) it runs up to about twice as fast in dB, as the envelope's release does.
+CPU: a release keeps the gliding path for about 16 release time constants. The law is the move's net effect at 0 dBFS,
+and a new target starts a new move from the values in force, judged afresh. After a rest (review round 3, the
+listening pair `tmp/listening/knob-glide/compressor-rest-*.wav`) the swell's 10 to 90 percent takes 0.26 s and
+0.40 s for the pair's values (release 0.2 s, notes at -6 and 0 dBFS) and 0.22 s for (-30, 4) to (-10, 4) (release
+0.1 s, after a 50 ms rest). Measured: on DC
+(threshold -40 to 0, ratio 8, release 0.2 s) the swell's 10 to 90 percent takes 0.27 s (1.36 time constants), more
+than 20 dB of reduction is still there 50 ms after the change, and the largest one-sample gain move is 0.004 dB
+(the 50 ms glide moved 0.0137 dB per sample on average, about 0.016 at its steepest). On the listening pair the 0.25 s takeover now swells about 24 dB, 10 to
+90 percent in about 183 ms, cut short by the threshold falling back (`tmp/listening/knob-glide/compressor-swing-after.wav`).
+The corpus did not move by it. A lookahead instance needs none of this: it recovers on its slow release branch.
+Decided (maintainer, 2026-10-17): the OFF edge (an owner without a compressor, a linear fade of the reduction over
+50 ms, 17 dB in the first 10 ms from 30 dB) and a falling duck `depth` keep the 50 ms fade and do not take the release
+law: "if someone really wants to automate the compressor, they want it almost immediately".
 

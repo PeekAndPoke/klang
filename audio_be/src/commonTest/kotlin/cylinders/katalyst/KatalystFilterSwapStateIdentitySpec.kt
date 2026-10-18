@@ -57,8 +57,8 @@ class KatalystFilterSwapStateIdentitySpec : StringSpec({
             }
         }
 
-        // 6.9 blocks at 44.1 kHz; this many blocks lands any fade.
-        val land = 9
+        // 17.2 blocks at 44.1 kHz since 2026-10-17 (50 ms); this many blocks lands any fade.
+        val land = 19
 
         // Off, as the hosts build it.
         val off = swap.currentState

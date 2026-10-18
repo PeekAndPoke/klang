@@ -104,6 +104,12 @@ class TailCeiling {
     val hasTail: Boolean get() = previous > SILENCE_FLOOR || current > SILENCE_FLOOR
 
     /**
+     * [hasTail] against an owner's own [floor] instead of [SILENCE_FLOOR]: the reverb's while its
+     * chain drains after a swap ([Reverb.TAIL_FLOOR], `KatalystReverbEffect.measureTail`). O(1).
+     */
+    fun hasTailOver(floor: Double): Boolean = previous > floor || current > floor
+
+    /**
      * Once per block, before or after the unit processes it (the bound holds either way).
      *
      * A block's peak is credited to EVERY window the block touches — the one it closes and the
@@ -216,6 +222,39 @@ class TailCeiling {
 
         if (p > current) {
             current = p
+        }
+    }
+
+    /**
+     * Lowers the ceiling to a MEASUREMENT of what the unit can still emit or recirculate ([peak]),
+     * in both windows and in the running window's input peak, and never raises it: the twin of
+     * [remeasure], for an owner whose CHAIN's input is silent and that has measured the unit
+     * (`KatalystReverbEffect.measureTail`, a chain draining after a swap). The bound stays a bound:
+     * everything the unit holds now is under [peak], and whatever still comes in (a delay before a
+     * room keeps feeding it) is credited by [observe] as always. Not tight: the next [observe]
+     * rebuilds the window's term as `fresh(peak) + feedback * peak`, so the ceiling sits up to about
+     * 10 dB above the measurement. Cells the caller's scan leaves out (the reverb's all-pass
+     * diffusers) are not in [peak]; they are covered by that slack, as in the reverb's own drain
+     * countdown. A non-finite or negative [peak] tightens nothing. O(1); the scan is the caller's.
+     */
+    fun tighten(peak: Double) {
+        // NaN-guard: a NaN compares false and would leave the ceiling alone anyway; say so.
+        if (!(peak >= 0.0) || peak > CEILING_MAX) {
+            return
+        }
+
+        if (peak < previous) {
+            previous = peak
+        }
+
+        // The running window's input is in the measurement too; without this the next block's
+        // [observe] would rebuild the current window's term from it and undo the tightening.
+        if (peak < inputPeakInWindow) {
+            inputPeakInWindow = peak
+        }
+
+        if (peak < current) {
+            current = peak
         }
     }
 

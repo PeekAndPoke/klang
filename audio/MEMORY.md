@@ -38,9 +38,10 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   D3): the depth envelope per sample (ledger E11 closed), an envelope-free door keeps its depth through the release
   tail (the strip collapsed it at the gate), the rounding order (at most 7.6e-15 at the output before the gate), the
   modulator sine's rng draw (a pitched voice that also draws while it renders, a supersaw, a pluck, `analog > 0`,
-  takes other random values; a noise-only voice is untouched), the modulator following `vib` / `penv` / `accelerate`, and over `sgpad`'s forking detune one
-  modulator for both pitches, block-size dependent (ledger E8: at 128 frames the pad loses its pitch; recorded, kept
-  quiet, `sgpad` the only built-in with that shape).
+  takes other random values; a noise-only voice is untouched), the modulator following `vib` / `penv` / `accelerate`. Over a forking detune one
+  modulator serves both pitches, block-size dependent (ledger E8, the author rule below); no built-in has that shape
+  since `sgpad` reads its second pitch as `Freq * 0.1.semitones()`, not under a `detune` (Q31, 2026-10-18;
+  `SgpadFmSpec`).
 - **Accelerate glides over the GATE and holds** (decision D2, with its hold, 2026-10-09): `2^(semitones / 12 *
   progress)` from the onset to the gate close (`IgniteContext.voiceDurationFrames`, which a note-off never moves),
   then the target through the release, for both doors; a gate of 0 frames holds the target from the first frame
@@ -77,7 +78,11 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   by `Cylinders.processAndMix`; an ownerless orbit keeps its last settings). Laws: `audio/ref/katalyst.md`; the classes: `audio/ref/effects-mixing.md`.
 - **Reverb**: one room for both ears: each side's combs are fed `(L + R) / 2` (`Reverb.CROSS_FEED` 0.5, by ear
   2026-09-30); an input with equal sides feeds what it did before, bit for bit. A Freeverb tail only: no pre-delay,
-  no early reflections (`docs/tasks/future/reverb-models.md`).
+  no early reflections (`docs/tasks/future/reverb-models.md`). Two tail floors on purpose (maintainer,
+  2026-10-17): ordinary playback holds a room's ceiling to `SILENCE_FLOOR` on the cells (unchanged, the corpus pins
+  it); only while its chain drains after a swap (`KatalystReverbEffect.swapDraining`, set by the drain's
+  `measureTail`, cleared by reset and retire) does it answer against `Reverb.TAIL_FLOOR`, the comb level whose output
+  is about -90 dBFS, a MEASURED ratio, not a bound (the diffusers can add up to about 17 dB on a narrow band).
 - **Master**: the same Katalyst chain at the output (`MasterBus`, `master(Katalyst(k => ...))`, off with
   `master(Katalyst())`). The Master DSL is retired.
 - **House stage**: `MasterStage`: DC blockers, the limiter (-1 dB, 20:1, 5 ms lookahead, always on, not
@@ -108,7 +113,8 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   `pitchModSemitones` at a literal mod since 7a). The
   rule's text is the `gatedOff` KDoc in `IgnitorDslRuntime.kt`; the values are `audio/ref/off-values.md`, their one home.
 - **The swap law** `ChainSwap` (both hosts): fade the leaving chain's input over 0.06 s, drain it at full weight,
-  at most `MAX_DRAIN_SECONDS` 20 s. **The release law** `TailRelease`: 60 dB per 3 s from exactly 1, retired
+  at most `MAX_DRAIN_SECONDS` 20 s; a request that waits behind the drain or the release CUTS it (a raised cosine over
+  `CUT_SECONDS` 0.15 s, maintainer 2026-10-17), so an edit lands in about 0.2 s. **The release law** `TailRelease`: 60 dB per 3 s from exactly 1, retired
   under -90 dB. **A stopped playback is never hard-cut**; only an endless tail triggers the release, 20 s after the
   last note (`PlaybackEngine.isIdle` KDoc). All in `audio/ref/katalyst.md`. **An engine's end of life** is one
   `PlaybackEngine.Phase` (Playing, Stopped, Releasing, Released, Disposed; the table in its class KDoc); the
@@ -118,7 +124,11 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   these, never an Ignitor node; the `eq` sections take a number or a `Kat.param` only. A knob over slots is evaluated when the owner's map changes; a knob that holds a modulator is
   ticked once per processed block at the top of `KatalystChain.process`. `audio/ref/katalyst.md`.
 - **Knob glide** `KNOB_GLIDE_SECONDS` 0.05 in whole blocks (17 at 44.1 kHz, 19 at 48 kHz), one block for a knob that
-  holds a modulator; **bank crossfade** `BANK_CROSSFADE_SECONDS` 0.02 with two banks and one parking slot. The bank
+  holds a modulator; **bank crossfade** `BANK_CROSSFADE_SECONDS` 0.05 (by ear 2026-10-17; 20 ms before), counted in
+  samples, with two banks and one parking slot, so a material changes at most every 18 blocks at 44.1 kHz (19 at
+  48 kHz): 16ths pass, 32nds park above about 143 BPM. A compressor move that RELAXES on balance (its net reduction at a fixed
+  0 dBFS is less; the three knobs on one fraction) releases at the compressor's own release time,
+  never faster than the 50 ms glide (`CompressorKnobMove`, by ear 2026-10-17). The bank
   crossfade and the compressor's switch fade run one linear law, `utils/linear_crossfade.kt` (the chain swap's
   `Crossfade` and the duck's glide are other laws). Every delay and reverb switch-off fades the feed over the wet
   glide and drains from the block it lands in, no further off-config needed (follow-up 42). Which knob glides how:
@@ -339,8 +349,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 
 ## Open threads
 
-- **By ear** (`docs/tasks/by-ear/README.md`): `chain-swap-request-during-drain.md`,
-  `duck-orbit-switch-click.md`, and the owed rounds listed there.
+- **By ear** (`docs/tasks/by-ear/README.md`): `duck-orbit-switch-click.md`, and the owed rounds listed there.
 - **Engine pass 1 follow-ups**: `docs/tasks/in-progress/engine-follow-ups.md` (the V8 residues, the phase-pool order, the
   audit's later steps and open decisions).
 - **Open, correctness**: `docs/tasks-archive/2026-10/20261014-audit-audio-backend-leftovers.md` (§2 worklet tests waits on the maintainer;
@@ -356,8 +365,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   `docs/tasks/voice-takeover.md` (blocked on a design decision), `docs/tasks/playback-layer-decomposition.md`.
 - **Katalyst, future**: `reverb-models.md` (with `room-reverb.md`), `one-chain-host.md`, `delay-ceiling-edges.md`, `transition-times.md`,
   `ducking-unfinished.md`, `general-eq-core.md`, `flanger-chorus.md` (all in
-  `docs/tasks/future/`). A wide rising compressor-threshold swing sits about 16 to 21 dB above its floor, a law
-  decision left open (`audio/ref/knob-glide.md`).
+  `docs/tasks/future/`).
 - **Voice and instruments, V1 high priority**: `docs/tasks/pitch-pipeline-into-the-tree.md` (promoted 2026-10-07).
 - **Voice and instruments, future**: `envelope-shape-followups.md`, `new-oscillators.md`, `onepole-highpass-door.md`,
   `cut-group-semantics.md`, `live-voice-modulation.md`, `soundfont-zone-selection.md`, `string-slot-readers.md`.
@@ -376,6 +384,21 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-18 `s("sgpad").fm(...)` keeps its pitch (Q31): `sgpad`'s second saw reads `Freq * 0.1.semitones()` instead
+  of a forking `detune`, so the classic FM serves one pitch; without fm bit-identical, with fm block-size independent
+  (`SgpadFmSpec`); no engine change; the corpus moves no row (its three red rows predate it, the same with the fix
+  reverted): `docs/tasks/future/fm-revisit.md` (Q31)
+- 2026-10-17 Knob glide, two ear decisions: the bank crossfade is 50 ms (`BANK_CROSSFADE_SECONDS`, 20 ms before), and a
+  compressor move that relaxes on balance (judged by its net reduction at a fixed 0 dBFS) releases at the compressor's
+  release time on one shared fraction, never faster than the glide; a 40 dB threshold rise no longer swells 32.2 dB with 10 to
+  90 % in 46 ms (`CompressorKnobMove`); corpus: three body songs
+  moved by the crossfade, nothing by the compressor (`docs/tasks-archive/2026-10/20261017-knob-glide-listening.md`).
+- 2026-10-17 A chain request no longer waits for the ring-out: `ChainSwap` gains `Cutting` (a raised cosine over
+  0.15 s from a drain, a release, or a fade's end) on the host's `requestWaiting`; the drain measures its tails
+  (`KatalystChain.measureTails`, `TailCeiling.tighten`) against an output-referred floor used only while draining
+  (`Reverb.TAIL_FLOOR`, about -90 dBFS out; ordinary playback bit-identical), and the drain also waits for the chain's output under `SILENCE_FLOOR`,
+  so a size-10 room drains in about 14 to 18 s (by its charge), not to the 20 s cap
+  (`docs/tasks-archive/2026-10/20261017-chain-swap-request-during-drain.md`).
 - 2026-10-16 Typed Kotlin doors S7, the rollout done: the script door objects in `klangscript-libs` (`KlangScriptIgnitor`,
   `KlangScriptIgnitorExtensions`, `KlangScriptKatalyst`, the script `Ign` / `Kat`, the slot objects, `toIgnitorDsl`,
   `toKatalystKnob`) are `internal`, so a Kotlin caller outside reaches only the typed doors in `audio_bridge`; three

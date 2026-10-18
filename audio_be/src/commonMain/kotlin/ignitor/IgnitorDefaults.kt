@@ -6,13 +6,14 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
-import io.peekandpoke.klang.audio_bridge.detune
 import io.peekandpoke.klang.audio_bridge.div
 import io.peekandpoke.klang.audio_bridge.fm
 import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.lowpass
+import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.audio_bridge.onepole
 import io.peekandpoke.klang.audio_bridge.plus
+import io.peekandpoke.klang.common.math.semitones
 
 /**
  * Registers every built-in sound: its source from [builtInSources] in the built-in voice shape
@@ -184,10 +185,14 @@ internal fun builtInSources(): Map<String, IgnitorDsl> = buildMap {
 
     // ─── Ignitor compositions ──────────────────────────────────────────────
 
-    // Rich detuned pad: two saws slightly detuned, mixed and lowpass filtered
+    // Rich detuned pad: two saws slightly detuned, mixed and lowpass filtered. The second saw reads its
+    // pitch as `Freq * 0.1.semitones()`, NOT `Saw().detune(0.1)`: the same frequency to the bit, but no
+    // forking detune, so `classic()`'s FM stage above it (sprudel's `fm`) serves ONE pitch, the note, with
+    // one modulator per block, as the strip's FM did (Q31, fixed 2026-10-18; `SgpadFmSpec`). A detune here
+    // asked that one modulator at two pitches per block and the pad lost its pitch (ledger E8).
     put(
         "sgpad",
-        (IgnitorDsl.Saw() + IgnitorDsl.Saw().detune(semitones = 0.1.ign))
+        (IgnitorDsl.Saw() + IgnitorDsl.Saw(freq = IgnitorDsl.Freq.mul(0.1.semitones().ign)))
             .div(other = IgnitorDsl.Param(name = "divisor", default = 2.0))
             .onepole(3000.0.ign)
     )

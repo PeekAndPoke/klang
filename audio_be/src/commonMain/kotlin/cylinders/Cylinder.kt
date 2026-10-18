@@ -200,12 +200,12 @@ class Cylinder(
     /**
      * True while this orbit rings with a tail that can never end on its own, in the chain in
      * service or the one leaving it while it fades or drains ([KatalystChain.sustainsItself];
-     * phase 3 step 12 decision (j)). NOT the leaving chain once its swap RELEASES it: that one ends
-     * within the release by construction, and counting it would make a stopped engine release
+     * phase 3 step 12 decision (j)). NOT the leaving chain once its swap RELEASES or CUTS it: that one
+     * ends within the release or the cut by construction ([ChainSwap.leavingIsEnding]), and counting it would make a stopped engine release
      * its whole output, finite tails on other orbits included, for a tail already on its way out.
      */
     fun sustainsItself(): Boolean =
-        isActive && (chain.sustainsItself() || (!swap.isReleasing && swap.leaving?.sustainsItself() == true))
+        isActive && (chain.sustainsItself() || (!swap.leavingIsEnding && swap.leaving?.sustainsItself() == true))
 
     /**
      * The duck that governs this orbit's mix, and the one `Cylinders` resolves the sidechain orbit
@@ -438,8 +438,10 @@ class Cylinder(
      *    born with, so the install is the name and nothing else (see [chainFor]).
      *  - **The cylinder is sounding**: faded in now (step 3b), over [Crossfade], while the chain
      *    it replaces fades out and then rings out (see [processEffects]).
-     *  - **A fade or drain is already running**: queued in [pendingKey] and started when the one
-     *    outgoing slot frees. Cutting a running fade would drop its outgoing chain at full weight,
+     *  - **A fade, drain, release or cut is already running**: queued in [pendingKey], the swap is
+     *    told a request waits ([ChainSwap.requestWaiting]: a ring-out is cut over
+     *    [ChainSwap.CUT_SECONDS], maintainer 2026-10-17), and started when the one outgoing slot
+     *    frees. Cutting a running fade would drop its outgoing chain at full weight,
      *    the very click the crossfade exists to prevent (the master's retarget policy (a)). A
      *    request for the chain fading IN is the first case above and costs nothing; a request for
      *    the chain fading OUT is queued like any other rather than reversing the ramp, because
@@ -479,9 +481,11 @@ class Cylinder(
         }
 
         if (isActive && !swap.settled) {
-            // The one leaving slot is taken by a running fade or drain: wait, never cut. The swap
-            // would refuse the begin; parking the key is the host's half of that refusal.
+            // The one leaving slot is taken by a running fade, drain, release or cut: park the key
+            // (the swap would refuse the begin) and tell the swap a request waits, so a ring-out is
+            // cut instead of waited for (maintainer, 2026-10-17; see [ChainSwap]).
             pendingKey = key
+            swap.requestWaiting()
 
             return
         }
@@ -555,11 +559,17 @@ class Cylinder(
      *    that feed out within 50 ms; before engine follow-up 42 it cut it in one sample, measured in
      *    step 5b-2). The stages' tail ceilings bound it
      *    (`KatalystDelayEffect`, `KatalystReverbEffect`), and the chain retires (units back to the
-     *    shelves) on the first block [KatalystChain.hasTail] is false. A drain still reporting a
+     *    shelves) on the first block [KatalystChain.hasTail] is false and the chain's own output is under
+     *    `SILENCE_FLOOR` (the output gate). A drain still reporting a
      *    tail after [ChainSwap.MAX_DRAIN_SECONDS] (a self-oscillating delay never stops) has its
-     *    output released exponentially and retires about 4.5 s later (step 12 decision (i)), so a
-     *    request queued behind a drain waits about 24.5 s at most. No owner configures it any more
-     *    (see [commitOwner]).
+     *    output released exponentially and retires about 4.5 s later (step 12 decision (i)). While
+     *    it drains it measures its tails now and then, so a room's ceiling follows what the room
+     *    really holds ([ChainSwap.TAIL_MEASURE_SECONDS]). No owner configures it any more (see
+     *    [commitOwner]).
+     *  - **Cutting.** A request queued behind a drain or a release does not wait for it
+     *    (maintainer, 2026-10-17): the leaving chain's output is faded out over
+     *    [ChainSwap.CUT_SECONDS] and the request lands on the next block's poll, about a fifth of a
+     *    second after it was made. A request during the fade cuts where the fade ends.
      *
      *    The orbit drained from the start (decided 2026-09-17: its delay and reverb already own the
      *    drain; nothing here invents a decay); the master bus cut its leaving chain until step 12
@@ -792,8 +802,13 @@ class Cylinder(
         val key = pendingKey ?: return false
 
         if (isActive && !swap.settled) {
-            // Still behind a fade or a drain, and the registry is not even asked: the one leaving
-            // slot is what this name waits for.
+            // Still behind the swap. A name that has meanwhile been registered could land, so the
+            // swap hears that a request waits (idempotent): one map probe per block while a key is
+            // parked behind a swap, which since the cut is a fifth of a second.
+            if (katalysts?.findByKey(key) != null) {
+                swap.requestWaiting()
+            }
+
             return false
         }
 

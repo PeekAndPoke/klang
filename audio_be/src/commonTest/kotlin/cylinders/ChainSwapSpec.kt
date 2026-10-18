@@ -23,8 +23,9 @@ import io.peekandpoke.klang.common.infra.toKlangMap
 /**
  * The contracts of [ChainSwap] that its conversion from five `Cylinder` fields worked out for itself
  * (phase 3 step 12 C1; `audio/ref/effect-state-machines.md` section 2): the REFUSAL of a begin while
- * the one leaving slot is taken, the RE-ENTRY of a request parked behind a drain, and "a finished
- * life leaves no record". What a swap SOUNDS like is `CylinderChainCrossfadeSpec`'s; what a request
+ * the one leaving slot is taken, the RE-ENTRY of a request parked behind a drain (which cuts it
+ * since 2026-10-17; the cut's own rows are `ChainSwapCutSpec`'s), and "a finished life leaves no
+ * record". What a swap SOUNDS like is `CylinderChainCrossfadeSpec`'s; what a request
  * does is `CylinderChainSwapSpec`'s.
  *
  * The oracles are TWIN rigs: two cylinders given the same script produce the same bits, so "this
@@ -130,11 +131,12 @@ class ChainSwapSpec : StringSpec({
 
     // ── The re-entry ─────────────────────────────────────────────────────────────────────────────
 
-    "a request during the drain waits for it and lands exactly as a request made the block it frees" {
-        // A: the request arrives early in the drain and is parked by the host (the swap would
-        // refuse it). B: the same request is made in the block the slot frees, at the point of the
-        // block where the poll would land it. The drain must not be cut, the parked key must not
-        // land late, and the two must then be the same bits: parking is invisible.
+    "a request during the drain cuts it and lands exactly as a request made the block the cut frees" {
+        // A: the request arrives early in the drain and is parked by the host, which tells the swap
+        // a request waits. B: the swap is told the same, with nothing parked, and the same request
+        // is made in the block the slot frees, at the point of the block where the poll would land
+        // it. The parked key must not land early or late, and the two must be the same bits from
+        // the request on: parking is invisible, only the cut is heard (maintainer, 2026-10-17).
         val (a, b) = twins()
 
         a.cylinder.requestChain("dry")
@@ -145,26 +147,27 @@ class ChainSwapSpec : StringSpec({
         a.swap.isDraining shouldBe true
 
         a.cylinder.requestChain("room")
+        b.swap.requestWaiting()
 
-        withClue("the parked request did not cut the drain") {
-            a.swap.isDraining shouldBe true
+        withClue("the parked request cut the drain") {
+            a.swap.isCutting shouldBe true
         }
 
-        var drained = 0
+        var cut = 0
 
-        while (a.cylinder.isDraining && drained < 20000) {
+        while (a.swap.isCutting && cut < 20000) {
             val left = a.block(level = 0.3)
             val right = b.block(level = 0.3)
 
-            withClue("drain block $drained: the parked key changes nothing while it waits") {
+            withClue("cut block $cut: the parked key changes nothing while it waits") {
                 left.contentEquals(right) shouldBe true
             }
 
-            drained++
+            cut++
         }
 
-        withClue("the drain ran a real tail before the parked request could land") {
-            drained shouldBeGreaterThan 20
+        withClue("the cut ran over several blocks before the parked request could land") {
+            cut shouldBeGreaterThan 20
         }
 
         b.swap.settled shouldBe true

@@ -394,7 +394,7 @@ class KatalystEqEffectSpec : StringSpec({
         val data = sine(40 * blockFrames, 300.0)
         val out = DoubleArray(data.size)
         val ctx = ctx()
-        // BANK_CROSSFADE_SECONDS at 44100 Hz is 882 frames, 6.9 blocks: the fade ENDS inside the
+        // BANK_CROSSFADE_SECONDS at 44100 Hz is 2205 frames, 17.2 blocks: the fade ENDS inside the
         // window below, so the seam where the old bank is dropped is measured too (the failure
         // `KatalystFilterSwap` would show if its ramp never advanced).
         val changeBlock = 12

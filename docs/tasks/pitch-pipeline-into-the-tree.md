@@ -6,7 +6,7 @@ Status: **V1, high priority (maintainer, 2026-10-07).** Next after the voice lif
 section 5, first bullet). Plan context: `docs/plans/signal-flow-redesign.md` section 5.
 **Planned 2026-10-07** (design worker, read-only on code): "The plan" below, six commits (steps 0 to 5) plus the
 composition block; eleven decisions for the maintainer in plan section 8.
-**Paused 2026-10-10** (moved back from `in-progress/`): steps 0 to 5 and the composition steps 7a, 7b, 7c are released (v0.6.1, v0.6.2); 7d and 7e were spiked and stopped on cost (the nodes stay). Waiting on the maintainer: the listening round (`tmp/listening/pp-step4/`, `tmp/listening/pp-7b/`), Q30 and Q31 (decided by default, confirm), Q32 and Q33 (compose the pitch envelope and accelerate or keep the nodes), Q13 (`progress()`, for 7f).
+**Paused 2026-10-10** (moved back from `in-progress/`): steps 0 to 5 and the composition steps 7a, 7b, 7c are released (v0.6.1, v0.6.2); 7d and 7e were spiked and stopped on cost (the nodes stay). Waiting on the maintainer: the listening round (heard 2026-10-17: `pp-7b/` accepted; `pp-step4/` accepted except `sgpad`, which sounded broken, Q31), Q30 (confirmed by ear 2026-10-17), Q31 (fixed 2026-10-18: `sgpad` rebuilt so its FM reads one pitch, `tmp/listening/pp-step4/sgpad-fixed.wav` to be heard), Q32 and Q33 (compose the pitch envelope and accelerate or keep the nodes), Q13 (`progress()`, for 7f).
 
 ## What it is
 
@@ -199,6 +199,11 @@ one") applied; every clause not named here is kept.
    "note" leaf, so it is a maintainer question). The only built-in with a forking `detune` under `classic()` is
    `sgpad` (checked in `builtInSources()`: `(Saw() + Saw().detune(0.1)) / 2`, then `onepole`); every other built-in
    has one pitch, the super oscillators detune inside one source.
+   **Fixed 2026-10-18 (Q31, maintainer: "fix it now"):** `sgpad`'s second saw reads `Freq * 0.1.semitones()` instead
+   of sitting under a `detune`: the same frequency to the bit, no fork, so the FM serves the note alone, the strip's
+   law. `s("sgpad")` without fm is bit-identical (`BuiltInVoiceMatrixSpec`); with fm it is the same at blocks 128, 64
+   and 37 and equals its two layers rendered as one-pitch voices (`SgpadFmSpec`). No built-in has the shape now; the
+   engine is unchanged, so an authored fm above a forking detune keeps it (the author rule).
 5. **The envelope-free tail** (found in step 4, decision (A)): the strip always ran its depth envelope with a release
    of 0, so it collapsed every FM at the first block from the gate on; the node runs no envelope when every stage is at
    its default (attack 0, decay 0, sustain 1 or more, release 0), so an envelope-free door keeps its depth through the
@@ -1521,7 +1526,8 @@ After step 5. The doors and the nodes stay as descriptions; the runtime arms com
     a constant depth (`vib(5.5, 0.4)` on a saw: identical at 16 bits), a fast-moving depth (0 to 3 semitones at 23 Hz:
     -12.2 dB, the staircase gone), a slow swell (-39.9 dB, nothing to hear), a supersaw with `vib` (other dice, +2.6
     dB), the most-moved song, the frozen Stranger Things (64 cycles, -1.3 dB), and Die Kirschblüte (64 cycles, -8.2
-    dB, the shakuhachi from 1:00).
+    dB, the shakuhachi from 1:00). **Heard (maintainer, 2026-10-17): accepted.** Constant depth, supersaw and swell
+    sound the same, the fast depth shows no audible difference, Die Kirschblüte and Stranger Things "after" are ok.
   - **Suites.** `audio_bridge` jvmTest 148 and jsTest 268; `audio_be` jvmTest 2,570 and jsBrowserTest 2,466 (7a's
     2,562 and 2,458 plus the eight rows); `sprudel` jvmTest 3,498 (486 skipped); `klangscript-libs` jvmTest 840 and
     jsTest 617; `BuiltInSongsSmokeTest`, `SongBenchmarkCasesCompileSpec`, `DslDocExamplesSpec` green;

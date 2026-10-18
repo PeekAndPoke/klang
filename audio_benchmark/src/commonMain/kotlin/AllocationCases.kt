@@ -384,6 +384,8 @@ object AllocationCases {
             sound = "superpluck",
             params = mapOf("voices" to 8.0, "analog" to 0.3, "feedback" to 1.0),
         ),
+        // Since 2026-10-18 sgpad has no detune node (its second saw reads Freq times the ratio), so this case no
+        // longer measures DetuneIgnitor; its series breaks there.
         Case(
             name = "sgpad-vib",
             engine = false,

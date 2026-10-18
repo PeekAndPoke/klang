@@ -15,6 +15,8 @@ import io.peekandpoke.klang.audio_be.utils.linearFadeWeight
 import io.peekandpoke.klang.audio_be.utils.sameKnob
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
+import kotlin.math.exp
+import kotlin.math.max
 import kotlin.math.min
 
 /**
@@ -51,14 +53,20 @@ import kotlin.math.min
  *   life on new material.
  *
  * **What glides while it runs** (`audio/ref/knob-glide.md`, measured first in 5c-7): the gain
- * computer's THRESHOLD, RATIO and KNEE, per sample ([Compressor.processGliding]), each on its own
- * [KnobGlide], the ratio as its INVERSE (the curve is linear in `1 / ratio - 1`; a glide linear in
+ * computer's THRESHOLD, RATIO and KNEE, per sample ([Compressor.processGliding]), together as
+ * one [CompressorKnobMove] (a shared move that glides like a [KnobGlide], or releases, below), the ratio as its INVERSE (the curve is linear in `1 / ratio - 1`; a glide linear in
  * the ratio bunched a 100 to 1 change into the glide's last blocks, -41 dB). A jump of any of them steps the gain at once, because the gain computer has no
  * memory: a threshold jump measured -9 to -36 dB above 8 kHz, a ratio jump -27 to -43, a knee jump
  * (with the envelope inside the knee) -34 to -52; a per-block glide left -31 to -69 dB in a model
  * of the gain computer (the zipper); the per-sample ramp reaches the steady floor in every row but
- * one kind: a wide RISING threshold swing (-40 to 0 dB) stays at -62 to -65 dB, part the size of a
+ * one kind: a wide RISING threshold swing (-40 to 0 dB) stayed at -62 to -65 dB, part the size of a
  * 25 dB release in 50 ms, part the threshold moving the reduction linearly in dB.
+ * **A move that RELAXES the compressor releases instead of gliding** (since 2026-10-17, decided by ear: "the
+ * hard swell is not really acceptable, or at least not that fast"): a rising threshold, a falling ratio or a
+ * narrower knee approaches its target as a one-pole at the compressor's own RELEASE time constant, so the gain comes
+ * back as it does when the input falls, never faster than the 50 ms glide. The three knobs move as one, on one
+ * fraction, and the law is the move's NET effect at a fixed 0 dBFS: less reduction releases, more or a
+ * tie keeps the 50 ms glide. The rules are [CompressorKnobMove]'s; a modulated knob is not part of the move.
  * ATTACK and RELEASE do not glide: they are the follower's own coefficients and its state stays
  * continuous across a jump (measured at the steady floor above 8 kHz, both directions). The old
  * path, literally: [configure] writes the knobs into the instance, and while a glide moves the
@@ -76,7 +84,7 @@ import kotlin.math.min
  * (`ChainSwap`, `Crossfade`): two chains of equal latency swap without a seam, and between two
  * latencies the jump in time happens under an ordinary linear crossfade of the two copies, weights
  * summing to one (a comb mid-fade: two time-offset copies lose level mid-fade, input-dependent).
- * The knob glides do not apply on
+ * The knob move does not apply on
  * this path: [Compressor.processGliding] runs [Compressor.process] on a lookahead instance, whose
  * hold, release and box smoother already keep a knob step off the output.
  * Without a lookahead (the default, and every chain before step 12) none of this paragraph applies
@@ -87,11 +95,11 @@ import kotlin.math.min
  *
  * **The four questions of the plan, answered for the compressor:**
  * 1. *What outlives its states:* the one [instance] (built with the effect, it survives every
- *    state), the three knob glides, the settings cache [applied], the dry scratch buffers, the
+ *    state), the one knob move [knobs], the settings cache [applied], the dry scratch buffers, the
  *    snap flag [fresh], and with a lookahead the ring's tail count [quietFrames]. No `enter` touches
  *    them except [Off.enter]; outside the states [reset] resets [instance] and [quietFrames] too,
  *    and the ON edge out of Off re-seeds a lookahead instance's detector ([Off.switchOn]).
- * 2. *The record of a finished life:* the envelope, the knob glides and [applied], all forgotten
+ * 2. *The record of a finished life:* the envelope, the knob move and [applied], all forgotten
  *    in [Off.enter] (the instance is reset, the cache emptied so the next ON writes every knob).
  *    The next life starts from an envelope at rest, its knobs snap, and nothing can glide from a
  *    dead life's values. With a lookahead the instance is NOT reset there: its ring holds the
@@ -113,7 +121,7 @@ class KatalystCompressorEffect(
     /**
      * The frames of one render block, pinned to [AudioBackendContext.RENDER_QUANTUM_FRAMES] in the
      * engine; `KatalystChainBuilder` passes its own. It sizes the dry scratch buffers and counts the
-     * knob glides' blocks.
+     * knob move's blocks.
      */
     blockFrames: Int = AudioBackendContext.RENDER_QUANTUM_FRAMES,
     /**
@@ -122,11 +130,11 @@ class KatalystCompressorEffect(
      * building this effect allocates; 0 (the default) is no lookahead and no latency.
      */
     lookaheadSeconds: Double = 0.0,
-    /** True when the threshold's knob holds a modulator: [thresholdGlide] spans one block (knob expressions 5b, D2). */
+    /** True when the threshold's knob holds a modulator: the threshold keeps a one-block glide outside the move ([CompressorKnobMove]) (knob expressions 5b, D2). */
     thresholdModulated: Boolean = false,
-    /** True when the ratio's knob holds a modulator: [inverseRatioGlide] spans one block (step 5b, D2). */
+    /** True when the ratio's knob holds a modulator: the ratio keeps a one-block glide outside the move (step 5b, D2). */
     ratioModulated: Boolean = false,
-    /** True when the knee's knob holds a modulator: [kneeGlide] spans one block (step 5b, D2). */
+    /** True when the knee's knob holds a modulator: the knee keeps a one-block glide outside the move (step 5b, D2). */
     kneeModulated: Boolean = false,
 ) : KatalystEffect, KatalystLatentEffect {
 
@@ -190,21 +198,23 @@ class KatalystCompressorEffect(
     /** True once a [configure] has filled [applied]; false after construction and in [Off.enter]. */
     private var appliedValid: Boolean = false
 
-    private val thresholdGlide =
-        KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames, modulated = thresholdModulated)
-    /** The ratio glides as its INVERSE, `1 / ratio`: see [Compressor.processGliding]. */
-    private val inverseRatioGlide =
-        KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames, modulated = ratioModulated)
-    private val kneeGlide = KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames, modulated = kneeModulated)
+    /** The three gain-computer knobs as one move ([CompressorKnobMove]): glide, or release when its net effect relaxes. */
+    private val knobs = CompressorKnobMove(
+        sampleRate = sampleRate,
+        blockFrames = blockFrames,
+        thresholdModulated = thresholdModulated,
+        ratioModulated = ratioModulated,
+        kneeModulated = kneeModulated,
+    )
 
     /** Test seam: the threshold in force, in dB, after the last processed block (the glide's value). */
-    internal val thresholdInForce: Double get() = thresholdGlide.value
+    internal val thresholdInForce: Double get() = knobs.value(CompressorKnobMove.THRESHOLD)
 
     /** Test seam: the inverse ratio in force after the last processed block (the glide's value). */
-    internal val inverseRatioInForce: Double get() = inverseRatioGlide.value
+    internal val inverseRatioInForce: Double get() = knobs.value(CompressorKnobMove.INVERSE_RATIO)
 
     /** Test seam: the knee in force, in dB, after the last processed block (the glide's value). */
-    internal val kneeInForce: Double get() = kneeGlide.value
+    internal val kneeInForce: Double get() = knobs.value(CompressorKnobMove.KNEE)
 
     /**
      * True from construction and from [reset] until a block has been processed: while it holds, a
@@ -258,7 +268,7 @@ class KatalystCompressorEffect(
     private inner class Off : State() {
         /**
          * Forgets the record of the finished life: the instance's envelope (reset to rest; with a
-         * lookahead the instance keeps running instead, see the class KDoc), the knob glides, the
+         * lookahead the instance keeps running instead, see the class KDoc), the knob move, the
          * settings cache (so the next ON writes every knob).
          *
          * PRECONDITION: the output is already the dry mix, the delayed dry mix with a lookahead (a
@@ -274,9 +284,7 @@ class KatalystCompressorEffect(
             }
 
             appliedValid = false
-            thresholdGlide.reset()
-            inverseRatioGlide.reset()
-            kneeGlide.reset()
+            knobs.reset()
             state = this
         }
 
@@ -512,29 +520,40 @@ class KatalystCompressorEffect(
     }
 
     /**
-     * Points the three glides at what the instance STORED, not at the raw settings: the setters
+     * Points the one knob move at what the instance STORED, not at the raw settings: the setters
      * coerce (a ratio of at least 1, a knee of at least 0) and drop non-finite values, and the
-     * glide must land on exactly the number the settled path then reads. A glide forgotten in
+     * move must land on exactly the number the settled path then reads. A move forgotten in
      * [Off.enter] snaps here, so a new instance starts on its own knobs.
      */
     private fun retarget(c: Compressor) {
-        thresholdGlide.retarget(c.thresholdDb)
-        inverseRatioGlide.retarget(1.0 / c.ratio)
-        kneeGlide.retarget(c.kneeDb)
+        knobs.retarget(threshold = c.thresholdDb, inverseRatio = 1.0 / c.ratio, knee = c.kneeDb, compressor = c)
     }
 
     /**
      * One block of [c] in place: the settled path (the instance's own [Compressor.process], which
-     * reads the knobs it stores) unless a knob glide moves, then [Compressor.processGliding] from
+     * reads the knobs it stores) unless the knob move runs, then [Compressor.processGliding] from
      * the values the last block ended on to this block's.
      */
     private fun compress(c: Compressor, left: AudioBuffer, right: AudioBuffer, n: Int) {
-        val thresholdFrom = thresholdGlide.value
-        val thresholdTo = thresholdGlide.advance()
-        val inverseRatioFrom = inverseRatioGlide.value
-        val inverseRatioTo = inverseRatioGlide.advance()
-        val kneeFrom = kneeGlide.value
-        val kneeTo = kneeGlide.advance()
+        // The release's share of this block, for a move that relaxes the compressor ([CompressorKnobMove]): the block
+        // ends where a per-sample one-pole at the release coefficient would. Computed only while a move releases. The
+        // `releaseSeconds` getter is read once per releasing block, accepted (the allocation check stays green).
+        val m = knobs
+        val decay = if (m.releasing) {
+            exp(-n / (max(Compressor.MIN_TIME_SECONDS, c.releaseSeconds) * sampleRate))
+        } else {
+            0.0
+        }
+
+        val thresholdFrom = m.value(CompressorKnobMove.THRESHOLD)
+        val inverseRatioFrom = m.value(CompressorKnobMove.INVERSE_RATIO)
+        val kneeFrom = m.value(CompressorKnobMove.KNEE)
+
+        m.advance(decay)
+
+        val thresholdTo = m.value(CompressorKnobMove.THRESHOLD)
+        val inverseRatioTo = m.value(CompressorKnobMove.INVERSE_RATIO)
+        val kneeTo = m.value(CompressorKnobMove.KNEE)
 
         if (thresholdFrom == thresholdTo && inverseRatioFrom == inverseRatioTo && kneeFrom == kneeTo) {
             c.process(left = left, right = right, blockSize = n)

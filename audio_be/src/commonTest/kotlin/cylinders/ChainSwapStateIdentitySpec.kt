@@ -240,4 +240,104 @@ class ChainSwapStateIdentitySpec : StringSpec({
             swap.currentState shouldBeSameInstanceAs idle
         }
     }
+
+    "the cut's cells point at the ONE Cutting instance, entered from Fading, Draining and Releasing" {
+        val rig = CylinderSwapRig()
+        val swap = rig.swap
+
+        rig.registry.register("dry", dryChain(0.9))
+        rig.registry.register("dry2", dryChain(1.1))
+        rig.registry.register("room", roomChain(6.0))
+        rig.registry.register(
+            "loop",
+            KatalystDsl.of(
+                KatalystStageDsl.Delay(
+                    wet = KatalystKnobDsl.Constant(0.5),
+                    time = KatalystKnobDsl.Constant(0.1),
+                    feedback = KatalystKnobDsl.Constant(1.0),
+                )
+            ),
+        )
+
+        val idle = swap.currentState
+
+        // Idle x requestWaiting: a self-edge.
+        swap.requestWaiting()
+        swap.currentState shouldBeSameInstanceAs idle
+
+        /** Puts a charged [name] in service and swaps it for [to]; leaves the swap fading. */
+        fun swapAwayFrom(name: String, to: String) {
+            rig.cylinder.requestChain(name)
+            rig.render(blocks = rig.fadeBlocks, level = 0.5)
+            rig.drainOut(level = 0.5)
+            rig.render(blocks = 100, level = 0.5)
+            rig.cylinder.requestChain(to)
+        }
+
+        fun cutToIdle() {
+            var guard = 0
+            while (!swap.settled && guard < 1000) {
+                rig.block(level = 0.0)
+                guard++
+            }
+        }
+
+        // Draining x requestWaiting -> Cutting.
+        swapAwayFrom("room", "dry")
+        rig.render(blocks = rig.fadeBlocks, level = 0.0)
+        val draining = swap.currentState
+        swap.isDraining shouldBe true
+        swap.requestWaiting()
+        val cutting = swap.currentState
+        withClue("Cutting is its own state") {
+            swap.isCutting shouldBe true
+            listOf(idle, draining).none { it === cutting } shouldBe true
+        }
+
+        // Cutting x begin: REFUSED; x requestWaiting and a block: self-edges.
+        swap.begin(leaving = rig.buildChain(dryChain(0.5)), arrivingLatencyFrames = 0, duckingOut = null, duckFadingIn = false)
+        swap.requestWaiting()
+        rig.block(level = 0.0)
+        withClue("a begin while cutting is refused, and a cut block is a self-edge") {
+            swap.currentState shouldBeSameInstanceAs cutting
+        }
+
+        // Cutting -> Idle.
+        cutToIdle()
+        withClue("the cut lands in the ONE Idle instance") {
+            swap.currentState shouldBeSameInstanceAs idle
+        }
+
+        // Fading x requestWaiting (remembered), then Fading -> Cutting where the fade ends.
+        swapAwayFrom("room", "dry2")
+        val fading = swap.currentState
+        swap.requestWaiting()
+        swap.currentState shouldBeSameInstanceAs fading
+        rig.render(blocks = rig.fadeBlocks, level = 0.0)
+        withClue("a fade with a request waiting ends in the ONE Cutting instance") {
+            swap.currentState shouldBeSameInstanceAs cutting
+        }
+
+        // Cutting -> Idle through the hard cut (retire).
+        rig.cylinder.retire()
+        withClue("the hard cut from mid-cut lands in the ONE Idle instance") {
+            swap.currentState shouldBeSameInstanceAs idle
+        }
+
+        // Releasing x requestWaiting -> Cutting, on the cylinder's next life.
+        rig.cylinder.adopt(id = 1, silentBlocksBeforeTailCheck = 0, katalysts = rig.registry)
+        swapAwayFrom("loop", "dry")
+        var guard = 0
+        while (!swap.isReleasing && guard < 8000) {
+            rig.block(level = 0.0)
+            guard++
+        }
+        swap.isReleasing shouldBe true
+        swap.requestWaiting()
+        withClue("a release with a request waiting is cut by the ONE Cutting instance") {
+            swap.currentState shouldBeSameInstanceAs cutting
+        }
+        cutToIdle()
+        swap.currentState shouldBeSameInstanceAs idle
+    }
 })

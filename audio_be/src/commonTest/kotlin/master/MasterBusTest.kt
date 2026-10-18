@@ -20,6 +20,7 @@ import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.interleavedCopy
 import io.peekandpoke.klang.audio_be.releaseStarted
 import io.peekandpoke.klang.audio_be.cylinders.CapLaw
+import io.peekandpoke.klang.audio_be.cylinders.CutLaw
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChainBuilder
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystContext
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
@@ -1056,10 +1057,10 @@ class MasterBusTest : StringSpec({
         rig.dc(level)[0] shouldBe (0.3 plusOrMinus 1e-12)
     }
 
-    "swapping back to a master that is still ringing out waits for the ring-out, then lands it empty" {
-        // Decision (g), kept: a request while the leaving chain drains waits for the whole
-        // ring-out. Here the request is for the very room that is draining, so it cannot be
-        // re-used mid-tail: it comes back retired and reset, holding nothing of its last life.
+    "swapping back to a master that is still ringing out cuts the ring-out, then lands it empty" {
+        // A request while the leaving chain drains cuts the ring-out (maintainer, 2026-10-17; decision
+        // (g) waited for it until then). Here the request is for the very room that is draining, so
+        // it cannot be re-used mid-tail: it comes back retired and reset, holding nothing of its last life.
         val rig = Rig().apply {
             registry.register("hall", room(wet = 0.8, size = 3.0))
             registry.register("dry", gain(0.9))
@@ -1074,15 +1075,16 @@ class MasterBusTest : StringSpec({
         swap.isDraining shouldBe true
         rig.bus.requestSwap("hall")
 
-        // The drain is not cut and nothing starts until it is over.
-        var drained = 0
-        while (swap.isDraining && drained < 6000) {
-            rig.block(0.0).also { drained++ }
+        // The drain is cut, and nothing starts until the cut is over: a fifth of a second, not the ring-out.
+        swap.isCutting shouldBe true
+        var cut = 0
+        while (swap.isCutting && cut < 6000) {
+            rig.block(0.0).also { cut++ }
             swap.isFading shouldBe false
         }
 
-        drained shouldBeGreaterThan 100
-        swap.isDraining shouldBe false
+        cut shouldBe CutLaw(sampleRate = sampleRate, blockFrames = blockFrames).blocks
+        swap.settled shouldBe true
 
         // The parked hall lands on the next block's poll, as a fade from dry.
         rig.block(0.0)
@@ -1102,7 +1104,7 @@ class MasterBusTest : StringSpec({
         ring shouldBeGreaterThan 1.0
     }
 
-    "a self-sustaining master swapped away is released at the drain's cap: exp(-k / tau) from exactly 1, then 0, the parked request lands" {
+    "a self-sustaining master swapped away, with no request waiting, is released at the drain's cap: exp(-k / tau) from exactly 1, then 0" {
         // Step 12 decision (i), the master half (the orbit's is `ChainSwapCapSpec`). The oracle is a
         // control bus that keeps the loop in service on the same silent input: the swapped bus must
         // be its ring times the decided weight, `CapLaw` (1 through the fade and the drain, the
@@ -1113,7 +1115,6 @@ class MasterBusTest : StringSpec({
             registry.register("room", room(wet = 0.6, size = 3.0))
             registry.register("loop", loop)
             registry.register("dry", gain(0.5))
-            registry.register("late", gain(2.0))
             // A room drains first, so the loop's drain is not the swap's first: a drain that
             // inherited this one's age would be cut early.
             bus.requestSwap("room")
@@ -1139,11 +1140,8 @@ class MasterBusTest : StringSpec({
 
         var ring = 0.0
 
+        // No request waits: one would cut the drain (the cut's master row is below).
         for (b in 0 until releaseAt + releaseBlocks + 30) {
-            if (b == 100) {
-                swapped.bus.requestSwap("late")
-            }
-
             val got = swapped.block(0.0)
             val want = control.block(0.0)
 
@@ -1163,7 +1161,7 @@ class MasterBusTest : StringSpec({
 
             // The state after block b: the release starts on the block after the drain reaches the cap.
             when {
-                b == 100 -> withClue("the request was parked behind the drain") {
+                b == 100 -> withClue("the loop drains") {
                     swap.isDraining shouldBe true
                 }
 
@@ -1173,13 +1171,9 @@ class MasterBusTest : StringSpec({
                     swapped.bus.isRinging shouldBe true
                 }
 
-                b == releaseAt + releaseBlocks - 1 -> withClue("block $b: the release's last block retired the loop, nothing rings") {
+                b >= releaseAt + releaseBlocks - 1 -> withClue("block $b: the release's last block retired the loop, nothing rings") {
                     swap.settled shouldBe true
                     swapped.bus.isRinging shouldBe false
-                }
-
-                b == releaseAt + releaseBlocks -> withClue("block $b: the parked request landed on the next block's poll") {
-                    swap.isFading shouldBe true
                 }
             }
         }
@@ -1187,6 +1181,98 @@ class MasterBusTest : StringSpec({
         withClue("positive control: the loop rang at full level through the release, and rings on in the control") {
             ring shouldBeGreaterThan 0.05
             maxAbs(control.block(0.0)) shouldBeGreaterThan 0.05
+        }
+    }
+
+    "a request at the master while the leaving chain drains cuts the ring-out: a raised cosine from 1 to 0, then it lands" {
+        // The orbit's rows are `ChainSwapCutSpec`'s; the oracle is the same: a control bus given the
+        // same script without the request plays the ring the swapped bus cuts, sample for sample.
+        fun rig() = Rig().apply {
+            registry.register("hall", room(wet = 0.6, size = 8.0))
+            registry.register("dry", gain(0.5))
+            registry.register("late", gain(2.0))
+            bus.requestSwap("hall")
+            repeat(200) { block(0.4) }
+            bus.requestSwap("dry")
+            repeat(60) { block(0.0) }
+            bus.chainSwap.isDraining shouldBe true
+        }
+
+        val swapped = rig()
+        val control = rig()
+        val law = CutLaw(sampleRate = sampleRate, blockFrames = blockFrames)
+        val swap = swapped.bus.chainSwap
+        var ring = 0.0
+        var landedAt = -1
+
+        swapped.bus.requestSwap("late")
+
+        withClue("the request cut the drain at once") {
+            swap.isCutting shouldBe true
+        }
+
+        for (b in 0 until law.blocks + 5) {
+            val got = swapped.block(0.0)
+            val want = control.block(0.0)
+
+            for (i in 0 until blockFrames) {
+                val weight = law.weight(b * blockFrames + i)
+
+                if (got[i] != want[i] * weight) {
+                    withClue("block $b sample $i: got ${got[i]}, want ${want[i]} x $weight") {
+                        got[i] shouldBe want[i] * weight
+                    }
+                }
+            }
+
+            ring = maxOf(ring, maxAbs(want))
+
+            if (b == law.blocks - 1) {
+                withClue("block $b: the cut's last block retired the hall") {
+                    swap.settled shouldBe true
+                }
+            }
+
+            if (landedAt < 0 && swap.isFading) {
+                landedAt = b
+            }
+        }
+
+        withClue("the request landed on the next block's poll, a fifth of a second at most after it was made") {
+            landedAt shouldBe law.blocks
+            (landedAt * blockFrames.toDouble() / sampleRate) shouldBeLessThan 0.25
+        }
+
+        withClue("positive control: the hall rang loud when it was cut, and rings on in the control") {
+            ring shouldBeGreaterThan 0.01
+            maxAbs(control.block(0.0)) shouldBeGreaterThan 0.001
+        }
+    }
+
+    "a master name registered while its request waits behind a drain cuts the drain on the next poll" {
+        val rig = Rig().apply {
+            registry.register("hall", room(wet = 0.6, size = 8.0))
+            registry.register("dry", gain(0.5))
+            bus.requestSwap("hall")
+            repeat(200) { block(0.4) }
+            bus.requestSwap("dry")
+            repeat(60) { block(0.0) }
+        }
+        val swap = rig.bus.chainSwap
+
+        swap.isDraining shouldBe true
+        rig.bus.requestSwap("late")
+        repeat(3) { rig.block(0.0) }
+
+        withClue("an unknown name cannot land, so it cuts nothing") {
+            swap.isDraining shouldBe true
+        }
+
+        rig.registry.register("late", gain(2.0))
+        rig.block(0.0)
+
+        withClue("the poll found it registered and the swap heard that a request waits") {
+            swap.isCutting shouldBe true
         }
     }
 

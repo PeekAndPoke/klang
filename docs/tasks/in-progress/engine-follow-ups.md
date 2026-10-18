@@ -1167,7 +1167,7 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
       trick in plain sight, weighed against the stone rule "Complexity is the enemy". If the phone ever needs it, B
       is the fix to build.
     Found on the way: `DetuneIgnitor` (`freqHz * ratio`) boxes once per detune node per block (`sgpad-vib` 15.5
-    against -0.2 B); pitch envelopes, vibrato, accelerate and FM's carrier work through `IgniteContext.phaseMod` and
+    against -0.2 B; since 2026-10-18 sgpad has no detune node, so no built-in or alloc case covers that site any more); pitch envelopes, vibrato, accelerate and FM's carrier work through `IgniteContext.phaseMod` and
     box nothing. `controlRateValue(freqHz)` keeps its argument: the build, the sizing reads and the Katalyst slots
     call it with no render context.
 
@@ -1484,7 +1484,7 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
 
 42. **DONE (2026-10-16): a delay or reverb switched off fades its feed instead of cutting it** (added 2026-10-13,
     maintainer Q39: "fade, do not cut"). A sound change, so not part of the performance batch 31 to 41. Plan, cost and
-    the corpus effect: [`../by-ear/delay-reverb-owner-change-cut.md`](../by-ear/delay-reverb-owner-change-cut.md),
+    the corpus effect: [`../../tasks-archive/2026-10/20261016-delay-reverb-owner-change-cut.md`](../../tasks-archive/2026-10/20261016-delay-reverb-owner-change-cut.md),
     option (b). M.
     **The design.** Every off-config (an owner change to a voice that leaves the stage off, a `katp` time or size
     below the gate, an unset or non-finite one) takes the wet glide to 0 over its span (50 ms, one block for a
@@ -2047,7 +2047,7 @@ Each was checked against the code: none is done (item 21's package dissolve asid
 26. **Step 20, the Katalyst by-ear items**, each with a home: A1.1
     ([`future/delay-ceiling-edges.md`](../future/delay-ceiling-edges.md)), A1.2
     ([`by-ear/duck-orbit-switch-click.md`](../future/duck-orbit-switch-click.md)), A1.3
-    ([`by-ear/chain-swap-request-during-drain.md`](../by-ear/chain-swap-request-during-drain.md)), A1.9
+    ([`by-ear/chain-swap-request-during-drain.md`](../../tasks-archive/2026-10/20261017-chain-swap-request-during-drain.md)), A1.9
     ([`future/transition-times.md`](../future/transition-times.md) §4).
 27. **The audit's decisions not taken yet** (section E): D2 (`MasterStage` against `MasterBus`, two "masters"), D4
     (one block driver or two: offline renders never run the dispatcher), D6 and D9 (above), D8 (the delay and reverb

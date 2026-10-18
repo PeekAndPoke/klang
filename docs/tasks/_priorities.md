@@ -138,8 +138,8 @@ The release-defining set, regardless of when they're sequenced:
     measure the win via `runSongBenchmark`.
 22. **Phase 3 follow-ups** (opened 2026-09-28 when the phase 3 record was archived as
     [`20260928-builtin-instruments.md`](../tasks-archive/2026-09/20260928-builtin-instruments.md)):
-    - **By ear, owed:** [`by-ear/chain-swap-request-during-drain.md`](by-ear/chain-swap-request-during-drain.md)
-      (step 12 decision (g)). The phase 3 end checkpoint is done (2026-10-02,
+    - **By ear, DONE 2026-10-17:** [`chain-swap-request-during-drain.md`](../tasks-archive/2026-10/20261017-chain-swap-request-during-drain.md)
+      (step 12 decision (g)): a waiting edit now cuts the drain and lands in about 0.2 s. The phase 3 end checkpoint is done (2026-10-02,
       [archived](../tasks-archive/2026-10/20261002-phase3-end-checkpoint.md)).
     - **NICE, deferred by the maintainer:** [`future/editor-voice-door-diagnostics.md`](future/editor-voice-door-diagnostics.md)
       (step 11: warn on doors an instrument does not hear, a string in a wet slot).

@@ -14,13 +14,12 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_bridge.constants.BANK_CROSSFADE_SECONDS
-import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 
 /**
  * [KatalystFilterSwap] switches the resonant banks behind `body(...)`, `vowel(...)` and the orbit
  * `eq` without a click: every edge (on, off, a change, a return) is a linear crossfade over
  * [BANK_CROSSFADE_SECONDS] from what sounds NOW (Katalyst step 5c-6, decided with the maintainer
- * 2026-09-19; TWO BANKS and 20 ms since step 5c-11, 2026-09-20).
+ * 2026-09-19; TWO BANKS since step 5c-11, 2026-09-20; 20 ms then, 50 ms by ear since 2026-10-17).
  *
  * The "filters" here are mostly plain gains on a DC input, so the output of any sequence of events
  * is exactly predictable, and the oracle is [FilterSwapLaw], the decided law written per sample
@@ -39,7 +38,7 @@ class KatalystFilterSwapSpec : StringSpec({
 
     // KatalystFilterSwap computes this itself as (sampleRate * BANK_CROSSFADE_SECONDS).toInt(),
     // recomputed here from the same definition so the spec does not simply agree with the class.
-    val fadeLen = (sampleRate * BANK_CROSSFADE_SECONDS).toInt() // 882, 6.9 blocks
+    val fadeLen = (sampleRate * BANK_CROSSFADE_SECONDS).toInt() // 2205, 17.2 blocks
 
     // Enough blocks for any fade in this file to land.
     val fadeBlocks = fadeLen / n + 2
@@ -172,15 +171,14 @@ class KatalystFilterSwapSpec : StringSpec({
         }
     }
 
-    "the fade lands on sample 882 at 44.1 kHz and 960 at 48 kHz: 20 ms, and NOT the knob glide" {
-        // Katalyst 5c-11: the bank swap got its own constant, 20 ms, while KNOB_GLIDE_SECONDS
-        // stays 50 ms for every level and dynamics glide. The LANDING SAMPLE is written out as a
-        // literal on purpose: a row that recomputed its expectation from the constant it guards
-        // would stay green for any value, and 20 ms is a decision, not an implementation detail.
-        // The inequality below then says the swap is not simply reading the other constant.
-        withClue("the two constants are apart") {
-            (BANK_CROSSFADE_SECONDS == KNOB_GLIDE_SECONDS) shouldBe false
-        }
+    "the fade lands on sample 2205 at 44.1 kHz and 2400 at 48 kHz: 50 ms, counted in samples, not the knob glide's blocks" {
+        // Katalyst 5c-11 gave the bank swap its own constant (20 ms then); the maintainer chose 50 ms by ear on
+        // 2026-10-17 (`docs/tasks-archive/2026-10/20261017-knob-glide-listening.md`, item 1: "to be on the safe side we take the 50ms").
+        // The LANDING SAMPLE is written out as a literal on purpose: a row that recomputed its expectation from the
+        // constant it guards would stay green for any value, and 50 ms is a decision, not an implementation detail.
+        // The two constants now share a value and stay two concepts: the swap counts samples (2205 at 44.1 kHz), the
+        // knob glide whole blocks (17 blocks, 2176 samples), so the landing below also says the swap is not running
+        // on the knob glide's rounding.
 
         /** Installs x1.0, swaps to x0.0 at [rate], and returns the landing sample of the ramp. */
         fun landingAt(rate: Double): Int {
@@ -210,14 +208,14 @@ class KatalystFilterSwapSpec : StringSpec({
             return landed
         }
 
-        withClue("44.1 kHz") { landingAt(44100.0) shouldBe 882 }
-        withClue("48 kHz") { landingAt(48000.0) shouldBe 960 }
+        withClue("44.1 kHz") { landingAt(44100.0) shouldBe 2205 }
+        withClue("48 kHz") { landingAt(48000.0) shouldBe 2400 }
 
-        // 881, not `fadeLen - 1`: this row may not take its expectation from the constant.
+        // 2204, not `fadeLen - 1`: this row may not take its expectation from the constant.
         val out = rampAfterSwap(blocks = fadeBlocks)
 
         withClue("the sample before the landing still carries the old pair") {
-            (out[881] > 0.0) shouldBe true
+            (out[2204] > 0.0) shouldBe true
         }
     }
 

@@ -60,7 +60,7 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
  * back on that mix. A call with ANOTHER table carries its mix and floor through the swap as one word: an install snaps
  * the new pair's blend and leaves the outgoing pair's as it sounded, and a parked change waits whole, which is what a
  * table and a mix changing together did before. (So while a third table waits in the parking slot, at most one fade,
- * 20 ms, the blend of the pairs that sound holds. The parked install snaps its pair to the latest mix, and the
+ * 50 ms since 2026-10-17 (20 ms before), the blend of the pairs that sound holds. The parked install snaps its pair to the latest mix, and the
  * outgoing pair catches up at the next mix move while it fades out: over one block when the mix is modulated, so up
  * to one fade of modulation lands in one block.) The bypass at a mix of 0 is the bank's: the bands keep running while
  * the blend travels to 0 and stop, their state zeroed, on the block it lands, so a return starts them from rest

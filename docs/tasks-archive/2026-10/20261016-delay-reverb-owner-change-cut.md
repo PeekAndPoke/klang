@@ -11,10 +11,11 @@ piece's bass off guitar 3's orbit (2026-10-16), and the corpus reaches no switch
 (a mutant that never switches off leaves it green), so it is no evidence here. The evidence for the fade is
 `KatalystSwitchOffFadeSpec` and the listening pairs:
 `tmp/listening/delay-reverb-fade/` (an owner change that switches the reverb off, a `katp` delay time below the gate).
-The record: item 42 of [`../in-progress/engine-follow-ups.md`](../in-progress/engine-follow-ups.md). Before the
+The record: item 42 of [`../in-progress/engine-follow-ups.md`](../../tasks/in-progress/engine-follow-ups.md). Before the
 decision: carried 2026-10-12 out of the Katalyst knob expressions record when it was archived
-([`../../tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`](../../tasks-archive/2026-10/20261012-katalyst-knob-expressions.md),
+([`../../tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`](20261012-katalyst-knob-expressions.md),
 the 5b record and its review rounds 1 and 2).
+Heard 2026-10-18 (maintainer): "both after versions ok".
 
 ## What it is
 
