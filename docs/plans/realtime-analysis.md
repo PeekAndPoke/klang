@@ -9,7 +9,7 @@ sessions and that describe the same feature from three angles:
   brought into the UI, "integrate, don't dance", the panels and their priority.
 - [`docs/tasks/realtime-analytics-meters.md`](../tasks/realtime-analytics-meters.md): the meters
   ranked by how often the offline sessions needed them, the telemetry channel, the worker harness.
-- [`docs/tasks/auto-mix-advisor.md`](../tasks/auto-mix-advisor.md): attribution and a rule engine
+- [`docs/tasks/future/auto-mix-advisor.md`](../tasks/future/auto-mix-advisor.md): attribution and a rule engine
   on top of the measurements.
 
 Those three keep their session-derived detail and decisions. This plan adds what they do not

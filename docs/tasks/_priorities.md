@@ -143,7 +143,7 @@ The release-defining set, regardless of when they're sequenced:
       [archived](../tasks-archive/2026-10/20261002-phase3-end-checkpoint.md)).
     - **NICE, deferred by the maintainer:** [`future/editor-voice-door-diagnostics.md`](future/editor-voice-door-diagnostics.md)
       (step 11: warn on doors an instrument does not hear, a string in a wet slot).
-    - **NICE, a naming decision:** [`future/tremolo-rate-naming-parity.md`](future/tremolo-rate-naming-parity.md)
+    - **NICE, a naming decision:** [`20261003-tremolo-rate-naming-parity.md`](../tasks-archive/2026-10/20261003-tremolo-rate-naming-parity.md)
       (sprudel's `sync` against the Ignitor's `rate`).
     - **NICE, parked:** `svf-resonator-class-collapse` (dead sweep code in the resonators' SVF classes) is DONE by
       engine tidy-up step 12 (a), 2026-10-08 (`../tasks-archive/2026-10/20261008-svf-resonator-class-collapse.md`).

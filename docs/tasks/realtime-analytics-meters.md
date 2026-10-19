@@ -126,7 +126,7 @@ no realtime meter can. These belong in the UI as **on-demand analyses** — trig
 audio and UI threads, results shown as a report panel. Reference implementations exist as Python scripts in the klang-ai
 repo (`specbalance.py`, `specdist.py`, `pumping.py`); treat them as the spec.
 
-Downstream consumer: [`auto-mix-advisor.md`](auto-mix-advisor.md) builds attribution ("which orbit owns which band")
+Downstream consumer: [`future/auto-mix-advisor.md`](future/auto-mix-advisor.md) builds attribution ("which orbit owns which band")
 and a rule-based suggestion engine on top of these analyses — its P2 phase consumes this doc's capture ring, worker, and
 windowed distribution directly.
 
