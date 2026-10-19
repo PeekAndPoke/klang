@@ -236,6 +236,84 @@ class KatalystArithmeticEffectSpec : StringSpec({
         first[blockFrames - 1] shouldBe (probe.pow(1.0 + 1.0 / glideBlocks) plusOrMinus 1e-12)
     }
 
+    "every operator's katp move ramps forwards: each sample of the first glide block takes the operand at that sample" {
+        // Each row: the stage, where katp puts the operand first ([Row.from]) and where it moves it ([Row.to]), the
+        // probe, what the glide holds at either end, and the law by hand. The numbers keep each law strictly monotone in
+        // the operand over the move (the cap under the probe and the floor over it, so the bound is what sounds), so a
+        // ramp run backwards (the block's end at its first sample) cannot read the same. DIV glides its LEVEL, the
+        // reciprocal: 2 to 4 is 0.5 to 0.25, both exact.
+        class Row(
+            val name: String,
+            val stage: KatalystStageDsl,
+            val from: Double,
+            val to: Double,
+            val probe: Double,
+            val glideFrom: Double,
+            val glideTo: Double,
+            val law: (x: Double, v: Double) -> Double,
+        )
+
+        val rows = listOf(
+            Row(
+                name = "plus", stage = KatalystStageDsl.Plus(KatalystKnobDsl.Param("o", 0.0)),
+                from = 0.1, to = 0.4, probe = 0.5, glideFrom = 0.1, glideTo = 0.4,
+                law = { x, v -> x + v },
+            ),
+            Row(
+                name = "minus", stage = KatalystStageDsl.Minus(KatalystKnobDsl.Param("o", 0.0)),
+                from = 0.1, to = 0.4, probe = 0.5, glideFrom = 0.1, glideTo = 0.4,
+                law = { x, v -> x - v },
+            ),
+            Row(
+                name = "times", stage = KatalystStageDsl.Times(KatalystKnobDsl.Param("o", 1.0)),
+                from = 0.8, to = 0.2, probe = 0.5, glideFrom = 0.8, glideTo = 0.2,
+                law = { x, v -> x * v },
+            ),
+            Row(
+                name = "div (the level)", stage = KatalystStageDsl.Div(KatalystKnobDsl.Param("o", 1.0)),
+                from = 2.0, to = 4.0, probe = 0.5, glideFrom = 0.5, glideTo = 0.25,
+                law = { x, v -> x * v },
+            ),
+            Row(
+                name = "pow", stage = KatalystStageDsl.Pow(KatalystKnobDsl.Param("o", 1.0)),
+                from = 1.0, to = 2.0, probe = 0.5, glideFrom = 1.0, glideTo = 2.0,
+                law = { x, v -> x.pow(v) },
+            ),
+            Row(
+                name = "min (cap)", stage = KatalystStageDsl.Min(KatalystKnobDsl.Param("o", 1.0)),
+                from = 0.4, to = 0.1, probe = 0.5, glideFrom = 0.4, glideTo = 0.1,
+                law = { x, v -> if (x < v) x else v },
+            ),
+            Row(
+                name = "max (floor)", stage = KatalystStageDsl.Max(KatalystKnobDsl.Param("o", -1.0)),
+                from = -0.4, to = -0.1, probe = -0.5, glideFrom = -0.4, glideTo = -0.1,
+                law = { x, v -> if (x > v) x else v },
+            ),
+        )
+
+        for (row in rows) {
+            val chain = build(row.stage)
+            chain.applyParams(klangMapOf("o" to row.from))
+            block(chain, row.probe)
+
+            chain.applyParams(klangMapOf("o" to row.to))
+            val samples = block(chain, row.probe)
+
+            // The first glide block ends 1/G of the way, and ramps there from where the operand stood, written from
+            // the end (`KnobGlide`, `audio/ref/knob-glide.md`).
+            val end = row.glideFrom + (row.glideTo - row.glideFrom) * (1.0 / glideBlocks)
+            val step = (end - row.glideFrom) / blockFrames
+
+            for (i in 0 until blockFrames) {
+                val v = end - step * (blockFrames - 1 - i)
+
+                withClue("${row.name} ${row.from} -> ${row.to}, sample $i (operand $v)") {
+                    samples[i] shouldBe (row.law(row.probe, v) plusOrMinus 1e-12)
+                }
+            }
+        }
+    }
+
     "an unset operand is the operator's identity, reached by a glide; an unset cap passes the bus and its first value arrives at once" {
         val probe = 0.5
 

@@ -616,6 +616,19 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   `V8.TFSimplifiedLowering`, and its use (a tagged `Phi`, a call argument) is the site. Grep a new per-block path's
   production bundle for `: NaN;` and `? NaN :` (a function's default-argument prologue, `x === VOID ? NaN : x`, merges
   an argument that is tagged anyway and costs nothing). The sweep of `audio_be` after the fix found no other.
+- **On the JVM, many loops inlined into one method compile on one shared profile: give each kind its own method**
+  (engine follow-up 35, 2026-10-19). `KatalystArithmeticEffect.process` held every operator's loops (Kotlin `inline`
+  `applyLaw`: 4,323 bytes of bytecode, seventeen loops). C2 compiled it six times as the operators arrived, and the
+  last compile ran the gliding `div`'s ramp loop about five times slower than a compile that had seen only that row:
+  1.61 to 1.94 µs per block after the `times` and `pow` rows in the same JVM, 0.28 to 0.41 alone. In the suite order
+  C1 alone ran it at 0.59 and C2 without unrolling (`-XX:LoopUnrollLimit=0`) at 0.63, so the slow code is C2's
+  unrolled form of a loop compiled on a profile the other operators had filled first; measured, not explained further
+  (no disassembly). **Remedy:** one private method per operator (`plusBlock` to `maxBlock`), each with a profile of
+  its own: 0.29 and 0.52 in suite order, the other rows unchanged or faster, the output bit-identical. On V8 the
+  methods take no double (the block's ramp travels in a `DoubleArray`, the rules above), and neither the allocation
+  check nor the node timing moved. A row timed alone can hide this class: compare it with the suite order
+  (`KLANG_BENCH_FILTER` on the one row, then on its group), and look at `-XX:+PrintCompilation` for a large method
+  made not entrant again and again.
 - **Fast math, `utils/fast_math.kt`**: `fastSin` (degree-11 polynomial on the folded half period, bound
   `FAST_SIN_MAX_ERROR` 1e-10), `fastExp2` (table plus polynomial with exact ends, `fastExp2(n) = 2^n` bit for bit,
   bound `FAST_EXP2_MAX_REL_ERROR` 1e-10) and `fastExp(x) = fastExp2(x * log2 e)` replace the library calls per

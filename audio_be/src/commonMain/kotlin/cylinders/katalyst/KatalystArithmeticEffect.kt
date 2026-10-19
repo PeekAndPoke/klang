@@ -94,6 +94,14 @@ internal class KatalystArithmeticEffect(
     /** DIV only: the divisor as written (finite), which the settled blocks divide by. */
     private var divisor: Double = 1.0
 
+    /**
+     * The block's operand ramp, written by [process] for the operator's method: where the operand stood
+     * ([RAMP_FROM]) and where it ends this block ([RAMP_END]). A `DoubleArray` and not two arguments: on V8 a double
+     * handed to a call that is not inlined is a heap number, and an element access never allocates
+     * (`audio/ref/performance.md`).
+     */
+    private val ramp = DoubleArray(2)
+
     init {
         if (identity.isFinite()) {
             glide.retarget(identity)
@@ -101,14 +109,23 @@ internal class KatalystArithmeticEffect(
     }
 
     /**
-     * Sets the operand; see the class KDoc for the glide and for what a non-finite one means.
+     * Sets the operand to [knob]'s value; see the class KDoc for the glide and for what a non-finite one means.
+     *
+     * **Takes the knob, not its value** (engine follow-up 36, 2026-10-19). The writer calls this on every block the
+     * orbit has an owner (`KatalystChain.applyParams`), and on V8 a double handed to a call that is not inlined is a
+     * heap number (`audio/ref/performance.md`). In up to half of the processes V8 inlined the chain's `applyParams`
+     * and the writers' `apply` into the cylinders' per-block path and left this method out of it, so each stage's
+     * operand crossed as one heap number per block: `E-arith`'s second mode, about 160 to 196 B per block against 20
+     * to 50. Read here, the value never crosses a call. No test can pin it; this KDoc and the allocation check's
+     * `E-arith` line are the guard.
      *
      * The finiteness tests are `isFiniteInline`, not the stdlib `isFinite()` (knob expressions step 6, 2026-10-12):
      * a modulated operand configures the stage every block from the chain's hook, and on V8 a stdlib call left out of
      * the hook takes its double as a heap number (`audio/ref/performance.md`). One of the group the KDoc of
      * `isFiniteInline` measures. No test can pin it; that KDoc and this one are the guard.
      */
-    fun configure(operand: Double) {
+    fun configure(knob: KatalystKnob) {
+        val operand = knob.value
         // NaN-guard on a value the author can write: a non-finite operand is unset (class KDoc).
         val written = if (operand.isFiniteInline()) operand else identity
 
@@ -169,43 +186,72 @@ internal class KatalystArithmeticEffect(
             return
         }
 
-        val from = glide.value
-        val end = glide.advance()
+        ramp[RAMP_FROM] = glide.value
+        ramp[RAMP_END] = glide.advance()
 
         if (unset) {
             return
         }
 
         when (op) {
-            KatalystArithmeticOp.PLUS ->
-                applyLaw(left = left, right = right, frames = frames, from = from, end = end) { x, v -> plusLaw(a = x, b = v) }
-
-            KatalystArithmeticOp.MINUS ->
-                applyLaw(left = left, right = right, frames = frames, from = from, end = end) { x, v -> minusLaw(a = x, b = v) }
-
-            KatalystArithmeticOp.TIMES ->
-                applyLaw(left = left, right = right, frames = frames, from = from, end = end) { x, v -> timesLaw(a = x, b = v) }
-
-            KatalystArithmeticOp.DIV -> if (from == end) {
-                val d = divisor
-
-                applyLaw(left = left, right = right, frames = frames, from = d, end = d) { x, v -> divLaw(a = x, b = v) }
-            } else {
-                // Moving: the glide holds the level, so this block multiplies (class KDoc).
-                applyLaw(left = left, right = right, frames = frames, from = from, end = end) { x, v -> timesLaw(a = x, b = v) }
-            }
-
-            KatalystArithmeticOp.POW ->
-                applyLaw(left = left, right = right, frames = frames, from = from, end = end) { x, v -> powLaw(a = x, b = v) }
-
-            KatalystArithmeticOp.MIN ->
-                applyLaw(left = left, right = right, frames = frames, from = from, end = end) { x, v -> minLaw(a = x, b = v) }
-
-            KatalystArithmeticOp.MAX ->
-                applyLaw(left = left, right = right, frames = frames, from = from, end = end) { x, v -> maxLaw(a = x, b = v) }
-
+            KatalystArithmeticOp.PLUS -> plusBlock(left = left, right = right, frames = frames)
+            KatalystArithmeticOp.MINUS -> minusBlock(left = left, right = right, frames = frames)
+            KatalystArithmeticOp.TIMES -> timesBlock(left = left, right = right, frames = frames)
+            KatalystArithmeticOp.DIV -> divBlock(left = left, right = right, frames = frames)
+            KatalystArithmeticOp.POW -> powBlock(left = left, right = right, frames = frames)
+            KatalystArithmeticOp.MIN -> minBlock(left = left, right = right, frames = frames)
+            KatalystArithmeticOp.MAX -> maxBlock(left = left, right = right, frames = frames)
             KatalystArithmeticOp.ABS -> Unit
         }
+    }
+
+    // ── One method per operator ────────────────────────────────────────────────────
+    //
+    // Engine follow-up 35 (2026-10-19): with every law's loops inlined into ONE `process` (about 4.3 KB of bytecode,
+    // seventeen loops), the JVM compiled them on one shared profile, and a loop that profile had seen little ran with
+    // poor code: the gliding `div` read 1.61 to 1.94 µs per block after the `times` and `pow` rows had run in the same
+    // JVM (in that order C1 alone ran it at 0.59, C2 without unrolling at 0.63), and 0.28 to 0.41 when it ran alone.
+    // Each operator's loops now live in a method of their own, with a profile of their own. They take no double, so
+    // nothing crosses a call on V8 (`audio/ref/performance.md`): the block's ramp reaches them through [ramp].
+
+    private fun plusBlock(left: AudioBuffer, right: AudioBuffer, frames: Int) {
+        applyLaw(left = left, right = right, frames = frames, from = ramp[RAMP_FROM], end = ramp[RAMP_END]) { x, v -> plusLaw(a = x, b = v) }
+    }
+
+    private fun minusBlock(left: AudioBuffer, right: AudioBuffer, frames: Int) {
+        applyLaw(left = left, right = right, frames = frames, from = ramp[RAMP_FROM], end = ramp[RAMP_END]) { x, v -> minusLaw(a = x, b = v) }
+    }
+
+    private fun timesBlock(left: AudioBuffer, right: AudioBuffer, frames: Int) {
+        applyLaw(left = left, right = right, frames = frames, from = ramp[RAMP_FROM], end = ramp[RAMP_END]) { x, v -> timesLaw(a = x, b = v) }
+    }
+
+    private fun divBlock(left: AudioBuffer, right: AudioBuffer, frames: Int) {
+        val from = ramp[RAMP_FROM]
+        val end = ramp[RAMP_END]
+
+        if (from == end) {
+            val d = divisor
+
+            applyLaw(left = left, right = right, frames = frames, from = d, end = d) { x, v -> divLaw(a = x, b = v) }
+
+            return
+        }
+
+        // Moving: the glide holds the level, so this block multiplies (class KDoc).
+        applyLaw(left = left, right = right, frames = frames, from = from, end = end) { x, v -> timesLaw(a = x, b = v) }
+    }
+
+    private fun powBlock(left: AudioBuffer, right: AudioBuffer, frames: Int) {
+        applyLaw(left = left, right = right, frames = frames, from = ramp[RAMP_FROM], end = ramp[RAMP_END]) { x, v -> powLaw(a = x, b = v) }
+    }
+
+    private fun minBlock(left: AudioBuffer, right: AudioBuffer, frames: Int) {
+        applyLaw(left = left, right = right, frames = frames, from = ramp[RAMP_FROM], end = ramp[RAMP_END]) { x, v -> minLaw(a = x, b = v) }
+    }
+
+    private fun maxBlock(left: AudioBuffer, right: AudioBuffer, frames: Int) {
+        applyLaw(left = left, right = right, frames = frames, from = ramp[RAMP_FROM], end = ramp[RAMP_END]) { x, v -> maxLaw(a = x, b = v) }
     }
 
     /**
@@ -239,5 +285,11 @@ internal class KatalystArithmeticEffect(
             left[i] = law(left[i], v)
             right[i] = law(right[i], v)
         }
+    }
+
+    private companion object {
+        /** The slots of [ramp]. */
+        const val RAMP_FROM: Int = 0
+        const val RAMP_END: Int = 1
     }
 }

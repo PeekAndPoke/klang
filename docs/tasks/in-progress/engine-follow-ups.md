@@ -4,8 +4,10 @@
 [`NEXT-STEPS.md`](NEXT-STEPS.md).** Item 2 is DONE (KlangMap, released in
 v0.6.5, step 4 merged after). Where to continue (Q38, maintainer 2026-10-13: 31 to 41 after the refill, each a purely independent performance
 fix that changes no API), open V8 items first: **the V8 batch is done** (31 DONE 2026-10-15; 32, 34, 39, 40 and 41
-DONE 2026-10-16; 33 DONE earlier). Left of the numbers 31 to 41: 35 (a gliding `div` slow on the JVM), the tails 36
-and 38 (not located), and 37 (a sound change, so outside Q38). 10c and 10d (fm): two sites fixed 2026-10-19, the modulator's frequency and the wrapper pin open, parked for the maintainer (item 30's class). Next: the known tails 4, 36 and 38;
+DONE 2026-10-16; 33 DONE earlier; 35, 36 and 38 DONE 2026-10-19, 38 as a site removed that is likely its tail, not
+shown). Left of the numbers 31 to 41: 37 (a sound change, so outside Q38). 10c and 10d (fm): two sites fixed
+2026-10-19, the modulator's frequency and the wrapper pin open, parked for the maintainer (item 30's class). Next:
+the known tail 4;
 then sections 2 to 5 (13, 11 and the small ones) and section 6. Open with the maintainer: C1 to C11 (the FM diagnostic is C6) in
 `docs/housekeeping/2026-10-10-baseline.md`, and Q13, Q29 (`duty(width)`) and Q30 to Q33 in
 [`_maintainer-questions.md`](../_maintainer-questions.md).
@@ -1885,33 +1887,135 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     7c range pass (a constant one in place, a signal one reading two bounds) and phase input (a moving phase read per
     sample), so a song benchmark's `work` column under-counts a vibrato. The tremolo's arm is the pattern (it counts
     only what runs). Source: `docs/tasks/pitch-pipeline-into-the-tree.md`, 7c review round 1, A6. S.
-35. **A gliding `div` stage is slow on the JVM** (numbered after the last item, added 2026-10-11): the timing row
-    "`div` gliding" read 1.8 to 3.7 µs per block on the JVM in every run against 0.39 to 0.47 on node, about eight
-    cheap stages against one (the full check's compare file flags it, JVM 3.88x slower than node). Not explained; the
-    moving branch is `timesLaw` over a per-sample ramp (`applyLaw`'s ramp loop), while the `times` row, a constant
-    operand, runs the plain loop at about 0.3 µs, so no row times the ramp loop on its own. Source:
-    `docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md`, "Built". S.
+35. **DONE (2026-10-19): the gliding `div` was slow on the JVM only after other operators had run in the same JVM;
+    each operator's loops now live in a method of their own, and the row reads what it reads alone.** Reported
+    (numbered after the last item, added 2026-10-11): the timing row "`div` gliding" read 1.8 to 3.7 µs per block on
+    the JVM in every run against 0.39 to 0.47 on node, about eight cheap stages against one (the full check's compare
+    file flags it, JVM 3.88x slower than node); the moving branch is `timesLaw` over a per-sample ramp (`applyLaw`'s
+    ramp loop). Source: `docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md`, "Built". A purely
+    independent performance fix (Q38): no door, wire type, public signature or sound changes (private methods of an
+    internal class). **Located** (`KLANG_BENCH_FILTER` runs of `:audio_benchmark:jvmRun`, µs per block, one value per
+    JVM): the rows run in list order in one JVM (the empty chain, `times`, three cheap stages, `pow`, the gliding
+    `div`, the eight stages), and the gliding `div` read 1.94, 1.78 and 1.61 there, but 0.34, 0.41 and 0.28 to 0.29
+    (three more JVMs) when it ran ALONE. The ramp loop itself is cheap; the cost is compile history.
+    `KatalystArithmeticEffect.process` held every operator's loops inlined (`applyLaw` is Kotlin `inline`), 4,323 bytes
+    of bytecode and seventeen loops (six operators with two each, the `div`'s two expansions with two each, `abs`
+    one), and `-XX:+PrintCompilation` showed C2 compile it six times, the first five made not entrant as new
+    operators arrived; the last compile still ran the gliding loop about five times slower than a compile
+    that had seen only the `div` row. HotSpot flags in suite order (one JVM each): C1 only
+    (`-XX:TieredStopAtLevel=1`) 0.59, C2 without unrolling (`-XX:LoopUnrollLimit=0`) 0.63, without SuperWord 1.45,
+    without loop predication 1.42; alone, every flag set read 0.28 to 0.29 (C1 0.56). So the slow code is C2's
+    unrolled form of a loop compiled inside a large method whose profile the other operators had filled first;
+    measured, not explained further (no disassembly). **Fix**
+    (`audio_be/.../cylinders/katalyst/KatalystArithmeticEffect.kt`): `process` dispatches to one private method per
+    operator (`plusBlock` to `maxBlock`), each with its own loops and so its own profile. They take no double: the
+    block's ramp reaches them through `ramp`, a `DoubleArray(2)` written in `process` (on V8 a double handed to a call
+    that is not inlined is a heap number). The comment above the methods is the guard; no test can pin a JIT's
+    choice. **Numbers** (the tree, suite order / alone): the gliding `div` 0.29 and 0.52 / 0.38 and 0.31 (against
+    1.61 to 1.94 / 0.28 to 0.41 before); the other rows unchanged or faster: `times` 0.27 and 0.27 (0.28, 0.31), three
+    cheap stages 0.41 and 0.40 (0.50, 0.44), `pow` 2.81 and 3.05 (3.81, 3.71), the eight stages 3.64 and 4.20 (4.61,
+    4.20). The "before" runs were the tree with item 36's change and without the split (item 36 touches `configure`,
+    not the loops). **V8 is unchanged:** the production bundle, interleaved with HEAD, `E-arith` 19.4 to 51.4 B in 10
+    rounds (HEAD 9.0 to 180.2, item 36's mode in 3), `E-arith-glide` 442.4 to 455.0 in 5 (HEAD 447.3 to 461.8), and
+    node timing within the noise of a loaded machine (load 16 on 16 cores): the gliding `div` 0.45, 0.58, 0.88 µs
+    against HEAD's 0.41, 0.48, 0.76 unpinned, 0.40 to 0.94 against 0.60 to 1.16 pinned to one core (4 rounds), no row
+    slower than HEAD's spread. Bit for bit: the last block's peak equal to every digit on `E-arith`, `E-arith-glide`,
+    `E-duck` and `E-kat-dyn` (production bundle, HEAD against the tree); `:audio_be:jvmTest` 2,841 of 2,841 and
+    `:audio_be:jsBrowserTest` 2,732 of 2,732 green; the allocation check GREEN, 80 of 80. **Test** (review round 1:
+    a reviewer's mutant swapping the ramp's ends in `minusBlock` and `maxBlock` left every test green, only `plus` and
+    `times` were pinned): `KatalystArithmeticEffectSpec`'s row "every operator's katp move ramps forwards" checks every
+    sample of the first glide block for all seven operators (the `div` through its level), each with numbers that keep
+    the law strictly monotone in the operand. Mutation-checked, each in one lock call, restored with `cp` and checked
+    with `cmp`: the ends swapped in `minusBlock` and `maxBlock` red (the `minus` row, sample 0); in `maxBlock` alone
+    red (the `max (floor)` row, sample 0); in `divBlock`'s moving branch red (the new row's `div` and the existing
+    moving-divisor row). With it `:audio_be:jvmTest` 2,842 of 2,842 and `:audio_be:jsBrowserTest` 2,733 of 2,733
+    green.
 
-36. **`E-arith` has a second mode on V8** (numbered after the last item, added 2026-10-11): one full run of the
-    allocation check read it at a median of 175 B (rounds 160 to 190) against its line of 96, the other runs 46 to 52
-    with single rounds of 139 and 160; `E-arith-glide` once read 511 against its 500. The chain runs only the
-    arithmetic stages, so no item 33 site. Not located. Like `spluck-a`'s tail (item 7), a breach that does not repeat
-    on a second run is that mode; if it repeats it turns the check red at random, and then either the site is found or
-    the line follows item 7's rule. Item 2, step 5 read the mode in 4 of 51 tree rounds (181 to 196 B), and one run
-    went red on it at a median of 191; the rule for reading such a breach is the "Known tails" paragraph in
-    `alloc-budgets.txt`. Source: item 33, "Found on the way". S.
+36. **DONE (2026-10-19): `E-arith`'s second mode on V8 was the arithmetic writer handing each stage's operand to
+    `configure` as a double every block; it now hands the knob, and the mode is gone.** Reported (numbered after the
+    last item, added 2026-10-11): one full run of the allocation check read it at a median of 175 B (rounds 160 to
+    190) against its line of 96, the other runs 46 to 52; item 2, step 5 read the mode in 4 of 51 tree rounds (181 to
+    196 B), and on 2026-10-19 the full check read it red twice (on Ultra 0.112.0 and 0.111.0 alike, so in the code).
+    Source: item 33, "Found on the way". A purely independent performance fix (Q38): no door, wire type, public
+    signature or sound changes (`configure` belongs to an internal class, and only the writer calls it). **Located**
+    on the production bundle (`:audio_benchmark:compileProductionExecutableKotlinJs`, node 22.12, the case run as
+    `AllocationCheck.runNode` runs it). Single-case processes are bimodal: HEAD read 4 of 8 rounds high (164.6 to
+    181.8 B, the low ones 16.8 to 37.5). `--trace-opt --trace-deopt` over 10 window processes (5 high, 5 low, the
+    gross bytes 365 to 402 against 236 to 257) told the modes apart by what V8 compiled on its own: in every low
+    process `KatalystChain.applyParams` and the arithmetic writer's `apply` were optimized as functions of their own
+    (with `apply` and `configure` inlined into `applyParams`, `--trace-turbo-inlining`); in no high process were they.
+    Inferred from that: there `Cylinder.commitOwner` and `applyParams` sat inlined in `Cylinders.processAndMix` (as
+    `commitOwner` does in a low process), and the writer's `apply` reached `configure(operand.value)` as a call, so
+    each stage's operand crossed it as a heap number every block (one per operand: seven, 112 B, most of the step of
+    about 140 B between the modes; the rule in `audio/ref/performance.md`, a double handed to a call V8 does not
+    inline).
+    `--trace-turbo-inlining` itself moved every process into the low mode (8 of 8), so that inference rests on the
+    `--trace-opt` difference and on the fix. A hand-edited copy of the bundle (the writer hands the knob, `configure`
+    reads its value) read 0 of 16 rounds high (25.2 to 57.6). **Fix** (`KatalystSlotWriters.kt`,
+    `KatalystArithmeticEffect.kt`): `KatalystArithmeticWriter.apply` calls `fx.configure(operand)`, and
+    `configure(knob: KatalystKnob)` reads `knob.value` itself, so no double crosses the call. Every other writer
+    but one already hands a holder or a reference (`DelayConfig`, `DistortConfig`, `DuckSettings`, the eq's
+    `DoubleArray`, ...); `KatalystGainWriter.apply` still hands its factor to `KatalystGainEffect.configure` as a
+    double every block, the shape removed here, not seen red (`E-gain` healthy) and left for item 45. The KDoc of
+    `configure` is the guard. **Numbers** (HEAD / tree, interleaved, one round = a base and a window process): 5 of 12 rounds high /
+    0 of 12 (25.5 to 62.1); with item 35's split in the tree as well 3 of 10 / 0 of 10 (19.4 to 51.4); so 12 of 30
+    HEAD rounds high (160 to 182 B) against 0 of 38 for the fix (19.4 to 62.1, the hand edit included).
+    `E-arith-glide` unchanged (442 to 455 against 447 to 462). The allocation check, GREEN 80 of 80: `E-arith` 31.8,
+    51.0, 24.8 B (JVM 0). **The line stays at 96** (34 B above the worst healthy round), and the case leaves the
+    "Known tails" paragraph of `alloc-budgets.txt`. It does not guard a revert reliably: HEAD's code reads high in
+    about half the rounds, so a run goes red by the median of 3 only about as often; the KDoc is the guard. Bit for
+    bit: see item 35 (the same tree, peaks and both test suites).
 37. **The Ignitor's `perlin` and `berlin` move per SAMPLE** (numbered after the last item, added 2026-10-11): their
     `rate` is 0.003 noise units per sample (`PERLIN_STEP`), so the same number runs about 9 % faster at 48 kHz than at
     44.1 kHz (about 144 units per second against 132). Seconds are the house unit. The Katalyst's `Kat.perlin` and
     `Kat.berlin` inherit the law for parity (maintainer, 2026-10-11, Q12 of `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`),
     so both hosts change together: a rate per second, which moves the sound of every song that uses them at one of the
     two rates. S.
-38. **`E-duck` has a tail on V8** (numbered after the last item, added 2026-10-11): about 1 round in 7 reads 97.6 to
-    108.8 B against healthy rounds of 24.8 to 66.7 (5 of 33 tree rounds; HEAD has it too, 103.1 in 8 rounds), and one
-    run held two tail rounds and read RED at 98 against the line of 96 (review round 1 of item 2, step 5). Its line was
-    re-set to 152, above the tail, so the release's full check does not go red by chance (`alloc-budgets.txt`). The
-    chain runs the duck with a sounding sidechain; the tail's site is not located. Locate it as `spluck-a`'s (item 7)
-    and `E-arith`'s (item 36) were looked for; a fix re-sets the line. S.
+38. **DONE (2026-10-19): a per-block boxing site removed from the duck's `configure`, which wrote its two settings
+    through `Ducking`'s setters every block (an unchanged setting now writes nothing); located through a squeezed
+    inlining budget. Likely `E-duck`'s tail, not shown: the tail was too rare that day to count at V8's own
+    budget.** Reported (numbered after the last item, added 2026-10-11): about 1 round in 7 read 97.6 to 108.8 B
+    against healthy rounds of 24.8 to 66.7 (5 of 33 tree rounds; HEAD too), and one run read RED at 98 against the
+    line of 96, so the line was re-set to 152. A purely independent performance fix (Q38): no door, wire type, public
+    signature or sound changes (the body of `KatalystDuckEffect.configure` only). **Not reproduced as it was
+    reported**: HEAD read 45 rounds at V8's own budget on 2026-10-19 (45.0 to 97.2 B, one round, 97.2, of the tail's
+    size), 10 pinned to one core (30.7 to 82.7), `--predictable` 62.2 in 6 of 6, and 30 window processes under
+    `--trace-opt --trace-deopt` with no tail. **A site located by squeezing V8's inlining budget**
+    (`--max-inlined-bytecode-size-cumulative`, default 920), which leaves out of a caller the calls a crowded profile
+    would: at 250 HEAD read the tail's size in nearly every round (82.3 to 122.8 B in 11 rounds, against 56.2 to 75.8
+    at 920 and 400 and one round of 99.0 at 600; at 120 everything boxes, 8.4 KB). The sampling heap profiler there
+    (`--predictable`, budget 250, the warm-up-only run subtracted) booked 32.3 B per block in
+    `KatalystDuckEffect.configure` on HEAD, two heap numbers, beside what the tree books too (`renderStages` 32, the
+    voice scheduler's block step and `AudioBackendContext.secAt` 16 each, `Phaser.process` 13). `configure` runs on
+    every block the orbit has an owner, and wrote `live.attackSeconds` and `live.depth` through `Ducking`'s setters,
+    each a call that takes a double and calls the stdlib `isFinite` (and the attack's `calculateCoefficient`, an `exp`
+    per block, and the depth's `coerceIn`), so every one V8 leaves out takes a double as a heap number (the rule in
+    `audio/ref/performance.md`; item 40's class, a stage writing knobs through setters per block). A hand-edited
+    bundle that skipped both setters on an unchanged value read 62.3 to 78.4 at 250 (3 rounds). **Fix**
+    (`audio_be/.../cylinders/katalyst/KatalystDuckEffect.kt`): each setter runs only when the arriving setting differs
+    from what the `Ducking` stores (`sameKnob`, which tells -0.0 from 0.0 and two NaNs alike). Exact for what the
+    writer hands: the setter keeps a finite value as it is (the depth clamped to [0, 1]) and ignores a non-finite one,
+    and `KatalystDuckWriter.fill` hands a finite attack (`DUCK_ATTACK_SECONDS` for a non-finite one) and the depth of a
+    declared duck only, which is finite, so a skipped write would have stored the same number and the same
+    coefficient. Not for any caller of the public class: the `Ducking` constructor derives its coefficient from the
+    RAW attack (a NaN gives 1 ms while it stores 0.1), so a direct caller that built one with a NaN and then set 0.1
+    would see that correction skipped; the constructor is unchanged (a sound change on a latent path, a maintainer
+    call). The compare departs from the letter of the cached-config rule (compare and store substituted values,
+    `/review-loop`): it compares the raw arriving depth with the clamped stored one, so a constant depth above 1 never
+    matches and its setter runs every block, exactly as on HEAD. Accepted and documented at the site: exact, no
+    regression, and a cache of the arriving values would need invalidating on a new `Ducking` and on `takeOver`. The
+    comment at the site is the guard. **Numbers** (HEAD / tree): at budget 250, HEAD 82.3 to 122.8 B in 11 rounds
+    (the same range in the 8 of them interleaved with the tree) / the tree 70.9 to 108.3 in 8, and the profiler books
+    nothing in `configure` on the tree (the other entries identical); at 920, interleaved, 45.0 to 97.2 / 42.1 to
+    82.3 (18 rounds each). `E-kat-dyn` (the duck with modulated knobs) 50.5 to 71.6 / 54.8 to 83.0 and `E-kat-mix`
+    50.7 to 57.2 / 45.0 to 62.6 (4 rounds each), within noise. The allocation check, GREEN 80 of 80: `E-duck` 56.6,
+    56.7, 71.4 B (JVM 0). **Likely the tail, not shown:** at 250 the tree still read up to 108.3 in one round, inside
+    the old tail band, which the profiler run did not attribute to the duck; and no tail round in 18 at V8's own
+    budget is what either reading predicts. **The line is re-set from 152 to 112** (30 B above the worst healthy
+    round, still above the old tail's rounds); after a few full checks without a round near 100 it moves to 96 with
+    the other stage lines (`alloc-budgets.txt`, E-duck's note). Bit for bit: see item 35 (the same tree, peaks and
+    both test suites). The setters still run every block while a modulated depth or attack moves (`E-kat-dyn`), which
+    this skip does not reach: item 45.
 39. **DONE (2026-10-16): the Katalyst knob noises crossed three doubles per noise per block on V8; `fbm` now calls
     `noise` at one site and the knob's noise arms are methods of their own, and a noise knob reads what the fader
     reads.** Reported (added 2026-10-12): `KatalystKnobProgram.sample` called `PerlinNoise.fbm(x, octaves,
@@ -2160,6 +2264,18 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     So `E-kat-gates` guards the per-sample class on the delay and reverb paths, `E-kat-mix` `KnobGlide.retarget` and
     the per-sample class; the isFinite group (G1) was not re-measured, and the header withdraws the claim that
     `E-kat-mix` catches it. S.
+45. **Three per-block sites of 36's and 38's shape, not seen red** (numbered after the last item, added 2026-10-19).
+    Each puts a double across a call, or a stdlib call, on a per-block path, where V8 boxes the double whenever it
+    leaves the call out (`audio/ref/performance.md`); none read over its line on 2026-10-19 (`E-gain` 31 B, `E-distort`
+    36 B, `E-kat-dyn` 78 B, the allocation check's medians), so each is a candidate, not a measured box:
+    - `KatalystGainWriter.apply` (`KatalystSlotWriters.kt`) hands its `factor`, a `Double`, to
+      `KatalystGainEffect.configure(gain: Double)` every block the orbit has an owner: the shape item 36 removed from
+      the arithmetic writer. Remedy if it boxes: hand the knob (or a holder) and read the value in `configure`.
+    - `KatalystDistortEffect.configure` tests `amount.isFinite()` with the stdlib function on the per-block path (the
+      knob expressions step 6 class that `isFiniteInline` exists for).
+    - The `Ducking` setters still run every block while a MODULATED depth or attack moves (`E-kat-dyn`): item 38's
+      skip only reaches an unchanged setting. Remedy if it boxes: item 40's, one call through a holder.
+    Behaviour-neutral each (Q38). Source: review round 1 of items 35, 36 and 38 (2026-10-19). S.
 
 ## 6. The audit's later steps and its open decisions
 

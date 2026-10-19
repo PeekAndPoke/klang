@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
 import io.peekandpoke.klang.audio_be.KnobGlide
 import io.peekandpoke.klang.audio_be.effects.Ducking
+import io.peekandpoke.klang.audio_be.utils.sameKnob
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 
 /**
@@ -258,8 +259,32 @@ class KatalystDuckEffect(
             ducking = live
         } else {
             live = existing
-            live.attackSeconds = settings.attackSeconds
-            live.depth = settings.depth
+
+            // An unchanged setting writes nothing (engine follow-up 38, 2026-10-19). This runs on every block the
+            // orbit has an owner, and on V8 the two setters, with the stdlib `isFinite` and `coerceIn` and the
+            // attack's coefficient inside them, are calls a double crosses as a heap number whenever V8 leaves them
+            // out of the per-block path (`audio/ref/performance.md`): with V8's inlining budget squeezed, two heap
+            // numbers per block booked here; likely `E-duck`'s rare tail, not shown.
+            //
+            // Exact for what [KatalystDuckWriter] hands (a finite attack, `DUCK_ATTACK_SECONDS` for a non-finite
+            // one, and a declared duck's finite depth): the setter keeps a finite value as it is, and [sameKnob]
+            // tells -0.0 from 0.0, so a skipped write would have stored the same number and the same coefficient.
+            // Not for every caller of [Ducking]: its constructor derives the coefficient from the RAW attack (a NaN
+            // gives 1 ms while it stores 0.1), so a caller that built one with a NaN and then set 0.1 would see that
+            // correction skipped. The constructor is left as it is (a sound change on a latent path).
+            //
+            // A stated exception to the cached-config rule (`/review-loop`: compare and store the substituted
+            // values): this compares the raw arriving depth with the clamped stored one, so a constant depth above 1
+            // never matches and its setter runs every block, as before. Exact and no regression, where a cache of
+            // the arriving values would need invalidating on a new [Ducking] and on [takeOver]. No test can pin the
+            // boxes; this comment is the guard.
+            if (!sameKnob(stored = live.attackSeconds, arriving = settings.attackSeconds)) {
+                live.attackSeconds = settings.attackSeconds
+            }
+
+            if (!sameKnob(stored = live.depth, arriving = settings.depth)) {
+                live.depth = settings.depth
+            }
         }
 
         // Aim the glide at what the instance STORED, never at the raw setting: the setter coerces

@@ -26,8 +26,10 @@ and goes to the maintainer.
    `configure`), 34 (the bus distort's oversampled path), 39 to 41 (the Katalyst knob expressions' residues: the knob
    noises' `fbm`, the compressor's five setters, a moving delay time, reverb size and phaser breakpoint), 10c and 10d
    (fm).
-2. The known tails of the allocation check, each a breach that a rerun clears (the rule is in the header of
-   `audio_benchmark/alloc-budgets.txt`): 4 (`spluck-a`), 36 (`E-arith`'s second mode), 38 (`E-duck`).
+2. The known tail of the allocation check, a breach that a rerun clears (the rule is in the "Known tails" paragraph
+   of `audio_benchmark/alloc-budgets.txt`): 4 (`spluck-a`). 36 (`E-arith`'s second mode) and 38 (a boxing site in the
+   duck's `configure`, likely `E-duck`'s tail, not shown) are done (2026-10-19), and so is 35 (a gliding `div` slow
+   on the JVM); their siblings, not seen red, are item 45.
 3. Done 2026-10-15: songs move freely (`../../tasks-archive/2026-10/20261015-song-checks-move-freely.md`).
    Then the behaviour changes decided 2026-10-13: engine follow-up 42 (a delay or reverb switched off fades, Q39, done 2026-10-16: corpus unmoved, a listening pair per stage in `tmp/listening/delay-reverb-fade/`), 43 (solo reacts at once, Q28, done 2026-10-16), 44 (`duty(width)`, Q29, done 2026-10-16). Larger, decided, its own task: typed Kotlin doors
    ([`../../tasks-archive/2026-10/20261016-kotlin-typed-doors.md`](../../tasks-archive/2026-10/20261016-kotlin-typed-doors.md), Q24, done 2026-10-16: rollout S1 to S7, the script doors internal)

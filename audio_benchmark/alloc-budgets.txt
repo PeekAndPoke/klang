@@ -118,7 +118,19 @@
 #   of 33 tree rounds read 97.6 to 108.8 (HEAD has it too, 103.1 in 8 rounds), and one run held two tail rounds and
 #   read RED at 98 against 96. A tail that common is not absorbed by the median of 3, so 152 sits 43 B above the
 #   highest tail round and still far under the per-sample class it guards (one heap number per sample, about 2 KB per
-#   block). The tail is not located: docs/tasks/in-progress/engine-follow-ups.md, item 38.
+#   block). The tail was not located then: docs/tasks/in-progress/engine-follow-ups.md, item 38 (and the note below).
+#   Re-set at engine follow-up 38 (2026-10-19) from 152 to 112, by the same rule, after a per-block boxing site was
+#   removed from the duck's `configure`: its two `Ducking` setters (and the stdlib calls inside them) took their
+#   doubles as heap numbers wherever V8 left them out, and an unchanged setting now writes nothing. The site was
+#   located through a squeezed inlining budget, not through the tail itself: at V8's own budget the tail was too rare
+#   that day to count (1 HEAD round in 45, 97.2). With the budget squeezed to 250 HEAD read 82.3 to 122.8 B in 11
+#   rounds (the same range in the 8 of them interleaved with the fix), and the profiler booked 32 B per block in the
+#   duck's `configure`; the fix read 70.9 to 108.3 in 8, with nothing booked there. That this site was THE tail is
+#   likely, not shown: the fix's 108.3 sits inside the old tail band, and no tail round in 18 at V8's own budget is
+#   what either reading predicts. Healthy rounds that day (a loaded machine): the fix 42.1 to 82.3 B in 18 rounds and
+#   the full check's 56.6, 56.7, 71.4 (medians about 57 to 66); HEAD 45.0 to 97.2 in 45 rounds. 112 is 30 B above the
+#   worst healthy round and still above the old tail (97.6 to 108.8); after a few full checks without a round near 100
+#   the line moves to 96 with the other stage lines.
 #   S-doors was added at engine follow-up 2, step 4 (2026-10-12): sprudel's per-event path, no engine. One step
 #   queries one cycle of note("c") with voice and bus doors (lpf, adsr, analog, reverb, delay, phaser, body,
 #   compressor), converts the event with toVoiceData and hands it on as the browser does (the wire encode on JS, the
@@ -220,19 +232,22 @@
 #   The JVM can also optimise a box away: review round 1 routed the ladder's constant reads through a nullable read
 #   (item 12's class) and the JVM read 0 B, while V8 read one more heap number.
 #
-# Known tails (records only; a red full check on these two lines is read by hand):
+# Known tails (records only; a red full check on the spluck-a line is read by hand):
 # - spluck-a (items 4 and 7): a healthy round sometimes reads 288 to 459 B against 1 to 53. Item 7 pooled 9 of 292
 #   rounds; engine follow-up 2, step 5 read 11 of 51 tree rounds high (2026-10-11 and 12), so a run went red by the
 #   median in about 1 run in 9. The tail overlaps HEAD's old code (407 to 566) and sits above the item 8 mutant (381),
 #   which is why the line cannot move above it.
-# - E-arith (item 36, its second mode): 4 of the same 51 tree rounds read 181 to 196 B against its line of 96; one
-#   run went red at a median of 191 (rounds 190.9, 195.6, 51.2), and HEAD's copy reads it too. The Ultra 0.112.0
-#   update (2026-10-19) read it red twice (175.6, 20.3, 169.9 and 174.7, 45.5, 163.6); an A/B of this case alone
-#   read 4 of 8 rounds high on 0.112.0 and 3 of 8 on 0.111.0 (high 160 to 182 B, low 22 to 45): the same tail,
-#   at a higher rate that day.
-# The rule for both: a breach with every round over the line is a regression (HEAD's code and the mutants read high
-# in every round of every run); a breach with a round under the line is the tail. Run the check once more to confirm;
-# a second breach of the tail's shape is still the tail.
+# The rule: a breach with every round over the line is a regression (HEAD's code and the mutants read high in every
+# round of every run); a breach with a round under the line is the tail. Run the check once more to confirm; a second
+# breach of the tail's shape is still the tail. One exception on record: engine follow-up 10d (2026-10-19) read a
+# spluck-a breach with every round over the line (319.7, 448.9, 458.1) on a change that does not touch the pluck, and
+# an A/B of the base commit and the change by the check's method (18 rounds each) read no high round on either side.
+# So an all-high spluck-a breach on a change that cannot reach the pluck is settled by such an A/B, not by its shape.
+# Closed tails (no longer read by hand):
+# - E-arith (item 36, its second mode, 160 to 196 B against 20 to 50, in up to half the rounds): fixed at engine
+#   follow-up 36 (2026-10-19). The arithmetic writer handed each stage's operand to `configure` as a double, which
+#   V8 left out of the cylinders' per-block path in some processes. The line stays at 96: the fix's healthy rounds
+#   19.4 to 62.1 B (38 rounds) and the full check's 31.8, 51.0, 24.8; HEAD that day 9.0 to 181.8, 12 of 30 rounds high.
 #
 # case             platform  budget  guards
 saw                v8        56      the control (a jump means the method or the bundle changed)
@@ -273,7 +288,7 @@ E-stages           v8        96      item 1: a revert of everything; the delay's
 E-stages           jvm       6       item 1, the three orbit stages
 E-C-n1             v8        13210   item 2 steps 3 and 5: the registry and the sound name per note, a needless lowercase (not the dispatcher's map: its comment)
 E-C-n1             jvm       6628    the voice build per note; one Double per note (item 2 allocates nothing on the JVM)
-E-arith            v8        96      the eight arithmetic stages, constant operands: the per-sample laws and once per block (the KDoc of applyLaw)
+E-arith            v8        96      the eight arithmetic stages, constant operands: the per-sample laws and once per block (the KDoc of applyLaw); the operand by reference (item 36: a revert reads high in about half the rounds)
 E-arith            jvm       6       the eight arithmetic stages, constant operands
 E-arith-glide      v8        500     the arithmetic glide: the per-sample ramp, div's reciprocal, an unset cap arriving at once (with the note path)
 E-arith-glide      jvm       211     the arithmetic glide; 204 to 207 B of it is the note path (since the merge of 2026-10-11)
@@ -285,7 +300,7 @@ E-eq               v8        96      the orbit eq: two bells and a tap
 E-eq               jvm       6       the orbit eq
 E-gain             v8        96      the group fader off unity
 E-gain             jvm       6       the group fader off unity
-E-duck             v8        152     the duck with a sounding sidechain (its tail: item 38)
+E-duck             v8        112     the duck with a sounding sidechain (item 38, the per-block setters: guarded by the comment at the site)
 E-duck             jvm       6       the duck with a sounding sidechain
 E-parallel         v8        96      items 33 and 34, a single view per block and the sub-pool map; parallel, a distorted branch and its twin: the per-sample class
 E-parallel         jvm       6       parallel, a distorted branch and its phase twin

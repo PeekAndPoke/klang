@@ -384,6 +384,13 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-19 Engine follow-ups 35, 36 and 38, bit-identical: the arithmetic stage runs each operator's loops in a
+  method of its own (the JVM compiled them on one shared profile; the gliding `div` 1.61 to 1.94 µs per block in
+  suite order, 0.29 and 0.52 after), its writer hands the knob to `configure` instead of the value (`E-arith`'s second
+  mode on V8 gone: 0 of 38 rounds high against HEAD's 12 of 30), and the duck's `configure` skips an unchanged
+  setting (a boxing site removed, located through a squeezed inlining budget; likely `E-duck`'s tail, not shown; its
+  line 152 to 112); the siblings not seen red are item 45: `docs/tasks/in-progress/engine-follow-ups.md`, items 35,
+  36, 38 and 45
 - 2026-10-19 Engine follow-ups 10c and 10d: the fm's knob reads no longer box on V8 (`prepareModEnvelope` and
   `finiteOr` Kotlin `inline`, `finiteOr` over `isFiniteInline`; bit-identical, JVM 0 B); open and parked for the
   maintainer (item 30's class): one heap number per fm per block for the modulator's frequency and one per

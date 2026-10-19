@@ -462,6 +462,9 @@ internal class KatalystGainWriter(
 /**
  * An arithmetic stage's operand, handed on as read: the stage itself decides what a non-finite one means (its
  * identity, or "pass the bus" for a cap or a floor), so the rule has one home ([KatalystArithmeticEffect]).
+ *
+ * The knob is handed over by reference and the stage reads its value, never the value itself (engine follow-up 36,
+ * 2026-10-19): see [KatalystArithmeticEffect.configure].
  */
 internal class KatalystArithmeticWriter(
     private val fx: KatalystArithmeticEffect,
@@ -473,7 +476,7 @@ internal class KatalystArithmeticWriter(
     }
 
     override fun apply() {
-        fx.configure(operand.value)
+        fx.configure(operand)
     }
 
     override val isModulated: Boolean = operand.isModulated
