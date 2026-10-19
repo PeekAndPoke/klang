@@ -353,7 +353,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 - **Engine pass 1 follow-ups**: `docs/tasks/in-progress/engine-follow-ups.md` (the V8 residues, the phase-pool order, the
   audit's later steps and open decisions).
 - **Open, correctness**: `docs/tasks-archive/2026-10/20261014-audit-audio-backend-leftovers.md` (§2 worklet tests waits on the maintainer;
-  §4, the cut-group fade, done by lifecycle step 4), `docs/tasks/svf-coefficient-cache-never-engages.md`,
+  §4, the cut-group fade, done by lifecycle step 4),
   `docs/tasks-archive/2026-10/20261014-bugfix-non-finite-pitch-strip-and-signals.md` (two NaN signal paths; its strip half closed with pitch
   pipeline step 4),
   `docs/tasks-archive/2026-10/20261007-shared-modulator-memo-rate.md` (two residues, both an author rule today: a shared modulator that reads

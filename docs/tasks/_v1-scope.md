@@ -121,8 +121,8 @@ tutorial phase instead of blocking it.
 **Pure performance, invisible to the surface:** unified-eq **D9** and its ramp phase (cut
 2026-08-31 with the sprudel `band`/`tap` decision), `voice-culling` (✅ DONE 2026-09-15, [archived](../tasks-archive/2026-09/20260915-voice-culling.md)),
 `future/optimize-constant-control-fast-path`, `reduce-js-bundle-size`, and
-`svf-coefficient-cache-never-engages.md` (opened 2026-08-31; the hottest path in the engine, but
-it changes no surface and no sound, so it fails the rule).
+`svf-coefficient-cache-never-engages` (opened 2026-08-31; the hottest path in the engine, but
+it changes no surface and no sound, so it fails the rule; closed 2026-10-19, built, measured and not kept: [archived](../tasks-archive/2026-10/20261019-svf-coefficient-cache-never-engages.md)).
 
 **Additive, so a tutorial written before them does not become wrong:** `filter-envelope-configuration`
 (the filter curve doors; done 2026-09-25 in phase 3 step 5b c2), `sprudel-field-accessors` and its `klangscript-native-object-operators`

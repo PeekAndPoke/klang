@@ -23,7 +23,7 @@ DSL surface and wire type) — see `docs/tasks-archive/2026-08/20260825-filter-f
 
 **Still open, all of it the maintainer's:** the by-ear retunes listed below, a `JsCompatTests` run
 on a GraalVM runtime, and two engine follow-ups —
-`docs/tasks/svf-coefficient-cache-never-engages.md` and the band-shaped engine filters still
+`docs/tasks-archive/2026-10/20261019-svf-coefficient-cache-never-engages.md` (closed 2026-10-19, not kept) and the band-shaped engine filters still
 documenting `@param cutoffHz Center frequency`. `band`/`tap` on sprudel remain deferred behind
 D9's static tier, which has not landed.
 
