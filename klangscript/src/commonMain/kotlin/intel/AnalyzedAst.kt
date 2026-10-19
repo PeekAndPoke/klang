@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.script.intel
 
+import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.common.strings.buildLineOffsets
 import io.peekandpoke.klang.common.strings.lineColToOffset
 import io.peekandpoke.klang.script.ast.Argument
@@ -60,7 +61,7 @@ import io.peekandpoke.klang.script.types.KlangType
  * Built once per code change; editor features query it via O(1) lookups instead of
  * re-running type inference on every hover or completion request.
  */
-class AnalyzedAst(
+class AnalyzedAst internal constructor(
     /** The parsed AST. */
     val ast: Program,
     /** The original source code. */
@@ -80,6 +81,8 @@ class AnalyzedAst(
      * popup as a local instead of looking the name up in the registry.
      */
     private val bindingMap: Map<Identifier, TypeScope.LocalBinding>,
+    /** The program's scope, the root of the scope tree [localsAt] reads. */
+    private val programScope: LocalScopeRange,
     /** Diagnostics from static analysis (errors, warnings, hints). */
     val diagnostics: List<AnalyzerDiagnostic>,
 ) {
@@ -139,6 +142,83 @@ class AnalyzedAst(
 
     /** The local binding [identifier] resolved to (`let`, `const`, `export`, a lambda parameter), or null for a global. */
     fun localBindingOf(identifier: Identifier): TypeScope.LocalBinding? = bindingMap[identifier]
+
+    /**
+     * The locals visible at the cursor [pos] in [text]: the `let` / `const` / `export` names and the arrow parameters
+     * of the innermost scope that encloses the cursor and of every scope around it, each declared above the cursor.
+     * An inner binding shadows an outer one of the same name, so every name comes once; the innermost scope comes
+     * first. Code completion's entry point for the song's own names.
+     *
+     * A name a closure only sees because it is declared further down ("Locals declared further down",
+     * `ref/intel-analyzer.md`) is not offered: completion offers what is declared above the cursor.
+     *
+     * A scope's range runs from the token that opens it to the last token the analysis met inside it (the AST keeps
+     * no closing brace), so a cursor on the blank stretch between a block's last statement and its `}` reads the
+     * enclosing scope: fewer locals, never a wrong one.
+     *
+     * [text] is the editor's text, which can be ahead of the analysed [source]: while the text does not parse, the
+     * editor keeps the last good analysis. The cursor is then mapped back across the edit (the text both share
+     * before and after it): a cursor before or after the edit reads the same place in [source], a cursor inside it
+     * reads the edited stretch, the innermost scope that holds all of it and the declarations above it. When the
+     * typed text repeats the text around it, where the edit starts is ambiguous; the stretch then starts at the
+     * earliest place it can. So the stale analysis gives fewer locals at worst, never one declared below the cursor
+     * or in a sibling scope.
+     */
+    fun localsAt(pos: Int, text: String = source): List<TypeScope.LocalBinding> {
+        if (text == source) {
+            return localsIn(from = pos, to = pos)
+        }
+
+        // The edit replaced source[editStart, oldEnd) with text[editStart, newEnd). The shared prefix and suffix can
+        // overlap (`let ` typed in front of `let b`): any start from shorter - rawSuffix up to prefix fits, so the
+        // stretch takes the earliest, and the latest end.
+        val prefix = source.commonPrefixWith(text).length
+        val rawSuffix = source.commonSuffixWith(text).length
+        val shorter = minOf(source.length, text.length)
+        val editStart = minOf(prefix, shorter - rawSuffix)
+        val suffix = minOf(rawSuffix, shorter - prefix)
+        val oldEnd = source.length - suffix
+        val newEnd = text.length - suffix
+
+        return when {
+            pos <= editStart -> localsIn(from = pos, to = pos)
+            pos >= newEnd -> (pos - newEnd + oldEnd).let { localsIn(from = it, to = it) }
+            else -> localsIn(from = editStart, to = oldEnd)
+        }
+    }
+
+    /**
+     * The locals of the innermost scope that holds all of `source[from, to]` and of the scopes around it, each
+     * declared before [from].
+     */
+    private fun localsIn(from: Int, to: Int): List<TypeScope.LocalBinding> {
+        var innermost = programScope
+        var next = innermost.childContaining(from = from, to = to)
+
+        while (next != null) {
+            innermost = next
+            next = innermost.childContaining(from = from, to = to)
+        }
+
+        val seen = mutableSetOf<String>()
+        val result = mutableListOf<TypeScope.LocalBinding>()
+        var scope: LocalScopeRange? = innermost
+
+        while (scope != null) {
+            // Inside one scope the latest declaration of a name above the cursor wins
+            for (binding in scope.bindings.asReversed()) {
+                val declPos = binding.declPos ?: continue
+
+                if (declPos < from && seen.add(binding.name)) {
+                    result.add(binding)
+                }
+            }
+
+            scope = scope.parent
+        }
+
+        return result
+    }
 
     /**
      * Resolve the receiver type for code completion triggered at offset [pos]
@@ -288,7 +368,7 @@ class AnalyzedAst(
         ): AnalyzedAst {
             val astIndex = AstIndex.build(program, source)
             val inferrer = ExpressionTypeInferrer(registry)
-            val builder = TypeMapBuilder(inferrer)
+            val builder = TypeMapBuilder(inferrer = inferrer, lineOffsets = buildLineOffsets(source))
             builder.visitStatements(program.statements)
             val typeMap = builder.map
             val bindingMap = builder.bindingMap
@@ -304,6 +384,7 @@ class AnalyzedAst(
                 registry = registry,
                 typeMap = typeMap,
                 bindingMap = bindingMap,
+                programScope = builder.programScope,
                 diagnostics = diagnostics,
             )
         }
@@ -321,25 +402,82 @@ class AnalyzedAst(
  *
  * The builder maintains a [TypeScope] stack mirroring the interpreter's
  * `runtime/Environment.kt` lookup rules (block-scope for let/const/export,
- * shadowing of outer scopes and of registry globals).
+ * shadowing of outer scopes and of registry globals), and beside it the tree of
+ * [LocalScopeRange]s, each scope's place in the source and its bindings, for
+ * [AnalyzedAst.localsAt].
  */
-private class TypeMapBuilder(private val inferrer: ExpressionTypeInferrer) {
+private class TypeMapBuilder(
+    private val inferrer: ExpressionTypeInferrer,
+    private val lineOffsets: IntArray,
+) {
     val map = mutableMapOf<Expression, KlangType?>()
     val bindingMap = mutableMapOf<Identifier, TypeScope.LocalBinding>()
 
-    private var scope: TypeScope = TypeScope()
+    /** The program's scope range, the root of the tree [AnalyzedAst.localsAt] reads. */
+    val programScope = LocalScopeRange(start = 0, parent = null)
 
-    private inline fun <T> withChildScope(deferred: Boolean = false, block: () -> T): T {
+    private var scope: TypeScope = TypeScope()
+    private var range: LocalScopeRange = programScope
+
+    /**
+     * Above 0 inside a template literal's `${...}`: the parser reads an interpolation on its own, so the locations
+     * there count from the interpolation's start, not the source's. Those nodes widen no range, and a scope opened
+     * there gets an empty range (fewer locals, never a wrong one).
+     */
+    private var interpolationDepth = 0
+
+    /**
+     * Run [block] in a child scope that opens at the source offset [start]. When it closes, the enclosing range
+     * reaches at least as far as the child did.
+     */
+    private inline fun <T> withChildScope(start: Int, deferred: Boolean = false, block: () -> T): T {
         val saved = scope
+        val savedRange = range
         scope = if (deferred) scope.deferredBody() else scope.child()
+        range = LocalScopeRange(start = start, parent = savedRange).also { savedRange.children.add(it) }
         try {
             return block()
         } finally {
+            savedRange.extendTo(range.end)
             scope = saved
+            range = savedRange
         }
     }
 
+    /** Source offset where [location] starts, or where the walk has got to when the node carries no location. */
+    private fun startOf(location: SourceLocation?): Int {
+        if (interpolationDepth > 0) {
+            return range.end
+        }
+
+        location ?: return range.end
+
+        return lineColToOffset(lineOffsets = lineOffsets, line = location.startLine, column = location.startColumn)
+            ?: range.end
+    }
+
+    /** Widen the current scope range to the end of the token at [location]. */
+    private fun extendRange(location: SourceLocation?) {
+        if (interpolationDepth > 0) {
+            return
+        }
+
+        location ?: return
+
+        lineColToOffset(lineOffsets = lineOffsets, line = location.endLine, column = location.endColumn)?.let {
+            range.extendTo(it)
+        }
+    }
+
+    /** Bind [binding] in the current scope and record it in the current scope range. */
+    private fun bindLocal(binding: TypeScope.LocalBinding): List<Identifier> {
+        range.bindings.add(binding)
+
+        return scope.bind(binding)
+    }
+
     fun visitExpr(expr: Expression) {
+        extendRange(expr.location)
         map[expr] = inferrer.inferType(expr, scope)
         if (expr is Identifier) {
             scope.resolveReference(expr)?.let { bindingMap[expr] = it }
@@ -409,19 +547,28 @@ private class TypeMapBuilder(private val inferrer: ExpressionTypeInferrer) {
 
             is IfExpression -> {
                 visitExpr(expr.condition)
-                withChildScope { visitStatements(expr.thenBranch) }
+                // The `else` block opens where the `if` block's last token ends
+                val thenEnd = withChildScope(start = startOf(expr.location)) {
+                    visitStatements(expr.thenBranch)
+                    range.end
+                }
                 when (val e = expr.elseBranch) {
-                    is ElseBranch.Block -> withChildScope { visitStatements(e.statements) }
+                    is ElseBranch.Block -> withChildScope(start = thenEnd) { visitStatements(e.statements) }
                     is ElseBranch.If -> visitExpr(e.ifExpr)
                     null -> {}
                 }
             }
 
             is TemplateLiteral -> {
-                for (part in expr.parts) {
-                    if (part is TemplatePart.Interp) {
-                        visitExpr(part.expression)
+                interpolationDepth++
+                try {
+                    for (part in expr.parts) {
+                        if (part is TemplatePart.Interp) {
+                            visitExpr(part.expression)
+                        }
                     }
+                } finally {
+                    interpolationDepth--
                 }
             }
             // Leaf expressions — no children to recurse into
@@ -439,10 +586,17 @@ private class TypeMapBuilder(private val inferrer: ExpressionTypeInferrer) {
         expr: ArrowFunction,
         paramTypes: List<KlangType>?,
         deferred: Boolean = false,
-    ) = withChildScope(deferred = deferred) {
+    ) = withChildScope(start = startOf(expr.location), deferred = deferred) {
+        // A parameter is declared at the arrow: visible in the whole body
+        val declPos = range.start
         expr.parameters.forEachIndexed { i, p ->
-            scope.bind(
-                TypeScope.LocalBinding(name = p, type = paramTypes?.getOrNull(i), kind = KlangSymbol.LocalKind.PARAM)
+            bindLocal(
+                TypeScope.LocalBinding(
+                    name = p,
+                    type = paramTypes?.getOrNull(i),
+                    kind = KlangSymbol.LocalKind.PARAM,
+                    declPos = declPos,
+                )
             )
         }
         when (val body = expr.body) {
@@ -466,9 +620,19 @@ private class TypeMapBuilder(private val inferrer: ExpressionTypeInferrer) {
         }
     }
 
+    /**
+     * Where a `let` / `const` / `export` becomes visible, called right after its [initializer] was visited. An arrow
+     * initializer sees its own name (a recursive local, `const f = () => f()`): the keyword at [stmtStart]. Any other
+     * initializer runs before the interpreter defines the name, so the name is visible after the initializer's last
+     * token (`let osc = run(os` offers no `osc`, `let g = g.gain(2)` reads the outer `g`).
+     */
+    private fun declPosOf(initializer: Expression?, stmtStart: Int): Int {
+        return if (initializer == null || initializer is ArrowFunction) stmtStart else range.end
+    }
+
     /** Bind a declaration, and give the identifiers that read it early from a deferred body its binding and type. */
     private fun bindDeclaration(binding: TypeScope.LocalBinding) {
-        scope.bind(binding).forEach { reader ->
+        bindLocal(binding).forEach { reader ->
             bindingMap[reader] = binding
             map[reader] = binding.type
         }
@@ -531,19 +695,33 @@ private class TypeMapBuilder(private val inferrer: ExpressionTypeInferrer) {
     }
 
     fun visitStmt(stmt: Statement) {
+        extendRange(stmt.location)
+        // Where the statement's keyword starts: a declaration's position, a loop scope's start
+        val stmtStart = startOf(stmt.location)
+
         when (stmt) {
             is ExpressionStatement -> visitExpr(stmt.expression)
             is LetDeclaration -> {
                 stmt.initializer?.let { visitDeferrable(it) }
                 val type = stmt.initializer?.let { map[it] }
-                bindDeclaration(TypeScope.LocalBinding(name = stmt.name, type = type, kind = KlangSymbol.LocalKind.LET))
+                bindDeclaration(
+                    TypeScope.LocalBinding(
+                        name = stmt.name,
+                        type = type,
+                        kind = KlangSymbol.LocalKind.LET,
+                        declPos = declPosOf(initializer = stmt.initializer, stmtStart = stmtStart),
+                    )
+                )
             }
 
             is ConstDeclaration -> {
                 visitDeferrable(stmt.initializer)
                 bindDeclaration(
                     TypeScope.LocalBinding(
-                        name = stmt.name, type = map[stmt.initializer], kind = KlangSymbol.LocalKind.CONST
+                        name = stmt.name,
+                        type = map[stmt.initializer],
+                        kind = KlangSymbol.LocalKind.CONST,
+                        declPos = declPosOf(initializer = stmt.initializer, stmtStart = stmtStart),
                     )
                 )
             }
@@ -552,7 +730,10 @@ private class TypeMapBuilder(private val inferrer: ExpressionTypeInferrer) {
                 visitDeferrable(stmt.initializer)
                 bindDeclaration(
                     TypeScope.LocalBinding(
-                        name = stmt.name, type = map[stmt.initializer], kind = KlangSymbol.LocalKind.EXPORT
+                        name = stmt.name,
+                        type = map[stmt.initializer],
+                        kind = KlangSymbol.LocalKind.EXPORT,
+                        declPos = declPosOf(initializer = stmt.initializer, stmtStart = stmtStart),
                     )
                 )
             }
@@ -560,15 +741,15 @@ private class TypeMapBuilder(private val inferrer: ExpressionTypeInferrer) {
             is ReturnStatement -> stmt.value?.let { visitExpr(it) }
             is WhileStatement -> {
                 visitExpr(stmt.condition)
-                withChildScope { visitStatements(stmt.body) }
+                withChildScope(start = stmtStart) { visitStatements(stmt.body) }
             }
 
             is DoWhileStatement -> {
-                withChildScope { visitStatements(stmt.body) }
+                withChildScope(start = stmtStart) { visitStatements(stmt.body) }
                 visitExpr(stmt.condition)
             }
 
-            is ForStatement -> withChildScope {
+            is ForStatement -> withChildScope(start = stmtStart) {
                 // `for (let i = 0; ...)` — the init's binding must be visible to
                 // condition/update/body, so they all share one scope started here.
                 stmt.init?.let { visitStmt(it) }

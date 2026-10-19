@@ -100,6 +100,21 @@ class CompletionProvider(private val registry: KlangDocsRegistry) {
     }
 
     /**
+     * Completions for the song's own names: one per binding of [locals] (from `AnalyzedAst.localsAt`) whose name
+     * starts with [prefix] (case-insensitive; pass an empty string for all).
+     *
+     * A function-typed local is a [CompletionSuggestion.Kind.FUNCTION], any other a
+     * [CompletionSuggestion.Kind.PROPERTY]. The detail says how it was declared and its inferred type when known,
+     * in the words of the hover (the kind's [KlangSymbol.LocalKind.display], the type's [KlangType.render]):
+     * `let . IgnitorDsl`, `param`.
+     */
+    fun localCompletions(locals: List<TypeScope.LocalBinding>, prefix: String): List<CompletionSuggestion> {
+        return locals
+            .filter { prefix.isEmpty() || it.name.startsWith(prefix, ignoreCase = true) }
+            .map { it.toLocalSuggestion() }
+    }
+
+    /**
      * Import completions: available library names.
      */
     fun importCompletions(availableLibraries: Set<String>): List<CompletionSuggestion> {
@@ -176,6 +191,19 @@ private fun KlangSymbol.toMemberSuggestion(receiverType: KlangType): CompletionS
         kind = matchingVariant.toKind(),
         detail = buildDetail(receiverType.simpleName, matchingVariant?.library ?: (getLibrary()?.name ?: "")),
         description = matchingVariant?.description?.take(MAX_DESCRIPTION_LENGTH) ?: "",
+        isAlias = false,
+        aliasFor = null,
+    )
+}
+
+private fun TypeScope.LocalBinding.toLocalSuggestion(): CompletionSuggestion {
+    val known = type
+
+    return CompletionSuggestion(
+        name = name,
+        kind = if (known?.isFunction == true) CompletionSuggestion.Kind.FUNCTION else CompletionSuggestion.Kind.PROPERTY,
+        detail = buildDetail(kind.display.lowercase(), known?.render() ?: ""),
+        description = "",
         isAlias = false,
         aliasFor = null,
     )

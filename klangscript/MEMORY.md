@@ -35,7 +35,9 @@ record), and put the narrative in the task record, which gets archived. The full
 - **Editor reads a name by position**: the hover of a bare name shows its top-level variants (a name stdlib and
   sprudel share hovers as sprudel's object, an alias with the object's call form), a member its receiver's method;
   which later locals a closure sees is stated once in `ref/intel-analyzer.md`, "Locals declared further down";
-  a local shadows a global for the checker and the param tools alike. `ref/intel-analyzer.md`.
+  a local shadows a global for the checker and the param tools alike. Completion offers the song's own names declared
+  above the cursor (`AnalyzedAst.localsAt`, the cursor mapped back across an edit while the text does not parse).
+  `ref/intel-analyzer.md`.
 - **Stdlib doors** (`klangscript-libs`): the oscillator doors are `Ignitor.name(freq?, configure?)` (short `Ign.name`) with the knobs
   on immutable oscillator builder wrappers (in `audio_bridge/IgnitorBuilders.kt` with typed members since the typed-doors
   rollout S2, the script knobs internal renamed variants in `klangscript-libs/.../IgnitorBuilders.kt`); `OscSineBuilder` carries `harmonics`,
@@ -169,3 +171,5 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
   `internal` (S7); public there only what is no door (`ignitorSlotName` / `katalystSlotName`, `klangScript()`,
   `stdlibLib`, `KlangStdLib`). A KSP fix on the way: a top-level extension function's own file is a source
   (`collectSourceFiles`, S6) (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`).
+- 2026-10-19: code completion offers the song's own names (`let`, `const`, `export`, lambda parameters) through
+  `AnalyzedAst.localsAt` and `CompletionProvider.localCompletions` (`docs/tasks/editor-local-symbol-completion.md`).

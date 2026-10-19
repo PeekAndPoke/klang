@@ -15,6 +15,7 @@ All that logic lives inside `AnalyzedAst.build`.
 | `getExpressionTypeEndingAt(offset)`                | For dot-completion: type of the chain that ends just before [offset].             |
 | **`symbolAt(pos)`**                                | **Hover entry point.** Returns the `KlangSymbol` to render in the popup, or null. |
 | **`receiverTypeBeforeDot(pos)`**                   | **Completion entry point.** Wraps `getExpressionTypeEndingAt`.                    |
+| **`localsAt(pos, text)`**                          | **Completion of the song's own names.** The locals visible at the cursor.         |
 | `diagnostics`                                      | Named-arg checker output.                                                         |
 
 `symbolAt(pos)` internally handles:
@@ -101,6 +102,20 @@ shadow the registry. This is why `ExpressionTypeInferrer.inferIdentifier` return
 resolved binding's type, null included, before falling through to the registry, instead of
 `scope.resolve(id.name)?.type ?: registry.get(...)`.
 
+## Locals at a cursor (`localsAt`)
+
+The walk records a `LocalScopeRange` per scope it opens (the program, arrow bodies, `if` / `else` blocks, loops):
+its range and its bindings. `localsAt(pos, text)` descends to the innermost range holding the cursor, then walks out;
+a binding is offered when its `declPos` (the `let` / `const` / `export` keyword for an arrow initializer, the end of
+any other initializer, the `=>` for a parameter) is before the cursor, inner before outer, one per name. A name a
+closure sees only because it is declared further down is not offered. A range ends at the last token met inside it (the AST keeps no `}`), so the blank stretch before a block's
+`}` reads the enclosing scope. `text` is the editor's text, which can be ahead of the analysed `source` after a parse
+failure: the cursor is mapped back across the edit (common prefix and suffix), a cursor inside the edit reads the
+whole edited stretch, starting at the earliest place the edit can start when the typed text repeats the text
+around it. Fewer locals at worst, never one from below or from a sibling scope. Offsets inside a template
+literal's `${...}` count from the interpolation (the parser reads it on its own), so a scope opened there gets an
+empty range. Guard: `LocalSymbolCompletionSpec`; record: `docs/tasks/editor-local-symbol-completion.md`.
+
 ## `ExpressionTypeInferrer` contract
 
 ```kotlin
@@ -158,6 +173,8 @@ Existing consumers that demonstrate the pattern:
   analysis is available (initial render / parse error).
 - `klangscript-ui/.../DslCompletionSource.kt::inferReceiverTypeBeforeDot` — one-liner
   delegating to `analysis.receiverTypeBeforeDot(...)`.
+- `klangscript-ui/.../DslCompletionSource.kt`, the non-member branch: `analysis.localsAt(from, currentCode)` through
+  `CompletionProvider.localCompletions`, before the library names (a CodeMirror `boost` keeps them first).
 - `src/jsMain/.../KlangSymbolDocsComp.kt` — switches purely on `symbol.origin` to render
   the library / LOCAL / Built-in chip; suppresses "View docs" for `Origin.Local`.
 
@@ -170,3 +187,5 @@ Existing consumers that demonstrate the pattern:
 - `docs/KlangDocsRegistryTest.kt` — `getSymbolWithReceiver` strict policy, `Origin` /
   `getLibrary()` helper, `registry.libraries` / `getByLibrary` filtering.
 - `intel/CompletionProviderTest.kt` — completion suggestion shape (uses `getLibrary()?.name`).
+- `klangscript/src/jvmTest/kotlin/intel/LocalSymbolCompletionSpec.kt`: `localsAt` and `localCompletions`: visibility
+  by position, shadowing, sibling scopes, the detail, the stale analysis.

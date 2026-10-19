@@ -33,9 +33,12 @@ class TypeScope(
      * or an expression we don't yet track). The binding still shadows any
      * registry symbol with the same name.
      *
-     * @param declPos Source offset of the declaration site, when available.
-     *   Used by `AnalyzedAst.symbolAt` to attach declaration context to the
-     *   synthesised local-symbol popup.
+     * @param declPos Source offset where the binding becomes visible: the
+     *   `let` / `const` / `export` keyword when the initializer is an arrow
+     *   (or missing), the end of the initializer's last token otherwise, the
+     *   `=>` of the arrow for a parameter. Null for a name
+     *   only announced further down ([declareAhead]). `AnalyzedAst.localsAt`
+     *   offers a binding to code completion only after its [declPos].
      */
     data class LocalBinding(
         val name: String,

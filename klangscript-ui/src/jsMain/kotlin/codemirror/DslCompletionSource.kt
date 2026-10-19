@@ -65,6 +65,14 @@ private fun completeDsl(context: CompletionContext, docContext: EditorDocContext
         // If receiver type can't be inferred (stale AST, parse error), show nothing.
         // Showing top-level symbols after a dot is always wrong.
     } else {
+        // The song's own names first: the user typed them, they are the most likely intent. CodeMirror ranks by
+        // match quality, so the order alone does not hold; the boost lifts a local above a library name that
+        // matches as well.
+        val locals = docContext.lastAnalysis?.localsAt(pos = from, text = currentCode) ?: emptyList()
+        provider.localCompletions(locals, typed).mapTo(options) { suggestion ->
+            suggestion.toCodeMirrorCompletion().also { it.boost = LOCAL_BOOST }
+        }
+
         val suggestions = provider.topLevelCompletions(typed)
         suggestions.mapTo(options) { it.toCodeMirrorCompletion() }
     }
@@ -84,6 +92,9 @@ private fun completeDsl(context: CompletionContext, docContext: EditorDocContext
         this.options = options.toTypedArray()
     }
 }
+
+/** CodeMirror rank boost for the song's own names over library names that match the typed word as well. */
+private const val LOCAL_BOOST = 1
 
 /** Resolve the receiver type for a dot-completion via the analyzer's single entry point. */
 private fun inferReceiverTypeBeforeDot(docContext: EditorDocContext, dotPos: Int): KlangType? {
