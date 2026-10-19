@@ -278,19 +278,39 @@ class KatalystDuckEffect(
             // never matches and its setter runs every block, as before. Exact and no regression, where a cache of
             // the arriving values would need invalidating on a new [Ducking] and on [takeOver]. No test can pin the
             // boxes; this comment is the guard.
-            if (!sameKnob(stored = live.attackSeconds, arriving = settings.attackSeconds)) {
-                live.attackSeconds = settings.attackSeconds
-            }
+            //
+            // A setting that moves goes through ONE call and a holder, not through the setters (engine follow-up 45,
+            // 2026-10-19; item 40's remedy, [Ducking.knobArgs]): a modulated depth or attack moves every block, and
+            // under a mixed profile the two setters took their doubles as heap numbers here in every process
+            // measured. A setting that holds is handed over as NaN, which the holder keeps as the setters keep a
+            // non-finite value, so it writes nothing, as the skip above did. One store per arm, never `if (c) NaN
+            // else x`: on V8 that merges a tagged NaN with the double and can box it (engine follow-up 41).
+            val attackHolds = sameKnob(stored = live.attackValue, arriving = settings.attackSeconds)
+            val depthHolds = sameKnob(stored = live.depthValue, arriving = settings.depth)
 
-            if (!sameKnob(stored = live.depth, arriving = settings.depth)) {
-                live.depth = settings.depth
+            if (!attackHolds || !depthHolds) {
+                val args = live.knobArgs
+
+                if (attackHolds) {
+                    args[Ducking.KNOB_ATTACK] = Double.NaN
+                } else {
+                    args[Ducking.KNOB_ATTACK] = settings.attackSeconds
+                }
+
+                if (depthHolds) {
+                    args[Ducking.KNOB_DEPTH] = Double.NaN
+                } else {
+                    args[Ducking.KNOB_DEPTH] = settings.depth
+                }
+
+                live.applyKnobArgs()
             }
         }
 
         // Aim the glide at what the instance STORED, never at the raw setting: the setter coerces
         // to [0, 1] and drops non-finite input, and the glide must land on exactly the number the
         // settled path then reads.
-        depthGlide.retarget(live.depth)
+        depthGlide.retarget(live.depthValue)
         fade.retarget(1.0)
     }
 

@@ -432,22 +432,26 @@ internal class KatalystGainWriter(
     private val gain: KatalystKnob,
 ) : KatalystSlotWriter {
 
-    private var factor: Double = guarded()
+    /**
+     * The guarded factor, element 0, handed to the stage by reference, never as a number (engine follow-up 45): see
+     * [KatalystGainEffect.configureFrom]. An array, so a store cannot box (engine follow-up 7).
+     */
+    private val factor = doubleArrayOf(guarded())
 
     override fun resolve(params: KlangMap<Double>?) {
         gain.resolve(params)
-        factor = guarded()
+        factor[0] = guarded()
     }
 
     override fun apply() {
-        fx.configure(factor)
+        fx.configureFrom(factor)
     }
 
     override val isModulated: Boolean = gain.isModulated
 
     override fun tick() {
         gain.tick()
-        factor = guarded()
+        factor[0] = guarded()
     }
 
     /**

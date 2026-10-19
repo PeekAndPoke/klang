@@ -279,8 +279,8 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   in `--trace-generalization`, like `AnalogDrift`'s, which do not box, so representation is ruled out; in that form V8
   inlined `advanceLane` into the superpluck's `generate`: measured, not explained). The holder is a
   `DoubleArray(2)` (a `Float64Array` on Kotlin/JS, whose elements are raw doubles), read through `inline` properties,
-  and the box is gone in the processes measured (a rare tail of about 1 process in 30 on the superpluck's drift
-  path, 300 to 460 B, not located, is recorded in item 7). Measure a new field holder with `--predictable` in a
+  and the box is gone in the processes measured (a rare tail on the superpluck's drift path, 300 to 460 B, was another
+  site: engine follow-up 4, the caution on rare modes below). Measure a new field holder with `--predictable` in a
   single-case process too. Item 29's field holders were checked so and do not box (item 31).
   **A per-sample helper past V8's bytecode limit for inlining (460 bytes) is never inlined**, however warm:
   `--trace-turbo-inlining` prints "Cannot consider ... for inlining (reason: 5)". Make it a Kotlin `inline` function,
@@ -331,7 +331,7 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   **A `Math.ceil` handed to a call that is not inlined boxes even when it is a whole number:** V8 cannot rule out -0,
   so it cannot travel as a small integer (the `toInt()` inside the delay's `framesFor(time)`, run every block until
   follow-up 1 kept the conversion off the steady path).
-  Six cautions for this class of box:
+  Seven cautions for this class of box:
   - **Measure pinned AND unpinned.** `taskset` to one core puts V8's concurrent compiler on the core of the measured
     code, which changes the tier-up history and so which calls are left out. A single bundle varies by up to five
     heap numbers per block between unpinned processes (and pinned ones vary too while the sibling threads are busy);
@@ -359,6 +359,18 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
     fm's modulator frequency and 10c's pin as no site there, and both box at middle C. Play the allocation harness's
     middle C (261.6255653005986 Hz), keep the derived frequencies non-integral too (a ratio of 1.4 on a non-integral
     note), and subtract a plain classic voice at the same note, which carries item 30's root box (16 B).
+  - **A rare mode can be a tie, not a shortfall: compare what the high and the low processes compiled on their own**
+    (engine follow-up 4, 2026-10-19). The superpluck's tail (1 round in 30 to 1 in 5 by session) was two per-string
+    calls of equal frequency competing for `generate`'s budget: mostly V8 inlined `getUnisonDetune` and called
+    `ensureLanes` (an Int in, nothing out), in a few processes the reverse, and then the detune crossed as a heap
+    number per string. Squeezing the budget did not make that mode common (the per-sample calls went first); 80 window
+    processes under `--trace-opt` of a copy with its methods named (`protoOf(X).m = function X__m(`) held 3 high ones,
+    and the functions optimized on their own split the modes exactly (3 of 3 against 0 of 77). Confirm by forcing the
+    mode in a copy: pad the suspect's body past the 460-byte limit with a never-taken branch, and it reads the tail's
+    size in every round. The robust remedy takes the double-crossing calls off the steady path (here a cache of each
+    string's base delay), so no inlining choice can bring them back. A mixed profile is worth the exact window above
+    too: it found `E-kat-dyn`'s duck setters at V8's own budget where the check's single-case method reads nothing
+    (engine follow-up 45).
   Measure with `--trace-gc-nvp` (it reports the bytes allocated since the last collection) and
   `--max-semi-space-size=1`, so a collection falls every megabyte and a residue of a few bytes per block is counted;
   at the default semi-space one run read 0 and the next 20.7 bytes per block for the same code. Locate with the
@@ -584,7 +596,8 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   setters is exact only because nothing between them reads what an earlier one computed; check that first. The
   setters stay public for the other callers, and their getters now read private fields: a Kotlin/JS getter on a
   property with a private backing field compiles to a call (`retarget` calls three), which V8 inlines here
-  (measured: the floor); a hot reader inside the class reads the fields.
+  (measured: the floor); a hot reader inside the class reads the fields. The duck's two setters went the same way at
+  engine follow-up 45 (`Ducking.knobArgs`; its stored values are plain properties, so `configure` loads them).
 - **A callee's own inlined size counts against its caller's budget: a helper that calls a small function at two
   sites can fit no caller** (engine follow-up 39, 2026-10-16). `--trace-turbo-inlining` prints it as "existing opt
   code's inlined bytecode size": V8 adds what a candidate's own optimized code inlined to the candidate's bytecode,

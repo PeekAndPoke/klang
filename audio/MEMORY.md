@@ -389,6 +389,13 @@ One line per step, newest first. A link to the archived task record where one ex
   phase's read; every `classic()` voice's census steps by 2 passes and 4 of traffic (3 and 6 with a vibrato range
   off the default; the gate is still not modeled), so the song benchmark's `work` and `traffic` columns compare
   across this date with care (`docs/tasks/in-progress/engine-follow-ups.md`, item 28).
+- 2026-10-19 Engine follow-ups 4, 45 and 13, bit-identical: the superpluck keeps each string's base delay and
+  computes it again only when the note, the detune or the count moves (`spluck-a`'s tail located: in some V8 processes
+  `getUnisonDetune` was left out of `generate` in place of `ensureLanes`, 9 of 140 HEAD rounds high against 0 of 100,
+  0.94 of the time; the pluck reads the floor); the duck's setters and the gain's hand-off go through holders
+  (`Ducking.knobArgs`, `KatalystGainEffect.configureFrom`; `E-kat-dyn` mixed 118 to 86 B), the distort's `isFinite`
+  is `isFiniteInline`; two siblings found and left open, and item 13's sub-pool half was already closed (34):
+  `docs/tasks/in-progress/engine-follow-ups.md`, items 4, 13 and 45
 - 2026-10-19 Engine follow-ups 35, 36 and 38, bit-identical: the arithmetic stage runs each operator's loops in a
   method of its own (the JVM compiled them on one shared profile; the gliding `div` 1.61 to 1.94 µs per block in
   suite order, 0.29 and 0.52 after), its writer hands the knob to `configure` instead of the value (`E-arith`'s second

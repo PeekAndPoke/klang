@@ -15,6 +15,7 @@ import io.peekandpoke.klang.audio_be.filters.HOUSE_DC_BLOCK_COEFF
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.utils.copyRangeInto
 import io.peekandpoke.klang.audio_be.utils.crossfadeLinear
+import io.peekandpoke.klang.audio_be.utils.isFiniteInline
 import io.peekandpoke.klang.audio_be.utils.linearFadeWeight
 import io.peekandpoke.klang.audio_bridge.DistortionShapes
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
@@ -337,7 +338,10 @@ class KatalystDistortEffect(
         val amount = config.amount
 
         // NaN-guard on a value the author can write: a non-finite amount was never set, and an unset stage is off.
-        if (!amount.isFinite() || amount <= 0.0) {
+        // `isFiniteInline`, the stdlib `isFinite()`'s exact twin without the call (engine follow-up 45): this runs on
+        // every block the orbit has an owner. Measured, it did not box here in any profile tried (single-case and
+        // mixed, V8's own inlining budget and a squeezed one); the swap is the house rule for a per-block path.
+        if (!amount.isFiniteInline() || amount <= 0.0) {
             state.switchOff()
 
             return

@@ -206,6 +206,31 @@ class KatalystGainEffectSpec : StringSpec({
         }
     }
 
+    "configureFrom moves the fader exactly as configure does with the holder's number" {
+        // Engine follow-up 45: the writer hands its factor over in a holder (`configureFrom`), where it called
+        // `configure` with the number. Two faders take the same factors, one each way, block by block: a snap, a
+        // glide, a change mid-glide, unity, a polarity flip, an unset factor; every sample must match bit for bit.
+        val factors = listOf(0.7, 0.7, 2.0, 2.0, 0.25, 1.0, 1.0, -1.5, Double.NaN, 0.0, 0.0, 3.0)
+        val byNumber = fader()
+        val byHolder = fader()
+        val holder = DoubleArray(1)
+
+        factors.forEachIndexed { n, factor ->
+            byNumber.configure(factor)
+            holder[0] = factor
+            byHolder.configureFrom(holder)
+
+            val expected = block(byNumber)
+            val actual = block(byHolder)
+
+            for (i in 0 until blockFrames) {
+                withClue("block $n (factor $factor), frame $i") {
+                    actual[i].toRawBits() shouldBe expected[i].toRawBits()
+                }
+            }
+        }
+    }
+
     // ── The glide ────────────────────────────────────────────────────────────────────────────────
 
     "a change glides per sample over the glide time and lands exactly, across the fader's full range" {

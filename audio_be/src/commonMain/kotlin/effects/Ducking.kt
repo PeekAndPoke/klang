@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.audio_be.effects
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.utils.isFiniteInline
 import io.peekandpoke.klang.audio_be.utils.timeConstantCoeff
 import kotlin.math.abs
 import kotlin.math.max
@@ -44,24 +45,81 @@ class Ducking(
     /** Current gain (1.0 = no duck, 0.0 = full duck). */
     private var currentGain: Double = 1.0
 
+    /**
+     * The stored [depth], what its getter reads. A property with default accessors, so a reader loads the field: on
+     * Kotlin/JS [depth]'s custom getter is a call, and a double a call returns is a heap number wherever V8 does not
+     * inline it (`audio/ref/performance.md`). The loops here and `KatalystDuckEffect.configure` read this.
+     */
+    internal var depthValue: Double = depth.coerceIn(0.0, 1.0)
+        private set
+
+    /** The stored [attackSeconds], what its getter reads; a plain property for the same reason as [depthValue]. */
+    internal var attackValue: Double = guardOr(value = attackSeconds, fallback = 0.1)
+        private set
+
     /** Ducking depth (0.0 = no ducking, 1.0 = full silence). Setter silently ignores non-finite values. */
-    var depth: Double = depth.coerceIn(0.0, 1.0)
+    var depth: Double
+        get() = depthValue
         set(value) {
             if (!value.isFinite()) return
-            field = value.coerceIn(0.0, 1.0)
+            depthValue = value.coerceIn(0.0, 1.0)
         }
 
     /** Attack time in seconds (return to normal). Setter silently ignores non-finite values. */
-    var attackSeconds: Double = guardOr(value = attackSeconds, fallback = 0.1)
+    var attackSeconds: Double
+        get() = attackValue
         set(value) {
             if (!value.isFinite()) return
-            field = value
+            attackValue = value
             releaseCoeff = calculateCoefficient(value)
         }
 
     /**
+     * The two knobs of one [applyKnobArgs], written by the caller before the call, at [KNOB_ATTACK] and [KNOB_DEPTH]:
+     * the raw values, as a caller would hand them to the two setters. A non-finite one keeps the stored value, as
+     * the setters do.
+     *
+     * **A holder, on purpose** (engine follow-up 45, 2026-10-19): the orbit duck writes its knobs on every block a
+     * modulated depth or attack moves. Through the two setters each knob crossed a call V8 does not always inline, so
+     * each was a heap number (`audio/ref/performance.md`, the rule on a double handed to a function that is not
+     * inlined): under a mixed profile `KatalystDuckEffect.configure` booked 32 B per block, two heap numbers, in
+     * every process measured. The compressor's [Compressor.knobArgs] is the same remedy (engine follow-up 40). An
+     * ARRAY, not double fields: an element access in optimized code never allocates (engine follow-up 7). No test
+     * can pin the box; this KDoc is the guard.
+     */
+    internal val knobArgs = DoubleArray(KNOB_ARGS)
+
+    /**
+     * Applies [knobArgs] as the two setters would, the attack first, and stores the same numbers bit for bit: each
+     * knob guarded as its setter guards it (a non-finite one keeps the stored value), the depth coerced to `[0, 1]`
+     * as [depth]'s setter does, the release coefficient computed from a written attack. Exact in either order,
+     * because neither setter reads what the other writes. Guarded by "applyKnobArgs leaves the instance where the two
+     * setters leave it, bit for bit" (`DuckingSpec`).
+     */
+    internal fun applyKnobArgs() {
+        val attack = knobArgs[KNOB_ATTACK]
+        val depthArg = knobArgs[KNOB_DEPTH]
+
+        // `isFiniteInline`, not the stdlib `isFinite()` (a call on Kotlin/JS): the same answer for every input.
+        if (attack.isFiniteInline()) {
+            attackValue = attack
+            updateReleaseCoeff()
+        }
+
+        // The setter's `coerceIn(0.0, 1.0)`, written out (the stdlib's body), so no double crosses a call.
+        if (depthArg.isFiniteInline()) {
+            depthValue = if (depthArg < 0.0) 0.0 else if (depthArg > 1.0) 1.0 else depthArg
+        }
+    }
+
+    /** [releaseCoeff] from the stored attack. Takes no double and returns none, so nothing crosses a call. */
+    private fun updateReleaseCoeff() {
+        releaseCoeff = calculateCoefficient(attackValue)
+    }
+
+    /**
      * Per-sample envelope step. Computes target gain from the sidechain level and [depthNow]
-     * (the property for the settled path, a ramped value while the depth glides), then applies
+     * (the stored depth for the settled path, a ramped value while the depth glides), then applies
      * instant-attack / exponential-release smoothing on `currentGain`.
      * Inlined into both `process()` overloads so each loop body stays specialized.
      */
@@ -93,7 +151,7 @@ class Ducking(
         blockSize: Int,
     ) {
         for (i in 0 until blockSize) {
-            val gain = stepGain(sidechainLevel = max(abs(sidechainL[i]), abs(sidechainR[i])), depthNow = depth)
+            val gain = stepGain(sidechainLevel = max(abs(sidechainL[i]), abs(sidechainR[i])), depthNow = depthValue)
             inputL[i] = inputL[i] * gain
             inputR[i] = inputR[i] * gain
         }
@@ -155,7 +213,7 @@ class Ducking(
      */
     fun process(input: AudioBuffer, sidechain: AudioBuffer, blockSize: Int) {
         for (i in 0 until blockSize) {
-            input[i] = input[i] * stepGain(sidechainLevel = abs(sidechain[i]), depthNow = depth)
+            input[i] = input[i] * stepGain(sidechainLevel = abs(sidechain[i]), depthNow = depthValue)
         }
     }
 
@@ -163,9 +221,16 @@ class Ducking(
      * Calculate time constant coefficient for the release envelope. Higher values =
      * faster response. Non-finite or sub-millisecond inputs fall back to a 1ms minimum
      * (matches `Compressor.updateCoefficients`).
+     *
+     * Kotlin `inline`, with `isFiniteInline` (the stdlib `isFinite()`'s exact twin), so on the per-block path of a
+     * moving attack ([applyKnobArgs]) no double crosses a call (engine follow-up 45): as a plain function it took the
+     * attack and returned the coefficient, and with V8's inlining budget squeezed to 250 the duck's `configure` (with
+     * [applyKnobArgs] inlined) still booked one heap number per block for it; inline, none (`E-kat-dyn` 130.7 to 114.6
+     * B per block there).
      */
-    private fun calculateCoefficient(timeSeconds: Double): Double {
-        val safeTime = if (timeSeconds.isFinite()) timeSeconds else 0.001
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun calculateCoefficient(timeSeconds: Double): Double {
+        val safeTime = if (timeSeconds.isFiniteInline()) timeSeconds else 0.001
         val clampedTime = max(0.001, safeTime)
         return timeConstantCoeff(timeSeconds = clampedTime, sampleRate = sampleRate.toDouble())
     }
@@ -183,6 +248,13 @@ class Ducking(
          * Lower the constant for a less aggressive duck; raise it for a harsher pump.
          */
         private const val SIDECHAIN_SENSITIVITY: Double = 2.0
+
+        /** The slots of [knobArgs]: the attack and the depth. */
+        internal const val KNOB_ATTACK: Int = 0
+        internal const val KNOB_DEPTH: Int = 1
+
+        /** How many slots [knobArgs] has. */
+        private const val KNOB_ARGS: Int = 2
 
         /** Returns [value] when finite; otherwise [fallback]. Mirrors `Compressor.guardOr`. */
         private fun guardOr(value: Double, fallback: Double): Double =

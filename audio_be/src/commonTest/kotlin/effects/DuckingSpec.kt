@@ -5,12 +5,14 @@
 
 package io.peekandpoke.klang.audio_be.effects
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import kotlin.math.abs
+import kotlin.math.sin
 
 class DuckingSpec : StringSpec({
     val sampleRate = 44100
@@ -175,5 +177,66 @@ class DuckingSpec : StringSpec({
 
         // Fast recovery should be closer to 1.0 than slow recovery
         (fastLevel > slowLevel) shouldBe true
+    }
+
+    "applyKnobArgs leaves the instance where the two setters leave it, bit for bit" {
+        // Engine follow-up 45: the orbit duck hands a moving attack or depth over through `knobArgs` and one
+        // `applyKnobArgs`, where it called the two setters. Both instances hear the same blocks and take the same
+        // knobs, one through the setters (attack, then depth, the order the stage used), the other through the
+        // holder; every stored knob and every output sample must match bit for bit. The steps reach every guard:
+        // non-finite knobs (each kept at its stored value), a depth below 0 and above 1 (coerced), a depth of -0.0
+        // (kept, `coerceIn` does not touch it), an attack under the 1 ms floor and a negative one (the coefficient's
+        // own clamp), and a step that keeps both.
+        val nan = Double.NaN
+        val inf = Double.POSITIVE_INFINITY
+        val steps = listOf(
+            doubleArrayOf(0.02, 0.6),
+            doubleArrayOf(0.011, 0.25),
+            doubleArrayOf(nan, 0.75),
+            doubleArrayOf(0.047, nan),
+            doubleArrayOf(inf, -0.3),
+            doubleArrayOf(0.0004, 1.7),
+            doubleArrayOf(-0.5, -0.0),
+            doubleArrayOf(nan, nan),
+            doubleArrayOf(0.3, 0.0),
+            doubleArrayOf(0.005, 1.0),
+        )
+        val block = 64
+        val bySetters = Ducking(sampleRate = sampleRate, attackSeconds = 0.1, depth = 0.5)
+        val byHolder = Ducking(sampleRate = sampleRate, attackSeconds = 0.1, depth = 0.5)
+
+        steps.forEachIndexed { n, knobs ->
+            bySetters.attackSeconds = knobs[0]
+            bySetters.depth = knobs[1]
+
+            byHolder.knobArgs[Ducking.KNOB_ATTACK] = knobs[0]
+            byHolder.knobArgs[Ducking.KNOB_DEPTH] = knobs[1]
+            byHolder.applyKnobArgs()
+
+            withClue("step $n, the stored knobs") {
+                byHolder.attackSeconds.toRawBits() shouldBe bySetters.attackSeconds.toRawBits()
+                byHolder.depth.toRawBits() shouldBe bySetters.depth.toRawBits()
+            }
+
+            // A sidechain that hits for 12 samples in every 40, so the instant duck and the release (the
+            // coefficient) both act in every block.
+            val start = n * block
+            val sideL = AudioBuffer(block) { if ((start + it) % 40 < 12) 0.9 * sin(0.3 * (start + it)) else 0.0 }
+            val sideR = AudioBuffer(block) { if ((start + it) % 40 < 12) 0.6 * sin(0.2 * (start + it) + 1.0) else 0.0 }
+            val l1 = AudioBuffer(block) { 0.7 * sin(0.031 * (start + it)) }
+            val r1 = AudioBuffer(block) { 0.5 * sin(0.047 * (start + it) + 0.5) }
+            val l2 = l1.copyOf()
+            val r2 = r1.copyOf()
+
+            bySetters.processStereo(inputL = l1, inputR = r1, sidechainL = sideL, sidechainR = sideR, blockSize = block)
+            byHolder.processStereo(inputL = l2, inputR = r2, sidechainL = sideL, sidechainR = sideR, blockSize = block)
+
+            for (i in 0 until block) {
+                withClue("step $n, sample $i") {
+                    l2[i].toRawBits() shouldBe l1[i].toRawBits()
+                    r2[i].toRawBits() shouldBe r1[i].toRawBits()
+                }
+            }
+        }
     }
 })

@@ -2656,6 +2656,37 @@ object Ignitors {
         private var drift: DriftLanes? = null
         private var analogLatched: Boolean = false
 
+        /**
+         * Each string's base delay, [KarplusString.baseDelayOf] at the note's frequency times the string's unison
+         * detune, for the first [v] strings; sized with [strings]. Computed by [computeBaseDelays] from [delayInputs]
+         * and [delayInputsCount], and again only when one of them moves ([sameDelayInput]), so a held note reads one
+         * element per string per block.
+         *
+         * A CACHE ON PURPOSE (engine follow-up 4, 2026-10-19; `audio/ref/performance.md`, "a non-integral double
+         * handed to a function that is not inlined"). The string loop computed `getUnisonDetune`, `semitones()` and
+         * [KarplusString.baseDelayOf] per string per block, each a call that takes and returns a double. In some V8
+         * processes this `generate` inlined [DriftLanes.ensureLanes] and left `getUnisonDetune` out (it was then
+         * compiled on its own in 3 of 3 high processes traced and in none of 77 low ones, where `ensureLanes` was the
+         * call instead), so the detune and the result crossed as heap numbers, about two per string per block:
+         * `spluck-a`'s rare tail, 288 to 460 B per block where a healthy process reads 15 to 50. With the cache nothing
+         * that takes or returns a double runs per string on a held note, whatever V8 inlines.
+         *
+         * Exact: the values are the loop's, the same function of the same inputs, computed the same way; a NaN input
+         * never matches, so it is recomputed every block as before. No test can pin the boxes: this KDoc is the guard.
+         * Do not move the computation back into the string loop.
+         */
+        private var baseDelays: DoubleArray = DoubleArray(strings.size)
+
+        /**
+         * The inputs [baseDelays] was computed from, at [DELAY_FREQ] (the note's frequency), [DELAY_SPREAD] (the
+         * detune) and [DELAY_SAMPLE_RATE]; NaN until the first computation. An array, not double fields, so a store
+         * cannot box (engine follow-up 7).
+         */
+        private val delayInputs: DoubleArray = doubleArrayOf(Double.NaN, Double.NaN, Double.NaN)
+
+        /** The string count [baseDelays] was computed for; -1 until the first computation. */
+        private var delayInputsCount: Int = -1
+
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val actualFreq = resolveFreq(freq, freqHz, ctx)
 
@@ -2681,6 +2712,7 @@ object Ignitors {
                     val old = strings
 
                     strings = Array(v) { i -> if (i < old.size) old[i] else KarplusString() }
+                    baseDelays = DoubleArray(v)
                 }
 
                 // A regrown string RE-PLUCKS (the DECIDED note above), so it gets a fresh lane
@@ -2711,6 +2743,20 @@ object Ignitors {
             val sr = ctx.sampleRateD
             val phaseMod = ctx.phaseMod
             val end = ctx.windowEnd
+
+            // Each string's base delay, computed again only when an input moves (see [baseDelays]).
+            val delaysHold = delayInputsCount == v &&
+                sameDelayInput(stored = delayInputs[DELAY_FREQ], arriving = actualFreq) &&
+                sameDelayInput(stored = delayInputs[DELAY_SPREAD], arriving = spread) &&
+                sameDelayInput(stored = delayInputs[DELAY_SAMPLE_RATE], arriving = sr)
+
+            if (!delaysHold) {
+                delayInputs[DELAY_FREQ] = actualFreq
+                delayInputs[DELAY_SPREAD] = spread
+                delayInputs[DELAY_SAMPLE_RATE] = sr
+                delayInputsCount = v
+                computeBaseDelays()
+            }
 
             // O2: param reads hoisted OUT of the per-string loop — a modulated subtree must
             // advance once per block, not v times, and every string samples the same value.
@@ -2745,9 +2791,7 @@ object Ignitors {
                 // one held its own lane; a string that came back after a shrink draws a fresh one.
                 lanes?.ensureLanes(n + 1)
 
-                val detuneSemitones = getUnisonDetune(unison = v, detune = spread, voiceIndex = n)
-                val detunedFreq = actualFreq * detuneSemitones.semitones()
-                val baseDelay = KarplusString.baseDelayOf(sampleRate = sr, freqHz = detunedFreq)
+                val baseDelay = baseDelays[n]
 
                 // Excite each string independently; a string that comes back keeps its filter state.
                 if (!s.excited) {
@@ -2773,6 +2817,39 @@ object Ignitors {
                     gain = voiceGain, accumulate = n != 0,
                 )
             }
+        }
+
+        /**
+         * Fills [baseDelays] for the first [v] strings from [delayInputs], exactly as the string loop computed them
+         * per block before engine follow-up 4. Takes no double and returns none (see [baseDelays]).
+         */
+        private fun computeBaseDelays() {
+            val actualFreq = delayInputs[DELAY_FREQ]
+            val spread = delayInputs[DELAY_SPREAD]
+            val sr = delayInputs[DELAY_SAMPLE_RATE]
+
+            for (n in 0 until v) {
+                val detuneSemitones = getUnisonDetune(unison = v, detune = spread, voiceIndex = n)
+                val detunedFreq = actualFreq * detuneSemitones.semitones()
+
+                baseDelays[n] = KarplusString.baseDelayOf(sampleRate = sr, freqHz = detunedFreq)
+            }
+        }
+
+        /**
+         * Whether an input of [baseDelays] holds: the same number, with `-0.0` and `0.0` told apart (a frequency of
+         * `-0.0` reads another delay than `0.0`). A NaN never holds, so a NaN input is computed again every block, as
+         * the loop did, unlike `sameKnob`, which takes two NaNs for one setting.
+         */
+        @Suppress("NOTHING_TO_INLINE")
+        private inline fun sameDelayInput(stored: Double, arriving: Double): Boolean =
+            stored == arriving && (stored != 0.0 || 1.0 / stored == 1.0 / arriving)
+
+        private companion object {
+            /** The slots of [delayInputs]. */
+            const val DELAY_FREQ: Int = 0
+            const val DELAY_SPREAD: Int = 1
+            const val DELAY_SAMPLE_RATE: Int = 2
         }
     }
 

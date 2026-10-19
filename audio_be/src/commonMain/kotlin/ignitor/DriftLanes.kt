@@ -139,8 +139,8 @@ class DriftLanes(capacity: Int, sharedLane: Boolean) {
      * allocates in optimized code, whatever V8 inlines or decides about a field (a value read from it can still box
      * further on, into a call V8 does not inline or a field: hence the adopters' `* 1.0`). No test can pin the boxes
      * (the numbers are the same either way): this KDoc is the guard. Do not turn the ramp back into a double-returning
-     * accessor or into plain fields. A rare tail on the superpluck's drift path (about 1 process in 30, not located) is
-     * recorded in `docs/tasks/in-progress/engine-follow-ups.md`, item 7.
+     * accessor or into plain fields. A rare tail on the superpluck's drift path (about 1 process in 30) was another site,
+     * the string loop's `getUnisonDetune`, fixed at engine follow-up 4 (`SuperKarplusStrongIgnitor.baseDelays`).
      */
     @PublishedApi
     internal val ramp: DoubleArray = doubleArrayOf(1.0, 1.0)

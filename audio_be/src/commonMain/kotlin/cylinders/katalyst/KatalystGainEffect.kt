@@ -109,13 +109,28 @@ class KatalystGainEffect(
      * set, ignoring a NaN keeps THAT factor, not unity.
      *
      * In production the difference never shows, because the guard never fires: [KatalystGainWriter]
-     * substitutes 1.0 for a non-finite slot before it calls this, so an unset slot arrives here as
+     * substitutes 1.0 for a non-finite slot before it hands the factor over ([configureFrom], this law
+     * through a holder), so an unset slot arrives here as
      * unity and a cleared one takes the fader back to unity by a glide. The guard stays at the door
      * anyway, because the cost of a NaN that does get through is unbounded (the whole orbit would be
      * NaN for good) and because a second caller must not have to rediscover the rule.
      */
     fun configure(gain: Double) {
         glide.retarget(gain)
+    }
+
+    /**
+     * [configure] with [holder]'s first element, the factor [KatalystGainWriter] guarded: the same glide, the same snap,
+     * the same NaN rule.
+     *
+     * **A holder, not the number** (engine follow-up 45, 2026-10-19): the writer calls this on every block the orbit
+     * has an owner (`KatalystChain.applyParams`), and on V8 a double handed to a call that is not inlined is a heap
+     * number (`audio/ref/performance.md`). With V8's inlining budget squeezed, the chain's `applyParams` booked one heap
+     * number per block on `E-gain`: the factor crossing [configure], the shape engine follow-up 36 removed from the
+     * arithmetic writer. Read here, the value never crosses a call. No test can pin the box; this KDoc is the guard.
+     */
+    internal fun configureFrom(holder: DoubleArray) {
+        glide.retarget(holder[0])
     }
 
     override fun reset() {

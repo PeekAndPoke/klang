@@ -18,9 +18,9 @@
 #   above the worst healthy round and below the item 8 mutant's lowest round (154.8 B) and item 29's revert (165 B).
 #   spluck-a was added at engine follow-up 7 (2026-10-11), with its two lines set by the same rule from that change's
 #   runs: V8 healthy rounds 1 to 53 B (median about 31), HEAD's code (the old double-returning ramp) 407 to 566 B. The
-#   healthy tree has a tail at 288 to 459 B (the drift path, not located: docs/tasks/in-progress/engine-follow-ups.md, items 4 and
-#   7), whose rate varies from session to session: see "Known tails" below. HEAD's code read high in every round of
-#   every run, the item 8 mutant in every round of its one run.
+#   healthy tree had a tail at 288 to 463 B (the drift path, docs/tasks/in-progress/engine-follow-ups.md, items 4 and
+#   7), whose rate varied from session to session; engine follow-up 4 (2026-10-19) located and fixed it: see "Closed
+#   tails" below. HEAD's code read high in every round of every run, the item 8 mutant in every round of its one run.
 #   E-delay and E-stages were added at engine follow-up 1 (2026-10-11), with their lines set by the same rule from
 #   that change's runs (3 runs of 3 rounds): E-delay healthy rounds 30 to 71 B (medians 62 to 67), HEAD's code 125
 #   to 171 (medians 160 to 171). Each part of the delay's fix is about one heap number per block, under the V8
@@ -232,18 +232,23 @@
 #   The JVM can also optimise a box away: review round 1 routed the ladder's constant reads through a nullable read
 #   (item 12's class) and the JVM read 0 B, while V8 read one more heap number.
 #
-# Known tails (records only; a red full check on the spluck-a line is read by hand):
-# - spluck-a (items 4 and 7): a healthy round sometimes reads 288 to 459 B against 1 to 53. Item 7 pooled 9 of 292
-#   rounds; engine follow-up 2, step 5 read 11 of 51 tree rounds high (2026-10-11 and 12), so a run went red by the
-#   median in about 1 run in 9. The tail overlaps HEAD's old code (407 to 566) and sits above the item 8 mutant (381),
-#   which is why the line cannot move above it.
-# The rule: a breach with every round over the line is a regression (HEAD's code and the mutants read high in every
-# round of every run); a breach with a round under the line is the tail. Run the check once more to confirm; a second
-# breach of the tail's shape is still the tail. One exception on record: engine follow-up 10d (2026-10-19) read a
-# spluck-a breach with every round over the line (319.7, 448.9, 458.1) on a change that does not touch the pluck, and
-# an A/B of the base commit and the change by the check's method (18 rounds each) read no high round on either side.
-# So an all-high spluck-a breach on a change that cannot reach the pluck is settled by such an A/B, not by its shape.
+# Known tails (records only; a red full check on such a line is read by hand): none since engine follow-up 4
+# (2026-10-19), which closed spluck-a's (below).
+# The rule, for a tail that turns up: a breach with every round over the line is a regression (HEAD's code and the
+# mutants read high in every round of every run); a breach with a round under the line is the tail. Run the check once
+# more to confirm; a second breach of the tail's shape is still the tail. One exception on record: engine follow-up 10d
+# (2026-10-19) read a spluck-a breach with every round over the line (319.7, 448.9, 458.1) on a change that does not
+# touch the pluck, and an A/B of the base commit and the change by the check's method (18 rounds each) read no high
+# round on either side; likely spluck-a's tail (a mode of the whole process, closed since). So an all-high breach on a
+# change that cannot reach the case is settled by such an A/B, not by its shape.
 # Closed tails (no longer read by hand):
+# - spluck-a (items 4 and 7, 288 to 463 B against 1 to 53, from 1 round in 30 to 1 in 5 by session): fixed at engine
+#   follow-up 4 (2026-10-19). In those processes V8 inlined `DriftLanes.ensureLanes` into the superpluck's `generate`
+#   and left `getUnisonDetune` out, so the detune and its result crossed a call per string per block; the node now keeps
+#   each string's base delay and computes it again only when the note, the detune or the count moves. The line stays
+#   at 96: the fix's rounds -7.1 to 68.3 B (124 rounds: 110 unpinned, 10 pinned, 4 --predictable); HEAD that day 9 of
+#   140 rounds high (298.4 to 463.5). It does not guard a revert reliably (a run goes red by the median only when two
+#   of its three rounds are high); the KDoc of `baseDelays` is the guard.
 # - E-arith (item 36, its second mode, 160 to 196 B against 20 to 50, in up to half the rounds): fixed at engine
 #   follow-up 36 (2026-10-19). The arithmetic writer handed each stage's operand to `configure` as a double, which
 #   V8 left out of the cylinders' per-block path in some processes. The line stays at 96: the fix's healthy rounds
@@ -262,7 +267,7 @@ super7             v8        64      item 8, the unison stack
 super7             jvm       6       item 8, the unison stack
 super7a            v8        64      item 8, the unison stack with drift (its drift ramp never boxed: item 7, spluck-a)
 super7a            jvm       6       item 8, the unison stack with drift
-spluck-a           v8        96      item 7, the drift ramp's holder (the superpluck's generate never inlined the old blend)
+spluck-a           v8        96      item 7, the drift ramp's holder (the superpluck's generate never inlined the old blend); item 4's base-delay cache only by its KDoc (a revert reads high in about 1 round in 15)
 spluck-a           jvm       6       item 7, the superpluck with drift
 sgpad-vib          v8        80      item 8, the vibrato's knob reads (the only line on the vibrato path)
 sgpad-vib          jvm       6       item 12, the ladder
@@ -298,7 +303,7 @@ E-comp             v8        96      the orbit compressor and a lookahead limite
 E-comp             jvm       6       the orbit compressor and a lookahead limiter
 E-eq               v8        96      the orbit eq: two bells and a tap
 E-eq               jvm       6       the orbit eq
-E-gain             v8        96      the group fader off unity
+E-gain             v8        96      the group fader off unity; the factor by reference (item 45) only by its KDoc (a revert boxes only under a squeezed budget)
 E-gain             jvm       6       the group fader off unity
 E-duck             v8        112     the duck with a sounding sidechain (item 38, the per-block setters: guarded by the comment at the site)
 E-duck             jvm       6       the duck with a sounding sidechain
@@ -318,7 +323,7 @@ E-kat-perlin       v8        96      perlin at 1 and 8 octaves: fbm on two noise
 E-kat-perlin       jvm       6       perlin at 1 and 8 octaves
 E-kat-all7         v8        250     all seven kinds: the per-sample class only, above its tail (a round of 207); item 39 by its KDoc
 E-kat-all7         jvm       6       all seven kinds
-E-kat-dyn          v8        96      the compressor's five, the duck's depth and attack: Compressor.knobArgs, the five setters put back (item 40, mutant 120); Compressor.glideArgs
+E-kat-dyn          v8        96      the compressor's five, the duck's depth and attack: Compressor.knobArgs, the five setters put back (item 40, mutant 120); Compressor.glideArgs; Ducking.knobArgs (item 45) only by its KDoc (a revert boxes in a mixed profile, not in the check's single-case one)
 E-kat-dyn          jvm       6       the compressor's five, the duck's depth and attack
 E-kat-res          v8        144     the body's and the vowel's wet and floor: the per-sample class (KnobGlide.retarget's mutant reads over it, not reliably)
 E-kat-res          jvm       6       the body's and the vowel's wet and floor

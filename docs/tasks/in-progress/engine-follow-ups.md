@@ -1,15 +1,18 @@
 # Engine follow-ups after the tidy-up
 
 **Paused 2026-10-20 after v0.7.2 (maintainer: token budget), on a stable point; where it picks up:
-[`NEXT-STEPS.md`](NEXT-STEPS.md). Items 4, 45 and 13 are built on the parked branch `engine-alloc-batch-2`, not
-reviewed yet.** Item 2 is DONE (KlangMap, released in
+[`NEXT-STEPS.md`](NEXT-STEPS.md). Items 4, 45 and 13 were merged before their review (maintainer, 2026-10-20): the
+review loop and a clean mutation campaign are still to come.** Item 2 is DONE (KlangMap, released in
 v0.6.5, step 4 merged after). Where to continue (Q38, maintainer 2026-10-13: 31 to 41 after the refill, each a purely independent performance
 fix that changes no API), open V8 items first: **the V8 batch is done** (31 DONE 2026-10-15; 32, 34, 39, 40 and 41
 DONE 2026-10-16; 33 DONE earlier; 35, 36 and 38 DONE 2026-10-19, 38 as a site removed that is likely its tail, not
 shown). Left of the numbers 31 to 41: 37 (a sound change, so outside Q38). 10c and 10d (fm): two sites fixed
-2026-10-19, the modulator's frequency and the wrapper pin open (item 30's class), revisited with the FM round. Next:
-the known tail 4;
-then sections 2 to 5 (13, 11, 20, 45 and 46; 16 to 19 and 28 DONE 2026-10-19) and section 6. Open with the maintainer: C1 to C11 (the FM diagnostic is C6) in
+2026-10-19, the modulator's frequency and the wrapper pin open (item 30's class), revisited with the FM round. 4 and 45
+DONE 2026-10-19 (4: `spluck-a`'s tail, the last known tail, located and fixed; 45: the duck's setters and the gain's
+hand-off through holders, the distort's `isFinite` swapped; two sites found on the way, the duck's gliding call and
+`E-kat-mix`'s four stages under a mixed profile, recorded in 45, open). 13 checked 2026-10-19: its sub-pool half
+closed by 34, the `DelayLine` per rent left for the Zig port with 11. Next: sections 2 to 5 (11, 20 and 46; 16 to 19 and 28 DONE
+2026-10-19) and section 6. Open with the maintainer: C1 to C11 (the FM diagnostic is C6) in
 `docs/housekeeping/2026-10-10-baseline.md`, and Q13, Q29 (`duty(width)`) and Q30 to Q33 in
 [`_maintainer-questions.md`](../_maintainer-questions.md).
 
@@ -457,19 +460,78 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
    only while reducing (A2); the master stage's two hosts (A3, B2); the rule asks for a check that the helper's own
    callees stay inlined (A4); the `@Suppress` precedent as form, not reason (A5); the JVM line names `whitecolor` and
    item 12, and the section header points at item 12 (B1); B's rows added. Records and KDoc only.
-4. **The superpluck allocates per block**: 450 to 700 bytes with 8 voices and drift, the pluck about 65, before and
-   after the pass alike. Not located. Source: as 2. S to M. **Measured at item 7 (2026-10-11):** the superpluck with
-   drift now reads 32 B per block (48 at `analogSpread` 0.5) in every process the item 7 probe measured, from 288 to
-   688; two of its boxes were the drift ramp (item 7's fix) and `getUnisonDetune`'s result, one per string, which V8
-   inlined in every process traced. What is left there is item 30's root frequency and one more heap number. But on
-   the harness bundle some processes still read 288 to 459 B on the drift path, not located (item 7's tail: 9 of 292
-   rounds at item 7, 11 of 51 at item 2, step 5; the "Known tails" paragraph in `alloc-budgets.txt`).
-   The pluck was not measured. **Item 4 stays open while that tail is unlocated**; closing it needs the tail and a
-   look at the pluck.
-   **Found at item 5 (2026-10-11), development bundle only, not followed up:** on
-   `compileTestDevelopmentExecutableKotlinJs` the superpluck with drift (`spluck-a`'s voice) reads 288 to 416 B per
-   block in every mixed process measured (21 of 21, before and after item 5 alike), the size of item 7's regression;
-   production reads 32. Item 7 measured production only.
+4. **DONE (2026-10-19): the superpluck's tail on the drift path located and fixed: in some V8 processes the string
+   loop's `getUnisonDetune` was left out of `generate`, and the node now keeps each string's base delay instead of
+   computing it per string per block. The pluck is clean.** Reported as: 450 to 700 bytes per block with 8 voices and
+   drift, the pluck about 65, before and after the V8 pass alike. Source: as 2. S to M. **Measured at item 7
+   (2026-10-11):** the superpluck with drift read 32 B per block (48 at `analogSpread` 0.5) in every process the item
+   7 probe measured, from 288 to 688; two of its boxes were the drift ramp (item 7's fix) and `getUnisonDetune`'s
+   result, one per string, which V8 inlined in every process traced. But on the harness bundle some processes still
+   read 288 to 459 B on the drift path (item 7's tail: 9 of 292 rounds at item 7, 11 of 51 at item 2, step 5; the
+   "Known tails" paragraph in `alloc-budgets.txt`). **Found at item 5 (2026-10-11), development bundle only, not
+   followed up:** on `compileTestDevelopmentExecutableKotlinJs` the superpluck with drift read 288 to 416 B per block
+   in every mixed process measured (21 of 21), the size of item 7's regression; production read 32. Not followed up
+   here either (the development bundle is not what ships).
+   A purely independent performance fix (Q38): no door, wire type, public signature or sound changes (a private class
+   of `Ignitors`). **Reproduced** on the production bundle (`:audio_benchmark:compileProductionExecutableKotlinJs`,
+   node 22.12, `spluck-a` as `AllocationCheck.runNode` runs it, one round = a base and a window process): HEAD read 9 of
+   140 rounds high (298.4 to 463.5 B; the healthy ones -4.4 to 53.5). **Located** with item 36's method: 80 window
+   processes of a method-named copy of HEAD's bundle under `--trace-opt --trace-deopt` held 3 high ones (gross 514.3,
+   514.4 and 648.4 B per block against 215 to 252), and the two modes differ by what V8 compiled on its own: in all 3
+   high processes `getUnisonDetune`'s body (`Ignitors.j3w`) was optimized as a function of its own, in none of the 77
+   low ones; `DriftLanes.ensureLanes` was optimized on its own in 77 of 77 low processes and in none of the high. So
+   the string loop's two per-string calls of equal frequency compete for `generate`'s inlining budget: mostly V8
+   inlines `getUnisonDetune` and calls `ensureLanes` (an Int in, nothing out), and in some processes (9 of 140 rounds
+   today) it inlines `ensureLanes` and calls `getUnisonDetune`, whose detune and result then cross as heap numbers,
+   about two per string per block (the rule in `audio/ref/performance.md`, a double handed to a call V8 does not
+   inline). The tail's two sizes likely follow the default argument's entry (`h40`, which fills the spread power and
+   calls the body): in the two processes at about 290 B net it was compiled on its own as well, in the one at about
+   450 B it was inlined, so `generate` called the body with the detune and the spread power, three heap numbers per
+   string (inferred from the traces). A squeezed budget did not help here: at 600 and below the per-sample calls box
+   first (16.8 KB per block at 600, about one heap number per sample and string; 33.2 KB from 400 to 250).
+   **Confirmed by forcing the mode:** a copy of HEAD's bundle with `getUnisonDetune`'s body padded past V8's 460-byte
+   limit for inlining (a never-taken branch of stores) read 273.6 to 299.6 B in 4 of 4 rounds; the tree with the same
+   padding 24.7 to 37.2.
+   **Fix** (`audio_be/.../ignitor/Ignitors.kt`, `SuperKarplusStrongIgnitor`): each string's base delay
+   (`KarplusString.baseDelayOf` at the note's frequency times the string's unison detune) lives in `baseDelays`,
+   computed by `computeBaseDelays` (a method that takes no double and returns none, the inputs in the `delayInputs`
+   holder) and again only when the note's frequency, the detune, the sample rate or the string count moves
+   (`sameDelayInput`: the same number with `-0.0` told from `0.0`; a NaN never matches, so it is recomputed every block
+   as before). A held note reads one element per string per block; nothing that takes or returns a double runs per
+   string, whatever V8 inlines. The values are the loop's, computed the same way from the same inputs, and no draw
+   moves (the base delays draw nothing). It is also the unison stacks' pattern (detunes recomputed only on a change).
+   The KDoc of `baseDelays` is the guard for the boxes. **Test:** `SuperPluckBaseDelaySpec`, four rows: with
+   brightness 1, no stiffness, feedback 1 and no drift a string at a whole-sample delay repeats itself, so after a
+   moving frequency (400 to 480 Hz), a moving string count (2 to 1) and a moving detune (0.4 to 0) every sample must
+   equal the one 100 samples before (within 1e-9; a stale delay misses by the size of the signal), and a frequency of
+   -0.0 after 0.0 must not sound like 0.0 (`sampleRate / f` is +Inf and -Inf, clamped to the longest and the shortest
+   delay). **Numbers** (bytes per block, HEAD / tree): unpinned, interleaved, 100 rounds each: 6 of 100 high (298.4 to
+   463.5) / 0 of 100 (-7.1 to 63.2); pinned (`taskset -c 11`), 10 each: 1.4 to 52.5 / -1.0 to 68.3; `--predictable`
+   37.7 / 31.3 in 4 of 4; mixed (seven voice cases warmed in the process first), 6 each, -36.1 to 77.4 / -31.4 to
+   65.8; the final tree 9.7 to 47.7 in 10 more rounds. Time per block (the window's `NS`, medians): unpinned 10,577 /
+   9,962 ns (0.94, the two `pow` per string per block gone), pinned 11,724 / 10,996 (0.94). **The pluck** (one
+   string, `karplusStrong`, not measured before; two probe cases, `pluck` with feedback 1 with and without `analog`
+   0.3, added to a copy of the case list and taken out again): 16 B per block, what the classic saw reads (item 30's
+   root box), in every condition (the exact window of `audio/ref/performance.md`, single-case, `--predictable` and
+   mixed, 3 processes each, mixed being the drifting one after nine voice cases warmed; the check's method 6.0 to 25.8
+   in 8 rounds each); the window-only profiler books nothing but the root box. It computes one base delay per block,
+   not per string. **Bit for bit:** raw samples of a superpluck probe (14 cases, 600 blocks:
+   `spluck-a`'s voice, `analogSpread` 0.5, no drift, 1, 2 and 16 strings, stiffness, 220 Hz, and the frequency, the
+   detune and the count as stepping signals, with 0.0 and -0.0 and NaN episodes), HEAD's `Ignitors.kt` against the
+   tree's, identical on V8 (the production test bundle) and on the JVM, 14 of 14 each; and every allocation case on V8,
+   the last block's peak and a digest of every block's peak over 6,000 blocks, 40 of 40 identical (this tree with item
+   45's changes). **The line stays at 96** and `spluck-a` leaves the "Known tails" paragraph of `alloc-budgets.txt`
+   for "Closed tails". It does not guard a revert reliably (HEAD's code reads high in about 1 round in 15, a run red
+   by the median of 3 far more rarely); the KDoc is the guard. **Mutation check, partly shown:** one lock call ran six
+   mutants over the three new specs (this item's four and item 45's two), each restored with `cp` and checked with
+   `cmp`, but something outside the run (likely the IDE, which had the worktree open) wrote each mutant back into the
+   file after its restore, so the mutants piled up and every "green again" run was red. What it still shows, each
+   row's first red at the step its own mutant arrived: the frequency key dropped (`sameDelayInput` on the frequency
+   always true) turned the 400-to-480 Hz row and the -0.0 row red; the detune key dropped turned the detune row red;
+   the count key dropped turned the count row red. Not shown: the sign-of-zero test dropped alone (its row was already
+   red from the frequency mutant). The files were restored by hand to the tree's versions, checked with `cmp` and
+   stable 20 s later; the full `:audio_be:jvmTest` after it is the clean run, 2,848 of 2,848 green. A clean campaign (one mutant per lock
+   call, the IDE closed) is left for the next worker.
 5. **DONE (2026-10-11): not reproduced on production; the development-bundle box was the PWM loop's phase seed, fixed
    by the seed rule, which now covers every field seed of an oscillator loop.** Reported as one heap number per sample
    on the development bundle under a mixed profile (about 2 KB per block, `pulze` with a duty signal), blamed on the
@@ -1850,6 +1912,24 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     `ScratchBuffers.oversample` looks its sub-pool up in a map per block (`getOrPut`; the first use per factor
     allocates, once per warehouse). Per orbit or per backend, not per voice. The resonators' part closed with step 12
     (a). Source: the record, "Found during tidy-up step 10" and "Found during tidy-up step 12". S.
+    **Checked (2026-10-19): the sub-pool half is closed; the `DelayLine` per rent stands, a shape change of
+    `DelayLine`, left with item 11 for the Zig port.**
+    - **The sub-pool, closed by item 34 (2026-10-16) and the warm-ups:** `oversample` scans two small arrays
+      (`oversampleFactors`, `oversamplePools`), so a block's lookup allocates nothing. A factor's first use still builds
+      its sub-pool (`addOversample`), but no production host reaches that in render: the warehouse's shared pool warms
+      2, 4, 8 and 16 (`ResourceWarehouse.scratch`, `WARM_OVERSAMPLE_FACTORS`), the bus distort its own factor and the
+      `parallel` stage its twins' factors at construction (`KatalystDistortEffect.scratch`,
+      `KatalystParallelEffect.scratch`). Nothing left to do.
+    - **The `DelayLine` per rent, unchanged:** `ensureRing` builds a `DelayLine` (the object and its five-double
+      `blockArgs`) when it rents a ring: at the delay's first activation after the chain was built or released
+      (`release()`, from `retire()`: a chain swap's ring-out, an engine disposed) and when a longer time grows the ring.
+      `reset()` (an orbit deactivated) keeps the ring and the line, so an orbit that sleeps and wakes builds nothing.
+      Not per block and not per note. The ring itself is pooled. Building the wrapper with the effect would need a
+      `DelayLine` that rebinds its ring (`ring`, `bufferSize` and `buffer` are fixed at construction), and a grow
+      needs the old line and the new one at once (`adoptHistory`), so the effect would hold two lines and swap them: a
+      shape change of a public class that the migration specs pin, for an allocation that comes with a ring rent
+      anyway. Not small and not urgent in the browser; the audit's reason for it (B4.5: a Zig render loop needs an
+      allocator for each) belongs with the Zig port, as item 11 does.
 
 ## 3. Behaviour and order
 
@@ -2302,18 +2382,81 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     So `E-kat-gates` guards the per-sample class on the delay and reverb paths, `E-kat-mix` `KnobGlide.retarget` and
     the per-sample class; the isFinite group (G1) was not re-measured, and the header withdraws the claim that
     `E-kat-mix` catches it. S.
-45. **Three per-block sites of 36's and 38's shape, not seen red** (numbered after the last item, added 2026-10-19).
-    Each puts a double across a call, or a stdlib call, on a per-block path, where V8 boxes the double whenever it
-    leaves the call out (`audio/ref/performance.md`); none read over its line on 2026-10-19 (`E-gain` 31 B, `E-distort`
-    36 B, `E-kat-dyn` 78 B, the allocation check's medians), so each is a candidate, not a measured box:
-    - `KatalystGainWriter.apply` (`KatalystSlotWriters.kt`) hands its `factor`, a `Double`, to
-      `KatalystGainEffect.configure(gain: Double)` every block the orbit has an owner: the shape item 36 removed from
-      the arithmetic writer. Remedy if it boxes: hand the knob (or a holder) and read the value in `configure`.
-    - `KatalystDistortEffect.configure` tests `amount.isFinite()` with the stdlib function on the per-block path (the
-      knob expressions step 6 class that `isFiniteInline` exists for).
-    - The `Ducking` setters still run every block while a MODULATED depth or attack moves (`E-kat-dyn`): item 38's
-      skip only reaches an unchanged setting. Remedy if it boxes: item 40's, one call through a holder.
-    Behaviour-neutral each (Q38). Source: review round 1 of items 35, 36 and 38 (2026-10-19). S.
+45. **DONE (2026-10-19): of the three sites, the duck's setters boxed under a mixed profile and the gain's hand-off
+    under a squeezed budget, and both now hand their numbers over through a holder; the distort's `isFinite()` boxed
+    in no condition tried and was swapped for `isFiniteInline` by the house rule. Two more sites found on the way, left
+    open below.** Reported (numbered after the last item, added 2026-10-19): three per-block sites of 36's and 38's
+    shape, each a double across a call or a stdlib call where V8 boxes it whenever it leaves the call out; none read
+    over its line (`E-gain` 31 B, `E-distort` 36 B, `E-kat-dyn` 78 B, the allocation check's medians). Source: review
+    round 1 of items 35, 36 and 38. A purely independent performance fix (Q38): no door, wire type or sound changes;
+    the public `configure(gain)` and the `Ducking` setters stay, the new entries are `internal`. **Measured** on the
+    production bundle (`:audio_benchmark:compileProductionExecutableKotlinJs`, node 22.12) with the exact window of
+    `audio/ref/performance.md` (one scavenge at the window's start, the new space's growth across 200,000 blocks, a
+    128 MB semi-space, no collection inside), so a window reads in whole heap numbers: single-case at V8's budget and
+    squeezed to 250 (`--max-inlined-bytecode-size-cumulative`), and mixed (twelve engine cases warmed in the process
+    first, `E-sawC-sus` to `E-kat-mix`); located with the sampling heap profiler run inside the window only (bytes
+    per block, HEAD / tree):
+
+    | case | single-case | squeezed to 250 | mixed |
+    |---|---|---|---|
+    | `E-gain` | 32 (16 to 64) / 32 (16 to 48) | 64.0 in 10 of 10 / 48.0 in 6 of 6 | 32.0 / 32.0 |
+    | `E-distort` | 32.1 (one 48.0) / 32.1 | 48.0 to 49.0 / 49.0 | 32.0 (one 16.0) / 32.0 |
+    | `E-kat-dyn` | 66.3 to 67.2 / 66.4 to 66.7 | 146.2 to 146.7 / 114.6 | 118.2 to 119.4 (one 150.9), 26 rounds / 85.9 to 87.2 (one 102.9), 14 |
+    | `E-duck` (control) | 61.0 / 61.0 | 77.0 / 77.0 | 48.0 / 48.0 (one 79.9) |
+    | `E-sawC-sus` (control) | 45.0 / 45.0 | 61.0 / 61.0 | 32.0 / 32.0 |
+
+    - **The duck's setters (boxed): `KatalystDuckEffect.configure` under a modulated depth and attack.** Mixed, the
+      profiler booked 32.4 B per block in `configure` in 3 of 3 processes (two heap numbers, the setters' arguments);
+      squeezed, 16.3 to 32.5 there (and in one process 16.1 in `Ducking.calculateCoefficient`, the attack setter's
+      coefficient). **Fix**
+      (`audio_be/.../effects/Ducking.kt`, `KatalystDuckEffect.kt`): item 40's remedy. `Ducking.knobArgs` (a
+      `DoubleArray(2)`) and `applyKnobArgs()`, which guards each knob as its setter does (a non-finite one keeps the
+      stored value), writes the depth's `coerceIn(0.0, 1.0)` out and computes the coefficient from the stored attack in
+      `updateReleaseCoeff` (no double in or out); `calculateCoefficient` is Kotlin `inline` over `isFiniteInline` (as
+      a plain function its call still booked one heap number per block in `configure` at 250: `E-kat-dyn` 130.7 there
+      before, 114.6 after). `configure` hands a setting that moved and NaN for one that holds (the holder keeps a
+      non-finite knob, so it writes nothing, which is item 38's skip; one store per arm, item 41's rule), then calls
+      `applyKnobArgs` once. The stored values live in two plain properties, `depthValue` and `attackValue`, which the
+      loops and `configure` read: `depth` and `attackSeconds` keep their setters for every other caller, and their
+      getters (calls on Kotlin/JS) are not on the per-block path. The KDoc of `knobArgs` is the guard. After it the
+      profiler books nothing in `configure`, mixed or squeezed.
+    - **The gain's hand-off (boxed under a squeezed budget only):** at 250 the profiler booked 16.1 B per block in
+      `KatalystChain.applyParams` (the writer's `apply` inlined, `configure(factor)` called), every round; at V8's
+      budget, single-case and mixed, nothing. **Fix** (`KatalystGainEffect.kt`, `KatalystSlotWriters.kt`): the writer
+      keeps its guarded factor in a `DoubleArray(1)` and calls `configureFrom(holder)`, which retargets the glide with
+      the element (the public `configure(gain)` stays for every other caller, the same law). Item 36's shape on the
+      arithmetic writer, here through a holder because the writer's guard (a non-finite slot is unity) differs from the
+      stage's door (a non-finite factor is ignored). The KDoc of `configureFrom` is the guard. At 250: 64.0 to 48.0,
+      nothing booked there.
+    - **The distort's `isFinite()` (no box found):** no condition above booked anything in
+      `KatalystDistortEffect.configure`, and the `--predictable` profiler with the warm-up subtracted booked nothing
+      there at 920 or 250 either. Swapped for `isFiniteInline` by the house rule (the exact twin, one compare), the
+      comment at the site says it was measured harmless. `E-distort` reads the same before and after.
+    **Found on the way, not fixed (not this item's sites; each the same class):**
+    - **The duck's gliding call:** while the depth moves, `KatalystDuckEffect.process` hands its two ends (and the
+      weight's) to `Ducking.processStereoGliding`, which V8 leaves out under a mixed profile: 32.4 B per block booked
+      in `process` in every mixed process, HEAD and tree (32 of `E-kat-dyn`'s 86 B mixed, the rest the two voices'
+      floor and the scheduler's step); squeezed, single-case too. Remedy candidate: a holder for the four ends, as `Compressor.glideArgs`
+      (knob expressions step 6).
+    - **`E-kat-mix` under a mixed profile** reads 293 B per block on HEAD and the tree alike (53 single-case): the
+      window-only profiler books 64.6 B in `KatalystDelayEffect.configure`, 64.9 in `ResonatorBank`'s `configure`, 48.5
+      in `KatalystReverbEffect.configure`, 32.4 in `KatalystPhaserEffect.configure`, 16.2 each in `Phaser.process` and
+      the reverb's `advanceGlide`: the stages whose knob moves (the delay's time, the reverb's size, the phaser's
+      center, the body's and the vowel's wet) take their doubles across left-out calls in their `configure`, item 40's
+      class in four more stages. Candidate for an item of its own.
+    **Bit for bit:** every allocation case on V8, HEAD against this tree (with item 4), the last block's peak and a
+    digest of every block's peak over 6,000 blocks: 40 of 40 identical. **Tests:** `DuckingSpec`, "applyKnobArgs
+    leaves the instance where the two setters leave it, bit for bit" (ten steps through every guard, the stored knobs
+    and every output sample compared by their bits); `KatalystGainEffectSpec`, "configureFrom moves the fader exactly
+    as configure does with the holder's number" (twelve blocks: a snap, a glide, a change mid-glide, unity, a polarity
+    flip, NaN, bit for bit). Mutation check, in the run item 4 describes (its restores were overwritten from outside,
+    so only each row's first red counts): `applyKnobArgs` without the coefficient update turned the `DuckingSpec` row
+    red (and no other row of the file); `configureFrom` reading `holder[0] * 1.0000000001` turned the
+    `KatalystGainEffectSpec` row red, with three slot rows. A clean campaign is left for the next worker. **Not run
+    here:** `:audio_be:jsBrowserTest` and the allocation check (the session was wrapped up for the maintainer's pause
+    first); `:audio_be:jvmTest` ran once on the final tree (item 4). No budget line moves: the check's
+    single-case method reads no difference on any of the three lines (`E-gain` and `E-kat-dyn` note that the KDocs
+    guard these fixes). S.
 46. **`GraphCensus`'s five pitch arms miss the pitch memo and the gate** (numbered after the last item, added
     2026-10-19): since 2026-10-07 `combineMods` calls `cachePerBlock` unconditionally, so each pitch node's mod renders
     into a memo and every consumer copies it out per block (2 of traffic each) while the memo holds a
