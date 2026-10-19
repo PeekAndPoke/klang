@@ -204,6 +204,9 @@ add the master chain's `latencyFrames` to the render's run-out.
 > counted two different ways; (c) leave it, as `tailSec = 0` with a delaying master is rare. A sibling, not in this
 > item: an orbit chain that delays (a `katalyst(...)` with a lookahead or an oversampled `distort`) is not counted
 > either.
+>
+> **Decided 2026-10-19 (maintainer): (a), "if it is easily done, do it"; scheduled after the release**, as it moves
+> two corpus rows (accepted with `corpus-accept-engine` in the same change) and gets the usual review.
 
 ## Links
 
