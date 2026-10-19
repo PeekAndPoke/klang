@@ -136,7 +136,15 @@ full parametric EQ.
 
 ## 6. Small documentation / convention debts
 
-- The `delay(cap)` KDoc example `delay(feedback = 1.0).delay(cap = 2.0) // endless echo, held at 2.0` is misleading: at exactly
+- DONE 2026-10-19. The example itself was already gone: `d9b6c8e3` (2026-09-07) removed it with the `delaycap` door,
+  and this line was only respelled then. The same claim lived on in prose ("at or above 1.0 ... with `cap` deciding how
+  loud") on the Katalyst `delay` door (`KatalystStageDsl.Delay` in `audio_bridge/KatalystDsl.kt`; `scriptDelay` and
+  the knob `scriptCap` in `klangscript-libs/.../stdlib/KatalystBuilders.kt`) and in `DelayLine.cap`'s KDoc. All now say
+  what `DelayLine.processInternal` does (a ring cell is `cap · softCap((input + feedback · tap) / cap)`, untouched up to
+  0.95 of the cap): at exactly 1.0 an echo keeps the level it went in at, and the cap sets the level only above 1.0,
+  where the echoes grow until it holds them just under it. The sprudel door's text ("Ceiling the repeats may not
+  exceed", "Above 1 builds up") was already right. Docs only, no test. Was: the `delay(cap)` KDoc example
+  `delay(feedback = 1.0).delay(cap = 2.0) // endless echo, held at 2.0` is misleading: at exactly
   1.0 the cap never engages (the echo holds at the *input* level); the cap only sets the level once feedback > 1.
 - RESOLVED 2026-09-07 (the `dcap` doors are gone, `delay(cap = ...)` is the one form). Was: several `dcap` overloads (top-level, `String.dcap`, both `PatternMapperFn` forms) lack
   `@category`/`@tags`/`@alias`, which `sprudel/ref/dsl-conventions.md` requires — so they will not surface in the
@@ -165,6 +173,37 @@ delays (a compressor's lookahead, an oversampled `distort`) is not counted, so a
 stay in the chain when the loop stops. Since the bus `distort` oversamples at 2x by default, any
 `master(Katalyst(k => k.distort(...)))` adds 3 uncounted frames (about 0.06 ms at 48 kHz, barely audible). The fix:
 add the master chain's `latencyFrames` to the render's run-out.
+
+> **Investigated 2026-10-19, NOT built: the fix moves two corpus rows, the maintainer's call.** Every claim above holds
+> (`KlangAudioRenderer.latencyFrames` is `MasterStage.latencyFrames`, the house limiter's 240 frames at 48 kHz;
+> nothing reads `KatalystChain.latencyFrames` of the master outside the swap's alignment; the bus `distort` default
+> is 2x, 3 frames). One nuance: the loop renders whole 128-frame blocks, so the real run-out is the bound rounded up
+> to a block, and a short chain latency (the 3 frames) usually hides in that slack; a lookahead limiter's 240 does not.
+>
+> **The plainest fix (three getters, no new plumbing):** `MasterBus.latencyFrames` (the chain in service),
+> `PlaybackEngine` passes it on, `KlangAudioRenderer.latencyFrames` adds it to the house limiter's, and
+> `KlangOfflineRenderer` reads the bound EVERY block (`while (currentFrame < musicalAndTailFrames + renderer.latencyFrames)`)
+> and returns the final bound as `totalFrames`. Read before the loop it would be 0: a master lands only when the
+> scheduler consumes its event inside the render. The value that counts is the chain in service at the end: it holds
+> the music's last frames. A chain swapped away earlier was fed silence after its 60 ms fade, so what it still rings
+> is tail (`tailSec`'s job); only a fade that overlaps the very end leaves music in the leaving chain, and
+> `max(current, leaving)` would cover that corner in one more line.
+>
+> **What it moves:** the corpus renders 256 cycles with a 2 s tail through this renderer and hashes every block. Der
+> Schmetterling and Kokon (live songs, code unchanged) carry a 244-frame master: `bands` with the mids'
+> `distort(0.10, "soft", 4)` (4 frames) and `limiter(lookahead = 0.005)` (240 frames). Their bound grows by 244 frames,
+> which is 2 more blocks each (Der Schmetterling 22,438,144 to 22,438,400 frames, Kokon 36,960,256 to 36,960,512), so
+> both hashes move and the corpus goes RED (engine-moved, needs `corpus-accept-engine`). Nothing else moves: no
+> frozen text has a delaying master (two run reverb and gain, the frozen Stranger Things none), Greensleeves and A
+> Synth Worth Lying For use `limiter()` at its authored lookahead 0, the other masters are reverb and gain, and the
+> render tests' masters are gain only.
+>
+> **Options:** (a) build the fix above and accept the two rows with `corpus-accept-engine` (recommended: it is the
+> correct run-out, and the two songs only gain 5.3 ms of tail); (b) count the chain latency only where the tail does
+> not cover it (`max(tailFrames, chainLatency)`): the corpus stays, but the house and the chain latency are then
+> counted two different ways; (c) leave it, as `tailSec = 0` with a delaying master is rare. A sibling, not in this
+> item: an orbit chain that delays (a `katalyst(...)` with a lookahead or an oversampled `distort`) is not counted
+> either.
 
 ## Links
 

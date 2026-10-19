@@ -216,9 +216,12 @@ class DelayLine(
     /**
      * Ceiling the feedback path saturates toward ([ShapingFuncs.softCapTo]).
      *
-     * The engine is raw: any [feedback] is allowed, including ≥ 1.0, which self-oscillates. This
-     * decides *how loud* that runaway settles rather than whether it is permitted — and keeps the
-     * ring bounded so a finite input can never produce a non-finite output. Default 1.0 is
+     * The engine is raw: any [feedback] is allowed. Above 1.0 the ring grows on every lap, and this
+     * decides *how loud* that runaway settles (just under the cap) rather than whether it is
+     * permitted. At exactly 1.0 the ring holds what it was fed (a fractional delay's linear
+     * interpolation dulls its highs a little per lap), and the cap acts only where that reaches it:
+     * a stored sample is untouched up to 0.95 of the cap. It also keeps the ring
+     * bounded, so a finite input can never produce a non-finite output. Default 1.0 is
      * bit-identical to the previous fixed behaviour. Setter silently ignores non-finite values.
      */
     var cap: Double = DELAY_CAP

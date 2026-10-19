@@ -260,8 +260,10 @@ internal fun KatalystBuilder.scriptVowel(
  * @param wet how much of the orbit goes into the delay (default 0.25; 0.0 = off). Orbit twin:
  *   `delay(wet = ...)`.
  * @param time delay time in seconds (default 0.25). Orbit twin: `delay(time = ...)`.
- * @param feedback feedback amount (default 0.3). At or above 1.0 the delay recirculates without
- *   loss and self-oscillates, allowed, with `cap` deciding how loud. Orbit twin:
+ * @param feedback feedback amount (default 0.3), allowed above 1.0. At exactly 1.0 the echoes
+ *   neither fade nor grow: each keeps the level it went in at (a delay time that falls between two
+ *   samples dulls its highs a little on every repeat), unless that level reaches `cap`. Above 1.0
+ *   they grow on every repeat until `cap` holds them, just under it. Orbit twin:
  *   `delay(feedback = ...)`.
  * @param configure receives the [KatalystDelayBuilder] (knob: `cap`) and returns it.
  */
@@ -984,7 +986,11 @@ internal fun KatalystVowelBuilder.scriptFloor(floor: IgnitorDslLike): KatalystVo
 
 // ── Delay ────────────────────────────────────────────────────────────────────
 
-/** Level the recirculating signal saturates toward (default 1.0). Orbit twin: `delay(cap = ...)`. */
+/**
+ * Level the recirculating signal saturates toward (default 1.0): how loud the echoes settle once the
+ * feedback is above 1.0. Up to 95% of it the echoes pass untouched, so at a feedback of 1.0 or less it
+ * acts only on echoes loud enough to reach it. Orbit twin: `delay(cap = ...)`.
+ */
 @KlangScript.Function(name = "cap")
 internal fun KatalystDelayBuilder.scriptCap(cap: IgnitorDslLike): KatalystDelayBuilder = this.cap(cap.toKatalystKnob())
 

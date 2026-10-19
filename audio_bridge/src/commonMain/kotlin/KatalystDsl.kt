@@ -345,10 +345,14 @@ sealed interface KatalystStageDsl {
      *
      * @param wet how much of the orbit goes into the delay (0.0 = off). Orbit twin: `delay(wet = x)`.
      * @param time delay time in seconds. Orbit twin: `delay(time = ...)`.
-     * @param feedback feedback amount; at or above 1.0 it recirculates without loss and
-     *   self-oscillates, allowed (raw engine), with [cap] deciding how loud. Orbit twin:
-     *   `delay(feedback = ...)`.
-     * @param cap level the recirculating signal saturates toward. Orbit twin: `delay(cap = ...)`.
+     * @param feedback feedback amount; allowed above 1.0 (raw engine). At exactly 1.0 the echoes
+     *   neither fade nor grow: each keeps the level it went in at (a delay time that falls between
+     *   two samples dulls its highs a little on every repeat), unless that level reaches [cap].
+     *   Above 1.0 they grow on every repeat until [cap] holds them, just under it.
+     *   Orbit twin: `delay(feedback = ...)`.
+     * @param cap level the recirculating signal saturates toward: how loud the echoes settle once
+     *   [feedback] is above 1.0. Up to 95% of it the echoes pass untouched, so at a feedback of
+     *   1.0 or less it acts only on echoes loud enough to reach it. Orbit twin: `delay(cap = ...)`.
      */
     @WireName("delay")
     data class Delay(
