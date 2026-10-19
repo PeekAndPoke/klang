@@ -20,7 +20,8 @@
 #
 # ENV
 #   KLANG_LOCK_TIMEOUT   seconds to wait for the lock (default 900; 0 = fail immediately)
-#   KLANG_LOCK_FILE      lock file path (default <repo>/.claude/build.lock)
+#   KLANG_LOCK_FILE      lock file path (default: the MAIN checkout's .claude/build.lock, found through git, so a
+#                        git worktree shares the one lock with the main checkout and every other worktree)
 #
 # EXIT CODES
 #   the wrapped command's exit code, or 75 (EX_TEMPFAIL) if the lock could not be acquired.
@@ -28,7 +29,18 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-LOCK_FILE="${KLANG_LOCK_FILE:-$REPO_ROOT/.claude/build.lock}"
+
+# The main checkout, also when this script runs from a git worktree (2026-10-19): git's common dir is the main
+# checkout's .git, for every worktree alike. Before, a worktree locked a file of its own and serialized against nobody.
+# Outside a git checkout, the script's own checkout.
+COMMON_DIR="$(git -C "$REPO_ROOT" rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)"
+MAIN_ROOT="$REPO_ROOT"
+
+if [ -n "$COMMON_DIR" ]; then
+    MAIN_ROOT="$(dirname "$COMMON_DIR")"
+fi
+
+LOCK_FILE="${KLANG_LOCK_FILE:-$MAIN_ROOT/.claude/build.lock}"
 TIMEOUT="${KLANG_LOCK_TIMEOUT:-900}"
 
 if [ $# -eq 0 ]; then
