@@ -657,8 +657,17 @@ fun Ignitor.onePoleHighpass(cutoffHz: Double): Ignitor = onePoleHighpass(ParamIg
  * cutoff envelope (`SvfIgnitor`, which reads [EnvelopeCore.at] at the block's two ends) and the FM index
  * envelope (`FmModIgnitor`, which reads it per sample). The level is the core's; each host clamps it to
  * [0, 1], the depth range of both destinations.
+ *
+ * Kotlin `inline` ON PURPOSE (engine follow-up 10d, 2026-10-19; `audio/ref/performance.md`, "a non-integral double
+ * handed to a function that is not inlined is a heap number per call"). As a plain function it took the four stage
+ * knobs as double arguments, and inside `FmModIgnitor.generate` V8 left it out of the budget under a mixed profile,
+ * so each non-integral knob (a sustain of 0.3, an attack of 0.001 s) crossed as a heap number per block. Inline, the
+ * host's own compiled code stores them into the core's fields ([EnvelopeCore.prepare] is inline too) and only the gate
+ * frame and the curves cross into `prepareBlock`. No test can pin it (the sound is the same either way): this KDoc
+ * is the guard. Do not turn it back into a plain function.
  */
-internal fun EnvelopeCore.prepareModEnvelope(
+@Suppress("NOTHING_TO_INLINE")
+internal inline fun EnvelopeCore.prepareModEnvelope(
     ctx: IgniteContext,
     attack: Double,
     decay: Double,

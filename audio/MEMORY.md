@@ -384,6 +384,12 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-19 Engine follow-ups 10c and 10d: the fm's knob reads no longer box on V8 (`prepareModEnvelope` and
+  `finiteOr` Kotlin `inline`, `finiteOr` over `isFiniteInline`; bit-identical, JVM 0 B); open and parked for the
+  maintainer (item 30's class): one heap number per fm per block for the modulator's frequency and one per
+  freq-keyed wrapper (10c's pin), at any non-integral note; probe at middle C, not 220 Hz, and do not bracket a
+  mixed-profile window with forced mark-compacts (`audio/ref/performance.md`):
+  `docs/tasks/in-progress/engine-follow-ups.md` items 10c and 10d
 - 2026-10-18 `s("sgpad").fm(...)` keeps its pitch (Q31): `sgpad`'s second saw reads `Freq * 0.1.semitones()` instead
   of a forking `detune`, so the classic FM serves one pitch; without fm bit-identical, with fm block-size independent
   (`SgpadFmSpec`); no engine change; the corpus moves no row (its three red rows predate it, the same with the fix

@@ -5,7 +5,7 @@
 v0.6.5, step 4 merged after). Where to continue (Q38, maintainer 2026-10-13: 31 to 41 after the refill, each a purely independent performance
 fix that changes no API), open V8 items first: **the V8 batch is done** (31 DONE 2026-10-15; 32, 34, 39, 40 and 41
 DONE 2026-10-16; 33 DONE earlier). Left of the numbers 31 to 41: 35 (a gliding `div` slow on the JVM), the tails 36
-and 38 (not located), and 37 (a sound change, so outside Q38). Next: 10c and 10d (fm); the known tails 4, 36 and 38;
+and 38 (not located), and 37 (a sound change, so outside Q38). 10c and 10d (fm): two sites fixed 2026-10-19, the modulator's frequency and the wrapper pin open, parked for the maintainer (item 30's class). Next: the known tails 4, 36 and 38;
 then sections 2 to 5 (13, 11 and the small ones) and section 6. Open with the maintainer: C1 to C11 (the FM diagnostic is C6) in
 `docs/housekeeping/2026-10-10-baseline.md`, and Q13, Q29 (`duty(width)`) and Q30 to Q33 in
 [`_maintainer-questions.md`](../_maintainer-questions.md).
@@ -983,7 +983,8 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     357.5 B per block (about 5.7 KB per note) is the build alone: its knob reads do not box. The controls, the JVM,
     bit-identity, the guard row and the corpus are 10a's. Report: `tmp/reviews/e10-report.md`. S.
     **Review round 1, applied**: see 10a (B1 corrected the residue above).
-10c. **An fm whose modulator reads a freq-keyed mod allocates a heap number per block on V8** (fixed for
+10c. **OPEN, the remedy parked for the maintainer (2026-10-19; item 30's class, whose remedy the maintainer declined
+    there): an fm whose modulator reads a freq-keyed mod allocates a heap number per block on V8** (fixed for
     freq-invariant mods, open for freq-keyed ones). The site (pitch pipeline step 3b, review round 1, reviewer B
     MINOR 1): `CarrierFreqMod.generate` hands the pinned carrier frequency, a double loaded from a field, to
     `mod.generate`, a megamorphic call V8 does not inline, so it boxes one heap number (about 16 bytes) per wrapper per
@@ -997,7 +998,44 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     spread is about 30), about one heap number per such wrapper per block. The JVM renders all of it allocation-free.
     A remedy would hand the pinned value on without a load V8 boxes. Source: `tmp/reviews/pp3b-r1-B.md`,
     `tmp/reviews/pp-step3b-report.md`. S.
-10d. **Sprudel's `fm` allocates on V8 per block since it became `classic()`'s FM stage** (pitch pipeline step 4,
+    **Re-measured 2026-10-19: confirmed, one heap number per freq-keyed wrapper per block at a non-integral note.** A
+    first pass at 220 Hz read no box and was recorded here as "nothing to fix"; review round 1 (both reviewers) found
+    why: at 220 Hz the pin is 220, a whole number, which travels as a small integer and cannot box (the fm's modulator
+    frequencies there too, 10d). Measured at middle C (261.6255653005986 Hz, the allocation harness's note) by
+    10d's exact method, render bytes per block, medians of 3, HEAD / tree (the tree changes nothing on this path),
+    single-case unpinned, single-case pinned, mixed unpinned, mixed pinned:
+
+    | case | single unpinned | single pinned | mixed unpinned | mixed pinned |
+    |---|---|---|---|---|
+    | a plain classic saw (`sawC`, the control: item 30's root box) | 16 / 16 | 16 / 16 | 16 / 16 | 16 / 16 |
+    | a chain of three fms (`chain3`) | 96 / 96 | 96 / 96 | 96 / 96 | 96 / 96 |
+    | the same under `vib` | 96 / 96 | 96 / 96 | 96 / 112 | 96 / 96 |
+    | the bell under a vibrato whose rate reads the note (`Freq * 0.01`) | 64 / 64 | 64 / 64 | 80 / 80 | 80 / 80 |
+
+    The chain's 96 B are the root box, its three modulator frequencies (10d) and two pins, one per wrapper whose outer
+    mod keeps its freq key; under `vib` the outermost wrapper's mod is the vibrato (constant knobs, freq-invariant),
+    which hands on the caller's tagged frequency, so the same two pins. The note-reading vibrato bell: the root, its
+    modulator frequency, one pin and the vibrato LFO's own box (below). Reviewer B's copy of the tree's bundle with the
+    pin field started tagged (written `null` first, then the frequency: item 30's option B shape) read the chain 64 B
+    and that bell 48 B, single-case and mixed (`scratchpad/rv10/logs/`): one heap number per pin, as first reported.
+    **The remedy is item 30's class**, a tagged cell: V8 keeps a field that held `null` first tagged, so the box is made
+    once per change of the pin instead of once per block, at the cost of a `Double` per voice and per change of pitch
+    on the JVM. The maintainer declined that remedy for the voice's root box (item 30, decision D, 2026-10-11:
+    complexity, bytes only), so it is not built here: parked for the maintainer, with item 30's decision as the
+    precedent. The JVM renders all of it allocation-free.
+    **Found on the way, not the fm (a lead):** the bell under the note-reading vibrato keeps one more heap number per
+    block, at 220 Hz as at middle C, on HEAD and on the tree, booked in the vibrato LFO's `SineIgnitor.generate`
+    (sampling heap profiler, the tree's bundle). Item 8 met a box booked in the same function on `sgpad-vib`'s LFO
+    (about 44 B per block, at a constant rate of 5.0, so not the rate) and showed it is not `resolveFreq`: inlined by
+    hand at its seven sites it moved nothing, so `resolveFreq` stays a plain function. For the note-reading case the
+    likelier cause is the class above: the LFO's frequency (`Freq * 0.01`, 2.2 Hz at 220 Hz) is non-integral at
+    most notes and crosses a call inside the oscillator that V8 does not inline (the bell under a vibrato at the
+    constant rate 5.0 reads what the bell reads, single-case); not located. `sgpad`'s
+    second saw (`Freq * 0.1.semitones()`, non-integral at almost any note) pays one heap number per block in
+    `WaveIgnitor.generate`, with or without `fm` (16 B in every condition at 220 Hz, 10d). Report: this item and 10d;
+    the probe and the runs in the session scratchpad's `fm-v8/` (`m-final.txt` at 220 Hz, `m-midC.txt` at middle C). S.
+10d. **Two sites fixed (2026-10-19), one open (the modulator's frequency, item 30's class, parked for the maintainer
+    as 10c): sprudel's `fm` allocates on V8 per block since it became `classic()`'s FM stage** (pitch pipeline step 4,
     review round 1, reviewer B MINOR 3). The strip's `FmRenderer` allocated nothing per block; the Ignitor `fm` node
     hands per-block doubles to calls V8 does not inline (the modulator's `generate` at `fmFreqVal * ratioVal`, the
     knob reads, `prepareModEnvelope`'s stage times), the class of `audio/ref/performance.md`. Measured on the
@@ -1014,6 +1052,109 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     modulator's `generate` at `fmFreqVal * ratioVal` (about 50 B per block on the tree, attributed to the modulator's
     sine, `SineIgnitor.generate`, called from `FmModIgnitor.generate`) and the knob reads (`Ignitors.readParam`, about
     65 B per block, item 8 on V8; item 12 on the JVM).
+    **2026-10-19: the knob reads are fixed (two sites), the modulator's frequency is open.** Measured on the production
+    test bundle (`:audio_be:compileTestProductionExecutableKotlinJs`, node 22), one voice through `VoiceFactory`, at
+    220 Hz and at middle C. **The note decides whether this class boxes at all:** at 220 Hz every hand-off of the fm is
+    a whole number (the modulator at 220 x 1.4 = 308.0 exactly, also 330, 440 and 770 in the chains; 10c's pin 220),
+    which travels as a small integer and cannot box, so only the two knob-read sites show there; at a non-integral note
+    every product and pin boxes, and a plain voice pays item 30's root box (16 B), the control subtracted
+    below. The first pass ran at 220 Hz only and recorded the modulator's frequency as "not a site"; review round 1
+    (both reviewers) found the probe's note and measured the product: at 220 Hz with ratio 1.37 (modulator 301.4 Hz)
+    `fm` and `fm-sus` read 16 B single-case and mixed, with ratio 1.41 `fm` reads 16 B, where ratio 1.4 reads 0; at
+    middle C `fm` and `fm` on `sine` read 32 B against the control's 16 (`scratchpad/r1-fmfreq/`, `r1-meas.log`).
+    **The method had to change.** The difference of two processes read about ±60 B of noise per round on this probe,
+    and a window bracketed by forced mark-compacts (10a's method for short windows) perturbs a mixed profile: HEAD's
+    `fm(300, 1.4)` read 84 B per block that way and 0 B without the collections (at 220 Hz), and the sampling profiler
+    with the collections added showed fractional per-block bytes in the oscillators (likely code re-optimized inside
+    the window). The method used: one scavenge at the window's start, then the growth of the new space
+    (`v8.getHeapSpaceStatistics`) over 200,000 blocks after 50,000 of warm-up, with a semi-space of 128 MB so no
+    collection falls inside the window (counted per process, none did). It reads 0 B on an allocation-free voice and
+    whole heap numbers (16 B) otherwise. Four conditions: single-case and mixed profile (every voice case warmed
+    first, as a worklet is), pinned (`taskset -c 11`) and unpinned.
+    **The sites** (sampling heap profiler around the window, `--trace-turbo-inlining` with compilation made
+    synchronous, on copies of the bundle with every method named):
+    - **Fixed: `prepareModEnvelope`** (`IgnitorFilters.kt`), the FM and filter envelopes' block setup, was a plain
+      function taking the four stage knobs as doubles; inside `FmModIgnitor.generate` V8 did not inline it in a mixed
+      profile, so each non-integral knob crossed as a heap number every block (attack 0.001, decay 0.01, sustain 0.3:
+      three). Now Kotlin `inline`: the host's code stores the knobs into `EnvelopeCore`'s fields (`prepare` is inline
+      since item 31) and only the gate frame and the curves cross into `prepareBlock`.
+    - **Fixed: `finiteOr`** (`IgnitorEnvelopes.kt`), the per-block NaN guard of the chain `adsr`'s sustain,
+      accelerate's semitones, the pitch envelope's semitones and sustain, and the fm's ratio, depth and sustain (the
+      vibrato takes its defaults at the build since pitch pipeline 7b, `finiteLiteralOr`; the filter envelope does not
+      use it), called Kotlin's `isFinite()`, a stdlib call on Kotlin/JS; V8 inlined `finiteOr` into
+      `FmModIgnitor.generate` but left one of the fm's three `isFinite` calls out of the budget, so that knob crossed
+      the call (the trace: candidate `isFinite`, not inlined; `ParamIgnitor`'s `controlRateValue` was inlined, so
+      `readParam` was not the site). Now Kotlin `inline` over `isFiniteInline()`, the same values (both are false for
+      NaN and both infinities). It may also be the classic envelope's sustain box that item 31 left open (booked in
+      `AdsrIgnitor.generate`): `C-sus` (sustain 0.5, at 220 Hz) reads 0 on the tree in every condition, but HEAD read
+      16 in three conditions and HEAD again 0 in all four, so that is not shown.
+    - **Open: the modulator's frequency** (`fmFreqVal * ratioVal`), handed to the modulator's `generate`, a call V8
+      does not inline: one heap number per fm per block whenever the product is not a whole number, that is at almost
+      every real note. The tree reads the control plus one heap number on every fm row at middle C (below). The first
+      pass measured a prototype that held the product in a `Double?` field written only on a change (item 30's option
+      B) and recorded that it "moved nothing"; it was measured at 220 Hz, where the product is 308.0 and cannot box,
+      so that verdict is withdrawn. The same remedy measured on 10c's pin does take its box (reviewer B: one heap
+      number per pin). The remedy is item 30's class, parked for the maintainer as in 10c (decision D the precedent);
+      not built.
+    Render bytes per block at **middle C**, medians of 3, HEAD / tree (`m-midC.txt`; HEAD's rounds in brackets
+    wherever they spread, the tree's rounds never did on these rows):
+
+    | case | single unpinned | single pinned | mixed unpinned | mixed pinned |
+    |---|---|---|---|---|
+    | a plain classic saw (`sawC`, the control: item 30's root box) | 16 / 16 | 16 / 16 | 16 / 16 | 16 / 16 |
+    | `fm(300, 1.4)` on `saw` (`fm`) | 32 / 32 | 32 / 32 | 32 [32-48] / 32 | 32 / 32 |
+    | `fm` on `sine` | 32 / 32 | 32 / 32 | 32 [32-48] / 32 | 32 / 32 |
+    | `fm` with its envelope settled at sustain 0.3 (`fm-sus`) | 48 [48-64] / 32 | 112 [48-112] / 32 | 96 / 32 | 96 / 32 |
+    | `sgbell` (in its sustain 0) | 96 / 32 | 48 [48-96] / 32 | 80 / 32 | 80 / 32 |
+    | `C-env3` (the allocation check's case) | 48 / 32 | 80 [48-80] / 32 | 64 [64-80] / 32 | 80 [64-80] / 32 |
+    | the bell (`sine.fm(sine, 3.5, 400).adsr(...).classic()`) | 32 / 32 | 32 / 32 | 32 [32-48] / 32 | 48 [32-48] / 32 |
+
+    Less the control, the tree reads one heap number on every fm row (the modulator's frequency, open), and HEAD's
+    surplus over the tree is the two fixed sites, 0 to 5 heap numbers by row and condition. `fm` and `fm` on `sine`
+    have no envelope, so `prepareModEnvelope` does not run there; `finiteOr` still guards their ratio and depth every
+    block and reads no surplus in the medians (HEAD read single rounds of one more heap number there, mixed unpinned;
+    the tree none). Render bytes per block at **220 Hz** (only the two fixed sites can box
+    there), medians of 3, HEAD / tree / HEAD again (rebuilt from HEAD's two files; `m-final.txt`):
+
+    | case | single unpinned | single pinned | mixed unpinned | mixed pinned |
+    |---|---|---|---|---|
+    | `fm(300, 1.4)` on `saw` (`fm`) | 0 / 0 / 0 | 0 / 0 / 0 | 0 / 0 / 0 | 0 / 0 / 0 |
+    | `fm` with its envelope settled at sustain 0.3 (`fm-sus`) | 32 / 0 / 32 | 16 / 0 / 16 | 64 / 0 / 64 | 64 / 0 / 64 |
+    | `sgbell` (in its sustain 0) | 16 / 0 / 16 | 64 / 0 / 16 | 64 / 0 / 48 | 48 / 0 / 48 |
+    | `C-env3` | 16 / 0 / 16 | 16 / 0 / 16 | 48 / 0 / 32 | 48 / 0 / 48 |
+    | the classic envelope at sustain 0.5 (`C-sus`) | 16 / 0 / 0 | 16 / 0 / 0 | 0 / 0 / 0 | 16 / 0 / 0 |
+    | the bell | 0 / 0 / 0 | 0 / 0 / 0 | 16 / 0 / 16 | 0 / 0 / 0 |
+    | `sgpad` with `fm` | 16 / 16 / 16 | 16 / 16 / 16 | 16 / 16 / 16 | 32 / 16 / 16 |
+    | `sgpad` alone (control) | 16 / 16 / 16 | 16 / 16 / 16 | 16 / 16 / 16 | 16 / 16 / 16 |
+    | `saw` (control) | 0 / 0 / 0 | 0 / 0 / 0 | 0 / 0 / 0 | 0 / 0 / 0 |
+
+    At 220 Hz `fm` on `sine`, the pitch envelope at sustain 0.3 and a vibrato read medians of 0 B on the tree in every
+    condition; HEAD and the tree both show single mixed-profile rounds of 16 there (`fm` on `sine` read a median of 16
+    on HEAD again, mixed pinned). `sgpad`'s 16 B is its second saw's frequency (10c, "found on the way"), with or
+    without `fm`. The engine rows (one held note through `PlaybackEngineDispatcher`, 220 Hz) read 19 to 35 B on every
+    side, the engine's own floor, too coarse to show one heap number. Time: within the noise of a busy machine (HEAD
+    against HEAD again up to 20 percent apart on single rows), no claim. JVM (`ThreadMXBean`, 7 rounds of 20,000
+    warm-up plus 16,000 blocks, every case in one process, 220 Hz): 0 B per block on every side for every case.
+    **Bit for bit:** 400 blocks of each of the 20 probe cases (the 220 Hz rows above, the bell under `vib` and under a
+    note-reading vibrato, the fm chains, and four engine rows), raw doubles, identical HEAD / tree / HEAD again on V8
+    (20 of 20) and on the JVM (20 of 20). `:audio_be:jvmTest` (2,841 tests) and `:audio_be:jsTest` (2,732, browser)
+    green. No test was added: both changes inline a function and swap a stdlib call for its exact twin; the existing
+    specs cover both paths, checked by mutants (each in one lock call, restored with `cp`, checked with `cmp`):
+    `prepareModEnvelope` with the attack and decay swapped turns `ClassicFmSpec` (6 rows), `ModEnvelopeDefaultCurveSpec`
+    (the FM stage) and `IgnitorFilterKnobsSpec` (the filter sweep) red; `finiteOr` letting infinities through
+    (`!isNaN()`) turns `IgnitorGateSpec` ("the envelope's knobs under a NaN", its infinite sustains) red.
+    **No allocation line added.** The check's V8 half runs single-case processes (middle C) by the two-process
+    difference, whose noise (about 25 B) is as large as the single-case gap of the two fixed sites (one to three heap
+    numbers): by the check's own method on copies of its bundle, `C-env3` read HEAD 36 to 67 B and the tree 26 to 45
+    (5 rounds each), overlapping. The KDocs at `prepareModEnvelope` and `finiteOr` are the guards. The allocation
+    check on the tree ran twice: `C-env3` medians 41 and 35 B (line 160), `C-full` (the filter envelope,
+    `prepareModEnvelope`'s other host) 16 and 5 B (line 112), JVM lines all held. Each run went red with every round
+    over one line, which the budget file's rule reads as the regression's shape, not the tail's (`spluck-a` 319.7,
+    448.9, 458.1 B against 96 in the first; `E-arith` 160.2, 181.1, 155.8 against 96 in the second; each green in the
+    other run). Cleared by an A/B of those two cases by the check's method on copies of its bundle, HEAD against the
+    tree: `spluck-a` 18 rounds each (13 unpinned, 5 pinned), no high round on either side (HEAD 12 to 48, tree -5 to
+    51 B); `E-arith` 8 rounds each, the high mode on both (HEAD 3 of 8, tree 2 of 8), so the known tails, not this
+    change. S.
 
 29. **DONE (2026-10-11): the SVF node's per-block setup boxed on V8 in a full `classic()` voice, and so did the
     filter drift.** Reported as about 130 + 65 + 32 B per block in the cutoff chain of a full `classic()` voice

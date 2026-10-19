@@ -22,7 +22,9 @@ was decided by default is collected here, so the round starts from one page.
 - **The fm diagnostic** ([`fm-above-forking-detune-diagnostic.md`](fm-above-forking-detune-diagnostic.md),
   C6 of the 2026-10-10 baseline): the first editor diagnostic, for an fm above a forking `detune`.
 - **FM's V8 allocations**: engine follow-ups 10c and 10d
-  ([`../in-progress/engine-follow-ups.md`](../in-progress/engine-follow-ups.md)), performance only.
+  ([`../in-progress/engine-follow-ups.md`](../in-progress/engine-follow-ups.md)), performance only. The knob reads
+  are fixed (2026-10-19); open, parked for the maintainer (item 30's class): one heap number per fm per block for the
+  modulator's frequency, and one per wrapper whose outer mod reads the note, at any non-integral note.
 
 ## For the round
 

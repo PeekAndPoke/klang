@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_be.ignitor
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.EnvelopeCore
 import io.peekandpoke.klang.audio_be.EnvelopeDeclick
+import io.peekandpoke.klang.audio_be.utils.isFiniteInline
 import io.peekandpoke.klang.audio_be.utils.timeConstantCoeff
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.constants.ADSR_EXP_K
@@ -72,10 +73,22 @@ fun Ignitor.adsr(
  *
  * The pitch envelope's sustain (`PitchModFactories`) takes the same substitution for the same
  * reason: it multiplies every ratio of a settled block, so a NaN would freeze the pitch. So do the
- * pitch modulators' amounts there (vibrato `rate` and `semitones`, accelerate's and the pitch
- * envelope's `semitones`, FM `ratio` and `depth`, since 2026-10-07), each with its node's default.
+ * pitch modulators' amounts there (accelerate's and the pitch envelope's `semitones`, FM `ratio`,
+ * `depth` and `sustain`, since 2026-10-07), each with its node's default. The vibrato's knobs do not
+ * come here: since pitch pipeline 7b its literals take their defaults once, at the build
+ * (`finiteLiteralOr` in `IgnitorDslRuntime`).
+ *
+ * **Kotlin `inline`, with [isFiniteInline], ON PURPOSE** (engine follow-up 10d, 2026-10-19; `audio/ref/performance.md`,
+ * "a non-integral double handed to a function that is not inlined is a heap number per call"). Its callers run it once
+ * per block per knob: the chain `adsr`'s sustain, accelerate's semitones, the pitch envelope's semitones and sustain,
+ * the fm's ratio, depth and sustain. Inside it Kotlin's `isFinite()` is a stdlib call on Kotlin/JS: V8 inlined this
+ * function into `FmModIgnitor.generate` but left one of its `isFinite` calls out of the budget, so that knob (an fm
+ * ratio of 1.4, a sustain of 0.3) crossed the call as a heap number per block. The same values either way
+ * (`isFiniteInline` is false for NaN and both infinities, as `isFinite()` is). No test can pin it (the sound is the
+ * same): this KDoc is the guard. Do not turn it back into a plain function or back onto `isFinite()`.
  */
-internal fun finiteOr(value: Double, fallback: Double): Double = if (value.isFinite()) value else fallback
+@Suppress("NOTHING_TO_INLINE")
+internal inline fun finiteOr(value: Double, fallback: Double): Double = if (value.isFiniteInline()) value else fallback
 
 private class AdsrIgnitor(
     private val upstream: Ignitor,

@@ -331,7 +331,7 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   **A `Math.ceil` handed to a call that is not inlined boxes even when it is a whole number:** V8 cannot rule out -0,
   so it cannot travel as a small integer (the `toInt()` inside the delay's `framesFor(time)`, run every block until
   follow-up 1 kept the conversion off the steady path).
-  Four cautions for this class of box:
+  Six cautions for this class of box:
   - **Measure pinned AND unpinned.** `taskset` to one core puts V8's concurrent compiler on the core of the measured
     code, which changes the tier-up history and so which calls are left out. A single bundle varies by up to five
     heap numbers per block between unpinned processes (and pinned ones vary too while the sibling threads are busy);
@@ -343,6 +343,22 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   - Measure the production bundle (`:audio_be:compileTestProductionExecutableKotlinJs`): it reads fields directly
     where the development bundle calls accessors, and it boxes in different places.
   - Run long: right after a change the first few megabytes are tier-up, not steady state.
+  - **Do not bracket a mixed-profile window with forced mark-compacts** (engine follow-up 10d, 2026-10-19). A
+    `gc()` at the window's start likely disturbed the compiled code of a process that had warmed many cases (no
+    deopt trace was taken): HEAD's fm voice read 84 B per block bracketed so and 0 B without, and the profiler then
+    showed fractional bytes per block in the oscillators. For an exact count of one window use one scavenge
+    (`gc({ type: 'minor' })`, `--expose-gc`) and the new space's growth across the window
+    (`v8.getHeapSpaceStatistics()`, `new_space`) with a semi-space large enough that no collection falls inside it
+    (`--min-semi-space-size=128 --max-semi-space-size=128` for 200,000 voice blocks, a `PerformanceObserver` on `gc`
+    to prove none did): it reads 0 B on an allocation-free voice and whole heap numbers otherwise. The difference of
+    two processes read about ±60 B per round on the same probe.
+  - **Probe at a non-integral note, and subtract a plain voice** (engine follow-ups 10c and 10d, review round 1). A
+    double that is a whole number in Smi range travels as a small integer and did not box (measured here on products
+    and field loads; the `Math.ceil` exception above still holds), so a probe at 220 Hz hides
+    every hand-off whose value is the note times a simple ratio (220 x 1.4 = 308.0 exactly): 10d's first pass read the
+    fm's modulator frequency and 10c's pin as no site there, and both box at middle C. Play the allocation harness's
+    middle C (261.6255653005986 Hz), keep the derived frequencies non-integral too (a ratio of 1.4 on a non-integral
+    note), and subtract a plain classic voice at the same note, which carries item 30's root box (16 B).
   Measure with `--trace-gc-nvp` (it reports the bytes allocated since the last collection) and
   `--max-semi-space-size=1`, so a collection falls every megabyte and a residue of a few bytes per block is counted;
   at the default semi-space one run read 0 and the next 20.7 bytes per block for the same code. Locate with the
@@ -522,9 +538,19 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   `MinusIgnitor.controlRateValue` then `MaxIgnitor.controlRateValue` was left out of the voice's budget, its double
   result a heap number); and the SVF clamps test finiteness with `isFiniteInline`. In `--predictable` single-case
   processes `C-full`, a lowpass or highpass with `analog`, the tremolo alone and the fused distort now read what the
-  classic saw reads (about 15 B per block, the method's floor). Left open on these voices: the fm's per-block calls
+  classic saw reads (about 15 B per block, the method's floor). Left open on these voices then: the fm's per-block calls
   (items 10c and 10d, about 2 heap numbers on `C-env3`) and a classic envelope with a non-integral sustain (about one
-  heap number, booked in `AdsrIgnitor.generate` as its root call, on HEAD too; likely item 30's class).
+  heap number, booked in `AdsrIgnitor.generate` as its root call, on HEAD too; likely item 30's class). **Engine
+  follow-up 10d (2026-10-19) fixed the fm's knob reads**, two cases of the rules above: `prepareModEnvelope` (four
+  stage knobs as double arguments, left out of `FmModIgnitor.generate` in a mixed profile) and `finiteOr` (its stdlib
+  `isFinite()` left out of the same budget) are Kotlin `inline` now, `finiteOr` over `isFiniteInline`. At 220 Hz,
+  where every other hand-off of the fm is a whole number, `C-env3` then reads 0 B on the tree in every condition
+  (HEAD 16 to 48). At middle C, as the allocation check plays it, the tree reads 32 B on every single-fm row (HEAD up
+  to 112): the root box (item 30) and **one heap number per fm per block, still open: the modulator's frequency**
+  (`fmFreqVal * ratioVal`, non-integral at almost every note) handed to the modulator's `generate`; and one more per
+  wrapper whose outer mod reads the note (item 10c, the pinned carrier frequency). Both are item 30's class, a tagged
+  cell their remedy, which the maintainer declined for the root box (item 30, decision D): parked for the maintainer.
+  The sustain box may have gone with `finiteOr` (not shown: HEAD read it in some processes only).
   **Engine follow-up 34 (2026-10-16) closed the oversampled path** that item 31 left (`tube4x`, `E-distort`): besides
   the sub-pool map (the `HashMap` rule above), the bus distort handed its drive to a `DistortionCore.process` that V8
   did not inline into the chain (one heap number per block, two while the amount glides, the ramp's two ends).
