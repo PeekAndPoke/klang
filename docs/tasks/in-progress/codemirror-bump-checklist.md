@@ -71,5 +71,6 @@ binds no keymap of its own: Play and Run are buttons.
 - **The minimap** is pre-1.0; it needs the same state and view instances as the editor.
 - **The playback highlight's Pixi overlay** (found 2026-10-18): webpack 5.108 dropped pixi's side-effect import
   `app/init.mjs`, so `app.ticker` was undefined ("Failed to initialize PixiJS highlight overlay ... reading 'add'")
-  and the page froze. Fixed by `webpack.config.d/04-pixi-side-effects.js`; after a pixi.js or webpack bump, check
-  that the highlights show and the console is clean.
+  and the page froze. Klang first fixed it with a webpack rule (`webpack.config.d/04-pixi-side-effects.js`, commit
+  0684195c); since Ultra 0.112.0 the pixijs addon registers pixi's extensions itself and the rule is gone. After a
+  pixi.js, webpack or Ultra bump, check that the highlights show and the console is clean.
