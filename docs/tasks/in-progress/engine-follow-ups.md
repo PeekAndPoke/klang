@@ -8,7 +8,7 @@ DONE 2026-10-16; 33 DONE earlier; 35, 36 and 38 DONE 2026-10-19, 38 as a site re
 shown). Left of the numbers 31 to 41: 37 (a sound change, so outside Q38). 10c and 10d (fm): two sites fixed
 2026-10-19, the modulator's frequency and the wrapper pin open, parked for the maintainer (item 30's class). Next:
 the known tail 4;
-then sections 2 to 5 (13, 11 and the small ones) and section 6. Open with the maintainer: C1 to C11 (the FM diagnostic is C6) in
+then sections 2 to 5 (13, 11, 20, 45 and 46; 16 to 19 and 28 DONE 2026-10-19) and section 6. Open with the maintainer: C1 to C11 (the FM diagnostic is C6) in
 `docs/housekeeping/2026-10-10-baseline.md`, and Q13, Q29 (`duty(width)`) and Q30 to Q33 in
 [`_maintainer-questions.md`](../_maintainer-questions.md).
 
@@ -1863,30 +1863,67 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
 
 ## 4. Tests
 
-16. **The weak pluck `ignitorParam` rows**: `IgnitorDefaultsTest`'s "pluck responds to ignitorParam" rows for
-    `brightness`, `pickPosition` and `stiffness` render both sides from one shared, advancing `testRandom`, so they
-    differ even when the slot is not read. Render each side from the same fresh seed, as the `feedback` and `leak` rows
-    already do. Source: [`20261009-classic-slot-names-check.md`](../../tasks-archive/2026-10/20261009-classic-slot-names-check.md),
-    step 2b. S.
-17. **`DelayLineMigrationSpec`'s "the timeout is the assertion" row may not be able to fail**: a kotest `timeout`
-    cannot interrupt a busy loop on the JVM, so a mutant that spins hangs the suite instead of going red. Not checked
-    yet. Source: the record, "Found during the empty-variants fix". S.
+16. **DONE (2026-10-19): every `IgnitorDefaultsTest` row that compares two renders draws both from the same fresh
+    seed.** Reported: the "pluck responds to ignitorParam" rows for `brightness`, `pickPosition` and `stiffness`
+    rendered both sides from one shared, advancing `testRandom`, so they differed even when the slot was not read.
+    Review round 1 found the same in the supersaw rows (`voices`, `spread`, `analog`: all three GREEN with the three
+    slots disconnected) and a dust row that held by the seed's luck (`countHigh >= countLow` over two draws). Every
+    comparing row now renders each side with `renderSeeded` (`Random(7)` for the build and the context, the helper of
+    the `feedback` and `leak` rows, moved up and given a `freqHz`): the pluck's three, the supersaw's three (the
+    `detune` row's title now names its slot, `spread`), the sine's `analog`, dust's `density` (strictly more impulses
+    from the same seed) and the eqdemo bell's `eqdb`. The first pluck `feedback` row is gone: seeded, it repeated a
+    line of the seeded `feedback` row below it. Mutation-checked, each RED on its own row, restored and `cmp` clean:
+    the source in `IgnitorDefaults.kt` wired to a constant in place of the pluck's `brightness`, `pickPosition` and
+    `stiffness`, the supersaw's `voices`, `spread` and `analog`, the sine's `analog`, dust's `density`, the eqdemo
+    bell's `eqdb` and the pluck's `feedback` (the seeded row). Left: none; the rows that remain on the shared stream
+    each check one render (output or silence). Source:
+    [`20261009-classic-slot-names-check.md`](../../tasks-archive/2026-10/20261009-classic-slot-names-check.md), step 2b.
+17. **DONE (2026-10-19): the row could not fail through its timeout; it no longer leans on one.** Reported:
+    `DelayLineMigrationSpec`'s equal-sizes row said "the timeout is the assertion", and a kotest `timeout` may not
+    interrupt a busy loop on the JVM. Checked: a mutant that spins in the row's last call (`processCrossfade`'s chunk
+    0 for a block longer than the ring; the call crossfades, 1 to 62 samples) hung the 5 s row until the outer
+    `timeout` killed the build at 421 s; on JS nothing can interrupt it. The mutant the row exists for (the
+    equal-sizes branch of `adoptHistory` dropped) never reached the timeout: the cursor pin above it went RED in 7 s.
+    The row now has no `timeout`, says that the cursor pin is the assertion (below the size every chunk is at least 1),
+    and processes a 100-frame block from the wrapped cursor with a measured-progress pin (`writePos` 100 mod 64).
+    Mutation-checked, RED and `cmp` clean: the equal-sizes branch dropped (the cursor pin, no hang), and
+    `processCrossfade` not advancing the cursor (the progress pin). Source: the record, "Found during the
+    empty-variants fix".
 
 ## 5. Small leftovers
 
-18. **`VoiceFactory.buildVoice` takes `cut = data.cut` beside `data`** at both call sites, a redundancy. Source:
-    [`code-style-named-args-pass.md`](../../tasks-archive/2026-10/20261014-code-style-named-args-pass.md), "Declarations". S.
-19. **`VcaOffTeardownSpec` keeps its file name** after its constant became `TEARDOWN_FADE_SECONDS`. Source: the record,
-    step 5, "Left". S.
+18. **DONE (2026-10-19): `VoiceFactory.buildVoice` reads `data.cut` itself.** Reported: it took `cut = data.cut`
+    beside `data` at both call sites, a redundancy. Both call sites (the only ones; the function is private, no spec
+    calls it) passed exactly `data.cut`; the parameter is gone. No behaviour change, no test changed. Source:
+    [`code-style-named-args-pass.md`](../../tasks-archive/2026-10/20261014-code-style-named-args-pass.md), "Declarations".
+19. **DONE (2026-10-19): the spec is `TeardownFadeSpec`** (file and class; was `VcaOffTeardownSpec`, which it kept
+    after its constant became `TEARDOWN_FADE_SECONDS`), its helper `renderVoiceVcaOff` is `renderVoiceFaded`, and its
+    KDoc names the old name for the older records. `TeardownFadeRenderer`'s KDoc and the block-framing plan's
+    "Related" list follow. Rows unchanged. Source: the record, step 5, "Left".
 20. **Test-only DSP entry points from the per-voice era** (audit A2.9): `Compressor.process(buffer, offset, length)`,
     `Ducking.process(input, sidechain, blockSize)`, `Phaser.process(buffer, frames)`, `Reverb.hasTail` and
     `DelayLine.hasTail`; move the specs onto the production entry points. The audit's other test-only seams (`*ForTest`,
     `currentState`, `installed*`) are the same question (the record, "Decided", D10). S.
-28. **`GraphCensus` still counts the vibrato as one pitch node** (numbered after the last item, added 2026-10-10):
-    its arm predates the composition (pitch pipeline 7b: the sine LFO, the floor, the multiply, the converter) and the
-    7c range pass (a constant one in place, a signal one reading two bounds) and phase input (a moving phase read per
-    sample), so a song benchmark's `work` column under-counts a vibrato. The tremolo's arm is the pattern (it counts
-    only what runs). Source: `docs/tasks/pitch-pipeline-into-the-tree.md`, 7c review round 1, A6. S.
+28. **DONE (2026-10-19): `GraphCensus` counts the vibrato as its composition, only what runs.** Reported (numbered
+    after the last item, added 2026-10-10): its arm predated the composition (pitch pipeline 7b: the sine LFO, the
+    floor, the multiply, the converter) and the 7c range pass and phase input, so a song benchmark's `work` column
+    under-counted a vibrato; the tremolo's arm is the pattern. The vibrato has its own arm now: the LFO (1 pass, 1
+    write), the multiply (in place over a scalar depth, a third stream over a signal one), the converter in place,
+    then, as for every pitch node, the ratio loop (`ModApplyingIgnitor` copies the mod block into the ratios: a read
+    and a write, its pass not counted, as in the other pitch arms) and the source's read of the ratio (1); a signal
+    depth adds its floor in place, a moving phase the LFO loop's read, and a built range a pass in place (reading both
+    bounds when either is a signal). Whether the range is built is the runtime's per-note test (`hasBuiltRange`), read
+    through the voice's params: none at the default swing, a non-finite literal or an unset slot. The plain vibrato is
+    3 passes and 8 of traffic where it was 1 and 4, so every `classic()` voice's census steps by 2 passes and 4 of
+    traffic at this date (3 and 6 with a vibrato range off the default, which builds the range pass; the gate is still not modeled: its vibrato counts as built at depth 0; item 46). Pins:
+    `GraphCensusSpec`'s new vibrato row; the pitch-mod row now counts an `Accelerate`. Mutation-checked, each RED and
+    `cmp` clean: the converter, the ratio loop, the source's read, the moving phase's read, the bounds' reads, the
+    signal depth's floor and its third stream left out; a `Param` bound read off its default only; a non-finite literal
+    bound not read as its default; the four other pitch arms' traffic 4 to 3 (the pitch-mod row). Not changed, a
+    doubt: of those four arms, `accelerate` and the pitch envelope fit the model (each writes its ratios: 1, then the
+    loop's 2 and the read's 1); `pitchMod` and `pitchModSemitones` charge a write of 1 that their mod, a child, already
+    counts, and miss their in-place conversion (`DeviationToRatioIgnitor`, `SemitonesToRatioIgnitor`: a read and a
+    write), so each is 1 under in traffic. Source: `docs/tasks/pitch-pipeline-into-the-tree.md`, 7c review round 1, A6.
 35. **DONE (2026-10-19): the gliding `div` was slow on the JVM only after other operators had run in the same JVM;
     each operator's loops now live in a method of their own, and the row reads what it reads alone.** Reported
     (numbered after the last item, added 2026-10-11): the timing row "`div` gliding" read 1.8 to 3.7 µs per block on
@@ -2276,6 +2313,19 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     - The `Ducking` setters still run every block while a MODULATED depth or attack moves (`E-kat-dyn`): item 38's
       skip only reaches an unchanged setting. Remedy if it boxes: item 40's, one call through a holder.
     Behaviour-neutral each (Q38). Source: review round 1 of items 35, 36 and 38 (2026-10-19). S.
+46. **`GraphCensus`'s five pitch arms miss the pitch memo and the gate** (numbered after the last item, added
+    2026-10-19): since 2026-10-07 `combineMods` calls `cachePerBlock` unconditionally, so each pitch node's mod renders
+    into a memo and every consumer copies it out per block (2 of traffic each) while the memo holds a
+    `blockFrames * 8` buffer between blocks; the census's own memo rule (its KDoc) counts both, and none of the five
+    pitch arms (`Vibrato`, `Accelerate`, `PitchEnvelope`, `PitchMod`, `PitchModSemitones`) does. And the gate: in
+    `classic()` the vibrato's depth defaults to 0, so the runtime builds nothing while the census counts the stage;
+    the same for a gated `Fm`, pitch envelope and accelerate. With `literalOf` in the census, modelling the gate is
+    about one line per arm; the sentence in `audio/ref/performance.md` ("It does not model the build gate") changes
+    with it. And the ratio loop and the source's read run once per pitched source, not per pitch node (`applyMod`
+    wraps each source once; `combineMods` folds nested pitch nodes into one `existing * newMod` memo, a multiply over
+    two signals, 1 pass and 3 of traffic): `classic()` with its vibrato and accelerate both built is counted with two
+    loops and two reads and no combine pass, and a pitch node over two pitched sources with one loop and one read too
+    few. All three move every `classic()` voice's census columns. Source: review rounds 1 and 2 of item 28. S.
 
 ## 6. The audit's later steps and its open decisions
 

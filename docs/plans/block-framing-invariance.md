@@ -619,7 +619,7 @@ the sample floor, and the two E4 code paths' reachability concern. B2 never land
 
 - `docs/tasks-archive/2026-08/20260831-ignitor-envelope-ownership.md` — where instance 1 surfaced.
 - `IgniteOnsetOffsetSpec` — the guard for instance 1, and the template for the harness.
-- `VcaOffTeardownSpec` — the teardown-side equivalent, already sweeping fractional and short spans.
+- `TeardownFadeSpec` (named `VcaOffTeardownSpec` until 2026-10-19): the teardown-side equivalent, already sweeping fractional and short spans.
 
 ### Modulation/waveshaper class — audited 2026-08-30 (two lenses: clocks/time-bases + state/memory/numerics) — FINDINGS ONLY, maintainer decisions pending
 

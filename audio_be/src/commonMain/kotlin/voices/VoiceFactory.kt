@@ -154,7 +154,6 @@ class VoiceFactory(
                     data = data, releaseSec = treeLifetime(built), startFrame = startFrame, gateEndFrame = gateEndFrame, voiceDurationFrames = voiceDurationFrames, cylinder = cylinder,
                     gain = gain,
                     signal = built.ignitor, freqHz = freqHz ?: 0.0, voiceRandom = voiceRandom,
-                    cut = data.cut,
                     cull = treeCull(cull, built),
                     treeStages = treeStages(built),
                 )
@@ -277,7 +276,6 @@ class VoiceFactory(
                     gain = gain,
                     signal = built.ignitor, freqHz = baseSamplePitchHz,
                     voiceRandom = voiceRandom,
-                    cut = data.cut,
                     cull = treeCull(cull, built),
                     treeStages = treeStages(built),
                 )
@@ -336,7 +334,6 @@ class VoiceFactory(
          *  with). NO default on purpose: a future call site must not silently fall back to
          *  the global and split the build/render channels. */
         voiceRandom: Random,
-        cut: Int?,
         cull: Double?,
         /** The stages after the ignite stage (`treeStages`). */
         treeStages: List<BlockRenderer>,
@@ -368,7 +365,7 @@ class VoiceFactory(
             // By reference, never a copy: the map is immutable on the wire and only the orbit's
             // owner reads it (see Voice.katalystParams).
             katalystParams = data.katalystParams,
-            cut = cut,
+            cut = data.cut,
             cull = cull,
             pipeline = pipeline,
             blockCtx = blockCtx,

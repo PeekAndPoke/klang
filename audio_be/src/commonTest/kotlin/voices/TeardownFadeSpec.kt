@@ -45,8 +45,10 @@ private val testRandom = Random(0x5EED)
  * The topology below is that guitar in miniature. `envelopeAfterAmp` is the control: the same
  * patch with the envelope last, which never had the problem, and which the numbers here must land
  * near.
+ *
+ * Named `VcaOffTeardownSpec` until 2026-10-19 (the older records use that name).
  */
-class VcaOffTeardownSpec : StringSpec({
+class TeardownFadeSpec : StringSpec({
 
     val sampleRate = 48000
     val blockFrames = 128
@@ -110,7 +112,7 @@ class VcaOffTeardownSpec : StringSpec({
     }
 
     /** Renders a whole voice through the teardown fade. */
-    fun renderVoiceVcaOff(dsl: IgnitorDsl, freqHz: Double): AudioBuffer {
+    fun renderVoiceFaded(dsl: IgnitorDsl, freqHz: Double): AudioBuffer {
         val signal: Ignitor = dsl.toExciter(random = testRandom)
         val signalCtx = IgniteContext(
             sampleRate = sampleRate,
@@ -179,14 +181,14 @@ class VcaOffTeardownSpec : StringSpec({
             // The ramp reaches 0 on endFrame-1, the frame Voice.render actually stops on, so this
             // is an exact assertion rather than a threshold. A fade that bottoms out at
             // 1/fadeFrames (the first version of this code) fails here.
-            lastSample(renderVoiceVcaOff(envelopeBeforeAmp, freq)) shouldBe 0.0
+            lastSample(renderVoiceFaded(envelopeBeforeAmp, freq)) shouldBe 0.0
         }
 
         "the fade touches ONLY the last few ms at ${freq}Hz" {
             // The previous version of this case compared two different topologies and was inert:
             // raising the fade 60x still passed it. This compares the SAME signal with and without
             // the gate, so widening the window makes it red immediately.
-            val gated = renderVoiceVcaOff(envelopeBeforeAmp, freq)
+            val gated = renderVoiceFaded(envelopeBeforeAmp, freq)
             val raw = renderRaw(envelopeBeforeAmp, freq)
             // A FIXED ceiling, deliberately not derived from TEARDOWN_FADE_SECONDS: deriving
             // it lets the test follow the constant, and a 60x widening then still passes (it did).
@@ -301,6 +303,6 @@ class VcaOffTeardownSpec : StringSpec({
     "the envelope-after-amp control was always silent at teardown" {
         // Proves the spec measures the right thing: this topology never had the bug, so it must
         // pass with or without the fade.
-        (lastSample(renderVoiceVcaOff(envelopeAfterAmp, 82.4)) < 1e-4) shouldBe true
+        (lastSample(renderVoiceFaded(envelopeAfterAmp, 82.4)) < 1e-4) shouldBe true
     }
 })

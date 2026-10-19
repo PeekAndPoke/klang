@@ -9,7 +9,6 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
-import kotlin.time.Duration.Companion.seconds
 
 /**
  * `DelayLine.adoptHistory` on its own — the migration the resource warehouse performs when a ring
@@ -87,10 +86,13 @@ class DelayLineMigrationSpec : StringSpec({
         }
     }
 
-    "equal sizes: the cursor wraps to 0, and processing a block afterwards terminates".config(timeout = 5.seconds) {
+    "equal sizes: the cursor wraps to 0, and a block processed afterwards moves it on" {
         // `writePos = if (n == bufferSize) 0 else n`. Dropping that branch leaves the cursor AT
         // bufferSize, process()'s chunk = min(length, bufferSize - pos) becomes 0, and its
-        // `while (done < length)` spins forever on the audio thread. The timeout is the assertion.
+        // `while (done < length)` spins forever on the audio thread. The cursor pin is the
+        // assertion: below the size every chunk is at least 1, so the loop ends. A test timeout
+        // is not (checked 2026-10-19): kotest's `timeout` does not interrupt a busy loop on the
+        // JVM (a 5 s timeout hung for 7 minutes under a spinning mutant), and nothing can on JS.
         val from = rampedLine(size = 64, frames = 100)
         val to = DelayLine(StereoBuffer(64), sampleRate)
 
@@ -100,7 +102,10 @@ class DelayLineMigrationSpec : StringSpec({
         for (d in 1..64) {
             withClue("d = $d") { sampleAgo(to, d) shouldBe sampleAgo(from, d) }
         }
-        to.process(input = StereoBuffer(128), output = StereoBuffer(128), length = 128) // must return
+
+        // A block longer than the ring, from the wrapped cursor: it wraps once more and ends 100 frames on.
+        to.process(input = StereoBuffer(100), output = StereoBuffer(100), length = 100)
+        to.writePosForTest shouldBe 100 % 64
     }
 
     "smaller target keeps the NEWEST samples, aligned — never the oldest, shifted" {

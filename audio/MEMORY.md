@@ -384,6 +384,11 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-19 `GraphCensus` counts the vibrato as its composition (7b and 7c): the LFO, the multiply, the converter, the
+  ratio loop, the source's read, plus a built range (per note, as `hasBuiltRange`), a signal depth's floor and a moving
+  phase's read; every `classic()` voice's census steps by 2 passes and 4 of traffic (3 and 6 with a vibrato range
+  off the default; the gate is still not modeled), so the song benchmark's `work` and `traffic` columns compare
+  across this date with care (`docs/tasks/in-progress/engine-follow-ups.md`, item 28).
 - 2026-10-19 Engine follow-ups 35, 36 and 38, bit-identical: the arithmetic stage runs each operator's loops in a
   method of its own (the JVM compiled them on one shared profile; the gliding `div` 1.61 to 1.94 µs per block in
   suite order, 0.29 and 0.52 after), its writer hands the knob to `configure` instead of the value (`E-arith`'s second

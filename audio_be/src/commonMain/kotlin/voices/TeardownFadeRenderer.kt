@@ -29,7 +29,7 @@ import kotlin.math.floor
  * removes that, and the instrument's own envelope cannot replace it: it sits BEFORE the
  * instrument's amp stages, so a tail it has taken to ~1e-4 comes back out of a tube/drive stage
  * 20 dB louder, and teardown steps that straight to zero. See [TEARDOWN_FADE_SECONDS]
- * for the measurements and `VcaOffTeardownSpec` for the guard.
+ * for the measurements and `TeardownFadeSpec` for the guard.
  *
  * It runs after the whole tree, so it guarantees silence at the voice's output (only the send stage follows).
  *

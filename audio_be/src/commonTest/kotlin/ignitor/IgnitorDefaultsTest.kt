@@ -7,7 +7,7 @@ package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.common.infra.toKlangMap
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
+import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
@@ -57,8 +57,27 @@ class IgnitorDefaultsTest : StringSpec({
         return buffer
     }
 
-    fun buffersDiffer(a: AudioBuffer, b: AudioBuffer): Boolean =
-        a.zip(b).any { (x, y) -> x != y }
+    // Every row that compares two renders draws each side from the SAME fresh seed, so only the slot can move the
+    // render: from the file's shared, advancing stream the two sides differ even when the slot is not read (the
+    // supersaw draws its voice phases from it, the pluck its burst, dust its impulses).
+    fun renderSeeded(soundName: String, ignitorParams: Map<String, Double>? = null, freqHz: Double = 440.0): List<Double> {
+        val data = VoiceData.empty.copy(sound = soundName, ignitorParams = ignitorParams?.toKlangMap())
+        val exciter = registry.createExciter(soundName, data, freqHz, random = Random(7))
+            ?.ignitor ?: error("Unknown sound: $soundName")
+        val buffer = AudioBuffer(blockFrames)
+        val ctx = IgniteContext(
+            sampleRate = sampleRate,
+            voiceDurationFrames = sampleRate,
+            gateEndFrame = sampleRate,
+            scratchBuffers = ScratchBuffers(blockFrames),
+            random = Random(7),
+        ).apply {
+            updateOffsetAndLength(offset = 0, length = blockFrames)
+            voiceElapsedFrames = 0
+        }
+        exciter.generate(buffer, freqHz, ctx)
+        return buffer.toList()
+    }
 
     // ═════════════════════════════════════════════════════════════════════════════
     // All predefined oscillators produce output
@@ -119,21 +138,15 @@ class IgnitorDefaultsTest : StringSpec({
     // ═════════════════════════════════════════════════════════════════════════════
 
     "supersaw responds to ignitorParam 'voices'" {
-        val bufDefault = createAndGenerate("supersaw")
-        val bufOverride = createAndGenerate("supersaw", ignitorParams = mapOf("voices" to 3.0))
-        buffersDiffer(a = bufDefault, b = bufOverride) shouldBe true
+        renderSeeded("supersaw", mapOf("voices" to 3.0)) shouldNotBe renderSeeded("supersaw")
     }
 
-    "supersaw responds to ignitorParam 'detune'" {
-        val bufDefault = createAndGenerate("supersaw")
-        val bufOverride = createAndGenerate("supersaw", ignitorParams = mapOf("spread" to 0.8))
-        buffersDiffer(a = bufDefault, b = bufOverride) shouldBe true
+    "supersaw responds to ignitorParam 'spread'" {
+        renderSeeded("supersaw", mapOf("spread" to 0.8)) shouldNotBe renderSeeded("supersaw")
     }
 
     "supersaw responds to ignitorParam 'analog'" {
-        val bufDefault = createAndGenerate("supersaw")
-        val bufOverride = createAndGenerate("supersaw", ignitorParams = mapOf("analog" to 0.5))
-        buffersDiffer(a = bufDefault, b = bufOverride) shouldBe true
+        renderSeeded("supersaw", mapOf("analog" to 0.5)) shouldNotBe renderSeeded("supersaw")
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
@@ -141,9 +154,7 @@ class IgnitorDefaultsTest : StringSpec({
     // ═════════════════════════════════════════════════════════════════════════════
 
     "sine responds to ignitorParam 'analog'" {
-        val bufDefault = createAndGenerate("sine")
-        val bufOverride = createAndGenerate("sine", ignitorParams = mapOf("analog" to 0.5))
-        buffersDiffer(a = bufDefault, b = bufOverride) shouldBe true
+        renderSeeded("sine", mapOf("analog" to 0.5)) shouldNotBe renderSeeded("sine")
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
@@ -151,45 +162,19 @@ class IgnitorDefaultsTest : StringSpec({
     // ═════════════════════════════════════════════════════════════════════════════
 
     "dust responds to ignitorParam 'density'" {
-        val bufLow = createAndGenerate("dust", ignitorParams = mapOf("density" to 0.05), freqHz = 0.0)
-        val bufHigh = createAndGenerate("dust", ignitorParams = mapOf("density" to 0.9), freqHz = 0.0)
-        val countLow = bufLow.count { it > 0.0 }
-        val countHigh = bufHigh.count { it > 0.0 }
-        countHigh shouldBeGreaterThanOrEqual countLow
+        // Strictly more impulses from the same seed: with the slot unread both sides are the same render, equal counts.
+        val countLow = renderSeeded("dust", mapOf("density" to 0.05), freqHz = 0.0).count { it > 0.0 }
+        val countHigh = renderSeeded("dust", mapOf("density" to 0.9), freqHz = 0.0).count { it > 0.0 }
+
+        countHigh shouldBeGreaterThan countLow
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
     // Pluck ignitorParam overrides
     // ═════════════════════════════════════════════════════════════════════════════
 
-    "pluck responds to ignitorParam 'feedback'" {
-        val bufDefault = createAndGenerate("pluck")
-        val bufOverride = createAndGenerate("pluck", ignitorParams = mapOf("feedback" to 0.9))
-        buffersDiffer(a = bufDefault, b = bufOverride) shouldBe true
-    }
-
-    // The two source slots renamed by Q21 decision 7, each against the SAME seeded draw, so only the
-    // slot can move the render: the old key is inert, the new key is read. The corpus cannot see
-    // `leak` (no song writes it), so this row is its proof.
-    fun renderSeeded(soundName: String, ignitorParams: Map<String, Double>? = null): List<Double> {
-        val data = VoiceData.empty.copy(sound = soundName, ignitorParams = ignitorParams?.toKlangMap())
-        val exciter = registry.createExciter(soundName, data, 440.0, random = Random(7))
-            ?.ignitor ?: error("Unknown sound: $soundName")
-        val buffer = AudioBuffer(blockFrames)
-        val ctx = IgniteContext(
-            sampleRate = sampleRate,
-            voiceDurationFrames = sampleRate,
-            gateEndFrame = sampleRate,
-            scratchBuffers = ScratchBuffers(blockFrames),
-            random = Random(7),
-        ).apply {
-            updateOffsetAndLength(offset = 0, length = blockFrames)
-            voiceElapsedFrames = 0
-        }
-        exciter.generate(buffer, 440.0, ctx)
-        return buffer.toList()
-    }
-
+    // The two source slots renamed by Q21 decision 7, each against the SAME seeded draw: the old key is inert, the new
+    // key is read. The corpus cannot see `leak` (no song writes it), so this row is its proof.
     "brownnoise reads its white leak from the slot 'leak'; the retired key 'depth' is inert" {
         val bare = renderSeeded("brownnoise")
 
@@ -209,21 +194,15 @@ class IgnitorDefaultsTest : StringSpec({
     }
 
     "pluck responds to ignitorParam 'brightness'" {
-        val bufDefault = createAndGenerate("pluck")
-        val bufOverride = createAndGenerate("pluck", ignitorParams = mapOf("brightness" to 0.9))
-        buffersDiffer(a = bufDefault, b = bufOverride) shouldBe true
+        renderSeeded("pluck", mapOf("brightness" to 0.9)) shouldNotBe renderSeeded("pluck")
     }
 
     "pluck responds to ignitorParam 'pickPosition'" {
-        val bufDefault = createAndGenerate("pluck")
-        val bufOverride = createAndGenerate("pluck", ignitorParams = mapOf("pickPosition" to 0.1))
-        buffersDiffer(a = bufDefault, b = bufOverride) shouldBe true
+        renderSeeded("pluck", mapOf("pickPosition" to 0.1)) shouldNotBe renderSeeded("pluck")
     }
 
     "pluck responds to ignitorParam 'stiffness'" {
-        val bufDefault = createAndGenerate("pluck")
-        val bufOverride = createAndGenerate("pluck", ignitorParams = mapOf("stiffness" to 0.8))
-        buffersDiffer(a = bufDefault, b = bufOverride) shouldBe true
+        renderSeeded("pluck", mapOf("stiffness" to 0.8)) shouldNotBe renderSeeded("pluck")
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
@@ -267,15 +246,6 @@ class IgnitorDefaultsTest : StringSpec({
     }
 
     "eqdemo bell responds to the eqdb ignitorParam override" {
-        val flat = createAndGenerate("eqdemo")
-        val boosted = createAndGenerate("eqdemo", ignitorParams = mapOf("eqdb" to 9.0))
-        var differs = false
-        for (i in flat.indices) {
-            if (flat[i] != boosted[i]) {
-                differs = true
-                break
-            }
-        }
-        differs shouldBe true
+        renderSeeded("eqdemo", mapOf("eqdb" to 9.0)) shouldNotBe renderSeeded("eqdemo")
     }
 })

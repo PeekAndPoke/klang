@@ -172,12 +172,59 @@ class GraphCensusSpec : StringSpec({
     }
 
     "a pitch-mod node renders its mod block, the ratio loop reads it, the source reads the ratio" {
-        val census = GraphCensus.of(IgnitorDsl.Vibrato(saw.lowpass(1000.0.ign)))
+        val census = GraphCensus.of(IgnitorDsl.Accelerate(saw.lowpass(1000.0.ign), semitones = c(12.0)))
 
         census.passes shouldBe 3
         census.traffic shouldBe 3 + 4
         // a detune is a constant factor folded into the source's increment
         GraphCensus.of(IgnitorDsl.Detune(saw, semitones = c(12.0))).passes shouldBe 1
+    }
+
+    "a vibrato is its composition: the LFO, the multiply, the converter, the ratio loop, the source's read; a range, a signal depth or phase add theirs" {
+        val lfo = IgnitorDsl.Sine(freq = c(0.5))
+        val plain = GraphCensus.of(IgnitorDsl.Vibrato(saw))
+
+        // the saw (1, 1) + the LFO (1, 1) + the multiply in place over the scalar depth (1, 2) + the converter in
+        // place (1, 2) + the ratio loop, a read and a write (0, 2) + the source reading the ratio (0, 1); the floor
+        // folds to one value per block
+        plain.passes shouldBe 4
+        plain.traffic shouldBe 1 + 1 + 2 + 2 + 2 + 1
+        plain.bytes shouldBe 2 * 64
+
+        // a range is built per note, as the runtime builds it: none at the default swing, a written-out default, a
+        // non-finite literal or an unset slot; one in place (1, 2) for any other literal, a slot's value included
+        val ranged = GraphCensus.of(IgnitorDsl.Vibrato(saw, rangeFrom = c(0.0), rangeTo = c(1.0)))
+
+        ranged shouldBe plain + GraphCensus(passes = 1, traffic = 2, bytes = 0)
+        GraphCensus.of(IgnitorDsl.Vibrato(saw, rangeFrom = c(-1.0), rangeTo = c(1.0))) shouldBe plain
+        GraphCensus.of(IgnitorDsl.Vibrato(saw, rangeTo = c(Double.NaN))) shouldBe plain
+        GraphCensus.of(IgnitorDsl.Vibrato(saw, rangeTo = IgnitorDsl.Param("vt", 1.0))) shouldBe plain
+        GraphCensus.of(IgnitorDsl.Vibrato(saw, rangeTo = IgnitorDsl.Param("vt", 1.0)), params = klangMapOf("vt" to 2.0)) shouldBe ranged
+
+        // a signal bound: + the bound's sine (1, 1), the range reading both bounds (1, 2 + 2)
+        GraphCensus.of(IgnitorDsl.Vibrato(saw, rangeTo = lfo)).let {
+            it.passes shouldBe 6
+            it.traffic shouldBe 1 + 1 + 1 + 4 + 2 + 2 + 2 + 1
+            it.bytes shouldBe 3 * 64
+        }
+
+        // a signal depth: + the depth's sine (1, 1), its floor in place (1, 2), and the multiply over two signals (1, 3)
+        GraphCensus.of(IgnitorDsl.Vibrato(saw, semitones = lfo)).let {
+            it.passes shouldBe 6
+            it.traffic shouldBe 1 + 1 + 1 + 2 + 3 + 2 + 2 + 1
+            it.bytes shouldBe 3 * 64
+        }
+
+        // block-constant arithmetic as the depth is control-rate, so counted like a leaf
+        GraphCensus.of(IgnitorDsl.Vibrato(saw, semitones = IgnitorDsl.Plus(left = IgnitorDsl.Param("d", 0.2), right = c(0.3)))) shouldBe plain
+
+        // a moving phase: + the phase's sine (1, 1) and the LFO's loop reading it (0, 1); a scalar phase costs nothing
+        GraphCensus.of(IgnitorDsl.Vibrato(saw, phase = lfo)).let {
+            it.passes shouldBe 5
+            it.traffic shouldBe 1 + 1 + 1 + 1 + 2 + 2 + 2 + 1
+            it.bytes shouldBe 3 * 64
+        }
+        GraphCensus.of(IgnitorDsl.Vibrato(saw, phase = c(0.25))) shouldBe plain
     }
 
     "one variant is counted, the one the sound index picks, and the others make nothing shared" {

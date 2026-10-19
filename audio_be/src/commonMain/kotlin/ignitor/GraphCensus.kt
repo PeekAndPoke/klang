@@ -13,6 +13,8 @@ import io.peekandpoke.klang.audio_bridge.hasClassicRange
 import io.peekandpoke.klang.audio_bridge.coercePasses
 import io.peekandpoke.klang.audio_bridge.coerceSinePartials
 import io.peekandpoke.klang.audio_bridge.coerceUnisonVoices
+import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RANGE_FROM
+import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RANGE_TO
 
 /**
  * What one note of a graph asks of the engine, counted from the tree the runtime lowers (the
@@ -21,8 +23,8 @@ import io.peekandpoke.klang.audio_bridge.coerceUnisonVoices
  *
  * - [passes]: passes over the block, one per node that renders a loop; an `Eq` counts its
  *   sections, a filter its `passes`, a unison stack a pass per voice (its loop is voice-major); a
- *   pitch-mod node counts the mod buffer it renders; a hint and scalar-only arithmetic (one value
- *   per block) count nothing.
+ *   pitch-mod node counts the mod buffer it renders (the vibrato, a composition, each pass of it); a
+ *   hint and scalar-only arithmetic (one value per block) count nothing.
  * - [traffic]: reads plus writes of a block buffer per sample. A source writes once; an in-place
  *   pass reads and writes once each (2); a pass over two signals reads both and writes one (3); a
  *   signal coefficient makes the node render every coefficient through scratch (a read each); an
@@ -331,6 +333,25 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
             return GraphCensus(passes = n, traffic = 2 * n, bytes = SECTION_BYTES * n)
         }
 
+        /** A knob's value at voice build: a `Constant`, or a `Param` through the voice's params or its default (a non-finite override reads as unset); null for anything else. */
+        private fun literalOf(knob: IgnitorDsl): Double? = when (knob) {
+            is IgnitorDsl.Constant -> knob.value
+            is IgnitorDsl.Param -> params[knob.name]?.takeIf { it.isFinite() } ?: knob.default
+            else -> null
+        }
+
+        /**
+         * True when the vibrato builds its `range(from, to)`, the runtime's per-note test (`hasBuiltRange` in
+         * `IgnitorDslRuntime`): anything but two literal bounds at the default swing, a non-finite literal reading as its
+         * default. Unlike the tremolo's structural [hasClassicRange], a `Param` bound is read through the voice's params.
+         */
+        private fun vibratoBuildsRange(node: IgnitorDsl.Vibrato): Boolean {
+            val from = literalOf(node.rangeFrom)?.let { if (it.isFinite()) it else VIBRATO_RANGE_FROM }
+            val to = literalOf(node.rangeTo)?.let { if (it.isFinite()) it else VIBRATO_RANGE_TO }
+
+            return !(from == VIBRATO_RANGE_FROM && to == VIBRATO_RANGE_TO)
+        }
+
         private fun own(node: IgnitorDsl): GraphCensus = when (node) {
             // leaves: one value per block
             is IgnitorDsl.Constant, is IgnitorDsl.Param, IgnitorDsl.Freq -> NONE
@@ -459,11 +480,31 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
             is IgnitorDsl.Phaser -> inPlace(4 * 16 + 32)
             is IgnitorDsl.Shimmer -> GraphCensus(passes = 1, traffic = SHIMMER_TRAFFIC, bytes = SHIMMER_BYTES)
 
+            // the vibrato is a composition (pitch pipeline 7b and 7c): its sine LFO writes a block (a moving `phase` adds
+            // the read of its block), `range(from, to)` maps it in place when built (reading both bounds when either is a
+            // signal), the floor `max(semitones, 0)` folds to one value per block unless the depth is a signal (then a pass
+            // in place), the multiply (in place over a scalar depth, a third stream over a signal one), the converter
+            // `2^(x / 12)` in place; then, as for every pitch node, the ratio loop (`ModApplyingIgnitor` reads the mod
+            // block and writes the ratios, its pass not counted, as in the arm below) and the source's read of the ratio
+            // per sample. Only what runs is counted, as for the tremolo.
+            is IgnitorDsl.Vibrato -> {
+                val range = if (vibratoBuildsRange(node)) {
+                    GraphCensus(passes = 1, traffic = 2 + coefficientReads(node.rangeFrom, node.rangeTo), bytes = 0)
+                } else {
+                    NONE
+                }
+                val floor = if (isScalar(node.semitones)) NONE else inPlace()
+                val multiply = GraphCensus(passes = 1, traffic = 2 + signals(node.semitones), bytes = 0)
+                val ratioLoop = GraphCensus(passes = 0, traffic = 2, bytes = 0)
+                val sourceRead = GraphCensus(passes = 0, traffic = 1, bytes = 0)
+
+                source() + phaseReads(node.phase) + range + floor + multiply + inPlace() + ratioLoop + sourceRead
+            }
+
             // pitch modulation: the mod renders a block (1 write), the ratio loop reads it and writes
             // the ratios (2), and the source reads the ratio per sample (1); a detune is a constant
             // factor folded into the source's increment
-            is IgnitorDsl.Vibrato, is IgnitorDsl.Accelerate, is IgnitorDsl.PitchEnvelope, is IgnitorDsl.PitchMod,
-            is IgnitorDsl.PitchModSemitones ->
+            is IgnitorDsl.Accelerate, is IgnitorDsl.PitchEnvelope, is IgnitorDsl.PitchMod, is IgnitorDsl.PitchModSemitones ->
                 GraphCensus(passes = 1, traffic = 4, bytes = 64)
 
             is IgnitorDsl.Detune -> NONE
