@@ -397,8 +397,8 @@ One line per step, newest first. A link to the archived task record where one ex
   line 152 to 112); the siblings not seen red are item 45: `docs/tasks/in-progress/engine-follow-ups.md`, items 35,
   36, 38 and 45
 - 2026-10-19 Engine follow-ups 10c and 10d: the fm's knob reads no longer box on V8 (`prepareModEnvelope` and
-  `finiteOr` Kotlin `inline`, `finiteOr` over `isFiniteInline`; bit-identical, JVM 0 B); open and parked for the
-  maintainer (item 30's class): one heap number per fm per block for the modulator's frequency and one per
+  `finiteOr` Kotlin `inline`, `finiteOr` over `isFiniteInline`; bit-identical, JVM 0 B); open, revisited with the FM
+  round (item 30's class, `docs/tasks/future/fm-revisit.md`): one heap number per fm per block for the modulator's frequency and one per
   freq-keyed wrapper (10c's pin), at any non-integral note; probe at middle C, not 220 Hz, and do not bracket a
   mixed-profile window with forced mark-compacts (`audio/ref/performance.md`):
   `docs/tasks/in-progress/engine-follow-ups.md` items 10c and 10d

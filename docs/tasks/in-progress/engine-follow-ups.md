@@ -6,7 +6,7 @@ v0.6.5, step 4 merged after). Where to continue (Q38, maintainer 2026-10-13: 31 
 fix that changes no API), open V8 items first: **the V8 batch is done** (31 DONE 2026-10-15; 32, 34, 39, 40 and 41
 DONE 2026-10-16; 33 DONE earlier; 35, 36 and 38 DONE 2026-10-19, 38 as a site removed that is likely its tail, not
 shown). Left of the numbers 31 to 41: 37 (a sound change, so outside Q38). 10c and 10d (fm): two sites fixed
-2026-10-19, the modulator's frequency and the wrapper pin open, parked for the maintainer (item 30's class). Next:
+2026-10-19, the modulator's frequency and the wrapper pin open (item 30's class), revisited with the FM round. Next:
 the known tail 4;
 then sections 2 to 5 (13, 11, 20, 45 and 46; 16 to 19 and 28 DONE 2026-10-19) and section 6. Open with the maintainer: C1 to C11 (the FM diagnostic is C6) in
 `docs/housekeeping/2026-10-10-baseline.md`, and Q13, Q29 (`duty(width)`) and Q30 to Q33 in
@@ -985,7 +985,7 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     357.5 B per block (about 5.7 KB per note) is the build alone: its knob reads do not box. The controls, the JVM,
     bit-identity, the guard row and the corpus are 10a's. Report: `tmp/reviews/e10-report.md`. S.
     **Review round 1, applied**: see 10a (B1 corrected the residue above).
-10c. **OPEN, the remedy parked for the maintainer (2026-10-19; item 30's class, whose remedy the maintainer declined
+10c. **OPEN, the remedy revisited with the FM round (2026-10-19; item 30's class, whose remedy the maintainer declined
     there): an fm whose modulator reads a freq-keyed mod allocates a heap number per block on V8** (fixed for
     freq-invariant mods, open for freq-keyed ones). The site (pitch pipeline step 3b, review round 1, reviewer B
     MINOR 1): `CarrierFreqMod.generate` hands the pinned carrier frequency, a double loaded from a field, to
@@ -1023,7 +1023,7 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     **The remedy is item 30's class**, a tagged cell: V8 keeps a field that held `null` first tagged, so the box is made
     once per change of the pin instead of once per block, at the cost of a `Double` per voice and per change of pitch
     on the JVM. The maintainer declined that remedy for the voice's root box (item 30, decision D, 2026-10-11:
-    complexity, bytes only), so it is not built here: parked for the maintainer, with item 30's decision as the
+    complexity, bytes only), so it is not built here: revisited with the FM round (maintainer, 2026-10-19; `docs/tasks/future/fm-revisit.md`), with item 30's decision as the
     precedent. The JVM renders all of it allocation-free.
     **Found on the way, not the fm (a lead):** the bell under the note-reading vibrato keeps one more heap number per
     block, at 220 Hz as at middle C, on HEAD and on the tree, booked in the vibrato LFO's `SineIgnitor.generate`
@@ -1036,7 +1036,7 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     second saw (`Freq * 0.1.semitones()`, non-integral at almost any note) pays one heap number per block in
     `WaveIgnitor.generate`, with or without `fm` (16 B in every condition at 220 Hz, 10d). Report: this item and 10d;
     the probe and the runs in the session scratchpad's `fm-v8/` (`m-final.txt` at 220 Hz, `m-midC.txt` at middle C). S.
-10d. **Two sites fixed (2026-10-19), one open (the modulator's frequency, item 30's class, parked for the maintainer
+10d. **Two sites fixed (2026-10-19), one open (the modulator's frequency, item 30's class, revisited with the FM round
     as 10c): sprudel's `fm` allocates on V8 per block since it became `classic()`'s FM stage** (pitch pipeline step 4,
     review round 1, reviewer B MINOR 3). The strip's `FmRenderer` allocated nothing per block; the Ignitor `fm` node
     hands per-block doubles to calls V8 does not inline (the modulator's `generate` at `fmFreqVal * ratioVal`, the
@@ -1096,7 +1096,7 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
       pass measured a prototype that held the product in a `Double?` field written only on a change (item 30's option
       B) and recorded that it "moved nothing"; it was measured at 220 Hz, where the product is 308.0 and cannot box,
       so that verdict is withdrawn. The same remedy measured on 10c's pin does take its box (reviewer B: one heap
-      number per pin). The remedy is item 30's class, parked for the maintainer as in 10c (decision D the precedent);
+      number per pin). The remedy is item 30's class, revisited with the FM round as in 10c (decision D the precedent);
       not built.
     Render bytes per block at **middle C**, medians of 3, HEAD / tree (`m-midC.txt`; HEAD's rounds in brackets
     wherever they spread, the tree's rounds never did on these rows):

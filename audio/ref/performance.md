@@ -549,7 +549,7 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   to 112): the root box (item 30) and **one heap number per fm per block, still open: the modulator's frequency**
   (`fmFreqVal * ratioVal`, non-integral at almost every note) handed to the modulator's `generate`; and one more per
   wrapper whose outer mod reads the note (item 10c, the pinned carrier frequency). Both are item 30's class, a tagged
-  cell their remedy, which the maintainer declined for the root box (item 30, decision D): parked for the maintainer.
+  cell their remedy, which the maintainer declined for the root box (item 30, decision D): revisited with the FM round (maintainer, 2026-10-19; `docs/tasks/future/fm-revisit.md`).
   The sustain box may have gone with `finiteOr` (not shown: HEAD read it in some processes only).
   **Engine follow-up 34 (2026-10-16) closed the oversampled path** that item 31 left (`tube4x`, `E-distort`): besides
   the sub-pool map (the `HashMap` rule above), the bus distort handed its drive to a `DistortionCore.process` that V8
