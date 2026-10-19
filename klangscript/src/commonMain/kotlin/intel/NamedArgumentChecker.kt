@@ -226,30 +226,8 @@ class NamedArgumentChecker(
     // Uses the pre-computed typeMap (from the same AnalyzedAst.build pass) to
     // resolve receiver types, avoiding a redundant second inference pass.
 
-    private fun resolveCallable(call: CallExpression): KlangCallable? = when (val callee = call.callee) {
-        // A local is never a same-named global (`const gain = (amount) => amount; gain(level = 1)`): only a
-        // local holding a callable object calls the call form of its type. Otherwise a plain function or a
-        // callable object's call form (`Katalyst(...)`), or a value holding a callable object through its
-        // type's call form. The same rule `ExpressionTypeInferrer.resolveCallable` applies.
-        is Identifier -> if (callee in localIdentifiers) {
-            typeMap[callee]?.let { docs.getCallForm(it) }
-        } else {
-            docs.getCallable(callee.name, receiverType = null)
-                ?: typeMap[callee]?.let { docs.getCallForm(it) }
-        }
-
-        is MemberAccess -> {
-            val objType = typeMap[callee.obj]
-            if (objType != null) {
-                docs.getCallable(callee.property, objType)
-                    ?: typeMap[callee]?.let { docs.getCallForm(it) }
-            } else {
-                null
-            }
-        }
-
-        else -> null
-    }
+    private fun resolveCallable(call: CallExpression): KlangCallable? =
+        docs.callableCalledBy(call = call, typeOf = { typeMap[it] }, isLocal = { it in localIdentifiers })
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -270,4 +248,43 @@ class NamedArgumentChecker(
         endLine = loc?.endLine ?: 1,
         endColumn = loc?.endColumn ?: 1,
     )
+}
+
+/**
+ * The registered callable [call] dispatches to, or null when the analysis cannot tell (an unknown name, a receiver of
+ * unknown type, a local function). The one resolution of the named-argument check and of the param-name completion
+ * ([AnalyzedAst.namedArgumentsAt]), so the completion offers exactly the parameters the check checks against.
+ *
+ * A local is never a same-named global (`const gain = (amount) => amount; gain(level = 1)`): only a local holding a
+ * callable object calls the call form of its type. Otherwise a plain function or a callable object's call form
+ * (`Katalyst(...)`), or a value holding a callable object through its type's call form. The same rule
+ * `ExpressionTypeInferrer.resolveCallable` applies.
+ *
+ * @param typeOf  The analysed type of an expression of the call.
+ * @param isLocal Whether an identifier is bound to a local (`let`, `const`, a lambda parameter).
+ */
+internal fun KlangDocsRegistry.callableCalledBy(
+    call: CallExpression,
+    typeOf: (Expression) -> KlangType?,
+    isLocal: (Identifier) -> Boolean,
+): KlangCallable? = when (val callee = call.callee) {
+    is Identifier -> if (isLocal(callee)) {
+        typeOf(callee)?.let { getCallForm(it) }
+    } else {
+        getCallable(callee.name, receiverType = null)
+            ?: typeOf(callee)?.let { getCallForm(it) }
+    }
+
+    is MemberAccess -> {
+        val objType = typeOf(callee.obj)
+
+        if (objType != null) {
+            getCallable(callee.property, objType)
+                ?: typeOf(callee)?.let { getCallForm(it) }
+        } else {
+            null
+        }
+    }
+
+    else -> null
 }

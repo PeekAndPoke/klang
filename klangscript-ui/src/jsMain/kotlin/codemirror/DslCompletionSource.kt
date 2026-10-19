@@ -65,9 +65,18 @@ private fun completeDsl(context: CompletionContext, docContext: EditorDocContext
         // If receiver type can't be inferred (stale AST, parse error), show nothing.
         // Showing top-level symbols after a dot is always wrong.
     } else {
-        // The song's own names first: the user typed them, they are the most likely intent. CodeMirror ranks by
-        // match quality, so the order alone does not hold; the boost lifts a local above a library name that
-        // matches as well.
+        // Where an argument starts in a known call, its unfilled parameters as `name = ` first, in declaration order:
+        // they are what this call takes. CodeMirror ranks by match quality first, so the boost lifts them above a local
+        // or a library name that matches as well, and the declaration order holds among them.
+        val params = docContext.lastAnalysis?.namedArgumentsAt(pos = from, text = currentCode) ?: emptyList()
+        val paramSuggestions = provider.namedArgumentCompletions(params, typed)
+
+        paramSuggestions.forEachIndexed { index, suggestion ->
+            options.add(suggestion.toCodeMirrorCompletion().also { it.boost = LOCAL_BOOST + paramSuggestions.size - index })
+        }
+
+        // The song's own names next: the user typed them, they are the most likely value. The boost lifts a local
+        // above a library name that matches as well.
         val locals = docContext.lastAnalysis?.localsAt(pos = from, text = currentCode) ?: emptyList()
         provider.localCompletions(locals, typed).mapTo(options) { suggestion ->
             suggestion.toCodeMirrorCompletion().also { it.boost = LOCAL_BOOST }
@@ -93,7 +102,11 @@ private fun completeDsl(context: CompletionContext, docContext: EditorDocContext
     }
 }
 
-/** CodeMirror rank boost for the song's own names over library names that match the typed word as well. */
+/**
+ * CodeMirror rank boost for the song's own names over library names that match the typed word as well. A named
+ * argument's boost sits above it, counting down in declaration order (CodeMirror adds the boost to the match score,
+ * whose kinds of match are 100 apart, so it never lifts a worse kind of match).
+ */
 private const val LOCAL_BOOST = 1
 
 /** Resolve the receiver type for a dot-completion via the analyzer's single entry point. */
@@ -103,11 +116,19 @@ private fun inferReceiverTypeBeforeDot(docContext: EditorDocContext, dotPos: Int
 
 /** Convert a [CompletionSuggestion] to a CodeMirror [Completion] JS object. */
 private fun CompletionSuggestion.toCodeMirrorCompletion(): Completion = jsObject {
-    label = name
+    label = this@toCodeMirrorCompletion.label
+    // A named argument inserts more than its label shows (`q = ` for `q =`)
+    val insert = insertText
+
+    if (insert != label) {
+        apply = insert
+    }
+
     type = when (kind) {
         CompletionSuggestion.Kind.FUNCTION -> "function"
         CompletionSuggestion.Kind.PROPERTY -> "variable"
         CompletionSuggestion.Kind.KEYWORD -> "keyword"
+        CompletionSuggestion.Kind.PARAMETER -> "property"
     }
     val d = this@toCodeMirrorCompletion.detail
     if (d.isNotEmpty()) {

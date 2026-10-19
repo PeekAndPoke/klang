@@ -16,6 +16,7 @@ All that logic lives inside `AnalyzedAst.build`.
 | **`symbolAt(pos)`**                                | **Hover entry point.** Returns the `KlangSymbol` to render in the popup, or null. |
 | **`receiverTypeBeforeDot(pos)`**                   | **Completion entry point.** Wraps `getExpressionTypeEndingAt`.                    |
 | **`localsAt(pos, text)`**                          | **Completion of the song's own names.** The locals visible at the cursor.         |
+| **`namedArgumentsAt(pos, text)`**                  | **Completion of `name = `.** The unfilled params where an argument starts.        |
 | `diagnostics`                                      | Named-arg checker output.                                                         |
 
 `symbolAt(pos)` internally handles:
@@ -116,6 +117,36 @@ around it. Fewer locals at worst, never one from below or from a sibling scope. 
 literal's `${...}` count from the interpolation (the parser reads it on its own), so a scope opened there gets an
 empty range. Guard: `LocalSymbolCompletionSpec`; record: `docs/tasks/editor-local-symbol-completion.md`.
 
+The edit (`editTo`: one stretch between the common prefix and suffix, the earliest start when they overlap) is
+shared with `namedArgumentsAt`.
+
+## Named arguments at a cursor (`namedArgumentsAt`)
+
+`namedArgumentsAt(pos, text)` returns, in declaration order, the parameters of the called callable that no argument
+of the call names, when the cursor (the start of the word being typed) stands where an argument starts: right after
+the `(` or a `,` of the innermost open `(`, with nothing but blanks, comments and that word in its slot. Empty when
+another argument of the call is positional, because the check refuses mixing the two styles. Two halves:
+
+- **The argument list from the text** (`ArgumentSlotAt.scan`): the innermost open bracket and its slots
+  (`name = value`, positional or blank) before and after the cursor. The lexer's rules for comments, strings and
+  backtick strings (backslash escapes honoured); a cursor inside one is in no slot. Read from the text because the
+  analysis can be stale and cannot know what was typed since. A value of one word right after the cursor reads as
+  the word being typed (`(|800)` offers the names, accepting gives `freq = 800`).
+- **The callee from the analysis**: the call whose own `(` (its location) stands at the slot's `(`. The `(` token is
+  zero-width, so the index covers a call from its callee to its last argument and `nodeAt` at a grouping paren
+  returns the call around it; the own-paren check refuses that. Refused too: a call inside a template interpolation
+  (relative offsets). While the text does not parse, only a call the edit cannot have changed answers: the edit lies
+  after its `(` (so the text up to the `(` is the analysed text, offsets included) and the call is not inside an
+  arrow a `let` / `const` / `export` binds (it can read a declaration from below, the edit's included). An edit in
+  front of the `(` can change the receiver, turn a grouping paren into a call or declare a shadowing local. The
+  callable comes from `callableCalledBy`, the check's own resolution (`NamedArgumentChecker.kt`), so completion
+  offers what the check checks against: an unknown name, a receiver of unknown type and a local function offer
+  nothing.
+
+`CompletionProvider.namedArgumentCompletions` shows `name =`, inserts `name = `, and says the type and `required`,
+`default <value>` or `optional` (`vararg <type>` for a vararg, which by name takes an array). Guard:
+`NamedArgumentCompletionSpec`; record: `docs/tasks/klangscript-named-args-docs-polish.md`, 6.4.
+
 ## `ExpressionTypeInferrer` contract
 
 ```kotlin
@@ -173,8 +204,10 @@ Existing consumers that demonstrate the pattern:
   analysis is available (initial render / parse error).
 - `klangscript-ui/.../DslCompletionSource.kt::inferReceiverTypeBeforeDot` — one-liner
   delegating to `analysis.receiverTypeBeforeDot(...)`.
-- `klangscript-ui/.../DslCompletionSource.kt`, the non-member branch: `analysis.localsAt(from, currentCode)` through
-  `CompletionProvider.localCompletions`, before the library names (a CodeMirror `boost` keeps them first).
+- `klangscript-ui/.../DslCompletionSource.kt`, the non-member branch: `analysis.namedArgumentsAt(from, currentCode)`
+  through `CompletionProvider.namedArgumentCompletions` first (boosted above the locals, in declaration order), then
+  `analysis.localsAt(from, currentCode)` through `CompletionProvider.localCompletions`, before the library names (a
+  CodeMirror `boost` keeps them first).
 - `src/jsMain/.../KlangSymbolDocsComp.kt` — switches purely on `symbol.origin` to render
   the library / LOCAL / Built-in chip; suppresses "View docs" for `Origin.Local`.
 
@@ -189,3 +222,5 @@ Existing consumers that demonstrate the pattern:
 - `intel/CompletionProviderTest.kt` — completion suggestion shape (uses `getLibrary()?.name`).
 - `klangscript/src/jvmTest/kotlin/intel/LocalSymbolCompletionSpec.kt`: `localsAt` and `localCompletions`: visibility
   by position, shadowing, sibling scopes, the detail, the stale analysis.
+- `klangscript/src/jvmTest/kotlin/intel/NamedArgumentCompletionSpec.kt`: `namedArgumentsAt` and
+  `namedArgumentCompletions`: where a slot starts, filled names, mixing, nested calls, varargs, the stale analysis.

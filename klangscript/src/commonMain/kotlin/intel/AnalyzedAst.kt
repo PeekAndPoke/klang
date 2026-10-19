@@ -14,6 +14,7 @@ import io.peekandpoke.klang.script.ast.ArrowFunction
 import io.peekandpoke.klang.script.ast.ArrowFunctionBody
 import io.peekandpoke.klang.script.ast.AssignmentExpression
 import io.peekandpoke.klang.script.ast.AstIndex
+import io.peekandpoke.klang.script.ast.AstNode
 import io.peekandpoke.klang.script.ast.BinaryOperation
 import io.peekandpoke.klang.script.ast.BooleanLiteral
 import io.peekandpoke.klang.script.ast.BreakStatement
@@ -48,6 +49,7 @@ import io.peekandpoke.klang.script.ast.UnaryOperation
 import io.peekandpoke.klang.script.ast.WhileStatement
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
 import io.peekandpoke.klang.script.parser.KlangScriptParser
+import io.peekandpoke.klang.script.types.KlangParam
 import io.peekandpoke.klang.script.types.KlangProperty
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.script.types.KlangType
@@ -165,27 +167,117 @@ class AnalyzedAst internal constructor(
      * or in a sibling scope.
      */
     fun localsAt(pos: Int, text: String = source): List<TypeScope.LocalBinding> {
-        if (text == source) {
-            return localsIn(from = pos, to = pos)
+        val edit = editTo(text) ?: return localsIn(from = pos, to = pos)
+
+        return when {
+            pos <= edit.start -> localsIn(from = pos, to = pos)
+            pos >= edit.newEnd -> (pos - edit.newEnd + edit.oldEnd).let { localsIn(from = it, to = it) }
+            else -> localsIn(from = edit.start, to = edit.oldEnd)
+        }
+    }
+
+    /**
+     * The parameters a named argument can still fill at the cursor [pos] in [text], in declaration order: the
+     * parameters of the called callable that no argument of the call names. Code completion's entry point for
+     * `name = ` in an argument list. [pos] is the start of the word being typed (or the cursor, when there is none).
+     *
+     * Empty unless the cursor stands where a new argument starts in a call to a callable the analysis resolves, by
+     * the resolution the named-argument check uses ([callableCalledBy]): right after the `(` or after a `,`, with
+     * nothing but blanks, comments and the word at [pos] in that slot ([ArgumentSlotAt]). That word can also be a value
+     * of one word (`(|800)`): a name then goes in front of it (`freq = 800`). Empty as well when another
+     * argument of the call is positional: the check refuses a call that mixes the two styles (all-or-nothing), so
+     * there a name is never right. The innermost open `(` is the call: in a nested call's argument list the nested
+     * callable's parameters apply. A vararg parameter is offered like any other: by name it takes an array.
+     *
+     * [text] is the editor's text, which can be ahead of the analysed [source] while it does not parse ([editTo]). The
+     * argument list is read from [text]; the callee only from the analysis, and only when the edit cannot have
+     * changed it: the edit lies after the call's `(` (an edit in front of it can change the receiver, turn a grouping
+     * paren into a call, or declare a local that shadows the callee), and the call is not inside an arrow that a
+     * `let` / `const` / `export` binds (such a body can read a declaration from further down, the edit's included).
+     * The text up to the `(` is then the analysed text, offsets included. Otherwise nothing is offered until the text
+     * parses again: fewer names, never a wrong callable's.
+     */
+    fun namedArgumentsAt(pos: Int, text: String = source): List<KlangParam> {
+        val slot = ArgumentSlotAt.scan(text = text, pos = pos) ?: return emptyList()
+
+        if (slot.hasPositional) {
+            return emptyList()
         }
 
-        // The edit replaced source[editStart, oldEnd) with text[editStart, newEnd). The shared prefix and suffix can
-        // overlap (`let ` typed in front of `let b`): any start from shorter - rawSuffix up to prefix fits, so the
-        // stretch takes the earliest, and the latest end.
+        val paren = slot.openParen
+        val edit = editTo(text)
+
+        if (edit != null && paren >= edit.start) {
+            return emptyList()
+        }
+
+        // The `(` token is zero-width, so the index covers a call from its callee to its last argument, and the node at
+        // a grouping paren can be the call around it: only the call whose own `(` stands there
+        val call = astIndex.nodeAt(paren) as? CallExpression ?: return emptyList()
+
+        if (parenOf(call) != paren) {
+            return emptyList()
+        }
+
+        val ancestors = generateSequence(astIndex.parentOf(call)) { astIndex.parentOf(it) }.toList()
+
+        // Inside a template literal's `${...}` the offsets count from the interpolation, not the source
+        if (ancestors.any { it is TemplateLiteral }) {
+            return emptyList()
+        }
+
+        if (edit != null && isInDeclaredArrow(ancestors)) {
+            return emptyList()
+        }
+
+        val callable = registry.callableCalledBy(call = call, typeOf = { typeMap[it] }, isLocal = { it in bindingMap })
+            ?: return emptyList()
+
+        return callable.params.filter { it.name !in slot.namedArgs }
+    }
+
+    /** The source offset of [call]'s own `(` (its location), or null. */
+    private fun parenOf(call: CallExpression): Int? {
+        val location = call.location ?: return null
+
+        return lineColToOffset(lineOffsets = lineOffsets, line = location.startLine, column = location.startColumn)
+    }
+
+    /**
+     * Whether [ancestors] (a node's parents, innermost first) hold an arrow that a `let` / `const` / `export` binds:
+     * the node then runs later than it is written and can read a declaration from further down ("Locals declared
+     * further down", `ref/intel-analyzer.md`).
+     */
+    private fun isInDeclaredArrow(ancestors: List<AstNode>): Boolean = ancestors.zipWithNext().any { (node, parent) ->
+        node is ArrowFunction && (parent is LetDeclaration || parent is ConstDeclaration || parent is ExportDeclaration)
+    }
+
+    /**
+     * The edit that turned the analysed [source] into the editor's [text], or null when they are the same: it replaced
+     * `source[start, oldEnd)` with `text[start, newEnd)`. Found by the text both share before and after it. The shared
+     * prefix and suffix can overlap (`let ` typed in front of `let b`): any start from `shorter - rawSuffix` up to the
+     * prefix fits, so the edit takes the earliest start, and the latest end. Several separate edits since the last
+     * good parse count as one stretch.
+     */
+    private fun editTo(text: String): SourceEdit? {
+        if (text == source) {
+            return null
+        }
+
         val prefix = source.commonPrefixWith(text).length
         val rawSuffix = source.commonSuffixWith(text).length
         val shorter = minOf(source.length, text.length)
-        val editStart = minOf(prefix, shorter - rawSuffix)
         val suffix = minOf(rawSuffix, shorter - prefix)
-        val oldEnd = source.length - suffix
-        val newEnd = text.length - suffix
 
-        return when {
-            pos <= editStart -> localsIn(from = pos, to = pos)
-            pos >= newEnd -> (pos - newEnd + oldEnd).let { localsIn(from = it, to = it) }
-            else -> localsIn(from = editStart, to = oldEnd)
-        }
+        return SourceEdit(
+            start = minOf(prefix, shorter - rawSuffix),
+            oldEnd = source.length - suffix,
+            newEnd = text.length - suffix,
+        )
     }
+
+    /** One edit from the analysed source to the editor's text: `source[start, oldEnd)` became `text[start, newEnd)`. */
+    private class SourceEdit(val start: Int, val oldEnd: Int, val newEnd: Int)
 
     /**
      * The locals of the innermost scope that holds all of `source[from, to]` and of the scopes around it, each
@@ -229,7 +321,7 @@ class AnalyzedAst internal constructor(
      */
     fun receiverTypeBeforeDot(pos: Int): KlangType? = getExpressionTypeEndingAt(pos)
 
-    private fun identifierNameOf(node: io.peekandpoke.klang.script.ast.AstNode): String? = when (node) {
+    private fun identifierNameOf(node: AstNode): String? = when (node) {
         is Identifier -> node.name
         is MemberAccess -> node.property
         is CallExpression -> (node.callee as? MemberAccess)?.property
@@ -241,7 +333,7 @@ class AnalyzedAst internal constructor(
      * cursor: when the cursor is sitting on that property, directly on the
      * MemberAccess or wrapped in a CallExpression `obj.foo(...)`.
      */
-    private fun memberAccessFor(node: io.peekandpoke.klang.script.ast.AstNode, name: String): MemberAccess? {
+    private fun memberAccessFor(node: AstNode, name: String): MemberAccess? {
         if (node is MemberAccess && node.property == name) return node
         if (node is CallExpression) {
             val cm = node.callee as? MemberAccess

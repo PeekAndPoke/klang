@@ -36,7 +36,8 @@ record), and put the narrative in the task record, which gets archived. The full
   sprudel share hovers as sprudel's object, an alias with the object's call form), a member its receiver's method;
   which later locals a closure sees is stated once in `ref/intel-analyzer.md`, "Locals declared further down";
   a local shadows a global for the checker and the param tools alike. Completion offers the song's own names declared
-  above the cursor (`AnalyzedAst.localsAt`, the cursor mapped back across an edit while the text does not parse).
+  above the cursor (`AnalyzedAst.localsAt`, the cursor mapped back across an edit while the text does not parse), and
+  where an argument starts in a known call its unfilled parameters as `name = ` (`AnalyzedAst.namedArgumentsAt`).
   `ref/intel-analyzer.md`.
 - **Stdlib doors** (`klangscript-libs`): the oscillator doors are `Ignitor.name(freq?, configure?)` (short `Ign.name`) with the knobs
   on immutable oscillator builder wrappers (in `audio_bridge/IgnitorBuilders.kt` with typed members since the typed-doors
@@ -113,6 +114,9 @@ KlangScript keeps a JavaScript-like syntax but its semantics and its stdlib foll
 - `docs/tasks/klangscript-native-object-operators.md` (arithmetic operators on native objects),
   `docs/tasks/klangscript-union-types.md`, `docs/tasks/klangscript-intellisense.md`,
   `docs/tasks/klangscript-named-args-docs-polish.md`.
+- The lexer accepts an unclosed block comment without an error (found 2026-10-19 by the 6.4 work): its loop in
+  `KlangScriptParser` runs `while (i < source.length - 1)`, so `/*` without `*/` swallows the rest of the text except
+  its last character, which is then lexed as a token. An unterminated block comment should be a parse error.
 
 ## History
 
@@ -173,3 +177,5 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
   (`collectSourceFiles`, S6) (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`).
 - 2026-10-19: code completion offers the song's own names (`let`, `const`, `export`, lambda parameters) through
   `AnalyzedAst.localsAt` and `CompletionProvider.localCompletions` (`docs/tasks/editor-local-symbol-completion.md`).
+- 2026-10-19: code completion offers a call's unfilled parameters as `name = ` where an argument starts, never in a
+  call with a positional argument (`AnalyzedAst.namedArgumentsAt`; `docs/tasks/klangscript-named-args-docs-polish.md` 6.4).

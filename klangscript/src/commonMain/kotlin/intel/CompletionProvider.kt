@@ -11,6 +11,7 @@ import io.peekandpoke.klang.script.docs.typeMatches
 import io.peekandpoke.klang.script.runtime.NativeOperatorNames
 import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.script.types.KlangDecl
+import io.peekandpoke.klang.script.types.KlangParam
 import io.peekandpoke.klang.script.types.KlangProperty
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.script.types.KlangType
@@ -19,6 +20,10 @@ private const val MAX_DESCRIPTION_LENGTH = 200
 
 /**
  * A code completion suggestion, independent of any editor framework.
+ *
+ * @param name       The symbol's name; the typed prefix is matched against it.
+ * @param label      What the list shows; the name unless the suggestion inserts more (`q =` for a named argument).
+ * @param insertText What accepting the suggestion inserts; the name unless it inserts more (`q = `).
  */
 data class CompletionSuggestion(
     val name: String,
@@ -27,8 +32,11 @@ data class CompletionSuggestion(
     val description: String,
     val isAlias: Boolean,
     val aliasFor: String?,
+    val label: String = name,
+    val insertText: String = name,
 ) {
-    enum class Kind { FUNCTION, PROPERTY, KEYWORD }
+    /** [PARAMETER]: a parameter name offered as a named argument, `name = `. */
+    enum class Kind { FUNCTION, PROPERTY, KEYWORD, PARAMETER }
 }
 
 /**
@@ -112,6 +120,23 @@ class CompletionProvider(private val registry: KlangDocsRegistry) {
         return locals
             .filter { prefix.isEmpty() || it.name.startsWith(prefix, ignoreCase = true) }
             .map { it.toLocalSuggestion() }
+    }
+
+    /**
+     * Named-argument completions: one per parameter of [params] (from `AnalyzedAst.namedArgumentsAt`) whose name
+     * starts with [prefix] (case-insensitive; pass an empty string for all), in the order given (the declaration
+     * order).
+     *
+     * The label is `name =`, accepting it inserts `name = `. The detail is the parameter's type as the signature
+     * renders it (`vararg ` in front of a vararg's element type), then `default <value>` for a parameter with a
+     * documented default, `optional` for another optional one, `required` for a required one (the check reports a
+     * required parameter a named call leaves out), nothing for a vararg. The description is the parameter's own;
+     * a vararg's says that by name it takes an array.
+     */
+    fun namedArgumentCompletions(params: List<KlangParam>, prefix: String): List<CompletionSuggestion> {
+        return params
+            .filter { prefix.isEmpty() || it.name.startsWith(prefix, ignoreCase = true) }
+            .map { it.toNamedArgumentSuggestion() }
     }
 
     /**
@@ -206,6 +231,28 @@ private fun TypeScope.LocalBinding.toLocalSuggestion(): CompletionSuggestion {
         description = "",
         isAlias = false,
         aliasFor = null,
+    )
+}
+
+private fun KlangParam.toNamedArgumentSuggestion(): CompletionSuggestion {
+    val typeText = if (isVararg) "vararg ${type.render()}" else type.render()
+    val defaultText = when {
+        isVararg -> ""
+        defaultDoc != null -> "default $defaultDoc"
+        isOptional -> "optional"
+        else -> "required"
+    }
+    val varargNote = if (isVararg) "By name it takes an array: $name = [...]. " else ""
+
+    return CompletionSuggestion(
+        name = name,
+        kind = CompletionSuggestion.Kind.PARAMETER,
+        detail = buildDetail(typeText, defaultText),
+        description = (varargNote + description).trim().take(MAX_DESCRIPTION_LENGTH),
+        isAlias = false,
+        aliasFor = null,
+        label = "$name =",
+        insertText = "$name = ",
     )
 }
 
