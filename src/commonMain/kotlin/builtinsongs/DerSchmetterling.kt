@@ -123,8 +123,8 @@ let cabStock = x => x.lowpass(5000).lowpass(5000)
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = x => x
   .eq(e => e
-    .band(freq =  120, q = 0.7, db =  2.0)         // thump: closed-back box resonance
-    .band(freq =  380, q = 0.5, db =  4.0)         // roar:  low mids
+    .band(freq =  120, q = 0.7, db =  1.5)         // thump: closed-back box resonance
+    .band(freq =  380, q = 0.5, db =  3.5)         // roar:  low mids
     .band(freq = 2700, q = 1.6, db =  4.2)         // bark:  the upper-mid speaker peak
   )
   .lowpass(5200, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone

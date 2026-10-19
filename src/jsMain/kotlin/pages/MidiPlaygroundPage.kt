@@ -47,12 +47,12 @@ import kotlinx.css.minHeight
 import kotlinx.css.padding
 import kotlinx.css.px
 import kotlinx.html.FlowContent
+import kotlinx.html.Tag
 import kotlinx.html.tbody
 import kotlinx.html.td
 import kotlinx.html.th
 import kotlinx.html.thead
 import kotlinx.html.tr
-import kotlinx.html.Tag
 
 @Suppress("FunctionName")
 fun Tag.MidiPlaygroundPage() = comp {
@@ -342,6 +342,7 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
             if (evt.cc == CC_BANK && evt.value > 0) {
                 activeBank = if (activeBank == "A") "B" else "A"
             }
+            // return
             Unit
         }
 
