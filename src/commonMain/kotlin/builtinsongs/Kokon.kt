@@ -369,7 +369,7 @@ export kick = pat => sound("bd").struct(pat)
 
 export snare = pat => sound(pat)
   .sound(metalSnare).adsrOff().freq(snareHz)
-  .gain(0.42).pan(0.575)
+  .gain(0.45).pan(0.575)
   .lpf(freq = "11500".add(saw(0, 1200).slow(12)), q = 0.5)
   .delay(0.33, pure(1/16).div(cps), 0.85, 24) // Snare needs it own orbit for the dalay!
   .orbit(12).apply(drumRoom).late(perlin(0.001, 0.0015))
@@ -514,16 +514,16 @@ let heavyDrums = arrange(
 // Song  ------------------------------------------------------------------------------------------------------------
 export song = stack(
   arrange(
-    // [8, spinning],
-    // [4, answering],
-    // [4, quickening],
-    // [4, stretching],
-    // [4, holdingBreath],
+    [8, spinning],
+    [4, answering],
+    [4, quickening],
+    [4, stretching],
+    [4, holdingBreath],
     [12, heavyBlock],
     [12, stack(heavyBlock, heavyDrums)],
-    // [12, flyingOff],
-    // [4, lastChord],
-    // [2, silence]
+    [12, flyingOff],
+    [4, lastChord],
+    [2, silence]
   )
     .scale("d3:minor")
     .analog(feel)
