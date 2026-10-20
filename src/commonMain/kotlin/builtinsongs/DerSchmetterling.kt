@@ -124,8 +124,8 @@ let cabStock = x => x.lowpass(5000).lowpass(5000)
 let cab4x12 = x => x
   .eq(e => e
     .band(freq =  120, q = 0.7, db =  1.9)         // thump: closed-back box resonance
-    .band(freq =  380, q = 0.5, db =  3.5)         // roar:  low mids
-    .band(freq = 2700, q = 1.6, db =  4.2)         // bark:  the upper-mid speaker peak
+    .band(freq =  380, q = 0.5, db =  3.8)         // roar:  low mids
+    .band(freq = 2700, q = 1.8, db =  4.1)         // bark:  the upper-mid speaker peak
   )
   .lowpass(5200, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
   .highpass(105, 0.707, x => x.passes(2))
@@ -224,7 +224,7 @@ let bass = (() => {
 
   // Harmonics: sine partials at 2f .. 8f, gain 1/n, the fundamental left to the sub above. On the
   // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
-  let harmonics = Ign.sine(x => x.harmonics(9, 0.90).fundamental(0).analog(pAnalog).analogSpread(0.1)).mul(pHarm)
+  let harmonics = Ign.sine(x => x.harmonics(8, 0.95).fundamental(0).analog(pAnalog).analogSpread(0.1)).mul(pHarm)
 
   return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -3)) // let the snare cut through
@@ -360,11 +360,11 @@ let gummiEimer = (() => {
  
   let ring = Ign.constant(140).div(Ign.freq()).mul(0.85)  
  
-  let head  = Ign.sine(x => x.analog(pAnalog)).pitchEnvelope(14, x => x.adsr(0.010, 0.025, 0, 0)).adsr(0.002, ring, 0.0, 2.0).mul(0.4)
+  let head  = Ign.sine(x => x.analog(pAnalog)).pitchEnvelope(14, x => x.adsr(0.010, 0.075, 0, 0)).adsr(0.010, ring, 0.0, 2.0).mul(0.4)
   // the harmonics 2f..8f, fundamental left out: the ear rebuilds it, so the drum sits low in the mix and keeps its pitch,
   // and the pitch drop is heard up here, not felt at 70 Hz. They die well before the head does.
   let harms = Ign.sine(x => x.harmonics(6, 0.9).fundamental(0).analog(pAnalog).analogSpread(1.0))
-    .pitchEnvelope(21, x => x.adsr(0.001, 0.05, 0, 0)).adsr(0.002, 0.35, 0.0, 0.40).mul(2.0)
+    .pitchEnvelope(21, x => x.adsr(0.010, 0.050, 0, 0)).adsr(0.010, 0.35, 0.0, 0.40).mul(2.0)
  
   let m2 = Ign.sine(Ign.freq().mul(1.59), x => x.analog(pAnalog)).adsr(0.002, 0.10, 0.0, 0.20).mul(0.30)
   let m3 = Ign.sine(Ign.freq().mul(2.14), x => x.analog(pAnalog)).adsr(0.002, 0.06, 0.0, 0.10).mul(0.20)
@@ -383,12 +383,12 @@ export trommel_pat = `<[~ 0 1 ~  0 ~ 2 ~] [0 ~ 0 -4  -3 ~ -1 ~] [~ 0 -1 0  ~ 0 ~
 export trommel_shape = x => x.sound(gummiEimer).adsrOff() // .solo()
   .velocity("1.0 0.8 0.9 0.8".sub(perlin(0.0, 0.02))).body(material = "membrane", wet = 0.4)
   .hpf(500).lpf("2200".add(perlin(-200, 200))).clip(2.0)
-  .pan(0.40).superimpose(pan(0.60))
+  .pan(0.425).superimpose(pan(0.575))
 
 export trommel_arrange = x => x.orbit(5) // .solo(0.5)
-  .scale("e4:minor").gain(0.14)
+  .scale("e4:minor").gain(0.16)
   .mute("<1!32 0!32 1!32>")                          
-  .late(berlin(0.0035, 0.0045).mul(drunk))
+  .late(berlin(0.0025, 0.0035).mul(drunk))
 
 export trommel = n(trommel_pat).apply(trommel_shape).tag("trommel")
 
@@ -512,7 +512,7 @@ export song_body = stack(
       guitar2.apply(guitar2_arrange) // .solo() .mute()
       , // Guitar 3
       guitar3.apply(guitar3_arrange) // .solo() .mute()
-    ).reverb(wet = 0.05, size = 2.0) // . solo()
+    ).reverb(wet = 0.30, size = 1.5) // . solo()
     , // Bass
     bass.apply(bass_arrange) // .solo() // .mute()
     , // Orchestertrommel
@@ -536,10 +536,10 @@ export song = stack(
     // pulled the groove towards the break (6.3 LU apart without it, 4.4 at 1.4 dB of glue). The ceiling sits at -3 dB
     // because the snare's crack overshoots between the samples: true peak -1.2 dBFS, and the house limiter stays idle.
   master(Katalyst(k => k
-    .reverb(0.05, 7, 7500)
-    .gain(4.5)
+    .reverb(0.10, 7, 7500)
+    .gain(4.6)
     .bands(b => b.cut(150)
-      .band(mid => mid.distort(0.10, "soft", 4).mul(0.90)).cut(4800)
+      .band(mid => mid.distort(0.10, "soft", 4).mul(0.90)).cut(5000)
     ) // the glue on the mids only: the kick and the hats stay clean
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)
   ))
