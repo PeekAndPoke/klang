@@ -22,7 +22,7 @@ import * from "sprudel"
 // Song Status: Upcoming Garage Band ...
 
 let feel          =   25    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
-let transposition =   -2    // -1 .. D# | 0 .. E | 1 .. F
+let transposition =    2    // -1 .. D# | 0 .. E | 1 .. F
 let drunk         =    2    // How many beers did each band member have?
 let snareHz       =  210    // Where does the snare cut through?
 
@@ -123,7 +123,7 @@ let cabStock = x => x.lowpass(5000).lowpass(5000)
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = x => x
   .eq(e => e
-    .band(freq =  120, q = 0.7, db =  1.5)         // thump: closed-back box resonance
+    .band(freq =  120, q = 0.7, db =  1.9)         // thump: closed-back box resonance
     .band(freq =  380, q = 0.5, db =  3.5)         // roar:  low mids
     .band(freq = 2700, q = 1.6, db =  4.2)         // bark:  the upper-mid speaker peak
   )
@@ -235,8 +235,8 @@ let bass = (() => {
 export guitarDyna = (s) => "0.98!2 0.65!6  0.85!2 0.65!2 0.80!2 0.65!2"
   .sub(perlin(0.00, 0.05).seed(s)).mul("[1.00 0.90 0.95 0.90  1.00 0.90 0.95 0.90]")
 export guitarClip = (s) => "<0.97!31 0.85 0.97!31 0.88 0.97!30 0.85 0.80>"
-  .sub("<[0.0!7 0.04] [0.0!7 0.05] [0.0!7 0.04] [0.0!7 0.07]>").sub(perlin(0.00, 0.02).seed(s))
-export guitarDecay = (s) => "<0.400!16 0.425!16 0.400!16 0.425!16>".mul(perlin(0.90, 1.00).seed(s))
+  .sub("<[0.0!7 0.05] [0.0!7 0.06] [0.0!7 0.05] [0.0!7 0.07]>").sub(perlin(0.00, 0.01).seed(s))
+export guitarDecay = (s) => "<0.375!16 0.400!16 0.375!16 0.400!16>".mul(perlin(0.90, 1.00).seed(s))
 
 // Lead - Inspired by: Editors - Papillon  ---------------------------------------------------------------------------------------------------------------------
 export lead_pat =
@@ -314,10 +314,10 @@ export guitar2 = n(guitar2_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(gu
 
 // Guitar 3  --------------------------------------------------------------------------------------------------------------------------------------------------
 export guitar3_pat =
-  `<[0 0  2 4  0 0 -2 -1] [0 0 2 [4 4 4 -1]                   0 0 -2 -1]
-    [0 0  2 4  0 0 -2 -1] [0 0 2 [4 6 4  6]                   0 0 -2 -1]
-    [0 0  2 4  0 0 -2 -1] [0 [[2 0 -1 0] 7] 2 [1 [5 3] 1 -1]  [[2 4] 7] [7 0] -2 -1] 
-    [0 0 -1 3  0 0 -2 -1] [0 0 3 [0 -2]                       0 0 [0 4 7 9] 6]>/4`
+  `<[0 0  2 4  0 0 -2 -1] [0 0 2 [4 4 4 -1]                0 0 -2 -1]
+    [0 0  2 4  0 0 -2 -1] [0 0 2 [4 6 4  6]                0 0 -2 -1]
+    [0 0  2 4  0 0 -2 -1] [0 [[2 0 -1 0] 7] 2 [1 -1 1 -1]  [[2 4] 7] [7 0] -2 -1] 
+    [0 0 -1 3  0 0 -2 -1] [0 0 3 [0 -2]                    0 0 [0 4 7 9] 6]>/4`
 
 export guitar3_shape = x => x.pregain(guitarDyna(2).fast(2)).sound(guitar).adsrOff().unison(voices = 5, spread = 0.08)
   .ignp("decay", guitarDecay(2))
@@ -337,7 +337,7 @@ export bass_pat =
     [0 0 2 4 0 0 -2 -1]!2 
     [0 0 -1 3  7 0 -2 -1] [0 0 3 [0 -2]  0 0 [0 4 7 9] 6]>/8`
 
-export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.38) // . mute()
+export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.40) // . mute()
     .ignp("sub", 1.00).ignp("harmonics", 1.00).clip("0.95".sub(perlin(0.0, 0.05).slow(8)))  // . solo()
     .adsr(0.003, 0.3, 0.40, 0.025).hpf(35)
 
