@@ -316,7 +316,7 @@ export beat = roots => n(roots.add(-7)).struct("x ~ ~ x ~ ~ x ~")
 // Chug: the heavy rig, palm-muted on the root, an octave down.
 export chug = roots => n(roots.add(-7)).struct("[x x] x@2  [x x] x@2  [x x] x")
   .sound(heavy).adsrOff().unison(voices = 11, spread = 0.08)
-  .ignp("decay", "0.4 0.8!2 0.4 0.8!2 0.3!2").clip(1)
+  .ignp("decay", "0.4 0.8!2 0.4 0.8!2 0.3 0.2").clip(1)
   .velocity("1.0 0.90 0.80 0.85  0.90 0.80 0.75 0.85".sub(perlin(0.0, 0.2)))
   .gain(0.50).late(perlin(0.0002, 0.0008)).apply(
     x => x.pan(0.20),
@@ -327,7 +327,7 @@ export chug = roots => n(roots.add(-7)).struct("[x x] x@2  [x x] x@2  [x x] x")
 // Wings: tremolo-picked power chords on the heavy rig, hard left and right.
 export wings = chords => n(chords).ply(16)
   .sound(heavy).adsrOff().unison(voices = 11, spread = 0.08)
-  .ignp("decay", 0.35).clip(1)
+  .ignp("decay", "[0.35 0.25]*8").clip(1)
   .velocity("1.0 0.90!2 0.96 0.88 0.92 0.94 0.92".sub(perlin(0.0, 0.2)))
   .gain(0.45).late(perlin(0.0008, 0.0014)).apply(
     x => x.pan(0.05),
@@ -364,20 +364,20 @@ let drumRoom = x => x.reverb(wet = 0.3, size = 5)
 
 export kick = pat => sound("bd").struct(pat)
   .sound(metalKick).adsrOff().note("a1").velocity("1.0 0.94 0.96 0.94")
-  .gain(1.15).pan(0.5)
+  .gain(1.05).pan(0.5)
   .orbit(11).apply(drumRoom)
 
 export snare = pat => sound(pat)
   .sound(metalSnare).adsrOff().freq(snareHz)
   .gain(0.50).pan(0.575)
   .lpf(freq = "11500".add(saw(0, 1200).slow(12)), q = 0.5)
-  .delay(0.35, pure(1/16).div(cps), 0.85, 24) // Snare needs it own orbit for the dalay!
+  .delay(0.33, pure(1/16).div(cps), 0.85, 24) // Snare needs it own orbit for the dalay!
   .orbit(12).apply(drumRoom).late(perlin(0.001, 0.0015))
 
 export hats = pat => sound(pat).n(0)
   .velocity("1.0 0.7 0.85 0.7")
   .hpf(800).lpf(freq = 13500, q = 0.5).adsr(0.005, 0.1, 0.70, 2.0) // some body, less sizzle
-  .gain(0.90).pan(0.425)                            
+  .gain(0.85).pan(0.425)                            
   .orbit(11).apply(drumRoom).late(perlin(0.002, 0.0035))
 
 // Bass: the Schmetterling's bass guitar, on every kick, on the chord's root two octaves down.
@@ -386,7 +386,7 @@ export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
   .ignp("sub", 1.00).ignp("harmonics", 1.00)
   .adsr(0.003, 0.3, 0.5, 0.040).hpf(30).notch(freq = snareHz, q = 1.0)
   .clip(0.90)
-  .gain(1.40).pan(0.5)
+  .gain(1.30).pan(0.5)
   .orbit(15)
 
 // Parts  -----------------------------------------------------------------------------------------------------------
@@ -534,8 +534,8 @@ export song = stack(
     .apply(drumRoom)
   
   , master(Katalyst(k => k
-    .reverb(0.20, 7, 4800)                         // the hall: one room for the whole band, about 2 s, warm
-    .gain(1.15)                                    // the house level, -14 LUFS
+    .reverb(0.20, 7, 7500)                         // the hall: one room for the whole band, about 2 s, warm
+    .gain(1.20)                                    // the house level, -14 LUFS
     .bands(b => b.cut(150)
       .band(mid => mid.distort(0.10, "soft", 4).mul(0.80)).cut(5000)
     ) // the glue on the mids only: the kick and the hats stay clean
