@@ -161,6 +161,25 @@ evidence-backed ceilings — they cost little and remove one variable. If future
   everyone's uncommitted work for as long as it is stashed (a writer did it for a second on 2026-10-04; nothing was
   lost). Compare against a commit with `git show <rev>:<path>` instead.
 
+## IntelliJ's tools: read-only (maintainer, 2026-10-20) *(provisional)*
+
+The `mcp__idea__*` tools query IntelliJ's index, with types and references resolved. The read-only ones are allowed:
+symbol and structural search, `analyze_calls`, the PSI tree, `get_file_problems`, `run_inspection_kts` and the other
+lookups. They answer "every caller", "every writer of this field" or "every case of this `when`" in one query, where
+grep only comes close. Write and build actions stay off (`apply_patch`, `rename_refactoring`, `reformat_file`,
+`apply_quick_fix`, `build_project`, `execute_run_configuration`, `execute_terminal_command`): a build there bypasses
+the build lock, and an edit lands in the maintainer's open editor. When the same case keeps coming up where one would
+help (a rename refactoring, say), bring it to the maintainer.
+
+- **The index is the open checkout**, the maintainer's working copy with its unsaved edits, never a worktree. A table
+  built from a query says which commit it reflects.
+- **After a branch switch or a merge, wait for indexing.** A partial result does not say it is partial.
+- **Blind spots:** songs and tutorials are KlangScript inside Kotlin strings, so who calls a door from a song still
+  needs grep. KSP-generated code is only as fresh as the last build.
+- **The coordinator runs the queries, a few per task**, and puts the results in the brief. A project-wide query stalls
+  the IDE the maintainer is typing in, so workers don't run queries in parallel. For a reviewer the results are facts
+  (callers, writers), not a verdict.
+
 ## Rules of thumb
 
 - **A rename or doc-sweep brief says how to treat quotations** (2026-10-04, after a sweep rewrote a maintainer's
@@ -235,6 +254,9 @@ or judging the theory; reading this skill to launch a fleet does not need it.
 
 ## Changelog
 
+- **2026-10-20**: IntelliJ's tools allowed, read-only (maintainer, in the coordinator's session, after Mission Control
+  asked the projects). An earlier session instruction against them dated from when they were still buggy; write
+  actions are decided one by one when a case for one comes up.
 - **2026-09-20**: the defect-density table moved to `defect-density-ledger.md`, the sibling of
   this file (maintainer: reading the skill should not carry the whole record). Nothing about the
   measure changed; the skill keeps the policy, the ledger keeps the evidence. Observations on the
