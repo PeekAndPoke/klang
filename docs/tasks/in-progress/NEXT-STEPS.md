@@ -12,6 +12,8 @@ history.
 - New since v0.7.1: completion offers the song's own names and a call's unfilled parameter names (both hand-tested by
   the maintainer 2026-10-20); engine follow-ups 10c and 10d (two fm sites), 16 to 19, 28, 35, 36 and 38; the delay
   docs; a fixed Karma port per module; the build lock found from every worktree.
+- Ultra 0.114.0 since 2026-10-20 (from 0.112.0, 0.113.0 skipped): the full check of `6647c4eb` GREEN (18,284
+  tests, corpus 3 of 3 frozen identical, allocation 80 of 80).
 - Two branches hold unmerged work, each in its worktree under `.claude/worktrees/`. All other work is merged; the
   finished worktrees and their branches were removed 2026-10-20.
 
@@ -70,7 +72,6 @@ Unchanged since 2026-10-13: its task is closed and archived, and what is left wa
   [`20261019-editor-local-symbol-completion.md`](../../tasks-archive/2026-10/20261019-editor-local-symbol-completion.md)
   and [`../klangscript-named-args-docs-polish.md`](../klangscript-named-args-docs-polish.md), "Open, for the
   maintainer".
-- Ultra 0.114.0: we wait for it (0.113.0 skipped, 2026-10-19), then upgrade.
 - sprudel's own typed Kotlin door (its doors take `PatternLike = Any`): needs its own design and a home
   ([`../../tasks-archive/2026-10/20261016-kotlin-typed-doors.md`](../../tasks-archive/2026-10/20261016-kotlin-typed-doors.md),
   "Left after the rollout").
