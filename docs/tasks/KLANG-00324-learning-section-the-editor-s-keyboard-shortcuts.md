@@ -19,7 +19,8 @@ After KLANG-00321 (done), KLANG-00322 and KLANG-00323, whose keys it lists.
 2. **One source for Klang's own keys:** the bindings Klang adds (go to definition and docs on Ctrl-click, the
    Ctrl underline, the context menu, back to the last edit, bookmarks, completion on Ctrl+Space) are listed in one
    Kotlin list next to the editor (`klangscript-ui`), and the keymaps use the same constants (`EditPlacesExtension.KEY`
-   is the first), so the page cannot drift from the code.
+   is the first), so the page cannot drift from the code. The list is shaped as actions and their bindings, so the
+   key map of KLANG-00325 (keyboard input mapped to actions in one place) grows out of it.
 3. **CodeMirror's keys as installed:** the page lists the useful ones of CodeMirror's standard keymaps (undo and
    redo, comment, move and copy a line, delete a line, indent, select the next match, multiple cursors, search and
    replace, go to line, fold, the matching bracket), each checked against the keymap source of the installed
@@ -48,3 +49,4 @@ Configurable keys, a shortcut overlay inside the editor, and a link from the edi
 ## History
 
 - 2026-10-21: created; designed the same day (maintainer's request).
+- 2026-10-21: the list shaped for KLANG-00325 (the key map, the maintainer's note).
