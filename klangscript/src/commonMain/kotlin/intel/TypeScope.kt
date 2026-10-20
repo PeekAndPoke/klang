@@ -39,12 +39,18 @@ class TypeScope(
      *   `=>` of the arrow for a parameter. Null for a name
      *   only announced further down ([declareAhead]). `AnalyzedAst.localsAt`
      *   offers a binding to code completion only after its [declPos].
+     * @param site Where the binding is declared: its name and the whole
+     *   declaration, for `AnalyzedAst.definitionAt`. Null for a name only
+     *   announced further down, for a declaration inside a template literal's
+     *   `${...}` (the offsets there count from the interpolation), and for
+     *   parameters the walk cannot read back from the text.
      */
     data class LocalBinding(
         val name: String,
         val type: KlangType?,
         val kind: KlangSymbol.LocalKind,
         val declPos: Int? = null,
+        val site: DeclarationSite? = null,
     )
 
     private val bindings = mutableMapOf<String, LocalBinding>()

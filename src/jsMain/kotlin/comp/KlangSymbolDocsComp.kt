@@ -74,18 +74,22 @@ import kotlinx.html.tr
 @Suppress("FunctionName")
 fun Tag.KlangSymbolDocsComp(
     symbol: KlangSymbol,
+    declarationCode: String? = null,
     onNavigate: (KlangSymbol, dynamic) -> Unit,
 ) = comp(
     KlangSymbolDocsComp.Props(
         symbol = symbol,
+        declarationCode = declarationCode,
         onNavigate = onNavigate,
     )
 ) { KlangSymbolDocsComp(it) }
 
 class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props>(ctx) {
 
+    /** [declarationCode]: a local's declaration as the song writes it, shown below its signature; null otherwise. */
     data class Props(
         val symbol: KlangSymbol,
+        val declarationCode: String? = null,
         val onNavigate: (KlangSymbol, dynamic) -> Unit,
     )
 
@@ -245,6 +249,18 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
                         codeBlock(
                             sortedVariants.joinToString("\n") { it.signature },
                         )
+                    }
+                }
+
+                // ── Declaration (a local: its code in the song) ──────────────────
+                val declarationCode = props.declarationCode
+
+                if (declarationCode != null) {
+                    noui.item {
+                        sectionLabel("Declaration")
+                        noui.content {
+                            codeBlock(declarationCode, copyToClipboard = true)
+                        }
                     }
                 }
 

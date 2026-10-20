@@ -81,6 +81,8 @@ internal class ArgumentSlotAt(
 
 // ── Private helpers ────────────────────────────────────────────────────────
 // Char codes are written `'('.code`: Kotlin folds them into Int constants at compile time, no Char at run time.
+// The lexical ones (`skipBlanks`, `skipNonCode`, `isBlankChar`, `isWordChar`) are internal: `DeclarationSite` reads
+// the source by the same rules.
 
 /** A stretch `[from, to)` of the text. */
 private class SlotSpan(val from: Int, val to: Int)
@@ -180,7 +182,7 @@ private fun slotsUntilClose(codes: IntArray, from: Int): List<SlotSpan> {
 private fun isBlank(codes: IntArray, from: Int, to: Int): Boolean = skipBlanks(codes = codes, from = from, to = to) >= to
 
 /** Index of the first code in `[from, to)` that is no blank and in no comment, or [to]. */
-private fun skipBlanks(codes: IntArray, from: Int, to: Int): Int {
+internal fun skipBlanks(codes: IntArray, from: Int, to: Int): Int {
     var i = from
 
     while (i < to) {
@@ -231,10 +233,10 @@ private fun classifySlot(text: String, codes: IntArray, slot: SlotSpan): SlotKin
  * A string or comment found at an index: [end] is the index after it. [openAtEnd]: a cursor at [end] is still inside
  * it (a line comment runs on to its newline, an unterminated string or comment to the end of the text).
  */
-private class NonCode(val end: Int, val openAtEnd: Boolean, val isString: Boolean)
+internal class NonCode(val end: Int, val openAtEnd: Boolean, val isString: Boolean)
 
 /** The string or comment that starts at [from], or null when none does. */
-private fun skipNonCode(codes: IntArray, from: Int): NonCode? {
+internal fun skipNonCode(codes: IntArray, from: Int): NonCode? {
     val c = codes[from]
     val next = if (from + 1 < codes.size) codes[from + 1] else -1
 
@@ -283,8 +285,8 @@ private fun skipNonCode(codes: IntArray, from: Int): NonCode? {
 }
 
 /** A blank as the lexer skips it: space, tab, carriage return, newline. */
-private fun Int.isBlankChar(): Boolean = this == ' '.code || this == '\t'.code || this == '\r'.code || this == '\n'.code
+internal fun Int.isBlankChar(): Boolean = this == ' '.code || this == '\t'.code || this == '\r'.code || this == '\n'.code
 
 /** A code of an identifier or a number, as the lexer reads them: ASCII letters, digits and `_`. */
-private fun Int.isWordChar(): Boolean =
+internal fun Int.isWordChar(): Boolean =
     this in 'a'.code..'z'.code || this in 'A'.code..'Z'.code || this in '0'.code..'9'.code || this == '_'.code

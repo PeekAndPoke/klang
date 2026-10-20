@@ -38,7 +38,8 @@ record), and put the narrative in the task record, which gets archived. The full
   a local shadows a global for the checker and the param tools alike. Completion offers the song's own names declared
   above the cursor (`AnalyzedAst.localsAt`, the cursor mapped back across an edit while the text does not parse), and
   where an argument starts in a known call its unfilled parameters as `name = ` (`AnalyzedAst.namedArgumentsAt`).
-  `ref/intel-analyzer.md`.
+  Ctrl/Cmd-click on a local jumps to its declaration and its hover shows the declaration's code
+  (`AnalyzedAst.definitionAt`, mapped across an edit the same way). `ref/intel-analyzer.md`.
 - **Stdlib doors** (`klangscript-libs`): the oscillator doors are `Ignitor.name(freq?, configure?)` (short `Ign.name`) with the knobs
   on immutable oscillator builder wrappers (in `audio_bridge/IgnitorBuilders.kt` with typed members since the typed-doors
   rollout S2, the script knobs internal renamed variants in `klangscript-libs/.../IgnitorBuilders.kt`); `OscSineBuilder` carries `harmonics`,
@@ -82,6 +83,10 @@ KlangScript keeps a JavaScript-like syntax but its semantics and its stdlib foll
 - **Blocks that must not leak `let` / `const`** (loop bodies, if branches) use `executeBlockInChildScope()`,
   never a bare `executeBlock()`.
 - **`ast/Ast.kt` changes cascade** through parser, interpreter and tests (`ref/adding-features.md`).
+- **AST nodes are data classes, and a `${...}` is parsed on its own**: a node inside an interpolation carries a
+  location counted from it, so it can equal a node outside (same content, line and column) in any map keyed by node.
+  The analyzer's binding map keeps interpolation identifiers out (KLANG-00321); its type map and `AstIndex` still
+  collide (`ref/intel-analyzer.md`, "A local's declaration").
 - **Library maps merge per name; `checkArgsSize` is a minimum** (`ref/interpreter-impl.md`).
 - **A stdlib string method must not share a name with a sprudel function**: sprudel registers every
   pattern function on strings too and the later import wins (`ratio` became `toRatio`). Guard in sprudel:
@@ -179,3 +184,6 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
   `AnalyzedAst.localsAt` and `CompletionProvider.localCompletions` (KLANG-00319 (editor local symbol completion)).
 - 2026-10-19: code completion offers a call's unfilled parameters as `name = ` where an argument starts, never in a
   call with a positional argument (`AnalyzedAst.namedArgumentsAt`; KLANG-00130 (klangscript named args docs polish) 6.4).
+- 2026-10-21: Ctrl/Cmd-click on a local jumps to its declaration, its hover shows the declaration's code, and an
+  identifier inside `${...}` no longer replaces an equal one outside in the binding map (`AnalyzedAst.definitionAt`;
+  KLANG-00321 (editor go to a local's definition and show its code on hover)).

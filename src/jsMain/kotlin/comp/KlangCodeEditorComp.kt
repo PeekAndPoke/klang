@@ -116,8 +116,8 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
 
     private val hoverPopup: HoverPopupCtrl by lazy { HoverPopupCtrl(popups = popups) }
 
-    private val hoverContent: FlowContent.(KlangSymbol) -> Unit = { doc ->
-        KlangSymbolDocsComp(symbol = doc, onNavigate = ::navToDoc)
+    private val hoverContent: FlowContent.(KlangSymbol, String?) -> Unit = { doc, declarationCode ->
+        KlangSymbolDocsComp(symbol = doc, declarationCode = declarationCode, onNavigate = ::navToDoc)
     }
 
     private val state by subscribingTo(props.ctrl.state)

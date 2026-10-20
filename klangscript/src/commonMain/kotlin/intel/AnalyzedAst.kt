@@ -177,6 +177,75 @@ class AnalyzedAst internal constructor(
     }
 
     /**
+     * Where the local that the word at the cursor [pos] in [text] reads is declared: go-to-definition's entry point,
+     * and the hover's for a local. For a word that reads a `let` / `const` / `export` or an arrow parameter, the offset
+     * of the declared name, the range of the declaration and its code ([LocalDefinition]). Null for a library name, a
+     * member, a literal, a keyword and the declared name itself. The binding is the one the analysis resolved, so an
+     * inner declaration shadows an outer one, and a closure's read of a name declared further down finds it there
+     * ("Locals declared further down", `ref/intel-analyzer.md`).
+     *
+     * [text] is the editor's text, which can be ahead of the analysed [source] while it does not parse ([localsAt]).
+     * The word and the declaration are mapped across the edit: before it they keep their offsets, after it they move
+     * with it, and a word or a declaration the edit touches answers null (no jump rather than a wrong one). The
+     * answer's offsets and code are [text]'s.
+     */
+    fun definitionAt(pos: Int, text: String = source): LocalDefinition? {
+        var wordStart = pos.coerceIn(0, text.length)
+        var wordEnd = wordStart
+
+        while (wordStart > 0 && text[wordStart - 1].code.isWordChar()) {
+            wordStart--
+        }
+
+        while (wordEnd < text.length && text[wordEnd].code.isWordChar()) {
+            wordEnd++
+        }
+
+        if (wordStart == wordEnd) {
+            return null
+        }
+
+        val edit = editTo(text)
+
+        // The word as the analysis read it: in place before the edit, moved back after it
+        val wordShift = when {
+            edit == null || wordEnd <= edit.start -> 0
+            wordStart >= edit.newEnd -> edit.oldEnd - edit.newEnd
+            else -> return null
+        }
+
+        val analysedStart = wordStart + wordShift
+        val identifier = astIndex.nodeAt(analysedStart) as? Identifier ?: return null
+        val isSameWord = identifier.name == text.substring(wordStart, wordEnd) &&
+                astIndex.offsetOf(identifier) == analysedStart until (wordEnd + wordShift)
+
+        if (!isSameWord) {
+            return null
+        }
+
+        val binding = bindingMap[identifier] ?: return null
+        val site = binding.site ?: return null
+
+        // The declaration in the editor's text: in place before the edit, moved with it after it
+        val siteShift = when {
+            edit == null || site.end <= edit.start -> 0
+            site.start >= edit.oldEnd -> edit.newEnd - edit.oldEnd
+            else -> return null
+        }
+
+        val start = site.start + siteShift
+        val end = site.end + siteShift
+
+        return LocalDefinition(
+            namePos = site.namePos + siteShift,
+            start = start,
+            end = end,
+            code = LocalDefinition.codeOf(text = text, start = start, end = end),
+            symbol = synthesizeLocalSymbol(binding),
+        )
+    }
+
+    /**
      * The parameters a named argument can still fill at the cursor [pos] in [text], in declaration order: the
      * parameters of the called callable that no argument of the call names. Code completion's entry point for
      * `name = ` in an argument list. [pos] is the start of the word being typed (or the cursor, when there is none).
@@ -460,12 +529,20 @@ class AnalyzedAst internal constructor(
         ): AnalyzedAst {
             val astIndex = AstIndex.build(program, source)
             val inferrer = ExpressionTypeInferrer(registry)
-            val builder = TypeMapBuilder(inferrer = inferrer, lineOffsets = buildLineOffsets(source))
+            val builder = TypeMapBuilder(
+                inferrer = inferrer,
+                lineOffsets = buildLineOffsets(source),
+                codes = IntArray(source.length) { source[it].code },
+            )
             builder.visitStatements(program.statements)
             val typeMap = builder.map
             val bindingMap = builder.bindingMap
             val diagnostics = if (computeDiagnostics) {
-                NamedArgumentChecker(registry, typeMap, localIdentifiers = bindingMap.keys).check(program)
+                NamedArgumentChecker(
+                    registry,
+                    typeMap,
+                    localIdentifiers = bindingMap.keys + builder.interpolationLocals,
+                ).check(program)
             } else {
                 emptyList()
             }
@@ -496,14 +573,25 @@ class AnalyzedAst internal constructor(
  * `runtime/Environment.kt` lookup rules (block-scope for let/const/export,
  * shadowing of outer scopes and of registry globals), and beside it the tree of
  * [LocalScopeRange]s, each scope's place in the source and its bindings, for
- * [AnalyzedAst.localsAt].
+ * [AnalyzedAst.localsAt]. Every binding carries its [DeclarationSite], for
+ * [AnalyzedAst.definitionAt].
  */
 private class TypeMapBuilder(
     private val inferrer: ExpressionTypeInferrer,
     private val lineOffsets: IntArray,
+    /** The source as char codes, for reading a declaration's name and end back from the text ([DeclarationSite]). */
+    private val codes: IntArray,
 ) {
     val map = mutableMapOf<Expression, KlangType?>()
     val bindingMap = mutableMapOf<Identifier, TypeScope.LocalBinding>()
+
+    /**
+     * The identifiers inside a template literal's `${...}` that read a local. They stay out of [bindingMap]: their
+     * locations count from the interpolation, and an [Identifier] is a data class, so one equal to an identifier
+     * outside (same name, line and column) would replace that one's entry. The named-argument check still treats them
+     * as locals.
+     */
+    val interpolationLocals = mutableSetOf<Identifier>()
 
     /** The program's scope range, the root of the tree [AnalyzedAst.localsAt] reads. */
     val programScope = LocalScopeRange(start = 0, parent = null)
@@ -572,7 +660,14 @@ private class TypeMapBuilder(
         extendRange(expr.location)
         map[expr] = inferrer.inferType(expr, scope)
         if (expr is Identifier) {
-            scope.resolveReference(expr)?.let { bindingMap[expr] = it }
+            if (interpolationDepth > 0) {
+                // No reader is remembered either: a declaration further down would write it into the map when reached
+                if (scope.resolve(expr.name) != null) {
+                    interpolationLocals.add(expr)
+                }
+            } else {
+                scope.resolveReference(expr)?.let { bindingMap[expr] = it }
+            }
         }
         // Recurse into children
         when (expr) {
@@ -681,6 +776,7 @@ private class TypeMapBuilder(
     ) = withChildScope(start = startOf(expr.location), deferred = deferred) {
         // A parameter is declared at the arrow: visible in the whole body
         val declPos = range.start
+        val sites = paramSitesOf(expr = expr, arrowStart = declPos)
         expr.parameters.forEachIndexed { i, p ->
             bindLocal(
                 TypeScope.LocalBinding(
@@ -688,6 +784,7 @@ private class TypeMapBuilder(
                     type = paramTypes?.getOrNull(i),
                     kind = KlangSymbol.LocalKind.PARAM,
                     declPos = declPos,
+                    site = sites?.getOrNull(i),
                 )
             )
         }
@@ -720,6 +817,28 @@ private class TypeMapBuilder(
      */
     private fun declPosOf(initializer: Expression?, stmtStart: Int): Int {
         return if (initializer == null || initializer is ArrowFunction) stmtStart else range.end
+    }
+
+    /**
+     * Where the `let` / `const` / `export` [stmt], whose keyword starts at [stmtStart], declares [name]. Called right after
+     * its initializer was visited: the range's end is then the end of the statement's last token the walk met. Null
+     * inside a template interpolation (the offsets there count from the interpolation) and without a location.
+     */
+    private fun statementSiteOf(stmt: Statement, name: String, stmtStart: Int): DeclarationSite? {
+        if (interpolationDepth > 0 || stmt.location == null) {
+            return null
+        }
+
+        return DeclarationSite.ofStatement(codes = codes, keywordStart = stmtStart, name = name, lastEnd = range.end)
+    }
+
+    /** Where the parameters of [expr], whose `=>` starts at [arrowStart], are declared; null as for [statementSiteOf]. */
+    private fun paramSitesOf(expr: ArrowFunction, arrowStart: Int): List<DeclarationSite>? {
+        if (interpolationDepth > 0 || expr.location == null) {
+            return null
+        }
+
+        return DeclarationSite.ofArrowParams(codes = codes, arrowStart = arrowStart, params = expr.parameters)
     }
 
     /** Bind a declaration, and give the identifiers that read it early from a deferred body its binding and type. */
@@ -802,6 +921,7 @@ private class TypeMapBuilder(
                         type = type,
                         kind = KlangSymbol.LocalKind.LET,
                         declPos = declPosOf(initializer = stmt.initializer, stmtStart = stmtStart),
+                        site = statementSiteOf(stmt = stmt, name = stmt.name, stmtStart = stmtStart),
                     )
                 )
             }
@@ -814,6 +934,7 @@ private class TypeMapBuilder(
                         type = map[stmt.initializer],
                         kind = KlangSymbol.LocalKind.CONST,
                         declPos = declPosOf(initializer = stmt.initializer, stmtStart = stmtStart),
+                        site = statementSiteOf(stmt = stmt, name = stmt.name, stmtStart = stmtStart),
                     )
                 )
             }
@@ -826,6 +947,7 @@ private class TypeMapBuilder(
                         type = map[stmt.initializer],
                         kind = KlangSymbol.LocalKind.EXPORT,
                         declPos = declPosOf(initializer = stmt.initializer, stmtStart = stmtStart),
+                        site = statementSiteOf(stmt = stmt, name = stmt.name, stmtStart = stmtStart),
                     )
                 )
             }

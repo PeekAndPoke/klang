@@ -15,13 +15,13 @@ import io.peekandpoke.klang.codemirror.ext.StateEffect
 import io.peekandpoke.klang.codemirror.ext.StateField
 import io.peekandpoke.klang.codemirror.ext.StateFieldConfig
 import io.peekandpoke.klang.script.intel.AnalyzedAst
+import io.peekandpoke.klang.script.intel.LocalDefinition
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.ui.HoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolCall
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.badgeTool
 import io.peekandpoke.klang.ui.feel.KlangTheme
-import io.peekandpoke.klang.ui.scheduleShow
 import io.peekandpoke.kraft.popups.PopupsManager
 import io.peekandpoke.kraft.utils.Vector2D
 import io.peekandpoke.kraft.utils.jsObject
@@ -41,19 +41,33 @@ import kotlinx.html.FlowContent
 import org.w3c.dom.Element
 
 /**
+ * The word under the mouse and what it names: its docs [symbol] and, for a local, its [definition] (null for a library
+ * name).
+ */
+private class WordDoc(val word: SelectionRange, val symbol: KlangSymbol, val definition: LocalDefinition?) {
+    /** The symbol whose docs page the word opens: a library name's; null for a local, which has its declaration. */
+    val docsSymbol: KlangSymbol? get() = symbol.takeIf { it.origin !is KlangSymbol.Origin.Local }
+}
+
+/** What the hover popup shows. It is rebuilt when the word under the mouse or what it names changes. */
+private data class HoverKey(val from: Int, val to: Int, val symbol: KlangSymbol, val definition: LocalDefinition?)
+
+/**
  * Combined CodeMirror extension for DSL editor interactions:
  *
- * - Hover over a known function  → show doc tooltip
- * - Right-click on a function/argument → context menu popup
- * - Ctrl/Cmd + click             → navigate to docs (same tab)
- * - Ctrl/Cmd + Shift + click     → navigate to docs (new tab)
- * - Ctrl/Cmd held while hovering → underline the function name
+ * - Hover over a known function  → show doc tooltip (for a local, with its declaration's code)
+ * - Right-click on a function/argument → context menu popup (a local: go to definition; a library name: go to docs)
+ * - Ctrl/Cmd + click             → a local: jump to its declaration; a library name: navigate to docs (same tab)
+ * - Ctrl/Cmd + Shift + click     → a local: jump to its declaration; a library name: navigate to docs (new tab)
+ * - Ctrl/Cmd held while hovering → underline the name
+ *
+ * [hoverContent] renders the popup for a symbol; `declarationCode` is a local's declaration, null for a library name.
  */
 fun dslEditorExtension(
     docProvider: (String) -> KlangSymbol?,
     analysisProvider: () -> AnalyzedAst? = { null },
     hoverPopup: HoverPopupCtrl,
-    hoverContent: FlowContent.(KlangSymbol) -> Unit,
+    hoverContent: FlowContent.(symbol: KlangSymbol, declarationCode: String?) -> Unit,
     popups: PopupsManager,
     onNavigate: (doc: KlangSymbol, event: dynamic) -> Unit,
     onOpenTool: ((toolName: String, ctx: KlangUiToolContext, argFrom: Int, event: dynamic) -> Unit)? = null,
@@ -103,7 +117,7 @@ fun dslEditorExtension(
         event.ctrlKey == true || event.metaKey == true
 
     /** Resolve the word under the mouse and look it up via the analyzer (receiver-aware + local-binding-aware). */
-    fun wordDocAt(view: EditorView, event: dynamic): Pair<SelectionRange, KlangSymbol>? {
+    fun wordDocAt(view: EditorView, event: dynamic): WordDoc? {
         val coords = jsObject<dynamic> {
             this.x = event.clientX
             this.y = event.clientY
@@ -123,15 +137,24 @@ fun dslEditorExtension(
         // filtering, local-binding shadowing, strict policy when receiver doesn't
         // match). The editor doesn't replicate any of that logic.
         val analysis = analysisProvider()
+
         if (analysis != null) {
-            return analysis.symbolAt(pos)?.let { word to it }
+            // A local answers with its declaration, read from the text as it is now (the analysis can be older)
+            val definition = analysis.definitionAt(pos = pos, text = view.state.doc.toString())
+
+            if (definition != null) {
+                return WordDoc(word = word, symbol = definition.symbol, definition = definition)
+            }
+
+            return analysis.symbolAt(pos)?.let { WordDoc(word = word, symbol = it, definition = null) }
         }
 
         // No analyzer yet (initial render, parse error) — fall back to the
         // bare-name registry lookup. The strict / local-binding behaviours kick
         // in as soon as an analysis is available again.
         val doc = docProvider(name) ?: return null
-        return word to doc
+
+        return WordDoc(word = word, symbol = doc, definition = null)
     }
 
     fun dispatchClear(view: EditorView) {
@@ -219,9 +242,23 @@ fun dslEditorExtension(
 
     // ── Context menu ───────────────────────────────────────────────────────
 
-    fun showContextMenu(event: dynamic, func: KlangSymbol?, argInfo: CallArgInfo?, view: EditorView) {
+    /** Move the cursor to a local's declared name, scroll it into view and keep the focus in the editor. */
+    fun goToDefinition(view: EditorView, definition: LocalDefinition) {
+        view.dispatch(jsObject<dynamic> {
+            this.selection = jsObject<dynamic> { this.anchor = definition.namePos }
+            this.scrollIntoView = true
+        })
+        view.focus()
+    }
 
-        if (func == null && argInfo == null) return
+    fun showContextMenu(event: dynamic, wordDoc: WordDoc?, argInfo: CallArgInfo?, view: EditorView) {
+        val definition = wordDoc?.definition
+        val docs = wordDoc?.docsSymbol
+        val hasWordItem = definition != null || docs != null
+
+        if (!hasWordItem && argInfo == null) {
+            return
+        }
 
         val anchor = Vector2D(
             x = event.clientX.unsafeCast<Double>(),
@@ -249,16 +286,23 @@ fun dslEditorExtension(
                 onMouseEnter { hoverPopup.cancelClose() }
                 onMouseLeave { hoverPopup.scheduleClose() }
 
-                // ── Docs navigation items ──────────────────────────────────
-                if (func != null) {
-                    item({ icon.book(); +"Go to docs: ${func.name}" }) {
-                        onNavigate(func, event)
+                // ── Navigation: a local to its declaration, a library name to its docs ──
+                if (definition != null) {
+                    item({ icon.code(); +"Go to definition: ${definition.symbol.name}" }) {
+                        goToDefinition(view, definition)
+                    }
+                } else if (docs != null) {
+                    item({ icon.book(); +"Go to docs: ${docs.name}" }) {
+                        onNavigate(docs, event)
                     }
                 }
 
                 // ── Tool items ─────────────────────────────────────────────
                 if (argInfo != null && onOpenTool != null) {
-                    if (func != null) noui.divider {}
+                    if (hasWordItem) {
+                        noui.divider {}
+                    }
+
                     argInfo.tools.forEach { (toolName, tool) ->
                         item({
                             tool.run { icon.iconFn().render() }
@@ -274,7 +318,7 @@ fun dslEditorExtension(
 
     // ── Hover state ────────────────────────────────────────────────────────
 
-    var lastHoveredWord: String? = null
+    var lastHoverKey: HoverKey? = null
 
     // ── Tool-badge overlay ──────────────────────────────────────────────────
 
@@ -395,7 +439,8 @@ fun dslEditorExtension(
         // console.log("onContextMenu", event)
 
         try {
-            val wordDoc = wordDocAt(view, event)
+            // A local the analysis cannot place right now offers neither its declaration nor docs
+            val wordDoc = wordDocAt(view, event)?.takeIf { it.definition != null || it.docsSymbol != null }
             val argInfo = argInfoAt(event, view)
 
             // console.log("wordDoc", wordDoc, "argInfo", argInfo)
@@ -403,7 +448,7 @@ fun dslEditorExtension(
             if (wordDoc == null && argInfo == null) return@contextmenu false
             event.preventDefault()
             event.stopPropagation()
-            showContextMenu(event, wordDoc?.second, argInfo, view)
+            showContextMenu(event, wordDoc, argInfo, view)
             true
         } catch (e: Throwable) {
             console.error("dslEditorExtension contextmenu error:", e)
@@ -411,21 +456,33 @@ fun dslEditorExtension(
         }
     }
 
-    // Ctrl/Cmd + click → same tab  |  Ctrl/Cmd + Shift + click → new tab
+    // Ctrl/Cmd + click → a local: its declaration | a library name: its docs, same tab (with Shift: new tab)
     val onClick: (event: dynamic, view: EditorView) -> Boolean = click@{ event, view ->
-        if (!isModifier(event)) return@click false
+        if (!isModifier(event)) {
+            return@click false
+        }
+
         val result = wordDocAt(view, event) ?: return@click false
+        val definition = result.definition
         event.preventDefault()
-        onNavigate(result.second, event)
+
+        if (definition != null) {
+            // The declaration is in this document, so Shift makes no difference
+            goToDefinition(view, definition)
+        } else {
+            // A local the analysis cannot place right now (the edit since the last parse touches it) has no docs page
+            result.docsSymbol?.let { onNavigate(it, event) }
+        }
+
         true
     }
 
     // Hover tooltip + Ctrl/Cmd underline
     val onMouseMove: (event: dynamic, view: EditorView) -> Boolean = { event, view ->
         val wordDoc = wordDocAt(view, event)
-        val word = wordDoc?.first
-        val doc = wordDoc?.second
-        val name = word?.let { view.state.doc.sliceString(it.from, it.to) }
+        val word = wordDoc?.word
+        val doc = wordDoc?.symbol
+        val declarationCode = wordDoc?.definition?.code
 
         // ── Ctrl/Cmd underline ─────────────────────────────────────────────
         if (isModifier(event)) {
@@ -441,10 +498,16 @@ fun dslEditorExtension(
         }
 
         // ── Hover tooltip ──────────────────────────────────────────────────
-        val currentWord = if (doc != null) name else null
+        // Keyed by the word's place and meaning: the same text elsewhere (a local `gain`, then the member `gain`) is
+        // another popup
+        val hoverKey = if (doc != null && word != null) {
+            HoverKey(from = word.from, to = word.to, symbol = doc, definition = wordDoc.definition)
+        } else {
+            null
+        }
 
-        if (currentWord != lastHoveredWord) {
-            lastHoveredWord = currentWord
+        if (hoverKey != lastHoverKey) {
+            lastHoverKey = hoverKey
 
             if (doc != null && word != null) {
                 val mouseY = event.clientY.unsafeCast<Double>()
@@ -475,11 +538,11 @@ fun dslEditorExtension(
                     Vector2D(x = visRight - pad, y = visTop + pad) to
                             PopupsManager.Positioning.BottomRight
                 }
-                hoverPopup.scheduleShow(doc = doc, anchor = anchor, positioning = positioning, content = hoverContent)
+                hoverPopup.scheduleShow(anchor = anchor, positioning = positioning) { _ -> hoverContent(doc, declarationCode) }
             } else {
                 hoverPopup.scheduleClose()
             }
-        } else if (currentWord != null) {
+        } else if (hoverKey != null) {
             hoverPopup.cancelClose()
         }
 
@@ -521,7 +584,7 @@ fun dslEditorExtension(
 
     // Mouse leaves editor → clear underline + close hover tooltip + schedule badge close
     val onMouseLeave: (event: dynamic, view: EditorView) -> Boolean = { _, view ->
-        lastHoveredWord = null
+        lastHoverKey = null
         dispatchClear(view)
         hoverPopup.scheduleClose()
         cancelBadgesShow()
@@ -538,7 +601,7 @@ fun dslEditorExtension(
     val handlers = jsObject<dynamic> {
         // Right-click → context menu
         this.contextmenu = onContextMenu
-        // Ctrl/Cmd + click → same tab  |  Ctrl/Cmd + Shift + click → new tab
+        // Ctrl/Cmd + click → a local: its declaration | a library name: its docs, same tab (with Shift: new tab)
         this.click = onClick
         // Ctrl/Cmd held while moving → underline the token under the cursor
         this.mousemove = onMouseMove

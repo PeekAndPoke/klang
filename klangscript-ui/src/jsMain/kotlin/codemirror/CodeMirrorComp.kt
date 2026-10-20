@@ -55,7 +55,7 @@ fun Tag.KlangScriptEditorComp(
     availableLibraries: List<KlangScriptLibrary> = emptyList(),
     autoImportedLibraries: List<KlangScriptLibrary> = emptyList(),
     hoverPopup: HoverPopupCtrl? = null,
-    hoverContent: (FlowContent.(KlangSymbol) -> Unit)? = null,
+    hoverContent: (FlowContent.(symbol: KlangSymbol, declarationCode: String?) -> Unit)? = null,
     popups: PopupsManager? = null,
     onNavigate: ((doc: KlangSymbol, event: dynamic) -> Unit)? = null,
     onOpenTool: ((toolName: String, ctx: KlangUiToolContext, argFrom: Int, event: dynamic) -> Unit)? = null,
@@ -87,7 +87,8 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
         val availableLibraries: List<KlangScriptLibrary> = emptyList(),
         val autoImportedLibraries: List<KlangScriptLibrary> = emptyList(),
         val hoverPopup: HoverPopupCtrl? = null,
-        val hoverContent: (FlowContent.(KlangSymbol) -> Unit)? = null,
+        /** Renders the hover popup for a symbol; `declarationCode` is a local's declaration, null for a library name. */
+        val hoverContent: (FlowContent.(symbol: KlangSymbol, declarationCode: String?) -> Unit)? = null,
         val popups: PopupsManager? = null,
         val onNavigate: ((doc: KlangSymbol, event: dynamic) -> Unit)? = null,
         val onOpenTool: ((toolName: String, ctx: KlangUiToolContext, argFrom: Int, event: dynamic) -> Unit)? = null,

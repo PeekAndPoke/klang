@@ -16,6 +16,7 @@ All that logic lives inside `AnalyzedAst.build`.
 | **`symbolAt(pos)`**                                | **Hover entry point.** Returns the `KlangSymbol` to render in the popup, or null. |
 | **`receiverTypeBeforeDot(pos)`**                   | **Completion entry point.** Wraps `getExpressionTypeEndingAt`.                    |
 | **`localsAt(pos, text)`**                          | **Completion of the song's own names.** The locals visible at the cursor.         |
+| **`definitionAt(pos, text)`**                      | **Go to a local's definition, a local's hover code.** Where the word's local is declared. |
 | **`namedArgumentsAt(pos, text)`**                  | **Completion of `name = `.** The unfilled params where an argument starts.        |
 | `diagnostics`                                      | Named-arg checker output.                                                         |
 
@@ -118,7 +119,32 @@ literal's `${...}` count from the interpolation (the parser reads it on its own)
 empty range. Guard: `LocalSymbolCompletionSpec`; record: KLANG-00319 (editor local symbol completion).
 
 The edit (`editTo`: one stretch between the common prefix and suffix, the earliest start when they overlap) is
-shared with `namedArgumentsAt`.
+shared with `namedArgumentsAt` and `definitionAt`.
+
+## A local's declaration (`definitionAt`)
+
+The walk records a `DeclarationSite` on every binding (`TypeScope.LocalBinding.site`): the declared name's offset and
+the declaration's range. The AST keeps less (a declaration's location is its keyword, an arrow's its `=>`, a parameter is
+a bare name, no node keeps a closing bracket), so the walk reads the rest back from the source by the lexer's rules (the
+lexical helpers of `ArgumentSlotAt`). A `let` / `const` / `export` runs from its keyword to the end of the last token the
+walk met in it, and on from there until every bracket opened since the keyword is closed (`foo(\n  a,\n)` ends after its
+`)`); its name is the word after the keyword, blanks and comments read past. An arrow parameter's offset is read back from
+the text in front of the `=>` (`x =>`, `(a, b) =>`) and checked against the parsed names; a parameter list with a comment
+in it gets no site. Inside a template literal's `${...}` nothing gets a site (the offsets there count from the
+interpolation), and no identifier there enters `bindingMap`: an AST node is a data class, so an `x` at 2:3 of an
+interpolation equals the `x` at 2:3 of the source and would replace its entry. The named-argument check still learns
+that such an identifier reads a local (`TypeMapBuilder.interpolationLocals`). The same collision still reaches the
+maps keyed by node that were left as they are (the type map, `AstIndex`'s offsets and parents).
+
+`definitionAt(pos, text)` reads the word at the cursor in `text`. It answers only for an `Identifier` node of exactly that
+range and name that the walk resolved to a local (`bindingMap`, so an inner declaration shadows an outer one and "Locals
+declared further down" holds); a member, a literal, a keyword and the declared name itself are no such node. The answer,
+a `LocalDefinition`, carries the declared name's offset, the declaration's range, its code for the hover (the whole lines,
+common indentation removed, at most `LocalDefinition.MAX_CODE_LINES` = 12 and then a `...` line; a parameter's line) and
+the local's symbol as `symbolAt` gives it. While `text` is ahead of the analysis, the word and the declaration are mapped
+across the edit (`editTo`): in place before it, moved after it; a word or a declaration the edit touches answers null (no
+jump rather than a wrong one). The answer's offsets and code are `text`'s. Guard: `LocalDefinitionSpec`; record:
+KLANG-00321 (editor go to a local's definition and show its code on hover).
 
 ## Named arguments at a cursor (`namedArgumentsAt`)
 
@@ -199,9 +225,12 @@ walking/filtering/shadowing logic in the consumer.
 
 Existing consumers that demonstrate the pattern:
 
-- `klangscript-ui/.../DslEditorExtension.kt::wordDocAt` — collapses to
-  `analysis.symbolAt(pos)?.let { word to it }` with a bare-name fallback only when no
-  analysis is available (initial render / parse error).
+- `klangscript-ui/.../DslEditorExtension.kt::wordDocAt` asks `analysis.definitionAt(pos, currentText)` first (a local:
+  the hover shows the definition's symbol and code, Ctrl/Cmd-click moves the cursor to its name, Shift too), then
+  `analysis.symbolAt(pos)` (Ctrl/Cmd-click opens the docs, never for a local), with a bare-name fallback only when no
+  analysis is available (initial render / parse error). The popup gets the code as `hoverContent(symbol, declarationCode)`
+  and shows it in `KlangSymbolDocsComp`'s "Declaration" block; it is rebuilt when the word's range or what it names
+  changes. The context menu offers "Go to definition" for a local and "Go to docs" for a library name.
 - `klangscript-ui/.../DslCompletionSource.kt::inferReceiverTypeBeforeDot` — one-liner
   delegating to `analysis.receiverTypeBeforeDot(...)`.
 - `klangscript-ui/.../DslCompletionSource.kt`, the non-member branch: `analysis.namedArgumentsAt(from, currentCode)`
@@ -224,3 +253,6 @@ Existing consumers that demonstrate the pattern:
   by position, shadowing, sibling scopes, the detail, the stale analysis.
 - `klangscript/src/jvmTest/kotlin/intel/NamedArgumentCompletionSpec.kt`: `namedArgumentsAt` and
   `namedArgumentCompletions`: where a slot starts, filled names, mixing, nested calls, varargs, the stale analysis.
+- `klangscript/src/jvmTest/kotlin/intel/LocalDefinitionSpec.kt`: `definitionAt`: each declaration kind, parameters,
+  shadowing, what finds nothing, a multi-line statement's range (a block body's `}` too), the stale text (a word inside
+  the edit included), an identifier inside `${...}` equal to one outside, the hover's code.
