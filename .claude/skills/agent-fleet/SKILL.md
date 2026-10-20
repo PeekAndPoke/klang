@@ -163,6 +163,12 @@ evidence-backed ceilings — they cost little and remove one variable. If future
   commit; look at `git log` first if anything must be rewound. Never `git stash` in the shared tree either: it takes back
   everyone's uncommitted work for as long as it is stashed (a writer did it for a second on 2026-10-04; nothing was
   lost). Compare against a commit with `git show <rev>:<path>` instead.
+- **Never switch branches in the shared checkout** (guardrail, 2026-10-21). `git switch` rewrites the working tree to
+  the other branch: the coordinator committed a ticket on a branch, switched back to main, and the next worker spent
+  its first edits on files that had lost that ticket's code (a three-way merge saved them). In the main checkout,
+  commit on the checked-out branch by explicit paths (`git add <paths>`, `git commit -- <paths>`); the check runs on
+  that commit in `klang-worktrees/measure` (`/project-layout`, Repo notes), and a red check is fixed by a follow-up
+  commit, never by rewinding.
 
 ## IntelliJ's tools: read-only (maintainer, 2026-10-20) *(provisional)*
 
