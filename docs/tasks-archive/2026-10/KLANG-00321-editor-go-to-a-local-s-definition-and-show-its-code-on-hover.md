@@ -1,6 +1,6 @@
 # KLANG-00321: Editor: go to a local's definition, and show its code on hover
 
-> **Status (2026-10-21): IN PROGRESS.** Built and reviewed (round 1 clean, the MINOR batch applied, 14 mutants KILLED); waits for the maintainer's hand test.
+> **Status (2026-10-21): DONE.** Hand-tested by the maintainer 2026-10-21: go to definition works.
 
 ## Why this exists
 
@@ -182,3 +182,4 @@ and `lowpass` answers null.
   binding map, rows for the block body's `}` and a word inside the edit, "Go to definition" in the context menu, the
   hover popup keyed by range and meaning, the unused docs-hover extension removed.
 - 2026-10-21: IN PROGRESS. Built and reviewed (round 1 clean, the MINOR batch applied, 14 mutants KILLED); waits for the maintainer's hand test.
+- 2026-10-21: DONE. Hand-tested by the maintainer 2026-10-21: go to definition works.
