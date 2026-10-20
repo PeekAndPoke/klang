@@ -1,7 +1,7 @@
 # KLANG-00290: Engine follow-ups after the tidy-up
 
-> **Status (2026-10-20): IN PROGRESS.** Items 4, 45 and 13 were merged before their review (maintainer,
-> 2026-10-20): the review loop and a clean mutation campaign come next ([`NEXT-STEPS.md`](NEXT-STEPS.md)).
+> **Status (2026-10-21): IN PROGRESS.** Items 4, 45 and 13: merged before their review (maintainer, 2026-10-20),
+> then reviewed (round 1 clean, code and audio) and mutation-checked (7 of 7 KILLED); see item 45's last paragraph.
 
 Item 2 is DONE (KlangMap, released in
 v0.6.5, step 4 merged after). Where to continue (Q38, maintainer 2026-10-13: 31 to 41 after the refill, each a purely independent performance
@@ -531,8 +531,8 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
    always true) turned the 400-to-480 Hz row and the -0.0 row red; the detune key dropped turned the detune row red;
    the count key dropped turned the count row red. Not shown: the sign-of-zero test dropped alone (its row was already
    red from the frequency mutant). The files were restored by hand to the tree's versions, checked with `cmp` and
-   stable 20 s later; the full `:audio_be:jvmTest` after it is the clean run, 2,848 of 2,848 green. A clean campaign (one mutant per lock
-   call, the IDE closed) is left for the next worker.
+   stable 20 s later; the full `:audio_be:jvmTest` after it is the clean run, 2,848 of 2,848 green. The clean campaign
+   ran after the merge (2026-10-21, item 45's last paragraph): every key and the sign-of-zero test alone, each KILLED.
 5. **DONE (2026-10-11): not reproduced on production; the development-bundle box was the PWM loop's phase seed, fixed
    by the seed rule, which now covers every field seed of an oscillator loop.** Reported as one heap number per sample
    on the development bundle under a mixed profile (about 2 KB per block, `pulze` with a duty signal), blamed on the
@@ -2418,14 +2418,16 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
       before, 114.6 after). `configure` hands a setting that moved and NaN for one that holds (the holder keeps a
       non-finite knob, so it writes nothing, which is item 38's skip; one store per arm, item 41's rule), then calls
       `applyKnobArgs` once. The stored values live in two plain properties, `depthValue` and `attackValue`, which the
-      loops and `configure` read: `depth` and `attackSeconds` keep their setters for every other caller, and their
+      loops and `configure` read: `depth` and `attackSeconds` keep their setters as the public door and the specs' seam (no production caller
+      is left; a per-block caller uses the holder), and their
       getters (calls on Kotlin/JS) are not on the per-block path. The KDoc of `knobArgs` is the guard. After it the
       profiler books nothing in `configure`, mixed or squeezed.
     - **The gain's hand-off (boxed under a squeezed budget only):** at 250 the profiler booked 16.1 B per block in
       `KatalystChain.applyParams` (the writer's `apply` inlined, `configure(factor)` called), every round; at V8's
       budget, single-case and mixed, nothing. **Fix** (`KatalystGainEffect.kt`, `KatalystSlotWriters.kt`): the writer
       keeps its guarded factor in a `DoubleArray(1)` and calls `configureFrom(holder)`, which retargets the glide with
-      the element (the public `configure(gain)` stays for every other caller, the same law). Item 36's shape on the
+      the element (the public `configure(gain)` stays as the public door and the specs' seam, the same law; no
+      production caller is left). Item 36's shape on the
       arithmetic writer, here through a holder because the writer's guard (a non-finite slot is unity) differs from the
       stage's door (a non-finite factor is ignored). The KDoc of `configureFrom` is the guard. At 250: 64.0 to 48.0,
       nothing booked there.
@@ -2453,11 +2455,20 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     flip, NaN, bit for bit). Mutation check, in the run item 4 describes (its restores were overwritten from outside,
     so only each row's first red counts): `applyKnobArgs` without the coefficient update turned the `DuckingSpec` row
     red (and no other row of the file); `configureFrom` reading `holder[0] * 1.0000000001` turned the
-    `KatalystGainEffectSpec` row red, with three slot rows. A clean campaign is left for the next worker. **Not run
-    here:** `:audio_be:jsBrowserTest` and the allocation check (the session was wrapped up for the maintainer's pause
-    first); `:audio_be:jvmTest` ran once on the final tree (item 4). No budget line moves: the check's
-    single-case method reads no difference on any of the three lines (`E-gain` and `E-kat-dyn` note that the KDocs
-    guard these fixes). S.
+    `KatalystGainEffectSpec` row red, with three slot rows. No budget line moves: the check's single-case method reads
+    no difference on any of the three lines (`E-gain` and `E-kat-dyn` note that the KDocs guard these fixes).
+    **Review and the clean checks (items 4, 45 and 13, after the merge to `main` of 2026-10-20).** The full check of
+    the merged commit (`1ade10ef`) ran every browser suite and the allocation check: GREEN, 80 of 80. Review round 1
+    (code and audio, blind): no CRITICAL or MAJOR; both traced the cache and the holders against the old code and
+    found them exact. MINORs applied as one batch: the cache stores the sample rate for `computeBaseDelays` but no
+    longer compares it (a node lives in one context, whose rate does not change, so the compare could never fail and
+    no test could tell it apart); `configure(gain)` and the ducker's two setters are called the public door and the
+    specs' seam (no production caller is left; a per-block caller uses the holder); the spec's KDoc names the -0.0
+    row's own oracle. Kept: `sameDelayInput` beside `sameKnob` (a NaN never holds, by design) and
+    `updateReleaseCoeff` (measured for the inlining budget). **Mutation check** (`console/tools/mutate`, one campaign
+    in one lock call, hash-verified restore, the final run green), each KILLED for its own row's message: the
+    frequency key, the detune key and the count key dropped, the sign-of-zero test dropped alone, `applyKnobArgs`
+    without the coefficient update, without the depth clamp, and `configureFrom` off by a hair. S.
 46. **`GraphCensus`'s five pitch arms miss the pitch memo and the gate** (numbered after the last item, added
     2026-10-19): since 2026-10-07 `combineMods` calls `cachePerBlock` unconditionally, so each pitch node's mod renders
     into a memo and every consumer copies it out per block (2 of traffic each) while the memo holds a

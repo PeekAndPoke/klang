@@ -30,7 +30,8 @@ private const val BLOCKS: Int = 30
  * equals the one `d` samples before, up to the rounding of the loop's one-pole. Each row moves one input at block
  * [SWITCH_BLOCK] to a setting whose delay is exactly 100 samples at 48 kHz (480 Hz, one string or no detune), and
  * checks that period on the blocks after the switch. A stale delay (120 samples, or a detuned 100.58) misses it by
- * the size of the signal.
+ * the size of the signal. The -0.0 row has its own oracle: it compares the render against one that stays at 0.0, which
+ * reads another delay.
  */
 class SuperPluckBaseDelaySpec : StringSpec({
     val sampleRate = 48000

@@ -114,6 +114,10 @@ class KatalystGainEffect(
      * unity and a cleared one takes the fader back to unity by a glide. The guard stays at the door
      * anyway, because the cost of a NaN that does get through is unbounded (the whole orbit would be
      * NaN for good) and because a second caller must not have to rediscover the rule.
+     *
+     * The public door and the specs' seam: no production code calls it per block. A per-block caller
+     * hands the factor through [configureFrom], or the double crosses a call and boxes on V8 (engine
+     * follow-up 45).
      */
     fun configure(gain: Double) {
         glide.retarget(gain)

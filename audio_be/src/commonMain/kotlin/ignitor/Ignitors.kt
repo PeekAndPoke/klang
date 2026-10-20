@@ -2680,7 +2680,9 @@ object Ignitors {
         /**
          * The inputs [baseDelays] was computed from, at [DELAY_FREQ] (the note's frequency), [DELAY_SPREAD] (the
          * detune) and [DELAY_SAMPLE_RATE]; NaN until the first computation. An array, not double fields, so a store
-         * cannot box (engine follow-up 7).
+         * cannot box (engine follow-up 7). The sample rate is stored for [computeBaseDelays], never compared: a node
+         * lives in one [IgniteContext], whose rate does not change (one context per voice), so a compare could never
+         * fail and no test could tell it apart (review round 1, 2026-10-20).
          */
         private val delayInputs: DoubleArray = doubleArrayOf(Double.NaN, Double.NaN, Double.NaN)
 
@@ -2747,8 +2749,7 @@ object Ignitors {
             // Each string's base delay, computed again only when an input moves (see [baseDelays]).
             val delaysHold = delayInputsCount == v &&
                 sameDelayInput(stored = delayInputs[DELAY_FREQ], arriving = actualFreq) &&
-                sameDelayInput(stored = delayInputs[DELAY_SPREAD], arriving = spread) &&
-                sameDelayInput(stored = delayInputs[DELAY_SAMPLE_RATE], arriving = sr)
+                sameDelayInput(stored = delayInputs[DELAY_SPREAD], arriving = spread)
 
             if (!delaysHold) {
                 delayInputs[DELAY_FREQ] = actualFreq

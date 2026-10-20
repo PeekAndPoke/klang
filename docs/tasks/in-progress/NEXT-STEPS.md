@@ -20,9 +20,8 @@ the ticket numbers. This note is the queue, in order. The note of the pause itse
    `tmp/`) and 2 MINORs, fixed in 8d9fa057; every round-1 fix holds. Two rounds without a clean one: the safety
    valve, a round 3 or not is the maintainer's call. The approved condense is applied (the `CLAUDE.md` tool block
    with `ticket`, shorter pointers elsewhere); the skill `mission-control-link` is in.
-2. **Engine alloc batch 2's review** (KLANG-00290 (engine follow-ups) items 4, 45 and 13): the review loop (code
-   and audio), a clean mutation campaign, `:audio_be:jsBrowserTest` and the allocation check. No release before it
-   is clean.
+2. **Engine alloc batch 2: done 2026-10-21.** Review round 1 clean (code and audio), the MINOR batch applied, the
+   mutation campaign 7 of 7 KILLED (KLANG-00290, item 45's last paragraph).
 3. **Master follow-up 8, option (a)**, decided 2026-10-19: the offline render counts the master chain's latency
    (KLANG-00137 (master dsl followups) §8). It moves two corpus rows (Der Schmetterling, Kokon), accepted with the
    change.

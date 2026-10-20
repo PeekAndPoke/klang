@@ -57,7 +57,10 @@ class Ducking(
     internal var attackValue: Double = guardOr(value = attackSeconds, fallback = 0.1)
         private set
 
-    /** Ducking depth (0.0 = no ducking, 1.0 = full silence). Setter silently ignores non-finite values. */
+    /**
+     * Ducking depth (0.0 = no ducking, 1.0 = full silence). Setter silently ignores non-finite values. The public door
+     * and the specs' seam: a per-block caller writes [knobArgs] and calls [applyKnobArgs] (engine follow-up 45).
+     */
     var depth: Double
         get() = depthValue
         set(value) {
@@ -65,7 +68,10 @@ class Ducking(
             depthValue = value.coerceIn(0.0, 1.0)
         }
 
-    /** Attack time in seconds (return to normal). Setter silently ignores non-finite values. */
+    /**
+     * Attack time in seconds (return to normal). Setter silently ignores non-finite values. The public door and the
+     * specs' seam: a per-block caller writes [knobArgs] and calls [applyKnobArgs] (engine follow-up 45).
+     */
     var attackSeconds: Double
         get() = attackValue
         set(value) {
