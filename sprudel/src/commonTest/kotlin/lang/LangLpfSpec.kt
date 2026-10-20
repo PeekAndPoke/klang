@@ -39,7 +39,7 @@ class LangLpfSpec : StringSpec({
             { p, f, q -> p.notch(f, q) }, { p, a, d -> p.notch(attack = a, decay = d) }),
     )
 
-    // ---- C0 guard: per-param flow (docs/tasks-archive/2026-09/20260927-filter-unification.md, C0) ----
+    // ---- C0 guard: per-param flow (KLANG-00227 (filter unification), C0) ----
 
     "x(freq-sequence, q) gives per-event freq and constant q, on all four filters" {
         filters.forEach { f ->

@@ -40,7 +40,7 @@ import kotlin.random.Random
 
 /**
  * The arithmetic stages on the bus ([KatalystArithmeticEffect],
- * `docs/tasks-archive/2026-10/20261011-katalyst-arithmetic.md`):
+ * KLANG-00300 (katalyst arithmetic)):
  * every sample is
  * the Ignitor's sample for the same numbers, and a moving operand glides.
  *

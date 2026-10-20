@@ -1,0 +1,776 @@
+# KLANG-00056: Feature Implementation Plan: Operator Functions for Registered Native Objects
+
+> **Status (2026-10-20): DESIGNED.**
+
+## Decided 2026-10-07 (maintainer), supersedes the naming and dispatch below
+
+The ask: `lpf(saw(100, 200) * 4)`, `lpf(saw ** 2.0 * 10)`. Precedence stays KlangScript's own (Kotlin's table):
+`saw(100, 200) + 50 * 4` is `saw + 200`, power binds tighter than `*`. `^` stays as it is for now ("let us not fiddle
+with ^ for the moment").
+
+1. **Explicit on both sides, no silent swap.** `a + b` with a native object on the left needs `__plus__` on it; with a
+   native object only on the right (`4 + saw`) it needs `__rplus__` on the right operand. If the method is not
+   defined, the expression is not possible: an error at the operator in the editor, and the same error at runtime.
+   ("If the `__add__` is not defined then `saw + ?` is not possible. If the `__radd__` is not defined then `? + saw` is
+   not possible.")
+2. **Number gets no operators.** Numbers keep their built-in arithmetic; `4 / saw` works only if the pattern side
+   defines `__rdiv__`.
+3. **Internal names are `__xxx__`** (maintainer: "let us go for the php style `__xxx__`"), and `invoke` becomes
+   `__invoke__` as the internal symbol:
+
+   | Syntax              | On the left operand                          | On the right operand |
+   |---------------------|----------------------------------------------|----------------------|
+   | `a + b`             | `__plus__`                                   | `__rplus__`          |
+   | `a - b`             | `__minus__`                                  | `__rminus__`         |
+   | `a * b`             | `__times__`                                  | `__rtimes__`         |
+   | `a / b`             | `__div__`                                    | `__rdiv__`           |
+   | `a % b`             | `__rem__`                                    | `__rrem__`           |
+   | `a ** b`            | `__pow__`                                    | `__rpow__`           |
+   | `-a`, `+a`, `!a`    | `__unaryMinus__`, `__unaryPlus__`, `__not__` |                      |
+   | `a(...)`            | `__invoke__`                                 |                      |
+
+   Kotlin's operator words inside the underscores (maintainer, 2026-10-07: "go for the kotlin words"), the reversed
+   side with an `r` prefix.
+
+   `pow` is Kotlin's function name for the power (`kotlin.math.pow`); `**` is in scope because the ask uses it
+   (`saw ** 2.0 * 10`). Comparisons (`<`, `==`) and indexing on objects are out of scope for now.
+4. **No new script words.** The `__xxx__` names are internal symbols, not aliases: an annotation on the existing method
+   (e.g. `@KlangScript.Operator("__plus__")` on sprudel's `add`, `@KlangScript.Operator("__rplus__")` on a method that
+   computes `left + this`) tells KSP which operator it serves; the script surface keeps `add`, `mul`, ... (one word per
+   concept). The Kotlin side keeps `operator fun invoke` (Kotlin's own word); only the KlangScript symbol is
+   `__invoke__`.
+5. **The editor** knows the result type of an operator expression (completion after `(saw(1, 2) * 4).` keeps working)
+   and reports a missing operator method as an error at the operator.
+
+The `invoke` -> `__invoke__` rename goes with KLANG-00275 (callable object docs), which removes the stray `invoke`
+docs symbol anyway (done 2026-10-07: `KlangScript.Invoke.NAME` is `__invoke__`, `NativeOperatorNames.INVOKE` reads
+it); the arithmetic operators follow as their own step.
+
+## Goal
+
+Allow registering Kotlin-style operator functions on native objects in KlangScript. This enables
+native objects to participate in KlangScript's existing operator syntax (`+`, `-`, `*`, `/`, `%`,
+unary `-`/`+`/`!`, and direct call `obj(args)`).
+
+Operators are stored as regular extension methods under canonical reserved names. The interpreter
+checks for these names during operator and call dispatch. No new storage infrastructure is needed.
+
+### Motivating use cases
+
+- **Sprudel patterns**: `pattern + offset`, `pattern * factor`, `-pattern` (sign-flip) — replaces
+  current method-style `add()`, `mul()`, `flipSign()` calls when the operator form is more natural.
+- **Ignitors DSL**: `oscA + oscB` to mix oscillators, `osc * gain` for amplitude scaling, `env * 2`
+  to scale envelope — dramatically more readable than `oscA.mix(oscB)` chains, and matches the
+  mental model of signal-flow graphs.
+- **Continuous patterns**: `sine + cosine`, `lfo * 2` for compound modulation sources.
+
+---
+
+## Revision 2026-09-05 (step S0 of KLANG-00179 (dsl configure lambdas))
+
+> This plan was written in the hand-registration era (`registerMethod` helpers in Kotlin). Since
+> then every native surface is emitted by KSP from `@KlangScript.*` annotations, native calls
+> are spec-aware (named arguments, default thunks, and since S1 the trailing-lambda rule in
+> `runtime/ArgAlignment`), and the editor analyzer resolves callables from the KSP-emitted
+> docs registry. The `invoke` operator is now a prerequisite of two consumers:
+> KLANG-00179 (dsl configure lambdas) (`Master(m => ...)`, `Pipeline(p => ...)`, later `Katalyst(...)`)
+> and KLANG-00184 (sprudel field accessors) (`gain(0.5)` on a callable accessor constant). This revision
+> supersedes Steps 1 to 3a for `invoke`; Steps 3b/3c (arithmetic, comparison, unary) remain
+> valid designs but are NOT part of the configure-lambda work and stay unscheduled.
+>
+> **Note 2026-09-28:** the worked example below is the `Master` object, which retired in phase 3 step 12
+> (`.master()` takes a Katalyst). The live consumer of the same shape is `Katalyst`
+> (`klangscript-libs/.../stdlib/KlangScriptKatalyst.kt`: `build`, `invoke`, `Katalyst()` is the empty chain). Read
+> `Master` as `Katalyst` below; the mechanism is unchanged.
+
+### What stays
+
+- Operators are extension methods under canonical Kotlin names (`invoke`, `plus`, ...), looked
+  up through `engine.getExtensionMethod(value, name)`, so the runtime supertype walk applies and
+  no new storage is needed. `NativeOperatorNames` (Step 1) stays as the single home of the names.
+- The dispatch points in the interpreter (Step 3) are the right ones.
+
+### What changes
+
+**Registration is an annotation, not a helper.** `@KlangScript.Invoke` on the `operator fun invoke`
+member of an `@KlangScript.Object` (2026-09-07; before that `@KlangScript.Method(name = "invoke")`) (or of a `@KlangScript.TypeExtensions` object) is all a library
+author writes. KSP already emits such a method as an extension method on the object's class with
+full `ParamSpec`s, so `Master(configure = m => ...)`, `Master()` and the trailing-lambda rule
+work exactly like on any other method. The `register*Operator` helpers of Step 2 are dropped;
+the builder path keeps `registerMethod(NativeOperatorNames.INVOKE, ...)` for hand-registered
+types, no dedicated helper needed. Verified 2026-09-05: no registration in the stdlib or sprudel
+output uses the name `invoke` today, so the name is free.
+
+**Aliases first, operator second (decision D8 of KLANG-00179 (dsl configure lambdas)).** Every callable
+object ships the method form and the operator as aliases of each other, so the operator can be
+tested against a form that already works:
+
+```kotlin
+@KlangScript.Object("Master")
+object KlangScriptMaster {
+    @KlangScript.Method fun build(configure: ((MasterBuilder) -> MasterBuilder)? = null): MasterDsl = ...
+    @KlangScript.Method fun default(): MasterDsl = MasterDsl.default
+    @KlangScript.Invoke
+    operator fun invoke(configure: ((MasterBuilder) -> MasterBuilder)? = null): MasterDsl = build(configure)
+}
+```
+
+The spec asserts `Master(...) == Master.build(...)` and `Master() == Master.default()` node for
+node. (Every optional parameter must have a literal default, per the KSP literal-default refusal,
+`/dsl-design` §3; here there are none.)
+
+**Interpreter (replaces Step 3a).** In `Interpreter.evaluateCall`, the `when (callee)` gains a
+`NativeObjectValue<*>` branch BEFORE the "Cannot call non-function value" fallback. It looks up
+`engine.getExtensionMethod(callee, NativeOperatorNames.INVOKE)` and, when found, goes through
+the SAME path a member call `Master.build(...)` takes: `positionalArgsForNative(name,
+extensionMethod.paramSpecs, callArgs, call)` then the guarded invoker (the block around
+`paramSpecs = extensionMethod.paramSpecs` in the MemberAccess call path). Step 3a's sketch
+passed the raw argument list straight to `invoker`, which would bypass named arguments, default
+thunks and the trailing-lambda rule; that is the part being replaced. When no `invoke` is
+registered the existing error stands, with the hint appended: "register a method named
+'invoke' to make it callable". Call-stack frame name: `<ObjectName>.invoke`.
+
+**Analyzer (new, was missing).** `ExpressionTypeInferrer.resolveCallable` on an `Identifier`
+callee currently returns `registry.getCallable(name, null)` only. Add the fallback: when that is
+null and the identifier resolves (scope first, then registry property) to a type `T`, return
+`registry.getCallable("invoke", T)`. Everything downstream is then free: the return type of
+`Master(...)`, the typed lambda parameter in `Master(m => m.` (R3), hover on the call. Same
+fallback for a `MemberAccess` callee whose property resolves to an object with an invoke, so
+`Foo.Bar(...)` would work if such nesting ever appears (not needed now, one `?:` more).
+
+**Docs popup.** `KlangCallable.signature` renders `Master.invoke(configure: ...)`; add one rule:
+when `name == "invoke"` and a receiver exists, render `Master(configure: ...)`. The
+`KlangSymbol` for the object keeps its property variant; the invoke callable is listed under
+the object's receiver like any method, so completion after `Master.` does not show `invoke`
+(filter it out there, it is not meant to be typed).
+
+**Field accessors (second consumer).** KLANG-00184 (sprudel field accessors) wants `gain` to be a
+`@KlangScript.Constant` whose class carries `@KlangScript.Invoke`. Same mechanism, no
+special casing: the constant's value is a `NativeObjectValue`, the interpreter finds `invoke` on
+its class. The only difference is the analyzer fallback above resolving through a registry
+PROPERTY (the constant) rather than an object; that is the same code path.
+
+### Steps for `invoke` (built 2026-09-06 as KLANG-00179 (dsl configure lambdas) S4; steps 1 to 5 ✅, step 5 landed with S5 on 2026-09-06)
+
+1. `Interpreter.evaluateCall`: the `NativeObjectValue` branch through the spec-aware path.
+2. `ExpressionTypeInferrer.resolveCallable`: the `invoke` fallback for identifier (and member)
+   callees.
+3. `KlangCallable.signature` rendering rule + completion filter for `invoke`.
+4. Tests: `NativeObjectInvokeTest` (runtime: positional, named, empty call, lambda floating
+   into `invoke(configure)`, error text when no invoke is registered, call-stack frame);
+   `AnalyzedAstTest` (return type of `Obj(...)`, typed lambda param in `Obj(m => m.`);
+   `CompletionProviderTest` (`invoke` hidden after the dot). Mutation-checked per `/review-loop`.
+5. First consumer lands in the same diff as S5 (`Master`), so the mechanism ships with a real
+   user and its alias spec.
+
+Steps 3b/3c (arithmetic and unary operators) keep their original design below and get the same
+annotation treatment (`@KlangScript.Method("plus")`) when they are scheduled.
+
+## Operator Name Convention
+
+Follow Kotlin's operator function naming:
+
+| KlangScript expression | Operator name | Notes                                    |
+|------------------------|---------------|------------------------------------------|
+| `obj(a, b)`            | `invoke`      | Makes native objects callable            |
+| `obj + arg`            | `plus`        |                                          |
+| `obj - arg`            | `minus`       |                                          |
+| `obj * arg`            | `times`       |                                          |
+| `obj / arg`            | `div`         |                                          |
+| `obj % arg`            | `rem`         |                                          |
+| `-obj`                 | `unaryMinus`  |                                          |
+| `+obj`                 | `unaryPlus`   |                                          |
+| `!obj`                 | `not`         |                                          |
+| `obj == arg`           | `equals`      | Must return `Boolean`                    |
+| `obj != arg`           | `equals`      | Same as `equals`, result is negated      |
+| `obj < arg`            | `compareTo`   | Must return `Number`; negative = less    |
+| `obj <= arg`           | `compareTo`   | Must return `Number`; non-positive = lte |
+| `obj > arg`            | `compareTo`   | Must return `Number`; positive = greater |
+| `obj >= arg`           | `compareTo`   | Must return `Number`; non-negative = gte |
+
+Operators are looked up through the same `getExtensionMethod` path as regular methods, so
+supertype-based inheritance works automatically.
+
+---
+
+## Files to Change
+
+1. `klangscript/src/commonMain/kotlin/runtime/NativeInterop.kt` — add `NativeOperatorNames` object
+2. `klangscript/src/commonMain/kotlin/builder/KlangScriptExtensionBuilder.kt` — add `register*Operator` helpers to
+   `NativeObjectExtensionsBuilder<T>`
+3. `klangscript/src/commonMain/kotlin/runtime/Interpreter.kt` — dispatch operators to native methods
+4. `klangscript/src/commonTest/kotlin/NativeObjectOperatorsTest.kt` — new test file
+
+---
+
+## Step 1 — Add `NativeOperatorNames` to `NativeInterop.kt`
+
+Add a simple constants object at the top of the file, alongside `NativeTypeInfo` and
+`NativeExtensionMethod`:
+
+```kotlin
+/**
+ * Canonical names for operator extension methods on native objects.
+ *
+ * Registering an extension method under one of these names makes the native
+ * object participate in the corresponding KlangScript operator syntax.
+ */
+object NativeOperatorNames {
+    // Callable object:  obj(a, b, ...)
+    const val INVOKE = "invoke"
+
+    // Binary arithmetic:  obj + arg,  obj - arg, ...
+    const val PLUS = "plus"
+    const val MINUS = "minus"
+    const val TIMES = "times"
+    const val DIV = "div"
+    const val REM = "rem"
+
+    // Unary:  -obj,  +obj,  !obj
+    const val UNARY_MINUS = "unaryMinus"
+    const val UNARY_PLUS = "unaryPlus"
+    const val NOT = "not"
+
+    // Equality / comparison:  obj == arg,  obj < arg, ...
+    const val EQUALS = "equals"
+    const val COMPARE_TO = "compareTo"
+
+    /** Map from BinaryOperator to operator name (null for AND / OR which are handled elsewhere). */
+    fun forBinaryOp(op: BinaryOperator): String? = when (op) {
+        BinaryOperator.ADD -> PLUS
+        BinaryOperator.SUBTRACT -> MINUS
+        BinaryOperator.MULTIPLY -> TIMES
+        BinaryOperator.DIVIDE -> DIV
+        BinaryOperator.MODULO -> REM
+        BinaryOperator.EQUAL -> EQUALS
+        BinaryOperator.NOT_EQUAL -> EQUALS   // result is negated by interpreter
+        BinaryOperator.LESS_THAN -> COMPARE_TO
+        BinaryOperator.LESS_THAN_OR_EQUAL -> COMPARE_TO
+        BinaryOperator.GREATER_THAN -> COMPARE_TO
+        BinaryOperator.GREATER_THAN_OR_EQUAL -> COMPARE_TO
+        else -> null  // AND, OR — short-circuited before this is reached
+    }
+}
+```
+
+---
+
+## Step 2 — Add `register*Operator` helpers to `NativeObjectExtensionsBuilder<T>`
+
+Append the following extension functions to the bottom of `KlangScriptExtensionBuilder.kt`. They
+are thin wrappers that delegate to existing `registerMethod` / `registerVarargMethod` with the
+canonical operator name.
+
+```kotlin
+// ===== Operator registration helpers for NativeObjectExtensionsBuilder =====
+
+/**
+ * Register an `invoke` operator, making the object callable as a function.
+ *
+ * Raw variant: receives the raw [RuntimeValue] argument list and source location.
+ * Use this when you need full control over argument handling.
+ *
+ * Usage:
+ * ```kotlin
+ * registerType<MyObj> {
+ *     registerInvokeOperator { args, _ -> wrapAsRuntimeValue(handle(args)) }
+ * }
+ * ```
+
+* KlangScript: `myObj(1, 2, 3)`
+  */
+  fun NativeObjectExtensionsBuilder<T>.registerInvokeOperator(
+  fn: T.(List<RuntimeValue>, SourceLocation?) -> RuntimeValue,
+  ) {
+  builder.registerExtensionMethod(cls, NativeOperatorNames.INVOKE) { receiver, args, location ->
+  receiver.fn(args, location)
+  }
+  }
+
+/**
+
+* Register a typed `invoke` operator using vararg parameter conversion.
+*
+* All arguments must be convertible to [P].
+*
+* Usage:
+* ```kotlin
+* registerType<MyObj> {
+*     registerInvokeOperator<Double, MyObj> { args -> applyArgs(args) }
+* }
+* ```
+
+*/
+inline fun <reified T : Any, reified P : Any, reified R : Any>
+NativeObjectExtensionsBuilder<T>.registerInvokeOperator(noinline fn: T.(List<P>) -> R) {
+registerVarargMethod(NativeOperatorNames.INVOKE, fn)
+}
+
+/**
+
+* Register a `plus` operator for `obj + arg`.
+*
+* Usage:
+* ```kotlin
+* registerType<MyObj> {
+*     registerPlusOperator<Double, MyObj> { other -> combine(other) }
+* }
+* ```
+
+*/
+inline fun <reified T : Any, reified P : Any, reified R : Any>
+NativeObjectExtensionsBuilder<T>.registerPlusOperator(noinline fn: T.(P) -> R) {
+registerMethod(NativeOperatorNames.PLUS, fn)
+}
+
+/** Register a `minus` operator for `obj - arg`. */
+inline fun <reified T : Any, reified P : Any, reified R : Any>
+NativeObjectExtensionsBuilder<T>.registerMinusOperator(noinline fn: T.(P) -> R) {
+registerMethod(NativeOperatorNames.MINUS, fn)
+}
+
+/** Register a `times` operator for `obj * arg`. */
+inline fun <reified T : Any, reified P : Any, reified R : Any>
+NativeObjectExtensionsBuilder<T>.registerTimesOperator(noinline fn: T.(P) -> R) {
+registerMethod(NativeOperatorNames.TIMES, fn)
+}
+
+/** Register a `div` operator for `obj / arg`. */
+inline fun <reified T : Any, reified P : Any, reified R : Any>
+NativeObjectExtensionsBuilder<T>.registerDivOperator(noinline fn: T.(P) -> R) {
+registerMethod(NativeOperatorNames.DIV, fn)
+}
+
+/** Register a `rem` operator for `obj % arg`. */
+inline fun <reified T : Any, reified P : Any, reified R : Any>
+NativeObjectExtensionsBuilder<T>.registerRemOperator(noinline fn: T.(P) -> R) {
+registerMethod(NativeOperatorNames.REM, fn)
+}
+
+/**
+
+* Register an `equals` operator for `obj == arg` and `obj != arg`.
+* The function must return `Boolean`.
+  */
+  inline fun <reified T : Any, reified P : Any>
+  NativeObjectExtensionsBuilder<T>.registerEqualsOperator(noinline fn: T.(P) -> Boolean) {
+  registerMethod(NativeOperatorNames.EQUALS, fn)
+  }
+
+/**
+
+* Register a `compareTo` operator for `<`, `<=`, `>`, `>=`.
+* The function must return `Int`:
+*
+    - negative → receiver is less than arg
+*
+    - zero → receiver equals arg
+*
+    - positive → receiver is greater than arg
+      */
+      inline fun <reified T : Any, reified P : Any>
+      NativeObjectExtensionsBuilder<T>.registerCompareToOperator(noinline fn: T.(P) -> Int) {
+      registerMethod(NativeOperatorNames.COMPARE_TO, fn)
+      }
+
+/**
+
+* Register a `unaryMinus` operator for `-obj`.
+  */
+  inline fun <reified T : Any, reified R : Any>
+  NativeObjectExtensionsBuilder<T>.registerUnaryMinusOperator(noinline fn: T.() -> R) {
+  builder.registerExtensionMethod(cls, NativeOperatorNames.UNARY_MINUS) { receiver, _, _ ->
+  wrapAsRuntimeValue(receiver.fn())
+  }
+  }
+
+/**
+
+* Register a `unaryPlus` operator for `+obj`.
+  */
+  inline fun <reified T : Any, reified R : Any>
+  NativeObjectExtensionsBuilder<T>.registerUnaryPlusOperator(noinline fn: T.() -> R) {
+  builder.registerExtensionMethod(cls, NativeOperatorNames.UNARY_PLUS) { receiver, _, _ ->
+  wrapAsRuntimeValue(receiver.fn())
+  }
+  }
+
+/**
+
+* Register a `not` operator for `!obj`.
+* The function must return `Boolean`.
+  */
+  inline fun <reified T : Any>
+  NativeObjectExtensionsBuilder<T>.registerNotOperator(noinline fn: T.() -> Boolean) {
+  builder.registerExtensionMethod(cls, NativeOperatorNames.NOT) { receiver, _, _ ->
+  BooleanValue(receiver.fn())
+  }
+  }
+
+```
+
+> **Note on `inline` + `reified T`**: The existing helpers (e.g., `registerMethod`) already carry
+> `T` through the `NativeObjectExtensionsBuilder<T>` class parameter. All the new helpers need the
+> same `reified T` in their own inline signature because they call `registerMethod` which itself is
+> `inline`. This matches the pattern already used in the file.
+
+---
+
+## Step 3 — Interpreter changes
+
+All three dispatch functions need modification. The pattern is the same in each: **check for a
+registered operator method on `NativeObjectValue` before falling through to the built-in
+number/boolean handling**.
+
+### 3a — `evaluateCall`: support `invoke` operator
+
+In the `when (callee)` block inside `evaluateCall`, add a new branch **before** the `else` catch-all:
+
+```kotlin
+is NativeObjectValue<*> -> {
+    val invokeMethod = engine.getExtensionMethod(callee, NativeOperatorNames.INVOKE)
+        ?: throw TypeError(
+            "Native type '${callee.qualifiedName}' is not callable. " +
+                "Register an 'invoke' operator to make it callable.",
+            operation = "function call",
+            location = call.location,
+            stackTrace = getStackTrace()
+        )
+
+    callStack.push("${callee.qualifiedName}.${NativeOperatorNames.INVOKE}", call.location)
+    val previousLocation = executionContext.currentLocation
+    executionContext.currentLocation = call.location
+    try {
+        invokeMethod.invoker(callee.value, args, call.location)
+    } finally {
+        executionContext.currentLocation = previousLocation
+        callStack.pop()
+    }
+}
+```
+
+### 3b — `evaluateBinaryOp`: dispatch arithmetic / comparison / equality to native operators
+
+After `val rightValue = evaluate(binOp.right)` (i.e., after both operands are evaluated but before
+the existing `when (binOp.operator)` block), insert:
+
+```kotlin
+// --- Native object operator dispatch ---
+// Must run before the built-in number/boolean checks so that a registered
+// operator on a NativeObjectValue takes precedence.
+if (leftValue is NativeObjectValue<*>) {
+    val operatorName = NativeOperatorNames.forBinaryOp(binOp.operator)
+    if (operatorName != null) {
+        val method = engine.getExtensionMethod(leftValue, operatorName)
+        if (method != null) {
+            val rawResult = method.invoker(leftValue.value, listOf(rightValue), binOp.location)
+
+            return when (binOp.operator) {
+                // equals returns a BooleanValue directly
+                BinaryOperator.EQUAL -> {
+                    rawResult as? BooleanValue ?: throw TypeError(
+                        "'${NativeOperatorNames.EQUALS}' operator must return a Boolean",
+                        operation = "==",
+                        location = binOp.location,
+                        stackTrace = getStackTrace()
+                    )
+                }
+                // not_equal: same operator, result negated
+                BinaryOperator.NOT_EQUAL -> {
+                    val b = rawResult as? BooleanValue ?: throw TypeError(
+                        "'${NativeOperatorNames.EQUALS}' operator must return a Boolean",
+                        operation = "!=",
+                        location = binOp.location,
+                        stackTrace = getStackTrace()
+                    )
+                    BooleanValue(!b.value)
+                }
+                // compareTo returns a Number whose sign determines the result
+                BinaryOperator.LESS_THAN -> {
+                    val cmp = compareToInt(rawResult, binOp)
+                    BooleanValue(cmp < 0)
+                }
+                BinaryOperator.LESS_THAN_OR_EQUAL -> {
+                    val cmp = compareToInt(rawResult, binOp)
+                    BooleanValue(cmp <= 0)
+                }
+                BinaryOperator.GREATER_THAN -> {
+                    val cmp = compareToInt(rawResult, binOp)
+                    BooleanValue(cmp > 0)
+                }
+                BinaryOperator.GREATER_THAN_OR_EQUAL -> {
+                    val cmp = compareToInt(rawResult, binOp)
+                    BooleanValue(cmp >= 0)
+                }
+                // Arithmetic operators return the result of the method directly
+                else -> rawResult
+            }
+        }
+    }
+}
+// --- End native object operator dispatch ---
+```
+
+Add the private helper at the bottom of `Interpreter`:
+
+```kotlin
+/** Extract the integer sign from a `compareTo` result value. */
+private fun compareToInt(rawResult: RuntimeValue, binOp: BinaryOperation): Int {
+    val num = rawResult as? NumberValue ?: throw TypeError(
+        "'${NativeOperatorNames.COMPARE_TO}' operator must return a Number",
+        operation = binOp.operator.toString(),
+        location = binOp.location,
+        stackTrace = getStackTrace()
+    )
+    return num.value.toInt()
+}
+```
+
+### 3c — `evaluateUnaryOp`: dispatch `-`, `+`, `!` to native operators
+
+At the very top of `evaluateUnaryOp`, **before** the existing `when (unaryOp.operator)` block,
+insert:
+
+```kotlin
+// --- Native object operator dispatch ---
+if (operandValue is NativeObjectValue<*>) {
+    val operatorName = when (unaryOp.operator) {
+        UnaryOperator.NEGATE -> NativeOperatorNames.UNARY_MINUS
+        UnaryOperator.PLUS -> NativeOperatorNames.UNARY_PLUS
+        UnaryOperator.NOT -> NativeOperatorNames.NOT
+    }
+    val method = engine.getExtensionMethod(operandValue, operatorName)
+    if (method != null) {
+        callStack.push("${operandValue.qualifiedName}.$operatorName", unaryOp.location)
+        val previousLocation = executionContext.currentLocation
+        executionContext.currentLocation = unaryOp.location
+        try {
+            return method.invoker(operandValue.value, emptyList(), unaryOp.location)
+        } finally {
+            executionContext.currentLocation = previousLocation
+            callStack.pop()
+        }
+    }
+    // No operator registered → fall through to the existing type error below
+}
+// --- End native object operator dispatch ---
+```
+
+---
+
+## Step 4 — Tests (`NativeObjectOperatorsTest.kt`)
+
+Create `klangscript/src/commonTest/kotlin/NativeObjectOperatorsTest.kt`.
+
+The test helper setup:
+
+```kotlin
+/** A simple counter value used as the receiver in all operator tests. */
+data class Counter(val n: Int)
+
+fun engineWithCounter(): KlangScriptEngine = KlangScriptEngine.builder()
+    .registerFunction<Int, Counter>("counter") { n -> Counter(n) }
+    .registerType<Counter> {
+        // regular method for asserting the value
+        registerMethod("value") { _: Any? -> n }
+
+        // operators under test
+        registerInvokeOperator<Double, Counter> { args -> Counter(n + args.sumOf { it.toInt() }) }
+        registerPlusOperator<Counter, Counter> { other -> Counter(n + other.n) }
+        registerMinusOperator<Counter, Counter> { other -> Counter(n - other.n) }
+        registerTimesOperator<Double, Counter> { factor -> Counter((n * factor).toInt()) }
+        registerDivOperator<Double, Counter> { divisor -> Counter((n / divisor).toInt()) }
+        registerRemOperator<Double, Counter> { mod -> Counter(n % mod.toInt()) }
+        registerUnaryMinusOperator { Counter(-n) }
+        registerUnaryPlusOperator { Counter(+n) }
+        registerEqualsOperator<Counter> { other -> n == other.n }
+        registerCompareToOperator<Counter> { other -> n.compareTo(other.n) }
+    }
+    .build()
+```
+
+Test cases (Kotest `StringSpec` style, run with `./gradlew :klangscript:jvmTest`):
+
+```kotlin
+class NativeObjectOperatorsTest : StringSpec({
+
+    "invoke operator - calling native object as function" {
+        val result = engineWithCounter().execute("counter(10)(1, 2, 3).value()")
+        result.value shouldBe 16.0  // 10 + 1 + 2 + 3
+    }
+
+    "plus operator" {
+        val result = engineWithCounter().execute("(counter(3) + counter(4)).value()")
+        result.value shouldBe 7.0
+    }
+
+    "minus operator" {
+        val result = engineWithCounter().execute("(counter(10) - counter(3)).value()")
+        result.value shouldBe 7.0
+    }
+
+    "times operator" {
+        val result = engineWithCounter().execute("(counter(4) * 3).value()")
+        result.value shouldBe 12.0
+    }
+
+    "div operator" {
+        val result = engineWithCounter().execute("(counter(10) / 2).value()")
+        result.value shouldBe 5.0
+    }
+
+    "rem operator" {
+        val result = engineWithCounter().execute("(counter(10) % 3).value()")
+        result.value shouldBe 1.0
+    }
+
+    "unaryMinus operator" {
+        val result = engineWithCounter().execute("(-counter(5)).value()")
+        result.value shouldBe -5.0
+    }
+
+    "unaryPlus operator" {
+        val result = engineWithCounter().execute("(+counter(5)).value()")
+        result.value shouldBe 5.0
+    }
+
+    "equals operator - true" {
+        val result = engineWithCounter().execute("counter(5) == counter(5)")
+        result shouldBe BooleanValue(true)
+    }
+
+    "equals operator - false" {
+        val result = engineWithCounter().execute("counter(5) == counter(6)")
+        result shouldBe BooleanValue(false)
+    }
+
+    "not_equal operator" {
+        val result = engineWithCounter().execute("counter(5) != counter(6)")
+        result shouldBe BooleanValue(true)
+    }
+
+    "compareTo - less than" {
+        val result = engineWithCounter().execute("counter(3) < counter(5)")
+        result shouldBe BooleanValue(true)
+    }
+
+    "compareTo - less than or equal (equal)" {
+        val result = engineWithCounter().execute("counter(5) <= counter(5)")
+        result shouldBe BooleanValue(true)
+    }
+
+    "compareTo - greater than" {
+        val result = engineWithCounter().execute("counter(9) > counter(5)")
+        result shouldBe BooleanValue(true)
+    }
+
+    "compareTo - greater than or equal (greater)" {
+        val result = engineWithCounter().execute("counter(9) >= counter(5)")
+        result shouldBe BooleanValue(true)
+    }
+
+    "invoke operator not registered - throws TypeError" {
+        val engine = KlangScriptEngine.builder()
+            .registerFunction<Int, Counter>("counter") { n -> Counter(n) }
+            .registerType<Counter> {}
+            .build()
+        shouldThrow<TypeError> { engine.execute("counter(1)()") }
+    }
+
+    "operator falls through to TypeError when not registered" {
+        val engine = KlangScriptEngine.builder()
+            .registerFunction<Int, Counter>("counter") { n -> Counter(n) }
+            .registerType<Counter> {}
+            .build()
+        shouldThrow<TypeError> { engine.execute("counter(1) + counter(2)") }
+    }
+
+    "operator result can be chained with method call" {
+        val result = engineWithCounter().execute("(counter(2) + counter(3)).value()")
+        result.value shouldBe 5.0
+    }
+
+    "operator result can be used in further operations" {
+        val result = engineWithCounter().execute("(counter(2) + counter(3) + counter(1)).value()")
+        result.value shouldBe 6.0
+    }
+})
+```
+
+---
+
+## Behavior Notes
+
+- **Left-operand only**: Operator dispatch checks the **left** operand only. `5 + myObj` does NOT
+  dispatch to `myObj.plus`; it falls through to the existing `TypeError` for non-numbers. This
+  matches Kotlin's dispatch semantics.
+
+- **Fallthrough on missing operator**: If a `NativeObjectValue` has no registered operator for a
+  given symbol, the interpreter falls through to the existing type error. This keeps backwards
+  compatibility — objects that don't opt in to operators behave exactly as before.
+
+- **`equals` and `compareTo` return-type contracts**: The interpreter throws `TypeError` at runtime
+  if an `equals` operator does not return `BooleanValue`, or a `compareTo` operator does not return
+  `NumberValue`. This is a runtime check, not a compile-time one.
+
+- **Supertype inheritance**: Because operators are stored as regular extension methods,
+  `getExtensionMethod` walks the supertype chain automatically. An operator registered on an
+  interface or superclass is available to all subclasses.
+
+- **`NativeOperatorNames` visibility**: Expose the object as `public` so that consuming code
+  (libraries that register operators manually via `registerExtensionMethod`) can reference the
+  canonical names without hard-coding strings.
+
+---
+
+## Out of Scope for This Task
+
+- KlangScript syntax for operator definitions (e.g., `operator fun + ...`) — deferred.
+- `get` / `set` index operators (`obj[i]`, `obj[i] = v`) — requires parser changes (no `[]`
+  syntax yet). Deferred.
+- `rangeTo` / `contains` / `in` operator — deferred.
+- Right-hand-side dispatch (`5 + nativeObj`) — deferred; left-side only for now.
+
+---
+
+## Future Direction: Unify Function and Property into Symbol (discussed 2026-04-24)
+
+Currently the runtime has two registration paths:
+
+- `@KlangScript.Function` → `nativeFunctions` list / `NativeFunctionEntry`
+- `@KlangScript.Property` → `nativeObjects` map (via `registerObject`)
+
+These map to two distinct annotation types in KSP and two lookup paths in `Environment`.
+Duplicate-name collision detection has to be replicated, KSP has to handle two annotation
+types, and a name can be either callable OR readable but not both.
+
+**Proposed long-term redesign:** collapse both into a single registered entity called
+**`Symbol`**, which can opt into any combination of the operators below. The same
+operator-dispatch infrastructure described in this document is reused — just extended:
+
+| KlangScript expression | Operator name | Current equivalent           |
+|------------------------|---------------|------------------------------|
+| `symbol(args)`         | `invoke`      | `@KlangScript.Function` call |
+| `let x = symbol`       | `get`         | `@KlangScript.Property` read |
+| `symbol = x`           | `set`         | (no equivalent today; rare)  |
+
+A single Symbol can register any subset of `{invoke, get, set}`. This means:
+
+- One name → one Symbol → multiple operators. No name-collision class problem
+  between functions and properties.
+- A name can be both callable and readable when that's natural — e.g., `silence`
+  could be both an empty pattern (`silence` returns `EmptyPattern`) AND a creator
+  (`silence(2)` returns a 2-step gap pattern). Today this requires two separate
+  registrations under different names.
+- Single annotation: `@KlangScript.Symbol` (or keep both annotations as sugar that
+  desugar to Symbol registration with the appropriate operator).
+- One lookup path in `Environment` instead of two.
+
+**No immediate action required.** This is an architectural target, not a refactor. Revisit
+when next touching the registry or when the function/property duality starts to bite (e.g.,
+when adding `set` semantics for assignable native values, or when the docs/completion layer
+needs to merge the two paths anyway).
+
+## History
+
+- 2026-10-20: numbered KLANG-00056 (was `docs/tasks/klangscript-native-object-operators.md`).

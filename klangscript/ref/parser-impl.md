@@ -33,7 +33,7 @@ Punctuation: `LPAREN`, `RPAREN`, `LBRACE`, `RBRACE`, `LBRACKET`, `RBRACKET`, `DO
    (`-42`), but if a `.` follows the number the spelling is REFUSED as ambiguous (`-6.db()`: write
    `(-6).db()` or `-(6.db())`, helper `refuseAmbiguousNegativeReceiver`). Precedence is Kotlin's, so
    `-x.abs()` is `-(x.abs())`. The literal-wins reading was tried 2026-09-08 and reverted 2026-09-09
-   (`docs/tasks-archive/2026-09/20260908-klangscript-number-methods.md`).
+   (KLANG-00193 (klangscript number methods)).
 8. `postfixExpr` (`parsePostfix(start)`) — call `foo()` and member `.prop` — **loop pattern, any alternating order**
 9. `primaryExpr` — literals, identifiers, `(...)`, `{...}`, `[...]`
 

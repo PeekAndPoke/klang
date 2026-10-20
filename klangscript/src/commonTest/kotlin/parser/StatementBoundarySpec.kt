@@ -19,7 +19,7 @@ import io.peekandpoke.klang.script.runtime.KlangScriptSyntaxError
  *
  * Without the rule a dropped dot is silent: `velocity("...")tag("hats")` is a finished chain plus an orphan
  * `tag(...)` mapper that nothing consumes, and since tags do not change the sound, nothing at all reports it
- * (`docs/tasks/klangscript-statement-boundaries.md`, found in Der Schmetterling).
+ * (KLANG-00194 (klangscript statement boundaries), found in Der Schmetterling).
  *
  * The must-still-parse rows are the ones that matter: the rule fires on a shared line only, so every
  * multi-line chain, leading-dot continuation and brace form in the song corpus has to survive it.

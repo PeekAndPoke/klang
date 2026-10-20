@@ -51,7 +51,7 @@ the authoring surface. Do not "fix" either side toward the other.
 
 ## 2. The door shape: configure lambdas on dedicated builder types
 
-Decided 2026-09-05; plan and status in `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`.
+Decided 2026-09-05; plan and status in KLANG-00179 (dsl configure lambdas).
 
 ```
 door(<construction inputs...>, configure: ((XyzBuilder) -> XyzBuilder)? = null)
@@ -88,7 +88,7 @@ master(Katalyst(k => k.reverb(0.05, 9).gain(2.5).limiter()))   // reverb(wet, si
     builder offers only what THAT envelope can do (the chain: `curves`, `declick`; the filter and pitch
     envelopes: `curves`; FM's index envelope: none yet). Maintainer, 2026-09-25.
   - A door whose only defaulted knob is temporary stays flat (`shape`, `distort`: their `oversample`
-    leaves with `docs/tasks/oversampling-regions.md`).
+    leaves with KLANG-00214 (oversampling regions)).
   - A knob that nothing reads is REMOVED, not moved (`drive`'s `driveType`, the pitch envelope's
     `releaseSec` and `curve`).
   - ONE shape per concept across the DSLs. On the Katalyst every door parameter is optional: an
@@ -102,7 +102,7 @@ master(Katalyst(k => k.reverb(0.05, 9).gain(2.5).limiter()))   // reverb(wet, si
   nodes. No new node kinds, no wire change.
 - Callable objects (`Katalyst(...)`) go through the call operator (`@KlangScript.Invoke` on
   `operator fun invoke`, the internal script symbol `__invoke__`,
-  `docs/tasks/klangscript-native-object-operators.md`); the docs show the object and its call form as
+  KLANG-00056 (klangscript native object operators)); the docs show the object and its call form as
   two variants of one symbol. A callable object may be aliased to a method form
   (`Katalyst.build(...)`; `Katalyst()` == `Katalyst.build()`, the empty chain) so both can be tested
   against each other.
@@ -123,9 +123,9 @@ script-only surface forces raw constructor calls and splits the vocabulary.
 **Rules:**
 
 - A surface addition lands on BOTH doors in the same deliverable. A stdlib function without its
-  Kotlin twin is a review finding (`docs/tasks/dsl-kotlin-surface-parity.md`).
+  Kotlin twin is a review finding (KLANG-00148 (dsl kotlin surface parity)).
 - **The layering of the Ignitor and Katalyst DSLs (maintainer, 2026-10-16, option C; in force since the
-  rollout S1 to S7 of `docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`, 2026-10-16):** every new
+  rollout S1 to S7 of KLANG-00314 (kotlin typed doors), 2026-10-16):** every new
   Ignitor or Katalyst door lands in it. sprudel's doors still take `PatternLike = Any` on one shared function
   until its own typed door is designed (maintainer's call; see the archived task, "Left after the rollout").
   - The ONE public Kotlin door is typed and lives in `audio_bridge`, next to the wire types: every
@@ -158,7 +158,7 @@ script-only surface forces raw constructor calls and splits the vocabulary.
     oversample factor, `passes`): those are read once per voice but FROM THE SLOTS, so they are
     typed like any knob (maintainer, 2026-10-16). Only a plain node field (a `Double`, `String` or
     `List` the script also takes plain) stays plain.
-- **The typed-door pattern** (spike S1 of `docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`, 2026-10-16; this
+- **The typed-door pattern** (spike S1 of KLANG-00314 (kotlin typed doors), 2026-10-16; this
   is its one home):
   1. The builder lives in `audio_bridge` (`IgnitorBuilders.kt` / `KatalystBuilders.kt`) under its
      simple name (the script shows it), its knobs CLASS MEMBERS with typed parameters, each with a
@@ -243,7 +243,7 @@ script-only surface forces raw constructor calls and splits the vocabulary.
        - Check what the script's operators do before promising them: the interpreter's binary operators take numbers
          and strings only, so a signal's script arithmetic is the method (`saw.mul(0.5)`); a row pins `saw * 0.5` as
          the type error it already was. A recorded asymmetry: Kotlin has `+` / `*` on signals, the script is
-         method-only until `docs/tasks/klangscript-native-object-operators.md` lands (decided 2026-10-07,
+         method-only until KLANG-00056 (klangscript native object operators) lands (decided 2026-10-07,
          `__times__` / `__rtimes__`, the goal `saw * 4`); that row then goes red on purpose.
      - Met in rollout S5 (the Katalyst):
        - Kotlin mirrors the script's words, aliases included; an alias delegates to its main word (coordinator, S5
@@ -364,7 +364,7 @@ the bug.
   what THIS call named, never a voice field that an earlier fill wrote, or a `katp` between two
   calls of the same door is overwritten. The engine's non-finite guard stays as the NaN rule for
   a raw `katp` write, not as a second fill. The voice-side compound doors (`adsr`, `lpf`, FM and
-  pitch envelopes) adopt it when phase 3 of `docs/plans/signal-flow-redesign.md` rebuilds the
+  pitch envelopes) adopt it when phase 3 of KLANG-00210 (signal flow redesign) rebuilds the
   built-ins as instruments with slots. **First adoption, 2026-09-20 (phase 3 step 3a): the four
   Ignitor filter doors.** Their envelope has no NAME knob, so ANY of its five knobs names the stage
   and a call that names one writes every companion it left out, `env` included; a call that names
@@ -405,7 +405,7 @@ the bug.
   leads with the modulator, its structure, and puts the ratio first; the words are the same since pitch pipeline step
   4 (D4), and sprudel kept its order so that no positional call changed, `fm(300, 1.4)` is still depth 300, ratio
   1.4). See
-  `docs/tasks/master-dsl-followups.md` section 1 for the parity audit brief.
+  KLANG-00137 (master dsl followups) section 1 for the parity audit brief.
 
 ---
 
@@ -422,7 +422,7 @@ documents its tells per unit (Q22).
 door's name (`lpf`, `penv`); the param part is the engine door's word (the Ignitor's, or the Katalyst's for a bus
 stage), after a check that it is the better word, and the sprudel door's parameter takes the same word. A one-knob
 door stays flat (`onepole`, `accelerate`, `pregain`, the sample slots). A `snd*` door's parameter takes the knob or slot word
-(`sndPulze(duty)`), not the knob's inner parameter word (`duty(width)`, Q29, 2026-10-16). The table: `docs/tasks-archive/2026-10/20261009-classic-slot-names-check.md`.
+(`sndPulze(duty)`), not the knob's inner parameter word (`duty(width)`, Q29, 2026-10-16). The table: KLANG-00289 (classic slot names check).
 
 ## 5. One word per concept, end to end
 
@@ -431,7 +431,7 @@ the wire, and the backend registry/runtime. The Katalyst is the model:
 `Katalyst` object, `KatalystDsl`, `.katalyst()`, `KatalystRegistry`, no split.
 
 The split that was left open, a script object named apart from its type `IgnitorDsl`, is resolved (2026-10-04,
-`docs/tasks-archive/2026-10/20261004-ignitor-katalyst-naming.md`): the script object, the wire field (`ignitorParams`), the setter
+KLANG-00269 (ignitor katalyst naming)): the script object, the wire field (`ignitorParams`), the setter
 (`ignitorParam`) and the runtime all say Ignitor. A second, shorter name is the house pattern, for songs: `Ign` and
 `Kat` are `@KlangScript.Constant` vals holding the same object as `Ignitor` and `Katalyst`, so every member answers
 to both (no alias factory, no third name).
@@ -481,7 +481,7 @@ sealed type makes every consumer arm compiler-checked. Precedents: `AdsrDef`, `K
 - **The backend never learns about cycles.** Only seconds cross the wire. Never propose
   cycle/bar/phrase fields in the wire format or `audio_be`; phrase-aware behavior derives from the
   note stream (works for every source).
-- **Plans live in `docs/plans/`, tasks in `docs/tasks/`**, in the repo. Never in a home directory.
+- **Plans and tasks are tickets in `docs/tasks/`** (`/project-layout`), in the repo. Never in a home directory.
 
 ---
 

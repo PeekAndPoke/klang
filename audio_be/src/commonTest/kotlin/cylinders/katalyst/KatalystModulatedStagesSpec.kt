@@ -35,7 +35,7 @@ import kotlin.math.sin
 
 /**
  * Knob expressions step 5b: one behaviour row per stage decision of the plan's per-stage table
- * (`docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`, "D2 in practice", Q7, Q9, Q16): what a stage does with a knob
+ * (KLANG-00302 (katalyst knob expressions), "D2 in practice", Q7, Q9, Q16): what a stage does with a knob
  * that holds a modulator, read off the stage after each block of a real chain.
  *
  * The modulator of most rows is the sine at the EIGHTH clock with a phase of 1/16 ([s]): it never lands on 0 or on a

@@ -86,7 +86,7 @@ aside .body { overflow: auto; padding: 12px 14px 18px; display: grid; gap: 14px;
 <div class="app">
   <div class="top">
     <div class="brand">
-      <div class="kicker">Klang dev status · docs/tasks · docs/plans · as of <span id="asof"></span></div>
+      <div class="kicker">Klang dev status · docs/tasks · as of <span id="asof"></span></div>
       <h1>Klang <span>//</span> Topic Map</h1>
       <nav class="hud-nav" aria-label="Dev status pages"><a href="klang-topic-map.html" aria-current="page">Topic map</a><a href="klang-mission-log.html">Mission log</a><a href="klang-whitepaper.html">White paper</a></nav>
     </div>
@@ -414,7 +414,7 @@ function listHtml(items){
 function renderPanel(){
   if(!selected){
     panel.innerHTML=`<div class="head"><h2>Open tasks and plans</h2></div><div class="body">
-      <p class="intro">Every Markdown file still in <code>docs/tasks</code> and <code>docs/plans</code>, grouped by area. The archive is off by default. Click a document to see its status, what it links to and what links to it. Drag to pan, scroll or pinch to zoom, drag a node to move it.</p>
+      <p class="intro">Every Markdown file still in <code>docs/tasks</code>, grouped by area. The archive is off by default. Click a document to see its status, what it links to and what links to it. Drag to pan, scroll or pinch to zoom, drag a node to move it.</p>
       <div class="sec"><h3>Worth a look first</h3>${listHtml(nodes.filter(n=>n.state==='finished'||n.stale).map(n=>({id:n.id,why:n.stale?'status line is out of date':'looks finished, candidate to archive'})))}</div>
       <div class="sec"><h3>In progress</h3>${listHtml(nodes.filter(n=>n.state==='active').map(n=>({id:n.id})))}</div>
       <div class="sec"><h3>Blocked</h3>${listHtml(nodes.filter(n=>n.state==='blocked').map(n=>({id:n.id})))}</div>

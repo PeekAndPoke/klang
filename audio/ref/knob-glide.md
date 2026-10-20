@@ -222,7 +222,7 @@ changes (18 of 18 built-in songs and frozen pieces bit-identical in raw doubles 
     its KDoc; its only state is value, target, start, remaining and the snap flag.
 
 **Engine follow-up 42 (2026-10-16), the delay's and the reverb's switch-off: fade, do not cut** (maintainer Q39,
-2026-10-13; `docs/tasks-archive/2026-10/20261016-delay-reverb-owner-change-cut.md` option (b)). Every off-config, an owner change, a
+2026-10-13; KLANG-00313 (delay reverb owner change cut) option (b)). Every off-config, an owner change, a
 `katp` time or size below the gate, an unset or non-finite one, takes the `wet` glide to 0 over its span (50 ms, one
 block for a modulated wet) while the stage stays Active and feeds the falling level into the ring or the room; the
 block the glide lands in moves the stage on into the drain at its end. The law is the LEVEL law above, applied to the
@@ -305,7 +305,7 @@ swing of 40 dB still read -62 to -65 dB (25 dB of release in 50 ms), accepted th
 did not accept the swell itself (below, 2026-10-17). Attack and release are time constants of the smoothed envelope
 and measured at the floor: no glide. Lesson: a knob feeding a memoryless gain law is a LEVEL knob.
 
-**2026-10-17, the compressor's relaxing moves release** (`docs/tasks-archive/2026-10/20261017-knob-glide-listening.md`, item 2). The
+**2026-10-17, the compressor's relaxing moves release** (KLANG-00316 (knob glide listening), item 2). The
 gain computer has no memory, so whatever moves its knobs moves the gain at once: a 40 dB threshold rise brought 32.2 dB
 of gain back over the 50 ms glide, 10 to 90 percent in 46 ms on the listening pair, which the maintainer heard as a
 hard swell. Now a relaxing move (see section 1) runs as a one-pole at the release coefficient on the move's shared

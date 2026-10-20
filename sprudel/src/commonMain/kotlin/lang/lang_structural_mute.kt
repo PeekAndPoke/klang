@@ -234,7 +234,7 @@ private fun soloIdOf(callInfo: CallInfo?): String {
  * new amount; when `solo()` is removed, the solo ends when the pattern's last soloed event ends, at most 1/8 of
  * the soloed pattern's own cycle after the edit takes effect (plus a few milliseconds; after `.solo().slow(4)`,
  * half a cycle). A structural op after `.solo()` (`struct`, `mask`, `degradeBy`) drops the solo in its gaps:
- * put `.solo()` last. Tracked in `docs/tasks/future/solo-survives-ops.md`. Accepts control patterns, so the
+ * put `.solo()` last. Tracked in KLANG-00315 (solo survives ops). Accepts control patterns, so the
  * amount can change per cycle. When several patterns are soloed, the strongest amount wins: a `solo(0.7)` beside
  * a `solo()` changes nothing.
  *

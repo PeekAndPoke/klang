@@ -19,7 +19,7 @@ import kotlin.math.log10
 import kotlin.math.sin
 
 /**
- * The bench of the oversampler (`docs/tasks-archive/2026-10/20261010-iir-oversampler.md` step 1): what a round trip does to a
+ * The bench of the oversampler (KLANG-00298 (iir oversampler) step 1): what a round trip does to a
  * signal, measured, at a 48 kHz base. The IIR half-band that replaced the FIR on 2026-10-10 is held to the figures its
  * KDoc states; the FIR's are in that KDoc for comparison (-2 dB at 16 kHz, about 20 dB of alias rejection).
  *

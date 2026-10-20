@@ -18,7 +18,7 @@ Status: 🔴 open (untriaged) · 🟢 accepted-as-is · 🔧 to fix · ✅ FIXED
 
 ## F1 — Three tuning constants are documented as "the knob" but read by nothing ✅ FIXED
 
-> **FIXED 2026-08-11** — `docs/tasks/audio-bridge-constants.md`. All three (plus `ADSR_EXP_K`, plus the shared master
+> **FIXED 2026-08-11** — KLANG-00141 (audio bridge constants). All three (plus `ADSR_EXP_K`, plus the shared master
 > limiter defaults) now have exactly ONE declaration, in `audio_bridge/src/commonMain/kotlin/constants/`, which both
 > the DSL default and the engine read. The `audio_be` twins are deleted, so there is no longer a constant that
 > documents itself as the knob while production reads a different literal. The rule going forward: **a constant
@@ -589,7 +589,7 @@ identical runs. And even if the gate were relaxed, the math is an identity at ze
   `Cylinders.kt:87-89`) has none, which is the same both-ends-covered-middle-empty shape that hid
   [F18](#f18). But no shipped song uses ducking, so this is unfinished work rather than a coverage
   hole in something live. Moved with its design questions to
-  [`docs/tasks/future/ducking-unfinished.md`](../tasks/future/ducking-unfinished.md) — including the
+  KLANG-00168 (ducking unfinished) — including the
   one worth fixing before anyone writes a song against it: `duck(attack)` (then `duckattack`) sets the **release**, and
   `Compressor` in the same directory has an `attackSeconds` that means something else again.
 - ~~**`Voice.Compressor`'s DSP is untested.**~~ ❌ **WITHDRAWN 2026-08-31.** The DSP has two dedicated
@@ -681,8 +681,7 @@ This is the standing click-diagnostic harness; it prints and guards nothing, by 
 
 ## F16 — The master limiter did not limit transients; the hard clip did ✅ FIXED
 
-**HIGH — user-reported symptom ("knock"), root-caused 2026-08-04, FIXED 2026-08-06** (`53834ba9` + follow-up) under [
-`20260927-master-limiter-lookahead.md`](../tasks-archive/2026-09/20260927-master-limiter-lookahead.md). By-ear confirmed.
+**HIGH — user-reported symptom ("knock"), root-caused 2026-08-04, FIXED 2026-08-06** (`53834ba9` + follow-up) under KLANG-00225 (master limiter lookahead). By-ear confirmed.
 
 > **Everything below describes the DEFECT as it was**, kept because it is the evidence and the
 > measurement baseline. After the fix, the same +12 dB kick exits at **−0.37 dBFS with zero samples
@@ -881,7 +880,7 @@ cannot express that at all.
 
 > 📋 **PARKED 2026-08-31 (maintainer): "it was never used yet, and needs some thinking and
 > design, not an on-the-fly judgement."** Moved to
-> [`docs/tasks/future/cut-group-semantics.md`](../tasks/future/cut-group-semantics.md), which opens
+> KLANG-00167 (cut group semantics), which opens
 > out the four questions this finding does not ask: whether per-event switchable choking is wanted at
 > all (the only thing `0` buys over simply not calling `.cut()`), how far a cut group reaches (today
 > it is **global to the scheduler** — two unrelated parts picking group `1` choke each other, which
@@ -985,7 +984,7 @@ spec named after it", but "does anything test the *handoff*".
 
 **Fix.** One argument, `meta = msg.meta`. Guard: three rows in `SampleChunkRoundTripSpec` asserting
 loop, adsr and anchor arrive intact across single-, two- and four-chunk samples; reverting the
-argument turns all three red. Full record: `docs/tasks-archive/2026-09/20260903-soundfont-looping-investigation.md`, round 3.
+argument turns all three red. Full record: KLANG-00171 (soundfont looping investigation), round 3.
 
 ---
 

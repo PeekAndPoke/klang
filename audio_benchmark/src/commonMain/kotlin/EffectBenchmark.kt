@@ -547,7 +547,7 @@ class EffectBenchmark(
                 )
             },
 
-            // ── Katalyst stages: the arithmetic (docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md).
+            // ── Katalyst stages: the arithmetic (KLANG-00301 (katalyst stage measurements)).
             // The operands are not integers (V8 keeps an integral double as a small integer, which hides a box).
             katalystCase("Katalyst empty chain (baseline: stereo copy + dispatch)", KatalystDsl(emptyList())),
             katalystCase("Katalyst times (1 cheap stage)", AllocationCases.katalyst { it.times(0.9.kat) }),
@@ -564,7 +564,7 @@ class EffectBenchmark(
             katalystCase("Katalyst 8 arithmetic stages (E-arith's chain)", AllocationCases.arithmeticChain),
 
             // ── Katalyst knob expressions and modulators (step 6 of
-            // docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md).
+            // KLANG-00302 (katalyst knob expressions)).
             // Each modulated row against its constant control. The difference is the modulation AND the DSP paths a
             // moving knob takes where a constant one does not: the hook, the evaluator, the writer's refill and the
             // stage's configure, plus the per-sample ramps (the fader's and the arithmetic's one-block glide, the

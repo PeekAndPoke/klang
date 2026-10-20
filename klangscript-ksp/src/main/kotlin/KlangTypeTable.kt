@@ -10,7 +10,7 @@ package io.peekandpoke.klang.script.ksp
  * private top-level `val` and referenced by name everywhere else.
  *
  * The docs used a few thousand `KlangType` constructions for about a hundred distinct types per library
- * (2026-10-06: 102 in sprudel, 109 in the stdlib; see docs/tasks/reduce-js-bundle-size.md), about a tenth
+ * (2026-10-06: 102 in sprudel, 109 in the stdlib; see KLANG-00106 (reduce js bundle size)), about a tenth
  * of the production bundle. A `KlangType` is an immutable data class, so sharing one instance changes
  * nothing a reader of the docs can observe.
  *

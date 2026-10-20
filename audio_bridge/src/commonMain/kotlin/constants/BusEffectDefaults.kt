@@ -28,7 +28,7 @@ package io.peekandpoke.klang.audio_bridge.constants
 //   `LowPassHighPassFilters`, `KatalystResonatorEffect`).
 // The values are the ones the engine used before they had a name; naming them
 // retuned nothing (Katalyst DSL step 1, 2026-09-17; the delay and reverb pair,
-// `docs/tasks-archive/2026-09/20260916-delay-names-and-send-defaults.md`, lived
+// KLANG-00209 (delay names and send defaults), lived
 // in `SendEffectDefaults.kt` until 2026-10-08).
 //
 // These are the TOUCHED defaults: what a knob means once the author has reached
@@ -174,7 +174,7 @@ const val DISTORT_AMOUNT: Double = 0.5
 
 /**
  * Oversampling factor of a Katalyst `distort` stage that names none: 2x (maintainer, 2026-10-10,
- * `docs/tasks-archive/2026-10/20261010-iir-oversampler.md` step 5). A bus bends the whole mix, so
+ * KLANG-00298 (iir oversampler) step 5). A bus bends the whole mix, so
  * its aliasing lands on every note at once; the IIR half-band is flat to 20 kHz, so oversampling no
  * longer dulls the mix as the FIR did. It costs 3 frames of latency on that bus and a round trip per
  * channel per block. A deliberate asymmetry with the voice, whose `distort` stays at 0 (a per-note
@@ -211,7 +211,7 @@ const val KNOB_GLIDE_SECONDS: Double = 0.05
  * Its own constant since Katalyst step 5c-11 (2026-09-20): a bank swap is not a level move, what
  * travels is a whole filter, so the fade is the time two materials are heard at once. It ran at
  * 20 ms from 5c-11 until 2026-10-17 and is 50 ms since, **decided by ear** (the maintainer, on the
- * pair `tmp/listening/knob-glide/body-low-crossfade-*.wav`, `docs/tasks-archive/2026-10/20261017-knob-glide-listening.md`
+ * pair `tmp/listening/knob-glide/body-low-crossfade-*.wav`, KLANG-00316 (knob glide listening)
  * item 1): "i cannot really hear a difference between the 20ms and the 50ms, so i would say to be on
  * the safe side we take the 50ms." So it now has the same VALUE as [KNOB_GLIDE_SECONDS] and stays a
  * constant of its own, because the concept is another one: the swap counts its fade in SAMPLES

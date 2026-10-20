@@ -352,7 +352,7 @@ sealed interface IgnitorDsl {
 
     /**
      * Sine wave oscillator, optionally carrying banks of sine PARTIALS at multiples of its own
-     * frequency (`docs/tasks-archive/2026-09/20260907-sine-partial-banks-plan.md`). The sine itself is partial 1 at gain
+     * frequency (KLANG-00185 (sine partial banks plan)). The sine itself is partial 1 at gain
      * [fundamental]; [harmonics] adds partials at `2f, 3f, ...`, [octaves] at `2f, 4f, 8f, ...`,
      * [suboctaves] at `f/2, f/4, ...`. An added partial at `m * f` or `f / m` has gain
      * `m ^ -rolloff` of its bank (the distance from the fundamental is `m` either way). Banks
@@ -363,7 +363,7 @@ sealed interface IgnitorDsl {
      * Nyquist are silent (decided 2026-09-07; by magnitude since 2026-10-10). [analogSpread] blends the
      * drift lanes: 0 = one shared walk for the whole bank, 1 = one walk per partial.
      *
-     * [partials] is the fourth bank (`docs/tasks-archive/2026-10/20261010-sine-inharmonic-partials.md`, Q26): explicit
+     * [partials] is the fourth bank (KLANG-00296 (sine inharmonic partials), Q26): explicit
      * [Partial]s at any ratio of this sine's frequency, each with its own gain and start phase, played in the
      * order written and summed raw with the fundamental and the other banks. The engine plays the first
      * [SINE_MAX_PARTIALS] of them.
@@ -1155,7 +1155,7 @@ sealed interface IgnitorDsl {
      * would comb against the others in the sum, so the build gives every branch an unshaped round trip of each
      * oversampler it lacks (a phase twin), and all branches then share the same delay at every frequency. A branch
      * that mixes two oversamplers in a plain [Plus] falls back to a whole-sample delay, which matches the bass and
-     * the mids only. A plain [Plus] is raw arithmetic and does not align (`docs/plans/future/signal-graph-engine.md`
+     * the mids only. A plain [Plus] is raw arithmetic and does not align (KLANG-00216 (signal graph engine)
      * §6.9).
      *
      * The doors build it for two branches or more (none is the signal unchanged, one is that branch).
@@ -2090,8 +2090,8 @@ sealed interface IgnitorDsl {
      *   1 or less is no oversampler, today's plain path). **Read ONCE, at voice build**, the same
      *   leaf-only way as [shape] (a non-leaf is 0, off), and truncated to a whole factor, as the
      *   pattern door's `asIntOrNull` does; a non-finite one is off. No upper clamp (the Motor stays
-     *   raw). A STOPGAP (decision D7, `docs/tasks-archive/2026-09/20260928-builtin-instruments.md` section 3): a knob so that
-     *   `classic()` can fill it from `distort.oversample`, and `docs/tasks/oversampling-regions.md`
+     *   raw). A STOPGAP (decision D7, KLANG-00237 (builtin instruments) section 3): a knob so that
+     *   `classic()` can fill it from `distort.oversample`, and KLANG-00214 (oversampling regions)
      *   retires it for a region. Default: 0 (off).
      */
     @WireName("shape")
@@ -2397,7 +2397,7 @@ sealed interface IgnitorDsl {
      * (`x 1.5`), -0.5 an octave down, and -1.0 stops the oscillator (ratio 0). The law of FM: a modulator's swing
      * around the carrier. For a modulation in SEMITONES (the exponential law, `2^(mod / 12)`) see [PitchModSemitones].
      * No switch and no clamp: the ratio passes raw, a NaN sample of [mod] included
-     * (`docs/tasks-archive/2026-10/20261014-bugfix-non-finite-pitch-strip-and-signals.md` section 2).
+     * (KLANG-00309 (bugfix non finite pitch strip and signals) section 2).
      */
     @WireName("pitch-mod")
     data class PitchMod(
@@ -2421,7 +2421,7 @@ sealed interface IgnitorDsl {
      * A signal [mod] is always built. The ratio passes through `safeOut`, no clamp below it: past about 598 semitones it
      * holds at `SAFE_MAX`. A non-finite SAMPLE of a signal: +Infinity reads as `SAFE_MAX`, NaN or -Infinity as the
      * ratio 0, which holds the source still, as `pitchMod`'s raw NaN and FM's modulator do
-     * (`docs/tasks-archive/2026-10/20261014-bugfix-non-finite-pitch-strip-and-signals.md` section 2).
+     * (KLANG-00309 (bugfix non finite pitch strip and signals) section 2).
      */
     @WireName("pitch-mod-semitones")
     data class PitchModSemitones(
@@ -2643,8 +2643,8 @@ fun IgnitorDsl.parallel(vararg branches: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl
 
 /**
  * A dry/wet blend, the linear law: `x.blend(wet, f)` is `x.parallel({ it.mul(1 - wet) }, { f(it).mul(wet) })`, so 0
- * is the dry signal and 1 is [branch]'s output alone (the dry/wet helper of `docs/plans/future/signal-graph-engine.md`
- * §6.9; the linear law only, the default taken 2026-10-10 in `docs/tasks-archive/2026-10/20261010-parallel-serial-bands.md`). Linear
+ * is the dry signal and 1 is [branch]'s output alone (the dry/wet helper of KLANG-00216 (signal graph engine)
+ * §6.9; the linear law only, the default taken 2026-10-10 in KLANG-00297 (parallel serial bands)). Linear
  * is right for correlated branches (distortion, filters); a decorrelated one (a room) loses about 3 dB in the middle,
  * which a song can lift with the branch's own `mul`. [wet] may be a slot or a signal (a moving blend); a constant that
  * is not finite reads as 0, the dry signal. The branch is matched in phase as in [parallel]. ONE door, typed (the
@@ -2771,7 +2771,7 @@ private fun modEnvCurveKnob(): IgnitorDsl = AdsrCurves.knob(MOD_ENV_CURVE)
  * envelope on and fills the other from `constants/FilterEnvelopeDefaults.kt`, once, after the lambda
  * ([fillFilterEnvelope], here, for both doors); a lambda that names neither is the filter without an envelope. The
  * four stage times are named together, by the builder's `adsr`: the flat door that named one stage at a time
- * (`lowpass(800.0, decay = 0.3)`) is gone, recorded in `docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md` (rollout S3a). `passes` is
+ * (`lowpass(800.0, decay = 0.3)`) is gone, recorded in KLANG-00314 (kotlin typed doors) (rollout S3a). `passes` is
  * rounded and coerced to 1..[FILTER_MAX_PASSES] here when it is a number ([coercePasses]); a SLOT goes straight
  * in (`it.passes(IgnitorDsl.Slots.lpf.passes)`) and the runtime coerces what it reads. See [IgnitorDsl.Lowpass]; the full text lives on the script door
  * (`KlangScriptIgnitorExtensions.lowpass`).
@@ -2971,7 +2971,7 @@ fun IgnitorDsl.shape(shape: String, oversample: IgnitorDsl = SHAPE_OVERSAMPLE.ig
  * Unshaped stages keep the node's default, [AdsrCurve.Default] (exponential); an unnamed `declick` keeps the node's
  * `declick` slot (0 = off). The flat door that took the curves and the de-click as parameters
  * (`adsr(a, d, s, r, attackCurve = ..., declick = ...)`) and its `Double` twin went with the typed-doors rollout S3b
- * (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`). The envelope's ON/OFF switch is on neither door ([IgnitorDsl.Adsr.on]). The
+ * (KLANG-00314 (kotlin typed doors)). The envelope's ON/OFF switch is on neither door ([IgnitorDsl.Adsr.on]). The
  * full text lives on the script door (`KlangScriptIgnitorExtensions.adsr`).
  */
 fun IgnitorDsl.adsr(
@@ -3080,7 +3080,7 @@ fun IgnitorDsl.Tremolo.hasClassicRange(): Boolean =
  *
  * Without the knobs the LFO is a sine and the swing the classic dip (`range(-1, 0)`, [TREMOLO_RANGE_FROM]). The flat
  * door that took `shape`, `rangeFrom` and `rangeTo` as parameters went with the typed-doors rollout S3c
- * (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`). See [IgnitorDsl.Tremolo]; the full text lives on the script door
+ * (KLANG-00314 (kotlin typed doors)). See [IgnitorDsl.Tremolo]; the full text lives on the script door
  * (`KlangScriptIgnitorExtensions.tremolo`).
  */
 fun IgnitorDsl.tremolo(

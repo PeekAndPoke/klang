@@ -20,7 +20,7 @@ history of a decision. Which functions exist is answered by the `lang/` files an
   (`copy`, `setAll`, `forEachEntry`; engine follow-up 2, step 2). A `KlangMap` is not a Kotlin `Map` (step 5):
   `toVoiceData` hands `KlangMap`s to the wire, and `ParamBag.toMap()` is a plain copy for tests and tools.
 - `toVoiceData()` is the one boundary. The voice doors stay TYPED on this side (the query hot loop keeps its
-  one allocation, `docs/plans/signal-flow-redesign.md` §4) and are written there as `classic()` slot keys
+  one allocation, KLANG-00210 (signal flow redesign) §4) and are written there as `classic()` slot keys
   into `ignitorParams` by `_classic_slot_params.kt`: the pitch envelope (`penv.*`, `penvCurves.*`), the vibrato
   (`vibrato.rate`, `vibrato.semitones`, `vibrato.rangeFrom`, `vibrato.rangeTo`, `vibrato.phase`), the flat `accelerate`, the fm (`fm.depth`, `fm.ratio`, `fm.attack` ...
   `fm.release`; `SvdFm` keeps its typed fields `fmEnv`, `fmh`, ..., `fmRelease`), the filters,
@@ -31,9 +31,9 @@ history of a decision. Which functions exist is answered by the `lang/` files an
   `katalystParams` slots.
 - An authored instrument that does not end in `classic()` plays as its bare tree: a voice door reaches it
   only when its tree reads that slot (the editor hint waits in
-  `docs/tasks/future/editor-voice-door-diagnostics.md`).
+  KLANG-00244 (editor voice door diagnostics)).
 - `crush.oversample` and `coarse.oversample` travel but nothing reads them
-  (`docs/tasks/oversampling-regions.md`); `distort.oversample` is a `classic()` slot, read at voice build.
+  (KLANG-00214 (oversampling regions)); `distort.oversample` is a `classic()` slot, read at voice build.
 - `velocity` stops at the wire: `foldedGain()` multiplies it into `gain`, `VoiceData` has no `velocity`.
   Both unset gives `null`; a non-finite operand reads as unset before the product. Guard: `WireGainFoldSpec`.
 - `tag(name)` tags cross the wire as `VoiceData.tags`, an unordered set. The argument is a literal
@@ -62,7 +62,7 @@ setter semantics) and `/dsl-design`. What they produce today:
   doors per slot. The curve objects (`adsrCurves`, `lpfCurves`, `hpfCurves`, `bpfCurves`, `notchCurves`,
   `penvCurves`) are setters only. The long names `lowpass` / `highpass` / `bandpass` are constants.
 - The name slots `body.material` and `vowel.vowel` carry the INDEX of the name (`BodyMaterials.indexOf`,
-  `VowelBands.indexOf`, 0 is `none`); they have no readers (`docs/tasks/future/string-slot-readers.md`).
+  `VowelBands.indexOf`, 0 is `none`); they have no readers (KLANG-00188 (string slot readers)).
 - The five wet doors take `wet` first; a bare call reinterprets the pattern's values as the wet.
 - `.katalyst(dsl)`, `.master(dsl)` and `sound()` REPLACE; each stamps one value onto every event.
 - The eight signals (`sine`, `cosine`, `saw`, `tri`, `square`, `perlin`, `berlin`, `rand`) are objects on
@@ -107,7 +107,7 @@ setter semantics) and `/dsl-design`. What they produce today:
 
 - **Immutable at construction, mutable at runtime, both deliberate.** Every combinator returns a new pattern
   (`/dsl-design` §1); the query and render path uses mutable single-owner `SprudelVoiceData` on purpose (leaf
-  clone about 17x faster, `docs/tasks-archive/2026-06/20260607-mutable-voicedata-optimization.md`). Do not
+  clone about 17x faster, KLANG-00102 (mutable voicedata optimization)). Do not
   "fix" either side toward the other. Guards: `VoiceDataAliasingSpec` (no two events of a query share their
   data, an `Svd*` group or a `ParamBag`; a new group joins its `mutableParts()` and `writeEveryPart()`),
   `SprudelVoiceDataSpec`, `ParamBagSpec`.
@@ -131,14 +131,14 @@ setter semantics) and `/dsl-design`. What they produce today:
 ## Open threads
 
 - A typed Kotlin door for sprudel (its doors take `PatternLike = Any`), not designed, the maintainer's call:
-  `docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`, "Left after the rollout".
+  KLANG-00314 (kotlin typed doors), "Left after the rollout".
 - `scale()` KDoc should say that later `.scale()` calls do not re-pitch (not written yet).
-- `docs/tasks/sprudel-sound-doors-compound.md` and `docs/tasks/sprudel-sound-function-surface.md`: the
+- KLANG-00189 (sprudel sound doors compound) and KLANG-00101 (sprudel sound function surface): the
   `snd*` family, the last doors that are not compound objects.
-- `docs/tasks-archive/2026-10/20261014-sprudel-function-testing.md`, `docs/tasks/sprudel-test-coverage-and-review.md`,
-  `docs/tasks/sprudel-ui-tools.md`.
-- `docs/tasks/future/string-slot-readers.md`, `docs/tasks/future/editor-voice-door-diagnostics.md`,
-  `docs/tasks/future/optimize-constant-control-fast-path.md`, `docs/tasks/oversampling-regions.md`.
+- KLANG-00307 (sprudel function testing), KLANG-00127 (sprudel test coverage and review),
+  KLANG-00090 (sprudel ui tools).
+- KLANG-00188 (string slot readers), KLANG-00244 (editor voice door diagnostics),
+  KLANG-00104 (optimize constant control fast path), KLANG-00214 (oversampling regions).
 
 ## History
 
@@ -149,21 +149,21 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
 - 2026-08-20: `tag(name)`, `Set<T>` in the wire codec, `ref/dsl-conventions.md` rewritten
   (`ref/memory-history.md#recent-work-2026-08-20`).
 - 2026-09-06: field accessor pilot on `freq`, mapper arguments apply to their own field
-  (`docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md`).
+  (KLANG-00184 (sprudel field accessors)).
 - 2026-09-07: field accessor batches one to four, accessor objects carry the script name, one Kotlin door
-  per accessor, the `adsr` compound pilot (`docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md`).
+  per accessor, the `adsr` compound pilot (KLANG-00184 (sprudel field accessors)).
 - 2026-09-07: compound effects (batch E), filters (batch F) and the last compounds (batch G) become objects
   with named slots; per-knob doors retired (`ref/memory-history.md#recent-work-2026-09-07`).
 - 2026-09-07: the addons split retired, every DSL file is `lang/lang_<group>_<subgroup>.kt`
-  (`docs/tasks-archive/2026-09/20260907-sprudel-lang-file-reorganisation.md`).
+  (KLANG-00187 (sprudel lang file reorganisation)).
 - 2026-09-08: arithmetic reads a continuous control per onset (`_appLeft`), `segment` fixed
-  (`docs/tasks-archive/2026-09/20260908-sprudel-arithmetic-continuous-controls.md`).
-- 2026-09-16: the reverb is `reverb`, not `room` (`docs/tasks-archive/2026-09/20260916-reverb-naming-unification.md`).
+  (KLANG-00195 (sprudel arithmetic continuous controls)).
+- 2026-09-16: the reverb is `reverb`, not `room` (KLANG-00208 (reverb naming unification)).
 - 2026-09-16: a rest in a setter's control pattern leaves the field untouched (`ref/memory-history.md#recent-work-2026-09-07`).
 - 2026-09-18: Katalyst step 5a: bus doors write the orbit's slots, material and vowel as indices,
-  `.katalyst()` replaces, `ParamBag`, the per-param fill (`docs/tasks-archive/2026-09/20260928-katalyst-dsl.md` §9).
+  `.katalyst()` replaces, `ParamBag`, the per-param fill (KLANG-00236 (katalyst dsl) §9).
 - 2026-09-19: Katalyst step 5b: the slot is what reaches the orbit; delay, reverb, compressor and duck
-  write slots only (`docs/tasks-archive/2026-09/20260928-katalyst-dsl.md` §9).
+  write slots only (KLANG-00236 (katalyst dsl) §9).
 - 2026-09-19: `postgain` retired, `velocity` folds at the wire
   (`ref/memory-history.md#gain-is-the-one-level-word-velocity-folds-at-the-wire-2026-09-19`).
 - 2026-09-19: the `pregain` door (`ref/memory-history.md#the-pregain-door-the-other-level-word-2026-09-19`).
@@ -178,60 +178,60 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
 - 2026-09-29: this file restructured; the old status line, feature list and dated entries are in
   `ref/memory-history.md` (`#current-status`, `#completed-features`).
 - 2026-10-01: `beats(n, base = 4)`, a tempo-following duration in seconds
-  (`docs/tasks-archive/2026-10/20261001-sprudel-beats-helper.md`).
+  (KLANG-00261 (sprudel beats helper)).
 - 2026-10-01: `beatRate(n, base = 4)`, the rate twin of `beats`, one cycle every n beats in Hz
-  (`docs/tasks-archive/2026-10/20261001-sprudel-beat-rate-helper.md`).
+  (KLANG-00262 (sprudel beat rate helper)).
 - 2026-10-03: the tremolo's `sync` is `rate` on every surface, the slot key `tremolo.rate`
-  (`docs/tasks-archive/2026-10/20261003-tremolo-rate-naming-parity.md`).
+  (KLANG-00268 (tremolo rate naming parity)).
 - 2026-10-03: the slot setters take a name or the param object, `katalystParam` is `katp`'s full name, wrong kinds are
-  script errors (`docs/tasks-archive/2026-10/20261004-ignitor-katalyst-naming.md` section 4, step C4).
+  script errors (KLANG-00269 (ignitor katalyst naming) section 4, step C4).
 - 2026-10-04: the Ignitor/Katalyst naming is complete: `ignitorParam` / `ignp` and `katalystParam` / `katp`, the
   bag `ignitorParams`, the songs spell `Ign.` and `ignp` (one `ignitorParam`), the old names guarded by `RetiredIgnitorNamesSpec`
-  (`docs/tasks-archive/2026-10/20261004-ignitor-katalyst-naming.md`).
+  (KLANG-00269 (ignitor katalyst naming)).
 - 2026-10-05: one `range`: the bipolar twins and `toBipolar` / `fromBipolar` / `range2` removed, every signal callable as
-  its range shorthand (`docs/tasks-archive/2026-10/20261005-sprudel-signals-range-cleanup.md`).
+  its range shorthand (KLANG-00271 (sprudel signals range cleanup)).
 - 2026-10-05: `isaw`, `itri`, `choose2`, `sinOfDay2`, `sinOfNight2` removed, `sinOfDay` / `sinOfNight` renamed to
   `sineOfDay` / `sineOfNight`, `cosine` is `sine.early(0.25)`, the range values are `from` / `to`
-  (`docs/tasks-archive/2026-10/20261005-sprudel-signals-range-cleanup.md`, maintainer decisions).
+  (KLANG-00271 (sprudel signals range cleanup), maintainer decisions).
 - 2026-10-05: `String.range` / `String.rangex` removed (a silent no-op or a wrong `exp` on discrete values); a
-  mini-notation string scales with `.mul(k).add(c)` (`docs/tasks-archive/2026-10/20261005-sprudel-signals-range-cleanup.md`).
+  mini-notation string scales with `.mul(k).add(c)` (KLANG-00271 (sprudel signals range cleanup)).
 - 2026-10-07: the sound door `sndTriangle()` is `sndTri()`, like `sndSaw()`; it still sets the sound `triangle`
-  (`docs/tasks-archive/2026-10/20261006-oscillator-names-across-dsls.md`, decision 4).
+  (KLANG-00273 (oscillator names across dsls), decision 4).
 - 2026-10-07: `solo(...)` covers its rests with control events instead of a sounding sine, one id per `solo` call,
-  `solo()` means 0.95 (`docs/tasks-archive/2026-10/20261009-bugfix-solo-rests-and-amount.md`).
+  `solo()` means 0.95 (KLANG-00287 (bugfix solo rests and amount)).
 - 2026-10-09: `penv(semitones, attack, decay, sustain, release)` (was `amount`, also the reader `penv.semitones`) writes
   `classic()`'s `penv.*` / `penvCurves.*` slots; its eight typed wire fields are gone
-  (`docs/tasks/pitch-pipeline-into-the-tree.md` step 1).
+  (KLANG-00245 (pitch pipeline into the tree) step 1).
 - 2026-10-09: `vibrato(rate, semitones)` / `vib` (was `depth`, also the reader `vibrato.semitones`) writes `classic()`'s
-  `vibrato.*` slots, its two typed wire fields are gone; `pamt` retired (`docs/tasks/pitch-pipeline-into-the-tree.md`
+  `vibrato.*` slots, its two typed wire fields are gone; `pamt` retired (KLANG-00245 (pitch pipeline into the tree)
   step 2).
 - 2026-10-09: `accelerate(semitones)` writes `classic()`'s flat `accelerate` slot, its typed wire field is gone; the glide
   ends at the gate close and holds through the release (decision D2), a sound change for an `accelerate` under a
   release tail and for `legato(0)` (the target from the first frame); the other shapes are named in the step record
   (D6: lost without `classic()`; D1: an `fm` instrument's modulator; a non-finite amount is now dropped, the bare
-  voice) (`docs/tasks/pitch-pipeline-into-the-tree.md` step 3).
+  voice) (KLANG-00245 (pitch pipeline into the tree) step 3).
 - 2026-10-09: `vib`, `penv` and `accelerate` over an fm instrument that ends in `classic()` (`sgbell`, an authored bell)
   move the whole operator again, modulator with carrier, as on the strip (pitch pipeline step 3b, decision D1). Sprudel's
   own `fm` door still runs on the strip until step 4, where no tree pitch stage reaches its modulator
-  (`docs/tasks/pitch-pipeline-into-the-tree.md` step 3b).
+  (KLANG-00245 (pitch pipeline into the tree) step 3b).
 - 2026-10-10: v0.6.1: `analog(character)` (was `amount`) on every analog door, sprudel's three forms and the mapper
   included (Q25); with the four pitch entries above. The old names are in `docs/retired-names.md`.
 - 2026-10-10: `fm(depth, ratio, attack, decay, sustain, release)` (was `env`, `h`, also the readers `fm.depth`,
   `fm.ratio`; `release` is new, D3) writes `classic()`'s innermost FM stage through the `fm.*` slots, its five typed wire
   fields are gone; a sound change, the node's law (every envelope stage at its default: the depth holds through the release tail;
   the depth envelope per sample; the modulator follows `vib`, `penv`, `accelerate`); a non-finite knob is dropped
-  (`docs/tasks/pitch-pipeline-into-the-tree.md` step 4).
+  (KLANG-00245 (pitch pipeline into the tree) step 4).
 - 2026-10-10: `vibrato` / `vib` gain `rangeFrom`, `rangeTo` and `phase` (the Ignitor vibrato's `range(from, to)` and
   `phase`, decision D9), written as the `vibrato.rangeFrom|rangeTo|phase` slots and read back by the readers of the same
-  names; not companions, nothing filled (`docs/tasks/pitch-pipeline-into-the-tree.md` section 7c).
+  names; not companions, nothing filled (KLANG-00245 (pitch pipeline into the tree) section 7c).
 - 2026-10-11: `ParamBag`'s storage and `classicSlotParams`' copy are a `KlangMap`, public API unchanged; on V8 an event
   with three bus doors went from about 17.1 to 12.4 KB and 7.8 to 4.3 us, with many doors 45 to 32 KB and 24.5 to
   12.5 us (the wire encode included); the JVM +0 to +168 B per event (up to about 2.4 percent on small events), its
   time within HEAD's spread
-  (`docs/tasks/in-progress/engine-follow-ups.md` item 2, step 2).
+  (KLANG-00290 (engine follow ups) item 2, step 2).
 - 2026-10-11: a `KlangMap` is not a Kotlin `Map` (maintainer); `VoiceData`'s two slot maps are `KlangMap`s, built
   by `toVoiceData` from the bags, and `ParamBag.toMap()` returns a plain copy; events identical on V8 and the JVM
-  (`docs/tasks/in-progress/engine-follow-ups.md` item 2, step 5).
+  (KLANG-00290 (engine follow ups) item 2, step 5).
 - 2026-10-16: `duty(width)` (was `amount`) on the duty door, its three forms and the mapper (Q29); positional calls
-  and the slot `duty` unchanged, `sndPulze(duty)` keeps the slot's word (`docs/tasks/in-progress/engine-follow-ups.md`
+  and the slot `duty` unchanged, `sndPulze(duty)` keeps the slot's word (KLANG-00290 (engine follow ups)
   item 44, `docs/retired-names.md`).

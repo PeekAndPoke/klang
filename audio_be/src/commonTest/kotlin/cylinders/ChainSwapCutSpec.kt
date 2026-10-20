@@ -42,7 +42,7 @@ internal class CutLaw(sampleRate: Int, private val blockFrames: Int) {
 }
 
 /**
- * The cut (maintainer, 2026-10-17, "cut the drain" in `docs/tasks-archive/2026-10/20261017-chain-swap-request-during-drain.md`):
+ * The cut (maintainer, 2026-10-17, "cut the drain" in KLANG-00318 (chain swap request during drain)):
  * a request that waits behind a ring-out no longer waits for it. The leaving chain's output is faded
  * out over [ChainSwap.CUT_SECONDS] and the request lands on the next poll; a request during the fade
  * cuts where the fade ends; with no request the drain rings out in full. The master's rows are

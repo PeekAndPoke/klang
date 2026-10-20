@@ -43,28 +43,25 @@ The release-defining set, regardless of when they're sequenced:
    **master-in-pattern**: `master(Master(m => m.gain(2.5).limiter()))` (spelled `Master.of(MasterFx...)` until 2026-09-06)
    rides the voice stream (Ignitor/Pipeline registration playbook), crossfades on swap, works offline, and
    `Master.default()` switches it back off. Plus the reverb/delay **parameter-parity**
-   fix (`d78ff3da`) — the same word now means the same thing on the orbit and master buses. Archived: [
-   `20260803-master-dsl.md`](../tasks-archive/2026-08/20260803-master-dsl.md); loose ends in [
-   `master-dsl-followups.md`](master-dsl-followups.md). (2026-09-28: the Master DSL retired in phase 3 step 12; the
+   fix (`d78ff3da`) — the same word now means the same thing on the orbit and master buses. Archived: KLANG-00136 (master dsl); loose ends in KLANG-00137 (master dsl followups). (2026-09-28: the Master DSL retired in phase 3 step 12; the
    master is a Katalyst at the output, `master(Katalyst(k => k.gain(2.5).limiter()))`, `master(Katalyst())` for off.)
 2. ~~**MUST** · **Pipeline DSL finish**~~: CLOSED 2026-09-27: the Pipeline DSL retired in phase 3 step 9
-   (every voice is an Ignitor tree); archived as [`20260927-engine-tuning-profile.md`](../tasks-archive/2026-09/20260927-engine-tuning-profile.md). Was:
-   *(successor to the archived `engine-dsl.md`)* Phase 2 wrapper feel-knobs — **Adsr `declickSeconds`/`expK`
+   (every voice is an Ignitor tree); archived as KLANG-00223 (engine tuning profile). Was:
+   *(successor to the archived KLANG-00122 (engine dsl))* Phase 2 wrapper feel-knobs — **Adsr `declickSeconds`/`expK`
    done (2026-07-04, as Ignitor slots)**; filter drift/cutoffOffset/driveScale + analog-drift carriers open.
    Phase 3 engine-identity profiles (`EngineDefault`/`EngineTuning`/`.tune()`, e.g. c64/nes) lean **NICE**.
-3. ~~**MUST** · **Katalyst DSL**~~: ✅ DONE 2026-09-20, archived as [`20260928-katalyst-dsl.md`](../tasks-archive/2026-09/20260928-katalyst-dsl.md). Author per-orbit effect chains from KlangScript, the counterpart to the Ignitor DSL.
+3. ~~**MUST** · **Katalyst DSL**~~: ✅ DONE 2026-09-20, archived as KLANG-00236 (katalyst dsl). Author per-orbit effect chains from KlangScript, the counterpart to the Ignitor DSL.
 4. ~~**SHOULD** · **Resonator swing**~~ — ❌ **WON'T IMPLEMENT** (closed 2026-08-20). Archived with the full
-   decision record: [`20260820-resonator-swing.md`](../tasks-archive/2026-08/20260820-resonator-swing.md).
+   decision record: KLANG-00147 (resonator swing).
    The design discussion revealed a three-axis model family (source/target/weighting), too diverse to tune by
    ear; and the original "filters feel hard" complaint re-diagnosed as mostly a **mixing** issue, not static
    banks. Taste call: *taste is also what you do not do.* Replacement work: **tune the material tables by ear**
    (the deferred "POC starting points" item in the body-resonator work).
-5. ~~**SHOULD** · **Resource warehouse pool**~~: ✅ DONE 2026-09-04 as the resource warehouse, archived as [`20260927-resource-warehouse.md`](../tasks-archive/2026-09/20260927-resource-warehouse.md). Was: 🔴
+5. ~~**SHOULD** · **Resource warehouse pool**~~: ✅ DONE 2026-09-04 as the resource warehouse, archived as KLANG-00230 (resource warehouse). Was: 🔴
    Self-balancing pool for expensive per-engine resources (~7.68 MB delay rings, cylinders); kills the
    audible first-note alloc spike (the "Der Schmetterling" stutter). Q3 schedules it **last**. (Audible
    quality — arguably a MUST; parked-last by Q3.)
-6. **SHOULD** (→ MUST before launch) · **Audio backend audit** — [
-   `audio-backend-audit.md`](../tasks-archive/2026-09/20260927-audio-backend-audit.md) 🔴 *(planned 2026-08-04, not started; closed 2026-09-27)*
+6. **SHOULD** (→ MUST before launch) · **Audio backend audit** — KLANG-00224 (audio backend audit) 🔴 *(planned 2026-08-04, not started; closed 2026-09-27)*
    Every `audio_be` test was written **without a mutation check** and every file was built with a **single review
    round** — the Master DSL then needed 5 rounds, each finding defects in the previous round's fixes, and turned up 3
    toothless guards. So the green suite is an *unmeasured* net. Verify-the-net → map-the-holes → `/review-loop` →
@@ -75,96 +72,91 @@ The release-defining set, regardless of when they're sequenced:
    super-oscillator "fundamental lottery" (onset holes 16 % → 0, never-rings 6/120 → 0, texture untouched).
    OFF by default; per-song opt-in via one combined `.phasePool(...)` call (per-family band defaults kept by
    user by-ear decision). 7 commits (`6c95de65`…`9a0cdb37`), 10+ review rounds, ~65 findings fixed, every new
-   test mutation-checked. Archived: [`20260812-unison-phase-pool.md`](../tasks-archive/2026-08/20260812-unison-phase-pool.md).
+   test mutation-checked. Archived: KLANG-00144 (unison phase pool).
    Future (parked): voices-aware bands, sticky/contextual selection, persistence.
 
 ## Act 2 — The quarter of tutorials
 
 > Q3 mandate: **fix the current set first → build a stringent through-line → then expand.**
 
-8. **MUST** · **Fix the current tutorial set + through-line** — [
-   `tutorial-fix-and-through-line.md`](tutorial-fix-and-through-line.md) 🔴
+8. **MUST** · **Fix the current tutorial set + through-line** — KLANG-00131 (tutorial fix and through line) 🔴
    The 38 shipped tutorials have ugly-sounding examples and miss the *core* of what they teach; the
    basics → crafted-sound path isn't coherent. Lean on the music-writing/recording skills + tutorial
    factory (sound first). → wants its own task doc.
-9. **SHOULD** · **Mini-notation attribute-blocks tutorial (+ Phase 2 series)** — [
-   `mini-notation-extensions.md`](../tasks-archive/2026-09/20260927-mini-notation-extensions.md) 🟡 *(archived 2026-09-27; the attribute block was removed 2026-08-30)*
+9. **SHOULD** · **Mini-notation attribute-blocks tutorial (+ Phase 2 series)** — KLANG-00221 (mini notation extensions) 🟡 *(archived 2026-09-27; the attribute block was removed 2026-08-30)*
    Phase 1 (`{key=value}` engine feature) shipped, so this tutorial is a clean, high-value fit. Phase 3
    (MIDI → mini-notation recording) stays future/NICE.
-10. **NICE** · **Tutorial expansion backlog** — [`tutorial-master-plan.md`](tutorial-master-plan.md) 🟡
+10. **NICE** · **Tutorial expansion backlog** — KLANG-00086 (tutorial master plan) 🟡
    The recast "expand" backlog (euclid, struct/mask, swing, sometimes-family, orbits, pattern-math,
    off/echo/stut, FM/super-osc masterclasses, "Make a…" showcases). Rises to **SHOULD** after the
    fix-first pass lands.
 
 ## Supporting / enabling (pull in as they unblock the acts above)
 
-11. **SHOULD** · **Intellisense: wire the linter stub** — [`klangscript-intellisense.md`](klangscript-intellisense.md)
+11. **SHOULD** · **Intellisense: wire the linter stub** — KLANG-00064 (klangscript intellisense)
    🟡 — *cheap win*
    The CodeMirror `linterSource` is a `[]` stub; wiring it to `AnalyzedAst.diagnostics` immediately
    surfaces the already-built named-arg checker. Low effort, improves tutorial-authoring UX. (Full
    analyzer tiers + web worker are NICE.)
-12. **SHOULD** · **`snd*` sound-function surface redesign** — [
-   `sprudel-sound-function-surface.md`](sprudel-sound-function-surface.md) 🔴
+12. **SHOULD** · **`snd*` sound-function surface redesign** — KLANG-00101 (sprudel sound function surface) 🔴
    Real DSL debt (per-param patternable sound selection); unblocked now that named args exist.
-13. **NICE** · **Sprudel editor tools backlog** — [`sprudel-ui-tools.md`](sprudel-ui-tools.md) 🟡
+13. **NICE** · **Sprudel editor tools backlog** — KLANG-00090 (sprudel ui tools) 🟡
     ~16 param editors still unwired; aids the tutorial quarter.
     Since 2026-09-07 the tools also resolve a named argument by position, so `room(size = 4)`
-    opens the wet editor: [`editor-tools-named-arguments.md`](../tasks-archive/2026-09/20260927-editor-tools-named-arguments.md),
+    opens the wet editor: KLANG-00231 (editor tools named arguments),
     to be folded into the rework. (Fixed 2026-09-26, `ffa490e4`.)
-14. **NICE** · **Named-args docs polish** — [
-    `klangscript-named-args-docs-polish.md`](klangscript-named-args-docs-polish.md) 🔴
+14. **NICE** · **Named-args docs polish** — KLANG-00130 (klangscript named args docs polish) 🔴
     Usage-styles panel, KDoc conventions + `@sample` sweep. Small remainder of a done feature.
 
 ## Lower / opportunistic (Q3 "likely, lower priority")
 
 15. ~~**SHOULD** · **Soundfont looping bug**~~ — ✅ DONE 2026-09-03, confirmed by ear; archived
-    [`20260903-soundfont-looping-investigation.md`](../tasks-archive/2026-09/20260903-soundfont-looping-investigation.md).
+    KLANG-00171 (soundfont looping investigation).
     Three stacked defects; in the browser no soundfont had ever looped (the worklet dropped every sample's metadata).
     The only user-visible item on that list; blocks round-trip drops loop/break/continue.
 17. **NICE** · **Filter-envelope curve config**: DONE 2026-09-25 (phase 3 step 5b c2: `lpfCurves`, `hpfCurves`,
     `bpfCurves`, `notchCurves`), archived as
-    [`20260925-filter-envelope-configuration.md`](../tasks-archive/2026-09/20260925-filter-envelope-configuration.md).
-18. **NICE** · **Constant-control fast-path** — [`optimize-constant-control-fast-path.md`](future/optimize-constant-control-fast-path.md) 🔴
+    KLANG-00215 (filter envelope configuration).
+18. **NICE** · **Constant-control fast-path** — KLANG-00104 (optimize constant control fast path) 🔴
     Optional sprudel perf; modest (~7% of query frame) after the VoiceData grouping. Measure-first.
-19. **NICE** · **JS bundle §1 (KSP-registration de-bloat)** — [`reduce-js-bundle-size.md`](reduce-js-bundle-size.md) 🔴
+19. **NICE** · **JS bundle §1 (KSP-registration de-bloat)** — KLANG-00106 (reduce js bundle size) 🔴
     ~1.2–1.6 MB win, no UX tradeoff; but "hard performance" is deliberately parked late-game.
-20. **NICE** · **Sprudel test-coverage sweep** — [
-    `sprudel-test-coverage-and-review.md`](sprudel-test-coverage-and-review.md) 🟡 — *ongoing, user-paced*
+20. **NICE** · **Sprudel test-coverage sweep** — KLANG-00127 (sprudel test coverage and review) 🟡 — *ongoing, user-paced*
     Form-(d) chained-mapper cases; done opportunistically as files are touched.
-21. **NICE** · **Voice culling** — [`../tasks-archive/2026-09/20260915-voice-culling.md`](../tasks-archive/2026-09/20260915-voice-culling.md) ✅ DONE 2026-09-15 (release-phase only, `cull(seconds)` / `noCull()`; no `cullAfter`)
+21. **NICE** · **Voice culling** — KLANG-00199 (voice culling) ✅ DONE 2026-09-15 (release-phase only, `cull(seconds)` / `noCull()`; no `cullAfter`)
     Sound-preserving, all-platform CPU win: terminate voices whose *real output* has decayed below −80 dB
     (ignitor-agnostic — no ADSR inference; gated by a per-voice `cullAfter` life-fraction). Reclaims wasted
     silent-tail rendering on dense `sustain=0` sections (Der Schmetterling). Complements the orbit-body move;
     measure the win via `runSongBenchmark`.
 22. **Phase 3 follow-ups** (opened 2026-09-28 when the phase 3 record was archived as
-    [`20260928-builtin-instruments.md`](../tasks-archive/2026-09/20260928-builtin-instruments.md)):
-    - **By ear, DONE 2026-10-17:** [`chain-swap-request-during-drain.md`](../tasks-archive/2026-10/20261017-chain-swap-request-during-drain.md)
+    KLANG-00237 (builtin instruments)):
+    - **By ear, DONE 2026-10-17:** KLANG-00318 (chain swap request during drain)
       (step 12 decision (g)): a waiting edit now cuts the drain and lands in about 0.2 s. The phase 3 end checkpoint is done (2026-10-02,
-      [archived](../tasks-archive/2026-10/20261002-phase3-end-checkpoint.md)).
-    - **NICE, deferred by the maintainer:** [`future/editor-voice-door-diagnostics.md`](future/editor-voice-door-diagnostics.md)
+      archived (KLANG-00264)).
+    - **NICE, deferred by the maintainer:** KLANG-00244 (editor voice door diagnostics)
       (step 11: warn on doors an instrument does not hear, a string in a wet slot).
-    - **NICE, a naming decision:** [`20261003-tremolo-rate-naming-parity.md`](../tasks-archive/2026-10/20261003-tremolo-rate-naming-parity.md)
+    - **NICE, a naming decision:** KLANG-00268 (tremolo rate naming parity)
       (sprudel's `sync` against the Ignitor's `rate`).
     - **NICE, parked:** `svf-resonator-class-collapse` (dead sweep code in the resonators' SVF classes) is DONE by
-      engine tidy-up step 12 (a), 2026-10-08 (`../tasks-archive/2026-10/20261008-svf-resonator-class-collapse.md`).
+      engine tidy-up step 12 (a), 2026-10-08 (KLANG-00282 (svf resonator class collapse)).
       **Promoted to V1, high priority, 2026-10-07:**
-      [`pitch-pipeline-into-the-tree.md`](pitch-pipeline-into-the-tree.md) (vibrato, accelerate, `penv`, `fm`
+      KLANG-00245 (pitch pipeline into the tree) (vibrato, accelerate, `penv`, `fm`
       into the tree; `_v1-scope.md` Layer 2). Steps 1 to 3b done 2026-10-09 (v0.6.1), steps 4 (`fm`) and 5 (the strip's
       shell, `voices/strip/` dissolved) 2026-10-10: left are the listening round before the branch merges, then the
       composition block (section 7).
-    - Existing homes: [`future/envelope-shape-followups.md`](future/envelope-shape-followups.md) sections 4 to 6 (FM
-      curves, a per-curve bend, the in-block corner), [`future/one-chain-host.md`](future/one-chain-host.md),
-      [`future/onepole-highpass-door.md`](future/onepole-highpass-door.md),
-      [`oversampling-regions.md`](oversampling-regions.md) (the D7 stopgap, crush and coarse oversampling, the
-      distort cap), [`future/stored-lambda-type-inference.md`](future/stored-lambda-type-inference.md).
+    - Existing homes: KLANG-00165 (envelope shape followups) sections 4 to 6 (FM
+      curves, a per-curve bend, the in-block corner), KLANG-00243 (one chain host),
+      KLANG-00235 (onepole highpass door),
+      KLANG-00214 (oversampling regions) (the D7 stopgap, crush and coarse oversampling, the
+      distort cap), KLANG-00217 (stored lambda type inference).
 23. **Engine pass 1 follow-ups** (opened 2026-10-09 when the engine tidy-up was archived as
-    [`20261009-engine-tidy-up.md`](../tasks-archive/2026-10/20261009-engine-tidy-up.md), v0.6.0):
-    [`engine-follow-ups.md`](in-progress/engine-follow-ups.md). **NICE** for the behaviour-neutral items (the V8 residues on the
+    KLANG-00286 (engine tidy up), v0.6.0):
+    KLANG-00290 (engine follow ups). **NICE** for the behaviour-neutral items (the V8 residues on the
     stages and oscillators, the JVM box per block-constant read, two weak specs); the audit's later shape and sound
     steps (the duck's attack, the vowel word, "cylinder" as the one word, `legato` on the wire) and its open decisions
     are the maintainer's call. The current engine order is in [`_v1-scope.md`](_v1-scope.md).
 
-- **NICE** · **Blog series: the phone that does not get faster** ([`../plans/blog-optimization-series.md`](../plans/blog-optimization-series.md)): P16's fact check, then publishing. Not urgent (maintainer, 2026-10-14, C15).
+- **NICE** · **Blog series: the phone that does not get faster** (KLANG-00206 (blog optimization series)): P16's fact check, then publishing. Not urgent (maintainer, 2026-10-14, C15).
 
 ## Blocked / off-plan / parked
 
@@ -174,47 +166,42 @@ The release-defining set, regardless of when they're sequenced:
   copies with `scp -r` and never deletes on the server, so a removed page or post stays online: add a delete step or
   accept it. Answered 2026-10-06: the triangle's name across the DSLs is `tri` (`Ign.tri`, like `supertri` and
   sprudel's `tri`; the sound and LFO names stay),
-  [`20261006-oscillator-names-across-dsls.md`](../tasks-archive/2026-10/20261006-oscillator-names-across-dsls.md);
+  KLANG-00273 (oscillator names across dsls);
   sprudel sounds get no `phase` slot,
-  [`20261006-oscillator-phase-knob.md`](../tasks-archive/2026-10/20261006-oscillator-phase-knob.md), "Recorded
-  asymmetries". Done 2026-10-07: [`20261007-shared-modulator-memo-rate.md`](../tasks-archive/2026-10/20261007-shared-modulator-memo-rate.md), a stateful
-  modulator shared by oscillators at different pitches ran at double rate (pre-existing, `duty` and `phase`); open from that batch: [`../tasks-archive/2026-10/20261014-bugfix-non-finite-pitch-strip-and-signals.md`](../tasks-archive/2026-10/20261014-bugfix-non-finite-pitch-strip-and-signals.md), and the audit leftovers §2 (worklet tests) and §4 (cut groups, by ear) in [`../tasks-archive/2026-10/20261014-audit-audio-backend-leftovers.md`](../tasks-archive/2026-10/20261014-audit-audio-backend-leftovers.md).
+  KLANG-00272 (oscillator phase knob), "Recorded
+  asymmetries". Done 2026-10-07: KLANG-00278 (shared modulator memo rate), a stateful
+  modulator shared by oscillators at different pitches ran at double rate (pre-existing, `duty` and `phase`); open from that batch: KLANG-00309 (bugfix non finite pitch strip and signals), and the audit leftovers §2 (worklet tests) and §4 (cut groups, by ear) in KLANG-00308 (audit audio backend leftovers).
   Answered 2026-10-07: (4) the saw's node is `IgnitorDsl.Saw` (wire name `saw`, factory `Ignitors.saw`), like its
   door `Ign.saw`; sprudel's `sndTriangle()` is `sndTri()` (it still sets the sound `triangle`); the sound names and
   the LFO shape `sawtooth` stay,
-  [`20261006-oscillator-names-across-dsls.md`](../tasks-archive/2026-10/20261006-oscillator-names-across-dsls.md),
+  KLANG-00273 (oscillator names across dsls),
   decisions 3 and 4. Also answered 2026-10-07: (1) no Sonnet reviewer trial; (2) `position-pipeline.png` deleted
   (source and built copy); (3) the deploy is versioned, `klang.finzo.de/versions/v<version>-<git hash>` with a `current`
   symlink, the newest 10 releases kept with their source maps (`console/deploy-finzo.sh`); (5) the repo-scanning guard
   `RetiredIgnitorNamesSpec` goes (it guarded what the compiler and the song smoke test already catch); the retired
-  names moved from `CLAUDE.md` to `docs/retired-names.md`. Done 2026-10-07: [`20261007-callable-object-docs.md`](../tasks-archive/2026-10/20261007-callable-object-docs.md),
+  names moved from `CLAUDE.md` to `docs/retired-names.md`. Done 2026-10-07: KLANG-00275 (callable object docs),
   a callable object's docs show its object form and its callable form.
-- **MUST (for commercialization) · ⚪ BLOCKED** — **Copyright audit** — [
-  `../tasks-archive/2026-09/20260927-copyright-audit-00-overview.md`](../tasks-archive/2026-09/20260927-copyright-audit-00-overview.md) + [
-  `-07`](copyright-audit-07-control-vocabulary-legal-review.md)
+- **MUST (for commercialization) · ⚪ BLOCKED** — **Copyright audit** — KLANG-00222 (copyright audit 00 overview) + 
+  `-07` (KLANG-00118)
   Code work done & archived; the one open item awaits external IP counsel. Gates a non-AGPL license, not Q3.
-- **DONE 2026-09-07** — **Sprudel field accessors** — [`20260907-sprudel-field-accessors.md`](../tasks-archive/2026-09/20260907-sprudel-field-accessors.md) —
+- **DONE 2026-09-07** — **Sprudel field accessors** — KLANG-00184 (sprudel field accessors) —
   every numeric field is an accessor, every compound door an object with slot children. Follow-up:
-  **`snd*` sound doors as compound objects** — [`sprudel-sound-doors-compound.md`](sprudel-sound-doors-compound.md), NICE.
-- **NICE** — **Native-object operators** — [
-  `klangscript-native-object-operators.md`](klangscript-native-object-operators.md) — prerequisite for field accessors;
+  **`snd*` sound doors as compound objects** — KLANG-00189 (sprudel sound doors compound), NICE.
+- **NICE** — **Native-object operators** — KLANG-00056 (klangscript native object operators) — prerequisite for field accessors;
   readability win.
-- **NICE** — **Ignitor DSL backlog** — [`ignitor-dsl-open-items.md`](../tasks-archive/2026-09/20260927-ignitor-dsl-open-items.md) — attributes /
+- **NICE** — **Ignitor DSL backlog** — KLANG-00219 (ignitor dsl open items) — attributes /
   splitAndJoin / convolution (convolution = long-term guitar/body realism). *(Retired 2026-09-27; see its banner.)*
-- **NICE · ⚪ parked** — **IR → modal-table extraction** — [
-  `future/ir-to-modal-table-extraction.md`](future/ir-to-modal-table-extraction.md) — real `body()` materials from
+- **NICE · ⚪ parked** — **IR → modal-table extraction** — KLANG-00121 (ir to modal table extraction) — real `body()` materials from
   recorded IRs.
-- **NICE · ⚪ far-future** — **High-performance native/Wasm backend** — [
-  `future/high-performance-audio-backend.md`](future/high-performance-audio-backend.md) — closing the gap to native
+- **NICE · ⚪ far-future** — **High-performance native/Wasm backend** — KLANG-00129 (high performance audio backend) — closing the gap to native
   DAWs; explicitly parked until *after* launch ("sound first"; hard performance is late-game).
-- **NICE · ⚪ far-future** — **Federated song sharing** — [
-  `future/federated-song-sharing.md`](future/federated-song-sharing.md) — multi-server imports
+- **NICE · ⚪ far-future** — **Federated song sharing** — KLANG-00135 (federated song sharing) — multi-server imports
   (`klang.art:user/song@v1.0`), immutable version tags + content addressing, per-server blob storage; captured
   2026-08-01, post-launch by design.
 
 ---
 
-*Stubbed 2026-07-04: `katalyst-dsl.md`, `resource-warehouse-pool.md`, `tutorial-fix-and-through-line.md` (then items
+*Stubbed 2026-07-04: KLANG-00236 (katalyst dsl), `resource-warehouse-pool.md`, KLANG-00131 (tutorial fix and through line) (then items
 3–5).*
 *Archived in the 2026-07-04 cleanup: `engine-dsl` (design record), `klang-blocks-take-1`,
 `wireformat-enhancements`, `sprudel-dsl-named-args`, `strudel-dsl-documentation`,

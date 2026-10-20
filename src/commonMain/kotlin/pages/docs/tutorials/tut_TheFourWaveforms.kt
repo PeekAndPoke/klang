@@ -6,7 +6,7 @@
 package io.peekandpoke.klang.pages.docs.tutorials
 
 /**
- * Curriculum slot A1 — see docs/tasks/tutorial-curriculum.md
+ * Curriculum slot A1 — see KLANG-00145 (tutorial curriculum)
  *
  * Teaches no new functions or notation ([teaches] is empty by design): its subject is
  * the voice NAMES passed to sound(), which the vocabulary lint treats as string

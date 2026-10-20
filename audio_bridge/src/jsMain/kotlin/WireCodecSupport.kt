@@ -9,7 +9,7 @@ import io.peekandpoke.klang.common.infra.KlangMap
 
 /**
  * Hand-written JS-interop helpers used by the generated wire codec (see `:audio-wire-codec-ksp` and
- * `docs/tasks/worklet-codec-ksp.md`). Kept hand-written because `dynamic`/`js(...)` interop has sharp edges
+ * KLANG-00103 (worklet codec ksp)). Kept hand-written because `dynamic`/`js(...)` interop has sharp edges
  * (e.g. `.also {}` on a `dynamic` doesn't bind `it`) — the generator emits straight-line calls to these.
  */
 
@@ -70,7 +70,7 @@ fun wireEncodeStringDoubleMap(m: KlangMap<Double>): dynamic {
  * JS object → a [KlangMap] (insertion order preserved via Object.keys). The engine reads these maps by key
  * (`ignitorParams` at every voice build, `katalystParams` at every owner change of an orbit), and on Kotlin/JS a
  * `HashMap` lookup allocates 40 bytes inside the stdlib's hashing, a `KlangMap` lookup nothing (engine follow-up 2,
- * `docs/tasks/in-progress/engine-follow-ups.md` item 2). The allocation check's `C-remap` case guards it.
+ * KLANG-00290 (engine follow ups) item 2). The allocation check's `C-remap` case guards it.
  */
 fun wireDecodeStringDoubleMap(o: dynamic): KlangMap<Double> {
     val keys = js("Object.keys(o)").unsafeCast<Array<String>>()

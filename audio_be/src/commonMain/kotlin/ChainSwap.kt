@@ -21,7 +21,7 @@ import kotlin.math.max
  * The swap of a whole effect chain under live audio: the chain leaving service fades out through
  * its INPUT while the arriving chain's output fades in over [Crossfade], and then the leaving chain
  * rings out (drains) on silent input at full weight until it has no tail left. Phase 3 step 12 C1
- * (`docs/tasks-archive/2026-09/20260928-phase3-step12-master-as-katalyst.md` section 6) moved it out of `Cylinder`, where it
+ * (KLANG-00238 (phase3 step12 master as katalyst) section 6) moved it out of `Cylinder`, where it
  * was five fields, into three states (`audio/ref/effect-state-machines.md`, the delay's shape);
  * five since the release (2026-09-28) and the cut (2026-10-17).
  *
@@ -42,7 +42,7 @@ import kotlin.math.max
  * **The cut: a waiting request does not wait for the ring-out** (maintainer, 2026-10-17, after
  * listening to `tmp/listening/chain-swap-drain/second-edit.md`: "the change should happen more or
  * less immediate ... it is really odd having to wait for that long. It feels as if it does not
- * work"; "cut the drain" in `docs/tasks-archive/2026-10/20261017-chain-swap-request-during-drain.md`). The host raises
+ * work"; "cut the drain" in KLANG-00318 (chain swap request during drain)). The host raises
  * [requestWaiting] when it parks a request it could land. A drain or a release then becomes
  * [Cutting]: the leaving chain's OUTPUT is faded to 0 over [CUT_SECONDS] by a raised cosine, per
  * sample, from the weight it had (1 in a drain, the release's gain in a release), so neither end

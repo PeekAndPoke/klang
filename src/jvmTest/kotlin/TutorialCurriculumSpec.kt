@@ -22,7 +22,7 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
 
 /**
- * Guards the tutorial curriculum rules from docs/tasks/tutorial-curriculum.md:
+ * Guards the tutorial curriculum rules from KLANG-00145 (tutorial curriculum):
  *
  * 1. Every KlangScript code block must compile — a broken example destroys learner trust.
  * 2. Vocabulary: a lesson may only use functions and mini-notation symbols that an EARLIER

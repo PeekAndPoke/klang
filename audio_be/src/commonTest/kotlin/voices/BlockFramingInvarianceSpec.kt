@@ -38,7 +38,7 @@ import kotlin.random.Random
 private val testRandom = Random(0x5EED)
 
 /**
- * P0 of `docs/plans/block-framing-invariance.md`: a voice's output must depend only on when the
+ * P0 of KLANG-00156 (block framing invariance): a voice's output must depend only on when the
  * note starts and what it is made of, never on how the renderer chops time into blocks.
  *
  * Two drivers: the REAL production framing (`VoiceFactory` -> `Voice.render`, so the first-block

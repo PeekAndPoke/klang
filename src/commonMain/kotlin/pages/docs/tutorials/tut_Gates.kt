@@ -6,7 +6,7 @@
 package io.peekandpoke.klang.pages.docs.tutorials
 
 /**
- * Curriculum slot B10 — see docs/tasks/tutorial-curriculum.md
+ * Curriculum slot B10 — see KLANG-00145 (tutorial curriculum)
  *
  * B7's stab riff (hits on steps one, four, seven) IS the tresillo — gaps of
  * three, three, two — so §1 teaches struct() by rewriting that riff as

@@ -37,7 +37,7 @@ class IgnitorRegistry(
          * ```
          *
          * The `pregain` slot sits on the source, where the player's touch enters, in front of every
-         * nonlinearity (`docs/plans/signal-flow-redesign.md` sections 5 and 6: "Ignitor -> pregain -> classic").
+         * nonlinearity (KLANG-00210 (signal flow redesign) sections 5 and 6: "Ignitor -> pregain -> classic").
          * Unwritten it is 1.0, and the gate folds a unity `mul` over a signal away at build, so it costs
          * nothing until a pattern writes `pregain(x)`. Then `classic()`: the pattern's `onepole`, then crush
          * ... adsr, the retired voice strip's order. Every built-in sound ([registerDefaults]) and the sample

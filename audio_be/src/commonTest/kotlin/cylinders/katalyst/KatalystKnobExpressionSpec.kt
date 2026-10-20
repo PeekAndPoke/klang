@@ -36,7 +36,7 @@ import io.peekandpoke.klang.common.infra.KlangMap
 import io.peekandpoke.klang.common.infra.klangMapOf
 
 /**
- * The Katalyst knob expressions of step 4 (`docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`, D4 and Q5): the
+ * The Katalyst knob expressions of step 4 (KLANG-00302 (katalyst knob expressions), D4 and Q5): the
  * evaluator ([KatalystKnobProgram]) and the knob around it ([KatalystKnob]).
  *
  * **The oracle is the Ignitor runtime**, not the law functions: the Ignitor node of the same operator, built over

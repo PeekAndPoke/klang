@@ -30,7 +30,7 @@ import io.peekandpoke.klang.script.runtime.NumberValue
 /**
  * Methods on number literals: `2.pow(7/12)`, `(-6).db()`.
  *
- * Two parser-level pieces make the spelling work (`docs/tasks-archive/2026-09/20260908-klangscript-number-methods.md`):
+ * Two parser-level pieces make the spelling work (KLANG-00193 (klangscript number methods)):
  *
  * 1. The lexer takes a `.` into a number only when a digit follows it. Before, the scanner ate every dot,
  *    `2.pow` lexed as `2.` `pow`, and no method was reachable on a literal (the statement boundary rule

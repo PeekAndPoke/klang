@@ -3,8 +3,8 @@
 The laws in force for the orbit bus and the output, as of 2026-09-29. One home per rule; where a class KDoc
 holds the full text, this file names it and gives the short form. How each law was found and measured is in
 `audio/ref/memory-history.md` (the Katalyst 5b and 5c entries of 2026-09-19 and 2026-09-20, phase 3 step 12 of
-2026-09-28) and in the archived records `docs/tasks-archive/2026-09/20260928-katalyst-dsl.md` and
-`docs/tasks-archive/2026-09/20260928-phase3-step12-master-as-katalyst.md`.
+2026-09-28) and in the archived records KLANG-00236 (katalyst dsl) and
+KLANG-00238 (phase3 step12 master as katalyst).
 
 ## One chain type, two positions
 
@@ -19,7 +19,7 @@ holds the full text, this file names it and gives the short form. How each law w
   first block is adopted at full weight; it never deactivates or resets on silence; its tail keeps the engine alive
   (`isRinging`). Nothing fills its slots (`applyParams(null)`), and a duck stage is built there but inert.
 - **One registry fork per playback** (`KatalystRegistry`) serves both positions. Two hosts still duplicate chain
-  plumbing: `docs/tasks/future/one-chain-host.md`.
+  plumbing: KLANG-00243 (one chain host).
 
 ## Where a knob comes from
 
@@ -62,7 +62,7 @@ and `retire` stay a synchronous hard cut, and `Cylinder` calls them only on a si
 | reverb | the same state machine and the delay's feed fade on every off, and its glide from 0 out of Off for a modulated size (`KatalystReverbEffect`) | `size` glides on the normalized 0..1 axis; `lowpass` (damping) does not glide, measured inaudible; `wet` as the delay's |
 | compressor | a linear blend with dry over `KNOB_GLIDE_SECONDS`; ON fades a reset instance in; the instance is built with the effect, never on the audio thread | `threshold`, `ratio` (as its inverse), `knee` glide per sample (`Compressor.processGliding`) as one move when it only adds reduction; a move whose NET effect at 0 dBFS (a fixed loud reference, never the signal) is less reduction (threshold up, ratio down, knee narrower, or a mix that relaxes on balance) releases on the same shared fraction at the compressor's release time constant, never faster than the glide (`CompressorKnobMove`, by ear 2026-10-17); a modulated knob stays outside the move; `attack`, `release` apply at once |
 | phaser | the wet and floor coefficients glide to identity; the cascade is dropped only on the landing | `wet`, `floor` per sample; `center`, `sweep` per block with alpha continuous across the seam (`PhaserCore.prepareBlock`); `rate` at once |
-| duck | a weight rides the reduction to 0 dB (`gain = 1 + w * (g - 1)`), then lets go of the source orbit | `depth` per sample; `attack` at once; a `duck.orbit` switch has no mechanism (open: `docs/tasks/future/duck-orbit-switch-click.md`) |
+| duck | a weight rides the reduction to 0 dB (`gain = 1 + w * (g - 1)`), then lets go of the source orbit | `depth` per sample; `attack` at once; a `duck.orbit` switch has no mechanism (open: KLANG-00247 (duck orbit switch click)) |
 | distort | the compressor's law: a linear blend with the dry mix over `KNOB_GLIDE_SECONDS`; ON fades reset cores in; with oversampling the dry runs through the phase twins, an unshaped round trip of the same oversampler (2026-10-10); oversampling is 2x unless the author names a factor | `amount` glides linear in the amount over `KNOB_GLIDE_SECONDS`, the drive ramped per sample within a block; `shape` and `oversample` are fixed with the chain |
 | gain | never off | per-sample glide over `KNOB_GLIDE_SECONDS` |
 | arithmetic (`plus`, `minus`, `times`, `div`, `pow`, `min`, `max`, `abs`; 2026-10-11) | never off, memoryless: the Ignitor's per-sample law (`_arithmetic_laws.kt`) on every sample; an unset operand is the operator's identity, an unset cap or floor passes the bus | the operand glides per sample over `KNOB_GLIDE_SECONDS`, the law taken with the operand at each sample; a divisor glides as its reciprocal (a level) and divides again once settled; a cap's or a floor's first operand after unset arrives at once, and a cleared one lets go at the next block (`KatalystArithmeticEffect`) |
@@ -72,14 +72,14 @@ and `retire` stay a synchronous hard cut, and `Cylinder` calls them only on a si
 `KNOB_GLIDE_SECONDS` (0.05) in whole 128-frame blocks, lands bit-exactly, restarts from where the knob stands on a
 new target, and ignores a non-finite target. A knob whose expression holds a modulator (`Kat.sine` and the rest) glides
 over ONE block instead, chosen per knob when the chain is built (knob expressions step 5b, D2; the per-stage rules are
-in `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`, "5b built"). Two traps for the next knob:
+in KLANG-00302 (katalyst knob expressions), "5b built"). Two traps for the next knob:
 
 - The owner re-applies its settings EVERY block, so a retarget to the same value must be free; a helper that
   restarts on every call never lands.
 - A knob retargeted every block converges like a one-pole with tau about 49 ms: a low-pass on the knob (-3 dB at
   3.2 Hz). A glided knob patterned faster than a few Hz loses depth.
 
-The glide time itself is an open question for the maintainer's ear: `docs/tasks/future/transition-times.md`.
+The glide time itself is an open question for the maintainer's ear: KLANG-00213 (transition times).
 
 ## When an orbit may stop, and when a chain leaves
 
@@ -93,7 +93,7 @@ The glide time itself is an open question for the maintainer's ear: `docs/tasks/
   Every ceiling is held to `SILENCE_FLOOR`, except a reverb whose chain drains after a swap: that one answers against
   `Reverb.TAIL_FLOOR`, its comb level whose output is about -90 dBFS (two floors on purpose, maintainer 2026-10-17:
   the cell floor held a draining room about 20 dB past inaudible, and ordinary playback stays as it was).
-  Its open edges (a lengthened tap, a feedback cut on a changing owner): `docs/tasks/future/delay-ceiling-edges.md`.
+  Its open edges (a lengthened tap, a feedback cut on a changing owner): KLANG-00246 (delay ceiling edges).
 - **A chain swap is `ChainSwap`** (`audio_be/.../ChainSwap.kt`), at both positions: the leaving chain's INPUT
   ramps down over `Crossfade.XFADE_SECONDS` (0.06) while the arriving chain ramps up, then the leaving chain drains
   at full weight until it has no tail, capped at `ChainSwap.MAX_DRAIN_SECONDS` (20 s), after which `TailRelease`
@@ -101,7 +101,7 @@ The glide time itself is an open question for the maintainer's ear: `docs/tasks/
   follows what the room holds. A request during a fade, drain or release is parked by the host, latest wins, and
   tells the swap (`requestWaiting`): a drain or a release is then CUT, the leaving output faded by a raised cosine
   over `ChainSwap.CUT_SECONDS` (0.15 s), and a request during the fade cuts where the fade ends; the request lands
-  about 0.2 s after it was made (maintainer, 2026-10-17: `docs/tasks-archive/2026-10/20261017-chain-swap-request-during-drain.md`).
+  about 0.2 s after it was made (maintainer, 2026-10-17: KLANG-00318 (chain swap request during drain)).
   Chains of different latency are placed so their weights meet at the output (`KatalystChain.latencyFrames`).
 - **`TailRelease` is the one release law** (`audio_be/.../TailRelease.kt`): exponential from exactly 1, 60 dB per
   `RT60_SECONDS` (3 s), retired under `FLOOR_DB` (-90 dB), 4.5 s in all.

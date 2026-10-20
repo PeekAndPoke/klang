@@ -18,7 +18,7 @@ import kotlin.random.Random
 private val testRandom = Random(0x5EED)
 
 /**
- * One stateful modulator shared by two oscillators at different pitches (`docs/tasks-archive/2026-10/20261007-shared-modulator-memo-rate.md`).
+ * One stateful modulator shared by two oscillators at different pitches (KLANG-00278 (shared modulator memo rate)).
  *
  * An oscillator renders its control inputs (`phase`, `duty`) at its OWN resolved frequency, and the fm modulator runs
  * at the fm frequency times the ratio, so one shared [MemoizingIgnitor] is called with two `freqHz` values per block.
@@ -148,7 +148,7 @@ class SharedModulatorRateSpec : StringSpec({
     "RESIDUE (a maintainer decision): an LFO whose RATE reads Freq, shared at two pitches, still runs twice per block" {
         // Under each oscillator Freq is that oscillator's own pitch, so the two readers want two different LFOs; one
         // shared instance renders at both rates and advances twice. This row flips to `shouldBe 0.0` the day a pitch
-        // context forks it (`docs/tasks-archive/2026-10/20261007-shared-modulator-memo-rate.md`, the residue); until then authors build it
+        // context forks it (KLANG-00278 (shared modulator memo rate), the residue); until then authors build it
         // once per layer.
         val lfo = IgnitorDsl.Times(left = IgnitorDsl.Sine(freq = IgnitorDsl.Div(left = IgnitorDsl.Freq, right = c(8.0)), analog = c(0.0)), right = c(0.3))
         val a = IgnitorDsl.Saw(analog = c(0.0), phase = lfo)

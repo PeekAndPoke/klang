@@ -6,7 +6,7 @@
 package io.peekandpoke.klang.pages.docs.tutorials
 
 /**
- * Curriculum slot A7 — see docs/tasks/tutorial-curriculum.md
+ * Curriculum slot A7 — see KLANG-00145 (tutorial curriculum)
  *
  * Keeps Layers' promise: B6 previewed `reverb(wet, size)` as "how much goes in" and
  * "how big the room is" and pointed at a Sound-track lesson still to come. This is it,

@@ -24,7 +24,7 @@ import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.script.types.KlangType
 
 /**
- * The editor reads a name as what it is where it stands (the open items of `docs/tasks-archive/2026-10/20261007-callable-object-docs.md`):
+ * The editor reads a name as what it is where it stands (the open items of KLANG-00275 (callable object docs)):
  *
  * - the hover of a name stdlib and sprudel share shows the variant of that position (a bare `perlin` is sprudel's
  *   object, `Ignitor.perlin` the stdlib method), and the hover of a second name of a callable object (`Kat`) carries

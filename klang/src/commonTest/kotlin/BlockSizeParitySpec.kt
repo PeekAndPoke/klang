@@ -19,7 +19,7 @@ import io.peekandpoke.klang.audio_fe.utils.AssetLoader
  * sets the analog-drift update rate (`VoiceFactory.driftUpdateRate = sampleRate / blockFrames`), the
  * filter-smoothing granularity, and the late-voice drop window. The browser worklet is handed 128 by
  * Web Audio and cannot choose, so everything else has to follow it or a render stops sounding like
- * live playback. See `docs/tasks-archive/2026-08/20260807-block-size-parity.md`.
+ * live playback. See KLANG-00139 (block size parity).
  *
  * The failure this guards is silent: someone bumps one default to make an offline render faster, the
  * whole suite stays green, and WAVs quietly drift away from the browser again. That is exactly how

@@ -12,7 +12,7 @@ package io.peekandpoke.klang.audio_bridge.constants
 // These live in `audio_bridge` because they were **wire defaults**, the defaults
 // of the Pipeline DSL's filter stage, until that DSL retired (phase 3 step 9).
 // The engine (`audio_be`) reads them from here. They once drifted apart while they
-// were duplicated, see `docs/tasks-archive/2026-08/20260811-audio-bridge-constants.md` §1.
+// were duplicated, see KLANG-00141 (audio bridge constants) §1.
 //
 // Engine-internal tuning with no DSL field (the oscillator drift depths in
 // `AnalogDriftCoeffs`) deliberately stays in `audio_be`. The rule is: a constant belongs here iff it is a wire default.
@@ -28,7 +28,7 @@ package io.peekandpoke.klang.audio_bridge.constants
 // drive 2x; the drift 1.25x since it was raised to 2.0 on 2026-09-29); at
 // the current cutoff offset, `analog = 10` is ±3.5 cents, which is not a broken VCO.
 // Deliberately not replaced with a new ladder: a fresh set of adjectives would go stale the
-// same way (the retune record: docs/tasks-archive/2026-08/20260811-audio-bridge-constants.md §6). Per-constant magnitudes are given below and are derived, not guessed.
+// same way (the retune record: KLANG-00141 (audio bridge constants) §6). Per-constant magnitudes are given below and are derived, not guessed.
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
@@ -64,7 +64,7 @@ const val FILTER_CUTOFF_OFFSET_PER_ANALOG: Double = 0.0002
  *
  * The effect is strongly Q-dependent AND level-dependent (`tCfb` is driven by the integrator
  * state), so a single adjective per `analog` value cannot be honest. See
- * `docs/tasks-archive/2026-08/20260811-audio-bridge-constants.md` §6.2 for the measured table.
+ * KLANG-00141 (audio bridge constants) §6.2 for the measured table.
  *
  * Consumer: `IgnitorFilters` (`Ignitor.svf`'s saturated branches). The strip's `SvfLPF` / `SvfHPF`
  * classes that also read it retired in phase 3 step 9.

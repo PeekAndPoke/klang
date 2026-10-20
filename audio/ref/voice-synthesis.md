@@ -38,7 +38,7 @@ Ignitor stages in the classic subtractive order:
 this -> fm -> pitchEnvelope -> accelerate -> vibrato -> onepole -> crush -> coarse -> distort -> highpass -> bandpass -> notch -> lowpass -> tremolo -> adsr
 ```
 
-The pitch stages sit at the front, directly on the instrument (`docs/tasks/pitch-pipeline-into-the-tree.md`
+The pitch stages sit at the front, directly on the instrument (KLANG-00245 (pitch pipeline into the tree)
 section 2): their mods bubble down to every pitched source, so their place among the amplitude stages does not change
 the sound, and their nesting is the retired pitch strip's grouping of the ratio product, `((V * A) * P) * F`. Three
 pitch factors on one path regroup it (one rounding, about -270 dB) only where two of the instrument's own pitch nodes
@@ -112,8 +112,8 @@ voice's onset (`Voice.cutOff`, the `Fading` state, `CUT_FADE_SECONDS`); one not 
   (control events included); a voice of a soloed source plays at `Voice.gainMultiplier` 1.0, every other voice at
   `1 - amount` of the strongest solo, reached on a 1.5 s ramp (0 only at `solo(1.0)`), and a voice that has just lost
   its solo holds until that ramp reaches it (no dip); a change is ramped across one block in `SendRenderer`. No hold
-  after a source's last event (Q28). The rules: `audio/MEMORY.md`, `docs/tasks/in-progress/engine-follow-ups.md`
-  item 43, and `docs/tasks-archive/2026-10/20261009-bugfix-solo-rests-and-amount.md`
+  after a source's last event (Q28). The rules: `audio/MEMORY.md`, KLANG-00290 (engine follow ups)
+  item 43, and KLANG-00287 (bugfix solo rests and amount)
 
 ## Oscillators
 
@@ -152,7 +152,7 @@ holds at `SAFE_MAX`. The knobs of `accelerate` and `pitchEnvelope` read a non-fi
 (`finiteOr`). The vibrato's non-finite reads: the `vibrato` row of `audio/ref/off-values.md`. `pitchModSemitones` gates a non-finite LITERAL mod (the bare voice); a non-finite SAMPLE of a signal mod reaches
 `safeOut`: NaN and -Infinity read as the ratio 0 (the source holds still, a saw renders a DC, as with FM's modulator),
 +Infinity as `SAFE_MAX`
-(`docs/tasks-archive/2026-10/20261014-bugfix-non-finite-pitch-strip-and-signals.md` section 2 holds the open question for signals). `pitchMod`
+(KLANG-00309 (bugfix non finite pitch strip and signals) section 2 holds the open question for signals). `pitchMod`
 has no `safeOut`: its ratio passes raw.
 
 A literal `pitchModSemitones` of 0, or a non-finite literal, is gated: no node is built and the voice is the bare
@@ -224,7 +224,7 @@ modulator serves both pitches and advances once per pitch per block; if the mod 
 modulator holds a pitch node whose knobs read no `Freq`, the second pitch's render even reads the first pitch's outer
 mod (that node's memo was filled under the first pin). The author rule: give each layer its own fm,
 inside its detune, and sum them, `x.fm(m1) + x.fm(m2).detune(7)`. A build-time diagnostic is its own task
-(`docs/tasks/future/fm-above-forking-detune-diagnostic.md`).
+(KLANG-00291 (fm above forking detune diagnostic)).
 
 ## Envelope / voice-lifetime semantics
 
@@ -283,7 +283,7 @@ its release and its own output has stayed under the audibility floor for the cul
   its scheduled `endFrame`, because the list order decided who took an orbit next (measured 2026-09-15 on Der
   Schmetterling: -32 dBFS). Ownership now goes by onset (the newest `Sounding` voice), and every removal keeps the
   list's order, so nothing needs the zombie. One order effect remains, the unison phase-pool take on a voice's
-  first block (open: `docs/tasks/in-progress/engine-follow-ups.md`, item 14).
+  first block (open: KLANG-00290 (engine follow ups), item 14).
 - **Never in the gate, and never before the voice has sounded.** The held part of a note may be
   silent on purpose (a slow attack, a silent lead-in). Only the release, which has been told to
   stop, is culled, and only once at least one block has been audible (`Voice.heard`): a sample
@@ -301,7 +301,7 @@ its release and its own output has stayed under the audibility floor for the cul
   cylinder's silence test, so per voice and per bus a culled voice is already below what keeps an
   orbit alive; the known exceptions, summed sub-floor tails and a feedback delay's tail ceiling,
   are on the constant's KDoc). Constants in `audio_bridge/constants/VoiceCullingDefaults.kt`.
-- Guard: `VoiceCullingSpec`. Record: `docs/tasks-archive/2026-09/20260915-voice-culling.md`.
+- Guard: `VoiceCullingSpec`. Record: KLANG-00199 (voice culling).
 
 ## The envelope law and its knobs
 

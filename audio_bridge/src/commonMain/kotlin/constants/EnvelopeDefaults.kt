@@ -39,7 +39,7 @@ const val ADSR_EXP_K: Double = 3.0
  * or reads as a bad index, falls back to it too.
  *
  * It is [AdsrCurve.Exponential], the house curve every other envelope already had
- * ([AdsrCurve.Default], bending at [ADSR_EXP_K]): decision D3 of `docs/tasks-archive/2026-09/20260928-builtin-instruments.md`
+ * ([AdsrCurve.Default], bending at [ADSR_EXP_K]): decision D3 of KLANG-00237 (builtin instruments)
  * (maintainer, 2026-09-25), which moved the Ignitor filter, pitch and FM envelopes off the LINEAR
  * law they had before, a deliberate sound change. It stays a constant of its own, and not a
  * reference to [AdsrCurve.Default], because the maintainer recorded the modulation envelopes'
@@ -148,9 +148,9 @@ const val TEARDOWN_FADE_SECONDS: Double = 0.004
  *
  * **Why this length.** It is today's teardown length: long enough to turn the cut's step into a ramp, short
  * enough that the new voice's attack masks it. A smoother curve (the smoothstep sketched in
- * `docs/tasks/voice-takeover.md`) is an option for `takeover`, which fades over a longer, authored time. For the
+ * KLANG-00138 (voice takeover)) is an option for `takeover`, which fades over a longer, authored time. For the
  * cut it is a by-ear choice left to the maintainer: measured quieter above 500 Hz on pure low tones, a little
- * louder below, and a different law from the teardown (`docs/tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`, step 4).
+ * louder below, and a different law from the teardown (KLANG-00279 (voice lifecycle state machine), step 4).
  * The ramp's exact zero sits on the last frame that renders, as the teardown's does.
  *
  * Consumer: `Voice.cutOff`.

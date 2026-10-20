@@ -26,7 +26,7 @@ import kotlin.math.sin
 
 /**
  * Every switch-off of the orbit delay and reverb FADES the feed over the wet glide instead of cutting it (engine
- * follow-up 42, maintainer Q39, 2026-10-13: "fade, do not cut"; `docs/tasks-archive/2026-10/20261016-delay-reverb-owner-change-cut.md`
+ * follow-up 42, maintainer Q39, 2026-10-13: "fade, do not cut"; KLANG-00313 (delay reverb owner change cut)
  * option (b)). Unmodulated stages throughout: the modulated gates have faded since knob expressions step 5b
  * (`KatalystModulatedStagesSpec`).
  *

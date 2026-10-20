@@ -11,7 +11,7 @@ package io.peekandpoke.klang.pages.docs.tutorials
  * IS the curriculum ladder and drives the strictest vocabulary lint; the
  * thematic tracks are curated views that declare what they build on.
  *
- * Curriculum plan: docs/tasks/tutorial-curriculum.md
+ * Curriculum plan: KLANG-00145 (tutorial curriculum)
  */
 
 /** The onramp: the carrier kit, self-contained (lints clean with no buildsOn). */

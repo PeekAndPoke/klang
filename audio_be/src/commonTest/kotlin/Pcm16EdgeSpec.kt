@@ -16,7 +16,7 @@ import kotlin.random.Random
  * The 16-bit edge, [pcm16] and [writePcm16]: what the JVM `SourceDataLine` player and the WAV writer
  * get from the engine's floating-point output. Until 2026-10-07 the engine itself quantised its output
  * to 16 bits in `MasterStage`; the edge must produce the very same integers from the clipped floats, so
- * a WAV render's bytes do not move (`docs/tasks-archive/2026-10/20261007-float-output.md`).
+ * a WAV render's bytes do not move (KLANG-00280 (float output)).
  *
  * The oracle is the retired rule, restated here on its own, plus a table of literal values: in
  * `[-1, 1]` scale by 32767 and truncate toward zero, above 1 it is 32767, anything else -32768.

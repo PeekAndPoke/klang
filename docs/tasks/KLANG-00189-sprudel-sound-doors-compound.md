@@ -1,0 +1,58 @@
+# KLANG-00189: The snd* sound doors as compound objects
+
+> **Status (2026-10-20): NOT STARTED.**
+
+Opened 2026-09-07 as the follow-up of the field-accessor rollout
+(KLANG-00184 (sprudel field accessors)). Every other compound door is an
+object with named slots and reader children; the `snd*` family
+(`sprudel/src/commonMain/kotlin/lang/lang_synthesis_snd_basic.kt` and
+`lang_synthesis_snd_super.kt`) is the one surface still built from per-sound functions. Maintainer's idea (2026-09-07): "the snd* prefix looks like it would happily
+live on an object as well: `object Snd { object supersaw { fields } }`. Not fully sure."
+
+## The surface today (19 doors, all `@KlangScript.Function`, no objects, no readers)
+
+| Door             | Slots                                                 |
+|------------------|-------------------------------------------------------|
+| `sndPluck`       | `feedback, brightness, pickPosition, stiffness`       |
+| `sndSuperPluck`  | `voices, spread, feedback, brightness, pickPosition, stiffness` |
+| `sndSine`, `sndSaw`, `sndSquare`, `sndTri`, `sndRamp`, `sndZamp`, `sndPink` | `params` (one slot) |
+| `sndNoise`       | `color`                                               |
+| `sndBrown`       | `leak`                                                |
+| `sndPulze`       | `duty`                                                |
+| `sndDust`        | `density, tail`                                       |
+| `sndCrackle`     | `chaos`                                               |
+| `sndSuperSaw`, `sndSuperSine`, `sndSuperSquare`, `sndSuperTri`, `sndSuperRamp` | `voices, spread` |
+
+Each sets `sound(...)` plus Ignitor slots (`ignitorParams`), which is also what `unison(voices,
+spread, pan)` and `analog`, `duty`, `onepole` write today.
+
+## Questions to settle before building
+
+1. **Shape.** One nested object `Snd` with a child object per sound (`Snd.supersaw(voices = 9)`,
+   `Snd.supersaw.voices` reads), or flat objects `sndSupersaw` like every other compound. KSP
+   supports member properties on objects (`@KlangScript.Property val supersaw = ...` holding an
+   object with its own `@Invoke`); whether the analyzer resolves a call on a nested object's
+   `invoke` and offers its children in completion needs a check (`FreqAccessorIntelSpec` shape).
+2. **Overlap with `unison`.** `sndSuperSaw(voices, spread)` writes the same `ignitorParams` keys as
+   `unison(voices, spread)`. Either the sound door keeps only what is specific to the sound
+   (`sound("supersaw")` + `unison(...)` for the rest) or it keeps the convenience and the two
+   doors share one set of readers (`unison.voices`), never a second set.
+3. **The `params` doors.** `sndSine(params)` and friends take a single opaque slot; decide what it
+   is (a string of Ignitor slots?) and whether it survives as a named slot or goes. Note
+   (2026-09-16): since a rest in a setter's control pattern leaves the event untouched, a rest in
+   `params` means that event gets no sound from the door at all (`sndPink("<1 ~>")`), while
+   `sndNoise(color = "<0.3 ~>")` keeps its sound. `LangControlRestSpec` pins the current behaviour
+   (its `fresh` rows); the reformulation decides it.
+4. **Readers.** Numeric slots get children like every compound (`Snd.pluck.feedback`); `color` on
+   `sndNoise` is a name and gets none (KLANG-00188 (string slot readers)).
+5. **Retirement.** The per-sound functions go when the objects land (replaced surfaces are removed);
+   the corpus (songs, tutorials, skill refs) migrates in the same change.
+
+## Not before
+
+The `/dsl-design` rules apply (two doors, parity, one word per concept, coerce not require). The
+editor-tools rework (KLANG-00090 (sprudel ui tools), Open list) is independent.
+
+## History
+
+- 2026-10-20: numbered KLANG-00189 (was `docs/tasks/sprudel-sound-doors-compound.md`).

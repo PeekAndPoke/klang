@@ -20,7 +20,7 @@ import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
  * [clock], and the [warehouse] every engine rents from — cylinders included: an engine's
  * `Cylinders` map is its own, but the cylinders in it come from the warehouse's shelf and go back
  * there when the engine is disposed. Per-engine state (that map, the scheduling timeline) is NOT
- * here. See `docs/tasks-archive/2026-09/20260904-per-playback-engine.md`.
+ * here. See KLANG-00176 (per playback engine).
  *
  * Note: `performanceTimeMs` is transitional — once diagnostics emission moves up to the dispatcher
  * (D5), the per-scheduler wall-clock read leaves this context.
@@ -49,7 +49,7 @@ class AudioBackendContext(
     /**
      * Where the backend's expensive buffers come from — one per backend, shared across playbacks and
      * kept from the warmup engine rather than disposed with it. Owned here, not a Kotlin `object`,
-     * so specs and the offline renderer get their own. See `docs/tasks-archive/2026-09/20260927-resource-warehouse.md`.
+     * so specs and the offline renderer get their own. See KLANG-00230 (resource warehouse).
      */
     val warehouse: ResourceWarehouse = ResourceWarehouse(
         sampleRate = sampleRate,

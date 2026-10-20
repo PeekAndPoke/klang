@@ -221,5 +221,5 @@ JVM has `-XX:UseFTZForFloats` but it's not portable across vendors.
   `Inf`/`NaN` recovery. New runtime tests for arithmetic ops + pitch-mod
   factories landed (60 + 12 tests).
 
-See `docs/agent-tasks-archive/2026-04/20260427-ignitor-dsl-arithmetic-batch.md`
+See KLANG-00092 (ignitor dsl arithmetic batch)
 and the original research scratch file at `tmp/audio-safety-bounds-research.md`.

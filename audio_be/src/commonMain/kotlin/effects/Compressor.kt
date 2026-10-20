@@ -696,7 +696,7 @@ class Compressor(
      * Why the ceiling is actually met: the min-hold window is `delayFrames + 1`, so the sample
      * emerging from the delay ring lies inside the hold window of **every** tap the smoother is
      * averaging. An average is >= its minimum, so the smoothed gain is <= what that sample requires.
-     * Derivation in `docs/tasks-archive/2026-09/20260927-master-limiter-lookahead.md` §2.3.
+     * Derivation in KLANG-00225 (master limiter lookahead) §2.3.
      *
      * **Inline on purpose** (engine follow-up item 3, 2026-10-10): called per sample, and its
      * bytecode is past V8's inlining limit, so as a plain function its level argument and its gain

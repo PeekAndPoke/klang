@@ -1,5 +1,5 @@
 <!-- Raw research catalogue, collected 2026-10-08 by a research agent (Claude Sonnet) for
-docs/plans/aaa-production-tricks.md, which maps every entry onto the engine. Kept as written, with its own
+KLANG-00283 (aaa production tricks), which maps every entry onto the engine. Kept as written, with its own
 honesty notes: [C] = a source was consulted (search summaries only), [K] = the agent's own knowledge, not
 verified online, [U] = unsure. Parameter ranges are starting points for the ear, not facts. -->
 

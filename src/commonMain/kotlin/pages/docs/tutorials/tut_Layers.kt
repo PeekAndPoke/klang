@@ -6,7 +6,7 @@
 package io.peekandpoke.klang.pages.docs.tutorials
 
 /**
- * Curriculum slot B6 — see docs/tasks/tutorial-curriculum.md
+ * Curriculum slot B6 — see KLANG-00145 (tutorial curriculum)
  *
  * Keeps two promises: B1's "balancing them with gain() is most of what mixing
  * is", and B3's "also written to sit on top of the groove" — the running

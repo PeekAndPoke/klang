@@ -6,7 +6,7 @@
 package io.peekandpoke.klang.pages.docs.tutorials
 
 /**
- * Curriculum slot B4 — see docs/tasks/tutorial-curriculum.md
+ * Curriculum slot B4 — see KLANG-00145 (tutorial curriculum)
  *
  * The finale's A/B pair is IDENTICAL BY DESIGN: "[bd hh] [sd hh] [bd hh] [sd oh]" and
  * "bd hh sd hh bd hh sd oh" are two spellings of the same beat, and hearing no

@@ -6,7 +6,7 @@
 package io.peekandpoke.klang.pages.docs.tutorials
 
 /**
- * Curriculum slot A3 — see docs/tasks/tutorial-curriculum.md
+ * Curriculum slot A3 — see KLANG-00145 (tutorial curriculum)
  *
  * Filter A/B pairs are inherently level-unequal, in BOTH directions: cutting
  * removes energy (the hpf side loses the loud low end), while resonance ADDS

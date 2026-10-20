@@ -7,10 +7,10 @@ package io.peekandpoke.klang.audio_bridge
 
 /**
  * The value of one Katalyst stage knob: the Katalyst's own small knob language, on the wire next to [KatalystStageDsl]
- * (decision D1 of `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`, maintainer 2026-10-11: "yes separate wire
+ * (decision D1 of KLANG-00302 (katalyst knob expressions), maintainer 2026-10-11: "yes separate wire
  * type").
  *
- * The Ignitor and the Katalyst stay two DSLs, on the wire too (`docs/plans/future/signal-graph-engine.md` §6.10): a
+ * The Ignitor and the Katalyst stay two DSLs, on the wire too (KLANG-00216 (signal graph engine) §6.10): a
  * chain knob is never an [IgnitorDsl] node, and a knob is never an Ignitor tree's leaf. Both doors keep them apart: a
  * Katalyst knob in an Ignitor tree, or an Ignitor node on a Katalyst knob, is a script error at the call, and the
  * Kotlin door's stage constructors take only this type.
@@ -247,7 +247,7 @@ operator fun KatalystKnobDsl.Constant.unaryMinus(): KatalystKnobDsl.Constant = K
 // Knob expressions: the Ignitor's arithmetic on a Katalyst knob
 //
 // ONE typed function per word, every operand a KatalystKnobDsl: a number comes in through `.kat`
-// (`Kat.param("fader", 1.0).times(0.5.kat)`), the typed-doors rollout S5 (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`). The script
+// (`Kat.param("fader", 1.0).times(0.5.kat)`), the typed-doors rollout S5 (KLANG-00314 (kotlin typed doors)). The script
 // door keeps taking numbers (`Kat.param("fader", 1).times(0.5)`): its `internal`, renamed variants (`scriptTimes`,
 // `klangscript-libs`) convert once and call these. The script's aliases (`add`, `sub`, `mul`, `power`, `negate`) are
 // here too, one-line typed delegates to their main word, so a script ports word for word. The text of each word lives on its script variant. Plain functions, as they

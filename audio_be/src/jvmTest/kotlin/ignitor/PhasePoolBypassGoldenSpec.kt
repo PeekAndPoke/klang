@@ -17,7 +17,7 @@ import kotlin.random.Random
 private val testRandom = Random(0x5EED)
 
 /**
- * The phase-pool BYPASS guarantee (docs/tasks/unison-phase-pool.md §7.4): with `phasePool` off
+ * The phase-pool BYPASS guarantee (KLANG-00144 (unison phase pool) §7.4): with `phasePool` off
  * (the default), every unison oscillator must render identically to the pre-phase-pool
  * engine — same rng consumption order (phases at voice creation, jitter in `computeVoiceGains`),
  * same samples. The golden values below were captured on the engine BEFORE the phase-pool

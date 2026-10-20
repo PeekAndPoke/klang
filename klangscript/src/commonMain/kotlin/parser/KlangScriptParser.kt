@@ -162,7 +162,7 @@ class KlangScriptParser private constructor(
          * only once: `2.5` is one number, `2.pow` is `2` `.` `pow`, `1.2.3` is `1.2` `.` `3` (which the parser
          * then rejects), and a trailing `2.` is `2` followed by a stray dot. Before the lookahead the scanner
          * ate every dot and no method was callable on a number literal
-         * (`docs/tasks-archive/2026-09/20260908-klangscript-number-methods.md`).
+         * (KLANG-00193 (klangscript number methods)).
          *
          * A companion function on purpose: a local function inside `tokenize` that writes the lexer index
          * would make Kotlin box that index for the whole lexer loop.
@@ -1001,7 +1001,7 @@ class KlangScriptParser private constructor(
      * parses as a finished chain plus an orphan `tag(...)` mapper whose value nothing consumes. It compiles, it
      * renders, it sounds identical, and the tag is silently gone. Almost every pattern method has a bare mapper
      * overload for `apply`/`superimpose`, so a dropped dot nearly always still resolves.
-     * See `docs/tasks/klangscript-statement-boundaries.md`.
+     * See KLANG-00194 (klangscript statement boundaries).
      *
      * The rule is deliberately narrow: only a SHARED LINE is an error. Statements on their own lines stay legal,
      * so no multi-line chain and no leading-dot continuation line can trip over it.

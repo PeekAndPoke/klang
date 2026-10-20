@@ -115,7 +115,7 @@ block and derive their rate from it: analog drift time constants (`driftUpdateRa
 cutoff smoothing granularity, and the late-voice drop window. A bigger block renders faster and sounds *different from
 live playback*.
 
-See `docs/tasks-archive/2026-08/20260807-block-size-parity.md`. Leave it at the default unless you are deliberately
+See KLANG-00139 (block size parity). Leave it at the default unless you are deliberately
 testing this.
 
 ## Limitations (current)

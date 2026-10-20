@@ -26,7 +26,7 @@ import kotlin.math.sqrt
 import kotlin.random.Random
 
 /**
- * **`s("sgpad").fm(...)` keeps its pitch** (Q31 of `docs/tasks/future/fm-revisit.md`, fixed 2026-10-18).
+ * **`s("sgpad").fm(...)` keeps its pitch** (Q31 of KLANG-00305 (fm revisit), fixed 2026-10-18).
  *
  * Since pitch pipeline step 4 sprudel's `fm` is `classic()`'s FM stage, innermost, so it sits above the built-in's
  * source. `sgpad` once built its second saw as `Saw().detune(0.1)`, a FORKING detune under that stage: one modulator

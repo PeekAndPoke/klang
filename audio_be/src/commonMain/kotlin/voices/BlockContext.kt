@@ -62,7 +62,7 @@ class BlockContext(
      * All three window fields are `private set` so this one CANNOT go stale: the only way in is
      * the update functions below, which recompute it once. That matters more than the arithmetic
      * it saves — a wrong render window is the block-framing bug class
-     * (`docs/plans/block-framing-invariance.md`), and a hand-maintained copy would invite it back.
+     * (KLANG-00156 (block framing invariance)), and a hand-maintained copy would invite it back.
      *
      * The ignitor side does the same, see `IgniteContext.windowEnd`.
      */

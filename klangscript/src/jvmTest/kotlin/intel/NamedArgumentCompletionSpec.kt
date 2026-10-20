@@ -21,7 +21,7 @@ import io.peekandpoke.klang.script.types.KlangType
 
 /**
  * Code completion offers a call's unfilled parameters as `name = ` where an argument starts (task 6.4 of
- * `docs/tasks/klangscript-named-args-docs-polish.md`), through `AnalyzedAst.namedArgumentsAt` and
+ * KLANG-00130 (klangscript named args docs polish)), through `AnalyzedAst.namedArgumentsAt` and
  * `CompletionProvider.namedArgumentCompletions`. A `|` in a test source marks the cursor and is cut out: it stands at
  * the start of the word being typed, as the editor passes it.
  *

@@ -80,7 +80,7 @@ class WireCodecRoundTripSpec : StringSpec({
     }
 
     "every knob of every stage carries both KatalystKnobDsl leaves through the trip" {
-        // The knob type of step 3 of `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`: per stage, one chain whose
+        // The knob type of step 3 of KLANG-00302 (katalyst knob expressions): per stage, one chain whose
         // every
         // knob is a Constant and one whose every knob is a Param (each its own name, a description on one), so a
         // knob the codec drops, swaps with a neighbour or decodes as the other leaf goes red on its stage. The eq
@@ -217,7 +217,7 @@ class WireCodecRoundTripSpec : StringSpec({
     }
 
     "every KatalystKnobDsl expression node carries its operands through the trip, in their order" {
-        // Step 4 of `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`: a row per node, each operand a different
+        // Step 4 of KLANG-00302 (katalyst knob expressions): a row per node, each operand a different
         // leaf (and the leaves' values all different), so an operand the codec drops, swaps or decodes as another node
         // goes red on its node. Then one deep tree, every node nested in another.
         val a = KatalystKnobDsl.Param(name = "a", default = 0.25, description = "the a")
@@ -259,7 +259,7 @@ class WireCodecRoundTripSpec : StringSpec({
     }
 
     "every KatalystKnobDsl modulator carries its operands through the trip, in their order" {
-        // Step 5a of `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`: a row per modulator with every operand a
+        // Step 5a of KLANG-00302 (katalyst knob expressions): a row per modulator with every operand a
         // different leaf, a row per modulator on its defaults, then modulators nested in each other and in the
         // arithmetic (a modulator's operand is any knob, a modulator included).
         val a = KatalystKnobDsl.Param(name = "a", default = 0.25, description = "the a")
@@ -375,7 +375,7 @@ class WireCodecRoundTripSpec : StringSpec({
         // The worklet refuses a message whose hash differs from its own (`WorkletContract`), so a moved hash only
         // refuses a stale worklet. Pinned since engine follow-up 2, step 5, which changed the slot maps' Kotlin type
         // and kept their signature. A deliberate wire change updates this number in the same change: step 3 of
-        // `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md` moved it from 1330155241 (the Katalyst knobs left
+        // KLANG-00302 (katalyst knob expressions) moved it from 1330155241 (the Katalyst knobs left
         // `IgnitorDsl` for `KatalystKnobDsl`), step 4 from 1168938423 (the knob expressions joined it), step 5a from
         // 615137850 (the modulators joined it).
         WIRE_SCHEMA_HASH shouldBe 211191718

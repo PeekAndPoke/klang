@@ -19,7 +19,7 @@ import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
 
 /**
- * The typed Kotlin `Ign` object (`audio_bridge`, step 1b of `docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`, Q46) against the
+ * The typed Kotlin `Ign` object (`audio_bridge`, step 1b of KLANG-00314 (kotlin typed doors), Q46) against the
  * KlangScript `Ign`: for every function, the script call and the Kotlin call build equal nodes, with the defaults, with
  * numbers, with a signal, and with every builder knob (the script's `configure` lambda and the same builder in a Kotlin
  * `configure` lambda: `saw` and `vibrato` since S1, every other oscillator since S2). The values in a row are distinct,

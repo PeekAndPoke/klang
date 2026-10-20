@@ -3,8 +3,8 @@
 > **2026-09-27:** the `voices/` pilot audited the voice strip, which retired in phase 3 step 9 (every voice is its
 > Ignitor tree now). Its rows are the record of that code; see `audio/ref/voice-synthesis.md` for the current voice.
 
-Campaign brief and method: [`20260927-audio-backend-audit.md`](../tasks-archive/2026-09/20260927-audio-backend-audit.md)
-(**closed 2026-09-27**; what stayed open is [`audit-audio-backend-leftovers.md`](../tasks-archive/2026-10/20261014-audit-audio-backend-leftovers.md)). Standing findings
+Campaign brief and method: KLANG-00224 (audio backend audit)
+(**closed 2026-09-27**; what stayed open is KLANG-00308 (audit audio backend leftovers)). Standing findings
 list: [`FINDINGS.md`](FINDINGS.md) — **this is the list we go through together.**
 
 > **Working rule for this campaign (user, 2026-08-04): ANALYSIS ONLY — do not repair anything.**
@@ -121,7 +121,7 @@ trustworthy verdicts.
 | Finding | Outcome |
 |---------|---------|
 | [F17](FINDINGS.md#f17)(b) compressor detector | ✅ **CLOSED BY EAR** — *"at least when currently listening to the songs I cannot hear any issues."* No change; RMS smoothing stays deferred. The measurement stands, the mechanism is still there, and the file records what would make it resurface (a genuinely slow glue compressor). |
-| [F19](FINDINGS.md#f19) `cut(0)` semantics | 📋 **PARKED to design** — *"never used yet, needs some thinking and design, not an on-the-fly judgement."* → [`docs/tasks/future/cut-group-semantics.md`](../tasks/future/cut-group-semantics.md) |
+| [F19](FINDINGS.md#f19) `cut(0)` semantics | 📋 **PARKED to design** — *"never used yet, needs some thinking and design, not an on-the-fly judgement."* → KLANG-00167 (cut group semantics) |
 | [F17](FINDINGS.md#f17)(a) `attackSeconds` is a τ, not a rise time | 🔴 still open — a docs/naming question, not a sound one, and cheap |
 
 **F17(b) is the second time in this campaign that a correct measurement described something that did
@@ -131,7 +131,7 @@ counts.** The audit's job is to hand over a mechanism with its evidence, not to 
 
 **2026-08-31 (seventh pass) — ducking removed from scope.** Maintainer: *"it is not used yet and was
 never really tested yet, so let us not waste our time right now."* [F14](FINDINGS.md#f14)'s ducking
-bullet is withdrawn to [`docs/tasks/future/ducking-unfinished.md`](../tasks/future/ducking-unfinished.md).
+bullet is withdrawn to KLANG-00168 (ducking unfinished).
 The observation stands — the DSL, bus effect and DSP each have a spec while the join between them has
 none, the same shape that hid [F18](FINDINGS.md#f18) — but no shipped song uses ducking, so it is
 unfinished work, not a hole in something live. The doc carries the four design questions, of which

@@ -65,7 +65,7 @@ class VoiceScheduler(
     private val cylinders = options.cylinders
 
     // Per-engine registry fork: custom Ignitors for THIS playback live here and die with the
-    // engine; the shared parent ([context]) keeps only the built-ins. See docs/tasks-archive/2026-09/20260904-per-playback-engine.md (#2).
+    // engine; the shared parent ([context]) keeps only the built-ins. See KLANG-00176 (per playback engine) (#2).
     private val ignitorFork = context.ignitorRegistry.fork()
 
     // Heap with scheduled voices
@@ -369,7 +369,7 @@ class VoiceScheduler(
      * - Same one-block-stale cursor as the start path (audit R1): the release begins on the
      *   first frame that will actually render, so the tail enters its curve at position 0.
      *   Block-quantised by decision: live-input jitter dwarfs one block (<= 3 ms). See the
-     *   "Decided semantics" in docs/tasks-archive/2026-08/20260829-realtime-note-off-gate-release.md.
+     *   "Decided semantics" in KLANG-00157 (realtime note off gate release).
      * - Floored one block after the voice's start: a note-on and note-off arriving in the SAME
      *   command drain stamp identical frames, and a gate exactly on startFrame would make the
      *   first rendered sample enter release from level 0 — the tap would be pure silence. With
@@ -550,7 +550,7 @@ class VoiceScheduler(
 
             scheduled.pop()
 
-            // Engine-level control data rides the voice stream (see docs/tasks/master-dsl.md):
+            // Engine-level control data rides the voice stream (see KLANG-00136 (master dsl)):
             // a `master(…)` reference swaps this playback's master chain from here on. It applies
             // whether or not the event also sounds, so `note("c3").master(…)` does both.
             //

@@ -5,7 +5,7 @@
 
 package io.peekandpoke.klang.pages.docs.tutorials
 
-/** Curriculum slot A2 — see docs/tasks/tutorial-curriculum.md */
+/** Curriculum slot A2 — see KLANG-00145 (tutorial curriculum) */
 val shapeOfANoteTutorial = Tutorial(
     slug = "shape-of-a-note",
     title = Tut.shapeOfANote,

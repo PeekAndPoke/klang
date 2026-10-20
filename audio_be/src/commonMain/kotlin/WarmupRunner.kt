@@ -132,7 +132,7 @@ class WarmupRunner(
          * Orbit-level effects the warmed voices rotate through on top of delay + room + filter, so
          * their constructors and first blocks run here and not in a song's first frame: a phaser,
          * a compressor, a body resonator, a vowel bank (review round 3). Ducking is left out — it
-         * needs a second orbit as sidechain and is unused by the corpus (`docs/tasks/future/ducking-unfinished.md`).
+         * needs a second orbit as sidechain and is unused by the corpus (KLANG-00168 (ducking unfinished)).
          */
         private const val EXTRA_EFFECT_KINDS = 4
     }
@@ -253,7 +253,7 @@ class WarmupRunner(
     /**
      * Test seam: true if `BackendReady` went out with the shelves still dirty — the wait hit
      * [maxCleanWaitBlocks]. Not surfaced anywhere yet; belongs in the warehouse stats feed
-     * (`docs/tasks-archive/2026-09/20260904-warehouse-stats-feed.md`) so a phone that hits the cap is not invisible.
+     * (KLANG-00177 (warehouse stats feed)) so a phone that hits the cap is not invisible.
      */
     internal var readyWhileDirty: Boolean = false
         private set

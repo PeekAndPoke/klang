@@ -177,7 +177,7 @@ parameter whose default is not a literal (number, string, boolean, null). Vararg
 exception: they render no spec (no named arguments), and Kotlin supplies their defaults.
 
 Tests: `ArgAlignmentTest.kt`, `ConfigureLambdaBindingTest.kt` (runtime), `AnalyzedAstTest.kt`
-("configure lambda" cases, analyzer). Plan: `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`.
+("configure lambda" cases, analyzer). Plan: KLANG-00179 (dsl configure lambdas).
 
 ### 4.11 Callable native objects (`__invoke__`) ✅
 
@@ -206,5 +206,5 @@ master(Katalyst())                                          // == Katalyst.build
 
 Tests: `NativeObjectInvokeTest.kt` (runtime), `InvokeAnalysisTest.kt` (analyzer), `CallableObjectDocsSpec`
 (sprudel) and `KatalystCallFormSpec` (klangscript-libs) on the real registries. Design:
-`docs/tasks/klangscript-native-object-operators.md` (revision 2026-09-05). The arithmetic and
+KLANG-00056 (klangscript native object operators) (revision 2026-09-05). The arithmetic and
 comparison operators of that plan are designed, not built.

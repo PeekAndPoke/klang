@@ -2,13 +2,13 @@
 
 > Moved from `docs/plans/` to `audio/ref/` 2026-10-14 (maintainer, Q43): no longer a plan, a law the engine follows.
 
-> Decided with the maintainer 2026-09-18, during the Katalyst work (`../tasks-archive/2026-09/20260928-katalyst-dsl.md`,
+> Decided with the maintainer 2026-09-18, during the Katalyst work (KLANG-00236 (katalyst dsl),
 > step 5c). Performance first, readability a close second: the model must cost what the flags cost
 > today and read as a state machine.
 
 > **Status 2026-09-28: DONE.** Every row of section 3 is done (converted, done without state classes, or
 > retired). The chain swap, the last row, was converted once for both positions in phase 3 step 12
-> (`../tasks-archive/2026-09/20260928-builtin-instruments.md`, `../tasks-archive/2026-09/20260928-phase3-step12-master-as-katalyst.md`): the `Cylinder` in C1, the master bus
+> (KLANG-00237 (builtin instruments), KLANG-00238 (phase3 step12 master as katalyst)): the `Cylinder` in C1, the master bus
 > in C4, one `ChainSwap` (Idle, Fading, Draining, Releasing; Cutting since 2026-10-17); the master is the Katalyst at the output position.
 
 ## 1. The shape
@@ -173,7 +173,7 @@ of the four (review ledger, 2026-09-19).
 
 A template states REQUIREMENTS per effect. A MECHANISM waits for that effect's own step, written
 with every host file open, and where it changes what a listener hears it is decided with the
-maintainer and recorded in `../tasks-archive/2026-09/20260928-katalyst-dsl.md` BEFORE the step is briefed.
+maintainer and recorded in KLANG-00236 (katalyst dsl) BEFORE the step is briefed.
 
 - **Copy the shape, not the condition.** Each effect's predicates are its own. The reverb's
   OFF-ARM test ("already silent", now its `Active.leave`) carries `|| !remaining.isFinite()`: a non-finite countdown there means a
@@ -215,7 +215,7 @@ maintainer and recorded in `../tasks-archive/2026-09/20260928-katalyst-dsl.md` B
 - **The filter swap and the compressor convert in TWO commits each.** First the lifecycle they
   have TODAY as states (identity, accepted on the full list below); then the switch-on and
   switch-off glides as a SOUND CHANGE under the 5c listening checkpoint. What those glides do
-  was decided with the maintainer on 2026-09-19 and is recorded in `../tasks-archive/2026-09/20260928-katalyst-dsl.md`
+  was decided with the maintainer on 2026-09-19 and is recorded in KLANG-00236 (katalyst dsl)
   ("how every orbit stage switches and changes"): always glide from the current state to the
   target, the first initialisation instant; body and vowel first merge into one resonator bank.
   Whatever the law, the oracle is an identity computed from a reference and the decided law,
@@ -225,7 +225,7 @@ maintainer and recorded in `../tasks-archive/2026-09/20260928-katalyst-dsl.md` B
   that leaves this situation; a chain arriving through `beginFade` can see two configures before
   its first block, and the identity harness scripts exactly that), settled, ramping. `currentGain` outlives
   all of them. The identity conversion keeps the snap; the parked finding of
-  `signal-flow-redesign.md` §11 (a fader through exactly 0 on a dry orbit can step) is a
+  KLANG-00210 (signal flow redesign) §11 (a fader through exactly 0 on a dry orbit can step) is a
   separate behaviour change; its candidates, one of them a cylinder change, stay in §11.
 
 ## 3. Where it applies, in order
@@ -240,7 +240,7 @@ maintainer and recorded in `../tasks-archive/2026-09/20260928-katalyst-dsl.md` B
 | `ResonatorBank` | RETIRED 2026-09-20 with the morph it was written for. 5c-10 gave the bank a morph and no state; the maintainer listened and rejected it (travelling resonances are an audible sweep), so `morphTo`, the capacity preallocation, `BaseSvf.retune` and `resetState` are gone and the bank is a plain parallel bank again. The output crossfade carries every material change. Since engine tidy-up step 12 (a) (2026-10-08) body and vowel are one stage class (`KatalystResonatorEffect`, two kinds) whose bank is reconfigured only while NOBODY HEARS it: the stage pools two pairs (built at its first install) and installs a change into the one the swap does not hold, from zero state, bit-identical to a new bank; a sounding bank still never retunes (the EQ's model since 5c-11) | nothing: the bank has no lifecycle of its own |
 | `KatalystPhaserEffect`, `KatalystDuckEffect` | DONE 2026-09-20 (Katalyst 5c-9) WITHOUT state classes: the phaser's situations are `KnobGlide`'s snap flag, countdown and rest plus `Phaser`'s own `engaged` latch next to the cascade it guards; the duck's Off is `ducking` being null, the field `Cylinders` already reads through `duckCylinderId`. The four questions are answered in each KDoc, each pinned by a row | had no fades of their own |
 | chain swap (`Cylinder` and, since C4, `MasterBus`) | Idle, Fading, Draining, and since step 12 decision (i) (2026-09-28) Releasing: a drain still reporting a tail after `ChainSwap.MAX_DRAIN_SECONDS` (20 s) has its OUTPUT released by `TailRelease` (exponential per sample, 60 dB per 3 s, retired under -90 dB, 4.5 s later; the same law releases a stopped engine's tails, decision (j)) (phase 3 step 12 decision (e): Pending is not a state; the host keeps `pendingKey` as its parked key, latest wins, as `KatalystFilterSwap` does since 5c-11). Since 2026-10-17 (maintainer, by ear) Cutting: the host raises the event `requestWaiting` when it parks a request it could land, and a drain or a release is faded out by a raised cosine over `ChainSwap.CUT_SECONDS` (0.15 s), a fade's end goes straight into it; the request is still parked by the host, the swap only hears that one waits | CONVERTED 2026-09-27 (phase 3 step 12 C1) into `ChainSwap` (`audio_be/.../ChainSwap.kt`), next to `Crossfade`; the duck handover lives on Fading; the master position adopted the same class in C4 (2026-09-28) |
-| `PlaybackEngine` (an engine's end of life, not an effect) | Playing, Stopped, Releasing, Released, Disposed: data objects of the sealed `PlaybackEngine.Phase`, an exhaustive `when` where they share one body (the voice's shape); the transition table, the hold and idleness are in its class KDoc. The dispatcher's `draining` set and `detached` list are gone; it keeps only the render order and the disposal order | CONVERTED 2026-10-08 (`../tasks-archive/2026-10/20261009-engine-tidy-up.md` step 9, audit C3.1); was three flags and a counter on the engine plus a set and a list on the dispatcher |
+| `PlaybackEngine` (an engine's end of life, not an effect) | Playing, Stopped, Releasing, Released, Disposed: data objects of the sealed `PlaybackEngine.Phase`, an exhaustive `when` where they share one body (the voice's shape); the transition table, the hold and idleness are in its class KDoc. The dispatcher's `draining` set and `detached` list are gone; it keeps only the render order and the disposal order | CONVERTED 2026-10-08 (KLANG-00286 (engine tidy up) step 9, audit C3.1); was three flags and a counter on the engine plus a set and a list on the dispatcher |
 | voice strips (phase 3 of the signal-flow plan; the strip retired 2026-09-27, every voice is its Ignitor tree) | void since the strip retired (2026-09-27); a tree node's lifecycle is its own design question, not decided here | build-time gate plus per-block guards |
 
 The master bus chain swap followed in step 12 C4 (2026-09-28): `MasterBus` runs the same `ChainSwap`, without the

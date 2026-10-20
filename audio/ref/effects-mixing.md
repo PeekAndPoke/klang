@@ -87,7 +87,7 @@ How each stage switches and glides, when an orbit may deactivate, the chain swap
 `audio/ref/katalyst.md`.
 
 `body`/`vowel` moved from the per-voice filter chain to the orbit bus (2026-07-03) — an 8-band SVF bank
-per voice became one per orbit; see `docs/tasks/body-vowel-to-orbit-katalyst.md`.
+per voice became one per orbit; see KLANG-00128 (body vowel to orbit katalyst).
 
 ## Effect Classes
 

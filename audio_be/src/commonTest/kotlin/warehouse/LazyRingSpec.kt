@@ -30,7 +30,7 @@ import kotlin.math.ceil
 
 /**
  * Resource warehouse step 2b: a delay ring exists only once a voice asks for one, sized to its
- * class, rented from the shelf, and refused gracefully (`docs/tasks-archive/2026-09/20260927-resource-warehouse.md`).
+ * class, rented from the shelf, and refused gracefully (KLANG-00230 (resource warehouse)).
  *
  * The headline row is the third one. A `Cylinder` used to construct a 10-second `DelayLine` in its
  * constructor — 7.68 MB, 97 % of the cylinder — for every orbit, delay or not; eight of those

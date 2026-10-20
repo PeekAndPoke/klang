@@ -5,7 +5,7 @@
 
 package io.peekandpoke.klang.pages.docs.tutorials
 
-/** Curriculum slot B1 — see docs/tasks/tutorial-curriculum.md */
+/** Curriculum slot B1 — see KLANG-00145 (tutorial curriculum) */
 val yourFirstBeatTutorial = Tutorial(
     slug = "your-first-beat",
     title = Tut.yourFirstBeat,

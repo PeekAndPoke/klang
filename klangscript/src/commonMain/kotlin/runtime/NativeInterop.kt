@@ -651,7 +651,7 @@ sealed class CallArgs {
  * method under one of these names makes the object take part in the corresponding KlangScript
  * syntax; the interpreter looks them up like any other extension method (supertype walk included).
  * Only [INVOKE] is wired today; the arithmetic operators of
- * `docs/tasks/klangscript-native-object-operators.md` are designed but not built.
+ * KLANG-00056 (klangscript native object operators) are designed but not built.
  */
 object NativeOperatorNames {
     /** `obj(a, b)`: a callable object, e.g. `Katalyst(k => k.gain(2))`; the symbol is `__invoke__`. */

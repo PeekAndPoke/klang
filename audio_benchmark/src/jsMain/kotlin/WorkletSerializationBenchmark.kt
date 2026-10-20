@@ -25,7 +25,7 @@ private fun structuredCloneJs(@Suppress("unused") obj: dynamic): dynamic = js("s
  * (`encode_ScheduledVoice`/`decode_ScheduledVoice`, what `WorkletContract` uses) plus the `structuredClone`
  * that `postMessage` performs. The worklet-side decode is the cost that matters (audio thread). The kotlinx
  * JSON-dynamic baseline this replaced is gone (the wire types are no longer `@Serializable`); the ~174×
- * win it demonstrated is recorded in `docs/tasks-archive/2026-06/20260607-worklet-codec-ksp.md`.
+ * win it demonstrated is recorded in KLANG-00103 (worklet codec ksp).
  */
 fun runWorkletSerializationBenchmark() {
     val voiceData = createSprudelVoiceData {

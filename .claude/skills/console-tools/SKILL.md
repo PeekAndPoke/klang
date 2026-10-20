@@ -65,6 +65,7 @@ LOCK="env KLANG_LOCK_FILE=/opt/dev/peekandpoke/klang/.claude/build.lock KLANG_LO
 | Before committing docs, task files, skills or `MEMORY.md`; after moving a task file | `docs-lint` (plus `docs_lint_local.py`) |
 | Preparing a review round's inputs (every round) | `review-pack` |
 | Landing a batch of reviewed branches together | `stack-merge` |
+| Creating, starting, pausing or finishing a task or plan; finding one; before committing docs | `ticket` |
 
 ## test-digest
 
@@ -235,7 +236,7 @@ that needs nothing added to the fresh worktree; klang's full check needs the cac
   Any other shared line (two new tests both starting with `@Test`) stops: one addition or two is a
   person's call. It prints each resolution. Read every printed resolution, and fix every numbering-clash warning on the stack before
   landing. Two klang habits always need that hand fix:
-  - a new item in `docs/tasks/in-progress/engine-follow-ups.md` is numbered after the last item, so two
+  - a new item in KLANG-00290 (engine follow ups) is numbered after the last item, so two
     branches both add the same number (the tool warns and never renumbers);
   - the `## History` list of `audio/MEMORY.md` is newest first, so of two lines added at its top the
     later-landed branch's belongs above; the tool keeps branch order (earlier first). `sprudel/` and
@@ -257,6 +258,27 @@ that needs nothing added to the fresh worktree; klang's full check needs the cac
   stacking and testing (the symlink is the likely way; confirm it on the first run).
 - After landing, the source branches still look unmerged (the stack holds copies of their commits,
   with `-x` lines); check `git cherry main <branch>` before deleting one.
+
+## ticket
+
+```
+python3 -I console/tools/ticket/ticket.py new "Engine follow-ups" [--status DESIGNED]
+python3 -I console/tools/ticket/ticket.py move XYZ-00042 IN PROGRESS [--note "Started step 1."]
+python3 -I console/tools/ticket/ticket.py find XYZ-00042   # or an old name or code: find KLANG-00290 (engine follow ups)
+python3 -I console/tools/ticket/ticket.py list [--status "IN PROGRESS"]
+python3 -I console/tools/ticket/ticket.py check            # exit 1 on a problem
+```
+
+- **Never number or move a ticket file by hand.** `new` takes the number under a lock shared by every
+  worktree and skips any number already used on any branch; `move` writes the status line, a History
+  line and the file's new place in one step.
+- **Write the number, never the path**: "XYZ-00042 (engine follow-ups)" on first mention, then
+  "XYZ-00042". `check` reports a path or a file name, a number with no ticket, a file in the wrong
+  folder for its status, and a counter behind the highest number.
+- **Migrating a repo** happens once; klang did it in bulk on 2026-10-20 (`migrate`, `sweep`, `check`).
+  The record `docs/housekeeping/20261020-ticket-migration.md` stays: `find` reads it.
+- Files that aren't tickets: README.md, NEXT-STEPS.md, TEMPLATE.md, every `_*.md`, plus `skip: <glob>`
+  lines in `docs/tasks/_next-ticket.txt`.
 
 ## Repo notes
 
@@ -294,3 +316,31 @@ dash scan, stack-merge's exit code by exception type, test-digest's foreign-suit
   on synthetic repos; not yet run against klang itself.
 - The lock: started in a worktree, `console/with-build-lock.sh` locks that worktree's own file, so every
   call carries `KLANG_LOCK_FILE` (the one `$LOCK` form above).
+- **ticket**: the blueprint's copy at 3e3d53c (2026-10-20), with one fix in `resolver`: several former
+  locations of one file are one ticket, not an ambiguity (see Proposed upstream). klang migrated in bulk the
+  same day: KLANG-00001 to KLANG-00320 numbered by date; 408 former locations added to the record from the
+  old paths' history (the tool read the new paths, which have none before the commit); 1,748 references
+  swept in two passes, 2 by hand (the shipped `src/jsMain/resources` pages, the blog, the diary, the
+  ledgers, the build-lock log, the memory histories, the benchmark results and the funding evidence
+  excluded: published, or dated records that keep their words); the checklist in `in-progress/` is a
+  `skip:` line.
+- **docs-lint**, klang's `docs_lint_local.py` since the tickets: the stale-path rule skips the migration's
+  "(was `old path`)" records and the files the sweep left alone. Its task-place rule duplicates
+  `ticket check` and goes with tools review round 2.
+
+## Proposed upstream
+
+<!-- Findings this repo sent back to Mission Control, not merged into the blueprint yet:
+     - yyyy-mm-dd: <what, one line> (<where it happened>)
+     Remove an item when an update arrives that contains it. -->
+- 2026-10-20: ticket `migrate`: `write_record` asks git for the former locations of the NEW path, which has
+  no history before the migration's commit, so a bulk migration records none; ask for the old path's
+  (klang: 408 rows added afterwards, which resolved 146 more references).
+- 2026-10-20: ticket `resolver`: two former locations of one file read as ambiguous; resolve when every
+  candidate is the same ticket (klang: 24 references were left before the fix, 0 after).
+
+## Changes
+
+<!-- Kept by the nexus, newest first. Tells a repo what an update brought. -->
+- 2026-10-20: new tool `ticket` (ticket numbers for tasks and plans; see project-layout).
+- 2026-10-19: back-channel sections added; masters now live in the nexus (missioncontrol/blueprints/tools/).

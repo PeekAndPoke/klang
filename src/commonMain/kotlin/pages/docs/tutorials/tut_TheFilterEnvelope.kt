@@ -6,7 +6,7 @@
 package io.peekandpoke.klang.pages.docs.tutorials
 
 /**
- * Curriculum slot A4 — see docs/tasks/tutorial-curriculum.md
+ * Curriculum slot A4 — see KLANG-00145 (tutorial curriculum)
  *
  * lpf(env = ...) depth is in SEMITONES (C3): +12 doubles the cutoff at full envelope, the
  * way DAW filter envelopes work (the built-in songs live in ~4-71). Prose stays

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# The song axis of the optimization blog series (docs/plans/blog-optimization-series.md, P16):
+# The song axis of the optimization blog series (KLANG-00206 (blog optimization series), P16):
 # extracts the text of a builtin song at every tag given (or the default list) into a directory
 # and runs the `snapshots` suite of the song benchmark on it, so every snapshot renders on ONE
 # engine and the census columns show the song's work growing while the engine stays put.
@@ -11,7 +11,7 @@
 #   2026-09-25 and is in git history, src/jvmMain/kotlin/FrozenSongs.kt at 0cc351a2)
 #
 # Syntax-only migration (the FrozenSongs exception: a text that no longer parses guards nothing):
-# since the Ignitor/Katalyst naming (2026-10-03, docs/tasks-archive/2026-10/20261004-ignitor-katalyst-naming.md) the script
+# since the Ignitor/Katalyst naming (2026-10-03, KLANG-00269 (ignitor katalyst naming)) the script
 # object, its slot accessor and its slot setter have new names; the old tags are spelled with them
 # on extraction, values untouched. The patterns use a character class so this file does not spell
 # the retired names itself (a habit from a repo-scanning guard, removed 2026-10-07).

@@ -26,7 +26,7 @@ import kotlin.reflect.KClass
  *
  * Found in review on 2026-09-08: the interval door was first called `ratio()`, the name of sprudel's
  * colon-ratio step, and `"M3".ratio()` would have yielded a null voice value instead of 1.2599
- * (`docs/tasks-archive/2026-09/20260908-klangscript-number-methods.md`). The door is `toRatio()` now, and this spec keeps the
+ * (KLANG-00193 (klangscript number methods)). The door is `toRatio()` now, and this spec keeps the
  * two name sets apart for good.
  */
 class LangStdlibStringMethodCollisionSpec : StringSpec({

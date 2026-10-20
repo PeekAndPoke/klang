@@ -34,7 +34,7 @@ import kotlin.math.pow
  *  3. NO soft cap here. The soft cap belongs to the `Shape` node. The two nodes are different laws on
  *     purpose (D2 kept both): the doors build `Shape(Drive(...))`, drive at the base rate and cap their
  *     output; `classic()` rebuilds the strip, which had its own downstream bounding stages. Whether the
- *     fused node should cap too is `docs/tasks/oversampling-regions.md`'s question, not this class's.
+ *     fused node should cap too is KLANG-00214 (oversampling regions)'s question, not this class's.
  *
  * The bypass belongs to the host, not here: the fused node is not built for a leaf amount at or below 0 and runs at
  * unity drive for a modulated one; the `Shape` node never bypasses.
@@ -134,7 +134,7 @@ internal class DistortionCore(
      * oversampled one with an oversampler), written from the END so the last sample carries [driveTo] exactly, and it
      * is applied where [process] applies its drive: on the shaper's input, inside the oversampler. So the
      * oversampler's history stays in the input's own domain, and a block that glides and a block that does not meet
-     * without a seam (round 1 of `docs/tasks-archive/2026-10/20261009-katalyst-distort-stage.md`: a host that pre-multiplied the input at the
+     * without a seam (round 1 of KLANG-00292 (katalyst distort stage): a host that pre-multiplied the input at the
      * base rate instead left the history one domain off at every change, a click at both ends of each glide).
      */
     @Suppress("NOTHING_TO_INLINE")
@@ -186,7 +186,7 @@ internal class DistortionCore(
      * initialized `var` assigned in a statement `when`, `audio/ref/performance.md`) removes those boxes too, but these
      * switch-free loops run 12 to 25 percent faster again than it; folding back to it gives that up with no test to
      * say so (the bits are the same either way). This KDoc is the guard; the measurement is in
-     * `docs/tasks/in-progress/engine-follow-ups.md`.
+     * KLANG-00290 (engine follow ups).
      */
     private fun shapeRun(buffer: AudioBuffer, from: Int, to: Int) {
         // The drive arrives through [blockDrive], not as an argument: see there.

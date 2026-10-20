@@ -118,7 +118,7 @@ object KlangScript {
         companion object {
             /**
              * The internal KlangScript symbol a callable object's call form registers under: Kotlin's
-             * operator word inside double underscores (`docs/tasks/klangscript-native-object-operators.md`).
+             * operator word inside double underscores (KLANG-00056 (klangscript native object operators)).
              */
             const val NAME = "__invoke__"
         }

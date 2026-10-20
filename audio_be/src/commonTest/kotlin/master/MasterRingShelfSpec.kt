@@ -16,7 +16,7 @@ import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 
 /**
  * Resource warehouse step 2e at the OUTPUT: the master bus rents its delay rings from the backend's
- * shelf, and a chain its bounded cache evicts returns them (`docs/tasks-archive/2026-09/20260927-resource-warehouse.md`).
+ * shelf, and a chain its bounded cache evicts returns them (KLANG-00230 (resource warehouse)).
  *
  * Since phase 3 step 12 C3 the output runs a `KatalystChain`, so the ring a master delay rents, its
  * size class and its refusal are the orbit delay's own and are pinned where that stage is

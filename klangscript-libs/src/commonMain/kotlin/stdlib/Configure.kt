@@ -9,7 +9,7 @@ import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 
 /**
  * Applies a door's `configure` lambda to the builder it just created and enforces the contract
- * of `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`: the lambda receives the builder and must return it
+ * of KLANG-00179 (dsl configure lambdas): the lambda receives the builder and must return it
  * (or a builder of the same type, since every knob returns a new one).
  *
  * The lambda arrives from KlangScript as a Kotlin function whose declared return type is a
@@ -45,7 +45,7 @@ internal fun <B : Any> B.configuredBy(door: String, configure: ((B) -> B)?): B {
 /**
  * A script-supplied [stage] (the [index]th of [door], from 0) wrapped in the check of [runStage], for a typed door to
  * invoke: the `serial`, `parallel`, `blend` and `bands` script variants hand these to the typed Kotlin doors, which
- * only call what they are given (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`, rollout S6). The check runs when the typed door
+ * only call what they are given (KLANG-00314 (kotlin typed doors), rollout S6). The check runs when the typed door
  * calls the stage, so a broken stage fails at the same point, with the same message, as before the wrapping.
  */
 internal fun <I : Any, T : Any> checkedStage(

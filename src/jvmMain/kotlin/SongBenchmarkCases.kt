@@ -20,7 +20,7 @@ import io.peekandpoke.klang.builtinsongs.derSchmetterlingSong
  * The chains are transcribed verbatim from the 2026-07-03 frozen snapshot, only removing the section
  * gates. That snapshot was replaced on 2026-09-25 by a fresh one ([FrozenSongs]); the transcriptions
  * stay as they are, a fixed workload of their own, minus the `pipeline("pedal")` calls, which went
- * with the preset (`docs/tasks-archive/2026-09/20260928-builtin-instruments.md` D4).
+ * with the preset (KLANG-00237 (builtin instruments) D4).
  */
 object SongBenchmarkCases {
 
@@ -528,7 +528,7 @@ object SongBenchmarkCases {
     private val rigUngated: String by lazy { ungated(FrozenSongs.derSchmetterling_2026_09_25) }
 
     /**
-     * The song axis of the optimization series (`docs/plans/blog-optimization-series.md`, P16): every
+     * The song axis of the optimization series (KLANG-00206 (blog optimization series), P16): every
      * snapshot of Der Schmetterling the caller drops into `KLANG_SNAPSHOT_DIR` as `NN__<rpm>__<label>.klang`
      * (the song text as it stood at a tag, extracted from `builtinsongs/DerSchmetterling.kt` at that tag),
      * rendered ungated with the seed pinned, on ONE engine, eight cycles each, so the census columns show
@@ -632,7 +632,7 @@ object SongBenchmarkCases {
      * and the drum one component at a time, on the FROZEN 2026-09-25 text.
      *
      * Kind: scaffolding of the rig ablation (2026-09-15) and the optimization blog series that still cites its rows
-     * (`docs/plans/blog-optimization-series.md`); it reads no live song, so a song edit never breaks it, and it goes
+     * (KLANG-00206 (blog optimization series)); it reads no live song, so a song edit never breaks it, and it goes
      * when that series is done.
      *
      * Rows recorded before 2026-10-14 measured the live text of their day; from then on they measure the frozen

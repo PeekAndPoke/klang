@@ -266,7 +266,7 @@ class KlangScriptIgnitorArithmeticDoorParitySpec : StringSpec({
         // The interpreter has no operator overloading for native values (`Interpreter.evaluateBinaryOp`); the
         // script's arithmetic on a signal is the method. Pinned here so the S4 change is seen not to move it.
         // A recorded asymmetry: Kotlin has `+` / `*` on signals, the script is method-only until
-        // `docs/tasks/klangscript-native-object-operators.md` lands (decided 2026-10-07, `__times__` / `__rtimes__`,
+        // KLANG-00056 (klangscript native object operators) lands (decided 2026-10-07, `__times__` / `__rtimes__`,
         // the goal `saw * 4`). This row goes red ON PURPOSE then: replace it with the operator's parity rows.
         val error = shouldThrow<KlangScriptTypeError> { ignitor("Ign.sine(2) * 0.5") }
 

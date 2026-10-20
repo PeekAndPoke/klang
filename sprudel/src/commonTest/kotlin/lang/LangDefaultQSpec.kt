@@ -17,7 +17,7 @@ import io.peekandpoke.klang.sprudel.WireFilter
 import io.peekandpoke.klang.sprudel.wireFilters
 
 /**
- * C1 parity pin (docs/tasks-archive/2026-09/20260927-filter-unification.md): ONE default q = 0.707 for every filter
+ * C1 parity pin (KLANG-00227 (filter unification)): ONE default q = 0.707 for every filter
  * on EVERY surface. The default drifted once before (sprudel built q = 1.0 while the
  * ignitor built 0.707 — an audible difference nobody decided); this spec is the tripwire.
  */

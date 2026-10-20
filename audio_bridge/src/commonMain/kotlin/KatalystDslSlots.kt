@@ -17,7 +17,7 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_FLOOR
 
 // ═════════════════════════════════════════════════════════════════════════════════════════════
 // The knobs of the classic chain, one group per stage: `KatalystDsl.Slots.reverb.wet` (the Ignitor/Katalyst naming,
-// `docs/tasks-archive/2026-10/20261004-ignitor-katalyst-naming.md` section 4.3).
+// KLANG-00269 (ignitor katalyst naming) section 4.3).
 //
 // The twin of `IgnitorDslClassic.kt`'s groups on the other host: every knob is named `<stage>.<knob>`, which is the
 // vocabulary `katp` and the sprudel bus doors write, and [KatalystDsl.classic] is built FROM these groups, so the chain
@@ -29,7 +29,7 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_FLOOR
  * The one constructor of this file: the knob `<stage>.<knob>` with its default (no description, as the chain always
  * had). A [KatalystKnobDsl.Param], the wire node the chain carries and the object `katp` takes, so the handle a song
  * names and the knob the chain reads are one value (decision Q1 of
- * `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`: the
+ * KLANG-00302 (katalyst knob expressions): the
  * separate `KatalystParam` handle is retired, the type split is the wire's own).
  */
 private fun knob(stage: String, knob: String, default: Double): KatalystKnobDsl.Param =

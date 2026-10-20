@@ -5,7 +5,7 @@
 
 package io.peekandpoke.klang.pages.docs.tutorials
 
-/** Curriculum slot B5 — see docs/tasks/tutorial-curriculum.md */
+/** Curriculum slot B5 — see KLANG-00145 (tutorial curriculum) */
 val alternationAndRepetitionTutorial = Tutorial(
     slug = "alternation-and-repetition",
     title = Tut.alternationAndRepetition,

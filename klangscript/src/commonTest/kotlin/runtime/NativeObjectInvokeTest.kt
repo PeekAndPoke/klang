@@ -15,7 +15,7 @@ import io.peekandpoke.klang.script.klangScriptEngine
 
 /**
  * The call operator: a native OBJECT becomes callable when its type registers a method under the
- * internal symbol `__invoke__` (`docs/tasks/klangscript-native-object-operators.md`).
+ * internal symbol `__invoke__` (KLANG-00056 (klangscript native object operators)).
  * The call takes the spec-aware path of a member call, so named args, defaults and the
  * trailing-lambda rule apply. Consumers: `Katalyst(...)`, the field accessors.
  */

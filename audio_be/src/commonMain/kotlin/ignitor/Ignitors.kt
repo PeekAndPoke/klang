@@ -291,7 +291,7 @@ object Ignitors {
 
     /**
      * A sine carrying banks of sine partials at multiples of its own frequency, rendered in ONE
-     * block pass (`docs/tasks-archive/2026-09/20260907-sine-partial-banks-plan.md`). Replaces the hand-rolled
+     * block pass (KLANG-00185 (sine partial banks plan)). Replaces the hand-rolled
      * `Ignitor.sine().add(Ignitor.sine(freq * 2).mul(1/2)).add(...)` stacks: same partials, same gains,
      * one loop per partial instead of three block passes per partial.
      *
@@ -325,7 +325,7 @@ object Ignitors {
      * seed, taken whether or not the spread ever drops below 1), so its fundamental lane seeds from
      * a different point in the stream than the plain sine's lane does.
      *
-     * [partials] is the fourth bank, explicit partials at any ratio (`docs/tasks-archive/2026-10/20261010-sine-inharmonic-partials.md`):
+     * [partials] is the fourth bank, explicit partials at any ratio (KLANG-00296 (sine inharmonic partials)):
      * its length is fixed for the note, so its storage and its drift lanes are built with the node and nothing grows
      * at render. Per block each partial reads its ratio and phase once (the bank knobs' rule): the frequency is
      * `ratio` times the sine's, and the partial is silent while its frequency's magnitude is at or above Nyquist, or
@@ -2272,7 +2272,7 @@ object Ignitors {
         }
 
         /**
-         * Banded best-of-M start-phase selection (docs/tasks/unison-phase-pool.md): draw up to
+         * Banded best-of-M start-phase selection (KLANG-00144 (unison phase pool)): draw up to
          * [drawTries] candidate phase sets, score each's fundamental coherence
          * `K = |Σ gₙ·e^{i2πφₙ}| / |Σ gₙ|` against the note's actual (jittered, [polarity]-folded)
          * gains, and take the first candidate inside `[kMin, kMax]` — early exit is accept-reject

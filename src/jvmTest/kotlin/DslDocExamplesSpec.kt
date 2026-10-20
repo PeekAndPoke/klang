@@ -43,7 +43,7 @@ import java.io.File
  * - It cannot prove an example is *right*. Three reverb and delay examples compiled and
  *   queried perfectly while being silent (a send whose gate parameter was missing), and a
  *   wrong unit in the prose survives anything short of a listener. That is the render gate in
- *   `docs/tasks/tutorial-curriculum.md`, or a human. This spec is the cheap half, deliberately.
+ *   KLANG-00145 (tutorial curriculum), or a human. This spec is the cheap half, deliberately.
  *
  * Samples are deduplicated by code: the same example usually appears on all four doors of a
  * function (`SprudelPattern.x`, `String.x`, `x()`, `PatternMapperFn.x`), so compiling each
@@ -140,7 +140,7 @@ private const val SEPARATOR = "--------"
  *
  * It was 42 of 1425 when this gate was introduced (2026-08-31): 38 were doc rot and were fixed,
  * and the last 4 were removed from the KDoc because they were not rot at all but call forms no
- * test has ever run — see `docs/tasks-archive/2026-10/20261014-sprudel-function-testing.md`. Keep it empty if you can:
+ * test has ever run — see KLANG-00307 (sprudel function testing). Keep it empty if you can:
  * an entry here is a to-do, never an exemption, and the ratchet below means it can only shrink.
  *
  * Records are separated by [SEPARATOR]; a record starting with `#` is a comment.

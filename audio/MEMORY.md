@@ -28,7 +28,7 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   `release` (the unit in the KDoc, not the name) and `declick`; the pluck's loop gain is `feedback`, brown noise's
   white leak is `leak`. The frame-domain core keeps `sustainLevel` (`EnvelopeCore.prepare`)
   and the constants keep their `*_SEC` names. Old names: `docs/retired-names.md`.
-- **The pitch doors are in the tree** (`docs/tasks/pitch-pipeline-into-the-tree.md`, steps 1 to 4): sprudel's
+- **The pitch doors are in the tree** (KLANG-00245 (pitch pipeline into the tree), steps 1 to 4): sprudel's
   pitch envelope, accelerate, vibrato and fm are `classic()`'s `PitchEnvelope`, `Accelerate`, `Vibrato` and `Fm`
   stages, filled by the `penv.*` / `penvCurves.*` (step 1), `vibrato.*` (step 2), flat `accelerate` (step 3) and
   `fm.*` (step 4) slots; nothing runs in front of the tree (step 5): the root's `IgniteContext.phaseMod` is null, and
@@ -68,7 +68,7 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   one is Done at once). The
   scheduler removes only Done voices, always keeping the list's order, by one allocation-free compaction pass,
   `retainInOrder` (`removeDoneVoices` between blocks, and the render loop).
-  Plan and steps: `docs/tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md` (steps 1 to 5b done).
+  Plan and steps: KLANG-00279 (voice lifecycle state machine) (steps 1 to 5b done).
 - **Channel**: `gain` is the one level word (the fader, applied once with `pan` in `SendRenderer`); a frontend's
   `velocity` is multiplied into `gain` before the wire. The orbit is the routing.
 - **Bus**: each orbit (`Cylinder`) runs a `KatalystChain`, born with `KatalystDsl.classic` (body, vowel, delay,
@@ -78,7 +78,7 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   by `Cylinders.processAndMix`; an ownerless orbit keeps its last settings). Laws: `audio/ref/katalyst.md`; the classes: `audio/ref/effects-mixing.md`.
 - **Reverb**: one room for both ears: each side's combs are fed `(L + R) / 2` (`Reverb.CROSS_FEED` 0.5, by ear
   2026-09-30); an input with equal sides feeds what it did before, bit for bit. A Freeverb tail only: no pre-delay,
-  no early reflections (`docs/tasks/future/reverb-models.md`). Two tail floors on purpose (maintainer,
+  no early reflections (KLANG-00256 (reverb models)). Two tail floors on purpose (maintainer,
   2026-10-17): ordinary playback holds a room's ceiling to `SILENCE_FLOOR` on the cells (unchanged, the corpus pins
   it); only while its chain drains after a swap (`KatalystReverbEffect.swapDraining`, set by the drain's
   `measureTail`, cleared by reset and retire) does it answer against `Reverb.TAIL_FLOOR`, the comb level whose output
@@ -159,596 +159,176 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   so the default keeps 7b's bits. `pitchModSemitones` is gated at a literal 0 or non-finite mod, `pitchMod` is not
   (`audio/ref/off-values.md`); nesting multiplies, the outer ratio the left factor. The table:
   `audio/ref/voice-synthesis.md`, "The pitch nodes and their two laws".
-- **Oscillator phase** (`PhaseOffset`, `docs/tasks-archive/2026-10/20261006-oscillator-phase-knob.md`): every periodic oscillator has a `phase`
-  input in cycles, wrapped to `[0, 1)`, no clamp. The literal 0 builds no input (the default renders as before, bit for
-  bit); a block-constant one moves the accumulator by its change once per block (the per-sample loops untouched); a
-  signal takes the oscillator's phased loop, which reads the shape at `accumulator + offset` per sample. A stack
-  shifts every voice alike; the impulse spikes where the shifted phase passes 0 going forward.
-- **Tremolo range**: `Tremolo.rangeFrom` / `rangeTo` (`TREMOLO_RANGE_FROM` / `_TO`, -1 and 0) place the LFO swing,
-  gain `1 + depth * (from..to)`; the literal default builds the classic `range(1 - depth, 1)` itself.
-- **The voice rng**: one stream per voice, and the draw ORDER is part of the sound (`audio/ref/voice-synthesis.md`,
-  "The voice rng").
-- **Silence culling**: a voice in its release whose output stays under `VOICE_CULL_FLOOR` (=
-  `SILENCE_FLOOR`, 1e-5) for `VOICE_CULL_SECONDS` (0.05) stops rendering; never in the gate, never before it
-  was heard, and not with a tremolo on the output unless `cull` is set.
-- **The optimizer's promise** is `OPTIMIZER_PARITY` (1e-12 relative to the block's loudest sample), not bit
-  identity; every registered tree renders optimized. A synthesized coefficient may be zero only when the authored
-  one was. Open items: `docs/tasks/future/ignitor-optimizer-open-items.md`.
-- **Numerical contract**: `SAFE_MIN` 1e-15 / `SAFE_MAX` 1e15; "safe" means finite, not small, so a consumer must be
-  O(1) at any magnitude. A divisor of exactly zero yields zero (`Recip` excepted). A non-finite value a pattern
-  writes reads as unset, at each reader once. All in `audio/ref/numerical-safety.md`.
-- **Catalogues are index spaces, append only**: `DistortionShapes`, `LfoShapes`, `AdsrCurves`, `BodyMaterials`,
-  `VowelBands` (audio_bridge). The index is the wire encoding; out of range or non-finite is index 0 for the
-  shapes. Guards: `ShapeCatalogueSpec`, `CatalogueIndexSpec`, `AdsrCurvesSpec`.
-- **Build-time knobs** (shapes, the oversample factor, `passes`, curves, the tremolo shape) are read once,
-  leaf-only; a non-leaf takes the default and is not built. `Oversampler.factorOf`: non-finite is 0, a fraction
-  truncates, no upper clamp (the D7 stopgap until `docs/tasks/oversampling-regions.md`).
-- **Solo**: background gain `1 - max(amounts of the soloed sources)` (`solo(1.0)` is exact silence, `solo()` is 0.95),
-  reached on the 1.5 s `SoloRamp`; `SoloTracker` (per playback, fixed arrays) keeps per source its NEWEST event (the
-  latest start wins at once; the end comes from the control events, a note's gate never extends it), recorded from
-  any event, control events included. A source is soloed, and its voices at 1.0, while that event runs (`end + 4 blocks > now`) with a
-  positive finite amount; an amount 0, NaN or infinity ends it. No hold, no per-voice protection (Q28, engine
-  follow-up 43). No dip: a voice that lost its solo never moves away from the background's target, it holds until
-  the ramp reaches it (`VoiceScheduler.backgroundLevel`), and falls over at least `CUT_FADE_SECONDS`; a new voice
-  starts on the ramp, except one of a source that has just lost its solo (`SoloTracker.isReleased`, until the ramp
-  reaches its target or the target falls), which starts at `max(ramp, target)`. Realtime voices have no
-  control events: each one whose gate is open records its source for the block, so a realtime solo follows the held
-  gates. Guards: `VoiceSchedulerSoloCutSpec`, `SoloTrackerSpec`.
-- **Resource counts are capped, tones are not**: `coercePasses` (1 to 16), `coerceUnisonVoices` (0 to
-  `UNISON_MAX_VOICES` = 256 since 2026-10-08, non-finite is 0) and `coerceSinePartials` (a sine plays its first
-  `SINE_MAX_PARTIALS` = 256 explicit partials, the rest are not built), all in `audio_bridge/_resource_bounds.kt`, read by the runtime and the census.
-- **The sine's partials** (`Ignitors.sinePartials`, `docs/tasks-archive/2026-09/20260907-sine-partial-banks-plan.md`): the fundamental and four banks,
-  `harmonics`, `octaves`, `suboctaves` and the explicit `partials` (`IgnitorDsl.Sine.Partial(ratio, gain, phase)`,
-  2026-10-10), summed raw, one loop per partial, every knob read once per block (an explicit partial's signal gain
-  per sample, its moving phase gliding across the block), a partial whose frequency's MAGNITUDE is at or above
-  Nyquist silent (one gate for the node; a non-finite frequency silent too), drift lanes in `DriftLanes` blended by
-  `analogSpread`. The explicit list is fixed per note, so its storage and lanes are built with the node.
-- **`pregain`** is an ordinary slot (`Param("pregain", 1.0)`) on the source, before every nonlinearity. It changes
-  timbre only where a nonlinearity follows; a saturating shaper driven hard makes it inert, on a wavefolder it is
-  the fold depth. A `mul` slot's default must be a safe literal: unset is NOT off for `mul`.
-- **Distortion**: `classic()`'s distort is the fused `IgnitorDsl.Distort` running `DistortionCore` (drive inside
-  the oversampler, DC blocker, no cap; a modulated amount at or below 0 runs at unity drive). The `distort` and
-  `shape` doors build `Shape(Drive(...))`, bounded to +-1 by `ShapingFuncs.softCap`. `CrushCore` floors. Guard for
-  both laws: `StripLawCoresSpec`. The Katalyst `distort` stage (`KatalystDistortEffect`, 2026-10-09) runs the fused law
-  on each channel of a bus, with the house DC pole (`HOUSE_DC_BLOCK_COEFF`, near 7 Hz; the voice's is near 35 Hz) and
-  the oversampler's group delay, rounded, as its latency in every state (`Oversampler.groupDelaySamples`: 3.07, 4.40,
-  5.06; held as 3, 4 and 5 frames). Its dry path runs through the phase twins (an unshaped round trip of the same
-  oversampler per channel), so a fade between dry and distorted cannot notch; its tail hold is `Oversampler.tailFrames`.
-  It oversamples at 2x unless the author names a factor (`DISTORT_OVERSAMPLE`, 2026-10-10); the voice's stays at 0.
-- **The oversampler is an IIR half-band** (2026-10-10, `docs/tasks-archive/2026-10/20261010-iir-oversampler.md`): two all-pass
-  chains per 2x stage, 8 coefficients at the base-rate stage and 6 above; the round trip is flat (0.00 dB to 20 kHz),
-  aliases and images about 95 to 100 dB down, latency 3.07, 4.40, 5.06 samples at 2x, 4x, 8x, rising toward the top
-  (3.9 at 16 kHz at 2x), so a host that sums a dry path with an oversampled one pads the dry with a PHASE TWIN, an
-  unshaped round trip of the same oversampler, never whole samples (those notch the top: -28.5 dB at 18.25 kHz at
-  2x). Every input sample is sterilised (`flushState`: an IIR keeps a NaN for good), the states are flushed of
-  denormals once per block. Guard: `OversamplerBenchSpec`, `OversamplerGroupDelaySpec`, `OversamplerDecimatorParitySpec`.
-- **`parallel` on the Ignitor** (`IgnitorDsl.Parallel`, 2026-10-10): the branches summed, every branch reading one
-  input instance; `BuiltIgnitor.latencySamples` is collected exactly along the signal spine (an oversampled `distort`
-  or `shape` adds `Oversampler.groupDelaySamples`: 3.07, 4.40, 5.06), and so is `BuiltIgnitor.oversamplers`. The node
-  gives every branch the phase twins of the oversamplers it lacks against their union (`phaseTwins`,
-  `Oversampler.unionOf`); a branch that mixes two in a plain `plus` lists none (`null`), and then every earlier branch
-  is padded by whole samples to the latest (`delayedBy`). A plain `plus` stays unaligned.
-- **`parallel` on the Katalyst** (`KatalystParallelEffect`, 2026-10-10): each branch is a `KatalystChain` of its own,
-  run on a copy of the bus and SUMMED; branches are matched in phase (the twins of the oversamplers a branch lacks,
-  `KatalystLatentEffect.oversamplers`, and a ring for the lookahead it lacks; the stage's latency is the union's plus
-  the longest lookahead); every lifecycle question (tails, rents, reset, retire) is passed to the branches; a `duck` in a branch is
-  hoisted to the orbit's duck. A `reverb` or `delay` in a branch carries the dry too. The doors write no stage for zero
-  branches and inline one. `through` is `serial` since the same day (`docs/retired-names.md`).
-- **`bands` on both hosts** (2026-10-10): DSL sugar in `audio_bridge` (`BandsBuilders.kt`, since typed doors S6; the
-  script variants in `klangscript-libs`) over `parallel` and
-  the EQ's existing sections, no DSP of its own. Linkwitz-Riley: band k is the high side of every cut below it (on a
-  voice a split tree, each high side shared by identity), the low side of its own, and the all-pass of every cut
-  above, one raw tap section in an EQ of its own (`x - 2 * bandpass(x)`, Q 1/sqrt(2)), so untouched bands sum to an
-  all-pass, flat within 0.001 dB (`BandsCrossoverSpec`). A band's processors get the band behind a sectionless EQ, so
-  an `eq()` tap in a band reads the band.
-- **`blend` on both hosts** (2026-10-10): `x.blend(wet, f)` is `parallel(dry * (1 - wet), f * wet)`, the linear
-  law; `wet` a slot or a signal on the Ignitor, a plain number on the Katalyst (a `Kat.param` there is follow-up
-  Q14, `docs/tasks/katalyst-knob-followups.md` section 4).
-- **Arithmetic on the Katalyst** (`KatalystArithmeticEffect`, 2026-10-11): `plus`, `minus`, `times`, `div`, `pow`,
-  `min`, `max`, `abs` (and the Ignitor's aliases) are stages that run the Ignitor's per-sample law on the bus, so the
-  same numbers give the same sample (`KatalystArithmeticEffectSpec` renders against the Ignitor runtime). The operand
-  is a number, a `Kat.param` or a Kat expression, glides per sample, and reads non-finite as unset. `times` is not
-  the fader. No optimizer (won't implement, maintainer 2026-10-11): one cheap stage costs about 50 ns per block (`docs/tasks-archive/2026-10/20261011-katalyst-arithmetic.md`, D5).
-- **The sample instrument**: a sample voice is bit-identical to the built-in `sine` when it plays the sine's own
-  output at rate 1.0 (`SampleInstrumentSpec`, the oracle that outlived the strip). Its playback knobs `begin`,
-  `end`, `speed`, `loop` are slots; `n` and `cut` stay wire fields.
-
-## Guardrails and traps still in force
-
-The list a reviewer pastes is `.claude/skills/review-loop/audio-constraints.md`; the project-wide guardrails
-(block size, reverb `+ ANTI_DENORMAL`, OnePole HPF bias, the house limiter, script-door literal defaults, `min`/`max`
-crossing) are in `CLAUDE.md`. Not repeated here. In addition:
-
-- **A per-block copy is `copyRangeInto`** (`audio_be/.../utils/buffer_copy.kt`), never `copyInto`, whose JS form makes a
-  `subarray` view per call. The domain-free helpers (fast math, numeric guards, phase wraps, fades) live in `utils/`.
-- **The resonator stage is handed its config in a holder, not as double arguments** (`ResonatorConfig`, tidy-up step
-  12 (a)): passing them made a steady body allocate about 40 bytes per block on V8, where a non-integral double
-  crossing a call V8 does not inline is a heap number. The delay, reverb and phaser writers do the same since the V8
-  allocation pass (`DelayConfig`, `ReverbConfig`, `PhaserConfig`, the phaser's `PhaserBlock`). Since engine follow-up
-  1 every box located in their block processing is gone (a tail step that takes no double, `DelayLine.observeTail`; a holder for the
-  delay loops, `DelayLine.blockArgs`; `KnobGlide.advance`, `TailCeiling.observe` and `PhaserCore.alphaAt` Kotlin
-  `inline`), and the phaser, delay and reverb stages skip an unchanged config (`applied` on each, the EQ's pattern;
-  the delay and the reverb never while their coefficient glide moves, and the delay not while a refused grow leaves
-  its ring short); an off phaser's call into `Phaser.process` is located, not removed:
-  `docs/tasks/in-progress/engine-follow-ups.md` items 1 and 32, `audio/ref/performance.md`.
-- **A map the engine reads by key on Kotlin/JS is a `KlangMap`** (`common/infra/KlangMap.kt`, engine follow-up 2):
-  every Kotlin/JS `HashMap`/`HashSet` operation with a non-null key allocates a 40-byte function context on V8 inside
-  the stdlib's `hashCode` (27 per new orbit map on the classic chain, 24 to 76 per classic voice build). The decoder,
-  the warm-up and the sample-envelope merge make `KlangMap`s; the steady block path makes no lookup at all. Read it
-  by key, and walk it with `forEachEntry` (or `copy`/`setAll`): it is not a Kotlin `Map` (maintainer, 2026-10-11), so
-  it has no `entries` (about 110 B per entry on JS), and the wire codec's generator refuses a stdlib `Map` field:
-  `audio/ref/performance.md`. `VoiceData`'s two slot maps, sprudel's `ParamBag` and the dispatcher's `engines` are
-  `KlangMap`s too, and so is the sound registry, whose
-  lookups lowercase a name only when it has a character that could change (V8's `toLowerCase` allocates about 24 B
-  even when nothing changes, at every length measured).
-- **A per-block walk is an index loop** over an array or a list, never `for (x in ...)` over a collection or a map,
-  which makes an iterator per call on JS. `Cylinders` keeps its orbits in rent order: that order is the mix's
-  summation order, so changing it changes bits.
-- **A node builds its storage with the voice and draws at its first block** (tidy-up step 10): drift lanes
-  (`AnalogDrift()` then `seed`, `DriftLanes(capacity, sharedLane)` then `start`, only when `analog` may be above 0
-  and, for the shared lane, the spread below 1), a stack's voice states and scratch, the superpluck's strings, the
-  partial banks' arrays, the phaser kernel and a caching memo's buffer are allocated at build, sized from what the
-  build can read (a count only when it reads no `Freq`, `countsAtBuild`); the first block reads the depth and draws,
-  when and in the order it always did. Still allocated at render: a count signal's rise past that size, the shared drift lane's `Random` below
-  spread 1 (D7), the phase pool's vocabulary while it grows. Guards: `FirstBlockAllocationSpec`, `SeededVoiceRngSpec`.
-- **The SVF**: bandpass, notch and the resonators are linear. Lowpass and highpass at `analog > 0` take a
-  state-dependent DAMPING path (a diode-pair term grows `k` with the state; `IgnitorFilters.kt`, `Ignitor.svf`).
-  Never saturate by capping the feedback signal with tanh: two such attempts went unstable and were reverted
-  (2026-05-28, history).
-- **The tube shape's constants are Pade-consistent** with `fastTanh` (`ShapingFuncs.kt`), so `tube(0)` is exactly
-  0; recompute them if `fastTanh` changes.
-- **The unity-`mul` fold drops a `safeOut`** only over a signal survivor; in a parameter position the clamp does
-  work and the fold does not fire (`survivesUnityFold`). The Karplus family's raw `feedback` is authored character.
-- **The active list's order still reaches the sound** through one path: unison phase-pool takes are drawn on a
-  voice's first rendered block, so a change to the removal order re-deals phases (open:
-  `docs/tasks/in-progress/engine-follow-ups.md`, item 14). Ownership no longer depends on it (newest onset wins).
-- **Do not remove the past-cutoff in `VoiceScheduler.promoteScheduled`**: it stops `ReplaceVoices` from
-  re-promoting voices that already played. `replaceVoices` dedups against active voices
-  (`ScheduledVoice.isDuplicate`); the frontend's resync grace window is 0.2 s (`KlangPatternScheduler`).
-- **State lives at the granularity it is bound to**: playbackId-bound state in `PlaybackEngine` (and the
-  per-playback controller on the frontend), global state in `AudioBackendContext` / `KlangPlayer`. Share only what
-  is expensive to recreate and safe to outlive a playback (samples, the built-in instruments). The `CLAUDE.md`
-  cleanup rule applies to every new map.
-- **The Katalyst traps** (a same-value retarget must be free; a per-block retarget low-passes the knob; a config
-  cache compares substituted values; every door into a terminal state sets the same precondition):
-  `audio/ref/katalyst.md`.
-- **The memo's freq key** (`MemoizingIgnitor.freqInvariant`, resolved at a share, never per wrap: per wrap made a voice
-  build five times slower): a shared subtree that reads no `Freq` and carries no pitch mod ignores the caller's freq,
-  so one LFO in the `phase` or `duty` of two oscillators at different pitches runs once per block. The author rule for
-  the rest: a shared modulator that reads `Ignitor.freq()` anywhere (its rate, its depth, a scaling next to it)
-  renders once per pitch; build it once per layer. The predicate is the detune fold's
-  (`IgnitorBuildCache.usesMusicalFreq`): a node that consumed the freq ARGUMENT without a `Freq` leaf would break
-  both. Guard: `SharedModulatorRateSpec`.
-- **One pitch mod per pitch-mod node** (`combineMods`): the mod a vibrato, fm, pitch envelope, accelerate,
-  `pitchMod` or `pitchModSemitones` hands to the pitched sources under it sits behind one memo that always caches per block, so its LFO or
-  modulator advances once per block for every source at one pitch (it ran once per source until 2026-10-07; Sakura and
-  Irish Lament were retuned to keep their sound). Except: a source detuned under a mod that keeps its freq key (an
-  `fm`, or a mod whose knobs read `Freq`) renders the whole mod again. Guard: the B-1 rows of `SharedModulatorRateSpec`.
-- **FM: a pitch node means what it wraps** (decision D1 and the placement rule, pitch pipeline step 3b, 2026-10-09):
-  above an `fm` it moves the whole operator (the modulator follows the carrier, the ratio stays exact; an outer `fm`
-  counts; a modulator with an absolute `freq` stays put), on the modulator the modulator alone, on the carrier the carrier alone. The modulator builds under the
-  outer mod through a `CarrierFreqMod`, which asks it at the CARRIER's frequency, pinned by the fm every block before
-  it renders the modulator (one field write); asked at the modulator's own frequency a `Freq`-keyed mod rendered twice
-  per block and broke the carrier too (a chain of N fms rendered 2^N times; now N + 1). One wrapper per fm node and
-  outer mod (`IgnitorBuildCache.carrierFreqMod`), so `let f = x.fm(m); f + f` keeps `m` one instance. The one shape
-  not processed, an author rule: one fm whose carrier holds two pitches (`(x + x.detune(7)).fm(m)`) serves both with one
-  modulator (and under a mod on the note, a pitch node inside the modulator reads the first pitch's mod) (give each layer its own fm, inside its detune, and sum them: `x.fm(m1) + x.fm(m2).detune(7)`). Reference: `audio/ref/voice-synthesis.md`; guards: `FmModulatorFollowsPitchSpec`,
-  `FmModulatorTopologySpec`.
-- **`phaseMod` save and restore has no try/finally** (`ModApplyingIgnitor`, `ModBlockingIgnitor`): accepted, an
-  exception on the audio thread is fatal anyway.
-- **The click-hunt harness** `GuitarClickHuntTest` is tagged `ClickHunt`, out of the default run
-  (`./gradlew :audio_be:jvmTest -Pkotest.tags=ClickHunt --tests io.peekandpoke.klang.audio_be.ignitor.GuitarClickHuntTest`);
-  add a setup to it for every new click symptom or ignitor archetype.
-- **KlangScript doors forbid mixing positional and named arguments**: `distort(amount = 0.5, oversample = 4)`.
-- **Platform facts**: `KlangTime.internalMsNow()` is monotonic, not wall clock; the JS targets compile to
-  ES2015 classes (an `AudioWorkletProcessor` must extend a real class); `MonoSamplePcm` is always mono, stereo
-  happens at pan and mix; a null `VoiceData` field means "the engine default".
-- **Proving a change**: identity renders in raw doubles with an engagement control, a metric floor before a
-  measurement, an oracle spec beside every parity spec: `audio/ref/verification.md`. Benchmarks and the fast-math
-  contracts (wrap a phase before `fastSin`): `audio/ref/performance.md`.
-
-## Open threads
-
-- **By ear** (`docs/tasks/by-ear/README.md`): `duck-orbit-switch-click.md`, and the owed rounds listed there.
-- **Engine pass 1 follow-ups**: `docs/tasks/in-progress/engine-follow-ups.md` (the V8 residues, the phase-pool order, the
-  audit's later steps and open decisions).
-- **Open, correctness**: `docs/tasks-archive/2026-10/20261014-audit-audio-backend-leftovers.md` (§2 worklet tests waits on the maintainer;
-  §4, the cut-group fade, done by lifecycle step 4),
-  `docs/tasks-archive/2026-10/20261014-bugfix-non-finite-pitch-strip-and-signals.md` (two NaN signal paths; its strip half closed with pitch
-  pipeline step 4),
-  `docs/tasks-archive/2026-10/20261007-shared-modulator-memo-rate.md` (two residues, both an author rule today: a shared modulator that reads
-  `Ignitor.freq()` anywhere renders once per pitch; a layer detuned under an `fm` or a `Freq`-reading pitch mod renders
-  the mod again); the build-time diagnostic for the second, an fm above a forking detune:
-  `docs/tasks/future/fm-above-forking-detune-diagnostic.md`.
-- **Scheduled or designed**: `docs/tasks/oversampling-regions.md`, `docs/tasks/master-dsl-followups.md`,
-  `docs/tasks/katalyst-master-configure-doors.md`, `docs/tasks/pluck-release-tail.md`,
-  `docs/tasks/voice-takeover.md` (blocked on a design decision), `docs/tasks/playback-layer-decomposition.md`.
-- **Katalyst, future**: `reverb-models.md` (with `room-reverb.md`), `one-chain-host.md`, `delay-ceiling-edges.md`, `transition-times.md`,
-  `ducking-unfinished.md`, `general-eq-core.md`, `flanger-chorus.md` (all in
-  `docs/tasks/future/`).
-- **Voice and instruments, V1 high priority**: `docs/tasks/pitch-pipeline-into-the-tree.md` (promoted 2026-10-07).
-- **Voice and instruments, future**: `envelope-shape-followups.md`, `new-oscillators.md`, `onepole-highpass-door.md`,
-  `cut-group-semantics.md`, `live-voice-modulation.md`, `soundfont-zone-selection.md`, `string-slot-readers.md`.
-- **Engine, future**: `ignitor-optimizer-open-items.md`, `optimize-affine-chain-fusion.md`,
-  `optimize-constant-control-fast-path.md`, `audit-parked-decisions.md`, `worklet-clock-divergence.md`,
-  `high-performance-audio-backend.md` (parked behind the sound-first priorities).
-- **Keep possible** (maintainer, 2026-10-08): stereo voices, signal knobs on a bus and on the master, routing,
-  a delay line on the voice, glide, velocity in the tree, an Ignitor on a bus. Where each assumption lives and what a
-  change must not do: `docs/plans/aaa-production-tricks.md` §11. Crossing one of those lines is a question for the
-  maintainer first.
-- **Never measured**: the build-time cost of the gate's ON path (the per-block numbers are in the history's gate
-  entry).
-
-## History
-
-One line per step, newest first. A link to the archived task record where one exists, else to the entry in
-`audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
-
-- 2026-10-19 `GraphCensus` counts the vibrato as its composition (7b and 7c): the LFO, the multiply, the converter, the
-  ratio loop, the source's read, plus a built range (per note, as `hasBuiltRange`), a signal depth's floor and a moving
-  phase's read; every `classic()` voice's census steps by 2 passes and 4 of traffic (3 and 6 with a vibrato range
-  off the default; the gate is still not modeled), so the song benchmark's `work` and `traffic` columns compare
-  across this date with care (`docs/tasks/in-progress/engine-follow-ups.md`, item 28).
-- 2026-10-19 Engine follow-ups 4, 45 and 13, bit-identical: the superpluck keeps each string's base delay and
-  computes it again only when the note, the detune or the count moves (`spluck-a`'s tail located: in some V8 processes
-  `getUnisonDetune` was left out of `generate` in place of `ensureLanes`, 9 of 140 HEAD rounds high against 0 of 100,
-  0.94 of the time; the pluck reads the floor); the duck's setters and the gain's hand-off go through holders
-  (`Ducking.knobArgs`, `KatalystGainEffect.configureFrom`; `E-kat-dyn` mixed 118 to 86 B), the distort's `isFinite`
-  is `isFiniteInline`; two siblings found and left open, and item 13's sub-pool half was already closed (34):
-  `docs/tasks/in-progress/engine-follow-ups.md`, items 4, 13 and 45
-- 2026-10-19 Engine follow-ups 35, 36 and 38, bit-identical: the arithmetic stage runs each operator's loops in a
-  method of its own (the JVM compiled them on one shared profile; the gliding `div` 1.61 to 1.94 µs per block in
-  suite order, 0.29 and 0.52 after), its writer hands the knob to `configure` instead of the value (`E-arith`'s second
-  mode on V8 gone: 0 of 38 rounds high against HEAD's 12 of 30), and the duck's `configure` skips an unchanged
-  setting (a boxing site removed, located through a squeezed inlining budget; likely `E-duck`'s tail, not shown; its
-  line 152 to 112); the siblings not seen red are item 45: `docs/tasks/in-progress/engine-follow-ups.md`, items 35,
-  36, 38 and 45
-- 2026-10-19 Engine follow-ups 10c and 10d: the fm's knob reads no longer box on V8 (`prepareModEnvelope` and
-  `finiteOr` Kotlin `inline`, `finiteOr` over `isFiniteInline`; bit-identical, JVM 0 B); open, revisited with the FM
-  round (item 30's class, `docs/tasks/future/fm-revisit.md`): one heap number per fm per block for the modulator's frequency and one per
-  freq-keyed wrapper (10c's pin), at any non-integral note; probe at middle C, not 220 Hz, and do not bracket a
-  mixed-profile window with forced mark-compacts (`audio/ref/performance.md`):
-  `docs/tasks/in-progress/engine-follow-ups.md` items 10c and 10d
-- 2026-10-18 `s("sgpad").fm(...)` keeps its pitch (Q31): `sgpad`'s second saw reads `Freq * 0.1.semitones()` instead
-  of a forking `detune`, so the classic FM serves one pitch; without fm bit-identical, with fm block-size independent
-  (`SgpadFmSpec`); no engine change; the corpus moves no row (its three red rows predate it, the same with the fix
-  reverted): `docs/tasks/future/fm-revisit.md` (Q31)
-- 2026-10-17 Knob glide, two ear decisions: the bank crossfade is 50 ms (`BANK_CROSSFADE_SECONDS`, 20 ms before), and a
-  compressor move that relaxes on balance (judged by its net reduction at a fixed 0 dBFS) releases at the compressor's
-  release time on one shared fraction, never faster than the glide; a 40 dB threshold rise no longer swells 32.2 dB with 10 to
-  90 % in 46 ms (`CompressorKnobMove`); corpus: three body songs
-  moved by the crossfade, nothing by the compressor (`docs/tasks-archive/2026-10/20261017-knob-glide-listening.md`).
-- 2026-10-17 A chain request no longer waits for the ring-out: `ChainSwap` gains `Cutting` (a raised cosine over
-  0.15 s from a drain, a release, or a fade's end) on the host's `requestWaiting`; the drain measures its tails
-  (`KatalystChain.measureTails`, `TailCeiling.tighten`) against an output-referred floor used only while draining
-  (`Reverb.TAIL_FLOOR`, about -90 dBFS out; ordinary playback bit-identical), and the drain also waits for the chain's output under `SILENCE_FLOOR`,
-  so a size-10 room drains in about 14 to 18 s (by its charge), not to the 20 s cap
-  (`docs/tasks-archive/2026-10/20261017-chain-swap-request-during-drain.md`).
-- 2026-10-16 Typed Kotlin doors S7, the rollout done: the script door objects in `klangscript-libs` (`KlangScriptIgnitor`,
-  `KlangScriptIgnitorExtensions`, `KlangScriptKatalyst`, the script `Ign` / `Kat`, the slot objects, `toIgnitorDsl`,
-  `toKatalystKnob`) are `internal`, so a Kotlin caller outside reaches only the typed doors in `audio_bridge`; three
-  sprudel specs moved to `Ign`; no `Double` twin or flat door left; generated docs byte-identical, corpus identical
-  (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`).
-- 2026-10-16 Typed Kotlin doors S6: `IgnitorBandsBuilder` and `KatalystBandsBuilder` live in `audio_bridge/BandsBuilders.kt`
-  with typed members (`band(processor)`, `cut(freq: Double)`, plain: never slot-read) and the crossover once; `serial`,
-  `parallel`, `blend` (`wet: Double`, plain as the script takes it) and `bands` are typed `KatalystBuilder` members, the
-  Ignitor `bands` a typed door and its `blend` `Double` twin gone; the script variants wrap every stage, branch and band
-  processor in its check; a KSP fix records an extension function's own file as a source; corpus identical, Kokon
-  and Der Schmetterling re-accepted so they are guarded again (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`).
-- 2026-10-16 Typed Kotlin doors S5: `KatalystBuilder`, its stage builders and the modulators' builders live in
-  `audio_bridge/KatalystBuilders.kt` with typed members (each stage's omitted parameter its bare-stage constant, the
-  limiter preset and the `classic` once-only logic there; name forms for body and vowel, distort by name only); `Kat.build`/`Kat { }`
-  and the modulators on their builders in `Kat`; the knob arithmetic one typed function per word in
-  `KatalystKnobDsl.kt`; the script knobs are internal renamed variants; `serial`, `parallel`, `blend`, `bands` wait for
-  S6; corpus identical, alloc 80 of 80 (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`).
-- 2026-10-16 Typed Kotlin doors S4: the Ignitor arithmetic is one typed function per word (`saw * 0.5.ign`, the fifteen
-  `Double` twins and their operators gone, Q47); the script words are internal renamed variants that convert and call
-  them, the `min`/`max` crossing lives once in the typed functions; the script's `*` stays numbers only; corpus
-  identical (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`).
-- 2026-10-16 Typed Kotlin doors S3b and S3c: `AdsrBuilder`, `FmBuilder`, `PitchEnvelopeBuilder` (its `adsr` holds the
-  default fill once), `PhaserBuilder`, `ShimmerBuilder` and `TremoloBuilder` (`shape` with a typed `String` form) live in
-  `audio_bridge/EffectBuilders.kt`; `adsr`, `fm`, `phaser`, `shimmer`, `tremolo` and a new Kotlin `pitchEnvelope` are one
-  typed door each on their builders, `detune`, `drive`, `distort`, `crush`, `coarse`, `accelerate`, `pitchMod` and
-  `pitchModSemitones` typed (the flat doors and `Double` twins are gone), `octaveUp`/`octaveDown` new on Kotlin; new
-  `constants/ShimmerDefaults.kt`; corpus identical (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`).
-- 2026-10-16 Typed Kotlin doors S3a: `FilterBuilder`, `BandFilterBuilder` (with `FilterKnobs` and the nested
-  `ModAdsrBuilder`) and the eq's two builders, `EqBuilder` (voice) and `KatalystEqBuilder` (chain, Q49 refusal at build
-  time), live in `audio_bridge/EffectBuilders.kt`; `lowpass`/`highpass`/`bandpass`/`notch` are `(freq, q = FILTER_Q.ign,
-  configure)`, `onepole(freq)` and `eq(configure)` one function each (the flat doors and `Double` twins are gone, the
-  fill runs once in the Kotlin door); new `constants/FilterDefaults.kt`; corpus identical (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`).
-- 2026-10-16 Typed Kotlin doors S2: the other fifteen oscillator builders (`OscSineBuilder` ... `OscSuperPluckBuilder`)
-  live in `audio_bridge` with typed member knobs, every `Ign` oscillator door is `(freq, configure)` (the flat named
-  knobs are gone), the script doors delegate to them, the script knobs are internal renamed variants; pinned per
-  member knob against written-out nodes in `KotlinIgnObjectParitySpec` (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`).
-- 2026-10-16 Typed Kotlin doors spike S1: `VibratoBuilder` and `OscSawBuilder` live in `audio_bridge`
-  (`IgnitorBuilders.kt`) with typed member knobs; `IgnitorDsl.vibrato(rate, semitones, configure)` replaces the flat
-  overloads and `Ign.saw(freq, configure)` the named knobs; the script knobs are internal, renamed variants
-  (`scriptRange`) that convert and call the members. The recipe: `/dsl-design` §3, the typed-door pattern
-  (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`).
-- 2026-10-16 Typed Kotlin doors step 1b: the typed `Ign` and `Kat` objects in `audio_bridge` (`Ign.kt`, `Kat.kt`),
-  the script objects' words (their knobs as named parameters, superseded by the maintainer's revision the same day:
-  the same builders and shapes, see S1); the pluck doors' sealed defaults moved there, pinned by
-  `KotlinIgnObjectParitySpec` / `KotlinKatObjectParitySpec` (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`).
-- 2026-10-16 Typed Kotlin doors step 1: `.ign` / `.kat` on `Double` and `Int` and a `unaryMinus` on each `Constant`
-  (`-1.ign` is `Constant(-1.0)`), pinned by `NumberExtensionsSpec`; the "Two doors, one DSL" rule rewritten for the
-  typed door as the target state (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`).
-- 2026-10-16 Engine follow-up 42: every delay and reverb switch-off fades its feed over the wet glide (Q39, "fade, do
-  not cut"), and the landing block moves the stage into the drain by itself, so an orbit without an owner drains too;
-  the new owner's first 50 ms bleed into the old ring or room, accepted; corpus unmoved (it reaches no such switch-off):
-  `docs/tasks/in-progress/engine-follow-ups.md` item 42
-- 2026-10-16 Q20: the frozen `strangerThings_2026_07_03`, `derSchmetterling_2026_09_25` and the frozen piece
-  `derSchmetterling_2026_09_16` give each pattern that shared an orbit with other bus settings a free orbit of its
-  own; the three corpus rows moved because the frozen TEXT was edited, not the engine, and were re-accepted
-  (`corpus-accept-engine`): `docs/tasks/song-orbit-ownership-review.md`
-- 2026-10-16 Engine follow-up 43: solo reacts at once (Q28): a source's newest solo event wins, the 2 s hold and the
-  per-voice `ActiveVoice.soloed` gone, a voice leaving its solo does not dip: `docs/tasks/in-progress/engine-follow-ups.md` item 43
-- 2026-10-16 Engine follow-up 41: Kotlin/JS emits `Double.NaN` as the global `NaN`, a tagged value, so an `if` with
-  a NaN arm boxed its double arm on V8: the delay and reverb writers' gates and the `Reverb.lowpass` setter now store
-  each arm on its own, and `Reverb.normalizeSize` writes its clamp out (the stdlib `coerceIn` was left out of the
-  writer's budget next). Bit for bit; `E-kat-gates` 54.5 to 16.3 B per block, `E-kat-mix` 65.0 to 33.0 (the floor),
-  `C-remap` 32.0 to 16.8 (`--predictable`, 1,000,000 blocks); corpus identical; the V8 lines `E-kat-gates` 160 to 112,
-  `E-kat-mix` 124 to 96: `docs/tasks/in-progress/engine-follow-ups.md` item 41
-- 2026-10-16 Engine follow-up 40: the orbit compressor writes its five knobs through one holder
-  (`Compressor.knobArgs`) and one `applyKnobArgs`, which stores what the five setters store, bit for bit, and computes
-  the time constants once (3 `exp` per change where there were 15); the public setters stay for the other callers.
-  `E-kat-dyn` 97.1 to 45.3 B per block (the duck's floor), `E-kat-mix` 96.9 to 67.3 (`--predictable`), pinned about 200
-  ns per block faster; corpus identical; the V8 lines `E-kat-dyn` 152 to 96, `E-kat-mix` 250 to 124:
-  `docs/tasks/in-progress/engine-follow-ups.md` item 40
-- 2026-10-16 Engine follow-up 39: the Katalyst knob noises no longer cross `fbm` as heap numbers on V8: `fbm`
-  (`common`, shared with the Ignitor's `perlin` and `berlin`, bit for bit) calls `noise` at one site, and the knob's
-  noise arms are methods of their own (`samplePerlin`, `sampleBerlin`). `E-kat-perlin` 113.7 to 21.8 B per block,
-  `E-kat-all7` 118.5 to 15.0, `E-kat-mix` 196.2 to 96.9 (`--predictable`); corpus identical; the V8 lines
-  `E-kat-perlin` 232 to 96, `E-kat-all7` 336 to 250 (the per-sample class only, above a tail HEAD has too):
-  `docs/tasks/in-progress/engine-follow-ups.md` item 39
-- 2026-10-16 Engine follow-up 34: `ScratchBuffers.oversample` finds a sub-pool by a scan of two arrays, not a
-  stdlib `Int` map (about 40 B per lookup on V8); `DistortionCore.process` and `processRamped` are `inline` and stage
-  the drive in fields. `E-distort` 155 to 16 B per block (`--predictable`, 1,000,000 blocks), `tube4x`,
-  `E-parallel` and `E-bands` at the floor too; bit for bit, corpus identical; the V8 lines of `E-distort` 232,
-  `E-parallel` 268 and `E-bands` 320 all to 96 (`E-parallel` catches a single view per block of item 33 again,
-  `E-bands` one view per branch only):
-  `docs/tasks/in-progress/engine-follow-ups.md` item 34
-- 2026-10-16 Engine follow-up 32: the delay and reverb stages skip an unchanged config (`applied`, the phaser's
-  pattern), never while the feedback or size glide moves, the delay not while a refused grow leaves the ring short,
-  the OFF arm never; in pinned mixed V8 processes their `configure` boxed up to four and three heap numbers per
-  block, now the engine without a stage; bit for bit, corpus identical, no budget moved:
-  `docs/tasks/in-progress/engine-follow-ups.md` item 32
-- 2026-10-15 Engine follow-up 31: the last per-block boxes of a full `classic()` voice on V8 removed, about one
-  heap number each: `EnvelopeCore.prepare` inline, its doubles staged in the core's own fields (a `DoubleArray`
-  holder cost an allocation per voice build, `E-C-n1` red); `DistortionCore.shapeRun` reads its drive from a field;
-  `classic()`'s tremolo folds a voice-constant depth at build; the SVF clamps use `isFiniteInline`. `C-full` about 47
-  to 15 B per block (`--predictable`), what the classic saw reads; bit for bit, corpus identical, no budget moved:
-  `docs/tasks/in-progress/engine-follow-ups.md` item 31
-- 2026-10-12 Engine follow-up 2, step 4, item 2 DONE: the allocation case `S-doors` guards sprudel's event path
-  (query, `toVoiceData`, wire encode), a case that makes no sound checks its outputs instead of a peak; V8 36,500,
-  JVM 15,764. The follow-ups file moved to `docs/tasks/in-progress/` (paused for the token budget):
-  `docs/tasks/in-progress/engine-follow-ups.md` item 2
-- 2026-10-12 Katalyst knob expressions, done (steps 6 and 7): ten allocation cases and twelve timing rows for moving
-  knobs, five V8 remedies (`KnobGlide.retarget` inline and its state in a `DoubleArray`, `Compressor.glideArgs`,
-  `PhaserCore.prepareBlock` from its block, `isFiniteInline`), engine follow-ups 39 to 41 filed; the step 3 render
-  fixture removed, the task archived: `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`
-- 2026-10-12 Katalyst knob expressions, steps 5a to 5c: Katalyst knobs take modulators (`Kat.sine`, `saw`, `ramp`,
-  `tri`, `square`, `perlin`, `berlin`), ticked once per processed block at the top of `KatalystChain.process`, a
-  modulated knob gliding over one block; `body`/`vowel` wet and floor glide the blend in place (Q8 (a)):
-  `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md` step 5
-- 2026-10-12 Katalyst knob expressions, step 4: a Katalyst knob may be an expression over `Kat.param`s (the
-  Ignitor's arithmetic and `range`, `KatalystKnobDsl`), compiled per knob at chain build (`KatalystKnobProgram`)
-  and evaluated with the Ignitor's laws once per changed map; a non-finite slot leaf unsets the knob (Q5):
-  `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md` step 4
-- 2026-10-11 Engine follow-up 2, step 5: `KlangMap` is not a Kotlin `Map` (maintainer); `VoiceData`'s slot maps and
-  the dispatcher's `engines` are `KlangMap`s, the codec generator refuses a stdlib `Map` field; the wire bytes, the
-  schema hash and the engine bit for bit unchanged, corpus identical; `E-C-n1` re-set to 13,068, `E-duck` to 152
-  (its V8 tail, item 38): `docs/tasks/in-progress/engine-follow-ups.md` item 2
-- 2026-10-11 Engine follow-up 2, step 3: the per-note lookups: the sound registry on `KlangMap`s, its name lowercased
-  only when a character could change, `engineFor` one lookup; a synth note about 450 B lighter on V8, bit for bit,
-  corpus identical; the alloc case `E-C-n1` (V8 13,100, JVM 6,628): `docs/tasks/in-progress/engine-follow-ups.md` item 2
-- 2026-10-11 Engine follow-up 2, step 2: sprudel's `ParamBag` on a `KlangMap`; `KlangMap.forEachEntry` and a
-  `capacityHint`, the JS copy and merge through the JS `Map`'s own walk, the wire encoder walks a `KlangMap` with it;
-  the engine bit for bit, corpus identical: `docs/tasks/in-progress/engine-follow-ups.md` item 2
-- 2026-10-11 Engine follow-up 2, step 1: a new param map cost about 1,100 B on V8, 27 `HashMap` lookups at 40 B each
-  inside the Kotlin/JS stdlib's `hashCode`; the new multiplatform `KlangMap` (`common/infra`, a JS `Map` on JS, a
-  `LinkedHashMap` on the JVM) is what the worklet's decoder, the warm-up and the sample-envelope merge make, no wire or
-  signature change; a new map now costs about 16 B, bit for bit, corpus identical; the alloc case `C-remap` (V8 192,
-  JVM 36); sprudel's `ParamBag` is step 2: `docs/tasks/in-progress/engine-follow-ups.md` item 2
-- 2026-10-11 Engine follow-up 33: `parallel`'s per-branch copy and the Katalyst EQ's scalar copies are `copyRangeInto`
-  (no `subarray` view per call on V8); `E-parallel` about 600 to about 220 B per block, `E-bands` about 820 to about
-  250, their V8 lines 268 and 320: `docs/tasks/in-progress/engine-follow-ups.md` item 33
-- 2026-10-11 Katalyst stage measurements: ten alloc cases run an authored Katalyst chain (every stage family; the
-  arithmetic constant and gliding), timing rows for the arithmetic stages; on V8 the bus distort's oversampled path and
-  `parallel`'s per-branch `copyInto` allocate per block (budgeted as they are, open):
-  `docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md`
-- 2026-10-11 Engine follow-up 1: the orbit stages' boxes on V8 located and the block processing's removed (the glide's
-  result, the delay's and the reverb's tail step, the delay loops' arguments, the ring check's `toInt()`, the phaser's
-  `alphaAt`, the depth clamp, the constant feedback rewrite) and the phaser's `configure` skips an unchanged config
-  (review round 1); in unpinned mixed processes every stage case now reads what the engine without a stage reads,
-  bit for bit, corpus identical; the delay's and the reverb's `configure` is item 32; two alloc cases, `E-delay`
-  (V8 112) and `E-stages` (V8 96): `docs/tasks/in-progress/engine-follow-ups.md` items 1 and 32
-- 2026-10-11 Engine follow-up 5: the PWM loop boxed its phase per sample on the development bundle only (about 2 KB per
-  block, mixed profile; the production bundle never), from its phase seed, not `setPulseShape`. The `* 1.0` seed rule
-  now covers the field seeds of every oscillator loop (the wave loops, the stacks, the sample, the Karplus string),
-  bit for bit, corpus identical: `docs/tasks/in-progress/engine-follow-ups.md` item 5
-- 2026-10-11 Engine follow-up 7: the drift ramp's `DriftLanes.startOf`/`endOf` returned doubles through a `blendOf`
-  that the superpluck's `generate` never inlined on V8 (2 heap numbers per string per block); the unison stacks and
-  the partial bank inline it and did not box. `advanceLane` now leaves the ramp in a `DoubleArray(2)` holder read
-  through `inline` `blockStart`/`blockEnd` (two double fields only moved the boxes). Superpluck with drift from 288
-  to 688 B per block to 32 to 48 (a rare tail, about 1 process in 30, not located), bit for bit, corpus identical; a
-  new alloc case `spluck-a` guards it (V8 96, JVM 6):
-  `docs/tasks/in-progress/engine-follow-ups.md` item 7
-- 2026-10-11 Engine follow-up 29: in a full `classic()` voice the SVF node's one shared `generate` ran out of V8's
-  inlining budget, and its per-block setup boxed (about 8 heap numbers per block on the lowpass, 4 on the highpass,
-  one per filter drift lane); the setup moved into methods of their own reading a holder, `SvfCoeffSweep` takes its
-  cutoffs and q as fields, the SVF clamps' `coerceIn` is written out, and the filter drift is a step that returns
-  nothing (`FilterHumanization.stepDrift`) plus a field the node reads. `C-full` about 190 to 36 to 52 B per block,
-  bit for bit, corpus identical, its V8 budget re-set to 112; what is left is item 31:
-  `docs/tasks/in-progress/engine-follow-ups.md` items 29 and 31
-- 2026-10-11 The Ignitor's arithmetic as Katalyst stages, the same per-sample laws, no optimizer (maintainer): [record](../docs/tasks-archive/2026-10/20261011-katalyst-arithmetic.md)
+- **Oscillator phase** (`PhaseOffset`, KLANG-00272 (oscillator phase knob)): every periodic oscillator has a `phase`
+  input in cycles, wrapped to `KLANG-00300 (katalyst arithmetic)
 - 2026-10-10 Engine follow-up 6: `WaveIgnitor` hands its `dt` to its loop methods (past V8's inlining limit) in its
   `WaveVoiceState.dt` holder, no longer as an argument; it boxed one heap number per block per wave oscillator on V8
   (about 16 B, now about 0), bit for bit, corpus identical; four V8 alloc budgets re-set with it:
-  `docs/tasks/in-progress/engine-follow-ups.md` item 6
+  KLANG-00290 (engine follow ups) item 6
 - 2026-10-10 The bus `distort` oversamples at 2x by default (maintainer; the voice's stays at 0): step 5 of
-  `docs/tasks-archive/2026-10/20261010-iir-oversampler.md`
+  KLANG-00298 (iir oversampler)
 - 2026-10-10 The oversampler is a polyphase IIR half-band (flat to 20 kHz, about 100 dB of rejection, 3.07 samples at
-  2x), and every dry path beside an oversampled one runs through its phase twin: `docs/tasks-archive/2026-10/20261010-iir-oversampler.md`
+  2x), and every dry path beside an oversampled one runs through its phase twin: KLANG-00298 (iir oversampler)
 - 2026-10-10 Engine follow-ups 8 and 12: `Ignitors.readParam` is Kotlin `inline` (one shared helper was one
   megamorphic site that boxed every knob read on V8, 60 to 100 B per classic voice block), and the scalar is the
   primitive `Ignitor.controlRateValue`, read only when `isBlockConstant` (the nullable view is the extension
   `controlRateValueOrNull`; the "true flag, null value" breach path is dropped, maintainer); bit for bit, corpus
-  identical: `docs/tasks/in-progress/engine-follow-ups.md` items 8 and 12
+  identical: KLANG-00290 (engine follow ups) items 8 and 12
 - 2026-10-10 Engine follow-ups 10a and 10b: `adsrCurveShape` is a statement `when`; its expression form boxed
   every sample of a moving envelope on V8 (the chain `adsr`, `classic()`'s envelope, the pitch and FM envelopes,
-  about 2.1 KB per block each, now about 0), bit for bit, corpus identical: `docs/tasks/in-progress/engine-follow-ups.md` items
+  about 2.1 KB per block each, now about 0), bit for bit, corpus identical: KLANG-00290 (engine follow ups) items
   10a and 10b
 - 2026-10-10 Engine follow-up 3: no noise box reproduces; the house limiter's per-sample `lookaheadStep`, never
   inlined by V8, boxed about 2 KB per block whenever anything sounded and 4 KB from its first reduction on (the
   likely cause of the old figure, unproven), now about 0; it is `inline`, bit for bit, corpus identical:
-  `docs/tasks/in-progress/engine-follow-ups.md` item 3
+  KLANG-00290 (engine follow ups) item 3
 - 2026-10-10 Engine follow-up 9: `DistortionCore` dispatches its shape once per block to one loop per shape; the
   per-sample `when` boxed every shaped sample on V8 (2 to 33 KB per block, now about 0), bit for bit, corpus
-  identical: `docs/tasks/in-progress/engine-follow-ups.md` item 9
+  identical: KLANG-00290 (engine follow ups) item 9
 - 2026-10-10 The sine's explicit partials, `partial(ratio, gain, phase)` (a fourth bank, wire `Sine.partials`, cap
-  256, both doors), corpus identical: `docs/tasks-archive/2026-10/20261010-sine-inharmonic-partials.md`
+  256, both doors), corpus identical: KLANG-00296 (sine inharmonic partials)
 - 2026-10-10 Pitch pipeline 7c: the vibrato's `range(from, to)` and `phase` (node fields, both doors, `classic()`
   slots `vibrato.rangeFrom|rangeTo|phase`); the default builds neither, corpus 18 of 18 identical:
-  `docs/tasks/pitch-pipeline-into-the-tree.md` section 7c
+  KLANG-00245 (pitch pipeline into the tree) section 7c
 - 2026-10-10 Pitch pipeline 7b: the `vibrato` node's runtime is a composition, `VibratoModIgnitor` gone; seven corpus
   songs move, by the sine's rng draw (all seven), one rounding (five) and the per-sample depth (Die Kirschblüte):
-  `docs/tasks/pitch-pipeline-into-the-tree.md` section 7b
+  KLANG-00245 (pitch pipeline into the tree) section 7b
 - 2026-10-10 Pitch pipeline 7a: `pitchModSemitones(mod)`, the exponential pitch primitive (`2^(mod / 12)`), a node on
   both doors and the wire beside the linear `pitchMod` (D8); the corpus identical:
-  `docs/tasks/pitch-pipeline-into-the-tree.md` section 7a
+  KLANG-00245 (pitch pipeline into the tree) section 7a
 - 2026-10-10 Pitch pipeline step 5: the strip's shell goes (`PitchPipelineBuilder`, `BlockContext.freqModBuffer`,
   `Voice.RenderContext.freqModBuffer`, `IgniteRenderer`'s bridge) and `voices/strip/` dissolves into `voices/` (D7);
-  a pure removal, the corpus identical: `docs/tasks/pitch-pipeline-into-the-tree.md` step 5
+  a pure removal, the corpus identical: KLANG-00245 (pitch pipeline into the tree) step 5
 - 2026-10-10 Pitch pipeline step 4: sprudel's `fm(depth, ratio, attack, decay, sustain, release)` is `classic()`'s
   innermost FM stage (`fm.*` slots), its five wire fields, `FmRenderer`, `Voice.Fm`, `Voice.Envelope` and
   `EnvelopeCalc` gone; the node's law (per-sample envelope, E11 closed; full depth through the tail without an envelope;
   the modulator follows the other pitch doors; the rng shift); the corpus identical:
-  `docs/tasks/pitch-pipeline-into-the-tree.md` step 4
+  KLANG-00245 (pitch pipeline into the tree) step 4
 - 2026-10-10 `serial` (was `through`), `parallel` on the Ignitor and the Katalyst (branches summed and aligned by
   latency), `bands` (Linkwitz-Riley, flat untouched), `blend` (linear dry/wet), and a shared node kept one node
-  across the wire (`@WireShared`): `docs/tasks-archive/2026-10/20261010-parallel-serial-bands.md` steps 1 to 5
+  across the wire (`@WireShared`): KLANG-00297 (parallel serial bands) steps 1 to 5
 - 2026-10-10 v0.6.1: pitch pipeline steps 1 to 3b, the Katalyst `distort` stage (merged from `katalyst-distort`), a
   soloed voice protected to its end, the warehouse panel's reverb counters, `analog(character)` on every door and
   `variants` with plain numbers; the corpus identical except Kokon's two landing strikes (accelerate, at most 2.5
   cents): the entries below and `DEV-DIARY.MD`
 - 2026-10-09 A `distort` stage on the Katalyst (bus and master), the voice's law at the house DC pole, the oversampler's
-  latency held in every state: `docs/tasks-archive/2026-10/20261009-katalyst-distort-stage.md`
+  latency held in every state: KLANG-00292 (katalyst distort stage)
 - 2026-10-09 Superseded by follow-up 43 (2026-10-16): a soloed voice is protected for its whole life (`ActiveVoice.soloed`, Q14 and Q28); the window serves between events:
-  `docs/tasks-archive/2026-10/20261009-solo-protects-whole-voice.md`
+  KLANG-00294 (solo protects whole voice)
 - 2026-10-09 Pitch pipeline step 3b: a pitch node means what it wraps; above an `fm` it moves the whole operator
   (`CarrierFreqMod`, the modulator reads the outer mod at the carrier's frequency, once per block). A sound change for
   authored fm trees under a pitch node and for sprudel's pitch doors over an fm instrument (the strip moved the modulator too),
   and for two shared-modulator shapes that rendered one modulator at two pitches; the corpus identical; one author rule
-  (an fm above a forking detune): `docs/tasks/pitch-pipeline-into-the-tree.md` step 3b
+  (an fm above a forking detune): KLANG-00245 (pitch pipeline into the tree) step 3b
 - 2026-10-09 Pitch pipeline step 3: sprudel's `accelerate` is `classic()`'s accelerate stage (the flat `accelerate`
   slot), its wire field and the strip's `AccelerateRenderer` gone; the node holds its target from the gate on (D2):
   a sound change for an `accelerate` under a release tail on both doors (corpus: Kokon's `strike` only, a listening
   pair) and for a zero gate (`legato(0)`: the target from the first frame, Q27), every other corpus row and every
   non-accelerate matrix row identical, apart from the shapes the step record names (D1, D6, a non-finite amount now
   the bare voice where the strip froze the oscillator, the clamp from about 598 semitones, one temporary regrouping
-  with sprudel `fm`): `docs/tasks/pitch-pipeline-into-the-tree.md` step 3
+  with sprudel `fm`): KLANG-00245 (pitch pipeline into the tree) step 3
 - 2026-10-09 Pitch pipeline step 2: sprudel's `vib` is `classic()`'s vibrato stage (`vibrato.*` slots), its two wire
   fields and the strip's `VibratoRenderer` gone, bit-identical on the corpus and the door matrix apart from the
   shapes the step record names (D1, D6, regroupings up to about 7.3e-13, the raw edges: a depth past about 598
-  semitones, non-finite rates, a +Infinity depth): `docs/tasks/pitch-pipeline-into-the-tree.md` step 2
+  semitones, non-finite rates, a +Infinity depth): KLANG-00245 (pitch pipeline into the tree) step 2
 - 2026-10-09 Pitch pipeline step 1: sprudel's `penv` is `classic()`'s pitch envelope stage (`penv.*`, `penvCurves.*`
   slots), its eight wire fields and the strip's `PitchEnvelopeRenderer` gone, bit-identical on the door matrix and
   the corpus, apart from the accepted shapes (an fm modulator under `penv` until step 3b, three pitch factors
-  regrouped, bare instruments, D6): `docs/tasks/pitch-pipeline-into-the-tree.md` step 1
+  regrouped, bare instruments, D6): KLANG-00245 (pitch pipeline into the tree) step 1
 - 2026-10-09 v0.6.0: the engine tidy-up is done (steps 1 to 13: the twins written once, `FilterDef` retired, a plain
   number at every constant door; the V8 allocation pass), bit-identical on the corpus; the open items:
-  `docs/tasks/in-progress/engine-follow-ups.md`; the record: `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md`
+  KLANG-00290 (engine follow ups); the record: KLANG-00286 (engine tidy up)
 - 2026-10-09 The `classic()` slot renames: the envelope words and `declick`, `crush.bits`, `coarse.factor`, the
   pluck's `feedback`, brown noise's `leak`, on every door, node, wire field and runtime factory, bit-identical:
-  `docs/tasks-archive/2026-10/20261009-classic-slot-names-check.md`
+  KLANG-00289 (classic slot names check)
 - 2026-10-08 One fade law for the bank swap and the compressor (`utils/linear_crossfade.kt`); body and vowel are one
   stage class with two kinds on a pooled bank, no allocation per change; the band rows live with their catalogues
-  (`BodyMaterials.Mode`, `VowelBands.Band`) and `FilterDef` is retired: `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md` step 12
+  (`BodyMaterials.Mode`, `VowelBands.Band`) and `FilterDef` is retired: KLANG-00286 (engine tidy up) step 12
 - 2026-10-08 First-block and voice-count allocations moved to the build (drift lanes, phaser, memo, partial banks,
-  stacks, strings, the phase pool's parse and key): `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md` step 10
+  stacks, strings, the phase pool's parse and key): KLANG-00286 (engine tidy up) step 10
 - 2026-10-08 An engine's end of life is one `PlaybackEngine.Phase`; the dispatcher's `draining` set and `detached`
-  list are gone; `renderInto` is one path: `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md` step 9
+  list are gone; `renderInto` is one path: KLANG-00286 (engine tidy up) step 9
 - 2026-10-08 One playback per scheduler: one `PlaybackCtx`, no `playbackId` filters or parameters
-  (`startRealtimeVoice` keeps its id, the context may be made from it): `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md` step 8
+  (`startRealtimeVoice` keeps its id, the context may be made from it): KLANG-00286 (engine tidy up) step 8
 - 2026-10-08 Per-block walks are index loops (`Voice` stages, `Cylinders` in rent order with an id array, the
   scheduler, the dispatcher); the diagnostics closure is gone; the solo ramp is `SoloRamp` on an inlined
-  `easeInOutCubic`, `ValueRamp` deleted: `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md` step 7
+  `easeInOutCubic`, `ValueRamp` deleted: KLANG-00286 (engine tidy up) step 7
 - 2026-10-08 The audio helpers live in `utils/` (`DspUtil.kt` split by content; `finiteOrZero`, `fadeToZero`,
   `timeConstantCoeff`, `wrapPhaseFastOrSafe`, `rampStep`, and `copyRangeInto` for every per-block copy, no `copyInto` view
-  on JS); the stereo add is the member `StereoBuffer.addFrom`: `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md` step 6
+  on JS); the stereo add is the member `StereoBuffer.addFrom`: KLANG-00286 (engine tidy up) step 6
 - 2026-10-08 One silence floor, `SILENCE_FLOOR` (1e-5; the master's 1e-4 stays, D9); `BusEffectDefaults` holds
-  delay and reverb; `TEARDOWN_FADE_SECONDS`, `stageAskedFor`, `KatalystChain.writers`: `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md` step 5
+  delay and reverb; `TEARDOWN_FADE_SECONDS`, `stageAskedFor`, `KatalystChain.writers`: KLANG-00286 (engine tidy up) step 5
 - 2026-10-07 The `KatalystSlots` composites live in their writers, one NaN rule per knob (body, vowel, reverb
-  lowpass: the stage's); `CompressorSettings` / `DuckSettings` left `Voice`: `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md` step 4
+  lowpass: the stage's); `CompressorSettings` / `DuckSettings` left `Voice`: KLANG-00286 (engine tidy up) step 4
 - 2026-10-07 No `Random` default anywhere in the engine; an orbit knob's build draws from a fixed seed:
-  `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md` step 3
+  KLANG-00286 (engine tidy up) step 3
 - 2026-10-07 The oversampler is two halves, `upsample` and `decimate`, with the caller's shaping loop between
-  them inline (no closure per block, no `copyInto` view on JS): `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md` step 2
+  them inline (no closure per block, no `copyInto` view on JS): KLANG-00286 (engine tidy up) step 2
 - 2026-10-07 The gate covers the four pitch arms, a fold (a non-finite vibrato depth stays built, its default);
-  a gated pitch arm's inner shares with the same node elsewhere: `docs/tasks/pitch-pipeline-into-the-tree.md` step 0
+  a gated pitch arm's inner shares with the same node elsewhere: KLANG-00245 (pitch pipeline into the tree) step 0
 - 2026-10-07 Solo is engine state per source: the rest fillers are control-only events, `SoloTracker` records from any
   event before the control drop and the late guard, the others play at `1 - amount`; `ActiveVoice.soloAmount` gone,
-  audit B4.2 closed: `docs/tasks-archive/2026-10/20261009-bugfix-solo-rests-and-amount.md`
-- 2026-10-08 The unison cap is 256 (maintainer; it was 64): `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md` (Decided)
+  audit B4.2 closed: KLANG-00287 (bugfix solo rests and amount)
+- 2026-10-08 The unison cap is 256 (maintainer; it was 64): KLANG-00286 (engine tidy up) (Decided)
 - 2026-10-07 An empty `Ignitor.variants()` is silence, no longer a `require` at note-on; the shimmer survives an empty,
   a huge or a non-finite pitch (no index error, no hang); a unison count is capped at `UNISON_MAX_VOICES` (64):
-  `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md` ("First, a bug")
+  KLANG-00286 (engine tidy up) ("First, a bug")
 - 2026-10-07 The voice's states are a sealed type; the fade window lives in `Fading`, the silence count in
   `Releasing` (lifecycle step 5b, no sound change by design; the 18-song corpus bit-identical to step 5,
-  coordinator, 2026-10-07): `docs/tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`
+  coordinator, 2026-10-07): KLANG-00279 (voice lifecycle state machine)
 - 2026-10-07 The newest Sounding voice owns its orbit's bus settings, gives them up at its gate or cut; the zombie
   is retired and every removal keeps the list's order (lifecycle step 5, maintainer, a sound change):
-  `docs/tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`
+  KLANG-00279 (voice lifecycle state machine)
 - 2026-10-07 A cut fades its victim over 4 ms (`Fading`) instead of removing it (lifecycle step 4; no shipped song
-  uses cut): `docs/tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`
+  uses cut): KLANG-00279 (voice lifecycle state machine)
 - 2026-10-07 Note-off and hard kill are events on the voice; the scheduler removes only Done voices (lifecycle
-  step 3, no sound change by design): `docs/tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`
+  step 3, no sound change by design): KLANG-00279 (voice lifecycle state machine)
 - 2026-10-07 One home for a voice's time limits, `VoiceLimits` (lifecycle step 2, no sound change by design):
-  `docs/tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`
+  KLANG-00279 (voice lifecycle state machine)
 - 2026-10-07 The voice's lifecycle is a state machine inside `Voice` (step 1, read-only, no sound change by design):
-  `docs/tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`
+  KLANG-00279 (voice lifecycle state machine)
 - 2026-10-07 The engine's output is floating point: the master clips into a `StereoBuffer`, the browser hears the
-  floats, the 16-bit step lives only at the JVM/WAV edge (`docs/tasks-archive/2026-10/20261007-float-output.md`)
+  floats, the 16-bit step lives only at the JVM/WAV edge (KLANG-00280 (float output))
 - 2026-10-07 One pitch mod over several pitched sources at one pitch advances once per block; Sakura's `shaku` and Irish Lament's
-  `blockfloete` vibrato rates written as heard (`docs/tasks-archive/2026-10/20261007-shared-modulator-memo-rate.md`, B-1)
+  `blockfloete` vibrato rates written as heard (KLANG-00278 (shared modulator memo rate), B-1)
 - 2026-10-07 A shared modulator that reads no `Freq` runs once per block at any pitch; a non-finite pitch amount reads
-  as unset; silence floors on the Eq parity specs; the wasm stub deleted (`docs/tasks-archive/2026-10/20261007-shared-modulator-memo-rate.md`,
-  `docs/tasks-archive/2026-10/20261007-bugfix-ignitor-non-finite-pitch-amount.md`, `docs/tasks-archive/2026-10/20261014-audit-audio-backend-leftovers.md`)
+  as unset; silence floors on the Eq parity specs; the wasm stub deleted (KLANG-00278 (shared modulator memo rate),
+  KLANG-00277 (bugfix ignitor non finite pitch amount), KLANG-00308 (audit audio backend leftovers))
 - 2026-10-07 The saw's node is `Saw` end to end: the node `IgnitorDsl.Saw` (wire name `saw`), the factory
   `Ignitors.saw`; the sound names `sawtooth` / `saw` and the LFO shape `sawtooth` stay
-  (`docs/tasks-archive/2026-10/20261006-oscillator-names-across-dsls.md`, decision 3)
+  (KLANG-00273 (oscillator names across dsls), decision 3)
 - 2026-10-06 The triangle oscillator is `tri` end to end: the node `IgnitorDsl.Tri` (wire name `tri`), the factory
   `Ignitors.tri`; the sound name and the LFO shape `triangle` stay
-  (`docs/tasks-archive/2026-10/20261006-oscillator-names-across-dsls.md`)
+  (KLANG-00273 (oscillator names across dsls))
 - 2026-10-06 A `phase` input on every periodic oscillator and a `range` on the tremolo's swing, both defaults bit-identical
-  (`docs/tasks-archive/2026-10/20261006-oscillator-phase-knob.md`)
+  (KLANG-00272 (oscillator phase knob))
 - 2026-10-05 The Ignitor's `rangex(from, to)`, the exponential twin of `range`, composed of `Exp`, `Range`, `Log` and
-  `Max` (no node of its own), floor `RANGEX_FLOOR` (`docs/tasks-archive/2026-10/20261005-sprudel-signals-range-cleanup.md` decision 16)
+  `Max` (no node of its own), floor `RANGEX_FLOOR` (KLANG-00271 (sprudel signals range cleanup) decision 16)
 - 2026-10-05 One `range`: the Ignitor's `unipolar()` / `bipolar()` go with their wire nodes; `range(0, 1)` and
-  `mul(2).minus(1)` spell them (`docs/tasks-archive/2026-10/20261005-sprudel-signals-range-cleanup.md`)
+  `mul(2).minus(1)` spell them (KLANG-00271 (sprudel signals range cleanup))
 - 2026-10-04 The Ignitor/Katalyst naming: the wire field is `ignitorParams`, `SoundValue.Dsl` holds an inline tree,
-  Katalyst params are their own type, `KatalystDsl.Slots` builds `classic` (`docs/tasks-archive/2026-10/20261004-ignitor-katalyst-naming.md`)
-- 2026-09-30 The reverb is one room for both ears (`CROSS_FEED` 0.5): [record](../docs/tasks-archive/2026-09/20260930-stereo-reverb.md)
-- 2026-09-29 The tremolo is composed from the oscillators (its own LFO removed, `skew`/`phase` gone, 16 ms edges, every depth floored at 0): [task](../docs/tasks-archive/2026-10/20261002-tremolo-as-composition.md)
-- 2026-09-29 Filter drift is twice the pitch drift, by ear: [record](../docs/tasks-archive/2026-09/20260929-analog-drift-ratio-tuning.md)
-- 2026-09-28 The master is a Katalyst at the output; the Master DSL retires (phase 3 step 12): [record](../docs/tasks-archive/2026-09/20260928-phase3-step12-master-as-katalyst.md)
+  Katalyst params are their own type, `KatalystDsl.Slots` builds `classic` (KLANG-00269 (ignitor katalyst naming))
+- 2026-09-30 The reverb is one room for both ears (`CROSS_FEED` 0.5): record (KLANG-00254)
+- 2026-09-29 The tremolo is composed from the oscillators (its own LFO removed, `skew`/`phase` gone, 16 ms edges, every depth floored at 0): task (KLANG-00265)
+- 2026-09-29 Filter drift is twice the pitch drift, by ear: record (KLANG-00248)
+- 2026-09-28 The master is a Katalyst at the output; the Master DSL retires (phase 3 step 12): record (KLANG-00238)
 - 2026-09-27 The voice strip and the Pipeline DSL retire; every voice is its tree (step 9): [entry](ref/memory-history.md#the-voice-strip-and-the-pipeline-dsl-retire-every-voice-is-its-tree-phase-3-step-9-2026-09-27)
 - 2026-09-26 Authored instruments ending in `classic()` leave the strip (step 10 c1; superseded by step 9): [entry](ref/memory-history.md#authored-instruments-ending-in-classic-leave-the-strip-phase-3-step-10-commit-1-2026-09-26)
 - 2026-09-26 The sample instrument (step 7): [entry](ref/memory-history.md#the-sample-instrument-the-strip-off-for-samples-phase-3-step-7-2026-09-26)
 - 2026-09-26 The built-ins on `classic()` (step 6; the strip parts superseded): [entry](ref/memory-history.md#the-built-ins-on-classic-the-strip-off-for-them-phase-3-step-6-2026-09-26)
 - 2026-09-25 One envelope law, `EnvelopeCore` (D3): [entry](ref/memory-history.md#one-envelope-law-envelopecore-for-every-envelope-phase-3-d3-commit-a1-2026-09-25)
 - 2026-09-25 One crush law, one distort loop (step 4): [entry](ref/memory-history.md#one-crush-law-one-distort-loop-d1-and-d2-landed-phase-3-step-4-2026-09-25)
-- 2026-09-25 `classic()` as a slotted tail, the filter envelope's slot-layer fill (step 5): [record](../docs/tasks-archive/2026-09/20260928-builtin-instruments.md)
-- 2026-09-25 One adsr shape, curve index knobs, an on switch, one exp bend (step 3c): [record](../docs/tasks-archive/2026-09/20260928-builtin-instruments.md)
-- 2026-09-25 One tremolo law, index shapes, a build-time factor (step 3b): [record](../docs/tasks-archive/2026-09/20260928-builtin-instruments.md)
+- 2026-09-25 `classic()` as a slotted tail, the filter envelope's slot-layer fill (step 5): record (KLANG-00237)
+- 2026-09-25 One adsr shape, curve index knobs, an on switch, one exp bend (step 3c): record (KLANG-00237)
+- 2026-09-25 One tremolo law, index shapes, a build-time factor (step 3b): record (KLANG-00237)
 - 2026-09-20 Two banks, one parking slot, 20 ms: the filter swap after the morph (Katalyst 5c-11): [entry](ref/memory-history.md#two-banks-one-parking-slot-20-ms-the-filter-swap-after-the-morph-was-rejected-2026-09-20)
-- 2026-09-20 The filter nodes grew a cutoff envelope and a per-voice lane (step 3a): [record](../docs/tasks-archive/2026-09/20260928-builtin-instruments.md)
-- 2026-09-20 The gate: a stage at its off value is not built (step 2): [record](../docs/tasks-archive/2026-09/20260928-builtin-instruments.md)
-- 2026-09-20 A material change morphs the resonator bank (5c-10; superseded, rejected by ear): [record](../docs/tasks-archive/2026-09/20260928-katalyst-dsl.md)
+- 2026-09-20 The filter nodes grew a cutoff envelope and a per-voice lane (step 3a): record (KLANG-00237)
+- 2026-09-20 The gate: a stage at its off value is not built (step 2): record (KLANG-00237)
+- 2026-09-20 A material change morphs the resonator bank (5c-10; superseded, rejected by ear): record (KLANG-00236)
 - 2026-09-20 The phaser and the duck switch and change without clicking (5c-9): [entry](ref/memory-history.md#the-phaser-and-the-duck-switch-and-change-without-clicking-2026-09-20)
 - 2026-09-19 An orbit never deactivates while a voice plays on it; the fader glides (5c-8): [entry](ref/memory-history.md#an-orbit-never-deactivates-while-a-voice-plays-on-it-the-fader-glides-2026-09-19)
-- 2026-09-19 The orbit compressor switches and changes by gliding (5c-7): [record](../docs/tasks-archive/2026-09/20260928-katalyst-dsl.md)
-- 2026-09-19 Body, vowel and the orbit EQ fade from what sounds now (5c-6; its 10-bank pool superseded by 5c-11): [record](../docs/tasks-archive/2026-09/20260928-katalyst-dsl.md)
+- 2026-09-19 The orbit compressor switches and changes by gliding (5c-7): record (KLANG-00236)
+- 2026-09-19 Body, vowel and the orbit EQ fade from what sounds now (5c-6; its 10-bank pool superseded by 5c-11): record (KLANG-00236)
 - 2026-09-19 The tail ceiling never under-reports a delay tail (5c-5): [entry](ref/memory-history.md#the-tail-ceiling-never-under-reports-a-delay-tail-2026-09-19)
 - 2026-09-19 The orbit-bus fields left the wire (5b-3): [entry](ref/memory-history.md#the-orbit-bus-fields-left-the-wire-2026-09-19)
 - 2026-09-19 The orbit delay and reverb are insert-style stages (5b-2): [entry](ref/memory-history.md#the-orbit-delay-and-reverb-are-insert-style-stages-2026-09-19)
@@ -761,24 +341,24 @@ One line per step, newest first. A link to the archived task record where one ex
 - 2026-09-19 The pregain slot, the `Param` leaf guard, the orbit's group fader: [entry](ref/memory-history.md#the-pregain-slot-the-leaf-guard-and-the-orbits-group-fader-2026-09-19)
 - 2026-09-19 The wire carries one level word: [entry](ref/memory-history.md#the-wire-carries-one-level-word-2026-09-19)
 - 2026-09-16 The ledger, a per-instrument benchmark harness: [entry](ref/memory-history.md#the-ledger-a-per-instrument-harness-for-every-optimization-round-2026-09-16)
-- 2026-09-15 The optimizer's promise is a margin: [record](../docs/tasks-archive/2026-09/20260916-ignitor-optimizer-arithmetic-folds.md)
+- 2026-09-15 The optimizer's promise is a margin: record (KLANG-00202)
 - 2026-09-15 div, minus and neg fold; a zero divisor is zero: [entry](ref/memory-history.md#div-minus-and-neg-fold-a-zero-divisor-is-zero-2026-09-15)
 - 2026-09-15 The oversampler's decimator is polyphase: [entry](ref/memory-history.md#the-oversamplers-decimator-is-polyphase-and-indexed-2026-09-15)
 - 2026-09-15 Analog drift steps per block and ramps across it: [entry](ref/memory-history.md#analog-drift-steps-per-block-and-ramps-across-it-2026-09-15)
 - 2026-09-15 Polynomial e^x in the envelopes and the compressor, no fastLn: [entry](ref/memory-history.md#polynomial-ex-in-the-envelopes-and-the-compressor-no-fastln-2026-09-15)
 - 2026-09-15 Table-and-polynomial 2^x in the pitch paths: [entry](ref/memory-history.md#table-and-polynomial-2x-in-the-pitch-paths-2026-09-15)
 - 2026-09-15 Polynomial sine in the oscillators: [entry](ref/memory-history.md#polynomial-sine-in-the-oscillators-2026-09-15)
-- 2026-09-15 Silence culling: [record](../docs/tasks-archive/2026-09/20260915-voice-culling.md)
-- 2026-09-10 One drift-lane container, `DriftLanes`: [record](../docs/tasks-archive/2026-09/20260910-drift-lanes-analog-spread.md)
+- 2026-09-15 Silence culling: record (KLANG-00199)
+- 2026-09-10 One drift-lane container, `DriftLanes`: record (KLANG-00198)
 - 2026-09-07 Loop shape beats block-pass count: [entry](ref/memory-history.md#loop-shape-beats-block-pass-count-2026-09-07-sine-partial-banks)
 - 2026-07-04 Body and vowel resonators on the orbit, live-update fixes: [entry](ref/memory-history.md#body--vowel-resonators--live-update-fixes-2026-07-04)
 - 2026-07-04 Ignitor ADSR knobs, declick and expK as slots (expK superseded by 3c): [entry](ref/memory-history.md#ignitor-adsr-knobs--declick--expk-as-slots-2026-07-04)
 - 2026-07-03 Song-level CPU benchmark and the Der Schmetterling deep-dive: [entry](ref/memory-history.md#song-level-cpu-benchmark--der-schmetterling-deep-dive-2026-07-03)
 - 2026-06-08 The VCA gain de-click smoother (superseded: the strip VCA retired): [entry](ref/memory-history.md#vca-gain-de-click-smoother-2026-06-08)
-- 2026-06-05 The oscillator engine unified: [record](../docs/tasks-archive/2026-06/20260605-oscillator-engine-unification.md)
+- 2026-06-05 The oscillator engine unified: record (KLANG-00100)
 - 2026-05-28 The filter saturation dead end (its "purely linear" superseded, see the SVF guardrail): [entry](ref/memory-history.md#filter-saturation-dead-end--linear-svf-is-the-right-choice-2026-05-28)
 - 2026-05-25 The sprudel-side scale and variant split (superseded here, a sprudel matter): [entry](ref/memory-history.md#sprudel-side-scale--variant-split-2026-05-25)
-- 2026-05-22 Ignitor variants dispatch on `soundIndex`: [record](../docs/tasks-archive/2026-05/20260522-ignitor-variants.md)
+- 2026-05-22 Ignitor variants dispatch on `soundIndex`: record (KLANG-00097)
 - 2026-05-21 The distortion shape catalogue extension: [entry](ref/memory-history.md#distortion-shape-catalog-extension-2026-05-21)
 - 2026-04-27 The numerical safety contract and the distort DC lock (the `IgniteRenderer` clip superseded): [entry](ref/memory-history.md#numerical-safety-contract--distort-dc-lock-fix-2026-04-27)
 - 2026-03-26 Ignitor param slots, "everything is a signal" (superseded as written): [entry](ref/memory-history.md#ignitor-param-slots--everything-is-a-signal-2026-03-26)

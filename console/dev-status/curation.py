@@ -9,7 +9,6 @@ stale), notes, the dashed "related" edges, and the guessed completion dates of t
 # Docs left off the pages: index files, and short-lived working docs not worth a node.
 EXCLUDE={
     'docs/tasks/_priorities.md', 'docs/tasks/_v1-scope.md', 'docs/tasks/by-ear/README.md',
-    'docs/plans/phase3-step12-master-as-katalyst.md',
 }
 
 # Areas of the open docs (ids are file names without .md). Order is the order of the lanes.
@@ -45,7 +44,7 @@ NOTES={
 'builtin-instruments':'Phase 3 of the signal-flow redesign. Step 9 (the voice strip and Pipeline DSL retire) done 2026-09-27; step 12 takes the master swap.',
 'effect-state-machines':'Every per-effect row done; the chain-swap state is folded into phase 3 step 12.',
 'unified-eq':'Largely shipped (D2b, D4, D5 marked shipped). Worth a check of what remains.',
-'sine-partial-banks':'Shipped 2026-09-07; kept in plans/ on purpose as the reference.',
+'sine-partial-banks':'Shipped 2026-09-07; kept open on purpose as the reference.',
 'block-framing-invariance':'Plan not started as a whole, but P4 and P5 were done 2026-08-31 (per _v1-scope).',
 'realtime-analysis':'Umbrella for the analysis tasks, gated on the UI structure decision.',
 'voice-takeover':'Blocked on a design decision (2026-09-08). Would also remove the limiter surge at its source.',

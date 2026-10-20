@@ -35,7 +35,7 @@ kotlin {
         commonMain {
             dependencies {
                 // Wire types are serialized by the KSP-generated codec (`:audio-wire-codec-ksp`), not kotlinx —
-                // so no serialization plugin/deps here. See docs/tasks-archive/2026-06/20260611-wireformat-enhancements.md.
+                // so no serialization plugin/deps here. See KLANG-00105 (wireformat enhancements).
                 api(project(":common"))
                 api(project(":tones"))
             }
@@ -65,7 +65,7 @@ kotlin {
 }
 
 // Worklet wire-codec generation — JS-only (codec uses `dynamic`), so applied to the JS target and generated
-// into jsMain (NOT kspCommonMainMetadata). See docs/tasks/worklet-codec-ksp.md.
+// into jsMain (NOT kspCommonMainMetadata). See KLANG-00103 (worklet codec ksp).
 dependencies {
     add("kspJs", project(":audio-wire-codec-ksp"))
 }

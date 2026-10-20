@@ -6,7 +6,7 @@
 package io.peekandpoke.klang.pages.docs.tutorials
 
 /**
- * Curriculum slot A6 — see docs/tasks/tutorial-curriculum.md
+ * Curriculum slot A6 — see KLANG-00145 (tutorial curriculum)
  *
  * Keeps two registered obligations: The Four Waveforms named `supersaw` among the
  * "further voices" promised for later lessons, and the word **voice** is already spent

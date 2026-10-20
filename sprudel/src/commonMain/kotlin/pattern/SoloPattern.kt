@@ -40,7 +40,7 @@ import kotlin.math.floor
  * the control pattern) ends the solo at once. The end comes from the control events: a soloed note's gate never
  * extends it, so a long note cannot keep a removed solo alive. The control events therefore keep the solo alive
  * through a rest, which sounding fillers used to do until 2026-10-07
- * (`docs/tasks-archive/2026-10/20261009-bugfix-solo-rests-and-amount.md`), and end it within one grid piece.
+ * (KLANG-00287 (bugfix solo rests and amount)), and end it within one grid piece.
  *
  * Pure and immutable: [soloId] is fixed at construction by the door, and a query depends on its arguments only.
  *

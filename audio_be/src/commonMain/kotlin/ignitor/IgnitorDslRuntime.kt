@@ -231,7 +231,7 @@ internal class IgnitorBuildCache(
 
     /**
      * A subtree with no [IgnitorDsl.Freq] consumer and no pitch mod renders the same at any freq, so its memo drops the
-     * freq key (`docs/tasks-archive/2026-10/20261007-shared-modulator-memo-rate.md`). The mod is excluded because the memo wraps it too, and a
+     * freq key (KLANG-00278 (shared modulator memo rate)). The mod is excluded because the memo wraps it too, and a
      * vibrato's knobs may read `Freq` where the subtree does not.
      */
     fun isFreqInvariant(node: IgnitorDsl, mod: Ignitor?): Boolean = mod == null && !usesMusicalFreq(node)
@@ -522,7 +522,7 @@ internal fun IgnitorDsl.buildIgnitor(
  * The memo drops its freq key when the node's knobs read no `Freq` and neither does [existing]: a detuned source
  * under the mod calls it at another freq. A mod whose knobs read `Freq` (FM, whose `freq` defaults to the note, or a
  * vibrato whose depth reads `Ignitor.freq()`) keeps the key: sources at one pitch share it, a source detuned under it
- * renders it again (the second residue of `docs/tasks-archive/2026-10/20261007-shared-modulator-memo-rate.md`).
+ * renders it again (the second residue of KLANG-00278 (shared modulator memo rate)).
  */
 private fun IgnitorBuildCache.combineMods(existing: Ignitor?, newMod: Ignitor, node: IgnitorDsl): Ignitor {
     val memo = MemoizingIgnitor(if (existing != null) existing * newMod else newMod)
@@ -550,7 +550,7 @@ private fun applyMod(source: Ignitor, mod: Ignitor?): Ignitor =
     if (mod != null) ModApplyingIgnitor(inner = source, mod = mod) else source
 
 // ═════════════════════════════════════════════════════════════════════════════════════════════
-// The build-time GATE (`docs/plans/signal-flow-redesign.md` section 5, phase 3 step 2)
+// The build-time GATE (KLANG-00210 (signal flow redesign) section 5, phase 3 step 2)
 // ═════════════════════════════════════════════════════════════════════════════════════════════
 
 /**
@@ -1653,7 +1653,7 @@ private fun IgnitorDsl.buildRaw(
         // ── Envelope: pass mod through ──
 
         // GATE ROW `the envelope`: OFF only at an explicit `on` of exactly 0.0; UNSET IS ON. Inverted
-        // from the plan's sketch on purpose (the spike corrected it, `docs/tasks-archive/2026-09/20260928-builtin-instruments.md`
+        // from the plan's sketch on purpose (the spike corrected it, KLANG-00237 (builtin instruments)
         // section 5): the voice strip's VCA ran on EVERY voice with the voice envelope (`VOICE_ADSR_*`) when the
         // pattern set nothing, and since step 6 a built-in's classic ADSR is that VCA, so it has to be
         // built BY DEFAULT, and only an explicit `adsrOff` (filled into `on` by `classic()`) switches it

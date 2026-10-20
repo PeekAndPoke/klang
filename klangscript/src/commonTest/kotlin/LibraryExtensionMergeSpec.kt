@@ -18,7 +18,7 @@ import io.peekandpoke.klang.script.builder.registerType
  * Before 2026-09-08 `Environment.register` replaced the receiver's whole method map with the map of
  * the library imported last, so `import * from "stdlib"` followed by `import * from "sprudel"` (the
  * header of every song) silently removed every stdlib string method. Found while adding
- * `"M3".toRatio()` (`docs/tasks-archive/2026-09/20260908-klangscript-number-methods.md`); the sprudel side is pinned in
+ * `"M3".toRatio()` (KLANG-00193 (klangscript number methods)); the sprudel side is pinned in
  * `LangStdlibStringMethodCollisionSpec`.
  */
 class LibraryExtensionMergeSpec : StringSpec({

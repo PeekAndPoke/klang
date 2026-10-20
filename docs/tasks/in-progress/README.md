@@ -1,12 +1,12 @@
-# Tasks in progress
+# Tickets in progress
 
-The tasks someone is working on RIGHT NOW (maintainer, 2026-10-10). A task file moves here from `docs/tasks/` (or
-`docs/tasks/future/`) when work on it starts, and from here to `docs/tasks-archive/<month>/` when it is done. A task
-that pauses moves back. One look at this folder answers "what is being worked on"; the status line inside each file
-says how far it is.
+The tickets someone is working on RIGHT NOW (maintainer, 2026-10-10). `ticket move <ID> IN PROGRESS` brings one
+here from `docs/tasks/` (or `docs/tasks/future/`) when work on it starts, `ticket move <ID> DONE` archives it to
+`docs/tasks-archive/<month>/`, and `ticket move <ID> PAUSED` sends a paused one back to `docs/tasks/`. One look at
+this folder answers "what is being worked on"; the status line inside each file says how far it is. The tool,
+the folders and the file shape: `/project-layout` and `/console-tools`.
 
-When a file moves, every link to it moves with it: grep the repository for its name (code KDocs included) and fix
-each path in the same commit.
+References name the ticket number, never the path, so a move breaks no link (since 2026-10-20).
 
-During a pause the paused tasks stay here (maintainer, 2026-10-13), and [`NEXT-STEPS.md`](NEXT-STEPS.md) says
-where each stream picks up again.
+During a pause of the whole project the paused tickets stay here (maintainer, 2026-10-13), and
+[`NEXT-STEPS.md`](NEXT-STEPS.md) says where each stream picks up again.

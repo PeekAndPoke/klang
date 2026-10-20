@@ -28,7 +28,7 @@ import io.peekandpoke.klang.common.infra.KlangMap
 
 /**
  * The key the wire carries for `crush(oversample = ...)`. `classic()`'s crush has no oversampler and places no
- * such slot, so nothing reads it (the knob waits for `docs/tasks/oversampling-regions.md`); it travels so the
+ * such slot, so nothing reads it (the knob waits for KLANG-00214 (oversampling regions)); it travels so the
  * value is not lost on the way.
  */
 internal const val CRUSH_OVERSAMPLE_KEY = "crush.oversample"

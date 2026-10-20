@@ -23,7 +23,7 @@ import io.peekandpoke.klang.audio_bridge.constants.LIMITER_THRESHOLD_DB
  *
  * Extracted from [KlangAudioRenderer] so the per-playback mixdown can run it **once** on the summed
  * mix — the safety brick belongs on the final output, not per engine. See
- * `docs/tasks-archive/2026-09/20260904-per-playback-engine.md` (D2). Behaviour is identical to the old inline post-chain.
+ * KLANG-00176 (per playback engine) (D2). Behaviour is identical to the old inline post-chain.
  */
 class MasterStage(
     sampleRate: Int,
@@ -53,7 +53,7 @@ class MasterStage(
          * `limiter` with `lookahead`, since phase 3 step 12 C2) is opt-in: it makes its orbit or its
          * playback late by that much, uncompensated.
          *
-         * See `docs/tasks-archive/2026-09/20260927-master-limiter-lookahead.md`.
+         * See KLANG-00225 (master limiter lookahead).
          */
         const val HOUSE_LIMITER_LOOKAHEAD_SECONDS: Double = 0.005
 
@@ -74,7 +74,7 @@ class MasterStage(
      * The whole output is delayed by this, uniformly, so nothing desyncs *within* the audio. But it
      * is invisible to `AudioContext.outputLatency` (it happens inside the worklet, downstream of the
      * clock), so anything aligning visuals to audio has to add it explicitly. See
-     * `docs/tasks-archive/2026-09/20260927-master-limiter-lookahead.md` Phase 5.
+     * KLANG-00225 (master limiter lookahead) Phase 5.
      */
     val latencyFrames: Int get() = limiter.latencyFrames
 

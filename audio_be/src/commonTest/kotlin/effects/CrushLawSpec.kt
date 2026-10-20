@@ -19,7 +19,7 @@ import kotlin.math.abs
  * reach past the oracle rows: the sub-1 bypass across its whole range (a named regression) and the magnitude bound
  * over 1 to 16 bits. The law itself (the FLOOR grid, continuous levels, zero in and zero out, the NaN and bypass
  * rules) is pinned bit for bit against an oracle in `StripLawCoresSpec`. The strip's oversampled crush rows went
- * with the strip (phase 3 step 9): the engine has no oversampled crush (`docs/tasks/oversampling-regions.md`).
+ * with the strip (phase 3 step 9): the engine has no oversampled crush (KLANG-00214 (oversampling regions)).
  */
 class CrushLawSpec : StringSpec({
 

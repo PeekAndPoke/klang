@@ -6,7 +6,7 @@
 package io.peekandpoke.klang.pages.docs.tutorials
 
 /**
- * Curriculum slot B9 — see docs/tasks/tutorial-curriculum.md
+ * Curriculum slot B9 — see KLANG-00145 (tutorial curriculum)
  *
  * Keeps two promises: B4's `*n` gets connected to `.fast(n)` (the same
  * multiplication, one step vs the whole line), and A5's preview of fast()/

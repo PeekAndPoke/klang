@@ -112,7 +112,7 @@ See `tag()` in `lang_structural_tag.kt` for a full four-form example, including 
   The editor types it as the canonical object, so `vel(...)` resolves to the `velocity(...)` call form
   (diagnostics, return type), and the docs page shows that call form on the `vel` card. One
   alias row per alias. Compound slots get no aliases at all (`rsize`, `delayfb` went 2026-09-07).
-- Design record and rejected alternatives: `docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md`.
+- Design record and rejected alternatives: KLANG-00184 (sprudel field accessors).
 - A continuous signal (`sine`, `perlin`, `rand`, ...) is the other callable object: `@KlangScript.Object("perlin")
   object perlin : SprudelSignal("perlin", createPerlin())`, where `SprudelSignal` IS a `SprudelPattern` by delegation, so
   the bare name stays a pattern in every door and method. Its `@KlangScript.Invoke` is the range shorthand

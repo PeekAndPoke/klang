@@ -526,7 +526,7 @@ class KlangScriptProcessor(
         // Every output is aggregating: the entry point and the docs map are built from every annotated
         // symbol of the library, so any change regenerates them, and with them the whole set. Kotlin's
         // incremental compile still skips a group file whose text did not change. (Isolating outputs per
-        // group were considered and left: see "Step 2 done" in docs/tasks/reduce-js-bundle-size.md.)
+        // group were considered and left: see "Step 2 done" in KLANG-00106 (reduce js bundle size).)
         val files = buildGeneratedFiles(libraryName, capitalizedName, packageName, entries)
 
         for (generated in files) {

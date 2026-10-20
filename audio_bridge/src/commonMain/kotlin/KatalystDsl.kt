@@ -261,7 +261,7 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
  * implementation, which is what keeps one effect one sound on every bus.
  *
  * **Every knob is a [KatalystKnobDsl]**, the Katalyst's own knob language and not an [IgnitorDsl] node
- * (`docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`, D1): a [KatalystKnobDsl.Constant], a
+ * (KLANG-00302 (katalyst knob expressions), D1): a [KatalystKnobDsl.Constant], a
  * [KatalystKnobDsl.Param], or an expression over them (step 4, D4), read once per block. An Ignitor node on a knob is
  * a type error at the door (the script door's stage call; the Kotlin door's constructors do not take one), never
  * coerced. The Motor stays raw, so a knob is never clamped beyond what
@@ -444,7 +444,7 @@ sealed interface KatalystStageDsl {
 
     /**
      * Distortion of the bus mix: the Ignitor's `distort` at the bus position, one DSP and one word on
-     * both hosts (`docs/tasks-archive/2026-10/20261009-katalyst-distort-stage.md`). A clipper is this stage with a clipping
+     * both hosts (KLANG-00292 (katalyst distort stage)). A clipper is this stage with a clipping
      * shape (`soft`, `hard`) and a small [amount]; saturation is a gentle shape at a moderate one.
      *
      * Unlike a voice's distort it bends the SUM: the notes of the bus meet inside one curve, so they
@@ -485,7 +485,7 @@ sealed interface KatalystStageDsl {
      *
      * When a chain declares more than one duck stage the LAST one wins, because the cylinder runs
      * exactly one ducking effect; the earlier ones are silently ignored rather than summed
-     * (decided with the maintainer, 2026-09-17, recorded in `docs/tasks-archive/2026-09/20260928-katalyst-dsl.md`).
+     * (decided with the maintainer, 2026-09-17, recorded in KLANG-00236 (katalyst dsl)).
      *
      * @param orbit the orbit to listen to, as a number the runtime coerces to an Int. The default
      *   is [SLOT_UNSET]: no source named, no ducking. A consumer tests `isFinite()` and never
@@ -507,7 +507,7 @@ sealed interface KatalystStageDsl {
      *
      * Reuses [IgnitorDsl.EqSection] verbatim, so a section means the same thing on a voice and on
      * an orbit. This is the one place a Katalyst stage still carries Ignitor nodes (decision Q2 of
-     * `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`, E2: the sections are a DSP law shared with the voice and
+     * KLANG-00302 (katalyst knob expressions), E2: the sections are a DSP law shared with the voice and
      * with
      * `bands`). The Katalyst door lets a section knob be a number or a `Kat.param` only, as a
      * [IgnitorDsl.Constant] or a [IgnitorDsl.Param]; the engine reads any other node there as unset.
@@ -572,7 +572,7 @@ sealed interface KatalystStageDsl {
     // ── Arithmetic: the Ignitor's operators on the bus signal ───────────────────────────────────
 
     /*
-     * The arithmetic stages (`docs/tasks-archive/2026-10/20261011-katalyst-arithmetic.md`):
+     * The arithmetic stages (KLANG-00300 (katalyst arithmetic)):
      * each applies its Ignitor twin's per-sample law
      * (`_arithmetic_laws.kt` in `audio_be`, one function per operator) to every sample of both channels, so a bus
      * sample and a voice sample that meet the same numbers come out the same, clamps included (bit for bit against
@@ -628,7 +628,7 @@ sealed interface KatalystStageDsl {
 
     /**
      * Branches side by side: every branch runs on its own copy of the bus at this position, and the
-     * stage's output is the SUM of the branches (`docs/plans/future/signal-graph-engine.md` §6.9).
+     * stage's output is the SUM of the branches (KLANG-00216 (signal graph engine) §6.9).
      * A branch is a chain of its own, so `parallel` is the twin of a chain's series. An empty branch
      * is the dry signal: `parallel(distorted, empty)` is parallel distortion. The doors write a
      * stage only for two branches or more (none is the bus unchanged, one is that branch's stages

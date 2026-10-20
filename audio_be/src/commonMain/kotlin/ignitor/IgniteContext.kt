@@ -25,7 +25,7 @@ class IgniteContext(
      * the `accelerate` glide base (the glide reaches its target at this gate and holds it through the
      * release, decision D2, for both doors since pitch pipeline step 3), and retro-shrinking it would
      * jump the glide progress and leap the pitch. On held realtime voices `accelerate` is inert by decision
-     * (docs/tasks-archive/2026-08/20260829-realtime-note-off-gate-release.md).
+     * (KLANG-00157 (realtime note off gate release)).
      */
     val voiceDurationFrames: Int,
     // ── Per-block input inside a voice (see the KDoc) ──────────────────────────
@@ -95,7 +95,7 @@ class IgniteContext(
      * All three window fields are `private set` so this one CANNOT go stale: the only way in is
      * the update functions below, which recompute it once. That matters more than the arithmetic
      * it saves — a wrong render window is the block-framing bug class
-     * (`docs/plans/block-framing-invariance.md`), and a hand-maintained copy would invite it back.
+     * (KLANG-00156 (block framing invariance)), and a hand-maintained copy would invite it back.
      *
      * Read it instead of recomputing the sum: ~120 render methods used to open with
      * `val end = ctx.offset + ctx.length`, once per node per block.

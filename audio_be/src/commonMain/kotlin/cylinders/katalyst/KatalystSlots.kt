@@ -15,7 +15,7 @@ import io.peekandpoke.klang.common.infra.KlangMap
  * values a stage wants instead of a number (the body and vowel `ResonatorConfig`s, the [CompressorSettings], the
  * [DuckSettings]) are filled by that stage's writer (`KatalystSlotWriters.kt`), each the one caller of its rule.
  *
- * Katalyst step 3a (2026-09-17). The per-stage contract is `docs/tasks-archive/2026-09/20260928-katalyst-dsl.md` §7 and
+ * Katalyst step 3a (2026-09-17). The per-stage contract is KLANG-00236 (katalyst dsl) §7 and
  * the value rule is the signal-flow plan §7 (D4): **a chain's stage knobs come from its slots only**, on every chain
  * since step 5b-1, the one a cylinder is born with included. The owner voice is a knob source only through the map it
  * carries; it has no bus fields since 5b-3.
@@ -33,7 +33,7 @@ import io.peekandpoke.klang.common.infra.KlangMap
  *  - a [KatalystKnobDsl.Constant] is its number, and so is an expression without a slot leaf, folded here through
  *    the laws ([KatalystKnobProgram.isConstant]);
  *  - a [KatalystKnobDsl.Param] is its default and its name;
- *  - an expression with at least one slot leaf (step 4 of `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`,
+ *  - an expression with at least one slot leaf (step 4 of KLANG-00302 (katalyst knob expressions),
  *    D4) is a [KatalystKnobProgram], compiled here;
  *  - so is a tree with a modulator (`Kat.sine` and the rest, step 5, D3), never folded, compiled on the chain's
  *    sample rate and block size: [isModulated]. Its value moves per BLOCK through [tick], which the chain calls at

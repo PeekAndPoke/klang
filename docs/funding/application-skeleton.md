@@ -7,7 +7,7 @@ Scaffolding only. No prose. Every sentence of the final text is written by the m
   (software infrastructure, data security), window 2026-10-01 to 2026-11-30.
 - Markers: `[ME]` only the maintainer can fill. `[VERIFY]` unsure or conflicting, check before use.
   `[Qn]` = verbatim quote in `evidence/maintainer-quotes.md`. `WP §n` = `src/jsMain/resources/klang-whitepaper.html`
-  section n. `FED` = `docs/tasks/future/federated-song-sharing.md`.
+  section n. `FED` = KLANG-00135 (federated song sharing).
 - Numbers come from `evidence/git-numbers.txt` (script: `scripts/git-counts.sh`) unless another source is named.
 - Scope warning for the whole application: the node / federation is **unbuilt**. WP Part II header: "Nearly
   everything from here on is design, not code." WP §13: "Everything in Part II is unbuilt."
@@ -115,7 +115,7 @@ against the project's own docs before submitting.
   TOPLAP, Algorave, ICLC: `[ME]` any contact so far? No evidence found in repo. WP §2 cites Algorave "more than
   eighty cities" `[VERIFY source link in WP]`.
 - **User groups** `[ME]`: live coders, synth / sound-design learners (tutorial curriculum:
-  `docs/tasks/tutorial-curriculum.md`), educators `[ME]`.
+  KLANG-00145 (tutorial curriculum)), educators `[ME]`.
 - **Honest current adoption**
   - Pre-alpha (WP header "Pre-Alpha"; WP §13).
   - Demo: klang.finzo.de; repo github.com/PeekAndPoke/klang (WP header). `[VERIFY]` repo public? stars? visitors?

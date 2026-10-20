@@ -13,7 +13,7 @@ import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
 
 /*
  * The effect builders: what an effect door hands to its `configure` lambda, ONE set for both doors
- * (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`: rollout S3a the four filters and the eq, S3b the amplitude envelope, the pitch
+ * (KLANG-00314 (kotlin typed doors): rollout S3a the four filters and the eq, S3b the amplitude envelope, the pitch
  * envelope and the FM, S3c the phaser, the shimmer and the tremolo; the oscillators' and the vibrato's builders are
  * in `IgnitorBuilders.kt`).
  *
@@ -302,7 +302,7 @@ data class EqBuilder(val node: IgnitorDsl.Eq) {
  * `band`, `tap`, the voice [EqBuilder]'s words, defaults and sections. Each knob takes a number (`300.kat`) or a
  * Katalyst param, which the engine reads from the orbit's `katp` state; a Katalyst EXPRESSION (`Kat.sine(...)`,
  * `Kat.param(...).times(2.kat)`) is refused at build time with an [IllegalArgumentException] naming the knob and the
- * parameter (maintainer, Q49 of `docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`): a section reads a number or a slot, never a
+ * parameter (maintainer, Q49 of KLANG-00314 (kotlin typed doors)): a section reads a number or a slot, never a
  * moving knob (the recorded asymmetry on [eqSectionKnobOrNull]).
  */
 data class KatalystEqBuilder(val sections: List<IgnitorDsl.EqSection> = emptyList()) {
@@ -331,7 +331,7 @@ data class KatalystEqBuilder(val sections: List<IgnitorDsl.EqSection> = emptyLis
 /**
  * THE ONE HELPER of the Katalyst eq builder and its script pre-check: a Katalyst knob as the [IgnitorDsl] leaf an eq section carries,
  * or `null` when it cannot be one. The residue of mixing the two DSLs that decision Q2 of
- * `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md` keeps (maintainer, 2026-10-11, E2: "keep shared,
+ * KLANG-00302 (katalyst knob expressions) keeps (maintainer, 2026-10-11, E2: "keep shared,
  * slots only"): the sections are [IgnitorDsl.EqSection], the one section law shared with the voice eq and with `bands`,
  * so a bus section's knob is an Ignitor leaf. A [KatalystKnobDsl.Constant] becomes an [IgnitorDsl.Constant] and a
  * [KatalystKnobDsl.Param] the [IgnitorDsl.Param] of the same name and default, which the engine reads from the

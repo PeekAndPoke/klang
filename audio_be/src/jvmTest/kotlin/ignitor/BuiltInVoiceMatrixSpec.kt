@@ -33,7 +33,7 @@ import kotlin.random.Random
  *
  * History: frozen when the voice strip retired (phase 3 step 9, 2026-09-27), as "the strip's sound" through the
  * migration; every row was then bit-identical to the strip except four, the recorded cost of section 8 of
- * `docs/tasks-archive/2026-09/20260928-builtin-instruments.md` (`perlin`, `berlin` and `crackle` draw from the
+ * KLANG-00237 (builtin instruments) (`perlin`, `berlin` and `crackle` draw from the
  * voice's stream when CONSTRUCTED, so with `analog > 0` and one filter the tree's filter draw comes after theirs;
  * the `analog 2, lpf 1200` row keeps that draw order guarded). At the phase 3 end checkpoint (2026-10-02, the
  * maintainer) it became the baseline of today's tree: the pins were confirmed unchanged that day, and

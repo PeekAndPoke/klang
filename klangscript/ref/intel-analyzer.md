@@ -115,7 +115,7 @@ failure: the cursor is mapped back across the edit (common prefix and suffix), a
 whole edited stretch, starting at the earliest place the edit can start when the typed text repeats the text
 around it. Fewer locals at worst, never one from below or from a sibling scope. Offsets inside a template
 literal's `${...}` count from the interpolation (the parser reads it on its own), so a scope opened there gets an
-empty range. Guard: `LocalSymbolCompletionSpec`; record: `docs/tasks-archive/2026-10/20261019-editor-local-symbol-completion.md`.
+empty range. Guard: `LocalSymbolCompletionSpec`; record: KLANG-00319 (editor local symbol completion).
 
 The edit (`editTo`: one stretch between the common prefix and suffix, the earliest start when they overlap) is
 shared with `namedArgumentsAt`.
@@ -145,7 +145,7 @@ another argument of the call is positional, because the check refuses mixing the
 
 `CompletionProvider.namedArgumentCompletions` shows `name =`, inserts `name = `, and says the type and `required`,
 `default <value>` or `optional` (`vararg <type>` for a vararg, which by name takes an array). Guard:
-`NamedArgumentCompletionSpec`; record: `docs/tasks/klangscript-named-args-docs-polish.md`, 6.4.
+`NamedArgumentCompletionSpec`; record: KLANG-00130 (klangscript named args docs polish), 6.4.
 
 ## `ExpressionTypeInferrer` contract
 

@@ -228,7 +228,7 @@ class PitchModSafetyTest : StringSpec({
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
-    // A non-finite pitch amount reads as unset (docs/tasks-archive/2026-10/20261007-bugfix-ignitor-non-finite-pitch-amount.md)
+    // A non-finite pitch amount reads as unset (KLANG-00277 (bugfix ignitor non finite pitch amount))
     // ═════════════════════════════════════════════════════════════════════════════
 
     /** Renders [dsl] as a voice at 220 Hz, 16 blocks of the pinned 128 frames. */

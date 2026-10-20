@@ -28,7 +28,7 @@ import io.peekandpoke.klang.common.infra.KlangMap
 // with no `.katp` and no bus door on its orbit therefore resolves exactly once, when it is built,
 // and every block after that costs what step 3a cost.
 //
-// Each writer holds the per-stage contract of `docs/tasks-archive/2026-09/20260928-katalyst-dsl.md`
+// Each writer holds the per-stage contract of KLANG-00236 (katalyst dsl)
 // §7 for its stage (the gate, and the rule for an unset slot), so a value that arrives from a slot
 // and one that was authored as a constant take the identical path. A NaN rule lives in ONE place per
 // knob: here, or in the stage's `configure` when that stage compares and caches what it is handed

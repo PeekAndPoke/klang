@@ -147,8 +147,8 @@ Gradle test run, for a mutation check, a review round, or a docs commit).
   stone-adjacent script, so it is the maintainer's call.
 - **Fix the 26 stale task paths in code KDoc** (the docs-lint whole-repo run lists them: ten `docs/tasks/<name>.md`
   paths of tasks since archived, each with exactly one archived record, so the sweep is mechanical). A KDoc-only sweep, best as its own small change with the grep in the report.
-- **The two task-place findings**: `docs/tasks/sprudel-test-coverage-and-review.md` ("IN PROGRESS, user-paced",
-  2026-06-30) and `docs/tasks/tutorial-curriculum.md` ("ACTIVE", 2026-08-31) sit outside `in-progress/`. Either the
+- **The two task-place findings**: KLANG-00127 (sprudel test coverage and review) ("IN PROGRESS, user-paced",
+  2026-06-30) and KLANG-00145 (tutorial curriculum) ("ACTIVE", 2026-08-31) sit outside `in-progress/`. Either the
   status line is stale or the file belongs in `in-progress/`; the maintainer knows which.
 - **review-pack `--paths`**: limit the diff to named paths, for a review in the shared main checkout where other
   sessions have uncommitted work (the 2026-09-19 escape). Five lines; generic.

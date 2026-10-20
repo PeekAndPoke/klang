@@ -14,7 +14,7 @@ package io.peekandpoke.klang
  * version of a song, add a NEW dated constant instead (e.g. derSchmetterling_2026_09),
  * keeping the old one for historical comparison.
  *
- * REPLACEMENT (maintainer decision, 2026-09-25, `docs/tasks-archive/2026-09/20260928-builtin-instruments.md` D4): the Der
+ * REPLACEMENT (maintainer decision, 2026-09-25, KLANG-00237 (builtin instruments) D4): the Der
  * Schmetterling snapshot of 2026-07-03 called the `pedal` pipeline preset three times, and that
  * preset was removed, which would have changed the snapshot's sound. The maintainer replaced it
  * with a fresh snapshot of the live song instead, `derSchmetterling_2026_09_25` (the text committed
@@ -22,22 +22,22 @@ package io.peekandpoke.klang
  * notes below describe Seltsamere Dinge and that retired text; the new snapshot's own migrations are the 2026-09-26
  * and 2026-10-03 notes below and the 2026-09-28 Master entry of the list.
  *
- * 2026-10-05, one `range` (`docs/tasks-archive/2026-10/20261005-sprudel-signals-range-cleanup.md`): sprudel's bipolar twins are gone, so a
+ * 2026-10-05, one `range` (KLANG-00271 (sprudel signals range cleanup)): sprudel's bipolar twins are gone, so a
  * twin is spelled as its signal with `.range(-1, 1)`. Syntax only; the renders are identical in raw doubles.
  *
- * 2026-10-03, the Ignitor/Katalyst naming (`docs/tasks-archive/2026-10/20261004-ignitor-katalyst-naming.md`): the script object, its slot
+ * 2026-10-03, the Ignitor/Katalyst naming (KLANG-00269 (ignitor katalyst naming)): the script object, its slot
  * accessor and its slot setter are spelled with their new names (`Ign.`, `Ign.slot.`, `ignp`). Syntax only; the
  * renders are identical in raw doubles.
  *
  * 2026-09-26, `.classic()` appended to the authored instruments (maintainer decision D5, phase 3 step 10,
- * `docs/tasks-archive/2026-09/20260928-builtin-instruments.md`): the old voice strip stopped running for an instrument that ends in
+ * KLANG-00237 (builtin instruments)): the old voice strip stopped running for an instrument that ends in
  * `classic()`, so without it the pieces would have lost their filters and envelope. Nothing else changed. The
  * renders moved, by the analog draw order only (the bass and trommel filter dice, -58 to -60 dB against the
  * texts before), proven by a control with the humanization pinned. The ledger's census columns (`work`,
  * `traffic`, `KiB`, `ns/smp/pass`) now count `classic()`'s stages in the graph, which they never counted on
  * the strip: rows from before and after this date are not comparable in those columns.
  *
- * EXCEPTION (maintainer decision, 2026-08-23, docs/tasks-archive/2026-09/20260927-filter-unification.md):
+ * EXCEPTION (maintainer decision, 2026-08-23, KLANG-00227 (filter unification)):
  * SYNTAX-ONLY migrations are permitted when the DSL itself changes shape (renames,
  * colon-compound -> per-param), because a frozen song that no longer parses guards
  * nothing. Values must never change; each such migration keeps the sound identical (two exceptions, both named
@@ -53,7 +53,7 @@ package io.peekandpoke.klang
  * compounds (`fmh(2).fmenv(e)` -> `fm(env = e, h = 2)`, `vibrato(r).vibratoMod(d)` -> `vibrato(rate = r, depth = d)`,
  * `duckorbit`/`duckdepth`/`duckattack` -> `duck(...)`, `vowelWet`/`bodyWet` -> `vowel(wet = ...)`/`body(wet = ...)`, same values),
  * and the 2026-09-16 reverb unification (`room(...)` -> `reverb(...)`; `fade = f` -> `size = 10f`, which the engine
- * divides back to the same f, bit-exact for the values here; `docs/tasks-archive/2026-09/20260916-reverb-naming-unification.md`),
+ * divides back to the same f, bit-exact for the values here; KLANG-00208 (reverb naming unification)),
  * and the 2026-09-24 wet-first doors (`body("glass")` -> `body(material = "glass")`, four calls in Seltsamere
  * Dinge, because `body`'s first parameter is now `wet`; same values, the render bit-identical),
  * and the 2026-09-28 Master DSL retirement (phase 3 step 12 C5: `master(Master(m => m.` ->

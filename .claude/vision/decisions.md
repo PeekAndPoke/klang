@@ -203,7 +203,7 @@ page is the *only* way to hear the band, so it has to be worth arriving at.
 
 **Status: DIRECTION / UNDER CONSIDERATION.** ⚠️ **Explicitly long-term and NOT a near-term commitment.**
 Karsten's own sequencing, verbatim: *"long term thing, basic tutorials first, but this could be deep dive
-learning 'tracks' later."* The basic concept ladder (`docs/tasks/tutorial-curriculum.md`) keeps absolute
+learning 'tracks' later."* The basic concept ladder (KLANG-00145 (tutorial curriculum)) keeps absolute
 priority. Do not let this reorder the tutorial quarter.
 
 **The idea.** One flagship song per in-scope genre (electronic, hip-hop, lo-fi, rock/metal/punk), each paired

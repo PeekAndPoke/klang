@@ -17,7 +17,7 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
  * Covers the door through to the wire (the `adsr.on` slot, 1.0 or 0.0, phase 3 step 8). The render end is in
  * `ClassicTailRenderSpec` (audio_be, `adsr.on`).
  *
- * See `docs/tasks-archive/2026-08/20260831-ignitor-envelope-ownership.md` Phase 3.
+ * See KLANG-00161 (ignitor envelope ownership) Phase 3.
  */
 class LangAdsrOnOffSpec : StringSpec({
 

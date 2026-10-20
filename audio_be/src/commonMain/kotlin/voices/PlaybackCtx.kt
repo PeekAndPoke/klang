@@ -20,7 +20,7 @@ class PlaybackCtx(
     val playbackId: String,
     /** Per-playback registry, forked from global. User can register custom oscillators. */
     val ignitorRegistry: IgnitorRegistry,
-    /** Per-playback unison start-phase pools (docs/tasks/unison-phase-pool.md §3.3). */
+    /** Per-playback unison start-phase pools (KLANG-00144 (unison phase pool) §3.3). */
     val phasePools: PhasePools,
     /** Backend-local epoch (seconds since backend start) when this playback first appeared */
     var epoch: Double = 0.0,

@@ -33,7 +33,7 @@ import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_SUSTAIN_LEVEL
 // ═════════════════════════════════════════════════════════════════════════════════════════════
 // `classic()`: the voice strip's chain as a tail of slotted Ignitor stages (phase 3 step 5; the strip retired in step 9)
 //
-// The plan is `docs/plans/signal-flow-redesign.md` section 5 and `docs/tasks-archive/2026-09/20260928-builtin-instruments.md`.
+// The plan is KLANG-00210 (signal flow redesign) section 5 and KLANG-00237 (builtin instruments).
 // The SLOTS below are grouped per stage and named `<door>.<param>`: the sprudel door's name, then the
 // engine door's word (`lpf.freq`, `crush.bits`, `adsr.attack`, ...), the `<stage>.<knob>` rule of the
 // Katalyst's classic chain (Q21, `/dsl-design` section 4). Sprudel's door parameter and reader take the
@@ -100,7 +100,7 @@ class BandFilterSlots internal constructor(door: String) {
 /**
  * The one slot of the crush stage (`Slots.crush`), mirroring sprudel's `crush.bits`: the bit depth.
  * Default 0.0, the strip's untouched value, which the gate reads as off (below 1). Sprudel's
- * `oversample` of this stage has no slot: it moved to `oversampling-regions.md`.
+ * `oversample` of this stage has no slot: it moved to KLANG-00214 (oversampling regions).
  */
 class CrushSlots internal constructor() {
     val bits: IgnitorDsl = slot(door = "crush", param = "bits", default = 0.0)
@@ -109,7 +109,7 @@ class CrushSlots internal constructor() {
 /**
  * The one slot of the coarse stage (`Slots.coarse`), mirroring sprudel's `coarse.factor`: the
  * sample-hold factor. Default 0.0, the strip's untouched value, which the gate reads as off (1 or
- * less). Sprudel's `oversample` of this stage has no slot: it moved to `oversampling-regions.md`.
+ * less). Sprudel's `oversample` of this stage has no slot: it moved to KLANG-00214 (oversampling regions).
  */
 class CoarseSlots internal constructor() {
     val factor: IgnitorDsl = slot(door = "coarse", param = "factor", default = 0.0)
@@ -139,7 +139,7 @@ class DistortSlots internal constructor() {
  * No range slots, by decision (maintainer, 2026-10-06, "not in sprudel yet"): the node's `rangeFrom` / `rangeTo` stay
  * at their default `(-1, 0)` here, so a pattern's tremolo is always the classic dip. Sprudel's tremolo is a flat door
  * with no builder layer for a two-value knob; the engine is ready (two slots at -1 and 0 render the same bits), and a
- * song that wants a swell reopens it (`docs/tasks-archive/2026-10/20261006-oscillator-phase-knob.md`, decision 4).
+ * song that wants a swell reopens it (KLANG-00272 (oscillator phase knob), decision 4).
  */
 class TremoloSlots internal constructor() {
     val depth: IgnitorDsl = slot(door = "tremolo", param = "depth", default = 0.0)
@@ -280,7 +280,7 @@ class PitchEnvelopeSlots internal constructor() {
  * values the strip read for an unwritten stage. With all four envelope stages at their defaults the node runs NO envelope: the depth is full
  * from the onset through the whole release tail. The strip always ran its envelope with a release of 0, so its FM
  * collapsed to 0 at the first block from the gate on (block-framing ledger E10, E11); the stage does not (the fifth
- * non-identical cause of step 4, `docs/tasks/pitch-pipeline-into-the-tree.md`).
+ * non-identical cause of step 4, KLANG-00245 (pitch pipeline into the tree)).
  */
 class FmSlots internal constructor() {
     val ratio: IgnitorDsl = slot(door = "fm", param = "ratio", default = FM_RATIO)
@@ -311,7 +311,7 @@ class SampleSlots internal constructor() {
 
 /**
  * Wraps this signal in the voice chain the old voice strip ran, stage for stage: the subtractive synth voice that
- * `sound("saw")` has always been, as a plain function over the node type (`docs/plans/signal-flow-redesign.md`
+ * `sound("saw")` has always been, as a plain function over the node type (KLANG-00210 (signal flow redesign)
  * section 5). The script door is `x.classic()`, and it calls this function: THIS is the one place the
  * order is written.
  *
@@ -319,7 +319,7 @@ class SampleSlots internal constructor() {
  * this -> fm -> pitchEnvelope -> accelerate -> vibrato -> onepole -> crush -> coarse -> distort -> highpass -> bandpass -> notch -> lowpass -> tremolo -> adsr
  * ```
  *
- * The PITCH stages come first, directly on the instrument (pitch pipeline, `docs/tasks/pitch-pipeline-into-the-tree.md`
+ * The PITCH stages come first, directly on the instrument (pitch pipeline, KLANG-00245 (pitch pipeline into the tree)
  * section 2): their mods bubble down to every pitched source, so their place among the amplitude stages does not
  * change the sound, and the nesting decides the grouping of the ratio product, which is the retired pitch strip's
  * (vibrato outermost, then accelerate, then the pitch envelope, FM innermost: `((V * A) * P) * F`). The amplitude
@@ -344,7 +344,7 @@ class SampleSlots internal constructor() {
  * before the strip was deleted; their frozen fingerprints were retired at the phase 3 end checkpoint, 2026-10-02):
  *  - the crush renders the strip's own `floor` quantizer, one shared law (decision D1, landed in step 4).
  *    It has no oversampler, so `crush(oversample = ...)` does nothing (tracked in
- *    `docs/tasks/oversampling-regions.md`);
+ *    KLANG-00214 (oversampling regions));
  *  - the distort is the fused [IgnitorDsl.Distort] node, the one that switches drive AND shape off as a
  *    unit (`Shape(Drive(...))` would put the shaper on every voice). Decision D2 (option A, landed in
  *    step 4): the node renders the strip's loop (no soft cap, the drive inside the oversampler), so it
@@ -533,7 +533,7 @@ fun IgnitorDsl.classic(): IgnitorDsl {
 /**
  * True when this tree ENDS in [classic]: its ROOT is `classic()`'s envelope, recognised by its switch, the slot
  * `adsr.on`. `classic()` is the one place that slot is placed (no door has the switch), so the root's switch IS
- * the tag, and no marker node or wire field is needed (phase 3 step 10, `docs/tasks-archive/2026-09/20260928-builtin-instruments.md`).
+ * the tag, and no marker node or wire field is needed (phase 3 step 10, KLANG-00237 (builtin instruments)).
  *
  * Such a tree carries the voice chain, so the voice doors reach it. Every built-in sound is one, and so is an
  * authored instrument whose LAST call is `.classic()`. The engine no longer asks (every voice is its tree since
@@ -545,7 +545,7 @@ fun IgnitorDsl.classic(): IgnitorDsl {
  * It reads the ROOT only, so `classic()` must be the last call: `x.classic().mul(0.5)` does not end in it. An optimizer hint is not a stage, so it looks through one at the root:
  * `x.classic().optimizer(0)` (the by-ear A/B, which its KDoc says to put last on a sound) ends in `classic()`,
  * and switching the optimizer off does not change the answer. This is the tag the `.sprudel()` auto-attach
- * of `docs/plans/future/signal-graph-engine.md` asks for: "does this instrument carry the voice chain yet?".
+ * of KLANG-00216 (signal graph engine) asks for: "does this instrument carry the voice chain yet?".
  */
 fun IgnitorDsl.endsInClassic(): Boolean {
     var root = this

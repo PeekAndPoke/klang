@@ -21,7 +21,7 @@ import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 /**
  * Tests for tweaks: named per-note modifiers attached in mini-notation (`e3{swell}`) and bound later
- * by `tweaks(...)`. See `docs/tasks-archive/2026-08/20260831-mini-notation-tweaks.md`.
+ * by `tweaks(...)`. See KLANG-00162 (mini notation tweaks).
  */
 class LangTweaksSpec : StringSpec({
 

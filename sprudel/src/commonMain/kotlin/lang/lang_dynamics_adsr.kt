@@ -23,7 +23,7 @@ import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArg
 
 // -- ADSR stages ------------------------------------------------------------------------------------------------------
 // attack, decay, sustain and release are slots of adsr(), not doors of their own (the single doors
-// were removed 2026-09-07, see docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md). Read them as adsr.attack etc.
+// were removed 2026-09-07, see KLANG-00184 (sprudel field accessors)). Read them as adsr.attack etc.
 
 private val attackMutation = voiceSetter { attack = it?.asDoubleOrNull() }
 private val decayMutation = voiceSetter { decay = it?.asDoubleOrNull() }

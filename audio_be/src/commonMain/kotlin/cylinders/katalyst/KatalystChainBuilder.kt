@@ -481,7 +481,7 @@ object KatalystChainBuilder {
 
     /**
      * An EQ section's knob as a chain knob. The sections stay [IgnitorDsl.EqSection], shared with the voice and with
-     * `bands` (decision Q2 of `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`, E2), so this is the one place a
+     * `bands` (decision Q2 of KLANG-00302 (katalyst knob expressions), E2), so this is the one place a
      * Katalyst knob
      * is read off an Ignitor node: an [IgnitorDsl.Constant] is a constant, an [IgnitorDsl.Param] the slot of that name,
      * which is what the Katalyst door writes for a number and a `Kat.param`.
@@ -527,7 +527,7 @@ object KatalystChainBuilder {
  * function only decides whether anybody asked for the stage at all.
  *
  * **A modulated wet is asked for** while its modulators run ([KatalystKnob.isModulating], Q7 of
- * `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`, step 5b): an LFO that dips the wet to 0 or below is the
+ * KLANG-00302 (katalyst knob expressions), step 5b): an LFO that dips the wet to 0 or below is the
  * author's modulation, a level that glides like a written 0, and must not drain the stage and rent it again every
  * cycle. A modulated wet whose slot leaf is unset (Q5), or whose value is not finite, asks for nothing: off, as the
  * same NaN as a constant is. So this gate is true only with a finite wet.

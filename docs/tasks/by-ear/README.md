@@ -18,10 +18,10 @@ Created 2026-08-31.
 
 | File | What the ear work is |
 |---|---|
-| [`chain-swap-request-during-drain.md`](../../tasks-archive/2026-10/20261017-chain-swap-request-during-drain.md) | **DONE 2026-10-17** (maintainer: "the change should happen more or less immediate"): a request that waits behind a ring-out cuts it over 0.15 s and lands in about 0.2 s; the drain's tail detection fixed. The check by ear: `tmp/listening/chain-swap-drain/second-edit-after.wav` |
-| [`delay-reverb-owner-change-cut.md`](../../tasks-archive/2026-10/20261016-delay-reverb-owner-change-cut.md) | **DONE 2026-10-16** (maintainer Q39 "fade, do not cut", engine follow-up 42): every delay and reverb switch-off fades its feed; the bleed of a new owner into the old room is accepted. The check by ear: `tmp/listening/delay-reverb-fade/`, heard 2026-10-18: "both after versions ok" |
-| [`knob-glide-listening.md`](../../tasks-archive/2026-10/20261017-knob-glide-listening.md) | **DONE 2026-10-17**: the bank crossfade is 50 ms; a compressor knob move that relaxes reduction follows the release time (judged at 0 dBFS). Corpus accepted 2026-10-18 |
-| [`../future/duck-orbit-switch-click.md`](../future/duck-orbit-switch-click.md) | Katalyst step 5c (2026-09-20, measured): moving a ducker's sidechain to a sounding orbit steps the reduction. Leave it, blend the two sources, or dip and return? |
+| KLANG-00318 (chain swap request during drain) | **DONE 2026-10-17** (maintainer: "the change should happen more or less immediate"): a request that waits behind a ring-out cuts it over 0.15 s and lands in about 0.2 s; the drain's tail detection fixed. The check by ear: `tmp/listening/chain-swap-drain/second-edit-after.wav` |
+| KLANG-00313 (delay reverb owner change cut) | **DONE 2026-10-16** (maintainer Q39 "fade, do not cut", engine follow-up 42): every delay and reverb switch-off fades its feed; the bleed of a new owner into the old room is accepted. The check by ear: `tmp/listening/delay-reverb-fade/`, heard 2026-10-18: "both after versions ok" |
+| KLANG-00316 (knob glide listening) | **DONE 2026-10-17**: the bank crossfade is 50 ms; a compressor knob move that relaxes reduction follows the release time (judged at 0 dBFS). Corpus accepted 2026-10-18 |
+| KLANG-00247 (duck orbit switch click) | Katalyst step 5c (2026-09-20, measured): moving a ducker's sidechain to a sounding orbit steps the reduction. Leave it, blend the two sources, or dip and return? |
 
 ---
 
@@ -38,9 +38,9 @@ Created 2026-08-31.
 > still thumps on the sawtooth, **16 ms for all** (74 to 78). Direction (maintainer): keep the `.tremolo()` doors,
 > remove the `TremoloIgnitor` and its own LFO (`LfoShape`), and model the tremolo by composition, "the dsp surface
 > would shrink". Decided the same day: `skew` and `phase` are dropped. The build task:
-> [`../../tasks-archive/2026-10/20261002-tremolo-as-composition.md`](../../tasks-archive/2026-10/20261002-tremolo-as-composition.md).
+> KLANG-00265 (tremolo as composition).
 
-**Commit `9cb896ff`.** Recorded only in the W10 row of `docs/plans/block-framing-invariance.md` and
+**Commit `9cb896ff`.** Recorded only in the W10 row of KLANG-00156 (block framing invariance) and
 in the BUILD-LOCK. The oldest debt in this folder and the one with the most new sound in it.
 
 Six shipped sprudel functions were **inert end to end** (full KDoc, examples and aliases, dropped at
@@ -65,7 +65,7 @@ heard either.
 
 ### 2. Mini-notation tweaks — the design could still come back
 
-Item 2 of [`../future/mini-notation-tweaks-followups.md`](../future/mini-notation-tweaks-followups.md).
+Item 2 of KLANG-00163 (mini notation tweaks followups).
 Shipped and archived 2026-08-31; every claim is backed by tests, which here is half a verification.
 
 Needs a session writing real music with `note("c3 e3{swell}").tweaks({ swell: x => ... })`, asking
@@ -82,7 +82,7 @@ or to the group as a unit) both depend on this round and cannot be judged withou
 ### 3. Body resonator material tables
 
 The replacement work from the resonator-swing closure
-([`../../tasks-archive/2026-08/20260820-resonator-swing.md`](../../tasks-archive/2026-08/20260820-resonator-swing.md),
+(KLANG-00147 (resonator swing),
 won't-implement 2026-08-20). Swing was closed on taste, and the deferred "POC starting points" item
 became: **tune the material tables by ear.**
 
@@ -92,7 +92,7 @@ fingerprint view, which is the instrument for this round. Oak and other tonewood
 and never tried.
 
 Long-term path if hand-tuning stops paying:
-[`../future/ir-to-modal-table-extraction.md`](../future/ir-to-modal-table-extraction.md).
+KLANG-00121 (ir to modal table extraction).
 
 ### 4. Der Schmetterling re-voicing — uncommitted right now
 
@@ -109,7 +109,7 @@ voicing numbers were chosen before that landed.
 
 ### 5. Unified EQ D7 — song bell migration (optional)
 
-`docs/plans/unified-eq.md` §D7. Per-band exactly solvable, but it carries a topology warning and is
+KLANG-00151 (unified eq) §D7. Per-band exactly solvable, but it carries a topology warning and is
 explicitly a taste pass. Optional, and the plan's CPU goal is already met (Fairphone 4, ~75%), so
 this one is pure sound.
 
@@ -117,7 +117,7 @@ this one is pure sound.
 
 > **HEARD 2026-10-02 (maintainer, pairs 50 to 53, JVM renders, fixes 1 and 2):** violin, accordion and nylon guitar
 > ok; church organ "probably ok, the loop is not clean but I think it is the sample itself" (noted in
-> `../future/soundfont-variant-curation.md`). Pairs deleted.
+> KLANG-00173 (soundfont variant curation)). Pairs deleted.
 
 Landed 2026-09-02/03. No shipped song uses a `gm_` soundfont, so nothing released moved, but
 everything a tutorial might reach for did. **Nothing below was audible in the browser until
@@ -152,11 +152,11 @@ specific belongs in the user's `.adsr()`, not in the engine default.
 pitches sit **0.4–1.4 semitones below** what was recorded (measured, `soundfont-looping-
 investigation.md`). Zone 8 (keys 81–84) plays 1.4 st sharp. FluidR3 is accurate to a quarter-tone
 and is `.n(1)` for the accordion. That is a data / curation item, see `docs/tasks/future/
-soundfont-variant-curation.md`.
+KLANG-00173 (soundfont variant curation)`.
 
 ### 7. Segmented controls and arithmetic humanisation — written years ago, heard never
 
-**2026-09-07, `docs/tasks/sprudel-arithmetic-continuous-controls.md`.** Two sprudel fixes, one
+**2026-09-07, KLANG-00195 (sprudel arithmetic continuous controls).** Two sprudel fixes, one
 listening pass, and nothing here is new sound by design: it is what the songs already SAY.
 
 > **CLOSED 2026-10-02 (maintainer): "I know that it works now"**, heard in the songs since the fix; pairs 30 to 33

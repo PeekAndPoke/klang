@@ -17,13 +17,13 @@ Item ids (A1, B12, ...) are referenced by the cleanup order at the end.
 
 Planned work that already removes items, so they are not counted twice (marked **[planned: ...]**):
 
-- `docs/tasks/voice-lifecycle-state-machine.md` steps 5 to 7 (the lease per state; takeover; optimisation);
-- `docs/tasks/pitch-pipeline-into-the-tree.md` (the pitch strip `be/voices/strip/pitch/`, `Voice.Vibrato` /
+- KLANG-00279 (voice lifecycle state machine) steps 5 to 7 (the lease per state; takeover; optimisation);
+- KLANG-00245 (pitch pipeline into the tree) (the pitch strip `be/voices/strip/pitch/`, `Voice.Vibrato` /
   `Fm` / `Accelerate` / `PitchEnvelope` / `Envelope`, `BlockContext.freqModBuffer` and the `phaseMod` feed,
   `EnvelopeCalc.kt`, the pitch wire fields, and the natural moment to dissolve `voices/strip/`);
-- `docs/tasks-archive/2026-10/20261014-code-style-named-args-pass.md` (every swappable positional call, e.g. `VoiceFactory.buildVoice`'s
+- KLANG-00310 (code style named args pass) (every swappable positional call, e.g. `VoiceFactory.buildVoice`'s
   17 positional arguments, `Cylinders.checkIn`);
-- `docs/tasks/future/one-chain-host.md` (the `Cylinder` / `MasterBus` chain plumbing table, the
+- KLANG-00243 (one chain host) (the `Cylinder` / `MasterBus` chain plumbing table, the
   `cylinders/katalyst/` package name).
 
 ---
@@ -32,31 +32,31 @@ Planned work that already removes items, so they are not counted twice (marked *
 
 ### A.1 Open items the Katalyst record and its follow-ups name
 
-The archived record `docs/tasks-archive/2026-09/20260928-katalyst-dsl.md` lists six moved items at its top (lines
+The archived record KLANG-00236 (katalyst dsl) lists six moved items at its top (lines
 9 to 19). Four more are named in its body and have no file of their own (A1.7 to A1.10). Each is checked against
 the code.
 
 | id | item | where it lives now | still true? | size |
 |---|---|---|---|---|
-| A1.1 | The delay's tail ceiling on a changing owner: (1) a lengthened tap re-reaches content the ceiling wrote off; (2) after a self-oscillating fall, the hold decays from `CEILING_MAX` | `docs/tasks/future/delay-ceiling-edges.md` | **Yes.** `KatalystDelayEffect.kt:427-433` re-measures only on a return from a self-oscillating drain, never on a lengthened `delay.time`. `TailCeiling.kt:141,196,212` saturate at `CEILING_MAX` (`:244`, 1e6), not at the cap | S + S |
-| A1.2 | `duck.orbit` switch onto a sounding source clicks, plus four recorded duck-handover corners | `docs/tasks/future/duck-orbit-switch-click.md` | **Yes.** No blend mechanism exists (`audio/ref/katalyst.md:53` says so). The file's code pointers are current | decision first, then S to M |
+| A1.1 | The delay's tail ceiling on a changing owner: (1) a lengthened tap re-reaches content the ceiling wrote off; (2) after a self-oscillating fall, the hold decays from `CEILING_MAX` | KLANG-00246 (delay ceiling edges) | **Yes.** `KatalystDelayEffect.kt:427-433` re-measures only on a return from a self-oscillating drain, never on a lengthened `delay.time`. `TailCeiling.kt:141,196,212` saturate at `CEILING_MAX` (`:244`, 1e6), not at the cap | S + S |
+| A1.2 | `duck.orbit` switch onto a sounding source clicks, plus four recorded duck-handover corners | KLANG-00247 (duck orbit switch click) | **Yes.** No blend mechanism exists (`audio/ref/katalyst.md:53` says so). The file's code pointers are current | decision first, then S to M |
 | A1.3 | A chain request during the old chain's drain waits up to about 24.5 s | `docs/tasks/by-ear/chain-swap-request-during-drain.md` | **Yes.** `Cylinder.kt:452-457` (HEAD) parks `pendingKey` while `!swap.settled`; `MasterBus.requestSwap` does the same | by ear |
-| A1.4 | The `Osc` / `oscp` rename (§D1) | was `signal-flow-redesign.md` §11 and a V1 row | **Done** 2026-10-04 (`docs/tasks-archive/2026-10/20261004-ignitor-katalyst-naming.md`). No `oscp` / `Osc.` remains in the engine. Only the record's top pointer is stale (history; leave it) | none |
-| A1.5 | The EQ's per-sample ramps (`EqCore` is snap-only) | `docs/plans/unified-eq.md` (D4 note) | **Partly dissolved.** The orbit was closed by the bank swap (Katalyst step 4). Since phase 3 step 12 the master runs the same `KatalystEqEffect` bank swap, so the record's "still open for a future master eq" no longer applies. What remains true: a per-voice `IgnitorDsl.Eq` with a signal-driven knob zippers per block (`EqCore` snap-only). `EqCore.kt:17` and `:26-27` still say "the planned master eq stage adopts it later": stale | doc S |
-| A1.6 | The pattern door that takes a configure lambda (`.katalyst(k => ...)`, `.master(k => ...)`) | `docs/tasks/katalyst-master-configure-doors.md` | Open, NICE, blocked on `klangscript-union-types.md` step 3. Not engine code | M (sprudel / KlangScript) |
+| A1.4 | The `Osc` / `oscp` rename (§D1) | was KLANG-00210 (signal flow redesign) §11 and a V1 row | **Done** 2026-10-04 (KLANG-00269 (ignitor katalyst naming)). No `oscp` / `Osc.` remains in the engine. Only the record's top pointer is stale (history; leave it) | none |
+| A1.5 | The EQ's per-sample ramps (`EqCore` is snap-only) | KLANG-00151 (unified eq) (D4 note) | **Partly dissolved.** The orbit was closed by the bank swap (Katalyst step 4). Since phase 3 step 12 the master runs the same `KatalystEqEffect` bank swap, so the record's "still open for a future master eq" no longer applies. What remains true: a per-voice `IgnitorDsl.Eq` with a signal-driven knob zippers per block (`EqCore` snap-only). `EqCore.kt:17` and `:26-27` still say "the planned master eq stage adopts it later": stale | doc S |
+| A1.6 | The pattern door that takes a configure lambda (`.katalyst(k => ...)`, `.master(k => ...)`) | KLANG-00211 (katalyst master configure doors) | Open, NICE, blocked on KLANG-00212 (klangscript union types) step 3. Not engine code | M (sprudel / KlangScript) |
 | A1.7 | `Voice.Compressor` / `Voice.Ducking` live under `Voice` though only the chain uses them (record line 548: "still there" on 2026-09-27) | **no task file** | **Yes.** `be/voices/Voice.kt:538-577` (HEAD). The only main-code users are `KatalystSlots`, `KatalystSlotWriters`, `KatalystCompressorEffect`, `KatalystDuckEffect`. `Voice.Ducking.cylinderId` / `attackSeconds` carry pre-Katalyst names | S to M |
 | A1.8 | An OFF Ignitor effect node still copies its upstream (record line 1082, "belongs with phase 3's node-level gate") | no task file | **Mostly dissolved.** The gate (a `Param`/`Constant` knob at its off value builds no node) removes the common case. An off-by-signal node (an LFO on `crush`) still renders its upstream into scratch and copies. Not worth a task on its own | none |
-| A1.9 | The phaser's low "blub" on every transition (5c-9 listening) | `docs/tasks/future/transition-times.md` §4 | Open, by ear | by ear |
-| A1.10 | The process-wide content-identity maps grow per live edit (signal-flow §11, "Housekeeping") | `docs/plans/signal-flow-redesign.md` §11 | **Yes.** `br/KatalystDslIdentity.kt:22-23` (`globalKatalystNames` plus counter); the Ignitor twin likewise. A frontend-side rule violation (the "allocate only with a way to clean up" rule), not audio-thread code | M |
+| A1.9 | The phaser's low "blub" on every transition (5c-9 listening) | KLANG-00213 (transition times) §4 | Open, by ear | by ear |
+| A1.10 | The process-wide content-identity maps grow per live edit (signal-flow §11, "Housekeeping") | KLANG-00210 (signal flow redesign) §11 | **Yes.** `br/KatalystDslIdentity.kt:22-23` (`globalKatalystNames` plus counter); the Ignitor twin likewise. A frontend-side rule violation (the "allocate only with a way to clean up" rule), not audio-thread code | M |
 
 Stale lines in the plan's open list, found on the way (doc only, S):
 
-- `signal-flow-redesign.md` §11 "a placed `pregain` costs CPU at unity" is **solved**: the unity fold drops it
+- KLANG-00210 (signal flow redesign) §11 "a placed `pregain` costs CPU at unity" is **solved**: the unity fold drops it
   (`be/ignitor/IgnitorDslRuntime.kt:1159-1206`).
-- `docs/tasks/future/ducking-unfinished.md` still cites `VoiceData.ducking`, `Cylinder.kt:198-203` and describes the
+- KLANG-00168 (ducking unfinished) still cites `VoiceData.ducking`, `Cylinder.kt:198-203` and describes the
   duck as a voice field; the wire is the `duck.*` slots in `katalystParams` now.
 
-Related, still open in `docs/tasks/master-dsl-followups.md`: §1 (the parameter parity audit), §3 (a chain-cache miss
+Related, still open in KLANG-00137 (master dsl followups): §1 (the parameter parity audit), §3 (a chain-cache miss
 rebuilds a chain on the audio thread; it applies to both hosts, `Cylinder.kt:944` HEAD documents the same
 exception), §6 (doc debts), §7 (Greensleeves' inert limiter, by ear).
 
@@ -92,7 +92,7 @@ exception), §6 (doc debts), §7 (Greensleeves' inert limiter, by ear).
   per `MasterBus` and per `ChainSwap`). **S.**
 - **A2.7** `effects/Ducking.kt:30-33, :41`: the duck's "attack" is a release, "named for Strudel compatibility",
   carried on `Voice.Ducking.attackSeconds`, `DUCK_ATTACK_SECONDS`, the `duck.attack` slot. A door rename, so a shape
-  change. **S to M [planned: `ducking-unfinished.md` item 1].**
+  change. **S to M [planned: KLANG-00168 (ducking unfinished) item 1].**
 - **A2.8** `effects/Compressor.kt:128` `makeupGainDb`: a public `var` nothing in the repo ever writes; read only at
   `:636`, so makeup gain is always unity. The voice compressor that once set it is gone. Delete (bit-identical).
   Verified. **S.**
@@ -104,13 +104,13 @@ exception), §6 (doc debts), §7 (Greensleeves' inert limiter, by ear).
 **The master path and the orbit path**
 
 There is **one chain** (`KatalystChain`), **one registry** (`KatalystRegistry`, forked per playback) and **one swap
-law** (`ChainSwap`), but **two hosts**, as `one-chain-host.md` records. The table there is accurate; what it misses:
+law** (`ChainSwap`), but **two hosts**, as KLANG-00243 (one chain host) records. The table there is accurate; what it misses:
 
 - **A2.10** Two tail polls of one law ("silent for N blocks, then ask `hasTail`") with different floors:
   `MasterBus.kt:462-481` `updateTailState` (10-block interval, 1e-4) and `Cylinder.kt:673-729` (HEAD)
   `tryDeactivate` (10 cleanup visits, 1e-5). Two silence scans: `Cylinder.kt:731` `isMixBufferSilent` and
   `MasterBus.kt:484` `isAudible`. Two `buildChain`s (`MasterBus.kt:242`, `Cylinder.kt:1007` HEAD) and two contexts
-  over the bus (`MasterBus.kt:442` `contextOver`, `Cylinder.kt:261`). **S to M [extend `one-chain-host.md`].**
+  over the bus (`MasterBus.kt:442` `contextOver`, `Cylinder.kt:261`). **S to M [extend KLANG-00243 (one chain host)].**
 - **A2.11** `be/PlaybackEngine.kt:117-160`: three branches each call `cylinders.processAndMix` (no master, master,
   releasing), plus a one-line wrapper `markMasterBusRendered` (`:174`). One path with `if (masterBus.isActive)`
   around the master call is the same arithmetic as the releasing branch already uses. **S, bit-identical** (the
@@ -132,7 +132,7 @@ There are few, and all are deliberate or historical:
 - `br/constants/OscillatorTuning.kt:45, :112` "seeded to the saw values for now": tuning placeholders, by-ear
   territory, not debt.
 - "D7 stopgap" (`IgnitorDslRuntime.kt:764, :1509`, `IgnitorDslClassic.kt:99`, `IgnitorDsl.kt:1966`): the
-  oversample factor as a build-time knob; tracked by `docs/tasks/oversampling-regions.md`.
+  oversample factor as a build-time knob; tracked by KLANG-00214 (oversampling regions).
 - "legacy" in `EqCore.kt:72-386`, `LowPassHighPassFilters.kt:58, :397`, `VowelBands.kt:15`, `FilterDef.kt:39`,
   `Ignitors.kt:1570-1722`, `IgnitorDsl.kt:671-931`: they name a bit-parity contract (the vowel Q-peak fold, the
   phase-pool bypass draw order) that is still in force. Keep the meaning. The word could become "the historical"
@@ -217,7 +217,7 @@ spelling of every node that a Zig port would not carry.
   - the dead `FormantIgnitor` (B1.1).
 
   `ResonatorBank`, the one production user of `SvfBPF`, could run on `EqCore` bandpass sections, which compute
-  identical coefficients. **M [planned in part: `future/svf-resonator-class-collapse.md`, which covers the sweep
+  identical coefficients. **M [planned in part: KLANG-00282 (svf resonator class collapse), which covers the sweep
   removal only].**
 - **B2.2 Oversampled shaper:** `ignitor/IgnitorEffects.kt:157-198` (`ShapeIgnitor`) and `DistortionCore.kt:38-86`.
   Each owns an `Oversampler`, a `DcBlocker` and the same `applyDistortionShape(...).nanGuard()` loop. They differ
@@ -473,7 +473,7 @@ spelling of every node that a Zig port would not carry.
 ### B.5 The wire (`audio_bridge`)
 
 - **B5.1** `br/VoiceData.kt:28` `legato`: read as `clip` in `VoiceFactory.kt:104-107` (HEAD), where it scales the
-  gate in frames. The plan's minimal wire (`signal-flow-redesign.md` §4: "timing: start, duration ... Everything else
+  gate in frames. The plan's minimal wire (KLANG-00210 (signal flow redesign) §4: "timing: start, duration ... Everything else
   leaves") has no room for it. Folding it into `gateEndTime` on the frontend changes the gate's frame rounding, so it
   is not bit-identical. **M, wire, decision D6.**
 - **B5.2** The `br/VoiceData.kt:14` TODO and the B1.10 commands: see above.
@@ -522,7 +522,7 @@ the plan closed.
   guards".
 - The duck's `handedOver` / `duckedLastBlock` (`KatalystDuckEffect.kt:131, :154`): plan `:210` (the duck done
   without state classes). The ducking design is being rethought as composition
-  (`docs/tasks/future/ducking-unfinished.md`), so this is not the moment.
+  (KLANG-00168 (ducking unfinished)), so this is not the moment.
 - `hasParked` in body, vowel and EQ (`KatalystBodyEffect.kt:83`, `KatalystFormantEffect.kt:48`,
   `KatalystEqEffect.kt:113`): the 5c-11 "two banks and one parking slot" decision. The flag tells "a parked OFF"
   from "nothing parked" (its KDoc, `KatalystBodyEffect.kt:79`). Its triplication is a duplication item (B2.10), not a
@@ -531,7 +531,7 @@ the plan closed.
   settled, crossfading) is `KnobGlide`'s three situations, the shape the plan accepted for the gain under its
   complexity rule (plan `:178`). It lives inside the delay's own state machine.
 - `MasterBus.hasRendered` (`:172`): a one-way latch for "adoption at full weight before the first block" (plan risk
-  R4, `one-chain-host.md` rule 1). One edge, no lifecycle. `MasterBus.ringing` / `silentBlocks` is a tail poll, not
+  R4, KLANG-00243 (one chain host) rule 1). One edge, no lifecycle. `MasterBus.ringing` / `silentBlocks` is a tail poll, not
   a lifecycle (A2.10).
 - Warehouse `clean` flags (`ReverbUnits.kt:33`, `SizedBuffers.kt:158-160`): data about a unit, not a lifecycle.
 - `EnvelopeCore.primed`, `DriftLanes.useShared/useOwn`, the Ignitor latches (`analogLatched`, `excited`,
@@ -547,7 +547,7 @@ the plan closed.
   - **The states:** Playing → Stopped (holding, `resume()` returns to Playing) → Releasing → Released → disposed,
     plus "detached while releasing".
   - **Why it pays off:** this is a real multi-state lifecycle. It decides disposal, and disposal has had bugs (the
-    truncated delay tail and the leaked engine of `master-dsl-followups.md` §2, fixed by step 12 decisions (i) and
+    truncated delay tail and the leaked engine of KLANG-00137 (master dsl followups) §2, fixed by step 12 decisions (i) and
     (j)).
   - **Today's edges are implicit:** `engineFor` moves an engine from `draining` to `detached` only when
     `isReleasing`; `isIdle` reads three flags in a fixed order.
@@ -563,11 +563,11 @@ the plan closed.
   decide when an orbit deactivates and resets (`tryDeactivate`, `:673-729`). There are four situations: inactive,
   sounding, silent grace, held by a voice.
   - **For states:** the logic is spread over several flags and counters. A bug came from exactly this spread: the
-    fader through 0 that reset a playing orbit (`signal-flow-redesign.md` §11, fixed in 5c-8). Lifecycle step 5 is
+    fader through 0 that reset a playing orbit (KLANG-00210 (signal flow redesign) §11, fixed in 5c-8). Lifecycle step 5 is
     reworking the lease now.
-  - **Against:** step 5 and `one-chain-host.md` will both reshape this code soon. The current version is commented
+  - **Against:** step 5 and KLANG-00243 (one chain host) will both reshape this code soon. The current version is commented
     edge by edge. A state machine now would be rewritten twice.
-  - **Suggestion:** decide it with `one-chain-host.md`, after step 5.
+  - **Suggestion:** decide it with KLANG-00243 (one chain host), after step 5.
 - **C4.2 `WarmupRunner`** (`WarmupRunner.kt:123-124, :234, :241`). `started`, `finished`, `disposed` and
   `readyWhileDirty` describe four phases: not started, running, disposed (waiting for the warehouse to zero), done.
   - **For an enum:** four booleans for four phases.
@@ -576,7 +576,7 @@ the plan closed.
 - **C4.3 Two state-machine shapes in one engine.**
   - **The two shapes:** the effects use inner-class instances with virtual dispatch (the plan, "no `when`"). The
     voice uses a plain enum with a `when` (`be/voices/Voice.kt:301-330, :462-483` HEAD; recorded in
-    `voice-lifecycle-state-machine.md` step 1: "a closed param-less set, no allocation per block").
+    KLANG-00279 (voice lifecycle state machine) step 1: "a closed param-less set, no allocation per block").
   - **For the Zig port:** an enum plus a switch maps 1:1 to a Zig `enum` / tagged union and `switch`. The inner
     classes map to a tagged union whose payload holds the state's own data, plus an explicit self pointer for the
     outer fields.
@@ -589,7 +589,7 @@ the plan closed.
 ## D. Proposed cleanup order (each step one reviewable commit)
 
 The order is behaviour-neutral (bit-identical) steps first, then shape and sound changes, each marked. "After step
-5" means after `voice-lifecycle-state-machine.md` step 5 lands, because it is editing `cylinders/` and `voices/` now.
+5" means after KLANG-00279 (voice lifecycle state machine) step 5 lands, because it is editing `cylinders/` and `voices/` now.
 The named-args pass is queued for the same moment; steps marked "after step 5" can go before or after it, but not
 in parallel with it.
 
@@ -643,11 +643,11 @@ in parallel with it.
 
 14. **Behaviour fix:** an empty `Ignitor.variants()` becomes silence or a door error instead of an audio-thread
     crash (B4.7). S. **Do this first, ahead of the order above.** It is a bug, not tidying.
-15. **Planned work, in its own order:** lifecycle steps 5 to 7; `code-style-named-args-pass.md`;
-    `pitch-pipeline-into-the-tree.md` (sound and shape, listening pairs). After it: dissolve `voices/strip/`, make
-    the voice's stages plain code, fold the contexts (B3.1, B3.2). Then `one-chain-host.md`, extended by A2.10 and
+15. **Planned work, in its own order:** lifecycle steps 5 to 7; KLANG-00310 (code style named args pass);
+    KLANG-00245 (pitch pipeline into the tree) (sound and shape, listening pairs). After it: dissolve `voices/strip/`, make
+    the voice's stages plain code, fold the contexts (B3.1, B3.2). Then KLANG-00243 (one chain host), extended by A2.10 and
     the package move (B3.8).
-16. **Shape: the duck's "attack" renamed** to what it is (A2.7, `ducking-unfinished.md`).
+16. **Shape: the duck's "attack" renamed** to what it is (A2.7, KLANG-00168 (ducking unfinished)).
 17. **Shape: the vowel / Formant word unified (B3.6).**
 18. **Wire and shape: "cylinder" renamed to "orbit"** (B3.4, decision D1), `legato` off the wire (B5.1, D6), the
     unused `ScheduleVoice` / `ClearScheduled` commands (B1.10).
@@ -686,7 +686,7 @@ in parallel with it.
   - A1.2 (duck switch), A1.3 (chain request during drain), A1.9 (the phaser "blub");
   - the cut fade's curve (lifecycle step 4);
   - the lease rule (step 5);
-  - `cut-group-semantics.md`;
+  - KLANG-00167 (cut group semantics);
   - the `wasmJs { }` block left in `audio_be/build.gradle.kts:24-28` (audit leftovers §5).
 
 ## Counts

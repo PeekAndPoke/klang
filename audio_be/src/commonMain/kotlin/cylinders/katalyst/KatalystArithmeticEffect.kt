@@ -31,7 +31,7 @@ internal enum class KatalystArithmeticOp {
 }
 
 /**
- * The arithmetic stages on the bus (`docs/tasks-archive/2026-10/20261011-katalyst-arithmetic.md`):
+ * The arithmetic stages on the bus (KLANG-00300 (katalyst arithmetic)):
  * every sample of both channels goes through
  * the SAME per-sample law as the Ignitor's node of that operator (`_arithmetic_laws.kt`), so a settled operand gives
  * the sample the authored Ignitor node gives, bit for bit, clamps included. (A registered voice runs its optimized

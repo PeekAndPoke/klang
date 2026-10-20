@@ -15,7 +15,7 @@ import io.peekandpoke.klang.audio_bridge.constants.ENV_DECLICK_SECONDS
  * `classic()`'s STRUCTURE and its SLOT VOCABULARY (phase 3 step 5), pinned where they are written.
  *
  * The order: the pitch stages on the source (pitch pipeline steps 1 to 4), then the strip's
- * (`docs/tasks-archive/2026-09/20260928-builtin-instruments.md` section 4) behind the pattern's onepole (the first
+ * (KLANG-00237 (builtin instruments) section 4) behind the pattern's onepole (the first
  * amplitude stage since step 10): fm, penv, accelerate, vibrato, onepole, crush, coarse, distort, highpass, bandpass, notch, lowpass,
  * tremolo, adsr. The slot table below is the contract step 8 built
  * on (sprudel's `toVoiceData` writes exactly these keys, `classicSlotParams`), so a renamed key or a moved

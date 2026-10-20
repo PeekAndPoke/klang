@@ -6,7 +6,7 @@
 package io.peekandpoke.klang.audio_bridge
 
 /**
- * The typed Kotlin `Ign`: the KlangScript object `Ign` (`Ignitor`) word for word, for Kotlin (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`,
+ * The typed Kotlin `Ign`: the KlangScript object `Ign` (`Ignitor`) word for word, for Kotlin (KLANG-00314 (kotlin typed doors),
  * Q46 and the maintainer's revision of 2026-10-16). Same function words, parameter names, order and defaults, the SAME
  * builders and shapes; only the accepted types differ: every value parameter is an [IgnitorDsl] (a number enters as
  * `0.5.ign`), and a `configure` lambda takes the same builder with typed knobs.

@@ -21,7 +21,7 @@ import org.w3c.dom.MessagePort
  * Commands ([KlangCommLink.Cmd]) and feedback ([KlangCommLink.Feedback]) are encoded/decoded by the
  * KSP-generated "trust the input" wire codec (`:audio-wire-codec-ksp`, generated into `audio_bridge` jsMain).
  * That replaced kotlinx `encodeToDynamic`/`decodeFromDynamic` + hand-built marshalling, which dominated the
- * worklet's audio-thread decode (~64 µs/voice → ~0.4 µs). See `docs/tasks/worklet-codec-ksp.md`.
+ * worklet's audio-thread decode (~64 µs/voice → ~0.4 µs). See KLANG-00103 (worklet codec ksp).
  *
  * Each message carries the generated [WIRE_SCHEMA_HASH] under `v`; [requireSchema] rejects a mismatch so a
  * stale-cached worklet meeting a fresh frontend (different build) fails loudly instead of decoding garbage.

@@ -40,7 +40,7 @@ import kotlin.math.sin
  * The master-in-pattern path end to end on the backend: a `master(…)` reference rides the voice
  * stream, the scheduler consumes it, and the engine applies the chain to its bus.
  *
- * See `docs/tasks/master-dsl.md`.
+ * See KLANG-00136 (master dsl).
  */
 class MasterBusTest : StringSpec({
 

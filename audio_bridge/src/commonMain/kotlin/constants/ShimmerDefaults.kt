@@ -9,7 +9,7 @@ package io.peekandpoke.klang.audio_bridge.constants
 // The Ignitor shimmer's defaults, read by the Kotlin door (`shimmer(wet = SHIMMER_WET.ign, ...)`) and the node's
 // fields (`IgnitorDsl.Shimmer`), the same numbers (`/dsl-design` section 4: defaults live in ONE place). The
 // KlangScript door keeps the same numbers as its literal defaults (KSP takes literals only), and a default-node row
-// pins that the two agree (typed-doors rollout S3c, `docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`).
+// pins that the two agree (typed-doors rollout S3c, KLANG-00314 (kotlin typed doors)).
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** The shimmer's wet/dry balance, 0..1: an equal-power half mix. */

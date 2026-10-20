@@ -71,7 +71,7 @@ registerObject("Math", MathObject) {
 
 - A `NativeObjectValue` callee (`Katalyst(...)`, sprudel's `reverb(0.3)`) dispatches to the extension
   method its type registers under the internal symbol `__invoke__` (Kotlin's operator word inside double
-  underscores, the scheme of `docs/tasks/klangscript-native-object-operators.md`; no script spells it),
+  underscores, the scheme of KLANG-00056 (klangscript native object operators); no script spells it),
   through the spec-aware member-call path (`Interpreter.evaluateCall`). Errors and the call stack name the
   call as written (`Katalyst`, `adsr`), never the internal symbol; the generated registration names a call
   form's argument errors after the object too (`SpecAwareItem.errorName`). A script never reaches an operator
@@ -97,7 +97,7 @@ registerObject("Math", MathObject) {
   on `invoke`, one without `operator`, a second one in the same class (KlangScript has no overloads, so one
   call form), and a `@Method` whose script name is `invoke`, `__invoke__` or any other `__x__` (`methodNameProblem`).
 - Only `__invoke__` is wired; the arithmetic operators of
-  `docs/tasks/klangscript-native-object-operators.md` are not built.
+  KLANG-00056 (klangscript native object operators) are not built.
 
 ## Library registration and argument checks
 
@@ -113,7 +113,7 @@ registerObject("Math", MathObject) {
 Handled in `Interpreter.evaluateMemberAccess()`: a native object looks up its type's extensions, and every other value
 kind except a script object (number, string, boolean, array, null, a function, a bound method) looks up the
 extensions registered on its runtime class the same way, so `true.toString()` reaches `KlangScriptBooleanExtensions`
-(2026-10-07, `docs/tasks-archive/2026-10/20261007-boolean-member-access.md`). A kind with none registered ends at "Cannot access property 'x'
+(2026-10-07, KLANG-00276 (boolean member access)). A kind with none registered ends at "Cannot access property 'x'
 on non-object value". The ranked error names a script value kind by its script name, the one the editor's
 types use (`Type 'Boolean' has no method 'toStrin'`, `Environment.getDisplayTypeName`). A script object (`ObjectValue`) keeps plain property access: its own properties are its
 members, a missing one is `null`. The stdlib methods are declared with `@KlangScript.TypeExtensions(StringValue::class)`

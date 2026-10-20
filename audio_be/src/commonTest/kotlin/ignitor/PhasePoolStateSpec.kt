@@ -24,7 +24,7 @@ import kotlin.random.Random
 private val testRandom = Random(0x5EED)
 
 /**
- * Guards for the stateful phase pool (P1 — docs/tasks/unison-phase-pool.md §3.3–§3.6):
+ * Guards for the stateful phase pool (P1 — KLANG-00144 (unison phase pool) §3.3–§3.6):
  * the amortized warm fill lands in-band and grows correctly, roundRobin cycles the vocabulary,
  * refresh evicts randomly, a seeded registry reproduces, and the ENGINE path serves entries from
  * the pool (superimpose copies on the same orbit share one vocabulary; different orbits get

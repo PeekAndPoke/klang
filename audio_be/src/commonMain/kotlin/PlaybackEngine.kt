@@ -18,7 +18,7 @@ import kotlin.math.min
  * (own scheduling timeline, solo state, scratch, `RenderContext`, `VoiceFactory`) and its own
  * [Cylinders] (orbits + FX). The only thing it does NOT own is the shared backend state
  * ([AudioBackendContext]); in particular the audio timeline (clock) is read from there, never per
- * engine — see `docs/tasks-archive/2026-09/20260904-per-playback-engine.md` (D2·b/D2·d).
+ * engine — see KLANG-00176 (per playback engine) (D2·b/D2·d).
  *
  * ## The end of life: one [Phase]
  *

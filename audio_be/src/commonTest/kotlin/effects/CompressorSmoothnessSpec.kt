@@ -13,7 +13,7 @@ import kotlin.math.abs
 import kotlin.math.pow
 
 /**
- * Guards for the gain-smoothing pass (`docs/tasks/compressor-gain-smoothing.md`):
+ * Guards for the gain-smoothing pass (KLANG-00109 (compressor gain smoothing)):
  *  - Fix 2: the gain-skip cutoff no longer snaps a small-but-real reduction to a hard 1.0 step.
  *  - Fix 1: the smoothstep attack<->release coefficient blend keeps the master limiter fast + bounded.
  *

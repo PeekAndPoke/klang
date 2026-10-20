@@ -21,7 +21,7 @@ import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
 
 /**
- * `serial(...)` on both DSLs, both doors (built as `through` in `docs/tasks-archive/2026-10/20261002-through-signal-chains.md`,
+ * `serial(...)` on both DSLs, both doors (built as `through` in KLANG-00267 (through signal chains),
  * renamed 2026-10-10): the script door, the Kotlin door and the hand-nested calls build the same value, the stages run
  * first to last, with no stage `serial()` is the receiver itself, and a broken stage is a script error that names it.
  *

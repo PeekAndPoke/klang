@@ -43,7 +43,7 @@ import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_WARMUP
 
 /*
  * The builders: what a door hands to its `configure` lambda, ONE set for both doors
- * (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`, "Revision (maintainer, 2026-10-16)").
+ * (KLANG-00314 (kotlin typed doors), "Revision (maintainer, 2026-10-16)").
  *
  *     Ign.saw().vibrato(5.ign, 0.3.ign) { it.range(0.ign, 1.ign) }    // Kotlin
  *     Ign.saw().vibrato(5, 0.3, v => v.range(0, 1))                  // KlangScript

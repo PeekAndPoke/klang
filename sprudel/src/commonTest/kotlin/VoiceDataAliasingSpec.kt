@@ -66,7 +66,7 @@ import io.peekandpoke.klang.sprudel.pattern.AtomicPattern
  *   already hands every layer fresh data: stack, superimpose, jux, echo, `_liftData` behind a full door chain and
  *   the bare `reverb()`. They pin the invariant against a later cache or fast path that shares one source event
  *   between layers (the constant-control fast path,
- *   `docs/tasks/future/optimize-constant-control-fast-path.md`), and they are cheap.
+ *   KLANG-00104 (optimize constant control fast path)), and they are cheap.
  */
 class VoiceDataAliasingSpec : StringSpec({
 

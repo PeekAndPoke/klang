@@ -16,7 +16,7 @@ package io.peekandpoke.klang.script.ksp
  * chunk boundaries and numbers, the order of a docs symbol's variants and the `ktN` numbering of the docs' type
  * table are the same on every machine. The registration order is the source order across objects, type
  * extensions, functions and constants alike, so the blocks of one area come out together and each area needs
- * only as many chunk functions as its size asks for (`docs/tasks/reduce-js-bundle-size.md`, 2026-10-07).
+ * only as many chunk functions as its size asks for (KLANG-00106 (reduce js bundle size), 2026-10-07).
  *
  * [filePath] is compared with `/` as the separator, so a Windows path sorts like the same path anywhere else.
  */

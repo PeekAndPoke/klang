@@ -28,7 +28,7 @@ import kotlin.random.Random
  * reader renders) and every count a [Count] (block-constant, so the build sizes the node from it). A node that
  * allocates nothing after its build takes exactly 0 bytes, its first block included.
  *
- * Not covered, because they still allocate at render (recorded in `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md` step 10): a count
+ * Not covered, because they still allocate at render (recorded in KLANG-00286 (engine tidy up) step 10): a count
  * signal's, or a count that reads the note's frequency, first rise past what the build sized (the rows with [Steps] start at their maximum, which the first block
  * grows to), the shared drift lane's own `Random` below spread 1, and the phase pool's vocabulary while it grows.
  */

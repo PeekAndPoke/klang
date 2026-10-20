@@ -6,7 +6,7 @@
 package io.peekandpoke.klang.pages.docs.tutorials
 
 /**
- * Curriculum slot B8 — see docs/tasks/tutorial-curriculum.md
+ * Curriculum slot B8 — see KLANG-00145 (tutorial curriculum)
  *
  * Keeps B3's deferred promises: which in-between notes belong to which letters
  * (the scale answers), and the major/minor mood A/B (0 2 4 on c4 = c4 e4 g4 vs

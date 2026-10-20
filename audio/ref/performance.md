@@ -241,12 +241,12 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   tagged value, and every update allocates a heap number: one 16-byte box per sample. Computing it in the same
   function is not enough (a value from `lanes.startOf(n)` boxed so). The remedy is `* 1.0` once before the loop
   (exact for every value but a NaN's payload). Measured on the Karplus string: without it the superpluck with drift
-  ran 424 to 633 scavenges per run and 40 to 76 percent slower (records: `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md`, step 11
+  ran 424 to 633 scavenges per run and 40 to 76 percent slower (records: KLANG-00286 (engine tidy up), step 11
   (b)); the unison stacks' phased loops showed the same with arguments. No test can pin it, because the sound is
   bit-identical either way: the KDoc at the site is the guard. Check a new hot loop with `--trace-gc`.
   Applied by rule to every drift seed (the four unison stack loops, the sine, the partial bank, the wave, impulse and
   sample oscillators) and to the partial bank's phase, seeded from an argument (V8 allocation pass, 2026-10-08,
-  `docs/tasks-archive/2026-10/20261009-engine-tidy-up.md`). Before it a five-partial bank with drift took about 10.5 KB per block (one heap
+  KLANG-00286 (engine tidy up)). Before it a five-partial bank with drift took about 10.5 KB per block (one heap
   number per sample per partial; 2.1 KB without drift when run alone, 10.5 KB under a mixed profile), 304 bytes
   after, on both bundles, pinned to one core and not. The stacks show why a loop shape needs a MIXED profile: run
   alone, a drifting stack boxed nothing per sample; with every oscillator case warmed in one process (the worklet's
@@ -305,7 +305,7 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   and the resonator's split remedy on the delay (worse). After the pass, at engine level, the production bundle read (pinned, medians) delay 82, reverb 22, phaser 144
   (192 with a floor of 0.5), all three 197 bytes per block (HEAD 277). **After engine follow-up 1 (2026-10-11) every box
   located in the stages' block processing is gone** (an off phaser's call into `Phaser.process`, about one heap number
-  per block in single-case processes, is located, not removed) (`docs/tasks/in-progress/engine-follow-ups.md`, item 1): the doubles that crossed were
+  per block in single-case processes, is located, not removed) (KLANG-00290 (engine follow ups), item 1): the doubles that crossed were
   `KnobGlide.advance`'s result (now Kotlin `inline`), the delay's and the reverb's tail step (`TailCeiling.observe`,
   `peakOf` and the units' window and laps getters; now `DelayLine.observeTail` and `Reverb.observeTail`, one call that
   takes no double, with the helpers `inline`), the delay loops' per-block arguments (`DelayLine.blockArgs`, a
@@ -495,7 +495,7 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   boxed. Measured on the production bundle (HEAD / inline / HEAD again, medians of
   3, unpinned): classic saw 77 / 21 / 82 bytes per block, unison stack 98 / 0 / 97, the dozen releasing voices
   1,846 / 1,062 / 1,844, bit for bit the same sound, at 0.96 to 1.01 of HEAD's time; pinned alike (the record:
-  `docs/tasks/in-progress/engine-follow-ups.md`, items 8 and 12). No test can pin it: the KDoc at the helper is the guard.
+  KLANG-00290 (engine follow ups), items 8 and 12). No test can pin it: the KDoc at the helper is the guard.
   **How to check:** the sampling heap profiler puts the box in the helper or in its callee; `--trace-turbo-inlining`
   then shows the callee as a candidate the caller never inlines (`blockStartValue` from `AdsrIgnitor`'s `generate`,
   five times on HEAD), and after the change the small callees inlined into the caller instead (`isBlockConstant` and
@@ -561,7 +561,7 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   to 112): the root box (item 30) and **one heap number per fm per block, still open: the modulator's frequency**
   (`fmFreqVal * ratioVal`, non-integral at almost every note) handed to the modulator's `generate`; and one more per
   wrapper whose outer mod reads the note (item 10c, the pinned carrier frequency). Both are item 30's class, a tagged
-  cell their remedy, which the maintainer declined for the root box (item 30, decision D): revisited with the FM round (maintainer, 2026-10-19; `docs/tasks/future/fm-revisit.md`).
+  cell their remedy, which the maintainer declined for the root box (item 30, decision D): revisited with the FM round (maintainer, 2026-10-19; KLANG-00305 (fm revisit)).
   The sustain box may have gone with `finiteOr` (not shown: HEAD read it in some processes only).
   **Engine follow-up 34 (2026-10-16) closed the oversampled path** that item 31 left (`tube4x`, `E-distort`): besides
   the sub-pool map (the `HashMap` rule above), the bus distort handed its drive to a `DistortionCore.process` that V8
@@ -570,7 +570,7 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   pattern. Every oversampled case reads the floor under `--predictable` (`E-distort` 155 to 16 B at 1,000,000
   blocks, `tube4x` 57 to 16, `E-parallel` 197 to 15, `E-bands` 232 to 16).
 - **A knob that moves every block makes its whole per-block path hot: measure a group of sites, and in both modes**
-  (2026-10-12, Katalyst knob expressions step 6, `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`; the runs:
+  (2026-10-12, Katalyst knob expressions step 6, KLANG-00302 (katalyst knob expressions); the runs:
   `docs/benchmarks/2026-10-12_183400_knob-step6-v8.md`). A modulated Katalyst knob runs the chain's hook every block
   (the knob's evaluation, the writer's refill, the stage's `configure`, `KnobGlide.retarget`), and every small
   double-taking call on it competes for one inlining budget. Fixed: `KnobGlide.retarget` a plain method (now `inline`),
@@ -684,9 +684,9 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   breach. How it measures and the cases: `audio_benchmark/README.md`. The cases cover the Ignitor's hot nodes and
   every Katalyst stage family on an orbit: the classic chain's delay, reverb and phaser through its slots, and an
   authored chain for the arithmetic (constant and gliding), the bus distort, the compressor and limiter, the eq, the
-  gain, the duck, `parallel`, `bands`, the body and the vowel (`docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md`), and the
+  gain, the duck, `parallel`, `bands`, the body and the vowel (KLANG-00301 (katalyst stage measurements)), and the
   knobs that move every block through the chain's own modulators, the `E-kat-*` cases (knob expressions step 6,
-  `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`). Not
+  KLANG-00302 (katalyst knob expressions)). Not
   covered: an authored chain at the master position (`MasterBus`; every engine case runs its empty default). The JVM guards in `jvmTest` (`FirstBlockAllocationSpec`,
   `KatalystResonatorAllocationSpec`) stay where they are.
 - **What it can see.** On V8 the method's noise (about 25 B per block) is larger than one heap number (16 B on

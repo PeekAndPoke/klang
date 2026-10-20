@@ -6,7 +6,7 @@ into any brief that touches `audio_be`, `audio_bridge`, `audio_fe` or `audio_jsw
 `audio/MEMORY.md` and `docs/tasks-archive/`.
 
 Moved here 2026-09-27 from the audio backend audit brief (§7), which closed that day
-(`docs/tasks-archive/2026-09/20260927-audio-backend-audit.md`). An entry naming code that has since
+(KLANG-00224 (audio backend audit)). An entry naming code that has since
 gone is removed when someone notices, not kept for history.
 
 - **Raw Motor**: no defensive checks in the inner math, no safety clamps on user-facing params;
@@ -29,7 +29,7 @@ gone is removed when someone notices, not kept for history.
   reverted 2026-08-03. See `Reverb.normalizeSize`.
 - **Accepted and intentional, each documented:** triangle aliasing (no PolyBLEP), no clip at `IgniteRenderer`
   (the `distort()` and `shape()` doors bound their output with a soft cap; `classic()`'s fused distort does not), the unconditional DC-block on distort, cylinder last-writer-wins,
-  `Ducking.attackSeconds`'s misleading name (`docs/tasks/future/audit-parked-decisions.md` §2),
+  `Ducking.attackSeconds`'s misleading name (KLANG-00174 (audit parked decisions) §2),
   `rectify()`'s hard clip, the body filter's fixed (non-note-tracking) resonances, `crackle`'s sound
   change, body and vowel at orbit level.
 - **`Ignitor` is deliberately NOT a `fun interface`**: SAM turns captured `var`s into JS `ObjectRef`.

@@ -18,7 +18,7 @@ import io.peekandpoke.klang.script.klangScriptEngine
  *
  * The interpreter looked up extensions for numbers, strings and arrays only; a boolean (and every other
  * kind) ended at "Cannot access property 'toString' on non-object value: true", although the stdlib
- * registers `toString` on booleans (`docs/tasks-archive/2026-10/20261007-boolean-member-access.md`, 2026-10-06). Each row registers
+ * registers `toString` on booleans (KLANG-00276 (boolean member access), 2026-10-06). Each row registers
  * one method on one runtime value kind and calls it through a member access.
  */
 class MemberAccessValueKindsSpec : StringSpec({

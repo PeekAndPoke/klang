@@ -221,7 +221,7 @@ class ExciterCombinatorsSpec : StringSpec({
         //
         // ⚠️ Unlike the retired strip's SvfLPF/SvfHPF twins (phase 3 step 9), this one CANNOT pin the
         // drive: `SvfIgnitor.generate` (IgnitorFilters.kt) reads FILTER_DRIVE_PER_ANALOG directly: the ignitor filter
-        // path has no pipeline stage to carry the value (docs/tasks/audio-bridge-constants.md
+        // path has no pipeline stage to carry the value (KLANG-00141 (audio bridge constants)
         // §6.1). So this test rides the shipped default.
         //
         // It is a ONE-SIDED guard: `satMax < linMax * 0.9` fails only when the drive is LOWERED

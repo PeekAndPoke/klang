@@ -133,7 +133,7 @@ fun voiceModifier(modify: VoiceModifierFn): VoiceModifierFn = modify
  * Safe because every [SprudelVoiceData] reaching a modifier is a single-owner clone — the leaf
  * emitters (`AtomicPattern`, `AtomicInfinitePattern`) clone on emission, so
  * no instance is ever shared between events. This kills the per-event copy/GC churn that dominated
- * query cost. See `docs/tasks/mutable-voicedata-optimization.md`.
+ * query cost. See KLANG-00102 (mutable voicedata optimization).
  */
 fun voiceSetter(set: SprudelVoiceData.(Any?) -> Unit): VoiceModifierFn = { value -> this.set(value); this }
 
@@ -345,7 +345,7 @@ internal fun List<SprudelDslArg<Any?>>.toListOfPatterns(
     val atomFactory = { text: Any?, sourceLocations: SourceLocationChain? ->
         AtomicPattern(
             // Fresh createSprudelVoiceData() per atom: `modify` may mutate in place (voiceSetter), so it
-            // must never run on a shared instance. See docs/tasks/mutable-voicedata-optimization.md.
+            // must never run on a shared instance. See KLANG-00102 (mutable voicedata optimization).
             data = createSprudelVoiceData().modify(text).copy(patternId = sourceId),
             sourceLocations = sourceLocations,
         )

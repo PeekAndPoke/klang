@@ -3,7 +3,7 @@
 
     python3 console/dev-status/build.py
 
-Reads every Markdown file in docs/tasks, docs/plans and docs/tasks-archive (title, status line,
+Reads every Markdown file in docs/tasks and docs/tasks-archive (title, status line,
 length, last commit, the links between them), joins it with the judgement in curation.py, and
 renders the two templates with the shared hud.css. The pages are flat HTML; d3 comes from cdnjs,
 the fonts from Google Fonts. They ship with the SPA's static resources: the dev server serves them,
@@ -25,8 +25,35 @@ C = runpy.run_path(os.path.join(HERE, 'curation.py'))
 TODAY = dt.date.today()
 
 
+TICKET = re.compile(r'^([A-Z][A-Z0-9]*-\d{5})[-:]\s*')
+STATUS_LINE = re.compile(r"^> \*\*Status \(\d{4}-\d{2}-\d{2}\): [A-Z' ]+\.\*\*\s*$")
+
+
+def old_stems():
+    """Ticket id -> the file's name before the ticket migration (without .md), from the migration
+    records, so the curation keeps its keys (KLANG-00290 -> 'engine-follow-ups')."""
+    out = {}
+    for rec in glob.glob(os.path.join(ROOT, 'docs', 'housekeeping', '*-ticket-migration.md')):
+        rows = re.finditer(r'^\| ([A-Z][A-Z0-9]*-\d{5}) \| [^|]+ \| `([^`]+)` \| `[^`]+` \|$',
+                           open(rec, encoding='utf-8').read(), re.M)
+        out.update({m.group(1): os.path.basename(m.group(2))[:-3] for m in rows})
+    return out
+
+
+OLD_STEMS = old_stems()
+
+
+def ticket(path):
+    m = TICKET.match(os.path.basename(path))
+    return m.group(1) if m else None
+
+
 def stem(path):
-    return os.path.basename(path)[:-3]
+    """The curation's key: the name before the migration, else the file name without its ticket number."""
+    t = ticket(path)
+    if t in OLD_STEMS:
+        return OLD_STEMS[t]
+    return TICKET.sub('', os.path.basename(path))[:-3]
 
 
 def clean(s):
@@ -43,7 +70,7 @@ def last_commit(path):
 
 def read_docs():
     os.chdir(ROOT)
-    files = sorted(glob.glob('docs/tasks/**/*.md', recursive=True) + glob.glob('docs/plans/**/*.md', recursive=True)
+    files = sorted(glob.glob('docs/tasks/**/*.md', recursive=True)
                    + glob.glob('docs/tasks-archive/**/*.md', recursive=True))
     files = [f for f in files if f not in C['EXCLUDE']]
     stems = {stem(f): f for f in files}
@@ -51,11 +78,15 @@ def read_docs():
     for f in files:
         txt = open(f, encoding='utf-8').read()
         lines = txt.splitlines()
-        title = next((l[2:].strip() for l in lines if l.startswith('# ')), stem(f))
+        title = TICKET.sub('', next((l[2:].strip() for l in lines if l.startswith('# ')), stem(f)))
         status = ''
-        for l in lines[1:40]:
+        for i, l in enumerate(lines[1:40], 1):
             if re.search(r'status', l, re.I) or re.match(r'>\s*\*\*', l) or re.match(r'\*\*Status', l):
                 status = clean(l)
+                if STATUS_LINE.match(l):  # the ticket's status word alone: add the prose status below it
+                    more = next((clean(k) for k in lines[i + 1:40] if re.search(r'status', k, re.I)
+                                 or re.match(r'>\s*\*\*', k) or re.match(r'\*\*Status', k)), '')
+                    status = (status + ' ' + more).strip()
                 break
         if not status:
             status = next((clean(l) for l in lines[1:15] if l.strip() and not l.startswith('#')), '')
@@ -69,6 +100,9 @@ def read_docs():
             e = re.escape(other)
             n = (len(re.findall(r'(?<![\w-])' + e + r'\.md', txt)) + len(re.findall('`' + e + '`', txt))
                  + len(re.findall(r'/' + e + r'(?![\w-])', txt)))
+            t = ticket(stems[other])
+            if t:
+                n += len(re.findall(r'(?<![\w-])' + re.escape(t) + r'(?![\w-])', txt))
             if n:
                 edges[(stem(f), other)] = n
     return nodes, [dict(source=a, target=b, count=c) for (a, b), c in edges.items()]

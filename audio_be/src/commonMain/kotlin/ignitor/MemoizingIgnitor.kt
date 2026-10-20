@@ -36,7 +36,7 @@ import io.peekandpoke.klang.audio_be.utils.copyRangeInto
  * and the wave/super oscillators read their own params at `actualFreq` — the E8 record, plus
  * hand-built Kotlin graphs, which own their sharing.
  *
- * **[freqInvariant]** (`docs/tasks-archive/2026-10/20261007-shared-modulator-memo-rate.md`, 2026-10-07): the build sets it
+ * **[freqInvariant]** (KLANG-00278 (shared modulator memo rate), 2026-10-07): the build sets it
  * ([markFreqInvariant], at the first share) when the wrapped subtree reads no `IgnitorDsl.Freq`
  * and carries no pitch mod. Such a subtree renders the same samples at any `freqHz` (the house
  * rule: runtime code consumes the freq argument only to forward it, so freq-dependence is visible

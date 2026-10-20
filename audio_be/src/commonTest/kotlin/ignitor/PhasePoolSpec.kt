@@ -58,7 +58,7 @@ private val testRandom = Random(0x5EED)
 
 /**
  * Behavioral guards for the banded best-of-M start-phase selection
- * (docs/tasks/unison-phase-pool.md §3.1–§3.2): with the pool on, the "fundamental lottery" tail
+ * (KLANG-00144 (unison phase pool) §3.1–§3.2): with the pool on, the "fundamental lottery" tail
  * (notes born with a cancelled fundamental) disappears, while notes remain genuinely random.
  *
  * Measurement trick: a supersine stack with `spread = 0` and `analog = 0` sums N equal-frequency

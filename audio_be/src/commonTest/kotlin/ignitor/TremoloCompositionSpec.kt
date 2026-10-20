@@ -19,7 +19,7 @@ import kotlin.math.abs
 import kotlin.random.Random
 
 /**
- * The tremolo as a COMPOSITION of the oscillators (decided 2026-09-29, `docs/tasks/tremolo-as-composition.md`): the
+ * The tremolo as a COMPOSITION of the oscillators (decided 2026-09-29, KLANG-00265 (tremolo as composition)): the
  * `Tremolo` node builds the oscillator of its shape at its rate (no analog drift; the square, sawtooth and ramp with
  * a 16 ms soft edge), maps it to `range(1 - depth, 1)` and multiplies it into the signal.
  *

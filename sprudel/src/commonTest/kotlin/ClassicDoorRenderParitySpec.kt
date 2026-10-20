@@ -31,7 +31,7 @@ import io.peekandpoke.klang.sprudel.lang.tremolo
 import kotlin.random.Random
 
 /**
- * `classic()`'s DOOR PARITY, rendered (phase 3 step 5, `docs/tasks-archive/2026-09/20260928-builtin-instruments.md` section 9):
+ * `classic()`'s DOOR PARITY, rendered (phase 3 step 5, KLANG-00237 (builtin instruments) section 9):
  * one voice per row, the script `Ignitor.saw().classic()` against the Kotlin `IgnitorDsl.Saw().classic()`,
  * with the slots written through the bag, every slot in turn and a few in combination, compared in RAW
  * BITS. Here because sprudel is the module that has both the script engine and the renderer, so the

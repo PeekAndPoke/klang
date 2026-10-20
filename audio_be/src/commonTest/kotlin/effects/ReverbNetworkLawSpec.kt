@@ -23,7 +23,7 @@ import io.peekandpoke.klang.audio_be.StereoBuffer
  * with `feedback = 0.28 size + 0.7` and `d = 0.4 damp` (damp 0.5 unset, `1 - lowpass / nyquist` set). An allpass
  * outputs `-in + buffered` and writes `in + 0.5 buffered + 1e-18`. The wet is `0.015` times the chain's output,
  * added onto what the output buffer holds. Each side's combs are fed `own + 0.5 (other - own)`: one room for both
- * ears (2026-09-30, `docs/tasks-archive/2026-09/20260930-stereo-reverb.md`).
+ * ears (2026-09-30, KLANG-00254 (stereo reverb)).
  *
  * Bit for bit: the oracle keeps each comb's and allpass's arithmetic in the order the design states it, which is
  * the order the network runs it; past the feed the two channels share nothing, so the oracle runs them one after

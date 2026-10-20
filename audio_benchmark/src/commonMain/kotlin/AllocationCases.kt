@@ -51,16 +51,16 @@ import kotlin.random.Random
 
 /**
  * The fixed case list of the allocation check (`KLANG_BENCH_MODE=alloc`, `console/full-check.sh`), the same on
- * both platforms. Each voice case and the first engine cases guard one fix of `docs/tasks/in-progress/engine-follow-ups.md`
+ * both platforms. Each voice case and the first engine cases guard one fix of KLANG-00290 (engine follow ups)
  * against a regression that brings a heap number per sample or per knob read back; the cases with an authored
- * Katalyst chain guard its stages (`docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md`). The
+ * Katalyst chain guard its stages (KLANG-00301 (katalyst stage measurements)). The
  * budgets and what each one guards are in `audio_benchmark/alloc-budgets.txt`.
  *
  * Every case renders at 48 kHz in 128-frame blocks at middle C (261.63 Hz, not an integer, so a frequency read that
  * boxes shows). A "voice" case is one voice through [VoiceFactory], offered to its cylinder and committed each
  * block. An "engine" case runs [PlaybackEngineDispatcher], so the master stage (DC blockers, the house limiter, the
  * clip) runs too. An engine case with a [Case.chain] runs an authored Katalyst on its orbit, registered and referenced
- * as a song's is (`docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md`).
+ * as a song's is (KLANG-00301 (katalyst stage measurements)).
  *
  * The list is fixed and learnable: no random cases. A change to it starts a new scoreboard table.
  */
@@ -219,7 +219,7 @@ object AllocationCases {
 
     private const val GLIDE_GATE_SEC: Double = 30.0 * BLOCK_FRAMES / SAMPLE_RATE
 
-    // ── The knob expressions and the modulators (step 6 of docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md) ──
+    // ── The knob expressions and the modulators (step 6 of KLANG-00302 (katalyst knob expressions)) ──
     //
     // Every chain below moves at least one knob every block through the chain's hook (`KatalystChain.process`: each
     // modulated writer ticks its knobs, refills its holder and configures its stage). The rates and the ranges are not

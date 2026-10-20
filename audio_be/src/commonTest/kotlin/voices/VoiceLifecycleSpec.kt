@@ -30,7 +30,7 @@ import kotlin.math.abs
 import kotlin.math.ceil
 
 /**
- * The voice's lifecycle state machine (`Voice.state`, step 1 of `docs/tasks-archive/2026-10/20261007-voice-lifecycle-state-machine.md`):
+ * The voice's lifecycle state machine (`Voice.state`, step 1 of KLANG-00279 (voice lifecycle state machine)):
  * which state a real `Voice` is in on which block, and that the terminal states stay terminal.
  *
  * The state describes a whole block: `Pending` until the block that holds the onset, `Sounding` from there,

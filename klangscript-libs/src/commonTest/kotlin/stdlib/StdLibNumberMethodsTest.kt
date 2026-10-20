@@ -25,7 +25,7 @@ import io.peekandpoke.klang.script.runtime.StringValue
  * Methods called on a number literal, end to end: `2.pow(7/12)`, `(-1).mod(12)`, `7.semitones()`.
  *
  * `toString` had been registered on numbers for a long time but was unreachable on a literal until the
- * lexer stopped eating the dot (2026-09-08, `docs/tasks-archive/2026-09/20260908-klangscript-number-methods.md`). The parser side
+ * lexer stopped eating the dot (2026-09-08, KLANG-00193 (klangscript number methods)). The parser side
  * is pinned in `NumberLiteralMethodCallSpec`; this is the proof that the stdlib dispatch sees the call
  * and that every method computes what its KDoc promises.
  *

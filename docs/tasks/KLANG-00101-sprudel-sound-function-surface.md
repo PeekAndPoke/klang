@@ -1,0 +1,102 @@
+# KLANG-00101: Sprudel Sound-Function Surface — Redesign (the `snd*` family: compound-string vs named/per-param)
+
+> **Status (2026-10-20): NOT STARTED.**
+
+> Status: **NOT STARTED (design).** This is the tracked home for the `snd*`-family cleanup — "single compound
+> colon-string vs. named / per-param control patterns." Captured 2026-06-05; refreshed **2026-06-30** with
+> what changed since (see the update block below).
+>
+> ### 2026-08-07 — this task now BLOCKS other work, and its scope needs widening
+> - KLANG-00138 (voice takeover) **Phase 2 (`glide`)** is blocked on this doc: `glide` needs a time *and*
+>   a curve, i.e. it is a compound param, and we refuse to keep spawning one function per sub-param
+>   (`glideTime()`, `glideCurve()`, …).
+> - **The scope has to widen from the `snd*` family to compound params in general.** The decision needed is
+>   a language-surface one — *one function expressing both forms* — and `adsr`, `distort`, `lpadsr`,
+>   `sndDust`, `glide`, … all wait on the same answer:
+>   `glide("0.02:scurve:2")` (compound colon-string, one value) **vs** `glide(0.02, "scurve", 2)`
+>   (per-param, each param constant **or its own pattern**).
+> - **The param-tool / UI half is an open problem with no known solution** — see "Open questions" below.
+>   It has to be answered too, not deferred, or every new compound param grows the debt.
+>
+> ### 2026-06-30 update — what's changed
+> - **Named arguments now work in KlangScript** (`name = value`). The old "positional-only, use `/* name */`
+>   comments" convention below is **superseded** — the redesign can lean on real named args. See
+>   `[[KlangScript supports named arguments]]` (memory) for the KSP safe-literal-default caveat.
+> - The **noise-generator knobs** work (2026-06-30) deliberately extended the `snd*` family in the
+>   **compound colon-string** form as the *interim*: `sndCrackle("1.7")` (chaos), `sndNoise("-0.5")` (color),
+>   `sndBrown("0.5")` (depth), `sndDust("0.2:4")` (density:tail; historical form — C0 made these per-param). This was an explicit "do the compound string
+>   now, defer the real fix" decision — so the family is now larger and the per-param blocker is more pressing.
+> - **The blocker is unchanged and is the whole point of this task:** a compound `"a:b:c"` string is one value,
+>   so you cannot modulate one sub-param with its own control pattern. Per-param control-pattern support
+>   (the project rule "all params accept control patterns") needs the positional/named surface below.
+> - The Ignitor side already models the target shape: `Ignitor.crackle(chaos = 1.7)`, `Ignitor.dust(density, tail, bipolar)`
+>   take per-param named args today — the `snd*` sprudel surface is what lags.
+
+## Why
+
+The sprudel sound-selection functions (`sndSaw()`, `sndZamp()`, `sndPluck()`, `sndSupersaw()`, …) have two
+problems with their current surface:
+
+1. **`snd`-prefixed camelCase is not idiomatic for sprudel.** Sprudel DSL functions are lowercase
+   (`note`, `gain`, `lpf`, `room`…). `sndSaw` / `sndSupersaw` read as Kotlin, not sprudel.
+2. **They take a single composite colon-string param** (`"p1:p2:p3"`). This is the blocker: a user cannot
+   modulate **one** of the sub-parameters with its own control pattern. The whole `"a:b:c"` string is one
+   value, so you can't e.g. pattern just `brightness` while holding `decay` fixed.
+
+## Current state (grounding)
+
+- Defined in `sprudel/src/commonMain/kotlin/lang/lang_synthesis_snd_basic.kt` and
+  `lang_synthesis_snd_super.kt`.
+- Each function: a `voiceModifier` splits the single string on `":"`, `toDoubleOrNull()`s each field, and
+  maps them onto the Ignitor slots through a bulk copy helper, since removed. (Today, 2026-10-04: the colon string is
+  gone; each named argument is one `ignitorParam` call, `lang_synthesis_snd_super.kt`.) Empty
+  args → bare `copy(sound = Named(...))`; non-empty → `_applyControlFromParams(...)` so the **composite
+  string** can be a control pattern (but only as a whole).
+- **Tool-window integration is annotation-driven** (this is the part that complicates the redesign):
+    - `@param-tool params SprudelPluckSequenceEditor` — binds the single `params` arg to a dedicated editor.
+    - `@param-sub params decay Feedback amount (…)` — decomposes the colon-string into labelled sub-fields
+      for the editor UI.
+    - See KLANG-00090 (sprudel ui tools) for the tool catalogue (e.g. `SprudelUnisonEditorTool`,
+      `SprudelWaveformEditor`).
+
+## Proposed direction (NOT decided — user's quick suggestions)
+
+1. **Lowercase, multi-positional + named params** — `.saw(p1, p2, …)`, `.supersaw(voices, spread, …)`,
+   `.pluck(feedback, brightness, pickPosition, stiffness)`. Each param is independently patternable (its own
+   control pattern), which fixes problem 2. **Named args now work** (`name = value`) — so the surface can be
+   `.supersaw(voices = 8, spread = 0.3)` (override only what you want), not just positional. (Note: the super-osc
+   spread param is `spread`, not `freqSpread`, post-rename; and `analog` is a chained character knob, not a
+   constructor positional.)
+2. **Keep a single-string composite shorthand** — when a function is called with exactly one **string**
+   argument, treat it as the legacy `"p1:p2:p3"` composite (sugar / back-compat). So
+   `.supersaw("8:0.3:0.2")` and `.supersaw(/* voices */ 8, /* spread */ 0.3, /* analog */ 0.2)` both work.
+
+## Open questions to resolve before building
+
+- **Naming / migration**: drop the `snd` prefix entirely (`saw` vs `sndSaw`)? Does a bare `saw` collide
+  with anything in the sprudel namespace (note names, existing functions)? Keep `sndX` as deprecated
+  aliases during transition?
+- **Tool windows** (the hard part): the current `@param-tool` + `@param-sub` model assumes ONE composite
+  param. With N positional params:
+    - Does each param get its own `@param-tool` (e.g. a slider per param) and the old sequence-editor
+      disappears, or do we keep a "combined" editor that writes back into N positional args?
+    - How does the editor round-trip code that mixes literals and control patterns across the N params?
+    - The single-string shorthand still needs the old composite editor — two code shapes to support.
+- **Patternability**: confirm each positional param flows through `_applyControlFromParams` independently
+  so per-param control patterns actually reach the ignitor slot (the plumbing today only patterns the whole
+  string).
+- **Scope**: which sounds get the new surface first? (saw/supersaw family vs pluck vs the full set.)
+- **Consistency with ignitorParams**: positional params should map 1:1 to the ignitor slot names
+  (`voices`, `freqSpread`, `analog`, `duty`, `decay`, …) — keep the mapping in one place.
+
+## Related
+
+- KLANG-00138 (voice takeover) — **blocked by this task** (Phase 2 `glide`); states the two required forms.
+- KLANG-00090 (sprudel ui tools) — the editor-tool catalogue that the `@param-tool` annotations drive.
+- KLANG-00091 (sprudel dsl named args) — sprudel arg-handling conventions.
+- Oscillator ignitorParams + per-variant constants — `audio_be/.../ignitor/OscillatorTuning.kt`,
+  `Ignitors.kt` (see KLANG-00100 (oscillator engine unification)).
+
+## History
+
+- 2026-10-20: numbered KLANG-00101 (was `docs/tasks/sprudel-sound-function-surface.md`).

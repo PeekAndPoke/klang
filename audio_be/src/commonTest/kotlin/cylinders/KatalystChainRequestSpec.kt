@@ -30,7 +30,7 @@ import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
  *
  * The twin of the master's `MasterBusTest` rows for the same three properties: it applies whether
  * or not the event sounds, it applies before the late-sound guards, and it reaches the right host.
- * See `docs/tasks-archive/2026-09/20260928-katalyst-dsl.md` §6.
+ * See KLANG-00236 (katalyst dsl) §6.
  */
 class KatalystChainRequestSpec : StringSpec({
 

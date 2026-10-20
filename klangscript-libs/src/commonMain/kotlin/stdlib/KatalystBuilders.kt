@@ -118,12 +118,12 @@ import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
  * an expression, see [toEqSectionKatalystKnob]).
  *
  * ANY [IgnitorDsl] is a [KlangScriptTypeError]: the Katalyst has its own knob language (decision D1 of
- * `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`, `docs/plans/future/signal-graph-engine.md` §6.10), and an
+ * KLANG-00302 (katalyst knob expressions), KLANG-00216 (signal graph engine) §6.10), and an
  * Ignitor node
  * means nothing on a bus knob (an oscillator has no bus value, a note frequency no bus note). Until 2026-10-12 such a
  * node was accepted and folded to one number when the chain was built; the type split removed that coercion.
  *
- * A BARE [IgnitorDsl.Param] keeps its own message (decision Q2 of `docs/tasks-archive/2026-10/20261004-ignitor-katalyst-naming.md`,
+ * A BARE [IgnitorDsl.Param] keeps its own message (decision Q2 of KLANG-00269 (ignitor katalyst naming),
  * 2026-10-03). THIS IS THE ONE HOME of the reason: an Ignitor param is the voice's slot by intent. Its author drives
  * it with `ignp`, which writes the voice's map and never reaches the chain, so on a chain the knob would sit at its
  * default while the song moves it; the fix is `Kat.param`. Not a coercion, for the reason [ignitorSlotName] gives:
@@ -151,7 +151,7 @@ internal fun IgnitorDslLike.toKatalystKnob(): KatalystKnobDsl = when (this) {
  * PRE-CHECKED against the one section helper (`eqSectionKnobOrNull` in `audio_bridge`, with the reason for the
  * recorded asymmetry): a Katalyst expression is a [KlangScriptTypeError] here, with the script's own words ("a
  * Katalyst eq section takes a number or a Kat.param; got a Kat expression"), before the typed builder would refuse
- * it at build time (Q49 of `docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`; `/dsl-design` section 3, the typed-door pattern,
+ * it at build time (Q49 of KLANG-00314 (kotlin typed doors); `/dsl-design` section 3, the typed-door pattern,
  * point 5).
  */
 internal fun IgnitorDslLike.toEqSectionKatalystKnob(): KatalystKnobDsl = toKatalystKnob().also { knob ->
@@ -508,7 +508,7 @@ internal fun KatalystBuilder.scriptGain(gain: IgnitorDslLike = 1.0): KatalystBui
 // ── Arithmetic: the Ignitor's operators on the bus ──────────────────────────────────────────────
 //
 // Each door appends one stage that runs the Ignitor's per-sample law of the same operator over the bus, so the same
-// numbers give the same sample on a voice and on a bus (`docs/tasks-archive/2026-10/20261011-katalyst-arithmetic.md`).
+// numbers give the same sample on a voice and on a bus (KLANG-00300 (katalyst arithmetic)).
 // The operand is a knob
 // like every other (a number, a `Kat.param` or a Kat expression); a moving one glides, an unset (non-finite) one reads
 // as the
@@ -720,11 +720,11 @@ internal fun KatalystBuilder.scriptParallel(vararg branches: (KatalystBuilder) -
  * branch carries the dry as well (it adds its return on top), so `blend(w, b => b.reverb(1, 7))` is the dry plus `w`
  * of the room. [wet] is a plain number here, where the Ignitor's may be a slot or a signal (recorded asymmetry):
  * `1 - wet` needed arithmetic a Katalyst param did not have until step 4 of
- * `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`, and taking a `Kat.param` or a Kat expression here is its
- * follow-up Q14 (`docs/tasks/katalyst-knob-followups.md` section 4). A number that is not finite reads as 0. Any
+ * KLANG-00302 (katalyst knob expressions), and taking a `Kat.param` or a Kat expression here is its
+ * follow-up Q14 (KLANG-00303 (katalyst knob followups) section 4). A number that is not finite reads as 0. Any
  * Ignitor node
  * is refused, `Ignitor.constant(...)` included (it was accepted until step 3 of
- * `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`,
+ * KLANG-00302 (katalyst knob expressions),
  * 2026-10-12, when the Katalyst knobs stopped taking Ignitor nodes).
  *
  * @param wet the share of the branch, 0 to 1.
@@ -798,7 +798,7 @@ private fun checkedStages(
 
 // ── Knob expressions: the Ignitor's arithmetic on a Katalyst knob ─────────────────────────────────────────────────
 //
-// Step 4 of `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md` (decision D4: the same words, laws and clamps as the
+// Step 4 of KLANG-00302 (katalyst knob expressions) (decision D4: the same words, laws and clamps as the
 // Ignitor's arithmetic, plus `range`). Each door wraps the knob it is called on in one [KatalystKnobDsl] node; an
 // operand is converted by [toKatalystKnob], so it is a number (a [KatalystKnobDsl.Constant]), a `Kat.param` or another
 // expression, and an Ignitor node is the same script error as on a stage knob. The engine evaluates the expression
@@ -1004,7 +1004,7 @@ internal fun KatalystPhaserBuilder.scriptFloor(floor: IgnitorDslLike): KatalystP
 //
 // Handed to the `configure` lambda of the modulator doors on the Katalyst object (`Kat.sine(freq, configure)` and the
 // rest, `KlangScriptKatalyst`): the Ignitor's oscillator builders' shape with only the knobs a bus LFO keeps (Q11 of
-// `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`: `phase` on every periodic shape, `duty` on the square; no
+// KLANG-00302 (katalyst knob expressions): `phase` on every periodic shape, `duty` on the square; no
 // `analog`, no flank or reset knobs). Each knob takes a number, a `Kat.param` or a Kat expression. The builders live in
 // `audio_bridge` with their typed member knobs; the script knobs below convert and call them.
 

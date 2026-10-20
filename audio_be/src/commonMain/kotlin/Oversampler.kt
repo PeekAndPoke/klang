@@ -27,7 +27,7 @@ import kotlin.math.roundToInt
  * [ScratchBuffers.oversample], held across both halves: no per-voice allocation. A voice's instance is fresh per note and
  * never reset; the one caller of [reset] is the Katalyst `distort` stage (through `DistortionCore.reset`).
  *
- * **The design** (2026-10-10, `docs/tasks-archive/2026-10/20261010-iir-oversampler.md`; the maintainer: "we make the iir the
+ * **The design** (2026-10-10, KLANG-00298 (iir oversampler); the maintainer: "we make the iir the
  * standard for now and add other methods later"): the elliptic half-band as two all-pass branches (Valenzuela and
  * Constantinides, IEE Proceedings, 1983; Krukowski and Kale, ISCAS 2001), the coefficients from the standard closed form
  * as in Laurent de Soras' HIIR library (WTFPL), computed offline and written below: [FIRST_STAGE] for the stage at

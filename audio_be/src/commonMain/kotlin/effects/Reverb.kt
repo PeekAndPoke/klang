@@ -514,12 +514,12 @@ class Reverb(
          * ~10.71), and the sliver between holds ever longer tails (authored ~10.36 ≈ 25 s, ~10.54 ≈
          * 50 s) approaching a freeze. Past unity the network has no steady state at all: the comb
          * buffers grow without bound until they reach Inf/NaN, and on the master, which feeds the
-         * shared mix, every playback is railed until a reload. Record: `docs/tasks-archive/2026-09/20260916-reverb-naming-unification.md`.
+         * shared mix, every playback is railed until a reload. Record: KLANG-00208 (reverb naming unification).
          *
          * (An earlier attempt kept it unclamped and soft-capped the feedback instead, so extreme
          * values would self-oscillate. Measured, they do not: the saturator rails at exactly ±1.0,
          * so every comb sample latches and the output is pure DC with zero AC content. Reverted —
-         * see docs/tasks/master-dsl.md.)
+         * see KLANG-00136 (master dsl).)
          *
          * The floor at 0 (a 0.7 s tail) is also inside the stable range; it stays because `size`
          * doubles as the orbit reverb's on switch.
@@ -607,7 +607,7 @@ class Reverb(
          * input with equal sides feeds the same at every value. A panned source's room spreads to the far side and,
          * the two tanks being decorrelated, loses in total from 0 dB (centred) up to `10 · log10((1 - k)² + k²)` dB for
          * a hard pan: at most 3 dB, at 0.5. Chosen by ear at 0.5, one room, the classic mono-in design (maintainer,
-         * 2026-09-30, on Der Schmetterling and Kokon; docs/tasks-archive/2026-09/20260930-stereo-reverb.md). The lean
+         * 2026-09-30, on Der Schmetterling and Kokon; KLANG-00254 (stereo reverb)). The lean
          * towards the source's side belongs in early reflections, which this network does not have.
          */
         private const val CROSS_FEED: Double = 0.5

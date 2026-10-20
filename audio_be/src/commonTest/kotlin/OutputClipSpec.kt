@@ -15,7 +15,7 @@ import kotlin.math.sin
 
 /**
  * The engine's output clip, [clipSample] and its loop [clipOutput], the real ones [MasterStage.process]
- * runs (2026-10-07, `docs/tasks-archive/2026-10/20261007-float-output.md`). The rule: in `[-1, 1]` a
+ * runs (2026-10-07, KLANG-00280 (float output)). The rule: in `[-1, 1]` a
  * sample passes untouched, above 1 it is 1.0, anything else -1.0. Untouched means NO quantisation: the
  * engine used to truncate every sample to 16 bits here, so a sample under one 16-bit step (1 / 32767,
  * about 3e-5) came out as 0. The rows below would see that step come back.

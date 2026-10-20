@@ -65,7 +65,7 @@ fun Tag.MidiPlaygroundPage() = comp {
  * The page owns only two things: **the translation** ([voiceFor] — what a note sounds like) and
  * the wiring ([handle]). Engine lifecycle lives in [RealtimePlaybackCtrl]; devices, byte parsing,
  * liveIds and note bookkeeping live in [MidiConnector]. See
- * docs/tasks/realtime-playback-controller.md.
+ * KLANG-00159 (realtime playback controller).
  */
 class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
 

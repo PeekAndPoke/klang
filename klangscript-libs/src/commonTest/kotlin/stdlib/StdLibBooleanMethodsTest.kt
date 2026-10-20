@@ -26,7 +26,7 @@ import io.peekandpoke.klang.script.types.KlangCallable
  * Methods called on a boolean, end to end: every method of [KlangScriptBooleanExtensions] resolves.
  *
  * `true.toString()` failed with "Cannot access property 'toString' on non-object value: true" because the
- * interpreter looked up extensions for numbers, strings and arrays only (`docs/tasks-archive/2026-10/20261007-boolean-member-access.md`).
+ * interpreter looked up extensions for numbers, strings and arrays only (KLANG-00276 (boolean member access)).
  * The editor side (completion after `true.`, the hover on the method) is checked per method too. The last test keeps
  * the list complete: a new boolean method without a row here fails it.
  */

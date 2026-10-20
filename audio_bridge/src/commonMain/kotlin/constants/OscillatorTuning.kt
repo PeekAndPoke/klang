@@ -74,7 +74,7 @@ const val SUPERSAW_CENTER_JITTER_SCALE: Double = 0.4
 /** Detune spacing shape: 1.0 = even; >1 concentrates voices toward center; <1 spreads outward. */
 const val SUPERSAW_SPREAD_POWER: Double = 1.2
 
-// Phase pool (docs/tasks/unison-phase-pool.md): banded best-of-M start-phase selection that kills
+// Phase pool (KLANG-00144 (unison phase pool)): banded best-of-M start-phase selection that kills
 // the "fundamental lottery" (random-phase draws leaving 11–21 % of low notes with a cancelled
 // fundamental for their whole duration). OFF by default — off is bit-identical to the legacy
 // random draw. K = |Σ gₙ·e^{i2πφₙ}| / Σ gₙ ∈ [0,1]: 0 = fundamental cancelled, 1 = phase-aligned

@@ -2,7 +2,7 @@
 # the alloc step of console/full-check.sh): bytes per block, the most a case may allocate.
 #
 # One line per case and platform: case, platform (v8 or jvm), budget, and what the budget guards (the item numbers
-# are docs/tasks/in-progress/engine-follow-ups.md's). A case without a line, or a line naming an unknown case, turns the run red.
+# are KLANG-00290 (engine follow ups)'s). A case without a line, or a line naming an unknown case, turns the run red.
 # Fixed numbers, set by hand, never by a run. They were set on 2026-10-10 from the harness's first run at middle C
 # (docs/benchmarks/alloc-scoreboard.md, the first two rows):
 # - V8: about 40 B or more above that run's median, and below the regression the case guards: one heap number per
@@ -12,13 +12,13 @@
 #   96, but it is not an item 8 line either).
 # - Re-set: saw, sawC, C-offrel, sgpad-vib and C-dist on V8 were re-set at engine follow-up 6 (2026-10-10) from that
 #   change's runs (tree medians 16, 15, 16, 31 to 36 and 31 to 36 B), by the same rule: its fix took about 16 B per wave oscillator off,
-#   enough that item 8's regression read under the old budgets (docs/tasks/in-progress/engine-follow-ups.md, item 6).
+#   enough that item 8's regression read under the old budgets (KLANG-00290 (engine follow ups), item 6).
 #   C-full on V8 was re-set at engine follow-up 29 (2026-10-11) from that change's runs (tree medians 26 to 67 B,
 #   healthy rounds 21 to 71 B): its fix took about 150 B off, so the line now guards item 8 as well. 112 is 41 B
 #   above the worst healthy round and below the item 8 mutant's lowest round (154.8 B) and item 29's revert (165 B).
 #   spluck-a was added at engine follow-up 7 (2026-10-11), with its two lines set by the same rule from that change's
 #   runs: V8 healthy rounds 1 to 53 B (median about 31), HEAD's code (the old double-returning ramp) 407 to 566 B. The
-#   healthy tree had a tail at 288 to 463 B (the drift path, docs/tasks/in-progress/engine-follow-ups.md, items 4 and
+#   healthy tree had a tail at 288 to 463 B (the drift path, KLANG-00290 (engine follow ups), items 4 and
 #   7), whose rate varied from session to session; engine follow-up 4 (2026-10-19) located and fixed it: see "Closed
 #   tails" below. HEAD's code read high in every round of every run, the item 8 mutant in every round of its one run.
 #   E-delay and E-stages were added at engine follow-up 1 (2026-10-11), with their lines set by the same rule from
@@ -69,7 +69,7 @@
 #   13,068 to 13,210: the full check read 13,146 (13,033 before the bump, JVM unchanged at 6,608), about 110 B more per
 #   note from the new Kotlin/JS compiler and stdlib, on the per-note path. 64 B above that reading, as at the start.
 #   E-arith to E-body-vowel were added by the Katalyst stage measurements (2026-10-11,
-#   docs/tasks-archive/2026-10/20261011-katalyst-stage-measurements.md), with their lines set by the same rule from that change's runs (4 runs of
+#   KLANG-00301 (katalyst stage measurements)), with their lines set by the same rule from that change's runs (4 runs of
 #   3 rounds, the healthy medians in brackets): E-arith 96 (10 to 52), E-arith-glide 500 (450 to 456), E-distort 232
 #   (155 to 185), E-comp, E-eq, E-gain, E-duck and E-body-vowel 96 (15 to 57), E-parallel 664 (571 to 604), E-bands 896
 #   (809 to 840). They guard the per-sample class in their stages, and E-arith the once-per-block class as well (a
@@ -118,7 +118,7 @@
 #   of 33 tree rounds read 97.6 to 108.8 (HEAD has it too, 103.1 in 8 rounds), and one run held two tail rounds and
 #   read RED at 98 against 96. A tail that common is not absorbed by the median of 3, so 152 sits 43 B above the
 #   highest tail round and still far under the per-sample class it guards (one heap number per sample, about 2 KB per
-#   block). The tail was not located then: docs/tasks/in-progress/engine-follow-ups.md, item 38 (and the note below).
+#   block). The tail was not located then: KLANG-00290 (engine follow ups), item 38 (and the note below).
 #   Re-set at engine follow-up 38 (2026-10-19) from 152 to 112, by the same rule, after a per-block boxing site was
 #   removed from the duck's `configure`: its two `Ducking` setters (and the stdlib calls inside them) took their
 #   doubles as heap numbers wherever V8 left them out, and an unchanged setting now writes nothing. The site was
@@ -142,7 +142,7 @@
 #   15,752 in every run; 15,764 tells one Double per event,
 #   as E-C-n1's line does. Neither mutant moves the JVM (no KlangMap wrapper to lose there; the fast path is JS only).
 #   C-kat-remap and E-kat-sine to E-kat-mix were added by Katalyst knob expressions step 6 (2026-10-12,
-#   docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md): each E-kat chain moves a knob every block through its own
+#   KLANG-00302 (katalyst knob expressions)): each E-kat chain moves a knob every block through its own
 #   modulators, C-kat-remap evaluates a slot expression on a new map every block. The lines follow this file's rule
 #   (about 40 B above the highest healthy median of the check's method, and above a tail seen in the rounds of the FINAL
 #   tree; a tail read on an earlier engine is cited as such, not budgeted for, the lesson of step 6's review), from

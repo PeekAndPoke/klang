@@ -263,7 +263,7 @@ class SongBenchmark(
         // Dinge brings orbits 4 and 5 in at cycles 16 and 28) allocates its cylinder deep inside the
         // measured window, and no start-of-pass skip can ever reach that. Those spikes still land in
         // peakBlockRtf — making the peak robust instead of time-gated (99th percentile, or drop the
-        // top N blocks) is the real fix. See docs/tasks-archive/2026-08/20260807-block-size-parity.md.
+        // top N blocks) is the real fix. See KLANG-00139 (block size parity).
         //
         // Bounded so a case shorter than the skip window cannot leave maxBlockUs at 0.0 and silently
         // report peakBlockRtf = 0.

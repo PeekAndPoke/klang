@@ -14,7 +14,7 @@ import io.peekandpoke.klang.script.types.KlangCallable
 import java.io.File
 
 /**
- * The KSP processor emits the registration in source order (2026-10-07, `docs/tasks/reduce-js-bundle-size.md`,
+ * The KSP processor emits the registration in source order (2026-10-07, KLANG-00106 (reduce js bundle size),
  * "Step 3: source order"), so the output does not depend on the order the file system lists the source directory.
  * This reads the REAL generated entry point of both modules the processor runs on and checks what that order
  * promises: the chunks of one area are called in ONE contiguous run, numbered from 0 upwards, and the runs come in

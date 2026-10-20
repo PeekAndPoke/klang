@@ -53,7 +53,7 @@ import kotlin.math.round
  * `-0.0` and `0.0` compare equal here, so a retarget between the two is no move.
  *
  * **The span is chosen at construction, per knob** (decision D2 of
- * `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`, step 5b): [KNOB_GLIDE_SECONDS] for a knob a pattern moves
+ * KLANG-00302 (katalyst knob expressions), step 5b): [KNOB_GLIDE_SECONDS] for a knob a pattern moves
  * through its slots, ONE block for a knob whose expression holds a modulator ([modulated]). A modulator retargets the
  * knob every block, so a 50 ms glide would smear it (a one-pole on the knob, see the trap above); over one block the
  * glide is a linear ramp from the value the last block ended on to this block's, which is D2's per-block ramp. A knob
@@ -290,7 +290,7 @@ internal class KnobGlide(
      * one's [blocks]. The countdown is in blocks and [blocks] is per instance, so a longer glide's countdown read on
      * a shorter one unclamped would drive the value OUTSIDE `[start, target]`: 17 blocks reading a countdown of 19
      * from 1.0 towards 0.0 lands on 1.0588, which for the duck's weight is over-ducking and for its mirror a boost.
-     * Reachable since knob expressions step 5b (Q16 of `docs/tasks-archive/2026-10/20261012-katalyst-knob-expressions.md`,
+     * Reachable since knob expressions step 5b (Q16 of KLANG-00302 (katalyst knob expressions),
      * accepted): a duck whose `depth` holds a modulator glides over ONE block, so a takeover between it and a duck
      * with a slot depth crosses spans. Clamped, a carried glide that had more blocks left than this span finishes
      * within this span, still between its endpoints (faster, never outside); one with fewer carries on as it was.

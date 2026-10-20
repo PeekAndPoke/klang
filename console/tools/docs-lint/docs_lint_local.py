@@ -16,7 +16,9 @@ to it along"):
    KDoc and comments of every *.kt and *.kts file too: a move must fix those as well.
    Dated history keeps its words and is skipped: docs/tasks-archive/, docs/history/, files whose name
    starts with a date (2026-09-06-..., 20260927-...), */ref/memory-history.md, the build-lock log,
-   DEV-DIARY.MD, the strategist's agent memory.
+   DEV-DIARY.MD, the strategist's agent memory, and what the ticket sweep of 2026-10-20 left alone: the
+   ledgers, docs/benchmarks/, docs/blog/, docs/funding/evidence/ and src/jsMain/resources/. The migration's
+   "(was `old path`)" records are skipped too.
 """
 import os
 import re
@@ -37,8 +39,11 @@ MD_LINK = re.compile(r"!?\[(?:[^\]\\]|\\.)*\]\([^)]*\)")
 FENCE = re.compile(r"^\s{0,3}(```|~~~)")
 HISTORY = re.compile(r"(^|/)(docs/tasks-archive|docs/history|\.claude/agent-memory)/"
                      r"|(^|/)(\d{4}-\d{2}-\d{2}|\d{8})-[^/]*$"
-                     r"|/ref/memory-history\.md$|^\.claude/build-lock-log\.md$|^DEV-DIARY\.MD$")
+                     r"|/ref/memory-history\.md$|^\.claude/build-lock-log\.md$|^DEV-DIARY\.MD$"
+                     # the files the ticket sweep left alone (2026-10-20): dated records and published pages
+                     r"|ledger[^/]*\.md$|^docs/(benchmarks|blog|funding/evidence)/|^src/jsMain/resources/")
 CODE_EXT = (".kt", ".kts")
+WAS_RECORD = re.compile(r"\(was `[^`]+`\)")
 SKIP_DIRS = {".git", "node_modules", "build", ".gradle", ".idea", ".kotlin", "kotlin-js-store"}
 
 
@@ -83,6 +88,7 @@ def stale_paths(root, path, lines, markdown):
             continue
         if markdown:
             line = MD_LINK.sub("", line)  # link targets are the generic check's job
+        line = WAS_RECORD.sub("", line)  # "(was `old path`)": the ticket migration's record, which ticket find reads
         for m in PATH_MENTION.finditer(line):
             if "..." in m.group(1):
                 continue  # a placeholder (`docs/tasks/...md`), not a path

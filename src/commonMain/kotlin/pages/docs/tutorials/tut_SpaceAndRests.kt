@@ -5,7 +5,7 @@
 
 package io.peekandpoke.klang.pages.docs.tutorials
 
-/** Curriculum slot B2 — see docs/tasks/tutorial-curriculum.md */
+/** Curriculum slot B2 — see KLANG-00145 (tutorial curriculum) */
 val spaceAndRestsTutorial = Tutorial(
     slug = "space-and-rests",
     title = Tut.spaceAndRests,

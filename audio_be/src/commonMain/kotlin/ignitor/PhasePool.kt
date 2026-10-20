@@ -86,7 +86,7 @@ fun parsePhasePoolSelection(raw: String?): PhasePoolSelectionParsed {
 }
 
 /**
- * Per-playback registry of unison start-phase pools (docs/tasks/unison-phase-pool.md §3.3–§3.6).
+ * Per-playback registry of unison start-phase pools (KLANG-00144 (unison phase pool) §3.3–§3.6).
  *
  * One pool per (orbit, unisonCount, sideAtten, band): the same instrument on the same orbit reuses
  * one vocabulary of accepted phase configurations — superimpose copies pull different entries from

@@ -26,7 +26,7 @@ fun applyPressBy(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): Spru
 | `_outerJoin(control)` | the SOURCE, events unchanged in shape | `sampleAt(onset)`, once per source event | setters (`_liftNumericField`): `.gain("1 0.5")`, `.pan(sine)` |
 | `_appLeft(control)` | the SOURCE wholes, one fragment per overlapping control event | over the source part, clipped to the query arc | arithmetic, comparison, bitwise (`applyArithmetic`) |
 
-`_innerJoin` for a VALUE operation is the 2026-09-07 bug (`docs/tasks/sprudel-arithmetic-continuous-controls.md`):
+`_innerJoin` for a VALUE operation is the 2026-09-07 bug (KLANG-00195 (sprudel arithmetic continuous controls)):
 a continuous control queried over a cycle yields ONE event valued at the cycle start, so
 `seq("1 1 1").mul(sine)` gave every note the same number, and `weight`/`numSteps` came from the control.
 

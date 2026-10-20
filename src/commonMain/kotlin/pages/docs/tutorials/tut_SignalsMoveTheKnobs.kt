@@ -6,7 +6,7 @@
 package io.peekandpoke.klang.pages.docs.tutorials
 
 /**
- * Curriculum slot A5 — see docs/tasks/tutorial-curriculum.md
+ * Curriculum slot A5 — see KLANG-00145 (tutorial curriculum)
  *
  * The merge lesson: patterns and sound design become one idea. Opens from the
  * stepped/inside/smooth progression A4's finale promised.

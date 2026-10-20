@@ -16,16 +16,16 @@ package io.peekandpoke.klang
  * so the sound stays identical. A materially changed instrument gets a NEW dated snapshot; the old
  * one stays so its rows remain comparable.
  *
- * 2026-10-05, one `range` (`docs/tasks-archive/2026-10/20261005-sprudel-signals-range-cleanup.md`): sprudel's bipolar twins are gone. The one
+ * 2026-10-05, one `range` (KLANG-00271 (sprudel signals range cleanup)): sprudel's bipolar twins are gone. The one
  * twin here sat in a commented-out fragment (`//.mix(saw2, 1.0)`, where `saw` is the local supersaw, not the signal),
  * and the fragment is deleted. A comment only; the renders are identical in raw doubles.
  *
- * 2026-10-03, the Ignitor/Katalyst naming (`docs/tasks-archive/2026-10/20261004-ignitor-katalyst-naming.md`): the script object, its slot
+ * 2026-10-03, the Ignitor/Katalyst naming (KLANG-00269 (ignitor katalyst naming)): the script object, its slot
  * accessor and its slot setter are spelled with their new names (`Ign.`, `Ign.slot.`, `ignp`). Syntax only; the
  * renders are identical in raw doubles.
  *
  * 2026-09-26, `.classic()` appended to the authored instruments (maintainer decision D5, phase 3 step 10,
- * `docs/tasks-archive/2026-09/20260928-builtin-instruments.md`): the old voice strip stopped running for an instrument that ends in
+ * KLANG-00237 (builtin instruments)): the old voice strip stopped running for an instrument that ends in
  * `classic()`, so without it the pieces would have lost their filters and envelope. Nothing else changed. The
  * renders moved, by the analog draw order only (the bass and trommel filter dice, -58 to -60 dB against the
  * texts before), proven by a control with the humanization pinned. The ledger's census columns (`work`,

@@ -30,7 +30,7 @@ import io.peekandpoke.klang.common.infra.klangMapOf
 
 /**
  * The per-cylinder chain swap: how a `katalyst(…)` name becomes the chain an orbit runs
- * (Katalyst step 3a, `docs/tasks-archive/2026-09/20260928-katalyst-dsl.md` §6 and the plan's §7).
+ * (Katalyst step 3a, KLANG-00236 (katalyst dsl) §6 and the plan's §7).
  *
  * The semantics of a request, the bounded cache behind them, and the lifecycle
  * (`retire` / `adopt`). What a DECLARED chain's knobs resolve to is `KatalystSlotResolverSpec`'s

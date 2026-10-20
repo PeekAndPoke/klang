@@ -1,0 +1,72 @@
+# KLANG-00148: DSL Kotlin-surface parity — every DSL usable from Kotlin directly
+
+> **Status (2026-10-20): PAUSED.**
+
+Status (2026-10-16): the Kotlin-door half of this task is succeeded by
+KLANG-00314 (kotlin typed doors). Its "`IgnitorDsl` primary plus a scalar overload" shape is
+retired (Q47): the Kotlin door is typed only, numbers enter through `.ign` / `.kat`.
+
+**Principle (maintainer, 2026-08-20):** the foundation of every Klang DSL must allow direct
+use from Kotlin, not only from KlangScript. Sprudel achieved this and is the model. Script
+stdlib and Kotlin extensions are two doors to ONE DSL — every surface addition lands on both
+in the same deliverable.
+
+## Current state
+
+- **Sprudel**: full parity (the model).
+- **IgnitorDsl**: the chained filter/effect/oscillator vocabulary largely has fluent Kotlin
+  extensions in `audio_bridge` (`.notch()/.highpass()/.lowpass()/.bandpass()/.adsr()/.fm()/
+  .drive()/.detune()/...` — the audio_be parity specs use them daily). **Gaps:**
+  - ~~`Eq` has NO fluent builder on either surface~~ **DONE (D5, 2026-08-20)**: `.eq()` on
+    the base type plus TWO section methods, `band(freq, q, db)` (serial bell) and
+    `tap(freq, q, gain)` (parallel boost, the form Der Schmetterling's guitar uses). Both shipped
+    on BOTH doors with identical names and defaults. Since 2026-09-06 (S3 of
+    KLANG-00179 (dsl configure lambdas)) the script door is `.eq(e => e.band(...).tap(...))` on an
+    `EqBuilder` in `klangscript-libs`, which delegates to the audio_bridge Kotlin extensions
+    `IgnitorDsl.Eq.band/tap`; future Eq section methods land on both. (Since the typed-doors rollout S3a, 2026-10-16,
+    `EqBuilder` lives in `audio_bridge` with typed `band`/`tap` members, the Kotlin door is `eq { it.band(...) }` and
+    the flat `IgnitorDsl.Eq.band/tap` are gone; the chain has its own `KatalystEqBuilder`.)
+  - **Known gap (D5 round 3):** the Kotlin door ships HOMOGENEOUS overloads (all-IgnitorDsl or
+    all-Double), while the script door takes `IgnitorDslLike` per parameter — so the mixed
+    `band(someDsl, 0.7, 6.0)` shape compiles in script but not in Kotlin, where the scalars
+    need `IgnitorDsl.Constant(...)`. Names/defaults match (the rule holds in the letter);
+    expressiveness does not.
+  - ✅ **The filter doors are DONE (2026-08-27).** They used to be the worst offenders:
+    `.lowpass()/.highpass()/.bandpass()/.notch()` had ONLY the all-`Double` form and no
+    `analog` parameter at all, so a tracking cutoff (`Ignitor.freq().mul(k)`, which the script
+    door supports and Der Schmetterling uses) was unreachable from Kotlin without hand-building
+    `IgnitorDsl.Highpass(...)`. All five (those four plus `onepole`) now ship an `IgnitorDsl`
+    primary plus a scalar convenience overload, the same shape `band`/`tap` already used, and
+    `analog` is in the same fourth slot on both doors. Pinned by
+    `KlangScriptFilterDoorParitySpec`, which compares the two doors node-for-node.
+    Behaviour-preserving: node and script door both defaulted `analog` to `Constant(0.0)`.
+  - A full audit of script-stdlib functions vs Kotlin extensions has not been done; unknown
+    smaller gaps likely (phasePool/analog/spreadPower/gainJitter etc. — check which exist as
+    Kotlin extensions vs script-only).
+- **Katalyst DSL** (at both positions, orbit and output): audit alongside (the Pipeline DSL retired in phase 3 step 9,
+  2026-09-27; the Master DSL in step 12 C5, 2026-09-28).
+- **Two-door asymmetries recorded in phase 3** (each with its reason in the archived record,
+  KLANG-00237 (builtin instruments) section 3b and section 9 rows 7 and 8): the Kotlin
+  `tremolo` and filter doors stay flat where the script doors take a builder; the Kotlin `shape`/`distort` doors
+  take a `String` and an `Int` where the script doors also take a slot; `floor` is only a builder knob, so Kotlin
+  sets it with `.copy(floor = ...)`; there is no Kotlin `pitchEnvelope` door; the sample instrument has no script
+  door (no `Ignitor.sample()`, "not yet" at step 7) and its playback slots (`begin`, `end`, `speed`, `loop`) are
+  Kotlin-only (`IgnitorDsl.Slots.sample`). Revisit them in the audit; the `Ignitor.sample()` door is the one marked
+  "not yet".
+
+## Work
+
+1. Audit: enumerate KlangScript stdlib surface per DSL; diff against Kotlin extensions;
+   produce the gap list.
+2. Close the gaps (mechanical; each new extension mirrors the stdlib function's defaults —
+   parameter-parity rule: same names, same meanings, same defaults on both doors).
+3. Standing rule for reviews: a new stdlib function without its Kotlin twin is a finding.
+
+## Links
+
+- Memory: `feedback_dsl_dual_surface`, `feedback_parameter_parity`.
+- Unified-eq plan D5 (both-doors requirement recorded there).
+
+## History
+
+- 2026-10-20: numbered KLANG-00148 (was `docs/tasks/dsl-kotlin-surface-parity.md`).

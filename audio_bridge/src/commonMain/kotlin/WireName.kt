@@ -17,7 +17,7 @@ package io.peekandpoke.klang.audio_bridge
  * Names must be unique within a single sealed hierarchy (the processor fails the build on a collision).
  *
  * `SOURCE` retention — purely a compile-time marker for the processor, never present at runtime.
- * See `docs/tasks/wireformat-enhancements.md`.
+ * See KLANG-00105 (wireformat enhancements).
  */
 @Retention(AnnotationRetention.SOURCE)
 @Target(AnnotationTarget.CLASS)

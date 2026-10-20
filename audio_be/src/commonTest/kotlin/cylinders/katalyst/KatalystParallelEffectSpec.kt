@@ -38,7 +38,7 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
- * The Katalyst `parallel` stage ([KatalystParallelEffect], `docs/tasks-archive/2026-10/20261010-parallel-serial-bands.md` step 3):
+ * The Katalyst `parallel` stage ([KatalystParallelEffect], KLANG-00297 (parallel serial bands) step 3):
  * branches side by side, summed, matched in phase (oversamplers by phase twins, pure delays by rings), and every
  * lifecycle question passed to the branches.
  *

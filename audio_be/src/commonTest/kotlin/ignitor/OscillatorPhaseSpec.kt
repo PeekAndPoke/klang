@@ -32,7 +32,7 @@ private class SteppedConstant(var value: Double) : Ignitor {
 }
 
 /**
- * The `phase` knob of every periodic oscillator (`docs/tasks-archive/2026-10/20261006-oscillator-phase-knob.md`): an offset in cycles, added to
+ * The `phase` knob of every periodic oscillator (KLANG-00272 (oscillator phase knob)): an offset in cycles, added to
  * the running phase every sample, wrapping. Guards:
  *
  *  - DEFAULT: an oscillator with a phase input of 0 (a slot, so the input is built and read) renders bit for bit what

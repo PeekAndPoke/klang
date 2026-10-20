@@ -14,7 +14,7 @@ package io.peekandpoke.klang.audio_bridge
  * `KlangCommLink.Feedback` sealed types, `ScheduledVoice`); the processor walks referenced types from there.
  *
  * `SOURCE` retention — purely a compile-time marker for the processor, never present at runtime.
- * See `docs/tasks/worklet-codec-ksp.md`.
+ * See KLANG-00103 (worklet codec ksp).
  */
 @Retention(AnnotationRetention.SOURCE)
 @Target(AnnotationTarget.CLASS)

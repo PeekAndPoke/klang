@@ -2,7 +2,7 @@
 
 Two flat HTML pages about where Klang stands, built from the docs and served next to the SPA:
 
-- `src/jsMain/resources/klang-topic-map.html`: every open task and plan in `docs/tasks` and `docs/plans` as a
+- `src/jsMain/resources/klang-topic-map.html`: every open task and plan in `docs/tasks` as a
   zoomable graph, grouped by area, with the links between the docs; the archive behind toggles.
 - `src/jsMain/resources/klang-mission-log.html`: every archived task on a timeline by the date in its file
   name, and a guessed completion date for each open one.

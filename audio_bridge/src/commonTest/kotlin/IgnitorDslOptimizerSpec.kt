@@ -354,7 +354,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
     // could drift: VoiceFactory analysed the AUTHORED tree while voices rendered the OPTIMIZED one.
     // The tail now falls out of the build of the tree that actually renders, so there is one source
     // and the drift is unrepresentable — the guard has no equivalent. See
-    // `docs/tasks-archive/2026-08/20260831-ignitor-envelope-ownership.md`.
+    // KLANG-00161 (ignitor envelope ownership).
 
     // ── Kill switch ───────────────────────────────────────────────────────────
 

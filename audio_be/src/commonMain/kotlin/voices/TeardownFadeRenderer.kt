@@ -58,7 +58,7 @@ object TeardownFadeRenderer : BlockRenderer {
         // mid-way: a step of up to ~50% at release 2 ms, 100% at release 0. Known, unfixed:
         // scoping a fix needs the release-vs-window comparison at releaseGate time, and whether
         // to extend the voice by the window is a maintainer call (see the round-3 parked item in
-        // docs/tasks-archive/2026-08/20260829-realtime-note-off-gate-release.md).
+        // KLANG-00157 (realtime note off gate release)).
         //
         // An earlier version preferred to start at gate end
         // so it could not touch the note body, but that collapsed the window for a SHORT non-zero

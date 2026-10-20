@@ -5,7 +5,7 @@ Scaffolding only. Telegraph notes, no prose. The maintainer writes the final tex
 - Built: 2026-09-24 at `0f1b774f` (`engine-redesign`).
 - Markers: `[ME]` maintainer to fill. `[VERIFY]` unsure / conflicting. `[Qn]` = verbatim quote,
   `evidence/maintainer-quotes.md`. `ANS <ts>` = multiple-choice answer, `evidence/maintainer-answers.md`.
-  `WP §n` = white paper section. `FED` = `docs/tasks/future/federated-song-sharing.md`. `CLAUDE.md` = rules register.
+  `WP §n` = white paper section. `FED` = KLANG-00135 (federated song sharing). `CLAUDE.md` = rules register.
 - Transcript coverage: **2026-08-15 to 2026-09-24 only**. Anything earlier rests on git, DEV-DIARY and docs.
   Every such decision is flagged "no transcript".
 - Diary caveat: DEV-DIARY entries v0.3.0 to v0.3.8 (2026-08-13 to 2026-09-07) were written by an agent (commit
@@ -32,14 +32,14 @@ Template per decision:
     (maintainer-messages.txt 2026-08-29T15:20). Songs committed by him: "i commited the song already"
     (2026-08-23T17:29). `[ME]` share of hand-written code? No git signal separates it.
 - **Agent role**
-  - Implementation, reviews ("/review-loop" skill), measurement, plans in `docs/plans/`, task docs.
+  - Implementation, reviews ("/review-loop" skill), measurement, plans and task docs (tickets in `docs/tasks/`).
   - Agent fleet with model tiers and a single Gradle writer: CLAUDE.md rules "Gradle is a single-writer resource"
     (2026-08-04), "Review rounds 3 and later run on the strongest model tier" (2026-09-05); `.claude/skills/agent-fleet/`.
   - Offers options; maintainer picks (answers file). Where the maintainer deviated from the recommended option:
     ch. 9.
 - **Where evidence lives**
   - Git history (2,083 commits); trailers (444 commits); tags (40).
-  - DEV-DIARY.MD; `docs/history/2025-Q4.md` .. `2026-Q3.md`; `docs/blog/` (25 posts); `docs/plans/`;
+  - DEV-DIARY.MD; `docs/history/2025-Q4.md` .. `2026-Q3.md`; `docs/blog/` (25 posts); the tickets in `docs/tasks/`;
     `docs/tasks/`, `docs/tasks-archive/`; `.claude/skills/`; `.claude/vision/decisions.md` (strategist log).
   - Transcripts (local only): 35 sessions, see `README.md` table.
 - **Process iterations** (what changed each time)
@@ -103,10 +103,10 @@ Template per decision:
 
 ### 1.7 Two doors: every DSL usable from Kotlin
 - Decision: [K11]; CLAUDE.md rule "Two doors, one DSL" (2026-08).
-- Status: settled as rule; parity work open: `docs/tasks/dsl-kotlin-surface-parity.md`.
+- Status: settled as rule; parity work open: KLANG-00148 (dsl kotlin surface parity).
 
 ### 1.8 Open
-- Union types for doors accepting lambda or instance [K12]: `docs/tasks/klangscript-union-types.md`.
+- Union types for doors accepting lambda or instance [K12]: KLANG-00212 (klangscript union types).
 - Runtime errors vs graceful NaN for live coding [K10]. `[VERIFY]` outcome.
 
 ---
@@ -151,7 +151,7 @@ Template per decision:
 - Iterations: pilot on `freq` (`1053f694`, 2026-09-06) → batches E, F, G (`d9b6c8e3`, `0c535555`, `95705370`,
   2026-09-07) → per-knob doors retired (`docs/retired-names.md` (in CLAUDE.md "Retired" until 2026-10-07) 2026-09-07).
 - Agent proposal overruled: ctx copy per control event rejected for cost [S11].
-- Status: settled; string-slot readers parked (`docs/tasks/future/string-slot-readers.md`).
+- Status: settled; string-slot readers parked (KLANG-00188 (string slot readers)).
 
 ### 2.5 Mini-notation mods
 - Decision: parse names only, apply via function, not at parse time [S9].
@@ -192,14 +192,14 @@ Template per decision:
   from DSP [M7].
 - Iterations: plan `a44c23b0`, harness `d8dfc50d` (2026-08-28); O, D, W batches (DEV-DIARY 2026-08-28);
   tolerance window removed 2026-09-03 (maintainer-messages 2026-09-03T11:35).
-- Evidence: `docs/plans/block-framing-invariance.md`; block size pinned 128 (DEV-DIARY 2026-08-08; CLAUDE.md guardrail).
+- Evidence: KLANG-00156 (block framing invariance); block size pinned 128 (DEV-DIARY 2026-08-08; CLAUDE.md guardrail).
 - Status: settled.
 
 ### 3.4 Realtime voices (MIDI)
 - Options: nullable `startTime` (own first idea) / sealed voice hierarchy / separate wire command.
 - Decision: separate command on the wire [M8]; no nullable special case [M9]; autoCleanup deferred
   (`ANS 2026-08-28T20:50`).
-- Evidence: DEV-DIARY 2026-08-29; `docs/tasks-archive/2026-09/20260927-midi-keyboard-playground.md`; latency: two backend channels [M27].
+- Evidence: DEV-DIARY 2026-08-29; KLANG-00228 (midi keyboard playground); latency: two backend channels [M27].
 - Status: MVP settled; playback / interactive split `[VERIFY]` status.
 
 ### 3.5 Resource warehouse
@@ -207,13 +207,13 @@ Template per decision:
 - Decision: build in isolation then integrate [M13]; never shrink [M12]; explicit warmup, no song [M14]; dirty flag
   [M15]; cylinders join warehouse.
 - Iterations: steps 2b, 2d, 2e (`ef33ccd4`, `bcf48e84`, `7ea90627`); 5 review rounds to clean (`08f0be8c`);
-  first-run spike v2 parked (`docs/tasks/future/first-run-spike-v2.md`).
-- Evidence: `docs/tasks-archive/2026-09/20260927-resource-warehouse.md`; blog `2026-09-04-seven-megabytes-of-silence`.
+  first-run spike v2 parked (KLANG-00178 (first run spike v2)).
+- Evidence: KLANG-00230 (resource warehouse); blog `2026-09-04-seven-megabytes-of-silence`.
 - Status: settled; v2 open.
 
 ### 3.6 Nothing allocates without cleanup
 - Decision: [M18]; CLAUDE.md rule 2026-09-17.
-- Status: rule; debt tracked in `docs/plans/signal-flow-redesign.md` §11.
+- Status: rule; debt tracked in KLANG-00210 (signal flow redesign) §11.
 
 ### 3.7 Effect state machines
 - Decision: states pre-allocated, no framework, performance first then readability [M20] [M21] [M22].
@@ -224,13 +224,13 @@ Template per decision:
 - Iterations: 1. crossfade + bank cap 10 (`ANS 2026-09-19T15:11`) → 2. formant MORPH built and heard as
   "laser-shot" [SD7] [M24] → 3. two banks + one parking slot, 20 ms, cap removed [M25] [M26] → 4. 50 ms, chosen by ear (2026-10-17).
 - Evidence: `docs/retired-names.md` (in CLAUDE.md "Retired" until 2026-10-07) 2026-09-20 (MORPH, `MAX_BANKS`); `audio/ref/knob-glide.md`;
-  `docs/tasks/future/transition-times.md`; "security net" [M23].
+  KLANG-00213 (transition times); "security net" [M23].
 - Status: settled.
 
 ### 3.9 One engine in Zig, later
 - Decision: single backend impl when it happens [M16]; ints not strings across the boundary [M17]; readable code
   now to ease the port [P2].
-- Evidence: `docs/plans/future/zig-motor-one-engine.md` (`e9a34c16`, 2026-09-15); WP §13 "~10× off a native DAW".
+- Evidence: KLANG-00200 (zig motor one engine) (`e9a34c16`, 2026-09-15); WP §13 "~10× off a native DAW".
 - Status: parked (guideline "Sound first").
 
 ### 3.10 Smaller engine decisions (one line each)
@@ -250,7 +250,7 @@ Template per decision:
   4. 2026-06-29 EngineDsl → PipelineDsl (DEV-DIARY 2026-06-29).
   5. 2026-08-03 Master DSL, master-in-pattern (DEV-DIARY 2026-08-03) `[VERIFY hash]`.
   6. 2026-09-17 Katalyst DSL designed (`412a0409`, `a824ba93`); Pipeline heritage named [D15]; retire Pipeline [D24].
-- Status: Katalyst in progress; Pipeline retirement planned (`docs/plans/signal-flow-redesign.md`).
+- Status: Katalyst in progress; Pipeline retirement planned (KLANG-00210 (signal flow redesign)).
 
 ### 4.2 Parameter parity, one word per concept
 - Problem: roomSize 10× bug (blog `docs/blog/2026-08-03-the-same-word`); filter surface split [S1].
@@ -272,7 +272,7 @@ Template per decision:
   (`ANS 2026-09-23T11:01` to `11:22`; [D23]).
 - Iterations: 2026-09-05 first shape → 2026-09-23 function-by-function walk (commit `0f1b774f`) → 2026-09-24
   `floor` confirmed over agent's `dryFloor` reason; fm `freq` kept hidden (`ANS 2026-09-24T13:43`).
-- Evidence: CLAUDE.md rule (2026-09-05, refined 2026-09-23); `docs/tasks-archive/2026-09/20260928-builtin-instruments.md` §3b.
+- Evidence: CLAUDE.md rule (2026-09-05, refined 2026-09-23); KLANG-00237 (builtin instruments) §3b.
 - Status: settled; implementation in progress.
 
 ### 4.5 Signal flow: gain, pregain, velocity, Katalyst ownership
@@ -286,7 +286,7 @@ Template per decision:
   6. 21:44 velocity folds into gain at the frontend [D21]; 21:49 pregain / gain / busgain order.
 - Result: `f359f23e` plan; `df93f9f1` "gain is the one level word, velocity folds at the wire, postgain retires";
   `52b89756` (2026-09-19). `docs/retired-names.md` (in CLAUDE.md "Retired" until 2026-10-07) `postgain`, wire `velocity` (2026-09-19).
-- Evidence: `docs/plans/signal-flow-redesign.md`; maintainer: "the last discussion was very fruitful!" (2026-09-18T22:28).
+- Evidence: KLANG-00210 (signal flow redesign); maintainer: "the last discussion was very fruitful!" (2026-09-18T22:28).
 - Status: in progress.
 
 ### 4.6 Naming decisions
@@ -296,8 +296,8 @@ Template per decision:
 - `eq()` → `equalizer()` in ignitor (`ANS 2026-08-25T17:44`); bit ops `bitShl` / `bitShr` (`17:48`).
 
 ### 4.7 Open
-- Oversampling regions, with factoring as equal goal [D22]: `docs/tasks/oversampling-regions.md`.
-- `.kat()` / `.master()` accepting lambda or instance: `docs/tasks/katalyst-master-configure-doors.md`.
+- Oversampling regions, with factoring as equal goal [D22]: KLANG-00214 (oversampling regions).
+- `.kat()` / `.master()` accepting lambda or instance: KLANG-00211 (katalyst master configure doors).
 
 ---
 
@@ -332,12 +332,12 @@ Template per decision:
   `[VERIFY]` reconcile 33 % (maintainer, whole-song observation) with 3 to 5 % (agent projection).
 - Iterations: D0 baseline `316cc8d8` → EqCore bake-off `c843dc64`, `302e7f66` → wire node `a4b19970` → optimizer
   `076683ab` → `.eq/.band/.tap` doors `03e995ca` (2026-08-19 to 2026-08-21).
-- Evidence: `docs/plans/unified-eq.md`; blog `2026-08-20-eleven-loops-one-pass`.
+- Evidence: KLANG-00151 (unified eq); blog `2026-08-20-eleven-loops-one-pass`.
 - Status: settled.
 
 ### 6.3 Optimizer rounds and affine folding
 - Decision: rounds until fixpoint [PF9]; runtime fusion deferred [PF10]; TDD for the optimizer [P15].
-- Evidence: `docs/tasks/future/optimize-affine-chain-fusion.md`, `docs/tasks/future/ignitor-optimizer-open-items.md`.
+- Evidence: KLANG-00203 (optimize affine chain fusion), KLANG-00204 (ignitor optimizer open items).
 
 ### 6.4 Voice culling
 - Decision: per-voice window [PF8]. Commit `2133056a` (2026-09-15); blog `2026-09-15-zombies`.
@@ -390,8 +390,8 @@ Template per decision:
 - KlangScript: union types [K12]; runtime error policy [K10].
 - Sprudel: ordered DSL [S6]; control-pattern rests [S15]; pattern-kind interop [S16].
 - Engine: effect state machines; playback / interactive channels [M27]; first-run spike v2; transition time per
-  effect (`docs/tasks/future/transition-times.md`); voice takeover (maintainer "not 100% sold",
-  2026-09-08T13:48; `docs/tasks/voice-takeover.md`).
+  effect (KLANG-00213 (transition times)); voice takeover (maintainer "not 100% sold",
+  2026-09-08T13:48; KLANG-00138 (voice takeover)).
 - DSLs: oversampling regions [D22]; Katalyst completion; Pipeline retirement.
 - `[ME]` remaining open V1 items: `docs/tasks/_v1-scope.md`.
 

@@ -6,7 +6,7 @@
 package io.peekandpoke.klang.pages.docs.tutorials
 
 /**
- * Curriculum slot B7 — see docs/tasks/tutorial-curriculum.md
+ * Curriculum slot B7 — see KLANG-00145 (tutorial curriculum)
  *
  * The "," (together) is taught against B4's space-inside-brackets (turns), and
  * "|" (fresh random pick each cycle) against B5's "<>" (a fixed schedule).

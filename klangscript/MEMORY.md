@@ -67,7 +67,7 @@ KlangScript keeps a JavaScript-like syntax but its semantics and its stdlib foll
   chains were fixed with configure lambdas on the existing arrow syntax and dedicated immutable builder
   types, no back-compat. Receiver lambdas are PARKED (they need several `this` and mutable builders); a
   Kotlin round trip is a later editor feature (paste-detect, "copy as Kotlin" from the AST), not grammar.
-  Record: `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`.
+  Record: KLANG-00179 (dsl configure lambdas).
 - **One call form per callable object**: KlangScript has no overloads (`ref/interpreter-impl.md`).
 - **Number literals take methods with Kotlin precedence**: `2.pow(7/12)` is a member call, `-x.abs()` is
   `-(x.abs())`, and `-6.db()` is refused as ambiguous (`ref/parser-impl.md`).
@@ -111,9 +111,9 @@ KlangScript keeps a JavaScript-like syntax but its semantics and its stdlib foll
 
 - `klangscript/TODOS.MD`: higher-order array methods (`map`, `filter`, ...), the `when` expression,
   `for...in` / `for...of`, spread, destructuring.
-- `docs/tasks/klangscript-native-object-operators.md` (arithmetic operators on native objects),
-  `docs/tasks/klangscript-union-types.md`, `docs/tasks/klangscript-intellisense.md`,
-  `docs/tasks/klangscript-named-args-docs-polish.md`.
+- KLANG-00056 (klangscript native object operators) (arithmetic operators on native objects),
+  KLANG-00212 (klangscript union types), KLANG-00064 (klangscript intellisense),
+  KLANG-00130 (klangscript named args docs polish).
 - The lexer accepts an unclosed block comment without an error (found 2026-10-19 by the 6.4 work): its loop in
   `KlangScriptParser` runs `while (i < source.length - 1)`, so `/*` without `*/` swallows the rest of the text except
   its last character, which is then lexed as a token. An unterminated block comment should be a parse error.
@@ -127,55 +127,55 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
 - 2026-05: `export name = expr` (`ref/memory-history.md#recent-work-2026-05`).
 - 2026-09-05: stays a JS-syntax dialect for V1 (`ref/memory-history.md#design-decisions-kotlin-style-not-js-style`).
 - 2026-09-06: configure lambdas S1 to S6, the `invoke` operator, the `klangscript-libs` split
-  (`docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`,
-  `docs/tasks-archive/2026-09/20260906-klangscript-libs-split.md`). The Pipeline and Master builders of S5
+  (KLANG-00179 (dsl configure lambdas),
+  KLANG-00180 (klangscript libs split)). The Pipeline and Master builders of S5
   and S6 are retired since (rules register).
-- 2026-09-07: `@KlangScript.Invoke`; sine partial banks (`docs/tasks-archive/2026-09/20260907-sine-partial-banks-plan.md`).
+- 2026-09-07: `@KlangScript.Invoke`; sine partial banks (KLANG-00185 (sine partial banks plan)).
 - 2026-09-08: methods on number literals, the number methods, library registration merges per name
-  (`docs/tasks-archive/2026-09/20260908-klangscript-number-methods.md`).
-- 2026-09-10: `analogSpread` on the super family (`docs/tasks-archive/2026-09/20260910-drift-lanes-analog-spread.md`).
+  (KLANG-00193 (klangscript number methods)).
+- 2026-09-10: `analogSpread` on the super family (KLANG-00198 (drift lanes analog spread)).
 - 2026-09-29: this file restructured; the old status, phases and dated entries are in `ref/memory-history.md`.
 - 2026-10-02: a non-callable value on a function-typed native parameter is a type error ("expected a function, got
-  a number"), found while building `through` (`docs/tasks-archive/2026-10/20261002-through-signal-chains.md`).
+  a number"), found while building `through` (KLANG-00267 (through signal chains)).
 - 2026-10-04: the Ignitor/Katalyst naming: the stdlib object is `Ignitor` with the alias `Ign` (a
   `@KlangScript.Constant`, the house pattern for a second name), `Katalyst` with `Kat`, `Ignitor.slot` and
-  `Katalyst.slot` hand back the Kotlin door's objects (`docs/tasks-archive/2026-10/20261004-ignitor-katalyst-naming.md`).
+  `Katalyst.slot` hand back the Kotlin door's objects (KLANG-00269 (ignitor katalyst naming)).
 - 2026-10-04: error locations: a script error thrown without a location inside a native call gets the call's
   location (`guardNativeCall`, via `KlangScriptRuntimeError.withLocation`), one with a location keeps it; so a
   wrong Katalyst knob value marks `k.reverb(...)` (guards: `NativeCallErrorLocationSpec`, `KlangScriptKatalystDoorParitySpec`).
 - 2026-10-04: the stdlib's `export { ... }` block deleted (it governed nothing: a native cannot be exported);
   `import * from "stdlib"` loads every stdlib name, a selective import of it binds nothing (`StdLibScopeSpec`,
-  `docs/tasks-archive/2026-10/20261004-stdlib-export-block.md`).
+  KLANG-00270 (stdlib export block)).
 - 2026-10-05: the Ignitor doors `unipolar()` / `bipolar()` removed, `range` is the one word for a swing; a sprudel object
   that IS a pattern (the signals) takes `@KlangScript.Invoke` and keeps its pattern methods through the `isInstance` walk
-  (`docs/tasks-archive/2026-10/20261005-sprudel-signals-range-cleanup.md`).
+  (KLANG-00271 (sprudel signals range cleanup)).
 - 2026-10-05: `from` and `as` are contextual keywords (lexed as identifiers, read as keywords only in an import or
-  export), so the range values can be named `from` / `to` (`docs/tasks-archive/2026-10/20261005-sprudel-signals-range-cleanup.md`).
+  export), so the range values can be named `from` / `to` (KLANG-00271 (sprudel signals range cleanup)).
 - 2026-10-06: the Ignitor's triangle door is `Ign.tri` / `Ignitor.tri` with `OscTriBuilder`, matching `supertri` and
-  sprudel's `tri`; `triangle` as a door is removed (`docs/tasks-archive/2026-10/20261006-oscillator-names-across-dsls.md`).
+  sprudel's `tri`; `triangle` as a door is removed (KLANG-00273 (oscillator names across dsls)).
 - 2026-10-06: the generated registration is one call per door (no arity dispatch), the shared helpers `callInfoOf`,
   `optArg`, `nullDefault`, and the processor refuses a non-literal door default; `convertToKotlin` refuses a number,
   boolean, array or object on a target it cannot be as a `KlangScriptTypeError` at the call, on every platform
-  (`docs/tasks/reduce-js-bundle-size.md`, "Step 1 done").
+  (KLANG-00106 (reduce js bundle size), "Step 1 done").
 - 2026-10-06: the generated registration is split per source area (`Generated<Lib><Area>Registration.kt`, plain functions,
   no top-level state), an entry point calls the chunks in the old order, the docs live in `Generated<Lib>Docs.kt` with
-  each `KlangType` emitted once (`docs/tasks/reduce-js-bundle-size.md`, "Step 2 done").
+  each `KlangType` emitted once (KLANG-00106 (reduce js bundle size), "Step 2 done").
 - 2026-10-07: the KSP processor sorts the symbols and the registration blocks into source order, so the generated
   output no longer depends on the file system's directory order (sprudel 150 chunk functions to 56)
-  (`docs/tasks/reduce-js-bundle-size.md`, "Step 3: source order").
+  (KLANG-00106 (reduce js bundle size), "Step 3: source order").
 - 2026-10-07: callable objects show both forms in the docs, the call form as the object's second variant (the stray
-  `invoke` docs symbol is gone), and the call's internal symbol is `__invoke__` (`docs/tasks-archive/2026-10/20261007-callable-object-docs.md`).
+  `invoke` docs symbol is gone), and the call's internal symbol is `__invoke__` (KLANG-00275 (callable object docs)).
 - 2026-10-07: member access reaches every value kind's extensions (`true.toString()`), and the editor reads a name by
   position (hover, closures seeing later locals, param tools and locals, diagnostics name the call as written)
-  (`docs/tasks-archive/2026-10/20261007-boolean-member-access.md`, `docs/tasks-archive/2026-10/20261007-callable-object-docs.md` "Open items, done").
+  (KLANG-00276 (boolean member access), KLANG-00275 (callable object docs) "Open items, done").
 - 2026-10-16: the pulse builders' `duty(width)` (was `duty(duty)`) on `Ign.square`, `Ign.pulze` and `Kat.square`, the
-  word of sprudel's `duty` door (Q29; `docs/tasks/in-progress/engine-follow-ups.md` item 44, `docs/retired-names.md`).
+  word of sprudel's `duty` door (Q29; KLANG-00290 (engine follow ups) item 44, `docs/retired-names.md`).
 - 2026-10-16: typed Kotlin doors S1 to S7 (the rollout done): every builder lives in `audio_bridge` with typed members,
   the `klangscript-libs` stdlib is the script door only, its doors, objects, knob variants and conversions
   `internal` (S7); public there only what is no door (`ignitorSlotName` / `katalystSlotName`, `klangScript()`,
   `stdlibLib`, `KlangStdLib`). A KSP fix on the way: a top-level extension function's own file is a source
-  (`collectSourceFiles`, S6) (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`).
+  (`collectSourceFiles`, S6) (KLANG-00314 (kotlin typed doors)).
 - 2026-10-19: code completion offers the song's own names (`let`, `const`, `export`, lambda parameters) through
-  `AnalyzedAst.localsAt` and `CompletionProvider.localCompletions` (`docs/tasks-archive/2026-10/20261019-editor-local-symbol-completion.md`).
+  `AnalyzedAst.localsAt` and `CompletionProvider.localCompletions` (KLANG-00319 (editor local symbol completion)).
 - 2026-10-19: code completion offers a call's unfilled parameters as `name = ` where an argument starts, never in a
-  call with a positional argument (`AnalyzedAst.namedArgumentsAt`; `docs/tasks/klangscript-named-args-docs-polish.md` 6.4).
+  call with a positional argument (`AnalyzedAst.namedArgumentsAt`; KLANG-00130 (klangscript named args docs polish) 6.4).

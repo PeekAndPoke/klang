@@ -131,7 +131,7 @@ also squeezes the soft edges of the saw and square family, which then alias like
 may be shared by layers at different pitches (`let wob = Ignitor.sine(30).mul(0.3)` in two layers is one LFO). The
 rule: a shared modulator that reads `Ignitor.freq()` anywhere (its rate, its depth, a scaling next to it, as in
 `wob.mul(Ignitor.freq().recip().mul(220))`) renders once per pitch, so every LFO only in it runs too fast; build it once per
-layer (`docs/tasks-archive/2026-10/20261007-shared-modulator-memo-rate.md`).
+layer (KLANG-00278 (shared modulator memo rate)).
 
 ```javascript
 Ignitor.sine(4, x => x.phase(0.25))                      // an LFO that starts at its peak
@@ -140,7 +140,7 @@ Ignitor.saw().mul(Ignitor.sine(4).range(0.5, 1)).plus(Ignitor.square().mul(Ignit
 Ignitor.sine(x => x.phase(Ignitor.sine(5).mul(0.2)))     // phase modulation by a 5 Hz LFO: a vibrato of about 6 Hz either way
 ```
 
-**Sine partial banks** (`Ignitor.sine` builder knobs; `docs/tasks-archive/2026-09/20260907-sine-partial-banks-plan.md`). The sine can carry banks
+**Sine partial banks** (`Ignitor.sine` builder knobs; KLANG-00185 (sine partial banks plan)). The sine can carry banks
 of sine partials at multiples of ITS OWN frequency, rendered in one pass: `harmonics(count, rolloff = 1)` adds
 `count` partials at `2f, 3f, 4f ...`, `octaves(count, rolloff = 1)` at `2f, 4f, 8f ...`, `suboctaves(count,
 rolloff = 1)` at `f/2, f/4 ...`. An added partial at `m * f` or at `f / m` has gain `m ^ -rolloff` of its bank:
@@ -502,7 +502,7 @@ every pitched layer bends with the same LFO, at the written rate. One exception:
 an `fm`, or under a pitch mod whose knobs read `Ignitor.freq()`, renders the whole mod again, LFO and modulator
 included; give such a layer its own mod. Until 2026-10-07 a pitch mod ran once per pitched layer, so a vibrato over
 three layers was heard at three times its rate; a patch tuned before then may sound slower now
-(`docs/tasks-archive/2026-10/20261007-shared-modulator-memo-rate.md`, section B-1).
+(KLANG-00278 (shared modulator memo rate), section B-1).
 
 ### Analog Drift
 

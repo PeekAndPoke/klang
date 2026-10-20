@@ -32,7 +32,7 @@ import io.peekandpoke.klang.script.types.KlangSymbol
  * the hover of a second name of a callable object (`Kat`, `lowpass`) carries the call form, the param tools and the
  * named-argument check respect a local (a closure sees one declared after it), and a diagnostic names the call as
  * written. The logic is pinned on both platforms by `PositionAwareIntelSpec` in klangscript; this is the proof on the
- * generated docs (`docs/tasks-archive/2026-10/20261007-callable-object-docs.md`, open items).
+ * generated docs (KLANG-00275 (callable object docs), open items).
  */
 class EditorPositionIntelSpec : StringSpec({
 

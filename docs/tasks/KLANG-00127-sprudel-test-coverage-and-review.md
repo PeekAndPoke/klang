@@ -1,0 +1,91 @@
+# KLANG-00127: Sprudel DSL — test-coverage gap + overall module review
+
+> **Status (2026-10-20): PAUSED.**
+
+> **STATUS (2026-06-30):** IN PROGRESS, user-paced. Started on branch `engine-dsl-osc-dsl-parameterization`
+> (now merged); continue on the current branch. ~5 addon
+> files done; the rest happen as the user reviews the module file-by-file (pasting IDE warnings). This doc
+> captures the systematic gap so it can be finished deliberately rather than ad-hoc.
+
+## The gap (root cause of the "Function `X` is never used" warnings)
+
+Each sprudel DSL operation is defined in (up to) four overload shapes in `lang/`:
+
+- (a) `SprudelPattern.X(...)` — the pattern-receiver form
+- (b) `String.X(...)` — the string-receiver form
+- (c) `X(...): PatternMapperFn` — the top-level factory form (used via `apply(X(...))`)
+- (d) `PatternMapperFn.X(...): PatternMapperFn` — the **chained-mapper** form (used via `apply(Y(...).X(...))`)
+
+The shared `dslInterfaceTests(...)` harness only exercises forms **(a)/(b)/(c)**. Form **(d)** — the
+`PatternMapperFn.X` chained mapper — is **uncovered codebase-wide**. Because nothing calls it, the IDE flags
+every form-(d) function as "Function `X` is never used." The warning is real: the overload is genuinely
+untested, not dead.
+
+## The fix (per operation)
+
+1. For a voice DOOR knob (a setter that writes a field or slot): add an entry to `LangDoorFormsSpec`, which covers
+   (a) to (d) in both doors with the value asserted (2026-09-27). For any other op, add a **chained form-(d) case**
+   to that op's `dslInterfaceTests` block, in both Kotlin and KlangScript, e.g.:
+   ```kotlin
+   "pattern.apply(gain(1.0).X(c))" to note("c3").apply(gain(1.0).X(c)),
+   "script apply(gain(1.0).X(c))" to SprudelPattern.compile("""note("c3").apply(gain(1.0).X(c))"""),
+   ```
+   (Pick any cheap leading mapper — `gain(1.0)` — so the chain `.X()` is the thing under test.)
+2. For ops that have **no spec at all**, write a fresh spec (don't only patch the chained case).
+3. Where a parameter is genuinely vestigial (e.g. an unused `callInfo` on a pure delegator), annotate with
+   `@Suppress("UNUSED_PARAMETER")` + a one-line why — don't invent fake usage.
+
+## Done so far (branch history)
+
+5 addon files cleared (per the working memory): the `snd*` addon block (`sndZamp` + a consolidated
+`PatternMapperFn.sndX` form-(d) case via `gain(1.0).sndX()`), `LangDutySpec` (new), and form-(d) cases added to
+the ten per-knob specs of the day (nine since folded into `LangDoorFormsSpec`, `1aa25a17`, 2026-09-28; the tenth is
+  `LangIgnitorParamSpec` today, renamed 2026-10-03); `@Suppress`
+on the `lang_arithmetic_numeric.kt` vestigial params (`flipSign`/`oneMinusValue`/`not`/`abs`).
+
+## Remaining
+
+Walk the rest of `lang/` file-by-file. For each file: run the IDE inspection, and for every
+"Function `X` is never used" on a `PatternMapperFn.X` overload, apply the fix above. The new `voices()` alias (retired 2026-09-07 into `unison(voices)`)
+(2026-06-30) already ships with its form-(d) covered. Since 2026-09-27 the forms, (d) included, of every knob of the doors listed in
+`LangDoorFormsSpec`'s KDoc are one entry there (test consolidation commit 2); the doors outside the table keep their
+forms in their own specs. A new knob of a listed door adds an entry there, not a spec file of its own.
+
+### Found 2026-09-24: 44 doors put no ARGUMENT location on their events
+
+**Decided 2026-10-14 (maintainer, C7):** the 44 doors put their argument's location on their events, and every location
+that already exists is passed through. Look first whether the central query and join helpers can do it in one place.
+The form-(d) sweep stays live here.
+
+Phase 3 step 3d(iii) strengthened `CallInfoTest`'s helper so a row must show a location that starts
+inside the call's argument span (before, any location passed, including the receiver's own mini-notation,
+so the file guarded nothing about arguments). 72 of 116 rows hold the strict check. 44 cannot, because no
+argument location ever reaches an event: the structural and time doors that take their argument as a
+structure parameter (`euclid` and its variants, `bjork`, `unit`, `loop`, `loopAt`, `loopAtCps`, `slice`,
+`splice`, `early`, `late`, `compress`, `focus`, `fastGap`, `densityGap`, `swing`, `swingBy`) and the
+no-argument doors (the 17 `snd*` sounds, `rev`, `palindrome`, `brak`). Those rows now use
+`assertReceiverLocationsSurvive`, which proves only that the receiver's locations are not dropped.
+Open: should those doors put their argument's location on the events (the editor would then highlight
+the `euclid(3, 8)` argument while it plays)? A UI and sprudel-core decision, not a defect.
+
+## Overall module review (fold in while sweeping)
+
+Since we're touching every file anyway, also note/fix:
+
+- **Naming consistency** — sprudel DSL functions are lowercase (`note`/`gain`/`spread`); the `snd*` camelCase
+  family is the known exception, tracked separately in KLANG-00101 (sprudel sound function surface).
+- **KDoc drift** — params/examples that lag renames (e.g. the `detune→spread` rename; the `density()` doc no
+  longer applies to `crackle`). The `2026-06-30` docs-sweep already fixed the music-writing skill refs.
+- **Alias completeness** — ops that should have a short alias but don't (template: `unison`→`uni`/`voices`).
+- **Control-pattern acceptance** — confirm each numeric param flows through `_applyControlFromParams` /
+  `_innerJoin` so it accepts control patterns (the project rule "all params accept control patterns").
+
+## Critical files
+
+- `sprudel/src/commonMain/kotlin/lang/**` (definitions).
+- `sprudel/src/commonTest/kotlin/lang/**` (specs + the `dslInterfaceTests` harness).
+- Working memory: `sprudel_dsl_test_coverage.md`.
+
+## History
+
+- 2026-10-20: numbered KLANG-00127 (was `docs/tasks/sprudel-test-coverage-and-review.md`).

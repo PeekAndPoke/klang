@@ -8,9 +8,9 @@ package io.peekandpoke.klang.audio_bridge
 import kotlin.math.sqrt
 
 // `bands`: a signal split into frequency bands, each band processed on its own, the bands summed again
-// (`docs/plans/future/signal-graph-engine.md` §6.9, `docs/tasks-archive/2026-10/20261010-parallel-serial-bands.md` step 4). Built on
+// (KLANG-00216 (signal graph engine) §6.9, KLANG-00297 (parallel serial bands) step 4). Built on
 // `parallel`, on both hosts, from the EQ's existing sections: no DSP of its own. ONE set of builders for both doors
-// (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`, rollout S6): the typed members live here, the KlangScript door
+// (KLANG-00314 (kotlin typed doors), rollout S6): the typed members live here, the KlangScript door
 // (`klangscript-libs`, `BandsBuilders.kt` there) adds `internal`, renamed variants (`scriptBand`, `scriptCut`) that
 // carry the user-facing text; its `band` variant wraps the processor in the script's stage check before handing it to
 // [IgnitorBandsBuilder.band], so the split here only invokes what it was given.

@@ -207,7 +207,7 @@ class SprudelDocsSpec : StringSpec({
     }
 
     "accelerate is a field accessor: the object first, its call form (the setter) second" {
-        // Since 2026-09-07 the bare name is an accessor object (docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md):
+        // Since 2026-09-07 the bare name is an accessor object (KLANG-00184 (sprudel field accessors)):
         // the symbol's top-level variants are the object, a property, and the setter, its call form.
         val doc = KlangDocsRegistry.global.get("accelerate")!!
         val prop = doc.variants.filterIsInstance<KlangProperty>().single()

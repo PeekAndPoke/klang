@@ -29,7 +29,7 @@ import io.peekandpoke.klang.audio_bridge.uniqueId
  * reused or handed to more than one consumer** (use [clone]). The leaf emitters (`AtomicPattern`,
  * `AtomicInfinitePattern`) clone on emission so every queried event owns its
  * data; mutate freely from there. There is intentionally no shared `empty` singleton — construct a
- * fresh one with `SprudelVoiceData()`. See `docs/tasks/mutable-voicedata-optimization.md`.
+ * fresh one with `SprudelVoiceData()`. See KLANG-00102 (mutable voicedata optimization).
  */
 data class SprudelVoiceData(
     // note, scale, freq

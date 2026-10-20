@@ -173,7 +173,7 @@ class KatalystFilterSwapSpec : StringSpec({
 
     "the fade lands on sample 2205 at 44.1 kHz and 2400 at 48 kHz: 50 ms, counted in samples, not the knob glide's blocks" {
         // Katalyst 5c-11 gave the bank swap its own constant (20 ms then); the maintainer chose 50 ms by ear on
-        // 2026-10-17 (`docs/tasks-archive/2026-10/20261017-knob-glide-listening.md`, item 1: "to be on the safe side we take the 50ms").
+        // 2026-10-17 (KLANG-00316 (knob glide listening), item 1: "to be on the safe side we take the 50ms").
         // The LANDING SAMPLE is written out as a literal on purpose: a row that recomputed its expectation from the
         // constant it guards would stay green for any value, and 50 ms is a decision, not an implementation detail.
         // The two constants now share a value and stay two concepts: the swap counts samples (2205 at 44.1 kHz), the

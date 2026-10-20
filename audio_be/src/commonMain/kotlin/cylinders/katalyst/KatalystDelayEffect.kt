@@ -55,7 +55,7 @@ import kotlin.math.min
  *  - **The cost, accepted with the decision:** on an owner change the NEW owner's mix feeds the OLD
  *    owner's ring for the fade's span (50 ms, one block for a modulated wet) at a falling level. A
  *    bleed across owners, chosen over the edge a cut wrote into the ring
- *    (`docs/tasks-archive/2026-10/20261016-delay-reverb-owner-change-cut.md`).
+ *    (KLANG-00313 (delay reverb owner change cut)).
  *  - **Coming back** out of [Draining] the wet glides up from 0, where the fade left it; a return while the
  *    fade still runs turns the glide around where it stands. Out of [Off] it snaps, except on a modulated
  *    time ([timeModulated]), whose wet glides up from 0 ([KnobGlide.startFrom]) there too, the first

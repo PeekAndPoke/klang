@@ -116,4 +116,4 @@ Four things worth knowing:
   (`(-1).mod(12)` is 11). `rem` is the method form of `%`; both throw on a zero divisor.
 - `7.semitones()` is the frequency ratio 1.4983, and `"P5".toRatio()` says the same thing by name.
 
-Background and the full design: `docs/tasks-archive/2026-09/20260908-klangscript-number-methods.md`.
+Background and the full design: KLANG-00193 (klangscript number methods).
