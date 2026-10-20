@@ -90,12 +90,12 @@ let powerClassA = x => x
 
 let cab4x12 = x => x
   .eq(e => e
-    .band(freq =  120, q = 0.7, db =  3.2)         // thump: closed-back box resonance
-    .band(freq =  380, q = 0.6, db =  8.0)         // roar:  low mids
-    .band(freq = 2700, q = 1.6, db =  5.0)         // bark:  the upper-mid speaker peak
+    .band(freq =  120, q = 0.7, db =  1.5)         // thump: closed-back box resonance
+    .band(freq =  380, q = 0.5, db =  3.5)         // roar:  low mids
+    .band(freq = 2700, q = 1.6, db =  4.2)         // bark:  the upper-mid speaker peak
   )
-  .lowpass(5000, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
-  .highpass(105)
+  .lowpass(5200, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
+  .highpass(105, 0.707, x => x.passes(2))
 
 let cab1x12 = x => x
   .highpass(120, 0.707, x => x.passes(2))
@@ -386,7 +386,7 @@ export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
   .ignp("sub", 1.00).ignp("harmonics", 0.95)
   .adsr(0.003, 0.3, 0.5, 0.040).hpf(30).notch(freq = snareHz, q = 1.0)
   .clip(0.90)
-  .gain(1.70).pan(0.5)
+  .gain(1.50).pan(0.5)
   .orbit(15)
 
 // Parts  -----------------------------------------------------------------------------------------------------------
