@@ -113,11 +113,12 @@ def resolve_file(path):
 
 
 def stack_worktree(repo, name):
-    """klang: <main checkout>/.claude/worktrees/stack-<name>, where every klang worktree lives (git-ignored, skipped
-    by test-digest and docs-lint), whichever worktree the tool is started from. The draft put it next to the repo
-    (among the other peekandpoke repos), or inside .claude/worktrees/ only when started from a worktree."""
+    """klang: <main checkout>-worktrees/stack-<name>, the sibling directory where every klang worktree lives
+    (/project-layout, "Worktrees"; inside the repo a worktree puts a second copy of every class into the IDE's
+    index), whichever worktree the tool is started from."""
     common = git("rev-parse", "--path-format=absolute", "--git-common-dir", cwd=repo).stdout.strip()
-    return os.path.join(os.path.dirname(common), ".claude", "worktrees", f"stack-{name}")
+    main = os.path.dirname(common)
+    return os.path.join(os.path.dirname(main), f"{os.path.basename(main)}-worktrees", f"stack-{name}")
 
 
 def base_checkout(repo, base):

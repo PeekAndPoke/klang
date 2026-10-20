@@ -23,35 +23,32 @@ for a red is, which conflict is real.
   verdict by hand once.
 - Standard-library Python or shell only. No dependencies. Run them with `python3`.
 
-## klang: the lock, worktrees, long runs
+## klang: the lock, long runs
 
 Gradle is a single-writer resource (`/agent-fleet`): every tool call that runs Gradle goes through
 `console/with-build-lock.sh`, ONCE, around the whole call.
 
 ```bash
-# one form everywhere, main checkout and worktrees alike; $LOCK below means this prefix, written out in the same
-# command (shell state does not carry over between calls)
-LOCK="env KLANG_LOCK_FILE=/opt/dev/peekandpoke/klang/.claude/build.lock KLANG_LOCK_TIMEOUT=7200 console/with-build-lock.sh"
+# one form everywhere; $LOCK below means this prefix, written out in the same command (shell state does not carry
+# over between calls)
+LOCK="env KLANG_LOCK_TIMEOUT=7200 console/with-build-lock.sh"
 ```
 
-- Why the env: the script's default lock file is `<its own checkout>/.claude/build.lock`, so started
-  in a worktree it locks that worktree's private file and serializes against nobody. The root fix
-  (the script defaulting to the main checkout's lock through git's common dir) is proposed to the
-  maintainer; until then, the prefix. Waiting for the lock is normal; others hold it for long stretches.
+- The script finds the main checkout's lock through git's common dir (since 2026-10-19), so the same
+  prefix works in the main checkout and in a worktree (`/project-layout`: work runs on the main checkout;
+  a measurement worktree in `klang-worktrees/` shares the lock). Waiting for the lock is normal; others
+  hold it for long stretches.
 - A locked call can outlast the Bash tool's 10-minute foreground limit: run it in the background and
   wait for the notification. The harness may kill a background chain under memory pressure; for
   mutate, that is what `mutate.py restore` is for.
-- Your shell may start in the main checkout or in your worktree, depending on how you were started:
-  never rely on it. Pass `--root <tree>` (or `cd` in the same command); the klang copies run the test
-  command in the root they scan.
-- **Kotlin/JS browser runs can cross between projects** (2026-10-19, machine-wide): a spross run's
-  results held two klang suites from inside its own run, most likely because both projects' Karma
-  servers took the same port and one project's ChromeHeadless connected to the other's server. So a JS
-  run can pass on another project's tests. Wherever test-digest reads JS results, pass
-  `--own-package io.peekandpoke.klang`: a fresh suite outside it then fails the digest (exit 2; the
-  `Kotest` executor suite has no package and is not judged). A JS run with missing or extra suites may
-  be this cross-over. The fix (fixed Karma ports per project, or a machine-wide browser-test lock) is
-  with the maintainer; no build change until then.
+- Never rely on the shell's directory: pass `--root <tree>` (or `cd` in the same command); the klang
+  copies run the test command in the root they scan.
+- **Kotlin/JS browser runs could cross between projects and modules** (2026-10-19): both projects'
+  Karma servers took the same port and one ChromeHeadless reported into the other's run. Fixed the same
+  day with a fixed Karma port per module (`<module>/karma.config.d/karma-port.js`, klang 10031 to 10046).
+  Keep passing `--own-package io.peekandpoke.klang` wherever test-digest reads JS results, as a safety
+  net: a fresh suite outside it fails the digest (exit 2; the `Kotest` executor suite has no package and
+  is not judged).
 - docs-lint never builds and needs no lock. review-pack does not build either, but it snapshots the
   working tree: where anyone may run a mutation in that tree, take the snapshot inside a lock call
   (`/review-loop`, "Snapshot the working tree only inside a lock call").
@@ -212,18 +209,17 @@ python3 console/tools/review-pack/review_pack.py --worktree <tree> list | clean
 # 1. stack, no tests yet (the stack worktree needs the sample cache first, see below)
 python3 console/tools/stack-merge/stack_merge.py --branches wt/a,wt/b --name <name>
 # 2. give the stack the main checkout's sample cache
-ln -s /opt/dev/peekandpoke/klang/cache /opt/dev/peekandpoke/klang/.claude/worktrees/stack-<name>/cache
+ln -s /opt/dev/peekandpoke/klang/cache /opt/dev/peekandpoke/klang-worktrees/stack-<name>/cache
 # 3. the full check in the stack worktree, read by test-digest (full-check.sh takes the lock per step itself)
 python3 console/tools/test-digest/test_digest.py run --root <stack worktree> --own-package io.peekandpoke.klang \
-    --expect FooSpec,BarSpec -- env KLANG_LOCK_FILE=/opt/dev/peekandpoke/klang/.claude/build.lock \
-    KLANG_LOCK_TIMEOUT=7200 console/full-check.sh
+    --expect FooSpec,BarSpec -- env KLANG_LOCK_TIMEOUT=7200 console/full-check.sh
 ```
 
 `--test "<command>"` (with `--own-package`, `--expect`) stacks and tests in one call, for a test command
 that needs nothing added to the fresh worktree; klang's full check needs the cache, hence the three steps.
 
-- The result is a new `stack/<name>` branch in its own worktree, `.claude/worktrees/stack-<name>` of the
-  main checkout. It cherry-picks each branch's commits in the given order; the branches, main and every
+- The result is a new `stack/<name>` branch in its own worktree, `/opt/dev/peekandpoke/klang-worktrees/stack-<name>`
+  (the sibling directory, `/project-layout`). It cherry-picks each branch's commits in the given order; the branches, main and every
   other worktree stay as they were. It never fast-forwards main and never pushes: the report prints
   the `merge --ff-only` command, and landing is the coordinator's call.
 - It only takes COMMITS: a branch's uncommitted work stays behind. Check each source worktree's
@@ -248,8 +244,8 @@ that needs nothing added to the fresh worktree; klang's full check needs the cac
 - The land line runs where the base branch is checked out (the main checkout), and fails if main moved;
   when main is checked out nowhere it is an `update-ref` guarded by main's sha.
 - The test step: `console/full-check.sh` takes the lock per step itself, so it is NOT wrapped in another
-  lock call (a nested call waits for itself); the `KLANG_LOCK_FILE` prefix makes those steps take the
-  main lock. Its Gradle output goes to `build/full-check/<stamp>/` in the stack worktree, not to the
+  lock call (a nested call waits for itself); from the stack worktree its steps take the main
+  checkout's lock by themselves. Its Gradle output goes to `build/full-check/<stamp>/` in the stack worktree, not to the
   console, so test-digest counts from the XML and the failing case names are in that folder's
   `tests.log`. A red corpus or allocation step with green tests reads as exit 4.
 - A fresh stack worktree has none of klang's git-ignored inputs. Most are built on the fly (the Strudel
@@ -303,7 +299,8 @@ dash scan, stack-merge's exit code by exception type, test-digest's foreign-suit
   klang's own: task-place and stale-path (a `...` placeholder is not a path).
 - **review-pack**: the draft as it is.
 - **stack-merge**, on top of the draft: (1) the stack worktree goes to
-  `<main checkout>/.claude/worktrees/stack-<name>` (klang only). (2) A shared line in a pure insertion
+  `<main checkout>-worktrees/stack-<name>`, the sibling directory (klang only; it was
+  `.claude/worktrees/` until 2026-10-20). (2) A shared line in a pure insertion
   stops, except `import` lines (kept once): diff3 conflicts show whole blocks without git's trimming of
   common lines, so a branch built on an earlier one put a second `register(A)` on the stack, exit 0. (3)
   A commit already on the stack by patch is skipped (`rev-list --cherry-pick`). (4) A branch with a merge
@@ -314,11 +311,10 @@ dash scan, stack-merge's exit code by exception type, test-digest's foreign-suit
   conflicted file (rename/rename) is a refusal, not a crash. (8) `--own-package` passed to test-digest;
   a test run with nothing fresh is not green. (2) to (8) are generic. Every one has a before/after repro
   on synthetic repos; not yet run against klang itself.
-- The lock: started in a worktree, `console/with-build-lock.sh` locks that worktree's own file, so every
-  call carries `KLANG_LOCK_FILE` (the one `$LOCK` form above).
-- **ticket**: the blueprint's copy at 3e3d53c (2026-10-20), with one fix in `resolver`: several former
-  locations of one file are one ticket, not an ambiguity (see Proposed upstream). klang migrated in bulk the
-  same day: KLANG-00001 to KLANG-00320 numbered by date; 408 former locations added to the record from the
+- The lock: `console/with-build-lock.sh` finds the main checkout's lock from any worktree (since
+  2026-10-19), so no call needs `KLANG_LOCK_FILE` any more.
+- **ticket**: the blueprint's copy at 7dc3d1c (2026-10-20), unchanged (it carries the two fixes klang's
+  migration found). klang migrated in bulk the same day, with the earlier copy: KLANG-00001 to KLANG-00320 numbered by date; 408 former locations added to the record from the
   old paths' history (the tool read the new paths, which have none before the commit); 1,748 references
   swept in two passes, 2 by hand (the shipped `src/jsMain/resources` pages, the blog, the diary, the
   ledgers, the build-lock log, the memory histories, the benchmark results and the funding evidence
@@ -333,11 +329,6 @@ dash scan, stack-merge's exit code by exception type, test-digest's foreign-suit
 <!-- Findings this repo sent back to Mission Control, not merged into the blueprint yet:
      - yyyy-mm-dd: <what, one line> (<where it happened>)
      Remove an item when an update arrives that contains it. -->
-- 2026-10-20: ticket `migrate`: `write_record` asks git for the former locations of the NEW path, which has
-  no history before the migration's commit, so a bulk migration records none; ask for the old path's
-  (klang: 408 rows added afterwards, which resolved 146 more references).
-- 2026-10-20: ticket `resolver`: two former locations of one file read as ambiguous; resolve when every
-  candidate is the same ticket (klang: 24 references were left before the fix, 0 after).
 
 ## Changes
 

@@ -381,6 +381,8 @@ def text_files(root):
         full = os.path.join(root, rel)
         if not rel or not os.path.isfile(full) or os.path.getsize(full) > 2_000_000:
             continue
+        if rel.endswith(".log"):
+            continue  # dated logs keep their words
         try:
             with open(full, encoding="utf-8") as f:
                 yield rel, f.read()
@@ -584,7 +586,8 @@ def write_record(root, rows):
         if old not in known:
             lines.append(f"| {tid} | {date} | `{old}` | `{new}` |")
             known.add(old)
-        for former in former_paths(root, new if os.path.exists(os.path.join(root, new)) else old):
+        # history lives under the OLD path: a bulk migration's new paths have none until it is committed
+        for former in former_paths(root, old) or former_paths(root, new):
             if former not in known and former not in current:
                 lines.append(f"| {tid} | {date} | `{former}` | `{new}` |")
                 known.add(former)
@@ -635,8 +638,8 @@ def resolver(old):
                 break
         if not hit:
             hits = by_suffix.get(re.sub(r"^(\.{1,2}/)+", "", target), set())
-            # several former locations of one file are one ticket, not an ambiguity (klang, 2026-10-20)
-            hit = next(iter(hits)) if len({old[h][0] for h in hits}) == 1 else None
+            # several candidates are fine when they all are one ticket (a file and its former locations)
+            hit = sorted(hits)[0] if hits and len({old[h][0] for h in hits}) == 1 else None
         if not hit:
             return None
         tid, new = old[hit]

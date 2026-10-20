@@ -300,6 +300,21 @@ class AdoptAndFixes(Repo):
         self.assertEqual(rows["docs/tasks-archive/2026-08/20260802-foo-array.md"], "UL-00001")
         self.assertEqual(rows["docs/tasks-archive/2026-08/20260802-foo-array-support.md"], "UL-00002")
 
+    def test_bulk_migration_records_former_locations(self):
+        # 04e-weather.md moved from docs/tasks/ to in-progress/ in history; a bulk migrate must know both
+        write(self.root, "docs/research/old.md", "See docs/tasks/04e-weather.md and 04e-weather.md.\n")
+        commit(self.root, "ref", "2026-10-19T12:00:00")
+        rc, out = run(self.root, "migrate", "UL", "--apply")
+        self.assertEqual(rc, 0, out)
+        rows = ticket.read_migrations(self.root)
+        tid = rows["docs/tasks/in-progress/04e-weather.md"]
+        self.assertEqual(rows.get("docs/tasks/04e-weather.md"), tid)  # the former location is a row
+        rc, out = run(self.root, "sweep", "--apply")
+        self.assertEqual(rc, 0, out)
+        # both the old full path and the bare name resolve: every candidate is the same ticket
+        self.assertEqual(read(self.root, "docs/research/old.md"),
+                         f"See {tid} (04e weather) and {tid} (04e weather).\n")
+
     def test_root_after_the_subcommand(self):
         out = io.StringIO()
         with redirect_stdout(out):
