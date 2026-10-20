@@ -261,7 +261,7 @@ export melodyOne = `<[4@4 3 2 1 2] [1@4 ~ 0 1 2] [4@3 5 4@2 2 0] [1@6 ~@2]>`
 export melodyTwo = `<[7@4 6 4 3 4] [8@4 ~ 7 8 9] [9@3 8 7@2 2 4] [4@6 ~@2]>`
 
 // Out of the cocoon flies the Schmetterling's own lead.
-export schmetterlingLead = `<[-7 0 2 4] [-7 0 4 2] [-5 -1 2 4] [-6 -1 4 3]>`
+export schmetterlingLead = `<[-7 0 2 4] [-7 0 4 [2 0]] [-5 -1 2 [4 4|-1]] [-6 -1 4 3]>`
 
 // Lines  -----------------------------------------------------------------------------------------------------------
 // One guitarist, one way of playing. Each line sets its own level; a part may set another.
@@ -299,7 +299,7 @@ export soar = notes => n(notes.add(14))
 
 // Swell: volume-knob swells, the thing inside stretching. Doubled on the left, a little late.
 export swell = chords => n(chords.add(7))
-  .sound(bright).adsrOff().unison(voices = 15, spread = 0.06)
+  .sound(bright).adsrOff().unison(voices = 5, spread = 0.06)
   .ignp("attack", 1.3).ignp("decay", 1.8).clip(1)
   .lpf(3500)
   .gain(0.07).pan(0.05).superimpose(x => x.pan(0.95).late(0.015)) // far left and far right, the right a little late
@@ -386,7 +386,7 @@ export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
   .ignp("sub", 1.00).ignp("harmonics", 1.00)
   .adsr(0.003, 0.3, 0.5, 0.040).hpf(30).notch(freq = snareHz, q = 1.0)
   .clip(0.90)
-  .gain(1.35).pan(0.5)
+  .gain(1.30).pan(0.5)
   .orbit(15)
 
 // Parts  -----------------------------------------------------------------------------------------------------------
@@ -463,8 +463,8 @@ let lifting = stack(
 // It lands on one heavy chord with the low D under it, and the melody holds its A.
 let landing = stack(
   spin("[0 4 7 9 11 9 7 4]".add(7)).gain(0.40).ignp("sustain", 0.15).clip(0.66),
-  soar("[4@6 ~@2]")
-    .tremolo(rate = beatRate(0.25), depth = 0.35)
+  soar("[4@6 ~@2]").gain(0.50)
+    .tremolo(rate = beatRate(0.25), depth = 0.25)
     .vibrato(rate = beatRate(0.25), semitones = 0.30),
   strike("[-7,0,4]").accelerate("0.05".add(perlin(-0.20, 0.20))).ignp("release", 3.5),
   beat("0").gain(0.45),
@@ -535,7 +535,7 @@ export song = stack(
   
   , master(Katalyst(k => k
     .reverb(0.20, 7, 7500)                         // the hall: one room for the whole band, about 2 s, warm
-    .gain(1.20)                                    // the house level, -14 LUFS
+    .gain(1.10)                                    // the house level, -14 LUFS
     .bands(b => b.cut(150)
       .band(mid => mid.distort(0.10, "soft", 4).mul(0.80)).cut(5000)
     ) // the glue on the mids only: the kick and the hats stay clean

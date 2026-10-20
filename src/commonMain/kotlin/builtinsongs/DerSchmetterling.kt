@@ -21,7 +21,7 @@ import * from "sprudel"
 
 // Song Status: Upcoming Garage Band ...
 
-let feel          =   25    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
+let feel          =   15    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
 let transposition =   -3    // -1 .. D# | 0 .. E | 1 .. F
 let drunk         =    2    // How many beers did each band member have?
 let snareHz       =  210    // Where does the snare cut through?
@@ -123,12 +123,12 @@ let cabStock = x => x.lowpass(5000).lowpass(5000)
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = x => x
   .eq(e => e
-    .band(freq =  120, q = 0.7, db =  1.8)         // thump: closed-back box resonance
-    .band(freq =  380, q = 0.5, db =  3.7)         // roar:  low mids
+    .band(freq =  120, q = 0.7, db =  1.5)         // thump: closed-back box resonance
+    .band(freq =  380, q = 0.5, db =  3.5)         // roar:  low mids
     .band(freq = 2700, q = 1.8, db =  4.2)         // bark:  the upper-mid speaker peak
   )
   .lowpass(5200, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
-  .highpass(105, 0.707, x => x.passes(2))
+  .highpass(110, 0.707, x => x.passes(2))
 
 // 1x12 open back: the open back cancels the bass, the top chimes and rolls off late and soft.
 let cab1x12 = x => x
@@ -222,9 +222,9 @@ let bass = (() => {
   // and it lives at 36–70 Hz where nothing else in the mix is.
   let sub = Ign.sine(x => x.analog(pAnalog)).mul(pSub)
 
-  // Harmonics: sine partials at 2f .. 8f, gain 1/n, the fundamental left to the sub above. On the
+  // Harmonics: sine partials at 2f .. 6f, gain 1/n, the fundamental left to the sub above. On the
   // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
-  let harmonics = Ign.sine(x => x.harmonics(8, 0.95).fundamental(0).analog(pAnalog).analogSpread(0.1)).mul(pHarm)
+  let harmonics = Ign.sine(x => x.harmonics(6, 0.95).fundamental(0).analog(pAnalog).analogSpread(0.1)).mul(pHarm)
 
   return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -3)) // let the snare cut through
@@ -248,7 +248,7 @@ export lead_pat =
 let marimba = (() => {
   let pAnalog = Ign.slot.analog
   let ring = Ign.constant(400).div(Ign.freq())                                                            // seconds: 1.2 s on e4, 0.6 s on e5
-  let f1  = Ign.sine(x => x.analog(pAnalog)).adsr(0.001, ring, 0.0, 0.5)
+  let f1  = Ign.sine(x => x.analog(pAnalog)).adsr(0.001, ring, 0.0, 0.30)
   let f4  = Ign.sine(Ign.freq().mul(4.05), x => x.analog(pAnalog)).adsr(0.001, 0.12, 0.0, 0.10).mul(0.35)
   let f10 = Ign.sine(Ign.freq().mul(10.075), x => x.analog(pAnalog)).adsr(0.001, 0.05, 0.0, 0.05).mul(0.25)
   let f12 = Ign.sine(Ign.freq().mul(12.025), x => x.analog(pAnalog)).adsr(0.001, 0.05, 0.0, 0.05).mul(0.05)
@@ -308,7 +308,7 @@ export guitar2_shape = x => x.pregain(guitarDyna(2).fast(2)).sound(guitar).adsrO
   .body(material = "maple", wet = 0.15) 
 
 export guitar2_arrange = x => x.orbit(2)  // . solo()
-  .scale("<e2:minor>").gain(0.095).mute("<0!128 1!16 0!16>") // .mute()
+  .scale("<e2:minor>").gain(0.0950).mute("<0!128 1!16 0!16>") // .mute()
   .late(berlin(0.0002, 0.0006).mul(drunk).seg(4))
 
 export guitar2 = n(guitar2_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(guitar2_shape).tag("guitar2")
@@ -326,7 +326,7 @@ export guitar3_shape = x => x.pregain(guitarDyna(2).fast(2)).sound(guitar).adsrO
   .body(material = "mahogany", wet = 0.15) 
 
 export guitar3_arrange = x => x.orbit(3) //  . solo()
-  .scale("<e2:minor>").gain(0.095).mute("<0!128 1!16 0!16>") //.mute()
+  .scale("<e2:minor>").gain(0.0925).mute("<0!128 1!16 0!16>") //.mute()
   .late(berlin(0.0000, 0.0004).mul(drunk).seg(4))
 
 export guitar3 = n(guitar3_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(guitar3_shape).tag("guitar3")
@@ -338,9 +338,9 @@ export bass_pat =
     [0 0 2 4 0 0 -2 -1]!2 
     [0 0 -1 3  7 0 -2 -1] [0 0 3 [0 -2]  0 0 [0 4 7 9] 6]>/8`
 
-export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.40) // . mute()
+export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.35) // . mute()
     .ignp("sub", 1.05).ignp("harmonics", 1.00).clip("0.95".sub(perlin(0.0, 0.05).slow(8)))  // . solo()
-    .adsr(0.003, 0.3, 0.40, 0.025).hpf(35)
+    .adsr(0.003, 0.5, 0.40, 0.025).hpf(35)
 
 export bass_arrange = x => x.orbit(4) // . mute()
   .scale("e1:minor").notch(freq = snareHz, q = 1.0).mute("<0!128 1!32>")
@@ -471,7 +471,7 @@ let metalSnare = (() => {
 
 // Drums  -----------------------------------------------------------------------------------------------------------------------------------------------------
 export kick_pat = `<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd  ~ bd  ~]!32 [bd!4]!16 [bd ~ bd [~ bd]]!15 [bd!16]!1>`
-export kick_shape = x => x.sound(metalKick).adsrOff().note("b1").gain(0.23).velocity("0.98 0.94 0.96 0.94").pan(0.5)
+export kick_shape = x => x.sound(metalKick).adsrOff().note("b1").gain(0.22).velocity("0.98 0.94 0.96 0.94").pan(0.5)
 export kick_arrange = x => x.orbit(6).mute("<0!128 1!32>").late(berlin(0.0000, 0.0005).mul(drunk).seg(4)) // .mute()
 export kick = sound(kick_pat).apply(kick_shape).tag("kick")  // . solo()
 
@@ -538,9 +538,9 @@ export song = stack(
     // because the snare's crack overshoots between the samples: true peak -1.2 dBFS, and the house limiter stays idle.
   master(Katalyst(k => k
     .reverb(0.10, 7, 7500)
-    .gain(4.5)
+    .gain(5.0)
     .bands(b => b.cut(150)
-      .band(mid => mid.distort(0.10, "soft", 4).mul(0.90)).cut(5000)
+      .band(mid => mid.distort(0.25, "soft", 4).mul(0.70)).cut(5000)
     ) // the glue on the mids only: the kick and the hats stay clean
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)
   ))
