@@ -1,15 +1,9 @@
-"""Klang's own docs rules, picked up by docs_lint.py (see .claude/skills/console-tools/SKILL.md).
+"""Klang's own docs rule, picked up by docs_lint.py (see .claude/skills/console-tools/SKILL.md).
 
-Two rules, both from docs/tasks/in-progress/README.md ("what lives where", "a moved file takes every link
-to it along"):
+Whether a task file sits in the folder its status names is `console/tools/ticket/ticket.py check`'s job since the
+ticket numbers (2026-10-20); this file's task-place rule went with them. One rule is left:
 
-1. task-place: a task file under docs/tasks/ whose status line opens with a state that belongs elsewhere.
-   "Status: DONE" (or closed, complete, finished, won't implement) belongs in docs/tasks-archive/<month>/;
-   "Status: IN PROGRESS" (or active) belongs in docs/tasks/in-progress/; a file in in-progress/ whose
-   status opens with "not started" belongs back in docs/tasks/. Only the opening word or two of the
-   status value count, so "Next after the voice lifecycle (..., done)" is not read as done.
-
-2. stale-path: a path to a task or plan written as text, not as a link, that does not resolve:
+stale-path: a path to a task or plan written as text, not as a link, that does not resolve:
    `docs/tasks/foo.md`, `../tasks-archive/2026-09/2026...md`, `docs/plans/bar.md`. The generic check
    reads only Markdown link targets and skips inline code, where most of these mentions live. It
    reads the linted .md files and, on a whole-repo run (docs_lint.py with no paths, or with `.`), the
@@ -22,16 +16,8 @@ to it along"):
 """
 import os
 import re
+import subprocess
 import sys
-
-TASKS = "docs/tasks/"
-IN_PROGRESS = "docs/tasks/in-progress/"
-INDEX_FILES = {"README.md", "NEXT-STEPS.md"}  # and every _name.md (index and register files)
-
-STATUS_LINE = re.compile(r"^[>\s*-]*\**status\b[^:]*:\**\s*(.*)$", re.I)
-DONE = re.compile(r"^(done|closed|complete|completed|finished|won'?t[ -]implement)\b", re.I)
-ACTIVE = re.compile(r"^(in[ -]progress|active)\b", re.I)
-NOT_STARTED = re.compile(r"^not[ -]started\b", re.I)
 
 PATH_MENTION = re.compile(
     r"(?<![\w/.-])((?:\.\./)*(?:\./)?(?:docs/)?(?:tasks|tasks-archive|plans)/[\w./-]*?\.md)\b")
@@ -45,30 +31,6 @@ HISTORY = re.compile(r"(^|/)(docs/tasks-archive|docs/history|\.claude/agent-memo
 CODE_EXT = (".kt", ".kts")
 WAS_RECORD = re.compile(r"\(was `[^`]+`\)")
 SKIP_DIRS = {".git", "node_modules", "build", ".gradle", ".idea", ".kotlin", "kotlin-js-store"}
-
-
-def status_value(lines):
-    """(line number, the text after 'Status:') of the first status line in the file's head, no bold marks."""
-    for n, line in enumerate(lines[:60], 1):
-        m = STATUS_LINE.match(line)
-        if m:
-            return n, re.sub(r"[*_`]", "", m.group(1)).strip(" .:")
-    return None, None
-
-
-def task_place(root, path, rel, lines):
-    name = os.path.basename(rel)
-    if not rel.startswith(TASKS) or name in INDEX_FILES or name.startswith("_"):
-        return
-    n, value = status_value(lines)
-    if value is None:
-        return
-    if DONE.match(value):
-        yield path, n, f"task-place: status '{value[:40]}' but the file is not in docs/tasks-archive/<month>/"
-    elif ACTIVE.match(value) and not rel.startswith(IN_PROGRESS):
-        yield path, n, f"task-place: status '{value[:40]}' but the file is not in {IN_PROGRESS}"
-    elif NOT_STARTED.match(value) and rel.startswith(IN_PROGRESS):
-        yield path, n, f"task-place: status '{value[:40]}' but the file is in {IN_PROGRESS}"
 
 
 def resolves(root, path, mention):
@@ -97,6 +59,13 @@ def stale_paths(root, path, lines, markdown):
 
 
 def code_files(root):
+    """Every *.kt and *.kts file git does not ignore (the scratch copies in tmp/ once read as 1,500 stale paths);
+    outside a git work tree, a walk."""
+    r = subprocess.run(["git", "ls-files", "-co", "--exclude-standard", "-z"], cwd=root, capture_output=True, text=True)
+    if r.returncode == 0:
+        yield from (os.path.join(root, f) for f in r.stdout.split("\0")
+                    if f.endswith(CODE_EXT) and os.path.isfile(os.path.join(root, f)))
+        return
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS and not d.startswith(".")
                        and not os.path.exists(os.path.join(dirpath, d, ".git"))]
@@ -125,7 +94,6 @@ def checks(root, files):
     for path in files:
         rel = os.path.relpath(path, root).replace(os.sep, "/")
         lines = read_lines(path)
-        yield from task_place(root, path, rel, lines)
         if not HISTORY.search(rel):
             yield from stale_paths(root, path, lines, markdown=True)
     if whole_repo_run(root):

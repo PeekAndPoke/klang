@@ -12,7 +12,7 @@ verdict on the start points (pairs 80 to 83, 2026-10-02): all four accepted. "Wh
 it starts at low volume"; the pluck's lower onset is expected; the square pluck shows no real difference. A `phase`
 knob on the oscillators is queued separately (KLANG-00272 (oscillator phase knob)).
 Decided 2026-09-29 by the maintainer after listening. V1 by the sorting rule
-([`_v1-scope.md`](_v1-scope.md)): it changes the surface a tutorial teaches (two knobs go) and how three shapes
+([`_v1-scope.md`](../../tasks/_v1-scope.md)): it changes the surface a tutorial teaches (two knobs go) and how three shapes
 sound (their clicks go).
 
 ## Why (the maintainer, 2026-09-29)
@@ -115,7 +115,7 @@ the voice is BUILT (`IgnitorBuildCache.sampleRate`). So:
 
 ## Links
 
-- The listening verdicts: [`by-ear/README.md`](by-ear/README.md), owed round 1.
+- The listening verdicts: [`by-ear/README.md`](../../tasks/by-ear/README.md), owed round 1.
 - The oscillator edge knobs: `klangscript-libs/src/commonMain/kotlin/stdlib/IgnitorBuilders.kt` (`OscSquareBuilder.flankSamples`,
   `OscSawBuilder.resetSamples`, `OscRampBuilder.resetSamples`), `audio_bridge/.../constants/OscillatorTuning.kt`.
 - A start-phase knob on the oscillators was considered and not added (no use today); add it to the oscillators,

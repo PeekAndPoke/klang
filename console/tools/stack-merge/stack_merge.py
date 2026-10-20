@@ -190,6 +190,12 @@ def stack(repo, base, branches, name, out, progress):
                     if warn:
                         out(f"             ! {warn}")
                 git("add", rel, cwd=wt)
+            if git("diff", "--cached", "--quiet", cwd=wt, check=False).returncode == 0:
+                # the resolution kept only what the stack holds (an import kept once): the commit is empty
+                git("cherry-pick", "--skip", cwd=wt)
+                out(f"   empty     {subject} (after the resolution, its change is already on the stack)")
+                progress["done"].append(progress["todo"].pop(0))
+                continue
             git("-c", "core.editor=true", "cherry-pick", "--continue", cwd=wt)
             out(f"   merged    {subject}")
             progress["done"].append(progress["todo"].pop(0))

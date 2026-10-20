@@ -14,7 +14,7 @@
 >
 > **Archived 2026-09-28 with the phase 3 record** (KLANG-00237 (builtin instruments), beside this file): the plan is
 > finished. Decision (g) now lives in
-> [`../../tasks/by-ear/chain-swap-request-during-drain.md`](../../tasks/by-ear/chain-swap-request-during-drain.md), the
+> KLANG-00318 (chain swap request during drain), the
 > chain-host follow-up and the `cylinders/katalyst/` package name in KLANG-00243 (one chain host); risk R0 was CLOSED
 > the same day (the clip extracted as `pcm16`/`interleavePcm16` and tested for real; see the R0 entry below). The risks R1 to R9 below are the plan's record: R1 was answered by C3's identity render, R4 and R5
 > are pinned (`MasterBusAdoptionSpec`, the `MasterBus` KDoc), R6 is decision (g), R8 is a release note, R2, R3, R7

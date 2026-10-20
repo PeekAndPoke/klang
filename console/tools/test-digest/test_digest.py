@@ -451,6 +451,17 @@ def main(argv=None):
             p.error("run needs a command after --")
         log_path = log_path or tempfile.mkstemp(prefix="test-digest-", suffix=".log")[1]
         since = datetime.now(timezone.utc)
+        import signal
+
+        def on_signal(signum, _frame):
+            # the command runs in its own process group, which this signal did not reach: exiting with it
+            # alive would release the build lock while Gradle still runs (as in mutate)
+            stop_running()
+            print("\ntest-digest: interrupted, the test command stopped", file=sys.stderr)
+            sys.exit(130)
+
+        signal.signal(signal.SIGINT, on_signal)
+        signal.signal(signal.SIGTERM, on_signal)
         build_exit, text = run_and_capture(cmd, log_path, quiet=a.quiet or a.json, cwd=root)
     else:
         since = a.since

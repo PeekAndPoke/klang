@@ -33,10 +33,24 @@ INLINE_CODE = re.compile(r"`+[^`]*`+")
 DASHES = {"\u2014": "em dash", "\u2013": "en dash"}  # escaped, so a dash scan of this file finds nothing
 
 
+def listed_files(top):
+    """Every file under `top` that git does not ignore (tracked or not), or None outside a git work tree.
+    klang: git-ignored scratch copies (tmp/) once drowned a whole-repo run in 4,700 findings (2026-10-20)."""
+    r = subprocess.run(["git", "ls-files", "-co", "--exclude-standard", "-z"], cwd=top, capture_output=True, text=True)
+    if r.returncode != 0:
+        return None
+    files = (os.path.abspath(os.path.join(top, f)) for f in r.stdout.split("\0") if f and not f.endswith("/"))
+    return [f for f in files if os.path.isfile(f)]  # a tracked file deleted from disk is listed too
+
+
 def md_files(paths):
     for p in paths:
         if os.path.isfile(p):
             yield os.path.abspath(p)
+            continue
+        listed = listed_files(p)
+        if listed is not None:
+            yield from (f for f in listed if f.lower().endswith(".md"))
             continue
         for dirpath, dirnames, filenames in os.walk(p):
             dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS

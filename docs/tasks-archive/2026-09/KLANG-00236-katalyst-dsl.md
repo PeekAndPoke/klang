@@ -13,7 +13,7 @@
 >   KLANG-00246 (delay ceiling edges).
 > - The `duck.orbit` switch click and the recorded duck handover corners:
 >   KLANG-00247 (duck orbit switch click).
-> - The swap request during a drain: [`../../tasks/by-ear/chain-swap-request-during-drain.md`](../../tasks/by-ear/chain-swap-request-during-drain.md).
+> - The swap request during a drain: KLANG-00318 (chain swap request during drain).
 > - The `Osc` / `oscp` rename noted at §D1: KLANG-00210 (signal flow redesign) section 11, and a V1 row in
 >   [`../../tasks/_v1-scope.md`](../../tasks/_v1-scope.md).
 > - The eq's per-sample ramps (`EqCore` is snap-only at both positions): KLANG-00151 (unified eq).

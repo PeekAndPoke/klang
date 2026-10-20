@@ -166,23 +166,23 @@ python3 console/tools/docs-lint/docs_lint.py docs .claude [--check-anchors]
 python3 console/tools/docs-lint/docs_lint.py --forbid-dashes <new or rewritten .md files>
 ```
 
-- It checks that relative links resolve, outside code. Repo rules go in
-  `console/tools/docs-lint/docs_lint_local.py` as `checks(root, files)`.
-- klang's rules there: **task-place**, a task file whose status line opens with a state that belongs
-  in another folder (`docs/tasks/in-progress/README.md`); **stale-path**, a `docs/tasks/...md`,
-  `tasks-archive/...` or `docs/plans/...` path written as text (often in backticks, which the link
-  check skips) that does not resolve. A whole-repo run (no paths, or `.`) also reads every `*.kt` and
-  `*.kts` file: a moved task file takes every mention along, KDoc included. Dated history
+- It checks that relative links resolve, outside code, in every file git does not ignore (`tmp/` and
+  the build dirs stay out). Repo rules go in `console/tools/docs-lint/docs_lint_local.py` as
+  `checks(root, files)`.
+- klang's rule there: **stale-path**, a `docs/tasks/...md`, `tasks-archive/...` or `docs/plans/...` path
+  written as text (often in backticks, which the link check skips) that does not resolve. A whole-repo
+  run (no paths, or `.`) also reads every `*.kt` and `*.kts` file. Since the ticket numbers a reference
+  names the number, so a hit is an old path left behind. Dated history and published pages
   (`docs/tasks-archive/`, `docs/history/`, files named by a date, `ref/memory-history.md`,
-  `DEV-DIARY.MD`) keeps its words and is skipped by stale-path; the generic link check still reads it.
+  `DEV-DIARY.MD`, the ledgers, `docs/benchmarks/`, `docs/blog/`, `docs/funding/evidence/`,
+  `src/jsMain/resources/`) keep their words and are skipped by stale-path; the generic link check still
+  reads them. Whether a task file sits in the right folder is `ticket check`'s job.
 - **Dashes** (`/code-style` §22): `--forbid-dashes` reports every line with an em or en dash in the
   files given, old lines included. Use it on files you create or rewrite; for edits use
   `review-pack --dash-scan` (added lines only, every file type, KDoc included). A whole-tree dash run
   counts the debt, it is not a to-do list (2026-10-19: about 6,100 lines in 302 files of `docs` and
   `.claude`, 3,300 of them in dated history).
-- Known findings of a whole-repo run on 2026-10-19, so a new one stands out: 15 broken links inside
-  `docs/tasks-archive/` (history, left as they are), 26 stale task paths in code KDoc, 5 in current
-  docs, 2 task-place findings. Exit 1 until those are fixed, so judge the run by its new lines.
+- A whole-repo run is clean (0 problems, 2026-10-20), so every finding is new: fix it in the same change.
 - A resolving link says nothing about whether the text is right. This is hygiene, not review.
 
 ## review-pack
@@ -224,7 +224,8 @@ that needs nothing added to the fresh worktree; klang's full check needs the cac
   the `merge --ff-only` command, and landing is the coordinator's call.
 - It only takes COMMITS: a branch's uncommitted work stays behind. Check each source worktree's
   `git status` first. A commit whose change the stack already holds (same patch: a branch built on an
-  earlier one) is skipped and printed as `same`.
+  earlier one) is skipped and printed as `same`; one that only matches after an insertion was resolved
+  (its import already kept) is skipped and printed as `empty`.
 - A branch holding a MERGE commit (`git merge main` into it) is refused before anything is created: a
   merge commit's own changes cannot be cherry-picked and would be lost. Rebase that branch first.
 - It auto-resolves only pure insertions (base side empty, not even a blank line; both kept, earlier
@@ -289,7 +290,8 @@ dash scan, stack-merge's exit code by exception type, test-digest's foreign-suit
   and a mutant read the last mutant's failure as its own KILLED (or the baseline's green as SURVIVED).
   (3) Exit 5 when nothing ran; it was 0, "green". (4) `--since` without a zone is refused (it was read
   as UTC on a CEST machine). (5) A running command is registered, so a signal handler can stop its
-  process group (`stop_running`, used by mutate). (2) to (5) are generic. The draft's foreign check skips a suite
+  process group (`stop_running`, used by mutate); `run` installs that handler itself, so a SIGINT or
+  SIGTERM stops the test command too (round 2, 2026-10-20). (2) to (5) are generic. The draft's foreign check skips a suite
   without a package (`Kotest`): checked read-only on a real klang `audio_be` result dir, 505 suites,
   none flagged.
 - **mutate**: `--logs` is created if missing; on SIGINT or SIGTERM it restores the files, then stops the
@@ -309,20 +311,18 @@ dash scan, stack-merge's exit code by exception type, test-digest's foreign-suit
   checkout of the base branch, or a guarded `update-ref` (it targeted the checkout the tool ran from,
   which would fast-forward that branch). (7) A base made of blank lines is not empty; an unreadable
   conflicted file (rename/rename) is a refusal, not a crash. (8) `--own-package` passed to test-digest;
-  a test run with nothing fresh is not green. (2) to (8) are generic. Every one has a before/after repro
+  a test run with nothing fresh is not green. (9) A commit that a resolution leaves empty is skipped as
+  `empty` (it stopped with a git error, round 2). (2) to (9) are generic. Every one has a before/after repro
   on synthetic repos; not yet run against klang itself.
 - The lock: `console/with-build-lock.sh` finds the main checkout's lock from any worktree (since
   2026-10-19), so no call needs `KLANG_LOCK_FILE` any more.
-- **ticket**: the blueprint's copy at 7dc3d1c (2026-10-20), unchanged (it carries the two fixes klang's
-  migration found). klang migrated in bulk the same day, with the earlier copy: KLANG-00001 to KLANG-00320 numbered by date; 408 former locations added to the record from the
-  old paths' history (the tool read the new paths, which have none before the commit); 1,748 references
-  swept in two passes, 2 by hand (the shipped `src/jsMain/resources` pages, the blog, the diary, the
-  ledgers, the build-lock log, the memory histories, the benchmark results and the funding evidence
-  excluded: published, or dated records that keep their words); the checklist in `in-progress/` is a
-  `skip:` line.
-- **docs-lint**, klang's `docs_lint_local.py` since the tickets: the stale-path rule skips the migration's
-  "(was `old path`)" records and the files the sweep left alone. Its task-place rule duplicates
-  `ticket check` and goes with tools review round 2.
+- **ticket**: the blueprint's copy at 7dc3d1c (2026-10-20), unchanged. klang's bulk migration, with what
+  it swept and what it left alone: `docs/housekeeping/20261020-ticket-migration.md` and its commit
+  (3c9a191d); the checklist in `in-progress/` is a `skip:` line.
+- **docs-lint**: both files list what git does not ignore (`git ls-files -co --exclude-standard`), with
+  the walk as the fallback outside git (generic). klang's `docs_lint_local.py` has one rule left,
+  stale-path, which skips the migration's "(was `old path`)" records and the files the ticket sweep left
+  alone; its task-place rule went with the ticket numbers (`ticket check`).
 
 ## Proposed upstream
 
