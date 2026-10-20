@@ -90,9 +90,9 @@ let powerClassA = x => x
 
 let cab4x12 = x => x
   .eq(e => e
-    .band(freq =  120, q = 0.7, db =  1.9)         // thump: closed-back box resonance
-    .band(freq =  380, q = 0.5, db =  3.8)         // roar:  low mids
-    .band(freq = 2700, q = 1.8, db =  4.1)         // bark:  the upper-mid speaker peak
+    .band(freq =  120, q = 0.7, db =  1.8)         // thump: closed-back box resonance
+    .band(freq =  380, q = 0.5, db =  3.7)         // roar:  low mids
+    .band(freq = 2700, q = 1.8, db =  4.2)         // bark:  the upper-mid speaker peak
   )
   .lowpass(5200, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
   .highpass(105, 0.707, x => x.passes(2))
@@ -140,7 +140,7 @@ let makeGuitar = (rig) => {
     // noise burst - the pick
     .plus(Ign.whitenoise().adsr(0.0005, 0.008, 0.0, 0.05).highpass(1200).mul(0.4))
     // the string - lowpass adsr for the string sound and adsr for the string
-    .adsr(pAttack, pDecay, pSustain, pRelease, e => e.curves("exp", "linear", "linear"))
+    .adsr(pAttack, pDecay, pSustain, pRelease, e => e.curves("exp", "exp", "linear"))
   
   // the string through the rig. No note-following highpass after the cab: the preamp tightens the bass at a fixed
   // frequency, and a filter that moves with every note gave every note the same shape, which the ear reads as
@@ -272,7 +272,7 @@ export schmetterlingLead = `<[-7 0 2 4] [-7 0 4 2] [-5 -1 2 4] [-6 -1 4 3]>`
 // Spin: the clean arpeggio, each note picked, then ringing under the next.
 export spin = notes => n(notes)
   .sound(clean).adsrOff().unison(voices = 7, spread = 0.05).pregain(0.7)
-  .ignp("decay", 1.00).ignp("sustain", 0.25).ignp("release", 0.8).clip(2.0)
+  .ignp("decay", 1.50).ignp("sustain", 0.25).ignp("release", 0.8).clip(2.0)
   .velocity("1.0 0.8 0.9 0.8 0.95 0.8 0.9 0.8".sub(perlin(0.0, 0.05)))
   .gain(0.22).pan(0.5).vibrato(beatRate(0.25).mul(perlin(0.95, 1.05).slow(4)), 0.03)  
   .orbit(1).body(wet = 0.1, material = "oak")
@@ -290,7 +290,7 @@ export sing = notes => n(notes.add(7))
 
 // Soar: the melody two octaves up, wider, over the wings.
 export soar = notes => n(notes.add(14))
-  .sound(bright).adsrOff().unison(voices = 15, spread = 0.05)
+  .sound(bright).adsrOff().unison(voices = 11, spread = 0.05)
   .ignp("decay", 2.8).clip(1.5)
   .hpf(500)                                        // two octaves up, nothing of the melody lives below
   .lpf(4400)                                       // less fizz, the wall keeps its own
@@ -299,7 +299,7 @@ export soar = notes => n(notes.add(14))
 
 // Swell: volume-knob swells, the thing inside stretching. Doubled on the left, a little late.
 export swell = chords => n(chords.add(7))
-  .sound(bright).adsrOff().unison(voices = 11, spread = 0.06)
+  .sound(bright).adsrOff().unison(voices = 15, spread = 0.06)
   .ignp("attack", 1.3).ignp("decay", 1.8).clip(1)
   .lpf(3500)
   .gain(0.07).pan(0.05).superimpose(x => x.pan(0.95).late(0.015)) // far left and far right, the right a little late
@@ -307,7 +307,7 @@ export swell = chords => n(chords.add(7))
 
 // Beat: the heartbeat under the skin, 3-3-2 on the root, an octave down.
 export beat = roots => n(roots.add(-7)).struct("x ~ ~ x ~ ~ x ~")
-  .sound(deep).adsrOff().unison(voices = 7, spread = 0.06)
+  .sound(deep).adsrOff().unison(voices = 11, spread = 0.06)
   .ignp("decay", 2.0).clip(2).hpf(80)
   .velocity("1.0 0.9 0.85")
   .gain(0.25).pan(0.5)                             // on the left, across from the melody on the right
@@ -315,10 +315,10 @@ export beat = roots => n(roots.add(-7)).struct("x ~ ~ x ~ ~ x ~")
 
 // Chug: the heavy rig, palm-muted on the root, an octave down.
 export chug = roots => n(roots.add(-7)).struct("[x x] x@2  [x x] x@2  [x x] x")
-  .sound(heavy).adsrOff().unison(voices = 11, spread = 0.08)
-  .ignp("decay", "0.4 0.8!2 0.4 0.8!2 0.3 0.2").clip(1)
+  .sound(heavy).adsrOff().unison(voices = 7, spread = 0.08)
+  //.ignp("decay", "0.4 0.8!2 0.4 0.8!2 0.3 0.2").clip(1)
   .velocity("1.0 0.90 0.80 0.85  0.90 0.80 0.75 0.85".sub(perlin(0.0, 0.2)))
-  .gain(0.50).late(perlin(0.0002, 0.0008)).apply(
+  .gain(0.55).late(perlin(0.0002, 0.0008)).apply(
     x => x.pan(0.20),
     x => x.pan(0.80),
   )
@@ -326,10 +326,10 @@ export chug = roots => n(roots.add(-7)).struct("[x x] x@2  [x x] x@2  [x x] x")
 
 // Wings: tremolo-picked power chords on the heavy rig, hard left and right.
 export wings = chords => n(chords).ply(16)
-  .sound(heavy).adsrOff().unison(voices = 11, spread = 0.08)
-  .ignp("decay", "[0.35 0.25]*8").clip(1)
+  .sound(heavy).adsrOff().unison(voices = 9, spread = 0.08)
+  .ignp("decay", "[0.9 0.8]*8").clip(1)
   .velocity("1.0 0.90!2 0.96 0.88 0.92 0.94 0.92".sub(perlin(0.0, 0.2)))
-  .gain(0.45).late(perlin(0.0008, 0.0014)).apply(
+  .gain(0.60).late(perlin(0.0008, 0.0014)).apply(
     x => x.pan(0.05),
     x => x.pan(0.95),
   )
@@ -364,12 +364,12 @@ let drumRoom = x => x.reverb(wet = 0.3, size = 5)
 
 export kick = pat => sound("bd").struct(pat)
   .sound(metalKick).adsrOff().note("a1").velocity("1.0 0.94 0.96 0.94")
-  .gain(1.05).pan(0.5)
+  .gain(1.10).pan(0.5)
   .orbit(11).apply(drumRoom)
 
 export snare = pat => sound(pat)
   .sound(metalSnare).adsrOff().freq(snareHz)
-  .gain(0.50).pan(0.575)
+  .gain(0.42).pan(0.575)
   .lpf(freq = "11500".add(saw(0, 1200).slow(12)), q = 0.5)
   .delay(0.33, pure(1/16).div(cps), 0.85, 24) // Snare needs it own orbit for the dalay!
   .orbit(12).apply(drumRoom).late(perlin(0.001, 0.0015))
@@ -386,7 +386,7 @@ export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
   .ignp("sub", 1.00).ignp("harmonics", 1.00)
   .adsr(0.003, 0.3, 0.5, 0.040).hpf(30).notch(freq = snareHz, q = 1.0)
   .clip(0.90)
-  .gain(1.30).pan(0.5)
+  .gain(1.35).pan(0.5)
   .orbit(15)
 
 // Parts  -----------------------------------------------------------------------------------------------------------
@@ -462,7 +462,7 @@ let lifting = stack(
 
 // It lands on one heavy chord with the low D under it, and the melody holds its A.
 let landing = stack(
-  spin("[0 4 7 9 11 9 7 4]".add(7)).gain(0.35).ignp("sustain", 0.15).clip(0.66),
+  spin("[0 4 7 9 11 9 7 4]".add(7)).gain(0.40).ignp("sustain", 0.15).clip(0.66),
   soar("[4@6 ~@2]")
     .tremolo(rate = beatRate(0.25), depth = 0.35)
     .vibrato(rate = beatRate(0.25), semitones = 0.30),
@@ -514,16 +514,16 @@ let heavyDrums = arrange(
 // Song  ------------------------------------------------------------------------------------------------------------
 export song = stack(
   arrange(
-    [8, spinning],
-    [4, answering],
-    [4, quickening],
-    [4, stretching],
-    [4, holdingBreath],
+    // [8, spinning],
+    // [4, answering],
+    // [4, quickening],
+    // [4, stretching],
+    // [4, holdingBreath],
     [12, heavyBlock],
     [12, stack(heavyBlock, heavyDrums)],
-    [12, flyingOff],
-    [4, lastChord],
-    [2, silence]
+    // [12, flyingOff],
+    // [4, lastChord],
+    // [2, silence]
   )
     .scale("d3:minor")
     .analog(feel)
