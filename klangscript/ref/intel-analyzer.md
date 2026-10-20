@@ -115,7 +115,7 @@ failure: the cursor is mapped back across the edit (common prefix and suffix), a
 whole edited stretch, starting at the earliest place the edit can start when the typed text repeats the text
 around it. Fewer locals at worst, never one from below or from a sibling scope. Offsets inside a template
 literal's `${...}` count from the interpolation (the parser reads it on its own), so a scope opened there gets an
-empty range. Guard: `LocalSymbolCompletionSpec`; record: `docs/tasks/editor-local-symbol-completion.md`.
+empty range. Guard: `LocalSymbolCompletionSpec`; record: `docs/tasks-archive/2026-10/20261019-editor-local-symbol-completion.md`.
 
 The edit (`editTo`: one stretch between the common prefix and suffix, the earliest start when they overlap) is
 shared with `namedArgumentsAt`.

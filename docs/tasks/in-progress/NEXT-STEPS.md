@@ -1,60 +1,79 @@
-# Next steps after the pause (2026-10-13)
+# Next steps after the pause (2026-10-20)
 
-We paused for the weekly token budget (maintainer, 2026-10-12) on a clean point. This note says where each stream
-picks up again. Read it first, then the task file it names.
+We paused after v0.7.2 for the token budget (maintainer, 2026-10-20), on a clean point. This note says where each
+stream picks up again. Read it first, then the file it names. The note of the previous pause (2026-10-13) is in git
+history.
 
 ## Where things stand
 
-- `main` holds everything: v0.6.5 (KlangMap), engine follow-up 2 step 4 (`S-doors`), Klang-Research's Katalyst knob
-  expressions (steps 3 to 7), and the Der Schmetterling paste fixed. Version 0.6.6 in `gradle.properties`, not tagged
-  at the time of writing.
-- The full check on `main` (2026-10-13, `9e1bcec7`): tests GREEN (17,684), allocation GREEN (80 of 80), timing done;
-  the corpus differed only on the maintainer's song edits, re-accepted the same day (Q34) on the songs as of
-  `d9804f41`. Since 2026-10-15 a song edit no longer turns the check red ([`../../tasks-archive/2026-10/20261015-song-checks-move-freely.md`](../../tasks-archive/2026-10/20261015-song-checks-move-freely.md)).
-- No branch holds unmerged work of either session. The merged branches and the `katalyst-live-knobs` worktree were
-  deleted 2026-10-13 (Q36), and so were the 55 older merged local branches and the abandoned experiment
-  `code-blocks-with-mutator` (maintainer). `main` is the only local branch.
+- `main` holds everything released: v0.7.2, tagged 2026-10-20 (the version commit `1eca7511`). The full check of
+  `b18d837d`, the commit before it (2026-10-19): tests GREEN (18,284), corpus 3 of 3 frozen identical, allocation
+  GREEN (80 of 80), timing done.
+- New since v0.7.1: completion offers the song's own names and a call's unfilled parameter names (both hand-tested by
+  the maintainer 2026-10-20); engine follow-ups 10c and 10d (two fm sites), 16 to 19, 28, 35, 36 and 38; the delay
+  docs; a fixed Karma port per module; the build lock found from every worktree.
+- Two branches hold unmerged work, each in its worktree under `.claude/worktrees/`. All other work is merged; the
+  finished worktrees and their branches were removed 2026-10-20.
 
 ## Engine stream (Klang-Main-Dev)
 
-The one task in progress: [`engine-follow-ups.md`](engine-follow-ups.md). Its first paragraph is the order. Q38
-(maintainer, 2026-10-13): finish 31 to 41 after the refill, **as long as each is a purely independent performance fix
-that changes no API**; an item that turns out to need an API change (a door, a wire type, a public signature) stops
-and goes to the maintainer.
+1. **`engine-alloc-batch-2`** (`add8fd7c`, based on `f13dcdbf`, so rebase onto `main` first): engine follow-ups 4
+   (the superpluck's base delay cached), 45 (the duck and gain hand-offs, the distort's `isFiniteInline`) and 13
+   (checked, nothing to change). Not reviewed yet. Before `main`: the review loop (code and audio), a clean mutation
+   campaign (the first one was disturbed by an outside writer, likely the IDE writing into the worktree),
+   `:audio_be:jsBrowserTest`, the allocation check, then a full check.
+2. **Master follow-up 8, option (a)**, decided 2026-10-19: the offline render counts the master chain's latency
+   ([`../master-dsl-followups.md`](../master-dsl-followups.md) §8). It moves two corpus rows (Der Schmetterling,
+   Kokon), accepted with the change.
+3. Then the order in [`engine-follow-ups.md`](engine-follow-ups.md), its first paragraph. 10c and 10d wait for the
+   FM round.
 
-1. The open V8 items: 31 (what item 29 left on a full `classic()` voice), 32 (the delay's and reverb's per-block
-   `configure`), 34 (the bus distort's oversampled path), 39 to 41 (the Katalyst knob expressions' residues: the knob
-   noises' `fbm`, the compressor's five setters, a moving delay time, reverb size and phaser breakpoint), 10c and 10d
-   (fm).
-2. The known tail of the allocation check, a breach that a rerun clears (the rule is in the "Known tails" paragraph
-   of `audio_benchmark/alloc-budgets.txt`): 4 (`spluck-a`). 36 (`E-arith`'s second mode) and 38 (a boxing site in the
-   duck's `configure`, likely `E-duck`'s tail, not shown) are done (2026-10-19), and so is 35 (a gliding `div` slow
-   on the JVM); their siblings, not seen red, are item 45.
-3. Done 2026-10-15: songs move freely (`../../tasks-archive/2026-10/20261015-song-checks-move-freely.md`).
-   Then the behaviour changes decided 2026-10-13: engine follow-up 42 (a delay or reverb switched off fades, Q39, done 2026-10-16: corpus unmoved, a listening pair per stage in `tmp/listening/delay-reverb-fade/`), 43 (solo reacts at once, Q28, done 2026-10-16), 44 (`duty(width)`, Q29, done 2026-10-16). Larger, decided, its own task: typed Kotlin doors
-   ([`../../tasks-archive/2026-10/20261016-kotlin-typed-doors.md`](../../tasks-archive/2026-10/20261016-kotlin-typed-doors.md), Q24, done 2026-10-16: rollout S1 to S7, the script doors internal)
-   and the frozen songs' shared orbits ([`../song-orbit-ownership-review.md`](../song-orbit-ownership-review.md), Q20,
-   done 2026-10-16: each conflicting pattern on a free orbit, the three frozen rows (the 09-25 count-in too) re-accepted, moved by the text, not the engine; a listening pair per
-   text in `tmp/listening/frozen-orbits/`; the live songs in that file stay with the maintainer).
-4. Sections 2 to 6 of the same file (13, 11, the small leftovers, the audit's later steps).
+## Tools and housekeeping (Klang-Main-Dev)
 
-A step there runs as before: a worker, a review loop, the allocation check for an allocation item, and a full check
-(`console/full-check.sh --fresh`) before a merge to `main`.
+1. **`console-tools-adoption`** (`addbfb37`): test-digest, mutate, docs-lint, review-pack and stack-merge in
+   `console/tools/`, the skill `/console-tools`. Review round 1 is done (7 MAJORs fixed). Next: review round 2, then
+   the condense proposal the maintainer approved 2026-10-19 ("as you proposed"; it adds the tool block to
+   `CLAUDE.md`), kept on that branch in `docs/tasks/in-progress/console-tools-condense/` with the script that applies
+   it. Then merge, and send Mission Control the commit: it ports the MAJOR fixes into its blueprints and builds one
+   merge tool (stack-merge and Spross's land) on ours.
+2. **With that merge, Mission Control's blueprint update** (2026-10-20, low priority): copy the new skills
+   `mission-control-link` and `project-layout` from `/opt/dev/peekandpoke/missioncontrol/blueprints/skills/`; check
+   `project-layout` against Klang, record our deviations under its "Repo notes" (for example `blog/`, `funding/`,
+   `plans/future/`, this note's pause rule) and tell Mission Control where it describes Klang wrongly; take the
+   blueprint's "Proposed upstream" and "Changes" sections into our console-tools skill. The tool masters now live in
+   `/opt/dev/peekandpoke/missioncontrol/blueprints/tools/`. Pointer lines for the new skills in `CLAUDE.md` need the
+   maintainer's OK in the session.
+3. **The docs-lint sweep** (maintainer, 2026-10-19: after the release): run docs-lint from the tools branch; fix the
+   26 stale task paths it finds in KDoc and docs; ask the maintainer about its two task-place findings
+   (`sprudel-test-coverage-and-review.md`, `tutorial-curriculum.md`: is the status line stale, or does the file belong
+   elsewhere?); and the `_priorities.md` tremolo entry (tools review round 1, MINOR 17).
+4. **Mission Control's review-loop RFC**: one answer to its draft
+   (`/opt/dev/peekandpoke/missioncontrol/blueprints/skills/review-loop/SKILL.md`), its four questions and its seven
+   open ones. The tier names are agreed (strict / standard / light). Nothing is adopted until the maintainer decides.
+   Our two Kraft pitfalls (`jsObject { dom = ... }` inside a component, a static `@JsModule` defeating lazy loading)
+   come back with Mission Control's merged `kraft-knowhow`; hold them until then.
+5. **The lexer accepts an unclosed block comment** ([`klangscript/MEMORY.md`](../../../klangscript/MEMORY.md), Open
+   threads): a fix to make.
 
 ## Katalyst stream (Klang-Research)
 
-Its task is closed and archived:
-[`20261012-katalyst-knob-expressions.md`](../../tasks-archive/2026-10/20261012-katalyst-knob-expressions.md), "Where
-to continue". What is left waits for a song that asks for it:
-[`../katalyst-knob-followups.md`](../katalyst-knob-followups.md). Its V8 items, 39 to 41 of the engine list above,
-are the engine stream's (Q38).
+Unchanged since 2026-10-13: its task is closed and archived, and what is left waits for a song that asks for it
+([`../katalyst-knob-followups.md`](../katalyst-knob-followups.md)).
 
 ## Open with the maintainer
 
-- The listening rounds before the next songs (C10). The round of 2026-10-17/18 is done (`tmp/listening/00-index.md`):
-  every pair heard and decided, the knob glide (C13) and engine follow-up 42's check among them.
-- An FM round together: [`../future/fm-revisit.md`](../future/fm-revisit.md).
-- sprudel's own typed Kotlin door (its doors take `PatternLike = Any`): needs its own design and a home, the
-  maintainer's call ([`../../tasks-archive/2026-10/20261016-kotlin-typed-doors.md`](../../tasks-archive/2026-10/20261016-kotlin-typed-doors.md), "Left after the rollout").
+- An FM round together: [`../future/fm-revisit.md`](../future/fm-revisit.md), now with the open sites of engine
+  follow-ups 10c and 10d.
+- Completion, left open: a local that shadows a library name shows two rows; a local bound to an arrow shows no type;
+  after a named argument the list still shows locals and library names; a new line inside a multi-line call offers
+  no names until a comma. Records:
+  [`20261019-editor-local-symbol-completion.md`](../../tasks-archive/2026-10/20261019-editor-local-symbol-completion.md)
+  and [`../klangscript-named-args-docs-polish.md`](../klangscript-named-args-docs-polish.md), "Open, for the
+  maintainer".
+- Ultra 0.114.0: we wait for it (0.113.0 skipped, 2026-10-19), then upgrade.
+- sprudel's own typed Kotlin door (its doors take `PatternLike = Any`): needs its own design and a home
+  ([`../../tasks-archive/2026-10/20261016-kotlin-typed-doors.md`](../../tasks-archive/2026-10/20261016-kotlin-typed-doors.md),
+  "Left after the rollout").
 - The stdlib's `hashCode(dynamic)` closure (every Kotlin/JS `HashMap` operation allocates on V8) is noted for an
   upstream report, not filed (engine follow-ups, item 2).
+- In IntelliJ, marking `.claude/worktrees` as Excluded keeps the IDE from writing into an agent's worktree.

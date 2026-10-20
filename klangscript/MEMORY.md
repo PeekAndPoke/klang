@@ -176,6 +176,6 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
   `stdlibLib`, `KlangStdLib`). A KSP fix on the way: a top-level extension function's own file is a source
   (`collectSourceFiles`, S6) (`docs/tasks-archive/2026-10/20261016-kotlin-typed-doors.md`).
 - 2026-10-19: code completion offers the song's own names (`let`, `const`, `export`, lambda parameters) through
-  `AnalyzedAst.localsAt` and `CompletionProvider.localCompletions` (`docs/tasks/editor-local-symbol-completion.md`).
+  `AnalyzedAst.localsAt` and `CompletionProvider.localCompletions` (`docs/tasks-archive/2026-10/20261019-editor-local-symbol-completion.md`).
 - 2026-10-19: code completion offers a call's unfilled parameters as `name = ` where an argument starts, never in a
   call with a positional argument (`AnalyzedAst.namedArgumentsAt`; `docs/tasks/klangscript-named-args-docs-polish.md` 6.4).

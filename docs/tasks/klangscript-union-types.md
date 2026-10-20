@@ -284,5 +284,5 @@ to `note` gets a compile error.
 ## Links
 
 - `klangscript-intellisense.md`, the analyzer's roadmap; this task slots in beside its tiers.
-- `editor-local-symbol-completion.md`, the neighbouring completion work.
+- `docs/tasks-archive/2026-10/20261019-editor-local-symbol-completion.md`, the neighbouring completion work (done 2026-10-19).
 - `/dsl-design` §3 (two doors, script-door defaults), `klangscript/MEMORY.md` (design decisions).

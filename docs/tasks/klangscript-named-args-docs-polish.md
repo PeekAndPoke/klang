@@ -112,6 +112,11 @@ rule dropped; that rule taking any arrow (red: the arrow passed as an argument);
 backslash escapes not honoured; an unterminated block comment ending right after its `/*`; the call's `(` taken as
 the end of its callee (red: blanks before the `(`); a blank slot after a trailing comma read as positional.
 
+**Hand test (maintainer, 2026-10-20, before v0.7.2): passed.** Ctrl+Space after `Ign.saw().lowpass(` offers the
+parameters in order, only those not yet named; typing `c` after `freq = 800, ` offers `configure =` at once; after a
+positional argument no `name =` entry shows; a nested call offers its own names (`Ign.sine().mul(other = )`) and the
+outer call's again once it is closed; nothing inside a string; `(` alone opens no list, only Ctrl+Space does.
+
 **Open, for the maintainer.**
 
 - After a named argument only a name is valid at a slot start (a value there mixes the styles), yet the list still

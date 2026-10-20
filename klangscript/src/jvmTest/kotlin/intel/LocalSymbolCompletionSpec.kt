@@ -20,8 +20,9 @@ import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.script.types.KlangType
 
 /**
- * Code completion offers the song's own names (`docs/tasks/editor-local-symbol-completion.md`): the `let` / `const` /
- * `export` names and the arrow parameters visible at the cursor, through `AnalyzedAst.localsAt` and
+ * Code completion offers the song's own names
+ * (`docs/tasks-archive/2026-10/20261019-editor-local-symbol-completion.md`): the `let` / `const` / `export` names
+ * and the arrow parameters visible at the cursor, through `AnalyzedAst.localsAt` and
  * `CompletionProvider.localCompletions`. The cursor is the start of a word being typed, as in the editor.
  *
  * Hand-built registry, no stdlib: this is analyzer machinery.

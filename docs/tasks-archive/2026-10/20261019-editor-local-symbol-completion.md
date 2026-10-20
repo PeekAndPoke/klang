@@ -70,7 +70,7 @@ In `klangscript/src/jvmTest/kotlin/intel/`:
 Completion of members on a local receiver (`guitar.` after `let guitar = ...`) already works
 through `receiverTypeBeforeDot` when the type was inferred; do not touch it. Exports of *another*
 song (`import { makeGuitar } from "peekandpoke/guitar-rig"`) are library symbols once imported
-and are a separate topic (`future/federated-song-sharing.md`).
+and are a separate topic (`docs/tasks/future/federated-song-sharing.md`).
 
 ## Done 2026-10-19
 
@@ -153,6 +153,12 @@ the raw-cursor mutant now that a plain initializer moves `declPos` to its end.
 5. A local named like a library function (`let gain = ...`, then type `gai`): both entries show, the local first
    with `let` in the detail (see the open question).
 
+**Hand test result (maintainer, 2026-10-20, before v0.7.2): passed.** Steps 1, 2, 3 and 5 as written. Step 4 as
+written offers nothing, because the list keeps only names that start with the typed word and nothing in the song starts
+with `gu`; a poor choice of letters in the step, not a fault. Tried as `const gu = ` plus Ctrl+Space (the text does
+not parse there either), it offers the names declared above and not `b`. Nothing offered while a new name is being
+typed is how it stays (maintainer).
+
 **Open, for the maintainer.**
 
 - A local that shadows a library name is offered next to the library entry (two `gain` rows). Dropping the library
@@ -163,5 +169,5 @@ the raw-cursor mutant now that a plain initializer moves `declPos` to its end.
 ## Links
 
 - Analyzer architecture: `klangscript/ref/intel-analyzer.md`.
-- The intellisense plan this sits next to: `klangscript-intellisense.md`.
-- The other editor-tools item: `editor-tools-named-arguments.md` (done 2026-09-26, archived; the tool leftovers are in `sprudel-ui-tools.md`).
+- The intellisense plan this sits next to: `docs/tasks/klangscript-intellisense.md`.
+- The other editor-tools item: `docs/tasks-archive/2026-09/20260927-editor-tools-named-arguments.md` (done 2026-09-26; the tool leftovers are in `docs/tasks/sprudel-ui-tools.md`).

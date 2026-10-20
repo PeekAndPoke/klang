@@ -1,7 +1,8 @@
 # Engine follow-ups after the tidy-up
 
-**Paused 2026-10-12 (maintainer: weekly token budget), on a stable point; both streams' next steps:
-[`NEXT-STEPS.md`](NEXT-STEPS.md).** Item 2 is DONE (KlangMap, released in
+**Paused 2026-10-20 after v0.7.2 (maintainer: token budget), on a stable point; where it picks up:
+[`NEXT-STEPS.md`](NEXT-STEPS.md). Items 4, 45 and 13 are built on the parked branch `engine-alloc-batch-2`, not
+reviewed yet.** Item 2 is DONE (KlangMap, released in
 v0.6.5, step 4 merged after). Where to continue (Q38, maintainer 2026-10-13: 31 to 41 after the refill, each a purely independent performance
 fix that changes no API), open V8 items first: **the V8 batch is done** (31 DONE 2026-10-15; 32, 34, 39, 40 and 41
 DONE 2026-10-16; 33 DONE earlier; 35, 36 and 38 DONE 2026-10-19, 38 as a site removed that is likely its tail, not
