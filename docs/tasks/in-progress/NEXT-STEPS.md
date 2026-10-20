@@ -14,8 +14,11 @@ history.
   docs; a fixed Karma port per module; the build lock found from every worktree.
 - Ultra 0.114.0 since 2026-10-20 (from 0.112.0, 0.113.0 skipped): the full check of `6647c4eb` GREEN (18,284
   tests, corpus 3 of 3 frozen identical, allocation 80 of 80).
-- Two branches hold unmerged work, each in its worktree under `.claude/worktrees/`. All other work is merged; the
-  finished worktrees and their branches were removed 2026-10-20.
+- Two branches hold unmerged work, `engine-alloc-batch-2` and `console-tools-adoption`, without a worktree: check one
+  out on the main checkout when its turn comes. All other work is merged. Every worktree was removed 2026-10-20.
+- Work runs sequentially on the main checkout, the one IntelliJ has open (maintainer, 2026-10-20, through Mission
+  Control): no worktree by default, and when one is needed it goes to `/opt/dev/peekandpoke/klang-worktrees/<name>`,
+  never `.claude/worktrees/` (so no Agent `isolation: "worktree"`).
 
 ## Engine stream (Klang-Main-Dev)
 
@@ -77,4 +80,3 @@ Unchanged since 2026-10-13: its task is closed and archived, and what is left wa
   "Left after the rollout").
 - The stdlib's `hashCode(dynamic)` closure (every Kotlin/JS `HashMap` operation allocates on V8) is noted for an
   upstream report, not filed (engine follow-ups, item 2).
-- In IntelliJ, marking `.claude/worktrees` as Excluded keeps the IDE from writing into an agent's worktree.
