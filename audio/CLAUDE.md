@@ -85,8 +85,5 @@ audio_jsworklet ←─ JS AudioWorklet thread entry point
 
 ## Build & Test
 
-```bash
-./gradlew :audio_bridge:jvmTest
-./gradlew :audio_be:jvmTest
-./gradlew :audio_fe:jvmTest
-```
+`:audio_bridge:jvmTest`, `:audio_be:jvmTest`, `:audio_fe:jvmTest`; through the build lock, read with test-digest
+(`/console-tools`).

@@ -89,10 +89,13 @@ Two failure modes, and the second is the expensive one:
 
 ```bash
 console/with-build-lock.sh ./gradlew :audio_be:jvmTest --tests some.Fqcn
-console/with-build-lock.sh bash -c 'apply-mutation && ./gradlew ... ; restore-mutation'
+console/with-build-lock.sh python3 console/tools/mutate/mutate.py run mutants.json   # a whole mutation campaign
 ```
 
-**For a mutation check the critical section is `mutate → build → restore`, not just the build** — wrap all three.
+The script finds the main checkout's lock from any worktree through git's common dir (since 2026-10-19), so the
+same call works everywhere (`/console-tools`).
+
+**For a mutation check the critical section is `mutate → build → restore`, not just the build**: one `mutate` campaign.
 `.claude/BUILD-LOCK.md` is the advisory half: the holder record plus one row per workstream that is uncommitted right
 now. Read it as its own step, never chained into the build with `&&`. It is coordination only, not a ledger, so keep it
 short: a row dies when its work is committed, and old handover notes go to `.claude/build-lock-log.md`, which nobody
@@ -112,15 +115,15 @@ reads to take the lock.
 - **Reviewers may build** (maintainer, 2026-10-04: "reviewers can run gradle but they need to respect the build-lock"),
   so a doubt is settled by a run instead of a guess. Always through `console/with-build-lock.sh`, one unquoted
   `--tests` FQCN per run. A reviewer never edits production code to fix anything; to TEST a doubt by a mutation it
-  wraps the whole critical section in ONE lock call (back up the file, mutate, build and run, restore with `cp`,
-  verify with `cmp`, never with git) and reports the mutant and its verdict. If the safety check refuses that call, the
+  runs it as one `mutate` campaign in ONE lock call (byte backup, hash-verified restore, never git) and reports
+  the mutant and its verdict. If the safety check refuses that call, the
   reviewer names the mutant and the worker runs it (maintainer, 2026-10-16; `/review-loop`, "A refused mutant goes to
   the worker"). Round-1 pairs run in parallel and
   take the lock in turn: a reviewer that waits for the lock is not stalled.
-- **Counting tests: clear old results with `find`, never `rm -rf`** (2026-10-10: the pitch step 4 and step 5
-  workers each ran `rm -rf <module>/build/test-results/<task>` to get a clean count, against their brief). The safe
-  form: `find <module>/build/test-results/<task> -name '*.xml' -delete`, or count only the XML files newer than the
-  run's start. Put this line in every brief that asks for test counts.
+- **Counting tests: `test-digest`, never `rm -rf`** (2026-10-10: the pitch step 4 and step 5 workers each ran
+  `rm -rf <module>/build/test-results/<task>` to get a clean count, against their brief). test-digest counts only this
+  run's XML, so nothing needs clearing; if you must, `find <dir> -name '*.xml' -delete`. Put this line in every brief
+  that asks for test counts.
 - **Cleanup names the worker's OWN folder, never the scratchpad root** (2026-10-10: the partials worker ran
   `find <scratchpad> -type f -delete` on the session scratchpad and emptied every earlier agent's harness, the
   review snapshots and the V8 cost bundles; nothing in the repo was lost). Give each worker its own subfolder in the

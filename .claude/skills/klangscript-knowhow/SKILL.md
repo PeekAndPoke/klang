@@ -32,11 +32,8 @@ stdlib or a DSL door).
 
 ## Testing
 
-```bash
-./gradlew :klangscript:jvmTest         # language tests (fast)
-./gradlew :klangscript-libs:jvmTest    # stdlib / DSL door tests
-./gradlew :klangscript:jsTest          # when testing JS-specific behavior
-```
+`:klangscript:jvmTest` (language, fast), `:klangscript-libs:jvmTest` (stdlib, DSL doors), `:klangscript:jsTest` (JS
+behaviour); through the build lock, read with test-digest (`/console-tools`).
 
 ## Notes
 

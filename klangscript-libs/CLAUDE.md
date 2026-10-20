@@ -61,8 +61,5 @@ interval vocabulary of `tones`, not an audio door. Split out of `:klangscript` o
 
 ## Build & Test
 
-```bash
-./gradlew :klangscript-libs:jvmTest          # stdlib + analyzer-with-stdlib tests
-./gradlew :klangscript-libs:jsTest           # JS platform
-./gradlew :klangscript:jvmTest               # the language alone (no stdlib)
-```
+`:klangscript-libs:jvmTest` (stdlib, analyzer with the stdlib), `:klangscript-libs:jsTest`, `:klangscript:jvmTest` (the
+language alone); through the build lock, read with test-digest (`/console-tools`).

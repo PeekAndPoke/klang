@@ -55,7 +55,7 @@ should be broken on purpose, consult the maintainer, and the rules do not have t
 |-----------------------------------------------------------------------------------------------------------------------------|------------|-------------------------------------------------|
 | *(provisional)* Capture now, prune later. A lesson is written down when it is learned: short, in its home, no form to fill. Pruning is separate work, a pass over all rules, memories and skills together when the maintainer calls it: keep fact, reason and a pointer to history; cut prose, duplicates, and what a test or build already enforces. | 2026-10-11 | this line |
 | Reviews loop until a clean round; every new test is mutation-checked (mandatory tier for engine/wire/KSP, light elsewhere). | 2026-08-02 | `/review-loop`                                  |
-| Gradle is a single-writer resource: one build at a time, always through `console/with-build-lock.sh`; the coordinator owns it, reviewers may build under the lock (a doubt tested by a mutation stays inside one lock call and is restored), other workers never fan out. | 2026-08-04, reviewers 2026-10-04 | `/agent-fleet` |
+| Gradle is a single-writer resource: one build at a time, always through `console/with-build-lock.sh`; the coordinator owns it, reviewers may build under the lock (a doubt tested by a mutant runs as one `mutate` campaign), other workers never fan out. | 2026-08-04, reviewers 2026-10-04 | `/agent-fleet`, `/console-tools` |
 | Published writing (whitepaper, blog, README, release notes, site copy) follows the public voice: friendly, calm and humble, inviting, human, "we", no hype, cautious with claims. Tutorials and in-app text have their own style. | 2026-09-28 | `/public-voice` |
 | Two doors, one DSL: every Ignitor and Katalyst surface addition lands on the typed Kotlin door (`audio_bridge`; every audio value an `IgnitorDsl` / `KatalystKnobDsl`, numbers through `.ign` / `.kat`; build-time knobs stay plain by the criterion in §3) AND the KlangScript door (stdlib, internal, number or signal at run time) in the same deliverable, with a door-parity spec. Same word, meaning, scale and default, the same builders and shapes; only the accepted types differ. Only KlangScript-exposed functions take `XxxLike = Any` parameters, converted and checked at run time; the Ignitor and Katalyst Kotlin doors are typesafe. sprudel's doors still take `PatternLike = Any` on one shared function until its own typed door is designed (maintainer's call; see the archived task KLANG-00314 (kotlin typed doors), "Left after the rollout"). | 2026-08, typed door 2026-10-16 | `/dsl-design` §3                                |
 | Parameter parity: same name, meaning and scale on every surface; conversions in one place; asymmetries recorded with a reason. | 2026-08-02 | `/dsl-design` §4                              |
@@ -113,3 +113,11 @@ porting an old song). History keeps its words.
 The project skills live in `.claude/skills/` (each `SKILL.md` says when to use it) and the agents in
 `.claude/agents/`; the harness lists both, with their triggers, to every session. Use `/skill-name` or describe
 the task. The `music-platform-strategist` agent runs only when asked for by name ("talk to the strategist").
+
+**Console tools** in `console/tools/`, how and when in `/console-tools`. Use them instead of a hand snippet:
+- `test-digest`: what really ran; a spec counts only with XML from this run, `--expect` names the specs that must run.
+- `mutate`: Standard 2 in one lock call; hash-verified byte restore, and red counts only for the expected reason.
+- `review-pack`: each round's full diff and fix delta, tree untouched; in a shared tree it holds others' edits too.
+- `docs-lint`: broken links, an old task path left in docs or KDoc, dashes.
+- `stack-merge`: reviewed branches onto a new `stack/<name>` branch; only pure insertions auto-resolved, main untouched.
+- `ticket`: take a ticket number, move a ticket to its status's folder, find one, check them all; never by hand.

@@ -49,9 +49,5 @@ Interpreter (tree-walking)  →  RuntimeValue / Environment
 
 ## Build & Test
 
-```bash
-./gradlew :klangscript:jvmTest          # language tests (fast)
-./gradlew :klangscript:jsTest           # JS platform tests
-./gradlew :klangscript-libs:jvmTest     # stdlib tests (separate module)
-./gradlew :klangscript:compileKotlinJvm # compile only
-```
+`:klangscript:jvmTest` (fast), `:klangscript:jsTest` (browser), `:klangscript-libs:jvmTest` (the stdlib),
+`:klangscript:compileKotlinJvm` (compile only); through the build lock, read with test-digest (`/console-tools`).

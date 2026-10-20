@@ -30,11 +30,8 @@ Also covers `sprudel-ksp`, the KSP processor that extracts DSL documentation fro
 
 ## Testing
 
-```bash
-./gradlew :sprudel:jvmTest                          # preferred (fast)
-./gradlew :sprudel:jvmTest --tests LangBpmSpec      # specific class — NO quotes
-./gradlew :sprudel:jsTest                           # browser-specific only
-```
+`:sprudel:jvmTest` (preferred; `--tests LangBpmSpec`, no quotes), `:sprudel:jsTest` (browser-specific only); through
+the build lock, read with test-digest (`/console-tools`). The rest: `sprudel/ref/testing.md`.
 
 ## Notes
 

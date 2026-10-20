@@ -34,8 +34,5 @@ Patterns generate musical events scheduled over cyclic time (1 cycle ≈ 1 measu
 
 ## Build & Test
 
-```bash
-./gradlew :sprudel:jvmTest                          # preferred (fast)
-./gradlew :sprudel:jvmTest --tests LangBpmSpec      # specific class — NO quotes
-./gradlew :sprudel:jsTest                           # browser-specific only
-```
+`:sprudel:jvmTest` (preferred, fast; one class: `--tests LangBpmSpec`, no quotes), `:sprudel:jsTest` (browser-specific
+only); through the build lock, read with test-digest (`/console-tools`).

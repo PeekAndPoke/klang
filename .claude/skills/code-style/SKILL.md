@@ -171,6 +171,7 @@ parameter) lives there.
 
 Never `—` or `–` in docs, KDoc, UI strings, tutorials, commit messages or reports; use commas, colons, parentheses
 or a new sentence. The A/B comment suffix is `, swap`. Why (maintainer, 2026-08): the dash reads as an AI tell.
+Check: `review-pack --dash-scan` (added lines, any file), `docs-lint --forbid-dashes` (new docs); `/console-tools`.
 
 ## 23. Negated equality is `shouldNotBe`
 

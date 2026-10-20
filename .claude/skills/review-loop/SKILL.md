@@ -21,7 +21,7 @@ Apply this standard whenever reviewing changes or writing tests — including wh
 
 ### The loop
 
-1. **Collect the change set** — the current diff (vs branch base, or the files just edited).
+1. **Collect the change set** with `review-pack` (`/console-tools`): `full.diff`, from round 2 on also `delta.diff`.
 2. **Review round** — spawn **FRESH** reviewer agents (general-purpose), in parallel.
    **Round 1 is BLIND**: the task description, the change set, and the constraints list — nothing
    else.
@@ -187,16 +187,14 @@ A green test proves nothing until it has been RED for the right reason.
 
 ### Protocol (per new test)
 
-1. **GREEN** — write the test, run it, confirm it passes.
-2. **MUTATE** — introduce ONE targeted mutation that should break the tested behavior. **Prefer mutating the code under
-   test** (flip an operator, off-by-one a constant, drop a term, swap a branch); mutating the test's inputs is the
-   fallback when the code can't be safely touched.
-3. **RED** — run the test. It MUST fail. If it stays green, the test is toothless → fix the test and repeat from 1.
-4. **RESTORE** — revert the mutation exactly; run again → green. **Verify with `git diff` that only the intended change
-   remains. NEVER leave a mutation behind.** An agent can be stopped mid-run with a mutant applied (2026-09-25,
-   ledger): a worker that takes over from a stopped one first `cmp`s every production file the predecessor's
-   mutation runner touched against that runner's backups, before it reads the code as the predecessor's work.
-5. **REPORT** one line per test: `mutation-checked: <what was mutated> → red ✓`
+Run it as a `mutate` campaign (`/console-tools`): its baseline is GREEN, each mutant is MUTATE and RED, its
+hash-verified restore and final run are RESTORE, its table is the REPORT. What stays yours:
+1. **MUTATE** ONE targeted thing that should break the tested behavior. **Prefer mutating the code under test** (flip
+   an operator, off-by-one a constant, drop a term, swap a branch); the test's inputs are the fallback.
+2. **RED for the right reason**: `expect_message` names the failure you expect. A SURVIVED mutant means a toothless
+   test (fix it and run again); KILLED-OTHER, KILLED-BY-COMPILE and NOT-RUN prove nothing.
+3. **REPORT** one line per test: `mutation-checked: <what was mutated> → red ✓` (the campaign's row).
+A worker that takes over from a stopped one runs `mutate.py restore <backup dir>` first (2026-09-25, ledger).
 
 ### Scope — two tiers (maintainer, 2026-08-28)
 
@@ -257,7 +255,7 @@ closed ONCE, deterministically, so the same class cannot escape the same way aga
 | checklist | the reviewer template does not ask the question | an item in the `/dsl-design` or `/review-loop` checklist, with the failing scenario as its example |
 | test | no test class could see it (a mutation would have stayed green) | a mandatory test pattern for that kind of change (a parity render, a defaults-sync spec, an identity spec) |
 | design | it should have been decided before implementing | a "decide before implementing" line in the task doc's step template |
-| tooling | a mechanical check would have caught it | a pre-commit grep or a script (`git diff | grep -c '—'`) |
+| tooling | a mechanical check would have caught it | a tool in `console/tools/` (`/console-tools`) or a pre-commit grep |
 
 **The signal that a rule failed is recurrence, not a rate.** If a finding of a class that already
 has a rule escapes again, the rule's TEXT failed (it was not where the agent read, or it did not
@@ -283,22 +281,20 @@ reader.
   Printed output does not count, only the test count and name lengths; the line length also swings about 15 KB with the
   random `flowId`, so it fails intermittently near the limit. Fixed by `karma.config.d/one-teamcity-message-per-line.js`
   in `sprudel` and `audio_be` (the file says why); a module growing toward about 4000 JS tests gets the same file.
-- **`:<module>:jsBrowserTest --tests X` runs the WHOLE JS suite**; read the result XML for the spec you want, and a
-  spec's printed output lands in the aggregate `TEST-Kotest.xml`, not in its own XML.
 - **A scripted rename must know what a word is.** A door name that is also an English word (`voices`,
   `spread`, `vibrato`, `compressor`, `body`) rewritten by a bare regex lands in KDoc prose, Lexikon
   strings, tutorial text and even a Kotlin function name (batch G, 2026-09-07: 215 prose sites).
   Rewrite reads only in a call context (an argument, a `.mul(` chain) and let a reviewer grep the
   dotted paths afterwards; the compiler cannot tell prose from code inside a string.
-- **Reviewers may run Gradle, under the lock** (maintainer, 2026-10-04): a doubt settled by a run beats a guess; the
-  rules (one lock call around mutate, build, restore; `cp` and `cmp`) are in `/agent-fleet`, "Reviewers may build".
+- **Reviewers may run Gradle, under the lock** (maintainer, 2026-10-04): a doubt settled by a run beats a guess; a
+  mutant runs as one `mutate` campaign in one lock call (`/agent-fleet`, "Reviewers may build").
 - **A refused mutant goes to the worker** (maintainer, 2026-10-16; it replaces the provisional 2026-10-11 rule that
-  reviewers only name mutants). Reviewers run their own mutants, each in one lock call (back up, mutate, run, restore
-  with `cp`, check with `cmp`). When the safety check refuses a reviewer's call (it has flagged an `rm` that was not
+  reviewers only name mutants). Reviewers run their own mutants, each as a `mutate` campaign in one lock call.
+  When the safety check refuses a reviewer's call (it has flagged an `rm` that was not
   there, three times in the 2026-10-15 batch, against many calls that passed), the reviewer does not rephrase it: it
   names the mutant and the result it expects in its findings, and the worker runs it in the next fix round. A scratch
   copy (`git archive` inside one lock call) is fine for a measurement.
-- **Snapshot the working tree only inside a lock call** (2026-10-08). A blind pair runs side by side, and a
+- **Snapshot the working tree only inside a lock call** (2026-10-08; `review-pack` too). A blind pair runs side by side, and a
   mutation check lives in the REAL tree for the length of its lock call. Reviewer B of tidy step 11 (b) and (c) copied
   the tree without the lock while reviewer A had `polarity = -1.0` mutated in, and its "new side" carried the mutant.
   Copy or `git archive` plus the uncommitted files inside one `console/with-build-lock.sh bash -c` call, and check the
@@ -314,18 +310,13 @@ reader.
   `:sprudel:clean`.
 - Single spec: `./gradlew :module:jvmTest --tests fully.qualified.SpecName` — UNQUOTED FQCN, no wildcards
   (quoted/wildcard filters match nothing). **One `--tests` per run**: chaining several was seen
-  to match nothing at all (2026-07-03, 2026-09-06). In a mutate-then-expect-red script that
-  `No tests found` exit is indistinguishable from a real kill and produced three spurious RED
-  verdicts (2026-08-20): every expect-red runner must grep the log for `No tests found` and
-  treat it as a script error, and print the failing test names (an empty list on a "red" is the tell).
+  to match nothing at all (2026-07-03, 2026-09-06). Its `No tests found` exit once read as three spurious RED
+  verdicts (2026-08-20); `mutate` and `test-digest` read it as NOT-RUN or MISSING, never as a kill.
 - **A frontend watcher blocks Gradle only in CONTINUOUS mode** (maintainer, 2026-09-09). What the
   build lock cannot serialize against is a build that keeps rebuilding on its own, which means
   `-t` or `--continuous`. A plain `jsBrowserDevelopmentRun` is not that, so it does not block you.
   Check `ps aux | grep gradle | grep -- "-t \|--continuous"`, not the bare process name. The old
   rule read the process name alone and stalled a whole round of work for nothing.
-- **A `--tests` filter does not apply to a JS test task the way it does on the JVM** (2026-09-17):
-  `:audio_bridge:jvmTest :audio_bridge:jsTest --tests <Fqcn>` in one invocation fails. Filter the JVM
-  task; run the JS task unfiltered, on its own.
 - Don't fuss over whitespace/blank-line findings — codefactor.io auto-fixes formatting.
 - **Generated batches: review the prose, trust the structure.** Across 88 script-generated accessor
   objects (2026-09-07) the reviewers found zero read/update or parameter slips; every finding was

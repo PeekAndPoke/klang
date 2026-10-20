@@ -16,12 +16,10 @@ the ticket numbers. This note is the queue, in order. The note of the pause itse
 
 ## Queue (Klang-Main-Dev)
 
-1. **Console tools, review round 2** (`console/tools/`, `/console-tools`), now on `main`. Then the condense
-   proposal the maintainer approved 2026-10-19 ("as you proposed"; it adds the tool block to `CLAUDE.md`), in
-   `docs/tasks/in-progress/console-tools-condense/` with the script that applies it (check its old texts against
-   today's files first: the ticket sweep changed some). docs-lint's task-place and stale-path checks become
-   `ticket check`. Then send Mission Control the commits; it ports the MAJOR fixes into its blueprints and builds
-   one merge tool on our stack-merge. With it: the skill `mission-control-link` from the blueprints.
+1. **Console tools: done 2026-10-20.** Review round 2 (reviewer-high): 1 MAJOR (docs-lint read the git-ignored
+   `tmp/`) and 2 MINORs, fixed in 8d9fa057; every round-1 fix holds. Two rounds without a clean one: the safety
+   valve, a round 3 or not is the maintainer's call. The approved condense is applied (the `CLAUDE.md` tool block
+   with `ticket`, shorter pointers elsewhere); the skill `mission-control-link` is in.
 2. **Engine alloc batch 2's review** (KLANG-00290 (engine follow-ups) items 4, 45 and 13): the review loop (code
    and audio), a clean mutation campaign, `:audio_be:jsBrowserTest` and the allocation check. No release before it
    is clean.

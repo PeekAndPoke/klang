@@ -42,11 +42,8 @@ Documentation lives in `audio/` (top-level docs dir, not a Kotlin module) and `a
 
 ## Testing
 
-```bash
-./gradlew :audio_bridge:jvmTest    # bridge types + comm-link tests
-./gradlew :audio_be:jvmTest        # DSP engine + voice tests
-./gradlew :audio_fe:jvmTest        # sample management tests
-```
+`:audio_bridge:jvmTest` (bridge types, comm-link), `:audio_be:jvmTest` (DSP engine, voices), `:audio_fe:jvmTest`
+(samples); through the build lock, read with test-digest (`/console-tools`).
 
 ## Critical Rules
 
