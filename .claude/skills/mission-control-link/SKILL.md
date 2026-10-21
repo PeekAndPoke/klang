@@ -58,6 +58,20 @@ status, epic), so the report only carries what the tickets don't:
 }
 ```
 
+## Budget (a standing rule from the maintainer)
+
+Watch the weekly token usage: `cat ~/.claude/usage-watch/latest.json`, field
+`rate_limits.seven_day.used_percentage` (`resets_at` is the weekly refill, Friday 13:00). Check it
+before a big step (a review round, a full build, a set of workers) and about every hour while working.
+
+- **Up to 85%:** normal work.
+- **From 85%:** cheap work only: no optional review rounds, no extra workers.
+- **At 90%:** start nothing new. Park the current step safely, commit what's safe, and report `idle`
+  with a note that you stopped for the budget. Work again after the refill or on the maintainer's word.
+
+The maintainer needs the rest for other work. Mission Control also sends a stop message at 90%, but
+don't wait for it.
+
 ## 2. Back-channel: something a shared skill or tool should know
 
 You found a trap, a mistake agents make, a missing case, or a fix in your copy of a blueprint:
@@ -99,7 +113,7 @@ browser tests. Ask it before picking one, and report back what you assigned.
 ## Repo notes
 
 <!-- Local deviations, if any. -->
-klang's copy, taken 2026-10-20, updated 2026-10-21 (missioncontrol cf4131a). klang's session name is
+klang's copy, taken 2026-10-20, updated 2026-10-21 (missioncontrol 83a92e8). klang's session name is
 `Klang-Main-Dev` (the coordinator). Its Karma range is 10031 to 10060, of which 10031 to 10046 are taken (one
 port per module, `<module>/karma.config.d/karma-port.js`). Reports use section 1's short form; the dashboard
 reads the tickets with `ticket.py list --json`.
@@ -113,5 +127,6 @@ reads the tickets with `ticket.py list --json`.
 ## Changes
 
 <!-- Kept by the nexus, newest first. Tells a repo what an update brought. -->
+- 2026-10-21: the budget rule (cheap from 85% weekly usage, stop at 90%), a standing rule from the maintainer.
 - 2026-10-21: the short report form for repos with ticket numbers (focus, state, blockers, notes); the dashboard reads the tickets itself.
 - 2026-10-19: first version.
