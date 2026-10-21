@@ -10,7 +10,8 @@ What goes into full.diff: everything between the merge base and the working tree
 committed or not, including untracked files that git does not ignore. Renames are detected (-M)
 and shown with their content changes. Nothing in the worktree or its index is changed.
 Left out: the review logs (.claude/reviews/, written during the review, so a later round would hand
-the reviewers the previous round's findings) and every --skip PATH; they stay as committed.
+the reviewers the previous round's findings), every path in skip.txt next to this script (the
+repo's own list: one path per line, # comments), and every --skip PATH; they stay as committed.
 
 How the delta works: each round's exact state is saved as a commit under
 refs/review-pack/<label>/round-<n> (a private ref namespace, never on a branch). The next round
@@ -31,6 +32,15 @@ import tempfile
 
 REF_ROOT = "refs/review-pack"
 SKIP = [".claude/reviews/"]  # what the review-log tool writes
+SKIP_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "skip.txt")
+
+
+def repo_skips():
+    try:
+        with open(SKIP_FILE, encoding="utf-8") as f:
+            return [l.split("#")[0].strip() for l in f if l.split("#")[0].strip()]
+    except FileNotFoundError:
+        return []
 DASHES = {"\u2014": "em dash", "\u2013": "en dash"}  # escaped, so a dash scan of this file finds nothing
 
 
@@ -108,7 +118,7 @@ def main(argv=None):
     p.add_argument("--label", default=None, help="name for this change's rounds (default: current branch)")
     p.add_argument("--out", default=None, help="output directory for this round")
     p.add_argument("--skip", action="append", default=[], metavar="PATH",
-                   help=f"leave this path out of the diffs (repeatable; always left out: {', '.join(SKIP)})")
+                   help=f"leave this path out of the diffs (repeatable; always left out: {', '.join(SKIP)} and skip.txt)")
     p.add_argument("--dash-scan", action="store_true", help="list added lines with em or en dashes")
     a = p.parse_args(argv)
     wt = git("rev-parse", "--show-toplevel", cwd=os.path.abspath(a.worktree)).strip()
@@ -129,7 +139,7 @@ def main(argv=None):
     base = a.base or default_base(wt)
     merge_base = git("merge-base", base, "HEAD", cwd=wt).strip()
     round_no = (done[-1] + 1) if done else 1
-    skip = SKIP + a.skip
+    skip = SKIP + repo_skips() + a.skip
     current = snapshot(wt, merge_base, label, round_no, skip)
     out = a.out or os.path.join(tempfile.gettempdir(), "review-pack", label, f"round-{round_no}")
     os.makedirs(out, exist_ok=True)

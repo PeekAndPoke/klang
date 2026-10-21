@@ -1,0 +1,3 @@
+# klang: paths review-pack leaves out of a round's diffs (one per line), besides .claude/reviews/
+# the maintainer edits songs in the shared main checkout; their uncommitted edits are not under review
+src/commonMain/kotlin/builtinsongs/
