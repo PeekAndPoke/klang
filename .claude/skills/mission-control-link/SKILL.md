@@ -20,8 +20,30 @@ says so in a line under "Repo notes". It doesn't need the nexus's OK.
 
 ## 1. Status reports
 
-Send a full JSON snapshot whenever something meaningful changes: a task starts or finishes, a
-blocker appears or clears, or you reach a pause. Each snapshot replaces the previous one.
+Send a JSON snapshot whenever something meaningful changes: a task starts or finishes, a blocker
+appears or clears, or you reach a pause. Each snapshot replaces the previous one.
+
+**A repo with ticket numbers sends the short form.** The dashboard reads the tickets itself (title,
+status, epic), so the report only carries what the tickets don't:
+
+```json
+{
+  "agent": "<your session name>", "project": "<project>",
+  "focus": "one line: what you are doing right now",
+  "state": "working | waiting-on-user | blocked | idle",
+  "blockers": ["XYZ-00042: what the maintainer or another agent has to do"],
+  "notes": {"XYZ-00042": "one line where the ticket's status line isn't enough"},
+  "upcoming": ["planned work that has no ticket yet"],
+  "upstream": ["proposals sent back to a blueprint, not yet merged (see 2)"]
+}
+```
+
+- `state` is one of the four words; detail goes in `notes`. Lists stay lists: `[]` when empty.
+- Name the ticket in a blocker: the dashboard shows that ticket as blocked.
+- Keep the tickets' status lines current. They are what the dashboard shows.
+- Optional: a `tasks` entry with a ticket number as its id adds `progress` or `subtasks` to that ticket.
+
+**A repo without ticket numbers** (or work that isn't in tickets) sends the full form:
 
 ```json
 {
@@ -77,13 +99,10 @@ browser tests. Ask it before picking one, and report back what you assigned.
 ## Repo notes
 
 <!-- Local deviations, if any. -->
-klang's copy, taken 2026-10-20. klang's session name is `Klang-Main-Dev` (the coordinator). Its Karma range is
-10031 to 10060, of which 10031 to 10046 are taken (one port per module, `<module>/karma.config.d/karma-port.js`).
-Reports since 2026-10-21 (Mission Control's message, the maintainer agreed; until the blueprint's section 1 says
-it): the dashboard reads the tickets itself (`ticket.py list --json`), so a report carries only what the tickets do
-not: `agent`, `project`, `focus`, `state`, `blockers` (e.g. "KLANG-00322: hand test (maintainer)"), optional
-`notes` (one line per ticket), `upcoming` (work without a ticket), `upstream`. Ticket status lines must stay
-current: they are what the dashboard shows.
+klang's copy, taken 2026-10-20, updated 2026-10-21 (missioncontrol cf4131a). klang's session name is
+`Klang-Main-Dev` (the coordinator). Its Karma range is 10031 to 10060, of which 10031 to 10046 are taken (one
+port per module, `<module>/karma.config.d/karma-port.js`). Reports use section 1's short form; the dashboard
+reads the tickets with `ticket.py list --json`.
 
 ## Proposed upstream
 
@@ -94,4 +113,5 @@ current: they are what the dashboard shows.
 ## Changes
 
 <!-- Kept by the nexus, newest first. Tells a repo what an update brought. -->
+- 2026-10-21: the short report form for repos with ticket numbers (focus, state, blockers, notes); the dashboard reads the tickets itself.
 - 2026-10-19: first version.
