@@ -174,6 +174,9 @@ redo, read from the table), the clipboard history (KLANG-00326), navigate back a
 
 ## Depends on / unblocks
 
+This ticket is the epic "keyboard shortcuts", klang's first (maintainer, 2026-10-21): its tickets carry a
+`Part of` line naming it.
+
 After KLANG-00323 (bookmarks, done and committed). Unblocks KLANG-00324 (the shortcuts page reads the table).
 
 ## History
@@ -181,3 +184,5 @@ After KLANG-00323 (bookmarks, done and committed). Unblocks KLANG-00324 (the sho
 - 2026-10-21: created as an idea (maintainer's note).
 - 2026-10-21: the interview: the PC preset decided key by key, presets per platform, the component idea; the Mac table
   and the design draft written for the maintainer's look. The order with KLANG-00324 turned round: the key map first.
+- 2026-10-21: the first epic (maintainer: "adopt this gradually"); KLANG-00324, KLANG-00326 and KLANG-00327 are part
+  of it.

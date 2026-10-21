@@ -168,6 +168,11 @@ klang's copy, taken 2026-10-20 (the blueprint as of that day).
   was added at the migration (archived: DONE, or WON'T IMPLEMENT for three, dated by the old file name;
   the open ones dated 2026-10-20 with the word read from their own status text). New tickets follow the
   shape above.
+- **Epics** *(provisional)*, adopted gradually (maintainer, 2026-10-21), Mission Control's proposal of that day: a
+  ticket that belongs to a group carries `> **Part of:** KLANG-nnnnn (short title)` after a bare `>` under its
+  status line (so `ticket move`, which ends the status block at a bare `>`, keeps it); the epic is an ordinary
+  ticket. The first and so far only epic: KLANG-00325 (keyboard shortcuts). The ticket tool's support (`list
+  --epic`, the check) comes from Mission Control.
 - **Dated records keep their words** and were not swept: `DEV-DIARY.MD`, the escape and defect-density
   ledgers, `<module>/ref/memory-history.md`, `docs/benchmarks/`, `docs/funding/evidence/`, and the
   published pages (`docs/blog/`, `src/jsMain/resources/`), which may still name old task paths.

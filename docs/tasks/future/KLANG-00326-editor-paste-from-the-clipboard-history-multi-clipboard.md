@@ -1,6 +1,8 @@
 # KLANG-00326: Editor: paste from the clipboard history (multi-clipboard)
 
 > **Status (2026-10-21): IDEA.** The maintainer's note during the key map interview (KLANG-00325).
+>
+> **Part of:** KLANG-00325 (keyboard shortcuts)
 
 ## Why this exists
 

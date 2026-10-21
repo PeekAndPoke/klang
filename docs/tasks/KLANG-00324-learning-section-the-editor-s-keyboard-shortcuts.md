@@ -1,6 +1,8 @@
 # KLANG-00324: Learning section: the editor's keyboard shortcuts
 
 > **Status (2026-10-21): DESIGNED.** After KLANG-00325 (the key map), whose table the page reads.
+>
+> **Part of:** KLANG-00325 (keyboard shortcuts)
 
 ## Why this exists
 

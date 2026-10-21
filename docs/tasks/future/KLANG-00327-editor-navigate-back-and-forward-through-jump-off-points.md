@@ -1,6 +1,8 @@
 # KLANG-00327: Editor: navigate back and forward through jump-off points
 
 > **Status (2026-10-21): IDEA.** Prepared in the key map (KLANG-00325) without a key; built later.
+>
+> **Part of:** KLANG-00325 (keyboard shortcuts)
 
 ## Why this exists
 
