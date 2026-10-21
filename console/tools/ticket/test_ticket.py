@@ -232,6 +232,9 @@ class NewMoveCheck(Repo):
         self.assertIn("> **Part of:** KL-00001 (Editor)", read(self.root, out.strip()))  # move keeps it
         rc, out = run(self.root, "list", "--epic", "KL-00001")
         self.assertIn("KL-00001 (Editor): 2/3 closed, 0 open, 0 paused, 1 ideas", out)
+        rows = {t["id"]: t for t in json.loads(run(self.root, "list", "--json")[1])}
+        self.assertEqual((rows["KL-00003"]["status"], rows["KL-00003"]["epic"], rows["KL-00004"]["note"]),
+                         ("IDEA", "KL-00001", "Dropped."))
         rc, out = run(self.root, "epics", "--json")
         epic = json.loads(out)[0]
         self.assertEqual((epic["id"], epic["counts"]["total"], len(epic["children"])), ("KL-00001", 3, 3))
@@ -376,6 +379,24 @@ class AdoptAndFixes(Repo):
         # both the old full path and the bare name resolve: every candidate is the same ticket
         self.assertEqual(read(self.root, "docs/research/old.md"),
                          f"See {tid} (04e weather) and {tid} (04e weather).\n")
+
+    def test_adopt_resolves_stale_and_elided_paths_and_commits_only_its_files(self):
+        write(self.root, "docs/tasks-archive/2026-10/20261018-docs-kronos.md",
+              "# Kronos docs\n\n> **Status (2026-10-18): DONE.** Shipped.\n\nBody of the kronos ticket.\n")
+        write(self.root, "README.md", "See `docs/tasks/20261018-docs-kronos.md` and `\u2026/20261018-docs-kronos.md`.\n")
+        write(self.root, ".gitignore", "*.ignored\n")
+        commit(self.root, "add", "2026-10-18T10:00:00")  # with the counter setUp made
+        write(self.root, "notes/scratch.txt", "not this ticket's\n")  # untracked before adopt
+        rc, out = run(self.root, "adopt", "docs/tasks-archive/2026-10/20261018-docs-kronos.md", "--apply", "--commit",
+                      "--trailer", "Co-Authored-By: Test <t@t>")
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(read(self.root, "README.md"), "See UL-00001 (docs kronos) and UL-00001 (docs kronos).\n")
+        msg = subprocess.run(["git", "log", "-1", "--format=%B"], cwd=self.root, capture_output=True, text=True).stdout
+        self.assertIn("Co-Authored-By: Test <t@t>", msg)
+        files = subprocess.run(["git", "show", "--name-only", "--format=", "HEAD"], cwd=self.root,
+                               capture_output=True, text=True).stdout
+        self.assertNotIn("notes/scratch.txt", files)
+        self.assertIn("README.md", files)
 
     def test_root_after_the_subcommand(self):
         out = io.StringIO()

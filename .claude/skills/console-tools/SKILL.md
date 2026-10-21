@@ -322,9 +322,9 @@ dash scan, stack-merge's exit code by exception type, test-digest's foreign-suit
   on synthetic repos; not yet run against klang itself.
 - The lock: `console/with-build-lock.sh` finds the main checkout's lock from any worktree (since
   2026-10-19), so no call needs `KLANG_LOCK_FILE` any more.
-- **ticket**: the blueprint's copy at 61ccec7 (2026-10-21, epics), unchanged; its 18 tests pass here
-  (`python3 test_ticket.py` in the tool's folder). Epics are adopted gradually (project-layout, Repo notes). klang's bulk migration, with what
-  it swept and what it left alone: `docs/housekeeping/20261020-ticket-migration.md` and its commit
+- **ticket**: the blueprint's copy at bb55dd5 (2026-10-21, epics, list --json, ultra's migration fixes), unchanged;
+  its 19 tests pass here (`python3 test_ticket.py` in the tool's folder). Epics are adopted gradually
+  (project-layout, Repo notes). klang's bulk migration, with what it swept and what it left alone: `docs/housekeeping/20261020-ticket-migration.md` and its commit
   (3c9a191d); the checklist in `in-progress/` is a `skip:` line.
 - **docs-lint**: both files list what git does not ignore (`git ls-files -co --exclude-standard`), with
   the walk as the fallback outside git (generic). klang's `docs_lint_local.py` has one rule left,
