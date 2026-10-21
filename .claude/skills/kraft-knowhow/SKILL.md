@@ -162,6 +162,8 @@ kraftApp {
   KLANG-00323, 2026-10-21), not Kraft's `OkCancelModal`: its buttons are divs that cannot take the keyboard.
   Fomantic paints a modal's `> .header`, `> .content` and `> .actions` white; klang.css themes them. Kraft's
   `FadingModal.close()` fades for 500 ms before the handle's `onClose` runs, and `closeAll()` runs no `onClose` at all.
+  Ultra confirmed all three and fixes them in Kraft (ULTRA-00233, after ultra's pause); keep YesNoModal's workaround
+  until a Kraft release carries the fix (Mission Control passes the version on).
 
 ## HARD RULE
 
