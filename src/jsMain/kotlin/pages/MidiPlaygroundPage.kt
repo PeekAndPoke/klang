@@ -12,8 +12,6 @@ import io.peekandpoke.klang.comp.MidiPanel
 import io.peekandpoke.klang.comp.RealtimePlaybackCtrl
 import io.peekandpoke.klang.midi.KeyLabEssential49Mk3
 import io.peekandpoke.klang.midi.MidiConnector
-import io.peekandpoke.klang.midi.MidiInstrument
-import io.peekandpoke.klang.midi.MidiInstrumentStorage
 import io.peekandpoke.klang.midi.NoteKey
 import io.peekandpoke.klang.midi.padBankOf
 import io.peekandpoke.klang.script.KlangScriptEngine
@@ -25,6 +23,8 @@ import io.peekandpoke.klang.sprudel.lang.note
 import io.peekandpoke.klang.sprudel.lang.sound
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
 import io.peekandpoke.klang.sprudel.lang.velocity
+import io.peekandpoke.klang.storage.MidiInstrument
+import io.peekandpoke.klang.storage.MidiInstrumentStorage
 import io.peekandpoke.klang.tones.midi.Midi
 import io.peekandpoke.klang.ui.codemirror.KlangScriptEditorComp
 import io.peekandpoke.kraft.components.NoProps

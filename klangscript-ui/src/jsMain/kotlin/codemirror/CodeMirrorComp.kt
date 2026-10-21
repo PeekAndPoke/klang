@@ -60,6 +60,7 @@ fun Tag.KlangScriptEditorComp(
     onNavigate: ((doc: KlangSymbol, event: dynamic) -> Unit)? = null,
     onOpenTool: ((toolName: String, ctx: KlangUiToolContext, argFrom: Int, event: dynamic) -> Unit)? = null,
     showMinimap: Boolean = false,
+    bookmarks: BookmarkOptions? = null,
 ): ComponentRef<KlangScriptEditorComp> = comp(
     KlangScriptEditorComp.Props(
         code = code,
@@ -72,6 +73,7 @@ fun Tag.KlangScriptEditorComp(
         onNavigate = onNavigate,
         onOpenTool = onOpenTool,
         showMinimap = showMinimap,
+        bookmarks = bookmarks,
     )
 ) {
     KlangScriptEditorComp(it)
@@ -97,6 +99,11 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
          * (`height: 100%`), so the host must give it a definite height.
          */
         val showMinimap: Boolean = false,
+        /**
+         * The numbered bookmarks (KLANG-00323) and the host that keeps them; read once, when the editor is built.
+         * Null leaves the editor without bookmarks, and their keys reach the browser.
+         */
+        val bookmarks: BookmarkOptions? = null,
     )
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -193,6 +200,7 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
                 lintGutter(),
                 *dslExtensions.toTypedArray(),
                 *buildMinimapExtensions().toTypedArray(),
+                *buildBookmarkExtensions().toTypedArray(),
             )
         ).unsafeCast<Array<Extension>>()
 
@@ -269,6 +277,13 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
         return listOf(showMinimap.of(config))
     }
 
+    /** The bookmarks when [Props.bookmarks] is set, nothing otherwise. */
+    private fun buildBookmarkExtensions(): List<Extension> {
+        val options = props.bookmarks ?: return emptyList()
+
+        return listOf(BookmarksExtension.extension(options))
+    }
+
     /** Builds DSL-aware extensions (hover docs, code completion) when libraries are configured. */
     private fun buildDslExtensions(): List<Extension> {
         if (props.availableLibraries.isEmpty()) return emptyList()
@@ -312,7 +327,8 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
     /**
      * Replaces the whole document with [newCode]: a reset to the original code (the song page's, a code example's).
      *
-     * Does nothing when the document already is [newCode]. A replacement empties the edit places (KLANG-00322).
+     * Does nothing when the document already is [newCode]. A replacement empties the edit places (KLANG-00322) and
+     * keeps the bookmarks on their line numbers, as a reload would (KLANG-00323).
      */
     fun setCode(newCode: String) {
         val view = editor ?: return
@@ -327,7 +343,7 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
                         this.to = view.state.doc.length
                         this.insert = newCode
                     }
-                    this.effects = EditPlacesExtension.clear.of(Unit)
+                    this.effects = arrayOf(EditPlacesExtension.clear.of(Unit), BookmarksExtension.keepLines.of(Unit))
                 }
             )
         )

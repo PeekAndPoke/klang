@@ -15,6 +15,11 @@ version = VERSION_NAME
 
 kotlin {
     js {
+        // As the app compiles: ES classes, so Kotlin can extend CodeMirror's (the bookmarks' gutter marker)
+        compilerOptions {
+            target.set("es2015")
+        }
+
         browser {
             commonWebpackConfig { devtool = "source-map" }
         }

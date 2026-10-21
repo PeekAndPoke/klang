@@ -3,23 +3,21 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-package io.peekandpoke.klang.pages.docs.tutorials
+package io.peekandpoke.klang.storage
 
 import kotlinx.browser.localStorage
 
 object TutorialStorage {
 
-    private const val KEY_PREFIX = "klang-tutorial-completed-"
-
     fun isCompleted(slug: String): Boolean {
-        return localStorage.getItem("$KEY_PREFIX$slug") == "true"
+        return localStorage.getItem(StorageKeys.tutorialCompleted(slug)) == "true"
     }
 
     fun setCompleted(slug: String, completed: Boolean) {
         if (completed) {
-            localStorage.setItem("$KEY_PREFIX$slug", "true")
+            localStorage.setItem(StorageKeys.tutorialCompleted(slug), "true")
         } else {
-            localStorage.removeItem("$KEY_PREFIX$slug")
+            localStorage.removeItem(StorageKeys.tutorialCompleted(slug))
         }
     }
 

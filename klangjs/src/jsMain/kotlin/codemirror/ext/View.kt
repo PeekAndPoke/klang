@@ -329,6 +329,25 @@ external fun tooltips(config: dynamic = definedExternally): Extension
 external fun showPanel(panelConstructor: (view: EditorView) -> Panel): Extension
 external fun panels(config: dynamic = definedExternally): Extension
 
+/**
+ * A marker on one line of a gutter, CodeMirror's class to extend (in Kotlin, from code compiled to ES classes):
+ * [elementClass] goes on the line's gutter element, and a subclass with a `toDOM(view)` method (named so with
+ * `@JsName`) draws into it. In the line-number gutter, a marker that draws takes the place of the line number.
+ */
+external abstract class GutterMarker : RangeValue {
+    /** The CSS class or classes for the marked line's gutter element; empty by default. */
+    open val elementClass: String
+
+    /** True when [other] draws the same; CodeMirror then keeps the drawn element. */
+    override fun eq(other: RangeValue): Boolean
+
+    /** This marker at [from], for [RangeSet.of]. */
+    fun range(from: Int, to: Int = definedExternally): Range<GutterMarker>
+}
+
+/** The markers of the line-number gutter: every extension may add a set. */
+external val lineNumberMarkers: Facet<RangeSet<GutterMarker>>
+
 external val showTooltip: Facet<Tooltip>
 
 external fun hoverTooltip(

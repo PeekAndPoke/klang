@@ -13,6 +13,9 @@ import io.peekandpoke.klang.comp.LcdDisplay
 import io.peekandpoke.klang.fs
 import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
+import io.peekandpoke.klang.storage.SongStorage
+import io.peekandpoke.klang.ui.codemirror.BookmarkOptions
+import io.peekandpoke.klang.ui.codemirror.Bookmarks
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.klang.version
 import io.peekandpoke.kraft.components.Component
@@ -21,6 +24,7 @@ import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.modals.ModalsManager.Companion.modals
 import io.peekandpoke.kraft.semanticui.forms.UiInputField
+import io.peekandpoke.kraft.semanticui.modals.OkCancelModal.Companion.mini
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
@@ -28,10 +32,8 @@ import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.semanticui.icon
 import io.peekandpoke.ultra.semanticui.noui
 import io.peekandpoke.ultra.semanticui.ui
-import io.peekandpoke.ultra.streams.StreamSource
 import io.peekandpoke.ultra.streams.ops.distinct
 import io.peekandpoke.ultra.streams.ops.map
-import io.peekandpoke.ultra.streams.ops.persistInLocalStorage
 import kotlinx.browser.window
 import kotlinx.css.Align
 import kotlinx.css.Color
@@ -64,7 +66,6 @@ import kotlinx.html.DIV
 import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlinx.html.title
-import kotlinx.serialization.builtins.serializer
 
 @Suppress("FunctionName")
 fun Tag.CodeSongPage(
@@ -98,22 +99,29 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     val builtIn = BuiltInSongs.songs.firstOrNull { it.id == songId }
 
-    val rpmStream = StreamSource(builtIn?.rpm ?: 30.0)
-        .persistInLocalStorage("song-$v-$songId-rpm", Double.serializer())
-
-    val songTitleStream = StreamSource(builtIn?.title ?: "New Song")
-        .persistInLocalStorage("song-$v-$songId-title", String.serializer())
-
-    val codeStream = StreamSource(builtIn?.code ?: defaultCode)
-        .persistInLocalStorage("song-$v-$songId-code", String.serializer())
+    /** What the browser keeps of this song: its code, title, rpm and bookmarks. */
+    private val songStorage = SongStorage(
+        version = v,
+        songId = songId,
+        defaultCode = builtIn?.code ?: defaultCode,
+        defaultTitle = builtIn?.title ?: "New Song",
+        defaultRpm = builtIn?.rpm ?: 30.0,
+    )
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
     private val ctrl = KlangCodePlaybackCtrl.builder()
-        .code(codeStream())
-        .rpm(rpmStream())
-        .title(songTitleStream())
+        .code(songStorage.code())
+        .rpm(songStorage.rpm())
+        .title(songStorage.title())
         .build()
+
+    /** The editor's bookmarks (KLANG-00323): it starts from the stored ones, and every change is stored. */
+    private val bookmarks = BookmarkOptions(
+        initial = songStorage.bookmarks().map { (digit, line) -> Bookmarks.Line(digit = digit, line = line) },
+        onChanged = { lines -> songStorage.bookmarks(lines.associate { it.digit to it.line }) },
+        askToMove = { move, answer -> askToMoveBookmark(move = move, answer = answer) },
+    )
 
     @Suppress("unused")
     private val laf by subscribingTo(KlangTheme)
@@ -135,7 +143,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     // On rpm changes: persist to localStorage AND cancel highlights to avoid stale timing across tempo shifts.
     @Suppress("unused")
     private val rpmChange by subscribingTo(ctrl.state.map { it.rpm }.distinct()) { newRpm ->
-        rpmStream(newRpm)
+        songStorage.rpm(newRpm)
         codeEditorRef { editor -> editor.cancelHighlights() }
     }
 
@@ -150,7 +158,9 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     // Persist title changes back to the localStorage-backed stream.
     @Suppress("unused")
     private val titlePersist by subscribingTo(ctrl.state.map { it.title }.distinct()) { newTitle ->
-        if (newTitle != null) songTitleStream(newTitle)
+        if (newTitle != null) {
+            songStorage.title(newTitle)
+        }
     }
 
     init {
@@ -168,7 +178,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     private fun onPlay() {
         // Persist the current code before starting (matches original strategy of persist-on-play).
-        codeStream(ctrl.state().code)
+        songStorage.code(ctrl.state().code)
         ctrl.play()
     }
 
@@ -184,8 +194,36 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
             ctrl.setCode(b.code)
             ctrl.setRpm(b.rpm)
             ctrl.setTitle(b.title)
-            codeStream(b.code)
+            songStorage.code(b.code)
             codeEditorRef { it.setCode(b.code) }
+        }
+    }
+
+    /**
+     * Asks whether to move a bookmark, in a small confirm. [answer] is called once: with the button's answer, or with
+     * no when the confirm closes otherwise (a click beside it). Kraft calls the Yes button's result before the confirm
+     * has faded out and closed, so the close that follows a yes changes nothing.
+     */
+    private fun askToMoveBookmark(move: BookmarkOptions.Move, answer: (yes: Boolean) -> Unit) {
+        var answered = false
+
+        val reply = { yes: Boolean ->
+            if (!answered) {
+                answered = true
+                answer(yes)
+            }
+        }
+
+        modals.show { handle ->
+            mini(
+                handle = handle,
+                header = {},
+                content = { ui.content { +"Bookmark ${move.digit} is on line ${move.fromLine}. Move it here?" } },
+            ) { result ->
+                reply(result.isOk)
+            }
+        }.onClose {
+            reply(false)
         }
     }
 
@@ -449,6 +487,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
             maxHighlightsPerEvent = highlightPerEvent,
             pauseHighlightsWhen = { currentModals.isNotEmpty() },
             showMinimap = true,
+            bookmarks = bookmarks,
         ).track(codeEditorRef)
     }
 }

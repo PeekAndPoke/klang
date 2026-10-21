@@ -129,6 +129,12 @@ external val indentWithTabKeymap: Array<KeyBinding>
 external val history: (config: dynamic) -> Extension
 external val historyField: dynamic
 
+/** Effects the history stores with a transaction and replays when it undoes it (and when it redoes the undo). */
+external val invertedEffects: Facet<(tr: Transaction) -> Array<StateEffect<*>>>
+
+/** Keeps a transaction from joining the history events around it: `"before"`, `"after"` or `"full"`. */
+external val isolateHistory: AnnotationType<String>
+
 // Comment config
 external interface CommentConfig {
     var lineComment: String?

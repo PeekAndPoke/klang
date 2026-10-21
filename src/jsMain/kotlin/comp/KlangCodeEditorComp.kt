@@ -16,6 +16,7 @@ import io.peekandpoke.klang.ui.HoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
 import io.peekandpoke.klang.ui.KlangUiToolRegistry
+import io.peekandpoke.klang.ui.codemirror.BookmarkOptions
 import io.peekandpoke.klang.ui.codemirror.KlangScriptEditorComp
 import io.peekandpoke.klang.ui.codetools.CodeToolModal
 import io.peekandpoke.kraft.addons.pixijs.PixiJsAddon
@@ -64,6 +65,7 @@ fun Tag.KlangCodeEditorComp(
     extraVoiceHandler: ((KlangPlaybackSignal.VoicesScheduled.VoiceEvent) -> Unit)? = null,
     currentSource: String? = null,
     showMinimap: Boolean = false,
+    bookmarks: BookmarkOptions? = null,
 ): ComponentRef<KlangCodeEditorComp> = comp(
     KlangCodeEditorComp.Props(
         ctrl = ctrl,
@@ -74,6 +76,7 @@ fun Tag.KlangCodeEditorComp(
         extraVoiceHandler = extraVoiceHandler,
         currentSource = currentSource,
         showMinimap = showMinimap,
+        bookmarks = bookmarks,
     )
 ) {
     KlangCodeEditorComp(it)
@@ -101,6 +104,8 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
         val currentSource: String?,
         /** Shows a minimap of the whole document; the host must give the editor a definite height. */
         val showMinimap: Boolean,
+        /** The numbered bookmarks and the host that keeps them (KLANG-00323); null leaves the editor without. */
+        val bookmarks: BookmarkOptions?,
     )
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -311,6 +316,7 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
                     openTool(toolName = toolName, toolCtx = toolCtx, argFrom = argFrom, event = event)
                 },
                 showMinimap = props.showMinimap,
+                bookmarks = props.bookmarks,
             ).track(editorRef)
         }
     }

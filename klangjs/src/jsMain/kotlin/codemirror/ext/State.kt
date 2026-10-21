@@ -20,12 +20,18 @@ external interface Extension
 external interface Facet<T> {
     fun of(value: T): Extension
     fun from(field: StateField<out T>): Extension
+
+    /** The facet's value computed from [get], which runs again only when one of [deps] changed (a field, "doc"). */
+    fun compute(deps: Array<Any>, get: (state: EditorState) -> T): Extension
 }
 
 /**
  * A state field stores additional state in the editor
  */
 external interface StateField<T> {
+    /** The field, started from [create] instead of its config's `create`. */
+    fun init(create: (state: EditorState) -> T): Extension
+
     companion object {
         fun <T> define(config: StateFieldConfig<T>): StateField<T>
     }
@@ -71,6 +77,9 @@ external class EditorState {
     companion object {
         fun create(config: EditorStateConfig): EditorState
         fun fromJSON(json: Any, config: EditorStateConfig = definedExternally): EditorState
+
+        /** Functions that may add to every transaction: a spec with `annotations` or `effects`, or null. */
+        val transactionExtender: Facet<(tr: Transaction) -> Any?>
     }
 }
 
@@ -150,7 +159,9 @@ external class Transaction {
     val startState: EditorState
     val newDoc: Text
     val newSelection: EditorSelection
-    val isUserEvent: (event: String) -> Boolean
+
+    /** True when the transaction's user event is [event] or one of its sub-events (`move.line` for `move`). */
+    fun isUserEvent(event: String): Boolean
 }
 
 /**
@@ -208,6 +219,19 @@ external class StateEffect<T> {
     }
 }
 
+/** A kind of transaction annotation (CodeMirror's `AnnotationType`): [of] makes one for a transaction. */
+external interface AnnotationType<T> {
+    fun of(value: T): Annotation<T>
+}
+
+/** One annotation of a transaction. */
+external interface Annotation<T>
+
+/** Precedence for extensions: a higher one runs first (key bindings, for example). */
+external object Prec {
+    fun highest(ext: Extension): Extension
+}
+
 /**
  * Type of a state effect
  */
@@ -231,6 +255,11 @@ external class RangeSet<T> {
     val size: Int
     fun between(from: Int, to: Int, f: (from: Int, to: Int, value: T) -> Unit)
     fun iter(from: Int = definedExternally): RangeSetIterator<T>
+
+    companion object {
+        /** A set of [ranges], which must be sorted by position unless [sort] is true. */
+        fun <T> of(ranges: Array<Range<T>>, sort: Boolean = definedExternally): RangeSet<T>
+    }
 }
 
 external interface RangeSetIterator<T> {

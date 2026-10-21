@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-package io.peekandpoke.klang.midi
+package io.peekandpoke.klang.storage
 
 import kotlinx.browser.localStorage
 import kotlinx.serialization.json.Json
@@ -33,8 +33,8 @@ data class MidiInstrument(
  */
 object MidiInstrumentStorage {
 
-    private const val KEY_INSTRUMENTS = "klang-midi-instruments"
-    private const val KEY_DRAFT = "klang-midi-instrument-draft"
+    private const val KEY_INSTRUMENTS = StorageKeys.MIDI_INSTRUMENTS
+    private const val KEY_DRAFT = StorageKeys.MIDI_INSTRUMENT_DRAFT
 
     fun loadAll(): List<MidiInstrument> {
         val raw = localStorage.getItem(KEY_INSTRUMENTS) ?: return emptyList()
