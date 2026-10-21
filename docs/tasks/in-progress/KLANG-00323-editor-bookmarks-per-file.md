@@ -1,6 +1,6 @@
 # KLANG-00323: Editor: bookmarks per file
 
-> **Status (2026-10-21): DESIGNED.** The maintainer's answers are in (below); starts after KLANG-00322.
+> **Status (2026-10-21): IN PROGRESS.** Started: a worker builds the storage layer and the bookmarks.
 
 ## Why this exists
 
@@ -58,3 +58,4 @@ Bookmarks across songs (IntelliJ's global list), named bookmarks, and a bookmark
 
 - 2026-10-21: created; designed the same day (maintainer's request); two questions open.
 - 2026-10-21: the maintainer's answers: kept per song in the browser behind a storage dir, the browser's default suppressed, Chrome only.
+- 2026-10-21: IN PROGRESS. Started: a worker builds the storage layer and the bookmarks.
