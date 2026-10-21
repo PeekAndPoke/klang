@@ -259,10 +259,11 @@ that needs nothing added to the fresh worktree; klang's full check needs the cac
 ## ticket
 
 ```
-python3 -I console/tools/ticket/ticket.py new "Engine follow-ups" [--status DESIGNED]
+python3 -I console/tools/ticket/ticket.py new "Engine follow-ups" [--status DESIGNED] [--part-of XYZ-00041]
 python3 -I console/tools/ticket/ticket.py move XYZ-00042 IN PROGRESS [--note "Started step 1."]
 python3 -I console/tools/ticket/ticket.py find XYZ-00042   # or an old name or code: find KLANG-00290 (engine follow ups)
-python3 -I console/tools/ticket/ticket.py list [--status "IN PROGRESS"]
+python3 -I console/tools/ticket/ticket.py list [--status "IN PROGRESS"] [--epic XYZ-00041 [--deep]]
+python3 -I console/tools/ticket/ticket.py epics [--json]   # every epic with its children's counts
 python3 -I console/tools/ticket/ticket.py check            # exit 1 on a problem
 ```
 
@@ -272,6 +273,10 @@ python3 -I console/tools/ticket/ticket.py check            # exit 1 on a problem
 - **Write the number, never the path**: "XYZ-00042 (engine follow-ups)" on first mention, then
   "XYZ-00042". `check` reports a path or a file name, a number with no ticket, a file in the wrong
   folder for its status, and a counter behind the highest number.
+- **Epics** (optional): a ticket in a group carries `> **Part of:** XYZ-00041 (short title)` after a bare `>`
+  under its status line; `new --part-of` writes it, `move` keeps it. `check` refuses a ticket that is its own
+  parent, a loop, a parent with no ticket file, and a short title sharing no word with the epic's title.
+  Counts: closed (DONE, WON'T IMPLEMENT), open, paused, ideas.
 - **Migrating a repo** happens once; klang did it in bulk on 2026-10-20 (`migrate`, `sweep`, `check`).
   The record `docs/housekeeping/20261020-ticket-migration.md` stays: `find` reads it.
 - Files that aren't tickets: README.md, NEXT-STEPS.md, TEMPLATE.md, every `_*.md`, plus `skip: <glob>`
@@ -317,7 +322,8 @@ dash scan, stack-merge's exit code by exception type, test-digest's foreign-suit
   on synthetic repos; not yet run against klang itself.
 - The lock: `console/with-build-lock.sh` finds the main checkout's lock from any worktree (since
   2026-10-19), so no call needs `KLANG_LOCK_FILE` any more.
-- **ticket**: the blueprint's copy at 521c7f3 (2026-10-21), unchanged. klang's bulk migration, with what
+- **ticket**: the blueprint's copy at 61ccec7 (2026-10-21, epics), unchanged; its 18 tests pass here
+  (`python3 test_ticket.py` in the tool's folder). Epics are adopted gradually (project-layout, Repo notes). klang's bulk migration, with what
   it swept and what it left alone: `docs/housekeeping/20261020-ticket-migration.md` and its commit
   (3c9a191d); the checklist in `in-progress/` is a `skip:` line.
 - **docs-lint**: both files list what git does not ignore (`git ls-files -co --exclude-standard`), with

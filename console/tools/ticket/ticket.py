@@ -3,11 +3,15 @@
 migrate a repo from file-name references to ticket numbers.
 
   ticket.py init PREFIX                    create docs/tasks/_next-ticket.txt ("next ticket: PREFIX-00001")
-  ticket.py new "Title" [--status WORD]    take the next number, create the file in its folder (default IDEA)
+  ticket.py new "Title" [--status WORD] [--part-of ID]
+                                           take the next number, create the file in its folder (default IDEA)
   ticket.py move ID WORD [--note TEXT]     set the status line, move the file to that status's folder
   ticket.py find ID|OLD-NAME               print the path (an old file name or code works after a migration)
-  ticket.py list [--status WORD]           ID, status, path, title
-  ticket.py check                          folders, numbers, counter and references (exit 1 on a problem)
+  ticket.py list [--status WORD] [--epic ID [--deep]]
+                                           ID, status, path, title (--epic: that epic's tickets and counts)
+  ticket.py epics [--json]                 every epic with its children's counts (--json for a dashboard snapshot)
+  ticket.py check                          folders, numbers, counter, references and Part of lines
+                                           (exit 1 on a problem)
   ticket.py migrate PREFIX [--apply]       number every task and plan by its date (dry run by default)
   ticket.py adopt FILE [--apply] [--commit]
                                            or one file at a time: number it, keep its old name behind the
@@ -28,6 +32,12 @@ Folders, by the status word in the line `> **Status (yyyy-mm-dd): WORD.**`:
 Not tickets: README.md, NEXT-STEPS.md, TEMPLATE.md, every _*.md, and every path matching a
 `skip: <glob>` line in the counter file (e.g. `skip: docs/tasks/in-progress/*-checklist.md`).
 PAUSED in in-progress/ is accepted only while in-progress/NEXT-STEPS.md (the project's pause note) exists.
+
+Epics (optional): a ticket names its one parent in the line `> **Part of:** XYZ-00042 (short title)`
+in the status block, after a bare `>` line (so it renders as its own paragraph). The epic is an ordinary ticket; it keeps no list of its children (`list
+--epic` derives it), and its own status never counts: its progress is its children's statuses. An
+epic may have a parent of its own; counts are of direct children unless --deep. "Follow-up of" and
+"split out of" say where a ticket came from, not what it belongs to: they stay in History.
 
 References: write the number, with a short title on first mention: "KLANG-00042 (engine follow-ups)",
 "KLANG-00042 item 30". `check` refuses references that name a ticket file instead of its number.
@@ -56,6 +66,9 @@ PLANS = "docs/plans"
 HOUSEKEEPING = "docs/housekeeping"
 NOT_TICKETS = {"README.md", "NEXT-STEPS.md", "TEMPLATE.md"}  # plus every _*.md
 STATUS_LINE = re.compile(r"^> \*\*Status \((\d{4}-\d{2}-\d{2})\):\s*(.*)$")
+PART_OF = re.compile(r"^> \*\*Part of:\*\*\s*([A-Z][A-Z0-9]*-\d{5})\b\s*(?:\(([^)]*)\))?")
+BUCKET = {"DONE": "closed", "WON'T IMPLEMENT": "closed", "IDEA": "ideas", "NOT SCHEDULED": "ideas",
+          "PAUSED": "paused"}  # everything else is open
 STATUS_WORD = re.compile(r"[A-Z][A-Z']*(?: [A-Z][A-Z']*)*(?![a-z])")
 FOLDER_OF = {
     "IDEA": FUTURE, "NOT SCHEDULED": FUTURE,
@@ -243,6 +256,64 @@ def status_of(path):
     return None
 
 
+def part_of(path):
+    """(parent ID, short title or '', line index) from the Part of line in the header, or None."""
+    with open(path, encoding="utf-8") as f:
+        for i, line in enumerate(f):
+            m = PART_OF.match(line.rstrip("\n"))
+            if m:
+                return m.group(1), (m.group(2) or "").strip(), i
+            if i > 30 or line.startswith("## "):
+                break
+    return None
+
+
+def words(text):
+    return {w for w in re.findall(r"[a-z0-9]+", text.lower()) if len(w) >= 4}
+
+
+def bare_title(path, tid):
+    t = title_of(path)
+    return t[len(tid) + 1:].strip() if tid and t.startswith(tid + ":") else t
+
+
+def tree(root, prefix):
+    """{id: {rel, word, title, parent, short}} for every numbered ticket."""
+    out = {}
+    for rel in ticket_files(root):
+        tid = id_of(rel, prefix)
+        if not tid:
+            continue
+        path = os.path.join(root, rel)
+        st, po = status_of(path), part_of(path)
+        out[tid] = {"rel": rel, "word": (st[1] if st else None) or "?", "title": bare_title(path, tid),
+                    "parent": po[0] if po else None, "short": po[1] if po else ""}
+    return out
+
+
+def children(t, epic, deep=False):
+    kids = sorted(k for k, v in t.items() if v["parent"] == epic and k != epic)
+    if deep:
+        seen, todo = set(kids), list(kids)
+        while todo:
+            for k in children(t, todo.pop()):
+                if k not in seen:
+                    seen.add(k); todo.append(k)
+        kids = sorted(seen)
+    return kids
+
+
+def counts(t, kids):
+    c = {"total": len(kids), "closed": 0, "open": 0, "paused": 0, "ideas": 0}
+    for k in kids:
+        c[BUCKET.get(t[k]["word"], "open")] += 1
+    return c
+
+
+def count_line(c):
+    return f"{c['closed']}/{c['total']} closed, {c['open']} open, {c['paused']} paused, {c['ideas']} ideas"
+
+
 def title_of(path):
     with open(path, encoding="utf-8") as f:
         for line in f:
@@ -314,10 +385,16 @@ def cmd_new(a):
     if word not in FOLDER_OF or FOLDER_OF[word] == ARCHIVE:
         raise Refused(f"a new ticket starts as one of: {', '.join(w for w, f in FOLDER_OF.items() if f != ARCHIVE)}")
     prefix, _ = read_counter(a.root)
+    part = ""
+    if a.part_of:
+        hits = [f for f in ticket_files(a.root) if os.path.basename(f).startswith(a.part_of + "-")]
+        if len(hits) != 1:
+            raise Refused(f"--part-of {a.part_of}: {len(hits)} matching tickets")
+        part = f">\n> **Part of:** {a.part_of} ({bare_title(os.path.join(a.root, hits[0]), a.part_of)})\n"
     n = take_numbers(a.root, prefix, 1)
     tid = f"{prefix}-{n:05d}"
     rel = f"{folder_for(word, today())}/{tid}-{slug(a.title)}.md"
-    body = (f"# {tid}: {a.title}\n\n> **Status ({today()}): {word}.** {a.note or ''}\n\n"
+    body = (f"# {tid}: {a.title}\n\n> **Status ({today()}): {word}.** {a.note or ''}\n{part}\n"
             "## Why this exists\n\n## Decide before implementing\n\n## The work\n\n## Acceptance\n\n"
             f"## History\n\n- {today()}: created.\n")
     os.makedirs(os.path.dirname(os.path.join(a.root, rel)), exist_ok=True)
@@ -374,12 +451,42 @@ def cmd_find(a):
 
 def cmd_list(a):
     prefix, _ = read_counter(a.root)
+    if a.epic:
+        t = tree(a.root, prefix)
+        if a.epic not in t:
+            raise Refused(f"{a.epic}: no such ticket")
+        kids = children(t, a.epic, a.deep)
+        for k in kids:
+            if not a.status or t[k]["word"] == a.status.upper():
+                print(f"{k:14} {t[k]['word']:16} {t[k]['rel']}  {t[k]['title']}")
+        print(f"{a.epic} ({t[a.epic]['title']}): {count_line(counts(t, kids))}")
+        return 0
     for rel in ticket_files(a.root):
         st = status_of(os.path.join(a.root, rel))
         word = st[1] if st else "?"
         if a.status and word != a.status.upper():
             continue
         print(f"{id_of(rel, prefix) or '(no number)':14} {word:16} {rel}  {title_of(os.path.join(a.root, rel))}")
+
+
+def cmd_epics(a):
+    prefix, _ = read_counter(a.root)
+    t = tree(a.root, prefix)
+    epics = sorted({v["parent"] for v in t.values() if v["parent"] in t})
+    out = []
+    for e in epics:
+        kids = children(t, e)
+        out.append({"id": e, "title": t[e]["title"], "status": t[e]["word"], "parent": t[e]["parent"],
+                    "counts": counts(t, kids),
+                    "children": [{"id": k, "title": t[k]["title"], "status": t[k]["word"]} for k in kids]})
+    if a.json:
+        import json
+        print(json.dumps(out, indent=1, ensure_ascii=False))
+    else:
+        for e in out:
+            up = f"  (part of {e['parent']})" if e["parent"] else ""
+            print(f"{e['id']:14} {e['title']}: {count_line(e['counts'])}{up}")
+    return 0
 
 
 def text_files(root):
@@ -426,6 +533,29 @@ def cmd_check(a):
         elif (FOLDER_OF[word] == ARCHIVE and not here.startswith(ARCHIVE + "/")) or \
                 (FOLDER_OF[word] != ARCHIVE and here != want):
             problems.append(f"{rel}: status {word} belongs in {want}/")
+    t = tree(a.root, prefix)
+    notes = []
+    for tid, v in sorted(t.items()):
+        par = v["parent"]
+        if not par:
+            continue
+        if par == tid:
+            problems.append(f"{v['rel']}: Part of names the ticket itself")
+        elif par not in t:
+            problems.append(f"{v['rel']}: Part of {par}, which has no ticket file")
+        else:
+            if v["short"] and not words(v["short"]) & words(t[par]["title"]):  # a paraphrase is fine
+                problems.append(f"{v['rel']}: Part of {par} ({v['short']}), but {par} is titled \"{t[par]['title']}\"")
+            chain, up = [tid], par
+            while up in t and up not in chain:
+                chain.append(up)
+                up = t[up]["parent"]
+            if up in chain and up == tid:
+                problems.append(f"{v['rel']}: Part of loops: {' > '.join(chain + [up])}")
+    for e in sorted({v["parent"] for v in t.values() if v["parent"] in t}):
+        c = counts(t, children(t, e))
+        if t[e]["word"] in ("DONE", "WON'T IMPLEMENT") and c["closed"] < c["total"]:
+            notes.append(f"note: {e} is {t[e]['word']} with {c['total'] - c['closed']} open child ticket(s)")
     if seen:
         top = max(int(t.split("-")[-1]) for t in seen)
         if nxt <= top:
@@ -443,7 +573,7 @@ def cmd_check(a):
                     problems.append(f"{rel}:{no}: {m.group(0)} has no ticket file")
             if named.search(line) and not rel.endswith(".json"):  # tools may store paths in json
                 problems.append(f"{rel}:{no}: names a ticket file; reference the number instead")
-    for p in problems:
+    for p in problems + notes:
         print(p)
     print(f"{len(seen)} tickets, next {prefix}-{nxt:05d}, {len(problems)} problems")
     return 1 if problems else 0
@@ -843,9 +973,11 @@ def main(argv=None):
     sub.add_parser = lambda *a, **k: _add(*a, parents=[common], **k)
     s = sub.add_parser("init"); s.add_argument("prefix")
     s = sub.add_parser("new"); s.add_argument("title"); s.add_argument("--status", default="IDEA"); s.add_argument("--note")
+    s.add_argument("--part-of")
     s = sub.add_parser("move"); s.add_argument("id"); s.add_argument("status", nargs="+"); s.add_argument("--note")
     s = sub.add_parser("find"); s.add_argument("key")
-    s = sub.add_parser("list"); s.add_argument("--status")
+    s = sub.add_parser("list"); s.add_argument("--status"); s.add_argument("--epic"); s.add_argument("--deep", action="store_true")
+    s = sub.add_parser("epics"); s.add_argument("--json", action="store_true")
     sub.add_parser("check")
     s = sub.add_parser("migrate"); s.add_argument("prefix"); s.add_argument("--apply", action="store_true")
     s = sub.add_parser("adopt"); s.add_argument("file"); s.add_argument("--apply", action="store_true")
@@ -859,7 +991,7 @@ def main(argv=None):
     try:
         a.root = repo_root(os.path.abspath(a.root or "."))
         rc = {"init": cmd_init, "new": cmd_new, "move": cmd_move, "find": cmd_find, "list": cmd_list,
-              "check": cmd_check, "migrate": cmd_migrate, "adopt": cmd_adopt, "sweep": cmd_sweep}[a.cmd](a)
+              "check": cmd_check, "epics": cmd_epics, "migrate": cmd_migrate, "adopt": cmd_adopt, "sweep": cmd_sweep}[a.cmd](a)
         return rc or 0
     except Refused as e:
         print(f"ticket: {e}", file=sys.stderr)

@@ -219,6 +219,46 @@ class NewMoveCheck(Repo):
         self.assertIn(f"> **Status ({ticket.today()}): PAUSED.** Waits for the checkout.\n\nBody.",
                       read(self.root, out.strip()))
 
+    def test_epics(self):
+        run(self.root, "init", "KL")
+        run(self.root, "new", "Editor", "--status", "SCHEDULED")
+        run(self.root, "new", "Bookmarks", "--status", "IN PROGRESS", "--part-of", "KL-00001")
+        run(self.root, "new", "Key map", "--part-of", "KL-00001")
+        rc, out = run(self.root, "new", "Old idea", "--part-of", "KL-00001")
+        text = read(self.root, "docs/tasks/in-progress/KL-00002-bookmarks.md")
+        self.assertIn("IN PROGRESS.** \n>\n> **Part of:** KL-00001 (Editor)\n", text)
+        run(self.root, "move", "KL-00004", "WON'T", "IMPLEMENT", "--note", "Dropped.")
+        rc, out = run(self.root, "move", "KL-00002", "DONE")
+        self.assertIn("> **Part of:** KL-00001 (Editor)", read(self.root, out.strip()))  # move keeps it
+        rc, out = run(self.root, "list", "--epic", "KL-00001")
+        self.assertIn("KL-00001 (Editor): 2/3 closed, 0 open, 0 paused, 1 ideas", out)
+        rc, out = run(self.root, "epics", "--json")
+        epic = json.loads(out)[0]
+        self.assertEqual((epic["id"], epic["counts"]["total"], len(epic["children"])), ("KL-00001", 3, 3))
+        self.assertEqual(run(self.root, "check")[0], 0)
+        run(self.root, "move", "KL-00001", "DONE")
+        rc, out = run(self.root, "check")
+        self.assertEqual(rc, 0, out)  # a DONE epic with open children is a note, not a problem
+        self.assertIn("note: KL-00001 is DONE with 1 open child ticket(s)", out)
+        # problems: itself, a missing parent, a drifted title, a loop
+        write(self.root, "docs/tasks/future/KL-00005-a.md",
+              "# KL-00005: A\n\n> **Status (2026-10-21): IDEA.**\n> **Part of:** KL-00005 (A)\n")
+        write(self.root, "docs/tasks/future/KL-00006-b.md",
+              "# KL-00006: B\n\n> **Status (2026-10-21): IDEA.**\n> **Part of:** KL-00099 (gone)\n")
+        write(self.root, "docs/tasks/future/KL-00007-c.md",
+              "# KL-00007: C\n\n> **Status (2026-10-21): IDEA.**\n> **Part of:** KL-00001 (Editr)\n")
+        write(self.root, "docs/tasks/future/KL-00008-d.md",
+              "# KL-00008: D\n\n> **Status (2026-10-21): IDEA.**\n> **Part of:** KL-00009 (E)\n")
+        write(self.root, "docs/tasks/future/KL-00009-e.md",
+              "# KL-00009: E\n\n> **Status (2026-10-21): IDEA.**\n> **Part of:** KL-00008 (D)\n")
+        write(self.root, ticket.COUNTER, "next ticket: KL-00010\n")
+        rc, out = run(self.root, "check")
+        self.assertEqual(rc, 1)
+        self.assertIn("KL-00005-a.md: Part of names the ticket itself", out)
+        self.assertIn("KL-00006-b.md: Part of KL-00099, which has no ticket file", out)
+        self.assertIn('Part of KL-00001 (Editr), but KL-00001 is titled "Editor"', out)
+        self.assertIn("KL-00008-d.md: Part of loops: KL-00008 > KL-00009 > KL-00008", out)
+
     def test_check_finds_problems(self):
         run(self.root, "init", "KL")
         run(self.root, "new", "One")
