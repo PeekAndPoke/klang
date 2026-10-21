@@ -9,6 +9,8 @@ and a stats line, so reviewers and the coordinator look at the same lines.
 What goes into full.diff: everything between the merge base and the working tree as it is now,
 committed or not, including untracked files that git does not ignore. Renames are detected (-M)
 and shown with their content changes. Nothing in the worktree or its index is changed.
+Left out: the review logs (.claude/reviews/, written during the review, so a later round would hand
+the reviewers the previous round's findings) and every --skip PATH; they stay as committed.
 
 How the delta works: each round's exact state is saved as a commit under
 refs/review-pack/<label>/round-<n> (a private ref namespace, never on a branch). The next round
@@ -28,6 +30,7 @@ import sys
 import tempfile
 
 REF_ROOT = "refs/review-pack"
+SKIP = [".claude/reviews/"]  # what the review-log tool writes
 DASHES = {"\u2014": "em dash", "\u2013": "en dash"}  # escaped, so a dash scan of this file finds nothing
 
 
@@ -45,13 +48,13 @@ def default_base(wt):
     sys.exit("review-pack: no main or master branch; pass --base")
 
 
-def snapshot(wt, base_commit, label, round_no):
-    """Commit the working tree as it is (tracked, modified, untracked-not-ignored) without touching
-    the real index, and keep it under a private ref."""
+def snapshot(wt, base_commit, label, round_no, skip):
+    """Commit the working tree as it is (tracked, modified, untracked-not-ignored, except the skipped
+    paths, which stay as in HEAD) without touching the real index, and keep it under a private ref."""
     with tempfile.TemporaryDirectory() as tmp:
         env = dict(os.environ, GIT_INDEX_FILE=os.path.join(tmp, "index"))
         git("read-tree", "HEAD", cwd=wt, env=env)
-        git("add", "-A", cwd=wt, env=env)
+        git("add", "-A", "--", ".", *[f":(exclude){p}" for p in skip], cwd=wt, env=env)
         tree = git("write-tree", cwd=wt, env=env).strip()
     commit = git("commit-tree", tree, "-p", base_commit, "-m", f"review-pack {label} round {round_no}",
                  cwd=wt, env=dict(os.environ, GIT_AUTHOR_NAME="review-pack", GIT_AUTHOR_EMAIL="review-pack@local",
@@ -104,6 +107,8 @@ def main(argv=None):
     p.add_argument("--base", default=None, help="branch the change goes into (default: main, else master)")
     p.add_argument("--label", default=None, help="name for this change's rounds (default: current branch)")
     p.add_argument("--out", default=None, help="output directory for this round")
+    p.add_argument("--skip", action="append", default=[], metavar="PATH",
+                   help=f"leave this path out of the diffs (repeatable; always left out: {', '.join(SKIP)})")
     p.add_argument("--dash-scan", action="store_true", help="list added lines with em or en dashes")
     a = p.parse_args(argv)
     wt = git("rev-parse", "--show-toplevel", cwd=os.path.abspath(a.worktree)).strip()
@@ -124,7 +129,8 @@ def main(argv=None):
     base = a.base or default_base(wt)
     merge_base = git("merge-base", base, "HEAD", cwd=wt).strip()
     round_no = (done[-1] + 1) if done else 1
-    current = snapshot(wt, merge_base, label, round_no)
+    skip = SKIP + a.skip
+    current = snapshot(wt, merge_base, label, round_no, skip)
     out = a.out or os.path.join(tempfile.gettempdir(), "review-pack", label, f"round-{round_no}")
     os.makedirs(out, exist_ok=True)
 
@@ -135,7 +141,8 @@ def main(argv=None):
     with open(os.path.join(out, "files.txt"), "w") as f:
         f.write(files)
     n_files = len(files.splitlines())
-    untracked = git("ls-files", "--others", "--exclude-standard", cwd=wt).split("\n")
+    untracked = git("ls-files", "--others", "--exclude-standard", "--", ".", *[f":(exclude){p}" for p in skip],
+                    cwd=wt).split("\n")
     n_untracked = len([u for u in untracked if u])
     stats = [f"review-pack {label} round {round_no}  base {base} @ {merge_base[:10]}  state {current[:10]}",
              f"full:  {n_files} file(s), {shortstat(wt, merge_base, current)}  ({n_untracked} untracked file(s) included)"]

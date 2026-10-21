@@ -299,7 +299,9 @@ dash scan, stack-merge's exit code by exception type, test-digest's foreign-suit
   Generic.
 - **docs-lint**: anchors of `*.MD` files are checked too (klang's `README.MD`). `docs_lint_local.py` is
   klang's own: task-place and stale-path (a `...` placeholder is not a path).
-- **review-pack**: the draft as it is.
+- **review-pack**: the blueprint's copy at ae7538b (2026-10-21), unchanged. In klang's shared checkout pass
+  `--skip src/commonMain/kotlin/builtinsongs/`: the maintainer's uncommitted song edits would otherwise land in
+  the reviewers' diffs.
 - **stack-merge**, on top of the draft: (1) the stack worktree goes to
   `<main checkout>-worktrees/stack-<name>`, the sibling directory (klang only; it was
   `.claude/worktrees/` until 2026-10-20). (2) A shared line in a pure insertion
