@@ -79,6 +79,11 @@ browser tests. Ask it before picking one, and report back what you assigned.
 <!-- Local deviations, if any. -->
 klang's copy, taken 2026-10-20. klang's session name is `Klang-Main-Dev` (the coordinator). Its Karma range is
 10031 to 10060, of which 10031 to 10046 are taken (one port per module, `<module>/karma.config.d/karma-port.js`).
+Reports since 2026-10-21 (Mission Control's message, the maintainer agreed; until the blueprint's section 1 says
+it): the dashboard reads the tickets itself (`ticket.py list --json`), so a report carries only what the tickets do
+not: `agent`, `project`, `focus`, `state`, `blockers` (e.g. "KLANG-00322: hand test (maintainer)"), optional
+`notes` (one line per ticket), `upcoming` (work without a ticket), `upstream`. Ticket status lines must stay
+current: they are what the dashboard shows.
 
 ## Proposed upstream
 
