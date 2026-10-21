@@ -158,6 +158,11 @@ kraftApp {
   between centre and top (top 30 %, centred via transform); label uses `borderBox` with a 2.5 px
   border; the canvas paints the circular background, not the Semantic UI label.
 
+- **A yes/no question is klangui's `YesNoModal`** (headline, content, `yesText`, `noText`, one `onResult`;
+  KLANG-00323, 2026-10-21), not Kraft's `OkCancelModal`: its buttons are divs that cannot take the keyboard.
+  Fomantic paints a modal's `> .header`, `> .content` and `> .actions` white; klang.css themes them. Kraft's
+  `FadingModal.close()` fades for 500 ms before the handle's `onClose` runs, and `closeAll()` runs no `onClose` at all.
+
 ## HARD RULE
 
 **Never edit, create, or delete any file under `/opt/dev/peekandpoke/ultra/kraft/`.** These are external library

@@ -1,6 +1,6 @@
 # KLANG-00323: Editor: bookmarks per file
 
-> **Status (2026-10-21): IN PROGRESS.** Built and reviewed (round 3 clean, 26 mutants KILLED since round 2). The maintainer's hand test asked for a new look (the digit in a box right of the number, a themed yes/no modal): built, review round 1 clean, batch applied; waits for the second hand test.
+> **Status (2026-10-21): DONE.** Hand-tested by the maintainer 2026-10-21: the bookmarks work and look right (the digit box, the yes/no modal).
 
 ## Why this exists
 
@@ -295,3 +295,4 @@ of re-anchoring sound. Its two MINORs were applied as one batch, without a furth
 - 2026-10-21: review round 3 clean; its two MINORs applied as one batch (a deleted line lands on the text right after the deletion; the unused key constants removed); 4 of 4 mutants killed (Done, "Review round 3").
 - 2026-10-21: the maintainer's hand test: the digit goes right of the line number, always shown, in room kept free on every line; the bookmark question in Klang's own themed yes or no modal (`YesNoModal`, klangui), and klang.css themes Semantic's modal content and actions; 5 of 5 mutants killed.
 - 2026-10-21: the maintainer's look request and the look review (clean, its MINORs as one batch): the digit in a small cyan box right of the number, in the bookmarks' own editor theme; the yes or no modal answers once when it is gone, in the app's card look with the gold main-answer button; Semantic's modal header themed too; 2 of 2 mutants killed.
+- 2026-10-21: DONE. Hand-tested by the maintainer 2026-10-21: the bookmarks work and look right (the digit box, the yes/no modal).
