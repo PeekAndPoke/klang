@@ -18,7 +18,7 @@ the ticket numbers. This note is the queue, in order. The note of the pause itse
 
 1. **Console tools: done 2026-10-20.** Review round 2 (reviewer-high): 1 MAJOR (docs-lint read the git-ignored
    `tmp/`) and 2 MINORs, fixed in 8d9fa057; every round-1 fix holds. Two rounds without a clean one: the safety
-   valve, a round 3 or not is the maintainer's call. The approved condense is applied (the `CLAUDE.md` tool block
+   valve; no round 3 (maintainer, 2026-10-21), the tools review is closed. The approved condense is applied (the `CLAUDE.md` tool block
    with `ticket`, shorter pointers elsewhere); the skill `mission-control-link` is in.
 2. **Engine alloc batch 2: done 2026-10-21.** Review round 1 clean (code and audio), the MINOR batch applied, the
    mutation campaign 7 of 7 KILLED (KLANG-00290, item 45's last paragraph).
