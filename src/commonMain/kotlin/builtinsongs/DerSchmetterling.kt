@@ -22,7 +22,7 @@ import * from "sprudel"
 // Song Status: Upcoming Garage Band ...
 
 let feel          =   15    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
-let transposition =   -3    // -1 .. D# | 0 .. E | 1 .. F
+let transposition =   -2    // -1 .. D# | 0 .. E | 1 .. F
 let drunk         =    2    // How many beers did each band member have?
 let snareHz       =  210    // Where does the snare cut through?
 
@@ -123,7 +123,7 @@ let cabStock = x => x.lowpass(5000).lowpass(5000)
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = x => x
   .eq(e => e
-    .band(freq =  120, q = 0.7, db =  1.3)         // thump: closed-back box resonance
+    .band(freq =  120, q = 0.7, db =  1.4)         // thump: closed-back box resonance
     .band(freq =  380, q = 0.5, db =  3.8)         // roar:  low mids
     .band(freq = 2700, q = 1.8, db =  4.3)         // bark:  the upper-mid speaker peak
   )
@@ -248,7 +248,7 @@ export lead_pat =
 let marimba = (() => {
   let pAnalog = Ign.slot.analog
   let ring = Ign.constant(400).div(Ign.freq())                                                            // seconds: 1.2 s on e4, 0.6 s on e5
-  let f1  = Ign.sine(x => x.analog(pAnalog)).adsr(0.001, ring, 0.0, 0.30)
+  let f1  = Ign.sine(x => x.analog(pAnalog)).adsr(0.001, ring, 0.0, 0.25)
   let f4  = Ign.sine(Ign.freq().mul(4.05), x => x.analog(pAnalog)).adsr(0.001, 0.12, 0.0, 0.10).mul(0.35)
   let f10 = Ign.sine(Ign.freq().mul(10.075), x => x.analog(pAnalog)).adsr(0.001, 0.05, 0.0, 0.05).mul(0.25)
   let f12 = Ign.sine(Ign.freq().mul(12.025), x => x.analog(pAnalog)).adsr(0.001, 0.05, 0.0, 0.05).mul(0.05)
@@ -270,7 +270,7 @@ export lead_shape = x => x.sound(marimba).ply("1|1|1|1|1|1|2").adsrOff()
   .clip(0.75)
 
 export lead_arrange = x => x.orbit(0) //  .mute()
-  .scale("<e5:minor!48 e6:minor!16>").gain("<0.50!48 0.30!16>").gain(mul(0.235))
+  .scale("<e5:minor!48 e6:minor!16>").gain("<0.50!48 0.30!16>").gain(mul(0.25))
   .velocity()
   .shuffle("<1!80 1!1 4/8!14 1!33>")
   .mute("<1!64 0!32 1!48 0!16 1!16>")
