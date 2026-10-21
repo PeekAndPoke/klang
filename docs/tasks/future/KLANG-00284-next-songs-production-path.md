@@ -24,6 +24,11 @@ falls short without it.
    inharmonic partials, a hard-sync lead.
 3. **EBM**: Nitzer Ebb, DAF, Front 242. Proves hard compression, the transient core, short rooms.
 
+## More references
+
+- **An overview of techno styles** (the maintainer, 2026-10-21): a YouTube short with "all" techno styles in it, "just
+  as a reference for songs we might do": https://www.youtube.com/shorts/v9wR8zXcPuc
+
 ## The first step
 
 The listening sheet for the reference: the maintainer listens with Claude's questions in hand. The questions cover
@@ -34,3 +39,4 @@ and production, never its melody, hook, chords or lyrics.
 ## History
 
 - 2026-10-20: numbered KLANG-00284 (was `docs/tasks/future/next-songs-production-path.md`).
+- 2026-10-21: the techno styles short added as a reference (the maintainer).
