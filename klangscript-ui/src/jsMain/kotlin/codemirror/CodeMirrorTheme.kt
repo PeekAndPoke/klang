@@ -108,17 +108,6 @@ class CodeMirrorTheme {
             this[".cm-activeLineGutter"] = jsObject {
                 backgroundColor = highlightBackground
             }
-            // A bookmarked line's number (KLANG-00323); more specific than the active line's, so it shows there too
-            this[".cm-lineNumbers .cm-gutterElement.${BookmarksExtension.LINE_CLASS}"] = jsObject {
-                color = selection
-                backgroundColor = "${cursor}38"
-                fontWeight = "bold"
-            }
-            // A colour of its own, so the digit reads as a mark and not as part of the number ("37")
-            this[".${BookmarksExtension.DIGIT_CLASS}"] = jsObject {
-                color = cyan
-                fontSize = "0.8em"
-            }
             this[".cm-foldPlaceholder"] = jsObject {
                 backgroundColor = "transparent"
                 border = "none"

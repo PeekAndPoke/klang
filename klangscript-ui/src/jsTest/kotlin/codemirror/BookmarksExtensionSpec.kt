@@ -27,6 +27,7 @@ import io.peekandpoke.klang.codemirror.ext.redo
 import io.peekandpoke.klang.codemirror.ext.undo
 import io.peekandpoke.kraft.utils.jsObject
 import kotlinx.browser.document
+import org.w3c.dom.Element
 import org.w3c.dom.asList
 import org.w3c.dom.events.KeyboardEvent
 import org.w3c.dom.events.KeyboardEventInit
@@ -666,7 +667,7 @@ class BookmarksExtensionSpec : StringSpec({
         }
     }
 
-    "the gutter highlights a bookmarked line's number, with the digit before it where there is room" {
+    "the gutter highlights a bookmarked line's number, with the digit after it" {
         // The higher digit higher up: the markers go to the gutter by position, not by digit. From the host, so a
         // failure throws here and not inside a key event, where the browser would only report it
         val host = RecordingHost(
@@ -674,16 +675,16 @@ class BookmarksExtensionSpec : StringSpec({
         )
 
         withView(newState(host, lineNumbers())) { view ->
-
             val marked = view.dom
                 .querySelectorAll(".cm-lineNumbers .cm-gutterElement.${BookmarksExtension.LINE_CLASS}")
                 .asList()
-                .map { it.textContent }
-            val digits = view.dom.querySelectorAll(".${BookmarksExtension.DIGIT_CLASS}").asList().map { it.textContent }
+                .filterIsInstance<Element>()
+            // The last node of each marker, a text node if the digit came first
+            val lastParts = marked.map { it.firstElementChild?.lastChild?.unsafeCast<Element>()?.className }
 
-            withClue("the bookmarked lines' numbers, highlighted; a 40-line song has room beside 7, none beside 20") {
-                marked shouldBe listOf("47", "20")
-                digits shouldBe listOf("4")
+            withClue("the bookmarked lines' numbers, highlighted, each with its digit after it") {
+                marked.map { it.textContent } shouldBe listOf("74", "203")
+                lastParts shouldBe listOf(BookmarksExtension.DIGIT_CLASS, BookmarksExtension.DIGIT_CLASS)
             }
         }
     }

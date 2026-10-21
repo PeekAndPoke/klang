@@ -21,6 +21,7 @@ import io.peekandpoke.klang.codemirror.ext.Transaction
 import io.peekandpoke.klang.codemirror.ext.invertedEffects
 import io.peekandpoke.klang.codemirror.ext.isolateHistory
 import io.peekandpoke.klang.codemirror.ext.lineNumberMarkers
+import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.utils.jsObject
 import kotlinx.browser.document
 import org.w3c.dom.Node
@@ -65,6 +66,18 @@ internal object BookmarksExtension {
     const val DIGIT_CLASS = "cm-bookmark-digit"
 
     /**
+     * The room kept free right of every line number for a bookmark's box, in the line numbers' size: the box and the
+     * gap before it ([DIGIT_BOX], [DIGIT_GAP], which are in the digit's smaller size) and a little to spare.
+     */
+    private const val DIGIT_ROOM = "1.4em"
+
+    /** The width and height of the box around a bookmark's digit, in the digit's size (0.8 of the line numbers'). */
+    private const val DIGIT_BOX = "1.3em"
+
+    /** The gap between a line number and its bookmark's box, in the digit's size. */
+    private const val DIGIT_GAP = "0.35em"
+
+    /**
      * Keeps every bookmark on its line number through a replacement of the whole document (a song reset through
      * `setCode`), as a reload would, and drops one past the new end. The history carries it into the undo and the
      * redo of that replacement.
@@ -94,6 +107,7 @@ internal object BookmarksExtension {
 
         return arrayOf(
             field.init { state -> Bookmarks.load(lines = options.initial, doc = TextDoc(state.doc)) },
+            theme(),
             // Before the keymaps, which would take a typed `/` for the comment key (Ctrl+Shift+7 on a German layout)
             Prec.highest(
                 EditorView.domEventHandlers(
@@ -107,6 +121,45 @@ internal object BookmarksExtension {
             EditorView.updateListener.of { update -> reporter.report(update.state) },
         ).unsafeCast<Extension>()
     }
+
+    /**
+     * The bookmarks' look in the line-number gutter, for the editors that have bookmarks only (the others keep their
+     * line numbers as they were).
+     *
+     * Every line number keeps room on its right for a bookmark's box, so the code does not move when the first
+     * bookmark is set. A bookmarked line's cell is a badge (the number bold, gold on an accent tint), and the digit
+     * stands in a small cyan box in the room, a little apart from the number and centred in the line. The box takes
+     * no width of its own (its right margin undoes its width and its gap), so the number stays right-aligned where it
+     * is on every other line.
+     */
+    private fun theme(): Extension = EditorView.theme(
+        jsObject {
+            this[".cm-lineNumbers .cm-gutterElement"] = jsObject<dynamic> {
+                paddingRight = "calc(3px + $DIGIT_ROOM)"
+            }
+            this[".cm-lineNumbers .cm-gutterElement.$LINE_CLASS"] = jsObject<dynamic> {
+                color = KlangTheme.Hex.gold
+                backgroundColor = "${KlangTheme.Hex.accent}38"
+                fontWeight = "bold"
+            }
+            this[".$DIGIT_CLASS"] = jsObject<dynamic> {
+                display = "inline-block"
+                boxSizing = "border-box"
+                width = DIGIT_BOX
+                height = DIGIT_BOX
+                lineHeight = "calc($DIGIT_BOX - 2px)"
+                marginLeft = DIGIT_GAP
+                marginRight = "calc(-1 * ($DIGIT_BOX + $DIGIT_GAP))"
+                border = "1px solid ${KlangTheme.Hex.excellent}"
+                borderRadius = "3px"
+                color = KlangTheme.Hex.excellent
+                fontSize = "0.8em"
+                textAlign = "center"
+                verticalAlign = "middle"
+            }
+        },
+        jsObject<dynamic> {},
+    )
 
     /**
      * A move line is an undo step of its own (the history's `isolateHistory`): joined with an edit right after it, its
@@ -321,28 +374,24 @@ internal object BookmarksExtension {
     /** The gutter markers of the bookmarks, sorted by position as a range set must be. */
     private fun markers(state: EditorState): RangeSet<GutterMarker> {
         val doc = state.doc
-        // CodeMirror makes the line numbers as wide as the number of the last line
-        val widest = doc.lines.toString().length
 
         val ranges = bookmarksOf(state).placed.map { placed ->
             val line = doc.lineAt(placed.pos)
-            val number = line.number.toString()
 
-            BookmarkMarker(digit = placed.digit, number = number, showDigit = number.length < widest).range(line.from)
+            BookmarkMarker(digit = placed.digit, number = line.number.toString()).range(line.from)
         }.sortedBy { it.from }
 
         return RangeSet.of(ranges.toTypedArray())
     }
 
     /**
-     * A bookmarked line's number in the line-number gutter: highlighted ([LINE_CLASS]), with the bookmark's digit
-     * before it when [showDigit] says the gutter has room. It draws, so it takes the place of CodeMirror's own line
-     * number.
+     * A bookmarked line's number in the line-number gutter, highlighted ([LINE_CLASS]), with the bookmark's digit
+     * after it ([DIGIT_CLASS]). It draws, so it takes the place of CodeMirror's own line number. The digit sits in room
+     * kept free right of every line number, so the code does not move when a bookmark is set ([theme]).
      */
     private class BookmarkMarker(
         val digit: Int,
         val number: String,
-        val showDigit: Boolean,
     ) : GutterMarker() {
 
         override val elementClass: String get() = LINE_CLASS
@@ -351,24 +400,21 @@ internal object BookmarksExtension {
             // CodeMirror compares only markers of the same class
             val that = other.unsafeCast<BookmarkMarker>()
 
-            return that.digit == digit && that.number == number && that.showDigit == showDigit
+            return that.digit == digit && that.number == number
         }
 
         @JsName("toDOM")
         fun toDOM(@Suppress("UNUSED_PARAMETER") view: EditorView): Node {
             val dom = document.createElement("span")
 
+            val digitDom = document.createElement("span")
+
+            digitDom.className = DIGIT_CLASS
+            digitDom.textContent = digit.toString()
+
             dom.setAttribute("title", "Bookmark $digit")
-
-            if (showDigit) {
-                val digitDom = document.createElement("span")
-
-                digitDom.className = DIGIT_CLASS
-                digitDom.textContent = digit.toString()
-                dom.appendChild(digitDom)
-            }
-
             dom.appendChild(document.createTextNode(number))
+            dom.appendChild(digitDom)
 
             return dom
         }

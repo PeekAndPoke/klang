@@ -52,6 +52,10 @@ textarea::selection,
 .ui.positive.button:hover {
     background-color: #f0c55a !important;
 }
+/* The main answer has the keyboard when a question opens (a yes or no modal): show it */
+.ui.positive.button:focus {
+    box-shadow: 0 0 0 2px var(--klang-text-primary) !important;
+}
 
 /* ── Dimmer ───────────────────────────────────────────────────────────────── */
 .ui.page.dimmer {
@@ -90,6 +94,16 @@ textarea::selection,
 .ui.modal .ui.header {
     color: var(--klang-text-secondary) !important;
     background: transparent !important;
+}
+/* Semantic paints a modal's header, content and actions white: let the modal's own background show through */
+.ui.modal > .header,
+.ui.modal > .content,
+.ui.modal > .actions {
+    background: transparent !important;
+    color: var(--klang-text-primary) !important;
+}
+.ui.modal > .actions {
+    border-top: 1px solid var(--klang-text-tertiary) !important;
 }
 .ui.modal .ui.divider {
     border-top-color: var(--klang-bg-app) !important;

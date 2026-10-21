@@ -1,6 +1,6 @@
 # KLANG-00323: Editor: bookmarks per file
 
-> **Status (2026-10-21): IN PROGRESS.** Built and reviewed (round 3 clean, the MINOR batch applied, 26 mutants KILLED since round 2); waits for the maintainer's hand test.
+> **Status (2026-10-21): IN PROGRESS.** Built and reviewed (round 3 clean, 26 mutants KILLED since round 2). The maintainer's hand test asked for a new look (the digit in a box right of the number, a themed yes/no modal): built, review round 1 clean, batch applied; waits for the second hand test.
 
 ## Why this exists
 
@@ -30,8 +30,9 @@ Decided by the maintainer, 2026-10-21:
 3. **Chrome only, for now.** If Chrome keeps one of the keys from the page, the hand test shows it, and the key is
    decided again then.
 4. **Setting on a line that holds the same number** removes it (IntelliJ's toggle). Setting a number that sits on
-   another line asks "Bookmark 3 is on line 42. Move it here?" in a small confirm (Fomantic, as the app's other
-   prompts). A line holds one bookmark; setting another number there replaces it without asking.
+   another line asks first, in a small confirm. A line holds one bookmark; setting another number there replaces it
+   without asking. (Built as Klang's own yes or no modal, `YesNoModal`, after the maintainer's hand test: "Move
+   bookmark 3?", "Bookmark 3 is on line 42. Move it to line 50?", Move and Keep.)
 5. **Stored as line numbers;** a stored line past the end of the song is dropped on load.
 
 Decided by the maintainer during the reviews, 2026-10-21:
@@ -99,17 +100,39 @@ decided below ("Decided while building") and wait for the maintainer's nod.
     song and a second key does not ask again; the answer gives it back, unless the editor is gone by then.
 - **The keys**: no constants for them in the editor; the shortcuts page (KLANG-00324) and the key map (KLANG-00325)
   add what they need (review round 3).
-- **The gutter**: a bookmarked line's element gets `cm-bookmark` (the number bold, gold on an accent tint), and the
-  digit (`cm-bookmark-digit`, cyan, so it reads as a mark and not as part of the number) stands before the number when
-  the number is shorter than the last line's, which is how wide CodeMirror makes the line numbers. The marker, a
-  Kotlin subclass of `GutterMarker`, draws, so it takes the place of CodeMirror's number for that line.
+- **The gutter** (the maintainer's hand tests, 2026-10-21): every line number keeps room on its right for a bookmark's
+  box, so the code does not move when the first bookmark is set. A bookmarked line's cell is a badge (the number
+  bold, gold on an accent tint); the digit stands in a small cyan box in the room, a little apart from the number,
+  centred in the line and in the box, on every line whatever the song's length. The look is the bookmarks' own
+  `EditorView.theme` (in `BookmarksExtension`), so only editors with bookmarks get the room. The marker, a Kotlin
+  subclass of `GutterMarker`, draws, so it takes the place of CodeMirror's number for that line.
+  - The CSS: `.cm-lineNumbers .cm-gutterElement` gets `padding-right: calc(3px + 1.4em)` (was CodeMirror's 3px). The
+    digit (`.cm-bookmark-digit`) is `display: inline-block; box-sizing: border-box; width: 1.3em; height: 1.3em;
+    line-height: calc(1.3em - 2px); margin-left: 0.35em; margin-right: calc(-1 * (1.3em + 0.35em)); border: 1px solid
+    cyan; border-radius: 3px; color: cyan; font-size: 0.8em; text-align: center; vertical-align: middle`. Its right
+    margin undoes its width and its gap, so it takes no width of its own and the number stays right-aligned where it
+    is on every other line; its ems are of its own 0.8em size, so box and gap fit in the 1.4em room. The badge
+    (`.cm-bookmark`) is unchanged.
 - **The editor's props** (`KlangScriptEditorComp`, passed through `KlangCodeEditorComp`): `bookmarks: BookmarkOptions?`,
   with `initial` (read once, as the code is), `onChanged(lines)`, and `askToMove(move, answer)`, where `move` is
   `BookmarkOptions.Move(digit, fromLine, toLine)` and the host calls `answer(yes)` once; the editor moves on a yes and
   takes the focus back on either answer. Null (the default) leaves an editor without bookmarks.
-- **The confirm**: the song page shows Kraft's `OkCancelModal.mini`, "Bookmark 3 is on line 42. Move it here?", Yes and
-  No. A click beside it closes it and answers no (`Handle.onClose`). Its buttons cannot take the focus: Kraft draws them
-  as `div`s, so the Yes button is clicked, not pressed with Enter.
+- **The confirm**: Klang's own yes or no modal, `YesNoModal` (`klangui/.../comp/YesNoModal.kt`, a Kraft
+  `FadingModal`; the maintainer's hand test, 2026-10-21: Kraft's `OkCancelModal` showed pale text on white). The
+  song page asks "Move bookmark 3?", "Bookmark 3 is on line 42. Move it to line 50?", with "Move" and "Keep".
+  - Its API: `Tag.YesNoModal(handle, headline: String, content: FlowContent.() -> Unit, yesText: String,
+    noText: String, onResult: (yes: Boolean) -> Unit)`. The answer is decided at once (the yes button; the no button,
+    Esc or the start of any close, a click beside it included, decide no) and `onResult` gets it exactly once when
+    the modal is gone (its close handler, or its unmount when the modals manager takes it away without one). Until
+    then the keyboard stays in the modal, so a key typed while it fades does not reach the editor; the editor takes it
+    back with the answer.
+  - Its look is the card look klang.css gives every `.ui.modal` (as the code tools' modal), a quiet basic no button,
+    and the app's main-answer button for yes (`ui positive button`, gold), with a focus ring in the text colour
+    (klang.css). Both are real `<button>`s; the yes button takes the keyboard when the modal opens, so Enter or Space
+    answers yes. The modal itself is focusable (`tabindex="-1"`), so a click on its text keeps the keyboard in it.
+  - klang.css now themes Semantic's `.ui.modal > .header`, `> .content` and `> .actions` (transparent, the theme's
+    text colour, a divider above the actions), so every Semantic modal is themed, not white.
+  - The editor still blurs before it asks.
 - **The storage layer**, `src/jsMain/kotlin/storage/`: `SongStorage(version, songId, defaultCode, defaultTitle,
   defaultRpm)` holds the four `persistInLocalStorage` streams of a song (`code`, `title`, `rpm`, and `bookmarks`, a map
   digit to line stored as `{"3":42}`); `MidiInstrumentStorage` (with `MidiInstrument`) and `TutorialStorage` moved in
@@ -137,7 +160,8 @@ decided below ("Decided while building") and wait for the maintainer's nod.
   above into a bookmarked line's text; CodeMirror's delete line, a select-and-delete, and a delete line below a blank
   line; a paste over a whole indented line; the real move line up and down with undo and redo, an empty line, and two
   cursors with one on the first line; a move line followed by a Backspace, undone and redone; the undo and redo of a
-  reset; the gutter; the start from the host's bookmarks; the whole-document replacement), and `StorageKeysSpec` (the
+  reset; the gutter, with each digit after its number; the start
+  from the host's bookmarks; the whole-document replacement), and `StorageKeysSpec` (the
   keys, byte for byte, a check for the future).
 - **Mutation-checked, round 1** (light tier, `console/tools/mutate`): 29 mutants, 29 KILLED with the expected message
   (the rule 11, the wiring 15, the keys 3). One mutant (a no that moves) first died for another reason (the test
@@ -257,9 +281,6 @@ of re-anchoring sound. Its two MINORs were applied as one batch, without a furth
 
 **Not foreseen, for the maintainer.**
 
-- *Room for the digit*: with the line numbers as wide as the last line's number, a song of 10 to 99 lines shows the
-  digit only beside lines 1 to 9 (100 to 999 lines: beside 1 to 99); every bookmarked line is highlighted either way.
-  Showing it always needs a gutter one character wider.
 - *One key lives outside the storage layer*: `klang-tool-auto-update` (`KlangToolAutoUpdate` in `klangui`), which
   cannot reach the app's code; `StorageKeys` names it in its KDoc.
 
@@ -272,3 +293,5 @@ of re-anchoring sound. Its two MINORs were applied as one batch, without a furth
 - 2026-10-21: review round 1 (3 MAJOR, 3 MINOR, leftovers) fixed: bookmarks hold on to their line's text, move line and the history keep them, the keys are CodeMirror bindings, the confirm takes the keyboard; 44 of 44 mutants killed (Done, "Review round 1").
 - 2026-10-21: review round 2 (4 MAJOR, 3 MINOR) fixed after the maintainer's call to simplify: keys by position in one handler, bookmarks back on their line's anchor after each change, move line isolated in the history, `restore` removed, ES2015 and a plain marker subclass; bookmarks stay in the browser only (Done, "Review round 2").
 - 2026-10-21: review round 3 clean; its two MINORs applied as one batch (a deleted line lands on the text right after the deletion; the unused key constants removed); 4 of 4 mutants killed (Done, "Review round 3").
+- 2026-10-21: the maintainer's hand test: the digit goes right of the line number, always shown, in room kept free on every line; the bookmark question in Klang's own themed yes or no modal (`YesNoModal`, klangui), and klang.css themes Semantic's modal content and actions; 5 of 5 mutants killed.
+- 2026-10-21: the maintainer's look request and the look review (clean, its MINORs as one batch): the digit in a small cyan box right of the number, in the bookmarks' own editor theme; the yes or no modal answers once when it is gone, in the app's card look with the gold main-answer button; Semantic's modal header themed too; 2 of 2 mutants killed.

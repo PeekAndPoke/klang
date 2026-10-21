@@ -16,6 +16,7 @@ import io.peekandpoke.klang.sprudel.lang.sprudelLib
 import io.peekandpoke.klang.storage.SongStorage
 import io.peekandpoke.klang.ui.codemirror.BookmarkOptions
 import io.peekandpoke.klang.ui.codemirror.Bookmarks
+import io.peekandpoke.klang.ui.comp.YesNoModal
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.klang.version
 import io.peekandpoke.kraft.components.Component
@@ -24,7 +25,6 @@ import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.modals.ModalsManager.Companion.modals
 import io.peekandpoke.kraft.semanticui.forms.UiInputField
-import io.peekandpoke.kraft.semanticui.modals.OkCancelModal.Companion.mini
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
@@ -199,31 +199,17 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         }
     }
 
-    /**
-     * Asks whether to move a bookmark, in a small confirm. [answer] is called once: with the button's answer, or with
-     * no when the confirm closes otherwise (a click beside it). Kraft calls the Yes button's result before the confirm
-     * has faded out and closed, so the close that follows a yes changes nothing.
-     */
+    /** Asks whether to move a bookmark, in Klang's yes or no modal, which answers exactly once. */
     private fun askToMoveBookmark(move: BookmarkOptions.Move, answer: (yes: Boolean) -> Unit) {
-        var answered = false
-
-        val reply = { yes: Boolean ->
-            if (!answered) {
-                answered = true
-                answer(yes)
-            }
-        }
-
         modals.show { handle ->
-            mini(
+            YesNoModal(
                 handle = handle,
-                header = {},
-                content = { ui.content { +"Bookmark ${move.digit} is on line ${move.fromLine}. Move it here?" } },
-            ) { result ->
-                reply(result.isOk)
-            }
-        }.onClose {
-            reply(false)
+                headline = "Move bookmark ${move.digit}?",
+                content = { +"Bookmark ${move.digit} is on line ${move.fromLine}. Move it to line ${move.toLine}?" },
+                yesText = "Move",
+                noText = "Keep",
+                onResult = answer,
+            )
         }
     }
 
