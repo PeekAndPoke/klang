@@ -226,6 +226,9 @@ class CreditsPage(ctx: NoProps) : PureComponent(ctx) {
                         - **[CodeMirror 6](https://codemirror.net)** — the code editor at the heart of the coding experience
                         - **[Lezer](https://lezer.codemirror.net)** — parser generator powering syntax highlighting
                         - **[codemirror-minimap](https://github.com/replit/codemirror-minimap)** by Replit: the small overview of the whole song beside the code editor
+                        - **Ideas from the code editors and IDEs we have worked in for years**: numbered bookmarks, the jump back to
+                          where you last edited, and Ctrl+click to a definition. Habits every programmer's editor taught us, and we wanted
+                          them in the song editor too
                     """.trimIndent()
                 )
             }
