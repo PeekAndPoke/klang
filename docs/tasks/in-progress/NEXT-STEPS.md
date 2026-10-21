@@ -22,18 +22,24 @@ the ticket numbers. This note is the queue, in order. The note of the pause itse
    with `ticket`, shorter pointers elsewhere); the skill `mission-control-link` is in.
 2. **Engine alloc batch 2: done 2026-10-21.** Review round 1 clean (code and audio), the MINOR batch applied, the
    mutation campaign 7 of 7 KILLED (KLANG-00290, item 45's last paragraph).
-3. **Master follow-up 8, option (a)**, decided 2026-10-19: the offline render counts the master chain's latency
+3. **Editor features** (maintainer, 2026-10-21): KLANG-00321 (go to definition) done. KLANG-00322 (back to the
+   last edit) and KLANG-00323 (bookmarks, 56b4d843; full check aa59d49e GREEN) built, reviewed and checked; both wait
+   for the maintainer's hand test. Next KLANG-00325, the key map: the PC keys decided in the interview, the Mac table
+   and the design draft wait for the maintainer's look; when built, stop after the first draft of `OnKey` and the
+   hints (the Play button) for the maintainer's code review. Then KLANG-00324 (the shortcuts page reads the key map).
+   Ideas from the interview: KLANG-00326 (clipboard history), KLANG-00327 (navigate back and forward).
+4. **Master follow-up 8, option (a)**, decided 2026-10-19: the offline render counts the master chain's latency
    (KLANG-00137 (master dsl followups) §8). It moves two corpus rows (Der Schmetterling, Kokon), accepted with the
    change.
-4. Then the order in KLANG-00290, its first paragraph. 10c and 10d wait for the FM round.
-5. **Left of the docs-lint findings:** the ticket sweep replaced the stale task paths, and the two task-place
+5. Then the order in KLANG-00290, its first paragraph. 10c and 10d wait for the FM round.
+6. **Left of the docs-lint findings:** the ticket sweep replaced the stale task paths, and the two task-place
    findings now carry PAUSED in `docs/tasks/` (KLANG-00127, KLANG-00145). Left: the `_priorities.md` tremolo entry
    (tools review round 1, MINOR 17).
-6. **Mission Control's review-loop RFC**: one answer to its draft
+7. **Mission Control's review-loop RFC**: one answer to its draft
    (`/opt/dev/peekandpoke/missioncontrol/blueprints/skills/review-loop/SKILL.md`). The tier names are agreed
    (strict / standard / light). Nothing is adopted until the maintainer decides. Our two Kraft pitfalls come back
    with Mission Control's merged `kraft-knowhow`.
-7. **The lexer accepts an unclosed block comment** ([`klangscript/MEMORY.md`](../../../klangscript/MEMORY.md), Open
+8. **The lexer accepts an unclosed block comment** ([`klangscript/MEMORY.md`](../../../klangscript/MEMORY.md), Open
    threads): a fix to make.
 
 ## Katalyst stream (Klang-Research)
