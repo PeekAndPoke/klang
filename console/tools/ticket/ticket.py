@@ -337,10 +337,14 @@ def cmd_move(a):
     path = os.path.join(a.root, src)
     lines = readf(path).split("\n")
     st = status_of(path)
+    end = st[3] + 1 if st else 0  # the status blockquote goes on until a blank, bare '>' or new bold line
+    while st and end < len(lines) and lines[end].startswith("> ") and lines[end][2:].strip() \
+            and not lines[end].startswith("> **"):
+        end += 1
     if a.note:
         note = f" {a.note}"
-    elif st:  # keep the prose after the old word
-        note = st[2].lstrip("*").lstrip()
+    elif st:  # keep the prose after the old word, all its lines
+        note = " ".join([st[2]] + [l[2:].strip() for l in lines[st[3] + 1:end]]).lstrip("*").lstrip()
         if st[1] and note.startswith(st[1]):
             note = note[len(st[1]):]
         note = " " + note.lstrip(" .,;:*").strip() if note.strip(" .,;:*") else ""
@@ -348,7 +352,7 @@ def cmd_move(a):
         note = ""
     new_line = f"> **Status ({today()}): {word}.**{note}"
     if st:
-        lines[st[3]] = new_line
+        lines[st[3]:end] = [new_line]
     else:
         at = next((i + 1 for i, l in enumerate(lines) if l.startswith("# ")), 0)
         lines[at:at] = ["", new_line]
@@ -356,6 +360,8 @@ def cmd_move(a):
     writef(path, text)
     dst = f"{folder_for(word, today())}/{os.path.basename(src)}"
     move_file(a.root, src, dst)
+    if git(a.root, "ls-files", "--error-unmatch", dst, ok=(0, 1)).strip():
+        git(a.root, "add", dst)  # git mv staged the old content; stage the new status and History too
     print(dst)
 
 

@@ -197,6 +197,28 @@ class NewMoveCheck(Repo):
         self.assertEqual(out.strip(), f"docs/tasks-archive/{ticket.today()[:7]}/KL-00001-engine-follow-ups.md")
         self.assertEqual(run(self.root, "check")[0], 0)
 
+    def test_move_replaces_a_two_line_status_and_stages_its_edit(self):
+        run(self.root, "init", "KL")
+        write(self.root, "docs/tasks/in-progress/KL-00001-shop.md",
+              "# KL-00001: Shop\n\n> **Status (2026-10-19): IN PROGRESS.** Waits for the\n"
+              "> checkout; it comes before task 05.\n> **Owner:** klang.\n\nBody.\n")
+        commit(self.root, "add", "2026-10-19T10:00:00")
+        rc, out = run(self.root, "move", "KL-00001", "DONE", "--note", "Shipped.")
+        self.assertEqual(rc, 0, out)
+        path = out.strip()
+        text = read(self.root, path)
+        self.assertIn(f"> **Status ({ticket.today()}): DONE.** Shipped.\n> **Owner:** klang.\n", text)
+        self.assertNotIn("checkout", text)
+        staged = subprocess.run(["git", "show", f":{path}"], cwd=self.root, check=True,
+                                capture_output=True, text=True).stdout
+        self.assertEqual(staged, text)
+        write(self.root, "docs/tasks/in-progress/KL-00002-cart.md",
+              "# KL-00002: Cart\n\n> **Status (2026-10-19): IN PROGRESS.** Waits for the\n"
+              "> checkout.\n\nBody.\n")
+        rc, out = run(self.root, "move", "KL-00002", "PAUSED")
+        self.assertIn(f"> **Status ({ticket.today()}): PAUSED.** Waits for the checkout.\n\nBody.",
+                      read(self.root, out.strip()))
+
     def test_check_finds_problems(self):
         run(self.root, "init", "KL")
         run(self.root, "new", "One")

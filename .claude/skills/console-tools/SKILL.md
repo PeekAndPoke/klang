@@ -316,7 +316,7 @@ dash scan, stack-merge's exit code by exception type, test-digest's foreign-suit
   on synthetic repos; not yet run against klang itself.
 - The lock: `console/with-build-lock.sh` finds the main checkout's lock from any worktree (since
   2026-10-19), so no call needs `KLANG_LOCK_FILE` any more.
-- **ticket**: the blueprint's copy at 7dc3d1c (2026-10-20), unchanged. klang's bulk migration, with what
+- **ticket**: the blueprint's copy at 521c7f3 (2026-10-21), unchanged. klang's bulk migration, with what
   it swept and what it left alone: `docs/housekeeping/20261020-ticket-migration.md` and its commit
   (3c9a191d); the checklist in `in-progress/` is a `skip:` line.
 - **docs-lint**: both files list what git does not ignore (`git ls-files -co --exclude-standard`), with
