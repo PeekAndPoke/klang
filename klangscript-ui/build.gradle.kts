@@ -2,6 +2,9 @@
 
 plugins {
     kotlin("multiplatform")
+    // Kotest's spec discovery on JS runs through KSP, as in the other modules with browser tests.
+    id("com.google.devtools.ksp")
+    id("io.kotest")
 }
 
 val GROUP: String by project
@@ -26,6 +29,14 @@ kotlin {
                 api(project(":klangui"))
                 api(Deps.KotlinLibs.Kraft.core)
                 api(Deps.KotlinLibs.Kraft.semanticui)
+            }
+        }
+
+        jsTest {
+            dependencies {
+                Deps.Test {
+                    jsTestDeps()
+                }
             }
         }
     }

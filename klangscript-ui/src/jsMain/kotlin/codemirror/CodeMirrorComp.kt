@@ -188,6 +188,7 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
                 theme.extension,
                 javascript(),
                 updateListenerExtension,
+                EditPlacesExtension.extension,
                 linterExtension,
                 lintGutter(),
                 *dslExtensions.toTypedArray(),
@@ -309,7 +310,9 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
     }
 
     /**
-     * Manually update the code in the editor
+     * Replaces the whole document with [newCode]: a reset to the original code (the song page's, a code example's).
+     *
+     * Does nothing when the document already is [newCode]. A replacement empties the edit places (KLANG-00322).
      */
     fun setCode(newCode: String) {
         val view = editor ?: return
@@ -324,6 +327,7 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
                         this.to = view.state.doc.length
                         this.insert = newCode
                     }
+                    this.effects = EditPlacesExtension.clear.of(Unit)
                 }
             )
         )

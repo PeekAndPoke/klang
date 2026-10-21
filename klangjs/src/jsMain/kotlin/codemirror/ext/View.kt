@@ -314,7 +314,8 @@ external interface KeyBinding {
 
 // Extension functions and constants
 // Extension factory functions
-external fun keymap(bindings: Array<KeyBinding>): Extension
+/** The keymap facet: `keymap.of(bindings)` adds key bindings (a facet in CodeMirror, not a function). */
+external val keymap: Facet<Array<KeyBinding>>
 external fun drawSelection(config: dynamic = definedExternally): Extension
 external fun dropCursor(config: dynamic = definedExternally): Extension
 external fun highlightSpecialChars(config: dynamic = definedExternally): Extension

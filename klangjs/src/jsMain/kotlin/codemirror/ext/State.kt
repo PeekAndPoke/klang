@@ -178,6 +178,9 @@ external class ChangeSet {
     fun map(other: ChangeSet, before: Boolean = definedExternally): ChangeSet
     fun iterChanges(f: (fromA: Int, toA: Int, fromB: Int, toB: Int, inserted: Text) -> Unit)
     fun desc(): ChangeDesc
+
+    /** Maps a position in the old document to the new one (a `ChangeSet` is a `ChangeDesc` in CodeMirror). */
+    fun mapPos(pos: Int, assoc: Int = definedExternally): Int
 }
 
 /**
