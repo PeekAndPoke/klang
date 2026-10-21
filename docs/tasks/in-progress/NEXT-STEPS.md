@@ -16,9 +16,10 @@ the ticket numbers. This note is the queue, in order. The note of the pause itse
 
 ## Queue (Klang-Main-Dev)
 
-0. **The agent meeting, Friday 2026-10-23 after 13:00** (Mission Control's MC-00017; klang goes first): the other
-   agents question klang's rules, klang decides what to merge, slim or drop; `CLAUDE.md` changes need the
-   maintainer's OK. The prepared list: `docs/housekeeping/2026-10-23-agent-meeting-rules.md`.
+0. **The agent meeting, Friday 2026-10-23 after 13:00** (Mission Control's MC-00017): all three projects (klang,
+   Spross, Ultra) are inspected together for a common baseline (maintainer, 2026-10-21). No rule is trimmed or
+   changed before then; `CLAUDE.md` changes need the maintainer's OK. The prepared list:
+   `docs/housekeeping/2026-10-23-agent-meeting-rules.md`.
 1. **Console tools: done 2026-10-20.** Review round 2 (reviewer-high): 1 MAJOR (docs-lint read the git-ignored
    `tmp/`) and 2 MINORs, fixed in 8d9fa057; every round-1 fix holds. Two rounds without a clean one: the safety
    valve; no round 3 (maintainer, 2026-10-21), the tools review is closed. The approved condense is applied (the `CLAUDE.md` tool block
