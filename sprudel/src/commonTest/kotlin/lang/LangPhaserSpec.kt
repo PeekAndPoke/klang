@@ -53,7 +53,7 @@ class LangPhaserSpec : StringSpec({
         events[0].data.phaserSweep shouldBe PHASER_SWEEP_HZ
     }
 
-    "phaser(tail-only) does not touch the head field" {
+    "phaser(tail-only) does not reinterpret the receiver into the head field" {
         // numeric receiver: without the tail-only guard the head apply would REINTERPRET
         // the values ("3"/"4") into the phaserDepth field, the WET being the head
         val p = SprudelPattern.compile("""seq("3 4").phaser(rate = 0.6)""")

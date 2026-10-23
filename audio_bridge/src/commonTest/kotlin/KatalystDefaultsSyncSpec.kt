@@ -43,9 +43,9 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
  * Every slot of the classic chain falls into exactly one of FIVE families, and each gets a row
  * (four until 2026-09-19, when the group fader arrived and brought its own):
  *
- *  1. **untouched zero** (0.0): a knob whose engine-untouched value is zero, so seeding it with
- *     the touched constant would switch that effect on for every song that never asked for it:
- *     `delay.wet`, `reverb.wet`, `phaser.wet`, `duck.depth`.
+ *  1. **untouched zero** (0.0): a stage's AMOUNT knob (its wet or depth) that the untouched voice
+ *     carries at zero; seeding it with a touched constant above zero would switch that effect on
+ *     for every song that never asked for it: `delay.wet`, `reverb.wet`, `phaser.wet`, `duck.depth`.
  *  2. **unset** ([SLOT_UNSET]): where "off" is an absence rather than a number, so the wire's
  *     non-finite marker carries it: all five compressor slots (`KatalystCompressorWriter`
  *     gates on "any of the five set", so even one finite constant is a compressor already on),
@@ -119,12 +119,13 @@ class KatalystDefaultsSyncSpec : StringSpec({
     "family 1, the untouched zeros: every knob here is 0.0, never its touched constant" {
         // A slot's default is its value when nobody writes it, so seeding an amount with the
         // touched constant would put REVERB_WET of room on every orbit of every song that never
-        // wrote `reverb(...)`. The criterion for THIS family is exactly that: a knob whose
-        // engine-UNTOUCHED value is zero belongs here, because seeding it with the touched constant
-        // would switch that effect on everywhere. It is not about where the engine's gate sits (the
-        // delay gates on `time`, the reverb on `size`, the duck on `orbit`, and `duck.orbit` is in
-        // family 2 while `phaser.wet` is here). Family 3 holds the two gate knobs whose untouched
-        // value happens to be zero, `delay.time` and `reverb.size`, for this same reason.
+        // wrote `reverb(...)`. The criterion for THIS family: the knob is a stage's AMOUNT (its wet
+        // or depth) and the untouched voice carries it at zero. `phaser.wet` and `duck.depth` have a
+        // touched constant of zero too, so they would be off either way; they are here because they
+        // are amounts. It is not about where the engine's gate sits (the delay gates on `time`, the
+        // reverb on `size`, the duck on `orbit`, and `duck.orbit` is in family 2 while `phaser.wet`
+        // is here). A knob that is NOT the amount and that the untouched voice carries at zero is
+        // family 3: `delay.time`, `reverb.size` and `delay.feedback`.
         listOf("delay.wet", "reverb.wet", "phaser.wet", "duck.depth")
             .forEach { name ->
                 withClue(name) { classicSlots.getValue(name) shouldBe 0.0 }
