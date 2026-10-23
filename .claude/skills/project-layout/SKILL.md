@@ -176,6 +176,10 @@ klang's copy, taken 2026-10-20 (the blueprint as of that day).
 - **Dated records keep their words** and were not swept: `DEV-DIARY.MD`, the escape and defect-density
   ledgers, `<module>/ref/memory-history.md`, `docs/benchmarks/`, `docs/funding/evidence/`, and the
   published pages (`docs/blog/`, `src/jsMain/resources/`), which may still name old task paths.
+- **The maintainer's (rules retro, 2026-10-23):** pushing, tagging, releasing and deploying; no agent pushes or
+  deploys, and no release is prepared unless asked. Agents may edit the repo's `gradle.properties`, but
+  `VERSION_NAME` is bumped by the maintainer for a release, and the global `~/.gradle/gradle.properties` (signing
+  and Maven Central secrets) is never read or edited.
 - **Memory:** each module's `MEMORY.md` says what is true now; its full dated record lives in
   `<module>/ref/memory-history.md` (since 2026-09-29).
 - **Worktrees:** work goes sequentially on the main checkout. A full check or a long measurement may run in

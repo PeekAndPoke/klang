@@ -96,10 +96,9 @@ The script finds the main checkout's lock from any worktree through git's common
 same call works everywhere (`/console-tools`).
 
 **For a mutation check the critical section is `mutate → build → restore`, not just the build**: one `mutate` campaign.
-`.claude/BUILD-LOCK.md` is the advisory half: the holder record plus one row per workstream that is uncommitted right
-now. Read it as its own step, never chained into the build with `&&`. It is coordination only, not a ledger, so keep it
-short: a row dies when its work is committed, and old handover notes go to `.claude/build-lock-log.md`, which nobody
-reads to take the lock.
+The lock file itself records its holder (`pid`, `since`, `cmd`), and a waiter that times out prints it. What is
+half-done lives in the tickets in `docs/tasks/in-progress/` (the advisory `BUILD-LOCK.md` was retired at the rules
+retro, 2026-10-23; its old handover notes stay in `.claude/build-lock-log.md`, history only).
 
 ### Rules for the fan-out
 
@@ -108,6 +107,9 @@ reads to take the lock.
 - **Say it in the worker prompt**: *"Do NOT run Gradle or any build command. Report what should be run; the coordinator
   runs it."* A worker that ignores this still cannot race — the lock is real — but it will block for up to 15 minutes
   and look like a stall.
+- **Workers make no git writes, reviewers delete nothing** (say it in every brief; written down at the rules retro,
+  2026-10-23): the coordinator stages and commits by path after the review, so nothing unreviewed lands, and a reviewer
+  that deletes can take a worker's evidence with it.
 - **Only ONE owner mutates production code, ever.** A lock around the build does not fix this: two workers mutating
   `audio_be` read *each other's* edits and both draw wrong verdicts. Mutation campaigns are inherently serial and belong
   to a single owner.
@@ -256,13 +258,18 @@ or judging the theory; reading this skill to launch a fleet does not need it.
 ## Notes
 
 - This skill governs model/effort selection and fan-out safety only. Whether to fan out at all is governed by the
-  Agent/Workflow tool rules (workflows require explicit user opt-in) and by the project rule *"Do not call the Agent
-  tool unless the user requested it."*
+  Agent/Workflow tool rules (workflows require explicit user opt-in); the coordinator spawns workers and reviewers as
+  its normal work (the old "do not call the Agent tool unless the user requested it" was retired at the rules retro,
+  2026-10-23).
 - Quality is the goal; cheap tiers are a means to afford more coverage, not an end. A wrong answer from Haiku is more
   expensive than a right answer from Opus.
 
 ## Changelog
 
+- **2026-10-23**: rules retro (Mission Control's MC-00017), klang's cleanup: the advisory `BUILD-LOCK.md` retired (the
+  lock file records its holder), the "do not call the Agent tool unless asked" note retired, "workers make no git
+  writes, reviewers delete nothing" written down. The "world-class" line and the heavy-agent cap are retired too
+  (MC-00021); their sections go with that rollout.
 - **2026-10-20**: IntelliJ's tools allowed, read-only (maintainer, in the coordinator's session, after Mission Control
   asked the projects). An earlier session instruction against them dated from when they were still buggy; write
   actions are decided one by one when a case for one comes up.

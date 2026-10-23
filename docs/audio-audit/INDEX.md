@@ -218,4 +218,4 @@ believed sound, and each carries the exact edit needed to finish it later.
 - **Builds are locked.** `console/with-build-lock.sh` (exclusive `flock`) — added mid-run at the user's instruction. For
   a mutation check the critical section is `mutate → build → restore`, not just the build: a build that races an edit
   returns a *plausible* verdict rather than an error, so it would silently poison this ledger. See
-  `.claude/BUILD-LOCK.md` and `/agent-fleet`.
+  `/agent-fleet`.
