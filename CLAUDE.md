@@ -88,6 +88,16 @@ A retired name is never restored and never cited as current. The full list, newe
 name and where it was decided, is `docs/retired-names.md`; read it when an old name turns up (for example when
 porting an old song). History keeps its words.
 
+## Current experiments
+
+Each runs until the meeting named; the meeting deletes its line or turns it into a rule. Notes go into the ticket,
+never here (maintainer, 2026-10-23).
+
+| Experiment | Until | Ticket |
+|------------|-------|--------|
+| Every review round on the top rung (round 3 and later) runs one Opus 5.5 max and one Fable reviewer, the same brief, blind to each other; the findings record who found each (both, Opus only, Fable only) and each reviewer's tokens. No repeat runs. | 2026-10-30 | KLANG-00328 |
+| Tool look-out: note each case where a tool (IntelliJ Optimize Imports, Auto-Format, Rename, Move) would have beaten a hand edit, and where Auto-Format differs from `/code-style`. IntelliJ stays read-only until the meeting allows a write action. | 2026-10-30 | KLANG-00329 |
+
 ## Agents and skills
 
 The project skills live in `.claude/skills/` (each `SKILL.md` says when to use it) and the agents in
