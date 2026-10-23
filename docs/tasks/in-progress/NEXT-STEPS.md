@@ -40,9 +40,11 @@ the ticket numbers. This note is the queue, in order. The note of the pause itse
 6. **The docs-lint findings: done 2026-10-23.** The ticket sweep replaced the stale task paths, the two task-place
    findings carry PAUSED in `docs/tasks/` (KLANG-00127, KLANG-00145), and the `_priorities.md` tremolo entry says
    DONE (tools review round 1, MINOR 17).
-7. **Mission Control's review-loop RFC**: one answer to its draft
-   (`/opt/dev/peekandpoke/missioncontrol/blueprints/skills/review-loop/SKILL.md`). The tier names are agreed
-   (strict / standard / light). Nothing is adopted until the maintainer decides. Our two Kraft pitfalls come back
+7. **Mission Control's review-loop RFC: answered 2026-10-23** (the six open questions of its draft,
+   `/opt/dev/peekandpoke/missioncontrol/blueprints/skills/review-loop/SKILL.md`): delta marked, rejections loop
+   reconcile-only, MINOR batch with a landing record, provisional self-rejection, the ledger on disk, ladder
+   agents named by model and effort. The tier names are agreed (strict / standard / light). Nothing is adopted
+   until the maintainer decides. Our two Kraft pitfalls come back
    with Mission Control's merged `kraft-knowhow`.
 8. **The lexer accepts an unclosed block comment** ([`klangscript/MEMORY.md`](../../../klangscript/MEMORY.md), Open
    threads): a fix to make.
