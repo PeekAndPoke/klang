@@ -32,8 +32,8 @@ IntelliJ MCP is".
   five star imports in klang are exactly that list's: `io.ktor` in `audio_fe/.../utils/AssetLoader.kt` (4) and
   `audio_fe/.../cache/DiskUrlCache.kt` (1). To forbid wildcards fully, the list is emptied in the settings and
   those five imports are written out. The list was emptied the same day at the maintainer's word (the form Spross
-  uses, `<option name="PACKAGES_TO_USE_STAR_IMPORTS"><value /></option>`); the five `io.ktor` star imports are still
-  in place, a one-click Optimize Imports once IntelliJ has reloaded the setting.
+  uses, `<option name="PACKAGES_TO_USE_STAR_IMPORTS"><value /></option>`); the five `io.ktor` star imports were
+  then written out by hand (the first case below), so klang has no star import left.
 - **The MCP picks no project by itself, 2026-10-23:** `get_repositories` without `projectPath` refused and listed
   the 13 open projects instead of guessing. The safe behaviour; the safeguard above still applies.
 
@@ -41,6 +41,7 @@ IntelliJ MCP is".
 
 | date | what | tool | what it would have saved |
 |---|---|---|---|
+| 2026-10-23 | The five `io.ktor` star imports in `audio_fe` (`AssetLoader.kt`, `DiskUrlCache.kt`) written out by hand at the maintainer's word: the used names found by reading each file, and one resolution checked by hand (`Charsets`: a star import outranks Kotlin's default `kotlin.text.Charsets`, so the explicit import is ktor's, the same as before) | IntelliJ Optimize Imports, once the emptied star list is loaded | reading two files and the resolution question, a few minutes; the compile check on JVM and JS is needed either way |
 
 ## History
 
