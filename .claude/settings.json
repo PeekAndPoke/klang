@@ -1,5 +1,6 @@
 {
   "$comment": "Command baseline from the nexus (missioncontrol blueprints/settings, MC-00024). Copy into the repo's tracked .claude/settings.json and merge with what is there; add the project's own entries below the baseline. Deny always wins over allow. `git -C <tree> checkout` stays open for measurement trees (klang, spross). klang's own entries follow the baseline at the end of a list: every form of git reset (deny).",
+  "autoMemoryEnabled": false,
   "permissions": {
     "deny": [
       "Bash(git stash)",
