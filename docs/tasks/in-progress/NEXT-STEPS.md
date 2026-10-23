@@ -16,10 +16,15 @@ the ticket numbers. This note is the queue, in order. The note of the pause itse
 
 ## Queue (Klang-Main-Dev)
 
-0. **The agent meeting, Friday 2026-10-23 after 13:00** (Mission Control's MC-00017): all three projects (klang,
-   Spross, Ultra) are inspected together for a common baseline (maintainer, 2026-10-21). No rule is trimmed or
-   changed before then; `CLAUDE.md` changes need the maintainer's OK. The prepared list:
-   `docs/housekeeping/2026-10-23-agent-meeting-rules.md`.
+0. **The rules retro (MC-00017), 2026-10-23: done.** Klang's items: the register slimmed from 47 rows to 21 with
+   each area's rules moved to that area (b78b8c28, the maintainer's OK in session); `docs/tasks/_incidents.md`; the
+   "world-class" line, the heavy-agent cap and the defect-density ledger retired; the Fable experiment
+   (`docs/housekeeping/2026-10-23-fable-experiment-5a3.md`). Waiting on Mission Control's rollouts: hooks, checks,
+   the gradlew lock, the command list, the review-loop blueprint (`/review-loop` stays untouched until then), home
+   memory off. **Until the next meeting (Friday 2026-10-30, after the refill; maintainer, 2026-10-23):** every
+   review round on the top rung runs one Opus 5.5 max reviewer AND one Fable reviewer, the same brief, blind to
+   each other; the round's findings record per finding who found it (both, Opus only, Fable only) and each
+   reviewer's tokens. No repeat runs. Rules wait for the meeting; incidents go into `_incidents.md`.
 1. **Console tools: done 2026-10-20.** Review round 2 (reviewer-high): 1 MAJOR (docs-lint read the git-ignored
    `tmp/`) and 2 MINORs, fixed in 8d9fa057; every round-1 fix holds. Two rounds without a clean one: the safety
    valve; no round 3 (maintainer, 2026-10-21), the tools review is closed. The approved condense is applied (the `CLAUDE.md` tool block
