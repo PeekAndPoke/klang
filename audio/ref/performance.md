@@ -664,8 +664,8 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   `docs/benchmarks/ledger.md`. Run it after every optimization round: within one piece and one machine only the
   engine moves between rows. The other suites are listed in `src/jvmMain/kotlin/SongBenchmarkMain.kt`.
 - **`GraphCensus`** (`ignitor/GraphCensus.kt`, diagnostic, never on the render path) counts what a note asks of
-  the engine (passes, traffic, held state). It does not model the build gate: every `classic()` stage counts as
-  built, set or not.
+  the engine (passes, traffic, held state). It models the build gate of the pitch stages only (an unwritten `vib`,
+  `penv`, `accelerate` or `fm` counts nothing); every other `classic()` stage counts as built, set or not.
 - **`KLANG_BENCH_FILTER=guitar-rig`** runs only the `guitar-rig*` rows of `audio_benchmark`'s `IgnitorBenchmark`.
 - A timing claim needs interleaved runs and a control row: `audio/ref/verification.md`.
 - **`console/full-check.sh`** runs everything before a merge or a release: every test, the corpus check

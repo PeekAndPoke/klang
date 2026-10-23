@@ -2478,8 +2478,8 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     in one lock call, hash-verified restore, the final run green), each KILLED for its own row's message: the
     frequency key, the detune key and the count key dropped, the sign-of-zero test dropped alone, `applyKnobArgs`
     without the coefficient update, without the depth clamp, and `configureFrom` off by a hair. S.
-46. **`GraphCensus`'s five pitch arms miss the pitch memo and the gate** (numbered after the last item, added
-    2026-10-19): since 2026-10-07 `combineMods` calls `cachePerBlock` unconditionally, so each pitch node's mod renders
+46. **DONE (2026-10-23): `GraphCensus`'s five pitch arms miss the pitch memo and the gate** (numbered after the last
+    item, added 2026-10-19): since 2026-10-07 `combineMods` calls `cachePerBlock` unconditionally, so each pitch node's mod renders
     into a memo and every consumer copies it out per block (2 of traffic each) while the memo holds a
     `blockFrames * 8` buffer between blocks; the census's own memo rule (its KDoc) counts both, and none of the five
     pitch arms (`Vibrato`, `Accelerate`, `PitchEnvelope`, `PitchMod`, `PitchModSemitones`) does. And the gate: in
@@ -2491,6 +2491,17 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     two signals, 1 pass and 3 of traffic): `classic()` with its vibrato and accelerate both built is counted with two
     loops and two reads and no combine pass, and a pitch node over two pitched sources with one loop and one read too
     few. All three move every `classic()` voice's census columns. Source: review rounds 1 and 2 of item 28. S.
+    **As built:** all three as described, the runtime unchanged (it agreed on each point). The census counts each built
+    pitch node's memo (a block held, a copy out per reader), gates a pitch stage at a literal off value or a `Param`
+    slot at an off default the way `gatedOff` / `gatedOffWhenFinite` do (a gated fm's modulator not counted either),
+    and walks the mod's edges to its readers: one ratio loop and one read per pitched source (per voice in a unison
+    stack or string), one multiply per nested pitch node, an fm's modulator reading the memo above it. Item 28's open
+    doubt closed with it: `pitchMod` and `pitchModSemitones` charge their in-place conversion. `GraphCensusSpec`
+    24 rows (two moved, five added, among them a song-shaped one cut from IrishLament's blockfloete); 21 + 6
+    mutants KILLED. Not modelled, named in the KDoc: a reused subtree under another pitch context, a pitch node over
+    no pitched source, a freq-keyed memo re-rendering per reader pitch, and a block-constant zero depth's dead
+    branch. Review round 1 (blind, code) clean; its MINOR batch applied. The song benchmark's census columns move for
+    every `classic()` voice.
 
 ## 6. The audit's later steps and its open decisions
 

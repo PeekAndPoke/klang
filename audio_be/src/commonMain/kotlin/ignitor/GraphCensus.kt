@@ -15,6 +15,7 @@ import io.peekandpoke.klang.audio_bridge.coerceSinePartials
 import io.peekandpoke.klang.audio_bridge.coerceUnisonVoices
 import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RANGE_FROM
 import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RANGE_TO
+import kotlin.random.Random
 
 /**
  * What one note of a graph asks of the engine, counted from the tree the runtime lowers (the
@@ -23,24 +24,39 @@ import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RANGE_TO
  *
  * - [passes]: passes over the block, one per node that renders a loop; an `Eq` counts its
  *   sections, a filter its `passes`, a unison stack a pass per voice (its loop is voice-major); a
- *   pitch-mod node counts the mod buffer it renders (the vibrato, a composition, each pass of it); a
- *   hint and scalar-only arithmetic (one value per block) count nothing.
+ *   pitch-mod node counts the passes of its mod (the vibrato, a composition, each pass of it), and
+ *   one more under another built pitch node (the multiply into its memo); a hint and scalar-only
+ *   arithmetic (one value per block) count nothing.
  * - [traffic]: reads plus writes of a block buffer per sample. A source writes once; an in-place
  *   pass reads and writes once each (2); a pass over two signals reads both and writes one (3); a
  *   signal coefficient makes the node render every coefficient through scratch (a read each); an
  *   oversampled shaper counts its upsample, its shaper loop, its decimation stages and the copy
- *   back; a pitch-mod node writes its mod block, and the ratio loop and the source's read of it
- *   follow; a shared node renders once into a memo, and EVERY consumer copies the memo out (2
- *   each, `MemoizingIgnitor`).
+ *   back; a pitch-mod node's mod renders into a memo that caches per block whatever its readers
+ *   (`combineMods`), and each reader copies it out (2): every pitched source under the node, wrapped
+ *   once (`ModApplyingIgnitor`), then runs the ratio loop (a read and a write, its pass not counted)
+ *   and reads the ratio in each of its voice loops, and a pitch node nested under it multiplies it
+ *   into its own memo (1 pass, 3); a shared node renders once into a memo, and EVERY consumer
+ *   copies the memo out (2 each, `MemoizingIgnitor`).
  * - [bytes]: state a note HOLDS between blocks (filter states and coefficients, oversampler
- *   history, a string's ring, a memo's cache), not the pooled scratch it borrows while rendering.
- *   A model with round numbers per kind, a lower bound where a count is not a literal (a partial
- *   count that is a slot).
+ *   history, a string's ring, a memo's cache, a pitch node's memo included), not the pooled scratch
+ *   it borrows while rendering. A model with round numbers per kind, a lower bound where a count is
+ *   not a literal (a partial count that is a slot).
+ *
+ * The build gate is modelled for the pitch stages only: a vibrato, accelerate, pitch envelope,
+ * `pitchModSemitones` or fm whose switch is a LITERAL off value (a `Constant`, or a `Param` read
+ * through [params]; the rows of `audio/ref/off-values.md`) is not built, its knobs included, and
+ * counts nothing. Every other gated stage (a filter at an unset cutoff, the tremolo, the shapers,
+ * the envelope) counts as built, set or not.
  *
  * Sharing is by IDENTITY, as the runtime's build cache keys it: two structurally equal subtrees
- * that are different instances build twice and are counted twice. One thing the model does not
- * see: a subtree reused under a different pitch-mod or detune context is a separate instance at
- * runtime and counted here as shared, so such a graph is under-counted.
+ * that are different instances build twice and are counted twice. What the model does not see
+ * includes: a subtree reused under a different pitch-mod or detune context is a separate instance
+ * at runtime and counted here as shared, so such a graph is under-counted; a pitch node over no
+ * pitched source (a noise) counts its mod, which the runtime renders only when a source reads it;
+ * and a pitch memo that keeps its freq key (every fm's does: its `freq` reads the note) renders
+ * its mod again for each further pitch its readers hold, as under a forking detune, so
+ * `(saw + saw2.detune(7)).fm(Sine(), depth = 100)` runs the fm loop and its modulator twice per
+ * block where the census counts them once.
  *
  * A model, not a measurement: the weights are read off the runtime lowering
  * (`IgnitorDslRuntime`, `Ignitor.kt`, `EqCore`, `Oversampler`) and pinned by `GraphCensusSpec`
@@ -175,8 +191,24 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
         private val scalarMemo = ArrayList<IgnitorDsl>()
         private val scalarValue = ArrayList<Boolean>()
 
-        /** The children that render: every child, except that one variant of a [IgnitorDsl.Variants] plays per note. */
+        /**
+         * Asks the runtime's own question whether a source is pitched (`pitchedSource`: does its `freq` read the note,
+         * `IgnitorBuildCache.usesMusicalFreq`), so that the census keeps no second copy of the rule. The cache builds
+         * nothing here, and its `random` is never drawn from.
+         */
+        private val freqProbe by lazy { IgnitorBuildCache(soundIndex = soundIndex, random = Random(0)) }
+
+        /**
+         * The children that render: every child, except that one variant of a [IgnitorDsl.Variants] plays per note, and
+         * that a gated pitch node builds nothing of itself, its knobs included ([gatedPitchChild]).
+         */
         private fun renderedChildren(node: IgnitorDsl): List<IgnitorDsl> {
+            val gated = gatedPitchChild(node)
+
+            if (gated != null) {
+                return listOf(gated)
+            }
+
             if (node is IgnitorDsl.Variants) {
                 if (node.children.isEmpty()) {
                     return emptyList()
@@ -352,6 +384,164 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
             return !(from == VIBRATO_RANGE_FROM && to == VIBRATO_RANGE_TO)
         }
 
+        /**
+         * The child a GATED pitch node is, or null when the node is built or is not a pitch node. Gated, the runtime's
+         * arm (`IgnitorDslRuntime`, the rows of `audio/ref/off-values.md`) builds nothing of the node, its knobs
+         * included, and descends into the child it bends under the mod above it. Only a LITERAL switch gates
+         * ([literalOf]: a `Constant`, or a `Param` through the voice's params or its default); a signal or arithmetic
+         * switch is built, whatever its value.
+         */
+        private fun gatedPitchChild(node: IgnitorDsl): IgnitorDsl? = when (node) {
+            // off at a FINITE depth <= 0 only: a non-finite literal depth renders the node's default depth
+            is IgnitorDsl.Vibrato -> node.inner.takeIf { literalOf(node.semitones)?.let { it.isFinite() && it <= 0.0 } == true }
+            is IgnitorDsl.Accelerate -> node.inner.takeIf { offAtZero(node.semitones) }
+            is IgnitorDsl.PitchEnvelope -> node.inner.takeIf { offAtZero(node.semitones) }
+            is IgnitorDsl.PitchModSemitones -> node.inner.takeIf { offAtZero(node.mod) }
+            is IgnitorDsl.Fm -> node.carrier.takeIf { offAtZero(node.depth) }
+            // `pitchMod` has no gate, and no other node is a pitch node
+            else -> null
+        }
+
+        /** The gate of accelerate, the pitch envelope, `pitchModSemitones` and fm: a literal 0, or a non-finite literal. */
+        private fun offAtZero(switch: IgnitorDsl): Boolean = literalOf(switch)?.let { !it.isFinite() || it == 0.0 } == true
+
+        /** A built pitch node: its [mod] and its memo with the memo's readers under [bent]; a gated one, nothing. */
+        private fun builtPitch(node: IgnitorDsl, mod: GraphCensus, bent: IgnitorDsl): GraphCensus =
+            if (gatedPitchChild(node) != null) NONE else mod + pitchMemo(bent)
+
+        /**
+         * What a built pitch node's mod costs past rendering it: the mod renders into a memo that caches per block even
+         * for one reader (`combineMods` calls `cachePerBlock`), a block of state, and every reader copies the memo out.
+         * The readers are found under [bent], the child the node bends ([modReaders]).
+         */
+        private fun pitchMemo(bent: IgnitorDsl): GraphCensus =
+            GraphCensus(passes = 0, traffic = 0, bytes = blockFrames * 8) + modReaders(node = bent, seen = ArrayList())
+
+        /**
+         * The readers of a pitch node's memo found at [node], walking the edges the runtime builds under the mod (its
+         * `withMod` edges: every operand of arithmetic, the inner of a stage, the variant that plays; never a knob),
+         * each node once, as the build cache shares it under one mod ([seen]):
+         * - a PITCHED source (`pitchedSource`: its `freq` reads the note; a silence and a sample always) is wrapped once
+         *   (`applyMod`, `ModApplyingIgnitor`): it copies the memo out (2), runs the ratio loop (a read and a write, its
+         *   pass not counted) and reads the ratio in each of its voice loops (a sine bank once, coarse as for its
+         *   `phase`; a silence never). A source whose `freq` reads no note is shielded (`ModBlockingIgnitor`) and a
+         *   noise ignores the mod: neither reads it.
+         * - a built pitch node below multiplies the memo into its own (`existing * newMod`): the copy out and a pass
+         *   over two signals (1, 3). Its sources read its own memo, except an fm's modulator, which reads the mod above
+         *   the fm (`CarrierFreqMod`) and so is walked here. A gated pitch node is the child it bends.
+         */
+        private fun modReaders(node: IgnitorDsl, seen: ArrayList<IgnitorDsl>): GraphCensus {
+            if (seen.any { it === node }) {
+                return NONE
+            }
+
+            seen.add(node)
+
+            return when (node) {
+                // leaves: no source
+                is IgnitorDsl.Constant, is IgnitorDsl.Param, IgnitorDsl.Freq -> NONE
+
+                // pitched sources: a read of the ratio per voice loop
+                is IgnitorDsl.Sine -> ratioReader(freq = node.freq, reads = 1)
+                is IgnitorDsl.Saw -> ratioReader(freq = node.freq, reads = 1)
+                is IgnitorDsl.Square -> ratioReader(freq = node.freq, reads = 1)
+                is IgnitorDsl.Tri -> ratioReader(freq = node.freq, reads = 1)
+                is IgnitorDsl.Ramp -> ratioReader(freq = node.freq, reads = 1)
+                is IgnitorDsl.Zawtooth -> ratioReader(freq = node.freq, reads = 1)
+                is IgnitorDsl.Zamp -> ratioReader(freq = node.freq, reads = 1)
+                is IgnitorDsl.Pulze -> ratioReader(freq = node.freq, reads = 1)
+                is IgnitorDsl.RawPulze -> ratioReader(freq = node.freq, reads = 1)
+                is IgnitorDsl.Impulse -> ratioReader(freq = node.freq, reads = 1)
+                is IgnitorDsl.Pluck -> ratioReader(freq = node.freq, reads = 1)
+                is IgnitorDsl.SuperSaw -> ratioReader(freq = node.freq, reads = countOf(node.voices))
+                is IgnitorDsl.SuperSine -> ratioReader(freq = node.freq, reads = countOf(node.voices))
+                is IgnitorDsl.SuperSquare -> ratioReader(freq = node.freq, reads = countOf(node.voices))
+                is IgnitorDsl.SuperTri -> ratioReader(freq = node.freq, reads = countOf(node.voices))
+                is IgnitorDsl.SuperRamp -> ratioReader(freq = node.freq, reads = countOf(node.voices))
+                is IgnitorDsl.SuperPluck -> ratioReader(freq = node.freq, reads = countOf(node.voices))
+                is IgnitorDsl.Sample -> GraphCensus(passes = 0, traffic = 2 + 2 + 1, bytes = 0)
+                is IgnitorDsl.Silence -> GraphCensus(passes = 0, traffic = 2 + 2, bytes = 0)
+
+                // the noises ignore the mod
+                is IgnitorDsl.WhiteNoise, is IgnitorDsl.PinkNoise, is IgnitorDsl.BrownNoise, is IgnitorDsl.Crackle,
+                is IgnitorDsl.Dust, is IgnitorDsl.PerlinNoise, is IgnitorDsl.BerlinNoise -> NONE
+
+                // pitch nodes: a gated one is the child it bends; a built one reads the memo into its own
+                is IgnitorDsl.Vibrato, is IgnitorDsl.Accelerate, is IgnitorDsl.PitchEnvelope, is IgnitorDsl.PitchMod,
+                is IgnitorDsl.PitchModSemitones -> {
+                    val gated = gatedPitchChild(node)
+
+                    if (gated != null) modReaders(node = gated, seen = seen) else combinedMod()
+                }
+
+                is IgnitorDsl.Fm -> {
+                    val gated = gatedPitchChild(node)
+
+                    if (gated != null) modReaders(node = gated, seen = seen) else combinedMod() + modReaders(node = node.modulator, seen = seen)
+                }
+
+                // arithmetic and the structure that plays: the mod reaches every operand
+                is IgnitorDsl.Times, is IgnitorDsl.Plus, is IgnitorDsl.Minus, is IgnitorDsl.Div, is IgnitorDsl.Mod,
+                is IgnitorDsl.Min, is IgnitorDsl.Max, is IgnitorDsl.Pow, is IgnitorDsl.Neg, is IgnitorDsl.Abs,
+                is IgnitorDsl.Sq, is IgnitorDsl.Sqrt, is IgnitorDsl.Exp, is IgnitorDsl.Log, is IgnitorDsl.Tanh,
+                is IgnitorDsl.Sign, is IgnitorDsl.Floor, is IgnitorDsl.Ceil, is IgnitorDsl.Round, is IgnitorDsl.Frac,
+                is IgnitorDsl.Recip, is IgnitorDsl.Clamp, is IgnitorDsl.Range, is IgnitorDsl.Lerp, is IgnitorDsl.Select,
+                is IgnitorDsl.Affine, is IgnitorDsl.Parallel, is IgnitorDsl.Variants, is IgnitorDsl.OptimizerHint -> {
+                    var sum = NONE
+
+                    for (child in renderedChildren(node)) {
+                        sum += modReaders(node = child, seen = seen)
+                    }
+
+                    sum
+                }
+
+                // a stage hands the mod to its inner only; its knobs are built without it
+                is IgnitorDsl.Detune -> modReaders(node = node.inner, seen = seen)
+                is IgnitorDsl.Lowpass -> modReaders(node = node.inner, seen = seen)
+                is IgnitorDsl.Highpass -> modReaders(node = node.inner, seen = seen)
+                is IgnitorDsl.Bandpass -> modReaders(node = node.inner, seen = seen)
+                is IgnitorDsl.Notch -> modReaders(node = node.inner, seen = seen)
+                is IgnitorDsl.OnePoleLowpass -> modReaders(node = node.inner, seen = seen)
+                is IgnitorDsl.Eq -> modReaders(node = node.inner, seen = seen)
+                is IgnitorDsl.Shape -> modReaders(node = node.inner, seen = seen)
+                is IgnitorDsl.Distort -> modReaders(node = node.inner, seen = seen)
+                is IgnitorDsl.Drive -> modReaders(node = node.inner, seen = seen)
+                is IgnitorDsl.Crush -> modReaders(node = node.inner, seen = seen)
+                is IgnitorDsl.Coarse -> modReaders(node = node.inner, seen = seen)
+                is IgnitorDsl.Adsr -> modReaders(node = node.inner, seen = seen)
+                is IgnitorDsl.Tremolo -> modReaders(node = node.inner, seen = seen)
+                is IgnitorDsl.Phaser -> modReaders(node = node.inner, seen = seen)
+                is IgnitorDsl.Shimmer -> modReaders(node = node.inner, seen = seen)
+            }
+        }
+
+        /** A pitched source under the mod: the copy out of the memo, the ratio loop's read and write, its [reads]; none when its `freq` reads no note. */
+        private fun ratioReader(freq: IgnitorDsl, reads: Int): GraphCensus =
+            if (freqProbe.usesMusicalFreq(freq)) GraphCensus(passes = 0, traffic = 2 + 2 + reads, bytes = 0) else NONE
+
+        /** A pitch node under another: the outer memo copied out, then `existing * newMod`, a pass over two signals. */
+        private fun combinedMod() = GraphCensus(passes = 1, traffic = 2 + 3, bytes = 0)
+
+        /**
+         * The vibrato's mod, a composition (pitch pipeline 7b and 7c): its sine LFO writes a block (a moving `phase` adds
+         * the read of its block), `range(from, to)` maps it in place when built (reading both bounds when either is a
+         * signal), the floor `max(semitones, 0)` folds to one value per block unless the depth is a signal (then a pass in
+         * place), the multiply (in place over a scalar depth, a third stream over a signal one), the converter
+         * `2^(x / 12)` in place. Only what runs is counted, as for the tremolo.
+         */
+        private fun vibratoMod(node: IgnitorDsl.Vibrato): GraphCensus {
+            val range = if (vibratoBuildsRange(node)) {
+                GraphCensus(passes = 1, traffic = 2 + coefficientReads(node.rangeFrom, node.rangeTo), bytes = 0)
+            } else {
+                NONE
+            }
+            val floor = if (isScalar(node.semitones)) NONE else inPlace()
+            val multiply = GraphCensus(passes = 1, traffic = 2 + signals(node.semitones), bytes = 0)
+
+            return source() + phaseReads(node.phase) + range + floor + multiply + inPlace()
+        }
+
         private fun own(node: IgnitorDsl): GraphCensus = when (node) {
             // leaves: one value per block
             is IgnitorDsl.Constant, is IgnitorDsl.Param, IgnitorDsl.Freq -> NONE
@@ -480,37 +670,21 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
             is IgnitorDsl.Phaser -> inPlace(4 * 16 + 32)
             is IgnitorDsl.Shimmer -> GraphCensus(passes = 1, traffic = SHIMMER_TRAFFIC, bytes = SHIMMER_BYTES)
 
-            // the vibrato is a composition (pitch pipeline 7b and 7c): its sine LFO writes a block (a moving `phase` adds
-            // the read of its block), `range(from, to)` maps it in place when built (reading both bounds when either is a
-            // signal), the floor `max(semitones, 0)` folds to one value per block unless the depth is a signal (then a pass
-            // in place), the multiply (in place over a scalar depth, a third stream over a signal one), the converter
-            // `2^(x / 12)` in place; then, as for every pitch node, the ratio loop (`ModApplyingIgnitor` reads the mod
-            // block and writes the ratios, its pass not counted, as in the arm below) and the source's read of the ratio
-            // per sample. Only what runs is counted, as for the tremolo.
-            is IgnitorDsl.Vibrato -> {
-                val range = if (vibratoBuildsRange(node)) {
-                    GraphCensus(passes = 1, traffic = 2 + coefficientReads(node.rangeFrom, node.rangeTo), bytes = 0)
-                } else {
-                    NONE
-                }
-                val floor = if (isScalar(node.semitones)) NONE else inPlace()
-                val multiply = GraphCensus(passes = 1, traffic = 2 + signals(node.semitones), bytes = 0)
-                val ratioLoop = GraphCensus(passes = 0, traffic = 2, bytes = 0)
-                val sourceRead = GraphCensus(passes = 0, traffic = 1, bytes = 0)
+            // pitch modulation, nothing when gated: the mod ([vibratoMod] for the vibrato), then its memo and the memo's
+            // readers ([pitchMemo]; the ratio loop and the read of the ratio belong to each pitched source under the node).
+            // Accelerate and the pitch envelope write their ratio block (1 pass, 1 write); the signal doors convert in
+            // place (`DeviationToRatioIgnitor`, `SemitonesToRatioIgnitor`) the block their mod, a child, wrote
+            is IgnitorDsl.Vibrato -> builtPitch(node = node, mod = vibratoMod(node), bent = node.inner)
+            is IgnitorDsl.Accelerate -> builtPitch(node = node, mod = GraphCensus(passes = 1, traffic = 1, bytes = 64), bent = node.inner)
+            is IgnitorDsl.PitchEnvelope -> builtPitch(node = node, mod = GraphCensus(passes = 1, traffic = 1, bytes = 64), bent = node.inner)
+            is IgnitorDsl.PitchMod -> builtPitch(node = node, mod = inPlace(bytes = 64), bent = node.inner)
+            is IgnitorDsl.PitchModSemitones -> builtPitch(node = node, mod = inPlace(bytes = 64), bent = node.inner)
 
-                source() + phaseReads(node.phase) + range + floor + multiply + inPlace() + ratioLoop + sourceRead
-            }
-
-            // pitch modulation: the mod renders a block (1 write), the ratio loop reads it and writes
-            // the ratios (2), and the source reads the ratio per sample (1); a detune is a constant
-            // factor folded into the source's increment
-            is IgnitorDsl.Accelerate, is IgnitorDsl.PitchEnvelope, is IgnitorDsl.PitchMod, is IgnitorDsl.PitchModSemitones ->
-                GraphCensus(passes = 1, traffic = 4, bytes = 64)
-
+            // a detune is a constant factor folded into the source's increment
             is IgnitorDsl.Detune -> NONE
 
-            // FM: the modulator renders (counted as a child), the ratio block is read and written, the carrier reads it
-            is IgnitorDsl.Fm -> GraphCensus(passes = 1, traffic = 5, bytes = 64)
+            // FM: the modulator renders (counted as a child), the fm loop reads it and writes the ratios (1 pass, 2)
+            is IgnitorDsl.Fm -> builtPitch(node = node, mod = GraphCensus(passes = 1, traffic = 2, bytes = 64), bent = node.carrier)
 
             // structure that leaves no trace at render time
             is IgnitorDsl.Variants, is IgnitorDsl.OptimizerHint -> NONE
