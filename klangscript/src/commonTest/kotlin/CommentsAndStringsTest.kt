@@ -113,6 +113,15 @@ class CommentsAndStringsTest : StringSpec({
         result.value shouldBe 55.0
     }
 
+    "should accept an empty multi-line comment that closes at the very end of the source" {
+        val script = klangScriptEngine()
+
+        val result = script.execute("5 /**/")
+
+        result.shouldBeInstanceOf<NumberValue>()
+        result.value shouldBe 5.0
+    }
+
     // ============================================================
     // Backtick Strings (Multi-line)
     // ============================================================

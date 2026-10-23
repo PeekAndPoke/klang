@@ -366,14 +366,19 @@ class KlangScriptParser private constructor(
 
                 // Multi-line comment
                 ch == C_SLASH && i + 1 < source.length && codes[i + 1] == C_STAR -> {
+                    val startLine = line
+                    var closed = false
                     i += 2
                     column += 2
-                    while (i < source.length - 1) {
-                        if (codes[i] == C_STAR && codes[i + 1] == C_SLASH) {
+
+                    while (i < source.length) {
+                        if (codes[i] == C_STAR && i + 1 < source.length && codes[i + 1] == C_SLASH) {
                             i += 2
                             column += 2
+                            closed = true
                             break
                         }
+
                         if (codes[i] == C_LF) {
                             line++
                             column = 1
@@ -381,6 +386,13 @@ class KlangScriptParser private constructor(
                             column++
                         }
                         i++
+                    }
+
+                    if (!closed) {
+                        throw KlangScriptSyntaxError(
+                            "Unterminated block comment",
+                            location = SourceLocation(currentSource, startLine, startColumn, line, column),
+                        )
                     }
                 }
 

@@ -203,8 +203,8 @@ class NamedArgumentCompletionSpec : StringSpec({
         staleNamesAt(source = "Ign.saw().lowpass(freq = 1, )", typedMarked = "Ign.saw().lowpass(freq = 1, q = `a, |)") shouldBe
             emptyList()
 
-        // ... and in a block comment that is not closed yet (the lexer still reads the last character, so this parses)
-        namesAt("Ign.saw().lowpass(/* |)") shouldBe emptyList()
+        // ... and in a block comment that is not closed yet (an unterminated block comment does not parse either)
+        staleNamesAt(source = "Ign.saw().lowpass()", typedMarked = "Ign.saw().lowpass(/* |)") shouldBe emptyList()
     }
 
     "a call inside a template interpolation never answers for the call at its offset" {

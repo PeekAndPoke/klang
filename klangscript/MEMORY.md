@@ -119,9 +119,9 @@ KlangScript keeps a JavaScript-like syntax but its semantics and its stdlib foll
 - KLANG-00056 (klangscript native object operators) (arithmetic operators on native objects),
   KLANG-00212 (klangscript union types), KLANG-00064 (klangscript intellisense),
   KLANG-00130 (klangscript named args docs polish).
-- The lexer accepts an unclosed block comment without an error (found 2026-10-19 by the 6.4 work): its loop in
-  `KlangScriptParser` runs `while (i < source.length - 1)`, so `/*` without `*/` swallows the rest of the text except
-  its last character, which is then lexed as a token. An unterminated block comment should be a parse error.
+- The template interpolation's brace matcher (`KlangScriptParser`, the `${...}` reader) does not know comments: in
+  `` `${a /* } */}` `` the `}` inside the comment ends the interpolation, which now reads as an unterminated block
+  comment, located from inside the interpolation (found 2026-10-23 by the lexer fix's review; older than it).
 
 ## History
 
@@ -187,3 +187,5 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
 - 2026-10-21: Ctrl/Cmd-click on a local jumps to its declaration, its hover shows the declaration's code, and an
   identifier inside `${...}` no longer replaces an equal one outside in the binding map (`AnalyzedAst.definitionAt`;
   KLANG-00321 (editor go to a local's definition and show its code on hover)).
+- 2026-10-23: an unclosed block comment is a syntax error, "Unterminated block comment", from its `/*` to the end of
+  the text (the lexer accepted it and lexed the text's last character as a token).
