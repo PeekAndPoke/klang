@@ -49,6 +49,7 @@ interval vocabulary of `tones`, not an audio door. Split out of `:klangscript` o
   (sprudel's `ignp` / `katp`), `klangScript()`, `stdlibLib`, `KlangStdLib`, `ConsoleLevel` (the app's player),
   `Interval.ratio` (the one Kotlin door kept in this module, for `tones`, not an audio door) and the script
   constants `PI` / `E` (no door, left as they were).
+- KlangScript stdlib follows Kotlin conventions, not JavaScript (naming, argument style, `name = value` named args). (rule, 2026-05; moved from the root register 2026-10-23; detail: `klangscript/MEMORY.md` Design Decisions)
 - Script-door parameter defaults are safe literals (number, string, boolean, null); since 2026-10-06
   the KSP processor refuses any other default with a build error naming the door and the parameter
   (the default thunk fills every script call, the pasted literal serves native callers; `/dsl-design` §3).

@@ -16,6 +16,24 @@ Companion skills: `/klangaudio-knowhow` (the engine the DSLs drive), `/klangscri
 
 ---
 
+## Rules
+
+Moved here from the root rules register at the rules retro (2026-10-23), word for word; the levels (stone, rule,
+guideline, guardrail) are the ones the root `CLAUDE.md` defines, and the root keeps one pointer row.
+
+| Rule | Level | Since | Detail |
+|------|-------|-------|--------|
+| Every DSL value is immutable at construction time; runtime mutability is engine-internal (sprudel voice data is the deliberate exception). | stone | 2026-09-05 | `/dsl-design` §1 |
+| Two doors, one DSL: every Ignitor and Katalyst surface addition lands on the typed Kotlin door (`audio_bridge`; every audio value an `IgnitorDsl` / `KatalystKnobDsl`, numbers through `.ign` / `.kat`; build-time knobs stay plain by the criterion in §3) AND the KlangScript door (stdlib, internal, number or signal at run time) in the same deliverable, with a door-parity spec. Same word, meaning, scale and default, the same builders and shapes; only the accepted types differ. Only KlangScript-exposed functions take `XxxLike = Any` parameters, converted and checked at run time; the Ignitor and Katalyst Kotlin doors are typesafe. sprudel's doors still take `PatternLike = Any` on one shared function until its own typed door is designed (maintainer's call; see the archived task KLANG-00314 (kotlin typed doors), "Left after the rollout"). | rule | 2026-08, typed door 2026-10-16 | `/dsl-design` §3 |
+| Parameter parity: same name, meaning and scale on every surface; conversions in one place; asymmetries recorded with a reason. | rule | 2026-08-02 | `/dsl-design` §4 |
+| One word per concept end to end; a replaced surface is removed, not deprecated. | rule | 2026-08 | `/dsl-design` §5 |
+| *(provisional)* Units: time always in seconds, pitch always in semitones (where it can be); the unit lives in the KDoc, not the name (`attack`, not `attackSec`). Slots are `<door>.<param>`, the param is the engine door's word, the sprudel door follows. | rule | 2026-10-08 | `/dsl-design` §4 end |
+| Door shape: musical inputs on the door (`wet` always first), secondary knobs on a builder behind a `configure` lambda that is last and always optional (the same builder on both doors, §3), dynamics stages flat, one shape per concept across the DSLs. | rule | 2026-09-05, refined 2026-09-23 | `/dsl-design` §2, `.claude/skills/dsl-design/door-shapes.md` |
+| Wire types over enums: sealed `@WireName` hierarchies for wire-visible distinctions; enum only for a closed param-less set. | rule | 2026-08 | `/dsl-design` §7 |
+| Compound doors fill per param at the door: a call that names a stage writes every companion it left out and the event has not set, from the constant in `audio_bridge/constants/`; an explicit value is never overwritten. A stage with a name knob is named only by that knob, and a tail-only call never invents it; a stage without one is named by any of its knobs. Which door is which: the two closed lists in `/dsl-design` §4, the one home of this rule's text, never copied. | rule | 2026-09-18 | `/dsl-design` §4, checklist 11 and 12 |
+| `min`/`max` are clamps on every door: `a.max(b)` is "a, at most b". The Ignitor doors therefore build the opposite-named node (`max` builds `IgnitorDsl.Min`); the nodes and the runtime `Ignitor.min`/`max` primitives keep the mathematical meaning, and `Math.min(a, b)`/`Math.max(a, b)` still select. Do not "correct" the crossing. Guard: `StdLibIgnitorTest`, `StdLibNumberMethodsTest`. | guardrail | 2026-09-10 | `/dsl-design` §5 |
+| Taste is also what you do not do: won't-implement is a first-class outcome, even for a designed feature; check upstream (mixing, levels) before animating a component. | guideline | 2026-08-20 | `/dsl-design` §9 |
+
 ## 1. Everything is immutable at construction time
 
 Every DSL value a user or a Kotlin caller holds is immutable: nodes, builders,
@@ -354,7 +372,7 @@ the bug.
     phaser missing from this list one round after the sends' gate was mis-stated).
   A knob with no constant, where unset means off (`reverb.lowpass`), is not a companion in this
   sense and is never filled; inventing a constant for it would damp every room.
-  **This bullet is the ONE home of the rule's text.** The register row is its index line. Every
+  **This bullet is the ONE home of the rule's text.** Its row in this skill's Rules table is its index line. Every
   other site (a door's KDoc, `ParamBag`, the classic chain's KDoc, the constants headers, the
   module `MEMORY.md` files) states only what THAT door or class does, in a sentence or two, and
   points here. The rule escaped review three times in one step because its text was copied to a

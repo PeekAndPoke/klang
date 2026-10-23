@@ -62,11 +62,17 @@ A utility, a data class (`ResolvedShape`) or a piece of lookup logic (shape reso
 imported, never copied as a `private` twin. In `audio_be`: numeric guards in `utils/numerical_safety.kt`, phase wraps
 in `utils/phase_wrap.kt`, fast math in `utils/fast_math.kt`.
 
-## 5. No boxed types
+## 5. No boxed types in high-performance code
 
-Never `Long`, `ULong`, `Byte`, `UByte`, `Short`, `UShort` or `Char`, anywhere in the project. Use `Int` (counts,
-indices, char codes, bytes masked with `and 0xFF`) or `Double` (time). A `Long` from an external API is converted at
-the boundary.
+Inside the performance boundary, never `Long`, `ULong`, `Byte`, `UByte`, `Short`, `UShort` or `Char`. Use `Int`
+(counts, indices, char codes, bytes masked with `and 0xFF`) or `Double` (time). A `Long` from an external API is
+converted where it enters.
+
+The boundary (maintainer, rules retro 2026-10-23): `audio_be`; `audio_bridge` with the wire codecs
+(`WireCodecSupport` and the code `audio-wire-codec-ksp` generates); sprudel's timing core (the query path:
+`sprudel/src/commonMain/kotlin/pattern/`, `SprudelPattern`, `SprudelPatternEvent`); KlangScript's interpreter
+(`klangscript/src/commonMain/kotlin/runtime/`). Outside it these types are allowed: UI and tools may keep the `Long`
+or `Char` an API hands them, and a slow case found outside is fixed on its own when it shows.
 
 Why: on Kotlin/JS `Long` is an emulated class that allocates on every operation, `Char` is a boxed wrapper, and
 `Byte`/`Short` pay a range check on every operation.

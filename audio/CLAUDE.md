@@ -65,6 +65,18 @@ audio_jsworklet ←─ JS AudioWorklet thread entry point
 |------------------------------------------|------------------------------------------------------|
 | `src/jsMain/kotlin/KlangAudioWorklet.kt` | AudioWorkletProcessor; bridges JS worklet → audio_be |
 
+## Engine rules
+
+Moved here from the root rules register at the rules retro (2026-10-23), word for word; the levels (stone, rule,
+guideline, guardrail) are the ones the root `CLAUDE.md` defines, and the root keeps one pointer row.
+
+| Rule | Level | Since | Detail |
+|------|-------|-------|--------|
+| The Motor stays raw: no safety clamp on an audio parameter without asking. Coerce user-reachable inputs, never `require()` them. | stone | 2026-05 | `/dsl-design` §6, `/code-style` §21 |
+| No allocation or exceptions in audio hot paths, flush IIR state; the rest of `/code-style` §6 to §10 (finite edges, wrapped phase) and §19's per-sample `when` exception. | rule | 2026-04 | `/code-style` §6 to §10, §19 |
+| Block size is pinned to 128 frames everywhere (it is a tone parameter); never raise it to speed up a render. | guardrail | 2026-08 | `audio/MEMORY.md`, `DelayLine` KDoc |
+| Deliberate engine exceptions a reviewer must not "fix" (reverb `+ ANTI_DENORMAL`, the OnePole HPF bias, linear bandpass, the house limiter's fixed lookahead, authored lookahead uncompensated): the list and the reasons are in `audio-constraints.md`. | guardrail | 2026-05, narrowed 2026-09-27 | `.claude/skills/review-loop/audio-constraints.md` |
+
 ## Reference Files — Read Only What You Need
 
 | Topic                                                                              | File                       |

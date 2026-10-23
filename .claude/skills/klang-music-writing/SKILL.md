@@ -15,6 +15,16 @@ Trigger: "write music", "create an instrument", "compose", "make a beat", "klang
 | Full track with custom instruments   | All three ref files                                      |
 | Judging / reviewing rendered audio   | `ref/production-quality-rubric.md`                       |
 
+## Rules
+
+Moved here from the root rules register at the rules retro (2026-10-23), word for word; the levels (stone, rule,
+guideline, guardrail) are the ones the root `CLAUDE.md` defines, and the root keeps one pointer row.
+
+| Rule | Level | Since | Detail |
+|------|-------|-------|--------|
+| Builtin songs are KlangScript inside Kotlin strings: `/` divides, `$` interpolates. | guardrail | 2026-09 | this line |
+| Caricature sound model: 2 to 4 real acoustic tells, sparse fill, tuned by ear, a fixed learnable target (no randomised or adaptive parameters). | guideline | 2026-07 | this skill |
+
 ## Notes
 
 - The reference files are self-contained — they can also be pasted into any LLM (ChatGPT, Gemini, etc.) as context

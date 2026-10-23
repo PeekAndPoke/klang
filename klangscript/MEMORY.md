@@ -48,7 +48,7 @@ record), and put the narrative in the task record, which gets archived. The full
 - **Number methods** on `KlangScriptNumberExtensions`: `pow abs sqrt round floor ceil min max clamp rem mod
   log2 log10 ln exp sign semitones cents toSemitones db toDb`, and `toRatio()` on strings (via `Interval.get`
   from `tones`). The Kotlin door for the musical conversions is `common/math/PitchAndGain.kt` plus
-  `val Interval.ratio`. `min` / `max` are clamps (rules register). No `coerce*` aliases (maintainer).
+  `val Interval.ratio`. `min` / `max` are clamps (`/dsl-design` Rules). No `coerce*` aliases (maintainer).
 
 ## Design Decisions
 
@@ -96,7 +96,7 @@ KlangScript keeps a JavaScript-like syntax but its semantics and its stdlib foll
   (`NativeObjectExtensionsBuilder.builder` / `cls`), and Kotlin cannot smart-cast a property declared in
   another module.
 - **A script-door default must be a safe literal**; the KSP processor refuses any other default with a
-  build error (rules register guardrail, `/dsl-design` §3). A generated door is ONE call, no arity
+  build error (`/dsl-design` §3). A generated door is ONE call, no arity
   dispatch: the spec's default thunk fills every omitted optional on a script call (named or
   positional); the call pastes the same literal only for a native caller with fewer arguments (a
   native function in a Kotlin function slot), `optArg` for the nullable `= null` case. `callInfoOf`

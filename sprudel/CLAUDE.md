@@ -32,6 +32,16 @@ Patterns generate musical events scheduled over cyclic time (1 cycle ≈ 1 measu
 | Building or modifying UI editor tools, registry, @param-tool         | `ref/uitools.md`          |
 | History of a decision (the full dated record, not read by default)   | `ref/memory-history.md`   |
 
+## Rules
+
+Moved here from the root rules register at the rules retro (2026-10-23), word for word; the levels (stone, rule,
+guideline, guardrail) are the ones the root `CLAUDE.md` defines, and the root keeps one pointer row.
+
+| Rule | Level | Since | Detail |
+|------|-------|-------|--------|
+| Klangbuch exported parts carry no arrangement timing and no scale; both live at song level. | rule | 2026-08-20 | `sprudel/MEMORY.md` Lessons |
+| Structural cycle selection (`arrange`, `<...>`) uses exact integer-cycle selection; the N-does-not-divide-T bug class is proven. Guard: `StructuralCycleSelectionSpec`. | guardrail | 2026-07 | `sprudel/MEMORY.md` Lessons |
+
 ## Build & Test
 
 `:sprudel:jvmTest` (preferred, fast; one class: `--tests LangBpmSpec`, no quotes), `:sprudel:jsTest` (browser-specific

@@ -47,6 +47,15 @@ Interpreter (tree-walking)  →  RuntimeValue / Environment
 | All implemented features + test file links | `ref/feature-catalog.md`  |
 | History of a decision (the full dated record, not read by default) | `ref/memory-history.md` |
 
+## Rules
+
+Moved here from the root rules register at the rules retro (2026-10-23), word for word; the levels (stone, rule,
+guideline, guardrail) are the ones the root `CLAUDE.md` defines, and the root keeps one pointer row.
+
+| Rule | Level | Since | Detail |
+|------|-------|-------|--------|
+| AST walkers and analysis utilities live in `klangscript`, never in UI modules. | rule | 2026-05 | `/code-style` §18 neighbourhood, `klangscript/CLAUDE.md` |
+
 ## Build & Test
 
 `:klangscript:jvmTest` (fast), `:klangscript:jsTest` (browser), `:klangscript-libs:jvmTest` (the stdlib),
