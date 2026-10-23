@@ -135,8 +135,8 @@ The release-defining set, regardless of when they're sequenced:
       archived (KLANG-00264)).
     - **NICE, deferred by the maintainer:** KLANG-00244 (editor voice door diagnostics)
       (step 11: warn on doors an instrument does not hear, a string in a wet slot).
-    - **NICE, a naming decision:** KLANG-00268 (tremolo rate naming parity)
-      (sprudel's `sync` against the Ignitor's `rate`).
+    - **DONE 2026-10-03, a naming decision:** KLANG-00268 (tremolo rate naming parity): sprudel's `sync` is
+      now `rate`, as on the Ignitor door; the order stays `tremolo(depth, rate, shape)`.
     - **NICE, parked:** `svf-resonator-class-collapse` (dead sweep code in the resonators' SVF classes) is DONE by
       engine tidy-up step 12 (a), 2026-10-08 (KLANG-00282 (svf resonator class collapse)).
       **Promoted to V1, high priority, 2026-10-07:**

@@ -37,9 +37,9 @@ the ticket numbers. This note is the queue, in order. The note of the pause itse
    (KLANG-00137 (master dsl followups) §8). It moves two corpus rows (Der Schmetterling, Kokon), accepted with the
    change.
 5. Then the order in KLANG-00290, its first paragraph. 10c and 10d wait for the FM round.
-6. **Left of the docs-lint findings:** the ticket sweep replaced the stale task paths, and the two task-place
-   findings now carry PAUSED in `docs/tasks/` (KLANG-00127, KLANG-00145). Left: the `_priorities.md` tremolo entry
-   (tools review round 1, MINOR 17).
+6. **The docs-lint findings: done 2026-10-23.** The ticket sweep replaced the stale task paths, the two task-place
+   findings carry PAUSED in `docs/tasks/` (KLANG-00127, KLANG-00145), and the `_priorities.md` tremolo entry says
+   DONE (tools review round 1, MINOR 17).
 7. **Mission Control's review-loop RFC**: one answer to its draft
    (`/opt/dev/peekandpoke/missioncontrol/blueprints/skills/review-loop/SKILL.md`). The tier names are agreed
    (strict / standard / light). Nothing is adopted until the maintainer decides. Our two Kraft pitfalls come back
