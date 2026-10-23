@@ -177,6 +177,12 @@ grep only comes close. Write and build actions stay off (`apply_patch`, `rename_
 the build lock, and an edit lands in the maintainer's open editor. When the same case keeps coming up where one would
 help (a rename refactoring, say), bring it to the maintainer.
 
+**One write action is allowed: Optimize Imports** (maintainer, 2026-10-23, relayed by Mission Control), through
+`invoke_ide_action` with `actionId: "OptimizeImports"` and the files in `filePaths`. The safeguards: klang's absolute
+`projectPath` on every call, checked with `get_repositories` first; afterwards `git diff` shows only import lines;
+the main checkout only; only where the maintainer expects it. The permission allows every IDE action, so keeping to
+this one is on us. Until the meeting of 2026-10-30 each use gets a row in KLANG-00329.
+
 - **The index is the open checkout**, the maintainer's working copy with its unsaved edits, never a worktree. A table
   built from a query says which commit it reflects.
 - **After a branch switch or a merge, wait for indexing.** A partial result does not say it is partial.
@@ -215,6 +221,8 @@ help (a rename refactoring, say), bring it to the maintainer.
 
 ## Changelog
 
+- **2026-10-23**: IntelliJ's Optimize Imports allowed, the first write action (maintainer, relayed by Mission Control,
+  after Ultra used it with success); every other write action stays off until the meeting of 2026-10-30.
 - **2026-10-23**: rules retro (Mission Control's MC-00017), klang's cleanup: the advisory `BUILD-LOCK.md` retired (the
   lock file records its holder), the "do not call the Agent tool unless asked" note retired, "workers make no git
   writes, reviewers delete nothing" written down. Then MC-00021: the "world-class" opening line of every brief

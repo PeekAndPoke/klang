@@ -16,7 +16,9 @@ IntelliJ MCP is".
 - **Note every case** where a tool would have beaten a hand edit, in the table below: the date, what, which tool,
   what it would have saved.
 - **IntelliJ stays read-only** for klang's agents (maintainer, 2026-10-20) until the meeting allows a write action,
-  one by one. If one is allowed, the safeguards: always pass klang's absolute `projectPath`; before the write,
+  one by one, with one exception: **Optimize Imports is allowed from 2026-10-23** (the maintainer, relayed by Mission
+  Control: "Ultra has success with the optimize imports action on Intellij. I updated the permission for the two
+  other repos as well"). Every other write action stays off until the meeting. The safeguards for an allowed one: always pass klang's absolute `projectPath`; before the write,
   `get_repositories` with that path lists klang's root; after it, `git status` and `git diff` show the change in
   klang and nothing elsewhere (anything else is an incident); never for work meant for a worktree (IntelliJ edits
   the main checkout); only where the maintainer expects it (it lands in their open editor).
@@ -37,12 +39,27 @@ IntelliJ MCP is".
 - **The MCP picks no project by itself, 2026-10-23:** `get_repositories` without `projectPath` refused and listed
   the 13 open projects instead of guessing. The safe behaviour; the safeguard above still applies.
 
+- **Optimize Imports, how, 2026-10-23:** the call is `invoke_ide_action` with `actionId: "OptimizeImports"`,
+  `filePaths` relative to the project root and `projectPath: /opt/dev/peekandpoke/klang`. `get_repositories` with
+  that path returns one Git root at the project root (checked the same day). The permission the maintainer set is
+  `mcp__idea__invoke_ide_action` in the machine's local settings, and it allows every IDE action, not only this one:
+  that only Optimize Imports runs rests on the agents, not on the setting.
+
 ## Cases
 
 | date | what | tool | what it would have saved |
 |---|---|---|---|
 | 2026-10-23 | The five `io.ktor` star imports in `audio_fe` (`AssetLoader.kt`, `DiskUrlCache.kt`) written out by hand at the maintainer's word: the used names found by reading each file, and one resolution checked by hand (`Charsets`: a star import outranks Kotlin's default `kotlin.text.Charsets`, so the explicit import is ktor's, the same as before) | IntelliJ Optimize Imports, once the emptied star list is loaded | reading two files and the resolution question, a few minutes; the compile check on JVM and JS is needed either way |
 
+## Uses of Optimize Imports
+
+One row per use: the files, the `get_repositories` check, what `git diff` showed (anything but import lines is an
+incident).
+
+| date | files | checks | result |
+|---|---|---|---|
+
 ## History
 
 - 2026-10-23: created.
+- 2026-10-23: Optimize Imports allowed as the first IntelliJ write action (maintainer, via Mission Control).
