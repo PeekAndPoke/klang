@@ -159,6 +159,21 @@ class EditPlacesSpec : StringSpec({
         }
     }
 
+    "a cursor move ends the walk" {
+        val editor = threePlaces()
+
+        editor.moveCursorTo(line = 12)
+        editor.back()
+        editor.back()
+        // The walk stands at line 20; the user moves the cursor back to where it was
+        editor.moveCursorTo(line = 12)
+
+        withClue("a cursor move ends the walk") {
+            editor.places.walkIndex shouldBe null
+            editor.back() shouldBe 35
+        }
+    }
+
     "the cap drops the oldest" {
         val editor = FakeEditor(lines = 100)
 
@@ -228,8 +243,10 @@ private class FakeEditor(lines: Int) {
 
     private fun endOf(line: Int): Int = doc.startOf(line) + doc.textOf(line).length
 
+    /** The user moves the cursor to the start of [line], which ends a walk, as the editor's field does. */
     fun moveCursorTo(line: Int) {
         cursor = doc.startOf(line)
+        places = places.cursorMoved()
     }
 
     /** One press of the key: the line the cursor went to, or null when it stayed. */

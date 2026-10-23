@@ -1,6 +1,6 @@
 # KLANG-00322: Editor: back to the last edit location
 
-> **Status (2026-10-21): IN PROGRESS.** Built and reviewed (round 2 clean, the MINOR batches applied, 25 mutants KILLED); waits for the maintainer's hand test.
+> **Status (2026-10-23): IN PROGRESS.** Hand test passed; the maintainer's addition (any cursor move ends the walk) built and reviewed; waits for its hand test.
 
 ## Why this exists
 
@@ -159,6 +159,27 @@ mark went with that code.)
 **Waits for** the maintainer's hand test (the acceptance above; Reset empties the list; on a Mac, that
 Cmd+Shift+Backspace never opens the browser's dialog for clearing the history).
 
+## After the hand test (2026-10-23)
+
+The maintainer's hand test passed, with one addition: "moving the cursor in any way resets the stack pointer, meaning
+the next Ctrl+Shift+Backspace goes again to the youngest edit location. This include keyboard cursor movements and
+cursor movements by mouse". Point 4 ("Any new edit ends the walk") therefore reads: any new edit or cursor move ends
+the walk.
+
+- **Built:** `EditPlaces.cursorMoved()` ends the walk; the field calls it for every transaction that sets a selection,
+  except the step back's own move (it carries `walked` and is handled first). Focus changes carry no selection, and
+  CodeMirror reports a browser selection only when it differs, so neither ends a walk by accident (reviewer, checked
+  against CodeMirror's source).
+- **Tests:** a rule row (a cursor move ends the walk) and a wiring row (the step's own move keeps the walk; the real
+  `cursorLineDown` command and a `select.pointer` selection each start over from the newest place); 17 tests green.
+- **Mutation check:** 3 mutants, all KILLED for their own row (the reset taken out; `cursorMoved` keeping the walk;
+  the step's own move resetting), restored byte-identical, final run green.
+- **Review round 1** (Opus, blind): clean, 4 NITs; the KDoc line on why `goBack` is internal applied, the rest kept
+  (the click row sends a hand-built pointer selection, not a real mousedown: a real click is the hand test's).
+
+**Waits for** a second hand test of the addition: walk back twice, click or press an arrow key, press again: the
+cursor goes to the youngest edit.
+
 ## History
 
 - 2026-10-21: created; designed the same day (maintainer's request and question).
@@ -167,3 +188,4 @@ Cmd+Shift+Backspace never opens the browser's dialog for clearing the history).
 - 2026-10-21: review round 1 (1 MAJOR, 4 MINOR) fixed: every change is an edit (point 3 changed), an edit at several places merges range by range, the near-cursor skip has a row; 13 tests green, 22 mutants KILLED. Waits for the hand test.
 - 2026-10-21: review round 2 clean (no CRITICAL or MAJOR); its MINOR batch applied: the near range first, last-only ranges, the guard ends the walk, the changes mapped before a step; 15 tests green, 25 mutants KILLED. Waits for the hand test.
 - 2026-10-21: IN PROGRESS. Built and reviewed (round 2 clean, the MINOR batches applied, 25 mutants KILLED); waits for the maintainer's hand test.
+- 2026-10-23: hand test passed; addition built: any cursor move ends the walk (maintainer). Review round 1 clean, 3 mutants KILLED. Waits for the hand test of the addition.

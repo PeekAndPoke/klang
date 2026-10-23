@@ -25,7 +25,8 @@ import io.peekandpoke.kraft.utils.jsObject
  * Every document change is an edit (the ticket's point 3, as changed 2026-10-21): typing, a command such as toggle
  * comment or move line (toggle comment carries no user event at all), an editor tool's commit. The one change the
  * editor makes of its own, replacing the whole document, carries [clear] and empties the list. A transaction that
- * changes only the selection (a step back, "go to definition") leaves the places as they are.
+ * changes only the selection (a step back, "go to definition") leaves the places as they are. A cursor move other
+ * than the step back's own (by key, by mouse) ends the walk, so the next step starts again from the newest place.
  */
 internal object EditPlacesExtension {
 
@@ -65,9 +66,10 @@ internal object EditPlacesExtension {
     /**
      * One step back: moves the cursor to the place [EditPlaces.back] picks and scrolls it into view.
      *
-     * Returns true when the cursor moved, false when there was no place to go to.
+     * Returns true when the cursor moved, false when there was no place to go to. Internal, not private, so the spec
+     * can step without a key event.
      */
-    private fun goBack(view: EditorView): Boolean {
+    internal fun goBack(view: EditorView): Boolean {
         val state = view.state
         val places = state.field(field).unsafeCast<EditPlaces>()
 
@@ -98,6 +100,12 @@ internal object EditPlacesExtension {
 
         if (walk != null) {
             return changed.walkedTo(walk.value.unsafeCast<Int>())
+        }
+
+        // Any other cursor move (a key, a click, "go to definition") ends the walk; the step back's own move carries
+        // `walked` and is handled above
+        if (tr.selection != null) {
+            return changed.cursorMoved()
         }
 
         return changed

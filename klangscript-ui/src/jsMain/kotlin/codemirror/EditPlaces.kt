@@ -16,7 +16,9 @@ package io.peekandpoke.klang.ui.codemirror
  *   end), an edit further away pushes a new place. A typing burst, a fix two lines up and a pause in the same spot
  *   therefore stay one place. (The undo history groups by time, which is right for undo and not for navigation.)
  * - Every change maps each place forward first, so typing above a place keeps it on its line.
- * - [back] skips the place the cursor is at and walks older, one place per step. Any new edit ends the walk.
+ * - [back] skips the place the cursor is at and walks older, one place per step. Any new edit ends the walk, and so
+ *   does any move of the cursor by the user, by key or by mouse ([cursorMoved]): the next step starts again from the
+ *   newest place.
  * - At most [MAX_PLACES] are kept; a push beyond them drops the oldest.
  *
  * Immutable, as the value of a CodeMirror state field must be: every step returns a new value.
@@ -95,6 +97,12 @@ data class EditPlaces(
 
     /** The same places with the walk standing at [index], as a [Step] left it. */
     fun walkedTo(index: Int): EditPlaces = copy(walkIndex = index)
+
+    /**
+     * The same places with the walk ended: the user moved the cursor (a key, a click), so the next step starts again
+     * from the newest place (maintainer, 2026-10-23, after the hand test).
+     */
+    fun cursorMoved(): EditPlaces = copy(walkIndex = null)
 
     /** True when [place] lies on the lines [fromLine] to [toLine], or at most [NEAR_LINES] above or below them. */
     private fun isNear(place: Int, fromLine: Int, toLine: Int, lineOf: (Int) -> Int): Boolean {

@@ -13,6 +13,7 @@ import io.peekandpoke.klang.codemirror.ext.EditorStateConfig
 import io.peekandpoke.klang.codemirror.ext.EditorView
 import io.peekandpoke.klang.codemirror.ext.EditorViewConfig
 import io.peekandpoke.klang.codemirror.ext.Extension
+import io.peekandpoke.klang.codemirror.ext.cursorLineDown
 import io.peekandpoke.klang.codemirror.ext.javascript
 import io.peekandpoke.klang.codemirror.ext.moveLineDown
 import io.peekandpoke.klang.codemirror.ext.toggleComment
@@ -187,6 +188,63 @@ class EditPlacesExtensionSpec : StringSpec({
 
         withClue("replacing the whole document") {
             replaced.placeLines() shouldBe emptyList()
+        }
+    }
+
+    "a cursor move by key or by mouse ends the walk; the step back's own move does not" {
+        val state = newState()
+            .insertAtEndOf(line = 5, text = "a", userEvent = "input.type")
+            .insertAtEndOf(line = 20, text = "b", userEvent = "input.type")
+            .insertAtEndOf(line = 35, text = "c", userEvent = "input.type")
+
+        withView(state) { view ->
+            fun back(): Int {
+                EditPlacesExtension.goBack(view)
+
+                return view.state.doc.lineAt(view.state.selection.main.head).number
+            }
+
+            fun walkIndex(): Int? = view.state.field(EditPlacesExtension.field).unsafeCast<EditPlaces>().walkIndex
+
+            view.moveCursorTo(line = 12)
+
+            val first = back()
+            val second = back()
+            val walkAfterSteps = walkIndex()
+
+            // By key: one line down, from line 20 to 21, with the real command
+            cursorLineDown(view)
+
+            val afterKey = back()
+
+            back()
+            // By mouse: a selection with the pointer's user event, as CodeMirror dispatches a click
+            view.dispatch(
+                view.state.update(
+                    jsObject {
+                        this.selection = jsObject<dynamic> { this.anchor = view.state.doc.line(12).from }
+                        this.userEvent = "select.pointer"
+                    }
+                )
+            )
+
+            val walkAfterClick = walkIndex()
+            val afterClick = back()
+
+            withClue("the step back's own move keeps the walk") {
+                first shouldBe 35
+                second shouldBe 20
+                walkAfterSteps shouldBe 1
+            }
+
+            withClue("a cursor move by key starts over from the newest place") {
+                afterKey shouldBe 35
+            }
+
+            withClue("a cursor move by mouse starts over from the newest place") {
+                walkAfterClick shouldBe null
+                afterClick shouldBe 35
+            }
         }
     }
 
