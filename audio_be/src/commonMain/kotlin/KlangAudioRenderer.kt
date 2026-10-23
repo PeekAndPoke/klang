@@ -37,12 +37,14 @@ class KlangAudioRenderer private constructor(
     val katalystRegistry: KatalystRegistry get() = context.katalystRegistry
 
     /**
-     * Frames of latency the master post-chain adds (the limiter's lookahead delay).
+     * Frames of latency the output adds: the master post-chain's (the house limiter's lookahead delay) plus the
+     * playback's master chain in service ([PlaybackEngine.masterLatencyFrames]).
      *
      * An offline render must run this many frames PAST its musical end, or the final samples are
-     * still in the delay ring when the loop stops.
+     * still in a delay ring when the loop stops. Read it per block: a master event later in the song swaps
+     * the chain in the middle of the render.
      */
-    val latencyFrames: Int get() = master.latencyFrames
+    val latencyFrames: Int get() = master.latencyFrames + engine.masterLatencyFrames
 
     fun setBackendStartTime(startTimeSec: Double) {
         clock.startTimeSec = startTimeSec

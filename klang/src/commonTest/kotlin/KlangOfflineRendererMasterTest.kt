@@ -7,6 +7,8 @@ package io.peekandpoke.klang.audio_engine
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThan
+import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
+import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
@@ -28,8 +30,8 @@ import kotlin.math.abs
  */
 class KlangOfflineRendererMasterTest : StringSpec({
 
-    /** A held note, optionally preceded by a control-only `master(…)` carrier event. */
-    fun pattern(master: KatalystDsl?): KlangPattern = object : KlangPattern {
+    /** A held note, optionally with a control-only `master(…)` carrier event at [masterAtCycles]. */
+    fun pattern(master: KatalystDsl?, masterAtCycles: Double = 0.0): KlangPattern = object : KlangPattern {
         override fun queryEvents(fromCycles: Double, toCycles: Double, cps: Double): List<KlangPatternEvent> {
             val note = object : KlangPatternEvent {
                 override val startCycles = 0.0
@@ -45,7 +47,7 @@ class KlangOfflineRendererMasterTest : StringSpec({
             }
 
             val carrier = object : KlangPatternEvent {
-                override val startCycles = 0.0
+                override val startCycles = masterAtCycles
                 override val durationCycles = 1.0
                 override val sourceLocations: SourceLocationChain? = null
                 override val master: KatalystValue = KatalystValue.Dsl(master)
@@ -76,6 +78,33 @@ class KlangOfflineRendererMasterTest : StringSpec({
         }
 
         return peak
+    }
+
+    /** The render's run-out bound, and the frames it handed to `onBlock`. */
+    suspend fun renderFrames(master: KatalystDsl?): Pair<Int, Int> {
+        var emitted = 0
+
+        val result = KlangOfflineRenderer(sampleRate = 44100, blockFrames = 128).render(
+            pattern = pattern(master = master, masterAtCycles = 2.0),
+            cycles = 4,
+            cyclesPerSecond = 0.5,
+            tailSec = 0.0,
+        ) { _, frames -> emitted += frames }
+
+        return result.totalFrames to emitted
+    }
+
+    "an offline render runs past its end by the master chain's latency too" {
+        val (plainBound, _) = renderFrames(master = null)
+        // A 10 ms lookahead delays the master bus by 441 frames at 44.1 kHz. The chain lands with the carrier event
+        // halfway through the render, so the run-out must be read again while the render runs.
+        val (delayedBound, delayedEmitted) = renderFrames(
+            master = KatalystDsl.of(KatalystStageDsl.Compressor(lookahead = 0.01)),
+        )
+
+        (delayedBound - plainBound) shouldBe 441
+        // ... and renders that far, not only to the bound it had before the chain landed
+        delayedEmitted shouldBeGreaterThanOrEqual delayedBound
     }
 
     "an offline render applies the song's master chain" {

@@ -209,6 +209,20 @@ add the master chain's `latencyFrames` to the render's run-out.
 >
 > **Decided 2026-10-19 (maintainer): (a), "if it is easily done, do it"; scheduled after the release**, as it moves
 > two corpus rows (accepted with `corpus-accept-engine` in the same change) and gets the usual review.
+>
+> **Built 2026-10-23**, the plainest fix as above: `MasterBus.latencyFrames`, `PlaybackEngine.masterLatencyFrames`,
+> `KlangAudioRenderer.latencyFrames` adds it, the offline loop reads the bound after every block. Review round 1
+> clean (coding and audio), the MINOR batch applied. Two corrections to the investigation: a master event at time 0
+> is already in service before the first block (`scheduleVoice` promotes it), so the per-block read matters for a
+> master later in the song; and the corner of a swap to a chain that delays less at the very end stays uncounted, named
+> in the `MasterBus.latencyFrames` KDoc (a `max` with the leaving chain would also count a draining one, which holds
+> only tail). The corpus moved exactly the two predicted rows (Kokon `5a81ae55b90e0e1e` to `05ce0ad31386d65a`, Der
+> Schmetterling `7d7bb963fb81231a` to `639bb01e2a5554a2`, peaks unchanged). Both songs were edited since the last
+> accept, so they read as information, not red, and a plain `corpus-accept` took them with their edits.
+>
+> **A sibling, open:** the live front end's latency budget (`JsAudioBackend`, the `MasterStageSpec` comment) leaves
+> the master chain's latency out as well, so the code highlighting can run early by up to a master chain's lookahead
+> (found by the review, 2026-10-23).
 
 ## Links
 
@@ -222,3 +236,4 @@ add the master chain's `latencyFrames` to the render's run-out.
 ## History
 
 - 2026-10-20: numbered KLANG-00137 (was `docs/tasks/master-dsl-followups.md`).
+- 2026-10-23: section 8 built (the offline run-out counts the master chain's latency).

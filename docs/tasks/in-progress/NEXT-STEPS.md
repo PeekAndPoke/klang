@@ -33,9 +33,10 @@ the ticket numbers. This note is the queue, in order. The note of the pause itse
    and the design draft wait for the maintainer's look; when built, stop after the first draft of `OnKey` and the
    hints (the Play button) for the maintainer's code review. Then KLANG-00324 (the shortcuts page reads the key map).
    Ideas from the interview: KLANG-00326 (clipboard history), KLANG-00327 (navigate back and forward).
-4. **Master follow-up 8, option (a)**, decided 2026-10-19: the offline render counts the master chain's latency
-   (KLANG-00137 (master dsl followups) §8). It moves two corpus rows (Der Schmetterling, Kokon), accepted with the
-   change.
+4. **Master follow-up 8, option (a): done 2026-10-23.** The offline render counts the master chain's latency
+   (KLANG-00137 (master dsl followups) §8); it moved exactly the two predicted corpus rows (Der Schmetterling,
+   Kokon), accepted with the change. The live sibling (highlighting early by a master chain's lookahead) is noted
+   there.
 5. Then the order in KLANG-00290, its first paragraph. 10c and 10d wait for the FM round.
 6. **The docs-lint findings: done 2026-10-23.** The ticket sweep replaced the stale task paths, the two task-place
    findings carry PAUSED in `docs/tasks/` (KLANG-00127, KLANG-00145), and the `_priorities.md` tremolo entry says

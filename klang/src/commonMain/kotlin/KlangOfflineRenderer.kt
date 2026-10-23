@@ -157,10 +157,13 @@ class KlangOfflineRenderer(
         // 5. Calculate total frames
         val musicalDurationSec = cycles.toDouble() * secPerCycle
         val totalDurationSec = musicalDurationSec + tailSec
+        val musicalAndTailFrames = (totalDurationSec * sampleRate).toInt()
         // Render past the end by the engine's own output latency, otherwise the last samples are
-        // still sitting in the master limiter's lookahead delay ring when the loop stops. Matters at
-        // tailSec = 0.0, where the truncated tail is the actual music rather than a reverb tail.
-        val totalFrames = (totalDurationSec * sampleRate).toInt() + renderer.latencyFrames
+        // still sitting in a delay ring (the house limiter's lookahead, a master chain's lookahead or
+        // oversampler) when the loop stops. Matters at tailSec = 0.0, where the truncated tail is the
+        // actual music rather than a reverb tail. Read again after every block: a master event later in
+        // the song swaps the chain in the middle of the render.
+        var totalFrames = musicalAndTailFrames + renderer.latencyFrames
 
         // 6. Render loop
         val out = StereoBuffer(blockFrames)
@@ -172,6 +175,7 @@ class KlangOfflineRenderer(
             renderer.renderBlock(cursorFrame = currentFrame, out = out)
             onBlock(out, blockFrames)
             currentFrame += blockFrames
+            totalFrames = musicalAndTailFrames + renderer.latencyFrames
         }
 
         val elapsedMs = klangTime.internalMsNow() - startMs

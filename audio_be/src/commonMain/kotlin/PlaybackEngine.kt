@@ -119,6 +119,9 @@ class PlaybackEngine(
     /** The master bus — exposed for tests asserting cache/tail behaviour. */
     internal val masterBusForTest: MasterBus get() = masterBus
 
+    /** Frames this playback's master chain in service delays its output by ([MasterBus.latencyFrames]). */
+    internal val masterLatencyFrames: Int get() = masterBus.latencyFrames
+
     /**
      * Registers a custom chain for this playback, for either position.
      *

@@ -217,6 +217,16 @@ class MasterBus(
     val isSettled: Boolean get() = swap.settled
 
     /**
+     * Frames the chain in service delays the bus by ([KatalystChain.latencyFrames]: a compressor's lookahead, an
+     * oversampled `distort`). An offline render runs this far past its end as well, or the music's last frames stay in
+     * the chain. Only the chain in service counts: a chain swapped away earlier was fed silence after its fade, so
+     * what it still rings is tail. The one case it misses: at `tailSec = 0`, a swap to a chain that delays less, within
+     * about a fade plus the leaving chain's latency of the end, cuts the leaving chain's last frames of music. A
+     * render's tail covers it.
+     */
+    val latencyFrames: Int get() = current.latencyFrames
+
+    /**
      * True while the chain in service holds a tail that can never end on its own
      * ([KatalystChain.sustainsItself]; phase 3 step 12 decision (j)). The leaving chain is not
      * asked: the engine asks only once this bus [isSettled], when nothing is leaving (a leaving
