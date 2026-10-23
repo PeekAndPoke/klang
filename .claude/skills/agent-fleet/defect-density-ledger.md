@@ -1,5 +1,10 @@
 # The fleet's defect-density ledger
 
+**Closed 2026-10-23** (rules retro, Mission Control's MC-00021): no rows are added any more. The
+"world-class" opening line it measured was retired, since the ledger showed no failure the line
+prevents while the review loop itself matured over the same weeks; the heavy-agent cap went with
+it. Kept as a dated record. Commit messages no longer need the "N review rounds" line for it.
+
 The record of how the fleet actually did, one row per committed step. Split out of
 `SKILL.md` 2026-09-20 so that reading the skill costs a page instead of twenty: the skill states
 the policy, this file holds the evidence. The skill's section "Every brief opens with the bar"

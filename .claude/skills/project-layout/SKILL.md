@@ -36,6 +36,7 @@ docs/
     in-progress/             the tickets being worked on RIGHT NOW (+ README.md: the ticket-file shape)
     future/                  plans and ideas: loose ideas, or work still to break into tickets
     _maintainer-questions.md open questions for the maintainer, numbered (Q1, Q2 ...); not tickets
+    _incidents.md            one line per incident, its rule decided at the weekly meeting (MC-00028)
     _priorities.md           (optional) the order of the work streams
   tasks-archive/
     <yyyy-mm>/<PREFIX>-<nnnnn>-<title>.md   finished tickets, in the month they closed

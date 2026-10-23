@@ -136,20 +136,15 @@ retro, 2026-10-23; its old handover notes stay in `.claude/build-lock-log.md`, h
 
 ## Concurrency & fan-out safety
 
-Cost isn't the only failure mode — in one upstream run, several heavy agents launched at once **stalled or disconnected
-mid-response**, and a failed agent writes nothing. **Causation is not proven:** that run also happened over a flaky
-network connection, which could equally explain the stalls. So treat the limits below as prudent defaults, not hard
-evidence-backed ceilings — they cost little and remove one variable. If future runs show heavy concurrency is reliable,
-**broaden it back in small increments** (e.g. 2–3 → 4 → 5 heavy agents) and note what held.
+A failed agent writes nothing, and a worker's own sub-fleet dies with it; the rules below keep a fan-out
+recoverable. How many agents run at once is not capped: the old cap of 2 to 3 heavy agents was retired at the
+rules retro (2026-10-23, MC-00021), since the stalls it was written for were never shown to come from concurrency
+and the build lock is the real guard.
 
 - **Workers must not fan out.** A sub-agent that spawns its own sub-fleet compounds load invisibly and, if it dies,
   orphans its children — their finished results are discarded with the parent. When a worker's task might tempt it to
   delegate, tell it explicitly in the prompt: *"Do NOT spawn sub-agents. Work sequentially yourself; read files in small
   batches."* Keep fan-out one level deep: the coordinator fans out, workers do not.
-- **Cap concurrent heavy-tier agents at ~2–3.** `opus`/inherit-tier agents are the ones that stall under simultaneous
-  load. `sonnet`/`haiku` workers parallelise fine (run 5–6+). If a phase needs many heavy agents, batch them or run the
-  heaviest synchronously (`run_in_background: false`) so a stall surfaces immediately instead of after a watchdog
-  timeout.
 - **On failure, retry the one agent** — synchronously, sub-fan-out forbidden — rather than relaunching the whole fleet.
   Check what already landed on disk first; partial work may survive.
 - **No two workers edit the same file.** Klang fan-outs are usually review/analysis, so this rarely binds; when it
@@ -209,52 +204,6 @@ help (a rename refactoring, say), bring it to the maintainer.
   prompt — `/review-loop` has templates, and
   `.claude/skills/review-loop/audio-constraints.md` has the audio-backend list.
 
-## Every brief opens with the bar: world-class, not average (maintainer, 2026-09-18, under observation)
-
-Every agent in the fleet, whatever its role (coder, reviewer, audio engineer, tester, strategist,
-writer), is told at the top of its brief that it is world-class at that role, and the coordinator
-says the same about itself ("you are a great coder, and I am a great manager"). This is not
-politeness.
-
-**Why:** the training data these models are built on holds work of every quality, roughly normally
-distributed, and an agent that is not told otherwise reaches for the middle of that distribution:
-the ordinary fix, the test that restates the implementation, the review that files whitespace.
-Klang works in the upper percentiles, and the opening line is what tells the agent which part of
-its training to draw on. It has been observed to matter: the briefs written this way came back
-with mutation-checked tests, named the decisions the brief had not settled, and refused to
-paper over an asymmetry they found.
-
-**How:** one sentence, first line of the prompt, naming the role, and right after it the other
-half of the bar, from the top of `CLAUDE.md` (maintainer, 2026-09-18): mistakes are fine, that is
-why the review loop exists; hiding a mistake or brushing over one is what would hurt us. An agent
-that has been told it is world-class must also be told that a reported weakness in its own work
-is part of being world-class here, or the first line alone invites the arrogance the caveat
-below warns about. Then the constraints and the task. The bar is also stated for the work itself where it helps ("byte-identical is the
-acceptance", "only CRITICAL and MAJOR force a round, so be precise about severity"), so the agent
-knows what excellent looks like here rather than in general.
-
-**Status: a theory, not a proven rule.** Two caveats from the maintainer. It might tip an agent
-into arrogance instead. And it might do nothing: every sub-agent already reads `CLAUDE.md`, whose
-first lines state the same bar ("We write exceptional software"), and the harness may frame the
-role in its own system prompt, which the coordinator cannot see; the line in the brief is then a
-second or third statement of the same thing, and a null result in the ledger is the likely
-outcome. If the density does not move, the line goes and `CLAUDE.md`'s opening stays the one
-place the bar is stated. Signs that it did, to watch for in every report: a finding dismissed without
-a scenario, a mutation check skipped or reported as "obviously red", a claim of byte identity
-without the hash, a deliberate engine exception "corrected", a brief's scope widened because the
-agent knew better, or a report that argues with the reviewer instead of answering the finding.
-Signs that it worked: decisions the brief did not settle are named and reasoned, weak tests are
-called weak by their own author, an asymmetry is reported rather than papered over. Record what
-you see in the changelog below with the date; after a few steps the maintainer decides whether
-the line stays, changes, or goes.
-
-**The numbers to watch** (maintainer's hypothesis: fewer review rounds and fewer
-CRITICAL/MAJOR findings per step) live in **`defect-density-ledger.md`**, the sibling of this
-file: the measure's definition, one row per committed step, and the reading so far. The
-coordinator adds a row when a step commits, and writes "N review rounds, C critical, M major"
-in the commit message so a row can be rebuilt from `git log`. Open it when you are filling a row
-or judging the theory; reading this skill to launch a fleet does not need it.
-
 ## Notes
 
 - This skill governs model/effort selection and fan-out safety only. Whether to fan out at all is governed by the
@@ -268,8 +217,9 @@ or judging the theory; reading this skill to launch a fleet does not need it.
 
 - **2026-10-23**: rules retro (Mission Control's MC-00017), klang's cleanup: the advisory `BUILD-LOCK.md` retired (the
   lock file records its holder), the "do not call the Agent tool unless asked" note retired, "workers make no git
-  writes, reviewers delete nothing" written down. The "world-class" line and the heavy-agent cap are retired too
-  (MC-00021); their sections go with that rollout.
+  writes, reviewers delete nothing" written down. Then MC-00021: the "world-class" opening line of every brief
+  and the cap of 2 to 3 heavy agents retired, their sections deleted; the defect-density ledger that measured the
+  line is closed (it showed no failure the line prevents).
 - **2026-10-20**: IntelliJ's tools allowed, read-only (maintainer, in the coordinator's session, after Mission Control
   asked the projects). An earlier session instruction against them dated from when they were still buggy; write
   actions are decided one by one when a case for one comes up.
