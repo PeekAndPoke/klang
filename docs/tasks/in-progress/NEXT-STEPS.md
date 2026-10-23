@@ -42,7 +42,9 @@ the ticket numbers. This note is the queue, in order. The note of the pause itse
    (KLANG-00137 (master dsl followups) §8); it moved exactly the two predicted corpus rows (Der Schmetterling,
    Kokon), accepted with the change. The live sibling (highlighting early by a master chain's lookahead) is noted
    there.
-5. Then the order in KLANG-00290, its first paragraph. 10c and 10d wait for the FM round.
+5. **KLANG-00290: done as far as it goes without the maintainer (2026-10-23).** Item 46 the last (4276585a, full
+   check d828f401 GREEN). What is left waits on a decision: 14 (by ear), 15 (does a replace resume a stopped
+   engine?), 11 (the Zig port), 37 (a sound change), section 6; 10c and 10d wait for the FM round.
 6. **The docs-lint findings: done 2026-10-23.** The ticket sweep replaced the stale task paths, the two task-place
    findings carry PAUSED in `docs/tasks/` (KLANG-00127, KLANG-00145), and the `_priorities.md` tremolo entry says
    DONE (tools review round 1, MINOR 17).

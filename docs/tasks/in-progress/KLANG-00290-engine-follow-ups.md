@@ -12,8 +12,10 @@ shown). Left of the numbers 31 to 41: 37 (a sound change, so outside Q38). 10c a
 DONE 2026-10-19 (4: `spluck-a`'s tail, the last known tail, located and fixed; 45: the duck's setters and the gain's
 hand-off through holders, the distort's `isFinite` swapped; two sites found on the way, the duck's gliding call and
 `E-kat-mix`'s four stages under a mixed profile, recorded in 45, open). 13 checked 2026-10-19: its sub-pool half
-closed by 34, the `DelayLine` per rent left for the Zig port with 11. Next: sections 2 to 5 (11 and 46; 16 to 19 and 28 DONE
-2026-10-19, 20 DONE 2026-10-23) and section 6. Open with the maintainer: C1 to C11 (the FM diagnostic is C6) in
+closed by 34, the `DelayLine` per rent left for the Zig port with 11. Sections 2 to 5 are done as far as they go without the
+maintainer (16 to 19 and 28 DONE 2026-10-19, 20 and 46 DONE 2026-10-23). What is left waits on a decision: 14 (a
+one-time sound change, by ear), 15 (does a replace resume a stopped engine?), 11 (with the Zig port), 37 (a sound
+change) and section 6's shape and sound steps. Open with the maintainer: C1 to C11 (the FM diagnostic is C6) in
 `docs/housekeeping/2026-10-10-baseline.md`, and Q13, Q29 (`duty(width)`) and Q30 to Q33 in
 [`_maintainer-questions.md`](../_maintainer-questions.md).
 
