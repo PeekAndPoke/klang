@@ -167,7 +167,7 @@ and the build lock is the real guard.
   that commit in `klang-worktrees/measure` (`/project-layout`, Repo notes), and a red check is fixed by a follow-up
   commit, never by rewinding.
 
-## IntelliJ's tools: read-only (maintainer, 2026-10-20) *(provisional)*
+## IntelliJ's tools: read-only, plus Optimize Imports (maintainer, 2026-10-20 and 2026-10-23) *(provisional)*
 
 The `mcp__idea__*` tools query IntelliJ's index, with types and references resolved. The read-only ones are allowed:
 symbol and structural search, `analyze_calls`, the PSI tree, `get_file_problems`, `run_inspection_kts` and the other
