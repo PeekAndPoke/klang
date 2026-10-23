@@ -63,6 +63,7 @@ LOCK="env KLANG_LOCK_TIMEOUT=7200 console/with-build-lock.sh"
 | Preparing a review round's inputs (every round) | `review-pack` |
 | Landing a batch of reviewed branches together | `stack-merge` |
 | Creating, starting, pausing or finishing a task or plan; finding one; before committing docs | `ticket` |
+| Every commit (git runs it); a commit it blocks; what an old commit would have tripped | `hooks` (installed), `hooks.py check <rev>` |
 
 ## test-digest
 
@@ -282,6 +283,21 @@ python3 -I console/tools/ticket/ticket.py check            # exit 1 on a problem
 - Files that aren't tickets: README.md, NEXT-STEPS.md, TEMPLATE.md, every `_*.md`, plus `skip: <glob>`
   lines in `docs/tasks/_next-ticket.txt`.
 
+## hooks
+
+```
+console/tools/hooks/hooks.py install        # once per clone; worktrees share the hooks
+console/tools/hooks/hooks.py check [REV]    # run the pre-commit checks on a commit
+```
+
+- Blocks a commit whose **added lines** carry an em/en dash (Markdown prose, KDoc) or a control byte, and whose
+  message carries a dash or, from a Claude Code session, lacks the `Co-Authored-By:` trailer. Old lines are
+  not checked until they are edited.
+- A blocked commit: fix the lines it names and commit again. Never go around it (`--no-verify`, `-n`,
+  `core.hooksPath` are denied). A quoted title or URL with a dash: URLs pass; put `dash-ok` on the line
+  (`<!-- dash-ok -->` in Markdown).
+- `hooks.json` next to the script holds this repo's switches and `dash_skip` (the paths docs-lint exempts).
+
 ## Repo notes
 
 klang's copies, adopted 2026-10-19 from the drafts in `/opt/dev/peekandpoke/agent-tools/`, rebased the same
@@ -330,6 +346,12 @@ dash scan, stack-merge's exit code by exception type, test-digest's foreign-suit
   the walk as the fallback outside git (generic). klang's `docs_lint_local.py` has one rule left,
   stale-path, which skips the migration's "(was `old path`)" records and the files the ticket sweep left
   alone; its task-place rule went with the ticket numbers (`ticket check`).
+- **hooks**, adopted 2026-10-24 from the master at missioncontrol 43bb762, unchanged; 20 of 20 tests green.
+  `hooks.json` sets only `dash_skip`, the same pattern as docs_lint_local.py's history skip (dated history,
+  ledgers, docs/benchmarks, blog, funding/evidence, src/jsMain/resources). Before install, `check` on the
+  last 300 commits flagged 11, all real dashes on lines those commits wrote or edited, no false positive; the
+  ticket sweep 3c9a191d would have been blocked by old dashes on the lines it rewrote. UI strings in Kotlin
+  (not KDoc) are not checked by the hook; `review-pack --dash-scan` still covers them in a review round.
 
 ## Proposed upstream
 
@@ -340,5 +362,6 @@ dash scan, stack-merge's exit code by exception type, test-digest's foreign-suit
 ## Changes
 
 <!-- Kept by the nexus, newest first. Tells a repo what an update brought. -->
+- 2026-10-24: new tool `hooks` (MC-00018): pre-commit and commit-msg hooks that block dashes, control bytes and a missing agent trailer on added lines; `hooks.json` for switches and the dash skip list.
 - 2026-10-20: new tool `ticket` (ticket numbers for tasks and plans; see project-layout).
 - 2026-10-19: back-channel sections added; masters now live in the nexus (missioncontrol/blueprints/tools/).

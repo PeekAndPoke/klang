@@ -1,0 +1,4 @@
+{
+  "$comment": "Settings for hooks.py (MC-00018). dash_skip is docs-lint's HISTORY pattern (console/tools/docs-lint/docs_lint_local.py): dated history and published pages keep their words.",
+  "dash_skip": "(^|/)(docs/tasks-archive|docs/history|\\.claude/agent-memory)/|(^|/)(\\d{4}-\\d{2}-\\d{2}|\\d{8})-[^/]*$|/ref/memory-history\\.md$|^\\.claude/build-lock-log\\.md$|^DEV-DIARY\\.MD$|ledger[^/]*\\.md$|^docs/(benchmarks|blog|funding/evidence)/|^src/jsMain/resources/"
+}
