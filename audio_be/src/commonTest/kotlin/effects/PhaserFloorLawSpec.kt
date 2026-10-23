@@ -48,7 +48,7 @@ class PhaserFloorLawSpec : StringSpec({
             buf.left[i] = dry[i]
             buf.right[i] = dry[i]
         }
-        p.process(buf, frames)
+        p.processSettled(buffer = buf, frames = frames)
         return DoubleArray(frames) { buf.left[it] }
     }
 

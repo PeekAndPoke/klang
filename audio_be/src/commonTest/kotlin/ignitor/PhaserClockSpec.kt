@@ -10,6 +10,7 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.Phaser
+import io.peekandpoke.klang.audio_be.effects.processSettled
 import kotlin.math.abs
 import kotlin.math.sin
 import kotlin.random.Random
@@ -187,11 +188,11 @@ class PhaserClockSpec : StringSpec({
 
             val gapBuf = StereoBuffer(blockFrames)
             fill(gapBuf, block, silent = false)
-            gap.process(gapBuf, blockFrames)
+            gap.processSettled(buffer = gapBuf, frames = blockFrames)
 
             val ctlBuf = StereoBuffer(blockFrames)
             fill(ctlBuf, block, silent = block < 10)
-            ctl.process(ctlBuf, blockFrames)
+            ctl.processSettled(buffer = ctlBuf, frames = blockFrames)
 
             if (block == 10) {
                 var m = 0.0
@@ -260,20 +261,20 @@ class PhaserClockSpec : StringSpec({
 
         val gap = charged()
 
-        repeat(3) { gap.process(buf(), blockFrames) }
+        repeat(3) { gap.processSettled(buffer = buf(), frames = blockFrames) }
 
         // Gate closes (a no-phaser owner): the engaged static notch MUST clear its cascade here.
         gap.depth = 0.0
-        gap.process(buf(), blockFrames)
+        gap.processSettled(buffer = buf(), frames = blockFrames)
 
         // Re-engage and compare against a fresh phaser: identical only if the clear ran.
         gap.depth = 0.8
         val gapOut = buf()
-        gap.process(gapOut, blockFrames)
+        gap.processSettled(buffer = gapOut, frames = blockFrames)
 
         val fresh = charged()
         val freshOut = buf()
-        fresh.process(freshOut, blockFrames)
+        fresh.processSettled(buffer = freshOut, frames = blockFrames)
 
         var m = 0.0
         for (i in 0 until blockFrames) {
@@ -292,13 +293,13 @@ class PhaserClockSpec : StringSpec({
         // Charge the cascade.
         val hot = StereoBuffer(blockFrames)
         hot.fill(0.8)
-        phaser.process(hot, blockFrames)
+        phaser.processSettled(buffer = hot, frames = blockFrames)
 
         phaser.reset()
 
         // A clean cascade maps silence to exactly silence (depth 1, floor 1: out = dry + wet).
         val cold = StereoBuffer(blockFrames)
-        phaser.process(cold, blockFrames)
+        phaser.processSettled(buffer = cold, frames = blockFrames)
 
         var residue = 0.0
         for (i in 0 until blockFrames) {

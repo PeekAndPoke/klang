@@ -14,6 +14,11 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import kotlin.math.abs
 import kotlin.math.sin
 
+/**
+ * The rows on one signal run it through the stereo door the engine calls, with a copy as the right channel: the
+ * linked detector's `max(|L|, |R|)` over two equal channels is the signal's own level, so the left channel is the
+ * mono render.
+ */
 class CompressorSpec : StringSpec({
 
     val sampleRate = 44100
@@ -31,7 +36,7 @@ class CompressorSpec : StringSpec({
         // Create a buffer with loud signal (above threshold)
         val buffer = AudioBuffer(1000) { 0.5 } // ~-6 dB
 
-        compressor.process(buffer = buffer, offset = 0, length = 1000)
+        compressor.process(left = buffer, right = buffer.copyOf(), blockSize = 1000)
 
         // Signal should be reduced
         val avgLevel = buffer.map { abs(it) }.average()
@@ -52,7 +57,7 @@ class CompressorSpec : StringSpec({
         val buffer = AudioBuffer(1000) { 0.01 } // ~-40 dB
         val original = buffer.copyOf()
 
-        compressor.process(buffer = buffer, offset = 0, length = 1000)
+        compressor.process(left = buffer, right = buffer.copyOf(), blockSize = 1000)
 
         // Signal should be mostly unchanged
         for (i in buffer.indices) {
@@ -70,7 +75,7 @@ class CompressorSpec : StringSpec({
 
         // Process some audio
         val buffer = AudioBuffer(100) { 0.5 }
-        compressor.process(buffer = buffer, offset = 0, length = 100)
+        compressor.process(left = buffer, right = buffer.copyOf(), blockSize = 100)
 
         // Reset
         compressor.reset()
@@ -78,7 +83,7 @@ class CompressorSpec : StringSpec({
         // Process quiet signal - should not be affected by previous state
         val quietBuffer = AudioBuffer(100) { 0.01 }
         val original = quietBuffer.copyOf()
-        compressor.process(buffer = quietBuffer, offset = 0, length = 100)
+        compressor.process(left = quietBuffer, right = quietBuffer.copyOf(), blockSize = 100)
 
         for (i in quietBuffer.indices) {
             quietBuffer[i] shouldBe (original[i] plusOrMinus 0.01)
@@ -131,8 +136,8 @@ class CompressorSpec : StringSpec({
         val bufferHard = AudioBuffer(1000) { 0.1 } // ~-20 dB
         val bufferSoft = bufferHard.copyOf()
 
-        hardKnee.process(buffer = bufferHard, offset = 0, length = 1000)
-        softKnee.process(buffer = bufferSoft, offset = 0, length = 1000)
+        hardKnee.process(left = bufferHard, right = bufferHard.copyOf(), blockSize = 1000)
+        softKnee.process(left = bufferSoft, right = bufferSoft.copyOf(), blockSize = 1000)
 
         // Both should compress, but soft knee should be gentler
         val avgHard = bufferHard.map { abs(it) }.average()

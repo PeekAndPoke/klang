@@ -310,8 +310,8 @@ class KatalystReverbEffectSpec : StringSpec({
         }
 
         effect.hasTail() shouldBe false
-        // Literally zero: hasTail(0.0) is a strict > comparison, ANY residue would trip it.
-        effect.reverb!!.hasTail(0.0) shouldBe false
+        // Literally zero: ANY residue, or a non-finite cell, lifts the comb peak above it.
+        effect.reverb!!.combPeakAbs() shouldBe 0.0
 
         // And Off is a true short-circuit: a hot mix passes through untouched.
         ctx.mixBuffer.fill(0.9)
@@ -478,8 +478,8 @@ class KatalystReverbEffectSpec : StringSpec({
         fadeOut(effect, ctx)
 
         effect.hasTail() shouldBe false
-        // hasTail(0.0) is itself NaN-blind (NaN > 0.0 is false), so the heal is pinned with the
-        // NaN-hardened scan instead (review round 3): zero means reset() really cleared them.
+        // The heal is pinned with the NaN-hardened scan (review round 3; a non-finite cell reads as
+        // infinity there): zero means reset() really cleared them.
         effect.reverb!!.combPeakAbs() shouldBe 0.0
     }
 
@@ -605,7 +605,7 @@ class KatalystReverbEffectSpec : StringSpec({
         effect.hasTail() shouldBe false
         // Literally zero: proves the TERMINAL RESET fired inside the proportional window — a
         // worst-case countdown (peak 1.0 -> 68 revolutions = 872 blocks) would still be Draining.
-        effect.reverb!!.hasTail(0.0) shouldBe false
+        effect.reverb!!.combPeakAbs() shouldBe 0.0
     }
 
     "an empty network goes straight to Off — no drain hold on a silent orbit; a charged one reports its tail" {

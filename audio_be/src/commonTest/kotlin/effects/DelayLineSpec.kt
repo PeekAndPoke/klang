@@ -7,9 +7,11 @@ package io.peekandpoke.klang.audio_be.effects
 
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
+import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
 import kotlin.math.abs
 import kotlin.math.sin
 
@@ -174,7 +176,7 @@ class DelayLineSpec : StringSpec({
         }
     }
 
-    "hasTail returns true when buffer has content" {
+    "tapWindowPeakAbs finds the content a fed line holds" {
         val delay = DelayLine(maxDelaySeconds = 1.0, sampleRate = sampleRate)
         delay.time = 0.1
         delay.feedback = 0.5
@@ -187,16 +189,16 @@ class DelayLineSpec : StringSpec({
 
         delay.process(input = send, output = output, length = blockSize)
 
-        delay.hasTail() shouldBe true
+        delay.tapWindowPeakAbs() shouldBeGreaterThan SILENCE_FLOOR
     }
 
-    "hasTail returns false when buffer is silent" {
+    "tapWindowPeakAbs is zero on a line never fed" {
         val delay = DelayLine(maxDelaySeconds = 1.0, sampleRate = sampleRate)
         delay.time = 0.1
         delay.feedback = 0.0
 
         // Never send any signal
-        delay.hasTail() shouldBe false
+        delay.tapWindowPeakAbs() shouldBe 0.0
     }
 
     "very short delay below 1ms works without crash" {

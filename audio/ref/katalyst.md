@@ -89,7 +89,7 @@ The glide time itself is an open question for the maintainer's ear: KLANG-00213 
   a culled voice has ended and keeps nothing.
   `tryDeactivate` clears the orbit's mix buffer (a stale buffer once leaked into a room).
 - **The tail question** is `KatalystChain.hasTail()`, answered by `TailCeiling` compares (`effects/TailCeiling.kt`),
-  never by a scan (`Reverb.hasTail()` has no production caller). The ceiling may only err towards holding longer.
+  never by a scan (the effects have no scan left, KLANG-00290 item 20). The ceiling may only err towards holding longer.
   Every ceiling is held to `SILENCE_FLOOR`, except a reverb whose chain drains after a swap: that one answers against
   `Reverb.TAIL_FLOOR`, its comb level whose output is about -90 dBFS (two floors on purpose, maintainer 2026-10-17:
   the cell floor held a draining room about 20 dB past inaudible, and ordinary playback stays as it was).

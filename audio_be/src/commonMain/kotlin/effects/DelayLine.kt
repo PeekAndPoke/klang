@@ -231,29 +231,6 @@ class DelayLine(
         }
 
     /**
-     * Returns true if the internal ring buffer still contains audio above
-     * [threshold]. Used by cylinder-cleanup logic to detect tails that should
-     * keep the cylinder alive.
-     *
-     * Cost: O(bufferSize × 2) — scans both channels linearly. Not intended for
-     * per-block use; called from cleanup polling.
-     *
-     * Conservative under stable feedback (≤ 1.0): if every sample in the buffer
-     * is below threshold, no future feedback iteration can bring the output
-     * back above threshold, so a `false` return is safe.
-     */
-    fun hasTail(threshold: Double = SILENCE_FLOOR): Boolean {
-        // Test/diagnostic only since the content-ceiling tail (`TailCeiling`): no production caller,
-        // and none should return — this is O(ring) with no ceiling on the ring.
-        for (i in 0 until bufferSize) {
-            if (abs(buffer.left[i]) > threshold || abs(buffer.right[i]) > threshold) {
-                return true
-            }
-        }
-        return false
-    }
-
-    /**
      * The loudest sample the drain's tap can still REACH: the samples immediately behind the write
      * head, one reach ([reachSamples], the longest tap still sounding) plus the interpolation
      * neighbour. Everything older
@@ -292,15 +269,14 @@ class DelayLine(
 
     /**
      * How many samples of zero-input processing until everything the tap can reach is provably
-     * below [threshold] — the closed form of the [hasTail] argument, run forward in time, from
-     * the MEASURED content [peak] (usually [tapWindowPeakAbs] at the off-transition; review
+     * below [threshold], counted from the MEASURED content [peak] (usually [tapWindowPeakAbs] at the off-transition; review
      * round 3 replaced the static worst-case cap bound with this, so a barely-used delay drains
      * in proportion to what it actually holds instead of paying the saturated-ring worst case).
      *
      * With silent input each delay period multiplies the content ceiling by |[feedback]| (the
      * interpolated tap is a convex combination, [ShapingFuncs.softCap] never expands). After
      * `k = ceil(ln(threshold / peak) / ln(|fb|))` periods the tap window is below [threshold]
-     * and (for |fb| < 1, the same argument [hasTail] makes) can never come back up. One slack
+     * and, for |fb| < 1, can never come back up. One slack
      * period is added on top — it also covers the tap's extra interpolation sample.
      *
      * A [peak] at or below [threshold] returns 0.0: already silent, nothing to drain — this

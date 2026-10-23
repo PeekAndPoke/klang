@@ -172,7 +172,7 @@ class OrbitBusPipelineSpec : StringSpec({
         cylinder.tryDeactivate(afterLastVoice)
 
         cylinder.isActive shouldBe false
-        cylinder.reverb!!.reverb!!.hasTail(0.0) shouldBe false // literally zero once the orbit is free
+        cylinder.reverb!!.reverb!!.combPeakAbs() shouldBe 0.0 // literally zero once the orbit is free
     }
 
     "cylinder bus context shares buffers with cylinder" {

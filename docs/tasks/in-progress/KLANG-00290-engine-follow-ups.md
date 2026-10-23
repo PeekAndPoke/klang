@@ -12,8 +12,8 @@ shown). Left of the numbers 31 to 41: 37 (a sound change, so outside Q38). 10c a
 DONE 2026-10-19 (4: `spluck-a`'s tail, the last known tail, located and fixed; 45: the duck's setters and the gain's
 hand-off through holders, the distort's `isFinite` swapped; two sites found on the way, the duck's gliding call and
 `E-kat-mix`'s four stages under a mixed profile, recorded in 45, open). 13 checked 2026-10-19: its sub-pool half
-closed by 34, the `DelayLine` per rent left for the Zig port with 11. Next: sections 2 to 5 (11, 20 and 46; 16 to 19 and 28 DONE
-2026-10-19) and section 6. Open with the maintainer: C1 to C11 (the FM diagnostic is C6) in
+closed by 34, the `DelayLine` per rent left for the Zig port with 11. Next: sections 2 to 5 (11 and 46; 16 to 19 and 28 DONE
+2026-10-19, 20 DONE 2026-10-23) and section 6. Open with the maintainer: C1 to C11 (the FM diagnostic is C6) in
 `docs/housekeeping/2026-10-10-baseline.md`, and Q13, Q29 (`duty(width)`) and Q30 to Q33 in
 [`_maintainer-questions.md`](../_maintainer-questions.md).
 
@@ -1982,10 +1982,19 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     after its constant became `TEARDOWN_FADE_SECONDS`), its helper `renderVoiceVcaOff` is `renderVoiceFaded`, and its
     KDoc names the old name for the older records. `TeardownFadeRenderer`'s KDoc and the block-framing plan's
     "Related" list follow. Rows unchanged. Source: the record, step 5, "Left".
-20. **Test-only DSP entry points from the per-voice era** (audit A2.9): `Compressor.process(buffer, offset, length)`,
-    `Ducking.process(input, sidechain, blockSize)`, `Phaser.process(buffer, frames)`, `Reverb.hasTail` and
-    `DelayLine.hasTail`; move the specs onto the production entry points. The audit's other test-only seams (`*ForTest`,
-    `currentState`, `installed*`) are the same question (the record, "Decided", D10). S.
+20. **DONE (2026-10-23): test-only DSP entry points from the per-voice era** (audit A2.9): `Compressor.process(buffer,
+    offset, length)`, `Ducking.process(input, sidechain, blockSize)`, `Phaser.process(buffer, frames)`, `Reverb.hasTail`
+    and `DelayLine.hasTail` are removed, and so is the Phaser's eight-argument door, which only the two-argument one
+    called. Their specs run through the production entry points (the stereo compressor and ducker with equal channels,
+    bit-identical; a test helper `Phaser.processSettled`; `Reverb.combPeakAbs()`, the delay ring read directly or
+    `tapWindowPeakAbs()`). Production only lost code: the corpus stays identical. Review round 1 clean, the MINOR batch
+    applied; 30 mutants killed through the new paths. **Benchmarks:** "Ducking (mono)" is now "Ducking (stereo)"
+    (two channels of work), and the Phaser case no longer pays the coefficients per block, so neither compares 1:1
+    with runs before 2026-10-23. **Found, older and open:** four weak rows the mutants exposed, CompressorSpec "below
+    threshold" and "reset" (a 0.01 tolerance on a 0.01 signal; the reset row's loud block never crosses the
+    threshold) and "soft knee" (the signal never reaches the knee), and PhaserFloorLawSpec "sanity: wet audible"
+    (the dry scaling alone passes it). The other test-only seams (`*ForTest`, `currentState`, `installed*`) stay the
+    same question (the record, "Decided", D10).
 28. **DONE (2026-10-19): `GraphCensus` counts the vibrato as its composition, only what runs.** Reported (numbered
     after the last item, added 2026-10-10): its arm predated the composition (pitch pipeline 7b: the sine LFO, the
     floor, the multiply, the converter) and the 7c range pass and phase input, so a song benchmark's `work` column

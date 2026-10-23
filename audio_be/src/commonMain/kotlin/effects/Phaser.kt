@@ -46,21 +46,15 @@ import io.peekandpoke.klang.audio_bridge.constants.PHASER_WET
  */
 class Phaser(sampleRate: Int) {
 
-    /**
-     * The eight-argument [process] door's own holder: the door fills it and hands it to the holder overload, so the
-     * law is written once (see [PhaserBlock]).
-     */
-    private val doorBlock = PhaserBlock()
-
     companion object {
         /**
          * Below this the bus phaser is a bypass: the historical katalyst `< 0.01` gate, and still
          * the ONE gate and the ONE threshold. Since Katalyst 5c-9 it is APPLIED in
          * `KatalystPhaserEffect.configure`, which is where the knobs arrive: below it the stage
          * aims its two C4 coefficients at identity and writes no kernel param. This class only
-         * ever sees the coefficients a block runs at, and it reads identity, not a depth. So the
-         * bare two-argument [process] does not gate at all: it renders [depth] as it stands, which
-         * is what makes it the reference a spec builds an oracle from.
+         * ever sees the coefficients a block runs at, and it reads identity, not a depth. So
+         * [process] does not gate at all: a block filled from [dryCoeff] and [wetCoeff] renders
+         * [depth] as it stands, which is the reference a spec builds an oracle from.
          *
          * The LFO advances above the gate regardless, and it keeps advancing while the stage is
          * off (block-framing ledger D2).
@@ -186,41 +180,18 @@ class Phaser(sampleRate: Int) {
     fun wetCoeff(): Double = WetDryMix.wetCoeff(depth, p = 2)
 
     /**
-     * One block of [buffer], in place, with every knob exactly as it STANDS: no glide, no ramp.
-     *
-     * The bare-DSP entry. The orbit stage never calls it (it hands in what its glides hold, see
-     * below), and it is what a spec builds its oracle from: a phaser whose knobs do not move
-     * renders bit-identically through either entry, which is what makes "settled equals the old
-     * path" true by construction rather than by a conditional.
-     */
-    fun process(buffer: StereoBuffer, frames: Int) {
-        val dry = dryCoeff()
-        val wet = wetCoeff()
-
-        process(
-            buffer = buffer,
-            frames = frames,
-            centerTo = center,
-            sweepTo = sweep,
-            dryFrom = dry,
-            dryTo = dry,
-            wetFrom = wet,
-            wetTo = wet,
-        )
-    }
-
-    /**
-     * One block of [buffer], in place.
+     * One block of [buffer], in place, with the block's knob values in [block]. The orbit stage owns its
+     * [PhaserBlock] and fills it per block; this reads the values and keeps no reference to the holder.
      *
      * Every knob arrives as the value the GLIDE holds for this block, never as a field read
      * (Katalyst 5c-9, `audio/ref/knob-glide.md`): `KatalystPhaserEffect` owns one
      * `KnobGlide` per knob and hands the results in.
      *
-     * - [centerTo] and [sweepTo] are the breakpoint this block ENDS at; the cores start from the
-     *   one they still hold and interpolate (see [PhaserCore.prepareBlock]).
-     * - the C4 law's two coefficients ramp PER SAMPLE from ([dryFrom], [wetFrom]) to
-     *   ([dryTo], [wetTo]), written from the END so the block's last sample is the block's value
-     *   bit for bit. The output is linear in the pair, so a linear ramp of both IS a linear
+     * - [PhaserBlock.centerTo] and [PhaserBlock.sweepTo] are the breakpoint this block ENDS at; the cores start
+     *   from the one they still hold and interpolate (see [PhaserCore.prepareBlock]).
+     * - the C4 law's two coefficients ramp PER SAMPLE from ([PhaserBlock.dryFrom], [PhaserBlock.wetFrom]) to
+     *   ([PhaserBlock.dryTo], [PhaserBlock.wetTo]), written from the END so the block's last sample is the
+     *   block's value bit for bit. The output is linear in the pair, so a linear ramp of both IS a linear
      *   crossfade between the phaser's old and new settings: one mechanism for the `wet` knob, the
      *   `floor` knob and the ON and OFF edges alike.
      *
@@ -228,32 +199,6 @@ class Phaser(sampleRate: Int) {
      * cleared (once) and the block passes through untouched, while the LFO clock keeps running.
      * The glide lands on it exactly, so the cascade is only ever dropped where the output is
      * already the dry mix (entering Off early is the click this stage exists to prevent).
-     */
-    fun process(
-        buffer: StereoBuffer,
-        frames: Int,
-        centerTo: Double,
-        sweepTo: Double,
-        dryFrom: Double,
-        dryTo: Double,
-        wetFrom: Double,
-        wetTo: Double,
-    ) {
-        val block = doorBlock
-
-        block.centerTo = centerTo
-        block.sweepTo = sweepTo
-        block.dryFrom = dryFrom
-        block.dryTo = dryTo
-        block.wetFrom = wetFrom
-        block.wetTo = wetTo
-        process(buffer = buffer, frames = frames, block = block)
-    }
-
-    /**
-     * One block of [buffer], in place, with the block's knob values in [block] (see the eight-argument [process] for
-     * what each one means). The orbit stage owns its [PhaserBlock] and fills it per block; this overload reads the
-     * values and keeps no reference to the holder.
      */
     fun process(buffer: StereoBuffer, frames: Int, block: PhaserBlock) {
         val dryFrom = block.dryFrom
@@ -347,8 +292,8 @@ class Phaser(sampleRate: Int) {
  * block more than the holder does, on the production bundle with the process pinned to one core and without (engine
  * level; at the edge of the spread an inert change produces, see `audio/ref/performance.md`). So the numbers stay in
  * the fields of one holder, and the call hands over the reference (the rule in `audio/ref/performance.md`; the
- * resonator's `ResonatorConfig` is the precedent). Each holder owns its instance: the orbit stage one, the
- * eight-argument door [Phaser]'s own; [Phaser.process] keeps no reference to it.
+ * resonator's `ResonatorConfig` is the precedent). Each caller owns its instance (the orbit stage one, the
+ * benchmark its own); [Phaser.process] keeps no reference to it.
  */
 class PhaserBlock {
     var centerTo: Double = PHASER_CENTER_HZ

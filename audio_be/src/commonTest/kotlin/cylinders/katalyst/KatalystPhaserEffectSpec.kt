@@ -12,6 +12,7 @@ import io.kotest.matchers.doubles.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.Phaser
+import io.peekandpoke.klang.audio_be.effects.processSettled
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.sin
@@ -129,7 +130,7 @@ class KatalystPhaserEffectSpec : StringSpec({
                 buf.right[i] = src[k * frames + i]
             }
 
-            p.process(buf, frames)
+            p.processSettled(buffer = buf, frames = frames)
 
             for (i in 0 until frames) {
                 out[k * frames + i] = buf.left[i]

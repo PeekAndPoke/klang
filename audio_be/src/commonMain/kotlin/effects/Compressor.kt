@@ -606,25 +606,8 @@ class Compressor(
     }
 
     /**
-     * Process a mono buffer in-place.
-     *
-     * ⚠️ **This overload always takes the classic one-pole path, even when [lookaheadSeconds] is
-     * set** — it has no delay ring of its own, and sharing the stereo one would desynchronise it.
-     * A lookahead-configured `Compressor` therefore limits differently through this door (measured:
-     * a +12 dB spike exits at −0.35 dBFS through the stereo overload and +12.04 dBFS through this
-     * one). No production caller does this today; do not add one.
-     */
-    fun process(buffer: AudioBuffer, offset: Int, length: Int) {
-        for (i in 0 until length) {
-            val idx = offset + i
-            val totalGain = envelopeStep(abs(buffer[idx]))
-            buffer[idx] = buffer[idx] * totalGain
-        }
-    }
-
-    /**
-     * Per-sample envelope-follower + gain-curve step. Inlined into both `process()` overloads
-     * so each loop body stays specialized to its input shape (stereo pair vs mono indexed).
+     * Per-sample envelope-follower + gain-curve step. Inlined into the classic loop of [process]
+     * so that loop body stays specialized.
      * Uses precomputed [DB20_OVER_LN10] / [LN10_OVER_20] to skip per-sample `ln(10.0)` calls.
      */
     @Suppress("NOTHING_TO_INLINE")

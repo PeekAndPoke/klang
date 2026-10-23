@@ -17,6 +17,15 @@ import kotlin.math.sin
 class DuckingSpec : StringSpec({
     val sampleRate = 44100
 
+    /**
+     * One block of a mono [input] through the door the orbit duck calls, [Ducking.processStereo]: the signal on both
+     * sides (a copy as the right channel) and [sidechain] as both trigger channels. The linked detector's
+     * `max(|L|, |R|)` over two equal channels is the mono level, so [input] ends as the mono render.
+     */
+    fun Ducking.duckMono(input: AudioBuffer, sidechain: AudioBuffer, blockSize: Int) {
+        processStereo(inputL = input, inputR = input.copyOf(), sidechainL = sidechain, sidechainR = sidechain, blockSize = blockSize)
+    }
+
     "Ducking reduces volume when sidechain is active" {
         val ducking = Ducking(
             sampleRate = sampleRate,
@@ -30,7 +39,7 @@ class DuckingSpec : StringSpec({
         // Create sidechain signal (loud trigger)
         val sidechain = AudioBuffer(100) { 0.8 }
 
-        ducking.process(input = input, sidechain = sidechain, blockSize = 100)
+        ducking.duckMono(input = input, sidechain = sidechain, blockSize = 100)
 
         // Input should be reduced significantly
         val avgLevel = input.map { abs(it) }.average()
@@ -47,12 +56,12 @@ class DuckingSpec : StringSpec({
         // Process with active sidechain
         val input1 = AudioBuffer(100) { 1.0 }
         val sidechain1 = AudioBuffer(100) { 1.0 }
-        ducking.process(input = input1, sidechain = sidechain1, blockSize = 100)
+        ducking.duckMono(input = input1, sidechain = sidechain1, blockSize = 100)
 
         // Process with silent sidechain (should return to normal)
         val input2 = AudioBuffer(1000) { 1.0 }
         val sidechain2 = AudioBuffer(1000) { 0.0 }
-        ducking.process(input = input2, sidechain = sidechain2, blockSize = 1000)
+        ducking.duckMono(input = input2, sidechain = sidechain2, blockSize = 1000)
 
         // Should return close to full volume
         val endLevel = input2.takeLast(100).map { abs(it) }.average()
@@ -67,8 +76,8 @@ class DuckingSpec : StringSpec({
         val duckingLight = Ducking(sampleRate, 0.01, depth = 0.3)
         val duckingHeavy = Ducking(sampleRate, 0.01, depth = 0.9)
 
-        duckingLight.process(input = input1, sidechain = sidechain, blockSize = 100)
-        duckingHeavy.process(input = input2, sidechain = sidechain, blockSize = 100)
+        duckingLight.duckMono(input = input1, sidechain = sidechain, blockSize = 100)
+        duckingHeavy.duckMono(input = input2, sidechain = sidechain, blockSize = 100)
 
         val avgLight = input1.map { abs(it) }.average()
         val avgHeavy = input2.map { abs(it) }.average()
@@ -83,7 +92,7 @@ class DuckingSpec : StringSpec({
         // Duck the signal
         val input = AudioBuffer(100) { 1.0 }
         val sidechain = AudioBuffer(100) { 1.0 }
-        ducking.process(input = input, sidechain = sidechain, blockSize = 100)
+        ducking.duckMono(input = input, sidechain = sidechain, blockSize = 100)
 
         // Reset
         ducking.reset()
@@ -91,7 +100,7 @@ class DuckingSpec : StringSpec({
         // Should process at full volume immediately
         val input2 = AudioBuffer(10) { 1.0 }
         val sidechain2 = AudioBuffer(10) { 0.0 }
-        ducking.process(input = input2, sidechain = sidechain2, blockSize = 10)
+        ducking.duckMono(input = input2, sidechain = sidechain2, blockSize = 10)
 
         input2[0] shouldBe (1.0 plusOrMinus 0.01)
     }
@@ -106,7 +115,7 @@ class DuckingSpec : StringSpec({
         val input = AudioBuffer(100) { 1.0 }
         val sidechain = AudioBuffer(100) { 1.0 }
 
-        ducking.process(input = input, sidechain = sidechain, blockSize = 100)
+        ducking.duckMono(input = input, sidechain = sidechain, blockSize = 100)
 
         // Should remain at full volume
         val avgLevel = input.map { abs(it) }.average()
@@ -161,15 +170,15 @@ class DuckingSpec : StringSpec({
         val active1 = AudioBuffer(100) { 1.0 }
         val active2 = AudioBuffer(100) { 1.0 }
         val sidechainActive = AudioBuffer(100) { 1.0 }
-        duckingFast.process(input = active1, sidechain = sidechainActive, blockSize = 100)
-        duckingSlow.process(input = active2, sidechain = sidechainActive, blockSize = 100)
+        duckingFast.duckMono(input = active1, sidechain = sidechainActive, blockSize = 100)
+        duckingSlow.duckMono(input = active2, sidechain = sidechainActive, blockSize = 100)
 
         // Phase 2: Release with silent sidechain
         val recover1 = AudioBuffer(400) { 1.0 }
         val recover2 = AudioBuffer(400) { 1.0 }
         val sidechainSilent = AudioBuffer(400) { 0.0 }
-        duckingFast.process(input = recover1, sidechain = sidechainSilent, blockSize = 400)
-        duckingSlow.process(input = recover2, sidechain = sidechainSilent, blockSize = 400)
+        duckingFast.duckMono(input = recover1, sidechain = sidechainSilent, blockSize = 400)
+        duckingSlow.duckMono(input = recover2, sidechain = sidechainSilent, blockSize = 400)
 
         // Fast should recover more by sample 50-100 of the recovery phase
         val fastLevel = recover1.sliceArray(50 until 100).map { abs(it) }.average()

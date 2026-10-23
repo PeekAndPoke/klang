@@ -35,8 +35,8 @@ gone is removed when someone notices, not kept for history.
 - **`Ignitor` is deliberately NOT a `fun interface`**: SAM turns captured `var`s into JS `ObjectRef`.
 - **`PhaserCore.step` must stay `inline`**, its state `internal` (about 25 % JVM / 60 % JS otherwise).
 - **`DelayLine`: no per-sample `isFinite`**: it cost about +33 % JVM / +30 % JS, removed 2026-05-22.
-- **`Reverb.hasTail()` is not for per-block use** (a scan of about 28k samples); it has no production caller.
-  The engine's tail questions are `TailCeiling` compares (`KatalystChain.hasTail()`, on an orbit and at the output
+- **`Reverb.combPeakAbs()` and `DelayLine.tapWindowPeakAbs()` are scans, not for per-block use** (the reverb's
+  is about 28k samples): only a chain swap's one-off drain measurement calls them. The engine's tail questions are `TailCeiling` compares (`KatalystChain.hasTail()`, on an orbit and at the output
   since phase 3 step 12 C3); `MasterBus` still asks only after `TAIL_CHECK_INTERVAL_BLOCKS` silent blocks, because a
   delay is silent between echoes and an output-only test would cut them.
 - **A sounding resonator bank never retunes** (body and vowel, one class with two kinds, `KatalystResonatorEffect`,

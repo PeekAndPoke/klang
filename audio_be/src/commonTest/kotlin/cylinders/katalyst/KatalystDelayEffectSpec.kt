@@ -369,8 +369,10 @@ class KatalystDelayEffectSpec : StringSpec({
         }
 
         effect.hasTail() shouldBe false
-        // Literally zero: hasTail(0.0) is a strict > comparison, ANY residue would trip it.
-        effect.delayLine!!.hasTail(0.0) shouldBe false
+        // Literally zero, every cell of the whole ring (not only the tap's window): ANY residue is counted.
+        val ring = effect.delayLine!!.ring
+        ring.left.count { it != 0.0 } shouldBe 0
+        ring.right.count { it != 0.0 } shouldBe 0
 
         // And Off is a true short-circuit: a hot mix passes through untouched.
         ctx.mixBuffer.fill(0.9)

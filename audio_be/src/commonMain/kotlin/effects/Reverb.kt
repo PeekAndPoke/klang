@@ -140,41 +140,11 @@ class Reverb(
         }
 
     /**
-     * Returns true if the internal reverb buffers still contain audio above
-     * [threshold]. Used by cylinder cleanup to detect a tail that should keep
-     * the cylinder alive.
-     *
-     * **Cost**: O(numCombs × maxCombSize × 2 channels) — at 48 kHz ≈ 24k samples.
-     * Not intended for per-block use; called from cleanup polling.
-     *
-     * **Conservative under stable feedback (≤ 0.98)**: if every stored sample
-     * is below threshold, no future iteration brings the output back above
-     * threshold (steady-state bound is `threshold / (1 − fb) ≈ 50 · threshold`,
-     * still well below audibility for typical thresholds).
-     */
-    fun hasTail(threshold: Double = SILENCE_FLOOR): Boolean {
-        // Test/diagnostic only since the content-ceiling tail (`TailCeiling`): no production caller.
-        for (c in 0 until numCombs) {
-            for (sample in combBufsL[c]) {
-                if (sample > threshold || sample < -threshold) {
-                    return true
-                }
-            }
-            for (sample in combBufsR[c]) {
-                if (sample > threshold || sample < -threshold) {
-                    return true
-                }
-            }
-        }
-        return false
-    }
-
-    /**
      * Highest absolute sample across ALL comb buffers, both channels — the drain-countdown
      * analog of `DelayLine.tapWindowPeakAbs`. For a comb the whole buffer IS the tap window:
      * the read position cycles through every cell and re-feeds it, so (unlike the delay ring)
      * nothing is overwritten before it is emitted. Allpass buffers are deliberately excluded
-     * from the magnitude scan, matching [hasTail]'s own convention: the series chain holds
+     * from the magnitude scan: the series chain holds
      * ~1.66k samples of comb-sum history (round 2 corrected round 1's single-stage figure) —
      * about one comb revolution, so once every comb cell is at the threshold the chain was fed
      * `<= numCombs x threshold / fb` for its whole memory, and the [FIXED_GAIN]-scaled wet a
@@ -187,9 +157,8 @@ class Reverb(
      * reads, so allpass poison implies a poisoned comb cell first, and comb poison persists
      * until a reset.
      *
-     * **Cost**: one O(all comb cells) scan (~22k samples at 44.1 kHz) — the same class as
-     * [hasTail], intended for the off-transition (at most once per owner change), never
-     * per block.
+     * **Cost**: one O(all comb cells) scan (~22k samples at 44.1 kHz), intended for the
+     * off-transition (at most once per owner change), never per block.
      */
     fun combPeakAbs(): Double {
         var peak = 0.0

@@ -148,8 +148,7 @@ class SizedBuffers(
         // plentiful and audio-thread time is not; a dirty one is zeroed on the spot, at most twice
         // what the allocation it replaces would zero (a fresh array is zeroed by the runtime). The
         // cap is what keeps that bound — a dirty 20 s master ring handed to a 0.25 s delay would be
-        // a 24 MB clear inside an onset block — and keeps `DelayLine.hasTail()`'s whole-ring scan
-        // proportional to the delay, not to whatever happened to be idle (review round 4). Past the
+        // a 24 MB clear inside an onset block (review round 4). Past the
         // cap the request allocates; only when allocation fails does an oversized idle buffer serve,
         // SMALLEST first and then clean before dirty (round 5: clean-first among oversized would
         // re-import the O(ring) scans the cap removed, for one saved clear): the big clear beats silence.

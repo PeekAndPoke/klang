@@ -127,7 +127,7 @@ class Ducking(
      * Per-sample envelope step. Computes target gain from the sidechain level and [depthNow]
      * (the stored depth for the settled path, a ramped value while the depth glides), then applies
      * instant-attack / exponential-release smoothing on `currentGain`.
-     * Inlined into both `process()` overloads so each loop body stays specialized.
+     * Inlined into [processStereo] and [processStereoGliding] so each loop body stays specialized.
      */
     @Suppress("NOTHING_TO_INLINE")
     private inline fun stepGain(sidechainLevel: Double, depthNow: Double): Double {
@@ -207,19 +207,6 @@ class Ducking(
 
             inputL[i] = inputL[i] * weighted
             inputR[i] = inputR[i] * weighted
-        }
-    }
-
-    /**
-     * Processes mono audio with sidechain ducking.
-     *
-     * @param input The audio buffer to be ducked
-     * @param sidechain The trigger signal (e.g., kick drum on another cylinder)
-     * @param blockSize Number of samples to process
-     */
-    fun process(input: AudioBuffer, sidechain: AudioBuffer, blockSize: Int) {
-        for (i in 0 until blockSize) {
-            input[i] = input[i] * stepGain(sidechainLevel = abs(sidechain[i]), depthNow = depthValue)
         }
     }
 

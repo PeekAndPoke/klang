@@ -22,6 +22,7 @@ import io.peekandpoke.klang.audio_bridge.DistortionShapes
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
+import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.sin
@@ -218,7 +219,7 @@ class MasterOutputChainSpec : StringSpec({
             right.fill(0.5)
         }
         repeat(40) { returned.process(input = charge, output = StereoBuffer(blockFrames), length = blockFrames) }
-        returned.hasTail() shouldBe true
+        returned.combPeakAbs() shouldBeGreaterThan SILENCE_FLOOR
         units.giveBack(returned)
 
         val wet = runRecovered(

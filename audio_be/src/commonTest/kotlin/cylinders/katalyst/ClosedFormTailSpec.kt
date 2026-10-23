@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.doubles.shouldBeLessThanOrEqual
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
@@ -22,8 +23,8 @@ import kotlin.math.abs
 
 /**
  * The Active-state tail question answered from a content ceiling (`TailCeiling`) instead of by scanning
- * the ring or the combs, for both orbit effects and a whole chain. The scans (`DelayLine.hasTail`,
- * `Reverb.hasTail`) stay as the ORACLE here: the closed form must never say "no tail" while the
+ * the ring or the combs, for both orbit effects and a whole chain. The scans (`DelayLine.tapWindowPeakAbs`,
+ * `Reverb.combPeakAbs`) stay as the ORACLE here: the closed form must never say "no tail" while the
  * scan still finds audible energy in what the tap can reach — and must eventually say it.
  */
 class ClosedFormTailSpec : StringSpec({
@@ -186,7 +187,7 @@ class ClosedFormTailSpec : StringSpec({
             (blocks < 20000) shouldBe true
         }
         withClue("the combs must be below the threshold when the closed form says silent") {
-            fx.reverb!!.hasTail() shouldBe false
+            fx.reverb!!.combPeakAbs() shouldBeLessThanOrEqual SILENCE_FLOOR
         }
         blocks shouldBeGreaterThan 100 // a real decay was held (~0.7 s minimum tail ≈ 240 blocks)
     }
@@ -216,7 +217,7 @@ class ClosedFormTailSpec : StringSpec({
             (blocks < 20000) shouldBe true
         }
         withClue("both sides' combs must be below the threshold when the closed form says silent") {
-            fx.reverb!!.hasTail() shouldBe false
+            fx.reverb!!.combPeakAbs() shouldBeLessThanOrEqual SILENCE_FLOOR
         }
         blocks shouldBeGreaterThan 100
     }
@@ -260,8 +261,11 @@ class ClosedFormTailSpec : StringSpec({
             blocks++
             (blocks < 20000) shouldBe true
         }
-        chain.delay!!.delayLine!!.hasTail() shouldBe false
-        chain.reverb!!.reverb!!.hasTail() shouldBe false
+        // The whole ring, read directly: the check shares no code with the closed form it checks
+        val ring = chain.delay!!.delayLine!!.ring
+        ring.left.all { abs(it) <= SILENCE_FLOOR } shouldBe true
+        ring.right.all { abs(it) <= SILENCE_FLOOR } shouldBe true
+        chain.reverb!!.reverb!!.combPeakAbs() shouldBeLessThanOrEqual SILENCE_FLOOR
         blocks shouldBeGreaterThan 100
     }
 })

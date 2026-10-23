@@ -179,7 +179,7 @@ class LazyReverbSpec : StringSpec({
         // Review round 3: the return is O(1) — parameters back now, the network still charged —
         // and housekeep() zeroes it later, one unit per call.
         used.size shouldBe 0.5
-        used.hasTail(0.0) shouldBe true
+        used.combPeakAbs() shouldBeGreaterThan 0.0
         units.isClean shouldBe false
         units.housekeep() shouldBe true
         units.isClean shouldBe true
@@ -191,7 +191,7 @@ class LazyReverbSpec : StringSpec({
         again shouldBeSameInstanceAs used
         again.size shouldBe 0.5 // constructor defaults
         again.lowpass.isNaN() shouldBe true
-        again.hasTail(0.0) shouldBe false
+        again.combPeakAbs() shouldBe 0.0
 
         // Same input, same output as a unit that was never used: the shelf leaves no fingerprint.
         val fresh = Reverb(sampleRate)
@@ -222,7 +222,7 @@ class LazyReverbSpec : StringSpec({
         val again = units.rent().shouldNotBeNull()
 
         again shouldBeSameInstanceAs used
-        again.hasTail(0.0) shouldBe false
+        again.combPeakAbs() shouldBe 0.0
         units.syncCleans shouldBe 1
         units.isClean shouldBe true // the dirty count followed the unit out (round 5)
     }

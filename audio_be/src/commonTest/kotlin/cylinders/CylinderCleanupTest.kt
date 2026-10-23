@@ -113,10 +113,10 @@ class OrbitCleanupTest : StringSpec({
     }
 
     "an inaudibly-charged delay ring is cleared LITERALLY on deactivation" {
-        // hasTail() scans the WHOLE ring, so a charged drain keeps the orbit alive until the
+        // The tail ceiling holds a charged drain until the
         // countdown\'s own terminal reset (old copies sit in the ring at full amplitude until the
         // head wraps). The reachable case for the resetBusEffects wiring is therefore an ACTIVE
-        // delay whose ring only ever held sub-threshold content: the scan frees the orbit while
+        // delay whose ring only ever held sub-threshold content: the ceiling frees the orbit while
         // literal nonzeros remain, and only resetBusEffects cleans those. Review round 2 found
         // that wiring line unguarded.
         val cylinder = createTestOrbit()
@@ -139,8 +139,10 @@ class OrbitCleanupTest : StringSpec({
         cylinder.tryDeactivate(afterLastVoice)
 
         cylinder.isActive shouldBe false
-        // Literally zero: any residue trips the strict > comparison.
-        cylinder.delay!!.delayLine!!.hasTail(0.0) shouldBe false
+        // Literally zero, every cell of the whole ring (not only the tap's window): any residue is counted.
+        val ring = cylinder.delay!!.delayLine!!.ring
+        ring.left.count { it != 0.0 } shouldBe 0
+        ring.right.count { it != 0.0 } shouldBe 0
         // Factory params too, not just the ring: a core-only reset would leave the dead owner's
         // time for the next life's first non-finite param to inherit (round-2 retrofit).
         cylinder.delay!!.delayLine!!.time shouldBe 0.0
@@ -179,8 +181,8 @@ class OrbitCleanupTest : StringSpec({
         cylinder.tryDeactivate(afterLastVoice)
 
         cylinder.isActive shouldBe false
-        // Literally zero: any residue trips the strict > comparison.
-        cylinder.reverb!!.reverb!!.hasTail(0.0) shouldBe false
+        // Literally zero: any residue, or a non-finite cell, lifts the comb peak above it.
+        cylinder.reverb!!.reverb!!.combPeakAbs() shouldBe 0.0
         // Factory params too, not just the buffers: a network-only `reverb.reverb!!.reset()`
         // passes the buffer assert while the dead owner's room survives into the next life
         // (review round 2).

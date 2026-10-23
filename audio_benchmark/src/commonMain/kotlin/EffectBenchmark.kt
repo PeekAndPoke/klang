@@ -14,6 +14,7 @@ import io.peekandpoke.klang.audio_be.effects.Compressor
 import io.peekandpoke.klang.audio_be.effects.DelayLine
 import io.peekandpoke.klang.audio_be.effects.Ducking
 import io.peekandpoke.klang.audio_be.effects.Phaser
+import io.peekandpoke.klang.audio_be.effects.PhaserBlock
 import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.filters.EqCore
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
@@ -521,7 +522,16 @@ class EffectBenchmark(
                     sweep = 1000.0
                     feedback = 0.3
                 }
-                StereoInPlaceEffect { buf, length -> p.process(buf, length) }
+                // The block the orbit stage hands in once its glides have settled: the knobs never move here.
+                val block = PhaserBlock().apply {
+                    centerTo = p.center
+                    sweepTo = p.sweep
+                    dryFrom = p.dryCoeff()
+                    dryTo = p.dryCoeff()
+                    wetFrom = p.wetCoeff()
+                    wetTo = p.wetCoeff()
+                }
+                StereoInPlaceEffect { buf, length -> p.process(buffer = buf, frames = length, block = block) }
             },
 
             // Dynamics
@@ -619,16 +629,24 @@ class EffectBenchmark(
                 sidechain = true,
             ),
 
-            Case("Ducking (mono)") { sr, bf ->
+            Case("Ducking (stereo)") { sr, bf ->
                 val ducking = Ducking(sr, attackSeconds = 0.1, depth = 0.5)
                 val src = sineSource(440.0, sr, bf)
                 val sidechainSrc = sineSource(2.0, sr, bf)
-                val input = AudioBuffer(bf)
-                val sidechain = AudioBuffer(bf)
+                val input = StereoBuffer(bf)
+                val sidechain = StereoBuffer(bf)
                 val step: () -> Unit = {
-                    src.copyInto(input)
-                    sidechainSrc.copyInto(sidechain)
-                    ducking.process(input, sidechain, bf)
+                    src.copyInto(input.left)
+                    src.copyInto(input.right)
+                    sidechainSrc.copyInto(sidechain.left)
+                    sidechainSrc.copyInto(sidechain.right)
+                    ducking.processStereo(
+                        inputL = input.left,
+                        inputR = input.right,
+                        sidechainL = sidechain.left,
+                        sidechainR = sidechain.right,
+                        blockSize = bf,
+                    )
                 }
                 step
             },
