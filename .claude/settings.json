@@ -1,5 +1,5 @@
 {
-  "$comment": "Command baseline from the nexus (missioncontrol blueprints/settings, MC-00024). Copy into the repo's tracked .claude/settings.json and merge with what is there; add the project's own entries below the baseline. Deny always wins over allow. `git -C <tree> checkout` stays open for measurement trees (klang, spross). klang's own entries follow the baseline at the end of a list: every form of git reset (deny).",
+  "$comment": "Command baseline from the nexus (missioncontrol blueprints/settings, MC-00024). Copy into the repo's tracked .claude/settings.json and merge with what is there; add the project's own entries below the baseline. Deny always wins over allow. `git -C <tree> checkout` stays open for measurement trees (klang, spross). Revision 5: IntelliJ MCP per-tool rules (MC-00031): deny everything that executes code as the IDE's user (terminal, run configs, notebook kernels, the xdebug debugger, the Python interpreter setting) or opens connections through the IDE (database connections, SQL); invoke_ide_action has NO rule: the PreToolUse hook decides (listed actions allow, others ask), because an explicit ask rule outranks a hook's allow. Read-only lookups and in-project writes (apply_patch, reformat_file, rename_refactoring, apply_quick_fix, create_new_file) stay open. The hooks block runs blueprints/settings/hooks/idea-action-gate.py (copied to .claude/hooks/) so that IDE actions listed in .claude/hooks/idea-actions.allow run without a prompt; unlisted ones fall back to ask. klang's own entries follow the baseline at the end of a list: every form of git reset (deny). klang's idea-actions.allow lists only OptimizeImports (CLAUDE.md: IntelliJ read-only except Optimize Imports until the 2026-10-30 meeting).",
   "autoMemoryEnabled": false,
   "permissions": {
     "deny": [
@@ -61,6 +61,36 @@
       "Bash(git -C * add * -A*)",
       "Bash(git -C * add * --all*)",
       "Bash(git -C * reset * --hard*)",
+      "mcp__idea__execute_terminal_command",
+      "mcp__idea__execute_run_configuration",
+      "mcp__idea__execute_tool",
+      "mcp__idea__execute_code_on_kernel",
+      "mcp__idea__run_notebook_cell",
+      "mcp__idea__create_notebook",
+      "mcp__idea__edit_notebook",
+      "mcp__idea__kill_notebook",
+      "mcp__idea__interrupt_notebook",
+      "mcp__idea__configure_python_interpreter",
+      "mcp__idea__xdebug_control_session",
+      "mcp__idea__xdebug_disassemble",
+      "mcp__idea__xdebug_evaluate_expression",
+      "mcp__idea__xdebug_get_debugger_status",
+      "mcp__idea__xdebug_get_frame_values",
+      "mcp__idea__xdebug_get_registers",
+      "mcp__idea__xdebug_get_stack",
+      "mcp__idea__xdebug_get_threads",
+      "mcp__idea__xdebug_get_value_by_path",
+      "mcp__idea__xdebug_list_breakpoints",
+      "mcp__idea__xdebug_read_memory",
+      "mcp__idea__xdebug_remove_breakpoint",
+      "mcp__idea__xdebug_run_to_line",
+      "mcp__idea__xdebug_set_breakpoint",
+      "mcp__idea__xdebug_set_variable",
+      "mcp__idea__xdebug_start_debugger_session",
+      "mcp__idea__create_database_connection",
+      "mcp__idea__edit_database_connection",
+      "mcp__idea__test_database_connection",
+      "mcp__idea__execute_sql_query",
       "Bash(git reset)",
       "Bash(git reset *)",
       "Bash(git -C * reset*)"
@@ -75,6 +105,19 @@
       "Bash(git add -- *)",
       "Bash(git mv *)",
       "Bash(pnpm *)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "mcp__idea__invoke_ide_action",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/idea-action-gate.py"
+          }
+        ]
+      }
     ]
   }
 }
