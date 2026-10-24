@@ -35,7 +35,7 @@
 #   console/full-check.sh --fresh    every test task runs again: the old test XML in the build dirs is deleted first
 #
 # OUTPUT
-#   one log per step and the summary under build/full-check/<date>_<time>/, the summary also on stdout
+#   one log per step and the summary under tmp/full-check/<date>_<time>/, the summary also on stdout
 #
 # EXIT CODES
 #   0 every step green; 1 red (a failed test, a changed song, an allocation over budget, a step that failed, could
@@ -61,7 +61,8 @@ unset KLANG_BENCH_MODE KLANG_BENCH_FILTER KLANG_ALLOC_CASE KLANG_ALLOC_WARM KLAN
 
 LOCK=console/with-build-lock.sh
 STAMP=$(date +%Y-%m-%d_%H%M%S)
-LOGDIR=build/full-check/$STAMP
+# tmp/, not build/: build/ belongs to the maintainer's IDE, the agents build elsewhere (MC-00031)
+LOGDIR=tmp/full-check/$STAMP
 mkdir -p "$LOGDIR"
 
 # The state of the tree: HEAD, then every listed path with its content hash. `-z` keeps paths unquoted (a space or a

@@ -156,7 +156,7 @@ def main(argv=None):
     n_untracked = len([u for u in untracked if u])
     stats = [f"review-pack {label} round {round_no}  base {base} @ {merge_base[:10]}  state {current[:10]}",
              f"full:  {n_files} file(s), {shortstat(wt, merge_base, current)}  ({n_untracked} untracked file(s) included)"]
-    generated = [u for u in untracked if re.search(r"(^|/)(build|\.gradle|node_modules|\.kotlin)/", u)]
+    generated = [u for u in untracked if re.search(r"(^|/)(build|\.gradle|node_modules|\.kotlin|\.build-claude|\.gradle-claude)/", u)]
     if generated:
         stats.append(f"! {len(generated)} untracked file(s) under build/, .gradle/ or node_modules/ are in the diff "
                      f"(e.g. {generated[0]}): is a .gitignore entry missing?")

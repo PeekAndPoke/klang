@@ -83,7 +83,8 @@ tasks {
 }
 
 kotlin.sourceSets.commonMain {
-    kotlin.srcDir("build/generated/ksp/metadata/commonMain/kotlin")
+    // The build directory, not a fixed "build/": user claude builds into .build-claude/ (MC-00031)
+    kotlin.srcDir(layout.buildDirectory.dir("generated/ksp/metadata/commonMain/kotlin"))
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().configureEach {

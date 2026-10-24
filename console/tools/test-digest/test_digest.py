@@ -36,7 +36,7 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 
-SKIP_DIRS = {".git", "node_modules", ".gradle", ".idea", ".kotlin"}
+SKIP_DIRS = {".git", "node_modules", ".gradle", ".idea", ".kotlin", ".build-claude", ".gradle-claude"}
 TASK_LINE = re.compile(r"^> Task (:\S+)(?: (UP-TO-DATE|FROM-CACHE|NO-SOURCE|SKIPPED|FAILED))?\s*$")
 FAILED_TEST = re.compile(r"^(\S.*?) > (.+) FAILED\s*$")
 WHAT_WENT_WRONG_TASK = re.compile(r"Execution failed for task '(:[^']+)'")
@@ -137,21 +137,70 @@ def parse_log(text):
     return log
 
 
+def gradle_property(root, name):
+    """A Gradle property from ORG_GRADLE_PROJECT_<name>, then the project's gradle.properties. None when unset.
+    Never the user's ~/.gradle/gradle.properties: agents do not read that file (maintainer's rule, kept for
+    user claude's own file too, 2026-10-24); build_root() finds the per-user layout without it."""
+    env = os.environ.get(f"ORG_GRADLE_PROJECT_{name}")
+    if env:
+        return env
+    try:
+        with open(os.path.join(root, "gradle.properties"), encoding="utf-8") as f:
+            for line in f:
+                key, sep, value = line.partition("=")
+                if sep and key.strip() == name:
+                    return value.strip()
+    except OSError:
+        pass
+    return None
+
+
+def build_root(root):
+    """Where this user's build outputs live: <root>/<buildRoot> when the per-user layout is on (MC-00031,
+    blueprints/settings/per-user-build.settings.gradle.kts), else None for the plain <module>/build/ layout.
+
+    buildRoot comes from gradle_property(), else from the folder itself: <root>/.build-<user> when it exists and
+    belongs to the user running this (the per-user layout names it so: buildRoot=.build-claude for user claude)."""
+    value = gradle_property(root, "buildRoot")
+    if value:
+        return os.path.join(root, value)
+    try:
+        import pwd
+        user = pwd.getpwuid(os.getuid()).pw_name
+    except (ImportError, KeyError):
+        return None
+    mine = os.path.join(root, f".build-{user}")
+    try:
+        return mine if os.stat(mine).st_uid == os.getuid() else None
+    except OSError:
+        return None
+
+
 def task_of(root, results_dir):
-    """<root>/a/b/build/test-results/jvmTest -> ':a:b:jvmTest'"""
-    rel = os.path.relpath(results_dir, root).split(os.sep)
-    i = rel.index("build")
-    module = ":".join(rel[:i])
+    """<root>/a/b/build/test-results/jvmTest -> ':a:b:jvmTest';
+    per-user layout: <root>/<buildRoot>/a/b/test-results/jvmTest the same, <buildRoot>/_root for the root project"""
+    out = build_root(root)
+    if out:
+        rel = os.path.relpath(results_dir, out).split(os.sep)
+        i = rel.index("test-results")
+        module = ":".join(p for p in rel[:i] if p != "_root")
+    else:
+        rel = os.path.relpath(results_dir, root).split(os.sep)
+        i = rel.index("build")
+        module = ":".join(rel[:i])
     return f":{module}:{rel[-1]}" if module else f":{rel[-1]}"
 
 
 def scan_suites(root):
     suites = []
-    for dirpath, dirnames, filenames in os.walk(root):
+    # the per-user layout reads only this user's outputs, never another user's build/ folders
+    out = build_root(root)
+    marker = os.sep + "test-results" + os.sep if out else os.sep + os.path.join("build", "test-results") + os.sep
+    for dirpath, dirnames, filenames in os.walk(out or root):
         # another checkout nested inside this one (e.g. .claude/worktrees/*) has results of its own
         dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS
                        and not os.path.exists(os.path.join(dirpath, d, ".git"))]
-        if os.sep + os.path.join("build", "test-results") + os.sep not in dirpath + os.sep:
+        if marker not in dirpath + os.sep:
             continue
         for name in filenames:
             if not (name.startswith("TEST-") and name.endswith(".xml")):

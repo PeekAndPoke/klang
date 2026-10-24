@@ -11,10 +11,25 @@ const buildHash = crypto.randomBytes(6).toString('hex');
 // bake it into index.html (no extra request). Falls back to an empty object if the
 // file is not there yet (e.g. a very first cold build) — the frontend then fetches
 // /version.json at runtime instead.
+// The project root: the nearest folder upward with a settings.gradle.kts. Not a fixed number of '../': the webpack
+// working folder sits one level deeper when user claude builds into .build-claude/ (MC-00031).
+function projectRoot() {
+    let dir = __dirname;
+    while (!fs.existsSync(path.join(dir, 'settings.gradle.kts'))) {
+        const parent = path.dirname(dir);
+        if (parent === dir) {
+            throw new Error('02-html-config.js: no settings.gradle.kts above ' + __dirname);
+        }
+        dir = parent;
+    }
+    return dir;
+}
+const resources = path.join(projectRoot(), 'src/jsMain/resources');
+
 let appVersion = {};
 try {
     appVersion = JSON.parse(
-        fs.readFileSync(path.resolve(__dirname, '../../../../src/jsMain/resources/version.json'), 'utf8')
+        fs.readFileSync(path.join(resources, 'version.json'), 'utf8')
     );
 } catch (e) {
     // version.json not generated yet — leave appVersion empty
@@ -23,7 +38,7 @@ try {
 if (config.plugins) {
     config.plugins.push(new HtmlWebpackPlugin({
         // Point directly to your source index.html as the template
-        template: path.resolve(__dirname, '../../../../src/jsMain/resources/index_template.html'),
+        template: path.join(resources, 'index_template.html'),
         // Automatically inject the <script> tags at the bottom of the body
         inject: 'body',
         filename: 'index.html',

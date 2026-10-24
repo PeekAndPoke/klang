@@ -60,3 +60,7 @@ src/jsMain/resources/version.json
 .claude/worktrees/
 # Runtime holder record for console/with-build-lock.sh — the flock itself is per-process.
 .claude/build.lock
+
+### Per-user build outputs (MC-00031): user claude builds into these, the IDE keeps build/ ###
+.build-claude/
+.gradle-claude/

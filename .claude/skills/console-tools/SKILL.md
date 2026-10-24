@@ -101,6 +101,10 @@ python3 console/tools/test-digest/test_digest.py digest --root <tree> --since 20
 | `:jvmTest` | the root project's own specs (`src/jvmTest`) | `build/test-results/jvmTest/` |
 | `:klangscript-ksp:test` | the KSP processor's specs (a plain JVM module); not part of `allTests` | `klangscript-ksp/build/test-results/test/` |
 
+The XML paths are the maintainer's layout. The agents (user claude) build into `.build-claude/` (MC-00031, the block
+at the end of `settings.gradle.kts`): `<module>/build/` becomes `.build-claude/<module>/`, the root's `build/` becomes
+`.build-claude/_root/`. test-digest reads only the layout of the user running it.
+
 - `--rerun` goes on the task that runs the tests: `:m:jvmTest --rerun`, `:m:jsBrowserTest --rerun`.
   `:m:jsTest --rerun` reruns only the aggregate and leaves `jsBrowserTest` UP-TO-DATE (seen
   2026-10-19; test-digest reads it as STALE). Never `--rerun-tasks` (it reruns every task, KSP included).
@@ -247,7 +251,7 @@ that needs nothing added to the fresh worktree; klang's full check needs the cac
   when main is checked out nowhere it is an `update-ref` guarded by main's sha.
 - The test step: `console/full-check.sh` takes the lock per step itself, so it is NOT wrapped in another
   lock call (a nested call waits for itself); from the stack worktree its steps take the main
-  checkout's lock by themselves. Its Gradle output goes to `build/full-check/<stamp>/` in the stack worktree, not to the
+  checkout's lock by themselves. Its Gradle output goes to `tmp/full-check/<stamp>/` in the stack worktree, not to the
   console, so test-digest counts from the XML and the failing case names are in that folder's
   `tests.log`. A red corpus or allocation step with green tests reads as exit 4.
 - A fresh stack worktree has none of klang's git-ignored inputs. Most are built on the fly (the Strudel
@@ -352,6 +356,11 @@ dash scan, stack-merge's exit code by exception type, test-digest's foreign-suit
   last 300 commits flagged 11, all real dashes on lines those commits wrote or edited, no false positive; the
   ticket sweep 3c9a191d would have been blocked by old dashes on the lines it rewrote. UI strings in Kotlin
   (not KDoc) are not checked by the hook; `review-pack --dash-scan` still covers them in a review round.
+- **Per-user build outputs** (MC-00031, 2026-10-24, from missioncontrol b24e8c6): test-digest and docs-lint
+  are the blueprint's, with one deviation in test-digest: `gradle_property()` never reads `~/.gradle/gradle.properties`
+  (agents do not read that file, maintainer 2026-10-24, also for user claude's own); `build_root()` takes buildRoot from
+  `ORG_GRADLE_PROJECT_buildRoot` or the project's `gradle.properties`, else uses `.build-<user>` when it exists and
+  belongs to the user running it. `full-check.sh` logs to `tmp/full-check/`, not `build/`.
 
 ## Proposed upstream
 
@@ -362,6 +371,7 @@ dash scan, stack-merge's exit code by exception type, test-digest's foreign-suit
 ## Changes
 
 <!-- Kept by the nexus, newest first. Tells a repo what an update brought. -->
+- 2026-10-24: test-digest follows the per-user build root, docs-lint skips `.build-claude/` and `.gradle-claude/` (MC-00031).
 - 2026-10-24: new tool `hooks` (MC-00018): pre-commit and commit-msg hooks that block dashes, control bytes and a missing agent trailer on added lines; `hooks.json` for switches and the dash skip list.
 - 2026-10-20: new tool `ticket` (ticket numbers for tasks and plans; see project-layout).
 - 2026-10-19: back-channel sections added; masters now live in the nexus (missioncontrol/blueprints/tools/).

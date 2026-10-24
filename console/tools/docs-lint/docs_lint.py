@@ -25,7 +25,7 @@ import re
 import subprocess
 import sys
 
-SKIP_DIRS = {".git", "node_modules", "build", ".gradle", ".idea", ".kotlin", "kotlin-js-store"}
+SKIP_DIRS = {".git", "node_modules", "build", ".gradle", ".idea", ".kotlin", "kotlin-js-store", ".build-claude", ".gradle-claude"}
 INLINE_LINK = re.compile(r"!?\[(?:[^\]\\]|\\.)*\]\(\s*<?([^)\s>]+)>?(?:\s+\"[^\"]*\")?\s*\)")
 REF_LINK = re.compile(r"^\s{0,3}\[[^\]]+\]:\s*<?(\S+?)>?\s*(?:[\"'(].*)?$")  # a title must be quoted
 FENCE = re.compile(r"^\s{0,3}(```|~~~)")

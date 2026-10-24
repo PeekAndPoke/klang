@@ -131,7 +131,17 @@ kotlin {
 
 tasks {
     // Use JUnit Platform so kotest tests in src/jvmTest/ are discovered.
-    configureJvmTests()
+    configureJvmTests {
+        // GeneratedRegistrationOrderSpec reads the KSP output of these modules from their build directory, which is
+        // not build/ for user claude (.build-claude/, MC-00031). Read when the test starts: the modules set their
+        // build directory after the root is configured.
+        listOf("sprudel", "klangscript-libs").forEach { module ->
+            val buildDir = project(":$module").layout.buildDirectory
+            jvmArgumentProviders.add(CommandLineArgumentProvider {
+                listOf("-Dklang.buildDir.$module=${buildDir.get().asFile.path}")
+            })
+        }
+    }
 
     // Generates src/jsMain/resources/version.json (project + git metadata).
     // Consumed by the frontend (webpack injects it into index.html; see
@@ -181,18 +191,26 @@ tasks {
         }
     }
 
+    // The worklet copy lands in the source tree, which the maintainer's IDE (user gerk) and the agents (user claude)
+    // share. Copy sets the file mode, and only a file's owner may: so the old copy goes first, whoever made it
+    // (MC-00031, maintainer 2026-10-24: "delete before copy").
+    val workletResources = layout.projectDirectory.dir("src/jsMain/resources").asFile
+    val workletFiles = listOf("klang-worklet.js", "klang-worklet.js.map")
+
     val copyWorkletDev by registering(Copy::class) {
         dependsOn(":audio_jsworklet:jsBrowserDevelopmentWebpack")
+        doFirst { workletFiles.forEach { workletResources.resolve(it).delete() } }
         from(project(":audio_jsworklet").layout.buildDirectory.dir("kotlin-webpack/js/developmentExecutable"))
         into(layout.projectDirectory.dir("src/jsMain/resources"))
-        include("klang-worklet.js", "klang-worklet.js.map")
+        include(workletFiles)
     }
 
     val copyWorkletProd by registering(Copy::class) {
         dependsOn(":audio_jsworklet:jsBrowserProductionWebpack")
+        doFirst { workletFiles.forEach { workletResources.resolve(it).delete() } }
         from(project(":audio_jsworklet").layout.buildDirectory.dir("kotlin-webpack/js/productionExecutable"))
         into(layout.projectDirectory.dir("src/jsMain/resources"))
-        include("klang-worklet.js", "klang-worklet.js.map")
+        include(workletFiles)
     }
 
     // Force the worklet to be built and copied before resources are processed

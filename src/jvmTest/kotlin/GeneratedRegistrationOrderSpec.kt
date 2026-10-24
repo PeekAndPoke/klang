@@ -24,7 +24,7 @@ import java.io.File
  */
 class GeneratedRegistrationOrderSpec : StringSpec({
 
-    val generatedDir = "build/generated/ksp/metadata/commonMain/kotlin/io/peekandpoke/klang/script/generated"
+    val generatedDir = "generated/ksp/metadata/commonMain/kotlin/io/peekandpoke/klang/script/generated"
     val registrationAnnotation = Regex("""@KlangScript\.(Function|Object|TypeExtensions|Constant)\b""")
     val chunkCall = Regex("""^\s*register(\w+?)Chunk(\d+)\(\)\s*$""")
 
@@ -39,7 +39,9 @@ class GeneratedRegistrationOrderSpec : StringSpec({
             .joinToString("") { part -> part.filter { it.isLetterOrDigit() }.replaceFirstChar { it.uppercase() } }
 
     fun checkModule(module: String, library: String, sourceDir: String) {
-        val entryPoint = File("$module/$generatedDir/Generated${library}Registration.kt")
+        // The module's build directory as Gradle passes it (user claude builds into .build-claude/, MC-00031)
+        val buildDir = System.getProperty("klang.buildDir.$module") ?: "$module/build"
+        val entryPoint = File("$buildDir/$generatedDir/Generated${library}Registration.kt")
 
         withClue("the generated entry point exists: ${entryPoint.path}") { entryPoint.isFile shouldBe true }
 

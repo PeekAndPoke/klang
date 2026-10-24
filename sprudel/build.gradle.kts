@@ -82,8 +82,14 @@ tasks {
 
         workingDir = file("jsbridge")
 
+        // The bundle lands in the source tree both users share; the old one goes first, whoever made it, so esbuild
+        // writes a file of its own (MC-00031, "delete before copy")
+        val bundle = file("src/jvmTest/resources/strudel-bundle.mjs")
+
         // Ensure the script is executable (useful for CI/Linux environments)
         doFirst {
+            bundle.delete()
+
             val script = file("jsbridge/build.sh")
             if (script.exists()) {
                 script.setExecutable(true)
@@ -159,7 +165,8 @@ tasks {
 }
 
 kotlin.sourceSets.commonMain {
-    kotlin.srcDir("build/generated/ksp/metadata/commonMain/kotlin")
+    // The build directory, not a fixed "build/": user claude builds into .build-claude/ (MC-00031)
+    kotlin.srcDir(layout.buildDirectory.dir("generated/ksp/metadata/commonMain/kotlin"))
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().configureEach {
