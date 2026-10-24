@@ -124,7 +124,7 @@ let cabStock = x => x.lowpass(5000).lowpass(5000)
 let cab4x12 = x => x
   .eq(e => e
     .band(freq =  120, q = 0.7, db =  1.40)        // thump: closed-back box resonance
-    .band(freq =  380, q = 0.5, db =  3.80)        // roar:  low mids
+    .band(freq =  380, q = 0.5, db =  3.90)        // roar:  low mids
     .band(freq = 2700, q = 1.8, db =  4.40)        // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
@@ -538,9 +538,9 @@ export song = stack(
     // because the snare's crack overshoots between the samples: true peak -1.2 dBFS, and the house limiter stays idle.
   master(Katalyst(k => k
     .reverb(0.10, 7, 7500)
-    .gain(4.8)
+    .gain(4.5)
     .bands(b => b.cut(150)
-      .band(mid => mid.distort(0.25, "soft", 4).mul(0.70)).cut(5000)
+      .band(mid => mid.distort(0.15, "soft", 4).mul(0.90)).cut(5000)
     ) // the glue on the mids only: the kick and the hats stay clean
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)
   ))
