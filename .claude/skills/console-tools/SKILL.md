@@ -357,8 +357,8 @@ dash scan, stack-merge's exit code by exception type, test-digest's foreign-suit
   ticket sweep 3c9a191d would have been blocked by old dashes on the lines it rewrote. UI strings in Kotlin
   (not KDoc) are not checked by the hook; `review-pack --dash-scan` still covers them in a review round.
 - **Per-user build outputs** (MC-00031, 2026-10-24, from missioncontrol b24e8c6): test-digest and docs-lint
-  are the blueprint's, with one deviation in test-digest: `gradle_property()` never reads `~/.gradle/gradle.properties`
-  (agents do not read that file, maintainer 2026-10-24, also for user claude's own); `build_root()` takes buildRoot from
+  are the blueprint's (test-digest as of missioncontrol e5709ac): `gradle_property()` never reads `~/.gradle/gradle.properties`
+  (no credentials where agents could see them, maintainer 2026-10-24, for all projects); `build_root()` takes buildRoot from
   `ORG_GRADLE_PROJECT_buildRoot` or the project's `gradle.properties`, else uses `.build-<user>` when it exists and
   belongs to the user running it. `full-check.sh` logs to `tmp/full-check/`, not `build/`.
 
@@ -373,5 +373,6 @@ dash scan, stack-merge's exit code by exception type, test-digest's foreign-suit
 <!-- Kept by the nexus, newest first. Tells a repo what an update brought. -->
 - 2026-10-24: test-digest follows the per-user build root, docs-lint skips `.build-claude/` and `.gradle-claude/` (MC-00031).
 - 2026-10-24: new tool `hooks` (MC-00018): pre-commit and commit-msg hooks that block dashes, control bytes and a missing agent trailer on added lines; `hooks.json` for switches and the dash skip list.
+- 2026-10-24: the test-digest change that skips `~/.gradle/gradle.properties` is now the blueprint's (missioncontrol e5709ac), no longer a klang deviation.
 - 2026-10-20: new tool `ticket` (ticket numbers for tasks and plans; see project-layout).
 - 2026-10-19: back-channel sections added; masters now live in the nexus (missioncontrol/blueprints/tools/).
