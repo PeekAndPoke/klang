@@ -95,7 +95,7 @@ never here (maintainer, 2026-10-23).
 
 | Experiment | Until | Ticket |
 |------------|-------|--------|
-| Tool look-out: note each case where a tool (IntelliJ Optimize Imports, Auto-Format, Rename, Move) would have beaten a hand edit, and where Auto-Format differs from `/code-style`. IntelliJ stays read-only except Optimize Imports (allowed 2026-10-23); every other write action waits for the meeting. | 2026-10-30 | KLANG-00329 |
+| Tool look-out: note each case where a tool (IntelliJ Optimize Imports, Auto-Format, Rename, Move) would have beaten a hand edit, and where Auto-Format differs from `/code-style`. IntelliJ stays read-only except Optimize Imports (allowed 2026-10-23) and Save All, which writes its result to disk (2026-10-24); every other write action waits for the meeting. | 2026-10-30 | KLANG-00329 |
 
 ## Agents and skills
 

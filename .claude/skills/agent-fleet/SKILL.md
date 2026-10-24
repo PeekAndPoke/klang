@@ -181,8 +181,12 @@ help (a rename refactoring, say), bring it to the maintainer.
 **One write action is allowed: Optimize Imports** (maintainer, 2026-10-23, relayed by Mission Control), through
 `invoke_ide_action` with `actionId: "OptimizeImports"` and the files in `filePaths`. The safeguards: klang's absolute
 `projectPath` on every call, checked with `get_repositories` first; afterwards `git diff` shows only import lines;
-the main checkout only; only where the maintainer expects it. The permission allows every IDE action, so keeping to
-this one is on us. Until the meeting of 2026-10-30 each use gets a row in KLANG-00329.
+the main checkout only; only where the maintainer expects it. Since 2026-10-24 the IDE action gate decides
+(`.claude/hooks/idea-actions.allow`, MC-00031): `OptimizeImports` and `SaveAll` run without a prompt, any other action
+asks the maintainer. Optimize Imports changes only IntelliJ's buffers: `SaveAll` writes them to disk, and it also
+saves the maintainer's own unsaved edits, so say so before a batch. Check the import set per file, not only the
+order: it can ADD imports of an object's own members (Cylinder.kt, Ignitors.kt, 2026-10-24). Until the meeting of
+2026-10-30 each use gets a row in KLANG-00329.
 
 - **The index is the open checkout**, the maintainer's working copy with its unsaved edits, never a worktree. A table
   built from a query says which commit it reflects.
@@ -221,6 +225,8 @@ this one is on us. Until the meeting of 2026-10-30 each use gets a row in KLANG-
   expensive than a right answer from Opus.
 
 ## Changelog
+
+- **2026-10-24**: the IDE action gate allows `OptimizeImports` and `SaveAll`; the two Optimize Imports traps noted.
 
 - **2026-10-24**: review rounds 3 and later run on Opus 5.5 at max effort, no Fable (maintainer); `reviewer-xhigh` is now
   `reviewer-max`. The Opus plus Fable experiment (KLANG-00328) is suspended.
