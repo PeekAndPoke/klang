@@ -49,6 +49,7 @@ IntelliJ MCP is".
 
 | date | what | tool | what it would have saved |
 |---|---|---|---|
+| 2026-10-24 | `klangscript-ui/src/jsMain/kotlin/codemirror/EditPlacesExtension.kt` (imports already clean) | `get_repositories`: one Git root at the project root; main checkout | gate test for MC-00031: ran through the IDE action gate without a prompt; `git diff` empty |
 | 2026-10-23 | The five `io.ktor` star imports in `audio_fe` (`AssetLoader.kt`, `DiskUrlCache.kt`) written out by hand at the maintainer's word: the used names found by reading each file, and one resolution checked by hand (`Charsets`: a star import outranks Kotlin's default `kotlin.text.Charsets`, so the explicit import is ktor's, the same as before) | IntelliJ Optimize Imports, once the emptied star list is loaded | reading two files and the resolution question, a few minutes; the compile check on JVM and JS is needed either way |
 
 ## Uses of Optimize Imports
@@ -63,3 +64,4 @@ incident).
 
 - 2026-10-23: created.
 - 2026-10-23: Optimize Imports allowed as the first IntelliJ write action (maintainer, via Mission Control).
+- 2026-10-24: the IDE action gate (MC-00031, baseline revision 5): `.claude/hooks/idea-actions.allow` lists only OptimizeImports; first use under the gate logged.
