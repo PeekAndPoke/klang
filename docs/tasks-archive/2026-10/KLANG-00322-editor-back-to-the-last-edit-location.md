@@ -1,6 +1,6 @@
 # KLANG-00322: Editor: back to the last edit location
 
-> **Status (2026-10-23): IN PROGRESS.** Hand test passed; the maintainer's addition (any cursor move ends the walk) built and reviewed; waits for its hand test.
+> **Status (2026-10-25): DONE.** Hand test passed; the maintainer's addition (any cursor move ends the walk) built and reviewed; waits for its hand test.
 
 ## Why this exists
 
@@ -190,3 +190,5 @@ cursor goes to the youngest edit.
 - 2026-10-21: IN PROGRESS. Built and reviewed (round 2 clean, the MINOR batches applied, 25 mutants KILLED); waits for the maintainer's hand test.
 - 2026-10-23: hand test passed; addition built: any cursor move ends the walk (maintainer). Review round 1 clean, 3 mutants KILLED. Waits for the hand test of the addition.
 - 2026-10-25: hand test of the addition passed (maintainer: "It works nicely"). Addition built: the step back scrolls its place to the middle of the editor, also when it is on screen (maintainer). Review round 1 fixed (a mutate tool bug), round 2 clean; 1 mutant KILLED. Waits for the hand test of the centring.
+- 2026-10-25: DONE. Hand test of the centring passed (maintainer: "Hand test is fine! Very nice helpful tool.").
+- 2026-10-25: DONE.
