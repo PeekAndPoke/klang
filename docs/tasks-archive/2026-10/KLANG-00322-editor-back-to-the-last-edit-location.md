@@ -1,6 +1,6 @@
 # KLANG-00322: Editor: back to the last edit location
 
-> **Status (2026-10-25): DONE.** Hand test passed; the maintainer's addition (any cursor move ends the walk) built and reviewed; waits for its hand test.
+> **Status (2026-10-25): DONE.** Built, reviewed and hand-tested, with the maintainer's two additions (any cursor move ends the walk; the step back centres its place).
 
 ## Why this exists
 

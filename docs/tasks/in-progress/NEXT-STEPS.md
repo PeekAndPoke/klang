@@ -32,8 +32,8 @@ the ticket numbers. This note is the queue, in order. The note of the pause itse
 2. **Engine alloc batch 2: done 2026-10-21.** Review round 1 clean (code and audio), the MINOR batch applied, the
    mutation campaign 7 of 7 KILLED (KLANG-00290, item 45's last paragraph).
 3. **Editor features** (maintainer, 2026-10-21): KLANG-00321 (go to definition) and KLANG-00323 (bookmarks,
-   56b4d843, the look c98e0ae8; full check aa59d49e GREEN) done and hand-tested. KLANG-00322 (back to the last edit)
-   built, reviewed and checked; waits for the maintainer's hand test. Next KLANG-00325, the key map (the first
+   56b4d843, the look c98e0ae8; full check aa59d49e GREEN) done and hand-tested. KLANG-00322 (back to the last edit,
+   the step back centred 00851631) done and hand-tested 2026-10-25. Next KLANG-00325, the key map (the first
    epic, keyboard shortcuts): the PC keys decided in the interview, the Mac table
    and the design draft wait for the maintainer's look; when built, stop after the first draft of `OnKey` and the
    hints (the Play button) for the maintainer's code review. Then KLANG-00324 (the shortcuts page reads the key map).
