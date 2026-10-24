@@ -49,9 +49,7 @@ IntelliJ MCP is".
 
 | date | what | tool | what it would have saved |
 |---|---|---|---|
-| 2026-10-24 | `klangscript-ui/src/jsMain/kotlin/codemirror/EditPlacesExtension.kt` (imports already clean) | `get_repositories`: one Git root at the project root; main checkout | gate test for MC-00031: ran through the IDE action gate without a prompt; `git diff` empty |
 | 2026-10-23 | The five `io.ktor` star imports in `audio_fe` (`AssetLoader.kt`, `DiskUrlCache.kt`) written out by hand at the maintainer's word: the used names found by reading each file, and one resolution checked by hand (`Charsets`: a star import outranks Kotlin's default `kotlin.text.Charsets`, so the explicit import is ktor's, the same as before) | IntelliJ Optimize Imports, once the emptied star list is loaded | reading two files and the resolution question, a few minutes; the compile check on JVM and JS is needed either way |
-| 2026-10-24 | the one reorder to the `.editorconfig` layout (stdlib last): 101 files handed over in one call, 86 changed (ede0974a) | `get_repositories` as before; main checkout; every changed line checked to be an import line, the import set per file compared | the call timed out but its edits sat in IntelliJ's buffers until `SaveAll`; it ADDED imports of an object's own members (Cylinder.kt 1, Ignitors.kt 6) and stripped a trailing space from a code line, all three taken back by hand; about ten unused imports removed; allTests green |
 
 ## Uses of Optimize Imports
 
@@ -60,6 +58,8 @@ incident).
 
 | date | files | checks | result |
 |---|---|---|---|
+| 2026-10-24 | `klangscript-ui/src/jsMain/kotlin/codemirror/EditPlacesExtension.kt` (imports already clean) | `get_repositories`: one Git root at the project root; main checkout | gate test for MC-00031: ran through the IDE action gate without a prompt; `git diff` empty |
+| 2026-10-24 | the one reorder to the `.editorconfig` layout (stdlib last): 101 files handed over in one call, 86 changed (ede0974a) | `get_repositories` as before; main checkout; every changed line checked to be an import line, the import set per file compared | the call timed out but its edits sat in IntelliJ's buffers until `SaveAll`; it ADDED imports of an object's own members (Cylinder.kt 1, Ignitors.kt 6) and stripped a trailing space from a code line, all three taken back by hand; about ten unused imports removed; allTests green |
 
 ## History
 
