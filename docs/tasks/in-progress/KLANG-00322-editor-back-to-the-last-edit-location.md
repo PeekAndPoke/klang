@@ -189,3 +189,4 @@ cursor goes to the youngest edit.
 - 2026-10-21: review round 2 clean (no CRITICAL or MAJOR); its MINOR batch applied: the near range first, last-only ranges, the guard ends the walk, the changes mapped before a step; 15 tests green, 25 mutants KILLED. Waits for the hand test.
 - 2026-10-21: IN PROGRESS. Built and reviewed (round 2 clean, the MINOR batches applied, 25 mutants KILLED); waits for the maintainer's hand test.
 - 2026-10-23: hand test passed; addition built: any cursor move ends the walk (maintainer). Review round 1 clean, 3 mutants KILLED. Waits for the hand test of the addition.
+- 2026-10-25: hand test of the addition passed (maintainer: "It works nicely"). Addition built: the step back scrolls its place to the middle of the editor, also when it is on screen (maintainer). Review round 1 fixed (a mutate tool bug), round 2 clean; 1 mutant KILLED. Waits for the hand test of the centring.

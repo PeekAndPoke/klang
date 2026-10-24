@@ -66,6 +66,9 @@ external class EditorView {
     fun plugin(plugin: ViewPlugin<*>): Any?
 
     companion object {
+        /** An effect that scrolls [pos] into view; [options] as CodeMirror's, e.g. `y = "center"`. */
+        fun scrollIntoView(pos: Int, options: dynamic = definedExternally): StateEffect<*>
+
         val domEventHandlers: (handlers: dynamic) -> Extension
         val domEventObservers: (observers: dynamic) -> Extension
         val theme: (spec: dynamic, options: dynamic) -> Extension

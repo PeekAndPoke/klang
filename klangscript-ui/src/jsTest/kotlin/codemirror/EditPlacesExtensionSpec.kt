@@ -7,6 +7,7 @@ package io.peekandpoke.klang.ui.codemirror
 
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.codemirror.ext.EditorState
 import io.peekandpoke.klang.codemirror.ext.EditorStateConfig
@@ -22,14 +23,17 @@ import kotlinx.browser.document
 import kotlinx.browser.window
 import org.w3c.dom.events.KeyboardEvent
 import org.w3c.dom.events.KeyboardEventInit
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
+import kotlin.math.abs
 
 /**
  * The wiring of the edit places into CodeMirror (KLANG-00322), on a real editor state and view.
  *
  * [EditPlacesSpec] holds the rule. This spec holds what the rule cannot see: that every change counts, with a user
  * event or without (real editor commands among them), that a selection move does not, that each changed range reaches
- * the rule, that replacing the whole document empties the list, and that the key reaches the step back and never the
- * browser.
+ * the rule, that replacing the whole document empties the list, that the key reaches the step back and never the
+ * browser, and that the step back scrolls its place to the editor's middle.
  */
 class EditPlacesExtensionSpec : StringSpec({
 
@@ -80,7 +84,7 @@ class EditPlacesExtensionSpec : StringSpec({
     }
 
     /** Runs [block] on a view of [state] in the page, and removes the view after. */
-    fun withView(state: EditorState, block: (EditorView) -> Unit) {
+    suspend fun withView(state: EditorState, block: suspend (EditorView) -> Unit) {
         val parent = document.createElement("div")
 
         document.body?.appendChild(parent)
@@ -289,4 +293,37 @@ class EditPlacesExtensionSpec : StringSpec({
             }
         }
     }
+
+    "the step back scrolls its place to the middle of the editor" {
+        val state = newState().insertAtEndOf(line = 30, text = "a", userEvent = "input.type")
+
+        withView(state) { view ->
+            // A short editor, so line 30 of 40 lies far below the first screen
+            view.dom.style.height = "200px"
+            view.moveCursorTo(line = 1)
+            view.scrollDOM.scrollTop = 0.0
+            nextFrames()
+
+            EditPlacesExtension.goBack(view)
+            // CodeMirror scrolls when it measures, on the next animation frame
+            nextFrames()
+
+            val block = view.lineBlockAt(view.state.selection.main.head)
+            val placeMiddle = block.top + block.height / 2
+            val editorMiddle = view.scrollDOM.scrollTop + view.scrollDOM.clientHeight / 2.0
+
+            // The block's top counts from the document, a few pixels of content padding below the scroller's top;
+            // the tolerance of one line covers that, the old "nearest" scroll misses by about 85 px
+            withClue("the place's line ${block.top}..${block.bottom}, the editor's middle $editorMiddle") {
+                abs(placeMiddle - editorMiddle) shouldBeLessThan block.height
+            }
+        }
+    }
 })
+
+/** Waits [count] animation frames, so CodeMirror's measuring (and the scroll it applies) has run. */
+private suspend fun nextFrames(count: Int = 3) {
+    repeat(count) {
+        suspendCoroutine { cont -> window.requestAnimationFrame { cont.resume(Unit) } }
+    }
+}

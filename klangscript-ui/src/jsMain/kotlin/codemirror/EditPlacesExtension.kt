@@ -64,7 +64,8 @@ internal object EditPlacesExtension {
     ).unsafeCast<Extension>()
 
     /**
-     * One step back: moves the cursor to the place [EditPlaces.back] picks and scrolls it into view.
+     * One step back: moves the cursor to the place [EditPlaces.back] picks and scrolls it to the middle of the editor,
+     * so the eye finds the cursor at once (maintainer, 2026-10-25), also when the place was already on screen.
      *
      * Returns true when the cursor moved, false when there was no place to go to. Internal, not private, so the spec
      * can step without a key event.
@@ -80,8 +81,10 @@ internal object EditPlacesExtension {
             state.update(
                 jsObject {
                     this.selection = jsObject<dynamic> { this.anchor = step.target }
-                    this.scrollIntoView = true
-                    this.effects = walked.of(step.walkIndex)
+                    this.effects = arrayOf(
+                        walked.of(step.walkIndex),
+                        EditorView.scrollIntoView(step.target, jsObject<dynamic> { this.y = "center" }),
+                    )
                 }
             )
         )
