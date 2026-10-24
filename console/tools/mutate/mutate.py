@@ -81,7 +81,9 @@ class Backup:
             json.dump({"root": root, "files": self.files}, f, indent=1)
 
     def restore(self, rel):
-        shutil.copy2(os.path.join(self.dir, "files", rel), os.path.join(self.root, rel))
+        # The bytes only, not copy2: setting the timestamps needs the file's owner, and in the per-user build
+        # (MC-00031) a source file can belong to the IDE's user. The hash check below proves the content.
+        shutil.copyfile(os.path.join(self.dir, "files", rel), os.path.join(self.root, rel))
         return sha(os.path.join(self.root, rel)) == self.files[rel]
 
     def restore_all(self):
@@ -94,7 +96,8 @@ def restore_from(backup_dir):
     ok = True
     for rel, digest in m["files"].items():
         dst = os.path.join(m["root"], rel)
-        shutil.copy2(os.path.join(backup_dir, "files", rel), dst)
+        # The bytes only, as in Backup.restore: the timestamps need the file's owner.
+        shutil.copyfile(os.path.join(backup_dir, "files", rel), dst)
         same = sha(dst) == digest
         ok &= same
         print(f"{'restored' if same else 'MISMATCH'}  {rel}")
