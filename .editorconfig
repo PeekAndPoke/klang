@@ -1,0 +1,16 @@
+# Shared Kotlin code style (maintainer, 2026-10-23/24): right margin 140, no wildcard imports, IntelliJ's
+# default import layout (stdlib last). Copy to the repo root as `.editorconfig`; IntelliJ reads it, so
+# Optimize Imports and Reformat Code follow it on every machine, the agents' IDE calls included.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+
+[*.{kt,kts}]
+max_line_length = 140
+ij_kotlin_imports_layout = *,java.**,javax.**,kotlin.**,^
+ij_kotlin_name_count_to_use_star_import = 2147483647
+ij_kotlin_name_count_to_use_star_import_for_members = 2147483647
+ij_kotlin_packages_to_use_import_on_demand = unset
