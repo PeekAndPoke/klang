@@ -5,6 +5,9 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_CENTER_JITTER_SCALE
 import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_DRAW_TRIES
 import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_GAIN_JITTER
@@ -65,10 +68,6 @@ import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_SELECTION
 import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_SIDE_ATTEN
 import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_SPREAD_POWER
 import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_WARMUP
-
-import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 
 /**
  * Guard: the `IgnitorDsl.Super*` character-field defaults (in `audio_bridge`) are hand-copies of the

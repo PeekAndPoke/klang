@@ -19,9 +19,9 @@ import io.peekandpoke.klang.audio_bridge.tremolo
 import io.peekandpoke.klang.audio_bridge.vibrato
 import kotlin.math.abs
 import kotlin.math.sqrt
+import kotlin.random.Random
 import io.kotest.matchers.ints.shouldBeGreaterThan as intShouldBeGreaterThan
 import io.kotest.matchers.ints.shouldBeLessThan as intShouldBeLessThan
-import kotlin.random.Random
 
 /** This file's one seeded stream: every run draws the same, and successive builds still draw
  *  differently (as they did from the process-wide stream these calls used before). */

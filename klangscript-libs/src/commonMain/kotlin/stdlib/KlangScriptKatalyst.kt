@@ -15,9 +15,9 @@ import io.peekandpoke.klang.audio_bridge.KatalystSawBuilder
 import io.peekandpoke.klang.audio_bridge.KatalystSineBuilder
 import io.peekandpoke.klang.audio_bridge.KatalystSquareBuilder
 import io.peekandpoke.klang.audio_bridge.KatalystTriBuilder
-import io.peekandpoke.klang.audio_bridge.Kat as KotlinKat
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
+import io.peekandpoke.klang.audio_bridge.Kat as KotlinKat
 
 /**
  * `Katalyst` for KlangScript: builds [KatalystDsl] chains, for an orbit or for the output.

@@ -27,10 +27,10 @@ import io.peekandpoke.klang.audio_bridge.constants.PHASER_RATE_HZ
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_SWEEP_HZ
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_WET
 import io.peekandpoke.klang.audio_bridge.constants.REVERB_SIZE
+import io.peekandpoke.klang.audio_bridge.constants.REVERB_WET
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 import io.peekandpoke.klang.audio_bridge.constants.VOWEL_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
-import io.peekandpoke.klang.audio_bridge.constants.REVERB_WET
 
 /**
  * Declarative, data-driven **effect chain**: the effects one orbit (one cylinder) runs on its own

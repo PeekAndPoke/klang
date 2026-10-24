@@ -8,8 +8,8 @@ package io.peekandpoke.klang.audio_be
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
-import io.peekandpoke.klang.audio_be.warehouse.ResourceWarehouse
 import io.peekandpoke.klang.audio_be.master.MasterBus
+import io.peekandpoke.klang.audio_be.warehouse.ResourceWarehouse
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 
 /**

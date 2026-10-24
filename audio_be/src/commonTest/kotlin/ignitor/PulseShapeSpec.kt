@@ -5,13 +5,12 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
-import io.peekandpoke.klang.audio_bridge.constants.PULSE_MIN_FLANK_SAMPLES
-
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_bridge.constants.PULSE_MIN_FLANK_SAMPLES
 
 /**
  * Guards for the pulse config of the unified shape ([WaveVoiceState.setPulseShape] / `waveTrapezoid`)

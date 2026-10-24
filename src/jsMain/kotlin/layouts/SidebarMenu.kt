@@ -8,8 +8,8 @@ package io.peekandpoke.klang.layouts
 import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.comp.Motoer
-import io.peekandpoke.klang.pages.docs.tutorials.TutorialDifficulty
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialDepth
+import io.peekandpoke.klang.pages.docs.tutorials.TutorialDifficulty
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialsListPage
 import io.peekandpoke.klang.pages.docs.tutorials.iconFn
 import io.peekandpoke.klang.ui.feel.KlangTheme
@@ -35,6 +35,7 @@ import kotlinx.css.JustifyContent
 import kotlinx.css.Margin
 import kotlinx.css.Overflow
 import kotlinx.css.Padding
+import kotlinx.css.Position
 import kotlinx.css.alignItems
 import kotlinx.css.backgroundColor
 import kotlinx.css.border
@@ -59,11 +60,10 @@ import kotlinx.css.padding
 import kotlinx.css.paddingLeft
 import kotlinx.css.paddingTop
 import kotlinx.css.pct
-import kotlinx.css.px
 import kotlinx.css.position
-import kotlinx.css.zIndex
-import kotlinx.css.Position
+import kotlinx.css.px
 import kotlinx.css.width
+import kotlinx.css.zIndex
 import kotlinx.html.DIV
 import kotlinx.html.Tag
 import kotlinx.html.div

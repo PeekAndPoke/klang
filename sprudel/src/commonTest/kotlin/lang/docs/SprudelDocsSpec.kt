@@ -11,11 +11,11 @@ import io.kotest.matchers.collections.shouldHaveAtLeastSize
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.peekandpoke.klang.script.annotations.KlangScope
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
 import io.peekandpoke.klang.script.generated.generatedSprudelDocs
 import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.script.types.KlangProperty
-import io.peekandpoke.klang.script.annotations.KlangScope
 import io.kotest.matchers.string.shouldContain as stringShouldContain
 
 class SprudelDocsSpec : StringSpec({

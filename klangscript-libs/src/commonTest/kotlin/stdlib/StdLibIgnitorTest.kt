@@ -7,13 +7,13 @@ package io.peekandpoke.klang.script.stdlib
 
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
-import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_bridge.DistortionShapes
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.script.klangScript
+import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.peekandpoke.klang.script.runtime.NativeObjectValue
 
 /**

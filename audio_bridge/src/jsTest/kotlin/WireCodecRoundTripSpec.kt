@@ -5,25 +5,24 @@
 
 package io.peekandpoke.klang.audio_bridge
 
-import io.peekandpoke.klang.common.infra.toMap
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
-import io.peekandpoke.klang.audio_bridge.uniqueId
 import io.peekandpoke.klang.audio_bridge.wire.WIRE_SCHEMA_HASH
+import io.peekandpoke.klang.audio_bridge.wire.decode_KatalystDsl
 import io.peekandpoke.klang.audio_bridge.wire.decode_KlangCommLink_Cmd
 import io.peekandpoke.klang.audio_bridge.wire.decode_KlangCommLink_Feedback
-import io.peekandpoke.klang.audio_bridge.wire.decode_KatalystDsl
 import io.peekandpoke.klang.audio_bridge.wire.decode_SampleRequest
 import io.peekandpoke.klang.audio_bridge.wire.decode_ScheduledVoice
+import io.peekandpoke.klang.audio_bridge.wire.encode_KatalystDsl
 import io.peekandpoke.klang.audio_bridge.wire.encode_KlangCommLink_Cmd
 import io.peekandpoke.klang.audio_bridge.wire.encode_KlangCommLink_Feedback
-import io.peekandpoke.klang.audio_bridge.wire.encode_KatalystDsl
 import io.peekandpoke.klang.audio_bridge.wire.encode_SampleRequest
 import io.peekandpoke.klang.audio_bridge.wire.encode_ScheduledVoice
 import io.peekandpoke.klang.common.infra.klangMapOf
+import io.peekandpoke.klang.common.infra.toMap
 
 /**
  * Round-trip guard for the KSP-generated worklet wire codec (JS-only — the codec uses `dynamic`).

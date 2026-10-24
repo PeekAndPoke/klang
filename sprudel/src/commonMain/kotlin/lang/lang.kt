@@ -8,9 +8,9 @@
 package io.peekandpoke.klang.sprudel.lang
 
 import io.peekandpoke.klang.sprudel.SprudelPattern
-import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
-import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
+import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
 
 /**
  * Type alias for pattern-like values that can be converted to patterns.

@@ -9,9 +9,9 @@ import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.AdsrCurves
 import io.peekandpoke.klang.audio_bridge.BandFilterSlots
 import io.peekandpoke.klang.audio_bridge.DistortionShapes
-import io.peekandpoke.klang.audio_bridge.ModEnvelopeCurvesSlots
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.LfoShapes
+import io.peekandpoke.klang.audio_bridge.ModEnvelopeCurvesSlots
 import io.peekandpoke.klang.audio_bridge.PassFilterSlots
 import io.peekandpoke.klang.audio_bridge.coercePasses
 import io.peekandpoke.klang.common.infra.KlangMap

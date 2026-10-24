@@ -5,11 +5,10 @@
 
 package io.peekandpoke.klang.audio_be.voices
 
-import io.peekandpoke.klang.common.infra.klangMapOf
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.plusOrMinus
+import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.ints.shouldBeLessThan
@@ -23,6 +22,7 @@ import io.peekandpoke.klang.audio_bridge.RealtimeVoice
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import io.peekandpoke.klang.common.infra.klangMapOf
 import kotlin.math.abs
 
 /**

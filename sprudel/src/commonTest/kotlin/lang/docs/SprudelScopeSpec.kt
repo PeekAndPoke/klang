@@ -10,8 +10,8 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.script.generated.generatedSprudelDocs
 import io.peekandpoke.klang.script.annotations.KlangScope
+import io.peekandpoke.klang.script.generated.generatedSprudelDocs
 
 /**
  * Where each audio setting takes effect, asserted on the GENERATED docs rather than on the KDoc.

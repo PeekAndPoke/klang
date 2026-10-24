@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.assertions.assertSoftly
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.doubles.plusOrMinus
@@ -13,7 +14,6 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
-import io.kotest.assertions.withClue
 import kotlin.math.PI
 import kotlin.math.sin
 

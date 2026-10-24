@@ -5,9 +5,6 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
-import io.peekandpoke.klang.audio_be.utils.SAFE_MAX
-import io.peekandpoke.klang.audio_be.utils.SAFE_MIN
-
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.booleans.shouldBeFalse
@@ -16,6 +13,8 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.utils.SAFE_MAX
+import io.peekandpoke.klang.audio_be.utils.SAFE_MIN
 import kotlin.math.ln
 import kotlin.random.Random
 

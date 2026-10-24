@@ -15,9 +15,9 @@ import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
+import io.peekandpoke.klang.audio_bridge.constants.BANK_CROSSFADE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.BODY_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.BODY_WET
-import io.peekandpoke.klang.audio_bridge.constants.BANK_CROSSFADE_SECONDS
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.sin

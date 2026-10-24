@@ -5,8 +5,8 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
-import io.kotest.core.spec.style.StringSpec
 import io.kotest.assertions.withClue
+import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.AudioBuffer

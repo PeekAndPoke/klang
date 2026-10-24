@@ -17,8 +17,8 @@ import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.common.infra.KlangRingBuffer
 import kotlinx.browser.window
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.await
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.await
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext

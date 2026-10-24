@@ -14,9 +14,9 @@ import io.peekandpoke.klang.script.runtime.ExecutionContext
 import io.peekandpoke.klang.script.runtime.Interpreter
 import io.peekandpoke.klang.script.runtime.KlangScriptSyntaxError
 import io.peekandpoke.klang.script.runtime.LibraryLoader
-import io.peekandpoke.klang.script.runtime.NativeOperatorNames
 import io.peekandpoke.klang.script.runtime.NativeExtensionMethod
 import io.peekandpoke.klang.script.runtime.NativeExtensionProperty
+import io.peekandpoke.klang.script.runtime.NativeOperatorNames
 import io.peekandpoke.klang.script.runtime.RuntimeValue
 import io.peekandpoke.ultra.common.MutableTypedAttributes
 

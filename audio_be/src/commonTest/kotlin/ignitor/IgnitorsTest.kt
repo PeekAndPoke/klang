@@ -5,13 +5,6 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
-import io.peekandpoke.klang.common.infra.klangMapOf
-import io.peekandpoke.klang.common.infra.KlangMap
-import io.peekandpoke.klang.audio_bridge.constants.CRACKLE_CHAOS_MAX
-import io.peekandpoke.klang.audio_be.voices.BlockContext
-import io.peekandpoke.klang.audio_be.voices.IgniteRenderer
-import io.peekandpoke.klang.audio_be.voices.VoiceLimits
-
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeGreaterThan
@@ -21,7 +14,12 @@ import io.kotest.matchers.ints.shouldBeInRange
 import io.kotest.matchers.ints.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.voices.BlockContext
+import io.peekandpoke.klang.audio_be.voices.IgniteRenderer
+import io.peekandpoke.klang.audio_be.voices.VoiceLimits
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.common.infra.KlangMap
+import io.peekandpoke.klang.common.infra.klangMapOf
 import kotlin.math.abs
 import kotlin.random.Random
 

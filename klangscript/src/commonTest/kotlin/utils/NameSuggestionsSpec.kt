@@ -6,10 +6,10 @@
 package io.peekandpoke.klang.script.utils
 
 import io.kotest.core.spec.style.StringSpec
-import io.peekandpoke.klang.common.strings.osaDistance
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldNotContain
+import io.peekandpoke.klang.common.strings.osaDistance
 
 class NameSuggestionsSpec : StringSpec({
 

@@ -14,8 +14,6 @@ import io.peekandpoke.ultra.html.key
 import kotlinx.css.Display
 import kotlinx.css.Overflow
 import kotlinx.css.Position
-import kotlinx.css.position
-import kotlinx.css.zIndex
 import kotlinx.css.display
 import kotlinx.css.flexGrow
 import kotlinx.css.flexShrink
@@ -25,9 +23,11 @@ import kotlinx.css.minWidth
 import kotlinx.css.overflow
 import kotlinx.css.overflowY
 import kotlinx.css.pct
+import kotlinx.css.position
 import kotlinx.css.px
 import kotlinx.css.vh
 import kotlinx.css.width
+import kotlinx.css.zIndex
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div

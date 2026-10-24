@@ -5,9 +5,6 @@
 
 package io.peekandpoke.klang.sprudel
 
-import io.peekandpoke.klang.audio_bridge.ign
-import io.peekandpoke.klang.common.infra.toMap
-import io.peekandpoke.klang.common.infra.toKlangMap
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
@@ -22,13 +19,16 @@ import io.peekandpoke.klang.audio_bridge.DistortionShapes
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.LfoShapes
 import io.peekandpoke.klang.audio_bridge.classic
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.optimize
-import io.peekandpoke.klang.audio_bridge.tremolo as ignitorTremolo
+import io.peekandpoke.klang.common.infra.toKlangMap
+import io.peekandpoke.klang.common.infra.toMap
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
 import io.peekandpoke.klang.sprudel.lang.note
 import io.peekandpoke.klang.sprudel.lang.tremolo
 import kotlin.random.Random
+import io.peekandpoke.klang.audio_bridge.tremolo as ignitorTremolo
 
 /**
  * `classic()`'s DOOR PARITY, rendered (phase 3 step 5, KLANG-00237 (builtin instruments) section 9):

@@ -8,9 +8,9 @@ package io.peekandpoke.klang.pages.docs.lexikon
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.components.NoProps
-import io.peekandpoke.kraft.routing.Router.Companion.router
 import io.peekandpoke.kraft.components.PureComponent
 import io.peekandpoke.kraft.components.comp
+import io.peekandpoke.kraft.routing.Router.Companion.router
 import io.peekandpoke.kraft.semanticui.forms.UiInputField
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.common.toggle
@@ -53,7 +53,6 @@ import kotlinx.html.Tag
 import kotlinx.html.a
 import kotlinx.html.div
 import kotlinx.html.p
-import kotlinx.html.span
 import kotlinx.html.tbody
 import kotlinx.html.td
 import kotlinx.html.th

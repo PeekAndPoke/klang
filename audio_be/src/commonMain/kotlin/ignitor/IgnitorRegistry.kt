@@ -7,10 +7,10 @@ package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.classic
 import io.peekandpoke.klang.audio_bridge.optimize
 import io.peekandpoke.klang.audio_bridge.pregain
-import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.common.infra.KlangMap
 import kotlin.random.Random
 

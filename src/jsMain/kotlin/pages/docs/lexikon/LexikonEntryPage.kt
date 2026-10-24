@@ -6,11 +6,11 @@
 package io.peekandpoke.klang.pages.docs.lexikon
 
 import io.peekandpoke.klang.Nav
-import io.peekandpoke.kraft.routing.Router.Companion.router
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
+import io.peekandpoke.kraft.routing.Router.Companion.router
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.onClick

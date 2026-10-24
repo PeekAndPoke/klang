@@ -5,12 +5,11 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
-import io.peekandpoke.klang.audio_be.utils.safeDiv
-import io.peekandpoke.klang.audio_be.utils.safeOut
-
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.EnvelopeCore
 import io.peekandpoke.klang.audio_be.utils.fastExp2
+import io.peekandpoke.klang.audio_be.utils.safeDiv
+import io.peekandpoke.klang.audio_be.utils.safeOut
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.constants.FM_ENV_ATTACK_SEC

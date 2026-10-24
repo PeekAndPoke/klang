@@ -5,20 +5,20 @@
 
 package io.peekandpoke.klang.audio_be.voices
 
-import io.peekandpoke.klang.audio_bridge.ign
-import io.peekandpoke.klang.common.infra.toKlangMap
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.ignitor.toExciter
+import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
+import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createSynthVoice
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.accelerate
 import io.peekandpoke.klang.audio_bridge.classic
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.vibrato
-import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
-import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createSynthVoice
+import io.peekandpoke.klang.common.infra.toKlangMap
 import kotlin.math.sqrt
 import kotlin.random.Random
 

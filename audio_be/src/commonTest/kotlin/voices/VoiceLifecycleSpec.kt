@@ -15,8 +15,8 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.cylinders.offerAndCommit
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
-import io.peekandpoke.klang.audio_be.ignitor.ModApplyingIgnitor
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors
+import io.peekandpoke.klang.audio_be.ignitor.ModApplyingIgnitor
 import io.peekandpoke.klang.audio_be.ignitor.ParamIgnitor
 import io.peekandpoke.klang.audio_be.ignitor.fmModIgnitor
 import io.peekandpoke.klang.audio_be.ignitor.pitchEnvelopeModIgnitor

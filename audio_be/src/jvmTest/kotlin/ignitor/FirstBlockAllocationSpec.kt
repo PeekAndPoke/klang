@@ -7,9 +7,9 @@ package io.peekandpoke.klang.audio_be.ignitor
 
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.shouldBe
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
+import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import java.lang.management.ManagementFactory

@@ -18,10 +18,10 @@ import io.peekandpoke.klang.audio_be.ignitor.FreqIgnitor
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
+import io.peekandpoke.klang.audio_be.ignitor.bandpass
 import io.peekandpoke.klang.audio_be.ignitor.highpass
 import io.peekandpoke.klang.audio_be.ignitor.lowpass
 import io.peekandpoke.klang.audio_be.ignitor.notch
-import io.peekandpoke.klang.audio_be.ignitor.bandpass
 import io.peekandpoke.klang.audio_be.ignitor.plus
 import io.peekandpoke.klang.audio_be.ignitor.times
 import kotlin.math.PI

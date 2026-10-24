@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.audio_be.cylinders
 
-import io.peekandpoke.klang.common.infra.KlangMap
 import io.peekandpoke.klang.audio_be.ChainSwap
 import io.peekandpoke.klang.audio_be.Crossfade
 import io.peekandpoke.klang.audio_be.StereoBuffer
@@ -13,11 +12,12 @@ import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChain
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChainBuilder
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystContext
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
+import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
-import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
+import io.peekandpoke.klang.common.infra.KlangMap
 
 /**
  * Mixing channel / effect bus: a cylinder (Strudel and sprudel's `orbit()` call it an orbit).

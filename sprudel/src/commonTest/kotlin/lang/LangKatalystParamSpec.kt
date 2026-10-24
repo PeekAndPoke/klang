@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
-import io.peekandpoke.klang.common.infra.klangMapOf
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
@@ -33,6 +32,7 @@ import io.peekandpoke.klang.audio_bridge.constants.PHASER_SWEEP_HZ
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_WET
 import io.peekandpoke.klang.audio_bridge.constants.VOWEL_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
+import io.peekandpoke.klang.common.infra.klangMapOf
 import io.peekandpoke.klang.sprudel.ParamBag
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
@@ -40,8 +40,8 @@ import io.peekandpoke.klang.sprudel.createSprudelVoiceData
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import io.peekandpoke.klang.sprudel.paramBagOf
 import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
-import io.peekandpoke.klang.sprudel.putKatalystParam
 import io.peekandpoke.klang.sprudel.putIgnitorParam
+import io.peekandpoke.klang.sprudel.putKatalystParam
 
 /**
  * The orbit chain's param state on the pattern side (Katalyst step 5a): the `.katp` door, the bus

@@ -5,15 +5,15 @@
 
 package io.peekandpoke.klang.audio_be.voices
 
-import io.peekandpoke.klang.common.infra.toKlangMap
-import io.peekandpoke.klang.common.infra.toMap
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.AdsrCurves
 import io.peekandpoke.klang.audio_bridge.DistortionShapes
-import io.peekandpoke.klang.audio_bridge.ModEnvelopeCurvesSlots
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.LfoShapes
+import io.peekandpoke.klang.audio_bridge.ModEnvelopeCurvesSlots
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.common.infra.toKlangMap
+import io.peekandpoke.klang.common.infra.toMap
 
 /**
  * TEST ONLY. The voice-door settings a spec states in typed form: the shape `VoiceData` carried as typed fields until

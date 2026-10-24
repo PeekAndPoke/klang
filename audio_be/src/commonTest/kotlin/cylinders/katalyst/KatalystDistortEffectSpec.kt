@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
-import io.peekandpoke.klang.common.infra.klangMapOf
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
@@ -17,8 +16,8 @@ import io.peekandpoke.klang.audio_be.DistortionCore
 import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.distortionShapeAt
-import io.peekandpoke.klang.audio_be.roundTrip
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
+import io.peekandpoke.klang.audio_be.roundTrip
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.DistortionShapes
@@ -26,6 +25,7 @@ import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
+import io.peekandpoke.klang.common.infra.klangMapOf
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.log10

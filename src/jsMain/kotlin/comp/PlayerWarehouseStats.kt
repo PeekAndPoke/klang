@@ -15,12 +15,12 @@ import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.common.toFixed
 import io.peekandpoke.ultra.html.css
-import io.peekandpoke.ultra.semanticui.noui
 import io.peekandpoke.ultra.streams.ops.ticker
 import kotlinx.css.Color
 import kotlinx.css.Display
 import kotlinx.css.FontWeight
 import kotlinx.css.JustifyContent
+import kotlinx.css.Padding
 import kotlinx.css.TextAlign
 import kotlinx.css.WhiteSpace
 import kotlinx.css.backgroundColor
@@ -36,7 +36,6 @@ import kotlinx.css.lineHeight
 import kotlinx.css.marginLeft
 import kotlinx.css.marginRight
 import kotlinx.css.opacity
-import kotlinx.css.Padding
 import kotlinx.css.padding
 import kotlinx.css.properties.LineHeight
 import kotlinx.css.rem

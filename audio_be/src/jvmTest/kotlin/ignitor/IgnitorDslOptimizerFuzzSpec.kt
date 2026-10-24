@@ -10,12 +10,12 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.OPTIMIZER_PARITY
+import io.peekandpoke.klang.audio_bridge.childNodes
 import io.peekandpoke.klang.audio_bridge.coercePasses
 import io.peekandpoke.klang.audio_bridge.ign
-import io.peekandpoke.klang.audio_bridge.shape
-import io.peekandpoke.klang.audio_bridge.childNodes
-import io.peekandpoke.klang.audio_bridge.OPTIMIZER_PARITY
 import io.peekandpoke.klang.audio_bridge.optimize
+import io.peekandpoke.klang.audio_bridge.shape
 import kotlin.math.abs
 import kotlin.random.Random
 

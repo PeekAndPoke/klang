@@ -5,6 +5,16 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.kotest.assertions.withClue
+import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.doubles.shouldBeGreaterThan
+import io.kotest.matchers.doubles.shouldBeLessThan
+import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
+import io.kotest.matchers.ints.shouldBeLessThanOrEqual
+import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.utils.TWO_PI
 import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_CENTER_JITTER_SCALE
 import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_DRAW_TRIES
 import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_GAIN_JITTER
@@ -35,17 +45,6 @@ import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_GAIN_JITTER
 import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_K_MAX
 import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_K_MIN
 import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_SIDE_ATTEN
-
-import io.kotest.assertions.withClue
-import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.booleans.shouldBeTrue
-import io.kotest.matchers.doubles.shouldBeGreaterThan
-import io.kotest.matchers.doubles.shouldBeLessThan
-import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
-import io.kotest.matchers.ints.shouldBeLessThanOrEqual
-import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.utils.TWO_PI
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin

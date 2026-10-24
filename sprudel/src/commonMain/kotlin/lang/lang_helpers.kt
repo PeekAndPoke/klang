@@ -7,10 +7,10 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
-import io.peekandpoke.klang.sprudel.SprudelDiagnostics
 import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.common.SourceLocationChain
 import io.peekandpoke.klang.script.ast.CallInfo
+import io.peekandpoke.klang.sprudel.SprudelDiagnostics
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import io.peekandpoke.klang.sprudel.SprudelVoiceData

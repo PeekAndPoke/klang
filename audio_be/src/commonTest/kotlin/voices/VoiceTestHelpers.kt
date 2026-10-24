@@ -5,9 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.voices
 
-import io.peekandpoke.klang.common.infra.KlangMap
 import io.peekandpoke.klang.audio_be.AudioBuffer
-
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
@@ -17,6 +15,7 @@ import io.peekandpoke.klang.audio_be.ignitor.adsr
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
+import io.peekandpoke.klang.common.infra.KlangMap
 import kotlin.math.PI
 import kotlin.math.sin
 import kotlin.random.Random

@@ -26,11 +26,11 @@ import io.peekandpoke.klang.script.ast.IfExpression
 import io.peekandpoke.klang.script.ast.IndexAccess
 import io.peekandpoke.klang.script.ast.LetDeclaration
 import io.peekandpoke.klang.script.ast.MemberAccess
+import io.peekandpoke.klang.script.ast.NumberLiteral
 import io.peekandpoke.klang.script.ast.ReturnStatement
 import io.peekandpoke.klang.script.ast.TemplateLiteral
 import io.peekandpoke.klang.script.ast.TemplatePart
 import io.peekandpoke.klang.script.ast.TernaryExpression
-import io.peekandpoke.klang.script.ast.NumberLiteral
 import io.peekandpoke.klang.script.ast.UnaryOperation
 import io.peekandpoke.klang.script.ast.WhileStatement
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry

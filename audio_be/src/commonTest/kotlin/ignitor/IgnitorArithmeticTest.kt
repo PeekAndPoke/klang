@@ -5,9 +5,6 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
-import io.peekandpoke.klang.audio_be.utils.SAFE_MAX
-import io.peekandpoke.klang.audio_be.utils.SAFE_MIN
-
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeGreaterThan
@@ -15,11 +12,12 @@ import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.doubles.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.utils.SAFE_MAX
 import kotlin.math.abs
 import kotlin.math.ln
+import kotlin.random.Random
 import kotlin.math.exp as kexp
 import kotlin.math.tanh as ktanh
-import kotlin.random.Random
 
 /** This file's one seeded stream: every run draws the same, and successive builds still draw
  *  differently (as they did from the process-wide stream these calls used before). */

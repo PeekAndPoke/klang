@@ -12,12 +12,12 @@ import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.ignitor.ConstantIgnitor
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
-import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
@@ -26,7 +26,6 @@ import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.common.infra.klangMapOf
 import io.peekandpoke.klang.common.math.PerlinNoise
 import kotlin.math.PI
-import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.sin
 import kotlin.random.Random

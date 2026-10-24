@@ -7,7 +7,6 @@
 
 package io.peekandpoke.klang.script.stdlib
 
-import io.peekandpoke.klang.audio_bridge.Ign as KotlinIgn
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.OscImpulseBuilder
 import io.peekandpoke.klang.audio_bridge.OscPluckBuilder
@@ -28,6 +27,7 @@ import io.peekandpoke.klang.audio_bridge.OscZawtoothBuilder
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
+import io.peekandpoke.klang.audio_bridge.Ign as KotlinIgn
 
 /**
  * `Ignitor` for KlangScript (short name `Ign`): builds IgnitorDsl signal graphs, the per-voice instrument.

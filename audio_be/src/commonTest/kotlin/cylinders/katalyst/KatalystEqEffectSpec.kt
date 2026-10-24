@@ -5,13 +5,11 @@
 
 package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
-import io.peekandpoke.klang.common.infra.klangMapOf
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.plusOrMinus
+import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
-import io.kotest.matchers.ints.shouldBeGreaterThan as intShouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.StereoBuffer
@@ -32,11 +30,13 @@ import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.constants.BANK_CROSSFADE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
+import io.peekandpoke.klang.common.infra.klangMapOf
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.random.Random
+import io.kotest.matchers.ints.shouldBeGreaterThan as intShouldBeGreaterThan
 
 /** This file's one seeded stream: every run draws the same, and successive builds still draw
  *  differently (as they did from the process-wide stream these calls used before). */

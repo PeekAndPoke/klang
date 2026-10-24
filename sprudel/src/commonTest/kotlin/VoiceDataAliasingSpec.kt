@@ -9,9 +9,9 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveAtLeastSize
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.lang.adsr
 import io.peekandpoke.klang.sprudel.lang.accelerate
 import io.peekandpoke.klang.sprudel.lang.add
+import io.peekandpoke.klang.sprudel.lang.adsr
 import io.peekandpoke.klang.sprudel.lang.adsrOff
 import io.peekandpoke.klang.sprudel.lang.begin
 import io.peekandpoke.klang.sprudel.lang.body
@@ -21,13 +21,13 @@ import io.peekandpoke.klang.sprudel.lang.echo
 import io.peekandpoke.klang.sprudel.lang.fm
 import io.peekandpoke.klang.sprudel.lang.gain
 import io.peekandpoke.klang.sprudel.lang.hpf
+import io.peekandpoke.klang.sprudel.lang.ignp
 import io.peekandpoke.klang.sprudel.lang.jux
 import io.peekandpoke.klang.sprudel.lang.loop
 import io.peekandpoke.klang.sprudel.lang.lpf
 import io.peekandpoke.klang.sprudel.lang.merge
 import io.peekandpoke.klang.sprudel.lang.notch
 import io.peekandpoke.klang.sprudel.lang.note
-import io.peekandpoke.klang.sprudel.lang.ignp
 import io.peekandpoke.klang.sprudel.lang.penv
 import io.peekandpoke.klang.sprudel.lang.phaser
 import io.peekandpoke.klang.sprudel.lang.ply

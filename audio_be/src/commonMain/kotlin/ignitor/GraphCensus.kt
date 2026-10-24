@@ -5,16 +5,16 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
-import io.peekandpoke.klang.common.infra.KlangMap
 import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.childNodes
-import io.peekandpoke.klang.audio_bridge.hasClassicRange
 import io.peekandpoke.klang.audio_bridge.coercePasses
 import io.peekandpoke.klang.audio_bridge.coerceSinePartials
 import io.peekandpoke.klang.audio_bridge.coerceUnisonVoices
 import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RANGE_FROM
 import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RANGE_TO
+import io.peekandpoke.klang.audio_bridge.hasClassicRange
+import io.peekandpoke.klang.common.infra.KlangMap
 import kotlin.random.Random
 
 /**
