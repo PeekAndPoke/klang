@@ -1,6 +1,6 @@
 # KLANG-00328: experiment: top-rung review rounds run one Opus and one Fable reviewer
 
-> **Status (2026-10-23): IN PROGRESS.** Experiment until the meeting of 2026-10-30 (maintainer, 2026-10-23, via Mission Control); the meeting deletes it or turns it into a rule.
+> **Status (2026-10-24): SUSPENDED** by the maintainer for the token budget: "No more Fable reviewers, instead we will use Opus reviewers on max effort", then "Opus max on the highest review tier. The two lower ones stay as they are" (both via Mission Control). The top rung is now one Opus 5.5 at max (`reviewer-max`, `/review-loop`). The one sample below went into MC-00026 for the meeting of 2026-10-30, which closes this ticket.
 
 ## Why this exists
 
@@ -30,3 +30,5 @@ Background: the Fable experiment (MC-00026), klang's sample in
 ## History
 
 - 2026-10-23: created.
+- 2026-10-24: suspended (maintainer); the CLAUDE.md experiment row removed, `reviewer-xhigh` renamed `reviewer-max` and
+  pinned to Opus at max. No live top-rung round ran during the experiment; the replay is the only sample.

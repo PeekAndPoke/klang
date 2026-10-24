@@ -95,7 +95,6 @@ never here (maintainer, 2026-10-23).
 
 | Experiment | Until | Ticket |
 |------------|-------|--------|
-| Every review round on the top rung (round 3 and later) runs one Opus 5.5 max and one Fable reviewer, the same brief, blind to each other; the findings record who found each (both, Opus only, Fable only) and each reviewer's tokens. No repeat runs. | 2026-10-30 | KLANG-00328 |
 | Tool look-out: note each case where a tool (IntelliJ Optimize Imports, Auto-Format, Rename, Move) would have beaten a hand edit, and where Auto-Format differs from `/code-style`. IntelliJ stays read-only except Optimize Imports (allowed 2026-10-23); every other write action waits for the meeting. | 2026-10-30 | KLANG-00329 |
 
 ## Agents and skills

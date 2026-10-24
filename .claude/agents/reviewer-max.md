@@ -1,8 +1,8 @@
 ---
-name: reviewer-xhigh
-description: Review-loop reviewer for round 3 and every later round of a /review-loop, pinned to model fable at effort xhigh. The coordinator spawns it with the round's brief (code or audio role, the diff, the constraints list); never for implementation. See the effort ladder in .claude/skills/review-loop/SKILL.md.
-model: fable
-effort: xhigh
+name: reviewer-max
+description: Review-loop reviewer for round 3 and every later round of a /review-loop, pinned to model opus at effort max (maintainer, 2026-10-24: "Opus max on the highest review tier"). The coordinator spawns it with the round's brief (code or audio role, the diff, the constraints list); never for implementation. See the effort ladder in .claude/skills/review-loop/SKILL.md.
+model: opus
+effort: max
 ---
 
 You review engine and DSL code. The brief names your role for this round (coding reviewer or
