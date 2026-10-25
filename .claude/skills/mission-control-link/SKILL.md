@@ -114,7 +114,7 @@ browser tests. Ask it before picking one, and report back what you assigned.
 
 <!-- Local deviations, if any. -->
 klang's copy, taken 2026-10-20, updated 2026-10-21 (missioncontrol 83a92e8). klang's session name is
-`Klang-Main-Dev` (the coordinator). Its Karma range is 10031 to 10060, of which 10031 to 10046 are taken (one
+`Klang-Main-Dev` (the coordinator). Its Karma range is 10031 to 10060, of which 10031 to 10047 are taken (one
 port per module, `<module>/karma.config.d/karma-port.js`). Reports use section 1's short form; the dashboard
 reads the tickets with `ticket.py list --json`.
 

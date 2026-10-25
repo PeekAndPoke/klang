@@ -45,7 +45,7 @@ LOCK="env KLANG_LOCK_TIMEOUT=7200 console/with-build-lock.sh"
   copies run the test command in the root they scan.
 - **Kotlin/JS browser runs could cross between projects and modules** (2026-10-19): both projects'
   Karma servers took the same port and one ChromeHeadless reported into the other's run. Fixed the same
-  day with a fixed Karma port per module (`<module>/karma.config.d/karma-port.js`, klang 10031 to 10046).
+  day with a fixed Karma port per module (`<module>/karma.config.d/karma-port.js`, klang 10031 to 10047).
   Keep passing `--own-package io.peekandpoke.klang` wherever test-digest reads JS results, as a safety
   net: a fresh suite outside it fails the digest (exit 2; the `Kotest` executor suite has no package and
   is not judged).

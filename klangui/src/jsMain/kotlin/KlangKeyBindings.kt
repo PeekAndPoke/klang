@@ -5,15 +5,26 @@
 
 package io.peekandpoke.klang.ui
 
+import io.peekandpoke.klang.workshop.keys.KeyAction
+import io.peekandpoke.klang.workshop.keys.KeyBindings
 import org.w3c.dom.events.KeyboardEvent
 
 /**
- * Centralised keyboard-shortcut definitions for the Klang UI.
+ * Klang's keys (KLANG-00325): the bag of actions the app defines with the key manager, with their default keys from
+ * the PC preset decided in the key map interview (2026-10-21). The keys a user changes are kept by the app.
  *
- * Use these helpers wherever keyboard shortcuts are handled so that all
- * tools (the mini-notation editor, …) react to the same keys.
+ * [isUndo] and [isRedo] still name their keys themselves, for the mini-notation editor's own listener; they move onto
+ * the key manager with the code editor (KLANG-00325 step 3).
  */
-object KlangKeyBindings {
+object KlangKeyBindings : KeyBindings {
+
+    /** Starts the song, or updates it with the edited code while it plays: the song page's Play / Update button. */
+    val PlayOrUpdate = KeyAction(id = "klang.play-or-update", title = "Play / Update", keys = listOf("Mod-Shift-Enter"))
+
+    /** Stops the song: the song page's Stop button. */
+    val Stop = KeyAction(id = "klang.stop", title = "Stop", keys = listOf("Mod-Shift-."))
+
+    override val actions: List<KeyAction> = listOf(PlayOrUpdate, Stop)
 
     /** Ctrl+Z (or Cmd+Z on Mac) — undo. */
     fun isUndo(e: KeyboardEvent): Boolean =

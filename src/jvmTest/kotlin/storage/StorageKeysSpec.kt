@@ -55,4 +55,8 @@ class StorageKeysSpec : StringSpec({
     "the master volume's key stays as it is" {
         StorageKeys.MASTER_VOLUME shouldBe "klang-master-volume"
     }
+
+    "the keymap's key stays as it is" {
+        StorageKeys.KEYMAP shouldBe "klang-keymap"
+    }
 })

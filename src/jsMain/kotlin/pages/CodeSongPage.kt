@@ -14,11 +14,13 @@ import io.peekandpoke.klang.fs
 import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
 import io.peekandpoke.klang.storage.SongStorage
+import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.codemirror.BookmarkOptions
 import io.peekandpoke.klang.ui.codemirror.Bookmarks
 import io.peekandpoke.klang.ui.comp.YesNoModal
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.klang.version
+import io.peekandpoke.klang.workshop.keys.OnKey
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.ComponentRef
 import io.peekandpoke.kraft.components.Ctx
@@ -201,7 +203,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     /** Asks whether to move a bookmark, in Klang's yes or no modal, which answers exactly once. */
     private fun askToMoveBookmark(move: BookmarkOptions.Move, answer: (yes: Boolean) -> Unit) {
-        modals.show<Boolean> { handle ->
+        modals.show { handle ->
             YesNoModal(
                 handle = handle,
                 headline = "Move bookmark ${move.digit}?",
@@ -269,6 +271,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                         noui.item {
                             if (!state.isPlaying) {
                                 ui.circular.white.button {
+                                    OnKey(KlangKeyBindings.PlayOrUpdate) { onPlay() }
                                     onClick { onPlay() }
                                     if (state.isPlayerFailed) {
                                         // The engine did not start. Clicking retries: Player.ensure()
@@ -291,6 +294,11 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                             } else {
                                 ui.circular.white
                                     .givenNot(state.isCodeModified) { disabled }.button {
+                                        OnKey(
+                                            action = KlangKeyBindings.PlayOrUpdate,
+                                            enabled = state.isCodeModified,
+                                            showHint = state.isCodeModified,
+                                        ) { onPlay() }
                                         onClick { onPlay() }
                                         if (state.isCodeModified) {
                                             icon.redo_alternate {
@@ -309,6 +317,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                             ui.circular.white
                                 .givenNot(state.isPlaying) { disabled }
                                 .given(state.isPlaying) { white }.icon.button {
+                                    OnKey(KlangKeyBindings.Stop, enabled = state.isPlaying, showHint = state.isPlaying) { ctrl.stop() }
                                     onClick { ctrl.stop() }
                                     title = "Stop playback"
                                     icon.black.stop()
@@ -474,6 +483,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
             pauseHighlightsWhen = { currentModals.isNotEmpty() },
             showMinimap = true,
             bookmarks = bookmarks,
+            showKeysOverview = true,
         ).track(codeEditorRef)
     }
 }

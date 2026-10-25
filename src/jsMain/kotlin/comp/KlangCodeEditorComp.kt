@@ -37,8 +37,10 @@ import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.html.onContextMenu
 import kotlinx.css.Padding
+import kotlinx.css.Position
 import kotlinx.css.minWidth
 import kotlinx.css.padding
+import kotlinx.css.position
 import kotlinx.css.px
 import kotlinx.css.rem
 import kotlinx.html.FlowContent
@@ -66,6 +68,7 @@ fun Tag.KlangCodeEditorComp(
     currentSource: String? = null,
     showMinimap: Boolean = false,
     bookmarks: BookmarkOptions? = null,
+    showKeysOverview: Boolean = false,
 ): ComponentRef<KlangCodeEditorComp> = comp(
     KlangCodeEditorComp.Props(
         ctrl = ctrl,
@@ -77,6 +80,7 @@ fun Tag.KlangCodeEditorComp(
         currentSource = currentSource,
         showMinimap = showMinimap,
         bookmarks = bookmarks,
+        showKeysOverview = showKeysOverview,
     )
 ) {
     KlangCodeEditorComp(it)
@@ -106,11 +110,14 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
         val showMinimap: Boolean,
         /** The numbered bookmarks and the host that keeps them (KLANG-00323); null leaves the editor without. */
         val bookmarks: BookmarkOptions?,
+        /** Shows the editor's keys in its top-right corner while the key hints show (KLANG-00325). */
+        val showKeysOverview: Boolean,
     )
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
     private val editorRef = ComponentRef.Tracker<KlangScriptEditorComp>()
+
 
     private val highlightBuffer = CodeMirrorHighlightBuffer(
         maxHighlightsPerEvent = props.maxHighlightsPerEvent,
@@ -303,6 +310,9 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
 
     override fun VDom.render() {
         div {
+            // The anchor of the keys overview, which sits in the editor's corner
+            css { position = Position.relative }
+
             KlangScriptEditorComp(
                 code = state.code,
                 onCodeChanged = { newCode -> props.ctrl.setCode(newCode) },
@@ -318,6 +328,10 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
                 showMinimap = props.showMinimap,
                 bookmarks = props.bookmarks,
             ).track(editorRef)
+
+            if (props.showKeysOverview) {
+                EditorKeysCorner()
+            }
         }
     }
 }

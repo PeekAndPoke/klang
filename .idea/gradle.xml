@@ -39,6 +39,7 @@
             <option value="$PROJECT_DIR$/klangui" />
             <option value="$PROJECT_DIR$/sprudel" />
             <option value="$PROJECT_DIR$/tones" />
+            <option value="$PROJECT_DIR$/workshop" />
           </set>
         </option>
       </GradleProjectSettings>

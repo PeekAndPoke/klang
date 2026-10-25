@@ -26,6 +26,9 @@ object StorageKeys {
     /** The master volume, a linear gain from 0.0 to 1.0 (KLANG-00330). */
     const val MASTER_VOLUME = "klang-master-volume"
 
+    /** The keys the user gave Klang's actions, over the defaults (KLANG-00325). */
+    const val KEYMAP = "klang-keymap"
+
     /** A song's code; [version] is the app's version, [songId] the song's id (a built-in song's, or "new"). */
     fun songCode(version: String, songId: String): String = songKey(version = version, songId = songId, part = "code")
 

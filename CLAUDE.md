@@ -44,7 +44,7 @@ should be broken on purpose, consult the maintainer, and the rules do not have t
 | Memory lives in the repo: module `MEMORY.md` files, `docs/tasks/`, skills. Never the home-directory auto-memory; only a machine's own setup (local directories) stays local. No home for a fact? Ask where it belongs. A module `MEMORY.md` states what is true NOW and stays short: a change updates its section in place and adds one History line; the full dated record lives in `<module>/ref/memory-history.md`. | 2026-09-05, short 2026-09-29, machine setup 2026-10-23 | this file, the knowhow skills |
 | The engine is the horse: a frontend (sprudel, MIDI, a sequencer) never gets DSP of its own; it maps onto existing engine components via the wire. Only seconds cross the wire: the backend never learns about cycles. | 2026-07 | `/dsl-design` §8 |
 | No boxed types in high-performance Kotlin/JS code: no `Long`/`ULong`/`Byte`/`Short`/`Char` (`Int` or `Double`) in `audio_be`, `audio_bridge` with the wire codecs, sprudel's timing core and KlangScript's interpreter, where Kotlin/JS pays on every operation. Elsewhere allowed; a slow case found outside is fixed on its own. | 2026-04, narrowed 2026-10-23 | `/code-style` §5 |
-| Licensing: AGPL v3 with `AUTHORS.MD`; `tones/` stays MIT and never gets the AGPL header. Commercial use waits for copyright-audit task 07 (lawyer).    | 2026-06-24 | `LICENSE`, KLANG-00118 (copyright audit 07 control vocabulary legal review), KLANG-00222 (copyright audit 00 overview) |
+| Licensing: AGPL v3 with `AUTHORS.MD`; `tones/` stays MIT and never gets the AGPL header; `workshop/` is Apache-2.0 like Ultra, bound for Kraft (2026-10-25). Commercial use waits for copyright-audit task 07 (lawyer).    | 2026-06-24, workshop 2026-10-25 | `LICENSE`, KLANG-00118 (copyright audit 07 control vocabulary legal review), KLANG-00222 (copyright audit 00 overview) |
 | Naming: "Klangmotor" / "Motor" with a plain o (the umlaut was retired 2026-08-25, "too much ego"); historic diary and strategist records keep whatever they say; Motörhead keeps its umlaut. | 2026-08-25 | `/code-style` §17 (header)                |
 
 ### Rule
@@ -80,6 +80,7 @@ Moved out of this register at the rules retro (2026-10-23), each with its level 
 |------|------|---------------|
 | The engine (`audio_be`, `audio_bridge`) | `audio/CLAUDE.md`, Engine rules (loaded first by `/klangaudio-knowhow`) | the Motor stays raw (stone: no safety clamp on an audio parameter without asking), hot-path code, the 128-frame block, the deliberate engine exceptions |
 | The DSLs (Ignitor, Katalyst, sprudel, every door) | `/dsl-design`, Rules | immutability (stone), two doors, parameter parity, one word, units, door shape, wire types, the compound-door fill, `min`/`max` as clamps, taste |
+| What Klang builds for Kraft | `workshop/CLAUDE.md` | Kraft and Ultra only (stone), Apache-2.0 (stone), Kraft's patterns, machinery and look apart |
 | Modules and songs | `klangscript/CLAUDE.md`, `klangscript-libs/CLAUDE.md`, `sprudel/CLAUDE.md`, `/klang-music-writing` | AST walkers live in `klangscript`; the stdlib follows Kotlin; Klangbuch parts and structural cycle selection; songs as Kotlin strings and the caricature sound model |
 
 ### Retired names

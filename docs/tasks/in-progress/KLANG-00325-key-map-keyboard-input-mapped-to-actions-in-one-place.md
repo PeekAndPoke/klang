@@ -1,6 +1,9 @@
 # KLANG-00325: Key map: keyboard input mapped to actions in one place
 
-> **Status (2026-10-25): IN PROGRESS.** The PC keys decided (interview, 2026-10-21); the mechanism planned with the maintainer (2026-10-25, "Plan 2026-10-25" below): a reusable key manager in the module `workshop`, bound for Kraft, with keys the user can change. Next: step 1, the core.
+> **Status (2026-10-25): IN PROGRESS.** Step 1 (the core, in the module `workshop`), step 2's first draft (`OnKey`,
+> the hints, on the song page's Play / Update / Stop) and the editor's keys overlay are built and committed for
+> v0.7.5; the overlay step's review stopped at the safety valve after two rounds (both MAJORs fixed), round 3 runs
+> after the release. Next: the maintainer's Mac test, then step 3 (the editor on the table).
 >
 > **Part of:** KLANG-00332 (UX comfort)
 

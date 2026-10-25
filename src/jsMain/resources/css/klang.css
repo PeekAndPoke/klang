@@ -5,6 +5,9 @@
     --klang-bg-panel:       #21252b;
     --klang-bg-card:        #2c313a;
     --klang-bg-overlay:     #353a42;
+    /* Hover popups and context menus: dark metallic blue (KlangLookAndFeel.popup); missing until 2026-10-25,
+       so those popups showed Semantic UI's own background */
+    --klang-bg-popup:       #1a2a30;
 
     --klang-text-primary:   #D7DADF;
     --klang-text-secondary: #abb2bf;
