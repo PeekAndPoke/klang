@@ -18,8 +18,8 @@ import kotlinx.html.Tag
 
 @Suppress("FunctionName")
 fun Tag.CodeToolModal(
-    handle: ModalsManager.Handle,
-    content: FlowContent.(ModalsManager.Handle) -> Unit,
+    handle: ModalsManager.Handle<Unit>,
+    content: FlowContent.(ModalsManager.Handle<Unit>) -> Unit,
 ) = comp(
     CodeToolModal.Props(
         handle = handle,
@@ -29,14 +29,15 @@ fun Tag.CodeToolModal(
     CodeToolModal(it)
 }
 
-class CodeToolModal(ctx: Ctx<Props>) : FadingModal<CodeToolModal.Props>(ctx) {
+/** A code tool in a modal; it answers nothing ([Unit]), the tool commits or cancels through its own context. */
+class CodeToolModal(ctx: Ctx<Props>) : FadingModal<CodeToolModal.Props, Unit>(ctx) {
 
     //  PROPS  //////////////////////////////////////////////////////////////////////////////////////////////////
 
     data class Props(
-        override val handle: ModalsManager.Handle,
-        val content: FlowContent.(ModalsManager.Handle) -> Unit,
-    ) : FadingModal.Props()
+        override val handle: ModalsManager.Handle<Unit>,
+        val content: FlowContent.(ModalsManager.Handle<Unit>) -> Unit,
+    ) : FadingModal.Props<Unit>()
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 

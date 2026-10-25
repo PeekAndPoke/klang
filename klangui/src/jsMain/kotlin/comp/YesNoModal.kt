@@ -24,11 +24,11 @@ import org.w3c.dom.HTMLElement
  *
  * [onResult] is called exactly once, when the modal is gone: with true for the yes button ([yesText]; Enter or Space,
  * since it has the keyboard when the modal opens), with false for the no button ([noText]), Esc, or any other way the
- * modal closes (a click beside it, the modals manager).
+ * modal closes (a click beside it, back navigation, the modals manager: Kraft's dismissals, which answer no).
  */
 @Suppress("FunctionName")
 fun Tag.YesNoModal(
-    handle: ModalsManager.Handle,
+    handle: ModalsManager.Handle<Boolean>,
     headline: String,
     content: FlowContent.() -> Unit,
     yesText: String,
@@ -54,14 +54,18 @@ fun Tag.YesNoModal(
  *
  * The answer is decided at once (a button, Esc, or the start of any close) and handed to [Props.onResult] when the
  * modal is gone, after it faded out: until then the keyboard stays in the modal, so a key typed while it fades does
- * not reach what had the keyboard before.
+ * not reach what had the keyboard before. Kraft's handle keeps the answer (the first one stands) and delivers it
+ * once; a dismissal answers `null`, which is a no here.
+ *
+ * Klang keeps its own dialog over Kraft's OkCancel for clear control over the look (maintainer, 2026-10-25); the
+ * dialog's Esc handling stays here until the key map (KLANG-00325) carries it.
  */
-class YesNoModal(ctx: Ctx<Props>) : FadingModal<YesNoModal.Props>(ctx) {
+class YesNoModal(ctx: Ctx<Props>) : FadingModal<YesNoModal.Props, Boolean>(ctx) {
 
     //  PROPS  //////////////////////////////////////////////////////////////////////////////////////////////////
 
     data class Props(
-        override val handle: ModalsManager.Handle,
+        override val handle: ModalsManager.Handle<Boolean>,
         /** The question, short. */
         val headline: String,
         /** What the question is about, below the headline. */
@@ -72,7 +76,7 @@ class YesNoModal(ctx: Ctx<Props>) : FadingModal<YesNoModal.Props>(ctx) {
         val noText: String,
         /** Called exactly once, when the modal is gone: true for yes, false for every other way out. */
         val onResult: (yes: Boolean) -> Unit,
-    ) : FadingModal.Props()
+    ) : FadingModal.Props<Boolean>()
 
     private companion object {
         /** `KeyboardEvent.key` of the Esc key. */
@@ -81,51 +85,21 @@ class YesNoModal(ctx: Ctx<Props>) : FadingModal<YesNoModal.Props>(ctx) {
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
-    /** The answer, once decided; the first decision stands. */
-    private var decided: Boolean? = null
-
-    /** True once [Props.onResult] had the answer. */
-    private var delivered = false
-
     /** Marks the yes button, so it can take the keyboard when the modal opens. */
     private val yesButtonId = "yes-no-modal-yes-${hashCode()}"
 
     init {
-        // The modal is gone (after its fade, or closed through its handle at once): the answer goes out
-        props.handle.onClose { deliver() }
+        // Once, when the modal is gone (after its fade, closed through its handle, or by closeAll): a dismissal is a no
+        props.handle.onResult { yes -> props.onResult(yes ?: false) }
 
         lifecycle {
             onMount {
                 (dom?.querySelector("#$yesButtonId") as? HTMLElement)?.focus()
             }
-
-            // Taken away without a close (the modals manager's closeAll runs no close handlers): still one answer
-            onUnmount { deliver() }
         }
     }
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
-
-    /** Any close before an answer (a click beside the modal, Esc) is a no, decided now and not after the fade. */
-    override fun close(onClose: (suspend () -> Unit)?) {
-        decide(yes = false)
-        super.close(onClose)
-    }
-
-    private fun decide(yes: Boolean) {
-        if (decided == null) {
-            decided = yes
-        }
-    }
-
-    private fun deliver() {
-        if (delivered) {
-            return
-        }
-
-        delivered = true
-        props.onResult(decided ?: false)
-    }
 
     override fun FlowContent.renderContent() {
         ui.tiny.modal.transition.visible.active.front {
@@ -148,20 +122,14 @@ class YesNoModal(ctx: Ctx<Props>) : FadingModal<YesNoModal.Props>(ctx) {
             noui.actions {
                 ui.basic.button Button {
                     type = ButtonType.button
-                    onClick {
-                        decide(yes = false)
-                        close()
-                    }
+                    onClick { close(result = false) }
                     +props.noText
                 }
 
                 ui.positive.button Button {
                     id = yesButtonId
                     type = ButtonType.button
-                    onClick {
-                        decide(yes = true)
-                        close()
-                    }
+                    onClick { close(result = true) }
                     +props.yesText
                 }
             }

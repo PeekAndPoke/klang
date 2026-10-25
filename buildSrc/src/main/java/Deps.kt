@@ -48,7 +48,7 @@ object Deps {
 
     object KotlinLibs {
         // https://central.sonatype.com/artifact/io.peekandpoke.ultra/common
-        private const val ultra_version = "0.114.0"
+        private const val ultra_version = "0.115.0"
 
         object Ultra {
             const val cache = "io.peekandpoke.ultra:cache:$ultra_version"
@@ -77,7 +77,6 @@ object Deps {
 
             const val addons_browserdetect = "io.peekandpoke.kraft:addons-browserdetect:$ultra_version"
             const val addons_chartjs = "io.peekandpoke.kraft:addons-chartjs:$ultra_version"
-            const val addons_konva = "io.peekandpoke.kraft:addons-konva:$ultra_version"
             const val addons_marked = "io.peekandpoke.kraft:addons-marked:$ultra_version"
             const val addons_nxcompile = "io.peekandpoke.kraft:addons-nxcompile:$ultra_version"
             const val addons_pdfjs = "io.peekandpoke.kraft:addons-pdfjs:$ultra_version"

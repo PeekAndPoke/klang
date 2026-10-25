@@ -204,7 +204,7 @@ private class SprudelMiniNotationEditorComp(ctx: Ctx<Props>) : MnPatternEditorBa
     private fun FlowContent.renderAtomModalButton(atom: MnNode.Atom, atomTool: KlangUiTool) {
         ui.basic.small.button {
             onClick {
-                modals.show { handle ->
+                modals.show<Unit> { handle ->
                     CodeToolModal(handle) {
                         val subCtx = atomSubCtx(
                             atom,

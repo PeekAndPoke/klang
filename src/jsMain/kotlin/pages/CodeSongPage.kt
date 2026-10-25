@@ -201,7 +201,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     /** Asks whether to move a bookmark, in Klang's yes or no modal, which answers exactly once. */
     private fun askToMoveBookmark(move: BookmarkOptions.Move, answer: (yes: Boolean) -> Unit) {
-        modals.show { handle ->
+        modals.show<Boolean> { handle ->
             YesNoModal(
                 handle = handle,
                 headline = "Move bookmark ${move.digit}?",

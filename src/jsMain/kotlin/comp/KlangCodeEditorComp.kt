@@ -273,7 +273,7 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
             return
         }
 
-        modals.show { handle ->
+        modals.show<Unit> { handle ->
             CodeToolModal(handle) {
                 tool.apply {
                     render(
