@@ -1,6 +1,6 @@
 # KLANG-00338: UI kitchen sink, step 2: the gauge and the knob
 
-> **Status (2026-10-25): IN PROGRESS.** Step 2 of the UI workbench, the maintainer's go 2026-10-25
+> **Status (2026-10-25): DONE.** the maintainer approved the thin focus ring, 2026-10-25
 >
 > **Part of:** KLANG-00334 (UI workbench)
 
@@ -74,5 +74,7 @@ gauges with icons, knobs with a label on top or below or an icon, and roundish s
 ## History
 
 - 2026-10-25: created and started.
-- 2026-10-25: built, reviewed (two rounds, the second clean), mutation-checked, committed. Open: the maintainer's look
-  at the thin focus ring.
+- 2026-10-25: built, reviewed (two rounds, the second clean), mutation-checked, committed (2a52b394); the focus ring
+  as a smooth shadow (c9450f5d).
+- 2026-10-25: the maintainer: "The thin ring is good now." Done.
+- 2026-10-25: DONE. the maintainer approved the thin focus ring, 2026-10-25
