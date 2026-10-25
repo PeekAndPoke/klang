@@ -40,10 +40,10 @@ class KlangButtonSpec : StringSpec({
 
     "each finish and surface picks its own class" {
         val expected = mapOf(
-            (KlangButton.Finish.Dark to KlangButton.Surface.Flat) to styles.darkFlat,
-            (KlangButton.Finish.Dark to KlangButton.Surface.Domed) to styles.darkDomed,
-            (KlangButton.Finish.Silver to KlangButton.Surface.Flat) to styles.silverFlat,
-            (KlangButton.Finish.Silver to KlangButton.Surface.Domed) to styles.silverDomed,
+            (KlangFinish.Dark to KlangButton.Surface.Flat) to styles.darkFlat,
+            (KlangFinish.Dark to KlangButton.Surface.Domed) to styles.darkDomed,
+            (KlangFinish.Silver to KlangButton.Surface.Flat) to styles.silverFlat,
+            (KlangFinish.Silver to KlangButton.Surface.Domed) to styles.silverDomed,
         )
 
         for ((combo, cls) in expected) {
@@ -77,7 +77,7 @@ class KlangButtonSpec : StringSpec({
             view = {
                 KlangButton(onClick = {}, pressed = true) { +"on" }
                 KlangButton(onClick = {}, pressed = false) { +"off" }
-                KlangButton(onClick = {}, pressed = true, finish = KlangButton.Finish.Silver) { +"silver on" }
+                KlangButton(onClick = {}, pressed = true, finish = KlangFinish.Silver) { +"silver on" }
             },
         ) { root ->
             val buttons = root.selectCss("button")

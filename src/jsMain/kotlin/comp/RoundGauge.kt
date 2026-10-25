@@ -153,7 +153,9 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
                 }
             }
 
-            onNextProps { _, newProps ->
+            // Kraft hands the new props first; this took the second, the previous ones, so the needle followed one
+            // update behind (found with KlangGauge, KLANG-00338)
+            onNextProps { newProps, _ ->
                 // Smooth the value changes based on smoothing factor
                 // smoothing = 0.0 means instant update (no smoothing)
                 // smoothing = 0.933 means heavy smoothing (93.3% old + 6.7% new)

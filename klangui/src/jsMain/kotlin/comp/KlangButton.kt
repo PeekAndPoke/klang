@@ -19,7 +19,7 @@ import kotlinx.html.button
 @Suppress("FunctionName")
 fun Tag.KlangButton(
     onClick: () -> Unit,
-    finish: KlangButton.Finish = KlangButton.Finish.Dark,
+    finish: KlangFinish = KlangFinish.Dark,
     surface: KlangButton.Surface = KlangButton.Surface.Flat,
     shape: KlangButton.Shape = KlangButton.Shape.Rect,
     pressed: Boolean? = null,
@@ -48,7 +48,7 @@ fun Tag.KlangButton(
 /**
  * The Klang button (KLANG-00337): a real `<button>` with a cap lit from above.
  *
- * [Finish] is the cap's material, [Surface] its curve, [Shape] its outline. A toggle passes [Props.pressed] (true or
+ * [KlangFinish] is the cap's material, [Surface] its curve, [Shape] its outline. A toggle passes [Props.pressed] (true or
  * false, announced as `aria-pressed`); a plain button leaves it null. [Availability.Later] draws a dashed outline for
  * a control that is not there yet ("with the backend"): it cannot be pressed and says so (`aria-disabled`).
  * [Props.beacon] is the first-visit trail's "try me". Canvas cells: "Rack button", "Lamp button", "White or silver,
@@ -60,7 +60,7 @@ class KlangButton(ctx: Ctx<Props>) : Component<KlangButton.Props>(ctx) {
 
     data class Props(
         val onClick: () -> Unit,
-        val finish: Finish,
+        val finish: KlangFinish,
         val surface: Surface,
         val shape: Shape,
         /** Null for a plain button; true or false for a toggle, which is then announced as pressed or not. */
@@ -73,12 +73,6 @@ class KlangButton(ctx: Ctx<Props>) : Component<KlangButton.Props>(ctx) {
         val ariaLabel: String?,
         val content: BUTTON.() -> Unit,
     )
-
-    /** The cap's material. */
-    enum class Finish {
-        Dark,
-        Silver,
-    }
 
     /** The cap's curve: flat with a top highlight, or domed like the volume knob. */
     enum class Surface {
@@ -132,12 +126,12 @@ class KlangButton(ctx: Ctx<Props>) : Component<KlangButton.Props>(ctx) {
         val styles = KlangControlStyles
 
         val finish = when (props.finish) {
-            Finish.Dark -> when (props.surface) {
+            KlangFinish.Dark -> when (props.surface) {
                 Surface.Flat -> styles.darkFlat
                 Surface.Domed -> styles.darkDomed
             }
 
-            Finish.Silver -> when (props.surface) {
+            KlangFinish.Silver -> when (props.surface) {
                 Surface.Flat -> styles.silverFlat
                 Surface.Domed -> styles.silverDomed
             }
@@ -151,7 +145,7 @@ class KlangButton(ctx: Ctx<Props>) : Component<KlangButton.Props>(ctx) {
 
         val pressed = when {
             props.pressed != true -> null
-            props.finish == Finish.Dark -> styles.pressedDark
+            props.finish == KlangFinish.Dark -> styles.pressedDark
             else -> styles.pressedSilver
         }
 

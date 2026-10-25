@@ -238,6 +238,250 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("right", "6px")
     }
 
+    // ── Gauges ────────────────────────────────────────────────────────────────
+
+    /** The rim: silver, lit from above. The glow's blur comes per gauge as `--gauge-blur`, its size times a share. */
+    val gauge by rule {
+        put("position", "relative")
+        put("display", "inline-block")
+        put("flex-shrink", "0")
+        put("border-radius", "50%")
+        put("background", "linear-gradient(180deg, var(--kl-metal-light), var(--kl-metal-mid) 55%, var(--kl-metal-dark))")
+        put("box-shadow", "0 2px 4px rgba(0,0,0,0.6)")
+    }
+
+    val gaugeOnline by rule {
+        put(
+            "box-shadow",
+            "0 2px 4px rgba(0,0,0,0.6), 0 0 var(--gauge-blur) color-mix(in srgb, var(--kl-gauge-glow) 60%, transparent)"
+        )
+    }
+
+    val gaugeHot by rule {
+        put(
+            "box-shadow",
+            "0 2px 4px rgba(0,0,0,0.6), 0 0 var(--gauge-blur) color-mix(in srgb, var(--kl-lamp-critical) 70%, transparent)"
+        )
+    }
+
+    val gaugeFace by rule {
+        put("position", "absolute")
+        put("inset", "4%")
+        put("border-radius", "50%")
+        put(
+            "background",
+            "radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--kl-ground-sunken), white 7%) 0%," +
+                    " var(--kl-ground-sunken) 70%)"
+        )
+        put("box-shadow", "inset 0 2px 4px rgba(0,0,0,0.8)")
+    }
+
+    val gaugeScale by rule {
+        put("position", "absolute")
+        put("inset", "0")
+        put("width", "100%")
+        put("height", "100%")
+        put("pointer-events", "none")
+    }
+
+    val gaugeTick by rule {
+        put("stroke", "var(--kl-gauge-tick)")
+    }
+
+    val gaugeTickHot by rule {
+        put("stroke", "var(--kl-lamp-critical)")
+    }
+
+    val gaugeTrack by rule {
+        put("fill", "none")
+        put("stroke", "color-mix(in srgb, var(--kl-gauge-tick) 25%, transparent)")
+        put("stroke-linecap", "round")
+    }
+
+    val gaugeArc by rule {
+        put("fill", "none")
+        put("stroke", "var(--kl-gauge-arc)")
+        put("stroke-linecap", "round")
+    }
+
+    val gaugeArcHot by rule {
+        put("stroke", "var(--kl-lamp-critical)")
+    }
+
+    val gaugeNeedle by rule {
+        put("stroke", "var(--kl-ink-strong)")
+        put("stroke-linecap", "round")
+    }
+
+    val gaugeHub by rule {
+        put("fill", "var(--kl-metal-mid)")
+        put("stroke", "var(--kl-edge)")
+    }
+
+    /** The icon or the text label, between the arc and the hub, clear of both (maintainer, 2026-10-25). Dim while offline. */
+    val gaugeMark by rule {
+        put("position", "absolute")
+        put("left", "50%")
+        put("top", "32%")
+        put("transform", "translate(-50%, -50%)")
+        put("margin", "0")
+        put("color", "var(--kl-ink-label)")
+        put("font-weight", "700")
+        put("letter-spacing", "0.08em")
+        put("white-space", "nowrap")
+    }
+
+    val gaugeMarkLit by rule {
+        put("color", "var(--kl-gauge-arc)")
+        put("text-shadow", "0 0 7px color-mix(in srgb, var(--kl-gauge-arc) 60%, transparent)")
+    }
+
+    val gaugeMarkHot by rule {
+        put("color", "var(--kl-lamp-critical)")
+        put("text-shadow", "0 0 7px color-mix(in srgb, var(--kl-lamp-critical) 60%, transparent)")
+    }
+
+    val gaugeValue by rule {
+        put("position", "absolute")
+        put("left", "0")
+        put("right", "0")
+        put("bottom", "20%")
+        put("text-align", "center")
+        put("font-family", "monospace")
+        put("color", "var(--kl-ink-text)")
+    }
+
+    // ── Knobs ─────────────────────────────────────────────────────────────────
+
+    /** Tight, to save space (maintainer, 2026-10-25): the label sits against the dial, the value right under the dial. */
+    val knob by rule {
+        put("display", "inline-flex")
+        put("flex-direction", "column")
+        put("align-items", "center")
+        put("gap", "4px")
+        put("user-select", "none")
+    }
+
+    /** What sits under the dial: the label when it goes below, then the value, 2 px apart. */
+    val knobCaption by rule {
+        put("display", "flex")
+        put("flex-direction", "column")
+        put("align-items", "center")
+        put("gap", "2px")
+    }
+
+    val knobLabel by rule {
+        put("font-size", "10px")
+        put("line-height", "1")
+        put("font-weight", "700")
+        put("letter-spacing", "0.14em")
+        put("color", "var(--kl-ink-text)")
+    }
+
+    val knobValue by rule {
+        put("font-family", "monospace")
+        put("font-size", "11px")
+        put("line-height", "1")
+        put("color", "var(--kl-ink-label)")
+    }
+
+    /** The part that is dragged and takes the keys; a finger's drag turns it instead of scrolling the page. */
+    val knobDial by rule {
+        put("position", "relative")
+        put("flex-shrink", "0")
+        put("border-radius", "50%")
+        put("cursor", "ns-resize")
+        put("touch-action", "none")
+        put("outline", "none")
+
+        // A thin ring close to the dial, so it does not reach the label (maintainer, 2026-10-25)
+        rule("&:focus-visible") {
+            put("outline", "1px solid var(--kl-focus)")
+            put("outline-offset", "1px")
+        }
+    }
+
+    val knobTrack by rule {
+        put("fill", "none")
+        put("stroke", "color-mix(in srgb, var(--kl-ink-label) 30%, transparent)")
+        put("stroke-linecap", "round")
+    }
+
+    val knobArc by rule {
+        put("fill", "none")
+        put("stroke", "var(--kl-accent-muted)")
+        put("stroke-linecap", "round")
+    }
+
+    /** The cap, domed and lit from above; its inset comes per knob (with or without the ring). */
+    val knobCap by rule {
+        put("position", "absolute")
+        put("border-radius", "50%")
+        put("border", "1px solid var(--kl-edge)")
+        put("box-shadow", "0 3px 5px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.18)")
+    }
+
+    val knobCapDark by rule {
+        put("background", "radial-gradient(circle at 42% 30%, var(--kl-cap-light) 0%, var(--kl-cap-dark) 100%)")
+    }
+
+    val knobCapSilver by rule {
+        put(
+            "background",
+            "radial-gradient(circle at 42% 28%, var(--kl-metal-light) 0%, var(--kl-metal-mid) 45%, var(--kl-metal-dark) 100%)"
+        )
+    }
+
+    /** The turning layer; its rotation comes per knob. */
+    val knobTurn by rule {
+        put("position", "absolute")
+        put("inset", "0")
+        put("pointer-events", "none")
+    }
+
+    /** The pointer line, printed in the cap's ink. */
+    val knobPointer by rule {
+        put("position", "absolute")
+        put("left", "50%")
+        put("top", "8%")
+        put("width", "8%")
+        put("height", "34%")
+        put("transform", "translateX(-50%)")
+        put("border-radius", "2px")
+        put("background", "var(--kl-ink-strong)")
+    }
+
+    /** The pointer as a dot at the rim, when an icon sits on the cap. */
+    val knobDot by rule {
+        put("position", "absolute")
+        put("left", "50%")
+        put("top", "7%")
+        put("width", "13%")
+        put("height", "13%")
+        put("transform", "translateX(-50%)")
+        put("border-radius", "50%")
+        put("background", "var(--kl-ink-strong)")
+    }
+
+    val knobIcon by rule {
+        put("position", "absolute")
+        put("left", "50%")
+        put("top", "50%")
+        put("transform", "translate(-50%, -50%)")
+        put("margin", "0")
+        put("color", "var(--kl-ink-strong)")
+    }
+
+    /** The silver cap's ink for its pointer or its dot. */
+    val knobMarkSilver by rule {
+        put("background", "var(--kl-metal-ink)")
+    }
+
+    /** The silver cap's ink for its icon. */
+    val knobIconSilver by rule {
+        put("color", "var(--kl-metal-ink)")
+    }
+
     // ── Motion ────────────────────────────────────────────────────────────────
 
     /**

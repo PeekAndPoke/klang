@@ -164,6 +164,12 @@ kraftApp {
   `prefers-reduced-motion` block) carries one class more than its target. kotlinx-css writes `rule("&::after")` as a
   nested rule (native CSS nesting): it weighs like the flat selector, but reads one level down in `cssRules`.
 
+- **A number prop that feeds kept state** (KLANG-00338, 2026-10-25): a component that keeps state derived from a
+  number prop (a smoothed needle, an accumulator) treats a NaN or an infinity as no value at all, so one bad reading
+  cannot latch the state for good (`KlangGauge.readingOf`). The audio engine's rule for cached configs, on the UI.
+- **`onNextProps` hands (new, old)** (KLANG-00338): the new props come first. `RoundGauge` took the second and
+  followed one update behind until 2026-10-25.
+
 - **A yes/no question is klangui's `YesNoModal`** (headline, content, `yesText`, `noText`, one `onResult`;
   KLANG-00323, 2026-10-21), not Kraft's `OkCancelModal`: its buttons are divs that cannot take the keyboard.
   Fomantic paints a modal's `> .header`, `> .content` and `> .actions` white; klang.css themes them. Kraft's

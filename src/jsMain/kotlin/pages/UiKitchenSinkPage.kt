@@ -11,6 +11,9 @@ import io.peekandpoke.klang.comp.activeVoicesGauge
 import io.peekandpoke.klang.comp.renderMotorHeatGauge
 import io.peekandpoke.klang.comp.roundCylindersGauge
 import io.peekandpoke.klang.ui.comp.KlangButton
+import io.peekandpoke.klang.ui.comp.KlangFinish
+import io.peekandpoke.klang.ui.comp.KlangGauge
+import io.peekandpoke.klang.ui.comp.KlangKnob
 import io.peekandpoke.klang.ui.comp.KlangLamp
 import io.peekandpoke.klang.ui.comp.KlangPanel
 import io.peekandpoke.klang.ui.comp.YesNoModal
@@ -56,6 +59,9 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
 
     private var clicks by value(0)
 
+    /** Where each knob on the page stands, by name; a knob not turned yet stands at its default. */
+    private var positions: Map<String, Double> by value(emptyMap())
+
     //  SAMPLE LOOKS  ///////////////////////////////////////////////////////////////////////////////////////////
 
     /** Two looks on the user's layer, to see a theme change repaint everything at once. Samples, not themes yet. */
@@ -98,6 +104,8 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
 
             renderHeader()
             renderRoles()
+            renderGauges()
+            renderKnobs()
             renderLamps()
             renderButtons()
             renderPanels()
@@ -190,6 +198,175 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
         }
     }
 
+    private fun position(name: String, default: Double): Double = positions[name] ?: default
+
+    private fun turn(name: String): (Double) -> Unit = { positions = positions + (name to it) }
+
+    private fun FlowContent.renderGauges() {
+        section("Gauges") {
+            cell(name = "The Motor's three, with icons", source = "klangui/comp/KlangGauge.kt") {
+                row {
+                    KlangGauge(
+                        name = "Active cylinders",
+                        value = 12.0,
+                        range = 0.0..32.0,
+                        size = 72.px,
+                        icon = { layer_group },
+                        display = { it.toInt().toString() },
+                    )
+                    KlangGauge(
+                        name = "Motor heat",
+                        value = 0.38,
+                        size = 92.px,
+                        icon = { microchip },
+                        display = { "${(it * 100).toInt()}%" },
+                        hotFrom = 0.85,
+                    )
+                    KlangGauge(
+                        name = "Active voices",
+                        value = 24.0,
+                        range = 0.0..64.0,
+                        size = 72.px,
+                        icon = { music },
+                        display = { it.toInt().toString() },
+                    )
+                }
+            }
+
+            cell(name = "Offline, online, too hot, a text label", source = "KlangGauge(value = null, hotFrom, label)") {
+                row {
+                    KlangGauge(name = "Heat, offline", value = null, size = 72.px, icon = { microchip }, hotFrom = 0.85)
+                    KlangGauge(
+                        name = "Heat",
+                        value = 0.38,
+                        size = 72.px,
+                        icon = { microchip },
+                        hotFrom = 0.85,
+                        display = { "${(it * 100).toInt()}%" },
+                    )
+                    KlangGauge(
+                        name = "Heat, too hot",
+                        value = 0.93,
+                        size = 72.px,
+                        icon = { microchip },
+                        hotFrom = 0.85,
+                        display = { "${(it * 100).toInt()}%" },
+                    )
+                    KlangGauge(name = "Heat", value = 0.38, size = 72.px, label = "HEAT", hotFrom = 0.85)
+                }
+            }
+
+            cell(name = "Sizes: the Motor's 50 and 62, a large 130", source = "KlangGauge(size)") {
+                row {
+                    KlangGauge(name = "Small", value = 0.5, size = 50.px, icon = { music })
+                    KlangGauge(name = "Middle", value = 0.5, size = 62.px, icon = { microchip })
+                    KlangGauge(
+                        name = "Large",
+                        value = 0.62,
+                        size = 130.px,
+                        icon = { microchip },
+                        display = { "${(it * 100).toInt()}%" },
+                        hotFrom = 0.85,
+                    )
+                }
+            }
+
+            cell(name = "A knob drives a gauge: turn it into the red", source = "KlangKnob + KlangGauge") {
+                val heat = position("demo", 0.38)
+
+                row {
+                    KlangKnob(name = "Demo", value = heat, onChange = turn("demo"), label = "TURN ME")
+                    KlangGauge(
+                        name = "Driven",
+                        value = heat,
+                        size = 92.px,
+                        icon = { microchip },
+                        display = { "${(it * 100).toInt()}%" },
+                        hotFrom = 0.85,
+                    )
+                }
+            }
+        }
+    }
+
+    private fun FlowContent.renderKnobs() {
+        section("Knobs") {
+            cell(
+                name = "Label: none, above, below, below with the value, above with the value below",
+                source = "klangui/comp/KlangKnob.kt",
+            ) {
+                row {
+                    KlangKnob(name = "Plain", value = position("plain", 0.62), onChange = turn("plain"))
+                    KlangKnob(
+                        name = "Cutoff",
+                        value = position("above", 0.62),
+                        onChange = turn("above"),
+                        label = "CUTOFF",
+                        labelPosition = KlangKnob.LabelPosition.Above,
+                    )
+                    KlangKnob(name = "Volume", value = position("below", 0.62), onChange = turn("below"), label = "VOLUME")
+                    KlangKnob(
+                        name = "Cutoff",
+                        value = position("value", 0.86),
+                        onChange = turn("value"),
+                        label = "CUTOFF",
+                        valueText = "${(200 + position("value", 0.86) * 15800).toInt()} Hz",
+                    )
+                    KlangKnob(
+                        name = "Cutoff",
+                        value = position("split", 0.86),
+                        onChange = turn("split"),
+                        label = "CUTOFF",
+                        labelPosition = KlangKnob.LabelPosition.Above,
+                        valueText = "${(200 + position("split", 0.86) * 15800).toInt()} Hz",
+                    )
+                }
+            }
+
+            cell(name = "An icon on the cap; the pointer becomes a dot", source = "KlangKnob(icon)") {
+                row {
+                    KlangKnob(name = "Volume", value = position("vol", 0.62), onChange = turn("vol"), icon = { volume_up })
+                    KlangKnob(name = "Filter", value = position("filter", 0.8), onChange = turn("filter"), icon = { filter })
+                    KlangKnob(
+                        name = "Delay",
+                        value = position("delay", 0.3),
+                        onChange = turn("delay"),
+                        icon = { clock },
+                        label = "DELAY",
+                    )
+                }
+            }
+
+            cell(name = "Size and finish: the Motor's 31 without a ring, silver caps", source = "KlangKnob(size, finish, ring)") {
+                row {
+                    KlangKnob(name = "Small", value = position("small", 0.62), onChange = turn("small"), size = 31.px, ring = false)
+                    KlangKnob(
+                        name = "Gain",
+                        value = position("gain", 0.62),
+                        onChange = turn("gain"),
+                        finish = KlangFinish.Silver,
+                        label = "GAIN",
+                    )
+                    KlangKnob(
+                        name = "Volume",
+                        value = position("svol", 0.62),
+                        onChange = turn("svol"),
+                        finish = KlangFinish.Silver,
+                        icon = { volume_up },
+                    )
+                    KlangKnob(
+                        name = "Master",
+                        value = position("master", 0.62),
+                        onChange = turn("master"),
+                        size = 96.px,
+                        finish = KlangFinish.Silver,
+                        label = "MASTER",
+                    )
+                }
+            }
+        }
+    }
+
     private fun FlowContent.renderLamps() {
         section("Lamps") {
             cell(name = "KlangLamp: off, on, try, warning, critical", source = "klangui/comp/KlangLamp.kt") {
@@ -213,7 +390,7 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
 
     private fun FlowContent.renderButtons() {
         section("Buttons") {
-            for (finish in KlangButton.Finish.entries) {
+            for (finish in KlangFinish.entries) {
                 for (surface in KlangButton.Surface.entries) {
                     cell(name = "$finish, $surface", source = "KlangButton(finish = $finish, surface = $surface)") {
                         row {
@@ -291,7 +468,7 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
                         }
                         row {
                             KlangButton(onClick = {}) { +"No" }
-                            KlangButton(onClick = {}, finish = KlangButton.Finish.Silver) { +"Yes" }
+                            KlangButton(onClick = {}, finish = KlangFinish.Silver) { +"Yes" }
                         }
                     }
                 }

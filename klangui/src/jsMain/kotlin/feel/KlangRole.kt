@@ -88,6 +88,17 @@ enum class KlangRole(
     /** An error. */
     LampCritical(cssVar = "--kl-lamp-critical", kind = Kind.Color, default = "#e06c75"),
 
+    // ── Gauges ────────────────────────────────────────────────────────────────
+
+    /** A gauge's arc: how far the needle has come. */
+    GaugeArc(cssVar = "--kl-gauge-arc", kind = Kind.Color, default = "#56b6c2"),
+
+    /** A gauge's scale marks. */
+    GaugeTick(cssVar = "--kl-gauge-tick", kind = Kind.Color, default = "#8a919e"),
+
+    /** The glow around a gauge whose Motor is online. */
+    GaugeGlow(cssVar = "--kl-gauge-glow", kind = Kind.Color, default = "#5c7cbc"),
+
     // ── Accent ────────────────────────────────────────────────────────────────
 
     /** Selection, links, the oscilloscope's trace. */
