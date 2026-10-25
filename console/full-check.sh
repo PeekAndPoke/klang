@@ -83,9 +83,38 @@ tree_state() {
         done | sha1sum
 }
 
-# The test XML files of this tree, with extra find arguments (-delete, -print0).
+# Where this user's build outputs live when the per-user layout is on (MC-00031): buildRoot from
+# ORG_GRADLE_PROJECT_buildRoot or the project's gradle.properties, else ./.build-<user> when it exists and belongs to
+# the user running this (as test-digest's build_root(); never ~/.gradle/gradle.properties, which agents do not read).
+# Empty for the plain <module>/build/ layout.
+build_root() {
+    local value user
+
+    value=${ORG_GRADLE_PROJECT_buildRoot:-$(sed -n 's/^[[:space:]]*buildRoot[[:space:]]*=[[:space:]]*//p' gradle.properties 2>/dev/null | head -1)}
+
+    if [ -n "$value" ]; then
+        printf '%s\n' "./$value"
+        return 0
+    fi
+
+    user=$(id -un)
+
+    if [ -d "./.build-$user" ] && [ -O "./.build-$user" ]; then
+        printf '%s\n' "./.build-$user"
+    fi
+}
+
+# The test XML files of this tree, with extra find arguments (-delete, -print0): only this user's, so a run never
+# counts another user's results.
 test_xml() {
-    local dirs=() dir
+    local dirs=() dir root
+
+    root=$(build_root)
+
+    if [ -n "$root" ]; then
+        find "$root" -path '*/test-results/*' -name '*.xml' -type f "$@"
+        return 0
+    fi
 
     if [ -d ./build ]; then
         dirs+=(./build)
@@ -109,7 +138,7 @@ test_xml() {
 }
 
 export LOGDIR FRESH
-export -f tree_state test_xml
+export -f tree_state build_root test_xml
 
 duration() {
     printf '%dm %02ds' $(($1 / 60)) $(($1 % 60))

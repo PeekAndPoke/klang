@@ -141,6 +141,9 @@
 #   36,500 is 360 B above the worst healthy round and 2,659 below the nearest regression's lowest. The JVM reads
 #   15,752 in every run; 15,764 tells one Double per event,
 #   as E-C-n1's line does. Neither mutant moves the JVM (no KlangMap wrapper to lose there; the fast path is JS only).
+#   Re-set 2026-10-25 (maintainer: "You increase the budget"): the v0.7.5 full check read 15,808 B, 56 B per event more
+#   than the 2026-10-23 full check (d828f401); between them lie the Ultra and Kraft 0.115.0 bump and the per-user
+#   build split, not traced to one change. 15,820 by the same rule, 12 B above the reading.
 #   C-kat-remap and E-kat-sine to E-kat-mix were added by Katalyst knob expressions step 6 (2026-10-12,
 #   KLANG-00302 (katalyst knob expressions)): each E-kat chain moves a knob every block through its own
 #   modulators, C-kat-remap evaluates a slot expression on a new map every block. The lines follow this file's rule
@@ -334,4 +337,4 @@ E-kat-mix          jvm       6       the mixed orbit
 E-C-rel05-n16      v8        1500    item 10b and item 8 across about 12 voices; item 3, the limiter
 E-C-rel05-n16      jvm       450     item 11, the voice build
 S-doors            v8        36500   item 2 step 4: the param bags' KlangMap storage and its JS copy fast path (per event)
-S-doors            jvm       15764   sprudel's per-event pipeline; one Double per event (not an item 2 line: the JVM sees neither mutant)
+S-doors            jvm       15820   sprudel's per-event pipeline; one Double per event (not an item 2 line: the JVM sees neither mutant)

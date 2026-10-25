@@ -74,8 +74,8 @@ object AllocationCheck {
     /** The build command the stale-bundle message names: `--rerun` relinks, so the bundle's time is fresh. */
     private const val BUILD_BUNDLE = "./gradlew :audio_benchmark:compileProductionExecutableKotlinJs --rerun"
 
-    private const val BUNDLE =
-        "audio_benchmark/build/compileSync/js/main/productionExecutable/kotlin/klang-engine-audio_benchmark.js"
+    /** The node bundle inside the module's build directory. */
+    private const val BUNDLE_IN_BUILD = "compileSync/js/main/productionExecutable/kotlin/klang-engine-audio_benchmark.js"
     private const val BUDGETS = "audio_benchmark/alloc-budgets.txt"
 
     /**
@@ -333,10 +333,12 @@ object AllocationCheck {
     private fun nowSec(): Double = System.nanoTime().toDouble() / 1.0e9
 
     private fun measureV8(node: String, root: File, problems: MutableList<String>): Map<String, Measurement> {
-        val bundle = File(root, BUNDLE)
+        // The build directory Gradle hands in (`jvmRun`): build/ for the maintainer, .build-claude/ for user claude
+        val buildDir = System.getProperty("klang.buildDir.audio_benchmark")?.let { File(it) } ?: File(root, "audio_benchmark/build")
+        val bundle = File(buildDir, BUNDLE_IN_BUILD)
 
         if (!bundle.isFile) {
-            problems.add("FAIL v8: no bundle at $BUNDLE (build it: $BUILD_BUNDLE)")
+            problems.add("FAIL v8: no bundle at ${bundle.path} (build it: $BUILD_BUNDLE)")
 
             return emptyMap()
         }

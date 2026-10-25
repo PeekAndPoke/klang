@@ -57,4 +57,11 @@ tasks.register<JavaExec>("jvmRun") {
     mainClass.set("io.peekandpoke.klang.audio_benchmark.MainKt")
     classpath = kotlin.jvm().compilations["main"].runtimeDependencyFiles +
             kotlin.jvm().compilations["main"].output.allOutputs
+
+    // The allocation check finds the node bundle in this module's build directory, which is not build/ for user
+    // claude (.build-claude/, MC-00031)
+    val buildDir = layout.buildDirectory
+    jvmArgumentProviders.add(CommandLineArgumentProvider {
+        listOf("-Dklang.buildDir.audio_benchmark=${buildDir.get().asFile.path}")
+    })
 }
