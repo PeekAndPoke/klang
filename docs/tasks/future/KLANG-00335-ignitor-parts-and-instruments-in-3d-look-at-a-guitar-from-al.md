@@ -11,8 +11,19 @@ they can be rotated and looked at from all angles, like players in a video game.
 represented, filters, distort etc. And the SLOTS would also need special visuals. Then someone could say: "Hey look
 at my new guitar!" and you would see something that looks like an alien machine."
 
+What a part is (the maintainer, 2026-10-25): "With part in the ignitors i would for example mean "Pre-Amp",
+"Cab4x12" ...". A part is a named piece of the instrument at the level of the real thing's components: the pre-amp,
+the cabinet, the pedal, the pickup. Not a single filter or clipper; those are the stages inside a part.
+
 ## Notes from the conversation
 
+- **The parts exist in the song already, as plain functions:** Der Schmetterling has `pickupSingle`,
+  `pickupHumbucker`, `pickupNeck`; `pedalScreamer`, `pedalFuzz`, `pedalBoost`; `preampClean`, `preampCrunch`,
+  `preampHighGain`; `powerPushPull`, `powerClassA`; `cab4x12`, `cab1x12`, `cabCombo` (each with a `...Stock`
+  preset that passes the signal through). Today they are anonymous to the engine and the UI; a part would carry
+  the name ("Cab 4x12") and its kind (cabinet) along with the wiring.
+- **Two levels to draw:** the part as a module of the machine (its kind sets the shape: a cabinet looks like a
+  cabinet), and the stages inside it as what you see when you look closer or open it.
 - **A hook that exists already:** Der Schmetterling's guitar rig is written as a chain of named stages (string,
   pickup, pedal, preamp, tone stack, power amp, cab), each a function of the signal with presets such as
   `pickupHumbucker` or `pedalScreamer`. A "part" would give such a stage a name the engine and the UI can see,
@@ -46,3 +57,4 @@ Not set while this is an idea.
 ## History
 
 - 2026-10-25: created from the maintainer's thinking aloud during the KLANG-00334 design conversation.
+- 2026-10-25: what a part is: "Pre-Amp", "Cab4x12" (the maintainer); the song's existing stage functions listed.
