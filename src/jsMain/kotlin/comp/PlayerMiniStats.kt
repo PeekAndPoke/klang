@@ -15,6 +15,8 @@ import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.semanticui.noui
 import io.peekandpoke.ultra.semanticui.ui
+import io.peekandpoke.ultra.streams.ops.filterIsInstance
+import io.peekandpoke.ultra.streams.ops.switchMapNotNull
 import io.peekandpoke.ultra.streams.ops.ticker
 import kotlinx.css.Color
 import kotlinx.css.Display
@@ -46,9 +48,7 @@ class PlayerMiniStats(ctx: Ctx<Props>) : Component<PlayerMiniStats.Props>(ctx) {
         /** The gauges beside it. */
         const val SIDE_GAUGE_PX = 50.0
 
-        /**
-         * The volume knob, outside the left gauge, sized by eye with the maintainer (2026-10-25).
-         */
+        /** The volume knob */
         const val VOLUME_KNOB_PX = 31.0
     }
 
@@ -65,34 +65,17 @@ class PlayerMiniStats(ctx: Ctx<Props>) : Component<PlayerMiniStats.Props>(ctx) {
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
-    private var playerDiagnosticsSubscription: (() -> Unit)? = null
-    private var playerDiagnostics: KlangPlaybackSignal.Diagnostics? = null
-
     @Suppress("unused")
     private val ticker by subscribingTo(ticker(16.milliseconds))
 
     /** Stream-subscribed — redraws the moment the player becomes ready. */
-    private val currentPlayer by subscribingTo(Player.player) { p ->
-        if (p != null) {
-            // Unsubscribe
-            playerDiagnosticsSubscription?.invoke()
-            // Resubscribe
-            playerDiagnosticsSubscription = p.signals.subscribeToStream { signal ->
-                if (signal is KlangPlaybackSignal.Diagnostics) {
-                    playerDiagnostics = signal
-                }
-            }
+    private val currentPlayer by subscribingTo(Player.player)
 
-        }
-    }
-
-    init {
-        lifecycle {
-            onUnmount {
-                playerDiagnosticsSubscription?.invoke()
-            }
-        }
-    }
+    /** The current player's latest diagnostics; kept while the player is gone, until the next one has its own. */
+    private val playerDiagnostics by subscribingTo(
+        Player.player.switchMapNotNull { it.signals }
+            .filterIsInstance<KlangPlaybackSignal.Diagnostics, _>()
+    )
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 

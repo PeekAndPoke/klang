@@ -15,7 +15,10 @@ import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.common.toFixed
 import io.peekandpoke.ultra.html.css
-import io.peekandpoke.ultra.streams.ops.ticker
+import io.peekandpoke.ultra.streams.ops.filterIsInstance
+import io.peekandpoke.ultra.streams.ops.distinct
+import io.peekandpoke.ultra.streams.ops.map
+import io.peekandpoke.ultra.streams.ops.switchMapNotNull
 import kotlinx.css.Color
 import kotlinx.css.Display
 import kotlinx.css.FontWeight
@@ -47,7 +50,6 @@ import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlinx.html.span
 import kotlinx.html.title
-import kotlin.time.Duration.Companion.milliseconds
 
 @Suppress("FunctionName")
 fun Tag.PlayerWarehouseStats() = comp {
@@ -66,31 +68,16 @@ class PlayerWarehouseStats(ctx: NoProps) : PureComponent(ctx) {
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
-    private var playerDiagnosticsSubscription: (() -> Unit)? = null
-    private var stats: KlangCommLink.Feedback.Diagnostics.WarehouseStats? = null
-
-    @Suppress("unused")
-    private val ticker by subscribingTo(ticker(250.milliseconds))
-
-    @Suppress("unused")
-    private val currentPlayer by subscribingTo(Player.player) { p ->
-        if (p != null) {
-            playerDiagnosticsSubscription?.invoke()
-            playerDiagnosticsSubscription = p.signals.subscribeToStream { signal ->
-                if (signal is KlangPlaybackSignal.Diagnostics) {
-                    stats = signal.diagnostics.warehouse
-                }
-            }
-        }
-    }
-
-    init {
-        lifecycle {
-            onUnmount {
-                playerDiagnosticsSubscription?.invoke()
-            }
-        }
-    }
+    /**
+     * The current player's latest warehouse stats; kept while the player is gone, until the next one has its own.
+     * Redraws only when they changed: no ticker needed.
+     */
+    private val stats: KlangCommLink.Feedback.Diagnostics.WarehouseStats? by subscribingTo(
+        Player.player.switchMapNotNull { it.signals }
+            .filterIsInstance<KlangPlaybackSignal.Diagnostics, _>()
+            .map { it?.diagnostics?.warehouse }
+            .distinct()
+    )
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
