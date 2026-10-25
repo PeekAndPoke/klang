@@ -1,6 +1,6 @@
 # KLANG-00325: Key map: keyboard input mapped to actions in one place
 
-> **Status (2026-10-25): DESIGNED.** The PC keys decided (interview, 2026-10-21); the mechanism planned with the maintainer (2026-10-25, "Plan 2026-10-25" below): a reusable key manager in the module `workshop`, bound for Kraft, with keys the user can change. Next: step 1, the core.
+> **Status (2026-10-25): IN PROGRESS.** The PC keys decided (interview, 2026-10-21); the mechanism planned with the maintainer (2026-10-25, "Plan 2026-10-25" below): a reusable key manager in the module `workshop`, bound for Kraft, with keys the user can change. Next: step 1, the core.
 >
 > **Part of:** KLANG-00332 (UX comfort)
 
@@ -171,7 +171,7 @@ Klang out of it and the move is a copy. Klang's modules depend on it.
   names a storage interface; the app gives it one.
 - **Kraft side:** `OnKey(Play) { ... }` registers while its component is mounted and draws a small hint with its key
   next to the element while the hints show.
-- **Hints:** shown while a key or combination is held a moment (about 400 ms) with no other key; gone on release or on
+- **Hints:** shown while a key or combination is held a moment (300 ms, maintainer 2026-10-25) with no other key; gone on release or on
   any other key, so Ctrl+Z does not flash them. The trigger is set **in code, not by the user, for now** (maintainer,
   2026-10-25); Klang sets Ctrl (Windows moves the focus to Chrome's menu on a lone Alt).
 
@@ -204,6 +204,18 @@ Klang out of it and the move is a copy. Klang's modules depend on it.
 4. **The settings page** with KLANG-00324, and `KeymapStorage`.
 5. **The move into Kraft** when it has proven itself; ULTRA-00239 (Esc on modals) built on it there, Klang's
    `YesNoModal` Esc onto it.
+
+**Open after step 1's review round 1 (2026-10-25), for later steps:**
+- **Layers:** page keys still act under a modal (Ctrl+Shift+Enter plays behind the bookmark question). The stack is per
+  action; a modal needs a layer that blocks the keys below it. Decide with step 5 (ULTRA-00239).
+- **Kraft parity for the move:** Kraft's managers are an interface with an implementation, `KeysManager` is a class
+  that adds its listeners in its constructor; `Component.keys` is a generic name on every component. Settle when it
+  moves. Also for the move: the stage's `visibleBox` treats `overflow-x: clip` with a visible `overflow-y` as clipping
+  both axes, and cuts an absolute or fixed anchor by ancestors that are not its containing block; no anchor in Klang
+  is either (2026-10-25).
+- **Matching by position:** a symbol with Shift and a digit match by the key's position (one rule each, so one key
+  never triggers two chords), so on a French keyboard Stop (Ctrl+Shift+.) is the key at the US period, which shows `:`;
+  the hint still says `.`. A layout-aware label waits for the settings page.
 
 ## Acceptance
 
@@ -240,3 +252,27 @@ OkCancel real buttons and focus; their Esc stays ours until the key map carries 
 - 2026-10-25: planned with the maintainer: a reusable key manager in the new module `workshop`, bound for Kraft;
   keys the user can change, kept in localStorage; the hints trigger set in code; DESIGNED.
 - 2026-10-25: DESIGNED.
+- 2026-10-25: step 1 built in `workshop` with the pilot on the song page's Play / Update / Stop; review round 1: 2
+  MAJOR (AltGr, a symbol on two chords) and 9 MINOR fixed, Klang's own hint with the keyboard icon.
+- 2026-10-25: review round 2 clean (6 MINOR fixed, two waiting for the maintainer); OnKey split into the
+  `OnKeyController` (the machinery, Kraft `FormController` style) and a slim renderer (maintainer's request); the hint
+  stage (maintainer: "I would also go for the hint stage"): hints drawn on one fixed layer, placed by
+  `KeyHintLayout` (Below, Above, Over, Start, End; pushed apart, flipped, kept in the window). The look settled with
+  the maintainer by eye: each key in its own key cap, compact signs drawn as vector icons (`⇧` `↵`), no keyboard icon,
+  12 px in 20 px caps on an opaque frame ("Ok this is great now"); no hint on a disabled button (`showHint`).
+- 2026-10-25: the maintainer's decisions: Mac Option rule (a): on a Mac a chord with Option reads the key's position
+  whatever Option types there (a sign `∆`, an ASCII sign like the German `@`, a dead key), so Cmd+Option+L works on
+  every Mac layout, while Alt on a PC (plain letters) keeps matching by its letter; decided by platform after the
+  overlay step's reviews (round 1 MINOR, round 2 MAJOR: a non-ASCII test missed `@` and dead keys). The Mac skips the
+  AltGr reading (macOS has no AltGr), which also settles the Firefox doubt below; `workshop/` is Apache-2.0 like Ultra ("Same license as ultra,
+  but we can also relicense once it moves"), with `workshop/CLAUDE.md` and a line in the root licensing row; the
+  missing `--klang-bg-popup` added to `klang.css`; hints of disabled buttons hidden with `showHint`; the hint delay
+  300 ms. Not verified, for a Mac at hand: Firefox on macOS may report Option as AltGraph, which would put Option
+  chords through the AltGr branch.
+- 2026-10-25: the editor keys overlay, ahead of step 3 (maintainer: "show an overlay with the key binding bag of the
+  editor"): `KeyActionGroup` and `KeyBindings.overview` (one row for bookmarks 0 to 9), `KeyBindingsOverlay` in
+  `workshop`, `KlangEditorKeyBindings` display-only in scope `editor` (CodeMirror still acts on these keys), the panel
+  in the editor's top-right corner, 18 px left of the measured minimap ("great"). Review of the step: 1 MAJOR (the
+  clipping walk took the body for a clipping box, so hints vanished on a scrolled page), fixed with the MINORs; the
+  next round at level 3.
+- 2026-10-25: IN PROGRESS.
