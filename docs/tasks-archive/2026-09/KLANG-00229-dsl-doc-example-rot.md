@@ -21,7 +21,8 @@ that does nothing.
 Known-broken examples are baselined in `src/jvmTest/resources/dsl-doc-examples-baseline.txt`
 (currently empty, keep it that way), so the gate **ratchets**: a newly broken example fails the build, and a baselined one that starts
 compiling also fails until it is deleted from the list. On failure the current failing set is
-written to `build/reports/dsl-doc-examples-failing.txt`, so refreshing the baseline is one copy.
+written to `build/reports/dsl-doc-examples-failing.txt`, so refreshing the baseline is one copy. (Since 2026-10-25 the
+root's build directory as Gradle hands it in: `.build-claude/_root/reports/...` for user claude, MC-00031.)
 
 > ⚠️ Compiling is the cheap half. It cannot tell you an example is *wrong*. Three reverb and delay
 > examples compiled perfectly while being **silent** (a send whose gate parameter was missing), and

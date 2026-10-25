@@ -141,6 +141,12 @@ tasks {
                 listOf("-Dklang.buildDir.$module=${buildDir.get().asFile.path}")
             })
         }
+
+        // DslDocExamplesSpec writes its report into the root's build directory, the same per-user split
+        val rootBuildDir = layout.buildDirectory
+        jvmArgumentProviders.add(CommandLineArgumentProvider {
+            listOf("-Dklang.buildDir.root=${rootBuildDir.get().asFile.path}")
+        })
     }
 
     // Generates src/jsMain/resources/version.json (project + git metadata).

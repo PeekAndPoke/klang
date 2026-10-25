@@ -96,8 +96,10 @@ class DslDocExamplesSpec : StringSpec({
             }
         }
 
-        // Regenerating the baseline is one copy: this file IS the baseline format.
-        val dump = File("build/reports/dsl-doc-examples-failing.txt")
+        // Regenerating the baseline is one copy: this file IS the baseline format. It lands in the build directory
+        // Gradle hands in, build/ for the maintainer and .build-claude/_root/ for user claude (MC-00031).
+        val buildDir = System.getProperty("klang.buildDir.root") ?: "build"
+        val dump = File(buildDir, "reports/dsl-doc-examples-failing.txt")
         dump.parentFile.mkdirs()
         dump.writeText(broken.keys.joinToString("\n$SEPARATOR\n"))
 
