@@ -47,6 +47,9 @@ Kept in order, close to the maintainer's words.
     bottom of the right strip (canvas board A2).
 23. (2026-10-25) Likes KLANGMOTOR rotated in the strip (it needed padding at the bottom): it makes the Motor more
     compact without the text, "also less marketingish which is good".
+24. (2026-10-25) To start: a `/debug/ui-kitchen-sink` page that demos all the elements, each element its own Kraft
+    component. Asked: how do we keep the design canvas and the code aligned over time, and how do settings reach a
+    component: flat props, or an options builder in the more complicated cases?
 
 ## Where the conversation stands (leanings, not decisions)
 
