@@ -35,4 +35,13 @@ class KlangPanelSpec : StringSpec({
             )
         }
     }
+
+    "without its bottom rivets the panel keeps the top pair" {
+        TestBed.preact(view = { KlangPanel(bottomRivets = false) { +"Dialog" } }) { root ->
+            root.selectCss(".${styles.rivet}").classes().map { it - styles.rivet.toString() } shouldContainExactly listOf(
+                setOf(styles.rivetTopLeft.toString()),
+                setOf(styles.rivetTopRight.toString()),
+            )
+        }
+    }
 })

@@ -11,10 +11,12 @@ import io.peekandpoke.klang.comp.activeVoicesGauge
 import io.peekandpoke.klang.comp.renderMotorHeatGauge
 import io.peekandpoke.klang.comp.roundCylindersGauge
 import io.peekandpoke.klang.storage.LookStorage
+import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangCaption
 import io.peekandpoke.klang.ui.comp.KlangCard
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
+import io.peekandpoke.klang.ui.comp.KlangDialog
 import io.peekandpoke.klang.ui.comp.KlangDrawer
 import io.peekandpoke.klang.ui.comp.KlangFinish
 import io.peekandpoke.klang.ui.comp.KlangGauge
@@ -76,6 +78,7 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
     private var drawerAt: String by value("songs")
     private var query: String by value("")
     private var menuChoice: String by value("nothing yet")
+    private var dialogChoice: String by value("nothing yet")
     private var pinned: Set<String> by value(setOf("pinned"))
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -515,27 +518,44 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
                 }
             }
 
-            cell(name = "KlangPanel: the riveted frame", source = "klangui/comp/KlangPanel.kt") {
+            cell(
+                name = "KlangDialog: the key row at the foot, verbs on the keys, their keys from the key manager",
+                source = "klangui/comp/KlangDialog.kt",
+            ) {
                 div {
-                    css { put("width", "320px") }
+                    css { put("width", "340px") }
+
+                    KlangDialog(
+                        title = "Move the bookmark here?",
+                        actions = listOf(
+                            KlangDialog.Action(
+                                label = "Keep",
+                                key = KlangKeyBindings.DialogClose,
+                                onClick = { dialogChoice = "kept" },
+                            ),
+                            KlangDialog.Action(
+                                label = "Move",
+                                key = KlangKeyBindings.DialogConfirm,
+                                primary = true,
+                                onClick = { dialogChoice = "moved" },
+                            ),
+                        ),
+                    ) {
+                        +"It is on line 12 now."
+                    }
+                }
+                span {
+                    css { put("font-size", "12px") }
+                    +"Chosen: $dialogChoice"
+                }
+            }
+
+            cell(name = "KlangPanel: the riveted frame alone", source = "klangui/comp/KlangPanel.kt") {
+                div {
+                    css { put("width", "260px") }
 
                     KlangPanel {
-                        div {
-                            css {
-                                put("font-size", "16px")
-                                put("font-weight", "700")
-                                put("color", "var(--kl-ink-strong)")
-                            }
-                            +"Move the bookmark here?"
-                        }
-                        p {
-                            css { put("margin", "8px 0 16px") }
-                            +"It is on line 12 now."
-                        }
-                        row {
-                            KlangButton(onClick = {}) { +"No" }
-                            KlangButton(onClick = {}, finish = KlangFinish.Silver) { +"Yes" }
-                        }
+                        +"A plate held by four rivets: the frame of every popup."
                     }
                 }
             }

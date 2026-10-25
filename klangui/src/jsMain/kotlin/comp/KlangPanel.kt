@@ -17,9 +17,10 @@ import kotlinx.html.span
 @Suppress("FunctionName")
 fun Tag.KlangPanel(
     tight: Boolean = false,
+    bottomRivets: Boolean = true,
     content: DIV.() -> Unit,
 ) = comp(
-    KlangPanel.Props(tight = tight, content = content)
+    KlangPanel.Props(tight = tight, bottomRivets = bottomRivets, content = content)
 ) {
     KlangPanel(it)
 }
@@ -38,6 +39,8 @@ class KlangPanel(ctx: Ctx<Props>) : Component<KlangPanel.Props>(ctx) {
     data class Props(
         /** Less padding, for a panel that holds a list running to its edges (a menu). */
         val tight: Boolean,
+        /** False for a panel whose foot is a key row (the dialog): rivets there sit too close to the keys. */
+        val bottomRivets: Boolean,
         val content: DIV.() -> Unit,
     )
 
@@ -49,7 +52,8 @@ class KlangPanel(ctx: Ctx<Props>) : Component<KlangPanel.Props>(ctx) {
         val classes = listOfNotNull(styles.panel, if (props.tight) styles.panelTight else null)
 
         div(classes = classes.joinToString(" ")) {
-            val corners = listOf(styles.rivetTopLeft, styles.rivetTopRight, styles.rivetBottomLeft, styles.rivetBottomRight)
+            val corners = listOf(styles.rivetTopLeft, styles.rivetTopRight) +
+                    if (props.bottomRivets) listOf(styles.rivetBottomLeft, styles.rivetBottomRight) else emptyList()
 
             for (corner in corners) {
                 span(classes = "${styles.rivet} $corner") {

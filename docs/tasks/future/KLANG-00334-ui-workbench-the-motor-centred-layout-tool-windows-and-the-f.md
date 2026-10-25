@@ -95,6 +95,12 @@ Kept in order, close to the maintainer's words.
     today), and Shift Shift as a second way in: a tap binding (a modifier pressed and released with no other key
     between; two within about 300 to 400 ms), simpler than general sequences. The key manager is Klang-Main-Dev's
     (KLANG-00325).
+38. (2026-10-25) The yes/no popup's buttons sat oddly (left aligned; right aligned "would also be strange"). Tried: a
+    key row across the dialog's foot, edge to edge, the keys sharing the width, the main one on the right in silver
+    (`KlangDialog`); caps printed under the keys were tried and rejected. And everywhere: buttons carry verbs that say what happens
+    ("Keep", "Move"), not "Yes" and "No". Settled with the maintainer: no printed caps (a key's hint comes from the
+    key manager, an `OnKey` in the button), and only the top pair of rivets (at the foot, and lifted over the key
+    row, they looked off). "OK thats good."
 
 ## Where the conversation stands (leanings, not decisions)
 

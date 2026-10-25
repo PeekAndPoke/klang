@@ -405,6 +405,54 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("margin-top", "8px")
     }
 
+    // ── Dialog ────────────────────────────────────────────────────────────────
+
+    val dialogTitle by rule {
+        put("font-size", "16px")
+        put("font-weight", "700")
+        put("color", "var(--kl-ink-strong)")
+    }
+
+    val dialogBody by rule {
+        put("margin-top", "8px")
+        put("line-height", "20px")
+    }
+
+    /**
+     * The key row at the panel's foot, edge to edge, as the button row of a device (maintainer, 2026-10-25): a sunken
+     * strip, the keys sharing its width, so no key floats left or right of an empty space.
+     */
+    val dialogKeys by rule {
+        put("display", "grid")
+        put("grid-auto-columns", "minmax(0, 1fr)")
+        put("grid-auto-flow", "column")
+        put("gap", "10px")
+        put("margin", "18px -18px -18px")
+        put("padding", "12px 18px")
+        put("background", "color-mix(in srgb, var(--kl-ground-sunken) 70%, transparent)")
+        put("border-top", "1px solid var(--kl-edge)")
+        // The panel's inner corner: its 4 px radius less its 1 px border
+        put("border-radius", "0 0 3px 3px")
+        put("box-shadow", "inset 0 2px 4px rgba(0,0,0,0.5)")
+    }
+
+    /** One key of the row: holds its button at the full width of its share; a long verb wraps inside it. */
+    val dialogKey by rule {
+        put("display", "flex")
+        put("flex-direction", "column")
+        put("align-items", "stretch")
+
+        rule("& > button") {
+            put("height", "auto")
+            put("min-height", "34px")
+            put("padding-top", "6px")
+            put("padding-bottom", "6px")
+            put("white-space", "normal")
+            put("text-align", "center")
+            put("line-height", "1.2")
+        }
+    }
+
     // ── Menu ──────────────────────────────────────────────────────────────────
 
     val menuItem by rule {

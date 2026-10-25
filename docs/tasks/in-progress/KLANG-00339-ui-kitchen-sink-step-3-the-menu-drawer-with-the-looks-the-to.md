@@ -78,4 +78,11 @@ works."
 ## History
 
 - 2026-10-25: created and started.
-- 2026-10-25: built, reviewed (two rounds, the second clean), mutation-checked, committed.
+- 2026-10-25: built, reviewed (two rounds, the second clean), mutation-checked, committed (46de2977).
+- 2026-10-25: `KlangDialog` added at the maintainer's request (the yes/no popup's buttons sat oddly): a key row across
+  the foot, edge to edge, verbs on the keys, the keys bound through the key manager (printed caps were tried and
+  rejected), only the top pair of rivets (at the foot, and lifted over the key row, they looked off).
+  `KlangPanel(bottomRivets)`. Reviewed (one round, clean; its MINORs and NITs applied: long verbs wrap in a key, the
+  dialog named by its title and described by its text, the strip's corner, the KDoc on key order and key layers),
+  mutation-checked (the main key not silver, the keys unbound, the dialog named by its text). `YesNoModal` moves onto
+  it later (Klang-Main-Dev's).
