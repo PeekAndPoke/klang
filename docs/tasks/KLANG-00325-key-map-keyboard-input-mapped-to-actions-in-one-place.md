@@ -1,7 +1,6 @@
 # KLANG-00325: Key map: keyboard input mapped to actions in one place
 
-> **Status (2026-10-21): IDEA.** The PC keys are decided (interview with the maintainer, 2026-10-21); the Mac table
-> and the design draft below wait for the maintainer's look, then DESIGNED.
+> **Status (2026-10-25): DESIGNED.** The PC keys decided (interview, 2026-10-21); the mechanism planned with the maintainer (2026-10-25, "Plan 2026-10-25" below): a reusable key manager in the module `workshop`, bound for Kraft, with keys the user can change. Next: step 1, the core.
 >
 > **Part of:** KLANG-00332 (UX comfort)
 
@@ -144,25 +143,67 @@ Refinements the coordinator proposed (to settle in the draft):
   flash them). Chrome on Windows moves the focus to its menu on a lone Alt; whether a page can stop that is a hand
   test.
 
-## Decide before implementing
+## Plan 2026-10-25 (with the maintainer)
 
-1. Where the table lives: `klangui` (both the editor module and the app depend on it; `KlangKeyBindings` there is
-   the first stone and goes into the table).
-2. The editor's setup: `basicSetup`'s extensions copied without its keymaps (CodeMirror's docs suggest exactly this),
-   the keymap built from the table.
-3. Split line: CodeMirror's `splitLine` as it is, or ours indenting the tail as IntelliJ does.
-4. The Mac table above.
-5. The `OnKey` API and the hint look (first draft, reviewed by the maintainer, step 3).
+The maintainer: "a reusable mechanism for other projects that can move into Kraft. Also the keymap must be
+user-configurable. And the hints that show when a user holds Ctrl or a similar configurable key or key-combination."
+The inventory that day: no central key manager in Klang, Kraft or Ultra; every key wired where it acts (the table in
+"Why this exists"); `KlangKeyBindings` is two helpers.
+
+**Where: the module `workshop`** (maintainer, 2026-10-25: "separate package, what would you call it workshop"). One
+Gradle module for what Klang builds for Kraft before it moves there; the key manager is its first package,
+`io.peekandpoke.klang.workshop.keys`. It depends on Kraft and Ultra only, never on a Klang module, so the build keeps
+Klang out of it and the move is a copy. Klang's modules depend on it.
+
+**The core (workshop, bound for Kraft):**
+- **Actions:** an id, a title, a group. A component asks for an action, never a raw key; the hint shows the key that is
+  set.
+- **Key chords:** written as text (`"Mod-Shift-Enter"`, `Mod` is Ctrl on a PC, Cmd on a Mac). Letters and symbols match
+  the typed character (Ctrl+Z stays undo on AZERTY), digits the key's position (`event.code`).
+- **Keymap:** a preset per platform (PC, Mac), the user's keys on top; the result is the one table everything reads.
+- **Checks:** two actions on one key in one scope, or a key Chrome never hands to a page (Ctrl+N, Ctrl+T, Ctrl+W,
+  Ctrl+Tab, each also with Shift), is an error: at start-up for the presets, and when the user changes a key, shown to
+  them as the clash.
+- **The key manager,** a Kraft service like the modals manager: one listener on the document, a stack of registrations
+  (the newest wins, the one before takes over when it goes: a modal's Esc over the page's), each with its own handle so
+  it unregisters cleanly out of order.
+- **The user's keys:** a small JSON of changes against the preset, so a preset update does not wipe them. The core
+  names a storage interface; the app gives it one.
+- **Kraft side:** `OnKey(Play) { ... }` registers while its component is mounted and draws a small hint with its key
+  next to the element while the hints show.
+- **Hints:** shown while a key or combination is held a moment (about 400 ms) with no other key; gone on release or on
+  any other key, so Ctrl+Z does not flash them. The trigger is set **in code, not by the user, for now** (maintainer,
+  2026-10-25); Klang sets Ctrl (Windows moves the focus to Chrome's menu on a lone Alt).
+
+**Klang's part:**
+- The actions and the two presets (the tables above).
+- **Storage:** the app's storage as it is (maintainer, 2026-10-25: "use the storage system we already have and store
+  in localStorage. Later when we have a server it will live there"): a `KeymapStorage` beside `OutputVolumeStorage`,
+  its key in `StorageKeys`.
+- The editor on the table: CodeMirror handles its keys while it has focus and lets the rest through, so Play works
+  while typing.
+- The settings page, with KLANG-00324: every action with its key, record a new key, the clashes shown, back to the
+  preset.
+
+**Open, the maintainer not sure yet (2026-10-25); the coordinator's defaults, to look at again in step 3:**
+- The editor's setup: `basicSetup`'s extensions copied without its keymaps (CodeMirror's docs suggest it), so no hidden
+  CodeMirror key can clash again (the German Ctrl+Shift+7 of KLANG-00323).
+- Split line: CodeMirror's `splitLine` as it is.
+- The Mac preset: the draft above as it is; the rows marked "check" are checked on a Mac when one is at hand.
 
 ## The work
 
-1. The table: actions, the two presets, matching, the registry with its stack, the start-up check; a browser test of
-   the check, the matching (German and AZERTY rows) and the stack.
-2. The editor on the table: the copied setup, the ours-commands above, KLANG-00322's and KLANG-00323's keys from the
-   table, Alt+Shift+click; a test that every CodeMirror command the table names exists in the installed packages.
-3. `OnKey` and the hints, the Play / Update button first. **Stop after the first draft so the maintainer can look at
-   the code** (maintainer, 2026-10-21), then Stop and the editor's overlay.
-4. KLANG-00324's page reads the table.
+1. **The core** in `workshop`: actions, chords and their matching, the keymap with presets and user keys, the checks,
+   the key manager and its stack, the storage interface; browser tests of the matching (German and AZERTY rows), the
+   stack, the checks and the user keys over a preset.
+2. **`OnKey` and the hints,** on the Play / Update button first. **Stop after the first draft so the maintainer can
+   look at the code** (maintainer, 2026-10-21); then Stop.
+3. **The editor on the table:** the copied setup, the ours-commands above, KLANG-00322's and KLANG-00323's keys and the
+   mini-notation editor's undo and redo from the table (`KlangKeyBindings` goes), Alt+Shift+click; a test that every
+   CodeMirror command the table names exists in the installed packages; the editor's overlay of its keys.
+4. **The settings page** with KLANG-00324, and `KeymapStorage`.
+5. **The move into Kraft** when it has proven itself; ULTRA-00239 (Esc on modals) built on it there, Klang's
+   `YesNoModal` Esc onto it.
 
 ## Acceptance
 
@@ -171,8 +212,8 @@ the table; the Mac preset checked on a Mac when one is at hand.
 
 ## Out of scope
 
-User-changed keys (the table is shaped for them), the keys of other pages (the mini-notation editor keeps its undo and
-redo, read from the table), the clipboard history (KLANG-00326), navigate back and forward (KLANG-00327).
+A user-set hints trigger (set in code for now), keys stored on a server (localStorage until there is one), the clipboard
+history (KLANG-00326), navigate back and forward (KLANG-00327).
 
 ## Depends on / unblocks
 
@@ -196,3 +237,6 @@ OkCancel real buttons and focus; their Esc stays ours until the key map carries 
 - 2026-10-25: next after the Ultra 0.115.0 bump (maintainer); built here, moves to Kraft once stable, Kraft's Esc
   on top; Klang keeps its own dialogs.
 - 2026-10-25: part of the epic UX comfort (KLANG-00332), as an epic of its own inside it.
+- 2026-10-25: planned with the maintainer: a reusable key manager in the new module `workshop`, bound for Kraft;
+  keys the user can change, kept in localStorage; the hints trigger set in code; DESIGNED.
+- 2026-10-25: DESIGNED.
