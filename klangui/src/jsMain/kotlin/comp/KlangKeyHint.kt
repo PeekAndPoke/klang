@@ -77,11 +77,20 @@ object KlangKeyHint {
         }
     }
 
+    /** One way to press a key, step by step: each step's caps, a small gap between the steps (`Shift` `Shift`). */
+    fun FlowContent.capsGroups(groups: List<List<String>>, enabled: Boolean = true) {
+        span {
+            style = "display: inline-flex; align-items: center; gap: 6px; white-space: nowrap"
+
+            groups.forEach { group -> caps(parts = group, enabled = enabled) }
+        }
+    }
+
     val render: KeyHintRenderer = { state ->
         span(classes = CLASS) {
             style = (listOf("display: inline-flex", "padding: 3px 5px") + frameStyle).joinToString("; ")
 
-            caps(parts = state.keyParts(compact = true), enabled = state.enabled)
+            capsGroups(groups = state.keyGroups(compact = true), enabled = state.enabled)
         }
     }
 
@@ -100,7 +109,7 @@ object KlangKeyHint {
                 ) + frameStyle
                 ).joinToString("; ")
 
-            caps(parts = state.keyParts(compact = true), enabled = state.enabled)
+            capsGroups(groups = state.keyGroups(compact = true), enabled = state.enabled)
 
             +state.action.title
         }
@@ -147,7 +156,7 @@ object KlangKeyHint {
                 span {
                     style = "display: inline-flex; align-items: center; gap: 6px; justify-self: end"
 
-                    entry.keys.forEachIndexed { index, parts ->
+                    entry.keys.forEachIndexed { index, groups ->
                         if (index > 0) {
                             span {
                                 style = "color: ${KlangTheme.Hex.textTertiary}"
@@ -155,7 +164,7 @@ object KlangKeyHint {
                             }
                         }
 
-                        caps(parts = parts)
+                        capsGroups(groups = groups)
                     }
                 }
             }

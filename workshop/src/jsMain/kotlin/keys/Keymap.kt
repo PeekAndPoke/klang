@@ -22,6 +22,9 @@ class Keymap(
         /** Two or more actions in one scope share a key; the first defined one with an enabled handler in the top layer acts. */
         data class Clash(val scope: String, val chord: KeyChord, val actionIds: List<String>) : Problem
 
+        /** Two or more actions in one scope share keys pressed in a row; the first defined one acts, as for [Clash]. */
+        data class SequenceClash(val scope: String, val sequence: KeySequence, val actionIds: List<String>) : Problem
+
         /** The browser keeps this key from every page (a new tab, closing the tab): the action would never fire. */
         data class Reserved(val actionId: String, val chord: KeyChord) : Problem
 
@@ -59,18 +62,26 @@ class Keymap(
 
     private val unreadable = mutableListOf<Problem.Unreadable>()
 
-    /** The chords per action id, the user's keys where set. */
-    private val chordsById: Map<String, List<KeyChord>> = actions.associate { action ->
+    /** The bindings per action id, in the order of their text, the user's keys where set. */
+    private val bindingsById: Map<String, List<KeyBinding>> = actions.associate { action ->
         val texts = userKeys[action.id] ?: action.defaultKeys(platform)
 
         action.id to texts.mapNotNull { text ->
             try {
-                KeyChord.parse(text, platform)
+                when {
+                    KeySequence.isSequence(text) -> KeySequence.parse(text, platform)
+                    else -> KeyChord.parse(text, platform)
+                }
             } catch (e: IllegalArgumentException) {
                 unreadable.add(Problem.Unreadable(actionId = action.id, text = text, reason = e.message ?: "unreadable"))
                 null
             }
         }.distinct()
+    }
+
+    /** The single chords per action id. */
+    private val chordsById: Map<String, List<KeyChord>> = bindingsById.mapValues { (_, bindings) ->
+        bindings.filterIsInstance<KeyChord>()
     }
 
     /** Everything wrong with this keymap; empty when it is all right. */
@@ -95,6 +106,12 @@ class Keymap(
                 .groupBy(keySelector = { it.first }, valueTransform = { it.second })
                 .filterValues { it.size > 1 }
                 .forEach { (chord, ids) -> add(Problem.Clash(scope = scope, chord = chord, actionIds = ids)) }
+
+            inScope
+                .flatMap { action -> sequencesOf(action.id).map { sequence -> sequence to action.id } }
+                .groupBy(keySelector = { it.first }, valueTransform = { it.second })
+                .filterValues { it.size > 1 }
+                .forEach { (sequence, ids) -> add(Problem.SequenceClash(scope = scope, sequence = sequence, actionIds = ids)) }
         }
     }
 
@@ -103,6 +120,15 @@ class Keymap(
 
     /** The chords that trigger the action with [actionId]; empty when it has none or is not defined. */
     fun chordsOf(actionId: String): List<KeyChord> = chordsById[actionId] ?: emptyList()
+
+    /** Everything that triggers the action with [actionId], chords and keys in a row, in the order of their text. */
+    fun bindingsOf(actionId: String): List<KeyBinding> = bindingsById[actionId] ?: emptyList()
+
+    /** The keys in a row that trigger the action with [actionId]. */
+    fun sequencesOf(actionId: String): List<KeySequence> = bindingsOf(actionId).filterIsInstance<KeySequence>()
+
+    /** The actions [sequence] triggers, in the order they were defined. */
+    fun actionsFor(sequence: KeySequence): List<KeyAction> = actions.filter { action -> sequence in sequencesOf(action.id) }
 
     /** The actions [event] triggers, in the order they were defined. */
     fun actionsFor(event: KeyboardEvent): List<KeyAction> = actions.filter { action ->

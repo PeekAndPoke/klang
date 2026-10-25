@@ -8,7 +8,7 @@ import org.w3c.dom.events.KeyboardEvent
  */
 data class KeyHintState(
     val action: KeyAction,
-    /** The chords that trigger the action, the first one being the one to show. */
+    /** The single chords that trigger the action (keys in a row are in [bindings]). */
     val chords: List<KeyChord>,
     /** The first chord as the user reads it on this platform (`Ctrl+Shift+Enter`, `⇧⌘↩`). */
     val label: String,
@@ -16,10 +16,15 @@ data class KeyHintState(
     val enabled: Boolean,
     /** The platform the keys are shown for. */
     val platform: KeyPlatform,
+    /** Everything that triggers the action, chords and keys in a row, the first one being the one to show. */
+    val bindings: List<KeyBinding> = chords,
 ) {
-    /** The first chord's keys one by one, to draw each as a key cap; see [KeyChord.keyParts]. */
-    fun keyParts(compact: Boolean = true): List<String> =
-        chords.firstOrNull()?.keyParts(platform = platform, compact = compact) ?: emptyList()
+    /** The first binding as groups of key caps, one group per step (`Shift` `Shift` is two); see [KeyBinding.keyGroups]. */
+    fun keyGroups(compact: Boolean = true): List<List<String>> =
+        bindings.firstOrNull()?.keyGroups(platform = platform, compact = compact) ?: emptyList()
+
+    /** The first binding's keys one by one, to draw each as a key cap; the steps of keys in a row follow each other. */
+    fun keyParts(compact: Boolean = true): List<String> = keyGroups(compact = compact).flatten()
 }
 
 /**
@@ -92,15 +97,16 @@ class OnKeyController(
                 return null
             }
 
-            val chords = keymap.chordsOf(action.id)
-            val first = chords.firstOrNull() ?: return null
+            val bindings = keymap.bindingsOf(action.id)
+            val first = bindings.firstOrNull() ?: return null
 
             return KeyHintState(
                 action = action,
-                chords = chords,
+                chords = bindings.filterIsInstance<KeyChord>(),
                 label = first.label(manager.platform),
                 enabled = enabled(),
                 platform = manager.platform,
+                bindings = bindings,
             )
         }
 

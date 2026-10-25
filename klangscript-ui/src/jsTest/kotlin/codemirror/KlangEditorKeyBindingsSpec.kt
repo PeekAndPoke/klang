@@ -37,8 +37,8 @@ class KlangEditorKeyBindingsSpec : StringSpec({
         val keymap = Keymap(platform = KeyPlatform.Mac, actions = KlangEditorKeyBindings.actions)
         val entries = KeyOverviewState.of(title = null, rows = KlangEditorKeyBindings.overview, keymap = keymap).entries
 
-        entries.first { it.title == "Go to bookmark" }.keys shouldBe listOf(listOf("⌃", "0…9"))
-        entries.first { it.title == "Set bookmark" }.keys shouldBe listOf(listOf("⌃", "⇧", "0…9"))
+        entries.first { it.title == "Go to bookmark" }.keys shouldBe listOf(listOf(listOf("⌃", "0…9")))
+        entries.first { it.title == "Set bookmark" }.keys shouldBe listOf(listOf(listOf("⌃", "⇧", "0…9")))
     }
 
     "the bookmark keys are the decided ones: Ctrl with the digits 0 to 9, Ctrl+Shift to set (KLANG-00323)" {

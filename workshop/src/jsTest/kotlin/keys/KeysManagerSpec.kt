@@ -555,4 +555,101 @@ class KeysManagerSpec : StringSpec({
             }
         }
     }
+
+    "keys in a row: Shift tapped twice triggers its action; held too long, too slow, or with a key between, it does not" {
+        val search = KeyAction(id = "search", title = "Search", keys = listOf("Mod-K", "Shift Shift"))
+        val host = document.createElement("div") as HTMLElement
+        document.body!!.appendChild(host)
+        val keys = KeysManager(platform = KeyPlatform.Pc, tapMaxMs = 60, tapPairMs = 120, target = host)
+        keys.define(object : KeyBindings {
+            override val actions = listOf(search)
+        })
+        val answered = mutableListOf<String>()
+        keys.handle(search) { answered.add("search") }
+
+        fun down(shift: Boolean = true) = host.dispatchEvent(keyEvent(key = "Shift", code = "ShiftLeft", shift = shift))
+        fun up() = host.dispatchEvent(keyEvent(key = "Shift", code = "ShiftLeft", type = "keyup"))
+        fun tap() {
+            down()
+            up()
+        }
+
+        try {
+            tap()
+            tap()
+            withClue("two quick taps") { answered shouldContainExactly listOf("search") }
+
+            withClue("a capital between: Shift down, A, Shift up is no tap") {
+                tap()
+                down()
+                host.dispatchEvent(keyEvent(key = "A", code = "KeyA", shift = true))
+                up()
+                answered shouldContainExactly listOf("search")
+            }
+
+            withClue("held too long") {
+                tap()
+                down()
+                delay(100)
+                up()
+                answered shouldContainExactly listOf("search")
+            }
+
+            withClue("too slow between the taps") {
+                tap()
+                delay(200)
+                tap()
+                answered shouldContainExactly listOf("search")
+            }
+
+            withClue("Ctrl held with Shift is no tap of Shift") {
+                host.dispatchEvent(keyEvent(key = "Shift", code = "ShiftLeft", shift = true, ctrl = true))
+                up()
+                host.dispatchEvent(keyEvent(key = "Shift", code = "ShiftLeft", shift = true, ctrl = true))
+                up()
+                answered shouldContainExactly listOf("search")
+            }
+
+            withClue("again two quick taps, in a text field too: a tap types nothing") {
+                delay(200)
+                val input = document.createElement("input") as HTMLElement
+                host.appendChild(input)
+                input.dispatchEvent(keyEvent(key = "Shift", code = "ShiftLeft", shift = true))
+                input.dispatchEvent(keyEvent(key = "Shift", code = "ShiftLeft", type = "keyup"))
+                input.dispatchEvent(keyEvent(key = "Shift", code = "ShiftLeft", shift = true))
+                input.dispatchEvent(keyEvent(key = "Shift", code = "ShiftLeft", type = "keyup"))
+                answered shouldContainExactly listOf("search", "search")
+            }
+
+            withClue("under another layer the page's taps wait") {
+                delay(200)
+                val modal = keys.openLayer()
+                tap()
+                tap()
+                modal.close()
+                answered shouldContainExactly listOf("search", "search")
+            }
+
+            withClue("a click between down and up is no tap: Shift+click twice extends a selection") {
+                delay(200)
+                repeat(2) {
+                    down()
+                    host.dispatchEvent(PointerEvent("pointerdown", PointerEventInit(bubbles = true)))
+                    up()
+                }
+                answered shouldContainExactly listOf("search", "search")
+            }
+
+            withClue("another modifier coming up (its keydown lost, as when the focus came back) is no tap") {
+                delay(200)
+                down()
+                host.dispatchEvent(keyEvent(key = "Control", code = "ControlLeft", type = "keyup"))
+                tap()
+                answered shouldContainExactly listOf("search", "search")
+            }
+        } finally {
+            keys.dispose()
+            host.remove()
+        }
+    }
 })

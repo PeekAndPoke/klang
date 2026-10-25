@@ -53,12 +53,21 @@ object KeyHints {
         }
     }
 
+    /** One way to press a key, step by step: each step's plain caps, a small gap between the steps. */
+    fun FlowContent.capsGroups(groups: List<List<String>>, enabled: Boolean = true) {
+        span {
+            style = "display: inline-flex; align-items: center; gap: 6px; white-space: nowrap"
+
+            groups.forEach { group -> caps(parts = group, enabled = enabled) }
+        }
+    }
+
     /** Each key in a small key cap on an opaque dark frame. */
     val badge: KeyHintRenderer = { state ->
         span(classes = BADGE_CLASS) {
             style = "display: inline-flex; padding: 3px 4px; border-radius: 4px; background: #222"
 
-            caps(parts = state.keyParts(compact = true), enabled = state.enabled)
+            capsGroups(groups = state.keyGroups(compact = true), enabled = state.enabled)
         }
     }
 
@@ -91,12 +100,12 @@ object KeyHints {
                 span {
                     style = "display: inline-flex; gap: 6px; justify-self: end"
 
-                    entry.keys.forEachIndexed { index, parts ->
+                    entry.keys.forEachIndexed { index, groups ->
                         if (index > 0) {
                             +"/"
                         }
 
-                        caps(parts = parts)
+                        capsGroups(groups = groups)
                     }
                 }
             }

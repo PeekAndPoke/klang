@@ -18,6 +18,7 @@ import kotlinx.html.span
 
 private val play = KeyAction(id = "play", title = "Play", keys = listOf("Mod-P"))
 private val pause = KeyAction(id = "pause", title = "Pause", keys = listOf("Mod-U"))
+private val search = KeyAction(id = "search", title = "Search", keys = listOf("Shift Shift", "Mod-K"))
 
 /** An app's own button that writes its key into its label, with no OnKey and no controller code of its own. */
 private class OwnButton(ctx: NoProps) : PureComponent(ctx) {
@@ -54,7 +55,7 @@ class OnKeyControllerSpec : StringSpec({
     suspend fun withApp(block: suspend (KeysManager, OwnButton) -> Unit) {
         val manager = KeysManager(platform = KeyPlatform.Pc, hintDelayMs = 10).apply {
             define(object : KeyBindings {
-                override val actions = listOf(play, pause)
+                override val actions = listOf(play, pause, search)
             })
         }
 
@@ -153,6 +154,23 @@ class OnKeyControllerSpec : StringSpec({
             releaseCtrl()
             press("p")
             button.pressed shouldContainExactly listOf("play")
+        }
+    }
+
+    "keys in a row first: the hint shows them as one group per step, the chords stay apart" {
+        withApp { _, button ->
+            button.key.action = search
+
+            holdCtrl()
+            eventually {
+                document.querySelector(".own-key")?.textContent shouldBe " (Shift Shift)"
+            }
+
+            val hint = button.key.hint!!
+            hint.keyGroups() shouldBe listOf(listOf("⇧"), listOf("⇧"))
+            hint.keyParts() shouldBe listOf("⇧", "⇧")
+            hint.chords shouldContainExactly listOf(KeyChord(key = "k", ctrl = true))
+            releaseCtrl()
         }
     }
 })

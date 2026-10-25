@@ -5,6 +5,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 
 /**
  * A keymap: the defaults per platform, the user's keys over them, and what is wrong with it.
@@ -127,5 +128,39 @@ class KeymapSpec : StringSpec({
         keymap.chordsOf("play") shouldContainExactly listOf(KeyChord(key = "F5"))
         keymap.problems.size shouldBe 1
         (keymap.problems.single() as Keymap.Problem.Unreadable).text shouldBe "Mod-Banana"
+    }
+
+    "keys in a row: read from text with spaces, shown as one group per step, chord sequences not yet" {
+        val search = play.copy(id = "search", keys = listOf("Mod-K", "Shift Shift"))
+        val keymap = Keymap(platform = pc, actions = listOf(search))
+
+        keymap.bindingsOf("search") shouldContainExactly listOf(
+            KeyChord(key = "k", ctrl = true),
+            KeySequence(taps = listOf(TapModifier.Shift, TapModifier.Shift)),
+        )
+        keymap.chordsOf("search") shouldContainExactly listOf(KeyChord(key = "k", ctrl = true))
+        keymap.problems.shouldBeEmpty()
+
+        withClue("the groups of key caps") {
+            KeySequence.parse("Shift Shift", pc).keyGroups(pc, compact = true) shouldBe listOf(listOf("⇧"), listOf("⇧"))
+            KeySequence.parse("Shift Shift", pc).label(pc) shouldBe "Shift Shift"
+            KeySequence.parse("Mod Mod", mac).keyGroups(mac) shouldBe listOf(listOf("⌘"), listOf("⌘"))
+        }
+
+        withClue("a chord sequence is unreadable until it is supported") {
+            Keymap(platform = pc, actions = listOf(play.copy(keys = listOf("Mod-K Mod-S")))).problems.single()
+                .shouldBeInstanceOf<Keymap.Problem.Unreadable>()
+        }
+
+        withClue("two actions on the same keys in a row clash") {
+            val other = play.copy(id = "other", keys = listOf("Shift Shift"))
+            Keymap(platform = pc, actions = listOf(search, other)).problems shouldContainExactly listOf(
+                Keymap.Problem.SequenceClash(
+                    scope = KeyAction.APP_SCOPE,
+                    sequence = KeySequence(taps = listOf(TapModifier.Shift, TapModifier.Shift)),
+                    actionIds = listOf("search", "other"),
+                )
+            )
+        }
     }
 })

@@ -32,14 +32,15 @@ sealed interface KeyOverviewRow {
 
 /**
  * What an overview shows: its [title] and its rows, each with the keys that are set now. A row's [Entry.keys] holds one
- * or more ways to press it, each as its key cap parts ([KeyChord.keyParts]); a group whose keys share their modifiers
- * and differ in one digit or letter is one way (`Ctrl` `1…9`).
+ * or more ways to press it, each as groups of key cap parts, one group per step ([KeyBinding.keyGroups]: a chord is one
+ * group, `Shift Shift` two); a group whose keys share their modifiers and differ in one digit or letter is one way
+ * (`Ctrl` `1…9`).
  */
 data class KeyOverviewState(
     val title: String?,
     val entries: List<Entry>,
 ) {
-    data class Entry(val title: String, val keys: List<List<String>>)
+    data class Entry(val title: String, val keys: List<List<List<String>>>)
 
     companion object {
         /** The overview of [rows] in [keymap], the key caps compact or not. */
@@ -52,14 +53,14 @@ data class KeyOverviewState(
                     .filter { it.keys.isNotEmpty() },
             )
 
-        private fun keysOf(row: KeyOverviewRow, keymap: Keymap, compact: Boolean): List<List<String>> = when (row) {
+        private fun keysOf(row: KeyOverviewRow, keymap: Keymap, compact: Boolean): List<List<List<String>>> = when (row) {
             is KeyOverviewRow.Single ->
-                keymap.chordsOf(row.action.id).take(1).map { it.keyParts(platform = keymap.platform, compact = compact) }
+                keymap.bindingsOf(row.action.id).take(1).map { it.keyGroups(platform = keymap.platform, compact = compact) }
 
             is KeyOverviewRow.Group -> groupKeys(group = row.group, keymap = keymap, compact = compact)
         }
 
-        private fun groupKeys(group: KeyActionGroup, keymap: Keymap, compact: Boolean): List<List<String>> {
+        private fun groupKeys(group: KeyActionGroup, keymap: Keymap, compact: Boolean): List<List<List<String>>> {
             val chords = group.actions.mapNotNull { keymap.chordsOf(it.id).firstOrNull() }
 
             if (chords.isEmpty()) {
@@ -72,7 +73,7 @@ data class KeyOverviewState(
 
             // A key changed on its own, or keys that are not one digit or letter: each shown as it is
             if (!sameModifiers || !singleKeys) {
-                return chords.map { it.keyParts(platform = keymap.platform, compact = compact) }
+                return chords.map { it.keyGroups(platform = keymap.platform, compact = compact) }
             }
 
             val modifiers = first.keyParts(platform = keymap.platform, compact = compact).dropLast(1)
@@ -85,7 +86,7 @@ data class KeyOverviewState(
                 else -> keys.joinToString(", ")
             }
 
-            return listOf(modifiers + joined)
+            return listOf(listOf(modifiers + joined))
         }
     }
 }

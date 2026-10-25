@@ -40,7 +40,7 @@ data class KeyChord(
     val alt: Boolean = false,
     val shift: Boolean = false,
     val meta: Boolean = false,
-) {
+) : KeyBinding {
     companion object {
         /** The position (`event.code`) of a symbol on a US keyboard. */
         private val SYMBOL_CODES = mapOf(
@@ -208,7 +208,7 @@ data class KeyChord(
      * False when no key press on [platform] can ever match: a symbol read by its US position (with Shift everywhere,
      * with Option on a Mac) whose position is unknown.
      */
-    fun canFire(platform: KeyPlatform): Boolean {
+    override fun canFire(platform: KeyPlatform): Boolean {
         val unknownSymbol = key.length == 1 && key[0] !in 'a'..'z' && key[0] !in '0'..'9' && key !in SYMBOL_CODES
         // Read by the key's US position: with Shift everywhere, with Option on a Mac
         val byPosition = shift || (alt && platform == KeyPlatform.Mac)
@@ -220,10 +220,14 @@ data class KeyChord(
     val hasCommandModifier: Boolean get() = ctrl || alt || meta
 
     /** The chord as the user reads it on [platform]: `Ctrl+Shift+Enter` on a PC, `⇧⌘↩` on a Mac. */
-    fun label(platform: KeyPlatform): String = when (platform) {
+    override fun label(platform: KeyPlatform): String = when (platform) {
         KeyPlatform.Pc -> keyParts(platform).joinToString("+")
         KeyPlatform.Mac -> keyParts(platform).joinToString("")
     }
+
+    /** A chord is one step: its [keyParts] as a single group. */
+    override fun keyGroups(platform: KeyPlatform, compact: Boolean): List<List<String>> =
+        listOf(keyParts(platform = platform, compact = compact))
 
     /**
      * The chord's keys one by one, modifiers first, for a hint that draws each key as a key cap: `Ctrl`, `Shift`,

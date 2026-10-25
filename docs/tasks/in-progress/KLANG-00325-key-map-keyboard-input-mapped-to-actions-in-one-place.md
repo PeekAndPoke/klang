@@ -334,3 +334,9 @@ OkCancel real buttons and focus; their Esc stays ours until the key map carries 
 - 2026-10-25: the bookmarks panel hand-tested by the maintainer ("Bookmarks preview works fabulous"); its review round 1
   (level 1) clean, its MINORs to the maintainer. The rollout to more places waits for Klang-Research's new UI layout
   (maintainer); the survey above went to Klang-Research as an informal hint (its KLANG-00334, item 31).
+- 2026-10-25: keys in a row, part (a) (the maintainer through Klang-Research's KLANG-00334): a modifier tapped on its
+  own twice (`"Shift Shift"`) triggers its action, in the top layer, also while typing; a click, a wheel turn, the
+  window's blur or another key between ends the row. Bindings show as groups of key caps, one per step. Klang's
+  `klang.search-everywhere` (Ctrl+K, Shift Shift) is defined for the new UI's search window; nothing handles it yet.
+  Chord sequences (`"Mod-K Mod-S"`) stay unreadable until part (b). Review: round 1 (level 1) one MAJOR (Shift+click
+  twice counted as two taps), fixed; round 2 (level 2) clean; 14 mutants killed. The MINORs wait for the maintainer.

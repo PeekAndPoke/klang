@@ -30,7 +30,13 @@ object KlangKeyBindings : KeyBindings {
     /** Leaves a dialog without an answer. */
     val DialogClose = KeyAction(id = "klang.dialog.close", title = "Close", keys = listOf("Escape"))
 
-    override val actions: List<KeyAction> = listOf(PlayOrUpdate, Stop, DialogConfirm, DialogClose)
+    /**
+     * Opens the search over everything (the new UI's search window, KLANG-00334): Ctrl+K (Cmd+K on a Mac), or Shift
+     * tapped twice, as in IntelliJ (maintainer, 2026-10-25).
+     */
+    val SearchEverywhere = KeyAction(id = "klang.search-everywhere", title = "Search everywhere", keys = listOf("Mod-K", "Shift Shift"))
+
+    override val actions: List<KeyAction> = listOf(PlayOrUpdate, Stop, DialogConfirm, DialogClose, SearchEverywhere)
 
     /** Ctrl+Z (or Cmd+Z on Mac) — undo. */
     fun isUndo(e: KeyboardEvent): Boolean =

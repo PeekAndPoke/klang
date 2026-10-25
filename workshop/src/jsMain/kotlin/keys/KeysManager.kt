@@ -28,6 +28,9 @@ import kotlin.math.abs
  *   over the rest ([openLayer]); only the top layer's handlers answer and only their hints show, the keys below wait,
  *   as the mouse does under a dimmer. Layers close in any order: the top open one always wins, a closed one never
  *   comes back, and the root cannot be closed at all.
+ * - **Keys in a row** ([KeySequence], `"Shift Shift"`): a modifier tapped on its own (down and up within [tapMaxMs],
+ *   no other key between) twice within [tapPairMs] triggers its action, in the top layer as any key; also while the
+ *   user types, since a tap types nothing. A capital (Shift, a letter) is no tap.
  * - **Hints:** [hints] is true while the [hintTrigger] (by default `Mod`: Ctrl on a PC, Cmd on a Mac) is held alone for
  *   [hintDelayMs], and false again on its release, on any other key, a click or the wheel (Ctrl+click, Ctrl+wheel), or
  *   when the window loses focus. Moving the mouse while the delay runs stops it (Ctrl+hover in the code editor). AltGr
@@ -46,6 +49,10 @@ class KeysManager(
     hintTrigger: String = "Mod",
     /** How long the [hintTrigger] is held before the hints show, in milliseconds. */
     val hintDelayMs: Int = 300,
+    /** The longest a modifier may be held and still count as a tap in keys in a row ([KeySequence]), in milliseconds. */
+    val tapMaxMs: Int = 300,
+    /** The longest pause between two taps of keys in a row, in milliseconds. */
+    val tapPairMs: Int = 400,
     private val target: EventTarget = document,
 ) {
     companion object {
@@ -167,6 +174,13 @@ class KeysManager(
 
     private var hintTimer: Int? = null
 
+    /** A modifier down on its own, which becomes a tap if it comes up soon with no other key between. */
+    private var tapStart: Pair<TapModifier, Double>? = null
+
+    /** The taps so far of keys in a row, with the time of the last one. */
+    private var taps: List<TapModifier> = emptyList()
+    private var lastTapAt = 0.0
+
     /** Where the pointer was last seen, and where it was when the hint delay started (null: not seen yet). */
     private var lastPointer: Pair<Int, Int>? = null
     private var delayStartedAt: Pair<Int, Int>? = null
@@ -174,9 +188,16 @@ class KeysManager(
     private val onKeyDown: (Event) -> Unit = { event -> (event as? KeyboardEvent)?.let { keyDown(it) } }
     private val onHintKeyDown: (Event) -> Unit = { event -> (event as? KeyboardEvent)?.let { hintKeyDown(it) } }
     private val onHintKeyUp: (Event) -> Unit = { event -> (event as? KeyboardEvent)?.let { hintKeyUp(it) } }
-    private val onPointer: (Event) -> Unit = { hideHints() }
+    // A click or a wheel turn between a modifier's down and up makes it no tap: Shift+click extends a selection
+    private val onPointer: (Event) -> Unit = {
+        hideHints()
+        breakTaps()
+    }
     private val onPointerMove: (Event) -> Unit = { event -> (event as? MouseEvent)?.let { pointerMove(it) } }
-    private val onBlur: (Event) -> Unit = { hideHints() }
+    private val onBlur: (Event) -> Unit = {
+        hideHints()
+        breakTaps()
+    }
 
     init {
         // The actions after the page's own handlers (bubbling), the hints before them (capturing)
@@ -330,15 +351,23 @@ class KeysManager(
                 return@forEach
             }
 
-            // Only the top layer answers: the keys below it wait, the page's under a modal
-            val top = _topLayer()
-            val answering = handlers.lastOrNull { it.actionId == action.id && it.layer === top && it.enabled() } ?: return@forEach
+            val answering = answering(action) ?: return@forEach
 
             event.preventDefault()
             answering.handler(event)
 
             return
         }
+    }
+
+    /**
+     * The handler that answers [action] now: the last registered enabled one in the top layer. The keys below the top
+     * layer wait, the page's under a modal.
+     */
+    private fun answering(action: KeyAction): Handler? {
+        val top = _topLayer()
+
+        return handlers.lastOrNull { it.actionId == action.id && it.layer === top && it.enabled() }
     }
 
     private fun isTextField(eventTarget: EventTarget?): Boolean {
@@ -349,6 +378,8 @@ class KeysManager(
     }
 
     private fun hintKeyDown(event: KeyboardEvent) {
+        followTaps(event)
+
         // Any other key, and AltGr, which types characters (Windows sends a Control keydown before it)
         if (event.key !in KeyChord.MODIFIER_KEY_NAMES || event.key == "AltGraph" || event.getModifierState("AltGraph")) {
             hideHints()
@@ -403,10 +434,70 @@ class KeysManager(
     private fun triggerHeld(ctrl: Boolean, alt: Boolean, shift: Boolean, meta: Boolean): Boolean =
         (!trigger.ctrl || ctrl) && (!trigger.alt || alt) && (!trigger.shift || shift) && (!trigger.meta || meta)
 
+    private fun now(): Double = window.performance.now()
+
+    /** Follows a key going down for keys in a row: a modifier alone may start a tap, anything else ends the row. */
+    private fun followTaps(event: KeyboardEvent) {
+        val modifier = TapModifier.ofKey(event.key)
+
+        if (event.repeat) {
+            return
+        }
+
+        // Alone: no other modifier held with it (Ctrl, then Shift, is no tap of either)
+        val alone = modifier != null &&
+            event.ctrlKey == (modifier == TapModifier.Ctrl) && event.altKey == (modifier == TapModifier.Alt) &&
+            event.shiftKey == (modifier == TapModifier.Shift) && event.metaKey == (modifier == TapModifier.Meta)
+
+        if (alone && !event.getModifierState("AltGraph")) {
+            tapStart = modifier!! to now()
+        } else {
+            breakTaps()
+        }
+    }
+
+    /** Ends keys in a row: no tap pending, no taps so far. */
+    private fun breakTaps() {
+        tapStart = null
+        taps = emptyList()
+    }
+
+    /** A modifier came up: a tap when it went down alone not long ago; two in a row may trigger an action. */
+    private fun tapEnded(event: KeyboardEvent) {
+        val start = tapStart ?: return
+        tapStart = null
+
+        val at = now()
+
+        if (TapModifier.ofKey(event.key) != start.first || at - start.second > tapMaxMs) {
+            taps = emptyList()
+
+            return
+        }
+
+        taps = if (taps.isNotEmpty() && at - lastTapAt <= tapPairMs) taps + start.first else listOf(start.first)
+        lastTapAt = at
+
+        if (taps.size < 2) {
+            return
+        }
+
+        _keymap().actionsFor(KeySequence(taps = taps)).forEach { action ->
+            val answering = answering(action) ?: return@forEach
+
+            taps = emptyList()
+            answering.handler(event)
+
+            return
+        }
+    }
+
     private fun hintKeyUp(event: KeyboardEvent) {
         if (event.key !in KeyChord.MODIFIER_KEY_NAMES) {
             return
         }
+
+        tapEnded(event)
 
         if (!triggerHeld(ctrl = event.ctrlKey, alt = event.altKey, shift = event.shiftKey, meta = event.metaKey)) {
             hideHints()

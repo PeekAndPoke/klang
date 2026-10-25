@@ -33,8 +33,8 @@ class KeyOverviewSpec : StringSpec({
 
     "a single action shows its first key, a group its shared modifiers and the run of its keys" {
         overviewOf().entries shouldBe listOf(
-            KeyOverviewState.Entry(title = "Save", keys = listOf(listOf("Ctrl", "S"))),
-            KeyOverviewState.Entry(title = "Go to", keys = listOf(listOf("Ctrl", "1…9"))),
+            KeyOverviewState.Entry(title = "Save", keys = listOf(listOf(listOf("Ctrl", "S")))),
+            KeyOverviewState.Entry(title = "Go to", keys = listOf(listOf(listOf("Ctrl", "1…9")))),
         )
     }
 
@@ -47,9 +47,14 @@ class KeyOverviewSpec : StringSpec({
         val one = KeyActionGroup(title = "One", actions = listOf(goTo[0]))
 
         overviewOf(rows = listOf(KeyOverviewRow.Group(odd), KeyOverviewRow.Group(one))).entries.map { it.keys } shouldBe listOf(
-            listOf(listOf("Ctrl", "1, 3, 5")),
-            listOf(listOf("Ctrl", "1")),
+            listOf(listOf(listOf("Ctrl", "1, 3, 5"))),
+            listOf(listOf(listOf("Ctrl", "1"))),
         )
+    }
+
+    "a single action whose first key is keys in a row shows one group of caps per step" {
+        overviewOf(userKeys = mapOf("save" to listOf("Shift Shift", "Mod-S"))).entries[0].keys shouldBe
+            listOf(listOf(listOf("⇧"), listOf("⇧")))
     }
 
     "a key the user changed on its own: the group shows each key as it is, nothing hidden" {
@@ -57,11 +62,11 @@ class KeyOverviewSpec : StringSpec({
             val keys = overviewOf(userKeys = mapOf("go-2" to listOf("Alt-2"))).entries[1].keys
 
             keys.size shouldBe 9
-            keys[1] shouldBe listOf("Alt", "2")
+            keys[1] shouldBe listOf(listOf("Alt", "2"))
         }
 
         withClue("a key that is no digit") {
-            overviewOf(userKeys = mapOf("go-2" to listOf("F2"))).entries[1].keys[1] shouldBe listOf("F2")
+            overviewOf(userKeys = mapOf("go-2" to listOf("F2"))).entries[1].keys[1] shouldBe listOf(listOf("F2"))
         }
     }
 
@@ -69,7 +74,8 @@ class KeyOverviewSpec : StringSpec({
         val manager = KeysManager(platform = pc, hintDelayMs = 10).apply { define(bag) }
         val plain: KeyOverviewRenderer = { state ->
             state.entries.forEach { entry ->
-                span(classes = "row") { +"${entry.title}: ${entry.keys.joinToString { it.joinToString("+") }}" }
+                val ways = entry.keys.joinToString { way -> way.joinToString(" ") { it.joinToString("+") } }
+                span(classes = "row") { +"${entry.title}: $ways" }
             }
         }
 
