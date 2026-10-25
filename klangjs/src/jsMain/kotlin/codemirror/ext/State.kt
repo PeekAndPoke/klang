@@ -67,6 +67,9 @@ external class EditorState {
     fun changeByRange(f: (range: SelectionRange) -> dynamic): Transaction
 
     fun field(field: StateField<*>): Any?
+
+    /** The value of [field]; with [require] false, undefined when the state does not have it instead of throwing. */
+    fun field(field: StateField<*>, require: Boolean): Any?
     fun facet(facet: Facet<*>): Any?
 
     fun wordAt(pos: Int): SelectionRange?

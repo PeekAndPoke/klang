@@ -106,12 +106,16 @@ object KlangKeyHint {
         }
     }
 
-    val overview: KeyOverviewRenderer = { state ->
+    /**
+     * A panel of keys in Klang's look: the frame, an optional bold [title] over the whole width, and [columns] columns
+     * that [content] fills cell by cell. The keys overview and the editor's bookmarks panel use it.
+     */
+    fun FlowContent.panel(title: String?, columns: Int, content: FlowContent.() -> Unit) {
         div(classes = OVERVIEW_CLASS) {
             style = (
                 listOf(
                     "display: grid",
-                    "grid-template-columns: auto auto",
+                    "grid-template-columns: repeat($columns, auto)",
                     "column-gap: 16px",
                     "row-gap: 5px",
                     "align-items: center",
@@ -122,13 +126,19 @@ object KlangKeyHint {
                 ) + frameStyle
                 ).joinToString("; ")
 
-            state.title?.let { title ->
+            title?.let {
                 div {
-                    style = "grid-column: 1 / span 2; color: ${KlangTheme.Hex.textPrimary}; font-weight: bold; margin-bottom: 2px"
-                    +title
+                    style = "grid-column: 1 / -1; color: ${KlangTheme.Hex.textPrimary}; font-weight: bold; margin-bottom: 2px"
+                    +it
                 }
             }
 
+            content()
+        }
+    }
+
+    val overview: KeyOverviewRenderer = { state ->
+        panel(title = state.title, columns = 2) {
             state.entries.forEach { entry ->
                 span { +entry.title }
 

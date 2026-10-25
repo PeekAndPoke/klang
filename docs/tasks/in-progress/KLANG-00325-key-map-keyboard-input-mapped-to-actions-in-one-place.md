@@ -228,6 +228,30 @@ Klang out of it and the move is a copy. Klang's modules depend on it.
   never triggers two chords), so on a French keyboard Stop (Ctrl+Shift+.) is the key at the US period, which shows `:`;
   the hint still says `.`. A layout-aware label waits for the settings page.
 
+## Places for keys and hints (survey 2026-10-25)
+
+The maintainer (2026-10-25): the rollout waits for Klang-Research's new UI layout (the UI kitchen sink, KLANG-00334);
+this list is an informal input for its designs. In order of benefit:
+
+1. **The code tools** (the ADSR, distort, scale ... modals and popovers, `ToolButtonBar`): Esc cancels, Ctrl+Enter
+   updates, a key for Reset; hints on their buttons. They open a key layer, as `YesNoModal` does.
+2. **The playable examples** in the docs and tutorials (`PlayableCodeExample`): Play / Update, Stop and Reset with the
+   song page's keys. A page holds several, so the one whose editor has the focus (else the one last played) answers:
+   a small focus scope.
+3. **`YesNoModal`**: done (Ctrl+Enter yes, Esc closes, "Esc Close" in the header's corner).
+4. **The song page's other controls:** Reset to original (behind the yes or no question), copy the code
+   (Ctrl+Shift+C), rpm up and down, the volume knob (louder, quieter, mute) with a hint on the knob.
+5. **Tutorials** (`TutorialPage`, `TourPage`): next and previous lesson, Mark as completed, All tutorials.
+6. **Search fields** (samples library, lexikon, docs): "/" or Ctrl+K focuses the page's search, Esc clears it.
+7. **Navigation** (the sidebar): jump to Songs, Docs, Tutorials, Samples, Lexikon with a two-key chord; a page's own
+   keys overview could show app-wide while Ctrl is held.
+8. **The REPL** (`KlangScriptReplComp`): Run with Ctrl+Enter, Clear.
+9. **The MIDI playground:** mostly settings; only with a play or record flow.
+
+What the designs can plan for: a button with a key gets its hint by `OnKey` inside it (the stage places the hint, so
+no room is needed beside the button); a whole box (a modal, a panel) can carry a key in a corner (`InsideEnd`); an
+area can show an overview of its keys in a corner while Ctrl is held (as the editor's keys and bookmarks do).
+
 ## Acceptance
 
 Tests green and mutation-checked (light tier); the maintainer's hand test of the PC preset in Chrome, key by key from
@@ -303,3 +327,10 @@ OkCancel real buttons and focus; their Esc stays ours until the key map carries 
   KDocs name the top layer, a component's layer goes on top only when it mounts (one that never mounts never covers
   the page), workshop tests for a component's layer and the overview under a layer or inside an inert part, room in
   the modal's header for "Esc Close".
+- 2026-10-25: the bookmarks panel shows on the hints' key, not on Ctrl+Shift (maintainer: "Ctrl+1 would jump there so
+  it would not make sense to show them on Ctrl+Shift"): in the editor's corner, left of the keys overview, each
+  bookmark with its jump key, its line and the code on it. `OnHoldKey` (a hold of any modifier combination) is not
+  needed for it and stays an idea for later.
+- 2026-10-25: the bookmarks panel hand-tested by the maintainer ("Bookmarks preview works fabulous"); its review round 1
+  (level 1) clean, its MINORs to the maintainer. The rollout to more places waits for Klang-Research's new UI layout
+  (maintainer); the survey above went to Klang-Research as an informal hint (its KLANG-00334, item 31).

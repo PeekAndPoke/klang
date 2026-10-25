@@ -288,6 +288,16 @@ internal object BookmarksExtension {
 
     private fun bookmarksOf(state: EditorState): Bookmarks = state.field(field).unsafeCast<Bookmarks>()
 
+    /** The bookmarks of [state] by digit, each with the code on its line, trimmed; empty when the editor has none. */
+    fun rowsOf(state: EditorState): List<BookmarkRow> {
+        // An editor without the bookmarks extension has no field: no rows
+        val bookmarks = state.field(field, false)?.unsafeCast<Bookmarks>() ?: return emptyList()
+
+        // Bookmarks keeps its own by digit
+        return bookmarks.lines(TextDoc(state.doc))
+            .map { BookmarkRow(digit = it.digit, line = it.line, code = state.doc.line(it.line).text.trim()) }
+    }
+
     private fun update(bookmarks: Bookmarks, tr: Transaction): Bookmarks {
         if (tr.effects.any { it.`is`(keepLines) }) {
             return Bookmarks.load(lines = bookmarks.lines(TextDoc(tr.startState.doc)), doc = TextDoc(tr.newDoc))

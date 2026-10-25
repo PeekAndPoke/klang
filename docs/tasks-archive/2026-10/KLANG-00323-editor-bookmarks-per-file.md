@@ -298,3 +298,4 @@ of re-anchoring sound. Its two MINORs were applied as one batch, without a furth
 - 2026-10-21: DONE. Hand-tested by the maintainer 2026-10-21: the bookmarks work and look right (the digit box, the yes/no modal).
 - 2026-10-25: a go centres its line in the editor, as the step back to the last edit does (maintainer, KLANG-00325's
   session); a browser test and its mutant (KILLED).
+- 2026-10-25: the centred jump hand-tested by the maintainer ("Bookmark centered jump work... confirmed!").

@@ -766,6 +766,30 @@ class BookmarksExtensionSpec : StringSpec({
             }
         }
     }
+
+    "the bookmarks as an overview lists them: by digit, with the line and its code; none without the extension" {
+        val host = RecordingHost()
+        val doc = (1..12).joinToString("\n") { "  note(\"c$it\")  " }
+
+        withView(newState(host, doc = doc)) { view ->
+            // The higher digit on the earlier line: the rows go by digit, not by place
+            view.moveCursorTo(line = 3)
+            view.pressSet(7)
+            view.moveCursorTo(line = 9)
+            view.pressSet(2)
+
+            bookmarkRowsOf(view.state) shouldBe listOf(
+                BookmarkRow(digit = 2, line = 9, code = "note(\"c9\")"),
+                BookmarkRow(digit = 7, line = 3, code = "note(\"c3\")"),
+            )
+        }
+
+        withClue("an editor without the bookmarks extension") {
+            val plain = EditorState.create(jsObject<EditorStateConfig> { this.doc = "a\nb" })
+
+            bookmarkRowsOf(plain) shouldBe emptyList()
+        }
+    }
 })
 
 /** A host that records what the editor reports and asks, and answers the last question when told to. */

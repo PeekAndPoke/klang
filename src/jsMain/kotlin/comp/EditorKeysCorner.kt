@@ -5,55 +5,88 @@
 
 package io.peekandpoke.klang.comp
 
+import io.peekandpoke.klang.codemirror.ext.EditorState
 import io.peekandpoke.klang.ui.codemirror.KlangEditorKeyBindings
+import io.peekandpoke.klang.ui.codemirror.bookmarkRowsOf
 import io.peekandpoke.klang.ui.comp.KlangKeyHint
+import io.peekandpoke.klang.ui.comp.KlangKeyHint.caps
+import io.peekandpoke.klang.ui.comp.KlangKeyHint.panel
+import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.klang.workshop.keys.KeyBindingsOverlay
+import io.peekandpoke.klang.workshop.keys.keyLayer
 import io.peekandpoke.klang.workshop.keys.keys
-import io.peekandpoke.kraft.components.NoProps
-import io.peekandpoke.kraft.components.PureComponent
+import io.peekandpoke.kraft.components.Component
+import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
+import kotlinx.css.Align
+import kotlinx.css.Display
 import kotlinx.css.PointerEvents
 import kotlinx.css.Position
+import kotlinx.css.alignItems
+import kotlinx.css.display
 import kotlinx.css.pointerEvents
 import kotlinx.css.position
 import kotlinx.css.px
 import kotlinx.css.right
 import kotlinx.css.top
 import kotlinx.css.zIndex
+import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
+import kotlinx.html.span
+import kotlinx.html.style
 import org.w3c.dom.HTMLElement
 import kotlin.math.roundToInt
 
 @Suppress("FunctionName")
-fun Tag.EditorKeysCorner() = comp {
+fun Tag.EditorKeysCorner(editorState: () -> EditorState?) = comp(EditorKeysCorner.Props(editorState = editorState)) {
     EditorKeysCorner(it)
 }
 
 /**
- * The editor's keys in its top-right corner while the key hints show (KLANG-00325): a [KeyBindingsOverlay] of
- * [KlangEditorKeyBindings] in Klang's look, left of the minimap. It sits in the editor's box, which needs
- * `position: relative`; only an editor that shows it follows the hints (the docs pages' editors do not).
+ * The editor's keys in its top-right corner while the key hints show (KLANG-00325), left of the minimap: the song's
+ * bookmarks (each with the key that jumps there, its line and the code on it; maintainer, 2026-10-25: shown on the
+ * hints' key, as Ctrl+digit is the jump), and right of them a [KeyBindingsOverlay] of [KlangEditorKeyBindings], both
+ * in Klang's look. It sits in the editor's box, which needs `position: relative`; only an editor
+ * that shows it follows the hints (the docs pages' editors do not).
  */
-class EditorKeysCorner(ctx: NoProps) : PureComponent(ctx) {
+class EditorKeysCorner(ctx: Ctx<Props>) : Component<EditorKeysCorner.Props>(ctx) {
+
+    //  PROPS  //////////////////////////////////////////////////////////////////////////////////////////////////
+
+    data class Props(
+        /** The editor's state now, for its bookmarks; null while the editor is not there yet. */
+        val editorState: () -> EditorState?,
+    )
 
     private companion object {
         /** The distance from the editor's top edge. */
         val INSET = 8.px
 
-        /** The space to the minimap on its right (maintainer, 2026-10-25). */
+        /** The space to the minimap on its right, and between the two panels (maintainer, 2026-10-25). */
         const val GAP_PX = 18
 
         /** The minimap's element, which CodeMirror's minimap extension mounts at the editor's right edge. */
         const val MINIMAP_SELECTOR = ".cm-minimap-gutter"
+
+        /** The longest piece of a bookmark's code the panel shows, in characters; longer code ends in "…". */
+        const val CODE_CHARS = 48
     }
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
-    /** The key hints show: the overview with them, measured against the minimap as it is now. */
+    /** The key hints show: the panels with them, measured against the minimap as it is now. */
     private val hintsShown by subscribingTo(keys.hints)
+
+    /** Under a modal the panels wait, with the page's keys. */
+    private val layer = keyLayer
+
+    private val topLayer by subscribingTo(keys.topLayer)
+
+    /** The keys as they are set now: the bookmarks panel shows the key that jumps to each. */
+    private val keymap by subscribingTo(keys.keymap)
 
     /** How far the minimap reaches in from the editor's right edge (with the scroll bar beside it), as last measured. */
     private var minimapWidth by value(0)
@@ -97,12 +130,51 @@ class EditorKeysCorner(ctx: NoProps) : PureComponent(ctx) {
                 position = Position.absolute
                 top = INSET
                 right = (minimapWidth + GAP_PX).px
+                display = Display.flex
+                alignItems = Align.flexStart
+                put("gap", "${GAP_PX}px")
                 // Over CodeMirror's panels (the search panel is at 300); it never takes a click
                 zIndex = 400
                 pointerEvents = PointerEvents.none
             }
 
+            if (hintsShown && topLayer === layer) {
+                renderBookmarks()
+            }
+
             KeyBindingsOverlay(bindings = KlangEditorKeyBindings, title = "Editor", renderer = KlangKeyHint.overview)
+        }
+    }
+
+    /** The song's bookmarks: the key that jumps there, the line, the code on it; nothing when there are none. */
+    private fun FlowContent.renderBookmarks() {
+        val rows = props.editorState()?.let { bookmarkRowsOf(it) } ?: emptyList()
+
+        if (rows.isEmpty()) {
+            return
+        }
+
+        panel(title = "Bookmarks", columns = 3) {
+            rows.forEach { row ->
+                val go = KlangEditorKeyBindings.GoToBookmark.getOrNull(row.digit)
+                val chord = go?.let { keymap.chordsOf(it.id).firstOrNull() }
+
+                span {
+                    chord?.let { caps(parts = it.keyParts(platform = keymap.platform, compact = true)) }
+                }
+
+                span { +"line ${row.line}" }
+
+                span {
+                    style = listOf(
+                        "font-family: monospace",
+                        "color: ${KlangTheme.Hex.textPrimary}",
+                        "white-space: pre",
+                    ).joinToString("; ")
+
+                    +if (row.code.length > CODE_CHARS) row.code.take(CODE_CHARS - 1) + "…" else row.code
+                }
+            }
         }
     }
 }

@@ -8,6 +8,7 @@ package io.peekandpoke.klang.comp
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.codemirror.CodeMirrorHighlightBuffer
+import io.peekandpoke.klang.codemirror.ext.EditorState
 import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.common.strings.offsetToSourceLocation
 import io.peekandpoke.klang.script.KlangScriptLibrary
@@ -329,7 +330,12 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
             ).track(editorRef)
 
             if (props.showKeysOverview) {
-                EditorKeysCorner()
+                // The editor's state as it is now, read when the corner draws (the bookmarks move with the edits)
+                EditorKeysCorner(editorState = {
+                    var state: EditorState? = null
+                    editorRef { state = it.editorView?.state }
+                    state
+                })
             }
         }
     }
