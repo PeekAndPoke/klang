@@ -204,4 +204,13 @@ class KeyHintLayoutSpec : StringSpec({
 
         boxes.indices.forEach { i -> (i + 1 until boxes.size).forEach { j -> overlap(boxes[i], boxes[j]) shouldBe false } }
     }
+
+    "inside the anchor, in its top corners: no flipping, kept in the window" {
+        val header = Box(left = 200.0, top = 100.0, width = 400.0, height = 40.0)
+
+        place(hint(1, header, width = 60.0, placement = KeyHintPlacement.InsideEnd))[1] shouldBe
+            Box(left = 600.0 - GAP_PX - 60.0, top = 100.0 + GAP_PX, width = 60.0, height = 16.0)
+        place(hint(1, header, width = 60.0, placement = KeyHintPlacement.InsideStart))[1] shouldBe
+            Box(left = 200.0 + GAP_PX, top = 100.0 + GAP_PX, width = 60.0, height = 16.0)
+    }
 })

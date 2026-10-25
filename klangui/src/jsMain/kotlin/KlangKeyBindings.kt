@@ -24,7 +24,13 @@ object KlangKeyBindings : KeyBindings {
     /** Stops the song: the song page's Stop button. */
     val Stop = KeyAction(id = "klang.stop", title = "Stop", keys = listOf("Mod-Shift-."))
 
-    override val actions: List<KeyAction> = listOf(PlayOrUpdate, Stop)
+    /** Answers a dialog with its main answer (the yes, the update), wherever the keyboard is in it. */
+    val DialogConfirm = KeyAction(id = "klang.dialog.confirm", title = "Confirm", keys = listOf("Mod-Enter"))
+
+    /** Leaves a dialog without an answer. */
+    val DialogClose = KeyAction(id = "klang.dialog.close", title = "Close", keys = listOf("Escape"))
+
+    override val actions: List<KeyAction> = listOf(PlayOrUpdate, Stop, DialogConfirm, DialogClose)
 
     /** Ctrl+Z (or Cmd+Z on Mac) — undo. */
     fun isUndo(e: KeyboardEvent): Boolean =

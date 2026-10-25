@@ -57,7 +57,8 @@ object KlangEditorKeyBindings : KeyBindings {
     val Redo = KeyAction(
         id = "klang.editor.redo",
         title = "Redo",
-        keys = listOf("Mod-Y", "Mod-Shift-Z"),
+        // CodeMirror redoes with Ctrl+Y on a PC (Ctrl+Shift+Z on Linux only) and Cmd+Shift+Z on a Mac; settled in step 3
+        keys = listOf("Mod-Y"),
         macKeys = listOf("Mod-Shift-Z"),
         scope = SCOPE,
     )

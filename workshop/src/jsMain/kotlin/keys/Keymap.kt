@@ -84,7 +84,7 @@ class Keymap(
                 add(Problem.Reserved(actionId = action.id, chord = chord))
             }
 
-            chordsOf(action.id).filterNot { it.canFire }.forEach { chord ->
+            chordsOf(action.id).filterNot { it.canFire(platform) }.forEach { chord ->
                 add(Problem.Unreachable(actionId = action.id, chord = chord))
             }
         }

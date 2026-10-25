@@ -6,9 +6,9 @@ import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.common.TypedKey
+import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
-import io.peekandpoke.ultra.html.key
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.html.FlowContent

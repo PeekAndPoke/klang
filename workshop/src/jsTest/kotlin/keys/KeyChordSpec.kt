@@ -98,6 +98,16 @@ class KeyChordSpec : StringSpec({
             KeyChord.parse("Cmd-Option-L", mac).matches(event = optionL, platform = mac) shouldBe true
         }
 
+        withClue("a digit with Option on a Mac stays a digit by position: Ctrl+Option+7 types ¶") {
+            KeyChord.parse("Ctrl-Option-7", mac)
+                .matches(event = keyEvent(key = "¶", code = "Digit7", ctrl = true, alt = true), platform = mac) shouldBe true
+        }
+
+        withClue("Ctrl+Alt+Space under Windows' AltGr reading: the space still counts") {
+            KeyChord.parse("Ctrl-Alt-Space", pc)
+                .matches(event = keyEvent(key = " ", code = "Space", ctrl = true, alt = true, altGraph = true), platform = pc) shouldBe true
+        }
+
         withClue("a US Mac: Option+E is a dead key, the Alt-E chord still fires") {
             KeyChord.parse("Alt-E", mac).matches(event = keyEvent(key = "Dead", code = "KeyE", alt = true), platform = mac) shouldBe true
         }

@@ -85,6 +85,27 @@ object KlangKeyHint {
         }
     }
 
+    /** A hint that names its action after the keys ("Esc Close"): for a key that belongs to a whole box, not a button. */
+    val renderWithTitle: KeyHintRenderer = { state ->
+        span(classes = CLASS) {
+            style = (
+                listOf(
+                    "display: inline-flex",
+                    "align-items: center",
+                    "gap: 6px",
+                    "padding: 3px 7px 3px 5px",
+                    "color: ${KlangTheme.Hex.textSecondary}",
+                    "font-size: 12px",
+                    "font-weight: normal",
+                ) + frameStyle
+                ).joinToString("; ")
+
+            caps(parts = state.keyParts(compact = true), enabled = state.enabled)
+
+            +state.action.title
+        }
+    }
+
     val overview: KeyOverviewRenderer = { state ->
         div(classes = OVERVIEW_CLASS) {
             style = (

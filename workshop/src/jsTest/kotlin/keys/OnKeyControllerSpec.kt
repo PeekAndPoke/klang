@@ -131,4 +131,28 @@ class OnKeyControllerSpec : StringSpec({
             releaseCtrl()
         }
     }
+
+    "under another layer the hint waits and the key does not answer; when the layer closes both come back" {
+        withApp { keys, button ->
+            val modal = keys.openLayer()
+            press("p")
+            holdCtrl()
+            delay(60)
+
+            withClue("under the modal") {
+                button.pressed shouldContainExactly emptyList()
+                document.querySelector(".own-key") shouldBe null
+            }
+
+            modal.close()
+
+            eventually {
+                document.querySelector(".own-key")?.textContent shouldBe " (Ctrl+P)"
+            }
+
+            releaseCtrl()
+            press("p")
+            button.pressed shouldContainExactly listOf("play")
+        }
+    }
 })

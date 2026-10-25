@@ -19,6 +19,12 @@ enum class KeyHintPlacement {
 
     /** Right of the anchor, centred in height. */
     End,
+
+    /** Inside the anchor, in its top-left corner: a key that belongs to a whole box (a modal's header). */
+    InsideStart,
+
+    /** Inside the anchor, in its top-right corner ("Esc: Close" in a modal's header). */
+    InsideEnd,
 }
 
 /**
@@ -108,6 +114,8 @@ object KeyHintLayout {
             KeyHintPlacement.Over -> Box(left = a.centerX - w / 2, top = a.centerY - h / 2, width = w, height = h)
             KeyHintPlacement.Start -> Box(left = a.left - GAP_PX - w, top = a.centerY - h / 2, width = w, height = h)
             KeyHintPlacement.End -> Box(left = a.right + GAP_PX, top = a.centerY - h / 2, width = w, height = h)
+            KeyHintPlacement.InsideStart -> Box(left = a.left + GAP_PX, top = a.top + GAP_PX, width = w, height = h)
+            KeyHintPlacement.InsideEnd -> Box(left = a.right - GAP_PX - w, top = a.top + GAP_PX, width = w, height = h)
         }
 
         val first = at(item.placement)
@@ -128,7 +136,8 @@ object KeyHintLayout {
             KeyHintPlacement.End -> KeyHintPlacement.Start
                 .takeIf { first.right > rightLimit && at(it).left >= MARGIN_PX }
 
-            KeyHintPlacement.Over -> null
+            // Inside its anchor: no other side to flip to
+            KeyHintPlacement.Over, KeyHintPlacement.InsideStart, KeyHintPlacement.InsideEnd -> null
         }
 
         val placement = flipped ?: item.placement
@@ -162,7 +171,8 @@ object KeyHintLayout {
     /**
      * A row ([alongRow]) or a column: pushed apart along it, each chain centred on its anchors, wrapped into further
      * lines away from the anchors when longer than the window ([limit] along it), or towards them when the lines would
-     * leave the window that way ([crossLimit] across it): the clamp then never pushes one line onto another.
+     * leave the window that way ([crossLimit] across it), so the clamp does not push one line onto another unless the
+     * lines fit neither way.
      */
     private fun pack(group: List<Placed>, alongRow: Boolean, limit: Double, crossLimit: Double): List<Pair<Int, Box>> {
         fun start(box: Box) = if (alongRow) box.left else box.top
@@ -195,7 +205,8 @@ object KeyHintLayout {
         val reach = (lines.size - 1) * lineStep
         val awayWanted = when (lines.first().first().placement) {
             KeyHintPlacement.Above, KeyHintPlacement.Start -> -1.0
-            else -> 1.0
+            KeyHintPlacement.Below, KeyHintPlacement.Over, KeyHintPlacement.End -> 1.0
+            KeyHintPlacement.InsideStart, KeyHintPlacement.InsideEnd -> 1.0
         }
         val away = when {
             awayWanted > 0 && bandEnd + reach > crossLimit - MARGIN_PX -> -1.0

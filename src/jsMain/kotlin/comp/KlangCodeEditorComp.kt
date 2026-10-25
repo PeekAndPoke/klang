@@ -118,7 +118,6 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
 
     private val editorRef = ComponentRef.Tracker<KlangScriptEditorComp>()
 
-
     private val highlightBuffer = CodeMirrorHighlightBuffer(
         maxHighlightsPerEvent = props.maxHighlightsPerEvent,
     )

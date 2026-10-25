@@ -38,6 +38,7 @@ kotlin {
                 Deps.Test {
                     jsTestDeps()
                 }
+                implementation(Deps.KotlinLibs.Kraft.testing)
             }
         }
     }

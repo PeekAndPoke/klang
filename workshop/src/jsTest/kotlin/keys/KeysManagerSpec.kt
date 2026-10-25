@@ -468,4 +468,67 @@ class KeysManagerSpec : StringSpec({
         played shouldBe 0
         host.remove()
     }
+
+    "layers: only the top one answers, the page's keys wait under a modal, and come back when it closes" {
+        withManager { keys, host ->
+            keys.define(bag)
+            val answered = mutableListOf<String>()
+            keys.handle(close) { answered.add("page") }
+            keys.handle(play) { answered.add("page plays") }
+
+            val modal = keys.openLayer()
+            keys.handle(close, layer = modal) { answered.add("modal") }
+
+            host.dispatchEvent(keyEvent(key = "Escape"))
+            withClue("the page's Play waits too, even with no handler for it in the modal") {
+                val event = ctrlShiftEnter()
+                host.dispatchEvent(event)
+                event.defaultPrevented shouldBe false
+            }
+
+            modal.close()
+            host.dispatchEvent(keyEvent(key = "Escape"))
+
+            answered shouldContainExactly listOf("modal", "page")
+        }
+    }
+
+    "layers close in any order: the top open one always wins, a closed one never comes back, the root stays" {
+        withManager { keys, host ->
+            keys.define(bag)
+            val answered = mutableListOf<String>()
+            keys.handle(close) { answered.add("root") }
+            val first = keys.openLayer()
+            keys.handle(close, layer = first) { answered.add("first") }
+            val second = keys.openLayer()
+            keys.handle(close, layer = second) { answered.add("second") }
+
+            keys.isOnTop(second) shouldBe true
+
+            withClue("the one below closes first: the top one still answers") {
+                first.close()
+                host.dispatchEvent(keyEvent(key = "Escape"))
+            }
+
+            second.close()
+            second.close()
+            host.dispatchEvent(keyEvent(key = "Escape"))
+
+            keys.isOnTop(keys.rootLayer) shouldBe true
+            answered shouldContainExactly listOf("second", "root")
+        }
+    }
+
+    "the top layer is a stream: hints redraw when a modal opens or closes" {
+        withManager { keys, _ ->
+            val seen = mutableListOf<KeysManager.KeyLayer>()
+            val unsubscribe = keys.topLayer.subscribeToStream { seen.add(it) }
+
+            val modal = keys.openLayer()
+            modal.close()
+            unsubscribe()
+
+            seen shouldContainExactly listOf(keys.rootLayer, modal, keys.rootLayer)
+        }
+    }
 })

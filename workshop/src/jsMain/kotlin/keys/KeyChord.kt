@@ -29,7 +29,8 @@ import org.w3c.dom.events.KeyboardEvent
  * - **AltGr** types characters: while it is held only the typed character counts (Windows reports AltGr as Ctrl+Alt,
  *   and may report a real Ctrl+Alt as AltGr), so German Ctrl+Alt+L still matches and Polish AltGr+L (`ł`) does not.
  *
- * A chord that can never be pressed ([canFire] false: a symbol with Shift whose US position is unknown, `Mod-Shift-?`)
+ * A chord that can never be pressed ([canFire] false: a symbol with Shift, or with Option on a Mac, whose US position
+ * is unknown, `Mod-Shift-?`, `Alt-+` on a Mac)
  * is a problem of the keymap.
  */
 data class KeyChord(
@@ -153,6 +154,7 @@ data class KeyChord(
         if (platform == KeyPlatform.Pc && event.getModifierState("AltGraph")) {
             return when {
                 key.length == 1 -> event.key.lowercase() == key
+                key == "Space" -> event.key == " "
                 else -> event.key == key
             }
         }
@@ -202,8 +204,17 @@ data class KeyChord(
         }
     }
 
-    /** False when no key press can ever match: a symbol with Shift whose position on a US keyboard is unknown. */
-    val canFire: Boolean get() = !(shift && key.length == 1 && key[0] !in 'a'..'z' && key[0] !in '0'..'9' && key !in SYMBOL_CODES)
+    /**
+     * False when no key press on [platform] can ever match: a symbol read by its US position (with Shift everywhere,
+     * with Option on a Mac) whose position is unknown.
+     */
+    fun canFire(platform: KeyPlatform): Boolean {
+        val unknownSymbol = key.length == 1 && key[0] !in 'a'..'z' && key[0] !in '0'..'9' && key !in SYMBOL_CODES
+        // Read by the key's US position: with Shift everywhere, with Option on a Mac
+        val byPosition = shift || (alt && platform == KeyPlatform.Mac)
+
+        return !(unknownSymbol && byPosition)
+    }
 
     /** True when the chord holds Ctrl, Alt or Meta: such a chord also acts while the user types in a text field. */
     val hasCommandModifier: Boolean get() = ctrl || alt || meta
@@ -216,7 +227,7 @@ data class KeyChord(
 
     /**
      * The chord's keys one by one, modifiers first, for a hint that draws each key as a key cap: `Ctrl`, `Shift`,
-     * `Enter` on a PC; the Mac's signs `⌃ ⌥ ⇧ ⌘` in the Mac's order, `⌘`, `⇧`, `↩`.
+     * `Enter` on a PC; the Mac's signs `⌃ ⌥ ⇧ ⌘` in the Mac's order, `⇧`, `⌘`, `↩`.
      *
      * [compact] takes the signs PC users know from their keyboards where a word is long: `⇧` for Shift, `↵` for Enter,
      * `⌫` for Backspace. Ctrl and Alt stay words: their Mac signs mean nothing on a PC.

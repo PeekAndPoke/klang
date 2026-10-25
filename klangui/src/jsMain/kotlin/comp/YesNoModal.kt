@@ -5,12 +5,15 @@
 
 package io.peekandpoke.klang.ui.comp
 
+import io.peekandpoke.klang.ui.KlangKeyBindings
+import io.peekandpoke.klang.workshop.keys.KeyHintPlacement
+import io.peekandpoke.klang.workshop.keys.OnKey
+import io.peekandpoke.klang.workshop.keys.openKeyLayer
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.modals.ModalsManager
 import io.peekandpoke.kraft.semanticui.modals.FadingModal
 import io.peekandpoke.ultra.html.onClick
-import io.peekandpoke.ultra.html.onKeyDown
 import io.peekandpoke.ultra.semanticui.noui
 import io.peekandpoke.ultra.semanticui.ui
 import kotlinx.html.ButtonType
@@ -52,13 +55,16 @@ fun Tag.YesNoModal(
  * (positive) button for yes, in the look klang.css gives every modal. Both are real buttons, and the yes button takes
  * the keyboard when the modal opens.
  *
- * The answer is decided at once (a button, Esc, or the start of any close) and handed to [Props.onResult] when the
+ * The answer is decided at once (a button, a key, or the start of any close) and handed to [Props.onResult] when the
  * modal is gone, after it faded out: until then the keyboard stays in the modal, so a key typed while it fades does
  * not reach what had the keyboard before. Kraft's handle keeps the answer (the first one stands) and delivers it
  * once; a dismissal answers `null`, which is a no here.
  *
- * Klang keeps its own dialog over Kraft's OkCancel for clear control over the look (maintainer, 2026-10-25); the
- * dialog's Esc handling stays here until the key map (KLANG-00325) carries it.
+ * Its keys (KLANG-00325) are in a layer of their own over the page, so the page's keys wait while it is open, as the
+ * mouse does under the dimmer: Ctrl+Enter (Cmd on a Mac) answers yes, with its hint on the yes button; Esc closes,
+ * with "Esc Close" in the header's corner while the hints show. Enter presses the button that has the keyboard.
+ *
+ * Klang keeps its own dialog over Kraft's OkCancel for clear control over the look (maintainer, 2026-10-25).
  */
 class YesNoModal(ctx: Ctx<Props>) : FadingModal<YesNoModal.Props, Boolean>(ctx) {
 
@@ -78,17 +84,15 @@ class YesNoModal(ctx: Ctx<Props>) : FadingModal<YesNoModal.Props, Boolean>(ctx) 
         val onResult: (yes: Boolean) -> Unit,
     ) : FadingModal.Props<Boolean>()
 
-    private companion object {
-        /** `KeyboardEvent.key` of the Esc key. */
-        const val ESCAPE_KEY = "Escape"
-    }
-
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
     /** Marks the yes button, so it can take the keyboard when the modal opens. */
     private val yesButtonId = "yes-no-modal-yes-${hashCode()}"
 
     init {
+        // Its keys over the page's, for the components below it too; closed when it unmounts
+        openKeyLayer()
+
         // Once, when the modal is gone (after its fade, closed through its handle, or by closeAll): a dismissal is a no
         props.handle.onResult { yes -> props.onResult(yes ?: false) }
 
@@ -103,17 +107,18 @@ class YesNoModal(ctx: Ctx<Props>) : FadingModal<YesNoModal.Props, Boolean>(ctx) 
 
     override fun FlowContent.renderContent() {
         ui.tiny.modal.transition.visible.active.front {
-            // Focusable, so a click on the text keeps the keyboard in the modal and Esc still answers
+            // Focusable, so a click on the text keeps the keyboard in the modal
             attributes["tabindex"] = "-1"
 
-            onKeyDown { event ->
-                if (event.key == ESCAPE_KEY) {
-                    event.preventDefault()
-                    close()
-                }
+            ui.header {
+                +props.headline
+                // A key of the whole modal, in its header's corner
+                OnKey(
+                    action = KlangKeyBindings.DialogClose,
+                    placement = KeyHintPlacement.InsideEnd,
+                    hint = KlangKeyHint.renderWithTitle,
+                ) { close() }
             }
-
-            ui.header { +props.headline }
 
             noui.content {
                 props.content(this)
@@ -129,6 +134,7 @@ class YesNoModal(ctx: Ctx<Props>) : FadingModal<YesNoModal.Props, Boolean>(ctx) 
                 ui.positive.button Button {
                     id = yesButtonId
                     type = ButtonType.button
+                    OnKey(KlangKeyBindings.DialogConfirm) { close(result = true) }
                     onClick { close(result = true) }
                     +props.yesText
                 }

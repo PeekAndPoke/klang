@@ -112,6 +112,15 @@ class KeymapSpec : StringSpec({
         )
     }
 
+    "an Option chord on a key whose US position is unknown is unreachable on a Mac, not on a PC" {
+        val plus = play.copy(keys = listOf("Alt-+"))
+
+        Keymap(platform = mac, actions = listOf(plus)).problems shouldContainExactly listOf(
+            Keymap.Problem.Unreachable(actionId = "play", chord = KeyChord(key = "+", alt = true))
+        )
+        Keymap(platform = pc, actions = listOf(plus)).problems.shouldBeEmpty()
+    }
+
     "an unreadable key is a problem, and the action keeps its other keys" {
         val keymap = Keymap(platform = pc, actions = listOf(play.copy(keys = listOf("Mod-Banana", "F5"))))
 

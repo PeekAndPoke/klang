@@ -10,9 +10,9 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.ui.KlangKeyBindings
+import io.peekandpoke.klang.workshop.keys.KeyOverviewState
 import io.peekandpoke.klang.workshop.keys.KeyPlatform
 import io.peekandpoke.klang.workshop.keys.Keymap
-import io.peekandpoke.klang.workshop.keys.KeyOverviewState
 
 /**
  * The editor's keys (KLANG-00325): sound with the page's on a PC and on a Mac, read from the extensions' own constants,
@@ -41,7 +41,7 @@ class KlangEditorKeyBindingsSpec : StringSpec({
         entries.first { it.title == "Set bookmark" }.keys shouldBe listOf(listOf("⌃", "⇧", "0…9"))
     }
 
-    "the bookmark keys are Ctrl with the digits 0 to 9, the keys the bookmarks extension acts on" {
+    "the bookmark keys are the decided ones: Ctrl with the digits 0 to 9, Ctrl+Shift to set (KLANG-00323)" {
         KlangEditorKeyBindings.GoToBookmark.map { it.keys } shouldBe (0..9).map { listOf("Ctrl-$it") }
         KlangEditorKeyBindings.SetBookmark.map { it.keys } shouldBe (0..9).map { listOf("Ctrl-Shift-$it") }
     }

@@ -29,6 +29,7 @@ private class OnKeyHost(ctx: NoProps) : PureComponent(ctx) {
     var enabled by value(true)
     var action by value(save)
     var showHint by value(true)
+    var inert by value(false)
     var label by value("first")
     val pressed = mutableListOf<String>()
 
@@ -38,6 +39,11 @@ private class OnKeyHost(ctx: NoProps) : PureComponent(ctx) {
 
     override fun VDom.render() {
         div {
+            if (inert) {
+                // Not "": Preact sets inert as the element's property, and an empty string is false there
+                attributes["inert"] = "inert"
+            }
+
             if (shown) {
                 // A new lambda every render: the newest one must answer
                 val version = "${action.id}, enabled=$enabled, $label"
@@ -155,6 +161,21 @@ class OnKeySpec : StringSpec({
             eventually {
                 document.querySelector(".app-hint")?.textContent shouldBe "app F2"
             }
+
+            document.body!!.dispatchEvent(keyEvent(key = "Control", code = "ControlLeft", type = "keyup"))
+        }
+    }
+
+    "inside an inert part of the page (a page fading out) it answers no key and shows no hint" {
+        withApp { _, host ->
+            host.inert = true
+            delay(30)
+            press("s")
+            document.body!!.dispatchEvent(keyEvent(key = "Control", code = "ControlLeft", ctrl = true))
+            delay(60)
+
+            host.pressed shouldContainExactly emptyList()
+            document.querySelector(".app-hint") shouldBe null
 
             document.body!!.dispatchEvent(keyEvent(key = "Control", code = "ControlLeft", type = "keyup"))
         }

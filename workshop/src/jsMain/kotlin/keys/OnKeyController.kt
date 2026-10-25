@@ -39,9 +39,12 @@ fun Component<*>.onKeyController(
  * - It registers [action] with the app's [KeysManager] when the [component] mounts and removes it when it unmounts.
  * - [enabled] and [onKey] are read at the moment of the key, so a lambda over the component's latest props answers;
  *   a new [action] registers again at once.
- * - It follows the hints and the keymap and redraws the component when either changes, so [hint] is always current:
- *   null while the hints are hidden or the action has no key, else what to show. A key the user changes reaches it
- *   without registering again.
+ * - It answers in the component's layer ([keyLayer]: the nearest one opened above it, else the page's), and only while
+ *   that layer is on top: under a modal the page's keys wait. Inside an inert part of the page (the page a router
+ *   fades out after a navigation) it answers nothing and shows no hint.
+ * - It follows the hints, the keymap and the top layer and redraws the component when one changes, so [hint] is
+ *   always current: null while the hints are hidden, the layer is not on top or the action has no key, else what to
+ *   show. A key the user changes reaches it without registering again.
  *
  * A component that only answers a key (a dialog's Esc) ignores [hint]; one that draws the key in its own way (in its
  * label, right-aligned in a menu row) reads it in its render. [OnKey] is the slim default: this controller and a
@@ -58,6 +61,12 @@ class OnKeyController(
     private val manager = component.keys
 
     private val hintsShown by component.subscribingTo(manager.hints)
+
+    /** The layer its key answers in: the nearest opened one above the component, else the page's. */
+    private val layer = component.keyLayer
+
+    /** The layer on top: a hint shows only while its own layer is on top (the page's hints wait under a modal). */
+    private val topLayer by component.subscribingTo(manager.topLayer)
 
     private val keymap by component.subscribingTo(manager.keymap)
 
@@ -79,7 +88,7 @@ class OnKeyController(
     /** What to show while the hints show; null while they are hidden or the action has no key. */
     val hint: KeyHintState?
         get() {
-            if (!hintsShown) {
+            if (!hintsShown || topLayer !== layer || isInert()) {
                 return null
             }
 
@@ -110,6 +119,9 @@ class OnKeyController(
 
     private fun register() {
         registration?.remove()
-        registration = manager.handle(action = action, enabled = { enabled() }) { event -> onKey(event) }
+        registration = manager.handle(action = action, enabled = { enabled() && !isInert() }, layer = layer) { event -> onKey(event) }
     }
+
+    /** True inside an inert part of the page (a page fading out after a navigation): it answers no keys, shows no hint. */
+    private fun isInert(): Boolean = component.dom?.closest("[inert]") != null
 }

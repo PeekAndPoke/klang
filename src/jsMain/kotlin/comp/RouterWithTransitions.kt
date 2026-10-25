@@ -133,6 +133,9 @@ class RouterWithTransitions internal constructor(ctx: Ctx<Props>) : Component<Ro
 
             div(classes = "previous") {
                 key = "previous-states"
+                // The page just left, fading out: inert, so it takes no focus and answers no keys (KLANG-00325). Not "":
+                // Preact sets inert as the element's property, and an empty string is false there
+                attributes["inert"] = "inert"
                 css {
                     position = Position.absolute
                     top = 0.px

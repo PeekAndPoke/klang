@@ -95,7 +95,8 @@ typealias KeyOverviewRenderer = FlowContent.(KeyOverviewState) -> Unit
 
 /**
  * An overview of a bag's keys while the hints show: its [KeyBindings.overview] rows with the keys set now (a key the
- * user changes shows at once), drawn by [renderer]. Nothing while the hints are hidden. It places nothing: put it where
+ * user changes shows at once), drawn by [renderer]. Nothing while the hints are hidden or another layer (a modal) is
+ * on top of its own. It places nothing: put it where
  * it belongs (`position: absolute` in the corner of the area it is about).
  */
 @Suppress("FunctionName")
@@ -126,11 +127,16 @@ class KeyBindingsOverlay(ctx: Ctx<Props>) : Component<KeyBindingsOverlay.Props>(
 
     private val keymap by subscribingTo(keys.keymap)
 
+    /** The layer this overview belongs to: under a modal, the page's overview waits with the page's keys. */
+    private val layer = keyLayer
+
+    private val topLayer by subscribingTo(keys.topLayer)
+
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     override fun VDom.render() {
         div(classes = CLASS) {
-            if (hintsShown) {
+            if (hintsShown && topLayer === layer && dom?.closest("[inert]") == null) {
                 props.renderer(this, KeyOverviewState.of(title = props.title, rows = props.bindings.overview, keymap = keymap))
             }
         }

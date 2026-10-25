@@ -211,8 +211,8 @@ Klang out of it and the move is a copy. Klang's modules depend on it.
 **Open after step 1's review round 1 (2026-10-25), for later steps:**
 - **Layers:** page keys still act under a modal (Ctrl+Shift+Enter plays behind the bookmark question). The stack is per
   action; a modal needs a layer that blocks the keys below it. Decide with step 5 (ULTRA-00239).
-- **Kraft parity for the move:** Kraft's managers are an interface with an implementation, `KeysManager` is a class
-  that adds its listeners in its constructor; `Component.keys` is a generic name on every component. Settle when it
+- **Kraft parity for the move:** of Kraft's managers only the modals manager is an interface with an implementation;
+  the popups and toasts managers are classes, as `KeysManager` is (it adds its listeners in its constructor); `Component.keys` is a generic name on every component. Settle when it
   moves. Also for the move: the stage's `visibleBox` treats `overflow-x: clip` with a visible `overflow-y` as clipping
   both axes, and cuts an absolute or fixed anchor by ancestors that are not its containing block; no anchor in Klang
   is either (2026-10-25).
@@ -270,8 +270,8 @@ OkCancel real buttons and focus; their Esc stays ours until the key map carries 
   AltGr reading (macOS has no AltGr), which also settles the Firefox doubt below; `workshop/` is Apache-2.0 like Ultra ("Same license as ultra,
   but we can also relicense once it moves"), with `workshop/CLAUDE.md` and a line in the root licensing row; the
   missing `--klang-bg-popup` added to `klang.css`; hints of disabled buttons hidden with `showHint`; the hint delay
-  300 ms. Not verified, for a Mac at hand: Firefox on macOS may report Option as AltGraph, which would put Option
-  chords through the AltGr branch.
+  300 ms. Not verified, for a Mac at hand: whether Firefox on macOS reports Option as AltGraph; matching no longer
+  depends on it (the Mac skips the AltGr reading), at most the hints hide when Option joins a held Cmd.
 - 2026-10-25: the editor keys overlay, ahead of step 3 (maintainer: "show an overlay with the key binding bag of the
   editor"): `KeyActionGroup` and `KeyBindings.overview` (one row for bookmarks 0 to 9), `KeyBindingsOverlay` in
   `workshop`, `KlangEditorKeyBindings` display-only in scope `editor` (CodeMirror still acts on these keys), the panel
@@ -279,3 +279,15 @@ OkCancel real buttons and focus; their Esc stays ours until the key map carries 
   clipping walk took the body for a clipping box, so hints vanished on a scrolled page), fixed with the MINORs; the
   next round at level 3.
 - 2026-10-25: IN PROGRESS.
+- 2026-10-25: v0.7.5 released with step 1, the pilot and the overlay (maintainer). The overlay step's round 3 clean;
+  its MINORs fixed with the next step: `canFire` by platform, Ctrl+Alt+Space under AltGr, a page fading out after a
+  navigation answers no keys (`inert` on the router's previous layer), the Kraft-parity note.
+- 2026-10-25: layers (maintainer): `openLayer()` returns a `LayerHandle` with `close()`, the root layer is always there
+  and cannot be closed, the top layer wins, closing in any order is deterministic; a modal opens one with
+  `openKeyLayer()`. `YesNoModal` on it: Ctrl+Enter answers yes (hint on the yes button), Esc closes ("Esc Close" in
+  the header's corner while Ctrl is held, the maintainer's choice), the page's keys wait meanwhile. Placements
+  `InsideStart` and `InsideEnd` (maintainer: build them too).
+- 2026-10-25: next, the maintainer's idea: while Ctrl+Shift is held, a panel of the song's bookmarks (digit, file,
+  line, the line's code), left of the editor's keys overview (both show; the Ctrl hints stay while Shift joins). It
+  needs a new pattern, `OnHoldKey`: a held modifier combination starts and ends a hold, as the hints' trigger does
+  today; the hints become one hold among others.

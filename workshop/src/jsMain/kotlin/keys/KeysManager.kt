@@ -22,8 +22,12 @@ import kotlin.math.abs
  * - **Actions** come in bags ([define], a [KeyBindings]); their keys are the defaults for [platform] with the user's keys
  *   over them ([setUserKeys], kept in the [KeymapStore]). Every change publishes a new [Keymap].
  * - **Handlers** answer an action. They stack per action: the newest enabled one answers, and when it goes (or is
- *   disabled) the one before answers again: a dialog's Esc over the page's. A handler names its action, never a key,
- *   so a key the user changes reaches it without registering again.
+ *   disabled) the one before answers again. A handler names its action, never a key, so a key the user changes reaches
+ *   it without registering again.
+ * - **Layers:** every handler answers in a layer, the page's in [rootLayer], which is always there. A modal opens one
+ *   over the rest ([openLayer]); only the top layer's handlers answer and only their hints show, the keys below wait,
+ *   as the mouse does under a dimmer. Layers close in any order: the top open one always wins, a closed one never
+ *   comes back, and the root cannot be closed at all.
  * - **Hints:** [hints] is true while the [hintTrigger] (by default `Mod`: Ctrl on a PC, Cmd on a Mac) is held alone for
  *   [hintDelayMs], and false again on its release, on any other key, a click or the wheel (Ctrl+click, Ctrl+wheel), or
  *   when the window loses focus. Moving the mouse while the delay runs stops it (Ctrl+hover in the code editor). AltGr
@@ -48,6 +52,9 @@ class KeysManager(
         /** The key under which a Kraft app keeps its manager (`KraftApp.Builder.keys`). */
         val key = TypedKey<KeysManager>("keys")
 
+        /** The key under which a component keeps the layer it opened (`Component.openKeyLayer`), for those below it. */
+        val layerKey = TypedKey<KeyLayer>("key-layer")
+
         /** How far the pointer may drift while the hint delay runs before it counts as pointing, in CSS pixels. */
         const val POINTER_SLACK_PX = 4
     }
@@ -60,6 +67,14 @@ class KeysManager(
     /** A bag defined with [define]; [update] swaps its actions in place (after [remove] it changes nothing). */
     interface BagRegistration : Registration {
         fun update(bindings: KeyBindings)
+    }
+
+    /** A layer of keys: [rootLayer], or one opened with [openLayer]. */
+    interface KeyLayer
+
+    /** A layer opened with [openLayer]; [close] removes it, closing twice does nothing. */
+    interface LayerHandle : KeyLayer {
+        fun close()
     }
 
     /** A handler registered with [handle]; [update] swaps what it does, keeping its place in the stack. */
@@ -87,8 +102,18 @@ class KeysManager(
         }
     }
 
+    private inner class Layer : LayerHandle {
+        override fun close() {
+            if (layers.remove(this)) {
+                _topLayer(layers.lastOrNull() ?: rootLayer)
+            }
+        }
+    }
+
     private inner class Handler(
         val actionId: String,
+        /** The layer it answers in. */
+        val layer: KeyLayer,
         var enabled: () -> Boolean,
         var handler: (KeyboardEvent) -> Unit,
     ) : HandlerRegistration {
@@ -109,6 +134,17 @@ class KeysManager(
 
     /** Every handler, oldest first; the newest enabled one of an action answers. */
     private val handlers = mutableListOf<Handler>()
+
+    /** The page's layer, under every opened one; it cannot be closed. */
+    val rootLayer: KeyLayer = object : KeyLayer {}
+
+    /** The opened layers, oldest first; the last one is on top of the root. */
+    private val layers = mutableListOf<Layer>()
+
+    private val _topLayer = StreamSource(rootLayer)
+
+    /** The layer on top now: the root while none is open. Hints redraw when it changes. */
+    val topLayer: Stream<KeyLayer> = _topLayer.readonly
 
     private var userKeys: Map<String, List<String>> = store.load()
 
@@ -175,9 +211,6 @@ class KeysManager(
     /** The first key of [action] as the user reads it (`Ctrl+Shift+Enter`), null when it has none. */
     fun labelOf(action: KeyAction): String? = _keymap().chordsOf(action.id).firstOrNull()?.label(platform)
 
-    /** True when [event] triggers [action], in the keymap as it is now. */
-    fun matches(action: KeyAction, event: KeyboardEvent): Boolean = _keymap().matches(action.id, event)
-
     private fun rebuild() {
         val actions = bags.flatMap { it.bindings.actions }
 
@@ -216,13 +249,23 @@ class KeysManager(
 
     //  HANDLERS  ///////////////////////////////////////////////////////////////////////////////////////////////
 
+    /** Opens a layer over everything open before it; see [LayerHandle]. */
+    fun openLayer(): LayerHandle = Layer().also { layer ->
+        layers.add(layer)
+        _topLayer(layer)
+    }
+
+    /** True while [layer] is the one whose keys answer. */
+    fun isOnTop(layer: KeyLayer): Boolean = _topLayer() === layer
+
     /**
-     * Answers [action] with [handler] while [enabled] says so, over the handlers registered before. The returned
-     * registration removes it, or swaps what it does without losing its place.
+     * Answers [action] with [handler] while [enabled] says so and its [layer] is on top, over the handlers registered
+     * before. The returned registration removes it, or swaps what it does without losing its place.
      */
     fun handle(
         action: KeyAction,
         enabled: () -> Boolean = { true },
+        layer: KeyLayer = rootLayer,
         handler: (KeyboardEvent) -> Unit,
     ): HandlerRegistration {
         // A forgotten define: no key, no hint, and nothing says why; say it once
@@ -230,7 +273,7 @@ class KeysManager(
             console.warn("KeysManager: \"${action.id}\" is handled but no bag defines it, so it has no key yet")
         }
 
-        val registered = Handler(actionId = action.id, enabled = enabled, handler = handler)
+        val registered = Handler(actionId = action.id, layer = layer, enabled = enabled, handler = handler)
         handlers.add(registered)
 
         return registered
@@ -267,7 +310,9 @@ class KeysManager(
                 return@forEach
             }
 
-            val answering = handlers.lastOrNull { it.actionId == action.id && it.enabled() } ?: return@forEach
+            // Only the top layer answers: the keys below it wait, the page's under a modal
+            val top = _topLayer()
+            val answering = handlers.lastOrNull { it.actionId == action.id && it.layer === top && it.enabled() } ?: return@forEach
 
             event.preventDefault()
             answering.handler(event)

@@ -24,3 +24,24 @@ val Component<*>.keys: KeysManager get() = getAttributeRecursive(KeysManager.key
 
 /** The app's [KeyHintStage]; null in an app without one. */
 val Component<*>.keyHintStage: KeyHintStage? get() = getAttributeRecursiveOrNull(KeyHintStage.key)
+
+/** The layer this component's keys answer in: the nearest one a component above opened, else the page's root layer. */
+val Component<*>.keyLayer: KeysManager.KeyLayer get() = getAttributeRecursiveOrNull(KeysManager.layerKey) ?: keys.rootLayer
+
+/**
+ * Opens a layer of keys for this component and everything below it (a modal): while it is on top, only their keys
+ * answer and only their hints show. It closes when the component unmounts. Call it in the component's `init`, before
+ * the components below it are made.
+ */
+fun Component<*>.openKeyLayer(): KeysManager.LayerHandle {
+    val layer = keys.openLayer()
+    attributes[KeysManager.layerKey] = layer
+
+    lifecycle {
+        onUnmount {
+            layer.close()
+        }
+    }
+
+    return layer
+}
