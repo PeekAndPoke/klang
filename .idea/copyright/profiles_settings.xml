@@ -2,6 +2,7 @@
   <settings default="Klang AGPL">
     <module2copyright>
       <element module="tones" copyright="Klang tones MIT" />
+      <element module="workshop" copyright="" />
     </module2copyright>
   </settings>
 </component>

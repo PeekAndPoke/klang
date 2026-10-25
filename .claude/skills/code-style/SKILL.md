@@ -137,6 +137,8 @@ Every `.kt` file starts with this header, above any `@file:` annotation or `pack
 - "Klangmotor" / "Motor" with a plain o. The umlaut spelling (retired 2026-08-25) survives only in historical records
   (`DEV-DIARY.MD`, `docs/history/`, `docs/tasks-archive/`), which are never "fixed".
 - Exempt: `.kts` build scripts, and third-party files with their own notice (never overwrite it).
+- `workshop/` is Apache-2.0 like Ultra, bound for Kraft (maintainer, 2026-10-25), and its files carry no header at all,
+  as Ultra's do: its `LICENSE` covers them. The IDE's copyright profile maps the `workshop` scope to no copyright.
 - `tones/` is MIT (a port of tonal.js) and never gets the AGPL header. The "Klang tones MIT" profile applies its own:
 
   ```kotlin
