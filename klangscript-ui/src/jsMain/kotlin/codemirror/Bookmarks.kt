@@ -36,7 +36,7 @@ package io.peekandpoke.klang.ui.codemirror
  * Immutable, as the value of a CodeMirror state field must be: every step returns a new value.
  */
 data class Bookmarks(
-    /** The bookmarks by digit, each at the anchor of its line. */
+    /** The bookmarks by digit, each at the anchor of its line; every step keeps them sorted by digit (overviews rely on it). */
     val placed: List<Placed> = emptyList(),
 ) {
     /** Bookmark [digit] at the offset [pos], the anchor of its line. */

@@ -22,10 +22,13 @@ import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import kotlinx.css.Align
 import kotlinx.css.Display
+import kotlinx.css.JustifyContent
 import kotlinx.css.PointerEvents
 import kotlinx.css.Position
 import kotlinx.css.alignItems
 import kotlinx.css.display
+import kotlinx.css.justifyContent
+import kotlinx.css.left
 import kotlinx.css.pointerEvents
 import kotlinx.css.position
 import kotlinx.css.px
@@ -71,8 +74,6 @@ class EditorKeysCorner(ctx: Ctx<Props>) : Component<EditorKeysCorner.Props>(ctx)
         /** The minimap's element, which CodeMirror's minimap extension mounts at the editor's right edge. */
         const val MINIMAP_SELECTOR = ".cm-minimap-gutter"
 
-        /** The longest piece of a bookmark's code the panel shows, in characters; longer code ends in "…". */
-        const val CODE_CHARS = 48
     }
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -130,7 +131,10 @@ class EditorKeysCorner(ctx: Ctx<Props>) : Component<EditorKeysCorner.Props>(ctx)
                 position = Position.absolute
                 top = INSET
                 right = (minimapWidth + GAP_PX).px
+                // Never wider than the editor: the bookmarks panel shrinks (its code ends in "…") before it leaves it
+                left = INSET
                 display = Display.flex
+                justifyContent = JustifyContent.flexEnd
                 alignItems = Align.flexStart
                 put("gap", "${GAP_PX}px")
                 // Over CodeMirror's panels (the search panel is at 300); it never takes a click
@@ -138,11 +142,18 @@ class EditorKeysCorner(ctx: Ctx<Props>) : Component<EditorKeysCorner.Props>(ctx)
                 pointerEvents = PointerEvents.none
             }
 
-            if (hintsShown && topLayer === layer) {
-                renderBookmarks()
+            // Under a modal, and in a page fading out after a navigation (inert), the bookmarks wait
+            if (hintsShown && topLayer === layer && dom?.closest("[inert]") == null) {
+                div {
+                    style = "min-width: 0; flex: 0 1 auto"
+                    renderBookmarks()
+                }
             }
 
-            KeyBindingsOverlay(bindings = KlangEditorKeyBindings, title = "Editor", renderer = KlangKeyHint.overview)
+            div {
+                style = "flex: 0 0 auto"
+                KeyBindingsOverlay(bindings = KlangEditorKeyBindings, title = "Editor", renderer = KlangKeyHint.overview)
+            }
         }
     }
 
@@ -154,10 +165,10 @@ class EditorKeysCorner(ctx: Ctx<Props>) : Component<EditorKeysCorner.Props>(ctx)
             return
         }
 
-        panel(title = "Bookmarks", columns = 3) {
+        // The code's column may shrink; the other two keep their width
+        panel(title = "Bookmarks", columns = 3, template = "auto auto minmax(0, 1fr)") {
             rows.forEach { row ->
-                val go = KlangEditorKeyBindings.GoToBookmark.getOrNull(row.digit)
-                val chord = go?.let { keymap.chordsOf(it.id).firstOrNull() }
+                val chord = KlangEditorKeyBindings.goToBookmark(row.digit)?.let { keymap.chordsOf(it.id).firstOrNull() }
 
                 span {
                     chord?.let { caps(parts = it.keyParts(platform = keymap.platform, compact = true)) }
@@ -170,9 +181,12 @@ class EditorKeysCorner(ctx: Ctx<Props>) : Component<EditorKeysCorner.Props>(ctx)
                         "font-family: monospace",
                         "color: ${KlangTheme.Hex.textPrimary}",
                         "white-space: pre",
+                        "min-width: 0",
+                        "overflow: hidden",
+                        "text-overflow: ellipsis",
                     ).joinToString("; ")
 
-                    +if (row.code.length > CODE_CHARS) row.code.take(CODE_CHARS - 1) + "…" else row.code
+                    +row.code
                 }
             }
         }

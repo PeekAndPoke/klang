@@ -288,7 +288,7 @@ internal object BookmarksExtension {
 
     private fun bookmarksOf(state: EditorState): Bookmarks = state.field(field).unsafeCast<Bookmarks>()
 
-    /** The bookmarks of [state] by digit, each with the code on its line, trimmed; empty when the editor has none. */
+    /** The bookmarks of [state] by digit, each with the code on its line, trimmed; empty without any, or without this extension. */
     fun rowsOf(state: EditorState): List<BookmarkRow> {
         // An editor without the bookmarks extension has no field: no rows
         val bookmarks = state.field(field, false)?.unsafeCast<Bookmarks>() ?: return emptyList()

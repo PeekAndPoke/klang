@@ -12,7 +12,7 @@ data class BookmarkRow(val digit: Int, val line: Int, val code: String)
 
 /**
  * The bookmarks of the editor whose state is [state], by digit, each with the code on its line, trimmed; empty when
- * the editor has none or has no bookmarks at all. The way in for the app (the song page's bookmarks panel); the
+ * the editor has no bookmarks, or not the bookmarks extension. The way in for the app (the song page's bookmarks panel); the
  * extension itself stays internal.
  */
 fun bookmarkRowsOf(state: EditorState): List<BookmarkRow> = BookmarksExtension.rowsOf(state)

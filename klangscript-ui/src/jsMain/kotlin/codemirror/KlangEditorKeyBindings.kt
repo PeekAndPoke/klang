@@ -52,6 +52,9 @@ object KlangEditorKeyBindings : KeyBindings {
         )
     }
 
+    /** The action that jumps to bookmark [digit]; null for a digit no bookmark can have. */
+    fun goToBookmark(digit: Int): KeyAction? = GoToBookmark.firstOrNull { it.id == "klang.editor.go-to-bookmark-$digit" }
+
     val Undo = KeyAction(id = "klang.editor.undo", title = "Undo", keys = listOf("Mod-Z"), scope = SCOPE)
 
     val Redo = KeyAction(

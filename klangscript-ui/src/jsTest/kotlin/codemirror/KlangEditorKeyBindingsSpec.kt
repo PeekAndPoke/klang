@@ -45,4 +45,10 @@ class KlangEditorKeyBindingsSpec : StringSpec({
         KlangEditorKeyBindings.GoToBookmark.map { it.keys } shouldBe (0..9).map { listOf("Ctrl-$it") }
         KlangEditorKeyBindings.SetBookmark.map { it.keys } shouldBe (0..9).map { listOf("Ctrl-Shift-$it") }
     }
+
+    "the jump key's action for a bookmark's digit, none for a digit no bookmark can have" {
+        KlangEditorKeyBindings.goToBookmark(3)?.keys shouldBe listOf("Ctrl-3")
+        KlangEditorKeyBindings.goToBookmark(0)?.keys shouldBe listOf("Ctrl-0")
+        KlangEditorKeyBindings.goToBookmark(10) shouldBe null
+    }
 })

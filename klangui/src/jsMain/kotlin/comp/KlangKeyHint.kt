@@ -107,15 +107,17 @@ object KlangKeyHint {
     }
 
     /**
-     * A panel of keys in Klang's look: the frame, an optional bold [title] over the whole width, and [columns] columns
-     * that [content] fills cell by cell. The keys overview and the editor's bookmarks panel use it.
+     * A panel of keys in Klang's look: the frame, an optional bold [title] over the whole width, and columns that
+     * [content] fills cell by cell: [columns] of their content's width, or [template] (a CSS grid template, for a column
+     * that may shrink). The keys overview and the editor's bookmarks panel use it.
      */
-    fun FlowContent.panel(title: String?, columns: Int, content: FlowContent.() -> Unit) {
+    fun FlowContent.panel(title: String?, columns: Int, template: String? = null, content: FlowContent.() -> Unit) {
         div(classes = OVERVIEW_CLASS) {
             style = (
                 listOf(
                     "display: grid",
-                    "grid-template-columns: repeat($columns, auto)",
+                    "grid-template-columns: ${template ?: "repeat($columns, auto)"}",
+                    "min-width: 0",
                     "column-gap: 16px",
                     "row-gap: 5px",
                     "align-items: center",
