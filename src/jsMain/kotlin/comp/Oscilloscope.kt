@@ -17,7 +17,8 @@ import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.maths.Ease
 import io.peekandpoke.ultra.streams.Stream
-import io.peekandpoke.ultra.streams.Unsubscribe
+import io.peekandpoke.ultra.streams.ops.map
+import io.peekandpoke.ultra.streams.ops.switchMapNotNull
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.css.Color
@@ -98,8 +99,6 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
-    private var waveformUnsubscribe: Unsubscribe? = null
-
     private var lastHistory: AnalyzerBufferHistory? = null
     private var expandedStorage: Float32Array? = null
 
@@ -130,9 +129,15 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
     @Suppress("unused")
     private val laf by subscribingTo(KlangTheme)
 
+    /** The player's waveform, followed to the next player; null (no player, or a player without an analyzer) keeps the last frame. */
     @Suppress("unused")
-    private val playerSub by subscribingTo(props.player) {
-        subscribeToWaveform(it)
+    private val waveform by subscribingTo(
+        props.player.map { it?.getAnalyzer() }.switchMapNotNull { it.waveform }
+    ) { history ->
+        if (history != null) {
+            lastHistory = history
+            drawWaveform(history)
+        }
     }
 
     init {
@@ -152,8 +157,6 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
             }
 
             onUnmount {
-                waveformUnsubscribe?.invoke()
-                waveformUnsubscribe = null
                 cleanupOverlay()
             }
 
@@ -176,19 +179,6 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
                     if (h != null) drawWaveform(h) else drawIdleWaveform()
                 }
             }
-        }
-    }
-
-    private fun subscribeToWaveform(player: KlangPlayer?) {
-        waveformUnsubscribe?.invoke()
-        waveformUnsubscribe = null
-
-        val analyzer = player?.getAnalyzer() ?: return
-
-        waveformUnsubscribe = analyzer.waveform.subscribeToStream { history ->
-            lastHistory = history
-            drawWaveform(history)
-            triggerRedraw()
         }
     }
 

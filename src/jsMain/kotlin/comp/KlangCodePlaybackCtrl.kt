@@ -16,10 +16,10 @@ import io.peekandpoke.klang.ui.codemirror.EditorError
 import io.peekandpoke.kraft.utils.launch
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
-import io.peekandpoke.ultra.streams.Unsubscribe
 import io.peekandpoke.ultra.streams.ops.debounce
 import io.peekandpoke.ultra.streams.ops.distinct
 import io.peekandpoke.ultra.streams.ops.map
+import io.peekandpoke.ultra.streams.ops.switchMapNotNull
 
 /**
  * Non-UI controller that owns the compile → play → signals → stop lifecycle for a single
@@ -103,8 +103,8 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) {
     private val _playback = StreamSource<KlangCyclicPlayback?>(null)
     val playback: Stream<KlangCyclicPlayback?> = _playback.readonly
 
-    private val _signals = StreamSource<KlangPlaybackSignal?>(null)
-    val signals: Stream<KlangPlaybackSignal?> = _signals.readonly
+    /** The current playback's signals; null while nothing plays. */
+    val signals: Stream<KlangPlaybackSignal?> = _playback.switchMapNotNull { it.signals }
 
     private val _errors = StreamSource<List<EditorError>>(emptyList())
     val errors: Stream<List<EditorError>> = _errors.readonly
@@ -114,13 +114,17 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) {
     /** Baseline for [State.isCodeModified] — the exact string that was last submitted to a playback. */
     private var playingCode: String? = null
 
-    /** Keeps the signal forwarding subscription so it can be cancelled when playback stops. */
-    private var signalSub: Unsubscribe? = null
-
     init {
         // Backend tempo sync — debounced on rpm changes only, so typing code doesn't delay the sync.
         _state.map { it.rpm }.distinct().debounce(150).subscribeToStream { newRpm ->
             if (newRpm > 0.0) _playback()?.updateRpm(newRpm)
+        }
+
+        // The cycle counter follows the playing playback's completed cycles.
+        signals.subscribeToStream { signal ->
+            if (signal is KlangPlaybackSignal.CycleCompleted) {
+                _state { it.copy(currentCycle = signal.cycleIndex + 1) }
+            }
         }
 
         // Mirror the global player loading state into our combined state.
@@ -174,11 +178,10 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) {
     }
 
     fun stop() {
-        signalSub?.invoke()
-        signalSub = null
-        _playback()?.stop()
+        val stopping = _playback()
+        // Off the signals first: what the playback sends while it stops does not reach the editor.
         _playback(null)
-        _signals(null)
+        stopping?.stop()
         playingCode = null
         _state {
             it.copy(
@@ -229,13 +232,6 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) {
                             isCodeModified = false,
                             currentCycle = 0,
                         )
-                    }
-
-                    signalSub = pb.signals.subscribeToStream { signal ->
-                        _signals(signal)
-                        if (signal is KlangPlaybackSignal.CycleCompleted) {
-                            _state { it.copy(currentCycle = signal.cycleIndex + 1) }
-                        }
                     }
 
                     pb.start(KlangCyclicPlayback.Options(rpm = _state().rpm))
