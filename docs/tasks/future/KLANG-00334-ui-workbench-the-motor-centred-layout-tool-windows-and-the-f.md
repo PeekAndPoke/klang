@@ -64,6 +64,14 @@ Kept in order, close to the maintainer's words.
     KLANG-00336 (visual script).
 30. (2026-10-25) Step 1 built (KLANG-00337): likes the kitchen sink page and the sample looks (Default, Copper,
     Cream on black). The names `--kl-` and `KlangLook` are fine.
+31. (2026-10-25) Input from Klang-Main-Dev at the maintainer's request (informal, take what fits): where keys and
+    their hints would help, by benefit: the code tools (Esc, Ctrl+Enter, Reset; they open a key layer), the playable
+    examples (Play/Update, Stop, Reset, the focused one answers), the song page's controls, tutorials (next,
+    previous, mark completed), search fields ("/" or Ctrl+K, Esc clears), navigation, the REPL. What a design can
+    count on: an `OnKey` inside a button draws its hint on its own layer (no room needed beside it); a box carries a
+    key in a corner (`InsideEnd`, as the yes/no modal's "Esc Close"); an area shows its keys in a corner while Ctrl
+    is held. The full list: KLANG-00325, section "Places for keys and hints (survey 2026-10-25)". The rollout waits
+    for this layout (maintainer).
 
 ## Where the conversation stands (leanings, not decisions)
 
