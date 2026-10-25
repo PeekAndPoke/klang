@@ -77,6 +77,10 @@ Kept in order, close to the maintainer's words.
     `<use>`) costs one element per use; drawn in `currentColor` the icons follow the theme's ink (silver caps,
     copper, cream). What costs is SVG filters (blur) and animating many at once. Our own drawing, or an open set
     (Lucide is ISC) credited per the credits rule. Today's icons are Font Awesome's through Fomantic.
+33. (2026-10-25) The Motor button's drawer shows a theme choice: "Default", "Copper", "Cream" and "Custom" (dashed,
+    coming later). Plan: in the drawer's step, the three sample looks of the kitchen sink become built-in looks in
+    `klangui`, the drawer gets a LOOK row (the active one pressed, its lamp on), and the choice is remembered in the
+    browser (later in the account).
 
 ## Where the conversation stands (leanings, not decisions)
 
