@@ -179,6 +179,11 @@ This ticket is the epic "keyboard shortcuts", klang's first (maintainer, 2026-10
 
 After KLANG-00323 (bookmarks, done and committed). Unblocks KLANG-00324 (the shortcuts page reads the table).
 
+**Moves to Kraft once stable** (maintainer, 2026-10-25, agreed with Ultra): the key map is built here first, and the
+mechanism moves to Kraft when it has proven itself. Kraft's Esc for modals (ULTRA-00239) will be built on top of it.
+Klang keeps its own dialogs (`YesNoModal`) for clear control over their styles, also after Ultra 0.115.0 gave Kraft's
+OkCancel real buttons and focus; their Esc stays ours until the key map carries it.
+
 ## History
 
 - 2026-10-21: created as an idea (maintainer's note).
@@ -186,3 +191,5 @@ After KLANG-00323 (bookmarks, done and committed). Unblocks KLANG-00324 (the sho
   and the design draft written for the maintainer's look. The order with KLANG-00324 turned round: the key map first.
 - 2026-10-21: the first epic (maintainer: "adopt this gradually"); KLANG-00324, KLANG-00326 and KLANG-00327 are part
   of it.
+- 2026-10-25: next after the Ultra 0.115.0 bump (maintainer); built here, moves to Kraft once stable, Kraft's Esc
+  on top; Klang keeps its own dialogs.
