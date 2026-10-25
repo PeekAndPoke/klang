@@ -87,6 +87,9 @@ Kept in order, close to the maintainer's words.
 35. (2026-10-25) Selected is blue: "down here everything is nice and blue except for the gauges". The open Motor
     button's dots and the active drawer item's lamp are blue on the canvas; `KlangRole.LampOn` defaults to the accent
     blue (was green).
+36. (2026-10-25) Likes the canvas's oscilloscope in blue (today white, `Oscilloscope.strokeColor`) and the spectrum
+    with more columns (28 on the canvas, today 16, `Spectrumeter.numBuckets`). For the step that switches the Motor
+    over: the trace's colour as a role, the column count raised.
 
 ## Where the conversation stands (leanings, not decisions)
 
