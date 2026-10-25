@@ -43,9 +43,21 @@ body{margin:0}
       </button>
     </sc-for>
   </div>
+
+  <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #12131c">
+    <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.18em; color: #abb2bf; margin-bottom: 8px">LOOK</div>
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px">
+      <sc-for list="{{ looks }}" as="lk" hint-placeholder-count="4">
+        <button aria-pressed="{{ lk.active }}" onClick="{{ lk.pick }}" style="display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 8px 4px 7px; cursor: pointer; border-radius: 10px; border: {{ lk.border }}; background: {{ lk.bg }}; box-shadow: {{ lk.shadow }}; color: {{ lk.color }}; font-family: Lato, sans-serif; font-size: 11px; font-weight: 700">
+          <span aria-hidden="true" style="width: 16px; height: 16px; border-radius: 50%; border: 1px solid #000; background: {{ lk.swatch }}"></span>
+          {{ lk.name }}
+        </button>
+      </sc-for>
+    </div>
+  </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"active":{"editor":"enum","options":["songs","learn","docs","samples","midi","credits"],"default":"songs"},"beaconItem":{"editor":"text","default":""},"onPick":{"editor":null},"onClose":{"editor":null},"$preview":{"width":300,"height":400}}'>
+<script type="text/x-dc" data-dc-script data-props='{"active":{"editor":"enum","options":["songs","learn","docs","samples","midi","credits"],"default":"songs"},"beaconItem":{"editor":"text","default":""},"onPick":{"editor":null},"onClose":{"editor":null},"$preview":{"width":300,"height":490}}'>
 class Component extends DCLogic {
   renderVals() {
     const active = this.state.active ?? this.props.active ?? 'songs';
@@ -70,8 +82,8 @@ class Component extends DCLogic {
         shadow: d.later ? 'none' : (on ? 'inset 0 2px 5px rgba(0,0,0,0.75)' : '0 2px 3px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1)'),
         color: d.later ? '#abb2bf' : '#ffffff',
         subColor: '#abb2bf',
-        led: on ? '#EBC773' : (d.later ? 'transparent' : '#3a3220'),
-        ledGlow: on ? '0 0 6px #EBC773' : 'none',
+        led: on ? '#98c379' : (d.later ? 'transparent' : '#3a3220'),
+        ledGlow: on ? '0 0 6px #98c379' : 'none',
         anim: d.id === (this.props.beaconItem ?? '') ? 'klangBeacon 1.82s ease-in-out infinite' : 'none',
         pick: () => {
           if (d.later) { return; }
@@ -80,7 +92,28 @@ class Component extends DCLogic {
         },
       };
     });
+    const look = this.state.look ?? 'default';
+    const lookDefs = [
+      { id: 'default', name: 'Default', swatch: 'radial-gradient(circle at 40% 30%, #f2f4f7, #c9ced6 45%, #7d838d)' },
+      { id: 'copper', name: 'Copper', swatch: 'radial-gradient(circle at 40% 30%, #f6d6bd, #c98a5e 45%, #7a4a2c)' },
+      { id: 'cream', name: 'Cream', swatch: 'radial-gradient(circle at 40% 30%, #fbf3dd, #e3d5b0 45%, #a08f66)' },
+      { id: 'custom', name: 'Custom', swatch: 'transparent', later: true },
+    ];
+    const looks = lookDefs.map((l) => {
+      const on = l.id === look;
+      return {
+        name: l.name,
+        active: on,
+        swatch: l.swatch,
+        border: l.later ? '1px dashed #5c6370' : '1px solid #000',
+        bg: l.later ? 'transparent' : (on ? 'radial-gradient(circle at 50% 65%, #1b1e24, #2e323a)' : 'radial-gradient(ellipse 120% 90% at 50% 10%, #5a606b 0%, #2e323a 55%, #1d2026 100%)'),
+        shadow: l.later ? 'none' : (on ? 'inset 0 3px 5px rgba(0,0,0,0.85)' : '0 3px 5px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.18)'),
+        color: l.later ? '#abb2bf' : '#ffffff',
+        pick: () => { if (!l.later) { this.setState({ look: l.id }); } },
+      };
+    });
     return {
+      looks: looks,
       items: items,
       close: () => { if (this.props.onClose) { this.props.onClose(); } },
     };
