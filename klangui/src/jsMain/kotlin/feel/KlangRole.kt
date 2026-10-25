@@ -76,8 +76,8 @@ enum class KlangRole(
     /** A lamp that is off: the dark glass. */
     LampOff(cssVar = "--kl-lamp-off", kind = Kind.Color, default = "#3a3220"),
 
-    /** A lamp that is on: this thing is active. */
-    LampOn(cssVar = "--kl-lamp-on", kind = Kind.Color, default = "#98c379"),
+    /** A lamp that is on: this thing is active or selected. Blue, as the Motor's scope and accents (maintainer, 2026-10-25). */
+    LampOn(cssVar = "--kl-lamp-on", kind = Kind.Color, default = "#528bff"),
 
     /** "Try me": the one colour of the first-visit trail, used for nothing else. */
     LampTry(cssVar = "--kl-lamp-try", kind = Kind.Color, default = "#EBC773"),

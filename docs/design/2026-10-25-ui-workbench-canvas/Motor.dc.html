@@ -135,8 +135,8 @@ class Component extends DCLogic {
       scope: pts.join(' '),
       spectrum: spectrum,
       dots: dots,
-      // Open: pressed in, the dots lit in the "on" colour; no lamp of its own (maintainer, 2026-10-25)
-      dotColor: open ? '#98c379' : '#D7DADF',
+      // Open: pressed in, the dots lit in the selected blue; no lamp of its own (maintainer, 2026-10-25)
+      dotColor: open ? '#528bff' : '#D7DADF',
       capBg: open ? 'radial-gradient(circle at 50% 60%, #1b1e24, #2a2e36)' : 'radial-gradient(circle at 40% 30%, #4a505b, #1b1e24)',
       capShadow: open ? 'inset 0 2px 4px rgba(0,0,0,0.8)' : '0 2px 3px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.12)',
       // The lamp pulses once per cycle (33 RPM: 1.82 s), in time with the song. The keyframes live in the page that shows the Motor.

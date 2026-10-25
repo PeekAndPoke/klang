@@ -84,6 +84,9 @@ Kept in order, close to the maintainer's words.
 34. (2026-10-25) The drawer's look buttons read as a new button type (a domed tile with a swatch), liked. The Motor
     button loses its lamp: while the drawer is open it is pressed in and its dots lit (in the "on" colour, since gold
     means "try me" only); that is signal enough.
+35. (2026-10-25) Selected is blue: "down here everything is nice and blue except for the gauges". The open Motor
+    button's dots and the active drawer item's lamp are blue on the canvas; `KlangRole.LampOn` defaults to the accent
+    blue (was green).
 
 ## Where the conversation stands (leanings, not decisions)
 

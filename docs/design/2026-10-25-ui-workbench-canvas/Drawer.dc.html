@@ -82,8 +82,8 @@ class Component extends DCLogic {
         shadow: d.later ? 'none' : (on ? 'inset 0 2px 5px rgba(0,0,0,0.75)' : '0 2px 3px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1)'),
         color: d.later ? '#abb2bf' : '#ffffff',
         subColor: '#abb2bf',
-        led: on ? '#98c379' : (d.later ? 'transparent' : '#3a3220'),
-        ledGlow: on ? '0 0 6px #98c379' : 'none',
+        led: on ? '#528bff' : (d.later ? 'transparent' : '#3a3220'),
+        ledGlow: on ? '0 0 6px #528bff' : 'none',
         anim: d.id === (this.props.beaconItem ?? '') ? 'klangBeacon 1.82s ease-in-out infinite' : 'none',
         pick: () => {
           if (d.later) { return; }
