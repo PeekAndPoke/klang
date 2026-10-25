@@ -1,6 +1,6 @@
 # KLANG-00330: Motor: master volume knob on a loudness scale
 
-> **Status (2026-10-25): IN PROGRESS.** Built as a knob, reviewed (round 5 clean); waits for the maintainer's hand test.
+> **Status (2026-10-25): DONE.** Built as a knob, reviewed (round 5 clean), hand-tested by the maintainer 2026-10-25 ("The turning knob is nice now"); the start page follows the volume, as built ("Startpage ok").
 
 ## Why this exists
 
@@ -59,3 +59,4 @@ purely on the JS side; the engine and the wire do not learn about it. The code s
 - 2026-10-25: IN PROGRESS. Built as a knob (maintainer's change); the scale spec green, 4 mutants KILLED; review round 1 running.
 - 2026-10-25: look tuned with the maintainer (left of the gauges, 31 px, no icon, cyan LED); review rounds 1 to 3 fixed, round 4 clean; then the volume moved into `Player.outputVolume` as the truth (maintainer), the knob derives its position; 4 more mutants KILLED.
 - 2026-10-25: review round 5 clean; committed. Waits for the hand test (before testing the reload, turn the knob once: an earlier build stored the knob position under the same key).
+- 2026-10-25: DONE.
