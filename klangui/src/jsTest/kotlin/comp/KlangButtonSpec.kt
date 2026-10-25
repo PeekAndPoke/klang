@@ -146,6 +146,31 @@ class KlangButtonSpec : StringSpec({
         }
     }
 
+    "a tile has its class, and room for its lamp only when it has one" {
+        TestBed.preact(
+            view = {
+                KlangButton(onClick = {}, shape = KlangButton.Shape.Tile) { +"plain" }
+                KlangButton(onClick = {}, shape = KlangButton.Shape.Tile, lamp = KlangLamp.State.Off) { +"lamp" }
+            },
+        ) { root ->
+            val classes = root.selectCss("button").classes()
+
+            (styles.tile.toString() in classes[0]) shouldBe true
+            (styles.tileWithLamp.toString() in classes[0]) shouldBe false
+            (styles.tileWithLamp.toString() in classes[1]) shouldBe true
+        }
+    }
+
+    "the current place is drawn pressed and announced as current, not as a toggle" {
+        TestBed.preact(view = { KlangButton(onClick = {}, current = true) { +"Songs" } }) { root ->
+            val button = root.selectCss("button")
+
+            button.attr("aria-current") shouldContainExactly listOf("true")
+            button.attr("aria-pressed") shouldContainExactly listOf(null)
+            (styles.pressedDark.toString() in button.classes().single()) shouldBe true
+        }
+    }
+
     "a lamp sits before the content" {
         TestBed.preact(view = { KlangButton(onClick = {}, lamp = KlangLamp.State.On) { +"Songs" } }) { root ->
             val lamp = root.selectCss("button > span[data-lamp]")

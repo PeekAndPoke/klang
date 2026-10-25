@@ -16,9 +16,10 @@ import kotlinx.html.span
 
 @Suppress("FunctionName")
 fun Tag.KlangPanel(
+    tight: Boolean = false,
     content: DIV.() -> Unit,
 ) = comp(
-    KlangPanel.Props(content = content)
+    KlangPanel.Props(tight = tight, content = content)
 ) {
     KlangPanel(it)
 }
@@ -35,6 +36,8 @@ class KlangPanel(ctx: Ctx<Props>) : Component<KlangPanel.Props>(ctx) {
     //  PROPS  //////////////////////////////////////////////////////////////////////////////////////////////////
 
     data class Props(
+        /** Less padding, for a panel that holds a list running to its edges (a menu). */
+        val tight: Boolean,
         val content: DIV.() -> Unit,
     )
 
@@ -43,7 +46,9 @@ class KlangPanel(ctx: Ctx<Props>) : Component<KlangPanel.Props>(ctx) {
     override fun VDom.render() {
         val styles = KlangControlStyles
 
-        div(classes = styles.panel.toString()) {
+        val classes = listOfNotNull(styles.panel, if (props.tight) styles.panelTight else null)
+
+        div(classes = classes.joinToString(" ")) {
             val corners = listOf(styles.rivetTopLeft, styles.rivetTopRight, styles.rivetBottomLeft, styles.rivetBottomRight)
 
             for (corner in corners) {

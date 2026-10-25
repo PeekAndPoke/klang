@@ -23,6 +23,7 @@ fun Tag.KlangButton(
     surface: KlangButton.Surface = KlangButton.Surface.Flat,
     shape: KlangButton.Shape = KlangButton.Shape.Rect,
     pressed: Boolean? = null,
+    current: Boolean = false,
     availability: KlangButton.Availability = KlangButton.Availability.Enabled,
     lamp: KlangLamp.State? = null,
     beacon: Boolean = false,
@@ -35,6 +36,7 @@ fun Tag.KlangButton(
         surface = surface,
         shape = shape,
         pressed = pressed,
+        current = current,
         availability = availability,
         lamp = lamp,
         beacon = beacon,
@@ -49,10 +51,10 @@ fun Tag.KlangButton(
  * The Klang button (KLANG-00337): a real `<button>` with a cap lit from above.
  *
  * [KlangFinish] is the cap's material, [Surface] its curve, [Shape] its outline. A toggle passes [Props.pressed] (true or
- * false, announced as `aria-pressed`); a plain button leaves it null. [Availability.Later] draws a dashed outline for
- * a control that is not there yet ("with the backend"): it cannot be pressed and says so (`aria-disabled`).
- * [Props.beacon] is the first-visit trail's "try me". Canvas cells: "Rack button", "Lamp button", "White or silver,
- * flat or domed".
+ * false, announced as `aria-pressed`); a plain button leaves it null; the current place passes [Props.current] (drawn
+ * pressed, announced as `aria-current`). [Availability.Later] draws a dashed outline for a control that is not there
+ * yet ("with the backend"): it cannot be pressed and says so (`aria-disabled`). [Props.beacon] is the first-visit
+ * trail's "try me". Canvas cells: "Rack button", "Lamp button", "White or silver, flat or domed".
  */
 class KlangButton(ctx: Ctx<Props>) : Component<KlangButton.Props>(ctx) {
 
@@ -65,6 +67,8 @@ class KlangButton(ctx: Ctx<Props>) : Component<KlangButton.Props>(ctx) {
         val shape: Shape,
         /** Null for a plain button; true or false for a toggle, which is then announced as pressed or not. */
         val pressed: Boolean?,
+        /** Where the user is (a drawer's current destination): drawn pressed, announced as `aria-current`. */
+        val current: Boolean,
         val availability: Availability,
         /** A lamp before the content: the button's own state, as on a drum machine's step keys. */
         val lamp: KlangLamp.State?,
@@ -84,6 +88,9 @@ class KlangButton(ctx: Ctx<Props>) : Component<KlangButton.Props>(ctx) {
         Rect,
         Pill,
         Round,
+
+        /** Tall, its content stacked: a drawer's entry, a swatch button. */
+        Tile,
     }
 
     enum class Availability {
@@ -109,6 +116,11 @@ class KlangButton(ctx: Ctx<Props>) : Component<KlangButton.Props>(ctx) {
             }
 
             props.pressed?.let { attributes["aria-pressed"] = it.toString() }
+
+            if (props.current) {
+                attributes["aria-current"] = "true"
+            }
+
             props.ariaLabel?.let { attributes["aria-label"] = it }
 
             if (enabled) {
@@ -141,10 +153,13 @@ class KlangButton(ctx: Ctx<Props>) : Component<KlangButton.Props>(ctx) {
             Shape.Rect -> null
             Shape.Pill -> styles.pill
             Shape.Round -> styles.round
+            Shape.Tile -> styles.tile
         }
 
+        val tileWithLamp = if (props.shape == Shape.Tile && props.lamp != null) styles.tileWithLamp else null
+
         val pressed = when {
-            props.pressed != true -> null
+            props.pressed != true && !props.current -> null
             props.finish == KlangFinish.Dark -> styles.pressedDark
             else -> styles.pressedSilver
         }
@@ -157,6 +172,6 @@ class KlangButton(ctx: Ctx<Props>) : Component<KlangButton.Props>(ctx) {
 
         val beacon = if (props.beacon && props.availability == Availability.Enabled) styles.beacon else null
 
-        return listOfNotNull(styles.button, finish, shape, pressed, availability, beacon).map { it.toString() }
+        return listOfNotNull(styles.button, finish, shape, tileWithLamp, pressed, availability, beacon).map { it.toString() }
     }
 }

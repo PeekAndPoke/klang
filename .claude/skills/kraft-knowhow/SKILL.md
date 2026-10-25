@@ -170,6 +170,10 @@ kraftApp {
 - **`onNextProps` hands (new, old)** (KLANG-00338): the new props come first. `RoundGauge` took the second and
   followed one update behind until 2026-10-25.
 
+- **A composite widget has one tab stop** (KLANG-00339, 2026-10-25): a menu, a list, tabs keep exactly one item in
+  the tab order (`tabindex=0`, the last focused, else the first that can be chosen; the rest `-1`), and the arrow keys
+  move between the items. Every item at `-1` makes the widget unreachable by Tab (`KlangMenu`).
+
 - **A yes/no question is klangui's `YesNoModal`** (headline, content, `yesText`, `noText`, one `onResult`;
   KLANG-00323, 2026-10-21), not Kraft's `OkCancelModal`: its buttons are divs that cannot take the keyboard.
   Fomantic paints a modal's `> .header`, `> .content` and `> .actions` white; klang.css themes them. Kraft's

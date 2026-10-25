@@ -7,6 +7,7 @@ package io.peekandpoke.klang
 
 import io.peekandpoke.klang.sprudel.ui.registerSprudelUiTools
 import io.peekandpoke.klang.storage.KeymapStorage
+import io.peekandpoke.klang.storage.LookStorage
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.codemirror.KlangEditorKeyBindings
 import io.peekandpoke.klang.ui.comp.KlangKeyHint
@@ -63,6 +64,8 @@ val version = VersionController()
 fun main() {
     // Read CSS custom properties and establish the active look-and-feel before render
     KlangTheme.initialize()
+    // The look the user chose last time (KLANG-00339)
+    LookStorage.load()?.let { KlangTheme.choose(it) }
 
     // Register UI tools
     registerSprudelUiTools()

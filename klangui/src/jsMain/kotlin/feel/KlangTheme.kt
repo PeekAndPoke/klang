@@ -74,6 +74,19 @@ object KlangTheme : Stream<KlangLookAndFeel> {
         applyLayers(lookLayers.cleared(layer))
     }
 
+    /** Puts [preset] on the user's layer (KLANG-00339); the default look clears it. */
+    fun choose(preset: KlangLookPreset) {
+        if (preset.values.isEmpty()) {
+            clearLayer(KlangLookLayers.Layer.User)
+        } else {
+            setLayer(KlangLookLayers.Layer.User, preset.values)
+        }
+    }
+
+    /** The preset the user's layer holds; null when it holds a look of its own (none can yet). */
+    val chosen: KlangLookPreset?
+        get() = KlangLooks.all.firstOrNull { it.values == lookLayers[KlangLookLayers.Layer.User] }
+
     private fun applyLayers(next: KlangLookLayers) {
         lookLayers = next
 

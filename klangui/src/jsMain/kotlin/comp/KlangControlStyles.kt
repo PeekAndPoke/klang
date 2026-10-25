@@ -82,6 +82,11 @@ object KlangControlStyles : StyleSheet("kl-controls") {
             put("outline", "2px solid var(--kl-focus)")
             put("outline-offset", "2px")
         }
+
+        // Fomantic gives every icon a right margin; on a button that would push it off centre
+        rule("& > i.icon") {
+            put("margin", "0")
+        }
     }
 
     // ── Buttons: finish and surface ───────────────────────────────────────────
@@ -135,6 +140,32 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("width", "34px")
         put("padding", "0")
         put("border-radius", "50%")
+    }
+
+    /** A tall button: a drawer's entry, a swatch button. Its lamp sits at the top left. */
+    val tile by rule {
+        put("position", "relative")
+        put("height", "auto")
+        put("min-height", "52px")
+        put("flex-direction", "column")
+        put("align-items", "center")
+        put("gap", "4px")
+        put("padding", "8px 10px")
+        put("white-space", "normal")
+        put("line-height", "1.2")
+
+        rule("& > span[data-lamp]") {
+            put("position", "absolute")
+            put("left", "10px")
+            put("top", "13px")
+        }
+    }
+
+    /** A tile with a lamp leaves room for it on the left. */
+    val tileWithLamp by rule {
+        put("padding-left", "24px")
+        put("align-items", "flex-start")
+        put("text-align", "left")
     }
 
     // ── Buttons: state ────────────────────────────────────────────────────────
@@ -209,6 +240,11 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("box-shadow", "0 14px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.09)")
     }
 
+    /** A panel holding a list (a menu): tighter, its entries run to the edges. */
+    val panelTight by rule {
+        put("padding", "14px 0 12px")
+    }
+
     val rivet by rule {
         put("position", "absolute")
         put("width", "6px")
@@ -236,6 +272,262 @@ object KlangControlStyles : StyleSheet("kl-controls") {
     val rivetBottomRight by rule {
         put("bottom", "6px")
         put("right", "6px")
+    }
+
+    // ── Card and caption ──────────────────────────────────────────────────────
+
+    /** A flat plate on the ground: no rivets (rivets mean a popup), no shadow of its own. */
+    val card by rule {
+        put("display", "flex")
+        put("flex-direction", "column")
+        put("gap", "12px")
+        put("box-sizing", "border-box")
+        put("padding", "18px")
+        put("color", "var(--kl-ink-text)")
+        put("background", "var(--kl-ground-app)")
+        put("border", "1px solid var(--kl-edge)")
+        put("border-radius", "4px")
+    }
+
+    val captionTitle by rule {
+        put("font-size", "13px")
+        put("font-weight", "700")
+        put("color", "var(--kl-ink-strong)")
+    }
+
+    val captionNote by rule {
+        put("font-family", "monospace")
+        put("font-size", "11px")
+        put("color", "var(--kl-ink-label)")
+    }
+
+    /** A silkscreen heading: small capitals, spaced, printed on the panel. */
+    val heading by rule {
+        put("font-family", "monospace")
+        put("font-size", "11px")
+        put("letter-spacing", "0.18em")
+        put("text-transform", "uppercase")
+        put("color", "var(--kl-ink-label)")
+    }
+
+    // ── Swatch, search field, key cap ─────────────────────────────────────────
+
+    val swatch by rule {
+        put("width", "16px")
+        put("height", "16px")
+        put("flex-shrink", "0")
+        put("border-radius", "50%")
+        put("border", "1px solid var(--kl-edge)")
+    }
+
+    /** A swatch where there is none yet ("Custom" before it exists). */
+    val swatchEmpty by rule {
+        put("border", "1px dashed var(--kl-ink-label)")
+    }
+
+    /** A field cut into the panel: the search icon, the input, a key cap. */
+    val searchField by rule {
+        put("display", "flex")
+        put("align-items", "center")
+        put("gap", "8px")
+        put("box-sizing", "border-box")
+        put("height", "36px")
+        put("padding", "0 10px")
+        put("color", "var(--kl-ink-label)")
+        put("background", "var(--kl-ground-sunken)")
+        put("border", "1px solid var(--kl-edge)")
+        put("border-radius", "var(--kl-radius)")
+        put("box-shadow", "inset 0 2px 4px rgba(0,0,0,0.7)")
+
+        rule("&:focus-within") {
+            put("box-shadow", "inset 0 2px 4px rgba(0,0,0,0.7), 0 0 0 1.5px var(--kl-focus)")
+        }
+    }
+
+    val searchInput by rule {
+        put("flex", "1")
+        put("min-width", "0")
+        put("background", "transparent")
+        put("border", "none")
+        put("outline", "none")
+        put("color", "var(--kl-ink-text)")
+        put("font-family", "inherit")
+        put("font-size", "13px")
+    }
+
+    /** A key cap, printed: the hint of a key that does the same. */
+    val keyCap by rule {
+        put("font-family", "monospace")
+        put("font-size", "10px")
+        put("line-height", "1")
+        put("padding", "2px 5px")
+        put("color", "var(--kl-ink-label)")
+        put("border", "1px solid color-mix(in srgb, var(--kl-ink-label) 40%, transparent)")
+        put("border-bottom-width", "2px")
+        put("border-radius", "3px")
+        put("white-space", "nowrap")
+    }
+
+    // ── Drawer ────────────────────────────────────────────────────────────────
+
+    val drawerHeader by rule {
+        put("display", "flex")
+        put("align-items", "center")
+        put("justify-content", "space-between")
+        put("gap", "8px")
+        put("margin-bottom", "12px")
+    }
+
+    val drawerGrid by rule {
+        put("display", "grid")
+        put("grid-template-columns", "repeat(2, minmax(0, 1fr))")
+        put("gap", "8px")
+        put("margin-top", "12px")
+    }
+
+    val drawerSub by rule {
+        put("font-size", "11px")
+        put("font-weight", "400")
+        put("color", "var(--kl-ink-label)")
+    }
+
+    val drawerFooter by rule {
+        put("margin-top", "14px")
+        put("padding-top", "12px")
+        put("border-top", "1px solid var(--kl-ground-deep)")
+    }
+
+    /** The look picker's row: the presets as equal tiles. */
+    val lookRow by rule {
+        put("display", "grid")
+        put("grid-template-columns", "repeat(4, minmax(0, 1fr))")
+        put("gap", "6px")
+        put("margin-top", "8px")
+    }
+
+    // ── Menu ──────────────────────────────────────────────────────────────────
+
+    val menuItem by rule {
+        put("display", "flex")
+        put("align-items", "center")
+        put("justify-content", "space-between")
+        put("gap", "16px")
+        put("width", "100%")
+        put("box-sizing", "border-box")
+        put("padding", "7px 14px")
+        put("border", "none")
+        put("background", "transparent")
+        put("color", "var(--kl-ink-text)")
+        put("font-family", "inherit")
+        put("font-size", "13px")
+        put("text-align", "left")
+        put("cursor", "pointer")
+        put("outline", "none")
+
+        rule("&:hover, &:focus") {
+            put("background", "color-mix(in srgb, var(--kl-accent) 18%, transparent)")
+            put("color", "var(--kl-ink-strong)")
+        }
+
+        rule("&:disabled") {
+            put("color", "var(--kl-ink-label)")
+            put("background", "transparent")
+            put("cursor", "default")
+        }
+    }
+
+    val menuHint by rule {
+        put("font-family", "monospace")
+        put("font-size", "11px")
+        put("color", "var(--kl-ink-label)")
+    }
+
+    // ── Tool window ───────────────────────────────────────────────────────────
+
+    val toolWindow by rule {
+        put("display", "flex")
+        put("flex-direction", "column")
+        put("box-sizing", "border-box")
+        put("min-height", "0")
+        put("color", "var(--kl-ink-text)")
+        put("background", "var(--kl-ground-panel)")
+        put("border-left", "1px solid var(--kl-edge)")
+    }
+
+    /** Flying in over the editor: a shadow to the left, rounded where it meets the editor. */
+    val toolWindowFloating by rule {
+        put("border-top-left-radius", "6px")
+        put("box-shadow", "-18px 0 40px rgba(0,0,0,0.55), inset 1px 0 0 rgba(255,255,255,0.06)")
+        put("animation", "kl-fly-in 0.18s ease-out")
+    }
+
+    val toolWindowHeader by rule {
+        put("display", "flex")
+        put("align-items", "center")
+        put("gap", "8px")
+        put("flex-shrink", "0")
+        put("height", "44px")
+        put("padding", "0 8px 0 16px")
+        put("border-bottom", "1px solid var(--kl-ground-deep)")
+    }
+
+    val toolWindowTitle by rule {
+        put("font-family", "monospace")
+        put("font-size", "11px")
+        put("letter-spacing", "0.18em")
+        put("text-transform", "uppercase")
+        put("color", "var(--kl-ink-strong)")
+    }
+
+    val toolWindowChip by rule {
+        put("font-size", "11px")
+        put("color", "var(--kl-ink-label)")
+        put("border", "1px solid color-mix(in srgb, var(--kl-ink-label) 40%, transparent)")
+        put("border-radius", "10px")
+        put("padding", "2px 8px")
+        put("white-space", "nowrap")
+    }
+
+    /** A header's small action: pin, close. Printed, not raised; pressed it sinks in. */
+    val toolWindowAction by rule {
+        put("display", "inline-flex")
+        put("align-items", "center")
+        put("justify-content", "center")
+        put("width", "28px")
+        put("height", "28px")
+        put("padding", "0")
+        put("border", "1px solid transparent")
+        put("border-radius", "var(--kl-radius)")
+        put("background", "transparent")
+        put("color", "var(--kl-ink-label)")
+        put("cursor", "pointer")
+
+        rule("&:hover") {
+            put("color", "var(--kl-ink-strong)")
+        }
+
+        rule("&:focus-visible") {
+            put("outline", "none")
+            put("box-shadow", "0 0 0 1.5px var(--kl-focus)")
+        }
+
+        rule("& > i.icon") {
+            put("margin", "0")
+        }
+    }
+
+    val toolWindowActionOn by rule {
+        put("color", "var(--kl-lamp-on)")
+        put("background", "var(--kl-ground-sunken)")
+        put("border-color", "var(--kl-edge)")
+        put("box-shadow", "inset 0 2px 4px rgba(0,0,0,0.8)")
+    }
+
+    val toolWindowBody by rule {
+        put("flex", "1")
+        put("min-height", "0")
+        put("overflow", "auto")
+        put("padding", "16px")
     }
 
     // ── Gauges ────────────────────────────────────────────────────────────────
@@ -396,8 +688,10 @@ object KlangControlStyles : StyleSheet("kl-controls") {
 
         // A thin ring on the dial's edge, clear of the label (maintainer, 2026-10-25). A shadow ring, because Chrome
         // draws a round outline without anti-aliasing (it looked pixelated); the transparent outline still shows in
-        // forced-colours modes, which drop shadows
-        rule("&:focus-visible") {
+        // forced-colours modes, which drop shadows. On any focus, not only `:focus-visible`: the focused knob is the
+        // one the arrows turn, and the browser's `:focus-visible` hid the ring after a click that followed a button's
+        // (the maintainer, 2026-10-25)
+        rule("&:focus") {
             put("box-shadow", "0 0 0 1.5px var(--kl-focus)")
             put("outline", "1px solid transparent")
         }
@@ -502,6 +796,10 @@ object KlangControlStyles : StyleSheet("kl-controls") {
                         0 0 18px color-mix(in srgb, var(--kl-lamp-try) 65%, transparent);
                 }
             }
+            @keyframes kl-fly-in {
+                from { transform: translateX(60px); opacity: 0; }
+                to { transform: none; opacity: 1; }
+            }
             @keyframes kl-lamp-pulse {
                 0%, 100% { filter: brightness(0.8); }
                 50% { filter: brightness(1.3); }
@@ -509,6 +807,7 @@ object KlangControlStyles : StyleSheet("kl-controls") {
             @media (prefers-reduced-motion: reduce) {
                 .$button.$beacon::after { animation: none; box-shadow: 0 0 0 2px var(--kl-lamp-try); }
                 .$lamp.$lampTry { animation: none; }
+                .$toolWindow.$toolWindowFloating { animation: none; }
             }
         """.trimIndent()
     )

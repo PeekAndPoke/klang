@@ -10,14 +10,24 @@ import io.peekandpoke.klang.comp.VolumeKnob
 import io.peekandpoke.klang.comp.activeVoicesGauge
 import io.peekandpoke.klang.comp.renderMotorHeatGauge
 import io.peekandpoke.klang.comp.roundCylindersGauge
+import io.peekandpoke.klang.storage.LookStorage
 import io.peekandpoke.klang.ui.comp.KlangButton
+import io.peekandpoke.klang.ui.comp.KlangCaption
+import io.peekandpoke.klang.ui.comp.KlangCard
+import io.peekandpoke.klang.ui.comp.KlangControlStyles
+import io.peekandpoke.klang.ui.comp.KlangDrawer
 import io.peekandpoke.klang.ui.comp.KlangFinish
 import io.peekandpoke.klang.ui.comp.KlangGauge
 import io.peekandpoke.klang.ui.comp.KlangKnob
 import io.peekandpoke.klang.ui.comp.KlangLamp
+import io.peekandpoke.klang.ui.comp.KlangLookPicker
+import io.peekandpoke.klang.ui.comp.KlangMenu
 import io.peekandpoke.klang.ui.comp.KlangPanel
+import io.peekandpoke.klang.ui.comp.KlangSearchField
+import io.peekandpoke.klang.ui.comp.KlangSwatchButton
+import io.peekandpoke.klang.ui.comp.KlangToolWindow
 import io.peekandpoke.klang.ui.comp.YesNoModal
-import io.peekandpoke.klang.ui.feel.KlangLookLayers
+import io.peekandpoke.klang.ui.feel.KlangLooks
 import io.peekandpoke.klang.ui.feel.KlangRole
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.components.NoProps
@@ -62,30 +72,11 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
     /** Where each knob on the page stands, by name; a knob not turned yet stands at its default. */
     private var positions: Map<String, Double> by value(emptyMap())
 
-    //  SAMPLE LOOKS  ///////////////////////////////////////////////////////////////////////////////////////////
-
-    /** Two looks on the user's layer, to see a theme change repaint everything at once. Samples, not themes yet. */
-    private val sampleLooks: List<Pair<String, Map<KlangRole, String>>> = listOf(
-        "Default" to emptyMap(),
-        "Copper" to mapOf(
-            KlangRole.MetalLight to "#f6d6bd",
-            KlangRole.MetalMid to "#c98a5e",
-            KlangRole.MetalDark to "#7a4a2c",
-            KlangRole.MetalInk to "#1a0d05",
-            KlangRole.AccentMuted to "#b0764c",
-        ),
-        "Cream on black" to mapOf(
-            KlangRole.GroundApp to "#141311",
-            KlangRole.GroundDeep to "#0d0c0b",
-            KlangRole.GroundPanel to "#22201c",
-            KlangRole.InkText to "#eadfc4",
-            KlangRole.InkStrong to "#fff6dc",
-            KlangRole.InkLabel to "#c6b996",
-            KlangRole.MetalLight to "#fbf3dd",
-            KlangRole.MetalMid to "#e3d5b0",
-            KlangRole.MetalDark to "#a08f66",
-        ),
-    )
+    /** The drawer's current destination, its search, the menu's last choice, the tool windows' pins. */
+    private var drawerAt: String by value("songs")
+    private var query: String by value("")
+    private var menuChoice: String by value("nothing yet")
+    private var pinned: Set<String> by value(setOf("pinned"))
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -108,7 +99,7 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
             renderKnobs()
             renderLamps()
             renderButtons()
-            renderPanels()
+            renderPopups()
             renderToday()
         }
     }
@@ -129,35 +120,16 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
                 put("line-height", "22px")
             }
             +"Every Klang UI element in every state. Its order and names follow the design canvas, board"
-            +" \"Kitchen sink\". The look below changes the user's layer: everything repaints at once."
+            +" \"Kitchen sink\". The look below changes the user's layer: everything repaints at once, and it is kept."
         }
 
         div {
             css {
-                put("display", "flex")
-                put("gap", "8px")
+                put("width", "340px")
                 put("margin-bottom", "36px")
             }
 
-            val current = KlangTheme.layers[KlangLookLayers.Layer.User]
-
-            for ((name, values) in sampleLooks) {
-                KlangButton(
-                    onClick = { applySampleLook(values) },
-                    surface = KlangButton.Surface.Domed,
-                    pressed = current == values,
-                ) {
-                    +name
-                }
-            }
-        }
-    }
-
-    private fun applySampleLook(values: Map<KlangRole, String>) {
-        if (values.isEmpty()) {
-            KlangTheme.clearLayer(KlangLookLayers.Layer.User)
-        } else {
-            KlangTheme.setLayer(KlangLookLayers.Layer.User, values)
+            KlangLookPicker(onChosen = { LookStorage.save(it) })
         }
     }
 
@@ -447,9 +419,103 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
         }
     }
 
-    private fun FlowContent.renderPanels() {
-        section("Popups, all with rivets") {
-            cell(name = "KlangPanel", source = "klangui/comp/KlangPanel.kt") {
+    private fun FlowContent.renderPopups() {
+        section("Popups and windows, the popups with rivets") {
+            cell(name = "The menu drawer", source = "klangui/comp/KlangDrawer.kt, KlangSearchField.kt, KlangLookPicker.kt") {
+                div {
+                    css { put("width", "300px") }
+
+                    KlangDrawer(
+                        title = "Where to",
+                        entries = listOf(
+                            KlangDrawer.Entry(id = "songs", label = "Songs", sub = "Yours and the built-ins"),
+                            KlangDrawer.Entry(id = "learn", label = "Learn", sub = "Tutorials and tracks"),
+                            KlangDrawer.Entry(id = "docs", label = "Docs", sub = "Lexikon, Sprudel, Stdlib"),
+                            KlangDrawer.Entry(id = "samples", label = "Samples", sub = "The library"),
+                            KlangDrawer.Entry(id = "midi", label = "MIDI", sub = "Playground, devices"),
+                            KlangDrawer.Entry(id = "credits", label = "Credits", sub = "Who we build on"),
+                            KlangDrawer.Entry(id = "community", label = "Community", sub = "With the backend", later = true),
+                            KlangDrawer.Entry(id = "account", label = "Account", sub = "With the backend", later = true),
+                        ),
+                        current = drawerAt,
+                        onPick = { drawerAt = it },
+                        onClose = {},
+                        search = {
+                            KlangSearchField(
+                                label = "Search songs, docs, samples and actions",
+                                value = query,
+                                onInput = { query = it },
+                                placeholder = "Songs, docs, samples, actions",
+                                keyHint = "Mod K",
+                            )
+                        },
+                        footer = { KlangLookPicker(onChosen = { LookStorage.save(it) }) },
+                    )
+                }
+            }
+
+            cell(name = "The context menu: arrows, Home, End, Esc", source = "klangui/comp/KlangMenu.kt") {
+                div {
+                    css { put("width", "240px") }
+
+                    KlangMenu(
+                        label = "Code actions",
+                        items = listOf(
+                            KlangMenu.Item(label = "Open the param tool", hint = "Alt 2", onSelect = { menuChoice = "the param tool" }),
+                            KlangMenu.Item(label = "Show the docs", hint = "Alt 1", onSelect = { menuChoice = "the docs" }),
+                            KlangMenu.Item(label = "Set a bookmark", onSelect = { menuChoice = "a bookmark" }),
+                            KlangMenu.Item(label = "Share (with the backend)", enabled = false, onSelect = {}),
+                        ),
+                        focusOnOpen = false,
+                    )
+                }
+                span {
+                    css { put("font-size", "12px") }
+                    +"Chosen: $menuChoice"
+                }
+            }
+
+            cell(name = "Tool windows: flying in, and pinned", source = "klangui/comp/KlangToolWindow.kt") {
+                row {
+                    for (id in listOf("floating", "pinned")) {
+                        div {
+                            css {
+                                put("width", "300px")
+                                put("height", "240px")
+                                put("display", "flex")
+                            }
+
+                            KlangToolWindow(
+                                title = "Docs",
+                                chip = "follows the cursor",
+                                pinned = id in pinned,
+                                onPinnedChange = { pin -> pinned = if (pin) pinned + id else pinned - id },
+                                onClose = {},
+                            ) {
+                                p {
+                                    css { put("margin", "0") }
+                                    +"The lowpass filter: cutoff, resonance, cascade and the cutoff envelope."
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            cell(name = "Swatch buttons: pressed, raised, later", source = "klangui/comp/KlangSwatchButton.kt") {
+                row {
+                    KlangSwatchButton(name = "Copper", swatch = KlangLooks.Copper.swatch, pressed = true, onClick = {})
+                    KlangSwatchButton(name = "Cream", swatch = KlangLooks.Cream.swatch, onClick = {})
+                    KlangSwatchButton(
+                        name = "Custom",
+                        swatch = emptyList(),
+                        onClick = {},
+                        availability = KlangButton.Availability.Later,
+                    )
+                }
+            }
+
+            cell(name = "KlangPanel: the riveted frame", source = "klangui/comp/KlangPanel.kt") {
                 div {
                     css { put("width", "320px") }
 
@@ -519,14 +585,10 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
     //  LAYOUT HELPERS  /////////////////////////////////////////////////////////////////////////////////////////
 
     private fun FlowContent.section(title: String, cells: DIV.() -> Unit) {
-        h2 {
+        h2(classes = KlangControlStyles.heading.toString()) {
             css {
                 put("margin", "0 0 14px")
-                put("font-family", "monospace")
                 put("font-size", "13px")
-                put("letter-spacing", "0.2em")
-                put("text-transform", "uppercase")
-                put("color", "var(--kl-ink-label)")
             }
             +title
         }
@@ -543,38 +605,11 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
         }
     }
 
+    /** One cell: a card holding the element, its caption under it. */
     private fun DIV.cell(name: String, source: String, content: DIV.() -> Unit) {
-        div {
-            css {
-                put("display", "flex")
-                put("flex-direction", "column")
-                put("gap", "12px")
-                put("padding", "18px")
-                put("background", "var(--kl-ground-app)")
-                put("border", "1px solid var(--kl-edge)")
-                put("border-radius", "4px")
-            }
-
+        KlangCard {
             content()
-
-            div {
-                div {
-                    css {
-                        put("font-size", "13px")
-                        put("font-weight", "700")
-                        put("color", "var(--kl-ink-strong)")
-                    }
-                    +name
-                }
-                div {
-                    css {
-                        put("font-family", "monospace")
-                        put("font-size", "11px")
-                        put("color", "var(--kl-ink-label)")
-                    }
-                    +source
-                }
-            }
+            KlangCaption(title = name, note = source)
         }
     }
 

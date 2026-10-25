@@ -11,6 +11,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.string.shouldContain
 import io.peekandpoke.kraft.testing.TestBed
 import io.peekandpoke.kraft.testing.eventually
 import io.peekandpoke.kraft.testing.selectCss
@@ -30,7 +31,7 @@ class KlangControlStylesSpec : StringSpec({
     val styles = KlangControlStyles
 
     /** A style rule as the browser applies it: its full selector, its animation, and whether reduce motion holds it. */
-    data class Rule(val selector: String, val animation: String, val inReducedMotion: Boolean)
+    data class Rule(val selector: String, val animation: String, val inReducedMotion: Boolean, val boxShadow: String = "")
 
     /**
      * Every style rule of every sheet. A nested rule (`&::after` inside `.beacon`, CSS nesting as kotlinx-css writes
@@ -44,7 +45,14 @@ class KlangControlStylesSpec : StringSpec({
                 val own = rule.selectorText
                 val selector = if (parent == null) own else own.replace("&", parent)
 
-                found.add(Rule(selector, rule.style.getPropertyValue("animation-name"), inReducedMotion))
+                found.add(
+                    Rule(
+                        selector = selector,
+                        animation = rule.style.getPropertyValue("animation-name"),
+                        inReducedMotion = inReducedMotion,
+                        boxShadow = rule.style.getPropertyValue("box-shadow"),
+                    )
+                )
 
                 val nested = rule.asDynamic().cssRules
 
@@ -99,6 +107,20 @@ class KlangControlStylesSpec : StringSpec({
         }
     }
 
+    "a knob draws its focus ring on any focus, not only when the browser judges it visible" {
+        TestBed.preact(view = { KlangKnob(name = "k", value = 0.5, onChange = {}) }) { _ ->
+            eventually {
+                val rings = styleRules().filter { it.selector.endsWith("${styles.knobDial}:focus") }
+
+                withClue("the knob's :focus rules: $rings") {
+                    rings.single().boxShadow shouldContain "1.5px"
+                }
+
+                styleRules().filter { it.selector.endsWith("${styles.knobDial}:focus-visible") } shouldBe emptyList()
+            }
+        }
+    }
+
     "a beacon button draws its pulsing ring as ::after" {
         TestBed.preact(view = { KlangButton(onClick = {}, beacon = true) { +"Try me" } }) { root ->
             val button = root.selectCss("button").single()
@@ -113,12 +135,18 @@ class KlangControlStylesSpec : StringSpec({
         }
     }
 
-    "the reduce-motion rules outweigh every rule that animates the beacon ring and the try lamp" {
+    "the reduce-motion rules outweigh every rule that animates the beacon ring, the try lamp and the fly-in" {
         // Render once, so the stylesheets are built and mounted
-        TestBed.preact(view = { KlangButton(onClick = {}, beacon = true) { +"Try me" } }) { _ ->
+        TestBed.preact(
+            view = {
+                KlangButton(onClick = {}, beacon = true) { +"Try me" }
+                KlangToolWindow(title = "Docs", pinned = false) {}
+            },
+        ) { _ ->
             eventually {
                 stillingOutweighsAnimating(target = "${styles.beacon}::after")
                 stillingOutweighsAnimating(target = ".${styles.lampTry}")
+                stillingOutweighsAnimating(target = ".${styles.toolWindowFloating}")
             }
         }
     }

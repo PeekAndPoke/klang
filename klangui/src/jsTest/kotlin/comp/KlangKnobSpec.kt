@@ -10,15 +10,33 @@ import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.kraft.components.NoProps
+import io.peekandpoke.kraft.components.PureComponent
+import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.testing.TestBed
 import io.peekandpoke.kraft.testing.attr
+import io.peekandpoke.kraft.testing.eventually
 import io.peekandpoke.kraft.testing.selectCss
+import io.peekandpoke.kraft.vdom.VDom
+import kotlinx.html.Tag
 import org.w3c.dom.Element
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.events.KeyboardEvent
 import org.w3c.dom.events.KeyboardEventInit
 import org.w3c.dom.pointerevents.PointerEvent
 import org.w3c.dom.pointerevents.PointerEventInit
+
+/** A knob held by its parent, as on the kitchen sink: every change redraws the parent with a new position. */
+private class KnobHost(ctx: NoProps) : PureComponent(ctx) {
+    var position: Double by value(0.5)
+
+    override fun VDom.render() {
+        KlangKnob(name = "held", value = position, onChange = { position = it })
+    }
+}
+
+@Suppress("FunctionName")
+private fun Tag.KnobHost() = comp { KnobHost(it) }
 
 /** The knob (KLANG-00338): a slider for screen readers, turned by keys and by dragging, and its variants. */
 class KlangKnobSpec : StringSpec({
@@ -161,6 +179,27 @@ class KlangKnobSpec : StringSpec({
             pointer(dial, "pointermove", clientY = 200, pointerId = 7)
 
             changes.shouldBeEmpty()
+        }
+    }
+
+    "a knob held by its parent keeps its focus and turns through the parent's redraws" {
+        TestBed.preact(view = { KnobHost() }) { root ->
+            suspend fun dial() = root.selectCss("[role=slider]").single() as HTMLElement
+
+            pointer(dial(), "pointerdown", clientY = 300)
+            pointer(dial(), "pointerup", clientY = 300, buttons = 0)
+
+            // Kraft redraws after the event (Preact batches it): each key waits for the one before to land, as real
+            // key repeats do
+            press(dial(), "ArrowUp")
+            eventually { dial().getAttribute("aria-valuenow") shouldBe "55" }
+
+            press(dial(), "ArrowUp")
+
+            eventually {
+                dial().getAttribute("aria-valuenow") shouldBe "60"
+                (dial().ownerDocument?.activeElement == dial()) shouldBe true
+            }
         }
     }
 

@@ -59,4 +59,8 @@ class StorageKeysSpec : StringSpec({
     "the keymap's key stays as it is" {
         StorageKeys.KEYMAP shouldBe "klang-keymap"
     }
+
+    "the look's key stays as it is" {
+        StorageKeys.LOOK shouldBe "klang-look"
+    }
 })
