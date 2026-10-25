@@ -18,7 +18,6 @@ import kotlinx.html.button
 import kotlinx.html.div
 import kotlinx.html.section
 import kotlinx.html.span
-import kotlinx.html.title
 
 @Suppress("FunctionName")
 fun Tag.KlangToolWindow(
@@ -76,19 +75,16 @@ class KlangToolWindow(ctx: Ctx<Props>) : Component<KlangToolWindow.Props>(ctx) {
                 div { attributes["style"] = "flex: 1" }
 
                 props.onPinnedChange?.let { change ->
-                    val pinClasses = listOfNotNull(styles.toolWindowAction, if (props.pinned) styles.toolWindowActionOn else null)
-
-                    button(type = ButtonType.button, classes = pinClasses.joinToString(" ")) {
-                        attributes["aria-label"] = "Pin beside the editor"
-                        attributes["aria-pressed"] = props.pinned.toString()
-                        title = if (props.pinned) "Pinned beside the editor" else "Flies over the editor; pin it beside"
-                        onClick { change(!props.pinned) }
-                        icon.thumbtack.render { attributes["aria-hidden"] = "true" }
-                    }
+                    KlangIconToggle(
+                        icon = { thumbtack },
+                        label = "Pin beside the editor",
+                        on = props.pinned,
+                        onClick = { change(!props.pinned) },
+                    )
                 }
 
                 props.onClose?.let { close ->
-                    button(type = ButtonType.button, classes = styles.toolWindowAction.toString()) {
+                    button(type = ButtonType.button, classes = styles.iconToggle.toString()) {
                         attributes["aria-label"] = "Close ${props.title}"
                         onClick { close() }
                         icon.times.render { attributes["aria-hidden"] = "true" }

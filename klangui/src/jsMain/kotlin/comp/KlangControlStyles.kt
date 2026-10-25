@@ -492,10 +492,13 @@ object KlangControlStyles : StyleSheet("kl-controls") {
 
     // ── Tool window ───────────────────────────────────────────────────────────
 
+    /** Fills the place it is given (a fly-in slot, a docked column) along its parent's flex row. */
     val toolWindow by rule {
         put("display", "flex")
         put("flex-direction", "column")
+        put("flex", "1")
         put("box-sizing", "border-box")
+        put("min-width", "0")
         put("min-height", "0")
         put("color", "var(--kl-ink-text)")
         put("background", "var(--kl-ground-panel)")
@@ -536,8 +539,8 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("white-space", "nowrap")
     }
 
-    /** A header's small action: pin, close. Printed, not raised; pressed it sinks in. */
-    val toolWindowAction by rule {
+    /** A small icon button: a tool window's pin and close, the tool strip's toggles. Printed, not raised; on, it sinks in. */
+    val iconToggle by rule {
         put("display", "inline-flex")
         put("align-items", "center")
         put("justify-content", "center")
@@ -564,11 +567,18 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         }
     }
 
-    val toolWindowActionOn by rule {
+    val iconToggleOn by rule {
         put("color", "var(--kl-lamp-on)")
         put("background", "var(--kl-ground-sunken)")
         put("border-color", "var(--kl-edge)")
         put("box-shadow", "inset 0 2px 4px rgba(0,0,0,0.8)")
+    }
+
+    /** The tool strip's size of it. */
+    val iconToggleLarge by rule {
+        put("width", "36px")
+        put("height", "36px")
+        put("font-size", "16px")
     }
 
     val toolWindowBody by rule {
@@ -576,6 +586,164 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("min-height", "0")
         put("overflow", "auto")
         put("padding", "16px")
+    }
+
+    // ── The Motor's menu button ───────────────────────────────────────────────
+
+    /** The nine dots on the menu button; while its drawer is open they are lit, the button pressed. */
+    val menuButtonDots by rule {
+        put("display", "block")
+        put("fill", "currentColor")
+    }
+
+    val menuButtonOpen by rule {
+        put("color", "var(--kl-lamp-on)")
+    }
+
+    // ── The workbench ─────────────────────────────────────────────────────────
+
+    val workbench by rule {
+        put("display", "flex")
+        put("width", "100%")
+        put("height", "100%")
+        put("overflow", "hidden")
+        put("color", "var(--kl-ink-text)")
+        put("background", "var(--kl-ground-app)")
+    }
+
+    /** The column on the left: its content scrolls, the Motor under it never moves (KLANG-00334 item 25). */
+    val workbenchColumn by rule {
+        put("position", "relative")
+        put("display", "flex")
+        put("flex-direction", "column")
+        put("width", "320px")
+        put("flex-shrink", "0")
+        put("background", "var(--kl-ground-deep)")
+        put("border-right", "1px solid var(--kl-edge)")
+    }
+
+    /** The column above the Motor: its scroller, and the drawer laid over it, its foot just above the Motor. */
+    val workbenchColumnArea by rule {
+        put("position", "relative")
+        put("display", "flex")
+        put("flex-direction", "column")
+        put("flex", "1")
+        put("min-height", "0")
+    }
+
+    val workbenchColumnScroll by rule {
+        put("flex", "1")
+        put("min-height", "0")
+        put("overflow-y", "auto")
+    }
+
+    val workbenchMotor by rule {
+        put("flex-shrink", "0")
+        put("border-top", "1px solid var(--kl-edge)")
+    }
+
+    /** Over the column, just above the Motor; taller than the column, it scrolls, whatever the Motor's height. */
+    val workbenchDrawer by rule {
+        put("position", "absolute")
+        put("left", "10px")
+        put("bottom", "8px")
+        put("width", "300px")
+        put("max-height", "calc(100% - 16px)")
+        put("overflow-y", "auto")
+        put("z-index", "20")
+
+        // Holding the focus only when it has no control of its own: a frame, not a control, so no ring
+        rule("&:focus") {
+            put("outline", "none")
+        }
+    }
+
+    val workbenchCentre by rule {
+        put("position", "relative")
+        put("display", "flex")
+        put("flex-direction", "column")
+        put("flex", "1")
+        put("min-width", "0")
+    }
+
+    val workbenchContent by rule {
+        put("flex", "1")
+        put("min-height", "0")
+        put("overflow", "auto")
+    }
+
+    val workbenchBottom by rule {
+        put("display", "flex")
+        put("flex-direction", "column")
+        put("flex-shrink", "0")
+        put("height", "240px")
+        put("background", "var(--kl-ground-panel)")
+        put("border-top", "1px solid var(--kl-edge)")
+    }
+
+    val workbenchBottomHeader by rule {
+        put("display", "flex")
+        put("align-items", "center")
+        put("flex-shrink", "0")
+        put("height", "36px")
+        put("padding", "0 16px")
+        put("border-bottom", "1px solid var(--kl-ground-deep)")
+    }
+
+    val workbenchBottomBody by rule {
+        put("flex", "1")
+        put("min-height", "0")
+        put("overflow", "auto")
+        put("padding", "14px 16px")
+    }
+
+    /** A tool window flying in over the content, from the strip's side. */
+    val workbenchFloating by rule {
+        put("position", "absolute")
+        put("top", "0")
+        put("right", "0")
+        put("bottom", "0")
+        put("width", "380px")
+        put("z-index", "15")
+        put("display", "flex")
+    }
+
+    /** A pinned tool window, docked between the content and the strip. */
+    val workbenchPinned by rule {
+        put("display", "flex")
+        put("width", "340px")
+        put("flex-shrink", "0")
+    }
+
+    val workbenchStrip by rule {
+        put("display", "flex")
+        put("flex-direction", "column")
+        put("align-items", "center")
+        put("gap", "6px")
+        put("width", "48px")
+        put("flex-shrink", "0")
+        put("padding-top", "12px")
+        put("background", "var(--kl-ground-deep)")
+        put("border-left", "1px solid var(--kl-edge)")
+    }
+
+    /** The maker's mark at the strip's foot, written upwards (KLANG-00334 items 22, 23). */
+    val workbenchMark by rule {
+        put("margin-top", "auto")
+        put("padding-bottom", "28px")
+
+        rule("& > span") {
+            put("display", "block")
+            put("writing-mode", "vertical-rl")
+            put("transform", "rotate(180deg)")
+            put("font-family", "monospace")
+            put("font-weight", "700")
+            put("font-size", "20px")
+            put("letter-spacing", "0.12em")
+            put("color", "var(--kl-ink-strong)")
+            put("text-shadow", "0 0 5px var(--kl-edge)")
+            put("white-space", "nowrap")
+        }
     }
 
     // ── Gauges ────────────────────────────────────────────────────────────────

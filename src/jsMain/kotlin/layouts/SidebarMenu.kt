@@ -359,6 +359,9 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
             menuItem(false, "UI kitchen sink", { palette }) {
                 router.navToUri(Nav.uiKitchenSink())
             }
+            menuItem(false, "Workbench (lab)", { columns }) {
+                router.navToUri(Nav.workbenchLab())
+            }
         }
     }
 

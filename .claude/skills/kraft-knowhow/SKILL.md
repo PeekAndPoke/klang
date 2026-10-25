@@ -174,6 +174,16 @@ kraftApp {
   the tab order (`tabindex=0`, the last focused, else the first that can be chosen; the rest `-1`), and the arrow keys
   move between the items. Every item at `-1` makes the widget unreachable by Tab (`KlangMenu`).
 
+- **A popup takes the focus and gives it back** (KLANG-00340, 2026-10-25): a popup that opens (a drawer, a dialog)
+  moves the focus in, a frame after it is drawn (its first control, else the popup itself with `tabindex=-1`), so
+  its Esc works from the first moment. Closing, it returns the focus to where it came from, but only when the focus
+  was lost with it (`document.activeElement` is the body): a pick that focused a page's editor keeps it there
+  (`KlangWorkbench`).
+- **An `eventually` after a state change can pass on the old DOM** (KLANG-00340): a `by value()` write redraws in a
+  microtask, so an assertion that the old DOM already satisfies ("still closed") passes before the redraw. Wait
+  first for a sign of the new render (an attribute the change flips), then assert; for an effect a frame later
+  (a focus moved in `requestAnimationFrame`), await the frames, then assert once.
+
 - **A yes/no question is klangui's `YesNoModal`** (headline, content, `yesText`, `noText`, one `onResult`;
   KLANG-00323, 2026-10-21), not Kraft's `OkCancelModal`: its buttons are divs that cannot take the keyboard.
   Fomantic paints a modal's `> .header`, `> .content` and `> .actions` white; klang.css themes them. Kraft's

@@ -7,8 +7,9 @@ package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.version
-import io.peekandpoke.kraft.components.NoProps
-import io.peekandpoke.kraft.components.PureComponent
+import io.peekandpoke.klang.ui.comp.KlangWorkbench
+import io.peekandpoke.kraft.components.Component
+import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
@@ -54,7 +55,12 @@ import kotlinx.html.div
 import kotlinx.html.title
 
 @Suppress("FunctionName")
-fun Tag.Motoer() = comp {
+fun Tag.Motoer(
+    showTitle: Boolean = true,
+    menu: KlangWorkbench.Menu? = null,
+) = comp(
+    Motor.Props(showTitle = showTitle, menu = menu)
+) {
     Motor(it)
 }
 
@@ -67,7 +73,7 @@ fun Tag.Motoer() = comp {
  * the height of the text below it). The geometry is in the companion; the title slot's height is
  * shared with `PlayerWarehouseStats`, which renders at exactly that height.
  */
-class Motor(ctx: NoProps) : PureComponent(ctx) {
+class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
 
     companion object {
         /** The frame's total height. */
@@ -89,7 +95,19 @@ class Motor(ctx: NoProps) : PureComponent(ctx) {
 
         /** The spectrum's height, anchored to the bottom, behind everything. */
         val SPECTRUM_HEIGHT = 8.25.rem
+
+        /** The frame without the title slot: the scope's foot (8.75 rem) and a little room under it. */
+        val FRAME_HEIGHT_WITHOUT_TITLE = 9.25.rem
     }
+
+    //  PROPS  //////////////////////////////////////////////////////////////////////////////////////////////////
+
+    data class Props(
+        /** The title slot under the scope (KLANGMOTOR, a click shows the warehouse stats); off, the frame is shorter. */
+        val showTitle: Boolean,
+        /** The menu button beside the gauges, opening a workbench's drawer; null for none (the empty spot of old). */
+        val menu: KlangWorkbench.Menu?,
+    )
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -108,7 +126,7 @@ class Motor(ctx: NoProps) : PureComponent(ctx) {
             css {
                 textAlign = TextAlign.center
                 position = Position.relative
-                height = FRAME_HEIGHT
+                height = if (props.showTitle) FRAME_HEIGHT else FRAME_HEIGHT_WITHOUT_TITLE
             }
 
             div {
@@ -121,7 +139,7 @@ class Motor(ctx: NoProps) : PureComponent(ctx) {
                     height = TOP_SLOT_HEIGHT
                     zIndex = 2
                 }
-                PlayerMiniStats(showVolume = true)
+                PlayerMiniStats(showVolume = true, menu = props.menu)
             }
 
             div {
@@ -148,7 +166,8 @@ class Motor(ctx: NoProps) : PureComponent(ctx) {
                     bottom = 0.rem
                     left = 0.rem
                     right = 0.rem
-                    height = SPECTRUM_HEIGHT
+                    // Without the title the frame is shorter: the spectrum keeps its old relation to the scope
+                    height = if (props.showTitle) SPECTRUM_HEIGHT else SPECTRUM_HEIGHT - TITLE_HEIGHT
                     width = 100.pct
 
                     opacity = 0.66
@@ -157,57 +176,60 @@ class Motor(ctx: NoProps) : PureComponent(ctx) {
                 Spectrumeter(numBoxesInStack = 35) { Player.get() }
             }
 
-            div {
-                key = "title"
+            // The title and its warehouse stats; a workbench writes the title up its tool strip instead (KLANG-00340)
+            if (props.showTitle) {
+                div {
+                    key = "title"
 
-                css {
-                    zIndex = 100
-                    position = Position.absolute
-                    bottom = TITLE_BOTTOM
-                    left = 0.rem
-                    right = 0.rem
-                    height = TITLE_HEIGHT
-                    opacity = 0.95
-                    cursor = Cursor.pointer
-                    // The title sits vertically centred in the slot; the stats fill it.
-                    display = Display.flex
-                    flexDirection = FlexDirection.column
-                    justifyContent = JustifyContent.center
-                }
+                    css {
+                        zIndex = 100
+                        position = Position.absolute
+                        bottom = TITLE_BOTTOM
+                        left = 0.rem
+                        right = 0.rem
+                        height = TITLE_HEIGHT
+                        opacity = 0.95
+                        cursor = Cursor.pointer
+                        // The title sits vertically centred in the slot; the stats fill it.
+                        display = Display.flex
+                        flexDirection = FlexDirection.column
+                        justifyContent = JustifyContent.center
+                    }
 
-                // A click anywhere in the slot swaps the title for the stats, and back.
-                onClick { showWarehouse = !showWarehouse }
+                    // A click anywhere in the slot swaps the title for the stats, and back.
+                    onClick { showWarehouse = !showWarehouse }
 
-                if (showWarehouse) {
-                    PlayerWarehouseStats()
-                } else {
-                    div {
-                        css {
-                            whiteSpace = WhiteSpace.nowrap
-                            put("text-shadow", "0 0 5px #000")
-                        }
-
-                        // Reveal the build version as a native tooltip on hover
-                        versionInfo.takeIf { it.isAvailable }?.let { info ->
-                            title = buildString {
-                                append(info.project).append(" v").append(info.version)
-                                append("\nbranch: ").append(info.gitBranch)
-                                append("\nrev: ").append(info.gitDesc)
-                                info.date?.let { append("\nbuilt: ").append(it) }
-                                append("\n\nclick: warehouse stats")
-                            }
-                        }
-
-                        ui.big.text {
+                    if (showWarehouse) {
+                        PlayerWarehouseStats()
+                    } else {
+                        div {
                             css {
-                                height = 2.0.em
-                                fontFamily = "monospace"
-                                lineHeight = LineHeight("2.0em")
-                                color = Color.white
-                                display = Display.inlineBlock
-                                fontWeight = FontWeight.bold
+                                whiteSpace = WhiteSpace.nowrap
+                                put("text-shadow", "0 0 5px #000")
                             }
-                            +"KLANGMOTOR"
+
+                            // Reveal the build version as a native tooltip on hover
+                            versionInfo.takeIf { it.isAvailable }?.let { info ->
+                                title = buildString {
+                                    append(info.project).append(" v").append(info.version)
+                                    append("\nbranch: ").append(info.gitBranch)
+                                    append("\nrev: ").append(info.gitDesc)
+                                    info.date?.let { append("\nbuilt: ").append(it) }
+                                    append("\n\nclick: warehouse stats")
+                                }
+                            }
+
+                            ui.big.text {
+                                css {
+                                    height = 2.0.em
+                                    fontFamily = "monospace"
+                                    lineHeight = LineHeight("2.0em")
+                                    color = Color.white
+                                    display = Display.inlineBlock
+                                    fontWeight = FontWeight.bold
+                                }
+                                +"KLANGMOTOR"
+                            }
                         }
                     }
                 }

@@ -7,6 +7,8 @@ package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
+import io.peekandpoke.klang.ui.comp.KlangMenuButton
+import io.peekandpoke.klang.ui.comp.KlangWorkbench
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
@@ -33,8 +35,9 @@ fun Tag.PlayerMiniStats(
     glowColor: Color? = null,
     glowIntensity: Double = 0.45,
     showVolume: Boolean = false,
+    menu: KlangWorkbench.Menu? = null,
 ) = comp(
-    PlayerMiniStats.Props(glowColor = glowColor, glowIntensity = glowIntensity, showVolume = showVolume)
+    PlayerMiniStats.Props(glowColor = glowColor, glowIntensity = glowIntensity, showVolume = showVolume, menu = menu)
 ) {
     PlayerMiniStats(it)
 }
@@ -61,6 +64,8 @@ class PlayerMiniStats(ctx: Ctx<Props>) : Component<PlayerMiniStats.Props>(ctx) {
         val glowIntensity: Double,
         /** The master volume knob left of the gauges (KLANG-00330): the Motor shows it, the start page does not. */
         val showVolume: Boolean,
+        /** The menu button in the spot beside the gauges (KLANG-00340); null keeps the spot empty. */
+        val menu: KlangWorkbench.Menu?,
     )
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -131,14 +136,21 @@ class PlayerMiniStats(ctx: Ctx<Props>) : Component<PlayerMiniStats.Props>(ctx) {
                     )
                 }
 
-                // An empty place of the knob's size on the other side, so the middle gauge stays in the middle
+                // The knob's size on the other side, so the middle gauge stays in the middle: the menu button when there
+                // is one (KLANG-00340), else an empty place
                 if (props.showVolume) {
                     noui.bottom.aligned.item {
-                        div {
-                            css {
-                                display = Display.inlineBlock
-                                width = VOLUME_KNOB_PX.px
-                                height = VOLUME_KNOB_PX.px
+                        val menu = props.menu
+
+                        if (menu != null) {
+                            KlangMenuButton(open = menu.open, onClick = menu.toggle, size = VOLUME_KNOB_PX.px)
+                        } else {
+                            div {
+                                css {
+                                    display = Display.inlineBlock
+                                    width = VOLUME_KNOB_PX.px
+                                    height = VOLUME_KNOB_PX.px
+                                }
                             }
                         }
                     }
