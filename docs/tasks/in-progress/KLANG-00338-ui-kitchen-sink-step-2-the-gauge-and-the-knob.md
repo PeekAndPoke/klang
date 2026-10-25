@@ -50,8 +50,9 @@ gauges with icons, knobs with a label on top or below or an icon, and roundish s
 - The gauge's icon: smaller (13 % of the size, a text label 11 %) and lower, tried at 36 % ("too low") and settled at
   32 % ("yes good").
 - The icon on a knob's cap: smaller (22 %), so the dot at the rim keeps its room.
-- Focus on a knob: a ring, as before, but thin (1 px, 1 px off the dial) so it does not reach the label; a coloured
-  pointer instead was tried and was too faint.
+- Focus on a knob: a ring, as before, but thin so it does not reach the label; a coloured pointer instead was tried
+  and was too faint. A 1 px outline looked pixelated in Chrome on Linux (a round outline is drawn without
+  anti-aliasing), so the ring is a 1.5 px shadow on the dial's edge, with a transparent outline for forced colours.
 
 ## Review and checks (2026-10-25)
 

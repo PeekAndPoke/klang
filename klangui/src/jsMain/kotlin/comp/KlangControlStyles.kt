@@ -394,10 +394,12 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("touch-action", "none")
         put("outline", "none")
 
-        // A thin ring close to the dial, so it does not reach the label (maintainer, 2026-10-25)
+        // A thin ring on the dial's edge, clear of the label (maintainer, 2026-10-25). A shadow ring, because Chrome
+        // draws a round outline without anti-aliasing (it looked pixelated); the transparent outline still shows in
+        // forced-colours modes, which drop shadows
         rule("&:focus-visible") {
-            put("outline", "1px solid var(--kl-focus)")
-            put("outline-offset", "1px")
+            put("box-shadow", "0 0 0 1.5px var(--kl-focus)")
+            put("outline", "1px solid transparent")
         }
     }
 
