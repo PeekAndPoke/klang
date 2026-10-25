@@ -129,25 +129,37 @@ Apply this standard whenever reviewing changes or writing tests — including wh
   plain `java` on a classpath captured by one locked Gradle run and snapshotted, several at a time,
   never one Gradle run per row. A new render tool proves itself first: the same sha as the serial
   render on the same tree.
-- **The effort ladder: every round that is not clean escalates one level, up to the top rung**
-  (maintainer, 2026-09-18; capped at xhigh 2026-09-28; top rung Opus at max since 2026-10-24, "Opus max on the
-  highest review tier. The two lower ones stay as they are"). The Agent tool has no per-call effort dial, so the levels are agent
-  definitions in `.claude/agents/` with model and effort pinned:
+- **The effort ladder: the level follows the findings, not the round number** (maintainer, 2026-10-25,
+  Mission Control's MC-00033, merged from the blueprint `ea3a129`; before it, the ladder went by round
+  number, 2026-09-18, top rung Opus at max since 2026-10-24). The Agent tool has no per-call effort dial,
+  so the levels are agent definitions in `.claude/agents/` with model and effort pinned:
 
-  | round | reviewers | how to spawn |
+  | level | reviewers | how to spawn |
   |---|---|---|
-  | 1 (blind) | `opus`, session effort | `subagent_type: general-purpose`, `model: opus` |
+  | 1 (the floor) | `opus`, session effort | `subagent_type: general-purpose` (or `claude`), `model: opus` |
   | 2 | `opus`, high | `subagent_type: reviewer-high` |
-  | 3 and later | `opus`, max | `subagent_type: reviewer-max` (the 2026-09-05 "round 3 on the strongest tier" rule, now with the effort; from round 4 the safety valve has already fired and the maintainer is in the loop) |
+  | 3 (the top) | `opus`, max | `subagent_type: reviewer-max` |
 
-  Why a ladder and not xhigh from the start: a round that is not clean means the previous tier
-  missed something or the fix delta introduced something, and both call for more scrutiny of a
-  SMALLER target (the delta), so the extra effort is spent where it pays. Round 1 is the wide
-  net at the ordinary tier. The implementer of a fix round stays at the session effort unless the
-  round found a CRITICAL, then it is briefed on `opus` with the reviewer-high definition's
-  discipline restated in the prompt. Watched together with the "opening line" table in
-  `/agent-fleet`: if round 2 at high finds what round 1 at session effort missed, the ladder
-  earns its cost; if it never does, round 1 can start higher and the ladder shortens.
+  - **A round with any CRITICAL or MAJOR, fixed or rejected, raises the next round one level**, to 3 at
+    most. A reconcile-only round after rejections goes UP too: rejecting must never be cheaper than fixing.
+  - **A round with only MINORs and NITs is clean, and the loop stops.** A round that runs after a clean
+    round anyway (a MINOR batch the maintainer asked to have re-reviewed) runs one level DOWN, never below
+    the floor.
+  - **The level belongs to the loop**, not to a charter: a MAJOR from the coding or the audio reviewer
+    raises both next rounds.
+  - **The ledger records each round's level.** The next step of the same task starts one level below where
+    the last loop ended if it ended clean, at that level if it stopped without a clean round, and at the
+    floor if it touches none of the previous step's modules. **New work arriving between rounds** (a
+    refactor the maintainer asks for) **is a new step, not the next round** (KLANG-00325, 2026-10-25: a
+    round 3 at max ran after a clean round 2 because the briefs called MINORs unclean, `_incidents.md`).
+  - Round 1 stays blind whatever its level. The safety valve counts rounds that were not clean, whatever
+    their level.
+
+  Why a ladder: a round that is not clean means the previous level missed something or the fix delta
+  introduced something, and both call for more scrutiny of a SMALLER target (the delta). A clean round
+  means the target is calm, and paying the top level for it is waste. The implementer of a fix round
+  stays at the session effort unless the round found a CRITICAL, then it is briefed on `opus` with the
+  reviewer-high definition's discipline restated in the prompt.
 - **Final report** lists: rounds run; per round the findings and their outcomes; the parked user decisions on top.
 
 ### Reviewer prompt templates
@@ -163,6 +175,9 @@ Coding reviewer (fill the brackets, attach the diff):
 > (a helper half nothing calls yet, a parameter, a mapping, a branch), and could it be removed or
 > deferred? Complexity is the stone rule; a removal is a valid finding. Return a numbered findings list: severity (CRITICAL/MAJOR/MINOR),
 > `file:line`, and a concrete failure scenario each. "NO FINDINGS" is a valid answer; do not pad.
+>
+> **Verdict (fixed text, keep it):** a round is clean when it has zero CRITICAL and zero MAJOR findings;
+> MINORs and NITs do not make it unclean. End with that verdict.
 
 Audio-engineer reviewer:
 
@@ -175,6 +190,9 @@ Audio-engineer reviewer:
 > project already coerces. Also SURPLUS: a mechanism more elaborate than the audible problem
 > needs (a glide is a safety net against clicks, not a loudness keeper). Return findings as severity + `file:line` + failure scenario.
 > "NO FINDINGS" is a valid answer; do not pad.
+>
+> **Verdict (fixed text, keep it):** a round is clean when it has zero CRITICAL and zero MAJOR findings;
+> MINORs and NITs do not make it unclean. End with that verdict.
 
 Paste [`audio-constraints.md`](audio-constraints.md) (the engine's deliberate decisions) into every
 audio-engineer prompt and into any audio brief; a reviewer without it files findings that would make
@@ -335,6 +353,11 @@ reader.
   reviewers, instead we will use Opus reviewers on max effort", then "Opus max on the highest review tier. The two
   lower ones stay as they are"). `reviewer-xhigh` (fable) is renamed `reviewer-max` and repinned; the Opus plus
   Fable experiment (KLANG-00328) is suspended. Rounds 1 and 2 unchanged.
+- **2026-10-25**: the effort ladder follows the findings, not the round number (maintainer, merged from
+  Mission Control's blueprint, MC-00033 `ea3a129`): levels 1 to 3 (session, `reviewer-high`, `reviewer-max`),
+  a CRITICAL or MAJOR raises the next round, a clean round stops the loop, new work between rounds is a new
+  step; the fixed verdict line in both brief templates. The cause: KLANG-00325's round 3 at max after a clean
+  round 2 (`_incidents.md`).
 
 - **2026-09-28**: the ladder stops at xhigh (maintainer: "rounds 3+ on fable with xhigh, no max
   anywhere"). `reviewer-max` is deleted; `reviewer-xhigh` serves round 3 and every later round.
