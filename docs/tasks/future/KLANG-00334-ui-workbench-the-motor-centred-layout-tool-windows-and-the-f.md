@@ -90,6 +90,11 @@ Kept in order, close to the maintainer's words.
 36. (2026-10-25) Likes the canvas's oscilloscope in blue (today white, `Oscilloscope.strokeColor`) and the spectrum
     with more columns (28 on the canvas, today 16, `Spectrumeter.numBuckets`). For the step that switches the Motor
     over: the trace's colour as a role, the column count raised.
+37. (2026-10-25) Likes the "search everywhere" window (canvas board C). Opened maybe as in IntelliJ, Shift then Shift
+    again, which needs a new feature in the key bindings. Proposed: Mod K as the plain chord (the key manager has it
+    today), and Shift Shift as a second way in: a tap binding (a modifier pressed and released with no other key
+    between; two within about 300 to 400 ms), simpler than general sequences. The key manager is Klang-Main-Dev's
+    (KLANG-00325).
 
 ## Where the conversation stands (leanings, not decisions)
 
