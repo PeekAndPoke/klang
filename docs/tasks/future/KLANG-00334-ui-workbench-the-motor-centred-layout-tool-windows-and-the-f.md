@@ -72,6 +72,11 @@ Kept in order, close to the maintainer's words.
     key in a corner (`InsideEnd`, as the yes/no modal's "Esc Close"); an area shows its keys in a corner while Ctrl
     is held. The full list: KLANG-00325, section "Places for keys and hints (survey 2026-10-25)". The rollout waits
     for this layout (maintainer).
+32. (2026-10-25) "Maybe in a final step we can think about our own icon set as svgs ... not sure how hard this is on
+    the browser to render many svgs." Notes: a line icon is a few paths; a sprite (`<symbol>` defined once, each use one
+    `<use>`) costs one element per use; drawn in `currentColor` the icons follow the theme's ink (silver caps,
+    copper, cream). What costs is SVG filters (blur) and animating many at once. Our own drawing, or an open set
+    (Lucide is ISC) credited per the credits rule. Today's icons are Font Awesome's through Fomantic.
 
 ## Where the conversation stands (leanings, not decisions)
 
