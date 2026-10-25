@@ -158,6 +158,12 @@ kraftApp {
   between centre and top (top 30 %, centred via transform); label uses `borderBox` with a 2.5 px
   border; the canvas paints the circular background, not the Semantic UI label.
 
+- **Two sheets, two mount times** (KLANG-00337, 2026-10-25): `RawStyleSheet` mounts in its constructor, `StyleSheet`
+  on the next animation frame, both into `<head>`. A rule in a raw sheet therefore loses every tie against a
+  `StyleSheet` rule of the same weight, and a media query adds no weight. A raw rule that overrides (a
+  `prefers-reduced-motion` block) carries one class more than its target. kotlinx-css writes `rule("&::after")` as a
+  nested rule (native CSS nesting): it weighs like the flat selector, but reads one level down in `cssRules`.
+
 - **A yes/no question is klangui's `YesNoModal`** (headline, content, `yesText`, `noText`, one `onResult`;
   KLANG-00323, 2026-10-21), not Kraft's `OkCancelModal`: its buttons are divs that cannot take the keyboard.
   Fomantic paints a modal's `> .header`, `> .content` and `> .actions` white; klang.css themes them. Kraft's

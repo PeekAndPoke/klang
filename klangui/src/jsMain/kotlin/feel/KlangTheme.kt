@@ -46,9 +46,47 @@ object KlangTheme : Stream<KlangLookAndFeel> {
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
-    /** Reads CSS custom properties from `:root`, applies the resulting theme, and emits it. */
+    /** Reads CSS custom properties from `:root`, applies the resulting theme, and emits it; writes the look's roles. */
     fun initialize() {
         update(KlangLookAndFeel.fromCss())
+        applyLayers(lookLayers)
+    }
+
+    // ── The look: roles and layers (KLANG-00337) ──────────────────────────────
+
+    private var lookLayers: KlangLookLayers = KlangLookLayers()
+
+    private val lookSource: StreamSource<KlangLook> = StreamSource(KlangLook.defaults)
+
+    /** The resolved look; subscribe where a value is needed outside CSS (a canvas, a JS object). */
+    val look: Stream<KlangLook> get() = lookSource
+
+    /** The stack the look is resolved from. */
+    val layers: KlangLookLayers get() = lookLayers
+
+    /** Puts [values] on [layer] (values a role does not accept are dropped) and repaints through the CSS variables. */
+    fun setLayer(layer: KlangLookLayers.Layer, values: Map<KlangRole, String>) {
+        applyLayers(lookLayers.with(layer, values))
+    }
+
+    /** Empties [layer]; the layers below show again. */
+    fun clearLayer(layer: KlangLookLayers.Layer) {
+        applyLayers(lookLayers.cleared(layer))
+    }
+
+    private fun applyLayers(next: KlangLookLayers) {
+        lookLayers = next
+
+        val resolved = next.resolve()
+        val style = (document.documentElement as? HTMLElement)?.style
+
+        if (style != null) {
+            for ((name, value) in resolved.cssVars()) {
+                style.setProperty(name, value)
+            }
+        }
+
+        lookSource(resolved)
     }
 
     /** Replaces the active theme: syncs CSS vars, swaps the stylesheet, and emits the new value. */

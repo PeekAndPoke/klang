@@ -18,6 +18,7 @@ import io.peekandpoke.klang.pages.ResourcesPage
 import io.peekandpoke.klang.pages.SamplesLibraryPage
 import io.peekandpoke.klang.pages.StartPage
 import io.peekandpoke.klang.pages.TourPage
+import io.peekandpoke.klang.pages.UiKitchenSinkPage
 import io.peekandpoke.klang.pages.docs.DocsPage
 import io.peekandpoke.klang.pages.docs.KlangScriptDocsPage
 import io.peekandpoke.klang.pages.docs.KlangScriptLibraryDocsPage
@@ -81,6 +82,9 @@ object Nav {
     val devStatus = Static("/dev-status")
 
     val tour = Static("/tour")
+
+    /** Every UI element in every state (KLANG-00337). */
+    val uiKitchenSink = Static("/debug/ui-kitchen-sink")
 }
 
 fun RootRouterBuilder.mountNav() {
@@ -92,6 +96,7 @@ fun RootRouterBuilder.mountNav() {
 
     layout({ FullscreenLayout { it() } }) {
         mount(Nav.tour) { TourPage() }
+        mount(Nav.uiKitchenSink) { UiKitchenSinkPage() }
     }
 
     layout({ MenuLayout { it() } }) {
