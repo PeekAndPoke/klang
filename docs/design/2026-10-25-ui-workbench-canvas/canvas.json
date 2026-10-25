@@ -1,0 +1,25 @@
+{
+  "v": 3,
+  "createdOnFiles": {"v": 1, "at": "2026-10-25T17:30:00Z"},
+  "title": "Klang Workbench Layout",
+  "launch": {"view": "canvas"},
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {"x": 0, "y": 0, "w": 1440, "h": 900, "title": "A: Workbench, tools docked right", "is_interactive": true},
+    "LeftStack.dc.html": {"x": 1520, "y": 0, "w": 1440, "h": 900, "title": "B: Tools stacked in the left column", "is_interactive": true},
+    "Launcher.dc.html": {"x": 0, "y": 1020, "w": 1440, "h": 900, "title": "C: The menu drawer open, with search"},
+    "MotorDetail.dc.html": {"x": 1520, "y": 1020, "w": 1200, "h": 900, "title": "D: The Motor, the menu button in the fifth spot", "is_interactive": true},
+    "Motor.dc.html": {"x": 0, "y": 2300, "w": 320, "h": 236, "title": "Part: Motor"},
+    "Editor.dc.html": {"x": 400, "y": 2300, "w": 860, "h": 560, "title": "Part: Editor"},
+    "Drawer.dc.html": {"x": 1340, "y": 2300, "w": 300, "h": 400, "title": "Part: Menu drawer", "is_interactive": true},
+    "Trail.dc.html": {"x": 0, "y": 3200, "w": 2000, "h": 1120, "title": "E: The first-visit trail, one lamp at a time"},
+    "KitchenSink.dc.html": {"x": 3100, "y": 0, "w": 1800, "h": 2700, "title": "Kitchen sink: every UI element, today and new"}
+  },
+  "order": ["Motor.dc.html", "Editor.dc.html", "Drawer.dc.html", "Main.dc.html", "LeftStack.dc.html", "Launcher.dc.html", "MotorDetail.dc.html", "Trail.dc.html", "KitchenSink.dc.html"],
+  "notes": {
+    "title_layouts": {"x": 0, "y": -300, "text": "Klang workbench: layout study", "kind": "title1", "maxW": 2960},
+    "title_trail": {"x": 0, "y": 2950, "text": "Introducing the UI: the trail", "kind": "title1", "maxW": 2000},
+    "title_parts":{"x": 0, "y": 2040, "text": "Shared parts", "kind": "title1", "maxW": 1640}
+  },
+  "designSystems": []
+}

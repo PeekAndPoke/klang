@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The Motor, the menu button in the fifth spot</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="position: relative; width: 1200px; height: 900px; overflow: hidden; background: #191C22; font-family: Lato, system-ui, sans-serif; color: #D7DADF">
+
+  <div style="position: absolute; left: 200px; top: 230px; width: 800px; height: 590px; border: 1px solid #000; box-shadow: 0 20px 60px rgba(0,0,0,0.5)">
+    <div style="width: 320px; height: 236px; transform: scale(2.5); transform-origin: top left">
+      <dc-import name="Motor" launcher-open="{{ open }}" on-launcher="{{ toggle }}" hint-size="320px,236px"></dc-import>
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 249px; top: 120px; width: 120px; text-align: center; transform: translateX(-60px)">
+    <div style="font-size: 15px; font-weight: 700; color: #ffffff">Volume</div>
+    <div style="font-size: 12px; color: #abb2bf">the master knob</div>
+  </div>
+  <div aria-hidden="true" style="position: absolute; left: 309px; top: 168px; width: 1px; height: 120px; background: #5c6370"></div>
+
+  <div style="position: absolute; left: 435px; top: 120px; width: 120px; text-align: center; transform: translateX(-60px)">
+    <div style="font-size: 15px; font-weight: 700; color: #ffffff">Cylinders</div>
+    <div style="font-size: 12px; color: #abb2bf">active orbits</div>
+  </div>
+  <div aria-hidden="true" style="position: absolute; left: 435px; top: 168px; width: 1px; height: 80px; background: #5c6370"></div>
+
+  <div style="position: absolute; left: 600px; top: 120px; width: 120px; text-align: center; transform: translateX(-60px)">
+    <div style="font-size: 15px; font-weight: 700; color: #ffffff">Heat</div>
+    <div style="font-size: 12px; color: #abb2bf">render headroom</div>
+  </div>
+  <div aria-hidden="true" style="position: absolute; left: 600px; top: 168px; width: 1px; height: 70px; background: #5c6370"></div>
+
+  <div style="position: absolute; left: 765px; top: 120px; width: 120px; text-align: center; transform: translateX(-60px)">
+    <div style="font-size: 15px; font-weight: 700; color: #ffffff">Voices</div>
+    <div style="font-size: 12px; color: #abb2bf">sounding now</div>
+  </div>
+  <div aria-hidden="true" style="position: absolute; left: 765px; top: 168px; width: 1px; height: 80px; background: #5c6370"></div>
+
+  <div style="position: absolute; left: 960px; top: 70px; width: 220px; padding: 12px 14px; box-sizing: border-box; background: #21252b; border: 1px solid #EBC773; border-radius: 4px">
+    <div style="font-size: 15px; font-weight: 700; color: #EBC773">New: the menu button</div>
+    <div style="font-size: 13px; line-height: 19px; color: #D7DADF; margin-top: 4px">Sits in the spot that is empty today, the size of the volume knob, so the heat gauge stays in the middle. Its lamp is lit while the drawer is open. Mod K opens it too.</div>
+  </div>
+  <div aria-hidden="true" style="position: absolute; left: 891px; top: 215px; width: 1px; height: 80px; background: #EBC773"></div>
+  <div aria-hidden="true" style="position: absolute; left: 891px; top: 214px; width: 70px; height: 1px; background: #EBC773"></div>
+
+  <div style="position: absolute; left: 200px; top: 840px; font-size: 13px; color: #abb2bf">Shown at 2.5 times its size. Click the menu button to see the pressed state and the lamp.</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1200,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const open = this.state.open ?? false;
+    return { open: open, toggle: () => this.setState({ open: !open }) };
+  }
+}
+</script>
+</body>
+</html>

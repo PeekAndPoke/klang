@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Menu drawer</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="position: relative; width: 300px; box-sizing: border-box; padding: 18px 16px 16px; font-family: Lato, system-ui, sans-serif; color: #D7DADF; background: linear-gradient(180deg, #2a2f37 0%, #21252b 40%, #1c1f25 100%); border: 1px solid #000; border-radius: 4px; box-shadow: 0 -10px 30px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.09)">
+
+  <span aria-hidden="true" style="position: absolute; top: 6px; left: 6px; width: 6px; height: 6px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #8a919e, #2c313a)"></span>
+  <span aria-hidden="true" style="position: absolute; top: 6px; right: 6px; width: 6px; height: 6px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #8a919e, #2c313a)"></span>
+  <span aria-hidden="true" style="position: absolute; bottom: 6px; left: 6px; width: 6px; height: 6px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #8a919e, #2c313a)"></span>
+  <span aria-hidden="true" style="position: absolute; bottom: 6px; right: 6px; width: 6px; height: 6px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #8a919e, #2c313a)"></span>
+
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px">
+    <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.18em; color: #abb2bf">WHERE TO</span>
+    <button aria-label="Close the menu" onClick="{{ close }}" style="width: 28px; height: 28px; padding: 0; border: 1px solid #000; border-radius: 3px; background: linear-gradient(180deg, #3a3f48, #262a31); color: #D7DADF; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1)">
+      <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 2 L10 10 M10 2 L2 10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
+    </button>
+  </div>
+
+  <label style="display: flex; align-items: center; gap: 8px; height: 38px; box-sizing: border-box; padding: 0 10px; margin-bottom: 14px; background: #0e1014; border: 1px solid #000; border-radius: 3px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.7)">
+    <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><circle cx="6" cy="6" r="4.2" fill="none" stroke="#abb2bf" stroke-width="1.5"></circle><path d="M9.2 9.2 L12.5 12.5" stroke="#abb2bf" stroke-width="1.5" stroke-linecap="round"></path></svg>
+    <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Search</span>
+    <input type="text" placeholder="Songs, docs, samples, actions" style="flex: 1; min-width: 0; background: transparent; border: none; outline: none; color: #D7DADF; font-family: Lato, sans-serif; font-size: 13px">
+    <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #abb2bf; border: 1px solid #3e4451; border-bottom-width: 2px; border-radius: 3px; padding: 1px 5px">Mod K</span>
+  </label>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+    <sc-for list="{{ items }}" as="it" hint-placeholder-count="8">
+      <button aria-pressed="{{ it.active }}" onClick="{{ it.pick }}" style="position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-height: 52px; padding: 9px 10px 8px 24px; text-align: left; cursor: pointer; border-radius: 3px; border: {{ it.border }}; background: {{ it.bg }}; box-shadow: {{ it.shadow }}; animation: {{ it.anim }}; color: {{ it.color }}; font-family: Lato, sans-serif">
+        <span aria-hidden="true" style="position: absolute; left: 10px; top: 14px; width: 7px; height: 7px; border-radius: 50%; background: {{ it.led }}; box-shadow: {{ it.ledGlow }}"></span>
+        <span style="font-size: 14px; font-weight: 700">{{ it.label }}</span>
+        <span style="font-size: 11px; color: {{ it.subColor }}">{{ it.sub }}</span>
+      </button>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"active":{"editor":"enum","options":["songs","learn","docs","samples","midi","credits"],"default":"songs"},"beaconItem":{"editor":"text","default":""},"onPick":{"editor":null},"onClose":{"editor":null},"$preview":{"width":300,"height":400}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const active = this.state.active ?? this.props.active ?? 'songs';
+    const defs = [
+      { id: 'songs', label: 'Songs', sub: 'Your songs and the built-ins' },
+      { id: 'learn', label: 'Learn', sub: 'Tutorials and tracks' },
+      { id: 'docs', label: 'Docs', sub: 'Lexikon, Sprudel, Stdlib' },
+      { id: 'samples', label: 'Samples', sub: 'The library' },
+      { id: 'midi', label: 'MIDI', sub: 'Playground, devices' },
+      { id: 'credits', label: 'Credits', sub: 'Who we build on' },
+      { id: 'library', label: 'Community', sub: 'With the backend', later: true },
+      { id: 'account', label: 'Account', sub: 'With the backend', later: true },
+    ];
+    const items = defs.map((d) => {
+      const on = d.id === active;
+      return {
+        label: d.label,
+        sub: d.sub,
+        active: on,
+        border: d.later ? '1px dashed #5c6370' : '1px solid #000',
+        bg: d.later ? 'transparent' : (on ? 'linear-gradient(180deg, #1c1f25, #262a31)' : 'linear-gradient(180deg, #3a3f48, #2a2e36)'),
+        shadow: d.later ? 'none' : (on ? 'inset 0 2px 5px rgba(0,0,0,0.75)' : '0 2px 3px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1)'),
+        color: d.later ? '#abb2bf' : '#ffffff',
+        subColor: '#abb2bf',
+        led: on ? '#EBC773' : (d.later ? 'transparent' : '#3a3220'),
+        ledGlow: on ? '0 0 6px #EBC773' : 'none',
+        anim: d.id === (this.props.beaconItem ?? '') ? 'klangBeacon 1.82s ease-in-out infinite' : 'none',
+        pick: () => {
+          if (d.later) { return; }
+          this.setState({ active: d.id });
+          if (this.props.onPick) { this.props.onPick(d.id); }
+        },
+      };
+    });
+    return {
+      items: items,
+      close: () => { if (this.props.onClose) { this.props.onClose(); } },
+    };
+  }
+}
+</script>
+</body>
+</html>

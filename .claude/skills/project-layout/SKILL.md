@@ -158,7 +158,9 @@ klang's copy, taken 2026-10-20 (the blueprint as of that day).
   `CREDITS.MD` has a twin, the in-app Credits page (`src/jsMain/kotlin/pages/CreditsPage.kt`), kept in step
   (rules register). `tones/` stays MIT and never gets the AGPL header.
 - **docs/, klang's own folders:** `audio-audit/`, `benchmarks/` (dated full-check and timing results, the
-  allocation scoreboard), `blog/` (published posts; a copy ships in `src/jsMain/resources/blog/`), `funding/`,
+  allocation scoreboard), `blog/` (published posts; a copy ships in `src/jsMain/resources/blog/`), `design/`
+  (the sources of design canvases, one dated folder per canvas with a README naming its ticket and its claude.ai
+  link; since 2026-10-25), `funding/`,
   `history/`, `knowhow/`, `media/`, `notebooks/`, `strategy/`, `whitepaper/`, plus `docs/retired-names.md`.
   No `research/`: research notes live in the tickets and in `strategy/`.
 - **docs/tasks/, klang's own files:** `_priorities.md` and `_v1-scope.md` (the order of the streams and the

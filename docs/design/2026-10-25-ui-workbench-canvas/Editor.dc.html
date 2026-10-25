@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Editor</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 100%; height: 100%; min-height: 200px; box-sizing: border-box; background: #0e1014; border-top: 2px solid #5c7cbc; border-top-left-radius: 10px; overflow: hidden; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 21px; opacity: {{ opacity }}">
+  <div style="padding: 12px 0">
+    <sc-for list="{{ lines }}" as="line" hint-placeholder-count="20">
+      <div style="display: flex; white-space: pre; background: {{ line.bg }}">
+        <span style="width: 48px; flex-shrink: 0; text-align: right; padding-right: 16px; color: {{ line.numColor }}">{{ line.num }}</span>
+        <span style="overflow: hidden"><sc-for list="{{ line.toks }}" as="t" hint-placeholder-count="4"><span style="color: {{ t.c }}; background: {{ t.bg }}">{{ t.t }}</span></sc-for></span>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"caretLine":{"editor":"int","default":12,"min":0,"max":24},"dim":{"editor":"boolean","default":false},"$preview":{"width":860,"height":560}}'>
+class Component extends DCLogic {
+  tokenize(src, caret) {
+    const out = [];
+    const re = /(\/\/.*$)|("[^"]*")|\b(import|from|let|export)\b|(\b\d+(?:\.\d+)?\b)|([A-Za-z_][A-Za-z0-9_]*)(?=\()|([A-Za-z_][A-Za-z0-9_]*)|(\s+)|(.)/g;
+    let m;
+    while ((m = re.exec(src)) !== null) {
+      let c = '#D7DADF';
+      if (m[1]) { c = '#8a919e'; }
+      else if (m[2]) { c = '#98c379'; }
+      else if (m[3]) { c = '#c678dd'; }
+      else if (m[4]) { c = '#d19a66'; }
+      else if (m[5]) { c = '#61afef'; }
+      else if (m[6]) { c = '#e06c75'; }
+      else if (m[8]) { c = '#abb2bf'; }
+      const isCaret = caret && m[5] === 'lpf';
+      out.push({ t: m[0], c: c, bg: isCaret ? 'rgba(235,199,115,0.18)' : 'transparent' });
+    }
+    return out;
+  }
+  renderVals() {
+    const src = [
+      'import * from "stdlib"',
+      'import * from "sprudel"',
+      '',
+      'let feel          =   15    // 0 .. guitar | 100 .. rave | 200 .. hyper',
+      'let snareHz       =  210    // where does the snare cut through?',
+      '',
+      '// Drums  ------------------------------------------------------------',
+      'export kick_shape = x => x.sound(metalKick).adsrOff().note("b1").gain(0.22)',
+      'export kick = sound(kick_pat).apply(kick_shape).tag("kick")',
+      '',
+      'export snare_shape = x => x.sound(metalSnare).adsrOff().freq(snareHz).gain(0.13)',
+      '  .lpf("11500".add(perlin(0, 500).slow(4)))',
+      'export snare = sound(snare_pat).apply(snare_shape).tag("snare")',
+      '',
+      '// Bass  -------------------------------------------------------------',
+      'export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.39)',
+      '',
+      '// Lead  -------------------------------------------------------------',
+      'export lead_shape = x => x.sound(marimba).ply("1|1|1|1|1|1|2").adsrOff()',
+      '  .hpf(600, 0.7).lpf(7800, 1.2).notch(2700, 0.5)',
+      '',
+      '// Guitars  ----------------------------------------------------------',
+      'export guitar1_shape = x => x.pregain(guitarDyna(1).fast(2).mul(0.8)).sound(guitarMelody)',
+      '  .adsrOff().unison(voices = 11, spread = 0.07)',
+    ];
+    const caretLine = this.props.caretLine ?? 12;
+    const lines = src.map((s, i) => {
+      const isCaret = (i + 1) === caretLine;
+      return {
+        num: String(i + 1),
+        numColor: isCaret ? '#EBC773' : '#5c6370',
+        bg: isCaret ? 'rgba(82,139,255,0.10)' : 'transparent',
+        toks: s.length ? this.tokenize(s, isCaret) : [{ t: ' ', c: '#D7DADF', bg: 'transparent' }],
+      };
+    });
+    return { lines: lines, opacity: (this.props.dim ?? false) ? 0.45 : 1 };
+  }
+}
+</script>
+</body>
+</html>

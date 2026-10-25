@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The menu drawer open, with search</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="position: relative; width: 1440px; height: 900px; display: flex; overflow: hidden; background: #191C22; font-family: Lato, system-ui, sans-serif; color: #D7DADF">
+
+  <aside aria-label="Project" style="position: relative; width: 320px; flex-shrink: 0; display: flex; flex-direction: column; background: #12131c; border-right: 1px solid #000">
+    <div style="flex: 1; padding: 18px; opacity: 0.35">
+      <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.18em; color: #abb2bf">PROJECT</div>
+      <div style="font-size: 18px; font-weight: 700; color: #ffffff; margin-top: 8px">Der Schmetterling</div>
+    </div>
+    <div style="position: absolute; left: 10px; bottom: 228px; z-index: 20">
+      <dc-import name="Drawer" active="songs" hint-size="300px,400px"></dc-import>
+    </div>
+    <div style="flex-shrink: 0; border-top: 1px solid #000">
+      <dc-import name="Motor" launcher-open="{{ true }}" hint-size="320px,236px"></dc-import>
+    </div>
+  </aside>
+
+  <main style="position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column">
+    <div style="height: 58px; flex-shrink: 0"></div>
+    <div style="flex: 1; min-height: 0">
+      <dc-import name="Editor" caret-line="{{ 12 }}" dim="{{ true }}" hint-size="100%,100%"></dc-import>
+    </div>
+
+    <div role="dialog" aria-label="Search everything" style="position: absolute; top: 120px; left: 50%; transform: translateX(-50%); width: 620px; background: linear-gradient(180deg, #2a2f37 0%, #21252b 30%); border: 1px solid #000; border-radius: 4px; box-shadow: 0 20px 60px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.09); overflow: hidden">
+      <label style="display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 16px; border-bottom: 1px solid #000; background: #0e1014">
+        <svg width="16" height="16" viewBox="0 0 14 14" aria-hidden="true"><circle cx="6" cy="6" r="4.2" fill="none" stroke="#abb2bf" stroke-width="1.5"></circle><path d="M9.2 9.2 L12.5 12.5" stroke="#abb2bf" stroke-width="1.5" stroke-linecap="round"></path></svg>
+        <input type="text" value="lpf" aria-label="Search" style="flex: 1; background: transparent; border: none; outline: none; color: #ffffff; font-family: 'JetBrains Mono', monospace; font-size: 18px">
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #abb2bf; border: 1px solid #3e4451; border-bottom-width: 2px; border-radius: 3px; padding: 1px 6px">Esc</span>
+      </label>
+
+      <div style="padding: 8px 0 10px">
+        <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: #abb2bf; padding: 8px 16px 4px">ACTIONS</div>
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 9px 16px; background: rgba(82,139,255,0.16); border-left: 3px solid #EBC773">
+          <span style="font-size: 14px; color: #ffffff">Open the param tool for <span style="font-family: 'JetBrains Mono', monospace">lpf</span> on line 12</span>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #abb2bf">Alt 2</span>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 9px 16px">
+          <span style="font-size: 14px; color: #D7DADF">Show the docs for <span style="font-family: 'JetBrains Mono', monospace">lpf</span></span>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #abb2bf">Alt 1</span>
+        </div>
+
+        <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: #abb2bf; padding: 12px 16px 4px">DOCS</div>
+        <div style="display: flex; align-items: baseline; gap: 12px; padding: 9px 16px">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 14px; color: #61afef">lpf</span>
+          <span style="font-size: 13px; color: #abb2bf">The lowpass filter: cutoff, resonance, cascade and the cutoff envelope.</span>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: 12px; padding: 9px 16px">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 14px; color: #61afef">lpf.freq</span>
+          <span style="font-size: 13px; color: #abb2bf">Reads the cutoff back as a child.</span>
+        </div>
+
+        <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: #abb2bf; padding: 12px 16px 4px">LEARN</div>
+        <div style="display: flex; align-items: baseline; gap: 12px; padding: 9px 16px">
+          <span style="font-size: 14px; color: #D7DADF">[Tutorial that uses lpf]</span>
+          <span style="font-size: 13px; color: #abb2bf">Tutorial</span>
+        </div>
+
+        <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: #abb2bf; padding: 12px 16px 4px">IN THIS SONG</div>
+        <div style="display: flex; align-items: baseline; gap: 12px; padding: 9px 16px">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #D7DADF">main.klang:12</span>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #abb2bf">.lpf("11500".add(perlin(0, 500).slow(4)))</span>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: 12px; padding: 9px 16px">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #D7DADF">main.klang:20</span>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #abb2bf">.hpf(600, 0.7).lpf(7800, 1.2).notch(2700, 0.5)</span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div style="width: 48px; flex-shrink: 0; background: #12131c; border-left: 1px solid #000"></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

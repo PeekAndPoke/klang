@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Workbench, tools docked right</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#8fb0ff}a:hover{color:#c3d4ff}
+@keyframes klangFlyIn{from{transform:translateX(60px);opacity:0}to{transform:none;opacity:1}}
+@keyframes klangBeacon{0%,100%{box-shadow:0 0 0 0 rgba(235,199,115,0)}50%{box-shadow:0 0 0 5px rgba(235,199,115,0.35),0 0 18px rgba(235,199,115,0.65)}}
+@media (prefers-reduced-motion: reduce){*{animation-duration:0s !important;animation-iteration-count:1 !important}}
+</style>
+</helmet>
+<div style="position: relative; width: 1440px; height: 900px; display: flex; overflow: hidden; background: #191C22; font-family: Lato, system-ui, sans-serif; color: #D7DADF">
+
+  <aside aria-label="Project" style="position: relative; width: 320px; flex-shrink: 0; display: flex; flex-direction: column; background: #12131c; border-right: 1px solid #000">
+    <div style="padding: 18px 18px 12px">
+      <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.18em; color: #abb2bf">PROJECT</div>
+      <div style="position: relative; display: flex; align-items: center; gap: 8px; margin-top: 8px">
+        <span style="flex: 1; font-size: 18px; font-weight: 700; color: #ffffff">Der Schmetterling</span>
+        <button aria-label="Song menu" aria-expanded="{{ songMenu }}" onClick="{{ toggleSongMenu }}" style="{{ songBtnStyle }}">
+          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="3.5" cy="8" r="1.5" fill="currentColor"></circle><circle cx="8" cy="8" r="1.5" fill="currentColor"></circle><circle cx="12.5" cy="8" r="1.5" fill="currentColor"></circle></svg>
+        </button>
+        <sc-if value="{{ songMenu }}" hint-placeholder-val="{{ false }}">
+          <div role="menu" aria-label="This song" style="position: absolute; top: 38px; right: 0; width: 250px; z-index: 30; padding: 6px 0; background: linear-gradient(180deg, #2a2f37 0%, #21252b 30%); border: 1px solid #000; border-radius: 4px; box-shadow: 0 14px 40px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.09)">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.18em; color: #abb2bf; padding: 6px 14px 4px">THIS SONG</div>
+            <sc-for list="{{ songItems }}" as="m" hint-placeholder-count="7">
+              <button role="menuitem" onClick="{{ toggleSongMenu }}" style="width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 14px; border: none; background: transparent; cursor: pointer; font-family: Lato, sans-serif; font-size: 14px; text-align: left; color: {{ m.color }}">
+                <span>{{ m.label }}</span>
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #abb2bf">{{ m.hint }}</span>
+              </button>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+      <div style="display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 12px; color: #abb2bf">
+        <span aria-hidden="true" style="width: 7px; height: 7px; border-radius: 50%; background: #e5c07b; box-shadow: 0 0 5px #e5c07b"></span>
+        Draft in this browser. Saved to your account once there is a backend.
+      </div>
+    </div>
+
+    <nav aria-label="Song files" style="flex: 1; min-height: 0; overflow: auto; padding: 4px 10px 12px">
+      <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: #abb2bf; padding: 10px 8px 6px">FILES</div>
+      <a href="#" style="display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 3px; background: #5c7cbc; color: #000000; text-decoration: none; font-family: 'JetBrains Mono', monospace; font-size: 13px">
+        <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 1.5 H8.5 L11 4 V12.5 H3 Z" fill="none" stroke="currentColor" stroke-width="1.3"></path></svg>
+        main.klang
+      </a>
+      <a href="#" style="display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 3px; color: #D7DADF; text-decoration: none; font-family: 'JetBrains Mono', monospace; font-size: 13px">
+        <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 1.5 H8.5 L11 4 V12.5 H3 Z" fill="none" stroke="currentColor" stroke-width="1.3"></path></svg>
+        guitar-rig.klang
+      </a>
+      <a href="#" style="display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 3px; color: #D7DADF; text-decoration: none; font-family: 'JetBrains Mono', monospace; font-size: 13px">
+        <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 1.5 H8.5 L11 4 V12.5 H3 Z" fill="none" stroke="currentColor" stroke-width="1.3"></path></svg>
+        drums.klang
+      </a>
+
+      <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: #abb2bf; padding: 16px 8px 6px">IMPORTS</div>
+      <div style="display: flex; justify-content: space-between; padding: 6px 8px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #D7DADF"><span>stdlib</span><span style="color: #abb2bf">built in</span></div>
+      <div style="display: flex; justify-content: space-between; padding: 6px 8px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #D7DADF"><span>sprudel</span><span style="color: #abb2bf">built in</span></div>
+
+      <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: #abb2bf; padding: 16px 8px 6px">SOUNDS IN USE</div>
+      <div style="display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 8px">
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; padding: 3px 7px; border: 1px solid #3e4451; border-radius: 3px">metalKick</span>
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; padding: 3px 7px; border: 1px solid #3e4451; border-radius: 3px">metalSnare</span>
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; padding: 3px 7px; border: 1px solid #3e4451; border-radius: 3px">marimba</span>
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; padding: 3px 7px; border: 1px solid #3e4451; border-radius: 3px">gummiEimer</span>
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; padding: 3px 7px; border: 1px solid #3e4451; border-radius: 3px">guitar</span>
+      </div>
+
+      <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: #abb2bf; padding: 16px 8px 6px">VERSIONS</div>
+      <div style="display: flex; justify-content: space-between; padding: 6px 8px; font-size: 13px"><span>working copy</span><span style="color: #abb2bf">now</span></div>
+      <div style="display: flex; justify-content: space-between; padding: 6px 8px; font-size: 13px; color: #abb2bf"><span>@v1.0 tag</span><span>with the backend</span></div>
+    </nav>
+
+    <sc-if value="{{ launcher }}" hint-placeholder-val="{{ false }}">
+      <div style="position: absolute; left: 10px; bottom: 228px; z-index: 20">
+        <dc-import name="Drawer" active="songs" beacon-item="{{ beaconDrawer }}" on-pick="{{ pickDrawer }}" on-close="{{ toggleLauncher }}" hint-size="300px,400px"></dc-import>
+      </div>
+    </sc-if>
+
+    <div style="flex-shrink: 0; border-top: 1px solid #000">
+      <dc-import name="Motor" launcher-open="{{ launcher }}" beacon="{{ beaconMotor }}" on-launcher="{{ toggleLauncher }}" hint-size="320px,236px"></dc-import>
+    </div>
+  </aside>
+
+  <main style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+    <div style="height: 58px; flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: 0 16px; background: #191C22">
+      <button onClick="{{ play }}" style="{{ playStyle }}">
+        <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 1 L11 6 L2 11 Z" fill="#e06c75"></path></svg>
+        {{ playLabel }}
+      </button>
+      <button aria-label="Stop playback" onClick="{{ stop }}" style="{{ stopStyle }}">
+        <svg width="11" height="11" viewBox="0 0 11 11" aria-hidden="true"><rect x="1" y="1" width="9" height="9" fill="#000"></rect></svg>
+      </button>
+      <div role="img" aria-label="Cycle 42" style="height: 34px; padding: 0 10px; display: flex; align-items: center; background: #0b0c0f; border: 1px solid #000; border-radius: 3px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.8); font-family: 'JetBrains Mono', monospace; font-size: 20px; letter-spacing: 0.12em; color: #EBC773; text-shadow: 0 0 6px rgba(235,199,115,0.6)">0042</div>
+      <label style="display: flex; align-items: center; height: 34px; border: 1px solid #3e4451; border-radius: 3px; overflow: hidden; font-size: 13px">
+        <span style="padding: 0 8px; background: #2c313a; height: 100%; display: flex; align-items: center; color: #D7DADF; font-weight: 700">RPM</span>
+        <input type="text" value="33" style="width: 44px; background: #0e1014; border: none; color: #ffffff; padding: 0 8px; height: 100%; font-family: 'JetBrains Mono', monospace; font-size: 14px">
+      </label>
+      <div style="display: flex; align-items: center; gap: 6px; margin-left: 8px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #ffffff">
+        main.klang
+        <span aria-label="modified" style="width: 7px; height: 7px; border-radius: 50%; background: #EBC773"></span>
+      </div>
+      <div style="flex: 1"></div>
+      <button aria-label="Toggle the bottom panel" aria-pressed="{{ bottom }}" onClick="{{ toggleBottom }}" style="{{ bottomBtnStyle }}">
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"></rect><rect x="1.5" y="9" width="13" height="4.5" fill="currentColor" opacity="0.6"></rect></svg>
+      </button>
+    </div>
+
+    <div style="flex: 1; min-height: 0; padding-left: 0">
+      <dc-import name="Editor" caret-line="{{ 12 }}" hint-size="100%,100%"></dc-import>
+    </div>
+
+    <sc-if value="{{ bottom }}" hint-placeholder-val="{{ true }}">
+      <section aria-label="Analysis" style="height: 230px; flex-shrink: 0; display: flex; flex-direction: column; background: #21252b; border-top: 1px solid #000">
+        <div style="display: flex; align-items: center; gap: 4px; height: 36px; padding: 0 10px; border-bottom: 1px solid #12131c">
+          <span style="padding: 6px 12px; font-size: 13px; font-weight: 700; color: #ffffff; border-bottom: 2px solid #EBC773">Analysis</span>
+          <span style="padding: 6px 12px; font-size: 13px; color: #abb2bf">Problems</span>
+          <span style="padding: 6px 12px; font-size: 13px; color: #abb2bf">Console</span>
+          <div style="flex: 1"></div>
+          <span style="font-size: 12px; color: #abb2bf; margin-right: 10px">Integrating over 8 cycles, relative to pink noise</span>
+          <button style="height: 26px; padding: 0 10px; border: 1px solid #000; border-radius: 3px; background: linear-gradient(180deg, #3a3f48, #262a31); color: #ffffff; font-family: Lato, sans-serif; font-size: 12px; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255,255,255,0.1)">Restart</button>
+        </div>
+        <div style="flex: 1; display: flex; align-items: stretch; gap: 14px; padding: 14px 24px 12px">
+          <sc-for list="{{ bands }}" as="b" hint-placeholder-count="7">
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px">
+              <div style="position: relative; flex: 1; width: 100%; background: #191C22; border-radius: 2px">
+                <div aria-hidden="true" style="position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: #5c6370"></div>
+                <div aria-hidden="true" style="position: absolute; left: 22%; right: 22%; top: {{ b.ribTop }}; height: {{ b.ribH }}; background: rgba(82,139,255,0.25); border-radius: 2px"></div>
+                <div aria-hidden="true" style="position: absolute; left: 12%; right: 12%; top: {{ b.med }}; height: 3px; background: {{ b.c }}; box-shadow: 0 0 6px {{ b.c }}"></div>
+              </div>
+              <div style="font-size: 12px; font-weight: 700; color: {{ b.labelColor }}">{{ b.name }}</div>
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #abb2bf">{{ b.db }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+    </sc-if>
+  </main>
+
+  <sc-if value="{{ hasTool }}" hint-placeholder-val="{{ true }}">
+    <section aria-label="{{ toolTitle }}" style="{{ panelStyle }}">
+      <div style="height: 44px; flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 0 12px 0 16px; border-bottom: 1px solid #12131c">
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.18em; color: #ffffff">{{ toolTitle }}</span>
+        <span style="font-size: 11px; color: #abb2bf; border: 1px solid #3e4451; border-radius: 10px; padding: 2px 8px">{{ toolChip }}</span>
+        <div style="flex: 1"></div>
+        <button aria-label="Pin beside the editor" aria-pressed="{{ pinned }}" onClick="{{ togglePin }}" title="{{ pinTitle }}" style="{{ pinStyle }}">
+          <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.5 1.5 H10.5 L9.8 6.5 L12.5 9.5 H3.5 L6.2 6.5 Z M8 9.5 V15" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"></path></svg>
+        </button>
+        <button aria-label="Close the tool window" onClick="{{ closeTool }}" style="width: 28px; height: 28px; padding: 0; border: none; background: transparent; color: #abb2bf; cursor: pointer">
+          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 2 L10 10 M10 2 L2 10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
+        </button>
+      </div>
+
+      <div style="flex: 1; min-height: 0; overflow: auto; padding: 16px">
+
+        <sc-if value="{{ isDocs }}" hint-placeholder-val="{{ true }}">
+          <div style="display: flex; flex-direction: column; gap: 12px">
+            <div>
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 700; color: #61afef">lpf</div>
+              <div style="font-size: 12px; color: #abb2bf; margin-top: 2px">sprudel, effects, per voice</div>
+            </div>
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 19px; padding: 10px; background: #0e1014; border-radius: 3px; color: #D7DADF">lpf(<span style="color: #EBC773; background: rgba(235,199,115,0.15)">freq</span>, q, passes, env,<br>    attack, decay, sustain, release)</div>
+            <p style="margin: 0; font-size: 14px; line-height: 21px; color: #D7DADF">The lowpass filter: cutoff, resonance, cascade and the cutoff envelope. Only frequencies below the cutoff pass, so lower values sound darker.</p>
+            <dl style="margin: 0; display: grid; grid-template-columns: 70px 1fr; row-gap: 8px; font-size: 13px">
+              <dt style="font-family: 'JetBrains Mono', monospace; color: #EBC773">freq</dt><dd style="margin: 0; color: #D7DADF">Cutoff in Hz.</dd>
+              <dt style="font-family: 'JetBrains Mono', monospace; color: #D7DADF">q</dt><dd style="margin: 0; color: #D7DADF">Resonance, higher emphasises the cutoff.</dd>
+              <dt style="font-family: 'JetBrains Mono', monospace; color: #D7DADF">passes</dt><dd style="margin: 0; color: #D7DADF">Cascade count, 1 to 16.</dd>
+              <dt style="font-family: 'JetBrains Mono', monospace; color: #D7DADF">env</dt><dd style="margin: 0; color: #D7DADF">Envelope depth in semitones.</dd>
+            </dl>
+            <div style="display: flex; align-items: center; gap: 10px; padding: 10px; background: #191C22; border: 1px solid #12131c; border-radius: 3px">
+              <button aria-label="Play the example" style="width: 30px; height: 30px; flex-shrink: 0; border: none; border-radius: 50%; background: #ffffff; cursor: pointer; display: flex; align-items: center; justify-content: center">
+                <svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 1 L11 6 L2 11 Z" fill="#e06c75"></path></svg>
+              </button>
+              <code style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #D7DADF">note("c3 e3").s("saw").lpf(800, 8)</code>
+            </div>
+            <a href="#">Open in the Lexikon</a>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isParam }}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 14px">
+            <div style="background: #0e1014; border: 1px solid #000; border-radius: 3px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.7)">
+              <svg width="306" height="150" viewBox="0 0 306 150" role="img" aria-label="Lowpass response, cutoff at 11500 Hz, wandering up to 12000 Hz">
+                <line x1="0" y1="50" x2="306" y2="50" stroke="#2c313a"></line>
+                <line x1="0" y1="100" x2="306" y2="100" stroke="#2c313a"></line>
+                <rect x="232" y="8" width="12" height="136" fill="rgba(235,199,115,0.15)"></rect>
+                <path d="M 0 52 L 200 52 C 222 52, 230 40, 236 44 C 246 52, 262 110, 306 146" fill="none" stroke="#528bff" stroke-width="2" style="filter: drop-shadow(0 0 3px rgba(82,139,255,0.8))"></path>
+                <line x1="236" y1="8" x2="236" y2="144" stroke="#EBC773" stroke-dasharray="3 3"></line>
+              </svg>
+            </div>
+            <div style="display: flex; align-items: baseline; justify-content: space-between">
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 24px; color: #ffffff">11500 Hz</span>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #EBC773">+ perlin(0, 500).slow(4)</span>
+            </div>
+            <div style="display: flex; justify-content: space-around; padding: 6px 0">
+              <sc-for list="{{ knobs }}" as="k" hint-placeholder-count="3">
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 6px">
+                  <svg width="58" height="58" viewBox="0 0 58 58" role="img" aria-label="{{ k.aria }}">
+                    <circle cx="29" cy="29" r="27" fill="none" stroke="#3e4451" stroke-width="2" stroke-dasharray="2 4"></circle>
+                    <circle cx="29" cy="29" r="21" fill="#2a2e36" stroke="#000" stroke-width="1.5"></circle>
+                    <circle cx="29" cy="27" r="19" fill="#353a42"></circle>
+                    <line x1="29" y1="29" x2="{{ k.x }}" y2="{{ k.y }}" stroke="#EBC773" stroke-width="2.5" stroke-linecap="round"></line>
+                  </svg>
+                  <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: #D7DADF">{{ k.label }}</span>
+                  <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #abb2bf">{{ k.value }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px; padding: 10px; background: #191C22; border-radius: 3px">
+              <span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 50%; background: #98c379; box-shadow: 0 0 6px #98c379"></span>
+              <span style="font-size: 13px; color: #D7DADF">Live: every turn is heard at once and written back into line 12.</span>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isErrors }}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <div style="display: flex; gap: 10px; padding: 10px; background: #191C22; border-left: 0; border-radius: 3px">
+              <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" style="flex-shrink: 0; margin-top: 2px"><path d="M8 1.5 L15 14 H1 Z" fill="none" stroke="#d19a66" stroke-width="1.5"></path><path d="M8 6 V9.5 M8 11.5 V12" stroke="#d19a66" stroke-width="1.5" stroke-linecap="round"></path></svg>
+              <div>
+                <div style="font-size: 13px; color: #ffffff">Unknown sound "metalSnar"</div>
+                <div style="font-size: 12px; color: #abb2bf; margin-top: 2px">main.klang, line 11. Did you mean metalSnare?</div>
+              </div>
+            </div>
+            <div style="font-size: 12px; color: #abb2bf">Example entry. Problems from the parser and from the running engine land here, each with a jump to its line.</div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isOrbits }}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <sc-for list="{{ strips }}" as="s" hint-placeholder-count="5">
+              <div style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: #191C22; border-radius: 3px">
+                <span style="width: 64px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #ffffff">{{ s.name }}</span>
+                <div aria-hidden="true" style="flex: 1; height: 8px; background: #0e1014; border-radius: 2px; overflow: hidden">
+                  <div style="width: {{ s.level }}; height: 100%; background: linear-gradient(90deg, #3d5a8f, #528bff 70%, #EBC773)"></div>
+                </div>
+                <button aria-label="Solo {{ s.name }}" style="width: 26px; height: 24px; padding: 0; border: 1px solid #000; border-radius: 3px; background: linear-gradient(180deg, #3a3f48, #262a31); color: #D7DADF; font-size: 11px; font-weight: 700; cursor: pointer">S</button>
+                <button aria-label="Mute {{ s.name }}" style="width: 26px; height: 24px; padding: 0; border: 1px solid #000; border-radius: 3px; background: linear-gradient(180deg, #3a3f48, #262a31); color: #D7DADF; font-size: 11px; font-weight: 700; cursor: pointer">M</button>
+              </div>
+            </sc-for>
+            <div style="font-size: 12px; color: #abb2bf; margin-top: 4px">One strip per tag. Solo and mute write the call into the code, as .solo() and .mute() do now.</div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isKeys }}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <sc-for list="{{ keys }}" as="k" hint-placeholder-count="6">
+              <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; background: #191C22; border-radius: 3px">
+                <span style="font-size: 13px; color: #D7DADF">{{ k.title }}</span>
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #ffffff; border: 1px solid #3e4451; border-bottom-width: 2px; border-radius: 3px; padding: 2px 6px">{{ k.keys }}</span>
+              </div>
+            </sc-for>
+            <div style="font-size: 12px; color: #abb2bf; margin-top: 4px">The first two are real today; the rest are proposals for this layout.</div>
+          </div>
+        </sc-if>
+      </div>
+    </section>
+  </sc-if>
+
+  <nav aria-label="Tool windows" style="width: 48px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; padding-top: 12px; background: #12131c; border-left: 1px solid #000">
+    <button aria-label="Docs" aria-pressed="{{ isDocs }}" onClick="{{ pickDocs }}" style="{{ sDocs }}">
+      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 3.5 C4.5 2.5 7 2.5 9 4 C11 2.5 13.5 2.5 16 3.5 V15 C13.5 14 11 14 9 15.5 C7 14 4.5 14 2 15 Z M9 4 V15.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"></path></svg>
+    </button>
+    <button aria-label="Param tool" aria-pressed="{{ isParam }}" onClick="{{ pickParam }}" style="{{ sParam }}">
+      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M4 2 V16 M9 2 V16 M14 2 V16" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"></path><rect x="2" y="10" width="4" height="3" rx="1" fill="currentColor"></rect><rect x="7" y="4" width="4" height="3" rx="1" fill="currentColor"></rect><rect x="12" y="8" width="4" height="3" rx="1" fill="currentColor"></rect></svg>
+    </button>
+    <button aria-label="Problems" aria-pressed="{{ isErrors }}" onClick="{{ pickErrors }}" style="{{ sErrors }}">
+      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M9 2 L16.5 15.5 H1.5 Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"></path><path d="M9 7 V11 M9 13 V13.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg>
+    </button>
+    <button aria-label="Orbits and mixer" aria-pressed="{{ isOrbits }}" onClick="{{ pickOrbits }}" style="{{ sOrbits }}">
+      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="2" fill="currentColor"></circle><ellipse cx="9" cy="9" rx="7.5" ry="3.2" fill="none" stroke="currentColor" stroke-width="1.3"></ellipse><ellipse cx="9" cy="9" rx="3.2" ry="7.5" fill="none" stroke="currentColor" stroke-width="1.3"></ellipse></svg>
+    </button>
+    <button aria-label="Keys" aria-pressed="{{ isKeys }}" onClick="{{ pickKeys }}" style="{{ sKeys }}">
+      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><rect x="1.5" y="4.5" width="15" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"></rect><path d="M4 7.5 H5 M7 7.5 H8 M10 7.5 H11 M13 7.5 H14 M5 10.5 H13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"></path></svg>
+    </button>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"startTool":{"editor":"enum","options":["docs","param","errors","orbits","keys","none"],"default":"docs"},"startBottom":{"editor":"boolean","default":true},"startPinned":{"editor":"boolean","default":false},"trailStep":{"editor":"enum","options":["off","play","motor","songs","docs","param","analysis","done"],"default":"off"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  btn(active, beacon) {
+    return 'position: relative; width: 36px; height: 36px; padding: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 3px; '
+      + (active
+        ? 'border: 1px solid #000; background: #0e1014; color: #EBC773; box-shadow: inset 0 2px 4px rgba(0,0,0,0.8);'
+        : 'border: 1px solid transparent; background: transparent; color: #abb2bf;')
+      + (beacon ? ' color: #EBC773; animation: klangBeacon 1.82s ease-in-out infinite;' : '');
+  }
+  renderVals() {
+    // The first-visit trail: one lamp at a time; using the lit thing moves the trail on.
+    const order = ['play', 'motor', 'songs', 'docs', 'param', 'analysis', 'done'];
+    const trailProp = this.props.trailStep ?? 'off';
+    const trailOn = trailProp !== 'off';
+    const step = this.state.step ?? trailProp;
+    const lit = (s) => trailOn && step === s;
+    const next = (from) => (lit(from) ? { step: order[order.indexOf(from) + 1] } : {});
+    const startTool = this.props.startTool ?? 'docs';
+    const tool = this.state.tool !== undefined ? this.state.tool : (trailOn ? null : (startTool === 'none' ? null : startTool));
+    const bottom = this.state.bottom !== undefined ? this.state.bottom : (trailOn ? false : (this.props.startBottom ?? true));
+    const launcher = this.state.launcher ?? false;
+    const playing = this.state.playing ?? (trailOn && order.indexOf(step) > 0);
+    const pinned = this.state.pinned ?? (this.props.startPinned ?? false);
+    const songMenu = this.state.songMenu ?? false;
+    const pick = (id) => () => this.setState(Object.assign({ tool: tool === id ? null : id }, next(id)));
+    const panelBase = 'display: flex; flex-direction: column; background: #21252b; border-left: 1px solid #000; ';
+    const panelStyle = pinned
+      ? panelBase + 'position: relative; width: 340px; flex-shrink: 0;'
+      : panelBase + 'position: absolute; z-index: 15; top: 58px; right: 48px; bottom: ' + (bottom ? '231px' : '0') + '; width: 380px; '
+        + 'border-top-left-radius: 6px; box-shadow: -18px 0 40px rgba(0,0,0,0.55), inset 1px 0 0 rgba(255,255,255,0.06); '
+        + 'animation: klangFlyIn 0.18s ease-out;';
+    const smallBtn = (on) => 'width: 28px; height: 28px; padding: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 3px; '
+      + (on ? 'border: 1px solid #000; background: #0e1014; color: #EBC773; box-shadow: inset 0 2px 4px rgba(0,0,0,0.8);' : 'border: 1px solid transparent; background: transparent; color: #abb2bf;');
+    const titles = { docs: 'DOCS', param: 'PARAM TOOL', errors: 'PROBLEMS', orbits: 'ORBITS', keys: 'KEYS' };
+    const chips = { docs: 'follows the cursor', param: 'lpf, freq, line 12', errors: '1 problem', orbits: 'live levels', keys: 'this page' };
+    const bands = [
+      { name: 'Sub', med: 58, lo: 50, hi: 68, hot: true },
+      { name: 'Bass', med: 44, lo: 36, hi: 52 },
+      { name: 'Mud', med: 36, lo: 30, hi: 44, hot: true },
+      { name: 'Mids', med: 50, lo: 42, hi: 56 },
+      { name: 'Edge', med: 54, lo: 46, hi: 62 },
+      { name: 'Presence', med: 48, lo: 40, hi: 58, hot: true },
+      { name: 'Air', med: 62, lo: 52, hi: 72, hot: true },
+    ].map((b) => ({
+      name: b.name,
+      med: b.med + '%',
+      ribTop: b.lo + '%',
+      ribH: (b.hi - b.lo) + '%',
+      c: b.med < 45 ? '#EBC773' : '#528bff',
+      labelColor: b.hot ? '#ffffff' : '#abb2bf',
+      db: (b.med < 50 ? '+' : '-') + (Math.abs(50 - b.med) / 4).toFixed(1) + ' dB',
+    }));
+    const knob = (label, frac, value, aria) => {
+      const a = (135 + frac * 270) * Math.PI / 180;
+      return { label: label, value: value, aria: aria, x: (29 + 15 * Math.cos(a)).toFixed(1), y: (29 + 15 * Math.sin(a)).toFixed(1) };
+    };
+    return {
+      launcher: launcher,
+      toggleLauncher: () => this.setState(Object.assign({ launcher: !launcher }, next('motor'))),
+      pickDrawer: () => this.setState(Object.assign({ launcher: false }, next('songs'))),
+      beaconMotor: lit('motor'),
+      beaconDrawer: lit('songs') ? 'songs' : '',
+      play: () => this.setState(Object.assign({ playing: true }, next('play'))),
+      stop: () => this.setState({ playing: false }),
+      playLabel: playing ? 'Update' : 'Play',
+      playStyle: 'display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px; border: none; border-radius: 18px; background: #ffffff; color: #000; font-family: Lato, sans-serif; font-size: 14px; font-weight: 700; cursor: pointer;'
+        + (playing ? ' opacity: 0.6;' : '')
+        + (lit('play') ? ' animation: klangBeacon 2.5s ease-in-out infinite;' : ''),
+      stopStyle: 'width: 36px; height: 36px; border: none; border-radius: 50%; background: #ffffff; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: ' + (playing ? '1' : '0.5') + ';',
+      bottom: bottom,
+      toggleBottom: () => this.setState(Object.assign({ bottom: !bottom }, next('analysis'))),
+      bottomBtnStyle: this.btn(bottom, lit('analysis')),
+      pinned: pinned,
+      togglePin: () => this.setState({ pinned: !pinned }),
+      pinStyle: smallBtn(pinned),
+      pinTitle: pinned ? 'Pinned: the editor makes room. Click to fly over it again.' : 'Flies over the editor. Pin it to dock beside it.',
+      panelStyle: panelStyle,
+      songMenu: songMenu,
+      toggleSongMenu: () => this.setState({ songMenu: !songMenu }),
+      songBtnStyle: smallBtn(songMenu),
+      songItems: [
+        { label: 'Save', hint: 'Mod S', color: '#ffffff' },
+        { label: 'Save a copy', hint: '', color: '#ffffff' },
+        { label: 'Rename', hint: '', color: '#ffffff' },
+        { label: 'New file in this song', hint: '', color: '#ffffff' },
+        { label: 'Record to a file', hint: '', color: '#ffffff' },
+        { label: 'Tag a version', hint: 'backend', color: '#abb2bf' },
+        { label: 'Share', hint: 'backend', color: '#abb2bf' },
+      ],
+      hasTool: tool !== null,
+      toolTitle: tool ? titles[tool] : '',
+      toolChip: tool ? chips[tool] : '',
+      closeTool: () => this.setState({ tool: null }),
+      isDocs: tool === 'docs', isParam: tool === 'param', isErrors: tool === 'errors', isOrbits: tool === 'orbits', isKeys: tool === 'keys',
+      pickDocs: pick('docs'), pickParam: pick('param'), pickErrors: pick('errors'), pickOrbits: pick('orbits'), pickKeys: pick('keys'),
+      sDocs: this.btn(tool === 'docs', lit('docs')), sParam: this.btn(tool === 'param', lit('param')), sErrors: this.btn(tool === 'errors'), sOrbits: this.btn(tool === 'orbits'), sKeys: this.btn(tool === 'keys'),
+      bands: bands,
+      knobs: [knob('FREQ', 0.86, '11.5 kHz', 'Cutoff knob at 11500 Hz'), knob('Q', 0.3, '0.71', 'Resonance knob at 0.71'), knob('WANDER', 0.45, '0 to 500', 'Perlin range knob, 0 to 500 Hz')],
+      strips: [
+        { name: 'kick', level: '72%' }, { name: 'snare', level: '64%' }, { name: 'bass', level: '81%' },
+        { name: 'lead', level: '48%' }, { name: 'guitar1', level: '58%' },
+      ],
+      keys: [
+        { title: 'Play / Update', keys: 'Mod Shift Enter' },
+        { title: 'Stop', keys: 'Mod Shift .' },
+        { title: 'Open the menu and search', keys: 'Mod K' },
+        { title: 'Docs', keys: 'Alt 1' },
+        { title: 'Param tool', keys: 'Alt 2' },
+        { title: 'Bottom panel', keys: 'Alt 0' },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

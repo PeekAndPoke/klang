@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The first-visit trail</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap">
+<style>
+body{margin:0}
+@keyframes klangBeacon{0%,100%{box-shadow:0 0 0 0 rgba(235,199,115,0)}50%{box-shadow:0 0 0 5px rgba(235,199,115,0.35),0 0 18px rgba(235,199,115,0.65)}}
+@keyframes klangFlyIn{from{transform:translateX(60px);opacity:0}to{transform:none;opacity:1}}
+</style>
+</helmet>
+<div style="width: 2000px; height: 1120px; box-sizing: border-box; padding: 40px; background: #12131c; font-family: Lato, system-ui, sans-serif; color: #D7DADF">
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 40px; row-gap: 36px">
+    <sc-for list="{{ steps }}" as="s" hint-placeholder-count="6">
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <div style="width: 605px; height: 378px; overflow: hidden; border: 1px solid #000; border-radius: 4px; box-shadow: 0 10px 30px rgba(0,0,0,0.5)">
+          <div style="width: 1440px; height: 900px; transform: scale(0.42); transform-origin: top left">
+            <dc-import name="Main" trail-step="{{ s.id }}" hint-size="1440px,900px"></dc-import>
+          </div>
+        </div>
+        <div style="display: flex; gap: 12px; align-items: flex-start">
+          <span style="flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #EBC773; color: #000; font-weight: 700; font-size: 14px">{{ s.n }}</span>
+          <div>
+            <div style="font-size: 17px; font-weight: 700; color: #ffffff">{{ s.title }}</div>
+            <div style="font-size: 13px; line-height: 19px; color: #D7DADF; margin-top: 3px">Lights: {{ s.when }}</div>
+            <div style="font-size: 13px; line-height: 19px; color: #abb2bf">Goes quiet: {{ s.done }}</div>
+          </div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2000,"height":1120}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      steps: [
+        { n: '1', id: 'play', title: 'Play', when: 'at once on the first visit, a slow breath.', done: 'the first time it is pressed.' },
+        { n: '2', id: 'motor', title: 'The Motor button', when: 'after the song has played for two cycles, pulsing once per cycle, in time with the music.', done: 'the drawer is opened.' },
+        { n: '3', id: 'songs', title: 'Songs, inside the drawer', when: 'at once, in the open drawer.', done: 'another song is opened.' },
+        { n: '4', id: 'docs', title: 'Docs', when: 'when the cursor rests on a function for a moment.', done: 'the docs are opened once.' },
+        { n: '5', id: 'param', title: 'Param tool', when: 'when the cursor rests on a call that has a tool.', done: 'one knob is turned.' },
+        { n: '6', id: 'analysis', title: 'Analysis', when: 'after a few edits and updates in one session.', done: 'the panel is opened.' },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

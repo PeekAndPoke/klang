@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tools stacked in the left column</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#8fb0ff}a:hover{color:#c3d4ff}
+</style>
+</helmet>
+<div style="position: relative; width: 1440px; height: 900px; display: flex; overflow: hidden; background: #191C22; font-family: Lato, system-ui, sans-serif; color: #D7DADF">
+
+  <aside aria-label="Side column" style="position: relative; width: 360px; flex-shrink: 0; display: flex; flex-direction: column; background: #12131c; border-right: 1px solid #000">
+    <div role="tablist" aria-label="Side views" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 12px 12px 0">
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4">
+        <button role="tab" aria-selected="{{ t.on }}" onClick="{{ t.pick }}" style="height: 34px; padding: 0; cursor: pointer; font-family: Lato, sans-serif; font-size: 13px; font-weight: 700; border-radius: 3px 3px 0 0; border: 1px solid #000; border-bottom: none; background: {{ t.bg }}; color: {{ t.color }}; box-shadow: {{ t.shadow }}">{{ t.label }}</button>
+      </sc-for>
+    </div>
+
+    <div style="flex: 1; min-height: 0; overflow: auto; padding: 16px; background: #21252b; margin: 0 12px; border: 1px solid #000; border-top: none">
+
+      <sc-if value="{{ isProject }}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div style="font-size: 18px; font-weight: 700; color: #ffffff">Der Schmetterling</div>
+          <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: #abb2bf; padding-top: 10px">FILES</div>
+          <div style="padding: 7px 8px; border-radius: 3px; background: #5c7cbc; color: #000; font-family: 'JetBrains Mono', monospace; font-size: 13px">main.klang</div>
+          <div style="padding: 7px 8px; font-family: 'JetBrains Mono', monospace; font-size: 13px">guitar-rig.klang</div>
+          <div style="padding: 7px 8px; font-family: 'JetBrains Mono', monospace; font-size: 13px">drums.klang</div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isDocs }}" hint-placeholder-val="{{ true }}">
+        <div style="display: flex; flex-direction: column; gap: 12px">
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 700; color: #61afef">lpf</div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 19px; padding: 10px; background: #0e1014; border-radius: 3px">lpf(<span style="color: #EBC773">freq</span>, q, passes, env,<br>    attack, decay, sustain, release)</div>
+          <p style="margin: 0; font-size: 14px; line-height: 21px">The lowpass filter: cutoff, resonance, cascade and the cutoff envelope. Only frequencies below the cutoff pass, so lower values sound darker.</p>
+          <a href="#">Open in the Lexikon</a>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isTool }}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; flex-direction: column; gap: 12px">
+          <div style="font-size: 12px; color: #abb2bf">lpf, freq, line 12</div>
+          <div style="background: #0e1014; border: 1px solid #000; border-radius: 3px">
+            <svg width="304" height="130" viewBox="0 0 306 150" role="img" aria-label="Lowpass response, cutoff at 11500 Hz">
+              <rect x="232" y="8" width="12" height="136" fill="rgba(235,199,115,0.15)"></rect>
+              <path d="M 0 52 L 200 52 C 222 52, 230 40, 236 44 C 246 52, 262 110, 306 146" fill="none" stroke="#528bff" stroke-width="2"></path>
+              <line x1="236" y1="8" x2="236" y2="144" stroke="#EBC773" stroke-dasharray="3 3"></line>
+            </svg>
+          </div>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 22px; color: #ffffff">11500 Hz</span>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isProblems }}" hint-placeholder-val="{{ false }}">
+        <div style="padding: 10px; background: #191C22; border-radius: 3px">
+          <div style="font-size: 13px; color: #ffffff">Unknown sound "metalSnar"</div>
+          <div style="font-size: 12px; color: #abb2bf; margin-top: 2px">main.klang, line 11</div>
+        </div>
+      </sc-if>
+    </div>
+
+    <div style="height: 12px; flex-shrink: 0"></div>
+
+    <sc-if value="{{ launcher }}" hint-placeholder-val="{{ false }}">
+      <div style="position: absolute; left: 30px; bottom: 228px; z-index: 20">
+        <dc-import name="Drawer" active="songs" on-close="{{ toggleLauncher }}" hint-size="300px,400px"></dc-import>
+      </div>
+    </sc-if>
+
+    <div style="flex-shrink: 0; display: flex; justify-content: center; border-top: 1px solid #000">
+      <dc-import name="Motor" launcher-open="{{ launcher }}" on-launcher="{{ toggleLauncher }}" hint-size="320px,236px"></dc-import>
+    </div>
+  </aside>
+
+  <main style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+    <div style="height: 58px; flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: 0 16px">
+      <button style="display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px; border: none; border-radius: 18px; background: #ffffff; color: #000; font-family: Lato, sans-serif; font-size: 14px; font-weight: 700; cursor: pointer">
+        <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 1 L11 6 L2 11 Z" fill="#e06c75"></path></svg>
+        Play
+      </button>
+      <div role="img" aria-label="Cycle 42" style="height: 34px; padding: 0 10px; display: flex; align-items: center; background: #0b0c0f; border: 1px solid #000; border-radius: 3px; font-family: 'JetBrains Mono', monospace; font-size: 20px; letter-spacing: 0.12em; color: #EBC773; text-shadow: 0 0 6px rgba(235,199,115,0.6)">0042</div>
+      <div style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #ffffff; margin-left: 8px">main.klang</div>
+    </div>
+    <div style="flex: 1; min-height: 0">
+      <dc-import name="Editor" caret-line="{{ 12 }}" hint-size="100%,100%"></dc-import>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"startTab":{"editor":"enum","options":["project","docs","tool","problems"],"default":"docs"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const tab = this.state.tab ?? this.props.startTab ?? 'docs';
+    const launcher = this.state.launcher ?? false;
+    const defs = [
+      { id: 'project', label: 'Project' },
+      { id: 'docs', label: 'Docs' },
+      { id: 'tool', label: 'Tool' },
+      { id: 'problems', label: 'Problems' },
+    ];
+    const tabs = defs.map((d) => {
+      const on = d.id === tab;
+      return {
+        label: d.label,
+        on: on,
+        bg: on ? '#21252b' : 'linear-gradient(180deg, #2a2e36, #1c1f25)',
+        color: on ? '#ffffff' : '#abb2bf',
+        shadow: on ? 'inset 0 1px 0 rgba(255,255,255,0.08)' : 'none',
+        pick: () => this.setState({ tab: d.id }),
+      };
+    });
+    return {
+      tabs: tabs,
+      isProject: tab === 'project', isDocs: tab === 'docs', isTool: tab === 'tool', isProblems: tab === 'problems',
+      launcher: launcher,
+      toggleLauncher: () => this.setState({ launcher: !launcher }),
+    };
+  }
+}
+</script>
+</body>
+</html>

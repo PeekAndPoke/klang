@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Motor</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="position: relative; width: 320px; height: 236px; font-family: Lato, system-ui, sans-serif; color: #D7DADF; background: #12131c; overflow: hidden">
+
+  <div aria-hidden="true" style="position: absolute; left: 10px; right: 10px; bottom: 6px; height: 132px; display: flex; align-items: flex-end; justify-content: space-between; opacity: 0.55">
+    <sc-for list="{{ spectrum }}" as="col" hint-placeholder-count="28">
+      <div style="display: flex; flex-direction: column-reverse; gap: 1px; width: 8px">
+        <sc-for list="{{ col.boxes }}" as="box" hint-placeholder-count="6">
+          <div style="height: 3px; border-radius: 1px; background: {{ box.c }}"></div>
+        </sc-for>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="position: absolute; top: 6px; left: 0; right: 0; height: 72px; display: flex; align-items: flex-end; justify-content: center; gap: 10px; z-index: 2">
+
+    <div role="img" aria-label="Master volume knob" style="width: 31px; height: 31px; margin-bottom: 4px">
+      <svg width="31" height="31" viewBox="0 0 31 31" aria-hidden="true">
+        <defs>
+          <radialGradient id="knobCap" cx="40%" cy="30%" r="75%">
+            <stop offset="0%" stop-color="#4a505b"></stop>
+            <stop offset="100%" stop-color="#1b1e24"></stop>
+          </radialGradient>
+        </defs>
+        <circle cx="15.5" cy="15.5" r="14.5" fill="url(#knobCap)" stroke="#000" stroke-width="1"></circle>
+        <circle cx="15.5" cy="15.5" r="14" fill="none" stroke="#9aa0ac" stroke-opacity="0.35" stroke-width="0.8"></circle>
+        <line x1="15.5" y1="15.5" x2="22.5" y2="6.5" stroke="#EBC773" stroke-width="2" stroke-linecap="round"></line>
+      </svg>
+    </div>
+
+    <sc-for list="{{ gauges }}" as="g" hint-placeholder-count="3">
+      <div role="img" aria-label="{{ g.aria }}" style="position: relative; width: {{ g.px }}; height: {{ g.px }}; border-radius: 50%; background: #0d0f13; box-shadow: 0 0 10px rgba(92, 124, 188, 0.45), inset 0 1px 0 rgba(255,255,255,0.06)">
+        <svg width="100%" height="100%" viewBox="0 0 100 100" aria-hidden="true">
+          <circle cx="50" cy="50" r="47" fill="none" stroke="#9aa0ac" stroke-width="2.5"></circle>
+          <path d="{{ g.track }}" fill="none" stroke="#2c313a" stroke-width="7" stroke-linecap="round"></path>
+          <path d="{{ g.arc }}" fill="none" stroke="{{ g.color }}" stroke-width="7" stroke-linecap="round"></path>
+          <line x1="50" y1="50" x2="{{ g.nx }}" y2="{{ g.ny }}" stroke="#D7DADF" stroke-width="2.5" stroke-linecap="round"></line>
+          <circle cx="50" cy="50" r="4" fill="#D7DADF"></circle>
+        </svg>
+        <div style="position: absolute; left: 0; right: 0; bottom: 6%; text-align: center; font-size: 8px; letter-spacing: 0.08em; color: #abb2bf; font-weight: 700">{{ g.label }}</div>
+      </div>
+    </sc-for>
+
+    <button aria-label="Open the menu" aria-expanded="{{ open }}" onClick="{{ clickLauncher }}" style="position: relative; width: 31px; height: 31px; margin-bottom: 4px; padding: 0; border-radius: 50%; border: 1px solid #000; cursor: pointer; background: {{ capBg }}; box-shadow: {{ capShadow }}; animation: {{ beaconAnim }}; display: flex; align-items: center; justify-content: center">
+      <svg width="13" height="13" viewBox="0 0 13 13" aria-hidden="true">
+        <sc-for list="{{ dots }}" as="d" hint-placeholder-count="9">
+          <circle cx="{{ d.x }}" cy="{{ d.y }}" r="1.6" fill="{{ dotColor }}"></circle>
+        </sc-for>
+      </svg>
+      <span aria-hidden="true" style="position: absolute; top: -5px; right: -3px; width: 6px; height: 6px; border-radius: 50%; background: {{ ledColor }}; box-shadow: {{ ledGlow }}"></span>
+    </button>
+  </div>
+
+  <div aria-hidden="true" style="position: absolute; top: 84px; left: 12px; right: 12px; height: 58px; z-index: 2">
+    <svg width="296" height="58" viewBox="0 0 296 58">
+      <line x1="0" y1="29" x2="296" y2="29" stroke="#2c313a" stroke-width="1"></line>
+      <polyline points="{{ scope }}" fill="none" stroke="#528bff" stroke-width="1.6" style="filter: drop-shadow(0 0 3px rgba(82,139,255,0.8))"></polyline>
+    </svg>
+  </div>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 18px; text-align: center; z-index: 3">
+    <span style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 22px; letter-spacing: 0.04em; color: #ffffff; text-shadow: 0 0 5px #000">KLANGMOTOR</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"launcherOpen":{"editor":"boolean","default":false},"beacon":{"editor":"boolean","default":false},"onLauncher":{"editor":null},"$preview":{"width":320,"height":236}}'>
+class Component extends DCLogic {
+  arcPath(frac) {
+    const a0 = 135 * Math.PI / 180;
+    const sweep = Math.max(0.001, frac) * 270;
+    const a1 = a0 + sweep * Math.PI / 180;
+    const r = 38;
+    const x0 = 50 + r * Math.cos(a0), y0 = 50 + r * Math.sin(a0);
+    const x1 = 50 + r * Math.cos(a1), y1 = 50 + r * Math.sin(a1);
+    const large = sweep > 180 ? 1 : 0;
+    return 'M ' + x0.toFixed(2) + ' ' + y0.toFixed(2) + ' A ' + r + ' ' + r + ' 0 ' + large + ' 1 ' + x1.toFixed(2) + ' ' + y1.toFixed(2);
+  }
+  gauge(px, label, aria, frac, color) {
+    const a1 = (135 + frac * 270) * Math.PI / 180;
+    return {
+      px: px + 'px', label: label, aria: aria, color: color,
+      track: this.arcPath(1), arc: this.arcPath(frac),
+      nx: (50 + 28 * Math.cos(a1)).toFixed(2), ny: (50 + 28 * Math.sin(a1)).toFixed(2),
+    };
+  }
+  renderVals() {
+    const open = this.props.launcherOpen ?? false;
+    const gauges = [
+      this.gauge(50, 'CYL', 'Cylinders: 3 active', 0.375, '#56b6c2'),
+      this.gauge(62, 'HEAT', 'Motor heat: 38 percent', 0.38, '#e5c07b'),
+      this.gauge(50, 'VOICES', 'Active voices: 24', 0.3, '#98c379'),
+    ];
+    const pts = [];
+    for (let i = 0; i <= 148; i++) {
+      const x = i * 2;
+      const y = 29 + 17 * Math.sin(i * 0.21) * Math.cos(i * 0.037) + 4 * Math.sin(i * 0.9);
+      pts.push(x + ',' + y.toFixed(1));
+    }
+    const spectrum = [];
+    for (let c = 0; c < 28; c++) {
+      const level = Math.round(5 + 22 * Math.exp(-c / 9) * (0.75 + 0.25 * Math.sin(c * 1.7)) + 3 * Math.sin(c * 0.6));
+      const boxes = [];
+      for (let b = 0; b < level; b++) {
+        boxes.push({ c: b > 22 ? '#EBC773' : (b > 15 ? '#5c7cbc' : '#3d5a8f') });
+      }
+      spectrum.push({ boxes: boxes });
+    }
+    const dots = [];
+    for (let r = 0; r < 3; r++) {
+      for (let c = 0; c < 3; c++) {
+        dots.push({ x: 2 + c * 4.5, y: 2 + r * 4.5 });
+      }
+    }
+    return {
+      open: open,
+      gauges: gauges,
+      scope: pts.join(' '),
+      spectrum: spectrum,
+      dots: dots,
+      dotColor: open ? '#EBC773' : '#D7DADF',
+      ledColor: open ? '#EBC773' : '#3a3220',
+      ledGlow: open ? '0 0 6px #EBC773' : 'none',
+      capBg: open ? 'radial-gradient(circle at 50% 60%, #1b1e24, #2a2e36)' : 'radial-gradient(circle at 40% 30%, #4a505b, #1b1e24)',
+      capShadow: open ? 'inset 0 2px 4px rgba(0,0,0,0.8)' : '0 2px 3px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.12)',
+      // The lamp pulses once per cycle (33 RPM: 1.82 s), in time with the song. The keyframes live in the page that shows the Motor.
+      beaconAnim: (this.props.beacon ?? false) ? 'klangBeacon 1.82s ease-in-out infinite' : 'none',
+      clickLauncher: () => { if (this.props.onLauncher) { this.props.onLauncher(); } },
+    };
+  }
+}
+</script>
+</body>
+</html>
