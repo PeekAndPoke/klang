@@ -45,6 +45,8 @@ Kept in order, close to the maintainer's words.
 21. (2026-10-25) To make it a nice visual experience the start page needs something, not sure what.
 22. (2026-10-25) Asked to try, on one screen, KLANGMOTOR removed from the bottom left and written rotated at the
     bottom of the right strip (canvas board A2).
+23. (2026-10-25) Likes KLANGMOTOR rotated in the strip (it needed padding at the bottom): it makes the Motor more
+    compact without the text, "also less marketingish which is good".
 
 ## Where the conversation stands (leanings, not decisions)
 
