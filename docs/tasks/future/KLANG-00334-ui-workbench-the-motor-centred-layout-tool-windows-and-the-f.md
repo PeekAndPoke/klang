@@ -50,6 +50,13 @@ Kept in order, close to the maintainer's words.
 24. (2026-10-25) To start: a `/debug/ui-kitchen-sink` page that demos all the elements, each element its own Kraft
     component. Asked: how do we keep the design canvas and the code aligned over time, and how do settings reach a
     component: flat props, or an options builder in the more complicated cases?
+25. (2026-10-25) The Motor moving from the start page into its corner means the Motor lives first-class in the
+    layout, not on single pages; the area above it always keeps its space free at the bottom so nothing overlaps,
+    and the left panel scrolls when its content is too tall.
+26. (2026-10-25) Every element gets its representation in the theme. Suggests a completely new set of variables
+    ("but we can also do otherwise").
+27. (2026-10-25) Users can fully customize the colours, and someday share them. "Imagine someone making a youtube
+    video of this with their own look ... pretty neat!"
 
 ## Where the conversation stands (leanings, not decisions)
 
@@ -82,6 +89,22 @@ Kept in order, close to the maintainer's words.
   lamps for done, next, open and locked. Board G proposes the start page as starting the Motor: a silver key is the
   click the browser needs before it plays audio, then the dyno run of today in the new gauges, then the Motor
   glides into its corner and the workbench opens around it. Board A2 tries the title in the right strip.
+
+- **One shell for every page** (item 25): today the Motor sits inside `SidebarMenu` (`MenuLayout`), the start page
+  has `MotorBackgroundLayout` with gauges of its own, and the tour and the not-found page use `FullscreenLayout`;
+  switching layouts mounts a new Motor. One shell layout for all routes keeps one Motor alive across pages, with
+  modes (ignition: centred and large; workbench: in its corner), and that is what lets it glide into the corner.
+  The left column is a flex column: the content scrolls (`min-height: 0`, its own scrollbar), the Motor never
+  shrinks and never gets covered.
+- **The theme** (items 26, 27): a new set of variables, in three layers: a small palette (the raw colours), roles
+  that every element reads (surface raised, pressed, domed; metal light, mid, dark; text, label; lamp on; "try
+  me"; gauge glow; warning, error), and component values only where a role does not fit. A user edits the palette
+  and the roles; gradients such as silver or the domed cap are derived from them, so a copper or a cream theme
+  works without new gradients. The theme is data (a `KlangLookAndFeel`-like data class, saved as a small JSON
+  file with a name and an author), never CSS text or URLs, so a shared theme cannot inject anything. The theme
+  editor's live preview is the kitchen sink; it warns when a text colour falls under 4.5:1 contrast. "Gold means
+  try me" becomes a role, so it can be recoloured but stays one role. The old `--klang-*` variables become aliases
+  of the new roles while the pages move over (scaffolding), then go.
 
 ## Decide before implementing
 
