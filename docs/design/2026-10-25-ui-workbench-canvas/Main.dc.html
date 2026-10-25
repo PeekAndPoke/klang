@@ -79,13 +79,13 @@ a{color:#8fb0ff}a:hover{color:#c3d4ff}
     </nav>
 
     <sc-if value="{{ launcher }}" hint-placeholder-val="{{ false }}">
-      <div style="position: absolute; left: 10px; bottom: 228px; z-index: 20">
+      <div style="position: absolute; left: 10px; bottom: {{ drawerBottom }}; z-index: 20">
         <dc-import name="Drawer" active="songs" beacon-item="{{ beaconDrawer }}" on-pick="{{ pickDrawer }}" on-close="{{ toggleLauncher }}" hint-size="300px,400px"></dc-import>
       </div>
     </sc-if>
 
     <div style="flex-shrink: 0; border-top: 1px solid #000">
-      <dc-import name="Motor" launcher-open="{{ launcher }}" beacon="{{ beaconMotor }}" on-launcher="{{ toggleLauncher }}" hint-size="320px,236px"></dc-import>
+      <dc-import name="Motor" launcher-open="{{ launcher }}" beacon="{{ beaconMotor }}" show-title="{{ motorTitle }}" on-launcher="{{ toggleLauncher }}" hint-size="320px,236px"></dc-import>
     </div>
   </aside>
 
@@ -280,10 +280,14 @@ a{color:#8fb0ff}a:hover{color:#c3d4ff}
     <button aria-label="Keys" aria-pressed="{{ isKeys }}" onClick="{{ pickKeys }}" style="{{ sKeys }}">
       <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><rect x="1.5" y="4.5" width="15" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"></rect><path d="M4 7.5 H5 M7 7.5 H8 M10 7.5 H11 M13 7.5 H14 M5 10.5 H13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"></path></svg>
     </button>
+    <sc-if value="{{ titleInStrip }}" hint-placeholder-val="{{ false }}">
+      <div style="flex: 1"></div>
+      <div title="Klangmotor" style="padding: 0 0 22px; writing-mode: vertical-rl; transform: rotate(180deg); font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 20px; letter-spacing: 0.12em; color: #ffffff; text-shadow: 0 0 5px #000; white-space: nowrap; cursor: pointer">KLANGMOTOR</div>
+    </sc-if>
   </nav>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"startTool":{"editor":"enum","options":["docs","param","errors","orbits","keys","none"],"default":"docs"},"startBottom":{"editor":"boolean","default":true},"startPinned":{"editor":"boolean","default":false},"trailStep":{"editor":"enum","options":["off","play","motor","songs","docs","param","analysis","done"],"default":"off"},"$preview":{"width":1440,"height":900}}'>
+<script type="text/x-dc" data-dc-script data-props='{"startTool":{"editor":"enum","options":["docs","param","errors","orbits","keys","none"],"default":"docs"},"startBottom":{"editor":"boolean","default":true},"startPinned":{"editor":"boolean","default":false},"titleInStrip":{"editor":"boolean","default":false},"trailStep":{"editor":"enum","options":["off","play","motor","songs","docs","param","analysis","done"],"default":"off"},"$preview":{"width":1440,"height":900}}'>
 class Component extends DCLogic {
   btn(active, beacon) {
     return 'position: relative; width: 36px; height: 36px; padding: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 3px; '
@@ -355,6 +359,9 @@ class Component extends DCLogic {
       bottom: bottom,
       toggleBottom: () => this.setState(Object.assign({ bottom: !bottom }, next('analysis'))),
       bottomBtnStyle: this.btn(bottom, lit('analysis')),
+      titleInStrip: this.props.titleInStrip ?? false,
+      motorTitle: !(this.props.titleInStrip ?? false),
+      drawerBottom: (this.props.titleInStrip ?? false) ? '184px' : '228px',
       pinned: pinned,
       togglePin: () => this.setState({ pinned: !pinned }),
       pinStyle: smallBtn(pinned),

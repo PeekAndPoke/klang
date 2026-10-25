@@ -26,6 +26,111 @@ a{color:#8fb0ff}a:hover{color:#c3d4ff}
   </header>
 
   <section style="display: flex; flex-direction: column; gap: 14px">
+    <h2 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; letter-spacing: 0.2em; color: #EBC773">GAUGES</h2>
+    <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: stretch">
+
+      <div style="display: flex; flex-direction: column; gap: 14px; padding: 22px; background: #191C22; border: 1px solid #000; border-radius: 4px">
+        <div style="display: flex; gap: 18px; align-items: flex-end">
+          <dc-import name="Gauge" size="{{ 72 }}" frac="{{ 0.375 }}" value="3" icon="cylinders" color="#56b6c2" hint-size="72px,72px"></dc-import>
+          <dc-import name="Gauge" size="{{ 92 }}" frac="{{ 0.38 }}" value="38%" icon="heat" color="#e5c07b" hint-size="92px,92px"></dc-import>
+          <dc-import name="Gauge" size="{{ 72 }}" frac="{{ 0.3 }}" value="24" icon="voices" color="#98c379" hint-size="72px,72px"></dc-import>
+        </div>
+        <div><div style="font-size: 13px; font-weight: 700; color: #ffffff">The Motor's three, with icons: cylinders, heat, voices</div><div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #abb2bf">RoundGauge.kt, gauges.kt; icons, ticks and the bezel new</div></div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 14px; padding: 22px; background: #191C22; border: 1px solid #000; border-radius: 4px">
+        <div style="display: flex; gap: 24px; align-items: flex-start; padding-bottom: 16px">
+          <dc-import name="Gauge" size="{{ 72 }}" frac="{{ 0.38 }}" value="38%" icon="heat" online="{{ false }}" label="OFFLINE" hint-size="72px,72px"></dc-import>
+          <dc-import name="Gauge" size="{{ 72 }}" frac="{{ 0.38 }}" value="38%" icon="heat" label="ONLINE" hint-size="72px,72px"></dc-import>
+          <dc-import name="Gauge" size="{{ 72 }}" frac="{{ 0.93 }}" value="93%" icon="heat" danger="{{ true }}" label="TOO HOT" hint-size="72px,72px"></dc-import>
+          <dc-import name="Gauge" size="{{ 72 }}" frac="{{ 0.38 }}" value="38%" icon="none" label="HEAT" hint-size="72px,72px"></dc-import>
+        </div>
+        <div><div style="font-size: 13px; font-weight: 700; color: #ffffff">States: offline (no glow), online (blue glow), too hot (red), text label instead of an icon</div><div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #EBC773">new</div></div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 14px; padding: 22px; background: #191C22; border: 1px solid #000; border-radius: 4px">
+        <div style="display: flex; gap: 20px; align-items: flex-end">
+          <dc-import name="Gauge" size="{{ 50 }}" frac="{{ 0.5 }}" value="" icon="voices" color="#98c379" hint-size="50px,50px"></dc-import>
+          <dc-import name="Gauge" size="{{ 62 }}" frac="{{ 0.5 }}" value="" icon="heat" hint-size="62px,62px"></dc-import>
+          <dc-import name="Gauge" size="{{ 130 }}" frac="{{ 0.62 }}" value="9.4 PS" icon="heat" hint-size="130px,130px"></dc-import>
+        </div>
+        <div><div style="font-size: 13px; font-weight: 700; color: #ffffff">Sizes: the Motor's 50 and 62, the start page's dyno 130</div><div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #abb2bf">PlayerMiniStats.kt, StartPage.kt</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display: flex; flex-direction: column; gap: 14px">
+    <h2 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; letter-spacing: 0.2em; color: #EBC773">KNOBS</h2>
+    <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: stretch">
+
+      <div style="display: flex; flex-direction: column; gap: 14px; padding: 22px; background: #191C22; border: 1px solid #000; border-radius: 4px">
+        <div style="display: flex; gap: 22px; align-items: flex-end">
+          <dc-import name="Knob" size="{{ 56 }}" label="" label-pos="none" hint-size="56px,56px"></dc-import>
+          <dc-import name="Knob" size="{{ 56 }}" label="CUTOFF" label-pos="top" hint-size="56px,76px"></dc-import>
+          <dc-import name="Knob" size="{{ 56 }}" label="VOLUME" label-pos="bottom" hint-size="56px,76px"></dc-import>
+          <dc-import name="Knob" size="{{ 56 }}" label="CUTOFF" label-pos="bottom" value="11.5 kHz" frac="{{ 0.86 }}" hint-size="56px,96px"></dc-import>
+        </div>
+        <div><div style="font-size: 13px; font-weight: 700; color: #ffffff">Label: none, on top, below, below with the value</div><div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #abb2bf">VolumeKnob.kt; variants new</div></div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 14px; padding: 22px; background: #191C22; border: 1px solid #000; border-radius: 4px">
+        <div style="display: flex; gap: 22px; align-items: flex-end">
+          <dc-import name="Knob" size="{{ 56 }}" icon="volume" label="" label-pos="none" hint-size="56px,56px"></dc-import>
+          <dc-import name="Knob" size="{{ 56 }}" icon="filter" label="" label-pos="none" frac="{{ 0.8 }}" hint-size="56px,56px"></dc-import>
+          <dc-import name="Knob" size="{{ 56 }}" icon="time" label="DELAY" label-pos="bottom" frac="{{ 0.3 }}" hint-size="56px,76px"></dc-import>
+        </div>
+        <div><div style="font-size: 13px; font-weight: 700; color: #ffffff">Icon on the cap; the pointer becomes a dot at the rim</div><div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #EBC773">new</div></div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 14px; padding: 22px; background: #191C22; border: 1px solid #000; border-radius: 4px">
+        <div style="display: flex; gap: 22px; align-items: flex-end">
+          <dc-import name="Knob" size="{{ 31 }}" label="" label-pos="none" ring="{{ false }}" hint-size="31px,31px"></dc-import>
+          <dc-import name="Knob" size="{{ 56 }}" finish="silver" label="GAIN" label-pos="bottom" hint-size="56px,76px"></dc-import>
+          <dc-import name="Knob" size="{{ 56 }}" finish="silver" icon="volume" label="" label-pos="none" hint-size="56px,56px"></dc-import>
+          <dc-import name="Knob" size="{{ 96 }}" finish="silver" label="MASTER" label-pos="bottom" hint-size="96px,116px"></dc-import>
+        </div>
+        <div><div style="font-size: 13px; font-weight: 700; color: #ffffff">Size and finish: the Motor's 31 without a ring, silver caps</div><div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #EBC773">new</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display: flex; flex-direction: column; gap: 14px">
+    <h2 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; letter-spacing: 0.2em; color: #EBC773">WHITE OR SILVER, FLAT OR DOMED</h2>
+    <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: stretch">
+
+      <div style="display: flex; flex-direction: column; gap: 14px; padding: 22px; background: #191C22; border: 1px solid #000; border-radius: 4px">
+        <div style="display: grid; grid-template-columns: 70px auto auto auto; gap: 14px; align-items: center">
+          <span style="font-size: 12px; color: #abb2bf">today</span>
+          <button style="display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px; border: none; border-radius: 18px; background: #ffffff; color: #000; font-family: Lato, sans-serif; font-size: 14px; font-weight: 700"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 1 L11 6 L2 11 Z" fill="#e06c75"></path></svg>Play</button>
+          <button aria-label="Stop" style="width: 36px; height: 36px; border: none; border-radius: 50%; background: #ffffff; display: flex; align-items: center; justify-content: center"><svg width="11" height="11" viewBox="0 0 11 11" aria-hidden="true"><rect x="1" y="1" width="9" height="9" fill="#000"></rect></svg></button>
+          <button style="height: 32px; padding: 0 14px; border: none; border-radius: 3px; background: #ffffff; color: #000; font-family: Lato, sans-serif; font-size: 13px; font-weight: 700">Yes</button>
+
+          <span style="font-size: 12px; color: #EBC773">silver</span>
+          <button style="display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px; border: 1px solid #000; border-radius: 18px; background: linear-gradient(180deg, #f2f4f7 0%, #c9ced6 48%, #aab0b9 52%, #d3d7dd 100%); color: #111; font-family: Lato, sans-serif; font-size: 14px; font-weight: 700; box-shadow: 0 2px 4px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.9)"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 1 L11 6 L2 11 Z" fill="#c4505a"></path></svg>Play</button>
+          <button aria-label="Stop" style="width: 36px; height: 36px; border: 1px solid #000; border-radius: 50%; background: radial-gradient(circle at 40% 28%, #ffffff 0%, #c9ced6 45%, #7d838d 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.6)"><svg width="11" height="11" viewBox="0 0 11 11" aria-hidden="true"><rect x="1" y="1" width="9" height="9" fill="#1b1e24"></rect></svg></button>
+          <button style="height: 32px; padding: 0 14px; border: 1px solid #000; border-radius: 3px; background: linear-gradient(180deg, #f2f4f7 0%, #c9ced6 48%, #aab0b9 52%, #d3d7dd 100%); color: #111; font-family: Lato, sans-serif; font-size: 13px; font-weight: 700; box-shadow: 0 2px 3px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.9)">Yes</button>
+        </div>
+        <div><div style="font-size: 13px; font-weight: 700; color: #ffffff">White (today) beside brushed silver: the silver sits in the dark like the gauge bezels</div><div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #EBC773">proposal</div></div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 14px; padding: 22px; background: #191C22; border: 1px solid #000; border-radius: 4px">
+        <div style="display: grid; grid-template-columns: 70px auto auto auto; gap: 14px; align-items: center">
+          <span style="font-size: 12px; color: #abb2bf">flat</span>
+          <button style="height: 36px; padding: 0 14px; border: 1px solid #000; border-radius: 3px; background: linear-gradient(180deg, #3a3f48, #2a2e36); color: #ffffff; font-family: Lato, sans-serif; font-size: 13px; font-weight: 700; box-shadow: 0 2px 3px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1)">Songs</button>
+          <button aria-label="Menu" style="width: 36px; height: 36px; padding: 0; border: 1px solid #000; border-radius: 3px; background: linear-gradient(180deg, #3a3f48, #2a2e36); color: #fff; box-shadow: 0 2px 3px rgba(0,0,0,0.6)"><svg width="13" height="13" viewBox="0 0 13 13" aria-hidden="true"><circle cx="2" cy="2" r="1.6" fill="#D7DADF"></circle><circle cx="6.5" cy="2" r="1.6" fill="#D7DADF"></circle><circle cx="11" cy="2" r="1.6" fill="#D7DADF"></circle><circle cx="2" cy="6.5" r="1.6" fill="#D7DADF"></circle><circle cx="6.5" cy="6.5" r="1.6" fill="#D7DADF"></circle><circle cx="11" cy="6.5" r="1.6" fill="#D7DADF"></circle><circle cx="2" cy="11" r="1.6" fill="#D7DADF"></circle><circle cx="6.5" cy="11" r="1.6" fill="#D7DADF"></circle><circle cx="11" cy="11" r="1.6" fill="#D7DADF"></circle></svg></button>
+          <span></span>
+
+          <span style="font-size: 12px; color: #EBC773">domed</span>
+          <button style="height: 36px; padding: 0 16px; border: 1px solid #000; border-radius: 10px; background: radial-gradient(ellipse 120% 90% at 50% 10%, #5a606b 0%, #2e323a 55%, #1d2026 100%); color: #ffffff; font-family: Lato, sans-serif; font-size: 13px; font-weight: 700; box-shadow: 0 3px 5px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.18)">Songs</button>
+          <button aria-label="Menu" style="width: 36px; height: 36px; padding: 0; border: 1px solid #000; border-radius: 50%; background: radial-gradient(circle at 40% 30%, #5a606b, #1b1e24); box-shadow: 0 3px 5px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.15)"><svg width="13" height="13" viewBox="0 0 13 13" aria-hidden="true"><circle cx="2" cy="2" r="1.6" fill="#D7DADF"></circle><circle cx="6.5" cy="2" r="1.6" fill="#D7DADF"></circle><circle cx="11" cy="2" r="1.6" fill="#D7DADF"></circle><circle cx="2" cy="6.5" r="1.6" fill="#D7DADF"></circle><circle cx="6.5" cy="6.5" r="1.6" fill="#D7DADF"></circle><circle cx="11" cy="6.5" r="1.6" fill="#D7DADF"></circle><circle cx="2" cy="11" r="1.6" fill="#D7DADF"></circle><circle cx="6.5" cy="11" r="1.6" fill="#D7DADF"></circle><circle cx="11" cy="11" r="1.6" fill="#D7DADF"></circle></svg></button>
+          <button aria-label="Pressed" style="width: 36px; height: 36px; padding: 0; border: 1px solid #000; border-radius: 50%; background: radial-gradient(circle at 50% 65%, #1b1e24, #2e323a); box-shadow: inset 0 3px 5px rgba(0,0,0,0.85)"><span style="display: block; margin: auto; width: 7px; height: 7px; border-radius: 50%; background: #EBC773; box-shadow: 0 0 6px #EBC773"></span></button>
+        </div>
+        <div><div style="font-size: 13px; font-weight: 700; color: #ffffff">Flat (the canvas so far) beside domed: light from above on a curved cap, like the volume knob and the Motor button</div><div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #EBC773">proposal</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display: flex; flex-direction: column; gap: 14px">
     <h2 style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; letter-spacing: 0.2em; color: #EBC773">BUTTONS</h2>
     <div style="display: flex; flex-wrap: wrap; gap: 16px">
 
@@ -365,7 +470,7 @@ a{color:#8fb0ff}a:hover{color:#c3d4ff}
   </section>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1800,"height":2700}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1800,"height":3600}}'>
 class Component extends DCLogic {
   renderVals() {
     return {};

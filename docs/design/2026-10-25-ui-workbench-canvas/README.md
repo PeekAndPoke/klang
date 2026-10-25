@@ -10,13 +10,16 @@ This folder is the copy that lasts. The canvas on claude.ai is a hosted page; th
 | File | Board |
 |------|-------|
 | `canvas.json` | The index: where each board sits on the canvas, the titles, the notes. |
-| `Main.dc.html` | A: the workbench, tool windows flying in from the right, the song menu; the `trailStep` tweak plays the first-visit trail. |
+| `Main.dc.html` | A: the workbench, tool windows flying in from the right, the song menu; the `trailStep` tweak plays the first-visit trail, `titleInStrip` moves KLANGMOTOR to the right strip. |
+| `MainTitleInStrip.dc.html` | A2: A with KLANGMOTOR written up the bottom of the right strip, the Motor without its title. |
 | `LeftStack.dc.html` | B: tools stacked in the left column above the Motor (for comparison). |
 | `Launcher.dc.html` | C: the menu drawer open, and the search on Mod K. |
 | `MotorDetail.dc.html` | D: the Motor at 2.5 times its size, the menu button in the fifth spot. |
 | `Trail.dc.html` | E: the first-visit trail, six steps. |
-| `KitchenSink.dc.html` | Every UI element in the app today and every new one, with the file it lives in. |
-| `Motor.dc.html`, `Editor.dc.html`, `Drawer.dc.html` | Shared parts the boards import. |
+| `Tutorials.dc.html` | F: a tutorial on the workbench, The Klang Path as a two-lane tech tree. |
+| `Start.dc.html` | G: the start page as starting the Motor: the key, the dyno run, the Motor settling into its corner. |
+| `KitchenSink.dc.html` | Every UI element in the app today and every new one, with the file it lives in: gauges, knobs, white or silver, flat or domed, buttons, fields, displays, popups, panels. |
+| `Motor.dc.html`, `Editor.dc.html`, `Drawer.dc.html`, `Gauge.dc.html`, `Knob.dc.html` | Shared parts the boards import. |
 
 ## The format
 

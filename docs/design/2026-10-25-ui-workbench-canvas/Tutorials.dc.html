@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>A tutorial on the workbench</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#8fb0ff}a:hover{color:#c3d4ff}
+@keyframes klangBeacon{0%,100%{box-shadow:0 0 0 0 rgba(235,199,115,0)}50%{box-shadow:0 0 0 5px rgba(235,199,115,0.35),0 0 18px rgba(235,199,115,0.65)}}
+</style>
+</helmet>
+<div style="position: relative; width: 1440px; height: 900px; display: flex; overflow: hidden; background: #191C22; font-family: Lato, system-ui, sans-serif; color: #D7DADF">
+
+  <aside aria-label="Learn" style="width: 320px; flex-shrink: 0; display: flex; flex-direction: column; background: #12131c; border-right: 1px solid #000">
+    <div style="padding: 18px 18px 10px">
+      <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.18em; color: #abb2bf">LEARN</div>
+      <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px">
+        <sc-for list="{{ tracks }}" as="t" hint-placeholder-count="4">
+          <button aria-pressed="{{ t.on }}" style="height: 28px; padding: 0 10px; border: 1px solid #000; border-radius: 14px; font-family: Lato, sans-serif; font-size: 12px; font-weight: 700; cursor: pointer; background: {{ t.bg }}; color: {{ t.color }}; box-shadow: {{ t.shadow }}">{{ t.title }}</button>
+        </sc-for>
+      </div>
+    </div>
+
+    <nav aria-label="The Klang Path" style="flex: 1; min-height: 0; overflow: hidden; padding: 4px 14px 10px">
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 10px; padding: 4px 4px 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: #abb2bf">
+        <span>SOUND</span><span>PATTERN</span>
+      </div>
+      <sc-for list="{{ stages }}" as="st" hint-placeholder-count="3">
+        <div style="font-size: 11px; color: #abb2bf; padding: 8px 4px 4px">{{ st.name }}</div>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 10px">
+          <div style="display: flex; flex-direction: column; gap: 3px; border-left: 2px solid #2c313a; padding-left: 8px">
+            <sc-for list="{{ st.a }}" as="n" hint-placeholder-count="2">
+              <a href="#" style="display: flex; align-items: center; gap: 7px; padding: 4px 6px; border-radius: 3px; text-decoration: none; font-size: 12px; line-height: 15px; color: {{ n.color }}; background: {{ n.bg }}; border: {{ n.border }}">
+                <span aria-hidden="true" style="flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%; background: {{ n.lamp }}; box-shadow: {{ n.glow }}; animation: {{ n.anim }}"></span>{{ n.title }}
+              </a>
+            </sc-for>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 3px; border-left: 2px solid #2c313a; padding-left: 8px">
+            <sc-for list="{{ st.b }}" as="n" hint-placeholder-count="2">
+              <a href="#" style="display: flex; align-items: center; gap: 7px; padding: 4px 6px; border-radius: 3px; text-decoration: none; font-size: 12px; line-height: 15px; color: {{ n.color }}; background: {{ n.bg }}; border: {{ n.border }}">
+                <span aria-hidden="true" style="flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%; background: {{ n.lamp }}; box-shadow: {{ n.glow }}; animation: {{ n.anim }}"></span>{{ n.title }}
+              </a>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+      <div style="display: flex; gap: 12px; padding: 12px 4px 0; font-size: 11px; color: #abb2bf">
+        <span style="display: flex; align-items: center; gap: 5px"><span aria-hidden="true" style="width: 7px; height: 7px; border-radius: 50%; background: #98c379"></span>done</span>
+        <span style="display: flex; align-items: center; gap: 5px"><span aria-hidden="true" style="width: 7px; height: 7px; border-radius: 50%; background: #EBC773"></span>next</span>
+        <span style="display: flex; align-items: center; gap: 5px"><span aria-hidden="true" style="width: 7px; height: 7px; border-radius: 50%; background: #3a3220"></span>open</span>
+        <span style="display: flex; align-items: center; gap: 5px"><span aria-hidden="true" style="width: 7px; height: 7px; border-radius: 50%; border: 1px dashed #8a919e"></span>locked</span>
+      </div>
+    </nav>
+
+    <div style="flex-shrink: 0; border-top: 1px solid #000">
+      <dc-import name="Motor" hint-size="320px,236px"></dc-import>
+    </div>
+  </aside>
+
+  <main style="flex: 1; min-width: 0; overflow: hidden; display: flex; justify-content: center">
+    <article style="width: 720px; padding: 36px 0 24px; display: flex; flex-direction: column; gap: 18px">
+      <div style="font-size: 12px; color: #abb2bf">The Klang Path, stage 2, Sound 3 of 7</div>
+      <div style="display: flex; align-items: center; gap: 12px">
+        <h1 style="margin: 0; font-size: 34px; color: #ffffff">Filters</h1>
+        <span style="font-size: 11px; padding: 2px 8px; border: 1px solid #5c6370; border-radius: 3px">[difficulty]</span>
+        <span style="font-size: 11px; padding: 2px 8px; border: 1px solid #5c6370; border-radius: 3px">[length]</span>
+      </div>
+      <p style="margin: 0; font-size: 16px; line-height: 25px">Only frequencies below the cutoff pass, so lower values sound darker. [The lesson's opening, in the tutorial's own voice.]</p>
+
+      <div style="background: #0e1014; border: 1px solid #000; border-top: 2px solid #5c7cbc; border-radius: 6px 6px 4px 4px; overflow: hidden">
+        <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid #191C22">
+          <button aria-label="Play the example" style="width: 32px; height: 32px; border: 1px solid #000; border-radius: 50%; background: radial-gradient(circle at 40% 28%, #ffffff 0%, #c9ced6 45%, #7d838d 100%); display: flex; align-items: center; justify-content: center; cursor: pointer; animation: klangBeacon 2.5s ease-in-out infinite"><svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 1 L11 6 L2 11 Z" fill="#c4505a"></path></svg></button>
+          <span style="font-size: 12px; color: #abb2bf">Example 1 of 3</span>
+          <div style="flex: 1"></div>
+          <span style="font-size: 12px; color: #abb2bf">Open in a new song</span>
+        </div>
+        <pre style="margin: 0; padding: 14px 16px; font-family: 'JetBrains Mono', monospace; font-size: 14px; line-height: 22px; color: #D7DADF"><span style="color: #61afef">note</span>(<span style="color: #98c379">"c3 e3"</span>).<span style="color: #61afef">s</span>(<span style="color: #98c379">"saw"</span>).<span style="color: #61afef">lpf</span>(<span style="color: #d19a66; background: rgba(235,199,115,0.18)">800</span>, <span style="color: #d19a66">8</span>)</pre>
+      </div>
+
+      <div style="display: flex; gap: 12px; padding: 14px 16px; background: #21252b; border: 1px solid #000; border-radius: 4px">
+        <span aria-hidden="true" style="flex-shrink: 0; margin-top: 5px; width: 9px; height: 9px; border-radius: 50%; background: #3a3220"></span>
+        <div>
+          <div style="font-size: 14px; font-weight: 700; color: #ffffff">Your turn</div>
+          <div style="font-size: 14px; line-height: 21px; margin-top: 2px">Turn the <code style="font-family: 'JetBrains Mono', monospace; padding: 1px 5px; background: #2c313a; border-radius: 3px">800</code> down to 300 and listen. [The lesson's task.] The lamp lights when the task is done.</div>
+        </div>
+      </div>
+
+      <p style="margin: 0; font-size: 16px; line-height: 25px; color: #D7DADF">[More of the lesson: a second idea, a second example.]</p>
+
+      <div style="flex: 1"></div>
+      <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 1px solid #2c313a">
+        <a href="#" style="font-size: 14px">Back: Alternation and Repetition</a>
+        <button style="height: 38px; padding: 0 18px; border: 1px solid #000; border-radius: 10px; background: radial-gradient(ellipse 120% 90% at 50% 10%, #5a606b 0%, #2e323a 55%, #1d2026 100%); color: #ffffff; font-family: Lato, sans-serif; font-size: 14px; font-weight: 700; box-shadow: 0 3px 5px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.18); cursor: pointer">Next: The Filter Envelope</button>
+      </div>
+    </article>
+  </main>
+
+  <nav aria-label="Tool windows" style="width: 48px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; padding-top: 12px; background: #12131c; border-left: 1px solid #000">
+    <button aria-label="Docs" style="width: 36px; height: 36px; padding: 0; display: flex; align-items: center; justify-content: center; border: 1px solid transparent; border-radius: 3px; background: transparent; color: #abb2bf"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 3.5 C4.5 2.5 7 2.5 9 4 C11 2.5 13.5 2.5 16 3.5 V15 C13.5 14 11 14 9 15.5 C7 14 4.5 14 2 15 Z M9 4 V15.5" fill="none" stroke="currentColor" stroke-width="1.4"></path></svg></button>
+    <button aria-label="Param tool" style="width: 36px; height: 36px; padding: 0; display: flex; align-items: center; justify-content: center; border: 1px solid transparent; border-radius: 3px; background: transparent; color: #abb2bf"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M4 2 V16 M9 2 V16 M14 2 V16" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"></path><rect x="2" y="10" width="4" height="3" rx="1" fill="currentColor"></rect><rect x="7" y="4" width="4" height="3" rx="1" fill="currentColor"></rect><rect x="12" y="8" width="4" height="3" rx="1" fill="currentColor"></rect></svg></button>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  node(title, state) {
+    const s = {
+      done: { lamp: '#98c379', glow: '0 0 5px #98c379', color: '#D7DADF', bg: 'transparent', border: '1px solid transparent', anim: 'none' },
+      current: { lamp: '#EBC773', glow: '0 0 6px #EBC773', color: '#000000', bg: '#5c7cbc', border: '1px solid #000', anim: 'none' },
+      next: { lamp: '#EBC773', glow: '0 0 6px #EBC773', color: '#ffffff', bg: 'transparent', border: '1px solid transparent', anim: 'klangBeacon 1.82s ease-in-out infinite' },
+      open: { lamp: '#3a3220', glow: 'none', color: '#D7DADF', bg: 'transparent', border: '1px solid transparent', anim: 'none' },
+      locked: { lamp: 'transparent', glow: 'inset 0 0 0 1px #8a919e', color: '#8a919e', bg: 'transparent', border: '1px dashed #3e4451', anim: 'none' },
+    }[state];
+    return Object.assign({ title: title }, s);
+  }
+  renderVals() {
+    const tracks = ['The Klang Path', 'First Steps', 'Sound Design Basics', 'The Pattern Language'].map((t, i) => ({
+      title: t,
+      on: i === 0,
+      bg: i === 0 ? 'radial-gradient(ellipse 120% 90% at 50% 10%, #6b84bd 0%, #5c7cbc 60%, #4a6aa8 100%)' : 'radial-gradient(ellipse 120% 90% at 50% 10%, #4a505b 0%, #2a2e36 70%)',
+      color: i === 0 ? '#000000' : '#ffffff',
+      shadow: '0 2px 3px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.15)',
+    }));
+    const n = (t, s) => this.node(t, s);
+    return {
+      tracks: tracks,
+      stages: [
+        { name: 'Stage 1, the onramp', a: [], b: [n('Your First Beat', 'done'), n('Space and Rests', 'done'), n('First Notes', 'done')] },
+        { name: 'Stage 2, core sound and notation', a: [n('The Four Waveforms', 'done'), n('Shape of a Note', 'done'), n('Filters', 'current'), n('The Filter Envelope', 'next')], b: [n('Subdivision', 'done'), n('Alternation and Repetition', 'done'), n('Layers', 'open'), n('Chords in One Step', 'open')] },
+        { name: 'Stage 3, where the tracks meet', a: [n('Signals Move the Knobs', 'locked'), n('Thickness', 'locked'), n('Space and Dirt', 'locked')], b: [n('Scales and Melodies', 'locked'), n('The Transform Toolkit', 'locked'), n('Gates', 'locked')] },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The start page: starting the Motor</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap">
+<style>
+body{margin:0}
+@keyframes klangBeacon{0%,100%{box-shadow:0 0 0 0 rgba(235,199,115,0)}50%{box-shadow:0 0 0 5px rgba(235,199,115,0.35),0 0 18px rgba(235,199,115,0.65)}}
+@keyframes klangFlyIn{from{transform:translateX(60px);opacity:0}to{transform:none;opacity:1}}
+</style>
+</helmet>
+<div style="width: 2000px; height: 640px; box-sizing: border-box; padding: 40px; background: #12131c; font-family: Lato, system-ui, sans-serif; color: #D7DADF">
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 40px">
+
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <div style="width: 605px; height: 378px; overflow: hidden; border: 1px solid #000; border-radius: 4px; box-shadow: 0 10px 30px rgba(0,0,0,0.5)">
+        <div style="position: relative; width: 1440px; height: 900px; transform: scale(0.42); transform-origin: top left; background: radial-gradient(ellipse 60% 55% at 50% 38%, rgba(235,199,115,0.16) 0%, rgba(92,124,188,0.07) 45%, #0b0c0f 80%); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 40px">
+          <div style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 64px; letter-spacing: 0.08em; color: #ffffff; text-shadow: 0 0 18px rgba(0,0,0,0.9)">KLANGMOTOR</div>
+          <div style="position: relative; width: 300px; height: 300px; display: flex; align-items: center; justify-content: center">
+            <span style="position: absolute; top: 18px; left: 34px; font-family: 'JetBrains Mono', monospace; font-size: 18px; letter-spacing: 0.14em; color: #abb2bf">OFF</span>
+            <span style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); font-family: 'JetBrains Mono', monospace; font-size: 18px; letter-spacing: 0.14em; color: #abb2bf">ON</span>
+            <span style="position: absolute; top: 18px; right: 18px; font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 700; letter-spacing: 0.14em; color: #EBC773">START</span>
+            <div style="border-radius: 50%; animation: klangBeacon 2.5s ease-in-out infinite">
+              <dc-import name="Knob" size="{{ 200 }}" finish="silver" frac="{{ 0.06 }}" label="" label-pos="none" ring="{{ false }}" hint-size="200px,200px"></dc-import>
+            </div>
+          </div>
+          <div style="font-size: 24px; color: #D7DADF">Turn the key to start the Motor</div>
+        </div>
+      </div>
+      <div style="display: flex; gap: 12px; align-items: flex-start">
+        <span style="flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #EBC773; color: #000; font-weight: 700; font-size: 14px">1</span>
+        <div>
+          <div style="font-size: 17px; font-weight: 700; color: #ffffff">The ignition</div>
+          <div style="font-size: 13px; line-height: 19px; margin-top: 3px">One silver key, the only lit thing on the page. A browser starts audio only after a click, so turning the key is the click it needs: the ritual is the requirement.</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <div style="width: 605px; height: 378px; overflow: hidden; border: 1px solid #000; border-radius: 4px; box-shadow: 0 10px 30px rgba(0,0,0,0.5)">
+        <div style="position: relative; width: 1440px; height: 900px; transform: scale(0.42); transform-origin: top left; background: radial-gradient(ellipse 70% 60% at 50% 45%, rgba(235,199,115,0.22) 0%, rgba(92,124,188,0.12) 45%, #0b0c0f 85%); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 44px">
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 22px; letter-spacing: 0.3em; color: #abb2bf">DYNAMOMETER TEST</div>
+          <div style="display: flex; gap: 48px; align-items: flex-end">
+            <dc-import name="Gauge" size="{{ 170 }}" frac="{{ 0.6 }}" value="ROUND 3" icon="cylinders" color="#56b6c2" hint-size="170px,170px"></dc-import>
+            <dc-import name="Gauge" size="{{ 240 }}" frac="{{ 0.72 }}" value="72%" icon="heat" hint-size="240px,240px"></dc-import>
+            <dc-import name="Gauge" size="{{ 170 }}" frac="{{ 0.55 }}" value="96" icon="voices" color="#98c379" hint-size="170px,170px"></dc-import>
+          </div>
+          <div style="font-size: 24px; color: #D7DADF">[the jingle plays while the Motor warms up]</div>
+        </div>
+      </div>
+      <div style="display: flex; gap: 12px; align-items: flex-start">
+        <span style="flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #EBC773; color: #000; font-weight: 700; font-size: 14px">2</span>
+        <div>
+          <div style="font-size: 17px; font-weight: 700; color: #ffffff">The dyno run</div>
+          <div style="font-size: 13px; line-height: 19px; margin-top: 3px">What the start page does today (the benchmark, the tier), in the new gauges: big, centred, the needles sweeping, the lamp light of the background swelling with the sound.</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <div style="position: relative; width: 605px; height: 378px; overflow: hidden; border: 1px solid #000; border-radius: 4px; box-shadow: 0 10px 30px rgba(0,0,0,0.5)">
+        <div style="width: 1440px; height: 900px; transform: scale(0.42); transform-origin: top left">
+          <dc-import name="Main" start-tool="none" start-bottom="{{ false }}" trail-step="play" hint-size="1440px,900px"></dc-import>
+        </div>
+        <div aria-hidden="true" style="position: absolute; left: 230px; top: 110px; width: 140px; height: 100px; border: 2px dashed #EBC773; border-radius: 6px"></div>
+        <svg aria-hidden="true" width="605" height="378" viewBox="0 0 605 378" style="position: absolute; left: 0; top: 0">
+          <path d="M 240 200 C 200 250, 140 270, 90 285" fill="none" stroke="#EBC773" stroke-width="2.5" stroke-dasharray="6 5"></path>
+          <path d="M 98 276 L 86 287 L 101 291" fill="none" stroke="#EBC773" stroke-width="2.5"></path>
+        </svg>
+      </div>
+      <div style="display: flex; gap: 12px; align-items: flex-start">
+        <span style="flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #EBC773; color: #000; font-weight: 700; font-size: 14px">3</span>
+        <div>
+          <div style="font-size: 17px; font-weight: 700; color: #ffffff">The Motor settles into its corner</div>
+          <div style="font-size: 13px; line-height: 19px; margin-top: 3px">The same gauges shrink and glide to the bottom left, and the workbench opens around them; the Play button takes the first lamp of the trail. One machine from the first second on.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2000,"height":640}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Knob</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="display: inline-flex; flex-direction: column; align-items: center; gap: 6px; font-family: Lato, system-ui, sans-serif">
+  <sc-if value="{{ labelTop }}" hint-placeholder-val="{{ false }}">
+    <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: #D7DADF">{{ label }}</span>
+  </sc-if>
+  <svg width="{{ box }}" height="{{ box }}" viewBox="0 0 100 100" role="img" aria-label="{{ aria }}">
+    <defs>
+      <radialGradient id="capDark" cx="42%" cy="30%" r="75%"><stop offset="0%" stop-color="#565c68"></stop><stop offset="60%" stop-color="#2a2e36"></stop><stop offset="100%" stop-color="#16181d"></stop></radialGradient>
+      <radialGradient id="capSilver" cx="42%" cy="28%" r="78%"><stop offset="0%" stop-color="#ffffff"></stop><stop offset="45%" stop-color="#c9ced6"></stop><stop offset="100%" stop-color="#7d838d"></stop></radialGradient>
+      <linearGradient id="skirt" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3a3f48"></stop><stop offset="100%" stop-color="#0b0d10"></stop></linearGradient>
+    </defs>
+    <sc-if value="{{ ring }}" hint-placeholder-val="{{ true }}">
+      <path d="{{ track }}" fill="none" stroke="#2c313a" stroke-width="5" stroke-linecap="round"></path>
+      <path d="{{ arc }}" fill="none" stroke="#5c7cbc" stroke-width="5" stroke-linecap="round"></path>
+    </sc-if>
+    <circle cx="50" cy="52" r="33" fill="#000" opacity="0.5"></circle>
+    <circle cx="50" cy="50" r="33" fill="url(#skirt)" stroke="#000" stroke-width="1"></circle>
+    <circle cx="50" cy="48" r="27" fill="{{ cap }}" stroke="rgba(0,0,0,0.6)" stroke-width="0.8"></circle>
+    <sc-if value="{{ showIndex }}" hint-placeholder-val="{{ true }}">
+      <line x1="{{ ix1 }}" y1="{{ iy1 }}" x2="{{ ix2 }}" y2="{{ iy2 }}" stroke="{{ indexColor }}" stroke-width="4" stroke-linecap="round"></line>
+    </sc-if>
+    <sc-if value="{{ showDot }}" hint-placeholder-val="{{ false }}">
+      <circle cx="{{ ix2 }}" cy="{{ iy2 }}" r="3.2" fill="{{ indexColor }}"></circle>
+    </sc-if>
+    <sc-if value="{{ iconVolume }}" hint-placeholder-val="{{ false }}">
+      <g transform="translate(38 37)" fill="none" stroke="{{ iconColor }}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"><path d="M2 8 H7 L13 3 V19 L7 14 H2 Z"></path><path d="M17 7 C19 9 19 13 17 15"></path><path d="M20.5 4.5 C24 8 24 14 20.5 17.5"></path></g>
+    </sc-if>
+    <sc-if value="{{ iconFilter }}" hint-placeholder-val="{{ false }}">
+      <path transform="translate(36 38)" d="M1 8 H14 C18 8 19 4 21 6 C23 9 25 18 28 20" fill="none" stroke="{{ iconColor }}" stroke-width="2.6" stroke-linecap="round"></path>
+    </sc-if>
+    <sc-if value="{{ iconTime }}" hint-placeholder-val="{{ false }}">
+      <g transform="translate(38 36)" fill="none" stroke="{{ iconColor }}" stroke-width="2.6" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 6 V12 L16 15"></path></g>
+    </sc-if>
+  </svg>
+  <sc-if value="{{ labelBottom }}" hint-placeholder-val="{{ false }}">
+    <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: #D7DADF">{{ label }}</span>
+  </sc-if>
+  <sc-if value="{{ hasValue }}" hint-placeholder-val="{{ false }}">
+    <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #abb2bf">{{ value }}</span>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"size":{"editor":"int","default":56,"min":24,"max":160},"frac":{"editor":"range","default":0.62,"min":0,"max":1,"step":0.01},"label":{"editor":"text","default":"VOLUME"},"labelPos":{"editor":"enum","options":["none","top","bottom"],"default":"bottom"},"icon":{"editor":"enum","options":["none","volume","filter","time"],"default":"none"},"finish":{"editor":"enum","options":["dark","silver"],"default":"dark"},"ring":{"editor":"boolean","default":true},"value":{"editor":"text","default":""},"$preview":{"width":80,"height":100}}'>
+class Component extends DCLogic {
+  arcPath(frac) {
+    const a0 = 135 * Math.PI / 180;
+    const sweep = Math.max(0.001, frac) * 270;
+    const a1 = a0 + sweep * Math.PI / 180;
+    const r = 44;
+    const p = (a) => (50 + r * Math.cos(a)).toFixed(2) + ' ' + (50 + r * Math.sin(a)).toFixed(2);
+    return 'M ' + p(a0) + ' A ' + r + ' ' + r + ' 0 ' + (sweep > 180 ? 1 : 0) + ' 1 ' + p(a1);
+  }
+  renderVals() {
+    const frac = this.props.frac ?? 0.62;
+    const icon = this.props.icon ?? 'none';
+    const finish = this.props.finish ?? 'dark';
+    const labelPos = this.props.labelPos ?? 'bottom';
+    const label = this.props.label ?? '';
+    const value = this.props.value ?? '';
+    const a = (135 + frac * 270) * Math.PI / 180;
+    const silver = finish === 'silver';
+    return {
+      box: (this.props.size ?? 56) + 'px',
+      aria: (label || icon) + ' knob',
+      ring: this.props.ring ?? true,
+      track: this.arcPath(1),
+      arc: this.arcPath(frac),
+      cap: silver ? 'url(#capSilver)' : 'url(#capDark)',
+      // With an icon on the cap the index shrinks to a dot at the rim, so the icon stays readable.
+      showIndex: icon === 'none',
+      showDot: icon !== 'none',
+      ix1: (50 + 8 * Math.cos(a)).toFixed(2), iy1: (48 + 8 * Math.sin(a)).toFixed(2),
+      ix2: (50 + 22 * Math.cos(a)).toFixed(2), iy2: (48 + 22 * Math.sin(a)).toFixed(2),
+      indexColor: silver ? '#1b1e24' : '#EBC773',
+      iconColor: silver ? '#2a2e36' : '#D7DADF',
+      iconVolume: icon === 'volume', iconFilter: icon === 'filter', iconTime: icon === 'time',
+      labelTop: labelPos === 'top' && label !== '',
+      labelBottom: labelPos === 'bottom' && label !== '',
+      label: label,
+      hasValue: value !== '',
+      value: value,
+    };
+  }
+}
+</script>
+</body>
+</html>

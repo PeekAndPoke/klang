@@ -37,6 +37,14 @@ Kept in order, close to the maintainer's words.
     live in the repo too (`docs/design/2026-10-25-ui-workbench-canvas/`).
 15. (2026-10-25) "Out there": Ignitor parts and instruments shown in 3D, rotatable like players in a video game.
     Its own ticket: KLANG-00335 (Ignitor parts and instruments in 3D).
+16. (2026-10-25) The Motor's gauges deserve their own section in the kitchen sink and should be able to carry icons.
+17. (2026-10-25) A turnable knob like the volume knob might come in variants: with a label (top or bottom) or an icon.
+18. (2026-10-25) Likes most things having a somewhat "roundish" surface, like the volume knob or the Motor button.
+19. (2026-10-25) Should the white buttons get a silverish colour instead? They stick out now.
+20. (2026-10-25) How would other pages look in this design, the tutorials page for example: menu, content?
+21. (2026-10-25) To make it a nice visual experience the start page needs something, not sure what.
+22. (2026-10-25) Asked to try, on one screen, KLANGMOTOR removed from the bottom left and written rotated at the
+    bottom of the right strip (canvas board A2).
 
 ## Where the conversation stands (leanings, not decisions)
 
@@ -61,6 +69,14 @@ Kept in order, close to the maintainer's words.
   the ones before it are done, as the tracks and the completion state of the tutorials pages already suggest.
 - **The kitchen sink** (item 14) lists every element with the file it lives in today, or "new"; its last cell names
   what is still to draw (MIDI panels, the REPL, the mini notation panels, completion, bookmarks).
+
+- **Drawn for items 16 to 22** (2026-10-25): the kitchen sink has a gauge section (icons for cylinders, heat and
+  voices; offline, online, too hot; sizes), knob variants (label on top or below, value, icon on the cap with the
+  pointer as a dot, dark or silver caps), white beside brushed silver, flat beside domed. Board F puts a tutorial on
+  the workbench: The Klang Path's two strands (sound, pattern) and three stages as a tech tree in the left column,
+  lamps for done, next, open and locked. Board G proposes the start page as starting the Motor: a silver key is the
+  click the browser needs before it plays audio, then the dyno run of today in the new gauges, then the Motor
+  glides into its corner and the workbench opens around it. Board A2 tries the title in the right strip.
 
 ## Decide before implementing
 

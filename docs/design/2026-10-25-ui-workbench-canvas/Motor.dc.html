@@ -13,7 +13,7 @@
 body{margin:0}
 </style>
 </helmet>
-<div style="position: relative; width: 320px; height: 236px; font-family: Lato, system-ui, sans-serif; color: #D7DADF; background: #12131c; overflow: hidden">
+<div style="position: relative; width: 320px; height: {{ rootH }}; font-family: Lato, system-ui, sans-serif; color: #D7DADF; background: #12131c; overflow: hidden">
 
   <div aria-hidden="true" style="position: absolute; left: 10px; right: 10px; bottom: 6px; height: 132px; display: flex; align-items: flex-end; justify-content: space-between; opacity: 0.55">
     <sc-for list="{{ spectrum }}" as="col" hint-placeholder-count="28">
@@ -71,12 +71,14 @@ body{margin:0}
     </svg>
   </div>
 
-  <div style="position: absolute; left: 0; right: 0; bottom: 18px; text-align: center; z-index: 3">
-    <span style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 22px; letter-spacing: 0.04em; color: #ffffff; text-shadow: 0 0 5px #000">KLANGMOTOR</span>
-  </div>
+  <sc-if value="{{ showTitle }}" hint-placeholder-val="{{ true }}">
+    <div style="position: absolute; left: 0; right: 0; bottom: 18px; text-align: center; z-index: 3">
+      <span style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 22px; letter-spacing: 0.04em; color: #ffffff; text-shadow: 0 0 5px #000">KLANGMOTOR</span>
+    </div>
+  </sc-if>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"launcherOpen":{"editor":"boolean","default":false},"beacon":{"editor":"boolean","default":false},"onLauncher":{"editor":null},"$preview":{"width":320,"height":236}}'>
+<script type="text/x-dc" data-dc-script data-props='{"launcherOpen":{"editor":"boolean","default":false},"beacon":{"editor":"boolean","default":false},"showTitle":{"editor":"boolean","default":true},"onLauncher":{"editor":null},"$preview":{"width":320,"height":236}}'>
 class Component extends DCLogic {
   arcPath(frac) {
     const a0 = 135 * Math.PI / 180;
@@ -124,7 +126,11 @@ class Component extends DCLogic {
         dots.push({ x: 2 + c * 4.5, y: 2 + r * 4.5 });
       }
     }
+    const showTitle = this.props.showTitle ?? true;
     return {
+      showTitle: showTitle,
+      // Without the title the frame is 44 px shorter; the spectrum and the scope keep their places.
+      rootH: showTitle ? '236px' : '192px',
       open: open,
       gauges: gauges,
       scope: pts.join(' '),

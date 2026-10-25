@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Workbench, the title in the right strip</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#8fb0ff}a:hover{color:#c3d4ff}
+@keyframes klangFlyIn{from{transform:translateX(60px);opacity:0}to{transform:none;opacity:1}}
+@keyframes klangBeacon{0%,100%{box-shadow:0 0 0 0 rgba(235,199,115,0)}50%{box-shadow:0 0 0 5px rgba(235,199,115,0.35),0 0 18px rgba(235,199,115,0.65)}}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px">
+  <dc-import name="Main" title-in-strip="{{ true }}" hint-size="1440px,900px"></dc-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>
