@@ -23,6 +23,9 @@ object StorageKeys {
     /** The instrument the Midi Playground's editors held when last applied. */
     const val MIDI_INSTRUMENT_DRAFT = "klang-midi-instrument-draft"
 
+    /** The master volume, a linear gain from 0.0 to 1.0 (KLANG-00330). */
+    const val MASTER_VOLUME = "klang-master-volume"
+
     /** A song's code; [version] is the app's version, [songId] the song's id (a built-in song's, or "new"). */
     fun songCode(version: String, songId: String): String = songKey(version = version, songId = songId, part = "code")
 

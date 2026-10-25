@@ -73,7 +73,7 @@ class Motor(ctx: NoProps) : PureComponent(ctx) {
         /** The frame's total height. */
         val FRAME_HEIGHT = 13.25.rem
 
-        /** The top slot: the three gauges (62 px + their glow). */
+        /** The top slot: the three gauges and the volume knob (62 px + their glow). */
         val TOP_SLOT_HEIGHT = 4.5.rem
 
         /** Where the oscilloscope starts and how tall it is — its bottom is fixed at 8.75 rem from the top. */
@@ -121,7 +121,7 @@ class Motor(ctx: NoProps) : PureComponent(ctx) {
                     height = TOP_SLOT_HEIGHT
                     zIndex = 2
                 }
-                PlayerMiniStats()
+                PlayerMiniStats(showVolume = true)
             }
 
             div {

@@ -86,6 +86,9 @@ object KlangTheme : Stream<KlangLookAndFeel> {
 
     // ── Gauge helpers ─────────────────────────────────────────────────────────
 
+    /** The glow's blur radius around round gauges, as a share of their size. */
+    val gaugeGlowBlur: Double get() = invoke().gaugeGlowBlur
+
     fun rangedMixer(from: Number, to: Number) = RangeColorMixer(
         range = from.toDouble()..to.toDouble(),
         colors = statusColors,
@@ -150,5 +153,6 @@ object KlangTheme : Stream<KlangLookAndFeel> {
         style.setProperty("--klang-moderate", laf.moderate)
         style.setProperty("--klang-warning", laf.warning)
         style.setProperty("--klang-critical", laf.critical)
+        style.setProperty("--klang-gauge-glow-blur", laf.gaugeGlowBlur.toString())
     }
 }

@@ -48,5 +48,17 @@ interface AudioBackend {
      */
     fun pump() {}
 
+    /**
+     * The master volume, a linear gain from 0.0 (silence) to 1.0 (the song's own level), on the backend's output
+     * (KLANG-00330).
+     *
+     * The one exception to the stone rule "the engine is the horse" (maintainer, 2026-10-25): a listener's volume
+     * knob, outside the engine. The engine renders as before and never learns of it; the JS backend applies it in
+     * the browser's audio graph, after the worklet. Must not throw.
+     *
+     * Default no-op: the JVM backend has no volume knob.
+     */
+    fun setOutputVolume(gain: Double) {}
+
     suspend fun run(scope: CoroutineScope)
 }

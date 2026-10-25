@@ -59,6 +59,11 @@ class KlangPlayer(
          * every other host must match it or a render won't sound like live playback.
          */
         val blockSize: Int = AudioBackendContext.RENDER_QUANTUM_FRAMES,
+        /**
+         * The master volume to start with, a linear gain from 0.0 to 1.0 (KLANG-00330): the backend builds its output
+         * at this level, so a remembered low volume never starts at full and glides down.
+         */
+        val outputVolume: Double = 1.0,
     )
 
     // Shared communication link and backend
@@ -67,6 +72,9 @@ class KlangPlayer(
 
     // Hold reference to active backend for visualizer access
     private var _activeBackend: AudioBackend? = null
+
+    // The master volume (KLANG-00330), kept so a backend that starts later gets it too
+    private var outputVolume: Double = options.outputVolume
 
     // Thread-safe state management
     private val lock = KlangLock()
@@ -124,6 +132,7 @@ class KlangPlayer(
 
             // Store backend reference for visualizer access
             _activeBackend = backend
+            backend.setOutputVolume(outputVolume)
 
             // backendDispatcher is a single-thread pinned dispatcher (see index_jvm.kt
             // / index_js.kt). No `limitedParallelism(1)` needed — and it would only
@@ -197,6 +206,15 @@ class KlangPlayer(
      * Get the audio analyzer for visualization data.
      */
     fun getAnalyzer(): AudioAnalyzer? = _activeBackend?.analyzer
+
+    /**
+     * The master volume, a linear gain from 0.0 to 1.0 (KLANG-00330): see [AudioBackend.setOutputVolume]. Before the
+     * backend exists the value is kept and handed over when it starts.
+     */
+    fun setOutputVolume(gain: Double) {
+        outputVolume = gain
+        _activeBackend?.setOutputVolume(gain)
+    }
 
     /**
      * Register a playback.

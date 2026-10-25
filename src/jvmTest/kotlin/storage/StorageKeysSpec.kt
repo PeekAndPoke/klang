@@ -51,4 +51,8 @@ class StorageKeysSpec : StringSpec({
             StorageKeys.tutorialCompleted(slug = "first-steps") shouldBe "klang-tutorial-completed-first-steps"
         }
     }
+
+    "the master volume's key stays as it is" {
+        StorageKeys.MASTER_VOLUME shouldBe "klang-master-volume"
+    }
 })

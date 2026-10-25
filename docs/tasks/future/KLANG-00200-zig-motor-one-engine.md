@@ -37,7 +37,7 @@ store, the voice pipeline, cylinders, katalysts, master, all DSP. That is all of
 (107 files, about 22k lines as of 2026-09-15).
 
 What stays Kotlin: `audio_bridge` (DSL values, `ScheduledVoice`, the ring buffer), `audio_fe`
-(sample index and decoding), the hosts, the analyzer (browser `AnalyserNode` on the worklet output,
+(sample index and decoding), the hosts, the analyzer (browser `AnalyserNode` on the output after the master volume,
 untouched), and everything on the frontend side of the wire (`BackendClockSync`, lookahead
 scheduling, `ScheduledVoice.startTime`).
 

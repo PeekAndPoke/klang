@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.comp
 
+import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.klang.ui.feel.ValueToColorMixer
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
@@ -194,7 +195,7 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
                     props.borderColor?.let { put("border-color", "$it !important") }
                     props.glowColor?.takeIf { props.glowIntensity > 0.0 }?.let { glow ->
                         val alpha = props.glowIntensity.coerceIn(0.0, 1.0)
-                        put("box-shadow", "0 0 ${props.size * 0.375} ${glow.withAlpha(alpha)}")
+                        put("box-shadow", "0 0 ${props.size * KlangTheme.gaugeGlowBlur} ${glow.withAlpha(alpha)}")
                     }
                     width = props.size
                     height = props.size

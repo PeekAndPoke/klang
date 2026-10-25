@@ -11,10 +11,10 @@ import kotlinx.browser.window
 import kotlinx.css.Color
 
 /**
- * All Klang UI colors in one place.
+ * All Klang UI colors in one place, and the gauges' glow blur.
  *
  * This is a pure data class — no side effects, easy to copy/modify for user theming.
- * All values are hex strings so they work both in CSS (via [Color]) and in JS contexts
+ * All colors are hex strings so they work both in CSS (via [Color]) and in JS contexts
  * (e.g. CodeMirror theme objects).
  *
  * Use [KlangTheme] to obtain the active instance; components subscribe to that
@@ -63,10 +63,15 @@ data class KlangLookAndFeel(
     val moderate: String = "#e5c07b",
     val warning: String = "#d19a66",
     val critical: String = "#e06c75",
+
+    // ── Gauges ────────────────────────────────────────────────────────────────
+
+    /** The glow's blur radius around round gauges and the volume knob, as a share of their size (KLANG-00330). */
+    val gaugeGlowBlur: Double = 0.25,
 ) {
 
     companion object {
-        /** Reads all tokens from the CSS custom properties defined on `:root` in `index.css`. */
+        /** Reads all tokens from the CSS custom properties defined on `:root` in `klang.css`. */
         fun fromCss(): KlangLookAndFeel {
             val style = window.getComputedStyle(document.documentElement!!)
             fun v(name: String): String = style.getPropertyValue(name).trim()
@@ -89,6 +94,7 @@ data class KlangLookAndFeel(
                 moderate = v("--klang-moderate"),
                 warning = v("--klang-warning"),
                 critical = v("--klang-critical"),
+                gaugeGlowBlur = v("--klang-gauge-glow-blur").toDoubleOrNull() ?: KlangLookAndFeel().gaugeGlowBlur,
             )
         }
     }

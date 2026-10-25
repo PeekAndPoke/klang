@@ -28,6 +28,10 @@ external class AudioContext(options: AudioContextOptions = definedExternally) {
     fun close(): Promise<Unit>
     fun decodeAudioData(audioData: ArrayBuffer): Promise<AudioBuffer>
     fun createAnalyser(): AnalyserNode
+    fun createGain(): GainNode
+
+    /** The context's clock in seconds, the time base of [AudioParam]'s scheduling. */
+    val currentTime: Double
 }
 
 external interface AudioContextOptions {
@@ -67,6 +71,22 @@ external class AudioWorklet {
 open external class AudioNode {
     fun connect(destination: AudioNode)
     fun disconnect()
+}
+
+/** A plain volume: multiplies its input by [gain] (the master volume, KLANG-00330). */
+external class GainNode : AudioNode {
+    val gain: AudioParam
+}
+
+/** An automatable value of a node; only what the master volume uses. */
+external class AudioParam {
+    var value: Double
+
+    /** Moves the value towards [target] from [startTime] on, exponentially with [timeConstant] seconds. */
+    fun setTargetAtTime(target: Double, startTime: Double, timeConstant: Double): AudioParam
+
+    /** Drops every scheduled change from [cancelTime] on. */
+    fun cancelScheduledValues(cancelTime: Double): AudioParam
 }
 
 external class AnalyserNode : AudioNode {

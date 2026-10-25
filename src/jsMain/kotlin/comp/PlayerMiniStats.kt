@@ -12,11 +12,16 @@ import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
+import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.semanticui.noui
 import io.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.ultra.streams.ops.ticker
 import kotlinx.css.Color
+import kotlinx.css.Display
+import kotlinx.css.display
+import kotlinx.css.height
 import kotlinx.css.px
+import kotlinx.css.width
 import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlin.time.Duration.Companion.milliseconds
@@ -25,13 +30,27 @@ import kotlin.time.Duration.Companion.milliseconds
 fun Tag.PlayerMiniStats(
     glowColor: Color? = null,
     glowIntensity: Double = 0.45,
+    showVolume: Boolean = false,
 ) = comp(
-    PlayerMiniStats.Props(glowColor = glowColor, glowIntensity = glowIntensity)
+    PlayerMiniStats.Props(glowColor = glowColor, glowIntensity = glowIntensity, showVolume = showVolume)
 ) {
     PlayerMiniStats(it)
 }
 
 class PlayerMiniStats(ctx: Ctx<Props>) : Component<PlayerMiniStats.Props>(ctx) {
+
+    companion object {
+        /** The middle gauge, the Motor heat. */
+        const val MIDDLE_GAUGE_PX = 62.0
+
+        /** The gauges beside it. */
+        const val SIDE_GAUGE_PX = 50.0
+
+        /**
+         * The volume knob, outside the left gauge, sized by eye with the maintainer (2026-10-25).
+         */
+        const val VOLUME_KNOB_PX = 31.0
+    }
 
     //  PROPS  //////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -40,6 +59,8 @@ class PlayerMiniStats(ctx: Ctx<Props>) : Component<PlayerMiniStats.Props>(ctx) {
         val glowColor: Color?,
         /** Strength of the gauge glow, 0.0..1.0. */
         val glowIntensity: Double,
+        /** The master volume knob left of the gauges (KLANG-00330): the Motor shows it, the start page does not. */
+        val showVolume: Boolean,
     )
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -86,11 +107,22 @@ class PlayerMiniStats(ctx: Ctx<Props>) : Component<PlayerMiniStats.Props>(ctx) {
 
         div {
             ui.horizontal.list {
+                if (props.showVolume) {
+                    noui.bottom.aligned.item {
+                        VolumeKnob(
+                            size = VOLUME_KNOB_PX.px,
+                            motorOnline = currentPlayer != null,
+                            glowColor = glow,
+                            glowIntensity = props.glowIntensity,
+                        )
+                    }
+                }
+
                 noui.bottom.aligned.item {
                     val active = playerDiagnostics?.diagnostics?.cylinders?.count { it.active }
                     roundCylindersGauge(
                         value = active?.toDouble(),
-                        size = 50.px,
+                        size = SIDE_GAUGE_PX.px,
                         glowColor = glow,
                         glowIntensity = props.glowIntensity,
                     )
@@ -100,7 +132,7 @@ class PlayerMiniStats(ctx: Ctx<Props>) : Component<PlayerMiniStats.Props>(ctx) {
                     val headroom = playerDiagnostics?.diagnostics?.renderHeadroom
                     renderMotorHeatGauge(
                         value = headroom,
-                        size = 62.px,
+                        size = MIDDLE_GAUGE_PX.px,
                         glowColor = glow,
                         glowIntensity = props.glowIntensity,
                     )
@@ -110,10 +142,23 @@ class PlayerMiniStats(ctx: Ctx<Props>) : Component<PlayerMiniStats.Props>(ctx) {
                     val voiceCount = playerDiagnostics?.diagnostics?.activeVoiceCount
                     activeVoicesGauge(
                         value = voiceCount,
-                        size = 50.px,
+                        size = SIDE_GAUGE_PX.px,
                         glowColor = glow,
                         glowIntensity = props.glowIntensity,
                     )
+                }
+
+                // An empty place of the knob's size on the other side, so the middle gauge stays in the middle
+                if (props.showVolume) {
+                    noui.bottom.aligned.item {
+                        div {
+                            css {
+                                display = Display.inlineBlock
+                                width = VOLUME_KNOB_PX.px
+                                height = VOLUME_KNOB_PX.px
+                            }
+                        }
+                    }
                 }
             }
         }

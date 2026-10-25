@@ -24,6 +24,10 @@
        text-secondary (#abb2bf) at 90% brightness */
     --klang-gauge-ring:     #9aa0ac;
 
+    /* The glow's blur radius around round gauges and the volume knob, as a share of
+       their size (KLANG-00330: 0.375 read too fuzzy) */
+    --klang-gauge-glow-blur: 0.25;
+
     --klang-excellent:      #56b6c2;
     --klang-good:           #98c379;
     --klang-moderate:       #e5c07b;

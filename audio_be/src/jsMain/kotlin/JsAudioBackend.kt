@@ -12,6 +12,7 @@ import io.peekandpoke.klang.audio_bridge.AudioContext
 import io.peekandpoke.klang.audio_bridge.AudioContextOptions
 import io.peekandpoke.klang.audio_bridge.AudioWorkletNode
 import io.peekandpoke.klang.audio_bridge.AudioWorkletNodeOptions
+import io.peekandpoke.klang.audio_bridge.GainNode
 import io.peekandpoke.klang.audio_bridge.guessDeviceLatencyMs
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.common.infra.KlangRingBuffer
@@ -25,6 +26,9 @@ import kotlinx.coroutines.withContext
 import org.w3c.dom.MessageEvent
 import org.w3c.dom.get
 
+/** How fast the master volume follows the knob: the time constant of its glide, short enough to feel direct. */
+private const val VOLUME_GLIDE_SECONDS = 0.015
+
 class JsAudioBackend(
     private val config: AudioBackend.Config,
 ) : AudioBackend {
@@ -34,6 +38,14 @@ class JsAudioBackend(
 
     // AnalyserNode for visualization
     private var analyserNode: AnalyserNode? = null
+
+    // The master volume (KLANG-00330): a gain between the worklet and the analyser, so the scope and the spectrum
+    // show what the speakers get (maintainer, 2026-10-25). Null before the graph is built and after teardown.
+    private var volumeNode: GainNode? = null
+    private var audioContext: AudioContext? = null
+
+    // The volume asked for, also before the node exists
+    private var outputVolume: Double = 1.0
 
     // The worklet node, held as a field (not just a local in [run]) so [pump] can reach the port
     // from outside the render loop. Null before the worklet is created and after teardown.
@@ -104,14 +116,21 @@ class JsAudioBackend(
                 analyserNode = null
             }
 
-            // Connect audio graph: Worklet → Analyser → Destination (or direct if no analyser)
+            val volume = ctx.createGain().apply { gain.value = outputVolume }
+
+            volumeNode = volume
+            audioContext = ctx
+
+            // Connect audio graph: Worklet → Volume → Analyser → Destination (or no analyser)
+            node.connect(volume)
+
             when (val ana = analyserNode) {
                 null -> {
-                    node.connect(ctx.destination)
+                    volume.connect(ctx.destination)
                 }
 
                 else -> {
-                    node.connect(ana)
+                    volume.connect(ana)
                     ana.connect(ctx.destination)
                 }
             }
@@ -220,6 +239,8 @@ class JsAudioBackend(
             // after this nothing can post to a port that is about to be disconnected.
             val liveNode = workletNode
             workletNode = null
+            volumeNode = null
+            audioContext = null
 
             try {
                 liveNode?.disconnect()
@@ -244,6 +265,27 @@ class JsAudioBackend(
             } catch (e: Throwable) {
                 console.error("Error closing AudioContext", e)
             }
+        }
+    }
+
+    /** The master volume on the gain before the analyser; see [AudioBackend.setOutputVolume]. */
+    override fun setOutputVolume(gain: Double) {
+        // NaN-guard: an unreadable volume is silence; the scale already keeps the knob in 0.0 to 1.0
+        val safe = if (gain != gain) 0.0 else gain.coerceIn(0.0, 1.0)
+
+        outputVolume = safe
+
+        val node = volumeNode ?: return
+        val ctx = audioContext ?: return
+
+        try {
+            // A short glide instead of a jump, so turning the knob does not click. The cancel drops a glide already
+            // set for this same instant (several moves in one render quantum, or a suspended context whose clock
+            // stands still); a glide under way is kept, and the new one takes over from its current value
+            node.gain.cancelScheduledValues(ctx.currentTime)
+            node.gain.setTargetAtTime(target = safe, startTime = ctx.currentTime, timeConstant = VOLUME_GLIDE_SECONDS)
+        } catch (e: Throwable) {
+            console.warn("JsAudioBackend: could not set the volume", e)
         }
     }
 

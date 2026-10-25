@@ -16,6 +16,7 @@ import io.peekandpoke.klang.script.stdlib.ConsoleLevel
 import io.peekandpoke.klang.script.stdlib.KlangStdLib
 import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
+import io.peekandpoke.klang.storage.OutputVolumeStorage
 import io.peekandpoke.kraft.utils.async
 import io.peekandpoke.kraft.utils.launch
 import io.peekandpoke.ultra.streams.Stream
@@ -45,6 +46,33 @@ object Player {
 
     private val _samples = StreamSource<Samples?>(null)
     val samples: Stream<Samples?> = _samples.readonly
+
+    private val _outputVolume = StreamSource(OutputVolumeStorage.load())
+
+    /**
+     * The master volume, a linear gain from 0.0 (silence) to 1.0 (the song's own level) on the browser's output
+     * (KLANG-00330). It lives here from page load, before the Motor; the player gets it when it starts, and every
+     * change after. The volume knob derives its position from it ([MasterVolumeScale]).
+     */
+    val outputVolume: Stream<Double> = _outputVolume.readonly
+
+    /** Sets the master volume to [gain] (kept in 0.0 to 1.0) and hands it to the player, when there is one. */
+    fun setOutputVolume(gain: Double) {
+        // NaN-guard: an unreadable gain leaves the volume where it is
+        if (gain != gain) {
+            return
+        }
+
+        val kept = gain.coerceIn(0.0, 1.0)
+
+        _outputVolume(kept)
+        get()?.setOutputVolume(kept)
+    }
+
+    /** Stores the master volume for the next visit; once per turn of the knob, not on every move. */
+    fun rememberOutputVolume() {
+        OutputVolumeStorage.save(_outputVolume())
+    }
 
     /**
      * Snapshot of whatever is considered the "primary" playback across the app.
@@ -153,8 +181,12 @@ object Player {
             try {
                 val samples = samplesDeferred.await()
 
-                val playerOptions = KlangPlayer.Options(samples = samples, sampleRate = 48000)
+                // The master volume (KLANG-00330) goes in before the audio graph exists
+                val playerOptions = KlangPlayer.Options(samples = samples, sampleRate = 48000, outputVolume = _outputVolume())
                 val playerInstance = klangPlayer(playerOptions)
+
+                // And once more after: a turn of the knob while the engine started
+                playerInstance.setOutputVolume(_outputVolume())
 
                 console.log("KlangPlayer ready", playerInstance)
 
