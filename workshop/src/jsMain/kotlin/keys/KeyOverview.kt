@@ -132,6 +132,15 @@ class KeyBindingsOverlay(ctx: Ctx<Props>) : Component<KeyBindingsOverlay.Props>(
 
     private val topLayer by subscribingTo(keys.topLayer)
 
+    init {
+        lifecycle {
+            // The first draw cannot see whether it sits in an inert part of the page (no element yet): look again
+            onMount {
+                triggerRedraw()
+            }
+        }
+    }
+
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     override fun VDom.render() {

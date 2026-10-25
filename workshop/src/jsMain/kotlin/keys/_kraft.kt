@@ -30,14 +30,20 @@ val Component<*>.keyLayer: KeysManager.KeyLayer get() = getAttributeRecursiveOrN
 
 /**
  * Opens a layer of keys for this component and everything below it (a modal): while it is on top, only their keys
- * answer and only their hints show. It closes when the component unmounts. Call it in the component's `init`, before
- * the components below it are made.
+ * answer and only their hints show. Call it in the component's `init`, before the components below it are made: they
+ * find the layer at once, and it goes on top when the component mounts and closes when it unmounts. A component that
+ * never mounts (its first render threw) never covers the page.
  */
 fun Component<*>.openKeyLayer(): KeysManager.LayerHandle {
-    val layer = keys.openLayer()
+    val manager = keys
+    val layer = manager.newLayer()
     attributes[KeysManager.layerKey] = layer
 
     lifecycle {
+        onMount {
+            manager.open(layer)
+        }
+
         onUnmount {
             layer.close()
         }

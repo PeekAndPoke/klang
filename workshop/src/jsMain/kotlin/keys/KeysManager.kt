@@ -36,7 +36,7 @@ import kotlin.math.abs
  * One listener on [target] (the document) answers every key, after the page's own handlers: a key a component already
  * handled (`defaultPrevented`: the code editor's own keys while it has the focus) is left alone, and so is a held key's
  * repeat. A key without Ctrl, Alt or Meta is left alone while the user types in a text field. When a key triggers
- * several actions (a clash), the first defined one with an enabled handler answers. The hints follow the keys before
+ * several actions (a clash), the first defined one with an enabled handler in the top layer answers. The hints follow the keys before
  * the page's handlers (the capture phase), so a handler that stops a key cannot leave them showing.
  */
 class KeysManager(
@@ -103,7 +103,12 @@ class KeysManager(
     }
 
     private inner class Layer : LayerHandle {
+        /** Once closed, it never opens again. */
+        var closed = false
+
         override fun close() {
+            closed = true
+
             if (layers.remove(this)) {
                 _topLayer(layers.lastOrNull() ?: rootLayer)
             }
@@ -250,9 +255,24 @@ class KeysManager(
     //  HANDLERS  ///////////////////////////////////////////////////////////////////////////////////////////////
 
     /** Opens a layer over everything open before it; see [LayerHandle]. */
-    fun openLayer(): LayerHandle = Layer().also { layer ->
-        layers.add(layer)
-        _topLayer(layer)
+    fun openLayer(): LayerHandle = newLayer().also { open(it) }
+
+    /**
+     * A layer not on the stack yet, for a component that hands it to the components below it before it mounts
+     * (`Component.openKeyLayer`): it goes on top with [open], so one that never mounts never covers the page.
+     */
+    internal fun newLayer(): LayerHandle = Layer()
+
+    /** Puts [layer] (from [newLayer]) on top; a layer already open or closed stays as it is. */
+    internal fun open(layer: LayerHandle) {
+        val opening = layer as? Layer ?: return
+
+        if (opening.closed || opening in layers) {
+            return
+        }
+
+        layers.add(opening)
+        _topLayer(opening)
     }
 
     /** True while [layer] is the one whose keys answer. */

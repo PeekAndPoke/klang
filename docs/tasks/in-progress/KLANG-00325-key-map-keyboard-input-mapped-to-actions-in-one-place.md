@@ -206,16 +206,24 @@ Klang out of it and the move is a copy. Klang's modules depend on it.
    CodeMirror command the table names exists in the installed packages; the editor's overlay of its keys.
 4. **The settings page** with KLANG-00324, and `KeymapStorage`.
 5. **The move into Kraft** when it has proven itself; ULTRA-00239 (Esc on modals) built on it there, Klang's
-   `YesNoModal` Esc onto it.
+   `YesNoModal` Esc onto it. Kraft's own modals take the layers with the move, not as instructions for each app
+   (maintainer's question, 2026-10-25): `FadingModal` opens a key layer in its `init` (`openKeyLayer()`), so every
+   Kraft modal holds the page's keys back by default, as its dimmer holds back the mouse; Esc dismisses and OkCancel
+   answers with Ctrl+Enter through the same actions. To decide then: whether popups and toasts open layers too (a
+   popup opened from a modal today belongs to the root layer, see "Kraft parity").
 
 **Open after step 1's review round 1 (2026-10-25), for later steps:**
 - **Layers:** page keys still act under a modal (Ctrl+Shift+Enter plays behind the bookmark question). The stack is per
   action; a modal needs a layer that blocks the keys below it. Decide with step 5 (ULTRA-00239).
 - **Kraft parity for the move:** of Kraft's managers only the modals manager is an interface with an implementation;
-  the popups and toasts managers are classes, as `KeysManager` is (it adds its listeners in its constructor); `Component.keys` is a generic name on every component. Settle when it
-  moves. Also for the move: the stage's `visibleBox` treats `overflow-x: clip` with a visible `overflow-y` as clipping
-  both axes, and cuts an absolute or fixed anchor by ancestors that are not its containing block; no anchor in Klang
-  is either (2026-10-25).
+  the popups and toasts managers are classes, as `KeysManager` is (it adds its listeners in its constructor);
+  `Component.keys` is a generic name on every component. Settle when it moves. Also for the move: the stage's
+  `visibleBox` treats `overflow-x: clip` with a visible `overflow-y` as clipping both axes, and cuts an absolute or
+  fixed anchor by ancestors that are not its containing block; no anchor in Klang is either (2026-10-25). Layers
+  follow the component tree, not the stack on screen: a component drawn on an app-wide stage (a popup opened from
+  inside a modal) belongs to the root layer and waits while the modal is open. A modal's Esc follows the rule that a
+  plain key belongs to a text field, so a future modal with an input would not close on Esc from inside it (the old
+  hand-made listener did); no modal has one today.
 - **Matching by position:** a symbol with Shift and a digit match by the key's position (one rule each, so one key
   never triggers two chords), so on a French keyboard Stop (Ctrl+Shift+.) is the key at the US period, which shows `:`;
   the hint still says `.`. A layout-aware label waits for the settings page.
@@ -291,3 +299,7 @@ OkCancel real buttons and focus; their Esc stays ours until the key map carries 
   line, the line's code), left of the editor's keys overview (both show; the Ctrl hints stay while Shift joins). It
   needs a new pattern, `OnHoldKey`: a held modifier combination starts and ends a hold, as the hints' trigger does
   today; the hints become one hold among others.
+- 2026-10-25: the layers step's review round 1 (level 2) clean; its MINORs fixed with the maintainer's OK: the clash
+  KDocs name the top layer, a component's layer goes on top only when it mounts (one that never mounts never covers
+  the page), workshop tests for a component's layer and the overview under a layer or inside an inert part, room in
+  the modal's header for "Esc Close".

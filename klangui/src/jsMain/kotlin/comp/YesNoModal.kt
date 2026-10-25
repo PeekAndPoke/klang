@@ -20,6 +20,7 @@ import kotlinx.html.ButtonType
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.id
+import kotlinx.html.style
 import org.w3c.dom.HTMLElement
 
 /**
@@ -111,6 +112,9 @@ class YesNoModal(ctx: Ctx<Props>) : FadingModal<YesNoModal.Props, Boolean>(ctx) 
             attributes["tabindex"] = "-1"
 
             ui.header {
+                // Room for "Esc Close" in the corner, so a long headline is never covered by it
+                style = "padding-right: 7.5rem"
+
                 +props.headline
                 // A key of the whole modal, in its header's corner
                 OnKey(

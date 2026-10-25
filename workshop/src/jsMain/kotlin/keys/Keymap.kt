@@ -9,7 +9,7 @@ import org.w3c.dom.events.KeyboardEvent
  *
  * What is wrong with it is in [problems]: two actions on one key in one scope, a key the browser never hands to a page,
  * a key that cannot be read. A clash stays in the keymap (both actions keep the key; of the two, the first defined one
- * with an enabled handler acts, see [KeysManager]) so the user sees it and can fix it.
+ * with an enabled handler in the top layer acts, see [KeysManager]) so the user sees it and can fix it.
  */
 class Keymap(
     val platform: KeyPlatform,
@@ -19,7 +19,7 @@ class Keymap(
 ) {
     /** Something wrong in a keymap. */
     sealed interface Problem {
-        /** Two or more actions in one scope share a key; the first defined one with an enabled handler acts. */
+        /** Two or more actions in one scope share a key; the first defined one with an enabled handler in the top layer acts. */
         data class Clash(val scope: String, val chord: KeyChord, val actionIds: List<String>) : Problem
 
         /** The browser keeps this key from every page (a new tab, closing the tab): the action would never fire. */

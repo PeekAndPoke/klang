@@ -531,4 +531,28 @@ class KeysManagerSpec : StringSpec({
             seen shouldContainExactly listOf(keys.rootLayer, modal, keys.rootLayer)
         }
     }
+
+    "a layer made for a component waits off the stack until it opens; closed, it never opens" {
+        withManager { keys, _ ->
+            val waiting = keys.newLayer()
+            keys.isOnTop(keys.rootLayer) shouldBe true
+
+            keys.open(waiting)
+            keys.isOnTop(waiting) shouldBe true
+
+            waiting.close()
+            keys.open(waiting)
+
+            withClue("closed stays closed") {
+                keys.isOnTop(keys.rootLayer) shouldBe true
+            }
+
+            withClue("a layer closed before it ever opened never opens either") {
+                val never = keys.newLayer()
+                never.close()
+                keys.open(never)
+                keys.isOnTop(keys.rootLayer) shouldBe true
+            }
+        }
+    }
 })

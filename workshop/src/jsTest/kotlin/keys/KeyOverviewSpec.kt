@@ -6,6 +6,7 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.kraft.testing.TestBed
 import io.peekandpoke.kraft.testing.eventually
 import kotlinx.browser.document
+import kotlinx.html.div
 import kotlinx.html.span
 
 private val save = KeyAction(id = "save", title = "Save", keys = listOf("Mod-S"))
@@ -89,6 +90,50 @@ class KeyOverviewSpec : StringSpec({
                 eventually {
                     document.querySelectorAll(".row").length shouldBe 0
                 }
+            }
+        } finally {
+            manager.dispose()
+        }
+    }
+
+    "the overlay waits under another layer and inside an inert part of the page" {
+        val manager = KeysManager(platform = pc, hintDelayMs = 10).apply { define(bag) }
+        val plain: KeyOverviewRenderer = { state -> state.entries.forEach { entry -> span(classes = "row") { +entry.title } } }
+
+        try {
+            TestBed.preact(
+                appSetup = { keys(manager) },
+                view = {
+                    div(classes = "awake") { KeyBindingsOverlay(bindings = bag, renderer = plain) }
+                    div(classes = "asleep") {
+                        // Not "": Preact sets inert as the element's property, and an empty string is false there
+                        attributes["inert"] = "inert"
+                        KeyBindingsOverlay(bindings = bag, renderer = plain)
+                    }
+                },
+            ) {
+                document.body!!.dispatchEvent(keyEvent(key = "Control", code = "ControlLeft", ctrl = true))
+
+                eventually {
+                    withClue("the awake one shows, the inert one does not") {
+                        document.querySelectorAll(".awake .row").length shouldBe 2
+                        document.querySelectorAll(".asleep .row").length shouldBe 0
+                    }
+                }
+
+                val modal = manager.openLayer()
+
+                eventually {
+                    withClue("under another layer") { document.querySelectorAll(".awake .row").length shouldBe 0 }
+                }
+
+                modal.close()
+
+                eventually {
+                    document.querySelectorAll(".awake .row").length shouldBe 2
+                }
+
+                document.body!!.dispatchEvent(keyEvent(key = "Control", code = "ControlLeft", type = "keyup"))
             }
         } finally {
             manager.dispose()

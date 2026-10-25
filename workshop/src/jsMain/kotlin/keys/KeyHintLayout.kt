@@ -23,7 +23,7 @@ enum class KeyHintPlacement {
     /** Inside the anchor, in its top-left corner: a key that belongs to a whole box (a modal's header). */
     InsideStart,
 
-    /** Inside the anchor, in its top-right corner ("Esc: Close" in a modal's header). */
+    /** Inside the anchor, in its top-right corner ("Esc Close" in a modal's header). */
     InsideEnd,
 }
 
