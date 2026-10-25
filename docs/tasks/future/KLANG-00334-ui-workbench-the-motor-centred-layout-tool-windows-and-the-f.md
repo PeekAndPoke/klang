@@ -94,7 +94,8 @@ Kept in order, close to the maintainer's words.
     again, which needs a new feature in the key bindings. Proposed: Mod K as the plain chord (the key manager has it
     today), and Shift Shift as a second way in: a tap binding (a modifier pressed and released with no other key
     between; two within about 300 to 400 ms), simpler than general sequences. The key manager is Klang-Main-Dev's
-    (KLANG-00325).
+    (KLANG-00325). Passed to Klang-Main-Dev on the maintainer's word (2026-10-25): "keys in a row", in parts:
+    detecting them (the delay accepted between) and showing the shortcut; it designs and builds it there.
 38. (2026-10-25) The yes/no popup's buttons sat oddly (left aligned; right aligned "would also be strange"). Tried: a
     key row across the dialog's foot, edge to edge, the keys sharing the width, the main one on the right in silver
     (`KlangDialog`); caps printed under the keys were tried and rejected. And everywhere: buttons carry verbs that say what happens
