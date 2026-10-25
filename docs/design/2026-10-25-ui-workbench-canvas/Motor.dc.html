@@ -37,7 +37,7 @@ body{margin:0}
         </defs>
         <circle cx="15.5" cy="15.5" r="14.5" fill="url(#knobCap)" stroke="#000" stroke-width="1"></circle>
         <circle cx="15.5" cy="15.5" r="14" fill="none" stroke="#9aa0ac" stroke-opacity="0.35" stroke-width="0.8"></circle>
-        <line x1="15.5" y1="15.5" x2="22.5" y2="6.5" stroke="#EBC773" stroke-width="2" stroke-linecap="round"></line>
+        <line x1="15.5" y1="15.5" x2="22.5" y2="6.5" stroke="#EDEFF2" stroke-width="2" stroke-linecap="round"></line>
       </svg>
     </div>
 
@@ -60,7 +60,6 @@ body{margin:0}
           <circle cx="{{ d.x }}" cy="{{ d.y }}" r="1.6" fill="{{ dotColor }}"></circle>
         </sc-for>
       </svg>
-      <span aria-hidden="true" style="position: absolute; top: -5px; right: -3px; width: 6px; height: 6px; border-radius: 50%; background: {{ ledColor }}; box-shadow: {{ ledGlow }}"></span>
     </button>
   </div>
 
@@ -136,9 +135,8 @@ class Component extends DCLogic {
       scope: pts.join(' '),
       spectrum: spectrum,
       dots: dots,
-      dotColor: open ? '#EBC773' : '#D7DADF',
-      ledColor: open ? '#EBC773' : '#3a3220',
-      ledGlow: open ? '0 0 6px #EBC773' : 'none',
+      // Open: pressed in, the dots lit in the "on" colour; no lamp of its own (maintainer, 2026-10-25)
+      dotColor: open ? '#98c379' : '#D7DADF',
       capBg: open ? 'radial-gradient(circle at 50% 60%, #1b1e24, #2a2e36)' : 'radial-gradient(circle at 40% 30%, #4a505b, #1b1e24)',
       capShadow: open ? 'inset 0 2px 4px rgba(0,0,0,0.8)' : '0 2px 3px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.12)',
       // The lamp pulses once per cycle (33 RPM: 1.82 s), in time with the song. The keyframes live in the page that shows the Motor.

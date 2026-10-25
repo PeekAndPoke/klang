@@ -81,6 +81,9 @@ Kept in order, close to the maintainer's words.
     coming later). Plan: in the drawer's step, the three sample looks of the kitchen sink become built-in looks in
     `klangui`, the drawer gets a LOOK row (the active one pressed, its lamp on), and the choice is remembered in the
     browser (later in the account).
+34. (2026-10-25) The drawer's look buttons read as a new button type (a domed tile with a swatch), liked. The Motor
+    button loses its lamp: while the drawer is open it is pressed in and its dots lit (in the "on" colour, since gold
+    means "try me" only); that is signal enough.
 
 ## Where the conversation stands (leanings, not decisions)
 
