@@ -62,6 +62,8 @@ Kept in order, close to the maintainer's words.
 29. (2026-10-25) In the very long run: another kind of script (also KlangScript) for visual coding, that changes
     how the UI looks when certain musical events happen. Future idea, to keep in mind while building the theme:
     KLANG-00336 (visual script).
+30. (2026-10-25) Step 1 built (KLANG-00337): likes the kitchen sink page and the sample looks (Default, Copper,
+    Cream on black). The names `--kl-` and `KlangLook` are fine.
 
 ## Where the conversation stands (leanings, not decisions)
 

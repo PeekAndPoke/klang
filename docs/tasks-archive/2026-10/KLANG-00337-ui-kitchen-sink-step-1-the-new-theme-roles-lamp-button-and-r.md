@@ -1,6 +1,6 @@
 # KLANG-00337: UI kitchen sink, step 1: the new theme roles, lamp, button and riveted panel
 
-> **Status (2026-10-25): IN PROGRESS.** Step 1 of the UI workbench, started with the maintainer 2026-10-25
+> **Status (2026-10-25): DONE.** the maintainer approved the page and the names, 2026-10-25
 >
 > **Part of:** KLANG-00334 (UI workbench)
 
@@ -12,8 +12,8 @@ element its own Kraft component, every element represented in the theme, and a t
 
 ## Decide before implementing
 
-- **Names** (proposed, the maintainer has not answered yet; renaming later is cheap): CSS variables `--kl-<role>`,
-  the roles an enum `KlangRole`, the resolved theme `KlangLook`, its layers `KlangLookLayers`.
+- **Names** (confirmed by the maintainer, 2026-10-25: "The prefix and KlangLook are fine"): CSS variables
+  `--kl-<role>`, the roles an enum `KlangRole`, the resolved theme `KlangLook`, its layers `KlangLookLayers`.
 - **Gold means "try me" and nothing else.** The canvas drew the active drawer button's lamp gold too; the code
   gives "on" its own colour (`--kl-lamp-on`), so gold stays the one signal of the trail.
 
@@ -66,5 +66,8 @@ element its own Kraft component, every element represented in the theme, and a t
 ## History
 
 - 2026-10-25: created and started.
-- 2026-10-25: built, reviewed (two rounds, the second clean), mutation-checked, committed. Open: the maintainer's
-  look at the page, and the names (`--kl-`, `KlangLook`).
+- 2026-10-25: built, reviewed (two rounds, the second clean), mutation-checked, committed (69383b04); the page linked
+  in the side menu after Dev status (43c79a79, the maintainer's request).
+- 2026-10-25: the maintainer looked at the page: "I like the page, i also like the presets you built." The names
+  are confirmed. Done.
+- 2026-10-25: DONE. the maintainer approved the page and the names, 2026-10-25
