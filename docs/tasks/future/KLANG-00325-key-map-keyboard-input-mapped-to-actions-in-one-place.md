@@ -2,6 +2,8 @@
 
 > **Status (2026-10-21): IDEA.** The PC keys are decided (interview with the maintainer, 2026-10-21); the Mac table
 > and the design draft below wait for the maintainer's look, then DESIGNED.
+>
+> **Part of:** KLANG-00332 (UX comfort)
 
 ## Why this exists
 
@@ -193,3 +195,4 @@ OkCancel real buttons and focus; their Esc stays ours until the key map carries 
   of it.
 - 2026-10-25: next after the Ultra 0.115.0 bump (maintainer); built here, moves to Kraft once stable, Kraft's Esc
   on top; Klang keeps its own dialogs.
+- 2026-10-25: part of the epic UX comfort (KLANG-00332), as an epic of its own inside it.
