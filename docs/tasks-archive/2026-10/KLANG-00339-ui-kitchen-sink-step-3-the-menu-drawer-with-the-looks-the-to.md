@@ -1,6 +1,6 @@
 # KLANG-00339: UI kitchen sink, step 3: the menu drawer with the looks, the tool window, the context menu
 
-> **Status (2026-10-25): IN PROGRESS.** Step 3 of the UI workbench, the maintainer's go 2026-10-25
+> **Status (2026-10-25): DONE.** the maintainer approved the popup section and the dialog, 2026-10-25
 >
 > **Part of:** KLANG-00334 (UI workbench)
 
@@ -86,3 +86,5 @@ works."
   dialog named by its title and described by its text, the strip's corner, the KDoc on key order and key layers),
   mutation-checked (the main key not silver, the keys unbound, the dialog named by its text). `YesNoModal` moves onto
   it later (Klang-Main-Dev's).
+- 2026-10-25: the maintainer: "popup section looks good"; the dialog: "OK thats good." Done.
+- 2026-10-25: DONE. the maintainer approved the popup section and the dialog, 2026-10-25
