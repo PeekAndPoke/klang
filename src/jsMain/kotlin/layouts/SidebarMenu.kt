@@ -355,6 +355,10 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
                 state = State.DevStatus
                 router.navToUri(Nav.devStatus())
             }
+            // The page has a full-screen layout of its own, so no menu state stays selected for it
+            menuItem(false, "UI kitchen sink", { palette }) {
+                router.navToUri(Nav.uiKitchenSink())
+            }
         }
     }
 
