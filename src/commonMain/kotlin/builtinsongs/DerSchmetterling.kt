@@ -22,7 +22,7 @@ import * from "sprudel"
 // Song Status: Upcoming Garage Band ...
 
 let feel          =   20    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
-let transposition =    2    // -1 .. D# | 0 .. E | 1 .. F
+let transposition =    0    // -1 .. D# | 0 .. E | 1 .. F
 let drunk         =    2    // How many beers did each band member have?
 let snareHz       =  210    // Where does the snare cut through?
 
@@ -124,7 +124,7 @@ let cabStock = x => x.lowpass(5000).lowpass(5000)
 let cab4x12 = x => x
   .eq(e => e
     .band(freq =  120, q = 0.7, db =  1.40)        // thump: closed-back box resonance
-    .band(freq =  380, q = 0.5, db =  3.90)        // roar:  low mids
+    .band(freq =  380, q = 0.5, db =  3.95)        // roar:  low mids
     .band(freq = 2700, q = 1.8, db =  4.40)        // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
@@ -317,7 +317,7 @@ export guitar2 = n(guitar2_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(gu
 export guitar3_pat =
   `<[0 0  2 4  0 0 -2 -1] [0 0 2 [4 4 4 -1]              0 0 -2 -1]
     [0 0  2 4  0 0 -2 -1] [0 0 2 [4 6 4  6]              0 0 -2 -1]
-    [0 0  2 4  0 0 -2 -1] [0 [[0 3 4 5] 7] 2 [4 4 2 6]   [[7 4] 7] [7 0] -2 -1]
+    [0 0  2 4  0 0 -2 -1] [0 [[0 3 4 5] 7] 2 [4 6 4 6]   [[7 4] 7] [7 0] -2 -1]
     [0 0 -1 3  0 0 -2 -1] [0 0 3 [0 -2]                  0 0 [0 4 7 9] 6]>/4`
 
 export guitar3_shape = x => x.pregain(guitarDyna(3).fast(2)).sound(guitar).adsrOff().unison(voices = 5, spread = 0.08)
@@ -387,7 +387,7 @@ export trommel_shape = x => x.sound(gummiEimer).adsrOff() // .solo()
   .pan(0.475).superimpose(pan(0.525))
 
 export trommel_arrange = x => x.orbit(5) // .solo(0.5)
-  .scale("e4:minor").gain(0.15)
+  .scale("e4:minor").gain(0.145)
   .mute("<1!32 0!32 1!64>")                          
   .late(berlin(0.0030, 0.0050).seed(100).mul(drunk).fast(4))
 
