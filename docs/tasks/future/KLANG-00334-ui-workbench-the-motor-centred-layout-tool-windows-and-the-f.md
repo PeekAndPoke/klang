@@ -96,6 +96,11 @@ Kept in order, close to the maintainer's words.
     between; two within about 300 to 400 ms), simpler than general sequences. The key manager is Klang-Main-Dev's
     (KLANG-00325). Passed to Klang-Main-Dev on the maintainer's word (2026-10-25): "keys in a row", in parts:
     detecting them (the delay accepted between) and showing the shortcut; it designs and builds it there.
+    Part (a) landed (f106dcef, Klang-Main-Dev's word): `KlangKeyBindings.SearchEverywhere` (`klang.search-everywhere`)
+    fires on Mod K and on Shift tapped twice (each tap within 300 ms, the two within 400 ms; a click, a wheel turn or
+    another key between cancels), in the top key layer only. Nothing handles it yet: the search window's step binds
+    it with `keys.handle(...)` while its host is mounted, or `onKeyController(action = ...)`, which also gives the hint.
+    Chord sequences (Ctrl K, then Ctrl S) follow as part (b).
 38. (2026-10-25) The yes/no popup's buttons sat oddly (left aligned; right aligned "would also be strange"). Tried: a
     key row across the dialog's foot, edge to edge, the keys sharing the width, the main one on the right in silver
     (`KlangDialog`); caps printed under the keys were tried and rejected. And everywhere: buttons carry verbs that say what happens
