@@ -57,6 +57,11 @@ Kept in order, close to the maintainer's words.
     ("but we can also do otherwise").
 27. (2026-10-25) Users can fully customize the colours, and someday share them. "Imagine someone making a youtube
     video of this with their own look ... pretty neat!"
+28. (2026-10-25) A song's own look: not for now, but it could simply be a theme override later, "or maybe prepare
+    it already".
+29. (2026-10-25) In the very long run: another kind of script (also KlangScript) for visual coding, that changes
+    how the UI looks when certain musical events happen. Future idea, to keep in mind while building the theme:
+    KLANG-00336 (visual script).
 
 ## Where the conversation stands (leanings, not decisions)
 
@@ -105,6 +110,10 @@ Kept in order, close to the maintainer's words.
   editor's live preview is the kitchen sink; it warns when a text colour falls under 4.5:1 contrast. "Gold means
   try me" becomes a role, so it can be recoloured but stays one role. The old `--klang-*` variables become aliases
   of the new roles while the pages move over (scaffolding), then go.
+- **Prepared for later** (items 28, 29): the theme is resolved as a stack of layers (app default, the user's
+  theme, a song's override, what a visual script sets while playing), and its roles can be read and set by name.
+  The song layer and the script layer stay empty until they are wanted; the stack costs nothing now and spares a
+  rebuild then.
 
 ## Decide before implementing
 
