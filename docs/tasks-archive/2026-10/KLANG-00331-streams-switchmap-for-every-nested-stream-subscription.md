@@ -1,6 +1,7 @@
 # KLANG-00331: Streams: switchMap for every nested stream subscription
 
-> **Status (2026-10-25): DONE.** Every site ported, review round 1 clean; waits for the maintainer's hand test of the oscilloscope and the editor's highlights.
+> **Status (2026-10-25): DONE.** Every site ported, review round 1 clean, hand-tested by the maintainer 2026-10-25
+> ("KLANG-00331 works as expected").
 
 ## Why this exists
 
@@ -51,4 +52,4 @@ one playback's signals.
 - 2026-10-25: created; the Motor stats done before it (74c17d14, hand-tested by the maintainer: "yes the switchMap
   works").
 - 2026-10-25: the oscilloscope and the code playback controller ported; review round 1 clean (four nits applied).
-- 2026-10-25: DONE.
+- 2026-10-25: hand-tested by the maintainer; DONE.
