@@ -7,6 +7,7 @@ package io.peekandpoke.klang.ui.codemirror
 
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.codemirror.ext.EditorSelection
 import io.peekandpoke.klang.codemirror.ext.EditorState
@@ -27,10 +28,14 @@ import io.peekandpoke.klang.codemirror.ext.redo
 import io.peekandpoke.klang.codemirror.ext.undo
 import io.peekandpoke.kraft.utils.jsObject
 import kotlinx.browser.document
+import kotlinx.browser.window
 import org.w3c.dom.Element
 import org.w3c.dom.asList
 import org.w3c.dom.events.KeyboardEvent
 import org.w3c.dom.events.KeyboardEventInit
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
+import kotlin.math.abs
 
 /**
  * The wiring of the numbered bookmarks into CodeMirror (KLANG-00323), on a real editor state and view.
@@ -80,7 +85,7 @@ class BookmarksExtensionSpec : StringSpec({
     }
 
     /** Runs [block] on a view of [state] in the page, and removes the view after. */
-    fun withView(state: EditorState, block: (EditorView) -> Unit) {
+    suspend fun withView(state: EditorState, block: suspend (EditorView) -> Unit) {
         val parent = document.createElement("div")
 
         document.body?.appendChild(parent)
@@ -732,6 +737,35 @@ class BookmarksExtensionSpec : StringSpec({
             replaced.bookmarkLines() shouldBe listOf(Bookmarks.Line(digit = 3, line = 10))
         }
     }
+
+    "a go scrolls its line to the middle of the editor" {
+        val host = RecordingHost()
+        val doc = (1..40).joinToString("\n") { "line $it" }
+
+        withView(newState(host, doc = doc)) { view ->
+            // A short editor, so line 30 of 40 lies far below the first screen
+            view.dom.style.height = "200px"
+            view.moveCursorTo(line = 30)
+            view.pressSet(4)
+            view.moveCursorTo(line = 1)
+            view.scrollDOM.scrollTop = 0.0
+            nextFrames()
+
+            view.pressGo(4)
+            // CodeMirror scrolls when it measures, on the next animation frame
+            nextFrames()
+
+            val block = view.lineBlockAt(view.state.selection.main.head)
+            val lineMiddle = block.top + block.height / 2
+            val editorMiddle = view.scrollDOM.scrollTop + view.scrollDOM.clientHeight / 2.0
+
+            // The block's top counts from the document, a few pixels of padding below the scroller's top; one line of
+            // tolerance covers that, a "nearest" scroll misses by several lines
+            withClue("the bookmark's line ${block.top}..${block.bottom}, the editor's middle $editorMiddle") {
+                abs(lineMiddle - editorMiddle) shouldBeLessThan block.height
+            }
+        }
+    }
 })
 
 /** A host that records what the editor reports and asks, and answers the last question when told to. */
@@ -756,5 +790,12 @@ private class RecordingHost(initial: List<Bookmarks.Line> = emptyList()) {
 
         pending = null
         reply(yes)
+    }
+}
+
+/** Waits [count] animation frames, so CodeMirror's measuring (and the scroll it applies) has run. */
+private suspend fun nextFrames(count: Int = 3) {
+    repeat(count) {
+        suspendCoroutine { cont -> window.requestAnimationFrame { cont.resume(Unit) } }
     }
 }

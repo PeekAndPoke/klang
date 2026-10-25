@@ -274,7 +274,9 @@ internal object BookmarksExtension {
             state.update(
                 jsObject {
                     this.selection = jsObject<dynamic> { this.anchor = lineStart }
-                    this.scrollIntoView = true
+                    // The line in the middle of the editor, as the step back to the last edit does (maintainer,
+                    // 2026-10-25): the eye finds it there at once
+                    this.effects = EditorView.scrollIntoView(lineStart, jsObject<dynamic> { this.y = "center" })
                 }
             )
         )

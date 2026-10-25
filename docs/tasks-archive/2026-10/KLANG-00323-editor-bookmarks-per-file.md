@@ -296,3 +296,5 @@ of re-anchoring sound. Its two MINORs were applied as one batch, without a furth
 - 2026-10-21: the maintainer's hand test: the digit goes right of the line number, always shown, in room kept free on every line; the bookmark question in Klang's own themed yes or no modal (`YesNoModal`, klangui), and klang.css themes Semantic's modal content and actions; 5 of 5 mutants killed.
 - 2026-10-21: the maintainer's look request and the look review (clean, its MINORs as one batch): the digit in a small cyan box right of the number, in the bookmarks' own editor theme; the yes or no modal answers once when it is gone, in the app's card look with the gold main-answer button; Semantic's modal header themed too; 2 of 2 mutants killed.
 - 2026-10-21: DONE. Hand-tested by the maintainer 2026-10-21: the bookmarks work and look right (the digit box, the yes/no modal).
+- 2026-10-25: a go centres its line in the editor, as the step back to the last edit does (maintainer, KLANG-00325's
+  session); a browser test and its mutant (KILLED).
