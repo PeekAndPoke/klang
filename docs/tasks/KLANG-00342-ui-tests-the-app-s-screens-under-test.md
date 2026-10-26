@@ -32,6 +32,12 @@ Each child is one step; this epic collects them.
 
 An epic: it closes when the maintainer says the app is covered well enough for now.
 
+## Notes
+
+- Kraft's testing wishes from KLANG-00343 (the test gets the app and its router, a router that removes its window
+  listeners, a helper that awaits a route) are Ultra's ULTRA-00243, under its Kraft testing epic ULTRA-00244. When
+  they land, the router spec can drive the app's own router.
+
 ## History
 
 - 2026-10-26: created, with its first child KLANG-00343.
