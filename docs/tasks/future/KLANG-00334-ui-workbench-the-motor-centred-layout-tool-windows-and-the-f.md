@@ -121,6 +121,15 @@ Kept in order, close to the maintainer's words.
     can be done with keys only, probably very good for live coding." Klang-Main-Dev will build the arrows (one tab
     stop, arrows, Home/End, Enter) into the key manager once the plan is agreed. The Motor button's key: Alt+M (the
     maintainer's OK), with its own `OnKey` hint.
+41. (2026-10-26) Keys for the tool strip. Asked whether Alt+1, Alt+2 would block anything later; settled with the
+    maintainer: "Alt+Letter is better for the tools". Each tool window gets Alt and a letter of its name (Alt+D Docs,
+    Alt+K Keys; Alt+M is the Motor menu's), opening and closing it like a click on the strip, its hint on the strip
+    button. The digits stay free for live performance (muting or soloing orbits 1 to 9, say): Ctrl+1 to 9 already
+    jump to the editor's bookmarks (`KlangEditorKeyBindings`), Ctrl/Cmd+digit switches browser tabs elsewhere, and
+    Firefox on Linux may switch tabs with Alt+digit. A page can take over any browser key with `preventDefault` except
+    the reserved ones (`Keymap.RESERVED_KEYS`: Mod-N, Mod-T, Mod-W, Ctrl-Tab; on a Mac also Cmd-Q, Cmd-H, Cmd-M),
+    but each one taken costs the user the browser's own key while in Klang. All checks on a Mac (Option+letter types
+    a character) wait for a later session (the maintainer, 2026-10-26).
 
 ## Where the conversation stands (leanings, not decisions)
 
