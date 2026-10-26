@@ -14,6 +14,7 @@ import kotlinx.browser.document
 import kotlinx.coroutines.delay
 import kotlinx.html.Tag
 import kotlinx.html.button
+import kotlinx.html.div
 import kotlinx.html.span
 
 private val play = KeyAction(id = "play", title = "Play", keys = listOf("Mod-P"))
@@ -45,6 +46,20 @@ private class OwnButton(ctx: NoProps) : PureComponent(ctx) {
 
 @Suppress("FunctionName")
 private fun Tag.OwnButton() = comp { OwnButton(it) }
+
+/** A header's close key: built to show its key always, drawn in its own flow. */
+private class PillKey(ctx: NoProps) : PureComponent(ctx) {
+    private val key = onKeyController(action = play, hintMode = KeyHintMode.Always) {}
+
+    override fun VDom.render() {
+        span(classes = "pill") {
+            key.hint?.let { +it.label }
+        }
+    }
+}
+
+@Suppress("FunctionName")
+private fun Tag.PillKey() = comp { PillKey(it) }
 
 /**
  * The controller in an app's own component: it answers while mounted, its hint redraws the component, a new action
@@ -157,27 +172,44 @@ class OnKeyControllerSpec : StringSpec({
         }
     }
 
-    "a hint that always shows: without the hints held, still only while its layer is on top" {
-        withApp { keys, button ->
-            button.key.hintMode = KeyHintMode.Always
-            eventually {
-                document.querySelector(".own-key")?.textContent shouldBe " (Ctrl+P)"
-            }
+    "a hint that always shows: from the first draw without the hints held, not under a modal, not in an inert part" {
+        val manager = KeysManager(platform = KeyPlatform.Pc, hintDelayMs = 10).apply {
+            define(object : KeyBindings {
+                override val actions = listOf(play, pause, search)
+            })
+        }
 
-            val modal = keys.openLayer()
-            eventually {
-                withClue("under a modal") { document.querySelector(".own-key") shouldBe null }
-            }
+        try {
+            TestBed.preact(
+                appSetup = { keys(manager) },
+                view = {
+                    div(classes = "live") { PillKey() }
+                    div(classes = "faded") {
+                        attributes["inert"] = "inert"
+                        PillKey()
+                    }
+                },
+            ) {
+                eventually {
+                    document.querySelector(".live .pill")?.textContent shouldBe "Ctrl+P"
+                }
 
-            modal.close()
-            eventually {
-                document.querySelector(".own-key")?.textContent shouldBe " (Ctrl+P)"
-            }
+                eventually {
+                    withClue("in an inert part") { document.querySelector(".faded .pill")?.textContent shouldBe "" }
+                }
 
-            button.key.hintMode = KeyHintMode.WhileHeld
-            eventually {
-                withClue("back to while held") { document.querySelector(".own-key") shouldBe null }
+                val modal = manager.openLayer()
+                eventually {
+                    withClue("under a modal") { document.querySelector(".live .pill")?.textContent shouldBe "" }
+                }
+
+                modal.close()
+                eventually {
+                    document.querySelector(".live .pill")?.textContent shouldBe "Ctrl+P"
+                }
             }
+        } finally {
+            manager.dispose()
         }
     }
 
@@ -192,7 +224,6 @@ class OnKeyControllerSpec : StringSpec({
 
             val hint = button.key.hint!!
             hint.keyGroups() shouldBe listOf(listOf("⇧"), listOf("⇧"))
-            hint.keyParts() shouldBe listOf("⇧", "⇧")
             hint.chords shouldContainExactly listOf(KeyChord(key = "k", ctrl = true))
             releaseCtrl()
         }

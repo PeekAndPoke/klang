@@ -10,29 +10,26 @@ data class KeyHintState(
     val action: KeyAction,
     /** The single chords that trigger the action (keys in a row are in [bindings]). */
     val chords: List<KeyChord>,
-    /** The first chord as the user reads it on this platform (`Ctrl+Shift+Enter`, `⇧⌘↩`). */
+    /** The first binding as the user reads it on this platform (`Ctrl+Shift+Enter`, `⇧⌘↩`, `Shift Shift`). */
     val label: String,
     /** False while the action would not act (a disabled button). */
     val enabled: Boolean,
     /** The platform the keys are shown for. */
     val platform: KeyPlatform,
     /** Everything that triggers the action, chords and keys in a row, the first one being the one to show. */
-    val bindings: List<KeyBinding> = chords,
+    val bindings: List<KeyBinding>,
 ) {
     /** The first binding as groups of key caps, one group per step (`Shift` `Shift` is two); see [KeyBinding.keyGroups]. */
     fun keyGroups(compact: Boolean = true): List<List<String>> =
         bindings.firstOrNull()?.keyGroups(platform = platform, compact = compact) ?: emptyList()
-
-    /** The first binding's keys one by one, to draw each as a key cap; the steps of keys in a row follow each other. */
-    fun keyParts(compact: Boolean = true): List<String> = keyGroups(compact = compact).flatten()
 }
 
 /** When a component's key hint shows. */
 enum class KeyHintMode {
-    /** While the user holds the hints' key (Ctrl): the default, for a hint drawn over the page. */
+    /** While the user holds the hints' key (Ctrl) and the hints show: the default, for a hint drawn over the page. */
     WhileHeld,
 
-    /** Always, where there is room for it: a pill in a header that names its key ("Close: Esc"). */
+    /** Always: for a component that draws its key in its own flow where it has room (a header's "Close: Esc"). */
     Always,
 }
 
@@ -45,7 +42,13 @@ fun Component<*>.onKeyController(
     enabled: () -> Boolean = { true },
     hintMode: KeyHintMode = KeyHintMode.WhileHeld,
     onKey: (KeyboardEvent) -> Unit,
-): OnKeyController = OnKeyController(component = this, action = action, enabled = enabled, hintMode = hintMode, onKey = onKey)
+): OnKeyController = OnKeyController(
+    component = this,
+    action = action,
+    enabled = enabled,
+    hintMode = hintMode,
+    onKey = onKey,
+)
 
 /**
  * The machinery behind a key on a component, as Kraft's `FormController` is behind a form: the component keeps the
@@ -60,6 +63,8 @@ fun Component<*>.onKeyController(
  * - It follows the hints, the keymap and the top layer and redraws the component when one changes, so [hint] is
  *   always current: null while the hints are hidden (unless [hintMode] is [KeyHintMode.Always]), the layer is not on
  *   top or the action has no key, else what to show. A key the user changes reaches it without registering again.
+ *   Nothing tells it when a part of the page turns inert later (a page fading out): an always shown hint stays drawn
+ *   there until the component redraws, though its key no longer answers.
  *
  * A component that only answers a key (a dialog's Esc) ignores [hint]; one that draws the key in its own way (in its
  * label, right-aligned in a menu row) reads it in its render. [OnKey] is the slim default: this controller and a
@@ -70,7 +75,8 @@ class OnKeyController(
     action: KeyAction,
     /** Whether the action acts now; read at the moment of the key. */
     var enabled: () -> Boolean = { true },
-    hintMode: KeyHintMode = KeyHintMode.WhileHeld,
+    /** When [hint] shows: while the hints show, or always (a component that draws its key where it has room). */
+    val hintMode: KeyHintMode = KeyHintMode.WhileHeld,
     /** What the key does; read at the moment of the key. */
     var onKey: (KeyboardEvent) -> Unit,
 ) {
@@ -97,15 +103,6 @@ class OnKeyController(
             // Mounted: the old action is no longer answered here, and the host draws the new key
             if (changed && registration != null) {
                 register()
-                component.triggerRedraw()
-            }
-        }
-
-    /** When [hint] shows: while the hints are held, or always (a component with room for it); a change redraws. */
-    var hintMode: KeyHintMode = hintMode
-        set(value) {
-            if (value != field) {
-                field = value
                 component.triggerRedraw()
             }
         }

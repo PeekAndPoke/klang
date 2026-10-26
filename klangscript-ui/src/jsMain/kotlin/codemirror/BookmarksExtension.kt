@@ -288,7 +288,7 @@ internal object BookmarksExtension {
 
     private fun bookmarksOf(state: EditorState): Bookmarks = state.field(field).unsafeCast<Bookmarks>()
 
-    /** The bookmarks of [state] by digit, each with the code on its line, trimmed; empty without any, or without this extension. */
+    /** The bookmarks of [state] by digit, each with the code on its line ([previewOf]); empty without any or this extension. */
     fun rowsOf(state: EditorState): List<BookmarkRow> {
         // An editor without the bookmarks extension has no field: no rows
         val bookmarks = state.field(field, false)?.unsafeCast<Bookmarks>() ?: return emptyList()
@@ -298,8 +298,11 @@ internal object BookmarksExtension {
             .map { BookmarkRow(digit = it.digit, line = it.line, code = previewOf(state.doc.line(it.line).text)) }
     }
 
+    /** A tab, or a run of two blanks or more, in a preview. */
+    private val previewBlanks = Regex("\\s{2,}|\\t")
+
     /** A line's code for a preview: trimmed, a tab or a run of blanks at most two spaces (an aligned comment). */
-    private fun previewOf(text: String): String = text.trim().replace(Regex("\\s{2,}|\\t"), "  ")
+    private fun previewOf(text: String): String = text.trim().replace(previewBlanks, "  ")
 
     private fun update(bookmarks: Bookmarks, tr: Transaction): Bookmarks {
         if (tr.effects.any { it.`is`(keepLines) }) {

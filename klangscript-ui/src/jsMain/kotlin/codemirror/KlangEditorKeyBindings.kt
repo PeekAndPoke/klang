@@ -95,7 +95,8 @@ object KlangEditorKeyBindings : KeyBindings {
         KeyOverviewRow.Single(LineComment),
         KeyOverviewRow.Single(Find),
         KeyOverviewRow.Single(Completion),
-        // The page's key that brings the keyboard back here (KlangKeyBindings, maintainer 2026-10-26)
+        // The song page's key that brings the keyboard back here (KlangKeyBindings, maintainer 2026-10-26); only the
+        // song page shows this overview, and only it handles the key
         KeyOverviewRow.Single(KlangKeyBindings.FocusEditor),
     )
 }

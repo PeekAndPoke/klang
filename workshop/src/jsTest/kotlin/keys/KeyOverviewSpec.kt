@@ -65,6 +65,13 @@ class KeyOverviewSpec : StringSpec({
             keys[1] shouldBe listOf(listOf("Alt", "2"))
         }
 
+        withClue("keys in a row for one of them: each shown as it is, the user's key not hidden") {
+            val keys = overviewOf(userKeys = mapOf("go-2" to listOf("Shift Shift"))).entries[1].keys
+
+            keys.size shouldBe 9
+            keys[1] shouldBe listOf(listOf("⇧"), listOf("⇧"))
+        }
+
         withClue("a key that is no digit") {
             overviewOf(userKeys = mapOf("go-2" to listOf("F2"))).entries[1].keys[1] shouldBe listOf(listOf("F2"))
         }

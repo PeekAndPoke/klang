@@ -59,8 +59,9 @@ object KlangKeyBindings : KeyBindings {
      * Another Esc focus editor"). Inside the editor Esc stays the editor's own, as a plain key in any text field.
      * Defined after [PanelClose] on purpose: both answer in the page's layer, where the first defined action with
      * an enabled handler wins, so an open panel closes first and the next Esc lands here. The two share Escape on
-     * purpose, which their own scopes allow; one scope would report it as a clash. A dialog with its own key layer
-     * (YesNoModal) answers its Esc there; one without (a code tool) is guarded by the song page.
+     * purpose, which their own scopes allow; one scope would report it as a clash. The price: a key a user gives either
+     * of them that an `app` action holds already goes unreported, and the `app` action keeps it. A dialog with its own
+     * key layer (YesNoModal) answers its Esc there; one without (a code tool) is guarded by the song page.
      */
     val FocusEditor = KeyAction(
         id = "klang.focus-editor",

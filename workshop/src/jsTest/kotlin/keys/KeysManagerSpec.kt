@@ -188,6 +188,14 @@ class KeysManagerSpec : StringSpec({
                 keys.labelOf(play) shouldBe "F6"
             }
         }
+
+        withClue("the first key is keys in a row: the label names them, as the hint does") {
+            withManager { keys, _ ->
+                keys.define(bag)
+                keys.setUserKeys(actionId = "play", keys = listOf("Shift Shift", "F5"))
+                keys.labelOf(play) shouldBe "Shift Shift"
+            }
+        }
     }
 
     "chordsOf follows the user's keys" {
@@ -640,12 +648,51 @@ class KeysManagerSpec : StringSpec({
                 answered shouldContainExactly listOf("search", "search")
             }
 
+            withClue("a held Shift's repeats (Windows) do not restart the tap: held long, then let go, is no tap") {
+                delay(200)
+                repeat(2) {
+                    down()
+                    delay(40)
+                    host.dispatchEvent(keyEvent(key = "Shift", code = "ShiftLeft", shift = true, repeat = true))
+                    delay(40)
+                    host.dispatchEvent(keyEvent(key = "Shift", code = "ShiftLeft", shift = true, repeat = true))
+                    up()
+                }
+                answered shouldContainExactly listOf("search", "search")
+            }
+
+            withClue("the window losing the focus between the taps ends the row") {
+                delay(200)
+                tap()
+                window.dispatchEvent(Event("blur"))
+                tap()
+                answered shouldContainExactly listOf("search", "search")
+            }
+
+            withClue("Shift under a held AltGr (Linux: no Ctrl, no Alt) is no tap") {
+                delay(200)
+                repeat(2) {
+                    host.dispatchEvent(keyEvent(key = "Shift", code = "ShiftLeft", shift = true, altGraph = true))
+                    up()
+                }
+                answered shouldContainExactly listOf("search", "search")
+            }
+
+            withClue("only the last two taps count: a Ctrl brushed first does not spoil Shift Shift") {
+                delay(200)
+                host.dispatchEvent(keyEvent(key = "Control", code = "ControlLeft", ctrl = true))
+                host.dispatchEvent(keyEvent(key = "Control", code = "ControlLeft", type = "keyup"))
+                tap()
+                tap()
+                answered shouldContainExactly listOf("search", "search", "search")
+            }
+
             withClue("another modifier coming up (its keydown lost, as when the focus came back) is no tap") {
                 delay(200)
                 down()
                 host.dispatchEvent(keyEvent(key = "Control", code = "ControlLeft", type = "keyup"))
                 tap()
-                answered shouldContainExactly listOf("search", "search")
+                answered shouldContainExactly listOf("search", "search", "search")
             }
         } finally {
             keys.dispose()

@@ -61,10 +61,16 @@ data class KeyOverviewState(
         }
 
         private fun groupKeys(group: KeyActionGroup, keymap: Keymap, compact: Boolean): List<List<List<String>>> {
-            val chords = group.actions.mapNotNull { keymap.chordsOf(it.id).firstOrNull() }
+            val firsts = group.actions.mapNotNull { keymap.bindingsOf(it.id).firstOrNull() }
+            val chords = firsts.filterIsInstance<KeyChord>()
 
-            if (chords.isEmpty()) {
+            if (firsts.isEmpty()) {
                 return emptyList()
+            }
+
+            // Keys in a row among them (a user's own key): each shown as it is, nothing hidden
+            if (chords.size < firsts.size) {
+                return firsts.map { it.keyGroups(platform = keymap.platform, compact = compact) }
             }
 
             val first = chords.first()

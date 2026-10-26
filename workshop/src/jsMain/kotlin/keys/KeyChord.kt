@@ -208,7 +208,7 @@ data class KeyChord(
      * False when no key press on [platform] can ever match: a symbol read by its US position (with Shift everywhere,
      * with Option on a Mac) whose position is unknown.
      */
-    override fun canFire(platform: KeyPlatform): Boolean {
+    fun canFire(platform: KeyPlatform): Boolean {
         val unknownSymbol = key.length == 1 && key[0] !in 'a'..'z' && key[0] !in '0'..'9' && key !in SYMBOL_CODES
         // Read by the key's US position: with Shift everywhere, with Option on a Mac
         val byPosition = shift || (alt && platform == KeyPlatform.Mac)

@@ -125,7 +125,7 @@ class Keymap(
     fun bindingsOf(actionId: String): List<KeyBinding> = bindingsById[actionId] ?: emptyList()
 
     /** The keys in a row that trigger the action with [actionId]. */
-    fun sequencesOf(actionId: String): List<KeySequence> = bindingsOf(actionId).filterIsInstance<KeySequence>()
+    private fun sequencesOf(actionId: String): List<KeySequence> = bindingsOf(actionId).filterIsInstance<KeySequence>()
 
     /** The actions [sequence] triggers, in the order they were defined. */
     fun actionsFor(sequence: KeySequence): List<KeyAction> = actions.filter { action -> sequence in sequencesOf(action.id) }

@@ -11,8 +11,6 @@ sealed interface KeyBinding {
     /** The binding as the user reads it in text: `Ctrl+Shift+Enter`, `Shift Shift`. */
     fun label(platform: KeyPlatform): String
 
-    /** False when no key press on [platform] can ever trigger it. */
-    fun canFire(platform: KeyPlatform): Boolean
 }
 
 /** A modifier key on its own, as a tap in a [KeySequence]. */
@@ -54,14 +52,14 @@ enum class TapModifier {
 /**
  * Keys pressed in a row (KLANG-00325, maintainer 2026-10-25: "keys in a row"), written as steps separated by spaces.
  *
- * For now a step is a modifier tapped on its own: `"Shift Shift"` (search everywhere, as in IntelliJ). A tap is the
- * modifier going down and up with no other key between and not held long; the taps of one sequence follow each other
+ * For now a sequence is two modifiers tapped on their own: `"Shift Shift"` (search everywhere, as in IntelliJ). A tap
+ * is the modifier going down and up with no other key between and not held long; the two taps follow each other
  * within a short window. The [KeysManager] owns both times. `Mod` is Ctrl on a PC and Cmd on a Mac, as in a chord.
  * Sequences of chords (`"Mod-K Mod-S"`) come later; until then their text is unreadable, so a binding never waits
  * silently for a key that cannot come.
  */
 data class KeySequence(
-    /** The tapped modifiers, in order; at least two. */
+    /** The tapped modifiers, in order; two. */
     val taps: List<TapModifier>,
 ) : KeyBinding {
 
@@ -73,12 +71,12 @@ data class KeySequence(
          * Reads [text] for [platform].
          *
          * @throws IllegalArgumentException when a step is no bare modifier (a chord sequence, not supported yet) or
-         *   there are fewer than two steps
+         *   there are not two steps (only the last two taps count, so a longer row could never fire)
          */
         fun parse(text: String, platform: KeyPlatform): KeySequence {
             val steps = text.trim().split(Regex("\\s+"))
 
-            require(steps.size >= 2) { "A sequence needs two steps or more: \"$text\"" }
+            require(steps.size == 2) { "Keys in a row are two taps for now: \"$text\"" }
 
             return KeySequence(
                 taps = steps.map { step ->
@@ -101,6 +99,4 @@ data class KeySequence(
         taps.map { listOf(it.keyPart(platform = platform, compact = compact)) }
 
     override fun label(platform: KeyPlatform): String = taps.joinToString(" ") { it.keyPart(platform = platform, compact = false) }
-
-    override fun canFire(platform: KeyPlatform): Boolean = true
 }

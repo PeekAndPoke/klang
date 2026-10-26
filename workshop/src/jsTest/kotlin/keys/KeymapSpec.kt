@@ -147,6 +147,11 @@ class KeymapSpec : StringSpec({
             KeySequence.parse("Mod Mod", mac).keyGroups(mac) shouldBe listOf(listOf("⌘"), listOf("⌘"))
         }
 
+        withClue("three taps are unreadable: only the last two taps count, so they could never fire") {
+            Keymap(platform = pc, actions = listOf(play.copy(keys = listOf("Shift Shift Shift")))).problems.single()
+                .shouldBeInstanceOf<Keymap.Problem.Unreadable>()
+        }
+
         withClue("a chord sequence is unreadable until it is supported") {
             Keymap(platform = pc, actions = listOf(play.copy(keys = listOf("Mod-K Mod-S")))).problems.single()
                 .shouldBeInstanceOf<Keymap.Problem.Unreadable>()

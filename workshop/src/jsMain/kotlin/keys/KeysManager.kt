@@ -51,7 +51,7 @@ class KeysManager(
     val hintDelayMs: Int = 300,
     /** The longest a modifier may be held and still count as a tap in keys in a row ([KeySequence]), in milliseconds. */
     val tapMaxMs: Int = 300,
-    /** The longest pause between two taps of keys in a row, in milliseconds. */
+    /** The longest time from one tap's release to the next one's in keys in a row, in milliseconds. */
     val tapPairMs: Int = 400,
     private val target: EventTarget = document,
 ) {
@@ -234,8 +234,8 @@ class KeysManager(
     /** The chords that trigger [action] now, and on every change. */
     fun chordsOf(action: KeyAction): Stream<List<KeyChord>> = keymap.map { it.chordsOf(action.id) }.distinct()
 
-    /** The first key of [action] as the user reads it (`Ctrl+Shift+Enter`), null when it has none. */
-    fun labelOf(action: KeyAction): String? = _keymap().chordsOf(action.id).firstOrNull()?.label(platform)
+    /** The first key of [action] as the user reads it (`Ctrl+Shift+Enter`, `Shift Shift`), null when it has none. */
+    fun labelOf(action: KeyAction): String? = _keymap().bindingsOf(action.id).firstOrNull()?.label(platform)
 
     private fun rebuild() {
         val actions = bags.flatMap { it.bindings.actions }
@@ -475,7 +475,9 @@ class KeysManager(
             return
         }
 
-        taps = if (taps.isNotEmpty() && at - lastTapAt <= tapPairMs) taps + start.first else listOf(start.first)
+        val row = if (taps.isNotEmpty() && at - lastTapAt <= tapPairMs) taps + start.first else listOf(start.first)
+        // Only the last two count: a Ctrl brushed before a quick Shift Shift does not spoil it
+        taps = row.takeLast(2)
         lastTapAt = at
 
         if (taps.size < 2) {

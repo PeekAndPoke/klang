@@ -354,3 +354,9 @@ OkCancel real buttons and focus; their Esc stays ours until the key map carries 
   tool opens no key layer). `MotorMenu` on Alt+M. "Focus editor: Esc" in the editor's keys overview. Review: round 1
   (level 1) one MAJOR (Esc under a code tool's modal moved the keyboard into the editor behind it), fixed; round 2
   (level 2) clean; 4 mutants killed. Its MINORs go into the MINOR step.
+- 2026-10-26: the MINORs of the four loops above fixed (the maintainer: "fix the minor in the next reviews"): only
+  the last two taps count, a sequence is two taps; tests for the repeat guard, the blur, AltGr and a brushed Ctrl;
+  `labelOf` and the overview's group rows follow the first binding; surplus removed (`KeyBinding.canFire`,
+  `KeyHintState.keyParts`); `hintMode` fixed at creation; the song page's Esc registered directly, its guard read at
+  the key (no page redraw on hints or hover), a hover popup no longer holds it back. Review round 1 (level 1) clean;
+  10 mutants killed, one survivor's code (a redundant redraw) removed. Its MINORs go into the next step.
