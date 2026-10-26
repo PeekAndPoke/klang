@@ -41,6 +41,13 @@ class KlangEditorKeyBindingsSpec : StringSpec({
         entries.first { it.title == "Set bookmark" }.keys shouldBe listOf(listOf(listOf("⌃", "⇧", "0…9")))
     }
 
+    "the overview ends with the page's key back into the editor: Focus editor, Esc" {
+        val keymap = Keymap(platform = KeyPlatform.Pc, actions = KlangKeyBindings.actions + KlangEditorKeyBindings.actions)
+        val entries = KeyOverviewState.of(title = null, rows = KlangEditorKeyBindings.overview, keymap = keymap).entries
+
+        entries.last() shouldBe KeyOverviewState.Entry(title = "Focus editor", keys = listOf(listOf(listOf("Esc"))))
+    }
+
     "the bookmark keys are the decided ones: Ctrl with the digits 0 to 9, Ctrl+Shift to set (KLANG-00323)" {
         KlangEditorKeyBindings.GoToBookmark.map { it.keys } shouldBe (0..9).map { listOf("Ctrl-$it") }
         KlangEditorKeyBindings.SetBookmark.map { it.keys } shouldBe (0..9).map { listOf("Ctrl-Shift-$it") }

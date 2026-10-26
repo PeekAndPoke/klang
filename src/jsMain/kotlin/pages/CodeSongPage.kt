@@ -21,11 +21,13 @@ import io.peekandpoke.klang.ui.comp.YesNoModal
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.klang.version
 import io.peekandpoke.klang.workshop.keys.OnKey
+import io.peekandpoke.klang.workshop.keys.onKeyController
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.ComponentRef
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.modals.ModalsManager.Companion.modals
+import io.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import io.peekandpoke.kraft.semanticui.forms.UiInputField
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
@@ -129,8 +131,22 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     private val laf by subscribingTo(KlangTheme)
     private val state by subscribingTo(ctrl.state)
     private val currentModals by subscribingTo(modals)
+    private val currentPopups by subscribingTo(popups)
 
     private val codeEditorRef = ComponentRef.Tracker<KlangCodeEditorComp>()
+
+    /**
+     * Esc anywhere on the page outside a text field puts the focus back into the editor, at its last cursor. Not while a
+     * modal or a popup is open: a code tool opens no key layer, and its live edits write into the range it took when it
+     * opened, which keys typed into the editor behind it would shift.
+     */
+    @Suppress("unused")
+    private val focusEditor = onKeyController(
+        action = KlangKeyBindings.FocusEditor,
+        enabled = { currentModals.isEmpty() && currentPopups.isEmpty() },
+    ) {
+        codeEditorRef { it.focus() }
+    }
 
     /** Shows the check mark on the copy button for a moment after a successful copy. */
     private var justCopied by value(false)

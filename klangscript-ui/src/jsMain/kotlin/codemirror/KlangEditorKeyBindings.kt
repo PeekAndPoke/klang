@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.ui.codemirror
 
+import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.workshop.keys.KeyAction
 import io.peekandpoke.klang.workshop.keys.KeyActionGroup
 import io.peekandpoke.klang.workshop.keys.KeyBindings
@@ -94,5 +95,7 @@ object KlangEditorKeyBindings : KeyBindings {
         KeyOverviewRow.Single(LineComment),
         KeyOverviewRow.Single(Find),
         KeyOverviewRow.Single(Completion),
+        // The page's key that brings the keyboard back here (KlangKeyBindings, maintainer 2026-10-26)
+        KeyOverviewRow.Single(KlangKeyBindings.FocusEditor),
     )
 }

@@ -347,3 +347,10 @@ OkCancel real buttons and focus; their Esc stays ours until the key map carries 
 - 2026-10-26: the bookmarks panel's code preview collapses a tab or a run of blanks to two spaces (maintainer: a
   comment aligned far right left a long gap). Review round 1 (level 1) clean; 1 mutant killed; its MINORs (a single
   tab untested, the internal KDoc) go into the MINOR step.
+- 2026-10-26: the Esc chain on the song page (maintainer: "One Esc close tool. Another Esc focus editor"; no key
+  layer for tool windows, which would block Play and Stop): `PanelClose` (`klang.panel.close`), handled by
+  Klang-Research's tool windows and the Motor's drawer while open, comes before `FocusEditor` (`klang.focus-editor`),
+  which puts the focus back into the editor at its cursor, scrolled into view, while no modal or popup is open (a code
+  tool opens no key layer). `MotorMenu` on Alt+M. "Focus editor: Esc" in the editor's keys overview. Review: round 1
+  (level 1) one MAJOR (Esc under a code tool's modal moved the keyboard into the editor behind it), fixed; round 2
+  (level 2) clean; 4 mutants killed. Its MINORs go into the MINOR step.

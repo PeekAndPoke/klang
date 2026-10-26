@@ -31,6 +31,7 @@ import io.peekandpoke.kraft.popups.PopupsManager
 import io.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import io.peekandpoke.kraft.routing.Router.Companion.router
 import io.peekandpoke.kraft.utils.Vector2D
+import io.peekandpoke.kraft.utils.jsObject
 import io.peekandpoke.kraft.utils.windowCtrl
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
@@ -212,6 +213,17 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
     /** Cancels all pending highlight marks on the code view. */
     fun cancelHighlights() {
         highlightBuffer.cancelAll()
+    }
+
+    /** Puts the focus into the code view, the cursor and the selection where they were, scrolled into view. */
+    fun focus() {
+        editorRef { editor ->
+            editor.editorView?.let { view ->
+                // CodeMirror's focus does not scroll: a cursor the user scrolled away from comes back into view
+                view.dispatch(jsObject<dynamic> { this.scrollIntoView = true })
+                view.focus()
+            }
+        }
     }
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////

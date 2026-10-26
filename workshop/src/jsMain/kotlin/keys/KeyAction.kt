@@ -39,7 +39,10 @@ interface KeyBindings {
     /** The actions of this bag. */
     val actions: List<KeyAction>
 
-    /** The rows of an overview of this bag ([KeyBindingsOverlay]), in order; by default each action on its own. */
+    /**
+     * The rows of an overview of this bag ([KeyBindingsOverlay]), in order; by default each action on its own. A row may
+     * name an action of another bag defined in the same manager (the editor's overview shows the page's "Focus editor").
+     */
     val overview: List<KeyOverviewRow> get() = actions.map { KeyOverviewRow.Single(it) }
 }
 

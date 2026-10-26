@@ -36,7 +36,42 @@ object KlangKeyBindings : KeyBindings {
      */
     val SearchEverywhere = KeyAction(id = "klang.search-everywhere", title = "Search everywhere", keys = listOf("Mod-K", "Shift Shift"))
 
-    override val actions: List<KeyAction> = listOf(PlayOrUpdate, Stop, DialogConfirm, DialogClose, SearchEverywhere)
+    /**
+     * Closes the newest open panel: a tool window flying in, the Motor's drawer (the workbench, KLANG-00334; maintainer,
+     * 2026-10-26). Each panel answers it in the page's layer while it is open; the last registered handler answers
+     * first, so "the newest open" holds when a panel registers as it opens (a panel mounted all the time and only
+     * enabled while open keeps its first place). Esc in a text field (the drawer's search) stays the field's own: a
+     * plain key never acts there, so such a field closes its panel itself. The scopes of this action and
+     * [FocusEditor] let the two share Escape on purpose (see there).
+     */
+    val PanelClose = KeyAction(
+        id = "klang.panel.close",
+        title = "Close",
+        keys = listOf("Escape"),
+        scope = "klang.panel",
+    )
+
+    /** Opens the Motor's drawer with the focus in its search field (KLANG-00334; Alt+M, the maintainer's OK). */
+    val MotorMenu = KeyAction(id = "klang.motor-menu", title = "Motor menu", keys = listOf("Alt-M"))
+
+    /**
+     * Puts the focus back into the song's editor at its last cursor (maintainer, 2026-10-26: "One Esc close tool.
+     * Another Esc focus editor"). Inside the editor Esc stays the editor's own, as a plain key in any text field.
+     * Defined after [PanelClose] on purpose: both answer in the page's layer, where the first defined action with
+     * an enabled handler wins, so an open panel closes first and the next Esc lands here. The two share Escape on
+     * purpose, which their own scopes allow; one scope would report it as a clash. A dialog with its own key layer
+     * (YesNoModal) answers its Esc there; one without (a code tool) is guarded by the song page.
+     */
+    val FocusEditor = KeyAction(
+        id = "klang.focus-editor",
+        title = "Focus editor",
+        keys = listOf("Escape"),
+        scope = "klang.song-page",
+    )
+
+    override val actions: List<KeyAction> = listOf(
+        PlayOrUpdate, Stop, DialogConfirm, DialogClose, SearchEverywhere, PanelClose, MotorMenu, FocusEditor,
+    )
 
     /** Ctrl+Z (or Cmd+Z on Mac) — undo. */
     fun isUndo(e: KeyboardEvent): Boolean =
