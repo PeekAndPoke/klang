@@ -8,7 +8,6 @@ package io.peekandpoke.klang.ui
 import io.peekandpoke.klang.workshop.keys.KeyAction
 import io.peekandpoke.klang.workshop.keys.KeyBindings
 import io.peekandpoke.klang.workshop.keys.KeyPriority
-import org.w3c.dom.events.KeyboardEvent
 
 /**
  * Klang's key priorities, all of them in this one place, lowest first (KLANG-00325, maintainer 2026-10-26: "manage
@@ -110,8 +109,9 @@ object KlangKeyBindings : KeyBindings {
     )
 
     /**
-     * Undo in a code tool's own editor (the mini-notation editor), in front of the page's keys while the tool is open.
-     * The code editor's own undo (its scope's), when it has the focus, answers first and keeps the key.
+     * Undo in a code tool's own editor (the mini-notation editor), in front of the page's keys while the tool is open
+     * and has something to undo. The code editor's own undo (its scope's), when it has the focus and something to undo,
+     * answers first and keeps the key.
      */
     val ToolUndo = KeyAction(id = "klang.tool.undo", title = "Undo", keys = listOf("Mod-Z"), priority = KlangKeyPriorities.Tool)
 
@@ -128,5 +128,4 @@ object KlangKeyBindings : KeyBindings {
         PlayOrUpdate, Stop, DialogConfirm, DialogClose, SearchEverywhere, PanelClose, MotorMenu, FocusEditor, VolumeFocus,
         ToolUndo, ToolRedo,
     )
-
 }

@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.sprudel.ui
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.script.types.KlangSymbol
@@ -28,7 +29,7 @@ import org.w3c.dom.events.KeyboardEventInit
 /** The mini-notation editors' undo and redo (KLANG-00325 step 3c): on the key map, while the tool is open. */
 class MnEditorUndoKeysSpec : StringSpec({
 
-    "Ctrl+Z undoes the tool's last edit and Ctrl+Y redoes it" {
+    "Ctrl+Z undoes the tool's last edit, Ctrl+Y and Ctrl+Shift+Z redo it; with nothing to take back the key goes on" {
         val manager = KeysManager(platform = KeyPlatform.Pc).apply { define(KlangKeyBindings) }
         val toolCtx = KlangUiToolContext(
             symbol = KlangSymbol(name = "n", variants = emptyList(), category = "test"),
@@ -38,8 +39,12 @@ class MnEditorUndoKeysSpec : StringSpec({
             onCancel = {},
         )
 
-        fun press(key: String, code: String) = document.body!!.dispatchEvent(
-            KeyboardEvent("keydown", KeyboardEventInit(key = key, code = code, ctrlKey = true, bubbles = true, cancelable = true))
+        /** True when the key went on to the browser (no one prevented it). */
+        fun press(key: String, code: String, shift: Boolean = false): Boolean = document.body!!.dispatchEvent(
+            KeyboardEvent(
+                "keydown",
+                KeyboardEventInit(key = key, code = code, ctrlKey = true, shiftKey = shift, bubbles = true, cancelable = true),
+            )
         )
 
         fun shown() = document.getElementById(TestMnEditor.TEXT_ID)?.textContent
@@ -48,16 +53,25 @@ class MnEditorUndoKeysSpec : StringSpec({
             TestBed.preact(appSetup = { keys(manager) }, view = { TestMnEditor(toolCtx) }) {
                 eventually { shown() shouldBe "a b" }
 
+                withClue("nothing to undo yet: the key goes on") { press(key = "z", code = "KeyZ") shouldBe true }
+
                 TestMnEditor.last!!.edit(newText = "c d")
+                eventually { shown() shouldBe "c d" }
+
+                withClue("undo, the key kept") { press(key = "z", code = "KeyZ") shouldBe false }
+                eventually { shown() shouldBe "a b" }
+
+                press(key = "y", code = "KeyY")
                 eventually { shown() shouldBe "c d" }
 
                 press(key = "z", code = "KeyZ")
                 eventually { shown() shouldBe "a b" }
 
-                press(key = "y", code = "KeyY")
+                press(key = "Z", code = "KeyZ", shift = true)
                 eventually { shown() shouldBe "c d" }
             }
         } finally {
+            TestMnEditor.last = null
             manager.dispose()
         }
     }

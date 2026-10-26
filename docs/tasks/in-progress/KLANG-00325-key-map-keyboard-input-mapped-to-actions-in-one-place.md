@@ -216,7 +216,7 @@ Klang out of it and the move is a copy. Klang's modules depend on it.
 2. **`OnKey` and the hints,** on the Play / Update button first. **Stop after the first draft so the maintainer can
    look at the code** (maintainer, 2026-10-21); then Stop.
 3. **The editor on the table:** the copied setup, the ours-commands above, KLANG-00322's and KLANG-00323's keys and the
-   mini-notation editor's undo and redo from the table (`KlangKeyBindings` goes), Alt+Shift+click; a test that every
+   mini-notation editor's undo and redo from the table (its own listener goes), Alt+Shift+click; a test that every
    CodeMirror command the table names exists in the installed packages; the editor's overlay of its keys.
 4. **The settings page** with KLANG-00324, and `KeymapStorage`.
 5. **The move into Kraft** when it has proven itself; ULTRA-00239 (Esc on modals) built on it there, Klang's
@@ -225,6 +225,16 @@ Klang out of it and the move is a copy. Klang's modules depend on it.
    Kraft modal holds the page's keys back by default, as its dimmer holds back the mouse; Esc dismisses and OkCancel
    answers with Ctrl+Enter through the same actions. To decide then: whether popups and toasts open layers too (a
    popup opened from a modal today belongs to the root layer, see "Kraft parity").
+
+**Open from step 3 (2026-10-26):**
+- **Held keys repeat nowhere:** the key manager skips a key's repeats, so holding Ctrl+Z in a code tool undoes one
+  step (the code editor, which answers its own keys, repeats). An opt-in on `KeyAction` that the manager honours (and
+  prevents for an action it answered) is a workshop change.
+- **A code tool's undo does not update the code:** with auto-update on, Ctrl+Z reverts the mini-notation tool but the
+  code behind it keeps the undone value until the next edit (`MnEditorBase.undo` and `redo` call no live update;
+  older than step 3).
+- **Its undo throws away typing:** after a button edit, Ctrl+Z in the tool's pattern field returns to the text before
+  that edit, typing since included (older than step 3).
 
 **Open after step 1's review round 1 (2026-10-25), for later steps:**
 - **Layers:** page keys still act under a modal (Ctrl+Shift+Enter plays behind the bookmark question). The stack is per
@@ -436,3 +446,6 @@ OkCancel real buttons and focus; their Esc stays ours until the key map carries 
   `ToolRedo`, at the code tools' priority); their own document listener and `KlangKeyBindings.isUndo`/`isRedo` are
   gone. With the code editor focused its own undo answers first now (before, both undid). Review (level 1) round 1
   clean; 2 mutants killed. Its MINORs go into the next step.
+- 2026-10-26: step 3c's MINORs fixed: a code tool's undo and redo answer only while they have something to take back
+  (else the key goes on to a text field's own undo), Ctrl+Shift+Z redoes there too (tested); three open points
+  recorded above. Review (level 1) round 1 clean; 2 mutants killed.

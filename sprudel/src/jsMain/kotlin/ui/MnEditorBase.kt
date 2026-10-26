@@ -129,10 +129,12 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
         triggerRedraw()
     }
 
-    // The tool's own undo and redo, on the key map (KLANG-00325): in front of the page's keys while the tool is open;
-    // the code editor's own undo, when it has the focus, answers first and keeps the key
-    private val undoKey = onKeyController(action = KlangKeyBindings.ToolUndo) { undo() }
-    private val redoKey = onKeyController(action = KlangKeyBindings.ToolRedo) { redo() }
+    // The tool's own undo and redo, on the key map (KLANG-00325), registered while the tool is mounted: in front of
+    // the page's keys while there is something to take back, else the key goes on (a text field's own undo of typing,
+    // while the tool has no edit of its own to take back: its undo returns to the text before that edit);
+    // the code editor's own undo, when it has the focus and something to undo, answers first and keeps the key
+    private val undoKey = onKeyController(action = KlangKeyBindings.ToolUndo, enabled = { undoStack.isNotEmpty() }) { undo() }
+    private val redoKey = onKeyController(action = KlangKeyBindings.ToolRedo, enabled = { redoStack.isNotEmpty() }) { redo() }
 
     // ── Playback highlight ────────────────────────────────────────────────────
 
