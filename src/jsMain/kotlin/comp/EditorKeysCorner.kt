@@ -22,12 +22,12 @@ import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import kotlinx.css.Align
 import kotlinx.css.Display
-import kotlinx.css.JustifyContent
+import kotlinx.css.FlexDirection
 import kotlinx.css.PointerEvents
 import kotlinx.css.Position
 import kotlinx.css.alignItems
 import kotlinx.css.display
-import kotlinx.css.justifyContent
+import kotlinx.css.flexDirection
 import kotlinx.css.left
 import kotlinx.css.pointerEvents
 import kotlinx.css.position
@@ -50,9 +50,9 @@ fun Tag.EditorKeysCorner(editorState: () -> EditorState?) = comp(EditorKeysCorne
 
 /**
  * The editor's keys in its top-right corner while the key hints show (KLANG-00325), left of the minimap: the song's
- * bookmarks (each with the key that jumps there, its line and the code on it; maintainer, 2026-10-25: shown on the
- * hints' key, as Ctrl+digit is the jump), and right of them a [KeyBindingsOverlay] of [KlangEditorKeyBindings], both
- * in Klang's look. It sits in the editor's box, which needs `position: relative`; only an editor
+ * [KeyBindingsOverlay] of [KlangEditorKeyBindings] and below it the song's bookmarks (maintainer, 2026-10-26), each with
+ * the key that jumps there, its line and the code on it (maintainer, 2026-10-25: shown on the hints' key, as
+ * Ctrl+digit is the jump), both in Klang's look and right-aligned. It sits in the editor's box, which needs `position: relative`; only an editor
  * that shows it follows the hints (the docs pages' editors do not).
  */
 class EditorKeysCorner(ctx: Ctx<Props>) : Component<EditorKeysCorner.Props>(ctx) {
@@ -131,31 +131,30 @@ class EditorKeysCorner(ctx: Ctx<Props>) : Component<EditorKeysCorner.Props>(ctx)
                 position = Position.absolute
                 top = INSET
                 right = (minimapWidth + GAP_PX).px
-                // Never wider than the editor: the bookmarks panel shrinks (its code ends in "…") before it leaves it
+                // Never wider than the editor: the panels below keep inside it
                 left = INSET
                 display = Display.flex
-                justifyContent = JustifyContent.flexEnd
-                alignItems = Align.flexStart
+                flexDirection = FlexDirection.column
+                alignItems = Align.flexEnd
                 put("gap", "${GAP_PX}px")
                 // Over CodeMirror's panels (the search panel is at 300); it never takes a click
                 zIndex = 400
                 pointerEvents = PointerEvents.none
             }
 
-            // Under a modal, and in a page fading out after a navigation (inert), the bookmarks wait
-            if (hintsShown && topLayer === layer && dom?.closest("[inert]") == null) {
-                // At most 40% of the corner, so the keys overview keeps room for its sections side by side
-                div {
-                    style = "min-width: 0; max-width: 40%; flex: 0 1 auto"
-                    renderBookmarks()
-                }
+            // Never wider than the corner: its sections wrap onto a second row in a narrow editor
+            div {
+                style = "max-width: 100%"
+                KeyBindingsOverlay(bindings = KlangEditorKeyBindings, title = "Editor", renderer = KlangKeyHint.overview)
             }
 
-            // May shrink: its sections then wrap onto a second row, the widest section the least it takes (its min-content,
-            // which a min-width of 0 would give away)
-            div {
-                style = "flex: 0 1 auto"
-                KeyBindingsOverlay(bindings = KlangEditorKeyBindings, title = "Editor", renderer = KlangKeyHint.overview)
+            // Under a modal, and in a page fading out after a navigation (inert), the bookmarks wait. Below the keys,
+            // never wider than the corner: the code on a line ends in "…" first
+            if (hintsShown && topLayer === layer && dom?.closest("[inert]") == null) {
+                div {
+                    style = "min-width: 0; max-width: 100%"
+                    renderBookmarks()
+                }
             }
         }
     }

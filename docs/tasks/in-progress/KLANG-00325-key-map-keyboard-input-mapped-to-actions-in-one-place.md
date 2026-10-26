@@ -455,3 +455,6 @@ OkCancel real buttons and focus; their Esc stays ours until the key map carries 
   takes `KeyOverviewRow.Heading`, which cuts the rows into sections; its plain look draws a heading over each. Review
   (level 1): round 1 one MAJOR (the overview could not shrink, so its left sections were cut off in a narrow editor),
   fixed; round 2 clean. 5 mutants killed. Open for the maintainer's eye: Completion under "Find and help" or "Edit".
+- 2026-10-26: the bookmarks below the keys overview, both right-aligned (maintainer: "Nice grouping! Put the
+  bookmarks below this box now please"); each panel never wider than the corner. A layout move of two boxes, committed
+  without a review round, for the maintainer's eye.
