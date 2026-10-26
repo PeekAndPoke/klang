@@ -117,8 +117,19 @@ stack(
   , sound("dust!2").orbit(5).gain(0.0400).vel(sine.range(0.500, 1.0).slow(21)).hpf(5000).lpf(8000).clip(1.5).adsr(0.1, 1, 1, 0.1)
   , sound("pink!3").orbit(5).gain(0.0070).vel(sine.range(0.625, 1.0).slow(13)).hpf(4000).lpf(14000).clip(1.5).adsr(0.1, 1, 1, 0.1)
   , sound("brown!4").orbit(5).gain(0.0150).vel(sine.range(0.500, 1.0).slow(8)).hpf(3000).lpf(10000).clip(1.5).adsr(0.1, 1, 1, 0.1)
- 
-).reverb(0.35, 7.5).delay(wet = 0.3, time = pure(1/8).div(cps), feedback = 0.0).compressor(-15, 2, 6, 0.01, 0.2).analog(8)
+
+  // Master
+  , master(Katalyst(k => k
+    .reverb(0.35, 8, 4500)
+    .gain(1.8)
+    .bands(b => b
+      .band(low => low.distort(0.01, "soft", 4)).cut(150)
+      .band(mid => mid.distort(0.15, "soft", 4).mul(0.90)).cut(5000)
+      .band(low => low.distort(0.01, "soft", 4))
+    ) // the glue on the mids only: the kick and the hats stay clean
+    .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)
+  ))
+)
 
 
 

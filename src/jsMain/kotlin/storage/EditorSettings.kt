@@ -20,7 +20,7 @@ import kotlinx.browser.localStorage
 object EditorSettings {
 
     /** Highlights per sound event, as the song page always had. */
-    const val HIGHLIGHTS_PER_EVENT_DEFAULT = 15
+    const val HIGHLIGHTS_PER_EVENT_DEFAULT = 25
 
     /** The highlights' range a user may choose; 0 draws none, as the header's EVT field allowed. */
     val HIGHLIGHTS_PER_EVENT_RANGE = 0..50
