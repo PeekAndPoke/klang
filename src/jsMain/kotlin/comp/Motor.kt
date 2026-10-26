@@ -16,6 +16,7 @@ import io.peekandpoke.ultra.html.key
 import kotlinx.css.PointerEvents
 import kotlinx.css.Position
 import kotlinx.css.TextAlign
+import kotlinx.css.bottom
 import kotlinx.css.height
 import kotlinx.css.left
 import kotlinx.css.opacity
@@ -49,7 +50,7 @@ fun Tag.Motoer(
 class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
 
     companion object {
-        /** The frame's total height: the gauges, the spectrum under them, the scope at the frame's foot. */
+        /** The frame's total height: the gauges, the scope under them, the spectrum behind it down to the floor. */
         val FRAME_HEIGHT = 13.25.rem
 
         /** Room above the gauges, so they do not touch the column's edge. */
@@ -58,17 +59,12 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
         /** The top slot: the three gauges and the volume knob (62 px + their glow). */
         val TOP_SLOT_HEIGHT = 4.5.rem
 
-        /** The spectrum, from between the gauges (behind them) down; its boxes stack up from its floor. */
-        const val SPECTRUM_TOP_REM = 4.5
-        const val SPECTRUM_HEIGHT_REM = 7.0
-
-        /**
-         * The scope's top sits on the spectrum's border from blue to green: `Spectrumeter`'s first colour (of five) fills
-         * the lowest quarter of a stack, the part nearly always lit, so the scope covers only that and every peak from
-         * green up shows above it (the maintainer, 2026-10-26).
-         */
-        const val OSCILLOSCOPE_TOP_REM = SPECTRUM_TOP_REM + SPECTRUM_HEIGHT_REM * 3.0 / 4.0
+        /** The scope, just under the gauges, above the spectrum's lower part (the maintainer, 2026-10-26). */
+        const val OSCILLOSCOPE_TOP_REM = 5.75
         const val OSCILLOSCOPE_HEIGHT_REM = 3.25
+
+        /** The spectrum stands on the frame's floor, behind the scope; its boxes stack up from there. */
+        const val SPECTRUM_HEIGHT_REM = 7.0
     }
 
     //  PROPS  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -123,8 +119,8 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
                     zIndex = 1
                     position = Position.absolute
                     pointerEvents = PointerEvents.none
-                    // Behind the gauges and the scope; the scope covers only its lowest, blue quarter
-                    top = SPECTRUM_TOP_REM.rem
+                    // On the frame's floor, behind the scope
+                    bottom = 0.rem
                     left = 0.rem
                     right = 0.rem
                     height = SPECTRUM_HEIGHT_REM.rem
