@@ -36,11 +36,14 @@ class JsAudioBackend(
 
     private val sampleUploadBuffer = KlangRingBuffer<KlangCommLink.Cmd.Sample.Chunk>(8192 * 4)
 
-    // AnalyserNode for visualization
-    private var analyserNode: AnalyserNode? = null
+    // The analysers for the visualisations, one on each side of the master volume (KLANG-00346, maintainer,
+    // 2026-10-26: the volume "should only influence the osci but not the spectrum"): the spectrum reads the song as it
+    // is made, the scope what the speakers get
+    private var spectrumAnalyser: AnalyserNode? = null
+    private var scopeAnalyser: AnalyserNode? = null
 
-    // The master volume (KLANG-00330): a gain between the worklet and the analyser, so the scope and the spectrum
-    // show what the speakers get (maintainer, 2026-10-25). Null before the graph is built and after teardown.
+    // The master volume (KLANG-00330): a gain between the worklet and the speakers, with the scope's analyser after it
+    // and the spectrum's before it. Null before the graph is built and after teardown.
     private var volumeNode: GainNode? = null
     private var audioContext: AudioContext? = null
 
@@ -52,7 +55,7 @@ class JsAudioBackend(
     private var workletNode: AudioWorkletNode? = null
 
     // Implement AudioVisualizer interface with zero-copy methods
-    override val analyzer = JsAudioAnalyzer { analyserNode }
+    override val analyzer = JsAudioAnalyzer(waveformNode = { scopeAnalyser }, fftNode = { spectrumAnalyser })
 
     override suspend fun run(scope: CoroutineScope) {
         console.log("JsAudioBackend starting")
@@ -103,36 +106,32 @@ class JsAudioBackend(
 
             console.log("JsAudioBackend AudioWorkletNode created successfully", node)
 
-            // Create AnalyserNode for visualization (with fallback if it fails)
-            try {
-                console.log("Creating AnalyserNode")
-                analyserNode = ctx.createAnalyser().apply {
-                    fftSize = 2048
-                    smoothingTimeConstant = 0.8
-                }
-                console.log("AnalyserNode created successfully for visualization")
-            } catch (e: Throwable) {
-                console.warn("Failed to create AnalyserNode, visualization disabled:", e)
-                analyserNode = null
-            }
+            // The analysers for the visualisations (with a fallback if one cannot be made: that view stays dark)
+            spectrumAnalyser = createAnalyserOrNull(ctx = ctx, name = "spectrum")
+            scopeAnalyser = createAnalyserOrNull(ctx = ctx, name = "scope")
 
             val volume = ctx.createGain().apply { gain.value = outputVolume }
 
             volumeNode = volume
             audioContext = ctx
 
-            // Connect audio graph: Worklet → Volume → Analyser → Destination (or no analyser)
-            node.connect(volume)
+            // Connect audio graph: worklet, spectrum analyser, volume, scope analyser, destination; an analyser that could
+            // not be made is left out, the sound takes the same way without it
+            val spectrumTap = spectrumAnalyser
+            val scopeTap = scopeAnalyser
 
-            when (val ana = analyserNode) {
-                null -> {
-                    volume.connect(ctx.destination)
-                }
+            if (spectrumTap != null) {
+                node.connect(spectrumTap)
+                spectrumTap.connect(volume)
+            } else {
+                node.connect(volume)
+            }
 
-                else -> {
-                    volume.connect(ana)
-                    ana.connect(ctx.destination)
-                }
+            if (scopeTap != null) {
+                volume.connect(scopeTap)
+                scopeTap.connect(ctx.destination)
+            } else {
+                volume.connect(ctx.destination)
             }
 
             // 3. Setup Feedback Loop (Worklet -> Frontend)
@@ -268,7 +267,19 @@ class JsAudioBackend(
         }
     }
 
-    /** The master volume on the gain before the analyser; see [AudioBackend.setOutputVolume]. */
+    /** An analyser for one visualisation, or null when the browser cannot make one (that view then stays dark). */
+    private fun createAnalyserOrNull(ctx: AudioContext, name: String): AnalyserNode? = try {
+        ctx.createAnalyser().apply {
+            fftSize = 2048
+            smoothingTimeConstant = 0.8
+        }
+    } catch (e: Throwable) {
+        console.warn("Failed to create the $name AnalyserNode, its visualization disabled:", e)
+
+        null
+    }
+
+    /** The master volume on the gain between the spectrum's analyser and the scope's; see [AudioBackend.setOutputVolume]. */
     override fun setOutputVolume(gain: Double) {
         // NaN-guard: an unreadable volume is silence; the scale already keeps the knob in 0.0 to 1.0
         val safe = if (gain != gain) 0.0 else gain.coerceIn(0.0, 1.0)
