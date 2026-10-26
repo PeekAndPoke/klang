@@ -138,6 +138,14 @@ enum class KlangRole(
 
     /** The corner of a domed control. */
     RadiusDomed(cssVar = "--kl-radius-domed", kind = Kind.Length, default = "10px"),
+
+    // ── Surface ───────────────────────────────────────────────────────────────
+
+    /**
+     * How strong the fine grain over the buttons and the knobs' caps is, from 0 (smooth) to 1 (the maintainer,
+     * 2026-10-26: "maybe this noise should be a theme property as well?").
+     */
+    Grain(cssVar = "--kl-grain", kind = Kind.Amount, default = "0.16"),
     ;
 
     /** What a role's value is, and so which values a theme may give it. */
@@ -147,17 +155,22 @@ enum class KlangRole(
 
         /** A length in px, 0 to 999, with an optional fraction: `3px`, `2.5px`. */
         Length,
+
+        /** A share from 0 to 1, up to three decimals: `0`, `0.16`, `1`. */
+        Amount,
     }
 
     /** True when [value] fits this role's [kind]; a theme layer drops a value that does not. */
     fun accepts(value: String): Boolean = when (kind) {
         Kind.Color -> HEX_COLOR.matches(value)
         Kind.Length -> PX_LENGTH.matches(value)
+        Kind.Amount -> AMOUNT.matches(value)
     }
 
     companion object {
         private val HEX_COLOR = Regex("^#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
         private val PX_LENGTH = Regex("^[0-9]{1,3}(\\.[0-9]{1,3})?px$")
+        private val AMOUNT = Regex("^(0(\\.[0-9]{1,3})?|1(\\.0{1,3})?)$")
 
         private val byCssVar: Map<String, KlangRole> = entries.associateBy { it.cssVar }
 

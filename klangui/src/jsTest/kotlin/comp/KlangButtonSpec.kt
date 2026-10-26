@@ -14,6 +14,7 @@ import io.peekandpoke.kraft.testing.classes
 import io.peekandpoke.kraft.testing.click
 import io.peekandpoke.kraft.testing.selectCss
 import io.peekandpoke.kraft.testing.textContent
+import kotlinx.browser.window
 import org.w3c.dom.HTMLButtonElement
 
 /** The Klang button (KLANG-00337): a real button, its classes per finish, surface and shape, and its states. */
@@ -104,6 +105,22 @@ class KlangButtonSpec : StringSpec({
             button.click()
 
             clicks shouldBe 0
+        }
+    }
+
+    "a button's finish lays the grain over it; a later button, only an outline, has none" {
+        TestBed.preact(
+            view = {
+                KlangButton(onClick = {}) { +"Play" }
+                KlangButton(onClick = {}, availability = KlangButton.Availability.Later) { +"Account" }
+            },
+        ) { root ->
+            val buttons = root.selectCss<HTMLButtonElement>("button")
+            val grain = buttons.map { window.getComputedStyle(it, "::before") }
+
+            grain[0].display shouldBe "block"
+            grain[0].getPropertyValue("mix-blend-mode") shouldBe "overlay"
+            grain[1].display shouldBe "none"
         }
     }
 

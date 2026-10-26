@@ -161,6 +161,10 @@ Kept in order, close to the maintainer's words.
 44. (2026-10-26) The start page starts the Motor (KLANG-00347): board G's key and dyno run, built and tuned by eye.
     Its third part is dropped: "We will not do the thing that the motor flies to the lower corner ... that would be
     over the top". "Make Music Now" starts the jingle and opens the first song at once.
+45. (2026-10-26) A fine grain on the controls ("The domed look of the buttons is too smooth... it could use a little
+    noise"), then on every button and a look property ("maybe this noise should be a theme property as well?"): the
+    role `Grain` (`--kl-grain`, a share from 0 to 1, 0.16 in every look today), a noise layer under each surface's
+    content in `overlay`; a "later" button, only an outline, has none.
 
 ## Where the conversation stands (leanings, not decisions)
 

@@ -435,7 +435,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
             }
 
             // Dark toward the edges, as board G draws it (the maintainer, 2026-10-26: "where things get dark toward the
-            // edges of the screen"), the corners real black: "the color must fade into real black in the corners".
+            // edges of the screen"), the corners nearly black ("the color must fade into real black in the corners").
             // Over the plate, under everything else
             div {
                 key = "vignette"
@@ -445,9 +445,13 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                     pointerEvents = PointerEvents.none
                     put(
                         "background",
-                        // A circle round the screen's middle, sized by its longer side; black beyond it
-                        "radial-gradient(circle at 50% 50%, transparent 0, transparent 25vmax, " +
-                                "rgba(0, 0, 0, 0.5) 36vmax, #000 48vmax)",
+                        // An oval round the screen's middle in the screen's proportions, a little taller (the
+                        // maintainer, 2026-10-26: "back to the oval light so that it matches the screen proportions";
+                        // "The y-radius needs to be a bit bigger"); black beyond it
+                        // A slow fade, in steps, to the edges ("it needs to fade out slower into the edges"); the corners
+                        // come out nearly black (about 0.97), at about 92 % of the oval's radius
+                        "radial-gradient(ellipse 71% 85% at 50% 50%, transparent 0%, transparent 30%, " +
+                                "rgba(0, 0, 0, 0.3) 50%, rgba(0, 0, 0, 0.65) 68%, rgba(0, 0, 0, 0.9) 85%, #000 95%)",
                     )
                 }
             }

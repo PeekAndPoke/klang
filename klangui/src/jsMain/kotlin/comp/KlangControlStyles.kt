@@ -7,6 +7,7 @@ package io.peekandpoke.klang.ui.comp
 
 import io.peekandpoke.kraft.addons.styling.RawStyleSheet
 import io.peekandpoke.kraft.addons.styling.StyleSheet
+import kotlinx.css.CssBuilder
 
 /**
  * The classes of the Klang controls (KLANG-00337): lamps, buttons, the riveted panel.
@@ -22,19 +23,35 @@ import io.peekandpoke.kraft.addons.styling.StyleSheet
  */
 object KlangControlStyles : StyleSheet("kl-controls") {
 
-    /**
-     * A fine grain for the domed surfaces, so a cap reads as machined metal, not as smooth plastic (the maintainer,
-     * 2026-10-26: "The domed look of the buttons is too smooth... it could use a little noise to give it texture"): a
-     * tile of grey noise at a low alpha, laid over the cap's gradient in `overlay`, so it adds grain and keeps the
-     * look's colours.
-     */
+    /** A tile of grey noise, opaque; the [grain] layer lays it over a surface at the look's strength. */
     private const val GRAIN = "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' " +
             "height='160'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' " +
-            "stitchTiles='stitch'/><feColorMatrix values='1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 0 0 0 0 0.16'/></filter>" +
+            "stitchTiles='stitch'/><feColorMatrix values='1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 0 0 0 0 1'/></filter>" +
             "<rect width='100%' height='100%' filter='url(%23g)'/></svg>\")"
 
-    /** [gradient] with the [GRAIN] over it; its rule also puts `background-blend-mode: overlay, normal`. */
-    private fun grained(gradient: String): String = "$GRAIN, $gradient"
+    /**
+     * A fine grain over a surface, so a cap or a button reads as machined metal, not as smooth plastic (the
+     * maintainer, 2026-10-26: "it could use a little noise to give it texture"; "the buttons could use the same noise
+     * ... maybe this noise should be a theme property"): a layer of [GRAIN] under the surface's content, blended in
+     * `overlay` at the look's `--kl-grain` ([io.peekandpoke.klang.ui.feel.KlangRole.Grain]), so it adds grain and keeps
+     * the look's colours. The surface must be positioned (the buttons are relative, the knob's cap absolute); it
+     * becomes its own stacking context, so the layer lies over its background and under its text and marks.
+     */
+    private fun CssBuilder.grain() {
+        put("isolation", "isolate")
+
+        rule("&::before") {
+            put("content", "\"\"")
+            put("position", "absolute")
+            put("inset", "0")
+            put("z-index", "-1")
+            put("border-radius", "inherit")
+            put("pointer-events", "none")
+            put("background-image", GRAIN)
+            put("mix-blend-mode", "overlay")
+            put("opacity", "var(--kl-grain)")
+        }
+    }
 
     // ── Lamps ─────────────────────────────────────────────────────────────────
 
@@ -70,6 +87,8 @@ object KlangControlStyles : StyleSheet("kl-controls") {
     // ── Buttons: the base ─────────────────────────────────────────────────────
 
     val button by rule {
+        // Positioned: the finish's grain layer takes the button's box (see grain())
+        put("position", "relative")
         put("display", "inline-flex")
         put("align-items", "center")
         put("justify-content", "center")
@@ -109,6 +128,7 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("color", "var(--kl-ink-strong)")
         put("background", "linear-gradient(180deg, var(--kl-cap-light), var(--kl-cap-dark))")
         put("box-shadow", "0 2px 3px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1)")
+        grain()
     }
 
     val darkDomed by rule {
@@ -116,12 +136,10 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("border-radius", "var(--kl-radius-domed)")
         put(
             "background",
-            grained(
-                "radial-gradient(ellipse 120% 90% at 50% 10%, var(--kl-cap-light) 0%," +
-                        " color-mix(in srgb, var(--kl-cap-light), var(--kl-cap-dark)) 55%, var(--kl-cap-dark) 100%)"
-            ),
+            "radial-gradient(ellipse 120% 90% at 50% 10%, var(--kl-cap-light) 0%," +
+                    " color-mix(in srgb, var(--kl-cap-light), var(--kl-cap-dark)) 55%, var(--kl-cap-dark) 100%)",
         )
-        put("background-blend-mode", "overlay, normal")
+        grain()
         put("box-shadow", "0 3px 5px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.18)")
     }
 
@@ -134,6 +152,7 @@ object KlangControlStyles : StyleSheet("kl-controls") {
                     " color-mix(in srgb, var(--kl-metal-light), var(--kl-metal-mid)) 100%)"
         )
         put("box-shadow", "0 2px 4px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.9)")
+        grain()
     }
 
     val silverDomed by rule {
@@ -141,12 +160,10 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("border-radius", "var(--kl-radius-domed)")
         put(
             "background",
-            grained(
-                "radial-gradient(ellipse 120% 90% at 45% 15%, var(--kl-metal-light) 0%, var(--kl-metal-mid) 50%," +
-                        " var(--kl-metal-dark) 100%)"
-            ),
+            "radial-gradient(ellipse 120% 90% at 45% 15%, var(--kl-metal-light) 0%, var(--kl-metal-mid) 50%," +
+                    " var(--kl-metal-dark) 100%)",
         )
-        put("background-blend-mode", "overlay, normal")
+        grain()
         put("box-shadow", "0 3px 5px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.7)")
     }
 
@@ -227,6 +244,11 @@ object KlangControlStyles : StyleSheet("kl-controls") {
 
         rule("&:hover") {
             put("filter", "none")
+        }
+
+        // No grain inside the outline: with no surface under it the grain would show as a grey haze (see grain())
+        rule("&::before") {
+            put("display", "none")
         }
     }
 
@@ -1141,18 +1163,16 @@ object KlangControlStyles : StyleSheet("kl-controls") {
     }
 
     val knobCapDark by rule {
-        put("background", grained("radial-gradient(circle at 42% 30%, var(--kl-cap-light) 0%, var(--kl-cap-dark) 100%)"))
-        put("background-blend-mode", "overlay, normal")
+        put("background", "radial-gradient(circle at 42% 30%, var(--kl-cap-light) 0%, var(--kl-cap-dark) 100%)")
+        grain()
     }
 
     val knobCapSilver by rule {
         put(
             "background",
-            grained(
-                "radial-gradient(circle at 42% 28%, var(--kl-metal-light) 0%, var(--kl-metal-mid) 45%, var(--kl-metal-dark) 100%)"
-            ),
+            "radial-gradient(circle at 42% 28%, var(--kl-metal-light) 0%, var(--kl-metal-mid) 45%, var(--kl-metal-dark) 100%)",
         )
-        put("background-blend-mode", "overlay, normal")
+        grain()
     }
 
     /** The turning layer; its rotation comes per knob. */

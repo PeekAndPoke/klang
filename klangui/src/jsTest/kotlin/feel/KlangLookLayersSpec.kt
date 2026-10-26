@@ -91,6 +91,15 @@ class KlangLookLayersSpec : StringSpec({
             .forEach { role.accepts(it) shouldBe false }
     }
 
+    "an amount role accepts 0 to 1 with up to three decimals, and nothing else" {
+        val role = KlangRole.Grain
+
+        listOf("0", "1", "0.16", "0.5", "0.125", "1.0", "1.000").forEach { role.accepts(it) shouldBe true }
+
+        listOf("", "1.1", "2", "-0.1", ".5", "0.1234", "0.", "0,5", "50%", " 0.2", "var(--x)")
+            .forEach { role.accepts(it) shouldBe false }
+    }
+
     "every role's default fits its own kind" {
         for (role in KlangRole.entries) {
             role.accepts(role.default) shouldBe true

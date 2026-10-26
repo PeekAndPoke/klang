@@ -174,6 +174,9 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
                                 put("border-radius", "var(${role.cssVar})")
                             }
                         }
+
+                        // A share: the one there is, the grain, shown on a cap
+                        KlangRole.Kind.Amount -> KlangButton(onClick = {}, surface = KlangButton.Surface.Domed) { +"Grain" }
                     }
 
                     span {
