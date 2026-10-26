@@ -1,9 +1,8 @@
 # KLANG-00325: Key map: keyboard input mapped to actions in one place
 
-> **Status (2026-10-25): IN PROGRESS.** Step 1 (the core, in the module `workshop`), step 2's first draft (`OnKey`,
-> the hints, on the song page's Play / Update / Stop) and the editor's keys overlay are built and committed for
-> v0.7.5; the overlay step's review stopped at the safety valve after two rounds (both MAJORs fixed), round 3 runs
-> after the release. Next: the maintainer's Mac test, then step 3 (the editor on the table).
+> **Status (2026-10-26): IN PROGRESS.** Steps 1 and 2 are done and hand-tested on the PC (the key manager, `OnKey`
+> and the hints, layers, priorities, keys in a row, the Esc chain). Now step 3, the editor on the table, in three
+> parts (3a, 3b, 3c below). Waiting: the maintainer's Mac test.
 >
 > **Part of:** KLANG-00332 (UX comfort)
 
@@ -188,11 +187,26 @@ Klang out of it and the move is a copy. Klang's modules depend on it.
 - The settings page, with KLANG-00324: every action with its key, record a new key, the clashes shown, back to the
   preset.
 
-**Open, the maintainer not sure yet (2026-10-25); the coordinator's defaults, to look at again in step 3:**
-- The editor's setup: `basicSetup`'s extensions copied without its keymaps (CodeMirror's docs suggest it), so no hidden
-  CodeMirror key can clash again (the German Ctrl+Shift+7 of KLANG-00323).
-- Split line: CodeMirror's `splitLine` as it is.
+**Decided for step 3 (maintainer, 2026-10-26):**
+- The editor's setup: `basicSetup`'s extensions copied without its keymaps, so the editor answers only the keys of our
+  table ("Only our table"); no hidden CodeMirror key can clash again (the German Ctrl+Shift+7 of KLANG-00323).
+- Split line: CodeMirror's `splitLine` as it is (the moved text at column 0; Reformat fixes the indentation).
 - The Mac preset: the draft above as it is; the rows marked "check" are checked on a Mac when one is at hand.
+
+**Step 3's plan (2026-10-26), in three parts, each reviewed:**
+- **3a, the table drives the editor:** one high-precedence keydown handler matches the editor's actions with the key
+  manager's own matcher (the user's keys and the platform included) and runs CodeMirror's commands; CodeMirror checks
+  its tab focus mode and an input method's composition before any handler (view 6.43.14 `InputState.handleEvent`),
+  so both keep working. Same key, same scope: a higher `KeyPriority` goes first (the completion list's Enter, Tab and
+  Esc before the newline, the indent and back to one cursor); a command that does nothing passes the key on, an Esc
+  the editor did not use goes on to the page. The setup is `basicSetup` without its keymaps, keeping the text keys
+  (`standardKeymap`), the closing brackets' Backspace and the completion list's arrows. The bookmarks and back to the
+  last edit move onto the table. The bindings get `@codemirror/search` (its commands were declared in
+  `@codemirror/commands` and would be undefined), `addCursorAbove` and the others; a test checks that every command
+  the table names exists.
+- **3b, our own commands:** block comment, unselect the last occurrence, replace, reformat the whole document,
+  quick documentation, go to definition on Ctrl+B, Alt+Shift+click adds a cursor (Ctrl+click no longer does).
+- **3c, the mini-notation editor:** undo and redo from the table; `KlangKeyBindings.isUndo` and `isRedo` go.
 
 ## The work
 
@@ -393,3 +407,13 @@ OkCancel real buttons and focus; their Esc stays ours until the key map carries 
   CodeMirror 6; a key an input method composes with (`isComposing`, or Safari's keyCode 229 alone) starts no modifier
   tap, and while chords in a row wait it ends the wait and goes on to the field instead of being swallowed. Tests for
   Safari's 229 on Esc, Shift taps while composing, and the wait. Review (level 1) clean in round 2; 3 mutants killed.
+- 2026-10-26: step 3a, the table drives the editor (maintainer: "Only our table", split line as CodeMirror's): the
+  editor's setup is `basicSetup` without its keymaps (`EditorKeyTable.setup()`); one handler matches the editor's
+  actions with the key manager's matcher, the user's keys included, and runs CodeMirror's commands, the higher
+  priority first (`KlangKeyPriorities.EditorPopup`: the completion list's Enter, Tab and Esc); a key no command acted
+  on goes on (an unused Esc to the page). The search panel's fields get their own small keymap from the table (find,
+  next and previous match, go to line, Esc closes); F3, Ctrl+I and Ctrl+Shift+M never reach the browser. The bookmarks
+  and back to the last edit run on the table. The bindings: `@codemirror/search` (its commands were declared in the
+  wrong package and would have been undefined), now a direct dependency. Review (level 2): round 1 one MAJOR (the
+  search panel had lost its keys) and four MINORs, fixed; round 2 clean, its MINOR and NIT applied. 10 mutants killed.
+  The maintainer's hand test of the editor's keys comes with 3b.

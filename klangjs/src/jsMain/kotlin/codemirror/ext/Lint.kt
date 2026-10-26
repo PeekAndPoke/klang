@@ -82,3 +82,9 @@ external val openLintPanel: dynamic
  * Command to close the lint panel
  */
 external val closeLintPanel: dynamic
+
+/** Moves the selection to the next diagnostic, wrapping around at the end. */
+external val nextDiagnostic: Command
+
+/** Moves the selection to the previous diagnostic, wrapping around at the start. */
+external val previousDiagnostic: Command

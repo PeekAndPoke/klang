@@ -5,11 +5,11 @@
 
 package io.peekandpoke.klang.ui.codemirror
 
+import io.peekandpoke.klang.codemirror.ext.Command
 import io.peekandpoke.klang.codemirror.ext.EditorState
 import io.peekandpoke.klang.codemirror.ext.EditorView
 import io.peekandpoke.klang.codemirror.ext.Extension
 import io.peekandpoke.klang.codemirror.ext.GutterMarker
-import io.peekandpoke.klang.codemirror.ext.Prec
 import io.peekandpoke.klang.codemirror.ext.RangeSet
 import io.peekandpoke.klang.codemirror.ext.RangeValue
 import io.peekandpoke.klang.codemirror.ext.StateEffect
@@ -25,30 +25,23 @@ import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.utils.jsObject
 import kotlinx.browser.document
 import org.w3c.dom.Node
-import org.w3c.dom.events.KeyboardEvent
 
 /**
  * Numbered bookmarks as in IntelliJ (KLANG-00323): Ctrl+Shift+digit sets one on the cursor's line, Ctrl+digit goes
  * there.
  *
  * Wires [Bookmarks] into the editor and holds no rule of its own: a state field keeps the bookmarks and maps them
- * through every change, a key handler sets and goes, the line-number gutter shows them, the history carries the line
- * moves and resets into undo and redo, and a listener reports each change to the host ([BookmarkOptions]), which keeps
- * them.
+ * through every change, [commands] set and go for the key map's bookmark keys, the line-number gutter shows them, the
+ * history carries the line moves and resets into undo and redo, and a listener reports each change to the host
+ * ([BookmarkOptions]), which keeps them.
  *
- * The keys are read from the key's position (`event.code`), Ctrl on a Mac too (Cmd+digit is the browser's tab switch
- * there): the number keys above the letters set and go, so Shift+3 on a German layout (`§`) or Shift+1 on a French
- * one (`1`) still sets, and Ctrl+Shift+7 on a German layout (`/`) sets 7 instead of running the comment key. The
- * keypad's digits only go (Shift turns them into the arrow and page keys). A handled key never reaches the browser,
- * also when there is no bookmark to go to.
+ * The keys are the key map's (KLANG-00325), which reads a digit by the key's position (`event.code`), Ctrl on a Mac
+ * too (Cmd+digit is the browser's tab switch there): the number keys above the letters set and go, so Shift+3 on a
+ * German layout (`§`) or Shift+1 on a French one (`1`) still sets, and Ctrl+Shift+7 on a German layout (`/`) sets 7
+ * instead of running the comment key. The keypad's digits only go (Shift turns them into the arrow and page keys). A
+ * bookmark key never reaches the browser, also when there is no bookmark to go to.
  */
 internal object BookmarksExtension {
-
-    /** How the code of a number key above the letters starts, before its digit (`Digit3`). */
-    private const val DIGIT_CODE = "Digit"
-
-    /** How the code of a number key on the numeric keypad starts, before its digit (`Numpad3`). */
-    private const val NUMPAD_CODE = "Numpad"
 
     /**
      * CodeMirror's `assoc` for an offset that stays before the character after it: text inserted at the offset goes
@@ -108,14 +101,6 @@ internal object BookmarksExtension {
         return arrayOf(
             field.init { state -> Bookmarks.load(lines = options.initial, doc = TextDoc(state.doc)) },
             theme(),
-            // Before the keymaps, which would take a typed `/` for the comment key (Ctrl+Shift+7 on a German layout)
-            Prec.highest(
-                EditorView.domEventHandlers(
-                    jsObject<dynamic> {
-                        this.keydown = { event: KeyboardEvent, view: EditorView -> onKeyDown(view, event, options) }
-                    }
-                )
-            ),
             invertedEffects.of { tr -> inverted(tr) },
             EditorState.transactionExtender.of { tr -> isolatedIfMoveLine(tr) },
             EditorView.updateListener.of { update -> reporter.report(update.state) },
@@ -174,39 +159,25 @@ internal object BookmarksExtension {
     }
 
     /**
-     * The digit of a number key, read from its position ([KeyboardEvent.code]: `Digit3`, or `Numpad3` when [keypad]),
-     * or null for any other key.
+     * The commands of the bookmark keys ([KlangEditorKeyBindings.GoToBookmark] and [KlangEditorKeyBindings.SetBookmark]),
+     * for [EditorKeyTable]. A bookmark key always acts, also on a digit without a bookmark, so it never reaches the
+     * browser (Ctrl+digit switches its tabs).
      */
-    fun digitOf(code: String, keypad: Boolean): Int? {
-        val rest = when {
-            code.startsWith(DIGIT_CODE) -> code.removePrefix(DIGIT_CODE)
-            keypad && code.startsWith(NUMPAD_CODE) -> code.removePrefix(NUMPAD_CODE)
-            else -> return null
-        }
-
-        // The keypad's other keys have codes of the same start (`NumpadAdd`, `NumpadEnter`)
-        return rest.toIntOrNull()?.takeIf { it in Bookmarks.DIGITS }
-    }
-
-    /**
-     * Ctrl+Shift+digit sets, Ctrl+digit goes, with neither Alt (AltGr on Windows) nor Meta held. Returns true for these
-     * keys, which keeps them from the browser and from the editor's other key bindings.
-     */
-    private fun onKeyDown(view: EditorView, event: KeyboardEvent, options: BookmarkOptions): Boolean {
-        if (!event.ctrlKey || event.altKey || event.metaKey) {
-            return false
-        }
-
-        val digit = digitOf(code = event.code, keypad = !event.shiftKey) ?: return false
-
-        if (event.shiftKey) {
-            set(view = view, digit = digit, askToMove = options.askToMove)
-        } else {
+    fun commands(options: BookmarkOptions): Map<String, List<Command>> = Bookmarks.DIGITS.flatMap { digit ->
+        val goTo: Command = { view ->
             goTo(view = view, digit = digit)
+            true
+        }
+        val set: Command = { view ->
+            set(view = view, digit = digit, askToMove = options.askToMove)
+            true
         }
 
-        return true
-    }
+        listOf(
+            KlangEditorKeyBindings.GoToBookmark[digit].id to listOf(goTo),
+            KlangEditorKeyBindings.SetBookmark[digit].id to listOf(set),
+        )
+    }.toMap()
 
     /** Bookmark [digit] set on the cursor's line, asking through [askToMove] when it sits on another line. */
     private fun set(

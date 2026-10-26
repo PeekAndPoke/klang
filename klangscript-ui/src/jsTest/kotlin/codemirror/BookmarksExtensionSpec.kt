@@ -15,7 +15,6 @@ import io.peekandpoke.klang.codemirror.ext.EditorStateConfig
 import io.peekandpoke.klang.codemirror.ext.EditorView
 import io.peekandpoke.klang.codemirror.ext.EditorViewConfig
 import io.peekandpoke.klang.codemirror.ext.Extension
-import io.peekandpoke.klang.codemirror.ext.basicSetup
 import io.peekandpoke.klang.codemirror.ext.deleteCharBackward
 import io.peekandpoke.klang.codemirror.ext.deleteLine
 import io.peekandpoke.klang.codemirror.ext.history
@@ -41,7 +40,7 @@ import kotlin.math.abs
  * The wiring of the numbered bookmarks into CodeMirror (KLANG-00323), on a real editor state and view.
  *
  * [BookmarksSpec] holds the rule. This spec holds what the rule cannot see: that the keys set and go by the key's
- * position, before the editor's own key bindings, and never reach the browser; that a move asks the host, gives it
+ * position through the editor's key map, and never reach the browser; that a move asks the host, gives it
  * the keyboard, and waits for its answer; that real commands (Enter, Backspace, delete line, move line, a paste) and
  * the history's undo and redo keep the bookmarks on their lines; that every change is reported; that the gutter shows
  * the bookmarks; and that the editor starts from the host's bookmarks and keeps them through a replacement of the
@@ -58,8 +57,12 @@ class BookmarksExtensionSpec : StringSpec({
     fun newState(host: RecordingHost, vararg extra: Any, doc: String = song): EditorState = EditorState.create(
         jsObject<EditorStateConfig> {
             this.doc = doc
-            // The others first, as the editor has `basicSetup` before the bookmarks
-            this.extensions = arrayOf<Any>(*extra, BookmarksExtension.extension(host.options))
+            // The others first, as the editor has its setup before the bookmarks; the keys as the editor wires them
+            this.extensions = arrayOf<Any>(
+                *extra,
+                editorKeys(commands = EditorKeyTable.commands + BookmarksExtension.commands(host.options)),
+                BookmarksExtension.extension(host.options),
+            )
                 .unsafeCast<Array<Extension>>()
         }
     )
@@ -217,10 +220,10 @@ class BookmarksExtensionSpec : StringSpec({
         }
     }
 
-    "the keys come before the editor's own: Ctrl+Shift+7 on a German layout sets 7 and does not comment the line" {
+    "on a German layout Ctrl+Shift+7 sets 7 and does not comment the line (the comment key is Ctrl+/ without Shift)" {
         val host = RecordingHost()
 
-        withView(newState(host, basicSetup, javascript())) { view ->
+        withView(newState(host, *EditorKeyTable.setup(), javascript())) { view ->
             view.moveCursorTo(line = 10)
             // Shift+7 types a `/` on a German layout, and Ctrl+/ is the comment key
             val set = view.press(code = "Digit7", key = "/", shift = true)
@@ -236,7 +239,7 @@ class BookmarksExtensionSpec : StringSpec({
     "on a French layout the number keys type their digit with Shift, and set and go all the same" {
         val host = RecordingHost()
 
-        withView(newState(host, basicSetup)) { view ->
+        withView(newState(host, *EditorKeyTable.setup())) { view ->
             view.moveCursorTo(line = 10)
             // AZERTY: the key above Q types `&`, and `1` with Shift
             view.press(code = "Digit1", key = "1", shift = true)
@@ -563,7 +566,7 @@ class BookmarksExtensionSpec : StringSpec({
             }
         }
 
-        withView(newState(RecordingHost(), basicSetup, doc = "a();\n  b();\n  c();\nd();\ne();")) { view ->
+        withView(newState(RecordingHost(), *EditorKeyTable.setup(), doc = "a();\n  b();\n  c();\nd();\ne();")) { view ->
             view.moveCursorTo(line = 2)
             view.pressSet(2)
             view.moveCursorTo(line = 3)

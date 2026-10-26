@@ -28,7 +28,7 @@ import io.peekandpoke.kraft.vdom.preact.PreactVDomEngine
 /** Every key of the app (KLANG-00325): Klang's actions, the user's keys kept in localStorage, hints on a held Ctrl (Cmd on a Mac). */
 val keysManager = KeysManager(store = KeymapStorage).apply {
     define(KlangKeyBindings)
-    // Shown in the editor's keys overview; CodeMirror still acts on them until step 3 of KLANG-00325
+    // The code editor's keys: the editor runs them through EditorKeyTable, the user's keys included
     define(KlangEditorKeyBindings)
 
     // A clash or an unreadable key, from the defaults or from the user's keys: say so where the developer looks

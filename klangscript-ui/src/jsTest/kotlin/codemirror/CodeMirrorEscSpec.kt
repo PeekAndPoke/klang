@@ -13,21 +13,20 @@ import io.peekandpoke.klang.codemirror.ext.EditorStateConfig
 import io.peekandpoke.klang.codemirror.ext.EditorView
 import io.peekandpoke.klang.codemirror.ext.EditorViewConfig
 import io.peekandpoke.klang.codemirror.ext.Extension
-import io.peekandpoke.klang.codemirror.ext.basicSetup
 import io.peekandpoke.kraft.utils.jsObject
 import kotlinx.browser.document
 import org.w3c.dom.events.KeyboardEvent
 import org.w3c.dom.events.KeyboardEventInit
 
 /**
- * CodeMirror's side of the key manager's text-field rule (KLANG-00325): an Esc the editor uses (here: a selection to
- * simplify; closing its completion works the same way) is prevented, one it ignores is not, so the manager answers
- * only the second. A CodeMirror upgrade that stopped preventing would make one Esc act twice, in the editor and on a
- * panel; this spec says so first.
+ * The editor's side of the key manager's text-field rule (KLANG-00325): an Esc the editor uses (here: a selection to
+ * simplify; closing its completion works the same way) is prevented, one it ignores is not, so the page's manager
+ * answers only the second. The editor's keys ([EditorKeyTable]) run CodeMirror's commands; if a change there stopped
+ * preventing, one Esc would act twice, in the editor and on a panel; this spec says so first.
  */
 class CodeMirrorEscSpec : StringSpec({
 
-    "CodeMirror prevents an Esc it uses (a selection to simplify) and leaves one it ignores (a plain cursor)" {
+    "the editor prevents an Esc it uses (a selection to simplify) and leaves one it ignores (a plain cursor)" {
         val parent = document.createElement("div")
         document.body!!.appendChild(parent)
 
@@ -36,7 +35,8 @@ class CodeMirrorEscSpec : StringSpec({
                 this.state = EditorState.create(
                     jsObject<EditorStateConfig> {
                         this.doc = "note(\"c3 e3\")"
-                        this.extensions = arrayOf<Any>(basicSetup).unsafeCast<Array<Extension>>()
+                        this.extensions = arrayOf<Any>(*EditorKeyTable.setup(), editorKeys(EditorKeyTable.commands))
+                            .unsafeCast<Array<Extension>>()
                     }
                 )
                 this.parent = parent

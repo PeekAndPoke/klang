@@ -29,6 +29,7 @@ kotlin {
                 api(Deps.Npm { codemirrorBasicSetup() })
                 api(Deps.Npm { codemirrorAutocomplete() })
                 api(Deps.Npm { codemirrorLint() })
+                api(Deps.Npm { codemirrorSearch() })
                 api(Deps.Npm { codemirrorMinimap() })
                 api(Deps.Npm { lezerHighlight() })
             }

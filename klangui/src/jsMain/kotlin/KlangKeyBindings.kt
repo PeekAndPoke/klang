@@ -27,8 +27,14 @@ object KlangKeyPriorities {
     /** A code tool or a dialog in front of a panel. */
     val Tool = KeyPriority(value = 20, name = "tool")
 
-    /** Every priority Klang uses, lowest first. */
-    val all = listOf(Page, Panel, Tool)
+    /**
+     * In the code editor's own scope: a list open in the editor (the completion) in front of the editor's keys, so
+     * Enter accepts before it breaks the line, Tab before it indents and Esc closes the list before anything else.
+     */
+    val EditorPopup = KeyPriority(value = 10, name = "editor-popup")
+
+    /** Every priority Klang uses: the page's, lowest first, then the editor's scope. */
+    val all = listOf(Page, Panel, Tool, EditorPopup)
 }
 
 /**

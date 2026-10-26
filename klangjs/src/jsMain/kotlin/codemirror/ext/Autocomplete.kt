@@ -81,6 +81,9 @@ external val acceptCompletion: Command
 external val startCompletion: Command
 external val closeCompletion: Command
 
+/** Moves the selection in the open completion list by one entry, or by a page with [by] `"page"`; false when none is open. */
+external fun moveCompletionSelection(forward: Boolean, by: String = definedExternally): Command
+
 // Completion keymap
 external val completionKeymap: Array<KeyBinding>
 

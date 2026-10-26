@@ -5,8 +5,10 @@ Status: **open (2026-10-18), for the maintainer's hand test** of the dependency 
 language 6.13.1, autocomplete 6.20.3, lint 6.9.7, @lezer/highlight 1.2.5; codemirror 6.0.2, lang-javascript
 6.2.5 and the minimap 0.5.2 unchanged). Archive this file when the test passes; it can be reused for the next bump.
 
-One editor component serves every host (`klangscript-ui/src/jsMain/kotlin/codemirror/CodeMirrorComp.kt`). The app
-binds no keymap of its own: Play and Run are buttons.
+One editor component serves every host (`klangscript-ui/src/jsMain/kotlin/codemirror/CodeMirrorComp.kt`). Since
+KLANG-00325 step 3 the editor has no CodeMirror keymap but the text keys: its keys come from the key map
+(`KlangEditorKeyBindings`, run by `EditorKeyTable`), and `EditorKeyTableSpec` checks that every command it names
+exists in the installed packages.
 
 | Host | Route | Hover, menu, tools | Autocomplete | Lint | Minimap | Playback highlight |
 |---|---|---|---|---|---|---|
@@ -60,13 +62,14 @@ binds no keymap of its own: Play and Run are buttons.
 - **Two copies of a package.** If `@codemirror/state` or `view` is loaded twice, facets stop matching: completions,
   the minimap or the linter silently do nothing, or the console shows "Unrecognized extension value" or "multiple
   instances of @codemirror/state". Check the browser console first. `@codemirror/autocomplete` is now a direct
-  dependency of `klangjs` (before it came only through `codemirror` and lang-javascript).
+  dependency of `klangjs` (before it came only through `codemirror` and lang-javascript), and so is
+  `@codemirror/search` (2026-10-26, KLANG-00325).
 - **CSS on CodeMirror's internal class names** (`CodeMirrorTheme.kt`): `.cm-selectionLayer .cm-selectionBackground`,
   `.cm-tooltip-arrow`, `.cm-panel-lint li.cm-diagnostic[aria-selected=true]`, `.cm-lintPoint-*::after`.
 - **The lint plumbing** (`CodeMirrorComp.kt` around 405 to 490): `needsRefresh`, `forEachDiagnostic` handing back the
   same objects, an empty dispatch plus `forceLinting` to rerun.
-- **`basicSetup` used as a JS array** (`basicSetup.asDynamic().concat(...)`, `CodeMirrorComp.kt:185`): if it ever
-  stops being one, no editor starts.
+- **`basicSetup` copied** (`EditorKeyTable.setup()`, since KLANG-00325 step 3): a bump that adds an extension to
+  `codemirror`'s `basicSetup` is not picked up by itself; compare the two lists.
 - **The playback highlight** assumes `view.dom` does not scroll and `scrollDOM` does (`CodeMirrorHighlightBuffer.kt`).
 - **The minimap** is pre-1.0; it needs the same state and view instances as the editor.
 - **The playback highlight's Pixi overlay** (found 2026-10-18): webpack 5.108 dropped pixi's side-effect import

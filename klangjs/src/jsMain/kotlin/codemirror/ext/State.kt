@@ -81,6 +81,9 @@ external class EditorState {
         fun create(config: EditorStateConfig): EditorState
         fun fromJSON(json: Any, config: EditorStateConfig = definedExternally): EditorState
 
+        /** Whether the selection may hold several ranges (several cursors); off by default. */
+        val allowMultipleSelections: Facet<Boolean>
+
         /** Functions that may add to every transaction: a spec with `annotations` or `effects`, or null. */
         val transactionExtender: Facet<(tr: Transaction) -> Any?>
     }
@@ -233,6 +236,7 @@ external interface Annotation<T>
 /** Precedence for extensions: a higher one runs first (key bindings, for example). */
 external object Prec {
     fun highest(ext: Extension): Extension
+    fun high(ext: Extension): Extension
 }
 
 /**

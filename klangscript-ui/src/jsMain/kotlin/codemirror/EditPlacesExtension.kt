@@ -5,22 +5,21 @@
 
 package io.peekandpoke.klang.ui.codemirror
 
+import io.peekandpoke.klang.codemirror.ext.Command
 import io.peekandpoke.klang.codemirror.ext.EditorView
 import io.peekandpoke.klang.codemirror.ext.Extension
-import io.peekandpoke.klang.codemirror.ext.KeyBinding
 import io.peekandpoke.klang.codemirror.ext.StateEffect
 import io.peekandpoke.klang.codemirror.ext.StateEffectType
 import io.peekandpoke.klang.codemirror.ext.StateField
 import io.peekandpoke.klang.codemirror.ext.StateFieldConfig
 import io.peekandpoke.klang.codemirror.ext.Transaction
-import io.peekandpoke.klang.codemirror.ext.keymap
 import io.peekandpoke.kraft.utils.jsObject
 
 /**
  * Ctrl+Shift+Backspace (Cmd+Shift+Backspace on a Mac): back to where the user last edited (KLANG-00322).
  *
- * Wires [EditPlaces] into the editor and holds no rule of its own: a state field keeps the places and the walk, and a
- * key binding steps back. The places live as long as the editor (one song open) and are not saved.
+ * Wires [EditPlaces] into the editor and holds no rule of its own: a state field keeps the places and the walk, and
+ * [commands] step back on the key map's key. The places live as long as the editor (one song open) and are not saved.
  *
  * Every document change is an edit (the ticket's point 3, as changed 2026-10-21): typing, a command such as toggle
  * comment or move line (toggle comment carries no user event at all), an editor tool's commit. The one change the
@@ -47,21 +46,20 @@ internal object EditPlacesExtension {
         }
     )
 
-    /** The field and the key binding, for the editor's extensions. */
-    val extension: Extension = arrayOf(
-        field,
-        keymap.of(
-            arrayOf(
-                jsObject<KeyBinding> {
-                    this.key = KEY
-                    this.run = { view, _ -> goBack(view) }
-                    // Also when there is no place to go back to: on a Mac, Chrome and Firefox open their dialog
-                    // for clearing the browsing history on a Cmd+Shift+Backspace that reaches them.
-                    this.preventDefault = true
-                }
-            )
-        ),
-    ).unsafeCast<Extension>()
+    /** The field, for the editor's extensions. */
+    val extension: Extension = field.unsafeCast<Extension>()
+
+    /**
+     * The command of [KlangEditorKeyBindings.BackToLastEdit], for [EditorKeyTable]. It acts also when there is no place
+     * to go back to: on a Mac, Chrome and Firefox open their dialog for clearing the browsing history on a
+     * Cmd+Shift+Backspace that reaches them.
+     */
+    val commands: Map<String, List<Command>> = mapOf(
+        KlangEditorKeyBindings.BackToLastEdit.id to listOf<Command>({ view ->
+            goBack(view)
+            true
+        }),
+    )
 
     /**
      * One step back: moves the cursor to the place [EditPlaces.back] picks and scrolls it to the middle of the editor,

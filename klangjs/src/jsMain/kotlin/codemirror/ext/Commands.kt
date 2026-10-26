@@ -94,21 +94,13 @@ external val lineUncomment: Command
 external val blockComment: Command
 external val blockUncomment: Command
 
-// Search commands
-external val openSearchPanel: Command
-external val closeSearchPanel: Command
-external val selectNextOccurrence: Command
-external val selectSelectionMatches: Command
-external val findNext: Command
-external val findPrevious: Command
-external val replaceNext: Command
-external val replaceAll: Command
+// Multiple cursors
+external val addCursorAbove: Command
+external val addCursorBelow: Command
+external val simplifySelection: Command
 
-// Fold commands
-external val foldCode: Command
-external val unfoldCode: Command
-external val foldAll: Command
-external val unfoldAll: Command
+// Tab focus mode: Tab moves the focus out of the editor instead of indenting
+external val toggleTabFocusMode: Command
 
 // Misc commands
 external val insertNewline: Command
@@ -141,10 +133,6 @@ external interface CommentConfig {
     var blockCommentStart: String?
     var blockCommentEnd: String?
 }
-
-external val commentKeymap: Array<KeyBinding>
-external val searchKeymap: Array<KeyBinding>
-external val foldKeymap: Array<KeyBinding>
 
 // Utility for creating custom commands
 external interface CommandContext {

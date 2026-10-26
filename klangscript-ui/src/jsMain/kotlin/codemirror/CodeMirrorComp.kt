@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.ui.codemirror
 
+import io.peekandpoke.klang.codemirror.ext.Command
 import io.peekandpoke.klang.codemirror.ext.Diagnostic
 import io.peekandpoke.klang.codemirror.ext.EditorState
 import io.peekandpoke.klang.codemirror.ext.EditorStateConfig
@@ -13,7 +14,6 @@ import io.peekandpoke.klang.codemirror.ext.EditorViewConfig
 import io.peekandpoke.klang.codemirror.ext.Extension
 import io.peekandpoke.klang.codemirror.ext.MinimapConfig
 import io.peekandpoke.klang.codemirror.ext.autocompletion
-import io.peekandpoke.klang.codemirror.ext.basicSetup
 import io.peekandpoke.klang.codemirror.ext.forEachDiagnostic
 import io.peekandpoke.klang.codemirror.ext.forceLinting
 import io.peekandpoke.klang.codemirror.ext.javascript
@@ -26,10 +26,14 @@ import io.peekandpoke.klang.script.intel.toOffsets
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.ui.HoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolContext
+import io.peekandpoke.klang.workshop.keys.KeyPlatform
+import io.peekandpoke.klang.workshop.keys.Keymap
+import io.peekandpoke.klang.workshop.keys.KeysManager
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.ComponentRef
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
+import io.peekandpoke.kraft.components.getAttributeRecursiveOrNull
 import io.peekandpoke.kraft.popups.PopupsManager
 import io.peekandpoke.kraft.utils.jsObject
 import io.peekandpoke.kraft.vdom.VDom
@@ -116,6 +120,9 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
 
     private val theme = CodeMirrorTheme()
 
+    /** The editor's own key map, for a host without a key manager (a test, another app). */
+    private val ownKeymap by lazy { Keymap(platform = KeyPlatform.detect(), actions = KlangEditorKeyBindings.actions) }
+
     /**
      * Runtime errors from the last compile or play attempt, published by [setErrors].
      *
@@ -189,19 +196,19 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
         // Build DSL extensions (hover, completion) if libraries are available
         val dslExtensions = buildDslExtensions()
 
-        // Create extensions array - combine basicSetup with our custom extensions
-        val allExtensions = basicSetup.asDynamic().concat(
-            arrayOf(
-                theme.extension,
-                javascript(),
-                updateListenerExtension,
-                EditPlacesExtension.extension,
-                linterExtension,
-                lintGutter(),
-                *dslExtensions.toTypedArray(),
-                *buildMinimapExtensions().toTypedArray(),
-                *buildBookmarkExtensions().toTypedArray(),
-            )
+        // The setup without CodeMirror's keymaps, the key map's keys (KLANG-00325), then our extensions
+        val allExtensions = arrayOf<Any>(
+            *EditorKeyTable.setup(),
+            EditorKeyTable.extension(currentKeymap = ::editorKeymap, commands = buildKeyCommands()),
+            theme.extension,
+            javascript(),
+            updateListenerExtension,
+            EditPlacesExtension.extension,
+            linterExtension,
+            lintGutter(),
+            *dslExtensions.toTypedArray(),
+            *buildMinimapExtensions().toTypedArray(),
+            *buildBookmarkExtensions().toTypedArray(),
         ).unsafeCast<Array<Extension>>()
 
         // Create editor state config
@@ -276,6 +283,17 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
 
         return listOf(showMinimap.of(config))
     }
+
+    /** The commands of the editor's keys: the table's, back to the last edit, and the bookmarks' when it has them. */
+    private fun buildKeyCommands(): Map<String, List<Command>> =
+        EditorKeyTable.commands + EditPlacesExtension.commands + (props.bookmarks?.let { BookmarksExtension.commands(it) } ?: emptyMap())
+
+    /**
+     * The key map the editor's keys are read from, on every key: the app's, with the user's keys; without a key manager
+     * (or one that does not know the editor's keys) the editor's own presets.
+     */
+    private fun editorKeymap(): Keymap =
+        EditorKeyTable.keymapOf(app = getAttributeRecursiveOrNull(KeysManager.key)?.keymap?.invoke(), own = ownKeymap)
 
     /** The bookmarks when [Props.bookmarks] is set, nothing otherwise. */
     private fun buildBookmarkExtensions(): List<Extension> {

@@ -430,6 +430,8 @@ object Deps {
         fun KotlinDependencyHandler.codemirrorAutocomplete() = npm("@codemirror/autocomplete", "6.20.3")
         // https://www.npmjs.com/package/@codemirror/lint
         fun KotlinDependencyHandler.codemirrorLint() = npm("@codemirror/lint", "6.9.7")
+        // https://www.npmjs.com/package/@codemirror/search
+        fun KotlinDependencyHandler.codemirrorSearch() = npm("@codemirror/search", "6.6.0")
         // https://www.npmjs.com/package/@replit/codemirror-minimap
         fun KotlinDependencyHandler.codemirrorMinimap() = npm("@replit/codemirror-minimap", "0.5.2")
         // https://www.npmjs.com/package/@lezer/highlight

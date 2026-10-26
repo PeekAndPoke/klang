@@ -313,6 +313,9 @@ external interface KeyBinding {
     var shift: ((view: EditorView, event: KeyboardEvent) -> Boolean)?
     var scope: String?
     var preventDefault: Boolean?
+
+    /** Called for every key in the binding's scope, with the key's event; true when it handled the key. */
+    var any: ((view: EditorView, event: KeyboardEvent) -> Boolean)?
 }
 
 // Extension functions and constants

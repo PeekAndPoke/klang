@@ -43,7 +43,8 @@ class EditPlacesExtensionSpec : StringSpec({
     fun newState(vararg extra: Any): EditorState = EditorState.create(
         jsObject<EditorStateConfig> {
             this.doc = song
-            this.extensions = arrayOf<Any>(EditPlacesExtension.extension, *extra).unsafeCast<Array<Extension>>()
+            this.extensions = arrayOf<Any>(EditPlacesExtension.extension, editorKeys(EditPlacesExtension.commands), *extra)
+                .unsafeCast<Array<Extension>>()
         }
     )
 
@@ -257,7 +258,7 @@ class EditPlacesExtensionSpec : StringSpec({
             .insertAtEndOf(line = 5, text = "a", userEvent = "input.type")
             .insertAtEndOf(line = 30, text = "b", userEvent = "input.type")
 
-        // CodeMirror's `Mod` is Cmd on a Mac and Ctrl elsewhere, by the same platform test
+        // The key map's `Mod` is Cmd on a Mac and Ctrl elsewhere (KeyPlatform.detect; this test agrees on a desktop)
         val mac = window.navigator.platform.contains("Mac")
 
         withView(state) { view ->
