@@ -154,6 +154,7 @@ Kept in order, close to the maintainer's words.
     the knob's cap, the ring `LampOff` while closed and `LampOn` while open. Knob and button 42 px with their feet
     and the tops of their rings on one line, the side gauges 52 px, the two outer gaps 2 px narrower than the gauges'
     (beside a smaller thing the same gap looks wider). Tried and dropped: the row centred vertically ("naaa not good").
+    The spectrum's columns 31 cells high, not 35, at the same height ("One less block per color").
 
 ## Where the conversation stands (leanings, not decisions)
 

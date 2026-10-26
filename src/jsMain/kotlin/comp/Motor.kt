@@ -141,7 +141,7 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
                 // The hovered column's frequencies show in the middle of the spectrum's part under the scope (higher up the
                 // trace would cover them)
                 Spectrumeter(
-                    numBoxesInStack = 35,
+                    numBoxesInStack = 31,
                     numBuckets = SPECTRUM_COLUMNS,
                     labelMiddle = ((FRAME_HEIGHT_REM - OSCILLOSCOPE_TOP_REM - OSCILLOSCOPE_HEIGHT_REM) / 2.0).rem,
                 ) { Player.get() }
