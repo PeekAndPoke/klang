@@ -11,6 +11,7 @@ import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.comp.KlangGauge
 import io.peekandpoke.klang.ui.comp.KlangMenuButton
 import io.peekandpoke.klang.ui.comp.KlangWorkbench
+import io.peekandpoke.klang.workshop.streams.smooth
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
@@ -18,7 +19,9 @@ import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.semanticui.noui
 import io.peekandpoke.ultra.semanticui.ui
+import io.peekandpoke.ultra.streams.ops.combinedWith
 import io.peekandpoke.ultra.streams.ops.filterIsInstance
+import io.peekandpoke.ultra.streams.ops.map
 import io.peekandpoke.ultra.streams.ops.switchMapNotNull
 import kotlinx.css.Display
 import kotlinx.css.display
@@ -54,8 +57,11 @@ class PlayerMiniStats(ctx: Ctx<Props>) : Component<PlayerMiniStats.Props>(ctx) {
         /** Where the heat gauge turns hot, as in the kitchen sink (KLANG-00344). */
         const val HEAT_HOT_FROM = 0.85
 
-        /** How slowly the needles follow new readings, as the Motor's gauges always did. */
+        /** How slowly the needles follow new readings: the share of the way kept per 10 ms, the Motor's old pace. */
         const val NEEDLE_SMOOTHING = 0.933
+
+        /** Where a needle counts as there: a thousandth of its gauge's sweep, times the sweep below. */
+        const val NEEDLE_NEAR = 0.001
     }
 
     //  PROPS  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -69,13 +75,27 @@ class PlayerMiniStats(ctx: Ctx<Props>) : Component<PlayerMiniStats.Props>(ctx) {
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
-    /** Stream-subscribed — redraws the moment the player becomes ready. */
-    private val currentPlayer by subscribingTo(Player.player)
+    /** The current player's latest diagnostics; null while there is no player, so the gauges go offline. */
+    private val online = Player.player.switchMapNotNull { it.signals }
+        .filterIsInstance<KlangPlaybackSignal.Diagnostics, _>()
+        .combinedWith(Player.player) { signal, player -> signal?.diagnostics?.takeIf { player != null } }
 
-    /** The current player's latest diagnostics; kept while the player is gone, until the next one has its own. */
-    private val playerDiagnostics by subscribingTo(
-        Player.player.switchMapNotNull { it.signals }
-            .filterIsInstance<KlangPlaybackSignal.Diagnostics, _>()
+    // The readings, smoothed as streams (KLANG-00345): the gauges draw what they get
+
+    private val cylinders by subscribingTo(
+        online.map { d -> d?.cylinders?.count { it.active }?.toDouble() }
+            .smooth(sharePer10Ms = NEEDLE_SMOOTHING, near = 32 * NEEDLE_NEAR)
+    )
+
+    /** The heat is what the render does not have to spare. */
+    private val heat by subscribingTo(
+        online.map { d -> d?.renderHeadroom?.let { 1.0 - it } }
+            .smooth(sharePer10Ms = NEEDLE_SMOOTHING, near = 1 * NEEDLE_NEAR)
+    )
+
+    private val voices by subscribingTo(
+        online.map { d -> d?.activeVoiceCount?.toDouble() }
+            .smooth(sharePer10Ms = NEEDLE_SMOOTHING, near = 100 * NEEDLE_NEAR)
     )
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -83,8 +103,6 @@ class PlayerMiniStats(ctx: Ctx<Props>) : Component<PlayerMiniStats.Props>(ctx) {
     override fun VDom.render() {
         // Offline until the player is ready: the gauges show no reading then, and no glow (their tint is the theme's
         // `--kl-gauge-glow`; the start page sets its own)
-        val diagnostics = playerDiagnostics?.diagnostics?.takeIf { currentPlayer != null }
-
         div {
             ui.horizontal.list {
                 if (props.showVolume) {
@@ -96,37 +114,33 @@ class PlayerMiniStats(ctx: Ctx<Props>) : Component<PlayerMiniStats.Props>(ctx) {
                 noui.bottom.aligned.item {
                     KlangGauge(
                         name = "Active cylinders",
-                        value = diagnostics?.cylinders?.count { it.active }?.toDouble(),
+                        value = cylinders,
                         range = 0.0..32.0,
                         size = SIDE_GAUGE_PX.px,
                         icon = { layer_group },
                         display = { it.roundToInt().toString() },
-                        smoothing = NEEDLE_SMOOTHING,
                     )
                 }
 
                 noui.bottom.aligned.item {
-                    // The heat is what the render does not have to spare
                     KlangGauge(
                         name = "Motor heat",
-                        value = diagnostics?.renderHeadroom?.let { 1.0 - it },
+                        value = heat,
                         size = MIDDLE_GAUGE_PX.px,
                         icon = { microchip },
                         display = { "${(it * 100).roundToInt()}%" },
                         hotFrom = HEAT_HOT_FROM,
-                        smoothing = NEEDLE_SMOOTHING,
                     )
                 }
 
                 noui.bottom.aligned.item {
                     KlangGauge(
                         name = "Active voices",
-                        value = diagnostics?.activeVoiceCount?.toDouble(),
+                        value = voices,
                         range = 0.0..100.0,
                         size = SIDE_GAUGE_PX.px,
                         icon = { music },
                         display = { it.roundToInt().toString() },
-                        smoothing = NEEDLE_SMOOTHING,
                     )
                 }
 

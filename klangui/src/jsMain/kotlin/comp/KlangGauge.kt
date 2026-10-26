@@ -14,7 +14,6 @@ import io.peekandpoke.kraft.vdom.custom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.semanticui.SemanticIconFn
 import io.peekandpoke.ultra.semanticui.icon
-import kotlinx.browser.window
 import kotlinx.css.LinearDimension
 import kotlinx.css.fontSize
 import kotlinx.css.height
@@ -23,8 +22,6 @@ import kotlinx.css.width
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
-import kotlin.math.abs
-import kotlin.math.pow
 
 @Suppress("FunctionName")
 fun Tag.KlangGauge(
@@ -36,7 +33,6 @@ fun Tag.KlangGauge(
     label: String? = null,
     display: ((Double) -> String)? = null,
     hotFrom: Double? = null,
-    smoothing: Double = 0.0,
 ) = comp(
     KlangGauge.Props(
         name = name,
@@ -47,7 +43,6 @@ fun Tag.KlangGauge(
         label = label,
         display = display,
         hotFrom = hotFrom,
-        smoothing = smoothing,
     )
 ) {
     KlangGauge(it)
@@ -57,11 +52,10 @@ fun Tag.KlangGauge(
  * A round gauge (KLANG-00338): a silver rim, a face with its scale, the arc and the needle, an icon or a text label,
  * and the value.
  *
- * Without a value the gauge is offline: no glow, the needle at rest, the mark dim. With one it glows. With the needle
- * at or past [Props.hotFrom] it is hot (with smoothing, once the needle gets there): the arc and the glow turn
- * critical. Screen readers hear a `meter` with the raw value; the needle shows a smoothed one when [Props.smoothing]
- * is above 0, as `RoundGauge` does: it glides towards the reading by itself, a step each frame, also while the
- * reading holds still. Canvas section "Gauges".
+ * Without a value the gauge is offline: no glow, the needle at rest, the mark dim. With one it glows. With one at or
+ * past [Props.hotFrom] it is hot: the arc and the glow turn critical. Screen readers hear a `meter` with the value.
+ * It draws the value it gets: a caller who wants a needle that glides smooths the stream first (`smooth()` in the
+ * workshop, KLANG-00345). Canvas section "Gauges".
  */
 class KlangGauge(ctx: Ctx<Props>) : Component<KlangGauge.Props>(ctx) {
 
@@ -71,12 +65,6 @@ class KlangGauge(ctx: Ctx<Props>) : Component<KlangGauge.Props>(ctx) {
 
         /** The scale's marks: one every tenth of the sweep, a long one at both ends and in the middle. */
         const val TICKS = 11
-
-        /** The time [Props.smoothing] is the share kept for. */
-        const val STEP_MS = 10.0
-
-        /** A usual frame, for the first step of a glide. */
-        const val FRAME_MS = 1000.0 / 60.0
     }
 
     //  PROPS  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -95,110 +83,15 @@ class KlangGauge(ctx: Ctx<Props>) : Component<KlangGauge.Props>(ctx) {
         val display: ((Double) -> String)?,
         /** Where the red zone starts, in the range's units; null for a gauge without one. */
         val hotFrom: Double?,
-        /** 0 moves the needle at once; towards 1 it follows more slowly: the share it keeps per 10 ms (0.933 the Motor's). */
-        val smoothing: Double,
     )
 
-    //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
-
-    /** Where the needle points, in the range's units. */
-    private var shown: Double by value(readingOf(props) ?: props.range.start)
-
-    /** Where the needle heads: the reading, or the rest while offline. */
-    private var target: Double = shown
-
-    /** A frame is asked for: the needle is on its way to [target]. */
-    private var stepping = false
-
-    /** When the last step was taken, from the frame's clock; null before the first step of a glide. */
-    private var lastStepAt: Double? = null
-
-    private var mounted = false
-
-    init {
-        lifecycle {
-            onMount {
-                mounted = true
-            }
-
-            onUnmount {
-                mounted = false
-            }
-
-            // Kraft hands the new props first, the previous ones second
-            onNextProps { next, _ ->
-                val reading = readingOf(next)
-                val smoothing = next.smoothing
-
-                when {
-                    // Offline: the needle goes to rest at once, it does not wait for more props to get there
-                    reading == null -> jumpTo(next.range.start)
-                    // NaN-guard: a NaN smoothing counts as none, as does a needle that is not finite
-                    smoothing != smoothing || smoothing <= 0.0 || !shown.isFinite() -> jumpTo(reading)
-                    else -> {
-                        target = reading
-                        glide()
-                    }
-                }
-            }
-        }
-    }
-
-    private fun jumpTo(v: Double) {
-        target = v
-        shown = v
-    }
-
-    /**
-     * Starts the needle's glide towards [target], unless one is on: the needle moves by itself, also while a reading
-     * holds still (props that do not change bring no step; KLANG-00344).
-     */
-    private fun glide() {
-        if (stepping || !mounted) {
-            return
-        }
-
-        stepping = true
-        lastStepAt = null
-
-        window.requestAnimationFrame { at -> step(at) }
-    }
-
-    /**
-     * One step a frame, sized by the time since the last one: [Props.smoothing] is the share kept per [STEP_MS], so the
-     * needle moves at the same pace on any display and whatever the readings do (the old Motor's needles took about
-     * a step every 10 ms, its ticker and its readings together).
-     */
-    private fun step(at: Double) {
-        stepping = false
-
-        if (!mounted) {
-            return
-        }
-
-        // NaN-guard: the first step of a glide, or a frame clock that stands or goes backwards, counts as one usual
-        // frame; a long gap (a tab in the background) is time that passed, the needle moves on by it
-        val elapsed = lastStepAt?.let { at - it }?.takeIf { it > 0.0 } ?: FRAME_MS
-        val share = props.smoothing.coerceIn(0.0, 0.999).pow(elapsed / STEP_MS)
-        val next = shown * share + target * (1.0 - share)
-        // Close enough to stop: a thousandth of the sweep, or of 1 on a range without a span; a NaN or a step that
-        // moves nothing any more counts as there, so the frames never run on for good
-        val near = if (span > 0.0) span * 0.001 else 0.001
-        val done = !(abs(next - target) > near) || next == shown
-
-        lastStepAt = at
-        shown = if (done) target else next
-
-        if (!done) {
-            stepping = true
-            window.requestAnimationFrame { nextAt -> step(nextAt) }
-        }
-    }
+    //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     /** The props' reading, when it is a number: a NaN or an infinity reads as no reading at all. */
     private fun readingOf(p: Props): Double? = p.value?.takeIf { it.isFinite() }
 
-    //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
+    /** Where the needle points: the reading, or the rest while there is none. */
+    private val shown: Double get() = readingOf(props) ?: props.range.start
 
     private val span: Double get() = props.range.endInclusive - props.range.start
 
@@ -210,9 +103,8 @@ class KlangGauge(ctx: Ctx<Props>) : Component<KlangGauge.Props>(ctx) {
         val online = value != null
         // No red zone on a range without a span, or at a hotFrom that is not a number
         val hotFrom = props.hotFrom?.takeIf { it.isFinite() && span > 0.0 }
-        // Hot is decided in the range's units, on what the needle shows: a spike the smoothing evens out never turns the
-        // gauge red (the maintainer, 2026-10-26); a hotFrom past the range's end is never reached
-        val hot = value != null && hotFrom != null && shown >= hotFrom
+        // Hot is decided in the range's units: a hotFrom past the range's end is never reached
+        val hot = value != null && hotFrom != null && value >= hotFrom
         // Where the red ticks start, unclamped: past the end none are red, before the start all are
         val hotFraction = hotFrom?.let { (it - props.range.start) / span }
 

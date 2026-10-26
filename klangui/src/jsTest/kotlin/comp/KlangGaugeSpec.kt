@@ -24,15 +24,11 @@ import io.peekandpoke.kraft.vdom.VDom
 import kotlinx.css.px
 import kotlinx.html.Tag
 import org.w3c.dom.Element
-import kotlin.math.abs
-import kotlin.time.Duration.Companion.seconds
 
 /** A gauge whose value a test sets, to see the needle follow new props. */
 private class GaugeHost(ctx: NoProps) : PureComponent(ctx) {
     companion object {
         var current: GaugeHost? = null
-        var smoothing: Double = 0.0
-        var hotFrom: Double? = null
     }
 
     var reading: Double? by value(0.0)
@@ -42,7 +38,7 @@ private class GaugeHost(ctx: NoProps) : PureComponent(ctx) {
     }
 
     override fun VDom.render() {
-        KlangGauge(name = "Host", value = reading, range = 0.0..1.0, smoothing = smoothing, hotFrom = hotFrom)
+        KlangGauge(name = "Host", value = reading, range = 0.0..1.0)
     }
 }
 
@@ -191,8 +187,6 @@ class KlangGaugeSpec : StringSpec({
     }
 
     "a NaN or an infinite reading counts as none, and the next good reading moves the needle again" {
-        GaugeHost.smoothing = 0.0
-
         TestBed.preact(view = { GaugeHost() }) { root ->
             val host = GaugeHost.current!!
 
@@ -219,30 +213,26 @@ class KlangGaugeSpec : StringSpec({
         }
     }
 
-    "going offline puts the needle to rest at once, smoothing or not" {
-        GaugeHost.smoothing = 0.9
-
+    "going offline puts the needle to rest at once" {
         TestBed.preact(view = { GaugeHost() }) { root ->
             val host = GaugeHost.current!!
 
-            host.reading = 1.0
+            // Half way: the needle points up, away from its rest (at rest y is 71.2)
+            host.reading = 0.5
 
-            // A tenth of the way: the needle has left its rest, upwards (at rest y is 71.2)
             eventually {
                 needle(root.single()).second shouldBeLessThan 71.0
             }
 
             host.reading = null
 
-            // Drawn, and no more than a frame or two later: a needle gliding to rest would still be on its way
-            nextFrame()
-            nextFrame()
+            eventually {
+                val (x, y) = needle(root.single())
 
-            val (x, y) = needle(root.single())
-
-            // The sweep's start, 30 from the centre at 135 degrees
-            x shouldBe (28.787 plusOrMinus 1e-3)
-            y shouldBe (71.213 plusOrMinus 1e-3)
+                // The sweep's start, 30 from the centre at 135 degrees
+                x shouldBe (28.787 plusOrMinus 1e-3)
+                y shouldBe (71.213 plusOrMinus 1e-3)
+            }
         }
     }
 
@@ -255,101 +245,6 @@ class KlangGaugeSpec : StringSpec({
         ) { root ->
             root.selectCss("[role=meter]").attr("data-gauge") shouldContainExactly listOf("online", "online")
             root.selectCss(".${styles.gaugeTickHot}").size shouldBe 0
-        }
-    }
-
-    "with smoothing the needle glides to a reading by itself, also while the reading holds still; without it it jumps" {
-        // The end of the sweep, where a reading of 1 points the needle
-        val (endX, endY) = Dial.point(fraction = 1.0, radius = 30.0)
-
-        for (smoothing in listOf(0.9, 0.0)) {
-            GaugeHost.smoothing = smoothing
-            GaugeHost.hotFrom = null
-
-            TestBed.preact(view = { GaugeHost() }) { root ->
-                // One change of the reading, then no new props at all
-                GaugeHost.current!!.reading = 1.0
-
-                if (smoothing > 0.0) {
-                    nextFrame()
-                    nextFrame()
-                    nextFrame()
-
-                    val (x, y) = needle(root.single())
-
-                    // On its way: a few frames in, not at the end yet
-                    (abs(x - endX) + abs(y - endY)) shouldBeGreaterThan 1.0
-                }
-
-                eventually(timeout = 5.seconds) {
-                    val (x, y) = needle(root.single())
-
-                    x shouldBe (endX plusOrMinus 0.01)
-                    y shouldBe (endY plusOrMinus 0.01)
-                }
-            }
-        }
-    }
-
-    "the colour follows the needle: a reading past the red zone's start turns the gauge hot only once the needle is there" {
-        GaugeHost.smoothing = 0.9
-        GaugeHost.hotFrom = 0.85
-
-        try {
-            TestBed.preact(view = { GaugeHost() }) { root ->
-                GaugeHost.current!!.reading = 1.0
-
-                nextFrame()
-                nextFrame()
-
-                // The reading is past 0.85, the needle not yet
-                root.single().querySelector("[role=meter]")!!.getAttribute("data-gauge") shouldBe "online"
-
-                eventually(timeout = 5.seconds) {
-                    root.single().querySelector("[role=meter]")!!.getAttribute("data-gauge") shouldBe "hot"
-                }
-            }
-        } finally {
-            GaugeHost.hotFrom = null
-        }
-    }
-
-    "after a rest the next change glides again, it does not jump" {
-        GaugeHost.smoothing = 0.9
-        GaugeHost.hotFrom = null
-
-        TestBed.preact(view = { GaugeHost() }) { root ->
-            val (endX, endY) = Dial.point(fraction = 1.0, radius = 30.0)
-            val (restX, restY) = Dial.point(fraction = 0.0, radius = 30.0)
-
-            GaugeHost.current!!.reading = 1.0
-
-            eventually(timeout = 5.seconds) {
-                val (x, y) = needle(root.single())
-
-                x shouldBe (endX plusOrMinus 0.01)
-                y shouldBe (endY plusOrMinus 0.01)
-            }
-
-            // At rest a while, then the next change
-            repeat(30) { nextFrame() }
-            GaugeHost.current!!.reading = 0.0
-
-            nextFrame()
-            nextFrame()
-            nextFrame()
-
-            val (x, y) = needle(root.single())
-
-            // On its way down, not at rest yet
-            (abs(x - restX) + abs(y - restY)) shouldBeGreaterThan 1.0
-
-            eventually(timeout = 5.seconds) {
-                val (x2, y2) = needle(root.single())
-
-                x2 shouldBe (restX plusOrMinus 0.01)
-                y2 shouldBe (restY plusOrMinus 0.01)
-            }
         }
     }
 

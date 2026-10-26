@@ -164,9 +164,14 @@ kraftApp {
   `prefers-reduced-motion` block) carries one class more than its target. kotlinx-css writes `rule("&::after")` as a
   nested rule (native CSS nesting): it weighs like the flat selector, but reads one level down in `cssRules`.
 
-- **A number prop that feeds kept state** (KLANG-00338, 2026-10-25): a component that keeps state derived from a
-  number prop (a smoothed needle, an accumulator) treats a NaN or an infinity as no value at all, so one bad reading
-  cannot latch the state for good (`KlangGauge.readingOf`). The audio engine's rule for cached configs, on the UI.
+- **A number that feeds kept state** (KLANG-00338, 2026-10-25): whatever keeps state derived from a number (a smoothed
+  needle, an accumulator) treats a NaN or an infinity as no value at all, so one bad reading cannot latch the state
+  for good. The audio engine's rule for cached configs, on the UI. Smoothing now lives in a stream, not in the view:
+  the workshop's `smooth()` (KLANG-00345, bound for Ultra) passes a non-finite value as `null`.
+- **A stream read before anyone subscribes may not have its value yet** (KLANG-00345, 2026-10-26): Ultra's filtered
+  and mapped streams compute their value from their source, and a filter reads `null` until it is subscribed. An
+  operator that keeps state decides on the first value of a subscription (`smooth()`'s `settledIn`), never on what it
+  read at construction; and read while nobody listens, it reads through to its source, as Ultra's own operators do.
 - **`onNextProps` hands (new, old)** (KLANG-00338): the new props come first. `RoundGauge` took the second and
   followed one update behind until 2026-10-25.
 
