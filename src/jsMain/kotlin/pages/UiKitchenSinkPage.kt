@@ -18,10 +18,12 @@ import io.peekandpoke.klang.ui.comp.KlangDialog
 import io.peekandpoke.klang.ui.comp.KlangDrawer
 import io.peekandpoke.klang.ui.comp.KlangFinish
 import io.peekandpoke.klang.ui.comp.KlangGauge
+import io.peekandpoke.klang.ui.comp.KlangIconToggle
 import io.peekandpoke.klang.ui.comp.KlangKnob
 import io.peekandpoke.klang.ui.comp.KlangLamp
 import io.peekandpoke.klang.ui.comp.KlangLookPicker
 import io.peekandpoke.klang.ui.comp.KlangMenu
+import io.peekandpoke.klang.ui.comp.KlangMenuButton
 import io.peekandpoke.klang.ui.comp.KlangPanel
 import io.peekandpoke.klang.ui.comp.KlangSearchField
 import io.peekandpoke.klang.ui.comp.KlangSwatchButton
@@ -187,10 +189,64 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
         "Light silver" to "#f2f4f7",
     )
 
+    /** Candidates for "selected" (`LampOn`): beside each look's metal, apart from gold (try me), warning and critical. */
+    private val selectedCandidates = listOf(
+        "Cyan" to "#56b6c2",
+        "Verdigris" to "#4fb3a0",
+        "Sage" to "#9cbf86",
+        "Blue" to "#528bff",
+        "Teal" to "#3fa7a0",
+        "Mint" to "#8fd1b8",
+    )
+
+    /** Tries [hex] for [role] on the look's Script layer (not saved), next to what the other experiments set there. */
+    private fun tryRole(role: KlangRole, hex: String) {
+        KlangTheme.setLayer(KlangLookLayers.Layer.Script, KlangTheme.layers[KlangLookLayers.Layer.Script] + (role to hex))
+    }
+
+    /** Ends the experiment on [role]: the look's own value again. */
+    private fun untryRole(role: KlangRole) {
+        KlangTheme.setLayer(KlangLookLayers.Layer.Script, KlangTheme.layers[KlangLookLayers.Layer.Script] - role)
+    }
+
+    private fun tried(role: KlangRole): String? = KlangTheme.layers[KlangLookLayers.Layer.Script][role]
+
     private fun FlowContent.renderGauges() {
         section("Gauges") {
             cell(
-                name = "The Motor's trace: try a colour while a song plays (the Motor shows it too, until a reload)",
+                name = "Selected (LampOn): try a colour for the current look (until a reload)",
+                source = "KlangRole.LampOn, set on the look's Script layer",
+            ) {
+                row {
+                    KlangLamp(state = KlangLamp.State.On, label = "Selected")
+                    KlangMenuButton(open = true, onClick = {})
+                    KlangIconToggle(icon = { book }, label = "Docs", on = true, onClick = {})
+                    KlangButton(onClick = {}, shape = KlangButton.Shape.Tile, current = true, lamp = KlangLamp.State.On) {
+                        +"Songs"
+                    }
+                }
+
+                row {
+                    KlangSwatchButton(
+                        name = "Look's own",
+                        swatch = listOf(look[KlangRole.LampOn]),
+                        pressed = tried(KlangRole.LampOn) == null,
+                        onClick = { untryRole(KlangRole.LampOn) },
+                    )
+
+                    for ((name, hex) in selectedCandidates) {
+                        KlangSwatchButton(
+                            name = name,
+                            swatch = listOf(hex),
+                            pressed = tried(KlangRole.LampOn).equals(hex, ignoreCase = true),
+                            onClick = { tryRole(KlangRole.LampOn, hex) },
+                        )
+                    }
+                }
+            }
+
+            cell(
+                name = "The Motor's trace: try a colour (the idle line here; the live trace in the Motor, until a reload)",
                 source = "KlangRole.ScopeTrace, set on the look's Script layer",
             ) {
                 div {
@@ -216,12 +272,20 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
                 }
 
                 row {
+                    // The default: the trace follows the metal (the experiment's layer cleared)
+                    KlangSwatchButton(
+                        name = "Metal",
+                        swatch = listOf(look[KlangRole.MetalMid]),
+                        pressed = tried(KlangRole.ScopeTrace) == null,
+                        onClick = { untryRole(KlangRole.ScopeTrace) },
+                    )
+
                     for ((name, hex) in traceCandidates) {
                         KlangSwatchButton(
                             name = name,
                             swatch = listOf(hex),
-                            pressed = look[KlangRole.ScopeTrace].equals(hex, ignoreCase = true),
-                            onClick = { KlangTheme.setLayer(KlangLookLayers.Layer.Script, mapOf(KlangRole.ScopeTrace to hex)) },
+                            pressed = tried(KlangRole.ScopeTrace).equals(hex, ignoreCase = true),
+                            onClick = { tryRole(KlangRole.ScopeTrace, hex) },
                         )
                     }
                 }

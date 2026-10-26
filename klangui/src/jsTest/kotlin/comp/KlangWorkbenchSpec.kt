@@ -121,6 +121,8 @@ class KlangWorkbenchSpec : StringSpec({
                     ),
                     bottom = KlangWorkbench.Bottom(title = "Analysis", icon = { chart_bar }) { span { +"BOTTOM BODY" } },
                     drawer = { close ->
+                        // A drawer's content brings its close key, as KlangDrawer with closeOnEsc does in the app
+                        KlangCloseKey(onClose = close)
                         button {
                             attributes["data-test"] = "drawer-close"
                             onClick { close() }
@@ -260,7 +262,7 @@ class KlangWorkbenchSpec : StringSpec({
             menu().click()
 
             eventually {
-                drawer()?.textContent?.startsWith("DRAWER") shouldBe true
+                drawer()?.textContent?.contains("DRAWER") shouldBe true
                 menu().getAttribute("data-open") shouldBe "true"
                 drawer()!!.contains(document.activeElement) shouldBe true
             }
@@ -646,7 +648,7 @@ class KlangWorkbenchSpec : StringSpec({
         }
     }
 
-    "Esc from inside the drawer closes the drawer alone, also with a newer tool window open" {
+    "Esc from inside the drawer still closes the newest panel first: a newer tool window, then the drawer" {
         withPanels { root ->
             root.q("[data-test=motor-menu]")!!.click()
 
@@ -661,13 +663,14 @@ class KlangWorkbenchSpec : StringSpec({
             tile.focus()
             escOn(tile)
 
+            eventually {
+                root.q(".${styles.workbenchFloating}") shouldBe null
+                root.q(".${styles.workbenchDrawer}") shouldNotBe null
+            }
+
+            escOn(document.activeElement ?: document.body!!)
+
             eventually { root.q(".${styles.workbenchDrawer}") shouldBe null }
-
-            // Past the frames a second close would take: the tool window stays
-            nextFrame()
-            nextFrame()
-
-            root.q(".${styles.workbenchFloating}") shouldNotBe null
         }
     }
 
@@ -707,31 +710,6 @@ class KlangWorkbenchSpec : StringSpec({
                 root.q(".${styles.workbenchFloating}") shouldBe null
                 root.q(".${styles.workbenchDrawer}") shouldNotBe null
             }
-        }
-    }
-
-    "Esc from inside a tool window closes the window alone, also with a newer drawer open" {
-        withPanels { root ->
-            root.toggle("Keys").click()
-
-            eventually { root.q(".${styles.workbenchFloating}") shouldNotBe null }
-
-            root.q("[data-test=motor-menu]")!!.click()
-
-            eventually { root.q(".${styles.workbenchDrawer}") shouldNotBe null }
-
-            val frame = root.q(".${styles.workbenchFloating}")!!
-
-            frame.focus()
-            escOn(frame)
-
-            eventually { root.q(".${styles.workbenchFloating}") shouldBe null }
-
-            // Past the frames a second close would take: the drawer stays
-            nextFrame()
-            nextFrame()
-
-            root.q(".${styles.workbenchDrawer}") shouldNotBe null
         }
     }
 

@@ -40,7 +40,6 @@ class KlangCloseKey(ctx: Ctx<Props>) : Component<KlangCloseKey.Props>(ctx) {
 
     private val close = onKeyController(
         action = KlangKeyBindings.PanelClose,
-        enabled = { nothingInFront() },
         hintMode = KeyHintMode.Always,
     ) {
         props.onClose()

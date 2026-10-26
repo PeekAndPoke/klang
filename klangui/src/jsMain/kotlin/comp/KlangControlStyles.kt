@@ -780,6 +780,9 @@ object KlangControlStyles : StyleSheet("kl-controls") {
 
     // ── Gauges ────────────────────────────────────────────────────────────────
 
+    /** The rim's width, as the inset of the face and of the glass over it, one value for both. */
+    private const val GAUGE_RIM = "5%"
+
     /** The rim: silver, lit from above. The glow's blur comes per gauge as `--gauge-blur`, its size times a share. */
     val gauge by rule {
         put("position", "relative")
@@ -807,7 +810,7 @@ object KlangControlStyles : StyleSheet("kl-controls") {
     /** The face, inside the rim: the rim's width is this inset (the maintainer, 2026-10-26: "slightly thicker", 6% too thick). */
     val gaugeFace by rule {
         put("position", "absolute")
-        put("inset", "5%")
+        put("inset", GAUGE_RIM)
         put("border-radius", "50%")
         put(
             "background",
@@ -823,7 +826,7 @@ object KlangControlStyles : StyleSheet("kl-controls") {
      */
     val gaugeGlass by rule {
         put("position", "absolute")
-        put("inset", "5%")
+        put("inset", GAUGE_RIM)
         put("border-radius", "50%")
         put("pointer-events", "none")
         put(
@@ -970,7 +973,7 @@ object KlangControlStyles : StyleSheet("kl-controls") {
 
     val knobArc by rule {
         put("fill", "none")
-        put("stroke", "var(--kl-accent-muted)")
+        put("stroke", "var(--kl-knob-arc)")
         put("stroke-linecap", "round")
     }
 

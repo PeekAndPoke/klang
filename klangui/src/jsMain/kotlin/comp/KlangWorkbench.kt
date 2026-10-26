@@ -10,7 +10,6 @@ import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.key
-import io.peekandpoke.ultra.html.onKeyDown
 import io.peekandpoke.ultra.semanticui.SemanticIconFn
 import kotlinx.browser.document
 import kotlinx.browser.window
@@ -60,9 +59,10 @@ fun Tag.KlangWorkbench(
  *   each tool window keeps its own pin, as in IntelliJ. Opened from the strip, it takes the focus. Esc closes one
  *   flying in, and the focus goes back to its toggle; a pinned one stays.
  *
- * Esc and the panels (the drawer, a tool window flying in): Esc from inside a panel, its fields too, closes that panel
- * through the panel's own handler, which keeps the key from the manager; Esc from outside closes the newest open panel
- * through the key manager (`KlangKeyBindings.PanelClose`, the pill "Close: Esc" in its header). One Esc, one panel.
+ * Esc and the panels (the drawer, a tool window flying in): wherever the focus is, also in a field that does not use
+ * the Esc itself, one Esc closes the newest open panel, through the key manager (`KlangKeyBindings.PanelClose`, the
+ * pill "Close: Esc" in its header, its [KlangCloseKey]). The drawer's content brings that close key (`KlangDrawer`
+ * with `closeOnEsc`); the workbench draws only the frame.
  *
  * It draws the frame only; what goes in it (the Motor, the routes behind the drawer) is the app's.
  */
@@ -240,15 +240,6 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
                             // The focus lands here when the drawer has no control of its own
                             attributes["tabindex"] = "-1"
 
-                            // Esc from inside the drawer, its search field too: the key manager leaves a text field's
-                            // plain keys alone, so the drawer answers them itself (outside, its close key answers)
-                            onKeyDown { e ->
-                                if (e.key == "Escape") {
-                                    e.preventDefault()
-                                    closeDrawer()
-                                }
-                            }
-
                             drawer { closeDrawer() }
                         }
                     }
@@ -296,14 +287,6 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
 
                         // The focus lands here when the window opens from the strip
                         attributes["tabindex"] = "-1"
-
-                        // Esc from inside the window, a field too (the key manager leaves a field's plain keys alone)
-                        onKeyDown { e ->
-                            if (e.key == "Escape" && !e.defaultPrevented) {
-                                e.preventDefault()
-                                closeTool()
-                            }
-                        }
 
                         renderTool(tool)
                     }

@@ -68,14 +68,7 @@ class KlangMenuButton(ctx: Ctx<Props>) : Component<KlangMenuButton.Props>(ctx) {
             title = "Menu"
             onClick { props.onClick() }
 
-            // A modal or popup in front (a code tool's) keeps the drawer from opening behind it
-            props.key?.let { action ->
-                OnKey(action) {
-                    if (nothingInFront()) {
-                        props.onClick()
-                    }
-                }
-            }
+            props.key?.let { action -> OnKey(action) { props.onClick() } }
 
             css {
                 width = props.size

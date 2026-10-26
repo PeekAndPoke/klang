@@ -52,7 +52,7 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
 
     companion object {
         /** The frame's total height: the gauges, the scope under them, the spectrum behind it down to the floor. */
-        val FRAME_HEIGHT = 13.25.rem
+        const val FRAME_HEIGHT_REM = 13.25
 
         /** Room above the gauges, so they do not touch the column's edge. */
         val TOP_INSET = 0.75.rem
@@ -92,7 +92,7 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
             css {
                 textAlign = TextAlign.center
                 position = Position.relative
-                height = FRAME_HEIGHT
+                height = FRAME_HEIGHT_REM.rem
             }
 
             div {
@@ -138,7 +138,13 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
                     opacity = 0.85
                 }
 
-                Spectrumeter(numBoxesInStack = 35, numBuckets = SPECTRUM_COLUMNS) { Player.get() }
+                // The hovered column's frequencies show in the middle of the spectrum's part under the scope (higher up the
+                // trace would cover them)
+                Spectrumeter(
+                    numBoxesInStack = 35,
+                    numBuckets = SPECTRUM_COLUMNS,
+                    labelMiddle = ((FRAME_HEIGHT_REM - OSCILLOSCOPE_TOP_REM - OSCILLOSCOPE_HEIGHT_REM) / 2.0).rem,
+                ) { Player.get() }
             }
         }
     }

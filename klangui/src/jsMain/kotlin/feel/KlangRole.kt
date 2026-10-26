@@ -13,12 +13,15 @@ package io.peekandpoke.klang.ui.feel
  * cap) are computed in the styles from these roles, never stored as roles of their own.
  *
  * A role has a [kind], and a value a theme layer brings must fit it ([accepts]): a shared theme is data, never CSS
- * text or a URL.
+ * text or a URL. A role may [follows] another: while no layer sets it, it takes that role's value, so a look that
+ * recolours the metal recolours the scope's trace with it.
  */
 enum class KlangRole(
     val cssVar: String,
     val kind: Kind,
     val default: String,
+    /** The role whose value this one takes while no layer sets it; null for its own [default]. */
+    val follows: KlangRole? = null,
 ) {
 
     // ── Ground: the surfaces things sit on ────────────────────────────────────
@@ -76,8 +79,12 @@ enum class KlangRole(
     /** A lamp that is off: the dark glass. */
     LampOff(cssVar = "--kl-lamp-off", kind = Kind.Color, default = "#3a3220"),
 
-    /** A lamp that is on: this thing is active or selected. Blue, as the Motor's scope and accents (maintainer, 2026-10-25). */
-    LampOn(cssVar = "--kl-lamp-on", kind = Kind.Color, default = "#528bff"),
+    /**
+     * A lamp that is on: this thing is active or selected (a lit lamp, the pressed toggle, the open Motor button). Each
+     * look gives it the light of its metal (the maintainer, 2026-10-26: "Each look's metal, all three"; blue until
+     * then): a silver-white here, bronze in copper, cream in cream.
+     */
+    LampOn(cssVar = "--kl-lamp-on", kind = Kind.Color, default = "#e4e8ee"),
 
     /** "Try me": the one colour of the first-visit trail, used for nothing else. */
     LampTry(cssVar = "--kl-lamp-try", kind = Kind.Color, default = "#EBC773"),
@@ -100,10 +107,17 @@ enum class KlangRole(
     GaugeGlow(cssVar = "--kl-gauge-glow", kind = Kind.Color, default = "#5c7cbc"),
 
     /**
-     * The oscilloscope's trace in the Motor: brass, near gold but apart from [LampTry]'s gold, which means "try me" and
-     * nothing else (the maintainer, 2026-10-26; the accent's blue did not work for it).
+     * The oscilloscope's trace in the Motor: the colour of the gauges' rims, [MetalMid] (the maintainer, 2026-10-26:
+     * "make the Osci the same color as the outlines of the gauges", after blue and brass; "When the them is set to
+     * copper the Osc should be copper like the gauges"). Its own role, so a look can set it apart from the metal.
      */
-    ScopeTrace(cssVar = "--kl-scope-trace", kind = Kind.Color, default = "#c9a35a"),
+    ScopeTrace(cssVar = "--kl-scope-trace", kind = Kind.Color, default = MetalMid.default, follows = MetalMid),
+
+    /**
+     * A knob's arc, how far it is turned: material, the colour of the gauges' rims, [MetalMid] (the maintainer,
+     * 2026-10-26: the knob's circle should match the gauges' outlines in every look, as it did in copper).
+     */
+    KnobArc(cssVar = "--kl-knob-arc", kind = Kind.Color, default = MetalMid.default, follows = MetalMid),
 
     // ── Accent ────────────────────────────────────────────────────────────────
 

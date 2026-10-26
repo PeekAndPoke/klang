@@ -117,4 +117,14 @@ class KlangLookLayersSpec : StringSpec({
         look.cssVars().first { it.first == KlangRole.Accent.cssVar }.second shouldBe "#111111"
         look shouldNotBe KlangLook.defaults
     }
+
+    "a role that follows another takes its value while no layer sets it, and its own value once one does" {
+        val metal = KlangLookLayers().with(Layer.User, mapOf(KlangRole.MetalMid to "#a07050"))
+
+        metal.resolve()[KlangRole.ScopeTrace] shouldBe "#a07050"
+
+        val set = metal.with(Layer.Song, mapOf(KlangRole.ScopeTrace to "#405060"))
+
+        set.resolve()[KlangRole.ScopeTrace] shouldBe "#405060"
+    }
 })

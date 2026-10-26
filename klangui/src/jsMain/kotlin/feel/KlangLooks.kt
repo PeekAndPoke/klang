@@ -22,6 +22,8 @@ object KlangLooks {
             KlangRole.MetalDark to "#7a4a2c",
             KlangRole.MetalInk to "#1a0d05",
             KlangRole.AccentMuted to "#b0764c",
+            // Selected in the metal's light, bronze; lighter than the warning's copper (#d19a66), so the two stay apart
+            KlangRole.LampOn to "#e8b28a",
         ),
     )
 
@@ -38,6 +40,8 @@ object KlangLooks {
             KlangRole.MetalLight to "#fbf3dd",
             KlangRole.MetalMid to "#e3d5b0",
             KlangRole.MetalDark to "#a08f66",
+            // Selected in the metal's light, cream
+            KlangRole.LampOn to "#f2e3bb",
         ),
     )
 

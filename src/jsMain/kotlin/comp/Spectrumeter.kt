@@ -22,10 +22,12 @@ import io.peekandpoke.ultra.maths.Ease
 import kotlinx.browser.window
 import kotlinx.css.Color
 import kotlinx.css.Display
+import kotlinx.css.LinearDimension
 import kotlinx.css.Position
 import kotlinx.css.bottom
 import kotlinx.css.display
 import kotlinx.css.height
+import kotlinx.css.left
 import kotlinx.css.pct
 import kotlinx.css.position
 import kotlinx.css.px
@@ -53,6 +55,7 @@ fun Tag.Spectrumeter(
     numBoxesInStack: Int = 30,
     numBuckets: Int = 16,
     binning: SpectrumBinning = SpectrumBinning(numBuckets = numBuckets),
+    labelMiddle: LinearDimension = 12.px,
     player: () -> KlangPlayer?,
 ) = comp(
     Spectrumeter.Props(
@@ -63,6 +66,7 @@ fun Tag.Spectrumeter(
         numBoxesInStack = numBoxesInStack,
         numBuckets = numBuckets,
         binning = binning,
+        labelMiddle = labelMiddle,
     )
 ) {
     Spectrumeter(it)
@@ -78,6 +82,8 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
         val numBoxesInStack: Int,
         val numBuckets: Int,
         val binning: SpectrumBinning,
+        /** How high over the spectrum's floor the middle of a hovered column's frequencies sits. */
+        val labelMiddle: LinearDimension,
     )
 
     private var visualizerAnimFrame: Int? = null
@@ -211,7 +217,8 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
         val colors = props.colors
         val numColors = colors.size.coerceAtLeast(1)
 
-        val barWidth = width / numBuckets
+        // Whole pixels per column, the rest as padding, half on the left (the maintainer, 2026-10-26)
+        val columns = spectrumColumns(width = width.toInt(), count = numBuckets)
 
         val maxBoxes = props.numBoxesInStack
         val boxHeight = (height - (maxBoxes * props.boxGap)) / maxBoxes
@@ -222,8 +229,8 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
 
             val numBoxesToDraw = (normalized * maxBoxes).toInt()
 
-            val x = bucketIdx * barWidth
-            val effectiveWidth = if (barWidth > props.gap) barWidth - props.gap else barWidth
+            val x = columns.xOf(bucketIdx).toDouble()
+            val effectiveWidth = if (columns.step > props.gap) columns.step - props.gap else columns.step.toDouble()
             val boxAlpha = 0.5 + (normalized * 0.5)
 
             val colorsWithAlpha = colors.map { it.withAlpha(boxAlpha) }
@@ -241,15 +248,12 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
         }
     }
 
-    /** The column under the mouse at [clientX], from the spectrum's own box. */
+    /** The column under the mouse at [clientX], laid out as the columns are drawn; null over the padding. */
     private fun columnAt(clientX: Double): Int? {
         val rect = dom?.getBoundingClientRect() ?: return null
 
-        if (rect.width <= 0.0) {
-            return null
-        }
-
-        return floor((clientX - rect.left) / rect.width * props.numBuckets).toInt().coerceIn(0, props.numBuckets - 1)
+        return spectrumColumns(width = rect.width.toInt(), count = props.numBuckets)
+            .columnAt(x = clientX - rect.left, count = props.numBuckets)
     }
 
     override fun VDom.render() {
@@ -280,29 +284,35 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
         }
     }
 
-    /** The label over the floor, at the [column]'s side towards the middle, so it never runs off the edge. */
+    /**
+     * The label, centred over the spectrum, its middle at [Props.labelMiddle]: one place, whichever column is hovered,
+     * so it does not jump (the maintainer, 2026-10-26).
+     */
     private fun FlowContent.renderRange(column: Int) {
-        val n = props.numBuckets
-        val towardsRight = column < n / 2
+        // As wide as the longest of all the columns' labels, so it keeps its size from column to column (the
+        // maintainer, 2026-10-26); in a monospace font a character is exactly 1ch
+        val widest = (0 until props.numBuckets).maxOf { rangeLabel(props.binning.frequencyRange(it)).length }
 
         div {
             css {
                 position = Position.absolute
-                bottom = 4.px
+                bottom = props.labelMiddle
+                left = 50.pct
+                // Its middle on that line, both ways
+                put("transform", "translate(-50%, 50%)")
                 put("pointer-events", "none")
                 put("padding", "1px 5px")
                 put("border-radius", "3px")
                 put("background", "rgba(0, 0, 0, 0.7)")
-                put("color", "var(--kl-ink-text)")
+                // The gauges' rims' silver, as the scope's trace
+                put("color", "var(--kl-metal-mid)")
                 put("font-family", "monospace")
                 put("font-size", "11px")
                 put("white-space", "nowrap")
-
-                if (towardsRight) {
-                    put("left", "${column * 100.0 / n}%")
-                } else {
-                    put("right", "${(n - column - 1) * 100.0 / n}%")
-                }
+                // The text's width alone: Fomantic's border-box would take the padding out of it
+                put("box-sizing", "content-box")
+                put("width", "${widest}ch")
+                put("text-align", "center")
             }
 
             +rangeLabel(props.binning.frequencyRange(column))
@@ -324,4 +334,29 @@ internal fun rangeLabel(range: ClosedFloatingPointRange<Double>): String {
         low >= 1000.0 -> "${khz(low)} to ${khz(high)} kHz"
         else -> "${hz(low)} Hz to ${khz(high)} kHz"
     }
+}
+
+/** Where the spectrum's columns go: each [step] whole pixels wide, after [left] pixels of padding. */
+internal data class SpectrumColumns(val step: Int, val left: Int) {
+
+    /** The left edge of [column]. */
+    fun xOf(column: Int): Int = left + column * step
+
+    /** The column at [x] pixels from the left, of [count]; null over the padding or without room for a column. */
+    fun columnAt(x: Double, count: Int): Int? {
+        if (step <= 0) {
+            return null
+        }
+
+        val column = floor((x - left) / step).toInt()
+
+        return column.takeIf { it in 0 until count }
+    }
+}
+
+/** [count] columns in [width] pixels, pixel exact: as wide as fits whole, the pixels left over half on either side. */
+internal fun spectrumColumns(width: Int, count: Int): SpectrumColumns {
+    val step = if (count > 0) width.coerceAtLeast(0) / count else 0
+
+    return SpectrumColumns(step = step, left = (width - step * count).coerceAtLeast(0) / 2)
 }

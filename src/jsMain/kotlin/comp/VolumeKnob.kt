@@ -7,7 +7,9 @@ package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.MasterVolumeScale
 import io.peekandpoke.klang.Player
+import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.comp.KlangKnob
+import io.peekandpoke.klang.workshop.keys.OnKey
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
@@ -19,6 +21,7 @@ import kotlinx.css.display
 import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlinx.html.title
+import org.w3c.dom.HTMLElement
 import kotlin.math.roundToInt
 
 @Suppress("FunctionName")
@@ -32,7 +35,8 @@ fun Tag.VolumeKnob(
 
 /**
  * The master volume as a knob (KLANG-00330, on `KlangKnob` since KLANG-00344): a drag up or down turns it, the arrow
- * keys too once it has the focus; at the top end it is full, the song's own level, and it never goes above.
+ * keys too once it has the focus (Alt+V gives it the focus); at the top end it is full, the song's own level, and it
+ * never goes above.
  *
  * The volume lives in [Player.outputVolume], as a gain; the knob derives its position from it on the loudness scale
  * ([MasterVolumeScale]), turns it from there, and has it remembered when a turn is over.
@@ -59,6 +63,9 @@ class VolumeKnob(ctx: Ctx<Props>) : Component<VolumeKnob.Props>(ctx) {
         div {
             css { display = Display.inlineBlock }
             title = "Volume: $level\ndrag up or down, or the arrow keys"
+
+            // Alt+V puts the focus on the knob, the arrows then turn it (the maintainer, 2026-10-26)
+            OnKey(KlangKeyBindings.VolumeFocus) { (dom?.querySelector("[role=slider]") as? HTMLElement)?.focus() }
 
             KlangKnob(
                 name = "Volume",

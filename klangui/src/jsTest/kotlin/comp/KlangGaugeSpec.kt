@@ -234,13 +234,15 @@ class KlangGaugeSpec : StringSpec({
 
             host.reading = null
 
-            eventually {
-                val (x, y) = needle(root.single())
+            // Drawn, and no more than a frame or two later: a needle gliding to rest would still be on its way
+            nextFrame()
+            nextFrame()
 
-                // The sweep's start, 30 from the centre at 135 degrees
-                x shouldBe (28.787 plusOrMinus 1e-3)
-                y shouldBe (71.213 plusOrMinus 1e-3)
-            }
+            val (x, y) = needle(root.single())
+
+            // The sweep's start, 30 from the centre at 135 degrees
+            x shouldBe (28.787 plusOrMinus 1e-3)
+            y shouldBe (71.213 plusOrMinus 1e-3)
         }
     }
 
@@ -309,6 +311,45 @@ class KlangGaugeSpec : StringSpec({
             }
         } finally {
             GaugeHost.hotFrom = null
+        }
+    }
+
+    "after a rest the next change glides again, it does not jump" {
+        GaugeHost.smoothing = 0.9
+        GaugeHost.hotFrom = null
+
+        TestBed.preact(view = { GaugeHost() }) { root ->
+            val (endX, endY) = Dial.point(fraction = 1.0, radius = 30.0)
+            val (restX, restY) = Dial.point(fraction = 0.0, radius = 30.0)
+
+            GaugeHost.current!!.reading = 1.0
+
+            eventually(timeout = 5.seconds) {
+                val (x, y) = needle(root.single())
+
+                x shouldBe (endX plusOrMinus 0.01)
+                y shouldBe (endY plusOrMinus 0.01)
+            }
+
+            // At rest a while, then the next change
+            repeat(30) { nextFrame() }
+            GaugeHost.current!!.reading = 0.0
+
+            nextFrame()
+            nextFrame()
+            nextFrame()
+
+            val (x, y) = needle(root.single())
+
+            // On its way down, not at rest yet
+            (abs(x - restX) + abs(y - restY)) shouldBeGreaterThan 1.0
+
+            eventually(timeout = 5.seconds) {
+                val (x2, y2) = needle(root.single())
+
+                x2 shouldBe (restX plusOrMinus 0.01)
+                y2 shouldBe (restY plusOrMinus 0.01)
+            }
         }
     }
 })

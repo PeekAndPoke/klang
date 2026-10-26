@@ -24,6 +24,7 @@ import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlin.math.abs
+import kotlin.math.pow
 
 @Suppress("FunctionName")
 fun Tag.KlangGauge(
@@ -56,10 +57,11 @@ fun Tag.KlangGauge(
  * A round gauge (KLANG-00338): a silver rim, a face with its scale, the arc and the needle, an icon or a text label,
  * and the value.
  *
- * Without a value the gauge is offline: no glow, the needle at rest, the mark dim. With one it glows. With one at or
- * past [Props.hotFrom] it is hot: the arc and the glow turn critical. Screen readers hear a `meter` with the raw value;
- * the needle shows a smoothed one when [Props.smoothing] is above 0, as `RoundGauge` does: it glides towards the
- * reading, a step every frame, also while the reading holds still. Canvas section "Gauges".
+ * Without a value the gauge is offline: no glow, the needle at rest, the mark dim. With one it glows. With the needle
+ * at or past [Props.hotFrom] it is hot (with smoothing, once the needle gets there): the arc and the glow turn
+ * critical. Screen readers hear a `meter` with the raw value; the needle shows a smoothed one when [Props.smoothing]
+ * is above 0, as `RoundGauge` does: it glides towards the reading by itself, a step each frame, also while the
+ * reading holds still. Canvas section "Gauges".
  */
 class KlangGauge(ctx: Ctx<Props>) : Component<KlangGauge.Props>(ctx) {
 
@@ -69,6 +71,12 @@ class KlangGauge(ctx: Ctx<Props>) : Component<KlangGauge.Props>(ctx) {
 
         /** The scale's marks: one every tenth of the sweep, a long one at both ends and in the middle. */
         const val TICKS = 11
+
+        /** The time [Props.smoothing] is the share kept for. */
+        const val STEP_MS = 10.0
+
+        /** A usual frame, for the first step of a glide. */
+        const val FRAME_MS = 1000.0 / 60.0
     }
 
     //  PROPS  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -87,7 +95,7 @@ class KlangGauge(ctx: Ctx<Props>) : Component<KlangGauge.Props>(ctx) {
         val display: ((Double) -> String)?,
         /** Where the red zone starts, in the range's units; null for a gauge without one. */
         val hotFrom: Double?,
-        /** 0 moves the needle at once; towards 1 it follows new values more slowly (0.933 is the Motor's). */
+        /** 0 moves the needle at once; towards 1 it follows more slowly: the share it keeps per 10 ms (0.933 the Motor's). */
         val smoothing: Double,
     )
 
@@ -101,6 +109,9 @@ class KlangGauge(ctx: Ctx<Props>) : Component<KlangGauge.Props>(ctx) {
 
     /** A frame is asked for: the needle is on its way to [target]. */
     private var stepping = false
+
+    /** When the last step was taken, from the frame's clock; null before the first step of a glide. */
+    private var lastStepAt: Double? = null
 
     private var mounted = false
 
@@ -126,7 +137,7 @@ class KlangGauge(ctx: Ctx<Props>) : Component<KlangGauge.Props>(ctx) {
                     smoothing != smoothing || smoothing <= 0.0 || !shown.isFinite() -> jumpTo(reading)
                     else -> {
                         target = reading
-                        step(smoothing = smoothing)
+                        glide()
                     }
                 }
             }
@@ -139,29 +150,48 @@ class KlangGauge(ctx: Ctx<Props>) : Component<KlangGauge.Props>(ctx) {
     }
 
     /**
-     * One step of the needle towards [target], then the next on the next frame, until it is there: the needle moves by
-     * itself while a reading holds still (props that do not change bring no new step; KLANG-00344).
+     * Starts the needle's glide towards [target], unless one is on: the needle moves by itself, also while a reading
+     * holds still (props that do not change bring no step; KLANG-00344).
      */
-    private fun step(smoothing: Double) {
-        val share = smoothing.coerceIn(0.0, 0.999)
-        val next = shown * share + target * (1.0 - share)
-        // Close enough to stop: a thousandth of the sweep, or of 1 on a range without a span
-        val near = if (span > 0.0) span * 0.001 else 0.001
-
-        shown = if (abs(next - target) <= near) target else next
-
-        if (shown == target || stepping || !mounted) {
+    private fun glide() {
+        if (stepping || !mounted) {
             return
         }
 
         stepping = true
+        lastStepAt = null
 
-        window.requestAnimationFrame {
-            stepping = false
+        window.requestAnimationFrame { at -> step(at) }
+    }
 
-            if (mounted && shown != target) {
-                step(smoothing = props.smoothing)
-            }
+    /**
+     * One step a frame, sized by the time since the last one: [Props.smoothing] is the share kept per [STEP_MS], so the
+     * needle moves at the same pace on any display and whatever the readings do (the old Motor's needles took about
+     * a step every 10 ms, its ticker and its readings together).
+     */
+    private fun step(at: Double) {
+        stepping = false
+
+        if (!mounted) {
+            return
+        }
+
+        // NaN-guard: the first step of a glide, or a frame clock that stands or goes backwards, counts as one usual
+        // frame; a long gap (a tab in the background) is time that passed, the needle moves on by it
+        val elapsed = lastStepAt?.let { at - it }?.takeIf { it > 0.0 } ?: FRAME_MS
+        val share = props.smoothing.coerceIn(0.0, 0.999).pow(elapsed / STEP_MS)
+        val next = shown * share + target * (1.0 - share)
+        // Close enough to stop: a thousandth of the sweep, or of 1 on a range without a span; a NaN or a step that
+        // moves nothing any more counts as there, so the frames never run on for good
+        val near = if (span > 0.0) span * 0.001 else 0.001
+        val done = !(abs(next - target) > near) || next == shown
+
+        lastStepAt = at
+        shown = if (done) target else next
+
+        if (!done) {
+            stepping = true
+            window.requestAnimationFrame { nextAt -> step(nextAt) }
         }
     }
 

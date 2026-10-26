@@ -86,7 +86,7 @@ Kept in order, close to the maintainer's words.
     means "try me" only); that is signal enough.
 35. (2026-10-25) Selected is blue: "down here everything is nice and blue except for the gauges". The open Motor
     button's dots and the active drawer item's lamp are blue on the canvas; `KlangRole.LampOn` defaults to the accent
-    blue (was green).
+    blue (was green). Retired 2026-10-26: each look's "selected" takes the light of its metal (item 42).
 36. (2026-10-25) Likes the canvas's oscilloscope in blue (today white, `Oscilloscope.strokeColor`) and the spectrum
     with more columns (28 on the canvas, today 16, `Spectrumeter.numBuckets`). For the step that switches the Motor
     over: the trace's colour as a role, the column count raised.
@@ -130,6 +130,18 @@ Kept in order, close to the maintainer's words.
     the reserved ones (`Keymap.RESERVED_KEYS`: Mod-N, Mod-T, Mod-W, Ctrl-Tab; on a Mac also Cmd-Q, Cmd-H, Cmd-M),
     but each one taken costs the user the browser's own key while in Klang. All checks on a Mac (Option+letter types
     a character) wait for a later session (the maintainer, 2026-10-26).
+42. (2026-10-26) Theme roles, without hundreds of them (the maintainer: "These color need to follow from the theme
+    color roles. Which roles would these be. Do the roles we currently have support this and do we need to rethink
+    the roles without introducing 100s of them?"). Proposed and tried ("Do both to try it"): a part's colour comes from
+    its **material** (Ground, Ink, Cap, Metal) or from what it **signals** (`LampOn` selected, `LampTry` try me,
+    warning, critical, focus, accent), never from a role named for something else; a part that a look may want to
+    set apart gets a role of its own that **follows** its material until a look sets it (`ScopeTrace` and `KnobArc`
+    follow `MetalMid`), so it costs no look an entry; shades stay derived in the styles. A look may give a signal its
+    own colour (copper's `LampOn` bronze). `AccentMuted` is then left to the old app's styles, to go when they move
+    to the roles. KLANG-00344. Then (the maintainer, on copper: "I think it looks great. Now the two other themes";
+    "Each look's metal, all three"): "selected" (`LampOn`) takes the light of each look's metal, a silver-white in
+    Default (`#e4e8ee`), cream in Cream (`#f2e3bb`), bronze in Copper (`#e8b28a`); item 35's blue is retired, and item
+    36's blue trace became the metal's colour.
 
 ## Where the conversation stands (leanings, not decisions)
 

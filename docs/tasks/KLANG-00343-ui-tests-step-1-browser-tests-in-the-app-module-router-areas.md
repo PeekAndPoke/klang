@@ -25,7 +25,9 @@ The app module has no browser tests (KLANG-00342). This step sets them up and co
    query change; the page wrapper keeps the page's full width in a flex-row layout.
 3. `AppArea.of`: every route of `nav.kt` maps to its area (the tutorials before the docs, whose paths they share).
 4. `WorkbenchLayout`: the drawer marks the current area and a pick navigates.
-5. The review loop; mutation checks (light tier, the router's rows by deletion mutants).
+5. The Motor's spectrum (KLANG-00344): `spectrumColumns` (whole pixels per column, the rest half on either side, a
+   pointer over the padding names no column) and `rangeLabel` (Hz, kHz, the mixed case), both pure functions.
+6. The review loop; mutation checks (light tier, the router's rows by deletion mutants).
 
 ## Acceptance
 
