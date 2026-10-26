@@ -53,6 +53,7 @@ fun Tag.Spectrumeter(
     gap: Double = 1.0,
     boxGap: Double = 2.0,
     numBoxesInStack: Int = 30,
+    colorStep: Double? = null,
     numBuckets: Int = 16,
     binning: SpectrumBinning = SpectrumBinning(numBuckets = numBuckets),
     labelMiddle: LinearDimension = 12.px,
@@ -64,6 +65,7 @@ fun Tag.Spectrumeter(
         gap = gap,
         boxGap = boxGap,
         numBoxesInStack = numBoxesInStack,
+        colorStep = colorStep,
         numBuckets = numBuckets,
         binning = binning,
         labelMiddle = labelMiddle,
@@ -80,6 +82,11 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
         val gap: Double,
         val boxGap: Double,
         val numBoxesInStack: Int,
+        /**
+         * The share of a column each colour's band takes, from the floor; the last colour goes on to the top. Null
+         * spreads the colours evenly over the whole column.
+         */
+        val colorStep: Double?,
         val numBuckets: Int,
         val binning: SpectrumBinning,
         /** How high over the spectrum's floor the middle of a hovered column's frequencies sits. */
@@ -221,6 +228,9 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
         val columns = spectrumColumns(width = width.toInt(), count = numBuckets)
 
         val maxBoxes = props.numBoxesInStack
+        // NaN-guard: a step that is not a positive number counts as none, the colours even over the column
+        val colorStep = props.colorStep?.takeIf { it > 0.0 } ?: (1.0 / numColors)
+        val boxesPerColor = maxBoxes * colorStep
         // Whole pixels per cell and per gap, stacked up from the floor, so the cells are crisp too (the maintainer,
         // 2026-10-26); the pixels left over stay empty at the top
         val gap = props.boxGap.roundToInt()
@@ -241,8 +251,9 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
             for (boxIdx in 0 until numBoxesToDraw) {
                 val boxY = height - ((boxIdx + 1) * boxWithGap)
 
-                val colorProgress = boxIdx.toDouble() / maxBoxes.coerceAtLeast(1)
-                val colorIdx = (colorProgress * (numColors - 1)).toInt().coerceIn(0, numColors - 1)
+                // Each colour a band of the same height, the last one on to the top: the red was never reached when
+                // the bands were cut by one colour less (the maintainer, 2026-10-26: "never red")
+                val colorIdx = (boxIdx / boxesPerColor).toInt().coerceIn(0, numColors - 1)
                 val boxColor = colorsWithAlpha[colorIdx]
 
                 ctx.fillStyle = boxColor.toString()

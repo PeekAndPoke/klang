@@ -69,6 +69,13 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
 
         /** The spectrum's columns, as on the design canvas (KLANG-00334 item 36; 16 before). */
         const val SPECTRUM_COLUMNS = 28
+
+        /**
+         * Each colour of the spectrum takes this share of a column, from the floor, and the red goes on to the top: a
+         * song's columns seldom rise past the middle (the maintainer, 2026-10-26: "We always see blue and green, rarely
+         * yellow and never red"; "take 15% steps please").
+         */
+        const val SPECTRUM_COLOR_STEP = 0.15
     }
 
     //  PROPS  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -142,6 +149,7 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
                 // trace would cover them)
                 Spectrumeter(
                     numBoxesInStack = 31,
+                    colorStep = SPECTRUM_COLOR_STEP,
                     numBuckets = SPECTRUM_COLUMNS,
                     labelMiddle = ((FRAME_HEIGHT_REM - OSCILLOSCOPE_TOP_REM - OSCILLOSCOPE_HEIGHT_REM) / 2.0).rem,
                 ) { Player.get() }
