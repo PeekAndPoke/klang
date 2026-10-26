@@ -40,9 +40,6 @@ object KlangKeyPriorities {
 /**
  * Klang's keys (KLANG-00325): the bag of actions the app defines with the key manager, with their default keys from
  * the PC preset decided in the key map interview (2026-10-21). The keys a user changes are kept by the app.
- *
- * [isUndo] and [isRedo] still name their keys themselves, for the mini-notation editor's own listener; they move onto
- * the key manager with the code editor (KLANG-00325 step 3).
  */
 object KlangKeyBindings : KeyBindings {
 
@@ -112,18 +109,24 @@ object KlangKeyBindings : KeyBindings {
         priority = KlangKeyPriorities.Page,
     )
 
-    override val actions: List<KeyAction> = listOf(
-        PlayOrUpdate, Stop, DialogConfirm, DialogClose, SearchEverywhere, PanelClose, MotorMenu, FocusEditor, VolumeFocus,
+    /**
+     * Undo in a code tool's own editor (the mini-notation editor), in front of the page's keys while the tool is open.
+     * The code editor's own undo (its scope's), when it has the focus, answers first and keeps the key.
+     */
+    val ToolUndo = KeyAction(id = "klang.tool.undo", title = "Undo", keys = listOf("Mod-Z"), priority = KlangKeyPriorities.Tool)
+
+    /** Redo in a code tool's own editor, as the code editor's keys: Ctrl+Y or Ctrl+Shift+Z, Cmd+Shift+Z on a Mac. */
+    val ToolRedo = KeyAction(
+        id = "klang.tool.redo",
+        title = "Redo",
+        keys = listOf("Mod-Y", "Mod-Shift-Z"),
+        macKeys = listOf("Mod-Shift-Z"),
+        priority = KlangKeyPriorities.Tool,
     )
 
-    /** Ctrl+Z (or Cmd+Z on Mac) — undo. */
-    fun isUndo(e: KeyboardEvent): Boolean =
-        (e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.lowercase() == "z"
+    override val actions: List<KeyAction> = listOf(
+        PlayOrUpdate, Stop, DialogConfirm, DialogClose, SearchEverywhere, PanelClose, MotorMenu, FocusEditor, VolumeFocus,
+        ToolUndo, ToolRedo,
+    )
 
-    /** Ctrl+Shift+Z or Ctrl+Y (or Cmd+Shift+Z / Cmd+Y on Mac) — redo. */
-    fun isRedo(e: KeyboardEvent): Boolean =
-        (e.ctrlKey || e.metaKey) && (
-                (e.shiftKey && e.key.lowercase() == "z") ||
-                        (!e.shiftKey && e.key.lowercase() == "y")
-                )
 }

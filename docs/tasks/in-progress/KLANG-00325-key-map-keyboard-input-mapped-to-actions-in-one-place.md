@@ -432,3 +432,7 @@ OkCancel real buttons and focus; their Esc stays ours until the key map carries 
   browser also in editors without the DSL wiring; Alt+Shift+click on one of several cursors takes it away and
   Alt+Shift+drag adds a range. Review (level 1): round 1 one MAJOR (unwrapping an unclosed comment cut the
   document's last two characters), fixed; round 2 clean. 12 mutants killed.
+- 2026-10-26: step 3c, the mini-notation editors' undo and redo on the key map (`KlangKeyBindings.ToolUndo` and
+  `ToolRedo`, at the code tools' priority); their own document listener and `KlangKeyBindings.isUndo`/`isRedo` are
+  gone. With the code editor focused its own undo answers first now (before, both undid). Review (level 1) round 1
+  clean; 2 mutants killed. Its MINORs go into the next step.

@@ -19,6 +19,7 @@ import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.codetools.KlangToolAutoUpdate
 import io.peekandpoke.klang.ui.feel.KlangLookAndFeel
 import io.peekandpoke.klang.ui.feel.KlangTheme
+import io.peekandpoke.klang.workshop.keys.onKeyController
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.vdom.VDom
@@ -27,7 +28,6 @@ import io.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.ops.filter
 import io.peekandpoke.ultra.streams.ops.map
-import kotlinx.browser.document
 import kotlinx.css.Display
 import kotlinx.css.FlexDirection
 import kotlinx.css.display
@@ -37,8 +37,6 @@ import kotlinx.css.minWidth
 import kotlinx.css.vw
 import kotlinx.html.FlowContent
 import kotlinx.html.div
-import org.w3c.dom.events.Event
-import org.w3c.dom.events.KeyboardEvent
 import kotlin.js.Date
 
 /**
@@ -131,18 +129,10 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
         triggerRedraw()
     }
 
-    private val keydownListener: (Event) -> Unit = listener@{ event ->
-        val ke = event as? KeyboardEvent ?: return@listener
-        when {
-            KlangKeyBindings.isUndo(ke) -> {
-                ke.preventDefault(); undo()
-            }
-
-            KlangKeyBindings.isRedo(ke) -> {
-                ke.preventDefault(); redo()
-            }
-        }
-    }
+    // The tool's own undo and redo, on the key map (KLANG-00325): in front of the page's keys while the tool is open;
+    // the code editor's own undo, when it has the focus, answers first and keeps the key
+    private val undoKey = onKeyController(action = KlangKeyBindings.ToolUndo) { undo() }
+    private val redoKey = onKeyController(action = KlangKeyBindings.ToolRedo) { redo() }
 
     // ── Playback highlight ────────────────────────────────────────────────────
 
@@ -205,11 +195,9 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
     init {
         lifecycle {
             onMount {
-                document.addEventListener("keydown", keydownListener)
                 subscribeToHighlights()
             }
             onUnmount {
-                document.removeEventListener("keydown", keydownListener)
                 cancelPendingHighlights()
             }
         }
