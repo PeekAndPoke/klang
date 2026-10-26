@@ -204,11 +204,13 @@ kraftApp {
   the open modals and popups was tried first and dropped: the editor's hover docs are a popup that stays open while
   one types, so it swallowed keys for no visible reason.
 
-- **A yes/no question is klangui's `YesNoModal`** (headline, content, `yesText`, `noText`, one `onResult`;
-  KLANG-00323, 2026-10-21), not Kraft's `OkCancelModal`: its buttons are divs that cannot take the keyboard.
-  Fomantic paints a modal's `> .header`, `> .content` and `> .actions` white; klang.css themes them. Kraft's
+- **A yes/no question is klangui's `KlangYesNoModal`** (headline, content, `yesText`, `noText`, one `onResult`;
+  KLANG-00323, 2026-10-21; named `YesNoModal` until 2026-10-26, now drawn as a `KlangDialog` inside Kraft's
+  `FadingModal`: KLANG-00349), not Kraft's `OkCancelModal`: its buttons are divs that cannot take the keyboard.
+  Fomantic paints a modal's `> .header`, `> .content` and `> .actions` white; klang.css themes them (for Fomantic
+  modals; KlangYesNoModal no longer uses them). Kraft's
   `FadingModal.close()` fades for 500 ms before the handle's `onClose` runs, and `closeAll()` runs no `onClose` at all.
-  Ultra confirmed all three and fixes them in Kraft (ULTRA-00233, after ultra's pause); keep YesNoModal's workaround
+  Ultra confirmed all three and fixes them in Kraft (ULTRA-00233, after ultra's pause); keep KlangYesNoModal's workaround
   until a Kraft release carries the fix (Mission Control passes the version on).
 
 ## HARD RULE

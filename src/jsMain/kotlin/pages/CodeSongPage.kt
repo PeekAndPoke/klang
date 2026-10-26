@@ -6,14 +6,12 @@
 package io.peekandpoke.klang.pages
 
 import io.peekandpoke.klang.BuiltInSongs
-import io.peekandpoke.klang.comp.FullscreenToggleButton
 import io.peekandpoke.klang.comp.HelpWindow
 import io.peekandpoke.klang.comp.KlangCodeEditorComp
 import io.peekandpoke.klang.comp.KlangCodePlaybackCtrl
 import io.peekandpoke.klang.comp.LcdDisplay
 import io.peekandpoke.klang.comp.SongColumn
 import io.peekandpoke.klang.comp.SongSettings
-import io.peekandpoke.klang.fs
 import io.peekandpoke.klang.layouts.WorkbenchSlots
 import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
@@ -23,10 +21,11 @@ import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.codemirror.BookmarkOptions
 import io.peekandpoke.klang.ui.codemirror.Bookmarks
 import io.peekandpoke.klang.ui.comp.KlangButton
+import io.peekandpoke.klang.ui.comp.KlangFinish
 import io.peekandpoke.klang.ui.comp.KlangSpinner
 import io.peekandpoke.klang.ui.comp.KlangValueKnob
 import io.peekandpoke.klang.ui.comp.KlangWorkbench
-import io.peekandpoke.klang.ui.comp.YesNoModal
+import io.peekandpoke.klang.ui.comp.KlangYesNoModal
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.klang.version
 import io.peekandpoke.klang.workshop.keys.OnKey
@@ -214,7 +213,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         val column: DIV.() -> Unit = {
             div {
                 key = "song-column-$pageKey"
-                SongColumn(ctrl = ctrl, builtIn = builtIn, onReset = { resetToOriginal() })
+                SongColumn(ctrl = ctrl, builtIn = builtIn, onReset = { askToReset() })
             }
         }
 
@@ -253,10 +252,33 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         }
     }
 
+    /** Asks before the song goes back to the original, which throws away the user's changes (the maintainer). */
+    private fun askToReset() {
+        val original = builtIn ?: return
+
+        modals.show<Boolean> { handle ->
+            KlangYesNoModal(
+                handle = handle,
+                headline = "Back to the original?",
+                content = {
+                    +"Your changes to \"${original.title}\" are lost: the code, the title and the tempo go back to the "
+                    +"original, and the playback stops."
+                },
+                yesText = "Back to the original",
+                noText = "Keep my changes",
+                onResult = { yes ->
+                    if (yes) {
+                        resetToOriginal()
+                    }
+                },
+            )
+        }
+    }
+
     /** Asks whether to move a bookmark, in Klang's yes or no modal, which answers exactly once. */
     private fun askToMoveBookmark(move: BookmarkOptions.Move, answer: (yes: Boolean) -> Unit) {
         modals.show { handle ->
-            YesNoModal(
+            KlangYesNoModal(
                 handle = handle,
                 headline = "Move bookmark ${move.digit}?",
                 content = { +"Bookmark ${move.digit} is on line ${move.fromLine}. Move it to line ${move.toLine}?" },
@@ -292,17 +314,14 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                     display = Display.flex
                     flexDirection = FlexDirection.column
                     flex = Flex(1.0, 1.0, FlexBasis.auto)
-                    // minHeight 0 (NOT overflow:hidden, which would clip the
-                    // editor's glow) keeps the form from growing past the page's
+                    // minHeight 0 keeps the form from growing past the page's
                     // height: the header stays pinned and only the editor
                     // wrapper scrolls internally.
                     minHeight = 0.px
                 }
-                // Transparent — shows the page container's chrome-bg, so the
-                // rounded editor corner reveals the same surface with no seam
                 renderTransportBar()
 
-                // Outer FRAME — carries the accent strips, corner radius, glow
+                // Outer FRAME: carries the accent strips, corner radius
                 // and black surface. It does NOT scroll, so scrolled editor
                 // content can never paint over the frame lines.
                 div {
@@ -321,21 +340,21 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                         put("border-top-left-radius", "3px")
                         put("padding-top", "1px")
                         put("padding-left", "1px")
+                        // The colour is the look's muted accent (KLANG-00349; the maintainer: it "should match a color
+                        // from the selected theme"); no glow, which lit up the transport bar
+                        val line = "var(--kl-accent-muted)"
+                        val faded = "color-mix(in srgb, var(--kl-accent-muted) 33%, transparent)"
+
                         put(
                             "background-image",
-                            "linear-gradient(to right, ${laf.accentMuted} 0%, ${laf.accentMuted} 80%, ${laf.accentMuted}55 100%)," +
-                                    " linear-gradient(to bottom, ${laf.accentMuted} 0%, ${laf.accentMuted} 66%, ${laf.accentMuted}55 100%)"
+                            "linear-gradient(to right, $line 0%, $line 80%, $faded 100%)," +
+                                    " linear-gradient(to bottom, $line 0%, $line 66%, $faded 100%)"
                         )
                         put("background-repeat", "no-repeat")
                         put("background-size", "100% 1px, 1px 100%")
                         // Black like the editor surface — otherwise any sub-pixel
                         // gap between the frame and the editor shows page chrome
                         put("background-color", "#000000")
-                        // Soft accent light from the editor's top and left edges
-                        put(
-                            "box-shadow",
-                            "0 -10px 22px ${laf.accentMuted}2e, -10px 0 22px ${laf.accentMuted}2e"
-                        )
                     }
 
                     // Inner CLIP — clips the editor content just inside the
@@ -375,13 +394,17 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                 put("gap", "12px")
                 put("flex-shrink", "0")
                 put("padding", "10px 14px")
+                // The column's and the strip's ground, so the bar reads as part of the bench around the editor
+                put("background", "var(--kl-ground-deep)")
+                put("border-bottom", "1px solid var(--kl-edge)")
             }
 
             renderPlayButton()
 
             KlangButton(
                 onClick = { ctrl.stop() },
-                surface = KlangButton.Surface.Domed,
+                finish = KlangFinish.Silver,
+                surface = KlangButton.Surface.Flat,
                 shape = KlangButton.Shape.Round,
                 availability = if (state.isPlaying) KlangButton.Availability.Enabled else KlangButton.Availability.Disabled,
                 ariaLabel = "Stop",
@@ -403,10 +426,6 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                 decimals = 2,
                 perPixel = 0.05,
             )
-
-            div { css { put("flex-grow", "1") } }
-
-            FullscreenToggleButton(fs = fs)
         }
     }
 
@@ -417,7 +436,9 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
         KlangButton(
             onClick = { onPlay() },
-            surface = KlangButton.Surface.Domed,
+            // Silver and flat, Play and Stop (the maintainer)
+            finish = KlangFinish.Silver,
+            surface = KlangButton.Surface.Flat,
             shape = KlangButton.Shape.Pill,
             availability = if (enabled) KlangButton.Availability.Enabled else KlangButton.Availability.Disabled,
         ) {

@@ -141,6 +141,11 @@ class KlangWorkbenchSpec : StringSpec({
                             }
                         }
                     },
+                    keys = {
+                        button {
+                            attributes["aria-label"] = "Fullscreen"
+                        }
+                    },
                     mark = "KLANGMOTOR",
                 )
             },
@@ -167,15 +172,21 @@ class KlangWorkbenchSpec : StringSpec({
         }
     }
 
-    "the strip has a toggle per tool window and one for the bottom panel, and the mark at its foot" {
+    "the strip has a toggle per tool window and one for the bottom panel; at its foot the keys, then the mark" {
         withWorkbench { root ->
             val strip = root.q("[role=group][aria-label='Tool windows']")!!
             val toggles = strip.querySelectorAll("button")
 
             (0 until toggles.length).map { (toggles.item(it) as Element).getAttribute("aria-label") } shouldContainExactly
-                    listOf("Docs", "Keys", "Analysis")
+                    listOf("Docs", "Keys", "Analysis", "Fullscreen")
 
-            strip.q(".${styles.workbenchMark}")!!.textContent shouldBe "KLANGMOTOR"
+            val foot = strip.q(".${styles.workbenchStripFoot}")!!
+            val keys = foot.q("[role=group][aria-label='View']")!!
+
+            keys.q("button")!!.getAttribute("aria-label") shouldBe "Fullscreen"
+            // The keys first, the mark under them
+            (keys.nextElementSibling == foot.q(".${styles.workbenchMark}")) shouldBe true
+            foot.q(".${styles.workbenchMark}")!!.textContent shouldBe "KLANGMOTOR"
         }
     }
 

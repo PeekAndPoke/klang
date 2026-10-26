@@ -5,15 +5,13 @@
 
 package io.peekandpoke.klang.comp
 
-import io.peekandpoke.klang.ui.comp.KlangButton
+import io.peekandpoke.klang.ui.comp.KlangIconToggle
 import io.peekandpoke.klang.utils.FullscreenController
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
-import io.peekandpoke.ultra.semanticui.icon
 import kotlinx.html.Tag
-import kotlinx.html.title
 
 @Suppress("FunctionName")
 fun Tag.FullscreenToggleButton(
@@ -24,6 +22,10 @@ fun Tag.FullscreenToggleButton(
     FullscreenToggleButton(it)
 }
 
+/**
+ * Fullscreen on and off, a key at the workbench strip's foot on every page (the maintainer, KLANG-00349: "should be
+ * available on every page"). Entered with the browser's own key (F11), only Esc leaves it, and the label says so.
+ */
 class FullscreenToggleButton(ctx: Ctx<Props>) : Component<FullscreenToggleButton.Props>(ctx) {
 
     //  PROPS  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -45,15 +47,12 @@ class FullscreenToggleButton(ctx: Ctx<Props>) : Component<FullscreenToggleButton
     override fun VDom.render() {
         val label = if (state.canExitWithClick) "Toggle fullscreen" else "Press ESC to exit fullscreen"
 
-        // A small round key, as the transport bar's others (KLANG-00349)
-        KlangButton(onClick = { toggle() }, surface = KlangButton.Surface.Domed, shape = KlangButton.Shape.Round, ariaLabel = label) {
-            title = label
-
-            if (state.isFullscreen) {
-                icon.compress()
-            } else {
-                icon.expand()
-            }
-        }
+        KlangIconToggle(
+            icon = if (state.isFullscreen) ({ compress }) else ({ expand }),
+            label = label,
+            on = state.isFullscreen,
+            onClick = { toggle() },
+            large = true,
+        )
     }
 }

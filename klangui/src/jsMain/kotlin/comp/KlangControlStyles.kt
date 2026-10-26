@@ -1000,9 +1000,25 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("border-left", "1px solid var(--kl-edge)")
     }
 
+    /** The strip's foot: its keys, then the mark, down at the bottom (KLANG-00349). */
+    val workbenchStripFoot by rule {
+        put("display", "flex")
+        put("flex-direction", "column")
+        put("align-items", "center")
+        put("gap", "18px")
+        put("margin-top", "auto")
+    }
+
+    /** The keys at the strip's foot (fullscreen), spaced as the toggles above. */
+    val workbenchStripKeys by rule {
+        put("display", "flex")
+        put("flex-direction", "column")
+        put("align-items", "center")
+        put("gap", "6px")
+    }
+
     /** The maker's mark at the strip's foot, written upwards (KLANG-00334 items 22, 23). */
     val workbenchMark by rule {
-        put("margin-top", "auto")
         put("padding-bottom", "28px")
 
         rule("& > span") {

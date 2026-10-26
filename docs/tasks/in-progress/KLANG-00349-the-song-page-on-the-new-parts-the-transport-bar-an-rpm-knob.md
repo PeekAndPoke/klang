@@ -76,6 +76,11 @@ the fullscreen toggle. The editor shows a symbol's quick help on hover (`hoverPo
 - **Steps 2 to 5, round 2** (level 2, two phases): clean; 2 NIT applied (the workbench parts keyed by the page, not
   the song id, so "new" opened twice cannot share them; a tool window shown by Alt+Q gives the focus back to the
   code on Esc). Mutation-checked: 8 mutants over the imports, showTool and its focus, all killed.
+- **The maintainer's look (2026-10-26)**, committed at the maintainer's word for the release, before its review
+  round: fullscreen moved to the workbench strip's foot (`KlangWorkbench(keys)`, on every page; spec row
+  mutation-checked); the transport bar on the column's ground, Play and Stop silver and flat; the editor frame's
+  glow gone, its line the look's muted accent; "Back to the original" asks first; `YesNoModal` became
+  `KlangYesNoModal`, drawn as a `KlangDialog` (Klang-Main-Dev agreed).
 
 ## Open for the maintainer
 

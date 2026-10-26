@@ -9,7 +9,7 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.ui.comp.YesNoModal
+import io.peekandpoke.klang.ui.comp.KlangYesNoModal
 import io.peekandpoke.klang.workshop.keys.KeyPlatform
 import io.peekandpoke.klang.workshop.keys.KeysManager
 import io.peekandpoke.klang.workshop.keys.OnKey
@@ -42,7 +42,7 @@ private class QuestionPage(ctx: NoProps) : PureComponent(ctx) {
 
     fun ask() {
         modals.show<Boolean> { handle ->
-            YesNoModal(
+            KlangYesNoModal(
                 handle = handle,
                 headline = "Move it?",
                 content = { +"Really?" },
@@ -72,7 +72,7 @@ private fun key(key: String, code: String, ctrl: Boolean = false, shift: Boolean
  * The yes or no question on the key manager (KLANG-00325): Ctrl+Enter answers yes, Esc closes as a no, and while it is
  * open the page's keys wait, as the mouse does under its dimmer.
  */
-class YesNoModalSpec : StringSpec({
+class KlangYesNoModalSpec : StringSpec({
 
     suspend fun withPage(block: suspend (QuestionPage) -> Unit) {
         val manager = KeysManager(platform = KeyPlatform.Pc, hintDelayMs = 10).apply { define(KlangKeyBindings) }
@@ -95,7 +95,7 @@ class YesNoModalSpec : StringSpec({
             page.ask()
 
             eventually {
-                (document.querySelector(".ui.modal") != null) shouldBe true
+                (document.querySelector("[role=dialog]") != null) shouldBe true
             }
 
             press(key(key = "Enter", code = "Enter", ctrl = true, shift = true))
@@ -117,7 +117,7 @@ class YesNoModalSpec : StringSpec({
             page.ask()
 
             eventually {
-                (document.querySelector(".ui.modal") != null) shouldBe true
+                (document.querySelector("[role=dialog]") != null) shouldBe true
             }
 
             press(key(key = "Escape", code = "Escape"))

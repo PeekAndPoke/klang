@@ -53,7 +53,7 @@ object KlangKeyBindings : KeyBindings {
 
     /**
      * Leaves a dialog without an answer; a code tool's Esc is its Cancel. In front of a panel and the page
-     * ([KlangKeyPriorities.Tool]); a dialog with its own key layer (YesNoModal) answers it there anyway.
+     * ([KlangKeyPriorities.Tool]); a dialog with its own key layer (KlangYesNoModal) answers it there anyway.
      */
     val DialogClose = KeyAction(
         id = "klang.dialog.close",

@@ -31,6 +31,7 @@ fun Tag.KlangWorkbench(
     tools: List<KlangWorkbench.Tool> = emptyList(),
     bottom: KlangWorkbench.Bottom? = null,
     drawer: (FlowContent.(close: () -> Unit) -> Unit)? = null,
+    keys: (FlowContent.() -> Unit)? = null,
     mark: String? = null,
 ) = comp(
     KlangWorkbench.Props(
@@ -40,6 +41,7 @@ fun Tag.KlangWorkbench(
         tools = tools,
         bottom = bottom,
         drawer = drawer,
+        keys = keys,
         mark = mark,
     )
 ) {
@@ -54,8 +56,9 @@ fun Tag.KlangWorkbench(
  *   drawer takes the focus (Esc then closes it); closed, the focus goes back to where it came from (the menu
  *   button).
  * - The content in the middle, and under it the bottom panel, docked, shown or hidden from the strip.
- * - The tool strip on the right: a toggle per tool window, the bottom panel's toggle, the maker's [Props.mark]
- *   written up its foot (items 22, 23). An open tool window flies in over the content, or, pinned, docks beside it;
+ * - The tool strip on the right: a toggle per tool window, the bottom panel's toggle; at its foot the caller's
+ *   [Props.keys] for every page (the app's fullscreen: KLANG-00349) and the maker's [Props.mark] written upwards
+ *   (items 22, 23). An open tool window flies in over the content, or, pinned, docks beside it;
  *   each tool window keeps its own pin, as in IntelliJ. Opened from the strip, it takes the focus. Esc closes one
  *   flying in, and the focus goes back to its toggle; a pinned one stays.
  *
@@ -108,6 +111,8 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
         val bottom: Bottom?,
         /** The drawer the Motor's menu button opens; it gets the way to close itself (after a pick, say). */
         val drawer: (FlowContent.(close: () -> Unit) -> Unit)?,
+        /** Keys at the strip's foot, above the mark, for what every page has (fullscreen); null for none. */
+        val keys: (FlowContent.() -> Unit)?,
         /** The maker's mark at the strip's foot ("KLANGMOTOR"); null for none. */
         val mark: String?,
     )
@@ -349,9 +354,25 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
                     )
                 }
 
-                props.mark?.let { mark ->
-                    div(classes = styles.workbenchMark.toString()) {
-                        span { +mark }
+                val keys = props.keys
+                val mark = props.mark
+
+                if (keys != null || mark != null) {
+                    div(classes = styles.workbenchStripFoot.toString()) {
+                        if (keys != null) {
+                            div(classes = styles.workbenchStripKeys.toString()) {
+                                attributes["role"] = "group"
+                                attributes["aria-label"] = "View"
+
+                                keys()
+                            }
+                        }
+
+                        if (mark != null) {
+                            div(classes = styles.workbenchMark.toString()) {
+                                span { +mark }
+                            }
+                        }
                     }
                 }
             }

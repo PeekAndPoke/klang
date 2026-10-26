@@ -26,7 +26,7 @@ import io.peekandpoke.klang.ui.comp.KlangIgnition
 import io.peekandpoke.klang.ui.comp.KlangLamp
 import io.peekandpoke.klang.ui.comp.KlangPanel
 import io.peekandpoke.klang.ui.comp.KlangSpinner
-import io.peekandpoke.klang.ui.comp.YesNoModal
+import io.peekandpoke.klang.ui.comp.KlangYesNoModal
 import io.peekandpoke.klang.version
 import io.peekandpoke.kraft.addons.browserdetect.BrowserDetect
 import io.peekandpoke.kraft.addons.browserdetect.BrowserDetectAddon
@@ -394,7 +394,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         val from = state
 
         modals.show<Boolean> { handle ->
-            YesNoModal(
+            KlangYesNoModal(
                 handle = handle,
                 headline = if (check.isMobile) "A phone or a tablet" else "Not Chrome",
                 content = {

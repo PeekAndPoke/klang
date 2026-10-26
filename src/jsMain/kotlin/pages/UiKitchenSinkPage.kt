@@ -32,7 +32,7 @@ import io.peekandpoke.klang.ui.comp.KlangSwatchButton
 import io.peekandpoke.klang.ui.comp.KlangTextField
 import io.peekandpoke.klang.ui.comp.KlangToolWindow
 import io.peekandpoke.klang.ui.comp.KlangValueKnob
-import io.peekandpoke.klang.ui.comp.YesNoModal
+import io.peekandpoke.klang.ui.comp.KlangYesNoModal
 import io.peekandpoke.klang.ui.feel.KlangLookLayers
 import io.peekandpoke.klang.ui.feel.KlangLooks
 import io.peekandpoke.klang.ui.feel.KlangRole
@@ -779,7 +779,7 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
                 }
             }
 
-            cell(name = "Yes or no question", source = "klangui/comp/YesNoModal.kt") {
+            cell(name = "Yes or no question", source = "klangui/comp/KlangYesNoModal.kt") {
                 KlangButton(onClick = { askYesNo() }) { +"Ask" }
             }
         }
@@ -787,7 +787,7 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
 
     private fun askYesNo() {
         modals.show<Boolean> { handle ->
-            YesNoModal(
+            KlangYesNoModal(
                 handle = handle,
                 headline = "Move the bookmark here?",
                 content = { +"It is on line 12 now." },

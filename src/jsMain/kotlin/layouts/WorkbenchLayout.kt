@@ -6,8 +6,10 @@
 package io.peekandpoke.klang.layouts
 
 import io.peekandpoke.klang.Nav
+import io.peekandpoke.klang.comp.FullscreenToggleButton
 import io.peekandpoke.klang.comp.Motoer
 import io.peekandpoke.klang.comp.PlayerWarehouseStats
+import io.peekandpoke.klang.fs
 import io.peekandpoke.klang.storage.LookStorage
 import io.peekandpoke.klang.ui.comp.KlangDrawer
 import io.peekandpoke.klang.ui.comp.KlangLookPicker
@@ -140,6 +142,8 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
                         footer = { KlangLookPicker(onChosen = { LookStorage.save(it) }) },
                     )
                 },
+                // On every page, at the strip's foot (the maintainer, KLANG-00349)
+                keys = { FullscreenToggleButton(fs = fs) },
                 mark = "KLANGMOTOR",
             ).track(WorkbenchSlots.workbench)
         }
