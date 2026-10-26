@@ -15,7 +15,7 @@ import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.common.toFixed
 import io.peekandpoke.ultra.html.css
-import io.peekandpoke.ultra.streams.ops.filterIsInstance
+import io.peekandpoke.ultra.streams.ops.filterIsInstanceOf
 import io.peekandpoke.ultra.streams.ops.distinct
 import io.peekandpoke.ultra.streams.ops.map
 import io.peekandpoke.ultra.streams.ops.switchMapNotNull
@@ -73,7 +73,7 @@ class PlayerWarehouseStats(ctx: NoProps) : PureComponent(ctx) {
      */
     private val stats: KlangCommLink.Feedback.Diagnostics.WarehouseStats? by subscribingTo(
         Player.player.switchMapNotNull { it.signals }
-            .filterIsInstance<KlangPlaybackSignal.Diagnostics, _>()
+            .filterIsInstanceOf(KlangPlaybackSignal.Diagnostics::class)
             .map { it?.diagnostics?.warehouse }
             .distinct()
     )
