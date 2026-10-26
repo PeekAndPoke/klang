@@ -221,8 +221,11 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
         val columns = spectrumColumns(width = width.toInt(), count = numBuckets)
 
         val maxBoxes = props.numBoxesInStack
-        val boxHeight = (height - (maxBoxes * props.boxGap)) / maxBoxes
-        val boxWithGap = boxHeight + props.boxGap
+        // Whole pixels per cell and per gap, stacked up from the floor, so the cells are crisp too (the maintainer,
+        // 2026-10-26); the pixels left over stay empty at the top
+        val gap = props.boxGap.roundToInt()
+        val boxHeight = ((height.toInt() - maxBoxes * gap) / maxBoxes.coerceAtLeast(1)).coerceAtLeast(1)
+        val boxWithGap = boxHeight + gap
 
         for (bucketIdx in 0 until numBuckets) {
             val normalized = bucketValues[bucketIdx]
@@ -243,7 +246,7 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
                 val boxColor = colorsWithAlpha[colorIdx]
 
                 ctx.fillStyle = boxColor.toString()
-                ctx.fillRect(x, boxY, effectiveWidth, boxHeight)
+                ctx.fillRect(x, boxY, effectiveWidth, boxHeight.toDouble())
             }
         }
     }
