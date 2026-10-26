@@ -20,6 +20,7 @@ import io.peekandpoke.klang.codemirror.ext.Extension
 import io.peekandpoke.klang.codemirror.ext.autocompletion
 import io.peekandpoke.klang.codemirror.ext.completeFromList
 import io.peekandpoke.klang.codemirror.ext.completionStatus
+import io.peekandpoke.klang.codemirror.ext.javascript
 import io.peekandpoke.klang.codemirror.ext.openSearchPanel
 import io.peekandpoke.klang.codemirror.ext.searchPanelOpen
 import io.peekandpoke.klang.codemirror.ext.selectedCompletion
@@ -34,6 +35,8 @@ import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.events.Event
 import org.w3c.dom.events.KeyboardEvent
 import org.w3c.dom.events.KeyboardEventInit
+import org.w3c.dom.events.MouseEvent
+import org.w3c.dom.events.MouseEventInit
 
 /**
  * The editor on the key map (KLANG-00325 step 3a): every action of the table has a command that exists in the
@@ -113,8 +116,9 @@ class EditorKeyTableSpec : StringSpec({
         val bookmarks = BookmarksExtension.commands(BookmarkOptions(initial = emptyList(), onChanged = {}, askToMove = { _, _ -> }))
         val all = EditorKeyTable.commands + EditPlacesExtension.commands + bookmarks
 
-        withClue("actions without a command") {
-            KlangEditorKeyBindings.actions.map { it.id }.filterNot { it in all }.shouldBeEmpty()
+        withClue("actions without a command: only those the DSL extension brings, which knows the names") {
+            KlangEditorKeyBindings.actions.map { it.id }.filterNot { it in all } shouldContainExactly
+                listOf(KlangEditorKeyBindings.GoToDefinition.id, KlangEditorKeyBindings.QuickDocumentation.id)
         }
 
         withClue("commands that are not functions: an import from the wrong package is undefined") {
@@ -276,5 +280,95 @@ class EditorKeyTableSpec : StringSpec({
         EditorKeyTable.keymapOf(app = null, own = own) shouldBe own
         EditorKeyTable.keymapOf(app = withoutEditorKeys, own = own) shouldBe own
         EditorKeyTable.keymapOf(app = withEditorKeys, own = own) shouldBe withEditorKeys
+    }
+
+    "block comment: an empty one with the cursor inside where nothing is selected, else the selection wrapped" {
+        withEditor(doc = "abc", extra = listOf(javascript().unsafeCast<Extension>())) { view ->
+            val empty = view.press(key = "?", code = "Slash", ctrl = true, shift = true)
+
+            withClue("nothing selected") {
+                view.state.doc.toString() shouldBe "/**/abc"
+                view.state.selection.main.head shouldBe 2
+                empty.defaultPrevented shouldBe true
+            }
+
+            view.dispatch(view.state.update(jsObject { this.selection = jsObject<dynamic> { this.anchor = 4; this.head = 7 } }))
+            view.press(key = "?", code = "Slash", ctrl = true, shift = true)
+
+            withClue("abc selected: wrapped") { view.state.doc.toString() shouldBe "/**//* abc */" }
+        }
+    }
+
+    "unselect last occurrence takes back the newest of select next occurrence, also after the search wrapped round" {
+        withEditor(doc = "a a a") { view ->
+            repeat(3) { view.press(key = "j", code = "KeyJ", alt = true) }
+            view.state.selection.ranges.size shouldBe 3
+
+            val unselect = view.press(key = "J", code = "KeyJ", alt = true, shift = true)
+
+            withClue("from the first: the last one goes") {
+                view.state.selection.ranges.map { it.from } shouldContainExactly listOf(0, 2)
+                view.state.selection.main.from shouldBe 0
+                unselect.defaultPrevented shouldBe true
+            }
+
+            // From the middle one: the third, then round to the first, which is the newest
+            view.dispatch(view.state.update(jsObject { this.selection = jsObject<dynamic> { this.anchor = 2 } }))
+            repeat(3) { view.press(key = "j", code = "KeyJ", alt = true) }
+            view.press(key = "J", code = "KeyJ", alt = true, shift = true)
+
+            withClue("from the middle: the first one goes, the main one stays") {
+                view.state.selection.ranges.map { it.from } shouldContainExactly listOf(2, 4)
+                view.state.selection.main.from shouldBe 2
+            }
+        }
+    }
+
+    "replace opens the search panel with the cursor in its replace field, and keeps Ctrl+R from the browser" {
+        withEditor(doc = "a b") { view ->
+            val replace = view.press(key = "r", code = "KeyR", ctrl = true)
+
+            searchPanelOpen(view.state) shouldBe true
+            document.activeElement shouldBe view.dom.querySelector(".cm-search input[name=replace]")
+            replace.defaultPrevented shouldBe true
+        }
+    }
+
+    "reformat with nothing selected reindents the whole document, the cursor staying where it is" {
+        withEditor(doc = "{\nx\n}", extra = listOf(javascript().unsafeCast<Extension>())) { view ->
+            view.press(key = "l", code = "KeyL", ctrl = true, alt = true)
+
+            view.state.doc.toString() shouldBe "{\n  x\n}"
+            view.state.selection.main.head shouldBe 0
+        }
+    }
+
+    "Alt+Shift+click adds a cursor, Ctrl+click does not" {
+        withEditor(doc = "one two three") { view ->
+            fun clickAt(pos: Int, alt: Boolean = false, shift: Boolean = false, ctrl: Boolean = false) {
+                val at = view.coordsAtPos(pos)!!
+                val init = MouseEventInit(
+                    clientX = at.left.toInt() + 1,
+                    clientY = ((at.top + at.bottom) / 2).toInt(),
+                    altKey = alt,
+                    shiftKey = shift,
+                    ctrlKey = ctrl,
+                    bubbles = true,
+                    cancelable = true,
+                    button = 0,
+                    detail = 1,
+                )
+                view.contentDOM.dispatchEvent(MouseEvent("mousedown", init))
+                document.dispatchEvent(MouseEvent("mouseup", init))
+            }
+
+            clickAt(pos = 8, ctrl = true)
+            withClue("Ctrl+click: one cursor") { view.state.selection.ranges.size shouldBe 1 }
+
+            clickAt(pos = 4, alt = true, shift = true)
+            withClue("Alt+Shift+click: a second cursor") {
+                view.state.selection.ranges.map { it.head }.sorted() shouldContainExactly listOf(4, 8)
+            }
+        }
     }
 })

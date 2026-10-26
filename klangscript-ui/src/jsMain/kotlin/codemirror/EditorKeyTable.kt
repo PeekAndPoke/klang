@@ -38,7 +38,6 @@ import io.peekandpoke.klang.codemirror.ext.history
 import io.peekandpoke.klang.codemirror.ext.indentLess
 import io.peekandpoke.klang.codemirror.ext.indentMore
 import io.peekandpoke.klang.codemirror.ext.indentOnInput
-import io.peekandpoke.klang.codemirror.ext.indentSelection
 import io.peekandpoke.klang.codemirror.ext.insertBlankLine
 import io.peekandpoke.klang.codemirror.ext.keymap
 import io.peekandpoke.klang.codemirror.ext.lineNumbers
@@ -89,8 +88,10 @@ object EditorKeyTable {
             Indent to listOf(indentMore),
             Unindent to listOf(indentLess),
             LineComment to listOf(toggleComment),
-            Reformat to listOf(indentSelection),
+            BlockComment to listOf(EditorCommands.blockComment),
+            Reformat to listOf(EditorCommands.reformat),
             SelectNextOccurrence to listOf(selectNextOccurrence),
+            UnselectOccurrence to listOf(EditorCommands.unselectOccurrence),
             SelectAllOccurrences to listOf(selectSelectionMatches),
             ExpandSelection to listOf(consumed(selectParentSyntax)),
             AddCursorAbove to listOf(addCursorAbove),
@@ -100,6 +101,7 @@ object EditorKeyTable {
             // As CodeMirror's own keymaps did: several cursors become one first, then the search panel closes
             BackToOneCursor to listOf(simplifySelection, closeSearchPanel),
             Find to listOf(openSearchPanel),
+            Replace to listOf(EditorCommands.replace),
             FindNext to listOf(consumed(findNext)),
             FindPrevious to listOf(consumed(findPrevious)),
             GoToLine to listOf(gotoLine),
@@ -116,12 +118,13 @@ object EditorKeyTable {
 
     /**
      * The keys of the search panel's fields (the scope `search-panel`), which sit outside the code and so never reach
-     * [extension]'s handler: find again, next and previous match, go to line, and Esc closes the panel and puts the
+     * [extension]'s handler: find again, replace, next and previous match, go to line, and Esc closes the panel and puts the
      * focus back in the code. Only these: Tab moves between the panel's fields, and Esc there leaves the code's selection alone.
      */
     val searchPanelCommands: Map<String, List<Command>> = with(KlangEditorKeyBindings) {
         mapOf(
             Find to listOf(openSearchPanel),
+            Replace to listOf(EditorCommands.replace),
             FindNext to listOf(consumed(findNext)),
             FindPrevious to listOf(consumed(findPrevious)),
             BackToOneCursor to listOf(closeSearchPanel),
@@ -180,9 +183,9 @@ object EditorKeyTable {
 
     /**
      * CodeMirror's `basicSetup` without its keymaps (CodeMirror's docs suggest copying it), so the editor answers the
-     * table's keys only (maintainer, 2026-10-26: "Only our table"). What stays: the plain text keys (arrows, Home,
-     * Backspace, Enter), the closing brackets' Backspace, and the arrows and pages inside an open completion list,
-     * which pass the key on while no list is open.
+     * table's keys only (maintainer, 2026-10-26: "Only our table"); Alt+Shift+click adds a cursor. What stays: the plain
+     * text keys (arrows, Home, Backspace, Enter), the closing brackets' Backspace, and the arrows and pages inside an
+     * open completion list, which pass the key on while no list is open.
      */
     fun setup(): Array<Extension> = arrayOf(
         lineNumbers(),
@@ -202,6 +205,7 @@ object EditorKeyTable {
         crosshairCursor(),
         highlightActiveLine(),
         highlightSelectionMatches(),
+        EditorCommands.addCursorByClick,
         Prec.highest(keymap.of(completionListKeys())),
         keymap.of(closeBracketsKeymap + standardKeymap),
     )

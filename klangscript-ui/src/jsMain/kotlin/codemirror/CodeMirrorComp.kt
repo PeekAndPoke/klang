@@ -193,20 +193,20 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
         }
         val linterExtension = linter(linterSource, linterConfig)
 
-        // Build DSL extensions (hover, completion) if libraries are available
-        val dslExtensions = buildDslExtensions()
+        // Build DSL extensions (hover, completion, go to definition) if libraries are available
+        val dsl = buildDsl()
 
         // The setup without CodeMirror's keymaps, the key map's keys (KLANG-00325), then our extensions
         val allExtensions = arrayOf<Any>(
             *EditorKeyTable.setup(),
-            EditorKeyTable.extension(currentKeymap = ::editorKeymap, commands = buildKeyCommands()),
+            EditorKeyTable.extension(currentKeymap = ::editorKeymap, commands = buildKeyCommands(dslCommands = dsl.commands)),
             theme.extension,
             javascript(),
             updateListenerExtension,
             EditPlacesExtension.extension,
             linterExtension,
             lintGutter(),
-            *dslExtensions.toTypedArray(),
+            *dsl.extensions.toTypedArray(),
             *buildMinimapExtensions().toTypedArray(),
             *buildBookmarkExtensions().toTypedArray(),
         ).unsafeCast<Array<Extension>>()
@@ -284,9 +284,13 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
         return listOf(showMinimap.of(config))
     }
 
-    /** The commands of the editor's keys: the table's, back to the last edit, and the bookmarks' when it has them. */
-    private fun buildKeyCommands(): Map<String, List<Command>> =
-        EditorKeyTable.commands + EditPlacesExtension.commands + (props.bookmarks?.let { BookmarksExtension.commands(it) } ?: emptyMap())
+    /**
+     * The commands of the editor's keys: the table's, back to the last edit, the bookmarks' when it has them, and the
+     * DSL's ([dslCommands]: go to definition, quick documentation) when it knows libraries.
+     */
+    private fun buildKeyCommands(dslCommands: Map<String, List<Command>>): Map<String, List<Command>> =
+        EditorKeyTable.commands + EditPlacesExtension.commands + dslCommands +
+            (props.bookmarks?.let { BookmarksExtension.commands(it) } ?: emptyMap())
 
     /**
      * The key map the editor's keys are read from, on every key: the app's, with the user's keys; without a key manager
@@ -302,11 +306,15 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
         return listOf(BookmarksExtension.extension(options))
     }
 
-    /** Builds DSL-aware extensions (hover docs, code completion) when libraries are configured. */
-    private fun buildDslExtensions(): List<Extension> {
-        if (props.availableLibraries.isEmpty()) return emptyList()
+    /** The DSL-aware extensions and the commands of their keys. */
+    private class DslParts(val extensions: List<Extension>, val commands: Map<String, List<Command>>)
+
+    /** Builds DSL-aware extensions (hover docs, code completion, go to definition) when libraries are configured. */
+    private fun buildDsl(): DslParts {
+        if (props.availableLibraries.isEmpty()) return DslParts(extensions = emptyList(), commands = emptyMap())
 
         val extensions = mutableListOf<Extension>()
+        var commands = emptyMap<String, List<Command>>()
 
         val hoverPopup = props.hoverPopup
         val hoverContent = props.hoverContent
@@ -314,17 +322,18 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
 
         // Hover docs + context menu + tool badges
         if (hoverPopup != null && hoverContent != null && popups != null) {
-            extensions.add(
-                dslEditorExtension(
-                    docProvider = { docContext.docProvider(it) },
-                    analysisProvider = { docContext.lastAnalysis },
-                    hoverPopup = hoverPopup,
-                    hoverContent = hoverContent,
-                    popups = popups,
-                    onNavigate = props.onNavigate ?: { _, _ -> },
-                    onOpenTool = props.onOpenTool,
-                )
+            val wiring = dslEditorExtension(
+                docProvider = { docContext.docProvider(it) },
+                analysisProvider = { docContext.lastAnalysis },
+                hoverPopup = hoverPopup,
+                hoverContent = hoverContent,
+                popups = popups,
+                onNavigate = props.onNavigate ?: { _, _ -> },
+                onOpenTool = props.onOpenTool,
             )
+
+            extensions.add(wiring.extension)
+            commands = wiring.commands
         }
 
         // Code completion
@@ -335,7 +344,7 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
             })
         )
 
-        return extensions
+        return DslParts(extensions = extensions, commands = commands)
     }
 
     fun destroy() {

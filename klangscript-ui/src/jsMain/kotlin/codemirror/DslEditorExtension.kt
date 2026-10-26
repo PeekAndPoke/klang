@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.ui.codemirror
 
+import io.peekandpoke.klang.codemirror.ext.Command
 import io.peekandpoke.klang.codemirror.ext.Coords
 import io.peekandpoke.klang.codemirror.ext.Decoration
 import io.peekandpoke.klang.codemirror.ext.DecorationSet
@@ -60,6 +61,7 @@ private data class HoverKey(val from: Int, val to: Int, val symbol: KlangSymbol,
  * - Ctrl/Cmd + click             → a local: jump to its declaration; a library name: navigate to docs (same tab)
  * - Ctrl/Cmd + Shift + click     → a local: jump to its declaration; a library name: navigate to docs (new tab)
  * - Ctrl/Cmd held while hovering → underline the name
+ * - Ctrl+B / Ctrl+Q (the key map's go to definition and quick documentation) → the same for the name at the cursor
  *
  * [hoverContent] renders the popup for a symbol; `declarationCode` is a local's declaration, null for a library name.
  */
@@ -71,7 +73,7 @@ fun dslEditorExtension(
     popups: PopupsManager,
     onNavigate: (doc: KlangSymbol, event: dynamic) -> Unit,
     onOpenTool: ((toolName: String, ctx: KlangUiToolContext, argFrom: Int, event: dynamic) -> Unit)? = null,
-): Extension {
+): DslEditorWiring {
 
     // ── Underline decoration (CTRL/Cmd-hover) ─────────────────────────────
 
@@ -116,13 +118,8 @@ fun dslEditorExtension(
     fun isModifier(event: dynamic): Boolean =
         event.ctrlKey == true || event.metaKey == true
 
-    /** Resolve the word under the mouse and look it up via the analyzer (receiver-aware + local-binding-aware). */
-    fun wordDocAt(view: EditorView, event: dynamic): WordDoc? {
-        val coords = jsObject<dynamic> {
-            this.x = event.clientX
-            this.y = event.clientY
-        }.unsafeCast<Coords>()
-        val pos = view.posAtCoords(coords) ?: return null
+    /** The word at [pos] and what it names, as [wordDocAt] reads the one under the mouse. */
+    fun wordDocAtPos(view: EditorView, pos: Int): WordDoc? {
         val word = view.state.wordAt(pos) ?: return null
         val name = view.state.doc.sliceString(word.from, word.to)
 
@@ -155,6 +152,17 @@ fun dslEditorExtension(
         val doc = docProvider(name) ?: return null
 
         return WordDoc(word = word, symbol = doc, definition = null)
+    }
+
+    /** Resolve the word under the mouse and look it up via the analyzer (receiver-aware + local-binding-aware). */
+    fun wordDocAt(view: EditorView, event: dynamic): WordDoc? {
+        val coords = jsObject<dynamic> {
+            this.x = event.clientX
+            this.y = event.clientY
+        }.unsafeCast<Coords>()
+        val pos = view.posAtCoords(coords) ?: return null
+
+        return wordDocAtPos(view = view, pos = pos)
     }
 
     fun dispatchClear(view: EditorView) {
@@ -477,6 +485,41 @@ fun dslEditorExtension(
         true
     }
 
+    /**
+     * Shows the docs popup of [symbol] in a corner of the editor's visible part, away from [y] (the mouse's or the
+     * cursor's height), so it does not cover what the user looks at.
+     */
+    fun showDocs(view: EditorView, y: Double, symbol: KlangSymbol, declarationCode: String?) {
+        val viewportH = window.innerHeight.toDouble()
+        val viewportW = window.innerWidth.toDouble()
+
+        // Use the scroll container's visible rect, clamped to viewport
+        val scrollRect = view.scrollDOM.getBoundingClientRect()
+        val visTop = maxOf(scrollRect.top, 0.0)
+        val visBottom = minOf(scrollRect.bottom, viewportH)
+        val visRight = minOf(scrollRect.right, viewportW)
+        val visMidY = (visTop + visBottom) / 2.0
+
+        val pad = 8.0
+        // The popup's glow (box-shadow 0 0 8px) is not part of its measured
+        // box, so the bottom edge needs extra clearance or the glow (plus
+        // rounding) hangs past the viewport edge.
+        val bottomPad = 20.0
+        // NOTE kraft semantics: Top* = the popup extends UP from the anchor,
+        // Bottom* = it extends DOWN. Getting these backwards pushes the
+        // popup's bottom outside the viewport.
+        val (anchor, positioning) = if (y < visMidY) {
+            // The mouse (or the cursor) in the top half → popup sits in the bottom-right corner, growing up
+            Vector2D(x = visRight - pad, y = visBottom - bottomPad) to
+                    PopupsManager.Positioning.TopRight
+        } else {
+            // In the bottom half → popup sits in the top-right corner, growing down
+            Vector2D(x = visRight - pad, y = visTop + pad) to
+                    PopupsManager.Positioning.BottomRight
+        }
+        hoverPopup.scheduleShow(anchor = anchor, positioning = positioning) { _ -> hoverContent(symbol, declarationCode) }
+    }
+
     // Hover tooltip + Ctrl/Cmd underline
     val onMouseMove: (event: dynamic, view: EditorView) -> Boolean = { event, view ->
         val wordDoc = wordDocAt(view, event)
@@ -510,35 +553,7 @@ fun dslEditorExtension(
             lastHoverKey = hoverKey
 
             if (doc != null && word != null) {
-                val mouseY = event.clientY.unsafeCast<Double>()
-                val viewportH = window.innerHeight.toDouble()
-                val viewportW = window.innerWidth.toDouble()
-
-                // Use the scroll container's visible rect, clamped to viewport
-                val scrollRect = view.scrollDOM.getBoundingClientRect()
-                val visTop = maxOf(scrollRect.top, 0.0)
-                val visBottom = minOf(scrollRect.bottom, viewportH)
-                val visRight = minOf(scrollRect.right, viewportW)
-                val visMidY = (visTop + visBottom) / 2.0
-
-                val pad = 8.0
-                // The popup's glow (box-shadow 0 0 8px) is not part of its measured
-                // box, so the bottom edge needs extra clearance or the glow (plus
-                // rounding) hangs past the viewport edge.
-                val bottomPad = 20.0
-                // NOTE kraft semantics: Top* = the popup extends UP from the anchor,
-                // Bottom* = it extends DOWN. Getting these backwards pushes the
-                // popup's bottom outside the viewport.
-                val (anchor, positioning) = if (mouseY < visMidY) {
-                    // Mouse in top half → popup sits in the bottom-right corner, growing up
-                    Vector2D(x = visRight - pad, y = visBottom - bottomPad) to
-                            PopupsManager.Positioning.TopRight
-                } else {
-                    // Mouse in bottom half → popup sits in the top-right corner, growing down
-                    Vector2D(x = visRight - pad, y = visTop + pad) to
-                            PopupsManager.Positioning.BottomRight
-                }
-                hoverPopup.scheduleShow(anchor = anchor, positioning = positioning) { _ -> hoverContent(doc, declarationCode) }
+                showDocs(view = view, y = event.clientY.unsafeCast<Double>(), symbol = doc, declarationCode = declarationCode)
             } else {
                 hoverPopup.scheduleClose()
             }
@@ -623,9 +638,58 @@ fun dslEditorExtension(
         }
     )
 
-    return arrayOf(
-        underlineField,
-        EditorView.domEventHandlers(handlers),
-        theme,
-    ).unsafeCast<Extension>()
+    // ── The key map's commands (KLANG-00325 step 3b) ─────────────────────
+
+    /** The word at the cursor and what it names; a cursor right after a word still reads that word. */
+    fun wordDocAtCursor(view: EditorView): WordDoc? {
+        val head = view.state.selection.main.head
+        val pos = view.state.wordAt(head)?.from ?: head
+
+        return wordDocAtPos(view = view, pos = pos)
+    }
+
+    // Both keep their key from the browser, also on a word with nothing behind it: Firefox opens its bookmarks on
+    // Ctrl+B, and quits on Ctrl+Q under Linux
+    val goToDefinitionAtCursor: Command = { view ->
+        wordDocAtCursor(view)?.let { result ->
+            val definition = result.definition
+
+            if (definition != null) {
+                goToDefinition(view, definition)
+            } else {
+                // No mouse event: the docs open in the same tab
+                result.docsSymbol?.let { onNavigate(it, jsObject { this.shiftKey = false }) }
+            }
+        }
+
+        true
+    }
+
+    val quickDocumentation: Command = { view ->
+        val result = wordDocAtCursor(view)
+        val cursorTop = view.coordsAtPos(view.state.selection.main.head)?.top
+
+        if (result != null && cursorTop != null) {
+            // The popup stands for this word now, so the next mouse move elsewhere closes it, as after a hover
+            lastHoverKey = HoverKey(from = result.word.from, to = result.word.to, symbol = result.symbol, definition = result.definition)
+            showDocs(view = view, y = cursorTop, symbol = result.symbol, declarationCode = result.definition?.code)
+        }
+
+        true
+    }
+
+    return DslEditorWiring(
+        extension = arrayOf(
+            underlineField,
+            EditorView.domEventHandlers(handlers),
+            theme,
+        ).unsafeCast<Extension>(),
+        commands = mapOf(
+            KlangEditorKeyBindings.GoToDefinition.id to listOf(goToDefinitionAtCursor),
+            KlangEditorKeyBindings.QuickDocumentation.id to listOf(quickDocumentation),
+        ),
+    )
 }
+
+/** The DSL editor's extension, and the commands of its keys in the key map (go to definition, quick documentation). */
+class DslEditorWiring(val extension: Extension, val commands: Map<String, List<Command>>)

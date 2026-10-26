@@ -80,6 +80,12 @@ external class EditorView {
         val scrollMargins: Facet<Any>
         val darkTheme: Facet<Boolean>
         val clickAddsSelectionRange: Facet<(event: MouseEvent) -> Boolean>
+
+        /**
+         * How a mouse press selects: the first value that returns a style (an object with `get(event, extend,
+         * multiple)` and `update(update)`) takes the press; null leaves it to the next one, at last to CodeMirror's own.
+         */
+        val mouseSelectionStyle: Facet<(view: EditorView, event: MouseEvent) -> dynamic>
         val dragMovesSelection: Facet<(event: MouseEvent) -> Boolean>
         val perLineTextDirection: Facet<Boolean>
         val exceptionSink: Facet<(exception: Any) -> Unit>

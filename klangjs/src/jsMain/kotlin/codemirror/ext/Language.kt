@@ -228,7 +228,8 @@ external val indentUnit: Facet<String>
 external fun indentOnInput(): Extension
 external fun indentString(state: EditorState, cols: Int): String
 external fun getIndentUnit(state: EditorState): Int
-external fun indentRange(state: EditorState, from: Int, to: Int): Array<dynamic>
+/** The changes that reindent the lines from [from] to [to]; empty when they are indented already. */
+external fun indentRange(state: EditorState, from: Int, to: Int): ChangeSet
 
 // Bracket matching
 external fun bracketMatching(config: dynamic = definedExternally): Extension

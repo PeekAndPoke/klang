@@ -417,3 +417,11 @@ OkCancel real buttons and focus; their Esc stays ours until the key map carries 
   wrong package and would have been undefined), now a direct dependency. Review (level 2): round 1 one MAJOR (the
   search panel had lost its keys) and four MINORs, fixed; round 2 clean, its MINOR and NIT applied. 10 mutants killed.
   The maintainer's hand test of the editor's keys comes with 3b.
+- 2026-10-26: step 3b, our own commands: block comment (an empty one with the cursor inside where nothing is
+  selected), unselect last occurrence (the newest that select next occurrence added, counted round as CodeMirror adds
+  them), replace (the search panel with the cursor in its replace field), reformat (the whole document with nothing
+  selected), go to definition (Ctrl+B) and quick documentation (Ctrl+Q, F1 on a Mac) at the cursor, Alt+Shift+click
+  adds a cursor and Ctrl+click no longer does. Review (level 2) round 1 clean; 7 mutants, 6 killed and one survivor's
+  code (a redundant focus) removed. Its 6 MINORs and 5 NITs go into the next step (unselect after other cursors, block
+  comment toggling off and inside a comment, closing the docs popup by key, the DSL commands' test and the editors
+  without them, Alt+Shift+click removing a cursor and dragging).

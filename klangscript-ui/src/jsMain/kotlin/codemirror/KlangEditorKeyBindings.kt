@@ -47,12 +47,21 @@ object KlangEditorKeyBindings : KeyBindings {
 
     val LineComment = action(id = "line-comment", title = "Line comment", keys = listOf("Mod-/"))
 
+    val BlockComment = action(id = "block-comment", title = "Block comment", keys = listOf("Mod-Shift-/"), macKeys = listOf("Mod-Alt-/"))
+
     val Reformat = action(id = "reformat", title = "Reformat", keys = listOf("Ctrl-Alt-L"), macKeys = listOf("Mod-Alt-L"))
 
     // Selection and cursors
 
     val SelectNextOccurrence =
         action(id = "select-next-occurrence", title = "Select next occurrence", keys = listOf("Alt-J"), macKeys = listOf("Ctrl-G"))
+
+    val UnselectOccurrence = action(
+        id = "unselect-occurrence",
+        title = "Unselect last occurrence",
+        keys = listOf("Alt-Shift-J"),
+        macKeys = listOf("Ctrl-Shift-G"),
+    )
 
     val SelectAllOccurrences = action(
         id = "select-all-occurrences",
@@ -86,6 +95,8 @@ object KlangEditorKeyBindings : KeyBindings {
 
     val Find = action(id = "find", title = "Find", keys = listOf("Mod-F"))
 
+    val Replace = action(id = "replace", title = "Replace", keys = listOf("Mod-R"))
+
     val FindNext = action(id = "find-next", title = "Next match", keys = listOf("F3"), macKeys = listOf("Mod-G"))
 
     val FindPrevious = action(id = "find-previous", title = "Previous match", keys = listOf("Shift-F3"), macKeys = listOf("Mod-Shift-G"))
@@ -116,6 +127,13 @@ object KlangEditorKeyBindings : KeyBindings {
 
     // Moving around
 
+    /** A local to its declaration; a library name to its docs page (KLANG-00321, also Ctrl+click). */
+    val GoToDefinition = action(id = "go-to-definition", title = "Go to definition", keys = listOf("Mod-B"))
+
+    /** The docs popup of the name at the cursor, as hovering shows it. */
+    val QuickDocumentation =
+        action(id = "quick-documentation", title = "Quick documentation", keys = listOf("Ctrl-Q"), macKeys = listOf("F1"))
+
     /** Back to the place of the last edit (KLANG-00322). */
     val BackToLastEdit = action(id = "back-to-last-edit", title = "Back to the last edit", keys = listOf(EditPlacesExtension.KEY))
 
@@ -140,14 +158,15 @@ object KlangEditorKeyBindings : KeyBindings {
         action(id = "tab-moves-focus", title = "Tab moves the focus", keys = listOf("Ctrl-M"), macKeys = listOf("Alt-Shift-M"))
 
     override val actions: List<KeyAction> = listOf(
-        MoveLineUp, MoveLineDown, DuplicateLine, StartNewLine, SplitLine, Indent, Unindent, LineComment, Reformat,
-        SelectNextOccurrence, SelectAllOccurrences, ExpandSelection, AddCursorAbove, AddCursorBelow, SelectLine,
-        MatchingBracket, BackToOneCursor,
-        Find, FindNext, FindPrevious, GoToLine,
+        MoveLineUp, MoveLineDown, DuplicateLine, StartNewLine, SplitLine, Indent, Unindent, LineComment, BlockComment,
+        Reformat,
+        SelectNextOccurrence, UnselectOccurrence, SelectAllOccurrences, ExpandSelection, AddCursorAbove, AddCursorBelow,
+        SelectLine, MatchingBracket, BackToOneCursor,
+        Find, Replace, FindNext, FindPrevious, GoToLine,
         Undo, Redo,
         Completion, AcceptCompletion, CloseCompletion,
         NextProblem, PreviousProblem,
-        BackToLastEdit,
+        GoToDefinition, QuickDocumentation, BackToLastEdit,
     ) + GoToBookmark + SetBookmark + listOf(TabMovesFocus)
 
     override val overview: List<KeyOverviewRow> = listOf(
@@ -163,7 +182,10 @@ object KlangEditorKeyBindings : KeyBindings {
         KeyOverviewRow.Single(SelectNextOccurrence),
         KeyOverviewRow.Single(Reformat),
         KeyOverviewRow.Single(Find),
+        KeyOverviewRow.Single(Replace),
         KeyOverviewRow.Single(GoToLine),
+        KeyOverviewRow.Single(GoToDefinition),
+        KeyOverviewRow.Single(QuickDocumentation),
         KeyOverviewRow.Single(Completion),
         KeyOverviewRow.Single(NextProblem),
         // The song page's key that brings the keyboard back here (KlangKeyBindings, maintainer 2026-10-26); only the

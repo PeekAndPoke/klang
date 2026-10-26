@@ -128,6 +128,9 @@ external class EditorSelection {
 
     fun map(change: ChangeSet): EditorSelection
     fun eq(other: EditorSelection): Boolean
+
+    /** This selection with [range] added; with [main] (the default) the new range becomes the main one. */
+    fun addRange(range: SelectionRange, main: Boolean = definedExternally): EditorSelection
     fun toJSON(): Any
 
     companion object {
