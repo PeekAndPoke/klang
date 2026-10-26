@@ -126,3 +126,6 @@ oscilloscope in blue (a theme role) and more spectrum columns.
 
 - 2026-10-26: created and started.
 - 2026-10-26: reviewed in three rounds (the third clean), committed.
+- 2026-10-26: the maintainer's hand test (recorded by Klang-Main-Dev in KLANG-00325): Alt+V works in Chrome and
+  Firefox; Esc works through the whole chain (the Motor menu, a tool window and a parameter tool open, then back into
+  the editor); the Motor menu closes on Esc from the editor.
