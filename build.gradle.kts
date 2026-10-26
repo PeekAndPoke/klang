@@ -18,8 +18,8 @@ plugins {
     id("io.kotest") version Deps.Test.kotest_plugin_version
 }
 
-val GROUP: String by project
-val VERSION_NAME: String by project
+val GROUP = project.property("GROUP") as String
+val VERSION_NAME = project.property("VERSION_NAME") as String
 
 group = GROUP
 version = VERSION_NAME
@@ -178,16 +178,22 @@ tasks {
     // Consumed by the frontend (webpack injects it into index.html; see
     // webpack.config.d/02-html-config.js + VersionController). Shells out to git
     // directly (no extra build dependency); every field degrades to "n/a" on failure.
-    val versionFile by registering {
+    val versionFile = register("versionFile") {
         description = "Writes version.json (project + git metadata) into the JS resources"
         group = "build"
         // Git state is cheap to read and changes between builds — never cache.
         outputs.upToDateWhen { false }
 
+        // Read while the build is configured: a task that reads `project` while it runs fails in Gradle 10 (KLANG-00348)
+        val projectName = project.name
+        val projectVersion = project.version.toString()
+        val gitDir = rootDir
+        val versionJson = file("src/jsMain/resources/version.json")
+
         doLast {
             fun git(vararg args: String): String? = runCatching {
                 val proc = ProcessBuilder(listOf("git", *args))
-                    .directory(rootDir)
+                    .directory(gitDir)
                     .start()
                 val out = proc.inputStream.bufferedReader().use { it.readText() }.trim()
                 proc.waitFor()
@@ -200,8 +206,8 @@ tasks {
 
             // `describe --always` falls back to the short hash when there are no tags
             val fields = linkedMapOf(
-                "project" to project.name,
-                "version" to project.version.toString(),
+                "project" to projectName,
+                "version" to projectVersion,
                 "gitBranch" to (git("rev-parse", "--abbrev-ref", "HEAD") ?: na),
                 "gitRev" to (git("rev-parse", "--short=8", "HEAD") ?: na),
                 "gitDesc" to (git("describe", "--tags", "--always", "--dirty") ?: na),
@@ -215,7 +221,7 @@ tasks {
                 postfix = "\n}\n",
             ) { (k, v) -> """  "$k": "${esc(v)}"""" }
 
-            file("src/jsMain/resources/version.json").apply {
+            versionJson.apply {
                 parentFile.mkdirs()
                 writeText(json)
             }
@@ -228,7 +234,7 @@ tasks {
     val workletResources = layout.projectDirectory.dir("src/jsMain/resources").asFile
     val workletFiles = listOf("klang-worklet.js", "klang-worklet.js.map")
 
-    val copyWorkletDev by registering(Copy::class) {
+    val copyWorkletDev = register<Copy>("copyWorkletDev") {
         dependsOn(":audio_jsworklet:jsBrowserDevelopmentWebpack")
         doFirst { workletFiles.forEach { workletResources.resolve(it).delete() } }
         from(project(":audio_jsworklet").layout.buildDirectory.dir("kotlin-webpack/js/developmentExecutable"))
@@ -236,7 +242,7 @@ tasks {
         include(workletFiles)
     }
 
-    val copyWorkletProd by registering(Copy::class) {
+    val copyWorkletProd = register<Copy>("copyWorkletProd") {
         dependsOn(":audio_jsworklet:jsBrowserProductionWebpack")
         doFirst { workletFiles.forEach { workletResources.resolve(it).delete() } }
         from(project(":audio_jsworklet").layout.buildDirectory.dir("kotlin-webpack/js/productionExecutable"))

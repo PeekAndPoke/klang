@@ -6,8 +6,8 @@ plugins {
     `maven-publish`
 }
 
-val GROUP: String by project
-val VERSION_NAME: String by project
+val GROUP = project.property("GROUP") as String
+val VERSION_NAME = project.property("VERSION_NAME") as String
 
 group = GROUP
 version = VERSION_NAME

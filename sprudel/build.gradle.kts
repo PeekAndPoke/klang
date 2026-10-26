@@ -10,8 +10,8 @@ plugins {
     id("io.kotest") version Deps.Test.kotest_plugin_version
 }
 
-val GROUP: String by project
-val VERSION_NAME: String by project
+val GROUP = project.property("GROUP") as String
+val VERSION_NAME = project.property("VERSION_NAME") as String
 
 group = GROUP
 version = VERSION_NAME
@@ -92,12 +92,12 @@ tasks {
         // The bundle lands in the source tree both users share; the old one goes first, whoever made it, so esbuild
         // writes a file of its own (MC-00031, "delete before copy")
         val bundle = file("src/jvmTest/resources/strudel-bundle.mjs")
+        val script = file("jsbridge/build.sh")
 
         // Ensure the script is executable (useful for CI/Linux environments)
         doFirst {
             bundle.delete()
 
-            val script = file("jsbridge/build.sh")
             if (script.exists()) {
                 script.setExecutable(true)
             }
@@ -127,22 +127,26 @@ tasks {
 
         dependsOn("jvmJar")
 
+        // Read while the build is configured: a task that reads `project` while it runs fails in Gradle 10 (KLANG-00348)
+        val moduleDir = projectDir
+        val mainSourceDirs = listOf("src/commonMain", "src/jsMain", "src/jvmMain").map { file(it) }
+        val libs = layout.buildDirectory.dir("libs")
+
         doLast {
             val offenders = mutableListOf<String>()
 
             // 1. The bundle must live ONLY under src/jvmTest — never in a main source set.
-            for (rel in listOf("src/commonMain", "src/jsMain", "src/jvmMain")) {
-                val dir = project.file(rel)
+            for (dir in mainSourceDirs) {
                 if (!dir.exists()) continue
                 for (f in dir.walkTopDown()) {
                     if (f.isFile && f.name.startsWith("strudel-bundle")) {
-                        offenders += f.relativeTo(project.projectDir).path
+                        offenders += f.relativeTo(moduleDir).path
                     }
                 }
             }
 
             // 2. The assembled production JVM jar(s) must not contain the bundle.
-            val libsDir = project.layout.buildDirectory.dir("libs").get().asFile
+            val libsDir = libs.get().asFile
             val jars = libsDir.listFiles()?.filter { it.isFile && it.name.endsWith(".jar") && it.name.contains("-jvm") }.orEmpty()
             for (jar in jars) {
                 ZipFile(jar).use { zip ->
