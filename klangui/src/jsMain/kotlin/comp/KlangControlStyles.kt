@@ -767,6 +767,70 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("border", "0")
     }
 
+    // ── The value knob and its LCD ────────────────────────────────────────────
+
+    /** A knob and the LCD beside it, on one line. */
+    val valueKnob by rule {
+        put("display", "inline-flex")
+        put("align-items", "center")
+        put("gap", "8px")
+        put("vertical-align", "middle")
+    }
+
+    /** An LCD: a sunken well in the look's ground, its digits in the LCD's ink with a faint glow. */
+    val lcd by rule {
+        put("display", "inline-flex")
+        put("align-items", "center")
+        put("justify-content", "flex-end")
+        put("gap", "6px")
+        put("box-sizing", "border-box")
+        put("padding", "0 9px")
+        put("line-height", "1")
+        put("border", "1px solid var(--kl-edge)")
+        put("border-radius", "var(--kl-radius)")
+        put("background", "var(--kl-ground-sunken)")
+        put("box-shadow", "inset 0 2px 4px rgba(0,0,0,0.6), 0 1px 0 rgba(255,255,255,0.06)")
+        put("font-family", "monospace")
+        put("color", "var(--kl-lcd-ink)")
+        put("text-shadow", "0 0 6px color-mix(in srgb, var(--kl-lcd-ink) 55%, transparent)")
+    }
+
+    /** The reading: a click or Enter lets one type it. */
+    val lcdValue by rule {
+        put("font-size", "18px")
+        put("text-align", "right")
+        put("cursor", "text")
+        put("outline", "none")
+        put("border-radius", "2px")
+
+        rule("&:focus-visible") {
+            put("box-shadow", "0 0 0 1.5px var(--kl-focus)")
+        }
+    }
+
+    /** The reading while it is typed: the same digits, in a field. */
+    val lcdInput by rule {
+        put("padding", "0")
+        put("border", "none")
+        put("outline", "none")
+        put("background", "transparent")
+        put("color", "inherit")
+        put("font", "inherit")
+        put("font-size", "18px")
+        put("text-align", "right")
+        put("text-shadow", "inherit")
+    }
+
+    /** The unit after the reading, small and printed; 1 px lower, on the digits' middle (the maintainer, by eye). */
+    val lcdUnit by rule {
+        put("position", "relative")
+        put("top", "1px")
+        put("font-size", "10px")
+        put("letter-spacing", "0.14em")
+        put("color", "var(--kl-ink-label)")
+        put("text-shadow", "none")
+    }
+
     // ── The spinner ───────────────────────────────────────────────────────────
 
     /** The spinner's box; its ring turns, the box stays. */
@@ -1127,7 +1191,8 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("position", "relative")
         put("flex-shrink", "0")
         put("border-radius", "50%")
-        put("cursor", "ns-resize")
+        // Four ways: a drag up, down, left or right turns it (the knob at the screen's top edge turns sideways)
+        put("cursor", "move")
         put("touch-action", "none")
         put("outline", "none")
 

@@ -34,9 +34,9 @@ fun Tag.VolumeKnob(
 }
 
 /**
- * The master volume as a knob (KLANG-00330, on `KlangKnob` since KLANG-00344): a drag up or down turns it, the arrow
- * keys too once it has the focus (Alt+V gives it the focus); at the top end it is full, the song's own level, and it
- * never goes above.
+ * The master volume as a knob (KLANG-00330, on `KlangKnob` since KLANG-00344): a drag up or right turns it up, down or
+ * left down, the arrow keys too once it has the focus (Alt+V gives it the focus); at the top end it is full, the song's
+ * own level, and it never goes above.
  *
  * The volume lives in [Player.outputVolume], as a gain; the knob derives its position from it on the loudness scale
  * ([MasterVolumeScale]), turns it from there, and has it remembered when a turn is over.
@@ -67,7 +67,7 @@ class VolumeKnob(ctx: Ctx<Props>) : Component<VolumeKnob.Props>(ctx) {
                 display = Display.inlineFlex
                 put("vertical-align", "bottom")
             }
-            title = "Volume: $level\ndrag up or down, or the arrow keys"
+            title = "Volume: $level\ndrag, or the arrow keys"
 
             // Alt+V puts the focus on the knob, the arrows then turn it (the maintainer, 2026-10-26)
             OnKey(KlangKeyBindings.VolumeFocus) { (dom?.querySelector("[role=slider]") as? HTMLElement)?.focus() }

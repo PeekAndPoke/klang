@@ -120,6 +120,12 @@ enum class KlangRole(
      */
     KnobArc(cssVar = "--kl-knob-arc", kind = Kind.Color, default = MetalMid.default, follows = MetalMid),
 
+    /**
+     * An LCD's digits (KLANG-00349, the RPM's readout): an instrument's reading, as the gauges' arc, [GaugeArc]. Its
+     * own role, so a look can light its LCDs apart from the gauges.
+     */
+    LcdInk(cssVar = "--kl-lcd-ink", kind = Kind.Color, default = GaugeArc.default, follows = GaugeArc),
+
     // ── Accent ────────────────────────────────────────────────────────────────
 
     /** Selection, links. */

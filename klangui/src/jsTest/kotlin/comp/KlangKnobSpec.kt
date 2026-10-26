@@ -51,13 +51,22 @@ class KlangKnobSpec : StringSpec({
         return event.defaultPrevented
     }
 
-    fun pointer(dial: Element, type: String, clientY: Int, pointerId: Int = 1, button: Int = 0, buttons: Int = 1) {
+    fun pointer(
+        dial: Element,
+        type: String,
+        clientY: Int,
+        clientX: Int = 0,
+        pointerId: Int = 1,
+        button: Int = 0,
+        buttons: Int = 1,
+    ) {
         dial.dispatchEvent(
             PointerEvent(
                 type,
                 PointerEventInit(
                     pointerId = pointerId,
                     isPrimary = true,
+                    clientX = clientX,
                     clientY = clientY,
                     button = button.toShort(),
                     buttons = buttons.toShort(),
@@ -163,6 +172,38 @@ class KlangKnobSpec : StringSpec({
             pointer(dial, "pointermove", clientY = 50)
 
             changes.size shouldBe 3
+        }
+    }
+
+    "dragging right turns it up, left down, as up and down do: a knob at the screen's top edge turns too" {
+        val changes = mutableListOf<Double>()
+
+        TestBed.preact(view = { KlangKnob(name = "k", value = 0.5, onChange = { changes.add(it) }) }) { root ->
+            val dial = root.selectCss("[role=slider]").single()
+
+            pointer(dial, "pointerdown", clientY = 300, clientX = 100)
+            pointer(dial, "pointermove", clientY = 300, clientX = 115)
+            pointer(dial, "pointermove", clientY = 300, clientX = 70)
+            // Up and right together add up
+            pointer(dial, "pointermove", clientY = 285, clientX = 115)
+
+            changes.size shouldBe 3
+            changes[0] shouldBe (0.7 plusOrMinus 1e-9)
+            changes[1] shouldBe (0.1 plusOrMinus 1e-9)
+            changes[2] shouldBe (0.9 plusOrMinus 1e-9)
+        }
+    }
+
+    "the drag's distance for the whole way is the knob's: 150 pixels turn half as fast as 75" {
+        val changes = mutableListOf<Double>()
+
+        TestBed.preact(view = { KlangKnob(name = "k", value = 0.5, onChange = { changes.add(it) }, dragPixels = 150.0) }) { root ->
+            val dial = root.selectCss("[role=slider]").single()
+
+            pointer(dial, "pointerdown", clientY = 300)
+            pointer(dial, "pointermove", clientY = 285)
+
+            changes.single() shouldBe (0.6 plusOrMinus 1e-9)
         }
     }
 

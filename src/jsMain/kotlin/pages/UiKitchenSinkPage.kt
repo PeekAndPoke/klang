@@ -30,6 +30,7 @@ import io.peekandpoke.klang.ui.comp.KlangSearchField
 import io.peekandpoke.klang.ui.comp.KlangSpinner
 import io.peekandpoke.klang.ui.comp.KlangSwatchButton
 import io.peekandpoke.klang.ui.comp.KlangToolWindow
+import io.peekandpoke.klang.ui.comp.KlangValueKnob
 import io.peekandpoke.klang.ui.comp.YesNoModal
 import io.peekandpoke.klang.ui.feel.KlangLookLayers
 import io.peekandpoke.klang.ui.feel.KlangLooks
@@ -92,6 +93,9 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
     /** The live ignition key: where it stands, and its glow lamp while the "Motor" gets ready. */
     private var ignitionAt: KlangIgnition.Position by value(KlangIgnition.Position.Off)
     private var ignitionGlow: Boolean by value(false)
+
+    /** The value knob's value, the song's RPM. */
+    private var rpm: Double by value(37.2)
 
     /** The glow lamp's 2 s, cancelled when the key goes back to OFF early. */
     private var ignitionWarmUp: Job? = null
@@ -436,6 +440,24 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
                         onChange = turn("delay"),
                         icon = { clock },
                         label = "DELAY",
+                    )
+                }
+            }
+
+            cell(
+                name = "A value on a knob with an LCD: drag or the arrows step it, a click on the LCD lets one type it",
+                source = "klangui/comp/KlangValueKnob.kt",
+            ) {
+                row {
+                    KlangValueKnob(
+                        name = "Revolutions per minute",
+                        value = rpm,
+                        range = 10.0..120.0,
+                        step = 0.5,
+                        onChange = { rpm = it },
+                        unit = "RPM",
+                        decimals = 2,
+                        perPixel = 0.05,
                     )
                 }
             }

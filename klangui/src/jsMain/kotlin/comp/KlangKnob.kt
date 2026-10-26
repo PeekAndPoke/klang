@@ -45,9 +45,11 @@ fun Tag.KlangKnob(
     label: String? = null,
     labelPosition: KlangKnob.LabelPosition = KlangKnob.LabelPosition.Below,
     valueText: String? = null,
+    spokenValue: String? = null,
     icon: SemanticIconFn? = null,
     ring: Boolean = true,
     step: Double = 0.05,
+    dragPixels: Double = KlangKnob.DRAG_PIXELS_FOR_FULL_TURN,
 ) = comp(
     KlangKnob.Props(
         name = name,
@@ -59,9 +61,11 @@ fun Tag.KlangKnob(
         label = label,
         labelPosition = labelPosition,
         valueText = valueText,
+        spokenValue = spokenValue,
         icon = icon,
         ring = ring,
         step = step,
+        dragPixels = dragPixels,
     )
 ) {
     KlangKnob(it)
@@ -103,10 +107,17 @@ class KlangKnob(ctx: Ctx<Props>) : Component<KlangKnob.Props>(ctx) {
         val label: String?,
         val labelPosition: LabelPosition,
         val valueText: String?,
+        /** The value as screen readers say it, when no [valueText] is printed ("37.20 RPM"); else they hear a percent. */
+        val spokenValue: String?,
         val icon: SemanticIconFn?,
         val ring: Boolean,
         /** How far one arrow key turns it. */
         val step: Double,
+        /**
+         * How far a drag goes for the whole way, in pixels: more is finer (the maintainer, 2026-10-26: the RPM knob's
+         * sensitivity "should be pretty low ... you have to move the mouse very far to change the values").
+         */
+        val dragPixels: Double,
     )
 
     enum class LabelPosition {
@@ -116,10 +127,16 @@ class KlangKnob(ctx: Ctx<Props>) : Component<KlangKnob.Props>(ctx) {
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
-    /** Where a drag started: which pointer, its height on the screen, and the position then. */
-    private data class DragStart(val pointerId: Int, val pointerY: Double, val position: Double)
+    /** Where a drag started: which pointer and where on the screen. */
+    private data class DragStart(val pointerId: Int, val pointerX: Double, val pointerY: Double)
 
     private var dragStart: DragStart? = null
+
+    /**
+     * The position a drag turns from, read at its first move, not at the press: a press that ends something else
+     * first (a typed value taken as its field loses the focus) has the new value drawn by then.
+     */
+    private var dragBase: Double? = null
 
     init {
         lifecycle {
@@ -140,7 +157,12 @@ class KlangKnob(ctx: Ctx<Props>) : Component<KlangKnob.Props>(ctx) {
         e.preventDefault()
         (e.currentTarget as? HTMLElement)?.focus()
 
-        dragStart = DragStart(pointerId = e.pointerId, pointerY = e.clientY.toDouble(), position = Dial.clamp(props.value))
+        dragStart = DragStart(
+            pointerId = e.pointerId,
+            pointerX = e.clientX.toDouble(),
+            pointerY = e.clientY.toDouble(),
+        )
+        dragBase = null
 
         // The moves and the release reach the knob also outside it; a pointer that is already gone cannot be captured
         runCatching { (e.currentTarget as? Element)?.setPointerCapture(e.pointerId) }
@@ -160,8 +182,16 @@ class KlangKnob(ctx: Ctx<Props>) : Component<KlangKnob.Props>(ctx) {
             return
         }
 
-        // Up turns it up: the screen's y grows downwards
-        props.onChange(Dial.clamp(start.position + (start.pointerY - e.clientY) / DRAG_PIXELS_FOR_FULL_TURN))
+        // Up or right turns it up (the screen's y grows downwards); sideways too, for a knob at the screen's top edge,
+        // where there is no room above it (the maintainer, 2026-10-26)
+        val moved = (start.pointerY - e.clientY) + (e.clientX - start.pointerX)
+
+        // NaN-guard: a distance that is not a positive number counts as the default
+        val pixels = props.dragPixels.takeIf { it > 0.0 } ?: DRAG_PIXELS_FOR_FULL_TURN
+
+        val base = dragBase ?: Dial.clamp(props.value).also { dragBase = it }
+
+        props.onChange(Dial.clamp(base + moved / pixels))
     }
 
     private fun stopDrag() {
@@ -238,7 +268,7 @@ class KlangKnob(ctx: Ctx<Props>) : Component<KlangKnob.Props>(ctx) {
             attributes["aria-valuemin"] = "0"
             attributes["aria-valuemax"] = "100"
             attributes["aria-valuenow"] = (position * 100).roundToInt().toString()
-            props.valueText?.let { attributes["aria-valuetext"] = it }
+            (props.valueText ?: props.spokenValue)?.let { attributes["aria-valuetext"] = it }
 
             css {
                 width = props.size
