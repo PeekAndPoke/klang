@@ -38,6 +38,9 @@ object StorageKeys {
     /** Whether the editor shows a name's quick help on hover, `true` or `false` (KLANG-00349). */
     const val EDITOR_HOVER_HELP = "klang-editor-hover-help"
 
+    /** The Gui-dance's story arcs done, their ids joined by commas (KLANG-00350). */
+    const val GUI_DANCE_ARCS_DONE = "klang-gui-dance-arcs-done"
+
     /** A song's code; [version] is the app's version, [songId] the song's id (a built-in song's, or "new"). */
     fun songCode(version: String, songId: String): String = songKey(version = version, songId = songId, part = "code")
 

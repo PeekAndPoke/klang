@@ -56,6 +56,20 @@ class KlangMenuButtonSpec : StringSpec({
         }
     }
 
+    "the trail's beacon shows on the closed button, not while its drawer is open (KLANG-00350)" {
+        TestBed.preact(
+            view = {
+                KlangMenuButton(open = false, onClick = {}, beacon = true)
+                KlangMenuButton(open = true, onClick = {}, beacon = true)
+                KlangMenuButton(open = false, onClick = {})
+            },
+        ) { root ->
+            val beacon = styles.beacon.toString()
+
+            root.selectCss("button").classes().map { beacon in it } shouldContainExactly listOf(true, false, false)
+        }
+    }
+
     "with a key, the menu button answers it through the key manager (Alt+M in the app)" {
         var clicks = 0
         val manager = KeysManager(platform = KeyPlatform.Pc, hintDelayMs = 10).apply { define(KlangKeyBindings) }

@@ -60,6 +60,9 @@ class KlangIgnition(ctx: Ctx<Props>) : Component<KlangIgnition.Props>(ctx) {
         /** The box around the cap, which leaves room for the positions above it, as a share of the cap's size. */
         private const val BOX_WIDTH = 1.6
         private const val BOX_HEIGHT = 1.4
+
+        /** Where the cap's centre sits below the key's top, as a share of the cap's size, for placing the cap. */
+        const val CAP_CENTRE_FROM_TOP = BOX_HEIGHT - 0.5
     }
 
     enum class Position(val label: String) {
@@ -150,7 +153,7 @@ class KlangIgnition(ctx: Ctx<Props>) : Component<KlangIgnition.Props>(ctx) {
         val radians = position.degrees * PI / 180.0
         // From the box's top left, in shares of the cap's size: the cap's centre sits half a cap above the box's foot
         val x = BOX_WIDTH / 2.0 + LABEL_RADIUS * sin(radians)
-        val y = BOX_HEIGHT - 0.5 - LABEL_RADIUS * cos(radians)
+        val y = CAP_CENTRE_FROM_TOP - LABEL_RADIUS * cos(radians)
 
         span(classes = listOfNotNull(styles.ignitionLabel, if (current) styles.ignitionLabelCurrent else null).joinToString(" ")) {
             attributes["aria-hidden"] = "true"

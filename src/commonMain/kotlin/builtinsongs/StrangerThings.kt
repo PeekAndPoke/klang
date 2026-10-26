@@ -54,7 +54,7 @@ stack(
         .pan(sine.range(0.3, 0.7).slow(20)).clip(0.825)
     ).lpf(freq = 4.5 * 440, q = 2.5).hpf(60).notch(freq = notchFreq, q = 0.5).body(material = "glass").vowel(vowel = "e o e i a u".slow(24), wet = 0.40)
     .superimpose(
-      x => x.gain(saw.range(0.2, 1.0).slow(64).pow(1.1).mul(2.2 * 0.45)).vibrato(rate = "0.51".add(perlin.div(20)), semitones = 0.06)
+      x => x.gain(saw.range(0.2, 1.0).slow(64).pow(1.1).mul(1.2)).vibrato(rate = "0.51".add(perlin.div(20)), semitones = 0.06)
         // The oversample slot of coarse/crush (then coarseos/crushos) was inert until 2026-09-07 (the setter never wrote its field). Pinned to 1 to keep the tuned sound; raise by ear.
         .crush(bits = "2.0".add(berlin.range(-1, 1).mul(0.75).slow(4)), oversample = 1).lpf(7.75 * 440).hpf(300)
         .pan(saw.range(0.5, 0.1).slow(64)).superimpose(pan(saw.range(0.5, 0.9).slow(64)))                
@@ -73,12 +73,18 @@ stack(
   ).reverb(wet = 0.20, size = 3.0, lowpass = 8000).compressor(-19, 2, 6, 0.01, 0.2)
   , // Shore ---------------------------------------------------------------------------------------------------------
   note("c").fast(4).sound("brown").legato(2)
-    .orbit(7).gain(0.11).pan(perlin.early(1.7).range(0.3, 0.7).slow(7)).adsr(0.5, 1.0, 1.0, 2.5)
+    .orbit(7).gain(0.08).pan(perlin.early(1.7).range(0.3, 0.7).slow(7)).adsr(0.5, 1.0, 1.0, 2.5)
     .bpf(freq = perlin.range(440, 440 * 4).segment(16).slow(6), q = sine.range(0.25, 5.0).slow(48).early(12))
   , // Master ------------------------------------------------------------------------------------------------------
   master(Katalyst(k => k
     .reverb(0.05, 9)
     .gain(2.5)
+    .bands(b => b
+      .band(low => low.distort(0.01, "soft", 4)).cut(150)
+      .band(mid => mid.distort(0.15, "soft", 4).mul(0.85)).cut(5000)
+      .band(low => low.distort(0.01, "soft", 4))
+    ) // the glue on the mids only: the kick and the hats stay clean
+    .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)
   ))
 )
 

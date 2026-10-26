@@ -86,6 +86,13 @@ the fullscreen toggle. The editor shows a symbol's quick help on hover (`hoverPo
   the F11 label; a stale KDoc; specs for the yes key's focus and the dimmer click, the focus mutation-checked with 2
   mutants), 1 NIT applied (the unused theme subscription gone), 1 NIT accepted: Fullscreen sits inside the strip's
   "Tool windows" group, as its own "View" group.
+- **The start page and the song page, tuned with the maintainer (2026-10-26, after the release):** the start page's
+  title on a raised plate on brushed tiles, the composition centred, the key where the heat gauge comes, the heat
+  ending on 99 %, an "Enter fullscreen" checkbox (`KlangCheckbox`, unchecked at first); the song page's editor a
+  screen in a bezel (`KlangScreen`, cut corners), Stop with its word, "Back to the original" keeps playing, the
+  minimap's view box clear with the rest dimmed; the drawer pressed only on an area's own page. Reviewed in two
+  rounds (level 2), both clean, their MINORs and NITs applied; the new parts' specs mutation-checked (the checkbox
+  4, the screen 4).
 
 ## Open for the maintainer
 

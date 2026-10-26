@@ -32,8 +32,9 @@ fun Tag.KlangMenuButton(
     onClick: () -> Unit,
     size: LinearDimension = 42.px,
     key: KeyAction? = null,
+    beacon: Boolean = false,
 ) = comp(
-    KlangMenuButton.Props(open = open, onClick = onClick, size = size, key = key)
+    KlangMenuButton.Props(open = open, onClick = onClick, size = size, key = key, beacon = beacon)
 ) {
     KlangMenuButton(it)
 }
@@ -55,6 +56,8 @@ class KlangMenuButton(ctx: Ctx<Props>) : Component<KlangMenuButton.Props>(ctx) {
         val size: LinearDimension,
         /** The key that presses it, answered through the key manager, its hint drawn by the button; null for none. */
         val key: KeyAction?,
+        /** The first-visit trail's "try me" on it (KLANG-00350), while the drawer is closed. */
+        val beacon: Boolean,
     )
 
     override fun VDom.render() {
@@ -65,6 +68,7 @@ class KlangMenuButton(ctx: Ctx<Props>) : Component<KlangMenuButton.Props>(ctx) {
             styles.round,
             if (props.open) styles.pressedDark else null,
             if (props.open) styles.menuButtonOpen else null,
+            if (props.beacon && !props.open) styles.beacon else null,
         )
 
         val ringClasses = listOfNotNull(styles.menuButtonRing, if (props.open) styles.menuButtonRingLit else null)

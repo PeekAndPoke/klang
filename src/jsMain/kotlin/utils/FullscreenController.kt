@@ -47,6 +47,30 @@ class FullscreenController : Stream<FullscreenController.FullscreenState> {
 
     override fun subscribeToStream(sub: (FullscreenState) -> Unit): Unsubscribe = source.subscribeToStream(sub)
 
+    /**
+     * Fullscreen, unless the page already is (the start page's "Enter fullscreen", KLANG-00349). Called from a click:
+     * the browser grants fullscreen only to a user's gesture; a refusal leaves the page as it is.
+     */
+    fun enter() {
+        if (getCurrentState().isFullscreen) {
+            return
+        }
+
+        // A browser without the Fullscreen API (an iPhone, an older Safari) throws instead of refusing: the caller goes
+        // on all the same, as "Make Music Now" must open the song
+        val root = document.documentElement ?: return
+
+        if (root.asDynamic().requestFullscreen == undefined) {
+            return
+        }
+
+        try {
+            root.requestFullscreen().catch { console.warn("Fullscreen refused:", it) }
+        } catch (e: Throwable) {
+            console.warn("Fullscreen failed:", e)
+        }
+    }
+
     fun toggle() {
         val currentState = getCurrentState()
         if (currentState.isFullscreen && !currentState.canExitWithClick) {

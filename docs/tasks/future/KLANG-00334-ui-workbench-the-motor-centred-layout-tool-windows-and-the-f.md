@@ -165,6 +165,13 @@ Kept in order, close to the maintainer's words.
     noise"), then on every button and a look property ("maybe this noise should be a theme property as well?"): the
     role `Grain` (`--kl-grain`, a share from 0 to 1, 0.16 in every look today), a noise layer under each surface's
     content in `overlay`; a "later" button, only an outline, has none.
+46. (2026-10-26) **The guiding idea: a machine made of tiles.** "The title page has tiles. This is a machine. So uis
+    should also look as made out of tiles. This page now does this well. It is subtle but it is there, and it is
+    clean." The start page shows the floor: brushed steel tiles, one turned here and there, the title on a raised
+    plate. In the app every surface is a plate or a well set into it: the song page's editor is a screen in a bezel
+    of the panel's ground, its corners cut off (triangles of bezel, "obvious but not too obvious", no rivets), the
+    same dark edge everywhere, no bright line across the screen. The screen became a klangui part,
+    `KlangScreen` (KLANG-00349), for textareas and code examples too.
 
 ## Where the conversation stands (leanings, not decisions)
 
@@ -252,3 +259,4 @@ references when it lands (`CREDITS.MD` and the Credits page).
 
 - 2026-10-25: created from the design conversation; the canvas holds boards A to E and the shared parts.
 - 2026-10-25: the kitchen sink board; the canvas source copied to `docs/design/2026-10-25-ui-workbench-canvas/`.
+- 2026-10-26: item 46, the guiding idea: a machine made of tiles.

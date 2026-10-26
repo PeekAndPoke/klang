@@ -454,6 +454,32 @@ body {
     height: 100%;
 }
 
+/* The minimap's view of the screen (KLANG-00349; the maintainer: the minimap was "inverted", a white veil on the part
+   in view). The view box is clear, and the rest of the minimap lies in its shadow, darker: the part in view is the
+   brightest. The shadow ends at the minimap's edge (its container clips). Over the box, and while dragging it, the rest
+   comes up a little, so the box can be found. The whole minimap is calmer than the code, its colours muted ("the
+   minimap is currently a bit distracting... pulling too much focus"). */
+.cm-minimap-gutter {
+    filter: saturate(0.55) brightness(0.85);
+}
+
+.cm-minimap-overlay-container {
+    overflow: hidden;
+}
+
+.cm-minimap-overlay-container .cm-minimap-overlay {
+    background: transparent !important;
+    opacity: 1 !important;
+    box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.72);
+    /* The package's theme sets `transition: top 0s` with a stronger selector: both here, so the box still jumps */
+    transition: box-shadow 200ms ease, top 0s !important;
+}
+
+.cm-minimap-overlay-container .cm-minimap-overlay:hover,
+.cm-minimap-overlay-container.cm-minimap-overlay-active .cm-minimap-overlay {
+    box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.6);
+}
+
 /* Black surface with the editor's fine white grain — the code page header
    uses it so header and editor read as one continuous surface.
    The .ui.basic.segment leg out-specifies `.ui.basic.segment { background: transparent !important }`. */

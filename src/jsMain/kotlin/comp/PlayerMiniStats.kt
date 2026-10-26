@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.comp
 
+import io.peekandpoke.klang.KlangGuiDance
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.ui.KlangKeyBindings
@@ -105,6 +106,9 @@ class PlayerMiniStats(ctx: Ctx<Props>) : Component<PlayerMiniStats.Props>(ctx) {
             .smooth(sharePer10Ms = NEEDLE_SMOOTHING, near = 100 * NEEDLE_NEAR)
     )
 
+    /** The Gui-dance's lit step: the menu button wears its beacon when it is the button's (KLANG-00350). */
+    private val guiDanceLit by subscribingTo(KlangGuiDance.dance.lit)
+
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     override fun VDom.render() {
@@ -168,9 +172,17 @@ class PlayerMiniStats(ctx: Ctx<Props>) : Component<PlayerMiniStats.Props>(ctx) {
                             // Its ring the knob's size, so its button is the knob's cap's size (the maintainer, 2026-10-26)
                             KlangMenuButton(
                                 open = menu.open,
-                                onClick = menu.toggle,
+                                onClick = {
+                                    // Opening the drawer is the Gui-dance's step; closing it is not
+                                    if (!menu.open) {
+                                        KlangGuiDance.dance.used(KlangGuiDance.MOTOR_MENU)
+                                    }
+
+                                    menu.toggle()
+                                },
                                 size = VOLUME_KNOB_PX.px,
                                 key = KlangKeyBindings.MotorMenu,
+                                beacon = guiDanceLit == KlangGuiDance.MOTOR_MENU,
                             )
                         } else {
                             div {

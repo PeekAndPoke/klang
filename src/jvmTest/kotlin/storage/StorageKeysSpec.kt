@@ -68,4 +68,8 @@ class StorageKeysSpec : StringSpec({
         StorageKeys.EDITOR_HIGHLIGHTS_PER_EVENT shouldBe "klang-editor-highlights-per-event"
         StorageKeys.EDITOR_HOVER_HELP shouldBe "klang-editor-hover-help"
     }
+
+    "the Gui-dance keeps its key" {
+        StorageKeys.GUI_DANCE_ARCS_DONE shouldBe "klang-gui-dance-arcs-done"
+    }
 })

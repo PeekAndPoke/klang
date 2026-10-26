@@ -40,10 +40,13 @@ import kotlinx.html.style
 import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.events.Event
+import kotlin.math.PI
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.pow
+import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
@@ -67,17 +70,117 @@ fun Tag.MotorBackground(
  * point it at the center of the screen") and whose filament subtly flickers.
  *
  * Pure Kotlin port of the former `motor-background.js` built on the kraft-threejs
- * addon. While the Motor waits for its key the plate shows in a dim standby light; [powerOn] brings the light up,
- * [hoverStart] and [hoverEnd] swell it under an element the mouse is over.
+ * addon. While the Motor waits for its key the screen stays black; [warmUp] fades in a dim standby light, quickly,
+ * while the Motor warms up (the maintainer, 2026-10-26: "In the very beginning leave it full black"); [powerOn]
+ * brings the light up, [hoverStart] and [hoverEnd] swell it under an element the mouse is over.
  */
 class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
 
     companion object {
+        /** The texture's height in px; its width follows the screen's aspect. */
+        private const val TEX_HEIGHT = 2048
+
+        /** Panel-grid cell size in texture px: shared by the normal map, the albedo seams and the title's plate. */
+        private const val PANEL_CELL = 330.0
+
         /**
-         * Where KLANGMOTOR's middle sits, as a share of the screen's height from the top: lower than at first, nearer
-         * the start page's gauges (the maintainer, 2026-10-26: "Please move Klangmotor down").
+         * The start page's block under the title's plate, in screen px: the gap, the gauges, the gap and the result
+         * panel. The title and the block are placed as one.
          */
-        private const val TITLE_CENTER_Y = 0.25
+        private const val BLOCK_UNDER_TITLE_PX = 430.0
+
+        /**
+         * The share of the free height above the title; the rest is under the block. Half: the title and the block
+         * stand in the middle of the screen, under the light, which stands there too (the maintainer, 2026-10-26: "When
+         * i am in fullscreen everything is too far up", and at a third above: "Still too far up").
+         */
+        private const val FREE_ABOVE = 0.5
+
+        /** The plate's reach above and below the title's middle, as shares of the texture's height. */
+        private val plateReach: Pair<Double, Double> by lazy {
+            val plate = titlePlate(width = TEX_HEIGHT, height = TEX_HEIGHT, centerShare = 0.0)
+
+            (-plate.top / TEX_HEIGHT) to (plate.bottom / TEX_HEIGHT)
+        }
+
+        /** Where KLANGMOTOR's middle sits in a screen [screenHeight] px high, as a share of it from the top. */
+        fun titleCenterShare(screenHeight: Double): Double {
+            val (above, below) = plateReach
+            val composition = (above + below) * screenHeight + BLOCK_UNDER_TITLE_PX
+            val free = (screenHeight - composition).coerceAtLeast(0.0)
+
+            return ((free * FREE_ABOVE + above * screenHeight) / screenHeight).coerceIn(0.12, 0.4)
+        }
+
+        /**
+         * Where the title's plate ends in a screen [screenHeight] px high, as a share of it from the top: the texture
+         * spans the screen, so the start page sets its gauges under it at the same gap as the panel under the gauges
+         * (the maintainer, 2026-10-26).
+         */
+        fun titlePlateBottomShare(screenHeight: Double): Double = titleCenterShare(screenHeight) + plateReach.second
+
+        /**
+         * The plate under KLANGMOTOR (the maintainer, 2026-10-26: "one nice tile underneith the text so that no lines
+         * are crossing it"; then smaller, "NOT be alligned with the rest of the grid", and "a bit wider and raise it
+         * instead of carving it"): the title's box and a margin, a plate standing on the tiles wherever the grid
+         * runs; no seam crosses it. [left], [top], [right] and [bottom] are in texture px.
+         */
+        private data class TitlePlate(
+            val left: Double,
+            val top: Double,
+            val right: Double,
+            val bottom: Double,
+        ) {
+            fun contains(x: Double, y: Double): Boolean = x >= left && x < right && y >= top && y < bottom
+        }
+
+        /** The title's font size in a texture [height] pixels high. */
+        private fun titleFontSize(height: Int): Double = (height * 0.135).coerceAtLeast(48.0)
+
+        /** Configures font, alignment and letter-spacing consistently for both text canvases. */
+        private fun applyTitleTextStyle(tctx: CanvasRenderingContext2D, height: Int) {
+            val fontSize = titleFontSize(height)
+            tctx.font = "bold ${fontSize}px monospace"
+            tctx.asDynamic().textAlign = "center"
+            tctx.asDynamic().textBaseline = "middle"
+            tctx.asDynamic().letterSpacing = "-0.03em"
+        }
+
+        /**
+         * The plate under the title in a texture [width] by [height]: one tile row high round the letters' own outline
+         * (not the font's box, whose middle sits above the capitals' middle), so the title sits in its middle, and an
+         * even number of tiles wide.
+         */
+        private fun titlePlate(width: Int, height: Int, centerShare: Double): TitlePlate {
+            val cnv = document.createElement("canvas") as HTMLCanvasElement
+            val tctx = cnv.getContext("2d") as CanvasRenderingContext2D
+
+            applyTitleTextStyle(tctx, height)
+
+            val metrics = tctx.measureText("KLANGMOTOR")
+            val cx = width / 2.0
+            val cy = height * centerShare
+            val ascent = metrics.actualBoundingBoxAscent
+            val descent = metrics.actualBoundingBoxDescent
+            // Exactly one tile row high, so the rows can run along its edges (the maintainer, 2026-10-26: the tiles
+            // aligned with the title, "but only vertically")
+            val margin = ((PANEL_CELL - ascent - descent) / 2.0).coerceAtLeast((ascent + descent) * 0.2)
+
+            // An even number of tiles wide, round the screen's middle, where a tile's middle sits: so its sides end
+            // half way across a tile, as far from the grid's lines as can be, on purpose (the maintainer, 2026-10-26:
+            // "Try half"). The least that leaves the letters some air
+            val textWidth = metrics.actualBoundingBoxLeft + metrics.actualBoundingBoxRight
+            val leastWidth = textWidth + 2 * (ascent + descent) * 0.3
+            val tiles = ceil(leastWidth / PANEL_CELL).toInt().let { if (it % 2 == 0) it else it + 1 }
+            val halfWidth = tiles * PANEL_CELL / 2.0
+
+            return TitlePlate(
+                left = cx - halfWidth,
+                top = cy - ascent - margin,
+                right = cx + halfWidth,
+                bottom = cy + descent + margin,
+            )
+        }
 
         /** A role's colour as a number for three.js; a value that is not `#rrggbb` takes the role's default. */
         private fun KlangLook.hexOf(role: KlangRole): Int =
@@ -129,18 +232,26 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     private var fillLight: DirectionalLight? = null
 
     private var aspect: Double = 1.0
-    private val texHeight = 2048
 
     ////  LIGHTING STATE MACHINE  /////////////////////////////////////////////////////////////////////////////////
 
     private var poweredOn = false
 
     private val defaultIntensity = 1.62
-    private val hoverIntensity = 3.0
+    /** Over "Make Music Now": 1.5 times the light it swelled to at first (the maintainer, 2026-10-26: twice was too bright). */
+    private val hoverIntensity = 4.5
 
-    /** The light while the Motor waits for its key: the plate and the title show, dim (the maintainer, 2026-10-26). */
+    /** The light while the Motor warms up ([warmUp]): the plate and the title show, dim (the maintainer, 2026-10-26). */
     private val standbyIntensity = defaultIntensity * 0.18
     private var targetIntensity = 0.0
+
+    /** Whether the Motor warms up: the standby light is on from then. */
+    private var warming = false
+
+    /** How far the light moves toward its target each frame: calm, but quick while it warms up to the standby. */
+    private val intensityEase = 0.01
+    private val warmUpEase = 0.05
+    private var currentEase = intensityEase
 
     // Ceiling for the plate's blend over the black backdrop: the light, not the backdrop, decides how bright it is
     private val maxPlateOpacity = 0.85
@@ -149,14 +260,43 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     // growing bigger (the maintainer, 2026-10-26, once the plate was as bright as before: "the circle of light is too
     // big")
     private val defaultLightZ = 3.0
-    private val hoverLightZ = 3.4
+    /** Over "Make Music Now" the cone opens wider, "like opening your eyes" (the maintainer, 2026-10-26: wider still). */
+    private val hoverLightZ = 5.2
     private var targetLightZ = defaultLightZ
     private var targetFillIntensity = 0.0
 
     ////  LIGHT MOTION  ///////////////////////////////////////////////////////////////////////////////////////////
 
-    // Fixed cone size: Z only eases toward the hover/default target.
+    // Fixed cone size: Z only moves toward the hover/default target ([moveCone]).
     private var lightZ = defaultLightZ
+
+    /**
+     * The cone's move to [targetLightZ]: from [coneFrom], over [coneMs], easing out hard, so the eye opens quickly and
+     * settles slowly (the maintainer, 2026-10-26: "Stronger ease out and longer eye opening").
+     */
+    private var coneFrom = defaultLightZ
+    private var coneElapsedMs = 0.0
+    private var coneMs = 1.0
+
+    /**
+     * The eye opening over "Make Music Now", and closing again (the maintainer: "longer please", then rather than
+     * twice as long, "just stronger ease out": [easeOutExpo]).
+     */
+    private val coneOpenMs = 5000.0
+    private val coneCloseMs = 2000.0
+
+    private fun moveCone(to: Double, ms: Double) {
+        coneFrom = lightZ
+        targetLightZ = to
+        coneElapsedMs = 0.0
+        coneMs = ms
+    }
+
+    /**
+     * Ease out, exponential: most of the way at first, then a long, very soft arrival (the maintainer: "much stronger
+     * ease out" than a quintic).
+     */
+    private fun easeOutExpo(t: Double): Double = if (t >= 1.0) 1.0 else 1.0 - 2.0.pow(-10.0 * t)
 
     // Eased intensity lives here (not on the light) so the flicker riding on
     // top never pollutes the easing state.
@@ -173,14 +313,110 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     /** Rows per macrotask for the chunked per-pixel texture loops. */
     private val chunkRows = 128
 
-    /** Panel-grid cell size in texture px — shared by normal map and albedo seams. */
-    private val panelCell = 330.0
+    /**
+     * Where the panel grid's columns start in a texture [size] pixels wide, so that one panel sits exactly in the
+     * middle of the screen (the maintainer, 2026-10-26): the texture spans the screen, so its middle is the screen's.
+     * The rows start at [gridOriginY].
+     */
+    private fun gridOrigin(size: Int): Double = ((size / 2.0 - PANEL_CELL / 2.0) % PANEL_CELL + PANEL_CELL) % PANEL_CELL
 
     /**
-     * Where the panel grid starts in a texture [size] pixels long, so that one panel sits exactly in the middle of the
-     * screen (the maintainer, 2026-10-26): the texture spans the screen, so its middle is the screen's.
+     * Where the panel grid's rows start: on the title's [plate], one row high, so the rows run along its top and its
+     * bottom (the maintainer, 2026-10-26: aligned with the title, "but only vertically"; the columns stay centred).
      */
-    private fun gridOrigin(size: Int): Double = ((size / 2.0 - panelCell / 2.0) % panelCell + panelCell) % panelCell
+    private fun gridOriginY(plate: TitlePlate): Double = (plate.top % PANEL_CELL + PANEL_CELL) % PANEL_CELL
+
+    /**
+     * Where the columns start in the title plate's row: half a tile over from the others, like a course of bricks, so
+     * the seams meet the plate's sides, which end half way across a tile (the maintainer, 2026-10-26: the tiles
+     * aligned left and right to the plate, "only on the row").
+     */
+    private fun gridOriginInPlateRow(width: Int): Double = (gridOrigin(width) + PANEL_CELL / 2.0) % PANEL_CELL
+
+    /** About the share of the tiles laid turned by 90 degrees, brushed up and down instead of across. */
+    private val turnedTiles = 0.25
+
+    /** A tile's lot for being turned: below [turnedTiles] it may be. */
+    private fun turnLot(col: Int, row: Int): Double = hashCell(col * 11 + 3, row * 13 + 5)
+
+    /**
+     * Whether the tile at [col], [row] lies turned: its lot is low, and lower than that of every neighbour whose lot
+     * is low too, so two turned tiles never touch, not at an edge and not at a corner (the maintainer, 2026-10-26).
+     */
+    private fun isTurned(col: Int, row: Int): Boolean {
+        val lot = turnLot(col, row)
+
+        if (lot >= turnedTiles) {
+            return false
+        }
+
+        for (dc in -1..1) {
+            for (dr in -1..1) {
+                val other = turnLot(col + dc, row + dr)
+
+                if ((dc != 0 || dr != 0) && other < turnedTiles && other < lot) {
+                    return false
+                }
+            }
+        }
+
+        return true
+    }
+
+    /** A rivet's radius on the title's plate, in texture px. */
+    private val rivetRadius = 9.0
+
+    /** How far a rivet's middle sits in from the plate's corner, both ways, in texture px. */
+    private val rivetInset = 26.0
+
+    /** How steep a rivet's dome falls off at its rim. */
+    private val rivetBevel = 0.7
+
+    /** The plate's four rivets, one in each corner (the maintainer, 2026-10-26), as their middles' x and y. */
+    private fun rivets(plate: TitlePlate): List<Pair<Double, Double>> = listOf(
+        (plate.left + rivetInset) to (plate.top + rivetInset),
+        (plate.right - rivetInset) to (plate.top + rivetInset),
+        (plate.left + rivetInset) to (plate.bottom - rivetInset),
+        (plate.right - rivetInset) to (plate.bottom - rivetInset),
+    )
+
+    /** Where the title's middle sits, as a share of the window's height, for the build that runs: taken as it starts. */
+    private var buildCenter = 0.25
+
+    /** A rebuild runs; one asked for meanwhile waits for it ([rebuildPending]). */
+    private var rebuilding = false
+    private var rebuildPending = false
+
+    /** Where the title's middle sits in the textures the running build makes. */
+    private fun titleCenter(): Double = buildCenter
+
+    /**
+     * Brushed steel on the plate and the tiles (the maintainer, 2026-10-26: "a little like brushed steel... very fine
+     * carvings"; soft, wavy streaks looked "a bit like wood", even rows "too even": "make it look hand brushed"):
+     * strokes of a hand, not machine rows. Each texture row is cut into strokes of their own length and depth, fading
+     * in and out at their ends; a second layer crosses the first at a slightly other angle; and some patches are
+     * brushed harder than others. For a tile brushed up and down, pass the coordinates swapped.
+     */
+    private fun brushed(px: Int, py: Int): Double {
+        var sum = 0.0
+
+        for (layer in 0..1) {
+            // The stroke's slight angle: each layer its own
+            val y = py + px * if (layer == 0) 0.004 else -0.007
+            val row = floor(y).toInt()
+            val length = 140.0 + 260.0 * hashCell(row, 31 + layer)
+            val along = (px + hashCell(row, 47 + layer) * length) / length
+            val stroke = floor(along).toInt()
+            val fade = sin(PI * (along - stroke))
+            val depth = hashCell(row * 7 + stroke, 59 + layer) - 0.5
+
+            sum += depth * 0.11 * fade
+        }
+
+        val pressure = 0.55 + 0.45 * grainNoise.noise(px * 0.006 + 3.1, py * 0.02 + 8.7)
+
+        return sum * pressure
+    }
 
     /**
      * Builds the plate + title textures and meshes. The heavy per-pixel loops
@@ -213,23 +449,26 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         val ctx = sceneCtx ?: return
         val addon = threeAddon ?: return
         preparing = true
+        buildCenter = titleCenterShare(window.innerHeight.toDouble())
 
         try {
-            val texW = ceil(texHeight * aspect).toInt()
-            generateMotorNormalMap(addon, texW, texHeight) { normalMap ->
-                val plateMap = buildPlateBaseMap(addon, texW, texHeight)
-                buildTitleOverlayMaps(addon, texW, texHeight) { titleAlbedo, titleNormal ->
+            val texW = ceil(TEX_HEIGHT * aspect).toInt()
+            generateMotorNormalMap(addon, texW, TEX_HEIGHT) { normalMap ->
+                val plateMap = buildPlateBaseMap(addon, texW, TEX_HEIGHT)
+                buildTitleOverlayMaps(addon, texW, TEX_HEIGHT) { titleAlbedo, titleNormal ->
                     buildMeshes(ctx, addon, normalMap, plateMap, titleAlbedo, titleNormal)
                     prepared = true
                     preparing = false
 
-                    // The plate shows from now on: dim until the Motor is powered on
-                    if (!poweredOn) {
+                    // The plate shows once the Motor warms up: dim until it is powered on
+                    if (warming && !poweredOn) {
                         targetIntensity = standbyIntensity
                     }
 
                     onPrepared.forEach { it() }
                     onPrepared.clear()
+
+                    rebuildIfPending(addon)
                 }
             }
         } catch (e: Throwable) {
@@ -319,11 +558,27 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
 
     ////  PUBLIC API (call via motorBackgroundRef)  ///////////////////////////////////////////////////////////////
 
+    /**
+     * The Motor warms up: the standby light fades in from black, quickly; once the plate is built if it is not yet.
+     * Call when the key turns to ON.
+     */
+    fun warmUp() {
+        prepare()
+        warming = true
+        currentEase = warmUpEase
+
+        if (prepared && !poweredOn) {
+            targetIntensity = standbyIntensity
+        }
+    }
+
     fun powerOn() {
         // Self-heal for flows that never called prepare() — idempotent, and the
         // plate simply fades in whenever the build finishes.
         prepare()
+        warming = true
         poweredOn = true
+        currentEase = intensityEase
         targetIntensity = defaultIntensity
         targetFillIntensity = 0.12
     }
@@ -331,13 +586,17 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     /** Boosts the light and widens the cone. Call from an element's mouse-enter. */
     fun hoverStart() {
         targetIntensity = hoverIntensity
-        targetLightZ = hoverLightZ
+        moveCone(to = hoverLightZ, ms = coneOpenMs)
     }
 
     /** Reverts the hover effect. Call from the element's mouse-leave. */
     fun hoverEnd() {
-        targetIntensity = if (poweredOn) defaultIntensity else standbyIntensity
-        targetLightZ = defaultLightZ
+        targetIntensity = when {
+            poweredOn -> defaultIntensity
+            warming -> standbyIntensity
+            else -> 0.0
+        }
+        moveCone(to = defaultLightZ, ms = coneCloseMs)
     }
 
     ////  LIFECYCLE  //////////////////////////////////////////////////////////////////////////////////////////////
@@ -425,8 +684,8 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         // No scene background: the canvas stays transparent (alpha = true), so the black wrapper div shows
         // through until the plate fades in.
 
-        // The plate and title textures are built at once, row-chunked by [prepare] so the page stays responsive,
-        // and show in the standby light while the Motor waits for its key
+        // The plate and title textures are built at once, row-chunked by [prepare] so the page stays responsive;
+        // they show once the Motor warms up ([warmUp])
         sceneCtx = ctx
         prepare()
 
@@ -480,41 +739,68 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
             }
             resizeTimer?.let { window.clearTimeout(it) }
             resizeTimer = window.setTimeout({
-                // Nothing to rebuild before prepare() has run — it will pick up
-                // the current aspect when it does.
-                if (prepared) {
-                    val newTexW = ceil(texHeight * aspect).toInt()
-                    generateMotorNormalMap(addon, newTexW, texHeight) { newNormal ->
-                        val newBase = buildPlateBaseMap(addon, newTexW, texHeight)
-                        buildTitleOverlayMaps(addon, newTexW, texHeight) { newTitleAlbedo, newTitleNormal ->
-                            material?.let { mat ->
-                                val mDyn = mat.asDynamic()
-                                val existingNormal = mDyn.normalMap
-                                if (existingNormal != null && existingNormal != undefined) existingNormal.dispose()
-                                mDyn.normalMap = newNormal
-                                val existingBase = mDyn.map
-                                if (existingBase != null && existingBase != undefined) existingBase.dispose()
-                                mDyn.map = newBase
-                                mDyn.needsUpdate = true
-                            }
-                            titleMaterial?.let { mat ->
-                                val mDyn = mat.asDynamic()
-                                val existingNormal = mDyn.normalMap
-                                if (existingNormal != null && existingNormal != undefined) existingNormal.dispose()
-                                mDyn.normalMap = newTitleNormal
-                                val existingBase = mDyn.map
-                                if (existingBase != null && existingBase != undefined) existingBase.dispose()
-                                mDyn.map = newTitleAlbedo
-                                mDyn.needsUpdate = true
-                            }
-                            baseMap = newBase
-                        }
-                    }
+                // Nothing to rebuild before the first build has started; one that runs rebuilds when it is done
+                when {
+                    prepared -> rebuildTextures(addon)
+                    preparing -> rebuildPending = true
                 }
             }, 300)
         }
         window.addEventListener("resize", handler)
         resizeListener = handler
+    }
+
+    /**
+     * Builds the textures again, for a new window size. One build at a time: a resize while one runs asks for one more
+     * when it is done, so a build never mixes two window heights (the title's place is taken once, as it starts).
+     */
+    private fun rebuildTextures(addon: ThreeJsAddon) {
+        if (rebuilding) {
+            rebuildPending = true
+            return
+        }
+
+        rebuilding = true
+        buildCenter = titleCenterShare(window.innerHeight.toDouble())
+
+        val newTexW = ceil(TEX_HEIGHT * aspect).toInt()
+        generateMotorNormalMap(addon, newTexW, TEX_HEIGHT) { newNormal ->
+            val newBase = buildPlateBaseMap(addon, newTexW, TEX_HEIGHT)
+            buildTitleOverlayMaps(addon, newTexW, TEX_HEIGHT) { newTitleAlbedo, newTitleNormal ->
+                material?.let { mat ->
+                    val mDyn = mat.asDynamic()
+                    val existingNormal = mDyn.normalMap
+                    if (existingNormal != null && existingNormal != undefined) existingNormal.dispose()
+                    mDyn.normalMap = newNormal
+                    val existingBase = mDyn.map
+                    if (existingBase != null && existingBase != undefined) existingBase.dispose()
+                    mDyn.map = newBase
+                    mDyn.needsUpdate = true
+                }
+                titleMaterial?.let { mat ->
+                    val mDyn = mat.asDynamic()
+                    val existingNormal = mDyn.normalMap
+                    if (existingNormal != null && existingNormal != undefined) existingNormal.dispose()
+                    mDyn.normalMap = newTitleNormal
+                    val existingBase = mDyn.map
+                    if (existingBase != null && existingBase != undefined) existingBase.dispose()
+                    mDyn.map = newTitleAlbedo
+                    mDyn.needsUpdate = true
+                }
+                baseMap = newBase
+                rebuilding = false
+
+                rebuildIfPending(addon)
+            }
+        }
+    }
+
+    /** After a build: the rebuild a resize asked for while it ran. */
+    private fun rebuildIfPending(addon: ThreeJsAddon) {
+        if (rebuildPending) {
+            rebuildPending = false
+            rebuildTextures(addon)
+        }
     }
 
     ////  RENDER LOOP  ////////////////////////////////////////////////////////////////////////////////////////////
@@ -529,17 +815,18 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         if (failed) return
         val delta = min(frame.deltaMs, 100.0)
 
-        // The light stands on the centre of the screen. The cone size stays FIXED: Z only eases toward the
-        // hover/default target, no breathing
+        // The light stands on the centre of the screen. The cone size stays FIXED: Z only moves toward the
+        // hover/default target ([moveCone]), no breathing
         mainLight?.position?.let { pos ->
             pos.x = 0.0
             pos.y = 0.0
-            lightZ += (targetLightZ - lightZ) * 0.04
+            coneElapsedMs += delta
+            lightZ = coneFrom + (targetLightZ - coneFrom) * easeOutExpo(min(1.0, coneElapsedMs / coneMs))
             pos.z = lightZ
         }
 
         // Smooth intensity transitions
-        currentIntensity += (targetIntensity - currentIntensity) * 0.01
+        currentIntensity += (targetIntensity - currentIntensity) * currentEase
         fillLight?.let { it.intensity += (targetFillIntensity - it.intensity) * 0.02 }
 
         // Subtle lamp flicker — a slow drift plus a faster shimmer, both smooth
@@ -606,15 +893,6 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
 
     private fun n2c(n: Double): Int = max(0.0, min(255.0, (n + 1.0) * 127.5)).toInt()
 
-    /** Configures font, alignment and letter-spacing consistently for both text canvases. */
-    private fun applyTitleTextStyle(tctx: CanvasRenderingContext2D, height: Int) {
-        val fontSize = (height * 0.135).coerceAtLeast(48.0)
-        tctx.font = "bold ${fontSize}px monospace"
-        tctx.asDynamic().textAlign = "center"
-        tctx.asDynamic().textBaseline = "middle"
-        tctx.asDynamic().letterSpacing = "-0.03em"
-    }
-
     /**
      * Renders "KLANGMOTOR" flat (no perspective) at the title position.
      *
@@ -626,7 +904,7 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         height: Int,
         fillStyle: String,
     ) {
-        val textCy = height * TITLE_CENTER_Y
+        val textCy = height * titleCenter()
         tctx.fillStyle = fillStyle
         applyTitleTextStyle(tctx, height)
         tctx.fillText("KLANGMOTOR", width / 2.0, textCy)
@@ -647,25 +925,64 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         tctx.fillStyle = "#ffffff"
         tctx.fillRect(0.0, 0.0, width.toDouble(), height.toDouble())
 
-        // Dark seam lines on the panel grid — albedo crispness on top of the
-        // normal-map bevels; about half the face's brightness, as they were.
+        val plate = titlePlate(width = width, height = height, centerShare = titleCenter())
+
+        // The rivets' rims, a thin darker ring each, so the domes read crisp
+        tctx.strokeStyle = "#9a9a9a"
+        tctx.lineWidth = 1.5
+
+        for ((rx, ry) in rivets(plate)) {
+            tctx.beginPath()
+            tctx.arc(rx, ry, rivetRadius, 0.0, 2 * PI)
+            tctx.stroke()
+        }
+
+        // Dark seam lines on the panel grid: albedo crispness on top of the normal-map bevels, about half the face's
+        // brightness, as they were. None crosses the title's plate: a line that would stops at its edges.
         tctx.strokeStyle = "#858585"
         tctx.lineWidth = 2.0
-        var gx = gridOrigin(width)
-        while (gx <= width) {
+
+        fun line(x0: Double, y0: Double, x1: Double, y1: Double) {
             tctx.beginPath()
-            tctx.moveTo(gx, 0.0)
-            tctx.lineTo(gx, height.toDouble())
+            tctx.moveTo(x0, y0)
+            tctx.lineTo(x1, y1)
             tctx.stroke()
-            gx += panelCell
         }
-        var gy = gridOrigin(height)
+
+        // The columns, above and below the plate's row
+        var gx = gridOrigin(width)
+
+        while (gx <= width) {
+            line(gx, 0.0, gx, plate.top)
+            line(gx, plate.bottom, gx, height.toDouble())
+
+            gx += PANEL_CELL
+        }
+
+        // In the plate's row the tiles lie half a tile over, so their seams meet the plate's sides; none on the plate,
+        // and none along its sides, which are its own edges
+        gx = gridOriginInPlateRow(width)
+
+        while (gx <= width) {
+            if (gx < plate.left - 1.0 || gx > plate.right + 1.0) {
+                line(gx, plate.top, gx, plate.bottom)
+            }
+
+            gx += PANEL_CELL
+        }
+
+        var gy = gridOriginY(plate)
+
         while (gy <= height) {
-            tctx.beginPath()
-            tctx.moveTo(0.0, gy)
-            tctx.lineTo(width.toDouble(), gy)
-            tctx.stroke()
-            gy += panelCell
+            // The rows along the plate's top and bottom stop at its sides: no line round the plate
+            if (gy >= plate.top - 1.0 && gy <= plate.bottom + 1.0) {
+                line(0.0, gy, plate.left, gy)
+                line(plate.right, gy, width.toDouble(), gy)
+            } else {
+                line(0.0, gy, width.toDouble(), gy)
+            }
+
+            gy += PANEL_CELL
         }
 
         val tex = addon.createCanvasTexture(cnv)
@@ -696,8 +1013,8 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         val tctx = cnv.getContext("2d") as CanvasRenderingContext2D
         // Clip so the blur halo doesn't bleed below the letter baseline — the
         // bottom edge of the engraving stays sharp.
-        val fontSize = (height * 0.135).coerceAtLeast(48.0)
-        val textCy = height * TITLE_CENTER_Y
+        val fontSize = titleFontSize(height)
+        val textCy = height * titleCenter()
         val textBottomY = textCy + fontSize / 2.0
         tctx.save()
         tctx.beginPath()
@@ -824,8 +1141,8 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         // Narrow blur → sharp bevel walls → raised lettering with crisp edges.
         // Clip so the blur doesn't bleed below the letter baseline — the bottom
         // edge of the relief stays crisp instead of fading into the plate.
-        val fontSize = (height * 0.135).coerceAtLeast(48.0)
-        val textCy = height * TITLE_CENTER_Y
+        val fontSize = titleFontSize(height)
+        val textCy = height * titleCenter()
         val textBottomY = textCy + fontSize / 2.0
         tctx.save()
         tctx.beginPath()
@@ -879,7 +1196,14 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         val seamHalf = 3.0
         val bevel = 0.55
         val originX = gridOrigin(width)
-        val originY = gridOrigin(height)
+        val plate = titlePlate(width = width, height = height, centerShare = titleCenter())
+        val originY = gridOriginY(plate)
+        val plateRowOriginX = gridOriginInPlateRow(width)
+        val plateRivets = rivets(plate)
+        // Whether a tile lies turned, worked out when the loop enters another tile, not for every pixel
+        var turnedCol = Int.MIN_VALUE
+        var turnedRow = Int.MIN_VALUE
+        var tileTurned = false
 
         runChunked(height, { pyFrom, pyTo ->
         for (py in pyFrom until pyTo) {
@@ -887,35 +1211,65 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
                 val idx = (py * width + px) * 4
 
                 // The panels before the grid's origin are numbered from -1 down: floor, not truncation
-                val col = floor((px - originX) / panelCell).toInt()
-                val row = floor((py - originY) / panelCell).toInt()
-                val u = px - originX - col * panelCell
-                val v = py - originY - row * panelCell
+                // The plate's row lies half a tile over ([gridOriginInPlateRow])
+                val rowOriginX = if (py >= plate.top && py < plate.bottom) plateRowOriginX else originX
+                val col = floor((px - rowOriginX) / PANEL_CELL).toInt()
+                val row = floor((py - originY) / PANEL_CELL).toInt()
+                val u = px - rowOriginX - col * PANEL_CELL
+                val v = py - originY - row * PANEL_CELL
 
-                // Per-panel constant tilt
-                val tiltX = (hashCell(col * 3 + 11, row * 7 + 29) - 0.5) * 0.08
-                val tiltY = (hashCell(col * 5 + 43, row * 3 + 71) - 0.5) * 0.08
+                // On the title's plate: a flat face, no seams, and its edges stepping up from the tiles
+                val onPlate = plate.contains(px.toDouble(), py.toDouble())
 
-                // V-groove seams along the grid lines
+                // Per-panel constant tilt; the plate's face lies flat
+                val tiltX = if (onPlate) 0.0 else (hashCell(col * 3 + 11, row * 7 + 29) - 0.5) * 0.08
+                val tiltY = if (onPlate) 0.0 else (hashCell(col * 5 + 43, row * 3 + 71) - 0.5) * 0.08
+
+                // V-groove seams along the grid lines; the plate's edges as a tile's, so it meets its neighbours as tiles
+                // meet (the maintainer, 2026-10-26)
                 val seamNx = when {
+                    onPlate && px - plate.left < seamHalf -> -bevel * (1.0 - (px - plate.left) / seamHalf)
+                    onPlate && plate.right - px <= seamHalf -> bevel * (1.0 - (plate.right - px) / seamHalf)
+                    onPlate -> 0.0
                     u < seamHalf -> -bevel * (1.0 - u / seamHalf)
-                    u > panelCell - seamHalf -> bevel * (1.0 - (panelCell - u) / seamHalf)
+                    u > PANEL_CELL - seamHalf -> bevel * (1.0 - (PANEL_CELL - u) / seamHalf)
                     else -> 0.0
                 }
                 val seamNy = when {
+                    onPlate && py - plate.top < seamHalf -> -bevel * (1.0 - (py - plate.top) / seamHalf)
+                    onPlate && plate.bottom - py <= seamHalf -> bevel * (1.0 - (plate.bottom - py) / seamHalf)
+                    onPlate -> 0.0
                     v < seamHalf -> -bevel * (1.0 - v / seamHalf)
-                    v > panelCell - seamHalf -> bevel * (1.0 - (panelCell - v) / seamHalf)
+                    v > PANEL_CELL - seamHalf -> bevel * (1.0 - (PANEL_CELL - v) / seamHalf)
                     else -> 0.0
                 }
 
-                // Patchy fine grain — calm and busier regions instead of static.
-                val patchAmp = hashCell(px / 24 + 101, py / 24 + 53)
-                val grainScale = 0.006 + patchAmp * 0.045
-                val grainX = grainNoise.noise(px * 0.18, py * 0.18) * grainScale * 0.1
-                val grainY = grainNoise.noise(px * 0.18 + 113.7, py * 0.18 - 91.3) * grainScale * 0.1
+                // Brushed steel, the plate and every tile: hairlines along the brushing tilt the face across them. A
+                // tile laid turned by 90 degrees, as if fitted the wrong way round, is brushed up and down (the
+                // maintainer, 2026-10-26); the title's plate lies straight
+                if (col != turnedCol || row != turnedRow) {
+                    turnedCol = col
+                    turnedRow = row
+                    tileTurned = isTurned(col, row)
+                }
 
-                val nx = tiltX + seamNx + grainX
-                val ny = tiltY + seamNy + grainY
+                val turned = !onPlate && tileTurned
+                var nx = tiltX + seamNx + if (turned) brushed(px = py, py = px) else 0.0
+                var ny = tiltY + seamNy + if (turned) 0.0 else brushed(px, py)
+
+                // A rivet: a dome, its surface falling off outward from its middle, no brushing on it
+                if (onPlate) {
+                    for ((rx, ry) in plateRivets) {
+                        val dx = px - rx
+                        val dy = py - ry
+
+                        if (dx * dx + dy * dy < rivetRadius * rivetRadius) {
+                            nx = dx / rivetRadius * rivetBevel
+                            ny = dy / rivetRadius * rivetBevel
+                        }
+                    }
+                }
+
                 val nz = sqrt(max(0.01, 1.0 - nx * nx - ny * ny))
 
                 d[idx] = n2c(nx)

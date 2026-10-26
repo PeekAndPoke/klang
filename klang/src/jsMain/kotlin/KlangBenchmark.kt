@@ -40,6 +40,13 @@ class KlangBenchmark(
          */
         const val VOICES_PER_CYLINDER = 10
 
+        /**
+         * The cylinders [voices] play on, of [cylinders]: the voices keep sounding, so the first ones fill the first
+         * cylinders. The start page names them with the result (KLANG-00349).
+         */
+        fun cylindersOf(voices: Int, cylinders: Int = CYLINDERS): Int =
+            minOf((voices + VOICES_PER_CYLINDER - 1) / VOICES_PER_CYLINDER, cylinders.coerceAtLeast(1))
+
         /** Blocks of silence rendered before the first measurement, to wake the JIT and the CPU governor. */
         private const val WARMUP_BLOCKS = 50
 
@@ -133,7 +140,7 @@ class KlangBenchmark(
             val iterationProgress = Progress(
                 currentVoices = 0,
                 activeVoices = result.maxSafeVoices,
-                activeCylinders = cylindersOf(result.maxSafeVoices),
+                activeCylinders = cylindersOf(voices = result.maxSafeVoices, cylinders = cylinders),
                 currentRtf = result.rtfAtLimit,
                 currentIteration = iteration + 1,
                 totalIterations = iterations,
@@ -180,7 +187,7 @@ class KlangBenchmark(
         val finalProgress = Progress(
             currentVoices = 0,
             activeVoices = avgMaxSafeVoices,
-            activeCylinders = cylindersOf(avgMaxSafeVoices),
+            activeCylinders = cylindersOf(voices = avgMaxSafeVoices, cylinders = cylinders),
             currentRtf = avgRtfAtLimit,
             currentIteration = iterations,
             totalIterations = iterations,
@@ -192,10 +199,6 @@ class KlangBenchmark(
 
         console.log("[Benchmark] All iterations complete. Average: $avgMaxSafeVoices voices")
     }
-
-    /** The cylinders [voices] play on: the voices keep sounding, so the first ones fill the first cylinders. */
-    private fun cylindersOf(voices: Int): Int =
-        minOf((voices + VOICES_PER_CYLINDER - 1) / VOICES_PER_CYLINDER, cylinders.coerceAtLeast(1))
 
     private suspend fun runSingleIteration(
         iteration: Int,
@@ -284,7 +287,7 @@ class KlangBenchmark(
             val progressUpdate = Progress(
                 currentVoices = targetVoices,
                 activeVoices = activeVoices,
-                activeCylinders = cylindersOf(activeVoices),
+                activeCylinders = cylindersOf(voices = activeVoices, cylinders = cylinders),
                 currentRtf = currentRtf,
                 currentIteration = iteration,
                 totalIterations = totalIterations,

@@ -774,6 +774,134 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("border", "0")
     }
 
+    // ── The screen ────────────────────────────────────────────────────────────
+
+    /** A screen set into the panel (KLANG-00349): fills its parent's flex column; its cut is `--kl-screen-cut`. */
+    val screen by rule {
+        put("position", "relative")
+        put("display", "flex")
+        put("flex-direction", "column")
+        put("flex", "1 1 auto")
+        put("min-height", "0")
+    }
+
+    /** The screen itself, in the panels' dark edge. */
+    val screenSurface by rule {
+        put("position", "relative")
+        put("display", "flex")
+        put("flex-direction", "column")
+        put("flex", "1 1 auto")
+        put("min-height", "0")
+        put("border", "1px solid var(--kl-edge)")
+    }
+
+    /** Its depth: a shadow from the top edge, over the content, never in the way. */
+    val screenShade by rule {
+        put("position", "absolute")
+        put("inset", "0")
+        put("box-shadow", "inset 0 3px 8px rgba(0, 0, 0, 0.85), inset 0 0 2px rgba(0, 0, 0, 0.9)")
+        put("pointer-events", "none")
+        put("z-index", "5")
+    }
+
+    /** What the screen shows: a flex column filling it. */
+    val screenContent by rule {
+        put("display", "flex")
+        put("flex-direction", "column")
+        put("flex", "1 1 auto")
+        put("min-height", "0")
+    }
+
+    /** A cut corner: a triangle of the bezel over the screen's corner, the dark edge along its diagonal. */
+    val screenCorner by rule {
+        put("position", "absolute")
+        put("width", "var(--kl-screen-cut)")
+        put("height", "var(--kl-screen-cut)")
+        put("z-index", "6")
+        put("pointer-events", "none")
+    }
+
+    private fun screenCornerTowards(towards: String) =
+        "linear-gradient($towards, var(--kl-screen-bezel) calc(50% - 0.75px), var(--kl-edge) calc(50% - 0.75px), " +
+                "var(--kl-edge) calc(50% + 0.75px), transparent calc(50% + 0.75px))"
+
+    val screenCornerTopLeft by rule {
+        put("top", "0")
+        put("left", "0")
+        put("background", screenCornerTowards("to bottom right"))
+    }
+
+    val screenCornerTopRight by rule {
+        put("top", "0")
+        put("right", "0")
+        put("background", screenCornerTowards("to bottom left"))
+    }
+
+    val screenCornerBottomLeft by rule {
+        put("bottom", "0")
+        put("left", "0")
+        put("background", screenCornerTowards("to top right"))
+    }
+
+    val screenCornerBottomRight by rule {
+        put("bottom", "0")
+        put("right", "0")
+        put("background", screenCornerTowards("to top left"))
+    }
+
+    // ── The checkbox ──────────────────────────────────────────────────────────
+
+    /** The checkbox: its box and its label in one line, the whole of it clickable (KLANG-00349). */
+    val checkbox by rule {
+        put("position", "relative")
+        put("display", "inline-flex")
+        put("align-items", "center")
+        put("gap", "8px")
+        put("cursor", "pointer")
+        put("user-select", "none")
+        put("font-size", "13px")
+        put("color", "var(--kl-ink-text)")
+    }
+
+    /** The box, sunk into the panel; checked, silver with a check, as the silver keys. */
+    val checkboxBox by rule {
+        put("position", "relative")
+        put("flex-shrink", "0")
+        put("box-sizing", "border-box")
+        put("width", "18px")
+        put("height", "18px")
+        put("border-radius", "var(--kl-radius)")
+        put("background", "var(--kl-ground-sunken)")
+        put("border", "1px solid var(--kl-edge)")
+        put("box-shadow", "inset 0 1px 2px rgba(0, 0, 0, 0.6)")
+    }
+
+    /** The hidden input: the box shows its checked state and its keyboard focus. */
+    val checkboxInput by rule {
+        rule("&:checked + *") {
+            put("background", "linear-gradient(to bottom, var(--kl-metal-light), var(--kl-metal-mid) 55%, var(--kl-metal-dark))")
+            put("box-shadow", "inset 0 1px 0 rgba(255, 255, 255, 0.5)")
+        }
+
+        // The check: two borders of a turned rectangle
+        rule("&:checked + *::after") {
+            put("content", "''")
+            put("position", "absolute")
+            put("left", "5px")
+            put("top", "1px")
+            put("width", "5px")
+            put("height", "10px")
+            put("border", "solid var(--kl-metal-ink)")
+            put("border-width", "0 2px 2px 0")
+            put("transform", "rotate(45deg)")
+        }
+
+        rule("&:focus-visible + *") {
+            put("outline", "2px solid var(--kl-focus)")
+            put("outline-offset", "2px")
+        }
+    }
+
     // ── The value knob and its LCD ────────────────────────────────────────────
 
     /** A knob and the LCD beside it, on one line. */

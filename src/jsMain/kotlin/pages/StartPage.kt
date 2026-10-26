@@ -11,14 +11,17 @@ import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_engine.KlangBenchmark
 import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
 import io.peekandpoke.klang.audio_engine.playOnce
+import io.peekandpoke.klang.comp.MotorBackground
 import io.peekandpoke.klang.comp.PlayerMiniStats
 import io.peekandpoke.klang.comp.motorBackgroundRef
+import io.peekandpoke.klang.fs
 import io.peekandpoke.klang.sprudel.lang.adsr
 import io.peekandpoke.klang.sprudel.lang.fast
 import io.peekandpoke.klang.sprudel.lang.gain
 import io.peekandpoke.klang.sprudel.lang.reverb
 import io.peekandpoke.klang.sprudel.lang.sound
 import io.peekandpoke.klang.ui.comp.KlangButton
+import io.peekandpoke.klang.ui.comp.KlangCheckbox
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.klang.ui.comp.KlangFinish
 import io.peekandpoke.klang.ui.comp.KlangGauge
@@ -49,6 +52,7 @@ import io.peekandpoke.ultra.maths.Ease
 import io.peekandpoke.ultra.streams.ops.map
 import io.peekandpoke.ultra.streams.ops.smooth
 import io.peekandpoke.ultra.streams.ops.ticker
+import kotlinx.browser.window
 import kotlinx.css.Align
 import kotlinx.css.Color
 import kotlinx.css.Display
@@ -64,6 +68,7 @@ import kotlinx.css.color
 import kotlinx.css.display
 import kotlinx.css.flexDirection
 import kotlinx.css.flexGrow
+import kotlinx.css.flexShrink
 import kotlinx.css.fontFamily
 import kotlinx.css.fontSize
 import kotlinx.css.height
@@ -116,6 +121,15 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
         /** How long the key stays at START, the lamp light swelling, before the dyno shows. */
         const val KEY_AT_START_MS = 1800.0
+
+        /** How long the key is seen at START before it fades; it is gone when the dyno starts to show. */
+        const val KEY_FADE_FROM_MS = 400.0
+
+        /** The gap between the title's plate and the gauges, and between the gauges and the panel (the maintainer). */
+        const val RUN_GAP_PX = 24
+
+        /** The page's padding at its top. */
+        const val PAGE_PADDING_PX = 32
     }
 
     //  PERFORMANCE TIERS  //////////////////////////////////////////////////////////////////////////////////////
@@ -268,7 +282,11 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 workletReady = true
             }
 
-            motorBackgroundRef { it.prepare { backgroundReady = true } }
+            // The screen was black until now: the standby light fades in while the Motor warms up
+            motorBackgroundRef {
+                it.prepare { backgroundReady = true }
+                it.warmUp()
+            }
         }
 
         private fun elapsedMs() = Kronos.systemUtc.millisNow() - start
@@ -288,7 +306,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         override val key = KlangIgnition.Position.Start
 
         val startMs = Kronos.systemUtc.millisNow()
-        /** The run fades in while the key fades out (the maintainer, 2026-10-26). */
+        /** The run's fade-in, once the key has faded out (the maintainer, 2026-10-26). */
         val uiFadeDurationMs = 800.0
         val uiFadeEase = Ease.In.quad
         var benchmarkStarted = false
@@ -303,8 +321,18 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         /** The run shows once the key has stood at START. */
         fun showsDyno(): Boolean = elapsedMs() >= KEY_AT_START_MS
 
-        /** The key is gone once the run has faded in. */
-        fun keyGone(): Boolean = elapsedMs() >= KEY_AT_START_MS + uiFadeDurationMs
+        /** The key fades out while it stands at START, a moment after it got there (the maintainer: "fade the button out earlier"). */
+        fun keyFades(): Boolean = elapsedMs() >= KEY_FADE_FROM_MS
+
+        /** The key is gone once it has faded, when the dyno starts to show. */
+        fun keyGone(): Boolean = elapsedMs() >= KEY_AT_START_MS
+
+        /** The key's opacity while it fades. */
+        fun keyOpacity(): Double {
+            val progress = ((elapsedMs() - KEY_FADE_FROM_MS) / (KEY_AT_START_MS - KEY_FADE_FROM_MS)).coerceIn(0.0, 1.0)
+
+            return 1.0 - uiFadeEase(progress)
+        }
 
         override fun update() {
             if (!benchmarkStarted && elapsedMs() >= KEY_AT_START_MS + uiFadeDurationMs) {
@@ -342,6 +370,11 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
             // No player (the worklet failed?): no jingle, the way on all the same
             Player.get()?.playOnce(song)?.start(KlangCyclicPlayback.Options(rpm = 50.0))
 
+            // Still in the click: the browser grants fullscreen only to a user's gesture
+            if (enterFullscreen) {
+                fs.enter()
+            }
+
             router.navToUri(Nav.editSongCode(BuiltInSongs.songs.first().id))
         }
     }
@@ -367,9 +400,12 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
             .smooth(sharePer10Ms = PlayerMiniStats.NEEDLE_SMOOTHING, near = KlangBenchmark.CYLINDERS * PlayerMiniStats.NEEDLE_NEAR)
     )
 
-    /** The heat is the render's load: the time a block takes against the time it plays. */
+    /**
+     * The heat is the render's load: the time a block takes against the time it plays. When the run is done it ends on
+     * 99 %, a hair under full (the maintainer, 2026-10-26: 101 % did not fit the gauge's face).
+     */
     private val dynoHeat by subscribingTo(
-        benchmark.progress.map<KlangBenchmark.Progress, Double?> { it.currentRtf.coerceAtMost(1.0) }
+        benchmark.progress.map<KlangBenchmark.Progress, Double?> { if (it.isComplete) 0.99 else it.currentRtf.coerceAtMost(1.0) }
             .smooth(sharePer10Ms = PlayerMiniStats.NEEDLE_SMOOTHING, near = PlayerMiniStats.NEEDLE_NEAR)
     )
 
@@ -382,6 +418,9 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
     private val currentOpacity get() = (state as? StateBenchmarking)?.getOpacity() ?: 1.0
 
     private val browserDetectAddon: BrowserDetectAddon? by subscribingTo(addons.browserDetect)
+
+    /** "Make Music Now" also enters fullscreen, when the user asks; not checked at first, "too overwhelming" (the maintainer). */
+    private var enterFullscreen: Boolean by value(false)
 
     /** Needed for ui updates */
     @Suppress("unused")
@@ -505,27 +544,41 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 alignItems = Align.center
                 width = 100.pct
                 height = 100.pct
-                paddingTop = 32.px
-                paddingBottom = 32.px
+                paddingTop = PAGE_PADDING_PX.px
+                paddingBottom = PAGE_PADDING_PX.px
             }
 
             if (showsRun) {
-                // Room for KLANGMOTOR, engraved in the Motor background's plate (its normal map), not drawn as text
+                // Room for KLANGMOTOR on its plate in the Motor background, not drawn as text: the gauges start the
+                // same gap under the plate as the panel under the gauges (the maintainer, 2026-10-26)
                 div {
                     key = "title-spacer"
-                    css { marginBottom = 32.px }
+                    css {
+                        flexShrink = 0.0
+                        // The page redraws on every frame (its ticker), so a resize moves the gauges along at once
+                        put("height", "${(plateBottomPx() + RUN_GAP_PX - PAGE_PADDING_PX).coerceAtLeast(0.0)}px")
+                    }
                 }
 
                 // From the run on, everything stands where it stays, so nothing moves when the result comes in (the
                 // maintainer, 2026-10-26: "Once the Motor is started all of this should be on screen all the time")
-                renderFlexGrowContent { renderRun(current as? StateBenchmarkComplete) }
+                renderRun(current as? StateBenchmarkComplete)
             }
         }
     }
 
+    /** Where the title's plate ends on the screen, in px from the top: the gauges and the key stand under it. */
+    private fun plateBottomPx(): Double {
+        val screenHeight = window.innerHeight.toDouble()
+
+        return MotorBackground.titlePlateBottomShare(screenHeight) * screenHeight
+    }
+
     /**
-     * The key in a layer of its own, centred over the page: one element from OFF through ON to START, so it turns
-     * rather than being redrawn, and it fades out over the run while that fades in (the maintainer, 2026-10-26).
+     * The key in a layer of its own over the page: one element from OFF through ON to START, so it turns rather than
+     * being redrawn, and it fades out while it stands at START, before the run fades in (the maintainer, 2026-10-26:
+     * "fade the button out earlier"). Its cap stands where the heat gauge comes, the same size: under the title's
+     * plate, clear of it (the maintainer: the key's "ON" collided with the plate), and the gauge takes its place.
      */
     private fun DIV.renderKeyLayer() {
         val current = state
@@ -534,7 +587,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
             return
         }
 
-        val fading = current is StateBenchmarking && current.showsDyno()
+        val fading = current is StateBenchmarking && current.keyFades()
 
         div {
             key = "key-layer"
@@ -542,9 +595,14 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 position = Position.absolute
                 put("inset", "0")
                 display = Display.flex
-                alignItems = Align.center
+                alignItems = Align.flexStart
                 justifyContent = JustifyContent.center
-                opacity = if (fading) 1.0 - currentOpacity else 1.0
+
+                // The cap's centre on the heat gauge's centre, the gauges' row starting the gap under the plate
+                val gaugeCentre = plateBottomPx() + RUN_GAP_PX + DYNO_MIDDLE_PX / 2.0
+
+                paddingTop = (gaugeCentre - KEY_PX * KlangIgnition.CAP_CENTRE_FROM_TOP).coerceAtLeast(0.0).px
+                opacity = if (current is StateBenchmarking && fading) current.keyOpacity() else 1.0
 
                 if (fading) {
                     pointerEvents = PointerEvents.none
@@ -552,21 +610,6 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
             }
 
             renderKey(current)
-        }
-    }
-
-    private fun DIV.renderFlexGrowContent(content: DIV.() -> Unit) {
-        div {
-            css {
-                flexGrow = 1.0
-                display = Display.flex
-                flexDirection = FlexDirection.column
-                alignItems = Align.center
-                justifyContent = JustifyContent.center
-                width = 100.pct
-            }
-
-            content()
         }
     }
 
@@ -638,7 +681,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
             div {
                 css {
-                    marginTop = 24.px
+                    marginTop = RUN_GAP_PX.px
                     width = 100.pct
                     textAlign = TextAlign.left
                 }
@@ -666,10 +709,10 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                             div {
                                 css { flexGrow = 1.0 }
 
-                                if (rating == null) {
+                                if (rating == null || complete == null) {
                                     renderRounds()
                                 } else {
-                                    renderTier(rating)
+                                    renderTier(rating = rating, voices = complete.result.maxSafeVoices)
                                 }
                             }
 
@@ -679,29 +722,50 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
                     div(classes = styles.dialogKeys.toString()) {
                         div(classes = styles.dialogKey.toString()) {
-                            // The light swells only over a key that can be pressed
-                            if (complete != null) {
-                                onMouseEnter { motorBackgroundRef { it.hoverStart() } }
-                                onMouseLeave { motorBackgroundRef { it.hoverEnd() } }
-                            }
-
-                            KlangButton(
-                                onClick = { complete?.go() },
-                                finish = KlangFinish.Silver,
-                                availability = if (complete != null) {
-                                    KlangButton.Availability.Enabled
-                                } else {
-                                    KlangButton.Availability.Disabled
-                                },
-                                beacon = complete != null,
-                            ) {
-                                // The page's one way on: bigger than a dialog's key (the maintainer, 2026-10-26)
+                            div {
                                 css {
-                                    put("min-height", "46px")
-                                    fontSize = 18.px
+                                    display = Display.flex
+                                    flexDirection = FlexDirection.column
                                 }
 
-                                +"Make Music Now"
+                                // The light swells only over a key that can be pressed, and not over the checkbox under it
+                                if (complete != null) {
+                                    onMouseEnter { motorBackgroundRef { it.hoverStart() } }
+                                    onMouseLeave { motorBackgroundRef { it.hoverEnd() } }
+                                }
+
+                                KlangButton(
+                                    onClick = { complete?.go() },
+                                    finish = KlangFinish.Silver,
+                                    availability = if (complete != null) {
+                                        KlangButton.Availability.Enabled
+                                    } else {
+                                        KlangButton.Availability.Disabled
+                                    },
+                                    beacon = complete != null,
+                                ) {
+                                    // The page's one way on: bigger than a dialog's key (the maintainer, 2026-10-26)
+                                    css {
+                                        put("min-height", "46px")
+                                        fontSize = 18.px
+                                    }
+
+                                    +"Make Music Now"
+                                }
+                            }
+
+                            div {
+                                css {
+                                    display = Display.flex
+                                    justifyContent = JustifyContent.center
+                                    marginTop = 10.px
+                                }
+
+                                KlangCheckbox(
+                                    label = "Enter fullscreen",
+                                    checked = enterFullscreen,
+                                    onChange = { enterFullscreen = it },
+                                )
                             }
                         }
                     }
@@ -792,7 +856,30 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
     }
 
     /** When the test is done: the tier's message, and a warning below the tiers that carry a song. */
-    private fun DIV.renderTier(rating: PerformanceRating) {
+    /** What the run found, in words: one supersaw, one cylinder, in the singular; none, plainly. */
+    private fun runsLine(voices: Int): String {
+        val cylinders = KlangBenchmark.cylindersOf(voices)
+
+        return when (voices) {
+            0 -> "Your Motor found no supersaw it could run."
+            else -> "Your Motor runs $voices ${if (voices == 1) "supersaw" else "supersaws"} " +
+                    "on $cylinders ${if (cylinders == 1) "cylinder" else "cylinders"}."
+        }
+    }
+
+    private fun DIV.renderTier(rating: PerformanceRating, voices: Int) {
+        // What the run found, in the Motor's words, before what it means (the maintainer: "You have 299 supersaws in 16
+        // cylinders" or similar); the run's voices are supersaws, each cylinder with its reverb
+        div {
+            css {
+                marginBottom = 6.px
+                fontSize = 13.px
+                color = Color("var(--kl-ink-label)")
+            }
+
+            +runsLine(voices)
+        }
+
         div {
             css {
                 fontSize = 16.px

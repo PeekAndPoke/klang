@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.layouts
 
+import io.peekandpoke.klang.KlangGuiDance
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.comp.FullscreenToggleButton
 import io.peekandpoke.klang.comp.Motoer
@@ -20,6 +21,7 @@ import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.routing.Router.Companion.router
+import io.peekandpoke.kraft.routing.Static
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
@@ -59,6 +61,9 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
     private val pageColumn by subscribingTo(WorkbenchSlots.column)
     private val pageTools by subscribingTo(WorkbenchSlots.tools)
 
+    /** The Gui-dance's lit step: the drawer lights "Songs" when it is (KLANG-00350). */
+    private val guiDanceLit by subscribingTo(KlangGuiDance.dance.lit)
+
     /** What the drawer's search field holds; the search window's step gives it results. */
     private var query: String by value("")
 
@@ -72,22 +77,24 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
                 KlangDrawer.Entry(id = "account", label = "Account", sub = "With the backend", later = true),
             )
 
+    /** Where a drawer entry leads: the area's own page; null for no area. */
+    private fun landing(area: AppArea): Static? = when (area) {
+        AppArea.Songs -> Nav.songs
+        AppArea.Learn -> Nav.tutorials
+        AppArea.Docs -> Nav.manuals
+        AppArea.Samples -> Nav.samplesLibrary
+        AppArea.Midi -> Nav.midiPlayground
+        AppArea.Resources -> Nav.resources
+        AppArea.Credits -> Nav.credits
+        AppArea.DevStatus -> Nav.devStatus
+        AppArea.Other -> null
+    }
+
     private fun go(id: String) {
         val area = AppArea.entries.firstOrNull { it.name == id } ?: return
+        val route = landing(area) ?: return
 
-        val uri = when (area) {
-            AppArea.Songs -> Nav.songs()
-            AppArea.Learn -> Nav.tutorials()
-            AppArea.Docs -> Nav.manuals()
-            AppArea.Samples -> Nav.samplesLibrary()
-            AppArea.Midi -> Nav.midiPlayground()
-            AppArea.Resources -> Nav.resources()
-            AppArea.Credits -> Nav.credits()
-            AppArea.DevStatus -> Nav.devStatus()
-            AppArea.Other -> return
-        }
-
-        router.navToUri(uri)
+        router.navToUri(route())
     }
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -124,11 +131,19 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
                     KlangDrawer(
                         title = "Where to",
                         entries = entries,
-                        current = area.name.takeIf { area != AppArea.Other },
+                        // Pressed only on the area's own page: on a song the Songs entry stays up, as it still
+                        // leads somewhere, and a pressed-looking key reads as one that cannot be pressed (the
+                        // maintainer, 2026-10-26)
+                        current = area.name.takeIf { landing(area) == currentRoute.route },
                         onPick = { id ->
+                            if (id == AppArea.Songs.name) {
+                                KlangGuiDance.dance.used(KlangGuiDance.DRAWER_SONGS)
+                            }
+
                             close()
                             go(id)
                         },
+                        beacon = AppArea.Songs.name.takeIf { guiDanceLit == KlangGuiDance.DRAWER_SONGS },
                         onClose = close,
                         closeOnEsc = true,
                         search = {

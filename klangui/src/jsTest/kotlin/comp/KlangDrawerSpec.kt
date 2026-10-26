@@ -53,6 +53,14 @@ class KlangDrawerSpec : StringSpec({
         }
     }
 
+    "the destination the trail lights carries the beacon, and only it (KLANG-00350)" {
+        TestBed.preact(view = { KlangDrawer(title = "t", entries = entries, current = null, onPick = {}, beacon = "learn") }) { root ->
+            val beacon = KlangControlStyles.beacon.toString()
+
+            tiles(root.single()).map { beacon in (it.getAttribute("class") ?: "") } shouldContainExactly listOf(false, true, false)
+        }
+    }
+
     "a press picks the destination; one that is not there yet picks nothing" {
         val picked = mutableListOf<String>()
 

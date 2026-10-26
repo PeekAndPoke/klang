@@ -227,6 +227,10 @@ Looking good thanks to:
   interface
 - **[CommonMark](https://github.com/commonmark/commonmark-java)** / **[Marked](https://marked.js.org)** — markdown
   rendering (JVM / JS)
+- **John M. Carroll's training wheels and minimalist instruction**: the first-visit trail (the Gui-dance) lights one
+  thing to try at a time and keeps the rest quiet, after *"Training Wheels in a User Interface"* (John M. Carroll and
+  Caroline Carrithers, Communications of the ACM, 1984) and *The Nurnberg Funnel: Designing Minimalist Instruction for
+  Practical Computer Skill* (John M. Carroll, MIT Press, 1990)
 
 ## Kraft & Ultra
 

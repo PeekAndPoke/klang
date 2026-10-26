@@ -13,6 +13,7 @@ import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangCaption
 import io.peekandpoke.klang.ui.comp.KlangCard
+import io.peekandpoke.klang.ui.comp.KlangCheckbox
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.klang.ui.comp.KlangDialog
 import io.peekandpoke.klang.ui.comp.KlangDrawer
@@ -26,6 +27,7 @@ import io.peekandpoke.klang.ui.comp.KlangLookPicker
 import io.peekandpoke.klang.ui.comp.KlangMenu
 import io.peekandpoke.klang.ui.comp.KlangMenuButton
 import io.peekandpoke.klang.ui.comp.KlangPanel
+import io.peekandpoke.klang.ui.comp.KlangScreen
 import io.peekandpoke.klang.ui.comp.KlangSearchField
 import io.peekandpoke.klang.ui.comp.KlangSpinner
 import io.peekandpoke.klang.ui.comp.KlangSwatchButton
@@ -88,6 +90,7 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
     private var drawerAt: String by value("songs")
     private var query: String by value("")
     private var title: String by value("Final Synthasy VII Prelude")
+    private var checkedOn: Boolean by value(true)
     private var menuChoice: String by value("nothing yet")
     private var dialogChoice: String by value("nothing yet")
     private var pinned: Set<String> by value(setOf("pinned"))
@@ -567,6 +570,39 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
                 KlangTextField(label = "Song title", value = title, onInput = { title = it }, placeholder = "Song title")
 
                 p { +"Holds: $title" }
+            }
+
+            cell(name = "KlangCheckbox: sunk, checked silver", source = "klangui/comp/KlangCheckbox.kt") {
+                row {
+                    KlangCheckbox(label = "Enter fullscreen", checked = checkedOn, onChange = { checkedOn = it })
+                    KlangCheckbox(label = "Off", checked = false, onChange = {})
+                }
+            }
+
+            cell(name = "KlangScreen: a well with cut corners, small and large", source = "klangui/comp/KlangScreen.kt") {
+                row {
+                    for (size in KlangScreen.Size.entries) {
+                        div {
+                            css {
+                                put("display", "flex")
+                                put("flex-direction", "column")
+                                put("width", "220px")
+                                put("height", "${if (size == KlangScreen.Size.Small) 70 else 140}px")
+                            }
+
+                            KlangScreen(size = size, bezel = "var(--kl-ground-app)") {
+                                css {
+                                    put("padding", "8px 12px")
+                                    put("font-family", "monospace")
+                                    put("font-size", "12px")
+                                    put("color", "var(--kl-ink-text)")
+                                }
+
+                                +"sound(\"bd hh sd hh\")"
+                            }
+                        }
+                    }
+                }
             }
         }
     }

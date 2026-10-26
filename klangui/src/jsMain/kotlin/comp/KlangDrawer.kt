@@ -21,6 +21,7 @@ fun Tag.KlangDrawer(
     entries: List<KlangDrawer.Entry>,
     current: String?,
     onPick: (String) -> Unit,
+    beacon: String? = null,
     onClose: (() -> Unit)? = null,
     closeOnEsc: Boolean = false,
     search: (DIV.() -> Unit)? = null,
@@ -31,6 +32,7 @@ fun Tag.KlangDrawer(
         entries = entries,
         current = current,
         onPick = onPick,
+        beacon = beacon,
         onClose = onClose,
         closeOnEsc = closeOnEsc,
         search = search,
@@ -65,6 +67,8 @@ class KlangDrawer(ctx: Ctx<Props>) : Component<KlangDrawer.Props>(ctx) {
         /** The id of the destination the user is at; null for none. */
         val current: String?,
         val onPick: (String) -> Unit,
+        /** The id of the destination the first-visit trail lights, its "try me" (KLANG-00350); null for none. */
+        val beacon: String?,
         /** Shows a close button when given. */
         val onClose: (() -> Unit)?,
         /** Esc closes it, through the key manager, with its pill "Close: Esc" beside the close button ([KlangCloseKey]). */
@@ -107,6 +111,7 @@ class KlangDrawer(ctx: Ctx<Props>) : Component<KlangDrawer.Props>(ctx) {
                         shape = KlangButton.Shape.Tile,
                         current = isCurrent,
                         availability = if (entry.later) KlangButton.Availability.Later else KlangButton.Availability.Enabled,
+                        beacon = entry.id == props.beacon,
                         lamp = when {
                             entry.later -> null
                             isCurrent -> KlangLamp.State.On

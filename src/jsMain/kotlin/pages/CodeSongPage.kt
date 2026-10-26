@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.pages
 
 import io.peekandpoke.klang.BuiltInSongs
+import io.peekandpoke.klang.KlangGuiDance
 import io.peekandpoke.klang.comp.HelpWindow
 import io.peekandpoke.klang.comp.KlangCodeEditorComp
 import io.peekandpoke.klang.comp.KlangCodePlaybackCtrl
@@ -22,6 +23,7 @@ import io.peekandpoke.klang.ui.codemirror.BookmarkOptions
 import io.peekandpoke.klang.ui.codemirror.Bookmarks
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangFinish
+import io.peekandpoke.klang.ui.comp.KlangScreen
 import io.peekandpoke.klang.ui.comp.KlangSpinner
 import io.peekandpoke.klang.ui.comp.KlangValueKnob
 import io.peekandpoke.klang.ui.comp.KlangWorkbench
@@ -133,6 +135,9 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     )
 
     private val state by subscribingTo(ctrl.state)
+
+    /** The Gui-dance's lit step: Play wears its beacon when it is Play's (KLANG-00350). */
+    private val guiDanceLit by subscribingTo(KlangGuiDance.dance.lit)
     private val currentModals by subscribingTo(modals)
 
     private val codeEditorRef = ComponentRef.Tracker<KlangCodeEditorComp>()
@@ -191,6 +196,8 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     private fun onPlay() {
+        KlangGuiDance.dance.used(KlangGuiDance.SONG_PLAY)
+
         // Persist the current code before starting (matches original strategy of persist-on-play).
         songStorage.code(ctrl.state().code)
         ctrl.play()
@@ -238,14 +245,19 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         slotColumn = null
     }
 
+    /** Back to the built-in song's code, title and rpm; a playing song goes on, updated to the original (the maintainer). */
     private fun resetToOriginal() {
         builtIn?.let { b ->
-            ctrl.stop()
             ctrl.setCode(b.code)
             ctrl.setRpm(b.rpm)
             ctrl.setTitle(b.title)
             songStorage.code(b.code)
             codeEditorRef { it.setCode(b.code) }
+
+            // As the Update key does: the playback takes the original's code and keeps going
+            if (ctrl.state().isPlaying) {
+                ctrl.play()
+            }
         }
     }
 
@@ -259,7 +271,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                 headline = "Back to the original?",
                 content = {
                     +"Your changes to \"${original.title}\" are lost: the code, the title and the tempo go back to the "
-                    +"original, and the playback stops."
+                    +"original. A playing song keeps playing, with the original."
                 },
                 yesText = "Back to the original",
                 noText = "Keep my changes",
@@ -315,12 +327,16 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                     // height: the header stays pinned and only the editor
                     // wrapper scrolls internally.
                     minHeight = 0.px
+                    // One panel: the transport bar and the bezel round the editor's screen
+                    put("background", "var(--kl-ground-deep)")
                 }
+
                 renderTransportBar()
 
-                // Outer FRAME: carries the accent strips, corner radius
-                // and black surface. It does NOT scroll, so scrolled editor
-                // content can never paint over the frame lines.
+                // The editor as a screen set into the machine, the panel's ground a bezel round it, as the LCD and the
+                // fields are wells in the panel (the maintainer, 2026-10-26: a line across the screen "cut through the
+                // entire picture", and without it "it looks too much like a code editor"; its cut corners "obvious but
+                // not too obvious", then smaller, no rivets). None of it scrolls; the editor scrolls itself.
                 div {
                     key = "dashboard-form-code"
                     css {
@@ -328,50 +344,27 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                         minHeight = 0.px
                         display = Display.flex
                         flexDirection = FlexDirection.column
-                        // Accent frame — drawn as 1px background gradient strips
-                        // instead of real borders, so each line can fade
-                        // independently AND follow the rounded corner:
-                        //  · top line fades to 33% alpha over its last 20% of width
-                        //  · left line fades to 33% alpha over its last third of height
-                        // The 1px paddings keep the scroller off the strips.
-                        put("border-top-left-radius", "3px")
-                        put("padding-top", "1px")
-                        put("padding-left", "1px")
-                        // The colour is the look's muted accent (KLANG-00349; the maintainer: it "should match a color
-                        // from the selected theme"); no glow, which lit up the transport bar
-                        val line = "var(--kl-accent-muted)"
-                        val faded = "color-mix(in srgb, var(--kl-accent-muted) 33%, transparent)"
-
-                        put(
-                            "background-image",
-                            "linear-gradient(to right, $line 0%, $line 80%, $faded 100%)," +
-                                    " linear-gradient(to bottom, $line 0%, $line 66%, $faded 100%)"
-                        )
-                        put("background-repeat", "no-repeat")
-                        put("background-size", "100% 1px, 1px 100%")
-                        // Black like the editor surface — otherwise any sub-pixel
-                        // gap between the frame and the editor shows page chrome
-                        put("background-color", "#000000")
+                        put("margin", "0 10px 10px")
                     }
 
-                    // Inner CLIP — clips the editor content just inside the
-                    // frame; its small radius hugs the outer curve. The editor
-                    // fills it and scrolls itself, which the minimap needs
-                    // (`klang-editor-fill` in klang.css passes the height down).
-                    div("klang-editor-fill") {
-                        key = "dashboard-form-code-scroll"
-                        css {
-                            flex = Flex(1.0, 1.0, FlexBasis.auto)
-                            minHeight = 0.px
-                            overflowY = Overflow.hidden
-                            overflowX = Overflow.hidden
-                            display = Display.flex
-                            flexDirection = FlexDirection.column
-                            paddingLeft = 12.px
-                            put("border-top-left-radius", "2px")
-                        }
+                    KlangScreen(size = KlangScreen.Size.Large, surface = "#000000") {
+                        // Inner CLIP: clips the editor content to the screen. The editor
+                        // fills it and scrolls itself, which the minimap needs
+                        // (`klang-editor-fill` in klang.css passes the height down).
+                        div("klang-editor-fill") {
+                            key = "dashboard-form-code-scroll"
+                            css {
+                                flex = Flex(1.0, 1.0, FlexBasis.auto)
+                                minHeight = 0.px
+                                overflowY = Overflow.hidden
+                                overflowX = Overflow.hidden
+                                display = Display.flex
+                                flexDirection = FlexDirection.column
+                                paddingLeft = 12.px
+                            }
 
-                        renderEditor()
+                            renderEditor()
+                        }
                     }
                 }
             }
@@ -391,9 +384,8 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                 put("gap", "12px")
                 put("flex-shrink", "0")
                 put("padding", "10px 14px")
-                // The column's and the strip's ground, so the bar reads as part of the bench around the editor
+                // The column's and the strip's ground, one panel with the bezel round the editor's screen
                 put("background", "var(--kl-ground-deep)")
-                put("border-bottom", "1px solid var(--kl-edge)")
             }
 
             renderPlayButton()
@@ -402,13 +394,14 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                 onClick = { ctrl.stop() },
                 finish = KlangFinish.Silver,
                 surface = KlangButton.Surface.Flat,
-                shape = KlangButton.Shape.Round,
+                // A pill with its word, as Play (the maintainer)
+                shape = KlangButton.Shape.Pill,
                 availability = if (state.isPlaying) KlangButton.Availability.Enabled else KlangButton.Availability.Disabled,
-                ariaLabel = "Stop",
             ) {
                 OnKey(KlangKeyBindings.Stop, enabled = state.isPlaying, showHint = state.isPlaying) { ctrl.stop() }
                 title = "Stop playback"
                 icon.stop()
+                +"Stop"
             }
 
             LcdDisplay(value = state.currentCycle, digits = 4, dim = !state.isPlaying)
@@ -438,6 +431,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
             surface = KlangButton.Surface.Flat,
             shape = KlangButton.Shape.Pill,
             availability = if (enabled) KlangButton.Availability.Enabled else KlangButton.Availability.Disabled,
+            beacon = guiDanceLit == KlangGuiDance.SONG_PLAY,
         ) {
             OnKey(action = KlangKeyBindings.PlayOrUpdate, enabled = enabled, showHint = enabled) { onPlay() }
 
