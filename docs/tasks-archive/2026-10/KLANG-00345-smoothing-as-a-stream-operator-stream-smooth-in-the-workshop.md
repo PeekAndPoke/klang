@@ -1,8 +1,6 @@
 # KLANG-00345: Smoothing as a stream operator: Stream.smooth() in the workshop, the Motor's gauges on it
 
-> **Status (2026-10-26): IN PROGRESS.** The maintainer: "I was thinking we might have a Stream node .smooth() that
-> handles the smoothing"; "Can you try it out locally, in the workbench [the workshop] and when it works we move it to
-> ultra?"
+> **Status (2026-10-26): DONE.** Ultra 0.116.0 carries smooth(); the workshop copy is gone (53c0053b)
 >
 > **Part of:** KLANG-00334 (UI workbench: the Motor-centred layout, tool windows and the first-visit trail)
 
@@ -78,3 +76,8 @@ spectrum's columns, the start page's dyno run), testable with a clock driven by 
   from Klang's commit and keeps the signature `smooth(sharePer10Ms, rest, near, clock)`, so moving to it is an import.
 - 2026-10-26: waiting for Ultra v0.116.0 (the maintainer: "We are waiting for ultra v0.116.0 and then we can adopt
   it's .smooth() function and clean up ours"): then the import moves to Ultra's and `workshop/streams` goes.
+- 2026-10-26: Ultra 0.116.0 in (Klang-Main-Dev, 53c0053b): the Motor's gauges import `smooth` from
+  `io.peekandpoke.ultra.streams.ops` with Ultra's default clock, the workshop's `smooth`, `FrameClock` and `SmoothSpec`
+  are gone (Ultra ported the 15 rows). The app's browser tests green on it; `KlangGauge`'s KDoc and `/kraft-knowhow`
+  name Ultra's `smooth()` now. Done.
+- 2026-10-26: DONE. Ultra 0.116.0 carries smooth(); the workshop copy is gone (53c0053b)

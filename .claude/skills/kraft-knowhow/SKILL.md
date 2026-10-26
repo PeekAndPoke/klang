@@ -167,7 +167,8 @@ kraftApp {
 - **A number that feeds kept state** (KLANG-00338, 2026-10-25): whatever keeps state derived from a number (a smoothed
   needle, an accumulator) treats a NaN or an infinity as no value at all, so one bad reading cannot latch the state
   for good. The audio engine's rule for cached configs, on the UI. Smoothing now lives in a stream, not in the view:
-  the workshop's `smooth()` (KLANG-00345, bound for Ultra) passes a non-finite value as `null`.
+  Ultra's `smooth()` (`io.peekandpoke.ultra.streams.ops`, since Ultra 0.116.0; born in Klang's workshop, KLANG-00345)
+  passes a non-finite value as `null`.
 - **A stream read before anyone subscribes may not have its value yet** (KLANG-00345, 2026-10-26): Ultra's filtered
   and mapped streams compute their value from their source, and a filter reads `null` until it is subscribed. An
   operator that keeps state decides on the first value of a subscription (`smooth()`'s `settledIn`), never on what it

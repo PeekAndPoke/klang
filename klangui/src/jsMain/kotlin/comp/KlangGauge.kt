@@ -54,8 +54,8 @@ fun Tag.KlangGauge(
  *
  * Without a value the gauge is offline: no glow, the needle at rest, the mark dim. With one it glows. With one at or
  * past [Props.hotFrom] it is hot: the arc and the glow turn critical. Screen readers hear a `meter` with the value.
- * It draws the value it gets: a caller who wants a needle that glides smooths the stream first (`smooth()` in the
- * workshop, KLANG-00345). Canvas section "Gauges".
+ * It draws the value it gets: a caller who wants a needle that glides smooths the stream first (Ultra's `smooth()`,
+ * KLANG-00345). Canvas section "Gauges".
  */
 class KlangGauge(ctx: Ctx<Props>) : Component<KlangGauge.Props>(ctx) {
 
