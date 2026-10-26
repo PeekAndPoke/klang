@@ -80,11 +80,12 @@ enum class KlangRole(
     LampOff(cssVar = "--kl-lamp-off", kind = Kind.Color, default = "#3a3220"),
 
     /**
-     * A lamp that is on: this thing is active or selected (a lit lamp, the pressed toggle, the open Motor button). Each
-     * look gives it the light of its metal (the maintainer, 2026-10-26: "Each look's metal, all three"; blue until
-     * then): a silver-white here, bronze in copper, cream in cream.
+     * A lamp that is on: this thing is active or selected (a lit lamp, the pressed toggle, the open Motor button). A blue,
+     * tuned to each look's metal (the maintainer, 2026-10-26: "The earlier blue was ok, but the blue-nes must be
+     * adjusted per theme to match color-theoretically better"): here the accent blue, beside the nearly neutral silver;
+     * a look with a warm metal takes the blue opposite its metal's hue (copper: azure, cream: a soft periwinkle).
      */
-    LampOn(cssVar = "--kl-lamp-on", kind = Kind.Color, default = "#e4e8ee"),
+    LampOn(cssVar = "--kl-lamp-on", kind = Kind.Color, default = "#528bff"),
 
     /** "Try me": the one colour of the first-visit trail, used for nothing else. */
     LampTry(cssVar = "--kl-lamp-try", kind = Kind.Color, default = "#EBC773"),

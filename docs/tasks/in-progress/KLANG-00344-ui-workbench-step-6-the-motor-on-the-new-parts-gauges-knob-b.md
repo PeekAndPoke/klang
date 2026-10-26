@@ -61,7 +61,8 @@ oscilloscope in blue (a theme role) and more spectrum columns.
   `MetalMid` (material, as the rims; it read `AccentMuted` before, which copper happened to set); the open Motor
   button stays a signal (`LampOn`, selected), and the copper look gives `LampOn` a bronze, `#e8b28a`, lighter than the
   warning's copper (`#d19a66`) so the two stay apart. The rule behind it is in KLANG-00334 item 42. Then all three
-  looks: "selected" takes each look's metal light (Default `#e4e8ee`, Cream `#f2e3bb`), "selected is blue" retired.
+  looks took their metal's light for "selected"; "a bit too plain", and "the blue-nes must be adjusted per theme": a
+  blue per look, opposite its metal's hue (Default `#528bff`, Copper `#4fa3d9`, Cream `#8099d6`; KLANG-00334 item 42).
 - **Alt+V** is wired (Klang-Main-Dev's `VolumeFocus`, 70770094): it puts the focus on the knob. To hand-test on
   Windows Firefox, where Alt+V is the View menu's key (Klang-Main-Dev's note).
 - **The oscilloscope cleaned up** (the maintainer: "remove the thing where it goes full width on click ... no longer

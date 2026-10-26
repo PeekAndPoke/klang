@@ -86,7 +86,7 @@ Kept in order, close to the maintainer's words.
     means "try me" only); that is signal enough.
 35. (2026-10-25) Selected is blue: "down here everything is nice and blue except for the gauges". The open Motor
     button's dots and the active drawer item's lamp are blue on the canvas; `KlangRole.LampOn` defaults to the accent
-    blue (was green). Retired 2026-10-26: each look's "selected" takes the light of its metal (item 42).
+    blue (was green). Since 2026-10-26 a blue tuned to each look's metal (item 42).
 36. (2026-10-25) Likes the canvas's oscilloscope in blue (today white, `Oscilloscope.strokeColor`) and the spectrum
     with more columns (28 on the canvas, today 16, `Spectrumeter.numBuckets`). For the step that switches the Motor
     over: the trace's colour as a role, the column count raised.
@@ -140,8 +140,12 @@ Kept in order, close to the maintainer's words.
     own colour (copper's `LampOn` bronze). `AccentMuted` is then left to the old app's styles, to go when they move
     to the roles. KLANG-00344. Then (the maintainer, on copper: "I think it looks great. Now the two other themes";
     "Each look's metal, all three"): "selected" (`LampOn`) takes the light of each look's metal, a silver-white in
-    Default (`#e4e8ee`), cream in Cream (`#f2e3bb`), bronze in Copper (`#e8b28a`); item 35's blue is retired, and item
-    36's blue trace became the metal's colour.
+    Default (`#e4e8ee`), cream in Cream (`#f2e3bb`), bronze in Copper (`#e8b28a`); item 36's blue trace became the
+    metal's colour. Then, the same day: "i meant a different color that fits well to the main metal color. The
+    earlier blue was ok, but the blue-nes must be adjusted per theme to match color-theoretically better": "selected"
+    is a blue again, tuned to each metal: Default keeps the accent blue (`#528bff`, beside the nearly neutral silver),
+    Copper the azure opposite its hue (`#4fa3d9`, about 204 against 25), Cream a soft periwinkle (`#8099d6`, about 223
+    against 44). Item 35's blue holds, adjusted per look.
 
 ## Where the conversation stands (leanings, not decisions)
 

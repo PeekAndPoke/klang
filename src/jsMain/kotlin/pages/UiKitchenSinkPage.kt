@@ -189,14 +189,14 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
         "Light silver" to "#f2f4f7",
     )
 
-    /** Candidates for "selected" (`LampOn`): beside each look's metal, apart from gold (try me), warning and critical. */
+    /** Candidates for "selected" (`LampOn`): blues, from cool to warm, to tune against each look's metal. */
     private val selectedCandidates = listOf(
-        "Cyan" to "#56b6c2",
-        "Verdigris" to "#4fb3a0",
-        "Sage" to "#9cbf86",
-        "Blue" to "#528bff",
-        "Teal" to "#3fa7a0",
-        "Mint" to "#8fd1b8",
+        "Accent blue" to "#528bff",
+        "Azure" to "#4fa3d9",
+        "Sky" to "#6cb2e6",
+        "Steel" to "#5f8fc4",
+        "Periwinkle" to "#8099d6",
+        "Denim" to "#4f6fb8",
     )
 
     /** Tries [hex] for [role] on the look's Script layer (not saved), next to what the other experiments set there. */

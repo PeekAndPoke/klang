@@ -22,8 +22,8 @@ object KlangLooks {
             KlangRole.MetalDark to "#7a4a2c",
             KlangRole.MetalInk to "#1a0d05",
             KlangRole.AccentMuted to "#b0764c",
-            // Selected in the metal's light, bronze; lighter than the warning's copper (#d19a66), so the two stay apart
-            KlangRole.LampOn to "#e8b28a",
+            // Selected in the blue opposite the copper (hue about 25, the azure about 204): warm and cold, a classic pair
+            KlangRole.LampOn to "#4fa3d9",
         ),
     )
 
@@ -40,8 +40,8 @@ object KlangLooks {
             KlangRole.MetalLight to "#fbf3dd",
             KlangRole.MetalMid to "#e3d5b0",
             KlangRole.MetalDark to "#a08f66",
-            // Selected in the metal's light, cream
-            KlangRole.LampOn to "#f2e3bb",
+            // Selected in the blue opposite the cream (hue about 44, the periwinkle about 223), muted as the cream is soft
+            KlangRole.LampOn to "#8099d6",
         ),
     )
 
