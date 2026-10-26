@@ -56,7 +56,7 @@ external class Tree {
     val type: NodeType
 
     fun cursor(mode: Int = definedExternally): TreeCursor
-    fun topNode(): SyntaxNode
+    val topNode: SyntaxNode
     fun resolve(pos: Int, side: Int = definedExternally): SyntaxNode
 }
 
@@ -82,13 +82,15 @@ external interface SyntaxNode {
 
     fun resolve(pos: Int, side: Int = definedExternally): SyntaxNode
     fun cursor(mode: Int = definedExternally): TreeCursor
-    fun firstChild(): SyntaxNode?
-    fun lastChild(): SyntaxNode?
+    // Getters in Lezer, not functions
+    val firstChild: SyntaxNode?
+    val lastChild: SyntaxNode?
+    val parent: SyntaxNode?
+    val nextSibling: SyntaxNode?
+    val prevSibling: SyntaxNode?
+
     fun childAfter(pos: Int): SyntaxNode?
     fun childBefore(pos: Int): SyntaxNode?
-    fun parent(): SyntaxNode?
-    fun nextSibling(): SyntaxNode?
-    fun prevSibling(): SyntaxNode?
 }
 
 /**

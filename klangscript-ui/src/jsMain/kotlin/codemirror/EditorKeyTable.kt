@@ -77,6 +77,12 @@ import org.w3c.dom.events.KeyboardEvent
  */
 object EditorKeyTable {
 
+    /**
+     * Does nothing and keeps the key: a key the table owns in the editor, also where nothing answers it. Before
+     * [commands], which uses it: an object's properties start in order.
+     */
+    private val nothing: Command = { true }
+
     /** The commands of the table's actions that CodeMirror brings, by action id; an extension adds its own. */
     val commands: Map<String, List<Command>> = with(KlangEditorKeyBindings) {
         mapOf(
@@ -113,6 +119,10 @@ object EditorKeyTable {
             NextProblem to listOf(nextDiagnostic),
             PreviousProblem to listOf(previousDiagnostic),
             TabMovesFocus to listOf(toggleTabFocusMode),
+            // The DSL extension's commands take these over where it knows the names; elsewhere (the REPL, the MIDI
+            // playground) the keys still never reach the browser (Firefox's bookmarks on Ctrl+B)
+            GoToDefinition to listOf(nothing),
+            QuickDocumentation to listOf(nothing),
         ).mapKeys { (action, _) -> action.id }
     }
 

@@ -62,9 +62,13 @@ external class EditorState {
     val doc: Text
     val selection: EditorSelection
 
+    /** True when the editor does not take changes from the user's commands (CodeMirror's `readOnly` facet). */
+    val readOnly: Boolean
+
     fun update(vararg specs: TransactionSpec): Transaction
     fun replaceSelection(text: String): Transaction
-    fun changeByRange(f: (range: SelectionRange) -> dynamic): Transaction
+    /** A transaction spec (changes, selection, effects) from [f]'s change and new range for each range. */
+    fun changeByRange(f: (range: SelectionRange) -> dynamic): dynamic
 
     fun field(field: StateField<*>): Any?
 

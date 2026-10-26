@@ -12,6 +12,7 @@ import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.codemirror.ext.Command
 import io.peekandpoke.klang.codemirror.ext.Completion
+import io.peekandpoke.klang.codemirror.ext.EditorSelection
 import io.peekandpoke.klang.codemirror.ext.EditorState
 import io.peekandpoke.klang.codemirror.ext.EditorStateConfig
 import io.peekandpoke.klang.codemirror.ext.EditorView
@@ -116,9 +117,8 @@ class EditorKeyTableSpec : StringSpec({
         val bookmarks = BookmarksExtension.commands(BookmarkOptions(initial = emptyList(), onChanged = {}, askToMove = { _, _ -> }))
         val all = EditorKeyTable.commands + EditPlacesExtension.commands + bookmarks
 
-        withClue("actions without a command: only those the DSL extension brings, which knows the names") {
-            KlangEditorKeyBindings.actions.map { it.id }.filterNot { it in all } shouldContainExactly
-                listOf(KlangEditorKeyBindings.GoToDefinition.id, KlangEditorKeyBindings.QuickDocumentation.id)
+        withClue("actions without a command") {
+            KlangEditorKeyBindings.actions.map { it.id }.filterNot { it in all }.shouldBeEmpty()
         }
 
         withClue("commands that are not functions: an import from the wrong package is undefined") {
@@ -297,6 +297,64 @@ class EditorKeyTableSpec : StringSpec({
 
             withClue("abc selected: wrapped") { view.state.doc.toString() shouldBe "/**//* abc */" }
         }
+
+        withEditor(doc = "x", extra = listOf(javascript().unsafeCast<Extension>())) { view ->
+            repeat(2) { view.press(key = "?", code = "Slash", ctrl = true, shift = true) }
+
+            withClue("pressed twice: the empty comment taken back") {
+                view.state.doc.toString() shouldBe "x"
+                view.state.selection.main.head shouldBe 0
+            }
+        }
+
+        withEditor(doc = "/* a b */ c", extra = listOf(javascript().unsafeCast<Extension>())) { view ->
+            view.dispatch(view.state.update(jsObject { this.selection = jsObject<dynamic> { this.anchor = 4 } }))
+            view.press(key = "?", code = "Slash", ctrl = true, shift = true)
+
+            withClue("inside a comment: unwrapped, never nested, the cursor on its letter") {
+                view.state.doc.toString() shouldBe "a b c"
+                view.state.selection.main.head shouldBe 1
+            }
+        }
+
+        val js = listOf(javascript().unsafeCast<Extension>())
+
+        withEditor(doc = "a /* open", extra = js) { view ->
+            view.dispatch(view.state.update(jsObject { this.selection = jsObject<dynamic> { this.anchor = 6 } }))
+            view.press(key = "?", code = "Slash", ctrl = true, shift = true)
+
+            withClue("inside an unclosed comment: its opening goes, the document's end stays") {
+                view.state.doc.toString() shouldBe "a open"
+                view.state.selection.main.head shouldBe 3
+            }
+        }
+
+        withEditor(doc = "/** doc */ x", extra = js) { view ->
+            view.dispatch(view.state.update(jsObject { this.selection = jsObject<dynamic> { this.anchor = 5 } }))
+            view.press(key = "?", code = "Slash", ctrl = true, shift = true)
+
+            withClue("inside a doc comment: its second star goes too") { view.state.doc.toString() shouldBe "doc x" }
+        }
+
+        withEditor(doc = "x abc", extra = js) { view ->
+            view.dispatch(
+                view.state.update(
+                    jsObject {
+                        this.selection = EditorSelection.create(
+                            ranges = arrayOf(EditorSelection.cursor(0), EditorSelection.range(anchor = 2, head = 5)),
+                        )
+                    }
+                )
+            )
+            view.press(key = "?", code = "Slash", ctrl = true, shift = true)
+            val once = view.state.doc.toString()
+            view.press(key = "?", code = "Slash", ctrl = true, shift = true)
+
+            withClue("a cursor and selected text: commented, then both taken back") {
+                once shouldBe "/**/x /* abc */"
+                view.state.doc.toString() shouldBe "x abc"
+            }
+        }
     }
 
     "unselect last occurrence takes back the newest of select next occurrence, also after the search wrapped round" {
@@ -321,6 +379,34 @@ class EditorKeyTableSpec : StringSpec({
                 view.state.selection.ranges.map { it.from } shouldContainExactly listOf(2, 4)
                 view.state.selection.main.from shouldBe 2
             }
+        }
+    }
+
+    "unselect last occurrence after cursors added above takes them back from the newest, the first one stays" {
+        withEditor(doc = "a\nb\nc") { view ->
+            view.dispatch(view.state.update(jsObject { this.selection = jsObject<dynamic> { this.anchor = 4 } }))
+            repeat(2) { view.press(key = "ArrowUp", code = "ArrowUp", ctrl = true, alt = true) }
+            repeat(2) { view.press(key = "J", code = "KeyJ", alt = true, shift = true) }
+
+            view.state.selection.ranges.map { it.head } shouldContainExactly listOf(4)
+        }
+    }
+
+    "Ctrl+B and Ctrl+Q never reach the browser, also in an editor without the DSL's commands" {
+        withEditor(doc = "x") { view ->
+            view.press(key = "b", code = "KeyB", ctrl = true).defaultPrevented shouldBe true
+            view.press(key = "q", code = "KeyQ", ctrl = true).defaultPrevented shouldBe true
+        }
+    }
+
+    "unselect last occurrence after a cursor added below takes that cursor, not the first one" {
+        withEditor(doc = "one\ntwo") { view ->
+            view.press(key = "ArrowDown", code = "ArrowDown", ctrl = true, alt = true)
+            view.state.selection.ranges.size shouldBe 2
+
+            view.press(key = "J", code = "KeyJ", alt = true, shift = true)
+
+            view.state.selection.ranges.map { it.head } shouldContainExactly listOf(0)
         }
     }
 
@@ -368,6 +454,11 @@ class EditorKeyTableSpec : StringSpec({
             clickAt(pos = 4, alt = true, shift = true)
             withClue("Alt+Shift+click: a second cursor") {
                 view.state.selection.ranges.map { it.head }.sorted() shouldContainExactly listOf(4, 8)
+            }
+
+            clickAt(pos = 8, alt = true, shift = true)
+            withClue("Alt+Shift+click on a cursor: it goes") {
+                view.state.selection.ranges.map { it.head } shouldContainExactly listOf(4)
             }
         }
     }

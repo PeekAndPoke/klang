@@ -40,6 +40,7 @@ import kotlinx.css.minWidth
 import kotlinx.css.px
 import kotlinx.html.FlowContent
 import org.w3c.dom.Element
+import org.w3c.dom.events.KeyboardEvent
 
 /**
  * The word under the mouse and what it names: its docs [symbol] and, for a local, its [definition] (null for a library
@@ -328,6 +329,18 @@ fun dslEditorExtension(
 
     var lastHoverKey: HoverKey? = null
 
+    /** True while the docs popup is the one quick documentation opened, which no mouse move will close. */
+    var popupByKey = false
+
+    /** Closes the docs popup when quick documentation opened it: on Esc, an edit, a cursor move. */
+    fun closeKeyPopup() {
+        if (popupByKey) {
+            popupByKey = false
+            lastHoverKey = null
+            hoverPopup.scheduleClose()
+        }
+    }
+
     // ── Tool-badge overlay ──────────────────────────────────────────────────
 
     /** Lazily created floating container for tool-icon badge buttons. */
@@ -551,6 +564,8 @@ fun dslEditorExtension(
 
         if (hoverKey != lastHoverKey) {
             lastHoverKey = hoverKey
+            // The mouse has the popup now
+            popupByKey = false
 
             if (doc != null && word != null) {
                 showDocs(view = view, y = event.clientY.unsafeCast<Double>(), symbol = doc, declarationCode = declarationCode)
@@ -648,8 +663,8 @@ fun dslEditorExtension(
         return wordDocAtPos(view = view, pos = pos)
     }
 
-    // Both keep their key from the browser, also on a word with nothing behind it: Firefox opens its bookmarks on
-    // Ctrl+B, and quits on Ctrl+Q under Linux
+    // Both keep their key from the browser, also on a word with nothing behind it (Firefox opens its bookmarks on
+    // Ctrl+B); Ctrl+Q quits Firefox on Linux, which a page may not be able to stop
     val goToDefinitionAtCursor: Command = { view ->
         wordDocAtCursor(view)?.let { result ->
             val definition = result.definition
@@ -670,7 +685,9 @@ fun dslEditorExtension(
         val cursorTop = view.coordsAtPos(view.state.selection.main.head)?.top
 
         if (result != null && cursorTop != null) {
-            // The popup stands for this word now, so the next mouse move elsewhere closes it, as after a hover
+            // The popup stands for this word now, so the next mouse move elsewhere closes it, as after a hover; Esc,
+            // an edit or a cursor move close it too ([closeKeyPopup])
+            popupByKey = true
             lastHoverKey = HoverKey(from = result.word.from, to = result.word.to, symbol = result.symbol, definition = result.definition)
             showDocs(view = view, y = cursorTop, symbol = result.symbol, declarationCode = result.definition?.code)
         }
@@ -682,6 +699,20 @@ fun dslEditorExtension(
         extension = arrayOf(
             underlineField,
             EditorView.domEventHandlers(handlers),
+            EditorView.domEventObservers(
+                jsObject<dynamic> {
+                    this.keydown = { event: KeyboardEvent, _: EditorView ->
+                        if (event.key == "Escape") {
+                            closeKeyPopup()
+                        }
+                    }
+                }
+            ),
+            EditorView.updateListener.of { update ->
+                if (update.docChanged || update.selectionSet) {
+                    closeKeyPopup()
+                }
+            },
             theme,
         ).unsafeCast<Extension>(),
         commands = mapOf(

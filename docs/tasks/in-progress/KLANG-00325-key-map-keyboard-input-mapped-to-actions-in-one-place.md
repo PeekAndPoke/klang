@@ -425,3 +425,10 @@ OkCancel real buttons and focus; their Esc stays ours until the key map carries 
   code (a redundant focus) removed. Its 6 MINORs and 5 NITs go into the next step (unselect after other cursors, block
   comment toggling off and inside a comment, closing the docs popup by key, the DSL commands' test and the editors
   without them, Alt+Shift+click removing a cursor and dragging).
+- 2026-10-26: step 3b's MINORs and NITs fixed: unselect last occurrence after cursors added otherwise takes the
+  newest (the main one) and hands the main role to its neighbour; block comment unwraps a comment around the cursor
+  (never nests; an unclosed one loses its opening only, a doc comment its second star) and takes back selected text it
+  wrapped; the docs popup Ctrl+Q opened closes on Esc, an edit or a cursor move; Ctrl+B and Ctrl+Q stay away from the
+  browser also in editors without the DSL wiring; Alt+Shift+click on one of several cursors takes it away and
+  Alt+Shift+drag adds a range. Review (level 1): round 1 one MAJOR (unwrapping an unclosed comment cut the
+  document's last two characters), fixed; round 2 clean. 12 mutants killed.
