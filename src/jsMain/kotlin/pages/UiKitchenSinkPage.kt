@@ -19,6 +19,7 @@ import io.peekandpoke.klang.ui.comp.KlangDrawer
 import io.peekandpoke.klang.ui.comp.KlangFinish
 import io.peekandpoke.klang.ui.comp.KlangGauge
 import io.peekandpoke.klang.ui.comp.KlangIconToggle
+import io.peekandpoke.klang.ui.comp.KlangIgnition
 import io.peekandpoke.klang.ui.comp.KlangKnob
 import io.peekandpoke.klang.ui.comp.KlangLamp
 import io.peekandpoke.klang.ui.comp.KlangLookPicker
@@ -37,9 +38,12 @@ import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.modals.ModalsManager.Companion.modals
+import io.peekandpoke.kraft.utils.launch
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.css.Color
 import kotlinx.css.px
 import kotlinx.html.DIV
@@ -50,6 +54,7 @@ import kotlinx.html.h1
 import kotlinx.html.h2
 import kotlinx.html.p
 import kotlinx.html.span
+import kotlin.time.Duration.Companion.seconds
 
 @Suppress("FunctionName")
 fun Tag.UiKitchenSinkPage() = comp {
@@ -82,6 +87,13 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
     private var menuChoice: String by value("nothing yet")
     private var dialogChoice: String by value("nothing yet")
     private var pinned: Set<String> by value(setOf("pinned"))
+
+    /** The live ignition key: where it stands, and its glow lamp while the "Motor" gets ready. */
+    private var ignitionAt: KlangIgnition.Position by value(KlangIgnition.Position.Off)
+    private var ignitionGlow: Boolean by value(false)
+
+    /** The glow lamp's 2 s, cancelled when the key goes back to OFF early. */
+    private var ignitionWarmUp: Job? = null
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -421,6 +433,43 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
                         icon = { clock },
                         label = "DELAY",
                     )
+                }
+            }
+
+            cell(
+                name = "The ignition key: a click turns it to ON, the glow lamp burns 2 s, then it springs to START",
+                source = "klangui/comp/KlangIgnition.kt",
+            ) {
+                row {
+                    KlangIgnition(
+                        position = ignitionAt,
+                        glowing = ignitionGlow,
+                        onTurn = {
+                            ignitionAt = KlangIgnition.Position.On
+                            ignitionGlow = true
+
+                            ignitionWarmUp?.cancel()
+                            ignitionWarmUp = launch {
+                                delay(2.seconds)
+                                ignitionGlow = false
+                                ignitionAt = KlangIgnition.Position.Start
+                            }
+                        },
+                    )
+
+                    KlangButton(
+                        onClick = {
+                            ignitionWarmUp?.cancel()
+                            ignitionGlow = false
+                            ignitionAt = KlangIgnition.Position.Off
+                        },
+                    ) { +"Back to OFF" }
+                }
+
+                row {
+                    KlangIgnition(position = KlangIgnition.Position.Off, glowing = false, onTurn = {}, size = 100.px)
+                    KlangIgnition(position = KlangIgnition.Position.On, glowing = true, onTurn = {}, size = 100.px)
+                    KlangIgnition(position = KlangIgnition.Position.Start, glowing = false, onTurn = {}, size = 100.px)
                 }
             }
 

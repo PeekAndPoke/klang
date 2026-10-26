@@ -142,12 +142,16 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("border-radius", "50%")
     }
 
-    /** A tall button: a drawer's entry, a swatch button. Its lamp sits at the top left. */
+    /**
+     * A tall button: a drawer's entry, a swatch button. Its lamp sits at the top left. Its text starts at the top, also
+     * when a neighbour's longer text makes the row taller (the maintainer, 2026-10-26).
+     */
     val tile by rule {
         put("position", "relative")
         put("height", "auto")
         put("min-height", "52px")
         put("flex-direction", "column")
+        put("justify-content", "flex-start")
         put("align-items", "center")
         put("gap", "4px")
         put("padding", "8px 10px")
@@ -647,6 +651,65 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("filter", "drop-shadow(0 0 3px var(--kl-lamp-on))")
     }
 
+    // ── The ignition key ──────────────────────────────────────────────────────
+
+    /** The key's box: the cap at its foot, the positions printed above it. */
+    val ignition by rule {
+        put("position", "relative")
+        put("display", "inline-block")
+        put("flex-shrink", "0")
+    }
+
+    /** The cap, a button: the knob's silver cap, without the button's own look. */
+    val ignitionCap by rule {
+        put("padding", "0")
+        put("margin", "0")
+        put("cursor", "pointer")
+        put("appearance", "none")
+        put("outline", "none")
+
+        // A shadow ring, the cap's own shadows kept: Chrome draws a round outline jagged (as the knob found,
+        // 2026-10-25); the transparent outline still shows in forced-colours modes, which drop shadows
+        rule("&:focus-visible") {
+            put("box-shadow", "0 3px 5px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.18), 0 0 0 3px var(--kl-focus)")
+            put("outline", "1px solid transparent")
+        }
+
+        rule("&[aria-disabled=true]") {
+            put("cursor", "default")
+        }
+    }
+
+    /** The key's turn, a short motion with a little spring at its end. */
+    val ignitionTurn by rule {
+        put("transition", "transform 350ms cubic-bezier(0.3, 1.4, 0.5, 1)")
+    }
+
+    /** A position's name, centred on its spot; the glow lamp hangs after ON without moving it off centre. */
+    val ignitionLabel by rule {
+        put("position", "absolute")
+        put("transform", "translate(-50%, -50%)")
+        put("font-family", "monospace")
+        put("line-height", "1")
+        put("letter-spacing", "0.14em")
+        put("white-space", "nowrap")
+        put("user-select", "none")
+        put("color", "var(--kl-ink-label)")
+
+        rule("& > [data-lamp]") {
+            put("position", "absolute")
+            put("left", "calc(100% + 0.3em)")
+            put("top", "50%")
+            put("transform", "translateY(-50%)")
+        }
+    }
+
+    /** The position the key is at. */
+    val ignitionLabelCurrent by rule {
+        put("font-weight", "700")
+        put("color", "var(--kl-ink-strong)")
+    }
+
     // ── The workbench ─────────────────────────────────────────────────────────
 
     val workbench by rule {
@@ -1106,6 +1169,8 @@ object KlangControlStyles : StyleSheet("kl-controls") {
                 .$button.$beacon::after { animation: none; box-shadow: 0 0 0 2px var(--kl-lamp-try); }
                 .$lamp.$lampTry { animation: none; }
                 .$toolWindow.$toolWindowFloating { animation: none; }
+                .$ignitionCap.$beacon::after { animation: none; box-shadow: 0 0 0 2px var(--kl-lamp-try); }
+                .$knobTurn.$ignitionTurn { transition: none; }
             }
         """.trimIndent()
     )
