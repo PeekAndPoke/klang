@@ -8,7 +8,6 @@ package io.peekandpoke.klang.pages
 import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.Player
-import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal.PlaybackStopped
 import io.peekandpoke.klang.audio_engine.KlangBenchmark
 import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
 import io.peekandpoke.klang.audio_engine.playOnce
@@ -50,7 +49,6 @@ import io.peekandpoke.ultra.maths.Ease
 import io.peekandpoke.ultra.streams.ops.map
 import io.peekandpoke.ultra.streams.ops.smooth
 import io.peekandpoke.ultra.streams.ops.ticker
-import kotlinx.coroutines.delay
 import kotlinx.css.Align
 import kotlinx.css.Color
 import kotlinx.css.Display
@@ -330,35 +328,21 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
             // noop
         }
 
-        /** Make music: the jingle, then the first song. */
+        /**
+         * Make music: the jingle starts and the first song opens at once, the jingle playing on into it (the
+         * maintainer, 2026-10-26: "after clicking Make Music now we can start the "jingle" and go straight to next
+         * page"). The song page stops only its own playback, so the jingle ends by itself.
+         */
         fun go() {
             val song = sound("<[sd sd sd sd  [bd, cr] ~ ~ ~] ~>").fast(1)
                 .gain(0.7)
                 .adsr(0.005, 0.2, 0.3, 10.0)
                 .reverb(wet = 0.2, size = 3.0, lowpass = 5000.0)
 
-            val playback = Player.get()?.playOnce(song)
+            // No player (the worklet failed?): no jingle, the way on all the same
+            Player.get()?.playOnce(song)?.start(KlangCyclicPlayback.Options(rpm = 50.0))
 
-            if (playback == null) {
-                // No player (the worklet failed?): skip the jingle, but never let the click dead-end
-                console.log("No player available, navigating without jingle")
-                router.navToUri(Nav.editSongCode(BuiltInSongs.songs.first().id))
-
-                return
-            }
-
-            // Wait for the jingle to finish before navigating
-            playback.signals.invoke { signal ->
-                if (signal is PlaybackStopped) {
-                    launch {
-                        delay(500.milliseconds)
-                        console.log("Playback stopped, navigating to new song page")
-                        router.navToUri(Nav.editSongCode(BuiltInSongs.songs.first().id))
-                    }
-                }
-            }
-
-            playback.start(KlangCyclicPlayback.Options(rpm = 50.0))
+            router.navToUri(Nav.editSongCode(BuiltInSongs.songs.first().id))
         }
     }
 
