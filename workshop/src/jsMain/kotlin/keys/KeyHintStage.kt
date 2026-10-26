@@ -38,6 +38,8 @@ class KeyHintStage(
     val renderer: KeyHintRenderer,
     /** Where hints go, for every [OnKey] that says nothing else. */
     val placement: KeyHintPlacement,
+    /** The app's look of the chip that shows chords in a row waiting for their next key. */
+    val waitingRenderer: KeyWaitingRenderer = KeyHints.waiting,
 ) : KraftApp.AutoMountedUi {
 
     companion object {
@@ -134,6 +136,9 @@ class KeyHintStageView(ctx: Ctx<Props>) : Component<KeyHintStageView.Props>(ctx)
     private val stage get() = props.stage
 
     private val shown by subscribingTo(stage.manager.hints) { placed = null }
+
+    /** The chords of keys in a row pressed so far, while the manager waits for the next one. */
+    private val waiting by subscribingTo(stage.manager.waiting)
 
     private val entries by subscribingTo(stage.entries) { placed = null }
 
@@ -246,6 +251,16 @@ class KeyHintStageView(ctx: Ctx<Props>) : Component<KeyHintStageView.Props>(ctx)
             // Each hint repeats a control's key next to it; the key is part of the control's own description
             attributes["aria-hidden"] = "true"
 
+            // Chords in a row waiting for their next key: a chip at the foot of the window, hints or not
+            if (waiting.isNotEmpty()) {
+                div {
+                    key = "key-waiting"
+                    style = "position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%)"
+
+                    stage.waitingRenderer(this, KeyWaitingState(pressed = waiting, platform = stage.manager.platform))
+                }
+            }
+
             if (!shown) {
                 return@div
             }
@@ -278,3 +293,18 @@ class KeyHintStageView(ctx: Ctx<Props>) : Component<KeyHintStageView.Props>(ctx)
         const val HINT_ATTRIBUTE = "data-key-hint"
     }
 }
+
+/** What the chip of chords in a row shows while the [KeysManager] waits for their next key. */
+data class KeyWaitingState(
+    /** The chords pressed so far, in order. */
+    val pressed: List<KeyChord>,
+    /** The platform the keys are shown for. */
+    val platform: KeyPlatform,
+) {
+    /** The chords pressed so far as groups of key caps, one group per chord; see [KeyChord.keyParts]. */
+    fun keyGroups(compact: Boolean = true): List<List<String>> =
+        pressed.map { it.keyParts(platform = platform, compact = compact) }
+}
+
+/** Draws the chip of chords in a row waiting for their next key, in the app's own look ([KeyHints.waiting] by default). */
+typealias KeyWaitingRenderer = FlowContent.(KeyWaitingState) -> Unit

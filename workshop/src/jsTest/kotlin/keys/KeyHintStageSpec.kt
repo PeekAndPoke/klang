@@ -240,4 +240,34 @@ class KeyHintStageSpec : StringSpec({
             manager.dispose()
         }
     }
+
+    "the chip of chords in a row: the chords pressed so far and an ellipsis while the manager waits, gone after" {
+        val save = KeyAction(id = "save", title = "Save", keys = listOf("Mod-K Mod-S"))
+        val manager = KeysManager(platform = KeyPlatform.Pc, hintDelayMs = 10).apply {
+            define(object : KeyBindings {
+                override val actions = listOf(save)
+            })
+        }
+        manager.handle(save) { }
+
+        try {
+            TestBed.preact(appSetup = { keys(manager) }, view = { div { } }) {
+                document.body!!.dispatchEvent(keyEvent(key = "k", code = "KeyK", ctrl = true))
+
+                eventually {
+                    val chip = document.querySelector(".${KeyHints.WAITING_CLASS}")
+                    chip?.querySelectorAll("kbd")?.asList()?.map { it.textContent } shouldBe listOf("Ctrl", "K")
+                    chip?.textContent?.endsWith("…") shouldBe true
+                }
+
+                document.body!!.dispatchEvent(keyEvent(key = "Escape", code = "Escape"))
+
+                eventually {
+                    document.querySelector(".${KeyHints.WAITING_CLASS}") shouldBe null
+                }
+            }
+        } finally {
+            manager.dispose()
+        }
+    }
 })

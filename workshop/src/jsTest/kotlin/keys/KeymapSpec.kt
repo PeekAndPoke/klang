@@ -136,7 +136,7 @@ class KeymapSpec : StringSpec({
 
         keymap.bindingsOf("search") shouldContainExactly listOf(
             KeyChord(key = "k", ctrl = true),
-            KeySequence(taps = listOf(TapModifier.Shift, TapModifier.Shift)),
+            KeySequence.ofTaps(TapModifier.Shift, TapModifier.Shift),
         )
         keymap.chordsOf("search") shouldContainExactly listOf(KeyChord(key = "k", ctrl = true))
         keymap.problems.shouldBeEmpty()
@@ -152,8 +152,8 @@ class KeymapSpec : StringSpec({
                 .shouldBeInstanceOf<Keymap.Problem.Unreadable>()
         }
 
-        withClue("a chord sequence is unreadable until it is supported") {
-            Keymap(platform = pc, actions = listOf(play.copy(keys = listOf("Mod-K Mod-S")))).problems.single()
+        withClue("taps mixed with chords are unreadable") {
+            Keymap(platform = pc, actions = listOf(play.copy(keys = listOf("Shift Mod-K")))).problems.single()
                 .shouldBeInstanceOf<Keymap.Problem.Unreadable>()
         }
 
@@ -162,10 +162,67 @@ class KeymapSpec : StringSpec({
             Keymap(platform = pc, actions = listOf(search, other)).problems shouldContainExactly listOf(
                 Keymap.Problem.SequenceClash(
                     scope = KeyAction.APP_SCOPE,
-                    sequence = KeySequence(taps = listOf(TapModifier.Shift, TapModifier.Shift)),
+                    sequence = KeySequence.ofTaps(TapModifier.Shift, TapModifier.Shift),
                     actionIds = listOf("search", "other"),
                 )
             )
+        }
+    }
+
+    "chords in a row: read, shown one group per chord, checked like single keys, and a prefix clash reported" {
+        val save = play.copy(id = "save", keys = listOf("Mod-K Mod-S"))
+        val ctrlK = KeyChord(key = "k", ctrl = true)
+        val ctrlS = KeyChord(key = "s", ctrl = true)
+        val ctrlA = KeyChord(key = "a", ctrl = true)
+
+        Keymap(platform = pc, actions = listOf(save)).let { keymap ->
+            keymap.bindingsOf("save") shouldContainExactly listOf(KeySequence.ofChords(ctrlK, ctrlS))
+            keymap.problems.shouldBeEmpty()
+            keymap.chordSequences.map { (action, sequence) -> action.id to sequence } shouldContainExactly
+                listOf("save" to KeySequence.ofChords(ctrlK, ctrlS))
+        }
+
+        withClue("the groups and the label, on a PC and on a Mac") {
+            KeySequence.parse("Mod-K Mod-S", pc).keyGroups(pc) shouldBe listOf(listOf("Ctrl", "K"), listOf("Ctrl", "S"))
+            KeySequence.parse("Mod-K Mod-S", pc).label(pc) shouldBe "Ctrl+K Ctrl+S"
+            KeySequence.parse("Mod-K Mod-S", mac).label(mac) shouldBe "⌘K ⌘S"
+        }
+
+        withClue("a step the browser keeps is reserved, as a single key would be") {
+            Keymap(platform = pc, actions = listOf(save.copy(keys = listOf("Mod-K Mod-W")))).problems shouldContainExactly
+                listOf(Keymap.Problem.Reserved(actionId = "save", chord = KeyChord(key = "w", ctrl = true)))
+        }
+
+        withClue("a single key that begins a sequence, and a sequence that begins a longer one, clash as prefixes") {
+            val open = play.copy(id = "open", keys = listOf("Mod-K"))
+            val saveAll = play.copy(id = "save-all", keys = listOf("Mod-K Mod-S Mod-A"))
+
+            Keymap(platform = pc, actions = listOf(open, save, saveAll)).problems shouldContainExactly listOf(
+                Keymap.Problem.PrefixClash(
+                    scope = KeyAction.APP_SCOPE,
+                    prefix = ctrlK,
+                    sequence = KeySequence.ofChords(ctrlK, ctrlS),
+                    actionIds = listOf("open", "save"),
+                ),
+                Keymap.Problem.PrefixClash(
+                    scope = KeyAction.APP_SCOPE,
+                    prefix = ctrlK,
+                    sequence = KeySequence.ofChords(ctrlK, ctrlS, ctrlA),
+                    actionIds = listOf("open", "save-all"),
+                ),
+                Keymap.Problem.PrefixClash(
+                    scope = KeyAction.APP_SCOPE,
+                    prefix = KeySequence.ofChords(ctrlK, ctrlS),
+                    sequence = KeySequence.ofChords(ctrlK, ctrlS, ctrlA),
+                    actionIds = listOf("save", "save-all"),
+                ),
+            )
+        }
+
+        withClue("in different scopes no prefix clash") {
+            val editorOpen = play.copy(id = "open", keys = listOf("Mod-K"), scope = "editor")
+
+            Keymap(platform = pc, actions = listOf(editorOpen, save)).problems.shouldBeEmpty()
         }
     }
 })

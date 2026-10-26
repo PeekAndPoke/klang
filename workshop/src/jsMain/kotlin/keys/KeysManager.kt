@@ -3,8 +3,6 @@ package io.peekandpoke.klang.workshop.keys
 import io.peekandpoke.ultra.common.TypedKey
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
-import io.peekandpoke.ultra.streams.ops.distinct
-import io.peekandpoke.ultra.streams.ops.map
 import kotlinx.browser.document
 import kotlinx.browser.window
 import org.w3c.dom.Element
@@ -28,13 +26,19 @@ import kotlin.math.abs
  *   over the rest ([openLayer]); only the top layer's handlers answer and only their hints show, the keys below wait,
  *   as the mouse does under a dimmer. Layers close in any order: the top open one always wins, a closed one never
  *   comes back, and the root cannot be closed at all.
- * - **Keys in a row** ([KeySequence], `"Shift Shift"`): a modifier tapped on its own (down and up within [tapMaxMs],
- *   no other key between) twice within [tapPairMs] triggers its action, in the top layer as any key; also while the
- *   user types, since a tap types nothing. A capital (Shift, a letter) is no tap.
+ * - **Keys in a row** ([KeySequence]), in the top layer as any key:
+ *   - taps, `"Shift Shift"`: a modifier tapped on its own (down and up within [tapMaxMs], no other key, click or wheel
+ *     between) twice within [tapPairMs]; also while the user types, since a tap types nothing. A capital (Shift, a
+ *     letter) is no tap.
+ *   - chords, `"Mod-K Mod-S"`: the first chord acts as a single key would (not on a plain key in a text field) and
+ *     starts a wait of [sequenceWaitMs] for the next ([waiting] says which chords are in, for the app to show). While
+ *     it waits every key belongs to it, before the page's own handlers: the next chord of a sequence goes on or
+ *     triggers it, Esc or any other key ends the wait (and does nothing else), as do a click and the time running out.
+ *     A chord that starts a sequence waits even when it is also an action's own key ([Keymap.Problem.PrefixClash]).
  * - **Hints:** [hints] is true while the [hintTrigger] (by default `Mod`: Ctrl on a PC, Cmd on a Mac) is held alone for
  *   [hintDelayMs], and false again on its release, on any other key, a click or the wheel (Ctrl+click, Ctrl+wheel), or
  *   when the window loses focus. Moving the mouse while the delay runs stops it (Ctrl+hover in the code editor). AltGr
- *   never shows them. Components show their key while it is true, in their own look ([chordsOf], [labelOf]).
+ *   never shows them. Components show their key while it is true, in their own look ([labelOf], [keymap]).
  *
  * One listener on [target] (the document) answers every key, after the page's own handlers: a key a component already
  * handled (`defaultPrevented`: the code editor's own keys while it has the focus) is left alone, and so is a held key's
@@ -53,6 +57,8 @@ class KeysManager(
     val tapMaxMs: Int = 300,
     /** The longest time from one tap's release to the next one's in keys in a row, in milliseconds. */
     val tapPairMs: Int = 400,
+    /** How long the next chord of chords in a row is waited for, in milliseconds. */
+    val sequenceWaitMs: Int = 1500,
     private val target: EventTarget = document,
 ) {
     companion object {
@@ -181,6 +187,13 @@ class KeysManager(
     private var taps: List<TapModifier> = emptyList()
     private var lastTapAt = 0.0
 
+    private val _waiting = StreamSource<List<KeyChord>>(emptyList())
+
+    /** The chords of keys in a row pressed so far while the manager waits for the next one; empty while it does not. */
+    val waiting: Stream<List<KeyChord>> = _waiting.readonly
+
+    private var waitTimer: Int? = null
+
     /** Where the pointer was last seen, and where it was when the hint delay started (null: not seen yet). */
     private var lastPointer: Pair<Int, Int>? = null
     private var delayStartedAt: Pair<Int, Int>? = null
@@ -192,11 +205,13 @@ class KeysManager(
     private val onPointer: (Event) -> Unit = {
         hideHints()
         breakTaps()
+        stopWaiting()
     }
     private val onPointerMove: (Event) -> Unit = { event -> (event as? MouseEvent)?.let { pointerMove(it) } }
     private val onBlur: (Event) -> Unit = {
         hideHints()
         breakTaps()
+        stopWaiting()
     }
 
     init {
@@ -230,9 +245,6 @@ class KeysManager(
 
         return bag
     }
-
-    /** The chords that trigger [action] now, and on every change. */
-    fun chordsOf(action: KeyAction): Stream<List<KeyChord>> = keymap.map { it.chordsOf(action.id) }.distinct()
 
     /** The first key of [action] as the user reads it (`Ctrl+Shift+Enter`, `Shift Shift`), null when it has none. */
     fun labelOf(action: KeyAction): String? = _keymap().bindingsOf(action.id).firstOrNull()?.label(platform)
@@ -330,6 +342,7 @@ class KeysManager(
         target.removeEventListener("pointermove", onPointerMove, true)
         window.removeEventListener("blur", onBlur)
         hideHints()
+        stopWaiting()
     }
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -344,6 +357,22 @@ class KeysManager(
 
     private fun dispatch(event: KeyboardEvent) {
         val typing = isTextField(event.target)
+
+        // The first chord of chords in a row: wait for the next, before any single key on the same chord
+        val starting = _keymap().chordSequences.firstOrNull { (action, sequence) ->
+            val first = sequence.chords.first()
+            // While the user types, only a first chord with Ctrl, Alt or Meta starts it, as for a single key
+            val allowed = !typing || first.hasCommandModifier
+
+            first.matches(event = event, platform = platform) && allowed && answering(action) != null
+        }
+
+        if (starting != null) {
+            event.preventDefault()
+            startWaiting(starting.second.chords.take(1))
+
+            return
+        }
 
         _keymap().actionsFor(event).forEach { action ->
             // While the user types, only keys with Ctrl, Alt or Meta act: an Esc or a letter belongs to the field
@@ -379,6 +408,18 @@ class KeysManager(
 
     private fun hintKeyDown(event: KeyboardEvent) {
         followTaps(event)
+
+        // Waiting for the next chord of chords in a row: every key is the wait's, before the page's handlers see it
+        if (_waiting().isNotEmpty() && event.key !in KeyChord.MODIFIER_KEY_NAMES) {
+            event.preventDefault()
+            event.stopPropagation()
+
+            if (!event.repeat) {
+                nextInRow(event)
+            }
+
+            return
+        }
 
         // Any other key, and AltGr, which types characters (Windows sends a Control keydown before it)
         if (event.key !in KeyChord.MODIFIER_KEY_NAMES || event.key == "AltGraph" || event.getModifierState("AltGraph")) {
@@ -484,13 +525,50 @@ class KeysManager(
             return
         }
 
-        _keymap().actionsFor(KeySequence(taps = taps)).forEach { action ->
+        _keymap().actionsFor(KeySequence(steps = taps.map { KeyStep.Tap(it) })).forEach { action ->
             val answering = answering(action) ?: return@forEach
 
             taps = emptyList()
             answering.handler(event)
 
             return
+        }
+    }
+
+    /** A key while chords in a row wait: the next chord goes on or triggers, any other key (Esc too) ends the wait. */
+    private fun nextInRow(event: KeyboardEvent) {
+        val pressed = _waiting()
+        stopWaiting()
+
+        val fitting = _keymap().chordSequences.filter { (action, sequence) ->
+            val chords = sequence.chords
+
+            chords.size > pressed.size && chords.take(pressed.size) == pressed &&
+                chords[pressed.size].matches(event = event, platform = platform) && answering(action) != null
+        }
+
+        // A sequence complete: the first defined one acts, as for a clash
+        fitting.firstOrNull { (_, sequence) -> sequence.chords.size == pressed.size + 1 }?.let { (action, _) ->
+            answering(action)?.handler(event)
+
+            return
+        }
+
+        fitting.firstOrNull()?.let { (_, sequence) -> startWaiting(sequence.chords.take(pressed.size + 1)) }
+    }
+
+    private fun startWaiting(pressed: List<KeyChord>) {
+        waitTimer?.let { window.clearTimeout(it) }
+        _waiting(pressed)
+        waitTimer = window.setTimeout({ stopWaiting() }, sequenceWaitMs)
+    }
+
+    private fun stopWaiting() {
+        waitTimer?.let { window.clearTimeout(it) }
+        waitTimer = null
+
+        if (_waiting().isNotEmpty()) {
+            _waiting(emptyList())
         }
     }
 

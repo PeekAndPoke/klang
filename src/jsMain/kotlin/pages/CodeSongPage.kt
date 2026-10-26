@@ -20,8 +20,8 @@ import io.peekandpoke.klang.ui.codemirror.Bookmarks
 import io.peekandpoke.klang.ui.comp.YesNoModal
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.klang.version
-import io.peekandpoke.klang.workshop.keys.OnKey
 import io.peekandpoke.klang.workshop.keys.KeysManager
+import io.peekandpoke.klang.workshop.keys.OnKey
 import io.peekandpoke.klang.workshop.keys.keys
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.ComponentRef

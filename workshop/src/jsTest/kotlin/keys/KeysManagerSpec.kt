@@ -11,6 +11,7 @@ import kotlinx.coroutines.delay
 import org.w3c.dom.EventInit
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.events.Event
+import org.w3c.dom.events.KeyboardEvent
 import org.w3c.dom.pointerevents.PointerEvent
 import org.w3c.dom.pointerevents.PointerEventInit
 
@@ -194,25 +195,6 @@ class KeysManagerSpec : StringSpec({
                 keys.define(bag)
                 keys.setUserKeys(actionId = "play", keys = listOf("Shift Shift", "F5"))
                 keys.labelOf(play) shouldBe "Shift Shift"
-            }
-        }
-    }
-
-    "chordsOf follows the user's keys" {
-        withManager { keys, _ ->
-            keys.define(bag)
-            val seen = mutableListOf<List<KeyChord>>()
-            val unsubscribe = keys.chordsOf(play).subscribeToStream { seen.add(it) }
-
-            keys.setUserKeys(actionId = "play", keys = listOf("F5"))
-            keys.setUserKeys(actionId = "stop", keys = listOf("F8"))
-            unsubscribe()
-
-            withClue("a change to another action publishes nothing new") {
-                seen shouldContainExactly listOf(
-                    listOf(KeyChord(key = "Enter", ctrl = true, shift = true)),
-                    listOf(KeyChord(key = "F5")),
-                )
             }
         }
     }
@@ -693,6 +675,107 @@ class KeysManagerSpec : StringSpec({
                 host.dispatchEvent(keyEvent(key = "Control", code = "ControlLeft", type = "keyup"))
                 tap()
                 answered shouldContainExactly listOf("search", "search", "search")
+            }
+        } finally {
+            keys.dispose()
+            host.remove()
+        }
+    }
+
+    "chords in a row: the first chord waits for the next; Esc, a key that fits nothing, a click or the time end the wait" {
+        val save = KeyAction(id = "save", title = "Save", keys = listOf("Mod-K Mod-S"))
+        val saveAll = KeyAction(id = "save-all", title = "Save all", keys = listOf("Mod-K Mod-A Mod-B"))
+        val close = KeyAction(id = "close", title = "Close", keys = listOf("Escape"))
+        val host = document.createElement("div") as HTMLElement
+        val inner = document.createElement("div") as HTMLElement
+        host.appendChild(inner)
+        document.body!!.appendChild(host)
+        val keys = KeysManager(platform = KeyPlatform.Pc, sequenceWaitMs = 100, target = host)
+        keys.define(object : KeyBindings {
+            override val actions = listOf(save, saveAll, close)
+        })
+        val answered = mutableListOf<String>()
+        keys.handle(save) { answered.add("save") }
+        keys.handle(saveAll) { answered.add("save-all") }
+        keys.handle(close) { answered.add("close") }
+        val pageSaw = mutableListOf<String>()
+        inner.addEventListener("keydown", { event -> pageSaw.add((event as KeyboardEvent).key) })
+
+        val ctrlK = KeyChord(key = "k", ctrl = true)
+
+        fun press(key: String, ctrl: Boolean = true) =
+            inner.dispatchEvent(keyEvent(key = key, code = "Key${key.uppercase()}", ctrl = ctrl))
+
+        try {
+            press("k")
+            withClue("waiting after the first chord") { keys.waiting() shouldContainExactly listOf(ctrlK) }
+            press("s")
+            withClue("the second chord triggers it, and the page never sees it") {
+                answered shouldContainExactly listOf("save")
+                pageSaw shouldContainExactly listOf("k")
+                keys.waiting() shouldContainExactly emptyList()
+            }
+
+            press("k")
+            press("a")
+            withClue("three chords: still waiting after two") {
+                keys.waiting() shouldContainExactly listOf(ctrlK, KeyChord(key = "a", ctrl = true))
+            }
+            press("b")
+            answered shouldContainExactly listOf("save", "save-all")
+
+            withClue("a held chord's repeat does not end the wait") {
+                press("k")
+                inner.dispatchEvent(keyEvent(key = "k", code = "KeyK", ctrl = true, repeat = true))
+                press("s")
+                answered shouldContainExactly listOf("save", "save-all", "save")
+            }
+
+            withClue("Esc ends the wait and does nothing else") {
+                press("k")
+                inner.dispatchEvent(keyEvent(key = "Escape", code = "Escape"))
+                keys.waiting() shouldContainExactly emptyList()
+                answered shouldContainExactly listOf("save", "save-all", "save")
+            }
+
+            withClue("a key that fits no sequence ends the wait, and is swallowed") {
+                press("k")
+                val other = keyEvent(key = "x", code = "KeyX")
+                inner.dispatchEvent(other)
+                other.defaultPrevented shouldBe true
+                keys.waiting() shouldContainExactly emptyList()
+                press("s")
+                answered shouldContainExactly listOf("save", "save-all", "save")
+            }
+
+            withClue("a click ends the wait") {
+                press("k")
+                inner.dispatchEvent(PointerEvent("pointerdown", PointerEventInit(bubbles = true)))
+                press("s")
+                answered shouldContainExactly listOf("save", "save-all", "save")
+            }
+
+            withClue("the time running out ends the wait") {
+                press("k")
+                delay(150)
+                keys.waiting() shouldContainExactly emptyList()
+                press("s")
+                answered shouldContainExactly listOf("save", "save-all", "save")
+            }
+
+            withClue("in a text field: the first chord has Ctrl, so it starts, and the next is the wait's") {
+                val input = document.createElement("input") as HTMLElement
+                inner.appendChild(input)
+                input.dispatchEvent(keyEvent(key = "k", code = "KeyK", ctrl = true))
+                input.dispatchEvent(keyEvent(key = "s", code = "KeyS", ctrl = true))
+                answered shouldContainExactly listOf("save", "save-all", "save", "save")
+            }
+
+            withClue("under another layer the first chord waits for nothing and stays the page's") {
+                val modal = keys.openLayer()
+                press("k")
+                keys.waiting() shouldContainExactly emptyList()
+                modal.close()
             }
         } finally {
             keys.dispose()

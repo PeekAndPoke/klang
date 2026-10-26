@@ -8,8 +8,6 @@ import org.w3c.dom.events.KeyboardEvent
  */
 data class KeyHintState(
     val action: KeyAction,
-    /** The single chords that trigger the action (keys in a row are in [bindings]). */
-    val chords: List<KeyChord>,
     /** The first binding as the user reads it on this platform (`Ctrl+Shift+Enter`, `⇧⌘↩`, `Shift Shift`). */
     val label: String,
     /** False while the action would not act (a disabled button). */
@@ -124,7 +122,6 @@ class OnKeyController(
 
             return KeyHintState(
                 action = action,
-                chords = bindings.filterIsInstance<KeyChord>(),
                 label = first.label(manager.platform),
                 enabled = enabled(),
                 platform = manager.platform,

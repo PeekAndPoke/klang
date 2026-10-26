@@ -213,7 +213,7 @@ class OnKeyControllerSpec : StringSpec({
         }
     }
 
-    "keys in a row first: the hint shows them as one group per step, the chords stay apart" {
+    "keys in a row first: the hint shows them as one group per step, the chord after them in the bindings" {
         withApp { _, button ->
             button.key.action = search
 
@@ -224,7 +224,7 @@ class OnKeyControllerSpec : StringSpec({
 
             val hint = button.key.hint!!
             hint.keyGroups() shouldBe listOf(listOf("⇧"), listOf("⇧"))
-            hint.chords shouldContainExactly listOf(KeyChord(key = "k", ctrl = true))
+            hint.bindings shouldContainExactly listOf(KeySequence.ofTaps(TapModifier.Shift, TapModifier.Shift), KeyChord(key = "k", ctrl = true))
             releaseCtrl()
         }
     }

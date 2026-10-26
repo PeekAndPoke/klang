@@ -360,3 +360,9 @@ OkCancel real buttons and focus; their Esc stays ours until the key map carries 
   `KeyHintState.keyParts`); `hintMode` fixed at creation; the song page's Esc registered directly, its guard read at
   the key (no page redraw on hints or hover), a hover popup no longer holds it back. Review round 1 (level 1) clean;
   10 mutants killed, one survivor's code (a redundant redraw) removed. Its MINORs go into the next step.
+- 2026-10-26: keys in a row, part (b): chords in a row (`"Mod-K Mod-S"`). The first chord starts a wait of 1.5 s,
+  shown as a chip at the foot of the window (`KeysManager.waiting`, `KlangKeyHint.waiting`); while it waits every key
+  is the wait's, before the page's handlers: the next chord goes on or triggers, any other key, a click, the blur or
+  the time ends it. `KeySequence` holds tap or chord steps; the keymap checks a sequence's chords like single keys and
+  reports `PrefixClash`. The previous step's MINORs folded in. Review round 1 (level 1) clean; 12 mutants killed. No
+  Klang action uses chords in a row yet. Its MINORs go into the next step.

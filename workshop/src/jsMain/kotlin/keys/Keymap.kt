@@ -25,6 +25,18 @@ class Keymap(
         /** Two or more actions in one scope share keys pressed in a row; the first defined one acts, as for [Clash]. */
         data class SequenceClash(val scope: String, val sequence: KeySequence, val actionIds: List<String>) : Problem
 
+        /**
+         * In one scope, [prefix] (a chord, or chords in a row) is how [sequence] begins: the shorter one never lets the
+         * longer one fire, or a chord that starts a sequence waits for its next key instead of acting. [actionIds] are
+         * the prefix's action, then the sequence's (the same one twice when one action has both).
+         */
+        data class PrefixClash(
+            val scope: String,
+            val prefix: KeyBinding,
+            val sequence: KeySequence,
+            val actionIds: List<String>,
+        ) : Problem
+
         /** The browser keeps this key from every page (a new tab, closing the tab): the action would never fire. */
         data class Reserved(val actionId: String, val chord: KeyChord) : Problem
 
@@ -91,11 +103,14 @@ class Keymap(
         val reserved = reservedChords(platform).toSet()
 
         actions.forEach { action ->
-            chordsOf(action.id).filter { it in reserved }.forEach { chord ->
+            // The chords of keys in a row too: a step the browser keeps or no press can match ends every sequence there
+            val chords = (chordsOf(action.id) + sequencesOf(action.id).flatMap { it.chords }).distinct()
+
+            chords.filter { it in reserved }.forEach { chord ->
                 add(Problem.Reserved(actionId = action.id, chord = chord))
             }
 
-            chordsOf(action.id).filterNot { it.canFire(platform) }.forEach { chord ->
+            chords.filterNot { it.canFire(platform) }.forEach { chord ->
                 add(Problem.Unreachable(actionId = action.id, chord = chord))
             }
         }
@@ -112,7 +127,37 @@ class Keymap(
                 .groupBy(keySelector = { it.first }, valueTransform = { it.second })
                 .filterValues { it.size > 1 }
                 .forEach { (sequence, ids) -> add(Problem.SequenceClash(scope = scope, sequence = sequence, actionIds = ids)) }
+
+            val chordRows = inScope.flatMap { action ->
+                sequencesOf(action.id).filter { it.chords.isNotEmpty() }.map { action to it }
+            }
+
+            inScope.forEach { action ->
+                bindingsOf(action.id).forEach { binding ->
+                    chordRows
+                        .filter { (_, sequence) -> isPrefix(binding = binding, sequence = sequence) }
+                        .forEach { (owner, sequence) ->
+                            val ids = listOf(action.id, owner.id)
+                            add(Problem.PrefixClash(scope = scope, prefix = binding, sequence = sequence, actionIds = ids))
+                        }
+                }
+            }
         }
+    }
+
+    /** Every action's chords in a row (`"Mod-K Mod-S"`), in the order the actions were defined. */
+    val chordSequences: List<Pair<KeyAction, KeySequence>> = actions.flatMap { action ->
+        sequencesOf(action.id).filter { it.chords.isNotEmpty() }.map { action to it }
+    }
+
+    /** True when [binding] (a chord, or chords in a row) is how the longer [sequence] begins. */
+    private fun isPrefix(binding: KeyBinding, sequence: KeySequence): Boolean {
+        val steps = when (binding) {
+            is KeyChord -> listOf(binding)
+            is KeySequence -> binding.chords
+        }
+
+        return steps.isNotEmpty() && sequence.chords.size > steps.size && sequence.chords.take(steps.size) == steps
     }
 
     /** The action with [id], or null when none is defined. */

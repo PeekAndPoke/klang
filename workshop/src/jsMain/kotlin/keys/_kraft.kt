@@ -7,16 +7,20 @@ import io.peekandpoke.kraft.components.getAttributeRecursiveOrNull
 
 /**
  * Registers [manager] in the Kraft application, with the [KeyHintStage] all hints are drawn on: [hint] is the app's
- * look of a hint and [placement] where hints go, for every [OnKey] that says nothing else. Components reach the
- * manager with [keys].
+ * look of a hint and [placement] where hints go, for every [OnKey] that says nothing else; [waiting] is the look of the
+ * chip of chords in a row waiting for their next key. Components reach the manager with [keys].
  */
 fun KraftApp.Builder.keys(
     manager: KeysManager,
     hint: KeyHintRenderer = KeyHints.badge,
     placement: KeyHintPlacement = KeyHintPlacement.Below,
+    waiting: KeyWaitingRenderer = KeyHints.waiting,
 ) = apply {
     setAttribute(KeysManager.key, manager)
-    setAttribute(KeyHintStage.key, KeyHintStage(manager = manager, renderer = hint, placement = placement))
+    setAttribute(
+        KeyHintStage.key,
+        KeyHintStage(manager = manager, renderer = hint, placement = placement, waitingRenderer = waiting),
+    )
 }
 
 /** The app's [KeysManager]. */

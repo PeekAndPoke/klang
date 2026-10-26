@@ -40,7 +40,7 @@ val keysManager = KeysManager(store = KeymapStorage).apply {
 val kraft = kraftApp {
     semanticUI()
 
-    keys(keysManager, hint = KlangKeyHint.render)
+    keys(keysManager, hint = KlangKeyHint.render, waiting = KlangKeyHint.waiting)
 
     addons {
         browserDetect()

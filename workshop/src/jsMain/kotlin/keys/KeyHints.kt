@@ -19,6 +19,9 @@ object KeyHints {
     /** The CSS class of [overview]'s element, for an app's stylesheet. */
     const val OVERVIEW_CLASS = "key-overview"
 
+    /** The CSS class of [waiting]'s element, for an app's stylesheet. */
+    const val WAITING_CLASS = "key-waiting"
+
     /** One way to press a key: its parts side by side, each in a plain key cap; muted while the action cannot act. */
     fun FlowContent.caps(parts: List<String>, enabled: Boolean = true) {
         val text = if (enabled) "#fff" else "#999"
@@ -68,6 +71,24 @@ object KeyHints {
             style = "display: inline-flex; padding: 3px 4px; border-radius: 4px; background: #222"
 
             capsGroups(groups = state.keyGroups(compact = true), enabled = state.enabled)
+        }
+    }
+
+    /** The chords pressed so far, then an ellipsis for the key to come, on the same dark frame as [badge]. */
+    val waiting: KeyWaitingRenderer = { state ->
+        span(classes = WAITING_CLASS) {
+            style = listOf(
+                "display: inline-flex",
+                "align-items: center",
+                "gap: 6px",
+                "padding: 4px 8px",
+                "border-radius: 4px",
+                "background: #222",
+                "color: #fff",
+            ).joinToString("; ")
+
+            capsGroups(groups = state.keyGroups())
+            +"…"
         }
     }
 

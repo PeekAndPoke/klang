@@ -68,18 +68,14 @@ data class KeyOverviewState(
                 return emptyList()
             }
 
-            // Keys in a row among them (a user's own key): each shown as it is, nothing hidden
-            if (chords.size < firsts.size) {
-                return firsts.map { it.keyGroups(platform = keymap.platform, compact = compact) }
-            }
-
-            val first = chords.first()
-            val sameModifiers = chords.all { it.copy(key = first.key) == first }
+            val first = chords.firstOrNull()
+            val sameModifiers = first != null && chords.all { it.copy(key = first.key) == first }
             val singleKeys = chords.all { it.key.length == 1 && (it.key[0].isDigit() || it.key[0] in 'a'..'z') }
 
-            // A key changed on its own, or keys that are not one digit or letter: each shown as it is
-            if (!sameModifiers || !singleKeys) {
-                return chords.map { it.keyGroups(platform = keymap.platform, compact = compact) }
+            // Keys in a row among them, a key changed on its own, or keys that are not one digit or letter: each shown
+            // as it is, nothing hidden
+            if (first == null || chords.size < firsts.size || !sameModifiers || !singleKeys) {
+                return firsts.map { it.keyGroups(platform = keymap.platform, compact = compact) }
             }
 
             val modifiers = first.keyParts(platform = keymap.platform, compact = compact).dropLast(1)

@@ -10,6 +10,7 @@ import io.peekandpoke.klang.workshop.keys.KeyCapGlyphs.keyCapGlyph
 import io.peekandpoke.klang.workshop.keys.KeyChord
 import io.peekandpoke.klang.workshop.keys.KeyHintRenderer
 import io.peekandpoke.klang.workshop.keys.KeyOverviewRenderer
+import io.peekandpoke.klang.workshop.keys.KeyWaitingRenderer
 import kotlinx.html.FlowContent
 import kotlinx.html.div
 import kotlinx.html.kbd
@@ -29,6 +30,9 @@ object KlangKeyHint {
 
     /** The CSS class of an overview panel's element. */
     const val OVERVIEW_CLASS = "klang-key-overview"
+
+    /** The CSS class of the chip of chords in a row waiting for their next key. */
+    const val WAITING_CLASS = "klang-key-waiting"
 
     /** The CSS class of one key cap. */
     const val KEY_CLASS = "klang-key-cap"
@@ -91,6 +95,29 @@ object KlangKeyHint {
             style = (listOf("display: inline-flex", "padding: 3px 5px") + frameStyle).joinToString("; ")
 
             capsGroups(groups = state.keyGroups(compact = true), enabled = state.enabled)
+        }
+    }
+
+    /**
+     * The chip of chords in a row waiting for their next key (Ctrl+K, then …): the chords pressed so far and an
+     * ellipsis, on Klang's frame. The key hint stage puts it at the foot of the window.
+     */
+    val waiting: KeyWaitingRenderer = { state ->
+        span(classes = WAITING_CLASS) {
+            style = (
+                listOf(
+                    "display: inline-flex",
+                    "align-items: center",
+                    "gap: 6px",
+                    "padding: 4px 8px",
+                    "color: ${KlangTheme.Hex.textSecondary}",
+                    "font-size: 12px",
+                    "box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5)",
+                ) + frameStyle
+                ).joinToString("; ")
+
+            capsGroups(groups = state.keyGroups())
+            +"…"
         }
     }
 

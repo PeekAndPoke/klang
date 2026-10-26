@@ -9,7 +9,7 @@ import io.peekandpoke.klang.codemirror.ext.EditorState
 import io.peekandpoke.klang.ui.codemirror.KlangEditorKeyBindings
 import io.peekandpoke.klang.ui.codemirror.bookmarkRowsOf
 import io.peekandpoke.klang.ui.comp.KlangKeyHint
-import io.peekandpoke.klang.ui.comp.KlangKeyHint.caps
+import io.peekandpoke.klang.ui.comp.KlangKeyHint.capsGroups
 import io.peekandpoke.klang.ui.comp.KlangKeyHint.panel
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.klang.workshop.keys.KeyBindingsOverlay
@@ -168,10 +168,11 @@ class EditorKeysCorner(ctx: Ctx<Props>) : Component<EditorKeysCorner.Props>(ctx)
         // The code's column may shrink; the other two keep their width
         panel(title = "Bookmarks", columns = 3, template = "auto auto minmax(0, 1fr)") {
             rows.forEach { row ->
-                val chord = KlangEditorKeyBindings.goToBookmark(row.digit)?.let { keymap.chordsOf(it.id).firstOrNull() }
+                // The jump key as the overview shows it: the first binding, keys in a row too
+                val jump = KlangEditorKeyBindings.goToBookmark(row.digit)?.let { keymap.bindingsOf(it.id).firstOrNull() }
 
                 span {
-                    chord?.let { caps(parts = it.keyParts(platform = keymap.platform, compact = true)) }
+                    jump?.let { capsGroups(groups = it.keyGroups(platform = keymap.platform, compact = true)) }
                 }
 
                 span { +"line ${row.line}" }
