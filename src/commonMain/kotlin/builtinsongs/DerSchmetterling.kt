@@ -22,7 +22,7 @@ import * from "sprudel"
 // Song Status: Upcoming Garage Band ...
 
 let feel          =   15    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
-let transposition =    0    // -1 .. D# | 0 .. E | 1 .. F
+let transposition =   -2    // -1 .. D# | 0 .. E | 1 .. F
 let drunk         =    2    // How many beers did each band member have?
 let snareHz       =  210    // Where does the snare cut through?
 
@@ -124,11 +124,11 @@ let cabStock = x => x.lowpass(5000).lowpass(5000)
 let cab4x12 = x => x
   .eq(e => e
     .band(freq =  120, q = 0.7, db =  1.40)        // thump: closed-back box resonance
-    .band(freq =  380, q = 0.5, db =  3.95)        // roar:  low mids
-    .band(freq = 2700, q = 1.8, db =  4.40)        // bark:  the upper-mid speaker peak
+    .band(freq =  380, q = 0.5, db =  4.00)        // roar:  low mids
+    .band(freq = 2700, q = 1.8, db =  4.25)        // bark:  the upper-mid speaker peak
   )
-  .lowpass(5000, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
-  .highpass(110, 0.707, x => x.passes(2))
+  .lowpass(5200, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
+  .highpass(105, 0.707, x => x.passes(2))
 
 // 1x12 open back: the open back cancels the bass, the top chimes and rolls off late and soft.
 let cab1x12 = x => x
@@ -270,7 +270,7 @@ export lead_shape = x => x.sound(marimba).ply("1|1|1|1|1|1|2").adsrOff()
   .clip(0.75)
 
 export lead_arrange = x => x.orbit(0) //  .mute()
-  .scale("<e5:minor!48 e6:minor!16>").gain("<0.50!48 0.35!16>").gain(mul(0.22))
+  .scale("<e5:minor!48 e6:minor!16>").gain("<0.50!48 0.35!16>").gain(mul(0.23))
   .velocity()
   .shuffle("<1!80 1!1 4/8!14 1!33>")
   .mute("<1!64 0!32 1!48 0!16 1!16>")
@@ -340,7 +340,7 @@ export bass_pat =
 
 export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.40) // . mute()
     .ignp("sub", 0.98).ignp("harmonics", 1.00).clip("0.95".sub(perlin(0.0, 0.05).slow(8)))  // . solo()
-    .adsr(0.003, 0.5, 0.33, 0.025).hpf(35)
+    .adsr(0.003, 0.75, 0.33, 0.025).hpf(35)
 
 export bass_arrange = x => x.orbit(4) // . mute()
   .scale("e1:minor").notch(freq = snareHz, q = 1.0).mute("<0!128 1!32>")
@@ -373,7 +373,7 @@ let gummiEimer = (() => {
   let beater = Ign.whitenoise().adsr(0.0005, 0.035, 0.0, 0.015).lowpass(1500).mul(6.00)    
  
   return head.plus(harms).plus(m2).plus(m3).plus(beater)
-    .distort(0.40, "softsat", 2)
+    .distort(0.50, "softsat", 2)
     .mul(0.1)
     .classic()
 })()
@@ -541,7 +541,7 @@ export song = stack(
     .gain(5.0)
     .bands(b => b
       .band(low => low.distort(0.01, "soft", 4)).cut(150)
-      .band(mid => mid.distort(0.15, "soft", 4).mul(0.90)).cut(5000)
+      .band(mid => mid.distort(0.15, "soft", 4).mul(0.85)).cut(5000)
       .band(low => low.distort(0.01, "soft", 4))
     ) // the glue on the mids only: the kick and the hats stay clean
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)

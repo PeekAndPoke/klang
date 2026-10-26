@@ -105,8 +105,17 @@ export song = stack(
     bass.filterWhen(x => x > 31.4 && x % 64 > 15.4),
     sub.filterWhen(x => x > 31.4 && x % 128 > 15.4),
     drums,
-    master(Katalyst(k => k.gain(1.5))),
-).reverb(0.3, 0.5, 11500).compressor(-6, 2.5, 7, 0.02, 0.025).swingBy(sine.pow(6.0).mul(0.05).slow(128), 4)
+    master(Katalyst(k => k
+    .reverb(0.15, 8, 4500)
+    .gain(1.8)
+    .bands(b => b
+      .band(low => low.distort(0.01, "soft", 4)).cut(150)
+      .band(mid => mid.distort(0.15, "soft", 4).mul(0.90)).cut(5000)
+      .band(low => low.distort(0.01, "soft", 4))
+    ) // the glue on the mids only: the kick and the hats stay clean
+    .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)
+  )),
+).swingBy(sine.pow(6.0).mul(0.05).slow(128), 4)
 
 
 
