@@ -385,3 +385,6 @@ OkCancel real buttons and focus; their Esc stays ours until the key map carries 
   back to the cursor); `CodeMirrorEscSpec` pins that CodeMirror prevents an Esc it uses. Review round 1 (level 1)
   clean; 1 mutant killed. Left for later: the focus check should look at the code itself (`contentDOM`, not the lint
   panel around it); a test for Safari's 229 without `isComposing`.
+- 2026-10-26: hand-tested by the maintainer: Alt+V works in Chrome and Firefox; Esc works through the chain (the
+  Motor menu, a tool window and a parameter tool open, then back into the editor); the Motor menu closes on Esc from
+  the editor.
