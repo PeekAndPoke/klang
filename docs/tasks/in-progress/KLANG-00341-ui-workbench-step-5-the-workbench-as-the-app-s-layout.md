@@ -98,3 +98,5 @@ the one place for "where to go".
   (`overflow-x: hidden`, "no horizontal scrollbar from shadows poking the right edge"); it clips again. A new row
   guards that a wide page never widens the workbench (mutant: the centre without `min-width: 0`, red). No review
   round for this: it restores the old layout's own rule.
+- 2026-10-26: the scope back up under the gauges, the spectrum on the frame's floor (all heights kept, the
+  maintainer's idea). The maintainer: "Yes this is good".
