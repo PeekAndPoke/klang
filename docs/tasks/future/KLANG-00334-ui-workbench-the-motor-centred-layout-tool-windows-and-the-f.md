@@ -110,7 +110,11 @@ Kept in order, close to the maintainer's words.
 39. (2026-10-26) "As a general principle: when there is enough space we show the keyboard shortcut pills always."
     First place: the tool window's header, "Close: Esc" left of the pin. The pill still comes from the key manager
     (item 38: no caps printed by hand), as a variant whose hint always shows, not only while the hints are held;
-    asked of Klang-Main-Dev on the maintainer's word (2026-10-26).
+    asked of Klang-Main-Dev on the maintainer's word (2026-10-26). The same holds for the Motor's drawer: "The
+    Motor menu should also be closed by Esc and will need the same "Close: Esc" chip as the tool window once this is
+    avaiable." Esc goes through the key manager, without a layer of its own (a layer would silence every key below
+    it; the maintainer, 2026-10-26): one Esc closes the newest open drawer or tool window and stops there, the next Esc
+    on the song page puts the focus back into the editor at its last cursor.
 40. (2026-10-26) A key for the Motor button; in the Motor's drawer, arrow keys and Enter. Arrow keys between buttons
     are nothing the browser does by itself, so it needs a mechanism, and that mechanism belongs in the general key
     manager, not in the menu. The maintainer (2026-10-26): parked for now, but kept: "Goal should be that everything
