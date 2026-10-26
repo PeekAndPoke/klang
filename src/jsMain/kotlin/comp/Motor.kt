@@ -16,7 +16,6 @@ import io.peekandpoke.ultra.html.key
 import kotlinx.css.PointerEvents
 import kotlinx.css.Position
 import kotlinx.css.TextAlign
-import kotlinx.css.bottom
 import kotlinx.css.height
 import kotlinx.css.left
 import kotlinx.css.opacity
@@ -50,8 +49,8 @@ fun Tag.Motoer(
 class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
 
     companion object {
-        /** The frame's total height: the inset, the scope's foot (8.75 rem) and a floor under it for the spectrum. */
-        val FRAME_HEIGHT = 11.5.rem
+        /** The frame's total height: the gauges, the spectrum under them, the scope at the frame's foot. */
+        val FRAME_HEIGHT = 13.25.rem
 
         /** Room above the gauges, so they do not touch the column's edge. */
         val TOP_INSET = 0.75.rem
@@ -59,12 +58,17 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
         /** The top slot: the three gauges and the volume knob (62 px + their glow). */
         val TOP_SLOT_HEIGHT = 4.5.rem
 
-        /** Where the oscilloscope starts under the inset and how tall it is. */
-        val OSCILLOSCOPE_TOP = 5.0.rem
-        val OSCILLOSCOPE_HEIGHT = 3.75.rem
+        /** The spectrum, from between the gauges (behind them) down; its boxes stack up from its floor. */
+        const val SPECTRUM_TOP_REM = 4.5
+        const val SPECTRUM_HEIGHT_REM = 7.0
 
-        /** How far the spectrum reaches above the scope's top, between the gauges, so its high peaks show. */
-        val SPECTRUM_RISE = 1.25.rem
+        /**
+         * The scope's top sits on the spectrum's border from blue to green: `Spectrumeter`'s first colour (of five) fills
+         * the lowest quarter of a stack, the part nearly always lit, so the scope covers only that and every peak from
+         * green up shows above it (the maintainer, 2026-10-26).
+         */
+        const val OSCILLOSCOPE_TOP_REM = SPECTRUM_TOP_REM + SPECTRUM_HEIGHT_REM * 3.0 / 4.0
+        const val OSCILLOSCOPE_HEIGHT_REM = 3.25
     }
 
     //  PROPS  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -103,10 +107,10 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
                 key = "oscilloscope"
                 css {
                     position = Position.absolute
-                    top = OSCILLOSCOPE_TOP + TOP_INSET
+                    top = OSCILLOSCOPE_TOP_REM.rem
                     left = 0.rem
                     right = 0.rem
-                    height = OSCILLOSCOPE_HEIGHT
+                    height = OSCILLOSCOPE_HEIGHT_REM.rem
                     zIndex = 2
                 }
                 Oscilloscope(player = Player.player)
@@ -119,11 +123,11 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
                     zIndex = 1
                     position = Position.absolute
                     pointerEvents = PointerEvents.none
-                    // From the frame's floor up past the scope's top, behind the scope and the gauges
-                    bottom = 0.rem
+                    // Behind the gauges and the scope; the scope covers only its lowest, blue quarter
+                    top = SPECTRUM_TOP_REM.rem
                     left = 0.rem
                     right = 0.rem
-                    height = FRAME_HEIGHT - TOP_INSET - OSCILLOSCOPE_TOP + SPECTRUM_RISE
+                    height = SPECTRUM_HEIGHT_REM.rem
                     width = 100.pct
 
                     opacity = 0.85
