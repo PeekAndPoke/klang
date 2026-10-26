@@ -92,3 +92,9 @@ the one place for "where to go".
   dropping the focus, no refocus after a pin, an unfocusable pinned frame. The batch's baseline went red on a real
   bug: unkeyed, the pinned window took over the strip's element when it appeared, so the remembered toggle was
   detached; the workbench's parts that come and go now carry keys (mutant: both keys removed, red).
+- 2026-10-26: the maintainer: the scope still covered the interesting part of the spectrum; it moved down onto the
+  spectrum's border from blue to green (the frame 13.25rem again). And with a tool window pinned the editor showed
+  double scrollbars: the workbench's content area scrolled sideways where `MenuLayout`'s scroller had clipped
+  (`overflow-x: hidden`, "no horizontal scrollbar from shadows poking the right edge"); it clips again. A new row
+  guards that a wide page never widens the workbench (mutant: the centre without `min-width: 0`, red). No review
+  round for this: it restores the old layout's own rule.

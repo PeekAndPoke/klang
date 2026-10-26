@@ -666,10 +666,15 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("min-width", "0")
     }
 
+    /**
+     * The page's area: it scrolls up and down; sideways it clips, as the app's old layout did, so a glow or a shadow
+     * poking past the edge never adds a second scrollbar beside the editor's own.
+     */
     val workbenchContent by rule {
         put("flex", "1")
         put("min-height", "0")
-        put("overflow", "auto")
+        put("overflow-x", "hidden")
+        put("overflow-y", "auto")
     }
 
     val workbenchBottom by rule {

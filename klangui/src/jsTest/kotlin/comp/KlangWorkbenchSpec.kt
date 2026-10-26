@@ -15,13 +15,18 @@ import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.testing.TestBed
 import io.peekandpoke.kraft.testing.eventually
 import io.peekandpoke.kraft.vdom.VDom
+import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.onClick
 import kotlinx.browser.document
 import kotlinx.browser.window
+import kotlinx.css.height
+import kotlinx.css.px
+import kotlinx.css.width
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.a
 import kotlinx.html.button
+import kotlinx.html.div
 import kotlinx.html.span
 import org.w3c.dom.Element
 import org.w3c.dom.HTMLElement
@@ -473,6 +478,48 @@ class KlangWorkbenchSpec : StringSpec({
             nextFrame()
 
             root.q(".${styles.workbenchPinned}") shouldNotBe null
+        }
+    }
+
+    "a page wider than the content area stays inside it; the workbench never grows past its box, also with a window pinned" {
+        TestBed.preact(
+            view = {
+                div {
+                    css {
+                        width = 1000.px
+                        height = 600.px
+                    }
+
+                    KlangWorkbench(
+                        column = {},
+                        motor = {},
+                        content = {
+                            div {
+                                attributes["data-test"] = "wide-page"
+                                css { width = 1500.px }
+                                +"WIDE"
+                            }
+                        },
+                        tools = listOf(KlangWorkbench.Tool(id = "docs", title = "Docs", icon = { book }) { +"DOCS" }),
+                    )
+                }
+            },
+        ) { root ->
+            val bench = root.single().q(".${styles.workbench}")!!
+
+            bench.toggle("Docs").click()
+
+            eventually { bench.q(".${styles.workbenchFloating}") shouldNotBe null }
+
+            bench.q(".${styles.workbenchFloating} button[aria-pressed]")!!.click()
+
+            eventually { bench.q(".${styles.workbenchPinned}") shouldNotBe null }
+
+            nextFrame()
+            nextFrame()
+
+            bench.scrollWidth shouldBe bench.clientWidth
+            bench.scrollLeft shouldBe 0.0
         }
     }
 })
