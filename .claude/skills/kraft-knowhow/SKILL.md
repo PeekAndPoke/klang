@@ -188,6 +188,10 @@ kraftApp {
   the focus, component state, a CSS animation restarted) and redo what must still happen (`RouterWithTransitions`
   scrolls the scrollers around the page up). A wrapper put between a parent and its child becomes the flex item or
   the block the child was: give it the child's box (`width: 100%` in a flex row), or the child shrinks.
+- **Siblings that come and go carry keys** (KLANG-00341, 2026-10-26): Preact matches an unkeyed child by its type
+  and place, so a `div` that appears before another `div` takes over that one's element, and a reference to it (a
+  focus to give back) points at a detached node. Key the parts of a layout that appear and vanish (`KlangWorkbench`:
+  the pinned window before the strip, the bottom panel before a floating window).
 
 - **A yes/no question is klangui's `YesNoModal`** (headline, content, `yesText`, `noText`, one `onResult`;
   KLANG-00323, 2026-10-21), not Kraft's `OkCancelModal`: its buttons are divs that cannot take the keyboard.

@@ -107,6 +107,16 @@ Kept in order, close to the maintainer's words.
     ("Keep", "Move"), not "Yes" and "No". Settled with the maintainer: no printed caps (a key's hint comes from the
     key manager, an `OnKey` in the button), and only the top pair of rivets (at the foot, and lifted over the key
     row, they looked off). "OK thats good."
+39. (2026-10-26) "As a general principle: when there is enough space we show the keyboard shortcut pills always."
+    First place: the tool window's header, "Close: Esc" left of the pin. The pill still comes from the key manager
+    (item 38: no caps printed by hand), as a variant whose hint always shows, not only while the hints are held;
+    asked of Klang-Main-Dev on the maintainer's word (2026-10-26).
+40. (2026-10-26) A key for the Motor button; in the Motor's drawer, arrow keys and Enter. Arrow keys between buttons
+    are nothing the browser does by itself, so it needs a mechanism, and that mechanism belongs in the general key
+    manager, not in the menu. The maintainer (2026-10-26): parked for now, but kept: "Goal should be that everything
+    can be done with keys only, probably very good for live coding." Klang-Main-Dev will build the arrows (one tab
+    stop, arrows, Home/End, Enter) into the key manager once the plan is agreed. The Motor button's key: Alt+M (the
+    maintainer's OK), with its own `OnKey` hint.
 
 ## Where the conversation stands (leanings, not decisions)
 

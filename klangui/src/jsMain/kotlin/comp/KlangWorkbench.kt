@@ -9,6 +9,7 @@ import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
+import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.html.onKeyDown
 import io.peekandpoke.ultra.semanticui.SemanticIconFn
 import kotlinx.browser.document
@@ -56,7 +57,8 @@ fun Tag.KlangWorkbench(
  * - The content in the middle, and under it the bottom panel, docked, shown or hidden from the strip.
  * - The tool strip on the right: a toggle per tool window, the bottom panel's toggle, the maker's [Props.mark]
  *   written up its foot (items 22, 23). An open tool window flies in over the content, or, pinned, docks beside it;
- *   each tool window keeps its own pin, as in IntelliJ.
+ *   each tool window keeps its own pin, as in IntelliJ. Opened from the strip, it takes the focus; Esc closes one
+ *   flying in (the focus goes back to its toggle), a pinned one stays.
  *
  * It draws the frame only; what goes in it (the Motor, the routes behind the drawer) is the app's.
  */
@@ -118,6 +120,9 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
     /** Where the focus was when the drawer opened (the menu button); it goes back there when the drawer closes. */
     private var focusBeforeDrawer: HTMLElement? = null
 
+    /** Where the focus was when a tool window opened from the strip (its toggle); it goes back there on Esc. */
+    private var focusBeforeTool: HTMLElement? = null
+
     init {
         lifecycle {
             // A tool window or a drawer that leaves the props closes, so it does not open again by itself when it comes back
@@ -136,7 +141,46 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     private fun toggleTool(id: String) {
-        openTool = if (openTool == id) null else id
+        if (openTool == id) {
+            openTool = null
+
+            return
+        }
+
+        focusBeforeTool = document.activeElement as? HTMLElement
+        openTool = id
+
+        focusToolFrame()
+    }
+
+    /** After the next draw, the open tool window takes the focus, so Esc reaches it from the first moment. */
+    private fun focusToolFrame() {
+        window.requestAnimationFrame {
+            val frame = dom?.querySelector(".${KlangControlStyles.workbenchFloating}, .${KlangControlStyles.workbenchPinned}")
+
+            (frame as? HTMLElement)?.focus()
+        }
+    }
+
+    /** Closes the open tool window (its close button; Esc when it flies in) and gives the focus back to its toggle. */
+    private fun closeTool() {
+        openTool = null
+
+        val back = focusBeforeTool
+        focusBeforeTool = null
+
+        restoreFocus(back)
+    }
+
+    /** Gives the focus back to [back], but only when it was lost with what closed (a pick may have moved it on). */
+    private fun restoreFocus(back: HTMLElement?) {
+        window.requestAnimationFrame {
+            val now = document.activeElement
+
+            if (now == null || now == document.body) {
+                back?.focus()
+            }
+        }
     }
 
     private fun openDrawer() {
@@ -163,13 +207,7 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
         focusBeforeDrawer = null
 
         // Only a focus lost with the drawer goes back; one a pick put elsewhere (a page's editor) stays there
-        window.requestAnimationFrame {
-            val now = document.activeElement
-
-            if (now == null || now == document.body) {
-                back?.focus()
-            }
-        }
+        restoreFocus(back)
     }
 
     override fun VDom.render() {
@@ -177,8 +215,12 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
         val tool = props.tools.firstOrNull { it.id == openTool }
         val bottom = props.bottom
 
+        // Keys on the parts that come and go, so a part that appears never takes over its neighbour's element (and the
+        // focus in it): the pinned window between the centre and the strip, the bottom panel before a floating window
         div(classes = styles.workbench.toString()) {
             aside(classes = styles.workbenchColumn.toString()) {
+                key = "column"
+
                 val drawer = props.drawer
 
                 div(classes = styles.workbenchColumnArea.toString()) {
@@ -214,12 +256,18 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
             }
 
             main(classes = styles.workbenchCentre.toString()) {
+                key = "centre"
+
                 div(classes = styles.workbenchContent.toString()) {
+                    key = "content"
+
                     props.content(this)
                 }
 
                 if (bottom != null && bottomOpen) {
                     section(classes = styles.workbenchBottom.toString()) {
+                        key = "bottom"
+
                         attributes["aria-label"] = bottom.title
 
                         div(classes = styles.workbenchBottomHeader.toString()) {
@@ -234,6 +282,18 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
 
                 if (tool != null && tool.id !in pinned) {
                     div(classes = styles.workbenchFloating.toString()) {
+                        key = "floating"
+
+                        // The focus lands here when the window opens from the strip
+                        attributes["tabindex"] = "-1"
+
+                        onKeyDown { e ->
+                            if (e.key == "Escape") {
+                                e.preventDefault()
+                                closeTool()
+                            }
+                        }
+
                         renderTool(tool)
                     }
                 }
@@ -241,12 +301,19 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
 
             if (tool != null && tool.id in pinned) {
                 div(classes = styles.workbenchPinned.toString()) {
+                    key = "pinned"
+
+                    // The focus lands here when the window opens from the strip
+                    attributes["tabindex"] = "-1"
+
                     renderTool(tool)
                 }
             }
 
             // A group, not a toolbar: a toolbar promises arrow keys and one tab stop, which the strip does not have yet
             div(classes = styles.workbenchStrip.toString()) {
+                key = "strip"
+
                 attributes["role"] = "group"
                 attributes["aria-label"] = "Tool windows"
 
@@ -284,8 +351,12 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
             title = tool.title,
             chip = tool.chip,
             pinned = tool.id in pinned,
-            onPinnedChange = { pin -> pinned = if (pin) pinned + tool.id else pinned - tool.id },
-            onClose = { openTool = null },
+            onPinnedChange = { pin ->
+                pinned = if (pin) pinned + tool.id else pinned - tool.id
+                // The window moves between the content and the bench: the focus moves with it
+                focusToolFrame()
+            },
+            onClose = { closeTool() },
         ) {
             tool.content(this)
         }

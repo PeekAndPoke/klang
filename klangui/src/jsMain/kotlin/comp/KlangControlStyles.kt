@@ -706,6 +706,11 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("width", "380px")
         put("z-index", "15")
         put("display", "flex")
+
+        // Holding the focus as a frame, not a control: no ring
+        rule("&:focus") {
+            put("outline", "none")
+        }
     }
 
     /** A pinned tool window, docked between the content and the strip. */
@@ -713,6 +718,11 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("display", "flex")
         put("width", "340px")
         put("flex-shrink", "0")
+
+        // Holding the focus as a frame, not a control: no ring
+        rule("&:focus") {
+            put("outline", "none")
+        }
     }
 
     val workbenchStrip by rule {

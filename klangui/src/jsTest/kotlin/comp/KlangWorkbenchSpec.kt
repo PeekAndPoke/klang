@@ -417,4 +417,62 @@ class KlangWorkbenchSpec : StringSpec({
 
         bare?.className shouldBe styles.workbenchDrawer.toString()
     }
+
+    "a tool window opened from the strip takes the focus; Esc closes one flying in, the focus goes back to its toggle; a pinned one stays" {
+        withWorkbench { root ->
+            fun esc() {
+                document.activeElement!!.dispatchEvent(
+                    KeyboardEvent("keydown", KeyboardEventInit(key = "Escape", bubbles = true, cancelable = true))
+                )
+            }
+
+            root.toggle("Docs").focus()
+            root.toggle("Docs").click()
+
+            eventually {
+                root.q(".${styles.workbenchFloating}")?.contains(document.activeElement) shouldBe true
+            }
+
+            esc()
+
+            eventually {
+                root.q(".${styles.workbenchFloating}") shouldBe null
+                document.activeElement?.getAttribute("aria-label") shouldBe "Docs"
+            }
+
+            root.toggle("Docs").click()
+
+            eventually { root.q(".${styles.workbenchFloating}") shouldNotBe null }
+
+            root.q(".${styles.workbenchFloating} button[aria-pressed]")!!.click()
+
+            // Pinned, the window moves beside the content and the focus moves with it
+            eventually {
+                root.q(".${styles.workbenchPinned}")?.contains(document.activeElement) shouldBe true
+            }
+
+            // Its close button gives the focus back to the toggle, as Esc does
+            root.q(".${styles.workbenchPinned} button[aria-label='Close Docs']")!!.click()
+
+            eventually {
+                root.q(".${styles.workbenchPinned}") shouldBe null
+                document.activeElement?.getAttribute("aria-label") shouldBe "Docs"
+            }
+
+            // Opened from the strip again it comes pinned, and takes the focus
+            root.toggle("Docs").click()
+
+            eventually {
+                root.q(".${styles.workbenchPinned}")?.contains(document.activeElement) shouldBe true
+            }
+
+            esc()
+
+            // Past the frames a close would take: the pinned window is part of the bench
+            nextFrame()
+            nextFrame()
+
+            root.q(".${styles.workbenchPinned}") shouldNotBe null
+        }
+    }
 })

@@ -62,6 +62,9 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
         /** Where the oscilloscope starts under the inset and how tall it is. */
         val OSCILLOSCOPE_TOP = 5.0.rem
         val OSCILLOSCOPE_HEIGHT = 3.75.rem
+
+        /** How far the spectrum reaches above the scope's top, between the gauges, so its high peaks show. */
+        val SPECTRUM_RISE = 1.25.rem
     }
 
     //  PROPS  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -116,14 +119,14 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
                     zIndex = 1
                     position = Position.absolute
                     pointerEvents = PointerEvents.none
-                    // From the frame's floor up to the scope's top, behind it
+                    // From the frame's floor up past the scope's top, behind the scope and the gauges
                     bottom = 0.rem
                     left = 0.rem
                     right = 0.rem
-                    height = FRAME_HEIGHT - TOP_INSET - OSCILLOSCOPE_TOP
+                    height = FRAME_HEIGHT - TOP_INSET - OSCILLOSCOPE_TOP + SPECTRUM_RISE
                     width = 100.pct
 
-                    opacity = 0.66
+                    opacity = 0.85
                 }
 
                 Spectrumeter(numBoxesInStack = 35) { Player.get() }

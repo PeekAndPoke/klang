@@ -83,3 +83,12 @@ the one place for "where to go".
 - 2026-10-26: round 1 (level 1, blind): clean, 3 MINOR, 2 NIT, all taken; the remounting behind its MINOR 2 fixed
   in the router, which is new code, so round 2 runs (one level down from a clean round, the floor).
 - 2026-10-26: round 2 found two MAJORs in the router change, fixed; round 3 (level 2) clean. Committed.
+- 2026-10-26: the maintainer's look: the Motor steady across pages, the pinned window stays, the editor fills the
+  height. Asked for: the spectrum higher and stronger (now 1.25rem above the scope's top, opacity 0.85); Esc closes a
+  tool window flying in (it takes the focus when opened from the strip, the focus goes back on Esc or its close
+  button; a pinned one stays). Reviewed (one round at level 1, clean; its three MINORs applied: the close button gives
+  the focus back, a pin change moves the focus with the window, the spec checks the pinned window's focus).
+  Mutation-checked: no focus in, Esc ignored, the focus not back, a pinned window closing on Esc, the close button
+  dropping the focus, no refocus after a pin, an unfocusable pinned frame. The batch's baseline went red on a real
+  bug: unkeyed, the pinned window took over the strip's element when it appeared, so the remembered toggle was
+  detached; the workbench's parts that come and go now carry keys (mutant: both keys removed, red).
