@@ -804,9 +804,10 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         )
     }
 
+    /** The face, inside the rim: the rim's width is this inset (the maintainer, 2026-10-26: "slightly thicker", 6% too thick). */
     val gaugeFace by rule {
         put("position", "absolute")
-        put("inset", "4%")
+        put("inset", "5%")
         put("border-radius", "50%")
         put(
             "background",
@@ -814,6 +815,22 @@ object KlangControlStyles : StyleSheet("kl-controls") {
                     " var(--kl-ground-sunken) 70%)"
         )
         put("box-shadow", "inset 0 2px 4px rgba(0,0,0,0.8)")
+    }
+
+    /**
+     * Domed glass over the face, ever so slightly (the maintainer, 2026-10-26): light caught at the top of the dome,
+     * and the glass a touch darker where it curves down into the rim. Above the scale and the value, it takes no clicks.
+     */
+    val gaugeGlass by rule {
+        put("position", "absolute")
+        put("inset", "5%")
+        put("border-radius", "50%")
+        put("pointer-events", "none")
+        put(
+            "background",
+            "radial-gradient(ellipse 72% 46% at 50% 16%, rgba(255,255,255,0.13), rgba(255,255,255,0.03) 62%, transparent 76%)"
+        )
+        put("box-shadow", "inset 0 -2px 5px rgba(255,255,255,0.05), inset 0 0 6px rgba(0,0,0,0.35)")
     }
 
     val gaugeScale by rule {

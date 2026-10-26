@@ -140,8 +140,26 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         }
     }
 
+    /** The trace's colour changed (a new look): the next update draws the last frame again, in the new colour. */
+    private var restroke = false
+
     init {
         lifecycle {
+            onNextProps { next, old ->
+                if (next.strokeColor != old.strokeColor) {
+                    restroke = true
+                }
+            }
+
+            onUpdate {
+                if (restroke) {
+                    restroke = false
+
+                    val h = lastHistory
+                    if (h != null) drawWaveform(h) else drawIdleWaveform()
+                }
+            }
+
             onMount {
                 dom?.let { container ->
                     canvas = dom?.querySelector("canvas") as HTMLCanvasElement?

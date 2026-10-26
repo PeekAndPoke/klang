@@ -24,7 +24,6 @@ import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.html.onKeyDown
 import kotlinx.browser.document
-import kotlinx.browser.window
 import kotlinx.css.height
 import kotlinx.css.px
 import kotlinx.css.width
@@ -40,8 +39,6 @@ import org.w3c.dom.HTMLElement
 import org.w3c.dom.events.EventTarget
 import org.w3c.dom.events.KeyboardEvent
 import org.w3c.dom.events.KeyboardEventInit
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
 /** A workbench whose tool windows and drawer its parent changes, as a page's may. */
 private class ChangingHost(ctx: NoProps) : PureComponent(ctx) {
@@ -87,9 +84,6 @@ private suspend fun keyedBed(view: VDom.() -> Any?, test: suspend (element: KQue
         manager.dispose()
     }
 }
-
-/** Waits for the next animation frame. */
-private suspend fun nextFrame() = suspendCoroutine { cont -> window.requestAnimationFrame { cont.resume(Unit) } }
 
 @Suppress("FunctionName")
 private fun Tag.ChangingHost() = comp { ChangingHost(it) }

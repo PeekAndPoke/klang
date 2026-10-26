@@ -24,12 +24,15 @@ import io.peekandpoke.kraft.vdom.VDom
 import kotlinx.css.px
 import kotlinx.html.Tag
 import org.w3c.dom.Element
+import kotlin.math.abs
+import kotlin.time.Duration.Companion.seconds
 
 /** A gauge whose value a test sets, to see the needle follow new props. */
 private class GaugeHost(ctx: NoProps) : PureComponent(ctx) {
     companion object {
         var current: GaugeHost? = null
         var smoothing: Double = 0.0
+        var hotFrom: Double? = null
     }
 
     var reading: Double? by value(0.0)
@@ -39,7 +42,7 @@ private class GaugeHost(ctx: NoProps) : PureComponent(ctx) {
     }
 
     override fun VDom.render() {
-        KlangGauge(name = "Host", value = reading, range = 0.0..1.0, smoothing = smoothing)
+        KlangGauge(name = "Host", value = reading, range = 0.0..1.0, smoothing = smoothing, hotFrom = hotFrom)
     }
 }
 
@@ -253,26 +256,59 @@ class KlangGaugeSpec : StringSpec({
         }
     }
 
-    "with smoothing the needle goes part of the way to a new value; without it all the way" {
-        for ((smoothing, expectMiddle) in listOf(0.5 to true, 0.0 to false)) {
-            GaugeHost.smoothing = smoothing
+    "with smoothing the needle glides to a reading by itself, also while the reading holds still; without it it jumps" {
+        // The end of the sweep, where a reading of 1 points the needle
+        val (endX, endY) = Dial.point(fraction = 1.0, radius = 30.0)
 
+        for (smoothing in listOf(0.9, 0.0)) {
+            GaugeHost.smoothing = smoothing
+            GaugeHost.hotFrom = null
+
+            TestBed.preact(view = { GaugeHost() }) { root ->
+                // One change of the reading, then no new props at all
+                GaugeHost.current!!.reading = 1.0
+
+                if (smoothing > 0.0) {
+                    nextFrame()
+                    nextFrame()
+                    nextFrame()
+
+                    val (x, y) = needle(root.single())
+
+                    // On its way: a few frames in, not at the end yet
+                    (abs(x - endX) + abs(y - endY)) shouldBeGreaterThan 1.0
+                }
+
+                eventually(timeout = 5.seconds) {
+                    val (x, y) = needle(root.single())
+
+                    x shouldBe (endX plusOrMinus 0.01)
+                    y shouldBe (endY plusOrMinus 0.01)
+                }
+            }
+        }
+    }
+
+    "the colour follows the needle: a reading past the red zone's start turns the gauge hot only once the needle is there" {
+        GaugeHost.smoothing = 0.9
+        GaugeHost.hotFrom = 0.85
+
+        try {
             TestBed.preact(view = { GaugeHost() }) { root ->
                 GaugeHost.current!!.reading = 1.0
 
-                eventually {
-                    val (x, y) = needle(root.single())
+                nextFrame()
+                nextFrame()
 
-                    if (expectMiddle) {
-                        // Half way from 0 to 1: the top
-                        x shouldBe (50.0 plusOrMinus 1e-6)
-                        y shouldBeLessThan 50.0
-                    } else {
-                        x shouldBeGreaterThan 50.0
-                        y shouldBeGreaterThan 50.0
-                    }
+                // The reading is past 0.85, the needle not yet
+                root.single().querySelector("[role=meter]")!!.getAttribute("data-gauge") shouldBe "online"
+
+                eventually(timeout = 5.seconds) {
+                    root.single().querySelector("[role=meter]")!!.getAttribute("data-gauge") shouldBe "hot"
                 }
             }
+        } finally {
+            GaugeHost.hotFrom = null
         }
     }
 })

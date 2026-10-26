@@ -16,19 +16,28 @@ import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.common.roundWithPrecision
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
+import io.peekandpoke.ultra.html.onMouseLeave
+import io.peekandpoke.ultra.html.onMouseMove
 import io.peekandpoke.ultra.maths.Ease
 import kotlinx.browser.window
 import kotlinx.css.Color
 import kotlinx.css.Display
+import kotlinx.css.Position
+import kotlinx.css.bottom
 import kotlinx.css.display
 import kotlinx.css.height
 import kotlinx.css.pct
+import kotlinx.css.position
+import kotlinx.css.px
+import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.canvas
 import kotlinx.html.div
 import org.khronos.webgl.set
 import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.HTMLCanvasElement
+import kotlin.math.floor
+import kotlin.math.roundToInt
 
 @Suppress("FunctionName")
 fun Tag.Spectrumeter(
@@ -82,6 +91,9 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
     }
 
     private val bucketValues = DoubleArray(props.numBuckets)
+
+    /** The column under the mouse, whose frequencies the label shows; null while the mouse is elsewhere. */
+    private var hovered: Int? by value(null)
 
     /** Accumulated "heat" driving the gold glow. Energy pumps heat in, cooling bleeds it out. */
     private var glowHeat: Double = 0.0
@@ -229,17 +241,87 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
         }
     }
 
+    /** The column under the mouse at [clientX], from the spectrum's own box. */
+    private fun columnAt(clientX: Double): Int? {
+        val rect = dom?.getBoundingClientRect() ?: return null
+
+        if (rect.width <= 0.0) {
+            return null
+        }
+
+        return floor((clientX - rect.left) / rect.width * props.numBuckets).toInt().coerceIn(0, props.numBuckets - 1)
+    }
+
     override fun VDom.render() {
         div {
             key = "spectrum-visualizer"
             css {
                 height = 100.pct
+                position = Position.relative
             }
+
+            // Hovered, a column shows the frequencies it covers (the maintainer, 2026-10-26)
+            onMouseMove { e ->
+                val column = columnAt(e.clientX.toDouble())
+
+                if (column != hovered) {
+                    hovered = column
+                }
+            }
+            onMouseLeave { hovered = null }
+
             canvas("spectrum-canvas") {
                 css {
                     display = Display.block
                 }
             }
+
+            hovered?.let { column -> renderRange(column) }
         }
+    }
+
+    /** The label over the floor, at the [column]'s side towards the middle, so it never runs off the edge. */
+    private fun FlowContent.renderRange(column: Int) {
+        val n = props.numBuckets
+        val towardsRight = column < n / 2
+
+        div {
+            css {
+                position = Position.absolute
+                bottom = 4.px
+                put("pointer-events", "none")
+                put("padding", "1px 5px")
+                put("border-radius", "3px")
+                put("background", "rgba(0, 0, 0, 0.7)")
+                put("color", "var(--kl-ink-text)")
+                put("font-family", "monospace")
+                put("font-size", "11px")
+                put("white-space", "nowrap")
+
+                if (towardsRight) {
+                    put("left", "${column * 100.0 / n}%")
+                } else {
+                    put("right", "${(n - column - 1) * 100.0 / n}%")
+                }
+            }
+
+            +rangeLabel(props.binning.frequencyRange(column))
+        }
+    }
+}
+
+/** A column's frequencies as one reads them: "120 to 180 Hz", "800 Hz to 1 kHz", "1.2 to 1.8 kHz". */
+internal fun rangeLabel(range: ClosedFloatingPointRange<Double>): String {
+    val low = range.start
+    val high = range.endInclusive
+
+    fun hz(f: Double) = f.roundToInt().toString()
+
+    fun khz(f: Double) = ((f / 100.0).roundToInt() / 10.0).toString()
+
+    return when {
+        high < 1000.0 -> "${hz(low)} to ${hz(high)} Hz"
+        low >= 1000.0 -> "${khz(low)} to ${khz(high)} kHz"
+        else -> "${hz(low)} Hz to ${khz(high)} kHz"
     }
 }

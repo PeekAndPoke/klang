@@ -509,12 +509,10 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                     // Stack above the absolutely-positioned spectrum visualizer
                     position = Position.relative
                     zIndex = 1
+                    // The gauges glow in the background lamp's colour, at half strength: the lamp already lights the page
+                    put("--kl-gauge-glow", "color-mix(in srgb, ${MotorBackground.lightColorHex} 50%, transparent)")
                 }
-                PlayerMiniStats(
-                    glowColor = Color(MotorBackground.lightColorHex),
-                    // Half strength — the background lamp already lights the page.
-                    glowIntensity = 0.225,
-                )
+                PlayerMiniStats()
             }
 
             div {

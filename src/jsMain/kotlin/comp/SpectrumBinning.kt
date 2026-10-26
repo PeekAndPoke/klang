@@ -48,8 +48,8 @@ class SpectrumBinning(
         val logMax = ln(maxFreq)
 
         bucketRanges = Array(numBuckets) { i ->
-            val freqLow = exp(logMin + (logMax - logMin) * i / numBuckets)
-            val freqHigh = exp(logMin + (logMax - logMin) * (i + 1) / numBuckets)
+            val freqLow = frequencyRange(i).start
+            val freqHigh = frequencyRange(i).endInclusive
 
             val binLow = (freqLow / fftBinWidth).toInt().coerceIn(0, fftBinCount - 1)
             val binHigh = (freqHigh / fftBinWidth).toInt().coerceIn(binLow, fftBinCount - 1)
@@ -61,6 +61,14 @@ class SpectrumBinning(
             val freqCenter = exp(logMin + (logMax - logMin) * (i + 0.5) / numBuckets)
             slopeDbPerOctave * log2(freqCenter / referenceFreq)
         }
+    }
+
+    /** The frequencies [bucket] covers, in Hz, low to high: its column spans them on a log scale. */
+    fun frequencyRange(bucket: Int): ClosedFloatingPointRange<Double> {
+        val logMin = ln(minFreq)
+        val logMax = ln(maxFreq)
+
+        return exp(logMin + (logMax - logMin) * bucket / numBuckets)..exp(logMin + (logMax - logMin) * (bucket + 1) / numBuckets)
     }
 
     /**

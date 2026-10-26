@@ -99,9 +99,15 @@ enum class KlangRole(
     /** The glow around a gauge whose Motor is online. */
     GaugeGlow(cssVar = "--kl-gauge-glow", kind = Kind.Color, default = "#5c7cbc"),
 
+    /**
+     * The oscilloscope's trace in the Motor: brass, near gold but apart from [LampTry]'s gold, which means "try me" and
+     * nothing else (the maintainer, 2026-10-26; the accent's blue did not work for it).
+     */
+    ScopeTrace(cssVar = "--kl-scope-trace", kind = Kind.Color, default = "#c9a35a"),
+
     // ── Accent ────────────────────────────────────────────────────────────────
 
-    /** Selection, links, the oscilloscope's trace. */
+    /** Selection, links. */
     Accent(cssVar = "--kl-accent", kind = Kind.Color, default = "#528bff"),
 
     /** The accent on large surfaces, where [Accent] is too loud: a selected row, the editor's frame. */

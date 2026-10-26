@@ -7,13 +7,15 @@ package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.ui.comp.KlangWorkbench
+import io.peekandpoke.klang.ui.feel.KlangRole
+import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
-import kotlinx.css.PointerEvents
+import kotlinx.css.Color
 import kotlinx.css.Position
 import kotlinx.css.TextAlign
 import kotlinx.css.bottom
@@ -21,7 +23,6 @@ import kotlinx.css.height
 import kotlinx.css.left
 import kotlinx.css.opacity
 import kotlinx.css.pct
-import kotlinx.css.pointerEvents
 import kotlinx.css.position
 import kotlinx.css.rem
 import kotlinx.css.right
@@ -65,6 +66,9 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
 
         /** The spectrum stands on the frame's floor, behind the scope; its boxes stack up from there. */
         const val SPECTRUM_HEIGHT_REM = 7.0
+
+        /** The spectrum's columns, as on the design canvas (KLANG-00334 item 36; 16 before). */
+        const val SPECTRUM_COLUMNS = 28
     }
 
     //  PROPS  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -73,6 +77,11 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
         /** The menu button beside the gauges, opening a workbench's drawer; null for none (an empty spot). */
         val menu: KlangWorkbench.Menu?,
     )
+
+    //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
+
+    /** The resolved look: the trace's colour is a role, read here for the canvas. */
+    private val look by subscribingTo(KlangTheme.look)
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -109,7 +118,8 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
                     height = OSCILLOSCOPE_HEIGHT_REM.rem
                     zIndex = 2
                 }
-                Oscilloscope(player = Player.player)
+                // The trace in the look's own colour for it (KLANG-00334 item 36): a new look changes it at once
+                Oscilloscope(player = Player.player, strokeColor = Color(look[KlangRole.ScopeTrace]))
             }
 
             div {
@@ -118,7 +128,6 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
                 css {
                     zIndex = 1
                     position = Position.absolute
-                    pointerEvents = PointerEvents.none
                     // On the frame's floor, behind the scope
                     bottom = 0.rem
                     left = 0.rem
@@ -129,7 +138,7 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
                     opacity = 0.85
                 }
 
-                Spectrumeter(numBoxesInStack = 35) { Player.get() }
+                Spectrumeter(numBoxesInStack = 35, numBuckets = SPECTRUM_COLUMNS) { Player.get() }
             }
         }
     }

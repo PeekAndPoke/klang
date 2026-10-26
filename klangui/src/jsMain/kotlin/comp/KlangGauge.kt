@@ -14,6 +14,7 @@ import io.peekandpoke.kraft.vdom.custom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.semanticui.SemanticIconFn
 import io.peekandpoke.ultra.semanticui.icon
+import kotlinx.browser.window
 import kotlinx.css.LinearDimension
 import kotlinx.css.fontSize
 import kotlinx.css.height
@@ -22,6 +23,7 @@ import kotlinx.css.width
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
+import kotlin.math.abs
 
 @Suppress("FunctionName")
 fun Tag.KlangGauge(
@@ -56,7 +58,8 @@ fun Tag.KlangGauge(
  *
  * Without a value the gauge is offline: no glow, the needle at rest, the mark dim. With one it glows. With one at or
  * past [Props.hotFrom] it is hot: the arc and the glow turn critical. Screen readers hear a `meter` with the raw value;
- * the needle shows a smoothed one when [Props.smoothing] is above 0, as `RoundGauge` does. Canvas section "Gauges".
+ * the needle shows a smoothed one when [Props.smoothing] is above 0, as `RoundGauge` does: it glides towards the
+ * reading, a step every frame, also while the reading holds still. Canvas section "Gauges".
  */
 class KlangGauge(ctx: Ctx<Props>) : Component<KlangGauge.Props>(ctx) {
 
@@ -93,24 +96,71 @@ class KlangGauge(ctx: Ctx<Props>) : Component<KlangGauge.Props>(ctx) {
     /** Where the needle points, in the range's units. */
     private var shown: Double by value(readingOf(props) ?: props.range.start)
 
+    /** Where the needle heads: the reading, or the rest while offline. */
+    private var target: Double = shown
+
+    /** A frame is asked for: the needle is on its way to [target]. */
+    private var stepping = false
+
+    private var mounted = false
+
     init {
         lifecycle {
+            onMount {
+                mounted = true
+            }
+
+            onUnmount {
+                mounted = false
+            }
+
             // Kraft hands the new props first, the previous ones second
             onNextProps { next, _ ->
                 val reading = readingOf(next)
                 val smoothing = next.smoothing
 
-                shown = when {
+                when {
                     // Offline: the needle goes to rest at once, it does not wait for more props to get there
-                    reading == null -> next.range.start
+                    reading == null -> jumpTo(next.range.start)
                     // NaN-guard: a NaN smoothing counts as none, as does a needle that is not finite
-                    smoothing != smoothing || smoothing <= 0.0 || !shown.isFinite() -> reading
+                    smoothing != smoothing || smoothing <= 0.0 || !shown.isFinite() -> jumpTo(reading)
                     else -> {
-                        val share = smoothing.coerceAtMost(0.999)
-
-                        shown * share + reading * (1.0 - share)
+                        target = reading
+                        step(smoothing = smoothing)
                     }
                 }
+            }
+        }
+    }
+
+    private fun jumpTo(v: Double) {
+        target = v
+        shown = v
+    }
+
+    /**
+     * One step of the needle towards [target], then the next on the next frame, until it is there: the needle moves by
+     * itself while a reading holds still (props that do not change bring no new step; KLANG-00344).
+     */
+    private fun step(smoothing: Double) {
+        val share = smoothing.coerceIn(0.0, 0.999)
+        val next = shown * share + target * (1.0 - share)
+        // Close enough to stop: a thousandth of the sweep, or of 1 on a range without a span
+        val near = if (span > 0.0) span * 0.001 else 0.001
+
+        shown = if (abs(next - target) <= near) target else next
+
+        if (shown == target || stepping || !mounted) {
+            return
+        }
+
+        stepping = true
+
+        window.requestAnimationFrame {
+            stepping = false
+
+            if (mounted && shown != target) {
+                step(smoothing = props.smoothing)
             }
         }
     }
@@ -130,8 +180,9 @@ class KlangGauge(ctx: Ctx<Props>) : Component<KlangGauge.Props>(ctx) {
         val online = value != null
         // No red zone on a range without a span, or at a hotFrom that is not a number
         val hotFrom = props.hotFrom?.takeIf { it.isFinite() && span > 0.0 }
-        // Hot is decided in the range's units: a hotFrom past the range's end is never reached
-        val hot = value != null && hotFrom != null && value >= hotFrom
+        // Hot is decided in the range's units, on what the needle shows: a spike the smoothing evens out never turns the
+        // gauge red (the maintainer, 2026-10-26); a hotFrom past the range's end is never reached
+        val hot = value != null && hotFrom != null && shown >= hotFrom
         // Where the red ticks start, unclamped: past the end none are red, before the start all are
         val hotFraction = hotFrom?.let { (it - props.range.start) / span }
 
@@ -147,6 +198,8 @@ class KlangGauge(ctx: Ctx<Props>) : Component<KlangGauge.Props>(ctx) {
         div(classes = rimClasses.joinToString(" ")) {
             attributes["role"] = "meter"
             attributes["aria-label"] = props.name
+            // A mouse user learns what an icon gauge measures, as the Motor's gauges always told
+            attributes["title"] = props.name
             attributes["aria-valuemin"] = props.range.start.toString()
             attributes["aria-valuemax"] = props.range.endInclusive.toString()
             attributes["data-gauge"] = when {
@@ -185,6 +238,9 @@ class KlangGauge(ctx: Ctx<Props>) : Component<KlangGauge.Props>(ctx) {
                     +display(shown)
                 }
             }
+
+            // Last, so it lies over the dial and the value
+            div(classes = styles.gaugeGlass.toString()) {}
         }
     }
 

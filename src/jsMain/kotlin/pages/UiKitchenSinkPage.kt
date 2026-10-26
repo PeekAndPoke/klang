@@ -5,11 +5,9 @@
 
 package io.peekandpoke.klang.pages
 
+import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.comp.LcdDisplay
-import io.peekandpoke.klang.comp.VolumeKnob
-import io.peekandpoke.klang.comp.activeVoicesGauge
-import io.peekandpoke.klang.comp.renderMotorHeatGauge
-import io.peekandpoke.klang.comp.roundCylindersGauge
+import io.peekandpoke.klang.comp.Oscilloscope
 import io.peekandpoke.klang.storage.LookStorage
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.comp.KlangButton
@@ -29,6 +27,7 @@ import io.peekandpoke.klang.ui.comp.KlangSearchField
 import io.peekandpoke.klang.ui.comp.KlangSwatchButton
 import io.peekandpoke.klang.ui.comp.KlangToolWindow
 import io.peekandpoke.klang.ui.comp.YesNoModal
+import io.peekandpoke.klang.ui.feel.KlangLookLayers
 import io.peekandpoke.klang.ui.feel.KlangLooks
 import io.peekandpoke.klang.ui.feel.KlangRole
 import io.peekandpoke.klang.ui.feel.KlangTheme
@@ -39,6 +38,7 @@ import io.peekandpoke.kraft.modals.ModalsManager.Companion.modals
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
+import kotlinx.css.Color
 import kotlinx.css.px
 import kotlinx.html.DIV
 import kotlinx.html.FlowContent
@@ -177,8 +177,56 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
 
     private fun turn(name: String): (Double) -> Unit = { positions = positions + (name to it) }
 
+    /** Candidates for the scope's trace, to try against the gauges while a song plays (KLANG-00344). */
+    private val traceCandidates = listOf(
+        "Brass" to "#c9a35a",
+        "Bright brass" to "#dcb466",
+        "Champagne" to "#e8d6ad",
+        "Warm white" to "#f4ebdc",
+        "Rim silver" to "#c9ced6",
+        "Light silver" to "#f2f4f7",
+    )
+
     private fun FlowContent.renderGauges() {
         section("Gauges") {
+            cell(
+                name = "The Motor's trace: try a colour while a song plays (the Motor shows it too, until a reload)",
+                source = "KlangRole.ScopeTrace, set on the look's Script layer",
+            ) {
+                div {
+                    css {
+                        put("display", "flex")
+                        put("align-items", "center")
+                        put("gap", "12px")
+                        put("padding", "10px")
+                        put("background", "var(--kl-ground-deep)")
+                        put("border-radius", "6px")
+                    }
+
+                    KlangGauge(name = "Motor heat", value = 0.38, size = 62.px, icon = { microchip }, hotFrom = 0.85)
+
+                    div {
+                        css {
+                            put("width", "260px")
+                            put("height", "52px")
+                        }
+
+                        Oscilloscope(player = Player.player, strokeColor = Color(look[KlangRole.ScopeTrace]))
+                    }
+                }
+
+                row {
+                    for ((name, hex) in traceCandidates) {
+                        KlangSwatchButton(
+                            name = name,
+                            swatch = listOf(hex),
+                            pressed = look[KlangRole.ScopeTrace].equals(hex, ignoreCase = true),
+                            onClick = { KlangTheme.setLayer(KlangLookLayers.Layer.Script, mapOf(KlangRole.ScopeTrace to hex)) },
+                        )
+                    }
+                }
+            }
+
             cell(name = "The Motor's three, with icons", source = "klangui/comp/KlangGauge.kt") {
                 row {
                     KlangGauge(
@@ -564,18 +612,6 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
 
     private fun FlowContent.renderToday() {
         section("Today, for comparison") {
-            cell(name = "The Motor's gauges", source = "comp/gauges.kt, RoundGauge.kt") {
-                row {
-                    roundCylindersGauge(value = 3.0, size = 50.px)
-                    renderMotorHeatGauge(value = 0.62, size = 62.px)
-                    activeVoicesGauge(value = 24, size = 50.px)
-                }
-            }
-
-            cell(name = "Volume knob", source = "comp/VolumeKnob.kt (turns the real master volume)") {
-                VolumeKnob(size = 31.px, motorOnline = true)
-            }
-
             cell(name = "LCD", source = "comp/LcdDisplay.kt") {
                 row {
                     LcdDisplay(value = 42)
