@@ -46,13 +46,15 @@ allprojects {
 }
 
 // The agents' build outputs (MC-00031: user claude builds into .build-claude/, its Gradle cache in .gradle-claude/)
-// stay out of IntelliJ's index, where they would be indexed as a second copy of every build (the maintainer,
-// 2026-10-26: "it goes crazy on these"). Set here, not by hand in the IDE, so a Gradle sync keeps it (as spross does).
+// and the scratch folder tmp/ stay out of IntelliJ's index, where the build outputs would be indexed as a second copy
+// of every build (the maintainer, 2026-10-26: "it goes crazy on these"). Set here, not by hand in the IDE, so a Gradle
+// sync keeps it (as spross does).
 idea {
     module {
         excludeDirs.add(file(".build-claude"))
         excludeDirs.add(file(".gradle-claude"))
         excludeDirs.add(file("buildSrc/.build-claude"))
+        excludeDirs.add(file("tmp"))
     }
 }
 
