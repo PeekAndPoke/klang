@@ -24,7 +24,7 @@ fun Tag.FullscreenToggleButton(
 
 /**
  * Fullscreen on and off, a key at the workbench strip's foot on every page (the maintainer, KLANG-00349: "should be
- * available on every page"). Entered with the browser's own key (F11), only Esc leaves it, and the label says so.
+ * available on every page"). Entered with the browser's own key (F11), only that key leaves it, and the label says so.
  */
 class FullscreenToggleButton(ctx: Ctx<Props>) : Component<FullscreenToggleButton.Props>(ctx) {
 
@@ -45,7 +45,7 @@ class FullscreenToggleButton(ctx: Ctx<Props>) : Component<FullscreenToggleButton
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     override fun VDom.render() {
-        val label = if (state.canExitWithClick) "Toggle fullscreen" else "Press ESC to exit fullscreen"
+        val label = if (state.canExitWithClick) "Toggle fullscreen" else "Press F11 to exit fullscreen"
 
         KlangIconToggle(
             icon = if (state.isFullscreen) ({ compress }) else ({ expand }),

@@ -59,7 +59,7 @@ textarea::selection,
 .ui.positive.button:hover {
     background-color: #f0c55a !important;
 }
-/* The main answer has the keyboard when a question opens (a yes or no modal): show it */
+/* The main answer has the keyboard when a code tool's dialog opens: show it (KlangYesNoModal rings its own) */
 .ui.positive.button:focus {
     box-shadow: 0 0 0 2px var(--klang-text-primary) !important;
 }

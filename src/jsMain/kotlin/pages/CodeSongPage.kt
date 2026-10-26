@@ -26,7 +26,6 @@ import io.peekandpoke.klang.ui.comp.KlangSpinner
 import io.peekandpoke.klang.ui.comp.KlangValueKnob
 import io.peekandpoke.klang.ui.comp.KlangWorkbench
 import io.peekandpoke.klang.ui.comp.KlangYesNoModal
-import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.klang.version
 import io.peekandpoke.klang.workshop.keys.OnKey
 import io.peekandpoke.kraft.components.Component
@@ -133,8 +132,6 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         askToMove = { move, answer -> askToMoveBookmark(move = move, answer = answer) },
     )
 
-    @Suppress("unused")
-    private val laf by subscribingTo(KlangTheme)
     private val state by subscribingTo(ctrl.state)
     private val currentModals by subscribingTo(modals)
 
@@ -383,7 +380,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     /**
      * The transport bar over the editor (KLANG-00349, the canvas's board A): play or update, stop, the cycle counter,
-     * the RPM on a knob, and the fullscreen key. The song's title and its actions live in the column now.
+     * the RPM on a knob. The song's title and its actions live in the column now, fullscreen in the workbench strip.
      */
     private fun DIV.renderTransportBar() {
         div {

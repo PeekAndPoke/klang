@@ -9,6 +9,7 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 import io.peekandpoke.klang.ui.comp.KlangYesNoModal
 import io.peekandpoke.klang.workshop.keys.KeyPlatform
 import io.peekandpoke.klang.workshop.keys.KeysManager
@@ -23,8 +24,10 @@ import io.peekandpoke.kraft.testing.TestBed
 import io.peekandpoke.kraft.testing.eventually
 import io.peekandpoke.kraft.vdom.VDom
 import kotlinx.browser.document
+import kotlinx.coroutines.delay
 import kotlinx.html.Tag
 import kotlinx.html.div
+import org.w3c.dom.HTMLElement
 import org.w3c.dom.events.KeyboardEvent
 import org.w3c.dom.events.KeyboardEventInit
 
@@ -108,6 +111,45 @@ class KlangYesNoModalSpec : StringSpec({
             withClue("the question gone, Play answers again") {
                 press(key(key = "Enter", code = "Enter", ctrl = true, shift = true))
                 page.log shouldContainExactly listOf("yes", "play")
+            }
+        }
+    }
+
+    "the yes key has the keyboard when the question opens, so Enter gives the answer it names" {
+        withPage { page ->
+            page.ask()
+
+            eventually {
+                val keys = document.querySelectorAll("[role=dialog] button")
+
+                keys.length shouldBe 2
+                (document.activeElement == keys.item(1)) shouldBe true
+                document.activeElement?.textContent shouldContain "Move"
+            }
+        }
+    }
+
+    "a click on the dimmer answers no; a click on the question's text leaves it open" {
+        withPage { page ->
+            page.ask()
+
+            eventually {
+                (document.querySelector("[role=dialog]") != null) shouldBe true
+            }
+
+            (document.querySelector("[role=dialog] [id$=-body]") as HTMLElement).click()
+            delay(700)
+
+            withClue("a click inside: still open, no answer") {
+                (document.querySelector("[role=dialog]") != null) shouldBe true
+                page.log shouldContainExactly emptyList<String>()
+            }
+
+            // Beside the question: the dimmer itself (the test bed has no Fomantic CSS to spread it over the window)
+            (document.querySelector(".ui.dimmer") as HTMLElement).click()
+
+            eventually {
+                page.log shouldContainExactly listOf("no")
             }
         }
     }

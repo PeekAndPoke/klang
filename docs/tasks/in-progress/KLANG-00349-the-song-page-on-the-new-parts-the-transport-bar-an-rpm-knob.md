@@ -81,6 +81,11 @@ the fullscreen toggle. The editor shows a symbol's quick help on hover (`hoverPo
   mutation-checked); the transport bar on the column's ground, Play and Stop silver and flat; the editor frame's
   glow gone, its line the look's muted accent; "Back to the original" asks first; `YesNoModal` became
   `KlangYesNoModal`, drawn as a `KlangDialog` (Klang-Main-Dev agreed).
+- **Its review** (level 2, after the commit): clean; 5 MINOR applied (the dimmer's centred, unselectable text undone
+  in the modal; the main key's focus ring on any focus, so a question opened with the mouse shows what Enter answers;
+  the F11 label; a stale KDoc; specs for the yes key's focus and the dimmer click, the focus mutation-checked with 2
+  mutants), 1 NIT applied (the unused theme subscription gone), 1 NIT accepted: Fullscreen sits inside the strip's
+  "Tool windows" group, as its own "View" group.
 
 ## Open for the maintainer
 

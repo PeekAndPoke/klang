@@ -494,6 +494,13 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("flex-direction", "column")
         put("align-items", "stretch")
 
+        // On any focus, not only `:focus-visible`: a question opened with the mouse gives its main key the keyboard,
+        // and Enter there answers it, so the ring shows which answer Enter gives (as the old modal's yes button did)
+        rule("& > button:focus") {
+            put("outline", "2px solid var(--kl-focus)")
+            put("outline-offset", "2px")
+        }
+
         rule("& > button") {
             put("height", "auto")
             put("min-height", "34px")

@@ -103,6 +103,10 @@ class KlangYesNoModal(ctx: Ctx<Props>) : FadingModal<KlangYesNoModal.Props, Bool
                 put("width", "380px")
                 put("max-width", "calc(100vw - 32px)")
                 put("outline", "none")
+                // The dimmer centres its text, sets it tight and makes it unselectable: undone, as a dialog elsewhere
+                put("text-align", "left")
+                put("line-height", "normal")
+                put("user-select", "text")
             }
             // Focusable, so a click on the text keeps the keyboard in the modal
             attributes["tabindex"] = "-1"
