@@ -51,9 +51,13 @@ allprojects {
 // sync keeps it (as spross does).
 idea {
     module {
+        excludeDirs.add(file(".claude"))
         excludeDirs.add(file(".build-claude"))
         excludeDirs.add(file(".gradle-claude"))
+        excludeDirs.add(file(".gradle"))
+        excludeDirs.add(file(".kotlin"))
         excludeDirs.add(file("buildSrc/.build-claude"))
+        excludeDirs.add(file("buildSrc/.gradle"))
         excludeDirs.add(file("tmp"))
     }
 }
