@@ -11,7 +11,8 @@ import io.peekandpoke.klang.codemirror.ext.EditorState
 data class BookmarkRow(val digit: Int, val line: Int, val code: String)
 
 /**
- * The bookmarks of the editor whose state is [state], by digit, each with the code on its line, trimmed; empty when
+ * The bookmarks of the editor whose state is [state], by digit, each with the code on its line, trimmed and with a tab
+ * or a run of blanks at most two spaces (maintainer, 2026-10-26: a comment aligned far right); empty when
  * the editor has no bookmarks, or not the bookmarks extension. The way in for the app (the song page's bookmarks panel); the
  * extension itself stays internal.
  */

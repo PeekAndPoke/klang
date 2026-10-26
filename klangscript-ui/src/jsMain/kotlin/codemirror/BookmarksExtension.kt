@@ -295,8 +295,11 @@ internal object BookmarksExtension {
 
         // Bookmarks keeps its own by digit
         return bookmarks.lines(TextDoc(state.doc))
-            .map { BookmarkRow(digit = it.digit, line = it.line, code = state.doc.line(it.line).text.trim()) }
+            .map { BookmarkRow(digit = it.digit, line = it.line, code = previewOf(state.doc.line(it.line).text)) }
     }
+
+    /** A line's code for a preview: trimmed, a tab or a run of blanks at most two spaces (an aligned comment). */
+    private fun previewOf(text: String): String = text.trim().replace(Regex("\\s{2,}|\\t"), "  ")
 
     private fun update(bookmarks: Bookmarks, tr: Transaction): Bookmarks {
         if (tr.effects.any { it.`is`(keepLines) }) {

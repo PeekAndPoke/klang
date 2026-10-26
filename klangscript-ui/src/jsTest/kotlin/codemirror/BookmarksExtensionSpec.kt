@@ -769,7 +769,8 @@ class BookmarksExtensionSpec : StringSpec({
 
     "the bookmarks as an overview lists them: by digit, with the line and its code; none without the extension" {
         val host = RecordingHost()
-        val doc = (1..12).joinToString("\n") { "  note(\"c$it\")  " }
+        // Line 3 with a comment aligned far right, by blanks and a tab
+        val doc = (1..12).joinToString("\n") { if (it == 3) "  note(\"c3\")\t\t// hot      output  " else "  note(\"c$it\")  " }
 
         withView(newState(host, doc = doc)) { view ->
             // The higher digit on the earlier line: the rows go by digit, not by place
@@ -780,7 +781,7 @@ class BookmarksExtensionSpec : StringSpec({
 
             bookmarkRowsOf(view.state) shouldBe listOf(
                 BookmarkRow(digit = 2, line = 9, code = "note(\"c9\")"),
-                BookmarkRow(digit = 7, line = 3, code = "note(\"c3\")"),
+                BookmarkRow(digit = 7, line = 3, code = "note(\"c3\")  // hot  output"),
             )
         }
 
