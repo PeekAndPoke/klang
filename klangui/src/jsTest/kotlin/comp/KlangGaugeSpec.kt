@@ -352,4 +352,15 @@ class KlangGaugeSpec : StringSpec({
             }
         }
     }
+
+    "the icon is printed on the face under the needle: it comes before the scale, which carries the needle" {
+        TestBed.preact(view = { KlangGauge(name = "Heat", value = 0.5, icon = { microchip }) }) { root ->
+            val gauge = root.single().querySelector("[role=meter]")!!
+            val parts = (0 until gauge.children.length).map { gauge.children.item(it)!!.className }
+            val mark = parts.indexOfFirst { styles.gaugeMark.toString() in it }
+            val scale = parts.indexOfFirst { styles.gaugeScale.toString() in it }
+
+            (mark in 0 until scale) shouldBe true
+        }
+    }
 })

@@ -256,9 +256,10 @@ class KlangGauge(ctx: Ctx<Props>) : Component<KlangGauge.Props>(ctx) {
 
             div(classes = styles.gaugeFace.toString()) {}
 
-            renderScale(online = online, hotFraction = hotFraction, hot = hot)
-
+            // The icon is printed on the face, under the needle (the maintainer, 2026-10-26); the parts stack as drawn
             renderMark(online = online, hot = hot)
+
+            renderScale(online = online, hotFraction = hotFraction, hot = hot)
 
             val display = props.display
 
