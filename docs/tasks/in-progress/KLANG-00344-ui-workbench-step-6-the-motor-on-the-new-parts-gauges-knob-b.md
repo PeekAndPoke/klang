@@ -66,8 +66,9 @@ oscilloscope in blue (a theme role) and more spectrum columns.
   The maintainer: "The blues match well now".
 - **The trace as a swinging string** (the maintainer: "draw the wareform twice. Brighter on top, like with the gauge
   outlines and darker below, keep the black behind them"): the path is stroked three times, the black band, the
-  trace's colour darkened 35% a pixel lower, then lightened 20% on top; both shades come from the trace's colour, so
-  they follow the look.
+  trace's colour darkened a little lower, then lightened on top; both shades come from the trace's colour, so they
+  follow the look. "the color contrast needs to be wider": darkened 55% 1.5 px lower, lightened 35% (was 35%, 1 px,
+  20%).
 - **Alt+V** is wired (Klang-Main-Dev's `VolumeFocus`, 70770094): it puts the focus on the knob. To hand-test on
   Windows Firefox, where Alt+V is the View menu's key (Klang-Main-Dev's note).
 - **The oscilloscope cleaned up** (the maintainer: "remove the thing where it goes full width on click ... no longer

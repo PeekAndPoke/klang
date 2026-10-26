@@ -83,13 +83,13 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         private const val AFTERGLOW_FADE = 0.66
 
         /** How far below the lit top the string's shade shows, in pixels. */
-        private const val STRING_SHADE_OFFSET = 1.0
+        private const val STRING_SHADE_OFFSET = 1.5
 
         /** How much darker the string's shade is than the trace's colour, in percent. */
-        private const val STRING_SHADE_DARKEN = 35
+        private const val STRING_SHADE_DARKEN = 55
 
         /** How much brighter the string's lit top is than the trace's colour, in percent. */
-        private const val STRING_TOP_LIGHTEN = 20
+        private const val STRING_TOP_LIGHTEN = 35
 
         private val idleBuffer = Float32Array(IDLE_FRAME_SIZE)
     }
