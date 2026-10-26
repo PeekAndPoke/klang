@@ -1,6 +1,6 @@
 # KLANG-00341: UI workbench, step 5: the workbench as the app's layout
 
-> **Status (2026-10-26): IN PROGRESS.** Step 5 of the UI workbench, the maintainer's "Please continue with next steps"
+> **Status (2026-10-26): DONE.** the maintainer: "Close the two tickets", 2026-10-26
 >
 > **Part of:** KLANG-00334 (UI workbench: the Motor-centred layout, tool windows and the first-visit trail)
 
@@ -110,3 +110,4 @@ the one place for "where to go".
   mutants); ledger rows and a `/kraft-knowhow` lesson. The safety valve stopped the loop after two rounds; the
   maintainer chose stacking instead (the newest registration on a key answers, declarative only), asked of
   Klang-Main-Dev; the guard stays until then as marked scaffolding.
+- 2026-10-26: DONE. the maintainer: "Close the two tickets", 2026-10-26

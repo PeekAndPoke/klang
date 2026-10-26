@@ -1,7 +1,6 @@
 # KLANG-00344: UI workbench, step 6: the Motor on the new parts (gauges, knob, the trace's colour, more spectrum columns)
 
-> **Status (2026-10-26): IN PROGRESS.** The maintainer: "anything you can do in the meanwhile like adopting the new
-> gauges?"
+> **Status (2026-10-26): DONE.** the maintainer: "Close the two tickets", 2026-10-26
 >
 > **Part of:** KLANG-00334 (UI workbench: the Motor-centred layout, tool windows and the first-visit trail)
 
@@ -129,3 +128,4 @@ oscilloscope in blue (a theme role) and more spectrum columns.
 - 2026-10-26: the maintainer's hand test (recorded by Klang-Main-Dev in KLANG-00325): Alt+V works in Chrome and
   Firefox; Esc works through the whole chain (the Motor menu, a tool window and a parameter tool open, then back into
   the editor); the Motor menu closes on Esc from the editor.
+- 2026-10-26: DONE. the maintainer: "Close the two tickets", 2026-10-26
