@@ -5,6 +5,8 @@ how many tests failed, and which cases broke (from the console, not the XML).
   test_digest.py run [--expect SpecA,SpecB] [--log FILE] -- ./gradlew :core:jvmTest
   test_digest.py digest --since 2026-10-19T15:50:00Z [--log FILE] [--expect SpecA,SpecB]
 
+--expect takes a comma list or repeats (--expect SpecA --expect SpecB); every value counts.
+
 Traps it guards against (see ultra/CLAUDE.md "Verification traps"):
 - A filtered or cached run looks green. A spec counts as RAN only when its XML <testsuite timestamp>
   lies inside this run. A FROM-CACHE restore keeps the original timestamp, so it does not count,
@@ -481,7 +483,7 @@ def main(argv=None):
     for name in ("run", "digest"):
         s = sub.add_parser(name)
         s.add_argument("--root", default=None, help="repo root to scan (default: git top level)")
-        s.add_argument("--expect", default="", help="comma-separated spec names that must have run")
+        s.add_argument("--expect", action="append", default=[], help="spec names that must have run: comma-separated, or the flag repeated")
         s.add_argument("--json", action="store_true", help="print JSON instead of text")
         s.add_argument("--log", default=None, help="Gradle console log (digest: read it; run: write it here)")
         s.add_argument("--own-package", default=None,
@@ -492,7 +494,7 @@ def main(argv=None):
     sub.choices["run"].add_argument("cmd", nargs=argparse.REMAINDER, help="-- command to run")
     a = p.parse_args(argv)
     root = os.path.abspath(a.root or git_root())
-    expect = [e.strip() for e in a.expect.split(",") if e.strip()]
+    expect = [e.strip() for v in a.expect for e in v.split(",") if e.strip()]
     build_exit, log_path, text = None, a.log, None
     if a.mode == "run":
         cmd = a.cmd[1:] if a.cmd[:1] == ["--"] else a.cmd
