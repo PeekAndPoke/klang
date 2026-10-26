@@ -13,6 +13,7 @@ import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.workshop.keys.KeyPlatform
 import io.peekandpoke.klang.workshop.keys.KeysManager
 import io.peekandpoke.klang.workshop.keys.keys
+import io.peekandpoke.kraft.components.ComponentRef
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
 import io.peekandpoke.kraft.components.comp
@@ -39,6 +40,9 @@ import org.w3c.dom.HTMLElement
 import org.w3c.dom.events.EventTarget
 import org.w3c.dom.events.KeyboardEvent
 import org.w3c.dom.events.KeyboardEventInit
+
+/** The workbench the host draws, so a spec can show a tool window from outside, as the song page does on Alt+Q. */
+private val workbenchRef = ComponentRef.Tracker<KlangWorkbench>()
 
 /** A workbench whose tool windows and drawer its parent changes, as a page's may. */
 private class ChangingHost(ctx: NoProps) : PureComponent(ctx) {
@@ -70,7 +74,7 @@ private class ChangingHost(ctx: NoProps) : PureComponent(ctx) {
             content = {},
             tools = if (withDocs) listOf(KlangWorkbench.Tool(id = "docs", title = "Docs", icon = { book }) { +"DOCS" }) else emptyList(),
             drawer = drawer,
-        )
+        ).track(workbenchRef)
     }
 }
 
@@ -328,6 +332,36 @@ class KlangWorkbenchSpec : StringSpec({
             },
         ) { root ->
             root.single().q(".${styles.workbenchMotor}")!!.textContent shouldBe "menu: true"
+        }
+    }
+
+    "a tool window shown from outside opens and leaves the focus where it is; Esc in it gives the focus back there" {
+        keyedBed(view = { ChangingHost() }) { root ->
+            val r = root[0]
+            fun floating() = r.q(".${styles.workbenchFloating}")
+
+            val field = document.createElement("input") as HTMLElement
+
+            r.appendChild(field)
+            field.focus()
+
+            workbenchRef { it.showTool("docs") }
+
+            eventually { floating()?.textContent?.contains("DOCS") shouldBe true }
+
+            // The user goes on typing where they were
+            document.activeElement shouldBe field
+
+            // A click into the window, then Esc: back to the field
+            (floating() as HTMLElement).focus()
+            document.activeElement!!.dispatchEvent(
+                KeyboardEvent("keydown", KeyboardEventInit(key = "Escape", bubbles = true, cancelable = true))
+            )
+
+            eventually {
+                floating() shouldBe null
+                document.activeElement shouldBe field
+            }
         }
     }
 

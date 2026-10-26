@@ -31,7 +31,7 @@ val yourFirstBeatTutorial = Tutorial(
                     - **RPM** (revolutions per minute) sets the music's speed; it gets its own section further down this page.
                     - The **EVT** field tunes how much of the code lights up while playing; you can ignore it.
 
-                    Two things about the code itself. Anything after `//` is a comment: Klang ignores it. We use comments to narrate the code, and later on this page you will use `//` to switch whole lines on and off. And whenever you wonder what a word in the code does: hover it, and a help popup opens right there, with what it does and how to use it.
+                    Two things about the code itself. Anything after `//` is a comment: Klang ignores it. We use comments to narrate the code, and later on this page you will use `//` to switch whole lines on and off. And whenever you wonder what a word in the code does: put the cursor on it and press Alt+Q, and a help popup opens right there, with what it does and how to use it.
                     """.trimIndent(),
                 ),
                 Block.Code(

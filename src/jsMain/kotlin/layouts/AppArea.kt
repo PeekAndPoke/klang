@@ -28,7 +28,7 @@ enum class AppArea(val label: String, val sub: String) {
     companion object {
         /** The area [route] belongs to; tutorials before docs, their paths share the manuals' base. */
         fun of(route: Route): AppArea = when {
-            route == Nav.newSongCode || route == Nav.editSongCode -> Songs
+            route == Nav.songs || route == Nav.newSongCode || route == Nav.editSongCode -> Songs
             route.pattern.startsWith(Nav.tutorialsBase) -> Learn
             route.pattern.startsWith(Nav.manualsBase) -> Docs
             route == Nav.samplesLibrary -> Samples

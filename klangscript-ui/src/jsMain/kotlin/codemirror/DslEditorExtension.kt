@@ -62,9 +62,12 @@ private data class HoverKey(val from: Int, val to: Int, val symbol: KlangSymbol,
  * - Ctrl/Cmd + click             → a local: jump to its declaration; a library name: navigate to docs (same tab)
  * - Ctrl/Cmd + Shift + click     → a local: jump to its declaration; a library name: navigate to docs (new tab)
  * - Ctrl/Cmd held while hovering → underline the name
- * - Ctrl+B / Ctrl+Q (the key map's go to definition and quick documentation) → the same for the name at the cursor
+ * - Ctrl+B / Alt+Q (the key map's go to definition and quick documentation) → the same for the name at the cursor
  *
  * [hoverContent] renders the popup for a symbol; `declarationCode` is a local's declaration, null for a library name.
+ * [hoverDocs] is asked on every move whether the hover shows the popup (a setting, off by default in the app:
+ * KLANG-00349). [onQuickDocumentation], when given, gets the name at the cursor on quick documentation instead of
+ * the popup (the song page shows it in its Help window); a cursor on no known name does not call it.
  */
 fun dslEditorExtension(
     docProvider: (String) -> KlangSymbol?,
@@ -74,6 +77,8 @@ fun dslEditorExtension(
     popups: PopupsManager,
     onNavigate: (doc: KlangSymbol, event: dynamic) -> Unit,
     onOpenTool: ((toolName: String, ctx: KlangUiToolContext, argFrom: Int, event: dynamic) -> Unit)? = null,
+    hoverDocs: () -> Boolean = { true },
+    onQuickDocumentation: ((symbol: KlangSymbol, declarationCode: String?) -> Unit)? = null,
 ): DslEditorWiring {
 
     // ── Underline decoration (CTRL/Cmd-hover) ─────────────────────────────
@@ -567,7 +572,7 @@ fun dslEditorExtension(
             // The mouse has the popup now
             popupByKey = false
 
-            if (doc != null && word != null) {
+            if (doc != null && word != null && hoverDocs()) {
                 showDocs(view = view, y = event.clientY.unsafeCast<Double>(), symbol = doc, declarationCode = declarationCode)
             } else {
                 hoverPopup.scheduleClose()
@@ -664,7 +669,7 @@ fun dslEditorExtension(
     }
 
     // Both keep their key from the browser, also on a word with nothing behind it (Firefox opens its bookmarks on
-    // Ctrl+B); Ctrl+Q quits Firefox on Linux, which a page may not be able to stop
+    // Ctrl+B)
     val goToDefinitionAtCursor: Command = { view ->
         wordDocAtCursor(view)?.let { result ->
             val definition = result.definition
@@ -683,8 +688,12 @@ fun dslEditorExtension(
     val quickDocumentation: Command = { view ->
         val result = wordDocAtCursor(view)
         val cursorTop = view.coordsAtPos(view.state.selection.main.head)?.top
+        val toWindow = onQuickDocumentation
 
-        if (result != null && cursorTop != null) {
+        if (result != null && toWindow != null) {
+            // The host shows the help in a window of its own, which closes itself; no popup
+            toWindow(result.symbol, result.definition?.code)
+        } else if (result != null && cursorTop != null) {
             // The popup stands for this word now, so the next mouse move elsewhere closes it, as after a hover; Esc,
             // an edit or a cursor move close it too ([closeKeyPopup])
             popupByKey = true

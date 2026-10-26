@@ -32,6 +32,12 @@ object StorageKeys {
     /** The look the user chose, a built-in preset's id (KLANG-00339). */
     const val LOOK = "klang-look"
 
+    /** The editor's highlights per sound event, a whole number (KLANG-00349). */
+    const val EDITOR_HIGHLIGHTS_PER_EVENT = "klang-editor-highlights-per-event"
+
+    /** Whether the editor shows a name's quick help on hover, `true` or `false` (KLANG-00349). */
+    const val EDITOR_HOVER_HELP = "klang-editor-hover-help"
+
     /** A song's code; [version] is the app's version, [songId] the song's id (a built-in song's, or "new"). */
     fun songCode(version: String, songId: String): String = songKey(version = version, songId = songId, part = "code")
 

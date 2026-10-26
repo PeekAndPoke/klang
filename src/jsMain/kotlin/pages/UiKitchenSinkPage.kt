@@ -29,6 +29,7 @@ import io.peekandpoke.klang.ui.comp.KlangPanel
 import io.peekandpoke.klang.ui.comp.KlangSearchField
 import io.peekandpoke.klang.ui.comp.KlangSpinner
 import io.peekandpoke.klang.ui.comp.KlangSwatchButton
+import io.peekandpoke.klang.ui.comp.KlangTextField
 import io.peekandpoke.klang.ui.comp.KlangToolWindow
 import io.peekandpoke.klang.ui.comp.KlangValueKnob
 import io.peekandpoke.klang.ui.comp.YesNoModal
@@ -86,6 +87,7 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
     /** The drawer's current destination, its search, the menu's last choice, the tool windows' pins. */
     private var drawerAt: String by value("songs")
     private var query: String by value("")
+    private var title: String by value("Final Synthasy VII Prelude")
     private var menuChoice: String by value("nothing yet")
     private var dialogChoice: String by value("nothing yet")
     private var pinned: Set<String> by value(setOf("pinned"))
@@ -120,6 +122,7 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
             renderGauges()
             renderKnobs()
             renderLamps()
+            renderFields()
             renderButtons()
             renderPopups()
             renderToday()
@@ -554,6 +557,16 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
                     KlangLamp(state = KlangLamp.State.Warning, label = "Draft")
                     KlangLamp(state = KlangLamp.State.Critical, label = "Error")
                 }
+            }
+        }
+    }
+
+    private fun FlowContent.renderFields() {
+        section("Fields") {
+            cell(name = "KlangTextField: the search field's well, no icon", source = "klangui/comp/KlangTextField.kt") {
+                KlangTextField(label = "Song title", value = title, onInput = { title = it }, placeholder = "Song title")
+
+                p { +"Holds: $title" }
             }
         }
     }

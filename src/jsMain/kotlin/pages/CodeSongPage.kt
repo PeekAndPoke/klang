@@ -7,16 +7,25 @@ package io.peekandpoke.klang.pages
 
 import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.comp.FullscreenToggleButton
+import io.peekandpoke.klang.comp.HelpWindow
 import io.peekandpoke.klang.comp.KlangCodeEditorComp
 import io.peekandpoke.klang.comp.KlangCodePlaybackCtrl
 import io.peekandpoke.klang.comp.LcdDisplay
+import io.peekandpoke.klang.comp.SongColumn
+import io.peekandpoke.klang.comp.SongSettings
 import io.peekandpoke.klang.fs
+import io.peekandpoke.klang.layouts.WorkbenchSlots
 import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
+import io.peekandpoke.klang.storage.EditorSettings
 import io.peekandpoke.klang.storage.SongStorage
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.codemirror.BookmarkOptions
 import io.peekandpoke.klang.ui.codemirror.Bookmarks
+import io.peekandpoke.klang.ui.comp.KlangButton
+import io.peekandpoke.klang.ui.comp.KlangSpinner
+import io.peekandpoke.klang.ui.comp.KlangValueKnob
+import io.peekandpoke.klang.ui.comp.KlangWorkbench
 import io.peekandpoke.klang.ui.comp.YesNoModal
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.klang.version
@@ -26,36 +35,28 @@ import io.peekandpoke.kraft.components.ComponentRef
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.modals.ModalsManager.Companion.modals
-import io.peekandpoke.kraft.semanticui.forms.UiInputField
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.semanticui.icon
-import io.peekandpoke.ultra.semanticui.noui
 import io.peekandpoke.ultra.semanticui.ui
+import io.peekandpoke.ultra.streams.StreamSource
 import io.peekandpoke.ultra.streams.ops.distinct
 import io.peekandpoke.ultra.streams.ops.map
 import kotlinx.browser.window
-import kotlinx.css.Align
-import kotlinx.css.Color
-import kotlinx.css.Cursor
 import kotlinx.css.Display
 import kotlinx.css.Flex
 import kotlinx.css.FlexBasis
 import kotlinx.css.FlexDirection
-import kotlinx.css.JustifyContent
 import kotlinx.css.Overflow
 import kotlinx.css.Padding
-import kotlinx.css.alignItems
 import kotlinx.css.color
 import kotlinx.css.cursor
 import kotlinx.css.display
 import kotlinx.css.flex
 import kotlinx.css.flexDirection
-import kotlinx.css.flexShrink
 import kotlinx.css.height
-import kotlinx.css.justifyContent
 import kotlinx.css.minHeight
 import kotlinx.css.overflowX
 import kotlinx.css.overflowY
@@ -79,6 +80,14 @@ fun Tag.CodeSongPage(
 }
 
 class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
+
+    private companion object {
+        /** The Help tool window's id, which Alt+Q shows. */
+        const val HELP_TOOL = "help"
+
+        /** Counts the pages drawn, for [pageKey]. */
+        var pagesDrawn = 0
+    }
 
     //  PROPS  //////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -132,15 +141,20 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     private val codeEditorRef = ComponentRef.Tracker<KlangCodeEditorComp>()
 
-    /** Shows the check mark on the copy button for a moment after a successful copy. */
-    private var justCopied by value(false)
-
-    private var highlightPerEvent by value(15) { newValue ->
+    /** The highlights a sound event draws, from the Settings tool window (KLANG-00349, once "EVT" in the header). */
+    private val highlightPerEvent by subscribingTo(EditorSettings.highlightsPerEvent) { newValue ->
         codeEditorRef { it.setMaxHighlightsPerEvent(newValue) }
         ctrl.reemitVoiceSignals()
     }
 
-    val isBuiltInModified get() = builtIn != null && builtIn.code != state.code
+    /** The name Alt+Q last asked about, for the Help tool window (KLANG-00349); null before the first. */
+    private val help = StreamSource<HelpWindow.Entry?>(null)
+
+    /** The column's content this page put into the workbench; null while it put none. */
+    private var slotColumn: (DIV.() -> Unit)? = null
+
+    /** This page's own key for its parts in the workbench: two pages never share one, even on one song id ("new"). */
+    private val pageKey = ++pagesDrawn
 
     // On rpm changes: persist to localStorage AND cancel highlights to avoid stale timing across tempo shifts.
     @Suppress("unused")
@@ -169,9 +183,11 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         lifecycle {
             onMount {
                 codeEditorRef { it.setMaxHighlightsPerEvent(highlightPerEvent) }
+                fillWorkbench()
             }
             onUnmount {
                 ctrl.stop()
+                emptyWorkbench()
             }
         }
     }
@@ -184,10 +200,46 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         ctrl.play()
     }
 
-    private fun copyCode() {
-        window.asDynamic().navigator.clipboard.writeText(ctrl.state().code)
-        justCopied = true
-        window.setTimeout({ justCopied = false }, 2000)
+    /**
+     * The song in the workbench's column, and the page's tool windows (KLANG-00349). A copy of the page that the
+     * router draws fading out (inside its inert layer) leaves the workbench alone: the page just opened owns it.
+     */
+    private fun fillWorkbench() {
+        if (dom?.closest("[inert]") != null) {
+            return
+        }
+
+        // Keyed by the page: from one song straight to another (a history jump), the workbench draws them anew
+        // rather than handing this page's parts to the next one, still listening to this page's streams
+        val column: DIV.() -> Unit = {
+            div {
+                key = "song-column-$pageKey"
+                SongColumn(ctrl = ctrl, builtIn = builtIn, onReset = { resetToOriginal() })
+            }
+        }
+
+        slotColumn = column
+        WorkbenchSlots.column(column)
+        WorkbenchSlots.tools(
+            listOf(
+                KlangWorkbench.Tool(id = HELP_TOOL, title = "Help", icon = { question_circle }) {
+                    div {
+                        key = "song-help-$pageKey"
+                        HelpWindow(entry = help)
+                    }
+                },
+                KlangWorkbench.Tool(id = "settings", title = "Settings", icon = { sliders_horizontal }) { SongSettings() },
+            )
+        )
+    }
+
+    /** Empties the workbench's slots, unless another page has filled them since. */
+    private fun emptyWorkbench() {
+        if (slotColumn != null && WorkbenchSlots.column() === slotColumn) {
+            WorkbenchSlots.clear()
+        }
+
+        slotColumn = null
     }
 
     private fun resetToOriginal() {
@@ -248,177 +300,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                 }
                 // Transparent — shows the page container's chrome-bg, so the
                 // rounded editor corner reveals the same surface with no seam
-                ui.basic.segment {
-                    key = "dashboard-form-segment"
-
-                    css {
-                        flexShrink = 0.0
-                        // Balanced vertical padding — Fomantic's segment default is
-                        // 1em top with our old 0 bottom, which read lopsided
-                        put("padding", "13px 14px")
-                        // Fomantic gives segments a 1rem bottom margin — that was
-                        // the black gap between header and editor
-                        put("margin", "0")
-                    }
-
-                    ui.horizontal.list {
-                        key = "dashboard-form-fields"
-
-                        css {
-                            // Centered flex row — also vertically centers the
-                            // mixed-height items (buttons, LCD, inputs, icons)
-                            display = Display.flex
-                            justifyContent = JustifyContent.center
-                            alignItems = Align.center
-                            put("flex-wrap", "wrap")
-                        }
-
-                        // Play / Update / Stop controls
-                        noui.item {
-                            if (!state.isPlaying) {
-                                ui.circular.white.button {
-                                    OnKey(KlangKeyBindings.PlayOrUpdate) { onPlay() }
-                                    onClick { onPlay() }
-                                    if (state.isPlayerFailed) {
-                                        // The engine did not start. Clicking retries: Player.ensure()
-                                        // drops its memoized deferred on failure.
-                                        icon.black.exclamation_triangle()
-                                        +"Retry"
-                                    } else if (state.isPlayerLoading) {
-                                        icon.black.loading.spinner()
-                                        +"Loading"
-                                    } else {
-                                        icon.play {
-                                            css {
-                                                put("--icon-glow-color", laf.critical)
-                                                put("animation", "iconGlow 2.5s ease-in-out infinite")
-                                            }
-                                        }
-                                        +"Play"
-                                    }
-                                }
-                            } else {
-                                ui.circular.white
-                                    .givenNot(state.isCodeModified) { disabled }.button {
-                                        OnKey(
-                                            action = KlangKeyBindings.PlayOrUpdate,
-                                            enabled = state.isCodeModified,
-                                            showHint = state.isCodeModified,
-                                        ) { onPlay() }
-                                        onClick { onPlay() }
-                                        if (state.isCodeModified) {
-                                            icon.redo_alternate {
-                                                css {
-                                                    put("--icon-glow-color", laf.critical)
-                                                    put("animation", "iconGlow 2.5s ease-in-out infinite")
-                                                }
-                                            }
-                                        } else {
-                                            icon.black.redo_alternate()
-                                        }
-                                        +"Update"
-                                    }
-                            }
-
-                            ui.circular.white
-                                .givenNot(state.isPlaying) { disabled }
-                                .given(state.isPlaying) { white }.icon.button {
-                                    OnKey(KlangKeyBindings.Stop, enabled = state.isPlaying, showHint = state.isPlaying) { ctrl.stop() }
-                                    onClick { ctrl.stop() }
-                                    title = "Stop playback"
-                                    icon.black.stop()
-                                }
-                        }
-
-                        noui.top.aligned.item {
-                            LcdDisplay(value = state.currentCycle, digits = 4, dim = !state.isPlaying)
-                        }
-
-                        if (isBuiltInModified) {
-                            noui.item {
-                                ui.circular.white.icon.button {
-                                    onClick { resetToOriginal() }
-                                    title = "Reset to original code"
-                                    icon.black.undo()
-                                }
-                            }
-                        }
-
-                        // RPM field
-                        noui.item {
-                            css { width = 140.px }
-                            UiInputField(state.rpm, { ctrl.setRpm(it) }) {
-                                step(0.5)
-                                appear { large }
-                                wrapFieldWith { fluid }
-                                leftLabel {
-                                    ui.grey.label {
-                                        title = "Revolutions per minute"
-                                        +"RPM"
-                                    }
-                                }
-                            }
-                        }
-
-                        // Highlight-per-event field
-                        noui.item {
-                            css { width = 140.px }
-                            UiInputField(highlightPerEvent, { highlightPerEvent = it }) {
-                                step(1)
-                                appear { large }
-                                wrapFieldWith { fluid }
-                                leftLabel {
-                                    ui.grey.label {
-                                        title = "Max highlights per audio event"
-                                        +"EVT"
-                                    }
-                                }
-                            }
-                        }
-
-                        // Title field
-                        noui.item {
-                            css { width = 300.px }
-                            UiInputField(state.title ?: "", { ctrl.setTitle(it) }) {
-                                placeholder("Song title")
-                                appear { large }
-                                wrapFieldWith { fluid }
-                                leftLabel {
-                                    title = "Song title"
-                                    ui.grey.label { +"Title" }
-                                }
-                            }
-                        }
-
-
-                        // Copy the whole editor content to the clipboard
-                        noui.item {
-                            div {
-                                css {
-                                    cursor = Cursor.pointer
-                                    display = Display.inlineBlock
-
-                                    if (justCopied) {
-                                        color = Color(laf.good)
-                                    }
-                                }
-                                onClick { copyCode() }
-                                title = if (justCopied) "Copied to clipboard" else "Copy the code to the clipboard"
-
-                                if (justCopied) {
-                                    icon.circular.check()
-                                } else {
-                                    icon.circular.copy()
-                                }
-                            }
-                        }
-
-                        // Fullscreen toggle
-                        noui.item {
-                            FullscreenToggleButton(fs = fs)
-                        }
-                    }
-                }
+                renderTransportBar()
 
                 // Outer FRAME — carries the accent strips, corner radius, glow
                 // and black surface. It does NOT scroll, so scrolled editor
@@ -480,6 +362,92 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         }
     }
 
+    /**
+     * The transport bar over the editor (KLANG-00349, the canvas's board A): play or update, stop, the cycle counter,
+     * the RPM on a knob, and the fullscreen key. The song's title and its actions live in the column now.
+     */
+    private fun DIV.renderTransportBar() {
+        div {
+            key = "transport-bar"
+            css {
+                put("display", "flex")
+                put("align-items", "center")
+                put("gap", "12px")
+                put("flex-shrink", "0")
+                put("padding", "10px 14px")
+            }
+
+            renderPlayButton()
+
+            KlangButton(
+                onClick = { ctrl.stop() },
+                surface = KlangButton.Surface.Domed,
+                shape = KlangButton.Shape.Round,
+                availability = if (state.isPlaying) KlangButton.Availability.Enabled else KlangButton.Availability.Disabled,
+                ariaLabel = "Stop",
+            ) {
+                OnKey(KlangKeyBindings.Stop, enabled = state.isPlaying, showHint = state.isPlaying) { ctrl.stop() }
+                title = "Stop playback"
+                icon.stop()
+            }
+
+            LcdDisplay(value = state.currentCycle, digits = 4, dim = !state.isPlaying)
+
+            KlangValueKnob(
+                name = "Revolutions per minute",
+                value = state.rpm,
+                range = 10.0..120.0,
+                step = 0.5,
+                onChange = { ctrl.setRpm(it) },
+                unit = "RPM",
+                decimals = 2,
+                perPixel = 0.05,
+            )
+
+            div { css { put("flex-grow", "1") } }
+
+            FullscreenToggleButton(fs = fs)
+        }
+    }
+
+    /** Play, or update a playing song once its code changed; retry when the engine did not start. */
+    private fun DIV.renderPlayButton() {
+        val updating = state.isPlaying
+        val enabled = !updating || state.isCodeModified
+
+        KlangButton(
+            onClick = { onPlay() },
+            surface = KlangButton.Surface.Domed,
+            shape = KlangButton.Shape.Pill,
+            availability = if (enabled) KlangButton.Availability.Enabled else KlangButton.Availability.Disabled,
+        ) {
+            OnKey(action = KlangKeyBindings.PlayOrUpdate, enabled = enabled, showHint = enabled) { onPlay() }
+
+            when {
+                updating -> {
+                    icon.redo_alternate()
+                    +"Update"
+                }
+
+                state.isPlayerFailed -> {
+                    // The engine did not start: a click retries, Player.ensure() drops its memoized deferred on failure
+                    icon.exclamation_triangle()
+                    +"Retry"
+                }
+
+                state.isPlayerLoading -> {
+                    KlangSpinner(label = "Loading the Motor", size = 14.px)
+                    +"Loading"
+                }
+
+                else -> {
+                    icon.play()
+                    +"Play"
+                }
+            }
+        }
+    }
+
     private fun DIV.renderEditor() {
         KlangCodeEditorComp(
             ctrl = ctrl,
@@ -489,6 +457,11 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
             showMinimap = true,
             bookmarks = bookmarks,
             showKeysOverview = true,
+            // Alt+Q: the name's help in the Help window, the focus staying in the code
+            onQuickDocumentation = { symbol, declarationCode ->
+                help(HelpWindow.Entry(symbol = symbol, declarationCode = declarationCode))
+                WorkbenchSlots.workbench { it.showTool(HELP_TOOL) }
+            },
         ).track(codeEditorRef)
     }
 }

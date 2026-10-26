@@ -78,6 +78,8 @@ class VolumeKnob(ctx: Ctx<Props>) : Component<VolumeKnob.Props>(ctx) {
                 onChange = { Player.setOutputVolume(MasterVolumeScale.gainOf(it)) },
                 onChangeEnd = { Player.rememberOutputVolume() },
                 size = props.size,
+                // Calmer than the knob's 75 px: the whole range over 200 px (the maintainer, 2026-10-26)
+                dragPixels = 200.0,
             )
         }
     }

@@ -5,29 +5,21 @@
 
 package io.peekandpoke.klang.comp
 
+import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.utils.FullscreenController
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
-import io.peekandpoke.ultra.html.css
-import io.peekandpoke.ultra.html.onClick
-import io.peekandpoke.ultra.semanticui.SemanticIconFn
 import io.peekandpoke.ultra.semanticui.icon
-import kotlinx.css.Cursor
-import kotlinx.css.Display
-import kotlinx.css.cursor
-import kotlinx.css.display
 import kotlinx.html.Tag
-import kotlinx.html.div
 import kotlinx.html.title
 
 @Suppress("FunctionName")
 fun Tag.FullscreenToggleButton(
     fs: FullscreenController,
-    style: SemanticIconFn = { circular },
 ) = comp(
-    FullscreenToggleButton.Props(fs = fs, style = style)
+    FullscreenToggleButton.Props(fs = fs)
 ) {
     FullscreenToggleButton(it)
 }
@@ -38,7 +30,6 @@ class FullscreenToggleButton(ctx: Ctx<Props>) : Component<FullscreenToggleButton
 
     data class Props(
         val fs: FullscreenController,
-        val style: SemanticIconFn,
     )
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -52,24 +43,16 @@ class FullscreenToggleButton(ctx: Ctx<Props>) : Component<FullscreenToggleButton
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     override fun VDom.render() {
-        val styleFn = props.style
-        div {
-            css {
-                cursor = Cursor.pointer
-                display = Display.inlineBlock
-            }
-            onClick { toggle() }
+        val label = if (state.canExitWithClick) "Toggle fullscreen" else "Press ESC to exit fullscreen"
 
-            title = if (state.canExitWithClick) {
-                "Toggle fullscreen"
-            } else {
-                "Press ESC to exit fullscreen"
-            }
+        // A small round key, as the transport bar's others (KLANG-00349)
+        KlangButton(onClick = { toggle() }, surface = KlangButton.Surface.Domed, shape = KlangButton.Shape.Round, ariaLabel = label) {
+            title = label
 
             if (state.isFullscreen) {
-                icon.styleFn().compress()
+                icon.compress()
             } else {
-                icon.styleFn().expand()
+                icon.expand()
             }
         }
     }

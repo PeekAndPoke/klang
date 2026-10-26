@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.comp
 
-import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
@@ -13,7 +12,6 @@ import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import kotlinx.browser.window
 import kotlinx.css.Align
-import kotlinx.css.Color
 import kotlinx.css.Display
 import kotlinx.css.FontWeight
 import kotlinx.css.JustifyContent
@@ -21,8 +19,6 @@ import kotlinx.css.LinearDimension
 import kotlinx.css.Overflow
 import kotlinx.css.Position
 import kotlinx.css.alignItems
-import kotlinx.css.backgroundColor
-import kotlinx.css.borderRadius
 import kotlinx.css.color
 import kotlinx.css.display
 import kotlinx.css.fontSize
@@ -41,19 +37,15 @@ import kotlinx.html.span
 fun Tag.LcdDisplay(
     value: Int,
     digits: Int = 4,
-    color: Color = KlangTheme.good,
     // 20px keeps the 0.9em digit cells at exactly 18px — integer pixel grid,
     // so the rolling strip never sits on half-pixels (which renders blurry).
     size: LinearDimension = 20.px,
-    backgroundColor: Color = Color("#111111"),
     dim: Boolean = false,
 ) = comp(
     LcdDisplay.Props(
         value = value,
         digits = digits,
-        color = color,
         size = size,
-        backgroundColor = backgroundColor,
         dim = dim,
     )
 ) {
@@ -65,9 +57,7 @@ class LcdDisplay(ctx: Ctx<Props>) : Component<LcdDisplay.Props>(ctx) {
     data class Props(
         val value: Int,
         val digits: Int,
-        val color: Color,
         val size: LinearDimension,
-        val backgroundColor: Color,
         val dim: Boolean,
     )
 
@@ -138,11 +128,12 @@ class LcdDisplay(ctx: Ctx<Props>) : Component<LcdDisplay.Props>(ctx) {
             }
         }
 
-        // Render
-        val dimColor = Color("${props.color}22")
-        // Matches the Fomantic default button height so the LCD fills the
-        // control row without a gap (border included via borderBox).
-        val compHeight = 36.px
+        // Render: in the look's LCD (KLANG-00349), as the value knob's LCD beside it: its digits in the LCD's ink, a
+        // sunken well in the look's ground, a ghost "8" behind each digit
+        val ink = "var(--kl-lcd-ink)"
+        val ghost = "color-mix(in srgb, var(--kl-lcd-ink) 13%, transparent)"
+        // The value knob's height, so the two LCDs stand level in the transport bar (border included via borderBox)
+        val compHeight = 34.px
 
         div {
             css {
@@ -150,10 +141,11 @@ class LcdDisplay(ctx: Ctx<Props>) : Component<LcdDisplay.Props>(ctx) {
                 // which shifted the LCD down a few px next to the buttons.
                 display = Display.flex
                 alignItems = Align.center
-                backgroundColor = props.backgroundColor
+                put("background", "var(--kl-ground-sunken)")
                 put("box-sizing", "border-box")
-                put("border", "1px solid var(--klang-gauge-ring)")
-                borderRadius = 5.px
+                put("border", "1px solid var(--kl-edge)")
+                put("border-radius", "var(--kl-radius)")
+                put("box-shadow", "inset 0 2px 4px rgba(0,0,0,0.6), 0 1px 0 rgba(255,255,255,0.06)")
                 height = compHeight
                 put("padding", "0 6px")
                 put("gap", "1px")
@@ -186,7 +178,7 @@ class LcdDisplay(ctx: Ctx<Props>) : Component<LcdDisplay.Props>(ctx) {
                             height = LinearDimension("100%")
                             alignItems = Align.center
                             justifyContent = JustifyContent.center
-                            color = dimColor
+                            put("color", ghost)
                             // Optical centering — Courier digits sit high otherwise (2px by eye)
                             put("transform", "translateY(2px)")
                         }
@@ -216,8 +208,8 @@ class LcdDisplay(ctx: Ctx<Props>) : Component<LcdDisplay.Props>(ctx) {
                                     display = Display.flex
                                     alignItems = Align.center
                                     justifyContent = JustifyContent.center
-                                    color = props.color
-                                    put("text-shadow", "0 0 3px ${props.color}66")
+                                    put("color", ink)
+                                    put("text-shadow", "0 0 3px color-mix(in srgb, var(--kl-lcd-ink) 40%, transparent)")
                                 }
                                 +"${d % 10}"
                             }

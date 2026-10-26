@@ -63,4 +63,9 @@ class StorageKeysSpec : StringSpec({
     "the look's key stays as it is" {
         StorageKeys.LOOK shouldBe "klang-look"
     }
+
+    "the editor's settings keep their keys" {
+        StorageKeys.EDITOR_HIGHLIGHTS_PER_EVENT shouldBe "klang-editor-highlights-per-event"
+        StorageKeys.EDITOR_HOVER_HELP shouldBe "klang-editor-hover-help"
+    }
 })

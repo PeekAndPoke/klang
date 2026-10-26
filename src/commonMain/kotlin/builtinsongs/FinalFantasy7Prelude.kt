@@ -30,8 +30,9 @@ const reverbSize = 6.0
 
 // Oh yeah
 // ... Headphones are advisable
-// ... Hover functions for help
+// ... Put the cursor on a function and press Alt+Q: its help opens on the right
 // ... Hover params for more help
+// ... Alt+M opens the Motor's menu: the songs, the docs, the looks
 
 stack(
   cat(n(`<[ 0  1 2 4] [7 8 9 11] [14 15 16 18] [21 22 23 25] [28 25 23 22] [21 18 16 15] [14 11 9 8] [7 4 2  1]

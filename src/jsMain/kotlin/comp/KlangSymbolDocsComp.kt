@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.comp
 
+import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.script.types.KlangProperty
 import io.peekandpoke.klang.script.types.KlangSymbol
@@ -14,6 +15,7 @@ import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
+import io.peekandpoke.kraft.routing.Router.Companion.router
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.onClick
@@ -70,6 +72,7 @@ import kotlinx.html.span
 import kotlinx.html.tbody
 import kotlinx.html.td
 import kotlinx.html.tr
+import org.w3c.dom.pointerevents.PointerEvent
 
 @Suppress("FunctionName")
 fun Tag.KlangSymbolDocsComp(
@@ -404,5 +407,20 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
                 +text
             }
         }
+    }
+}
+
+/**
+ * Opens [doc]'s docs page from a name's help (the editor's popup, the song page's Help window): a shift click opens it
+ * in a new tab.
+ */
+fun Component<*>.navToSymbolDocs(doc: KlangSymbol, event: dynamic) {
+    val uri = Nav.manualsLibrarySearch("sprudel", "function:${doc.name}")
+    val pointerEvent = event as? PointerEvent
+
+    if (pointerEvent?.shiftKey == true) {
+        router.navToUri(pointerEvent, uri)
+    } else {
+        router.navToUri(uri)
     }
 }

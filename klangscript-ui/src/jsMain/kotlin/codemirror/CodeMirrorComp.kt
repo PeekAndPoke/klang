@@ -63,6 +63,8 @@ fun Tag.KlangScriptEditorComp(
     popups: PopupsManager? = null,
     onNavigate: ((doc: KlangSymbol, event: dynamic) -> Unit)? = null,
     onOpenTool: ((toolName: String, ctx: KlangUiToolContext, argFrom: Int, event: dynamic) -> Unit)? = null,
+    hoverDocs: () -> Boolean = { true },
+    onQuickDocumentation: ((symbol: KlangSymbol, declarationCode: String?) -> Unit)? = null,
     showMinimap: Boolean = false,
     bookmarks: BookmarkOptions? = null,
 ): ComponentRef<KlangScriptEditorComp> = comp(
@@ -76,6 +78,8 @@ fun Tag.KlangScriptEditorComp(
         popups = popups,
         onNavigate = onNavigate,
         onOpenTool = onOpenTool,
+        hoverDocs = hoverDocs,
+        onQuickDocumentation = onQuickDocumentation,
         showMinimap = showMinimap,
         bookmarks = bookmarks,
     )
@@ -98,6 +102,10 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
         val popups: PopupsManager? = null,
         val onNavigate: ((doc: KlangSymbol, event: dynamic) -> Unit)? = null,
         val onOpenTool: ((toolName: String, ctx: KlangUiToolContext, argFrom: Int, event: dynamic) -> Unit)? = null,
+        /** Asked on every move whether the hover shows a name's quick help (KLANG-00349); read live. */
+        val hoverDocs: () -> Boolean = { true },
+        /** Gets the name at the cursor on quick documentation (Alt+Q) instead of the popup; null for the popup. */
+        val onQuickDocumentation: ((symbol: KlangSymbol, declarationCode: String?) -> Unit)? = null,
         /**
          * Shows a minimap of the whole document on the right. The editor then scrolls itself
          * (`height: 100%`), so the host must give it a definite height.
@@ -330,6 +338,8 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
                 popups = popups,
                 onNavigate = props.onNavigate ?: { _, _ -> },
                 onOpenTool = props.onOpenTool,
+                hoverDocs = { props.hoverDocs() },
+                onQuickDocumentation = props.onQuickDocumentation,
             )
 
             extensions.add(wiring.extension)

@@ -127,7 +127,7 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
     /** Where the focus was when the drawer opened (the menu button); it goes back there when the drawer closes. */
     private var focusBeforeDrawer: HTMLElement? = null
 
-    /** Where the focus was when a tool window opened from the strip (its toggle); it goes back there on Esc. */
+    /** Where the focus was when a tool window opened (its toggle in the strip, the code for [showTool]); back there on Esc. */
     private var focusBeforeTool: HTMLElement? = null
 
     init {
@@ -150,6 +150,7 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
     private fun toggleTool(id: String) {
         if (openTool == id) {
             openTool = null
+            focusBeforeTool = null
 
             return
         }
@@ -158,6 +159,23 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
         openTool = id
 
         focusToolFrame()
+    }
+
+    /**
+     * Shows the tool window [id] from outside the strip (a key in the editor, as Alt+Q shows the help: KLANG-00349),
+     * open if it is already; the focus stays where it is, so the user goes on typing, and Esc in the window gives it
+     * back there. An [id] the props do not hold does nothing.
+     */
+    fun showTool(id: String) {
+        if (props.tools.none { it.id == id }) {
+            return
+        }
+
+        if (openTool != id) {
+            focusBeforeTool = document.activeElement as? HTMLElement
+        }
+
+        openTool = id
     }
 
     /** After the next draw, the open tool window takes the focus, so Tab goes on inside it. */
@@ -169,7 +187,7 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
         }
     }
 
-    /** Closes the open tool window (its close button; Esc when it flies in) and gives the focus back to its toggle. */
+    /** Closes the open tool window (its close button; Esc when it flies in) and gives the focus back to where it was. */
     private fun closeTool() {
         openTool = null
 

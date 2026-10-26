@@ -412,17 +412,6 @@ body {
     animation: fadeOut 300ms linear forwards;
 }
 
-@keyframes iconGlow {
-    0%, 100% {
-        color: color-mix(in srgb, var(--icon-glow-color) 10%, black);
-        text-shadow: none;
-    }
-    50% {
-        color: var(--icon-glow-color);
-        text-shadow: 0 0 3px var(--icon-glow-color);
-    }
-}
-
 @keyframes fadeIn {
     from { opacity: 0; }
     to   { opacity: 1; }

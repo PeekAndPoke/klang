@@ -64,7 +64,7 @@ Source of CodeMirror's commands: the installed packages (commands 6.11.1, search
 | Completion: open / accept / close | Ctrl+Space / Enter and Tab / Esc | startCompletion / acceptCompletion / closeCompletion | Enter only |
 | Next / previous problem | F2 / Shift+F2 | nextDiagnostic / previousDiagnostic | F8 (next only) |
 | Go to definition | Ctrl+B, and Ctrl+click | ours (KLANG-00321); Ctrl+click no longer adds a cursor | Ctrl+click |
-| Quick documentation | Ctrl+Q | ours: the hover's docs popup for the name at the cursor | hover only |
+| Quick documentation | Alt+Q | ours: the name's help, in the song page's Help window (else the docs popup); Alt+Q since 2026-10-26, KLANG-00349 | hover only |
 | Back to the last edit | Ctrl+Shift+Backspace | KLANG-00322 | same |
 | Set / go to bookmark n | Ctrl+Shift+n / Ctrl+n (by position; go also on the keypad) | KLANG-00323 | same |
 | Play / Update (one button) | Ctrl+Shift+Enter | app scope, the song page's button | none |
@@ -111,7 +111,7 @@ Mac keys come from its source; the IntelliJ Mac keys are from memory, and the ro
 | Completion | Ctrl+Space (CodeMirror also Option+` and Option+I) |
 | Next / previous problem | F2 / Shift+F2 |
 | Go to definition | Cmd+B, Cmd+click |
-| Quick documentation | F1 (check; Ctrl+J in older keymaps) |
+| Quick documentation | Alt+Q (Option+Q, by position; since 2026-10-26, KLANG-00349) |
 | Back to the last edit | Cmd+Shift+Backspace |
 | Bookmarks | Ctrl+Shift+n / Ctrl+n (Cmd+digit is Chrome's tab switch) |
 | Play / Update, Stop | Cmd+Shift+Enter, Cmd+Shift+. |
@@ -458,3 +458,6 @@ OkCancel real buttons and focus; their Esc stays ours until the key map carries 
 - 2026-10-26: the bookmarks below the keys overview, both right-aligned (maintainer: "Nice grouping! Put the
   bookmarks below this box now please"); each panel never wider than the corner. A layout move of two boxes, committed
   without a review round, for the maintainer's eye.
+- 2026-10-26: quick documentation on Alt+Q on every platform, decided by the maintainer in KLANG-00349 (Alt+Q on a
+  name opens its help in the song page's Help window; the hover help a setting, off by default); made there, with
+  Klang-Main-Dev's agreement.

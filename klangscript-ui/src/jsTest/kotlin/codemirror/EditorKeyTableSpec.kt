@@ -392,10 +392,10 @@ class EditorKeyTableSpec : StringSpec({
         }
     }
 
-    "Ctrl+B and Ctrl+Q never reach the browser, also in an editor without the DSL's commands" {
+    "Ctrl+B and Alt+Q never reach the browser, also in an editor without the DSL's commands" {
         withEditor(doc = "x") { view ->
             view.press(key = "b", code = "KeyB", ctrl = true).defaultPrevented shouldBe true
-            view.press(key = "q", code = "KeyQ", ctrl = true).defaultPrevented shouldBe true
+            view.press(key = "q", code = "KeyQ", alt = true).defaultPrevented shouldBe true
         }
     }
 

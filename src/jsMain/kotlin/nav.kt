@@ -16,6 +16,7 @@ import io.peekandpoke.klang.pages.MidiPlaygroundPage
 import io.peekandpoke.klang.pages.NotFoundPage
 import io.peekandpoke.klang.pages.ResourcesPage
 import io.peekandpoke.klang.pages.SamplesLibraryPage
+import io.peekandpoke.klang.pages.SongsPage
 import io.peekandpoke.klang.pages.StartPage
 import io.peekandpoke.klang.pages.TourPage
 import io.peekandpoke.klang.pages.UiKitchenSinkPage
@@ -37,6 +38,9 @@ object Nav {
     val startSlash = Static("/")
 
     val dashboard = Static("/dashboard")
+
+    /** The songs, to open one or start a new one (KLANG-00349). */
+    val songs = Static("/songs")
 
     val newSongCode = Static("/song/code")
     val editSongCode = Route1("/song/code/{id}")
@@ -102,6 +106,8 @@ fun RootRouterBuilder.mountNav() {
     layout({ WorkbenchLayout { it() } }) {
 
         mount(Nav.dashboard) { DashboardPage() }
+
+        mount(Nav.songs) { SongsPage() }
 
         mount(Nav.newSongCode) { CodeSongPage(id = null) }
         mount(Nav.editSongCode) { CodeSongPage(id = it["id"]) }

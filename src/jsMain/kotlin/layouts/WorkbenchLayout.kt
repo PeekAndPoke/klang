@@ -53,6 +53,10 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
     /** The build, shown in the Motor tool window (the Motor's title, which carried it, went up the strip). */
     private val versionInfo by subscribingTo(version)
 
+    /** The page's column and its own tool windows (KLANG-00349), when it puts any into the workbench. */
+    private val pageColumn by subscribingTo(WorkbenchSlots.column)
+    private val pageTools by subscribingTo(WorkbenchSlots.tools)
+
     /** What the drawer's search field holds; the search window's step gives it results. */
     private var query: String by value("")
 
@@ -70,7 +74,7 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
         val area = AppArea.entries.firstOrNull { it.name == id } ?: return
 
         val uri = when (area) {
-            AppArea.Songs -> Nav.newSongCode()
+            AppArea.Songs -> Nav.songs()
             AppArea.Learn -> Nav.tutorials()
             AppArea.Docs -> Nav.manuals()
             AppArea.Samples -> Nav.samplesLibrary()
@@ -97,7 +101,15 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
             }
 
             KlangWorkbench(
-                column = { SidebarMenu() },
+                column = {
+                    val column = pageColumn
+
+                    if (column != null) {
+                        column()
+                    } else {
+                        SidebarMenu()
+                    }
+                },
                 motor = { menu -> Motoer(menu = menu) },
                 content = { props.inner(this) },
                 tools = listOf(
@@ -105,7 +117,7 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
                         renderBuild()
                         PlayerWarehouseStats()
                     },
-                ),
+                ) + pageTools,
                 drawer = { close ->
                     KlangDrawer(
                         title = "Where to",
@@ -129,7 +141,7 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
                     )
                 },
                 mark = "KLANGMOTOR",
-            )
+            ).track(WorkbenchSlots.workbench)
         }
     }
 

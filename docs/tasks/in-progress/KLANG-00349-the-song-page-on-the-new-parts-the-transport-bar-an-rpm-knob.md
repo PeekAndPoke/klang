@@ -69,6 +69,20 @@ the fullscreen toggle. The editor shows a symbol's quick help on hover (`hoverPo
 - **Mutation-checked:** 16 mutants over the value knob and the knob's drag, all killed for the right reason (one
   spec host first let a mutant survive: its lambda captured nothing, so Kotlin/JS kept one instance and the knob did
   not redraw; it captures state now).
+- **Steps 2 to 5, round 1** (level 1): 1 MAJOR (the column and the help reused across a direct jump from one song to
+  the next: the title field and the help kept the old song), fixed by keying both by the song; the MINORs and NITs
+  fixed (the imports read with single quotes and over several lines, EVT down to 0 for no highlights, the docs
+  navigation shared, the text field in the kitchen sink).
+- **Steps 2 to 5, round 2** (level 2, two phases): clean; 2 NIT applied (the workbench parts keyed by the page, not
+  the song id, so "new" opened twice cannot share them; a tool window shown by Alt+Q gives the focus back to the
+  code on Esc). Mutation-checked: 8 mutants over the imports, showTool and its focus, all killed.
+
+## Open for the maintainer
+
+- **Where the hover setting reaches:** it switches the hover help of the song page and the tutorials' code examples
+  (both use the app's code editor). The docs REPL and the MIDI playground keep the hover on, as today. One setting for
+  every editor, or only these two?
+- **EVT 0** turns the highlights off entirely (the old field's floor was 1).
 
 ## Acceptance
 

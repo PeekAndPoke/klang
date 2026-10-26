@@ -25,6 +25,8 @@ import kotlinx.coroutines.delay
 import kotlinx.html.div
 import org.w3c.dom.events.KeyboardEvent
 import org.w3c.dom.events.KeyboardEventInit
+import org.w3c.dom.events.MouseEvent
+import org.w3c.dom.events.MouseEventInit
 
 /**
  * The DSL editor's keys (KLANG-00325 step 3b): go to definition and quick documentation at the cursor, wired as the
@@ -34,7 +36,10 @@ class DslEditorKeysSpec : StringSpec({
 
     val note = KlangSymbol(name = "note", variants = emptyList(), category = "test", origin = KlangSymbol.Origin.Library("test"))
 
-    class Host {
+    class Host(
+        hoverDocs: () -> Boolean = { true },
+        onQuickDocumentation: ((KlangSymbol, String?) -> Unit)? = null,
+    ) {
         val navigated = mutableListOf<String>()
         val popups = PopupsManager(PopupsManager.Settings(popupRenderer = PopupsManager.DefaultPopupFactory))
         val hoverPopup = HoverPopupCtrl(popups = popups, showDelayMs = 10, hideDelayMs = 10)
@@ -45,6 +50,8 @@ class DslEditorKeysSpec : StringSpec({
             hoverContent = { symbol, _ -> div { +symbol.name } },
             popups = popups,
             onNavigate = { symbol, _ -> navigated.add(symbol.name) },
+            hoverDocs = hoverDocs,
+            onQuickDocumentation = onQuickDocumentation,
         )
     }
 
@@ -77,10 +84,22 @@ class DslEditorKeysSpec : StringSpec({
         }
     }
 
-    fun EditorView.press(key: String, code: String, ctrl: Boolean = false) = KeyboardEvent(
+    fun EditorView.press(key: String, code: String, ctrl: Boolean = false, alt: Boolean = false) = KeyboardEvent(
         "keydown",
-        KeyboardEventInit(key = key, code = code, ctrlKey = ctrl, bubbles = true, cancelable = true),
+        KeyboardEventInit(key = key, code = code, ctrlKey = ctrl, altKey = alt, bubbles = true, cancelable = true),
     ).also { contentDOM.dispatchEvent(it) }
+
+    /** The mouse moved onto the text at [pos], as a hover. */
+    fun EditorView.hover(pos: Int) {
+        val at = coordsAtPos(pos)!!
+
+        contentDOM.dispatchEvent(
+            MouseEvent(
+                "mousemove",
+                MouseEventInit(clientX = (at.left + 1).toInt(), clientY = ((at.top + at.bottom) / 2).toInt(), bubbles = true),
+            )
+        )
+    }
 
     fun EditorView.cursorAt(pos: Int) {
         dispatch(state.update(jsObject { this.selection = jsObject<dynamic> { this.anchor = pos } }))
@@ -110,12 +129,12 @@ class DslEditorKeysSpec : StringSpec({
         }
     }
 
-    "Ctrl+Q shows the docs of the name at the cursor, and Esc closes them" {
+    "Alt+Q shows the docs of the name at the cursor, and Esc closes them" {
         val host = Host()
 
         withEditor(host = host, doc = "note(1)") { view ->
             view.cursorAt(pos = 2)
-            view.press(key = "q", code = "KeyQ", ctrl = true)
+            view.press(key = "q", code = "KeyQ", alt = true)
             delay(100)
 
             withClue("shown") { host.popups().size shouldBe 1 }
@@ -127,12 +146,42 @@ class DslEditorKeysSpec : StringSpec({
         }
     }
 
+    "with a Help window of the host's, Alt+Q hands it the name at the cursor and opens no popup; elsewhere nothing" {
+        val asked = mutableListOf<String>()
+        val host = Host(onQuickDocumentation = { symbol, _ -> asked.add(symbol.name) })
+
+        withEditor(host = host, doc = "note(1) + 2") { view ->
+            view.cursorAt(pos = 2)
+            view.press(key = "q", code = "KeyQ", alt = true)
+
+            view.cursorAt(pos = 10)
+            view.press(key = "q", code = "KeyQ", alt = true)
+            delay(100)
+
+            asked shouldContainExactly listOf("note")
+            host.popups().size shouldBe 0
+        }
+    }
+
+    "hovering a name shows its docs only while the hover help is on" {
+        for ((on, popups) in listOf(true to 1, false to 0)) {
+            val host = Host(hoverDocs = { on })
+
+            withEditor(host = host, doc = "note(1)") { view ->
+                view.hover(pos = 2)
+                delay(100)
+
+                withClue("hover help ${if (on) "on" else "off"}") { host.popups().size shouldBe popups }
+            }
+        }
+    }
+
     "a docs popup opened by key closes on the next edit" {
         val host = Host()
 
         withEditor(host = host, doc = "note(1)") { view ->
             view.cursorAt(pos = 2)
-            view.press(key = "q", code = "KeyQ", ctrl = true)
+            view.press(key = "q", code = "KeyQ", alt = true)
             delay(100)
             host.popups().size shouldBe 1
 
@@ -148,7 +197,7 @@ class DslEditorKeysSpec : StringSpec({
 
         withEditor(host = host, doc = "note(1)") { view ->
             view.cursorAt(pos = 2)
-            view.press(key = "q", code = "KeyQ", ctrl = true)
+            view.press(key = "q", code = "KeyQ", alt = true)
             delay(100)
             host.popups().size shouldBe 1
 

@@ -130,9 +130,12 @@ object KlangEditorKeyBindings : KeyBindings {
     /** A local to its declaration; a library name to its docs page (KLANG-00321, also Ctrl+click). */
     val GoToDefinition = action(id = "go-to-definition", title = "Go to definition", keys = listOf("Mod-B"))
 
-    /** The docs popup of the name at the cursor, as hovering shows it. */
-    val QuickDocumentation =
-        action(id = "quick-documentation", title = "Quick documentation", keys = listOf("Ctrl-Q"), macKeys = listOf("F1"))
+    /**
+     * The help of the name at the cursor: in the host's Help window when it has one (the song page), else the docs
+     * popup as hovering shows it. Alt+Q on every platform (the maintainer, 2026-10-26, KLANG-00349; Ctrl+Q quits
+     * Firefox on Linux, and a Mac's Option+Q matches by position).
+     */
+    val QuickDocumentation = action(id = "quick-documentation", title = "Quick documentation", keys = listOf("Alt-Q"))
 
     /** Back to the place of the last edit (KLANG-00322). */
     val BackToLastEdit = action(id = "back-to-last-edit", title = "Back to the last edit", keys = listOf(EditPlacesExtension.KEY))

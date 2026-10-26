@@ -5,13 +5,13 @@
 
 package io.peekandpoke.klang.comp
 
-import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.codemirror.CodeMirrorHighlightBuffer
 import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.common.strings.offsetToSourceLocation
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.types.KlangSymbol
+import io.peekandpoke.klang.storage.EditorSettings
 import io.peekandpoke.klang.ui.HoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.KlangUiToolContext
@@ -31,7 +31,6 @@ import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.modals.ModalsManager.Companion.modals
 import io.peekandpoke.kraft.popups.PopupsManager
 import io.peekandpoke.kraft.popups.PopupsManager.Companion.popups
-import io.peekandpoke.kraft.routing.Router.Companion.router
 import io.peekandpoke.kraft.utils.Vector2D
 import io.peekandpoke.kraft.utils.jsObject
 import io.peekandpoke.kraft.utils.windowCtrl
@@ -49,7 +48,6 @@ import kotlinx.css.rem
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
-import org.w3c.dom.pointerevents.PointerEvent
 
 /**
  * Reusable Kraft component that wraps [KlangScriptEditorComp] with all the playback-related
@@ -72,6 +70,7 @@ fun Tag.KlangCodeEditorComp(
     showMinimap: Boolean = false,
     bookmarks: BookmarkOptions? = null,
     showKeysOverview: Boolean = false,
+    onQuickDocumentation: ((symbol: KlangSymbol, declarationCode: String?) -> Unit)? = null,
 ): ComponentRef<KlangCodeEditorComp> = comp(
     KlangCodeEditorComp.Props(
         ctrl = ctrl,
@@ -84,6 +83,7 @@ fun Tag.KlangCodeEditorComp(
         showMinimap = showMinimap,
         bookmarks = bookmarks,
         showKeysOverview = showKeysOverview,
+        onQuickDocumentation = onQuickDocumentation,
     )
 ) {
     KlangCodeEditorComp(it)
@@ -115,6 +115,8 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
         val bookmarks: BookmarkOptions?,
         /** Shows the editor's keys in its top-right corner while the key hints show (KLANG-00325). */
         val showKeysOverview: Boolean,
+        /** Gets the name at the cursor on Alt+Q, for a Help window of the host's (KLANG-00349); null for the popup. */
+        val onQuickDocumentation: ((symbol: KlangSymbol, declarationCode: String?) -> Unit)?,
     )
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -234,15 +236,7 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-    private fun navToDoc(doc: KlangSymbol, event: dynamic) {
-        val uri = Nav.manualsLibrarySearch("sprudel", "function:${doc.name}")
-        val pointerEvent = event as? PointerEvent
-        if (pointerEvent?.shiftKey == true) {
-            router.navToUri(pointerEvent, uri)
-        } else {
-            router.navToUri(uri)
-        }
-    }
+    private fun navToDoc(doc: KlangSymbol, event: dynamic) = navToSymbolDocs(doc = doc, event = event)
 
     private fun openTool(toolName: String, toolCtx: KlangUiToolContext, argFrom: Int, event: dynamic = null) {
         val tool = KlangUiToolRegistry.get(toolName) ?: return
@@ -344,6 +338,9 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
                 onOpenTool = { toolName, toolCtx, argFrom, event ->
                     openTool(toolName = toolName, toolCtx = toolCtx, argFrom = argFrom, event = event)
                 },
+                // The hover's quick help is a setting, off by default (KLANG-00349); read on every move
+                hoverDocs = { EditorSettings.hoverHelp() },
+                onQuickDocumentation = props.onQuickDocumentation,
                 showMinimap = props.showMinimap,
                 bookmarks = props.bookmarks,
             ).track(editorRef)
