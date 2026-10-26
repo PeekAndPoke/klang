@@ -19,9 +19,11 @@ import kotlin.math.abs
  *
  * - **Actions** come in bags ([define], a [KeyBindings]); their keys are the defaults for [platform] with the user's keys
  *   over them ([setUserKeys], kept in the [KeymapStore]). Every change publishes a new [Keymap].
- * - **Handlers** answer an action. They stack per action: the newest enabled one answers, and when it goes (or is
- *   disabled) the one before answers again. A handler names its action, never a key, so a key the user changes reaches
- *   it without registering again.
+ * - **Handlers** answer an action. They stack per key (maintainer, 2026-10-26: "stack key registrations"): of the
+ *   enabled handlers in the top layer whose action a key triggers, the one of the highest [KeyPriority] answers, and
+ *   within one priority the newest, whatever its action; when it goes (or is disabled) the one before answers again.
+ *   All declared, nothing set by hand: a page's Esc, a panel's above it, a tool's above that, whatever mounts first.
+ *   A handler names its action, never a key, so a key the user changes reaches it without registering again.
  * - **Layers:** every handler answers in a layer, the page's in [rootLayer], which is always there. A modal opens one
  *   over the rest ([openLayer]); only the top layer's handlers answer and only their hints show, the keys below wait,
  *   as the mouse does under a dimmer. Layers close in any order: the top open one always wins, a closed one never
@@ -30,11 +32,12 @@ import kotlin.math.abs
  *   - taps, `"Shift Shift"`: a modifier tapped on its own (down and up within [tapMaxMs], no other key, click or wheel
  *     between) twice within [tapPairMs]; also while the user types, since a tap types nothing. A capital (Shift, a
  *     letter) is no tap.
- *   - chords, `"Mod-K Mod-S"`: the first chord acts as a single key would (not on a plain key in a text field) and
- *     starts a wait of [sequenceWaitMs] for the next ([waiting] says which chords are in, for the app to show). While
- *     it waits every key belongs to it, before the page's own handlers: the next chord of a sequence goes on or
- *     triggers it, Esc or any other key ends the wait (and does nothing else), as do a click and the time running out.
- *     A chord that starts a sequence waits even when it is also an action's own key ([Keymap.Problem.PrefixClash]).
+ *   - chords, `"Mod-K Mod-S"`: the first chord answers as a single key would (not on a plain key in a text field)
+ *     and starts a wait of [sequenceWaitMs] for the second ([waiting] holds the first, for the app to show). While it
+ *     waits every key belongs to it, in the capture phase before the page's own handlers: the second chord triggers
+ *     its sequence, Esc or any other key ends the wait (and does nothing else), as do a click, the blur, a tap pair
+ *     that acts, a layer that opens and the time running out. When a chord is both an action's own key and how a
+ *     sequence begins ([Keymap.Problem.PrefixClash]), the answering registration decides whether it acts or waits.
  * - **Hints:** [hints] is true while the [hintTrigger] (by default `Mod`: Ctrl on a PC, Cmd on a Mac) is held alone for
  *   [hintDelayMs], and false again on its release, on any other key, a click or the wheel (Ctrl+click, Ctrl+wheel), or
  *   when the window loses focus. Moving the mouse while the delay runs stops it (Ctrl+hover in the code editor). AltGr
@@ -42,9 +45,9 @@ import kotlin.math.abs
  *
  * One listener on [target] (the document) answers every key, after the page's own handlers: a key a component already
  * handled (`defaultPrevented`: the code editor's own keys while it has the focus) is left alone, and so is a held key's
- * repeat. A key without Ctrl, Alt or Meta is left alone while the user types in a text field. When a key triggers
- * several actions (a clash), the first defined one with an enabled handler in the top layer answers. The hints follow the keys before
- * the page's handlers (the capture phase), so a handler that stops a key cannot leave them showing.
+ * repeat. A key without Ctrl, Alt or Meta is left alone while the user types in a text field. The hints and the wait of
+ * chords in a row follow the keys before the page's handlers (the capture phase), so a handler that stops a key cannot
+ * leave them showing; a key the wait takes stops there, though a capture listener on `window` still sees it.
  */
 class KeysManager(
     val platform: KeyPlatform = KeyPlatform.detect(),
@@ -189,7 +192,7 @@ class KeysManager(
 
     private val _waiting = StreamSource<List<KeyChord>>(emptyList())
 
-    /** The chords of keys in a row pressed so far while the manager waits for the next one; empty while it does not. */
+    /** The first chord of chords in a row while the manager waits for the second; empty while it does not wait. */
     val waiting: Stream<List<KeyChord>> = _waiting.readonly
 
     private var waitTimer: Int? = null
@@ -306,6 +309,8 @@ class KeysManager(
 
         layers.add(opening)
         _topLayer(opening)
+        // The keys of the layer below no longer answer: neither does their wait
+        stopWaiting()
     }
 
     /** True while [layer] is the one whose keys answer. */
@@ -357,46 +362,41 @@ class KeysManager(
 
     private fun dispatch(event: KeyboardEvent) {
         val typing = isTextField(event.target)
+        val keymap = _keymap()
 
-        // The first chord of chords in a row: wait for the next, before any single key on the same chord
-        val starting = _keymap().chordSequences.firstOrNull { (action, sequence) ->
-            val first = sequence.chords.first()
-            // While the user types, only a first chord with Ctrl, Alt or Meta starts it, as for a single key
-            val allowed = !typing || first.hasCommandModifier
+        // While the user types, only keys with Ctrl, Alt or Meta act: an Esc or a letter belongs to the field
+        fun pressed(chord: KeyChord): Boolean =
+            chord.matches(event = event, platform = platform) && (!typing || chord.hasCommandModifier)
 
-            first.matches(event = event, platform = platform) && allowed && answering(action) != null
-        }
+        val singles = keymap.actions.filter { action -> keymap.chordsOf(action.id).any { pressed(it) } }.map { it.id }
+        val starts = keymap.chordSequences.filter { (_, sequence) -> pressed(sequence.chords.first()) }
+        val answering = answering(actionIds = (singles + starts.map { it.first.id }).toSet()) ?: return
 
-        if (starting != null) {
-            event.preventDefault()
-            startWaiting(starting.second.chords.take(1))
+        event.preventDefault()
 
-            return
-        }
-
-        _keymap().actionsFor(event).forEach { action ->
-            // While the user types, only keys with Ctrl, Alt or Meta act: an Esc or a letter belongs to the field
-            if (typing && _keymap().chordsOf(action.id).none { it.matches(event = event, platform = platform) && it.hasCommandModifier }) {
-                return@forEach
-            }
-
-            val answering = answering(action) ?: return@forEach
-
-            event.preventDefault()
+        // A single key acts at once; the first chord of chords in a row waits for the second
+        if (answering.actionId in singles) {
             answering.handler(event)
-
-            return
+        } else {
+            startWaiting(starts.first { it.first.id == answering.actionId }.second.chords.take(1))
         }
     }
 
     /**
-     * The handler that answers [action] now: the last registered enabled one in the top layer. The keys below the top
-     * layer wait, the page's under a modal.
+     * The handler that answers now for any of [actionIds]: of the enabled ones in the top layer, the one of the highest
+     * [KeyPriority], and within it the newest, whatever its action. The keys below the top layer wait, the page's under
+     * a modal.
      */
-    private fun answering(action: KeyAction): Handler? {
+    private fun answering(actionIds: Set<String>): Handler? {
         val top = _topLayer()
+        val keymap = _keymap()
+        val candidates = handlers.filter { it.actionId in actionIds && it.layer === top && it.enabled() }
 
-        return handlers.lastOrNull { it.actionId == action.id && it.layer === top && it.enabled() }
+        fun priorityOf(handler: Handler): Int = (keymap.action(handler.actionId)?.priority ?: KeyPriority.Default).value
+
+        val highest = candidates.maxOfOrNull { priorityOf(it) } ?: return null
+
+        return candidates.last { priorityOf(it) == highest }
     }
 
     private fun isTextField(eventTarget: EventTarget?): Boolean {
@@ -409,10 +409,11 @@ class KeysManager(
     private fun hintKeyDown(event: KeyboardEvent) {
         followTaps(event)
 
-        // Waiting for the next chord of chords in a row: every key is the wait's, before the page's handlers see it
+        // Waiting for the second chord of chords in a row: every key is the wait's, before the page's handlers see it
         if (_waiting().isNotEmpty() && event.key !in KeyChord.MODIFIER_KEY_NAMES) {
             event.preventDefault()
-            event.stopPropagation()
+            event.stopImmediatePropagation()
+            hideHints()
 
             if (!event.repeat) {
                 nextInRow(event)
@@ -491,7 +492,7 @@ class KeysManager(
             event.shiftKey == (modifier == TapModifier.Shift) && event.metaKey == (modifier == TapModifier.Meta)
 
         if (alone && !event.getModifierState("AltGraph")) {
-            tapStart = modifier!! to now()
+            tapStart = modifier to now()
         } else {
             breakTaps()
         }
@@ -525,36 +526,27 @@ class KeysManager(
             return
         }
 
-        _keymap().actionsFor(KeySequence(steps = taps.map { KeyStep.Tap(it) })).forEach { action ->
-            val answering = answering(action) ?: return@forEach
+        val tapped = _keymap().actionsFor(KeySequence.ofTaps(*taps.toTypedArray())).map { it.id }.toSet()
+        val answering = answering(actionIds = tapped) ?: return
 
-            taps = emptyList()
-            answering.handler(event)
-
-            return
-        }
+        taps = emptyList()
+        stopWaiting()
+        answering.handler(event)
     }
 
-    /** A key while chords in a row wait: the next chord goes on or triggers, any other key (Esc too) ends the wait. */
+    /** A key while chords in a row wait: the second chord triggers its sequence, any other key (Esc too) ends the wait. */
     private fun nextInRow(event: KeyboardEvent) {
-        val pressed = _waiting()
+        val first = _waiting().firstOrNull() ?: return
         stopWaiting()
 
-        val fitting = _keymap().chordSequences.filter { (action, sequence) ->
-            val chords = sequence.chords
+        val completed = _keymap().chordSequences
+            .filter { (_, sequence) ->
+                sequence.chords.first() == first && sequence.chords.last().matches(event = event, platform = platform)
+            }
+            .map { it.first.id }
+            .toSet()
 
-            chords.size > pressed.size && chords.take(pressed.size) == pressed &&
-                chords[pressed.size].matches(event = event, platform = platform) && answering(action) != null
-        }
-
-        // A sequence complete: the first defined one acts, as for a clash
-        fitting.firstOrNull { (_, sequence) -> sequence.chords.size == pressed.size + 1 }?.let { (action, _) ->
-            answering(action)?.handler(event)
-
-            return
-        }
-
-        fitting.firstOrNull()?.let { (_, sequence) -> startWaiting(sequence.chords.take(pressed.size + 1)) }
+        answering(actionIds = completed)?.handler(event)
     }
 
     private fun startWaiting(pressed: List<KeyChord>) {

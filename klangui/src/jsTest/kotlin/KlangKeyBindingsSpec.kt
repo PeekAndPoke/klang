@@ -31,19 +31,25 @@ class KlangKeyBindingsSpec : StringSpec({
         }
     }
 
-    "the Esc chain on the song page: an open panel's close answers first, then Esc focuses the editor" {
+    "the Esc chain by priority, whatever mounted first: a code tool closes, then a panel, then the editor takes the focus" {
         val host = document.createElement("div") as HTMLElement
         document.body!!.appendChild(host)
         val keys = KeysManager(platform = KeyPlatform.Pc, target = host).apply { define(KlangKeyBindings) }
         val answered = mutableListOf<String>()
-        var panelOpen = true
 
-        // Both in the page's layer: the order of the actions in the bag decides, close before focus
-        keys.handle(KlangKeyBindings.FocusEditor) { answered.add("focus") }
-        keys.handle(KlangKeyBindings.PanelClose, enabled = { panelOpen }) {
-            answered.add("close")
-            panelOpen = false
+        // All in the page's layer, mounted the wrong way round: the code tool first, then a panel, the page last (a
+        // tool window open before a navigation). Closing unmounts, which removes the registration
+        var tool: KeysManager.HandlerRegistration? = null
+        var panel: KeysManager.HandlerRegistration? = null
+        tool = keys.handle(KlangKeyBindings.DialogClose) {
+            answered.add("tool")
+            tool?.remove()
         }
+        panel = keys.handle(KlangKeyBindings.PanelClose) {
+            answered.add("panel")
+            panel?.remove()
+        }
+        keys.handle(KlangKeyBindings.FocusEditor) { answered.add("focus") }
 
         fun esc() = host.dispatchEvent(
             KeyboardEvent("keydown", KeyboardEventInit(key = "Escape", code = "Escape", bubbles = true, cancelable = true))
@@ -52,10 +58,15 @@ class KlangKeyBindingsSpec : StringSpec({
         try {
             esc()
             esc()
-            answered shouldContainExactly listOf("close", "focus")
+            esc()
+            answered shouldContainExactly listOf("tool", "panel", "focus")
         } finally {
             keys.dispose()
             host.remove()
         }
+    }
+
+    "every action takes one of Klang's priorities, so they stay in one place" {
+        KlangKeyBindings.actions.filterNot { it.priority in KlangKeyPriorities.all }.map { it.id }.shouldBeEmpty()
     }
 })

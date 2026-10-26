@@ -248,15 +248,15 @@ class KeyHintStageView(ctx: Ctx<Props>) : Component<KeyHintStageView.Props>(ctx)
     override fun VDom.render() {
         div(classes = STAGE_CLASS) {
             style = "position: fixed; left: 0; top: 0; width: 0; height: 0; pointer-events: none; z-index: 10000"
-            // Each hint repeats a control's key next to it; the key is part of the control's own description
-            attributes["aria-hidden"] = "true"
+            // Chords in a row waiting for their second key: a chip at the foot of the window, hints or not. Said aloud
+            // too: it is the only sign that the next key goes to the wait (a live region, there before the chip comes)
+            div {
+                key = "key-waiting"
+                attributes["role"] = "status"
+                attributes["aria-live"] = "polite"
+                style = "position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%)"
 
-            // Chords in a row waiting for their next key: a chip at the foot of the window, hints or not
-            if (waiting.isNotEmpty()) {
-                div {
-                    key = "key-waiting"
-                    style = "position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%)"
-
+                if (waiting.isNotEmpty()) {
                     stage.waitingRenderer(this, KeyWaitingState(pressed = waiting, platform = stage.manager.platform))
                 }
             }
@@ -275,6 +275,8 @@ class KeyHintStageView(ctx: Ctx<Props>) : Component<KeyHintStageView.Props>(ctx)
                 div {
                     key = "key-hint-${entry.id}"
                     attributes[HINT_ATTRIBUTE] = entry.id.toString()
+                    // Each hint repeats a control's key next to it; the key is part of the control's own description
+                    attributes["aria-hidden"] = "true"
                     // Unplaced: drawn unseen, to measure it; placed: at its spot
                     style = when {
                         box == null -> "position: fixed; left: 0; top: 0; visibility: hidden"

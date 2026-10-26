@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.workshop.keys
 
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldBeEmpty
@@ -173,7 +174,6 @@ class KeymapSpec : StringSpec({
         val save = play.copy(id = "save", keys = listOf("Mod-K Mod-S"))
         val ctrlK = KeyChord(key = "k", ctrl = true)
         val ctrlS = KeyChord(key = "s", ctrl = true)
-        val ctrlA = KeyChord(key = "a", ctrl = true)
 
         Keymap(platform = pc, actions = listOf(save)).let { keymap ->
             keymap.bindingsOf("save") shouldContainExactly listOf(KeySequence.ofChords(ctrlK, ctrlS))
@@ -193,30 +193,24 @@ class KeymapSpec : StringSpec({
                 listOf(Keymap.Problem.Reserved(actionId = "save", chord = KeyChord(key = "w", ctrl = true)))
         }
 
-        withClue("a single key that begins a sequence, and a sequence that begins a longer one, clash as prefixes") {
+        withClue("a single key that begins a sequence clashes as its prefix") {
             val open = play.copy(id = "open", keys = listOf("Mod-K"))
-            val saveAll = play.copy(id = "save-all", keys = listOf("Mod-K Mod-S Mod-A"))
 
-            Keymap(platform = pc, actions = listOf(open, save, saveAll)).problems shouldContainExactly listOf(
+            Keymap(platform = pc, actions = listOf(open, save)).problems shouldContainExactly listOf(
                 Keymap.Problem.PrefixClash(
                     scope = KeyAction.APP_SCOPE,
                     prefix = ctrlK,
                     sequence = KeySequence.ofChords(ctrlK, ctrlS),
                     actionIds = listOf("open", "save"),
                 ),
-                Keymap.Problem.PrefixClash(
-                    scope = KeyAction.APP_SCOPE,
-                    prefix = ctrlK,
-                    sequence = KeySequence.ofChords(ctrlK, ctrlS, ctrlA),
-                    actionIds = listOf("open", "save-all"),
-                ),
-                Keymap.Problem.PrefixClash(
-                    scope = KeyAction.APP_SCOPE,
-                    prefix = KeySequence.ofChords(ctrlK, ctrlS),
-                    sequence = KeySequence.ofChords(ctrlK, ctrlS, ctrlA),
-                    actionIds = listOf("save", "save-all"),
-                ),
             )
+        }
+
+        withClue("three chords are unreadable, as are sequences built in code that break the rules") {
+            Keymap(platform = pc, actions = listOf(play.copy(keys = listOf("Mod-K Mod-S Mod-A")))).problems.single()
+                .shouldBeInstanceOf<Keymap.Problem.Unreadable>()
+            shouldThrow<IllegalArgumentException> { KeySequence.ofChords(ctrlK) }
+            shouldThrow<IllegalArgumentException> { KeySequence(steps = listOf(KeyStep.Tap(TapModifier.Shift), KeyStep.Press(ctrlK))) }
         }
 
         withClue("in different scopes no prefix clash") {
@@ -224,5 +218,17 @@ class KeymapSpec : StringSpec({
 
             Keymap(platform = pc, actions = listOf(editorOpen, save)).problems.shouldBeEmpty()
         }
+    }
+
+    "one key, one scope: a clash only within one priority; different priorities are a deliberate order" {
+        val front = KeyPriority(value = 10, name = "front")
+        val back = play.copy(id = "back", keys = listOf("Escape"))
+        val ahead = play.copy(id = "ahead", keys = listOf("Escape"), priority = front)
+        val also = play.copy(id = "also", keys = listOf("Escape"), priority = front)
+
+        Keymap(platform = pc, actions = listOf(back, ahead)).problems.shouldBeEmpty()
+        Keymap(platform = pc, actions = listOf(back, ahead, also)).problems shouldContainExactly listOf(
+            Keymap.Problem.Clash(scope = KeyAction.APP_SCOPE, chord = KeyChord(key = "Escape"), actionIds = listOf("ahead", "also")),
+        )
     }
 })

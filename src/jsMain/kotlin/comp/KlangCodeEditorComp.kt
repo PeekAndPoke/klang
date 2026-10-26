@@ -13,12 +13,14 @@ import io.peekandpoke.klang.common.strings.offsetToSourceLocation
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.ui.HoverPopupCtrl
+import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
 import io.peekandpoke.klang.ui.KlangUiToolRegistry
 import io.peekandpoke.klang.ui.codemirror.BookmarkOptions
 import io.peekandpoke.klang.ui.codemirror.KlangScriptEditorComp
 import io.peekandpoke.klang.ui.codetools.CodeToolModal
+import io.peekandpoke.klang.workshop.keys.OnKey
 import io.peekandpoke.kraft.addons.pixijs.PixiJsAddon
 import io.peekandpoke.kraft.addons.pixijs.pixiJs
 import io.peekandpoke.kraft.addons.registry.AddonRegistry.Companion.addons
@@ -127,13 +129,6 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
     private val pixiAddon: PixiJsAddon? by subscribingTo(addons.pixiJs)
 
     private val hoverPopup: HoverPopupCtrl by lazy { HoverPopupCtrl(popups = popups) }
-
-    /** The code tool's inline popover, from its opening until the popups drop it. */
-    private var toolPopover: PopupsManager.Handle? = null
-
-    /** True while a code tool's inline popover is open over this editor (its live edits write into a fixed range). */
-    val isToolPopoverOpen: Boolean
-        get() = toolPopover?.let { it in popups() } == true
 
     private val hoverContent: FlowContent.(KlangSymbol, String?) -> Unit = { doc, declarationCode ->
         KlangSymbolDocsComp(symbol = doc, declarationCode = declarationCode, onNavigate = ::navToDoc)
@@ -260,7 +255,7 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
         val anchorX = (event?.clientX as? Number)?.toDouble()
         val anchorY = (event?.clientY as? Number)?.toDouble()
         if (tool.prefersPopover && tool is KlangUiToolEmbeddable && anchorX != null && anchorY != null) {
-            toolPopover = popups.showContextMenu(
+            popups.showContextMenu(
                 anchor = Vector2D(anchorX, anchorY),
                 positioning = PopupsManager.Positioning.BottomLeft,
             ) { handle ->
@@ -273,6 +268,8 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
                     // inside the popover from bubbling there (same trick as the context menu).
                     onClick { it.stopPropagation() }
                     onContextMenu { it.stopPropagation() }
+                    // Esc closes the popover, as a panel (the tool's own bar, if it has one, cancels it first)
+                    OnKey(KlangKeyBindings.PanelClose, showHint = false) { handle.close(); toolCtx.onCancel() }
                     tool.apply {
                         renderEmbedded(
                             toolCtx.copy(

@@ -5,6 +5,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.kraft.testing.TestBed
 import io.peekandpoke.kraft.testing.eventually
 import kotlinx.browser.document
@@ -258,6 +259,10 @@ class KeyHintStageSpec : StringSpec({
                     val chip = document.querySelector(".${KeyHints.WAITING_CLASS}")
                     chip?.querySelectorAll("kbd")?.asList()?.map { it.textContent } shouldBe listOf("Ctrl", "K")
                     chip?.textContent?.endsWith("…") shouldBe true
+                    withClue("said aloud: in a live region, not under an aria-hidden one") {
+                        chip?.closest("[role=status][aria-live=polite]") shouldNotBe null
+                        chip?.closest("[aria-hidden=true]") shouldBe null
+                    }
                 }
 
                 document.body!!.dispatchEvent(keyEvent(key = "Escape", code = "Escape"))

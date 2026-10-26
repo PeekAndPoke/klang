@@ -366,3 +366,11 @@ OkCancel real buttons and focus; their Esc stays ours until the key map carries 
   the time ends it. `KeySequence` holds tap or chord steps; the keymap checks a sequence's chords like single keys and
   reports `PrefixClash`. The previous step's MINORs folded in. Review round 1 (level 1) clean; 12 mutants killed. No
   Klang action uses chords in a row yet. Its MINORs go into the next step.
+- 2026-10-26: stacking and key priority (maintainer: "stack key registrations", then "similar to zIndex", "in one
+  central place"): when several actions in the top layer answer one key, the highest `KeyPriority` answers, within
+  one priority the newest registration; a clash is one key, one scope and one priority. Klang's priorities sit in
+  `KlangKeyBindings.kt` (`KlangKeyPriorities`: Page, Panel, Tool): Esc closes a code tool (its own Cancel, through the
+  shared `ToolButtonBar`), then a panel, then focuses the editor, whatever mounted first. The song page's imperative
+  guard is gone. Chords in a row are exactly two (maintainer). `VolumeFocus` (Alt+V) for Klang-Research. Review: round
+  1 (level 1) two MAJORs (Esc skipped a tool's revert; a window open across navigation lost to the page's Esc), fixed;
+  round 2 (level 2) clean; 14 mutants killed. Its MINORs go into the next step.

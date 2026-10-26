@@ -10,6 +10,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.ui.KlangKeyBindings
+import io.peekandpoke.klang.ui.KlangKeyPriorities
 import io.peekandpoke.klang.workshop.keys.KeyOverviewState
 import io.peekandpoke.klang.workshop.keys.KeyPlatform
 import io.peekandpoke.klang.workshop.keys.Keymap
@@ -57,5 +58,9 @@ class KlangEditorKeyBindingsSpec : StringSpec({
         KlangEditorKeyBindings.goToBookmark(3)?.keys shouldBe listOf("Ctrl-3")
         KlangEditorKeyBindings.goToBookmark(0)?.keys shouldBe listOf("Ctrl-0")
         KlangEditorKeyBindings.goToBookmark(10) shouldBe null
+    }
+
+    "every editor action takes one of Klang's priorities, so they stay in one place" {
+        KlangEditorKeyBindings.actions.filterNot { it.priority in KlangKeyPriorities.all }.map { it.id }.shouldBeEmpty()
     }
 })

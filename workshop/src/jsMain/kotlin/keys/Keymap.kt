@@ -8,8 +8,8 @@ import org.w3c.dom.events.KeyboardEvent
  * changes a key, and publishes it.
  *
  * What is wrong with it is in [problems]: two actions on one key in one scope, a key the browser never hands to a page,
- * a key that cannot be read. A clash stays in the keymap (both actions keep the key; of the two, the first defined one
- * with an enabled handler in the top layer acts, see [KeysManager]) so the user sees it and can fix it.
+ * a key that cannot be read. A clash stays in the keymap (both actions keep the key; of the two, the newest enabled
+ * registration in the top layer answers, see [KeysManager]) so the user sees it and can fix it.
  */
 class Keymap(
     val platform: KeyPlatform,
@@ -19,20 +19,23 @@ class Keymap(
 ) {
     /** Something wrong in a keymap. */
     sealed interface Problem {
-        /** Two or more actions in one scope share a key; the first defined one with an enabled handler in the top layer acts. */
+        /**
+         * Two or more actions of one scope and one [KeyPriority] share a key; the newest enabled registration in the top
+         * layer answers. Different priorities on one key are a deliberate order, no clash.
+         */
         data class Clash(val scope: String, val chord: KeyChord, val actionIds: List<String>) : Problem
 
-        /** Two or more actions in one scope share keys pressed in a row; the first defined one acts, as for [Clash]. */
+        /** Two or more actions of one scope and one priority share keys pressed in a row; as for [Clash]. */
         data class SequenceClash(val scope: String, val sequence: KeySequence, val actionIds: List<String>) : Problem
 
         /**
-         * In one scope, [prefix] (a chord, or chords in a row) is how [sequence] begins: the shorter one never lets the
-         * longer one fire, or a chord that starts a sequence waits for its next key instead of acting. [actionIds] are
-         * the prefix's action, then the sequence's (the same one twice when one action has both).
+         * In one scope and one priority, the chord [prefix] is an action's own key and how [sequence] begins: of the two,
+         * the newest registration decides whether the chord acts or waits for the second. [actionIds] are the prefix's
+         * action, then the sequence's (the same one twice when one action has both).
          */
         data class PrefixClash(
             val scope: String,
-            val prefix: KeyBinding,
+            val prefix: KeyChord,
             val sequence: KeySequence,
             val actionIds: List<String>,
         ) : Problem
@@ -96,6 +99,11 @@ class Keymap(
         bindings.filterIsInstance<KeyChord>()
     }
 
+    /** Every action's chords in a row (`"Mod-K Mod-S"`), in the order the actions were defined. */
+    val chordSequences: List<Pair<KeyAction, KeySequence>> = actions.flatMap { action ->
+        sequencesOf(action.id).filter { it.chords.isNotEmpty() }.map { action to it }
+    }
+
     /** Everything wrong with this keymap; empty when it is all right. */
     val problems: List<Problem> = buildList {
         addAll(unreadable)
@@ -115,7 +123,10 @@ class Keymap(
             }
         }
 
-        actions.groupBy { it.scope }.forEach { (scope, inScope) ->
+        // One scope and one priority: different priorities on one key are a deliberate order
+        actions.groupBy { it.scope to it.priority }.forEach { (group, inScope) ->
+            val scope = group.first
+
             inScope
                 .flatMap { action -> chordsOf(action.id).map { chord -> chord to action.id } }
                 .groupBy(keySelector = { it.first }, valueTransform = { it.second })
@@ -128,36 +139,19 @@ class Keymap(
                 .filterValues { it.size > 1 }
                 .forEach { (sequence, ids) -> add(Problem.SequenceClash(scope = scope, sequence = sequence, actionIds = ids)) }
 
-            val chordRows = inScope.flatMap { action ->
-                sequencesOf(action.id).filter { it.chords.isNotEmpty() }.map { action to it }
-            }
+            val chordRows = chordSequences.filter { (owner, _) -> owner.scope == scope && owner.priority == group.second }
 
             inScope.forEach { action ->
-                bindingsOf(action.id).forEach { binding ->
+                chordsOf(action.id).forEach { chord ->
                     chordRows
-                        .filter { (_, sequence) -> isPrefix(binding = binding, sequence = sequence) }
+                        .filter { (_, sequence) -> sequence.chords.first() == chord }
                         .forEach { (owner, sequence) ->
                             val ids = listOf(action.id, owner.id)
-                            add(Problem.PrefixClash(scope = scope, prefix = binding, sequence = sequence, actionIds = ids))
+                            add(Problem.PrefixClash(scope = scope, prefix = chord, sequence = sequence, actionIds = ids))
                         }
                 }
             }
         }
-    }
-
-    /** Every action's chords in a row (`"Mod-K Mod-S"`), in the order the actions were defined. */
-    val chordSequences: List<Pair<KeyAction, KeySequence>> = actions.flatMap { action ->
-        sequencesOf(action.id).filter { it.chords.isNotEmpty() }.map { action to it }
-    }
-
-    /** True when [binding] (a chord, or chords in a row) is how the longer [sequence] begins. */
-    private fun isPrefix(binding: KeyBinding, sequence: KeySequence): Boolean {
-        val steps = when (binding) {
-            is KeyChord -> listOf(binding)
-            is KeySequence -> binding.chords
-        }
-
-        return steps.isNotEmpty() && sequence.chords.size > steps.size && sequence.chords.take(steps.size) == steps
     }
 
     /** The action with [id], or null when none is defined. */

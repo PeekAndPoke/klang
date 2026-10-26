@@ -20,9 +20,7 @@ import io.peekandpoke.klang.ui.codemirror.Bookmarks
 import io.peekandpoke.klang.ui.comp.YesNoModal
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.klang.version
-import io.peekandpoke.klang.workshop.keys.KeysManager
 import io.peekandpoke.klang.workshop.keys.OnKey
-import io.peekandpoke.klang.workshop.keys.keys
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.ComponentRef
 import io.peekandpoke.kraft.components.Ctx
@@ -134,15 +132,6 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     private val codeEditorRef = ComponentRef.Tracker<KlangCodeEditorComp>()
 
-    /**
-     * Esc anywhere on the page outside a text field puts the focus back into the editor, at its last cursor. Not while a
-     * modal or a code tool's popover is open: a code tool opens no key layer, and its live edits write into the range it
-     * took when it opened, which keys typed into the editor behind it would shift. A hover popup does not hold it back.
-     * Registered with the manager directly and its guard read at the moment of the key: the page draws no hint for it,
-     * so nothing redraws the page when the hints or the popups change.
-     */
-    private var focusEditor: KeysManager.HandlerRegistration? = null
-
     /** Shows the check mark on the copy button for a moment after a successful copy. */
     private var justCopied by value(false)
 
@@ -180,27 +169,14 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         lifecycle {
             onMount {
                 codeEditorRef { it.setMaxHighlightsPerEvent(highlightPerEvent) }
-
-                focusEditor = keys.handle(
-                    action = KlangKeyBindings.FocusEditor,
-                    enabled = { canFocusEditor() },
-                ) {
-                    codeEditorRef { it.focus() }
-                }
             }
             onUnmount {
-                focusEditor?.remove()
-                focusEditor = null
                 ctrl.stop()
             }
         }
     }
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
-
-    /** No modal, no code tool's popover, and not a page fading out (inert) after a navigation. */
-    private fun canFocusEditor(): Boolean =
-        modals().isEmpty() && codeEditorRef()?.isToolPopoverOpen != true && dom?.closest("[inert]") == null
 
     private fun onPlay() {
         // Persist the current code before starting (matches original strategy of persist-on-play).
@@ -253,6 +229,11 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                 height = 100.pct
                 padding = Padding(0.px)
             }
+
+            // Esc anywhere on the page outside a text field puts the focus back into the editor, at its last cursor; an
+            // open code tool or panel answers Esc first (their priority is higher)
+            OnKey(KlangKeyBindings.FocusEditor, showHint = false) { codeEditorRef { it.focus() } }
+
             ui.form {
                 key = "dashboard-form"
                 css {

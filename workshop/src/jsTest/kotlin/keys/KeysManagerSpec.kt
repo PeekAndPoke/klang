@@ -273,7 +273,7 @@ class KeysManagerSpec : StringSpec({
         }
     }
 
-    "a clash: the first defined action with an enabled handler answers" {
+    "stacking: of two actions on one key, the newest enabled registration answers; when it goes, the one before" {
         withManager { keys, host ->
             val first = KeyAction(id = "first", title = "First", keys = listOf("F9"))
             val second = KeyAction(id = "second", title = "Second", keys = listOf("F9"))
@@ -281,12 +281,15 @@ class KeysManagerSpec : StringSpec({
                 override val actions = listOf(first, second)
             })
             val answered = mutableListOf<String>()
-            var firstEnabled = true
-            keys.handle(second) { answered.add("second") }
-            keys.handle(first, enabled = { firstEnabled }) { answered.add("first") }
+            var secondEnabled = true
+            // The first defined action registered last: the order of registration decides, not the order of definition
+            keys.handle(second, enabled = { secondEnabled }) { answered.add("second") }
+            val newest = keys.handle(first) { answered.add("first") }
 
             host.dispatchEvent(keyEvent(key = "F9", code = "F9"))
-            firstEnabled = false
+            newest.remove()
+            host.dispatchEvent(keyEvent(key = "F9", code = "F9"))
+            secondEnabled = false
             host.dispatchEvent(keyEvent(key = "F9", code = "F9"))
 
             answered shouldContainExactly listOf("first", "second")
@@ -684,13 +687,13 @@ class KeysManagerSpec : StringSpec({
 
     "chords in a row: the first chord waits for the next; Esc, a key that fits nothing, a click or the time end the wait" {
         val save = KeyAction(id = "save", title = "Save", keys = listOf("Mod-K Mod-S"))
-        val saveAll = KeyAction(id = "save-all", title = "Save all", keys = listOf("Mod-K Mod-A Mod-B"))
+        val saveAll = KeyAction(id = "save-all", title = "Save all", keys = listOf("Mod-K Mod-A"))
         val close = KeyAction(id = "close", title = "Close", keys = listOf("Escape"))
         val host = document.createElement("div") as HTMLElement
         val inner = document.createElement("div") as HTMLElement
         host.appendChild(inner)
         document.body!!.appendChild(host)
-        val keys = KeysManager(platform = KeyPlatform.Pc, sequenceWaitMs = 100, target = host)
+        val keys = KeysManager(platform = KeyPlatform.Pc, hintDelayMs = 30, sequenceWaitMs = 100, target = host)
         keys.define(object : KeyBindings {
             override val actions = listOf(save, saveAll, close)
         })
@@ -718,11 +721,9 @@ class KeysManagerSpec : StringSpec({
 
             press("k")
             press("a")
-            withClue("three chords: still waiting after two") {
-                keys.waiting() shouldContainExactly listOf(ctrlK, KeyChord(key = "a", ctrl = true))
+            withClue("the same first chord, another second: the other sequence") {
+                answered shouldContainExactly listOf("save", "save-all")
             }
-            press("b")
-            answered shouldContainExactly listOf("save", "save-all")
 
             withClue("a held chord's repeat does not end the wait") {
                 press("k")
@@ -777,9 +778,89 @@ class KeysManagerSpec : StringSpec({
                 keys.waiting() shouldContainExactly emptyList()
                 modal.close()
             }
+
+            withClue("a layer that opens while waiting ends the wait: the keys below no longer answer") {
+                press("k")
+                val modal = keys.openLayer()
+                keys.waiting() shouldContainExactly emptyList()
+                modal.close()
+            }
+
+            withClue("the window's blur ends the wait") {
+                press("k")
+                window.dispatchEvent(Event("blur"))
+                keys.waiting() shouldContainExactly emptyList()
+            }
+
+            withClue("the second chord hides the hints: Ctrl held again alone between the chords shows none after") {
+                press("k")
+                inner.dispatchEvent(keyEvent(key = "Control", code = "ControlLeft", ctrl = true))
+                press("s")
+                delay(60)
+                keys.hints() shouldBe false
+                inner.dispatchEvent(keyEvent(key = "Control", code = "ControlLeft", type = "keyup"))
+            }
+
+            withClue("a single key on the first chord: the newest registration decides whether it acts or waits") {
+                val count = answered.size
+                val open = KeyAction(id = "open", title = "Open", keys = listOf("Mod-K"))
+                val bag = keys.define(object : KeyBindings {
+                    override val actions = listOf(open)
+                })
+                val openKey = keys.handle(open) { answered.add("open") }
+
+                press("k")
+                keys.waiting() shouldContainExactly emptyList()
+                openKey.remove()
+                press("k")
+                keys.waiting() shouldContainExactly listOf(ctrlK)
+                press("s")
+                answered.drop(count) shouldContainExactly listOf("open", "save")
+                bag.remove()
+            }
+
+            withClue("two actions on the same chords in a row: the newest registration answers") {
+                val count = answered.size
+                val again = KeyAction(id = "save-again", title = "Save again", keys = listOf("Mod-K Mod-S"))
+                val bag = keys.define(object : KeyBindings {
+                    override val actions = listOf(again)
+                })
+                val againKey = keys.handle(again) { answered.add("save-again") }
+
+                press("k")
+                press("s")
+                answered.drop(count) shouldContainExactly listOf("save-again")
+                againKey.remove()
+                bag.remove()
+            }
         } finally {
             keys.dispose()
             host.remove()
+        }
+    }
+
+    "priority: the highest answers whatever mounted first; within one priority the newest; a removal hands back" {
+        withManager { keys, host ->
+            val front = KeyPriority(value = 10, name = "front")
+            val page = KeyAction(id = "page", title = "Page", keys = listOf("F9"))
+            val panel = KeyAction(id = "panel", title = "Panel", keys = listOf("F9"), priority = front)
+            keys.define(object : KeyBindings {
+                override val actions = listOf(page, panel)
+            })
+            val answered = mutableListOf<String>()
+
+            // The panel first, the page after it: the page is newer, the panel stands higher
+            val olderPanel = keys.handle(panel) { answered.add("panel 1") }
+            val newerPanel = keys.handle(panel) { answered.add("panel 2") }
+            keys.handle(page) { answered.add("page") }
+
+            host.dispatchEvent(keyEvent(key = "F9", code = "F9"))
+            newerPanel.remove()
+            host.dispatchEvent(keyEvent(key = "F9", code = "F9"))
+            olderPanel.remove()
+            host.dispatchEvent(keyEvent(key = "F9", code = "F9"))
+
+            answered shouldContainExactly listOf("panel 2", "panel 1", "page")
         }
     }
 })

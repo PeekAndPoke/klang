@@ -70,6 +70,13 @@ kotlin {
                 }
             }
         }
+
+        jsTest {
+            dependencies {
+                // Kraft's TestBed, to mount the code tools' components (the tool bar's Esc, KLANG-00325)
+                implementation(Deps.KotlinLibs.Kraft.testing)
+            }
+        }
     }
 }
 

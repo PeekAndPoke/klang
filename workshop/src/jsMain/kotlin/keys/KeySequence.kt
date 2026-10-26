@@ -80,15 +80,22 @@ sealed interface KeyStep {
  * - **Taps:** two modifiers tapped on their own, `"Shift Shift"` (search everywhere, as in IntelliJ). A tap is the
  *   modifier going down and up with no other key between and not held long; the two taps follow each other within a
  *   short window.
- * - **Chords:** two chords or more, `"Mod-K Mod-S"`. After the first the [KeysManager] waits a while for the next
- *   (the app shows that it waits); Esc, a key that fits no sequence, a click or the time running out ends the wait.
+ * - **Chords:** two chords, `"Mod-K Mod-S"`. After the first the [KeysManager] waits a while for the second (the app
+ *   shows that it waits); Esc, a key that fits no sequence, a click or the time running out ends the wait.
  *
  * The [KeysManager] owns the times. `Mod` is Ctrl on a PC and Cmd on a Mac, as in a chord.
  */
 data class KeySequence(
-    /** The steps, in order: two taps, or two chords or more. */
+    /** The steps, in order: two taps, or two chords. */
     val steps: List<KeyStep>,
 ) : KeyBinding {
+
+    init {
+        require(steps.size == 2) { "Keys in a row are two steps: $steps" }
+        require(steps.all { it is KeyStep.Tap } || steps.all { it is KeyStep.Press }) {
+            "Keys in a row never mix taps and chords: $steps"
+        }
+    }
 
     companion object {
         /** The words of a modifier tapped on its own. */
@@ -106,21 +113,17 @@ data class KeySequence(
         /**
          * Reads [text] for [platform].
          *
-         * @throws IllegalArgumentException when taps and chords are mixed, a chord cannot be read, taps are not two (only
-         *   the last two taps count, so a longer row could never fire), or there is a single step
+         * @throws IllegalArgumentException when taps and chords are mixed, a chord cannot be read, or the steps are not
+         *   two (only the last two taps count; a third chord no action needs yet, maintainer 2026-10-26)
          */
         fun parse(text: String, platform: KeyPlatform): KeySequence {
             val words = text.trim().split(Regex("\\s+"))
             val taps = words.count { it.lowercase() in TAP_WORDS }
 
-            require(words.size >= 2) { "Keys in a row need two steps or more: \"$text\"" }
+            require(words.size == 2) { "Keys in a row are two steps: \"$text\"" }
 
             return when (taps) {
-                words.size -> {
-                    require(words.size == 2) { "Taps in a row are two: \"$text\"" }
-
-                    KeySequence(steps = words.map { KeyStep.Tap(tapOf(word = it, platform = platform)) })
-                }
+                words.size -> KeySequence(steps = words.map { KeyStep.Tap(tapOf(word = it, platform = platform)) })
 
                 0 -> KeySequence(steps = words.map { KeyStep.Press(KeyChord.parse(it, platform)) })
 
@@ -137,7 +140,7 @@ data class KeySequence(
         }
     }
 
-    /** The chords pressed in a row; empty for taps. */
+    /** The two chords pressed in a row; empty for taps. */
     val chords: List<KeyChord> get() = steps.filterIsInstance<KeyStep.Press>().map { it.chord }
 
     override fun keyGroups(platform: KeyPlatform, compact: Boolean): List<List<String>> =

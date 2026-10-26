@@ -24,7 +24,8 @@ The code style is Klang's (`/code-style`) apart from the header.
 | `KeyPlatform.kt` | PC or Mac, detected once: `Mod` and the Mac's own keys follow it. |
 | `KeyChord.kt` | One key with its modifiers (`"Mod-Shift-Enter"`): reading, matching against a key event, the label and the key cap parts. |
 | `KeyAction.kt` | `KeyAction`, the `KeyBindings` bag, the `KeymapStore` interface. |
-| `Keymap.kt` | Which keys trigger which action at one moment, with its problems (clash, reserved, unreachable, unreadable). |
+| `KeySequence.kt` | Keys in a row (`KeyBinding`): two modifier taps (`"Shift Shift"`) or two chords (`"Mod-K Mod-S"`). |
+| `Keymap.kt` | Which keys trigger which action at one moment, with its problems (clash, sequence clash, prefix clash, reserved, unreachable, unreadable). |
 | `KeysManager.kt` | The one listener: bags, the handler stack, the user's keys, the hints. |
 | `OnKeyController.kt` | The machinery behind a key on a component. |
 | `OnKey.kt` | The slim default: a controller and an entry on the stage. |

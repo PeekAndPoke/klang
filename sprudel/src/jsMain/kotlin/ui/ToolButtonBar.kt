@@ -5,8 +5,10 @@
 
 package io.peekandpoke.klang.sprudel.ui
 
+import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.codetools.KlangToolAutoUpdate
 import io.peekandpoke.klang.ui.feel.KlangTheme
+import io.peekandpoke.klang.workshop.keys.OnKey
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
@@ -64,6 +66,9 @@ internal class ToolButtonBarComp(ctx: Ctx<Props>) : Component<ToolButtonBarComp.
                 alignItems = Align.center
                 gap = 8.px
             }
+
+            // Esc is the tool's Cancel, its revert of live edits included (KLANG-00325): every tool with this bar
+            OnKey(KlangKeyBindings.DialogClose, showHint = false) { props.onCancel() }
 
             // Left side: auto-update toggle
             div {

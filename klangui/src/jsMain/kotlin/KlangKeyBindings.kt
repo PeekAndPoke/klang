@@ -7,7 +7,29 @@ package io.peekandpoke.klang.ui
 
 import io.peekandpoke.klang.workshop.keys.KeyAction
 import io.peekandpoke.klang.workshop.keys.KeyBindings
+import io.peekandpoke.klang.workshop.keys.KeyPriority
 import org.w3c.dom.events.KeyboardEvent
+
+/**
+ * Klang's key priorities, all of them in this one place, lowest first (KLANG-00325, maintainer 2026-10-26: "manage
+ * these priorities in one central place, so we always see what is already there"). When several actions in the top
+ * layer answer the same key, the highest priority answers, within one priority the newest registration: so Esc closes
+ * a code tool, then a panel, then puts the focus back into the editor, whatever mounted first. Gaps of ten leave room
+ * for a level between two. Every Klang action takes one of [all]; the keys specs check it.
+ */
+object KlangKeyPriorities {
+    /** The page's own keys: Esc puts the focus back into the editor. */
+    val Page = KeyPriority.Default
+
+    /** A panel in front of the page: a tool window flying in, the Motor's drawer, a code tool's popover. */
+    val Panel = KeyPriority(value = 10, name = "panel")
+
+    /** A code tool or a dialog in front of a panel. */
+    val Tool = KeyPriority(value = 20, name = "tool")
+
+    /** Every priority Klang uses, lowest first. */
+    val all = listOf(Page, Panel, Tool)
+}
 
 /**
  * Klang's keys (KLANG-00325): the bag of actions the app defines with the key manager, with their default keys from
@@ -27,8 +49,16 @@ object KlangKeyBindings : KeyBindings {
     /** Answers a dialog with its main answer (the yes, the update), wherever the keyboard is in it. */
     val DialogConfirm = KeyAction(id = "klang.dialog.confirm", title = "Confirm", keys = listOf("Mod-Enter"))
 
-    /** Leaves a dialog without an answer. */
-    val DialogClose = KeyAction(id = "klang.dialog.close", title = "Close", keys = listOf("Escape"))
+    /**
+     * Leaves a dialog without an answer; a code tool's Esc is its Cancel. In front of a panel and the page
+     * ([KlangKeyPriorities.Tool]); a dialog with its own key layer (YesNoModal) answers it there anyway.
+     */
+    val DialogClose = KeyAction(
+        id = "klang.dialog.close",
+        title = "Close",
+        keys = listOf("Escape"),
+        priority = KlangKeyPriorities.Tool,
+    )
 
     /**
      * Opens the search over everything (the new UI's search window, KLANG-00334): Ctrl+K (Cmd+K on a Mac), or Shift
@@ -38,17 +68,16 @@ object KlangKeyBindings : KeyBindings {
 
     /**
      * Closes the newest open panel: a tool window flying in, the Motor's drawer (the workbench, KLANG-00334; maintainer,
-     * 2026-10-26). Each panel answers it in the page's layer while it is open; the last registered handler answers
-     * first, so "the newest open" holds when a panel registers as it opens (a panel mounted all the time and only
-     * enabled while open keeps its first place). Esc in a text field (the drawer's search) stays the field's own: a
-     * plain key never acts there, so such a field closes its panel itself. The scopes of this action and
-     * [FocusEditor] let the two share Escape on purpose (see there).
+     * 2026-10-26), a code tool's inline popover. Each panel registers it while it is open, in the page's layer; of two
+     * open panels the newer closes first. In front of the page, behind a code tool ([KlangKeyPriorities.Panel]). Esc in
+     * a text field (the drawer's search) stays the field's own: a plain key never acts there, so such a field closes its
+     * panel itself.
      */
     val PanelClose = KeyAction(
         id = "klang.panel.close",
         title = "Close",
         keys = listOf("Escape"),
-        scope = "klang.panel",
+        priority = KlangKeyPriorities.Panel,
     )
 
     /** Opens the Motor's drawer with the focus in its search field (KLANG-00334; Alt+M, the maintainer's OK). */
@@ -56,23 +85,30 @@ object KlangKeyBindings : KeyBindings {
 
     /**
      * Puts the focus back into the song's editor at its last cursor (maintainer, 2026-10-26: "One Esc close tool.
-     * Another Esc focus editor"). Inside the editor Esc stays the editor's own, as a plain key in any text field.
-     * Defined after [PanelClose] on purpose: both answer in the page's layer, where the first defined action with
-     * an enabled handler wins, so an open panel closes first and the next Esc lands here. The two share Escape on
-     * purpose, which their own scopes allow; one scope would report it as a clash. The price: a key a user gives either
-     * of them that an `app` action holds already goes unreported, and the first defined action with an enabled handler
-     * takes it. A dialog with its own key layer (YesNoModal) answers its Esc there; one without (a code tool) is
-     * guarded by the song page.
+     * Another Esc focus editor"). Inside the editor Esc stays the editor's own, as a plain key in any text field. The
+     * page's own key ([KlangKeyPriorities.Page]): an open code tool or panel answers Esc first, also one that was open
+     * before the song page mounted.
      */
     val FocusEditor = KeyAction(
         id = "klang.focus-editor",
         title = "Focus editor",
         keys = listOf("Escape"),
-        scope = "klang.song-page",
+        priority = KlangKeyPriorities.Page,
+    )
+
+    /**
+     * Puts the focus on the Motor's volume knob, so the arrow keys turn it (KLANG-00344; maintainer, 2026-10-26: "The
+     * volume knob could also use a shortcut like Alt+V maybe to select the knob").
+     */
+    val VolumeFocus = KeyAction(
+        id = "klang.volume",
+        title = "Volume",
+        keys = listOf("Alt-V"),
+        priority = KlangKeyPriorities.Page,
     )
 
     override val actions: List<KeyAction> = listOf(
-        PlayOrUpdate, Stop, DialogConfirm, DialogClose, SearchEverywhere, PanelClose, MotorMenu, FocusEditor,
+        PlayOrUpdate, Stop, DialogConfirm, DialogClose, SearchEverywhere, PanelClose, MotorMenu, FocusEditor, VolumeFocus,
     )
 
     /** Ctrl+Z (or Cmd+Z on Mac) — undo. */
