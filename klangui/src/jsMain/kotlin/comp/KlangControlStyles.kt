@@ -617,6 +617,36 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("color", "var(--kl-lamp-on)")
     }
 
+    /** The ring and the button inside it; it sits on the line's foot like the knob opposite. */
+    val menuButtonFrame by rule {
+        put("position", "relative")
+        put("display", "inline-block")
+        put("flex-shrink", "0")
+        put("vertical-align", "bottom")
+
+        // The focus ring inside the lamp ring, not on it: there it would read as the lamp lit
+        rule("& > button:focus-visible") {
+            put("outline-width", "1.5px")
+            put("outline-offset", "0")
+        }
+    }
+
+    /** The ring around the menu button: dark, a lamp that is off, while its drawer is closed. */
+    val menuButtonRing by rule {
+        put("display", "block")
+        put("width", "100%")
+        put("height", "100%")
+        put("pointer-events", "none")
+        put("fill", "none")
+        put("stroke", "var(--kl-lamp-off)")
+    }
+
+    /** The ring lit, with a glow, while the drawer is open. */
+    val menuButtonRingLit by rule {
+        put("stroke", "var(--kl-lamp-on)")
+        put("filter", "drop-shadow(0 0 3px var(--kl-lamp-on))")
+    }
+
     // ── The workbench ─────────────────────────────────────────────────────────
 
     val workbench by rule {

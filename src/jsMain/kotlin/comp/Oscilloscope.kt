@@ -17,7 +17,6 @@ import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.ops.map
 import io.peekandpoke.ultra.streams.ops.switchMapNotNull
-import kotlinx.browser.window
 import kotlinx.css.Color
 import kotlinx.css.height
 import kotlinx.css.pct
@@ -55,9 +54,9 @@ fun Tag.Oscilloscope(
 }
 
 /**
- * The oscilloscope: the newest frame of the player's waveform as a trace over a faint centre line, drawn as a metal
- * string lit from above (a darker shade under a brighter top). The trace eases off towards both ends, as a string
- * held at its ends, and each frame fades the last one out, a short afterglow.
+ * The oscilloscope: the newest frame of the player's waveform as a trace over a faint centre line, with a soft shadow
+ * under it. The trace eases off towards both ends, as a string held at its ends, and each frame fades the last one
+ * out, a short afterglow.
  * Without a player it draws the idle line.
  */
 class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
@@ -82,25 +81,13 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         private const val DEFLECTION_STRENGTH = 4.0
 
         /** How much of the last frame each new one fades out: the afterglow. */
-        private const val AFTERGLOW_FADE = 0.66
+        private const val AFTERGLOW_FADE = 0.50
 
         /** How far below the string its shadow falls, in CSS pixels. */
         private const val STRING_SHADOW_OFFSET = 2.0
 
-        /** How far below the string's body its shade shows, in CSS pixels. */
-        private const val STRING_SHADE_OFFSET = 1.0
-
-        /** How much darker the string's shade is than the trace's colour, in percent. */
-        private const val STRING_SHADE_DARKEN = 70
-
-        /** How far above the body's middle the highlight runs, in CSS pixels. */
-        private const val STRING_HIGHLIGHT_OFFSET = 0.5
-
-        /** How much brighter the highlight is than the trace's colour, in percent. */
-        private const val STRING_HIGHLIGHT_LIGHTEN = 55
-
-        /** The highlight's width, as a share of the string's. */
-        private const val STRING_HIGHLIGHT_WIDTH = 0.45
+        /** The canvas's backing store per CSS pixel, fixed, whatever the screen's own density. */
+        private const val BACKING_SCALE = 2.0
 
         private val idleBuffer = Float32Array(IDLE_FRAME_SIZE)
     }
@@ -173,14 +160,14 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     /**
-     * Sizes the canvas to [width] by [height] CSS pixels, with a backing store at the screen's own resolution, so the
-     * string stays sharp on a dense screen (the maintainer, 2026-10-26: "it appears a bit blurry"); the drawing goes
-     * on in CSS pixels.
+     * Sizes the canvas to [width] by [height] CSS pixels, its backing store [BACKING_SCALE] times that, and the
+     * drawing goes on in CSS pixels. The browser scales the store to the screen, and that interpolation smooths the
+     * string in motion (the maintainer, 2026-10-26: "Can we make the canvas 2x the css size so that we get more pixel
+     * interpolation"); a store at the screen's own density did not look nice when moving.
      */
     private fun sizeCanvas(width: Double, height: Double) {
         val c = canvas ?: return
-        // NaN-guard: a ratio that is not a positive number counts as 1
-        val ratio = window.devicePixelRatio.takeIf { it > 0.0 } ?: 1.0
+        val ratio = BACKING_SCALE
 
         cssWidth = width.toInt()
         cssHeight = height.toInt()
@@ -231,7 +218,7 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
             return centerY - eased * centerY
         }
 
-        // Built once, stroked three times: the dark band, the string's shade, its lit top
+        // Built once, stroked twice: the shadow, then the string
         val path = Path2D()
 
         if (width >= bufferLength) {
@@ -287,25 +274,12 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
             path = path,
             dy = STRING_SHADOW_OFFSET,
             color = Color.black.withAlpha(0.4),
-            width = props.strokeWidth + 5.0,
+            width = props.strokeWidth + 3.0,
         )
 
-        // A metal string lit from above, as the gauges' rims are (the maintainer, 2026-10-26: "Brighter on top ...
-        // darker below", "needs a more metallic look"): across its thickness its shade a little lower, its body, and a
-        // thin bright highlight along the top; all of the trace's own colour, so they follow the look
-        strokeShifted(
-            path = path,
-            dy = STRING_SHADE_OFFSET,
-            color = props.strokeColor.darken(STRING_SHADE_DARKEN),
-            width = props.strokeWidth,
-        )
+        // The string itself, in the trace's own colour only: a shade under it and a highlight over it were tried and
+        // taken out (the maintainer, 2026-10-26: "it look better like this")
         strokeShifted(path = path, dy = 0.0, color = props.strokeColor, width = props.strokeWidth)
-        strokeShifted(
-            path = path,
-            dy = -STRING_HIGHLIGHT_OFFSET,
-            color = props.strokeColor.lighten(STRING_HIGHLIGHT_LIGHTEN),
-            width = props.strokeWidth * STRING_HIGHLIGHT_WIDTH,
-        )
     }
 
     /** The ease-off for each pixel of [width]: 1 in the middle, down to 0.02 at the ends. */

@@ -83,7 +83,7 @@ Kept in order, close to the maintainer's words.
     browser (later in the account).
 34. (2026-10-25) The drawer's look buttons read as a new button type (a domed tile with a swatch), liked. The Motor
     button loses its lamp: while the drawer is open it is pressed in and its dots lit (in the "on" colour, since gold
-    means "try me" only); that is signal enough.
+    means "try me" only); that is signal enough. Since 2026-10-26 it has a lamp again, as a ring (item 43).
 35. (2026-10-25) Selected is blue: "down here everything is nice and blue except for the gauges". The open Motor
     button's dots and the active drawer item's lamp are blue on the canvas; `KlangRole.LampOn` defaults to the accent
     blue (was green). Since 2026-10-26 a blue tuned to each look's metal (item 42).
@@ -146,6 +146,14 @@ Kept in order, close to the maintainer's words.
     is a blue again, tuned to each metal: Default keeps the accent blue (`#528bff`, beside the nearly neutral silver),
     Copper the azure opposite its hue (`#4fa3d9`, about 204 against 25), Cream a soft periwinkle (`#8099d6`, about 223
     against 44). Item 35's blue holds, adjusted per look.
+43. (2026-10-26) The Motor's row, tuned by eye. The scope's canvas draws at a fixed 2x its CSS size, not at the
+    screen's density ("now it does not look nice when moving so the smoothing was actually good"; "Can we make the
+    canvas 2x the css size so that we get more pixel interpolation"), and its string is the trace alone over its
+    shadow: the shade and the highlight went ("it look better like this"). The Motor button got "a ring of its own
+    which is "disabled" dark and lit when pressed down": laid out like the volume knob, the button inside the ring as
+    the knob's cap, the ring `LampOff` while closed and `LampOn` while open. Knob and button 42 px with their feet
+    and the tops of their rings on one line, the side gauges 52 px, the two outer gaps 2 px narrower than the gauges'
+    (beside a smaller thing the same gap looks wider). Tried and dropped: the row centred vertically ("naaa not good").
 
 ## Where the conversation stands (leanings, not decisions)
 

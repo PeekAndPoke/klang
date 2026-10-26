@@ -61,7 +61,12 @@ class VolumeKnob(ctx: Ctx<Props>) : Component<VolumeKnob.Props>(ctx) {
 
         // The level as a tooltip: at this size there is no room to print it beside the knob
         div {
-            css { display = Display.inlineBlock }
+            css {
+                // A flex box, so the knob leaves no room for a text line's descent under it, and on the line's foot like
+                // the menu button opposite: the tops of their rings meet one line (the maintainer, 2026-10-26)
+                display = Display.inlineFlex
+                put("vertical-align", "bottom")
+            }
             title = "Volume: $level\ndrag up or down, or the arrow keys"
 
             // Alt+V puts the focus on the knob, the arrows then turn it (the maintainer, 2026-10-26)

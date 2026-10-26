@@ -26,6 +26,7 @@ import io.peekandpoke.ultra.streams.ops.switchMapNotNull
 import kotlinx.css.Display
 import kotlinx.css.display
 import kotlinx.css.height
+import kotlinx.css.marginLeft
 import kotlinx.css.px
 import kotlinx.css.width
 import kotlinx.html.Tag
@@ -49,10 +50,16 @@ class PlayerMiniStats(ctx: Ctx<Props>) : Component<PlayerMiniStats.Props>(ctx) {
         const val MIDDLE_GAUGE_PX = 62.0
 
         /** The gauges beside it. */
-        const val SIDE_GAUGE_PX = 50.0
+        const val SIDE_GAUGE_PX = 52.0
 
-        /** The volume knob */
-        const val VOLUME_KNOB_PX = 31.0
+        /** The volume knob, and the menu button's ring opposite it. */
+        const val VOLUME_KNOB_PX = 42.0
+
+        /**
+         * How much closer the knob and the menu button sit to their gauges than the gauges to each other: beside a
+         * smaller thing the same gap looks wider (the maintainer, 2026-10-26).
+         */
+        const val OUTER_GAP_TRIM_PX = 2.0
 
         /** Where the heat gauge turns hot, as in the kitchen sink (KLANG-00344). */
         const val HEAT_HOT_FROM = 0.85
@@ -112,6 +119,11 @@ class PlayerMiniStats(ctx: Ctx<Props>) : Component<PlayerMiniStats.Props>(ctx) {
                 }
 
                 noui.bottom.aligned.item {
+                    // Fomantic spaces the items by their right margin; a negative left one takes from that gap
+                    if (props.showVolume) {
+                        css { marginLeft = (-OUTER_GAP_TRIM_PX).px }
+                    }
+
                     KlangGauge(
                         name = "Active cylinders",
                         value = cylinders,
@@ -148,9 +160,12 @@ class PlayerMiniStats(ctx: Ctx<Props>) : Component<PlayerMiniStats.Props>(ctx) {
                 // is one (KLANG-00340), else an empty place
                 if (props.showVolume) {
                     noui.bottom.aligned.item {
+                        css { marginLeft = (-OUTER_GAP_TRIM_PX).px }
+
                         val menu = props.menu
 
                         if (menu != null) {
+                            // Its ring the knob's size, so its button is the knob's cap's size (the maintainer, 2026-10-26)
                             KlangMenuButton(
                                 open = menu.open,
                                 onClick = menu.toggle,
