@@ -1,7 +1,6 @@
 # KLANG-00347: The start page on the new parts: the ignition key, the dyno in the Motor's gauges, the result panel
 
-> **Status (2026-10-26): IN PROGRESS.** The maintainer: "Can we continue with the StartPage instead?"; "But before you
-> do let us sharpen the StartPage design"
+> **Status (2026-10-26): DONE.** the start page starts the Motor: the key, the dyno in the Motor's gauges, one panel; the maintainer: "This is cool"
 >
 > **Part of:** KLANG-00334 (UI workbench: the Motor-centred layout, tool windows and the first-visit trail)
 
@@ -100,3 +99,4 @@ Five screens over the lamp-lit `MotorBackground` plate, KLANGMOTOR engraved in i
   sizes, the result).
 - 2026-10-26: the key committed (b32fb099); the start page tuned with the maintainer, reviewed in two rounds (the
   second clean), committed.
+- 2026-10-26: DONE. the start page starts the Motor: the key, the dyno in the Motor's gauges, one panel; the maintainer: "This is cool"
