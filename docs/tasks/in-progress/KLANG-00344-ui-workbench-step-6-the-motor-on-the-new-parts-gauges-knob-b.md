@@ -63,6 +63,11 @@ oscilloscope in blue (a theme role) and more spectrum columns.
   warning's copper (`#d19a66`) so the two stay apart. The rule behind it is in KLANG-00334 item 42. Then all three
   looks took their metal's light for "selected"; "a bit too plain", and "the blue-nes must be adjusted per theme": a
   blue per look, opposite its metal's hue (Default `#528bff`, Copper `#4fa3d9`, Cream `#8099d6`; KLANG-00334 item 42).
+  The maintainer: "The blues match well now".
+- **The trace as a swinging string** (the maintainer: "draw the wareform twice. Brighter on top, like with the gauge
+  outlines and darker below, keep the black behind them"): the path is stroked three times, the black band, the
+  trace's colour darkened 35% a pixel lower, then lightened 20% on top; both shades come from the trace's colour, so
+  they follow the look.
 - **Alt+V** is wired (Klang-Main-Dev's `VolumeFocus`, 70770094): it puts the focus on the knob. To hand-test on
   Windows Firefox, where Alt+V is the View menu's key (Klang-Main-Dev's note).
 - **The oscilloscope cleaned up** (the maintainer: "remove the thing where it goes full width on click ... no longer

@@ -27,6 +27,7 @@ import org.khronos.webgl.Float32Array
 import org.khronos.webgl.get
 import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.HTMLCanvasElement
+import org.w3c.dom.Path2D
 import kotlin.math.abs
 import kotlin.math.pow
 
@@ -52,8 +53,9 @@ fun Tag.Oscilloscope(
 }
 
 /**
- * The oscilloscope: the newest frame of the player's waveform as a trace over a faint centre line. The trace eases
- * off towards both ends, as a string held at its ends, and each frame fades the last one out, a short afterglow.
+ * The oscilloscope: the newest frame of the player's waveform as a trace over a faint centre line, drawn as a metal
+ * string lit from above (a darker shade under a brighter top). The trace eases off towards both ends, as a string
+ * held at its ends, and each frame fades the last one out, a short afterglow.
  * Without a player it draws the idle line.
  */
 class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
@@ -79,6 +81,15 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
 
         /** How much of the last frame each new one fades out: the afterglow. */
         private const val AFTERGLOW_FADE = 0.66
+
+        /** How far below the lit top the string's shade shows, in pixels. */
+        private const val STRING_SHADE_OFFSET = 1.0
+
+        /** How much darker the string's shade is than the trace's colour, in percent. */
+        private const val STRING_SHADE_DARKEN = 35
+
+        /** How much brighter the string's lit top is than the trace's colour, in percent. */
+        private const val STRING_TOP_LIGHTEN = 20
 
         private val idleBuffer = Float32Array(IDLE_FRAME_SIZE)
     }
@@ -193,7 +204,8 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
             return centerY - eased * centerY
         }
 
-        ctx.beginPath()
+        // Built once, stroked three times: the dark band, the string's shade, its lit top
+        val path = Path2D()
 
         if (width >= bufferLength) {
             // More pixels than samples: a point per sample
@@ -204,9 +216,9 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
                 val y = yOf(value = buffer[i], x = x)
 
                 if (i == 0) {
-                    ctx.moveTo(x, y)
+                    path.moveTo(x, y)
                 } else {
-                    ctx.lineTo(x, y)
+                    path.lineTo(x, y)
                 }
             }
         } else {
@@ -235,22 +247,31 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
                 val x = pixelX.toDouble()
 
                 if (pixelX == 0) {
-                    ctx.moveTo(x, yOf(value = max, x = x))
+                    path.moveTo(x, yOf(value = max, x = x))
                 }
 
-                ctx.lineTo(x, yOf(value = max, x = x))
-                ctx.lineTo(x, yOf(value = min, x = x))
+                path.lineTo(x, yOf(value = max, x = x))
+                path.lineTo(x, yOf(value = min, x = x))
             }
         }
 
         // A dark band behind the trace, for contrast
         ctx.strokeStyle = Color.black.withAlpha(0.25).toString()
         ctx.lineWidth = props.strokeWidth + 5.0
-        ctx.stroke()
+        ctx.stroke(path)
 
-        ctx.strokeStyle = props.strokeColor.toString()
+        // A swinging string, lit from above as the gauges' rims are (the maintainer, 2026-10-26): its shade a little
+        // lower and darker, its lit top brighter over it; both shades of the trace's own colour, so they follow the look
+        ctx.save()
+        ctx.translate(0.0, STRING_SHADE_OFFSET)
+        ctx.strokeStyle = props.strokeColor.darken(STRING_SHADE_DARKEN).toString()
         ctx.lineWidth = props.strokeWidth
-        ctx.stroke()
+        ctx.stroke(path)
+        ctx.restore()
+
+        ctx.strokeStyle = props.strokeColor.lighten(STRING_TOP_LIGHTEN).toString()
+        ctx.lineWidth = props.strokeWidth
+        ctx.stroke(path)
     }
 
     /** The ease-off for each pixel of [width]: 1 in the middle, down to 0.02 at the ends. */
