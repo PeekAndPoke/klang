@@ -1,7 +1,6 @@
 # KLANG-00348: Gradle 9.7.1, as Ultra and spross
 
-> **Status (2026-10-26): SCHEDULED.** The maintainer: "Should we update gradle to i think 9.7.1 the max supported
-> version for Kotlin 2.4.21"; "You or main, does not matter but coordinate please"
+> **Status (2026-10-26): IN PROGRESS.** started; the build handed over by Klang-Main-Dev
 
 ## Why this exists
 
@@ -36,3 +35,4 @@ machine, so the pair is proven.
 - 2026-10-26: created.
 - 2026-10-26: coordinated with Klang-Main-Dev: Klang-Research takes it after KLANG-00347; Klang-Main-Dev messages
   when its KLANG-00325 step 3b is committed and starts no build from then until the upgrade is done.
+- 2026-10-26: IN PROGRESS. started; the build handed over by Klang-Main-Dev
