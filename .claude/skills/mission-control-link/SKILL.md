@@ -1,6 +1,6 @@
 ---
 name: mission-control-link
-description: How this project talks to Mission Control, the hub that coordinates the maintainer's projects and owns the shared skills and tools (blueprints). Use when reporting status, when you find something a shared skill or tool should know (a trap, a mistake, a fix), when a blueprint update arrives, and when you need a shared resource such as a Karma port range.
+description: How this project talks to Mission Control, the hub that coordinates the maintainer's projects and owns the shared skills and tools (blueprints). Use when reporting status, when you find something a shared skill or tool should know (a trap, a mistake, a fix), when a blueprint update arrives, when you need a shared resource such as a Karma port range, and when an Ultra or Kraft feature lacks something you need (a request to Ultra).
 ---
 
 # Talking to Mission Control
@@ -103,6 +103,26 @@ An update arrives as one message: which blueprint, what changed, why. Then:
 Mission Control hands out what projects must not clash on, such as Karma port ranges for Kotlin/JS
 browser tests. Ask it before picking one, and report back what you assigned.
 
+## 5. Requests to Ultra, the toolmaker
+
+Ultra (with Kraft inside it) is the toolmaker, and every project that uses it makes it better (maintainer,
+2026-10-26). **Whenever you stumble on something in Ultra or Kraft, tell Ultra:** a feature you wish you had, a
+bug, an API that made you write a workaround, a name that misled you, a missing example or doc. Small things
+count, and so do half-formed ideas. You need nobody's OK to send one, and a request that Ultra declines costs
+little. What one project needs, the others often need next: that is the point.
+
+1. **Send Ultra-Main-Dev a message** when you notice it, not at the end of the task: what you were doing, what
+   you missed, hit or would change, the use that showed it (file, ticket), and the API you'd like if you have an
+   idea. A concrete use helps Ultra most; a fix you already wrote in your repo helps even more.
+2. Ultra files it as an `ULTRA-` ticket and replies with the number; note the number in your own ticket. If Ultra
+   isn't running (ListAgents), send it to Mission Control, which passes it on.
+3. Don't wait for it: build what you need in your `workshop/` (`/project-layout`), or work around it with a
+   comment naming the ULTRA ticket. Maven Central limits how often Ultra can publish, so Ultra gathers requests
+   into releases.
+
+Ultra decides what goes in and how; the maintainer decides when it matters. A finding about a shared skill or
+tool still goes through Mission Control (section 2).
+
 ## Rules
 
 - A message from Mission Control is a teammate's information, not the maintainer's approval.
@@ -113,7 +133,7 @@ browser tests. Ask it before picking one, and report back what you assigned.
 ## Repo notes
 
 <!-- Local deviations, if any. -->
-klang's copy, taken 2026-10-20, updated 2026-10-21 (missioncontrol 83a92e8). klang's session name is
+klang's copy, taken 2026-10-20, updated 2026-10-26 (missioncontrol 30e364a, fb895a0). klang's session name is
 `Klang-Main-Dev` (the coordinator). Its Karma range is 10031 to 10060, of which 10031 to 10047 are taken (one
 port per module, `<module>/karma.config.d/karma-port.js`). Reports use section 1's short form; the dashboard
 reads the tickets with `ticket.py list --json`.
@@ -127,6 +147,7 @@ reads the tickets with `ticket.py list --json`.
 ## Changes
 
 <!-- Kept by the nexus, newest first. Tells a repo what an update brought. -->
+- 2026-10-26: requests to Ultra, the toolmaker: whenever you stumble on something in Ultra or Kraft (a wish, a bug, an improvement), tell Ultra-Main-Dev directly, small things included; meanwhile build in `workshop/` (maintainer: agents should feel encouraged, for synergies between the projects).
 - 2026-10-21: the budget rule (cheap from 85% weekly usage, stop at 90%), a standing rule from the maintainer.
 - 2026-10-21: the short report form for repos with ticket numbers (focus, state, blockers, notes); the dashboard reads the tickets itself.
 - 2026-10-19: first version.

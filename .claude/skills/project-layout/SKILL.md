@@ -149,10 +149,34 @@ notes, for example a measurement tree at a fixed commit for long simulations. Th
 Every commit an agent wrote or co-wrote carries a `Co-Authored-By:` trailer naming the model. A commit
 the maintainer wrote alone carries none.
 
+## workshop/: code bound for Ultra
+
+Ultra (with Kraft inside it) is the toolmaker; the other projects build on it (maintainer, 2026-10-26). Every
+project that uses Ultra has a `workshop/` module: framework code that might move into Ultra or Kraft grows there
+first and is battle-tested in the project's own use (klang's key manager, spross's Kulisse scenes), then moves.
+Maven Central limits how often Ultra can publish (io.peekandpoke: 17 releases and 200 MB a month), so a piece
+waits in the workshop rather than in a stream of small Ultra releases. Ultra itself has no workshop: it is where
+the pieces go.
+
+The rules, from klang's and spross's `workshop/CLAUDE.md`:
+- Project agnostic: depends on Ultra, Kraft and Kotlin's own libraries only, never on a project module, not even
+  through a test; no project domain in names, KDoc or tests. The move is then a copy.
+- Apache-2.0 like Ultra: `LICENSE` in the folder, no project license header in its files.
+- Kraft's patterns (a service as an app attribute, a component's machinery as a controller); machinery and look
+  apart, the look replaceable by the app.
+- Tests for everything, mutation-checked; pure logic in `commonMain` where it can be.
+- Package `io.peekandpoke.<project>.workshop.<piece>`; the move renames it once. The app module uses a piece like
+  any library; domain modules never depend on the workshop.
+- `workshop/CLAUDE.md` holds these rules and one section per piece; each piece has a ticket.
+
+A piece that has proven itself goes to Ultra as a request (`/mission-control-link`, "Requests to Ultra"). It
+leaves the workshop once Ultra has released it and the project uses it from there.
+
 ## Repo notes
 
 <!-- Each repo records here where it deviates from this layout, and why. -->
-klang's copy, taken 2026-10-20 (the blueprint as of that day).
+klang's copy, taken 2026-10-20 (the blueprint as of that day); the workshop section added 2026-10-26 (missioncontrol
+30e364a).
 
 - **Root:** no `SEED.md` (klang grew before the layout) and no `CHANGELOG.md` (an app, not a library).
   `CREDITS.MD` has a twin, the in-app Credits page (`src/jsMain/kotlin/pages/CreditsPage.kt`), kept in step
@@ -185,6 +209,9 @@ klang's copy, taken 2026-10-20 (the blueprint as of that day).
   and Maven Central secrets) is never read or edited.
 - **Memory:** each module's `MEMORY.md` says what is true now; its full dated record lives in
   `<module>/ref/memory-history.md` (since 2026-09-29).
+- **workshop/:** the model for the section above; its rules and pieces are in `workshop/CLAUDE.md`. The key
+  manager (KLANG-00325) grows there. The first piece to leave was `Stream.smooth()` (KLANG-00345), released in
+  Ultra 0.116.0 and dropped from the workshop on 2026-10-26.
 - **Worktrees:** work goes sequentially on the main checkout. A full check or a long measurement may run in
   `/opt/dev/peekandpoke/klang-worktrees/measure`, detached at the commit being measured, so the maintainer
   can keep editing on the checkout: no commits and no edits there, it shares the main checkout's build lock
@@ -199,6 +226,7 @@ klang's copy, taken 2026-10-20 (the blueprint as of that day).
 ## Changes
 
 <!-- Kept by the nexus, newest first. Tells a repo what an update brought. -->
+- 2026-10-26: `workshop/`: every project that uses Ultra keeps framework code bound for Ultra there first, battle-tested, then moved (maintainer; Maven Central release limits).
 - 2026-10-20: every blueprint is a starting point; a project deviates where its work needs it (maintainer). Worktrees: each project decides.
 - 2026-10-20: ticket numbers: every task and plan is `<PREFIX>-<nnnnn>-<title>.md`, kept in its status's folder by the `ticket` tool; references name the number; no `docs/plans/` (maintainer).
 - 2026-10-20: worktrees: none by default; when used, in the sibling `<repo>-worktrees/`, never `.claude/worktrees/` (maintainer).
