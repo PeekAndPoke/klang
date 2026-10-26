@@ -24,7 +24,9 @@ code, none by a test. The more the app moves into the workbench, and the more it
 
 Each child is one step; this epic collects them.
 
-1. KLANG-00343: browser tests in the app module, first for the router, the areas and the workbench layout.
+1. KLANG-00343: browser tests in the app module, first for the router, the areas and the spectrum's arithmetic.
+2. Later, once the layout settles (the maintainer, 2026-10-26: "please do not do it too tightly at the moment"): the
+   workbench layout (the drawer marks the current area, a pick navigates), deferred from KLANG-00343.
 
 ## Acceptance
 

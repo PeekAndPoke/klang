@@ -35,7 +35,8 @@ try {
     // version.json not generated yet — leave appVersion empty
 }
 
-if (config.plugins) {
+// Only for the app's bundle: Karma's test bundle (no output section) has no page (KLANG-00343)
+if (config.plugins && config.output) {
     config.plugins.push(new HtmlWebpackPlugin({
         // Point directly to your source index.html as the template
         template: path.join(resources, 'index_template.html'),

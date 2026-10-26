@@ -13,8 +13,9 @@ plugins {
     idea
     kotlin("multiplatform")
     kotlin("plugin.serialization") version Deps.kotlinVersion apply false
-    id("com.google.devtools.ksp") version Deps.Ksp.version apply false
-    id("io.kotest") version Deps.Test.kotest_plugin_version apply false
+    // Applied here too: Kotest's spec discovery for the app's browser tests runs through KSP (KLANG-00343)
+    id("com.google.devtools.ksp") version Deps.Ksp.version
+    id("io.kotest") version Deps.Test.kotest_plugin_version
 }
 
 val GROUP: String by project
@@ -107,6 +108,13 @@ kotlin {
                 api(Deps.KotlinLibs.Kraft.addons_marked)
                 api(Deps.KotlinLibs.Kraft.addons_pixijs)
                 api(Deps.KotlinLibs.Kraft.addons_threejs)
+            }
+        }
+
+        jsTest {
+            dependencies {
+                // Kraft's TestBed, to mount the app's components (KLANG-00343)
+                implementation(Deps.KotlinLibs.Kraft.testing)
             }
         }
 
