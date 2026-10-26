@@ -62,6 +62,23 @@ Five screens over the lamp-lit `MotorBackground` plate, KLANGMOTOR engraved in i
 - The start page runs key, glow lamp, dyno and result on the new parts, by mouse and by keyboard.
 - The specs of the new part green and mutation-checked; the review loop ends clean.
 
+## Where it stands (parked 2026-10-26 for the IntelliJ restart)
+
+- **Done, uncommitted, not reviewed yet:** item 1, the key: `klangui/comp/KlangIgnition.kt`, its styles in
+  `KlangControlStyles.kt` (ignition, ignitionCap, ignitionTurn, ignitionLabel, ignitionLabelCurrent, the
+  reduce-motion lines), `KlangIgnitionSpec` (4 rows, green), the kitchen sink cell in `UiKitchenSinkPage.kt` (a live
+  key, then OFF, ON, START at 100 px). The maintainer has not looked at the key yet.
+- **In the same uncommitted styles file:** the tiles' text at the top (`tile`: `justify-content: flex-start`), the
+  maintainer confirmed it in the browser ("Ok now it works").
+- **Next:** the maintainer's look at the key; then item 2 (the benchmark's voices over 16 cylinders, measured before
+  and after, the tiers to the maintainer before they change); then item 3; the review loop and the mutation checks
+  for the key and the tiles together.
+- **Open beside it:** the IDE exclusions (`build.gradle.kts`, commits cd6bf5b2 and e6a84dbc): after the maintainer's
+  Gradle sync, check with the IDE's file search that `.build-claude/`, `.gradle-claude/`, `tmp/` and
+  `buildSrc/.build-claude/` are excluded (the last one may need `buildSrc/build.gradle.kts`); only then tell Mission
+  Control it belongs in the project template and in every project (the maintainer's word). `sprudel/jsbridge/tmp`
+  is not excluded; offered.
+
 ## History
 
 - 2026-10-26: created; the design sharpened with the maintainer (the key, the gauges, the cylinders, the lamp, the
