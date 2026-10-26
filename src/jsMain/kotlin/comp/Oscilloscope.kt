@@ -91,13 +91,13 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         private const val STRING_SHADE_OFFSET = 1.0
 
         /** How much darker the string's shade is than the trace's colour, in percent. */
-        private const val STRING_SHADE_DARKEN = 55
+        private const val STRING_SHADE_DARKEN = 70
 
         /** How far above the body's middle the highlight runs, in CSS pixels. */
         private const val STRING_HIGHLIGHT_OFFSET = 0.5
 
         /** How much brighter the highlight is than the trace's colour, in percent. */
-        private const val STRING_HIGHLIGHT_LIGHTEN = 40
+        private const val STRING_HIGHLIGHT_LIGHTEN = 55
 
         /** The highlight's width, as a share of the string's. */
         private const val STRING_HIGHLIGHT_WIDTH = 0.45
@@ -286,7 +286,7 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         strokeShifted(
             path = path,
             dy = STRING_SHADOW_OFFSET,
-            color = Color.black.withAlpha(0.25),
+            color = Color.black.withAlpha(0.4),
             width = props.strokeWidth + 5.0,
         )
 

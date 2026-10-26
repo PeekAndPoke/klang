@@ -71,7 +71,8 @@ oscilloscope in blue (a theme role) and more spectrum columns.
   20%). Then "it appears a bit blurry" and "needs a more metallic look": the canvas draws at the screen's own
   resolution (its backing store times `devicePixelRatio`, the drawing in CSS pixels), and the string has three tones
   across its thickness as the rims do: its shade (55% darker, 1 px lower), its body (the trace's colour) and a thin
-  highlight along the top (40% brighter, 0.45 of the width, 0.5 px up).
+  highlight along the top (0.45 of the width, 0.5 px up); the dark band 2 px lower, a shadow; then "The contrast
+  could still be stronger": the shade 70% darker, the highlight 55% brighter, the shadow 40% black.
 - **Alt+V** is wired (Klang-Main-Dev's `VolumeFocus`, 70770094): it puts the focus on the knob. To hand-test on
   Windows Firefox, where Alt+V is the View menu's key (Klang-Main-Dev's note).
 - **The oscilloscope cleaned up** (the maintainer: "remove the thing where it goes full width on click ... no longer
