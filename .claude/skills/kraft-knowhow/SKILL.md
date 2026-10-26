@@ -192,6 +192,10 @@ kraftApp {
   and place, so a `div` that appears before another `div` takes over that one's element, and a reference to it (a
   focus to give back) points at a detached node. Key the parts of a layout that appear and vanish (`KlangWorkbench`:
   the pinned window before the strip, the bottom panel before a floating window).
+- **A key in the page's layer asks what is in front of it** (KLANG-00341, 2026-10-26): Kraft's modals and popups open
+  no key layer of their own (a code tool's modal, its popover), so a key answering in the page's layer answers behind
+  them unless it checks. A modal always counts; a popup only while it holds the focus, since the editor's hover docs
+  are a popup that stays open while one types (`nothingInFront`, klangui `_panel_key_helpers.kt`).
 
 - **A yes/no question is klangui's `YesNoModal`** (headline, content, `yesText`, `noText`, one `onResult`;
   KLANG-00323, 2026-10-21), not Kraft's `OkCancelModal`: its buttons are divs that cannot take the keyboard.

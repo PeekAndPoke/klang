@@ -378,6 +378,12 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("margin-bottom", "12px")
     }
 
+    /** The header's right end: the close key's pill beside the close button. */
+    val drawerHeaderEnd by rule {
+        put("display", "inline-flex")
+        put("align-items", "center")
+    }
+
     val drawerGrid by rule {
         put("display", "grid")
         put("grid-template-columns", "repeat(2, minmax(0, 1fr))")
@@ -536,6 +542,17 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("border", "1px solid color-mix(in srgb, var(--kl-ink-label) 40%, transparent)")
         put("border-radius", "10px")
         put("padding", "2px 8px")
+        put("white-space", "nowrap")
+    }
+
+    /** A key's pill in a header, shown always where there is room ("Close: Esc", KLANG-00334 item 39): quiet, a label. */
+    val keyPill by rule {
+        put("display", "inline-flex")
+        put("align-items", "center")
+        put("gap", "5px")
+        put("margin-right", "4px")
+        put("font-size", "11px")
+        put("color", "var(--kl-ink-label)")
         put("white-space", "nowrap")
     }
 

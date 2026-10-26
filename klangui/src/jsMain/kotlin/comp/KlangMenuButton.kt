@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.ui.comp
 
+import io.peekandpoke.klang.workshop.keys.KeyAction
+import io.peekandpoke.klang.workshop.keys.OnKey
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
@@ -27,8 +29,9 @@ fun Tag.KlangMenuButton(
     open: Boolean,
     onClick: () -> Unit,
     size: LinearDimension = 31.px,
+    key: KeyAction? = null,
 ) = comp(
-    KlangMenuButton.Props(open = open, onClick = onClick, size = size)
+    KlangMenuButton.Props(open = open, onClick = onClick, size = size, key = key)
 ) {
     KlangMenuButton(it)
 }
@@ -36,7 +39,8 @@ fun Tag.KlangMenuButton(
 /**
  * The Motor's menu button (KLANG-00340, KLANG-00334 item 2): a small domed button with nine dots in the spot the
  * Motor kept empty beside its gauges, the volume knob's size. While its drawer is open it is pressed and its dots are
- * lit, without a lamp of its own (item 34); `aria-expanded` says the same.
+ * lit, without a lamp of its own (item 34); `aria-expanded` says the same. With a [Props.key] (Alt+M in the app) the
+ * key toggles it too, and the key manager shows its hint on the button.
  */
 class KlangMenuButton(ctx: Ctx<Props>) : Component<KlangMenuButton.Props>(ctx) {
 
@@ -44,6 +48,8 @@ class KlangMenuButton(ctx: Ctx<Props>) : Component<KlangMenuButton.Props>(ctx) {
         val open: Boolean,
         val onClick: () -> Unit,
         val size: LinearDimension,
+        /** The key that presses it, answered through the key manager, its hint drawn by the button; null for none. */
+        val key: KeyAction?,
     )
 
     override fun VDom.render() {
@@ -61,6 +67,15 @@ class KlangMenuButton(ctx: Ctx<Props>) : Component<KlangMenuButton.Props>(ctx) {
             attributes["aria-expanded"] = props.open.toString()
             title = "Menu"
             onClick { props.onClick() }
+
+            // A modal or popup in front (a code tool's) keeps the drawer from opening behind it
+            props.key?.let { action ->
+                OnKey(action) {
+                    if (nothingInFront()) {
+                        props.onClick()
+                    }
+                }
+            }
 
             css {
                 width = props.size

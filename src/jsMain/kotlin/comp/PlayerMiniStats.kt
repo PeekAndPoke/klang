@@ -7,6 +7,7 @@ package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
+import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.comp.KlangMenuButton
 import io.peekandpoke.klang.ui.comp.KlangWorkbench
 import io.peekandpoke.klang.ui.feel.KlangTheme
@@ -143,7 +144,12 @@ class PlayerMiniStats(ctx: Ctx<Props>) : Component<PlayerMiniStats.Props>(ctx) {
                         val menu = props.menu
 
                         if (menu != null) {
-                            KlangMenuButton(open = menu.open, onClick = menu.toggle, size = VOLUME_KNOB_PX.px)
+                            KlangMenuButton(
+                                open = menu.open,
+                                onClick = menu.toggle,
+                                size = VOLUME_KNOB_PX.px,
+                                key = KlangKeyBindings.MotorMenu,
+                            )
                         } else {
                             div {
                                 css {

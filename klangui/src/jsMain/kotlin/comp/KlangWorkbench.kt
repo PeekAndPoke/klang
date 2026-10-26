@@ -57,14 +57,21 @@ fun Tag.KlangWorkbench(
  * - The content in the middle, and under it the bottom panel, docked, shown or hidden from the strip.
  * - The tool strip on the right: a toggle per tool window, the bottom panel's toggle, the maker's [Props.mark]
  *   written up its foot (items 22, 23). An open tool window flies in over the content, or, pinned, docks beside it;
- *   each tool window keeps its own pin, as in IntelliJ. Opened from the strip, it takes the focus; Esc closes one
- *   flying in (the focus goes back to its toggle), a pinned one stays.
+ *   each tool window keeps its own pin, as in IntelliJ. Opened from the strip, it takes the focus. Esc closes one
+ *   flying in, and the focus goes back to its toggle; a pinned one stays.
+ *
+ * Esc and the panels (the drawer, a tool window flying in): Esc from inside a panel, its fields too, closes that panel
+ * through the panel's own handler, which keeps the key from the manager; Esc from outside closes the newest open panel
+ * through the key manager (`KlangKeyBindings.PanelClose`, the pill "Close: Esc" in its header). One Esc, one panel.
  *
  * It draws the frame only; what goes in it (the Motor, the routes behind the drawer) is the app's.
  */
 class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
 
     private companion object {
+        /** A field to type in, which takes the focus first when the drawer opens (its search). */
+        const val FIELD = "input:not([disabled]):not([type=hidden])"
+
         /** What can take the focus in the drawer: links, enabled fields and buttons, any tab stop. */
         const val FOCUSABLE = "a[href], button:not([disabled]), input:not([disabled]):not([type=hidden]), " +
                 "select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])"
@@ -153,7 +160,7 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
         focusToolFrame()
     }
 
-    /** After the next draw, the open tool window takes the focus, so Esc reaches it from the first moment. */
+    /** After the next draw, the open tool window takes the focus, so Tab goes on inside it. */
     private fun focusToolFrame() {
         window.requestAnimationFrame {
             val frame = dom?.querySelector(".${KlangControlStyles.workbenchFloating}, .${KlangControlStyles.workbenchPinned}")
@@ -187,10 +194,10 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
         focusBeforeDrawer = document.activeElement as? HTMLElement
         drawerOpen = true
 
-        // After the drawer is drawn: its first control takes the focus, or the drawer itself when it has none
+        // After the drawer is drawn: its field takes the focus (the search), else its first control, else the drawer
         window.requestAnimationFrame {
             val drawer = dom?.querySelector(".${KlangControlStyles.workbenchDrawer}")
-            val target = drawer?.querySelector(FOCUSABLE) ?: drawer
+            val target = drawer?.querySelector(FIELD) ?: drawer?.querySelector(FOCUSABLE) ?: drawer
 
             (target as? HTMLElement)?.focus()
         }
@@ -233,7 +240,8 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
                             // The focus lands here when the drawer has no control of its own
                             attributes["tabindex"] = "-1"
 
-                            // Esc closes the drawer; the focus is in it from the moment it opens
+                            // Esc from inside the drawer, its search field too: the key manager leaves a text field's
+                            // plain keys alone, so the drawer answers them itself (outside, its close key answers)
                             onKeyDown { e ->
                                 if (e.key == "Escape") {
                                     e.preventDefault()
@@ -282,13 +290,16 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
 
                 if (tool != null && tool.id !in pinned) {
                     div(classes = styles.workbenchFloating.toString()) {
-                        key = "floating"
+                        // Per tool: another tool window is a new panel, its close key registers anew, so the newest
+                        // open panel closes first
+                        key = "floating-${tool.id}"
 
                         // The focus lands here when the window opens from the strip
                         attributes["tabindex"] = "-1"
 
+                        // Esc from inside the window, a field too (the key manager leaves a field's plain keys alone)
                         onKeyDown { e ->
-                            if (e.key == "Escape") {
+                            if (e.key == "Escape" && !e.defaultPrevented) {
                                 e.preventDefault()
                                 closeTool()
                             }
@@ -357,6 +368,8 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
                 focusToolFrame()
             },
             onClose = { closeTool() },
+            // Flying in, Esc closes it through the key manager; pinned, it is part of the bench
+            closeOnEsc = tool.id !in pinned,
         ) {
             tool.content(this)
         }

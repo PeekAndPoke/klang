@@ -26,6 +26,7 @@ fun Tag.KlangToolWindow(
     chip: String? = null,
     onPinnedChange: ((Boolean) -> Unit)? = null,
     onClose: (() -> Unit)? = null,
+    closeOnEsc: Boolean = false,
     content: DIV.() -> Unit,
 ) = comp(
     KlangToolWindow.Props(
@@ -34,6 +35,7 @@ fun Tag.KlangToolWindow(
         chip = chip,
         onPinnedChange = onPinnedChange,
         onClose = onClose,
+        closeOnEsc = closeOnEsc,
         content = content,
     )
 ) {
@@ -42,7 +44,7 @@ fun Tag.KlangToolWindow(
 
 /**
  * A tool window (KLANG-00339, KLANG-00334 item 9): a header with its title, a chip (what it follows, "follows the
- * cursor"), a pin and a close button, over its content.
+ * cursor"), a pin and a close button, over its content; one that closes on Esc shows the key's pill left of the pin.
  *
  * Unpinned it flies in over the editor: a shadow to its left, rounded where it meets the editor, a short slide in
  * (still under "reduce motion"). Pinned it docks beside the editor, flat. Its size and place are the shell's.
@@ -57,6 +59,8 @@ class KlangToolWindow(ctx: Ctx<Props>) : Component<KlangToolWindow.Props>(ctx) {
         val onPinnedChange: ((Boolean) -> Unit)?,
         /** Shows the close button when given. */
         val onClose: (() -> Unit)?,
+        /** Esc closes it, through the key manager, with its pill "Close: Esc" in the header ([KlangCloseKey]). */
+        val closeOnEsc: Boolean,
         val content: DIV.() -> Unit,
     )
 
@@ -73,6 +77,8 @@ class KlangToolWindow(ctx: Ctx<Props>) : Component<KlangToolWindow.Props>(ctx) {
                 props.chip?.let { chip -> span(classes = styles.toolWindowChip.toString()) { +chip } }
 
                 div { attributes["style"] = "flex: 1" }
+
+                props.onClose?.takeIf { props.closeOnEsc }?.let { close -> KlangCloseKey(onClose = close) }
 
                 props.onPinnedChange?.let { change ->
                     KlangIconToggle(

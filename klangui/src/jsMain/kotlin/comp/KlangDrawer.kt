@@ -22,6 +22,7 @@ fun Tag.KlangDrawer(
     current: String?,
     onPick: (String) -> Unit,
     onClose: (() -> Unit)? = null,
+    closeOnEsc: Boolean = false,
     search: (DIV.() -> Unit)? = null,
     footer: (DIV.() -> Unit)? = null,
 ) = comp(
@@ -31,6 +32,7 @@ fun Tag.KlangDrawer(
         current = current,
         onPick = onPick,
         onClose = onClose,
+        closeOnEsc = closeOnEsc,
         search = search,
         footer = footer,
     )
@@ -40,8 +42,8 @@ fun Tag.KlangDrawer(
 
 /**
  * The menu drawer (KLANG-00339): what the Motor button opens (KLANG-00334, layout A). A riveted panel with a printed
- * title and a close button, a search field when one is given, the destinations as tiles in two columns, and a footer
- * (the look picker).
+ * title and a close button (with the pill "Close: Esc" when Esc closes it), a search field when one is given, the
+ * destinations as tiles in two columns, and a footer (the look picker).
  *
  * The current destination is drawn pressed with its lamp on and announced as `aria-current`; the others' lamps are
  * off; one that is not there yet ([Entry.later]) is a dashed tile without a lamp that cannot be picked. The drawer
@@ -65,6 +67,8 @@ class KlangDrawer(ctx: Ctx<Props>) : Component<KlangDrawer.Props>(ctx) {
         val onPick: (String) -> Unit,
         /** Shows a close button when given. */
         val onClose: (() -> Unit)?,
+        /** Esc closes it, through the key manager, with its pill "Close: Esc" beside the close button ([KlangCloseKey]). */
+        val closeOnEsc: Boolean,
         val search: (DIV.() -> Unit)?,
         val footer: (DIV.() -> Unit)?,
     )
@@ -80,8 +84,14 @@ class KlangDrawer(ctx: Ctx<Props>) : Component<KlangDrawer.Props>(ctx) {
                 span(classes = styles.heading.toString()) { +props.title }
 
                 props.onClose?.let { close ->
-                    KlangButton(onClick = close, shape = KlangButton.Shape.Round, ariaLabel = "Close") {
-                        icon.times.render { attributes["aria-hidden"] = "true" }
+                    span(classes = styles.drawerHeaderEnd.toString()) {
+                        if (props.closeOnEsc) {
+                            KlangCloseKey(onClose = close)
+                        }
+
+                        KlangButton(onClick = close, shape = KlangButton.Shape.Round, ariaLabel = "Close") {
+                            icon.times.render { attributes["aria-hidden"] = "true" }
+                        }
                     }
                 }
             }

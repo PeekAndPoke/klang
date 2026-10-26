@@ -9,14 +9,20 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.peekandpoke.klang.ui.KlangKeyBindings
+import io.peekandpoke.klang.workshop.keys.KeyPlatform
+import io.peekandpoke.klang.workshop.keys.KeysManager
+import io.peekandpoke.klang.workshop.keys.keys
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
 import io.peekandpoke.kraft.components.comp
+import io.peekandpoke.kraft.testing.KQuery
 import io.peekandpoke.kraft.testing.TestBed
 import io.peekandpoke.kraft.testing.eventually
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.onClick
+import io.peekandpoke.ultra.html.onKeyDown
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.css.height
@@ -27,9 +33,11 @@ import kotlinx.html.Tag
 import kotlinx.html.a
 import kotlinx.html.button
 import kotlinx.html.div
+import kotlinx.html.input
 import kotlinx.html.span
 import org.w3c.dom.Element
 import org.w3c.dom.HTMLElement
+import org.w3c.dom.events.EventTarget
 import org.w3c.dom.events.KeyboardEvent
 import org.w3c.dom.events.KeyboardEventInit
 import kotlin.coroutines.resume
@@ -69,6 +77,17 @@ private class ChangingHost(ctx: NoProps) : PureComponent(ctx) {
     }
 }
 
+/** A test bed with the app's key manager: the workbench's close keys answer through it (KLANG-00334 item 39). */
+private suspend fun keyedBed(view: VDom.() -> Any?, test: suspend (element: KQuery<Element>) -> Unit) {
+    val manager = KeysManager(platform = KeyPlatform.Pc, hintDelayMs = 10).apply { define(KlangKeyBindings) }
+
+    try {
+        TestBed.preact(appSetup = { keys(manager) }, view = view, test = test)
+    } finally {
+        manager.dispose()
+    }
+}
+
 /** Waits for the next animation frame. */
 private suspend fun nextFrame() = suspendCoroutine { cont -> window.requestAnimationFrame { cont.resume(Unit) } }
 
@@ -84,7 +103,7 @@ class KlangWorkbenchSpec : StringSpec({
     val styles = KlangControlStyles
 
     suspend fun withWorkbench(block: suspend (root: Element) -> Unit) {
-        TestBed.preact(
+        keyedBed(
             view = {
                 KlangWorkbench(
                     column = { span { +"PROJECT" } },
@@ -303,7 +322,7 @@ class KlangWorkbenchSpec : StringSpec({
     }
 
     "without a drawer the Motor gets no menu" {
-        TestBed.preact(
+        keyedBed(
             view = {
                 KlangWorkbench(
                     column = {},
@@ -317,7 +336,7 @@ class KlangWorkbenchSpec : StringSpec({
     }
 
     "a tool window that leaves the list closes, and does not open again by itself when it comes back" {
-        TestBed.preact(view = { ChangingHost() }) { root ->
+        keyedBed(view = { ChangingHost() }) { root ->
             root.single().toggle("Docs").click()
 
             eventually { root.single().q(".${styles.workbenchFloating}") shouldNotBe null }
@@ -359,7 +378,7 @@ class KlangWorkbenchSpec : StringSpec({
     }
 
     "a drawer that leaves the props closes, and does not open again by itself when it comes back" {
-        TestBed.preact(view = { ChangingHost() }) { root ->
+        keyedBed(view = { ChangingHost() }) { root ->
             root.single().q("[data-test=motor-menu]")!!.click()
 
             eventually { root.single().q(".${styles.workbenchDrawer}") shouldNotBe null }
@@ -377,11 +396,11 @@ class KlangWorkbenchSpec : StringSpec({
         }
     }
 
-    "the drawer's first control takes the focus, a link counts, a disabled button not; with none, the drawer itself" {
+    "the drawer's field takes the focus, else its first control (a link counts, a disabled button not), else the drawer" {
         suspend fun focusedOnOpen(drawer: FlowContent.(close: () -> Unit) -> Unit): Element? {
             var focused: Element? = null
 
-            TestBed.preact(
+            keyedBed(
                 view = {
                     KlangWorkbench(
                         column = {},
@@ -421,6 +440,14 @@ class KlangWorkbenchSpec : StringSpec({
         val bare = focusedOnOpen { span { +"NOTHING TO PRESS" } }
 
         bare?.className shouldBe styles.workbenchDrawer.toString()
+
+        // A field comes first, before the controls above it: the drawer's search, so Alt+M lands where one types
+        val field = focusedOnOpen {
+            button { +"FIRST" }
+            input { }
+        }
+
+        field?.tagName shouldBe "INPUT"
     }
 
     "a tool window opened from the strip takes the focus; Esc closes one flying in, the focus goes back to its toggle; a pinned one stays" {
@@ -482,7 +509,7 @@ class KlangWorkbenchSpec : StringSpec({
     }
 
     "a page wider than the content area stays inside it; the workbench never grows past its box, also with a window pinned" {
-        TestBed.preact(
+        keyedBed(
             view = {
                 div {
                     css {
@@ -520,6 +547,216 @@ class KlangWorkbenchSpec : StringSpec({
 
             bench.scrollWidth shouldBe bench.clientWidth
             bench.scrollLeft shouldBe 0.0
+        }
+    }
+
+    "a tool window flying in shows Close: Esc, and Esc from outside it closes it through the key manager; pinned, no pill" {
+        withWorkbench { root ->
+            root.toggle("Docs").click()
+
+            eventually {
+                root.q(".${styles.workbenchFloating} .${styles.keyPill}")?.textContent?.startsWith("Close:") shouldBe true
+            }
+
+            // The focus outside the window: the key manager answers all the same
+            (document.activeElement as? HTMLElement)?.blur()
+            document.body!!.dispatchEvent(
+                KeyboardEvent("keydown", KeyboardEventInit(key = "Escape", bubbles = true, cancelable = true))
+            )
+
+            eventually { root.q(".${styles.workbenchFloating}") shouldBe null }
+
+            root.toggle("Docs").click()
+
+            eventually { root.q(".${styles.workbenchFloating}") shouldNotBe null }
+
+            root.q(".${styles.workbenchFloating} button[aria-pressed]")!!.click()
+
+            eventually {
+                root.q(".${styles.workbenchPinned}") shouldNotBe null
+                root.q(".${styles.workbenchPinned} .${styles.keyPill}") shouldBe null
+            }
+        }
+    }
+
+    /** A workbench with real panels: a drawer that closes on Esc, and two tool windows, the first with a field. */
+    suspend fun withPanels(block: suspend (root: Element) -> Unit) {
+        keyedBed(
+            view = {
+                KlangWorkbench(
+                    column = {},
+                    motor = { menu ->
+                        button {
+                            attributes["data-test"] = "motor-menu"
+                            onClick { menu?.toggle?.invoke() }
+                        }
+                    },
+                    content = {},
+                    tools = listOf(
+                        KlangWorkbench.Tool(id = "docs", title = "Docs", icon = { book }) {
+                            input { attributes["data-test"] = "docs-field" }
+                            // A control that keeps Esc for itself (prevents it) without stopping it
+                            button {
+                                attributes["data-test"] = "docs-keeper"
+                                onKeyDown { e ->
+                                    if (e.key == "Escape") {
+                                        e.preventDefault()
+                                    }
+                                }
+                            }
+                        },
+                        KlangWorkbench.Tool(id = "keys", title = "Keys", icon = { keyboard }) { span { +"KEYS" } },
+                    ),
+                    drawer = { close ->
+                        KlangDrawer(
+                            title = "Where to",
+                            entries = listOf(KlangDrawer.Entry(id = "songs", label = "Songs")),
+                            current = null,
+                            onPick = {},
+                            onClose = close,
+                            closeOnEsc = true,
+                        )
+                    },
+                )
+            },
+        ) { root ->
+            block(root.single())
+        }
+    }
+
+    fun escOn(target: EventTarget) {
+        target.dispatchEvent(KeyboardEvent("keydown", KeyboardEventInit(key = "Escape", bubbles = true, cancelable = true)))
+    }
+
+    "one Esc, one panel: from outside, the newest open panel closes first, then the one before it" {
+        withPanels { root ->
+            root.q("[data-test=motor-menu]")!!.click()
+
+            eventually { root.q(".${styles.workbenchDrawer}") shouldNotBe null }
+
+            root.toggle("Keys").click()
+
+            eventually { root.q(".${styles.workbenchFloating}") shouldNotBe null }
+
+            (document.activeElement as? HTMLElement)?.blur()
+            escOn(document.body!!)
+
+            eventually {
+                root.q(".${styles.workbenchFloating}") shouldBe null
+                root.q(".${styles.workbenchDrawer}") shouldNotBe null
+            }
+
+            escOn(document.body!!)
+
+            eventually { root.q(".${styles.workbenchDrawer}") shouldBe null }
+        }
+    }
+
+    "Esc from inside the drawer closes the drawer alone, also with a newer tool window open" {
+        withPanels { root ->
+            root.q("[data-test=motor-menu]")!!.click()
+
+            eventually { root.q(".${styles.workbenchDrawer}") shouldNotBe null }
+
+            root.toggle("Keys").click()
+
+            eventually { root.q(".${styles.workbenchFloating}") shouldNotBe null }
+
+            val tile = root.q(".${styles.workbenchDrawer} .${styles.drawerGrid} button")!!
+
+            tile.focus()
+            escOn(tile)
+
+            eventually { root.q(".${styles.workbenchDrawer}") shouldBe null }
+
+            // Past the frames a second close would take: the tool window stays
+            nextFrame()
+            nextFrame()
+
+            root.q(".${styles.workbenchFloating}") shouldNotBe null
+        }
+    }
+
+    "Esc in a field inside a tool window flying in closes it" {
+        withPanels { root ->
+            root.toggle("Docs").click()
+
+            eventually { root.q("[data-test=docs-field]") shouldNotBe null }
+
+            val field = root.q("[data-test=docs-field]")!!
+
+            field.focus()
+            escOn(field)
+
+            eventually { root.q(".${styles.workbenchFloating}") shouldBe null }
+        }
+    }
+
+    "switching to another tool window makes it the newest panel: Esc closes it before the drawer opened earlier" {
+        withPanels { root ->
+            root.toggle("Docs").click()
+
+            eventually { root.q(".${styles.workbenchFloating}") shouldNotBe null }
+
+            root.q("[data-test=motor-menu]")!!.click()
+
+            eventually { root.q(".${styles.workbenchDrawer}") shouldNotBe null }
+
+            root.toggle("Keys").click()
+
+            eventually { root.q(".${styles.workbenchFloating}")?.textContent?.contains("KEYS") shouldBe true }
+
+            (document.activeElement as? HTMLElement)?.blur()
+            escOn(document.body!!)
+
+            eventually {
+                root.q(".${styles.workbenchFloating}") shouldBe null
+                root.q(".${styles.workbenchDrawer}") shouldNotBe null
+            }
+        }
+    }
+
+    "Esc from inside a tool window closes the window alone, also with a newer drawer open" {
+        withPanels { root ->
+            root.toggle("Keys").click()
+
+            eventually { root.q(".${styles.workbenchFloating}") shouldNotBe null }
+
+            root.q("[data-test=motor-menu]")!!.click()
+
+            eventually { root.q(".${styles.workbenchDrawer}") shouldNotBe null }
+
+            val frame = root.q(".${styles.workbenchFloating}")!!
+
+            frame.focus()
+            escOn(frame)
+
+            eventually { root.q(".${styles.workbenchFloating}") shouldBe null }
+
+            // Past the frames a second close would take: the drawer stays
+            nextFrame()
+            nextFrame()
+
+            root.q(".${styles.workbenchDrawer}") shouldNotBe null
+        }
+    }
+
+    "an Esc a control inside a tool window already took leaves the window open" {
+        withPanels { root ->
+            root.toggle("Docs").click()
+
+            eventually { root.q("[data-test=docs-keeper]") shouldNotBe null }
+
+            val keeper = root.q("[data-test=docs-keeper]")!!
+
+            keeper.focus()
+            escOn(keeper)
+
+            // Past the frames a close would take
+            nextFrame()
+            nextFrame()
+
+            root.q(".${styles.workbenchFloating}") shouldNotBe null
         }
     }
 })

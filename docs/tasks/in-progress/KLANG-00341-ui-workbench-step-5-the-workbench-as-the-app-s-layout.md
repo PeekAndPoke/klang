@@ -100,3 +100,13 @@ the one place for "where to go".
   round for this: it restores the old layout's own rule.
 - 2026-10-26: the scope back up under the gauges, the spectrum on the frame's floor (all heights kept, the
   maintainer's idea). The maintainer: "Yes this is good".
+- 2026-10-26: Esc and Alt+M through the key manager (KLANG-00334 items 39, 40), on Klang-Main-Dev's actions
+  (82022580): `KlangCloseKey` answers `PanelClose` while a panel that closes on Esc is open and shows its pill
+  "Close: Esc" (the tool window flying in, the Motor's drawer); Esc from inside a panel closes that panel through its
+  own handler; Alt+M toggles the drawer, its hint on the menu button, the focus in the search field. The maintainer
+  tried it: "Esc works for closing. Esc for jumping back into the editor also works. Alt+M also work." Reviewed in two
+  rounds, both with a MAJOR in the guard against what sits in front without a key layer (first missing, then too
+  broad: the hover docs), both fixed, the second round's reconcile confirming every fix; mutation-checked (14
+  mutants); ledger rows and a `/kraft-knowhow` lesson. The safety valve stopped the loop after two rounds; the
+  maintainer chose stacking instead (the newest registration on a key answers, declarative only), asked of
+  Klang-Main-Dev; the guard stays until then as marked scaffolding.

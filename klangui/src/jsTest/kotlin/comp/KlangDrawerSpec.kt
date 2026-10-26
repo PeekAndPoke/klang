@@ -9,13 +9,26 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
+import io.peekandpoke.klang.ui.KlangKeyBindings
+import io.peekandpoke.klang.workshop.keys.KeyPlatform
+import io.peekandpoke.klang.workshop.keys.KeysManager
+import io.peekandpoke.klang.workshop.keys.keys
+import io.peekandpoke.kraft.modals.modals
+import io.peekandpoke.kraft.popups.popups
 import io.peekandpoke.kraft.testing.TestBed
 import io.peekandpoke.kraft.testing.attr
+import io.peekandpoke.kraft.testing.eventually
 import io.peekandpoke.kraft.testing.selectCss
 import io.peekandpoke.kraft.testing.textContent
+import kotlinx.browser.document
+import kotlinx.html.button
 import kotlinx.html.span
 import org.w3c.dom.Element
 import org.w3c.dom.HTMLElement
+import org.w3c.dom.events.EventTarget
+import org.w3c.dom.events.KeyboardEvent
+import org.w3c.dom.events.KeyboardEventInit
 
 /** The menu drawer (KLANG-00339): its destinations as tiles, the current one, those not there yet, close, slots. */
 class KlangDrawerSpec : StringSpec({
@@ -102,6 +115,114 @@ class KlangDrawerSpec : StringSpec({
     "without search and footer there is neither" {
         TestBed.preact(view = { KlangDrawer(title = "t", entries = entries, current = null, onPick = {}) }) { root ->
             root.selectCss(".${KlangControlStyles.drawerFooter}").toList().shouldBeEmpty()
+        }
+    }
+
+    "a drawer that closes on Esc shows Close: Esc beside its close button, and Esc closes it through the key manager" {
+        var closed = 0
+        val manager = KeysManager(platform = KeyPlatform.Pc, hintDelayMs = 10).apply { define(KlangKeyBindings) }
+
+        try {
+            TestBed.preact(
+                appSetup = { keys(manager) },
+                view = {
+                    KlangDrawer(title = "a", entries = entries, current = null, onPick = {}, onClose = { closed++ }, closeOnEsc = true)
+                    KlangDrawer(title = "b", entries = entries, current = null, onPick = {}, onClose = {})
+                },
+            ) { root ->
+                val pills = root.selectCss(".${KlangControlStyles.keyPill}")
+
+                // One pill: only the drawer that closes on Esc shows it
+                pills.size shouldBe 1
+                pills.textContent().startsWith("Close:") shouldBe true
+
+                document.body!!.dispatchEvent(
+                    KeyboardEvent("keydown", KeyboardEventInit(key = "Escape", code = "Escape", bubbles = true, cancelable = true))
+                )
+
+                closed shouldBe 1
+            }
+        } finally {
+            manager.dispose()
+        }
+    }
+
+    "a modal in front gets the Esc: the drawer behind it stays open, and closes on Esc once the modal is gone" {
+        var closed = 0
+        val manager = KeysManager(platform = KeyPlatform.Pc, hintDelayMs = 10).apply { define(KlangKeyBindings) }
+
+        fun esc() {
+            document.body!!.dispatchEvent(
+                KeyboardEvent("keydown", KeyboardEventInit(key = "Escape", code = "Escape", bubbles = true, cancelable = true))
+            )
+        }
+
+        try {
+            TestBed.preact(
+                appSetup = { keys(manager); modals() },
+                view = {
+                    FrontGrip()
+                    KlangDrawer(title = "a", entries = entries, current = null, onPick = {}, onClose = { closed++ }, closeOnEsc = true)
+                },
+            ) { _ ->
+                val modal = FrontGrip.modals.show<Unit> { span { +"MODAL" } }
+
+                esc()
+
+                closed shouldBe 0
+
+                modal.close()
+                esc()
+
+                closed shouldBe 1
+            }
+        } finally {
+            manager.dispose()
+        }
+    }
+
+    "a popup blocks the drawer's Esc only while it holds the focus: a hover doc does not, a code tool's popover does" {
+        var closed = 0
+        val manager = KeysManager(platform = KeyPlatform.Pc, hintDelayMs = 10).apply { define(KlangKeyBindings) }
+
+        fun escOn(target: EventTarget) {
+            target.dispatchEvent(
+                KeyboardEvent("keydown", KeyboardEventInit(key = "Escape", code = "Escape", bubbles = true, cancelable = true))
+            )
+        }
+
+        try {
+            TestBed.preact(
+                appSetup = { keys(manager); popups() },
+                view = {
+                    FrontGrip()
+                    KlangDrawer(title = "a", entries = entries, current = null, onPick = {}, onClose = { closed++ }, closeOnEsc = true)
+                },
+            ) { _ ->
+                // A hover doc: open, but the focus is elsewhere
+                FrontGrip.popups.add { span { +"HOVER" } }
+
+                // Drawn, as a hover doc is while the mouse rests on a word
+                eventually { document.body!!.textContent!!.contains("HOVER") shouldBe true }
+                (document.activeElement as? HTMLElement)?.blur()
+                escOn(document.body!!)
+
+                closed shouldBe 1
+
+                // A popover with the focus in it
+                FrontGrip.popups.add { button { attributes["data-test"] = "in-popup" } }
+
+                eventually { document.querySelector("[data-test=in-popup]") shouldNotBe null }
+
+                val inPopup = document.querySelector("[data-test=in-popup]") as HTMLElement
+
+                inPopup.focus()
+                escOn(inPopup)
+
+                closed shouldBe 1
+            }
+        } finally {
+            manager.dispose()
         }
     }
 })

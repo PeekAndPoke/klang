@@ -116,6 +116,7 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
                             go(id)
                         },
                         onClose = close,
+                        closeOnEsc = true,
                         search = {
                             KlangSearchField(
                                 label = "Search songs, docs, samples and actions",
