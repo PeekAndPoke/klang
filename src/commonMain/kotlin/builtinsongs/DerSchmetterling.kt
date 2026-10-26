@@ -338,9 +338,9 @@ export bass_pat =
     [0 0 2 4 0 0 -2 -1]!2
     [0 0 -1 3  7 0 -2 -1] [0 0 3 [0 -2]  0 0 [0 4 7 9] 6]>/8`
 
-export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.39) // . mute()
+export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.40) // . mute()
     .ignp("sub", 0.98).ignp("harmonics", 1.00).clip("0.95".sub(perlin(0.0, 0.05).slow(8)))  // . solo()
-    .adsr(0.003, 0.5, 0.40, 0.025).hpf(35)
+    .adsr(0.003, 0.5, 0.33, 0.025).hpf(35)
 
 export bass_arrange = x => x.orbit(4) // . mute()
   .scale("e1:minor").notch(freq = snareHz, q = 1.0).mute("<0!128 1!32>")
@@ -476,7 +476,7 @@ export kick_arrange = x => x.orbit(6).mute("<0!128 1!32>").late(berlin(0.0000, 0
 export kick = sound(kick_pat).apply(kick_shape).tag("kick")  // . solo()
 
 export snare_pat = `<[~!2]!2  [~!4]!2  [~!8]!2  [~!16]  [~!24]  [~  sd  ~ sd]!15 [[~ sd] sd  [[sd? sd?] sd] [sd!4]] [~  sd  ~ sd]!16 [~ sd ~ sd]!32>`
-export snare_shape = x => x.sound(metalSnare).adsrOff().freq(snareHz).gain(0.13).pan(0.575)
+export snare_shape = x => x.sound(metalSnare).adsrOff().freq(snareHz).gain(0.12).pan(0.575)
   .lpf("11500".add(perlin(0, 500).slow(4)))
 export snare_arrange = x => x.orbit(7).mute("<0!128 1!32>").late(berlin(0.005, 0.0015).mul(drunk).seg(4))
 export snare = sound(snare_pat).apply(snare_shape).tag("snare") // .solo()
@@ -488,7 +488,7 @@ export hats_arrange = x => x.orbit(8).mute("<0!128 1!32>").late(berlin(0.0020, 0
 export hats = sound(hats_pat).fast(2).apply(hats_shape).velocity("<1.0 0.85 0.93 0.85>*4".sub(berlin(0.0, 0.05).slow(4))).tag("hats")
 
 export shaker_pat = `<white ~ white ~ white ~ white ~ white>*8`
-export shaker_shape = x => x.gain(0.015).velocity("<1.0 0.80 0.90 0.80>*8") //  . mute()
+export shaker_shape = x => x.gain(0.02).velocity("<1.0 0.80 0.90 0.80>*8") //  . mute()
   .hpf(freq = 8000, q = 0.7).lpf(16500, 0.5) //  . solo()
   .pan(0.35).adsr(0.015, 0.10, 0.0, 0.01)
 export shaker_arrange = x => x.orbit(10).late(berlin(0.0010, 0.0020).mul(drunk))
@@ -513,7 +513,7 @@ export song_body = stack(
       guitar2.apply(guitar2_arrange) // .solo() .mute()
       , // Guitar 3
       guitar3.apply(guitar3_arrange) // .solo() .mute()
-    ).reverb(wet = 0.30, size = 1.5) // . solo()
+    ).reverb(wet = 0.25, size = 2.0) // . solo()
     , // Bass
     bass.apply(bass_arrange) // .solo() // .mute()
     , // Orchestertrommel
@@ -537,10 +537,12 @@ export song = stack(
     // pulled the groove towards the break (6.3 LU apart without it, 4.4 at 1.4 dB of glue). The ceiling sits at -3 dB
     // because the snare's crack overshoots between the samples: true peak -1.2 dBFS, and the house limiter stays idle.
   master(Katalyst(k => k
-    .reverb(0.10, 7, 6500)
-    .gain(4.5)
-    .bands(b => b.cut(150)
+    .reverb(0.10, 7, 4500)
+    .gain(5.0)
+    .bands(b => b
+      .band(low => low.distort(0.01, "soft", 4)).cut(150)
       .band(mid => mid.distort(0.15, "soft", 4).mul(0.90)).cut(5000)
+      .band(low => low.distort(0.01, "soft", 4))
     ) // the glue on the mids only: the kick and the hats stay clean
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)
   ))
