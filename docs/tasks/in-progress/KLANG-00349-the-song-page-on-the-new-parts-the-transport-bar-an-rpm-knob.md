@@ -1,7 +1,6 @@
 # KLANG-00349: The song page on the new parts: the transport bar, an RPM knob, Alt+Q's help panel, the song in the left column
 
-> **Status (2026-10-26): SCHEDULED.** The maintainer: "I would like to continue with adopting the new design in the
-> order a user would explore the app. So the next screen is the CodeSongPage."
+> **Status (2026-10-26): IN PROGRESS.** started
 >
 > **Part of:** KLANG-00334 (UI workbench: the Motor-centred layout, tool windows and the first-visit trail)
 
@@ -62,3 +61,4 @@ the fullscreen toggle. The editor shows a symbol's quick help on hover (`hoverPo
 
 - 2026-10-26: created; the design decided with the maintainer (the RPM knob, the hover setting, the comments, the
   header).
+- 2026-10-26: IN PROGRESS. started
