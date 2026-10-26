@@ -340,3 +340,7 @@ OkCancel real buttons and focus; their Esc stays ours until the key map carries 
   `klang.search-everywhere` (Ctrl+K, Shift Shift) is defined for the new UI's search window; nothing handles it yet.
   Chord sequences (`"Mod-K Mod-S"`) stay unreadable until part (b). Review: round 1 (level 1) one MAJOR (Shift+click
   twice counted as two taps), fixed; round 2 (level 2) clean; 14 mutants killed. The MINORs wait for the maintainer.
+- 2026-10-26: a hint that always shows (Klang-Research for the maintainer: "when there is enough space we show the
+  keyboard shortcut pills always"): `onKeyController(..., hintMode = KeyHintMode.Always)` offers the hint without the
+  hold, still not under another layer, in an inert part or without a key; the component draws it in its own flow (a
+  tool window's "Close: Esc"). Review round 1 (level 1) clean; 3 mutants killed. The MINORs wait for the maintainer.

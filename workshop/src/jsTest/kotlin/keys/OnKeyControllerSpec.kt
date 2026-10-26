@@ -157,6 +157,30 @@ class OnKeyControllerSpec : StringSpec({
         }
     }
 
+    "a hint that always shows: without the hints held, still only while its layer is on top" {
+        withApp { keys, button ->
+            button.key.hintMode = KeyHintMode.Always
+            eventually {
+                document.querySelector(".own-key")?.textContent shouldBe " (Ctrl+P)"
+            }
+
+            val modal = keys.openLayer()
+            eventually {
+                withClue("under a modal") { document.querySelector(".own-key") shouldBe null }
+            }
+
+            modal.close()
+            eventually {
+                document.querySelector(".own-key")?.textContent shouldBe " (Ctrl+P)"
+            }
+
+            button.key.hintMode = KeyHintMode.WhileHeld
+            eventually {
+                withClue("back to while held") { document.querySelector(".own-key") shouldBe null }
+            }
+        }
+    }
+
     "keys in a row first: the hint shows them as one group per step, the chords stay apart" {
         withApp { _, button ->
             button.key.action = search

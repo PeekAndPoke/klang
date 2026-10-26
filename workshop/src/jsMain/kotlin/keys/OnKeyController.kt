@@ -27,15 +27,25 @@ data class KeyHintState(
     fun keyParts(compact: Boolean = true): List<String> = keyGroups(compact = compact).flatten()
 }
 
+/** When a component's key hint shows. */
+enum class KeyHintMode {
+    /** While the user holds the hints' key (Ctrl): the default, for a hint drawn over the page. */
+    WhileHeld,
+
+    /** Always, where there is room for it: a pill in a header that names its key ("Close: Esc"). */
+    Always,
+}
+
 /**
  * Creates an [OnKeyController] for this component: it answers [action] with [onKey] while the component is mounted and
- * [enabled] says so, and offers the [OnKeyController.hint] to draw while the hints show.
+ * [enabled] says so, and offers the [OnKeyController.hint] to draw while the hints show, or always ([hintMode]).
  */
 fun Component<*>.onKeyController(
     action: KeyAction,
     enabled: () -> Boolean = { true },
+    hintMode: KeyHintMode = KeyHintMode.WhileHeld,
     onKey: (KeyboardEvent) -> Unit,
-): OnKeyController = OnKeyController(component = this, action = action, enabled = enabled, onKey = onKey)
+): OnKeyController = OnKeyController(component = this, action = action, enabled = enabled, hintMode = hintMode, onKey = onKey)
 
 /**
  * The machinery behind a key on a component, as Kraft's `FormController` is behind a form: the component keeps the
@@ -48,8 +58,8 @@ fun Component<*>.onKeyController(
  *   that layer is on top: under a modal the page's keys wait. Inside an inert part of the page (the page a router
  *   fades out after a navigation) it answers nothing and shows no hint.
  * - It follows the hints, the keymap and the top layer and redraws the component when one changes, so [hint] is
- *   always current: null while the hints are hidden, the layer is not on top or the action has no key, else what to
- *   show. A key the user changes reaches it without registering again.
+ *   always current: null while the hints are hidden (unless [hintMode] is [KeyHintMode.Always]), the layer is not on
+ *   top or the action has no key, else what to show. A key the user changes reaches it without registering again.
  *
  * A component that only answers a key (a dialog's Esc) ignores [hint]; one that draws the key in its own way (in its
  * label, right-aligned in a menu row) reads it in its render. [OnKey] is the slim default: this controller and a
@@ -60,6 +70,7 @@ class OnKeyController(
     action: KeyAction,
     /** Whether the action acts now; read at the moment of the key. */
     var enabled: () -> Boolean = { true },
+    hintMode: KeyHintMode = KeyHintMode.WhileHeld,
     /** What the key does; read at the moment of the key. */
     var onKey: (KeyboardEvent) -> Unit,
 ) {
@@ -90,10 +101,24 @@ class OnKeyController(
             }
         }
 
-    /** What to show while the hints show; null while they are hidden or the action has no key. */
+    /** When [hint] shows: while the hints are held, or always (a component with room for it); a change redraws. */
+    var hintMode: KeyHintMode = hintMode
+        set(value) {
+            if (value != field) {
+                field = value
+                component.triggerRedraw()
+            }
+        }
+
+    /**
+     * What to show: while the hints show, or always ([hintMode]); null while another layer is on top or the action has
+     * no key.
+     */
     val hint: KeyHintState?
         get() {
-            if (!hintsShown || topLayer !== layer || isInert()) {
+            val held = hintsShown || hintMode == KeyHintMode.Always
+
+            if (!held || topLayer !== layer || isInert()) {
                 return null
             }
 
