@@ -143,6 +143,10 @@ reads the tickets with `ticket.py list --json`.
 <!-- Findings this repo sent back to Mission Control, not merged into the blueprint yet:
      - yyyy-mm-dd: <what, one line> (<where it happened>)
      Remove an item when an update arrives that contains it. -->
+- 2026-10-26: the project template and every project: IntelliJ excludes `.claude`, `.build-claude`, `.gradle-claude`,
+  `.gradle`, `.kotlin`, `buildSrc/.build-claude`, `buildSrc/.gradle` and `tmp` through the root module's
+  `idea { module { excludeDirs } }`, kept by a Gradle sync; checked after a sync with the IDE's file search (klang
+  commits cd6bf5b2, e6a84dbc, 240f0e42)
 
 ## Changes
 
