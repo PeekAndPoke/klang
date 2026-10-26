@@ -1,7 +1,6 @@
 # KLANG-00346: The Motor's spectrum before the master volume, the scope after it
 
-> **Status (2026-10-26): IN PROGRESS.** The maintainer: "One addition on the global volume setting ... i think it
-> should only influence the osci but not the spectrum"
+> **Status (2026-10-26): DONE.** the maintainer tested it in the browser, reviewed clean, 2026-10-26
 >
 > **Part of:** KLANG-00334 (UI workbench: the Motor-centred layout, tool windows and the first-visit trail)
 
@@ -40,3 +39,4 @@ Turning the volume down shrinks the scope's trace, not the spectrum's columns; t
 
 - 2026-10-26: created and started; the maintainer tested it in the browser.
 - 2026-10-26: reviewed (clean), committed, done.
+- 2026-10-26: DONE. the maintainer tested it in the browser, reviewed clean, 2026-10-26
