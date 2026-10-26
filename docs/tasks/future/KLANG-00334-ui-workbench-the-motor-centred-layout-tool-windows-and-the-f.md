@@ -158,6 +158,9 @@ Kept in order, close to the maintainer's words.
     15% steps from the floor, red from 60% on to the top ("We always see blue and green, rarely yellow and never red";
     "take 15% steps please"); before, the bands were cut for one colour less and the red never showed. The spectrum
     reads before the master volume (KLANG-00346), so turning the volume up does not raise it.
+44. (2026-10-26) The start page starts the Motor (KLANG-00347): board G's key and dyno run, built and tuned by eye.
+    Its third part is dropped: "We will not do the thing that the motor flies to the lower corner ... that would be
+    over the top". "Make Music Now" starts the jingle and opens the first song at once.
 
 ## Where the conversation stands (leanings, not decisions)
 
@@ -189,12 +192,14 @@ Kept in order, close to the maintainer's words.
   the workbench: The Klang Path's two strands (sound, pattern) and three stages as a tech tree in the left column,
   lamps for done, next, open and locked. Board G proposes the start page as starting the Motor: a silver key is the
   click the browser needs before it plays audio, then the dyno run of today in the new gauges, then the Motor
-  glides into its corner and the workbench opens around it. Board A2 tries the title in the right strip.
+  glides into its corner and the workbench opens around it (the glide dropped, item 44). Board A2 tries the title in
+  the right strip.
 
 - **One shell for every page** (item 25): today the Motor sits inside `SidebarMenu` (`MenuLayout`), the start page
   has `MotorBackgroundLayout` with gauges of its own, and the tour and the not-found page use `FullscreenLayout`;
   switching layouts mounts a new Motor. One shell layout for all routes keeps one Motor alive across pages, with
-  modes (ignition: centred and large; workbench: in its corner), and that is what lets it glide into the corner.
+  modes (ignition: centred and large; workbench: in its corner), and that is what lets it glide into the corner (the
+  glide is dropped, item 44; one shell keeps its other reasons).
   The left column is a flex column: the content scrolls (`min-height: 0`, its own scrollbar), the Motor never
   shrinks and never gets covered.
 - **The theme** (items 26, 27): a new set of variables, in three layers: a small palette (the raw colours), roles

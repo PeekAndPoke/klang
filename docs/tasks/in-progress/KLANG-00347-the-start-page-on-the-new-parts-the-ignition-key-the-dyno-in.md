@@ -57,7 +57,9 @@ Five screens over the lamp-lit `MotorBackground` plate, KLANGMOTOR engraved in i
 
 ## Not in this step
 
-- The Motor gliding into its corner and one shell for every page (epic items 25 and board G's third part).
+- The Motor gliding into its corner: dropped (the maintainer, 2026-10-26: "We will not do the thing that the motor
+  flies to the lower corner ... that would be over the top"). One shell for every page (epic item 25) stays open for
+  its other reasons.
 - The first-visit trail.
 
 ## Acceptance
