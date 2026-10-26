@@ -16,7 +16,10 @@ data class KeyAction(
     val keys: List<String> = emptyList(),
     /** The Mac's default keys, when they are not [keys]. */
     val macKeys: List<String>? = null,
-    /** Actions in one scope must not share a key; actions in different scopes may (the page's and an editor's). */
+    /**
+     * Actions in one scope and of one [priority] must not share a key; actions in different scopes may (the page's and
+     * an editor's), and so may actions of different priorities (a deliberate order: a tool's Esc over a panel's).
+     */
     val scope: String = APP_SCOPE,
     /** How far forward its key stands when several actions in the top layer answer the same key; see [KeyPriority]. */
     val priority: KeyPriority = KeyPriority.Default,
@@ -36,8 +39,9 @@ data class KeyAction(
 /**
  * How far forward an action's key stands when several actions in the top layer answer the same key, as z-index does
  * for elements (maintainer, 2026-10-26): the highest [value] answers; within one priority, the newest registration.
- * Actions on one key with different priorities are a deliberate order, not a clash. An app keeps all of its priorities
- * in one place, so it always sees which there are; [name] says which one a value is.
+ * Actions on one key with different priorities are a deliberate order, not a clash. Two priorities with the same
+ * [value] are one level. An app keeps all of its priorities in one place, so it always sees which there are; [name]
+ * says which one a value is.
  */
 data class KeyPriority(val value: Int, val name: String) {
     companion object {

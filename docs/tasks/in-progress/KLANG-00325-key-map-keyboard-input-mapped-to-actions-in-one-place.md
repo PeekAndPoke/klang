@@ -374,3 +374,9 @@ OkCancel real buttons and focus; their Esc stays ours until the key map carries 
   guard is gone. Chords in a row are exactly two (maintainer). `VolumeFocus` (Alt+V) for Klang-Research. Review: round
   1 (level 1) two MAJORs (Esc skipped a tool's revert; a window open across navigation lost to the page's Esc), fixed;
   round 2 (level 2) clean; 14 mutants killed. Its MINORs go into the next step.
+- 2026-10-26: Esc passes the text-field rule (maintainer: Esc in the editor did not close the Motor menu): a field
+  that uses its Esc (the code editor closing its completion) prevents it first, an Esc it ignores goes on to the
+  stack, so a panel closes and a code tool cancels from inside a field too. Clashes compare a priority's value; the
+  code tool modal's unused fallback Esc removed; `VolumeFocus` id `klang.focus-volume`. Review round 1 (level 1)
+  clean; 5 mutants killed. Its MINORs (an IME guard, stale comments, FocusEditor inside the editor) go into the next
+  step.

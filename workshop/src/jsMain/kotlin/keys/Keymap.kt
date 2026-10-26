@@ -123,8 +123,9 @@ class Keymap(
             }
         }
 
-        // One scope and one priority: different priorities on one key are a deliberate order
-        actions.groupBy { it.scope to it.priority }.forEach { (group, inScope) ->
+        // One scope and one priority (its value, as the manager orders them): different priorities on one key are a
+        // deliberate order
+        actions.groupBy { it.scope to it.priority.value }.forEach { (group, inScope) ->
             val scope = group.first
 
             inScope
@@ -139,7 +140,7 @@ class Keymap(
                 .filterValues { it.size > 1 }
                 .forEach { (sequence, ids) -> add(Problem.SequenceClash(scope = scope, sequence = sequence, actionIds = ids)) }
 
-            val chordRows = chordSequences.filter { (owner, _) -> owner.scope == scope && owner.priority == group.second }
+            val chordRows = chordSequences.filter { (owner, _) -> owner.scope == scope && owner.priority.value == group.second }
 
             inScope.forEach { action ->
                 chordsOf(action.id).forEach { chord ->

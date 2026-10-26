@@ -67,7 +67,8 @@ internal class ToolButtonBarComp(ctx: Ctx<Props>) : Component<ToolButtonBarComp.
                 gap = 8.px
             }
 
-            // Esc is the tool's Cancel, its revert of live edits included (KLANG-00325): every tool with this bar
+            // Esc is the tool's Cancel, its revert of live edits included (KLANG-00325): every tool with this bar, also
+            // from its text field (an Esc the field ignores goes on)
             OnKey(KlangKeyBindings.DialogClose, showHint = false) { props.onCancel() }
 
             // Left side: auto-update toggle

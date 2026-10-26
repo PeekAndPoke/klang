@@ -219,12 +219,26 @@ class KeysManagerSpec : StringSpec({
             val input = document.createElement("input") as HTMLElement
             host.appendChild(input)
 
-            withClue("Esc in a text field belongs to the field, Ctrl+Shift+Enter still plays") {
-                input.dispatchEvent(keyEvent(key = "Escape"))
+            val letter = KeyAction(id = "letter", title = "Letter", keys = listOf("N"))
+            keys.define(object : KeyBindings {
+                override val actions = listOf(letter)
+            })
+            keys.handle(letter) { answered.add("letter") }
+
+            withClue("a plain letter in a text field belongs to the field, Ctrl+Shift+Enter still plays") {
+                input.dispatchEvent(keyEvent(key = "n", code = "KeyN"))
                 input.dispatchEvent(ctrlShiftEnter())
             }
 
-            answered shouldContainExactly listOf("play")
+            withClue("an Esc the field uses (it prevents it) stays the field's; an Esc it ignores goes on") {
+                val uses: (Event) -> Unit = { it.preventDefault() }
+                input.addEventListener("keydown", uses)
+                input.dispatchEvent(keyEvent(key = "Escape"))
+                input.removeEventListener("keydown", uses)
+                input.dispatchEvent(keyEvent(key = "Escape"))
+            }
+
+            answered shouldContainExactly listOf("play", "close")
         }
     }
 
@@ -861,6 +875,69 @@ class KeysManagerSpec : StringSpec({
             host.dispatchEvent(keyEvent(key = "F9", code = "F9"))
 
             answered shouldContainExactly listOf("panel 2", "panel 1", "page")
+        }
+    }
+
+    "priority stays inside a layer: a higher priority below waits for a lower one on top" {
+        withManager { keys, host ->
+            val front = KeyPriority(value = 10, name = "front")
+            val page = KeyAction(id = "page", title = "Page", keys = listOf("F9"), priority = front)
+            val modal = KeyAction(id = "modal", title = "Modal", keys = listOf("F9"))
+            keys.define(object : KeyBindings {
+                override val actions = listOf(page, modal)
+            })
+            val answered = mutableListOf<String>()
+            keys.handle(page) { answered.add("page") }
+            val layer = keys.openLayer()
+            keys.handle(modal, layer = layer) { answered.add("modal") }
+
+            host.dispatchEvent(keyEvent(key = "F9", code = "F9"))
+            layer.close()
+            host.dispatchEvent(keyEvent(key = "F9", code = "F9"))
+
+            answered shouldContainExactly listOf("modal", "page")
+        }
+    }
+
+    "chords in a row: a tap pair that acts ends the wait; the waited key reaches no other listener on the target" {
+        val save = KeyAction(id = "save", title = "Save", keys = listOf("Mod-K Mod-S"))
+        val search = KeyAction(id = "search", title = "Search", keys = listOf("Shift Shift"))
+        val host = document.createElement("div") as HTMLElement
+        document.body!!.appendChild(host)
+        val keys = KeysManager(platform = KeyPlatform.Pc, tapMaxMs = 60, tapPairMs = 120, target = host)
+        keys.define(object : KeyBindings {
+            override val actions = listOf(save, search)
+        })
+        val answered = mutableListOf<String>()
+        keys.handle(save) { answered.add("save") }
+        keys.handle(search) { answered.add("search") }
+        // A capture listener on the same target, added after the manager's
+        val seen = mutableListOf<String>()
+        host.addEventListener("keydown", { event -> seen.add((event as KeyboardEvent).key) }, true)
+
+        fun tapShift() {
+            host.dispatchEvent(keyEvent(key = "Shift", code = "ShiftLeft", shift = true))
+            host.dispatchEvent(keyEvent(key = "Shift", code = "ShiftLeft", type = "keyup"))
+        }
+
+        try {
+            host.dispatchEvent(keyEvent(key = "k", code = "KeyK", ctrl = true))
+            host.dispatchEvent(keyEvent(key = "s", code = "KeyS", ctrl = true))
+            withClue("the second chord stops at the manager") {
+                answered shouldContainExactly listOf("save")
+                seen.filter { it == "s" } shouldContainExactly emptyList()
+            }
+
+            host.dispatchEvent(keyEvent(key = "k", code = "KeyK", ctrl = true))
+            tapShift()
+            tapShift()
+            withClue("the tap pair acts and the wait is over") {
+                answered shouldContainExactly listOf("save", "search")
+                keys.waiting() shouldContainExactly emptyList()
+            }
+        } finally {
+            keys.dispose()
+            host.remove()
         }
     }
 })

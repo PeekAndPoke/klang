@@ -231,4 +231,18 @@ class KeymapSpec : StringSpec({
             Keymap.Problem.Clash(scope = KeyAction.APP_SCOPE, chord = KeyChord(key = "Escape"), actionIds = listOf("ahead", "also")),
         )
     }
+
+    "priorities in the checks: one value is one level whatever its name; a sequence start at another priority is no prefix clash" {
+        val one = play.copy(id = "one", keys = listOf("Escape"), priority = KeyPriority(value = 10, name = "overlay"))
+        val two = play.copy(id = "two", keys = listOf("Escape"), priority = KeyPriority(value = 10, name = "panel"))
+
+        Keymap(platform = pc, actions = listOf(one, two)).problems shouldContainExactly listOf(
+            Keymap.Problem.Clash(scope = KeyAction.APP_SCOPE, chord = KeyChord(key = "Escape"), actionIds = listOf("one", "two")),
+        )
+
+        val open = play.copy(id = "open", keys = listOf("Mod-K"), priority = KeyPriority(value = 10, name = "front"))
+        val save = play.copy(id = "save", keys = listOf("Mod-K Mod-S"))
+
+        Keymap(platform = pc, actions = listOf(open, save)).problems.shouldBeEmpty()
+    }
 })

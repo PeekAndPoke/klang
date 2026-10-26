@@ -69,9 +69,8 @@ object KlangKeyBindings : KeyBindings {
     /**
      * Closes the newest open panel: a tool window flying in, the Motor's drawer (the workbench, KLANG-00334; maintainer,
      * 2026-10-26), a code tool's inline popover. Each panel registers it while it is open, in the page's layer; of two
-     * open panels the newer closes first. In front of the page, behind a code tool ([KlangKeyPriorities.Panel]). Esc in
-     * a text field (the drawer's search) stays the field's own: a plain key never acts there, so such a field closes its
-     * panel itself.
+     * open panels the newer closes first. In front of the page, behind a code tool ([KlangKeyPriorities.Panel]). Also
+     * from a text field (the code editor), unless the field uses its Esc itself (the editor closing its completion).
      */
     val PanelClose = KeyAction(
         id = "klang.panel.close",
@@ -85,7 +84,7 @@ object KlangKeyBindings : KeyBindings {
 
     /**
      * Puts the focus back into the song's editor at its last cursor (maintainer, 2026-10-26: "One Esc close tool.
-     * Another Esc focus editor"). Inside the editor Esc stays the editor's own, as a plain key in any text field. The
+     * Another Esc focus editor"). An Esc the editor uses (closing its completion) stays the editor's own. The
      * page's own key ([KlangKeyPriorities.Page]): an open code tool or panel answers Esc first, also one that was open
      * before the song page mounted.
      */
@@ -101,7 +100,7 @@ object KlangKeyBindings : KeyBindings {
      * volume knob could also use a shortcut like Alt+V maybe to select the knob").
      */
     val VolumeFocus = KeyAction(
-        id = "klang.volume",
+        id = "klang.focus-volume",
         title = "Volume",
         keys = listOf("Alt-V"),
         priority = KlangKeyPriorities.Page,

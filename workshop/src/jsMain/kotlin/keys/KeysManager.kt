@@ -45,7 +45,9 @@ import kotlin.math.abs
  *
  * One listener on [target] (the document) answers every key, after the page's own handlers: a key a component already
  * handled (`defaultPrevented`: the code editor's own keys while it has the focus) is left alone, and so is a held key's
- * repeat. A key without Ctrl, Alt or Meta is left alone while the user types in a text field. The hints and the wait of
+ * repeat. A key without Ctrl, Alt or Meta is left alone while the user types in a text field, except Esc, which types
+ * nothing (maintainer, 2026-10-26: Esc in the editor did not close the Motor menu): a field that uses its Esc (the
+ * code editor closing its completion) handles it first, and an Esc it ignores goes on. The hints and the wait of
  * chords in a row follow the keys before the page's handlers (the capture phase), so a handler that stops a key cannot
  * leave them showing; a key the wait takes stops there, though a capture listener on `window` still sees it.
  */
@@ -364,9 +366,10 @@ class KeysManager(
         val typing = isTextField(event.target)
         val keymap = _keymap()
 
-        // While the user types, only keys with Ctrl, Alt or Meta act: an Esc or a letter belongs to the field
+        // While the user types, only keys with Ctrl, Alt or Meta act, and an Esc the field did not use: a letter belongs
+        // to the field
         fun pressed(chord: KeyChord): Boolean =
-            chord.matches(event = event, platform = platform) && (!typing || chord.hasCommandModifier)
+            chord.matches(event = event, platform = platform) && (!typing || chord.hasCommandModifier || chord.key == "Escape")
 
         val singles = keymap.actions.filter { action -> keymap.chordsOf(action.id).any { pressed(it) } }.map { it.id }
         val starts = keymap.chordSequences.filter { (_, sequence) -> pressed(sequence.chords.first()) }
