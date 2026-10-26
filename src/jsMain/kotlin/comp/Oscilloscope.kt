@@ -17,6 +17,7 @@ import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.ops.map
 import io.peekandpoke.ultra.streams.ops.switchMapNotNull
+import kotlinx.browser.window
 import kotlinx.css.Color
 import kotlinx.css.height
 import kotlinx.css.pct
@@ -30,6 +31,7 @@ import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.Path2D
 import kotlin.math.abs
 import kotlin.math.pow
+import kotlin.math.roundToInt
 
 @Suppress("FunctionName")
 fun Tag.Oscilloscope(
@@ -82,14 +84,20 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         /** How much of the last frame each new one fades out: the afterglow. */
         private const val AFTERGLOW_FADE = 0.66
 
-        /** How far below the lit top the string's shade shows, in pixels. */
-        private const val STRING_SHADE_OFFSET = 1.5
+        /** How far below the string's body its shade shows, in CSS pixels. */
+        private const val STRING_SHADE_OFFSET = 1.0
 
         /** How much darker the string's shade is than the trace's colour, in percent. */
         private const val STRING_SHADE_DARKEN = 55
 
-        /** How much brighter the string's lit top is than the trace's colour, in percent. */
-        private const val STRING_TOP_LIGHTEN = 35
+        /** How far above the body's middle the highlight runs, in CSS pixels. */
+        private const val STRING_HIGHLIGHT_OFFSET = 0.5
+
+        /** How much brighter the highlight is than the trace's colour, in percent. */
+        private const val STRING_HIGHLIGHT_LIGHTEN = 40
+
+        /** The highlight's width, as a share of the string's. */
+        private const val STRING_HIGHLIGHT_WIDTH = 0.45
 
         private val idleBuffer = Float32Array(IDLE_FRAME_SIZE)
     }
@@ -100,6 +108,10 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
 
     private var canvas: HTMLCanvasElement? = null
     private var ctx2d: CanvasRenderingContext2D? = null
+
+    /** The canvas's size in CSS pixels, which the drawing works in. */
+    private var cssWidth = 0
+    private var cssHeight = 0
 
     /** The ease-off per pixel, for the width it was made for. */
     private var deflectionCache: Pair<Int, DoubleArray>? = null
@@ -136,12 +148,9 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
             onMount {
                 dom?.let { container ->
                     canvas = container.querySelector("canvas") as HTMLCanvasElement?
-                    canvas?.let {
-                        it.width = container.clientWidth
-                        it.height = container.clientHeight
-                    }
-
                     ctx2d = canvas?.getContext("2d") as? CanvasRenderingContext2D
+
+                    sizeCanvas(width = container.clientWidth.toDouble(), height = container.clientHeight.toDouble())
                 }
 
                 redraw()
@@ -149,10 +158,7 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
 
             onResize { entries ->
                 for (entry in entries) {
-                    canvas?.let {
-                        it.width = entry.contentRect.width.toInt()
-                        it.height = entry.contentRect.height.toInt()
-                    }
+                    sizeCanvas(width = entry.contentRect.width, height = entry.contentRect.height)
 
                     // A resized canvas is cleared: draw again
                     redraw()
@@ -162,6 +168,25 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
     }
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Sizes the canvas to [width] by [height] CSS pixels, with a backing store at the screen's own resolution, so the
+     * string stays sharp on a dense screen (the maintainer, 2026-10-26: "it appears a bit blurry"); the drawing goes
+     * on in CSS pixels.
+     */
+    private fun sizeCanvas(width: Double, height: Double) {
+        val c = canvas ?: return
+        // NaN-guard: a ratio that is not a positive number counts as 1
+        val ratio = window.devicePixelRatio.takeIf { it > 0.0 } ?: 1.0
+
+        cssWidth = width.toInt()
+        cssHeight = height.toInt()
+        c.width = (width * ratio).roundToInt()
+        c.height = (height * ratio).roundToInt()
+        c.style.width = "${width}px"
+        c.style.height = "${height}px"
+        ctx2d?.setTransform(ratio, 0.0, 0.0, ratio, 0.0, 0.0)
+    }
 
     /** The newest frame of the last waveform, else the idle line. */
     private fun redraw() {
@@ -176,9 +201,8 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
 
     private fun draw(buffer: Float32Array, bufferLength: Int) {
         val ctx = ctx2d ?: return
-        val c = canvas ?: return
-        val width = c.width
-        val centerY = c.height / 2.0
+        val width = cssWidth
+        val centerY = cssHeight / 2.0
 
         ctx.fadeout(AFTERGLOW_FADE)
 
@@ -260,18 +284,22 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         ctx.lineWidth = props.strokeWidth + 5.0
         ctx.stroke(path)
 
-        // A swinging string, lit from above as the gauges' rims are (the maintainer, 2026-10-26): its shade a little
-        // lower and darker, its lit top brighter over it; both shades of the trace's own colour, so they follow the look
-        ctx.save()
-        ctx.translate(0.0, STRING_SHADE_OFFSET)
-        ctx.strokeStyle = props.strokeColor.darken(STRING_SHADE_DARKEN).toString()
-        ctx.lineWidth = props.strokeWidth
-        ctx.stroke(path)
-        ctx.restore()
-
-        ctx.strokeStyle = props.strokeColor.lighten(STRING_TOP_LIGHTEN).toString()
-        ctx.lineWidth = props.strokeWidth
-        ctx.stroke(path)
+        // A metal string lit from above, as the gauges' rims are (the maintainer, 2026-10-26: "Brighter on top ...
+        // darker below", "needs a more metallic look"): across its thickness its shade a little lower, its body, and a
+        // thin bright highlight along the top; all of the trace's own colour, so they follow the look
+        strokeShifted(
+            path = path,
+            dy = STRING_SHADE_OFFSET,
+            color = props.strokeColor.darken(STRING_SHADE_DARKEN),
+            width = props.strokeWidth,
+        )
+        strokeShifted(path = path, dy = 0.0, color = props.strokeColor, width = props.strokeWidth)
+        strokeShifted(
+            path = path,
+            dy = -STRING_HIGHLIGHT_OFFSET,
+            color = props.strokeColor.lighten(STRING_HIGHLIGHT_LIGHTEN),
+            width = props.strokeWidth * STRING_HIGHLIGHT_WIDTH,
+        )
     }
 
     /** The ease-off for each pixel of [width]: 1 in the middle, down to 0.02 at the ends. */
@@ -290,9 +318,23 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         return values
     }
 
+    /** Strokes [path] moved down by [dy] CSS pixels (up when negative). */
+    private fun strokeShifted(path: Path2D, dy: Double, color: Color, width: Double) {
+        val ctx = ctx2d ?: return
+
+        ctx.save()
+        ctx.translate(0.0, dy)
+        ctx.strokeStyle = color.toString()
+        ctx.lineWidth = width
+        ctx.stroke(path)
+        ctx.restore()
+    }
+
     private fun CanvasRenderingContext2D.fadeout(amount: Double) {
         save()
 
+        // The whole backing store, whatever the drawing's scale
+        setTransform(1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
         globalCompositeOperation = "destination-in"
         fillStyle = Color.black.withAlpha(1.0 - amount).toString()
         fillRect(0.0, 0.0, canvas.width.toDouble(), canvas.height.toDouble())
