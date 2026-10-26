@@ -1,6 +1,6 @@
 # KLANG-00343: UI tests, step 1: browser tests in the app module (router, areas, workbench layout)
 
-> **Status (2026-10-26): SCHEDULED.** The maintainer: "Yes please open a ticket for the ui tests"
+> **Status (2026-10-26): IN PROGRESS.** started
 >
 > **Part of:** KLANG-00342 (UI tests: the app's screens under test)
 
@@ -37,3 +37,4 @@ The app module has no browser tests (KLANG-00342). This step sets them up and co
 ## History
 
 - 2026-10-26: created.
+- 2026-10-26: IN PROGRESS. started

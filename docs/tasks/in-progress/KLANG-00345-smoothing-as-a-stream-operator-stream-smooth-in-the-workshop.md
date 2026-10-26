@@ -76,3 +76,5 @@ spectrum's columns, the start page's dyno run), testable with a clock driven by 
 - 2026-10-26: reviewed in two rounds (the second clean), committed; the hash sent to Ultra.
 - 2026-10-26: handed over to Ultra (Ultra-Main-Dev): ULTRA-00242, with the round 1 fixes; Ultra takes the source
   from Klang's commit and keeps the signature `smooth(sharePer10Ms, rest, near, clock)`, so moving to it is an import.
+- 2026-10-26: waiting for Ultra v0.116.0 (the maintainer: "We are waiting for ultra v0.116.0 and then we can adopt
+  it's .smooth() function and clean up ours"): then the import moves to Ultra's and `workshop/streams` goes.
