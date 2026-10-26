@@ -449,3 +449,9 @@ OkCancel real buttons and focus; their Esc stays ours until the key map carries 
 - 2026-10-26: step 3c's MINORs fixed: a code tool's undo and redo answer only while they have something to take back
   (else the key goes on to a text field's own undo), Ctrl+Shift+Z redoes there too (tested); three open points
   recorded above. Review (level 1) round 1 clean; 2 mutants killed.
+- 2026-10-26: the editor's keys overview by function (maintainer: "start to organize a bit by function groups, it
+  becomes hard to see at once"): Navigate, Edit, Select, Find and help, side by side, wrapping onto a second row in a
+  narrow editor; every key of the table but the completion list's and Tab moves the focus. The workshop's overview
+  takes `KeyOverviewRow.Heading`, which cuts the rows into sections; its plain look draws a heading over each. Review
+  (level 1): round 1 one MAJOR (the overview could not shrink, so its left sections were cut off in a narrow editor),
+  fixed; round 2 clean. 5 mutants killed. Open for the maintainer's eye: Completion under "Find and help" or "Edit".

@@ -144,14 +144,17 @@ class EditorKeysCorner(ctx: Ctx<Props>) : Component<EditorKeysCorner.Props>(ctx)
 
             // Under a modal, and in a page fading out after a navigation (inert), the bookmarks wait
             if (hintsShown && topLayer === layer && dom?.closest("[inert]") == null) {
+                // At most 40% of the corner, so the keys overview keeps room for its sections side by side
                 div {
-                    style = "min-width: 0; flex: 0 1 auto"
+                    style = "min-width: 0; max-width: 40%; flex: 0 1 auto"
                     renderBookmarks()
                 }
             }
 
+            // May shrink: its sections then wrap onto a second row, the widest section the least it takes (its min-content,
+            // which a min-width of 0 would give away)
             div {
-                style = "flex: 0 0 auto"
+                style = "flex: 0 1 auto"
                 KeyBindingsOverlay(bindings = KlangEditorKeyBindings, title = "Editor", renderer = KlangKeyHint.overview)
             }
         }

@@ -11,6 +11,7 @@ import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.KlangKeyPriorities
+import io.peekandpoke.klang.workshop.keys.KeyOverviewRow
 import io.peekandpoke.klang.workshop.keys.KeyOverviewState
 import io.peekandpoke.klang.workshop.keys.KeyPlatform
 import io.peekandpoke.klang.workshop.keys.Keymap
@@ -42,11 +43,27 @@ class KlangEditorKeyBindingsSpec : StringSpec({
         entries.first { it.title == "Set bookmark" }.keys shouldBe listOf(listOf(listOf("⌃", "⇧", "0…9")))
     }
 
-    "the overview ends with the page's key back into the editor: Focus editor, Esc" {
+    "the overview reads by function, every key of the table in it but the completion list's and Tab's focus key" {
         val keymap = Keymap(platform = KeyPlatform.Pc, actions = KlangKeyBindings.actions + KlangEditorKeyBindings.actions)
-        val entries = KeyOverviewState.of(title = null, rows = KlangEditorKeyBindings.overview, keymap = keymap).entries
+        val state = KeyOverviewState.of(title = null, rows = KlangEditorKeyBindings.overview, keymap = keymap)
 
-        entries.last() shouldBe KeyOverviewState.Entry(title = "Focus editor", keys = listOf(listOf(listOf("Esc"))))
+        state.sections.map { it.title } shouldBe listOf("Navigate", "Edit", "Select", "Find and help")
+
+        withClue("Navigate ends with the page's key back into the editor: Focus editor, Esc") {
+            state.sections[0].entries.last() shouldBe KeyOverviewState.Entry(title = "Focus editor", keys = listOf(listOf(listOf("Esc"))))
+        }
+
+        val shown = KlangEditorKeyBindings.overview.flatMap { row ->
+            when (row) {
+                is KeyOverviewRow.Single -> listOf(row.action)
+                is KeyOverviewRow.Group -> row.group.actions
+                is KeyOverviewRow.Heading -> emptyList()
+            }
+        }
+
+        with(KlangEditorKeyBindings) {
+            actions.filterNot { it in shown }.map { it.id } shouldBe listOf(AcceptCompletion, CloseCompletion, TabMovesFocus).map { it.id }
+        }
     }
 
     "the bookmark keys are the decided ones: Ctrl with the digits 0 to 9, Ctrl+Shift to set (KLANG-00323)" {

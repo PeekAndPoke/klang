@@ -92,7 +92,7 @@ object KeyHints {
         }
     }
 
-    /** A plain dark panel: each row's title, and its keys in key caps. */
+    /** A plain dark panel: each section's heading over its rows, each row's title and its keys in key caps. */
     val overview: KeyOverviewRenderer = { state ->
         div(classes = OVERVIEW_CLASS) {
             style = listOf(
@@ -115,18 +115,27 @@ object KeyHints {
                 }
             }
 
-            state.entries.forEach { entry ->
-                span { +entry.title }
+            state.sections.forEach { section ->
+                section.title?.let { heading ->
+                    div {
+                        style = "grid-column: 1 / span 2; margin-top: 4px; color: #999"
+                        +heading
+                    }
+                }
 
-                span {
-                    style = "display: inline-flex; gap: 6px; justify-self: end"
+                section.entries.forEach { entry ->
+                    span { +entry.title }
 
-                    entry.keys.forEachIndexed { index, groups ->
-                        if (index > 0) {
-                            +"/"
+                    span {
+                        style = "display: inline-flex; gap: 6px; justify-self: end"
+
+                        entry.keys.forEachIndexed { index, groups ->
+                            if (index > 0) {
+                                +"/"
+                            }
+
+                            capsGroups(groups = groups)
                         }
-
-                        capsGroups(groups = groups)
                     }
                 }
             }

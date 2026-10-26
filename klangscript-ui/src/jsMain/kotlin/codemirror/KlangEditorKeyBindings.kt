@@ -169,27 +169,55 @@ object KlangEditorKeyBindings : KeyBindings {
         GoToDefinition, QuickDocumentation, BackToLastEdit,
     ) + GoToBookmark + SetBookmark + listOf(TabMovesFocus)
 
+    /**
+     * The overview, by function (maintainer, 2026-10-26: "start to organize a bit by function groups, it becomes hard
+     * to see at once"): moving around, editing, selecting, finding and help. Left out: the completion list's keys
+     * (Enter, Tab, Esc), which show where they act, and Tab moves the focus, a rare toggle for keyboard users.
+     */
     override val overview: List<KeyOverviewRow> = listOf(
+        KeyOverviewRow.Heading("Navigate"),
         KeyOverviewRow.Single(BackToLastEdit),
         KeyOverviewRow.Group(KeyActionGroup(title = "Go to bookmark", actions = GoToBookmark)),
         KeyOverviewRow.Group(KeyActionGroup(title = "Set bookmark", actions = SetBookmark)),
-        KeyOverviewRow.Single(Undo),
-        KeyOverviewRow.Single(Redo),
-        KeyOverviewRow.Single(LineComment),
-        KeyOverviewRow.Single(DuplicateLine),
-        KeyOverviewRow.Single(MoveLineUp),
-        KeyOverviewRow.Single(MoveLineDown),
-        KeyOverviewRow.Single(SelectNextOccurrence),
-        KeyOverviewRow.Single(Reformat),
-        KeyOverviewRow.Single(Find),
-        KeyOverviewRow.Single(Replace),
         KeyOverviewRow.Single(GoToLine),
         KeyOverviewRow.Single(GoToDefinition),
-        KeyOverviewRow.Single(QuickDocumentation),
-        KeyOverviewRow.Single(Completion),
+        KeyOverviewRow.Single(MatchingBracket),
         KeyOverviewRow.Single(NextProblem),
+        KeyOverviewRow.Single(PreviousProblem),
         // The song page's key that brings the keyboard back here (KlangKeyBindings, maintainer 2026-10-26); only the
         // song page shows this overview, and only it handles the key
         KeyOverviewRow.Single(KlangKeyBindings.FocusEditor),
+
+        KeyOverviewRow.Heading("Edit"),
+        KeyOverviewRow.Single(Undo),
+        KeyOverviewRow.Single(Redo),
+        KeyOverviewRow.Single(DuplicateLine),
+        KeyOverviewRow.Single(MoveLineUp),
+        KeyOverviewRow.Single(MoveLineDown),
+        KeyOverviewRow.Single(StartNewLine),
+        KeyOverviewRow.Single(SplitLine),
+        KeyOverviewRow.Single(Indent),
+        KeyOverviewRow.Single(Unindent),
+        KeyOverviewRow.Single(LineComment),
+        KeyOverviewRow.Single(BlockComment),
+        KeyOverviewRow.Single(Reformat),
+
+        KeyOverviewRow.Heading("Select"),
+        KeyOverviewRow.Single(SelectNextOccurrence),
+        KeyOverviewRow.Single(UnselectOccurrence),
+        KeyOverviewRow.Single(SelectAllOccurrences),
+        KeyOverviewRow.Single(ExpandSelection),
+        KeyOverviewRow.Single(SelectLine),
+        KeyOverviewRow.Single(AddCursorAbove),
+        KeyOverviewRow.Single(AddCursorBelow),
+        KeyOverviewRow.Single(BackToOneCursor),
+
+        KeyOverviewRow.Heading("Find and help"),
+        KeyOverviewRow.Single(Find),
+        KeyOverviewRow.Single(Replace),
+        KeyOverviewRow.Single(FindNext),
+        KeyOverviewRow.Single(FindPrevious),
+        KeyOverviewRow.Single(Completion),
+        KeyOverviewRow.Single(QuickDocumentation),
     )
 }

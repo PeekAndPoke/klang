@@ -10,6 +10,7 @@ import io.peekandpoke.klang.workshop.keys.KeyCapGlyphs.keyCapGlyph
 import io.peekandpoke.klang.workshop.keys.KeyChord
 import io.peekandpoke.klang.workshop.keys.KeyHintRenderer
 import io.peekandpoke.klang.workshop.keys.KeyOverviewRenderer
+import io.peekandpoke.klang.workshop.keys.KeyOverviewState
 import io.peekandpoke.klang.workshop.keys.KeyWaitingRenderer
 import kotlinx.html.FlowContent
 import kotlinx.html.div
@@ -175,25 +176,50 @@ object KlangKeyHint {
         }
     }
 
+    /**
+     * The keys overview in Klang's look: one panel, its sections side by side (each a heading over its rows, the title
+     * left and the keys right), so a long overview stays short and reads by function. Without sections, one column.
+     */
     val overview: KeyOverviewRenderer = { state ->
-        panel(title = state.title, columns = 2) {
-            state.entries.forEach { entry ->
-                span { +entry.title }
+        panel(title = state.title, columns = 1) {
+            div {
+                style = "display: flex; flex-wrap: wrap; align-items: flex-start; gap: 6px 20px"
 
-                span {
-                    style = "display: inline-flex; align-items: center; gap: 6px; justify-self: end"
+                state.sections.forEach { section ->
+                    div {
+                        style = "display: grid; grid-template-columns: auto auto; column-gap: 16px; row-gap: 5px; align-items: center"
 
-                    entry.keys.forEachIndexed { index, groups ->
-                        if (index > 0) {
-                            span {
-                                style = "color: ${KlangTheme.Hex.textTertiary}"
-                                +"/"
+                        section.title?.let { heading ->
+                            div {
+                                style = "grid-column: 1 / -1; color: ${KlangTheme.Hex.accent}; font-size: 11px; " +
+                                    "text-transform: uppercase; letter-spacing: 0.05em"
+                                +heading
                             }
                         }
 
-                        capsGroups(groups = groups)
+                        section.entries.forEach { entry -> entryRow(entry) }
                     }
                 }
+            }
+        }
+    }
+
+    /** One row of an overview: its title, and its keys right-aligned, the ways to press it apart by a slash. */
+    private fun FlowContent.entryRow(entry: KeyOverviewState.Entry) {
+        span { +entry.title }
+
+        span {
+            style = "display: inline-flex; align-items: center; gap: 6px; justify-self: end"
+
+            entry.keys.forEachIndexed { index, groups ->
+                if (index > 0) {
+                    span {
+                        style = "color: ${KlangTheme.Hex.textTertiary}"
+                        +"/"
+                    }
+                }
+
+                capsGroups(groups = groups)
             }
         }
     }

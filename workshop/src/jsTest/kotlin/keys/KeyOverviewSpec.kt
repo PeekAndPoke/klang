@@ -2,6 +2,8 @@ package io.peekandpoke.klang.workshop.keys
 
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.ints.shouldBeGreaterThan
+import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.kraft.testing.TestBed
 import io.peekandpoke.kraft.testing.eventually
@@ -36,6 +38,26 @@ class KeyOverviewSpec : StringSpec({
             KeyOverviewState.Entry(title = "Save", keys = listOf(listOf(listOf("Ctrl", "S")))),
             KeyOverviewState.Entry(title = "Go to", keys = listOf(listOf(listOf("Ctrl", "1…9")))),
         )
+    }
+
+    "headings cut the rows into sections; rows before the first heading go untitled, a section without rows is left out" {
+        val rows = listOf(
+            KeyOverviewRow.Single(save),
+            KeyOverviewRow.Heading("Empty"),
+            KeyOverviewRow.Heading("Jump"),
+            KeyOverviewRow.Group(KeyActionGroup(title = "Go to", actions = goTo)),
+        )
+        val state = overviewOf(rows = rows)
+
+        state.sections.map { it.title to it.entries.map { entry -> entry.title } } shouldBe listOf(
+            null to listOf("Save"),
+            "Jump" to listOf("Go to"),
+        )
+        state.entries.map { it.title } shouldBe listOf("Save", "Go to")
+
+        withClue("a section whose rows all lost their keys is left out too") {
+            overviewOf(userKeys = mapOf("save" to emptyList()), rows = rows).sections.map { it.title } shouldBe listOf("Jump")
+        }
     }
 
     "a row without any key is left out" {
@@ -103,6 +125,36 @@ class KeyOverviewSpec : StringSpec({
                 eventually {
                     document.querySelectorAll(".row").length shouldBe 0
                 }
+            }
+        } finally {
+            manager.dispose()
+        }
+    }
+
+    "the plain look draws each heading before its section's rows" {
+        val headed = object : KeyBindings {
+            override val actions = bag.actions
+            override val overview = listOf(
+                KeyOverviewRow.Single(save),
+                KeyOverviewRow.Heading("Jump"),
+                KeyOverviewRow.Group(KeyActionGroup(title = "Go to", actions = goTo)),
+            )
+        }
+        val manager = KeysManager(platform = pc, hintDelayMs = 10).apply { define(headed) }
+
+        try {
+            TestBed.preact(appSetup = { keys(manager) }, view = { KeyBindingsOverlay(bindings = headed) }) {
+                document.body!!.dispatchEvent(keyEvent(key = "Control", code = "ControlLeft", ctrl = true))
+
+                eventually {
+                    val text = document.querySelector(".${KeyHints.OVERVIEW_CLASS}")?.textContent.orEmpty()
+
+                    text.indexOf("Save") shouldBeGreaterThanOrEqual 0
+                    text.indexOf("Jump") shouldBeGreaterThan text.indexOf("Save")
+                    text.indexOf("Go to") shouldBeGreaterThan text.indexOf("Jump")
+                }
+
+                document.body!!.dispatchEvent(keyEvent(key = "Control", code = "ControlLeft", type = "keyup"))
             }
         } finally {
             manager.dispose()

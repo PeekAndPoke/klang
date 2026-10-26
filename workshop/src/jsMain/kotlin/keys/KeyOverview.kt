@@ -17,7 +17,10 @@ data class KeyActionGroup(
     val actions: List<KeyAction>,
 )
 
-/** One row of a [KeyBindings]' overview: one action, or a [KeyActionGroup]. */
+/**
+ * One row of a [KeyBindings]' overview: one action, a [KeyActionGroup], or a [Heading] that starts a section of rows
+ * that belong together ("Edit", "Navigate"), so a long overview reads by function.
+ */
 sealed interface KeyOverviewRow {
     val title: String
 
@@ -28,6 +31,9 @@ sealed interface KeyOverviewRow {
     data class Group(val group: KeyActionGroup) : KeyOverviewRow {
         override val title: String get() = group.title
     }
+
+    /** Starts a section: the rows after it, up to the next heading, belong to it. */
+    data class Heading(override val title: String) : KeyOverviewRow
 }
 
 /**
@@ -38,22 +44,54 @@ sealed interface KeyOverviewRow {
  */
 data class KeyOverviewState(
     val title: String?,
-    val entries: List<Entry>,
+    val sections: List<Section>,
 ) {
     data class Entry(val title: String, val keys: List<List<List<String>>>)
+
+    /** The rows under one heading ([title]), or before the first one (no title). */
+    data class Section(val title: String?, val entries: List<Entry>)
+
+    /** Every row, the sections one after the other: for a look that draws no headings. */
+    val entries: List<Entry> get() = sections.flatMap { it.entries }
 
     companion object {
         /** The overview of [rows] in [keymap], the key caps compact or not. */
         fun of(title: String?, rows: List<KeyOverviewRow>, keymap: Keymap, compact: Boolean = true): KeyOverviewState =
-            KeyOverviewState(
-                title = title,
-                // A row without any key (the user took them all off) says nothing: it is left out
-                entries = rows
-                    .map { row -> Entry(title = row.title, keys = keysOf(row = row, keymap = keymap, compact = compact)) }
-                    .filter { it.keys.isNotEmpty() },
-            )
+            KeyOverviewState(title = title, sections = sectionsOf(rows = rows, keymap = keymap, compact = compact))
+
+        /**
+         * [rows] cut into sections at each heading. A row without any key (the user took them all off) says nothing,
+         * and neither does a section left without rows: both are left out.
+         */
+        private fun sectionsOf(rows: List<KeyOverviewRow>, keymap: Keymap, compact: Boolean): List<Section> {
+            val titles = mutableListOf<String?>(null)
+            val entries = mutableListOf(mutableListOf<Entry>())
+
+            rows.forEach { row ->
+                when (row) {
+                    is KeyOverviewRow.Heading -> {
+                        titles.add(row.title)
+                        entries.add(mutableListOf())
+                    }
+
+                    is KeyOverviewRow.Single, is KeyOverviewRow.Group -> {
+                        val keys = keysOf(row = row, keymap = keymap, compact = compact)
+
+                        if (keys.isNotEmpty()) {
+                            entries.last().add(Entry(title = row.title, keys = keys))
+                        }
+                    }
+                }
+            }
+
+            return titles.zip(entries) { title, rowsOfSection -> Section(title = title, entries = rowsOfSection) }
+                .filter { it.entries.isNotEmpty() }
+        }
 
         private fun keysOf(row: KeyOverviewRow, keymap: Keymap, compact: Boolean): List<List<List<String>>> = when (row) {
+            // A heading has no keys; sectionsOf never asks for them, the branch keeps the when exhaustive
+            is KeyOverviewRow.Heading -> emptyList()
+
             is KeyOverviewRow.Single ->
                 keymap.bindingsOf(row.action.id).take(1).map { it.keyGroups(platform = keymap.platform, compact = compact) }
 
