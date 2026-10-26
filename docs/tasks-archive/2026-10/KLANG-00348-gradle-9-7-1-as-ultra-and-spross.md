@@ -1,6 +1,6 @@
 # KLANG-00348: Gradle 9.7.1, as Ultra and spross
 
-> **Status (2026-10-26): IN PROGRESS.** started; the build handed over by Klang-Main-Dev
+> **Status (2026-10-26): DONE.** Gradle 9.7.1, reviewed in two rounds (the second clean)
 
 ## Why this exists
 
@@ -73,3 +73,4 @@ machine, so the pair is proven.
 - 2026-10-26: done: Gradle 9.7.1, reviewed in two rounds (the second clean); the build back to Klang-Main-Dev; the
   maintainer reloads the Gradle project in the IDE.
 - 2026-10-26: IN PROGRESS. started; the build handed over by Klang-Main-Dev
+- 2026-10-26: DONE. Gradle 9.7.1, reviewed in two rounds (the second clean)
