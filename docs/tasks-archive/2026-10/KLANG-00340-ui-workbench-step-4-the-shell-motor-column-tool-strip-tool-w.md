@@ -1,6 +1,6 @@
 # KLANG-00340: UI workbench, step 4: the shell (Motor column, tool strip, tool windows, bottom panel)
 
-> **Status (2026-10-25): IN PROGRESS.** Step 4 of the UI workbench, the maintainer's go 2026-10-25
+> **Status (2026-10-26): DONE.** the maintainer: "The button aligns well", the Motor's spacing taken in, "Please continue with next steps", 2026-10-26
 >
 > **Part of:** KLANG-00334 (UI workbench)
 
@@ -79,3 +79,4 @@ panel (item 9), the Motor button opening the drawer with the destinations and th
   had none. Now 0.75rem above the gauges and a floor under the scope (the frame 11.5rem); the spectrum rises from the
   floor to the scope's top, as with the title. A layout constant judged by eye, so no review round. The maintainer:
   "Please continue with next steps"; the spectrum is judged with a song playing in the next step.
+- 2026-10-26: DONE. the maintainer: "The button aligns well", the Motor's spacing taken in, "Please continue with next steps", 2026-10-26

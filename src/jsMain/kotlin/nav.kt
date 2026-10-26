@@ -6,8 +6,8 @@
 package io.peekandpoke.klang
 
 import io.peekandpoke.klang.layouts.FullscreenLayout
-import io.peekandpoke.klang.layouts.MenuLayout
 import io.peekandpoke.klang.layouts.MotorBackgroundLayout
+import io.peekandpoke.klang.layouts.WorkbenchLayout
 import io.peekandpoke.klang.pages.CodeSongPage
 import io.peekandpoke.klang.pages.CreditsPage
 import io.peekandpoke.klang.pages.DashboardPage
@@ -19,7 +19,6 @@ import io.peekandpoke.klang.pages.SamplesLibraryPage
 import io.peekandpoke.klang.pages.StartPage
 import io.peekandpoke.klang.pages.TourPage
 import io.peekandpoke.klang.pages.UiKitchenSinkPage
-import io.peekandpoke.klang.pages.WorkbenchLabPage
 import io.peekandpoke.klang.pages.docs.DocsPage
 import io.peekandpoke.klang.pages.docs.KlangScriptDocsPage
 import io.peekandpoke.klang.pages.docs.KlangScriptLibraryDocsPage
@@ -86,9 +85,6 @@ object Nav {
 
     /** Every UI element in every state (KLANG-00337). */
     val uiKitchenSink = Static("/debug/ui-kitchen-sink")
-
-    /** The workbench shell in the lab, before the app's pages move into it (KLANG-00340). */
-    val workbenchLab = Static("/debug/workbench")
 }
 
 fun RootRouterBuilder.mountNav() {
@@ -101,10 +97,9 @@ fun RootRouterBuilder.mountNav() {
     layout({ FullscreenLayout { it() } }) {
         mount(Nav.tour) { TourPage() }
         mount(Nav.uiKitchenSink) { UiKitchenSinkPage() }
-        mount(Nav.workbenchLab) { WorkbenchLabPage() }
     }
 
-    layout({ MenuLayout { it() } }) {
+    layout({ WorkbenchLayout { it() } }) {
 
         mount(Nav.dashboard) { DashboardPage() }
 

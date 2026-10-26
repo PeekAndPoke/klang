@@ -59,7 +59,7 @@ Portability findings (all checked, not guessed):
 
 ### C. UI (mechanical)
 
-- `Nav.benchmarks = Static("/benchmarks")` + `mount()` in the MenuLayout block of `nav.kt`.
+- `Nav.benchmarks = Static("/benchmarks")` + `mount()` in the WorkbenchLayout block of `nav.kt`.
 - `SidebarMenu`: `State.Benchmarks` object, item in `renderDefaultMenu()` (next to Samples Library /
   Credits), arm in `inferState()`, and add to the "More is selected" list (`State.Main ->` branch).
 - `BenchmarksPage`: suite cards + Run / Run All, progress line (suite, case x/y, pass), result tables

@@ -33,7 +33,6 @@ import kotlinx.css.display
 import kotlinx.css.fontFamily
 import kotlinx.css.fontSize
 import kotlinx.css.fontWeight
-import kotlinx.css.height
 import kotlinx.css.justifyContent
 import kotlinx.css.lineHeight
 import kotlinx.css.marginLeft
@@ -58,8 +57,8 @@ fun Tag.PlayerWarehouseStats() = comp {
 
 /**
  * The resource warehouse's stats, the way the backend keeps them: what it holds and what happened
- * to it (KLANG-00177 (warehouse stats feed)). Rendered in the Motor's title slot when the
- * title is clicked, in place of the word, at exactly the slot's height so nothing else moves.
+ * to it (KLANG-00177 (warehouse stats feed)). Shown in the workbench's Motor tool window
+ * (KLANG-00341).
  *
  * The snapshot rides every `Diagnostics`; the backend rebuilds it only when a part changed, so
  * this component only reads the latest one.
@@ -86,10 +85,9 @@ class PlayerWarehouseStats(ctx: NoProps) : PureComponent(ctx) {
 
         div {
             css {
-                height = Motor.TITLE_HEIGHT
                 display = Display.flex
                 justifyContent = JustifyContent.center
-                // A solid ground at 80 % over the spectrum, or the numbers cannot be read.
+                // A solid ground at 80 %, so the numbers read on any look.
                 backgroundColor = Color("${KlangTheme.Hex.panelBackground}CC")
                 borderRadius = 0.3.rem
                 padding = Padding(vertical = 0.2.rem, horizontal = 0.5.rem)
@@ -112,7 +110,7 @@ class PlayerWarehouseStats(ctx: NoProps) : PureComponent(ctx) {
                 return@div
             }
 
-            // Two columns of four lines each — the height of the title slot. Every number carries
+            // Two columns of four lines each. Every number carries
             // its own hover hint; the labels say what the row is about.
             div {
                 css { marginRight = 0.9.rem }

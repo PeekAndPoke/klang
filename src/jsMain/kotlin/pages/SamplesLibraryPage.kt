@@ -39,8 +39,8 @@ import kotlinx.css.minHeight
 import kotlinx.css.overflow
 import kotlinx.css.overflowY
 import kotlinx.css.paddingBottom
+import kotlinx.css.pct
 import kotlinx.css.px
-import kotlinx.css.vh
 import kotlinx.html.DIV
 import kotlinx.html.InputType
 import kotlinx.html.Tag
@@ -187,7 +187,8 @@ class SamplesLibraryPage(ctx: NoProps) : PureComponent(ctx) {
             css {
                 display = Display.flex
                 flexDirection = FlexDirection.column
-                height = 100.vh
+                // The workbench's content height, which a bottom panel may share
+                height = 100.pct
                 overflow = Overflow.hidden
             }
 

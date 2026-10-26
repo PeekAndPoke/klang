@@ -6,7 +6,6 @@
 package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.Player
-import io.peekandpoke.klang.version
 import io.peekandpoke.klang.ui.comp.KlangWorkbench
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
@@ -14,131 +13,81 @@ import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
-import io.peekandpoke.ultra.html.onClick
-import io.peekandpoke.ultra.semanticui.ui
-import kotlinx.css.Color
-import kotlinx.css.Cursor
-import kotlinx.css.Display
-import kotlinx.css.FlexDirection
-import kotlinx.css.FontWeight
-import kotlinx.css.JustifyContent
 import kotlinx.css.PointerEvents
 import kotlinx.css.Position
 import kotlinx.css.TextAlign
-import kotlinx.css.WhiteSpace
 import kotlinx.css.bottom
-import kotlinx.css.color
-import kotlinx.css.cursor
-import kotlinx.css.display
-import kotlinx.css.em
-import kotlinx.css.flexDirection
-import kotlinx.css.fontFamily
-import kotlinx.css.fontWeight
 import kotlinx.css.height
-import kotlinx.css.justifyContent
 import kotlinx.css.left
-import kotlinx.css.lineHeight
 import kotlinx.css.opacity
 import kotlinx.css.pct
 import kotlinx.css.pointerEvents
 import kotlinx.css.position
-import kotlinx.css.properties.LineHeight
 import kotlinx.css.rem
 import kotlinx.css.right
 import kotlinx.css.textAlign
 import kotlinx.css.top
-import kotlinx.css.whiteSpace
 import kotlinx.css.width
 import kotlinx.css.zIndex
 import kotlinx.html.Tag
 import kotlinx.html.div
-import kotlinx.html.title
 
 @Suppress("FunctionName")
 fun Tag.Motoer(
-    showTitle: Boolean = true,
     menu: KlangWorkbench.Menu? = null,
 ) = comp(
-    Motor.Props(showTitle = showTitle, menu = menu)
+    Motor.Props(menu = menu)
 ) {
     Motor(it)
 }
 
 /**
- * The Motor: the gauges, the oscilloscope, the spectrum behind everything, and the title — which
- * a click swaps for the warehouse stats, and back.
+ * The Motor: the gauges, the oscilloscope, and the spectrum behind them, in the workbench's corner (KLANG-00341). Its
+ * title is written up the workbench's tool strip; its warehouse stats and the build live in the Motor tool window.
  *
- * Every slot is positioned ABSOLUTELY in rem inside a fixed-height frame, so that whatever the
- * title slot shows, the oscilloscope keeps its distance to the bottom (it used to be pushed up by
- * the height of the text below it). The geometry is in the companion; the title slot's height is
- * shared with `PlayerWarehouseStats`, which renders at exactly that height.
+ * Every slot is positioned ABSOLUTELY in rem inside a fixed-height frame; the geometry is in the companion.
  */
 class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
 
     companion object {
-        /** The frame's total height. */
-        val FRAME_HEIGHT = 13.25.rem
+        /** The frame's total height: the inset, the scope's foot (8.75 rem) and a floor under it for the spectrum. */
+        val FRAME_HEIGHT = 11.5.rem
+
+        /** Room above the gauges, so they do not touch the column's edge. */
+        val TOP_INSET = 0.75.rem
 
         /** The top slot: the three gauges and the volume knob (62 px + their glow). */
         val TOP_SLOT_HEIGHT = 4.5.rem
 
-        /** Where the oscilloscope starts and how tall it is — its bottom is fixed at 8.75 rem from the top. */
+        /** Where the oscilloscope starts under the inset and how tall it is. */
         val OSCILLOSCOPE_TOP = 5.0.rem
         val OSCILLOSCOPE_HEIGHT = 3.75.rem
-
-        /**
-         * The title slot, anchored to the bottom: the title sits vertically centred in it; the
-         * warehouse stats, when toggled in, fill it.
-         */
-        val TITLE_HEIGHT = 4.0.rem
-        val TITLE_BOTTOM = 0.25.rem
-
-        /** The spectrum's height, anchored to the bottom, behind everything. */
-        val SPECTRUM_HEIGHT = 8.25.rem
-
-        /** Without the title slot (a workbench): room above the gauges, so they do not touch the column's edge. */
-        val TOP_INSET_WITHOUT_TITLE = 0.75.rem
-
-        /** Without the title slot: the inset, the scope's foot (8.75 rem) and a floor under it for the spectrum. */
-        val FRAME_HEIGHT_WITHOUT_TITLE = 11.5.rem
     }
 
     //  PROPS  //////////////////////////////////////////////////////////////////////////////////////////////////
 
     data class Props(
-        /** The title slot under the scope (KLANGMOTOR, a click shows the warehouse stats); off, the frame is shorter. */
-        val showTitle: Boolean,
-        /** The menu button beside the gauges, opening a workbench's drawer; null for none (the empty spot of old). */
+        /** The menu button beside the gauges, opening a workbench's drawer; null for none (an empty spot). */
         val menu: KlangWorkbench.Menu?,
     )
-
-    //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
-
-    // Build metadata, published as a stream; redraws once it loads so the title tooltip is current.
-    private val versionInfo by subscribingTo(version)
-
-    /** A click on the title swaps it for the warehouse stats; a click on those swaps back. */
-    private var showWarehouse by value(false)
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     override fun VDom.render() {
-        val inset = if (props.showTitle) 0.rem else TOP_INSET_WITHOUT_TITLE
-
         div {
             key = "motor"
 
             css {
                 textAlign = TextAlign.center
                 position = Position.relative
-                height = if (props.showTitle) FRAME_HEIGHT else FRAME_HEIGHT_WITHOUT_TITLE
+                height = FRAME_HEIGHT
             }
 
             div {
                 key = "stats"
                 css {
                     position = Position.absolute
-                    top = inset
+                    top = TOP_INSET
                     left = 0.rem
                     right = 0.rem
                     height = TOP_SLOT_HEIGHT
@@ -151,7 +100,7 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
                 key = "oscilloscope"
                 css {
                     position = Position.absolute
-                    top = OSCILLOSCOPE_TOP + inset
+                    top = OSCILLOSCOPE_TOP + TOP_INSET
                     left = 0.rem
                     right = 0.rem
                     height = OSCILLOSCOPE_HEIGHT
@@ -167,81 +116,17 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
                     zIndex = 1
                     position = Position.absolute
                     pointerEvents = PointerEvents.none
-                    // Anchor to bottom
+                    // From the frame's floor up to the scope's top, behind it
                     bottom = 0.rem
                     left = 0.rem
                     right = 0.rem
-                    // Without the title the spectrum rises from the frame's floor to the scope's top, as with it
-                    height = if (props.showTitle) {
-                        SPECTRUM_HEIGHT
-                    } else {
-                        FRAME_HEIGHT_WITHOUT_TITLE - TOP_INSET_WITHOUT_TITLE - OSCILLOSCOPE_TOP
-                    }
+                    height = FRAME_HEIGHT - TOP_INSET - OSCILLOSCOPE_TOP
                     width = 100.pct
 
                     opacity = 0.66
                 }
 
                 Spectrumeter(numBoxesInStack = 35) { Player.get() }
-            }
-
-            // The title and its warehouse stats; a workbench writes the title up its tool strip instead (KLANG-00340)
-            if (props.showTitle) {
-                div {
-                    key = "title"
-
-                    css {
-                        zIndex = 100
-                        position = Position.absolute
-                        bottom = TITLE_BOTTOM
-                        left = 0.rem
-                        right = 0.rem
-                        height = TITLE_HEIGHT
-                        opacity = 0.95
-                        cursor = Cursor.pointer
-                        // The title sits vertically centred in the slot; the stats fill it.
-                        display = Display.flex
-                        flexDirection = FlexDirection.column
-                        justifyContent = JustifyContent.center
-                    }
-
-                    // A click anywhere in the slot swaps the title for the stats, and back.
-                    onClick { showWarehouse = !showWarehouse }
-
-                    if (showWarehouse) {
-                        PlayerWarehouseStats()
-                    } else {
-                        div {
-                            css {
-                                whiteSpace = WhiteSpace.nowrap
-                                put("text-shadow", "0 0 5px #000")
-                            }
-
-                            // Reveal the build version as a native tooltip on hover
-                            versionInfo.takeIf { it.isAvailable }?.let { info ->
-                                title = buildString {
-                                    append(info.project).append(" v").append(info.version)
-                                    append("\nbranch: ").append(info.gitBranch)
-                                    append("\nrev: ").append(info.gitDesc)
-                                    info.date?.let { append("\nbuilt: ").append(it) }
-                                    append("\n\nclick: warehouse stats")
-                                }
-                            }
-
-                            ui.big.text {
-                                css {
-                                    height = 2.0.em
-                                    fontFamily = "monospace"
-                                    lineHeight = LineHeight("2.0em")
-                                    color = Color.white
-                                    display = Display.inlineBlock
-                                    fontWeight = FontWeight.bold
-                                }
-                                +"KLANGMOTOR"
-                            }
-                        }
-                    }
-                }
             }
         }
     }

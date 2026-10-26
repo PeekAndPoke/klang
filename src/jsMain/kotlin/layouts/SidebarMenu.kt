@@ -7,11 +7,11 @@ package io.peekandpoke.klang.layouts
 
 import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.Nav
-import io.peekandpoke.klang.comp.Motoer
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialDepth
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialDifficulty
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialsListPage
 import io.peekandpoke.klang.pages.docs.tutorials.iconFn
+import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
@@ -25,18 +25,13 @@ import io.peekandpoke.ultra.semanticui.SemanticIconFn
 import io.peekandpoke.ultra.semanticui.icon
 import io.peekandpoke.ultra.semanticui.noui
 import io.peekandpoke.ultra.semanticui.ui
-import kotlinx.css.Align
 import kotlinx.css.Border
 import kotlinx.css.Color
 import kotlinx.css.Cursor
 import kotlinx.css.Display
 import kotlinx.css.FlexDirection
-import kotlinx.css.JustifyContent
-import kotlinx.css.Margin
 import kotlinx.css.Overflow
 import kotlinx.css.Padding
-import kotlinx.css.Position
-import kotlinx.css.alignItems
 import kotlinx.css.backgroundColor
 import kotlinx.css.border
 import kotlinx.css.borderBottomLeftRadius
@@ -49,25 +44,17 @@ import kotlinx.css.cursor
 import kotlinx.css.display
 import kotlinx.css.flexDirection
 import kotlinx.css.flexGrow
-import kotlinx.css.fontSize
-import kotlinx.css.gap
 import kotlinx.css.height
-import kotlinx.css.justifyContent
-import kotlinx.css.margin
 import kotlinx.css.minHeight
 import kotlinx.css.overflowY
 import kotlinx.css.padding
 import kotlinx.css.paddingLeft
 import kotlinx.css.paddingTop
 import kotlinx.css.pct
-import kotlinx.css.position
 import kotlinx.css.px
-import kotlinx.css.width
-import kotlinx.css.zIndex
 import kotlinx.html.DIV
 import kotlinx.html.Tag
 import kotlinx.html.div
-import kotlinx.html.title
 import org.w3c.dom.pointerevents.PointerEvent
 
 @Suppress("FunctionName")
@@ -75,6 +62,10 @@ fun Tag.SidebarMenu() = comp {
     SidebarMenu(it)
 }
 
+/**
+ * The workbench's column (KLANG-00341): the current area's list (the songs, the tutorial filters, the doc sections)
+ * under the area's name. Areas change through the Motor's drawer (`WorkbenchLayout`).
+ */
 class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -82,31 +73,8 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
     private val laf by subscribingTo(KlangTheme)
     private val currentRoute by subscribingTo(router.current)
 
-    private sealed interface State {
-        data object Main : State
-        data object Songs : State
-        data object Samples : State
-        data object MidiPlayground : State
-        data object Resources : State
-        data object Tutorials : State
-        data object Docs : State
-        data object Credits : State
-        data object DevStatus : State
-    }
-
-    private fun inferState(): State = when {
-        currentRoute.route in listOf(Nav.editSongCode, Nav.newSongCode) -> State.Songs
-        currentRoute.route in listOf(Nav.samplesLibrary) -> State.Samples
-        currentRoute.route.pattern.startsWith(Nav.tutorialsBase) -> State.Tutorials
-        currentRoute.route.pattern.startsWith(Nav.manualsBase) -> State.Docs
-        currentRoute.route == Nav.midiPlayground -> State.MidiPlayground
-        currentRoute.route == Nav.resources -> State.Resources
-        currentRoute.route == Nav.credits -> State.Credits
-        currentRoute.route == Nav.devStatus -> State.DevStatus
-        else -> State.Main
-    }
-
-    private var state: State by value(inferState())
+    /** The area the route belongs to; the drawer changes areas, so the column keeps no state of its own. */
+    private val area: AppArea get() = AppArea.of(currentRoute.route)
 
     //  MENU ITEM HELPER  /////////////////////////////////////////////////////////////////////////////////////
 
@@ -134,7 +102,7 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
                     backgroundColor = Color(laf.accentMuted)
                     color = Color.black
                 } else {
-                    // Transparent so the chrome-bg noise grain of the sidebar shows through
+                    // Transparent so the column's ground shows through
                     backgroundColor = Color.transparent
                     color = Color.white
                     borderRadius = 0.px
@@ -170,100 +138,14 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
         ui.vertical.relaxed.list {
             key = "menu-list"
             css {
-                // Tuned by eye — sits just below the editor frame's rounded corner
-                paddingTop = 29.px
+                // Under the area's heading
+                paddingTop = 8.px
                 paddingLeft = 16.px
                 flexGrow = 1.0
                 overflowY = Overflow.auto
                 minHeight = 0.px
             }
             block()
-        }
-    }
-
-    //  ICON BAR  ////////////////////////////////////////////////////////////////////////////////////////////////
-
-    private data class IconBarEntry(
-        val targetState: State,
-        val iconFn: SemanticIconFn,
-        val title: String,
-        val navigate: () -> Unit,
-    )
-
-    private fun DIV.renderIconBar() {
-        val entries = listOf(
-            IconBarEntry(State.Songs, { music }, "Write Songs") {
-                state = State.Songs
-                router.navToUri(Nav.newSongCode())
-            },
-            IconBarEntry(State.Tutorials, { graduation_cap }, "Tutorials") {
-                state = State.Tutorials
-                router.navToUri(Nav.tutorials())
-            },
-            IconBarEntry(State.Docs, { code }, "Documentation") {
-                state = State.Docs
-                router.navToUri(Nav.manuals())
-            },
-            IconBarEntry(State.Main, { ellipsis_horizontal }, "Discover more") {
-                state = State.Main
-            },
-        )
-
-        div {
-            key = "icon-bar"
-            css {
-                display = Display.flex
-                justifyContent = JustifyContent.center
-                gap = 4.px
-                // Aligned by eye with the header bar's control row
-                padding = Padding(15.px, 16.px, 0.px, 16.px)
-            }
-
-            for (entry in entries) {
-                val isSelected = when (entry.targetState) {
-                    // "More" is selected only when we're on Main, Samples, MidiPlayground, Resources, Credits or DevStatus
-                    State.Main -> state in listOf(
-                        State.Main, State.Samples, State.MidiPlayground, State.Resources, State.Credits, State.DevStatus,
-                    )
-                    else -> state == entry.targetState
-                }
-
-                div {
-                    key = "icon-bar-${entry.targetState}"
-                    css {
-                        width = 40.px
-                        height = 40.px
-                        display = Display.flex
-                        alignItems = Align.center
-                        justifyContent = JustifyContent.center
-                        borderRadius = 8.px
-                        cursor = Cursor.pointer
-
-                        if (isSelected) {
-                            backgroundColor = Color.white
-                        } else {
-                            backgroundColor = Color.transparent
-                        }
-                    }
-                    title = entry.title
-                    onClick { evt ->
-                        evt.stopPropagation()
-                        entry.navigate()
-                    }
-
-                    icon.(entry.iconFn)().then {
-                        css {
-                            margin = Margin(0.px)
-                            fontSize = 18.px
-                            if (isSelected) {
-                                put("color", "${laf.accentMuted} !important")
-                            } else {
-                                put("color", "white !important")
-                            }
-                        }
-                    }
-                }
-            }
         }
     }
 
@@ -280,11 +162,6 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
     //  RENDER  ////////////////////////////////////////////////////////////////////////////////////////////////
 
     override fun VDom.render() {
-        // No `chrome-bg` here any more: the background is a separate layer in `MenuLayout`, BELOW
-        // the content scroller's glow window, and this content sits ABOVE it (z-index 2 in the
-        // page's stacking context). `chrome-bg` isolates its stacking, so a background on this
-        // very element would have pinned the menu and the Motor under the glow strip, where they
-        // received no clicks (the Motor's title toggle and the stats' hover hints).
         div {
             key = "sidebar-menu"
             css {
@@ -292,13 +169,22 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
                 height = 100.pct
                 display = Display.flex
                 flexDirection = FlexDirection.column
-                justifyContent = JustifyContent.spaceBetween
-                position = Position.relative
-                zIndex = 2
+            }
+
+            div(classes = KlangControlStyles.heading.toString()) {
+                key = "area-heading"
+                css {
+                    padding = Padding(18.px, 20.px, 0.px, 20.px)
+                }
+                // The smaller areas share one list, so it is named for all of them
+                +when (area) {
+                    AppArea.Midi, AppArea.Resources, AppArea.Credits, AppArea.DevStatus, AppArea.Other -> AppArea.Other.label
+                    AppArea.Songs, AppArea.Learn, AppArea.Docs, AppArea.Samples -> area.label
+                }
             }
 
             div {
-                key = "menu-top"
+                key = "menu-container-$area"
                 css {
                     display = Display.flex
                     flexDirection = FlexDirection.column
@@ -306,61 +192,37 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
                     flexGrow = 1.0
                 }
 
-                renderIconBar()
-
-                div {
-                    key = "menu-container-${state.hashCode()}"
-                    css {
-                        display = Display.flex
-                        flexDirection = FlexDirection.column
-                        minHeight = 0.px
-                        flexGrow = 1.0
-                    }
-                    when (state) {
-                        State.Main, State.MidiPlayground, State.Resources, State.Credits, State.DevStatus -> renderDefaultMenu()
-                        State.Songs -> renderSongsMenu()
-                        State.Samples -> renderSamplesMenu()
-                        State.Tutorials -> renderTutorialsMenu()
-                        State.Docs -> renderDocsMenu()
-                    }
+                when (area) {
+                    AppArea.Songs -> renderSongsMenu()
+                    AppArea.Samples -> renderSamplesMenu()
+                    AppArea.Learn -> renderTutorialsMenu()
+                    AppArea.Docs -> renderDocsMenu()
+                    AppArea.Midi, AppArea.Resources, AppArea.Credits, AppArea.DevStatus, AppArea.Other -> renderDefaultMenu()
                 }
-            }
-
-            div {
-                key = "motor-container"
-                Motoer()
             }
         }
     }
 
     private fun DIV.renderDefaultMenu() {
         menuItemsList {
-            menuItem(state == State.Samples, "Samples Library", { wave_square }) {
-                state = State.Samples
+            menuItem(false, "Samples Library", { wave_square }) {
                 router.navToUri(Nav.samplesLibrary())
             }
-            menuItem(state == State.MidiPlayground, "Midi Playground", { keyboard }) {
-                state = State.MidiPlayground
+            menuItem(area == AppArea.Midi, "Midi Playground", { keyboard }) {
                 router.navToUri(Nav.midiPlayground())
             }
-            menuItem(state == State.Resources, "Resources", { bookmark }) {
-                state = State.Resources
+            menuItem(area == AppArea.Resources, "Resources", { bookmark }) {
                 router.navToUri(Nav.resources())
             }
-            menuItem(state == State.Credits, "Credits", { bullhorn }) {
-                state = State.Credits
+            menuItem(area == AppArea.Credits, "Credits", { bullhorn }) {
                 router.navToUri(Nav.credits())
             }
-            menuItem(state == State.DevStatus, "Dev status", { satellite_dish }) {
-                state = State.DevStatus
+            menuItem(area == AppArea.DevStatus, "Dev status", { satellite_dish }) {
                 router.navToUri(Nav.devStatus())
             }
-            // The page has a full-screen layout of its own, so no menu state stays selected for it
+            // The page has a full-screen layout of its own, so it never shows as selected here
             menuItem(false, "UI kitchen sink", { palette }) {
                 router.navToUri(Nav.uiKitchenSink())
-            }
-            menuItem(false, "Workbench (lab)", { columns }) {
-                router.navToUri(Nav.workbenchLab())
             }
         }
     }

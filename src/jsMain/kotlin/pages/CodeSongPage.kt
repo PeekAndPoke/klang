@@ -61,8 +61,8 @@ import kotlinx.css.overflowX
 import kotlinx.css.overflowY
 import kotlinx.css.padding
 import kotlinx.css.paddingLeft
+import kotlinx.css.pct
 import kotlinx.css.px
-import kotlinx.css.vh
 import kotlinx.css.width
 import kotlinx.html.DIV
 import kotlinx.html.Tag
@@ -225,7 +225,8 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
             css {
                 display = Display.flex
                 flexDirection = FlexDirection.column
-                height = 100.vh
+                // The workbench's content height, which a bottom panel may share
+                height = 100.pct
                 padding = Padding(0.px)
             }
             ui.form {
@@ -235,8 +236,8 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                     flexDirection = FlexDirection.column
                     flex = Flex(1.0, 1.0, FlexBasis.auto)
                     // minHeight 0 (NOT overflow:hidden, which would clip the
-                    // editor's glow) keeps the form from growing past the 100vh
-                    // container — the header stays pinned and only the editor
+                    // editor's glow) keeps the form from growing past the page's
+                    // height: the header stays pinned and only the editor
                     // wrapper scrolls internally.
                     minHeight = 0.px
                 }
@@ -443,8 +444,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                         // Black like the editor surface — otherwise any sub-pixel
                         // gap between the frame and the editor shows page chrome
                         put("background-color", "#000000")
-                        // Soft accent light from the editor's top and left edges —
-                        // dimmed to match the layout's ambient edge light
+                        // Soft accent light from the editor's top and left edges
                         put(
                             "box-shadow",
                             "0 -10px 22px ${laf.accentMuted}2e, -10px 0 22px ${laf.accentMuted}2e"

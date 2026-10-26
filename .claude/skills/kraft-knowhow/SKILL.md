@@ -183,6 +183,11 @@ kraftApp {
   microtask, so an assertion that the old DOM already satisfies ("still closed") passes before the redraw. Wait
   first for a sign of the new render (an attribute the change flips), then assert; for an effect a frame later
   (a focus moved in `requestAnimationFrame`), await the frames, then assert once.
+- **Moving a key boundary keeps alive what used to be fresh** (KLANG-00341, 2026-10-26): when a subtree stops
+  remounting (the layouts kept mounted across pages), list what the remount did implicitly (a scroller's position,
+  the focus, component state, a CSS animation restarted) and redo what must still happen (`RouterWithTransitions`
+  scrolls the scrollers around the page up). A wrapper put between a parent and its child becomes the flex item or
+  the block the child was: give it the child's box (`width: 100%` in a flex row), or the child shrinks.
 
 - **A yes/no question is klangui's `YesNoModal`** (headline, content, `yesText`, `noText`, one `onResult`;
   KLANG-00323, 2026-10-21), not Kraft's `OkCancelModal`: its buttons are divs that cannot take the keyboard.
