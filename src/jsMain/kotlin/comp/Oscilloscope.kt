@@ -84,6 +84,9 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         /** How much of the last frame each new one fades out: the afterglow. */
         private const val AFTERGLOW_FADE = 0.66
 
+        /** How far below the string its shadow falls, in CSS pixels. */
+        private const val STRING_SHADOW_OFFSET = 2.0
+
         /** How far below the string's body its shade shows, in CSS pixels. */
         private const val STRING_SHADE_OFFSET = 1.0
 
@@ -279,10 +282,13 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
             }
         }
 
-        // A dark band behind the trace, for contrast
-        ctx.strokeStyle = Color.black.withAlpha(0.25).toString()
-        ctx.lineWidth = props.strokeWidth + 5.0
-        ctx.stroke(path)
+        // A dark band behind the trace, a little lower, so it reads as the string's shadow (the maintainer, 2026-10-26)
+        strokeShifted(
+            path = path,
+            dy = STRING_SHADOW_OFFSET,
+            color = Color.black.withAlpha(0.25),
+            width = props.strokeWidth + 5.0,
+        )
 
         // A metal string lit from above, as the gauges' rims are (the maintainer, 2026-10-26: "Brighter on top ...
         // darker below", "needs a more metallic look"): across its thickness its shade a little lower, its body, and a
