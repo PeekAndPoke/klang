@@ -6,6 +6,8 @@
 package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.common.math.PerlinNoise2D
+import io.peekandpoke.klang.ui.feel.KlangLook
+import io.peekandpoke.klang.ui.feel.KlangRole
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.addons.registry.AddonRegistry.Companion.addons
 import io.peekandpoke.kraft.addons.threejs.ThreeJs
@@ -39,10 +41,9 @@ import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.events.Event
 import kotlin.math.ceil
-import kotlin.math.cos
+import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
@@ -62,38 +63,57 @@ fun Tag.MotorBackground(
 
 /**
  * Machined panel-grid background in the code page's surface language, with a
- * wandering spotlight whose cone width breathes and whose filament subtly
- * flickers.
+ * spotlight that stands on the centre of the screen (the maintainer, 2026-10-26: "Stop the light from moving ... just
+ * point it at the center of the screen") and whose filament subtly flickers.
  *
  * Pure Kotlin port of the former `motor-background.js` built on the kraft-threejs
- * addon. Exposes [powerOn], [startScan], [stopScan] as a lighting state machine.
+ * addon. While the Motor waits for its key the plate shows in a dim standby light; [powerOn] brings the light up,
+ * [hoverStart] and [hoverEnd] swell it under an element the mouse is over.
  */
 class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
 
     companion object {
-        // Picked once per session so sibling components (e.g. the start-page
-        // power button) can match the eventual background light tint.
-        // laf.bronze (#362820) is a warm overlay-background tone, too dark to
-        // read as a light — substitute a brighter shade in the same hue.
-        val lightColorHex: String by lazy {
-            val brightBronze = "#cd9b6a"
-            val palette = listOf(
-                KlangTheme.Hex.excellent, KlangTheme.Hex.good, KlangTheme.Hex.moderate, KlangTheme.Hex.warning,
-                KlangTheme.Hex.critical, KlangTheme.Hex.gold, brightBronze,
-            )
-            palette.random()
-        }
+        /**
+         * Where KLANGMOTOR's middle sits, as a share of the screen's height from the top: lower than at first, nearer
+         * the start page's gauges (the maintainer, 2026-10-26: "Please move Klangmotor down").
+         */
+        private const val TITLE_CENTER_Y = 0.25
+
+        /** A role's colour as a number for three.js; a value that is not `#rrggbb` takes the role's default. */
+        private fun KlangLook.hexOf(role: KlangRole): Int =
+            parseHex(this[role]) ?: parseHex(role.default) ?: 0x808080
+
+        private fun parseHex(value: String): Int? =
+            value.trim().removePrefix("#").takeIf { it.length == 6 }?.toIntOrNull(16)
     }
 
     ////  ADDON  //////////////////////////////////////////////////////////////////////////////////////////////////
 
     private val threeAddon: ThreeJsAddon? by subscribingTo(addons.threeJs)
-    private val laf by subscribingTo(KlangTheme)
+
+    /**
+     * The look's colours (the maintainer, 2026-10-26: "The background and Klangmotor color needs to fit the theme
+     * colors"): the light shines in the look's metal, so KLANGMOTOR glitters like the gauges' rims; the plate takes the
+     * look's ground. A changed look repaints them at once.
+     */
+    private val look by subscribingTo(KlangTheme.look) { applyLook(it) }
 
     /** 2D Perlin source for the brushed-metal grain — fixed seed keeps the texture reproducible. */
     private val grainNoise = PerlinNoise2D()
 
-    private fun pickLightColor(): Int = lightColorHex.removePrefix("#").toInt(16)
+    /** The light's colour: the look's metal. */
+    private fun lightColor(look: KlangLook): Int = look.hexOf(KlangRole.MetalMid)
+
+    /** The plate's colour: the look's ground; its texture is neutral and only shapes it (seams, grain). */
+    private fun plateColor(look: KlangLook): Int = look.hexOf(KlangRole.GroundApp)
+
+    private fun applyLook(look: KlangLook) {
+        val light = lightColor(look)
+
+        listOfNotNull(ambientLight, mainLight, fillLight).forEach { it.asDynamic().color.setHex(light) }
+        // Raw, as the canvas textures are taken (three would decode a hex int as sRGB, ten times darker here)
+        material?.asDynamic()?.color?.setHex(plateColor(look), "srgb-linear")
+    }
 
     ////  SCENE STATE  ////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -105,6 +125,7 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     private var titleMaterial: MeshStandardMaterial? = null
     private var baseMap: CanvasTexture? = null
     private var mainLight: PointLight? = null
+    private var ambientLight: Any? = null
     private var fillLight: DirectionalLight? = null
 
     private var aspect: Double = 1.0
@@ -113,20 +134,22 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     ////  LIGHTING STATE MACHINE  /////////////////////////////////////////////////////////////////////////////////
 
     private var poweredOn = false
-    private var scanning = false
 
     private val defaultIntensity = 1.62
     private val hoverIntensity = 3.0
+
+    /** The light while the Motor waits for its key: the plate and the title show, dim (the maintainer, 2026-10-26). */
+    private val standbyIntensity = defaultIntensity * 0.18
     private var targetIntensity = 0.0
 
-    // Ceiling for the plate's blend over the menu-colored backdrop — keeps the
-    // background graphic dim enough to not compete with the page content.
-    private val maxPlateOpacity = 0.55
+    // Ceiling for the plate's blend over the black backdrop: the light, not the backdrop, decides how bright it is
+    private val maxPlateOpacity = 0.85
 
-    // Light "radius" — pulling the light further from the plate widens the
-    // illuminated area, so hover reads as the light growing bigger.
-    private val defaultLightZ = 3.2
-    private val hoverLightZ = 3.6
+    // Light "radius": pulling the light further from the plate widens the illuminated area, so hover reads as the light
+    // growing bigger (the maintainer, 2026-10-26, once the plate was as bright as before: "the circle of light is too
+    // big")
+    private val defaultLightZ = 3.0
+    private val hoverLightZ = 3.4
     private var targetLightZ = defaultLightZ
     private var targetFillIntensity = 0.0
 
@@ -134,9 +157,6 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
 
     // Fixed cone size: Z only eases toward the hover/default target.
     private var lightZ = defaultLightZ
-
-    // Slow autonomous Lissajous wander — the light roams the panel grid.
-    private var wanderTime = 0.0
 
     // Eased intensity lives here (not on the light) so the flicker riding on
     // top never pollutes the easing state.
@@ -148,7 +168,6 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     private var sceneCtx: ThreeJsContext? = null
     private var prepared = false
     private var preparing = false
-    private var prepareRequested = false
     private val onPrepared = mutableListOf<() -> Unit>()
 
     /** Rows per macrotask for the chunked per-pixel texture loops. */
@@ -156,6 +175,12 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
 
     /** Panel-grid cell size in texture px — shared by normal map and albedo seams. */
     private val panelCell = 330.0
+
+    /**
+     * Where the panel grid starts in a texture [size] pixels long, so that one panel sits exactly in the middle of the
+     * screen (the maintainer, 2026-10-26): the texture spans the screen, so its middle is the screen's.
+     */
+    private fun gridOrigin(size: Int): Double = ((size / 2.0 - panelCell / 2.0) % panelCell + panelCell) % panelCell
 
     /**
      * Builds the plate + title textures and meshes. The heavy per-pixel loops
@@ -170,7 +195,6 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
             return
         }
         onPrepared.add(onReady)
-        prepareRequested = true
         // Watchdog: if the 3D pipeline never comes up (no WebGL, three.js
         // failed to load), fail soft instead of leaving the boot screen stuck.
         // Only fires when the build has not even STARTED — an in-progress
@@ -198,6 +222,12 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
                     buildMeshes(ctx, addon, normalMap, plateMap, titleAlbedo, titleNormal)
                     prepared = true
                     preparing = false
+
+                    // The plate shows from now on: dim until the Motor is powered on
+                    if (!poweredOn) {
+                        targetIntensity = standbyIntensity
+                    }
+
                     onPrepared.forEach { it() }
                     onPrepared.clear()
                 }
@@ -217,7 +247,7 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     ) {
         val geometry = addon.createPlaneGeometry(2.0 * aspect, 2.0)
         val mat = addon.createMeshStandardMaterial(jsObject {
-            color = 0xffffff            // let the map provide the base color
+            color = 0xffffff            // set to the look's ground below; the map, neutral, shapes it
             roughness = 0.28
             metalness = 0.97
             val d = this.asDynamic()
@@ -227,6 +257,8 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
             d.transparent = true
             d.opacity = 0.0             // fades in with the main light (see animate)
         })
+        // The look's ground, taken raw as the halo around the title is (see applyLook)
+        mat.asDynamic().color.setHex(plateColor(look), "srgb-linear")
         baseMap = plateMap
         val pl = addon.createMesh(geometry, mat)
         ctx.scene.add(pl)
@@ -296,24 +328,15 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         targetFillIntensity = 0.12
     }
 
-    fun startScan() {
-        scanning = true
-    }
-
-    fun stopScan() {
-        scanning = false
-    }
-
     /** Boosts the light and widens the cone. Call from an element's mouse-enter. */
     fun hoverStart() {
         targetIntensity = hoverIntensity
         targetLightZ = hoverLightZ
-        scanning = false
     }
 
     /** Reverts the hover effect. Call from the element's mouse-leave. */
     fun hoverEnd() {
-        targetIntensity = if (poweredOn) defaultIntensity else 0.0
+        targetIntensity = if (poweredOn) defaultIntensity else standbyIntensity
         targetLightZ = defaultLightZ
     }
 
@@ -322,9 +345,8 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     private var failed: Boolean by value(false)
 
     /**
-     * Central fail-soft: ANY 3D-background error drops to the flat
-     * menu-colored fallback and — crucially — releases every [prepare]
-     * waiter, so an unsupported browser can never wedge the start flow.
+     * Central fail-soft: ANY 3D-background error drops to the flat black backdrop and, crucially, releases every
+     * [prepare] waiter, so an unsupported browser can never wedge the start flow.
      */
     private fun markFailed(e: Any?) {
         if (failed) return
@@ -347,7 +369,9 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         div {
             key = "motor-bg"
             style = "position:fixed;top:0;left:0;width:100%;height:100%;" +
-                    "z-index:-1;pointer-events:none;background-color:${laf.menuBackground};"
+                    // Black under the plate: it fades in as the light comes on, and over black it rises as itself, with no
+                    // other colour mixed in (the maintainer, 2026-10-26: "the initial background color must match")
+                    "z-index:-1;pointer-events:none;background-color:#000;"
 
             if (!failed) {
                 ThreeJs(
@@ -398,23 +422,21 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         renderer?.setPixelRatio(min(window.devicePixelRatio, 2.0))
         renderer?.setSize(w, h)
 
-        // No scene background — the canvas stays transparent (alpha = true) so the
-        // menu-colored wrapper div shows through until the plate fades in.
+        // No scene background: the canvas stays transparent (alpha = true), so the black wrapper div shows
+        // through until the plate fades in.
 
-        // The plate + title textures are NOT built here — their per-pixel loops
-        // block the main thread for a noticeable moment, which froze the start
-        // page's power button right after mount. They are built by [prepare]
-        // (row-chunked, UI-friendly) during the start page's loading sequence.
+        // The plate and title textures are built at once, row-chunked by [prepare] so the page stays responsive,
+        // and show in the standby light while the Motor waits for its key
         sceneCtx = ctx
-        if (prepareRequested) {
-            startPrepareIfPossible()
-        }
+        prepare()
 
         // ── Lighting ──
 
-        val lightColor = pickLightColor()
+        val lightColor = lightColor(look)
+        val ambient = addon.createAmbientLight(color = lightColor, intensity = 0.5)
 
-        ctx.scene.add(addon.createAmbientLight(color = lightColor, intensity = 0.5))
+        ctx.scene.add(ambient)
+        ambientLight = ambient
 
         // Start dark — light turns on when powerOn() is called
         val main = addon.createPointLight(color = lightColor, intensity = 0.0, distance = 0.0, decay = 1.0)
@@ -432,13 +454,6 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
 
         // ── Resize ──
         registerResizeListener(addon)
-    }
-
-    @Suppress("unused")
-    private fun createColor(addon: ThreeJsAddon, hex: Int): dynamic {
-        @Suppress("unused", "UNUSED_VARIABLE")
-        val ctor = addon.raw.Color
-        return js("new ctor(hex)")
     }
 
     ////  LISTENERS  //////////////////////////////////////////////////////////////////////////////////////////////
@@ -514,13 +529,11 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         if (failed) return
         val delta = min(frame.deltaMs, 100.0)
 
-        // The light wanders in a slow Lissajous over the panel grid — the seam
-        // bevels and per-panel tilts catch it as it passes. The cone size stays
-        // FIXED: Z only eases toward the hover/default target, no breathing.
-        wanderTime += delta * 0.001
+        // The light stands on the centre of the screen. The cone size stays FIXED: Z only eases toward the
+        // hover/default target, no breathing
         mainLight?.position?.let { pos ->
-            pos.x = sin(wanderTime * 0.4) * 0.35 * aspect
-            pos.y = cos(wanderTime * 0.33) * 0.15
+            pos.x = 0.0
+            pos.y = 0.0
             lightZ += (targetLightZ - lightZ) * 0.04
             pos.z = lightZ
         }
@@ -534,14 +547,14 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         // not a faulty one.
         flickerTime += delta
         val flicker = 1.0 +
-                grainNoise.noise(flickerTime * 0.0035, 7.7) * 0.05 +
-                grainNoise.noise(flickerTime * 0.021, 3.3) * 0.025
+                // Three times slower than at first (the maintainer, 2026-10-26: "it flickers too often")
+                grainNoise.noise(flickerTime * 0.0012, 7.7) * 0.05 +
+                grainNoise.noise(flickerTime * 0.007, 3.3) * 0.025
         mainLight?.let { it.intensity = currentIntensity * flicker }
 
-        // The plate fades in with the main light — while the light is off the
-        // canvas is transparent and the menu-colored backdrop shows through.
-        // The title overlay is exempt from the dimming cap and stays bright.
-        // Driven by the unflickered intensity so the fade itself stays steady.
+        // The plate fades in with the main light: while the light is off the canvas is transparent and the black
+        // backdrop shows through. The title overlay is exempt from the dimming cap and stays bright. Driven by the
+        // unflickered intensity so the fade itself stays steady.
         val lit = min(1.0, currentIntensity / defaultIntensity)
         material?.asDynamic()?.opacity = maxPlateOpacity * lit
         titleMaterial?.asDynamic()?.opacity = lit
@@ -613,14 +626,15 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         height: Int,
         fillStyle: String,
     ) {
-        val textCy = height * 0.18
+        val textCy = height * TITLE_CENTER_Y
         tctx.fillStyle = fillStyle
         applyTitleTextStyle(tctx, height)
         tctx.fillText("KLANGMOTOR", width / 2.0, textCy)
     }
 
     /**
-     * Albedo map for the plate — uniform dark metal in the menu background tone.
+     * Albedo map for the plate: a neutral white face with darker seams; the material's colour, the look's ground,
+     * tints it.
      * The title lives on its own overlay plane (see [buildTitleOverlayMaps]) so
      * the plate can be dimmed without dimming the title.
      */
@@ -629,16 +643,15 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         cnv.width = width
         cnv.height = height
         val tctx = cnv.getContext("2d") as CanvasRenderingContext2D
-        // Dark like the editor surface, but with enough albedo for the moving
-        // light to sheen and for the plate to read as metal rather than void.
-        tctx.fillStyle = "#1b1d24"
+        // Neutral: the material's colour, the look's ground, tints it (a white face takes that colour as it is)
+        tctx.fillStyle = "#ffffff"
         tctx.fillRect(0.0, 0.0, width.toDouble(), height.toDouble())
 
         // Dark seam lines on the panel grid — albedo crispness on top of the
-        // normal-map bevels.
-        tctx.strokeStyle = "#0d0f13"
+        // normal-map bevels; about half the face's brightness, as they were.
+        tctx.strokeStyle = "#858585"
         tctx.lineWidth = 2.0
-        var gx = 0.0
+        var gx = gridOrigin(width)
         while (gx <= width) {
             tctx.beginPath()
             tctx.moveTo(gx, 0.0)
@@ -646,7 +659,7 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
             tctx.stroke()
             gx += panelCell
         }
-        var gy = 0.0
+        var gy = gridOrigin(height)
         while (gy <= height) {
             tctx.beginPath()
             tctx.moveTo(0.0, gy)
@@ -684,7 +697,7 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         // Clip so the blur halo doesn't bleed below the letter baseline — the
         // bottom edge of the engraving stays sharp.
         val fontSize = (height * 0.135).coerceAtLeast(48.0)
-        val textCy = height * 0.18
+        val textCy = height * TITLE_CENTER_Y
         val textBottomY = textCy + fontSize / 2.0
         tctx.save()
         tctx.beginPath()
@@ -693,7 +706,7 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         // Dark halo first — matches the plate tone, so the bevel ring around the
         // letters has pixels to render on (its width matches the engrave mask blur).
         tctx.asDynamic().filter = "blur(3px)"
-        drawTitleText(tctx, width, height, laf.menuBackground)
+        drawTitleText(tctx, width, height, "#${plateColor(look).toString(16).padStart(6, '0')}")
         // Mid-grey text — with the noise normals and metallic reflection this reads
         // as a faceted glass/crystal inlay. On a metal the albedo IS the reflectance,
         // so this doubles as the brightness knob: dark enough that the facets keep
@@ -812,7 +825,7 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         // Clip so the blur doesn't bleed below the letter baseline — the bottom
         // edge of the relief stays crisp instead of fading into the plate.
         val fontSize = (height * 0.135).coerceAtLeast(48.0)
-        val textCy = height * 0.18
+        val textCy = height * TITLE_CENTER_Y
         val textBottomY = textCy + fontSize / 2.0
         tctx.save()
         tctx.beginPath()
@@ -837,7 +850,7 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     /**
      * Generates the machined panel-grid normal map — near-black panels with
      * sharp V-groove seams and per-panel micro-tilts that react crisply to
-     * the wandering light.
+     * the light.
      *
      * The "KLANGMOTOR" engraving lives on the separate title overlay plane —
      * see [buildTitleOverlayMaps].
@@ -857,7 +870,7 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
 
         val d = data.asDynamic()
 
-        // Machined panel grid — SHARP seams that catch the wandering light.
+        // Machined panel grid: SHARP seams that catch the light.
         // Each seam is a V-groove: its two walls tilt in opposite directions,
         // so one wall flares up while the other darkens as the light passes.
         // Each panel additionally gets a tiny constant tilt of its own, so
@@ -865,16 +878,19 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         // show a crisp step at the seam.
         val seamHalf = 3.0
         val bevel = 0.55
+        val originX = gridOrigin(width)
+        val originY = gridOrigin(height)
 
         runChunked(height, { pyFrom, pyTo ->
         for (py in pyFrom until pyTo) {
             for (px in 0 until width) {
                 val idx = (py * width + px) * 4
 
-                val col = (px / panelCell).toInt()
-                val row = (py / panelCell).toInt()
-                val u = px - col * panelCell
-                val v = py - row * panelCell
+                // The panels before the grid's origin are numbered from -1 down: floor, not truncation
+                val col = floor((px - originX) / panelCell).toInt()
+                val row = floor((py - originY) / panelCell).toInt()
+                val u = px - originX - col * panelCell
+                val v = py - originY - row * panelCell
 
                 // Per-panel constant tilt
                 val tiltX = (hashCell(col * 3 + 11, row * 7 + 29) - 0.5) * 0.08

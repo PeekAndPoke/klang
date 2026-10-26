@@ -35,9 +35,12 @@ Five screens over the lamp-lit `MotorBackground` plate, KLANGMOTOR engraved in i
 - **The dyno run shows the Motor's own three gauges**, big: cylinders, heat, voices, as `KlangGauge`, **130 px in the
   middle and 109 px beside it** (the Motor's 62 to 52, scaled), so the glide later is a pure shrink. Heat is the
   render's load (the benchmark's real-time factor), voices the active voices. The round count (1 of 3) is three lamps.
-- **The benchmark spreads its voices over the cylinders** (voice n on cylinder n mod 16), so the cylinders gauge
-  sweeps like the others, and the load is closer to a real song's (a reverb per cylinder). The measured voice counts
-  move, so the tiers get a fresh look by measurement, reported to the maintainer before they change.
+- **The benchmark fills the cylinders along its ramp** (voice n on cylinder min(n / 10, 15), a new cylinder every 10
+  voices, all 16 at 160), so the cylinders gauge climbs with the voices, and the load is closer to a real song's (a
+  reverb per cylinder). A first try spread the voices round robin over 16 from the start: the gauge pinned at 16
+  (round 1 of the review). Measured in headless Chrome, interleaved: about 0.84 of the voices on one cylinder; the
+  tier thresholds are 0.85 of the old ones, 300, 265, 230, 195, 160, 130 (the maintainer: "The tier threshold are
+  good").
 - **The result keeps today's content on klangui parts**: a riveted `KlangPanel`, the tier as a lamp in its colour,
   its message (the jokes stay), the safe voices, a `KlangButton`; the jingle, then the first song, as today.
 - **The browser warning** becomes a klangui dialog with rivets instead of the Fomantic card (proposed, not objected).
@@ -62,24 +65,36 @@ Five screens over the lamp-lit `MotorBackground` plate, KLANGMOTOR engraved in i
 - The start page runs key, glow lamp, dyno and result on the new parts, by mouse and by keyboard.
 - The specs of the new part green and mutation-checked; the review loop ends clean.
 
-## Where it stands (parked 2026-10-26 for the IntelliJ restart)
+## What the step became (2026-10-26, the maintainer's look by eye)
 
-- **Done, uncommitted, not reviewed yet:** item 1, the key: `klangui/comp/KlangIgnition.kt`, its styles in
-  `KlangControlStyles.kt` (ignition, ignitionCap, ignitionTurn, ignitionLabel, ignitionLabelCurrent, the
-  reduce-motion lines), `KlangIgnitionSpec` (4 rows, green), the kitchen sink cell in `UiKitchenSinkPage.kt` (a live
-  key, then OFF, ON, START at 100 px). The maintainer has not looked at the key yet.
-- **In the same uncommitted styles file:** the tiles' text at the top (`tile`: `justify-content: flex-start`), the
-  maintainer confirmed it in the browser ("Ok now it works").
-- **Next:** the maintainer's look at the key; then item 2 (the benchmark's voices over 16 cylinders, measured before
-  and after, the tiers to the maintainer before they change); then item 3; the review loop and the mutation checks
-  for the key and the tiles together.
-- **Open beside it:** the IDE exclusions (`build.gradle.kts`, commits cd6bf5b2 and e6a84dbc): after the maintainer's
-  Gradle sync, check with the IDE's file search that `.build-claude/`, `.gradle-claude/`, `tmp/` and
-  `buildSrc/.build-claude/` are excluded (the last one may need `buildSrc/build.gradle.kts`); only then tell Mission
-  Control it belongs in the project template and in every project (the maintainer's word). `sprudel/jsbridge/tmp`
-  is not excluded; offered.
+- The key at 130 px, its positions further out; under it "Turn the key to start the Motor", the spinner beside
+  "Warming up", and the version stamp (only on this step).
+- From START on, one layout that stays: the Motor's three gauges (109, 130, 109), a panel in the dialog's look with
+  the test (spinner, round lamps, live voices) and then the tier and the average, "Make Music Now" in its key row
+  (silver, 18 px, waiting until the test is done). The key fades out while the run fades in (0.8 s). The Motor row,
+  scope and spectrum at the bottom are gone.
+- The background: the light stands on the centre, shines in the look's metal and flickers slowly; one panel centred;
+  KLANGMOTOR lower (25 % of the height); the plate in the look's ground, built at once and shown in a dim standby
+  light while the key waits; black behind it; a circular vignette to black at the edges. The dead scan and the random
+  light colour are gone.
+- New parts: `KlangSpinner`; a fine grain on every domed cap (the maintainer: "it could use a little noise").
+
+## Review and checks (2026-10-26)
+
+- **Key, round 1** (level 1): clean, 3 MINOR and 1 NIT applied (b32fb099).
+- **Start page, round 1** (level 1): 1 MAJOR (the cylinders gauge pinned at 16, fixed by filling along the ramp, the
+  maintainer's choice), 2 MINOR (the tier lamp: the maintainer kept one blue; a KDoc reworded), 3 NIT, fixed.
+- **Start page, round 2** (level 2, two phases): clean; 4 MINOR applied (the plate's colour taken raw like the canvas
+  textures, three decoded it as sRGB and made it ten times darker; no light swell over the disabled key; the
+  spinner's label as hidden text in the status; this ticket's decision record), 5 NIT applied (stale comments, an
+  import, the dead scan, the panel's height for the longest tier); the title halo after a live look change left (no
+  look picker on the start page).
+- **Mutation-checked:** the key 7 mutants, the spinner 3, all killed for the right reason.
+- **Tests:** klangui 122 green; the app compiles.
 
 ## History
 
 - 2026-10-26: created; the design sharpened with the maintainer (the key, the gauges, the cylinders, the lamp, the
   sizes, the result).
+- 2026-10-26: the key committed (b32fb099); the start page tuned with the maintainer, reviewed in two rounds (the
+  second clean), committed.

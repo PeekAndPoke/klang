@@ -154,9 +154,6 @@ kraftApp {
 - **Stored `SemanticIconFn` values need `.render()`**: `icon.(domainIconFn(domain))().render()`.
   Direct calls such as `icon.search()` auto-render inside the builder; a stored function returns
   an unrendered `SemanticTag` and emits nothing without `.render()`.
-- **RoundGauge proportions** (settled by iteration): icon about 0.15 x gauge size, positioned
-  between centre and top (top 30 %, centred via transform); label uses `borderBox` with a 2.5 px
-  border; the canvas paints the circular background, not the Semantic UI label.
 
 - **Two sheets, two mount times** (KLANG-00337, 2026-10-25): `RawStyleSheet` mounts in its constructor, `StyleSheet`
   on the next animation frame, both into `<head>`. A rule in a raw sheet therefore loses every tie against a
@@ -173,8 +170,8 @@ kraftApp {
   and mapped streams compute their value from their source, and a filter reads `null` until it is subscribed. An
   operator that keeps state decides on the first value of a subscription (`smooth()`'s `settledIn`), never on what it
   read at construction; and read while nobody listens, it reads through to its source, as Ultra's own operators do.
-- **`onNextProps` hands (new, old)** (KLANG-00338): the new props come first. `RoundGauge` took the second and
-  followed one update behind until 2026-10-25.
+- **`onNextProps` hands (new, old)** (KLANG-00338): the new props come first. The old `RoundGauge` (gone with
+  KLANG-00347) took the second and followed one update behind until 2026-10-25.
 
 - **A composite widget has one tab stop** (KLANG-00339, 2026-10-25): a menu, a list, tabs keep exactly one item in
   the tab order (`tabindex=0`, the last focused, else the first that can be chosen; the rest `-1`), and the arrow keys

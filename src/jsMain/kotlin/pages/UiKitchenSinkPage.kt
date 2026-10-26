@@ -27,6 +27,7 @@ import io.peekandpoke.klang.ui.comp.KlangMenu
 import io.peekandpoke.klang.ui.comp.KlangMenuButton
 import io.peekandpoke.klang.ui.comp.KlangPanel
 import io.peekandpoke.klang.ui.comp.KlangSearchField
+import io.peekandpoke.klang.ui.comp.KlangSpinner
 import io.peekandpoke.klang.ui.comp.KlangSwatchButton
 import io.peekandpoke.klang.ui.comp.KlangToolWindow
 import io.peekandpoke.klang.ui.comp.YesNoModal
@@ -505,6 +506,14 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
 
     private fun FlowContent.renderLamps() {
         section("Lamps") {
+            cell(name = "KlangSpinner: something is happening; 16, 24 and 40", source = "klangui/comp/KlangSpinner.kt") {
+                row {
+                    KlangSpinner(label = "Loading")
+                    KlangSpinner(label = "Loading", size = 24.px)
+                    KlangSpinner(label = "Loading", size = 40.px)
+                }
+            }
+
             cell(name = "KlangLamp: off, on, try, warning, critical", source = "klangui/comp/KlangLamp.kt") {
                 row {
                     for (state in KlangLamp.State.entries) {

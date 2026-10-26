@@ -24,8 +24,22 @@ import kotlin.time.TimeSource
 class KlangBenchmark(
     private val sampleRate: Int = 44100,
     private val blockFrames: Int = AudioBackendContext.RENDER_QUANTUM_FRAMES,
+    /** The most cylinders the voices fill, [VOICES_PER_CYLINDER] each; 1 puts them all on one, as before. */
+    private val cylinders: Int = CYLINDERS,
 ) {
     companion object {
+        /**
+         * The cylinders a run fills with its voices: like a song's, each with its own reverb (the maintainer,
+         * 2026-10-26, KLANG-00347).
+         */
+        const val CYLINDERS = 16
+
+        /**
+         * The voices a cylinder takes before the next one opens, so the cylinders fill along the ramp and the start
+         * page's cylinders gauge climbs with the voices: all of them at 160 voices (the maintainer, 2026-10-26).
+         */
+        const val VOICES_PER_CYLINDER = 10
+
         /** Blocks of silence rendered before the first measurement, to wake the JIT and the CPU governor. */
         private const val WARMUP_BLOCKS = 50
 
@@ -49,6 +63,8 @@ class KlangBenchmark(
     data class Progress(
         val currentVoices: Int,
         val activeVoices: Int,
+        /** The cylinders the active voices play on. */
+        val activeCylinders: Int,
         val currentRtf: Double,
         val currentIteration: Int,
         val totalIterations: Int,
@@ -67,6 +83,7 @@ class KlangBenchmark(
         Progress(
             currentVoices = 0,
             activeVoices = 0,
+            activeCylinders = 0,
             currentRtf = 0.0,
             currentIteration = 0,
             totalIterations = 3,
@@ -87,6 +104,7 @@ class KlangBenchmark(
         val initialProgress = Progress(
             currentVoices = 0,
             activeVoices = 0,
+            activeCylinders = 0,
             currentRtf = 0.0,
             currentIteration = 0,
             totalIterations = iterations,
@@ -115,6 +133,7 @@ class KlangBenchmark(
             val iterationProgress = Progress(
                 currentVoices = 0,
                 activeVoices = result.maxSafeVoices,
+                activeCylinders = cylindersOf(result.maxSafeVoices),
                 currentRtf = result.rtfAtLimit,
                 currentIteration = iteration + 1,
                 totalIterations = iterations,
@@ -161,6 +180,7 @@ class KlangBenchmark(
         val finalProgress = Progress(
             currentVoices = 0,
             activeVoices = avgMaxSafeVoices,
+            activeCylinders = cylindersOf(avgMaxSafeVoices),
             currentRtf = avgRtfAtLimit,
             currentIteration = iterations,
             totalIterations = iterations,
@@ -172,6 +192,10 @@ class KlangBenchmark(
 
         console.log("[Benchmark] All iterations complete. Average: $avgMaxSafeVoices voices")
     }
+
+    /** The cylinders [voices] play on: the voices keep sounding, so the first ones fill the first cylinders. */
+    private fun cylindersOf(voices: Int): Int =
+        minOf((voices + VOICES_PER_CYLINDER - 1) / VOICES_PER_CYLINDER, cylinders.coerceAtLeast(1))
 
     private suspend fun runSingleIteration(
         iteration: Int,
@@ -260,6 +284,7 @@ class KlangBenchmark(
             val progressUpdate = Progress(
                 currentVoices = targetVoices,
                 activeVoices = activeVoices,
+                activeCylinders = cylindersOf(activeVoices),
                 currentRtf = currentRtf,
                 currentIteration = iteration,
                 totalIterations = totalIterations,
@@ -381,6 +406,7 @@ class KlangBenchmark(
                     klangMapOf("voices" to 8.0, (lpf.freq as IgnitorDsl.Param).name to 1000.0, (lpf.q as IgnitorDsl.Param).name to 1.0)
                 },
                 freqHz = 220.0 + (id * 2),
+                cylinder = minOf(id / VOICES_PER_CYLINDER, cylinders.coerceAtLeast(1) - 1),
                 // Enable the orbit reverb. Its stage reads the SLOTS, the amount included
                 // (Katalyst step 5b-2), and the wire has no reverb fields since 5b-3.
                 katalystParams = klangMapOf("reverb.wet" to 0.2, "reverb.size" to 0.5),

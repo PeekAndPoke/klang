@@ -22,6 +22,20 @@ import io.peekandpoke.kraft.addons.styling.StyleSheet
  */
 object KlangControlStyles : StyleSheet("kl-controls") {
 
+    /**
+     * A fine grain for the domed surfaces, so a cap reads as machined metal, not as smooth plastic (the maintainer,
+     * 2026-10-26: "The domed look of the buttons is too smooth... it could use a little noise to give it texture"): a
+     * tile of grey noise at a low alpha, laid over the cap's gradient in `overlay`, so it adds grain and keeps the
+     * look's colours.
+     */
+    private const val GRAIN = "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' " +
+            "height='160'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' " +
+            "stitchTiles='stitch'/><feColorMatrix values='1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 0 0 0 0 0.16'/></filter>" +
+            "<rect width='100%' height='100%' filter='url(%23g)'/></svg>\")"
+
+    /** [gradient] with the [GRAIN] over it; its rule also puts `background-blend-mode: overlay, normal`. */
+    private fun grained(gradient: String): String = "$GRAIN, $gradient"
+
     // ── Lamps ─────────────────────────────────────────────────────────────────
 
     val lamp by rule {
@@ -102,9 +116,12 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("border-radius", "var(--kl-radius-domed)")
         put(
             "background",
-            "radial-gradient(ellipse 120% 90% at 50% 10%, var(--kl-cap-light) 0%," +
-                    " color-mix(in srgb, var(--kl-cap-light), var(--kl-cap-dark)) 55%, var(--kl-cap-dark) 100%)"
+            grained(
+                "radial-gradient(ellipse 120% 90% at 50% 10%, var(--kl-cap-light) 0%," +
+                        " color-mix(in srgb, var(--kl-cap-light), var(--kl-cap-dark)) 55%, var(--kl-cap-dark) 100%)"
+            ),
         )
+        put("background-blend-mode", "overlay, normal")
         put("box-shadow", "0 3px 5px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.18)")
     }
 
@@ -124,9 +141,12 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("border-radius", "var(--kl-radius-domed)")
         put(
             "background",
-            "radial-gradient(ellipse 120% 90% at 45% 15%, var(--kl-metal-light) 0%, var(--kl-metal-mid) 50%," +
-                    " var(--kl-metal-dark) 100%)"
+            grained(
+                "radial-gradient(ellipse 120% 90% at 45% 15%, var(--kl-metal-light) 0%, var(--kl-metal-mid) 50%," +
+                        " var(--kl-metal-dark) 100%)"
+            ),
         )
+        put("background-blend-mode", "overlay, normal")
         put("box-shadow", "0 3px 5px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.7)")
     }
 
@@ -710,6 +730,48 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("color", "var(--kl-ink-strong)")
     }
 
+    // ── For screen readers ────────────────────────────────────────────────────
+
+    /** Text for screen readers only: in the page, out of sight (the usual clip pattern). */
+    val visuallyHidden by rule {
+        put("position", "absolute")
+        put("width", "1px")
+        put("height", "1px")
+        put("margin", "-1px")
+        put("padding", "0")
+        put("overflow", "hidden")
+        put("clip", "rect(0 0 0 0)")
+        put("white-space", "nowrap")
+        put("border", "0")
+    }
+
+    // ── The spinner ───────────────────────────────────────────────────────────
+
+    /** The spinner's box; its ring turns, the box stays. */
+    val spinner by rule {
+        put("display", "inline-block")
+        put("flex-shrink", "0")
+        put("vertical-align", "middle")
+
+        rule("& > svg") {
+            put("display", "block")
+            put("width", "100%")
+            put("height", "100%")
+            put("animation", "kl-spin 0.9s linear infinite")
+        }
+    }
+
+    val spinnerTrack by rule {
+        put("fill", "none")
+        put("stroke", "color-mix(in srgb, var(--kl-ink-label) 25%, transparent)")
+    }
+
+    val spinnerArc by rule {
+        put("fill", "none")
+        put("stroke", "var(--kl-metal-mid)")
+        put("stroke-linecap", "round")
+    }
+
     // ── The workbench ─────────────────────────────────────────────────────────
 
     val workbench by rule {
@@ -1079,14 +1141,18 @@ object KlangControlStyles : StyleSheet("kl-controls") {
     }
 
     val knobCapDark by rule {
-        put("background", "radial-gradient(circle at 42% 30%, var(--kl-cap-light) 0%, var(--kl-cap-dark) 100%)")
+        put("background", grained("radial-gradient(circle at 42% 30%, var(--kl-cap-light) 0%, var(--kl-cap-dark) 100%)"))
+        put("background-blend-mode", "overlay, normal")
     }
 
     val knobCapSilver by rule {
         put(
             "background",
-            "radial-gradient(circle at 42% 28%, var(--kl-metal-light) 0%, var(--kl-metal-mid) 45%, var(--kl-metal-dark) 100%)"
+            grained(
+                "radial-gradient(circle at 42% 28%, var(--kl-metal-light) 0%, var(--kl-metal-mid) 45%, var(--kl-metal-dark) 100%)"
+            ),
         )
+        put("background-blend-mode", "overlay, normal")
     }
 
     /** The turning layer; its rotation comes per knob. */
@@ -1161,6 +1227,13 @@ object KlangControlStyles : StyleSheet("kl-controls") {
                 from { transform: translateX(60px); opacity: 0; }
                 to { transform: none; opacity: 1; }
             }
+            @keyframes kl-spin {
+                to { transform: rotate(360deg); }
+            }
+            @keyframes kl-spin-still {
+                0%, 100% { opacity: 0.45; }
+                50% { opacity: 1; }
+            }
             @keyframes kl-lamp-pulse {
                 0%, 100% { filter: brightness(0.8); }
                 50% { filter: brightness(1.3); }
@@ -1171,6 +1244,7 @@ object KlangControlStyles : StyleSheet("kl-controls") {
                 .$toolWindow.$toolWindowFloating { animation: none; }
                 .$ignitionCap.$beacon::after { animation: none; box-shadow: 0 0 0 2px var(--kl-lamp-try); }
                 .$knobTurn.$ignitionTurn { transition: none; }
+                .$spinner.$spinner > svg { animation: kl-spin-still 1.6s ease-in-out infinite; }
             }
         """.trimIndent()
     )

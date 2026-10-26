@@ -55,11 +55,11 @@ class KlangIgnition(ctx: Ctx<Props>) : Component<KlangIgnition.Props>(ctx) {
         const val STEP_DEGREES = 45.0
 
         /** Where the positions are printed, from the cap's centre, as a share of the cap's size. */
-        private const val LABEL_RADIUS = 0.66
+        private const val LABEL_RADIUS = 0.8
 
         /** The box around the cap, which leaves room for the positions above it, as a share of the cap's size. */
         private const val BOX_WIDTH = 1.6
-        private const val BOX_HEIGHT = 1.35
+        private const val BOX_HEIGHT = 1.4
     }
 
     enum class Position(val label: String) {
