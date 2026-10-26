@@ -5,11 +5,14 @@
 
 package io.peekandpoke.klang.comp
 
+import io.peekandpoke.klang.KlangGuiDance
 import io.peekandpoke.klang.ui.comp.KlangIconToggle
+import io.peekandpoke.klang.ui.comp.KlangNoticeModal
 import io.peekandpoke.klang.utils.FullscreenController
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
+import io.peekandpoke.kraft.modals.ModalsManager.Companion.modals
 import io.peekandpoke.kraft.vdom.VDom
 import kotlinx.html.Tag
 
@@ -38,8 +41,29 @@ class FullscreenToggleButton(ctx: Ctx<Props>) : Component<FullscreenToggleButton
 
     private val state by subscribingTo(props.fs)
 
+    /** The Gui-dance's lit step: the key wears its beacon when it is the key's (KLANG-00350). */
+    private val guiDanceLit by subscribingTo(KlangGuiDance.dance.lit)
+
     private fun toggle() {
+        KlangGuiDance.dance.used(KlangGuiDance.FULLSCREEN)
+
+        // Fullscreen the browser started (F11, or a Mac's own) only the browser can end: say so, as a click does nothing
+        // (the maintainer, 2026-10-26: "i cannot leave fullscreen when clicking the icon")
+        if (state.isFullscreen && !state.canExitWithClick) {
+            explainBrowserFullscreen()
+            return
+        }
+
         props.fs.toggle()
+    }
+
+    private fun explainBrowserFullscreen() {
+        modals.show<Boolean> { handle ->
+            KlangNoticeModal(handle = handle, headline = "Leave fullscreen with your browser's key", okText = "Got it") {
+                +"This fullscreen was started by the browser (with F11), so only the browser can end it: press F11 again. "
+                +"On a Mac, press Ctrl+Cmd+F."
+            }
+        }
     }
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -53,6 +77,7 @@ class FullscreenToggleButton(ctx: Ctx<Props>) : Component<FullscreenToggleButton
             on = state.isFullscreen,
             onClick = { toggle() },
             large = true,
+            beacon = guiDanceLit == KlangGuiDance.FULLSCREEN,
         )
     }
 }

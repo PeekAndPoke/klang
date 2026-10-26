@@ -71,5 +71,6 @@ class StorageKeysSpec : StringSpec({
 
     "the Gui-dance keeps its key" {
         StorageKeys.GUI_DANCE_ARCS_DONE shouldBe "klang-gui-dance-arcs-done"
+        StorageKeys.GUI_DANCE_MUTED_UNTIL shouldBe "klang-gui-dance-muted-until"
     }
 })

@@ -1479,6 +1479,7 @@ object KlangControlStyles : StyleSheet("kl-controls") {
                 .$lamp.$lampTry { animation: none; }
                 .$toolWindow.$toolWindowFloating { animation: none; }
                 .$ignitionCap.$beacon::after { animation: none; box-shadow: 0 0 0 2px var(--kl-lamp-try); }
+                .$iconToggle.$beacon::after { animation: none; box-shadow: 0 0 0 2px var(--kl-lamp-try); }
                 .$knobTurn.$ignitionTurn { transition: none; }
                 .$spinner.$spinner > svg { animation: kl-spin-still 1.6s ease-in-out infinite; }
             }

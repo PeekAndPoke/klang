@@ -458,9 +458,19 @@ body {
    in view). The view box is clear, and the rest of the minimap lies in its shadow, darker: the part in view is the
    brightest. The shadow ends at the minimap's edge (its container clips). Over the box, and while dragging it, the rest
    comes up a little, so the box can be found. The whole minimap is calmer than the code, its colours muted ("the
-   minimap is currently a bit distracting... pulling too much focus"). */
+   minimap is currently a bit distracting... pulling too much focus"), the part in view too a little darker than the
+   code itself. */
 .cm-minimap-gutter {
-    filter: saturate(0.55) brightness(0.85);
+    filter: saturate(0.55) brightness(0.7);
+    /* Slow and easing out, as the start page's light over "Make Music Now": 2 s in (the hover's rule), 1 s out (this
+       one); most of the change at once, then a soft arrival (the maintainer, 2026-10-27) */
+    transition: filter 1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Under the mouse it comes up ("Except for when hovered, then full 90%", then "a bit less") */
+.cm-minimap-gutter:hover {
+    filter: saturate(0.55) brightness(0.8);
+    transition: filter 2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .cm-minimap-overlay-container {
@@ -472,12 +482,18 @@ body {
     opacity: 1 !important;
     box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.72);
     /* The package's theme sets `transition: top 0s` with a stronger selector: both here, so the box still jumps */
-    transition: box-shadow 200ms ease, top 0s !important;
+    transition: box-shadow 1s cubic-bezier(0.16, 1, 0.3, 1), top 0s !important;
 }
 
-.cm-minimap-overlay-container .cm-minimap-overlay:hover,
+/* While dragging the box beyond the minimap: the hover's light below holds only while the mouse is on it */
 .cm-minimap-overlay-container.cm-minimap-overlay-active .cm-minimap-overlay {
     box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.6);
+}
+
+/* With the mouse anywhere on the minimap, the rest comes up further, to be read before a jump */
+.cm-minimap-gutter:hover .cm-minimap-overlay-container .cm-minimap-overlay {
+    box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.55);
+    transition: box-shadow 2s cubic-bezier(0.16, 1, 0.3, 1), top 0s !important;
 }
 
 /* Black surface with the editor's fine white grain — the code page header

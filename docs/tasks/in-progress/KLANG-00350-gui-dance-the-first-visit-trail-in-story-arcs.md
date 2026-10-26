@@ -28,7 +28,15 @@ themselves.
 - **Steps are ids, not places:** a later arc can light the Motor button again.
 - **Testable** (epic item 12): the machine is plain Kotlin, no UI in it, specced on its own; the components only ask
   "am I lit" and report "I was used".
-- **The first arc:** Play on the song page, the Motor button, "Songs" in the drawer.
+- **The arcs today** (the maintainer, 2026-10-26 and 27): the first, "Your first song, and the next": Play on the
+  song page, the Motor button, "Songs" in the drawer, then the next song on the songs page (any song opened there
+  counts); the second, "Fullscreen, and the walkthroughs", starting as the first ends: the fullscreen key, then the
+  walkthroughs key itself.
+- **Called walkthroughs, not tours** (2026-10-27), with a shoe-prints key at the workbench strip's foot, above
+  fullscreen. It opens the walkthroughs window: the ones finished (lamps), how many are to come (the number only),
+  a finished one pressed is marked to be taken again (its lamp off, it stays), mute for an hour or a day (or unmute);
+  nothing applies until Confirm, Cancel leaves all as it was. A walkthrough taken again while muted unmutes.
+- **Muted,** nothing is lit and nothing counts; the mute is kept in the browser and ends by itself on time.
 - **Where it lives:** the machine (`GuiDance`) in klangui, as UI machinery; the arcs and their store
   (`KlangGuiDance`) in the app.
 
@@ -53,10 +61,20 @@ themselves.
   out of order, the lit step not published) and 2 over the beacons (the Motor button's while open, the drawer's
   ignored), all killed for the right reason.
 
+- **The walkthroughs, the mute, taking one again, round 1** (level 2): clean; 4 MINOR applied (the notice's KDoc on
+  dismissals; a walkthrough taken again while muted unmutes, rather than seeming to do nothing; this ticket brought up
+  to date; specs for the walkthroughs window, 4 rows, and the notice, 2 rows), 4 NIT (the minimap's dead hover rule
+  dropped, a spec name, the window redrawing when a mute ends; the walkthroughs key announced as a toggle, noted for
+  when klangui has a plain icon key).
+- **Mutation-checked:** the machine's mute, counts and reopen (11), the icon toggle's beacon (2), the notice (3), the
+  window (5), all killed for the right reason.
+
 ## Acceptance
 
-- On a first visit Play glows; after Play the Motor button; after it Songs in the drawer; then nothing.
-- Leaving in the middle starts the arc over; a finished arc does not come back.
+- On a first visit Play glows; after Play the Motor button; after it Songs in the drawer; then the next song; then the
+  fullscreen key; then the walkthroughs key; then nothing.
+- Leaving in the middle starts the arc over; a finished arc does not come back unless taken again in the window.
+- Muted, nothing glows until the mute ends.
 - The machine's spec green and mutation-checked; the review loop ends clean.
 
 ## Credits
@@ -70,3 +88,4 @@ Interface"* (Carroll and Carrithers, Communications of the ACM, 1984) and *The N
 
 - 2026-10-26: created.
 - 2026-10-26: the design with the maintainer: story arcs, one lamp, an arc stored only when finished.
+- 2026-10-27: the next song, the second walkthrough, the walkthroughs window with mute and taking one again.

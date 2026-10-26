@@ -41,4 +41,15 @@ class KlangIconToggleSpec : StringSpec({
             clicks shouldBe 1
         }
     }
+
+    "the trail's beacon shows only on the toggle it is given to (KLANG-00350)" {
+        TestBed.preact(
+            view = {
+                KlangIconToggle(icon = { expand }, label = "Fullscreen", on = false, onClick = {}, beacon = true)
+                KlangIconToggle(icon = { book }, label = "Docs", on = false, onClick = {})
+            },
+        ) { root ->
+            root.selectCss("button").classes().map { styles.beacon.toString() in it } shouldContainExactly listOf(true, false)
+        }
+    }
 })

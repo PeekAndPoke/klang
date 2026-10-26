@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.pages
 
 import io.peekandpoke.klang.BuiltInSongs
+import io.peekandpoke.klang.KlangGuiDance
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
@@ -34,7 +35,13 @@ fun Tag.SongsPage() = comp {
  */
 class SongsPage(ctx: NoProps) : PureComponent(ctx) {
 
+    /** The Gui-dance's lit step: the next song after the first glows when it is "open another song" (KLANG-00350). */
+    private val guiDanceLit by subscribingTo(KlangGuiDance.dance.lit)
+
     override fun VDom.render() {
+        // The song after the first, where the first-visit trail began
+        val nextSong = BuiltInSongs.songs.getOrNull(1)?.id.takeIf { guiDanceLit == KlangGuiDance.SONGS_OPEN }
+
         JoinedPageTitle { listOf("Songs") }
 
         div {
@@ -74,15 +81,19 @@ class SongsPage(ctx: NoProps) : PureComponent(ctx) {
                 }
 
                 for (song in BuiltInSongs.songs) {
-                    renderSong(title = song.title, rpm = song.rpm) { router.navToUri(Nav.editSongCode(song.id)) }
+                    renderSong(title = song.title, rpm = song.rpm, beacon = song.id == nextSong) {
+                        // Any song opened from here is the step, the lit one or another
+                        KlangGuiDance.dance.used(KlangGuiDance.SONGS_OPEN)
+                        router.navToUri(Nav.editSongCode(song.id))
+                    }
                 }
             }
         }
     }
 
     /** A song's tile: its title, and under it its tempo. */
-    private fun FlowContent.renderSong(title: String, rpm: Double, open: () -> Unit) {
-        KlangButton(onClick = open, shape = KlangButton.Shape.Tile, surface = KlangButton.Surface.Domed) {
+    private fun FlowContent.renderSong(title: String, rpm: Double, beacon: Boolean, open: () -> Unit) {
+        KlangButton(onClick = open, shape = KlangButton.Shape.Tile, surface = KlangButton.Surface.Domed, beacon = beacon) {
             span { +title }
             span(classes = KlangControlStyles.drawerSub.toString()) { +"$rpm RPM" }
         }

@@ -24,8 +24,9 @@ fun Tag.KlangIconToggle(
     on: Boolean,
     onClick: () -> Unit,
     large: Boolean = false,
+    beacon: Boolean = false,
 ) = comp(
-    KlangIconToggle.Props(icon = icon, label = label, on = on, onClick = onClick, large = large)
+    KlangIconToggle.Props(icon = icon, label = label, on = on, onClick = onClick, large = large, beacon = beacon)
 ) {
     KlangIconToggle(it)
 }
@@ -44,6 +45,8 @@ class KlangIconToggle(ctx: Ctx<Props>) : Component<KlangIconToggle.Props>(ctx) {
         val onClick: () -> Unit,
         /** The tool strip's size (36 px) instead of a header's (28 px). */
         val large: Boolean,
+        /** The first-visit trail's "try me" on it (KLANG-00350). */
+        val beacon: Boolean,
     )
 
     override fun VDom.render() {
@@ -52,6 +55,7 @@ class KlangIconToggle(ctx: Ctx<Props>) : Component<KlangIconToggle.Props>(ctx) {
             styles.iconToggle,
             if (props.large) styles.iconToggleLarge else null,
             if (props.on) styles.iconToggleOn else null,
+            if (props.beacon) styles.beacon else null,
         )
 
         button(type = ButtonType.button, classes = classes.joinToString(" ")) {

@@ -10,6 +10,7 @@ import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.comp.FullscreenToggleButton
 import io.peekandpoke.klang.comp.Motoer
 import io.peekandpoke.klang.comp.PlayerWarehouseStats
+import io.peekandpoke.klang.comp.WalkthroughsButton
 import io.peekandpoke.klang.fs
 import io.peekandpoke.klang.storage.LookStorage
 import io.peekandpoke.klang.ui.comp.KlangDrawer
@@ -158,7 +159,10 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
                     )
                 },
                 // On every page, at the strip's foot (the maintainer, KLANG-00349)
-                keys = { FullscreenToggleButton(fs = fs) },
+                keys = {
+                    WalkthroughsButton()
+                    FullscreenToggleButton(fs = fs)
+                },
                 mark = "KLANGMOTOR",
             ).track(WorkbenchSlots.workbench)
         }
