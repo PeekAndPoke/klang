@@ -388,3 +388,8 @@ OkCancel real buttons and focus; their Esc stays ours until the key map carries 
 - 2026-10-26: hand-tested by the maintainer: Alt+V works in Chrome and Firefox; Esc works through the chain (the
   Motor menu, a tool window and a parameter tool open, then back into the editor); the Motor menu closes on Esc from
   the editor.
+- 2026-10-26: the last review's small points: the editor's focus check asks CodeMirror (`hasFocus`, the code itself,
+  so Esc from the lint panel's close button brings the cursor back); the binding's `hasFocus` is a property, as in
+  CodeMirror 6; a key an input method composes with (`isComposing`, or Safari's keyCode 229 alone) starts no modifier
+  tap, and while chords in a row wait it ends the wait and goes on to the field instead of being swallowed. Tests for
+  Safari's 229 on Esc, Shift taps while composing, and the wait. Review (level 1) clean in round 2; 3 mutants killed.

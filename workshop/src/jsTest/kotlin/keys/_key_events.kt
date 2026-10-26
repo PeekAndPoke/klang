@@ -14,6 +14,7 @@ fun keyEvent(
     repeat: Boolean = false,
     altGraph: Boolean = false,
     composing: Boolean = false,
+    keyCode: Int = 0,
     type: String = "keydown",
 ): KeyboardEvent = KeyboardEvent(
     type,
@@ -30,4 +31,11 @@ fun keyEvent(
         bubbles = true,
         cancelable = true,
     ),
-)
+).also { event ->
+    // Kotlin's KeyboardEventInit has no keyCode (a legacy field), so it is set on the event itself
+    if (keyCode != 0) {
+        val descriptor: dynamic = js("({})")
+        descriptor.value = keyCode
+        js("Object").defineProperty(event, "keyCode", descriptor)
+    }
+}

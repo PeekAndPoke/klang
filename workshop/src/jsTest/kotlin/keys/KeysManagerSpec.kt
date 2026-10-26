@@ -242,6 +242,10 @@ class KeysManagerSpec : StringSpec({
                 input.dispatchEvent(keyEvent(key = "Escape", composing = true))
             }
 
+            withClue("so does one Safari reports by its keyCode 229 alone, without isComposing") {
+                input.dispatchEvent(keyEvent(key = "Escape", keyCode = 229))
+            }
+
             answered shouldContainExactly listOf("play", "close")
         }
     }
@@ -697,6 +701,20 @@ class KeysManagerSpec : StringSpec({
                 tap()
                 answered shouldContainExactly listOf("search", "search", "search")
             }
+
+            withClue("Shift taken by a composing input method (it switches its mode) is no tap, also by keyCode 229 alone") {
+                delay(200)
+                repeat(2) {
+                    host.dispatchEvent(keyEvent(key = "Shift", code = "ShiftLeft", shift = true, composing = true))
+                    up()
+                }
+                delay(200)
+                repeat(2) {
+                    host.dispatchEvent(keyEvent(key = "Shift", code = "ShiftLeft", shift = true, keyCode = 229))
+                    up()
+                }
+                answered shouldContainExactly listOf("search", "search", "search")
+            }
         } finally {
             keys.dispose()
             host.remove()
@@ -762,6 +780,17 @@ class KeysManagerSpec : StringSpec({
                 val other = keyEvent(key = "x", code = "KeyX")
                 inner.dispatchEvent(other)
                 other.defaultPrevented shouldBe true
+                keys.waiting() shouldContainExactly emptyList()
+                press("s")
+                answered shouldContainExactly listOf("save", "save-all", "save")
+            }
+
+            withClue("a key an input method composes with (keyCode 229) ends the wait and goes on to the field") {
+                press("k")
+                val composed = keyEvent(key = "Process", code = "KeyA", keyCode = 229)
+                inner.dispatchEvent(composed)
+                composed.defaultPrevented shouldBe false
+                pageSaw.last() shouldBe "Process"
                 keys.waiting() shouldContainExactly emptyList()
                 press("s")
                 answered shouldContainExactly listOf("save", "save-all", "save")

@@ -361,9 +361,7 @@ class KeysManager(
 
     private fun keyDown(event: KeyboardEvent) {
         // A key that composes text (an input method: Esc there cancels the composition) belongs to the field
-        val composing = event.isComposing || event.keyCode == IME_KEY_CODE
-
-        if (event.key in KeyChord.MODIFIER_KEY_NAMES || event.defaultPrevented || event.repeat || composing) {
+        if (event.key in KeyChord.MODIFIER_KEY_NAMES || event.defaultPrevented || event.repeat || composing(event)) {
             return
         }
 
@@ -410,6 +408,9 @@ class KeysManager(
         return candidates.last { priorityOf(it) == highest }
     }
 
+    /** An input method composes text with this key (Safari reports only the `keyCode`). */
+    private fun composing(event: KeyboardEvent): Boolean = event.isComposing || event.keyCode == IME_KEY_CODE
+
     private fun isTextField(eventTarget: EventTarget?): Boolean {
         val element = eventTarget as? Element ?: return false
         val tag = element.tagName.lowercase()
@@ -422,6 +423,14 @@ class KeysManager(
 
         // Waiting for the second chord of chords in a row: every key is the wait's, before the page's handlers see it
         if (_waiting().isNotEmpty() && event.key !in KeyChord.MODIFIER_KEY_NAMES) {
+            // A key an input method composes with is the field's: the user moved on, the wait is over
+            if (composing(event)) {
+                stopWaiting()
+                hideHints()
+
+                return
+            }
+
             event.preventDefault()
             event.stopImmediatePropagation()
             hideHints()
@@ -502,7 +511,8 @@ class KeysManager(
             event.ctrlKey == (modifier == TapModifier.Ctrl) && event.altKey == (modifier == TapModifier.Alt) &&
             event.shiftKey == (modifier == TapModifier.Shift) && event.metaKey == (modifier == TapModifier.Meta)
 
-        if (alone && !event.getModifierState("AltGraph")) {
+        // A modifier an input method takes while it composes (Shift switches its mode) is no tap
+        if (alone && !event.getModifierState("AltGraph") && !composing(event)) {
             tapStart = modifier to now()
         } else {
             breakTaps()

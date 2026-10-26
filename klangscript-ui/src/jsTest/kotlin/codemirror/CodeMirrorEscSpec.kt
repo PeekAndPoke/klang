@@ -20,9 +20,10 @@ import org.w3c.dom.events.KeyboardEvent
 import org.w3c.dom.events.KeyboardEventInit
 
 /**
- * CodeMirror's side of the key manager's text-field rule (KLANG-00325): an Esc the editor uses is prevented, one it
- * ignores is not, so the manager answers only the second. A CodeMirror upgrade that stopped preventing would make one
- * Esc close both the editor's completion and a panel; this spec says so first.
+ * CodeMirror's side of the key manager's text-field rule (KLANG-00325): an Esc the editor uses (here: a selection to
+ * simplify; closing its completion works the same way) is prevented, one it ignores is not, so the manager answers
+ * only the second. A CodeMirror upgrade that stopped preventing would make one Esc act twice, in the editor and on a
+ * panel; this spec says so first.
  */
 class CodeMirrorEscSpec : StringSpec({
 

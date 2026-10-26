@@ -43,7 +43,7 @@ external class EditorView {
     fun destroy()
 
     fun focus()
-    fun hasFocus(): Boolean
+    val hasFocus: Boolean
 
     // Coordinate/position methods
     fun coordsAtPos(pos: Int, side: Int = definedExternally): Rect?
