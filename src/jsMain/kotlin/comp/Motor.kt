@@ -96,8 +96,11 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
         /** The spectrum's height, anchored to the bottom, behind everything. */
         val SPECTRUM_HEIGHT = 8.25.rem
 
-        /** The frame without the title slot: the scope's foot (8.75 rem) and a little room under it. */
-        val FRAME_HEIGHT_WITHOUT_TITLE = 9.25.rem
+        /** Without the title slot (a workbench): room above the gauges, so they do not touch the column's edge. */
+        val TOP_INSET_WITHOUT_TITLE = 0.75.rem
+
+        /** Without the title slot: the inset, the scope's foot (8.75 rem) and a floor under it for the spectrum. */
+        val FRAME_HEIGHT_WITHOUT_TITLE = 11.5.rem
     }
 
     //  PROPS  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -120,6 +123,8 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     override fun VDom.render() {
+        val inset = if (props.showTitle) 0.rem else TOP_INSET_WITHOUT_TITLE
+
         div {
             key = "motor"
 
@@ -133,7 +138,7 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
                 key = "stats"
                 css {
                     position = Position.absolute
-                    top = 0.rem
+                    top = inset
                     left = 0.rem
                     right = 0.rem
                     height = TOP_SLOT_HEIGHT
@@ -146,7 +151,7 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
                 key = "oscilloscope"
                 css {
                     position = Position.absolute
-                    top = OSCILLOSCOPE_TOP
+                    top = OSCILLOSCOPE_TOP + inset
                     left = 0.rem
                     right = 0.rem
                     height = OSCILLOSCOPE_HEIGHT
@@ -166,8 +171,12 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
                     bottom = 0.rem
                     left = 0.rem
                     right = 0.rem
-                    // Without the title the frame is shorter: the spectrum keeps its old relation to the scope
-                    height = if (props.showTitle) SPECTRUM_HEIGHT else SPECTRUM_HEIGHT - TITLE_HEIGHT
+                    // Without the title the spectrum rises from the frame's floor to the scope's top, as with it
+                    height = if (props.showTitle) {
+                        SPECTRUM_HEIGHT
+                    } else {
+                        FRAME_HEIGHT_WITHOUT_TITLE - TOP_INSET_WITHOUT_TITLE - OSCILLOSCOPE_TOP
+                    }
                     width = 100.pct
 
                     opacity = 0.66

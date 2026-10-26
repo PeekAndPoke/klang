@@ -73,4 +73,9 @@ panel (item 9), the Motor button opening the drawer with the destinations and th
 ## History
 
 - 2026-10-25: created and started.
-- 2026-10-25: built, reviewed (two rounds, the second clean), mutation-checked.
+- 2026-10-25: built, reviewed (two rounds, the second clean), mutation-checked, committed (8f535680).
+- 2026-10-26: the maintainer on the menu button: "The button aligns well".
+- 2026-10-26: the maintainer: the Motor without its title is too cramped, the gauges need room on top, the spectrum
+  had none. Now 0.75rem above the gauges and a floor under the scope (the frame 11.5rem); the spectrum rises from the
+  floor to the scope's top, as with the title. A layout constant judged by eye, so no review round. The maintainer:
+  "Please continue with next steps"; the spectrum is judged with a song playing in the next step.
