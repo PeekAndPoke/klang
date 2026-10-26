@@ -221,9 +221,8 @@ Klang out of it and the move is a copy. Klang's modules depend on it.
   `visibleBox` treats `overflow-x: clip` with a visible `overflow-y` as clipping both axes, and cuts an absolute or
   fixed anchor by ancestors that are not its containing block; no anchor in Klang is either (2026-10-25). Layers
   follow the component tree, not the stack on screen: a component drawn on an app-wide stage (a popup opened from
-  inside a modal) belongs to the root layer and waits while the modal is open. A modal's Esc follows the rule that a
-  plain key belongs to a text field, so a future modal with an input would not close on Esc from inside it (the old
-  hand-made listener did); no modal has one today.
+  inside a modal) belongs to the root layer and waits while the modal is open. (Settled 2026-10-26: Esc passes a text
+  field that does not use it, so a modal with an input closes on Esc from inside it.)
 - **Matching by position:** a symbol with Shift and a digit match by the key's position (one rule each, so one key
   never triggers two chords), so on a French keyboard Stop (Ctrl+Shift+.) is the key at the US period, which shows `:`;
   the hint still says `.`. A layout-aware label waits for the settings page.
@@ -242,7 +241,8 @@ this list is an informal input for its designs. In order of benefit:
 4. **The song page's other controls:** Reset to original (behind the yes or no question), copy the code
    (Ctrl+Shift+C), rpm up and down, the volume knob (louder, quieter, mute) with a hint on the knob.
 5. **Tutorials** (`TutorialPage`, `TourPage`): next and previous lesson, Mark as completed, All tutorials.
-6. **Search fields** (samples library, lexikon, docs): "/" or Ctrl+K focuses the page's search, Esc clears it.
+6. **Search fields** (samples library, lexikon, docs): "/" or Ctrl+K focuses the page's search, Esc clears it. Such a field prevents its own Esc while it has text to clear; otherwise the page's Esc (focus the
+   editor) takes it.
 7. **Navigation** (the sidebar): jump to Songs, Docs, Tutorials, Samples, Lexikon with a two-key chord; a page's own
    keys overview could show app-wide while Ctrl is held.
 8. **The REPL** (`KlangScriptReplComp`): Run with Ctrl+Enter, Clear.
@@ -380,3 +380,8 @@ OkCancel real buttons and focus; their Esc stays ours until the key map carries 
   code tool modal's unused fallback Esc removed; `VolumeFocus` id `klang.focus-volume`. Review round 1 (level 1)
   clean; 5 mutants killed. Its MINORs (an IME guard, stale comments, FocusEditor inside the editor) go into the next
   step.
+- 2026-10-26: the Esc step's MINORs: a key that composes text with an input method is the field's (an Esc that
+  cancels a composition closes nothing); the editor's focus does nothing when it has the focus already (no scroll
+  back to the cursor); `CodeMirrorEscSpec` pins that CodeMirror prevents an Esc it uses. Review round 1 (level 1)
+  clean; 1 mutant killed. Left for later: the focus check should look at the code itself (`contentDOM`, not the lint
+  panel around it); a test for Safari's 229 without `isComposing`.

@@ -230,8 +230,8 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                 padding = Padding(0.px)
             }
 
-            // Esc anywhere on the page outside a text field puts the focus back into the editor, at its last cursor; an
-            // open code tool or panel answers Esc first (their priority is higher)
+            // Esc anywhere on the page (from a field too, unless it uses its Esc) puts the focus back into the editor, at
+            // its last cursor; an open code tool or panel answers Esc first (their priority is higher)
             OnKey(KlangKeyBindings.FocusEditor, showHint = false) { codeEditorRef { it.focus() } }
 
             ui.form {

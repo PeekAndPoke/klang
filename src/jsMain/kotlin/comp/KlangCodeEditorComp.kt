@@ -39,6 +39,7 @@ import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.html.onContextMenu
+import kotlinx.browser.document
 import kotlinx.css.Padding
 import kotlinx.css.Position
 import kotlinx.css.minWidth
@@ -217,10 +218,13 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
         highlightBuffer.cancelAll()
     }
 
-    /** Puts the focus into the code view, the cursor and the selection where they were, scrolled into view. */
+    /**
+     * Puts the focus into the code view, the cursor and the selection where they were, scrolled into view; nothing when
+     * the focus is in it already (an Esc there must not scroll the view back to the cursor).
+     */
     fun focus() {
         editorRef { editor ->
-            editor.editorView?.let { view ->
+            editor.editorView?.takeIf { !it.dom.contains(document.activeElement) }?.let { view ->
                 // CodeMirror's focus does not scroll: a cursor the user scrolled away from comes back into view
                 view.dispatch(jsObject<dynamic> { this.scrollIntoView = true })
                 view.focus()

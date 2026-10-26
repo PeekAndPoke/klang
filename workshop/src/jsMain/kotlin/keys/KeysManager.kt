@@ -32,7 +32,7 @@ import kotlin.math.abs
  *   - taps, `"Shift Shift"`: a modifier tapped on its own (down and up within [tapMaxMs], no other key, click or wheel
  *     between) twice within [tapPairMs]; also while the user types, since a tap types nothing. A capital (Shift, a
  *     letter) is no tap.
- *   - chords, `"Mod-K Mod-S"`: the first chord answers as a single key would (not on a plain key in a text field)
+ *   - chords, `"Mod-K Mod-S"`: the first chord answers as a single key would (in a text field only with a modifier)
  *     and starts a wait of [sequenceWaitMs] for the second ([waiting] holds the first, for the app to show). While it
  *     waits every key belongs to it, in the capture phase before the page's own handlers: the second chord triggers
  *     its sequence, Esc or any other key ends the wait (and does nothing else), as do a click, the blur, a tap pair
@@ -45,9 +45,11 @@ import kotlin.math.abs
  *
  * One listener on [target] (the document) answers every key, after the page's own handlers: a key a component already
  * handled (`defaultPrevented`: the code editor's own keys while it has the focus) is left alone, and so is a held key's
- * repeat. A key without Ctrl, Alt or Meta is left alone while the user types in a text field, except Esc, which types
- * nothing (maintainer, 2026-10-26: Esc in the editor did not close the Motor menu): a field that uses its Esc (the
- * code editor closing its completion) handles it first, and an Esc it ignores goes on. The hints and the wait of
+ * repeat, and so is a key that composes text with an input method. A key without Ctrl, Alt or Meta is left alone while
+ * the user types in a text field, except Esc, the key that leaves a field (maintainer, 2026-10-26: Esc in the editor
+ * did not close the Motor menu): a field that uses its Esc (the code editor closing its completion) prevents it first,
+ * and an Esc it ignores goes on. So a plain Esc action answers from every field and prevents the key there (an
+ * `<input type=search>` no longer clears on Esc): a field that needs its Esc prevents it. The hints and the wait of
  * chords in a row follow the keys before the page's handlers (the capture phase), so a handler that stops a key cannot
  * leave them showing; a key the wait takes stops there, though a capture listener on `window` still sees it.
  */
@@ -69,6 +71,9 @@ class KeysManager(
     companion object {
         /** The key under which a Kraft app keeps its manager (`KraftApp.Builder.keys`). */
         val key = TypedKey<KeysManager>("keys")
+
+        /** The `keyCode` of a key an input method takes while it composes (some browsers report the key itself). */
+        private const val IME_KEY_CODE = 229
 
         /** The key under which a component keeps the layer it opened (`Component.openKeyLayer`), for those below it. */
         val layerKey = TypedKey<KeyLayer>("key-layer")
@@ -355,7 +360,10 @@ class KeysManager(
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     private fun keyDown(event: KeyboardEvent) {
-        if (event.key in KeyChord.MODIFIER_KEY_NAMES || event.defaultPrevented || event.repeat) {
+        // A key that composes text (an input method: Esc there cancels the composition) belongs to the field
+        val composing = event.isComposing || event.keyCode == IME_KEY_CODE
+
+        if (event.key in KeyChord.MODIFIER_KEY_NAMES || event.defaultPrevented || event.repeat || composing) {
             return
         }
 

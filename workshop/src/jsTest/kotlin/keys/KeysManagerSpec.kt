@@ -238,6 +238,10 @@ class KeysManagerSpec : StringSpec({
                 input.dispatchEvent(keyEvent(key = "Escape"))
             }
 
+            withClue("an Esc that cancels an input method's composition stays the field's") {
+                input.dispatchEvent(keyEvent(key = "Escape", composing = true))
+            }
+
             answered shouldContainExactly listOf("play", "close")
         }
     }

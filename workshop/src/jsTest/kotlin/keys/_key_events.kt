@@ -13,10 +13,12 @@ fun keyEvent(
     meta: Boolean = false,
     repeat: Boolean = false,
     altGraph: Boolean = false,
+    composing: Boolean = false,
     type: String = "keydown",
 ): KeyboardEvent = KeyboardEvent(
     type,
     KeyboardEventInit(
+        isComposing = composing,
         key = key,
         code = code,
         ctrlKey = ctrl,
