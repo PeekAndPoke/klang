@@ -143,6 +143,8 @@ reads the tickets with `ticket.py list --json`.
 <!-- Findings this repo sent back to Mission Control, not merged into the blueprint yet:
      - yyyy-mm-dd: <what, one line> (<where it happened>)
      Remove an item when an update arrives that contains it. -->
+- 2026-10-27: `ticket new --part-of` and hand-written Part of lines copy an epic's full title; a title with a dash
+  or its own parentheses lands in the child's line. Truncate the short title at the first " (" or dash (the epic grouping, KLANG-00200).
 
 ## Changes
 
