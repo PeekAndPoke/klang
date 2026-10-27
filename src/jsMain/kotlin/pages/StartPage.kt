@@ -11,6 +11,7 @@ import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_engine.KlangBenchmark
 import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
 import io.peekandpoke.klang.audio_engine.playOnce
+import io.peekandpoke.klang.comp.KlangCodePlaybackCtrl
 import io.peekandpoke.klang.comp.MotorBackground
 import io.peekandpoke.klang.comp.PlayerMiniStats
 import io.peekandpoke.klang.comp.motorBackgroundRef
@@ -355,6 +356,11 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
     private inner class StateBenchmarkComplete(val result: KlangBenchmark.Result) : State {
         override val key = KlangIgnition.Position.Start
 
+        init {
+            // The dyno is done: "Gestrandet" plays while the result waits for "Make Music Now"
+            waitingSong.play()
+        }
+
         override fun update() {
             // noop
         }
@@ -369,6 +375,9 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 .gain(0.7)
                 .adsr(0.005, 0.2, 0.3, 10.0)
                 .reverb(wet = 0.2, size = 3.0, lowpass = 5000.0)
+
+            // The waiting song stops, its notes ringing out, and the jingle takes over
+            waitingSong.stop()
 
             // No player (the worklet failed?): no jingle, the way on all the same
             Player.get()?.playOnce(song)?.start(KlangCyclicPlayback.Options(rpm = 50.0))
@@ -385,6 +394,24 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
     private var state: State by value(StateOffline())
 
     private val benchmark = KlangBenchmark()
+
+    /**
+     * "Gestrandet" in the background once the Motor runs, until "Make Music Now" is pressed (the maintainer,
+     * 2026-10-27). It starts after the dyno, never during it: it would compete with the run's measurement and lower
+     * the voices it reports.
+     */
+    private val waitingSong = KlangCodePlaybackCtrl.builder()
+        .code(BuiltInSongs.soundOfTheSea.code)
+        .rpm(BuiltInSongs.soundOfTheSea.rpm)
+        .title(BuiltInSongs.soundOfTheSea.title)
+        .build()
+
+    init {
+        lifecycle {
+            // Left another way than by "Make Music Now" (the Motor's menu, the browser's back): the song stops too
+            onUnmount { waitingSong.stop() }
+        }
+    }
 
     private val benchmarkProgress: KlangBenchmark.Progress? by subscribingTo(benchmark.progress) { progress ->
         if (progress.isComplete) {
