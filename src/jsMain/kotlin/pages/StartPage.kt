@@ -121,6 +121,9 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         /** The key's cap, as big as the dyno's heat gauge after it (the maintainer, 2026-10-26: 200 was "too massive"). */
         const val KEY_PX = 130.0
 
+        /** How long the lamp stays clean after the run, before its bulb starts to stutter now and then. */
+        const val LIGHT_CLEAN_AFTER_RUN_MS = 5000.0
+
         /** How long the key stays at START, the lamp light swelling, before the dyno shows. */
         const val KEY_AT_START_MS = 1800.0
 
@@ -362,8 +365,16 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
             waitingSong.play()
         }
 
+        private val startMs = Kronos.systemUtc.millisNow()
+
+        private var settled = false
+
         override fun update() {
-            // noop
+            // The light stays clean until a while after the run (the maintainer, 2026-10-28), then the bulb settles
+            if (!settled && Kronos.systemUtc.millisNow() - startMs >= LIGHT_CLEAN_AFTER_RUN_MS) {
+                settled = true
+                motorBackgroundRef { it.settle() }
+            }
         }
 
         /**

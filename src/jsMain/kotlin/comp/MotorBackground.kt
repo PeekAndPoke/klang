@@ -336,7 +336,11 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     private var bulbFollow: Unsubscribe? = bulbGoal.smooth(smoothing = bulbLaw, rest = 1.0, near = 0.002)
         .subscribeToStream { bulbShown = it ?: 1.0 }
 
-    private val bulb = BulbStutter(onStutter = { bulbLaw.law = it })
+    /** Clean from the start: no stutter, no shimmer, until [settle] (the maintainer, 2026-10-28). */
+    private val bulb = BulbStutter(onStutter = { bulbLaw.law = it }).apply { steady = true }
+
+    /** How much of the filament's shimmer shows: none while the bulb is clean, easing in once it [settle]s. */
+    private var shimmer = 0.0
 
     ////  DEFERRED TEXTURE BUILD  /////////////////////////////////////////////////////////////////////////////////
 
@@ -618,6 +622,16 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         targetFillIntensity = 0.12
     }
 
+    /**
+     * The light comes on clean and stays so, no stutter, no shimmer, until this (the maintainer, 2026-10-28: "The light
+     * must come clean on and stay clean until 5 seconds after the dynamo test"): then the shimmer eases in and the
+     * bulb stutters now and then, calmly ([BulbStutter.SETTLED]).
+     */
+    fun settle() {
+        bulb.temper = BulbStutter.SETTLED
+        bulb.steady = false
+    }
+
     /** Boosts the light and widens the cone. Call from an element's mouse-enter. */
     fun hoverStart() {
         targetIntensity = hoverIntensity
@@ -868,11 +882,14 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         // noise. Stays within a few percent so it reads as a living filament,
         // not a faulty one.
         flickerTime += delta
-        val flicker = 1.0 +
+        // None while the bulb is clean; once it settles, the shimmer eases in over a couple of seconds
+        shimmer += ((if (bulb.steady) 0.0 else 1.0) - shimmer) * 0.02
+        val flicker = 1.0 + shimmer * (
                 // Three times slower than at first (the maintainer, 2026-10-26: "it flickers too often")
                 // A bit livelier between the stutters (the maintainer, 2026-10-27: "a bit less stable in between")
                 grainNoise.noise(flickerTime * 0.0012, 7.7) * 0.07 +
-                grainNoise.noise(flickerTime * 0.007, 3.3) * 0.035
+                        grainNoise.noise(flickerTime * 0.007, 3.3) * 0.035
+                )
         val bulbHeads = bulb.next(delta)
 
         if (bulbHeads != bulbGoal()) {

@@ -12,8 +12,8 @@ import kotlin.random.Random
 /**
  * A light bulb about to break, for the start page's lamp (the maintainer, 2026-10-27: "a bit more flicker ... but not
  * constantly, like a lightbulb that is about to break, stuttering, but then again quite stable for some time"): calm
- * stretches, then a short stutter in which the light drops in quick dips, now and then deeper, to half at the most
- * ("It gets too dark when it is stuttering, half only").
+ * stretches, then a short stutter in which the light drops in quick dips, now and then deeper; how often and how
+ * deep is its [temper].
  *
  * [next] gives where the light heads, 1.0 while it is calm; the first stretch is always calm, so the light comes up
  * cleanly. The way there is the lamp's: it smooths these goals with a [Smoothing], a law of its own for each stutter,
@@ -24,41 +24,76 @@ class BulbStutter(
     private val onStutter: (Smoothing) -> Unit = {},
 ) {
 
-    companion object {
-        /** A calm stretch, in ms: "stable for some time", but "a bit less stable in between" (the maintainer). */
-        val CALM_MS = 2000.0..7000.0
+    /**
+     * How restless the bulb is: the length of its calm stretches and its stutters, in ms, and how deep its dips go.
+     * [next] reads it at each new stretch, so a change shows from the next one on.
+     */
+    data class Temper(
+        val calmMs: ClosedFloatingPointRange<Double>,
+        val stutterMs: ClosedFloatingPointRange<Double>,
+        val dipLevel: ClosedFloatingPointRange<Double>,
+        val deepChance: Double,
+        val deepLevel: ClosedFloatingPointRange<Double>,
+    )
 
-        /** A stutter, in ms. */
-        val STUTTER_MS = 250.0..1400.0
+    companion object {
+        /**
+         * Before and during the dyno: "stable for some time", but "a bit less stable in between", the dips to half at
+         * the most ("It gets too dark when it is stuttering, half only"; the maintainer, 2026-10-27).
+         */
+        val RESTLESS = Temper(
+            calmMs = 2000.0..7000.0,
+            stutterMs = 250.0..1400.0,
+            dipLevel = 0.6..0.85,
+            deepChance = 0.15,
+            deepLevel = 0.5..0.55,
+        )
+
+        /**
+         * Once the test is done: "do not flicker too much or too often" (the maintainer, 2026-10-28). Long calm
+         * stretches, short stutters, shallow dips.
+         */
+        val SETTLED = Temper(
+            calmMs = 8000.0..20000.0,
+            stutterMs = 200.0..700.0,
+            dipLevel = 0.75..0.9,
+            deepChance = 0.1,
+            deepLevel = 0.65..0.7,
+        )
 
         /** One step of a stutter, in ms. */
         val STEP_MS = 30.0..120.0
 
         /** The chance that a step of a stutter is a dip, not the light back on. */
         const val DIP_CHANCE = 0.5
-
-        /** How far a dip leaves the light. */
-        val DIP_LEVEL = 0.6..0.85
-
-        /** The chance that a dip is a deep one. */
-        const val DEEP_CHANCE = 0.15
-
-        /** How far a deep dip leaves the light: half, at the most. */
-        val DEEP_LEVEL = 0.5..0.55
     }
 
+    /** How restless the bulb is now. */
+    var temper: Temper = RESTLESS
+
+    /** While true the light stays straight on, no stutter; after it, a calm stretch comes first. */
+    var steady = false
+
     private var stuttering = false
-    private var phaseLeftMs = draw(CALM_MS)
+    private var phaseLeftMs = draw(temper.calmMs)
     private var stepLeftMs = 0.0
     private var level = 1.0
 
-    /** Where the light heads, 0.5 to 1, after [deltaMs] more. */
+    /** Where the light heads, at least the [temper]'s deepest dip, after [deltaMs] more. */
     fun next(deltaMs: Double): Double {
+        if (steady) {
+            stuttering = false
+            level = 1.0
+            phaseLeftMs = temper.calmMs.start
+
+            return 1.0
+        }
+
         phaseLeftMs -= deltaMs
 
         if (phaseLeftMs <= 0.0) {
             stuttering = !stuttering
-            phaseLeftMs = draw(if (stuttering) STUTTER_MS else CALM_MS)
+            phaseLeftMs = draw(if (stuttering) temper.stutterMs else temper.calmMs)
             stepLeftMs = 0.0
             level = 1.0
 
@@ -74,8 +109,8 @@ class BulbStutter(
                 stepLeftMs = draw(STEP_MS)
                 level = when {
                     random.nextDouble() >= DIP_CHANCE -> 1.0
-                    random.nextDouble() < DEEP_CHANCE -> draw(DEEP_LEVEL)
-                    else -> draw(DIP_LEVEL)
+                    random.nextDouble() < temper.deepChance -> draw(temper.deepLevel)
+                    else -> draw(temper.dipLevel)
                 }
             }
         }
