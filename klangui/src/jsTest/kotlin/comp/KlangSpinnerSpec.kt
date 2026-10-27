@@ -10,6 +10,7 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.kraft.testing.TestBed
 import kotlinx.browser.window
 import kotlinx.css.px
+import org.w3c.dom.Element
 import org.w3c.dom.HTMLElement
 
 /** The spinner (KLANG-00347): what screen readers find, its size, a ring that turns. */
@@ -25,6 +26,18 @@ class KlangSpinnerSpec : StringSpec({
             val ring = spinner.querySelector("svg")!!
 
             window.getComputedStyle(ring).animationName shouldBe "kl-spin"
+        }
+    }
+
+    "its arc is in the ink of the text around it, so it shows on a silver button too" {
+        TestBed.preact(view = { KlangSpinner(label = "Loading", size = 14.px) }) { root ->
+            val spinner = root[0].querySelector("[role=status]") as HTMLElement
+
+            spinner.style.color = "rgb(17, 17, 17)"
+
+            val arc = spinner.querySelectorAll("circle").item(1) as Element
+
+            window.getComputedStyle(arc).getPropertyValue("stroke") shouldBe "rgb(17, 17, 17)"
         }
     }
 })

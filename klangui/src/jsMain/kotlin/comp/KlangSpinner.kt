@@ -31,9 +31,10 @@ fun Tag.KlangSpinner(
 
 /**
  * Something is happening (KLANG-00347; the maintainer, 2026-10-26: "While it says "Warming Up" we need some
- * indication that something is happening ... a little spinner"): a dim ring with a short arc of the look's metal
- * running round it. Its [Props.label] is the text of a `status`, hidden from the eye, so screen readers that read the
- * page find it. Under "reduce motion" the arc stands and pulses gently instead.
+ * indication that something is happening ... a little spinner"): a dim ring with a short arc running round it, both in
+ * the ink of the text beside it, so it reads on a dark panel and on a silver button alike (the look's metal vanished on
+ * silver, the maintainer, 2026-10-27). Its [Props.label] is the text of a `status`, hidden from the eye, so screen
+ * readers that read the page find it. Under "reduce motion" the arc stands and pulses gently instead.
  */
 class KlangSpinner(ctx: Ctx<Props>) : Component<KlangSpinner.Props>(ctx) {
 

@@ -1129,14 +1129,15 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         }
     }
 
+    // Both in the ink of the text beside it: the look's metal vanished on a silver button
     val spinnerTrack by rule {
         put("fill", "none")
-        put("stroke", "color-mix(in srgb, var(--kl-ink-label) 25%, transparent)")
+        put("stroke", "color-mix(in srgb, currentColor 25%, transparent)")
     }
 
     val spinnerArc by rule {
         put("fill", "none")
-        put("stroke", "var(--kl-metal-mid)")
+        put("stroke", "currentColor")
         put("stroke-linecap", "round")
     }
 
