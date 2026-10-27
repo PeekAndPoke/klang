@@ -123,18 +123,62 @@ sealed interface Block {
      * never engine internals (flux ruling).
      */
     sealed interface Visual : Block {
-        /** Envelope shape from the same colon string the code uses. */
+        /**
+         * An envelope's shape. On the page it follows the examples right after it, each one a player (KLANG-00371):
+         * a light per note on the curve, the curve reshaped to what plays. Before a note sounds it shows [value], the
+         * same colon string the first of them writes (drift is lint-enforced); without one, what that example writes
+         * in `.adsr(...)`. Only where the example writes its envelope (the maintainer, 2026-10-27, on the lessons
+         * before and without one: "these do not define adsrs"; lint-enforced).
+         */
         data class Adsr(
-            val value: String,
-            val label: String = "loudness",
-        ) : Visual
+            val value: String? = null,
+            val envelope: Envelope = Envelope.Loudness,
+        ) : Visual {
+
+            /**
+             * The four numbers drawn before a note sounds, [example] being the code of the first player after it;
+             * null when it writes none or they do not parse (the curriculum lint says so).
+             */
+            fun numbers(example: String?): List<Double>? {
+                if (value != null) {
+                    return value.split(":").map { it.trim().toDoubleOrNull() ?: return null }.takeIf { it.size == 4 }
+                }
+
+                val written = adsrCall.find(codeOnly(example ?: return null)) ?: return null
+
+                return written.groupValues[1].split(",").map { it.trim().toDoubleOrNull() ?: return null }.takeIf { it.size == 4 }
+            }
+
+            /** Which of a note's envelopes it shows: its door in the voice data, and the word along its edge. */
+            enum class Envelope(val door: String, val label: String) {
+                Loudness(door = "adsr", label = "loudness"),
+                Cutoff(door = "lpf", label = "cutoff"),
+            }
+        }
     }
 }
 
 data class TutorialSection(
     val heading: String? = null,
     val blocks: List<Block>,
-)
+) {
+    /**
+     * Each player that an ADSR picture follows, by its block's index, onto the picture's index: the KlangScript
+     * examples right after the picture, one after another, up to the first block that is not one (KLANG-00371).
+     */
+    fun playersAfterPictures(): Map<Int, Int> = buildMap {
+        blocks.forEachIndexed { index, block ->
+            if (block is Block.Visual.Adsr) {
+                var next = index + 1
+
+                while ((blocks.getOrNull(next) as? Block.Code)?.lang == "KlangScript") {
+                    put(next, index)
+                    next++
+                }
+            }
+        }
+    }
+}
 
 data class Tutorial(
     val slug: String,
@@ -159,3 +203,9 @@ data class Tutorial(
     val sections: List<TutorialSection>,
     val rpm: Double = 30.0,
 )
+
+/** `.adsr(a, d, s, r)` in a line of code: its four arguments. */
+private val adsrCall = Regex("""\.adsr\(([^)]*)\)""")
+
+/** [code] without its comments: what plays, its lines joined. */
+fun codeOnly(code: String): String = code.lines().joinToString(" ") { it.substringBefore("//") }

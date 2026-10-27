@@ -44,15 +44,25 @@ val alternationAndRepetitionTutorial = Tutorial(
                     markdown = """
                     ${Tut.yourFirstBeat} set the musician's word bar aside, so there was one name for the window in time. It comes back now with a different job: the cycle is the container, and a **bar** is one cycle's worth of notes. With `< >`, a pattern can hold several bars and deal them out in turn. This is how real songs are written in Klang: a handful of bars between the angle brackets, taking turns.
 
-                    **Try it:** swap the `//` to compare rotating bars against one repeating bar.
+                    **Try it:** play both examples to compare rotating bars against one repeating bar.
 
                     **Listen for:** cycle one circles `a2`; cycle two lifts the home note to `c3` and comes back, while the `g2` in third place stays put in both, the hinge the two bars turn on.
                     """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
-                    note("<[a2 a2 g2 a2] [c3 c3 g2 c3]>").sound("saw").adsr(0.001, 0.3, 0, 0.1).gain(0.5) // two bars, one per cycle
-                    // note("[a2 a2 g2 a2]").sound("saw").adsr(0.001, 0.3, 0, 0.1).gain(0.5)              // one bar, repeating
+                    note("<[a2 a2 g2 a2] [c3 c3 g2 c3]>")  // two bars, one per cycle
+                      .sound("saw")                        // the bright voice
+                      .adsr(0.001, 0.3, 0, 0.1)            // the pluck shape
+                      .gain(0.5)
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    note("[a2 a2 g2 a2]")        // one bar, repeating
+                      .sound("saw")              // the bright voice
+                      .adsr(0.001, 0.3, 0, 0.1)  // the pluck shape
+                      .gain(0.5)
                     """.trimIndent(),
                 ),
             ),
@@ -62,17 +72,27 @@ val alternationAndRepetitionTutorial = Tutorial(
             blocks = listOf(
                 Block.Markdown(
                     markdown = """
-                    The exclamation mark clones a step in place: `a2!3` means `a2 a2 a2`, as three real steps. It looks like the `*` from ${Tut.subdivision} but does the opposite job: `!` multiplies steps; `*` squeezes copies inside a single step and leaves the step count alone. That is why `g2` moves in one line and not the other: `a2!3` turns two steps into four, so `g2` shrinks to a quarter of the cycle; `a2*3` keeps two steps, so `g2` keeps its half. (Alone, with no neighbour to push around, the two sound the same; the difference needs company.)
+                    The exclamation mark clones a step in place: `a2!3` means `a2 a2 a2`, as three real steps. It looks like the `*` from ${Tut.subdivision} but does the opposite job: `!` multiplies steps; `*` squeezes copies inside a single step and leaves the step count alone. That is why `g2` moves in one example and not the other: `a2!3` turns two steps into four, so `g2` shrinks to a quarter of the cycle; `a2*3` keeps two steps, so `g2` keeps its half. (Alone, with no neighbour to push around, the two sound the same; the difference needs company.)
 
-                    **Try it:** swap the `//` and hear the same three `a2`s land completely differently.
+                    **Try it:** play both examples and hear the same three `a2`s land completely differently.
 
-                    **Listen for:** the first line walks: four even steps, three of them `a2`. The second stumbles: three quick `a2`s in the first half, then `g2` alone with the whole second half to itself. (The steps here are half a cycle wide, far bigger than the hat slots in ${Tut.subdivision}, which is why the same `*3` sounds unhurried.)
+                    **Listen for:** the first example walks: four even steps, three of them `a2`. The second example stumbles: three quick `a2`s in the first half, then `g2` alone with the whole second half to itself. (The steps here are half a cycle wide, far bigger than the hat slots in ${Tut.subdivision}, which is why the same `*3` sounds unhurried.)
                     """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
-                    note("a2!3 g2").sound("saw").adsr(0.001, 0.3, 0, 0.1).gain(0.5)    // !3: three real steps, four steps total
-                    // note("a2*3 g2").sound("saw").adsr(0.001, 0.3, 0, 0.1).gain(0.5) // *3: three inside one step, two steps total
+                    note("a2!3 g2")              // !3: three real steps, four steps total
+                      .sound("saw")              // the bright voice
+                      .adsr(0.001, 0.3, 0, 0.1)  // the pluck shape
+                      .gain(0.5)
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    note("a2*3 g2")              // *3: three inside one step, two steps total
+                      .sound("saw")              // the bright voice
+                      .adsr(0.001, 0.3, 0, 0.1)  // the pluck shape
+                      .gain(0.5)
                     """.trimIndent(),
                 ),
             ),
@@ -84,15 +104,25 @@ val alternationAndRepetitionTutorial = Tutorial(
                     markdown = """
                     The at-sign gives a step extra weight: `a2@3` takes three shares of the cycle where its neighbour takes one. `!` gives a note more turns; `@` gives its step more room.
 
-                    **Try it:** swap the `//` to compare the lean against an even split.
+                    **Try it:** play both examples to compare the lean against an even split.
 
-                    **Listen for:** when `g2` arrives. In the first line `a2` holds the floor for three quarters of the cycle and `g2` slips in right at the end: a lean. In the second, the two notes share the cycle half and half. (The pluck itself does not ring any longer; sustain 0 sees to that, as you heard in ${Tut.shapeOfANote}. `@` stretches the step, and everything after it moves.)
+                    **Listen for:** when `g2` arrives. In the first example `a2` holds the floor for three quarters of the cycle and `g2` slips in right at the end: a lean. In the second, the two notes share the cycle half and half. (The pluck itself does not ring any longer; sustain 0 sees to that, as you heard in ${Tut.shapeOfANote}. `@` stretches the step, and everything after it moves.)
                     """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
-                    note("a2@3 g2").sound("saw").adsr(0.001, 0.3, 0, 0.1).gain(0.5)  // @3: a2's step takes three shares of four, g2 waits
-                    // note("a2 g2").sound("saw").adsr(0.001, 0.3, 0, 0.1).gain(0.5) // even: half and half
+                    note("a2@3 g2")              // @3: a2's step takes three shares of four, g2 waits
+                      .sound("saw")              // the bright voice
+                      .adsr(0.001, 0.3, 0, 0.1)  // the pluck shape
+                      .gain(0.5)
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    note("a2 g2")                // even: half and half
+                      .sound("saw")              // the bright voice
+                      .adsr(0.001, 0.3, 0, 0.1)  // the pluck shape
+                      .gain(0.5)
                     """.trimIndent(),
                 ),
             ),

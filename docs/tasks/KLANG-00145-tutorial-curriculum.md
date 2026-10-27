@@ -89,10 +89,10 @@ Ground truth from the 14 built-in songs (full tally in session analysis, key fac
    earlier in the path. Anything else must be a labeled **preview** with a link to the lesson that teaches it.
    → *Lintable:* parse code blocks, check identifiers against (carrier ∪ taught-so-far ∪ declared previews).
 4. **Every lesson has at least one "listen for …" A/B moment.** Same code twice, one change, directed ear.
-   Write each side of the pair as ONE whole statement on its own line, so a single `//` toggles it and the
-   reader can swap without editing anything else. The commented-out side is real code the lesson tells the
-   reader to run, so it is compiled by the spec exactly like the live line (lint-enforced): roughly a
-   quarter of the corpus's runnable code sits behind a `//`, and none of it was checked until 2026-08-31.
+   Each side of the pair is a player of its own: two examples one after the other, the reader plays one,
+   then the other (the maintainer, 2026-10-27: "If there are multiple code block add multiple players instead
+   of the comments"; lint-enforced, no commented-out code in an example). Until then each side was one line
+   and a `//` toggled it. How an example is written: `/tutorial-writing`.
 5. **The finale consolidates, never introduces.** Closing example = this lesson's topic + earlier material only.
 6. **No template headings, no mandated metaphors.** Structure grows from the topic.
 7. **Short path, fat reference.** The ladder stays lean; exhaustive parameter lists live in the Lexikon, cross-linked.

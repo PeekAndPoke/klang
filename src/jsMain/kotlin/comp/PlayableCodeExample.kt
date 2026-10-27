@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.comp
 
+import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
 import io.peekandpoke.klang.storage.EditorSettings
@@ -22,6 +23,7 @@ import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.semanticui.icon
+import kotlinx.browser.window
 import kotlinx.css.px
 import kotlinx.html.ButtonType
 import kotlinx.html.DIV
@@ -35,8 +37,9 @@ fun Tag.PlayableCodeExample(
     code: String,
     rpm: Double = 30.0,
     help: QuickHelpPanel? = null,
+    onSignal: ((KlangPlaybackSignal?) -> Unit)? = null,
 ) = comp(
-    PlayableCodeExample.Props(code = code, rpm = rpm, help = help)
+    PlayableCodeExample.Props(code = code, rpm = rpm, help = help, onSignal = onSignal)
 ) {
     PlayableCodeExample(it)
 }
@@ -44,9 +47,10 @@ fun Tag.PlayableCodeExample(
 /**
  * A code example to play (KLANG-00370, the canvas's "The example player"): the song page's transport, small, over the
  * code on a small screen: Play (Update while it plays), Stop, the cycle, the RPM on a knob, and "Back to the original"
- * once the code was changed. One example plays at a time. The highlights per sound event are the editor setting the
+ * once the code was changed, and Copy. One example plays at a time. The highlights per sound event are the editor setting the
  * song page has (no EVT field of its own). Given [Props.help], Alt+Q and a hover show a name's help in the page's
- * bottom panel; without, the editor's own popup.
+ * bottom panel; without, the editor's own popup. [Props.onSignal] hears what the playback signals, for a picture that
+ * follows it (KLANG-00371).
  */
 class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props>(ctx) {
 
@@ -57,6 +61,8 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
         val rpm: Double = 30.0,
         /** The page's bottom panel for the code's help; null for the editor's own popup. */
         val help: QuickHelpPanel? = null,
+        /** Each signal of the playback, as it comes: the notes scheduled, a stop, a live update. */
+        val onSignal: ((KlangPlaybackSignal?) -> Unit)? = null,
     )
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -75,11 +81,28 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
         editorCompRef { it.setMaxHighlightsPerEvent(newValue) }
     }
 
+    /** Each playback signal on to [Props.onSignal]; a plain subscription, as the example draws nothing from it. */
+    private val passSignals = ctrl.signals.subscribeToStream { props.onSignal?.invoke(it) }
+
     private val isModifiedFromOriginal get() = state.code != props.code
+
+    /** "Copied" on the copy key for a moment. */
+    private var copied: Boolean by value(false)
+
+    /** The copy key's way back to "Copy"; cleared when the example goes. */
+    private var copiedTimer: Int? = null
+
+    private var unmounted = false
 
     init {
         lifecycle {
-            onUnmount { ctrl.stop() }
+            onUnmount {
+                unmounted = true
+                copiedTimer?.let { window.clearTimeout(it) }
+                // Stopped first, so the stop still reaches whoever follows the playback
+                ctrl.stop()
+                passSignals()
+            }
         }
     }
 
@@ -159,7 +182,36 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                     +"Back to the original"
                 }
             }
+
+            // What the editor holds, edits included (the maintainer, 2026-10-27: "please add a copy button here")
+            button(type = ButtonType.button, classes = "kl-quiet-key") {
+                attributes["data-copy"] = ""
+                title = "Copy the code"
+                onClick { copy(state.code) }
+
+                icon.copy_outline()
+                +if (copied) "Copied" else "Copy"
+            }
         }
+    }
+
+    /** Copies [code]; "Copied" only once it is. Outside a secure context (a dev URL over http) there is no clipboard. */
+    private fun copy(code: String) {
+        val clipboard = window.navigator.asDynamic().clipboard ?: return
+
+        clipboard.writeText(code).then(
+            {
+                if (!unmounted) {
+                    copied = true
+                    copiedTimer?.let { window.clearTimeout(it) }
+                    copiedTimer = window.setTimeout({
+                        copiedTimer = null
+                        copied = false
+                    }, 2000)
+                }
+            },
+            { e: dynamic -> console.warn("PlayableCodeExample: could not copy the code", e) },
+        )
     }
 
     /** Play, or update while it plays once its code changed; retry when the engine did not start. */

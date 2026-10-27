@@ -61,15 +61,23 @@ val thicknessTutorial = Tutorial(
 
                     It is not a fifth waveform. It is the `saw` you already know, playing several times at once, each copy nudged a little off the note. The phrase below is the long two-note leap from ${Tut.shapeOfANote}, so each note has room to be heard.
 
-                    **Try it:** swap the `//` between the two lines and press **Update**, a few times. (Judge the thickness, not the level.)
+                    **Try it:** play the first example, then the second, a few times. (Judge the thickness, not the level.)
 
                     **Listen for:** the single `saw` stands perfectly still. The `supersaw` will not hold still: it shimmers, swelling and thinning on a slow pulse of its own. That pulse is the copies disagreeing about the pitch and drifting in and out of step with each other. Nothing about the note has changed; there is simply more than one of it.
                     """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
-                    note("a3 ~ c4 ~").sound("supersaw").gain(0.5)  // many saws at once: it shimmers
-                    // note("a3 ~ c4 ~").sound("saw").gain(0.5)    // one saw, perfectly still, swap to compare
+                    note("a3 ~ c4 ~")
+                      .sound("supersaw")  // many saws at once: it shimmers
+                      .gain(0.5)
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    note("a3 ~ c4 ~")
+                      .sound("saw")    // one saw, perfectly still, to compare
+                      .gain(0.5)
                     """.trimIndent(),
                 ),
             ),
@@ -130,15 +138,31 @@ val thicknessTutorial = Tutorial(
 
                     It needs a note long enough to wander during, so this phrase now wears the pad shape from ${Tut.shapeOfANote} and `slow(2)` from ${Tut.theTransformToolkit} to stretch each note over a whole cycle. (Notes always begin in tune; the wander only develops while one is held. On a short pluck there is nothing to hear.)
 
-                    **Try it:** swap the `//` and press **Update**. Then push `analog` to 25 and hear the wobble turn seasick, and drop it to 1 for the version most songs actually use.
+                    **Try it:** play the first example, then the second. Then, in the first, push `analog` to 25 and press **Update** to hear the wobble turn seasick, and drop it to 1 for the version most songs actually use.
 
                     **Listen for:** the still version is beautiful and slightly dead, the same shape held for as long as you like. The drifting one never repeats itself: the shimmer keeps rearranging while the note is held, and the longer you listen, the more obviously the first version is a machine.
                     """.trimIndent(),
                 ),
+                Block.Visual.Adsr(),
                 Block.Code(
                     code = """
-                    note("a3 ~ c4 ~").sound("supersaw").unison(voices = 8, spread = 0.2).analog(6).adsr(0.25, 0.15, 0.8, 1.2).slow(2).gain(0.5)    // drifting: each layer wanders on its own
-                    // note("a3 ~ c4 ~").sound("supersaw").unison(voices = 8, spread = 0.2).adsr(0.25, 0.15, 0.8, 1.2).slow(2).gain(0.5)           // perfectly still, swap to compare
+                    note("a3 ~ c4 ~")
+                      .sound("supersaw")
+                      .unison(voices = 8, spread = 0.2)
+                      .analog(6)                         // drifting: each layer wanders on its own
+                      .adsr(0.25, 0.15, 0.8, 1.2)
+                      .slow(2)
+                      .gain(0.5)
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    note("a3 ~ c4 ~")
+                      .sound("supersaw")
+                      .unison(voices = 8, spread = 0.2)  // perfectly still, to compare
+                      .adsr(0.25, 0.15, 0.8, 1.2)
+                      .slow(2)
+                      .gain(0.5)
                     """.trimIndent(),
                 ),
             ),
@@ -150,16 +174,41 @@ val thicknessTutorial = Tutorial(
                     markdown = """
                     Three instruments from three numbers, in the spirit of ${Tut.shapeOfANote} and ${Tut.theFilterEnvelope}. All three are the same voice on the same two notes; only the size of the stack, the distance across it, and the drift inside it change.
 
-                    **Try it:** give each line a few loops, then take the third one and walk `spread` from `0.05` up to `0.5` a step at a time. Somewhere in there is the sound you were looking for.
+                    **Try it:** give each example a few loops, then take the third one and walk `spread` from `0.05` up to `0.5` a step at a time. Somewhere in there is the sound you were looking for.
 
                     **Listen for:** how many players you hear. The tight one is one instrument. The wide one is a whole section of them, on the same note, none of them quite agreeing about it. The alive one is that section played by people, who cannot hold still even when they mean to.
                     """.trimIndent(),
                 ),
+                Block.Visual.Adsr(),
                 Block.Code(
                     code = """
-                    note("a3 ~ c4 ~").sound("supersaw").unison(voices = 3, spread = 0.04).adsr(0.25, 0.15, 0.8, 1.2).slow(2).gain(0.5)              // tight: three layers, barely apart
-                    // note("a3 ~ c4 ~").sound("supersaw").unison(voices = 12, spread = 0.3).adsr(0.25, 0.15, 0.8, 1.2).slow(2).gain(0.5)           // wide: the big detuned lead
-                    // note("a3 ~ c4 ~").sound("supersaw").unison(voices = 12, spread = 0.3).analog(6).adsr(0.25, 0.15, 0.8, 1.2).slow(2).gain(0.5) // alive: the same, drifting
+                    note("a3 ~ c4 ~")
+                      .sound("supersaw")
+                      .unison(voices = 3, spread = 0.04)  // tight: three layers, barely apart
+                      .adsr(0.25, 0.15, 0.8, 1.2)
+                      .slow(2)
+                      .gain(0.5)
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    note("a3 ~ c4 ~")
+                      .sound("supersaw")
+                      .unison(voices = 12, spread = 0.3)  // wide: the big detuned lead
+                      .adsr(0.25, 0.15, 0.8, 1.2)
+                      .slow(2)
+                      .gain(0.5)
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    note("a3 ~ c4 ~")
+                      .sound("supersaw")
+                      .unison(voices = 12, spread = 0.3)
+                      .analog(6)                          // alive: the same, drifting
+                      .adsr(0.25, 0.15, 0.8, 1.2)
+                      .slow(2)
+                      .gain(0.5)
                     """.trimIndent(),
                 ),
             ),

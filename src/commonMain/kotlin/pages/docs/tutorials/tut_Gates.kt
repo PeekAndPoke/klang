@@ -31,17 +31,28 @@ val gatesTutorial = Tutorial(
                     markdown = """
                     The stab riff from ${Tut.chordsInOneStep} wrote the chord out three times, with rests between. `struct()` takes the same line apart: the pattern says what plays (one power chord), and the **gate** string says when, with `x` for a hit and `~` for a rest, splitting the cycle into steps exactly like every string you have written.
 
-                    (The two lines below sound identical on purpose: they are the same riff, spelled whole and spelled apart.)
+                    (The two examples below sound identical on purpose: they are the same riff, spelled whole and spelled apart.)
 
-                    **Try it:** swap the `//` and press **Update** to convince your ear, and swap back. Then change `[a2,e3,a3]` to `[g2,d3,g3]` and press **Update**. One edit moves all three hits.
+                    **Try it:** play the first example, then the second, to convince your ear. Then, in the first, change `[a2,e3,a3]` to `[g2,d3,g3]` and press **Update**. One edit moves all three hits.
 
                     **Listen for:** no difference. Then look at the code again. The gate line names the chord once: change the chord and every hit follows; change the gate and the chord stays.
                     """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
-                    note("[a2,e3,a3]").sound("saw").adsr(0.001, 0.3, 0, 0.1).struct("x ~ ~ x  ~ ~ x ~").gain(0.35)          // one chord + a gate
-                    // note("[a2,e3,a3] ~ ~ [a2,e3,a3]  ~ ~ [a2,e3,a3] ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).gain(0.35) // spelled whole, swap
+                    note("[a2,e3,a3]")             // one chord
+                      .sound("saw")
+                      .adsr(0.001, 0.3, 0, 0.1)
+                      .struct("x ~ ~ x  ~ ~ x ~")  // and a gate
+                      .gain(0.35)
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    note("[a2,e3,a3] ~ ~ [a2,e3,a3]  ~ ~ [a2,e3,a3] ~")  // spelled whole
+                      .sound("saw")
+                      .adsr(0.001, 0.3, 0, 0.1)
+                      .gain(0.35)
                     """.trimIndent(),
                 ),
             ),
@@ -53,15 +64,27 @@ val gatesTutorial = Tutorial(
                     markdown = """
                     Look at the gate's spacing: hits on steps one, four, and seven, with gaps of three, three, and two. That spacing has a name, the **tresillo**, and it is one of the most widespread rhythm shapes in the world: son, reggaeton, and half of pop lean on it. You have been playing it since ${Tut.chordsInOneStep} without the name.
 
-                    **Try it:** swap the `//` to the straightened gate (hits every other step) and press **Update**, then swap back.
+                    **Try it:** play the first example, then the second, which has the straightened gate (hits every other step).
 
                     **Listen for:** the difference in pull. The even gate marches in place; the tresillo leans forward, because its last gap is one step short: the cycle comes back around one step before you expect it.
                     """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
-                    note("[a2,e3,a3]").sound("saw").adsr(0.001, 0.3, 0, 0.1).struct("x ~ ~ x  ~ ~ x ~").gain(0.35)    // the tresillo: three, three, two
-                    // note("[a2,e3,a3]").sound("saw").adsr(0.001, 0.3, 0, 0.1).struct("x ~ x ~  x ~ x ~").gain(0.35) // straightened, swap to compare
+                    note("[a2,e3,a3]")
+                      .sound("saw")
+                      .adsr(0.001, 0.3, 0, 0.1)
+                      .struct("x ~ ~ x  ~ ~ x ~")  // the tresillo: three, three, two
+                      .gain(0.35)
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    note("[a2,e3,a3]")
+                      .sound("saw")
+                      .adsr(0.001, 0.3, 0, 0.1)
+                      .struct("x ~ x ~  x ~ x ~")  // straightened, to compare
+                      .gain(0.35)
                     """.trimIndent(),
                 ),
             ),
@@ -81,8 +104,15 @@ val gatesTutorial = Tutorial(
                 Block.Code(
                     code = """
                     stack(
-                      note("a2").sound("sine").struct("x ~ ~ x  ~ ~ x ~").gain(0.6),                                  // the bass on the gate
-                      note("[a2,e3,a3]").sound("saw").adsr(0.001, 0.3, 0, 0.1).struct("x ~ ~ x  ~ ~ x ~").gain(0.35)  // the stabs on the same gate
+                      note("a2")                     // the bass on the gate
+                        .sound("sine")
+                        .struct("x ~ ~ x  ~ ~ x ~")
+                        .gain(0.6),
+                      note("[a2,e3,a3]")             // the stabs on the same gate
+                        .sound("saw")
+                        .adsr(0.001, 0.3, 0, 0.1)
+                        .struct("x ~ ~ x  ~ ~ x ~")
+                        .gain(0.35)
                     )
                     """.trimIndent(),
                 ),
@@ -95,7 +125,7 @@ val gatesTutorial = Tutorial(
                     markdown = """
                     The groove from ${Tut.spaceAndRests} underneath, and the locked pair above it. The drums and the gate agree where it matters: the first hit shares its step with the kick, the last one with the snare, and the middle one strikes where the drums leave room.
 
-                    **Try it:** put `//` in front of one layer at a time to hear the others. Then move the middle `x` one step later in both gate strings (same lock, new lean) and press **Update**.
+                    **Try it:** put `//` in front of every line of one layer at a time and press **Update** to hear the others. Then move the middle `x` one step later in both gate strings (same lock, new lean) and press **Update**.
 
                     **Listen for:** the push and the frame at once: drums keeping the cycle square while bass and stabs lean three-three-two across it. Most grooves you love are exactly this argument.
                     """.trimIndent(),
@@ -103,9 +133,17 @@ val gatesTutorial = Tutorial(
                 Block.Code(
                     code = """
                     stack(
-                      sound("bd ~ hh ~  ~ hh sd ~").gain(0.8),                                                        // the groove, square
-                      note("a2").sound("sine").struct("x ~ ~ x  ~ ~ x ~").gain(0.6),                                  // tresillo bass
-                      note("[a2,e3,a3]").sound("saw").adsr(0.001, 0.3, 0, 0.1).struct("x ~ ~ x  ~ ~ x ~").gain(0.35)  // tresillo stabs
+                      sound("bd ~ hh ~  ~ hh sd ~")  // the groove, square
+                        .gain(0.8),
+                      note("a2")                     // tresillo bass
+                        .sound("sine")
+                        .struct("x ~ ~ x  ~ ~ x ~")
+                        .gain(0.6),
+                      note("[a2,e3,a3]")             // tresillo stabs
+                        .sound("saw")
+                        .adsr(0.001, 0.3, 0, 0.1)
+                        .struct("x ~ ~ x  ~ ~ x ~")
+                        .gain(0.35)
                     )
                     """.trimIndent(),
                 ),

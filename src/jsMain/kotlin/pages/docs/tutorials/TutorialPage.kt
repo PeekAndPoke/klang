@@ -9,9 +9,11 @@ import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.comp.PlayableCodeExample
 import io.peekandpoke.klang.comp.QuickHelpPanel
 import io.peekandpoke.klang.comp.lexikonSlugOf
+import io.peekandpoke.klang.comp.toAdsrSignals
 import io.peekandpoke.klang.layouts.WorkbenchSlots
 import io.peekandpoke.klang.pages.docs.lexikon.lexikonAutoLinks
 import io.peekandpoke.klang.storage.TutorialStorage
+import io.peekandpoke.klang.ui.comp.KlangAdsrSignal
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangLamp
 import io.peekandpoke.klang.ui.comp.MarkdownDisplay
@@ -23,10 +25,12 @@ import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.html.onClick
+import io.peekandpoke.ultra.streams.Stream
+import io.peekandpoke.ultra.streams.StreamSource
 import kotlinx.css.CssBuilder
+import kotlinx.html.ButtonType
 import kotlinx.html.DIV
 import kotlinx.html.FlowContent
-import kotlinx.html.ButtonType
 import kotlinx.html.Tag
 import kotlinx.html.button
 import kotlinx.html.div
@@ -70,6 +74,12 @@ class TutorialPage(ctx: NoProps) : PureComponent(ctx) {
     private val currentRoute by subscribingTo(router.current)
 
     private val done by subscribingTo(TutorialStorage.done)
+
+    /** For a picture with no example after it: nothing ever comes. */
+    private val noSignals: Stream<KlangAdsrSignal?> = StreamSource(null)
+
+    /** Per ADSR picture (by tutorial, section, block), the notes its example plays; kept while the page is. */
+    private val adsrSignals = mutableMapOf<String, StreamSource<KlangAdsrSignal?>>()
 
     private val helpPanel = QuickHelpPanel(pageKey = "tutorial-${++pagesDrawn}")
 
@@ -247,7 +257,13 @@ class TutorialPage(ctx: NoProps) : PureComponent(ctx) {
                 }
             }
 
-            for (block in section.blocks) {
+            // A picture follows the players right after it (KLANG-00371): a stream per picture, fed by each of them
+            val follows = section.blocks.indices
+                .filter { section.blocks[it] is Block.Visual.Adsr }
+                .associateWith { blockIndex -> adsrSignals.getOrPut("${tutorial.slug}/$index/$blockIndex") { StreamSource(null) } }
+            val feeds = section.playersAfterPictures()
+
+            for ((blockIndex, block) in section.blocks.withIndex()) {
                 when (block) {
                     is Block.Text -> div {
                         css { renderProse() }
@@ -267,12 +283,31 @@ class TutorialPage(ctx: NoProps) : PureComponent(ctx) {
 
                     is Block.Code -> div {
                         when (block.lang) {
-                            "KlangScript" -> PlayableCodeExample(code = block.code, rpm = tutorial.rpm, help = helpPanel)
+                            "KlangScript" -> {
+                                val pictureIndex = feeds[blockIndex]
+                                val picture = pictureIndex?.let { section.blocks[it] as Block.Visual.Adsr }
+                                val stream = pictureIndex?.let { follows[it] }
+
+                                PlayableCodeExample(
+                                    code = block.code,
+                                    rpm = tutorial.rpm,
+                                    help = helpPanel,
+                                    onSignal = if (picture != null && stream != null) {
+                                        { signal -> signal.toAdsrSignals(door = picture.envelope.door).forEach { stream(it) } }
+                                    } else {
+                                        null
+                                    },
+                                )
+                            }
                             else -> pre { +block.code }
                         }
                     }
 
-                    is Block.Visual.Adsr -> AdsrVisual(value = block.value, label = block.label)
+                    is Block.Visual.Adsr -> AdsrVisual(
+                        visual = block,
+                        example = (section.blocks.getOrNull(blockIndex + 1) as? Block.Code)?.code,  // the first player after it
+                        signals = follows[blockIndex] ?: noSignals,
+                    )
                 }
             }
         }
@@ -336,7 +371,17 @@ class TutorialPage(ctx: NoProps) : PureComponent(ctx) {
                     +(nextLabel?.let { "Done. On to $it ›" } ?: "Mark this lesson as done")
                 }
             } else {
-                KlangLamp(state = KlangLamp.State.On, label = "Done")
+                // The quiet key's text box: its size and its line height (a button's "normal", 1.15 in Lato), and no line
+                // of its own around the lamp's label; centred in the row, the two then share one baseline (measured)
+                span {
+                    css {
+                        put("display", "flex")
+                        put("font-size", "13px")
+                        put("line-height", "1.15")
+                    }
+
+                    KlangLamp(state = KlangLamp.State.On, label = "Done")
+                }
 
                 quietKey(label = "Not done after all", marker = "undo") {
                     TutorialStorage.setCompleted(tutorial.slug, false)

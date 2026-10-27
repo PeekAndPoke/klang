@@ -31,7 +31,7 @@ val yourFirstBeatTutorial = Tutorial(
                     - **RPM** (revolutions per minute) sets the music's speed; it gets its own section further down this page.
                     - The **EVT** field tunes how much of the code lights up while playing; you can ignore it.
 
-                    Two things about the code itself. Anything after `//` is a comment: Klang ignores it. We use comments to narrate the code, and later on this page you will use `//` to switch whole lines on and off. And whenever you wonder what a word in the code does: put the cursor on it and press Alt+Q, and a help popup opens right there, with what it does and how to use it.
+                    Two things about the code itself. Anything after `//` is a comment: Klang ignores it. We use comments to narrate the code. And whenever you wonder what a word in the code does: put the cursor on it and press Alt+Q, and a help popup opens right there, with what it does and how to use it.
                     """.trimIndent(),
                 ),
                 Block.Code(
@@ -54,7 +54,8 @@ val yourFirstBeatTutorial = Tutorial(
                 ),
                 Block.Code(
                     code = """
-                    sound("bd").gain(0.8)  // one name = one hit per cycle, also written s("bd")
+                    sound("bd")  // one name = one hit per cycle, also written s("bd")
+                      .gain(0.8)
                     """.trimIndent(),
                 ),
             ),
@@ -73,7 +74,8 @@ val yourFirstBeatTutorial = Tutorial(
                 ),
                 Block.Code(
                     code = """
-                    sound("bd").gain(0.8)  // unchanged, only the clock above it moves
+                    sound("bd")  // unchanged, only the clock above it moves
+                      .gain(0.8)
                     """.trimIndent(),
                 ),
             ),
@@ -104,17 +106,20 @@ val yourFirstBeatTutorial = Tutorial(
                 ),
                 Block.Code(
                     code = """
-                    sound("bd hh sd hh").gain(0.8)  // four names: four equal steps
+                    sound("bd hh sd hh")  // four names: four equal steps
+                      .gain(0.8)
                     """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
-                    sound("bd oh cp rim").gain(0.8)  // same steps, new drums
+                    sound("bd oh cp rim")  // same steps, new drums
+                      .gain(0.8)
                     """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
-                    sound("bd ht mt lt").gain(0.8)  // the toms, high to low
+                    sound("bd ht mt lt")  // the toms, high to low
+                      .gain(0.8)
                     """.trimIndent(),
                 ),
             ),
@@ -126,15 +131,21 @@ val yourFirstBeatTutorial = Tutorial(
                     markdown = """
                     The rule is not "four": any number of names splits the cycle equally. Three names make three equal steps.
 
-                    **Try it:** this is your first `//` swap. Put `//` in front of the first line and remove it from the second, then press **Update**. Keep exactly one line live; if both are, only the lower one plays.
+                    **Try it:** play the first example, then the second.
 
                     **Listen for:** the kick comes back around at exactly the same moment in both versions, with three hits spread out to fill the time four filled. (The counter confirms it: same pace either way.) The cycle is a fixed container: you never changed it, only how many pieces it is cut into.
                     """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
-                    sound("bd hh sd").gain(0.8)        // three names: the cycle splits in thirds
-                    // sound("bd hh sd hh").gain(0.8)  // four again, swap the // to compare
+                    sound("bd hh sd")  // three names: the cycle splits in thirds
+                      .gain(0.8)
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    sound("bd hh sd hh")  // four again, to compare
+                      .gain(0.8)
                     """.trimIndent(),
                 ),
             ),
@@ -151,7 +162,8 @@ val yourFirstBeatTutorial = Tutorial(
                 ),
                 Block.Code(
                     code = """
-                    sound("bd hh sd hh  bd hh sd oh").gain(0.8)  // eight names: each gets an eighth of the cycle
+                    sound("bd hh sd hh  bd hh sd oh")  // eight names: each gets an eighth of the cycle
+                      .gain(0.8)
                     """.trimIndent(),
                 ),
             ),

@@ -31,17 +31,26 @@ val scalesAndMelodiesTutorial = Tutorial(
             blocks = listOf(
                 Block.Markdown(
                     markdown = """
-                    `n()` plays **rungs** of a **ladder** by number, and `scale()` names the ladder: `0` is the home rung, counting upward. The pair below is the seven-letter climb from ${Tut.firstNotes}, written twice: as note names, and as numbers on the `c3:major` ladder. (The two lines sound identical on purpose: the numbers are the same notes.)
+                    `n()` plays **rungs** of a **ladder** by number, and `scale()` names the ladder: `0` is the home rung, counting upward. The pair below is the seven-letter climb from ${Tut.firstNotes}, written twice: as note names, and as numbers on the `c3:major` ladder. (The two examples sound identical on purpose: the numbers are the same notes.)
 
-                    **Try it:** swap the `//` to convince your ear, press **Update**, and swap back. Then, on the number line, change the `7` to `9`. The ladder keeps going past the octave.
+                    **Try it:** play the first example, then the second, to convince your ear. Then, in the first, change the `7` to `9` and press **Update**. The ladder keeps going past the octave.
 
                     **Listen for:** no difference between the two spellings. What the numbers buy you is not a new sound; it is that the melody no longer says which notes it wants, only which rungs. The ladder decides the rest.
                     """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
-                    n("0 1 2 3  4 5 6 7").scale("c3:major").sound("sine").gain(0.5)    // the climb as numbers: 0 is c3, 7 is c4
-                    // note("c3 d3 e3 f3  g3 a3 b3 c4").sound("sine").gain(0.5)        // the climb from ${Tut.firstNotes}, swap
+                    n("0 1 2 3  4 5 6 7")  // the climb as numbers: 0 is c3, 7 is c4
+                      .scale("c3:major")
+                      .sound("sine")
+                      .gain(0.5)
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    note("c3 d3 e3 f3  g3 a3 b3 c4")  // the climb from ${Tut.firstNotes}, as note names
+                      .sound("sine")
+                      .gain(0.5)
                     """.trimIndent(),
                 ),
             ),
@@ -55,15 +64,25 @@ val scalesAndMelodiesTutorial = Tutorial(
 
                     The same three numbers below (`0 2 4`) land on `c4 eb4 g4` on the minor ladder, and on `c4 e4 g4` on the major one. Only rung `2` moves, and it is the one you hear most.
 
-                    **Try it:** swap the `//` and press **Update**, a few times, until the difference is unmistakable.
+                    **Try it:** play the first example, then the second, a few times, until the difference is unmistakable.
 
-                    **Listen for:** the mood flip. Same numbers, same rhythm. One lowered letter, and the line goes from overcast to sunlit and back as you swap. This single choice, major or minor, is the loudest word in a song's vocabulary.
+                    **Listen for:** the mood flip. Same numbers, same rhythm. One lowered letter, and the line goes from overcast to sunlit and back as you switch. This single choice, major or minor, is the loudest word in a song's vocabulary.
                     """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
-                    n("0 2 4 2  0 2 4 2").scale("c4:minor").sound("sine").gain(0.5)    // minor: the numbers land on c4 eb4 g4
-                    // n("0 2 4 2  0 2 4 2").scale("c4:major").sound("sine").gain(0.5) // major: c4 e4 g4, swap to compare
+                    n("0 2 4 2  0 2 4 2")
+                      .scale("c4:minor")   // minor: the numbers land on c4 eb4 g4
+                      .sound("sine")
+                      .gain(0.5)
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    n("0 2 4 2  0 2 4 2")
+                      .scale("c4:major")   // major: c4 e4 g4, the numbers stay the same
+                      .sound("sine")
+                      .gain(0.5)
                     """.trimIndent(),
                 ),
             ),
@@ -97,15 +116,26 @@ val scalesAndMelodiesTutorial = Tutorial(
 
                     It also takes a pattern. With the angle brackets from ${Tut.alternationAndRepetition}, `"<0 12>"` plays the melody on its home floor one cycle and one floor up the next.
 
-                    **Try it:** swap the `//` and press **Update**, and swap back. Then make it `"<0 -12>"`. The visits go down instead.
+                    **Try it:** play the first example, then the second. Then, in the first, make it `"<0 -12>"` and press **Update**. The visits go down instead.
 
                     **Listen for:** the same melody taking turns between two floors, cycle by cycle: the octave from ${Tut.firstNotes}, now a moving part.
                     """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
-                    n("0 2 3 ~  4 3 2 ~").scale("a3:minor").sound("sine").gain(0.5).transpose("<0 12>")    // home floor, then one floor up, in turns
-                    // n("0 2 3 ~  4 3 2 ~").scale("a3:minor").sound("sine").gain(0.5)                     // home floor only, swap
+                    n("0 2 3 ~  4 3 2 ~")
+                      .scale("a3:minor")
+                      .sound("sine")
+                      .gain(0.5)
+                      .transpose("<0 12>")  // home floor, then one floor up, in turns
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    n("0 2 3 ~  4 3 2 ~")
+                      .scale("a3:minor")
+                      .sound("sine")
+                      .gain(0.5)           // home floor only, to compare
                     """.trimIndent(),
                 ),
             ),
@@ -117,7 +147,7 @@ val scalesAndMelodiesTutorial = Tutorial(
                     markdown = """
                     The layers from ${Tut.layers}, rewritten as numbers: dry, one thing at a time. The bass turns out to live on its own ladder one floor below the melody: rung `0` is `a2`, and rung `-3` sits three rungs down, at `e2`. Two ladders, one family: `a2:minor` under `a3:minor`.
 
-                    **Try it:** turn both scales to major and press **Update**. The bass keeps its two notes (they sit on both ladders) while the melody lifts its `c4` to `cs4`: the whole song brightens on two word-swaps. Then put `//` in front of one layer at a time to hear each pair alone, the practice from ${Tut.layers}.
+                    **Try it:** turn both scales to major and press **Update**. The bass keeps its two notes (they sit on both ladders) while the melody lifts its `c4` to `cs4`: the whole song brightens on two word-swaps. Then put `//` in front of every line of one layer at a time to hear each pair alone, the practice from ${Tut.layers}.
 
                     **Listen for:** how little you typed and how much moved. The notes come from the ladder now; the patterns only say when.
                     """.trimIndent(),
@@ -125,9 +155,16 @@ val scalesAndMelodiesTutorial = Tutorial(
                 Block.Code(
                     code = """
                     stack(
-                      sound("bd ~ hh ~  ~ hh sd ~").gain("0.8 0.8 0.4 0.8  0.8 0.5 0.8 0.8"),  // the accented groove from ${Tut.spaceAndRests}
-                      n("0 ~ ~ 0  ~ ~ -3 ~").scale("a2:minor").sound("sine").gain(0.6),        // ${Tut.layers}' bass: 0 is a2, -3 is the e2 below it
-                      n("0 2 3 ~  4 3 2 ~").scale("a3:minor").sound("sine").gain(0.5)          // the melody on its ladder
+                      sound("bd ~ hh ~  ~ hh sd ~")                 // the accented groove from ${Tut.spaceAndRests}
+                        .gain("0.8 0.8 0.4 0.8  0.8 0.5 0.8 0.8"),
+                      n("0 ~ ~ 0  ~ ~ -3 ~")                        // ${Tut.layers}' bass: 0 is a2, -3 is the e2 below it
+                        .scale("a2:minor")
+                        .sound("sine")
+                        .gain(0.6),
+                      n("0 2 3 ~  4 3 2 ~")                         // the melody on its ladder
+                        .scale("a3:minor")
+                        .sound("sine")
+                        .gain(0.5)
                     )
                     """.trimIndent(),
                 ),

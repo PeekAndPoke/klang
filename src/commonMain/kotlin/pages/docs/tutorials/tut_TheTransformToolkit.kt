@@ -31,18 +31,34 @@ val theTransformToolkitTutorial = Tutorial(
             blocks = listOf(
                 Block.Markdown(
                     markdown = """
-                    In ${Tut.subdivision}, `*2` doubled one step. `fast()` is the same multiplication applied to the whole line: `fast(2)` plays the entire pattern twice per cycle. `slow(2)` is its mirror: the pattern stretches over two cycles, and every note gets twice the room. (You already pointed `fast()` and `slow()` at signals in ${Tut.signalsMoveTheKnobs}; this is their day job.) Below, the melody wears `slow(2)` first; `fast(2)` and the plain line wait behind the `//`.
+                    In ${Tut.subdivision}, `*2` doubled one step. `fast()` is the same multiplication applied to the whole line: `fast(2)` plays the entire pattern twice per cycle. `slow(2)` is its mirror: the pattern stretches over two cycles, and every note gets twice the room. (You already pointed `fast()` and `slow()` at signals in ${Tut.signalsMoveTheKnobs}; this is their day job.) Below, the first example wears `slow(2)`, the second wears `fast(2)`, and the third is the plain line.
 
-                    **Try it:** swap the `//` between the three lines and press **Update** each time. On the slow line, watch the player's counter: the melody now needs two clicks to come around.
+                    **Try it:** play the three examples one after the other. In the first, watch the player's counter: the melody now needs two clicks to come around.
 
                     **Listen for:** the same shape at three sizes. Half-time makes the melody calm and heavy; double-time turns it into a run. Nothing about the melody changed, only how much time it is given.
                     """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
-                    note("a3 c4 d4 ~  e4 d4 c4 ~").sound("sine").gain(0.5).slow(2)    // half-time: the melody takes two cycles
-                    // note("a3 c4 d4 ~  e4 d4 c4 ~").sound("sine").gain(0.5).fast(2) // double-time: twice per cycle, swap
-                    // note("a3 c4 d4 ~  e4 d4 c4 ~").sound("sine").gain(0.5)         // the plain line, swap
+                    note("a3 c4 d4 ~  e4 d4 c4 ~")
+                      .sound("sine")
+                      .gain(0.5)
+                      .slow(2)                      // half-time: the melody takes two cycles
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    note("a3 c4 d4 ~  e4 d4 c4 ~")
+                      .sound("sine")
+                      .gain(0.5)
+                      .fast(2)                      // double-time: twice per cycle
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    note("a3 c4 d4 ~  e4 d4 c4 ~")
+                      .sound("sine")
+                      .gain(0.5)                    // the plain line
                     """.trimIndent(),
                 ),
             ),
@@ -54,15 +70,24 @@ val theTransformToolkitTutorial = Tutorial(
                     markdown = """
                     `superimpose()` plays the line, and on top of it a copy, run through a change. Below, the change is `transpose(12)` from ${Tut.scalesAndMelodies}: the copy sings one floor up, in step with the original. (Two copies add up, the practice from ${Tut.chordsInOneStep}, so the line, copy included, sits at 0.4 instead of the usual 0.5.)
 
-                    **Try it:** swap the `//` to hear the line alone, and press **Update**. Then make it `transpose(-12)`. The copy moves underneath. Last, headphones on: make it `.pan(0.3).superimpose(transpose(12).pan(0.7))`. The original on the left, its octave copy on the right.
+                    **Try it:** play the second example to hear the line alone. Then, in the first, make it `transpose(-12)` and press **Update**. The copy moves underneath. Last, headphones on: make it `.pan(0.3).superimpose(transpose(12).pan(0.7))`. The original on the left, its octave copy on the right.
 
                     **Listen for:** not a second melody but a taller one. The copy hits every note together with the original: the octave from ${Tut.firstNotes}, worn as a coat.
                     """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
-                    note("a3 c4 d4 ~  e4 d4 c4 ~").sound("sine").superimpose(transpose(12)).gain(0.4)    // the line plus its octave copy
-                    // note("a3 c4 d4 ~  e4 d4 c4 ~").sound("sine").gain(0.5)                            // alone, swap to compare
+                    note("a3 c4 d4 ~  e4 d4 c4 ~")
+                      .sound("sine")
+                      .superimpose(transpose(12))   // the line plus its octave copy
+                      .gain(0.4)
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    note("a3 c4 d4 ~  e4 d4 c4 ~")
+                      .sound("sine")
+                      .gain(0.5)                    // alone, to compare
                     """.trimIndent(),
                 ),
             ),
@@ -74,15 +99,24 @@ val theTransformToolkitTutorial = Tutorial(
                     markdown = """
                     Since ${Tut.firstNotes}, every note has held for its whole step; that was `legato(1)`, unwritten. `legato()` scales the held length: 0.5 cuts each note to half its step and leaves silence behind it; 2 holds it into the next step.
 
-                    **Try it:** swap the `//` and press **Update**, and swap back. Then change `legato(0.5)` to `legato(2)`. The notes hold past their steps and begin to touch, length doing what release did in ${Tut.shapeOfANote}.
+                    **Try it:** play the first example, then the second. Then, in the first, change `legato(0.5)` to `legato(2)` and press **Update**. The notes hold past their steps and begin to touch, length doing what release did in ${Tut.shapeOfANote}.
 
                     **Listen for:** the melody on tiptoe. Same notes, same places, but each one steps away early, and the silences carry as much groove as the notes. Short is a rhythm of its own.
                     """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
-                    note("a3 c4 d4 ~  e4 d4 c4 ~").sound("sine").gain(0.5).legato(0.5)    // half-length notes: staccato
-                    // note("a3 c4 d4 ~  e4 d4 c4 ~").sound("sine").gain(0.5)             // full-length, swap
+                    note("a3 c4 d4 ~  e4 d4 c4 ~")
+                      .sound("sine")
+                      .gain(0.5)
+                      .legato(0.5)                  // half-length notes: staccato
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    note("a3 c4 d4 ~  e4 d4 c4 ~")
+                      .sound("sine")
+                      .gain(0.5)                    // full-length, to compare
                     """.trimIndent(),
                 ),
             ),
@@ -102,12 +136,14 @@ val theTransformToolkitTutorial = Tutorial(
                 Block.Code(
                     code = """
                     stack(
-                      sound("bd ~ hh ~  ~ hh sd ~").gain(0.8),      // the groove, at its usual speed
-                      note("a3 c4 d4 ~  e4 d4 c4 ~").sound("sine")  // the melody from ${Tut.firstNotes}
-                        .slow(2)                                    // half-time: two cycles per pass
-                        .superimpose(transpose(12))                 // plus its octave copy
-                        .clip(0.5)                                  // clip: the same function as legato, short notes
-                        .gain(0.4)                                  // two copies add up
+                      sound("bd ~ hh ~  ~ hh sd ~")   // the groove, at its usual speed
+                        .gain(0.8),
+                      note("a3 c4 d4 ~  e4 d4 c4 ~")  // the melody from ${Tut.firstNotes}
+                        .sound("sine")
+                        .slow(2)                      // half-time: two cycles per pass
+                        .superimpose(transpose(12))   // plus its octave copy
+                        .clip(0.5)                    // clip: the same function as legato, short notes
+                        .gain(0.4)                    // two copies add up
                     )
                     """.trimIndent(),
                 ),

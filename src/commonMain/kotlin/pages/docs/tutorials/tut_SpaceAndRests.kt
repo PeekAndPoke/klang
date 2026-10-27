@@ -20,19 +20,25 @@ val spaceAndRestsTutorial = Tutorial(
             blocks = listOf(
                 Block.Markdown(
                     markdown = """
-                    This lesson is about deleting. It starts from the beat built in ${Tut.yourFirstBeat} (eight steps, every step filled) and stays on that grid the whole way. (The code sits on one line here, so a single `//` can switch a whole version off.)
+                    This lesson is about deleting. It starts from the beat built in ${Tut.yourFirstBeat} (eight steps, every step filled) and stays on that grid the whole way.
 
-                    The tilde `~` is a **rest**: silence that still takes its step. The second line below is the first line with every hi-hat replaced by `~`.
+                    The tilde `~` is a **rest**: silence that still takes its step. The second example below is the first with every hi-hat replaced by `~`.
 
-                    **Try it:** swap the `//` between the two lines and press **Update**.
+                    **Try it:** play the first example, then the second.
 
                     **Listen for:** the kick and snare land in exactly the same places in both versions: only the hats vanished, and the steps they stood on stayed open instead of closing up. Watch the code, too: nothing lights up on the `~` steps. The step is there; it just doesn't sound. (`~` works in any pattern string, not only drums; melodies rest the same way, as ${Tut.firstNotes} shows.)
                     """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
-                    sound("bd hh sd hh  bd hh sd oh").gain(0.8)  // full: every step filled
-                    // sound("bd ~ sd ~  bd ~ sd ~").gain(0.8)   // same grid, hats replaced by rests
+                    sound("bd hh sd hh  bd hh sd oh")  // full: every step filled
+                      .gain(0.8)
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    sound("bd ~ sd ~  bd ~ sd ~")  // same grid, hats replaced by rests
+                      .gain(0.8)
                     """.trimIndent(),
                 ),
             ),
@@ -60,17 +66,23 @@ val spaceAndRestsTutorial = Tutorial(
             blocks = listOf(
                 Block.Markdown(
                     markdown = """
-                    Now delete the other half instead: keep only the hats. Play the first line and count along until the count feels solid.
+                    Now delete the other half instead: keep only the hats. Play the first example and count along until the count feels solid.
 
-                    **Try it:** swap the `//` and keep counting through the change. (The hats are lifted to `gain` 1.0 in the second line; on their own, they are much quieter sounds than kick and snare.)
+                    **Try it:** play the second example and keep counting through the change. (The hats are lifted to `gain` 1.0 in it; on their own, they are much quieter sounds than kick and snare.)
 
                     **Listen for:** the hats land exactly between your counts (musicians call those the **off-beats**) and your head keeps nodding where the kick and snare used to be. Your ear supplies the skeleton for a while, even though the speaker no longer plays it. Silence in the right place creates pull; that is why rests matter more than extra sounds.
                     """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
-                    sound("bd ~ sd ~  bd ~ sd ~").gain(0.8)     // the skeleton, count along with this first
-                    // sound("~ hh ~ hh  ~ hh ~ oh").gain(1.0)  // hats alone, lifted to 1.0 (alone they need it)
+                    sound("bd ~ sd ~  bd ~ sd ~")  // the skeleton, count along with this first
+                      .gain(0.8)
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    sound("~ hh ~ hh  ~ hh ~ oh")  // hats alone
+                      .gain(1.0)                   // lifted to 1.0 (alone they need it)
                     """.trimIndent(),
                 ),
             ),
@@ -102,15 +114,21 @@ val spaceAndRestsTutorial = Tutorial(
                     markdown = """
                     This is not a new function; it is the rule you already know, applied to numbers. `gain()` accepts a pattern string too, and the numbers split the cycle exactly like drum names do: eight numbers, eight steps, and every sound picks up the number standing on its step. Giving hits different levels (some standing out, some sitting back) is called **accenting**, and it is the other half of groove. (Most settings accept a pattern string like this. Remember that: the whole course leans on it.)
 
-                    **Try it:** swap the `//` to compare against the flat version.
+                    **Try it:** play the first example, then the second, the flat version.
 
                     **Listen for:** only the hats moved. They sit back, while the kick and snare stand exactly where they were. Same sounds, different accents.
                     """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
-                    sound("bd ~ hh ~  ~ hh sd ~").gain("0.8 0.8 0.4 0.8  0.8 0.5 0.8 0.8")  // second hat a touch louder: it leads into the snare
-                    // sound("bd ~ hh ~  ~ hh sd ~").gain(0.8)                              // flat: every hit equal
+                    sound("bd ~ hh ~  ~ hh sd ~")                // the groove from above
+                      .gain("0.8 0.8 0.4 0.8  0.8 0.5 0.8 0.8")  // second hat a touch louder: it leads into the snare
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    sound("bd ~ hh ~  ~ hh sd ~")  // the same groove
+                      .gain(0.8)                   // flat: every hit equal
                     """.trimIndent(),
                 ),
             ),
@@ -120,9 +138,9 @@ val spaceAndRestsTutorial = Tutorial(
             blocks = listOf(
                 Block.Markdown(
                     markdown = """
-                    Both lines below are the same tempo and the same eight steps. The live line is what we made; the switched-off line is the full beat this lesson started with.
+                    Both examples below are the same tempo and the same eight steps. The first is what we made; the second is the full beat this lesson started with.
 
-                    **Try it:** swap the `//` and press **Update**, and remember to comment the live line out, or the lower one still wins.
+                    **Try it:** play the first example, then the second.
 
                     The shaped version is also quieter (it has half the hits), so nudge your volume up a notch and judge the groove, not the level.
 
@@ -131,8 +149,14 @@ val spaceAndRestsTutorial = Tutorial(
                 ),
                 Block.Code(
                     code = """
-                    sound("bd ~ hh ~  ~ hh sd ~").gain("0.8 0.8 0.4 0.8  0.8 0.5 0.8 0.8")  // shaped and accented
-                    // sound("bd hh sd hh  bd hh sd oh").gain(0.8)                          // full: every step filled
+                    sound("bd ~ hh ~  ~ hh sd ~")  // shaped and accented
+                      .gain("0.8 0.8 0.4 0.8  0.8 0.5 0.8 0.8")
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    sound("bd hh sd hh  bd hh sd oh")  // full: every step filled
+                      .gain(0.8)
                     """.trimIndent(),
                 ),
             ),

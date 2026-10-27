@@ -15,6 +15,8 @@ import io.peekandpoke.klang.pages.docs.tutorials.Tutorial
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialSection
 import io.peekandpoke.klang.pages.docs.tutorials.allTracks
 import io.peekandpoke.klang.pages.docs.tutorials.allTutorials
+import io.peekandpoke.klang.pages.docs.tutorials.codeOnly
+import io.peekandpoke.klang.pages.docs.tutorials.soundDesignBasicsTrack
 import io.peekandpoke.klang.pages.docs.tutorials.theKlangPathTrack
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.stdlibLib
@@ -41,8 +43,10 @@ import io.peekandpoke.klang.sprudel.lang.sprudelLib
  *    button in the chrome, and B1's player tour introduces all of them in bold.
  * 11. Inside one code block, every line comment starts at the same column — the comments are a
  *    narration column, and a ragged one reads as sloppy code.
- * 12. The commented-out alternatives compile too. Roughly a quarter of the corpus's code sits
- *    behind a `//`, and every "Try it: swap the //" asks the reader to run it.
+ * 12. An alternative is a player of its own, never a line behind `//`; each layer of a stack can
+ *    be put aside with `//` on every line of it, and what is left still compiles.
+ * 13. An ADSR picture follows the players right after it and draws what the first of them writes;
+ *    only where it writes its envelope, and in Sound Design Basics wherever one does (KLANG-00371).
  *
  * Mini-notation symbols use these canonical names in `teaches`/`previews`:
  * "~" rest, "[]" group, "<>" alternation, "*" fast, "!" replicate, "@" weight,
@@ -70,28 +74,6 @@ class TutorialCurriculumSpec : StringSpec({
                     }
                 }
             }
-        }
-    }
-
-    "every commented-out alternative in a code block compiles too" {
-        val failures = mutableListOf<String>()
-
-        for (tutorial in allTutorials) {
-            for (section in tutorial.sections) {
-                for (code in section.klangScriptBlocks()) {
-                    for (alternative in commentedAlternatives(code)) {
-                        val compiled = runCatching { compileBlock(alternative) }.getOrNull()
-
-                        if (compiled == null) {
-                            failures.add("${tutorial.slug} (${section.heading}): $alternative")
-                        }
-                    }
-                }
-            }
-        }
-
-        withClue("every 'Try it: swap the //' asks the reader to RUN one of these lines") {
-            failures.shouldBeEmpty()
         }
     }
 
@@ -330,11 +312,13 @@ class TutorialCurriculumSpec : StringSpec({
                 for (visual in section.blocks.filterIsInstance<Block.Visual>()) {
                     when (visual) {
                         is Block.Visual.Adsr -> {
-                            val parts = visual.value.split(":").mapNotNull { it.toDoubleOrNull() }
+                            // Without values of its own it draws what its example plays: checked in the row below
+                            val value = visual.value ?: continue
+                            val parts = value.split(":").mapNotNull { it.toDoubleOrNull() }
                             if (parts.size != 4) {
                                 violations.add(
                                     "${tutorial.slug} (${section.heading}): Adsr visual value " +
-                                        "'${visual.value}' does not parse as four colon-separated numbers"
+                                        "'$value' does not parse as four colon-separated numbers"
                                 )
                             }
                             // The visual keeps its compact colon encoding; the DSL is per-param
@@ -348,17 +332,126 @@ class TutorialCurriculumSpec : StringSpec({
                                 .zip(perParamCall.split(", "))
                                 .joinToString(", ") { (slot, n) -> "$slot = $n" }
                             val matchesCode = codes.any { code ->
-                                visual.value in code || perParamCall in code || namedCall in code
+                                value in code || perParamCall in code || namedCall in code
                             }
                             if (codes.isNotEmpty() && !matchesCode) {
                                 violations.add(
                                     "${tutorial.slug} (${section.heading}): Adsr visual value " +
-                                        "'${visual.value}' (per-param: '$perParamCall') does not appear " +
+                                        "'$value' (per-param: '$perParamCall') does not appear " +
                                         "in the section's code — picture and code must not drift"
                                 )
                             }
                         }
                     }
+                }
+            }
+        }
+
+        violations.shouldBeEmpty()
+    }
+
+    "an ADSR picture has a player right after it and draws what that plays: the players it follows on the page" {
+        val violations = mutableListOf<String>()
+
+        for (tutorial in allTutorials) {
+            for (section in tutorial.sections) {
+                section.blocks.forEachIndexed { index, block ->
+                    val visual = block as? Block.Visual.Adsr ?: return@forEachIndexed
+                    val next = section.blocks.getOrNull(index + 1) as? Block.Code
+                    val where = "${tutorial.slug} (${section.heading}): the Adsr visual '${visual.value ?: "from its example"}'"
+
+                    if (next == null || next.lang != "KlangScript") {
+                        violations.add("$where has no example right after it")
+                        return@forEachIndexed
+                    }
+
+                    val numbers = visual.numbers(example = next.code)
+                        ?.map { n -> if (n == n.toInt().toDouble()) n.toInt().toString() else n.toString() }
+
+                    if (numbers == null) {
+                        violations.add("$where: its first player writes no envelope, or its numbers do not parse")
+                        return@forEachIndexed
+                    }
+
+                    // What the first player plays, its comments aside
+                    val played = codeOnly(next.code).replace(Regex("""\s+"""), " ")
+                    val written = Block.Visual.Adsr().numbers(example = next.code)
+                    val named = listOf("attack", "decay", "sustain", "release").zip(numbers)
+                        .joinToString(", ") { (slot, n) -> "$slot = $n" }
+
+                    val draws = when (visual.envelope) {
+                        // Values of its own or read from it: the player writes the same numbers (`1` and `1.0` alike)
+                        Block.Visual.Adsr.Envelope.Loudness -> written == visual.numbers(example = next.code)
+                        // The cutoff's envelope is read from no player: its picture names its values
+                        Block.Visual.Adsr.Envelope.Cutoff -> visual.value != null && named in played
+                    }
+
+                    if (!draws) {
+                        violations.add("$where (${visual.envelope}) is not what the first player after it plays")
+                    }
+                }
+            }
+        }
+
+        violations.shouldBeEmpty()
+    }
+
+    "each player of Sound Design Basics that writes an envelope follows an ADSR picture" {
+        // The maintainer, 2026-10-27: the track's examples show their envelope, where they write one (no picture in
+        // the lessons before adsr is taught, nor in those that write none: "these do not define adsrs")
+        val missing = soundDesignBasicsTrack.lessons.flatMap { tutorial ->
+            tutorial.sections.flatMap { section ->
+                val followed = section.playersAfterPictures()
+
+                section.blocks.withIndex()
+                    .filter { (index, block) -> block is Block.Code && ".adsr(" in codeOnly(block.code) && index !in followed }
+                    .map { (index, _) -> "${tutorial.slug} (${section.heading}) block $index" }
+            }
+        }
+
+        missing.shouldBeEmpty()
+    }
+
+    "each layer of a stack can be put aside with `//` on its lines, and what is left still plays" {
+        // A lesson says "put `//` in front of every line of one layer": the rest must compile (trailing commas are fine)
+        val failures = mutableListOf<String>()
+
+        for (tutorial in allTutorials) {
+            for (section in tutorial.sections) {
+                for (code in section.klangScriptBlocks()) {
+                    val lines = code.lines()
+                    val layers = stackLayers(lines)
+
+                    // A stack the check cannot read would pass unseen: it fails instead
+                    if (layers == null) {
+                        if ("stack(" in codeOnly(code)) {
+                            failures.add("${tutorial.slug} (${section.heading}): a stack not opened alone on its first line")
+                        }
+
+                        continue
+                    }
+
+                    for (layer in layers.takeIf { it.size > 1 } ?: continue) {
+                        val without = lines.mapIndexed { index, line -> if (index in layer) "// $line" else line }.joinToString("\n")
+
+                        if (runCatching { compileBlock(without) }.getOrNull() == null) {
+                            failures.add("${tutorial.slug} (${section.heading}): without lines ${layer.first + 1}..${layer.last + 1}")
+                        }
+                    }
+                }
+            }
+        }
+
+        failures.shouldBeEmpty()
+    }
+
+    "an alternative is a player of its own, never a line behind `//` (the maintainer, 2026-10-27)" {
+        val violations = allTutorials.flatMap { tutorial ->
+            tutorial.sections.flatMap { section ->
+                section.klangScriptBlocks().flatMap { code ->
+                    code.lines().map { it.trim() }
+                        .filter { it.startsWith("//") && COMMENTED_CALL_REGEX.containsMatchIn(it.removePrefix("//").trim()) }
+                        .map { "${tutorial.slug} (${section.heading}): $it" }
                 }
             }
         }
@@ -413,20 +506,50 @@ private fun commentColumn(line: String): Int? {
     return marker
 }
 
-/**
- * The runnable alternatives a code block keeps behind `//`. Every A/B pair in the corpus is
- * written as ONE whole statement per line precisely so a single `//` toggles it, and every
- * "Try it: swap the `//`" tells the reader to run one of these — so they have to compile as
- * surely as the live line does. Prose comments (no call in them) are narration, not code.
- */
-private fun commentedAlternatives(code: String): List<String> = code.lines()
-    .map { it.trim() }
-    .filter { it.startsWith("//") }
-    .map { it.removePrefix("//").trim() }
-    .filter { CALL_REGEX.containsMatchIn(it) }
-
 /** Keywords the call-scan matches that are not vocabulary. */
 private val STRUCTURAL_KEYWORDS = setOf("if", "while", "for")
+
+/**
+ * The layers of an example that is a `stack(...)` from its first line, each as the range of its lines; null for any
+ * other example. A layer ends at a comma back on the stack's own level; the stack closes on a line of its own.
+ */
+private fun stackLayers(lines: List<String>): List<IntRange>? {
+    if (lines.firstOrNull()?.substringBefore("//")?.trim() != "stack(") {
+        return null
+    }
+
+    val layers = mutableListOf<IntRange>()
+    var depth = 1
+    var start = -1
+
+    for (index in 1 until lines.size) {
+        val code = lines[index].substringBefore("//").replace(STRING_REGEX, "\"\"")
+
+        if (start < 0 && code.isNotBlank() && !code.trim().startsWith(")")) {
+            start = index
+        }
+
+        depth += code.count { it == '(' } - code.count { it == ')' }
+
+        val closesOnItsOwn = depth == 0 && code.trim().startsWith(")")
+
+        if (start >= 0 && ((depth == 1 && code.trim().endsWith(",")) || depth == 0)) {
+            // The stack's own `)` is no part of the last layer; a layer that closes the stack on its own last line
+            // cannot be put aside, so it keeps that line, and fails
+            layers.add(start..(if (closesOnItsOwn) index - 1 else index))
+            start = -1
+        }
+
+        if (depth == 0) {
+            break
+        }
+    }
+
+    return layers
+}
+
+/** A commented line that starts with a call (`// note(...)`, `// .adsr(...)`): code put aside, not a remark. */
+private val COMMENTED_CALL_REGEX = Regex("""^\.?[a-zA-Z_][A-Za-z0-9_]*\s*\(""")
 
 private val CALL_REGEX = Regex("""([a-zA-Z_][A-Za-z0-9_]*)\s*\(""")
 private val STRING_REGEX = Regex(""""([^"\\]|\\.)*"""")

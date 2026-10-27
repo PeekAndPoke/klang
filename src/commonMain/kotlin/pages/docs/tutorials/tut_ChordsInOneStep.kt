@@ -29,17 +29,27 @@ val chordsInOneStepTutorial = Tutorial(
                     markdown = """
                     Inside brackets, a space splits a step into turns; ${Tut.subdivision} built hat rolls that way. A comma does something new: the notes stop taking turns and sound at the same instant. Several notes sounding together is a **chord**.
 
-                    Both lines below play `a2` and `e3` twice per cycle on the bright `saw` voice from ${Tut.theFourWaveforms}, wearing the pluck shape from ${Tut.shapeOfANote} so each hit starts and ends cleanly. (Two notes in one step add up, so the line sits at 0.4 instead of the usual 0.5.)
+                    Both examples below play `a2` and `e3` twice per cycle on the bright `saw` voice from ${Tut.theFourWaveforms}, wearing the pluck shape from ${Tut.shapeOfANote} so each hit starts and ends cleanly. (Two notes in one step add up, so the line sits at 0.4 instead of the usual 0.5.)
 
-                    **Try it:** swap the `//` and press **Update**. The same two notes, comma against space.
+                    **Try it:** play the first example, then the second. The same two notes, comma against space.
 
                     **Listen for:** struck together, the two notes fuse into one thicker sound; taking turns, they come apart into a quick roll. The comma is the difference between a chord and a very fast melody.
                     """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
-                    note("[a2,e3] ~ [a2,e3] ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).gain(0.4)    // comma: both notes strike together
-                    // note("[a2 e3] ~ [a2 e3] ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).gain(0.4) // space: the same notes take turns, swap
+                    note("[a2,e3] ~ [a2,e3] ~")  // comma: both notes strike together
+                      .sound("saw")
+                      .adsr(0.001, 0.3, 0, 0.1)
+                      .gain(0.4)
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    note("[a2 e3] ~ [a2 e3] ~")  // space: the same notes take turns
+                      .sound("saw")
+                      .adsr(0.001, 0.3, 0, 0.1)
+                      .gain(0.4)
                     """.trimIndent(),
                 ),
             ),
@@ -53,15 +63,25 @@ val chordsInOneStepTutorial = Tutorial(
 
                     The riff below (a short figure that repeats) stabs it three times across the cycle: on the first step, on the fourth, and on the seventh, with rests carrying the time between. (Three notes add up further, so the line drops to 0.35.)
 
-                    **Try it:** swap the `//` to hear three notes against two.
+                    **Try it:** play the first example, then the second, to hear three notes against two.
 
                     **Listen for:** the added `a3` does not read as a new melody note. It makes the chord taller and heavier: the "same but higher" of the octave floors in ${Tut.firstNotes}, folded into one strike.
                     """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
-                    note("[a2,e3,a3] ~ ~ [a2,e3,a3]  ~ ~ [a2,e3,a3] ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).gain(0.35)    // three-note stabs on steps one, four, seven
-                    // note("[a2,e3] ~ ~ [a2,e3]  ~ ~ [a2,e3] ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).gain(0.35)          // the two-note version, swap to compare
+                    note("[a2,e3,a3] ~ ~ [a2,e3,a3]  ~ ~ [a2,e3,a3] ~")  // three-note stabs on steps one, four, seven
+                      .sound("saw")
+                      .adsr(0.001, 0.3, 0, 0.1)
+                      .gain(0.35)
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    note("[a2,e3] ~ ~ [a2,e3]  ~ ~ [a2,e3] ~")  // the two-note version, to compare
+                      .sound("saw")
+                      .adsr(0.001, 0.3, 0, 0.1)
+                      .gain(0.35)
                     """.trimIndent(),
                 ),
             ),
@@ -83,7 +103,9 @@ val chordsInOneStepTutorial = Tutorial(
                 Block.Code(
                     code = """
                     note("[a2,e3,a3] ~ ~ [a2,e3,a3]  ~ ~ [a2,e3,a3]|[g2,d3,g3] ~")  // the last stab: a random pick, A or the same shape on G
-                      .sound("saw").adsr(0.001, 0.3, 0, 0.1).gain(0.35)             // voice, pluck, and level unchanged
+                      .sound("saw")                                                 // voice, pluck, and level unchanged
+                      .adsr(0.001, 0.3, 0, 0.1)
+                      .gain(0.35)
                     """.trimIndent(),
                 ),
             ),
@@ -95,7 +117,7 @@ val chordsInOneStepTutorial = Tutorial(
                     markdown = """
                     The riff was built to land on drums. `stack()` from ${Tut.layers} puts the groove from ${Tut.spaceAndRests} underneath: the first stab strikes with the kick, the middle one falls into the drums' gap, and the gambling one lands right on the snare.
 
-                    **Try it:** give each layer a few loops alone. Put `//` in front of the other one. Then swap the G chord for a shape of your own: move all three notes down one more letter to `[f2,c3,f3]` and press **Update**.
+                    **Try it:** give each layer a few loops alone: put `//` in front of every line of the other one and press **Update**. Then swap the G chord for a shape of your own: move all three notes down one more letter to `[f2,c3,f3]` and press **Update**.
 
                     **Listen for:** what the steady beat does to the gamble. With drums framing it, the changing chord no longer sounds like an accident; it sounds like a band member making a choice. That contrast, something solid next to something loose, is what makes randomness musical.
                     """.trimIndent(),
@@ -103,8 +125,11 @@ val chordsInOneStepTutorial = Tutorial(
                 Block.Code(
                     code = """
                     stack(
-                      sound("bd ~ hh ~  ~ hh sd ~").gain(0.8),                                                                         // the groove, steady every cycle
-                      note("[a2,e3,a3] ~ ~ [a2,e3,a3]  ~ ~ [a2,e3,a3]|[g2,d3,g3] ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).gain(0.35)  // the stab riff, unchanged
+                      sound("bd ~ hh ~  ~ hh sd ~").gain(0.8),                        // the groove, steady every cycle
+                      note("[a2,e3,a3] ~ ~ [a2,e3,a3]  ~ ~ [a2,e3,a3]|[g2,d3,g3] ~")  // the stab riff, unchanged
+                        .sound("saw")
+                        .adsr(0.001, 0.3, 0, 0.1)
+                        .gain(0.35)
                     )
                     """.trimIndent(),
                 ),

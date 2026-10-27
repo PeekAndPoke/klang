@@ -50,7 +50,8 @@ val firstNotesTutorial = Tutorial(
                 Block.Code(
                     code = """
                     note("c3 d3 e3 f3  g3 a3 b3 c4")  // up the seven letters, back to c
-                      .sound("sine").gain(0.5)
+                      .sound("sine")
+                      .gain(0.5)
                     """.trimIndent(),
                 ),
             ),
@@ -62,19 +63,27 @@ val firstNotesTutorial = Tutorial(
                     markdown = """
                     The number after the letter picks the floor: `c3` is low, `c5` is high. Same letter, same note, different height.
 
-                    **Try it:** swap the `//` between the two lines and press **Update**.
+                    **Try it:** play the first example, then the second.
 
-                    **Listen for:** the first line is one note moving between floors; the second walks between neighbouring notes on one floor. That is the octave from the last section, side by side with ordinary movement.
+                    **Listen for:** the first example is one note moving between floors; the second walks between neighbouring notes on one floor. That is the octave from the last section, side by side with ordinary movement.
 
                     Octaves 1 and 2 are bass territory; 3 and 4 are where melodies usually live; 5 and up cuts through everything.
 
-                    **Try it:** swap back to the first line, then drop its opening `c3` to `c2` and press **Update**; on small speakers it nearly vanishes. That is the speaker's limit, not the note's.
+                    **Try it:** in the first example, drop the opening `c3` to `c2` and press **Update**; on small speakers it nearly vanishes. That is the speaker's limit, not the note's.
                     """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
-                    note("c3 c4 c5 c4").sound("sine").gain(0.5)     // the same note on three floors, there and back
-                    // note("c4 d4 e4 d4").sound("sine").gain(0.5)  // neighbour notes on one floor, swap to compare
+                    note("c3 c4 c5 c4")  // the same note on three floors, there and back
+                      .sound("sine")
+                      .gain(0.5)
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    note("c4 d4 e4 d4")  // neighbour notes on one floor
+                      .sound("sine")
+                      .gain(0.5)
                     """.trimIndent(),
                 ),
             ),
@@ -86,9 +95,9 @@ val firstNotesTutorial = Tutorial(
                     markdown = """
                     The seven letters are not the whole ladder. Between most of them sits one more note: the black keys on a piano. You write them by adding `s` for **sharp**, raising the note into the gap above it, or `b` for **flat**, lowering it into the gap below: `cs3` sits between `c3` and `d3`, `eb3` between `d3` and `e3`. (Between `e` and `f`, and between `b` and `c`, there is none, and that unevenness is what gives the ladder its shape.)
 
-                    The live line is the ladder with one change: `e3` dropped to `eb3`.
+                    The first example is the ladder with one change: `e3` dropped to `eb3`.
 
-                    **Try it:** swap the `//` against the original.
+                    **Try it:** play the first example, then the second, the original.
 
                     **Listen for:** the third step lands lower, into the crack between `d3` and `e3`, and the whole ladder suddenly sounds darker.
 
@@ -97,8 +106,16 @@ val firstNotesTutorial = Tutorial(
                 ),
                 Block.Code(
                     code = """
-                    note("c3 d3 eb3 f3  g3 a3 b3 c4").sound("sine").gain(0.5)    // the ladder, e3 lowered to eb3
-                    // note("c3 d3 e3 f3  g3 a3 b3 c4").sound("sine").gain(0.5)  // the original, swap to compare
+                    note("c3 d3 eb3 f3  g3 a3 b3 c4")  // the ladder, e3 lowered to eb3
+                      .sound("sine")
+                      .gain(0.5)
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    note("c3 d3 e3 f3  g3 a3 b3 c4")  // the original
+                      .sound("sine")
+                      .gain(0.5)
                     """.trimIndent(),
                 ),
             ),
@@ -110,15 +127,23 @@ val firstNotesTutorial = Tutorial(
                     markdown = """
                     Melodies move in two ways: to a neighbouring letter, or further. Musicians call the first a **step**, a different sense of the word than the pattern steps from the drum lessons: here it means the next letter up or down. Anything bigger is a **leap**.
 
-                    **Try it:** swap the `//` between the two lines and press **Update**.
+                    **Try it:** play the first example, then the second.
 
                     **Listen for:** steps walk, smooth and speech-like, easy to follow. Leaps sing, dramatic and attention-grabbing. Most melodies you love are mostly steps with one or two well-placed leaps; the leap is the moment you remember.
                     """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
-                    note("c4 d4 e4 d4").sound("sine").gain(0.5)     // steps: neighbour to neighbour
-                    // note("c4 g4 e4 c5").sound("sine").gain(0.5)  // leaps: every move bigger than one letter
+                    note("c4 d4 e4 d4")  // steps: neighbour to neighbour
+                      .sound("sine")
+                      .gain(0.5)
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    note("c4 g4 e4 c5")  // leaps: every move bigger than one letter
+                      .sound("sine")
+                      .gain(0.5)
                     """.trimIndent(),
                 ),
             ),
@@ -151,15 +176,23 @@ val firstNotesTutorial = Tutorial(
                     markdown = """
                     One more version, for a question you may already be asking: how do you hold a note instead of resting after it? Put `@2` behind it, and that note then takes two steps' worth of time. Here the two rests are gone; `d4` and `c4` hold through the space instead. (`@` is borrowed from a later lesson: ${Tut.alternationAndRepetition} tells its full story; here it is simply the answer to the question.)
 
-                    **Try it:** swap the `//` to compare holding against resting.
+                    **Try it:** play both examples to compare holding against resting.
 
                     **Listen for:** the same melody, now unbroken. Where the silence was, the long note carries through.
                     """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
-                    note("a3 c4 d4@2  e4 d4 c4@2").sound("sine").gain(0.5)    // @2: the note holds two steps' worth
-                    // note("a3 c4 d4 ~  e4 d4 c4 ~").sound("sine").gain(0.5) // the rest version, swap to compare
+                    note("a3 c4 d4@2  e4 d4 c4@2")  // @2: the note holds two steps' worth
+                      .sound("sine")
+                      .gain(0.5)
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    note("a3 c4 d4 ~  e4 d4 c4 ~")  // the rest version
+                      .sound("sine")
+                      .gain(0.5)
                     """.trimIndent(),
                 ),
             ),

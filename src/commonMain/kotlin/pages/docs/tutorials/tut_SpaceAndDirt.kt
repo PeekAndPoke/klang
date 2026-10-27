@@ -75,15 +75,27 @@ val spaceAndDirtTutorial = Tutorial(
 
                     **Reverb** is the wash of reflections a space adds. `reverb()` puts a sound in one, and its first two numbers answer different questions. `wet` is how much of the sound is sent into the room, from 0 to 1. `size` is how big that room is.
 
-                    **Try it:** swap the `//` and press **Update**. Then, with the first line live, grow `size` to 8, and shrink it to 1.
+                    **Try it:** play the first example, then the second. Then, in the first, grow `size` to 8, and shrink it to 1, pressing **Update** each time.
 
                     **Listen for:** the rests. Dry, each note stops and leaves silence. Wet, the silence is full of the note that just ended, and at `size` 8 the tail is still going when the next note arrives.
                     """.trimIndent(),
                 ),
+                Block.Visual.Adsr(),
                 Block.Code(
                     code = """
-                    note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).reverb(wet = 0.4, size = 4).gain(0.5)  // 0.4 goes into a room of size 4
-                    // note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).gain(0.5)                           // dry, swap to compare
+                    note("a3 c4 d4 ~  e4 d4 c4 ~")
+                      .sound("saw")
+                      .adsr(0.001, 0.3, 0, 0.1)
+                      .reverb(wet = 0.4, size = 4)  // 0.4 goes into a room of size 4
+                      .gain(0.5)
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    note("a3 c4 d4 ~  e4 d4 c4 ~")
+                      .sound("saw")
+                      .adsr(0.001, 0.3, 0, 0.1)
+                      .gain(0.5)                    // dry, to compare
                     """.trimIndent(),
                 ),
             ),
@@ -100,6 +112,7 @@ val spaceAndDirtTutorial = Tutorial(
                     **Listen for:** a slightly longer tail, not silence. With `size` gone the room falls back to its default, 5, one size bigger than the 4 you took away. The delay in the next section works the same way.
                     """.trimIndent(),
                 ),
+                Block.Visual.Adsr(),
                 Block.Code(
                     code = """
                     note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw")        // the same melody all lesson
@@ -125,6 +138,7 @@ val spaceAndDirtTutorial = Tutorial(
                     **Listen for:** the melody answering itself a step later. At `feedback` 0.75 the answers pile up until the line is more echo than notes; at a time of 0.125 the echoes fall between the steps and the line doubles in speed instead.
                     """.trimIndent(),
                 ),
+                Block.Visual.Adsr(),
                 Block.Code(
                     code = """
                     note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw")           // the same melody
@@ -146,15 +160,27 @@ val spaceAndDirtTutorial = Tutorial(
 
                     `distort()` takes an amount, and optionally the name of a shape, because there is more than one way to be rude. `"soft"` rounds the peaks off warmly; `"tube"` leans the way a valve amplifier leans; `"hard"` simply refuses to go past a limit.
 
-                    **Try it:** swap the `//` and press **Update**. Then add a shape to the live line: `distort(0.5, "tube")`, then `"hard"`, then `"fold"`.
+                    **Try it:** play the first example, then the second. Then add a shape to the first: `distort(0.5, "tube")`, then `"hard"`, then `"fold"`, pressing **Update** each time.
 
                     **Listen for:** the pluck growing teeth. It is also plainly louder, which is a real problem and the reason this lesson has one section left. (Where distortion sits among the other effects is not something the call order decides; a Motor-track lesson still to come takes that up.)
                     """.trimIndent(),
                 ),
+                Block.Visual.Adsr(),
                 Block.Code(
                     code = """
-                    note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).distort(0.5).gain(0.5)  // driven hard: edge and growl
-                    // note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).gain(0.5)            // clean, swap to compare
+                    note("a3 c4 d4 ~  e4 d4 c4 ~")
+                      .sound("saw")
+                      .adsr(0.001, 0.3, 0, 0.1)
+                      .distort(0.5)                 // driven hard: edge and growl
+                      .gain(0.5)
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    note("a3 c4 d4 ~  e4 d4 c4 ~")
+                      .sound("saw")
+                      .adsr(0.001, 0.3, 0, 0.1)
+                      .gain(0.5)                    // clean, to compare
                     """.trimIndent(),
                 ),
             ),
@@ -170,15 +196,29 @@ val spaceAndDirtTutorial = Tutorial(
 
                     This is not the `lpf` from ${Tut.filters}, and the difference is worth keeping. `lpf` is the filter you shape a sound with: it has an edge you can make sing, and ${Tut.theFilterEnvelope} put that edge on the move. `onepole` has no edge and nothing to sweep. You set it once and leave it.
 
-                    **Try it:** swap the `//` and press **Update**. Then walk `onepole` down: 6000, then 2500, then 1200.
+                    **Try it:** play the first example, then the second. Then, in the first, walk `onepole` down and press **Update** each time: 6000, then 2500, then 1200.
 
                     **Listen for:** not only less glare on top, but a different growl underneath. A darker voice gives the distortion less to chew on, so the dirt changes character as it changes brightness. Drive and tone turn out to be one decision, not two.
                     """.trimIndent(),
                 ),
+                Block.Visual.Adsr(),
                 Block.Code(
                     code = """
-                    note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).distort(0.5).onepole(3500).gain(0.5)  // driven, then darkened
-                    // note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).distort(0.5).gain(0.5)             // driven and glaring, swap
+                    note("a3 c4 d4 ~  e4 d4 c4 ~")
+                      .sound("saw")
+                      .adsr(0.001, 0.3, 0, 0.1)
+                      .distort(0.5)
+                      .onepole(3500)                // driven, then darkened
+                      .gain(0.5)
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    note("a3 c4 d4 ~  e4 d4 c4 ~")
+                      .sound("saw")
+                      .adsr(0.001, 0.3, 0, 0.1)
+                      .distort(0.5)                 // driven and glaring, to compare
+                      .gain(0.5)
                     """.trimIndent(),
                 ),
             ),
@@ -194,15 +234,30 @@ val spaceAndDirtTutorial = Tutorial(
 
                     It takes a pattern like everything else, which is how ${Tut.spaceAndRests} put accents on individual hits: one number for the whole line, a pattern for note by note, the same word either way. A mute or a fade scales it too.
 
-                    **Try it:** swap the `//` and press **Update**. Then walk `gain` from 0.2 up to 0.5 and find the point where the growl still reads but stops shouting.
+                    **Try it:** play the first example, then the second. Then, in the first, walk `gain` from 0.2 up to 0.5, pressing **Update** each time, and find the point where the growl still reads but stops shouting.
 
                     **Listen for:** nothing changing except size. The growl and the tone are exactly as you left them; the line simply stops dominating everything around it.
                     """.trimIndent(),
                 ),
+                Block.Visual.Adsr(),
                 Block.Code(
                     code = """
-                    note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).distort(0.5).onepole(3500).gain(0.2)     // same growl, trimmed on the way out
-                    // note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).distort(0.5).onepole(3500).gain(0.5)  // untrimmed, swap to compare
+                    note("a3 c4 d4 ~  e4 d4 c4 ~")
+                      .sound("saw")
+                      .adsr(0.001, 0.3, 0, 0.1)
+                      .distort(0.5)
+                      .onepole(3500)
+                      .gain(0.2)                    // same growl, trimmed on the way out
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    note("a3 c4 d4 ~  e4 d4 c4 ~")
+                      .sound("saw")
+                      .adsr(0.001, 0.3, 0, 0.1)
+                      .distort(0.5)
+                      .onepole(3500)
+                      .gain(0.5)                    // untrimmed, to compare
                     """.trimIndent(),
                 ),
             ),
@@ -219,6 +274,7 @@ val spaceAndDirtTutorial = Tutorial(
                     **Listen for:** how much of what you think of as an instrument is the treatment rather than the notes. The melody has not changed since ${Tut.firstNotes}. Everything else has.
                     """.trimIndent(),
                 ),
+                Block.Visual.Adsr(),
                 Block.Code(
                     code = """
                     note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw")           // the melody, unchanged all course
