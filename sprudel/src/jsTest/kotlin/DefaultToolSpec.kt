@@ -17,16 +17,15 @@ import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.script.types.KlangParam
 import io.peekandpoke.klang.sprudel.ui.registerSprudelUiTools
 import io.peekandpoke.klang.ui.KlangUiToolRegistry
-import io.peekandpoke.klang.ui.badgeTool
+import io.peekandpoke.klang.ui.defaultTool
 import io.peekandpoke.ultra.semanticui.SemanticIcon
 
 /**
- * The editor's inline badge offers ONE tool per argument. Since C0.3 every tooled param declares a
- * value tool and the mini-notation tool that wraps it, and the wrapper borrows the value tool's
- * icon; listing both drew every icon twice. The badge picks the wrapper for a string literal and
- * the value tool for anything else; the context menu still lists both.
+ * The tool the Sprudel tab opens on for an argument (KLANG-00374): every tooled param declares a value tool and the
+ * mini-notation tool that wraps it (C0.3), and the wrapper borrows the value tool's icon. The tab opens on the wrapper
+ * for a string literal and on the value tool for anything else; its keys offer both.
  */
-class ParamToolBadgeSpec : StringSpec({
+class DefaultToolSpec : StringSpec({
 
     registerSprudelUiTools()
 
@@ -40,31 +39,31 @@ class ParamToolBadgeSpec : StringSpec({
             .first { (tools, p) -> p.name == param && tools.isNotEmpty() }
             .let { (tools, _) -> KlangUiToolRegistry.resolve(tools) }
 
-    "reverb wet: the param has two tools with one icon, the badge shows one of them" {
+    "reverb wet: the param has two tools with one icon, the tab opens on one of them" {
         val tools = toolsOf("reverb", "wet")
 
         tools shouldHaveSize 2
         SemanticIcon.cssClassOf(tools[0].second.iconFn) shouldBe SemanticIcon.cssClassOf(tools[1].second.iconFn)
 
-        tools.badgeTool("0.3").shouldNotBeNull().first shouldBe "SprudelReverbEditor"
-        tools.badgeTool("\"<0.2 0.5>\"").shouldNotBeNull().first shouldBe "SprudelReverbSequenceEditor"
+        tools.defaultTool("0.3").shouldNotBeNull().first shouldBe "SprudelReverbEditor"
+        tools.defaultTool("\"<0.2 0.5>\"").shouldNotBeNull().first shouldBe "SprudelReverbSequenceEditor"
     }
 
     "body material: a quoted material opens the sequence tool, as before C0.3" {
         val tools = toolsOf("body", "material")
 
-        tools.badgeTool("\"wood\"").shouldNotBeNull().first shouldBe "SprudelBodySequenceEditor"
-        tools.badgeTool("'wood'").shouldNotBeNull().first shouldBe "SprudelBodySequenceEditor"
-        tools.badgeTool("`wood`").shouldNotBeNull().first shouldBe "SprudelBodySequenceEditor"
-        tools.badgeTool("mat").shouldNotBeNull().first shouldBe "SprudelBodyEditor"
+        tools.defaultTool("\"wood\"").shouldNotBeNull().first shouldBe "SprudelBodySequenceEditor"
+        tools.defaultTool("'wood'").shouldNotBeNull().first shouldBe "SprudelBodySequenceEditor"
+        tools.defaultTool("`wood`").shouldNotBeNull().first shouldBe "SprudelBodySequenceEditor"
+        tools.defaultTool("mat").shouldNotBeNull().first shouldBe "SprudelBodyEditor"
     }
 
     "a param with a single tool shows that tool for any argument" {
         val tools = toolsOf("scale", "name")
 
         tools shouldHaveSize 1
-        tools.badgeTool("\"C:major\"").shouldNotBeNull().first shouldBe "SprudelScaleEditor"
-        tools.badgeTool("s").shouldNotBeNull().first shouldBe "SprudelScaleEditor"
+        tools.defaultTool("\"C:major\"").shouldNotBeNull().first shouldBe "SprudelScaleEditor"
+        tools.defaultTool("s").shouldNotBeNull().first shouldBe "SprudelScaleEditor"
     }
 
     "every tooled sprudel param: a number gets a value tool, a string gets a sequence tool when there is one" {
@@ -79,16 +78,16 @@ class ParamToolBadgeSpec : StringSpec({
 
             withClue("${param.name} $names") {
                 tools shouldHaveSize names.size
-                tools.badgeTool("1").shouldNotBeNull().second.editsSequence shouldBe false
+                tools.defaultTool("1").shouldNotBeNull().second.editsSequence shouldBe false
 
                 if (tools.any { it.second.editsSequence }) {
-                    tools.badgeTool("\"1 2\"").shouldNotBeNull().second.editsSequence shouldBe true
+                    tools.defaultTool("\"1 2\"").shouldNotBeNull().second.editsSequence shouldBe true
                 }
             }
         }
     }
 
-    "the mini-notation wrapper reads differently from its value tool in the context menu" {
+    "the mini-notation wrapper reads differently from its value tool on the tab's keys" {
         val tools = toolsOf("reverb", "wet")
 
         tools[1].second.title shouldNotBe tools[0].second.title

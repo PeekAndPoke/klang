@@ -65,8 +65,8 @@ import kotlinx.html.span
  */
 class SprudelMiniNotationEditorTool(
     private val atomTool: KlangUiTool? = null,
-) : KlangUiTool {
-    // Distinct from the atom tool's own title: the context menu lists both, with the same icon.
+) : KlangUiToolEmbeddable {
+    // Distinct from the atom tool's own title: the Sprudel tab's keys list both, with the same icon.
     override val title: String = atomTool?.title?.let { "$it (mini-notation)" } ?: "Mini-Notation Editor"
 
     override val iconFn: SemanticIconFn = atomTool?.iconFn ?: { code }
@@ -74,13 +74,17 @@ class SprudelMiniNotationEditorTool(
     override val editsSequence: Boolean = true
 
     override fun FlowContent.render(ctx: KlangUiToolContext) {
-        SprudelMiniNotationEditorComp(ctx, atomTool)
+        SprudelMiniNotationEditorComp(toolCtx = ctx, atomTool = atomTool, embedded = false)
+    }
+
+    override fun FlowContent.renderEmbedded(ctx: KlangUiToolContext) {
+        SprudelMiniNotationEditorComp(toolCtx = ctx, atomTool = atomTool, embedded = true)
     }
 }
 
 @Suppress("FunctionName")
-private fun Tag.SprudelMiniNotationEditorComp(toolCtx: KlangUiToolContext, atomTool: KlangUiTool?) =
-    comp(SprudelMiniNotationEditorComp.Props(toolCtx, atomTool)) { SprudelMiniNotationEditorComp(it) }
+private fun Tag.SprudelMiniNotationEditorComp(toolCtx: KlangUiToolContext, atomTool: KlangUiTool?, embedded: Boolean) =
+    comp(SprudelMiniNotationEditorComp.Props(toolCtx, atomTool, embedded)) { SprudelMiniNotationEditorComp(it) }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -89,6 +93,7 @@ private class SprudelMiniNotationEditorComp(ctx: Ctx<Props>) : MnPatternEditorBa
     data class Props(
         override val toolCtx: KlangUiToolContext,
         val atomTool: KlangUiTool?,
+        override val embedded: Boolean,
     ) : BaseProps
 
     private val infoPopup = HoverPopupCtrl(popups)
@@ -101,8 +106,10 @@ private class SprudelMiniNotationEditorComp(ctx: Ctx<Props>) : MnPatternEditorBa
 
         ui.segment {
             css {
-                minWidth = 60.vw
-                minHeight = 60.vh
+                if (!props.embedded) {
+                    minWidth = 60.vw
+                    minHeight = 60.vh
+                }
                 display = Display.flex
                 flexDirection = FlexDirection.column
             }
@@ -141,7 +148,11 @@ private class SprudelMiniNotationEditorComp(ctx: Ctx<Props>) : MnPatternEditorBa
 
             div { css { flexGrow = 1.0 } }
 
-            ui.divider {}
+            // The bar, under a divider; in a panel there is none
+            if (!props.embedded) {
+                ui.divider {}
+            }
+
             renderBottomBar()
         }
     }

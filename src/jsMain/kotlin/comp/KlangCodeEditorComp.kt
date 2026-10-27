@@ -14,16 +14,11 @@ import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.storage.EditorSettings
 import io.peekandpoke.klang.ui.HoverPopupCtrl
-import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.KlangUiToolContext
-import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
-import io.peekandpoke.klang.ui.KlangUiToolRegistry
 import io.peekandpoke.klang.ui.codemirror.BookmarkOptions
 import io.peekandpoke.klang.ui.codemirror.KlangScriptEditorComp
 import io.peekandpoke.klang.ui.codemirror.QuickHelpHandler
 import io.peekandpoke.klang.ui.codemirror.ToolCallSite
-import io.peekandpoke.klang.ui.codetools.CodeToolModal
-import io.peekandpoke.klang.workshop.keys.OnKey
 import io.peekandpoke.kraft.addons.pixijs.PixiJsAddon
 import io.peekandpoke.kraft.addons.pixijs.pixiJs
 import io.peekandpoke.kraft.addons.registry.AddonRegistry.Companion.addons
@@ -31,32 +26,22 @@ import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.ComponentRef
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
-import io.peekandpoke.kraft.modals.ModalsManager.Companion.modals
-import io.peekandpoke.kraft.popups.PopupsManager
 import io.peekandpoke.kraft.popups.PopupsManager.Companion.popups
-import io.peekandpoke.kraft.utils.Vector2D
 import io.peekandpoke.kraft.utils.jsObject
 import io.peekandpoke.kraft.utils.windowCtrl
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
-import io.peekandpoke.ultra.html.onClick
-import io.peekandpoke.ultra.html.onContextMenu
 import io.peekandpoke.ultra.streams.Stream
 import kotlinx.browser.window
-import kotlinx.css.Padding
 import kotlinx.css.Position
-import kotlinx.css.minWidth
-import kotlinx.css.padding
 import kotlinx.css.position
-import kotlinx.css.px
-import kotlinx.css.rem
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
 
 /**
  * Reusable Kraft component that wraps [KlangScriptEditorComp] with all the playback-related
- * integrations: the highlight buffer, hover docs, context menus, tool modals, error diagnostics,
+ * integrations: the highlight buffer, hover docs, context menus, the Sprudel tool's live context, error diagnostics,
  * and window-focus re-emission.
  *
  * The page owns a [KlangCodePlaybackCtrl] and passes it in via props. The page also renders
@@ -78,6 +63,7 @@ fun Tag.KlangCodeEditorComp(
     onQuickDocumentation: QuickHelpHandler? = null,
     onHoverDocumentation: QuickHelpHandler? = null,
     onToolCall: ((ToolCallSite?) -> Unit)? = null,
+    onShowTool: (() -> Unit)? = null,
 ): ComponentRef<KlangCodeEditorComp> = comp(
     KlangCodeEditorComp.Props(
         ctrl = ctrl,
@@ -93,6 +79,7 @@ fun Tag.KlangCodeEditorComp(
         onQuickDocumentation = onQuickDocumentation,
         onHoverDocumentation = onHoverDocumentation,
         onToolCall = onToolCall,
+        onShowTool = onShowTool,
     )
 ) {
     KlangCodeEditorComp(it)
@@ -130,6 +117,8 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
         val onHoverDocumentation: QuickHelpHandler?,
         /** Gets the call around the cursor whose tools the host's Sprudel tab shows (KLANG-00374); null for none. */
         val onToolCall: ((ToolCallSite?) -> Unit)?,
+        /** Opens the host's Sprudel tab, from a right-click's "Open the Sprudel tool" (KLANG-00374); null for no item. */
+        val onShowTool: (() -> Unit)?,
     )
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -310,87 +299,6 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
         )
     }
 
-    private fun openTool(toolName: String, toolCtx: KlangUiToolContext, argFrom: Int, event: dynamic = null) {
-        val tool = KlangUiToolRegistry.get(toolName) ?: return
-
-        val baseLoc = offsetToSourceLocation(source = props.ctrl.state().code, offset = argFrom)
-        var attrs = toolCtx.attrs.plus(KlangUiToolContext.BaseSourceLocation, baseLoc)
-
-        props.ctrl.playback()?.let { pb ->
-            attrs = attrs.plus(KlangUiToolContext.PlaybackVoiceEvents, pb.signals)
-        }
-
-        // Inline-popover tier (C0.3): scalar tools open as a small anchored popover with live
-        // commits; everything else opens in the classic tool modal.
-        val anchorX = (event?.clientX as? Number)?.toDouble()
-        val anchorY = (event?.clientY as? Number)?.toDouble()
-        if (tool.prefersPopover && tool is KlangUiToolEmbeddable && anchorX != null && anchorY != null) {
-            popups.showContextMenu(
-                anchor = Vector2D(anchorX, anchorY),
-                positioning = PopupsManager.Positioning.BottomLeft,
-            ) { handle ->
-                div {
-                    css {
-                        padding = Padding(0.75.rem)
-                        minWidth = 260.px
-                    }
-                    // The popups stage closes ALL popups on any document click — keep clicks
-                    // inside the popover from bubbling there (same trick as the context menu).
-                    onClick { it.stopPropagation() }
-                    onContextMenu { it.stopPropagation() }
-                    // Esc closes the popover, as a panel (the tool's own bar, if it has one, cancels it first)
-                    OnKey(KlangKeyBindings.PanelClose, showHint = false) { handle.close(); toolCtx.onCancel() }
-                    tool.apply {
-                        renderEmbedded(
-                            toolCtx.copy(
-                                attrs = attrs,
-                                onCommit = {
-                                    toolCtx.onCommit(it)
-                                    if (props.ctrl.state().isPlaying) props.ctrl.play()
-                                },
-                                onCancel = { handle.close(); toolCtx.onCancel() },
-                                call = toolCtx.call?.let { call ->
-                                    call.copy(
-                                        onCommitCall = {
-                                            call.onCommitCall(it)
-                                            if (props.ctrl.state().isPlaying) props.ctrl.play()
-                                        },
-                                    )
-                                },
-                            )
-                        )
-                    }
-                }
-            }
-            return
-        }
-
-        modals.show<Unit> { handle ->
-            CodeToolModal(handle) {
-                tool.apply {
-                    render(
-                        toolCtx.copy(
-                            attrs = attrs,
-                            onCommit = {
-                                toolCtx.onCommit(it)
-                                if (props.ctrl.state().isPlaying) props.ctrl.play()
-                            },
-                            onCancel = { handle.close(); toolCtx.onCancel() },
-                            call = toolCtx.call?.let { call ->
-                                call.copy(
-                                    onCommitCall = {
-                                        call.onCommitCall(it)
-                                        if (props.ctrl.state().isPlaying) props.ctrl.play()
-                                    },
-                                )
-                            },
-                        )
-                    )
-                }
-            }
-        }
-    }
-
     //  RENDER  /////////////////////////////////////////////////////////////////////////////////////////////////
 
     override fun VDom.render() {
@@ -407,9 +315,7 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
                 hoverContent = hoverContent,
                 popups = popups,
                 onNavigate = ::navToDoc,
-                onOpenTool = { toolName, toolCtx, argFrom, event ->
-                    openTool(toolName = toolName, toolCtx = toolCtx, argFrom = argFrom, event = event)
-                },
+                onShowTool = props.onShowTool?.let { show -> { _ -> show() } },
                 // The hover's quick help is a setting, on by default (KLANG-00349); read on every move
                 hoverDocs = { EditorSettings.hoverHelp() },
                 onQuickDocumentation = props.onQuickDocumentation,

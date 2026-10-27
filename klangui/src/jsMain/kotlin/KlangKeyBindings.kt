@@ -20,7 +20,7 @@ object KlangKeyPriorities {
     /** The page's own keys: Esc puts the focus back into the editor. */
     val Page = KeyPriority.Default
 
-    /** A panel in front of the page: a tool window flying in, the Motor's drawer, a code tool's popover. */
+    /** A panel in front of the page: a tool window flying in, the Motor's drawer. */
     val Panel = KeyPriority(value = 10, name = "panel")
 
     /** A code tool or a dialog in front of a panel. */
@@ -70,7 +70,7 @@ object KlangKeyBindings : KeyBindings {
 
     /**
      * Closes the newest open panel: a tool window flying in, the Motor's drawer (the workbench, KLANG-00334; maintainer,
-     * 2026-10-26), a code tool's inline popover. Each panel registers it while it is open, in the page's layer; of two
+     * 2026-10-26). Each panel registers it while it is open, in the page's layer; of two
      * open panels the newer closes first. In front of the page, behind a code tool ([KlangKeyPriorities.Panel]). Also
      * from a text field (the code editor), unless the field uses its Esc itself (the editor closing its completion).
      */

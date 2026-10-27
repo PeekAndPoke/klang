@@ -1,6 +1,6 @@
 # KLANG-00374: The Sprudel tool: a function's tools in the bottom panel, following the cursor
 
-> **Status (2026-10-27): IN PROGRESS.** steps 1 and 2 committed; step 3 (panel only) next
+> **Status (2026-10-27): IN PROGRESS.** steps 1 to 3 committed; step 4, the maintainer's look, next
 >
 > **Part of:** KLANG-00334 (UI workbench: the Motor-centred layout, tool windows and the first-visit trail)
 
@@ -77,3 +77,14 @@ Not set yet.
   a literal to edit or in an empty call, and none of the call's when the variant is ambiguous (an untyped receiver). Each
   whole-call tool is named on its anchor parameter too, so an ambiguous call keeps it in scalar mode. A `@tool`
   naming no parameter, or on a class or a property, fails the build. 13 mutants, all killed.
+- 2026-10-27: step 3 committed after two review rounds. The hover badge, the tool items of the right-click menu, the modal and the popover
+  are gone (`DslEditorExtension`, `KlangCodeEditorComp.openTool`, `prefersPopover`, `ArgFinder`'s finders; the
+  whole-call helpers stay in `CallArgs.kt`). A right-click inside a call with tools offers "Open the Sprudel tool",
+  which puts the cursor there and opens the tab. Not two but all mini-notation editors were modal-only (the
+  sequence tools too, on `MnPatternEditorBase`): the base takes `embedded` (live commits, no bar, the panel's size),
+  and every tool a sprudel KDoc names renders embedded (`ToolsEmbeddedSpec`). `badgeTool` is `defaultTool`. Open
+  for the maintainer: the tutorials' code players used the badge and the modal and now show no tool; a Sprudel
+  panel under an example would bring them back. Review: the mini-notation editors' staff edits, repeat counts and undo/redo now write
+  live too (the modal's Update had been their only commit); the right-click item has its spec
+  (`DslEditorToolMenuSpec`); the whole-call text helpers moved to klangscript (`CallArgs.kt`); the dead modal path is
+  KLANG-00375. 20 mutants, all killed.

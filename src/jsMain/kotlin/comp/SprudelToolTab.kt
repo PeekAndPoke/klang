@@ -8,7 +8,7 @@ package io.peekandpoke.klang.comp
 import io.peekandpoke.klang.ui.KlangUiTool
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
-import io.peekandpoke.klang.ui.badgeTool
+import io.peekandpoke.klang.ui.defaultTool
 import io.peekandpoke.klang.ui.codemirror.ToolCallSite
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.kraft.components.Component
@@ -90,7 +90,7 @@ class SprudelToolTab(ctx: Ctx<Props>) : Component<SprudelToolTab.Props>(ctx) {
     }
 
     private fun FlowContent.renderSite(site: ToolCallSite) {
-        val default = site.tools.badgeTool(site.currentValue.orEmpty()) ?: return
+        val default = site.tools.defaultTool(site.currentValue.orEmpty()) ?: return
         val toolName = picked?.takeIf { it.first == site.key }?.second?.takeIf { name -> site.tools.any { it.first == name } }
             ?: default.first
         val tool = site.tools.first { it.first == toolName }.second
@@ -143,7 +143,7 @@ class SprudelToolTab(ctx: Ctx<Props>) : Component<SprudelToolTab.Props>(ctx) {
                 if (this is KlangUiToolEmbeddable) {
                     renderEmbedded(toolContext)
                 } else {
-                    // Not embeddable yet (the note and scale degree tools): its own keys, KLANG-00374 step 3
+                    // A tool made for a modal only (none of sprudel's since KLANG-00374 step 3): its own buttons
                     render(toolContext)
                 }
             }

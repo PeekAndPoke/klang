@@ -25,7 +25,6 @@ import io.peekandpoke.klang.script.intel.toCodeMirrorSeverity
 import io.peekandpoke.klang.script.intel.toOffsets
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.ui.HoverPopupCtrl
-import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.workshop.keys.KeyPlatform
 import io.peekandpoke.klang.workshop.keys.Keymap
 import io.peekandpoke.klang.workshop.keys.KeysManager
@@ -62,7 +61,7 @@ fun Tag.KlangScriptEditorComp(
     hoverContent: (FlowContent.(symbol: KlangSymbol, declarationCode: String?) -> Unit)? = null,
     popups: PopupsManager? = null,
     onNavigate: ((doc: KlangSymbol, event: dynamic) -> Unit)? = null,
-    onOpenTool: ((toolName: String, ctx: KlangUiToolContext, argFrom: Int, event: dynamic) -> Unit)? = null,
+    onShowTool: ((pos: Int) -> Unit)? = null,
     hoverDocs: () -> Boolean = { true },
     onQuickDocumentation: QuickHelpHandler? = null,
     onHoverDocumentation: QuickHelpHandler? = null,
@@ -79,7 +78,7 @@ fun Tag.KlangScriptEditorComp(
         hoverContent = hoverContent,
         popups = popups,
         onNavigate = onNavigate,
-        onOpenTool = onOpenTool,
+        onShowTool = onShowTool,
         hoverDocs = hoverDocs,
         onQuickDocumentation = onQuickDocumentation,
         onHoverDocumentation = onHoverDocumentation,
@@ -105,7 +104,8 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
         val hoverContent: (FlowContent.(symbol: KlangSymbol, declarationCode: String?) -> Unit)? = null,
         val popups: PopupsManager? = null,
         val onNavigate: ((doc: KlangSymbol, event: dynamic) -> Unit)? = null,
-        val onOpenTool: ((toolName: String, ctx: KlangUiToolContext, argFrom: Int, event: dynamic) -> Unit)? = null,
+        /** A right-click's "Open the Sprudel tool" (KLANG-00374): the cursor is put there, the host opens the tab. */
+        val onShowTool: ((pos: Int) -> Unit)? = null,
         /** Asked on every move whether the hover shows a name's quick help (KLANG-00349); read live. */
         val hoverDocs: () -> Boolean = { true },
         /** Gets the name at the cursor on quick documentation (Alt+Q) instead of the popup; null for the popup. */
@@ -339,7 +339,7 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
         val hoverContent = props.hoverContent
         val popups = props.popups
 
-        // Hover docs + context menu + tool badges
+        // Hover docs + context menu (with the Sprudel tool's item)
         if (hoverPopup != null && hoverContent != null && popups != null) {
             val wiring = dslEditorExtension(
                 docProvider = { docContext.docProvider(it) },
@@ -348,7 +348,7 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
                 hoverContent = hoverContent,
                 popups = popups,
                 onNavigate = props.onNavigate ?: { _, _ -> },
-                onOpenTool = props.onOpenTool,
+                onShowTool = props.onShowTool,
                 hoverDocs = { props.hoverDocs() },
                 onQuickDocumentation = props.onQuickDocumentation,
                 onHoverDocumentation = props.onHoverDocumentation,

@@ -22,8 +22,8 @@ import io.peekandpoke.klang.script.types.KlangParam
 
 /**
  * Which parameter, and so which `@tool` tools, the editor finds under the cursor, against the
- * real generated registries. [argumentAt] is the resolution `findCallArgAtAst` in klangscript-ui
- * calls; the text-scanner fallback calls the same `bindArgument` under it.
+ * real generated registries. [argumentAt] binds through `bindArgument`, as the Sprudel tool's
+ * `toolCallAt` does (KLANG-00374).
  *
  * The registry is built the way the editor builds it: the stdlib first, then sprudel. So the
  * Katalyst `body(wet, material, configure)` and `gain(gain)` come before sprudel's variants.

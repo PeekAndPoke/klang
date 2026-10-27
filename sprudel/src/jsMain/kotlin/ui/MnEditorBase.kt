@@ -48,6 +48,12 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
 
     interface BaseProps {
         val toolCtx: KlangUiToolContext
+
+        /**
+         * Shown in a panel, not a modal (the Sprudel tab, KLANG-00374): every change is written at once, there is no
+         * Cancel/Reset/Update bar, and the editor takes the panel's size.
+         */
+        val embedded: Boolean get() = false
     }
 
     // ── Theme ─────────────────────────────────────────────────────────────────
@@ -118,6 +124,7 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
         cursorOffset = text.length
         lastAtom = null
         triggerRedraw()
+        liveUpdate()
     }
 
     fun redo() {
@@ -127,6 +134,7 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
         cursorOffset = text.length
         lastAtom = null
         triggerRedraw()
+        liveUpdate()
     }
 
     // The tool's own undo and redo, on the key map (KLANG-00325), registered while the tool is mounted: in front of
@@ -248,6 +256,7 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
         lastAtom = lastAtom?.let { _ ->
             pattern?.let { MnNodeOps.findAtomAtOffset(it, text, cursorOffset) }
         }
+        liveUpdate()
     }
 
     /** Removes the node with [targetId] from the tree, normalizing wrapper groups afterward. */
@@ -258,6 +267,7 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
         text = MnRenderer.render(MnNodeOps.normalizeGroups(newRoot))
         cursorOffset = cursorOffset.coerceAtMost(text.length)
         lastAtom = null
+        liveUpdate()
     }
 
     /** Replaces [old] with [new] in the pattern tree (legacy convenience, uses id-based replace). */
@@ -290,7 +300,7 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
     // ── Actions ───────────────────────────────────────────────────────────────
 
     protected fun liveUpdate() {
-        if (autoUpdate) {
+        if (autoUpdate || props.embedded) {
             lastCommittedText = text
             props.toolCtx.onCommit(text.quoteForCommit())
         }
@@ -320,6 +330,11 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
     // ── Bottom bar ────────────────────────────────────────────────────────────
 
     protected fun FlowContent.renderBottomBar() {
+        // In a panel every change is written already: nothing to confirm or cancel
+        if (props.embedded) {
+            return
+        }
+
         ToolButtonBar(
             isInitialModified = isModified,
             isCurrentModified = hasUncommittedChanges,
@@ -413,7 +428,9 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
 
         ui.segment {
             css {
-                minWidth = 60.vw
+                if (!props.embedded) {
+                    minWidth = 60.vw
+                }
                 display = Display.flex
                 flexDirection = FlexDirection.column
             }
@@ -469,7 +486,11 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
 
             div { css { flexGrow = 1.0 } }
 
-            ui.divider {}
+            // The bar, under a divider; in a panel there is none
+            if (!props.embedded) {
+                ui.divider {}
+            }
+
             renderBottomBar()
         }
     }

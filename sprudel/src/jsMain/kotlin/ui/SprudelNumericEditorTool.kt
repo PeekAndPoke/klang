@@ -288,9 +288,6 @@ class SprudelNumericEditorTool(
     val centerValue: Double? = null,
 ) : KlangUiToolEmbeddable {
 
-    /** Scalar single-value editor: opens as an inline popover (C0.3 popover tier). */
-    override val prefersPopover: Boolean get() = true
-
     override fun FlowContent.render(ctx: KlangUiToolContext) {
         SprudelNumericEditorComp(ctx, this@SprudelNumericEditorTool, embedded = false)
     }
@@ -380,9 +377,9 @@ private class SprudelNumericEditorComp(ctx: Ctx<Props>) : Component<SprudelNumer
     }
 
     /**
-     * A drag that ends with the pointer outside the popover makes the browser fire a synthetic
-     * click on the common ancestor (body). That click bypasses the popover's stopPropagation
-     * guard and would reach kraft PopupsStage's document click listener, closing the popover.
+     * A drag that ends with the pointer outside the tool makes the browser fire a synthetic
+     * click on the common ancestor (body). That click would reach kraft PopupsStage's document
+     * click listener and close whatever popup is open (the tool's own popover, until KLANG-00374).
      * Swallow exactly that one click with a one-shot capture-phase listener; the timeout
      * removes it again in case no click fires at all.
      */

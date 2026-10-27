@@ -11,6 +11,8 @@ import io.peekandpoke.klang.codemirror.ext.MapMode
 import io.peekandpoke.klang.codemirror.ext.ViewUpdate
 import io.peekandpoke.klang.script.intel.AnalyzedAst
 import io.peekandpoke.klang.script.intel.CallText
+import io.peekandpoke.klang.script.intel.alignArgsToParams
+import io.peekandpoke.klang.script.intel.serializeCallArgs
 import io.peekandpoke.klang.script.intel.toolCallAt
 import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.script.types.KlangSymbol

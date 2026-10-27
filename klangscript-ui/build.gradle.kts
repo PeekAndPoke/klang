@@ -42,6 +42,9 @@ kotlin {
                 Deps.Test {
                     jsTestDeps()
                 }
+
+                // Kraft's TestBed, to render the editor's context menu (the Sprudel tool's item, KLANG-00374)
+                implementation(Deps.KotlinLibs.Kraft.testing)
             }
         }
     }

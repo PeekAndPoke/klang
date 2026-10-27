@@ -75,16 +75,9 @@ fun interface KlangUiTool {
     val iconFn: SemanticIconFn get() = { wrench }
 
     /**
-     * Inline-popover tier (C0.3): when true AND the tool is [KlangUiToolEmbeddable], the editor
-     * opens it as a small anchored popover with live commits instead of a modal dialog.
-     * Scalar single-value tools (sliders, numeric drags) opt in; whole-call tools stay modal.
-     */
-    val prefersPopover: Boolean get() = false
-
-    /**
      * True for a tool that edits a whole mini-notation sequence, usually by wrapping a value tool.
-     * The editor's inline badge offers it for a string argument and the value tool for anything
-     * else (see [badgeTool]); the context menu offers both.
+     * The Sprudel tab opens on it for a string argument and on the value tool for anything else
+     * (see [defaultTool]); the tab's keys offer both.
      */
     val editsSequence: Boolean get() = false
 
@@ -92,15 +85,13 @@ fun interface KlangUiTool {
 }
 
 /**
- * The one tool the editor's inline badge offers for an argument whose trimmed source text is
- * [argText]: the sequence tool for a string literal, a value tool for anything else, and the
- * first tool when no tool of that kind is declared. Null for an empty list.
- *
- * One badge per argument, because a param declares its value tool AND the sequence tool that wraps
- * it (`@tool wet: SprudelReverbEditor, SprudelReverbSequenceEditor`), and the wrapper borrows
- * the value tool's icon: listing both drew every icon twice.
+ * The tool the Sprudel tab opens on for an argument whose trimmed source text is [argText]
+ * (KLANG-00374): the sequence tool for a string literal, a value tool (the call's own, listed
+ * first, when it has one) for anything else, and the first tool when no tool of that kind is
+ * declared. Null for an empty list. A param declares its value tool AND the sequence tool that
+ * wraps it (`@tool wet: SprudelReverbEditor, SprudelReverbSequenceEditor`); the other is a key away.
  */
-fun List<Pair<String, KlangUiTool>>.badgeTool(argText: String): Pair<String, KlangUiTool>? {
+fun List<Pair<String, KlangUiTool>>.defaultTool(argText: String): Pair<String, KlangUiTool>? {
     val isStringLiteral = argText.startsWith("\"") || argText.startsWith("'") || argText.startsWith("`")
 
     return firstOrNull { (_, tool) -> tool.editsSequence == isStringLiteral } ?: firstOrNull()

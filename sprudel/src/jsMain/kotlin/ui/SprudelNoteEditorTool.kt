@@ -8,7 +8,7 @@ package io.peekandpoke.klang.sprudel.ui
 import io.peekandpoke.klang.tones.note.Note
 import io.peekandpoke.klang.tones.note.staffPosition
 import io.peekandpoke.klang.tones.scale.Scale
-import io.peekandpoke.klang.ui.KlangUiTool
+import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
@@ -20,33 +20,37 @@ import kotlinx.html.Tag
 // ── Tool singleton ────────────────────────────────────────────────────────────
 
 /**
- * A [KlangUiTool] for editing `note()` pattern strings on a treble-clef staff.
+ * A [KlangUiToolEmbeddable] for editing `note()` pattern strings on a treble-clef staff.
  *
  * Atom values are note names (e.g. "c4", "d#3"). The staff position is derived
  * directly from the note name; dragging a note head up/down changes it according
  * to the active scale (auto-detected from the pattern or set manually).
  */
-object SprudelNoteEditorTool : KlangUiTool {
+object SprudelNoteEditorTool : KlangUiToolEmbeddable {
     override val title: String = "Note Editor"
 
     override val iconFn: SemanticIconFn = { music }
 
     override fun FlowContent.render(ctx: KlangUiToolContext) {
-        SprudelNoteEditorComp(ctx)
+        SprudelNoteEditorComp(toolCtx = ctx, embedded = false)
+    }
+
+    override fun FlowContent.renderEmbedded(ctx: KlangUiToolContext) {
+        SprudelNoteEditorComp(toolCtx = ctx, embedded = true)
     }
 }
 
 // ── Entry-point helper ────────────────────────────────────────────────────────
 
 @Suppress("FunctionName")
-private fun Tag.SprudelNoteEditorComp(toolCtx: KlangUiToolContext) =
-    comp(SprudelNoteEditorComp.Props(toolCtx)) { SprudelNoteEditorComp(it) }
+private fun Tag.SprudelNoteEditorComp(toolCtx: KlangUiToolContext, embedded: Boolean) =
+    comp(SprudelNoteEditorComp.Props(toolCtx, embedded)) { SprudelNoteEditorComp(it) }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 private class SprudelNoteEditorComp(ctx: Ctx<Props>) : MnEditorBase<SprudelNoteEditorComp.Props>(ctx) {
 
-    data class Props(override val toolCtx: KlangUiToolContext) : BaseProps
+    data class Props(override val toolCtx: KlangUiToolContext, override val embedded: Boolean) : BaseProps
 
     // ── Scale state ───────────────────────────────────────────────────────────
 

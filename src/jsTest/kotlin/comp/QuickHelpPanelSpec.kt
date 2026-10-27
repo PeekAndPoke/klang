@@ -22,6 +22,7 @@ import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.testing.TestBed
 import io.peekandpoke.kraft.testing.eventually
 import io.peekandpoke.kraft.vdom.VDom
+import kotlinx.coroutines.delay
 import kotlinx.html.Tag
 import kotlinx.html.span
 import org.w3c.dom.Element
@@ -57,8 +58,16 @@ class QuickHelpPanelSpec : StringSpec({
         val keys = querySelectorAll("button[aria-pressed]")
 
         return (0 until keys.length).map { keys.item(it) as HTMLElement }
-            .firstOrNull { it.getAttribute("aria-pressed") == "true" && it.textContent in setOf("Quick help", "Lexikon") }
+            .firstOrNull { it.getAttribute("aria-pressed") == "true" && it.textContent in setOf("Quick help", "Lexikon", "Sprudel") }
             ?.textContent
+    }
+
+    /** The bottom panel's tab keys, by their title: none while the panel is closed. */
+    fun Element.tabKeys(): List<String?> {
+        val keys = querySelectorAll("button[aria-pressed]")
+
+        return (0 until keys.length).map { (keys.item(it) as HTMLElement).textContent }
+            .filter { it in setOf("Quick help", "Lexikon", "Sprudel") }
     }
 
     "the Lexikon shown: a name's help, by a hover too, turns the panel to the Quick help" {
@@ -86,6 +95,41 @@ class QuickHelpPanelSpec : StringSpec({
                 panel.showHelp(entry = HelpWindow.Entry(symbol = note, declarationCode = null), jumpTo = {})
 
                 eventually { view.shownTab() shouldBe "Quick help" }
+            }
+        } finally {
+            manager.dispose()
+        }
+    }
+
+    "a right-click's \"Open the Sprudel tool\" turns the panel to the Sprudel tab; a page without tools has none to turn to" {
+        val withTools = QuickHelpPanel(pageKey = "spec-tools", toolContext = { null })
+        val withoutTools = QuickHelpPanel(pageKey = "spec-plain")
+        val manager = KeysManager(platform = KeyPlatform.Pc, hintDelayMs = 10).apply { define(KlangKeyBindings) }
+
+        try {
+            TestBed.preact(appSetup = { addons { marked() }; keys(manager) }, view = { PanelHost(withoutTools) }) { root ->
+                val view = root.single()
+
+                // The panel closed: asked for a tab it does not have, it stays closed
+                eventually { (view.textContent?.contains("CONTENT") == true) shouldBe true }
+                delay(200)
+                withoutTools.showSprudel()
+                delay(200)
+                view.tabKeys() shouldBe emptyList()
+
+                eventually {
+                    withoutTools.showLexikon(slug = "adsr")
+                    view.shownTab() shouldBe "Lexikon"
+                }
+            }
+
+            TestBed.preact(appSetup = { addons { marked() }; keys(manager) }, view = { PanelHost(withTools) }) { root ->
+                val view = root.single()
+
+                eventually {
+                    withTools.showSprudel()
+                    view.shownTab() shouldBe "Sprudel"
+                }
             }
         } finally {
             manager.dispose()

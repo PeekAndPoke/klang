@@ -125,6 +125,13 @@ class QuickHelpPanel(
         lastCallKey = site?.callKey
     }
 
+    /** The Sprudel tab, the panel opened if it is closed: a right-click's "Open the Sprudel tool" (KLANG-00374). */
+    fun showSprudel() {
+        if (toolContext != null) {
+            WorkbenchSlots.workbench { it.showBottom(tab = TAB_SPRUDEL) }
+        }
+    }
+
     /** The quick help's options, at the right of its headline: how to call it, and the hover's switch. */
     private fun FlowContent.renderOptions() {
         span {

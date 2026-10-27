@@ -481,6 +481,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
             },
             // The call the cursor is in: its tool in the Sprudel tab
             onToolCall = { site -> helpPanel.showToolCall(site) },
+            onShowTool = { helpPanel.showSprudel() },
         ).track(codeEditorRef)
     }
 }

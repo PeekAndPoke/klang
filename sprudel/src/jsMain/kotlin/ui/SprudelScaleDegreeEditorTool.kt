@@ -8,7 +8,7 @@ package io.peekandpoke.klang.sprudel.ui
 import io.peekandpoke.klang.tones.note.nearestScaleDegree
 import io.peekandpoke.klang.tones.note.scaleDegreeToStaffPosition
 import io.peekandpoke.klang.tones.scale.Scale
-import io.peekandpoke.klang.ui.KlangUiTool
+import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
@@ -20,33 +20,37 @@ import kotlinx.html.Tag
 // ── Tool singleton ────────────────────────────────────────────────────────────
 
 /**
- * A [KlangUiTool] for editing `n()` pattern strings (scale degree indices) on a treble-clef staff.
+ * A [KlangUiToolEmbeddable] for editing `n()` pattern strings (scale degree indices) on a treble-clef staff.
  *
  * Atom values are 0-based scale degree integers. Mapping to/from staff positions is done
  * via the active scale (default "C major"), which can be changed with the scale picker
  * rendered above the staff.
  */
-object SprudelScaleDegreeEditorTool : KlangUiTool {
+object SprudelScaleDegreeEditorTool : KlangUiToolEmbeddable {
     override val title: String = "Scale Degree Editor"
 
     override val iconFn: SemanticIconFn = { music }
 
     override fun FlowContent.render(ctx: KlangUiToolContext) {
-        SprudelScaleDegreeEditorComp(ctx)
+        SprudelScaleDegreeEditorComp(toolCtx = ctx, embedded = false)
+    }
+
+    override fun FlowContent.renderEmbedded(ctx: KlangUiToolContext) {
+        SprudelScaleDegreeEditorComp(toolCtx = ctx, embedded = true)
     }
 }
 
 // ── Entry-point helper ────────────────────────────────────────────────────────
 
 @Suppress("FunctionName")
-private fun Tag.SprudelScaleDegreeEditorComp(toolCtx: KlangUiToolContext) =
-    comp(SprudelScaleDegreeEditorComp.Props(toolCtx)) { SprudelScaleDegreeEditorComp(it) }
+private fun Tag.SprudelScaleDegreeEditorComp(toolCtx: KlangUiToolContext, embedded: Boolean) =
+    comp(SprudelScaleDegreeEditorComp.Props(toolCtx, embedded)) { SprudelScaleDegreeEditorComp(it) }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 private class SprudelScaleDegreeEditorComp(ctx: Ctx<Props>) : MnEditorBase<SprudelScaleDegreeEditorComp.Props>(ctx) {
 
-    data class Props(override val toolCtx: KlangUiToolContext) : BaseProps
+    data class Props(override val toolCtx: KlangUiToolContext, override val embedded: Boolean) : BaseProps
 
     // ── Scale state ───────────────────────────────────────────────────────────
 

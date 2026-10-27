@@ -7,7 +7,6 @@ package io.peekandpoke.klang.sprudel.ui
 
 import io.peekandpoke.klang.tones.scale.Scale
 import io.peekandpoke.klang.ui.HoverPopupCtrl
-import io.peekandpoke.klang.ui.KlangUiTool
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
 import io.peekandpoke.klang.ui.codetools.KlangToolAutoUpdate
@@ -42,18 +41,20 @@ import kotlinx.html.Tag
 // ── Public tool singleton ─────────────────────────────────────────────────────
 
 /**
- * [KlangUiTool] for editing a mini-notation scale pattern string (e.g. `"c4:major d4:dorian"`).
+ * [KlangUiToolEmbeddable] for editing a mini-notation scale pattern string (e.g. `"c4:major d4:dorian"`).
  *
  * Acts as a mini-notation editor; when an atom is selected the embedded
  * [SprudelSingleScaleEditorTool] is shown for editing that atom's scale value.
  */
-object SprudelScaleEditorTool : KlangUiTool {
+object SprudelScaleEditorTool : KlangUiToolEmbeddable {
     override val title: String = "Scale Editor"
     override val iconFn: SemanticIconFn = { music }
 
     private val inner = SprudelMiniNotationEditorTool(atomTool = SprudelSingleScaleEditorTool)
 
     override fun FlowContent.render(ctx: KlangUiToolContext) = with(inner) { render(ctx) }
+
+    override fun FlowContent.renderEmbedded(ctx: KlangUiToolContext) = with(inner) { renderEmbedded(ctx) }
 }
 
 // ── Single-value scale editor (embedded atom tool) ────────────────────────────

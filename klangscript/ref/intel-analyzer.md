@@ -1,7 +1,7 @@
 # Editor intelligence — analyzer-owns-decisions
 
 The `intel/` package builds `AnalyzedAst` once per code change and serves hover docs,
-code completion, named-argument diagnostics, and tool badges from position-keyed lookups.
+code completion, named-argument diagnostics, and the Sprudel tool (`toolCallAt`) from position-keyed lookups.
 The consumers (CodeMirror extension, completion source, popup component) MUST stay dumb —
 no MemberAccess sniffing, no scope walking, no library-vs-local branching in the UI layer.
 All that logic lives inside `AnalyzedAst.build`.

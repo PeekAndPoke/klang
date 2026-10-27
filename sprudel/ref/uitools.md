@@ -14,12 +14,13 @@ interface KlangUiToolEmbeddable : KlangUiTool {
 }
 ```
 
-- **KlangUiTool**: opens in a `CodeToolModal` dialog.
-- **KlangUiToolEmbeddable**: also supports inline rendering without buttons.
-  `renderEmbedded` must call `onCommit()` on every live change.
-- **prefersPopover** (C0.3): an embeddable tool that returns true opens as a small
-  anchored POPOVER with live commits instead of a modal (the inline tier for scalar
-  tools like gain/pan; `SprudelNumericEditorTool` opts in for all its instances).
+- **KlangUiToolEmbeddable**: renders in the Sprudel tab of the bottom panel without buttons; `renderEmbedded`
+  calls `onCommit()` on every live change. Every sprudel tool is one (`ToolsEmbeddedSpec`): the tab is the one place
+  a tool shows (KLANG-00374, 2026-10-27; the hover badge, the modal and the popover are gone).
+- **KlangUiTool**: `render` with its own Cancel/Reset/Update bar, in a `CodeToolModal`. Only the sequence editor
+  still opens one, for an atom tool that is not embeddable (none of sprudel's).
+- The mini-notation editors (`MnPatternEditorBase`: the sequence, note and scale degree tools) take `embedded`:
+  live commits, no bar, the panel's size.
 
 ## KlangUiToolContext
 
@@ -94,14 +95,15 @@ fun SprudelPattern.lpf(freq: PatternLike? = null, q: PatternLike? = null, ...): 
   variant (`String.gain`, `PatternMapperFn.gain`), whichever variant's KDoc names them.
 - The old `@param-tool <param> A, B` is retired (2026-10-27): it fails the build with a message saying what to write.
 
-## Trigger Flow
+## Trigger Flow (KLANG-00374)
 
-1. User right-clicks a function argument in CodeMirror.
-2. `DslGoToDocsExtension` calls `ArgFinder.findCallArgAt()`.
-3. That resolves `param.uitools` via `KlangUiToolRegistry.resolve()`.
-4. Context menu shows "Open ToolName…" for each registered tool.
-5. `CodeSongPage.openTool()` opens the tool in `CodeToolModal`.
-6. On commit: `onCommit(newValue)` replaces the argument text in the editor.
+1. The cursor rests inside the parentheses of a call with tools; `ToolCallFollower` (klangscript-ui) looks it up
+   with `toolCallAt` (klangscript) and reports a `ToolCallSite`.
+2. The song page's `QuickHelpPanel` shows it in the Sprudel tab (`SprudelToolTab`), opening the bottom panel on a
+   new call. A right-click inside such a call offers "Open the Sprudel tool", which puts the cursor there.
+3. The tab renders the default tool (`defaultTool`: the sequence tool for a string, else the call's tool or the
+   value tool), the others a key away, with a context from `KlangCodeEditorComp.liveToolContext`.
+4. Each change commits at once (user event `delete.tool`: one drag is one undo step); a playing song follows.
 
 ## Implemented Editor Tools
 
@@ -198,7 +200,10 @@ All helpers live in `sprudel/src/jsMain/kotlin/ui/KlangToolInfoHelpers.kt`.
 | `sprudel/src/jsMain/kotlin/ui/KlangToolInfoHelpers.kt`  | Info icon helpers + `HoverPopupCtrl`        |
 | `sprudel/src/jsMain/kotlin/ui/_editor_tool_arg_helpers.kt` | `parseNum` / `parseNumOrNull` / `parseStr` read an arg's text, `formatArg()` writes a number back; use these, never a private copy |
 | `sprudel/src/jsMain/kotlin/ui/_distort_curve_helpers.kt` | `waveshape()`, the distortion tools' transfer-curve preview |
-| `src/jsMain/kotlin/codemirror/ArgFinder.kt`             | Finds arg under cursor                      |
-| `src/jsMain/kotlin/codemirror/DslGoToDocsExtension.kt`  | Right-click → tool launch                   |
+| `klangscript/src/commonMain/kotlin/intel/ArgumentBinding.kt` | `toolCallAt`: the call with tools at the cursor, its tools |
+| `klangscript/src/commonMain/kotlin/intel/CallText.kt`, `CallArgs.kt` | The call's text: parentheses, arguments, literals; a whole-call rewrite |
+| `klangscript-ui/src/jsMain/kotlin/codemirror/ToolCallFollower.kt` | Follows the cursor, live tool contexts, one undo per drag |
+| `klangscript-ui/src/jsMain/kotlin/codemirror/DslEditorExtension.kt` | Right-click: "Open the Sprudel tool" |
+| `src/jsMain/kotlin/comp/SprudelToolTab.kt`              | The Sprudel tab of the song page's bottom panel |
 | `sprudel/src/jsMain/kotlin/ui/SprudelUiTools.kt`        | Registration function                       |
 | `src/jsMain/kotlin/index.kt`                            | Calls `registerSprudelUiTools()` at startup |

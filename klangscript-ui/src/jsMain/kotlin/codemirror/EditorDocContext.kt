@@ -78,7 +78,7 @@ class EditorDocContext(
     }
 
     private fun processCode(code: String) {
-        // Always parse to keep the analysis up-to-date for hover/completion/tool badges
+        // Always parse to keep the analysis up-to-date for hover/completion/the Sprudel tool
         val program = try {
             KlangScriptParser.parse(code)
         } catch (_: Throwable) {
