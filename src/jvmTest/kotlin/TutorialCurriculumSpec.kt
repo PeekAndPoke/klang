@@ -412,6 +412,55 @@ class TutorialCurriculumSpec : StringSpec({
         missing.shouldBeEmpty()
     }
 
+    "each note an ADSR picture follows is held long enough to reach its sustain, as the picture draws it" {
+        // The Bend of a Note first had adsr(0.8, 0.3, ...) on one-second notes: every note was let go during its
+        // decay, the drawn sustain never played, and the light fell away from the curve (the maintainer, 2026-10-27:
+        // "Something is up here", "The sustain seems to be broken"). A pluck (sustain 0) dies away anyway.
+        val violations = mutableListOf<String>()
+
+        for (tutorial in allTutorials) {
+            for (section in tutorial.sections) {
+                for ((index, picture) in section.playersAfterPictures()) {
+                    if ((section.blocks[picture] as Block.Visual.Adsr).envelope != Block.Visual.Adsr.Envelope.Loudness) {
+                        continue
+                    }
+
+                    val code = (section.blocks[index] as Block.Code).code
+                    val (attack, decay, sustain) = Block.Visual.Adsr().numbers(example = code) ?: continue
+
+                    if (sustain == 0.0) {
+                        continue
+                    }
+
+                    // The gate is read from the notes' length; legato and clip change it on the way to the engine
+                    if (Regex("""\b(legato|clip)\(""").containsMatchIn(codeOnly(code))) {
+                        violations.add("${tutorial.slug} (${section.heading}) block $index: legato or clip under a picture, unmeasured")
+                        continue
+                    }
+
+                    val pattern = compileBlock(code)
+
+                    if (pattern == null) {
+                        violations.add("${tutorial.slug} (${section.heading}) block $index: does not compile")
+                        continue
+                    }
+
+                    val shortest = pattern.queryArc(0.0, 4.0).minOfOrNull { it.durationCycles } ?: continue
+                    val heldSec = shortest * 60.0 / tutorial.rpm
+
+                    if (heldSec < attack + decay - 1e-9) {
+                        violations.add(
+                            "${tutorial.slug} (${section.heading}) block $index: a note held ${heldSec}s, " +
+                                "attack and decay take ${attack + decay}s",
+                        )
+                    }
+                }
+            }
+        }
+
+        violations.shouldBeEmpty()
+    }
+
     "each layer of a stack can be put aside with `//` on its lines, and what is left still plays" {
         // A lesson says "put `//` in front of every line of one layer": the rest must compile (trailing commas are fine)
         val failures = mutableListOf<String>()

@@ -9,6 +9,8 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.peekandpoke.klang.audio_bridge.AdsrCurve
+import io.peekandpoke.klang.audio_bridge.constants.ADSR_EXP_K
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
@@ -18,6 +20,7 @@ import io.peekandpoke.ultra.streams.StreamSource
 import kotlinx.html.Tag
 import kotlinx.html.div
 import org.w3c.dom.Element
+import kotlin.math.exp
 
 /** The time a spec sets, and the frames it runs by hand. */
 private class TestClock(var now: Double) : KlangAdsrCurve.Clock {
@@ -92,6 +95,70 @@ class KlangAdsrCurveSpec : StringSpec({
     }
 
     fun between(a: KlangAdsrPoint, b: KlangAdsrPoint, f: Double) = KlangAdsrPoint(a.x + (b.x - a.x) * f, a.y + (b.y - a.y) * f)
+
+    "each curve runs from 0 to 1, in the engine's shapes" {
+        for (curve in AdsrCurve.entries) {
+            curve.drawnAt(0.0) shouldBe (0.0 plusOrMinus 1e-12)
+            curve.drawnAt(1.0) shouldBe (1.0 plusOrMinus 1e-12)
+        }
+
+        AdsrCurve.Linear.drawnAt(0.5) shouldBe 0.5
+        AdsrCurve.Square.drawnAt(0.5) shouldBe 0.25
+        AdsrCurve.Cube.drawnAt(0.5) shouldBe 0.125
+        AdsrCurve.SCurve.drawnAt(0.25) shouldBe 0.125
+        AdsrCurve.SCurve.drawnAt(0.75) shouldBe 0.875
+        AdsrCurve.InvSquare.drawnAt(0.5) shouldBe 0.75
+        AdsrCurve.Exponential.drawnAt(0.5) shouldBe ((exp(ADSR_EXP_K * 0.5) - 1.0) / (exp(ADSR_EXP_K) - 1.0) plusOrMinus 1e-12)
+    }
+
+    "the curve as drawn: each stage's points where the engine's law puts them, written out by hand" {
+        val bent = written.copy(attackCurve = AdsrCurve.Exponential, decayCurve = AdsrCurve.Square, releaseCurve = AdsrCurve.InvSquare)
+        val drawn = KlangAdsrGeometry(bent).curve
+        fun yOf(level: Double) = KlangAdsrGeometry.PAD_TOP + (1.0 - level) * KlangAdsrGeometry.DRAW_HEIGHT
+
+        // A quarter into each stage (6 of 24 pieces): attack f(0.25); decay s + (1 - s) f(0.75); release s f(0.75)
+        drawn[6].y shouldBe (yOf((exp(ADSR_EXP_K * 0.25) - 1.0) / (exp(ADSR_EXP_K) - 1.0)) plusOrMinus 1e-9)
+        drawn[24 + 6].y shouldBe (yOf(0.5 + 0.5 * (0.75 * 0.75)) plusOrMinus 1e-9)
+        drawn[24 + 24 + 1 + 6].y shouldBe (yOf(0.5 * (0.75 * (2.0 - 0.75))) plusOrMinus 1e-9)
+    }
+
+    "a curved stage: the light keeps its time across, and its height follows the curve" {
+        val signals = StreamSource<KlangAdsrSignal?>(null)
+        val clock = TestClock(now = 9.0)
+        val bent = written.copy(attackCurve = AdsrCurve.Exponential, decayCurve = AdsrCurve.Square, releaseCurve = AdsrCurve.InvSquare)
+        val at = KlangAdsrGeometry(bent).points
+
+        TestBed.preact(view = { KlangAdsrCurve(adsr = bent, signals = signals, clock = clock) }) { root ->
+            val view = root.single()
+
+            signals(KlangAdsrSignal.Note(startSec = 10.0, gateEndSec = 11.0, adsr = bent))
+
+            // Halfway through the attack: halfway across, but only the exponential's share of the way up
+            clock.frameAt(10.1)
+            nextFrame()
+            view.lights().single().shouldBeAt(
+                x = (at[0].x + at[1].x) / 2,
+                y = at[0].y + (at[1].y - at[0].y) * AdsrCurve.Exponential.drawnAt(0.5),
+            )
+
+            // A quarter into the decay (it runs 10.2 to 10.3): from full towards the sustain along the square, written
+            // out: s + (1 - s) * 0.75^2, at an uneven point so a curve turned around would show
+            clock.frameAt(10.225)
+            nextFrame()
+            view.lights().single().shouldBeAt(
+                x = at[1].x + (at[2].x - at[1].x) * 0.25,
+                y = KlangAdsrGeometry.PAD_TOP + (1.0 - (0.5 + 0.5 * 0.75 * 0.75)) * KlangAdsrGeometry.DRAW_HEIGHT,
+            )
+
+            // A quarter into the release from the sustain: the sustain times the curve of the three quarters left
+            clock.frameAt(11.1)
+            nextFrame()
+            view.lights().single().shouldBeAt(
+                x = at[3].x + (at[4].x - at[3].x) * 0.25,
+                y = KlangAdsrGeometry.PAD_TOP + (1.0 - 0.5 * (0.75 * (2.0 - 0.75))) * KlangAdsrGeometry.DRAW_HEIGHT,
+            )
+        }
+    }
 
     "before any note: the written shape, dimmed, no light" {
         val signals = StreamSource<KlangAdsrSignal?>(null)

@@ -7,6 +7,7 @@ package io.peekandpoke.klang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.pages.docs.tutorials.Block
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialSection
 
@@ -45,6 +46,16 @@ class TutorialAdsrPictureSpec : StringSpec({
 
     "an example that writes no envelope gives a picture nothing to show: it has none (lint-enforced)" {
         picture.numbers(example = "note(\"a3\")\n  .sound(\"saw\")  // .adsr(9, 9, 9, 9) in a remark") shouldBe null
+    }
+
+    "its curves: what the example writes in adsrCurves, by place or by name; the default for the rest" {
+        val exp = AdsrCurve.Exponential
+
+        picture.curves(example = "note(\"a3\")\n  .adsr(0.3, 0.1, 1, 0.05)") shouldBe listOf(exp, exp, exp)
+        picture.curves(example = "note(\"a3\")\n  .adsrCurves(\"linear\", \"cube\", \"scurve\")  // three") shouldBe
+            listOf(AdsrCurve.Linear, AdsrCurve.Cube, AdsrCurve.SCurve)
+        picture.curves(example = "note(\"a3\").adsrCurves(release = \"invsquare\")") shouldBe listOf(exp, exp, AdsrCurve.InvSquare)
+        picture.curves(example = "note(\"a3\")  // .adsrCurves(\"linear\") in a remark") shouldBe listOf(exp, exp, exp)
     }
 
     "values of its own win; four numbers or nothing" {

@@ -10,6 +10,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.string.shouldContain
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.comp.RouterWithTransitions
 import io.peekandpoke.klang.layouts.WorkbenchSlots
@@ -18,6 +19,7 @@ import io.peekandpoke.klang.pages.docs.tutorials.TutorialColumn
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialPage
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialTrackPage
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialsListPage
+import io.peekandpoke.klang.pages.docs.tutorials.allTracks
 import io.peekandpoke.klang.pages.docs.tutorials.allTutorials
 import io.peekandpoke.klang.pages.docs.tutorials.firstStepsTrack
 import io.peekandpoke.klang.pages.docs.tutorials.patternLanguageTrack
@@ -30,6 +32,7 @@ import io.peekandpoke.kraft.addons.registry.addons
 import io.peekandpoke.kraft.routing.RootRouterBuilder
 import io.peekandpoke.kraft.testing.TestBed
 import io.peekandpoke.kraft.testing.eventually
+import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.coroutines.delay
 import kotlinx.html.div
@@ -105,11 +108,16 @@ class LearnPagesSpec : StringSpec({
 
     fun Element.column() = querySelector(".router .current .column") as HTMLElement?
 
-    "the overview: continue with the next lesson; its tiles and the column's list show the same lamps" {
+    "the overview: continue with the next lesson; the path's tiles show its lamps; the column lists the tracks, how far" {
         withLearn(done = setOf(path[0].slug, path[1].slug)) { root ->
             go()
 
             eventually { root.page()?.querySelector("[data-continue]")?.getAttribute("data-continue") shouldBe path[2].slug }
+
+            // Folded like every track (the maintainer, 2026-10-27): its key opens its tiles
+            (root.page()!!.querySelector("[data-track='${theKlangPathTrack.slug}'] [aria-expanded=false]") as HTMLElement).click()
+
+            eventually { root.page()!!.querySelector("[data-track='${theKlangPathTrack.slug}']")!!.states("").size shouldBe path.size }
 
             val tiles = root.page()!!.querySelector("[data-track='${theKlangPathTrack.slug}']")!!.states("")
 
@@ -123,12 +131,18 @@ class LearnPagesSpec : StringSpec({
             klangPath.querySelector("[data-lesson='${path[3].slug}'] [data-lamp]")?.getAttribute("data-lamp") shouldBe "Unlit"
             klangPath.querySelector("[data-lesson='${path[0].slug}'] [data-lamp]")?.getAttribute("data-lamp") shouldBe "On"
             tiles.count { it == "Next" } shouldBe 1
-            root.column()!!.states("").count { it == "Done" } shouldBe 2
-            root.column()!!.querySelector("[data-lesson='${path[2].slug}']")?.getAttribute("data-state") shouldBe "Next"
+
+            // The column: only the tracks, each with how far (the maintainer, 2026-10-27: "only show the tracks")
+            val listed = root.column()!!.querySelectorAll("[data-track]")
+
+            (0 until listed.length).map { (listed.item(it) as Element).getAttribute("data-track") } shouldContainExactly
+                allTracks.map { it.slug }
+            root.column()!!.querySelector("[data-track='${theKlangPathTrack.slug}']")!!.textContent!! shouldContain "2 of ${path.size}"
+            root.column()!!.querySelector("[data-lesson]") shouldBe null
         }
     }
 
-    "a track not taken is folded to its lamps; its key opens its tiles" {
+    "every track starts folded to its lamps; its key opens its tiles" {
         withLearn { root ->
             go()
 
@@ -136,7 +150,9 @@ class LearnPagesSpec : StringSpec({
 
             eventually { root.page()?.querySelector(firstSteps) shouldNotBe null }
 
-            root.page()!!.querySelector(firstSteps)!!.states("").size shouldBe 0
+            for (track in allTracks) {
+                root.page()!!.querySelector("[data-track='${track.slug}']")!!.states("").size shouldBe 0
+            }
 
             (root.page()!!.querySelector("$firstSteps [aria-expanded=false]") as HTMLElement).click()
 
@@ -152,10 +168,15 @@ class LearnPagesSpec : StringSpec({
 
             val input = root.page()!!.querySelector("input") as HTMLInputElement
 
+            input.focus()
             input.value = "envelope"
             input.dispatchEvent(Event("input", EventInit(bubbles = true)))
 
             eventually {
+                // The same field, still in focus: the Continue tile going away above it must not rebuild it
+                (root.page()!!.querySelector("input") === input) shouldBe true
+                (document.activeElement === input) shouldBe true
+
                 val shown = root.page()!!.querySelectorAll("[data-lesson]")
                 val slugs = (0 until shown.length).map { (shown.item(it) as Element).getAttribute("data-lesson") }.toSet()
 

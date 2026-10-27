@@ -41,6 +41,7 @@ private val theKlangPathStages = listOf(
         lessons = listOf(
             theFourWaveformsTutorial, // A1
             shapeOfANoteTutorial, // A2
+            bendOfANoteTutorial, // A2b
             subdivisionTutorial, // B4
             alternationAndRepetitionTutorial, // B5
             filtersTutorial, // A3
@@ -79,6 +80,7 @@ val soundDesignBasicsTrack = TutorialTrackDef(
     lessons = listOf(
         theFourWaveformsTutorial, // A1
         shapeOfANoteTutorial, // A2
+        bendOfANoteTutorial, // A2b
         filtersTutorial, // A3
         theFilterEnvelopeTutorial, // A4
         signalsMoveTheKnobsTutorial, // A5

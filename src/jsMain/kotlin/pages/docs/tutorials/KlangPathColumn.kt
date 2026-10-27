@@ -21,31 +21,28 @@ import kotlinx.html.span
 @Suppress("FunctionName")
 fun Tag.KlangPathColumn() = comp { KlangPathColumn(it) }
 
-/** The Learn overview's column: The Klang Path's lessons with their lamps, then the other tracks with how far. */
+/**
+ * The Learn overview's column: the tracks, each with how far (the maintainer, 2026-10-27: "In the menu i would only
+ * show the tracks for now"); The Klang Path first. A lesson's own column lists its track's lessons (TutorialColumn).
+ */
 class KlangPathColumn(ctx: NoProps) : PureComponent(ctx) {
 
     private val done by subscribingTo(TutorialStorage.done)
 
     override fun VDom.render() {
         val progress = TutorialProgress(done = done)
-        val path = theKlangPathTrack
 
         div {
             css {
                 put("display", "flex")
                 put("flex-direction", "column")
                 put("gap", "14px")
-                put("padding", "18px 16px")
+                // On the area headline's left edge, 20px in as the other areas' menus
+                put("padding", "18px 20px")
                 put("color", "var(--kl-ink-text)")
             }
 
-            appLink(router, Nav.tutorialTrack(path.slug)) {
-                learnLabel("${path.title}, ${progress.doneIn(path)} of ${path.lessons.size} done")
-            }
-
-            lessonList(router = router, track = path, progress = progress, current = null)
-
-            learnLabel("Other tracks")
+            learnLabel("Tracks")
 
             div {
                 css {
@@ -55,7 +52,7 @@ class KlangPathColumn(ctx: NoProps) : PureComponent(ctx) {
                     put("font-size", "13px")
                 }
 
-                for (track in allTracks.filter { it != path }) {
+                for (track in allTracks) {
                     appLink(router, Nav.tutorialTrack(track.slug)) {
                         attributes["data-track"] = track.slug
                         css { put("display", "flex") }

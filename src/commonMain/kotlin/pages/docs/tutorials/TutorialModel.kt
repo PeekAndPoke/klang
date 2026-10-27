@@ -5,6 +5,10 @@
 
 package io.peekandpoke.klang.pages.docs.tutorials
 
+import io.peekandpoke.klang.audio_bridge.AdsrCurve
+import io.peekandpoke.klang.audio_bridge.AdsrCurves
+import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
+
 enum class TutorialDifficulty(val label: String) {
     Beginner("Beginner"),
     Intermediate("Intermediate"),
@@ -46,6 +50,7 @@ object Tut {
     const val firstNotes = "First Notes"
     const val theFourWaveforms = "The Four Waveforms"
     const val shapeOfANote = "The Shape of a Note"
+    const val bendOfANote = "The Bend of a Note"
     const val subdivision = "Subdivision"
     const val alternationAndRepetition = "Alternation and Repetition"
     const val filters = "Filters"
@@ -117,10 +122,9 @@ sealed interface Block {
     ) : Block
 
     /**
-     * A schematic, parameterized diagram — rendered as SVG in jsMain from the
-     * SAME values the neighbouring code block uses, so picture and code cannot
-     * drift (lint-enforced). Schematic by design: it draws the mental model,
-     * never engine internals (flux ruling).
+     * A parameterized diagram, rendered as SVG in jsMain from the SAME values the neighbouring code block uses, so
+     * picture and code cannot drift (lint-enforced). It draws the mental model (flux ruling); an envelope's stages bend
+     * as the engine bends them (the maintainer, 2026-10-27: "the real curves", KLANG-00371), its widths stay schematic.
      */
     sealed interface Visual : Block {
         /**
@@ -147,6 +151,32 @@ sealed interface Block {
                 val written = adsrCall.find(codeOnly(example ?: return null)) ?: return null
 
                 return written.groupValues[1].split(",").map { it.trim().toDoubleOrNull() ?: return null }.takeIf { it.size == 4 }
+            }
+
+            /**
+             * The three moving stages' curves (attack, decay, release) drawn before a note sounds: what [example]
+             * writes in `.adsrCurves(...)`, by place or by name, each one not written the envelope's default (the
+             * loudness's [AdsrCurve.Default], a filter's [MOD_ENV_CURVE]).
+             */
+            fun curves(example: String?): List<AdsrCurve> {
+                val default = if (envelope == Envelope.Loudness) AdsrCurve.Default else MOD_ENV_CURVE
+                val curves = MutableList(3) { default }
+
+                // The cutoff's curves have a door of their own, which no lesson writes yet
+                val written = example?.takeIf { envelope == Envelope.Loudness }?.let { adsrCurvesCall.find(codeOnly(it)) }
+                    ?: return curves
+
+                written.groupValues[1].split(",").forEachIndexed { index, argument ->
+                    val stage = argument.substringBefore("=", missingDelimiterValue = "").trim()
+                    val at = if (stage.isEmpty()) index else curveStages.indexOf(stage)
+                    val curve = AdsrCurves.curveOf(argument.substringAfter("=").trim().trim('"'))
+
+                    if (at in curves.indices && curve != null) {
+                        curves[at] = curve
+                    }
+                }
+
+                return curves
             }
 
             /** Which of a note's envelopes it shows: its door in the voice data, and the word along its edge. */
@@ -206,6 +236,12 @@ data class Tutorial(
 
 /** `.adsr(a, d, s, r)` in a line of code: its four arguments. */
 private val adsrCall = Regex("""\.adsr\(([^)]*)\)""")
+
+/** `.adsrCurves(...)` in a line of code: its arguments. */
+private val adsrCurvesCall = Regex("""\.adsrCurves\(([^)]*)\)""")
+
+/** The stages `.adsrCurves(...)` names, in its order. */
+private val curveStages = listOf("attack", "decay", "release")
 
 /** [code] without its comments: what plays, its lines joined. */
 fun codeOnly(code: String): String = code.lines().joinToString(" ") { it.substringBefore("//") }

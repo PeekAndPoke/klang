@@ -158,6 +158,8 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
                 key = "area-heading"
                 css {
                     padding = Padding(18.px, 20.px, 0.px, 20.px)
+                    // The column's headline, a size above the labels under it (the maintainer, 2026-10-27)
+                    put("font-size", "13px")
                 }
                 // The smaller areas share one list, so it is named for all of them
                 +when (area) {

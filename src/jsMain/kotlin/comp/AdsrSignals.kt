@@ -5,8 +5,12 @@
 
 package io.peekandpoke.klang.comp
 
+import io.peekandpoke.klang.audio_bridge.AdsrCurve
+import io.peekandpoke.klang.audio_bridge.AdsrCurves
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
+import io.peekandpoke.klang.audio_bridge.ModEnvelopeCurvesSlots
+import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
 import io.peekandpoke.klang.ui.comp.KlangAdsr
 import io.peekandpoke.klang.ui.comp.KlangAdsrSignal
 
@@ -24,8 +28,8 @@ fun KlangPlaybackSignal?.toAdsrSignals(door: String): List<KlangAdsrSignal> = wh
 }
 
 /**
- * This voice as a note on [door]'s envelope: its start, its gate's end and the four numbers it plays with, each the
- * one written or the engine's default. Null when the envelope is off for it, or [door] has none.
+ * This voice as a note on [door]'s envelope: its start, its gate's end, the four numbers and the three stage curves it
+ * plays with, each the one written or the engine's default. Null when the envelope is off for it, or [door] has none.
  */
 fun KlangPlaybackSignal.VoicesScheduled.VoiceEvent.adsrNote(door: String): KlangAdsrSignal.Note? {
     val stages = envelopeStages(door) ?: return null
@@ -51,25 +55,52 @@ fun KlangPlaybackSignal.VoicesScheduled.VoiceEvent.adsrNote(door: String): Klang
             decay = value(stages.decay),
             sustain = value(stages.sustain),
             release = value(stages.release),
+            attackCurve = stages.curve(stages.curves?.attack, ::value),
+            decayCurve = stages.curve(stages.curves?.decay, ::value),
+            releaseCurve = stages.curve(stages.curves?.release, ::value),
         ),
     )
 }
 
-/** An envelope's four stage slots, and when it is on: from what the voice wrote. */
+/** An envelope's four stage slots, its curve slots, and when it is on: from what the voice wrote. */
 private class EnvelopeStages(
     val attack: IgnitorDsl,
     val decay: IgnitorDsl,
     val sustain: IgnitorDsl,
     val release: IgnitorDsl,
+    /** The stages' curve slots; null for an envelope that has none (the FM's), which bends as [fallback]. */
+    val curves: CurveSlots? = null,
+    /** The curve an unwritten or unknown one is: each envelope has its own default. */
+    val fallback: AdsrCurve = MOD_ENV_CURVE,
     val isOn: (written: (IgnitorDsl) -> Double?) -> Boolean,
-)
+) {
+    /** The curve a slot holds (an index in [AdsrCurves]); [fallback] for an envelope without curve slots. */
+    fun curve(slot: IgnitorDsl?, value: (IgnitorDsl) -> Double): AdsrCurve =
+        slot?.let { AdsrCurves.curveAt(index = value(it), fallback = fallback) } ?: fallback
+}
+
+/** The three curve slots of an envelope's moving stages. */
+private class CurveSlots(val attack: IgnitorDsl, val decay: IgnitorDsl, val release: IgnitorDsl)
 
 private fun envelopeStages(door: String): EnvelopeStages? {
     val slots = IgnitorDsl.Slots
 
     /** A filter's envelope is on with a depth written, or with a stage written and no depth (the depth then filled). */
-    fun filter(env: IgnitorDsl, attack: IgnitorDsl, decay: IgnitorDsl, sustain: IgnitorDsl, release: IgnitorDsl) =
-        EnvelopeStages(attack = attack, decay = decay, sustain = sustain, release = release) { written ->
+    fun filter(
+        env: IgnitorDsl,
+        attack: IgnitorDsl,
+        decay: IgnitorDsl,
+        sustain: IgnitorDsl,
+        release: IgnitorDsl,
+        curves: ModEnvelopeCurvesSlots,
+    ) =
+        EnvelopeStages(
+            attack = attack,
+            decay = decay,
+            sustain = sustain,
+            release = release,
+            curves = CurveSlots(attack = curves.attack, decay = curves.decay, release = curves.release),
+        ) { written ->
             when (val depth = written(env)) {
                 null -> listOf(attack, decay, sustain, release).any { written(it) != null }
                 else -> depth != 0.0
@@ -78,20 +109,35 @@ private fun envelopeStages(door: String): EnvelopeStages? {
 
     return when (door) {
         "adsr" -> with(slots.adsr) {
+            val curves = slots.adsrCurves
+
             // Off only when switched off (`adsrOff()`)
-            EnvelopeStages(attack = attack, decay = decay, sustain = sustain, release = release) { written -> written(on) != 0.0 }
+            EnvelopeStages(
+                attack = attack,
+                decay = decay,
+                sustain = sustain,
+                release = release,
+                curves = CurveSlots(attack = curves.attack, decay = curves.decay, release = curves.release),
+                fallback = AdsrCurve.Default,
+            ) { written -> written(on) != 0.0 }
         }
 
-        "lpf" -> with(slots.lpf) { filter(env, attack, decay, sustain, release) }
-        "hpf" -> with(slots.hpf) { filter(env, attack, decay, sustain, release) }
-        "bpf" -> with(slots.bpf) { filter(env, attack, decay, sustain, release) }
-        "notch" -> with(slots.notch) { filter(env, attack, decay, sustain, release) }
+        "lpf" -> with(slots.lpf) { filter(env, attack, decay, sustain, release, curves = slots.lpfCurves) }
+        "hpf" -> with(slots.hpf) { filter(env, attack, decay, sustain, release, curves = slots.hpfCurves) }
+        "bpf" -> with(slots.bpf) { filter(env, attack, decay, sustain, release, curves = slots.bpfCurves) }
+        "notch" -> with(slots.notch) { filter(env, attack, decay, sustain, release, curves = slots.notchCurves) }
 
         "penv" -> with(slots.penv) {
+            val curves = slots.penvCurves
+
             // Its depth is its switch
-            EnvelopeStages(attack = attack, decay = decay, sustain = sustain, release = release) { written ->
-                (written(semitones) ?: 0.0) != 0.0
-            }
+            EnvelopeStages(
+                attack = attack,
+                decay = decay,
+                sustain = sustain,
+                release = release,
+                curves = CurveSlots(attack = curves.attack, decay = curves.decay, release = curves.release),
+            ) { written -> (written(semitones) ?: 0.0) != 0.0 }
         }
 
         "fm" -> with(slots.fm) {

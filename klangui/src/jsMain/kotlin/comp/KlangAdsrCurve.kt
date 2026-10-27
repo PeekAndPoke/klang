@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.ui.comp
 
+import io.peekandpoke.klang.audio_bridge.AdsrCurve
+import io.peekandpoke.klang.audio_bridge.constants.ADSR_EXP_K
 import io.peekandpoke.klang.ui.svgCircle
 import io.peekandpoke.klang.ui.svgG
 import io.peekandpoke.klang.ui.svgLine
@@ -18,12 +20,13 @@ import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.streams.Stream
-import kotlin.js.Date
-import kotlin.math.max
-import kotlin.math.round
 import kotlinx.browser.window
 import kotlinx.html.Tag
 import kotlinx.html.div
+import kotlin.js.Date
+import kotlin.math.exp
+import kotlin.math.max
+import kotlin.math.round
 
 @Suppress("FunctionName")
 fun Tag.KlangAdsrCurve(
@@ -37,13 +40,35 @@ fun Tag.KlangAdsrCurve(
     KlangAdsrCurve(it)
 }
 
-/** An envelope's four numbers: attack, decay and release in seconds, sustain a level from 0 to 1. */
+/**
+ * An envelope's four numbers: attack, decay and release in seconds, sustain a level from 0 to 1; and the curve each of
+ * the three moving stages takes, the engine's own [AdsrCurve]s.
+ */
 data class KlangAdsr(
     val attack: Double,
     val decay: Double,
     val sustain: Double,
     val release: Double,
+    val attackCurve: AdsrCurve = AdsrCurve.Linear,
+    val decayCurve: AdsrCurve = AdsrCurve.Linear,
+    val releaseCurve: AdsrCurve = AdsrCurve.Linear,
 )
+
+/**
+ * How far along its way a stage is at progress [p] (0 to 1) in this curve, `f(0) = 0` and `f(1) = 1`, for the drawing
+ * (KLANG-00371; the maintainer, 2026-10-27, chose "the real curves" over straight lines). The engine's own law
+ * (`adsrCurveShape` in `audio_be`'s `AdsrCurveMath.kt`), its exponential at the same [ADSR_EXP_K]; exhaustive, so a curve
+ * added to the engine does not compile here until it is drawn. A rising stage goes `f(p)`, a falling one `f(1 - p)`
+ * of the way down, as the engine does.
+ */
+internal fun AdsrCurve.drawnAt(p: Double): Double = when (this) {
+    AdsrCurve.Linear -> p
+    AdsrCurve.Square -> p * p
+    AdsrCurve.Cube -> p * p * p
+    AdsrCurve.SCurve -> if (p < 0.5) 2.0 * p * p else 1.0 - 2.0 * (1.0 - p) * (1.0 - p)
+    AdsrCurve.InvSquare -> p * (2.0 - p)
+    AdsrCurve.Exponential -> (exp(ADSR_EXP_K * p) - 1.0) / (exp(ADSR_EXP_K) - 1.0)
+}
 
 /** What a [KlangAdsrCurve] follows: the notes that sound, one signal each. */
 sealed interface KlangAdsrSignal {
@@ -72,9 +97,9 @@ sealed interface KlangAdsrSignal {
  * [Props.signals], every one (a stream set directly passes equal values on; one that comes again from a new
  * subscription is over already and draws nothing). Any envelope the same way: the loudness, a filter's cutoff.
  *
- * Schematic, as the pictures in the tutorials always were: straight segments, the attack, decay and release as wide
- * as their share of the time with a least width, the sustain a fixed share. It is drawn from [Props.adsr] until a
- * note brings its own values, then from the last note begun: an edited example shows the shape that plays.
+ * Each stage bends in its curve, as [KlangAdsr] says. The widths stay schematic: the attack, decay and release as wide as their
+ * share of the time with a least width, the sustain a fixed share. It is drawn from [Props.adsr] until a note brings
+ * its own values, then from the last note begun: an edited example shows the shape that plays.
  */
 class KlangAdsrCurve(ctx: Ctx<Props>) : Component<KlangAdsrCurve.Props>(ctx) {
 
@@ -293,12 +318,16 @@ internal class KlangAdsrGeometry(private val adsr: KlangAdsr) {
 
         /** A stage of nearly no time still shows as an edge. */
         private const val MIN_WIDTH = 3.0
+
+        /** The pieces a curved stage is drawn in: smooth at this size, few enough to redraw every frame. */
+        private const val STEPS = 24
     }
 
     private val attack = max(0.0, adsr.attack)
     private val decay = max(0.0, adsr.decay)
     private val release = max(0.0, adsr.release)
-    private val sustainY = PAD_TOP + (1.0 - adsr.sustain.coerceIn(0.0, 1.0)) * DRAW_HEIGHT
+    private val sustain = adsr.sustain.coerceIn(0.0, 1.0)
+    private val sustainY = levelY(sustain)
 
     val points: List<KlangAdsrPoint> = run {
         val drawWidth = WIDTH - PAD_LEFT - PAD_RIGHT
@@ -325,14 +354,32 @@ internal class KlangAdsrGeometry(private val adsr: KlangAdsr) {
         )
     }
 
-    fun pathD(): String = "M " + points.joinToString(" L ") { "${it.x} ${it.y}" }
+    /** The curve as drawn: each moving stage in [STEPS] pieces along its curve, the sustain straight. */
+    val curve: List<KlangAdsrPoint> = buildList {
+        for (step in 0..STEPS) {
+            add(attackAt(step.toDouble() / STEPS))
+        }
 
-    fun polylinePoints(): String = points.joinToString(" ") { "${it.x},${it.y}" }
+        for (step in 1..STEPS) {
+            add(decayAt(step.toDouble() / STEPS))
+        }
+
+        add(points[3])
+
+        for (step in 1..STEPS) {
+            add(releaseAt(from = points[3], level = sustain, p = step.toDouble() / STEPS))
+        }
+    }
+
+    fun pathD(): String = "M " + curve.joinToString(" L ") { "${it.x} ${it.y}" }
+
+    fun polylinePoints(): String = curve.joinToString(" ") { "${it.x},${it.y}" }
 
     /**
      * Where [note]'s light is at [nowSec], on this curve; null before the note starts and once its release is over.
-     * The light crosses the sustain in the time the gate is open, so it reaches the release's corner when the note
-     * ends. A note that ends before its decay has run releases from where it is, straight to the curve's end.
+     * The light keeps the note's own times on the curve as drawn: it crosses the sustain in the time the gate is
+     * open, so it reaches the release's corner when the note ends. A note that ends before its decay has run releases
+     * from where it is, down to the curve's end, along the release's bend.
      */
     fun lightAt(note: KlangAdsrSignal.Note, nowSec: Double): KlangAdsrPoint? {
         val start = note.startSec
@@ -346,34 +393,44 @@ internal class KlangAdsrGeometry(private val adsr: KlangAdsr) {
             return null
         }
 
-        fun held(t: Double): KlangAdsrPoint {
-            val decayEnd = start + ownAttack + ownDecay
+        val decayEnd = start + ownAttack + ownDecay
 
-            return when {
-                t < start + ownAttack -> along(0, fraction(t - start, ownAttack))
-                t < decayEnd -> along(1, fraction(t - start - ownAttack, ownDecay))
-                else -> along(2, fraction(t - decayEnd, gateEnd - decayEnd))
+        /** Where the light is while the gate is open, with the level it stands for. */
+        fun held(t: Double): Pair<KlangAdsrPoint, Double> = when {
+            t < start + ownAttack -> fraction(t - start, ownAttack).let { p -> attackAt(p) to adsr.attackCurve.drawnAt(p) }
+            t < decayEnd -> fraction(t - start - ownAttack, ownDecay).let { p -> decayAt(p) to decayLevel(p) }
+
+            else -> {
+                val p = fraction(t - decayEnd, gateEnd - decayEnd)
+
+                KlangAdsrPoint(points[2].x + (points[3].x - points[2].x) * p, sustainY) to sustain
             }
         }
 
         if (nowSec <= gateEnd) {
-            return held(nowSec)
+            return held(nowSec).first
         }
 
-        val from = held(gateEnd)
-        val to = points[4]
-        val f = fraction(nowSec - gateEnd, ownRelease)
+        val (from, level) = held(gateEnd)
 
-        return KlangAdsrPoint(from.x + (to.x - from.x) * f, from.y + (to.y - from.y) * f)
+        return releaseAt(from = from, level = level, p = fraction(nowSec - gateEnd, ownRelease))
     }
 
-    /** The point [f] of the way along the segment from corner [index] to the next. */
-    private fun along(index: Int, f: Double): KlangAdsrPoint {
-        val a = points[index]
-        val b = points[index + 1]
+    private fun attackAt(p: Double) = KlangAdsrPoint(between(points[0].x, points[1].x, p), levelY(adsr.attackCurve.drawnAt(p)))
 
-        return KlangAdsrPoint(a.x + (b.x - a.x) * f, a.y + (b.y - a.y) * f)
-    }
+    private fun decayAt(p: Double) = KlangAdsrPoint(between(points[1].x, points[2].x, p), levelY(decayLevel(p)))
+
+    /** From full down to the sustain, along the decay's bend. */
+    private fun decayLevel(p: Double): Double = sustain + (1.0 - sustain) * adsr.decayCurve.drawnAt(1.0 - p)
+
+    /** [p] of the way through the release that starts at [from], at [level], and ends at the curve's end. */
+    private fun releaseAt(from: KlangAdsrPoint, level: Double, p: Double) =
+        KlangAdsrPoint(between(from.x, points[4].x, p), levelY(level * adsr.releaseCurve.drawnAt(1.0 - p)))
+
+    private fun between(a: Double, b: Double, p: Double): Double = a + (b - a) * p
+
+    /** A level from 0 (the floor) to 1 (the top) as a height in the drawing. */
+    private fun levelY(level: Double): Double = PAD_TOP + (1.0 - level) * DRAW_HEIGHT
 
     // A stage of no time is over at once; NaN-guard: a span of zero or less gives 1, never 0/0
     private fun fraction(elapsed: Double, span: Double): Double =

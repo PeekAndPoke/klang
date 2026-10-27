@@ -167,6 +167,7 @@ stages must not carry it.
 |---|--------|------|---------|------------------------------|
 | A1 | The four waveforms | oscillator timbre: sine, tri, saw, square (+ noise) | carrier only | ONE fixed phrase, swap `.sound()` per section. *Listen for: the buzz the saw adds over the sine; the hollowness of the square.* |
 | A2 | ADSR — a note's shape in time | `adsr` (amp envelope), dedicated lesson (currently missing) | — | Same phrase morphs pluck → organ → pad by moving one letter at a time. *Listen for: attack snap vs. fade-in.* |
+| A2b | The bend of a note | `adsrCurves` (the curves of attack, decay and release) | (none) | The same leap at half speed, a slow attack and a long tail, each stage bent one way, then another; the picture draws the curve that plays (added 2026-10-27, KLANG-00371). *Listen for: the late bloom of the default attack against a straight one; the soft trail of the default release.* |
 | B4 | Subdivision | `[]`, `*` | — | Hi-hat line densifies. *Listen for: how `[hh hh]` fits the same time slot.* |
 | B5 | Alternation & repetition | `<>`, `!`, `@` | — | Bassline that changes per cycle (Sandsturm's `<bar1 bar2 bar3 bar4>` idiom). *Listen for: the 4-bar rotation.* |
 | A3 | Filters — LPF & HPF | `lpf`, `hpf` (with the `q` slot) | — | Saw phrase under a moving blanket; then thin it from below. *Listen for: which disappears first — the body or the sparkle.* (The old `tut_FilterPlayground` had good bones — same idea, fresh writing.) |

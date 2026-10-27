@@ -35,8 +35,9 @@ fun Tag.TutorialsListPage() = comp {
 /**
  * The Learn overview on the workbench (KLANG-00370, the canvas "Klang Learn on the workbench", board "Learn: the
  * overview"): the next lesson to continue with, a slim search with the level and the depth as keys, and the tracks as
- * rows of lesson tiles, each with its lamp. The tracks beside the main path fold to a row of lamps, a key opens one.
- * The column (The Klang Path's lessons) is the Learn area's own, from the sidebar.
+ * rows of lesson tiles, each with its lamp. Every track starts folded to a row of lamps, a key opens one; the
+ * Continue tile is the way in (the maintainer, 2026-10-27: "collapse all tracks but keep the big continue button").
+ * The column (the tracks) is the Learn area's own, from the sidebar.
  */
 class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
 
@@ -61,8 +62,8 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
 
     private var depthParam: String by urlParam(name = PARAM_DEPTH, default = "")
 
-    /** The tracks shown with their tiles; the others are a row of lamps. The main path at first. */
-    private var unfolded: Set<String> by value(setOf(theKlangPathTrack.slug))
+    /** The tracks shown with their tiles; the others are a row of lamps. None at first. */
+    private var unfolded: Set<String> by value(emptySet())
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -148,6 +149,7 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
 
             if (shown == 0) {
                 div {
+                    key = "nothing-found"
                     css { put("color", "var(--kl-ink-label)") }
 
                     +"No lesson matches. Try fewer words, or another level or depth."
@@ -161,6 +163,7 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
         val number = theKlangPathTrack.lessons.indexOf(next) + 1
 
         div {
+            key = "continue"
             css { put("display", "flex") }
 
             KlangButton(
@@ -212,9 +215,13 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
         }
     }
 
-    /** The search, then the level's and the depth's keys; a pressed key presses off. */
+    /**
+     * The search, then the level's and the depth's keys; a pressed key presses off. Keyed: the Continue tile above it
+     * goes while one searches, and without a key the first letter rebuilt the field and took its focus away.
+     */
     private fun FlowContent.renderFilters() {
         div {
+            key = "filters"
             css {
                 put("display", "flex")
                 put("flex-wrap", "wrap")

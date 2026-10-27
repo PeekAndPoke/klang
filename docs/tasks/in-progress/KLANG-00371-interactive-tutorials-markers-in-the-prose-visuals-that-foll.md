@@ -1,6 +1,6 @@
 # KLANG-00371: Interactive tutorials: markers in the prose, visuals that follow the player (a light running along the ADSR curve)
 
-> **Status (2026-10-27): IN PROGRESS.** the ADSR picture follows the players (landed); next the real curves and the curves lesson
+> **Status (2026-10-27): IN PROGRESS.** the real curves and The Bend of a Note landed; next two pictures for the loudness and the filter envelope
 >
 > **Part of:** KLANG-00334 (UI workbench: the Motor-centred layout, tool windows and the first-visit trail)
 
@@ -78,3 +78,4 @@ knows each sound event as it is scheduled (the highlights in the code use them).
 - 2026-10-27: decided with the maintainer (a component fed by a stream of signals, any envelope, the point of light); started.
 - 2026-10-27: IN PROGRESS. first slice: the ADSR picture follows the player
 - 2026-10-27: the light, a picture before every example of Sound Design Basics that writes an envelope, one player per alternative in all 17 lessons, the Copy key; two review rounds (the second clean), mutation-checked.
+- 2026-10-27: the stages drawn in the engine's own curves, The Bend of a Note (lesson 6), a lint that every note a picture follows reaches its sustain; two review rounds (the second clean), mutation-checked.

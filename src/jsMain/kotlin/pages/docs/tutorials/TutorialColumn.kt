@@ -39,7 +39,8 @@ class TutorialColumn(ctx: NoProps) : PureComponent(ctx) {
                 put("display", "flex")
                 put("flex-direction", "column")
                 put("gap", "12px")
-                put("padding", "18px 16px")
+                // On the area headline's left edge, 20px in as the other areas' menus
+                put("padding", "18px 20px")
                 put("color", "var(--kl-ink-text)")
             }
 
