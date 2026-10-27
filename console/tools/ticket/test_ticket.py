@@ -219,6 +219,16 @@ class NewMoveCheck(Repo):
         self.assertIn(f"> **Status ({ticket.today()}): PAUSED.** Waits for the checkout.\n\nBody.",
                       read(self.root, out.strip()))
 
+    def test_part_of_short_title(self):
+        run(self.root, "init", "KL")
+        run(self.root, "new", "Motor \u2014 correct at the edges (with the graph)", "--status", "SCHEDULED")
+        run(self.root, "new", "Sprudel's surface (its API)", "--status", "SCHEDULED")
+        run(self.root, "new", "Clipping", "--part-of", "KL-00001")
+        run(self.root, "new", "Bank", "--part-of", "KL-00002")
+        self.assertIn("> **Part of:** KL-00001 (Motor)\n", read(self.root, "docs/tasks/future/KL-00003-clipping.md"))
+        self.assertIn("> **Part of:** KL-00002 (Sprudel's surface)\n", read(self.root, "docs/tasks/future/KL-00004-bank.md"))
+        self.assertEqual(run(self.root, "check")[0], 0)
+
     def test_epics(self):
         run(self.root, "init", "KL")
         run(self.root, "new", "Editor", "--status", "SCHEDULED")

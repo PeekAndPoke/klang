@@ -37,7 +37,8 @@ PAUSED in in-progress/ is accepted only while in-progress/NEXT-STEPS.md (the pro
 
 Epics (optional): a ticket names its one parent in the line `> **Part of:** XYZ-00042 (short title)`
 in the status block, after a bare `>` line (so it renders as its own paragraph). The epic is an ordinary ticket; it keeps no list of its children (`list
---epic` derives it), and its own status never counts: its progress is its children's statuses. An
+--epic` derives it), and its own status never counts: its progress is its children's statuses. `new --part-of` writes the
+epic's title up to its first " (" or dash as the short title. An
 epic may have a parent of its own; counts are of direct children unless --deep. "Follow-up of" and
 "split out of" say where a ticket came from, not what it belongs to: they stay in History.
 
@@ -255,7 +256,7 @@ def status_of(path):
             m = STATUS_LINE.match(line.rstrip("\n"))
             if m:
                 return m.group(1), parse_word(m.group(2)), m.group(2), i
-            if i > 20:
+            if i > 20 or line.startswith("## "):  # the status is in the header, never in the body
                 break
     return None
 
@@ -279,6 +280,11 @@ def words(text):
 def bare_title(path, tid):
     t = title_of(path)
     return t[len(tid) + 1:].strip() if tid and t.startswith(tid + ":") else t
+
+
+def epic_short(title):
+    """The epic title up to its first " (" or dash: the Part of line's parentheses hold no ")" or long tail."""
+    return re.split(r" \(| [\u2014\u2013-] ", title, maxsplit=1)[0].strip() or title
 
 
 def tree(root, prefix):
@@ -394,7 +400,7 @@ def cmd_new(a):
         hits = [f for f in ticket_files(a.root) if os.path.basename(f).startswith(a.part_of + "-")]
         if len(hits) != 1:
             raise Refused(f"--part-of {a.part_of}: {len(hits)} matching tickets")
-        part = f">\n> **Part of:** {a.part_of} ({bare_title(os.path.join(a.root, hits[0]), a.part_of)})\n"
+        part = f">\n> **Part of:** {a.part_of} ({epic_short(bare_title(os.path.join(a.root, hits[0]), a.part_of))})\n"
     n = take_numbers(a.root, prefix, 1)
     tid = f"{prefix}-{n:05d}"
     rel = f"{folder_for(word, today())}/{tid}-{slug(a.title)}.md"
