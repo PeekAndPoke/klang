@@ -286,6 +286,11 @@ the table; the Mac preset checked on a Mac when one is at hand.
 A user-set hints trigger (set in code for now), keys stored on a server (localStorage until there is one), the clipboard
 history (KLANG-00326), navigate back and forward (KLANG-00327).
 
+Later, when a second case comes (the maintainer, 2026-10-27, noted in KLANG-00365): the key manager grown into an
+interaction manager (gestures and followed links too, such as a Lexikon link opening the song page's Lexikon tab),
+reusing its layers, and renamed. Today that one link case is a plain prop (`QuickHelpView.onLexikon`). The manager
+lives in `workshop/` bound for Kraft, so its scope and name are worth settling with Ultra-Main-Dev before it moves.
+
 ## Depends on / unblocks
 
 This ticket is the epic "keyboard shortcuts", klang's first (maintainer, 2026-10-21): its tickets carry a
@@ -468,3 +473,4 @@ OkCancel real buttons and focus; their Esc stays ours until the key map carries 
   "right aligned in the editor and overlap the minimap"); the minimap measuring gone, the column of panels as it was.
 - 2026-10-27: `KlangKeyHint`'s caps on the look's colours (`--kl-*`), so the Esc and Alt+Q caps match in Copper and
   Cream; the hover hand-over cancelled when the mouse leaves the editor, on an edit, and when the editor is gone.
+- 2026-10-27: Out of scope: the interaction manager idea (KLANG-00365), for when a second case comes.
