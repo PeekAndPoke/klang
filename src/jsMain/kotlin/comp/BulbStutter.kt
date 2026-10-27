@@ -108,7 +108,8 @@ class BulbStutter(
 
 /**
  * A [Smoothing] whose [law] can change on the way: each step goes by the law of the moment, and the motion (where the
- * value is, how fast it moves) stays with the stream that smooths, so a change of law never starts it over.
+ * value is, how fast it moves) stays with the stream that smooths, so a change of law never starts it over. Local
+ * until Ultra has its own (ULTRA-00264: `smooth()` taking a `Stream<Smoothing?>`).
  */
 class SwappableSmoothing(var law: Smoothing) : Smoothing {
 
