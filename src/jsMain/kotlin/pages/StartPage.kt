@@ -341,6 +341,9 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         override fun update() {
             if (!benchmarkStarted && elapsedMs() >= KEY_AT_START_MS + uiFadeDurationMs) {
                 benchmarkStarted = true
+                // "Gestrandet" with the run, fading in (the maintainer, 2026-10-27)
+                songFadeIn.start()
+                waitingSong.play()
                 launch { benchmark.run(iterations = 3) }
             }
         }
@@ -355,11 +358,6 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
     private inner class StateBenchmarkComplete(val result: KlangBenchmark.Result) : State {
         override val key = KlangIgnition.Position.Start
-
-        init {
-            // The dyno is done: "Gestrandet" plays while the result waits for "Make Music Now"
-            waitingSong.play()
-        }
 
         override fun update() {
             // noop
@@ -376,7 +374,8 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 .adsr(0.005, 0.2, 0.3, 10.0)
                 .reverb(wet = 0.2, size = 3.0, lowpass = 5000.0)
 
-            // The waiting song stops, its notes ringing out, and the jingle takes over
+            // The waiting song stops, its notes ringing out, and the jingle takes over at the user's volume
+            songFadeIn.end()
             waitingSong.stop()
 
             // No player (the worklet failed?): no jingle, the way on all the same
@@ -396,9 +395,9 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
     private val benchmark = KlangBenchmark()
 
     /**
-     * "Gestrandet" in the background once the Motor runs, until "Make Music Now" is pressed (the maintainer,
-     * 2026-10-27). It starts after the dyno, never during it: it would compete with the run's measurement and lower
-     * the voices it reports.
+     * "Gestrandet" in the background from the dyno run on, until "Make Music Now" is pressed (the maintainer,
+     * 2026-10-27: "start the song when the dynamo test start but fade it in over 15 seconds"). It plays on the main
+     * thread's time too, so the run reports somewhat fewer voices than the machine can do; the maintainer's call.
      */
     private val waitingSong = KlangCodePlaybackCtrl.builder()
         .code(BuiltInSongs.soundOfTheSea.code)
@@ -406,10 +405,54 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         .title(BuiltInSongs.soundOfTheSea.title)
         .build()
 
+    /**
+     * The waiting song's fade-in: the player's output from silence up to the user's volume over [DURATION_MS]. The
+     * user's volume itself ([Player.outputVolume], the knob's and the stored one) is never touched; [end] gives the
+     * player that volume back at once.
+     */
+    private class SongFadeIn {
+        companion object {
+            const val DURATION_MS = 15_000.0
+
+            /** How often the volume steps; the backend glides between the steps. */
+            const val STEP_MS = 100
+        }
+
+        private var timer: Int? = null
+
+        fun start() {
+            val startMs = Kronos.systemUtc.millisNow()
+
+            Player.get()?.setOutputVolume(0.0)
+
+            timer = window.setInterval({
+                val progress = ((Kronos.systemUtc.millisNow() - startMs) / DURATION_MS).coerceIn(0.0, 1.0)
+
+                // Squared: the ear hears the first part of a linear gain ramp as the loudest change
+                Player.get()?.setOutputVolume(Player.outputVolume() * progress * progress)
+
+                if (progress >= 1.0) {
+                    end()
+                }
+            }, STEP_MS)
+        }
+
+        fun end() {
+            timer?.let { window.clearInterval(it) }
+            timer = null
+            Player.get()?.setOutputVolume(Player.outputVolume())
+        }
+    }
+
+    private val songFadeIn = SongFadeIn()
+
     init {
         lifecycle {
             // Left another way than by "Make Music Now" (the Motor's menu, the browser's back): the song stops too
-            onUnmount { waitingSong.stop() }
+            onUnmount {
+                songFadeIn.end()
+                waitingSong.stop()
+            }
         }
     }
 
