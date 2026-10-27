@@ -182,7 +182,7 @@ let darkBuild = stack(
     s("[~ ~ ~ oh]!4").gain(0.40).hpf(5000).orbit(2),
     // Sub bass — sidechain pump (drops at each kick, recovers between)
     note("<a1 d2 bb1 c2 g1 f1 a1 d2>").struct("<[x!4]!32 [x!8]!32>")
-        .sound("sine").distort(0.2, "soft").legato(1.0).adsr(0.005, 0.05, 0.5, 0.05)
+        .sound("sine").distort(0.1, "soft").legato(1.0).adsr(0.005, 0.05, 0.5, 0.05)
         .hpf(50).lpf(300).gain(saw.fast(4).range(0.45, 0.30))
         .orbit(3),
     // Saw bass — pumping, LPF closes, warmth + distortion grow
@@ -201,7 +201,7 @@ let darkBuild = stack(
         .pan(0.3).superimpose(pan(0.7))
         .superimpose(transpose("<-12 0 12 0>/8").gain(0.2 * 0.7).pan(0.1), transpose("<0 12 24 12>/8").gain(saw.range(0.1, 0.2).slow(64).mul(0.7)).pan(0.8))
         .phaser(rate = 1/11, wet = 0.25, center = 3500, sweep = 500)
-        .hpf(300).lpf(freq = saw.range(3500, 5000).slow(64), env = 13.7, q = 2.5).adsr(0.005, 0.35, 0.5, 0.12)
+        .hpf(300).lpf(freq = saw.range(3500, 5000).slow(64), env = 13.7, q = 1.5, passes = 1).adsr(0.005, 0.35, 0.5, 0.12)
         .orbit(6), // the same orbits as the build: bassline 6, stabs 5 (tails cross the section edge)
     // Syncopated pad stabs — keep the 90s rhythm but darken with section
     chord("<Am Dm <Bb [Bb|F]> C Gm [F|F|Dm] Am Dm>").voicing(rank = sine.range(0, 1.8).fast(7).add(perlin.range(0, 0.4)))
@@ -209,7 +209,7 @@ let darkBuild = stack(
         .sound("superpulse").unison(voices = 2, spread = 0.05).pan(0.2).superimpose(pan(0.8))
         .hpf(400).lpf(freq = saw.range(1500, 2500).slow(32), env = 24).onepole(12000)
         .adsr(0.005, 0.1, 0.25, 0.1).legato(0.7)
-        .gain(0.11).orbit(5).reverb(wet = 0.4, size = 6),
+        .gain(0.13).orbit(5).reverb(wet = 0.4, size = 6),
     // Spheric supersine stabs — syncopated 5-3-3-3 (16ths), wide slow drift
     note("<a5 d6 bb5 c6 g5 f5 a5 d6>")
         .sound("supersine").unison(voices = 8, spread = 0.15).adsr(0.5, 0.3, 0.5, 0.5)
@@ -251,7 +251,7 @@ stack(
     [64, quietBuild],   // 84-147: smooth morph — two melodies fade in
     [96, darkBuild]     // 148-211: no melodies — bass + bassline pump, filters close upen up, spheric stabs drift in stereo
   ),
-  master(Katalyst(k => k.reverb(0.05, 7).gain(1.1)))
+  master(Katalyst(k => k.reverb(0.10, 7).gain(1.2).distort(0.1, "soft")))
 ).analog(3.0)
 
 // Inspired by: The Synthsale Piper's Farewell — gone clubbing

@@ -65,17 +65,17 @@ export leadShape = (p) => p
 // Bass voice: supersaw, slow detune-LFO, stereo phaser, transposed superimpose.
 export bassShape = (p) => p
     .sound("supersaw").unison(sine.range(4, 12).slow(80)).onepole(23197)
-    .orbit(1).gain(0.23).adsr(0.007, 0.5, 0.7, 0.10).lpf(attack = 0.007, decay = 2.0, sustain = 0.0, release = 0.10).pan(0.2)
+    .orbit(1).gain(0.20).adsr(0.007, 0.5, 0.7, 0.10).lpf(attack = 0.007, decay = 2.0, sustain = 0.0, release = 0.10).pan(0.2)
     .superimpose(
       x => x.pan(0.8),
       x => x.transpose("<0 12 0 -12>/8").pan(0.5).superimpose(pan(0.8))
-    ).phaser(rate = 1/13, wet = 0.15, center = 2000, sweep = 1200)
+    ).phaser(rate = 1/19, wet = 0.35, center = 1600, sweep = 1200)
     .unison(spread = sine.range(0.1, 0.4).early(1.5).slow(24)).hpf(200).lpf(freq = 2900, env = 14.4)
     .lpf(q = berlin.range(1.5, 2.2).seg(32).slow(32))
 
 // Sub voice: tremoloed triangle, soft distortion.
 export subShape = (p) => p
-    .slow(2).orbit(2).clip(0.5).sound("tri").gain(0.7 * 0.80).distort(0.2, "tube", 2).analog(2.5)
+    .slow(2).orbit(2).clip(0.5).sound("tri").gain(0.7 * 0.82).distort(0.2, "tube", 2).analog(2.5)
     .adsr(0.01, 0.2, 0.4, 0.09).lpf(attack = 0.01, decay = 0.1, sustain = 0.0, release = 0.09).hpf(55).lpf(freq = 200, env = 56.4, q = 1.0) // . solo()
 
 // Drums: tight, panned right, fast.
@@ -106,7 +106,7 @@ export song = stack(
     sub.filterWhen(x => x > 31.4 && x % 128 > 15.4),
     drums,
     master(Katalyst(k => k
-    .reverb(0.15, 8, 4500)
+    .reverb(0.10, 8, 5500)
     .gain(1.8)
     .bands(b => b
       .band(low => low.distort(0.01, "soft", 4)).cut(150)
