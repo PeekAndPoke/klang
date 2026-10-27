@@ -70,6 +70,9 @@ Design points:
   raise the analyzer to 16384 (2.9 Hz/bin; ~3 bins at 40 Hz — acceptable), or a second small analyzer tap decimated ×8
   for the bottom three octaves. Decide at implementation; raising the size is the simpler first try, cost is one FFT per
   frame.
+  Update 2026-10-27: the spectrum's analyser is raised to 8192 (`SPECTRUM_FFT_SIZE`, 5.9 Hz/bin, about 1.4 bins at
+  40 Hz) for the Spectrumeter's low columns; the scope stays at 2048. Whether the meter needs 16384 or a decimated tap
+  on top of that is still open.
 
 UI-only except for the possible FFT-size change. No hot-path cost.
 
@@ -175,7 +178,8 @@ quiet sections corrupt the averages.
 
 ## 5. Open decisions
 
-1. FFT size for the low bands (raise global vs. second decimated tap) — §2.1.
+1. FFT size for the low bands (raise global vs. second decimated tap), §2.1. The spectrum's tap is at 8192 since
+   2026-10-27; open is whether the meter needs more.
 2. Anchor convention: adopt 250–500 Hz band-mean everywhere (this doc's proposal) or move offline scripts to the
    Spectrumeter's 1 kHz reference. Either — but exactly one.
 3. Telemetry channel shape: reuse the `Stream` pattern of `AudioAnalyzer` vs. a pull-model snapshot struct the UI reads

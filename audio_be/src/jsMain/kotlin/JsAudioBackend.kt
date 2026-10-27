@@ -13,6 +13,7 @@ import io.peekandpoke.klang.audio_bridge.AudioContextOptions
 import io.peekandpoke.klang.audio_bridge.AudioWorkletNode
 import io.peekandpoke.klang.audio_bridge.AudioWorkletNodeOptions
 import io.peekandpoke.klang.audio_bridge.GainNode
+import io.peekandpoke.klang.audio_bridge.analyzer.SPECTRUM_FFT_SIZE
 import io.peekandpoke.klang.audio_bridge.guessDeviceLatencyMs
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.common.infra.KlangRingBuffer
@@ -107,8 +108,8 @@ class JsAudioBackend(
             console.log("JsAudioBackend AudioWorkletNode created successfully", node)
 
             // The analysers for the visualisations (with a fallback if one cannot be made: that view stays dark)
-            spectrumAnalyser = createAnalyserOrNull(ctx = ctx, name = "spectrum")
-            scopeAnalyser = createAnalyserOrNull(ctx = ctx, name = "scope")
+            spectrumAnalyser = createAnalyserOrNull(ctx = ctx, name = "spectrum", fftSize = SPECTRUM_FFT_SIZE)
+            scopeAnalyser = createAnalyserOrNull(ctx = ctx, name = "scope", fftSize = 2048)
 
             val volume = ctx.createGain().apply { gain.value = outputVolume }
 
@@ -268,9 +269,9 @@ class JsAudioBackend(
     }
 
     /** An analyser for one visualisation, or null when the browser cannot make one (that view then stays dark). */
-    private fun createAnalyserOrNull(ctx: AudioContext, name: String): AnalyserNode? = try {
+    private fun createAnalyserOrNull(ctx: AudioContext, name: String, fftSize: Int): AnalyserNode? = try {
         ctx.createAnalyser().apply {
-            fftSize = 2048
+            this.fftSize = fftSize
             smoothingTimeConstant = 0.8
         }
     } catch (e: Throwable) {

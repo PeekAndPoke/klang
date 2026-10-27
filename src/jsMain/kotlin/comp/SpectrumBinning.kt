@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.audio_bridge.analyzer.AnalyzerBuffer
+import io.peekandpoke.klang.audio_bridge.analyzer.SPECTRUM_FFT_SIZE
 import org.khronos.webgl.get
 import kotlin.math.exp
 import kotlin.math.ln
@@ -22,12 +23,19 @@ import kotlin.math.sqrt
  * 2. RMS aggregation — proper energy measurement when combining multiple FFT bins
  * 3. Slope compensation (+3 dB/octave) — counteracts the natural 1/f spectral rolloff
  *
+ * The floor and ceiling were tuned at 1024 bins. A bin of a larger FFT is narrower and holds less of the energy, so
+ * the RMS over a column's bins falls 3 dB per doubling of [fftBinCount]; [resolutionDb] adds that back, and broadband
+ * material (noise, a dense mix) reads the same at any FFT size. Two places where it does not: a lone low tone, in a
+ * column narrower than the window's main lobe, reads up to about 4 dB hotter at 4096 bins than at 1024; and the
+ * silence gate looks at the uncorrected level, so content just above the floor at 1024 bins (within 6 dB of it, at
+ * 4096) stays dark.
+ *
  * The result is a display where typical music looks balanced across the frequency range,
  * rather than showing the misleading bass-heavy downward slope of raw FFT data.
  */
 class SpectrumBinning(
     val numBuckets: Int,
-    val fftBinCount: Int = 1024,
+    val fftBinCount: Int = SPECTRUM_FFT_SIZE / 2,
     val sampleRate: Double = 48000.0,
     val minFreq: Double = 30.0,
     val maxFreq: Double = 20000.0,
@@ -41,6 +49,9 @@ class SpectrumBinning(
 
     /** Precomputed slope compensation in dB for each bucket's center frequency. */
     private val slopeCompensationDb: DoubleArray
+
+    /** The level lost to narrower bins against the 1024 the floor and ceiling were tuned at. */
+    private val resolutionDb = 10.0 * log10(fftBinCount / 1024.0)
 
     init {
         val fftBinWidth = sampleRate / (fftBinCount * 2) // Hz per bin
@@ -95,9 +106,9 @@ class SpectrumBinning(
             }
             val rmsDb = 20.0 * log10(sqrt(sumSquares / binCount).coerceAtLeast(1e-10))
 
-            // Apply slope compensation, but not to silence — otherwise high-freq
+            // Apply slope and resolution compensation, but not to silence: otherwise high-freq
             // buckets get boosted above the floor and show phantom bars.
-            val compensatedDb = if (rmsDb < dbFloor) dbFloor else rmsDb + slopeCompensationDb[i]
+            val compensatedDb = if (rmsDb < dbFloor) dbFloor else rmsDb + slopeCompensationDb[i] + resolutionDb
 
             // Normalize to 0.0..1.0
             out[i] = ((compensatedDb - dbFloor) / range).coerceIn(0.0, 1.0)

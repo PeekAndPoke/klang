@@ -18,12 +18,13 @@ import io.peekandpoke.ultra.streams.ops.map
  * the spectrum before it).
  */
 class JsAudioAnalyzer(
-    fftSize: Int = 2048,
+    /** The length of one [waveform] buffer: the scope analyser's FFT size, which fills it whole. */
+    waveformSize: Int = 2048,
     private val waveformNode: () -> AnalyserNode?,
     private val fftNode: () -> AnalyserNode?,
 ) : AudioAnalyzer {
 
-    private val history = AnalyzerBufferHistory(bufferSize = fftSize, capacity = HISTORY_CAPACITY)
+    private val history = AnalyzerBufferHistory(bufferSize = waveformSize, capacity = HISTORY_CAPACITY)
 
     companion object {
         private const val HISTORY_CAPACITY = 50

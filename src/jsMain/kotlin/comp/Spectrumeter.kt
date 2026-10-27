@@ -95,8 +95,8 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
 
     private var visualizerAnimFrame: Int? = null
 
-    // FFT size is typically 2048, resulting in 1024 frequency bins
-    private val visualizerBuffer = createAnalyzerBuffer(1024).also { buffer ->
+    // One value per frequency bin, as many as the binning reads (half the analyser's FFT size)
+    private val visualizerBuffer = createAnalyzerBuffer(props.binning.fftBinCount).also { buffer ->
         // Initialize with silence (-100 dB) so nothing displays before audio starts
         for (i in 0 until buffer.length) {
             buffer[i] = -100.0f
