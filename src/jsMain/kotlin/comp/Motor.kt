@@ -52,16 +52,16 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
 
     companion object {
         /** The frame's total height: the gauges, the scope under them, the spectrum behind it down to the floor. */
-        const val FRAME_HEIGHT_REM = 13.25
+        const val FRAME_HEIGHT_REM = 13.75
 
-        /** Room above the gauges, so they do not touch the column's edge. */
-        val TOP_INSET = 0.75.rem
+        /** Room above the gauges, so they do not crowd the divider above (the maintainer, 2026-10-27: "a bit larger"). */
+        val TOP_INSET = 1.25.rem
 
         /** The top slot: the three gauges and the volume knob (62 px + their glow). */
         val TOP_SLOT_HEIGHT = 4.5.rem
 
         /** The scope, just under the gauges, above the spectrum's lower part (the maintainer, 2026-10-26). */
-        const val OSCILLOSCOPE_TOP_REM = 5.75
+        const val OSCILLOSCOPE_TOP_REM = 6.25
         const val OSCILLOSCOPE_HEIGHT_REM = 3.25
 
         /** The spectrum stands on the frame's floor, behind the scope; its boxes stack up from there. */
