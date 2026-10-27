@@ -5,8 +5,12 @@
 
 package io.peekandpoke.klang.script.intel
 
+import io.peekandpoke.klang.script.ast.Argument
 import io.peekandpoke.klang.script.ast.ArrowFunction
+import io.peekandpoke.klang.script.ast.AstNode
+import io.peekandpoke.klang.script.ast.CallExpression
 import io.peekandpoke.klang.script.ast.CallExpressionAtResult
+import io.peekandpoke.klang.script.ast.Expression
 import io.peekandpoke.klang.script.ast.Identifier
 import io.peekandpoke.klang.script.ast.MemberAccess
 import io.peekandpoke.klang.script.docs.callableForReceiver
@@ -134,7 +138,25 @@ fun AnalyzedAst.argumentAt(
         return null
     }
 
-    val callee = site.call.callee
+    val (symbol, receiver) = calledSymbol(call = site.call, functionName = site.functionName, symbolLookup = symbolLookup)
+        ?: return null
+
+    val functionArgs = site.call.arguments.map { it.value is ArrowFunction }
+    val binding = symbol.bindArgument(receiver, site.argIndex, site.argName, functionArgs) ?: return null
+
+    return ArgumentAt(site = site, symbol = symbol, binding = binding)
+}
+
+/**
+ * The symbol a call dispatches to, and what is known of its receiver. A local shadows a same-named global; a local
+ * holding a callable object binds through the object's symbol, and so does a second name of the object.
+ */
+private fun AnalyzedAst.calledSymbol(
+    call: CallExpression,
+    functionName: String,
+    symbolLookup: (String) -> KlangSymbol?,
+): Pair<KlangSymbol, CallReceiver>? {
+    val callee = call.callee
     val local = (callee as? Identifier)?.let { localBindingOf(it) }
 
     val symbol = if (local != null) {
@@ -142,7 +164,7 @@ fun AnalyzedAst.argumentAt(
 
         symbolLookup(callForm.name) ?: return null
     } else {
-        val named = symbolLookup(site.functionName) ?: return null
+        val named = symbolLookup(functionName) ?: return null
 
         // A second name of a callable object (`lowpass(800)`, `vel(0.5)`): no top-level callable of its own, so the
         // call dispatches to the object's call form, and the object's symbol carries the tools
@@ -157,8 +179,140 @@ fun AnalyzedAst.argumentAt(
         CallReceiver.TopLevel
     }
 
-    val functionArgs = site.call.arguments.map { it.value is ArrowFunction }
-    val binding = symbol.bindArgument(receiver, site.argIndex, site.argName, functionArgs) ?: return null
+    return symbol to receiver
+}
 
-    return ArgumentAt(site = site, symbol = symbol, binding = binding)
+/**
+ * A call around a source position whose arguments have tools, for the editor's Sprudel tool (KLANG-00374): the
+ * argument its tools edit and what that binds to.
+ *
+ * @param argIndex The argument the tools edit; -1 when the call has no argument yet and the tools would write its
+ *   first one.
+ * @param argName That argument's name when it is written `name = value`.
+ * @param atCursor Whether the cursor is on that argument.
+ * @param editRange The literal the tools read and write, as source offsets: the argument's value, or the literal its
+ *   value starts with (`"c e"` in `"c e".fast(2)`); null for a call without arguments.
+ * @param parentheses The call's opening parenthesis and its closing one, as source offsets.
+ */
+data class ToolCallAt(
+    val call: CallExpression,
+    val functionName: String,
+    val symbol: KlangSymbol,
+    val binding: ArgumentBinding,
+    val argIndex: Int,
+    val argName: String?,
+    val atCursor: Boolean,
+    val editRange: IntRange?,
+    val parentheses: IntRange,
+)
+
+/**
+ * The innermost call whose parentheses hold [pos] and whose arguments have tools (the maintainer, 2026-10-27:
+ * "Whenever the cursor is inside the parenteses if a function that supports tools we should so the tool"), or null.
+ * Inside the parentheses: from just after the opening one up to the closing one, so between arguments and in an empty
+ * call too; on the called name or after `)` is outside. The argument, among those with tools and a literal a tool can
+ * edit (a string or a number, as the value or at the head of its chain): the one at the cursor; else the call's first;
+ * else, for a call without arguments, its first parameter. A literal inside a nested call (`4` in
+ * `gain(sine.slow(4))`) is never taken for the outer call's parameter. A call with nothing to edit gives way to the
+ * call around it.
+ */
+fun AnalyzedAst.toolCallAt(
+    pos: Int,
+    symbolLookup: (String) -> KlangSymbol? = { registry.get(it) },
+): ToolCallAt? {
+    // From the node at the cursor; in space or a comment no node may cover it (an empty call's `( )`), so also from
+    // the last character of code before it
+    val before = CallText.lastCodeBefore(source = source, pos = pos)
+
+    val starts = listOfNotNull(astIndex.nodeAt(pos), astIndex.nodeAt(before).takeIf { before >= 0 })
+
+    // A node's range is a guess at a call's end (space before its `)` may lie outside), so each start may stop at an
+    // outer call first: of what the starts find, the innermost call wins
+    return starts.mapNotNull { start ->
+        var node: AstNode = start
+        var found: ToolCallAt? = null
+
+        while (found == null) {
+            if (node is CallExpression) {
+                found = toolsOfCall(call = node, pos = pos, symbolLookup = symbolLookup)
+            }
+
+            node = astIndex.parentOf(node) ?: break
+        }
+
+        found
+    }.maxByOrNull { it.parentheses.first }
+}
+
+/** [toolCallAt] for one call: null when [pos] is not in its parentheses or none of its arguments can be edited. */
+private fun AnalyzedAst.toolsOfCall(
+    call: CallExpression,
+    pos: Int,
+    symbolLookup: (String) -> KlangSymbol?,
+): ToolCallAt? {
+    val calleeEnd = astIndex.offsetOf(call.callee)?.last ?: return null
+    val parens = CallText.parentheses(source = source, from = calleeEnd + 1) ?: return null
+
+    // The cursor from just after the opening parenthesis to just before the closing one
+    if (pos <= parens.first || pos > parens.last) {
+        return null
+    }
+
+    val functionName = when (val callee = call.callee) {
+        is Identifier -> callee.name
+        is MemberAccess -> callee.property
+        else -> return null
+    }
+
+    val (symbol, receiver) = calledSymbol(call = call, functionName = functionName, symbolLookup = symbolLookup) ?: return null
+    val functionArgs = call.arguments.map { it.value is ArrowFunction }
+
+    fun bind(index: Int): ArgumentBinding? {
+        val name = (call.arguments.getOrNull(index) as? Argument.Named)?.name
+
+        return symbol.bindArgument(receiver, index, name, functionArgs)?.takeIf { it.param.uitools.isNotEmpty() }
+    }
+
+    fun found(index: Int, binding: ArgumentBinding, atCursor: Boolean, editRange: IntRange?) = ToolCallAt(
+        call = call,
+        functionName = functionName,
+        symbol = symbol,
+        binding = binding,
+        argIndex = index,
+        argName = (call.arguments.getOrNull(index) as? Argument.Named)?.name,
+        atCursor = atCursor,
+        editRange = editRange,
+        parentheses = parens,
+    )
+
+    // The argument at the cursor: on its value, or just after it
+    val atIndex = call.arguments.indexOfFirst { argument ->
+        astIndex.offsetOf(argument.value)?.let { range -> pos in range.first..range.last + 1 } == true
+    }
+
+    // The literal as the text has it, the way the follower finds it again at each commit
+    fun literal(index: Int, binding: ArgumentBinding): IntRange? =
+        CallText.literalOf(source = source, parentheses = parens, name = binding.param.name, index = index)
+
+    if (atIndex >= 0) {
+        val binding = bind(atIndex)
+        val literal = binding?.let { literal(index = atIndex, binding = it) }
+
+        if (binding != null && literal != null) {
+            return found(index = atIndex, binding = binding, atCursor = true, editRange = literal)
+        }
+    }
+
+    for (index in call.arguments.indices) {
+        val binding = bind(index) ?: continue
+        val literal = literal(index = index, binding = binding) ?: continue
+
+        return found(index = index, binding = binding, atCursor = false, editRange = literal)
+    }
+
+    if (call.arguments.isEmpty()) {
+        bind(0)?.let { return found(index = -1, binding = it, atCursor = false, editRange = null) }
+    }
+
+    return null
 }

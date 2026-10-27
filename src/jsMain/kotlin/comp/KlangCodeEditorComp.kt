@@ -21,6 +21,7 @@ import io.peekandpoke.klang.ui.KlangUiToolRegistry
 import io.peekandpoke.klang.ui.codemirror.BookmarkOptions
 import io.peekandpoke.klang.ui.codemirror.KlangScriptEditorComp
 import io.peekandpoke.klang.ui.codemirror.QuickHelpHandler
+import io.peekandpoke.klang.ui.codemirror.ToolCallSite
 import io.peekandpoke.klang.ui.codetools.CodeToolModal
 import io.peekandpoke.klang.workshop.keys.OnKey
 import io.peekandpoke.kraft.addons.pixijs.PixiJsAddon
@@ -40,6 +41,8 @@ import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.html.onContextMenu
+import io.peekandpoke.ultra.streams.Stream
+import kotlinx.browser.window
 import kotlinx.css.Padding
 import kotlinx.css.Position
 import kotlinx.css.minWidth
@@ -74,6 +77,7 @@ fun Tag.KlangCodeEditorComp(
     showKeysOverview: Boolean = false,
     onQuickDocumentation: QuickHelpHandler? = null,
     onHoverDocumentation: QuickHelpHandler? = null,
+    onToolCall: ((ToolCallSite?) -> Unit)? = null,
 ): ComponentRef<KlangCodeEditorComp> = comp(
     KlangCodeEditorComp.Props(
         ctrl = ctrl,
@@ -88,6 +92,7 @@ fun Tag.KlangCodeEditorComp(
         showKeysOverview = showKeysOverview,
         onQuickDocumentation = onQuickDocumentation,
         onHoverDocumentation = onHoverDocumentation,
+        onToolCall = onToolCall,
     )
 ) {
     KlangCodeEditorComp(it)
@@ -123,6 +128,8 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
         val onQuickDocumentation: QuickHelpHandler?,
         /** Gets the name the mouse rests on, for a Quick help panel of the host's (KLANG-00349); null for the popup. */
         val onHoverDocumentation: QuickHelpHandler?,
+        /** Gets the call around the cursor whose tools the host's Sprudel tab shows (KLANG-00374); null for none. */
+        val onToolCall: ((ToolCallSite?) -> Unit)?,
     )
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -188,6 +195,7 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
             }
             onUnmount {
                 highlightBuffer.detach()
+                replayTimer?.let { window.clearTimeout(it) }
             }
         }
     }
@@ -262,6 +270,45 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     private fun navToDoc(doc: KlangSymbol, event: dynamic) = navToSymbolDocs(doc = doc, event = event)
+
+    /** The playing song's update after a tool's live change, at most every [LIVE_REPLAY_MS]; null while none waits. */
+    private var replayTimer: Int? = null
+
+    /**
+     * The context for [site]'s tool in the host's Sprudel tab (KLANG-00374): what a tool opened here gets (the
+     * playback's voices, the argument's place), its live changes updating a playing song, a few times a second at most.
+     */
+    fun liveToolContext(site: ToolCallSite): KlangUiToolContext {
+        val toolCtx = site.context()
+        val baseLoc = offsetToSourceLocation(source = props.ctrl.state().code, offset = site.argFrom)
+
+        // The controller's signals, not one playback's: the tab outlives a Stop and a Play. The tools take only the
+        // signals they know by their type, so the stream's null (no playback) passes by unseen
+        @Suppress("UNCHECKED_CAST")
+        val attrs = toolCtx.attrs
+            .plus(KlangUiToolContext.BaseSourceLocation, baseLoc)
+            .plus(KlangUiToolContext.PlaybackVoiceEvents, props.ctrl.signals as Stream<KlangPlaybackSignal>)
+
+        fun replaySoon() {
+            if (!props.ctrl.state().isPlaying || replayTimer != null) {
+                return
+            }
+
+            replayTimer = window.setTimeout({
+                replayTimer = null
+
+                if (props.ctrl.state().isPlaying) {
+                    props.ctrl.play()
+                }
+            }, LIVE_REPLAY_MS)
+        }
+
+        return toolCtx.copy(
+            attrs = attrs,
+            onCommit = { toolCtx.onCommit(it); replaySoon() },
+            call = toolCtx.call?.let { call -> call.copy(onCommitCall = { call.onCommitCall(it); replaySoon() }) },
+        )
+    }
 
     private fun openTool(toolName: String, toolCtx: KlangUiToolContext, argFrom: Int, event: dynamic = null) {
         val tool = KlangUiToolRegistry.get(toolName) ?: return
@@ -367,6 +414,7 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
                 hoverDocs = { EditorSettings.hoverHelp() },
                 onQuickDocumentation = props.onQuickDocumentation,
                 onHoverDocumentation = props.onHoverDocumentation,
+                onToolCall = props.onToolCall,
                 showMinimap = props.showMinimap,
                 bookmarks = props.bookmarks,
             ).track(editorRef)
@@ -378,3 +426,6 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
         }
     }
 }
+
+/** How often a tool's live changes update a playing song at most (KLANG-00374): the music follows a drag. */
+private const val LIVE_REPLAY_MS = 250

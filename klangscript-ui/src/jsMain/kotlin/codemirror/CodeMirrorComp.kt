@@ -66,6 +66,7 @@ fun Tag.KlangScriptEditorComp(
     hoverDocs: () -> Boolean = { true },
     onQuickDocumentation: QuickHelpHandler? = null,
     onHoverDocumentation: QuickHelpHandler? = null,
+    onToolCall: ((ToolCallSite?) -> Unit)? = null,
     showMinimap: Boolean = false,
     bookmarks: BookmarkOptions? = null,
 ): ComponentRef<KlangScriptEditorComp> = comp(
@@ -82,6 +83,7 @@ fun Tag.KlangScriptEditorComp(
         hoverDocs = hoverDocs,
         onQuickDocumentation = onQuickDocumentation,
         onHoverDocumentation = onHoverDocumentation,
+        onToolCall = onToolCall,
         showMinimap = showMinimap,
         bookmarks = bookmarks,
     )
@@ -110,6 +112,11 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
         val onQuickDocumentation: QuickHelpHandler? = null,
         /** Gets the name the mouse rests on instead of the popup, for a help of the host's; null for the popup. */
         val onHoverDocumentation: QuickHelpHandler? = null,
+        /**
+         * Gets the call around the cursor whose tools a panel of the host's shows (KLANG-00374), after each move and
+         * edit; null outside any such call. Null leaves the editor without it.
+         */
+        val onToolCall: ((ToolCallSite?) -> Unit)? = null,
         /**
          * Shows a minimap of the whole document on the right. The editor then scrolls itself
          * (`height: 100%`), so the host must give it a definite height.
@@ -349,6 +356,17 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
 
             extensions.add(wiring.extension)
             commands = wiring.commands
+        }
+
+        // The call around the cursor, for the host's tool panel
+        props.onToolCall?.let { onToolCall ->
+            extensions.add(
+                ToolCallFollower(
+                    docProvider = { docContext.docProvider(it) },
+                    analysisProvider = { docContext.lastAnalysis },
+                    onToolCall = onToolCall,
+                ).extension
+            )
         }
 
         // Code completion

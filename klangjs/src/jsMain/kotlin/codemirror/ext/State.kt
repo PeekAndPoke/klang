@@ -205,6 +205,24 @@ external class ChangeSet {
 
     /** Maps a position in the old document to the new one (a `ChangeSet` is a `ChangeDesc` in CodeMirror). */
     fun mapPos(pos: Int, assoc: Int = definedExternally): Int
+
+    /** [mapPos] with a [MapMode]: null when the change deleted what the mode tracks. */
+    fun mapPos(pos: Int, assoc: Int, mode: Int): Int?
+}
+
+/** How a position maps through a deletion (CodeMirror's `MapMode`); every mode but [Simple] may map it to null. */
+external object MapMode {
+    /** Always a position. */
+    val Simple: Int
+
+    /** Null when a deletion spans the position. */
+    val TrackDel: Int
+
+    /** Null when the character before the position is deleted. */
+    val TrackBefore: Int
+
+    /** Null when the character after the position is deleted. */
+    val TrackAfter: Int
 }
 
 /**

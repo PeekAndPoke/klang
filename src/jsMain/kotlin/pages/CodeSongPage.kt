@@ -152,7 +152,11 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     private val pageKey = ++pagesDrawn
 
     /** The bottom panel's Quick help and Lexikon (KLANG-00349, KLANG-00365), shared with the tutorials. */
-    private val helpPanel = QuickHelpPanel(pageKey = "song-$pageKey")
+    private val helpPanel = QuickHelpPanel(
+        pageKey = "song-$pageKey",
+        // The Sprudel tab's tool works through the editor, which knows the code and the playback (KLANG-00374)
+        toolContext = { site -> codeEditorRef.getOrNull()?.liveToolContext(site) },
+    )
 
     // On rpm changes: persist to localStorage AND cancel highlights to avoid stale timing across tempo shifts.
     @Suppress("unused")
@@ -475,6 +479,8 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
             onHoverDocumentation = { symbol, declarationCode, usages ->
                 helpPanel.showHelp(entry = HelpWindow.Entry(symbol, declarationCode, usages), jumpTo = ::jumpTo)
             },
+            // The call the cursor is in: its tool in the Sprudel tab
+            onToolCall = { site -> helpPanel.showToolCall(site) },
         ).track(codeEditorRef)
     }
 }

@@ -6,6 +6,8 @@
 package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.layouts.WorkbenchSlots
+import io.peekandpoke.klang.ui.KlangUiToolContext
+import io.peekandpoke.klang.ui.codemirror.ToolCallSite
 import io.peekandpoke.klang.ui.comp.KlangKeyHint
 import io.peekandpoke.klang.ui.comp.KlangWorkbench
 import io.peekandpoke.ultra.html.css
@@ -18,15 +20,26 @@ import kotlinx.html.span
 /**
  * The bottom panel's help, for a page with code in it (KLANG-00349, KLANG-00365, KLANG-00370): its tabs Quick help and
  * Lexikon, what each shows, and the calls that fill them. The song page and a tutorial both use it; [pageKey] keeps one
- * page's parts apart from the next one's.
+ * page's parts apart from the next one's. Given [toolContext] (the song page), a third tab, Sprudel, shows the tool of
+ * the call the editor's cursor is in (KLANG-00374).
  */
-class QuickHelpPanel(private val pageKey: String) {
+class QuickHelpPanel(
+    private val pageKey: String,
+    private val toolContext: ((ToolCallSite) -> KlangUiToolContext?)? = null,
+) {
 
     companion object {
         /** The bottom panel's tabs, by the ids the workbench keeps with its layout. */
         const val TAB_QUICK_HELP = "quick-help"
         const val TAB_LEXIKON = "lexikon"
+        const val TAB_SPRUDEL = "sprudel"
     }
+
+    /** The call around the editor's cursor whose tool the Sprudel tab shows; null outside one. */
+    private val toolCall = StreamSource<ToolCallSite?>(null)
+
+    /** The call and parameter last shown, so only a new one turns the panel to the Sprudel tab. */
+    private var lastCallKey: String? = null
 
     /** The name Alt+Q or a hover last asked about; null before the first. */
     private val help = StreamSource<HelpWindow.Entry?>(null)
@@ -62,6 +75,15 @@ class QuickHelpPanel(private val pageKey: String) {
                     LexikonPanel(slug = lexikonSlug, onPick = { lexikonSlug(it) })
                 }
             },
+        ) + listOfNotNull(
+            toolContext?.let { contextOf ->
+                KlangWorkbench.Tab(id = TAB_SPRUDEL, title = "Sprudel") {
+                    div {
+                        key = "sprudel-$pageKey"
+                        SprudelToolTab(site = toolCall, contextOf = contextOf)
+                    }
+                }
+            },
         ),
     )
 
@@ -85,6 +107,22 @@ class QuickHelpPanel(private val pageKey: String) {
     fun showLexikon(slug: String) {
         lexikonSlug(slug)
         WorkbenchSlots.workbench { it.showBottom(tab = TAB_LEXIKON) }
+    }
+
+    /**
+     * The call the editor's cursor is now in, for the Sprudel tab; null outside any call with a tool. A new call
+     * turns the panel to the tab (the maintainer, 2026-10-27: "Whenever the cursor is inside the parenteses if a
+     * function that supports tools we should so the tool"); the cursor leaving one leaves the panel as it is.
+     */
+    fun showToolCall(site: ToolCallSite?) {
+        toolCall(site)
+
+        // A new call or parameter; an edit inside the same call (it starts the tool over) leaves the panel be
+        if (site != null && toolContext != null && site.callKey != lastCallKey) {
+            WorkbenchSlots.workbench { it.showBottom(tab = TAB_SPRUDEL) }
+        }
+
+        lastCallKey = site?.callKey
     }
 
     /** The quick help's options, at the right of its headline: how to call it, and the hover's switch. */
