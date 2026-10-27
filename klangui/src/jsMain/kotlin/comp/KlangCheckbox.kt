@@ -10,6 +10,7 @@ import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.onChange
+import kotlinx.css.px
 import kotlinx.html.InputType
 import kotlinx.html.Tag
 import kotlinx.html.input
@@ -22,8 +23,9 @@ fun Tag.KlangCheckbox(
     label: String,
     checked: Boolean,
     onChange: (Boolean) -> Unit,
+    look: KlangCheckbox.Look = KlangCheckbox.Look.Box,
 ) = comp(
-    KlangCheckbox.Props(label = label, checked = checked, onChange = onChange)
+    KlangCheckbox.Props(label = label, checked = checked, onChange = onChange, look = look)
 ) {
     KlangCheckbox(it)
 }
@@ -34,6 +36,9 @@ fun Tag.KlangCheckbox(
  * under it, hidden from the eye only: it takes the keyboard (Space), its focus ring shows on the box, and the label
  * names it for screen readers. Controlled: [Props.checked] is shown, a click hands the other value to
  * [Props.onChange].
+ *
+ * [Look.Lamp] shows a lamp instead of the box, lit when checked (the maintainer, 2026-10-27, for the Learn filters:
+ * "checkbox but with light"); the same input under it, the focus ring round the lamp.
  */
 class KlangCheckbox(ctx: Ctx<Props>) : Component<KlangCheckbox.Props>(ctx) {
 
@@ -41,13 +46,22 @@ class KlangCheckbox(ctx: Ctx<Props>) : Component<KlangCheckbox.Props>(ctx) {
         val label: String,
         val checked: Boolean,
         val onChange: (Boolean) -> Unit,
+        val look: Look,
     )
+
+    /** What shows the state: a box that turns silver with a check, or a lamp that lights. */
+    enum class Look {
+        Box,
+        Lamp,
+    }
 
     override fun VDom.render() {
         val styles = KlangControlStyles
 
         label(classes = styles.checkbox.toString()) {
-            input(type = InputType.checkBox, classes = "${styles.visuallyHidden} ${styles.checkboxInput}") {
+            val inputStyle = if (props.look == Look.Lamp) styles.checkboxLampInput else styles.checkboxInput
+
+            input(type = InputType.checkBox, classes = "${styles.visuallyHidden} $inputStyle") {
                 checked = props.checked
 
                 onChange { e ->
@@ -60,8 +74,16 @@ class KlangCheckbox(ctx: Ctx<Props>) : Component<KlangCheckbox.Props>(ctx) {
                 }
             }
 
-            span(classes = styles.checkboxBox.toString()) {
-                attributes["aria-hidden"] = "true"
+            when (props.look) {
+                Look.Box -> span(classes = styles.checkboxBox.toString()) {
+                    attributes["aria-hidden"] = "true"
+                }
+
+                Look.Lamp -> span(classes = styles.checkboxLamp.toString()) {
+                    attributes["aria-hidden"] = "true"
+
+                    KlangLamp(state = if (props.checked) KlangLamp.State.On else KlangLamp.State.Off, size = 10.px)
+                }
             }
 
             span { +props.label }

@@ -34,6 +34,26 @@ private fun Tag.HeldCheckbox() = comp { HeldCheckbox(it) }
 /** The checkbox (KLANG-00349): a real checkbox input named by its label, controlled by its owner. */
 class KlangCheckboxSpec : StringSpec({
 
+    "the lamp look: the same input, no box, a lamp lit when checked and dark when not" {
+        for (checked in listOf(true, false)) {
+            val lampLook = KlangCheckbox.Look.Lamp
+
+            TestBed.preact(view = { KlangCheckbox(label = "Beginner", checked = checked, onChange = {}, look = lampLook) }) { root ->
+                val input = root.selectCss("input").single() as HTMLInputElement
+                val label = input.closest("label") as HTMLElement
+
+                input.type shouldBe "checkbox"
+                input.checked shouldBe checked
+                label.textContent shouldBe "Beginner"
+                label.querySelector("[data-lamp]")?.getAttribute("data-lamp") shouldBe if (checked) "On" else "Off"
+                label.querySelector(".${KlangControlStyles.checkboxBox}") shouldBe null
+                // The box's checked look (the metal, the check) never reaches the lamp
+                input.classList.contains(KlangControlStyles.checkboxLampInput.toString()) shouldBe true
+                input.classList.contains(KlangControlStyles.checkboxInput.toString()) shouldBe false
+            }
+        }
+    }
+
     "a checkbox input, named by its label, showing what the props say" {
         TestBed.preact(view = { KlangCheckbox(label = "Enter fullscreen", checked = true, onChange = {}) }) { root ->
             val input = root.selectCss("input").single() as HTMLInputElement

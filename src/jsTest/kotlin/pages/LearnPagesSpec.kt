@@ -11,6 +11,7 @@ import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
+import io.kotest.matchers.string.shouldNotContain
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.comp.RouterWithTransitions
 import io.peekandpoke.klang.layouts.WorkbenchSlots
@@ -114,6 +115,15 @@ class LearnPagesSpec : StringSpec({
 
     fun Element.column() = querySelector(".router .current .column") as HTMLElement?
 
+    /** A filter's checkbox in the column: the input of the [group]'s choice labelled [text]. */
+    fun Element.choice(group: String, text: String): HTMLInputElement {
+        val labels = column()!!.querySelectorAll("[role=group][aria-label=$group] label")
+
+        return (0 until labels.length).map { labels.item(it) as HTMLElement }
+            .first { it.textContent == text }
+            .querySelector("input") as HTMLInputElement
+    }
+
     "the overview: continue with the next lesson; the path's tiles show its lamps; the column lists the tracks, how far" {
         withLearn(done = setOf(path[0].slug, path[1].slug)) { root ->
             go()
@@ -180,19 +190,17 @@ class LearnPagesSpec : StringSpec({
         }
     }
 
-    "typed on the overview, the search keeps the level key pressed: no navigation that would drop it" {
+    "typed on the overview, the search keeps the level chosen: no navigation that would drop it" {
         withLearn { root ->
             go()
 
-            eventually { root.page()?.querySelector("[role=group] button") shouldNotBe null }
+            eventually { root.column()?.querySelector("[role=group][aria-label=Level]") shouldNotBe null }
 
-            val beginner = { root.page()!!.querySelectorAll("[role=group] button").let { keys ->
-                (0 until keys.length).map { keys.item(it) as HTMLElement }.first { it.textContent == "Beginner" }
-            } }
+            val beginner = { root.choice(group = "Level", text = "Beginner") }
 
             beginner().click()
 
-            eventually { window.location.href shouldContain "difficulty=" }
+            eventually { window.location.hash shouldContain "difficulty=" }
 
             val input = root.column()!!.querySelector("input") as HTMLInputElement
 
@@ -201,8 +209,8 @@ class LearnPagesSpec : StringSpec({
 
             eventually {
                 (root.page()?.querySelectorAll("[data-lesson]")?.length ?: 0) shouldNotBe 0
-                window.location.href shouldContain "difficulty="
-                beginner().getAttribute("aria-pressed") shouldBe "true"
+                window.location.hash shouldContain "difficulty="
+                beginner().checked shouldBe true
             }
         }
     }
@@ -325,26 +333,72 @@ class LearnPagesSpec : StringSpec({
         }
     }
 
-    "a level key keeps only that level's lessons and is kept in the address" {
+    "a hand-written address lights the lamps in any case, and each lets go on a click" {
+        withLearn { root ->
+            go("?difficulty=beginner,%20Expert")
+
+            eventually { root.choice(group = "Level", text = "Beginner").checked shouldBe true }
+
+            root.choice(group = "Level", text = "Beginner").click()
+
+            eventually {
+                root.choice(group = "Level", text = "Beginner").checked shouldBe false
+                // The unknown name is gone with it
+                window.location.hash shouldNotContain "difficulty="
+            }
+        }
+    }
+
+    "the level filters in the column: several at once, any of them shown, kept in the address as a list" {
         withLearn { root ->
             go()
 
-            eventually { root.page()?.querySelector("[role=group][aria-label=Level]") shouldNotBe null }
+            eventually { root.column()?.querySelector("[role=group][aria-label=Level]") shouldNotBe null }
 
-            fun beginner() = root.page()!!.querySelectorAll("[role=group][aria-label=Level] button").let { keys ->
-                (0 until keys.length).map { keys.item(it) as HTMLElement }.first { it.textContent == "Beginner" }
+            fun shown() = root.page()!!.querySelectorAll("[data-lesson]").let { nodes ->
+                (0 until nodes.length).map { (nodes.item(it) as Element).getAttribute("data-lesson") }.toSet()
             }
 
-            beginner().click()
+            fun lessonsOf(vararg levels: String) = allTutorials.filter { it.difficulty.name in levels }.map { it.slug }.toSet()
+
+            // Intermediate first: the address keeps the levels' own order all the same
+            root.choice(group = "Level", text = "Intermediate").click()
 
             eventually {
-                withClue(window.location.href) { window.location.href.contains("difficulty=Beginner") shouldBe true }
-                beginner().getAttribute("aria-pressed") shouldBe "true"
+                root.choice(group = "Level", text = "Intermediate").checked shouldBe true
+                shown() shouldBe lessonsOf("Intermediate")
+            }
 
-                val shown = root.page()!!.querySelectorAll("[data-lesson]")
-                val slugs = (0 until shown.length).map { (shown.item(it) as Element).getAttribute("data-lesson") }.toSet()
+            root.choice(group = "Level", text = "Beginner").click()
 
-                slugs shouldBe allTutorials.filter { it.difficulty.name == "Beginner" }.map { it.slug }.toSet()
+            eventually {
+                withClue(window.location.hash) {
+                    decodeURIComponent(window.location.hash) shouldContain "difficulty=Beginner,Intermediate"
+                }
+                shown() shouldBe lessonsOf("Beginner", "Intermediate")
+            }
+
+            // A depth narrows the levels' lessons further
+            root.choice(group = "Depth", text = "Quick").click()
+
+            eventually {
+                root.choice(group = "Depth", text = "Quick").checked shouldBe true
+                decodeURIComponent(window.location.hash) shouldContain "depth=Quick"
+                shown() shouldBe allTutorials
+                    .filter { it.difficulty.name in setOf("Beginner", "Intermediate") && it.depth.name == "Quick" }
+                    .map { it.slug }.toSet()
+            }
+
+            root.choice(group = "Depth", text = "Quick").click()
+
+            eventually { root.choice(group = "Depth", text = "Quick").checked shouldBe false }
+
+            // Let go of one: the other stays
+            root.choice(group = "Level", text = "Beginner").click()
+
+            eventually {
+                root.choice(group = "Level", text = "Beginner").checked shouldBe false
+                shown() shouldBe lessonsOf("Intermediate")
             }
         }
     }
@@ -391,3 +445,5 @@ class LearnPagesSpec : StringSpec({
         }
     }
 })
+
+private external fun decodeURIComponent(encoded: String): String

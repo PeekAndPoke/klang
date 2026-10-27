@@ -78,3 +78,4 @@ It follows the epic's board F: The Klang Path as a tech tree in the left column.
   own). Changes from the maintainer's looks: the overview's column a list, `KlangBackLink`, the Lexikon split into a
   list and the term, gold only where one presses, "Back to Learn". Committed.
 - 2026-10-27: the column lists only the tracks, with the search above them (it lost its focus on the first letter on the page; checked in a browser with real key presses: the field in the column keeps it); every track starts folded, its key first and of one width; Continue stays.
+- 2026-10-27: the level and depth filters into the column, several of each, as checkboxes with a lamp (`KlangCheckbox.Look.Lamp`), lists in the overview's address; a click navigates (Kraft's hash-strategy `replaceUri` writes a path: ULTRA-00263).

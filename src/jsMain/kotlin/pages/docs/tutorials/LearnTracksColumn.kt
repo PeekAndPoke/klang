@@ -8,6 +8,7 @@ package io.peekandpoke.klang.pages.docs.tutorials
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.comp.appLink
 import io.peekandpoke.klang.storage.TutorialStorage
+import io.peekandpoke.klang.ui.comp.KlangCheckbox
 import io.peekandpoke.klang.ui.comp.KlangSearchField
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
@@ -16,6 +17,7 @@ import io.peekandpoke.kraft.routing.Router.Companion.router
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.streams.StreamSource
+import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlinx.html.span
@@ -38,12 +40,17 @@ fun Tag.LearnTracksColumn() = comp { LearnTracksColumn(it) }
  *
  * The search lives here, beside the page: the overview redraws its tracks with every letter, and a field in the column
  * keeps its focus through that. Typed on a track's page, it takes the reader to the overview, where the results are.
+ * The level and depth filters with it, several of each, a lamp lit for each chosen (the maintainer, 2026-10-27: "move
+ * the filters to the sidebar", "checkbox but with light"); they live in the overview's address, so a link keeps them.
  */
 class LearnTracksColumn(ctx: NoProps) : PureComponent(ctx) {
 
     private val done by subscribingTo(TutorialStorage.done)
 
     private val search by subscribingTo(LearnSearch.text)
+
+    /** Where the reader is: on the overview the filters show what its address holds. */
+    private val currentRoute by subscribingTo(router.current)
 
     override fun VDom.render() {
         val progress = TutorialProgress(done = done)
@@ -72,6 +79,8 @@ class LearnTracksColumn(ctx: NoProps) : PureComponent(ctx) {
                 },
                 placeholder = "Search lessons, topics, done, open",
             )
+
+            renderFilters()
 
             learnLabel("Tracks")
 
@@ -104,5 +113,73 @@ class LearnTracksColumn(ctx: NoProps) : PureComponent(ctx) {
                 }
             }
         }
+    }
+
+    /** Level and depth side by side, each a column of lamp checkboxes. */
+    private fun FlowContent.renderFilters() {
+        val query = if (currentRoute.route == Nav.tutorials) currentRoute.matchedRoute.queryParams else emptyMap()
+        val levels = TutorialsListPage.difficultiesFromParam(query[TutorialsListPage.PARAM_DIFFICULTY]).map { it.name }.toSet()
+        val depths = TutorialsListPage.depthsFromParam(query[TutorialsListPage.PARAM_DEPTH]).map { it.name }.toSet()
+
+        div {
+            css {
+                put("display", "grid")
+                put("grid-template-columns", "1fr 1fr")
+                put("gap", "12px")
+            }
+
+            renderChoices(
+                label = "Level",
+                choices = TutorialDifficulty.entries.map { it.name to it.label },
+                chosen = levels,
+                param = TutorialsListPage.PARAM_DIFFICULTY,
+            )
+
+            renderChoices(
+                label = "Depth",
+                choices = TutorialDepth.entries.map { it.name to it.label },
+                chosen = depths,
+                param = TutorialsListPage.PARAM_DEPTH,
+            )
+        }
+    }
+
+    private fun FlowContent.renderChoices(label: String, choices: List<Pair<String, String>>, chosen: Set<String>, param: String) {
+        div {
+            attributes["role"] = "group"
+            attributes["aria-label"] = label
+            css {
+                put("display", "flex")
+                put("flex-direction", "column")
+                put("gap", "6px")
+            }
+
+            learnLabel(label)
+
+            for ((name, text) in choices) {
+                KlangCheckbox(
+                    label = text,
+                    checked = name in chosen,
+                    onChange = { on -> choose(param = param, chosen = chosen, name = name, on = on, order = choices.map { it.first }) },
+                    look = KlangCheckbox.Look.Lamp,
+                )
+            }
+        }
+    }
+
+    /**
+     * Chooses [name] in the filter [param], or lets it go: the overview with its address changed, a step in the history
+     * (Back undoes it); from elsewhere the overview opens with it. The overview follows its address, and a change of
+     * the query alone does not fade the page. Not `replaceUri`: under the hash strategy Kraft's writes a path, the route
+     * is not resolved (ULTRA-00263).
+     */
+    private fun choose(param: String, chosen: Set<String>, name: String, on: Boolean, order: List<String>) {
+        val current = router.current()
+        val query = if (current.route == Nav.tutorials) current.matchedRoute.queryParams else emptyMap()
+        // From the choices as the lamps show them (parsed: any case, unknown names dropped), so a lamp always lets go
+        val next = (if (on) chosen + name else chosen - name).sortedBy { order.indexOf(it) }
+        val updated = (query + (param to next.joinToString(","))).filterValues { it.isNotBlank() }
+
+        router.navToUri(Nav.tutorials().withQueryParams(updated))
     }
 }

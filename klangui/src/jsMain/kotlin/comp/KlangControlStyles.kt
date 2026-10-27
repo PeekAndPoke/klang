@@ -1023,6 +1023,21 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("box-shadow", "inset 0 1px 2px rgba(0, 0, 0, 0.6)")
     }
 
+    /** The lamp in place of the box ([KlangCheckbox.Look.Lamp]): round, so its focus ring is round too. */
+    val checkboxLamp by rule {
+        put("display", "inline-flex")
+        put("flex-shrink", "0")
+        put("border-radius", "50%")
+    }
+
+    /** The hidden input under a lamp: the lamp shows the state itself; here only its keyboard focus. */
+    val checkboxLampInput by rule {
+        rule("&:focus-visible + *") {
+            put("outline", "2px solid var(--kl-focus)")
+            put("outline-offset", "3px")
+        }
+    }
+
     /** The hidden input: the box shows its checked state and its keyboard focus. */
     val checkboxInput by rule {
         rule("&:checked + *") {

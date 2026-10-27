@@ -14,7 +14,6 @@ import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.routing.Router.Companion.router
-import io.peekandpoke.kraft.routing.urlParam
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
@@ -33,10 +32,10 @@ fun Tag.TutorialsListPage() = comp {
 
 /**
  * The Learn overview on the workbench (KLANG-00370, the canvas "Klang Learn on the workbench", board "Learn: the
- * overview"): the next lesson to continue with, the level and the depth as keys (the search by words is in the column,
- * LearnTracksColumn), and the tracks as rows of lesson tiles, each with its lamp. Every track starts folded to a row of lamps, a key opens one; the
- * Continue tile is the way in (the maintainer, 2026-10-27: "collapse all tracks but keep the big continue button").
- * The column (the tracks) is the Learn area's own, from the sidebar.
+ * overview"): the next lesson to continue with and the tracks as rows of lesson tiles, each with its lamp. Every track
+ * starts folded to a row of lamps, a key opens one; the Continue tile is the way in (the maintainer, 2026-10-27:
+ * "collapse all tracks but keep the big continue button"). The search and the level and depth filters are in the
+ * Learn column (LearnTracksColumn), the area's own, from the sidebar; the filters live in this page's address.
  */
 class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
 
@@ -47,11 +46,15 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
         const val PARAM_DIFFICULTY = "difficulty"
         const val PARAM_DEPTH = "depth"
 
-        fun difficultyFromParam(param: String?): TutorialDifficulty? =
-            TutorialDifficulty.entries.find { it.name.equals(param, ignoreCase = true) }
+        /** The levels a filter list in the address names (`Beginner,Advanced`); an unknown name is left out. */
+        fun difficultiesFromParam(param: String?): Set<TutorialDifficulty> =
+            namesIn(param).mapNotNull { name -> TutorialDifficulty.entries.find { it.name.equals(name, ignoreCase = true) } }.toSet()
 
-        fun depthFromParam(param: String?): TutorialDepth? =
-            TutorialDepth.entries.find { it.name.equals(param, ignoreCase = true) }
+        /** The depths a filter list in the address names. */
+        fun depthsFromParam(param: String?): Set<TutorialDepth> =
+            namesIn(param).mapNotNull { name -> TutorialDepth.entries.find { it.name.equals(name, ignoreCase = true) } }.toSet()
+
+        private fun namesIn(param: String?): List<String> = param.orEmpty().split(",").map { it.trim() }.filter { it.isNotEmpty() }
     }
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -61,9 +64,16 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
     /** The search, typed in the Learn column (LearnTracksColumn). */
     private val searchText by subscribingTo(LearnSearch.text)
 
-    private var difficultyParam: String by urlParam(name = PARAM_DIFFICULTY, default = "")
+    /**
+     * The address, for the levels and depths chosen in the Learn column (several of each, lists in it: a link keeps
+     * them). Read, never written here: Kraft's urlParam writes back through replaceUri, which under the hash strategy
+     * writes a path (ULTRA-00263), and it stays subscribed after the page.
+     */
+    private val currentRoute by subscribingTo(router.current)
 
-    private var depthParam: String by urlParam(name = PARAM_DEPTH, default = "")
+    private val difficultyParam: String get() = currentRoute.matchedRoute.queryParam(PARAM_DIFFICULTY)
+
+    private val depthParam: String get() = currentRoute.matchedRoute.queryParam(PARAM_DEPTH)
 
     /** The tracks shown with their tiles; the others are a row of lamps. None at first. */
     private var unfolded: Set<String> by value(emptySet())
@@ -71,7 +81,7 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     private fun filtering(): Boolean =
-        searchText.isNotBlank() || difficultyFromParam(difficultyParam) != null || depthFromParam(depthParam) != null
+        searchText.isNotBlank() || difficultiesFromParam(difficultyParam).isNotEmpty() || depthsFromParam(depthParam).isNotEmpty()
 
     /**
      * Whether a lesson answers the search and the keys. The search reads words, each to be found somewhere: the title,
@@ -96,10 +106,13 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
         ) + lesson.tags.map { it.label }
 
         val matchesSearch = words.all { word -> text.any { it.contains(word, ignoreCase = true) } }
-        val difficulty = difficultyFromParam(difficultyParam)
-        val depth = depthFromParam(depthParam)
+        val difficulties = difficultiesFromParam(difficultyParam)
+        val depths = depthsFromParam(depthParam)
 
-        return matchesSearch && (difficulty == null || lesson.difficulty == difficulty) && (depth == null || lesson.depth == depth)
+        // Several of a kind: any of them; none: all
+        return matchesSearch &&
+            (difficulties.isEmpty() || lesson.difficulty in difficulties) &&
+            (depths.isEmpty() || lesson.depth in depths)
     }
 
     override fun VDom.render() {
@@ -134,8 +147,6 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
             }
 
             progress.next?.takeIf { !filtering() }?.let { next -> renderContinue(next) }
-
-            renderFilters()
 
             var shown = 0
 
@@ -213,61 +224,6 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
                     +listOfNotNull(next.strand()?.label, next.difficulty.label, next.depth.label.lowercase())
                         .joinToString(", ")
                     +": ${next.description}"
-                }
-            }
-        }
-    }
-
-    /** The level's and the depth's keys (the search is in the column); a pressed key presses off. */
-    private fun FlowContent.renderFilters() {
-        div {
-            key = "filters"
-            css {
-                put("display", "flex")
-                put("flex-wrap", "wrap")
-                put("align-items", "center")
-                put("gap", "14px")
-            }
-
-            renderKeys(
-                label = "Level",
-                all = "All levels",
-                keys = TutorialDifficulty.entries.map { it.name to it.label },
-                selected = difficultyFromParam(difficultyParam)?.name,
-                onSelect = { difficultyParam = it.orEmpty() },
-            )
-
-            renderKeys(
-                label = "Depth",
-                all = "Any depth",
-                keys = TutorialDepth.entries.map { it.name to it.label },
-                selected = depthFromParam(depthParam)?.name,
-                onSelect = { depthParam = it.orEmpty() },
-            )
-        }
-    }
-
-    private fun FlowContent.renderKeys(
-        label: String,
-        all: String,
-        keys: List<Pair<String, String>>,
-        selected: String?,
-        onSelect: (String?) -> Unit,
-    ) {
-        div {
-            attributes["role"] = "group"
-            attributes["aria-label"] = label
-            css {
-                put("display", "flex")
-                put("flex-wrap", "wrap")
-                put("gap", "4px")
-            }
-
-            KlangButton(onClick = { onSelect(null) }, pressed = selected == null) { +all }
-
-            for ((name, text) in keys) {
-                KlangButton(onClick = { onSelect(if (selected == name) null else name) }, pressed = selected == name) {
-                    +text
                 }
             }
         }
