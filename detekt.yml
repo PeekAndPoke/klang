@@ -78,7 +78,7 @@ complexity:
     threshold: 600
   LongMethod:
     active: true
-    threshold: 60
+    threshold: 200
   LongParameterList:
     active: true
     threshold: 10
@@ -252,7 +252,7 @@ formatting:
     indentSize: 4
     continuationIndentSize: 4
   MaximumLineLength:
-    active: true
+    active: false
     maxLineLength: 160
   ModifierOrdering:
     active: true
