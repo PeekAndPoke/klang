@@ -86,6 +86,21 @@ data class LexikonEntry(
 
 private val slugSeparators = Regex("[^a-z0-9]+")
 
+/**
+ * Whether the entry answers a search for [text], in any case: its term, summary, detail, what else it is called, or a
+ * tag. The Lexikon page and the song page's Lexikon tab search the same way (KLANG-00365).
+ */
+fun LexikonEntry.matchesSearch(text: String): Boolean {
+    val words = text.trim()
+
+    return words.isEmpty() ||
+            term.contains(words, ignoreCase = true) ||
+            summary.contains(words, ignoreCase = true) ||
+            detail.contains(words, ignoreCase = true) ||
+            conventional?.contains(words, ignoreCase = true) == true ||
+            tags.any { it.label.contains(words, ignoreCase = true) }
+}
+
 /** The entry with this [slug], or null. */
 fun lexikonEntryBySlug(slug: String): LexikonEntry? = allLexikonEntries.firstOrNull { it.slug == slug }
 
@@ -359,6 +374,30 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
         ),
     ),
 
+    LexikonEntry(
+        term = "Perlin noise",
+        category = LexikonCategory.Animating,
+        tags = setOf(LexikonTag.Synthesis),
+        summary = "Smooth random motion: a value that wanders and never jumps.",
+        detail = "White noise picks a new random value at every step, so it jumps. Perlin noise picks random " +
+                "slopes at evenly spaced points and glides smoothly between them, so it wanders like a hand on a " +
+                "knob. Slow, it is a drift that makes a sound feel alive: a filter that breathes, a pan that " +
+                "sways, a pitch that never sits quite still. Octaves layer faster, quieter copies on top for " +
+                "finer detail (fractal Brownian motion); persistence sets how quiet each layer is. In Klang it " +
+                "is a pattern (perlin, mapped with range) and a sound source in an Ignitor (perlin with rate, " +
+                "octaves and persistence). Its sibling Berlin noise glides in straight lines instead of curves.",
+        conventional = "Perlin noise, gradient noise, smooth random modulation",
+        trivia = LexikonTrivia(
+            text = "Ken Perlin made it in 1983, unhappy with the clean, machine-like look of computer images " +
+                    "after working on the film Tron. He published it at SIGGRAPH in 1985, and in 1997 it won " +
+                    "him an Academy Award for Technical Achievement. Much of the clouds, fire, marble and " +
+                    "landscapes in films and games since are made with it or its children.",
+            year = "1983",
+            person = "Ken Perlin",
+            url = "https://en.wikipedia.org/wiki/Perlin_noise",
+        ),
+    ),
+
     // =============================================================================================================
     // AUDIO — Mixing
     // =============================================================================================================
@@ -474,6 +513,28 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
         detail = "+12 transposes up an octave. scale maps values into a musical scale. " +
                 "transpose shifts pitch by a fixed amount. " +
                 "The pattern's timing and structure are preserved; only the note/parameter values are recomputed.",
+    ),
+
+    LexikonEntry(
+        term = "Pitch",
+        category = LexikonCategory.Mapping,
+        tags = setOf(LexikonTag.Fundamental),
+        summary = "How high or low a note sounds: the ear's name for frequency.",
+        detail = "A sound whose wave repeats 440 times a second is heard as the A above middle C (A4). Twice as fast, " +
+                "880 Hz, is the same note an octave higher: the ear hears ratios, not steps in Hz, so every octave " +
+                "is a doubling. Western music splits the octave into 12 equal semitones, each about 6 percent higher " +
+                "than the one before. In Klang a pattern gives its pitches as note names (note(\"c3 e3 g3\")) or " +
+                "as steps of a scale (n(\"0 2 4\").scale(\"c4:major\")), and transpose moves them up or down by " +
+                "semitones or an interval.",
+        conventional = "Pitch, note, frequency (Hz)",
+        trivia = LexikonTrivia(
+            text = "The A that orchestras tune to was not always 440 Hz: across Europe it wandered from about " +
+                    "400 Hz to over 460 Hz, so the same piece sounded higher in one city than in the next. An " +
+                    "international conference in London agreed on 440 Hz in 1939, made a standard (ISO 16) in " +
+                    "1955. Ensembles playing Baroque music often tune lower still, to 415 Hz.",
+            year = "1939",
+            url = "https://en.wikipedia.org/wiki/A440_(pitch_standard)",
+        ),
     ),
 
     // =============================================================================================================

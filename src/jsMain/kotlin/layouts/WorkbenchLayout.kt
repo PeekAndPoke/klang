@@ -65,8 +65,12 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
 
     private val pageBottom by subscribingTo(WorkbenchSlots.bottom)
 
-    /** The workbench's layout as the last visit left it, read once: its pinned tool windows come back (KLANG-00349). */
-    private val keptLayout = WorkbenchLayoutStorage.load()
+    /**
+     * The workbench's layout as the last visit left it, read once: its pinned tool windows come back (KLANG-00349). A
+     * first visit finds the Quick help open and pinned, where its empty text says what to do (the maintainer,
+     * 2026-10-27: "a new user should see the quick help open and pinned", KLANG-00365).
+     */
+    private val keptLayout = WorkbenchLayoutStorage.load() ?: KlangWorkbench.Layout(bottomOpen = true, bottomPinned = true)
 
     /** The Gui-dance's lit step: the drawer lights "Songs" when it is (KLANG-00350). */
     private val guiDanceLit by subscribingTo(KlangGuiDance.dance.lit)

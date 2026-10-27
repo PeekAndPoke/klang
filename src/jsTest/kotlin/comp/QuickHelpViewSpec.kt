@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.comp
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
@@ -24,9 +25,13 @@ import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.testing.TestBed
 import io.peekandpoke.kraft.testing.eventually
 import io.peekandpoke.kraft.vdom.VDom
+import kotlinx.browser.window
 import kotlinx.html.Tag
 import org.w3c.dom.Element
 import org.w3c.dom.HTMLElement
+import org.w3c.dom.events.Event
+import org.w3c.dom.events.MouseEvent
+import org.w3c.dom.events.MouseEventInit
 
 /** `lowpass` in two kinds: on a string first, as a library may list it, and on a pattern. */
 private val lowpass = KlangSymbol(
@@ -162,6 +167,76 @@ class QuickHelpViewSpec : StringSpec({
                 view.text() shouldContain ".lowpass(freq, q)"
             }
         }
+    }
+
+    "a plain click on a Lexikon link goes to the host, not the page; with Ctrl it keeps its own way" {
+        val withLink = lowpass.copy(
+            variants = listOf(
+                KlangCallable(
+                    name = "lowpass",
+                    receiver = KlangType(simpleName = "SprudelPattern"),
+                    params = emptyList(),
+                    description = "One filter per [the *orbit* bus](/manuals/lexikon/orbit-bus), or [elsewhere](/manuals/other).",
+                ),
+            ),
+        )
+        val opened = mutableListOf<String>()
+
+        TestBed.preact(
+            appSetup = withMarkdown,
+            view = { QuickHelpView(symbol = withLink, declarationCode = null, onNavigate = noNav, onLexikon = { opened.add(it) }) },
+        ) { root ->
+            val view = root.single()
+
+            // Whether the view stopped the link's own way; then stopped here anyway, so the test page never leaves
+            val stoppedByView = mutableListOf<Boolean>()
+            val stopper: (Event) -> Unit = { event ->
+                stoppedByView.add(event.defaultPrevented)
+                event.preventDefault()
+            }
+
+            fun click(selector: String, ctrl: Boolean = false) {
+                view.querySelector(selector)!!.dispatchEvent(
+                    MouseEvent("click", MouseEventInit(bubbles = true, cancelable = true, ctrlKey = ctrl)),
+                )
+            }
+
+            eventually { (view.querySelector("a[href='/manuals/lexikon/orbit-bus']") != null) shouldBe true }
+
+            window.addEventListener("click", stopper)
+
+            try {
+                // On the link's emphasised word: the link is what counts, not the word under the mouse
+                click("a[href='/manuals/lexikon/orbit-bus'] em")
+                click("a[href='/manuals/lexikon/orbit-bus'] em", ctrl = true)
+                click("a[href='/manuals/other']")
+            } finally {
+                window.removeEventListener("click", stopper)
+            }
+
+            opened shouldContainExactly listOf("orbit-bus")
+            withClue("plain: stays on the page; with Ctrl: its own way; another link: its own way") {
+                stoppedByView shouldContainExactly listOf(true, false, false)
+            }
+        }
+    }
+
+    "a KDoc reference shows as code; a link, a reference definition and code stay as they are" {
+        kdocRefsAsCode("[semitones] is the shift on the [PitchEnvelopeBuilder].") shouldBe
+            "`semitones` is the shift on the `PitchEnvelopeBuilder`."
+        kdocRefsAsCode("per [orbit bus](/manuals/lexikon/orbit-bus)") shouldBe "per [orbit bus](/manuals/lexikon/orbit-bus)"
+        kdocRefsAsCode("see [voice](/manuals/lexikon/voice)") shouldBe "see [voice](/manuals/lexikon/voice)"
+        kdocRefsAsCode("[ref]: https://example.org") shouldBe "[ref]: https://example.org"
+        kdocRefsAsCode("as `x[i]` reads") shouldBe "as `x[i]` reads"
+    }
+
+    "a Lexikon entry's link gives its slug; another link none" {
+        lexikonSlugOf("/manuals/lexikon/orbit-bus") shouldBe "orbit-bus"
+        lexikonSlugOf("#/manuals/lexikon/perlin-noise") shouldBe "perlin-noise"
+        lexikonSlugOf("https://klang.example/manuals/lexikon/voice/") shouldBe "voice"
+        lexikonSlugOf("/manuals/lexikon") shouldBe null
+        lexikonSlugOf("/manuals/other") shouldBe null
+        lexikonSlugOf("/manuals/lexikon/orbit-bus/more") shouldBe null
     }
 
     "a local name shows its declaration as the song writes it, and no docs key" {

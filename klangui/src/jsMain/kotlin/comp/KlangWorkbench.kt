@@ -89,8 +89,8 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
         const val FOCUSABLE = "a[href], button:not([disabled]), input:not([disabled]):not([type=hidden]), " +
                 "select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])"
 
-        /** What in the bottom panel's header is not its handle: what one operates, and what the panel brings there. */
-        val NOT_A_HANDLE = "button, a, input, label, select, textarea, [role=button], .${KlangControlStyles.toolWindowHeaderEnd}"
+        /** What in the bottom panel's header is not its handle: what one operates there, its tabs among them. */
+        val NOT_A_HANDLE = "button, a, input, label, select, textarea, [role=button]"
 
         /** The bottom panel's height at first. */
         const val BOTTOM_HEIGHT_PX = 260.0
@@ -112,13 +112,23 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
     )
 
     /**
-     * The bottom panel: its [title] and its [content]; [icon] is its strip toggle; [header] what its header holds
-     * besides the title, at the right (the song page's Help: its "Show on hover", KLANG-00349).
+     * The bottom panel: its [title] and its strip toggle's [icon], and its [tabs] in its header (KLANG-00365; the
+     * song page's Quick help and Lexikon), the first shown at first. One pin and one close serve them all.
      */
     data class Bottom(
         val title: String,
         val icon: SemanticIconFn,
-        val header: (FlowContent.() -> Unit)? = null,
+        val tabs: List<Tab>,
+    ) {
+        init {
+            require(tabs.isNotEmpty()) { "The bottom panel $title has no tabs" }
+        }
+    }
+
+    /** One of the bottom panel's tabs: its [id] (kept with the layout), its [title] in the header, its [content]. */
+    data class Tab(
+        val id: String,
+        val title: String,
         val content: DIV.() -> Unit,
     )
 
@@ -150,7 +160,8 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
     /**
      * What of the bench outlives a reload (the maintainer, 2026-10-27: "When there are pinned tools they need to survive
      * reloads"): the tool windows [pinned], the pinned one [open], and the bottom panel's [bottomPinned], whether it is
-     * open pinned ([bottomOpen]) and its [bottomHeight]. A window that only flies in is a passing look: it is not kept.
+     * open pinned ([bottomOpen]), its [bottomHeight] and the tab it shows ([bottomTab]). A window that only flies in is
+     * a passing look: it is not kept.
      */
     data class Layout(
         val pinned: Set<String> = emptySet(),
@@ -158,6 +169,7 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
         val bottomOpen: Boolean = false,
         val bottomPinned: Boolean = false,
         val bottomHeight: Double = BOTTOM_HEIGHT_PX,
+        val bottomTab: String? = null,
     )
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -181,6 +193,9 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
 
     /** The bottom panel's height, pinned or flying in; its header, dragged, sets it (the maintainer, 2026-10-27). */
     private var bottomHeight: Double by value((props.layout?.bottomHeight ?: BOTTOM_HEIGHT_PX).coerceAtLeast(BOTTOM_LEAST_PX))
+
+    /** The bottom panel's tab shown, by its id; the first when null, or when the panel has no such tab. */
+    private var bottomTab: String? by value(props.layout?.bottomTab)
 
     /** The layout as last reported (or started with), so a redraw that changed nothing of it reports nothing. */
     private var reported: Layout = props.layout ?: Layout()
@@ -261,6 +276,7 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
         bottomOpen = bottomOpen && bottomPinned,
         bottomPinned = bottomPinned,
         bottomHeight = bottomHeight,
+        bottomTab = bottomTab,
     )
 
     /** Reports the layout when it changed, not in the middle of a drag (its end reports it). */
@@ -297,10 +313,20 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
 
     /**
      * Shows the bottom panel from outside the strip (the song page's help, on Alt+Q or a hover: KLANG-00349), open if
-     * it is already; the focus stays where it is. Without a bottom panel it does nothing.
+     * it is already, at its [tab] when one is given; the focus stays where it is. With [onlyIfClosed] an open panel is
+     * left as it is: a hover fills the Quick help, but does not take the Lexikon away from a user reading there
+     * (KLANG-00365). Without a bottom panel it does nothing.
      */
-    fun showBottom() {
-        if (props.bottom != null && !bottomOpen) {
+    fun showBottom(tab: String? = null, onlyIfClosed: Boolean = false) {
+        if (props.bottom == null || (onlyIfClosed && bottomOpen)) {
+            return
+        }
+
+        if (tab != null) {
+            bottomTab = tab
+        }
+
+        if (!bottomOpen) {
             openBottom()
         }
     }
@@ -634,9 +660,19 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
             // Flying in, Esc closes it through the key manager; pinned, it is part of the bench
             closeOnEsc = !bottomPinned,
             edge = KlangToolWindow.Edge.Bottom,
-            header = bottom.header,
+            tabs = bottom.tabs.map { KlangToolWindow.Tab(id = it.id, title = it.title) },
+            selectedTab = bottomTab,
+            onTab = { id -> bottomTab = id },
         ) {
-            bottom.content(this)
+            val shown = bottom.tabs.firstOrNull { it.id == bottomTab } ?: bottom.tabs.first()
+
+            div {
+                key = "tab-${shown.id}"
+                attributes["role"] = "region"
+                attributes["aria-label"] = shown.title
+
+                shown.content(this)
+            }
         }
     }
 

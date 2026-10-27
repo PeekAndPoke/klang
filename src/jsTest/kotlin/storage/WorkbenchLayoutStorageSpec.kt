@@ -24,6 +24,7 @@ class WorkbenchLayoutStorageSpec : StringSpec({
             bottomOpen = true,
             bottomPinned = true,
             bottomHeight = 333.5,
+            bottomTab = "lexikon",
         )
 
         WorkbenchLayoutStorage.decode(WorkbenchLayoutStorage.encode(layout)) shouldBe layout

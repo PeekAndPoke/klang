@@ -23,12 +23,27 @@ import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.html.onKeyDown
+import io.peekandpoke.ultra.semanticui.icon
 import kotlinx.browser.window
+import kotlinx.html.ButtonType
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
+import kotlinx.html.button
 import kotlinx.html.div
 import kotlinx.html.span
 import kotlinx.html.title
+import org.w3c.dom.Element
+import org.w3c.dom.events.Event
+import org.w3c.dom.events.MouseEvent
+
+/**
+ * A KDoc reference (`[semitones]`, `[PitchEnvelopeBuilder]`) as code, as the docs mean it; a markdown link
+ * (`[orbit bus](/manuals/lexikon/orbit-bus)`) and what is already code stay as they are.
+ */
+internal fun kdocRefsAsCode(text: String): String =
+    text.split("`").mapIndexed { i, part -> if (i % 2 == 1) part else part.replace(kdocRef, "`$1`") }.joinToString("`")
+
+private val kdocRef = Regex("""\[([A-Za-z_][A-Za-z0-9_.]*)\](?![(\[:])""")
 
 @Suppress("FunctionName")
 fun Tag.QuickHelpView(
@@ -37,6 +52,8 @@ fun Tag.QuickHelpView(
     onNavigate: (KlangSymbol, dynamic) -> Unit,
     usages: List<LocalUsage> = emptyList(),
     onJump: (pos: Int) -> Unit = {},
+    headlineEnd: (FlowContent.() -> Unit)? = null,
+    onLexikon: ((slug: String) -> Unit)? = null,
 ) = comp(
     QuickHelpView.Props(
         symbol = symbol,
@@ -44,6 +61,8 @@ fun Tag.QuickHelpView(
         onNavigate = onNavigate,
         usages = usages,
         onJump = onJump,
+        headlineEnd = headlineEnd,
+        onLexikon = onLexikon,
     )
 ) {
     QuickHelpView(it)
@@ -76,6 +95,13 @@ class QuickHelpView(ctx: Ctx<Props>) : Component<QuickHelpView.Props>(ctx) {
         val usages: List<LocalUsage>,
         /** Puts the cursor in the code at an offset. */
         val onJump: (pos: Int) -> Unit,
+        /** What the host puts at the headline's right end (the song page: how to call the help, the hover's switch). */
+        val headlineEnd: (FlowContent.() -> Unit)?,
+        /**
+         * Gets a Lexikon link clicked in the help, in place of the Lexikon page (KLANG-00365; the song page opens it in
+         * its Lexikon tab, so the user stays in the code); null, the link goes to the page.
+         */
+        val onLexikon: ((slug: String) -> Unit)?,
     )
 
     /**
@@ -107,6 +133,25 @@ class QuickHelpView(ctx: Ctx<Props>) : Component<QuickHelpView.Props>(ctx) {
                 copiedTimer = null
             }
         }
+    }
+
+    /**
+     * A plain click on a Lexikon link goes to the host instead of the page; a click with a key held (Ctrl, Shift, Cmd)
+     * or another button keeps the link's own way, a new tab.
+     */
+    private fun openLexikonInPlace(event: Event) {
+        val handler = props.onLexikon ?: return
+        val mouse = event as? MouseEvent ?: return
+
+        if (mouse.button.toInt() != 0 || mouse.ctrlKey || mouse.metaKey || mouse.shiftKey || mouse.altKey) {
+            return
+        }
+
+        val link = (event.target as? Element)?.closest("a") ?: return
+        val slug = lexikonSlugOf(link.getAttribute("href") ?: return) ?: return
+
+        event.preventDefault()
+        handler(slug)
     }
 
     /** The name's kinds, a pattern's first, then the others as the library lists them. */
@@ -141,6 +186,7 @@ class QuickHelpView(ctx: Ctx<Props>) : Component<QuickHelpView.Props>(ctx) {
                 put("gap", "12px")
                 put("color", "var(--kl-ink-text)")
             }
+            onClick { event -> openLexikonInPlace(event) }
 
             renderHeadline(symbol)
 
@@ -177,10 +223,9 @@ class QuickHelpView(ctx: Ctx<Props>) : Component<QuickHelpView.Props>(ctx) {
                             css {
                                 put("font-size", "13px")
                                 put("line-height", "1.5")
-                                put("max-width", "72ch")
                             }
 
-                            MarkdownDisplay(description.trim(), linksInNewTab = true)
+                            MarkdownDisplay(kdocRefsAsCode(description.trim()), linksInNewTab = true)
                         }
                     }
 
@@ -226,6 +271,29 @@ class QuickHelpView(ctx: Ctx<Props>) : Component<QuickHelpView.Props>(ctx) {
                 is KlangSymbol.Origin.Local -> engraved(text = origin.kind.display)
             }
 
+            // A library name has a docs page, a quiet link after its labels (the maintainer, 2026-10-27: "a subtle
+            // Docs button with a link icon after the tags"); a local name has its declaration instead
+            if (symbol.origin !is KlangSymbol.Origin.Local) {
+                button(type = ButtonType.button) {
+                    title = "Open its page in the docs; with Shift, in a new tab"
+                    css {
+                        put("display", "inline-flex")
+                        put("align-items", "center")
+                        put("gap", "4px")
+                        put("padding", "2px 4px")
+                        put("border", "none")
+                        put("background", "transparent")
+                        put("font-size", "12px")
+                        put("color", "var(--kl-ink-label)")
+                        put("cursor", "pointer")
+                    }
+                    onClick { event -> props.onNavigate(symbol, event) }
+
+                    icon.linkify.render { attributes["aria-hidden"] = "true" }
+                    +"Docs"
+                }
+            }
+
             if (symbol.aliases.isNotEmpty()) {
                 span {
                     css {
@@ -237,14 +305,10 @@ class QuickHelpView(ctx: Ctx<Props>) : Component<QuickHelpView.Props>(ctx) {
                 }
             }
 
-            div { css { put("flex", "1") } }
+            props.headlineEnd?.let { end ->
+                div { css { put("flex", "1") } }
 
-            // A library name has a docs page; a local name has its declaration instead
-            if (symbol.origin !is KlangSymbol.Origin.Local) {
-                KlangButton(onClick = { props.onNavigate(symbol, window.asDynamic().event) }) {
-                    title = "Open its page in the docs; with Shift, in a new tab"
-                    +"Docs"
-                }
+                end()
             }
         }
     }
@@ -342,7 +406,11 @@ class QuickHelpView(ctx: Ctx<Props>) : Component<QuickHelpView.Props>(ctx) {
         }
     }
 
-    /** The parameters: each name with its type and default, and under it what it does. */
+    /**
+     * The parameters, one under the other (the maintainer, 2026-10-27: the description "under the signature", "no
+     * table grid", but "a subtle divider" where one parameter ends and the next starts): the name with its type and
+     * default, under it what it does, not indented ("Should not be indented"); a thin line between parameters.
+     */
     private fun FlowContent.renderParams(params: List<KlangParam>) {
         div {
             css {
@@ -354,54 +422,65 @@ class QuickHelpView(ctx: Ctx<Props>) : Component<QuickHelpView.Props>(ctx) {
 
             div(classes = KlangControlStyles.heading.toString()) { +"Parameters" }
 
-            for (param in params) {
-                div {
-                    key = param.name
-
+            div {
+                for ((index, param) in params.withIndex()) {
                     div {
+                        key = param.name
                         css {
-                            put("display", "flex")
-                            put("flex-wrap", "wrap")
-                            put("align-items", "baseline")
-                            put("gap", "8px")
-                        }
+                            put("padding", "6px 0")
 
-                        span {
-                            css {
-                                put("font-family", "monospace")
-                                put("font-size", "13px")
-                                put("font-weight", "700")
-                                put("color", "var(--kl-ink-strong)")
-                            }
-
-                            +param.name
-                        }
-
-                        span {
-                            css {
-                                put("font-family", "monospace")
-                                put("font-size", "12px")
-                                put("color", "var(--kl-ink-label)")
-                            }
-
-                            +param.type.render()
-                            param.defaultDoc?.let { +" = $it" }
-
-                            if (param.isOptional && param.defaultDoc == null) {
-                                +", optional"
+                            if (index > 0) {
+                                put("border-top", "1px solid color-mix(in srgb, var(--kl-ink-label) 20%, transparent)")
                             }
                         }
-                    }
 
-                    if (param.description.isNotBlank()) {
                         div {
                             css {
-                                put("font-size", "12px")
-                                put("line-height", "1.45")
-                                put("margin-top", "2px")
+                                put("display", "flex")
+                                put("flex-wrap", "wrap")
+                                put("align-items", "baseline")
+                                put("column-gap", "8px")
                             }
 
-                            MarkdownDisplay(param.description.trim(), linksInNewTab = true)
+                            span {
+                                css {
+                                    put("font-family", "monospace")
+                                    put("font-size", "13px")
+                                    put("font-weight", "700")
+                                    put("color", "var(--kl-ink-strong)")
+                                }
+
+                                +param.name
+                            }
+
+                            span {
+                                css {
+                                    put("font-family", "monospace")
+                                    put("font-size", "12px")
+                                    put("color", "var(--kl-ink-label)")
+                                    put("overflow-wrap", "break-word")
+                                    put("min-width", "0")
+                                }
+
+                                +param.type.render()
+                                param.defaultDoc?.let { +" = $it" }
+
+                                if (param.isOptional && param.defaultDoc == null) {
+                                    +", optional"
+                                }
+                            }
+                        }
+
+                        if (param.description.isNotBlank()) {
+                            div {
+                                css {
+                                    put("margin-top", "3px")
+                                    put("font-size", "12px")
+                                    put("line-height", "1.45")
+                                }
+
+                                MarkdownDisplay(kdocRefsAsCode(param.description.trim()), linksInNewTab = true)
+                            }
                         }
                     }
                 }

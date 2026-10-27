@@ -11,6 +11,7 @@ import io.peekandpoke.klang.storage.LookStorage
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.codemirror.KlangEditorKeyBindings
 import io.peekandpoke.klang.ui.comp.KlangKeyHint
+import io.peekandpoke.klang.ui.feel.KlangBrushedMetal
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.klang.utils.FullscreenController
 import io.peekandpoke.klang.utils.VersionController
@@ -66,6 +67,8 @@ fun main() {
     KlangTheme.initialize()
     // The look the user chose last time (KLANG-00339)
     LookStorage.load()?.let { KlangTheme.choose(it) }
+    // The brushed metal's tile for the parts that wear it, painted once (KLANG-00366)
+    KlangBrushedMetal.install()
 
     // Register UI tools
     registerSprudelUiTools()

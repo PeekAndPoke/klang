@@ -53,6 +53,42 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         }
     }
 
+    /**
+     * Brushed metal on the bench's frame (KLANG-00366; the maintainer, 2026-10-27: "the brushed iron look"; then "maybe
+     * the inner content on this page should not be brushed only the sides"): the column, the strip and the tool
+     * windows have it, quietly; the middle, where the page's own content is, stays plain. The tile
+     * of [io.peekandpoke.klang.ui.feel.KlangBrushedMetal] under the part's content, at the look's `--kl-brushed`, so
+     * the part keeps the look's ground and gains the strokes. The part becomes positioned and its own stacking
+     * context; until the tile is painted it shows plain.
+     */
+    private fun CssBuilder.brushed() {
+        put("position", "relative")
+        put("isolation", "isolate")
+
+        rule("&::before") {
+            put("content", "\"\"")
+            put("position", "absolute")
+            put("inset", "0")
+            put("z-index", "-1")
+            put("border-radius", "inherit")
+            put("pointer-events", "none")
+            put("background-image", "var(--kl-brushed-image, none)")
+            put("background-repeat", "repeat")
+            put("opacity", "var(--kl-brushed)")
+        }
+    }
+
+    /** A patch of the frame's ground with its brushed finish: the look's `--kl-brushed` shown on its own. */
+    val brushedSwatch by rule {
+        put("width", "120px")
+        put("height", "40px")
+        put("border", "1px solid var(--kl-edge)")
+        put("border-radius", "3px")
+        put("background", "var(--kl-ground-deep)")
+
+        brushed()
+    }
+
     // ── Lamps ─────────────────────────────────────────────────────────────────
 
     val lamp by rule {
@@ -562,6 +598,8 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("color", "var(--kl-ink-text)")
         put("background", "var(--kl-ground-panel)")
         put("border-left", "1px solid var(--kl-edge)")
+
+        brushed()
     }
 
     /** Flying in over the editor: a shadow to the left, rounded where it meets the editor. */
@@ -577,14 +615,6 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("border-top-right-radius", "6px")
         put("box-shadow", "0 -18px 40px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06)")
         put("animation", "kl-fly-up 0.18s ease-out")
-    }
-
-    /** What a tool window's header holds besides its title, before its close key and pin. */
-    val toolWindowHeaderEnd by rule {
-        put("display", "flex")
-        put("align-items", "center")
-        put("gap", "8px")
-        put("margin-right", "8px")
     }
 
     val toolWindowHeader by rule {
@@ -603,6 +633,43 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("letter-spacing", "0.18em")
         put("text-transform", "uppercase")
         put("color", "var(--kl-ink-strong)")
+    }
+
+    /** The tabs in a tool window's header, in its title's place: as tall as the header, each a quiet key. */
+    val toolWindowTabs by rule {
+        put("display", "flex")
+        put("align-self", "stretch")
+        put("gap", "4px")
+        put("margin-left", "-8px")
+    }
+
+    val toolWindowTab by rule {
+        put("display", "flex")
+        put("align-items", "center")
+        put("padding", "0 10px")
+        put("border", "none")
+        put("border-bottom", "2px solid transparent")
+        put("background", "transparent")
+        put("font-family", "monospace")
+        put("font-size", "11px")
+        put("letter-spacing", "0.18em")
+        put("text-transform", "uppercase")
+        put("color", "var(--kl-ink-label)")
+        put("cursor", "pointer")
+
+        rule("&:hover") {
+            put("color", "var(--kl-ink-text)")
+        }
+
+        rule("&[aria-pressed=true]") {
+            put("color", "var(--kl-ink-strong)")
+            put("border-bottom-color", "var(--kl-accent)")
+        }
+
+        rule("&:focus-visible") {
+            put("outline", "2px solid var(--kl-focus)")
+            put("outline-offset", "-2px")
+        }
     }
 
     val toolWindowChip by rule {
@@ -1029,6 +1096,8 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("flex-shrink", "0")
         put("background", "var(--kl-ground-deep)")
         put("border-right", "1px solid var(--kl-edge)")
+
+        brushed()
     }
 
     /** The column above the Motor: its scroller, and the drawer laid over it, its foot just above the Motor. */
@@ -1173,6 +1242,8 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("padding-top", "12px")
         put("background", "var(--kl-ground-deep)")
         put("border-left", "1px solid var(--kl-edge)")
+
+        brushed()
     }
 
     /** The strip's foot: its keys, then the mark, down at the bottom (KLANG-00349). */

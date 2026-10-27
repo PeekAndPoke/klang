@@ -16,6 +16,7 @@ import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.streams.Stream
+import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
 
@@ -23,8 +24,10 @@ import kotlinx.html.div
 fun Tag.HelpWindow(
     entry: Stream<HelpWindow.Entry?>,
     onJump: (pos: Int) -> Unit,
+    options: (FlowContent.() -> Unit)? = null,
+    onLexikon: ((slug: String) -> Unit)? = null,
 ) = comp(
-    HelpWindow.Props(entry = entry, onJump = onJump)
+    HelpWindow.Props(entry = entry, onJump = onJump, options = options, onLexikon = onLexikon)
 ) {
     HelpWindow(it)
 }
@@ -33,8 +36,9 @@ fun Tag.HelpWindow(
  * The help of a name, in the song page's Quick help panel (KLANG-00349; the maintainer: Alt+Q on a name "would open
  * the help panel as designed"): the same docs as the editor's quick help, in the bottom panel under the editor, wide
  * enough for signatures and parameters (the maintainer, 2026-10-27: "always shown in the help" panel, never as the
- * popup, and the bottom rather than the right side). Alt+Q and a hover fill it; its header holds the hover's switch
- * ([HoverHelpToggle]). Before the first it says how to call it.
+ * popup, and the bottom rather than the right side). Alt+Q and a hover fill it. The host's [Props.options] (how to
+ * call it, the hover's switch) sit at the end of a name's headline, so no row of their own takes room above it; before
+ * the first name they stand alone at the top, over what to do.
  */
 class HelpWindow(ctx: Ctx<Props>) : Component<HelpWindow.Props>(ctx) {
 
@@ -45,6 +49,10 @@ class HelpWindow(ctx: Ctx<Props>) : Component<HelpWindow.Props>(ctx) {
         val entry: Stream<Entry?>,
         /** Puts the cursor in the code at an offset: a use clicked in the "Used on" list. */
         val onJump: (pos: Int) -> Unit,
+        /** The host's options for the help, at the right of the headline. */
+        val options: (FlowContent.() -> Unit)?,
+        /** Gets a Lexikon link clicked in the help, in place of the Lexikon page; null, the link goes there. */
+        val onLexikon: ((slug: String) -> Unit)?,
     )
 
     private val entry by subscribingTo(props.entry)
@@ -56,6 +64,19 @@ class HelpWindow(ctx: Ctx<Props>) : Component<HelpWindow.Props>(ctx) {
         val shown = entry
 
         if (shown == null) {
+            props.options?.let { options ->
+                div {
+                    css {
+                        put("display", "flex")
+                        put("justify-content", "flex-end")
+                        put("align-items", "center")
+                        put("gap", "12px")
+                    }
+
+                    options()
+                }
+            }
+
             // Before the first name: how to call it, in the middle of the panel, the first thing a new user reads
             // there (the maintainer, 2026-10-27: "more prominent and centered in the tool")
             div {
@@ -65,7 +86,8 @@ class HelpWindow(ctx: Ctx<Props>) : Component<HelpWindow.Props>(ctx) {
                     put("align-items", "center")
                     put("justify-content", "center")
                     put("gap", "10px")
-                    put("min-height", "150px")
+                    // Room above and below, but never more than the panel's least height holds (no scroll bar)
+                    put("padding", "32px 0")
                     put("text-align", "center")
                 }
 
@@ -86,7 +108,7 @@ class HelpWindow(ctx: Ctx<Props>) : Component<HelpWindow.Props>(ctx) {
 
                     +if (hoverHelp) "or put the cursor on it and press " else "and press "
                     with(KlangKeyHint) { caps(parts = listOf("Alt", "Q")) }
-                    +": its help shows here."
+                    +" and its help shows here."
                 }
             }
         } else {
@@ -99,6 +121,8 @@ class HelpWindow(ctx: Ctx<Props>) : Component<HelpWindow.Props>(ctx) {
                     onNavigate = { doc, event -> navToSymbolDocs(doc = doc, event = event) },
                     usages = shown.usages,
                     onJump = props.onJump,
+                    headlineEnd = props.options,
+                    onLexikon = props.onLexikon,
                 )
             }
         }

@@ -79,12 +79,7 @@ class LexikonPage(ctx: NoProps) : PureComponent(ctx) {
 
     private fun filteredEntries(): List<LexikonEntry> {
         return allLexikonEntries.filter { entry ->
-            val matchesSearch = searchText.isBlank() ||
-                    entry.term.contains(searchText, ignoreCase = true) ||
-                    entry.summary.contains(searchText, ignoreCase = true) ||
-                    entry.detail.contains(searchText, ignoreCase = true) ||
-                    entry.conventional?.contains(searchText, ignoreCase = true) == true ||
-                    entry.tags.any { it.label.contains(searchText, ignoreCase = true) }
+            val matchesSearch = entry.matchesSearch(searchText)
 
             val matchesDomain = selectedDomain == null || entry.domain == selectedDomain
             val matchesCategory = selectedCategories.isEmpty() || entry.category in selectedCategories

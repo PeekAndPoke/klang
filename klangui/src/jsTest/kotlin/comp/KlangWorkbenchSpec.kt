@@ -30,17 +30,14 @@ import kotlinx.css.height
 import kotlinx.css.px
 import kotlinx.css.width
 import kotlinx.html.FlowContent
-import kotlinx.html.InputType
 import kotlinx.html.Tag
 import kotlinx.html.a
 import kotlinx.html.button
 import kotlinx.html.div
 import kotlinx.html.input
-import kotlinx.html.label
 import kotlinx.html.span
 import org.w3c.dom.Element
 import org.w3c.dom.HTMLElement
-import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.events.EventTarget
 import org.w3c.dom.events.KeyboardEvent
 import org.w3c.dom.events.KeyboardEventInit
@@ -99,15 +96,11 @@ private class ChangingHost(ctx: NoProps) : PureComponent(ctx) {
             bottom = if (!withBottom) null else KlangWorkbench.Bottom(
                 title = "Help",
                 icon = { question_circle },
-                header = {
-                    button { +"HOVER" }
-                    label {
-                        input(type = InputType.checkBox) { attributes["data-test"] = "header-check" }
-                    }
-                },
-            ) {
-                +"HELP BODY"
-            },
+                tabs = listOf(
+                    KlangWorkbench.Tab(id = "help", title = "Quick") { +"HELP BODY" },
+                    KlangWorkbench.Tab(id = "terms", title = "Terms") { +"TERMS BODY" },
+                ),
+            ),
             drawer = drawer,
             layout = startLayout,
             onLayout = { reports.add(it) },
@@ -160,7 +153,11 @@ class KlangWorkbenchSpec : StringSpec({
                         KlangWorkbench.Tool(id = "docs", title = "Docs", icon = { book }) { span { +"DOCS BODY" } },
                         KlangWorkbench.Tool(id = "keys", title = "Keys", icon = { keyboard }) { span { +"KEYS BODY" } },
                     ),
-                    bottom = KlangWorkbench.Bottom(title = "Analysis", icon = { chart_bar }) { span { +"BOTTOM BODY" } },
+                    bottom = KlangWorkbench.Bottom(
+                        title = "Analysis",
+                        icon = { chart_bar },
+                        tabs = listOf(KlangWorkbench.Tab(id = "analysis", title = "Analysis") { span { +"BOTTOM BODY" } }),
+                    ),
                     drawer = { close ->
                         // A drawer's content brings its close key, as KlangDrawer with closeOnEsc does in the app
                         KlangCloseKey(onClose = close)
@@ -357,7 +354,7 @@ class KlangWorkbenchSpec : StringSpec({
         }
     }
 
-    "a checkbox in the bottom panel's header is a checkbox, not a handle: pressed, it toggles and nothing resizes" {
+    "a tab in the bottom panel's header is a key, not a handle: pressed, it shows its content and nothing resizes" {
         keyedBed(view = { ChangingHost() }) { root ->
             val r = root[0]
 
@@ -365,23 +362,30 @@ class KlangWorkbenchSpec : StringSpec({
             eventually { (r.q(".${styles.workbenchBottomFloating}") != null) shouldBe true }
 
             val panel = r.q(".${styles.workbenchBottomFloating}")!!
-            val check = panel.q("[data-test=header-check]") as HTMLInputElement
+            val terms = panel.q(".${styles.toolWindowTab}:nth-child(2)")!!
             val before = panel.style.height
 
-            fun pointer(type: String, y: Int) = check.dispatchEvent(
+            fun pointer(type: String, y: Int) = terms.dispatchEvent(
                 PointerEvent(type, PointerEventInit(pointerId = 1, isPrimary = true, clientY = y, buttons = 1, bubbles = true)),
             )
+
+            panel.textContent!!.contains("HELP BODY") shouldBe true
 
             pointer("pointerdown", y = 500)
             pointer("pointermove", y = 300)
             pointer("pointerup", y = 300)
-            check.click()
+            terms.click()
 
-            eventually { check.checked shouldBe true }
+            eventually {
+                val shown = r.q(".${styles.workbenchBottomFloating}")!!
+
+                shown.q("[role=region]")!!.textContent shouldBe "TERMS BODY"
+                shown.q(".${styles.toolWindowTab}[aria-pressed=true]")!!.textContent shouldBe "Terms"
+            }
             // A resize would show after the next draw
             delay(100)
 
-            panel.style.height shouldBe before
+            r.q(".${styles.workbenchBottomFloating}")!!.style.height shouldBe before
         }
     }
 
@@ -434,7 +438,7 @@ class KlangWorkbenchSpec : StringSpec({
                 pinned!!.contains(document.activeElement) shouldBe true
             }
 
-            root.q(".${styles.workbenchBottomPinned} button[aria-pressed]")!!.click()
+            root.q(".${styles.workbenchBottomPinned} button[aria-label='Pin under the editor']")!!.click()
             eventually { root.q(".${styles.workbenchBottomFloating}") shouldNotBe null }
 
             root.q(".${styles.workbenchBottomFloating} button[aria-label='Close Analysis']")!!.click()
@@ -635,7 +639,7 @@ class KlangWorkbenchSpec : StringSpec({
         }
     }
 
-    "the bottom panel shown from outside opens, the focus where it is; its header holds what it brings, at its end" {
+    "the bottom panel shown from outside opens at the tab asked, the focus where it is; its header holds the tabs" {
         keyedBed(view = { ChangingHost() }) { root ->
             val r = root[0]
             val field = document.createElement("input") as HTMLElement
@@ -645,16 +649,50 @@ class KlangWorkbenchSpec : StringSpec({
 
             r.q(".${styles.workbenchBottomFloating}") shouldBe null
 
-            workbenchRef { it.showBottom() }
+            workbenchRef { it.showBottom(tab = "terms") }
+
+            eventually {
+                val bottom = r.q(".${styles.workbenchBottomFloating}")!!
+                val tabs = bottom.querySelectorAll(".${styles.toolWindowTab}")
+
+                (0 until tabs.length).map { tabs.item(it)!!.textContent } shouldContainExactly listOf("Quick", "Terms")
+                bottom.q("[role=region]")!!.textContent shouldBe "TERMS BODY"
+            }
+
+            document.activeElement shouldBe field
+
+            // Open already: a show that only opens a closed panel leaves the tab; a plain one switches it
+            workbenchRef { it.showBottom(tab = "help", onlyIfClosed = true) }
+            delay(100)
+
+            r.q(".${styles.workbenchBottomFloating} [role=region]")!!.textContent shouldBe "TERMS BODY"
+
+            workbenchRef { it.showBottom(tab = "help") }
+
+            eventually { r.q(".${styles.workbenchBottomFloating} [role=region]")!!.textContent shouldBe "HELP BODY" }
+        }
+    }
+
+    "a closed bottom panel shown only if closed opens, its first tab pressed when none was picked" {
+        keyedBed(view = { ChangingHost() }) { root ->
+            val r = root[0]
+
+            workbenchRef { it.showBottom(onlyIfClosed = true) }
 
             eventually {
                 val bottom = r.q(".${styles.workbenchBottomFloating}")!!
 
-                bottom.textContent!!.contains("HELP BODY") shouldBe true
-                bottom.q(".${styles.toolWindowHeaderEnd}")!!.textContent shouldBe "HOVER"
+                bottom.q("[role=region]")!!.textContent shouldBe "HELP BODY"
+                bottom.q(".${styles.toolWindowTab}[aria-pressed=true]")!!.textContent shouldBe "Quick"
             }
 
-            document.activeElement shouldBe field
+            r.q(".${styles.workbenchBottomFloating} button[aria-label='Close Help']")!!.click()
+            eventually { r.q(".${styles.workbenchBottomFloating}") shouldBe null }
+
+            // Closed, the hover's way opens it at the tab it names
+            workbenchRef { it.showBottom(tab = "terms", onlyIfClosed = true) }
+
+            eventually { r.q(".${styles.workbenchBottomFloating} [role=region]")!!.textContent shouldBe "TERMS BODY" }
         }
     }
 
@@ -686,6 +724,7 @@ class KlangWorkbenchSpec : StringSpec({
             bottomOpen = true,
             bottomPinned = true,
             bottomHeight = 300.0,
+            bottomTab = "terms",
         )
 
         try {
@@ -694,6 +733,7 @@ class KlangWorkbenchSpec : StringSpec({
 
                 eventually {
                     r.q(".${styles.workbenchBottomPinned}")?.style?.height shouldBe "300px"
+                    r.q(".${styles.workbenchBottomPinned} [role=region]")?.textContent shouldBe "TERMS BODY"
                     r.q(".${styles.workbenchPinned}") shouldBe null
                 }
 
@@ -753,7 +793,7 @@ class KlangWorkbenchSpec : StringSpec({
                 }
 
                 // Flying in, too: its header stays in the room
-                r.q(".${styles.workbenchBottomPinned} button[aria-pressed]")!!.click()
+                r.q(".${styles.workbenchBottomPinned} button[aria-label='Pin under the editor']")!!.click()
                 eventually { headerInside(styles.workbenchBottomFloating.toString()) }
                 r.q(".${styles.workbenchBottomFloating} button[aria-label='Pin under the editor']")!!.click()
                 eventually { r.q(".${styles.workbenchBottomPinned}") shouldNotBe null }
@@ -831,6 +871,12 @@ class KlangWorkbenchSpec : StringSpec({
 
                 eventually {
                     ChangingHost.reports.lastOrNull() shouldBe pinnedBoth.copy(open = null, bottomHeight = 360.0)
+                }
+
+                r.q(".${styles.workbenchBottomPinned} .${styles.toolWindowTab}:nth-child(2)")!!.click()
+
+                eventually {
+                    ChangingHost.reports.lastOrNull() shouldBe pinnedBoth.copy(open = null, bottomHeight = 360.0, bottomTab = "terms")
                 }
             }
         } finally {

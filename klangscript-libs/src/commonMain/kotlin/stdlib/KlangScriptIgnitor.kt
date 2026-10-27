@@ -242,7 +242,7 @@ internal object KlangScriptIgnitor {
     fun pinknoise(): IgnitorDsl = IgnitorDsl.PinkNoise()
 
     /**
-     * Creates a Perlin noise source (smooth organic noise).
+     * Creates a [Perlin noise](/manuals/lexikon/perlin-noise) source (smooth organic noise).
      * @param rate walk speed (default 1.0).
      * @param octaves fractal-Brownian-motion octaves: 1 = plain (default), higher = more detail (capped at 8).
      * @param persistence fBm amplitude falloff per octave (default 0.5; lower = quieter upper octaves).

@@ -152,6 +152,13 @@ enum class KlangRole(
      * 2026-10-26: "maybe this noise should be a theme property as well?").
      */
     Grain(cssVar = "--kl-grain", kind = Kind.Amount, default = "0.16"),
+
+    /**
+     * How strong the brushed metal on the bench's frame is (the column, the strip, the tool windows; the middle stays
+     * plain), from 0 (smooth) to 1 (KLANG-00366; the maintainer, 2026-10-27: "the brushed iron look"; a first 0.5
+     * was "too much", then 0.18 on the large empty pages "a bit too much... needs to be more subtle").
+     */
+    Brushed(cssVar = "--kl-brushed", kind = Kind.Amount, default = "0.1"),
     ;
 
     /** What a role's value is, and so which values a theme may give it. */

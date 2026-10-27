@@ -185,8 +185,11 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
                             }
                         }
 
-                        // A share: the one there is, the grain, shown on a cap
-                        KlangRole.Kind.Amount -> KlangButton(onClick = {}, surface = KlangButton.Surface.Domed) { +"Grain" }
+                        // A share: the brushed finish on a patch of the frame's ground; the grain on a cap
+                        KlangRole.Kind.Amount -> when (role) {
+                            KlangRole.Brushed -> div(classes = KlangControlStyles.brushedSwatch.toString()) {}
+                            else -> KlangButton(onClick = {}, surface = KlangButton.Surface.Domed) { +"Grain" }
+                        }
                     }
 
                     span {

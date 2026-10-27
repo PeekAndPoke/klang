@@ -17,8 +17,8 @@ import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonObject
 
 /**
- * The workbench's layout in the browser's localStorage (KLANG-00349): the pinned tool windows and the bottom panel,
- * so a reload finds them where they were.
+ * The workbench's layout in the browser's localStorage (KLANG-00349): the pinned tool windows and the bottom panel
+ * with its tab (KLANG-00365), so a reload finds them where they were.
  *
  * The storage can throw or come back empty (a private window, blocked site data); the bench then starts bare and
  * still works, it only forgets on reload. A part it cannot read starts at its default.
@@ -52,6 +52,7 @@ object WorkbenchLayoutStorage {
             "bottomOpen" to JsonPrimitive(layout.bottomOpen),
             "bottomPinned" to JsonPrimitive(layout.bottomPinned),
             "bottomHeight" to JsonPrimitive(layout.bottomHeight),
+            layout.bottomTab?.let { "bottomTab" to JsonPrimitive(it) },
         ).toMap()
     )
 
@@ -69,6 +70,7 @@ object WorkbenchLayoutStorage {
             // A height that is no number (NaN, infinite) starts at the default, as one that cannot be read
             bottomHeight = (obj["bottomHeight"] as? JsonPrimitive)?.doubleOrNull?.takeIf { it.isFinite() }
                 ?: defaults.bottomHeight,
+            bottomTab = (obj["bottomTab"] as? JsonPrimitive)?.contentOrNull,
         )
     }
 }

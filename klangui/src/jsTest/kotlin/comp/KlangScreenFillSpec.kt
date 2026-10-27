@@ -94,7 +94,11 @@ class KlangScreenFillSpec : StringSpec({
                                     }
                                 }
                             },
-                            bottom = KlangWorkbench.Bottom(title = "Quick help", icon = { question_circle }) { +"HELP" },
+                            bottom = KlangWorkbench.Bottom(
+                                title = "Quick help",
+                                icon = { question_circle },
+                                tabs = listOf(KlangWorkbench.Tab(id = "help", title = "Quick help") { +"HELP" }),
+                            ),
                         ).track(fillRef)
                     }
                 },

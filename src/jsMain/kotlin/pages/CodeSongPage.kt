@@ -12,6 +12,7 @@ import io.peekandpoke.klang.comp.HoverHelpToggle
 import io.peekandpoke.klang.comp.KlangCodeEditorComp
 import io.peekandpoke.klang.comp.KlangCodePlaybackCtrl
 import io.peekandpoke.klang.comp.LcdDisplay
+import io.peekandpoke.klang.comp.LexikonPanel
 import io.peekandpoke.klang.comp.SongColumn
 import io.peekandpoke.klang.comp.SongSettings
 import io.peekandpoke.klang.layouts.WorkbenchSlots
@@ -88,6 +89,10 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     private companion object {
         /** Counts the pages drawn, for [pageKey]. */
         var pagesDrawn = 0
+
+        /** The bottom panel's tabs (KLANG-00365), by the ids the workbench keeps with its layout. */
+        const val TAB_QUICK_HELP = "quick-help"
+        const val TAB_LEXIKON = "lexikon"
     }
 
     //  PROPS  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -151,6 +156,9 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     /** The name Alt+Q or a hover last asked about, for the Quick help panel (KLANG-00349); null before the first. */
     private val help = StreamSource<HelpWindow.Entry?>(null)
+
+    /** The Lexikon term the Lexikon tab shows; null for its list of terms (KLANG-00365). */
+    private val lexikonSlug = StreamSource<String?>(null)
 
     /** The column's content this page put into the workbench; null while it put none. */
     private var slotColumn: (DIV.() -> Unit)? = null
@@ -229,20 +237,42 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                 KlangWorkbench.Tool(id = "settings", title = "Settings", icon = { sliders_horizontal }) { SongSettings() },
             )
         )
-        // The quick help under the editor, wide enough for signatures and parameters; its header says how to call
-        // it (the maintainer, 2026-10-27: "Quick-Help" followed by "some instruction like: In the code Press Alt-Q")
+        // Under the editor, wide enough for signatures and parameters: the quick help, and the Lexikon beside it
+        // (the maintainer, 2026-10-27: the tabs in the panel's header, a tab's own options in its content)
         WorkbenchSlots.bottom(
-            KlangWorkbench.Bottom(title = "Quick help", icon = { question_circle }, header = { renderQuickHelpHeader() }) {
-                div {
-                    key = "song-help-$pageKey"
-                    HelpWindow(entry = help, onJump = { pos -> codeEditorRef { it.jumpTo(pos) } })
-                }
-            }
+            KlangWorkbench.Bottom(
+                title = "Help",
+                icon = { question_circle },
+                tabs = listOf(
+                    KlangWorkbench.Tab(id = TAB_QUICK_HELP, title = "Quick help") {
+                        div {
+                            key = "song-help-$pageKey"
+                            HelpWindow(
+                                entry = help,
+                                onJump = { pos -> codeEditorRef { it.jumpTo(pos) } },
+                                options = { renderQuickHelpOptions() },
+                                onLexikon = { slug -> showLexikon(slug) },
+                            )
+                        }
+                    },
+                    KlangWorkbench.Tab(id = TAB_LEXIKON, title = "Lexikon") {
+                        div {
+                            key = "song-lexikon-$pageKey"
+                            LexikonPanel(slug = lexikonSlug, onPick = { lexikonSlug(it) })
+                        }
+                    },
+                ),
+            )
         )
     }
 
-    /** The quick help's header: how to call it, and the hover's switch. */
-    private fun FlowContent.renderQuickHelpHeader() {
+    /** The quick help's options, at the right of its headline: how to call it, and the hover's switch. */
+    private fun FlowContent.renderQuickHelpOptions() {
+        renderQuickHelpHint()
+        HoverHelpToggle()
+    }
+
+    private fun FlowContent.renderQuickHelpHint() {
         span {
             css {
                 put("font-size", "12px")
@@ -255,14 +285,25 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
             with(KlangKeyHint) { caps(parts = listOf("Alt", "Q")) }
             +" on a name, or rest the mouse on it"
         }
-
-        HoverHelpToggle()
     }
 
-    /** A name's help in the Help panel, which opens if it is closed; the focus stays where it is. */
-    private fun showHelp(entry: HelpWindow.Entry) {
+    /**
+     * A name's help in the Quick help, the panel opened if it is closed; the focus stays where it is. Asked [byKey]
+     * (Alt+Q) it shows the Quick help's tab; a hover leaves an open panel at its tab, so the mouse passing over the code
+     * does not take the Lexikon away from the user reading there (KLANG-00365).
+     */
+    private fun showHelp(entry: HelpWindow.Entry, byKey: Boolean) {
         help(entry)
-        WorkbenchSlots.workbench { it.showBottom() }
+        WorkbenchSlots.workbench { it.showBottom(tab = TAB_QUICK_HELP, onlyIfClosed = !byKey) }
+    }
+
+    /**
+     * A Lexikon term in the bottom panel's Lexikon tab, the user staying in the code (the maintainer, 2026-10-27: a
+     * Lexikon link "would lead to the Lexikon tab", KLANG-00365).
+     */
+    private fun showLexikon(slug: String) {
+        lexikonSlug(slug)
+        WorkbenchSlots.workbench { it.showBottom(tab = TAB_LEXIKON) }
     }
 
     /** Empties the workbench's slots, unless another page has filled them since. */
@@ -499,8 +540,12 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
             bookmarks = bookmarks,
             showKeysOverview = true,
             // Alt+Q, and a hover: the name's help in the Help panel, never a popup, the focus staying in the code
-            onQuickDocumentation = { symbol, declarationCode, usages -> showHelp(HelpWindow.Entry(symbol, declarationCode, usages)) },
-            onHoverDocumentation = { symbol, declarationCode, usages -> showHelp(HelpWindow.Entry(symbol, declarationCode, usages)) },
+            onQuickDocumentation = { symbol, declarationCode, usages ->
+                showHelp(entry = HelpWindow.Entry(symbol, declarationCode, usages), byKey = true)
+            },
+            onHoverDocumentation = { symbol, declarationCode, usages ->
+                showHelp(entry = HelpWindow.Entry(symbol, declarationCode, usages), byKey = false)
+            },
         ).track(codeEditorRef)
     }
 }
