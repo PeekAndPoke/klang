@@ -45,6 +45,8 @@ KeyManager which would then need a new name like InteractionManager or similar..
 existing things like that layers etc." That is: the key manager (`KeysManager`, workshop, KLANG-00325) grows from
 key presses to interactions in general (a link followed, a gesture), renamed to fit, and a Lexikon link becomes one
 more interaction a layer can answer, with the layers, the modals' layers over the page and the rest as they are.
+Klang-Main-Dev (2026-10-27, noted in KLANG-00325's out of scope, 4df2093f): the key manager lives in `workshop/`,
+bound for Kraft, so growing its scope and renaming it is settled with Ultra-Main-Dev before it moves, not after.
 
 ## The work
 

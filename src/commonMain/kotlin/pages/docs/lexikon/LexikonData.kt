@@ -71,6 +71,13 @@ data class LexikonEntry(
     val detail: String,
     val conventional: String? = null,
     val trivia: LexikonTrivia? = null,
+    /**
+     * The words that link to this entry wherever the help or the Lexikon names them (KLANG-00369; the maintainer,
+     * 2026-10-27: "Each lexikon entry should announce alternative words that link to it"), any case; its own term
+     * among them where that is a clear name. A category's word ("Mapping", "Mixing") is left out on purpose: it is
+     * ordinary prose too often. See [lexikonAutoLinks].
+     */
+    val linkWords: List<String> = emptyList(),
 ) {
     val domain: LexikonDomain get() = category.domain
 
@@ -140,6 +147,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
 
     LexikonEntry(
         term = "Crush",
+        linkWords = listOf("bit crush", "bit-crush", "bitcrush", "bit crushing", "bit-crushing"),
         category = LexikonCategory.Degrading,
         tags = setOf(LexikonTag.Effect),
         summary = "Reduces bit depth: fewer amplitude steps means a grittier, more stepped sound.",
@@ -161,6 +169,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
 
     LexikonEntry(
         term = "Coarse",
+        linkWords = listOf("sample-rate reduction", "sample rate reduction"),
         category = LexikonCategory.Degrading,
         tags = setOf(LexikonTag.Effect),
         summary = "Reduces sample rate — fewer time steps means an aliased, metallic quality.",
@@ -186,6 +195,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
 
     LexikonEntry(
         term = "LP (Low-Pass)",
+        linkWords = listOf("low-pass", "low pass", "lowpass"),
         category = LexikonCategory.Carving,
         tags = setOf(LexikonTag.Filter, LexikonTag.Abbreviation),
         summary = "Lets low frequencies through, dulls the highs.",
@@ -207,6 +217,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
 
     LexikonEntry(
         term = "HP (High-Pass)",
+        linkWords = listOf("high-pass", "high pass", "highpass"),
         category = LexikonCategory.Carving,
         tags = setOf(LexikonTag.Filter, LexikonTag.Abbreviation),
         summary = "Lets high frequencies through, removes the bottom.",
@@ -218,6 +229,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
 
     LexikonEntry(
         term = "BP (Band-Pass)",
+        linkWords = listOf("band-pass", "band pass", "bandpass"),
         category = LexikonCategory.Carving,
         tags = setOf(LexikonTag.Filter, LexikonTag.Abbreviation),
         summary = "Keeps only a frequency band, removes everything above and below.",
@@ -229,6 +241,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
 
     LexikonEntry(
         term = "Notch",
+        linkWords = listOf("notch filter"),
         category = LexikonCategory.Carving,
         tags = setOf(LexikonTag.Filter),
         summary = "Removes one frequency band, keeps everything else.",
@@ -255,6 +268,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
 
     LexikonEntry(
         term = "ADSR",
+        linkWords = listOf("ADSR", "envelope", "envelopes"),
         category = LexikonCategory.Contouring,
         tags = setOf(LexikonTag.Envelope, LexikonTag.Abbreviation, LexikonTag.Fundamental),
         summary = "Attack, Decay, Sustain, Release — the four stages of a volume envelope.",
@@ -293,6 +307,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
 
     LexikonEntry(
         term = "Distort",
+        linkWords = listOf("distortion"),
         category = LexikonCategory.Saturating,
         tags = setOf(LexikonTag.Effect),
         summary = "Applies waveshaping distortion with controllable amount and shape.",
@@ -331,6 +346,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
 
     LexikonEntry(
         term = "Tremolo",
+        linkWords = listOf("tremolo"),
         category = LexikonCategory.Animating,
         tags = setOf(LexikonTag.Effect),
         summary = "Amplitude animation — volume goes up and down rhythmically.",
@@ -354,6 +370,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
 
     LexikonEntry(
         term = "Phaser",
+        linkWords = listOf("phaser"),
         category = LexikonCategory.Animating,
         tags = setOf(LexikonTag.Effect),
         summary = "Spectral animation — sweeping notches move through the frequency spectrum.",
@@ -376,6 +393,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
 
     LexikonEntry(
         term = "Perlin noise",
+        linkWords = listOf("Perlin noise", "Perlin"),
         category = LexikonCategory.Animating,
         tags = setOf(LexikonTag.Synthesis),
         summary = "Smooth random motion: a value that wanders and never jumps.",
@@ -517,6 +535,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
 
     LexikonEntry(
         term = "Pitch",
+        linkWords = listOf("pitch", "pitches"),
         category = LexikonCategory.Mapping,
         tags = setOf(LexikonTag.Fundamental),
         summary = "How high or low a note sounds: the ear's name for frequency.",
@@ -572,6 +591,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
 
     LexikonEntry(
         term = "LFO",
+        linkWords = listOf("LFO", "LFOs", "low frequency oscillator"),
         category = LexikonCategory.Abbreviations,
         tags = setOf(LexikonTag.Abbreviation, LexikonTag.Fundamental),
         summary = "Low Frequency Oscillator — a slow wave used to animate parameters.",
@@ -594,6 +614,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
 
     LexikonEntry(
         term = "VCA",
+        linkWords = listOf("VCA"),
         category = LexikonCategory.Abbreviations,
         tags = setOf(LexikonTag.Abbreviation, LexikonTag.Envelope),
         summary = "Voltage-Controlled Amplifier — a volume knob controlled by a signal.",
@@ -615,6 +636,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
 
     LexikonEntry(
         term = "DSP",
+        linkWords = listOf("DSP"),
         category = LexikonCategory.Abbreviations,
         tags = setOf(LexikonTag.Abbreviation),
         summary = "Digital Signal Processing — processing audio as numbers.",
@@ -625,6 +647,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
 
     LexikonEntry(
         term = "BPM",
+        linkWords = listOf("BPM"),
         category = LexikonCategory.Abbreviations,
         tags = setOf(LexikonTag.Abbreviation, LexikonTag.Fundamental),
         summary = "Beats Per Minute — how fast the music plays.",
@@ -646,6 +669,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
 
     LexikonEntry(
         term = "dB",
+        linkWords = listOf("dB", "decibel", "decibels"),
         category = LexikonCategory.Abbreviations,
         tags = setOf(LexikonTag.Abbreviation),
         summary = "Decibel — unit for measuring loudness.",
@@ -656,6 +680,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
 
     LexikonEntry(
         term = "Hz / kHz",
+        linkWords = listOf("Hz", "kHz", "hertz"),
         category = LexikonCategory.Abbreviations,
         tags = setOf(LexikonTag.Abbreviation, LexikonTag.Fundamental),
         summary = "Hertz / Kilohertz — frequency units.",
@@ -676,6 +701,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
 
     LexikonEntry(
         term = "RPM",
+        linkWords = listOf("revolutions per minute"),
         category = LexikonCategory.Abbreviations,
         tags = setOf(LexikonTag.Abbreviation, LexikonTag.Motor, LexikonTag.Fundamental),
         summary = "Revolutions Per Minute — the Motor's word for tempo.",
@@ -696,6 +722,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
 
     LexikonEntry(
         term = "Motor",
+        linkWords = listOf("Motor", "Klangmotor"),
         category = LexikonCategory.MotorTerms,
         tags = setOf(LexikonTag.Motor, LexikonTag.Fundamental),
         summary = "The whole audio engine — everything that turns patterns into sound.",
@@ -708,6 +735,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
 
     LexikonEntry(
         term = "Fuel",
+        linkWords = listOf("Fuel"),
         category = LexikonCategory.MotorTerms,
         tags = setOf(LexikonTag.Motor, LexikonTag.Fundamental),
         summary = "The raw material — the pattern data that feeds the engine.",
@@ -719,6 +747,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
 
     LexikonEntry(
         term = "Cylinder",
+        linkWords = listOf("cylinder", "cylinders"),
         category = LexikonCategory.MotorTerms,
         tags = setOf(LexikonTag.Motor, LexikonTag.Fundamental),
         summary = "An independent effect bus — one engine running its own signal chain.",
@@ -730,6 +759,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
 
     LexikonEntry(
         term = "Injection",
+        linkWords = listOf("Injection"),
         category = LexikonCategory.MotorTerms,
         tags = setOf(LexikonTag.Motor),
         summary = "Getting the right Fuel to the right Cylinder at the right time.",
@@ -741,6 +771,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
 
     LexikonEntry(
         term = "Ignitor",
+        linkWords = listOf("Ignitor", "Ignitors"),
         category = LexikonCategory.MotorTerms,
         tags = setOf(LexikonTag.Motor, LexikonTag.Synthesis),
         summary = "The spark that sets the music on fire — the sound source.",
@@ -753,6 +784,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
 
     LexikonEntry(
         term = "Katalyst",
+        linkWords = listOf("Katalyst", "Katalysts"),
         category = LexikonCategory.MotorTerms,
         tags = setOf(LexikonTag.Motor, LexikonTag.Effect),
         summary = "Refines the raw sound after ignition — per-cylinder effects processing.",
@@ -765,6 +797,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
 
     LexikonEntry(
         term = "Fusion",
+        linkWords = listOf("Fusion"),
         category = LexikonCategory.MotorTerms,
         tags = setOf(LexikonTag.Motor),
         summary = "Where all Cylinders converge into the final output.",
@@ -777,6 +810,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
 
     LexikonEntry(
         term = "RPM (Motor)",
+        linkWords = listOf("RPM"),
         category = LexikonCategory.MotorTerms,
         tags = setOf(LexikonTag.Motor, LexikonTag.Fundamental),
         summary = "How fast the engine cycles — tempo in Motor language.",
@@ -788,6 +822,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
 
     LexikonEntry(
         term = "Orbit",
+        linkWords = listOf("orbit", "orbits"),
         category = LexikonCategory.MotorTerms,
         tags = setOf(LexikonTag.Motor, LexikonTag.Fundamental),
         summary = "Where a pattern meets a signal chain — the bridge between events and audio.",
@@ -799,6 +834,8 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
 
     LexikonEntry(
         term = "Voice",
+        // Only the phrase: a bare "voices" in the docs is often a unison's or a super oscillator's copies inside one note
+        linkWords = listOf("per voice"),
         category = LexikonCategory.MotorTerms,
         tags = setOf(LexikonTag.Motor, LexikonTag.Fundamental),
         summary = "One sounding note, with its own copy of every per-voice setting.",
@@ -813,6 +850,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
 
     LexikonEntry(
         term = "Orbit bus",
+        linkWords = listOf("per orbit bus", "orbit bus", "orbit buses", "per orbit"),
         category = LexikonCategory.MotorTerms,
         tags = setOf(LexikonTag.Motor, LexikonTag.Fundamental),
         summary = "The one shared effect chain an orbit's voices are mixed through.",
@@ -832,6 +870,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
 
     LexikonEntry(
         term = "Send",
+        linkWords = listOf("send", "sends"),
         category = LexikonCategory.MotorTerms,
         tags = setOf(LexikonTag.Motor, LexikonTag.Effect),
         summary = "How much of an orbit is fed into its reverb or its delay: one amount per orbit.",
@@ -848,6 +887,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
 
     LexikonEntry(
         term = "Sprudel",
+        linkWords = listOf("Sprudel"),
         category = LexikonCategory.MotorTerms,
         tags = setOf(LexikonTag.Motor, LexikonTag.Fundamental),
         summary = "Klang's pattern language — the Fuel source.",

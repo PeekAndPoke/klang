@@ -178,7 +178,7 @@ private fun katpSlot(slot: KatalystSlotLike?, callInfo: CallInfo?): String =
     katalystSlotName(slot, door = "katp", twin = "ignp", location = callInfo?.callLocation)
 
 /**
- * Writes one **orbit chain slot**, [per orbit](/manuals/lexikon/orbit-bus), by its `<stage>.<knob>`
+ * Writes one **orbit chain slot**, per orbit, by its `<stage>.<knob>`
  * name or by the Katalyst param object itself.
  *
  * Direct access to a declared chain's named knobs, the orbit twin of [ignitorParam]: `ignp` fills the

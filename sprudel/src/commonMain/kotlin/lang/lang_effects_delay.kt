@@ -70,7 +70,7 @@ private fun applyDelay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
 /**
  * The orbit delay: how much of the orbit is echoed, the time, the feedback and the feedback cap.
  *
- * One delay per [orbit bus](/manuals/lexikon/orbit-bus), and all four are set once for everyone by
+ * One delay per orbit bus, and all four are set once for everyone by
  * the orbit's owning voice. `wet` is how much of the orbit goes into the delay: the echoes are
  * added on top of the dry sound, and every voice on the orbit is echoed alike. So a pattern that
  * should stay dry, or echo by a different amount, goes on an orbit of its own. When another pattern

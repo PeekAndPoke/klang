@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.Nav
+import io.peekandpoke.klang.pages.docs.lexikon.lexikonAutoLinks
 import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.script.types.KlangProperty
 import io.peekandpoke.klang.script.types.KlangSymbol
@@ -240,7 +241,8 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
                         noui.content {
                             // New tab: this popup floats over the editor, and path routing means a
                             // plain link would reload the app and take the unsaved song with it.
-                            MarkdownDisplay(description, linksInNewTab = true)
+                            // The Lexikon's terms link themselves (KLANG-00369)
+                            MarkdownDisplay(lexikonAutoLinks(description), linksInNewTab = true)
                         }
                     }
                 }

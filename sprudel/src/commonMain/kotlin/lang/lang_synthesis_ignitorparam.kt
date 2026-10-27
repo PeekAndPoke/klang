@@ -40,7 +40,7 @@ private fun ignpSlot(slot: IgnitorSlotLike?, callInfo: CallInfo?): String =
     ignitorSlotName(slot, door = "ignp", twin = "katp", location = callInfo?.callLocation)
 
 /**
- * Writes one Ignitor slot, [per voice](/manuals/lexikon/voice): by its name, or by the param object itself.
+ * Writes one Ignitor slot, per voice: by its name, or by the param object itself.
  *
  * Direct access to the `ignitorParams` map, for slots that have no dedicated door of their own.
  * Slots used elsewhere in this library are `analog`, `onepole` and `density`.

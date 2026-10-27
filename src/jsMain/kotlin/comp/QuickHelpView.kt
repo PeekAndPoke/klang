@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.comp
 
+import io.peekandpoke.klang.pages.docs.lexikon.lexikonAutoLinks
 import io.peekandpoke.klang.script.intel.LocalUsage
 import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.script.types.KlangDecl
@@ -42,6 +43,12 @@ import org.w3c.dom.events.MouseEvent
  */
 internal fun kdocRefsAsCode(text: String): String =
     text.split("`").mapIndexed { i, part -> if (i % 2 == 1) part else part.replace(kdocRef, "`$1`") }.joinToString("`")
+
+/**
+ * A help text as the panel shows it: its KDoc references as code, then the Lexikon's terms linked (KLANG-00369), the
+ * first time each is named.
+ */
+internal fun helpMarkdown(text: String): String = lexikonAutoLinks(kdocRefsAsCode(text.trim()))
 
 private val kdocRef = Regex("""\[([A-Za-z_][A-Za-z0-9_.]*)\](?![(\[:])""")
 
@@ -225,7 +232,7 @@ class QuickHelpView(ctx: Ctx<Props>) : Component<QuickHelpView.Props>(ctx) {
                                 put("line-height", "1.5")
                             }
 
-                            MarkdownDisplay(kdocRefsAsCode(description.trim()), linksInNewTab = true)
+                            MarkdownDisplay(helpMarkdown(description), linksInNewTab = true)
                         }
                     }
 
@@ -479,7 +486,7 @@ class QuickHelpView(ctx: Ctx<Props>) : Component<QuickHelpView.Props>(ctx) {
                                     put("line-height", "1.45")
                                 }
 
-                                MarkdownDisplay(kdocRefsAsCode(param.description.trim()), linksInNewTab = true)
+                                MarkdownDisplay(helpMarkdown(param.description), linksInNewTab = true)
                             }
                         }
                     }

@@ -6,6 +6,8 @@
 package io.peekandpoke.klang.pages.docs.lexikon
 
 import io.peekandpoke.klang.Nav
+import io.peekandpoke.klang.comp.lexikonSlugOf
+import io.peekandpoke.klang.ui.comp.MarkdownDisplay
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
@@ -38,6 +40,9 @@ import kotlinx.html.Tag
 import kotlinx.html.a
 import kotlinx.html.div
 import kotlinx.html.p
+import org.w3c.dom.Element
+import org.w3c.dom.events.Event
+import org.w3c.dom.events.MouseEvent
 
 @Suppress("FunctionName")
 fun Tag.LexikonEntryPage(slug: String) = comp(LexikonEntryPage.Props(slug = slug)) {
@@ -89,6 +94,21 @@ class LexikonEntryPage(ctx: Ctx<Props>) : Component<LexikonEntryPage.Props>(ctx)
         }
     }
 
+    /** A plain click on a link to another entry moves there without a reload; with a key held, its own way. */
+    private fun followInApp(event: Event) {
+        val mouse = event as? MouseEvent ?: return
+
+        if (mouse.button.toInt() != 0 || mouse.ctrlKey || mouse.metaKey || mouse.shiftKey || mouse.altKey) {
+            return
+        }
+
+        val link = (event.target as? Element)?.closest("a") ?: return
+        val slug = lexikonSlugOf(link.getAttribute("href") ?: return) ?: return
+
+        event.preventDefault()
+        router.navToUri(Nav.manualsLexikonEntry(slug))
+    }
+
     private fun FlowContent.renderEntry(entry: LexikonEntry) {
         ui.huge.header {
             css { color = Color(laf.gold); marginTop = 8.px; marginBottom = 4.px }
@@ -114,9 +134,12 @@ class LexikonEntryPage(ctx: Ctx<Props>) : Component<LexikonEntryPage.Props>(ctx)
             +entry.summary
         }
 
-        p {
+        // Its terms linked to their entries (KLANG-00369), never to itself; a plain click stays in the app
+        div {
             css { color = Color(laf.textPrimary) }
-            +entry.detail
+            onClick { event -> followInApp(event) }
+
+            MarkdownDisplay(lexikonAutoLinks(markdown = entry.detail, self = entry.slug))
         }
 
         entry.conventional?.let { conventional ->

@@ -52,7 +52,7 @@ private fun applyUnisonPan(source: SprudelPattern, args: List<SprudelDslArg<Any?
 /**
  * Unison: voice count, detune spread and stereo spread.
  *
- * Stacks detuned copies of the oscillator [per voice](/manuals/lexikon/voice); `spread` is the
+ * Stacks detuned copies of the oscillator per voice; `spread` is the
  * detune in semitones, `pan` the stereo width.
  *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes

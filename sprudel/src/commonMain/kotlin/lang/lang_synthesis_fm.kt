@@ -150,7 +150,7 @@ private fun applyFmRelease(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * FM synthesis: modulation depth, ratio and the modulation envelope.
  *
  * `depth` is the peak modulation in Hz, `ratio` the modulator's frequency as a multiple of the note, and the envelope
- * shapes the depth over the note [per voice](/manuals/lexikon/voice). FM is active once `depth` is set and not 0;
+ * shapes the depth over the note per voice. FM is active once `depth` is set and not 0;
  * `ratio` defaults to 1, a modulator at the carrier's own pitch.
  *
  * A depth of 10 to 100 Hz is subtle, 200 to 500 brassy, above 500 metallic. Integer ratios are

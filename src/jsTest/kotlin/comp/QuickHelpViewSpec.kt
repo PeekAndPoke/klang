@@ -221,6 +221,11 @@ class QuickHelpViewSpec : StringSpec({
         }
     }
 
+    "a help text links the Lexikon's terms by itself, once each, beside a hand-written link" {
+        helpMarkdown("Set [per voice](/manuals/lexikon/voice): the pitch, its pitch again, and the [semitones].") shouldBe
+            "Set [per voice](/manuals/lexikon/voice): the [pitch](/manuals/lexikon/pitch), its pitch again, and the `semitones`."
+    }
+
     "a KDoc reference shows as code; a link, a reference definition and code stay as they are" {
         kdocRefsAsCode("[semitones] is the shift on the [PitchEnvelopeBuilder].") shouldBe
             "`semitones` is the shift on the `PitchEnvelopeBuilder`."

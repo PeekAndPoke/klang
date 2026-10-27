@@ -8,10 +8,12 @@ package io.peekandpoke.klang.comp
 import io.peekandpoke.klang.pages.docs.lexikon.LexikonDomain
 import io.peekandpoke.klang.pages.docs.lexikon.LexikonEntry
 import io.peekandpoke.klang.pages.docs.lexikon.allLexikonEntries
+import io.peekandpoke.klang.pages.docs.lexikon.lexikonAutoLinks
 import io.peekandpoke.klang.pages.docs.lexikon.lexikonEntryBySlug
 import io.peekandpoke.klang.pages.docs.lexikon.matchesSearch
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangSearchField
+import io.peekandpoke.klang.ui.comp.MarkdownDisplay
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
@@ -30,7 +32,10 @@ import kotlinx.html.a
 import kotlinx.html.button
 import kotlinx.html.div
 import kotlinx.html.span
+import org.w3c.dom.Element
 import org.w3c.dom.HTMLElement
+import org.w3c.dom.events.Event
+import org.w3c.dom.events.MouseEvent
 
 /** A Lexikon entry's page in a link (`/manuals/lexikon/orbit-bus`, as the DSL docs write it), its slug; else null. */
 fun lexikonSlugOf(href: String): String? = lexikonHref.find(href)?.groupValues?.get(1)
@@ -77,6 +82,7 @@ class LexikonPanel(ctx: Ctx<Props>) : Component<LexikonPanel.Props>(ctx) {
                 put("gap", "12px")
                 put("color", "var(--kl-ink-text)")
             }
+            onClick { event -> followInPlace(event) }
 
             if (entry == null) {
                 key = "lexikon-terms"
@@ -101,6 +107,21 @@ class LexikonPanel(ctx: Ctx<Props>) : Component<LexikonPanel.Props>(ctx) {
                 (dom?.querySelector("button[data-focus-next], [data-focus-next] input") as? HTMLElement)?.focus()
             }
         }
+    }
+
+    /** A plain click on a link to another entry shows it here; with a key held, the link keeps its own way. */
+    private fun followInPlace(event: Event) {
+        val mouse = event as? MouseEvent ?: return
+
+        if (mouse.button.toInt() != 0 || mouse.ctrlKey || mouse.metaKey || mouse.shiftKey || mouse.altKey) {
+            return
+        }
+
+        val link = (event.target as? Element)?.closest("a") ?: return
+        val slug = lexikonSlugOf(link.getAttribute("href") ?: return) ?: return
+
+        event.preventDefault()
+        props.onPick(slug)
     }
 
     /** The terms to pick from, by domain, narrowed by the search. */
@@ -219,7 +240,8 @@ class LexikonPanel(ctx: Ctx<Props>) : Component<LexikonPanel.Props>(ctx) {
             div {
                 css { put("line-height", "1.55") }
 
-                +entry.detail
+                // Its terms linked to their entries (KLANG-00369), never to itself; a link followed stays in the tab
+                MarkdownDisplay(lexikonAutoLinks(markdown = entry.detail, self = entry.slug))
             }
 
             div {

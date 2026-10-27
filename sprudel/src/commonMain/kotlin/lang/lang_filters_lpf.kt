@@ -99,7 +99,7 @@ private fun applyLpfRelease(source: SprudelPattern, args: List<SprudelDslArg<Any
  * The lowpass filter: cutoff, resonance, cascade and the cutoff envelope.
  *
  * Only frequencies below the cutoff pass, so lower values sound darker. Every note carries its own
- * cutoff, resonance and envelope, [per voice](/manuals/lexikon/voice).
+ * cutoff, resonance and envelope, per voice.
  *
  * The envelope sweeps `freq` up by `env` semitones: attack is the time to reach full depth, decay
  * the fall to the sustain share, release the fall back to `freq` after the note ends. `env = 12`

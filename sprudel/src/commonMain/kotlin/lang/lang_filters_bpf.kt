@@ -90,7 +90,7 @@ private fun applyBpfRelease(source: SprudelPattern, args: List<SprudelDslArg<Any
  * The bandpass filter: centre, resonance and the centre envelope.
  *
  * Only a band around the centre passes, and the resonance sets its width: higher `q` is a narrower
- * band. Every note carries its own centre, width and envelope, [per voice](/manuals/lexikon/voice).
+ * band. Every note carries its own centre, width and envelope, per voice.
  *
  * The envelope sweeps `freq` up by `env` semitones: attack is the time to reach full depth, decay
  * the fall to the sustain share, release the fall back to `freq` after the note ends. `env = 12`

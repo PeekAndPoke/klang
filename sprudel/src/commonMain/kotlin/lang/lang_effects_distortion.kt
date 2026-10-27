@@ -33,7 +33,7 @@ private fun applyDistort(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
 
 
 /**
- * Waveshaper distortion: drive, shape and oversampling, [per voice](/manuals/lexikon/voice).
+ * Waveshaper distortion: drive, shape and oversampling, per voice.
  *
  * This is not a bus effect. Unlike reverb and delay, distortion runs inside each voice's own chain,
  * so two voices sharing an orbit can be driven differently.

@@ -41,7 +41,7 @@ private fun applyOrbit(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
 }
 
 /**
- * Routes the pattern to an [orbit bus](/manuals/lexikon/orbit-bus), its own channel of shared effects.
+ * Routes the pattern to an orbit bus, its own channel of shared effects.
  *
  * This is the answer whenever two patterns fight over a bus effect. Reverb, delay, phaser,
  * compressor, body, vowel and ducking exist once per orbit and take their settings from the first
@@ -267,7 +267,7 @@ private fun applyDuckAttack(source: SprudelPattern, args: List<SprudelDslArg<Any
  * The pattern carrying `duck(...)` is ducked whenever the named orbit plays. The duck-down is
  * instant, `attack` is the recovery.
  *
- * Ducking belongs to the [orbit bus](/manuals/lexikon/orbit-bus) and runs after every orbit has been
+ * Ducking belongs to the orbit bus and runs after every orbit has been
  * processed, so it ducks the whole orbit, set by its owning voice, not one note at a time.
  *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes

@@ -145,7 +145,7 @@ private fun applyCompressorRelease(source: SprudelPattern, args: List<SprudelDsl
  * Levels above the threshold are turned down by the ratio, the knee softens the onset, and attack
  * and release set how fast it moves.
  *
- * One compressor per [orbit bus](/manuals/lexikon/orbit-bus), so it hears the whole orbit summed
+ * One compressor per orbit bus, so it hears the whole orbit summed
  * and its settings come from the orbit's owning voice. That is what makes it a drum-bus compressor
  * rather than a per-note one: give a pattern its own orbit to compress it on its own.
  *

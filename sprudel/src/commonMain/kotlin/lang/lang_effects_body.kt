@@ -117,12 +117,12 @@ private fun applyBodyFloor(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * The resonant body: the material, its mix and its dry floor.
  *
  * Runs the orbit through a resonating body, the way a guitar top or a drum shell colours what passes
- * through it. One body per [orbit bus](/manuals/lexikon/orbit-bus), so ALL of it, `material`
+ * through it. One body per orbit bus, so ALL of it, `material`
  * included, is set once for everyone by the orbit's owning voice.
  *
  * `wet` here is a mix (and `floor` how much of the dry stays under it): the body processes the whole
  * orbit mix. The `wet` of `reverb` and `delay` reads differently: it is how much of the orbit goes
- * INTO them, a [send](/manuals/lexikon/send), and their sound is added on top of the dry. Give a
+ * INTO them, a send, and their sound is added on top of the dry. Give a
  * pattern its own body by giving it its own orbit.
  *
  * Materials: woods `wood`, `cedar`, `spruce`, `mahogany`, `rosewood`, `maple`, `oak`; bowed string

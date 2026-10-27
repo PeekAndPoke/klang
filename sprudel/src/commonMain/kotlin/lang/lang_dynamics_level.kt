@@ -29,7 +29,7 @@ private fun applyGain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
 }
 
 /**
- * Sets the level each event leaves at, [per voice](/manuals/lexikon/voice).
+ * Sets the level each event leaves at, per voice.
  *
  * The one level word. It is tone-neutral and it comes last: the voice's filters, its distortion and
  * its envelope have all run by the time `gain` is applied, so turning it down makes the sound
@@ -141,7 +141,7 @@ private fun applyPregain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
 }
 
 /**
- * Sets how hard each event is played INTO its instrument, [per voice](/manuals/lexikon/voice).
+ * Sets how hard each event is played INTO its instrument, per voice.
  *
  * The other level word, and the only one that is not a fader. `gain` is the level the event LEAVES
  * at, after everything; `pregain` is the level the signal ARRIVES at inside the instrument, where

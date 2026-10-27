@@ -95,7 +95,7 @@ private fun applyReverb(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
 /**
  * The orbit reverb: how much of the orbit goes into the room, its size and its lowpass.
  *
- * One reverb per [orbit bus](/manuals/lexikon/orbit-bus), and all three are set once for everyone
+ * One reverb per orbit bus, and all three are set once for everyone
  * by the orbit's owning voice. `wet` is how much of the orbit goes into the room: the room is added
  * on top of the dry sound, and every voice on the orbit is in it alike. So a pattern that should
  * stay dry, or sit in the room by a different amount, goes on an orbit of its own. The room hears

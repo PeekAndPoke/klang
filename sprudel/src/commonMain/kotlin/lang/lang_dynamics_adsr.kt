@@ -60,7 +60,7 @@ private fun applyRelease(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
 /**
  * The amplitude envelope: attack, decay, sustain and release.
  *
- * The envelope shapes the loudness of one note [per voice](/manuals/lexikon/voice). Attack, decay
+ * The envelope shapes the loudness of one note per voice. Attack, decay
  * and release are times in seconds, sustain is a level from 0 to 1.
  *
  * ```KlangScript(Playable)

@@ -73,7 +73,7 @@ private fun applyVibratoPhase(source: SprudelPattern, args: List<SprudelDslArg<A
 /**
  * Vibrato: LFO rate in Hz, depth in semitones, where the swing sits, and where the LFO starts.
  *
- * A pitch wobble on the note [per voice](/manuals/lexikon/voice): the rate is how fast, the depth
+ * A pitch wobble on the note per voice: the rate is how fast, the depth
  * how far. A rate of 3 Hz is gentle, 5 standard, 7 nervous; a depth of 0.2 semitones is subtle,
  * 0.5 expressive, 1 a wide wobble.
  *

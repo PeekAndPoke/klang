@@ -9,6 +9,7 @@ import io.peekandpoke.klang.comp.InViewport
 import io.peekandpoke.klang.comp.KlangScriptReplComp
 import io.peekandpoke.klang.comp.PlayableCodeExample
 import io.peekandpoke.klang.comp.klangScopeLabel
+import io.peekandpoke.klang.pages.docs.lexikon.lexikonAutoLinks
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
 import io.peekandpoke.klang.script.generated.generatedSprudelDocs
@@ -335,7 +336,8 @@ class KlangScriptLibraryDocsPage(ctx: Ctx<Props>) : Component<KlangScriptLibrary
                     marginBottom = 0.5.rem
                 }
 
-                MarkdownDisplay(decl.description)
+                // The Lexikon's terms link themselves (KLANG-00369)
+                MarkdownDisplay(lexikonAutoLinks(decl.description))
             }
 
             // Parameters

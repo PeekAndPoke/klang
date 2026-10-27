@@ -108,7 +108,7 @@ private fun applyPhaserWet(source: SprudelPattern, args: List<SprudelDslArg<Any?
 /**
  * The orbit phaser: depth, rate, centre, sweep and dry floor.
  *
- * One sweep over the summed [orbit bus](/manuals/lexikon/orbit-bus), the DAW-insert model, so every
+ * One sweep over the summed orbit bus, the DAW-insert model, so every
  * knob belongs to the orbit's owning voice: a voice that sets phaser knobs without owning its orbit
  * is not phased at all. Route it to its own orbit to give it its own phaser.
  *
@@ -333,7 +333,7 @@ private fun applyTremoloRate(source: SprudelPattern, args: List<SprudelDslArg<An
 /**
  * The tremolo: depth, rate and waveform.
  *
- * Unlike the phaser above it, the tremolo runs [per voice](/manuals/lexikon/voice): every note gets
+ * Unlike the phaser above it, the tremolo runs per voice: every note gets
  * its own LFO, so two notes on one orbit can wobble at different rates. The LFO is the oscillator
  * of that shape; the square, sawtooth and ramp get a 16 ms soft edge, so they pulse without clicking.
  *

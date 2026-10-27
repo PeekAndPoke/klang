@@ -91,7 +91,7 @@ private fun applyNotchRelease(source: SprudelPattern, args: List<SprudelDslArg<A
  *
  * A narrow band around the centre is cut and everything else passes, the opposite of a bandpass.
  * Higher `q` narrows the cut. Every note carries its own centre, width and envelope,
- * [per voice](/manuals/lexikon/voice).
+ * per voice.
  *
  * The envelope sweeps `freq` up by `env` semitones: attack is the time to reach full depth, decay
  * the fall to the sustain share, release the fall back to `freq` after the note ends. `env = 12`

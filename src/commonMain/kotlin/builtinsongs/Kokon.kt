@@ -75,8 +75,8 @@ let preampHighGain = x => x
   .highpass(120)                                    // tight: no bass into the gain stages
   .distort(0.35, "tube", 4).highpass(110)
   .distort(0.45, "softsat", 4).highpass(100)
-  .distort(0.60, "soft", 4)
-  .lowpass(4500)                                   // the fizz
+  .distort(0.65, "soft", 4)
+  .lowpass(4800)                                   // the fizz
   .mul(0.30)                                       // volume
 
 let powerPushPull = x => x
@@ -90,11 +90,11 @@ let powerClassA = x => x
 
 let cab4x12 = x => x
   .eq(e => e
-    .band(freq =  120, q = 0.7, db =  1.40)        // thump: closed-back box resonance
-    .band(freq =  380, q = 0.5, db =  4.00)        // roar:  low mids
+    .band(freq =  120, q = 0.7, db =  1.45)        // thump: closed-back box resonance
+    .band(freq =  380, q = 0.5, db =  3.90)        // roar:  low mids
     .band(freq = 2700, q = 1.8, db =  4.25)        // bark:  the upper-mid speaker peak
   )
-  .lowpass(6500, 0.500, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
+  .lowpass(6000, 0.600, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
   .highpass(105, 0.707, x => x.passes(2))
 
 let cab1x12 = x => x
@@ -232,7 +232,7 @@ let bass = (() => {
 
   // Harmonics: sine partials at 2f .. 8f, gain 1/n, the fundamental left to the sub above. On the
   // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
-  let harmonics = Ign.sine(x => x.harmonics(6, 1.1).fundamental(0).analog(pAnalog).analogSpread(0.1)).mul(pHarm)
+  let harmonics = Ign.sine(x => x.harmonics(8, 1.5).fundamental(0).analog(pAnalog).analogSpread(0.25)).mul(pHarm)
 
   return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -3)) // let the snare cut through
@@ -383,7 +383,7 @@ export hats = pat => sound(pat).n(0)
 export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
   .sound(bass).velocity("0.98 0.94 0.96 0.94")
   .ignp("sub", 1.00).ignp("harmonics", 1.00)
-  .adsr(0.003, 0.3, 0.5, 0.040).hpf(30).notch(freq = snareHz, q = 1.0)
+  .adsr(0.003, 0.75, 0.5, 0.040).hpf(30).notch(freq = snareHz, q = 1.0)
   .clip(0.90)
   .gain(1.30).pan(0.5)
   .orbit(15)
