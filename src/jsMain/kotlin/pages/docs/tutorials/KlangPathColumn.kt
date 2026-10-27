@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.pages.docs.tutorials
 
 import io.peekandpoke.klang.Nav
+import io.peekandpoke.klang.comp.appLink
 import io.peekandpoke.klang.storage.TutorialStorage
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent

@@ -221,6 +221,27 @@ class QuickHelpViewSpec : StringSpec({
         }
     }
 
+    "its aliases are named and each links to its own docs page" {
+        val withAliases = lowpass.copy(aliases = listOf("lpf", "cutoff"))
+
+        TestBed.preact(
+            appSetup = { addons { marked() }; routing { } },
+            view = { QuickHelpView(symbol = withAliases, declarationCode = null, onNavigate = noNav) },
+        ) { root ->
+            val view = root.single()
+
+            eventually { view.text() shouldContain "Aliases: lpf, cutoff" }
+
+            val links = view.querySelectorAll("a[data-alias]")
+            fun href(index: Int): String = decodeURIComponent((links.item(index) as Element).getAttribute("href")!!)
+
+            links.length shouldBe 2
+            href(0) shouldContain "/manuals/library/sprudel"
+            href(0) shouldContain "function:lpf"
+            href(1) shouldContain "function:cutoff"
+        }
+    }
+
     "a help text links the Lexikon's terms by itself, once each, beside a hand-written link" {
         helpMarkdown("Set [per voice](/manuals/lexikon/voice): the pitch, its pitch again, and the [semitones].") shouldBe
             "Set [per voice](/manuals/lexikon/voice): the [pitch](/manuals/lexikon/pitch), its pitch again, and the `semitones`."
@@ -306,3 +327,5 @@ class QuickHelpViewSpec : StringSpec({
         }
     }
 })
+
+private external fun decodeURIComponent(encoded: String): String

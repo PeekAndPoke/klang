@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.pages.docs.tutorials
 
 import io.peekandpoke.klang.Nav
+import io.peekandpoke.klang.comp.appLink
 import io.peekandpoke.klang.storage.TutorialStorage
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangLamp

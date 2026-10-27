@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.pages.docs.tutorials
 
 import io.peekandpoke.klang.Nav
+import io.peekandpoke.klang.comp.appLink
 import io.peekandpoke.klang.ui.comp.KlangBackLink
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
@@ -13,10 +14,7 @@ import io.peekandpoke.klang.ui.comp.KlangLamp
 import io.peekandpoke.kraft.routing.Route
 import io.peekandpoke.kraft.routing.Router
 import io.peekandpoke.ultra.html.css
-import io.peekandpoke.ultra.html.onClick
-import kotlinx.html.A
 import kotlinx.html.FlowContent
-import kotlinx.html.a
 import kotlinx.html.div
 import kotlinx.html.span
 
@@ -102,23 +100,6 @@ fun FlowContent.learnLabel(text: String) {
         }
 
         +text
-    }
-}
-
-/** A link to a place in the app: a real link (a new tab with a key held), a plain click stays in the app. */
-fun FlowContent.appLink(router: Router, to: Route.Bound, block: A.() -> Unit) {
-    // The colour from a class (klang.css): a caller's own css {} would replace an inline one
-    a(href = router.strategy.render(to), classes = "kl-app-link") {
-        onClick { event ->
-            val mouse = event.asDynamic()
-
-            if (mouse.ctrlKey != true && mouse.metaKey != true && mouse.shiftKey != true && mouse.altKey != true && mouse.button == 0) {
-                event.preventDefault()
-                router.navToUri(to)
-            }
-        }
-
-        block()
     }
 }
 

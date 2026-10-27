@@ -16,6 +16,7 @@ import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
+import io.peekandpoke.kraft.routing.Route
 import io.peekandpoke.kraft.routing.Router.Companion.router
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
@@ -417,7 +418,7 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
  * in a new tab.
  */
 fun Component<*>.navToSymbolDocs(doc: KlangSymbol, event: dynamic) {
-    val uri = Nav.manualsLibrarySearch("sprudel", "function:${doc.name}")
+    val uri = symbolDocsUri(doc.name)
     val pointerEvent = event as? PointerEvent
 
     if (pointerEvent?.shiftKey == true) {
@@ -426,3 +427,6 @@ fun Component<*>.navToSymbolDocs(doc: KlangSymbol, event: dynamic) {
         router.navToUri(uri)
     }
 }
+
+/** Where a name's docs page is: the library docs, searched for the name (an alias has an entry of its own). */
+fun symbolDocsUri(name: String): Route.Bound = Nav.manualsLibrarySearch("sprudel", "function:$name")

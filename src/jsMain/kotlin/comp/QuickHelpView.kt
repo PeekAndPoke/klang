@@ -19,6 +19,7 @@ import io.peekandpoke.klang.ui.comp.MarkdownDisplay
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
+import io.peekandpoke.kraft.routing.Router.Companion.router
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
@@ -301,6 +302,8 @@ class QuickHelpView(ctx: Ctx<Props>) : Component<QuickHelpView.Props>(ctx) {
                 }
             }
 
+            // Each alias has its own docs entry, so each a link to it (the maintainer, 2026-10-27: "say "Aliases: " and
+            // then link each alias to it's docs page")
             if (symbol.aliases.isNotEmpty()) {
                 span {
                     css {
@@ -308,7 +311,30 @@ class QuickHelpView(ctx: Ctx<Props>) : Component<QuickHelpView.Props>(ctx) {
                         put("color", "var(--kl-ink-label)")
                     }
 
-                    +"also ${symbol.aliases.joinToString(", ")}"
+                    +"Aliases: "
+
+                    symbol.aliases.forEachIndexed { index, alias ->
+                        if (index > 0) {
+                            +", "
+                        }
+
+                        appLink(router = router, to = symbolDocsUri(alias)) {
+                            attributes["data-alias"] = alias
+                            css {
+                                put("text-decoration", "underline dotted")
+                                put("text-underline-offset", "3px")
+                            }
+
+                            span {
+                                css {
+                                    put("font-family", "monospace")
+                                    put("color", "var(--kl-ink-text)")
+                                }
+
+                                +alias
+                            }
+                        }
+                    }
                 }
             }
 

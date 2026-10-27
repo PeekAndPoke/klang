@@ -48,6 +48,13 @@ more interaction a layer can answer, with the layers, the modals' layers over th
 Klang-Main-Dev (2026-10-27, noted in KLANG-00325's out of scope, 4df2093f): the key manager lives in `workshop/`,
 bound for Kraft, so growing its scope and renaming it is settled with Ultra-Main-Dev before it moves, not after.
 
+The second case came (the maintainer, 2026-10-27, on the aliases in the Quick help linked to their docs pages: "Here
+we have the second case for "catching" a link i guess, so the InteractionManager comes closer"). The places that
+catch a plain click on a link today, each with its own check of the keys held: `appLink` (`comp/AppLink.kt`, Learn
+and the aliases), `KlangBackLink` (klangui), the Lexikon tab's `followInPlace` (`LexikonPanel`) and the Quick
+help's Lexikon links (`QuickHelpView`'s `onLexikon`). One rule for "a plain left click, no key held" in one place is
+the first step, whoever owns the manager then.
+
 ## The work
 
 1. klangui: the bottom panel takes tabs (`KlangWorkbench.Bottom` with tabs, the header's title slot drawing them; a
