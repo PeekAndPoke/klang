@@ -1270,6 +1270,12 @@ class KlangScriptProcessor(
             entries.objects.forEachIndexed { index, obj ->
                 val kdoc = KDocParser.parse(obj.cls.docString)
                 val description = kdoc.description.escapeForRawString()
+
+                // A tool belongs to a call: the object's call form (its `invoke`) carries it, the class cannot
+                if (kdoc.callTools.isNotEmpty() || kdoc.paramTools.isNotEmpty()) {
+                    logger.error("KlangScript docs: '@tool' on the class of '${obj.name}': write it on its invoke (the call form)")
+                }
+
                 val category = kdoc.category ?: "object"
                 // A callable object's call form (`perlin(from, to)`): a receiver-less callable named after the
                 // object, its second variant, the shape the editor already resolves a top-level call with.
@@ -1312,7 +1318,22 @@ class KlangScriptProcessor(
                 if (callForm != null) {
                     appendLine("            ),")
                     val item = DocItem(obj.name, null, null, callForm.fn, isRawArgs = isRawArgsMethod(callForm.fn))
-                    appendLine(generateCallableDoc(item, KDocParser.parse(callForm.fn.docString), libraryName))
+                    val callFormDoc = KDocParser.parse(callForm.fn.docString)
+                    val callFormTools = EditorTools.of(listOf(callFormDoc))
+                    val callFormParams = callForm.fn.parameters.mapNotNull { it.name?.asString() }.toSet()
+
+                    callFormTools.unknownParams(callFormParams).forEach { unknown ->
+                        logger.error("KlangScript docs: '@tool $unknown:' on '${obj.name}' names no parameter of '${obj.name}'")
+                    }
+
+                    appendLine(
+                        generateCallableDoc(
+                            item = item,
+                            kdoc = callFormDoc,
+                            libraryName = libraryName,
+                            tools = callFormTools,
+                        )
+                    )
                 } else {
                     appendLine("            )")
                 }
@@ -1333,6 +1354,8 @@ class KlangScriptProcessor(
             appendLine("private fun generated${capitalizedName}DocsProperties() = mapOf(")
             entries.properties.forEachIndexed { index, prop ->
                 val kdoc = KDocParser.parse(prop.prop.docString)
+
+                propertyToolErrors(name = prop.name, kdocs = listOf(kdoc))
                 val description = kdoc.description.escapeForRawString()
                 val category = kdoc.category ?: "uncategorized"
                 val tagsString = kdoc.tags.joinToString(", ") { "\"$it\"" }
@@ -1410,6 +1433,8 @@ class KlangScriptProcessor(
                 val tagsString = kdoc.tags.joinToString(", ") { "\"$it\"" }
                 val aliasesString = kdoc.aliases.joinToString(", ") { "\"$it\"" }
 
+                propertyToolErrors(name = propName, kdocs = variants.map { KDocParser.parse(it.prop.docString) })
+
                 appendLine()
                 appendLine("    \"$propName\" to KlangSymbol(")
                 appendLine("        name = \"$propName\",")
@@ -1467,9 +1492,11 @@ class KlangScriptProcessor(
      *
      * Also reports what the parser could not make sense of, because both mistakes are otherwise silent:
      * a `@scope` value that is not one of [KlangScope]'s tags, and any unknown `@tag` (a typo used to be
-     * folded into the previous tag's content).
+     * folded into the previous tag's content). A retired tag fails the build: its line would lose its meaning.
      */
     private fun scopeArgLine(symbolName: String, kdocs: List<ParsedKDoc>): String {
+        KDocParser.retiredTagErrors(symbolName = symbolName, kdocs = kdocs).forEach { logger.error(it) }
+
         kdocs.flatMap { it.unusableTags }.distinct().forEach { unusable ->
             logger.warn("KlangScript docs: KDoc tag '@$unusable' on '$symbolName' is unknown or has no value (ignored)")
         }
@@ -1497,6 +1524,13 @@ class KlangScriptProcessor(
         return "        scope = KlangScope.${scope.name},\n"
     }
 
+    /** A tool belongs to a call: a `@tool` on a property's KDoc would be dropped, so it fails the build. */
+    private fun propertyToolErrors(name: String, kdocs: List<ParsedKDoc>) {
+        if (kdocs.any { it.callTools.isNotEmpty() || it.paramTools.isNotEmpty() }) {
+            logger.error("KlangScript docs: '@tool' on the property '$name': a tool belongs to a function's KDoc")
+        }
+    }
+
     private fun generateDocEntry(
         name: String,
         libraryName: String,
@@ -1511,8 +1545,17 @@ class KlangScriptProcessor(
         val tagsString = allTags.joinToString(", ") { "\"$it\"" }
         val aliasesString = allAliases.joinToString(", ") { "\"$it\"" }
 
+        // A function's tools reach every variant (`"c3".gain(0.5)` as well as `note("c3").gain(0.5)`), whichever
+        // variant's KDoc names them
+        val tools = EditorTools.of(parsedKDocs)
+        val paramNames = items.flatMap { item -> item.fn.parameters.mapNotNull { it.name?.asString() } }.toSet()
+
+        tools.unknownParams(paramNames).forEach { unknown ->
+            logger.error("KlangScript docs: '@tool $unknown:' on '$name' names no parameter of '$name'")
+        }
+
         val variants = items.zip(parsedKDocs).map { (item, kdoc) ->
-            generateCallableDoc(item, kdoc, libraryName)
+            generateCallableDoc(item = item, kdoc = kdoc, libraryName = libraryName, tools = tools)
         }
 
         return buildString {
@@ -1535,7 +1578,7 @@ class KlangScriptProcessor(
         }
     }
 
-    private fun generateCallableDoc(item: DocItem, kdoc: ParsedKDoc, libraryName: String = ""): String {
+    private fun generateCallableDoc(item: DocItem, kdoc: ParsedKDoc, libraryName: String, tools: EditorTools): String {
         val fn = item.fn
         val allParams = getScriptParams(fn)
         // Raw-args methods have internal params (List<RuntimeValue>, SourceLocation?) — exclude all from docs
@@ -1566,7 +1609,7 @@ class KlangScriptProcessor(
                     val paramName = param.name?.asString() ?: continue
                     val paramType = param.type.resolve()
                     val paramDesc = (kdoc.params[paramName] ?: "").replace("\n", " ").escapeForRawString()
-                    val paramUiTools = kdoc.paramTools[paramName] ?: emptyList()
+                    val paramUiTools = tools.params[paramName].orEmpty()
 
                     append("                    KlangParam(")
                     append("name = \"$paramName\", ")
@@ -1602,6 +1645,11 @@ class KlangScriptProcessor(
             } else {
                 appendLine("                samples = emptyList(),")
             }
+
+            if (tools.call.isNotEmpty()) {
+                appendLine("                uitools = listOf(${tools.call.joinToString(", ") { "\"$it\"" }}),")
+            }
+
             appendLine("                library = \"$libraryName\"")
             append("            )")
         }

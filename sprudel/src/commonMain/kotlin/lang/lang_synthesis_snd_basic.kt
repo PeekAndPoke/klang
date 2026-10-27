@@ -378,7 +378,7 @@ private fun applySndPulze(source: SprudelPattern): SprudelPattern =
 /**
  * Sets the sound to a pulse wave oscillator with configurable duty cycle.
  *
- * @param-tool duty SprudelPulzeEditor, SprudelPulzeSequenceEditor
+ * @tool duty: SprudelPulzeEditor, SprudelPulzeSequenceEditor
  * @param duty The share of each cycle the wave is high, 0 to 1 (default 0.5, a square).
  * @return A new pattern with sound set to "pulze" and parameters applied.
  * @category tonal
@@ -431,7 +431,7 @@ private fun applySndDust(source: SprudelPattern): SprudelPattern =
  * Sets the sound to dust (random impulse) generator with configurable density.
  *
  * @param tail Impulse tail length.
- * @param-tool density SprudelDustEditor, SprudelDustSequenceEditor
+ * @tool density: SprudelDustEditor, SprudelDustSequenceEditor
  * @param density Impulse rate, 0 to 1, scaling a 200 per second ceiling.
  * @return A new pattern with sound set to "dust" and parameters applied.
  * @category tonal

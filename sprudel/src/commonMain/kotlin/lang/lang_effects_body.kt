@@ -168,7 +168,7 @@ private fun applyBodyFloor(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * @param wet How much of the orbit runs through the body, 0 to 1.
  * @param material Material name. See the list above.
  * @param floor Minimum dry share kept in the mix, 0 to 1.
- * @param-tool material SprudelBodyEditor, SprudelBodySequenceEditor
+ * @tool material: SprudelBodyEditor, SprudelBodySequenceEditor
  *
  * @scope orbit
  * @category effects

@@ -14,7 +14,7 @@ import io.peekandpoke.klang.script.types.KlangType
 
 /**
  * [KlangCallable.paramForArgument]: the parameter an argument binds to, which is what the editor
- * reads a param's `@param-tool` tools from.
+ * reads a param's `@tool` tools from.
  */
 class ParamForArgumentTest : StringSpec({
 

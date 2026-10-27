@@ -150,7 +150,7 @@ class ToolCallFollower(
 
         val head = view.state.selection.main.head
         val found = analysis.toolCallAt(pos = head, symbolLookup = docProvider)
-        val tools = found?.let { KlangUiToolRegistry.resolve(it.binding.param.uitools) }.orEmpty()
+        val tools = found?.let { KlangUiToolRegistry.resolve(it.tools) }.orEmpty()
         val callKey = found?.takeIf { tools.isNotEmpty() }?.let { "${it.functionName}@${it.parentheses.first}:${it.binding.param.name}" }
         val shown = anchor?.parentheses(source)
         val sameSite = found != null && callKey != null && found.parentheses.first == shown?.first && found.binding.param.name == lastParam

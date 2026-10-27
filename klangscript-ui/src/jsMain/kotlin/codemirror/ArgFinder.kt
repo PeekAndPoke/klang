@@ -161,14 +161,14 @@ fun serializeCallArgs(paramNames: List<String>, texts: List<String?>): String {
 
 /**
  * Finds the function-call argument at [pos] in [source] and returns tool information for it,
- * or null if the cursor is not inside a known function's argument that has `@param-tool` tools.
+ * or null if the cursor is not inside a known function's argument that has `@tool` tools.
  *
  * Algorithm:
  * 1. Scan backward from [pos] to find the nearest enclosing `(` (respecting string literals).
  * 2. Look backward from that `(` to identify the function/method name.
  * 3. Look up the name in [docProvider].
  * 4. Scan forward from `(` to find argument boundaries (respecting nesting and strings).
- * 5. Determine which argument [pos] falls in and resolve its `@param-tool` tools.
+ * 5. Determine which argument [pos] falls in and resolve its `@tool` tools.
  */
 fun findCallArgAt(
     source: String,
@@ -287,7 +287,7 @@ fun findCallArgAt(
     // No analysis here, so no receiver type: the untyped rule of the shared resolution.
     val functionArgs = argBounds.map { b -> functionLiteralRegex.containsMatchIn(source.substring(b.from, b.to).trim()) }
     val binding = symbol.bindArgument(CallReceiver.Untyped, argIndex, argName, functionArgs) ?: return null
-    val tools = KlangUiToolRegistry.resolve(binding.param.uitools)
+    val tools = KlangUiToolRegistry.resolve(binding.tools)
     if (tools.isEmpty()) return null
 
     return CallArgInfo(
@@ -330,7 +330,7 @@ fun findCallArgAtAst(
     val found = analysis.argumentAt(pos, docProvider) ?: return null
     val result = found.site
     val param = found.binding.param
-    val tools = KlangUiToolRegistry.resolve(param.uitools)
+    val tools = KlangUiToolRegistry.resolve(found.binding.tools)
     if (tools.isEmpty()) return null
 
     // Use cursor node range (the actual node under the cursor, e.g., a StringLiteral)

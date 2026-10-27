@@ -122,12 +122,43 @@ class ToolCallAtSpec : StringSpec({
         at("""note("c3").gain(0.5)""", "(0.5").shouldBeNull()
     }
 
-    "the argument at the cursor is no literal: the call's next one that is, with tools" {
-        val found = at("""note("c3").lpf(sine.range(200, 2000), 4)""", "sine").shouldNotBeNull()
+    "the argument at the cursor is no literal: the call's own tool for it, the parameter's tools need a literal" {
+        val found = at("""note("c3").lpf(sine.range(200, 2000), 4)""", "range").shouldNotBeNull()
 
         found.functionName shouldBe "lpf"
+        found.argIndex shouldBe 0
+        found.atCursor shouldBe true
+        found.editRange shouldBe null
+        found.tools shouldBe listOf("SprudelLpFilterEditor")
+    }
+
+    "between arguments: the call's first argument with tools and a literal, after the call's own tool" {
+        val found = at("""note("c3").lpf(sine.range(200, 2000),  4)""", "  4", after = 1).shouldNotBeNull()
+
         found.argIndex shouldBe 1
         found.atCursor shouldBe false
+        found.tools shouldBe listOf("SprudelLpFilterEditor", "SprudelLpResonanceEditor", "SprudelLpResonanceSequenceEditor")
+    }
+
+    "only the call's tool, no argument with one written (`adsr( decay = 0.3)`): on the first argument" {
+        // The cursor in the space before the argument: on none, so the call's own tool falls back to the first
+        val code = """note("c3").adsr( decay = 0.3)"""
+        val found = at(code, "( decay", after = 1).shouldNotBeNull()
+
+        found.atCursor shouldBe false
+        found.functionName shouldBe "adsr"
+        found.argIndex shouldBe 0
+        found.tools shouldBe listOf("SprudelAdsrEditor")
+        at(code, "0.3").shouldNotBeNull().tools shouldBe listOf("SprudelAdsrEditor")
+    }
+
+    "an empty call: the call's tool and its first parameter's" {
+        at("""note("c3").lpf()""", "()", after = 1).shouldNotBeNull().tools shouldBe
+            listOf("SprudelLpFilterEditor", "SprudelLpFilterSequenceEditor")
+    }
+
+    "a String variant gets the function's tools too, whichever variant's KDoc names them" {
+        at(""""c3".gain(0.5)""", "0.5").shouldNotBeNull().tools shouldBe listOf("SprudelGainEditor", "SprudelGainSequenceEditor")
     }
 
     "a call with no tools anywhere: nothing" {

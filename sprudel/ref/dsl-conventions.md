@@ -99,7 +99,8 @@ See `tag()` in `lang_structural_tag.kt` for a full four-form example, including 
   the children read. String slots (`shape`) get no child. `SprudelPattern.X`, `String.X`,
   `PatternMapperFn.X` and `X.invoke` carry the same parameter list in the same order; the
   tail-only guard on the first slot keeps `seq("3 4").reverb(size = 4)` from reinterpreting the
-  head. `@param-tool` lines sit on the compound's setter, one per slot that has an editor. A
+  head. `@tool <slot>: ...` lines sit on the compound's setter, one per slot that has an editor (and `@tool A` for
+  a tool that edits the whole call). A
   compound whose slots are all names (`adsrCurves`) carries the setter only, no children
   (maintainer, 2026-09-07).
 - A setter whose lift call carries an inline update lambda (`_liftOrReinterpretNumericalField(args)
@@ -153,7 +154,8 @@ guards are `LangControlRestSpec` (one row per setter and slot) and `LangFieldAcc
 
 - Examples: fenced ` ```KlangScript ``` ` blocks (or ` ```KlangScript(Playable) ``` `) — **NOT** `@sample` tags
 - Required tags: `@param`, `@return`, `@category` (one word), `@tags` (comma-separated)
-- `@param-tool <ParamName> <ToolName>` wires a param to a `KlangUiTool` (see `ref/uitools.md`)
+- `@tool <ParamName>: <ToolName>, ...` wires a param to its `KlangUiTool`s, `@tool <ToolName>` the whole call (see
+  `ref/uitools.md`)
 - `@alias` required when aliases exist — every alias must list all the others
 - Max line length: 120 chars
 - Single-line `/** ... */` only when entire comment fits within 120 chars

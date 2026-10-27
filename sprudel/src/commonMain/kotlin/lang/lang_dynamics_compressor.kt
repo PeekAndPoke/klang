@@ -177,7 +177,8 @@ private fun applyCompressorRelease(source: SprudelPattern, args: List<SprudelDsl
  * @param knee Knee width in dB. 0 is hard, 6 and above soft.
  * @param attack Attack in seconds.
  * @param release Release in seconds.
- * @param-tool threshold SprudelCompressorEditor, SprudelCompressorSequenceEditor
+ * @tool SprudelCompressorEditor
+ * @tool threshold: SprudelCompressorEditor, SprudelCompressorSequenceEditor
  *
  * @scope orbit
  * @category dynamics
@@ -264,7 +265,8 @@ object compressor {
  * @scope orbit
  * @category dynamics
  * @tags comp, compressor
- * @param-tool threshold SprudelCompressorEditor, SprudelCompressorSequenceEditor
+ * @tool SprudelCompressorEditor
+ * @tool threshold: SprudelCompressorEditor, SprudelCompressorSequenceEditor
  */
 @KlangScript.Function
 fun SprudelPattern.comp(threshold: PatternLike? = null, ratio: PatternLike? = null, knee: PatternLike? = null, attack: PatternLike? = null, release: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =

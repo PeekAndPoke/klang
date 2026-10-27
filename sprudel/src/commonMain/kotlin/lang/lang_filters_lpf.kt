@@ -137,9 +137,10 @@ private fun applyLpfRelease(source: SprudelPattern, args: List<SprudelDslArg<Any
  * @param decay Envelope decay in seconds.
  * @param sustain Envelope sustain, 0 to 1.
  * @param release Envelope release in seconds.
- * @param-tool freq SprudelLpFilterEditor, SprudelLpFilterSequenceEditor
- * @param-tool q SprudelLpResonanceEditor, SprudelLpResonanceSequenceEditor
- * @param-tool env SprudelLpEnvEditor, SprudelLpEnvSequenceEditor
+ * @tool SprudelLpFilterEditor
+ * @tool freq: SprudelLpFilterEditor, SprudelLpFilterSequenceEditor
+ * @tool q: SprudelLpResonanceEditor, SprudelLpResonanceSequenceEditor
+ * @tool env: SprudelLpEnvEditor, SprudelLpEnvSequenceEditor
  *
  * @scope voice
  * @category effects

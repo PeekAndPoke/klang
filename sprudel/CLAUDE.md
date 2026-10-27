@@ -29,7 +29,7 @@ Patterns generate musical events scheduled over cyclic time (1 cycle ≈ 1 measu
 | Control patterns (`_innerJoin`), `fmap`/`squeezeJoin`, when stuck    | `ref/control-patterns.md` |
 | Adding/documenting DSL functions, setter semantics, KDoc format, KSP | `ref/dsl-conventions.md`  |
 | Running tests, 12-cycle rule, isOnset, JS compat                     | `ref/testing.md`          |
-| Building or modifying UI editor tools, registry, @param-tool         | `ref/uitools.md`          |
+| Building or modifying UI editor tools, registry, @tool               | `ref/uitools.md`          |
 | History of a decision (the full dated record, not read by default)   | `ref/memory-history.md`   |
 
 ## Rules

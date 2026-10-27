@@ -56,7 +56,7 @@ private fun applyGain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * ```
  *
  * @param amount Level multiplier, 1 leaves the event as it is.
- * @param-tool amount SprudelGainEditor, SprudelGainSequenceEditor
+ * @tool amount: SprudelGainEditor, SprudelGainSequenceEditor
  *
  * @scope voice
  * @category dynamics
@@ -283,7 +283,7 @@ private fun applyPan(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): S
  * ```
  *
  * @param amount Pan position, 0 left to 1 right.
- * @param-tool amount SprudelPanEditor, SprudelPanSequenceEditor
+ * @tool amount: SprudelPanEditor, SprudelPanSequenceEditor
  *
  * @scope voice
  * @category dynamics

@@ -65,19 +65,34 @@ object KlangUiToolRegistry {
 
 Registration happens at app startup in `SprudelUiTools.kt`, called from `index.kt`.
 
-## @param-tool KDoc Tag
+## @tool KDoc Tag
+
+Two forms (the maintainer, 2026-10-27, KLANG-00374):
 
 ```kotlin
 /**
- * @param name The scale name.
- * @param-tool name SprudelScaleEditor
+ * @param freq Cutoff in Hz.
+ * @tool SprudelLpFilterEditor
+ * @tool freq: SprudelLpFilterEditor, SprudelLpFilterSequenceEditor
+ * @tool q: SprudelLpResonanceEditor, SprudelLpResonanceSequenceEditor
  */
-fun SprudelPattern.scale(name: PatternLike? = null): SprudelPattern
+fun SprudelPattern.lpf(freq: PatternLike? = null, q: PatternLike? = null, ...): SprudelPattern
 ```
 
-- Parsed by KSP processor in `sprudel-ksp/src/main/kotlin/KDocParser.kt`.
-- Stored in `KlangParam.uitools: List<String>`.
-- Multiple tools per param: `@param-tool name ToolA, ToolB`.
+- `@tool A, B` names the tools for the whole call: a tool that reads and writes every argument (`ctx.call`), such as
+  the filter, ADSR, compressor, delay, reverb, distort, phaser, tremolo and the pluck and saw editors. Stored in
+  `KlangCallable.uitools`.
+- `@tool <param>: A, B` names a parameter's tools: a value tool and its sequence tool. Stored in `KlangParam.uitools`.
+- A whole-call tool is named on its anchor parameter as well (`@tool depth: SprudelTremoloEditor, ...`): there it
+  serves, in scalar mode, a call whose variant is ambiguous and so gets no whole-call tool (`ctx.call` is null).
+- A `@tool <param>:` naming no parameter of the function, or a `@tool` on an object's class KDoc (it goes on the
+  `invoke`), fails the build.
+- The editor shows the call's tools first, then the tools of the parameter at the cursor (those only when the
+  argument holds a literal, or the call is empty): `ArgumentBinding.tools`, `ToolCallAt.tools`. A call whose variant
+  is ambiguous (`x => x.tremolo(5, 0.3)`, an untyped receiver) gets no whole-call tool.
+- Parsed by the KSP processor in `klangscript-ksp/src/main/kotlin/KDocParser.kt`. A function's tools reach every
+  variant (`String.gain`, `PatternMapperFn.gain`), whichever variant's KDoc names them.
+- The old `@param-tool <param> A, B` is retired (2026-10-27): it fails the build with a message saying what to write.
 
 ## Trigger Flow
 
@@ -129,9 +144,9 @@ All tool source files are in `sprudel/src/jsMain/kotlin/ui/`.
    registry.register("SprudelMyEditor", SprudelMyEditorTool)
    registry.register("SprudelMySequenceEditor", SprudelMiniNotationEditorTool(atomTool = SprudelMyEditorTool))
    ```
-3. Add `@param-tool` annotation to the DSL function KDoc:
+3. Add a `@tool` line to the DSL function KDoc:
    ```kotlin
-   /** @param-tool amount SprudelMySequenceEditor */
+   /** @tool amount: SprudelMyEditor, SprudelMySequenceEditor */
    ```
 4. The KSP processor picks it up automatically on next build.
 

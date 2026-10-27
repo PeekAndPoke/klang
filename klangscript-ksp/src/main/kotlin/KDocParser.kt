@@ -42,8 +42,15 @@ data class ParsedKDoc(
     val tags: List<String>,
     /** @alias tag (custom, comma-separated alternative function names) */
     val aliases: List<String>,
-    /** @param-tool tags: parameter name -> list of UI tool names */
+    /** `@tool <param>: A, B` tags: parameter name -> its editor tools */
     val paramTools: Map<String, List<String>>,
+    /** `@tool A, B` tags: the editor tools for the whole call */
+    val callTools: List<String> = emptyList(),
+    /**
+     * Retired tags this KDoc still uses (`@param-tool`, KLANG-00374): the processor fails the build on each, so an old
+     * line never silently loses its tools.
+     */
+    val retiredTags: List<String> = emptyList(),
     /** @scope tag (custom): where the thing runs, see KlangSymbol.scope */
     val scope: String?,
     /**
@@ -58,16 +65,45 @@ data class ParsedKDoc(
 )
 
 /**
+ * The editor tools of one function, from the KDocs of all its variants (KLANG-00374): the whole call's (`@tool A`) and
+ * each parameter's (`@tool amount: A, B`), each in the order first named, without repeats. A function's tools reach
+ * every variant, whichever variant's KDoc names them.
+ */
+data class EditorTools(
+    val call: List<String>,
+    val params: Map<String, List<String>>,
+) {
+    /** The parameters named by `@tool <param>:` that the function does not have (a typo would lose its tools). */
+    fun unknownParams(paramNames: Set<String>): List<String> = params.keys.filter { it !in paramNames }
+
+    companion object {
+        fun of(kdocs: List<ParsedKDoc>): EditorTools = EditorTools(
+            call = kdocs.flatMap { it.callTools }.distinct(),
+            params = kdocs.flatMap { it.paramTools.entries }
+                .groupBy(keySelector = { it.key }, valueTransform = { it.value })
+                .mapValues { (_, lists) -> lists.flatten().distinct() },
+        )
+    }
+}
+
+/**
  * Parses KDoc string into structured information.
  *
  * Supports standard tags (@param, @return) plus custom tags
- * (@category, @tags, @alias, @scope, @param-tool) and
+ * (@category, @tags, @alias, @scope, @tool) and
  * KlangScript fenced code blocks as samples.
  *
  * A tag this parser cannot use is collected into [ParsedKDoc.unusableTags] instead of being
  * appended to whatever tag came before it.
  */
 object KDocParser {
+
+    /** The build errors for the retired tags in a symbol's KDocs, one per tag: what to write instead. */
+    fun retiredTagErrors(symbolName: String, kdocs: List<ParsedKDoc>): List<String> =
+        kdocs.flatMap { it.retiredTags }.distinct().map { retired ->
+            "KlangScript docs: KDoc tag '@$retired' on '$symbolName' is retired (KLANG-00374):" +
+                    " write '@tool <param>: <Tool>, ...' for a parameter's tools, '@tool <Tool>' for the whole call's"
+        }
 
     fun parse(kdoc: String?): ParsedKDoc {
         if (kdoc == null) {
@@ -155,6 +191,8 @@ object KDocParser {
         val tags = mutableListOf<String>()
         val aliases = mutableListOf<String>()
         val paramTools = mutableMapOf<String, MutableList<String>>()
+        val callTools = mutableListOf<String>()
+        val retiredTags = mutableListOf<String>()
 
         var currentTag: String? = null
         var currentContent = StringBuilder()
@@ -194,11 +232,24 @@ object KDocParser {
                     }
                 }
 
-                tag.startsWith("param-tool:") -> {
-                    val paramName = tag.removePrefix("param-tool:")
+                tag == "tool" -> {
                     content.split(",").forEach { t ->
                         val trimmed = t.trim()
-                        if (trimmed.isNotEmpty()) paramTools.getOrPut(paramName) { mutableListOf() }.add(trimmed)
+
+                        if (trimmed.isNotEmpty()) {
+                            callTools.add(trimmed)
+                        }
+                    }
+                }
+
+                tag.startsWith("tool:") -> {
+                    val paramName = tag.removePrefix("tool:")
+                    content.split(",").forEach { t ->
+                        val trimmed = t.trim()
+
+                        if (trimmed.isNotEmpty()) {
+                            paramTools.getOrPut(paramName) { mutableListOf() }.add(trimmed)
+                        }
                     }
                 }
             }
@@ -206,21 +257,34 @@ object KDocParser {
 
         // A tag matches only when the name ENDS there: `@return` must not swallow `@returns`, and
         // `@param` must not swallow `@parameter`. Without this, a typo is parsed as its nearest known
-        // tag and its content silently lands in that tag (review round 1); `@param-tool` still needs
-        // to be tested before `@param`, since `-` is not a boundary character.
+        // tag and its content silently lands in that tag (review round 1).
         fun String.isTag(name: String): Boolean =
             this == "@$name" || startsWith("@$name ") || startsWith("@$name\t")
 
         for (line in tagLines) {
             val t = line.trim()
             when {
+                // `@tool amount: A, B` names a parameter's tools, `@tool A` the whole call's
+                t.isTag("tool") -> {
+                    saveCurrentTag()
+                    val rest = t.removePrefix("@tool").trim()
+                    val forParam = Regex("(\\w+)\\s*:\\s*(.*)").matchEntire(rest)
+
+                    if (forParam != null) {
+                        currentTag = "tool:${forParam.groupValues[1]}"
+                        currentContent = StringBuilder(forParam.groupValues[2])
+                    } else {
+                        currentTag = "tool"
+                        currentContent = StringBuilder(rest)
+                    }
+                }
+
+                // Retired 2026-10-27 (KLANG-00374) for `@tool <param>: ...`: never read, always reported
                 t.isTag("param-tool") -> {
                     saveCurrentTag()
-                    val match = Regex("@param-tool\\s+(\\w+)\\s*(.*)").matchEntire(t)
-                    if (match != null) {
-                        currentTag = "param-tool:${match.groupValues[1]}"
-                        currentContent = StringBuilder(match.groupValues[2])
-                    }
+                    currentTag = null
+                    currentContent = StringBuilder()
+                    retiredTags.add("param-tool")
                 }
 
                 t.isTag("param") -> {
@@ -290,6 +354,8 @@ object KDocParser {
             tags = tags,
             aliases = aliases,
             paramTools = paramTools,
+            callTools = callTools,
+            retiredTags = retiredTags,
             scope = scope,
             unusableTags = unusableTags,
         )

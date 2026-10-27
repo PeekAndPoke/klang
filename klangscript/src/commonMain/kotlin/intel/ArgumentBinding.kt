@@ -32,7 +32,14 @@ data class ArgumentBinding(
     val callable: KlangCallable,
     val param: KlangParam,
     val wholeCall: Boolean = true,
-)
+) {
+    /**
+     * The editor tools for this argument (KLANG-00374): the call's own first ([KlangCallable.uitools]), only when the
+     * whole call may be rewritten ([wholeCall]), then the parameter's ([KlangParam.uitools]); each once.
+     */
+    val tools: List<String>
+        get() = ((if (wholeCall) callable.uitools else emptyList()) + param.uitools).distinct()
+}
 
 /** What is known about the receiver of a call, for [bindArgument]. */
 sealed interface CallReceiver {
@@ -47,13 +54,13 @@ sealed interface CallReceiver {
 }
 
 /**
- * The one resolution of "which parameter does this argument bind to", as the editor's param tools
- * (`@param-tool`) need it. Both the editor's AST path ([argumentAt]) and its text-scanner fallback
+ * The one resolution of "which parameter does this argument bind to", as the editor's tools
+ * (`@tool`) need it. Both the editor's AST path ([argumentAt]) and its text-scanner fallback
  * call this.
  *
  * The variant: on a [CallReceiver.Typed] receiver the receiver-matched one (null when none
  * matches, never a guess); on an [CallReceiver.Untyped] one [KlangSymbol.callableForArgument],
- * which prefers the variant whose parameter declares tools (a call form is never a member, so never
+ * which prefers the variant with tools for the argument (a call form is never a member, so never
  * a candidate there); on a [CallReceiver.TopLevel] call the top-level variant, else the same untyped
  * rule. A callable object's call form binds to its own parameters, except where a method has the very
  * same parameter list and declares tools for the argument: a field accessor's or compound's call form
@@ -107,7 +114,7 @@ private fun KlangSymbol.toolTwinOf(
     return variants.filterIsInstance<KlangCallable>().firstOrNull { other ->
         other != callForm &&
                 other.params.map { it.name } == names &&
-                other.paramForArgument(argIndex, argName, functionArgs)?.uitools?.isNotEmpty() == true
+                other.hasToolsFor(other.paramForArgument(argIndex, argName, functionArgs))
     }
 }
 
@@ -183,16 +190,19 @@ private fun AnalyzedAst.calledSymbol(
 }
 
 /**
- * A call around a source position whose arguments have tools, for the editor's Sprudel tool (KLANG-00374): the
- * argument its tools edit and what that binds to.
+ * A call around a source position with tools, for the editor's Sprudel tool (KLANG-00374): the argument its tools
+ * edit, what that binds to, and the tools.
  *
  * @param argIndex The argument the tools edit; -1 when the call has no argument yet and the tools would write its
  *   first one.
  * @param argName That argument's name when it is written `name = value`.
  * @param atCursor Whether the cursor is on that argument.
  * @param editRange The literal the tools read and write, as source offsets: the argument's value, or the literal its
- *   value starts with (`"c e"` in `"c e".fast(2)`); null for a call without arguments.
+ *   value starts with (`"c e"` in `"c e".fast(2)`); null for a call without arguments, or an argument without a
+ *   literal that only the call's tools edit.
  * @param parentheses The call's opening parenthesis and its closing one, as source offsets.
+ * @param tools The tools to show, by their registered names: the call's own first, then the parameter's (those only
+ *   with a literal to edit, or in an empty call); never empty.
  */
 data class ToolCallAt(
     val call: CallExpression,
@@ -204,17 +214,20 @@ data class ToolCallAt(
     val atCursor: Boolean,
     val editRange: IntRange?,
     val parentheses: IntRange,
+    val tools: List<String>,
 )
 
 /**
- * The innermost call whose parentheses hold [pos] and whose arguments have tools (the maintainer, 2026-10-27:
- * "Whenever the cursor is inside the parenteses if a function that supports tools we should so the tool"), or null.
- * Inside the parentheses: from just after the opening one up to the closing one, so between arguments and in an empty
- * call too; on the called name or after `)` is outside. The argument, among those with tools and a literal a tool can
- * edit (a string or a number, as the value or at the head of its chain): the one at the cursor; else the call's first;
- * else, for a call without arguments, its first parameter. A literal inside a nested call (`4` in
- * `gain(sine.slow(4))`) is never taken for the outer call's parameter. A call with nothing to edit gives way to the
- * call around it.
+ * The innermost call whose parentheses hold [pos] and that has tools (the maintainer, 2026-10-27: "Whenever the
+ * cursor is inside the parenteses if a function that supports tools we should so the tool"), or null. Inside the
+ * parentheses: from just after the opening one up to the closing one, so between arguments and in an empty call too;
+ * on the called name or after `)` is outside.
+ *
+ * The argument: the one at the cursor when it has tools there (the call's own, or its parameter's with a literal a
+ * tool can edit: a string or a number, as the value or at the head of its chain); else the call's first argument
+ * whose parameter has tools and a literal; else, for a call with tools of its own, its first argument; else, for a
+ * call without arguments, its first parameter. A literal inside a nested call (`4` in `gain(sine.slow(4))`) is never
+ * taken for the outer call's parameter. A call with nothing to show gives way to the call around it.
  */
 fun AnalyzedAst.toolCallAt(
     pos: Int,
@@ -270,7 +283,14 @@ private fun AnalyzedAst.toolsOfCall(
     fun bind(index: Int): ArgumentBinding? {
         val name = (call.arguments.getOrNull(index) as? Argument.Named)?.name
 
-        return symbol.bindArgument(receiver, index, name, functionArgs)?.takeIf { it.param.uitools.isNotEmpty() }
+        return symbol.bindArgument(receiver, index, name, functionArgs)
+    }
+
+    // The call's tools always; the parameter's only with a literal to edit, or in an empty call, where they write it
+    fun toolsOf(binding: ArgumentBinding, editRange: IntRange?): List<String> = when {
+        editRange != null || call.arguments.isEmpty() -> binding.tools
+        binding.wholeCall -> binding.callable.uitools
+        else -> emptyList()
     }
 
     fun found(index: Int, binding: ArgumentBinding, atCursor: Boolean, editRange: IntRange?) = ToolCallAt(
@@ -283,12 +303,12 @@ private fun AnalyzedAst.toolsOfCall(
         atCursor = atCursor,
         editRange = editRange,
         parentheses = parens,
+        tools = toolsOf(binding = binding, editRange = editRange),
     )
 
-    // The argument at the cursor: on its value, or just after it
-    val atIndex = call.arguments.indexOfFirst { argument ->
-        astIndex.offsetOf(argument.value)?.let { range -> pos in range.first..range.last + 1 } == true
-    }
+    // The argument at the cursor: on its text, or just after it. Read from the text: the analysis guesses where a
+    // member call ends (`sine.range(200, 2000)`), and may leave its start uncovered
+    val atIndex = CallText.arguments(source = source, parentheses = parens).indexOfFirst { pos in it.from..it.to }
 
     // The literal as the text has it, the way the follower finds it again at each commit
     fun literal(index: Int, binding: ArgumentBinding): IntRange? =
@@ -298,20 +318,25 @@ private fun AnalyzedAst.toolsOfCall(
         val binding = bind(atIndex)
         val literal = binding?.let { literal(index = atIndex, binding = it) }
 
-        if (binding != null && literal != null) {
+        if (binding != null && toolsOf(binding = binding, editRange = literal).isNotEmpty()) {
             return found(index = atIndex, binding = binding, atCursor = true, editRange = literal)
         }
     }
 
     for (index in call.arguments.indices) {
-        val binding = bind(index) ?: continue
+        val binding = bind(index)?.takeIf { it.param.uitools.isNotEmpty() } ?: continue
         val literal = literal(index = index, binding = binding) ?: continue
 
         return found(index = index, binding = binding, atCursor = false, editRange = literal)
     }
 
+    // Only the call's tools: on its first argument, whatever that holds (`adsr(decay = 0.3)`)
+    bind(0)?.takeIf { it.wholeCall && it.callable.uitools.isNotEmpty() && call.arguments.isNotEmpty() }?.let { binding ->
+        return found(index = 0, binding = binding, atCursor = false, editRange = literal(index = 0, binding = binding))
+    }
+
     if (call.arguments.isEmpty()) {
-        bind(0)?.let { return found(index = -1, binding = it, atCursor = false, editRange = null) }
+        bind(0)?.takeIf { it.tools.isNotEmpty() }?.let { return found(index = -1, binding = it, atCursor = false, editRange = null) }
     }
 
     return null

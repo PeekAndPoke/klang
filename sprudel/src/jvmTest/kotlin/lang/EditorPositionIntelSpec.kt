@@ -109,8 +109,7 @@ class EditorPositionIntelSpec : StringSpec({
                 val found = analyze(viaAlias).argumentAt(viaAlias.indexOf("0.5")).shouldNotBeNull()
 
                 found.symbol.name shouldBe objectName
-                found.binding.param.uitools shouldNotBe emptyList<String>()
-                found.binding.param.uitools shouldBe tools
+                found.binding.tools shouldBe tools
             }
         }
     }

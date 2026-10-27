@@ -148,7 +148,8 @@ private fun applyPhaserWet(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * @param center Centre frequency of the sweep, Hz.
  * @param sweep Sweep range around the centre, Hz.
  * @param floor Minimum dry share kept in the mix, 0 to 1.
- * @param-tool rate SprudelPhaserEditor, SprudelPhaserSequenceEditor
+ * @tool SprudelPhaserEditor
+ * @tool rate: SprudelPhaserEditor, SprudelPhaserSequenceEditor
  *
  * @scope orbit
  * @category effects
@@ -356,8 +357,9 @@ private fun applyTremoloRate(source: SprudelPattern, args: List<SprudelDslArg<An
  * @param depth Depth, 0 to 1. The stage is built only above 0.
  * @param rate LFO rate in Hz. [beatRate] follows the tempo.
  * @param shape LFO waveform: `sine`, `triangle`, `square`, `sawtooth`, `ramp`.
- * @param-tool depth SprudelTremoloEditor, SprudelTremoloSequenceEditor
- * @param-tool shape SprudelWaveformEditor, SprudelWaveformSequenceEditor
+ * @tool SprudelTremoloEditor
+ * @tool depth: SprudelTremoloEditor, SprudelTremoloSequenceEditor
+ * @tool shape: SprudelWaveformEditor, SprudelWaveformSequenceEditor
  *
  * @scope voice
  * @category effects

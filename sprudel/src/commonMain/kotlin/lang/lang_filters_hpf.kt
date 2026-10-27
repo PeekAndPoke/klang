@@ -133,9 +133,10 @@ private fun applyHpfRelease(source: SprudelPattern, args: List<SprudelDslArg<Any
  * @param decay Envelope decay in seconds.
  * @param sustain Envelope sustain, 0 to 1.
  * @param release Envelope release in seconds.
- * @param-tool freq SprudelHpFilterEditor, SprudelHpFilterSequenceEditor
- * @param-tool q SprudelHpResonanceEditor, SprudelHpResonanceSequenceEditor
- * @param-tool env SprudelHpEnvEditor, SprudelHpEnvSequenceEditor
+ * @tool SprudelHpFilterEditor
+ * @tool freq: SprudelHpFilterEditor, SprudelHpFilterSequenceEditor
+ * @tool q: SprudelHpResonanceEditor, SprudelHpResonanceSequenceEditor
+ * @tool env: SprudelHpEnvEditor, SprudelHpEnvSequenceEditor
  *
  * @scope voice
  * @category effects

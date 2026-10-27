@@ -88,10 +88,11 @@ data class KlangSymbol(
      * editor's param tools see it (`x => x.body(material = "oak")`: nothing types `x`).
      *
      * One rule, in variant order (library registration order, then each library's declaration
-     * order): the first variant whose parameter for this argument ([KlangCallable.paramForArgument])
-     * declares ui tools wins; with none, the first callable variant. Several libraries share a door
-     * name (the Katalyst `body` and sprudel's `body`), and only the pattern language declares tools,
-     * so taking the first variant blindly found the tool-less one.
+     * order): the first variant with editor tools for this argument ([KlangCallable.hasToolsFor]: the
+     * call's own, or those of the parameter [KlangCallable.paramForArgument] gives) wins; with none,
+     * the first callable variant. Several libraries share a door name (the Katalyst `body` and
+     * sprudel's `body`), and only the pattern language declares tools, so taking the first variant
+     * blindly found the tool-less one.
      *
      * Known asymmetry: an untyped receiver is assumed to be a pattern, since the tools live there.
      * On an untyped Ignitor or Katalyst call this may pick a variant the call does not belong to;
@@ -102,7 +103,7 @@ data class KlangSymbol(
         val ownCallForm = callForm
         val callables = variants.filterIsInstance<KlangCallable>().filter { it != ownCallForm }
 
-        return callables.firstOrNull { it.paramForArgument(argIndex, argName, functionArgs)?.uitools?.isNotEmpty() == true }
+        return callables.firstOrNull { it.hasToolsFor(it.paramForArgument(argIndex, argName, functionArgs)) }
             ?: callables.firstOrNull()
     }
 

@@ -14,6 +14,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.script.generated.generatedSprudelDocs
 import io.peekandpoke.klang.script.types.KlangCallable
+import io.peekandpoke.klang.script.types.KlangParam
 import io.peekandpoke.klang.sprudel.ui.registerSprudelUiTools
 import io.peekandpoke.klang.ui.KlangUiToolRegistry
 import io.peekandpoke.klang.ui.badgeTool
@@ -29,12 +30,15 @@ class ParamToolBadgeSpec : StringSpec({
 
     registerSprudelUiTools()
 
+    /** An argument's tools as the editor lists them: the call's own (`@tool A`), then the parameter's. */
+    fun KlangCallable.toolsFor(param: KlangParam): List<String> = (uitools + param.uitools).distinct()
+
     fun toolsOf(symbol: String, param: String) =
         generatedSprudelDocs[symbol].shouldNotBeNull()
             .variants.filterIsInstance<KlangCallable>()
-            .flatMap { it.params }
-            .first { it.name == param && it.uitools.isNotEmpty() }
-            .let { KlangUiToolRegistry.resolve(it.uitools) }
+            .flatMap { callable -> callable.params.map { callable.toolsFor(it) to it } }
+            .first { (tools, p) -> p.name == param && tools.isNotEmpty() }
+            .let { (tools, _) -> KlangUiToolRegistry.resolve(tools) }
 
     "reverb wet: the param has two tools with one icon, the badge shows one of them" {
         val tools = toolsOf("reverb", "wet")
@@ -66,16 +70,15 @@ class ParamToolBadgeSpec : StringSpec({
     "every tooled sprudel param: a number gets a value tool, a string gets a sequence tool when there is one" {
         val params = generatedSprudelDocs.values
             .flatMap { it.variants.filterIsInstance<KlangCallable>() }
-            .flatMap { it.params }
-            .filter { it.uitools.isNotEmpty() }
+            .flatMap { callable -> callable.params.filter { it.uitools.isNotEmpty() }.map { callable.toolsFor(it) to it } }
 
         params.size shouldBeGreaterThan 40
 
-        params.forEach { param ->
-            val tools = KlangUiToolRegistry.resolve(param.uitools)
+        params.forEach { (names, param) ->
+            val tools = KlangUiToolRegistry.resolve(names)
 
-            withClue("${param.name} ${param.uitools}") {
-                tools shouldHaveSize param.uitools.size
+            withClue("${param.name} $names") {
+                tools shouldHaveSize names.size
                 tools.badgeTool("1").shouldNotBeNull().second.editsSequence shouldBe false
 
                 if (tools.any { it.second.editsSequence }) {

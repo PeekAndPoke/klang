@@ -51,7 +51,7 @@ private fun applyScale(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * When called with no argument, reinterprets the current event value as a scale name.
  *
  * @param name The scale name in `"root:mode"` or `"root mode"` format, e.g. `"c4:major"`.
- * @param-tool name SprudelScaleEditor
+ * @tool name: SprudelScaleEditor
  * @return A pattern with the scale context applied to each event.
  *
  * ```KlangScript(Playable)

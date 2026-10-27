@@ -24,7 +24,7 @@ The named-argument bug itself is fixed (2026-09-26, `ffa490e4`: a named argument
 KLANG-00231 (editor tools named arguments)). Still open on the tools:
 
 - **The filter whole-envelope editors are bound to no door.** `SprudelLpAdsrEditor`, `SprudelHpAdsrEditor`,
-  `SprudelBpAdsrEditor`, `SprudelNfAdsrEditor` (and their sequence twins) are registered but no `@param-tool`
+  `SprudelBpAdsrEditor`, `SprudelNfAdsrEditor` (and their sequence twins) are registered but no `@tool`
   names them: they still read and write argument slots 0 to 3 of their call
   (`SprudelFilterAdsrEditorTool.kt`), the shape of the retired `lpadsr(a, d, s, r)`, while the stages are the
   `attack .. release` slots of `lpf`/`hpf` (4..7) and `bpf`/`notch` (3..6). `SprudelNotchQEditor` and
@@ -104,7 +104,8 @@ multi-field editors with SVG visualizations. The compressor editor includes pres
 ## Tool Registry
 
 All tools are registered in `sprudel/src/jsMain/kotlin/ui/SprudelUiTools.kt`.
-`@param-tool` KDoc annotations wire DSL function parameters to their editor tools.
+`@tool` KDoc annotations (until 2026-10-27 `@param-tool`, KLANG-00374) wire DSL functions and their parameters to
+their editor tools.
 
 ## Dynamics
 

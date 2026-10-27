@@ -58,8 +58,9 @@ private fun applyDistort(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * @param amount Drive, 0 is clean, 1 is heavy. Higher is allowed.
  * @param shape Transfer curve by name, for example `tube`.
  * @param oversample Oversampling factor: 1, 2, 4 or 8.
- * @param-tool amount SprudelDistortEditor, SprudelDistortSequenceEditor
- * @param-tool shape SprudelDistortShapeEditor, SprudelDistortShapeSequenceEditor
+ * @tool SprudelDistortEditor
+ * @tool amount: SprudelDistortEditor, SprudelDistortSequenceEditor
+ * @tool shape: SprudelDistortShapeEditor, SprudelDistortShapeSequenceEditor
  *
  * @scope voice
  * @category effects

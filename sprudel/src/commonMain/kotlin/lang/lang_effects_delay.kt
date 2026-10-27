@@ -105,9 +105,10 @@ private fun applyDelay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * @param time Delay time in seconds, default 0.25. Orbit-wide.
  * @param feedback Feedback, 0 to 1, default 0.3. Above 1 builds up. Orbit-wide.
  * @param cap Ceiling the repeats may not exceed, default 1. Orbit-wide.
- * @param-tool wet SprudelDelayEditor, SprudelDelaySequenceEditor
- * @param-tool time SprudelDelayTimeEditor, SprudelDelayTimeSequenceEditor
- * @param-tool feedback SprudelDelayFeedbackEditor, SprudelDelayFeedbackSequenceEditor
+ * @tool SprudelDelayEditor
+ * @tool wet: SprudelDelayEditor, SprudelDelaySequenceEditor
+ * @tool time: SprudelDelayTimeEditor, SprudelDelayTimeSequenceEditor
+ * @tool feedback: SprudelDelayFeedbackEditor, SprudelDelayFeedbackSequenceEditor
  *
  * @scope orbit
  * @category effects

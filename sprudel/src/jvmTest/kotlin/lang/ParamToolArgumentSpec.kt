@@ -7,7 +7,6 @@ package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -22,7 +21,7 @@ import io.peekandpoke.klang.script.intel.argumentAt
 import io.peekandpoke.klang.script.types.KlangParam
 
 /**
- * Which parameter, and so which `@param-tool` tools, the editor finds under the cursor, against the
+ * Which parameter, and so which `@tool` tools, the editor finds under the cursor, against the
  * real generated registries. [argumentAt] is the resolution `findCallArgAtAst` in klangscript-ui
  * calls; the text-scanner fallback calls the same `bindArgument` under it.
  *
@@ -91,9 +90,10 @@ class ParamToolArgumentSpec : StringSpec({
     "phaser: a named rate finds the phaser tool at position 0" {
         val code = """note("c3").phaser(rate = 2, wet = 0.5)"""
 
-        val rate = paramAt(code, "2,").shouldNotBeNull()
-        rate.name shouldBe "rate"
-        rate.uitools shouldBe listOf("SprudelPhaserEditor", "SprudelPhaserSequenceEditor")
+        val rate = bindingAt(code, "2,").shouldNotBeNull()
+        rate.param.name shouldBe "rate"
+        // The phaser's own tool for the whole call, then the rate's
+        rate.tools shouldBe listOf("SprudelPhaserEditor", "SprudelPhaserSequenceEditor")
     }
 
     "lpf: a named q alone finds the resonance tool, not the cutoff tool" {
@@ -134,6 +134,23 @@ class ParamToolArgumentSpec : StringSpec({
 
         depth.param.name shouldBe "depth"
         depth.wholeCall shouldBe false
+        // The call's own tool rewrites the whole call: on the anchor parameter it stays, as a scalar tool
+        depth.tools shouldBe listOf("SprudelTremoloEditor", "SprudelTremoloSequenceEditor")
+        bindingAt("""let wob = o => o.tremolo(5, 0.3)""", "0.3", typed = false).shouldNotBeNull().tools shouldBe emptyList()
+    }
+
+    "a call form's twin with only the call's tool for the argument: the twin, and its tool" {
+        val rate = bindingAt("""note("c3").superimpose(tremolo(5, 0.3))""", "0.3").shouldNotBeNull()
+
+        rate.param.name shouldBe "rate"
+        rate.tools shouldBe listOf("SprudelTremoloEditor")
+    }
+
+    "untyped: the variant with the call's tool wins, though the parameter has none" {
+        val decay = bindingAt("""let f = x => x.adsr(0.1, 0.2)""", "0.2", typed = false).shouldNotBeNull()
+
+        decay.param.name shouldBe "decay"
+        decay.tools shouldBe listOf("SprudelAdsrEditor")
     }
 
     "untyped receiver: variants that agree by name keep the whole-call edit" {
@@ -168,10 +185,10 @@ class ParamToolArgumentSpec : StringSpec({
     }
 
     "a compound's call form mirrors its pattern method: lpf(800) at top level keeps the filter tool" {
-        val freq = paramAt("""note("c3").superimpose(lpf(800))""", "800").shouldNotBeNull()
+        val freq = bindingAt("""note("c3").superimpose(lpf(800))""", "800").shouldNotBeNull()
 
-        freq.name shouldBe "freq"
-        freq.uitools shouldBe listOf("SprudelLpFilterEditor", "SprudelLpFilterSequenceEditor")
+        freq.param.name shouldBe "freq"
+        freq.tools shouldBe listOf("SprudelLpFilterEditor", "SprudelLpFilterSequenceEditor")
     }
 
     "an untyped member call never binds to a call form (it is no member)" {
@@ -182,7 +199,7 @@ class ParamToolArgumentSpec : StringSpec({
 
     "a tooled setter call form at top level opens the whole-call rewrite (its twin has the same parameter names)" {
         val tremolo = bindingAt("""note("c3").superimpose(tremolo(5, 0.3))""", "5,").shouldNotBeNull()
-        tremolo.param.uitools.shouldNotBeEmpty()
+        tremolo.tools shouldBe listOf("SprudelTremoloEditor", "SprudelTremoloSequenceEditor")
         tremolo.wholeCall shouldBe true
 
         val gain = bindingAt("""note("c3").superimpose(gain(0.5))""", "0.5").shouldNotBeNull()

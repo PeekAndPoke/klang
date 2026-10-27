@@ -18,7 +18,8 @@ package io.peekandpoke.klang.script.types
  *                   Extracted from raw source by the KSP processor for display
  *                   only; never executed as code.
  * @param description Human-readable parameter description
- * @param uitools UI tool identifiers associated with this parameter (e.g., for editor widgets)
+ * @param uitools The editor tools for this parameter's value (`@tool amount: SprudelGainEditor, ...`); the call's
+ *   own tools are [KlangCallable.uitools]
  */
 data class KlangParam(
     val name: String,

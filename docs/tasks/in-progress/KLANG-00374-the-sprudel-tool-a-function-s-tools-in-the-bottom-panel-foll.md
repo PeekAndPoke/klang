@@ -1,6 +1,6 @@
 # KLANG-00374: The Sprudel tool: a function's tools in the bottom panel, following the cursor
 
-> **Status (2026-10-27): IN PROGRESS.** step 1 (the panel on today's data) committed after four review rounds; step 2, the `@tool` annotation, next
+> **Status (2026-10-27): IN PROGRESS.** steps 1 and 2 committed; step 3 (panel only) next
 >
 > **Part of:** KLANG-00334 (UI workbench: the Motor-centred layout, tool windows and the first-visit trail)
 
@@ -50,6 +50,9 @@ parenteses if a function that supports tools we should so the tool. This might m
    Found in step 1 (2026-10-27): only one variant of a function carries the tags today (`gain`'s pattern variant,
    not `String.gain` or the mapper's), so `"c3".gain(0.5)` shows no tool; the `@tool` lines should reach every
    variant of the function.
+   Found in step 2's review (2026-10-27): the top-level `note(vararg note)` names the tool; `SprudelPattern.note` and
+   `String.note` call the parameter `noteName`, so the merge by name leaves them without one. Settle it in step 3,
+   when the note tool is embedded.
 3. Panel only: the badge, the right-click menu (it opens the tab), the modal and the popover retired; the two
    modal-only tools embedded.
 4. Specs for each; mutation checks; review rounds; the maintainer's look in the browser.
@@ -66,5 +69,11 @@ Not set yet.
   from the text at each read and commit (by the parameter's name, else its place). It looks again only after a cursor
   move or an edit by other hands, never after a tool's own. Four review rounds: a stale range, a lookup that orphaned
   ranges, a nested literal, the tool dropped by its own edit, and the vararg place, all fixed with specs; five mutation
-  campaigns, every mutant killed. Open for the maintainer: a "Used on" jump from the Quick help into a call with a tool flips the panel
-  to the Sprudel tab.
+  campaigns, every mutant killed. Open for the maintainer: a "Used on" jump from the Quick help into a call with a
+  tool flips the panel to the Sprudel tab.
+- 2026-10-27: step 2 committed after two review rounds. `@tool` in both forms (`KDocParser`, `EditorTools`, `KlangCallable.uitools`); a
+  function's tools reach every variant; the 49 lines rewritten (19 got a call-level `@tool`); an old `@param-tool`
+  fails the build (checked with a planted line). The editor lists the call's tools first, the parameter's only with
+  a literal to edit or in an empty call, and none of the call's when the variant is ambiguous (an untyped receiver). Each
+  whole-call tool is named on its anchor parameter too, so an ambiguous call keeps it in scalar mode. A `@tool`
+  naming no parameter, or on a class or a property, fails the build. 13 mutants, all killed.

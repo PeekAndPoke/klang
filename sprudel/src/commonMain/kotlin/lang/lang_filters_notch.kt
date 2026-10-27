@@ -120,13 +120,14 @@ private fun applyNotchRelease(source: SprudelPattern, args: List<SprudelDslArg<A
  * @param decay Envelope decay in seconds.
  * @param sustain Envelope sustain, 0 to 1.
  * @param release Envelope release in seconds.
- * @param-tool freq SprudelNotchFilterEditor, SprudelNotchFilterSequenceEditor
- * @param-tool q SprudelNResonanceEditor, SprudelNResonanceSequenceEditor
- * @param-tool env SprudelNfEnvEditor, SprudelNfEnvSequenceEditor
- * @param-tool attack SprudelNfAttackEditor, SprudelNfAttackSequenceEditor
- * @param-tool decay SprudelNfDecayEditor, SprudelNfDecaySequenceEditor
- * @param-tool sustain SprudelNfSustainEditor, SprudelNfSustainSequenceEditor
- * @param-tool release SprudelNfReleaseEditor, SprudelNfReleaseSequenceEditor
+ * @tool SprudelNotchFilterEditor
+ * @tool freq: SprudelNotchFilterEditor, SprudelNotchFilterSequenceEditor
+ * @tool q: SprudelNResonanceEditor, SprudelNResonanceSequenceEditor
+ * @tool env: SprudelNfEnvEditor, SprudelNfEnvSequenceEditor
+ * @tool attack: SprudelNfAttackEditor, SprudelNfAttackSequenceEditor
+ * @tool decay: SprudelNfDecayEditor, SprudelNfDecaySequenceEditor
+ * @tool sustain: SprudelNfSustainEditor, SprudelNfSustainSequenceEditor
+ * @tool release: SprudelNfReleaseEditor, SprudelNfReleaseSequenceEditor
  *
  * @scope voice
  * @category effects

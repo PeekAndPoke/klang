@@ -163,7 +163,7 @@ private fun applyNote(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * ```
  *
  * @param note The note pattern in mini-notation, e.g. `"c4 e4 g4"`.
- * @param-tool note SprudelNoteEditor
+ * @tool note: SprudelNoteEditor
  * @category tonal
  * @tags note, pitch, frequency, MIDI, note name, pattern-creator
  */
@@ -220,7 +220,7 @@ private fun applyN(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): Spr
  * ```
  *
  * @param index The sound index to set, or null to reparse sequence values as sound index.
- * @param-tool index SprudelScaleDegreeEditor
+ * @tool index: SprudelScaleDegreeEditor
  *
  * @category tonal
  * @tags n, note number, sample index, pitch index, pattern-creator
@@ -238,7 +238,7 @@ fun String.n(index: PatternLike? = null, callInfo: CallInfo? = null): SprudelPat
  * Creates a pattern of sound indices.
  *
  * @param index The scale degree index pattern in mini-notation, e.g. `"0 1 2 3"`.
- * @param-tool index SprudelScaleDegreeEditor
+ * @tool index: SprudelScaleDegreeEditor
  */
 @KlangScript.Function
 fun n(index: PatternLike, callInfo: CallInfo? = null): SprudelPattern =

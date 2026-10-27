@@ -87,7 +87,8 @@ private fun applyRelease(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * @param decay Decay in seconds, peak down to the sustain level.
  * @param sustain Sustain level, 0 to 1, held while the note is on.
  * @param release Release in seconds, the fade after note-off.
- * @param-tool attack SprudelAdsrEditor, SprudelAdsrSequenceEditor
+ * @tool SprudelAdsrEditor
+ * @tool attack: SprudelAdsrEditor, SprudelAdsrSequenceEditor
  *
  * @scope voice
  * @category dynamics

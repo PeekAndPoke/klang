@@ -8,6 +8,7 @@ package io.peekandpoke.klang.script.ksp
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 
 /**
  * Coverage for [KDocParser], which turns the KDoc of a DSL declaration into the docs model.
@@ -112,11 +113,13 @@ class KDocParserTest : StringSpec({
         kdoc.unusableTags shouldBe listOf("parameter")
     }
 
-    "@param-tool still wins over @param" {
-        parse("X.\n\n@param-tool wet SprudelReverbEditor").let {
-            it.paramTools shouldBe mapOf("wet" to listOf("SprudelReverbEditor"))
+    "the retired @param-tool is reported as retired, never read, never taken for @param" {
+        parse("X.\n\n@param-tool wet SprudelReverbEditor\n  SprudelReverbSequenceEditor\n@category effects").let {
+            it.retiredTags shouldBe listOf("param-tool")
+            it.paramTools shouldBe emptyMap()
             it.params.isEmpty() shouldBe true
             it.unusableTags.shouldBeEmpty()
+            it.category shouldBe "effects"
         }
     }
 
@@ -144,19 +147,64 @@ class KDocParserTest : StringSpec({
 
     // ── existing tags keep working ───────────────────────────────────────────
 
-    "@param-tool is recognised before @param" {
+    "a retired tag is one build error per symbol, saying what to write instead" {
+        val kdocs = listOf(parse("A.\n\n@param-tool wet X"), parse("B.\n\n@param-tool size Y"), parse("C."))
+        val errors = KDocParser.retiredTagErrors(symbolName = "reverb", kdocs = kdocs)
+
+        errors.size shouldBe 1
+        errors.single() shouldContain "'@param-tool' on 'reverb' is retired"
+        errors.single() shouldContain "@tool <param>: <Tool>"
+        KDocParser.retiredTagErrors(symbolName = "gain", kdocs = listOf(parse("C.\n\n@tool amount: X"))).shouldBeEmpty()
+    }
+
+    "@tool in its two forms: a parameter's tools after `name:`, the whole call's without; beside @param" {
         val kdoc = parse(
             """
             X.
 
             @param wet Send, 0 to 1.
-            @param-tool wet SprudelReverbEditor, SprudelReverbSequenceEditor
+            @tool SprudelReverbEditor
+            @tool wet: SprudelReverbEditor,
+              SprudelReverbSequenceEditor
+            @tool size : SprudelReverbSizeEditor
             @category effects
             """
         )
 
         kdoc.params shouldBe mapOf("wet" to "Send, 0 to 1.")
-        kdoc.paramTools shouldBe mapOf("wet" to listOf("SprudelReverbEditor", "SprudelReverbSequenceEditor"))
+        kdoc.callTools shouldBe listOf("SprudelReverbEditor")
+        kdoc.paramTools shouldBe mapOf(
+            "wet" to listOf("SprudelReverbEditor", "SprudelReverbSequenceEditor"),
+            "size" to listOf("SprudelReverbSizeEditor"),
+        )
+        kdoc.retiredTags.shouldBeEmpty()
+        kdoc.category shouldBe "effects"
+    }
+
+    "@tool with nothing named is reported; `@tools` is no @tool" {
+        parse("X.\n\n@tool\n@tool wet:\n@tools A").let {
+            it.callTools.shouldBeEmpty()
+            it.paramTools shouldBe emptyMap()
+            it.unusableTags shouldBe listOf("tool", "tool", "tools")
+        }
+    }
+
+    "a function's tools from all its variants: each named once, in the order first named" {
+        val tools = EditorTools.of(
+            listOf(
+                parse("A.\n\n@tool SprudelGainEditor\n@tool amount: SprudelGainEditor, SprudelGainSequenceEditor"),
+                parse("B.\n\n@param amount The gain."),
+                parse("C.\n\n@tool SprudelGainEditor, Other\n@tool amount: SprudelGainSequenceEditor, Third\n@tool pan: P"),
+            )
+        )
+
+        tools.call shouldBe listOf("SprudelGainEditor", "Other")
+        tools.unknownParams(setOf("amount", "callInfo")) shouldBe listOf("pan")
+        tools.unknownParams(setOf("amount", "pan")).shouldBeEmpty()
+        tools.params shouldBe mapOf(
+            "amount" to listOf("SprudelGainEditor", "SprudelGainSequenceEditor", "Third"),
+            "pan" to listOf("P"),
+        )
     }
 
     "@tags and @alias split on commas" {

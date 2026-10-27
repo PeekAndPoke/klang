@@ -39,7 +39,8 @@ private fun applySndPluck(source: SprudelPattern): SprudelPattern =
  * @param brightness Lowpass cutoff (0 = dark, 1 = bright).
  * @param pickPosition Pluck position (0 = bridge, 1 = neck).
  * @param stiffness String stiffness (0 = nylon, 1 = piano wire).
- * @param-tool feedback SprudelPluckEditor, SprudelPluckSequenceEditor
+ * @tool SprudelPluckEditor
+ * @tool feedback: SprudelPluckEditor, SprudelPluckSequenceEditor
  * @param feedback How long the string rings: the share of its level kept on each pass round the loop, 0.9 (a short thud) to 0.999 (rings for seconds); a coefficient, not a time
  * @return A new pattern with sound set to "pluck" and parameters applied.
  * @category tonal
@@ -148,7 +149,8 @@ private fun applySndSuperPluck(source: SprudelPattern): SprudelPattern =
  * @param brightness Lowpass cutoff (0 = dark, 1 = bright).
  * @param pickPosition Pluck position (0 = bridge, 1 = neck).
  * @param stiffness String stiffness (0 = nylon, 1 = piano wire).
- * @param-tool voices SprudelSuperPluckEditor, SprudelSuperPluckSequenceEditor
+ * @tool SprudelSuperPluckEditor
+ * @tool voices: SprudelSuperPluckEditor, SprudelSuperPluckSequenceEditor
  * @param feedback How long the string rings: the share of its level kept on each pass round the loop, 0.9 (a short thud) to 0.999 (rings for seconds); a coefficient, not a time
  * @return A new pattern with sound set to "superpluck" and parameters applied.
  * @category tonal
@@ -255,7 +257,8 @@ private fun applySndSuperSaw(source: SprudelPattern): SprudelPattern =
  * Sets the sound to a super sawtooth (multiple detuned sawtooth oscillators).
  *
  * @param spread Detune spread between voices.
- * @param-tool voices SprudelSuperSawEditor, SprudelSuperSawSequenceEditor
+ * @tool SprudelSuperSawEditor
+ * @tool voices: SprudelSuperSawEditor, SprudelSuperSawSequenceEditor
  * @param voices Number of oscillators (1–16)
  * @return A new pattern with sound set to "supersaw" and parameters applied.
  * @category tonal
@@ -313,7 +316,8 @@ private fun applySndSuperSine(source: SprudelPattern): SprudelPattern =
  * Sets the sound to a super sine (multiple detuned sine oscillators).
  *
  * @param spread Detune spread between voices.
- * @param-tool voices SprudelSuperSawEditor, SprudelSuperSawSequenceEditor
+ * @tool SprudelSuperSawEditor
+ * @tool voices: SprudelSuperSawEditor, SprudelSuperSawSequenceEditor
  * @param voices Number of oscillators (1–16)
  * @return A new pattern with sound set to "supersine" and parameters applied.
  * @category tonal
@@ -371,7 +375,8 @@ private fun applySndSuperSquare(source: SprudelPattern): SprudelPattern =
  * Sets the sound to a super square (multiple detuned square oscillators).
  *
  * @param spread Detune spread between voices.
- * @param-tool voices SprudelSuperSawEditor, SprudelSuperSawSequenceEditor
+ * @tool SprudelSuperSawEditor
+ * @tool voices: SprudelSuperSawEditor, SprudelSuperSawSequenceEditor
  * @param voices Number of oscillators (1–16)
  * @return A new pattern with sound set to "supersquare" and parameters applied.
  * @category tonal
@@ -429,7 +434,8 @@ private fun applySndSuperTri(source: SprudelPattern): SprudelPattern =
  * Sets the sound to a super triangle (multiple detuned triangle oscillators).
  *
  * @param spread Detune spread between voices.
- * @param-tool voices SprudelSuperSawEditor, SprudelSuperSawSequenceEditor
+ * @tool SprudelSuperSawEditor
+ * @tool voices: SprudelSuperSawEditor, SprudelSuperSawSequenceEditor
  * @param voices Number of oscillators (1–16)
  * @return A new pattern with sound set to "supertri" and parameters applied.
  * @category tonal
@@ -487,7 +493,8 @@ private fun applySndSuperRamp(source: SprudelPattern): SprudelPattern =
  * Sets the sound to a super ramp (multiple detuned ramp oscillators).
  *
  * @param spread Detune spread between voices.
- * @param-tool voices SprudelSuperSawEditor, SprudelSuperSawSequenceEditor
+ * @tool SprudelSuperSawEditor
+ * @tool voices: SprudelSuperSawEditor, SprudelSuperSawSequenceEditor
  * @param voices Number of oscillators (1–16)
  * @return A new pattern with sound set to "superramp" and parameters applied.
  * @category tonal

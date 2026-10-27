@@ -67,7 +67,7 @@ data class KlangUiToolCall(
  * A UI tool that can edit a function argument interactively.
  *
  * Implement this interface and register it with [KlangUiToolRegistry] under the name
- * declared in a `@param-tool` KDoc tag.
+ * declared in a `@tool` KDoc tag.
  */
 fun interface KlangUiTool {
     val title: String? get() = null
@@ -97,7 +97,7 @@ fun interface KlangUiTool {
  * first tool when no tool of that kind is declared. Null for an empty list.
  *
  * One badge per argument, because a param declares its value tool AND the sequence tool that wraps
- * it (`@param-tool wet SprudelReverbEditor, SprudelReverbSequenceEditor`), and the wrapper borrows
+ * it (`@tool wet: SprudelReverbEditor, SprudelReverbSequenceEditor`), and the wrapper borrows
  * the value tool's icon: listing both drew every icon twice.
  */
 fun List<Pair<String, KlangUiTool>>.badgeTool(argText: String): Pair<String, KlangUiTool>? {
@@ -119,7 +119,7 @@ interface KlangUiToolEmbeddable : KlangUiTool {
 }
 
 /**
- * Global registry mapping tool names (as declared in `@param-tool` KDoc tags) to [KlangUiTool] implementations.
+ * Global registry mapping tool names (as declared in `@tool` KDoc tags) to [KlangUiTool] implementations.
  *
  * Register tools at application startup:
  * ```kotlin

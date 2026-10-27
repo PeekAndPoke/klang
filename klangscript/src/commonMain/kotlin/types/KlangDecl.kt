@@ -38,6 +38,8 @@ sealed interface KlangDecl {
  * @param returnDoc Documentation for the return value
  * @param samples Example code snippets
  * @param library The library this declaration belongs to (empty string for unset)
+ * @param uitools The editor tools for the whole call (`@tool SprudelLpFilterEditor`), shown with the tools of the
+ *   parameter at the cursor ([KlangParam.uitools]); a whole-call tool reads and writes every argument (KLANG-00374)
  */
 data class KlangCallable(
     val name: String,
@@ -48,6 +50,7 @@ data class KlangCallable(
     override val returnDoc: String = "",
     override val samples: List<KlangCodeSample> = emptyList(),
     override val library: String = "",
+    val uitools: List<String> = emptyList(),
 ) : KlangDecl {
     override val signature: String
         get() = buildString {
@@ -58,6 +61,9 @@ data class KlangCallable(
             append(")")
             returnType?.let { append(": ${it.render()}") }
         }
+
+    /** Whether an argument bound to [param] has editor tools: the call's own, or the parameter's (KLANG-00374). */
+    fun hasToolsFor(param: KlangParam?): Boolean = param != null && (uitools.isNotEmpty() || param.uitools.isNotEmpty())
 
     /**
      * The parameter an argument binds to: a named argument ([argName] not null) binds by name, a

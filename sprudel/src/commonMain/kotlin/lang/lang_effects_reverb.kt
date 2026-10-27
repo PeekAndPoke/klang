@@ -135,8 +135,9 @@ private fun applyReverb(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * @param wet How much of the orbit goes into the room, 0 to 1, default 0.25. Orbit-wide.
  * @param size Tail length, about 0 to 10, default 5; above 10 is bounded at 10. Orbit-wide.
  * @param lowpass Lowpass on the tail, Hz. Lower is darker. Unset by default. Orbit-wide.
- * @param-tool wet SprudelReverbEditor, SprudelReverbSequenceEditor
- * @param-tool size SprudelReverbSizeEditor, SprudelReverbSizeSequenceEditor
+ * @tool SprudelReverbEditor
+ * @tool wet: SprudelReverbEditor, SprudelReverbSequenceEditor
+ * @tool size: SprudelReverbSizeEditor, SprudelReverbSizeSequenceEditor
  *
  * @scope orbit
  * @category effects

@@ -119,9 +119,10 @@ private fun applyBpfRelease(source: SprudelPattern, args: List<SprudelDslArg<Any
  * @param decay Envelope decay in seconds.
  * @param sustain Envelope sustain, 0 to 1.
  * @param release Envelope release in seconds.
- * @param-tool freq SprudelBpFilterEditor, SprudelBpFilterSequenceEditor
- * @param-tool q SprudelBpQEditor, SprudelBpQSequenceEditor
- * @param-tool env SprudelBpEnvEditor, SprudelBpEnvSequenceEditor
+ * @tool SprudelBpFilterEditor
+ * @tool freq: SprudelBpFilterEditor, SprudelBpFilterSequenceEditor
+ * @tool q: SprudelBpQEditor, SprudelBpQSequenceEditor
+ * @tool env: SprudelBpEnvEditor, SprudelBpEnvSequenceEditor
  *
  * @scope voice
  * @category effects
