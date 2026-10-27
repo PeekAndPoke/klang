@@ -25,21 +25,27 @@ import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.html.onKeyDown
 import kotlinx.browser.document
+import kotlinx.coroutines.delay
 import kotlinx.css.height
 import kotlinx.css.px
 import kotlinx.css.width
 import kotlinx.html.FlowContent
+import kotlinx.html.InputType
 import kotlinx.html.Tag
 import kotlinx.html.a
 import kotlinx.html.button
 import kotlinx.html.div
 import kotlinx.html.input
+import kotlinx.html.label
 import kotlinx.html.span
 import org.w3c.dom.Element
 import org.w3c.dom.HTMLElement
+import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.events.EventTarget
 import org.w3c.dom.events.KeyboardEvent
 import org.w3c.dom.events.KeyboardEventInit
+import org.w3c.dom.pointerevents.PointerEvent
+import org.w3c.dom.pointerevents.PointerEventInit
 
 /** The workbench the host draws, so a spec can show a tool window from outside, as the song page does on Alt+Q. */
 private val workbenchRef = ComponentRef.Tracker<KlangWorkbench>()
@@ -48,11 +54,28 @@ private val workbenchRef = ComponentRef.Tracker<KlangWorkbench>()
 private class ChangingHost(ctx: NoProps) : PureComponent(ctx) {
     companion object {
         var current: ChangingHost? = null
+
+        /** Whether the next host starts with its Docs tool window. */
+        var startWithDocs = true
+
+        /** The layout the next host gives its workbench to start with. */
+        var startLayout: KlangWorkbench.Layout? = null
+
+        /** What the workbench reported of its layout, oldest first. */
+        val reports = mutableListOf<KlangWorkbench.Layout>()
+
+        fun reset() {
+            startWithDocs = true
+            startLayout = null
+            reports.clear()
+        }
     }
 
-    var withDocs: Boolean by value(true)
+    var withDocs: Boolean by value(startWithDocs)
 
     var withDrawer: Boolean by value(true)
+
+    var withBottom: Boolean by value(true)
 
     init {
         current = this
@@ -73,7 +96,21 @@ private class ChangingHost(ctx: NoProps) : PureComponent(ctx) {
             },
             content = {},
             tools = if (withDocs) listOf(KlangWorkbench.Tool(id = "docs", title = "Docs", icon = { book }) { +"DOCS" }) else emptyList(),
+            bottom = if (!withBottom) null else KlangWorkbench.Bottom(
+                title = "Help",
+                icon = { question_circle },
+                header = {
+                    button { +"HOVER" }
+                    label {
+                        input(type = InputType.checkBox) { attributes["data-test"] = "header-check" }
+                    }
+                },
+            ) {
+                +"HELP BODY"
+            },
             drawer = drawer,
+            layout = startLayout,
+            onLayout = { reports.add(it) },
         ).track(workbenchRef)
     }
 }
@@ -244,24 +281,246 @@ class KlangWorkbenchSpec : StringSpec({
         }
     }
 
-    "the bottom panel shows and hides from its toggle, under the content" {
+    "the bottom panel flies in over the content from its toggle; pinned it docks under it; the toggle hides it" {
         withWorkbench { root ->
-            root.q(".${styles.workbenchBottom}") shouldBe null
+            fun floating() = root.q(".${styles.workbenchBottomFloating}")
+            fun pinned() = root.q(".${styles.workbenchBottomPinned}")
+
+            floating() shouldBe null
 
             root.toggle("Analysis").click()
 
             eventually {
-                val bottom = root.q(".${styles.workbenchBottom}")
+                val bottom = floating()!!
 
-                bottom shouldNotBe null
-                bottom!!.getAttribute("aria-label") shouldBe "Analysis"
+                bottom.q("section")!!.getAttribute("aria-label") shouldBe "Analysis"
                 bottom.textContent!!.contains("BOTTOM BODY") shouldBe true
                 root.q(".${styles.workbenchCentre}")!!.contains(bottom) shouldBe true
+                (styles.toolWindowFloatingBottom.toString() in bottom.q("section")!!.className) shouldBe true
+            }
+
+            floating()!!.q("button[aria-label='Pin under the editor']")!!.click()
+
+            eventually {
+                floating() shouldBe null
+                pinned()!!.textContent!!.contains("BOTTOM BODY") shouldBe true
             }
 
             root.toggle("Analysis").click()
 
-            eventually { root.q(".${styles.workbenchBottom}") shouldBe null }
+            eventually {
+                floating() shouldBe null
+                pinned() shouldBe null
+            }
+        }
+    }
+
+    "the bottom panel's header, dragged, makes it higher or lower; a drag that starts on a header key does not" {
+        withWorkbench { root ->
+            fun panel() = root.q(".${styles.workbenchBottomFloating}")!!
+
+            fun pointer(target: Element, type: String, y: Int) = target.dispatchEvent(
+                PointerEvent(
+                    type,
+                    PointerEventInit(pointerId = 1, isPrimary = true, clientY = y, buttons = 1, bubbles = true, cancelable = true),
+                )
+            )
+
+            // Room to grow: the workbench as high as a window
+            (root as HTMLElement).style.setProperty("height", "800px")
+            root.toggle("Analysis").click()
+            eventually { panel().style.height shouldBe "260px" }
+
+            val header = panel().q(".${styles.toolWindowHeader}")!!
+
+            pointer(header, "pointerdown", y = 500)
+            pointer(header, "pointermove", y = 400)
+            pointer(header, "pointerup", y = 400)
+
+            eventually { panel().style.height shouldBe "360px" }
+
+            val pin = panel().q("button[aria-label='Pin under the editor']")!!
+
+            pointer(pin, "pointerdown", y = 500)
+            pointer(pin, "pointermove", y = 300)
+            pointer(pin, "pointerup", y = 300)
+            delay(50)
+
+            panel().style.height shouldBe "360px"
+
+            // Down past its least height: it stops there
+            pointer(header, "pointerdown", y = 100)
+            pointer(header, "pointermove", y = 700)
+            pointer(header, "pointerup", y = 700)
+
+            eventually { panel().style.height shouldBe "120px" }
+        }
+    }
+
+    "a checkbox in the bottom panel's header is a checkbox, not a handle: pressed, it toggles and nothing resizes" {
+        keyedBed(view = { ChangingHost() }) { root ->
+            val r = root[0]
+
+            workbenchRef { it.showBottom() }
+            eventually { (r.q(".${styles.workbenchBottomFloating}") != null) shouldBe true }
+
+            val panel = r.q(".${styles.workbenchBottomFloating}")!!
+            val check = panel.q("[data-test=header-check]") as HTMLInputElement
+            val before = panel.style.height
+
+            fun pointer(type: String, y: Int) = check.dispatchEvent(
+                PointerEvent(type, PointerEventInit(pointerId = 1, isPrimary = true, clientY = y, buttons = 1, bubbles = true)),
+            )
+
+            pointer("pointerdown", y = 500)
+            pointer("pointermove", y = 300)
+            pointer("pointerup", y = 300)
+            check.click()
+
+            eventually { check.checked shouldBe true }
+            // A resize would show after the next draw
+            delay(100)
+
+            panel.style.height shouldBe before
+        }
+    }
+
+    "Esc closes the bottom panel while it flies in; pinned, it stays" {
+        withWorkbench { root ->
+            fun esc() {
+                (document.activeElement ?: document.body!!).dispatchEvent(
+                    KeyboardEvent("keydown", KeyboardEventInit(key = "Escape", bubbles = true, cancelable = true))
+                )
+            }
+
+            root.toggle("Analysis").click()
+            eventually { root.q(".${styles.workbenchBottomFloating}") shouldNotBe null }
+
+            esc()
+
+            eventually { root.q(".${styles.workbenchBottomFloating}") shouldBe null }
+
+            root.toggle("Analysis").click()
+            eventually { root.q(".${styles.workbenchBottomFloating}") shouldNotBe null }
+            root.q(".${styles.workbenchBottomFloating}")!!.q("button[aria-label='Pin under the editor']")!!.click()
+            eventually { root.q(".${styles.workbenchBottomPinned}") shouldNotBe null }
+
+            esc()
+            delay(100)
+
+            root.q(".${styles.workbenchBottomPinned}") shouldNotBe null
+        }
+    }
+
+    "the bottom panel gives back a focus lost with it: closed by Esc from inside, and kept in it when it is pinned" {
+        withWorkbench { root ->
+            val target = root.q("[data-test=content-target]")!!
+
+            // A click from a script moves no focus: it stays in the content as the panel opens
+            target.focus()
+            root.toggle("Analysis").click()
+            eventually { root.q(".${styles.workbenchBottomFloating}") shouldNotBe null }
+
+            // A click on the panel's pin takes the focus there; the key is redrawn, the panel keeps the focus
+            val pin = root.q(".${styles.workbenchBottomFloating} button[aria-label='Pin under the editor']")!!
+
+            pin.focus()
+            pin.click()
+
+            eventually {
+                val pinned = root.q(".${styles.workbenchBottomPinned}")
+
+                pinned shouldNotBe null
+                pinned!!.contains(document.activeElement) shouldBe true
+            }
+
+            root.q(".${styles.workbenchBottomPinned} button[aria-pressed]")!!.click()
+            eventually { root.q(".${styles.workbenchBottomFloating}") shouldNotBe null }
+
+            root.q(".${styles.workbenchBottomFloating} button[aria-label='Close Analysis']")!!.click()
+
+            eventually {
+                root.q(".${styles.workbenchBottomFloating}") shouldBe null
+                document.activeElement shouldBe target
+            }
+        }
+    }
+
+    "a header drag ends when a move comes without the button held; a right press starts none" {
+        withWorkbench { root ->
+            fun panel() = root.q(".${styles.workbenchBottomFloating}")!!
+
+            fun pointer(target: Element, type: String, y: Int, button: Short = 0, buttons: Short = 1) = target.dispatchEvent(
+                PointerEvent(
+                    type,
+                    PointerEventInit(
+                        pointerId = 1,
+                        isPrimary = true,
+                        clientY = y,
+                        button = button,
+                        buttons = buttons,
+                        bubbles = true,
+                        cancelable = true,
+                    ),
+                )
+            )
+
+            (root as HTMLElement).style.setProperty("height", "800px")
+            root.toggle("Analysis").click()
+            eventually { panel().style.height shouldBe "260px" }
+
+            val header = panel().q(".${styles.toolWindowHeader}")!!
+
+            // The release went elsewhere: the next move, no button held, ends the drag; later moves change nothing
+            pointer(header, "pointerdown", y = 500)
+            pointer(header, "pointermove", y = 450)
+            pointer(header, "pointermove", y = 300, buttons = 0)
+            pointer(header, "pointermove", y = 200, buttons = 0)
+            delay(50)
+
+            panel().style.height shouldBe "310px"
+
+            // A right press whose release a menu kept: the next left-button gesture across the panel moves nothing
+            pointer(header, "pointerdown", y = 500, button = 2, buttons = 2)
+            pointer(header, "pointermove", y = 400, buttons = 1)
+            pointer(header, "pointerup", y = 400, buttons = 0)
+            delay(50)
+
+            panel().style.height shouldBe "310px"
+        }
+    }
+
+    "the bottom panel flying in goes with its page; pinned it comes back with the next page that has one" {
+        ChangingHost.reset()
+
+        try {
+            keyedBed(view = { ChangingHost() }) { root ->
+                val r = root.single()
+
+                r.toggle("Help").click()
+                eventually { r.q(".${styles.workbenchBottomFloating}") shouldNotBe null }
+
+                ChangingHost.current!!.withBottom = false
+                eventually { r.q(".${styles.workbenchBottomFloating}") shouldBe null }
+
+                ChangingHost.current!!.withBottom = true
+                delay(50)
+
+                r.q(".${styles.workbenchBottomFloating}") shouldBe null
+
+                r.toggle("Help").click()
+                eventually { r.q(".${styles.workbenchBottomFloating}") shouldNotBe null }
+                r.q(".${styles.workbenchBottomFloating} button[aria-label='Pin under the editor']")!!.click()
+                eventually { r.q(".${styles.workbenchBottomPinned}") shouldNotBe null }
+
+                ChangingHost.current!!.withBottom = false
+                eventually { r.q(".${styles.workbenchBottomPinned}") shouldBe null }
+
+                ChangingHost.current!!.withBottom = true
+                eventually { r.q(".${styles.workbenchBottomPinned}") shouldNotBe null }
+            }
+        } finally {
+            ChangingHost.reset()
         }
     }
 
@@ -376,6 +635,29 @@ class KlangWorkbenchSpec : StringSpec({
         }
     }
 
+    "the bottom panel shown from outside opens, the focus where it is; its header holds what it brings, at its end" {
+        keyedBed(view = { ChangingHost() }) { root ->
+            val r = root[0]
+            val field = document.createElement("input") as HTMLElement
+
+            r.appendChild(field)
+            field.focus()
+
+            r.q(".${styles.workbenchBottomFloating}") shouldBe null
+
+            workbenchRef { it.showBottom() }
+
+            eventually {
+                val bottom = r.q(".${styles.workbenchBottomFloating}")!!
+
+                bottom.textContent!!.contains("HELP BODY") shouldBe true
+                bottom.q(".${styles.toolWindowHeaderEnd}")!!.textContent shouldBe "HOVER"
+            }
+
+            document.activeElement shouldBe field
+        }
+    }
+
     "a tool window that leaves the list closes, and does not open again by itself when it comes back" {
         keyedBed(view = { ChangingHost() }) { root ->
             root.single().toggle("Docs").click()
@@ -392,6 +674,167 @@ class KlangWorkbenchSpec : StringSpec({
                 root.single().q("[role=group] button[aria-label='Docs']") shouldNotBe null
                 root.single().q(".${styles.workbenchFloating}") shouldBe null
             }
+        }
+    }
+
+    "a kept layout comes back: the bottom panel pinned at its height, the pinned tool window open whenever the page brings it" {
+        ChangingHost.reset()
+        ChangingHost.startWithDocs = false
+        ChangingHost.startLayout = KlangWorkbench.Layout(
+            pinned = setOf("docs"),
+            open = "docs",
+            bottomOpen = true,
+            bottomPinned = true,
+            bottomHeight = 300.0,
+        )
+
+        try {
+            keyedBed(view = { ChangingHost() }) { root ->
+                val r = root.single()
+
+                eventually {
+                    r.q(".${styles.workbenchBottomPinned}")?.style?.height shouldBe "300px"
+                    r.q(".${styles.workbenchPinned}") shouldBe null
+                }
+
+                ChangingHost.current!!.withDocs = true
+
+                eventually {
+                    r.q(".${styles.workbenchPinned}")?.textContent?.contains("DOCS") shouldBe true
+                    r.q(".${styles.workbenchFloating}") shouldBe null
+                }
+
+                // A page left and come back to: the pinned window goes with it and comes back with it, still kept open
+                ChangingHost.current!!.withDocs = false
+
+                eventually { r.q(".${styles.workbenchPinned}") shouldBe null }
+
+                delay(50)
+
+                ChangingHost.reports.filter { it.open != "docs" } shouldBe emptyList()
+
+                ChangingHost.current!!.withDocs = true
+
+                eventually { r.q(".${styles.workbenchPinned}")?.textContent?.contains("DOCS") shouldBe true }
+            }
+        } finally {
+            ChangingHost.reset()
+        }
+    }
+
+    "a kept height taller than the room keeps the content and the panel's header in it; a drag starts from what shows" {
+        ChangingHost.reset()
+        ChangingHost.startLayout = KlangWorkbench.Layout(bottomOpen = true, bottomPinned = true, bottomHeight = 5000.0)
+
+        try {
+            keyedBed(view = { ChangingHost() }) { root ->
+                val r = root.single() as HTMLElement
+
+                fun pointer(target: Element, type: String, y: Int) = target.dispatchEvent(
+                    PointerEvent(
+                        type,
+                        PointerEventInit(pointerId = 1, isPrimary = true, clientY = y, buttons = 1, bubbles = true, cancelable = true),
+                    )
+                )
+
+                fun headerInside(placement: String) {
+                    val top = r.getBoundingClientRect().top
+                    val header = r.q(".$placement .${styles.toolWindowHeader}")!!.getBoundingClientRect()
+
+                    (header.top >= top) shouldBe true
+                    (header.bottom - top <= 800.0) shouldBe true
+                }
+
+                r.style.setProperty("height", "800px")
+
+                eventually {
+                    headerInside(styles.workbenchBottomPinned.toString())
+                    (r.q(".${styles.workbenchContent}")!!.getBoundingClientRect().height >= 100.0) shouldBe true
+                }
+
+                // Flying in, too: its header stays in the room
+                r.q(".${styles.workbenchBottomPinned} button[aria-pressed]")!!.click()
+                eventually { headerInside(styles.workbenchBottomFloating.toString()) }
+                r.q(".${styles.workbenchBottomFloating} button[aria-label='Pin under the editor']")!!.click()
+                eventually { r.q(".${styles.workbenchBottomPinned}") shouldNotBe null }
+
+                // Dragged down by 100 from where it shows: 100 lower at once, not first the hidden excess
+                val panel = r.q(".${styles.workbenchBottomPinned}")!!
+                val shown = panel.getBoundingClientRect().height
+                val header = panel.q(".${styles.toolWindowHeader}")!!
+
+                pointer(header, "pointerdown", y = 300)
+                pointer(header, "pointermove", y = 400)
+                pointer(header, "pointerup", y = 400)
+
+                eventually { r.q(".${styles.workbenchBottomPinned}")!!.getBoundingClientRect().height shouldBe shown - 100.0 }
+            }
+        } finally {
+            ChangingHost.reset()
+        }
+    }
+
+    "the workbench reports its layout as it changes; a window that only flies in is not kept open, a drag reports once" {
+        ChangingHost.reset()
+
+        try {
+            keyedBed(view = { ChangingHost() }) { root ->
+                val r = root.single()
+
+                fun pointer(target: Element, type: String, y: Int) = target.dispatchEvent(
+                    PointerEvent(
+                        type,
+                        PointerEventInit(pointerId = 1, isPrimary = true, clientY = y, buttons = 1, bubbles = true, cancelable = true),
+                    )
+                )
+
+                (r as HTMLElement).style.setProperty("height", "800px")
+
+                r.toggle("Docs").click()
+
+                eventually { r.q(".${styles.workbenchFloating}") shouldNotBe null }
+                delay(50)
+
+                ChangingHost.reports shouldBe emptyList()
+
+                r.q(".${styles.workbenchFloating} button[aria-label='Pin beside the editor']")!!.click()
+
+                eventually { ChangingHost.reports.lastOrNull() shouldBe KlangWorkbench.Layout(pinned = setOf("docs"), open = "docs") }
+
+                r.toggle("Help").click()
+
+                eventually { r.q(".${styles.workbenchBottomFloating}") shouldNotBe null }
+
+                r.q(".${styles.workbenchBottomFloating} button[aria-label='Pin under the editor']")!!.click()
+
+                val pinnedBoth = KlangWorkbench.Layout(pinned = setOf("docs"), open = "docs", bottomOpen = true, bottomPinned = true)
+
+                eventually { ChangingHost.reports.lastOrNull() shouldBe pinnedBoth }
+
+                val before = ChangingHost.reports.size
+                val header = r.q(".${styles.workbenchBottomPinned} .${styles.toolWindowHeader}")!!
+
+                pointer(header, "pointerdown", y = 500)
+                pointer(header, "pointermove", y = 450)
+                pointer(header, "pointermove", y = 400)
+                delay(50)
+
+                ChangingHost.reports.size shouldBe before
+
+                pointer(header, "pointerup", y = 400)
+
+                eventually {
+                    ChangingHost.reports.drop(before) shouldContainExactly listOf(pinnedBoth.copy(bottomHeight = 360.0))
+                }
+
+                r.toggle("Docs").click()
+
+                eventually {
+                    ChangingHost.reports.lastOrNull() shouldBe pinnedBoth.copy(open = null, bottomHeight = 360.0)
+                }
+            }
+        } finally {
+            ChangingHost.reset()
         }
     }
 

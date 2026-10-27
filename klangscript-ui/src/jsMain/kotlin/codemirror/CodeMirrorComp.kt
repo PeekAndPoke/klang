@@ -64,7 +64,8 @@ fun Tag.KlangScriptEditorComp(
     onNavigate: ((doc: KlangSymbol, event: dynamic) -> Unit)? = null,
     onOpenTool: ((toolName: String, ctx: KlangUiToolContext, argFrom: Int, event: dynamic) -> Unit)? = null,
     hoverDocs: () -> Boolean = { true },
-    onQuickDocumentation: ((symbol: KlangSymbol, declarationCode: String?) -> Unit)? = null,
+    onQuickDocumentation: QuickHelpHandler? = null,
+    onHoverDocumentation: QuickHelpHandler? = null,
     showMinimap: Boolean = false,
     bookmarks: BookmarkOptions? = null,
 ): ComponentRef<KlangScriptEditorComp> = comp(
@@ -80,6 +81,7 @@ fun Tag.KlangScriptEditorComp(
         onOpenTool = onOpenTool,
         hoverDocs = hoverDocs,
         onQuickDocumentation = onQuickDocumentation,
+        onHoverDocumentation = onHoverDocumentation,
         showMinimap = showMinimap,
         bookmarks = bookmarks,
     )
@@ -105,7 +107,9 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
         /** Asked on every move whether the hover shows a name's quick help (KLANG-00349); read live. */
         val hoverDocs: () -> Boolean = { true },
         /** Gets the name at the cursor on quick documentation (Alt+Q) instead of the popup; null for the popup. */
-        val onQuickDocumentation: ((symbol: KlangSymbol, declarationCode: String?) -> Unit)? = null,
+        val onQuickDocumentation: QuickHelpHandler? = null,
+        /** Gets the name the mouse rests on instead of the popup, for a help of the host's; null for the popup. */
+        val onHoverDocumentation: QuickHelpHandler? = null,
         /**
          * Shows a minimap of the whole document on the right. The editor then scrolls itself
          * (`height: 100%`), so the host must give it a definite height.
@@ -340,6 +344,7 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
                 onOpenTool = props.onOpenTool,
                 hoverDocs = { props.hoverDocs() },
                 onQuickDocumentation = props.onQuickDocumentation,
+                onHoverDocumentation = props.onHoverDocumentation,
             )
 
             extensions.add(wiring.extension)

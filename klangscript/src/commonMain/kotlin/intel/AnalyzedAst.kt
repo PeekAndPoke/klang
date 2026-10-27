@@ -224,6 +224,66 @@ class AnalyzedAst internal constructor(
         }
 
         val binding = bindingMap[identifier] ?: return null
+
+        return definitionOf(binding = binding, edit = edit, text = text)
+    }
+
+    /**
+     * The local whose declared name is the word at the cursor [pos] in [text] (`pedalStock` in `let pedalStock = ...`,
+     * an arrow's parameter where it is declared), as [definitionAt] answers for a word that reads it: the hover and the
+     * Quick help show a local also where it is declared (the maintainer, 2026-10-27). Null for any other word. A local
+     * that nothing reads is found too. [text] as for [definitionAt].
+     */
+    fun declarationAt(pos: Int, text: String = source): LocalDefinition? {
+        val word = analysedWordAt(pos = pos, text = text) ?: return null
+        val binding = declaredAt(word) ?: return null
+
+        return definitionOf(binding = binding, edit = word.edit, text = text)
+    }
+
+    /** The word at the cursor [pos] in [text], where the analysis read it; null on no word or on the edit. */
+    private fun analysedWordAt(pos: Int, text: String): AnalysedWord? {
+        var wordStart = pos.coerceIn(0, text.length)
+        var wordEnd = wordStart
+
+        while (wordStart > 0 && text[wordStart - 1].code.isWordChar()) {
+            wordStart--
+        }
+
+        while (wordEnd < text.length && text[wordEnd].code.isWordChar()) {
+            wordEnd++
+        }
+
+        if (wordStart == wordEnd) {
+            return null
+        }
+
+        val edit = editTo(text)
+
+        // The word as the analysis read it: in place before the edit, moved back after it
+        val wordShift = when {
+            edit == null || wordEnd <= edit.start -> 0
+            wordStart >= edit.newEnd -> edit.oldEnd - edit.newEnd
+            else -> return null
+        }
+
+        return AnalysedWord(name = text.substring(wordStart, wordEnd), analysedStart = wordStart + wordShift, edit = edit)
+    }
+
+    /** A word at the cursor: its [name], where the analysis read it, and the edit the editor's text is ahead by. */
+    private class AnalysedWord(val name: String, val analysedStart: Int, val edit: SourceEdit?)
+
+    /** The local whose declared name is [word], in any scope of the program. */
+    private fun declaredAt(word: AnalysedWord): TypeScope.LocalBinding? {
+        fun inScope(scope: LocalScopeRange): TypeScope.LocalBinding? =
+            scope.bindings.firstOrNull { it.name == word.name && it.site?.namePos == word.analysedStart }
+                ?: scope.children.firstNotNullOfOrNull { inScope(it) }
+
+        return inScope(programScope)
+    }
+
+    /** [binding]'s declaration in the editor's [text], moved by the [edit]; null when the edit touches it. */
+    private fun definitionOf(binding: TypeScope.LocalBinding, edit: SourceEdit?, text: String): LocalDefinition? {
         val site = binding.site ?: return null
 
         // The declaration in the editor's text: in place before the edit, moved with it after it
@@ -243,6 +303,62 @@ class AnalyzedAst internal constructor(
             code = LocalDefinition.codeOf(text = text, start = start, end = end),
             symbol = synthesizeLocalSymbol(binding),
         )
+    }
+
+    /**
+     * Where the local that the word at the cursor [pos] in [text] reads is used: every word the analysis bound to the
+     * same declaration, in the order of the text, the word at [pos] too (KLANG-00349: the Quick help's "Used on", one
+     * click from each), asked from a use or from the declared name ([declarationAt]). Empty for a library name, a
+     * member, a literal and a keyword. The binding is the one the analysis resolved, so a shadowed name's uses are not
+     * the shadowing one's.
+     *
+     * [text] is the editor's text, which can be ahead of the analysed [source]: a use before the edit keeps its
+     * offset, one after it moves with it, and one the edit touches, or that is no longer the same whole word, is left
+     * out. The offsets, lines and code are [text]'s.
+     */
+    fun usagesAt(pos: Int, text: String = source): List<LocalUsage> {
+        val word = analysedWordAt(pos = pos, text = text) ?: return emptyList()
+        val edit = word.edit
+
+        // A word that reads the local, or its declared name; the same declaration, not one that only looks the same
+        // (a shadowing one has its own)
+        val identifier = (astIndex.nodeAt(word.analysedStart) as? Identifier)?.takeIf {
+            it.name == word.name && astIndex.offsetOf(it)?.first == word.analysedStart
+        }
+        val binding = identifier?.let { bindingMap[it] } ?: declaredAt(word) ?: return emptyList()
+
+        return bindingMap.entries
+            .filter { (_, other) -> other === binding }
+            .mapNotNull { (use, _) -> astIndex.offsetOf(use) }
+            .mapNotNull { range ->
+                // The use in the editor's text: in place before the edit, moved with it after it
+                val shift = when {
+                    edit == null || range.last + 1 <= edit.start -> 0
+                    range.first >= edit.oldEnd -> edit.newEnd - edit.oldEnd
+                    else -> return@mapNotNull null
+                }
+
+                val start = range.first + shift
+                val end = range.last + 1 + shift
+
+                // Still the same whole word in the editor's text: an edit right next to it changes it ("a" to "ab")
+                val sameWord = end <= text.length && text.substring(start, end) == binding.name &&
+                        (start == 0 || !text[start - 1].code.isWordChar()) &&
+                        (end == text.length || !text[end].code.isWordChar())
+
+                if (sameWord) usageIn(text = text, start = start, end = end) else null
+            }
+            .distinctBy { it.start }
+            .sortedBy { it.start }
+    }
+
+    /** A use from [start] to [end] in [text]: its line, counted from 1, and that line's code. */
+    private fun usageIn(text: String, start: Int, end: Int): LocalUsage {
+        val lineStart = if (start > 0) text.lastIndexOf("\n", startIndex = start - 1) + 1 else 0
+        val lineEnd = text.indexOf("\n", startIndex = start).let { if (it < 0) text.length else it }
+        val line = text.substring(0, start).count { it == '\n' } + 1
+
+        return LocalUsage(start = start, end = end, line = line, code = text.substring(lineStart, lineEnd).trim())
     }
 
     /**

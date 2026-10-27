@@ -35,7 +35,9 @@ the fullscreen toggle. The editor shows a symbol's quick help on hover (`hoverPo
   the column shows only that song.
 - **EVT** (highlights per audio event) moves to a settings place.
 - **Alt+Q on a name opens its help in a tool window** flying in from the right, as designed. The hover help becomes
-  a setting, **off by default**, in the same settings place.
+  a setting, **off by default**, in the same settings place. *Changed 2026-10-27:* the help is a bottom panel, "Quick
+  help" (the signatures and parameter tables are long lines), never the popup on the song page; the hover help is
+  **on by default**, its switch in the panel. See "Asked along the way".
 - **Teaching the keys**: the first song (Final Synthasy VII Prelude) opens with a few short comments: Alt+Q on a name
   for its help, Alt+M for the Motor's menu, and the like. The first-visit trail can add a lamp later.
 
@@ -94,6 +96,40 @@ the fullscreen toggle. The editor shows a symbol's quick help on hover (`hoverPo
   rounds (level 2), both clean, their MINORs and NITs applied; the new parts' specs mutation-checked (the checkbox
   4, the screen 4).
 
+## Asked along the way (the maintainer, 2026-10-27)
+
+Requests made while the Quick help was looked at in the browser, each with what came of it. Done unless marked.
+
+- The gauges' reading cannot be selected (commit 39f97cd2b).
+- The hover help on by default, its switch in the help's header; the help always in the panel, never the old popup;
+  then the panel at the bottom, as the signatures and parameter tables are long lines.
+- The Oscilloscope's spikes from bottom left to top right: fixed (`extremesInOrder`, `OscilloscopeSpec`).
+- The bottom panel in a fly-in and a pinned variant, as the tool windows; Esc closes only the fly-in.
+- The header reads "Quick help" with how to call it (the Alt and Q caps); the header, dragged, resizes the panel; a
+  checkbox in it stays clickable.
+- The help's content laid out anew ("pretty much a mess", "wasting a lot of space", signatures "extremely ugly"):
+  `QuickHelpView`, the kinds as keys, the call as written, parameters in a column.
+- The double scroll bar under the editor with the panel open: the code highlights' canvas now follows the editor's
+  size (`CodeMirrorHighlightBuffer`); the "ResizeObserver loop" error on pin fixed with it.
+- A local's uses ("line number and code with the option to jump there"), and the help on a declared name too
+  (`AnalyzedAst.usagesAt`/`declarationAt`, KLANG-00361).
+- The editor's keys and bookmarks corner right-aligned over the darker minimap.
+- Looks: Cream's panel lighter and its fields warmer; Copper's grounds its own reddish brown, darkened a step, its
+  inks warm; the Esc and Alt+Q caps on the look's colours; the tool windows' ground a greyish variant in every look.
+- The workbench's layout kept over a reload: the pinned tool windows, the pinned one open, the bottom panel pinned,
+  open and its height (`KlangWorkbench.Layout`, `WorkbenchLayoutStorage`).
+- The pinned bottom panel's left border doubled: removed.
+- The empty Quick help's "Rest the mouse ..." larger and centred.
+- *Moved to KLANG-00368:* the editor's comments in the look's colours ("the comments in the editor them need to
+  match the theme"), and a palette of the code's own per look.
+- *Next, after the Quick help commit:* "When we have an export symbol the help must provide a copyable import for
+  that symbol": a library's top-level name (`note`, `stack`) shows `import { note } from "sprudel"` with a Copy key.
+  Proposed for a member (`.reverb` on a pattern, which cannot be imported alone): the import that brings its library,
+  `import * from "sprudel"`. A local shows none.
+- *Moved to KLANG-00365:* the bottom panel's tabs (Quick help, Lexikon), Lexikon links that stay on the page, a first
+  visit with the Quick help open and pinned.
+- *Moved to KLANG-00366:* brushed metal on chosen parts.
+
 ## Open for the maintainer
 
 - **Where the hover setting reaches:** it switches the hover help of the song page and the tutorials' code examples
@@ -112,3 +148,10 @@ the fullscreen toggle. The editor shows a symbol's quick help on hover (`hoverPo
 - 2026-10-26: created; the design decided with the maintainer (the RPM knob, the hover setting, the comments, the
   header).
 - 2026-10-26: IN PROGRESS. started
+- 2026-10-27: the maintainer's requests of the day recorded under "Asked along the way"; the tabs and the Lexikon
+  moved to KLANG-00365, the brushed metal to KLANG-00366.
+- 2026-10-27: the Quick help round committed (the bottom panel, `QuickHelpView`, a local's uses, the layout kept over
+  a reload, the looks, the scope's spikes, the double scroll bar). Reviewed in four rounds (level 2): round 1 two
+  MAJORs (the hover's timer, a kind kept across names), round 2 one (a kept height larger than the room), round 3 one
+  (a right press starting a drag a menu kept), round 4 clean; their MINORs applied but two NITs accepted (the scope's
+  pair per pixel, the screen fill spec as a light check). The new rows mutation-checked, every mutant killed.

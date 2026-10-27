@@ -35,18 +35,7 @@ fun FlowContent.klangScopeLabel(laf: KlangLookAndFeel, scope: KlangScope) {
         KlangScope.MASTER -> laf.warning
     }
 
-    val hint = when (scope) {
-        KlangScope.VOICE ->
-            "Per voice: every note carries its own value."
-
-        KlangScope.ORBIT ->
-            "Orbit bus: one shared processor per orbit, set by the newest note that is still held on it (a release tail does not count)." +
-                    " Every other voice on the orbit is along for the ride." +
-                    " Give a pattern its own orbit to give it its own settings."
-
-        KlangScope.MASTER ->
-            "Master: the whole playback, after every orbit."
-    }
+    val hint = scope.hint()
 
     ui.label {
         css {
@@ -56,4 +45,18 @@ fun FlowContent.klangScopeLabel(laf: KlangLookAndFeel, scope: KlangScope) {
         title = hint
         +scope.label
     }
+}
+
+/** What a scope means for the one who writes the code, for a label's tooltip. */
+fun KlangScope.hint(): String = when (this) {
+    KlangScope.VOICE ->
+        "Per voice: every note carries its own value."
+
+    KlangScope.ORBIT ->
+        "Orbit bus: one shared processor per orbit, set by the newest note that is still held on it (a release tail does not count)." +
+                " Every other voice on the orbit is along for the ride." +
+                " Give a pattern its own orbit to give it its own settings."
+
+    KlangScope.MASTER ->
+        "Master: the whole playback, after every orbit."
 }

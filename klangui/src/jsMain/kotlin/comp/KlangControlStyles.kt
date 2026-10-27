@@ -571,6 +571,22 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("animation", "kl-fly-in 0.18s ease-out")
     }
 
+    /** Flying in from below: the shadow above it, rounded at its top corners. */
+    val toolWindowFloatingBottom by rule {
+        put("border-top-left-radius", "6px")
+        put("border-top-right-radius", "6px")
+        put("box-shadow", "0 -18px 40px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06)")
+        put("animation", "kl-fly-up 0.18s ease-out")
+    }
+
+    /** What a tool window's header holds besides its title, before its close key and pin. */
+    val toolWindowHeaderEnd by rule {
+        put("display", "flex")
+        put("align-items", "center")
+        put("gap", "8px")
+        put("margin-right", "8px")
+    }
+
     val toolWindowHeader by rule {
         put("display", "flex")
         put("align-items", "center")
@@ -1070,29 +1086,53 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("overflow-y", "auto")
     }
 
-    val workbenchBottom by rule {
+    /** The bottom panel pinned: docked under the content, which gives it room. Its height is the workbench's. */
+    val workbenchBottomPinned by rule {
         put("display", "flex")
-        put("flex-direction", "column")
         put("flex-shrink", "0")
-        put("height", "240px")
-        put("background", "var(--kl-ground-panel)")
+        // A kept height from a larger window never pushes the content (or the panel's own header) out of the room
+        put("max-height", "calc(100% - ${KlangWorkbench.CONTENT_KEPT_PX.toInt()}px)")
         put("border-top", "1px solid var(--kl-edge)")
+
+        // Its left edge meets the page's own (the line beside a right-side tool window would double it)
+        rule("& .$toolWindow") {
+            put("border-left", "none")
+        }
+
+        // Its header is its handle, to drag it higher or lower; the keys in it stay keys
+        rule("& .$toolWindowHeader") {
+            put("cursor", "ns-resize")
+            put("touch-action", "none")
+        }
+
+        // Holding the focus as a frame, not a control: no ring
+        rule("&:focus") {
+            put("outline", "none")
+        }
     }
 
-    val workbenchBottomHeader by rule {
+    /** The bottom panel flying in over the content from below (KLANG-00349). Its height is the workbench's. */
+    val workbenchBottomFloating by rule {
+        put("position", "absolute")
+        put("left", "0")
+        put("right", "0")
+        put("bottom", "0")
+        put("z-index", "14")
         put("display", "flex")
-        put("align-items", "center")
-        put("flex-shrink", "0")
-        put("height", "36px")
-        put("padding", "0 16px")
-        put("border-bottom", "1px solid var(--kl-ground-deep)")
-    }
+        put("max-height", "calc(100% - ${KlangWorkbench.CONTENT_KEPT_PX.toInt()}px)")
 
-    val workbenchBottomBody by rule {
-        put("flex", "1")
-        put("min-height", "0")
-        put("overflow", "auto")
-        put("padding", "14px 16px")
+        rule("& .$toolWindow") {
+            put("border-left", "none")
+        }
+
+        rule("& .$toolWindowHeader") {
+            put("cursor", "ns-resize")
+            put("touch-action", "none")
+        }
+
+        rule("&:focus") {
+            put("outline", "none")
+        }
     }
 
     /** A tool window flying in over the content, from the strip's side. */
@@ -1466,6 +1506,10 @@ object KlangControlStyles : StyleSheet("kl-controls") {
                 from { transform: translateX(60px); opacity: 0; }
                 to { transform: none; opacity: 1; }
             }
+            @keyframes kl-fly-up {
+                from { transform: translateY(60px); opacity: 0; }
+                to { transform: none; opacity: 1; }
+            }
             @keyframes kl-spin {
                 to { transform: rotate(360deg); }
             }
@@ -1481,6 +1525,7 @@ object KlangControlStyles : StyleSheet("kl-controls") {
                 .$button.$beacon::after { animation: none; box-shadow: 0 0 0 2px var(--kl-lamp-try); }
                 .$lamp.$lampTry { animation: none; }
                 .$toolWindow.$toolWindowFloating { animation: none; }
+                .$toolWindow.$toolWindowFloatingBottom { animation: none; }
                 .$ignitionCap.$beacon::after { animation: none; box-shadow: 0 0 0 2px var(--kl-lamp-try); }
                 .$iconToggle.$beacon::after { animation: none; box-shadow: 0 0 0 2px var(--kl-lamp-try); }
                 .$knobTurn.$ignitionTurn { transition: none; }

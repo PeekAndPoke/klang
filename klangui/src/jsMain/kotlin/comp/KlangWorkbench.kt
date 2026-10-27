@@ -9,7 +9,12 @@ import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
+import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
+import io.peekandpoke.ultra.html.onPointerCancel
+import io.peekandpoke.ultra.html.onPointerDown
+import io.peekandpoke.ultra.html.onPointerMove
+import io.peekandpoke.ultra.html.onPointerUp
 import io.peekandpoke.ultra.semanticui.SemanticIconFn
 import kotlinx.browser.document
 import kotlinx.browser.window
@@ -19,9 +24,10 @@ import kotlinx.html.Tag
 import kotlinx.html.aside
 import kotlinx.html.div
 import kotlinx.html.main
-import kotlinx.html.section
 import kotlinx.html.span
+import org.w3c.dom.Element
 import org.w3c.dom.HTMLElement
+import org.w3c.dom.pointerevents.PointerEvent
 
 @Suppress("FunctionName")
 fun Tag.KlangWorkbench(
@@ -33,6 +39,8 @@ fun Tag.KlangWorkbench(
     drawer: (FlowContent.(close: () -> Unit) -> Unit)? = null,
     keys: (FlowContent.() -> Unit)? = null,
     mark: String? = null,
+    layout: KlangWorkbench.Layout? = null,
+    onLayout: ((KlangWorkbench.Layout) -> Unit)? = null,
 ) = comp(
     KlangWorkbench.Props(
         column = column,
@@ -43,6 +51,8 @@ fun Tag.KlangWorkbench(
         drawer = drawer,
         keys = keys,
         mark = mark,
+        layout = layout,
+        onLayout = onLayout,
     )
 ) {
     KlangWorkbench(it)
@@ -71,13 +81,25 @@ fun Tag.KlangWorkbench(
  */
 class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
 
-    private companion object {
+    internal companion object {
         /** A field to type in, which takes the focus first when the drawer opens (its search). */
         const val FIELD = "input:not([disabled]):not([type=hidden])"
 
         /** What can take the focus in the drawer: links, enabled fields and buttons, any tab stop. */
         const val FOCUSABLE = "a[href], button:not([disabled]), input:not([disabled]):not([type=hidden]), " +
                 "select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])"
+
+        /** What in the bottom panel's header is not its handle: what one operates, and what the panel brings there. */
+        val NOT_A_HANDLE = "button, a, input, label, select, textarea, [role=button], .${KlangControlStyles.toolWindowHeaderEnd}"
+
+        /** The bottom panel's height at first. */
+        const val BOTTOM_HEIGHT_PX = 260.0
+
+        /** The least the bottom panel shrinks to: its header and a few lines. */
+        const val BOTTOM_LEAST_PX = 120.0
+
+        /** The content kept above the bottom panel at its highest. */
+        const val CONTENT_KEPT_PX = 120.0
     }
 
     /** A tool window: its [id], its [title] (and toggle name), a [chip] (what it follows), its strip [icon]. */
@@ -89,10 +111,14 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
         val content: DIV.() -> Unit,
     )
 
-    /** The bottom panel: its [title] and its [content]; [icon] is its strip toggle. */
+    /**
+     * The bottom panel: its [title] and its [content]; [icon] is its strip toggle; [header] what its header holds
+     * besides the title, at the right (the song page's Help: its "Show on hover", KLANG-00349).
+     */
     data class Bottom(
         val title: String,
         val icon: SemanticIconFn,
+        val header: (FlowContent.() -> Unit)? = null,
         val content: DIV.() -> Unit,
     )
 
@@ -115,6 +141,23 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
         val keys: (FlowContent.() -> Unit)?,
         /** The maker's mark at the strip's foot ("KLANGMOTOR"); null for none. */
         val mark: String?,
+        /** The layout to start with, as [onLayout] last reported it (a page kept it over a reload); null for none. */
+        val layout: Layout?,
+        /** Gets the layout whenever it changed, to keep it; a drag of the bottom panel reports once, at its end. */
+        val onLayout: ((Layout) -> Unit)?,
+    )
+
+    /**
+     * What of the bench outlives a reload (the maintainer, 2026-10-27: "When there are pinned tools they need to survive
+     * reloads"): the tool windows [pinned], the pinned one [open], and the bottom panel's [bottomPinned], whether it is
+     * open pinned ([bottomOpen]) and its [bottomHeight]. A window that only flies in is a passing look: it is not kept.
+     */
+    data class Layout(
+        val pinned: Set<String> = emptySet(),
+        val open: String? = null,
+        val bottomOpen: Boolean = false,
+        val bottomPinned: Boolean = false,
+        val bottomHeight: Double = BOTTOM_HEIGHT_PX,
     )
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -123,9 +166,29 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
     private var openTool: String? by value(null)
 
     /** The tool windows pinned beside the content; each keeps its own pin. */
-    private var pinned: Set<String> by value(emptySet())
+    private var pinned: Set<String> by value(props.layout?.pinned ?: emptySet())
 
-    private var bottomOpen: Boolean by value(false)
+    /**
+     * The pinned tool window the kept layout had open, waiting for its page to bring it (the song page fills its tools
+     * just after the bench is drawn); opened when it comes, dropped when the user opens another.
+     */
+    private var waitingTool: String? = props.layout?.open?.takeIf { it in pinned }
+
+    private var bottomOpen: Boolean by value(props.layout?.let { it.bottomOpen && it.bottomPinned } ?: false)
+
+    /** The bottom panel docked under the content; else it flies in over it. */
+    private var bottomPinned: Boolean by value(props.layout?.bottomPinned ?: false)
+
+    /** The bottom panel's height, pinned or flying in; its header, dragged, sets it (the maintainer, 2026-10-27). */
+    private var bottomHeight: Double by value((props.layout?.bottomHeight ?: BOTTOM_HEIGHT_PX).coerceAtLeast(BOTTOM_LEAST_PX))
+
+    /** The layout as last reported (or started with), so a redraw that changed nothing of it reports nothing. */
+    private var reported: Layout = props.layout ?: Layout()
+
+    /** A drag on the bottom panel's header: the pointer, where it started, and the height then. */
+    private class BottomDrag(val pointerId: Int, val fromY: Double, val fromHeight: Double)
+
+    private var bottomDrag: BottomDrag? = null
 
     private var drawerOpen: Boolean by value(false)
 
@@ -135,12 +198,38 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
     /** Where the focus was when a tool window opened (its toggle in the strip, the code for [showTool]); back there on Esc. */
     private var focusBeforeTool: HTMLElement? = null
 
+    /** Where the focus was when the bottom panel opened, to give it back when the panel closes. */
+    private var focusBeforeBottom: HTMLElement? = null
+
     init {
+        openWaitingTool(props.tools)
+
         lifecycle {
-            // A tool window or a drawer that leaves the props closes, so it does not open again by itself when it comes back
+            onUpdate { reportLayout() }
+
+            // A tool window or a drawer that leaves the props closes, so it does not open again by itself when it comes
+            // back; a pinned one waits for it, as it would after a reload (a page left and come back to)
             onNextProps { next, _ ->
-                if (openTool != null && next.tools.none { it.id == openTool }) {
+                val leaving = openTool
+
+                if (leaving != null && next.tools.none { it.id == leaving }) {
                     openTool = null
+
+                    if (leaving in pinned) {
+                        waitingTool = leaving
+                    }
+                }
+
+                openWaitingTool(next.tools)
+
+                // The bottom panel flying in goes with its page; pinned, it waits for the next page that brings one. A
+                // drag ends with it either way
+                if (next.bottom == null) {
+                    bottomDrag = null
+
+                    if (!bottomPinned) {
+                        bottomOpen = false
+                    }
                 }
 
                 if (next.drawer == null) {
@@ -152,7 +241,47 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+    /** The kept layout's pinned tool window, once its page brought it. */
+    private fun openWaitingTool(tools: List<Tool>) {
+        val waiting = waitingTool ?: return
+
+        if (tools.any { it.id == waiting }) {
+            waitingTool = null
+
+            if (openTool == null) {
+                openTool = waiting
+            }
+        }
+    }
+
+    /** The layout now, as it outlives a reload. */
+    private fun layout(): Layout = Layout(
+        pinned = pinned,
+        open = openTool?.takeIf { it in pinned } ?: waitingTool,
+        bottomOpen = bottomOpen && bottomPinned,
+        bottomPinned = bottomPinned,
+        bottomHeight = bottomHeight,
+    )
+
+    /** Reports the layout when it changed, not in the middle of a drag (its end reports it). */
+    private fun reportLayout() {
+        val report = props.onLayout ?: return
+
+        if (bottomDrag != null) {
+            return
+        }
+
+        val now = layout()
+
+        if (now != reported) {
+            reported = now
+            report(now)
+        }
+    }
+
     private fun toggleTool(id: String) {
+        waitingTool = null
+
         if (openTool == id) {
             openTool = null
             focusBeforeTool = null
@@ -167,14 +296,26 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
     }
 
     /**
-     * Shows the tool window [id] from outside the strip (a key in the editor, as Alt+Q shows the help: KLANG-00349),
-     * open if it is already; the focus stays where it is, so the user goes on typing, and Esc in the window gives it
-     * back there. An [id] the props do not hold does nothing.
+     * Shows the bottom panel from outside the strip (the song page's help, on Alt+Q or a hover: KLANG-00349), open if
+     * it is already; the focus stays where it is. Without a bottom panel it does nothing.
+     */
+    fun showBottom() {
+        if (props.bottom != null && !bottomOpen) {
+            openBottom()
+        }
+    }
+
+    /**
+     * Shows the tool window [id] from outside the strip (a key in the editor, say), open if it is already; the focus
+     * stays where it is, so the user goes on typing, and Esc in the window gives it back there. An [id] the props do
+     * not hold does nothing. The song page's help went to the bottom panel ([showBottom]); kept for the pages to come.
      */
     fun showTool(id: String) {
         if (props.tools.none { it.id == id }) {
             return
         }
+
+        waitingTool = null
 
         if (openTool != id) {
             focusBeforeTool = document.activeElement as? HTMLElement
@@ -189,6 +330,37 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
             val frame = dom?.querySelector(".${KlangControlStyles.workbenchFloating}, .${KlangControlStyles.workbenchPinned}")
 
             (frame as? HTMLElement)?.focus()
+        }
+    }
+
+    private fun openBottom() {
+        focusBeforeBottom = document.activeElement as? HTMLElement
+        bottomOpen = true
+    }
+
+    /** Closes the bottom panel (its toggle, its close button; Esc when it flies in); a focus lost with it goes back. */
+    private fun closeBottom() {
+        bottomOpen = false
+        bottomDrag = null
+
+        val back = focusBeforeBottom
+        focusBeforeBottom = null
+
+        restoreFocus(back)
+    }
+
+    /** After the next draw, the bottom panel takes a focus that was lost on the way (its pin's key was redrawn). */
+    private fun focusBottomFrame() {
+        window.requestAnimationFrame {
+            val now = document.activeElement
+
+            if (now == null || now == document.body) {
+                val frame = dom?.querySelector(
+                    ".${KlangControlStyles.workbenchBottomPinned}, .${KlangControlStyles.workbenchBottomFloating}"
+                )
+
+                (frame as? HTMLElement)?.focus()
+            }
         }
     }
 
@@ -286,19 +458,29 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
                     props.content(this)
                 }
 
+                // The bottom panel: pinned, docked under the content; else flying in over it from below (the
+                // maintainer, 2026-10-27: "a "fly in" and a pinned variant", as the tool windows have)
                 if (bottom != null && bottomOpen) {
-                    section(classes = styles.workbenchBottom.toString()) {
-                        key = "bottom"
+                    val placement = if (bottomPinned) styles.workbenchBottomPinned else styles.workbenchBottomFloating
 
-                        attributes["aria-label"] = bottom.title
+                    div(classes = placement.toString()) {
+                        key = if (bottomPinned) "bottom-pinned" else "bottom-floating"
+                        attributes["tabindex"] = "-1"
+                        css { put("height", "${bottomHeight}px") }
 
-                        div(classes = styles.workbenchBottomHeader.toString()) {
-                            span(classes = styles.toolWindowTitle.toString()) { +bottom.title }
+                        // Its header is its handle: dragged up or down, the panel grows or shrinks
+                        onPointerDown { e -> startBottomDrag(e) }
+                        onPointerMove { e -> dragBottom(e) }
+                        onPointerUp {
+                            bottomDrag = null
+                            reportLayout()
+                        }
+                        onPointerCancel {
+                            bottomDrag = null
+                            reportLayout()
                         }
 
-                        div(classes = styles.workbenchBottomBody.toString()) {
-                            bottom.content(this)
-                        }
+                        renderBottom(bottom)
                     }
                 }
 
@@ -350,7 +532,7 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
                         label = bottom.title,
                         on = bottomOpen,
                         large = true,
-                        onClick = { bottomOpen = !bottomOpen },
+                        onClick = { if (bottomOpen) closeBottom() else openBottom() },
                     )
                 }
 
@@ -376,6 +558,85 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * A press on the bottom panel's header starts a resize: on its title or its empty stretch, not on anything one
+     * operates (a key, a checkbox) nor on what the panel brings into its header (the maintainer, 2026-10-27: the "Show
+     * on hover" checkbox was "caught by the dragging of the header").
+     */
+    private fun startBottomDrag(e: PointerEvent) {
+        val target = e.target as? Element ?: return
+        val styles = KlangControlStyles
+
+        // The main button only: a right press opens a menu, which may keep the release, and a drag begun so would
+        // take over the next left-button gesture that crosses the panel (a selection in the code, say)
+        if (e.button.toInt() != 0) {
+            return
+        }
+
+        if (target.closest(".${styles.toolWindowHeader}") == null || target.closest(NOT_A_HANDLE) != null) {
+            return
+        }
+
+        // No text selected on the way
+        e.preventDefault()
+
+        // From the height it shows, which the room may hold below the kept one (a smaller window than the last visit's)
+        bottomDrag = BottomDrag(
+            pointerId = e.pointerId,
+            fromY = e.clientY.toDouble(),
+            fromHeight = bottomHeight.coerceAtMost(mostBottomHeight()),
+        )
+
+        // The moves and the release reach the panel also outside it; a pointer that is already gone cannot be captured
+        runCatching { (e.currentTarget as? Element)?.setPointerCapture(e.pointerId) }
+    }
+
+    private fun dragBottom(e: PointerEvent) {
+        val drag = bottomDrag ?: return
+
+        if (e.pointerId != drag.pointerId) {
+            return
+        }
+
+        // The main button's release went elsewhere (the panel closed under it, a window took it): the drag is over,
+        // not stuck
+        if ((e.buttons.toInt() and 1) == 0) {
+            bottomDrag = null
+            reportLayout()
+
+            return
+        }
+
+        // Up makes it higher; it keeps some content above it, and some room of its own
+        bottomHeight = (drag.fromHeight + (drag.fromY - e.clientY)).coerceIn(BOTTOM_LEAST_PX, mostBottomHeight())
+    }
+
+    /** The bottom panel's height at most: the room, some content kept above it, as its style's max-height says. */
+    private fun mostBottomHeight(): Double {
+        val centre = dom?.querySelector(".${KlangControlStyles.workbenchCentre}") as? HTMLElement
+
+        return ((centre?.clientHeight ?: 0).toDouble() - CONTENT_KEPT_PX).coerceAtLeast(BOTTOM_LEAST_PX)
+    }
+
+    private fun FlowContent.renderBottom(bottom: Bottom) {
+        KlangToolWindow(
+            title = bottom.title,
+            pinned = bottomPinned,
+            onPinnedChange = { pin ->
+                bottomPinned = pin
+                // The panel moves between the content and the bench: a focus it held moves with it
+                focusBottomFrame()
+            },
+            onClose = { closeBottom() },
+            // Flying in, Esc closes it through the key manager; pinned, it is part of the bench
+            closeOnEsc = !bottomPinned,
+            edge = KlangToolWindow.Edge.Bottom,
+            header = bottom.header,
+        ) {
+            bottom.content(this)
         }
     }
 

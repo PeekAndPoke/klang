@@ -461,3 +461,10 @@ OkCancel real buttons and focus; their Esc stays ours until the key map carries 
 - 2026-10-26: quick documentation on Alt+Q on every platform, decided by the maintainer in KLANG-00349 (Alt+Q on a
   name opens its help in the song page's Help window; the hover help a setting, off by default); made there, with
   Klang-Main-Dev's agreement.
+- 2026-10-27: the editor extension's `onHoverDocumentation` (KLANG-00349, Klang-Research): given, a hover hands the name
+  to the host after a 350 ms rest instead of the popup; the song page shows it in its Quick help panel. Without it
+  (the REPL, the MIDI playground) the popup stays.
+- 2026-10-27: `EditorKeysCorner` right-aligned in the editor over the minimap, now that it is darker (the maintainer:
+  "right aligned in the editor and overlap the minimap"); the minimap measuring gone, the column of panels as it was.
+- 2026-10-27: `KlangKeyHint`'s caps on the look's colours (`--kl-*`), so the Esc and Alt+Q caps match in Copper and
+  Cream; the hover hand-over cancelled when the mouse leaves the editor, on an edit, and when the editor is gone.

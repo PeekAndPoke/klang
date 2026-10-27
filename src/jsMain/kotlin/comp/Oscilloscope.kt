@@ -236,36 +236,24 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
                 }
             }
         } else {
-            // More samples than pixels: each drawn pixel spans its samples' lowest and highest
+            // More samples than pixels: each drawn pixel spans its samples' lowest and highest, in the order the
+            // signal reached them. Always highest then lowest drew, from every pixel's lowest to the next one's
+            // highest, a line rising to the right whatever the wave did: spikes (the maintainer, 2026-10-27)
             val samplesPerPixel = bufferLength / width
 
             for (pixelX in 0 until width step step) {
                 val start = pixelX * samplesPerPixel
                 val end = minOf(start + samplesPerPixel, bufferLength)
 
-                var min = buffer[start]
-                var max = min
-
-                for (i in start + 1 until end) {
-                    val value = buffer[i]
-
-                    if (value < min) {
-                        min = value
-                    }
-
-                    if (value > max) {
-                        max = value
-                    }
-                }
-
+                val (first, last) = extremesInOrder(buffer = buffer, start = start, end = end)
                 val x = pixelX.toDouble()
 
                 if (pixelX == 0) {
-                    path.moveTo(x, yOf(value = max, x = x))
+                    path.moveTo(x, yOf(value = first, x = x))
                 }
 
-                path.lineTo(x, yOf(value = max, x = x))
-                path.lineTo(x, yOf(value = min, x = x))
+                path.lineTo(x, yOf(value = first, x = x))
+                path.lineTo(x, yOf(value = last, x = x))
             }
         }
 
@@ -333,4 +321,31 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
             canvas("oscilloscope-canvas") {}
         }
     }
+}
+
+/**
+ * The lowest and the highest of [buffer] from [start] until [end], in the order the signal reached them: the one
+ * reached first first.
+ */
+internal fun extremesInOrder(buffer: Float32Array, start: Int, end: Int): Pair<Float, Float> {
+    var min = buffer[start]
+    var max = min
+    var minAt = start
+    var maxAt = start
+
+    for (i in start + 1 until end) {
+        val value = buffer[i]
+
+        if (value < min) {
+            min = value
+            minAt = i
+        }
+
+        if (value > max) {
+            max = value
+            maxAt = i
+        }
+    }
+
+    return if (minAt <= maxAt) min to max else max to min
 }

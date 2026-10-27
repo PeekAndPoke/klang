@@ -17,6 +17,7 @@ import io.peekandpoke.klang.codemirror.ext.StateField
 import io.peekandpoke.klang.codemirror.ext.StateFieldConfig
 import io.peekandpoke.klang.script.intel.AnalyzedAst
 import io.peekandpoke.klang.script.intel.LocalDefinition
+import io.peekandpoke.klang.script.intel.LocalUsage
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.ui.HoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolCall
@@ -55,6 +56,15 @@ private class WordDoc(val word: SelectionRange, val symbol: KlangSymbol, val def
 private data class HoverKey(val from: Int, val to: Int, val symbol: KlangSymbol, val definition: LocalDefinition?)
 
 /**
+ * A host's quick help for a name: its [KlangSymbol], a local's declaration code (null for a library name), and a local's
+ * uses in the editor's text (empty for a library name), for a list to jump from (KLANG-00349).
+ */
+typealias QuickHelpHandler = (symbol: KlangSymbol, declarationCode: String?, usages: List<LocalUsage>) -> Unit
+
+/** How long the mouse rests on a name before its help goes to the host ([dslEditorExtension]'s onHoverDocumentation). */
+private const val HOVER_TO_HOST_MS = 350
+
+/**
  * Combined CodeMirror extension for DSL editor interactions:
  *
  * - Hover over a known function  → show doc tooltip (for a local, with its declaration's code)
@@ -65,9 +75,11 @@ private data class HoverKey(val from: Int, val to: Int, val symbol: KlangSymbol,
  * - Ctrl+B / Alt+Q (the key map's go to definition and quick documentation) → the same for the name at the cursor
  *
  * [hoverContent] renders the popup for a symbol; `declarationCode` is a local's declaration, null for a library name.
- * [hoverDocs] is asked on every move whether the hover shows the popup (a setting, off by default in the app:
+ * [hoverDocs] is asked on every move whether the hover shows the popup (a setting in the app, on by default:
  * KLANG-00349). [onQuickDocumentation], when given, gets the name at the cursor on quick documentation instead of
- * the popup (the song page shows it in its Help window); a cursor on no known name does not call it.
+ * the popup (the song page shows it in its Help panel); a cursor on no known name does not call it.
+ * [onHoverDocumentation], when given, gets the name the mouse rests on instead of the popup, once it rested a moment
+ * (the song page shows its help in the Help panel, never as a popup: the maintainer, 2026-10-27).
  */
 fun dslEditorExtension(
     docProvider: (String) -> KlangSymbol?,
@@ -78,7 +90,8 @@ fun dslEditorExtension(
     onNavigate: (doc: KlangSymbol, event: dynamic) -> Unit,
     onOpenTool: ((toolName: String, ctx: KlangUiToolContext, argFrom: Int, event: dynamic) -> Unit)? = null,
     hoverDocs: () -> Boolean = { true },
-    onQuickDocumentation: ((symbol: KlangSymbol, declarationCode: String?) -> Unit)? = null,
+    onQuickDocumentation: QuickHelpHandler? = null,
+    onHoverDocumentation: QuickHelpHandler? = null,
 ): DslEditorWiring {
 
     // ── Underline decoration (CTRL/Cmd-hover) ─────────────────────────────
@@ -142,8 +155,10 @@ fun dslEditorExtension(
         val analysis = analysisProvider()
 
         if (analysis != null) {
-            // A local answers with its declaration, read from the text as it is now (the analysis can be older)
-            val definition = analysis.definitionAt(pos = pos, text = view.state.doc.toString())
+            // A local answers with its declaration, read from the text as it is now (the analysis can be older); on
+            // its declared name too (the maintainer, 2026-10-27: the help "also on the declaration sites")
+            val text = view.state.doc.toString()
+            val definition = analysis.definitionAt(pos = pos, text = text) ?: analysis.declarationAt(pos = pos, text = text)
 
             if (definition != null) {
                 return WordDoc(word = word, symbol = definition.symbol, definition = definition)
@@ -256,6 +271,15 @@ fun dslEditorExtension(
 
     // ── Context menu ───────────────────────────────────────────────────────
 
+    /** A local's uses in the editor's text, for the host's quick help; none for a library name. */
+    fun usagesOf(view: EditorView, word: Int, isLocal: Boolean): List<LocalUsage> {
+        if (!isLocal) {
+            return emptyList()
+        }
+
+        return analysisProvider()?.usagesAt(pos = word, text = view.state.doc.toString()) ?: emptyList()
+    }
+
     /** Move the cursor to a local's declared name, scroll it into view and keep the focus in the editor. */
     fun goToDefinition(view: EditorView, definition: LocalDefinition) {
         view.dispatch(jsObject<dynamic> {
@@ -359,6 +383,14 @@ fun dslEditorExtension(
 
     var badgesHideTimer: dynamic = null
     var badgesShowTimer: dynamic = null
+
+    /** The hover's quick help on its way to the host ([onHoverDocumentation]), waiting for the mouse to rest. */
+    var hoverToHostTimer: Int? = null
+
+    fun cancelHoverToHost() {
+        hoverToHostTimer?.let { window.clearTimeout(it) }
+        hoverToHostTimer = null
+    }
 
     fun cancelBadgesShow() {
         if (badgesShowTimer != null) window.clearTimeout(badgesShowTimer.unsafeCast<Int>())
@@ -572,8 +604,26 @@ fun dslEditorExtension(
             // The mouse has the popup now
             popupByKey = false
 
+            cancelHoverToHost()
+
+            val toHost = onHoverDocumentation
+
             if (doc != null && word != null && hoverDocs()) {
-                showDocs(view = view, y = event.clientY.unsafeCast<Double>(), symbol = doc, declarationCode = declarationCode)
+                if (toHost != null) {
+                    // The host shows it, once the mouse rested on the name a moment
+                    hoverToHostTimer = window.setTimeout({
+                        hoverToHostTimer = null
+
+                        // An editor gone meanwhile (its page left by a key, no mouseleave on the way) hands nothing over
+                        if (!view.dom.isConnected) {
+                            return@setTimeout
+                        }
+
+                        toHost(doc, declarationCode, usagesOf(view = view, word = word.from, isLocal = declarationCode != null))
+                    }, HOVER_TO_HOST_MS)
+                } else {
+                    showDocs(view = view, y = event.clientY.unsafeCast<Double>(), symbol = doc, declarationCode = declarationCode)
+                }
             } else {
                 hoverPopup.scheduleClose()
             }
@@ -620,6 +670,8 @@ fun dslEditorExtension(
     // Mouse leaves editor → clear underline + close hover tooltip + schedule badge close
     val onMouseLeave: (event: dynamic, view: EditorView) -> Boolean = { _, view ->
         lastHoverKey = null
+        // A name the mouse only passed on its way out (into the host's quick help, say) is not handed over
+        cancelHoverToHost()
         dispatchClear(view)
         hoverPopup.scheduleClose()
         cancelBadgesShow()
@@ -692,7 +744,11 @@ fun dslEditorExtension(
 
         if (result != null && toWindow != null) {
             // The host shows the help in a window of its own, which closes itself; no popup
-            toWindow(result.symbol, result.definition?.code)
+            toWindow(
+                result.symbol,
+                result.definition?.code,
+                usagesOf(view = view, word = result.word.from, isLocal = result.definition != null),
+            )
         } else if (result != null && cursorTop != null) {
             // The popup stands for this word now, so the next mouse move elsewhere closes it, as after a hover; Esc,
             // an edit or a cursor move close it too ([closeKeyPopup])
@@ -720,6 +776,11 @@ fun dslEditorExtension(
             EditorView.updateListener.of { update ->
                 if (update.docChanged || update.selectionSet) {
                     closeKeyPopup()
+                }
+
+                // A rest that began before an edit would hand over a name and uses of two different texts
+                if (update.docChanged) {
+                    cancelHoverToHost()
                 }
             },
             theme,

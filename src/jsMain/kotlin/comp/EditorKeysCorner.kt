@@ -40,8 +40,6 @@ import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlinx.html.span
 import kotlinx.html.style
-import org.w3c.dom.HTMLElement
-import kotlin.math.roundToInt
 
 @Suppress("FunctionName")
 fun Tag.EditorKeysCorner(editorState: () -> EditorState?) = comp(EditorKeysCorner.Props(editorState = editorState)) {
@@ -49,11 +47,12 @@ fun Tag.EditorKeysCorner(editorState: () -> EditorState?) = comp(EditorKeysCorne
 }
 
 /**
- * The editor's keys in its top-right corner while the key hints show (KLANG-00325), left of the minimap: the song's
+ * The editor's keys in its top-right corner while the key hints show (KLANG-00325), over the minimap since it is
+ * darker (the maintainer, 2026-10-27: "right aligned in the editor and overlap the minimap"): the song's
  * [KeyBindingsOverlay] of [KlangEditorKeyBindings] and below it the song's bookmarks (maintainer, 2026-10-26), each with
  * the key that jumps there, its line and the code on it (maintainer, 2026-10-25: shown on the hints' key, as
- * Ctrl+digit is the jump), both in Klang's look and right-aligned. It sits in the editor's box, which needs `position: relative`; only an editor
- * that shows it follows the hints (the docs pages' editors do not).
+ * Ctrl+digit is the jump), both in Klang's look and right-aligned. It sits in the editor's box, which needs
+ * `position: relative`; only an editor that shows it follows the hints (the docs pages' editors do not).
  */
 class EditorKeysCorner(ctx: Ctx<Props>) : Component<EditorKeysCorner.Props>(ctx) {
 
@@ -68,17 +67,13 @@ class EditorKeysCorner(ctx: Ctx<Props>) : Component<EditorKeysCorner.Props>(ctx)
         /** The distance from the editor's top edge. */
         val INSET = 8.px
 
-        /** The space to the minimap on its right, and between the two panels (maintainer, 2026-10-25). */
+        /** The space to the editor's right edge, clear of its scroll bar, and between the two panels (maintainer, 2026-10-25). */
         const val GAP_PX = 18
-
-        /** The minimap's element, which CodeMirror's minimap extension mounts at the editor's right edge. */
-        const val MINIMAP_SELECTOR = ".cm-minimap-gutter"
-
     }
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
-    /** The key hints show: the panels with them, measured against the minimap as it is now. */
+    /** The key hints show: the panels with them. */
     private val hintsShown by subscribingTo(keys.hints)
 
     /** Under a modal the panels wait, with the page's keys. */
@@ -89,48 +84,14 @@ class EditorKeysCorner(ctx: Ctx<Props>) : Component<EditorKeysCorner.Props>(ctx)
     /** The keys as they are set now: the bookmarks panel shows the key that jumps to each. */
     private val keymap by subscribingTo(keys.keymap)
 
-    /** How far the minimap reaches in from the editor's right edge (with the scroll bar beside it), as last measured. */
-    private var minimapWidth by value(0)
-
-    init {
-        lifecycle {
-            // Mounted while the hints already show: measured at once, not at the next update
-            onMount {
-                measureMinimap()
-            }
-
-            onUpdate {
-                measureMinimap()
-            }
-        }
-    }
-
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
-
-    /**
-     * Reads how far the minimap reaches in from the editor's right edge, only while the hints show (no layout on every
-     * keystroke); a new value redraws, the same one does nothing (no loop with onUpdate).
-     */
-    private fun measureMinimap() {
-        if (!hintsShown) {
-            return
-        }
-
-        val editor = dom?.parentElement ?: return
-        val minimap = editor.querySelector(MINIMAP_SELECTOR) as? HTMLElement
-        val width = minimap?.let { (editor.getBoundingClientRect().right - it.getBoundingClientRect().left).roundToInt() } ?: 0
-
-        if (width != minimapWidth) {
-            minimapWidth = width
-        }
-    }
 
     override fun VDom.render() {
         div {
             css {
                 position = Position.absolute
                 top = INSET
-                right = (minimapWidth + GAP_PX).px
+                right = GAP_PX.px
                 // Never wider than the editor: the panels below keep inside it
                 left = INSET
                 display = Display.flex

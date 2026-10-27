@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.ui.comp
 
-import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.klang.workshop.keys.KeyCapGlyphs.keyCapGlyph
 import io.peekandpoke.klang.workshop.keys.KeyChord
 import io.peekandpoke.klang.workshop.keys.KeyHintRenderer
@@ -42,13 +41,14 @@ object KlangKeyHint {
     private val frameStyle: List<String>
         get() = listOf(
             "border-radius: 5px",
-            "border: 1px solid ${KlangTheme.Hex.accentMuted}",
-            "background: ${KlangTheme.Hex.menuBackground}",
+            "border: 1px solid var(--kl-accent-muted)",
+            "background: var(--kl-ground-panel)",
         )
 
     /** One way to press a key: its parts side by side, each in a key cap. */
     fun FlowContent.caps(parts: List<String>, enabled: Boolean = true) {
-        val text = if (enabled) KlangTheme.Hex.textPrimary else KlangTheme.Hex.textTertiary
+        // The look's roles, so a cap follows the look (the maintainer, 2026-10-27: the "Esc" cap "sticks out" in Copper)
+        val text = if (enabled) "var(--kl-ink-text)" else "var(--kl-ink-label)"
 
         span {
             style = "display: inline-flex; align-items: center; gap: 3px; white-space: nowrap"
@@ -63,11 +63,11 @@ object KlangKeyHint {
                         "height: 20px",
                         "min-width: 20px",
                         "padding: 0 4px",
-                        "border: 1px solid ${KlangTheme.Hex.textTertiary}",
+                        "border: 1px solid color-mix(in srgb, var(--kl-ink-label) 60%, transparent)",
                         // A key cap: the lower edge a little heavier
                         "border-bottom-width: 2px",
                         "border-radius: 3px",
-                        "background: ${KlangTheme.Hex.cardBackground}",
+                        "background: var(--kl-ground-sunken)",
                         "color: $text",
                         "font-family: inherit",
                         "font-size: 12px",
@@ -111,7 +111,7 @@ object KlangKeyHint {
                     "align-items: center",
                     "gap: 6px",
                     "padding: 4px 8px",
-                    "color: ${KlangTheme.Hex.textSecondary}",
+                    "color: var(--kl-ink-label)",
                     "font-size: 12px",
                     "box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5)",
                 ) + frameStyle
@@ -131,7 +131,7 @@ object KlangKeyHint {
                     "align-items: center",
                     "gap: 6px",
                     "padding: 3px 7px 3px 5px",
-                    "color: ${KlangTheme.Hex.textSecondary}",
+                    "color: var(--kl-ink-label)",
                     "font-size: 12px",
                     "font-weight: normal",
                 ) + frameStyle
@@ -159,7 +159,7 @@ object KlangKeyHint {
                     "row-gap: 5px",
                     "align-items: center",
                     "padding: 8px 10px",
-                    "color: ${KlangTheme.Hex.textSecondary}",
+                    "color: var(--kl-ink-label)",
                     "font-size: 12px",
                     "box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5)",
                 ) + frameStyle
@@ -167,7 +167,7 @@ object KlangKeyHint {
 
             title?.let {
                 div {
-                    style = "grid-column: 1 / -1; color: ${KlangTheme.Hex.textPrimary}; font-weight: bold; margin-bottom: 2px"
+                    style = "grid-column: 1 / -1; color: var(--kl-ink-text); font-weight: bold; margin-bottom: 2px"
                     +it
                 }
             }
@@ -191,7 +191,7 @@ object KlangKeyHint {
 
                         section.title?.let { heading ->
                             div {
-                                style = "grid-column: 1 / -1; color: ${KlangTheme.Hex.accent}; font-size: 11px; " +
+                                style = "grid-column: 1 / -1; color: var(--kl-accent); font-size: 11px; " +
                                     "text-transform: uppercase; letter-spacing: 0.05em"
                                 +heading
                             }
@@ -214,7 +214,7 @@ object KlangKeyHint {
             entry.keys.forEachIndexed { index, groups ->
                 if (index > 0) {
                     span {
-                        style = "color: ${KlangTheme.Hex.textTertiary}"
+                        style = "color: color-mix(in srgb, var(--kl-ink-label) 60%, transparent)"
                         +"/"
                     }
                 }

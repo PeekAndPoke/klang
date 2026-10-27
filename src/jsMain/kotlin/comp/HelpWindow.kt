@@ -5,12 +5,16 @@
 
 package io.peekandpoke.klang.comp
 
+import io.peekandpoke.klang.script.intel.LocalUsage
 import io.peekandpoke.klang.script.types.KlangSymbol
+import io.peekandpoke.klang.storage.EditorSettings
+import io.peekandpoke.klang.ui.comp.KlangKeyHint
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
+import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.streams.Stream
 import kotlinx.html.Tag
 import kotlinx.html.div
@@ -18,46 +22,85 @@ import kotlinx.html.div
 @Suppress("FunctionName")
 fun Tag.HelpWindow(
     entry: Stream<HelpWindow.Entry?>,
+    onJump: (pos: Int) -> Unit,
 ) = comp(
-    HelpWindow.Props(entry = entry)
+    HelpWindow.Props(entry = entry, onJump = onJump)
 ) {
     HelpWindow(it)
 }
 
 /**
- * The help of a name, in the song page's Help tool window (KLANG-00349; the maintainer: Alt+Q on a name "would open
- * the help panel as designed"): the same docs as the editor's quick help, which no longer shows on hover unless the
- * user wants it. Before the first Alt+Q it says how to call it.
+ * The help of a name, in the song page's Quick help panel (KLANG-00349; the maintainer: Alt+Q on a name "would open
+ * the help panel as designed"): the same docs as the editor's quick help, in the bottom panel under the editor, wide
+ * enough for signatures and parameters (the maintainer, 2026-10-27: "always shown in the help" panel, never as the
+ * popup, and the bottom rather than the right side). Alt+Q and a hover fill it; its header holds the hover's switch
+ * ([HoverHelpToggle]). Before the first it says how to call it.
  */
 class HelpWindow(ctx: Ctx<Props>) : Component<HelpWindow.Props>(ctx) {
 
-    /** A name's help: its [symbol], and a local's [declarationCode] (null for a library name). */
-    data class Entry(val symbol: KlangSymbol, val declarationCode: String?)
+    /** A name's help: its [symbol], a local's [declarationCode] and [usages] (null and none for a library name). */
+    data class Entry(val symbol: KlangSymbol, val declarationCode: String?, val usages: List<LocalUsage> = emptyList())
 
     data class Props(
         val entry: Stream<Entry?>,
+        /** Puts the cursor in the code at an offset: a use clicked in the "Used on" list. */
+        val onJump: (pos: Int) -> Unit,
     )
 
     private val entry by subscribingTo(props.entry)
+
+    /** Whether a hover fills the help: the empty state says only what works. */
+    private val hoverHelp by subscribingTo(EditorSettings.hoverHelp)
 
     override fun VDom.render() {
         val shown = entry
 
         if (shown == null) {
+            // Before the first name: how to call it, in the middle of the panel, the first thing a new user reads
+            // there (the maintainer, 2026-10-27: "more prominent and centered in the tool")
             div {
                 css {
-                    put("font-size", "13px")
-                    put("color", "var(--kl-ink-label)")
+                    put("display", "flex")
+                    put("flex-direction", "column")
+                    put("align-items", "center")
+                    put("justify-content", "center")
+                    put("gap", "10px")
+                    put("min-height", "150px")
+                    put("text-align", "center")
                 }
 
-                +"Put the cursor on a name in the code and press Alt+Q: its help shows here."
+                div {
+                    css {
+                        put("font-size", "18px")
+                        put("color", "var(--kl-ink-strong)")
+                    }
+
+                    +if (hoverHelp) "Rest the mouse on a name in the code" else "Put the cursor on a name in the code"
+                }
+
+                div {
+                    css {
+                        put("font-size", "14px")
+                        put("color", "var(--kl-ink-label)")
+                    }
+
+                    +if (hoverHelp) "or put the cursor on it and press " else "and press "
+                    with(KlangKeyHint) { caps(parts = listOf("Alt", "Q")) }
+                    +": its help shows here."
+                }
             }
         } else {
-            KlangSymbolDocsComp(
-                symbol = shown.symbol,
-                declarationCode = shown.declarationCode,
-                onNavigate = { doc, event -> navToSymbolDocs(doc = doc, event = event) },
-            )
+            div {
+                key = "help-${shown.symbol.name}"
+
+                QuickHelpView(
+                    symbol = shown.symbol,
+                    declarationCode = shown.declarationCode,
+                    onNavigate = { doc, event -> navToSymbolDocs(doc = doc, event = event) },
+                    usages = shown.usages,
+                    onJump = props.onJump,
+                )
+            }
         }
     }
 }

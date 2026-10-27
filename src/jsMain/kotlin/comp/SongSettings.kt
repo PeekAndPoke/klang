@@ -25,8 +25,8 @@ fun Tag.SongSettings() = comp {
 
 /**
  * The song page's settings, in its Settings tool window (KLANG-00349): the highlights a sound event draws in the
- * code (once "EVT" in the header), and the quick help on hover, off by default (Alt+Q shows a name's help in the
- * Help window). Kept in the browser ([EditorSettings]).
+ * code (once "EVT" in the header), and the quick help on hover, on by default (Alt+Q shows a name's help in the
+ * Quick help panel, hover or not). Kept in the browser ([EditorSettings]); the Quick help's header has the same switch.
  */
 class SongSettings(ctx: NoProps) : PureComponent(ctx) {
 

@@ -19,3 +19,6 @@ Derived, never listed by hand: `python3 console/tools/ticket/ticket.py list --ep
 ## History
 
 - 2026-10-27: created in the epic grouping (the maintainer's ask; the grouping agreed with Klang-Research).
+- 2026-10-27: `AnalyzedAst.usagesAt` and `declarationAt` (klangscript, `LocalUsage`, `LocalUsagesSpec`): a local's
+  uses with their lines and code, from a use or from its declared name, for the Quick help's "Used on" list
+  (KLANG-00349, Klang-Research, with Klang-Main-Dev's agreement).

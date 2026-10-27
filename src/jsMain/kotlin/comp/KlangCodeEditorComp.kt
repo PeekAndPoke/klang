@@ -7,6 +7,7 @@ package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.codemirror.CodeMirrorHighlightBuffer
+import io.peekandpoke.klang.codemirror.ext.EditorView
 import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.common.strings.offsetToSourceLocation
 import io.peekandpoke.klang.script.KlangScriptLibrary
@@ -19,6 +20,7 @@ import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
 import io.peekandpoke.klang.ui.KlangUiToolRegistry
 import io.peekandpoke.klang.ui.codemirror.BookmarkOptions
 import io.peekandpoke.klang.ui.codemirror.KlangScriptEditorComp
+import io.peekandpoke.klang.ui.codemirror.QuickHelpHandler
 import io.peekandpoke.klang.ui.codetools.CodeToolModal
 import io.peekandpoke.klang.workshop.keys.OnKey
 import io.peekandpoke.kraft.addons.pixijs.PixiJsAddon
@@ -70,7 +72,8 @@ fun Tag.KlangCodeEditorComp(
     showMinimap: Boolean = false,
     bookmarks: BookmarkOptions? = null,
     showKeysOverview: Boolean = false,
-    onQuickDocumentation: ((symbol: KlangSymbol, declarationCode: String?) -> Unit)? = null,
+    onQuickDocumentation: QuickHelpHandler? = null,
+    onHoverDocumentation: QuickHelpHandler? = null,
 ): ComponentRef<KlangCodeEditorComp> = comp(
     KlangCodeEditorComp.Props(
         ctrl = ctrl,
@@ -84,6 +87,7 @@ fun Tag.KlangCodeEditorComp(
         bookmarks = bookmarks,
         showKeysOverview = showKeysOverview,
         onQuickDocumentation = onQuickDocumentation,
+        onHoverDocumentation = onHoverDocumentation,
     )
 ) {
     KlangCodeEditorComp(it)
@@ -115,8 +119,10 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
         val bookmarks: BookmarkOptions?,
         /** Shows the editor's keys in its top-right corner while the key hints show (KLANG-00325). */
         val showKeysOverview: Boolean,
-        /** Gets the name at the cursor on Alt+Q, for a Help window of the host's (KLANG-00349); null for the popup. */
-        val onQuickDocumentation: ((symbol: KlangSymbol, declarationCode: String?) -> Unit)?,
+        /** Gets the name at the cursor on Alt+Q, for a Quick help panel of the host's (KLANG-00349); null for the popup. */
+        val onQuickDocumentation: QuickHelpHandler?,
+        /** Gets the name the mouse rests on, for a Quick help panel of the host's (KLANG-00349); null for the popup. */
+        val onHoverDocumentation: QuickHelpHandler?,
     )
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -217,6 +223,25 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
     /** Cancels all pending highlight marks on the code view. */
     fun cancelHighlights() {
         highlightBuffer.cancelAll()
+    }
+
+    /**
+     * Puts the cursor at [pos] in the code, its line in the middle of the view, the focus in the code: the Quick help's
+     * "Used on" list jumps so (KLANG-00349). The list may be older than the text (an edit since): a place past the
+     * end goes to the end, never outside the text.
+     */
+    fun jumpTo(pos: Int) {
+        editorRef { editor ->
+            editor.editorView?.let { view ->
+                val at = pos.coerceIn(0, view.state.doc.length)
+
+                view.dispatch(jsObject<dynamic> {
+                    this.selection = jsObject<dynamic> { this.anchor = at }
+                    this.effects = EditorView.scrollIntoView(at, jsObject<dynamic> { this.y = "center" })
+                })
+                view.focus()
+            }
+        }
     }
 
     /**
@@ -338,9 +363,10 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
                 onOpenTool = { toolName, toolCtx, argFrom, event ->
                     openTool(toolName = toolName, toolCtx = toolCtx, argFrom = argFrom, event = event)
                 },
-                // The hover's quick help is a setting, off by default (KLANG-00349); read on every move
+                // The hover's quick help is a setting, on by default (KLANG-00349); read on every move
                 hoverDocs = { EditorSettings.hoverHelp() },
                 onQuickDocumentation = props.onQuickDocumentation,
+                onHoverDocumentation = props.onHoverDocumentation,
                 showMinimap = props.showMinimap,
                 bookmarks = props.bookmarks,
             ).track(editorRef)

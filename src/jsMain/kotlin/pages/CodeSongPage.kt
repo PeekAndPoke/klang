@@ -8,6 +8,7 @@ package io.peekandpoke.klang.pages
 import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.KlangGuiDance
 import io.peekandpoke.klang.comp.HelpWindow
+import io.peekandpoke.klang.comp.HoverHelpToggle
 import io.peekandpoke.klang.comp.KlangCodeEditorComp
 import io.peekandpoke.klang.comp.KlangCodePlaybackCtrl
 import io.peekandpoke.klang.comp.LcdDisplay
@@ -23,6 +24,7 @@ import io.peekandpoke.klang.ui.codemirror.BookmarkOptions
 import io.peekandpoke.klang.ui.codemirror.Bookmarks
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangFinish
+import io.peekandpoke.klang.ui.comp.KlangKeyHint
 import io.peekandpoke.klang.ui.comp.KlangScreen
 import io.peekandpoke.klang.ui.comp.KlangSpinner
 import io.peekandpoke.klang.ui.comp.KlangValueKnob
@@ -66,8 +68,10 @@ import kotlinx.css.pct
 import kotlinx.css.px
 import kotlinx.css.width
 import kotlinx.html.DIV
+import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
+import kotlinx.html.span
 import kotlinx.html.title
 
 @Suppress("FunctionName")
@@ -82,9 +86,6 @@ fun Tag.CodeSongPage(
 class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     private companion object {
-        /** The Help tool window's id, which Alt+Q shows. */
-        const val HELP_TOOL = "help"
-
         /** Counts the pages drawn, for [pageKey]. */
         var pagesDrawn = 0
     }
@@ -148,7 +149,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         ctrl.reemitVoiceSignals()
     }
 
-    /** The name Alt+Q last asked about, for the Help tool window (KLANG-00349); null before the first. */
+    /** The name Alt+Q or a hover last asked about, for the Quick help panel (KLANG-00349); null before the first. */
     private val help = StreamSource<HelpWindow.Entry?>(null)
 
     /** The column's content this page put into the workbench; null while it put none. */
@@ -225,15 +226,43 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         WorkbenchSlots.column(column)
         WorkbenchSlots.tools(
             listOf(
-                KlangWorkbench.Tool(id = HELP_TOOL, title = "Help", icon = { question_circle }) {
-                    div {
-                        key = "song-help-$pageKey"
-                        HelpWindow(entry = help)
-                    }
-                },
                 KlangWorkbench.Tool(id = "settings", title = "Settings", icon = { sliders_horizontal }) { SongSettings() },
             )
         )
+        // The quick help under the editor, wide enough for signatures and parameters; its header says how to call
+        // it (the maintainer, 2026-10-27: "Quick-Help" followed by "some instruction like: In the code Press Alt-Q")
+        WorkbenchSlots.bottom(
+            KlangWorkbench.Bottom(title = "Quick help", icon = { question_circle }, header = { renderQuickHelpHeader() }) {
+                div {
+                    key = "song-help-$pageKey"
+                    HelpWindow(entry = help, onJump = { pos -> codeEditorRef { it.jumpTo(pos) } })
+                }
+            }
+        )
+    }
+
+    /** The quick help's header: how to call it, and the hover's switch. */
+    private fun FlowContent.renderQuickHelpHeader() {
+        span {
+            css {
+                put("font-size", "12px")
+                put("color", "var(--kl-ink-label)")
+                put("white-space", "nowrap")
+            }
+
+            +"In the code: "
+            // The same caps as every key hint, "Esc" in the close pill beside it included (the maintainer, 2026-10-27)
+            with(KlangKeyHint) { caps(parts = listOf("Alt", "Q")) }
+            +" on a name, or rest the mouse on it"
+        }
+
+        HoverHelpToggle()
+    }
+
+    /** A name's help in the Help panel, which opens if it is closed; the focus stays where it is. */
+    private fun showHelp(entry: HelpWindow.Entry) {
+        help(entry)
+        WorkbenchSlots.workbench { it.showBottom() }
     }
 
     /** Empties the workbench's slots, unless another page has filled them since. */
@@ -469,11 +498,9 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
             showMinimap = true,
             bookmarks = bookmarks,
             showKeysOverview = true,
-            // Alt+Q: the name's help in the Help window, the focus staying in the code
-            onQuickDocumentation = { symbol, declarationCode ->
-                help(HelpWindow.Entry(symbol = symbol, declarationCode = declarationCode))
-                WorkbenchSlots.workbench { it.showTool(HELP_TOOL) }
-            },
+            // Alt+Q, and a hover: the name's help in the Help panel, never a popup, the focus staying in the code
+            onQuickDocumentation = { symbol, declarationCode, usages -> showHelp(HelpWindow.Entry(symbol, declarationCode, usages)) },
+            onHoverDocumentation = { symbol, declarationCode, usages -> showHelp(HelpWindow.Entry(symbol, declarationCode, usages)) },
         ).track(codeEditorRef)
     }
 }

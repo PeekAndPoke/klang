@@ -73,4 +73,8 @@ class StorageKeysSpec : StringSpec({
         StorageKeys.GUI_DANCE_ARCS_DONE shouldBe "klang-gui-dance-arcs-done"
         StorageKeys.GUI_DANCE_MUTED_UNTIL shouldBe "klang-gui-dance-muted-until"
     }
+
+    "the workbench's layout keeps its key" {
+        StorageKeys.WORKBENCH_LAYOUT shouldBe "klang-workbench-layout"
+    }
 })

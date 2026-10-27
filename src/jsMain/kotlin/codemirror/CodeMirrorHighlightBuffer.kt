@@ -12,6 +12,7 @@ import io.peekandpoke.kraft.addons.pixijs.PixiJsAddon
 import io.peekandpoke.kraft.addons.pixijs.js.Application
 import io.peekandpoke.kraft.addons.pixijs.js.Graphics
 import io.peekandpoke.kraft.addons.pixijs.js.Ticker
+import io.peekandpoke.kraft.ext.ResizeObserver
 import io.peekandpoke.kraft.utils.jsObject
 import io.peekandpoke.kraft.utils.jsObjectOf
 import io.peekandpoke.kraft.utils.launch
@@ -64,6 +65,28 @@ class CodeMirrorHighlightBuffer(
 
     private var addon: PixiJsAddon? = null
     private var app: Application? = null
+
+    /**
+     * Follows the editor's own size: Pixi's `resizeTo` only listens to the window, and a panel pinned or dragged
+     * under the editor changes its size without a window resize. The canvas, left larger than the editor, made the
+     * editor's box scroll a second time (the maintainer, 2026-10-27: "the double scrolling again on the editor").
+     */
+    private var sizeObserver: ResizeObserver? = null
+
+    /** The frame a resize waits for; null while none waits. */
+    private var resizeFrame: Int? = null
+
+    private fun resizeOnNextFrame() {
+        if (resizeFrame != null) {
+            return
+        }
+
+        resizeFrame = window.requestAnimationFrame {
+            resizeFrame = null
+            app?.asDynamic()?.resize()
+        }
+    }
+
     private var initializing = false
     private var tickerRunning = false
 
@@ -138,6 +161,10 @@ class CodeMirrorHighlightBuffer(
     }
 
     fun detach() {
+        sizeObserver?.disconnect()
+        sizeObserver = null
+        resizeFrame?.let { window.cancelAnimationFrame(it) }
+        resizeFrame = null
         cancelAll()
         window.removeEventListener("blur", blurHandler)
         app?.let { application ->
@@ -223,6 +250,11 @@ class CodeMirrorHighlightBuffer(
                     zIndex = "5"
                 }
                 view.dom.appendChild(canvas)
+
+                // `resize()` is Pixi's (its resize plugin, with `resizeTo`), not in Kraft's binding yet: ULTRA-00262.
+                // On the next frame, once per frame: resized inside the callback, the canvas changed the editor's box
+                // again in the same frame ("ResizeObserver loop completed with undelivered notifications")
+                sizeObserver = ResizeObserver { _, _ -> resizeOnNextFrame() }.also { it.observe(view.dom) }
 
                 application.ticker.add(tickCallback)
                 application.ticker.stop()         // idle until a highlight appears

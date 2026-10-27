@@ -20,15 +20,19 @@ object WorkbenchSlots {
     /** The column for the page (the song page: the song); null for the area's list. */
     val column = StreamSource<(DIV.() -> Unit)?>(null)
 
-    /** The page's own tool windows, after the layout's (the song page: Help, Settings). */
+    /** The page's own tool windows, after the layout's (the song page: Settings). */
     val tools = StreamSource<List<KlangWorkbench.Tool>>(emptyList())
 
-    /** The workbench drawn now, so a page can show one of its tool windows by a key (Alt+Q shows the Help). */
+    /** The page's bottom panel (the song page: Help, wide enough for signatures and parameters); null for none. */
+    val bottom = StreamSource<KlangWorkbench.Bottom?>(null)
+
+    /** The workbench drawn now, so a page can show its panels by a key (Alt+Q shows the Help). */
     val workbench = ComponentRef.Tracker<KlangWorkbench>()
 
-    /** Empties both slots: the page that filled them is gone. */
+    /** Empties the slots: the page that filled them is gone. */
     fun clear() {
         column(null)
         tools(emptyList())
+        bottom(null)
     }
 }

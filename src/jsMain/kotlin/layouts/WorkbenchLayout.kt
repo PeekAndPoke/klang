@@ -13,6 +13,7 @@ import io.peekandpoke.klang.comp.PlayerWarehouseStats
 import io.peekandpoke.klang.comp.WalkthroughsButton
 import io.peekandpoke.klang.fs
 import io.peekandpoke.klang.storage.LookStorage
+import io.peekandpoke.klang.storage.WorkbenchLayoutStorage
 import io.peekandpoke.klang.ui.comp.KlangDrawer
 import io.peekandpoke.klang.ui.comp.KlangLookPicker
 import io.peekandpoke.klang.ui.comp.KlangSearchField
@@ -61,6 +62,11 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
     /** The page's column and its own tool windows (KLANG-00349), when it puts any into the workbench. */
     private val pageColumn by subscribingTo(WorkbenchSlots.column)
     private val pageTools by subscribingTo(WorkbenchSlots.tools)
+
+    private val pageBottom by subscribingTo(WorkbenchSlots.bottom)
+
+    /** The workbench's layout as the last visit left it, read once: its pinned tool windows come back (KLANG-00349). */
+    private val keptLayout = WorkbenchLayoutStorage.load()
 
     /** The Gui-dance's lit step: the drawer lights "Songs" when it is (KLANG-00350). */
     private val guiDanceLit by subscribingTo(KlangGuiDance.dance.lit)
@@ -128,6 +134,9 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
                         PlayerWarehouseStats()
                     },
                 ) + pageTools,
+                bottom = pageBottom,
+                layout = keptLayout,
+                onLayout = { WorkbenchLayoutStorage.save(it) },
                 drawer = { close ->
                     KlangDrawer(
                         title = "Where to",

@@ -14,6 +14,8 @@ import io.peekandpoke.klang.codemirror.ext.EditorStateConfig
 import io.peekandpoke.klang.codemirror.ext.EditorView
 import io.peekandpoke.klang.codemirror.ext.EditorViewConfig
 import io.peekandpoke.klang.codemirror.ext.Extension
+import io.peekandpoke.klang.script.docs.KlangDocsRegistry
+import io.peekandpoke.klang.script.intel.AnalyzedAst
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.ui.HoverPopupCtrl
 import io.peekandpoke.klang.workshop.keys.KeyPlatform
@@ -38,7 +40,9 @@ class DslEditorKeysSpec : StringSpec({
 
     class Host(
         hoverDocs: () -> Boolean = { true },
-        onQuickDocumentation: ((KlangSymbol, String?) -> Unit)? = null,
+        onQuickDocumentation: QuickHelpHandler? = null,
+        onHoverDocumentation: QuickHelpHandler? = null,
+        analysis: AnalyzedAst? = null,
     ) {
         val navigated = mutableListOf<String>()
         val popups = PopupsManager(PopupsManager.Settings(popupRenderer = PopupsManager.DefaultPopupFactory))
@@ -52,6 +56,8 @@ class DslEditorKeysSpec : StringSpec({
             onNavigate = { symbol, _ -> navigated.add(symbol.name) },
             hoverDocs = hoverDocs,
             onQuickDocumentation = onQuickDocumentation,
+            onHoverDocumentation = onHoverDocumentation,
+            analysisProvider = { analysis },
         )
     }
 
@@ -148,7 +154,7 @@ class DslEditorKeysSpec : StringSpec({
 
     "with a Help window of the host's, Alt+Q hands it the name at the cursor and opens no popup; elsewhere nothing" {
         val asked = mutableListOf<String>()
-        val host = Host(onQuickDocumentation = { symbol, _ -> asked.add(symbol.name) })
+        val host = Host(onQuickDocumentation = { symbol, _, _ -> asked.add(symbol.name) })
 
         withEditor(host = host, doc = "note(1) + 2") { view ->
             view.cursorAt(pos = 2)
@@ -173,6 +179,92 @@ class DslEditorKeysSpec : StringSpec({
 
                 withClue("hover help ${if (on) "on" else "off"}") { host.popups().size shouldBe popups }
             }
+        }
+    }
+
+    "with a Help panel of the host's, a hover hands it the name once the mouse rests, and opens no popup" {
+        val shown = mutableListOf<String>()
+        val host = Host(onHoverDocumentation = { symbol, _, _ -> shown.add(symbol.name) })
+
+        withEditor(host = host, doc = "note(1) + 2") { view ->
+            view.hover(pos = 2)
+
+            // Not at once: the mouse may only be passing
+            shown shouldBe emptyList()
+
+            delay(500)
+
+            shown shouldContainExactly listOf("note")
+            host.popups().size shouldBe 0
+        }
+    }
+
+    "a hover that moves on before it rests hands nothing over; with the hover help off, nothing either" {
+        val shown = mutableListOf<String>()
+        var on = true
+        val host = Host(hoverDocs = { on }, onHoverDocumentation = { symbol, _, _ -> shown.add(symbol.name) })
+
+        withEditor(host = host, doc = "note(1) + 2") { view ->
+            view.hover(pos = 2)
+            view.hover(pos = 10)
+            delay(500)
+
+            shown shouldBe emptyList()
+
+            on = false
+            view.hover(pos = 2)
+            delay(500)
+
+            shown shouldBe emptyList()
+        }
+    }
+
+    "a hover cut short by the mouse leaving the editor, an edit, or the editor going, hands nothing over" {
+        val shown = mutableListOf<String>()
+        val host = Host(onHoverDocumentation = { symbol, _, _ -> shown.add(symbol.name) })
+
+        withEditor(host = host, doc = "note(1) + 2") { view ->
+            view.hover(pos = 2)
+            view.contentDOM.dispatchEvent(MouseEvent("mouseleave", MouseEventInit(bubbles = false)))
+            delay(500)
+
+            withClue("left") { shown shouldBe emptyList() }
+
+            view.hover(pos = 2)
+            view.dispatch(view.state.update(jsObject { this.changes = jsObject<dynamic> { this.from = 11; this.insert = ";" } }))
+            delay(500)
+
+            withClue("edited") { shown shouldBe emptyList() }
+
+            // The editor taken away under a resting mouse (its page left by a key): no mouseleave comes. Off the name
+            // first, so the hover on it is a new one
+            view.hover(pos = 10)
+            view.hover(pos = 2)
+            view.dom.remove()
+            delay(500)
+
+            withClue("gone") { shown shouldBe emptyList() }
+        }
+    }
+
+    "a local hands its uses over with its help, by hover and by Alt+Q" {
+        val code = "let a = 1\nrun(a)\nnote(a)"
+        val handed = mutableListOf<Pair<String, List<Int>>>()
+        val host = Host(
+            onQuickDocumentation = { symbol, _, usages -> handed.add(symbol.name to usages.map { it.line }) },
+            onHoverDocumentation = { symbol, _, usages -> handed.add(symbol.name to usages.map { it.line }) },
+            analysis = AnalyzedAst.build(code, KlangDocsRegistry()),
+        )
+
+        withEditor(host = host, doc = code) { view ->
+            view.hover(pos = code.indexOf("run(a)") + 4)
+            delay(500)
+
+            view.cursorAt(pos = code.indexOf("note(a)") + 5)
+            view.press(key = "q", code = "KeyQ", alt = true)
+            delay(100)
+
+            handed shouldContainExactly listOf("a" to listOf(2, 3), "a" to listOf(2, 3))
         }
     }
 
