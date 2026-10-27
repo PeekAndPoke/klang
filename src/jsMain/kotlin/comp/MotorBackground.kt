@@ -84,10 +84,10 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         private const val PANEL_CELL = 330.0
 
         /**
-         * The start page's block under the title's plate, in screen px: the gap, the gauges, the gap and the result
-         * panel. The title and the block are placed as one.
+         * The start page's result panel, in screen px, under the gauges' row, which is one tile row high: the title,
+         * the gauges and the panel are placed as one.
          */
-        private const val BLOCK_UNDER_TITLE_PX = 430.0
+        private const val PANEL_UNDER_GAUGES_PX = 250.0
 
         /**
          * The share of the free height above the title; the rest is under the block. Half: the title and the block
@@ -106,7 +106,7 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         /** Where KLANGMOTOR's middle sits in a screen [screenHeight] px high, as a share of it from the top. */
         fun titleCenterShare(screenHeight: Double): Double {
             val (above, below) = plateReach
-            val composition = (above + below) * screenHeight + BLOCK_UNDER_TITLE_PX
+            val composition = (above + below) * screenHeight + tileWidthPx(screenHeight) + PANEL_UNDER_GAUGES_PX
             val free = (screenHeight - composition).coerceAtLeast(0.0)
 
             return ((free * FREE_ABOVE + above * screenHeight) / screenHeight).coerceIn(0.12, 0.4)
@@ -118,6 +118,13 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
          * (the maintainer, 2026-10-26).
          */
         fun titlePlateBottomShare(screenHeight: Double): Double = titleCenterShare(screenHeight) + plateReach.second
+
+        /**
+         * A tile's width on a screen [screenHeight] px high, in screen px: the texture spans the screen's height. The
+         * columns are centred on the screen, a tile's middle on the screen's, so the start page sets its side gauges a
+         * tile's width out (the maintainer, 2026-10-27: each gauge centred in its tile).
+         */
+        fun tileWidthPx(screenHeight: Double): Double = PANEL_CELL / TEX_HEIGHT * screenHeight
 
         /**
          * The plate under KLANGMOTOR (the maintainer, 2026-10-26: "one nice tile underneith the text so that no lines
@@ -237,9 +244,13 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
 
     private var poweredOn = false
 
-    private val defaultIntensity = 1.62
-    /** Over "Make Music Now": 1.5 times the light it swelled to at first (the maintainer, 2026-10-26: twice was too bright). */
-    private val hoverIntensity = 4.5
+    /** The light at rest (the maintainer, 2026-10-27: 1.62 was "a bit too bright"). */
+    private val defaultIntensity = 1.35
+    /**
+     * Over "Make Music Now" (the maintainer, 2026-10-26 and 27: twice the first swell was too bright, then 4.5 "a bit
+     * too bright" too).
+     */
+    private val hoverIntensity = 3.6
 
     /** The light while the Motor warms up ([warmUp]): the plate and the title show, dim (the maintainer, 2026-10-26). */
     private val standbyIntensity = defaultIntensity * 0.18

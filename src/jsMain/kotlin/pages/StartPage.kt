@@ -125,8 +125,8 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         /** How long the key is seen at START before it fades; it is gone when the dyno starts to show. */
         const val KEY_FADE_FROM_MS = 400.0
 
-        /** The gap between the title's plate and the gauges, and between the gauges and the panel (the maintainer). */
-        const val RUN_GAP_PX = 24
+        /** The gauges' row at the least: the heat gauge and some room, on a window whose tiles are smaller. */
+        const val GAUGES_ROW_MIN_PX = DYNO_MIDDLE_PX + 16.0
 
         /** The page's padding at its top. */
         const val PAGE_PADDING_PX = 32
@@ -549,14 +549,14 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
             }
 
             if (showsRun) {
-                // Room for KLANGMOTOR on its plate in the Motor background, not drawn as text: the gauges start the
-                // same gap under the plate as the panel under the gauges (the maintainer, 2026-10-26)
+                // Room for KLANGMOTOR on its plate in the Motor background, not drawn as text: the gauges' row starts
+                // right under the plate, on the next tile row (the maintainer, 2026-10-27: each gauge centred in its tile)
                 div {
                     key = "title-spacer"
                     css {
                         flexShrink = 0.0
                         // The page redraws on every frame (its ticker), so a resize moves the gauges along at once
-                        put("height", "${(plateBottomPx() + RUN_GAP_PX - PAGE_PADDING_PX).coerceAtLeast(0.0)}px")
+                        put("height", "${(plateBottomPx() - PAGE_PADDING_PX).coerceAtLeast(0.0)}px")
                     }
                 }
 
@@ -566,6 +566,10 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
             }
         }
     }
+
+    /** The gauges' row: one tile row high, so each gauge sits in the middle of its tile. */
+    private fun gaugesRowPx(): Double =
+        MotorBackground.tileWidthPx(window.innerHeight.toDouble()).coerceAtLeast(GAUGES_ROW_MIN_PX)
 
     /** Where the title's plate ends on the screen, in px from the top: the gauges and the key stand under it. */
     private fun plateBottomPx(): Double {
@@ -598,8 +602,8 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 alignItems = Align.flexStart
                 justifyContent = JustifyContent.center
 
-                // The cap's centre on the heat gauge's centre, the gauges' row starting the gap under the plate
-                val gaugeCentre = plateBottomPx() + RUN_GAP_PX + DYNO_MIDDLE_PX / 2.0
+                // The cap's centre on the heat gauge's centre, in the middle of the gauges' row under the plate
+                val gaugeCentre = plateBottomPx() + gaugesRowPx() / 2.0
 
                 paddingTop = (gaugeCentre - KEY_PX * KlangIgnition.CAP_CENTRE_FROM_TOP).coerceAtLeast(0.0).px
                 opacity = if (current is StateBenchmarking && fading) current.keyOpacity() else 1.0
@@ -679,9 +683,9 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
             renderDynoGauges()
 
+            // The panel on the tile line under the gauges' row
             div {
                 css {
-                    marginTop = RUN_GAP_PX.px
                     width = 100.pct
                     textAlign = TextAlign.left
                 }
@@ -776,12 +780,19 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
     /** The Motor's gauges at the dyno's size, glowing in the background lamp's colour as the Motor's do here. */
     private fun DIV.renderDynoGauges() {
+        // Each gauge in the middle of its tile: the heat gauge on the middle tile, the others a tile's width out (the
+        // maintainer, 2026-10-27); the page redraws on every frame, so a resize moves them along
+        val tile = MotorBackground.tileWidthPx(window.innerHeight.toDouble())
+        val gap = (tile - DYNO_MIDDLE_PX / 2.0 - DYNO_SIDE_PX / 2.0).coerceAtLeast(8.0)
+
         div {
             css {
                 display = Display.flex
                 justifyContent = JustifyContent.center
-                alignItems = Align.flexEnd
-                put("gap", "24px")
+                // Each in the middle of its tile both ways: the row one tile row high, the gauges centred in it
+                alignItems = Align.center
+                height = gaugesRowPx().px
+                put("gap", "${gap}px")
                 // The background's light is the look's metal: the gauges glow in it, at half strength
                 put("--kl-gauge-glow", "color-mix(in srgb, var(--kl-metal-mid) 50%, transparent)")
             }
