@@ -8,7 +8,7 @@ Ein Klang-Generator | A Sound-Generator
 
 This is the home of the Klangmotor, a Kotlin multiplatform realtime audio generator.
 
-![Klangmotor](docs/media/klang-motor-02.png)
+![Klangmotor](docs/media/klang-motor-03.png)
 
 Currently supported platforms:
 
