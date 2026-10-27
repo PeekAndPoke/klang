@@ -37,6 +37,9 @@ import org.w3c.dom.events.MouseEvent
 /** A Lexikon entry's page in a link (`/manuals/lexikon/orbit-bus`, as the DSL docs write it), its slug; else null. */
 fun lexikonSlugOf(href: String): String? = lexikonHref.find(href)?.groupValues?.get(1)
 
+/** A line of the entry's text, at most: longer lines are hard to follow back to their start. */
+private const val READING_WIDTH = "76ch"
+
 private val lexikonHref = Regex("""/manuals/lexikon/([a-z0-9-]+)/?(?:[?#].*)?$""")
 
 @Suppress("FunctionName")
@@ -223,7 +226,7 @@ class LexikonPanel(ctx: Ctx<Props>) : Component<LexikonPanel.Props>(ctx) {
         }
     }
 
-    /** One term: its name and where it belongs, its summary, then its detail beside what else it is called and its story. */
+    /** One term: its name and where it belongs, its summary and what else it is called, its detail, then its story. */
     private fun FlowContent.renderEntry(entry: LexikonEntry) {
         div {
             css {
@@ -249,6 +252,7 @@ class LexikonPanel(ctx: Ctx<Props>) : Component<LexikonPanel.Props>(ctx) {
 
         div {
             css {
+                put("max-width", READING_WIDTH)
                 put("font-size", "15px")
                 put("color", "var(--kl-ink-strong)")
             }
@@ -256,66 +260,72 @@ class LexikonPanel(ctx: Ctx<Props>) : Component<LexikonPanel.Props>(ctx) {
             +entry.summary
         }
 
-        div {
-            css {
-                put("display", "grid")
-                put("grid-template-columns", "minmax(0, 3fr) minmax(0, 2fr)")
-                put("gap", "24px")
-            }
-
-            div {
-                css { put("line-height", "1.55") }
-
-                // Its terms linked to their entries (KLANG-00369), never to itself; a link followed stays in the tab
-                MarkdownDisplay(lexikonAutoLinks(markdown = entry.detail, self = entry.slug))
-            }
-
+        // Short, so on one line with the summary's facts, before the long text
+        entry.conventional?.let { conventional ->
             div {
                 css {
                     put("display", "flex")
-                    put("flex-direction", "column")
-                    put("gap", "10px")
+                    put("align-items", "baseline")
+                    put("flex-wrap", "wrap")
+                    put("gap", "4px 10px")
                 }
 
-                entry.conventional?.let { conventional ->
+                renderLabel("Elsewhere known as")
+                span { +conventional }
+            }
+        }
+
+        // One column, read from top to bottom at a comfortable length: two fixed columns left one side empty while the
+        // other ran on under the fold, and balanced columns taller than the panel meant scrolling back up to read on
+        // (the maintainer, 2026-10-27: "not a nice layout")
+        div {
+            css {
+                put("max-width", READING_WIDTH)
+                put("line-height", "1.55")
+            }
+
+            // Its terms linked to their entries (KLANG-00369), never to itself; a link followed stays in the tab
+            MarkdownDisplay(lexikonAutoLinks(markdown = entry.detail, self = entry.slug))
+        }
+
+        // The story beside the facts: quieter, set off by a line
+        entry.trivia?.let { trivia ->
+            div {
+                css {
+                    put("max-width", READING_WIDTH)
+                    put("display", "flex")
+                    put("flex-direction", "column")
+                    put("gap", "4px")
+                    put("padding-left", "12px")
+                    put("border-left", "2px solid color-mix(in srgb, var(--kl-ink-label) 35%, transparent)")
+                    put("font-size", "13px")
+                    put("line-height", "1.5")
+                }
+
+                renderLabel("Did you know")
+                div { +trivia.text }
+
+                val meta = listOfNotNull(trivia.year, trivia.person, trivia.device)
+
+                if (meta.isNotEmpty()) {
                     div {
-                        renderLabel("Elsewhere known as")
-                        div { +conventional }
+                        css {
+                            put("font-size", "12px")
+                            put("color", "var(--kl-ink-label)")
+                        }
+
+                        +meta.joinToString(", ")
                     }
                 }
 
-                entry.trivia?.let { trivia ->
-                    div {
-                        renderLabel("Did you know")
-                        div {
-                            css { put("line-height", "1.5") }
-
-                            +trivia.text
+                trivia.url?.let { url ->
+                    a(href = url, target = "_blank") {
+                        css {
+                            put("font-size", "12px")
+                            put("color", "var(--kl-accent)")
                         }
 
-                        val meta = listOfNotNull(trivia.year, trivia.person, trivia.device)
-
-                        if (meta.isNotEmpty()) {
-                            div {
-                                css {
-                                    put("font-size", "12px")
-                                    put("color", "var(--kl-ink-label)")
-                                }
-
-                                +meta.joinToString(", ")
-                            }
-                        }
-
-                        trivia.url?.let { url ->
-                            a(href = url, target = "_blank") {
-                                css {
-                                    put("font-size", "12px")
-                                    put("color", "var(--kl-accent)")
-                                }
-
-                                +"Read more"
-                            }
-                        }
+                        +"Read more"
                     }
                 }
             }
