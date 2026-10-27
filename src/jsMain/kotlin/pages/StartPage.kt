@@ -44,6 +44,7 @@ import io.peekandpoke.kraft.routing.Router.Companion.router
 import io.peekandpoke.kraft.utils.launch
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.datetime.Kronos
+import io.peekandpoke.ultra.datetime.MpTimezone
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.html.onMouseEnter
@@ -148,45 +149,47 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
      * maintainer, 2026-10-26, KLANG-00347): a machine keeps its tier.
      */
     private fun getPerformanceRating(voiceCount: Int): PerformanceRating {
+        val today = Kronos.systemUtc.localDateNow(MpTimezone.systemDefault)
+
         return when {
             voiceCount >= 300 -> PerformanceRating(
                 tier = "God-Tier",
-                message = "Your machine is a god among mortals!",
+                message = "This machine is a god among mortals!",
                 showWarning = false,
                 lamp = KlangLamp.State.On,
             )
 
             voiceCount >= 265 -> PerformanceRating(
                 tier = "Excellent",
-                message = "Your machine is a true work-horse!",
+                message = "This machine is a true work-horse!",
                 showWarning = false,
                 lamp = KlangLamp.State.On,
             )
 
             voiceCount >= 230 -> PerformanceRating(
                 tier = "Great",
-                message = "Your machine handles this like a champ!",
+                message = "This machine handles this like a champ!",
                 showWarning = false,
                 lamp = KlangLamp.State.On,
             )
 
             voiceCount >= 195 -> PerformanceRating(
                 tier = "Good",
-                message = "Your machine is ready to make some music!",
+                message = "This machine is ready to make some music!",
                 showWarning = false,
                 lamp = KlangLamp.State.On,
             )
 
             voiceCount >= 160 -> PerformanceRating(
                 tier = "Fair",
-                message = "Your machine is doing okay. Nothing fancy, it'll work... mostly...",
+                message = "This thing is doing okay. Nothing fancy, it'll work... hopefully...",
                 showWarning = false,
                 lamp = KlangLamp.State.On,
             )
 
             voiceCount >= 130 -> PerformanceRating(
                 tier = "Limited",
-                message = "C'mon, it's 2026... maybe consider an upgrade?",
+                message = "C'mon, it's ${today.year}... maybe consider an upgrade?",
                 showWarning = true,
                 lamp = KlangLamp.State.Warning,
             )
@@ -432,7 +435,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
     private fun askToContinue(check: BrowserCheck) {
         val from = state
 
-        modals.show<Boolean> { handle ->
+        modals.show { handle ->
             KlangYesNoModal(
                 handle = handle,
                 headline = if (check.isMobile) "A phone or a tablet" else "Not Chrome",
@@ -713,6 +716,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                             div {
                                 css { flexGrow = 1.0 }
 
+                                @Suppress("SENSELESS_COMPARISON")
                                 if (rating == null || complete == null) {
                                     renderRounds()
                                 } else {
