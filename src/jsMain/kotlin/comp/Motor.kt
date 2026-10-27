@@ -60,8 +60,12 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
         /** The top slot: the three gauges and the volume knob (62 px + their glow). */
         val TOP_SLOT_HEIGHT = 4.5.rem
 
-        /** The scope, just under the gauges, above the spectrum's lower part (the maintainer, 2026-10-26). */
-        const val OSCILLOSCOPE_TOP_REM = 6.25
+        /**
+         * The scope, just under the gauges, above the spectrum's lower part (the maintainer, 2026-10-26); its resting
+         * line as far below the gauges as the divider is above them, 21px each, measured (the maintainer, 2026-10-27:
+         * "the spacing between divider <-> gauges <-> osci is the same").
+         */
+        const val OSCILLOSCOPE_TOP_REM = 5.875
         const val OSCILLOSCOPE_HEIGHT_REM = 3.25
 
         /** The spectrum stands on the frame's floor, behind the scope; its boxes stack up from there. */
