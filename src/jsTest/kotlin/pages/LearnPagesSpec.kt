@@ -7,11 +7,13 @@ package io.peekandpoke.klang.pages
 
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldNotContain
+import io.peekandpoke.klang.KlangGuiDance
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.comp.RouterWithTransitions
 import io.peekandpoke.klang.layouts.WorkbenchSlots
@@ -28,6 +30,7 @@ import io.peekandpoke.klang.pages.docs.tutorials.patternLanguageTrack
 import io.peekandpoke.klang.pages.docs.tutorials.soundDesignBasicsTrack
 import io.peekandpoke.klang.pages.docs.tutorials.theKlangPathTrack
 import io.peekandpoke.klang.storage.TutorialStorage
+import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.kraft.addons.browserdetect.browserDetect
 import io.peekandpoke.kraft.addons.marked.marked
 import io.peekandpoke.kraft.addons.pixijs.pixiJs
@@ -43,8 +46,8 @@ import org.w3c.dom.Element
 import org.w3c.dom.EventInit
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLInputElement
-import org.w3c.dom.Node
 import org.w3c.dom.events.Event
+import kotlin.js.Date
 
 /**
  * The Learn pages on hash routes, each with its column beside it, as the workbench shows them; the app's own router,
@@ -124,15 +127,13 @@ class LearnPagesSpec : StringSpec({
             .querySelector("input") as HTMLInputElement
     }
 
-    "the overview: continue with the next lesson; the path's tiles show its lamps; the column lists the tracks, how far" {
+    "the overview: continue with the next lesson; the path's panel shows its lamps; the column lists the tracks, how far" {
         withLearn(done = setOf(path[0].slug, path[1].slug)) { root ->
             go()
 
             eventually { root.page()?.querySelector("[data-continue]")?.getAttribute("data-continue") shouldBe path[2].slug }
 
-            // Folded like every track (the maintainer, 2026-10-27): its key opens its tiles
-            (root.page()!!.querySelector("[data-track='${theKlangPathTrack.slug}'] [aria-expanded=false]") as HTMLElement).click()
-
+            // The path's panel: a lamp per lesson (the maintainer, 2026-10-27: each track on a panel)
             eventually { root.page()!!.querySelector("[data-track='${theKlangPathTrack.slug}']")!!.states("").size shouldBe path.size }
 
             val tiles = root.page()!!.querySelector("[data-track='${theKlangPathTrack.slug}']")!!.states("")
@@ -158,35 +159,85 @@ class LearnPagesSpec : StringSpec({
         }
     }
 
-    "every track starts folded to its lamps; its key opens its tiles" {
+    "not looking for anything, each track is a panel: a link to its page, a lamp per lesson; a click goes there" {
         withLearn { root ->
             go()
 
-            val firstSteps = "[data-track='${firstStepsTrack.slug}']"
-
-            eventually { root.page()?.querySelector(firstSteps) shouldNotBe null }
+            eventually { root.page()?.querySelectorAll("a[data-track]")?.length shouldBe allTracks.size }
 
             for (track in allTracks) {
-                root.page()!!.querySelector("[data-track='${track.slug}']")!!.states("").size shouldBe 0
+                val panel = root.page()!!.querySelector("a[data-track='${track.slug}']") as HTMLElement
+
+                panel.getAttribute("href")!! shouldContain "/track/${track.slug}"
+                panel.querySelectorAll("[data-lesson] [data-lamp]").length shouldBe track.lessons.size
             }
 
-            // Each key before its lamps, all of one width: keys and lamps line up down the page
-            val keys = root.page()!!.querySelectorAll("[aria-expanded=false]")
-            val widths = (0 until keys.length).map { (keys.item(it) as HTMLElement).getBoundingClientRect().width }
+            // No key to open a track here: its page shows its lessons
+            root.page()!!.querySelector("[aria-expanded]") shouldBe null
 
-            widths.size shouldBe allTracks.size
-            widths.distinct().size shouldBe 1
+            // The First Steps panel wears the Gui-dance's beacon only while its step is lit
+            val firstStepsLit = KlangGuiDance.dance.lit() == KlangGuiDance.LEARN_FIRST_STEPS
 
-            for (track in allTracks) {
-                val row = root.page()!!.querySelector("[data-track='${track.slug}'] [aria-expanded=false]")!!
-                val firstLamp = root.page()!!.querySelector("[data-track='${track.slug}'] [data-lamp]")!!
+            (root.page()!!.querySelector("a[data-track='${firstStepsTrack.slug}']") as HTMLElement)
+                .classList.contains(KlangControlStyles.beacon.toString()) shouldBe firstStepsLit
+            root.page()!!.querySelector("[data-lesson] button") shouldBe null
 
-                (row.compareDocumentPosition(firstLamp).toInt() and Node.DOCUMENT_POSITION_FOLLOWING.toInt()) shouldNotBe 0
+            (root.page()!!.querySelector("a[data-track='${firstStepsTrack.slug}']") as HTMLElement).click()
+
+            eventually {
+                window.location.hash shouldContain "/track/${firstStepsTrack.slug}"
+                root.page()!!.states("").size shouldBe firstStepsTrack.lessons.size
+            }
+        }
+    }
+
+    "the Gui-dance's First Steps arc ends on the First Steps panel: it wears the beacon, a click on it ends the arc" {
+        val dance = KlangGuiDance.dance
+        val doneBefore = dance.doneArcs().map { it.id }.toSet()
+        val mutedBefore = dance.mutedUntil()
+
+        try {
+            KlangGuiDance.unmute()
+            dance.reopen("first-steps")
+
+            // Danced up to the panel, as a user would: every step before it used in turn
+            repeat(20) {
+                val step = dance.lit() ?: error("nothing lit")
+
+                if (step != KlangGuiDance.LEARN_FIRST_STEPS) {
+                    dance.used(step)
+                }
             }
 
-            (root.page()!!.querySelector("$firstSteps [aria-expanded=false]") as HTMLElement).click()
+            dance.lit() shouldBe KlangGuiDance.LEARN_FIRST_STEPS
 
-            eventually { root.page()!!.querySelector(firstSteps)!!.states("").size shouldBe firstStepsTrack.lessons.size }
+            withLearn { root ->
+                go()
+
+                val beacon = KlangControlStyles.beacon.toString()
+
+                eventually { root.page()?.querySelector("a[data-track='${firstStepsTrack.slug}']") shouldNotBe null }
+
+                for (track in allTracks) {
+                    val panel = root.page()!!.querySelector("a[data-track='${track.slug}']") as HTMLElement
+
+                    panel.classList.contains(beacon) shouldBe (track == firstStepsTrack)
+                }
+
+                (root.page()!!.querySelector("a[data-track='${firstStepsTrack.slug}']") as HTMLElement).click()
+
+                eventually { dance.doneArcs().map { it.id } shouldContain "first-steps" }
+            }
+        } finally {
+            // As it was: the arcs this case finished open again, the mute back. An arc done before and reopened above
+            // stays open if the case fails before its end: the dance has no way to mark an arc done but to dance it
+            for (arc in KlangGuiDance.arcs.reversed()) {
+                if (arc.id !in doneBefore) {
+                    dance.reopen(arc.id)
+                }
+            }
+
+            mutedBefore?.let { until -> KlangGuiDance.mute(forMs = until - Date.now()) }
         }
     }
 

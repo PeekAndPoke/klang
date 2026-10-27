@@ -25,6 +25,7 @@ import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.html.onKeyDown
 import kotlinx.browser.document
+import kotlinx.browser.window
 import kotlinx.coroutines.delay
 import kotlinx.css.height
 import kotlinx.css.px
@@ -38,9 +39,12 @@ import kotlinx.html.input
 import kotlinx.html.span
 import org.w3c.dom.Element
 import org.w3c.dom.HTMLElement
+import org.w3c.dom.events.Event
 import org.w3c.dom.events.EventTarget
 import org.w3c.dom.events.KeyboardEvent
 import org.w3c.dom.events.KeyboardEventInit
+import org.w3c.dom.events.MouseEvent
+import org.w3c.dom.events.MouseEventInit
 import org.w3c.dom.pointerevents.PointerEvent
 import org.w3c.dom.pointerevents.PointerEventInit
 
@@ -191,6 +195,46 @@ class KlangWorkbenchSpec : StringSpec({
     fun Element.q(selector: String): HTMLElement? = querySelector(selector) as HTMLElement?
 
     fun Element.toggle(label: String): HTMLElement = q("[role=group] button[aria-label='$label']")!!
+
+    "with a link, the mark leads there: a real link, a plain click inside the app, with Ctrl the browser's way" {
+        val followed = mutableListOf<String>()
+
+        TestBed.preact(
+            view = {
+                KlangWorkbench(
+                    column = { span { +"COLUMN" } },
+                    motor = { _ -> span { +"MOTOR" } },
+                    content = { span { +"CONTENT" } },
+                    mark = "KLANGMOTOR",
+                    markLink = KlangWorkbench.Link(href = "/home") { followed.add("home") },
+                )
+            },
+        ) { root ->
+            val mark = root.single().querySelector(".${KlangControlStyles.workbenchMark} a") as HTMLElement
+
+            mark.textContent shouldBe "KLANGMOTOR"
+            mark.getAttribute("href") shouldBe "/home"
+
+            // Stopped at the window as well, so the test page never leaves; the mark's own stop is what is asked
+            val stoppedByMark = mutableListOf<Boolean>()
+            val stopper: (Event) -> Unit = { event ->
+                stoppedByMark.add(event.defaultPrevented)
+                event.preventDefault()
+            }
+
+            window.addEventListener("click", stopper)
+
+            try {
+                mark.dispatchEvent(MouseEvent("click", MouseEventInit(bubbles = true, cancelable = true)))
+                mark.dispatchEvent(MouseEvent("click", MouseEventInit(bubbles = true, cancelable = true, ctrlKey = true)))
+            } finally {
+                window.removeEventListener("click", stopper)
+            }
+
+            followed shouldContainExactly listOf("home")
+            stoppedByMark shouldContainExactly listOf(true, false)
+        }
+    }
 
     "the column holds its content in a scroller of its own; the Motor sits below it, outside the scroller" {
         withWorkbench { root ->

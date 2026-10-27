@@ -12,6 +12,7 @@ import io.peekandpoke.klang.comp.Motoer
 import io.peekandpoke.klang.comp.PlayerWarehouseStats
 import io.peekandpoke.klang.comp.WalkthroughsButton
 import io.peekandpoke.klang.fs
+import io.peekandpoke.klang.pages.docs.tutorials.LearnSearch
 import io.peekandpoke.klang.storage.LookStorage
 import io.peekandpoke.klang.storage.WorkbenchLayoutStorage
 import io.peekandpoke.klang.ui.comp.KlangDrawer
@@ -150,14 +151,30 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
                         // maintainer, 2026-10-26)
                         current = area.name.takeIf { landing(area) == currentRoute.route },
                         onPick = { id ->
-                            if (id == AppArea.Songs.name) {
-                                KlangGuiDance.dance.used(KlangGuiDance.DRAWER_SONGS)
+                            when (id) {
+                                AppArea.Songs.name -> {
+                                    KlangGuiDance.dance.used(KlangGuiDance.DRAWER_SONGS)
+                                }
+
+                                AppArea.Learn.name -> {
+                                    // Led there by the Gui-dance: the overview shows its panels (the next step) only
+                                    // with no search left over in the Learn column
+                                    if (guiDanceLit == KlangGuiDance.DRAWER_LEARN) {
+                                        LearnSearch.text("")
+                                    }
+
+                                    KlangGuiDance.dance.used(KlangGuiDance.DRAWER_LEARN)
+                                }
                             }
 
                             close()
                             go(id)
                         },
-                        beacon = AppArea.Songs.name.takeIf { guiDanceLit == KlangGuiDance.DRAWER_SONGS },
+                        beacon = when (guiDanceLit) {
+                            KlangGuiDance.DRAWER_SONGS -> AppArea.Songs.name
+                            KlangGuiDance.DRAWER_LEARN -> AppArea.Learn.name
+                            else -> null
+                        },
                         onClose = close,
                         closeOnEsc = true,
                         search = {
@@ -177,6 +194,9 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
                     FullscreenToggleButton(fs = fs)
                 },
                 mark = "KLANGMOTOR",
+                // The mark leads home, to the start screen (the maintainer, 2026-10-27); "/", as `start` renders an empty
+                // href, which a browser takes for the page one is on
+                markLink = KlangWorkbench.Link(href = router.strategy.render(Nav.startSlash())) { router.navToUri(Nav.startSlash()) },
             ).track(WorkbenchSlots.workbench)
         }
     }

@@ -12,12 +12,17 @@ import kotlinx.html.A
 import kotlinx.html.FlowContent
 import kotlinx.html.a
 
-/** A link to a place in the app: a real link (a new tab with a key held), a plain click stays in the app. */
-fun FlowContent.appLink(router: Router, to: Route.Bound, block: A.() -> Unit) {
+/**
+ * A link to a place in the app: a real link (a new tab with a key held), a plain click stays in the app. [onFollow] is
+ * told of every click that follows it, either way (a Gui-dance step taken).
+ */
+fun FlowContent.appLink(router: Router, to: Route.Bound, onFollow: (() -> Unit)? = null, block: A.() -> Unit) {
     // The colour from a class (klang.css): a caller's own css {} would replace an inline one
     a(href = router.strategy.render(to), classes = "kl-app-link") {
         onClick { event ->
             val mouse = event.asDynamic()
+
+            onFollow?.invoke()
 
             if (mouse.ctrlKey != true && mouse.metaKey != true && mouse.shiftKey != true && mouse.altKey != true && mouse.button == 0) {
                 event.preventDefault()

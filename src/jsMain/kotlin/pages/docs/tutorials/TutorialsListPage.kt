@@ -5,10 +5,12 @@
 
 package io.peekandpoke.klang.pages.docs.tutorials
 
+import io.peekandpoke.klang.KlangGuiDance
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.comp.appLink
 import io.peekandpoke.klang.storage.TutorialStorage
 import io.peekandpoke.klang.ui.comp.KlangButton
+import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.klang.ui.comp.KlangLamp
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
@@ -32,17 +34,14 @@ fun Tag.TutorialsListPage() = comp {
 
 /**
  * The Learn overview on the workbench (KLANG-00370, the canvas "Klang Learn on the workbench", board "Learn: the
- * overview"): the next lesson to continue with and the tracks as rows of lesson tiles, each with its lamp. Every track
- * starts folded to a row of lamps, a key opens one; the Continue tile is the way in (the maintainer, 2026-10-27:
- * "collapse all tracks but keep the big continue button"). The search and the level and depth filters are in the
+ * overview"): the next lesson to continue with, then the tracks as panels, each a link to its track's page with a lamp
+ * per lesson (the maintainer, 2026-10-27: "put each path on a panel ... multiple in one row"); while one searches or
+ * filters, the lessons found as tiles under their tracks. The search and the level and depth filters are in the
  * Learn column (LearnTracksColumn), the area's own, from the sidebar; the filters live in this page's address.
  */
 class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
 
     companion object {
-        /** The folded tracks' key, one width for all: "Show its 18 lessons" fits, and the shorter ones line up with it. */
-        private const val FOLDED_KEY_WIDTH = "172px"
-
         const val PARAM_DIFFICULTY = "difficulty"
         const val PARAM_DEPTH = "depth"
 
@@ -61,6 +60,9 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
 
     private val done by subscribingTo(TutorialStorage.done)
 
+    /** The Gui-dance's lit step: the First Steps panel is one. */
+    private val guiDanceLit by subscribingTo(KlangGuiDance.dance.lit)
+
     /** The search, typed in the Learn column (LearnTracksColumn). */
     private val searchText by subscribingTo(LearnSearch.text)
 
@@ -74,9 +76,6 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
     private val difficultyParam: String get() = currentRoute.matchedRoute.queryParam(PARAM_DIFFICULTY)
 
     private val depthParam: String get() = currentRoute.matchedRoute.queryParam(PARAM_DEPTH)
-
-    /** The tracks shown with their tiles; the others are a row of lamps. None at first. */
-    private var unfolded: Set<String> by value(emptySet())
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -148,26 +147,37 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
 
             progress.next?.takeIf { !filtering() }?.let { next -> renderContinue(next) }
 
-            var shown = 0
+            // Not looking for anything: each track a panel, to its page (the maintainer, 2026-10-27: "put each path on a
+            // panel ... Clicking the panel will go to the details page"); looking: the lessons found, under their tracks
+            if (filtering()) {
+                renderFound(progress = progress)
+            } else {
+                renderPanels(progress = progress)
+            }
+        }
+    }
 
-            for (track in allTracks) {
-                val lessons = track.lessons.filter { matches(it, progress) }
+    /** While one searches or filters: the lessons found, as tiles under their tracks; nothing found says so. */
+    private fun FlowContent.renderFound(progress: TutorialProgress) {
+        var shown = 0
 
-                if (lessons.isEmpty()) {
-                    continue
-                }
+        for (track in allTracks) {
+            val lessons = track.lessons.filter { matches(it, progress) }
 
-                shown++
-                renderTrack(track = track, lessons = lessons, progress = progress)
+            if (lessons.isEmpty()) {
+                continue
             }
 
-            if (shown == 0) {
-                div {
-                    key = "nothing-found"
-                    css { put("color", "var(--kl-ink-label)") }
+            shown++
+            renderTrack(track = track, lessons = lessons, progress = progress)
+        }
 
-                    +"No lesson matches. Try fewer words, or another level or depth."
-                }
+        if (shown == 0) {
+            div {
+                key = "nothing-found"
+                css { put("color", "var(--kl-ink-label)") }
+
+                +"No lesson matches. Try fewer words, or another level or depth."
             }
         }
     }
@@ -229,10 +239,100 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
         }
     }
 
-    /** A track: its title, how far, what it is; its tiles, or folded, a lamp per lesson. */
-    private fun FlowContent.renderTrack(track: TutorialTrackDef, lessons: List<Tutorial>, progress: TutorialProgress) {
-        val folded = track.slug !in unfolded && !filtering()
+    /** The tracks as panels, one to three in a row as the page is wide: each a link to its track's page. */
+    private fun FlowContent.renderPanels(progress: TutorialProgress) {
+        val gapPx = 14
 
+        div {
+            key = "panels"
+            css {
+                put("display", "grid")
+                // At least 300px and a third of the row less its two gaps, so never more than three; on a narrow page
+                // one, never wider than the page
+                put("grid-template-columns", "repeat(auto-fill, minmax(min(100%, max(300px, calc((100% - ${2 * gapPx}px) / 3))), 1fr))")
+                put("gap", "${gapPx}px")
+            }
+
+            for (track in allTracks) {
+                // First Steps is the Gui-dance's last step of its arc: lit, it wears the beacon
+                val step = KlangGuiDance.LEARN_FIRST_STEPS.takeIf { track == firstStepsTrack }
+                val lit = step != null && guiDanceLit == step
+
+                appLink(router, Nav.tutorialTrack(track.slug), onFollow = step?.let { { KlangGuiDance.dance.used(it) } }) {
+                    key = "panel-${track.slug}"
+                    attributes["data-track"] = track.slug
+                    attributes["class"] = listOfNotNull(
+                        "kl-app-link",
+                        LearnStyles.trackPanel.toString(),
+                        KlangControlStyles.beacon.toString().takeIf { lit },
+                    ).joinToString(" ")
+
+                    div {
+                        css {
+                            put("display", "flex")
+                            put("align-items", "baseline")
+                            put("flex-wrap", "wrap")
+                            put("column-gap", "10px")
+                        }
+
+                        span {
+                            css {
+                                put("font-size", "18px")
+                                put("font-weight", "700")
+                                put("color", "var(--kl-ink-strong)")
+                            }
+
+                            +track.title
+                        }
+
+                        span {
+                            css {
+                                put("font-size", "12px")
+                                put("color", "var(--kl-ink-label)")
+                            }
+
+                            +"${progress.doneIn(track)} of ${track.lessons.size} done"
+                        }
+                    }
+
+                    div {
+                        css {
+                            put("flex", "1")
+                            put("font-size", "13px")
+                            put("line-height", "1.45")
+                            put("color", "var(--kl-ink-label)")
+                        }
+
+                        +track.description
+                    }
+
+                    // A lamp per lesson, in the track's order: where one stands at a glance
+                    div {
+                        css {
+                            put("display", "flex")
+                            put("flex-wrap", "wrap")
+                            put("gap", "6px")
+                        }
+
+                        for (lesson in track.lessons) {
+                            val state = progress.stateOf(lesson)
+
+                            span {
+                                attributes["data-lesson"] = lesson.slug
+                                attributes["data-state"] = state.name
+                                css { put("display", "inline-flex") }
+
+                                KlangLamp(state = state.lamp(), size = 10.px)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /** A track while one looks for lessons: its title, how far, what it is, and the lessons found as tiles. */
+    private fun FlowContent.renderTrack(track: TutorialTrackDef, lessons: List<Tutorial>, progress: TutorialProgress) {
         section {
             key = "track-${track.slug}"
             attributes["data-track"] = track.slug
@@ -279,48 +379,7 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
                 }
             }
 
-            if (folded) {
-                renderFolded(track = track, progress = progress)
-            } else {
-                renderTiles(track = track, lessons = lessons, progress = progress)
-            }
-        }
-    }
-
-    /**
-     * A folded track: the key that opens it, then a lamp per lesson. The key first and of one width on every track, so
-     * the keys and the rows of lamps line up down the page (the maintainer, 2026-10-27: "the "Show its lessons" buttons
-     * are all left of the dots ... all buttons should have the same width").
-     */
-    private fun FlowContent.renderFolded(track: TutorialTrackDef, progress: TutorialProgress) {
-        div {
-            css {
-                put("display", "flex")
-                // On a narrow page the lamps wrap under the key instead of running off the side
-                put("flex-wrap", "wrap")
-                put("align-items", "center")
-                put("gap", "6px")
-            }
-
-            div {
-                css {
-                    put("display", "flex")
-                    put("flex-shrink", "0")
-                    put("width", FOLDED_KEY_WIDTH)
-                    put("margin-right", "10px")
-                }
-
-                KlangButton(onClick = { unfolded = unfolded + track.slug }) {
-                    attributes["aria-expanded"] = "false"
-                    css { put("width", "100%") }
-
-                    +"Show its ${track.lessons.size} lessons"
-                }
-            }
-
-            for (lesson in track.lessons) {
-                KlangLamp(state = progress.stateOf(lesson).lamp(), size = 10.px)
-            }
+            renderTiles(track = track, lessons = lessons, progress = progress)
         }
     }
 

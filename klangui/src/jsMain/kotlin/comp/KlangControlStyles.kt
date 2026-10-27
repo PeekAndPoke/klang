@@ -1347,7 +1347,8 @@ object KlangControlStyles : StyleSheet("kl-controls") {
     val workbenchMark by rule {
         put("padding-bottom", "28px")
 
-        rule("& > span") {
+        // The mark, or the mark as a link home: the same lettering, no link colour, brighter under the mouse
+        rule("& > span, & > a") {
             put("display", "block")
             put("writing-mode", "vertical-rl")
             put("transform", "rotate(180deg)")
@@ -1358,6 +1359,17 @@ object KlangControlStyles : StyleSheet("kl-controls") {
             put("color", "var(--kl-ink-strong)")
             put("text-shadow", "0 0 5px var(--kl-edge)")
             put("white-space", "nowrap")
+        }
+
+        // An app may colour its links with !important (Klang's gold): the mark keeps its own ink against that
+        rule("& > a, & > a:visited") {
+            put("color", "var(--kl-ink-strong) !important")
+            put("text-decoration", "none")
+            put("cursor", "pointer")
+        }
+
+        rule("& > a:hover") {
+            put("color", "var(--kl-ink-text) !important")
         }
     }
 

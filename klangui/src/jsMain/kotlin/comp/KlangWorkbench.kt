@@ -11,6 +11,7 @@ import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
+import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.html.onPointerCancel
 import io.peekandpoke.ultra.html.onPointerDown
 import io.peekandpoke.ultra.html.onPointerMove
@@ -21,6 +22,7 @@ import kotlinx.browser.window
 import kotlinx.html.DIV
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
+import kotlinx.html.a
 import kotlinx.html.aside
 import kotlinx.html.div
 import kotlinx.html.main
@@ -39,6 +41,7 @@ fun Tag.KlangWorkbench(
     drawer: (FlowContent.(close: () -> Unit) -> Unit)? = null,
     keys: (FlowContent.() -> Unit)? = null,
     mark: String? = null,
+    markLink: KlangWorkbench.Link? = null,
     layout: KlangWorkbench.Layout? = null,
     onLayout: ((KlangWorkbench.Layout) -> Unit)? = null,
 ) = comp(
@@ -51,6 +54,7 @@ fun Tag.KlangWorkbench(
         drawer = drawer,
         keys = keys,
         mark = mark,
+        markLink = markLink,
         layout = layout,
         onLayout = onLayout,
     )
@@ -68,9 +72,9 @@ fun Tag.KlangWorkbench(
  * - The content in the middle, and under it the bottom panel, docked, shown or hidden from the strip.
  * - The tool strip on the right: a toggle per tool window, the bottom panel's toggle; at its foot the caller's
  *   [Props.keys] for every page (the app's fullscreen: KLANG-00349) and the maker's [Props.mark] written upwards
- *   (items 22, 23). An open tool window flies in over the content, or, pinned, docks beside it;
- *   each tool window keeps its own pin, as in IntelliJ. Opened from the strip, it takes the focus. Esc closes one
- *   flying in, and the focus goes back to its toggle; a pinned one stays.
+ *   (items 22, 23), a link home when [Props.markLink] says where. An open tool window flies in over the content, or,
+ *   pinned, docks beside it; each tool window keeps its own pin, as in IntelliJ. Opened from the strip, it takes the
+ *   focus. Esc closes one flying in, and the focus goes back to its toggle; a pinned one stays.
  *
  * Esc and the panels (the drawer, a tool window flying in): wherever the focus is, also in a field that does not use
  * the Esc itself, one Esc closes the newest open panel, through the key manager (`KlangKeyBindings.PanelClose`, the
@@ -101,6 +105,12 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
         /** The content kept above the bottom panel at its highest. */
         const val CONTENT_KEPT_PX = 120.0
     }
+
+    /**
+     * A place a link leads to: its [href], a real link (a new tab with a key held), and [onFollow] for a plain click,
+     * which goes there inside the app.
+     */
+    data class Link(val href: String, val onFollow: () -> Unit)
 
     /** A tool window: its [id], its [title] (and toggle name), a [chip] (what it follows), its strip [icon]. */
     data class Tool(
@@ -151,6 +161,8 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
         val keys: (FlowContent.() -> Unit)?,
         /** The maker's mark at the strip's foot ("KLANGMOTOR"); null for none. */
         val mark: String?,
+        /** Where the mark leads (the app: its start screen); null for a mark that is only a mark. */
+        val markLink: Link?,
         /** The layout to start with, as [onLayout] last reported it (a page kept it over a reload); null for none. */
         val layout: Layout?,
         /** Gets the layout whenever it changed, to keep it; a drag of the bottom panel reports once, at its end. */
@@ -578,7 +590,27 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
 
                         if (mark != null) {
                             div(classes = styles.workbenchMark.toString()) {
-                                span { +mark }
+                                val link = props.markLink
+
+                                if (link == null) {
+                                    span { +mark }
+                                } else {
+                                    // Home, the same way as any app link: a plain click inside the app
+                                    a(href = link.href) {
+                                        onClick { event ->
+                                            val mouse = event.asDynamic()
+
+                                            if (mouse.button == 0 && mouse.ctrlKey != true && mouse.metaKey != true &&
+                                                mouse.shiftKey != true && mouse.altKey != true
+                                            ) {
+                                                event.preventDefault()
+                                                link.onFollow()
+                                            }
+                                        }
+
+                                        +mark
+                                    }
+                                }
                             }
                         }
                     }

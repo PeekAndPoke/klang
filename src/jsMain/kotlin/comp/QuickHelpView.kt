@@ -613,7 +613,16 @@ class QuickHelpView(ctx: Ctx<Props>) : Component<QuickHelpView.Props>(ctx) {
 
                 div(classes = KlangControlStyles.heading.toString()) { +"Example" }
 
-                KlangButton(onClick = { copy(code) }) { +if (copied) "Copied" else "Copy" }
+                // The example player's quiet copy key, the same everywhere (the maintainer, 2026-10-27: "the same copy
+                // button as in the playable code example, the more descend one")
+                button(type = ButtonType.button, classes = "kl-quiet-key") {
+                    attributes["data-copy"] = ""
+                    title = "Copy the example"
+                    onClick { copy(code) }
+
+                    icon.copy_outline()
+                    +if (copied) "Copied" else "Copy"
+                }
             }
 
             renderCode(code)

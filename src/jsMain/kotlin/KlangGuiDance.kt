@@ -35,10 +35,18 @@ object KlangGuiDance {
     /** The walkthroughs key above it, opening the walkthroughs window. */
     const val WALKTHROUGHS = "workbench.walkthroughs"
 
+    /** "Learn" in the Motor's drawer. */
+    const val DRAWER_LEARN = "drawer.learn"
+
+    /** The First Steps track's panel on the Learn overview, to its page. */
+    const val LEARN_FIRST_STEPS = "learn.first-steps"
+
     /**
      * The arcs, in their order (the maintainer, 2026-10-26). The first: Play on the song page, the Motor button,
      * "Songs" in its drawer, then the next song on the songs page. The second starts as it ends: the fullscreen key,
-     * then the walkthroughs key itself.
+     * then the walkthroughs key itself. The third, after it, to the first lessons (the maintainer, 2026-10-27: "After
+     * the GuiDance to the "Walkthroughs" is done, let us guide the user to the "First Steps" tutorial", "new guidance
+     * path"): the Motor button, "Learn" in its drawer, the First Steps panel.
      */
     val arcs = listOf(
         GuiDance.Arc(
@@ -50,6 +58,11 @@ object KlangGuiDance {
             id = "fullscreen",
             title = "Fullscreen, and the walkthroughs",
             steps = listOf(FULLSCREEN, WALKTHROUGHS),
+        ),
+        GuiDance.Arc(
+            id = "first-steps",
+            title = "First Steps, your first lessons",
+            steps = listOf(MOTOR_MENU, DRAWER_LEARN, LEARN_FIRST_STEPS),
         ),
     )
 

@@ -79,3 +79,4 @@ It follows the epic's board F: The Klang Path as a tech tree in the left column.
   list and the term, gold only where one presses, "Back to Learn". Committed.
 - 2026-10-27: the column lists only the tracks, with the search above them (it lost its focus on the first letter on the page; checked in a browser with real key presses: the field in the column keeps it); every track starts folded, its key first and of one width; Continue stays.
 - 2026-10-27: the level and depth filters into the column, several of each, as checkboxes with a lamp (`KlangCheckbox.Look.Lamp`), lists in the overview's address; a click navigates (Kraft's hash-strategy `replaceUri` writes a path: ULTRA-00263).
+- 2026-10-27: the tracks as panels (one to three in a row, each a link to its page, a lamp per lesson; `LearnStyles`, a Kraft style sheet); the Gui-dance's third arc to the First Steps panel; the workbench's mark a link home.
