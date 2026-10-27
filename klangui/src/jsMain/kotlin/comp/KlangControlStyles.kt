@@ -225,6 +225,22 @@ object KlangControlStyles : StyleSheet("kl-controls") {
     }
 
     /**
+     * The close's flat finish (the maintainer, 2026-10-27: "Can we make the KlangCloseButton flat please", then of its
+     * thin ring: "Maybe not even the circle"): only the x, in the label's ink, brighter under the mouse; the button's
+     * box stays, so it is as easy to hit. After the finishes, so it wins over them.
+     */
+    val closeFlat by rule {
+        put("color", "var(--kl-ink-label)")
+        put("background", "transparent")
+        put("border-color", "transparent")
+        put("box-shadow", "none")
+
+        rule("&:hover") {
+            put("color", "var(--kl-ink-strong)")
+        }
+    }
+
+    /**
      * A tall button: a drawer's entry, a swatch button. Its lamp sits at the top left. Its text starts at the top, also
      * when a neighbour's longer text makes the row taller (the maintainer, 2026-10-26).
      */

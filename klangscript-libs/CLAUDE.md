@@ -59,6 +59,9 @@ interval vocabulary of `tones`, not an audio door. Split out of `:klangscript` o
   stdlib registry (`generatedStdlibDocs`) live here too (`src/jvmTest/kotlin/intel/`).
 - Memory and language references stay in `klangscript/` (`MEMORY.md`, `ref/`); this module has no
   separate memory file.
+- KDocs: the Lexikon's terms link themselves (no hand-written Lexikon links for them), and "per voice", not a bare
+  "voice", for what belongs to one sounding note: the two KDoc rules in `sprudel/ref/dsl-conventions.md` (KDoc
+  Rules), which hold here too. (rule, 2026-10-27, KLANG-00369)
 
 ## Build & Test
 

@@ -40,7 +40,7 @@ class KlangScreenSpec : StringSpec({
         ) { root ->
             val screens = root.selectCss(".${styles.screen}")
 
-            screens.map { cornerWidths(it) } shouldContainExactly listOf(List(4) { "8px" }, List(4) { "22px" })
+            screens.map { cornerWidths(it) } shouldContainExactly listOf(List(4) { "8px" }, List(4) { "14px" })
 
             for (corner in screens[1].querySelectorAll(".${styles.screenCorner}").asList()) {
                 val style = window.getComputedStyle(corner)

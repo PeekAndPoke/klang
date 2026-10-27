@@ -66,3 +66,6 @@ someone writes the links.
 - 2026-10-27: review round 2 (level 2): clean (the real KDocs run through a port: no bare voice link left, the 25
   swept phrases link whole, no reference linked). Its MINOR applied: a row on the real Lexikon pins the two data
   fixes; its NIT: an unclosed `[` swallows nothing. Committed.
+- 2026-10-27: the two rules for KDoc writers (Lexikon words link themselves; "per voice", not a bare "voice") in
+  `sprudel/ref/dsl-conventions.md` (KDoc Rules), and a pointer in `klangscript-libs/CLAUDE.md` (Klang-Main-Dev's ask,
+  the maintainer's yes).

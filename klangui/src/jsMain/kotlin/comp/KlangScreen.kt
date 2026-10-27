@@ -41,7 +41,8 @@ class KlangScreen(ctx: Ctx<Props>) : Component<KlangScreen.Props>(ctx) {
     /** How far the corners are cut: about twice the bezel round a large screen, a little for a small one. */
     enum class Size(val cutPx: Int) {
         Small(cutPx = 8),
-        Large(cutPx = 22),
+        // Was 22: "the triangle a bit too big" (the maintainer, 2026-10-27)
+        Large(cutPx = 14),
     }
 
     data class Props(

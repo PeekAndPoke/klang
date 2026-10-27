@@ -29,8 +29,8 @@ fun Tag.KlangCloseButton(
 
 /**
  * The close of a panel, a drawer or a window, the same everywhere (the maintainer, 2026-10-27: "Can we use the same
- * decent 'x' for close everywhere? maybe with a subtle circle around it"): a round dark cap with an x, its edge the
- * circle, as the menu drawer's close first had it.
+ * decent 'x' for close everywhere?"): only the x, flat and without a ring ("Can we make the KlangCloseButton flat
+ * please", "Maybe not even the circle"), brighter under the mouse.
  *
  * Its [Props.label] names it for screen readers and as its tooltip ("Close Docs").
  */
@@ -54,8 +54,8 @@ class KlangCloseButton(ctx: Ctx<Props>) : Component<KlangCloseButton.Props>(ctx)
         val styles = KlangControlStyles
         val classes = listOfNotNull(
             styles.button,
-            styles.darkFlat,
             styles.round,
+            styles.closeFlat,
             if (props.size == Size.Small) styles.roundSmall else null,
         )
 
