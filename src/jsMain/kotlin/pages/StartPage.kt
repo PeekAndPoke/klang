@@ -341,9 +341,6 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         override fun update() {
             if (!benchmarkStarted && elapsedMs() >= KEY_AT_START_MS + uiFadeDurationMs) {
                 benchmarkStarted = true
-                // "Gestrandet" with the run, fading in (the maintainer, 2026-10-27)
-                songFadeIn.start()
-                waitingSong.play()
                 launch { benchmark.run(iterations = 3) }
             }
         }
@@ -358,6 +355,12 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
     private inner class StateBenchmarkComplete(val result: KlangBenchmark.Result) : State {
         override val key = KlangIgnition.Position.Start
+
+        init {
+            // The dyno is done: "Gestrandet" fades in while the result waits for "Make Music Now"
+            songFadeIn.start()
+            waitingSong.play()
+        }
 
         override fun update() {
             // noop
@@ -395,9 +398,9 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
     private val benchmark = KlangBenchmark()
 
     /**
-     * "Gestrandet" in the background from the dyno run on, until "Make Music Now" is pressed (the maintainer,
-     * 2026-10-27: "start the song when the dynamo test start but fade it in over 15 seconds"). It plays on the main
-     * thread's time too, so the run reports somewhat fewer voices than the machine can do; the maintainer's call.
+     * "Gestrandet" in the background once the dyno is done, fading in, until "Make Music Now" is pressed (the
+     * maintainer, 2026-10-27/28). Not during the run: it would share the main thread with the measurement and lower
+     * the PS the run reports ("or we start the song after the dynamo, probably simpler").
      */
     private val waitingSong = KlangCodePlaybackCtrl.builder()
         .code(BuiltInSongs.soundOfTheSea.code)
