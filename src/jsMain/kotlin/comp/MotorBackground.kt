@@ -32,6 +32,10 @@ import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.utils.jsObject
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.key
+import io.peekandpoke.ultra.maths.Smoothing
+import io.peekandpoke.ultra.streams.StreamSource
+import io.peekandpoke.ultra.streams.Unsubscribe
+import io.peekandpoke.ultra.streams.ops.smooth
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.html.Tag
@@ -67,7 +71,8 @@ fun Tag.MotorBackground(
 /**
  * Machined panel-grid background in the code page's surface language, with a
  * spotlight that stands on the centre of the screen (the maintainer, 2026-10-26: "Stop the light from moving ... just
- * point it at the center of the screen") and whose filament subtly flickers.
+ * point it at the center of the screen") and whose filament subtly flickers; now and then it stutters, a bulb about
+ * to break ([BulbStutter]).
  *
  * Pure Kotlin port of the former `motor-background.js` built on the kraft-threejs
  * addon. While the Motor waits for its key the screen stays black; [warmUp] fades in a dim standby light, quickly,
@@ -313,6 +318,25 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     // top never pollutes the easing state.
     private var currentIntensity = 0.0
     private var flickerTime = 0.0
+
+    /**
+     * The bulb about to break ([BulbStutter]): its goals go into [bulbGoal], and the light reads them smoothed, each
+     * stutter by a law of its own (the maintainer, 2026-10-28: "build a stream with .smooth() for how bright the light
+     * is and throw values in it"). One smoothed stream for the lamp's life: a stutter swaps the law ([bulbLaw]), the
+     * motion goes on where it is ("when you recreate the bulbFollow you lose the history").
+     */
+    private val bulbGoal = StreamSource<Double?>(1.0)
+
+    /** The law the bulb's light moves by now; a stutter puts its own. */
+    private val bulbLaw = SwappableSmoothing(Smoothing.Exponential(keepPer10Ms = 0.5))
+
+    /** The bulb's share of the light as smoothed, read every frame. */
+    private var bulbShown = 1.0
+
+    private var bulbFollow: Unsubscribe? = bulbGoal.smooth(smoothing = bulbLaw, rest = 1.0, near = 0.002)
+        .subscribeToStream { bulbShown = it ?: 1.0 }
+
+    private val bulb = BulbStutter(onStutter = { bulbLaw.law = it })
 
     ////  DEFERRED TEXTURE BUILD  /////////////////////////////////////////////////////////////////////////////////
 
@@ -846,9 +870,16 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         flickerTime += delta
         val flicker = 1.0 +
                 // Three times slower than at first (the maintainer, 2026-10-26: "it flickers too often")
-                grainNoise.noise(flickerTime * 0.0012, 7.7) * 0.05 +
-                grainNoise.noise(flickerTime * 0.007, 3.3) * 0.025
-        mainLight?.let { it.intensity = currentIntensity * flicker }
+                // A bit livelier between the stutters (the maintainer, 2026-10-27: "a bit less stable in between")
+                grainNoise.noise(flickerTime * 0.0012, 7.7) * 0.07 +
+                grainNoise.noise(flickerTime * 0.007, 3.3) * 0.035
+        val bulbHeads = bulb.next(delta)
+
+        if (bulbHeads != bulbGoal()) {
+            bulbGoal(bulbHeads)
+        }
+
+        mainLight?.let { it.intensity = currentIntensity * flicker * bulbShown }
 
         // The plate fades in with the main light: while the light is off the canvas is transparent and the black
         // backdrop shows through. The title overlay is exempt from the dimming cap and stays bright. Driven by the
@@ -865,6 +896,8 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         resizeTimer?.let { window.clearTimeout(it) }
         resizeListener = null
         resizeTimer = null
+        bulbFollow?.invoke()
+        bulbFollow = null
     }
 
     ////  PROCEDURAL NORMAL MAP  //////////////////////////////////////////////////////////////////////////////////
