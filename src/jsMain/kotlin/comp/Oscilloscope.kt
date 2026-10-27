@@ -36,7 +36,7 @@ import kotlin.math.roundToInt
 fun Tag.Oscilloscope(
     player: Stream<KlangPlayer?>,
     strokeColor: Color = Color.white,
-    strokeWidth: Double = 1.5,
+    strokeWidth: Double = 2.0,
     centerLineColor: Color? = Color.white.withAlpha(0.07),
     centerLineWidth: Double = 1.0,
     pixelSkip: Int = 3,

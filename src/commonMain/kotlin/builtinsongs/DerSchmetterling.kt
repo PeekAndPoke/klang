@@ -96,8 +96,8 @@ let preampHighGain = x => x
   .highpass(120)                                    // tight: no bass into the gain stages
   .distort(0.35, "tube", 4).highpass(110)
   .distort(0.45, "softsat", 4).highpass(100)
-  .distort(0.60, "soft", 4)
-  .lowpass(4600)                                   // the fizz
+  .distort(0.65, "soft", 4)
+  .lowpass(4800)                                   // the fizz
   .mul(0.30)                                       // volume
 
 // Power amps: the last saturating stage. Tells: symmetric or not, and the presence bump. The last mul is the master.
@@ -123,8 +123,8 @@ let cabStock = x => x.lowpass(5000).lowpass(5000)
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = x => x
   .eq(e => e
-    .band(freq =  120, q = 0.7, db =  1.40)        // thump: closed-back box resonance
-    .band(freq =  380, q = 0.5, db =  4.00)        // roar:  low mids
+    .band(freq =  120, q = 0.7, db =  1.45)        // thump: closed-back box resonance
+    .band(freq =  380, q = 0.5, db =  3.90)        // roar:  low mids
     .band(freq = 2700, q = 1.8, db =  4.25)        // bark:  the upper-mid speaker peak
   )
   .lowpass(6500, 0.500, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
@@ -224,7 +224,7 @@ let bass = (() => {
 
   // Harmonics: sine partials at 2f .. 6f, gain 1/n, the fundamental left to the sub above. On the
   // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
-  let harmonics = Ign.sine(x => x.harmonics(6, 1.2).fundamental(0).analog(pAnalog).analogSpread(0.1)).mul(pHarm)
+  let harmonics = Ign.sine(x => x.harmonics(8, 1.5).fundamental(0).analog(pAnalog).analogSpread(0.25)).mul(pHarm)
 
   return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -3)) // let the snare cut through
