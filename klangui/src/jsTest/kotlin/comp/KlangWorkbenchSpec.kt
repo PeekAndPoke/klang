@@ -705,23 +705,18 @@ class KlangWorkbenchSpec : StringSpec({
 
             document.activeElement shouldBe field
 
-            // Open already: a show that only opens a closed panel leaves the tab; a plain one switches it
-            workbenchRef { it.showBottom(tab = "help", onlyIfClosed = true) }
-            delay(100)
-
-            r.q(".${styles.workbenchBottomFloating} [role=region]")!!.textContent shouldBe "TERMS BODY"
-
+            // Open already: shown at another tab, it switches to it
             workbenchRef { it.showBottom(tab = "help") }
 
             eventually { r.q(".${styles.workbenchBottomFloating} [role=region]")!!.textContent shouldBe "HELP BODY" }
         }
     }
 
-    "a closed bottom panel shown only if closed opens, its first tab pressed when none was picked" {
+    "a closed bottom panel shown from outside opens, its first tab pressed when none was picked" {
         keyedBed(view = { ChangingHost() }) { root ->
             val r = root[0]
 
-            workbenchRef { it.showBottom(onlyIfClosed = true) }
+            workbenchRef { it.showBottom() }
 
             eventually {
                 val bottom = r.q(".${styles.workbenchBottomFloating}")!!
@@ -733,8 +728,8 @@ class KlangWorkbenchSpec : StringSpec({
             r.q(".${styles.workbenchBottomFloating} button[aria-label='Close Help']")!!.click()
             eventually { r.q(".${styles.workbenchBottomFloating}") shouldBe null }
 
-            // Closed, the hover's way opens it at the tab it names
-            workbenchRef { it.showBottom(tab = "terms", onlyIfClosed = true) }
+            // Closed, it opens at the tab asked
+            workbenchRef { it.showBottom(tab = "terms") }
 
             eventually { r.q(".${styles.workbenchBottomFloating} [role=region]")!!.textContent shouldBe "TERMS BODY" }
         }

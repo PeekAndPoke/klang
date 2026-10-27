@@ -66,15 +66,16 @@ class QuickHelpPanel(private val pageKey: String) {
     )
 
     /**
-     * A name's help in the Quick help, the panel opened if it is closed; the focus stays where it is. Asked [byKey]
-     * (Alt+Q) it shows the Quick help's tab; a hover leaves an open panel at its tab, so the mouse passing over the code
-     * does not take the Lexikon away from the user reading there (KLANG-00365). [jumpTo] puts the cursor in the code
-     * the name came from, for its "Used on" list.
+     * A name's help in the Quick help, the panel opened if it is closed and turned to the Quick help's tab; the focus
+     * stays where it is. Alt+Q and a hover alike: the hover comes only with "Show on hover" switched on, and then it is
+     * the help the user asked for (the maintainer, 2026-10-27: "When the Lexikon tool is active and the "Show on hover"
+     * for the docs then the tool should switch to the docs"; before, a hover left the Lexikon in place, KLANG-00365).
+     * [jumpTo] puts the cursor in the code the name came from, for its "Used on" list.
      */
-    fun showHelp(entry: HelpWindow.Entry, byKey: Boolean, jumpTo: (pos: Int) -> Unit) {
+    fun showHelp(entry: HelpWindow.Entry, jumpTo: (pos: Int) -> Unit) {
         jump = jumpTo
         help(entry)
-        WorkbenchSlots.workbench { it.showBottom(tab = TAB_QUICK_HELP, onlyIfClosed = !byKey) }
+        WorkbenchSlots.workbench { it.showBottom(tab = TAB_QUICK_HELP) }
     }
 
     /**

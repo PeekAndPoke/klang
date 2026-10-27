@@ -470,10 +470,10 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
             showKeysOverview = true,
             // Alt+Q, and a hover: the name's help in the Help panel, never a popup, the focus staying in the code
             onQuickDocumentation = { symbol, declarationCode, usages ->
-                helpPanel.showHelp(entry = HelpWindow.Entry(symbol, declarationCode, usages), byKey = true, jumpTo = ::jumpTo)
+                helpPanel.showHelp(entry = HelpWindow.Entry(symbol, declarationCode, usages), jumpTo = ::jumpTo)
             },
             onHoverDocumentation = { symbol, declarationCode, usages ->
-                helpPanel.showHelp(entry = HelpWindow.Entry(symbol, declarationCode, usages), byKey = false, jumpTo = ::jumpTo)
+                helpPanel.showHelp(entry = HelpWindow.Entry(symbol, declarationCode, usages), jumpTo = ::jumpTo)
             },
         ).track(codeEditorRef)
     }

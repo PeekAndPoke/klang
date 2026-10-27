@@ -261,12 +261,12 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
             maxHighlightsPerEvent = highlightPerEvent,
             onQuickDocumentation = help?.let { panel ->
                 { symbol, declarationCode, usages ->
-                    panel.showHelp(entry = HelpWindow.Entry(symbol, declarationCode, usages), byKey = true, jumpTo = ::jumpTo)
+                    panel.showHelp(entry = HelpWindow.Entry(symbol, declarationCode, usages), jumpTo = ::jumpTo)
                 }
             },
             onHoverDocumentation = help?.let { panel ->
                 { symbol, declarationCode, usages ->
-                    panel.showHelp(entry = HelpWindow.Entry(symbol, declarationCode, usages), byKey = false, jumpTo = ::jumpTo)
+                    panel.showHelp(entry = HelpWindow.Entry(symbol, declarationCode, usages), jumpTo = ::jumpTo)
                 }
             },
         ).track(editorCompRef)

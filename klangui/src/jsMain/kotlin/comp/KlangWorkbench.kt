@@ -325,12 +325,11 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
 
     /**
      * Shows the bottom panel from outside the strip (the song page's help, on Alt+Q or a hover: KLANG-00349), open if
-     * it is already, at its [tab] when one is given; the focus stays where it is. With [onlyIfClosed] an open panel is
-     * left as it is: a hover fills the Quick help, but does not take the Lexikon away from a user reading there
-     * (KLANG-00365). Without a bottom panel it does nothing.
+     * it is already, at its [tab] when one is given; the focus stays where it is. Without a bottom panel it does
+     * nothing.
      */
-    fun showBottom(tab: String? = null, onlyIfClosed: Boolean = false) {
-        if (props.bottom == null || (onlyIfClosed && bottomOpen)) {
+    fun showBottom(tab: String? = null) {
+        if (props.bottom == null) {
             return
         }
 

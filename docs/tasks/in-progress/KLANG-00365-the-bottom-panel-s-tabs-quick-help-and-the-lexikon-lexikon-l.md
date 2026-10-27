@@ -87,3 +87,4 @@ the first step, whoever owns the manager then.
   switch in the Lexikon tab, the brushed role's own swatch in the kitchen sink, the Perlin entry's "never repeats"
   taken back. The new rows mutation-checked. Committed with the brushed metal (KLANG-00366).
 - 2026-10-27: IN PROGRESS.
+- 2026-10-27: reversed by the maintainer: a hover (with "Show on hover" on) turns the panel to the Quick help too, also from the Lexikon ("When the Lexikon tool is active and the "Show on hover" for the docs then the tool should switch to the docs"); `showBottom`'s `onlyIfClosed` went with it.
