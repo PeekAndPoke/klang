@@ -10,7 +10,6 @@ import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.onClick
-import io.peekandpoke.ultra.semanticui.icon
 import kotlinx.html.ButtonType
 import kotlinx.html.DIV
 import kotlinx.html.FlowContent
@@ -129,11 +128,7 @@ class KlangToolWindow(ctx: Ctx<Props>) : Component<KlangToolWindow.Props>(ctx) {
                 }
 
                 props.onClose?.let { close ->
-                    button(type = ButtonType.button, classes = styles.iconToggle.toString()) {
-                        attributes["aria-label"] = "Close ${props.title}"
-                        onClick { close() }
-                        icon.times.render { attributes["aria-hidden"] = "true" }
-                    }
+                    KlangCloseButton(label = "Close ${props.title}", onClick = close, size = KlangCloseButton.Size.Small)
                 }
             }
 

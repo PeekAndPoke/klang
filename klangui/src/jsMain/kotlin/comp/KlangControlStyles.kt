@@ -213,6 +213,15 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("width", "34px")
         put("padding", "0")
         put("border-radius", "50%")
+        // A circle stays a circle in a crowded header row, never squeezed into an oval
+        put("flex-shrink", "0")
+    }
+
+    /** A round button at a header's icon size, beside a [KlangIconToggle] ([KlangCloseButton.Size.Small]). */
+    val roundSmall by rule {
+        put("width", "28px")
+        put("height", "28px")
+        put("font-size", "12px")
     }
 
     /**
@@ -692,7 +701,7 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("white-space", "nowrap")
     }
 
-    /** A small icon button: a tool window's pin and close, the tool strip's toggles. Printed, not raised; on, it sinks in. */
+    /** A small icon button: a tool window's pin, the tool strip's toggles. Printed, not raised; on, it sinks in. */
     val iconToggle by rule {
         put("display", "inline-flex")
         put("align-items", "center")

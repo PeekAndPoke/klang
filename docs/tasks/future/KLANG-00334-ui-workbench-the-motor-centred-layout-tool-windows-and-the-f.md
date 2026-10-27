@@ -260,3 +260,4 @@ references when it lands (`CREDITS.MD` and the Credits page).
 - 2026-10-25: created from the design conversation; the canvas holds boards A to E and the shared parts.
 - 2026-10-25: the kitchen sink board; the canvas source copied to `docs/design/2026-10-25-ui-workbench-canvas/`.
 - 2026-10-26: item 46, the guiding idea: a machine made of tiles.
+- 2026-10-27: `KlangCloseButton`, one close for every panel (the maintainer: "the same decent x for close everywhere, maybe with a subtle circle"): the drawer's round cap with its edge as the circle, 34 px in the drawer, 28 px beside a tool window's pin (the bottom panel and the tool windows); a kitchen-sink row. Built by Klang-Main-Dev at Klang-Research's hand-over.

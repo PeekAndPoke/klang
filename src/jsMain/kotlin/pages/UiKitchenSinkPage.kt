@@ -14,6 +14,7 @@ import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangCaption
 import io.peekandpoke.klang.ui.comp.KlangCard
 import io.peekandpoke.klang.ui.comp.KlangCheckbox
+import io.peekandpoke.klang.ui.comp.KlangCloseButton
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.klang.ui.comp.KlangDialog
 import io.peekandpoke.klang.ui.comp.KlangDrawer
@@ -646,6 +647,13 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
                             KlangButton(onClick = {}, finish = finish, surface = surface, beacon = true) { +"Try me" }
                         }
                     }
+                }
+            }
+
+            cell(name = "Close, the same everywhere", source = "klangui/comp/KlangCloseButton.kt") {
+                row {
+                    KlangCloseButton(label = "Close", onClick = {})
+                    KlangCloseButton(label = "Close (small)", onClick = {}, size = KlangCloseButton.Size.Small)
                 }
             }
 

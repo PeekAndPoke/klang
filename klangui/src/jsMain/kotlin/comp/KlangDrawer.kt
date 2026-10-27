@@ -9,7 +9,6 @@ import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
-import io.peekandpoke.ultra.semanticui.icon
 import kotlinx.html.DIV
 import kotlinx.html.Tag
 import kotlinx.html.div
@@ -93,9 +92,7 @@ class KlangDrawer(ctx: Ctx<Props>) : Component<KlangDrawer.Props>(ctx) {
                             KlangCloseKey(onClose = close)
                         }
 
-                        KlangButton(onClick = close, shape = KlangButton.Shape.Round, ariaLabel = "Close") {
-                            icon.times.render { attributes["aria-hidden"] = "true" }
-                        }
+                        KlangCloseButton(label = "Close", onClick = close)
                     }
                 }
             }
