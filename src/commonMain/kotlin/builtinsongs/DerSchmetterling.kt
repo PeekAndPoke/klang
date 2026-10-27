@@ -43,7 +43,7 @@ let pickupSingle = x => x
 
 // Humbucker at the bridge: a lower, broader resonance, fat and dark, hot output that pushes the amp harder.
 let pickupHumbucker = x => x
-  .lowpass(2200, 1.6)                              // the peak, low and wide
+  .lowpass(2400, 1.6)                              // the peak, low and wide
   .mul(1.2)                                        // hot output
 
 // Humbucker at the neck: darker still, and the neck position cancels the 4th harmonic (the hollow, woody tell).
@@ -97,7 +97,7 @@ let preampHighGain = x => x
   .distort(0.35, "tube", 4).highpass(110)
   .distort(0.45, "softsat", 4).highpass(100)
   .distort(0.65, "soft", 4)
-  .lowpass(4800)                                   // the fizz
+  .lowpass(5200)                                   // the fizz
   .mul(0.30)                                       // volume
 
 // Power amps: the last saturating stage. Tells: symmetric or not, and the presence bump. The last mul is the master.
@@ -128,7 +128,7 @@ let cab4x12 = x => x
     .band(freq = 2700, q = 1.7, db =  4.35)        // bark:  the upper-mid speaker peak
   )
   .lowpass(6000, 0.600, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
-  .highpass(105, 0.707, x => x.passes(2))
+  .highpass(110, 0.707, x => x.passes(2))
 
 // 1x12 open back: the open back cancels the bass, the top chimes and rolls off late and soft.
 let cab1x12 = x => x
@@ -224,7 +224,7 @@ let bass = (() => {
 
   // Harmonics: sine partials at 2f .. 6f, gain 1/n, the fundamental left to the sub above. On the
   // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
-  let harmonics = Ign.sine(x => x.harmonics(8, 1.5).fundamental(0).analog(pAnalog).analogSpread(0.25)).mul(pHarm)
+  let harmonics = Ign.sine(x => x.harmonics(6, 1.5).fundamental(0).analog(pAnalog).analogSpread(0.25)).mul(pHarm)
 
   return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -3)) // let the snare cut through
@@ -387,7 +387,7 @@ export trommel_shape = x => x.sound(gummiEimer).adsrOff() // .solo()
   .pan(0.40).superimpose(pan(0.60))
 
 export trommel_arrange = x => x.orbit(5) // .solo(0.5)
-  .scale("e4:minor").gain(0.145)
+  .scale("e4:minor").gain(0.140)
   .mute("<1!32 0!32 1!64>")                          
   .late(berlin(0.0030, 0.0050).seed(100).mul(drunk).fast(4))
 

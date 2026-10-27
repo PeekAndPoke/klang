@@ -76,7 +76,7 @@ let preampHighGain = x => x
   .distort(0.35, "tube", 4).highpass(110)
   .distort(0.45, "softsat", 4).highpass(100)
   .distort(0.65, "soft", 4)
-  .lowpass(4800)                                   // the fizz
+  .lowpass(5200)                                   // the fizz
   .mul(0.30)                                       // volume
 
 let powerPushPull = x => x
@@ -90,7 +90,7 @@ let powerClassA = x => x
 
 let cab4x12 = x => x
   .eq(e => e
-    .band(freq =  120, q = 0.7, db =  1.45)        // thump: closed-back box resonance
+    .band(freq =  120, q = 0.7, db =  1.35)        // thump: closed-back box resonance
     .band(freq =  380, q = 0.5, db =  3.90)        // roar:  low mids
     .band(freq = 2700, q = 1.8, db =  4.25)        // bark:  the upper-mid speaker peak
   )
@@ -232,7 +232,7 @@ let bass = (() => {
 
   // Harmonics: sine partials at 2f .. 8f, gain 1/n, the fundamental left to the sub above. On the
   // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
-  let harmonics = Ign.sine(x => x.harmonics(8, 1.5).fundamental(0).analog(pAnalog).analogSpread(0.25)).mul(pHarm)
+  let harmonics = Ign.sine(x => x.harmonics(6, 1.5).fundamental(0).analog(pAnalog).analogSpread(0.25)).mul(pHarm)
 
   return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -3)) // let the snare cut through
@@ -535,7 +535,7 @@ export song = stack(
  
   , master(Katalyst(k => k
     .reverb(0.20, 7, 7500)                         // the hall: one room for the whole band, about 2 s, warm
-    .gain(1.15)                                    // the house level, -14 LUFS
+    .gain(1.10)                                    // the house level, -14 LUFS
     .bands(b => b
       .band(low => low.distort(0.01, "soft", 4)).cut(150)
       .band(mid => mid.distort(0.15, "soft", 4).mul(0.85)).cut(5000)
