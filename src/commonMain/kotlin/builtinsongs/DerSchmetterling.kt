@@ -123,11 +123,11 @@ let cabStock = x => x.lowpass(5000).lowpass(5000)
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = x => x
   .eq(e => e
-    .band(freq =  120, q = 0.7, db =  1.45)        // thump: closed-back box resonance
+    .band(freq =  120, q = 0.7, db =  1.40)        // thump: closed-back box resonance
     .band(freq =  380, q = 0.5, db =  3.90)        // roar:  low mids
-    .band(freq = 2700, q = 1.8, db =  4.25)        // bark:  the upper-mid speaker peak
+    .band(freq = 2700, q = 1.7, db =  4.35)        // bark:  the upper-mid speaker peak
   )
-  .lowpass(6500, 0.500, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
+  .lowpass(6000, 0.600, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
   .highpass(105, 0.707, x => x.passes(2))
 
 // 1x12 open back: the open back cancels the bass, the top chimes and rolls off late and soft.
@@ -340,7 +340,7 @@ export bass_pat =
 
 export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.40) // . mute()
     .ignp("sub", 0.98).ignp("harmonics", 1.00).clip("0.95".sub(perlin(0.0, 0.05).slow(8)))  // . solo()
-    .adsr(0.003, 0.75, 0.33, 0.025).hpf(35)
+    .adsr(0.003, 0.50, 0.33, 0.025).hpf(35)
 
 export bass_arrange = x => x.orbit(4) // . mute()
   .scale("e1:minor").notch(freq = snareHz, q = 1.0).mute("<0!128 1!32>")
