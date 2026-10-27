@@ -1183,6 +1183,9 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("border-radius", "50%")
         put("background", "linear-gradient(180deg, var(--kl-metal-light), var(--kl-metal-mid) 55%, var(--kl-metal-dark))")
         put("box-shadow", "0 2px 4px rgba(0,0,0,0.6)")
+        // An instrument, not text: its reading and its icon cannot be selected (the maintainer, 2026-10-27)
+        put("user-select", "none")
+        put("-webkit-user-select", "none")
     }
 
     val gaugeOnline by rule {

@@ -21,6 +21,7 @@ import io.peekandpoke.kraft.testing.eventually
 import io.peekandpoke.kraft.testing.selectCss
 import io.peekandpoke.kraft.testing.textContent
 import io.peekandpoke.kraft.vdom.VDom
+import kotlinx.browser.window
 import kotlinx.css.px
 import kotlinx.html.Tag
 import org.w3c.dom.Element
@@ -72,6 +73,14 @@ class KlangGaugeSpec : StringSpec({
             meter.attr("data-gauge") shouldContainExactly listOf("online")
             (styles.gaugeOnline.toString() in meter.classes().single()) shouldBe true
             root.selectCss(".${styles.gaugeValue}").textContent() shouldBe "38%"
+        }
+    }
+
+    "the gauge's reading cannot be selected: an instrument, not text" {
+        TestBed.preact(view = { KlangGauge(name = "Motor heat", value = 0.5, display = { "50%" }) }) { root ->
+            val value = root.selectCss(".${styles.gaugeValue}").single()
+
+            window.getComputedStyle(value).getPropertyValue("user-select") shouldBe "none"
         }
     }
 
