@@ -91,10 +91,10 @@ let powerClassA = x => x
 let cab4x12 = x => x
   .eq(e => e
     .band(freq =  120, q = 0.7, db =  1.40)        // thump: closed-back box resonance
-    .band(freq =  380, q = 0.5, db =  3.90)        // roar:  low mids
-    .band(freq = 2700, q = 1.8, db =  4.40)        // bark:  the upper-mid speaker peak
+    .band(freq =  380, q = 0.5, db =  4.00)        // roar:  low mids
+    .band(freq = 2700, q = 1.8, db =  4.25)        // bark:  the upper-mid speaker peak
   )
-  .lowpass(5000, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
+  .lowpass(6500, 0.500, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
   .highpass(105, 0.707, x => x.passes(2))
 
 let cab1x12 = x => x
@@ -401,7 +401,7 @@ let spinning = stack(
 // A second guitar answers.
 let answering = stack(
   spin(cocoonArp).pan(0.25).gain(0.28).hpf(120).lpf(3300).unison(voices = 5, spread = 0.02)
-    .mask("<[1 0 1 0 1 0 0 0]!2 [1 0 1 1 1 0 1 0]!2 [1 1 1 1 1 0 1 1]!2 1!2>"),
+    .mask("<[1 1 1 0 1 0 0 0]!2 [1 0 1 1 1 0 1 0]!2 [1 1 1 1 1 0 1 1]!2 1!2>"),
   sing(melodyOne).pan(0.75).gain(0.24).hpf(300),
 )
 
@@ -535,9 +535,11 @@ export song = stack(
  
   , master(Katalyst(k => k
     .reverb(0.20, 7, 7500)                         // the hall: one room for the whole band, about 2 s, warm
-    .gain(1.10)                                    // the house level, -14 LUFS
-    .bands(b => b.cut(150)
-      .band(mid => mid.distort(0.10, "soft", 4).mul(0.80)).cut(5000)
+    .gain(1.15)                                    // the house level, -14 LUFS
+    .bands(b => b
+      .band(low => low.distort(0.01, "soft", 4)).cut(150)
+      .band(mid => mid.distort(0.15, "soft", 4).mul(0.85)).cut(5000)
+      .band(low => low.distort(0.01, "soft", 4))
     ) // the glue on the mids only: the kick and the hats stay clean
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005) // the ceiling: peaks only
   ))

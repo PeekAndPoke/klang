@@ -127,7 +127,7 @@ let cab4x12 = x => x
     .band(freq =  380, q = 0.5, db =  4.00)        // roar:  low mids
     .band(freq = 2700, q = 1.8, db =  4.25)        // bark:  the upper-mid speaker peak
   )
-  .lowpass(5200, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
+  .lowpass(6500, 0.500, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
   .highpass(105, 0.707, x => x.passes(2))
 
 // 1x12 open back: the open back cancels the bass, the top chimes and rolls off late and soft.

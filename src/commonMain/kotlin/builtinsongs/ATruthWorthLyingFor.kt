@@ -60,21 +60,21 @@ stack( // Gitarre! -------------------------------------------------------------
   ,// Melody 1 ----------------------------------------------------------------------------------------------------------------------------------------------
   n(`<   [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
          [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
-    .orbit(1).fast(4).scale("C3:chromatic").hpf(600).lpf(freq = 3100, env = 15.9, q = 1.50).clip(0.96) // .solo()
-    .s(guitar).adsrOff().ignp("drive", drive * 0.9).ignp("brightness", 6000).ignp("spread", 0.05).gain(0.120).body(material = "mahogany", wet = 0.5)
+    .orbit(1).fast(4).scale("C3:chromatic").hpf(600).lpf(freq = 3100, env = 15.9, q = 1.50).clip(0.96).late(perlin(0.001, 0.002)) // .solo()
+    .s(guitar).adsrOff().ignp("drive", drive * 0.9).ignp("brightness", 6000).ignp("spread", 0.05).gain(0.125).body(material = "mahogany", wet = 0.5)
     .transpose(tp).pan(0.25).superimpose(pan(0.75)).velocity("<[1.0 0.95 0.975 0.95]>").filterWhen(t => t % stay > 16)
   , // Melody 2 ---------------------------------------------------------------------------------------------------------------------------------------------
   n(`<   [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0  8] [0 7 0 5] [ 0 7 0 0]
          [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
-    .orbit(2).fast(4).scale("C4:chromatic").hpf(1200).lpf(freq = 3200, env = 15.9, q = 1.50).clip(0.96).late(0.001)  // . solo()
-    .s(guitar).adsrOff().ignp("drive", drive * 0.9).ignp("brightness", 6200).ignp("spread", 0.04).gain(0.110).body(material = "oak", wet = 0.5)
+    .orbit(2).fast(4).scale("C4:chromatic").hpf(1200).lpf(freq = 3200, env = 15.9, q = 1.50).clip(0.96).late(perlin(0.001, 0.002))  // . solo()
+    .s(guitar).adsrOff().ignp("drive", drive * 0.9).ignp("brightness", 6200).ignp("spread", 0.04).gain(0.120).body(material = "oak", wet = 0.5)
     .transpose(tp).pan(0.10).superimpose(pan(0.90)).velocity("<[1.0 0.95 0.975 0.95]>").filterWhen(t => t % stay > 32)
   , // Rhythm -----------------------------------------------------------------------------------------------------------------------------------------------
   cat(n(`<[0,7,12]                                [[0,7,12]!3 ~                ~!12]
           [0,7,12]                                [[[8,15,20]@12 [8,15,20]@4]  [10,5|10|10,17|17|22|22]*8]>`).repeat(2),
       n(`<[0 0 0 0 0 0 0 0 0 0 0 8 8 8 8 7]       [0!9 8 8 5 5 5 5 3]
           [0!11 5 8 8 [8,15] [7,14]]              [[[8,15]!4 [8,15]!3 [10,17]] [10,10|10|17|17|17|17|22]*8]>`).repeat(2),
-  ).orbit(3).fast(1).scale("C2:chromatic").clip(0.9925).hpf(110).lpf(freq = 2950, env = 14, q = 1.50).gain(0.15)
+  ).orbit(3).fast(1).scale("C2:chromatic").clip(0.9925).hpf(110).lpf(freq = 2950, env = 14, q = 1.50).gain(0.15).late(perlin(0.000, 0.001))
     .s(guitar).adsrOff().ignitorParam("drive", drive).ignp("brightness", 6000).ignp("spread", 0.09).body(material = "cedar", wet = 0.5) //  . mute()
     .transpose(tp).pan(0.40).superimpose(pan(0.60).late(0.001)).velocity("<[1.0 0.95 0.975 0.95]>").filterWhen(t => t % stay >= 4) //  .solo()
   , // Bass -------------------------------------------------------------------------------------------------------------------------------------------------
@@ -100,7 +100,17 @@ stack( // Gitarre! -------------------------------------------------------------
   s("<[cr hh!7]!7 [cr hh!3 [hh hh] [hh hh] [oh hh] [oh hh]]>")
     .orbit(7).late(0.001).adsr(0.007, 0.2, 0.9, 0.7).gain(0.85).hpf(800).lpf(12500).velocity("<[1.0 0.95 0.975 0.95]>") // .solo()
   , // Master -----------------------------------------------------------------------------------------------------------------------------------------------
-  master(Katalyst(k => k.reverb(0.01, 3).gain(1.5).limiter()))
+    master(Katalyst(k => k
+    .reverb(0.10, 7, 4500)
+    .gain(1.8)
+    .bands(b => b
+      .band(low => low.distort(0.01, "soft", 4)).cut(150)
+      .band(mid => mid.distort(0.15, "soft", 4).mul(0.85)).cut(5000)
+      .band(low => low.distort(0.01, "soft", 4))
+    ) // the glue on the mids only: the kick and the hats stay clean
+    .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)
+  ))
+
 
 ).analog(feel) /*
 
