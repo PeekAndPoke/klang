@@ -7,7 +7,7 @@ package io.peekandpoke.klang.layouts
 
 import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.Nav
-import io.peekandpoke.klang.pages.docs.tutorials.KlangPathColumn
+import io.peekandpoke.klang.pages.docs.tutorials.LearnTracksColumn
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.components.NoProps
@@ -60,7 +60,7 @@ fun Tag.SidebarMenu() = comp {
 }
 
 /**
- * The workbench's column (KLANG-00341): the current area's list (the songs, the tutorial filters, the doc sections)
+ * The workbench's column (KLANG-00341): the current area's list (the songs, the Learn search and tracks, the doc sections)
  * under the area's name. Areas change through the Motor's drawer (`WorkbenchLayout`).
  */
 class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
@@ -180,8 +180,8 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
                 when (area) {
                     AppArea.Songs -> renderSongsMenu()
                     AppArea.Samples -> renderSamplesMenu()
-                    // The Klang Path's tree; a tutorial puts its own column (KLANG-00370)
-                    AppArea.Learn -> KlangPathColumn()
+                    // The search and the tracks; a tutorial puts its own column (KLANG-00370)
+                    AppArea.Learn -> LearnTracksColumn()
                     AppArea.Docs -> renderDocsMenu()
                     AppArea.Midi, AppArea.Resources, AppArea.Credits, AppArea.DevStatus, AppArea.Other -> renderDefaultMenu()
                 }

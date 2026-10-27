@@ -14,7 +14,8 @@ import io.kotest.matchers.string.shouldContain
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.comp.RouterWithTransitions
 import io.peekandpoke.klang.layouts.WorkbenchSlots
-import io.peekandpoke.klang.pages.docs.tutorials.KlangPathColumn
+import io.peekandpoke.klang.pages.docs.tutorials.LearnSearch
+import io.peekandpoke.klang.pages.docs.tutorials.LearnTracksColumn
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialColumn
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialPage
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialTrackPage
@@ -23,6 +24,7 @@ import io.peekandpoke.klang.pages.docs.tutorials.allTracks
 import io.peekandpoke.klang.pages.docs.tutorials.allTutorials
 import io.peekandpoke.klang.pages.docs.tutorials.firstStepsTrack
 import io.peekandpoke.klang.pages.docs.tutorials.patternLanguageTrack
+import io.peekandpoke.klang.pages.docs.tutorials.soundDesignBasicsTrack
 import io.peekandpoke.klang.pages.docs.tutorials.theKlangPathTrack
 import io.peekandpoke.klang.storage.TutorialStorage
 import io.peekandpoke.kraft.addons.browserdetect.browserDetect
@@ -40,6 +42,7 @@ import org.w3c.dom.Element
 import org.w3c.dom.EventInit
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLInputElement
+import org.w3c.dom.Node
 import org.w3c.dom.events.Event
 
 /**
@@ -50,11 +53,11 @@ private fun RootRouterBuilder.learnRoutes() {
     useHashStrategy()
 
     mount(Nav.tutorials) {
-        div(classes = "column") { KlangPathColumn() }
+        div(classes = "column") { LearnTracksColumn() }
         div(classes = "page") { TutorialsListPage() }
     }
     mount(Nav.tutorialTrack) {
-        div(classes = "column") { KlangPathColumn() }
+        div(classes = "column") { LearnTracksColumn() }
         div(classes = "page") { TutorialTrackPage() }
     }
     mount(Nav.tutorial) {
@@ -70,6 +73,8 @@ class LearnPagesSpec : StringSpec({
 
     suspend fun withLearn(done: Set<String> = emptySet(), test: suspend (root: Element) -> Unit) {
         allTutorials.forEach { TutorialStorage.setCompleted(it.slug, it.slug in done) }
+        // The search is shared by the column and the overview: each case starts with it empty
+        LearnSearch.text("")
 
         try {
             TestBed.preact(
@@ -90,6 +95,7 @@ class LearnPagesSpec : StringSpec({
             window.location.hash = ""
             allTutorials.forEach { TutorialStorage.setCompleted(it.slug, false) }
             WorkbenchSlots.clear()
+            LearnSearch.text("")
         }
     }
 
@@ -154,9 +160,71 @@ class LearnPagesSpec : StringSpec({
                 root.page()!!.querySelector("[data-track='${track.slug}']")!!.states("").size shouldBe 0
             }
 
+            // Each key before its lamps, all of one width: keys and lamps line up down the page
+            val keys = root.page()!!.querySelectorAll("[aria-expanded=false]")
+            val widths = (0 until keys.length).map { (keys.item(it) as HTMLElement).getBoundingClientRect().width }
+
+            widths.size shouldBe allTracks.size
+            widths.distinct().size shouldBe 1
+
+            for (track in allTracks) {
+                val row = root.page()!!.querySelector("[data-track='${track.slug}'] [aria-expanded=false]")!!
+                val firstLamp = root.page()!!.querySelector("[data-track='${track.slug}'] [data-lamp]")!!
+
+                (row.compareDocumentPosition(firstLamp).toInt() and Node.DOCUMENT_POSITION_FOLLOWING.toInt()) shouldNotBe 0
+            }
+
             (root.page()!!.querySelector("$firstSteps [aria-expanded=false]") as HTMLElement).click()
 
             eventually { root.page()!!.querySelector(firstSteps)!!.states("").size shouldBe firstStepsTrack.lessons.size }
+        }
+    }
+
+    "typed on the overview, the search keeps the level key pressed: no navigation that would drop it" {
+        withLearn { root ->
+            go()
+
+            eventually { root.page()?.querySelector("[role=group] button") shouldNotBe null }
+
+            val beginner = { root.page()!!.querySelectorAll("[role=group] button").let { keys ->
+                (0 until keys.length).map { keys.item(it) as HTMLElement }.first { it.textContent == "Beginner" }
+            } }
+
+            beginner().click()
+
+            eventually { window.location.href shouldContain "difficulty=" }
+
+            val input = root.column()!!.querySelector("input") as HTMLInputElement
+
+            input.value = "beat"
+            input.dispatchEvent(Event("input", EventInit(bubbles = true)))
+
+            eventually {
+                (root.page()?.querySelectorAll("[data-lesson]")?.length ?: 0) shouldNotBe 0
+                window.location.href shouldContain "difficulty="
+                beginner().getAttribute("aria-pressed") shouldBe "true"
+            }
+        }
+    }
+
+    // In the app the column is the sidebar's and stays through the navigation (its focus with it); here each route
+    // mounts its own column, so this case checks where the search leads, not the focus on the way
+    "typed in the column on a track's page, the search takes the reader to the overview, its results there" {
+        withLearn { root ->
+            go("/track/${soundDesignBasicsTrack.slug}")
+
+            eventually { root.column()?.querySelector("input") shouldNotBe null }
+
+            val input = root.column()!!.querySelector("input") as HTMLInputElement
+
+            input.value = "envelope"
+            input.dispatchEvent(Event("input", EventInit(bubbles = true)))
+
+            eventually {
+                window.location.hash shouldBe "#${Nav.tutorialsBase}"
+                root.page()?.querySelector("[data-continue]") shouldBe null
+                (root.page()?.querySelectorAll("[data-lesson]")?.length ?: 0) shouldNotBe 0
+            }
         }
     }
 
@@ -164,17 +232,18 @@ class LearnPagesSpec : StringSpec({
         withLearn { root ->
             go()
 
-            eventually { root.page()?.querySelector("input") shouldNotBe null }
+            eventually { root.column()?.querySelector("input") shouldNotBe null }
 
-            val input = root.page()!!.querySelector("input") as HTMLInputElement
+            // The search is in the column (the maintainer, 2026-10-27), apart from the tracks it narrows
+            val input = root.column()!!.querySelector("input") as HTMLInputElement
 
             input.focus()
             input.value = "envelope"
             input.dispatchEvent(Event("input", EventInit(bubbles = true)))
 
             eventually {
-                // The same field, still in focus: the Continue tile going away above it must not rebuild it
-                (root.page()!!.querySelector("input") === input) shouldBe true
+                // The same field, still in focus, while the page redraws its tracks
+                (root.column()!!.querySelector("input") === input) shouldBe true
                 (document.activeElement === input) shouldBe true
 
                 val shown = root.page()!!.querySelectorAll("[data-lesson]")

@@ -21,7 +21,7 @@ import kotlinx.html.span
 /**
  * The Learn area's shared parts (KLANG-00370, the canvas "Klang Learn on the workbench"): a lesson's lamp, its tile,
  * the small engraved label, a link that stays in the app, the way back, a track's lesson list (both columns show it:
- * `KlangPathColumn`, `TutorialColumn`), and the track a tutorial is read in.
+ * `LearnTracksColumn`, `TutorialColumn`), and the track a tutorial is read in.
  */
 
 /** A lesson's state in a word, for a screen reader beside its lamp (the lamp itself is hidden from them). */

@@ -64,8 +64,8 @@ It follows the epic's board F: The Klang Path as a tech tree in the left column.
 - 2026-10-27: created from the maintainer's approval of the design; IN PROGRESS.
 - 2026-10-27: built. The Klang Path's stages as data (`TutorialStage`); `TutorialProgress` (done, next, open, later;
   one next, on the main path) and `TutorialStrand`, JVM-specced; `KlangLamp.State.Unlit`; `TutorialStorage.done` as a
-  stream; the overview (`TutorialsListPage`: continue, search and level/depth keys, tracks of tiles, folded tracks as
-  lamps), the column (`KlangPathColumn`, the sidebar's Learn column), the track page, the tutorial page and its column
+  stream; the overview (`TutorialsListPage`: continue, level/depth keys, tracks of tiles, folded tracks as
+  lamps), the column (`LearnTracksColumn`, the sidebar's Learn column: the search and the tracks), the track page, the tutorial page and its column
   (`TutorialColumn`); the example player on the song page's parts (`PlayableCodeExample`, also on the docs pages);
   the bottom panel's help shared (`QuickHelpPanel`: the song page, a tutorial, the docs pages). Changes from the
   maintainer's look: the content centred, the prose as wide as the examples; the column only the track's lessons (no
@@ -77,3 +77,4 @@ It follows the epic's board F: The Klang Path as a tech tree in the left column.
   the search by words, valid list ARIA, focus kept in the Lexikon, specs for every rule; the columns in files of their
   own). Changes from the maintainer's looks: the overview's column a list, `KlangBackLink`, the Lexikon split into a
   list and the term, gold only where one presses, "Back to Learn". Committed.
+- 2026-10-27: the column lists only the tracks, with the search above them (it lost its focus on the first letter on the page; checked in a browser with real key presses: the field in the column keeps it); every track starts folded, its key first and of one width; Continue stays.

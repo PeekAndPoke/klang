@@ -10,7 +10,6 @@ import io.peekandpoke.klang.comp.appLink
 import io.peekandpoke.klang.storage.TutorialStorage
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangLamp
-import io.peekandpoke.klang.ui.comp.KlangSearchField
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
 import io.peekandpoke.kraft.components.comp
@@ -34,14 +33,17 @@ fun Tag.TutorialsListPage() = comp {
 
 /**
  * The Learn overview on the workbench (KLANG-00370, the canvas "Klang Learn on the workbench", board "Learn: the
- * overview"): the next lesson to continue with, a slim search with the level and the depth as keys, and the tracks as
- * rows of lesson tiles, each with its lamp. Every track starts folded to a row of lamps, a key opens one; the
+ * overview"): the next lesson to continue with, the level and the depth as keys (the search by words is in the column,
+ * LearnTracksColumn), and the tracks as rows of lesson tiles, each with its lamp. Every track starts folded to a row of lamps, a key opens one; the
  * Continue tile is the way in (the maintainer, 2026-10-27: "collapse all tracks but keep the big continue button").
  * The column (the tracks) is the Learn area's own, from the sidebar.
  */
 class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
 
     companion object {
+        /** The folded tracks' key, one width for all: "Show its 18 lessons" fits, and the shorter ones line up with it. */
+        private const val FOLDED_KEY_WIDTH = "172px"
+
         const val PARAM_DIFFICULTY = "difficulty"
         const val PARAM_DEPTH = "depth"
 
@@ -56,7 +58,8 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
 
     private val done by subscribingTo(TutorialStorage.done)
 
-    private var searchText by value("")
+    /** The search, typed in the Learn column (LearnTracksColumn). */
+    private val searchText by subscribingTo(LearnSearch.text)
 
     private var difficultyParam: String by urlParam(name = PARAM_DIFFICULTY, default = "")
 
@@ -215,10 +218,7 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
         }
     }
 
-    /**
-     * The search, then the level's and the depth's keys; a pressed key presses off. Keyed: the Continue tile above it
-     * goes while one searches, and without a key the first letter rebuilt the field and took its focus away.
-     */
+    /** The level's and the depth's keys (the search is in the column); a pressed key presses off. */
     private fun FlowContent.renderFilters() {
         div {
             key = "filters"
@@ -227,17 +227,6 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
                 put("flex-wrap", "wrap")
                 put("align-items", "center")
                 put("gap", "14px")
-            }
-
-            div {
-                css { put("width", "320px") }
-
-                KlangSearchField(
-                    label = "Search the lessons",
-                    value = searchText,
-                    onInput = { searchText = it },
-                    placeholder = "Search lessons, topics, done, open",
-                )
             }
 
             renderKeys(
@@ -342,24 +331,39 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
         }
     }
 
-    /** A folded track: a lamp per lesson, and the key that opens it. */
+    /**
+     * A folded track: the key that opens it, then a lamp per lesson. The key first and of one width on every track, so
+     * the keys and the rows of lamps line up down the page (the maintainer, 2026-10-27: "the "Show its lessons" buttons
+     * are all left of the dots ... all buttons should have the same width").
+     */
     private fun FlowContent.renderFolded(track: TutorialTrackDef, progress: TutorialProgress) {
         div {
             css {
                 put("display", "flex")
+                // On a narrow page the lamps wrap under the key instead of running off the side
+                put("flex-wrap", "wrap")
                 put("align-items", "center")
                 put("gap", "6px")
             }
 
-            for (lesson in track.lessons) {
-                KlangLamp(state = progress.stateOf(lesson).lamp(), size = 10.px)
+            div {
+                css {
+                    put("display", "flex")
+                    put("flex-shrink", "0")
+                    put("width", FOLDED_KEY_WIDTH)
+                    put("margin-right", "10px")
+                }
+
+                KlangButton(onClick = { unfolded = unfolded + track.slug }) {
+                    attributes["aria-expanded"] = "false"
+                    css { put("width", "100%") }
+
+                    +"Show its ${track.lessons.size} lessons"
+                }
             }
 
-            div { css { put("width", "10px") } }
-
-            KlangButton(onClick = { unfolded = unfolded + track.slug }) {
-                attributes["aria-expanded"] = "false"
-                +"Show its ${track.lessons.size} lessons"
+            for (lesson in track.lessons) {
+                KlangLamp(state = progress.stateOf(lesson).lamp(), size = 10.px)
             }
         }
     }
