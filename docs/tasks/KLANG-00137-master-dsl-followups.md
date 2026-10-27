@@ -1,6 +1,8 @@
 # KLANG-00137: Master DSL — follow-ups
 
 > **Status (2026-10-20): SCHEDULED.**
+>
+> **Part of:** KLANG-00357 (Effects: the Katalyst and the master)
 
 > Carried out of KLANG-00136 (master dsl)
 > when that shipped (2026-08-03). Nothing here blocks anything; each item is small and independent.
@@ -237,3 +239,4 @@ add the master chain's `latencyFrames` to the render's run-out.
 
 - 2026-10-20: numbered KLANG-00137 (was `docs/tasks/master-dsl-followups.md`).
 - 2026-10-23: section 8 built (the offline run-out counts the master chain's latency).
+- 2026-10-27: part of KLANG-00357 (Effects: the Katalyst and the master), the epic grouping.

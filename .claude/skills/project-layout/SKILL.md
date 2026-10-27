@@ -198,8 +198,10 @@ klang's copy, taken 2026-10-20 (the blueprint as of that day); the workshop sect
 - **Epics** *(provisional)*, adopted gradually (maintainer, 2026-10-21), Mission Control's proposal of that day: a
   ticket that belongs to a group carries `> **Part of:** KLANG-nnnnn (short title)` after a bare `>` under its
   status line (so `ticket move`, which ends the status block at a bare `>`, keeps it); the epic is an ordinary
-  ticket. The first and so far only epic: KLANG-00325 (keyboard shortcuts). The ticket tool's support (`list
-  --epic`, the check) comes from Mission Control.
+  ticket. The ticket tool's support (`list --epic`, `epics`, the check) comes from Mission Control. Since
+  2026-10-27 every open ticket belongs to an epic (the maintainer's ask, the grouping agreed with Klang-Research):
+  fourteen top-level epics, some with an umbrella inside (`ticket epics` lists them). A new ticket names its
+  epic at birth (`ticket new --part-of`); an experiment ticket (KLANG-00329) stays outside.
 - **Dated records keep their words** and were not swept: `DEV-DIARY.MD`, the escape and defect-density
   ledgers, `<module>/ref/memory-history.md`, `docs/benchmarks/`, `docs/funding/evidence/`, and the
   published pages (`docs/blog/`, `src/jsMain/resources/`), which may still name old task paths.

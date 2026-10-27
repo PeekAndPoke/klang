@@ -1,6 +1,8 @@
 # KLANG-00266: A noise band from sines: `noiseBand(low, high, partials)`
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00356 (Sound sources: instruments, samples, soundfonts)
 
 Status: **future, idea, not started.** Asked for by the maintainer 2026-10-02. A follow-up to
 KLANG-00296 (sine inharmonic partials): a noise band is one more generator of partials, so it
@@ -97,3 +99,4 @@ one per grid point (the signs as `phase = 0.5`), on one sine.
 ## History
 
 - 2026-10-20: numbered KLANG-00266 (was `docs/tasks/future/sine-noise-band.md`).
+- 2026-10-27: part of KLANG-00356 (Sound sources: instruments, samples, soundfonts), the epic grouping.

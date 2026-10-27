@@ -1,6 +1,8 @@
 # KLANG-00212: KlangScript union types: tell the editor what an `XLike` parameter accepts
 
 > **Status (2026-10-20): NOT STARTED.**
+>
+> **Part of:** KLANG-00360 (KlangScript: the language)
 
 > **Written 2026-09-18, updated 2026-09-28, not started.** Priority: **NICE** (editor convenience; no engine or sound
 > impact). Outside the signal-flow work stream on purpose. Follow-ups that depend on it:
@@ -292,3 +294,4 @@ to `note` gets a compile error.
 ## History
 
 - 2026-10-20: numbered KLANG-00212 (was `docs/tasks/klangscript-union-types.md`).
+- 2026-10-27: part of KLANG-00360 (KlangScript: the language), the epic grouping.

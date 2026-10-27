@@ -1,6 +1,8 @@
 # KLANG-00168: Ducking: built, wired, never used, never tested end to end
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
 Status: **future / parked 2026-08-31.** Maintainer's call, taking it out of the audio-backend audit's
 scope: *"it is not used yet and was never really tested yet, so let us not waste our time right now."*
@@ -80,3 +82,4 @@ Not now. When someone actually wants a pumping bass, and at that point:
 ## History
 
 - 2026-10-20: numbered KLANG-00168 (was `docs/tasks/future/ducking-unfinished.md`).
+- 2026-10-27: part of KLANG-00353 (The Motor: correct at the edges), the epic grouping.

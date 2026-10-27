@@ -1,6 +1,8 @@
 # KLANG-00056: Feature Implementation Plan: Operator Functions for Registered Native Objects
 
 > **Status (2026-10-20): DESIGNED.**
+>
+> **Part of:** KLANG-00360 (KlangScript: the language)
 
 ## Decided 2026-10-07 (maintainer), supersedes the naming and dispatch below
 
@@ -774,3 +776,4 @@ needs to merge the two paths anyway).
 ## History
 
 - 2026-10-20: numbered KLANG-00056 (was `docs/tasks/klangscript-native-object-operators.md`).
+- 2026-10-27: part of KLANG-00360 (KlangScript: the language), the epic grouping.

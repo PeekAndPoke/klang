@@ -1,6 +1,8 @@
 # KLANG-00174: Audio backend audit: the three decisions it left parked
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
 Status: **future / maintainer calls.** None changes how anything sounds, which is why they were not
 made on the audit's behalf. Record and evidence: `docs/audio-audit/FINDINGS.md` (F14, F15, F17).
@@ -43,3 +45,4 @@ directly (the soundfont work already added some: `SamplePlayheadStartSpec`,
 ## History
 
 - 2026-10-20: numbered KLANG-00174 (was `docs/tasks/future/audit-parked-decisions.md`).
+- 2026-10-27: part of KLANG-00353 (The Motor: correct at the edges), the epic grouping.

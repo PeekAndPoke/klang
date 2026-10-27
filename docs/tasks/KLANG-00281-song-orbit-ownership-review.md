@@ -1,6 +1,8 @@
 # KLANG-00281: Song review: patterns with different bus settings share one orbit
 
 > **Status (2026-10-20): PAUSED.**
+>
+> **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
 Status: **the frozen songs decided (maintainer, 2026-10-13, Q20): fix their shared-orbit conflicts, so they are
 reasonable in what they do** (each conflicting pattern its own orbit, or the settings made to agree; the corpus
@@ -116,3 +118,4 @@ or vowel changes go through the 20 ms bank crossfade (20 ms then; 50 ms since 20
 ## History
 
 - 2026-10-20: numbered KLANG-00281 (was `docs/tasks/song-orbit-ownership-review.md`).
+- 2026-10-27: part of KLANG-00353 (The Motor: correct at the edges), the epic grouping.

@@ -1,6 +1,8 @@
 # KLANG-00256: Reverb models: more than one kind of room
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00357 (Effects: the Katalyst and the master)
 
 Status: **future, design round, not started.** Asked for by the maintainer 2026-09-30, after the stereo
 reverb landed (KLANG-00254 (stereo reverb)):
@@ -81,3 +83,4 @@ Convolution is both a model and the measuring stick for the others, so it likely
 ## History
 
 - 2026-10-20: numbered KLANG-00256 (was `docs/tasks/future/reverb-models.md`).
+- 2026-10-27: part of KLANG-00357 (Effects: the Katalyst and the master), the epic grouping.

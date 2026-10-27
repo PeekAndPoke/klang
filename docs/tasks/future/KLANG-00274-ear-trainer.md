@@ -1,6 +1,8 @@
 # KLANG-00274: An ear trainer: learning to hear what a knob does
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00362 (Learning: tutorials and the ear)
 
 Status: **future, idea, not started.** Asked for by the maintainer 2026-10-07, while tuning Kokon's high-gain preamp:
 
@@ -74,3 +76,4 @@ order ("what does each step add?").
 ## History
 
 - 2026-10-20: numbered KLANG-00274 (was `docs/tasks/future/ear-trainer.md`).
+- 2026-10-27: part of KLANG-00362 (Learning: tutorials and the ear), the epic grouping.

@@ -1,6 +1,8 @@
 # KLANG-00086: Tutorial Master Plan
 
 > **Status (2026-10-20): NOT STARTED.**
+>
+> **Part of:** KLANG-00362 (Learning: tutorials and the ear)
 
 **Date:** 2026-04-07 | **Status:** Expansion backlog (Q3 Act 2 — after the fix-first pass)
 
@@ -228,3 +230,4 @@ These didn't get dedicated tutorials — fold into related tutorials or leave fo
 ## History
 
 - 2026-10-20: numbered KLANG-00086 (was `docs/tasks/tutorial-master-plan.md`).
+- 2026-10-27: part of KLANG-00362 (Learning: tutorials and the ear), the epic grouping.

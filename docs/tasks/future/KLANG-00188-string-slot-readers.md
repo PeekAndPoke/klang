@@ -1,6 +1,8 @@
 # KLANG-00188: String slots have no readers
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00359 (Sprudel: the pattern language's surface)
 
 Recorded 2026-09-07 (maintainer decision, KLANG-00184 (sprudel field accessors)): a compound
 object exposes a reader child for every NUMERIC slot (`reverb.size`, `lpf.env`, `penv.sustain`), and
@@ -27,3 +29,4 @@ a `FieldAccessor` child whose read yields the name as a string value, and the ma
 ## History
 
 - 2026-10-20: numbered KLANG-00188 (was `docs/tasks/future/string-slot-readers.md`).
+- 2026-10-27: part of KLANG-00359 (Sprudel: the pattern language's surface), the epic grouping.

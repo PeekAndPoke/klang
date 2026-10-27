@@ -7,6 +7,8 @@
 > reaches parity, `audio_be/commonMain` is deleted. The frozen golden corpus takes over the
 > reference role.
 >
+> **Part of:** KLANG-00129 (high-performance audio backend)
+>
 > Captured from a design conversation on 2026-09-15 so it is not re-derived cold. Self-contained.
 
 ## The one-sentence goal
@@ -216,3 +218,4 @@ then needs its own small set of DSL trees defined in Zig; they are plain structs
 ## History
 
 - 2026-10-20: numbered KLANG-00200 (was `docs/plans/future/zig-motor-one-engine.md`).
+- 2026-10-27: part of KLANG-00129 (high-performance audio backend), the epic grouping.

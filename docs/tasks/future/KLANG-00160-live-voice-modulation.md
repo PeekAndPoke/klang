@@ -1,6 +1,8 @@
 # KLANG-00160: Live modulation of sounding voices (turn a knob, hear the note change)
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00363 (Live play: MIDI and realtime)
 
 Status: **future / concept — parked deliberately, not started.** Raised 2026-08-29 while mapping the KeyLab's
 knobs in the MIDI playground; maintainer decision the same day: this is a real feature with its own design
@@ -37,3 +39,4 @@ Three separate things have to change, and none of them is local:
 ## History
 
 - 2026-10-20: numbered KLANG-00160 (was `docs/tasks/future/live-voice-modulation.md`).
+- 2026-10-27: part of KLANG-00363 (Live play: MIDI and realtime), the epic grouping.

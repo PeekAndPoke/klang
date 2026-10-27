@@ -1,6 +1,8 @@
 # KLANG-00304: Curves as nodes
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00356 (Sound sources: instruments, samples, soundfonts)
 
 Status: **future, wanted (maintainer, 2026-10-13, Q13): "useful it definitely is"; needs a deep design round before
 anything is built.**
@@ -23,3 +25,4 @@ V8 and the JVM.
 ## History
 
 - 2026-10-20: numbered KLANG-00304 (was `docs/tasks/future/curves.md`).
+- 2026-10-27: part of KLANG-00356 (Sound sources: instruments, samples, soundfonts), the epic grouping.

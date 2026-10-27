@@ -1,6 +1,8 @@
 # KLANG-00252: Chip-style instruments by composition (NES, C64 and friends)
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00356 (Sound sources: instruments, samples, soundfonts)
 
 Status: **future, not planned.** Opened 2026-09-29 by the maintainer, in the conversation about the old Engine DSL.
 
@@ -51,3 +53,4 @@ let mySaw    = (freq) => Ignitor.saw(freq, x => x.resetSamples(0).analog(0))    
 ## History
 
 - 2026-10-20: numbered KLANG-00252 (was `docs/tasks/future/chip-style-instruments.md`).
+- 2026-10-27: part of KLANG-00356 (Sound sources: instruments, samples, soundfonts), the epic grouping.

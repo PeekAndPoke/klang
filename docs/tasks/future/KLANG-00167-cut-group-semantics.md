@@ -1,6 +1,8 @@
 # KLANG-00167: Cut / choke groups: what `cut(0)` means, and what else was never decided
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
 Status: **to be decided before takeover starts** (maintainer, 2026-10-07: `cut(0)` is "not ideal" and the
 semantics are unclear on the user side; a precondition of step 6 of KLANG-00279 (voice lifecycle state machine)).
@@ -154,3 +156,4 @@ ungrouped voice kills nothing) and is where new rows belong.
 ## History
 
 - 2026-10-20: numbered KLANG-00167 (was `docs/tasks/future/cut-group-semantics.md`).
+- 2026-10-27: part of KLANG-00353 (The Motor: correct at the edges), the epic grouping.

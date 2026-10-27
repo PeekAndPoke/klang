@@ -1,6 +1,8 @@
 # KLANG-00206: Blog series: the phone that does not get faster
 
 > **Status (2026-10-20): PAUSED.**
+>
+> **Part of:** KLANG-00364 (Out in the world: legal, sharing, outreach)
 
 Status: **plan, 2026-09-16.** A series of posts about every performance optimization Klangmotor
 has made, one optimization or one class per post, with the Fairphone 4 as the non-moving target
@@ -682,3 +684,4 @@ tells the story in the order it happened. Working titles are Fable's to change.
 ## History
 
 - 2026-10-20: numbered KLANG-00206 (was `docs/plans/blog-optimization-series.md`).
+- 2026-10-27: part of KLANG-00364 (Out in the world: legal, sharing, outreach), the epic grouping.

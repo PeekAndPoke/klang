@@ -1,6 +1,8 @@
 # KLANG-00135: Federated song sharing — multi-server import / export
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00364 (Out in the world: legal, sharing, outreach)
 
 > **Future / post-launch.** Captured 2026-08-01 from a design conversation — broad picture, not yet
 > specified, deliberately parked ("sound first": engine → tutorials → launch come first). Sits next to
@@ -388,3 +390,4 @@ choice, community console gutted 2025), **SeaweedFS**
 ## History
 
 - 2026-10-20: numbered KLANG-00135 (was `docs/tasks/future/federated-song-sharing.md`).
+- 2026-10-27: part of KLANG-00364 (Out in the world: legal, sharing, outreach), the epic grouping.

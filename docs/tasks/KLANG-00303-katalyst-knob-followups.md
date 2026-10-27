@@ -1,6 +1,8 @@
 # KLANG-00303: Katalyst knobs: follow-ups
 
 > **Status (2026-10-20): NOT STARTED.**
+>
+> **Part of:** KLANG-00357 (Effects: the Katalyst and the master)
 
 > Carried out of KLANG-00302 (katalyst knob expressions)
 > when that task closed (2026-10-12). Nothing here blocks anything; each item waits for a song that asks for it.
@@ -46,3 +48,4 @@ guard reading only a `Constant`, as the Ignitor's does, and its callers move to 
 ## History
 
 - 2026-10-20: numbered KLANG-00303 (was `docs/tasks/katalyst-knob-followups.md`).
+- 2026-10-27: part of KLANG-00357 (Effects: the Katalyst and the master), the epic grouping.

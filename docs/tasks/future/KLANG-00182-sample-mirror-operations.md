@@ -1,6 +1,8 @@
 # KLANG-00182: Sample mirror: operations notes and licensing audit
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00356 (Sound sources: instruments, samples, soundfonts)
 
 > **Status: reference, the mirror is live** (built 2026-08-17/18, committed). Restored 2026-09-06
 > from session memory during the memory housekeeping because no repo document carried the
@@ -51,3 +53,4 @@ Optional follow-ups: ask ritchse for a grant; ask yaxu to pin the CC BY-SA versi
 ## History
 
 - 2026-10-20: numbered KLANG-00182 (was `docs/tasks/future/sample-mirror-operations.md`).
+- 2026-10-27: part of KLANG-00356 (Sound sources: instruments, samples, soundfonts), the epic grouping.

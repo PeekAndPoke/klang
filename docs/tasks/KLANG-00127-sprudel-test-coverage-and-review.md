@@ -1,6 +1,8 @@
 # KLANG-00127: Sprudel DSL — test-coverage gap + overall module review
 
 > **Status (2026-10-20): PAUSED.**
+>
+> **Part of:** KLANG-00359 (Sprudel: the pattern language's surface)
 
 > **STATUS (2026-06-30):** IN PROGRESS, user-paced. Started on branch `engine-dsl-osc-dsl-parameterization`
 > (now merged); continue on the current branch. ~5 addon
@@ -89,3 +91,4 @@ Since we're touching every file anyway, also note/fix:
 ## History
 
 - 2026-10-20: numbered KLANG-00127 (was `docs/tasks/sprudel-test-coverage-and-review.md`).
+- 2026-10-27: part of KLANG-00359 (Sprudel: the pattern language's surface), the epic grouping.

@@ -1,6 +1,8 @@
 # KLANG-00204: Ignitor graph optimizer: open items
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00355 (Performance: fast on every device)
 
 Status: **future, decide by measurement.** The catalogue of what the optimizer
 (`audio_bridge/src/commonMain/kotlin/IgnitorDslOptimizer.kt`) deliberately does NOT claim, each
@@ -171,3 +173,4 @@ user-facing docs.
 ## History
 
 - 2026-10-20: numbered KLANG-00204 (was `docs/tasks/future/ignitor-optimizer-open-items.md`).
+- 2026-10-27: part of KLANG-00355 (Performance: fast on every device), the epic grouping.

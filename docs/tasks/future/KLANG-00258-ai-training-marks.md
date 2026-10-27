@@ -1,6 +1,8 @@
 # KLANG-00258: Marks against AI training: Katalyst stages that cloak or tag published audio
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00357 (Effects: the Katalyst and the master)
 
 Status: **future, idea, not designed.** Created 2026-09-30 (maintainer): "we might consider adding a Katalyst
 node / nodes to be used on the master, for example for applying the HarmonyCloak approach or similar things."
@@ -91,3 +93,4 @@ here and record why.
 ## History
 
 - 2026-10-20: numbered KLANG-00258 (was `docs/tasks/future/ai-training-marks.md`).
+- 2026-10-27: part of KLANG-00357 (Effects: the Katalyst and the master), the epic grouping.

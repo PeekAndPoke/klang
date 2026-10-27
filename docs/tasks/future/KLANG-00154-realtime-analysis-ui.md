@@ -1,6 +1,8 @@
 # KLANG-00154: Realtime analysis in the UI — the measurement loop, built in
 
 > **Status (2026-10-20): NOT SCHEDULED.**
+>
+> **Part of:** KLANG-00196 (Realtime analysis: crowded, thin, loud, and who is responsible)
 
 > **Umbrella plan (2026-09-08):** KLANG-00196 (realtime analysis) consolidates this
 > doc with its two siblings, defines "crowded" as distinct from "loud", and gates every UI phase on the UI rework.
@@ -143,3 +145,4 @@ fifth on the scale"). The analyzer should say that 660 Hz *is* E5 and highlight 
 ## History
 
 - 2026-10-20: numbered KLANG-00154 (was `docs/tasks/realtime-analysis-ui.md`).
+- 2026-10-27: part of KLANG-00196 (Realtime analysis: crowded, thin, loud, and who is responsible), the epic grouping.

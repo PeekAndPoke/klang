@@ -1,6 +1,8 @@
 # KLANG-00064: KlangScript IntelliSense — Full Diagnostics & Web Worker Plan
 
 > **Status (2026-10-20): PAUSED.**
+>
+> **Part of:** KLANG-00361 (Editor intelligence: completion, types, diagnostics)
 
 ## Goal
 
@@ -363,3 +365,4 @@ and emit `DiagnosticSeverity.WARNING` in `AnalyzedAst.diagnostics`. (Wanted by t
 ## History
 
 - 2026-10-20: numbered KLANG-00064 (was `docs/tasks/klangscript-intellisense.md`).
+- 2026-10-27: part of KLANG-00361 (Editor intelligence: completion, types, diagnostics), the epic grouping.

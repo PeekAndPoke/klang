@@ -1,6 +1,8 @@
 # KLANG-00148: DSL Kotlin-surface parity — every DSL usable from Kotlin directly
 
 > **Status (2026-10-20): PAUSED.**
+>
+> **Part of:** KLANG-00359 (Sprudel: the pattern language's surface)
 
 Status (2026-10-16): the Kotlin-door half of this task is succeeded by
 KLANG-00314 (kotlin typed doors). Its "`IgnitorDsl` primary plus a scalar overload" shape is
@@ -70,3 +72,4 @@ in the same deliverable.
 ## History
 
 - 2026-10-20: numbered KLANG-00148 (was `docs/tasks/dsl-kotlin-surface-parity.md`).
+- 2026-10-27: part of KLANG-00359 (Sprudel: the pattern language's surface), the epic grouping.

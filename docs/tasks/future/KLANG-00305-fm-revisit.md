@@ -1,6 +1,8 @@
 # KLANG-00305: FM: a round with the maintainer
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00356 (Sound sources: instruments, samples, soundfonts)
 
 Status: **future (maintainer, 2026-10-13): "we need to visit fm anyway, as I have no experience with it at all."**
 A listening and design round on frequency modulation, together, before more FM work. Everything FM that is open or
@@ -40,3 +42,4 @@ doors, and then which of the above matter.
 ## History
 
 - 2026-10-20: numbered KLANG-00305 (was `docs/tasks/future/fm-revisit.md`).
+- 2026-10-27: part of KLANG-00356 (Sound sources: instruments, samples, soundfonts), the epic grouping.

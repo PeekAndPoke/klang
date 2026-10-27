@@ -1,6 +1,8 @@
 # KLANG-00293: A chain swap may cut an insert stage that still rings
 
 > **Status (2026-10-20): NOT STARTED.**
+>
+> **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
 Status: **found 2026-10-09, not measured, not started.** Found in review round 1 of the Katalyst `distort` stage
 (KLANG-00292 (katalyst distort stage)), where the same mechanism was measured for that stage and fixed.
@@ -44,3 +46,4 @@ How much of that ring survives the 60 ms input ramp, and whether the cut is audi
 ## History
 
 - 2026-10-20: numbered KLANG-00293 (was `docs/tasks/chain-swap-cuts-ringing-inserts.md`).
+- 2026-10-27: part of KLANG-00353 (The Motor: correct at the edges), the epic grouping.

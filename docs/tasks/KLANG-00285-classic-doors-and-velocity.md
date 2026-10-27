@@ -1,6 +1,8 @@
 # KLANG-00285: The doors of an instrument, and velocity as touch
 
 > **Status (2026-10-20): NOT STARTED.**
+>
+> **Part of:** KLANG-00356 (Sound sources: instruments, samples, soundfonts)
 
 Status: **design question, open. Not started. Direction since 2026-10-08: a stage after the instrument (§7).** Raised by the maintainer 2026-10-08, out of the production research
 (KLANG-00283 (aaa production tricks), gap G6). To be designed after the engine
@@ -177,3 +179,4 @@ This task is no longer designed on its own. Its sections 1 to 7 are input to tha
 ## History
 
 - 2026-10-20: numbered KLANG-00285 (was `docs/tasks/classic-doors-and-velocity.md`).
+- 2026-10-27: part of KLANG-00356 (Sound sources: instruments, samples, soundfonts), the epic grouping.

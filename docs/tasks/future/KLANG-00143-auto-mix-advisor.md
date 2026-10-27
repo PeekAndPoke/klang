@@ -1,6 +1,8 @@
 # KLANG-00143: Auto-mix advisor — attribution, suggestions, and a deliberately weak auto-master
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00196 (Realtime analysis: crowded, thin, loud, and who is responsible)
 
 > **Umbrella plan (2026-09-08):** KLANG-00196 (realtime analysis) consolidates this
 > doc with its two siblings, defines "crowded" as distinct from "loud", and gates every UI phase on the UI rework.
@@ -121,3 +123,4 @@ voices, not numbers.
 ## History
 
 - 2026-10-20: numbered KLANG-00143 (was `docs/tasks/future/auto-mix-advisor.md`).
+- 2026-10-27: part of KLANG-00196 (Realtime analysis: crowded, thin, loud, and who is responsible), the epic grouping.

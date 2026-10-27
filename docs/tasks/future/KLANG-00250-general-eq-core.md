@@ -1,6 +1,8 @@
 # KLANG-00250: One general EQ core: every filter is an EQ section, and sprudel speaks `.eq()`
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00357 (Effects: the Katalyst and the master)
 
 Status: **future, not planned; needs a design round before it can be sized.** Opened 2026-09-29 by the maintainer.
 If it is built, it is a SHAPE change (sprudel's filter doors go), so by the V1 sorting rule
@@ -167,3 +169,4 @@ stated bounds of Part A's parity rows elsewhere).
 ## History
 
 - 2026-10-20: numbered KLANG-00250 (was `docs/tasks/future/general-eq-core.md`).
+- 2026-10-27: part of KLANG-00357 (Effects: the Katalyst and the master), the epic grouping.

@@ -1,6 +1,8 @@
 # KLANG-00165: Envelope shape: the three findings the ownership task measured but did not act on
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
 Status: **future / follow-ups — the parent workstream SHIPPED 2026-08-31, these are what it left on
 the table.** Design and build record:
@@ -137,3 +139,4 @@ a problem; measure and listen before building.
 ## History
 
 - 2026-10-20: numbered KLANG-00165 (was `docs/tasks/future/envelope-shape-followups.md`).
+- 2026-10-27: part of KLANG-00353 (The Motor: correct at the edges), the epic grouping.

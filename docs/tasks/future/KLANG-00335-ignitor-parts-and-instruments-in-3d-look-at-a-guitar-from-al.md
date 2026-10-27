@@ -2,6 +2,8 @@
 
 > **Status (2026-10-25): IDEA.** The maintainer's idea, thinking aloud, 2026-10-25. "Very out there", held for a
 > longer time already. Nothing decided.
+>
+> **Part of:** KLANG-00334 (UI workbench: the Motor-centred layout, tool windows and the first-visit trail)
 
 ## The idea, in the maintainer's words
 
@@ -58,3 +60,4 @@ Not set while this is an idea.
 
 - 2026-10-25: created from the maintainer's thinking aloud during the KLANG-00334 design conversation.
 - 2026-10-25: what a part is: "Pre-Amp", "Cab4x12" (the maintainer); the song's existing stage functions listed.
+- 2026-10-27: part of KLANG-00334 (UI workbench: the Motor-centred layout, tool windows and the first-visit trail), the epic grouping.

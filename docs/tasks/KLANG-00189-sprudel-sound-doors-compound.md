@@ -1,6 +1,8 @@
 # KLANG-00189: The snd* sound doors as compound objects
 
 > **Status (2026-10-20): NOT STARTED.**
+>
+> **Part of:** KLANG-00359 (Sprudel: the pattern language's surface)
 
 Opened 2026-09-07 as the follow-up of the field-accessor rollout
 (KLANG-00184 (sprudel field accessors)). Every other compound door is an
@@ -56,3 +58,4 @@ editor-tools rework (KLANG-00090 (sprudel ui tools), Open list) is independent.
 ## History
 
 - 2026-10-20: numbered KLANG-00189 (was `docs/tasks/sprudel-sound-doors-compound.md`).
+- 2026-10-27: part of KLANG-00359 (Sprudel: the pattern language's surface), the epic grouping.

@@ -1,6 +1,8 @@
 # KLANG-00121: IR → modal table extraction (impulse response → `body()` material)
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00356 (Sound sources: instruments, samples, soundfonts)
 
 Status: **future / idea — not scheduled.** Created 2026-06-24. Too detailed for the current project status
 (plenty of open work-streams already). Captured here so the idea isn't lost; pick it up when the body resonator
@@ -121,3 +123,4 @@ the extractor should land near them for a comparable recording.
 ## History
 
 - 2026-10-20: numbered KLANG-00121 (was `docs/tasks/future/ir-to-modal-table-extraction.md`).
+- 2026-10-27: part of KLANG-00356 (Sound sources: instruments, samples, soundfonts), the epic grouping.

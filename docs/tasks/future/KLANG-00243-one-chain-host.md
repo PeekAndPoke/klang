@@ -1,6 +1,8 @@
 # KLANG-00243: One chain host: `Cylinder` and `MasterBus` share their chain plumbing
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00354 (The Motor's shape: signal flow and the graph)
 
 Status: **future, not planned.** Opened 2026-09-28 at the close of phase 3 step 12
 (KLANG-00238 (phase3 step12 master as katalyst)), which made the
@@ -53,3 +55,4 @@ start to drift.
 ## History
 
 - 2026-10-20: numbered KLANG-00243 (was `docs/tasks/future/one-chain-host.md`).
+- 2026-10-27: part of KLANG-00354 (The Motor's shape: signal flow and the graph), the epic grouping.

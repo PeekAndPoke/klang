@@ -1,6 +1,8 @@
 # KLANG-00158: Playback layer — inventory and SRP decomposition
 
 > **Status (2026-10-20): DESIGNED.**
+>
+> **Part of:** KLANG-00363 (Live play: MIDI and realtime)
 
 **Status:** ANALYSIS (2026-08-29). Based on a four-way read-only inventory of the whole stack
 from `CodeSongPage` down to `KlangCommLink`. Nothing implemented. Companion of
@@ -214,3 +216,4 @@ P1.
 ## History
 
 - 2026-10-20: numbered KLANG-00158 (was `docs/tasks/playback-layer-decomposition.md`).
+- 2026-10-27: part of KLANG-00363 (Live play: MIDI and realtime), the epic grouping.

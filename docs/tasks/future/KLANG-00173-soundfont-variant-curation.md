@@ -1,6 +1,8 @@
 # KLANG-00173: Soundfont variant curation: the index decides what plays, and some of it is wrong
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00356 (Sound sources: instruments, samples, soundfonts)
 
 Status: **data item, no code.** Maintainer's rule (2026-09-03): *"no special handling in the code —
 the data must be correct."* So this lives in the mirror's `index.json`, not in `SampleIndexLoader`.
@@ -42,3 +44,4 @@ whatever it is handed — as of `aa93eef8` and the loop/envelope change that fol
 ## History
 
 - 2026-10-20: numbered KLANG-00173 (was `docs/tasks/future/soundfont-variant-curation.md`).
+- 2026-10-27: part of KLANG-00356 (Sound sources: instruments, samples, soundfonts), the epic grouping.

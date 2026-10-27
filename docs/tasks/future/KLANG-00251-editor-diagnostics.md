@@ -1,6 +1,8 @@
 # KLANG-00251: Editor diagnostics: the umbrella
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00361 (Editor intelligence: completion, types, diagnostics)
 
 Status: **parked by the maintainer (2026-09-29): "we will revisit the whole diagnostics topics later".** Opened
 2026-09-29 as the one place that lists every diagnostics item, so the topic can be picked up as a whole. This file
@@ -32,3 +34,4 @@ all of them is cheaper than five separate ones. The V1 rows 19 and 20 in [`../_v
 ## History
 
 - 2026-10-20: numbered KLANG-00251 (was `docs/tasks/future/editor-diagnostics.md`).
+- 2026-10-27: part of KLANG-00361 (Editor intelligence: completion, types, diagnostics), the epic grouping.

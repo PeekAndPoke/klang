@@ -1,6 +1,8 @@
 # KLANG-00106: Reduce the frontend JS bundle size
 
 > **Status (2026-10-20): PAUSED.**
+>
+> **Part of:** KLANG-00355 (Performance: fast on every device)
 
 _Status: in progress. Step 1 ((b), (c), the cast fix, non-literal defaults refused) committed 2026-10-06 (599540e6);
 step 2 ((d), (e), the split per area) done 2026-10-06, awaiting review (see "Step 1 done" and "Step 2 done" at the
@@ -874,3 +876,4 @@ with today's budget.
 ## History
 
 - 2026-10-20: numbered KLANG-00106 (was `docs/tasks/reduce-js-bundle-size.md`).
+- 2026-10-27: part of KLANG-00355 (Performance: fast on every device), the epic grouping.

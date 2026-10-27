@@ -1,6 +1,8 @@
 # KLANG-00130: KlangScript named arguments — docs-polish remainder
 
 > **Status (2026-10-20): PAUSED.**
+>
+> **Part of:** KLANG-00360 (KlangScript: the language)
 
 > Split from KLANG-00107 (klangscript named arguments) (~85% done). The core feature — parser, runtime,
 > `createFunction` builders, KSP default extraction, the `NamedArgumentChecker`, and optional-param
@@ -143,3 +145,4 @@ outer call's again once it is closed; nothing inside a string; `(` alone opens n
 ## History
 
 - 2026-10-20: numbered KLANG-00130 (was `docs/tasks/klangscript-named-args-docs-polish.md`).
+- 2026-10-27: part of KLANG-00360 (KlangScript: the language), the epic grouping.

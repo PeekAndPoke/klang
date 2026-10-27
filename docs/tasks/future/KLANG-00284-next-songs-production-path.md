@@ -1,6 +1,8 @@
 # KLANG-00284: The next songs: three references that pull the missing production tools in
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00358 (Production: songs that sound like records)
 
 Status: **future, after the listening rounds (maintainer, 2026-10-14, C10): "trying to make guitar music worked kind of,
 but I am stuck there and need to learn more about sound design and production to make it really work, and working
@@ -40,3 +42,4 @@ and production, never its melody, hook, chords or lyrics.
 
 - 2026-10-20: numbered KLANG-00284 (was `docs/tasks/future/next-songs-production-path.md`).
 - 2026-10-21: the techno styles short added as a reference (the maintainer).
+- 2026-10-27: part of KLANG-00358 (Production: songs that sound like records), the epic grouping.

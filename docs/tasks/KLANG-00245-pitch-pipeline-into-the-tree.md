@@ -1,6 +1,8 @@
 # KLANG-00245: The pitch pipeline moves into the Ignitor tree
 
 > **Status (2026-10-20): SCHEDULED.**
+>
+> **Part of:** KLANG-00354 (The Motor's shape: signal flow and the graph)
 
 Status: **V1, high priority (maintainer, 2026-10-07).** Next after the voice lifecycle (KLANG-00279 (voice lifecycle state machine), done) and
 KLANG-00310 (code style named args pass). Was: future, not planned. Named "its own later item" by the phase 3 spike (2026-09-20); opened as a file
@@ -1869,3 +1871,4 @@ After step 5. The doors and the nodes stay as descriptions; the runtime arms com
 ## History
 
 - 2026-10-20: numbered KLANG-00245 (was `docs/tasks/pitch-pipeline-into-the-tree.md`).
+- 2026-10-27: part of KLANG-00354 (The Motor's shape: signal flow and the graph), the epic grouping.

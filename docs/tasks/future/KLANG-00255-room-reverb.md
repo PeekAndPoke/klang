@@ -1,6 +1,8 @@
 # KLANG-00255: A room reverb: the room's size in its timing
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00357 (Effects: the Katalyst and the master)
 
 Status: **future, new class of reverb, not started.** Raised by the maintainer 2026-09-30 while
 designing KLANG-00254 (stereo reverb): "when on the left channel there is a sound
@@ -48,3 +50,4 @@ combs are fed `(L + R) / 2`: one room for both ears, no lean towards the source.
 ## History
 
 - 2026-10-20: numbered KLANG-00255 (was `docs/tasks/future/room-reverb.md`).
+- 2026-10-27: part of KLANG-00357 (Effects: the Katalyst and the master), the epic grouping.

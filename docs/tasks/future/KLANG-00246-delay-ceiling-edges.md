@@ -1,6 +1,8 @@
 # KLANG-00246: The delay's tail ceiling: two edges on a changing owner
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
 Status: **future, correctness, small; not planned.** Carried 2026-09-28 out of the Katalyst DSL record when it was
 archived (KLANG-00236 (katalyst dsl),
@@ -33,3 +35,4 @@ A render row per case in the delay's spec (`KatalystDelayEffectSpec`), mutation-
 ## History
 
 - 2026-10-20: numbered KLANG-00246 (was `docs/tasks/future/delay-ceiling-edges.md`).
+- 2026-10-27: part of KLANG-00353 (The Motor: correct at the edges), the epic grouping.

@@ -1,6 +1,8 @@
 # KLANG-00291: An authoring diagnostic: an fm above a forking detune
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00251 (Editor diagnostics: the umbrella)
 
 **Moved to `future/` 2026-10-14 (maintainer, C6), with the FM round (KLANG-00305 (fm revisit)).**
 
@@ -72,3 +74,4 @@ its one modulator serves one pitch. The shape is an fm whose carrier holds TWO p
 ## History
 
 - 2026-10-20: numbered KLANG-00291 (was `docs/tasks/future/fm-above-forking-detune-diagnostic.md`).
+- 2026-10-27: part of KLANG-00251 (Editor diagnostics: the umbrella), the epic grouping.

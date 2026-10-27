@@ -1,6 +1,8 @@
 # KLANG-00205: Run the ignitor graph optimizer on the frontend
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00355 (Performance: fast on every device)
 
 Status: **future.** Maintainer, 2026-09-16: "for the future this would be nice to do it on the
 frontend for two reasons: smaller wire footprint (in general), and we could show the optimized
@@ -47,3 +49,4 @@ listing see only the authored tree.
 ## History
 
 - 2026-10-20: numbered KLANG-00205 (was `docs/tasks/future/optimizer-on-the-frontend.md`).
+- 2026-10-27: part of KLANG-00355 (Performance: fast on every device), the epic grouping.

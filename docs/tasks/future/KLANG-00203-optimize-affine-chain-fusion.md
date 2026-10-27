@@ -1,6 +1,8 @@
 # KLANG-00203: Affine chain fusion: two nested Affines as one pass
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00355 (Performance: fast on every device)
 
 Status: **future, last in line.** Maintainer, 2026-09-16: "one of the optimizations you only do
 when there is nothing else to be done"; the hunch is more complexity for little gain, and the
@@ -59,3 +61,4 @@ two rules undoing each other would otherwise spin on the registration path.
 ## History
 
 - 2026-10-20: numbered KLANG-00203 (was `docs/tasks/future/optimize-affine-chain-fusion.md`).
+- 2026-10-27: part of KLANG-00355 (Performance: fast on every device), the epic grouping.

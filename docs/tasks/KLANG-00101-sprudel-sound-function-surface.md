@@ -1,6 +1,8 @@
 # KLANG-00101: Sprudel Sound-Function Surface — Redesign (the `snd*` family: compound-string vs named/per-param)
 
 > **Status (2026-10-20): NOT STARTED.**
+>
+> **Part of:** KLANG-00359 (Sprudel: the pattern language's surface)
 
 > Status: **NOT STARTED (design).** This is the tracked home for the `snd*`-family cleanup — "single compound
 > colon-string vs. named / per-param control patterns." Captured 2026-06-05; refreshed **2026-06-30** with
@@ -100,3 +102,4 @@ problems with their current surface:
 ## History
 
 - 2026-10-20: numbered KLANG-00101 (was `docs/tasks/sprudel-sound-function-surface.md`).
+- 2026-10-27: part of KLANG-00359 (Sprudel: the pattern language's surface), the epic grouping.

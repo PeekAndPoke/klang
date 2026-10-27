@@ -1,6 +1,8 @@
 # KLANG-00234: Legato in mini-notation: a concise way to let a note ring
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00359 (Sprudel: the pattern language's surface)
 
 Status: **future, idea, not designed.** Kept 2026-09-27 (maintainer) when
 KLANG-00221 (mini notation extensions) was archived
@@ -52,3 +54,4 @@ pedalled piano note) inside the mini-notation string itself, concisely?
 ## History
 
 - 2026-10-20: numbered KLANG-00234 (was `docs/tasks/future/mini-notation-legato.md`).
+- 2026-10-27: part of KLANG-00359 (Sprudel: the pattern language's surface), the epic grouping.

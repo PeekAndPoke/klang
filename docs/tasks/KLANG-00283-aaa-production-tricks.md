@@ -1,6 +1,8 @@
 # KLANG-00283: What makes a record sound expensive, and what Klang needs to play it
 
 > **Status (2026-10-20): PAUSED.**
+>
+> **Part of:** KLANG-00358 (Production: songs that sound like records)
 
 Status: **research, 2026-10-08. Parked until the engine tidy-up is done** (maintainer, 2026-10-08: "let us wait until
 the current engine work / cleanup is done. I think it is a good point in time to think about the next steps in
@@ -605,3 +607,4 @@ map above is two research agents and one coordinator reading the engine the main
 ## History
 
 - 2026-10-20: numbered KLANG-00283 (was `docs/plans/aaa-production-tricks.md`).
+- 2026-10-27: part of KLANG-00358 (Production: songs that sound like records), the epic grouping.

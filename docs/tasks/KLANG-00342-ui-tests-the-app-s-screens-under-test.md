@@ -2,6 +2,8 @@
 
 > **Status (2026-10-26): SCHEDULED.** An epic, opened on the maintainer's word (2026-10-26): "There should probably be
 > an epic that will get many children over time"
+>
+> **Part of:** KLANG-00334 (UI workbench: the Motor-centred layout, tool windows and the first-visit trail)
 
 ## Why this exists
 
@@ -41,3 +43,4 @@ An epic: it closes when the maintainer says the app is covered well enough for n
 ## History
 
 - 2026-10-26: created, with its first child KLANG-00343.
+- 2026-10-27: part of KLANG-00334 (UI workbench: the Motor-centred layout, tool windows and the first-visit trail), the epic grouping.

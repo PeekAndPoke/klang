@@ -1,6 +1,8 @@
 # KLANG-00150: A typo in a shape function silently discards the WHOLE shape
 
 > **Status (2026-10-20): PAUSED.**
+>
+> **Part of:** KLANG-00251 (Editor diagnostics: the umbrella)
 
 > **Parked 2026-09-29, and split in two (maintainer):** it falls into the KlangScript union types bucket first. The
 > editor can only flag a typo inside a shape function once it knows what the function's parameter is, which needs
@@ -65,3 +67,4 @@ audio thread mid-performance, which is worse.
 ## History
 
 - 2026-10-20: numbered KLANG-00150 (was `docs/tasks/silent-shape-discard-on-error.md`).
+- 2026-10-27: part of KLANG-00251 (Editor diagnostics: the umbrella), the epic grouping.

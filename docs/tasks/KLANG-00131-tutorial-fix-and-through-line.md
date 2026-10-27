@@ -1,6 +1,8 @@
 # KLANG-00131: Tutorials — fix the current set + build the through-line
 
 > **Status (2026-10-20): NOT STARTED.**
+>
+> **Part of:** KLANG-00362 (Learning: tutorials and the ear)
 
 > **Stub — not started (2026-07-04).** Priority: **MUST** — this is the core of Q3 Act 2 ("the quarter
 > of tutorials") and comes **first**, before any expansion. Expansion is a separate doc
@@ -52,3 +54,4 @@ fix-first pass lands.
 ## History
 
 - 2026-10-20: numbered KLANG-00131 (was `docs/tasks/tutorial-fix-and-through-line.md`).
+- 2026-10-27: part of KLANG-00362 (Learning: tutorials and the ear), the epic grouping.

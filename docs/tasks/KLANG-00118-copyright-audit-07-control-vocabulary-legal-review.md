@@ -1,6 +1,8 @@
 # KLANG-00118: Copyright Audit 07 — Control-vocabulary legal review
 
 > **Status (2026-10-20): NOT STARTED.**
+>
+> **Part of:** KLANG-00364 (Out in the world: legal, sharing, outreach)
 
 > **BLOCKED — awaiting external IP counsel. Not startable internally; do not rewrite preemptively.**
 
@@ -86,3 +88,4 @@ filed. Until then this is the primary open legal question for commercialization.
 ## History
 
 - 2026-10-20: numbered KLANG-00118 (was `docs/tasks/copyright-audit-07-control-vocabulary-legal-review.md`).
+- 2026-10-27: part of KLANG-00364 (Out in the world: legal, sharing, outreach), the epic grouping.

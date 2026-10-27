@@ -1,6 +1,8 @@
 # KLANG-00181: Phoneme singing (`sing()`)
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00356 (Sound sources: instruments, samples, soundfonts)
 
 > **Status: idea, not started.** Restored 2026-09-06 from the maintainer's session memory during
 > the memory housekeeping (`docs/housekeeping/2026-09-06-memory-and-rules-inventory.md`). This file
@@ -72,3 +74,4 @@ sweep (long) or a click (short), which is the open question in KLANG-00213 (tran
 ## History
 
 - 2026-10-20: numbered KLANG-00181 (was `docs/tasks/future/phoneme-singing.md`).
+- 2026-10-27: part of KLANG-00356 (Sound sources: instruments, samples, soundfonts), the epic grouping.

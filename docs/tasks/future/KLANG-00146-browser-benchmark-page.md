@@ -1,6 +1,8 @@
 # KLANG-00146: In-browser Benchmark page (run the CPU benchmarks from the web UI)
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00355 (Performance: fast on every device)
 
 Status: **future / dev tool — not user-facing for launch.** Created 2026-08-19 (scoped during the unified-EQ
 workstream, but independent of it). A "Benchmarks" entry under the "..." sidebar menu (next to Samples Library
@@ -120,3 +122,4 @@ see the worklet-clock-divergence note). Consequences and workarounds:
 ## History
 
 - 2026-10-20: numbered KLANG-00146 (was `docs/tasks/future/browser-benchmark-page.md`).
+- 2026-10-27: part of KLANG-00355 (Performance: fast on every device), the epic grouping.

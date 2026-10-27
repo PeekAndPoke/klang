@@ -1,6 +1,8 @@
 # KLANG-00175: Soundfont zone selection: by key range, not nearest root
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00356 (Sound sources: instruments, samples, soundfonts)
 
 Status: **future, low priority.** Approximately right today, wrong by the spec. Found during the
 soundfont looping investigation (KLANG-00171 (soundfont looping investigation)), 2026-09-02.
@@ -39,3 +41,4 @@ zones whose ranges disagree with their roots and asserts the range wins.
 ## History
 
 - 2026-10-20: numbered KLANG-00175 (was `docs/tasks/future/soundfont-zone-selection.md`).
+- 2026-10-27: part of KLANG-00356 (Sound sources: instruments, samples, soundfonts), the epic grouping.

@@ -1,6 +1,8 @@
 # KLANG-00163: Mini-notation tweaks: what is left after phases 0-4
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00359 (Sprudel: the pattern language's surface)
 
 Status: **future / follow-ups — the feature SHIPPED 2026-08-31, these are the loose ends.**
 Design and build record: KLANG-00162 (mini notation tweaks).
@@ -95,3 +97,4 @@ Depends on item 2: this cannot be judged without writing music with it.
 ## History
 
 - 2026-10-20: numbered KLANG-00163 (was `docs/tasks/future/mini-notation-tweaks-followups.md`).
+- 2026-10-27: part of KLANG-00359 (Sprudel: the pattern language's surface), the epic grouping.

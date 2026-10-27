@@ -1,6 +1,8 @@
 # KLANG-00214: Oversampling regions, and one core per effect
 
 > **Status (2026-10-20): SCHEDULED.**
+>
+> **Part of:** KLANG-00354 (The Motor's shape: signal flow and the graph)
 
 Status: **scheduled, once the current plan (KLANG-00210 (signal flow redesign), phase 3 included) is
 fully complete** (maintainer, 2026-09-23). Not started.
@@ -228,3 +230,4 @@ will anyway change the way how oversampling works in the future so we need to ke
 ## History
 
 - 2026-10-20: numbered KLANG-00214 (was `docs/tasks/oversampling-regions.md`).
+- 2026-10-27: part of KLANG-00354 (The Motor's shape: signal flow and the graph), the epic grouping.

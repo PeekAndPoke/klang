@@ -2,6 +2,8 @@
 
 > **Status (2026-10-25): IDEA.** The maintainer's idea for the very long run, 2026-10-25. Future idea sector; kept
 > in mind while the new theme is built (KLANG-00334 (UI workbench)).
+>
+> **Part of:** KLANG-00334 (UI workbench: the Motor-centred layout, tool windows and the first-visit trail)
 
 ## The idea, in the maintainer's words
 
@@ -45,3 +47,4 @@ Not set while this is an idea.
 ## History
 
 - 2026-10-25: created from the maintainer's idea during the KLANG-00334 design conversation.
+- 2026-10-27: part of KLANG-00334 (UI workbench: the Motor-centred layout, tool windows and the first-visit trail), the epic grouping.

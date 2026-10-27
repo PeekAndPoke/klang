@@ -1,6 +1,8 @@
 # KLANG-00183: Worklet clock divergence (frame time vs wall time)
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
 > **Status: deferred, no plan.** Restored 2026-09-06 from session memory during the memory
 > housekeeping. Related: KLANG-00169 (midi latency optimizations) (Bluetooth latency probe idea).
@@ -30,3 +32,4 @@ worklet's `baseTimeMs` to `Date.now()`.
 ## History
 
 - 2026-10-20: numbered KLANG-00183 (was `docs/tasks/future/worklet-clock-divergence.md`).
+- 2026-10-27: part of KLANG-00353 (The Motor: correct at the edges), the epic grouping.

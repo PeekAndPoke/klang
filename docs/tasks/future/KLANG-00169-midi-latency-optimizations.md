@@ -1,6 +1,8 @@
 # KLANG-00169: MIDI / realtime latency: what is left to win
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00363 (Live play: MIDI and realtime)
 
 Status: **good enough for now (2026-08-31), recorded so it is not re-derived.** Written after the
 first round of work on the realtime path, which removed the largest software term. Nothing here is
@@ -155,3 +157,4 @@ not from a probe at init.
 ## History
 
 - 2026-10-20: numbered KLANG-00169 (was `docs/tasks/future/midi-latency-optimizations.md`).
+- 2026-10-27: part of KLANG-00363 (Live play: MIDI and realtime), the epic grouping.

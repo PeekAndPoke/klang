@@ -1,6 +1,8 @@
 # KLANG-00138: Voice Takeover — a new note displaces the ones still ringing
 
 > **Status (2026-10-20): NOT STARTED.**
+>
+> **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
 > Status: **BLOCKED ON A DESIGN DECISION (2026-09-08).** The maintainer is not sold on the design
 > below, so Phase 1 is NOT ready to build and must not be picked up as decision-free work. It was
@@ -280,3 +282,4 @@ compound param — is designed, or we just grow the debt.
 ## History
 
 - 2026-10-20: numbered KLANG-00138 (was `docs/tasks/voice-takeover.md`).
+- 2026-10-27: part of KLANG-00353 (The Motor: correct at the edges), the epic grouping.

@@ -1,6 +1,8 @@
 # KLANG-00244: Editor diagnostics for the voice doors (phase 3 step 11)
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00251 (Editor diagnostics: the umbrella)
 
 Status: **future, deferred by the maintainer (2026-09-27):** "no warnings yet; diagnostics tools come later once the
 design is fully settled". Opened 2026-09-28 when the phase 3 record was archived
@@ -41,14 +43,16 @@ task is the editor's answer to them: a warning where a script says something the
   `.sprudel()` (today's `classic()`) automatically to an authored instrument, which would make candidate 1 moot.
   Decide that first.
 
+## Decisions it needs
+
+- Whether candidate 1 is answered by a warning or by the graph plan's auto-attach.
+- Which of candidates 2 and 3 get a warning at all.
+
 ## History
 
 Step 8 accepted the doors going dark on a bare authored instrument on the condition that this diagnostic lands
 before the branch merges; the deferral of 2026-09-27 dropped that merge gate (record section 9, "Merge gate,
 revised").
 
-## Decisions it needs
-
-- Whether candidate 1 is answered by a warning or by the graph plan's auto-attach.
-- Which of candidates 2 and 3 get a warning at all.
 - 2026-10-20: numbered KLANG-00244 (was `docs/tasks/future/editor-voice-door-diagnostics.md`).
+- 2026-10-27: part of KLANG-00251 (Editor diagnostics: the umbrella), the epic grouping.

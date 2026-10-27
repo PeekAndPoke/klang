@@ -1,6 +1,8 @@
 # KLANG-00151: Unified Equalizer — filter-chain fusion via graph optimizer
 
 > **Status (2026-10-20): NOT SCHEDULED.**
+>
+> **Part of:** KLANG-00358 (Production: songs that sound like records)
 
 > **2026-10-14 (maintainer, C11):** this plan belongs to the AAA production tricks, or is at least a prerequisite of some of
 > them (the shelf and tilt sections first): KLANG-00283 (aaa production tricks).
@@ -902,3 +904,5 @@ Each step: green tests + /review-loop clean round before the next.
 ## History
 
 - 2026-10-20: numbered KLANG-00151 (was `docs/plans/unified-eq.md`).
+- 2026-10-27: part of KLANG-00358 (Production: songs that sound like records), the epic grouping.
+- 2026-10-27: the general EQ core (KLANG-00250, in KLANG-00357 (Effects)) grew out of this plan and shares its EQ machinery; this plan sits in Production by the maintainer's word (C11).

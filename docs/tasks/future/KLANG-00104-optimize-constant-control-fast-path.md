@@ -1,6 +1,8 @@
 # KLANG-00104: Constant-control fast-path (sprudel query)
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00355 (Performance: fast on every device)
 
 Status: **planned / not started.** Created 2026-06-07. Designed during the mutable-VoiceData effort but never built
 (we did the grouping refactor + the worklet codec instead). Self-contained plan so it can be picked up later.
@@ -81,3 +83,4 @@ Small: ~1 interface default method + 1 `AtomicPattern` override + ~5 lift-helper
 ## History
 
 - 2026-10-20: numbered KLANG-00104 (was `docs/tasks/future/optimize-constant-control-fast-path.md`).
+- 2026-10-27: part of KLANG-00355 (Performance: fast on every device), the epic grouping.

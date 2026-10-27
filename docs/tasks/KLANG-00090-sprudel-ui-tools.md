@@ -1,6 +1,8 @@
 # KLANG-00090: Sprudel UI Tools — Status Overview
 
 > **Status (2026-10-20): PAUSED.**
+>
+> **Part of:** KLANG-00334 (UI workbench: the Motor-centred layout, tool windows and the first-visit trail)
 
 Last updated: 2026-07-04 (archive sweep — rename reconciliation, Tremolo added).
 
@@ -219,3 +221,4 @@ are the only spellings); the phaser editor has no `floor` control (see the Open 
 ## History
 
 - 2026-10-20: numbered KLANG-00090 (was `docs/tasks/sprudel-ui-tools.md`).
+- 2026-10-27: part of KLANG-00334 (UI workbench: the Motor-centred layout, tool windows and the first-visit trail), the epic grouping.

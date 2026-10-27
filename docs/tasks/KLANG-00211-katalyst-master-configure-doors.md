@@ -1,6 +1,8 @@
 # KLANG-00211: `.katalyst(k => ...)` and `.master(k => ...)`: a pattern door that takes the value or its configure lambda
 
 > **Status (2026-10-20): NOT STARTED.**
+>
+> **Part of:** KLANG-00357 (Effects: the Katalyst and the master)
 
 > **Written 2026-09-18, not started.** Priority: **NICE** (pure convenience, the maintainer's
 > words). Outside the signal-flow work stream on purpose. **Depends on**
@@ -105,3 +107,4 @@ signal-flow plan's phase 5 picks the lambda form for new text.
 ## History
 
 - 2026-10-20: numbered KLANG-00211 (was `docs/tasks/katalyst-master-configure-doors.md`).
+- 2026-10-27: part of KLANG-00357 (Effects: the Katalyst and the master), the epic grouping.

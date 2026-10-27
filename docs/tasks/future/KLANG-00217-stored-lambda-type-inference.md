@@ -1,6 +1,8 @@
 # KLANG-00217: Type inference for stored lambdas in the editor
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00361 (Editor intelligence: completion, types, diagnostics)
 
 Status: FUTURE, NICE. Found 2026-09-26 while fixing the param-tool icons (the maintainer's report on
 `guitar3_shape`).
@@ -47,3 +49,4 @@ tests (the implementer's estimate).
 ## History
 
 - 2026-10-20: numbered KLANG-00217 (was `docs/tasks/future/stored-lambda-type-inference.md`).
+- 2026-10-27: part of KLANG-00361 (Editor intelligence: completion, types, diagnostics), the epic grouping.

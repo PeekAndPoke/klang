@@ -1,6 +1,8 @@
 # KLANG-00232: Flanger and chorus
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00357 (Effects: the Katalyst and the master)
 
 Status: **future, feature, not started.** Extracted 2026-09-27 from KLANG-00218 (audio pipeline open topics)
 (archived as KLANG-00218 (audio pipeline open topics)). Theory and a
@@ -31,3 +33,4 @@ existing line, not a new buffer type.
 ## History
 
 - 2026-10-20: numbered KLANG-00232 (was `docs/tasks/future/flanger-chorus.md`).
+- 2026-10-27: part of KLANG-00357 (Effects: the Katalyst and the master), the epic grouping.

@@ -1,6 +1,8 @@
 # KLANG-00247: A `duck.orbit` switch onto a sounding source clicks
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
 **Moved to `future/` 2026-10-14 (maintainer, C9): ducking and the sidechain need their own work, maybe after the
 configurable Motor work (KLANG-00216 (signal graph engine)); see also KLANG-00168 (ducking unfinished).**
@@ -45,3 +47,4 @@ Code: `audio_be/src/commonMain/kotlin/cylinders/katalyst/KatalystDuckEffect.kt`,
 ## History
 
 - 2026-10-20: numbered KLANG-00247 (was `docs/tasks/future/duck-orbit-switch-click.md`).
+- 2026-10-27: part of KLANG-00353 (The Motor: correct at the edges), the epic grouping.

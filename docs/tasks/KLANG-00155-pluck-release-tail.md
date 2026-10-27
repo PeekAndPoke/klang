@@ -7,6 +7,8 @@
 > Priority: **SHOULD** — not release-gating, but it blocks credible physical-modelling
 > instruments.
 >
+> **Part of:** KLANG-00353 (The Motor: correct at the edges)
+>
 > ⚠️ **No quick shot here** (maintainer, 2026-08-27). This needs the same depth the envelope-ownership
 > design got: the arithmetic below rules out every obvious answer, and each remaining option is a
 > policy decision, not an implementation detail.
@@ -109,3 +111,4 @@ Not an interface — a policy. In rough dependency order:
 ## History
 
 - 2026-10-20: numbered KLANG-00155 (was `docs/tasks/pluck-release-tail.md`).
+- 2026-10-27: part of KLANG-00353 (The Motor: correct at the edges), the epic grouping.

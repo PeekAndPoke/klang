@@ -1,6 +1,8 @@
 # KLANG-00216: The engine as a signal graph; sprudel's layout as one built-in graph
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00354 (The Motor's shape: signal flow and the graph)
 
 > Also called "the configurable Motor" (maintainer, 2026-10-14): the engine's layout (cylinders, Katalysts, the
 > master) becomes a fully configurable graph instead of today's fixed buses into the master.
@@ -552,3 +554,4 @@ rules and specs keep the two surfaces from drifting.
 ## History
 
 - 2026-10-20: numbered KLANG-00216 (was `docs/plans/future/signal-graph-engine.md`).
+- 2026-10-27: part of KLANG-00354 (The Motor's shape: signal flow and the graph), the epic grouping.

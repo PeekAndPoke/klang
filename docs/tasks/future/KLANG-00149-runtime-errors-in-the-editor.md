@@ -1,6 +1,8 @@
 # KLANG-00149: Plan: surface runtime errors in the editor, with a clickable source location
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00251 (Editor diagnostics: the umbrella)
 
 **Moved to `future/` 2026-10-14 (maintainer, C4): phases 1 to 3 shipped; phase 4 waits.**
 
@@ -229,3 +231,4 @@ the console remains unexplained and was not reproduced on the JVM.
 ## History
 
 - 2026-10-20: numbered KLANG-00149 (was `docs/tasks/future/runtime-errors-in-the-editor.md`).
+- 2026-10-27: part of KLANG-00251 (Editor diagnostics: the umbrella), the epic grouping.

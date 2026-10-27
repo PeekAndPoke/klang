@@ -1,6 +1,8 @@
 # KLANG-00207: UI look: vintage, a little dirty, dense as a game, with real affordances
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00334 (UI workbench: the Motor-centred layout, tool windows and the first-visit trail)
 
 Status: **future / reference point, not scheduled.** Created 2026-09-16. Captures a design
 conversation with the maintainer so the direction and the sources are not re-derived. Nothing here
@@ -143,3 +145,4 @@ once links and buttons get their vintage treatment.
 ## History
 
 - 2026-10-20: numbered KLANG-00207 (was `docs/tasks/future/ui-vintage-look-inspiration.md`).
+- 2026-10-27: part of KLANG-00334 (UI workbench: the Motor-centred layout, tool windows and the first-visit trail), the epic grouping.

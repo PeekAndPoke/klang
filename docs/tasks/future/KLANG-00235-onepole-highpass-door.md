@@ -1,6 +1,8 @@
 # KLANG-00235: A door for the one-pole highpass (and the one-poles on the Katalyst)
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00357 (Effects: the Katalyst and the master)
 
 Status: **future.** Found in the test consolidation audit (2026-09-27); the maintainer wants the primitive
 kept and reachable: "we might need it in the future, so the only thing is the missing doors".
@@ -35,3 +37,4 @@ topology was chosen to avoid (`LowPassHighPassFilters.kt` history).
 ## History
 
 - 2026-10-20: numbered KLANG-00235 (was `docs/tasks/future/onepole-highpass-door.md`).
+- 2026-10-27: part of KLANG-00357 (Effects: the Katalyst and the master), the epic grouping.

@@ -2,6 +2,8 @@
 
 > **Status (2026-10-21): IN PROGRESS.** Items 4, 45 and 13: merged before their review (maintainer, 2026-10-20),
 > then reviewed (round 1 clean, code and audio) and mutation-checked (7 of 7 KILLED); see item 45's last paragraph.
+>
+> **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
 Item 2 is DONE (KlangMap, released in
 v0.6.5, step 4 merged after). Where to continue (Q38, maintainer 2026-10-13: 31 to 41 after the refill, each a purely independent performance
@@ -2555,3 +2557,4 @@ ramp times (1.5 s in and out, a 2 s hold), recorded in the same solo task.
 ## History
 
 - 2026-10-20: numbered KLANG-00290 (was `docs/tasks/in-progress/engine-follow-ups.md`).
+- 2026-10-27: part of KLANG-00353 (The Motor: correct at the edges), the epic grouping.

@@ -1,6 +1,8 @@
 # KLANG-00196: Realtime analysis: crowded, thin, loud, and who is responsible
 
 > **Status (2026-10-20): NOT SCHEDULED.**
+>
+> **Part of:** KLANG-00358 (Production: songs that sound like records)
 
 **Status: FUTURE, proposed 2026-09-08. Not started. Gated on the UI structure decision (section 2).**
 
@@ -470,3 +472,4 @@ Cost when the inspector is off: zero, the copy loop is behind one flag. Cost whe
 ## History
 
 - 2026-10-20: numbered KLANG-00196 (was `docs/plans/realtime-analysis.md`).
+- 2026-10-27: part of KLANG-00358 (Production: songs that sound like records), the epic grouping.

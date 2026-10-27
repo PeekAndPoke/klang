@@ -10,6 +10,8 @@
 > `.adsrOff()`; sample-voice onset quantisation 2026-08-07). An audit workstream, deliberately
 > incremental: build the harness, run it, fix one node per commit.
 >
+> **Part of:** KLANG-00353 (The Motor: correct at the edges)
+>
 > **Target: A, structurally correct at any block size — NOT B, bit-identical.** See that section.
 
 ## The one-sentence property
@@ -812,3 +814,4 @@ MIDI playground can never be mastered.
 ## History
 
 - 2026-10-20: numbered KLANG-00156 (was `docs/plans/block-framing-invariance.md`).
+- 2026-10-27: part of KLANG-00353 (The Motor: correct at the edges), the epic grouping.

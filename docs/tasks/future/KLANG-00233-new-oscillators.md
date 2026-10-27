@@ -1,6 +1,8 @@
 # KLANG-00233: New oscillator candidates
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00356 (Sound sources: instruments, samples, soundfonts)
 
 Status: **future, feature, not started.** Extracted 2026-09-27 from KLANG-00218 (audio pipeline open topics)
 (archived as KLANG-00218 (audio pipeline open topics)). Full specs, maths
@@ -29,3 +31,4 @@ sound name where it earns one, and is tuned by ear.
 ## History
 
 - 2026-10-20: numbered KLANG-00233 (was `docs/tasks/future/new-oscillators.md`).
+- 2026-10-27: part of KLANG-00356 (Sound sources: instruments, samples, soundfonts), the epic grouping.

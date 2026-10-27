@@ -1,6 +1,8 @@
 # KLANG-00178: First-run spike on the phone, v2: measure before guessing again
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00355 (Performance: fast on every device)
 
 **Status:** OPEN, maintainer 2026-09-04: "a future round here, which is ok".
 
@@ -94,3 +96,4 @@ one null check (maintainer, 2026-10-07).
 ## History
 
 - 2026-10-20: numbered KLANG-00178 (was `docs/tasks/future/first-run-spike-v2.md`).
+- 2026-10-27: part of KLANG-00355 (Performance: fast on every device), the epic grouping.

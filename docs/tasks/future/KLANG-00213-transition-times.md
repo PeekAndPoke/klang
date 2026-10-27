@@ -1,6 +1,8 @@
 # KLANG-00213: What is a click, and what is the right transition time?
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
 Status: **future, raised by the maintainer 2026-09-20** after listening to Katalyst 5c. Not a
 defect report: every 5c transition measured clean by the metric we used, and the maintainer
@@ -99,3 +101,4 @@ separate family and would be asked the same question.
 ## History
 
 - 2026-10-20: numbered KLANG-00213 (was `docs/tasks/future/transition-times.md`).
+- 2026-10-27: part of KLANG-00353 (The Motor: correct at the edges), the epic grouping.

@@ -1,6 +1,8 @@
 # KLANG-00145: Tutorial Curriculum — Rework Plan
 
 > **Status (2026-10-20): PAUSED.**
+>
+> **Part of:** KLANG-00362 (Learning: tutorials and the ear)
 
 > **Hand-off from the DSL work, 2026-09-06.** The authoring surface changed under this plan before
 > any Ignitor/Master/Pipeline tutorial was written; teach the NEW forms only
@@ -579,3 +581,4 @@ workstream owns them from here. Hardness: guideline, except where the engine dic
 ## History
 
 - 2026-10-20: numbered KLANG-00145 (was `docs/tasks/tutorial-curriculum.md`).
+- 2026-10-27: part of KLANG-00362 (Learning: tutorials and the ear), the epic grouping.

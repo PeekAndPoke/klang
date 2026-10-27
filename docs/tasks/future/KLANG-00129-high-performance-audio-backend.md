@@ -1,6 +1,8 @@
 # KLANG-00129: High-performance audio backend (native / Wasm) — closing the gap to native DAWs
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00355 (Performance: fast on every device)
 
 Status: **far-future / ideation — explicitly NOT scheduled.** Created 2026-07-04. Deliberately parked behind
 the current priority order (see below). This is a conceptual capture of a design conversation, written down
@@ -170,3 +172,4 @@ Do **not** port the whole engine first. Thin spike:
 ## History
 
 - 2026-10-20: numbered KLANG-00129 (was `docs/tasks/future/high-performance-audio-backend.md`).
+- 2026-10-27: part of KLANG-00355 (Performance: fast on every device), the epic grouping.

@@ -1,6 +1,8 @@
 # KLANG-00159: RealtimePlaybackCtrl + MidiConnector — DRAFT for discussion
 
 > **Status (2026-10-20): DESIGNED.**
+>
+> **Part of:** KLANG-00363 (Live play: MIDI and realtime)
 
 **Status:** DRAFT v2 (2026-08-29), nothing built. Supersedes the first draft (which put the
 held-note bookkeeping in the playback controller — wrong seam). Sibling of
@@ -225,3 +227,4 @@ build until the page decides what it means.
 ## History
 
 - 2026-10-20: numbered KLANG-00159 (was `docs/tasks/realtime-playback-controller.md`).
+- 2026-10-27: part of KLANG-00363 (Live play: MIDI and realtime), the epic grouping.

@@ -1,6 +1,8 @@
 # KLANG-00170: Bare function references as function-typed arguments
 
 > **Status (2026-10-20): IDEA.**
+>
+> **Part of:** KLANG-00360 (KlangScript: the language)
 
 Status: **future, correctness.** Found 2026-08-31 while compiling the sprudel DSL's own KDoc
 examples (KLANG-00229 (dsl doc example rot)). The workaround is one pair of parentheses, but
@@ -84,3 +86,4 @@ next person to write `jux(rev)` in a doc example has the answer next to them.
 ## History
 
 - 2026-10-20: numbered KLANG-00170 (was `docs/tasks/future/bugfix-native-interop-function-values.md`).
+- 2026-10-27: part of KLANG-00360 (KlangScript: the language), the epic grouping.
