@@ -89,6 +89,39 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         brushed()
     }
 
+    /**
+     * The way back ([KlangBackLink]): a pill with a thin outline, a chevron and the place's name, brighter under the
+     * mouse. `!important` on the colour, as the app's global link rule paints every link gold so.
+     */
+    val backLink by rule {
+        put("display", "inline-flex")
+        put("align-items", "center")
+        put("align-self", "flex-start")
+        put("gap", "4px")
+        put("padding", "4px 12px 4px 6px")
+        put("border", "1px solid color-mix(in srgb, var(--kl-ink-label) 45%, transparent)")
+        put("border-radius", "999px")
+        put("font-size", "13px")
+        put("line-height", "1.3")
+        put("color", "var(--kl-ink-text) !important")
+        put("text-decoration", "none")
+        put("transition", "border-color 120ms ease, color 120ms ease")
+
+        rule("&:hover") {
+            put("color", "var(--kl-ink-strong) !important")
+            put("border-color", "var(--kl-ink-label)")
+        }
+
+        rule("&:focus-visible") {
+            put("outline", "2px solid var(--kl-focus)")
+            put("outline-offset", "2px")
+        }
+
+        rule("& > i.icon") {
+            put("margin", "0")
+        }
+    }
+
     // ── Lamps ─────────────────────────────────────────────────────────────────
 
     val lamp by rule {
@@ -118,6 +151,12 @@ object KlangControlStyles : StyleSheet("kl-controls") {
     val lampCritical by rule {
         put("background", "var(--kl-lamp-critical)")
         put("box-shadow", "0 0 6px var(--kl-lamp-critical)")
+    }
+
+    /** No glass, only its ring: a lamp of something not reached yet ([KlangLamp.State.Unlit]). */
+    val lampUnlit by rule {
+        put("background", "transparent")
+        put("box-shadow", "inset 0 0 0 1px color-mix(in srgb, var(--kl-ink-label) 45%, transparent)")
     }
 
     // ── Buttons: the base ─────────────────────────────────────────────────────

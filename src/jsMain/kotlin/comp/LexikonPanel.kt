@@ -5,13 +5,11 @@
 
 package io.peekandpoke.klang.comp
 
-import io.peekandpoke.klang.pages.docs.lexikon.LexikonDomain
 import io.peekandpoke.klang.pages.docs.lexikon.LexikonEntry
 import io.peekandpoke.klang.pages.docs.lexikon.allLexikonEntries
 import io.peekandpoke.klang.pages.docs.lexikon.lexikonAutoLinks
 import io.peekandpoke.klang.pages.docs.lexikon.lexikonEntryBySlug
 import io.peekandpoke.klang.pages.docs.lexikon.matchesSearch
-import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangSearchField
 import io.peekandpoke.klang.ui.comp.MarkdownDisplay
 import io.peekandpoke.kraft.components.Component
@@ -21,7 +19,6 @@ import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.html.onClick
-import io.peekandpoke.ultra.semanticui.icon
 import io.peekandpoke.ultra.streams.Stream
 import kotlinx.browser.document
 import kotlinx.browser.window
@@ -54,10 +51,12 @@ fun Tag.LexikonPanel(
 
 /**
  * The Lexikon in the song page's bottom panel (KLANG-00365; the maintainer, 2026-10-27: a Lexikon link clicked in the
- * help should open "another tab in bottom tool [...] with the lexikon entry", so the user stays in the editor): one
- * term laid out for the wide, low panel, or, before a term is picked, the terms to pick from, searchable.
+ * help should open "another tab in bottom tool [...] with the lexikon entry", so the user stays in the editor). The
+ * wide, low panel splits: the terms on the left, searchable, the one shown marked; the term on the right. No way back
+ * is needed, the list is always there (the maintainer, 2026-10-27, after a back link in the headline's row read as "a
+ * stranger"). Each side scrolls on its own.
  *
- * [Props.slug] is the term shown; [Props.onPick] gets a term picked here, or null for the list.
+ * [Props.slug] is the term shown, null for none yet; [Props.onPick] gets a term picked here.
  */
 class LexikonPanel(ctx: Ctx<Props>) : Component<LexikonPanel.Props>(ctx) {
 
@@ -66,8 +65,8 @@ class LexikonPanel(ctx: Ctx<Props>) : Component<LexikonPanel.Props>(ctx) {
         val onPick: (slug: String?) -> Unit,
     )
 
-    /** A term picked or put back: once drawn, a focus lost on the way goes to what comes next. */
-    private val slug by subscribingTo(props.slug) { keepFocus() }
+    /** A term shown from elsewhere (a link in an entry, the help): its item in view in the list, the focus kept. */
+    private val slug by subscribingTo(props.slug) { showInList(it) }
 
     /** What the list's search field holds. */
     private var query: String by value("")
@@ -77,34 +76,60 @@ class LexikonPanel(ctx: Ctx<Props>) : Component<LexikonPanel.Props>(ctx) {
 
         div {
             css {
-                put("display", "flex")
-                put("flex-direction", "column")
-                put("gap", "12px")
+                put("display", "grid")
+                put("grid-template-columns", "220px minmax(0, 1fr)")
+                put("gap", "24px")
+                put("height", "100%")
                 put("color", "var(--kl-ink-text)")
             }
             onClick { event -> followInPlace(event) }
 
-            if (entry == null) {
-                key = "lexikon-terms"
-                renderTerms()
-            } else {
-                key = "lexikon-${entry.slug}"
-                renderEntry(entry)
+            renderTerms(shown = entry)
+
+            div {
+                key = "lexikon-${entry?.slug ?: "none"}"
+                css {
+                    put("display", "flex")
+                    put("flex-direction", "column")
+                    put("gap", "12px")
+                    put("min-height", "0")
+                    put("overflow-y", "auto")
+                }
+
+                if (entry == null) {
+                    div {
+                        css { put("color", "var(--kl-ink-label)") }
+
+                        +"Pick a term on the left, or follow a Lexikon link in the help."
+                    }
+                } else {
+                    renderEntry(entry)
+                }
             }
         }
     }
 
     /**
-     * After a switch (a term picked, "All terms", a Lexikon link in the help), the key pressed is gone and the focus
-     * with it: it goes to "All terms" on a term, to the search on the list, so the keyboard goes on from there.
+     * Brings the shown term's item into view in the list (only the list scrolls: scrollIntoView would also move the
+     * workbench's boxes), and when the focus was lost with the link followed, puts it on that item.
      */
-    private fun keepFocus() {
+    private fun showInList(slug: String?) {
+        slug ?: return
+
         window.requestAnimationFrame {
+            val list = dom?.querySelector("[data-terms]") as? HTMLElement ?: return@requestAnimationFrame
+            val item = list.querySelector("[data-term='$slug']") as? HTMLElement ?: return@requestAnimationFrame
+            val top = item.offsetTop - list.offsetTop
+
+            if (top < list.scrollTop || top + item.offsetHeight > list.scrollTop + list.clientHeight) {
+                list.scrollTop = (top - 8).toDouble()
+            }
+
             val now = document.activeElement
 
             if (now == null || now == document.body) {
-                // The back key itself, or the field inside the search's box
-                (dom?.querySelector("button[data-focus-next], [data-focus-next] input") as? HTMLElement)?.focus()
+                // Without scrolling: the list was scrolled above, nothing else should move
+                item.asDynamic().focus(js("({ preventScroll: true })"))
             }
         }
     }
@@ -124,51 +149,74 @@ class LexikonPanel(ctx: Ctx<Props>) : Component<LexikonPanel.Props>(ctx) {
         props.onPick(slug)
     }
 
-    /** The terms to pick from, by domain, narrowed by the search. */
-    private fun FlowContent.renderTerms() {
+    /** The terms, by name, narrowed by the search; the one [shown] marked. Its own scroller, under the search. */
+    private fun FlowContent.renderTerms(shown: LexikonEntry?) {
         div {
-            css { put("max-width", "360px") }
-            attributes["data-focus-next"] = ""
+            css {
+                put("display", "flex")
+                put("flex-direction", "column")
+                put("gap", "8px")
+                put("min-height", "0")
+            }
 
             KlangSearchField(label = "Search the Lexikon", value = query, onInput = { query = it }, placeholder = "Search terms")
-        }
 
-        val found = allLexikonEntries.filter { it.matchesSearch(query) }
+            val found = allLexikonEntries.filter { it.matchesSearch(query) }.sortedBy { it.term.lowercase() }
 
-        if (found.isEmpty()) {
-            div {
-                css { put("color", "var(--kl-ink-label)") }
+            // Outside the list: a list holds only its items
+            if (found.isEmpty()) {
+                div {
+                    css {
+                        put("padding", "4px 8px")
+                        put("color", "var(--kl-ink-label)")
+                    }
 
-                +"No term matches \"${query.trim()}\"."
-            }
-        }
-
-        for (domain in LexikonDomain.entries) {
-            val terms = found.filter { it.domain == domain }
-
-            if (terms.isEmpty()) {
-                continue
+                    +"No term matches."
+                }
             }
 
             div {
-                key = "domain-${domain.name}"
+                attributes["role"] = "list"
+                attributes["data-terms"] = ""
+                attributes["aria-label"] = "Terms"
                 css {
                     put("display", "flex")
                     put("flex-direction", "column")
-                    put("gap", "6px")
+                    put("min-height", "0")
+                    put("overflow-y", "auto")
                 }
 
-                renderLabel(domain.label)
+                for (term in found) {
+                    val current = term == shown
 
-                div {
-                    css {
-                        put("display", "flex")
-                        put("flex-wrap", "wrap")
-                        put("gap", "6px")
-                    }
+                    // An item holding a plain button, so it is read as one that can be pressed
+                    div {
+                        key = term.slug
+                        attributes["role"] = "listitem"
+                        css { put("display", "flex") }
 
-                    for (term in terms) {
-                        KlangButton(onClick = { props.onPick(term.slug) }) { +term.term }
+                        button(type = ButtonType.button, classes = "kl-quiet-key") {
+                            attributes["data-term"] = term.slug
+
+                            if (current) {
+                                attributes["aria-current"] = "true"
+                            }
+
+                            css {
+                                put("flex", "1")
+                                put("text-align", "left")
+                                put("border-radius", "var(--kl-radius)")
+
+                                if (current) {
+                                    put("background", "var(--kl-ground-panel)")
+                                    put("color", "var(--kl-ink-strong)")
+                                    put("font-weight", "700")
+                                }
+                            }
+                            onClick { props.onPick(term.slug) }
+
+                            +term.term
+                        }
                     }
                 }
             }
@@ -177,28 +225,6 @@ class LexikonPanel(ctx: Ctx<Props>) : Component<LexikonPanel.Props>(ctx) {
 
     /** One term: its name and where it belongs, its summary, then its detail beside what else it is called and its story. */
     private fun FlowContent.renderEntry(entry: LexikonEntry) {
-        // Back to the terms, quiet and on the left, where the eye starts (the maintainer, 2026-10-27: the key at the
-        // far right was "too far away from the action")
-        button(type = ButtonType.button) {
-            css {
-                put("align-self", "flex-start")
-                put("display", "inline-flex")
-                put("align-items", "center")
-                put("gap", "2px")
-                put("padding", "0")
-                put("border", "none")
-                put("background", "transparent")
-                put("font-size", "12px")
-                put("color", "var(--kl-ink-label)")
-                put("cursor", "pointer")
-            }
-            attributes["data-focus-next"] = ""
-            onClick { props.onPick(null) }
-
-            icon.angle_left.render { attributes["aria-hidden"] = "true" }
-            +"All terms"
-        }
-
         div {
             css {
                 put("display", "flex")

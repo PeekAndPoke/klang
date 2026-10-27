@@ -8,7 +8,9 @@ package io.peekandpoke.klang.pages.docs
 import io.peekandpoke.klang.comp.InViewport
 import io.peekandpoke.klang.comp.KlangScriptReplComp
 import io.peekandpoke.klang.comp.PlayableCodeExample
+import io.peekandpoke.klang.comp.QuickHelpPanel
 import io.peekandpoke.klang.comp.klangScopeLabel
+import io.peekandpoke.klang.layouts.WorkbenchSlots
 import io.peekandpoke.klang.pages.docs.lexikon.lexikonAutoLinks
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
@@ -22,6 +24,7 @@ import io.peekandpoke.klang.script.types.KlangMutability
 import io.peekandpoke.klang.script.types.KlangProperty
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
+import io.peekandpoke.klang.ui.comp.KlangWorkbench
 import io.peekandpoke.klang.ui.comp.MarkdownDisplay
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.components.Component
@@ -102,12 +105,52 @@ class KlangScriptLibraryDocsPage(ctx: Ctx<Props>) : Component<KlangScriptLibrary
     companion object {
         const val PARAM_LIBRARY = "library"
         const val PARAM_SEARCH = "search"
+
+        /** Counts the pages drawn, for the help panel's key. */
+        private var pagesDrawn = 0
     }
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
     private val laf by subscribingTo(KlangTheme)
     private var searchQuery: String by urlParam(name = PARAM_SEARCH, default = "")
+
+    /**
+     * The bottom panel's Quick help and Lexikon for the examples' code (the maintainer, 2026-10-27: "The help pages
+     * also need the quick help panel on the bottom so hovering a function can show the help", "and Alt+Q").
+     */
+    private val helpPanel = QuickHelpPanel(pageKey = "docs-${++pagesDrawn}")
+
+    /** The bottom panel this page put into the workbench; null while it put none. */
+    private var slotBottom: KlangWorkbench.Bottom? = null
+
+    init {
+        lifecycle {
+            onMount { fillWorkbench() }
+            onUnmount { emptyWorkbench() }
+        }
+    }
+
+    private fun fillWorkbench() {
+        // The copy fading out after a change of page is inert: it neither fills nor empties (as the song page guards it)
+        if (dom?.closest("[inert]") != null) {
+            return
+        }
+
+        val bottom = helpPanel.bottom()
+
+        slotBottom = bottom
+        WorkbenchSlots.bottom(bottom)
+    }
+
+    /** Takes the panel back out, unless another page has put its own since. */
+    private fun emptyWorkbench() {
+        if (slotBottom != null && WorkbenchSlots.bottom() === slotBottom) {
+            WorkbenchSlots.bottom(null)
+        }
+
+        slotBottom = null
+    }
 
     //  REGISTRY  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -388,7 +431,7 @@ class KlangScriptLibraryDocsPage(ctx: Ctx<Props>) : Component<KlangScriptLibrary
                     key = sample.code
                     InViewport {
                         when (sample.type) {
-                            KlangCodeSampleType.PLAYABLE -> PlayableCodeExample(code = sample.code)
+                            KlangCodeSampleType.PLAYABLE -> PlayableCodeExample(code = sample.code, help = helpPanel)
                             KlangCodeSampleType.EXECUTABLE -> KlangScriptReplComp(
                                 initialCode = sample.code,
                                 autoImportLibraries = autoImports,

@@ -670,6 +670,8 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
                 key = "tab-${shown.id}"
                 attributes["role"] = "region"
                 attributes["aria-label"] = shown.title
+                // The panel's height, so a tab can split it into parts that scroll on their own (the Lexikon's list)
+                css { put("height", "100%") }
 
                 shown.content(this)
             }

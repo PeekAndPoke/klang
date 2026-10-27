@@ -30,7 +30,6 @@ import io.peekandpoke.klang.pages.docs.tutorials.TutorialTrackPage
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialsListPage
 import io.peekandpoke.kraft.routing.RootRouterBuilder
 import io.peekandpoke.kraft.routing.Route1
-import io.peekandpoke.kraft.routing.Router
 import io.peekandpoke.kraft.routing.Static
 
 object Nav {
@@ -62,11 +61,6 @@ object Nav {
 
     const val tutorialsBase = "$manualsBase/tutorials"
     val tutorials = Static(tutorialsBase)
-    fun tutorialsWithUpdatedParams(router: Router, vararg params: Pair<String, String>) =
-        tutorials().withQueryParams(
-            router.current().takeIf { it.route == tutorials }?.matchedRoute?.queryParams ?: emptyMap()
-        ).plusQueryParams(params.toMap())
-
     val tutorial = Route1("$tutorialsBase/{slug}")
 
     /** Overview page of one tutorial track. */

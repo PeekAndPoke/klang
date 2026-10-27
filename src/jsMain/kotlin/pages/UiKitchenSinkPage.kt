@@ -10,6 +10,7 @@ import io.peekandpoke.klang.comp.LcdDisplay
 import io.peekandpoke.klang.comp.Oscilloscope
 import io.peekandpoke.klang.storage.LookStorage
 import io.peekandpoke.klang.ui.KlangKeyBindings
+import io.peekandpoke.klang.ui.comp.KlangBackLink
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangCaption
 import io.peekandpoke.klang.ui.comp.KlangCard
@@ -647,6 +648,13 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
                             KlangButton(onClick = {}, finish = finish, surface = surface, beacon = true) { +"Try me" }
                         }
                     }
+                }
+            }
+
+            cell(name = "Back, the same everywhere", source = "klangui/comp/KlangBackLink.kt") {
+                row {
+                    KlangBackLink(label = "Learn", href = "#", onNavigate = {})
+                    KlangBackLink(label = "All terms", href = "#", onNavigate = {})
                 }
             }
 

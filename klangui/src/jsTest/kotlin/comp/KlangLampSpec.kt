@@ -28,7 +28,11 @@ class KlangLampSpec : StringSpec({
             KlangLamp.State.Try to styles.lampTry,
             KlangLamp.State.Warning to styles.lampWarning,
             KlangLamp.State.Critical to styles.lampCritical,
+            KlangLamp.State.Unlit to styles.lampUnlit,
         )
+
+        // Every state is in the map: a new one gets its row here
+        expected.keys shouldBe KlangLamp.State.entries.toSet()
 
         for ((state, cls) in expected) {
             TestBed.preact(view = { KlangLamp(state = state) }) { root ->

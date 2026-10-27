@@ -1,0 +1,106 @@
+/*
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
+package io.peekandpoke.klang.comp
+
+import io.peekandpoke.klang.layouts.WorkbenchSlots
+import io.peekandpoke.klang.ui.comp.KlangKeyHint
+import io.peekandpoke.klang.ui.comp.KlangWorkbench
+import io.peekandpoke.ultra.html.css
+import io.peekandpoke.ultra.html.key
+import io.peekandpoke.ultra.streams.StreamSource
+import kotlinx.html.FlowContent
+import kotlinx.html.div
+import kotlinx.html.span
+
+/**
+ * The bottom panel's help, for a page with code in it (KLANG-00349, KLANG-00365, KLANG-00370): its tabs Quick help and
+ * Lexikon, what each shows, and the calls that fill them. The song page and a tutorial both use it; [pageKey] keeps one
+ * page's parts apart from the next one's.
+ */
+class QuickHelpPanel(private val pageKey: String) {
+
+    companion object {
+        /** The bottom panel's tabs, by the ids the workbench keeps with its layout. */
+        const val TAB_QUICK_HELP = "quick-help"
+        const val TAB_LEXIKON = "lexikon"
+    }
+
+    /** The name Alt+Q or a hover last asked about; null before the first. */
+    private val help = StreamSource<HelpWindow.Entry?>(null)
+
+    /** The Lexikon term the Lexikon tab shows beside its list of terms; null for none yet. */
+    private val lexikonSlug = StreamSource<String?>(null)
+
+    /** Where a use clicked in the "Used on" list goes: the code the last name came from. */
+    private var jump: (pos: Int) -> Unit = {}
+
+    /** The panel for the workbench's bottom slot. */
+    fun bottom(): KlangWorkbench.Bottom = KlangWorkbench.Bottom(
+        title = "Help",
+        icon = { question_circle },
+        tabs = listOf(
+            KlangWorkbench.Tab(id = TAB_QUICK_HELP, title = "Quick help") {
+                div {
+                    key = "help-$pageKey"
+                    // The tab fills the panel's height; a long help ends with the panel's own air below it
+                    css { put("padding-bottom", "16px") }
+                    HelpWindow(
+                        entry = help,
+                        onJump = { pos -> jump(pos) },
+                        options = { renderOptions() },
+                        onLexikon = { slug -> showLexikon(slug) },
+                    )
+                }
+            },
+            KlangWorkbench.Tab(id = TAB_LEXIKON, title = "Lexikon") {
+                div {
+                    key = "lexikon-$pageKey"
+                    css { put("height", "100%") }
+                    LexikonPanel(slug = lexikonSlug, onPick = { lexikonSlug(it) })
+                }
+            },
+        ),
+    )
+
+    /**
+     * A name's help in the Quick help, the panel opened if it is closed; the focus stays where it is. Asked [byKey]
+     * (Alt+Q) it shows the Quick help's tab; a hover leaves an open panel at its tab, so the mouse passing over the code
+     * does not take the Lexikon away from the user reading there (KLANG-00365). [jumpTo] puts the cursor in the code
+     * the name came from, for its "Used on" list.
+     */
+    fun showHelp(entry: HelpWindow.Entry, byKey: Boolean, jumpTo: (pos: Int) -> Unit) {
+        jump = jumpTo
+        help(entry)
+        WorkbenchSlots.workbench { it.showBottom(tab = TAB_QUICK_HELP, onlyIfClosed = !byKey) }
+    }
+
+    /**
+     * A Lexikon term in the Lexikon tab, the user staying in the code (the maintainer, 2026-10-27: a Lexikon link
+     * "would lead to the Lexikon tab", KLANG-00365).
+     */
+    fun showLexikon(slug: String) {
+        lexikonSlug(slug)
+        WorkbenchSlots.workbench { it.showBottom(tab = TAB_LEXIKON) }
+    }
+
+    /** The quick help's options, at the right of its headline: how to call it, and the hover's switch. */
+    private fun FlowContent.renderOptions() {
+        span {
+            css {
+                put("font-size", "12px")
+                put("color", "var(--kl-ink-label)")
+                put("white-space", "nowrap")
+            }
+
+            +"In the code: "
+            // The same caps as every key hint, "Esc" in the close pill beside it included (the maintainer, 2026-10-27)
+            with(KlangKeyHint) { caps(parts = listOf("Alt", "Q")) }
+            +" on a name, or rest the mouse on it"
+        }
+
+        HoverHelpToggle()
+    }
+}

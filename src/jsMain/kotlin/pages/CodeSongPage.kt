@@ -8,11 +8,10 @@ package io.peekandpoke.klang.pages
 import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.KlangGuiDance
 import io.peekandpoke.klang.comp.HelpWindow
-import io.peekandpoke.klang.comp.HoverHelpToggle
 import io.peekandpoke.klang.comp.KlangCodeEditorComp
 import io.peekandpoke.klang.comp.KlangCodePlaybackCtrl
 import io.peekandpoke.klang.comp.LcdDisplay
-import io.peekandpoke.klang.comp.LexikonPanel
+import io.peekandpoke.klang.comp.QuickHelpPanel
 import io.peekandpoke.klang.comp.SongColumn
 import io.peekandpoke.klang.comp.SongSettings
 import io.peekandpoke.klang.layouts.WorkbenchSlots
@@ -25,7 +24,6 @@ import io.peekandpoke.klang.ui.codemirror.BookmarkOptions
 import io.peekandpoke.klang.ui.codemirror.Bookmarks
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangFinish
-import io.peekandpoke.klang.ui.comp.KlangKeyHint
 import io.peekandpoke.klang.ui.comp.KlangScreen
 import io.peekandpoke.klang.ui.comp.KlangSpinner
 import io.peekandpoke.klang.ui.comp.KlangValueKnob
@@ -44,7 +42,6 @@ import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.semanticui.icon
 import io.peekandpoke.ultra.semanticui.ui
-import io.peekandpoke.ultra.streams.StreamSource
 import io.peekandpoke.ultra.streams.ops.distinct
 import io.peekandpoke.ultra.streams.ops.map
 import kotlinx.browser.window
@@ -69,10 +66,8 @@ import kotlinx.css.pct
 import kotlinx.css.px
 import kotlinx.css.width
 import kotlinx.html.DIV
-import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
-import kotlinx.html.span
 import kotlinx.html.title
 
 @Suppress("FunctionName")
@@ -89,10 +84,6 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     private companion object {
         /** Counts the pages drawn, for [pageKey]. */
         var pagesDrawn = 0
-
-        /** The bottom panel's tabs (KLANG-00365), by the ids the workbench keeps with its layout. */
-        const val TAB_QUICK_HELP = "quick-help"
-        const val TAB_LEXIKON = "lexikon"
     }
 
     //  PROPS  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -154,17 +145,14 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         ctrl.reemitVoiceSignals()
     }
 
-    /** The name Alt+Q or a hover last asked about, for the Quick help panel (KLANG-00349); null before the first. */
-    private val help = StreamSource<HelpWindow.Entry?>(null)
-
-    /** The Lexikon term the Lexikon tab shows; null for its list of terms (KLANG-00365). */
-    private val lexikonSlug = StreamSource<String?>(null)
-
     /** The column's content this page put into the workbench; null while it put none. */
     private var slotColumn: (DIV.() -> Unit)? = null
 
     /** This page's own key for its parts in the workbench: two pages never share one, even on one song id ("new"). */
     private val pageKey = ++pagesDrawn
+
+    /** The bottom panel's Quick help and Lexikon (KLANG-00349, KLANG-00365), shared with the tutorials. */
+    private val helpPanel = QuickHelpPanel(pageKey = "song-$pageKey")
 
     // On rpm changes: persist to localStorage AND cancel highlights to avoid stale timing across tempo shifts.
     @Suppress("unused")
@@ -239,71 +227,12 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         )
         // Under the editor, wide enough for signatures and parameters: the quick help, and the Lexikon beside it
         // (the maintainer, 2026-10-27: the tabs in the panel's header, a tab's own options in its content)
-        WorkbenchSlots.bottom(
-            KlangWorkbench.Bottom(
-                title = "Help",
-                icon = { question_circle },
-                tabs = listOf(
-                    KlangWorkbench.Tab(id = TAB_QUICK_HELP, title = "Quick help") {
-                        div {
-                            key = "song-help-$pageKey"
-                            HelpWindow(
-                                entry = help,
-                                onJump = { pos -> codeEditorRef { it.jumpTo(pos) } },
-                                options = { renderQuickHelpOptions() },
-                                onLexikon = { slug -> showLexikon(slug) },
-                            )
-                        }
-                    },
-                    KlangWorkbench.Tab(id = TAB_LEXIKON, title = "Lexikon") {
-                        div {
-                            key = "song-lexikon-$pageKey"
-                            LexikonPanel(slug = lexikonSlug, onPick = { lexikonSlug(it) })
-                        }
-                    },
-                ),
-            )
-        )
+        WorkbenchSlots.bottom(helpPanel.bottom())
     }
 
-    /** The quick help's options, at the right of its headline: how to call it, and the hover's switch. */
-    private fun FlowContent.renderQuickHelpOptions() {
-        renderQuickHelpHint()
-        HoverHelpToggle()
-    }
-
-    private fun FlowContent.renderQuickHelpHint() {
-        span {
-            css {
-                put("font-size", "12px")
-                put("color", "var(--kl-ink-label)")
-                put("white-space", "nowrap")
-            }
-
-            +"In the code: "
-            // The same caps as every key hint, "Esc" in the close pill beside it included (the maintainer, 2026-10-27)
-            with(KlangKeyHint) { caps(parts = listOf("Alt", "Q")) }
-            +" on a name, or rest the mouse on it"
-        }
-    }
-
-    /**
-     * A name's help in the Quick help, the panel opened if it is closed; the focus stays where it is. Asked [byKey]
-     * (Alt+Q) it shows the Quick help's tab; a hover leaves an open panel at its tab, so the mouse passing over the code
-     * does not take the Lexikon away from the user reading there (KLANG-00365).
-     */
-    private fun showHelp(entry: HelpWindow.Entry, byKey: Boolean) {
-        help(entry)
-        WorkbenchSlots.workbench { it.showBottom(tab = TAB_QUICK_HELP, onlyIfClosed = !byKey) }
-    }
-
-    /**
-     * A Lexikon term in the bottom panel's Lexikon tab, the user staying in the code (the maintainer, 2026-10-27: a
-     * Lexikon link "would lead to the Lexikon tab", KLANG-00365).
-     */
-    private fun showLexikon(slug: String) {
-        lexikonSlug(slug)
-        WorkbenchSlots.workbench { it.showBottom(tab = TAB_LEXIKON) }
+    /** Puts the cursor in the song's code: a use clicked in the Quick help's "Used on" list. */
+    private fun jumpTo(pos: Int) {
+        codeEditorRef { it.jumpTo(pos) }
     }
 
     /** Empties the workbench's slots, unless another page has filled them since. */
@@ -541,10 +470,10 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
             showKeysOverview = true,
             // Alt+Q, and a hover: the name's help in the Help panel, never a popup, the focus staying in the code
             onQuickDocumentation = { symbol, declarationCode, usages ->
-                showHelp(entry = HelpWindow.Entry(symbol, declarationCode, usages), byKey = true)
+                helpPanel.showHelp(entry = HelpWindow.Entry(symbol, declarationCode, usages), byKey = true, jumpTo = ::jumpTo)
             },
             onHoverDocumentation = { symbol, declarationCode, usages ->
-                showHelp(entry = HelpWindow.Entry(symbol, declarationCode, usages), byKey = false)
+                helpPanel.showHelp(entry = HelpWindow.Entry(symbol, declarationCode, usages), byKey = false, jumpTo = ::jumpTo)
             },
         ).track(codeEditorRef)
     }

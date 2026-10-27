@@ -58,6 +58,12 @@ class KlangLamp(ctx: Ctx<Props>) : Component<KlangLamp.Props>(ctx) {
         Try,
         Warning,
         Critical,
+
+        /**
+         * Not lit at all, only its ring: not reached yet (KLANG-00370, a lesson in a stage ahead). Quieter than [Off],
+         * which is a lamp that could light now.
+         */
+        Unlit,
     }
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -87,6 +93,7 @@ class KlangLamp(ctx: Ctx<Props>) : Component<KlangLamp.Props>(ctx) {
             State.Try -> KlangControlStyles.lampTry
             State.Warning -> KlangControlStyles.lampWarning
             State.Critical -> KlangControlStyles.lampCritical
+            State.Unlit -> KlangControlStyles.lampUnlit
         }
 
         span(classes = listOfNotNull(KlangControlStyles.lamp, stateClass).joinToString(" ")) {

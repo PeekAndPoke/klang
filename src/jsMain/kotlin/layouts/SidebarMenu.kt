@@ -7,10 +7,7 @@ package io.peekandpoke.klang.layouts
 
 import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.Nav
-import io.peekandpoke.klang.pages.docs.tutorials.TutorialDepth
-import io.peekandpoke.klang.pages.docs.tutorials.TutorialDifficulty
-import io.peekandpoke.klang.pages.docs.tutorials.TutorialsListPage
-import io.peekandpoke.klang.pages.docs.tutorials.iconFn
+import io.peekandpoke.klang.pages.docs.tutorials.KlangPathColumn
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.components.NoProps
@@ -130,10 +127,6 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
         }
     }
 
-    private fun DIV.menuGap() {
-        noui.item { css { padding = Padding(8.px) } }
-    }
-
     private fun DIV.menuItemsList(block: DIV.() -> Unit) {
         ui.vertical.relaxed.list {
             key = "menu-list"
@@ -147,16 +140,6 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
             }
             block()
         }
-    }
-
-    //  NAV HELPERS  ///////////////////////////////////////////////////////////////////////////////////////////
-
-    private fun navTutorials(vararg params: Pair<String, String>) {
-        router.navToUri(Nav.tutorialsWithUpdatedParams(router = router, *params))
-    }
-
-    private fun toggleTutorialFilter(paramKey: String, value: String, isActive: Boolean) {
-        navTutorials(paramKey to if (isActive) "" else value)
     }
 
     //  RENDER  ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -195,7 +178,8 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
                 when (area) {
                     AppArea.Songs -> renderSongsMenu()
                     AppArea.Samples -> renderSamplesMenu()
-                    AppArea.Learn -> renderTutorialsMenu()
+                    // The Klang Path's tree; a tutorial puts its own column (KLANG-00370)
+                    AppArea.Learn -> KlangPathColumn()
                     AppArea.Docs -> renderDocsMenu()
                     AppArea.Midi, AppArea.Resources, AppArea.Credits, AppArea.DevStatus, AppArea.Other -> renderDefaultMenu()
                 }
@@ -271,61 +255,5 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
                 router.navToUri(Nav.manualsKlangScript())
             }
         }
-    }
-
-    private fun DIV.renderTutorialsMenu() {
-        val activeDifficulty = currentDifficultyFilter()
-        val activeDepth = currentDepthFilter()
-        val activeCompletion = currentCompletionFilter()
-        val hasNoFilters = activeDifficulty == null && activeDepth == null &&
-                activeCompletion == TutorialsListPage.CompletionFilter.All
-
-        menuItemsList {
-            menuItem(currentRoute.route == Nav.tutorials && hasNoFilters, "All Tutorials", { list }) {
-                router.navToUri(Nav.tutorials())
-            }
-
-            menuGap()
-
-            for (diff in TutorialDifficulty.entries) {
-                val isSelected = activeDifficulty == diff
-                menuItem(isSelected, diff.label, diff.iconFn()) {
-                    toggleTutorialFilter(TutorialsListPage.PARAM_DIFFICULTY, diff.name, isSelected)
-                }
-            }
-
-            menuGap()
-
-            for (depth in TutorialDepth.entries) {
-                val isSelected = activeDepth == depth
-                menuItem(isSelected, depth.label, depth.iconFn()) {
-                    toggleTutorialFilter(TutorialsListPage.PARAM_DEPTH, depth.name, isSelected)
-                }
-            }
-
-            menuGap()
-
-            for (filter in listOf(TutorialsListPage.CompletionFilter.Completed, TutorialsListPage.CompletionFilter.Open)) {
-                val isSelected = activeCompletion == filter
-                menuItem(isSelected, filter.name, filter.iconFn()) {
-                    toggleTutorialFilter(TutorialsListPage.PARAM_COMPLETION, filter.name, isSelected)
-                }
-            }
-        }
-    }
-
-    private fun currentDifficultyFilter(): TutorialDifficulty? {
-        val param = currentRoute.matchedRoute.queryParams[TutorialsListPage.PARAM_DIFFICULTY]
-        return TutorialsListPage.difficultyFromParam(param)
-    }
-
-    private fun currentDepthFilter(): TutorialDepth? {
-        val param = currentRoute.matchedRoute.queryParams[TutorialsListPage.PARAM_DEPTH]
-        return TutorialsListPage.depthFromParam(param)
-    }
-
-    private fun currentCompletionFilter(): TutorialsListPage.CompletionFilter {
-        val param = currentRoute.matchedRoute.queryParams[TutorialsListPage.PARAM_COMPLETION]
-        return TutorialsListPage.completionFromParam(param)
     }
 }

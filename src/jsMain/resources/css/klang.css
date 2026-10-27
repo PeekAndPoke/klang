@@ -197,6 +197,34 @@ a:hover {
     color: #f0c55a !important;
 }
 
+/* A link that reads as the text round it, not as a gold link (the Learn area, KLANG-00370): its colour inherited,
+   brighter under the mouse. Against the gold rule above it needs !important too; a page colours the text inside it. */
+a.kl-app-link,
+a.kl-app-link:visited {
+    color: inherit !important;
+    text-decoration: none;
+}
+
+a.kl-app-link:hover {
+    color: var(--kl-ink-strong) !important;
+}
+
+/* A quiet key: plain text in the label's ink, brighter under the mouse ("Mark as done, stay here", "Back to the
+   original"; KLANG-00370). */
+button.kl-quiet-key {
+    padding: 6px 8px;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--kl-ink-label);
+    cursor: pointer;
+}
+
+button.kl-quiet-key:hover {
+    color: var(--kl-ink-strong);
+}
+
 /* ── Code blocks ──────────────────────────────────────────────────────────── */
 pre, code {
     color: var(--klang-text-primary) !important;

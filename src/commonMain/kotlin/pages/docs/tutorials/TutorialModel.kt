@@ -73,6 +73,18 @@ data class TutorialTrackDef(
     val description: String,
     val lessons: List<Tutorial>,
     val buildsOn: List<TutorialTrackDef> = emptyList(),
+    /**
+     * The track's stages, in order, holding its [lessons] in order (The Klang Path: the onramp, the core, where the
+     * strands meet); none for a track without stages. A lesson in a stage not reached yet is drawn as "later"
+     * (KLANG-00370).
+     */
+    val stages: List<TutorialStage> = emptyList(),
+)
+
+/** A stage of a track: its [title] and its [lessons], in teaching order. */
+data class TutorialStage(
+    val title: String,
+    val lessons: List<Tutorial>,
 )
 
 /**

@@ -7,37 +7,16 @@ package io.peekandpoke.klang.pages.docs.tutorials
 
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.storage.TutorialStorage
-import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.routing.Router.Companion.router
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
-import io.peekandpoke.ultra.html.onClick
-import io.peekandpoke.ultra.semanticui.icon
-import io.peekandpoke.ultra.semanticui.noui
-import io.peekandpoke.ultra.semanticui.ui
-import kotlinx.css.Align
-import kotlinx.css.Color
-import kotlinx.css.Cursor
-import kotlinx.css.Display
-import kotlinx.css.JustifyContent
-import kotlinx.css.Padding
-import kotlinx.css.alignItems
-import kotlinx.css.color
-import kotlinx.css.cursor
-import kotlinx.css.display
-import kotlinx.css.gap
-import kotlinx.css.justifyContent
-import kotlinx.css.marginLeft
-import kotlinx.css.marginTop
-import kotlinx.css.padding
-import kotlinx.css.rem
-import kotlinx.html.FlowContent
+import io.peekandpoke.ultra.html.key
 import kotlinx.html.Tag
 import kotlinx.html.div
-import kotlinx.html.p
+import kotlinx.html.h1
 import kotlinx.html.span
 
 @Suppress("FunctionName")
@@ -46,73 +25,89 @@ fun Tag.TutorialTrackPage() = comp {
 }
 
 /**
- * Overview of one tutorial track: its lessons in order, with completion state.
- * Entering a lesson from here carries the track context, so Prev/Next on the
- * lesson page walk this track.
+ * One track on its own (KLANG-00370): its title, how far, what it builds on, and its lessons as tiles in its order.
+ * A lesson opened from here carries the track, so the tutorial page walks this track.
  */
 class TutorialTrackPage(ctx: NoProps) : PureComponent(ctx) {
 
-    //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
-
-    private val laf by subscribingTo(KlangTheme)
     private val currentRoute by subscribingTo(router.current)
 
-    private fun currentSlug(): String = currentRoute.matchedRoute["slug"]
+    private val done by subscribingTo(TutorialStorage.done)
 
-    private fun currentTrack(): TutorialTrackDef? = allTracks.find { it.slug == currentSlug() }
-
-    //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
+    private fun currentTrack(): TutorialTrackDef? = allTracks.find { it.slug == currentRoute.matchedRoute["slug"] }
 
     override fun VDom.render() {
         val track = currentTrack()
+        val progress = TutorialProgress(done = done)
 
-        ui.fluid.container {
-            css { padding = Padding(2.rem) }
+        div {
+            css {
+                put("display", "flex")
+                put("flex-direction", "column")
+                put("gap", "16px")
+                put("padding", "28px 36px")
+                put("color", "var(--kl-ink-text)")
+            }
+
+            backLink(router = router, label = "Learn", to = Nav.tutorials())
 
             if (track == null) {
-                ui.placeholder.segment {
-                    ui.icon.header {
-                        icon.dragon()
-                        +"Track not found"
-                    }
-                    ui.button {
-                        onClick { router.navToUri(Nav.tutorials()) }
-                        +"Back to Tutorials"
-                    }
-                }
-                return@container
+                div { +"There is no such track." }
+
+                return@div
             }
 
-            // Nav
-            ui.segment {
-                ui.black.button {
-                    onClick { router.navToUri(Nav.tutorials()) }
-                    icon.th_list()
-                    +"All Tutorials"
+            div {
+                css {
+                    put("display", "flex")
+                    put("align-items", "baseline")
+                    put("flex-wrap", "wrap")
+                    put("column-gap", "14px")
                 }
-            }
 
-            // Header
-            val completed = track.lessons.count { TutorialStorage.isCompleted(it.slug) }
+                h1 {
+                    css {
+                        put("margin", "0")
+                        put("font-size", "26px")
+                        put("color", "var(--kl-ink-strong)")
+                    }
 
-            ui.segment {
-                ui.large.header {
                     +track.title
-                    ui.basic.label {
-                        css { marginLeft = 1.rem }
-                        icon.check_circle()
-                        +"$completed of ${track.lessons.size} completed"
-                    }
                 }
-                p { +track.description }
 
-                if (track.buildsOn.isNotEmpty()) {
-                    div {
-                        css { marginTop = 1.rem }
-                        span { +"Builds on: " }
-                        track.buildsOn.forEach { other ->
-                            ui.mini.basic.button {
-                                onClick { router.navToUri(Nav.tutorialTrack(other.slug)) }
+                span {
+                    css {
+                        put("font-size", "13px")
+                        put("color", "var(--kl-ink-label)")
+                    }
+
+                    +"${progress.doneIn(track)} of ${track.lessons.size} done"
+                }
+            }
+
+            div {
+                css { put("font-size", "15px") }
+
+                +track.description
+            }
+
+            if (track.buildsOn.isNotEmpty()) {
+                div {
+                    css {
+                        put("font-size", "13px")
+                        put("color", "var(--kl-ink-label)")
+                    }
+
+                    +"Builds on "
+
+                    for ((index, other) in track.buildsOn.withIndex()) {
+                        if (index > 0) {
+                            +", "
+                        }
+
+                        appLink(router, Nav.tutorialTrack(other.slug)) {
+                            span {
+                                css { put("color", "var(--kl-ink-text)") }
                                 +other.title
                             }
                         }
@@ -120,61 +115,21 @@ class TutorialTrackPage(ctx: NoProps) : PureComponent(ctx) {
                 }
             }
 
-            // Lessons, in track order
-            track.lessons.forEachIndexed { index, lesson ->
-                renderLesson(track, index, lesson)
-            }
-        }
-    }
-
-    private fun FlowContent.renderLesson(track: TutorialTrackDef, index: Int, lesson: Tutorial) {
-        val isCompleted = TutorialStorage.isCompleted(lesson.slug)
-
-        ui.segment {
-            onClick { router.navToUri(Nav.tutorialInTrack(lesson.slug, track.slug)) }
-            css {
-                cursor = Cursor.pointer
-                display = Display.flex
-                justifyContent = JustifyContent.spaceBetween
-                alignItems = Align.center
-            }
-
             div {
                 css {
-                    display = Display.flex
-                    alignItems = Align.center
-                    gap = 0.75.rem
+                    put("display", "grid")
+                    put("grid-template-columns", "repeat(auto-fill, minmax(190px, 1fr))")
+                    put("gap", "8px")
                 }
 
-                if (isCompleted) {
-                    span {
-                        css { color = Color(laf.good) }
-                        icon.large.check_circle()
-                    }
-                } else {
-                    ui.circular.basic.label { +"${index + 1}" }
-                }
+                for ((index, lesson) in track.lessons.withIndex()) {
+                    div {
+                        key = "lesson-${lesson.slug}"
+                        css { put("display", "flex") }
 
-                div {
-                    ui.small.header {
-                        css { color = Color(laf.textPrimary) }
-                        +lesson.title
-                    }
-                    noui.description {
-                        css { color = Color(laf.textSecondary) }
-                        +lesson.description
+                        lessonTile(router = router, lesson = lesson, number = index + 1, state = progress.stateOf(lesson), track = track)
                     }
                 }
-            }
-
-            div {
-                css {
-                    display = Display.flex
-                    alignItems = Align.center
-                    gap = 0.5.rem
-                }
-
-                difficultyLabel(laf, lesson.difficulty)
             }
         }
     }

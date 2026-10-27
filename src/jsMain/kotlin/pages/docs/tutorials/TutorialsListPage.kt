@@ -7,43 +7,23 @@ package io.peekandpoke.klang.pages.docs.tutorials
 
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.storage.TutorialStorage
-import io.peekandpoke.klang.ui.feel.KlangTheme
+import io.peekandpoke.klang.ui.comp.KlangButton
+import io.peekandpoke.klang.ui.comp.KlangLamp
+import io.peekandpoke.klang.ui.comp.KlangSearchField
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.routing.Router.Companion.router
 import io.peekandpoke.kraft.routing.urlParam
-import io.peekandpoke.kraft.semanticui.forms.UiInputField
 import io.peekandpoke.kraft.vdom.VDom
-import io.peekandpoke.ultra.common.toggle
 import io.peekandpoke.ultra.html.css
-import io.peekandpoke.ultra.html.onClick
-import io.peekandpoke.ultra.semanticui.icon
-import io.peekandpoke.ultra.semanticui.noui
-import io.peekandpoke.ultra.semanticui.ui
-import kotlinx.css.Color
-import kotlinx.css.Cursor
-import kotlinx.css.Display
-import kotlinx.css.Padding
-import kotlinx.css.Position
-import kotlinx.css.backgroundColor
-import kotlinx.css.borderColor
-import kotlinx.css.color
-import kotlinx.css.cursor
-import kotlinx.css.display
-import kotlinx.css.fontSize
-import kotlinx.css.gap
-import kotlinx.css.marginLeft
-import kotlinx.css.marginTop
-import kotlinx.css.padding
-import kotlinx.css.position
+import io.peekandpoke.ultra.html.key
 import kotlinx.css.px
-import kotlinx.css.rem
-import kotlinx.css.right
-import kotlinx.css.top
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
+import kotlinx.html.h2
+import kotlinx.html.section
 import kotlinx.html.span
 
 @Suppress("FunctionName")
@@ -51,351 +31,351 @@ fun Tag.TutorialsListPage() = comp {
     TutorialsListPage(it)
 }
 
+/**
+ * The Learn overview on the workbench (KLANG-00370, the canvas "Klang Learn on the workbench", board "Learn: the
+ * overview"): the next lesson to continue with, a slim search with the level and the depth as keys, and the tracks as
+ * rows of lesson tiles, each with its lamp. The tracks beside the main path fold to a row of lamps, a key opens one.
+ * The column (The Klang Path's lessons) is the Learn area's own, from the sidebar.
+ */
 class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
-
-    //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
-
-    private val laf by subscribingTo(KlangTheme)
-
-    enum class CompletionFilter { All, Completed, Open }
-
-    enum class ViewMode { Tracks, Lessons }
 
     companion object {
         const val PARAM_DIFFICULTY = "difficulty"
         const val PARAM_DEPTH = "depth"
-        const val PARAM_COMPLETION = "completion"
-        const val PARAM_VIEW = "view"
-
-        fun viewFromParam(param: String?): ViewMode =
-            ViewMode.entries.find { it.name.equals(param, ignoreCase = true) } ?: ViewMode.Tracks
 
         fun difficultyFromParam(param: String?): TutorialDifficulty? =
             TutorialDifficulty.entries.find { it.name.equals(param, ignoreCase = true) }
 
         fun depthFromParam(param: String?): TutorialDepth? =
             TutorialDepth.entries.find { it.name.equals(param, ignoreCase = true) }
-
-        fun completionFromParam(param: String?): CompletionFilter =
-            CompletionFilter.entries.find { it.name.equals(param, ignoreCase = true) } ?: CompletionFilter.All
     }
+
+    //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
+
+    private val done by subscribingTo(TutorialStorage.done)
 
     private var searchText by value("")
 
     private var difficultyParam: String by urlParam(name = PARAM_DIFFICULTY, default = "")
-    private var selectedDifficulty: TutorialDifficulty?
-        get() = difficultyFromParam(difficultyParam)
-        set(value) {
-            difficultyParam = value?.name ?: ""
-        }
 
     private var depthParam: String by urlParam(name = PARAM_DEPTH, default = "")
-    private var selectedDepth: TutorialDepth?
-        get() = depthFromParam(depthParam)
-        set(value) {
-            depthParam = value?.name ?: ""
-        }
 
-    private var completionParam: String by urlParam(name = PARAM_COMPLETION, default = "")
-    private var completionFilter: CompletionFilter
-        get() = completionFromParam(completionParam)
-        set(value) {
-            completionParam = if (value == CompletionFilter.All) "" else value.name
-        }
-
-    private var selectedTags: Set<TutorialTag> by value(emptySet())
-
-    private var viewParam: String by urlParam(name = PARAM_VIEW, default = "")
-    private var viewMode: ViewMode
-        get() = viewFromParam(viewParam)
-        set(value) {
-            viewParam = if (value == ViewMode.Tracks) "" else value.name
-        }
+    /** The tracks shown with their tiles; the others are a row of lamps. The main path at first. */
+    private var unfolded: Set<String> by value(setOf(theKlangPathTrack.slug))
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-    private fun toggleTag(tag: TutorialTag) {
-        selectedTags = selectedTags.toggle(tag)
-    }
+    private fun filtering(): Boolean =
+        searchText.isNotBlank() || difficultyFromParam(difficultyParam) != null || depthFromParam(depthParam) != null
 
-    private fun matches(tutorial: Tutorial): Boolean {
-        val matchesSearch = searchText.isBlank() ||
-                tutorial.title.contains(searchText, ignoreCase = true) ||
-                tutorial.description.contains(searchText, ignoreCase = true) ||
-                tutorial.tags.any { it.label.contains(searchText, ignoreCase = true) }
-
-        val matchesDifficulty = selectedDifficulty == null || tutorial.difficulty == selectedDifficulty
-        val matchesDepth = selectedDepth == null || tutorial.depth == selectedDepth
-        val matchesTags = selectedTags.isEmpty() || selectedTags.all { it in tutorial.tags }
-
-        val matchesCompletion = when (completionFilter) {
-            CompletionFilter.All -> true
-            CompletionFilter.Completed -> TutorialStorage.isCompleted(tutorial.slug)
-            CompletionFilter.Open -> !TutorialStorage.isCompleted(tutorial.slug)
+    /**
+     * Whether a lesson answers the search and the keys. The search reads words, each to be found somewhere: the title,
+     * the description, a topic, the strand, the level and the depth; "done", "open" and "next" find lessons by where
+     * the user stands ("beginner rhythm" finds the beginners' rhythm lessons).
+     */
+    private fun matches(lesson: Tutorial, progress: TutorialProgress): Boolean {
+        val words = searchText.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
+        val state = progress.stateOf(lesson)
+        val stateWord = when (state) {
+            LessonState.Done -> "done"
+            LessonState.Next -> "next open"
+            LessonState.Open, LessonState.Later -> "open"
         }
+        val text = listOf(
+            lesson.title,
+            lesson.description,
+            lesson.strand()?.label.orEmpty(),
+            lesson.difficulty.label,
+            lesson.depth.label,
+            stateWord,
+        ) + lesson.tags.map { it.label }
 
-        return matchesSearch && matchesDifficulty && matchesDepth && matchesTags && matchesCompletion
+        val matchesSearch = words.all { word -> text.any { it.contains(word, ignoreCase = true) } }
+        val difficulty = difficultyFromParam(difficultyParam)
+        val depth = depthFromParam(depthParam)
+
+        return matchesSearch && (difficulty == null || lesson.difficulty == difficulty) && (depth == null || lesson.depth == depth)
     }
-
-    private fun filteredTutorials(): List<Tutorial> = allTutorials.filter { matches(it) }
-
-    private fun anyFilterActive(): Boolean =
-        searchText.isNotBlank() || selectedDifficulty != null || selectedDepth != null ||
-                selectedTags.isNotEmpty() || completionFilter != CompletionFilter.All
 
     override fun VDom.render() {
-        ui.fluid.container {
-            css { padding = Padding(2.rem) }
+        val progress = TutorialProgress(done = done)
 
-            ui.segment {
-                ui.header { +"Tutorials" }
-                ui.sub.header { +"Learn Klang step by step, from first notes to advanced techniques" }
+        div {
+            css {
+                put("display", "flex")
+                put("flex-direction", "column")
+                put("gap", "22px")
+                put("padding", "28px 36px")
+                put("color", "var(--kl-ink-text)")
+            }
 
+            div {
+                css {
+                    put("display", "flex")
+                    put("align-items", "baseline")
+                    put("flex-wrap", "wrap")
+                    put("column-gap", "16px")
+                }
+
+                learnLabel("Learn")
+                span {
+                    css {
+                        put("font-size", "14px")
+                        put("color", "var(--kl-ink-label)")
+                    }
+
+                    +"Step by step, from your first beat to sound design: each lesson a page of short examples you play and change."
+                }
+            }
+
+            progress.next?.takeIf { !filtering() }?.let { next -> renderContinue(next) }
+
+            renderFilters()
+
+            var shown = 0
+
+            for (track in allTracks) {
+                val lessons = track.lessons.filter { matches(it, progress) }
+
+                if (lessons.isEmpty()) {
+                    continue
+                }
+
+                shown++
+                renderTrack(track = track, lessons = lessons, progress = progress)
+            }
+
+            if (shown == 0) {
                 div {
-                    css { marginTop = 1.rem }
-                    ViewMode.entries.forEach { mode ->
-                        val isSelected = viewMode == mode
-                        ui.mini.givenNot(isSelected) { basic }
-                            .given(isSelected) { with(laf.styles.goldButton()) }.button {
-                                onClick { viewMode = mode }
-                                if (mode == ViewMode.Tracks) icon.map_signs() else icon.th_list()
-                                +mode.name
-                            }
-                    }
-                }
-            }
+                    css { put("color", "var(--kl-ink-label)") }
 
-            // Search and filters
-            ui.segment {
-                ui.form {
-                    UiInputField(value = searchText, onChange = { searchText = it }) {
-                        placeholder("Search tutorials...")
-                        rightClearingIcon()
-                        leftLabel {
-                            ui.grey.label { icon.search(); +"Search" }
-                        }
-                    }
-                }
-
-                ui.divider()
-
-                ui.stackable.grid {
-                    ui.three.column.row {
-                        // Difficulty filter
-                        noui.column {
-                            ui.mini.givenNot(selectedDifficulty == null) { basic }
-                                .given(selectedDifficulty == null) { with(laf.styles.goldButton()) }.button {
-                                    onClick { selectedDifficulty = null }
-                                    icon.circle()
-                                    +"All Levels"
-                                }
-
-                            TutorialDifficulty.entries.forEach { diff ->
-                                val isSelected = selectedDifficulty == diff
-                                ui.mini.givenNot(isSelected) { basic }
-                                    .given(isSelected) { with(laf.styles.goldButton()) }.button {
-                                        onClick { selectedDifficulty = if (isSelected) null else diff }
-                                        diff.renderIcon(this)
-                                        +diff.label
-                                    }
-                            }
-                        }
-
-                        // Depth filter
-                        noui.column {
-                            ui.mini.givenNot(selectedDepth == null) { basic }
-                                .given(selectedDepth == null) { with(laf.styles.goldButton()) }
-                                .button {
-                                    onClick { selectedDepth = null }
-                                    icon.circle()
-                                    +"All Depths"
-                                }
-
-                            TutorialDepth.entries.forEach { depth ->
-                                val isSelected = selectedDepth == depth
-                                ui.mini.givenNot(isSelected) { basic }
-                                    .given(isSelected) { with(laf.styles.goldButton()) }.button {
-                                        onClick { selectedDepth = if (isSelected) null else depth }
-                                        depth.renderIcon(this)
-                                        +depth.label
-                                    }
-                            }
-                        }
-
-                        // Completion Filter
-                        noui.column {
-                            CompletionFilter.entries.forEach { filter ->
-                                val isSelected = completionFilter == filter
-                                ui.mini.givenNot(isSelected) { basic }.given(isSelected) { with(laf.styles.goldButton()) }.button {
-                                    onClick { completionFilter = filter }
-                                    filter.renderIcon(this)
-                                    +filter.name
-                                }
-                            }
-                        }
-                    }
-                }
-
-                ui.divider()
-
-                // Tag filter — selected tags + add button
-                div {
-                    // Show unselected tags as basic buttons
-                    TutorialTag.entries.forEach { tag ->
-                        ui.mini.basic.given(tag in selectedTags) { with(laf.styles.goldButton()) }.button {
-                            onClick { toggleTag(tag) }
-                            +tag.label
-                        }
-                    }
-                }
-            }
-
-            if (viewMode == ViewMode.Tracks) {
-                renderTracksView()
-                return@container
-            }
-
-            // Tutorial cards
-            val tutorials = filteredTutorials()
-
-            if (tutorials.isEmpty()) {
-                ui.placeholder.segment {
-                    ui.icon.header {
-                        icon.search()
-                        if (allTutorials.isEmpty()) {
-                            +"No tutorials yet"
-                        } else {
-                            +"No tutorials match your filters"
-                        }
-                    }
-                }
-            } else {
-                ui.three.stackable.cards {
-                    tutorials.forEach { tutorial ->
-                        val isCompleted = TutorialStorage.isCompleted(tutorial.slug)
-
-                        ui.card {
-                            onClick { router.navToUri(Nav.tutorial(tutorial.slug)) }
-                            css {
-                                cursor = Cursor.pointer
-                                backgroundColor = Color(laf.cardBackground)
-                                position = Position.relative
-                            }
-
-                            // Completed checkmark in top-right
-                            if (isCompleted) {
-                                span {
-                                    css {
-                                        position = Position.absolute
-                                        top = 8.px
-                                        right = 8.px
-                                        color = Color(laf.good)
-                                        fontSize = 1.2.rem
-                                    }
-                                    icon.large.check_circle()
-                                }
-                            }
-
-                            noui.content {
-                                ui.small.header {
-                                    css { color = Color(laf.textPrimary) }
-                                    +tutorial.title
-                                }
-                                noui.meta {
-                                    css {
-                                        display = Display.flex
-                                        gap = 0.25.rem
-                                        marginTop = 0.25.rem
-                                    }
-                                    difficultyLabel(laf, tutorial.difficulty)
-                                    depthLabel(laf, tutorial.depth)
-                                }
-                                noui.description {
-                                    css {
-                                        marginTop = 0.5.rem
-                                        color = Color(laf.textSecondary)
-                                    }
-                                    +tutorial.description
-                                }
-                            }
-                            noui.extra.content {
-                                css { borderColor = Color(laf.textTertiary) }
-                                tutorial.tags.forEach { tag ->
-                                    ui.mini.basic.label { +tag.label }
-                                }
-                            }
-                        }
-                    }
+                    +"No lesson matches. Try fewer words, or another level or depth."
                 }
             }
         }
     }
 
-    private fun FlowContent.renderTracksView() {
-        val filtering = anyFilterActive()
-        val visible = allTracks.mapNotNull { track ->
-            val matching = track.lessons.filter { matches(it) }
-            if (matching.isEmpty()) null else track to matching
-        }
+    /** The next lesson on the main path, large: one press opens it. */
+    private fun FlowContent.renderContinue(next: Tutorial) {
+        val number = theKlangPathTrack.lessons.indexOf(next) + 1
 
-        if (visible.isEmpty()) {
-            ui.placeholder.segment {
-                ui.icon.header {
-                    icon.search()
-                    +"No lessons match your filters"
+        div {
+            css { put("display", "flex") }
+
+            KlangButton(
+                onClick = { router.navToUri(Nav.tutorialInTrack(slug = next.slug, trackSlug = theKlangPathTrack.slug)) },
+                shape = KlangButton.Shape.Tile,
+                lamp = KlangLamp.State.Try,
+            ) {
+                attributes["data-continue"] = next.slug
+                css {
+                    put("flex", "1")
+                    put("padding", "14px 18px 14px 30px")
+                    put("text-align", "left")
+                }
+
+                span {
+                    css {
+                        put("display", "block")
+                        put("font-size", "11px")
+                        put("letter-spacing", "0.14em")
+                        put("font-weight", "400")
+                        put("color", "var(--kl-ink-label)")
+                    }
+
+                    +"CONTINUE THE KLANG PATH"
+                }
+
+                span {
+                    css {
+                        put("display", "block")
+                        put("font-size", "20px")
+                        put("color", "var(--kl-ink-strong)")
+                    }
+
+                    +"$number. ${next.title}"
+                }
+
+                span {
+                    css {
+                        put("display", "block")
+                        put("font-size", "13px")
+                        put("font-weight", "400")
+                    }
+
+                    +listOfNotNull(next.strand()?.label, next.difficulty.label, next.depth.label.lowercase())
+                        .joinToString(", ")
+                    +": ${next.description}"
                 }
             }
-            return
         }
+    }
 
-        visible.forEach { (track, matching) ->
-            val completed = track.lessons.count { TutorialStorage.isCompleted(it.slug) }
+    /** The search, then the level's and the depth's keys; a pressed key presses off. */
+    private fun FlowContent.renderFilters() {
+        div {
+            css {
+                put("display", "flex")
+                put("flex-wrap", "wrap")
+                put("align-items", "center")
+                put("gap", "14px")
+            }
 
-            ui.segment {
-                ui.medium.header {
-                    css { cursor = Cursor.pointer }
-                    onClick { router.navToUri(Nav.tutorialTrack(track.slug)) }
-                    icon.map_signs()
-                    +track.title
-                    ui.mini.basic.label {
-                        css { marginLeft = 0.75.rem }
-                        icon.check_circle()
-                        +"$completed of ${track.lessons.size} completed"
-                    }
+            div {
+                css { put("width", "320px") }
+
+                KlangSearchField(
+                    label = "Search the lessons",
+                    value = searchText,
+                    onInput = { searchText = it },
+                    placeholder = "Search lessons, topics, done, open",
+                )
+            }
+
+            renderKeys(
+                label = "Level",
+                all = "All levels",
+                keys = TutorialDifficulty.entries.map { it.name to it.label },
+                selected = difficultyFromParam(difficultyParam)?.name,
+                onSelect = { difficultyParam = it.orEmpty() },
+            )
+
+            renderKeys(
+                label = "Depth",
+                all = "Any depth",
+                keys = TutorialDepth.entries.map { it.name to it.label },
+                selected = depthFromParam(depthParam)?.name,
+                onSelect = { depthParam = it.orEmpty() },
+            )
+        }
+    }
+
+    private fun FlowContent.renderKeys(
+        label: String,
+        all: String,
+        keys: List<Pair<String, String>>,
+        selected: String?,
+        onSelect: (String?) -> Unit,
+    ) {
+        div {
+            attributes["role"] = "group"
+            attributes["aria-label"] = label
+            css {
+                put("display", "flex")
+                put("flex-wrap", "wrap")
+                put("gap", "4px")
+            }
+
+            KlangButton(onClick = { onSelect(null) }, pressed = selected == null) { +all }
+
+            for ((name, text) in keys) {
+                KlangButton(onClick = { onSelect(if (selected == name) null else name) }, pressed = selected == name) {
+                    +text
                 }
+            }
+        }
+    }
+
+    /** A track: its title, how far, what it is; its tiles, or folded, a lamp per lesson. */
+    private fun FlowContent.renderTrack(track: TutorialTrackDef, lessons: List<Tutorial>, progress: TutorialProgress) {
+        val folded = track.slug !in unfolded && !filtering()
+
+        section {
+            key = "track-${track.slug}"
+            attributes["data-track"] = track.slug
+            css {
+                put("display", "flex")
+                put("flex-direction", "column")
+                put("gap", "10px")
+            }
+
+            div {
+                css {
+                    put("display", "flex")
+                    put("align-items", "baseline")
+                    put("flex-wrap", "wrap")
+                    put("column-gap", "12px")
+                }
+
+                h2 {
+                    css {
+                        put("margin", "0")
+                        put("font-size", "18px")
+                        put("color", "var(--kl-ink-strong)")
+                    }
+
+                    appLink(router, Nav.tutorialTrack(track.slug)) { +track.title }
+                }
+
                 span {
-                    css { color = Color(laf.textSecondary) }
+                    css {
+                        put("font-size", "12px")
+                        put("color", "var(--kl-ink-label)")
+                    }
+
+                    +"${progress.doneIn(track)} of ${track.lessons.size} done"
+                }
+
+                span {
+                    css {
+                        put("font-size", "13px")
+                        put("color", "var(--kl-ink-label)")
+                    }
+
                     +track.description
                 }
+            }
 
-                if (filtering && matching.size < track.lessons.size) {
-                    div {
-                        css { marginTop = 0.75.rem }
+            if (folded) {
+                renderFolded(track = track, progress = progress)
+            } else {
+                renderTiles(track = track, lessons = lessons, progress = progress)
+            }
+        }
+    }
 
-                        ui.mini.basic.label {
-                            icon.search()
-                            +"${matching.size} of ${track.lessons.size} match"
-                        }
-                    }
-                }
+    /** A folded track: a lamp per lesson, and the key that opens it. */
+    private fun FlowContent.renderFolded(track: TutorialTrackDef, progress: TutorialProgress) {
+        div {
+            css {
+                put("display", "flex")
+                put("align-items", "center")
+                put("gap", "6px")
+            }
 
+            for (lesson in track.lessons) {
+                KlangLamp(state = progress.stateOf(lesson).lamp(), size = 10.px)
+            }
+
+            div { css { put("width", "10px") } }
+
+            KlangButton(onClick = { unfolded = unfolded + track.slug }) {
+                attributes["aria-expanded"] = "false"
+                +"Show its ${track.lessons.size} lessons"
+            }
+        }
+    }
+
+    private fun FlowContent.renderTiles(track: TutorialTrackDef, lessons: List<Tutorial>, progress: TutorialProgress) {
+        div {
+            css {
+                put("display", "grid")
+                put("grid-template-columns", "repeat(auto-fill, minmax(190px, 1fr))")
+                put("gap", "8px")
+            }
+
+            for (lesson in lessons) {
                 div {
-                    css {
-                        marginTop = 0.75.rem
-                        display = Display.flex
-                        gap = 0.25.rem
-                    }
+                    key = "lesson-${lesson.slug}"
+                    css { put("display", "flex") }
 
-                    matching.forEach { lesson ->
-                        val number = track.lessons.indexOf(lesson) + 1
-                        val isCompleted = TutorialStorage.isCompleted(lesson.slug)
-
-                        ui.mini.basic.button {
-                            onClick { router.navToUri(Nav.tutorialInTrack(lesson.slug, track.slug)) }
-                            if (isCompleted) icon.check_circle()
-                            +"$number. ${lesson.title}"
-                        }
-                    }
+                    lessonTile(
+                        router = router,
+                        lesson = lesson,
+                        number = track.lessons.indexOf(lesson) + 1,
+                        state = progress.stateOf(lesson),
+                        track = track,
+                    )
                 }
             }
         }

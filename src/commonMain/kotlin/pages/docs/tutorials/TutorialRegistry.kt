@@ -26,33 +26,49 @@ val firstStepsTrack = TutorialTrackDef(
     ),
 )
 
-/** The braided main path — the full curriculum ladder in teaching order. */
+/** The main path's stages, in teaching order: the curriculum ladder (KLANG-00145), its stages data (KLANG-00370). */
+private val theKlangPathStages = listOf(
+    TutorialStage(
+        title = "The onramp",
+        lessons = listOf(
+            yourFirstBeatTutorial, // B1
+            spaceAndRestsTutorial, // B2
+            firstNotesTutorial, // B3
+        ),
+    ),
+    TutorialStage(
+        title = "Core sound and core notation",
+        lessons = listOf(
+            theFourWaveformsTutorial, // A1
+            shapeOfANoteTutorial, // A2
+            subdivisionTutorial, // B4
+            alternationAndRepetitionTutorial, // B5
+            filtersTutorial, // A3
+            theFilterEnvelopeTutorial, // A4
+            layersTutorial, // B6
+            chordsInOneStepTutorial, // B7
+        ),
+    ),
+    TutorialStage(
+        title = "Where the tracks meet",
+        lessons = listOf(
+            signalsMoveTheKnobsTutorial, // A5
+            scalesAndMelodiesTutorial, // B8
+            theTransformToolkitTutorial, // B9
+            gatesTutorial, // B10
+            thicknessTutorial, // A6
+            spaceAndDirtTutorial, // A7
+        ),
+    ),
+)
+
+/** The braided main path: the full curriculum ladder in teaching order, its lessons those of its stages. */
 val theKlangPathTrack = TutorialTrackDef(
     slug = "the-klang-path",
     title = "The Klang Path",
     description = "The main road: sound design and pattern language taught side by side, one idea at a time.",
-    lessons = listOf(
-        // Stage 1 — Onramp (carrier kit)
-        yourFirstBeatTutorial, // B1
-        spaceAndRestsTutorial, // B2
-        firstNotesTutorial, // B3
-        // Stage 2 — Core sound + core notation
-        theFourWaveformsTutorial, // A1
-        shapeOfANoteTutorial, // A2
-        subdivisionTutorial, // B4
-        alternationAndRepetitionTutorial, // B5
-        filtersTutorial, // A3
-        theFilterEnvelopeTutorial, // A4
-        layersTutorial, // B6
-        chordsInOneStepTutorial, // B7
-        // Stage 3 — Where the tracks meet
-        signalsMoveTheKnobsTutorial, // A5
-        scalesAndMelodiesTutorial, // B8
-        theTransformToolkitTutorial, // B9
-        gatesTutorial, // B10
-        thicknessTutorial, // A6
-        spaceAndDirtTutorial, // A7
-    ),
+    lessons = theKlangPathStages.flatMap { it.lessons },
+    stages = theKlangPathStages,
 )
 
 /** The Sound-track lessons as one curated sequence. */
