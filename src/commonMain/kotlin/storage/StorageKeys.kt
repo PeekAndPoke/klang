@@ -47,6 +47,13 @@ object StorageKeys {
     /** Until when the Gui-dance's walkthroughs are muted, milliseconds since the epoch; 0 for not muted (KLANG-00350). */
     const val GUI_DANCE_MUTED_UNTIL = "klang-gui-dance-muted-until"
 
+    /**
+     * The seed the user's metal grows from: the buttons' grain, the brushed metal, the start page's sheet; made once, on
+     * the first visit, so each user has a sheet of their own and keeps it (the maintainer, 2026-10-28: "every user
+     * should get a ui-seed in the storage").
+     */
+    const val SEED_METAL = "klang-seed-metal"
+
     /** The workbench's layout: its pinned tool windows and the bottom panel, as JSON (KLANG-00349). */
     const val WORKBENCH_LAYOUT = "klang-workbench-layout"
 
@@ -67,4 +74,73 @@ object StorageKeys {
     fun tutorialCompleted(slug: String): String = "klang-tutorial-completed-$slug"
 
     private fun songKey(version: String, songId: String, part: String): String = "song-$version-$songId-$part"
+
+    /**
+     * A part of what the browser keeps, as the Dev Tools' storage page shows it and resets it (the maintainer,
+     * 2026-10-28: "reset everything in the local storage or individual settings"): its [name], what it holds
+     * ([about]), and which keys are its own ([covers]). [precious] parts hold the user's own work: resetting them asks
+     * first.
+     */
+    class Part(
+        val name: String,
+        val about: String,
+        val precious: Boolean = false,
+        /** The section the storage page shows it in. */
+        val section: String = SETTINGS,
+        val covers: (key: String) -> Boolean,
+    )
+
+    /** The storage page's sections. */
+    const val SETTINGS = "Settings"
+    const val SEEDS = "Random seeds"
+
+    private fun exactly(vararg keys: String): (String) -> Boolean = { it in keys }
+
+    /** Every part, one per kept setting; a new key gets a part here, or the storage page lists it as unknown. */
+    val parts: List<Part> = listOf(
+        Part(name = "Songs", about = "Your songs: their code, titles, tempos and bookmarks", precious = true) {
+            it.startsWith("song-")
+        },
+        Part(
+            name = "Your own looks",
+            about = "The looks you made and the eight equipped",
+            precious = true,
+            covers = exactly(LOOKS),
+        ),
+        Part(name = "The look worn", about = "The look you chose last", covers = exactly(LOOK)),
+        Part(name = "Master volume", about = "The Motor's output level", covers = exactly(MASTER_VOLUME)),
+        Part(name = "Keys", about = "The keys you gave Klang's actions", precious = true, covers = exactly(KEYMAP)),
+        Part(
+            name = "Editor",
+            about = "Highlights per sound event, quick help on hover",
+            covers = exactly(EDITOR_HIGHLIGHTS_PER_EVENT, EDITOR_HOVER_HELP),
+        ),
+        Part(
+            name = "Walkthroughs",
+            about = "The walkthroughs done and their mute",
+            covers = exactly(GUI_DANCE_ARCS_DONE, GUI_DANCE_MUTED_UNTIL),
+        ),
+        Part(
+            name = "Workbench",
+            about = "Pinned tool windows and the bottom panel",
+            covers = exactly(WORKBENCH_LAYOUT),
+        ),
+        Part(name = "Lessons done", about = "The tutorials you finished") {
+            it.startsWith("klang-tutorial-completed-")
+        },
+        Part(
+            name = "MIDI instruments",
+            about = "The Midi Playground's instruments and its draft",
+            precious = true,
+            covers = exactly(MIDI_INSTRUMENTS, MIDI_INSTRUMENT_DRAFT),
+        ),
+        // The random seeds (the maintainer, 2026-10-28: "Make a random seeds "section" in the storage and the first
+        // entry will be the seed for grain noise and the metal brushes"); reset, one is made anew on the next load
+        Part(
+            name = "Metal",
+            about = "The buttons' grain, the brushed metal and the start page's sheet grow from it",
+            section = SEEDS,
+            covers = exactly(SEED_METAL),
+        ),
+    )
 }

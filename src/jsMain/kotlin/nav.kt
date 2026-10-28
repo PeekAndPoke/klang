@@ -12,6 +12,7 @@ import io.peekandpoke.klang.pages.CodeSongPage
 import io.peekandpoke.klang.pages.CreditsPage
 import io.peekandpoke.klang.pages.DashboardPage
 import io.peekandpoke.klang.pages.DevStatusPage
+import io.peekandpoke.klang.pages.DevStoragePage
 import io.peekandpoke.klang.pages.LooksPage
 import io.peekandpoke.klang.pages.MidiPlaygroundPage
 import io.peekandpoke.klang.pages.NotFoundPage
@@ -78,7 +79,14 @@ object Nav {
 
     val credits = Static("/credits")
 
-    val devStatus = Static("/dev-status")
+    /** The Dev Tools, all under one base (the maintainer, 2026-10-28: "/dev-tools" and "/dev-tools/<SLUG>"). */
+    const val devToolsBase = "/dev-tools"
+
+    /** The Dev Tools' landing: where Klang stands. */
+    val devStatus = Static(devToolsBase)
+
+    /** What this browser keeps for Klang, to reset all of it or a part. */
+    val devStorage = Static("$devToolsBase/storage")
 
     val tour = Static("/tour")
 
@@ -89,7 +97,7 @@ object Nav {
     val looksSlot = Route1("/looks/slot/{slot}")
 
     /** Every UI element in every state (KLANG-00337). */
-    val uiKitchenSink = Static("/debug/ui-kitchen-sink")
+    val uiKitchenSink = Static("$devToolsBase/ui-kitchen-sink")
 }
 
 fun RootRouterBuilder.mountNav() {
@@ -101,7 +109,6 @@ fun RootRouterBuilder.mountNav() {
 
     layout({ FullscreenLayout { it() } }) {
         mount(Nav.tour) { TourPage() }
-        mount(Nav.uiKitchenSink) { UiKitchenSinkPage() }
     }
 
     layout({ WorkbenchLayout { it() } }) {
@@ -135,6 +142,8 @@ fun RootRouterBuilder.mountNav() {
         mount(Nav.looksSlot) { LooksPage(slot = it["slot"].toIntOrNull()) }
 
         mount(Nav.devStatus) { DevStatusPage() }
+        mount(Nav.devStorage) { DevStoragePage() }
+        mount(Nav.uiKitchenSink) { UiKitchenSinkPage() }
     }
 
     layout({ FullscreenLayout { it() } }) {

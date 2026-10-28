@@ -5,11 +5,10 @@
 
 package io.peekandpoke.klang.layouts
 
-import io.peekandpoke.klang.BuiltInSongs
-import io.peekandpoke.klang.Nav
+import io.peekandpoke.klang.comp.appLink
 import io.peekandpoke.klang.pages.docs.tutorials.LearnTracksColumn
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
-import io.peekandpoke.klang.ui.feel.KlangTheme
+import io.peekandpoke.klang.ui.comp.KlangLamp
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
 import io.peekandpoke.kraft.components.comp
@@ -17,42 +16,12 @@ import io.peekandpoke.kraft.routing.Router.Companion.router
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
-import io.peekandpoke.ultra.html.onClick
-import io.peekandpoke.ultra.semanticui.SemanticIconFn
 import io.peekandpoke.ultra.semanticui.icon
-import io.peekandpoke.ultra.semanticui.noui
-import io.peekandpoke.ultra.semanticui.ui
-import kotlinx.css.Border
-import kotlinx.css.Color
-import kotlinx.css.Cursor
-import kotlinx.css.Display
-import kotlinx.css.FlexDirection
-import kotlinx.css.Overflow
-import kotlinx.css.Padding
-import kotlinx.css.backgroundColor
-import kotlinx.css.border
-import kotlinx.css.borderBottomLeftRadius
-import kotlinx.css.borderBottomRightRadius
-import kotlinx.css.borderRadius
-import kotlinx.css.borderTopLeftRadius
-import kotlinx.css.borderTopRightRadius
-import kotlinx.css.color
-import kotlinx.css.cursor
-import kotlinx.css.display
-import kotlinx.css.flexDirection
-import kotlinx.css.flexGrow
-import kotlinx.css.height
-import kotlinx.css.minHeight
-import kotlinx.css.overflowY
-import kotlinx.css.padding
-import kotlinx.css.paddingLeft
-import kotlinx.css.paddingTop
-import kotlinx.css.pct
 import kotlinx.css.px
-import kotlinx.html.DIV
+import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
-import org.w3c.dom.pointerevents.PointerEvent
+import kotlinx.html.span
 
 @Suppress("FunctionName")
 fun Tag.SidebarMenu() = comp {
@@ -60,87 +29,15 @@ fun Tag.SidebarMenu() = comp {
 }
 
 /**
- * The workbench's column (KLANG-00341): the current area's list (the songs, the Learn search and tracks, the doc sections)
- * under the area's name. Areas change through the Motor's drawer (`WorkbenchLayout`).
+ * The workbench's column for a page without a column of its own (KLANG-00341): Learn's search and tracks on Learn's
+ * pages, which they drive (KLANG-00370); on every other page the map of the app ([AppMap]), one standard column, its
+ * groups under silkscreen headings (the maintainer, 2026-10-28: the columns before were "inconsistent and do nothing").
  */
 class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
-    private val laf by subscribingTo(KlangTheme)
     private val currentRoute by subscribingTo(router.current)
-
-    /** The area the route belongs to; the drawer changes areas, so the column keeps no state of its own. */
-    private val area: AppArea get() = AppArea.of(currentRoute.route)
-
-    //  MENU ITEM HELPER  /////////////////////////////////////////////////////////////////////////////////////
-
-    /**
-     * Renders a single menu item with consistent styling.
-     * Selected items get accent-blue background with black icon and text.
-     */
-    private fun DIV.menuItem(
-        isSelected: Boolean,
-        label: String,
-        iconFn: SemanticIconFn? = null,
-        onClick: (PointerEvent) -> Unit,
-    ) {
-        noui.item {
-            css {
-                border = Border.none
-                borderTopLeftRadius = 4.px
-                borderBottomLeftRadius = 4.px
-                borderTopRightRadius = 0.px
-                borderBottomRightRadius = 0.px
-                padding = Padding(10.px, 20.px)
-                cursor = Cursor.pointer
-
-                if (isSelected) {
-                    backgroundColor = Color(laf.accentMuted)
-                    color = Color.black
-                } else {
-                    // Transparent so the column's ground shows through
-                    backgroundColor = Color.transparent
-                    color = Color.white
-                    borderRadius = 0.px
-                }
-            }
-            this.onClick { evt ->
-                evt.stopPropagation()
-                onClick(evt)
-            }
-
-            if (iconFn != null) {
-                icon.iconFn().then {
-                    if (isSelected) {
-                        css { put("color", "black !important") }
-                    }
-                }
-            }
-
-            noui.content {
-                css {
-                    color = if (isSelected) Color.black else Color.white
-                }
-                +label
-            }
-        }
-    }
-
-    private fun DIV.menuItemsList(block: DIV.() -> Unit) {
-        ui.vertical.relaxed.list {
-            key = "menu-list"
-            css {
-                // Under the area's heading
-                paddingTop = 8.px
-                paddingLeft = 16.px
-                flexGrow = 1.0
-                overflowY = Overflow.auto
-                minHeight = 0.px
-            }
-            block()
-        }
-    }
 
     //  RENDER  ////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -148,113 +45,103 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
         div {
             key = "sidebar-menu"
             css {
-                color = Color.white
-                height = 100.pct
-                display = Display.flex
-                flexDirection = FlexDirection.column
+                put("color", "var(--kl-ink-text)")
+                put("height", "100%")
+                put("display", "flex")
+                put("flex-direction", "column")
             }
 
-            div(classes = KlangControlStyles.heading.toString()) {
-                key = "area-heading"
+            if (AppArea.of(currentRoute.route) == AppArea.Learn) {
+                heading(text = AppArea.Learn.label, top = true)
+
+                div {
+                    key = "learn-column"
+                    css {
+                        put("min-height", "0")
+                        put("flex-grow", "1")
+                    }
+
+                    LearnTracksColumn()
+                }
+            } else {
+                renderMap()
+            }
+        }
+    }
+
+    private fun FlowContent.renderMap() {
+        div {
+            key = "app-map"
+            css {
+                put("min-height", "0")
+                put("flex-grow", "1")
+                put("overflow-y", "auto")
+                put("padding-bottom", "18px")
+            }
+
+            AppMap.groups.forEachIndexed { index, group ->
+                heading(text = group.title, top = index == 0)
+
+                div {
+                    css {
+                        put("display", "flex")
+                        put("flex-direction", "column")
+                        put("padding", "4px 0 0 16px")
+                    }
+
+                    for (page in group.pages) {
+                        entry(page = page, current = page.isCurrent(currentRoute))
+                    }
+                }
+            }
+        }
+    }
+
+    /** A group's heading, a size above the labels under it (the maintainer, 2026-10-27). */
+    private fun FlowContent.heading(text: String, top: Boolean) {
+        div(classes = KlangControlStyles.heading.toString()) {
+            key = "heading-$text"
+            css {
+                put("padding", if (top) "18px 20px 0" else "16px 20px 0")
+                put("font-size", "13px")
+            }
+            +text
+        }
+    }
+
+    /**
+     * One page: a lamp, its icon, its label. The page shown has its lamp on and its label in the strong ink, as the
+     * drawer and the toggles mark what is on (the maintainer, 2026-10-28: "with the lamps and the selected page has the
+     * lamp on"); under the mouse the label brightens ([appLink]). A link, so it opens in a new tab too.
+     */
+    private fun FlowContent.entry(page: AppMap.Page, current: Boolean) {
+        // The ink on a wrapper: the app link inherits it (a link's own colour loses to the app's link rule)
+        div {
+            key = "page-${page.label}"
+            css { put("color", if (current) "var(--kl-ink-strong)" else "var(--kl-ink-text)") }
+
+            appLink(router, page.target) {
+                if (current) {
+                    attributes["aria-current"] = "page"
+                }
+
                 css {
-                    padding = Padding(18.px, 20.px, 0.px, 20.px)
-                    // The column's headline, a size above the labels under it (the maintainer, 2026-10-27)
-                    put("font-size", "13px")
-                }
-                // The smaller areas share one list, so it is named for all of them
-                +when (area) {
-                    AppArea.Midi, AppArea.Resources, AppArea.Credits, AppArea.DevStatus, AppArea.Other -> AppArea.Other.label
-                    AppArea.Songs, AppArea.Learn, AppArea.Docs, AppArea.Samples -> area.label
-                }
-            }
-
-            div {
-                key = "menu-container-$area"
-                css {
-                    display = Display.flex
-                    flexDirection = FlexDirection.column
-                    minHeight = 0.px
-                    flexGrow = 1.0
+                    put("display", "flex")
+                    put("align-items", "center")
+                    put("gap", "10px")
+                    put("padding", "6px 16px 6px 4px")
                 }
 
-                when (area) {
-                    AppArea.Songs -> renderSongsMenu()
-                    AppArea.Samples -> renderSamplesMenu()
-                    // The search and the tracks; a tutorial puts its own column (KLANG-00370)
-                    AppArea.Learn -> LearnTracksColumn()
-                    AppArea.Docs -> renderDocsMenu()
-                    AppArea.Midi, AppArea.Resources, AppArea.Credits, AppArea.DevStatus, AppArea.Other -> renderDefaultMenu()
+                KlangLamp(state = if (current) KlangLamp.State.On else KlangLamp.State.Off, size = 7.px)
+
+                icon.(page.icon)().then {
+                    css {
+                        put("margin", "0")
+                        put("color", if (current) "var(--kl-ink-strong)" else "var(--kl-ink-label)")
+                    }
                 }
-            }
-        }
-    }
 
-    private fun DIV.renderDefaultMenu() {
-        menuItemsList {
-            menuItem(false, "Samples Library", { wave_square }) {
-                router.navToUri(Nav.samplesLibrary())
-            }
-            menuItem(area == AppArea.Midi, "Midi Playground", { keyboard }) {
-                router.navToUri(Nav.midiPlayground())
-            }
-            menuItem(area == AppArea.Resources, "Resources", { bookmark }) {
-                router.navToUri(Nav.resources())
-            }
-            menuItem(area == AppArea.Credits, "Credits", { bullhorn }) {
-                router.navToUri(Nav.credits())
-            }
-            menuItem(area == AppArea.DevStatus, "Dev status", { satellite_dish }) {
-                router.navToUri(Nav.devStatus())
-            }
-            // The page has a full-screen layout of its own, so it never shows as selected here
-            menuItem(false, "UI kitchen sink", { palette }) {
-                router.navToUri(Nav.uiKitchenSink())
-            }
-        }
-    }
-
-    private fun DIV.renderSongsMenu() {
-        val isNewSong = currentRoute.route == Nav.newSongCode
-        val isEditSong = currentRoute.route == Nav.editSongCode
-        val songId = currentRoute.matchedRoute["id"]
-
-        menuItemsList {
-            menuItem(isNewSong, "New Song", { plus }) {
-                router.navToUri(Nav.newSongCode())
-            }
-
-            BuiltInSongs.songs.forEach { song ->
-                val isSelected = isEditSong && song.id == songId
-                menuItem(isSelected, song.title, {
-                    if (song.icon != null) with(song.icon) else music
-                }) {
-                    router.navToUri(Nav.editSongCode(song.id))
-                }
-            }
-        }
-    }
-
-    private fun DIV.renderSamplesMenu() {
-        menuItemsList {
-            menuItem(currentRoute.route == Nav.samplesLibrary, "Explore", { music }) {
-                router.navToUri(Nav.samplesLibrary())
-            }
-        }
-    }
-
-    private fun DIV.renderDocsMenu() {
-        menuItemsList {
-            menuItem(currentRoute.route == Nav.manualsLexikon, "Lexikon", { book }) {
-                router.navToUri(Nav.manualsLexikon())
-            }
-            menuItem(currentRoute.route == Nav.manualsLibrary && currentRoute.matchedRoute["library"] == "sprudel", "Sprudel", { wind }) {
-                router.navToUri(Nav.manualsLibrary("sprudel"))
-            }
-            menuItem(currentRoute.route == Nav.manualsLibrary && currentRoute.matchedRoute["library"] == "stdlib", "Stdlib", { cogs }) {
-                router.navToUri(Nav.manualsLibrary("stdlib"))
-            }
-            menuItem(currentRoute.route == Nav.manualsKlangScript, "KlangScript", { code }) {
-                router.navToUri(Nav.manualsKlangScript())
+                span { +page.label }
             }
         }
     }

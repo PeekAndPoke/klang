@@ -22,6 +22,12 @@ class AppAreaSpec : StringSpec({
         AppArea.of(Static("${Nav.manualsBase}/some-page")) shouldBe AppArea.Docs
     }
 
+    "the Dev Tools' base and every route under it are the Dev Tools; a name that only starts the same is not" {
+        AppArea.of(Static(Nav.devToolsBase)) shouldBe AppArea.DevTools
+        AppArea.of(Static("${Nav.devToolsBase}/some-tool")) shouldBe AppArea.DevTools
+        AppArea.of(Static("${Nav.devToolsBase}-else")) shouldBe AppArea.Other
+    }
+
     "a route of no area is Other" {
         AppArea.of(Static("/no-such-page")) shouldBe AppArea.Other
     }

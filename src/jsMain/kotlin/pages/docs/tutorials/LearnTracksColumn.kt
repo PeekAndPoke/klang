@@ -112,6 +112,18 @@ class LearnTracksColumn(ctx: NoProps) : PureComponent(ctx) {
                     }
                 }
             }
+
+            // The learning resources, links and reading, are Learn's (the maintainer, 2026-10-28)
+            learnLabel("More to read")
+
+            div {
+                css { put("font-size", "13px") }
+
+                appLink(router, Nav.resources()) {
+                    attributes["data-resources"] = ""
+                    +"Resources: links and reading"
+                }
+            }
         }
     }
 
@@ -161,7 +173,6 @@ class LearnTracksColumn(ctx: NoProps) : PureComponent(ctx) {
                     label = text,
                     checked = name in chosen,
                     onChange = { on -> choose(param = param, chosen = chosen, name = name, on = on, order = choices.map { it.first }) },
-                    look = KlangCheckbox.Look.Lamp,
                 )
             }
         }

@@ -69,7 +69,7 @@ fun Tag.UiKitchenSinkPage() = comp {
 }
 
 /**
- * Every Klang UI element in every state, on one page (KLANG-00337, `/debug/ui-kitchen-sink`).
+ * Every Klang UI element in every state, on one page (KLANG-00337, `/dev-tools/ui-kitchen-sink`).
  *
  * The sections follow the design canvas (`docs/design/2026-10-25-ui-workbench-canvas/`, board "Kitchen sink") in
  * order and names, so the two side by side show any drift. Once a component is built, this page is its truth and the
@@ -113,8 +113,9 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
         div {
             key = "ui-kitchen-sink"
             css {
+                // In the workbench, the map in its column (the maintainer, 2026-10-28): its content area, not the window
                 put("width", "100%")
-                put("height", "100vh")
+                put("height", "100%")
                 put("overflow", "auto")
                 put("box-sizing", "border-box")
                 put("padding", "40px 48px 80px")

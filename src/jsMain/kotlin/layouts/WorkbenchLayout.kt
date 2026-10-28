@@ -87,7 +87,6 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
         .filter { it != AppArea.Other }
         .map { KlangDrawer.Entry(id = it.name, label = it.label, sub = it.sub) } +
             listOf(
-                KlangDrawer.Entry(id = "community", label = "Community", sub = "With the backend", later = true),
                 KlangDrawer.Entry(id = "account", label = "Account", sub = "With the backend", later = true),
             )
 
@@ -98,9 +97,8 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
         AppArea.Docs -> Nav.manuals
         AppArea.Samples -> Nav.samplesLibrary
         AppArea.Midi -> Nav.midiPlayground
-        AppArea.Resources -> Nav.resources
         AppArea.Credits -> Nav.credits
-        AppArea.DevStatus -> Nav.devStatus
+        AppArea.DevTools -> Nav.devStatus
         AppArea.Other -> null
     }
 

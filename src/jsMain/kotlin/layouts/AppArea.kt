@@ -18,9 +18,10 @@ enum class AppArea(val label: String, val sub: String) {
     Docs(label = "Docs", sub = "Lexikon, Sprudel, Stdlib"),
     Samples(label = "Samples", sub = "The library"),
     Midi(label = "MIDI", sub = "Playground, devices"),
-    Resources(label = "Resources", sub = "Links and reading"),
     Credits(label = "Credits", sub = "Who we build on"),
-    DevStatus(label = "Dev status", sub = "What we are building"),
+
+    /** Where Klang stands, what this browser keeps, every part of the UI (the maintainer, 2026-10-28: "Dev Tools"). */
+    DevTools(label = "Dev Tools", sub = "Status, storage, the parts"),
 
     /** A route of no area (the dashboard): the column shows the list of the smaller areas. */
     Other(label = "More", sub = "");
@@ -30,12 +31,13 @@ enum class AppArea(val label: String, val sub: String) {
         fun of(route: Route): AppArea = when {
             route == Nav.songs || route == Nav.newSongCode || route == Nav.editSongCode -> Songs
             route.pattern.startsWith(Nav.tutorialsBase) -> Learn
+            // Learning resources: Learn's (the maintainer, 2026-10-28)
+            route == Nav.resources -> Learn
             route.pattern.startsWith(Nav.manualsBase) -> Docs
             route == Nav.samplesLibrary -> Samples
             route == Nav.midiPlayground -> Midi
-            route == Nav.resources -> Resources
             route == Nav.credits -> Credits
-            route == Nav.devStatus -> DevStatus
+            route.pattern == Nav.devToolsBase || route.pattern.startsWith("${Nav.devToolsBase}/") -> DevTools
             else -> Other
         }
     }
