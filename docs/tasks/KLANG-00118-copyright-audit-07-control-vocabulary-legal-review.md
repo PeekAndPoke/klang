@@ -89,3 +89,4 @@ filed. Until then this is the primary open legal question for commercialization.
 
 - 2026-10-20: numbered KLANG-00118 (was `docs/tasks/copyright-audit-07-control-vocabulary-legal-review.md`).
 - 2026-10-27: part of KLANG-00364 (Out in the world: legal, sharing, outreach), the epic grouping.
+- 2026-10-28: not in Q4: no lawyer yet (the maintainer, in the Q4 planning).
