@@ -44,6 +44,7 @@ fun Tag.Oscilloscope(
     centerLineColor: Color? = Color.white.withAlpha(0.07),
     centerLineWidth: Double = 1.0,
     pixelSkip: Int = 5,
+    preview: Float32Array? = null,
 ) = comp(
     Oscilloscope.Props(
         player = player,
@@ -52,6 +53,7 @@ fun Tag.Oscilloscope(
         centerLineColor = centerLineColor,
         centerLineWidth = centerLineWidth,
         pixelSkip = pixelSkip,
+        preview = preview,
     )
 ) {
     Oscilloscope(it)
@@ -61,7 +63,9 @@ fun Tag.Oscilloscope(
  * The oscilloscope: the newest frame of the player's waveform as a trace over a faint centre line, with a soft shadow
  * under it. The trace eases off towards both ends, as a string held at its ends, and each frame fades the last one
  * out, a short afterglow.
- * Without a player it draws the idle line.
+ * Without a player it draws the idle line. With [Props.preview] it draws that frame and nothing else, a still picture
+ * of itself (the look editor's card, KLANG-00382; the maintainer, 2026-10-28: "these component implement a preview
+ * mode, when they get static data").
  */
 class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
 
@@ -75,6 +79,8 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         val centerLineWidth: Double,
         /** Draw every n-th pixel (or sample) only. */
         val pixelSkip: Int,
+        /** A still frame to draw instead of the player's waveform; null for the live trace. */
+        val preview: Float32Array?,
     )
 
     companion object {
@@ -207,11 +213,14 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         ctx2d?.setTransform(ratio, 0.0, 0.0, ratio, 0.0, 0.0)
     }
 
-    /** The newest frame of the last waveform, else the idle line. */
+    /** The preview's frame, else the newest frame of the last waveform, else the idle line. */
     private fun redraw() {
         val history = lastHistory
+        val preview = props.preview
 
-        if (history != null && history.size > 0) {
+        if (preview != null) {
+            draw(buffer = preview, bufferLength = preview.length)
+        } else if (history != null && history.size > 0) {
             draw(buffer = history[0], bufferLength = history.bufferSize)
         } else {
             draw(buffer = idleBuffer, bufferLength = IDLE_FRAME_SIZE)

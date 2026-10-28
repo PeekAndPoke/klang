@@ -12,6 +12,7 @@ import io.peekandpoke.klang.pages.CodeSongPage
 import io.peekandpoke.klang.pages.CreditsPage
 import io.peekandpoke.klang.pages.DashboardPage
 import io.peekandpoke.klang.pages.DevStatusPage
+import io.peekandpoke.klang.pages.LooksPage
 import io.peekandpoke.klang.pages.MidiPlaygroundPage
 import io.peekandpoke.klang.pages.NotFoundPage
 import io.peekandpoke.klang.pages.ResourcesPage
@@ -81,6 +82,12 @@ object Nav {
 
     val tour = Static("/tour")
 
+    /** The look editor: the equip grid, the bench, a look of one's own (KLANG-00382). */
+    val looks = Static("/looks")
+
+    /** The look editor with an empty slot of the drawer ready to be filled. */
+    val looksSlot = Route1("/looks/slot/{slot}")
+
     /** Every UI element in every state (KLANG-00337). */
     val uiKitchenSink = Static("/debug/ui-kitchen-sink")
 }
@@ -123,6 +130,9 @@ fun RootRouterBuilder.mountNav() {
         mount(Nav.resources) { ResourcesPage() }
 
         mount(Nav.credits) { CreditsPage() }
+
+        mount(Nav.looks) { LooksPage(slot = null) }
+        mount(Nav.looksSlot) { LooksPage(slot = it["slot"].toIntOrNull()) }
 
         mount(Nav.devStatus) { DevStatusPage() }
     }

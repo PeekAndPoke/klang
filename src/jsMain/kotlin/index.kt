@@ -65,7 +65,8 @@ val version = VersionController()
 fun main() {
     // Read CSS custom properties and establish the active look-and-feel before render
     KlangTheme.initialize()
-    // The look the user chose last time (KLANG-00339)
+    // The user's own looks and the equipped slots (KLANG-00382), then the look the user chose last time (KLANG-00339)
+    LookStorage.restoreShelf()
     LookStorage.load()?.let { KlangTheme.choose(it) }
     // The brushed metal's tile for the parts that wear it, painted once (KLANG-00366)
     KlangBrushedMetal.install()

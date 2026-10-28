@@ -35,6 +35,14 @@ enum class KlangRole(
     /** Panels, tool windows, popups. */
     GroundPanel(cssVar = "--kl-ground-panel", kind = Kind.Color, default = "#21252b"),
 
+    /**
+     * Cards and tiles on a page: a step lighter than the ground they sit on, so they stand out on it (the maintainer,
+     * 2026-10-28: the look editor's panels "cannot be seen on the same dark background ... something each theme needs
+     * to handle. Panel slighly lighter than background by default?"). Each look sets its own, its panel ground moved 7 %
+     * towards its text.
+     */
+    GroundRaised(cssVar = "--kl-ground-raised", kind = Kind.Color, default = "#2e3238"),
+
     /** Wells cut into a surface: fields, the editor, the scope, an LCD. */
     GroundSunken(cssVar = "--kl-ground-sunken", kind = Kind.Color, default = "#0e1014"),
 

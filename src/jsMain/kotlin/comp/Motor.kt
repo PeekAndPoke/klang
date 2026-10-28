@@ -80,8 +80,11 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
          */
         const val SPECTRUM_COLOR_STEP = 0.15
 
-        /** The spectrum's colours, from the look, quiet to peak. */
-        private val SPECTRUM_ROLES = listOf(
+        /** The cells in a spectrum column, floor to top. */
+        const val SPECTRUM_BOXES = 31
+
+        /** The spectrum's colours, from the look, quiet to peak; the look editor's card shows them as here. */
+        val SPECTRUM_ROLES = listOf(
             KlangRole.SpectrumQuiet,
             KlangRole.SpectrumLow,
             KlangRole.SpectrumMid,
@@ -160,7 +163,7 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
                 Spectrumeter(
                     // The look's spectrum section, quiet to peak (the maintainer, 2026-10-28)
                     colors = SPECTRUM_ROLES.map { Color(look[it]) },
-                    numBoxesInStack = 31,
+                    numBoxesInStack = SPECTRUM_BOXES,
                     colorStep = SPECTRUM_COLOR_STEP,
                     numBuckets = SPECTRUM_COLUMNS,
                     labelMiddle = ((FRAME_HEIGHT_REM - OSCILLOSCOPE_TOP_REM - OSCILLOSCOPE_HEIGHT_REM) / 2.0).rem,

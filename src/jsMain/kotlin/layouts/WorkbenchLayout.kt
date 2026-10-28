@@ -185,7 +185,16 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
                                 placeholder = "Songs, docs, samples, actions",
                             )
                         },
-                        footer = { KlangLookPicker(onChosen = { LookStorage.save(it) }) },
+                        footer = {
+                            KlangLookPicker(
+                                onChosen = { LookStorage.save(it) },
+                                // The look editor, an empty slot ready to be filled (KLANG-00382)
+                                onEdit = { slot ->
+                                    close()
+                                    router.navToUri(if (slot == null) Nav.looks() else Nav.looksSlot(slot.toString()))
+                                },
+                            )
+                        },
                     )
                 },
                 // On every page, at the strip's foot (the maintainer, KLANG-00349)

@@ -29,8 +29,11 @@ object StorageKeys {
     /** The keys the user gave Klang's actions, over the defaults (KLANG-00325). */
     const val KEYMAP = "klang-keymap"
 
-    /** The look the user chose, a built-in preset's id (KLANG-00339). */
+    /** The look the user chose, a look's id (KLANG-00339). */
     const val LOOK = "klang-look"
+
+    /** The user's own looks and the equipped slots, as JSON (KLANG-00382). */
+    const val LOOKS = "klang-looks"
 
     /** The editor's highlights per sound event, a whole number (KLANG-00349). */
     const val EDITOR_HIGHLIGHTS_PER_EVENT = "klang-editor-highlights-per-event"

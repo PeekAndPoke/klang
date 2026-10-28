@@ -25,6 +25,7 @@ object KlangLooks {
             KlangRole.GroundDeep to "#1e1713",
             // The tool windows a greyish variant of the grounds, as the default's are (the maintainer, 2026-10-27)
             KlangRole.GroundPanel to "#27231f",
+            KlangRole.GroundRaised to "#35302b",
             KlangRole.GroundSunken to "#110c0a",
             KlangRole.CapLight to "#5b4a40",
             KlangRole.CapDark to "#241b17",
@@ -64,6 +65,7 @@ object KlangLooks {
             KlangRole.GroundDeep to "#28211c",
             // The tool windows a greyish variant of the grounds, as the default's are (the maintainer, 2026-10-27)
             KlangRole.GroundPanel to "#2e2925",
+            KlangRole.GroundRaised to "#3c3631",
             KlangRole.GroundSunken to "#17120f",
             KlangRole.CapLight to "#6e5d50",
             KlangRole.CapDark to "#2b221c",
@@ -105,6 +107,7 @@ object KlangLooks {
             KlangRole.GroundDeep to "#25221c",
             // The tool windows a greyish variant of the grounds, as the default's are (the maintainer, 2026-10-27)
             KlangRole.GroundPanel to "#2b2a28",
+            KlangRole.GroundRaised to "#383733",
             KlangRole.GroundSunken to "#15130f",
             // The keys' caps warm too, not the default's blue-grey
             KlangRole.CapLight to "#5a5344",
@@ -137,6 +140,7 @@ object KlangLooks {
             KlangRole.GroundApp to "#121a15",
             KlangRole.GroundDeep to "#17211b",
             KlangRole.GroundPanel to "#222a25",
+            KlangRole.GroundRaised to "#2f3732",
             KlangRole.GroundSunken to "#0c120e",
             KlangRole.CapLight to "#465a4b",
             KlangRole.CapDark to "#1a241d",
@@ -173,6 +177,7 @@ object KlangLooks {
             KlangRole.GroundApp to "#1c150e",
             KlangRole.GroundDeep to "#241a10",
             KlangRole.GroundPanel to "#2c241b",
+            KlangRole.GroundRaised to "#3a3227",
             KlangRole.GroundSunken to "#140e08",
             KlangRole.CapLight to "#6b5232",
             KlangRole.CapDark to "#2a1f12",
@@ -213,6 +218,7 @@ object KlangLooks {
             KlangRole.GroundApp to "#161718",
             KlangRole.GroundDeep to "#1c1d1f",
             KlangRole.GroundPanel to "#26282a",
+            KlangRole.GroundRaised to "#333537",
             KlangRole.GroundSunken to "#0f1011",
             KlangRole.CapLight to "#55595d",
             KlangRole.CapDark to "#1f2123",

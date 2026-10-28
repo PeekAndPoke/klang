@@ -1,6 +1,6 @@
 # KLANG-00382: The look editor: an equip grid, the bench, a look of your own
 
-> **Status (2026-10-28): NOT STARTED.** planned and designed; the design waits for the maintainer's look
+> **Status (2026-10-28): IN PROGRESS.** the editor page, the loadout, sharing and the drawer built and seen by the maintainer; open: asking before leaving with a draft, the drag (the maintainer, with Ultra), the walkthrough
 >
 > **Part of:** KLANG-00334 (UI workbench: the Motor-centred layout, tool windows and the first-visit trail)
 
@@ -83,6 +83,29 @@ equipped, the Looks walkthrough.
 5. **The Looks walkthrough** (Gui-dance, KLANG-00350), after the editor exists: the Motor button, then Copper, Sun and
    Asphalt lit in turn in the drawer, then the "Edit" key; a minute's rest before it, as after every walkthrough.
 
+## Decided (2026-10-28)
+
+Taken as recommended, and seen in the browser by the maintainer ("Nice!"):
+
+1. A page, `/looks` (and `/looks/slot/{slot}` from an empty slot of the drawer), in the workbench.
+2. All roles, a card per element (`KlangRoleGroup`), four cards to a row under the groups' headings (two columns
+   were tried and dropped).
+3. The browser's colour input and a hex field; the amounts on `KlangValueKnob`.
+4. The browser: `klang-looks` holds the own looks and the slots, `klang-look` the worn look's id (`LookStorage`).
+5. Pick and place, Klang's own; the drag is the maintainer's, with Ultra.
+6. 10 characters for now (`KlangLookPreset.NAME_MAX`), the count inside the name field; a tile cuts a longer name.
+
+Also from the maintainer's look:
+
+- A new role, `GroundRaised`: cards and tiles on a page, a step lighter than the panel ground, set by each look (the
+  panels "cannot be seen on the same dark background ... something each theme needs to handle"). A card's preview
+  stands on `GroundPanel`, its lower part on `GroundRaised`: even steps from the page.
+- The scope and the spectrum have a preview mode, still data in place of the player (the maintainer: "these component
+  implement a preview mode, when they get static data"), so their cards show the real drawing.
+- A changed role's undo is a small circle beside its label, so the controls never move.
+- The look's header is a panel: its swatch, its name, how it stands (changes, saved, worn), the keys in a sunken strip
+  at its foot; a duplicate's name counts up ("Sun 2", "Sun 3").
+
 ## Acceptance
 
 Not set yet.
@@ -90,3 +113,6 @@ Not set yet.
 ## History
 
 - 2026-10-28: created.
+- 2026-10-28: steps 1 to 4 built (data, the editor page, pick and place, share) and the drawer's LOOK row on the
+  loadout; open: asking before leaving with a draft not applied, the drag, the walkthrough (step 5).
+- 2026-10-28: IN PROGRESS.

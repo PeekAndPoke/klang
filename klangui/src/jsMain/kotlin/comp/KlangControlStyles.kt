@@ -568,6 +568,71 @@ object KlangControlStyles : StyleSheet("kl-controls") {
             put("width", "12px")
             put("height", "12px")
         }
+
+        // A name of the user's own may still be wider than a tile: cut with "...", whole in the editor (KLANG-00382)
+        rule("& > button > span:last-child") {
+            put("max-width", "100%")
+            put("overflow", "hidden")
+            put("text-overflow", "ellipsis")
+            put("white-space", "nowrap")
+        }
+    }
+
+    /** The LOOK heading with the Edit key at its right (KLANG-00382). */
+    val lookHeading by rule {
+        put("display", "flex")
+        put("align-items", "center")
+        put("justify-content", "space-between")
+    }
+
+    /**
+     * The quiet key that opens the look editor: no frame, a pencil and a word in the label's ink, brighter on hover, as
+     * the code players' copy key (the maintainer, 2026-10-28: "like the "copy to clipboard" style").
+     */
+    val quietKey by rule {
+        put("display", "inline-flex")
+        put("align-items", "center")
+        put("gap", "5px")
+        put("padding", "2px 4px")
+        put("border", "none")
+        put("background", "transparent")
+        put("font-family", "inherit")
+        put("font-size", "12px")
+        put("color", "var(--kl-ink-label)")
+        put("cursor", "pointer")
+
+        rule("&:hover") {
+            put("color", "var(--kl-ink-strong)")
+        }
+
+        rule("&:focus-visible") {
+            put("outline", "2px solid var(--kl-focus)")
+            put("outline-offset", "1px")
+        }
+    }
+
+    /** An empty slot of the LOOK row: a quiet dashed "+" that opens the editor, that slot ready to be filled. */
+    val lookEmpty by rule {
+        put("display", "flex")
+        put("align-items", "center")
+        put("justify-content", "center")
+        put("min-height", "38px")
+        put("border", "1px dashed var(--kl-cap-light)")
+        put("border-radius", "var(--kl-radius-domed)")
+        put("background", "transparent")
+        put("color", "var(--kl-ink-label)")
+        put("font-size", "14px")
+        put("cursor", "pointer")
+
+        rule("&:hover") {
+            put("color", "var(--kl-ink-strong)")
+            put("border-color", "var(--kl-ink-label)")
+        }
+
+        rule("&:focus-visible") {
+            put("outline", "2px solid var(--kl-focus)")
+            put("outline-offset", "1px")
+        }
     }
 
     // ── Dialog ────────────────────────────────────────────────────────────────

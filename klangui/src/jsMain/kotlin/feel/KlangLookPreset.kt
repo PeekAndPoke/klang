@@ -6,14 +6,26 @@
 package io.peekandpoke.klang.ui.feel
 
 /**
- * A built-in look (KLANG-00339): an [id] to remember it by, a [name] to show, and the role values it puts on the
- * user's layer. An empty [values] map is the default look.
+ * A look (KLANG-00339): an [id] to remember it by, a [name] to show, and the role values it puts on the user's layer.
+ * An empty [values] map is the default look. A built-in look is read only; one of the user's [own] (KLANG-00382) can be
+ * edited, renamed and deleted, and carries its [author] when it is shared.
  */
 data class KlangLookPreset(
     val id: String,
     val name: String,
     val values: Map<KlangRole, String>,
+    val author: String = "",
+    val own: Boolean = false,
 ) {
+    companion object {
+        /**
+         * The longest name a look of the user's own may have, so it fits a drawer tile (about 80 px at 11 px). A count
+         * cannot promise a width ("WWWWWWWWWW" is wider than "Asphalt"), so a tile still cuts a name that overflows
+         * with "..."; KLANG-00382 decision 6, 10 taken for now (the maintainer, 2026-10-28: "Not sure we will see").
+         */
+        const val NAME_MAX = 10
+    }
+
     /**
      * Its metal, lit to dark, for a swatch: the preset's own values where it has them and they fit their role, the
      * defaults elsewhere.

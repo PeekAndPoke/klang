@@ -9,11 +9,13 @@ import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
+import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.onInput
 import kotlinx.html.InputType
 import kotlinx.html.Tag
 import kotlinx.html.input
 import kotlinx.html.label
+import kotlinx.html.span
 import org.w3c.dom.HTMLInputElement
 
 @Suppress("FunctionName")
@@ -22,8 +24,9 @@ fun Tag.KlangTextField(
     value: String,
     onInput: (String) -> Unit,
     placeholder: String? = null,
+    suffix: String? = null,
 ) = comp(
-    KlangTextField.Props(label = label, value = value, onInput = onInput, placeholder = placeholder)
+    KlangTextField.Props(label = label, value = value, onInput = onInput, placeholder = placeholder, suffix = suffix)
 ) {
     KlangTextField(it)
 }
@@ -40,6 +43,8 @@ class KlangTextField(ctx: Ctx<Props>) : Component<KlangTextField.Props>(ctx) {
         val value: String,
         val onInput: (String) -> Unit,
         val placeholder: String?,
+        /** Quiet text at the well's right, inside it: a count, a unit (KLANG-00382, a name's "4/10"). */
+        val suffix: String?,
     )
 
     override fun VDom.render() {
@@ -53,6 +58,17 @@ class KlangTextField(ctx: Ctx<Props>) : Component<KlangTextField.Props>(ctx) {
 
                 onInput { e ->
                     (e.target as? HTMLInputElement)?.let { props.onInput(it.value) }
+                }
+            }
+
+            props.suffix?.let { suffix ->
+                span {
+                    css {
+                        put("flex", "none")
+                        put("font-size", "11px")
+                        put("color", "var(--kl-ink-label)")
+                    }
+                    +suffix
                 }
             }
         }

@@ -57,10 +57,12 @@ fun Tag.Spectrumeter(
     numBuckets: Int = 16,
     binning: SpectrumBinning = SpectrumBinning(numBuckets = numBuckets),
     labelMiddle: LinearDimension = 12.px,
+    preview: List<Double>? = null,
     player: () -> KlangPlayer?,
 ) = comp(
     Spectrumeter.Props(
         player = player,
+        preview = preview,
         colors = colors,
         gap = gap,
         boxGap = boxGap,
@@ -78,6 +80,12 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
 
     data class Props(
         val player: () -> KlangPlayer?,
+        /**
+         * Still levels per column, 0 to 1, drawn instead of the player's spectrum: a picture of itself (the look
+         * editor's card, KLANG-00382; the maintainer, 2026-10-28: "these component implement a preview mode, when they
+         * get static data"); null for the live spectrum.
+         */
+        val preview: List<Double>?,
         val colors: List<Color>,
         val gap: Double,
         val boxGap: Double,
@@ -173,8 +181,17 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
         ctx.fillRect(0.0, 0.0, width, height)
         ctx.restore()
 
-        // Process FFT data through perceptually balanced binning
-        props.binning.process(fftBuffer = visualizerBuffer, out = bucketValues)
+        val preview = props.preview
+
+        if (preview != null) {
+            for (i in bucketValues.indices) {
+                // NaN-guard: a level that is not a number counts as silence
+                bucketValues[i] = preview.getOrNull(i)?.takeIf { it >= 0.0 }?.coerceAtMost(1.0) ?: 0.0
+            }
+        } else {
+            // Process FFT data through perceptually balanced binning
+            props.binning.process(fftBuffer = visualizerBuffer, out = bucketValues)
+        }
 
         // Total energy this frame drives a slow "heating iron" model:
         //   heat += instantEnergy * heatRate   (energy pumps heat in)

@@ -74,18 +74,41 @@ object KlangTheme : Stream<KlangLookAndFeel> {
         applyLayers(lookLayers.cleared(layer))
     }
 
-    /** Puts [preset] on the user's layer (KLANG-00339); the default look clears it. */
+    private var wornLook: KlangLookPreset = KlangLooks.Default
+
+    /** The look worn: the one chosen last, built-in or the user's own. */
+    val worn: KlangLookPreset get() = wornLook
+
+    /** Puts [preset] on the user's layer (KLANG-00339) and wears it; the default look clears the layer. */
     fun choose(preset: KlangLookPreset) {
-        if (preset.values.isEmpty()) {
-            clearLayer(KlangLookLayers.Layer.User)
-        } else {
-            setLayer(KlangLookLayers.Layer.User, preset.values)
-        }
+        wornLook = preset
+        putOnUserLayer(preset.values)
     }
 
-    /** The preset the user's layer holds; null when it holds a look of its own (none can yet). */
+    /**
+     * Puts [values] on the user's layer without wearing them (KLANG-00382): the look editor shows the look being edited
+     * on the whole app; [endPreview] goes back to the look worn.
+     */
+    fun preview(values: Map<KlangRole, String>) {
+        putOnUserLayer(values)
+    }
+
+    /** The look worn again, after a [preview]. */
+    fun endPreview() {
+        putOnUserLayer(wornLook.values)
+    }
+
+    /** The look worn while the user's layer holds it; null while it holds something else (a preview, say). */
     val chosen: KlangLookPreset?
-        get() = KlangLooks.all.firstOrNull { it.values == lookLayers[KlangLookLayers.Layer.User] }
+        get() = wornLook.takeIf { it.values == lookLayers[KlangLookLayers.Layer.User] }
+
+    private fun putOnUserLayer(values: Map<KlangRole, String>) {
+        if (values.isEmpty()) {
+            clearLayer(KlangLookLayers.Layer.User)
+        } else {
+            setLayer(KlangLookLayers.Layer.User, values)
+        }
+    }
 
     private fun applyLayers(next: KlangLookLayers) {
         lookLayers = next
