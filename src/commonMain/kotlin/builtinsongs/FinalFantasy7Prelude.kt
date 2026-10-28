@@ -30,8 +30,8 @@ const reverbSize = 6.0
 
 // Oh yeah
 // ... Headphones are advisable
-// ... Put the cursor on a function and press Alt+Q: its help opens on the right
-// ... Hover params for more help
+// ... Put the cursor on a function and press Alt+Q, or rest the mouse on it: its help opens below
+// ... Put the cursor inside a call, as lpf( ): its tool opens below, in the Sprudel tab
 // ... Alt+M opens the Motor's menu: the songs, the docs, the looks
 
 stack(
