@@ -47,6 +47,12 @@ object KlangLooks {
             KlangRole.SpectrumMid to "#c99a5e",
             KlangRole.SpectrumHot to "#d9733f",
             KlangRole.SpectrumPeak to "#ffcf9a",
+            // The texture and the corners, each look its own (the maintainer, 2026-10-28):
+            // Hammered copper: a coarser grain, little brushing
+            KlangRole.Grain to "0.22",
+            KlangRole.GrainSize to "0.45",
+            KlangRole.Brushed to "0.08",
+            KlangRole.Radius to "4px",
         ),
     )
 
@@ -89,6 +95,12 @@ object KlangLooks {
             KlangRole.SpectrumMid to "#f2dd9a",
             KlangRole.SpectrumHot to "#f2b48a",
             KlangRole.SpectrumPeak to "#f29aa8",
+            // The texture and the corners, each look its own (the maintainer, 2026-10-28):
+            // Smooth as porcelain: a fine, faint grain
+            KlangRole.Grain to "0.08",
+            KlangRole.GrainSize to "0.15",
+            KlangRole.Brushed to "0.05",
+            KlangRole.Radius to "4px",
         ),
     )
 
@@ -126,6 +138,12 @@ object KlangLooks {
             KlangRole.SpectrumMid to "#5fa04a",
             KlangRole.SpectrumHot to "#8fd06a",
             KlangRole.SpectrumPeak to "#c8f59a",
+            // The texture and the corners, each look its own (the maintainer, 2026-10-28):
+            // Rough paint: a strong grain, rugged corners
+            KlangRole.Grain to "0.4",
+            KlangRole.GrainSize to "0.4",
+            KlangRole.Brushed to "0.14",
+            KlangRole.Radius to "2px",
         ),
     )
 
@@ -163,6 +181,12 @@ object KlangLooks {
             KlangRole.SpectrumMid to "#8cc45a",
             KlangRole.SpectrumHot to "#d4c45a",
             KlangRole.SpectrumPeak to "#f2a65a",
+            // The texture and the corners, each look its own (the maintainer, 2026-10-28):
+            // Woody: a broad grain, strong brushing like the grain of wood
+            KlangRole.Grain to "0.25",
+            KlangRole.GrainSize to "0.6",
+            KlangRole.Brushed to "0.18",
+            KlangRole.Radius to "3px",
         ),
     )
 
@@ -201,6 +225,13 @@ object KlangLooks {
             KlangRole.SpectrumMid to "#ffd93a",
             KlangRole.SpectrumHot to "#ff972e",
             KlangRole.SpectrumPeak to "#ff4f3a",
+            // The texture and the corners, each look its own (the maintainer, 2026-10-28):
+            // The maintainer's, 2026-10-28: a strong grain, tight corners
+            KlangRole.Grain to "0.67",
+            KlangRole.GrainSize to "0.25",
+            KlangRole.Brushed to "0.12",
+            KlangRole.Radius to "2px",
+            KlangRole.RadiusDomed to "4px",
         ),
     )
 
@@ -238,8 +269,11 @@ object KlangLooks {
             KlangRole.AccentMuted to "#3f4fb0",
             KlangRole.Focus to "#7fd8f0",
             KlangRole.LampOn to "#3460dc",
+            // Coarse tar: a broad grain, hardly brushed, sharp corners (the maintainer, 2026-10-28: each look its own)
             KlangRole.Grain to "0.32",
+            KlangRole.GrainSize to "0.7",
             KlangRole.Brushed to "0.04",
+            KlangRole.Radius to "1px",
             // The tube a little stronger than the other looks' (the maintainer, 2026-10-28)
             KlangRole.Scanlines to "0.15",
             KlangRole.Glow to "0.25",

@@ -130,6 +130,9 @@ class KlangKnob(ctx: Ctx<Props>) : Component<KlangKnob.Props>(ctx) {
     /** Where a drag started: which pointer and where on the screen. */
     private data class DragStart(val pointerId: Int, val pointerX: Double, val pointerY: Double)
 
+    /** Where this knob's cap cuts its grain from, so no two look alike; kept while it lives. */
+    private val grain = KlangControlStyles.grainOffset()
+
     private var dragStart: DragStart? = null
 
     /**
@@ -303,7 +306,11 @@ class KlangKnob(ctx: Ctx<Props>) : Component<KlangKnob.Props>(ctx) {
 
             div(classes = capClasses.joinToString(" ")) {
                 val inset = if (props.ring) CAP_INSET_WITH_RING_PCT else 0
-                css { put("inset", "$inset%") }
+                css {
+                    put("inset", "$inset%")
+                    // Its own cut of the grain, so no two caps look alike
+                    with(styles) { grainAt(grain) }
+                }
 
                 div(classes = styles.knobTurn.toString()) {
                     attributes["data-knob-turn"] = "true"

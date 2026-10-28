@@ -9,6 +9,7 @@ import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
+import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.onClick
 import kotlinx.css.px
 import kotlinx.html.BUTTON
@@ -103,6 +104,9 @@ class KlangButton(ctx: Ctx<Props>) : Component<KlangButton.Props>(ctx) {
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+    /** Where this button cuts its grain from, so no two look alike; kept while it lives. */
+    private val grain = KlangControlStyles.grainOffset()
+
     override fun VDom.render() {
         val enabled = props.availability == Availability.Enabled
 
@@ -126,6 +130,9 @@ class KlangButton(ctx: Ctx<Props>) : Component<KlangButton.Props>(ctx) {
             if (enabled) {
                 onClick { props.onClick() }
             }
+
+            // Its own cut of the grain; content that sets a style of its own replaces it (the grain then starts at 0)
+            css { with(KlangControlStyles) { grainAt(grain) } }
 
             props.lamp?.let { KlangLamp(state = it, size = 7.px) }
 

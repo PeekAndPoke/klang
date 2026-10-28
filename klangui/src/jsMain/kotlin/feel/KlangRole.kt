@@ -180,8 +180,8 @@ enum class KlangRole(
     /** The corner of a flat control: a machined chamfer, never a pill (KLANG-00207). */
     Radius(cssVar = "--kl-radius", kind = Kind.Length, default = "3px"),
 
-    /** The corner of a domed control. */
-    RadiusDomed(cssVar = "--kl-radius-domed", kind = Kind.Length, default = "10px"),
+    /** The corner of a domed control: 8 px, 10 before (the maintainer, 2026-10-28). */
+    RadiusDomed(cssVar = "--kl-radius-domed", kind = Kind.Length, default = "8px"),
 
     // ── Surface ───────────────────────────────────────────────────────────────
 
@@ -190,6 +190,12 @@ enum class KlangRole(
      * 2026-10-26: "maybe this noise should be a theme property as well?").
      */
     Grain(cssVar = "--kl-grain", kind = Kind.Amount, default = "0.16"),
+
+    /**
+     * How coarse the grain is, from 0 (fine, a tile of 80 px) to 1 (coarse, 400 px); 0.25 is the 160 px it always had
+     * (the maintainer, 2026-10-28: "could we choose the grain size?").
+     */
+    GrainSize(cssVar = "--kl-grain-size", kind = Kind.Amount, default = "0.25"),
 
     /**
      * How strong the brushed metal on the bench's frame is (the column, the strip, the tool windows; the middle stays

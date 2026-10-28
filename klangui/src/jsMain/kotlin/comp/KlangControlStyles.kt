@@ -8,6 +8,7 @@ package io.peekandpoke.klang.ui.comp
 import io.peekandpoke.kraft.addons.styling.RawStyleSheet
 import io.peekandpoke.kraft.addons.styling.StyleSheet
 import kotlinx.css.CssBuilder
+import kotlin.random.Random
 
 /**
  * The classes of the Klang controls (KLANG-00337): lamps, buttons, the riveted panel.
@@ -23,9 +24,13 @@ import kotlinx.css.CssBuilder
  */
 object KlangControlStyles : StyleSheet("kl-controls") {
 
+    /** The grain tile's side. */
+    const val GRAIN_TILE_PX = 160
+
     /** A tile of grey noise, opaque; the [grain] layer lays it over a surface at the look's strength. */
-    private const val GRAIN = "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' " +
-            "height='160'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' " +
+    private const val GRAIN = "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' " +
+            "width='$GRAIN_TILE_PX' height='$GRAIN_TILE_PX' viewBox='0 0 $GRAIN_TILE_PX $GRAIN_TILE_PX'>" +
+            "<filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' " +
             "stitchTiles='stitch'/><feColorMatrix values='1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 0 0 0 0 1'/></filter>" +
             "<rect width='100%' height='100%' filter='url(%23g)'/></svg>\")"
 
@@ -36,6 +41,10 @@ object KlangControlStyles : StyleSheet("kl-controls") {
      * `overlay` at the look's `--kl-grain` ([io.peekandpoke.klang.ui.feel.KlangRole.Grain]), so it adds grain and keeps
      * the look's colours. The surface must be positioned (the buttons are relative, the knob's cap absolute); it
      * becomes its own stacking context, so the layer lies over its background and under its text and marks.
+     *
+     * Each surface may cut its grain from another place of the tile, `--kl-grain-x` and `--kl-grain-y` ([grainOffset]),
+     * so no two buttons look alike (the maintainer, 2026-10-28: "a random offset for the grain in x an y so that they
+     * do not like identical").
      */
     private fun CssBuilder.grain() {
         put("isolation", "isolate")
@@ -48,9 +57,21 @@ object KlangControlStyles : StyleSheet("kl-controls") {
             put("border-radius", "inherit")
             put("pointer-events", "none")
             put("background-image", GRAIN)
+            put("background-position", "var(--kl-grain-x, 0px) var(--kl-grain-y, 0px)")
+            // The tile scaled to the look's grain size: the noise is a vector, so a larger tile is coarser grain
+            put("background-size", "calc(80px + var(--kl-grain-size) * 320px)")
             put("mix-blend-mode", "overlay")
             put("opacity", "var(--kl-grain)")
         }
+    }
+
+    /** A place to cut a surface's grain from, at random: a surface keeps its own while it lives. */
+    fun grainOffset(): Pair<Int, Int> = Random.nextInt(GRAIN_TILE_PX) to Random.nextInt(GRAIN_TILE_PX)
+
+    /** [offset] as the grain's cut ([grainOffset]), in an element's inline style. */
+    fun CssBuilder.grainAt(offset: Pair<Int, Int>) {
+        put("--kl-grain-x", "-${offset.first}px")
+        put("--kl-grain-y", "-${offset.second}px")
     }
 
     /**

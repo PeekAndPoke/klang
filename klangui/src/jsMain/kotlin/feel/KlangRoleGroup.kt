@@ -39,7 +39,11 @@ enum class KlangRoleGroup(val title: String, val elements: List<Element>) {
             Element(
                 id = "texture",
                 title = "Texture",
-                roles = listOf(KlangRole.Grain to "Grain", KlangRole.Brushed to "Brushed"),
+                roles = listOf(
+                    KlangRole.Grain to "Grain",
+                    KlangRole.GrainSize to "Grain size",
+                    KlangRole.Brushed to "Brushed",
+                ),
             ),
         ),
     ),
