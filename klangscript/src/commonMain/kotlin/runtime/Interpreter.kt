@@ -655,8 +655,16 @@ class Interpreter(
             // through the SAME spec-aware path as a member call, so named arguments, default thunks and
             // the trailing-lambda rule all apply. The error for one without speaks to the script user.
             is NativeObjectValue<*> -> {
+                val held = callee.value
                 val invoke = engine.getExtensionMethod(callee, NativeOperatorNames.INVOKE)
-                    ?: throw KlangScriptTypeError(
+
+                // A Kotlin function a native handed back (`Ign.fn(x => ...)`, a pattern mapper): called as the script
+                // lambda it may have been, its arguments in order, its result a script value again
+                if (invoke == null && held is Function<*>) {
+                    return callHeldFunction(held, callArgs, call)
+                }
+
+                invoke ?: throw KlangScriptTypeError(
                         message = notCallableMessage(callee, call.callee),
                         operation = "function call",
                         location = call.location,
@@ -692,6 +700,45 @@ class Interpreter(
                 )
             }
         }
+    }
+
+    /**
+     * Calls [fn], a Kotlin function a native handed back, with the call's positional arguments (KLANG-00382 neighbour:
+     * `Ign.fn` returns its stage as a Kotlin function, the maintainer, 2026-10-28). Up to three arguments; named ones,
+     * or more, are a script error.
+     */
+    @Suppress("UNCHECKED_CAST")
+    private fun callHeldFunction(fn: Function<*>, callArgs: CallArgs, call: CallExpression): RuntimeValue {
+        val values = (callArgs as? CallArgs.Positional)?.values
+            ?: throw KlangScriptTypeError(
+                message = "This function takes its arguments in order, not by name.",
+                operation = "function call",
+                location = call.location,
+                astNode = call,
+                callStackTrace = getStackTrace(),
+            )
+
+        val args = values.map { if (it is NullValue) null else it.convertToKotlin(Any::class, call.location) }
+
+        val result = try {
+            when (args.size) {
+                0 -> (fn as () -> Any?)()
+                1 -> (fn as (Any?) -> Any?)(args[0])
+                2 -> (fn as (Any?, Any?) -> Any?)(args[0], args[1])
+                3 -> (fn as (Any?, Any?, Any?) -> Any?)(args[0], args[1], args[2])
+                else -> throw ClassCastException("arity")
+            }
+        } catch (e: ClassCastException) {
+            throw KlangScriptTypeError(
+                message = "This function cannot be called with ${args.size} argument(s).",
+                operation = "function call",
+                location = call.location,
+                astNode = call,
+                callStackTrace = getStackTrace(),
+            )
+        }
+
+        return wrapAsRuntimeValue(result)
     }
 
     /** User-visible name for a callee: used in argument error messages. */

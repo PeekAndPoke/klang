@@ -34,123 +34,123 @@ let snareHz       =  210    // Where does the snare cut through?
 
 // Pickups: the coil's resonance sets the colour, its output sets how hard the amp is pushed, its position on the string
 // cancels one harmonic.
-let pickupStock = x => x
+let pickupStock = Ign.fn(x => x)
 
 // Single coil at the bridge: a high, sharp resonance, thin and bright, low output.
-let pickupSingle = x => x
+let pickupSingle = Ign.fn(x => x
   .lowpass(4800, 2.5)                              // the peak, up high and narrow
-  .mul(0.8)                                        // low output, the amp stays cleaner
+  .mul(0.8))                                       // low output, the amp stays cleaner
 
 // Humbucker at the bridge: a lower, broader resonance, fat and dark, hot output that pushes the amp harder.
-let pickupHumbucker = x => x
+let pickupHumbucker = Ign.fn(x => x
   .lowpass(2200, 1.6)                              // the peak, low and wide
-  .mul(1.2)                                        // hot output
+  .mul(1.2))                                       // hot output
 
 // Humbucker at the neck: darker still, and the neck position cancels the 4th harmonic (the hollow, woody tell).
-let pickupNeck = x => x
+let pickupNeck = Ign.fn(x => x
   .lowpass(3500, 1.4)
   .notch(freq = Ign.freq().mul(4), q = 2.0)        // the neck sits a quarter along the string
-  .mul(1.2)
+  .mul(1.2))
 
 // Pedals: a box in front of the amp. What it filters BEFORE clipping is the tell, not the clipping itself. The last
 // mul is the pedal's level knob, set so the three guitars land within 2 dB of the stock rig (a louder A/B always wins).
-let pedalStock = x => x
+let pedalStock = Ign.fn(x => x)
 
 // Screamer: only the mids go through the clipper, the clean signal goes around it: the mid hump over a clean bass.
-let pedalScreamer = x => x
+let pedalScreamer = Ign.fn(x => x
   .parallel(clean => clean, dirt => dirt.highpass(720).distort(0.35, "soft", 2).mul(0.6)) // the clipper only ever sees the mids, the clean bass carries, both aligned
   .lowpass(3000)                                   // the tone knob, half way
-  .mul(0.5)                                        // level
+  .mul(0.5))                                       // level
 
 // Fuzz: everything clips, hard and lopsided, splatty.
-let pedalFuzz = x => x
+let pedalFuzz = Ign.fn(x => x
   .distort(0.70, "asym", 4)
   .lowpass(4500)
-  .mul(0.28)                                       // level
+  .mul(0.28))                                      // level
 
 // Treble booster: cuts the bass and pushes the rest into the preamp. The classic bright crunch.
-let pedalBoost = x => x
+let pedalBoost = Ign.fn(x => x
   .highpass(400)
-  .mul(1.2)                                        // level
+  .mul(1.2))                                       // level
 
 // Preamps: the amp's gain stages. Tells: how many stages, what each coupling cap lets through, and how tight the bass
 // is BEFORE it clips. The last mul is the preamp's volume, set so the power amp is pushed about as hard as stock.
-let preampStock = x => x
+let preampStock = Ign.fn(x => x
   .distort(0.20, "tube", 4).highpass(100)
-  .distort(0.50, "soft", 4).highpass(100)
+  .distort(0.50, "soft", 4).highpass(100))
 
 // Clean: one lightly driven tube stage and a bright cap that lets the top through.
-let preampClean = x => x
+let preampClean = Ign.fn(x => x
   .distort(0.12, "tube", 2).highpass(80)
   .eq(e => e.band(freq = 3500, q = 0.7, db = 2.0)) // the bright cap
-  .mul(3.5)                                        // volume
+  .mul(3.5))                                       // volume
 
 // Crunch: two tube stages, coupled loosely so the bass goes along and the clipping stays round.
-let preampCrunch = x => x
+let preampCrunch = Ign.fn(x => x
   .distort(0.30, "tube", 4).highpass(90)
   .distort(0.30, "tube", 4).highpass(90)
-  .mul(1.9)                                        // volume
+  .mul(1.9))                                       // volume
 
 // High gain: tighten the bass BEFORE it clips, three cascaded stages, the last one hard, then tame the fizz.
-let preampHighGain = x => x
+let preampHighGain = Ign.fn(x => x
   .highpass(110)                                    // tight: no bass into the gain stages
   .distort(0.35, "tube", 4).highpass(100)
   .distort(0.45, "softsat", 4).highpass(90)
   .distort(0.65, "soft", 4)
   .lowpass(5000)                                   // the fizz
-  .mul(0.30)                                       // volume
+  .mul(0.30))                                      // volume
 
 // Power amps: the last saturating stage. Tells: symmetric or not, and the presence bump. The last mul is the master.
-let powerStock = x => x.drive(0.3)
+let powerStock = Ign.fn(x => x.drive(0.3))
 
 // Push-pull (class AB): symmetric clip, odd harmonics, and presence: the top opens up as it works.
-let powerPushPull = x => x
+let powerPushPull = Ign.fn(x => x
   .distort(0.25, "soft", 2)
   .eq(e => e.band(freq = 4000, q = 0.7, db = 2.0)) // presence
-  .mul(1.6)                                        // master
+  .mul(1.6))                                       // master
 
 // Class A: a lopsided clip, even harmonics, the chime.
-let powerClassA = x => x
+let powerClassA = Ign.fn(x => x
   .distort(0.25, "asym", 2)
-  .mul(1.3)                                        // master
+  .mul(1.3))                                       // master
 
 // Cabinets: the linear half of the amp. All of these are static and linear, so they move to the orbit unchanged once
 // the Katalyst DSL lands.
 
 // Two plain lowpasses at 5 kHz, the cab the guitar had before the cabs existed.
-let cabStock = x => x.lowpass(5000).lowpass(5000)
+let cabStock = Ign.fn(x => x.lowpass(5000).lowpass(5000))
 
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
-let cab4x12 = x => x
+let cab4x12 = Ign.fn(x => x
   .eq(e => e
     .band(freq =  120, q = 0.7, db =  1.70)        // thump: closed-back box resonance
     .band(freq =  380, q = 0.5, db =  4.40)        // roar:  low mids
     .band(freq = 2700, q = 1.7, db =  4.30)        // bark:  the upper-mid speaker peak
   )
   .lowpass(4980, 0.707, x => x.passes(3))          // the wall: 36 dB/oct, the fizz is gone
-  .highpass(80, 0.707, x => x.passes(2))
+  .highpass(80, 0.707, x => x.passes(2)))
 
 // 1x12 open back: the open back cancels the bass, the top chimes and rolls off late and soft.
-let cab1x12 = x => x
+let cab1x12 = Ign.fn(x => x
   .highpass(120, 0.707, x => x.passes(2))          // open back: no low end below the box
   .eq(e => e
     .band(freq = 3200, q = 1.0, db = 3.0)          // chime: broad upper presence
   )
-  .lowpass(6500, 0.707, x => x.passes(2))          // soft, late roll-off, some air stays
+  .lowpass(6500, 0.707, x => x.passes(2)))         // soft, late roll-off, some air stays
 
 // Small combo: a tiny speaker in a tiny box. No bass, a boxy honk, and the highs die early.
-let cabCombo = x => x
+let cabCombo = Ign.fn(x => x
   .highpass(160, 0.707, x => x.passes(2))          // small speaker: nothing down low
   .eq(e => e
     .band(freq = 750, q = 1.4, db = 4.0)           // honk: the boxy midrange
   )
-  .lowpass(3800, 0.707, x => x.passes(2))          // early roll-off
+  .lowpass(3800, 0.707, x => x.passes(2)))         // early roll-off
 
 // Let the snare cut through: a stage of its own, between the power amp and the cab.
-let snareCut = x => x
+let snareCut = Ign.fn(x => x
   .eq(e => e
     .band(freq = snareHz, q = 3.0, db = -4)        // notch the snare
-  )
+  ))
 
 // Guitar  ----------------------------------------------------------------------------------------------------------------------------------------------------
 // The string, the pregain and the envelope; the rig is everything after the string, in the order the signal takes.
@@ -203,8 +203,8 @@ let makeGuitar = (rig) => {
 //   cab:    cabStock    | cab4x12       | cab1x12         | cabCombo
 // Two guitarists, two rigs: the rhythm rig on guitars 2 and 3 (hard left and right), the melody rig on guitar 1 in the
 // centre. On one rig the humbucker, the screamer and the cab all peak near 2.6 kHz; three guitars on it pile up there.
-let rhythmRig = x => x.serial(pickupHumbucker, pedalScreamer, preampHighGain, powerPushPull, snareCut, cab4x12)
-let melodyRig = x => x.serial(pickupSingle,    pedalBoost,    preampCrunch,   powerPushPull, snareCut, cab4x12)
+let rhythmRig = Ign.fn(x => x.serial(pickupHumbucker, pedalScreamer, preampHighGain, powerPushPull, snareCut, cab4x12))
+let melodyRig = Ign.fn(x => x.serial(pickupSingle,    pedalBoost,    preampCrunch,   powerPushPull, snareCut, cab4x12))
 
 let guitar       = makeGuitar(rhythmRig)
 let guitarMelody = makeGuitar(melodyRig)

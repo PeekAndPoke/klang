@@ -37,80 +37,80 @@ let feel  = 10   // analog drift of the guitars, as in Der Schmetterling
 let drunk =  1   // two guitarists, sober this time, mostly
 
 // Rig stages (from Der Schmetterling)  ------------------------------------------------------------
-let pickupNeck = x => x
+let pickupNeck = Ign.fn(x => x
   .lowpass(3400, 1.4)
   .notch(freq = Ign.freq().mul(4), q = 2.0)
-  .mul(1.2)
+  .mul(1.2))
 
-let pickupSingle = x => x
+let pickupSingle = Ign.fn(x => x
   .lowpass(4800, 2.5)
-  .mul(0.8)
+  .mul(0.8))
 
-let pickupHumbucker = x => x
+let pickupHumbucker = Ign.fn(x => x
   .lowpass(2200, 1.6)
-  .mul(1.2)
+  .mul(1.2))
 
-let pedalStock = x => x
+let pedalStock = Ign.fn(x => x)
 
-let pedalScreamer = x => x
+let pedalScreamer = Ign.fn(x => x
   .parallel(clean => clean, dirt => dirt.highpass(720).distort(0.35, "soft", 2).mul(0.6)) // the clean and the dirt aligned
   .lowpass(3000)
-  .mul(0.5)
+  .mul(0.5))
 
-let pedalBoost = x => x
+let pedalBoost = Ign.fn(x => x
   .highpass(400)
-  .mul(1.2)
+  .mul(1.2))
 
-let preampClean = x => x
+let preampClean = Ign.fn(x => x
   .distort(0.12, "tube", 2).highpass(80)
   .eq(e => e.band(freq = 3500, q = 0.7, db = 2.0))
-  .mul(3.5)
+  .mul(3.5))
 
-let preampCrunch = x => x
+let preampCrunch = Ign.fn(x => x
   .distort(0.30, "tube", 4).highpass(90)
   .distort(0.30, "tube", 4).highpass(90)
-  .mul(1.9)
+  .mul(1.9))
 
-let preampHighGain = x => x
+let preampHighGain = Ign.fn(x => x
   .highpass(110)                                    // tight: no bass into the gain stages
   .distort(0.35, "tube", 4).highpass(100)
   .distort(0.45, "softsat", 4).highpass(90)
   .distort(0.65, "soft", 4)
   .lowpass(5000)                                   // the fizz
-  .mul(0.30)                                       // volume
+  .mul(0.30))                                      // volume
 
-let powerPushPull = x => x
+let powerPushPull = Ign.fn(x => x
   .distort(0.25, "soft", 2)
   .eq(e => e.band(freq = 4000, q = 0.7, db = 2.0))
-  .mul(1.6)
+  .mul(1.6))
 
-let powerClassA = x => x
+let powerClassA = Ign.fn(x => x
   .distort(0.21, "asym", 4)
-  .mul(1.4)
+  .mul(1.4))
 
-let cab4x12 = x => x
+let cab4x12 = Ign.fn(x => x
   .eq(e => e
     .band(freq =  120, q = 0.7, db =  1.70)        // thump: closed-back box resonance
     .band(freq =  380, q = 0.5, db =  4.40)        // roar:  low mids
     .band(freq = 2700, q = 1.7, db =  4.20)        // bark:  the upper-mid speaker peak
   )
   .lowpass(4980, 0.707, x => x.passes(3))          // the wall: 36 dB/oct, the fizz is gone
-  .highpass(80, 0.707, x => x.passes(2))
+  .highpass(80, 0.707, x => x.passes(2)))
 
-let cab1x12 = x => x
+let cab1x12 = Ign.fn(x => x
   .highpass(120, 0.707, x => x.passes(2))
   .eq(e => e.band(freq = 3200, q = 1.0, db = 3.0))
-  .lowpass(6500, 0.707, x => x.passes(3))
+  .lowpass(6500, 0.707, x => x.passes(3)))
 
 // Drums and bass (from Der Schmetterling)  -------------------------------------------------------
 let snareHz = 210
 
 // The guitar (from Der Schmetterling)  -----------------------------------------------------------
 // Let the snare cut through: a stage of its own, between the power amp and the cab.
-let snareCut = x => x
+let snareCut = Ign.fn(x => x
   .eq(e => e
     .band(freq = snareHz, q = 1.5, db = -2)          // notch the snare
-  )
+  ))
 
 // The string, the pregain and the envelope; the rig is everything after the string, in the order the signal takes.
 let makeGuitar = (rig) => {
@@ -152,10 +152,10 @@ let makeGuitar = (rig) => {
 
 // Four rigs, one guitar. The cocoon is clean and dark, the answer is bright, the heartbeat is the clean rig into the big
 // box (the 4x12 keeps the thump the 1x12 cuts), and the wings are the Schmetterling's own rhythm rig.
-let cleanRig  = x => x.serial(pickupNeck,      pedalStock,    preampClean,    powerClassA,   snareCut, cab1x12)
-let brightRig = x => x.serial(pickupSingle,    pedalBoost,    preampCrunch,   powerPushPull, snareCut, cab4x12)
-let deepRig   = x => x.serial(pickupNeck,      pedalStock,    preampClean,    powerClassA,   snareCut, cab4x12)
-let heavyRig  = x => x.serial(pickupHumbucker, pedalScreamer, preampHighGain, powerPushPull, snareCut, cab4x12)
+let cleanRig  = Ign.fn(x => x.serial(pickupNeck,      pedalStock,    preampClean,    powerClassA,   snareCut, cab1x12))
+let brightRig = Ign.fn(x => x.serial(pickupSingle,    pedalBoost,    preampCrunch,   powerPushPull, snareCut, cab4x12))
+let deepRig   = Ign.fn(x => x.serial(pickupNeck,      pedalStock,    preampClean,    powerClassA,   snareCut, cab4x12))
+let heavyRig  = Ign.fn(x => x.serial(pickupHumbucker, pedalScreamer, preampHighGain, powerPushPull, snareCut, cab4x12))
 
 let clean  = makeGuitar(cleanRig)
 let bright = makeGuitar(brightRig)

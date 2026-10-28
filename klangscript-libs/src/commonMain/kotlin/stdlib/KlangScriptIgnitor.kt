@@ -457,6 +457,23 @@ internal object KlangScriptIgnitor {
     fun constant(value: Double): IgnitorDsl =
         IgnitorDsl.Constant(value)
 
+    // ── A function of a signal ──────────────────────────────────────────────
+
+    /**
+     * Returns [f] as it is: a function from a signal to a signal, typed. Written as `let stage = x => x...`, the editor
+     * cannot know what `x` is; written as `Ign.fn(x => x...)`, `x` is an Ignitor, so the Quick help and the completion
+     * show the Ignitor's own doors (the maintainer, 2026-10-28). The stage plays the same either way.
+     *
+     * ```KlangScript
+     * let pickupNeck = Ign.fn(x => x.lowpass(3500, 1.4).mul(1.2))
+     * let rig = x => x.serial(pickupNeck)
+     * ```
+     *
+     * @param f the function, from an Ignitor to an Ignitor
+     */
+    @KlangScript.Method
+    fun fn(f: (IgnitorDsl) -> IgnitorDsl): (IgnitorDsl) -> IgnitorDsl = f
+
     // ── Dispatch / Selection ─────────────────────────────────────────────────
 
     /**

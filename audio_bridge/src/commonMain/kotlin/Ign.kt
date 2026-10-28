@@ -262,6 +262,9 @@ object Ign {
     /** A fixed constant that no ignitorParam overrides. Script door: `Ignitor.constant(value)`. */
     fun constant(value: Double): IgnitorDsl.Constant = IgnitorDsl.Constant(value)
 
+    /** Returns [f] as it is, a function from a signal to a signal, typed. Script door: `Ignitor.fn(f)`. */
+    fun fn(f: (IgnitorDsl) -> IgnitorDsl): (IgnitorDsl) -> IgnitorDsl = f
+
     /** Selects one of [children] per note by the voice's `soundIndex`. Script door: `Ignitor.variants(...)`. */
     fun variants(vararg children: IgnitorDsl): IgnitorDsl.Variants = IgnitorDsl.Variants(children.toList())
 }
