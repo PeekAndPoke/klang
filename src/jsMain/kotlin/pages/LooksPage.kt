@@ -752,11 +752,17 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
     }
 
     private fun FlowContent.renderElement(element: KlangRoleGroup.Element, editable: Boolean) {
+        // A wide card, two tiles, its preview left and its controls right, the preview as tall as the card (the
+        // maintainer, 2026-10-28: "the preview higher, so that the glow can be seen")
+        val wide = element.id in WIDE_ELEMENTS
+
         div {
             key = "element-${element.id}"
             css {
-                if (element.id == "spectrum") {
+                if (wide) {
                     put("grid-column", "span 2")
+                    put("display", "grid")
+                    put("grid-template-columns", "minmax(0, 1fr) minmax(0, 1fr)")
                 }
 
                 put("background", "var(--kl-ground-raised)")
@@ -773,10 +779,16 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
                     put("align-items", "center")
                     put("justify-content", "center")
                     put("gap", "14px")
-                    // The spectrum as tall as the Motor's, so its cells are the Motor's
-                    put("height", if (element.id == "spectrum") "${Motor.SPECTRUM_HEIGHT_REM}rem" else "96px")
                     put("background", "var(--kl-ground-panel)")
-                    put("border-bottom", "1px solid var(--kl-edge)")
+
+                    if (wide) {
+                        put("min-height", "${Motor.SPECTRUM_HEIGHT_REM}rem")
+                        put("padding", "12px 14px")
+                        put("border-right", "1px solid var(--kl-edge)")
+                    } else {
+                        put("height", "96px")
+                        put("border-bottom", "1px solid var(--kl-edge)")
+                    }
                 }
 
                 renderPreview(element.id)
@@ -1138,8 +1150,8 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
             "screen" -> div {
                 css {
                     put("display", "flex")
-                    put("width", "200px")
-                    put("height", "72px")
+                    put("width", "100%")
+                    put("align-self", "stretch")
                 }
 
                 KlangScreen(size = KlangScreen.Size.Small, surface = "#000000", tube = true) {
@@ -1179,10 +1191,11 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
                 +"128"
             }
 
+            // As tall as the Motor's, so its cells are the Motor's
             "spectrum" -> div {
                 css {
                     put("width", "100%")
-                    put("align-self", "stretch")
+                    put("height", "${Motor.SPECTRUM_HEIGHT_REM}rem")
                 }
 
                 Spectrumeter(
@@ -1216,6 +1229,9 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
     }
 
     companion object {
+        /** The cards two tiles wide, their preview left of their controls. */
+        private val WIDE_ELEMENTS = setOf("screen", "spectrum")
+
         /** The scope card's still frame: a tone with an overtone, as a song might show it. */
         private val SCOPE_FRAME = Float32Array(2048).also { frame ->
             for (i in 0 until frame.length) {

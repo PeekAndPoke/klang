@@ -113,13 +113,15 @@ enum class KlangRoleGroup(val title: String, val elements: List<Element>) {
             ),
             Element(
                 id = "spectrum",
-                title = "Spectrum, quiet to peak",
+                title = "Spectrum, peak to quiet",
+                // Top to bottom, as the spectrum stands (the maintainer, 2026-10-28: "reorder the color in the
+                // spectrumeter to match the graphics")
                 roles = listOf(
-                    KlangRole.SpectrumQuiet to "Quiet",
-                    KlangRole.SpectrumLow to "Low",
-                    KlangRole.SpectrumMid to "Mid",
-                    KlangRole.SpectrumHot to "Hot",
                     KlangRole.SpectrumPeak to "Peak",
+                    KlangRole.SpectrumHot to "Hot",
+                    KlangRole.SpectrumMid to "Mid",
+                    KlangRole.SpectrumLow to "Low",
+                    KlangRole.SpectrumQuiet to "Quiet",
                 ),
             ),
         ),
