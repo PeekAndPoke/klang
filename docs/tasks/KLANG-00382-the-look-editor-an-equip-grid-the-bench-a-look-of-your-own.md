@@ -35,8 +35,18 @@ equipped, the Looks walkthrough.
   roles in groups (grounds and inks, metal, lamps and accent, gauges and scope, the spectrum, texture). A built-in is
   read only: "Duplicate to edit". A role that follows another (`ScrollThumbHover` follows `Accent`) shows so, dimmed,
   until it is set.
-- **Live:** the whole app takes the look being edited (a theme layer), and a preview of the Motor (gauges, the lamp,
-  the scope, the spectrum) sits beside the roles.
+- **Every element a tile:** grouped (surfaces and type, metal and caps, lamps and accent and focus, instruments, the
+  spectrum), each with a preview of its element centred on the look's ground and its roles below (the maintainer,
+  2026-10-28: "There should be one for each element. Nicely grouped, tiled and centered in the tiles"). The equip grid
+  and the bench sit side by side above, so editing has the full width.
+- **Amounts on knobs:** grain, brushed and the corners are amounts, not colours; they turn on `KlangValueKnob` (the
+  knob with an LCD the song page has), not a new slider.
+- **Live, then back:** while the editor is open the app wears the look being edited, its draft included (a theme
+  layer); leaving, it goes back to the look worn. Two actions, kept apart: **Apply** keeps the draft in the look,
+  **Wear it** makes it the look worn (as a pick in the drawer does). **Reset** drops the draft; a changed role has its
+  own undo; leaving with a draft not applied asks first. A built-in look has none of these but "Wear it" and
+  "Duplicate to edit" (the maintainer, 2026-10-28: "can the use "apply" the current settings and "reset"?", "apply
+  without selecting the theme or should the ui automatically change while editing?").
 - **Share:** "Copy as text" and "Paste a look": a name, an author and the roles' values by their CSS names, checked
   role by role on the way in (`KlangRole.accepts`); never CSS text, never a URL.
 - **The drawer:** the LOOK row shows the eight equipped; "Custom" goes, and a small "Edit" key (a pencil) at the
