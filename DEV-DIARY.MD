@@ -4,6 +4,62 @@ Condensed per-quarter summaries live in [docs/history](docs/history/). This file
 
 ## Diary
 
+### (2026-10-28) The Sprudel tool, a lamp about to break, seven looks ... v0.8.4
+
+- the parameter tools live in a new Sprudel tab of the bottom panel: put the cursor inside the parentheses of a call with a tool (`lpf( )`, `adsr( )`, `n(...)`) and its tool shows, writing into the code as you drag ... a playing song follows, and one drag is one undo step (KLANG-00374)
+- the KDoc tag `@param-tool` is retired for `@tool` in two forms: `@tool SprudelLpFilterEditor` on a function names a tool for the whole call, `@tool amount: ...` a parameter's ... a function's tools reach every variant, so `"c3".gain(0.5)` gets the gain tool too, and an old `@param-tool` line fails the build, saying what to write
+- the hover badge, the tool modal and the popover are gone: a right-click inside a call offers "Open the Sprudel tool", and every tool shows embedded, the mini-notation editors writing each change at once
+- a hover's help turns the bottom panel to the Quick help, from the Lexikon too (KLANG-00365)
+- the start page plays "Gestrandet" once the dyno is done, fading in over 15 s, until "Make Music Now" ... not during the run, which it would slow down and so lower the PS (maintainer)
+- the start page's lamp comes on clean and stays so until 5 s after the dyno, then stutters now and then like a bulb about to break, each stutter smoothed by a law of its own through Ultra's `smooth()` (maintainer) ... a law that can change on a running stream is ULTRA-00264
+- scrollbars: Chrome ignored our scrollbar styling, since klang.css set the standard `scrollbar-color` on every element ... it is Firefox's only now, and a hovered thumb takes the look's accent at 65 %, a new theme role
+- looks: Cream is coffee and cream now, the old one kept as Army; new are Forest, Sun (gold, with a royal-blue lamp) and Asphalt (tarmac, more grain) ... the look picker's buttons are smaller
+- Der Schmetterling and Gestrandet retuned (maintainer)
+- rough: the tutorials' code players show no tool since the modal is gone, a question for the maintainer; an untyped call such as `x => x.tremolo(5, 0.3)` gets no whole-call tool
+
+### (2026-10-27) Learn on the workbench, an envelope that follows the player ... v0.8.3
+
+- Learn's tracks are panels, two or three to a row, a click opens the track; the filters sit in the left column, several of each, checkboxes with a lamp, and the search above the tracks (KLANG-00370)
+- the Gui-dance leads on from the walkthroughs to the First Steps tutorial, and the KLANGMOTOR mark leads home
+- the ADSR picture follows the players in every lesson of the sound design track: it draws the envelope of the example that plays and reshapes as that changes (KLANG-00371) ... each alternative has its own player, the examples are multi-line, and a lesson on curves is new, "The Bend of a Note"
+- the Quick help names a function's aliases, each a link to its docs page
+- a Lexikon entry reads in one column
+- the Motor's spectrum runs an 8192-point analyser, so the low columns read bins of their own
+- the Motor's gauges sit as far from the scope as from the divider above
+- a spinner on a silver button takes the ink of the text beside it
+- the start page and songs (maintainer)
+
+### (2026-10-27) The bottom panel: Quick help and the Lexikon ... v0.8.2
+
+- the Quick help moves into a bottom panel and shows a local's uses, the page's layout kept (KLANG-00349)
+- the bottom panel gets tabs, Quick help and the Lexikon, and a Lexikon link stays on the page; the panel's frame is brushed metal (KLANG-00365, KLANG-00366)
+- Lexikon terms link themselves in the help and in the Lexikon, and the hand-written links are swept (KLANG-00369)
+- Learn moves onto the workbench: the tutorials overview, the tutorial page and the example player (KLANG-00370)
+- one close button everywhere, flat, only its x; the screen's corners are smaller
+- the app's link preview: Open Graph and Twitter card tags with the Motor picture ... the repo has a social preview and the README the new picture and the Kotlin badge at 2.4.21
+- every open ticket sits in an epic; an idea noted: sound banks of Ignitor instruments, played by name and index (KLANG-00352)
+- songs and looks (maintainer)
+
+### (2026-10-27) Gui-dance and walkthroughs ... v0.8.1
+
+- the start page gets its plate and KlangScreen, each gauge in the middle of its tile, and a calmer light (KLANG-00349)
+- Gui-dance, the first-visit trail in story arcs: the first arc, and walkthroughs in their own window, with mute, taking one again and a second walkthrough (KLANG-00350)
+- the look batch's review: the modal's text and focus ring, the F11 label
+- an idea noted: UI sounds, a voice for each button and input (KLANG-00351)
+- songs (maintainer)
+
+### (2026-10-26) The workbench ... v0.8.0
+
+- every page sits in one shell, the workbench: the Motor in a column, a tool strip, tool windows that fly in, a bottom panel and a drawer, with one Motor across the pages (KLANG-00334, KLANG-00340, KLANG-00341)
+- a UI kitchen sink page (/debug/ui-kitchen-sink) shows the new parts: gauges, knobs, silver and domed buttons, lamps, riveted panels, and KlangDialog with a row of keys at its foot (KLANG-00337, KLANG-00339)
+- looks: a LOOK row in the Motor button's drawer (Default, Copper, Cream), kept by the browser ... selected is a blue tuned to each look's metal (maintainer)
+- the Motor on the new parts: KlangGauge and KlangKnob, the oscilloscope's trace a metal string lit from above, 28 spectrum columns exact to the pixel ... the spectrum reads before the master volume, the scope after it (KLANG-00344, KLANG-00346)
+- `Stream.smooth()` glides the needles at the same pace at any frame rate, and it lives in Ultra 0.116.0 now (KLANG-00345)
+- the start page starts the Motor: an ignition key, the dyno in the Motor's own gauges, one panel with the result, and "Make Music Now" plays the jingle and opens the first song at once (KLANG-00347)
+- the song page on the new parts: the transport bar, an RPM knob with an LCD, fullscreen in the strip, silver Play and Stop (KLANG-00349)
+- keys: the editor's keys come from the key map and CodeMirror's keymaps are gone; key layers and priorities, and Esc closes a code tool, then a panel, then returns to the editor ... Alt+M opens the Motor menu, Alt and a letter the tool windows, chords in a row (Ctrl+K Ctrl+S) and a double Shift open search everywhere, and the keys overview is grouped by function (KLANG-00325)
+- Gradle 9.7.1, as Ultra and spross (KLANG-00348); browser tests in the app module (KLANG-00343); IntelliJ leaves the agents' build outputs out of its index (maintainer)
+
 ### (2026-10-25) Keys with hints ... v0.7.5
 
 - Play / Update and Stop on the song page have keys: Ctrl+Shift+Enter and Ctrl+Shift+. (Cmd on a Mac), and they work while typing in the editor
