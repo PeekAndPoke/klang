@@ -18,6 +18,7 @@ import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.modals.ModalsManager
 import io.peekandpoke.kraft.semanticui.modals.FadingModal
 import io.peekandpoke.ultra.html.css
+import io.peekandpoke.ultra.semanticui.ui
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
@@ -109,7 +110,13 @@ class WalkthroughsWindow(ctx: Ctx<Props>) : FadingModal<WalkthroughsWindow.Props
             // Focusable, so a click on the text keeps the keyboard in the modal
             attributes["tabindex"] = "-1"
 
-            KlangDialog(title = "Walkthroughs", actions = actions()) {
+            KlangDialog(title = "Walkthrough guidance", actions = actions()) {
+                div {
+                    +"Let's dance through the gui."
+                }
+
+                ui.divider()
+
                 if (done.isEmpty()) {
                     div { +"No walkthrough finished yet." }
                 } else {

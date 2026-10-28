@@ -32,7 +32,7 @@ class WalkthroughsButton(ctx: NoProps) : PureComponent(ctx) {
     private fun open() {
         KlangGuiDance.dance.used(KlangGuiDance.WALKTHROUGHS)
 
-        modals.show<Boolean> { handle -> WalkthroughsWindow(handle = handle) }
+        modals.show { handle -> WalkthroughsWindow(handle = handle) }
     }
 
     override fun VDom.render() {
