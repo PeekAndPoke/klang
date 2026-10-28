@@ -9,7 +9,7 @@
 The maintainer, 2026-10-28: "stand-alone engine js-build so that it can be pulled into a normal website, like the
 whitepaper or the blog-post, and play sounds and music there". The whitepaper (`klang-whitepaper.html`) and the blog
 posts (`src/jsMain/resources/blog/`) are plain pages that talk about sound but cannot play any: a reader has to open
-the app. A small build that any page includes with one script tag would let a paragraph about drift, a filter or a
+the app. A small headless build that any page includes with one script tag would let a paragraph about drift, a filter or a
 song play right where it is explained.
 
 ## Decide before implementing
@@ -20,9 +20,10 @@ song play right where it is explained.
   - **events:** the Motor only, fed a voice stream rendered ahead by the app; light, but nothing editable;
   - **audio files:** rendered offline, no engine at all; the lightest, for pages where nothing changes.
   A mix is likely: code where the reader may edit, files elsewhere.
-- **The page's side:** a custom element (`<klang-player>` with the code inside) or a small JS API
-  (`Klang.play(code)`); a start on the first click (the browser's autoplay rule); the look of the play and stop
-  controls, styled by the page.
+- **Headless, no UI** (the maintainer, 2026-10-28: "Headless build basically ... no ui"): the build brings the
+  engine and a small JS API only (`Klang.play(code)`, `stop()`, a playing state to listen to); the page draws its own
+  play and stop buttons and starts the sound on a click (the browser's autoplay rule). No Kraft, no Fomantic, no
+  editor in the bundle.
 - **Loading:** lazily, on the first play, so a page stays light until the reader wants sound; the AudioWorklet
   module must come from the same origin or a blob URL; samples and soundfonts from the sample mirror need CORS
   (KLANG-00182).
@@ -44,3 +45,4 @@ Not set while this is an idea.
 ## History
 
 - 2026-10-28: created from the maintainer's idea.
+- 2026-10-28: headless, no UI (the maintainer): the page brings its own controls.
