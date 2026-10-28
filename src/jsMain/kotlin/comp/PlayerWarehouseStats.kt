@@ -68,7 +68,9 @@ class PlayerWarehouseStats(ctx: NoProps) : PureComponent(ctx) {
         div {
             css {
                 put("display", "grid")
-                put("grid-template-columns", "repeat(auto-fill, minmax(150px, 1fr))")
+                // Two to a row at any width: pinned, the window's scroll bar took the room for a second column (the
+                // maintainer, 2026-10-28: "when i pin the tool the warehouse stats change shape")
+                put("grid-template-columns", "repeat(2, minmax(0, 1fr))")
                 put("gap", "8px")
             }
 
