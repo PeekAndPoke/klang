@@ -24,7 +24,7 @@ import * from "sprudel"
 let feel          =    5    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
 let transposition =   -3    // -1 .. D# | 0 .. E | 1 .. F
 let drunk         =    1    // How many beers did each band member have?
-let snareHz       =  210    // Where does the snare cut through?
+let snareHz       =  205    // Where does the snare cut through?
 
 // Guitar rig  ------------------------------------------------------------------------------------------------------------------------------------------------
 // string -> pickup -> pedal -> preamp -> tone stack -> power amp -> cab. Every stage is a function of the signal, and every
@@ -123,8 +123,8 @@ let cabStock = Ign.fn(x => x.lowpass(5000).lowpass(5000))
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = Ign.fn(x => x
   .eq(e => e
-    .band(freq =  120, q = 0.7, db =  2.60)        // thump: closed-back box resonance
-    .band(freq =  380, q = 0.5, db =  4.50)        // roar:  low mids
+    .band(freq =  120, q = 0.7, db =  2.50)        // thump: closed-back box resonance
+    .band(freq =  380, q = 0.5, db =  4.45)        // roar:  low mids
     .band(freq = 2700, q = 1.7, db =  4.30)        // bark:  the upper-mid speaker peak
   )
   .lowpass(4980, 0.707, x => x.passes(3))          // the wall: 36 dB/oct, the fizz is gone
@@ -182,7 +182,7 @@ let makeGuitar = (rig) => {
     .pitchEnvelope(0.2, x => x.adsr(0.030, 0.05, 0, 0))
     //.lowpass(freq = Ign.freq().times(4).add(Ign.constant(5000).adsr(pAttack, 1.0, 0.0, 0.050)), q = 0.7)
     // noise burst
-    .plus(Ign.whitenoise().adsr(0.0005, 0.005, 0.0, 0.05).highpass(1200).mul(0.45))
+    .plus(Ign.whitenoise().adsr(0.0005, 0.010, 0.0, 0.05).highpass(1200).mul(0.20))
     //.plus(Ign.crackle(1.3).highpass(1200).adsr(0.003, 0.001, 0.0, 0.05).mul(1.5))
     // the string - lowpass adsr for the string sound and adsr for the string
     .adsr(pAttack, pDecay, pSustain, pRelease, e => e.curves("exp", "exp", "linear"))
@@ -224,7 +224,7 @@ let bass = (() => {
 
   // Harmonics: sine partials at 2f .. 6f, gain 1/n, the fundamental left to the sub above. On the
   // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
-  let harmonics = Ign.sine(x => x.harmonics(6, 0.90).fundamental(0).analog(pAnalog).analogSpread(0.01)).mul(pHarm)
+  let harmonics = Ign.sine(x => x.harmonics(6, 0.95).fundamental(0).analog(pAnalog).analogSpread(0.05)).mul(pHarm)
 
   return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -3)) // let the snare cut through
@@ -234,7 +234,7 @@ let bass = (() => {
 
 export guitarDyna = (s) => "0.98!2 0.65!6  0.85!2 0.65!2 0.80!2 0.65!2"
   .sub(perlin(0.00, 0.05).seed(s)).mul("[1.00 0.90 0.95 0.90  1.00 0.90 0.95 0.90]")
-export guitarClip = (s) => "<0.97!31 0.84 0.97!31 0.82 0.97!30 0.83 0.79>"
+export guitarClip = (s) => "<0.97!31 0.84 0.97!31 0.82 0.97!30 0.84 0.81>"
   .sub("<[0.0!7 0.05] [0.0!7 0.06] [0.0!7 0.05] [0.0!7 0.07]>").sub(perlin(0.00, 0.01).seed(s))
 export guitarDecay = (s) => "<0.480!16 0.500!16 0.480!16 0.520!16>".mul(perlin(0.90, 1.00).seed(s))
 
@@ -265,7 +265,7 @@ let marimba = (() => {
 
 export lead_shape = x => x.sound(marimba).ply("1|1|1|1|1|1|2".fast(3.sqrt())).adsrOff()
   .velocity(guitarDyna(0)).body(material = "steel", wet = 0.2)
-  .hpf(600, 0.7).lpf(7000, 1.2).notch(2700, 0.7)
+  .hpf(600, 0.7).lpf(7200, 1.2).notch(2700, 0.7)
   .pan(0.05).superimpose(pan(0.95)) // . solo()
   .clip(0.80)
 
