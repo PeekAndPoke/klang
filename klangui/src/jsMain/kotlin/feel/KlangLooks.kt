@@ -240,6 +240,9 @@ object KlangLooks {
             KlangRole.LampOn to "#3460dc",
             KlangRole.Grain to "0.32",
             KlangRole.Brushed to "0.04",
+            // The tube a little stronger than the other looks' (the maintainer, 2026-10-28)
+            KlangRole.Scanlines to "0.15",
+            KlangRole.Glow to "0.25",
             // The spectrum: gasoline on a puddle (the maintainer, 2026-10-28, from photos of an oil and a soap film), the
             // film's bands in their own order, bottom to top: amber, violet, deep blue, cyan, and a bright yellow on
             // top; vivid and metallic, the dark is the asphalt around them
