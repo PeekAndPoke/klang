@@ -134,6 +134,13 @@ enum class KlangRole(
     /** The accent on large surfaces, where [Accent] is too loud: a selected row, the editor's frame. */
     AccentMuted(cssVar = "--kl-accent-muted", kind = Kind.Color, default = "#5c7cbc"),
 
+    /**
+     * A scrollbar's thumb under the mouse, page-wide (the maintainer, 2026-10-28: the white one was "too bright when
+     * hover breaking the imersion"): the accent, as the bottom panel's shown tab is underlined, unless a look sets it;
+     * the page shows it at 65 % (all of it was "too much").
+     */
+    ScrollThumbHover(cssVar = "--kl-scroll-thumb-hover", kind = Kind.Color, default = Accent.default, follows = Accent),
+
     /** The keyboard focus ring. */
     Focus(cssVar = "--kl-focus", kind = Kind.Color, default = "#8fb0ff"),
 

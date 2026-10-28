@@ -384,10 +384,13 @@ textarea:focus {
 
 /* ── Custom Scrollbar Styling ─────────────────────────────────────────────── */
 /* Custom Scrollbar Styling */
-/* For Firefox */
-* {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+/* For Firefox only: since Chrome 121 an element with scrollbar-width or scrollbar-color ignores the ::-webkit-scrollbar
+   rules below, and Chrome then draws its own, bright thumb under the mouse */
+@supports not selector(::-webkit-scrollbar) {
+    * {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+    }
 }
 
 /* For WebKit (Chrome, Edge, Safari) */
@@ -411,13 +414,16 @@ textarea:focus {
     background: transparent;
 }
 
+/* !important: Fomantic's own thumb rules (body ::-webkit-scrollbar-thumb..., .ui.inverted ...) are more specific */
 ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.2) !important;
     border-radius: 10px;
 }
 
+/* The theme's colour: the accent, as the bottom panel's shown tab (KlangRole.ScrollThumbHover), a little subdued;
+   white broke the immersion */
 ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.4);
+    background: color-mix(in srgb, var(--kl-scroll-thumb-hover, #528bff) 65%, transparent) !important;
 }
 
 body {
