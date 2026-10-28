@@ -39,7 +39,8 @@ equipped, the Looks walkthrough.
   role by role on the way in (`KlangRole.accepts`); never CSS text, never a URL.
 - **The drawer:** the LOOK row shows the eight equipped; "Custom" goes, and a small "Edit" key (a pencil) at the
   right of the LOOK heading opens the editor, so the drawer grows by nothing (the maintainer, 2026-10-28: "we have to
-  be careful with the Motor menu it has already grown vertically quite a bit").
+  be careful with the Motor menu it has already grown vertically quite a bit"); not a button but in the code players'
+  copy key's style, a pencil and a word in the label's ink, brighter on hover ("like the "copy to clipboard" style").
 
 ## Decide before implementing
 
