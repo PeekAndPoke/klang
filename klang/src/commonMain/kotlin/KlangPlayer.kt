@@ -15,6 +15,9 @@ import io.peekandpoke.klang.common.infra.KlangAtomicInt
 import io.peekandpoke.klang.common.infra.KlangLock
 import io.peekandpoke.klang.common.infra.withLock
 import io.peekandpoke.ultra.streams.StreamSource
+import io.peekandpoke.ultra.streams.ops.filterIsInstanceOf
+import io.peekandpoke.ultra.streams.ops.map
+import io.peekandpoke.ultra.streams.ops.ticker
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
@@ -83,6 +86,18 @@ class KlangPlayer(
     // Signal stream for system-wide signals (diagnostics, etc.)
     private val _signals = StreamSource<KlangPlaybackSignal>(KlangPlaybackSignal.Idle)
     val signals = _signals.readonly
+
+    /**
+     * The Motor's diagnostics: [KlangMotorDiagnostics.stream], the latest from the backend, and
+     * [KlangMotorDiagnostics.history], its last two minutes (heat, cylinders, voices), kept from the start to the
+     * shutdown. Subscribe and draw; the player keeps them.
+     */
+    val diagnostics = KlangMotorDiagnostics(
+        stream = signals.filterIsInstanceOf(KlangPlaybackSignal.Diagnostics::class).map { it?.diagnostics },
+        ticks = ticker(intervalMs = KlangMotorDiagnostics.TICK_MS),
+        capacity = KlangMotorDiagnostics.TWO_MINUTES,
+    )
+
     private var feedbackDispatcherJob: Job? = null
     private var hasLoggedDiagnostics = false
 
@@ -120,6 +135,8 @@ class KlangPlayer(
         get() = lock.withLock { _activePlaybacks.toList() }
 
     init {
+        diagnostics.start()
+
         // Start the audio backend when the player is created
         backendJob = scope.launch {
             val backend = backendFactory(
@@ -321,7 +338,8 @@ class KlangPlayer(
             // Clear preloader cache
             samplePreloader.clear()
 
-            // Clear signal listeners
+            // Clear signal listeners, the Motor's diagnostics first
+            diagnostics.stop()
             _signals.removeAllSubscriptions()
         }
     }

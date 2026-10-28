@@ -7,7 +7,6 @@ package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.KlangGuiDance
 import io.peekandpoke.klang.Player
-import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.comp.KlangGauge
 import io.peekandpoke.klang.ui.comp.KlangMenuButton
@@ -19,11 +18,8 @@ import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.semanticui.noui
 import io.peekandpoke.ultra.semanticui.ui
-import io.peekandpoke.ultra.streams.ops.combinedWith
-import io.peekandpoke.ultra.streams.ops.filterIsInstanceOf
 import io.peekandpoke.ultra.streams.ops.map
 import io.peekandpoke.ultra.streams.ops.smooth
-import io.peekandpoke.ultra.streams.ops.switchMapNotNull
 import kotlinx.css.Display
 import kotlinx.css.display
 import kotlinx.css.height
@@ -84,9 +80,7 @@ class PlayerMiniStats(ctx: Ctx<Props>) : Component<PlayerMiniStats.Props>(ctx) {
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
     /** The current player's latest diagnostics; null while there is no player, so the gauges go offline. */
-    private val online = Player.player.switchMapNotNull { it.signals }
-        .filterIsInstanceOf(KlangPlaybackSignal.Diagnostics::class)
-        .combinedWith(Player.player) { signal, player -> signal?.diagnostics?.takeIf { player != null } }
+    private val online = Player.diagnostics.stream
 
     // The readings, smoothed as streams (KLANG-00345): the gauges draw what they get
 

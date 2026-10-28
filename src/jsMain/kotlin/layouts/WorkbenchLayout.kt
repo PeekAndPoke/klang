@@ -9,12 +9,14 @@ import io.peekandpoke.klang.KlangGuiDance
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.comp.FullscreenToggleButton
 import io.peekandpoke.klang.comp.Motoer
+import io.peekandpoke.klang.comp.MotorHistoryGraphs
 import io.peekandpoke.klang.comp.PlayerWarehouseStats
 import io.peekandpoke.klang.comp.WalkthroughsButton
 import io.peekandpoke.klang.fs
 import io.peekandpoke.klang.pages.docs.tutorials.LearnSearch
 import io.peekandpoke.klang.storage.LookStorage
 import io.peekandpoke.klang.storage.WorkbenchLayoutStorage
+import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.klang.ui.comp.KlangDrawer
 import io.peekandpoke.klang.ui.comp.KlangLookPicker
 import io.peekandpoke.klang.ui.comp.KlangSearchField
@@ -135,8 +137,12 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
                 content = { props.inner(this) },
                 tools = listOf(
                     KlangWorkbench.Tool(id = "motor", title = "Motor", icon = { tachometer_alternate }) {
-                        renderBuild()
-                        PlayerWarehouseStats()
+                        // Sections under silkscreen headings, a divider between them (the maintainer, 2026-10-28)
+                        // The gauges' last two minutes first, as a task manager shows a machine's load, then the
+                        // warehouse, then the build (the maintainer, 2026-10-28: "Flip the order")
+                        motorSection(title = "The last two minutes", first = true) { MotorHistoryGraphs() }
+                        motorSection(title = "Warehouse") { PlayerWarehouseStats() }
+                        motorSection(title = "Build") { renderBuild() }
                     },
                 ) + pageTools,
                 bottom = pageBottom,
@@ -221,23 +227,65 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
         }
     }
 
-    /** The build the Motor runs: version, branch, revision, date; nothing until it has loaded. */
+    /** A section of the Motor window: a silkscreen heading, a divider above all but the [first]. */
+    private fun FlowContent.motorSection(title: String, first: Boolean = false, content: FlowContent.() -> Unit) {
+        div {
+            css {
+                if (!first) {
+                    put("margin-top", "16px")
+                    put("padding-top", "14px")
+                    put("border-top", "1px solid var(--kl-edge)")
+                }
+            }
+
+            div(classes = KlangControlStyles.heading.toString()) {
+                css { put("margin-bottom", "10px") }
+                +title
+            }
+
+            content()
+        }
+    }
+
+    /** The build the Motor runs: version, branch, revision, date, a label and a value each; nothing until it has loaded. */
     private fun FlowContent.renderBuild() {
         val info = versionInfo.takeIf { it.isAvailable } ?: return
 
         div {
             css {
-                put("margin", "0 0 10px")
-                put("font-family", "monospace")
-                put("font-size", "12px")
-                put("line-height", "18px")
-                put("color", "var(--kl-ink-label)")
+                put("display", "grid")
+                put("grid-template-columns", "auto minmax(0, 1fr)")
+                put("column-gap", "14px")
+                put("row-gap", "4px")
+                put("align-items", "baseline")
             }
 
-            div { +"${info.project} v${info.version}" }
-            div { +"branch: ${info.gitBranch}" }
-            div { +"rev: ${info.gitDesc}" }
-            info.date?.let { date -> div { +"built: $date" } }
+            val rows = listOfNotNull(
+                "Engine" to "${info.project} v${info.version}",
+                "Branch" to info.gitBranch,
+                "Revision" to info.gitDesc,
+                info.date?.let { "Built" to it },
+            )
+
+            for ((label, value) in rows) {
+                div {
+                    css {
+                        put("font-size", "12px")
+                        put("color", "var(--kl-ink-label)")
+                    }
+                    +label
+                }
+
+                div {
+                    css {
+                        put("font-family", "monospace")
+                        put("font-size", "12px")
+                        put("color", "var(--kl-ink-text)")
+                        put("overflow-wrap", "anywhere")
+                    }
+                    +value
+                }
+            }
         }
     }
 }

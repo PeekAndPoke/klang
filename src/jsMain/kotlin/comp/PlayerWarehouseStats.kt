@@ -6,44 +6,15 @@
 package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.Player
-import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
-import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.common.toFixed
 import io.peekandpoke.ultra.html.css
-import io.peekandpoke.ultra.streams.ops.filterIsInstanceOf
 import io.peekandpoke.ultra.streams.ops.distinct
 import io.peekandpoke.ultra.streams.ops.map
-import io.peekandpoke.ultra.streams.ops.switchMapNotNull
-import kotlinx.css.Color
-import kotlinx.css.Display
-import kotlinx.css.FontWeight
-import kotlinx.css.JustifyContent
-import kotlinx.css.Padding
-import kotlinx.css.TextAlign
-import kotlinx.css.WhiteSpace
-import kotlinx.css.backgroundColor
-import kotlinx.css.borderRadius
-import kotlinx.css.color
-import kotlinx.css.display
-import kotlinx.css.fontFamily
-import kotlinx.css.fontSize
-import kotlinx.css.fontWeight
-import kotlinx.css.justifyContent
-import kotlinx.css.lineHeight
-import kotlinx.css.marginLeft
-import kotlinx.css.marginRight
-import kotlinx.css.opacity
-import kotlinx.css.padding
-import kotlinx.css.properties.LineHeight
-import kotlinx.css.rem
-import kotlinx.css.textAlign
-import kotlinx.css.whiteSpace
-import kotlinx.css.width
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
@@ -68,14 +39,11 @@ class PlayerWarehouseStats(ctx: NoProps) : PureComponent(ctx) {
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
     /**
-     * The current player's latest warehouse stats; kept while the player is gone, until the next one has its own.
-     * Redraws only when they changed: no ticker needed.
+     * The current player's latest warehouse stats; none while there is no player. Redraws only when they changed: no
+     * ticker needed.
      */
     private val stats: KlangCommLink.Feedback.Diagnostics.WarehouseStats? by subscribingTo(
-        Player.player.switchMapNotNull { it.signals }
-            .filterIsInstanceOf(KlangPlaybackSignal.Diagnostics::class)
-            .map { it?.diagnostics?.warehouse }
-            .distinct()
+        Player.diagnostics.stream.map { it?.warehouse }.distinct()
     )
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -83,126 +51,171 @@ class PlayerWarehouseStats(ctx: NoProps) : PureComponent(ctx) {
     override fun VDom.render() {
         val w = stats
 
+        if (w == null) {
+            div {
+                css {
+                    put("font-size", "12px")
+                    put("color", "var(--kl-ink-label)")
+                }
+                +"No diagnostics yet"
+            }
+
+            return
+        }
+
+        // A tile per part of the warehouse, its main figure large and its counters written out under it, the tile's
+        // hint on hover (the maintainer, 2026-10-28: "The warehouse still needs some "love"")
         div {
             css {
-                display = Display.flex
-                justifyContent = JustifyContent.center
-                // A solid ground at 80 %, so the numbers read on any look.
-                backgroundColor = Color("${KlangTheme.Hex.panelBackground}CC")
-                borderRadius = 0.3.rem
-                padding = Padding(vertical = 0.2.rem, horizontal = 0.5.rem)
-                fontFamily = "monospace"
-                fontSize = 0.7.rem
-                lineHeight = LineHeight("0.85rem")
-                whiteSpace = WhiteSpace.nowrap
-                textAlign = TextAlign.left
-                color = Color(KlangTheme.Hex.textSecondary)
-                put("text-shadow", "0 0 4px #000")
+                put("display", "grid")
+                put("grid-template-columns", "repeat(auto-fill, minmax(150px, 1fr))")
+                put("gap", "8px")
             }
 
-            title = "click: back to KLANGMOTOR"
-
-            if (w == null) {
-                div {
-                    css { opacity = 0.6 }
-                    +"warehouse: no diagnostics yet"
-                }
-                return@div
-            }
-
-            // Two columns of four lines each. Every number carries
-            // its own hover hint; the labels say what the row is about.
-            div {
-                css { marginRight = 0.9.rem }
-                line(
-                    "rings", "Delay rings: the shelf of class-sized stereo buffers orbit and master delays rent",
-                    mb(w.ringIdleBytes) to "bytes idle on the shelf",
-                    "${w.ringIdleCount}i" to "rings idle on the shelf",
-                    "${w.ringDirtyCount}d" to "idle rings not yet zeroed (housekeeping zeroes a slice per block)",
-                )
-                line(
-                    "", "",
-                    "${w.ringAllocations}a" to "rings allocated since start",
-                    "${w.ringHits}h" to "rents served from the shelf without allocating",
-                    "${w.ringFailures}f" to "allocations that failed (out of memory)",
-                    "${w.ringDropped}x" to "idle rings freed because the shelf was over budget",
-                    "${w.ringSyncCleans}z" to "rents that had to zero a dirty ring on the spot",
-                )
-                line(
-                    "reverb", "Reverb networks: one size each, lazy on the first reverb()",
-                    "${w.reverbIdleCount}i" to "networks idle on the shelf",
-                    "${w.reverbDirtyCount}d" to "idle networks not yet zeroed",
-                    "${w.reverbAllocations}a" to "networks allocated since start",
-                    "${w.reverbHits}h" to "rents served from the shelf",
-                    "${w.reverbFailures}f" to "allocations that failed (out of memory)",
-                    "${w.reverbDropped}x" to "returned networks dropped because the shelf was full",
-                )
-                line(
-                    "cyl", "Cylinders: whole orbits, built by the warmup, returned when a playback ends",
-                    "${w.cylinderIdleCount}i" to "cylinders idle on the shelf",
-                    "${w.cylinderAllocations}a" to "cylinders built since start",
-                    "${w.cylinderHits}h" to "orbits served from the shelf",
-                    "${w.cylinderDropped}x" to "idle cylinders dropped because the shelf was full",
-                )
-            }
-            div {
-                line(
-                    "scratch", "Scratch buffers: the one shared block-sized pool every ignitor renders through",
-                    "${w.scratchHighWater}/${w.scratchCapacity}" to "deepest nesting ever served / pre-sized capacity",
-                    "${w.scratchLateAllocations}l" to "allocations that happened inside render (should stay 0)",
-                    "${w.scratchUnbalancedReleases}u" to "releases without an acquire (should stay 0)",
-                )
-                line(
-                    "samples", "Sample PCM resident in the backend's store",
-                    mb(w.sampleBytes) to "PCM bytes resident",
-                    "(${w.sampleCount})" to "samples resident (complete or still arriving)",
-                    "${w.sampleAllocationFailures}f" to "uploads whose PCM could not be allocated (silent samples)",
-                )
-                line(
-                    "late", "Voices dropped at admission because their start was already behind the render clock",
-                    "${w.droppedVoices}" to "voices dropped as late since start (across all playbacks)",
-                    warn = w.droppedVoices > 0,
-                )
-                line(
-                    "dry", "Delay or reverb rents the warehouse refused for lack of memory: that orbit plays dry",
-                    "${w.deniedRents}" to "refused rents since start (across all live orbits)",
-                    warn = w.deniedRents > 0,
-                )
-            }
+            tile(
+                name = "Delay rings",
+                hint = "The shelf of class-sized stereo buffers orbit and master delays rent",
+                figure = mb(w.ringIdleBytes),
+                unit = "idle",
+                details = listOf(
+                    "${w.ringIdleCount} idle, ${w.ringDirtyCount} to zero",
+                    "${w.ringAllocations} built, ${w.ringHits} reused",
+                    "${w.ringDropped} freed, ${w.ringSyncCleans} zeroed late",
+                ),
+                warn = w.ringFailures > 0,
+                warning = "${w.ringFailures} failed for lack of memory",
+            )
+            tile(
+                name = "Reverbs",
+                hint = "Reverb networks: one size each, built on the first reverb()",
+                figure = w.reverbIdleCount.toString(),
+                unit = "idle",
+                details = listOf(
+                    "${w.reverbDirtyCount} to zero",
+                    "${w.reverbAllocations} built, ${w.reverbHits} reused",
+                    "${w.reverbDropped} dropped",
+                ),
+                warn = w.reverbFailures > 0,
+                warning = "${w.reverbFailures} failed for lack of memory",
+            )
+            tile(
+                name = "Cylinders",
+                hint = "Whole orbits, built by the warmup, returned when a playback ends",
+                figure = w.cylinderIdleCount.toString(),
+                unit = "idle",
+                details = listOf(
+                    "${w.cylinderAllocations} built, ${w.cylinderHits} reused",
+                    "${w.cylinderDropped} dropped",
+                ),
+            )
+            tile(
+                name = "Scratch",
+                hint = "The one shared block-sized pool every ignitor renders through: the deepest nesting served, of " +
+                    "the capacity it was sized for",
+                figure = "${w.scratchHighWater}",
+                unit = "of ${w.scratchCapacity}",
+                details = listOf("deepest nesting"),
+                warn = w.scratchLateAllocations > 0 || w.scratchUnbalancedReleases > 0,
+                warning = "${w.scratchLateAllocations} late, ${w.scratchUnbalancedReleases} unbalanced",
+            )
+            tile(
+                name = "Samples",
+                hint = "Sample PCM resident in the backend's store",
+                figure = mb(w.sampleBytes),
+                unit = "PCM",
+                details = listOf("${w.sampleCount} ${if (w.sampleCount == 1) "sample" else "samples"}"),
+                warn = w.sampleAllocationFailures > 0,
+                warning = "${w.sampleAllocationFailures} silent, no memory",
+            )
+            tile(
+                name = "Late voices",
+                hint = "Voices dropped at admission because their start was already behind the render clock",
+                figure = w.droppedVoices.toString(),
+                unit = "dropped",
+                details = listOf("since the start"),
+                warn = w.droppedVoices > 0,
+            )
+            tile(
+                name = "Playing dry",
+                hint = "Delay or reverb rents the warehouse refused for lack of memory: that orbit plays dry",
+                figure = w.deniedRents.toString(),
+                unit = "refused",
+                details = listOf("since the start"),
+                warn = w.deniedRents > 0,
+            )
         }
     }
 
-    private fun FlowContent.line(label: String, labelHint: String, vararg values: Pair<String, String>, warn: Boolean = false) {
+    /** A part of the warehouse: its [figure] large, its [details] under it; [warn] lights the tile and adds [warning]. */
+    private fun FlowContent.tile(
+        name: String,
+        hint: String,
+        figure: String,
+        unit: String,
+        details: List<String>,
+        warn: Boolean = false,
+        warning: String? = null,
+    ) {
         div {
-            span {
-                css {
-                    display = Display.inlineBlock
-                    width = 3.4.rem
-                    color = Color.white
-                    fontWeight = FontWeight.bold
-                }
-                if (labelHint.isNotEmpty()) {
-                    title = labelHint
-                }
-                +label
+            title = hint
+            css {
+                put("padding", "8px 10px")
+                put("background", "var(--kl-ground-sunken)")
+                put("border", "1px solid " + if (warn) "var(--kl-lamp-warning)" else "var(--kl-edge)")
+                put("border-radius", "var(--kl-radius)")
             }
-            for ((index, entry) in values.withIndex()) {
-                val (value, hint) = entry
+
+            div {
+                css {
+                    put("font-size", "11px")
+                    put("color", "var(--kl-ink-label)")
+                }
+                +name
+            }
+
+            div {
+                css {
+                    put("margin", "2px 0 4px")
+                    put("font-family", "monospace")
+                    put("font-size", "18px")
+                    put("color", if (warn) "var(--kl-lamp-warning)" else "var(--kl-lcd-ink)")
+                }
+                +figure
+
                 span {
                     css {
-                        if (warn) {
-                            color = KlangTheme.warning
-                        }
-                        if (index > 0) {
-                            marginLeft = 0.35.rem
-                        }
+                        put("margin-left", "5px")
+                        put("font-family", "inherit")
+                        put("font-size", "11px")
+                        put("color", "var(--kl-ink-label)")
                     }
-                    title = hint
-                    +value
+                    +unit
+                }
+            }
+
+            for (line in details) {
+                div {
+                    css {
+                        put("font-size", "11px")
+                        put("line-height", "15px")
+                        put("color", "var(--kl-ink-text)")
+                    }
+                    +line
+                }
+            }
+
+            if (warn && warning != null) {
+                div {
+                    css {
+                        put("font-size", "11px")
+                        put("line-height", "15px")
+                        put("color", "var(--kl-lamp-warning)")
+                    }
+                    +warning
                 }
             }
         }
     }
 
-    private fun mb(bytes: Double): String = "${(bytes / (1024.0 * 1024.0)).toFixed(1)}M"
+    private fun mb(bytes: Double): String = "${(bytes / (1024.0 * 1024.0)).toFixed(1)} MB"
 }

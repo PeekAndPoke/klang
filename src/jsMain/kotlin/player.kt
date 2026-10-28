@@ -5,7 +5,9 @@
 
 package io.peekandpoke.klang
 
+import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
+import io.peekandpoke.klang.audio_engine.KlangMotorDiagnostics
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.audio_engine.klangPlayer
 import io.peekandpoke.klang.audio_fe.create
@@ -21,6 +23,8 @@ import io.peekandpoke.kraft.utils.async
 import io.peekandpoke.kraft.utils.launch
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
+import io.peekandpoke.ultra.streams.ops.combinedWith
+import io.peekandpoke.ultra.streams.ops.switchMapNotNull
 import kotlinx.browser.window
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
@@ -43,6 +47,23 @@ object Player {
 
     private val _player = StreamSource<KlangPlayer?>(null)
     val player: Stream<KlangPlayer?> = _player.readonly
+
+    /** The current player's Motor diagnostics, as [KlangPlayer.diagnostics] has them, null while there is no player. */
+    class Diagnostics(player: Stream<KlangPlayer?>) {
+        /** The latest diagnostics; null while there is no player, so the gauges go offline. */
+        val stream: Stream<KlangCommLink.Feedback.Diagnostics?> = player.switchMapNotNull { it.diagnostics.stream }
+            .combinedWith(player) { d, p -> d?.takeIf { p != null } }
+
+        /** The Motor's last two minutes; null while there is no player. */
+        val history: Stream<KlangMotorDiagnostics.History?> = player.switchMapNotNull { it.diagnostics.history }
+            .combinedWith(player) { h, p -> h?.takeIf { p != null } }
+    }
+
+    /**
+     * The current player's Motor diagnostics: subscribe to [Diagnostics.stream] for the latest, to
+     * [Diagnostics.history] for the last two minutes (the maintainer, 2026-10-28).
+     */
+    val diagnostics = Diagnostics(player)
 
     private val _samples = StreamSource<Samples?>(null)
     val samples: Stream<Samples?> = _samples.readonly
