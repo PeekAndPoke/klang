@@ -37,7 +37,9 @@ equipped, the Looks walkthrough.
   the scope, the spectrum) sits beside the roles.
 - **Share:** "Copy as text" and "Paste a look": a name, an author and the roles' values by their CSS names, checked
   role by role on the way in (`KlangRole.accepts`); never CSS text, never a URL.
-- **The drawer:** the LOOK row shows the eight equipped; "Custom" becomes "Edit looks", which opens the editor.
+- **The drawer:** the LOOK row shows the eight equipped; "Custom" goes, and a small "Edit" key (a pencil) at the
+  right of the LOOK heading opens the editor, so the drawer grows by nothing (the maintainer, 2026-10-28: "we have to
+  be careful with the Motor menu it has already grown vertically quite a bit").
 
 ## Decide before implementing
 
@@ -62,7 +64,7 @@ equipped, the Looks walkthrough.
 3. **The equip grid:** pick and place, by mouse, keys and touch; then the drag.
 4. **Share:** copy as text, paste a look.
 5. **The Looks walkthrough** (Gui-dance, KLANG-00350), after the editor exists: the Motor button, then Copper, Sun and
-   Asphalt lit in turn in the drawer, then "Edit looks"; a minute's rest before it, as after every walkthrough.
+   Asphalt lit in turn in the drawer, then the "Edit" key; a minute's rest before it, as after every walkthrough.
 
 ## Acceptance
 
