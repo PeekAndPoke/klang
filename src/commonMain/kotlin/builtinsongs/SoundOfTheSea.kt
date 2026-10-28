@@ -18,45 +18,37 @@ internal val soundOfTheSeaSong = Song(
     code = """
 
 
+      import * from  "stdlib"
+       import * from "sprudel"
+        let wind       = 0.200
+         let water      = 0.120
+          let waves      = 0.165
+           let windSpiel  = 3.250
+            let randseed   = sineOfDay.add(1).mul(100)
 
+            stack( //   Lean back and relax... let the waves carry you away
+          // Wind ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+       note("c").fast(8).sound("brown").adsr(0.5, 1.0, 1.0, 3.5).vowel("u|o|a".slow(8))  // . solo()
+     .gain(wind).pan(berlin.range(0.2, 0.8).slow(34))//.lpf(1500)
+    .hpf(300).bpf(freq = perlin.range(110, 110 * 15).slow(64), q = perlin.range(0.5, 5.0).slow(21))
 
-          import * from  "stdlib"
-           import * from "sprudel"
-            let wind       = 0.200
-             let water      = 0.120
-              let waves      = 0.165
-               let windSpiel  = 3.250
+   , // Water ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   sound("pink pink pink pink").legato(2).degrade(0.5).adsr(1.5, 3.0, 0.5, 5.0) //  . solo()
+   .gain(water).hpf(120).lpf(freq = 8000, env = 15).bpf(freq = 300, q = 1.0).early(2)
 
-                 stack( //   Lean back and relax... let the waves carry you away
-              // Wind ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    , // Waves ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    note("~ c ~ c ~ c ~").legato(4).degrade(96/100).sound("pink").adsr(1.0, 5.0, 0.6, 20.0) // . solo()
+    .gain(waves).hpf(80).lpf(freq = 800, env = 35, attack = 1.0, decay = 3.0, sustain = 0.4, release = 20.0)
+    .bpf(freq = perlin.range(120, 500).slow(22), q = rand.range(0.5, 1.5))
+     .pan(sine.range(0.1, 0.4).slow(4)).superimpose(x => x.pan(sine.range(0.9, 0.6).slow(5)))
+      .superimpose(x => x.sound("pink").adsr(0.3, 0.5, 0.2, 3.0).velocity(0.2).hpf(1500).lpf(12500))
 
-           note("c").fast(8).sound("brown").adsr(0.5, 1.0, 1.0, 3.5).vowel("u|o|a".slow(8))  // . solo()
-         .gain(wind).pan(berlin.range(0.2, 0.8).slow(34))//.lpf(1500)
-        .hpf(300).bpf(freq = perlin.range(110, 110 * 15).slow(64), q = perlin.range(0.5, 5.0).slow(21))
-
-        , // Water ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-       sound("pink pink pink pink").legato(2).degrade(0.5).adsr(1.5, 3.0, 0.5, 5.0) //  . solo()
-       .gain(water).hpf(120).lpf(freq = 8000, env = 15).bpf(freq = 300, q = 1.0).early(2)
-
-        , // Waves ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        note("~ c ~ c ~ c ~").legato(4).degrade(96/100).sound("pink").adsr(1.0, 5.0, 0.6, 20.0) // . solo()
-        .gain(waves).hpf(80).lpf(freq = 800, env = 35, attack = 1.0, decay = 3.0, sustain = 0.4, release = 20.0)
-        .bpf(freq = perlin.range(120, 500).slow(22), q = rand.range(0.5, 1.5))
-         .pan(sine.range(0.1, 0.4).slow(4)).superimpose(x => x.pan(sine.range(0.9, 0.6).slow(5)))
-          .superimpose(x => x.sound("pink").adsr(0.3, 0.5, 0.2, 10.0).velocity(0.2).hpf(1500).lpf(12500))
-
-             , // Windspiel ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-               n(randrun(16)).orbit(2).fast(4).degradeBy(0.995).sound("glockenspiel").scale("f2:pentatonic").pan(0.3).body(material = "glass")
-                 .gain(0.25 * windSpiel).distort(0.05).adsr(0.05, 0.2, 0.5, 5.0).hpf(400).lpf(freq = 3000, q = 2, env = 24)
-                     .orbit(1).delay(wet = 0.25, time = pure(1/4).div(cps), feedback = 0.85) // . solo()
-                           ).reverb(wet = 0.25, size = 10.0, lowpass = 12500).seed(sineOfDay.add(1).mul(24 * 60 * 60 * 100)).analog(20)
-
-
-
-
-
-
+         , // Windspiel ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ~~~~~~~~~~~
+           n(randrun(16)).orbit(2).fast(4).degradeBy(0.995).sound("glockenspiel").scale("f2:pentatonic").body(material = "glass")
+             .gain(0.25 * windSpiel).distort(0.05).adsr(0.05, 0.2, 0.5, 5.0).hpf(400).lpf(freq = 3000, q = 2, env = 24)
+                 .orbit(1).delay(wet = 0.25, time = pure(1/4).div(cps), feedback = 0.85) // . solo()
+                       ).reverb(wet = 0.25, size = 10.0, lowpass = 12500).seed().analog(20)
 
 
 

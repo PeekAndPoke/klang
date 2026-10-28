@@ -182,7 +182,7 @@ let makeGuitar = (rig) => {
     .pitchEnvelope(0.2, x => x.adsr(0.030, 0.05, 0, 0))
     //.lowpass(freq = Ign.freq().times(4).add(Ign.constant(5000).adsr(pAttack, 1.0, 0.0, 0.050)), q = 0.7)
     // noise burst
-    .plus(Ign.whitenoise().adsr(0.0005, 0.008, 0.0, 0.05).highpass(800).mul(0.42))
+    .plus(Ign.whitenoise().adsr(0.0005, 0.008, 0.0, 0.05).highpass(1200).mul(0.42))
     //.plus(Ign.crackle(1.3).highpass(1200).adsr(0.003, 0.001, 0.0, 0.05).mul(1.5))
     // the string - lowpass adsr for the string sound and adsr for the string
     .adsr(pAttack, pDecay, pSustain, pRelease, e => e.curves("exp", "exp", "linear"))
@@ -224,7 +224,7 @@ let bass = (() => {
 
   // Harmonics: sine partials at 2f .. 6f, gain 1/n, the fundamental left to the sub above. On the
   // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
-  let harmonics = Ign.sine(x => x.harmonics(6, 1.6).fundamental(0).analog(pAnalog).analogSpread(0.01)).mul(pHarm)
+  let harmonics = Ign.sine(x => x.harmonics(6, 1.2).fundamental(0).analog(pAnalog).analogSpread(0.01)).mul(pHarm)
 
   return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -3)) // let the snare cut through
@@ -273,7 +273,7 @@ export lead_arrange = x => x.orbit(0) //  .mute()
   .scale("<e5:minor!48 e6:minor!16>").gain("<0.50!48 0.35!16>").gain(mul(0.26))
   .velocity()
   .shuffle("<1!80 1!1 4/8!14 1!33>")
-  .mute("<1!64 0!32 1!48 0!16 1!16>")
+  .mute("<1!64 0!32 1!48 0!16 1!32>")
   .late(berlin(0.0015, 0.0035).mul(drunk).fast(8))
 
 export lead = n(lead_pat).apply(lead_shape).tag("lead")
@@ -339,7 +339,7 @@ export bass_pat =
     [0 0 -1 3  7 0 -2 -1] [0 0 3 [0 -2]  0 0 [0 4 7 9] 6]>/8`
 
 export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.40) // . mute()
-    .ignp("sub", 0.95).ignp("harmonics", 1.00).clip("0.90".sub(perlin(0.0, 0.05).slow(8)))  // . solo()
+    .ignp("sub", 0.90).ignp("harmonics", 1.00).clip("0.90".sub(perlin(0.0, 0.05).slow(8)))  // . solo()
     .adsr(0.003, 0.50, 0.33, 0.015).hpf(35)
 
 export bass_arrange = x => x.orbit(4) // . mute()
@@ -367,8 +367,8 @@ let gummiEimer = (() => {
   let harms = Ign.sine(x => x.harmonics(6, 0.9).fundamental(0).analog(pAnalog).analogSpread(1.0))
     .pitchEnvelope(21, x => x.adsr(0.010, 0.050, 0, 0)).adsr(0.010, 0.35, 0.0, 0.40).mul(2.0)
  
-  let m2 = Ign.sine(Ign.freq().mul(1.59), x => x.analog(pAnalog)).adsr(0.002, 0.10, 0.0, 0.20).mul(0.30)
-  let m3 = Ign.sine(Ign.freq().mul(2.14), x => x.analog(pAnalog)).adsr(0.002, 0.06, 0.0, 0.10).mul(0.20)
+  let m2 = Ign.sine(Ign.freq().mul(1.59), x => x.analog(pAnalog)).adsr(0.002, 0.10, 0.0, 0.20).mul(0.45)
+  let m3 = Ign.sine(Ign.freq().mul(2.14), x => x.analog(pAnalog)).adsr(0.002, 0.06, 0.0, 0.10).mul(0.40)
   // wood core: a crack, the force of the hit the skin gives, and the hit reads as hard
   let beater = Ign.whitenoise().adsr(0.0005, 0.035, 0.0, 0.015).lowpass(1500).mul(6.00)    
  
@@ -383,13 +383,13 @@ export trommel_pat = `<[~ 0 1 ~  0 ~ 2 ~] [0 ~ 0 -4  -3 ~ -1 ~] [~ 0 -1 0  ~ 0 ~
 
 export trommel_shape = x => x.sound(gummiEimer).adsrOff() // .solo()
   .velocity("1.0 0.8 0.9 0.8".sub(perlin(0.0, 0.02))).body(material = "membrane", wet = 0.4)
-  .hpf(220).lpf("1800".add(perlin(-100, 100).slow(4))).clip(2.0)
+  .hpf(300).lpf("1900".add(perlin(-100, 100).slow(4))).clip(2.0)
   .pan(0.40).superimpose(pan(0.60))
 
 export trommel_arrange = x => x.orbit(5) // .solo(0.5)
-  .scale("e4:minor").gain(0.125)
-  .mute("<1!32 0!32 1!64>")                          
-  .late(berlin(0.0030, 0.0050).seed(100).mul(drunk).fast(4))
+  .scale("e4:minor").gain(0.12)
+  .mute("<1!96 0!32>")                          
+  .late(berlin(0.0020, 0.0040).seed(100).mul(drunk).fast(4))
 
 export trommel = n(trommel_pat).apply(trommel_shape).tag("trommel")
 
@@ -538,7 +538,7 @@ export song = stack(
     // because the snare's crack overshoots between the samples: true peak -1.2 dBFS, and the house limiter stays idle.
   master(Katalyst(k => k
     .reverb(0.10, 7, 4500)
-    .gain(4.3)
+    .gain(4.5)
     .bands(b => b
       .band(low => low.distort(0.01, "soft", 4).mul(1.00)).cut(150)
       .band(mid => mid.distort(0.15, "soft", 4).mul(0.90)).cut(5000)

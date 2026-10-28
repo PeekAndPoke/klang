@@ -15,24 +15,22 @@ internal val finalFantasy7PreludeSong = Song(
     title = "Final Synthasy VII Prelude",
     rpm = 42.0,
     icon = "gamepad",
-    code = """
-import * from "stdlib"
+    code = """import * from "stdlib"
 import * from "sprudel"
 
-// Press "Play" and then play with me!
+// Press "Play"! ... Headphones are advisable ...
 //
-//  0.0 .. your home
-// 10.0 .. cathedral
-//
-// Click "Update" on top to hear the change!
+// Try changing the "reverbSize" value, and the click Update.
+// 
+// 0.0 .. your home   |   10.0 .. cathedral
 
-const reverbSize = 6.0  
+const reverbSize = 10.0  
 
-// Oh yeah
-// ... Headphones are advisable
-// ... Put the cursor on a function and press Alt+Q, or rest the mouse on it: its help opens below
-// ... Put the cursor inside a call, as lpf( ): its tool opens below, in the Sprudel tab
-// ... Alt+M opens the Motor's menu: the songs, the docs, the looks
+// Hints:
+// - Put the cursor on a function and press Alt+Q: its help opens below in the Quick Help tab
+// - Put the cursor inside a call, as lpf( ): its tool opens below, in the Sprudel tab
+// - Hold Ctrl and the UI will show available keyboard shortcuts
+// - Alt+M opens the Motor's menu: the songs, the docs, the looks
 
 stack(
   cat(n(`<[ 0  1 2 4] [7 8 9 11] [14 15 16 18] [21 22 23 25] [28 25 23 22] [21 18 16 15] [14 11 9 8] [7 4 2  1]
@@ -40,12 +38,11 @@ stack(
   )
   // Put the cursor on "rosewood": its tool opens below, in the Sprudel tab
   .fast(2).scale("C3:major").body(material = "rosewood", wet = 1.0, floor = 0.2)
-  .sound("sine").hpf(100).lpf(5000).onepole(23197).gain(0.5).clip(0.5)
+  .sound("sine").hpf(110).lpf(5000).gain(0.5).clip(0.5)
   // Put the cursor in the adsr( ): drag the curve, and hear it change
-  .adsr(0.07, 0.2, 0.5, 0.15)
+  .adsr(0.05, 0.2, 0.5, 0.15)
 
 ).reverb(wet = 0.25, size = reverbSize).analog(5)
-
 
 
     """,
