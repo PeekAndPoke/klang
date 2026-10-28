@@ -21,12 +21,14 @@ import kotlin.js.Date
  * mute ends by itself; whoever keeps the clock calls [refresh] then, so the lamp comes back.
  *
  * Plain state, no UI (the epic's item 12): the components only ask whether their step is lit and report when they
- * were used. [now] is the clock, in milliseconds, for the mute.
+ * were used. [now] is the clock, in milliseconds, for the mute. [onArcDone] hears of each arc finished, after it is
+ * kept: the app rests the walkthroughs a while there.
  */
 class GuiDance(
     val arcs: List<Arc>,
     private val store: Store,
     private val now: () -> Double = { Date.now() },
+    private val onArcDone: (Arc) -> Unit = {},
 ) {
     /** A story arc, a walkthrough: its [id], kept in the [Store] once done, its [title] for the user, its [steps] in order. */
     data class Arc(val id: String, val title: String, val steps: List<String>) {
@@ -107,6 +109,7 @@ class GuiDance(
             done = done + arc.id
             stepIndex = 0
             store.saveDone(done)
+            onArcDone(arc)
         }
 
         litSource(litStep())

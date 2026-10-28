@@ -66,7 +66,18 @@ object KlangGuiDance {
         ),
     )
 
-    val dance = GuiDance(arcs = arcs, store = BrowserStore)
+    /**
+     * How long the walkthroughs rest after a finished one, before the next lights up (the maintainer, 2026-10-28: "When
+     * a tour is done, add a 1 minute mute"): time to look around, the next lamp not at once on the heels of the last.
+     */
+    const val REST_AFTER_ARC_MS = 60_000.0
+
+    val dance: GuiDance = GuiDance(
+        arcs = arcs,
+        store = BrowserStore,
+        // A rest only when another walkthrough waits; the mute's timer brings the lamp back
+        onArcDone = { if (dance.currentArc() != null) mute(REST_AFTER_ARC_MS) },
+    )
 
     /** The timer that ends a mute on time. */
     private var muteTimer: Int? = null

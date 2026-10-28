@@ -61,6 +61,22 @@ class GuiDanceSpec : StringSpec({
         dance.lit() shouldBe "motor.menu"
     }
 
+    "a finished arc is told, once, after it is kept; an arc's other steps tell nothing" {
+        val store = GuiDance.MemoryStore()
+        val told = mutableListOf<Pair<String, Set<String>>>()
+        lateinit var dance: GuiDance
+
+        dance = GuiDance(arcs = arcs, store = store, onArcDone = { told.add(it.id to store.loadDone()) })
+
+        dance.used("song.play")
+        dance.used("motor.menu")
+        told shouldContainExactly emptyList()
+
+        dance.used("drawer.songs")
+        dance.used("drawer.songs")
+        told shouldContainExactly listOf("first-song" to setOf("first-song"))
+    }
+
     "after the last arc nothing is lit, and nothing used changes that" {
         val dance = GuiDance(arcs = arcs, store = GuiDance.MemoryStore(setOf("first-song")))
 
