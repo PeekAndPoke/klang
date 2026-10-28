@@ -8,10 +8,13 @@ package io.peekandpoke.klang
 import io.peekandpoke.klang.sprudel.ui.registerSprudelUiTools
 import io.peekandpoke.klang.storage.KeymapStorage
 import io.peekandpoke.klang.storage.LookStorage
+import io.peekandpoke.klang.storage.SeedStorage
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.codemirror.KlangEditorKeyBindings
+import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.klang.ui.comp.KlangKeyHint
 import io.peekandpoke.klang.ui.feel.KlangBrushedMetal
+import io.peekandpoke.klang.ui.feel.KlangLooks
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.klang.utils.FullscreenController
 import io.peekandpoke.klang.utils.VersionController
@@ -67,9 +70,13 @@ fun main() {
     KlangTheme.initialize()
     // The user's own looks and the equipped slots (KLANG-00382), then the look the user chose last time (KLANG-00339)
     LookStorage.restoreShelf()
-    LookStorage.load()?.let { KlangTheme.choose(it) }
+    // A first visit, nothing kept, wears Sun, gold on the start page (the maintainer, 2026-10-28: "Ok on the golden
+    // start page"); not stored, so a later first-visit look reaches everyone who never chose one
+    KlangTheme.choose(LookStorage.load() ?: KlangLooks.Sun)
     // The brushed metal's tile for the parts that wear it, painted once (KLANG-00366)
-    KlangBrushedMetal.install()
+    KlangBrushedMetal.install(seed = SeedStorage.metal)
+    // The buttons' grain from the same seed: the user's own sheet of metal
+    KlangControlStyles.installGrain(seed = SeedStorage.metal)
 
     // Register UI tools
     registerSprudelUiTools()

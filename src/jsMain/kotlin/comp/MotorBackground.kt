@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.common.math.PerlinNoise2D
+import io.peekandpoke.klang.storage.SeedStorage
 import io.peekandpoke.klang.ui.feel.KlangLook
 import io.peekandpoke.klang.ui.feel.KlangRole
 import io.peekandpoke.klang.ui.feel.KlangTheme
@@ -46,12 +47,14 @@ import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.events.Event
 import kotlin.math.PI
 import kotlin.math.ceil
+import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
+import kotlin.random.Random
 
 /**
  * Shared ref to the mounted [MotorBackground] so sibling components
@@ -82,6 +85,20 @@ fun Tag.MotorBackground(
 class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
 
     companion object {
+        /**
+         * The lamp sways as if it hung on a cord, left and right of the centre, very slightly and very slowly (the
+         * maintainer, 2026-10-28): this far at the most, in the scene's units (the plate is 2 high, the lamp 3 in
+         * front of it), and one swing there and back in [LIGHT_SWAY_PERIOD_MS].
+         */
+        private const val LIGHT_SWAY = 0.12
+        private const val LIGHT_SWAY_PERIOD_MS = 16_000.0
+
+        /**
+         * The line the lamp sways along turns slowly round, as a Foucault pendulum's (the maintainer, 2026-10-28: "make
+         * the light pendulum direction rotate slowly"): once round in this time.
+         */
+        private const val LIGHT_SWAY_TURN_MS = 90_000.0
+
         /** The texture's height in px; its width follows the screen's aspect. */
         private const val TEX_HEIGHT = 2048
 
@@ -213,8 +230,15 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
      */
     private val look by subscribingTo(KlangTheme.look) { applyLook(it) }
 
-    /** 2D Perlin source for the brushed-metal grain — fixed seed keeps the texture reproducible. */
-    private val grainNoise = PerlinNoise2D()
+    /**
+     * The user's seed ([SeedStorage.metal]): the title's flakes, the grain, the strokes and the turned tiles are the
+     * user's own sheet of metal, the same on every visit (the maintainer, 2026-10-28: "The noise on Klangmotor looks
+     * the same everytime ... seed it randomly", then "every user should get a ui-seed in the storage").
+     */
+    private val seed = SeedStorage.metal
+
+    /** 2D Perlin source for the brushed-metal grain and the lamp's flicker, from this visit's [seed]. */
+    private val grainNoise = PerlinNoise2D(random = Random(seed))
 
     /** The light's colour: the look's metal. */
     private fun lightColor(look: KlangLook): Int = look.hexOf(KlangRole.MetalMid)
@@ -319,6 +343,9 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     private var currentIntensity = 0.0
     private var flickerTime = 0.0
 
+    /** How long the lamp has been swaying, for its pendulum. */
+    private var swayElapsedMs = 0.0
+
     /**
      * The bulb about to break ([BulbStutter]): its goals go into [bulbGoal], and the light reads them smoothed, each
      * stutter by a law of its own (the maintainer, 2026-10-28: "build a stream with .smooth() for how bright the light
@@ -401,23 +428,6 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
 
         return true
     }
-
-    /** A rivet's radius on the title's plate, in texture px. */
-    private val rivetRadius = 9.0
-
-    /** How far a rivet's middle sits in from the plate's corner, both ways, in texture px. */
-    private val rivetInset = 26.0
-
-    /** How steep a rivet's dome falls off at its rim. */
-    private val rivetBevel = 0.7
-
-    /** The plate's four rivets, one in each corner (the maintainer, 2026-10-26), as their middles' x and y. */
-    private fun rivets(plate: TitlePlate): List<Pair<Double, Double>> = listOf(
-        (plate.left + rivetInset) to (plate.top + rivetInset),
-        (plate.right - rivetInset) to (plate.top + rivetInset),
-        (plate.left + rivetInset) to (plate.bottom - rivetInset),
-        (plate.right - rivetInset) to (plate.bottom - rivetInset),
-    )
 
     /** Where the title's middle sits, as a share of the window's height, for the build that runs: taken as it starts. */
     private var buildCenter = 0.25
@@ -864,11 +874,16 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         if (failed) return
         val delta = min(frame.deltaMs, 100.0)
 
-        // The light stands on the centre of the screen. The cone size stays FIXED: Z only moves toward the
-        // hover/default target ([moveCone]), no breathing
+        // The light hangs over the centre of the screen and sways a little, as a pendulum. The cone size stays FIXED:
+        // Z only moves toward the hover/default target ([moveCone]), no breathing
+        swayElapsedMs += delta
+
         mainLight?.position?.let { pos ->
-            pos.x = 0.0
-            pos.y = 0.0
+            val swing = LIGHT_SWAY * sin(2.0 * PI * swayElapsedMs / LIGHT_SWAY_PERIOD_MS)
+            val direction = 2.0 * PI * swayElapsedMs / LIGHT_SWAY_TURN_MS
+
+            pos.x = swing * cos(direction)
+            pos.y = swing * sin(direction)
             coneElapsedMs += delta
             lightZ = coneFrom + (targetLightZ - coneFrom) * easeOutExpo(min(1.0, coneElapsedMs / coneMs))
             pos.z = lightZ
@@ -919,8 +934,9 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
 
     ////  PROCEDURAL NORMAL MAP  //////////////////////////////////////////////////////////////////////////////////
 
+    /** A number from 0 to 1 for a cell, the same for the same cell and [seed]. */
     private fun hashCell(col: Int, row: Int): Double {
-        var h = (col * 73856093) xor (row * 19349663)
+        var h = (col * 73856093) xor (row * 19349663) xor seed
         h = ((h ushr 16) xor h) * 0x45d9f3b
         h = ((h ushr 16) xor h) * 0x45d9f3b
         h = (h ushr 16) xor h
@@ -987,16 +1003,6 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         tctx.fillRect(0.0, 0.0, width.toDouble(), height.toDouble())
 
         val plate = titlePlate(width = width, height = height, centerShare = titleCenter())
-
-        // The rivets' rims, a thin darker ring each, so the domes read crisp
-        tctx.strokeStyle = "#9a9a9a"
-        tctx.lineWidth = 1.5
-
-        for ((rx, ry) in rivets(plate)) {
-            tctx.beginPath()
-            tctx.arc(rx, ry, rivetRadius, 0.0, 2 * PI)
-            tctx.stroke()
-        }
 
         // Dark seam lines on the panel grid: albedo crispness on top of the normal-map bevels, about half the face's
         // brightness, as they were. None crosses the title's plate: a line that would stops at its edges.
@@ -1260,7 +1266,6 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         val plate = titlePlate(width = width, height = height, centerShare = titleCenter())
         val originY = gridOriginY(plate)
         val plateRowOriginX = gridOriginInPlateRow(width)
-        val plateRivets = rivets(plate)
         // Whether a tile lies turned, worked out when the loop enters another tile, not for every pixel
         var turnedCol = Int.MIN_VALUE
         var turnedRow = Int.MIN_VALUE
@@ -1315,21 +1320,10 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
                 }
 
                 val turned = !onPlate && tileTurned
-                var nx = tiltX + seamNx + if (turned) brushed(px = py, py = px) else 0.0
-                var ny = tiltY + seamNy + if (turned) 0.0 else brushed(px, py)
-
-                // A rivet: a dome, its surface falling off outward from its middle, no brushing on it
-                if (onPlate) {
-                    for ((rx, ry) in plateRivets) {
-                        val dx = px - rx
-                        val dy = py - ry
-
-                        if (dx * dx + dy * dy < rivetRadius * rivetRadius) {
-                            nx = dx / rivetRadius * rivetBevel
-                            ny = dy / rivetRadius * rivetBevel
-                        }
-                    }
-                }
+                // The title's plate has no rivets (the maintainer, 2026-10-28: "remove the rivets on the Klangmotor
+                // tile"; they came 2026-10-26)
+                val nx = tiltX + seamNx + if (turned) brushed(px = py, py = px) else 0.0
+                val ny = tiltY + seamNy + if (turned) 0.0 else brushed(px, py)
 
                 val nz = sqrt(max(0.01, 1.0 - nx * nx - ny * ny))
 

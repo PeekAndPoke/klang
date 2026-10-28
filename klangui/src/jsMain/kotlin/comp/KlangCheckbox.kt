@@ -23,22 +23,18 @@ fun Tag.KlangCheckbox(
     label: String,
     checked: Boolean,
     onChange: (Boolean) -> Unit,
-    look: KlangCheckbox.Look = KlangCheckbox.Look.Box,
 ) = comp(
-    KlangCheckbox.Props(label = label, checked = checked, onChange = onChange, look = look)
+    KlangCheckbox.Props(label = label, checked = checked, onChange = onChange)
 ) {
     KlangCheckbox(it)
 }
 
 /**
- * A checkbox (KLANG-00349; the maintainer: an "Enter Fullscreen" checkbox, "new design element"): a box sunk into the
- * panel that turns silver with a check, as the silver keys, and its [Props.label] beside it. A real checkbox input
- * under it, hidden from the eye only: it takes the keyboard (Space), its focus ring shows on the box, and the label
- * names it for screen readers. Controlled: [Props.checked] is shown, a click hands the other value to
- * [Props.onChange].
- *
- * [Look.Lamp] shows a lamp instead of the box, lit when checked (the maintainer, 2026-10-27, for the Learn filters:
- * "checkbox but with light"); the same input under it, the focus ring round the lamp.
+ * A checkbox as a lamp, lit when checked, and its [Props.label] beside it (KLANG-00349; the maintainer, 2026-10-27,
+ * for the Learn filters: "checkbox but with light"; 2026-10-28: "we should not have any checkboxes in the ui anywhere
+ * ... they should use an LED instead of the checkmark", so the box with the check is gone). A real checkbox input under
+ * it, hidden from the eye only: it takes the keyboard (Space), its focus ring shows round the lamp, and the label names
+ * it for screen readers. Controlled: [Props.checked] is shown, a click hands the other value to [Props.onChange].
  */
 class KlangCheckbox(ctx: Ctx<Props>) : Component<KlangCheckbox.Props>(ctx) {
 
@@ -46,22 +42,13 @@ class KlangCheckbox(ctx: Ctx<Props>) : Component<KlangCheckbox.Props>(ctx) {
         val label: String,
         val checked: Boolean,
         val onChange: (Boolean) -> Unit,
-        val look: Look,
     )
-
-    /** What shows the state: a box that turns silver with a check, or a lamp that lights. */
-    enum class Look {
-        Box,
-        Lamp,
-    }
 
     override fun VDom.render() {
         val styles = KlangControlStyles
 
         label(classes = styles.checkbox.toString()) {
-            val inputStyle = if (props.look == Look.Lamp) styles.checkboxLampInput else styles.checkboxInput
-
-            input(type = InputType.checkBox, classes = "${styles.visuallyHidden} $inputStyle") {
+            input(type = InputType.checkBox, classes = "${styles.visuallyHidden} ${styles.checkboxLampInput}") {
                 checked = props.checked
 
                 onChange { e ->
@@ -74,16 +61,10 @@ class KlangCheckbox(ctx: Ctx<Props>) : Component<KlangCheckbox.Props>(ctx) {
                 }
             }
 
-            when (props.look) {
-                Look.Box -> span(classes = styles.checkboxBox.toString()) {
-                    attributes["aria-hidden"] = "true"
-                }
+            span(classes = styles.checkboxLamp.toString()) {
+                attributes["aria-hidden"] = "true"
 
-                Look.Lamp -> span(classes = styles.checkboxLamp.toString()) {
-                    attributes["aria-hidden"] = "true"
-
-                    KlangLamp(state = if (props.checked) KlangLamp.State.On else KlangLamp.State.Off, size = 10.px)
-                }
+                KlangLamp(state = if (props.checked) KlangLamp.State.On else KlangLamp.State.Off, size = 10.px)
             }
 
             span { +props.label }

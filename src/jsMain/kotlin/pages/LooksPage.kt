@@ -13,6 +13,7 @@ import io.peekandpoke.klang.storage.LookStorage
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.klang.ui.comp.KlangGauge
+import io.peekandpoke.klang.ui.comp.KlangIgnition
 import io.peekandpoke.klang.ui.comp.KlangScreen
 import io.peekandpoke.klang.ui.comp.KlangTextField
 import io.peekandpoke.klang.ui.comp.KlangValueKnob
@@ -37,6 +38,7 @@ import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.html.onInput
 import kotlinx.browser.window
 import kotlinx.css.Color
+import kotlinx.css.px
 import kotlinx.html.ButtonType
 import kotlinx.html.FlowContent
 import kotlinx.html.InputType
@@ -112,6 +114,9 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
     private var pasteError: Boolean by value(false)
 
     private var copied: Boolean by value(false)
+
+    /** The metal card's ignition key: where it points, a click turns it. */
+    private var ignitionPreview: KlangIgnition.Position by value(KlangIgnition.Position.Off)
 
     /** The knob card's preview turns, so its arc shows; the gauge card's needle follows it. */
     private var knobPreview: Double by value(0.6)
@@ -1065,21 +1070,19 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
                 }
             }
 
-            "metal" -> span {
-                css {
-                    put("width", "48px")
-                    put("height", "48px")
-                    put("border-radius", "50%")
-                    put("border", "1px solid var(--kl-edge)")
-                    put("background", "radial-gradient(circle at 40% 30%, var(--kl-metal-light), var(--kl-metal-mid), var(--kl-metal-dark))")
-                    put("color", "var(--kl-metal-ink)")
-                    put("display", "flex")
-                    put("align-items", "center")
-                    put("justify-content", "center")
-                    put("font-weight", "700")
-                }
-                +"A"
-            }
+            // The start page's ignition key, made of the look's metal; a click turns it, its grain with it
+            "metal" -> KlangIgnition(
+                position = ignitionPreview,
+                glowing = false,
+                // OFF, ON, START, and round again
+                onTurn = {
+                    val all = KlangIgnition.Position.entries
+                    ignitionPreview = all[(ignitionPreview.ordinal + 1) % all.size]
+                },
+                size = 52.px,
+                name = "Preview",
+                cycling = true,
+            )
 
             "caps" -> {
                 KlangButton(onClick = {}, surface = KlangButton.Surface.Domed) { +"Key" }

@@ -247,6 +247,7 @@ class KlangKnob(ctx: Ctx<Props>) : Component<KlangKnob.Props>(ctx) {
             // Under the dial: the label when it goes below, then the value, as one tight caption
             if (labelBelow || valueText != null) {
                 div(classes = styles.knobCaption.toString()) {
+                    @Suppress("SENSELESS_COMPARISON")
                     if (labelBelow && label != null) {
                         span(classes = styles.knobLabel.toString()) { +label }
                     }
@@ -308,8 +309,9 @@ class KlangKnob(ctx: Ctx<Props>) : Component<KlangKnob.Props>(ctx) {
                 val inset = if (props.ring) CAP_INSET_WITH_RING_PCT else 0
                 css {
                     put("inset", "$inset%")
-                    // Its own cut of the grain, so no two caps look alike
+                    // Its own cut of the grain, so no two caps look alike, turning with the cap
                     with(styles) { grainAt(grain) }
+                    put("--kl-knob-turn", "${Dial.capDegrees(position)}deg")
                 }
 
                 div(classes = styles.knobTurn.toString()) {

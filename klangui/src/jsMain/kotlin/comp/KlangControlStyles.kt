@@ -9,6 +9,8 @@ import io.peekandpoke.kraft.addons.styling.RawStyleSheet
 import io.peekandpoke.kraft.addons.styling.StyleSheet
 import kotlinx.css.CssBuilder
 import kotlin.random.Random
+import kotlinx.browser.document
+import org.w3c.dom.HTMLElement
 
 /**
  * The classes of the Klang controls (KLANG-00337): lamps, buttons, the riveted panel.
@@ -28,11 +30,24 @@ object KlangControlStyles : StyleSheet("kl-controls") {
     const val GRAIN_TILE_PX = 160
 
     /** A tile of grey noise, opaque; the [grain] layer lays it over a surface at the look's strength. */
-    private const val GRAIN = "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' " +
+    private val GRAIN = grainImage(seed = 0)
+
+    /**
+     * The grain tile grown from [seed], as a CSS image: the user's own noise (the maintainer, 2026-10-28: "every user
+     * should get a ui-seed"); the app puts it on the root as `--kl-grain-image` ([installGrain]).
+     */
+    fun grainImage(seed: Int): String =
+        "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' " +
             "width='$GRAIN_TILE_PX' height='$GRAIN_TILE_PX' viewBox='0 0 $GRAIN_TILE_PX $GRAIN_TILE_PX'>" +
             "<filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' " +
-            "stitchTiles='stitch'/><feColorMatrix values='1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 0 0 0 0 1'/></filter>" +
+            "seed='${seed and 0xffff}' stitchTiles='stitch'/>" +
+            "<feColorMatrix values='1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 0 0 0 0 1'/></filter>" +
             "<rect width='100%' height='100%' filter='url(%23g)'/></svg>\")"
+
+    /** The user's grain, from their [seed], on the document's root; until then the grain of seed 0. */
+    fun installGrain(seed: Int) {
+        (document.documentElement as? HTMLElement)?.style?.setProperty("--kl-grain-image", grainImage(seed))
+    }
 
     /**
      * A fine grain over a surface, so a cap or a button reads as machined metal, not as smooth plastic (the
@@ -56,7 +71,7 @@ object KlangControlStyles : StyleSheet("kl-controls") {
             put("z-index", "-1")
             put("border-radius", "inherit")
             put("pointer-events", "none")
-            put("background-image", GRAIN)
+            put("background-image", "var(--kl-grain-image, $GRAIN)")
             put("background-position", "var(--kl-grain-x, 0px) var(--kl-grain-y, 0px)")
             // The tile scaled to the look's grain size: the noise is a vector, so a larger tile is coarser grain
             put("background-size", "calc(80px + var(--kl-grain-size) * 320px)")
@@ -981,6 +996,13 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("transition", "transform 350ms cubic-bezier(0.3, 1.4, 0.5, 1)")
     }
 
+    /** The key's grain turns with the same spring as the key. */
+    val ignitionGrainTurn by rule {
+        rule("&::before") {
+            put("transition", "transform 350ms cubic-bezier(0.3, 1.4, 0.5, 1)")
+        }
+    }
+
     /** A position's name, centred on its spot; the glow lamp hangs after ON without moving it off centre. */
     val ignitionLabel by rule {
         put("position", "absolute")
@@ -1129,7 +1151,7 @@ object KlangControlStyles : StyleSheet("kl-controls") {
 
     // ── The checkbox ──────────────────────────────────────────────────────────
 
-    /** The checkbox: its box and its label in one line, the whole of it clickable (KLANG-00349). */
+    /** The checkbox: its lamp and its label in one line, the whole of it clickable (KLANG-00349). */
     val checkbox by rule {
         put("position", "relative")
         put("display", "inline-flex")
@@ -1141,20 +1163,7 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("color", "var(--kl-ink-text)")
     }
 
-    /** The box, sunk into the panel; checked, silver with a check, as the silver keys. */
-    val checkboxBox by rule {
-        put("position", "relative")
-        put("flex-shrink", "0")
-        put("box-sizing", "border-box")
-        put("width", "18px")
-        put("height", "18px")
-        put("border-radius", "var(--kl-radius)")
-        put("background", "var(--kl-ground-sunken)")
-        put("border", "1px solid var(--kl-edge)")
-        put("box-shadow", "inset 0 1px 2px rgba(0, 0, 0, 0.6)")
-    }
-
-    /** The lamp in place of the box ([KlangCheckbox.Look.Lamp]): round, so its focus ring is round too. */
+    /** The checkbox's lamp: round, so its focus ring is round too. */
     val checkboxLamp by rule {
         put("display", "inline-flex")
         put("flex-shrink", "0")
@@ -1166,32 +1175,6 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         rule("&:focus-visible + *") {
             put("outline", "2px solid var(--kl-focus)")
             put("outline-offset", "3px")
-        }
-    }
-
-    /** The hidden input: the box shows its checked state and its keyboard focus. */
-    val checkboxInput by rule {
-        rule("&:checked + *") {
-            put("background", "linear-gradient(to bottom, var(--kl-metal-light), var(--kl-metal-mid) 55%, var(--kl-metal-dark))")
-            put("box-shadow", "inset 0 1px 0 rgba(255, 255, 255, 0.5)")
-        }
-
-        // The check: two borders of a turned rectangle
-        rule("&:checked + *::after") {
-            put("content", "''")
-            put("position", "absolute")
-            put("left", "5px")
-            put("top", "1px")
-            put("width", "5px")
-            put("height", "10px")
-            put("border", "solid var(--kl-metal-ink)")
-            put("border-width", "0 2px 2px 0")
-            put("transform", "rotate(45deg)")
-        }
-
-        rule("&:focus-visible + *") {
-            put("outline", "2px solid var(--kl-focus)")
-            put("outline-offset", "2px")
         }
     }
 
@@ -1716,16 +1699,60 @@ object KlangControlStyles : StyleSheet("kl-controls") {
     }
 
     val knobCapDark by rule {
-        put("background", "radial-gradient(circle at 42% 30%, var(--kl-cap-light) 0%, var(--kl-cap-dark) 100%)")
+        put(
+            "background",
+            turned(sheen = 0.12, rings = 0.08) +
+                ", radial-gradient(circle at 42% 30%, var(--kl-cap-light) 0%, var(--kl-cap-dark) 100%)",
+        )
         grain()
+        grainTurns()
     }
 
     val knobCapSilver by rule {
         put(
             "background",
-            "radial-gradient(circle at 42% 28%, var(--kl-metal-light) 0%, var(--kl-metal-mid) 45%, var(--kl-metal-dark) 100%)",
+            // Darker than a first try, the metal's dark over its outer third, as the gauges' rims on the start page's next
+            // screen (the maintainer, 2026-10-28: "the button is too bright now in general... it should match the next
+            // screen a bit more")
+            turned(sheen = 0.18, rings = 0.12) +
+                ", radial-gradient(circle at 42% 28%, var(--kl-metal-light) 0%, var(--kl-metal-mid) 30%, " +
+                "var(--kl-metal-dark) 78%, var(--kl-metal-dark) 100%)",
         )
         grain()
+        grainTurns()
+    }
+
+    /**
+     * A turned finish over a round cap's metal, as a part made on a lathe (the maintainer, 2026-10-28: the gold key
+     * "looks like an old plastic that once was white and is now turning yellow"; a soft dome of light is how plastic
+     * shines): fine concentric rings, and the light on them in two broad wedges, bright at the upper left and the lower
+     * right, at [sheen] and [rings] strength (a first 0.42 and 0.07 on silver was "a bit too much"). The
+     * rings are round, so the wedges stay where the light is while the cap turns; only the grain turns with it.
+     */
+    private fun turned(sheen: Double, rings: Double): String {
+        val light = "rgba(255, 255, 255, $sheen)"
+        val clear = "rgba(255, 255, 255, 0)"
+
+        // Light only: dark wedges met in a hard cross at the middle (the maintainer, 2026-10-28: "the dark areas in
+        // the center are weird"); two broad bright ones, soft at their edges
+        return listOf(
+            "conic-gradient(from 0deg, $clear 0deg, $clear 60deg, $light 135deg, $clear 210deg, $clear 240deg, " +
+                "$light 315deg, $clear 390deg)",
+            // Rings of 4 px, light fading to dark and back: 1 px rings aliased into a fine moire at 1x (the maintainer,
+            // 2026-10-28: "make the rings less but thicker each")
+            "repeating-radial-gradient(circle at 50% 50%, rgba(255, 255, 255, $rings) 0, rgba(0, 0, 0, $rings) 2px, " +
+                "rgba(255, 255, 255, $rings) 4px)",
+        ).joinToString(", ")
+    }
+
+    /**
+     * A turning cap's grain turns with it, by the cap's `--kl-knob-turn`, while its light stays where it is (the
+     * maintainer, 2026-10-28: "the turning knobs must also turn the grain").
+     */
+    private fun CssBuilder.grainTurns() {
+        rule("&::before") {
+            put("transform", "rotate(var(--kl-knob-turn, 0deg))")
+        }
     }
 
     /** The turning layer; its rotation comes per knob. */
@@ -1741,10 +1768,18 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("left", "50%")
         put("top", "8%")
         put("width", "8%")
-        put("height", "34%")
+        // Ends well before the middle (the maintainer, 2026-10-28: "it goes too far into the center"; it reached 42 %)
+        put("height", "26%")
         put("transform", "translateX(-50%)")
         put("border-radius", "2px")
         put("background", "var(--kl-ink-strong)")
+        // Cut into the cap, not painted on (the maintainer, 2026-10-28: "should look like mechanically created"): its
+        // walls in shadow, a fine bright lip where the cut meets the face
+        put(
+            "box-shadow",
+            "inset 0 1px 2px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(0, 0, 0, 0.25), " +
+                "0 0 0 1px rgba(255, 255, 255, 0.16)",
+        )
     }
 
     /** The pointer as a dot at the rim, when an icon sits on the cap. */
@@ -1770,7 +1805,10 @@ object KlangControlStyles : StyleSheet("kl-controls") {
 
     /** The silver cap's ink for its pointer or its dot. */
     val knobMarkSilver by rule {
+        // A groove in the metal: a flat floor in the metal's ink, its walls in an even shadow, its lip catching the
+        // light; shaded across its width it read as a rod lying on the cap (the maintainer, 2026-10-28: "Strange")
         put("background", "var(--kl-metal-ink)")
+        put("box-shadow", "inset 0 0 2px 1px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.35)")
     }
 
     /** The silver cap's ink for its icon. */

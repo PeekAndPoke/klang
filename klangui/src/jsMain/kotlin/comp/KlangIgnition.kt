@@ -33,8 +33,16 @@ fun Tag.KlangIgnition(
     onTurn: () -> Unit,
     size: LinearDimension = 200.px,
     name: String = "Start the Motor",
+    cycling: Boolean = false,
 ) = comp(
-    KlangIgnition.Props(position = position, glowing = glowing, onTurn = onTurn, size = size, name = name)
+    KlangIgnition.Props(
+        position = position,
+        glowing = glowing,
+        onTurn = onTurn,
+        size = size,
+        name = name,
+        cycling = cycling,
+    )
 ) {
     KlangIgnition(it)
 }
@@ -86,13 +94,22 @@ class KlangIgnition(ctx: Ctx<Props>) : Component<KlangIgnition.Props>(ctx) {
         val size: LinearDimension,
         /** What the key does, for screen readers. */
         val name: String,
+        /**
+         * A preview's key (the look editor's; the maintainer, 2026-10-28: "clickable always, going to the next step and
+         * the looping back"): every press calls [onTurn], at any position, and it wears no "try me".
+         */
+        val cycling: Boolean,
     )
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+    /** Where the cap cuts its grain from, so no two keys look alike; kept while it lives. */
+    private val grain = KlangControlStyles.grainOffset()
+
     override fun VDom.render() {
         val styles = KlangControlStyles
-        val waiting = props.position == Position.Off
+        // A cycling key never waits: it can always be turned, and wears no "try me"
+        val waiting = props.position == Position.Off && !props.cycling
 
         div(classes = styles.ignition.toString()) {
             css {
@@ -108,6 +125,7 @@ class KlangIgnition(ctx: Ctx<Props>) : Component<KlangIgnition.Props>(ctx) {
                 styles.knobCap,
                 styles.knobCapSilver,
                 styles.ignitionCap,
+                styles.ignitionGrainTurn,
                 if (waiting) styles.beacon else null,
             )
 
@@ -115,9 +133,9 @@ class KlangIgnition(ctx: Ctx<Props>) : Component<KlangIgnition.Props>(ctx) {
                 // The positions above the cap are hidden from screen readers: the name says where the key is
                 attributes["aria-label"] = "${props.name}: ${spoken()}"
                 // Not disabled: the focus stays on the key while it turns
-                attributes["aria-disabled"] = (!waiting).toString()
+                attributes["aria-disabled"] = (!waiting && !props.cycling).toString()
                 onClick {
-                    if (props.position == Position.Off) {
+                    if (props.cycling || props.position == Position.Off) {
                         props.onTurn()
                     }
                 }
@@ -127,6 +145,9 @@ class KlangIgnition(ctx: Ctx<Props>) : Component<KlangIgnition.Props>(ctx) {
                     height = props.size
                     put("left", "calc(50% - ${props.size * 0.5})")
                     put("bottom", "0")
+                    // Its own cut of the grain, turning with the key
+                    with(styles) { grainAt(grain) }
+                    put("--kl-knob-turn", "${props.position.degrees}deg")
                 }
 
                 div(classes = "${styles.knobTurn} ${styles.ignitionTurn}") {

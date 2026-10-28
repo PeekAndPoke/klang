@@ -17,6 +17,7 @@ import kotlin.math.floor
 import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
+import kotlin.random.Random
 
 /**
  * Brushed metal as a flat finish (KLANG-00366; the maintainer, 2026-10-27: "the brushed iron look on the backgrounds
@@ -43,18 +44,29 @@ object KlangBrushedMetal {
     /** How opaque a stroke is per unit of its level: a light stroke white, a deep one black, both mostly clear. */
     private const val CONTRAST = 700.0
 
-    private val pressureNoise = PerlinNoise2D()
+    /**
+     * The user's seed ([install]): the strokes are the user's own sheet, the same on every visit (the maintainer,
+     * 2026-10-28: "Same for the metal brush here and on the ui-elements"; "every user should get a ui-seed").
+     */
+    private var seed = 0
+
+    private var pressureNoise = PerlinNoise2D(random = Random(seed))
 
     /** Painted, or on its way: a second [install] does nothing. */
     private var installed = false
 
-    /** Paints the tile a few rows at a time, then hands it to the styles; nothing where a canvas cannot be had. */
-    fun install() {
+    /**
+     * Paints the tile from the user's [seed] a few rows at a time, then hands it to the styles; nothing where a canvas
+     * cannot be had.
+     */
+    fun install(seed: Int) {
         if (installed) {
             return
         }
 
         installed = true
+        this.seed = seed
+        pressureNoise = PerlinNoise2D(random = Random(seed))
 
         val canvas = document.createElement("canvas") as HTMLCanvasElement
 
@@ -144,7 +156,7 @@ object KlangBrushedMetal {
     }
 
     private fun hashCell(col: Int, row: Int): Double {
-        var h = (col * 73856093) xor (row * 19349663)
+        var h = (col * 73856093) xor (row * 19349663) xor seed
         h = ((h ushr 16) xor h) * 0x45d9f3b
         h = ((h ushr 16) xor h) * 0x45d9f3b
         h = (h ushr 16) xor h
