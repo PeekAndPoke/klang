@@ -104,8 +104,13 @@ enum class KlangRoleGroup(val title: String, val elements: List<Element>) {
     ),
 
     Spectrum(
-        title = "The spectrum",
+        title = "Screen and spectrum",
         elements = listOf(
+            Element(
+                id = "screen",
+                title = "Screen, an old tube",
+                roles = listOf(KlangRole.Scanlines to "Scan lines", KlangRole.Glow to "Glow"),
+            ),
             Element(
                 id = "spectrum",
                 title = "Spectrum, quiet to peak",

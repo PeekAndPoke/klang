@@ -19,9 +19,10 @@ fun Tag.KlangScreen(
     size: KlangScreen.Size = KlangScreen.Size.Small,
     surface: String = "var(--kl-ground-sunken)",
     bezel: String = "var(--kl-ground-deep)",
+    tube: Boolean = false,
     content: DIV.() -> Unit,
 ) = comp(
-    KlangScreen.Props(size = size, surface = surface, bezel = bezel, content = content)
+    KlangScreen.Props(size = size, surface = surface, bezel = bezel, tube = tube, content = content)
 ) {
     KlangScreen(it)
 }
@@ -35,6 +36,9 @@ fun Tag.KlangScreen(
  * Nothing clips the content: the corners are laid over it, so popups fixed inside the content (the code editor's
  * hover docs, the code tools) are not cut at the screen's edge. The corners and the shadow never catch the mouse.
  * The screen fills what its parent gives it (a flex column); the content gets a flex column that fills the screen.
+ *
+ * A [Props.tube] is an old screen, before flat ones: scan lines, glass, a little glow on the code (the look's
+ * [io.peekandpoke.klang.ui.feel.KlangRole.Scanlines] and [io.peekandpoke.klang.ui.feel.KlangRole.Glow]).
  */
 class KlangScreen(ctx: Ctx<Props>) : Component<KlangScreen.Props>(ctx) {
 
@@ -51,6 +55,8 @@ class KlangScreen(ctx: Ctx<Props>) : Component<KlangScreen.Props>(ctx) {
         val surface: String,
         /** The ground round the screen, which its cut corners show. */
         val bezel: String,
+        /** An old tube: scan lines, glass, glowing text. */
+        val tube: Boolean,
         val content: DIV.() -> Unit,
     )
 
@@ -63,11 +69,19 @@ class KlangScreen(ctx: Ctx<Props>) : Component<KlangScreen.Props>(ctx) {
                 put("--kl-screen-bezel", props.bezel)
             }
 
-            div(classes = styles.screenSurface.toString()) {
+            val surfaceClasses = listOfNotNull(styles.screenSurface, styles.screenTube.takeIf { props.tube })
+
+            div(classes = surfaceClasses.joinToString(" ")) {
                 css { put("background", props.surface) }
 
                 div(classes = styles.screenShade.toString()) {
                     attributes["aria-hidden"] = "true"
+                }
+
+                if (props.tube) {
+                    div(classes = styles.screenTubeGlass.toString()) {
+                        attributes["aria-hidden"] = "true"
+                    }
                 }
 
                 div(classes = styles.screenContent.toString()) {

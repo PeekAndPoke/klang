@@ -13,6 +13,7 @@ import io.peekandpoke.klang.storage.LookStorage
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.klang.ui.comp.KlangGauge
+import io.peekandpoke.klang.ui.comp.KlangScreen
 import io.peekandpoke.klang.ui.comp.KlangTextField
 import io.peekandpoke.klang.ui.comp.KlangValueKnob
 import io.peekandpoke.klang.ui.comp.KlangYesNoModal
@@ -1134,6 +1135,37 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
                 Oscilloscope(player = Player.player, strokeColor = Color(look[KlangRole.ScopeTrace]), preview = SCOPE_FRAME)
             }
 
+            "screen" -> div {
+                css {
+                    put("display", "flex")
+                    put("width", "200px")
+                    put("height", "72px")
+                }
+
+                KlangScreen(size = KlangScreen.Size.Small, surface = "#000000", tube = true) {
+                    // The editor's own class, so the glow reaches it as it reaches the code
+                    div(classes = "cm-content") {
+                        css {
+                            put("padding", "8px 10px")
+                            put("font-family", "monospace")
+                            put("font-size", "12px")
+                            put("line-height", "1.5")
+                        }
+
+                        div {
+                            token(color = "#c678dd", text = "let ")
+                            token(color = "#e5c07b", text = "feel")
+                            token(color = "#abb2bf", text = " = 5")
+                        }
+
+                        div {
+                            css { put("color", "#7f848e") }
+                            +"// the tube glows"
+                        }
+                    }
+                }
+            }
+
             "lcd" -> span {
                 css {
                     put("padding", "4px 10px")
@@ -1161,6 +1193,13 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
                     preview = SPECTRUM_LEVELS,
                 ) { null }
             }
+        }
+    }
+
+    private fun FlowContent.token(color: String, text: String) {
+        span {
+            css { put("color", color) }
+            +text
         }
     }
 

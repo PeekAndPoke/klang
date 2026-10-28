@@ -197,6 +197,16 @@ enum class KlangRole(
      * was "too much", then 0.18 on the large empty pages "a bit too much... needs to be more subtle").
      */
     Brushed(cssVar = "--kl-brushed", kind = Kind.Amount, default = "0.1"),
+
+    /**
+     * The song editor's screen as an old tube (the maintainer, 2026-10-28: "so that it reads more like an old "screen"
+     * before there were led-screens", "Has to be subtle though to not interfere with the coding"): how dark its scan
+     * lines are, from 0 (none) to 1; 0.3 was "too much now but it is there".
+     */
+    Scanlines(cssVar = "--kl-scanlines", kind = Kind.Amount, default = "0.15"),
+
+    /** How much the tube's text glows in its own colour, lit phosphor rather than print, from 0 (none) to 1. */
+    Glow(cssVar = "--kl-glow", kind = Kind.Amount, default = "0.2"),
     ;
 
     /** What a role's value is, and so which values a theme may give it. */

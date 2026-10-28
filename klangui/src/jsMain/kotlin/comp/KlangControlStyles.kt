@@ -1030,6 +1030,37 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("z-index", "5")
     }
 
+    /**
+     * A screen as an old tube (the song editor's): its text glows a little in its own colour, as lit phosphor, at the
+     * look's `--kl-glow`; small, so the code stays sharp.
+     */
+    val screenTube by rule {
+        rule("& .cm-content") {
+            put("text-shadow", "0 0 4px color-mix(in srgb, currentColor calc(var(--kl-glow) * 100%), transparent)")
+        }
+    }
+
+    /**
+     * The tube's glass, over the content and never in the way: a faint reflection across the top, the corners and
+     * edges darker, scan lines (a dark line every third pixel, at the look's `--kl-scanlines`), and the glass's own
+     * grey-green, which lifts the black a little: on pure black, dark lines and a dark rim would not show.
+     */
+    val screenTubeGlass by rule {
+        put("position", "absolute")
+        put("inset", "0")
+        put("pointer-events", "none")
+        put("z-index", "5")
+        put(
+            "background",
+            listOf(
+                "linear-gradient(165deg, rgba(255, 255, 255, 0.05) 0%, transparent 30%)",
+                "radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.35) 100%)",
+                "repeating-linear-gradient(to bottom, rgba(0, 0, 0, var(--kl-scanlines)) 0 1px, transparent 1px 3px)",
+                "rgba(150, 175, 165, 0.04)",
+            ).joinToString(", "),
+        )
+    }
+
     /** What the screen shows: a flex column filling it. */
     val screenContent by rule {
         put("display", "flex")

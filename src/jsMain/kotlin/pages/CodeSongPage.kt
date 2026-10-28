@@ -350,7 +350,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                         put("margin", "0 10px 10px")
                     }
 
-                    KlangScreen(size = KlangScreen.Size.Large, surface = "#000000") {
+                    KlangScreen(size = KlangScreen.Size.Large, surface = "#000000", tube = true) {
                         // Inner CLIP: clips the editor content to the screen. The editor
                         // fills it and scrolls itself, which the minimap needs
                         // (`klang-editor-fill` in klang.css passes the height down).
