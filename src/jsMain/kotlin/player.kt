@@ -7,7 +7,7 @@ package io.peekandpoke.klang
 
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
-import io.peekandpoke.klang.audio_engine.KlangMotorDiagnostics
+import io.peekandpoke.klang.audio_engine.KlangDiagnostics
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.audio_engine.klangPlayer
 import io.peekandpoke.klang.audio_fe.create
@@ -55,7 +55,7 @@ object Player {
             .combinedWith(player) { d, p -> d?.takeIf { p != null } }
 
         /** The Motor's last two minutes; null while there is no player. */
-        val history: Stream<KlangMotorDiagnostics.History?> = player.switchMapNotNull { it.diagnostics.history }
+        val history: Stream<KlangDiagnostics.History?> = player.switchMapNotNull { it.diagnostics.history }
             .combinedWith(player) { h, p -> h?.takeIf { p != null } }
     }
 

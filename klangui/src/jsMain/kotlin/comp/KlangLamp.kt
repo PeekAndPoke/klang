@@ -28,8 +28,9 @@ fun Tag.KlangLamp(
     state: KlangLamp.State,
     size: LinearDimension = 8.px,
     label: String? = null,
+    color: String? = null,
 ) = comp(
-    KlangLamp.Props(state = state, size = size, label = label)
+    KlangLamp.Props(state = state, size = size, label = label, color = color)
 ) {
     KlangLamp(it)
 }
@@ -50,6 +51,12 @@ class KlangLamp(ctx: Ctx<Props>) : Component<KlangLamp.Props>(ctx) {
         val size: LinearDimension,
         /** Printed beside the lamp; null for a lamp whose control says what it means. */
         val label: String?,
+        /**
+         * The lit lamp's own colour, a CSS colour (a look's role, `var(--kl-...)`), in place of its state's: a graph's
+         * line in its legend (KLANG-00385; the maintainer, 2026-10-28: "Use the LED comp we have to show the color of a
+         * diagnostic"). Off and unlit lamps stay dark.
+         */
+        val color: String?,
     )
 
     enum class State {
@@ -102,6 +109,13 @@ class KlangLamp(ctx: Ctx<Props>) : Component<KlangLamp.Props>(ctx) {
             css {
                 width = props.size
                 height = props.size
+
+                val color = props.color
+
+                if (color != null && props.state != State.Off && props.state != State.Unlit) {
+                    put("background", color)
+                    put("box-shadow", "0 0 6px $color")
+                }
             }
         }
     }

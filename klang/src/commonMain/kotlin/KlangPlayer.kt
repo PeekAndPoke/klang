@@ -9,12 +9,14 @@ import io.peekandpoke.klang.audio_be.AudioAnalyzer
 import io.peekandpoke.klang.audio_be.AudioBackend
 import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
+import io.peekandpoke.klang.audio_bridge.KlangTime
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.common.infra.KlangAtomicInt
 import io.peekandpoke.klang.common.infra.KlangLock
 import io.peekandpoke.klang.common.infra.withLock
 import io.peekandpoke.ultra.streams.StreamSource
+import io.peekandpoke.ultra.streams.Unsubscribe
 import io.peekandpoke.ultra.streams.ops.filterIsInstanceOf
 import io.peekandpoke.ultra.streams.ops.map
 import io.peekandpoke.ultra.streams.ops.ticker
@@ -88,15 +90,36 @@ class KlangPlayer(
     val signals = _signals.readonly
 
     /**
-     * The Motor's diagnostics: [KlangMotorDiagnostics.stream], the latest from the backend, and
-     * [KlangMotorDiagnostics.history], its last two minutes (heat, cylinders, voices), kept from the start to the
-     * shutdown. Subscribe and draw; the player keeps them.
+     * The diagnostics (KLANG-00385): [KlangDiagnostics.stream], the latest from the backend, and the metrics any owner
+     * registers, with [KlangDiagnostics.history], their last two minutes, kept from the start to the shutdown. The
+     * player owns the Motor's three; a playback its pattern work. Subscribe and draw; the player keeps them.
      */
-    val diagnostics = KlangMotorDiagnostics(
+    val diagnostics = KlangDiagnostics(
         stream = signals.filterIsInstanceOf(KlangPlaybackSignal.Diagnostics::class).map { it?.diagnostics },
-        ticks = ticker(intervalMs = KlangMotorDiagnostics.TICK_MS),
-        capacity = KlangMotorDiagnostics.TWO_MINUTES,
+        ticks = ticker(intervalMs = KlangDiagnostics.TICK_MS),
+        capacity = KlangDiagnostics.TWO_MINUTES,
+        nowMs = KlangTime.create()::internalMsNow,
     )
+
+    // The Motor's own metrics, the player their owner: posted from every diagnostics the backend sends, closed at
+    // the shutdown
+    private val motorHeat = diagnostics.metric(
+        id = "motor-heat", name = "Motor heat", category = "CPU", unit = "%", min = 0.0, max = 100.0,
+    )
+    private val motorCylinders = diagnostics.metric(
+        id = "motor-cylinders", name = "Active cylinders", category = "Cylinders", unit = "", min = 0.0, max = 32.0,
+    )
+    private val motorVoices = diagnostics.metric(
+        id = "motor-voices", name = "Active voices", category = "Voices", unit = "", min = 0.0, max = 100.0,
+    )
+
+    private var motorFeed: Unsubscribe? = diagnostics.stream.subscribeToStream { d ->
+        if (d != null) {
+            motorHeat.post((1.0 - d.renderHeadroom) * 100.0)
+            motorCylinders.post(d.cylinders.count { it.active }.toDouble())
+            motorVoices.post(d.activeVoiceCount.toDouble())
+        }
+    }
 
     private var feedbackDispatcherJob: Job? = null
     private var hasLoggedDiagnostics = false
@@ -126,6 +149,7 @@ class KlangPlayer(
         callbackDispatcher = callbackDispatcher,
         backendReady = backendReady,
         clockSync = clockSync,
+        diagnostics = diagnostics,
     )
 
     /**
@@ -338,7 +362,12 @@ class KlangPlayer(
             // Clear preloader cache
             samplePreloader.clear()
 
-            // Clear signal listeners, the Motor's diagnostics first
+            // Clear signal listeners, the diagnostics first: the Motor's metrics are the player's, closed with it
+            motorFeed?.invoke()
+            motorFeed = null
+            motorHeat.close()
+            motorCylinders.close()
+            motorVoices.close()
             diagnostics.stop()
             _signals.removeAllSubscriptions()
         }

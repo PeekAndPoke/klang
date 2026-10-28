@@ -53,6 +53,9 @@ internal class KlangPatternScheduler(
          * `secPerCycle` explode and time effectively stand still (or compute NaN anchors).
          */
         const val MIN_RPM: Double = 1.0
+
+        /** How often the pattern's work is posted: as the diagnostics read it, four times a second. */
+        const val RUNTIME_WINDOW_MS = 250.0
     }
 
     // Extract dependencies from context for convenience
@@ -63,6 +66,16 @@ internal class KlangPatternScheduler(
     private val fetcherDispatcher = context.fetcherDispatcher
     private val callbackDispatcher = context.callbackDispatcher
     private val backendReady = context.backendReady
+    private val diagnostics = context.diagnostics
+
+    /**
+     * The pattern's work at runtime (KLANG-00385; the maintainer, 2026-10-28: "measure how long the sprudel part takes
+     * at runtime"): the milliseconds the pattern queries took, added up, and posted every [RUNTIME_WINDOW_MS] as the
+     * share of real time they took. The metric is this playback's, registered at the start, closed at the stop.
+     */
+    private var runtime: KlangDiagnostics.Metric? = null
+    private var runtimeSpentMs = 0.0
+    private var runtimeWindowStartMs = 0.0
 
     // ===== State Management =====
     private val running = KlangAtomicBool(false)
@@ -184,6 +197,10 @@ internal class KlangPatternScheduler(
         // Send clean up command to backend
         cleanUpBackend()
 
+        // The pattern's work metric is this playback's: closed with it
+        runtime?.close()
+        runtime = null
+
         // Emit stopped signal
         signals(KlangPlaybackSignal.PlaybackStopped)
 
@@ -286,6 +303,14 @@ internal class KlangPatternScheduler(
         // Must be set BEFORE scheduling first cycle so voices have correct playbackStartTime
         startTimeMs = klangTime.internalMsNow()
 
+        // ===== THE PATTERN'S WORK, MEASURED FROM HERE =====
+        runtime?.close()
+        runtime = diagnostics.metric(
+            id = "sprudel-$playbackId", name = "Sprudel runtime", category = "CPU", unit = "%", min = 0.0, max = 100.0,
+        )
+        runtimeSpentMs = 0.0
+        runtimeWindowStartMs = startTimeMs
+
         // ===== SCHEDULE FIRST CYCLE IMMEDIATELY =====
         // Sent as a single batched command so all voices share one nowSec snapshot at the
         // backend; per-voice sends would otherwise interleave with audio blocks and let later
@@ -312,6 +337,8 @@ internal class KlangPatternScheduler(
             lookAheadForSampleSounds(from = queryCursorCycles + sampleSoundLookAheadCycles, dur = 1.0)
             // Request the next cycles from the source
             requestNextCyclesAndAdvanceCursor()
+            // The share of real time the pattern's queries took, now and then
+            postRuntime()
             // roughly 60 FPS
             delay(16.milliseconds)
         }
@@ -365,7 +392,35 @@ internal class KlangPatternScheduler(
     /**
      * Query events from the pattern and convert to ScheduledVoice.
      */
+    /** Every pattern query, timed: the time goes into the pattern's work ([postRuntime]). */
     private fun queryEvents(from: Double, to: Double, sendSignals: Boolean): List<ScheduledVoice> {
+        val startedMs = klangTime.internalMsNow()
+
+        try {
+            return queryEventsUntimed(from = from, to = to, sendSignals = sendSignals)
+        } finally {
+            runtimeSpentMs += klangTime.internalMsNow() - startedMs
+        }
+    }
+
+    /**
+     * Posts the share of real time the pattern's queries took since the last post, once [RUNTIME_WINDOW_MS] has passed;
+     * plain numbers, no object made.
+     */
+    private fun postRuntime() {
+        val nowMs = klangTime.internalMsNow()
+        val elapsedMs = nowMs - runtimeWindowStartMs
+
+        if (elapsedMs < RUNTIME_WINDOW_MS) {
+            return
+        }
+
+        runtime?.post(runtimeSpentMs / elapsedMs * 100.0)
+        runtimeSpentMs = 0.0
+        runtimeWindowStartMs = nowMs
+    }
+
+    private fun queryEventsUntimed(from: Double, to: Double, sendSignals: Boolean): List<ScheduledVoice> {
         val events = pattern.queryEvents(fromCycles = from, toCycles = to, cps = cyclesPerSecond)
 
         // Announce every inline DSL these events reference BEFORE they are scheduled, so the

@@ -45,6 +45,9 @@ class KlangPlaybackContext internal constructor(
 
     /** The single FE↔BE clock offset — GLOBAL, owned by [KlangPlayer]; controllers read it. */
     internal val clockSync: BackendClockSync,
+
+    /** The player's diagnostics: a playback registers its own metrics here and closes them when it stops. */
+    val diagnostics: KlangDiagnostics,
 ) {
     /**
      * A fresh per-playback inline-DSL registrar wired to the live backend.
