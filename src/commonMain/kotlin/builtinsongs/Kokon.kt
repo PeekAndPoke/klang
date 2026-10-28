@@ -47,7 +47,7 @@ let pickupSingle = x => x
   .mul(0.8)
 
 let pickupHumbucker = x => x
-  .lowpass(2500, 1.6)
+  .lowpass(2200, 1.6)
   .mul(1.2)
 
 let pedalStock = x => x
@@ -72,11 +72,11 @@ let preampCrunch = x => x
   .mul(1.9)
 
 let preampHighGain = x => x
-  .highpass(120)                                    // tight: no bass into the gain stages
-  .distort(0.35, "tube", 4).highpass(110)
-  .distort(0.45, "softsat", 4).highpass(100)
+  .highpass(110)                                    // tight: no bass into the gain stages
+  .distort(0.35, "tube", 4).highpass(100)
+  .distort(0.45, "softsat", 4).highpass(90)
   .distort(0.65, "soft", 4)
-  .lowpass(5200)                                   // the fizz
+  .lowpass(5000)                                   // the fizz
   .mul(0.30)                                       // volume
 
 let powerPushPull = x => x
@@ -90,12 +90,12 @@ let powerClassA = x => x
 
 let cab4x12 = x => x
   .eq(e => e
-    .band(freq =  120, q = 0.7, db =  1.35)        // thump: closed-back box resonance
-    .band(freq =  380, q = 0.5, db =  3.90)        // roar:  low mids
-    .band(freq = 2700, q = 1.8, db =  4.25)        // bark:  the upper-mid speaker peak
+    .band(freq =  120, q = 0.7, db =  1.70)        // thump: closed-back box resonance
+    .band(freq =  380, q = 0.5, db =  4.40)        // roar:  low mids
+    .band(freq = 2700, q = 1.7, db =  4.20)        // bark:  the upper-mid speaker peak
   )
-  .lowpass(6000, 0.600, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
-  .highpass(105, 0.707, x => x.passes(2))
+  .lowpass(4980, 0.707, x => x.passes(3))          // the wall: 36 dB/oct, the fizz is gone
+  .highpass(80, 0.707, x => x.passes(2))
 
 let cab1x12 = x => x
   .highpass(120, 0.707, x => x.passes(2))
@@ -292,7 +292,7 @@ export soar = notes => n(notes.add(14))
   .sound(bright).adsrOff().unison(voices = 11, spread = 0.05)
   .ignp("decay", 2.8).clip(1.5)
   .hpf(500)                                        // two octaves up, nothing of the melody lives below
-  .lpf(4200)                                       // less fizz, the wall keeps its own
+  .lpf(4300)                                       // less fizz, the wall keeps its own
   .gain(0.45).pan(0.5)
   .orbit(6)
 
@@ -316,8 +316,8 @@ export beat = roots => n(roots.add(-7)).struct("x ~ ~ x ~ ~ x ~")
 export chug = roots => n(roots.add(-7)).struct("[x x] x@2  [x x] x@2  [x x] x")
   .sound(heavy).adsrOff().unison(voices = 7, spread = 0.08)
   //.ignp("decay", "0.4 0.8!2 0.4 0.8!2 0.3 0.2").clip(1)
-  .velocity("1.0 0.90 0.80 0.85  0.90 0.80 0.75 0.85".sub(perlin(0.0, 0.2)))
-  .gain(0.55).late(perlin(0.0002, 0.0008)).apply(
+  .velocity("1.0 0.90 0.80 0.85  0.90 0.80 0.75 0.85".sub(perlin(0.0, 0.2).seed(2)))
+  .gain(0.55).late(perlin(0.0005, 0.0010).seed(2)).apply(
     x => x.pan(0.20),
     x => x.pan(0.80),
   )
@@ -327,8 +327,8 @@ export chug = roots => n(roots.add(-7)).struct("[x x] x@2  [x x] x@2  [x x] x")
 export wings = chords => n(chords).ply(16)
   .sound(heavy).adsrOff().unison(voices = 7, spread = 0.08)
   .ignp("decay", "[0.9 0.8]*8").clip(1)
-  .velocity("1.0 0.90!2 0.96 0.88 0.92 0.94 0.92".sub(perlin(0.0, 0.2)))
-  .gain(0.60).late(perlin(0.0008, 0.0014)).apply(
+  .velocity("1.0 0.90!2 0.96 0.88 0.92 0.94 0.92".sub(perlin(0.0, 0.2).seed(3)))
+  .gain(0.60).late(perlin(0.0010, 0.0015).seed(3)).apply(
     x => x.pan(0.05),
     x => x.pan(0.95),
   )
@@ -369,7 +369,7 @@ export kick = pat => sound("bd").struct(pat)
 export snare = pat => sound(pat)
   .sound(metalSnare).adsrOff().freq(snareHz)
   .gain(0.45).pan(0.575)
-  .lpf(freq = "11500".add(saw(0, 1200).slow(12)), q = 0.5)
+  .lpf(freq = "12500".add(saw(0, 1200).slow(12)), q = 0.5)
   .delay(0.33, pure(1/16).div(cps), 0.85, 24) // Snare needs it own orbit for the dalay!
   .orbit(12).apply(drumRoom).late(perlin(0.001, 0.0015))
 
@@ -537,9 +537,9 @@ export song = stack(
     .reverb(0.20, 7, 7500)                         // the hall: one room for the whole band, about 2 s, warm
     .gain(1.10)                                    // the house level, -14 LUFS
     .bands(b => b
-      .band(low => low.distort(0.01, "soft", 4)).cut(150)
+      .band(low => low.distort(0.01, "soft", 4).mul(1.00)).cut(150)
       .band(mid => mid.distort(0.15, "soft", 4).mul(0.85)).cut(5000)
-      .band(low => low.distort(0.01, "soft", 4))
+      .band(low => low.distort(0.01, "soft", 4).mul(1.10))
     ) // the glue on the mids only: the kick and the hats stay clean
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005) // the ceiling: peaks only
   ))
