@@ -23,7 +23,9 @@ equipped, the Looks walkthrough.
 ## The design in words
 
 - **The equip grid:** 4x2 slots, what the Motor drawer's LOOK row shows, in that order. A slot holds a built-in look
-  or one of the user's own, or nothing (an empty slot shows nothing in the drawer).
+  or one of the user's own, or nothing: in the drawer an empty slot is a quiet dashed "+" that opens the editor with
+  that slot ready to be filled (the maintainer, 2026-10-28: "Clicking on an empty slot should also go to the theme
+  editor").
 - **The bench:** every look not equipped, built-in or own, and "New look". A look in a slot goes to the bench when
   another takes its place; a built-in can wait there too.
 - **Moving:** drag a look onto a slot (a swap when it came from a slot), or onto the bench to unequip; or pick and
