@@ -337,11 +337,11 @@ class KlangScriptProcessor(
 
         // Return unprocessed symbols for deferred processing
         val unprocessed = mutableListOf<KSAnnotated>()
-        unprocessed.addAll(objectClasses.filterNot { it.validate() })
-        unprocessed.addAll(typeExtClasses.filterNot { it.validate() })
-        unprocessed.addAll(topLevelFunctions.filterNot { it.validate() })
-        unprocessed.addAll(topLevelProperties.filterNot { it.validate() })
-        unprocessed.addAll(topLevelConstants.filterNot { it.validate() })
+        unprocessed.addAll(objectClasses.filterNot { it.validate(enableNewFeatures = true) })
+        unprocessed.addAll(typeExtClasses.filterNot { it.validate(enableNewFeatures = true) })
+        unprocessed.addAll(topLevelFunctions.filterNot { it.validate(enableNewFeatures = true) })
+        unprocessed.addAll(topLevelProperties.filterNot { it.validate(enableNewFeatures = true) })
+        unprocessed.addAll(topLevelConstants.filterNot { it.validate(enableNewFeatures = true) })
         return unprocessed
     }
 

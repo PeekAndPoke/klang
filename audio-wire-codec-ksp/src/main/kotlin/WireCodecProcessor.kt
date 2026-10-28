@@ -79,7 +79,7 @@ class WireCodecProcessor(
     override fun process(resolver: Resolver): List<KSAnnotated> {
         val roots = resolver.getSymbolsWithAnnotation(ANN_WIRE_FORMAT)
             .filterIsInstance<KSClassDeclaration>()
-            .filter { it.validate() }
+            .filter { it.validate(enableNewFeatures = true) }
             .toList()
         if (roots.isEmpty()) return emptyList()
 

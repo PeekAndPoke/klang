@@ -74,3 +74,4 @@ machine, so the pair is proven.
   maintainer reloads the Gradle project in the IDE.
 - 2026-10-26: IN PROGRESS. started; the build handed over by Klang-Main-Dev
 - 2026-10-26: DONE. Gradle 9.7.1, reviewed in two rounds (the second clean)
+- 2026-10-28: the `KSNode.validate()` deprecation fixed (the maintainer's go): both processors call `validate(enableNewFeatures = true)`, so backing fields and context parameters are validated too, as KSP recommends. The generated sources of audio_bridge, sprudel and klangscript-libs are byte-identical before and after (a full non-incremental KSP run); klangscript-ksp 157 tests green; no deprecation warning left in either processor.
