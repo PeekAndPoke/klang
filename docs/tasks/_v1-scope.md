@@ -14,6 +14,15 @@ Three layers, worked from the ground up:
 2. **Widen and harden the interface** (the DSLs and sprudel).
 3. **Write tutorials for the shape of the DSLs and engine.** (Owned by a separate session.)
 
+## The Motor's versions (maintainer, 2026-10-28)
+
+- **V1:** this scope, without a fully configurable engine.
+- **V1.5:** configurable side chains, for example to generalise ducking (KLANG-00379).
+- **V2:** the fully configurable engine, the signal graph (KLANG-00216, in KLANG-00354).
+
+A later version may change how a song sounds. The maintainer accepts that trade-off: "This is a fine tradeoff for
+staying in a high gear while noone has written any music yet except us."
+
 ## The sorting rule
 
 A task is V1 if it **changes the shape a tutorial would teach, or changes how things sound.**
