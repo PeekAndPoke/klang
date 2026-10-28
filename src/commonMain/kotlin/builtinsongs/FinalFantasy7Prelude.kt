@@ -13,7 +13,7 @@ import io.peekandpoke.klang.Song
 internal val finalFantasy7PreludeSong = Song(
     id = "${BuiltInSongs.PREFIX}-final-synthasy-7-prelude",
     title = "Final Synthasy VII Prelude",
-    rpm = 42.0,
+    rpm = 40.0,
     icon = "gamepad",
     code = """import * from "stdlib"
 import * from "sprudel"
@@ -24,7 +24,7 @@ import * from "sprudel"
 // 
 // 0.0 .. your home   |   10.0 .. cathedral
 
-const reverbSize = 10.0  
+const reverbSize = 6.0  
 
 // Hints:
 // - Put the cursor on a function and press Alt+Q: its help opens below in the Quick Help tab

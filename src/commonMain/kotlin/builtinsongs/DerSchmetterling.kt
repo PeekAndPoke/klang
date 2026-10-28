@@ -125,7 +125,7 @@ let cab4x12 = x => x
   .eq(e => e
     .band(freq =  120, q = 0.7, db =  1.70)        // thump: closed-back box resonance
     .band(freq =  380, q = 0.5, db =  4.40)        // roar:  low mids
-    .band(freq = 2700, q = 1.7, db =  4.20)        // bark:  the upper-mid speaker peak
+    .band(freq = 2700, q = 1.7, db =  4.30)        // bark:  the upper-mid speaker peak
   )
   .lowpass(4980, 0.707, x => x.passes(3))          // the wall: 36 dB/oct, the fizz is gone
   .highpass(80, 0.707, x => x.passes(2))
@@ -338,7 +338,7 @@ export bass_pat =
     [0 0 2 4 0 0 -2 -1]!2
     [0 0 -1 3  7 0 -2 -1] [0 0 3 [0 -2]  0 0 [0 4 7 9] 6]>/8`
 
-export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.40) // . mute()
+export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.42) // . mute()
     .ignp("sub", 0.90).ignp("harmonics", 1.00).clip("0.90".sub(perlin(0.0, 0.05).slow(8)))  // . solo()
     .adsr(0.003, 0.50, 0.33, 0.015).hpf(35)
 
@@ -542,7 +542,7 @@ export song = stack(
     .bands(b => b
       .band(low => low.distort(0.01, "soft", 4).mul(1.00)).cut(150)
       .band(mid => mid.distort(0.15, "soft", 4).mul(0.90)).cut(5000)
-      .band(low => low.distort(0.01, "soft", 4).mul(1.10))
+      .band(low => low.distort(0.01, "soft", 4).mul(1.25))
     ) // the glue on the mids only: the kick and the hats stay clean
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)
   ))
