@@ -22,6 +22,19 @@ note("c d e f").sound(Guess(correct = "saw", choices = ["sine", "saw", "square"]
   small field where the "???" is.
 - Example: the tutorial on the four waveforms ends with a puzzle that asks to identify them.
 
+## Decided (the maintainer, 2026-10-28)
+
+- **A builder, to stay flexible:** `Guess(b => b.correct(...).choice(...).choice(...))`, a configure lambda as the
+  other DSLs have (`Ign.supersaw(x => x.voices(9))`), immutable like every door (`/dsl-design`). Sketches, to settle
+  in the design round:
+
+  ```
+  note("c d e f").sound(Guess(b => b.correct("saw").choice("sine").choice("square").choice("tri")))
+  note("c d e f").sound("saw").lpf(Guess(b => b.correct(800).range(200, 4000).log().tolerance(0.25)))
+  ```
+
+- **Feedback in steps:** first "2 of 3 right" without saying which, then per guess after a few tries or on request.
+
 ## Notes for the design (Klang-Main-Dev, 2026-10-28, to discuss)
 
 - **Two players, one switch:** "the target" plays the code with the correct values, "yours" with the current picks.
@@ -32,11 +45,10 @@ note("c d e f").sound(Guess(correct = "saw", choices = ["sine", "saw", "square"]
 - **The "???" in the code:** an inline widget in the read-only editor (a CodeMirror replace decoration) over the
   whole `Guess(...)` call, so the shown code never gives the answer away. It reads "???" until a pick, then the
   pick (`"saw"`, `800`). A click opens the choices beside it: chips for a list, a knob or slider for a range.
-- **Range guesses:** something like `Guess(correct = 800, range = [200, 4000], scale = "log", tolerance = 0.25)`,
-  right when within the tolerance (in octaves or a ratio for frequencies, since the ear hears ratios).
+- **Range guesses:** a range, a scale and a tolerance on the builder (above), right when within the tolerance
+  (in octaves or a ratio for frequencies, since the ear hears ratios).
 - **How `Guess` works:** a KlangScript value that the puzzle host resolves before playback: to the correct value
   for the target, to the user's pick for "yours". The engine never sees a `Guess`.
-- **Feedback:** "2 of 3 right" per check, without saying which, then per guess after a few tries or on request.
 - **The tech tree:** a solved puzzle unlocks the next tutorials (KLANG-00334 item 13); progress kept in the browser
   until there is an account (Q1 2027). Close by: the ear trainer (KLANG-00274).
 
@@ -59,3 +71,4 @@ Not set while this is an idea.
 
 - 2026-10-28: created in the Q4 planning with the maintainer.
 - 2026-10-28: the maintainer's idea (recreate a sound by filling in the "???" of read-only code) and the design notes.
+- 2026-10-28: decided: the builder form `Guess(b => ...)`, and feedback in steps (the maintainer).
