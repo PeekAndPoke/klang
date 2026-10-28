@@ -66,8 +66,9 @@ class QuickHelpPanel(
 
     /** The panel for the workbench's bottom slot. */
     fun bottom(): KlangWorkbench.Bottom = KlangWorkbench.Bottom(
-        title = "Help",
-        icon = { question_circle },
+        title = "Help and tools",
+        // The tools' icon: the panel holds the Quick help, the Lexikon and the Sprudel tool (the maintainer, 2026-10-28)
+        icon = { tools },
         tabs = listOf(
             KlangWorkbench.Tab(id = TAB_QUICK_HELP, title = "Quick help") {
                 div {

@@ -29,6 +29,9 @@ object KlangControlStyles : StyleSheet("kl-controls") {
     /** The grain tile's side. */
     const val GRAIN_TILE_PX = 160
 
+    /** A tool window's width, the same flown in and docked. */
+    const val TOOL_WINDOW_WIDTH_PX = 340
+
     /** A tile of grey noise, opaque; the [grain] layer lays it over a surface at the look's strength. */
     private val GRAIN = grainImage(seed = 0)
 
@@ -1406,7 +1409,8 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("top", "0")
         put("right", "0")
         put("bottom", "0")
-        put("width", "380px")
+        // As wide as docked (the maintainer, 2026-10-28: "Take the docked width also for the fly in"; 380 before)
+        put("width", "${TOOL_WINDOW_WIDTH_PX}px")
         put("z-index", "15")
         put("display", "flex")
 
@@ -1419,7 +1423,7 @@ object KlangControlStyles : StyleSheet("kl-controls") {
     /** A pinned tool window, docked between the content and the strip. */
     val workbenchPinned by rule {
         put("display", "flex")
-        put("width", "340px")
+        put("width", "${TOOL_WINDOW_WIDTH_PX}px")
         put("flex-shrink", "0")
 
         // Holding the focus as a frame, not a control: no ring

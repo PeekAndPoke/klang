@@ -563,21 +563,23 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
                     )
                 }
 
-                if (bottom != null) {
-                    KlangIconToggle(
-                        icon = bottom.icon,
-                        label = bottom.title,
-                        on = bottomOpen,
-                        large = true,
-                        onClick = { if (bottomOpen) closeBottom() else openBottom() },
-                    )
-                }
-
                 val keys = props.keys
                 val mark = props.mark
 
-                if (keys != null || mark != null) {
+                if (bottom != null || keys != null || mark != null) {
                     div(classes = styles.workbenchStripFoot.toString()) {
+                        // The bottom panel's key at the foot, near the panel it opens; the top keeps the tool windows
+                        // on the right (the maintainer, 2026-10-28)
+                        if (bottom != null) {
+                            KlangIconToggle(
+                                icon = bottom.icon,
+                                label = bottom.title,
+                                on = bottomOpen,
+                                large = true,
+                                onClick = { if (bottomOpen) closeBottom() else openBottom() },
+                            )
+                        }
+
                         if (keys != null) {
                             div(classes = styles.workbenchStripKeys.toString()) {
                                 attributes["role"] = "group"
