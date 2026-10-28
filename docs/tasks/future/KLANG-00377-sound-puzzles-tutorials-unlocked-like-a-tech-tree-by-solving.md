@@ -8,9 +8,44 @@
 
 The maintainer, 2026-10-28: "I like the tech tree unlocking by solving sound puzzles idea. Let's discuss details later... Have some ideas." It grows from KLANG-00334 item 13 ("unlock new tutorials like a tech tree in a game") and makes the interactive learning tools of Q4 concrete: a tutorial opens the next ones when its sound puzzle is solved.
 
+## The maintainer's idea (2026-10-28)
+
+"We create sounds and play them and the user has to recreate them." The code of the puzzle is shown, read-only,
+with "???" where the user has to fill in:
+
+```
+note("c d e f").sound(Guess(correct = "saw", choices = ["sine", "saw", "square"]))
+```
+
+- Choices from a list (a waveform), and range choices for numbers (a filter's cutoff and the like).
+- The code cannot be edited. The choices are made through UI elements, not by typing code; or in the code, as a
+  small field where the "???" is.
+- Example: the tutorial on the four waveforms ends with a puzzle that asks to identify them.
+
+## Notes for the design (Klang-Main-Dev, 2026-10-28, to discuss)
+
+- **Two players, one switch:** "the target" plays the code with the correct values, "yours" with the current picks.
+  Both run in sync on the same pattern and one switch flips between them, so the ear compares the same moment, not
+  two memories.
+- **Match the loudness:** a saw is louder than a sine at the same gain, so without care a puzzle can be solved by
+  loudness alone. The target and every choice are matched in loudness, so the ear has to judge the colour.
+- **The "???" in the code:** an inline widget in the read-only editor (a CodeMirror replace decoration) over the
+  whole `Guess(...)` call, so the shown code never gives the answer away. It reads "???" until a pick, then the
+  pick (`"saw"`, `800`). A click opens the choices beside it: chips for a list, a knob or slider for a range.
+- **Range guesses:** something like `Guess(correct = 800, range = [200, 4000], scale = "log", tolerance = 0.25)`,
+  right when within the tolerance (in octaves or a ratio for frequencies, since the ear hears ratios).
+- **How `Guess` works:** a KlangScript value that the puzzle host resolves before playback: to the correct value
+  for the target, to the user's pick for "yours". The engine never sees a `Guess`.
+- **Feedback:** "2 of 3 right" per check, without saying which, then per guess after a few tries or on request.
+- **The tech tree:** a solved puzzle unlocks the next tutorials (KLANG-00334 item 13); progress kept in the browser
+  until there is an account (Q1 2027). Close by: the ear trainer (KLANG-00274).
+
 ## Decide before implementing
 
-Nothing yet: the maintainer has ideas and the details come in a conversation. Open points to bring to it: what a puzzle is (match a target sound, fix a broken patch, hear which knob moved, as in KLANG-00274's ear trainer), how a solution is checked (by ear, by measurement, by the code), whether the tree can be skipped, and where progress is kept before there is an account.
+- Choices beside the "???" (a popup) or in a panel below the code, or both.
+- Whether a puzzle may be skipped in the tree, and whether wrong answers cost anything.
+- The tolerance per kind of range, and whether the user may hear each choice on its own before deciding.
+- The name in KlangScript: `Guess`, or another word that reads well in a song.
 
 ## The work
 
@@ -23,3 +58,4 @@ Not set while this is an idea.
 ## History
 
 - 2026-10-28: created in the Q4 planning with the maintainer.
+- 2026-10-28: the maintainer's idea (recreate a sound by filling in the "???" of read-only code) and the design notes.
