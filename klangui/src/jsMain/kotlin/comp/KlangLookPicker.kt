@@ -24,8 +24,9 @@ import kotlinx.html.title
 fun Tag.KlangLookPicker(
     onChosen: (KlangLookPreset) -> Unit = {},
     onEdit: ((slot: Int?) -> Unit)? = null,
+    beacon: String? = null,
 ) = comp(
-    KlangLookPicker.Props(onChosen = onChosen, onEdit = onEdit)
+    KlangLookPicker.Props(onChosen = onChosen, onEdit = onEdit, beacon = beacon)
 ) {
     KlangLookPicker(it)
 }
@@ -37,14 +38,22 @@ fun Tag.KlangLookPicker(
  * A press puts the look on the user's layer ([KlangTheme.choose]) and hands it to [Props.onChosen], where the app
  * remembers it (the picker lives in `klangui` and cannot reach the app's storage). With [Props.onEdit] the heading has
  * a quiet "Edit" key and an empty slot is a dashed "+", both opening the look editor (the slot's index for an empty
- * slot); without, an empty slot is only its dashed place.
+ * slot); without, an empty slot is only its dashed place. [Props.beacon] lights a look by its id, or the Edit key by
+ * [EDIT], for the Gui-dance's Looks walkthrough (KLANG-00350).
  */
 class KlangLookPicker(ctx: Ctx<Props>) : Component<KlangLookPicker.Props>(ctx) {
 
     data class Props(
         val onChosen: (KlangLookPreset) -> Unit,
         val onEdit: ((slot: Int?) -> Unit)?,
+        /** The look id, or [EDIT], wearing the trail's beacon; null for none. */
+        val beacon: String?,
     )
+
+    companion object {
+        /** [Props.beacon] for the Edit key. */
+        const val EDIT = "edit"
+    }
 
     /** Redraws when the look changes, from here or from anywhere. */
     @Suppress("unused")
@@ -65,7 +74,9 @@ class KlangLookPicker(ctx: Ctx<Props>) : Component<KlangLookPicker.Props>(ctx) {
                 div(classes = styles.heading.toString()) { +"Look" }
 
                 if (onEdit != null) {
-                    button(type = ButtonType.button, classes = styles.quietKey.toString()) {
+                    val classes = listOfNotNull(styles.quietKey, styles.beacon.takeIf { props.beacon == EDIT })
+
+                    button(type = ButtonType.button, classes = classes.joinToString(" ")) {
                         title = "Edit the looks: equip them, make your own"
                         onClick { onEdit(null) }
 
@@ -85,6 +96,7 @@ class KlangLookPicker(ctx: Ctx<Props>) : Component<KlangLookPicker.Props>(ctx) {
                             name = preset.name,
                             swatch = preset.swatch,
                             pressed = preset == chosen,
+                            beacon = preset.id == props.beacon,
                             onClick = {
                                 KlangTheme.choose(preset)
                                 props.onChosen(preset)

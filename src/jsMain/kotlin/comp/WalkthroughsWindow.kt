@@ -100,7 +100,8 @@ class WalkthroughsWindow(ctx: Ctx<Props>) : FadingModal<WalkthroughsWindow.Props
                 put("top", "50%")
                 put("left", "50%")
                 put("transform", "translate(-50%, -50%)")
-                put("width", "420px")
+                // Wide enough for the walkthroughs two to a row (the maintainer, 2026-10-28)
+                put("width", "600px")
                 put("max-width", "calc(100vw - 32px)")
                 put("outline", "none")
                 put("text-align", "left")
@@ -120,7 +121,7 @@ class WalkthroughsWindow(ctx: Ctx<Props>) : FadingModal<WalkthroughsWindow.Props
                 if (done.isEmpty()) {
                     div { +"No walkthrough finished yet." }
                 } else {
-                    column {
+                    twoToARow {
                         // A finished walkthrough, pressed, is marked to be taken again: it stays, its lamp off; pressed again,
                         // it stays finished (the maintainer, 2026-10-27: "keep it on the screen but disable the light")
                         for (arc in done) {
@@ -199,11 +200,11 @@ class WalkthroughsWindow(ctx: Ctx<Props>) : FadingModal<WalkthroughsWindow.Props
         }
     }
 
-    private fun FlowContent.column(content: FlowContent.() -> Unit) {
+    private fun FlowContent.twoToARow(content: FlowContent.() -> Unit) {
         div {
             css {
-                put("display", "flex")
-                put("flex-direction", "column")
+                put("display", "grid")
+                put("grid-template-columns", "repeat(2, minmax(0, 1fr))")
                 put("gap", "6px")
             }
 

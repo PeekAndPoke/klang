@@ -1,6 +1,6 @@
 # KLANG-00382: The look editor: an equip grid, the bench, a look of your own
 
-> **Status (2026-10-28): IN PROGRESS.** the editor page, the loadout, sharing and the drawer built and seen by the maintainer; open: asking before leaving with a draft, the drag (the maintainer, with Ultra), the walkthrough
+> **Status (2026-10-28): DONE.** the editor, the loadout, own looks, sharing, the drawer and the Looks walkthrough; the drag and the leave guard went to KLANG-00383
 >
 > **Part of:** KLANG-00334 (UI workbench: the Motor-centred layout, tool windows and the first-visit trail)
 
@@ -92,7 +92,7 @@ Taken as recommended, and seen in the browser by the maintainer ("Nice!"):
    were tried and dropped).
 3. The browser's colour input and a hex field; the amounts on `KlangValueKnob`.
 4. The browser: `klang-looks` holds the own looks and the slots, `klang-look` the worn look's id (`LookStorage`).
-5. Pick and place, Klang's own; the drag is the maintainer's, with Ultra.
+5. Pick and place, Klang's own; the drag is the maintainer's, with Ultra (ULTRA-00265), and lands with KLANG-00383.
 6. 10 characters for now (`KlangLookPreset.NAME_MAX`), the count inside the name field; a tile cuts a longer name.
 
 Also from the maintainer's look:
@@ -103,16 +103,26 @@ Also from the maintainer's look:
 - The scope and the spectrum have a preview mode, still data in place of the player (the maintainer: "these component
   implement a preview mode, when they get static data"), so their cards show the real drawing.
 - A changed role's undo is a small circle beside its label, so the controls never move.
+- A draft not applied is kept when the editor is left, and shown again on return; the browser asks before a reload
+  loses one. The design asked before leaving, but Kraft's router has no guard for leaving a page: ULTRA-00266, and
+  the guard lands with KLANG-00383.
+- The Looks walkthrough is the Gui-dance's fourth arc: the Motor button, Copper, Sun and Asphalt in the drawer (any
+  look picked goes on, so a look taken off the drawer cannot hold the walkthrough up), then the Edit key.
+- The walkthroughs window is wider, its walkthroughs two to a row (the maintainer, 2026-10-28).
 - The look's header is a panel: its swatch, its name, how it stands (changes, saved, worn), the keys in a sunken strip
   at its foot; a duplicate's name counts up ("Sun 2", "Sun 3").
 
 ## Acceptance
 
-Not set yet.
+Seen in the browser by the maintainer, step by step (2026-10-28). The specs: `KlangLoadoutSpec` (place, swap,
+unequip, remembered slots cleaned), `KlangLookTextSpec` (the round trip, the role-by-role check, every role on one
+card), `KlangLookPickerSpec` (the equipped looks, the Edit key and the empty slot, own looks, the beacons).
 
 ## History
 
 - 2026-10-28: created.
 - 2026-10-28: steps 1 to 4 built (data, the editor page, pick and place, share) and the drawer's LOOK row on the
   loadout; open: asking before leaving with a draft not applied, the drag, the walkthrough (step 5).
+- 2026-10-28: drafts kept on leaving, the Looks walkthrough; the drag and the leave guard to KLANG-00383; DONE.
 - 2026-10-28: IN PROGRESS.
+- 2026-10-28: DONE.

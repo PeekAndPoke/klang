@@ -595,6 +595,7 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("gap", "5px")
         put("padding", "2px 4px")
         put("border", "none")
+        put("border-radius", "var(--kl-radius)")
         put("background", "transparent")
         put("font-family", "inherit")
         put("font-size", "12px")
@@ -1769,6 +1770,7 @@ object KlangControlStyles : StyleSheet("kl-controls") {
                 .$toolWindow.$toolWindowFloatingBottom { animation: none; }
                 .$ignitionCap.$beacon::after { animation: none; box-shadow: 0 0 0 2px var(--kl-lamp-try); }
                 .$iconToggle.$beacon::after { animation: none; box-shadow: 0 0 0 2px var(--kl-lamp-try); }
+                .$quietKey.$beacon::after { animation: none; box-shadow: 0 0 0 2px var(--kl-lamp-try); }
                 .$knobTurn.$ignitionTurn { transition: none; }
                 .$spinner.$spinner > svg { animation: kl-spin-still 1.6s ease-in-out infinite; }
             }

@@ -20,8 +20,16 @@ fun Tag.KlangSwatchButton(
     onClick: () -> Unit,
     pressed: Boolean = false,
     availability: KlangButton.Availability = KlangButton.Availability.Enabled,
+    beacon: Boolean = false,
 ) = comp(
-    KlangSwatchButton.Props(name = name, swatch = swatch, onClick = onClick, pressed = pressed, availability = availability)
+    KlangSwatchButton.Props(
+        name = name,
+        swatch = swatch,
+        onClick = onClick,
+        pressed = pressed,
+        availability = availability,
+        beacon = beacon,
+    )
 ) {
     KlangSwatchButton(it)
 }
@@ -43,6 +51,8 @@ class KlangSwatchButton(ctx: Ctx<Props>) : Component<KlangSwatchButton.Props>(ct
         val onClick: () -> Unit,
         val pressed: Boolean,
         val availability: KlangButton.Availability,
+        /** The trail's "try me" pulse (the Gui-dance, KLANG-00350). */
+        val beacon: Boolean,
     )
 
     override fun VDom.render() {
@@ -55,6 +65,7 @@ class KlangSwatchButton(ctx: Ctx<Props>) : Component<KlangSwatchButton.Props>(ct
             shape = KlangButton.Shape.Tile,
             pressed = if (props.availability == KlangButton.Availability.Later) null else props.pressed,
             availability = props.availability,
+            beacon = props.beacon,
         ) {
             if (swatch.isEmpty()) {
                 span(classes = "${styles.swatch} ${styles.swatchEmpty}") {

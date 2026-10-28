@@ -187,11 +187,22 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
                         },
                         footer = {
                             KlangLookPicker(
-                                onChosen = { LookStorage.save(it) },
+                                onChosen = {
+                                    LookStorage.save(it)
+
+                                    // The Looks walkthrough goes on with any look picked: a lit look the user took
+                                    // off the drawer cannot hold it up
+                                    guiDanceLit?.takeIf { it in KlangGuiDance.LOOK_STEPS }?.let { KlangGuiDance.dance.used(it) }
+                                },
                                 // The look editor, an empty slot ready to be filled (KLANG-00382)
                                 onEdit = { slot ->
+                                    KlangGuiDance.dance.used(KlangGuiDance.LOOK_EDIT)
                                     close()
                                     router.navToUri(if (slot == null) Nav.looks() else Nav.looksSlot(slot.toString()))
+                                },
+                                beacon = when (guiDanceLit) {
+                                    KlangGuiDance.LOOK_EDIT -> KlangLookPicker.EDIT
+                                    else -> KlangGuiDance.LOOK_STEPS[guiDanceLit]
                                 },
                             )
                         },

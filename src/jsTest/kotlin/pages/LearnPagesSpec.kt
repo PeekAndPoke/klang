@@ -200,8 +200,13 @@ class LearnPagesSpec : StringSpec({
             KlangGuiDance.unmute()
             dance.reopen("first-steps")
 
-            // Danced up to the panel, as a user would: every step before it used in turn
+            // Danced up to the panel, as a user would: every step before it used in turn, the rest after each finished
+            // arc waited out
             repeat(20) {
+                if (dance.mutedUntil() != null) {
+                    KlangGuiDance.unmute()
+                }
+
                 val step = dance.lit() ?: error("nothing lit")
 
                 if (step != KlangGuiDance.LEARN_FIRST_STEPS) {

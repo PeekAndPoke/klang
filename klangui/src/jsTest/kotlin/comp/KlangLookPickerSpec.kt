@@ -89,4 +89,20 @@ class KlangLookPickerSpec : StringSpec({
             }
         }
     }
+
+    "the beacon lights the look it names, or the Edit key" {
+        val beacon = KlangControlStyles.beacon.toString()
+
+        TestBed.preact(view = { KlangLookPicker(onEdit = {}, beacon = "sun") }) { root ->
+            val lit = root.selectCss("button").filter { it.classList.contains(beacon) }
+
+            lit.map { it.textContent?.trim() } shouldContainExactly listOf("Sun")
+        }
+
+        TestBed.preact(view = { KlangLookPicker(onEdit = {}, beacon = KlangLookPicker.EDIT) }) { root ->
+            val lit = root.selectCss("button").filter { it.classList.contains(beacon) }
+
+            lit.map { it.textContent?.trim() } shouldContainExactly listOf("\u270EEdit")
+        }
+    }
 })

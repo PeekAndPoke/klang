@@ -41,6 +41,21 @@ object KlangGuiDance {
     /** The First Steps track's panel on the Learn overview, to its page. */
     const val LEARN_FIRST_STEPS = "learn.first-steps"
 
+    /** Copper in the drawer's LOOK row. */
+    const val LOOK_COPPER = "look.copper"
+
+    /** Sun in the drawer's LOOK row. */
+    const val LOOK_SUN = "look.sun"
+
+    /** Asphalt in the drawer's LOOK row. */
+    const val LOOK_ASPHALT = "look.asphalt"
+
+    /** The Edit key in the drawer's LOOK heading, to the look editor. */
+    const val LOOK_EDIT = "look.edit"
+
+    /** The looks the Looks walkthrough lights in the drawer, by their steps. */
+    val LOOK_STEPS: Map<String, String> = mapOf(LOOK_COPPER to "copper", LOOK_SUN to "sun", LOOK_ASPHALT to "asphalt")
+
     /**
      * The arcs, in their order (the maintainer, 2026-10-26). The first: Play on the song page, the Motor button,
      * "Songs" in its drawer, then the next song on the songs page. The second starts as it ends: the fullscreen key,
@@ -63,6 +78,14 @@ object KlangGuiDance {
             id = "first-steps",
             title = "First Steps, your first lessons",
             steps = listOf(MOTOR_MENU, DRAWER_LEARN, LEARN_FIRST_STEPS),
+        ),
+        // The fourth (KLANG-00382; the maintainer, 2026-10-28: "its own tour, where the motor button lights up again,
+        // then 2-3 themes and then the custom button"): three looks in turn, so a look reads as the whole app, then the
+        // editor's Edit key
+        GuiDance.Arc(
+            id = "looks",
+            title = "Looks, dress the Motor",
+            steps = listOf(MOTOR_MENU, LOOK_COPPER, LOOK_SUN, LOOK_ASPHALT, LOOK_EDIT),
         ),
     )
 
