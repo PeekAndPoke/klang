@@ -100,10 +100,8 @@ class LexikonPanel(ctx: Ctx<Props>) : Component<LexikonPanel.Props>(ctx) {
                 }
 
                 if (entry == null) {
-                    div {
-                        css { put("color", "var(--kl-ink-label)") }
-
-                        +"Pick a term on the left, or follow a Lexikon link in the help."
+                    panelEmptyHint(headline = "Pick a term on the left") {
+                        +"or follow a Lexikon link in the help."
                     }
                 } else {
                     renderEntry(entry)

@@ -64,48 +64,32 @@ class HelpWindow(ctx: Ctx<Props>) : Component<HelpWindow.Props>(ctx) {
         val shown = entry
 
         if (shown == null) {
-            props.options?.let { options ->
-                div {
-                    css {
-                        put("display", "flex")
-                        put("justify-content", "flex-end")
-                        put("align-items", "center")
-                        put("gap", "12px")
-                    }
-
-                    options()
-                }
-            }
-
-            // Before the first name: how to call it, in the middle of the panel, the first thing a new user reads
-            // there (the maintainer, 2026-10-27: "more prominent and centered in the tool")
+            // The rest of the panel's height, so the hint sits in its middle
             div {
                 css {
                     put("display", "flex")
                     put("flex-direction", "column")
-                    put("align-items", "center")
-                    put("justify-content", "center")
-                    put("gap", "10px")
-                    // Room above and below, but never more than the panel's least height holds (no scroll bar)
-                    put("padding", "32px 0")
-                    put("text-align", "center")
+                    put("flex", "1 1 auto")
                 }
 
-                div {
-                    css {
-                        put("font-size", "18px")
-                        put("color", "var(--kl-ink-strong)")
-                    }
+                props.options?.let { options ->
+                    div {
+                        css {
+                            put("display", "flex")
+                            put("justify-content", "flex-end")
+                            put("align-items", "center")
+                            put("gap", "12px")
+                        }
 
-                    +if (hoverHelp) "Rest the mouse on a name in the code" else "Put the cursor on a name in the code"
+                        options()
+                    }
                 }
 
-                div {
-                    css {
-                        put("font-size", "14px")
-                        put("color", "var(--kl-ink-label)")
-                    }
-
+                // Before the first name: how to call it, in the middle of the panel, the first thing a new user reads
+                // there (the maintainer, 2026-10-27: "more prominent and centered in the tool")
+                panelEmptyHint(
+                    headline = if (hoverHelp) "Rest the mouse on a name in the code" else "Put the cursor on a name in the code",
+                ) {
                     +if (hoverHelp) "or put the cursor on it and press " else "and press "
                     with(KlangKeyHint) { caps(parts = listOf("Alt", "Q")) }
                     +" and its help shows here."

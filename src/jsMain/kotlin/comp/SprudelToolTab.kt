@@ -63,8 +63,9 @@ class SprudelToolTab(ctx: Ctx<Props>) : Component<SprudelToolTab.Props>(ctx) {
             css {
                 put("display", "flex")
                 put("flex-direction", "column")
+                // The rest of the panel's height, so the hint sits in its middle
+                put("flex", "1 1 auto")
                 put("gap", "12px")
-                put("padding-bottom", "16px")
                 put("color", "var(--kl-ink-text)")
             }
 
@@ -79,13 +80,8 @@ class SprudelToolTab(ctx: Ctx<Props>) : Component<SprudelToolTab.Props>(ctx) {
     }
 
     private fun FlowContent.renderHint() {
-        div {
-            css {
-                put("color", "var(--kl-ink-label)")
-                put("font-size", "13px")
-            }
-
-            +"Put the cursor inside the parentheses of a call with a tool, as lpf( ), adsr( ) or gain( ), and its tool shows here."
+        panelEmptyHint(headline = "Put the cursor inside a call with a tool") {
+            +"between its parentheses, as lpf( ), adsr( ) or gain( ), and its tool shows here."
         }
     }
 

@@ -11,6 +11,7 @@ import io.peekandpoke.klang.ui.codemirror.ToolCallSite
 import io.peekandpoke.klang.ui.comp.KlangKeyHint
 import io.peekandpoke.klang.ui.comp.KlangWorkbench
 import io.peekandpoke.ultra.html.css
+import kotlinx.css.CssBuilder
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.streams.StreamSource
 import kotlinx.html.FlowContent
@@ -50,6 +51,19 @@ class QuickHelpPanel(
     /** Where a use clicked in the "Used on" list goes: the code the last name came from. */
     private var jump: (pos: Int) -> Unit = {}
 
+    /**
+     * A tab's wrapper: a column at least as tall as the panel, its tab taking the rest (`flex: 1`), and the ground an
+     * empty tab's hint is centred on.
+     */
+    private fun CssBuilder.fillsPanel() {
+        put("position", "relative")
+        put("display", "flex")
+        put("flex-direction", "column")
+        put("min-height", "100%")
+        put("box-sizing", "border-box")
+        put("padding-bottom", "16px")
+    }
+
     /** The panel for the workbench's bottom slot. */
     fun bottom(): KlangWorkbench.Bottom = KlangWorkbench.Bottom(
         title = "Help",
@@ -58,8 +72,9 @@ class QuickHelpPanel(
             KlangWorkbench.Tab(id = TAB_QUICK_HELP, title = "Quick help") {
                 div {
                     key = "help-$pageKey"
-                    // The tab fills the panel's height; a long help ends with the panel's own air below it
-                    css { put("padding-bottom", "16px") }
+                    // The tab fills the panel's height, so an empty one's hint sits in its middle; a long help ends with
+                    // the panel's own air below it
+                    css { fillsPanel() }
                     HelpWindow(
                         entry = help,
                         onJump = { pos -> jump(pos) },
@@ -71,7 +86,11 @@ class QuickHelpPanel(
             KlangWorkbench.Tab(id = TAB_LEXIKON, title = "Lexikon") {
                 div {
                     key = "lexikon-$pageKey"
-                    css { put("height", "100%") }
+                    css {
+                        // The ground an empty Lexikon's hint is centred on
+                        put("position", "relative")
+                        put("height", "100%")
+                    }
                     LexikonPanel(slug = lexikonSlug, onPick = { lexikonSlug(it) })
                 }
             },
@@ -80,6 +99,7 @@ class QuickHelpPanel(
                 KlangWorkbench.Tab(id = TAB_SPRUDEL, title = "Sprudel") {
                     div {
                         key = "sprudel-$pageKey"
+                        css { fillsPanel() }
                         SprudelToolTab(site = toolCall, contextOf = contextOf)
                     }
                 }
