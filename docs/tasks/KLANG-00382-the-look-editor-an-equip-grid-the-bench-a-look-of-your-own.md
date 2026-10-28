@@ -56,6 +56,10 @@ equipped, the Looks walkthrough.
    know its source; the requests are ULTRA-00265 (not scheduled; Ultra offers to let the rework grow in `workshop/`
    first). Recommended: pick and place first, Klang's own (it is also the keyboard's and touch's way); the drag after,
    on Kraft's dnd as it is or on its rework.
+6. A look's name: how long it may be, so it fits a drawer tile (about 80 px at 11 px). The maintainer, 2026-10-28:
+   "We should restict the length of the name to 8 chars?", then "Not sure we will see". Options: 8 characters, or
+   10 with a counter; either way the tile cuts a name that still overflows with "...", and the editor and the tile's
+   tooltip show it whole (a character count cannot promise a width: "WWWWWWWW" is wider than "Asphalt").
 
 ## The work
 
