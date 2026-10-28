@@ -35,6 +35,14 @@ note("c d e f").sound(Guess(correct = "saw", choices = ["sine", "saw", "square"]
 
 - **Feedback in steps:** first "2 of 3 right" without saying which, then per guess after a few tries or on request.
 
+## More puzzle ideas
+
+- **EQ back to pink** (the maintainer, 2026-10-28): pink noise, equalized away from pink, plays; the user gets an EQ
+  of their own and brings it back to pink. Pink noise has equal energy per octave, so a boost or a dip shows
+  plainly as a colour. Solved when the target's EQ and the user's together come out flat within a tolerance per
+  band. Levels could grow from one wide band to several narrow ones, and from a spectrum shown to ears only. Built
+  on the Katalyst `eq` (KLANG-00250); close to the ear trainer (KLANG-00274).
+
 ## Notes for the design (Klang-Main-Dev, 2026-10-28, to discuss)
 
 - **Two players, one switch:** "the target" plays the code with the correct values, "yours" with the current picks.
@@ -72,3 +80,4 @@ Not set while this is an idea.
 - 2026-10-28: created in the Q4 planning with the maintainer.
 - 2026-10-28: the maintainer's idea (recreate a sound by filling in the "???" of read-only code) and the design notes.
 - 2026-10-28: decided: the builder form `Guess(b => ...)`, and feedback in steps (the maintainer).
+- 2026-10-28: a second puzzle idea, EQ back to pink (the maintainer).
