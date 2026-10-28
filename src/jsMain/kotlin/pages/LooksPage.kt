@@ -113,7 +113,7 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
 
     private var copied: Boolean by value(false)
 
-    /** The knob card's preview turns, so its arc shows. */
+    /** The knob card's preview turns, so its arc shows; the gauge card's needle follows it. */
     private var knobPreview: Double by value(0.6)
 
     init {
@@ -1142,7 +1142,8 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
                 +"Focused"
             }
 
-            "gauge" -> KlangGauge(name = "Preview", value = 0.62)
+            // The knob card's knob turns the gauge too (the maintainer, 2026-10-28)
+            "gauge" -> KlangGauge(name = "Preview", value = knobPreview)
 
             "knob" -> KlangValueKnob(
                 name = "Preview",
