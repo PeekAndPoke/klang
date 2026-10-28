@@ -24,7 +24,7 @@ internal val soundOfTheSeaSong = Song(
          let water      = 0.120
           let waves      = 0.165
            let windSpiel  = 3.250
-            let randseed   = sineOfDay.add(1).mul(100)
+            let randSeed   = sineOfDay.add(1).mul(100)
 
             stack( //   Lean back and relax... let the waves carry you away
           // Wind ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -48,7 +48,7 @@ internal val soundOfTheSeaSong = Song(
            n(randrun(16)).orbit(2).fast(4).degradeBy(0.995).sound("glockenspiel").scale("f2:pentatonic").body(material = "glass")
              .gain(0.25 * windSpiel).distort(0.05).adsr(0.05, 0.2, 0.5, 5.0).hpf(400).lpf(freq = 3000, q = 2, env = 24)
                  .orbit(1).delay(wet = 0.25, time = pure(1/4).div(cps), feedback = 0.85) // . solo()
-                       ).reverb(wet = 0.25, size = 10.0, lowpass = 12500).seed().analog(20)
+                       ).reverb(wet = 0.25, size = 10.0, lowpass = 12500).seed(randSeed).analog(20)
 
 
 
