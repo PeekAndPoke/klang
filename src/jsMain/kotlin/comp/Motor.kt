@@ -65,8 +65,8 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
          * line as far below the gauges as the divider is above them, 21px each, measured (the maintainer, 2026-10-27:
          * "the spacing between divider <-> gauges <-> osci is the same").
          */
-        const val OSCILLOSCOPE_TOP_REM = 5.875
-        const val OSCILLOSCOPE_HEIGHT_REM = 3.25
+        const val OSCILLOSCOPE_TOP_REM = 5.800
+        const val OSCILLOSCOPE_HEIGHT_REM = 4.00
 
         /** The spectrum stands on the frame's floor, behind the scope; its boxes stack up from there. */
         const val SPECTRUM_HEIGHT_REM = 7.0
@@ -80,6 +80,15 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
          * yellow and never red"; "take 15% steps please").
          */
         const val SPECTRUM_COLOR_STEP = 0.15
+
+        /** The spectrum's colours, from the look, quiet to peak. */
+        private val SPECTRUM_ROLES = listOf(
+            KlangRole.SpectrumQuiet,
+            KlangRole.SpectrumLow,
+            KlangRole.SpectrumMid,
+            KlangRole.SpectrumHot,
+            KlangRole.SpectrumPeak,
+        )
     }
 
     //  PROPS  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -146,12 +155,14 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
                     height = SPECTRUM_HEIGHT_REM.rem
                     width = 100.pct
 
-                    opacity = 0.85
+                    opacity = 0.90
                 }
 
                 // The hovered column's frequencies show in the middle of the spectrum's part under the scope (higher up the
                 // trace would cover them)
                 Spectrumeter(
+                    // The look's spectrum section, quiet to peak (the maintainer, 2026-10-28)
+                    colors = SPECTRUM_ROLES.map { Color(look[it]) },
                     numBoxesInStack = 31,
                     colorStep = SPECTRUM_COLOR_STEP,
                     numBuckets = SPECTRUM_COLUMNS,

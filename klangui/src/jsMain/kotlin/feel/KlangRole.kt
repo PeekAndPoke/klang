@@ -126,6 +126,29 @@ enum class KlangRole(
      */
     LcdInk(cssVar = "--kl-lcd-ink", kind = Kind.Color, default = GaugeArc.default, follows = GaugeArc),
 
+    // ── Spectrum: the Motor's spectrum, from quiet to loud ───────────────────
+    // A section of its own (the maintainer, 2026-10-28), no longer the status colours: each step a clear step from the
+    // last, and the top a hot coral, not the error red ("looks a bit too much like blood")
+
+    /** The spectrum's lowest step. */
+    SpectrumQuiet(cssVar = "--kl-spectrum-quiet", kind = Kind.Color, default = "#56b6c2"),
+
+    /** The spectrum's second step. */
+    SpectrumLow(cssVar = "--kl-spectrum-low", kind = Kind.Color, default = "#98c379"),
+
+    /**
+     * The spectrum's middle step: a sunflower yellow, strong enough beside its neighbours (the maintainer, 2026-10-28:
+     * the softer one was "overwhelmed by the saturation of its neighbours"), then a notch "more dusty"; yellower than
+     * the trail's gold.
+     */
+    SpectrumMid(cssVar = "--kl-spectrum-mid", kind = Kind.Color, default = "#e4c35a"),
+
+    /** The spectrum's step below the top: a clear orange, apart from the yellow below it, a notch dusty. */
+    SpectrumHot(cssVar = "--kl-spectrum-hot", kind = Kind.Color, default = "#e08f4e"),
+
+    /** The spectrum's top step: a hot coral, as a meter's peak LED. */
+    SpectrumPeak(cssVar = "--kl-spectrum-peak", kind = Kind.Color, default = "#ff6b4a"),
+
     // ── Accent ────────────────────────────────────────────────────────────────
 
     /** Selection, links. */
