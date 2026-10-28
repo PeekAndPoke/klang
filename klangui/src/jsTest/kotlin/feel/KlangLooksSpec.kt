@@ -19,7 +19,7 @@ class KlangLooksSpec : StringSpec({
     }
 
     "the presets are Default, Copper and Cream, each found by its id; an unknown id finds none" {
-        KlangLooks.all.map { it.id } shouldContainExactly listOf("default", "copper", "cream")
+        KlangLooks.all.map { it.id } shouldContainExactly listOf("default", "copper", "cream", "army", "forest", "sun", "asphalt")
 
         for (preset in KlangLooks.all) {
             KlangLooks.byId(preset.id) shouldBe preset

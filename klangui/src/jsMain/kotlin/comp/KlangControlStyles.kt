@@ -555,6 +555,19 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("grid-template-columns", "repeat(4, minmax(0, 1fr))")
         put("gap", "6px")
         put("margin-top", "8px")
+
+        // Smaller tiles than a tile's own: seven looks fit in two short rows (the maintainer, 2026-10-28)
+        rule("& > button") {
+            put("min-height", "0")
+            put("padding", "5px 4px")
+            put("gap", "3px")
+            put("font-size", "11px")
+        }
+
+        rule("& > button > span[aria-hidden]") {
+            put("width", "12px")
+            put("height", "12px")
+        }
     }
 
     // ── Dialog ────────────────────────────────────────────────────────────────

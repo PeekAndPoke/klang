@@ -25,7 +25,7 @@ class KlangLookPickerSpec : StringSpec({
         KlangTheme.clearLayer(Layer.User)
     }
 
-    "it shows the three presets and Custom, the chosen one pressed, Custom not there yet" {
+    "it shows the seven presets and Custom, the chosen one pressed, Custom not there yet" {
         KlangTheme.choose(KlangLooks.Cream)
 
         TestBed.preact(view = { KlangLookPicker() }) { root ->
@@ -33,9 +33,9 @@ class KlangLookPickerSpec : StringSpec({
 
             val buttons = root.selectCss("button")
 
-            buttons.map { it.textContent } shouldContainExactly listOf("Default", "Copper", "Cream", "Custom")
-            buttons.attr("aria-pressed") shouldContainExactly listOf("false", "false", "true", null)
-            buttons.attr("aria-disabled") shouldContainExactly listOf(null, null, null, "true")
+            buttons.map { it.textContent } shouldContainExactly listOf("Default", "Copper", "Cream", "Army", "Forest", "Sun", "Asphalt", "Custom")
+            buttons.attr("aria-pressed") shouldContainExactly listOf("false", "false", "true", "false", "false", "false", "false", null)
+            buttons.attr("aria-disabled") shouldContainExactly listOf(null, null, null, null, null, null, null, "true")
         }
     }
 
@@ -49,12 +49,12 @@ class KlangLookPickerSpec : StringSpec({
 
             eventually {
                 KlangTheme.chosen shouldBe KlangLooks.Copper
-                root.selectCss("button").attr("aria-pressed") shouldContainExactly listOf("false", "true", "false", null)
+                root.selectCss("button").attr("aria-pressed") shouldContainExactly listOf("false", "true", "false", "false", "false", "false", "false", null)
             }
 
             handed shouldContainExactly listOf(KlangLooks.Copper)
 
-            (root.selectCss("button")[3] as HTMLElement).click()
+            (root.selectCss("button")[7] as HTMLElement).click()
 
             KlangTheme.chosen shouldBe KlangLooks.Copper
             handed.size shouldBe 1
