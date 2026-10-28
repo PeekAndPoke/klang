@@ -110,16 +110,18 @@ object KlangBrushedMetal {
 
     /**
      * Strokes of a hand, not machine rows (the start page's, 2026-10-26: "make it look hand brushed"): each row cut
-     * into strokes of their own length and depth, fading in and out at their ends; a second layer crosses the first
-     * at a slightly other angle; some patches brushed harder than others.
+     * into strokes of their own length and depth, fading in and out at their ends; a second layer over the first,
+     * its strokes cut elsewhere; some patches brushed harder than others.
+     *
+     * Level, no angle: a slant on rows a pixel high stepped every row down at the same x, so every stroke broke there,
+     * a seam from top to bottom every 143 and 250 pixels (the maintainer, 2026-10-28: "The brush still creates
+     * artifacts").
      */
     private fun strokes(px: Int, py: Int): Double {
         var sum = 0.0
 
         for (layer in 0..1) {
-            // The stroke's slight angle: each layer its own
-            val y = py + px * if (layer == 0) 0.004 else -0.007
-            val row = floor(y).toInt()
+            val row = py
             val length = 140.0 + 260.0 * hashCell(col = row, row = 31 + layer)
             val along = (px + hashCell(col = row, row = 47 + layer) * length) / length
             val stroke = floor(along).toInt()
