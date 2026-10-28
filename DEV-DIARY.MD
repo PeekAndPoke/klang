@@ -4,6 +4,22 @@ Condensed per-quarter summaries live in [docs/history](docs/history/). This file
 
 ## Diary
 
+### (2026-10-28) The look editor, an old tube, a Looks walkthrough ... v0.8.5
+
+- the look editor at /looks: the eight looks the drawer shows in an equip grid, the rest on a bench, moved by pick and place as games equip; a look of your own from "Duplicate to edit" or "New look", a card per element with a live preview, colours by picker and hex, amounts on knobs; the app wears the look while you edit it, Apply keeps it, Wear it puts it on, and a draft not applied waits for you when you leave (KLANG-00382)
+- looks copy as text and paste back, checked role by role; your own looks and the slots are kept by the browser
+- the drawer's LOOK row shows the equipped looks, a small Edit key in its heading and a dashed "+" for an empty slot ... "Custom" is gone
+- the oscilloscope and the spectrum draw still pictures of themselves for the editor's cards, so a card shows the real thing
+- a new role, raised ground, for cards and tiles: a step lighter than the page in every look (maintainer)
+- the song editor is an old tube: fine scan lines, a glass with a darker rim, the code glowing a little in its own colour ... two new roles, scan lines and glow, subtle on purpose (maintainer)
+- the Gui-dance's fourth walkthrough, Looks: the Motor button, Copper, Sun and Asphalt in turn, then the Edit key ... after a finished walkthrough the next one rests a minute, and the walkthroughs window shows them two to a row
+- the Motor's oscilloscope is a round, lit string drawn at twice the resolution; the spectrum has its own theme section, bands of whole cells at full strength, and each look a spectrum of its own, Asphalt with gasoline on it
+- brushed metal without the seams that ran top to bottom every few hundred pixels
+- the dev history: Q3 closed, Q4 and the plan, Q1 2027 outlined, screenshots at the end of each quarter
+- ideas noted: sound puzzles that unlock tutorials like a tech tree (KLANG-00377), a stand-alone Klang build for any web page (KLANG-00381), a Winamp look (KLANG-00380)
+- songs (maintainer)
+- rough: the drag in the look editor and asking before leaving it wait for Kraft (KLANG-00383, ULTRA-00265, ULTRA-00266); a test went red unnoticed for a day after the walkthroughs' rest, fixed and logged
+
 ### (2026-10-28) The Sprudel tool, a lamp about to break, seven looks ... v0.8.4
 
 - the parameter tools live in a new Sprudel tab of the bottom panel: put the cursor inside the parentheses of a call with a tool (`lpf( )`, `adsr( )`, `n(...)`) and its tool shows, writing into the code as you drag ... a playing song follows, and one drag is one undo step (KLANG-00374)
