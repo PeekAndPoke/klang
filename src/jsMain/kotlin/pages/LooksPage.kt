@@ -907,7 +907,9 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
             css {
                 put("flex", "none")
                 put("width", "32px")
-                put("height", "24px")
+                // As tall as a label with its hint under it, two lines (the maintainer, 2026-10-28)
+                put("height", "${FIELD_HEIGHT_PX}px")
+                put("box-sizing", "border-box")
                 put("padding", "0")
                 put("border", "1px solid var(--kl-edge)")
                 put("border-radius", "var(--kl-radius)")
@@ -926,7 +928,9 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
             css {
                 put("flex", "none")
                 put("width", "80px")
-                put("padding", "3px 6px")
+                put("height", "${FIELD_HEIGHT_PX}px")
+                put("box-sizing", "border-box")
+                put("padding", "0 6px")
                 put("background", "var(--kl-ground-sunken)")
                 put("color", "var(--kl-ink-text)")
                 put("border", "1px solid var(--kl-edge)")
@@ -1241,6 +1245,9 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
     }
 
     companion object {
+        /** A colour's swatch and hex field: as tall as a role's label and its "follows" hint, 13 px and 11 px lines. */
+        private const val FIELD_HEIGHT_PX = 28
+
         /** The cards two tiles wide, their preview left of their controls. */
         private val WIDE_ELEMENTS = setOf("screen", "spectrum")
 
