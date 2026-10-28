@@ -96,9 +96,11 @@ license, which needs a clean chain of title.
 - **Claude** (Anthropic's AI, working as a team of agent sessions): most of the
   code with its tests and mutation checks, code reviews, technical consulting
   (DSP, CSS, Kotlin/JS performance), UI design drafts, research into papers and
-  prior art, first drafts of docs, tutorials and blog posts, the tools and the
-  process (console tools, hooks, review loops), and the book-keeping of tickets,
-  diary and history; always at the maintainer's direction.
+  prior art, measurements for the ear (renders, spectra, benchmarks), song
+  sketches with the maintainer, first drafts of docs, tutorials and blog posts,
+  the tools and the process (console tools, hooks, review loops), coordinating
+  its sessions with one another, and the book-keeping of tickets, diary and
+  history; always at the maintainer's direction.
 
 ## AI assistance
 
