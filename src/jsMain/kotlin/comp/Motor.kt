@@ -21,7 +21,6 @@ import kotlinx.css.TextAlign
 import kotlinx.css.bottom
 import kotlinx.css.height
 import kotlinx.css.left
-import kotlinx.css.opacity
 import kotlinx.css.pct
 import kotlinx.css.position
 import kotlinx.css.rem
@@ -154,8 +153,6 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
                     right = 0.rem
                     height = SPECTRUM_HEIGHT_REM.rem
                     width = 100.pct
-
-                    opacity = 0.90
                 }
 
                 // The hovered column's frequencies show in the middle of the spectrum's part under the scope (higher up the

@@ -230,7 +230,9 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
         val maxBoxes = props.numBoxesInStack
         // NaN-guard: a step that is not a positive number counts as none, the colours even over the column
         val colorStep = props.colorStep?.takeIf { it > 0.0 } ?: (1.0 / numColors)
-        val boxesPerColor = maxBoxes * colorStep
+        // Whole cells per colour, so each band is as high as the others: 15 % of 31 cells cut at 4.65 left one band a
+        // cell short (the maintainer, 2026-10-28: "the middle row is only 4 cells high")
+        val boxesPerColor = (maxBoxes * colorStep).roundToInt().coerceAtLeast(1)
         // Whole pixels per cell and per gap, stacked up from the floor, so the cells are crisp too (the maintainer,
         // 2026-10-26); the pixels left over stay empty at the top
         val gap = props.boxGap.roundToInt()
@@ -253,7 +255,7 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
 
                 // Each colour a band of the same height, the last one on to the top: the red was never reached when
                 // the bands were cut by one colour less (the maintainer, 2026-10-26: "never red")
-                val colorIdx = (boxIdx / boxesPerColor).toInt().coerceIn(0, numColors - 1)
+                val colorIdx = (boxIdx / boxesPerColor).coerceIn(0, numColors - 1)
                 val boxColor = colorsWithAlpha[colorIdx]
 
                 ctx.fillStyle = boxColor.toString()

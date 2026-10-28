@@ -40,6 +40,12 @@ object KlangLooks {
             KlangRole.AccentMuted to "#b0764c",
             // Selected in the blue opposite the copper (hue about 25, the azure about 204): warm and cold, a classic pair
             KlangRole.LampOn to "#4fa3d9",
+            // The spectrum: Patina rising to glowing copper, white-hot at the top
+            KlangRole.SpectrumQuiet to "#3f9a8c",
+            KlangRole.SpectrumLow to "#6fae8f",
+            KlangRole.SpectrumMid to "#c99a5e",
+            KlangRole.SpectrumHot to "#d9733f",
+            KlangRole.SpectrumPeak to "#ffcf9a",
         ),
     )
 
@@ -75,6 +81,12 @@ object KlangLooks {
             // Selected in a soft periwinkle, the blue opposite the cream's caramel, muted as the cream is soft
             KlangRole.Accent to "#8fa6e6",
             KlangRole.LampOn to "#8099d6",
+            // The spectrum: Ice-cream pastels: mint, pistachio, vanilla, peach, strawberry
+            KlangRole.SpectrumQuiet to "#8fc9d9",
+            KlangRole.SpectrumLow to "#a8d8a0",
+            KlangRole.SpectrumMid to "#f2dd9a",
+            KlangRole.SpectrumHot to "#f2b48a",
+            KlangRole.SpectrumPeak to "#f29aa8",
         ),
     )
 
@@ -105,6 +117,12 @@ object KlangLooks {
             KlangRole.MetalDark to "#a08f66",
             // Selected in the blue opposite the khaki (hue about 44, the periwinkle about 223), muted as the khaki is soft
             KlangRole.LampOn to "#8099d6",
+            // The spectrum: Night vision: phosphor green, dark to bright
+            KlangRole.SpectrumQuiet to "#2e5a2e",
+            KlangRole.SpectrumLow to "#3f7a3a",
+            KlangRole.SpectrumMid to "#5fa04a",
+            KlangRole.SpectrumHot to "#8fd06a",
+            KlangRole.SpectrumPeak to "#c8f59a",
         ),
     )
 
@@ -135,6 +153,12 @@ object KlangLooks {
             KlangRole.Accent to "#6cc48a",
             KlangRole.AccentMuted to "#4f7f5f",
             KlangRole.LampOn to "#6fb3d9",
+            // The spectrum: Deep pine and moss to sunlit leaves, autumn at the top
+            KlangRole.SpectrumQuiet to "#2f6f5a",
+            KlangRole.SpectrumLow to "#4e9a5a",
+            KlangRole.SpectrumMid to "#8cc45a",
+            KlangRole.SpectrumHot to "#d4c45a",
+            KlangRole.SpectrumPeak to "#f2a65a",
         ),
     )
 
@@ -166,14 +190,21 @@ object KlangLooks {
             KlangRole.AccentMuted to "#b8862f",
             // Royal blue beside the gold (the maintainer, 2026-10-28: "the blue needs to be a more royal blue")
             KlangRole.LampOn to "#4169e1",
+            // The spectrum: A real rainbow: the same colours as the default, saturated, no dust (the maintainer, 2026-10-28)
+            KlangRole.SpectrumQuiet to "#1fc6dc",
+            KlangRole.SpectrumLow to "#5cd65a",
+            KlangRole.SpectrumMid to "#ffd93a",
+            KlangRole.SpectrumHot to "#ff972e",
+            KlangRole.SpectrumPeak to "#ff4f3a",
         ),
     )
 
     /**
-     * Asphalt (the maintainer, 2026-10-28: "make it more asphalt looking"): grounds of fresh tarmac, near black with a
-     * cool tint; metal in concrete and steel greys, more grain and less brushing, a stony surface; gauges in the road
-     * marking's white, a traffic-cone orange accent (not the marking's yellow: gold is the first-visit trail's lamp);
-     * selected in a signal blue.
+     * Asphalt (the maintainer, 2026-10-28: "make it more asphalt looking"), with gasoline on it ("adopt the whole
+     * "gasoline" look on the Asphalt theme"): grounds of fresh tarmac, near black with a cool tint, and metal in
+     * concrete and steel greys, more grain and less brushing, a stony surface; on them the oil film's colours, vivid
+     * on the black: gauges and the knob in its cyan with a violet glow, the scope's string a pale cyan silver, the
+     * accent its violet-magenta, selected in its deep blue, the spectrum its bands.
      */
     val Asphalt = KlangLookPreset(
         id = "asphalt",
@@ -192,14 +223,25 @@ object KlangLooks {
             KlangRole.MetalMid to "#a9adb0",
             KlangRole.MetalDark to "#5f6367",
             KlangRole.MetalInk to "#121314",
-            KlangRole.GaugeArc to "#eeeee8",
+            KlangRole.GaugeArc to "#3fc4e0",
             KlangRole.GaugeTick to "#7d8185",
-            KlangRole.GaugeGlow to "#6c7075",
-            KlangRole.Accent to "#ff8a3d",
-            KlangRole.AccentMuted to "#a8653a",
-            KlangRole.LampOn to "#3d7bd9",
+            KlangRole.GaugeGlow to "#6a4fd0",
+            KlangRole.KnobArc to "#3fc4e0",
+            KlangRole.ScopeTrace to "#c4e8ee",
+            KlangRole.Accent to "#b04fd6",
+            KlangRole.AccentMuted to "#3f4fb0",
+            KlangRole.Focus to "#7fd8f0",
+            KlangRole.LampOn to "#3460dc",
             KlangRole.Grain to "0.32",
             KlangRole.Brushed to "0.04",
+            // The spectrum: gasoline on a puddle (the maintainer, 2026-10-28, from photos of an oil and a soap film), the
+            // film's bands in their own order, bottom to top: amber, violet, deep blue, cyan, and a bright yellow on
+            // top; vivid and metallic, the dark is the asphalt around them
+            KlangRole.SpectrumQuiet to "#d48a35",
+            KlangRole.SpectrumLow to "#8e3fc6",
+            KlangRole.SpectrumMid to "#3460dc",
+            KlangRole.SpectrumHot to "#3fc4e0",
+            KlangRole.SpectrumPeak to "#e8d24a",
         ),
     )
 
