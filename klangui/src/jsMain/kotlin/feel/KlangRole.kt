@@ -201,9 +201,9 @@ enum class KlangRole(
     /**
      * The song editor's screen as an old tube (the maintainer, 2026-10-28: "so that it reads more like an old "screen"
      * before there were led-screens", "Has to be subtle though to not interfere with the coding"): how dark its scan
-     * lines are, from 0 (none) to 1; 0.3 was "too much now but it is there".
+     * lines are, from 0 (none) to 1; 0.3 was "too much now but it is there", then 0.15, now 0.1 in every look.
      */
-    Scanlines(cssVar = "--kl-scanlines", kind = Kind.Amount, default = "0.15"),
+    Scanlines(cssVar = "--kl-scanlines", kind = Kind.Amount, default = "0.1"),
 
     /** How much the tube's text glows in its own colour, lit phosphor rather than print, from 0 (none) to 1. */
     Glow(cssVar = "--kl-glow", kind = Kind.Amount, default = "0.2"),
