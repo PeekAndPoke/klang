@@ -327,7 +327,7 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
                 put("box-sizing", "border-box")
                 put("height", "100%")
                 put("overflow", "auto")
-                put("padding", "28px 32px")
+                put("padding", "${PAGE_PADDING_TOP_PX}px 32px")
                 put("color", "var(--kl-ink-text)")
             }
 
@@ -551,8 +551,18 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
         val look = selected
         val own = look.own
 
+        // Stays at the top while the cards scroll under it, so Apply and the other keys stay in reach (the maintainer,
+        // 2026-10-28); a band of the page's ground above it hides what scrolls past ("the content scrolls past it and
+        // is then visible above the sticky panel"), up to the page's top edge, its padding included
         div {
-            css { put("margin-top", "18px") }
+            css {
+                put("position", "sticky")
+                put("top", "-${PAGE_PADDING_TOP_PX}px")
+                put("z-index", "10")
+                put("margin-top", "0")
+                put("padding-top", "${PAGE_PADDING_TOP_PX}px")
+                put("background", "var(--kl-ground-app)")
+            }
 
             panel(if (own) "Your look" else "Built-in look, read only") {
                 renderNameRow(look)
@@ -1246,6 +1256,9 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
     }
 
     companion object {
+        /** The page's padding at its top: the sticky look panel's band covers it, so nothing shows above the panel. */
+        private const val PAGE_PADDING_TOP_PX = 28
+
         /** A colour's swatch and hex field: as tall as a role's label and its "follows" hint, 13 px and 11 px lines. */
         private const val FIELD_HEIGHT_PX = 28
 
