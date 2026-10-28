@@ -831,52 +831,62 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
                 }
             }
 
+            // The label, its undo beside it; what it follows below it, so neither breaks (the maintainer, 2026-10-28)
             span {
                 css {
                     put("flex", "1")
                     put("display", "flex")
-                    put("align-items", "center")
-                    put("gap", "6px")
-                    put("min-width", "0")
+                    put("flex-direction", "column")
                     put("font-size", "13px")
+                    put("line-height", "1.2")
                 }
-                +label
+
+                span {
+                    css {
+                        put("display", "flex")
+                        put("align-items", "center")
+                        put("gap", "6px")
+                    }
+                    +label
+
+                    // A changed role's own undo, beside its label: the controls never move (the maintainer, 2026-10-28)
+                    if (editable && draft[role] != saved) {
+                        button(type = ButtonType.button) {
+                            title = "Undo this change"
+                            attributes["aria-label"] = "Undo the change to ${roleLabel(role)}"
+                            onClick { edit(role, saved) }
+
+                            css {
+                                put("display", "inline-flex")
+                                put("align-items", "center")
+                                put("justify-content", "center")
+                                put("flex", "none")
+                                put("width", "18px")
+                                put("height", "18px")
+                                put("padding", "0")
+                                put("border", "1px solid var(--kl-ink-label)")
+                                put("border-radius", "50%")
+                                put("background", "transparent")
+                                put("color", "var(--kl-ink-label)")
+                                put("font-size", "11px")
+                                put("line-height", "1")
+                                put("cursor", "pointer")
+                            }
+
+                            +"\u21B6"
+                        }
+                    }
+                }
 
                 if (following != null) {
                     span {
                         css {
                             put("font-size", "11px")
+                            put("line-height", "1.1")
                             put("color", "var(--kl-ink-label)")
+                            put("white-space", "nowrap")
                         }
                         +"follows ${roleLabel(following).lowercase()}"
-                    }
-                }
-
-                // A changed role's own undo, beside its label, so the controls never move (the maintainer, 2026-10-28)
-                if (editable && draft[role] != saved) {
-                    button(type = ButtonType.button) {
-                        title = "Undo this change"
-                        attributes["aria-label"] = "Undo the change to ${roleLabel(role)}"
-                        onClick { edit(role, saved) }
-
-                        css {
-                            put("display", "inline-flex")
-                            put("align-items", "center")
-                            put("justify-content", "center")
-                            put("flex", "none")
-                            put("width", "18px")
-                            put("height", "18px")
-                            put("padding", "0")
-                            put("border", "1px solid var(--kl-ink-label)")
-                            put("border-radius", "50%")
-                            put("background", "transparent")
-                            put("color", "var(--kl-ink-label)")
-                            put("font-size", "11px")
-                            put("line-height", "1")
-                            put("cursor", "pointer")
-                        }
-
-                        +"\u21B6"
                     }
                 }
             }
@@ -895,6 +905,7 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
             this.value = sixDigits(value)
             disabled = !editable
             css {
+                put("flex", "none")
                 put("width", "32px")
                 put("height", "24px")
                 put("padding", "0")
@@ -913,6 +924,7 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
             this.value = value
             readonly = !editable
             css {
+                put("flex", "none")
                 put("width", "80px")
                 put("padding", "3px 6px")
                 put("background", "var(--kl-ground-sunken)")
