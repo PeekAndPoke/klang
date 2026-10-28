@@ -17,8 +17,9 @@ data class KlangLoadout(val slots: List<String?>) {
         /** The drawer's two rows of four. */
         const val SIZE = 8
 
-        /** The built-in looks in their order, the last slot empty. */
-        val default: KlangLoadout = KlangLoadout(KlangLooks.all.map { it.id }).normalized(KlangLooks.all.map { it.id })
+        /** The looks a new user finds equipped ([KlangLooks.equippedByDefault]), the last slot empty. */
+        val default: KlangLoadout = KlangLoadout(KlangLooks.equippedByDefault.map { it.id })
+            .normalized(KlangLooks.all.map { it.id })
     }
 
     /** The slot [id] is in; null when it waits on the bench. */

@@ -24,14 +24,23 @@ data class KlangLookPreset(
          * with "..."; KLANG-00382 decision 6, 10 taken for now (the maintainer, 2026-10-28: "Not sure we will see").
          */
         const val NAME_MAX = 10
+
+        /** A swatch's stops, lit to dark: the light once, the body and the shadow twice each. */
+        private val SWATCH_ROLES = listOf(
+            KlangRole.MetalLight,
+            KlangRole.MetalMid,
+            KlangRole.MetalMid,
+            KlangRole.MetalDark,
+            KlangRole.MetalDark,
+        )
     }
 
     /**
      * Its metal, lit to dark, for a swatch: the preset's own values where it has them and they fit their role, the
-     * defaults elsewhere.
+     * defaults elsewhere. Weighted to the metal's body and shadow, its light only a small highlight: spread evenly, the
+     * light took a third of the lamp and every look read pale (the maintainer, 2026-10-28: "the lamps do not really
+     * show the color to expect").
      */
     val swatch: List<String>
-        get() = listOf(KlangRole.MetalLight, KlangRole.MetalMid, KlangRole.MetalDark).map { role ->
-            values[role]?.takeIf { role.accepts(it) } ?: role.default
-        }
+        get() = SWATCH_ROLES.map { role -> values[role]?.takeIf { role.accepts(it) } ?: role.default }
 }

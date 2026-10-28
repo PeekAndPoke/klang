@@ -14,8 +14,9 @@ class KlangLoadoutSpec : StringSpec({
 
     val start = KlangLoadout(listOf("a", "b", "c", null, null, null, null, null))
 
-    "the default is the built-in looks in their order, the rest empty" {
-        KlangLoadout.default.slots shouldContainExactly KlangLooks.all.map { it.id } + List(KlangLoadout.SIZE - KlangLooks.all.size) { null }
+    "the default is the looks equipped by default, in their order, the rest empty; Army waits on the bench" {
+        KlangLoadout.default.slots shouldContainExactly
+            listOf("default", "copper", "cream", "forest", "sun", "asphalt", "neon", null)
     }
 
     "a look from the bench on a slot sends the look there to the bench" {

@@ -1096,10 +1096,12 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put(
             "background",
             listOf(
-                "linear-gradient(165deg, rgba(255, 255, 255, 0.05) 0%, transparent 30%)",
-                "radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.35) 100%)",
+                // The reflection and the rim kept to the corners and the edges: across the middle they looked like a
+                // dirty monitor (the maintainer, 2026-10-28)
+                "linear-gradient(160deg, rgba(255, 255, 255, 0.03) 0%, transparent 14%)",
+                "radial-gradient(ellipse at center, transparent 70%, rgba(0, 0, 0, 0.3) 100%)",
                 "repeating-linear-gradient(to bottom, rgba(0, 0, 0, var(--kl-scanlines)) 0 1px, transparent 1px 3px)",
-                "rgba(150, 175, 165, 0.04)",
+                "rgba(150, 175, 165, 0.03)",
             ).joinToString(", "),
         )
     }
@@ -1699,9 +1701,11 @@ object KlangControlStyles : StyleSheet("kl-controls") {
     }
 
     val knobCapDark by rule {
+        // The sheen only: a small dark cap holds three or four rings of 4 px, which read as a blur (the maintainer,
+        // 2026-10-28: "the small knobs now appear blurred")
         put(
             "background",
-            turned(sheen = 0.12, rings = 0.08) +
+            turned(sheen = 0.12, rings = 0.0) +
                 ", radial-gradient(circle at 42% 30%, var(--kl-cap-light) 0%, var(--kl-cap-dark) 100%)",
         )
         grain()
@@ -1735,9 +1739,18 @@ object KlangControlStyles : StyleSheet("kl-controls") {
 
         // Light only: dark wedges met in a hard cross at the middle (the maintainer, 2026-10-28: "the dark areas in
         // the center are weird"); two broad bright ones, soft at their edges
+        // The second wedge wraps round past 0: the cone starts at its 40 % so the turn has no seam (a stop past 360
+        // left a line at the top)
+        val wrap = "rgba(255, 255, 255, ${sheen * 0.4})"
+        val wedges = "conic-gradient(from 0deg, $wrap 0deg, $clear 30deg, $clear 60deg, $light 135deg, $clear 210deg, " +
+            "$clear 240deg, $light 315deg, $wrap 360deg)"
+
+        if (rings <= 0.0) {
+            return wedges
+        }
+
         return listOf(
-            "conic-gradient(from 0deg, $clear 0deg, $clear 60deg, $light 135deg, $clear 210deg, $clear 240deg, " +
-                "$light 315deg, $clear 390deg)",
+            wedges,
             // Rings of 4 px, light fading to dark and back: 1 px rings aliased into a fine moire at 1x (the maintainer,
             // 2026-10-28: "make the rings less but thicker each")
             "repeating-radial-gradient(circle at 50% 50%, rgba(255, 255, 255, $rings) 0, rgba(0, 0, 0, $rings) 2px, " +

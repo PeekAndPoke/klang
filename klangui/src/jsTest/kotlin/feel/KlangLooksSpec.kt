@@ -19,13 +19,14 @@ class KlangLooksSpec : StringSpec({
     }
 
     "the presets are Default, Copper and Cream, each found by its id; an unknown id finds none" {
-        KlangLooks.all.map { it.id } shouldContainExactly listOf("default", "copper", "cream", "army", "forest", "sun", "asphalt")
+        KlangLooks.all.map { it.id } shouldContainExactly
+            listOf("default", "copper", "cream", "army", "forest", "sun", "asphalt", "neon")
 
         for (preset in KlangLooks.all) {
             KlangLooks.byId(preset.id) shouldBe preset
         }
 
-        KlangLooks.byId("neon") shouldBe null
+        KlangLooks.byId("no-such-look") shouldBe null
     }
 
     "every value of every preset fits its role, so none is dropped when it is chosen" {
@@ -56,12 +57,14 @@ class KlangLooksSpec : StringSpec({
         KlangTheme.chosen shouldBe null
     }
 
-    "a swatch is the preset's metal, lit to dark, falling back to the defaults where it has none or a bad one" {
-        KlangLooks.Copper.swatch shouldContainExactly listOf("#f6d6bd", "#c98a5e", "#7a4a2c")
+    "a swatch is the preset's metal, lit to dark, the light a small highlight, the defaults where it has none" {
+        KlangLooks.Copper.swatch shouldContainExactly listOf("#f6d6bd", "#c98a5e", "#c98a5e", "#7a4a2c", "#7a4a2c")
 
         KlangLooks.Default.swatch shouldContainExactly listOf(
             KlangRole.MetalLight.default,
             KlangRole.MetalMid.default,
+            KlangRole.MetalMid.default,
+            KlangRole.MetalDark.default,
             KlangRole.MetalDark.default,
         )
 
@@ -71,6 +74,12 @@ class KlangLooksSpec : StringSpec({
             values = mapOf(KlangRole.MetalLight to "url(x)", KlangRole.MetalDark to "#000000"),
         )
 
-        odd.swatch shouldContainExactly listOf(KlangRole.MetalLight.default, KlangRole.MetalMid.default, "#000000")
+        odd.swatch shouldContainExactly listOf(
+            KlangRole.MetalLight.default,
+            KlangRole.MetalMid.default,
+            KlangRole.MetalMid.default,
+            "#000000",
+            "#000000",
+        )
     }
 })

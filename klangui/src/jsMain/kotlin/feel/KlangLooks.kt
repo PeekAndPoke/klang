@@ -7,8 +7,8 @@ package io.peekandpoke.klang.ui.feel
 
 /**
  * The built-in looks (KLANG-00339): the three the maintainer picked from the kitchen sink's samples (2026-10-25), and
- * Army, the first Cream kept when Cream became creamy, Forest, Sun and Asphalt (2026-10-28). A
- * custom look of the user's own comes later; the drawer shows it as "later" until then.
+ * Army, the first Cream kept when Cream became creamy, Forest, Sun, Asphalt and Neon (2026-10-28). Which of them a new
+ * user finds equipped is [equippedByDefault]; the rest wait on the bench (KLANG-00382).
  */
 object KlangLooks {
 
@@ -288,7 +288,70 @@ object KlangLooks {
         ),
     )
 
-    val all: List<KlangLookPreset> = listOf(Default, Copper, Cream, Army, Forest, Sun, Asphalt)
+    /**
+     * Neon disco (the maintainer, 2026-10-28: "a neon disco theme", Army to the bench for it): a near-black violet
+     * ground and dark chrome, so the neon glows against them; hot pink, cyan and violet on the instruments and the
+     * accent, a disco spectrum from violet to yellow; smooth, softer corners; the tube glows more.
+     */
+    val Neon = KlangLookPreset(
+        id = "neon",
+        name = "Neon",
+        values = mapOf(
+            // Dark violet, so the black screen stands apart (the maintainer, 2026-10-28: near black, "there is no real
+            // contrast to the editor anymore"; as bright as the default's was "too bright ... middle")
+            KlangRole.GroundApp to "#100a1d",
+            KlangRole.GroundDeep to "#0c0716",
+            KlangRole.GroundPanel to "#1c122e",
+            KlangRole.GroundRaised to "#281c3f",
+            KlangRole.GroundSunken to "#05030a",
+            KlangRole.CapLight to "#3b2c58",
+            KlangRole.CapDark to "#130b20",
+            KlangRole.InkText to "#e6dcff",
+            KlangRole.InkStrong to "#ffffff",
+            KlangRole.InkLabel to "#ab96d8",
+            // Dark chrome with a violet cast
+            KlangRole.MetalLight to "#d6d0f2",
+            KlangRole.MetalMid to "#7d72aa",
+            KlangRole.MetalDark to "#2a2245",
+            KlangRole.MetalInk to "#0a0612",
+            KlangRole.LampOff to "#2a1a3c",
+            KlangRole.LampOn to "#00e8ff",
+            KlangRole.LampWarning to "#ffb020",
+            KlangRole.LampCritical to "#ff2a6d",
+            KlangRole.GaugeArc to "#ff2bd6",
+            KlangRole.GaugeTick to "#6c5ba8",
+            KlangRole.GaugeGlow to "#b026ff",
+            KlangRole.KnobArc to "#00e8ff",
+            KlangRole.ScopeTrace to "#00e8ff",
+            KlangRole.LcdInk to "#39ff9c",
+            KlangRole.Accent to "#ff2bd6",
+            KlangRole.AccentMuted to "#7b2cff",
+            KlangRole.Focus to "#00e8ff",
+            // Smooth all over, glass and lacquer, hardly any grain, no brushing (the maintainer, 2026-10-28: "almost no
+            // grain at all ... everything smooth")
+            KlangRole.Grain to "0.02",
+            KlangRole.GrainSize to "0.2",
+            KlangRole.Brushed to "0",
+            KlangRole.Radius to "4px",
+            KlangRole.RadiusDomed to "12px",
+            KlangRole.Scanlines to "0.12",
+            KlangRole.Glow to "0.45",
+            // The spectrum: a disco floor, violet, blue, cyan, pink, and a yellow peak
+            KlangRole.SpectrumQuiet to "#7b2cff",
+            KlangRole.SpectrumLow to "#2d6bff",
+            KlangRole.SpectrumMid to "#00e8ff",
+            KlangRole.SpectrumHot to "#ff2bd6",
+            KlangRole.SpectrumPeak to "#fff14a",
+        ),
+    )
+
+    val all: List<KlangLookPreset> = listOf(Default, Copper, Cream, Army, Forest, Sun, Asphalt, Neon)
+
+    /**
+     * The looks a new user finds equipped, in the drawer's order, the last slot left empty for a look of their own:
+     * every built-in but Army, on the bench for Neon (the maintainer, 2026-10-28).
+     */
+    val equippedByDefault: List<KlangLookPreset> = listOf(Default, Copper, Cream, Forest, Sun, Asphalt, Neon)
 
     /** The preset with [id]; null for an id no preset has (one remembered from an older version, say). */
     fun byId(id: String): KlangLookPreset? = all.firstOrNull { it.id == id }

@@ -36,7 +36,7 @@ class KlangLookPickerSpec : StringSpec({
 
             val buttons = root.selectCss("button")
 
-            buttons.map { it.textContent } shouldContainExactly listOf("Default", "Copper", "Cream", "Army", "Forest", "Sun", "Asphalt")
+            buttons.map { it.textContent } shouldContainExactly listOf("Default", "Copper", "Cream", "Forest", "Sun", "Asphalt", "Neon")
             buttons.attr("aria-pressed") shouldContainExactly listOf("false", "false", "true", "false", "false", "false", "false")
         }
     }
