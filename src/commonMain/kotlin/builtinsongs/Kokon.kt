@@ -90,9 +90,9 @@ let powerClassA = Ign.fn(x => x
 
 let cab4x12 = Ign.fn(x => x
   .eq(e => e
-    .band(freq =  120, q = 0.7, db =  1.70)        // thump: closed-back box resonance
-    .band(freq =  380, q = 0.5, db =  4.40)        // roar:  low mids
-    .band(freq = 2700, q = 1.7, db =  4.20)        // bark:  the upper-mid speaker peak
+    .band(freq =  120, q = 0.7, db =  2.60)        // thump: closed-back box resonance
+    .band(freq =  380, q = 0.5, db =  4.50)        // roar:  low mids
+    .band(freq = 2700, q = 1.7, db =  4.30)        // bark:  the upper-mid speaker peak
   )
   .lowpass(4980, 0.707, x => x.passes(3))          // the wall: 36 dB/oct, the fizz is gone
   .highpass(80, 0.707, x => x.passes(2)))
@@ -124,7 +124,7 @@ let makeGuitar = (rig) => {
 
   let saw = Ign.supersaw(x => x.voices(pVoices).spread(pSpread)
     // enable the phase-pool for consistent onsets and fundamentals
-    .phasePool(on = 1, kMin = 0.70, kMax = 0.95, warmup = 0, selection = "normal")
+    .phasePool(on = 1, kMin = 0.75, kMax = 0.95, warmup = 0, selection = "normal")
     // character knobs, plain scalars on the supersaw builder
     .spreadPower(1.0).sideAtten(0.5).gainJitter(0.30).centerJitter(0.30)
     // analog settings
@@ -232,7 +232,7 @@ let bass = (() => {
 
   // Harmonics: sine partials at 2f .. 8f, gain 1/n, the fundamental left to the sub above. On the
   // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
-  let harmonics = Ign.sine(x => x.harmonics(6, 1.5).fundamental(0).analog(pAnalog).analogSpread(0.25)).mul(pHarm)
+  let harmonics = Ign.sine(x => x.harmonics(6, 0.90).fundamental(0).analog(pAnalog).analogSpread(0.01)).mul(pHarm)
 
   return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -3)) // let the snare cut through
@@ -256,8 +256,8 @@ export liftRoots = `<5 6 0>`
 export liftPower = `<[-2,2] [-1,3] [0,4]>`
 
 // The melody, in two phrases of one round each. The second fits the cocoon and the lift alike.
-export melodyOne = `<[4@4 3 2 1 2] [1@4 ~ 0 1 2] [4@3 5 4@2 2 0] [1@6 ~@2]>`
-export melodyTwo = `<[7@4 6 4 3 4] [8@4 ~ 7 8 9] [9@3 8 7@2 2 4] [4@6 ~@2]>`
+export melodyOne = `<[4@4 3 0 1 2] [3@4 ~ 4 1 2] [4@3 5 4@2 0 2] [1@6 ~@2]>`
+export melodyTwo = `<[7@4 6 1 3 4] [8@4 ~ 4 7 6] [9@3 8 7@2 2 4] [4@6 ~@2]>`
 
 // Out of the cocoon flies the Schmetterling's own lead.
 export schmetterlingLead = `<[-7 0 2 4] [-7 0 4 [2 0]] [-5 -1 2 4|[4 4|4|-1]] [-6 -1 4 3|3|[3 3]]>`
@@ -270,7 +270,7 @@ export schmetterlingLead = `<[-7 0 2 4] [-7 0 4 [2 0]] [-5 -1 2 4|[4 4|4|-1]] [-
 
 // Spin: the clean arpeggio, each note picked, then ringing under the next.
 export spin = notes => n(notes)
-  .sound(clean).adsrOff().unison(voices = 7, spread = 0.05).pregain(0.7)
+  .sound(clean).adsrOff().unison(voices = 7, spread = 0.03).pregain(0.7)
   .ignp("decay", 1.50).ignp("sustain", 0.25).ignp("release", 0.8).clip(2.0)
   .velocity("1.0 0.8 0.9 0.8 0.95 0.8 0.9 0.8".sub(perlin(0.0, 0.05)))
   .gain(0.22).pan(0.5).vibrato(beatRate(0.25).mul(perlin(0.95, 1.05).slow(4)), 0.03)  
@@ -317,7 +317,7 @@ export chug = roots => n(roots.add(-7)).struct("[x x] x@2  [x x] x@2  [x x] x")
   .sound(heavy).adsrOff().unison(voices = 7, spread = 0.08)
   //.ignp("decay", "0.4 0.8!2 0.4 0.8!2 0.3 0.2").clip(1)
   .velocity("1.0 0.90 0.80 0.85  0.90 0.80 0.75 0.85".sub(perlin(0.0, 0.2).seed(2)))
-  .gain(0.55).late(perlin(0.0005, 0.0010).seed(2)).apply(
+  .gain(0.58).late(perlin(0.0005, 0.0010).seed(2)).apply(
     x => x.pan(0.20),
     x => x.pan(0.80),
   )
@@ -328,7 +328,7 @@ export wings = chords => n(chords).ply(16)
   .sound(heavy).adsrOff().unison(voices = 7, spread = 0.08)
   .ignp("decay", "[0.9 0.8]*8").clip(1)
   .velocity("1.0 0.90!2 0.96 0.88 0.92 0.94 0.92".sub(perlin(0.0, 0.2).seed(3)))
-  .gain(0.60).late(perlin(0.0010, 0.0015).seed(3)).apply(
+  .gain(0.64).late(perlin(0.0010, 0.0015).seed(3)).apply(
     x => x.pan(0.05),
     x => x.pan(0.95),
   )
@@ -343,7 +343,7 @@ export strike = chords => n(chords)
 
 // Chime: a melody on the clean rig, two octaves up, picked and let ring. The butterfly after the storm.
 export chime = notes => n(notes.add(14))
-  .sound(clean).adsrOff().unison(voices = 7, spread = 0.15).pregain(0.7)
+  .sound(clean).adsrOff().unison(voices = 7, spread = 0.10).pregain(0.7)
   .ignp("decay", 0.30).ignp("sustain", 0.35).ignp("release", 1.2).clip(2)
   .velocity("1.0 0.8 0.9 0.8 0.95 0.8 0.9 0.8".sub(perlin(0.0, 0.10)))
   .gain(0.33).pan(0.75).late(perlin(0.001, 0.002))
@@ -382,10 +382,10 @@ export hats = pat => sound(pat).n(0)
 // Bass: the Schmetterling's bass guitar, on every kick, on the chord's root two octaves down.
 export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
   .sound(bass).velocity("0.98 0.94 0.96 0.94")
-  .ignp("sub", 1.00).ignp("harmonics", 1.00)
+  .ignp("sub", 0.90).ignp("harmonics", 1.00)
   .adsr(0.003, 0.75, 0.5, 0.040).hpf(30).notch(freq = snareHz, q = 1.0)
   .clip(0.90)
-  .gain(1.30).pan(0.5)
+  .gain(1.25).pan(0.5)
   .orbit(15)
 
 // Parts  -----------------------------------------------------------------------------------------------------------
@@ -535,11 +535,11 @@ export song = stack(
  
   , master(Katalyst(k => k
     .reverb(0.20, 7, 7500)                         // the hall: one room for the whole band, about 2 s, warm
-    .gain(1.10)                                    // the house level, -14 LUFS
+    .gain(1.05)                                    // the house level, -14 LUFS
     .bands(b => b
       .band(low => low.distort(0.01, "soft", 4).mul(1.00)).cut(150)
-      .band(mid => mid.distort(0.15, "soft", 4).mul(0.85)).cut(5000)
-      .band(low => low.distort(0.01, "soft", 4).mul(1.10))
+      .band(mid => mid.distort(0.15, "soft", 4).mul(0.90)).cut(5000)
+      .band(low => low.distort(0.01, "soft", 4).mul(1.25))
     ) // the glue on the mids only: the kick and the hats stay clean
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005) // the ceiling: peaks only
   ))
@@ -553,12 +553,6 @@ export song = stack(
 // Inspired by: Philip Glass and Steve Reich, the additive process of minimal music. The spinning arpeggio grows thread
 // by thread through its mask, and the listener hears the same notes transform instead of new ones arriving.
 // Inspired by: Editors - Papillon, through the Schmetterling's lead that flies off at the end.
-
-
-
-
-
-
 
 
 
