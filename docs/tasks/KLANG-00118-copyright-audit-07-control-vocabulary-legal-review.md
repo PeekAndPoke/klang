@@ -72,6 +72,48 @@ Compound `:`-field orderings that match (the ordering is arbitrary expression):
 - Interoperability / compatibility necessity (users coming from Strudel expect these names) — functional, not
   expressive, choice.
 
+## Also for counsel: Claude in AUTHORS.MD (filed 2026-10-28, not decided)
+
+The maintainer would like to name Claude in `AUTHORS.MD`, "if there are not legal issues", and to say there who
+does what. Filed here until counsel can answer; nothing is changed yet.
+
+**The legal picture as far as we know it (no legal advice):** an AI cannot hold copyright (UrhG §2(2) and §7: a
+personal intellectual creation of a human; in the US, the Copyright Office and Thaler v. Perlmutter, 2025), and
+Anthropic's terms pass any rights it might have in the outputs to the user. Listing Claude would give Claude and
+Anthropic nothing. `AUTHORS.MD` is, by its own words, the authoritative list of copyright holders behind every
+header's "The Klangmotor Authors", so Claude under "Copyright holders" would name a holder that cannot hold, and
+could suggest parts of the code without a human author. That matters most for the planned commercial or dual
+license, which needs a clean chain of title.
+
+**The proposal:** the holders list stays human; below it, two sections:
+
+```markdown
+## Who does what
+
+- **Karsten J. Gerber**: the vision and the design decisions, the sound (every
+  tuning judged by ear), the songs, the direction of every step, and the final
+  review of what goes in.
+- **Claude** (Anthropic's AI, working as a team of agent sessions): most of the
+  code with its tests and mutation checks, code reviews, technical consulting
+  (DSP, CSS, Kotlin/JS performance), UI design drafts, research into papers and
+  prior art, first drafts of docs, tutorials and blog posts, the tools and the
+  process (console tools, hooks, review loops), and the book-keeping of tickets,
+  diary and history; always at the maintainer's direction.
+
+## AI assistance
+
+Claude is credited here as a collaborator, not as a copyright holder: an AI
+cannot hold copyright, and the rights in the work stay with the holders above.
+Commits Claude wrote or co-wrote carry a `Co-Authored-By` trailer (complete
+since August 2026). More in `CREDITS.MD`, "AI Assistance".
+```
+
+**Questions for counsel:** does this wording keep the chain of title clean for a dual license; how AI-assisted
+code is best described (the share, the human direction and selection); whether the commits before August 2026,
+which carry no trailer, need a statement (`docs/funding/gaps.md` G4). **Open with the maintainer:** the honest
+share of AI-written code (G4), and whether naming Claude is a deliberate exception to the credits rule that
+commercial products are not credited (2026-10-10; `CREDITS.MD` already has its "AI Assistance" section).
+
 ## Plan
 
 1. Package the evidence above (the matching alias/field-order list + the divergences) for an IP lawyer.
@@ -90,3 +132,4 @@ filed. Until then this is the primary open legal question for commercialization.
 - 2026-10-20: numbered KLANG-00118 (was `docs/tasks/copyright-audit-07-control-vocabulary-legal-review.md`).
 - 2026-10-27: part of KLANG-00364 (Out in the world: legal, sharing, outreach), the epic grouping.
 - 2026-10-28: not in Q4: no lawyer yet (the maintainer, in the Q4 planning).
+- 2026-10-28: the idea of naming Claude in AUTHORS.MD filed here for counsel, with the proposal and its questions.
