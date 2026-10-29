@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.Player
+import io.peekandpoke.klang.spine.UiWork
 import io.peekandpoke.klang.ui.comp.KlangWorkbench
 import io.peekandpoke.klang.ui.feel.KlangRole
 import io.peekandpoke.klang.ui.feel.KlangTheme
@@ -36,7 +37,7 @@ import kotlinx.html.div
 @Suppress("FunctionName")
 fun Tag.Motoer(
     menu: KlangWorkbench.Menu? = null,
-    paused: Stream<Boolean> = NeverPaused,
+    paused: Stream<Boolean> = UiWork.resting,
 ) = comp(
     Motor.Props(menu = menu, paused = paused)
 ) {
@@ -100,7 +101,7 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
     data class Props(
         /** The menu button beside the gauges, opening a workbench's drawer; null for none (an empty spot). */
         val menu: KlangWorkbench.Menu?,
-        /** While true, its gauges, scope and spectrum rest: a visual covers the page ([NeverPaused]). */
+        /** While true, its gauges, scope and spectrum rest: a visual covers the page ([UiWork.resting], the default). */
         val paused: Stream<Boolean>,
     )
 

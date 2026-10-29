@@ -10,6 +10,7 @@ import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
 import io.peekandpoke.ultra.streams.ops.FrameClock
 import io.peekandpoke.ultra.streams.ops.animationFrames
+import io.peekandpoke.ultra.streams.ops.cutoffWhen
 import io.peekandpoke.ultra.streams.ops.map
 import io.peekandpoke.ultra.streams.ops.ticker
 
@@ -63,4 +64,6 @@ object VisualState {
      * maintainer, 2026-10-29: "Ideally we stop the calculations in SwingingLamp when there is no subscriber").
      */
     val light: Stream<SwingingLamp.Light> = lightOf(lamp = lamp, clock = FrameClock.animationFrames)
+        // And not while the window has no attention ([UiWork]): the lamp waits where it was
+        .cutoffWhen(UiWork.resting)
 }

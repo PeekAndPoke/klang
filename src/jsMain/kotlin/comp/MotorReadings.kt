@@ -7,7 +7,9 @@ package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_bridge.analyzer.AnalyzerBufferHistory
+import io.peekandpoke.klang.spine.UiWork
 import io.peekandpoke.ultra.streams.Stream
+import io.peekandpoke.ultra.streams.ops.cutoffWhen
 import io.peekandpoke.ultra.streams.ops.map
 import io.peekandpoke.ultra.streams.ops.smooth
 import io.peekandpoke.ultra.streams.ops.switchMapNotNull
@@ -24,8 +26,8 @@ object MotorReadings {
     /** How much of the scope's glow is kept each 10 ms: it rises and falls softly. */
     private const val GLOW_SMOOTHING = 0.85
 
-    /** The current player's latest diagnostics; null while there is none. */
-    private val online get() = Player.diagnostics.stream
+    /** The current player's latest diagnostics; null while there is none; not followed while the window has no attention. */
+    private val online get() = Player.diagnostics.stream.cutoffWhen(UiWork.resting)
 
     /** The cylinders at work, 0 to 32; null while the Motor gives none. */
     fun cylinders(): Stream<Double?> = online.map { d -> d?.cylinders?.count { it.active }?.toDouble() }
@@ -42,6 +44,7 @@ object MotorReadings {
     /** The scope's signal now, 0 (silence) to 1 (full scale): its loudest sample in the newest frame, smoothed. */
     fun signal(): Stream<Double?> = Player.player.map { it?.getAnalyzer() }
         .switchMapNotNull { it.waveform }
+        .cutoffWhen(UiWork.resting)
         .map<AnalyzerBufferHistory?, Double?> { history ->
             if (history == null || history.size == 0) {
                 0.0

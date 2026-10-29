@@ -8,6 +8,7 @@ package io.peekandpoke.klang.comp
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_engine.KlangDiagnostics
 import io.peekandpoke.klang.audio_engine.KlangPlayer
+import io.peekandpoke.klang.spine.UiWork
 import io.peekandpoke.klang.ui.comp.KlangLamp
 import io.peekandpoke.klang.ui.comp.KlangScreen
 import io.peekandpoke.klang.ui.svgRoot
@@ -30,7 +31,7 @@ import kotlin.math.floor
 import kotlin.math.roundToInt
 
 @Suppress("FunctionName")
-fun Tag.MotorHistoryGraphs(paused: Stream<Boolean> = NeverPaused) = comp(
+fun Tag.MotorHistoryGraphs(paused: Stream<Boolean> = UiWork.resting) = comp(
     MotorHistoryGraphs.Props(paused = paused)
 ) {
     MotorHistoryGraphs(it)
@@ -48,7 +49,7 @@ fun Tag.MotorHistoryGraphs(paused: Stream<Boolean> = NeverPaused) = comp(
 class MotorHistoryGraphs(ctx: Ctx<Props>) : Component<MotorHistoryGraphs.Props>(ctx) {
 
     data class Props(
-        /** While true, the graphs are not drawn again: the history goes on being kept ([NeverPaused]). */
+        /** While true, the graphs are not drawn again: the history goes on being kept ([UiWork.resting], the default). */
         val paused: Stream<Boolean>,
     )
 

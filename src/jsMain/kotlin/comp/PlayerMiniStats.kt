@@ -7,6 +7,7 @@ package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.KlangGuiDance
 import io.peekandpoke.klang.Player
+import io.peekandpoke.klang.spine.UiWork
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.comp.KlangGauge
 import io.peekandpoke.klang.ui.comp.KlangMenuButton
@@ -36,7 +37,7 @@ import kotlin.math.roundToInt
 fun Tag.PlayerMiniStats(
     showVolume: Boolean = false,
     menu: KlangWorkbench.Menu? = null,
-    paused: Stream<Boolean> = NeverPaused,
+    paused: Stream<Boolean> = UiWork.resting,
 ) = comp(
     PlayerMiniStats.Props(showVolume = showVolume, menu = menu, paused = paused)
 ) {
@@ -78,7 +79,7 @@ class PlayerMiniStats(ctx: Ctx<Props>) : Component<PlayerMiniStats.Props>(ctx) {
         val showVolume: Boolean,
         /** The menu button in the spot beside the gauges (KLANG-00340); null keeps the spot empty. */
         val menu: KlangWorkbench.Menu?,
-        /** While true, the readings are let go and the needles rest ([NeverPaused]). */
+        /** While true, the readings are let go and the needles rest ([UiWork.resting], the default). */
         val paused: Stream<Boolean>,
     )
 

@@ -7,6 +7,7 @@ package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.audio_bridge.analyzer.AnalyzerBufferHistory
 import io.peekandpoke.klang.audio_engine.KlangPlayer
+import io.peekandpoke.klang.spine.UiWork
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
@@ -46,7 +47,7 @@ fun Tag.Oscilloscope(
     centerLineWidth: Double = 1.0,
     pixelSkip: Int = 5,
     preview: Float32Array? = null,
-    paused: Stream<Boolean> = NeverPaused,
+    paused: Stream<Boolean> = UiWork.resting,
 ) = comp(
     Oscilloscope.Props(
         player = player,
@@ -84,7 +85,7 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         val pixelSkip: Int,
         /** A still frame to draw instead of the player's waveform; null for the live trace. */
         val preview: Float32Array?,
-        /** While true, nothing is drawn: the waveform is let go until it is false again ([NeverPaused]). */
+        /** While true, nothing is drawn: the waveform is let go until it is false again ([UiWork.resting], the default). */
         val paused: Stream<Boolean>,
     )
 

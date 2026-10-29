@@ -7,6 +7,7 @@ package io.peekandpoke.klang.visuals
 
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
+import io.peekandpoke.klang.spine.UiWork
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
@@ -120,6 +121,9 @@ class VoiceRain(ctx: Ctx<Props>) : Component<VoiceRain.Props>(ctx) {
     /** The display's size in CSS px: read once, then kept by [onResize]. */
     private var boxWidth = 0
     private var boxHeight = 0
+
+    /** Whether showing things rests ([UiWork]): [step] then draws nothing. */
+    private val resting by subscribingTo(UiWork.resting)
 
     init {
         lifecycle {
@@ -236,6 +240,19 @@ class VoiceRain(ctx: Ctx<Props>) : Component<VoiceRain.Props>(ctx) {
         frame = window.requestAnimationFrame { step() }
 
         val now = Date.now()
+
+        // Resting, nothing is drawn, the loop just goes on: checked here, every frame, so no start or stop can get out
+        // of step with it (the maintainer, 2026-10-29). The voices due meanwhile are let go and the clock moves along,
+        // so on return nothing falls all at once and nothing jumps; the voices still to come stay, they come seconds
+        // ahead and fall on time after
+        if (resting) {
+            while (pending.isNotEmpty() && pending.first().atMs <= now) {
+                pending.removeFirst()
+            }
+
+            lastMs = now
+            return
+        }
 
         // Nothing falling and nothing to come: the canvas is already empty
         if (drops.isEmpty() && pending.isEmpty() && blank) {

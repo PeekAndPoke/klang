@@ -7,6 +7,7 @@ package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.audio_bridge.analyzer.createAnalyzerBuffer
 import io.peekandpoke.klang.audio_engine.KlangPlayer
+import io.peekandpoke.klang.spine.UiWork
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
@@ -62,7 +63,7 @@ fun Tag.Spectrumeter(
     lighting: Spectrumeter.Lighting = Spectrumeter.Lighting.Own,
     labelAtTop: Boolean = false,
     preview: List<Double>? = null,
-    paused: Stream<Boolean> = NeverPaused,
+    paused: Stream<Boolean> = UiWork.resting,
     player: () -> KlangPlayer?,
 ) = comp(
     Spectrumeter.Props(
@@ -88,7 +89,7 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
 
     data class Props(
         val player: () -> KlangPlayer?,
-        /** While true, the spectrum is neither read nor drawn: its loop rests until it is false again ([NeverPaused]). */
+        /** While true, the spectrum is neither read nor drawn: its loop rests until it is false again ([UiWork.resting], the default). */
         val paused: Stream<Boolean>,
         /**
          * Still levels per column, 0 to 1, drawn instead of the player's spectrum: a picture of itself (the look
@@ -186,27 +187,13 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
     private var canvas: HTMLCanvasElement? = null
     private var ctx2d: CanvasRenderingContext2D? = null
 
-    private var mounted = false
-
-    /** Whether the spectrum rests ([Props.paused]): its loop stops, and starts again when it is over. */
-    private val paused by subscribingTo(props.paused) { resting ->
-        if (resting) {
-            visualizerAnimFrame?.let { window.cancelAnimationFrame(it) }
-            visualizerAnimFrame = null
-        } else if (mounted && visualizerAnimFrame == null) {
-            visualizerAnimFrame = window.requestAnimationFrame { processVisualizer() }
-        }
-    }
-
+    /** Whether the spectrum rests ([Props.paused]): [processVisualizer] then reads and draws nothing. */
+    private val paused by subscribingTo(props.paused)
 
     init {
         lifecycle {
             onMount {
-                mounted = true
-
-                if (!paused) {
-                    visualizerAnimFrame = window.requestAnimationFrame { processVisualizer() }
-                }
+                visualizerAnimFrame = window.requestAnimationFrame { processVisualizer() }
 
                 dom?.let { container ->
                     canvas = dom?.querySelector("canvas") as HTMLCanvasElement?
@@ -220,7 +207,6 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
             }
 
             onUnmount {
-                mounted = false
                 visualizerAnimFrame?.let { window.cancelAnimationFrame(it) }
             }
 
@@ -239,14 +225,20 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
     }
 
     private fun processVisualizer() {
+        visualizerAnimFrame = window.requestAnimationFrame { processVisualizer() }
+
+        // Resting, nothing is read or drawn, the loop just goes on: checked here, every frame (the maintainer,
+        // 2026-10-29: no start and stop to get out of step)
+        if (paused) {
+            return
+        }
+
         props.player()?.let { player ->
             // This fills the buffer with frequency data in Decibels (dB)
             player.getAnalyzer()?.getFft(visualizerBuffer)
         }
 
         drawSpectrum()
-
-        visualizerAnimFrame = if (paused) null else window.requestAnimationFrame { processVisualizer() }
     }
 
     private fun drawSpectrum() {
