@@ -2,6 +2,15 @@
 
 > **Status (2026-10-29): NOT SCHEDULED.** Asked for by the maintainer (2026-10-29: "file a ticket to have one animation
 > frame scheduler which collects all and runs them").
+>
+> **Progress (2026-10-29):** the Spine's `Frames` (85f2986cf): `Frames.all`, one Ultra `ticker` on the animation frames
+> that every subscriber shares, and `Frames.ui`, cut off while the UI rests (KLANG-00389). Components subscribe with
+> Kraft's `subscribe { step() }`, which ends with them (the maintainer: "spine exposes a single animationFrame stream and
+> components subscribe to it and call their step function()"). On it: the lamp's light (and through it the plate's and
+> the domes' reflections), the rain, the spectrum, the start page (was a 16 ms ticker). Still on frames of their own:
+> `smooth()` and `animTicker()` (Ultra's `AnimationFrameClock` asks for one frame per `next()`, so each smoothing and
+> the analyser's waveform ask separately; asked of Ultra to share one frame), three.js's loop, `KlangAdsrCurve`, the
+> highlight buffer's Pixi ticker.
 
 ## Why this exists
 
@@ -42,3 +51,4 @@ animation frame callbacks a second, about nine a frame: each part runs its own l
 
 - 2026-10-29: created from the maintainer's trace, after the Motor's pause while a visual covers the page (14964a0f2)
   and the gauges drawn once (d329990b9).
+- 2026-10-29: `Frames` in the Spine (85f2986cf); the lamp, the rain, the spectrum and the start page moved onto it.
