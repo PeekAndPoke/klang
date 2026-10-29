@@ -65,6 +65,12 @@ class KlangGauge(ctx: Ctx<Props>) : Component<KlangGauge.Props>(ctx) {
 
         /** The scale's marks: one every tenth of the sweep, a long one at both ends and in the middle. */
         const val TICKS = 11
+
+        /** The arc over the whole sweep; a reading shows it up to its place by the dash. */
+        private val FULL_ARC = Dial.arc(fraction = 1.0, radius = 33.0)
+
+        /** The needle's tip at the sweep's start; a reading turns it from there. */
+        private val NEEDLE_START = Dial.point(fraction = 0.0, radius = 30.0)
     }
 
     //  PROPS  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -167,51 +173,41 @@ class KlangGauge(ctx: Ctx<Props>) : Component<KlangGauge.Props>(ctx) {
         }
     }
 
+    /**
+     * The scale: its ticks and track drawn once ([KlangGaugeDial], redrawn only when its red zone changes), over them
+     * the arc and the needle, which a new reading moves by one value each: the arc's dash, the needle's turn (the
+     * maintainer, 2026-10-29: the gauges "draw the dial once, move only the needle"; every reading, every frame while
+     * the needles ease, drew the whole dial again before).
+     */
     private fun FlowContent.renderScale(online: Boolean, hotFraction: Double?, hot: Boolean) {
         val styles = KlangControlStyles
+        val fraction = fractionOf(shown)
 
         div(classes = styles.gaugeScale.toString()) {
-            svgRoot(viewBox = "0 0 100 100", style = "display:block;height:100%;") {
-                for (i in 0 until TICKS) {
-                    val fraction = i.toDouble() / (TICKS - 1)
-                    val major = i % 5 == 0
-                    val (x1, y1) = Dial.point(fraction = fraction, radius = 44.0)
-                    val (x2, y2) = Dial.point(fraction = fraction, radius = if (major) 37.0 else 40.0)
-                    val tickHot = hotFraction != null && fraction >= hotFraction
+            KlangGaugeDial(hotFraction = hotFraction)
 
-                    custom("line") {
-                        attributes["class"] = if (tickHot) "${styles.gaugeTick} ${styles.gaugeTickHot}" else "${styles.gaugeTick}"
-                        attributes["x1"] = x1.toString()
-                        attributes["y1"] = y1.toString()
-                        attributes["x2"] = x2.toString()
-                        attributes["y2"] = y2.toString()
-                        attributes["stroke-width"] = if (major) "1.8" else "1"
-                    }
-                }
-
-                custom("path") {
-                    attributes["class"] = styles.gaugeTrack.toString()
-                    attributes["d"] = Dial.arc(fraction = 1.0, radius = 33.0)
-                    attributes["stroke-width"] = "4"
-                }
-
+            svgRoot(viewBox = "0 0 100 100", style = "display:block;height:100%;position:absolute;inset:0;") {
                 if (online) {
+                    // The whole sweep, shown up to the reading by its dash: a length of 100 along the path
                     custom("path") {
                         attributes["class"] = if (hot) "${styles.gaugeArc} ${styles.gaugeArcHot}" else "${styles.gaugeArc}"
-                        attributes["d"] = Dial.arc(fraction = fractionOf(shown), radius = 33.0)
+                        attributes["d"] = FULL_ARC
+                        attributes["pathLength"] = "100"
+                        attributes["stroke-dasharray"] = "100 100"
+                        attributes["stroke-dashoffset"] = (100.0 * (1.0 - fraction)).toString()
                         attributes["stroke-width"] = "4"
                     }
                 }
 
-                val (nx, ny) = Dial.point(fraction = fractionOf(shown), radius = 30.0)
-
+                // Drawn at the sweep's start, turned to the reading
                 custom("line") {
                     attributes["class"] = styles.gaugeNeedle.toString()
                     attributes["data-needle"] = "true"
                     attributes["x1"] = "50"
                     attributes["y1"] = "50"
-                    attributes["x2"] = nx.toString()
-                    attributes["y2"] = ny.toString()
+                    attributes["x2"] = NEEDLE_START.first.toString()
+                    attributes["y2"] = NEEDLE_START.second.toString()
+                    attributes["transform"] = "rotate(${fraction * Dial.SWEEP_DEGREES} 50 50)"
                     attributes["stroke-width"] = "2.4"
                 }
 
@@ -250,6 +246,55 @@ class KlangGauge(ctx: Ctx<Props>) : Component<KlangGauge.Props>(ctx) {
             icon.iconFn().with(markClasses).render {
                 attributes["aria-hidden"] = "true"
                 css { fontSize = props.size * 0.13 }
+            }
+        }
+    }
+}
+
+@Suppress("FunctionName")
+private fun Tag.KlangGaugeDial(hotFraction: Double?) = comp(
+    KlangGaugeDial.Props(hotFraction = hotFraction)
+) {
+    KlangGaugeDial(it)
+}
+
+/**
+ * A gauge's dial: its ticks, the red ones from [Props.hotFraction] on, and the track under the arc. Its props change only
+ * with the red zone, so a new reading leaves it alone ([KlangGauge.renderScale]).
+ */
+private class KlangGaugeDial(ctx: Ctx<Props>) : Component<KlangGaugeDial.Props>(ctx) {
+
+    data class Props(
+        /** Where the red ticks start, as a share of the sweep, unclamped; null for none. */
+        val hotFraction: Double?,
+    )
+
+    override fun VDom.render() {
+        val styles = KlangControlStyles
+        val hotFraction = props.hotFraction
+
+        svgRoot(viewBox = "0 0 100 100", style = "display:block;height:100%;position:absolute;inset:0;") {
+            for (i in 0 until KlangGauge.TICKS) {
+                val fraction = i.toDouble() / (KlangGauge.TICKS - 1)
+                val major = i % 5 == 0
+                val (x1, y1) = Dial.point(fraction = fraction, radius = 44.0)
+                val (x2, y2) = Dial.point(fraction = fraction, radius = if (major) 37.0 else 40.0)
+                val tickHot = hotFraction != null && fraction >= hotFraction
+
+                custom("line") {
+                    attributes["class"] = if (tickHot) "${styles.gaugeTick} ${styles.gaugeTickHot}" else "${styles.gaugeTick}"
+                    attributes["x1"] = x1.toString()
+                    attributes["y1"] = y1.toString()
+                    attributes["x2"] = x2.toString()
+                    attributes["y2"] = y2.toString()
+                    attributes["stroke-width"] = if (major) "1.8" else "1"
+                }
+            }
+
+            custom("path") {
+                attributes["class"] = styles.gaugeTrack.toString()
+                attributes["d"] = Dial.arc(fraction = 1.0, radius = 33.0)
+                attributes["stroke-width"] = "4"
             }
         }
     }

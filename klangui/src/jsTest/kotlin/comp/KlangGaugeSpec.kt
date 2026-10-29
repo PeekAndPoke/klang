@@ -25,6 +25,9 @@ import kotlinx.browser.window
 import kotlinx.css.px
 import kotlinx.html.Tag
 import org.w3c.dom.Element
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 
 /** A gauge whose value a test sets, to see the needle follow new props. */
 private class GaugeHost(ctx: NoProps) : PureComponent(ctx) {
@@ -51,10 +54,16 @@ class KlangGaugeSpec : StringSpec({
 
     val styles = KlangControlStyles
 
+    /** Where the needle's tip is: drawn at the sweep's start, turned round the centre by its `rotate`. */
     fun needle(root: Element): Pair<Double, Double> {
         val line = root.querySelector("line[data-needle]")!!
+        val x = line.getAttribute("x2")!!.toDouble() - 50.0
+        val y = line.getAttribute("y2")!!.toDouble() - 50.0
+        val degrees = Regex("""rotate\(([-0-9.e]+)""").find(line.getAttribute("transform") ?: "")
+            ?.groupValues?.get(1)?.toDouble() ?: 0.0
+        val radians = degrees * PI / 180.0
 
-        return line.getAttribute("x2")!!.toDouble() to line.getAttribute("y2")!!.toDouble()
+        return (50.0 + x * cos(radians) - y * sin(radians)) to (50.0 + x * sin(radians) + y * cos(radians))
     }
 
     "an online gauge is a meter with its name, range, raw value and value text" {
