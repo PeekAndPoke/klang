@@ -14,6 +14,8 @@ import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.kraft.vdom.custom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.onClick
+import io.peekandpoke.ultra.semanticui.SemanticIconFn
+import io.peekandpoke.ultra.semanticui.icon
 import kotlinx.css.LinearDimension
 import kotlinx.css.height
 import kotlinx.css.px
@@ -33,8 +35,10 @@ fun Tag.KlangMenuButton(
     size: LinearDimension = 42.px,
     key: KeyAction? = null,
     beacon: Boolean = false,
+    label: String = "Menu",
+    icon: SemanticIconFn? = null,
 ) = comp(
-    KlangMenuButton.Props(open = open, onClick = onClick, size = size, key = key, beacon = beacon)
+    KlangMenuButton.Props(open = open, onClick = onClick, size = size, key = key, beacon = beacon, label = label, icon = icon)
 ) {
     KlangMenuButton(it)
 }
@@ -58,6 +62,14 @@ class KlangMenuButton(ctx: Ctx<Props>) : Component<KlangMenuButton.Props>(ctx) {
         val key: KeyAction?,
         /** The first-visit trail's "try me" on it (KLANG-00350), while the drawer is closed. */
         val beacon: Boolean,
+        /** What it is called, for screen readers and the tooltip. */
+        val label: String,
+        /**
+         * Another button in the menu button's dress: an icon instead of the nine dots, [open] its pressed state, said as
+         * pressed, not as a menu expanded (the maintainer, 2026-10-29: a visual's play/stop, "same button style other
+         * icons"); null for the menu's dots.
+         */
+        val icon: SemanticIconFn?,
     )
 
     override fun VDom.render() {
@@ -94,9 +106,15 @@ class KlangMenuButton(ctx: Ctx<Props>) : Component<KlangMenuButton.Props>(ctx) {
             }
 
             button(type = ButtonType.button, classes = classes.joinToString(" ")) {
-                attributes["aria-label"] = "Menu"
-                attributes["aria-expanded"] = props.open.toString()
-                title = "Menu"
+                attributes["aria-label"] = props.label
+
+                if (props.icon == null) {
+                    attributes["aria-expanded"] = props.open.toString()
+                } else {
+                    attributes["aria-pressed"] = props.open.toString()
+                }
+
+                title = props.label
                 onClick { props.onClick() }
 
                 props.key?.let { action -> OnKey(action) { props.onClick() } }
@@ -109,7 +127,21 @@ class KlangMenuButton(ctx: Ctx<Props>) : Component<KlangMenuButton.Props>(ctx) {
                     put("height", "${100 - 2 * inset}%")
                 }
 
-                renderDots()
+                val iconFn = props.icon
+
+                if (iconFn == null) {
+                    renderDots()
+                } else {
+                    // In the dots' place and colour, lit with them while pressed
+                    icon.iconFn().with(styles.menuButtonDots.toString()).render {
+                        attributes["aria-hidden"] = "true"
+                        css {
+                            put("margin", "0")
+                            put("font-size", "13px")
+                            put("line-height", "1")
+                        }
+                    }
+                }
             }
         }
     }

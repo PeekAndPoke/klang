@@ -179,6 +179,9 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
         highlights = found?.let { list -> (0 until list.length).mapNotNull { list.item(it) as? HTMLElement } } ?: emptyList()
     }
 
+    /** What plays now, from here or from any page: the Motor's plate's play/stop shows it. */
+    private val nowPlaying by subscribingTo(Player.nowPlaying)
+
     private val cylinders by subscribingTo(MotorReadings.cylinders())
 
     private val heat by subscribingTo(MotorReadings.heat())
@@ -201,7 +204,9 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
                 put("--kl-gauge-glow", "color-mix(in srgb, var(--kl-metal-mid) 50%, transparent)")
                 // In after the plate's light has come up, about two and a half seconds, hidden until then (the
                 // maintainer, 2026-10-29: "Fade in the ui after the background")
-                put("animation", "kl-visuals-fade-in 1.5s ease-in 2.5s both")
+                // (the maintainer, 2026-10-29: "the contents must fade in earlier and a bit faster"; 1.5 s after 2.5 s
+                // before)
+                put("animation", "kl-visuals-fade-in 1s ease-in 1.2s both")
             }
 
             for (placed in props.composition.tiles) {
@@ -331,6 +336,19 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
                         dragPixels = 200.0,
                     )
                 }
+            } else if (props.composition.tiles.any { it.id == VisualsCompositions.BOARD }) {
+                // On the Motor's plate the menu button's dress plays and stops (the maintainer, 2026-10-29: "on the first
+                // visual replace the motor button with a play / stop button ... same button style other icons and
+                // functionality"): whatever plays stops; nothing playing, Klang Amp's last song plays again
+                val playing = nowPlaying != null
+
+                KlangMenuButton(
+                    open = playing,
+                    onClick = { if (playing) KlangampDeck.stop() else KlangampDeck.playAgain() },
+                    size = (tile * KNOB).px,
+                    label = if (playing) "Stop" else "Play",
+                    icon = if (playing) ({ stop }) else ({ play }),
+                )
             } else {
                 KlangMenuButton(open = false, onClick = { props.onMotorButton() }, size = (tile * KNOB).px)
             }

@@ -42,7 +42,16 @@ object KlangampDeck {
     /** The built-in song [now] plays, by its place in the list; -1 when nothing plays or it is not one of them. */
     fun indexOf(now: Player.NowPlaying?): Int = now?.let { n -> BuiltInSongs.songs.indexOfFirst { it.title == n.title } } ?: -1
 
+    /** The song Klang Amp played last; null before the first. */
+    private var last: Song? = null
+
+    /** Plays the song Klang Amp played last again, or the playlist's first: a visual's play button. */
+    fun playAgain() {
+        play(last ?: BuiltInSongs.songs.first())
+    }
+
     fun play(song: Song) {
+        last = song
         ctrl.stop()
         ctrl.setCode(song.code)
         ctrl.setRpm(song.rpm)
