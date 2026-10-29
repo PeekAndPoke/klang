@@ -19,7 +19,6 @@ internal class ContinuousPlayback internal constructor(
     override val playbackId: String,
     pattern: KlangPattern,
     context: KlangPlaybackContext,
-    source: KlangPlaybackSource? = null,
     onStarted: () -> Unit = {},
     onStopped: () -> Unit = {},
 ) : KlangCyclicPlayback {
@@ -37,7 +36,6 @@ internal class ContinuousPlayback internal constructor(
         context = context,
         signals = _signals,
         registrar = registrar,
-        source = source,
         onStarted = onStarted,
         onStopped = onStopped,
     )

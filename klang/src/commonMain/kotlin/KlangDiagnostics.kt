@@ -24,8 +24,8 @@ import kotlin.concurrent.Volatile
  * - [history]: every metric's last [capacity] readings, one per tick of [ticks], each the metric's latest value when it
  *   posted within [FRESH_MS], else a gap (null). A closed metric's line stays until it scrolls out. A line is a metric's
  *   [Metric.id]: a metric registered again under an id continues its line, after a gap (the maintainer, 2026-10-29:
- *   "when i play and stop the same song the sprudel entries pile up", "would need an identifier that "survives" stop and
- *   play").
+ *   "when i play and stop the same song the sprudel entries pile up", "maybe a single sprudel entry is better and
+ *   simpler": every playback's Sprudel runtime is one id).
  *
  * A clock reads the registry rather than combining the metrics' streams: those come and go with their owners. The tick
  * reads in a map; an operator that samples a stream on a clock is ULTRA-00267.

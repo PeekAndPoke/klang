@@ -44,8 +44,6 @@ internal class KlangPatternScheduler(
      * path needs the same object, and the scheduler is not its natural home.
      */
     private val registrar: InlineDslRegistrar,
-    /** Who plays: its pattern work goes on the line where its last playback's stopped; null for a line of its own. */
-    private val source: KlangPlaybackSource? = null,
     private val onStarted: () -> Unit = {},
     private val onStopped: () -> Unit = {},
 ) {
@@ -307,9 +305,12 @@ internal class KlangPatternScheduler(
 
         // ===== THE PATTERN'S WORK, MEASURED FROM HERE =====
         runtime?.close()
+        // One line for every playback, under one id: played, stopped and played again it goes on where it stopped, not a
+        // line per play (the maintainer, 2026-10-29: "maybe a single sprudel entry is better and simpler"); two at once
+        // share it, the newer post showing
         runtime = diagnostics.metric(
-            id = "sprudel-${source?.id ?: playbackId}",
-            name = source?.name?.let { "Sprudel: $it" } ?: "Sprudel runtime",
+            id = "sprudel",
+            name = "Sprudel runtime",
             category = "CPU",
             unit = "%",
             min = 0.0,

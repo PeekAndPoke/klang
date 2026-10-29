@@ -22,6 +22,7 @@ import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlinx.html.span
+import kotlinx.html.title
 import kotlin.math.roundToInt
 
 @Suppress("FunctionName")
@@ -170,11 +171,13 @@ class MotorHistoryGraphs(ctx: NoProps) : PureComponent(ctx) {
                 }
             }
 
-            // The legend: a lamp in each line's colour, its label, its value now
+            // The legend: a lamp in each line's colour, its label, its value now; two even columns, so nothing jumps as
+            // the values change (the maintainer, 2026-10-29: "These should be shown in a Grid, 2 columns, so that they do
+            // not jump. Title with ellipsis numbers right aligned")
             div {
                 css {
-                    put("display", "flex")
-                    put("flex-wrap", "wrap")
+                    put("display", "grid")
+                    put("grid-template-columns", "repeat(2, minmax(0, 1fr))")
                     put("column-gap", "14px")
                     put("row-gap", "4px")
                     put("margin-top", "6px")
@@ -185,12 +188,14 @@ class MotorHistoryGraphs(ctx: NoProps) : PureComponent(ctx) {
                 for (s in series) {
                     val latest = s.latest
 
-                    span {
+                    div {
                         key = "legend-${s.metric.id}"
+                        title = s.metric.name
                         css {
-                            put("display", "inline-flex")
+                            put("display", "grid")
+                            put("grid-template-columns", "auto minmax(0, 1fr) auto")
                             put("align-items", "center")
-                            put("gap", "6px")
+                            put("column-gap", "6px")
                         }
 
                         KlangLamp(
@@ -199,10 +204,19 @@ class MotorHistoryGraphs(ctx: NoProps) : PureComponent(ctx) {
                             color = colorOf(s),
                         )
 
-                        span { +s.metric.name }
+                        span {
+                            css {
+                                put("white-space", "nowrap")
+                                put("overflow", "hidden")
+                                put("text-overflow", "ellipsis")
+                            }
+                            +s.metric.name
+                        }
 
                         span {
                             css {
+                                put("min-width", "4ch")
+                                put("text-align", "right")
                                 put("font-family", "monospace")
                                 put("color", "var(--kl-lcd-ink)")
                             }
