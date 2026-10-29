@@ -1279,17 +1279,24 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
         // the material's transparency shows the black backdrop there ([PlateComposition.bareOutside]); with its tiles
         // switched off, none ([PlateComposition.platesShown])
         if (props.composition.bareOutside) {
-            // One path for all of them, filled once: a fill per plate would keep only what lies in every plate
-            tctx.globalCompositeOperation = "destination-in"
-            tctx.fillStyle = "#ffffff"
-            tctx.beginPath()
+            val kept = plates.takeIf { props.composition.platesShown }.orEmpty()
 
-            for (plate in plates.takeIf { props.composition.platesShown }.orEmpty()) {
-                tctx.rect(plate.left, plate.top, plate.right - plate.left, plate.bottom - plate.top)
+            if (kept.isEmpty()) {
+                // Nothing kept: all clear. An empty path filled draws nothing and so clears nothing
+                tctx.clearRect(0.0, 0.0, width.toDouble(), height.toDouble())
+            } else {
+                // One path for all of them, filled once: a fill per plate would keep only what lies in every plate
+                tctx.globalCompositeOperation = "destination-in"
+                tctx.fillStyle = "#ffffff"
+                tctx.beginPath()
+
+                for (plate in kept) {
+                    tctx.rect(plate.left, plate.top, plate.right - plate.left, plate.bottom - plate.top)
+                }
+
+                tctx.fill()
+                tctx.globalCompositeOperation = "source-over"
             }
-
-            tctx.fill()
-            tctx.globalCompositeOperation = "source-over"
         }
 
         val tex = addon.createCanvasTexture(cnv)
