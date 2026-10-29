@@ -6,17 +6,20 @@
 package io.peekandpoke.klang.comp
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.assertions.withClue
 import io.kotest.matchers.doubles.plusOrMinus
+import io.kotest.matchers.doubles.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.doubles.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.hypot
+import kotlin.math.min
 
 /**
- * The start page's and the visual's plate, without WebGL (the test browser has none): where the visual's board plate
- * lies on screens of every common size, and how the lamp sways over it.
+ * The start page's and the visuals' plate, without WebGL (the test browser has none): where every composition's tiles
+ * lie on screens of every common size, and how the lamp sways over them.
  */
 class MotorBackgroundSpec : StringSpec({
 
@@ -32,31 +35,81 @@ class MotorBackgroundSpec : StringSpec({
         1024.0 to 1366.0,
     )
 
-    "the board's plate is three tiles wide and two rows high, round the screen's middle" {
+    /** Every composition a screen is made of. */
+    val compositions = mapOf(
+        "start" to PlateComposition.start,
+        "motor board" to PlateComposition.motorBoard,
+        "klangamp glass" to PlateComposition.klangampGlass,
+        "klangamp tiles" to PlateComposition.klangampTiles,
+    )
+
+    "each tile is as wide and as high as its tiles, where its place says, round the screen's middle" {
+        for ((name, composition) in compositions) {
+            for ((w, h) in screens) {
+                val spots = MotorBackground.tilesOnScreen(screenWidth = w, screenHeight = h, composition = composition)
+                val tile = MotorBackground.tileWidthPx(h)
+                val top = MotorBackground.topShare(h, composition) * h
+
+                for (placed in composition.tiles) withClue("$name, ${w}x$h, ${placed.id}") {
+                    val rect = spots.getValue(placed.id)
+
+                    rect.width shouldBe (placed.columns * tile plusOrMinus 1.0)
+                    rect.height shouldBe (placed.rows * tile plusOrMinus 0.01)
+                    rect.left shouldBe (w / 2 + placed.left * tile plusOrMinus 1.0)
+                    rect.top shouldBe (top + placed.row * tile plusOrMinus 0.01)
+                }
+            }
+        }
+    }
+
+    "the tiles off the title's row lie on the grid: their sides on the seams" {
+        for ((name, composition) in compositions) {
+            for ((w, h) in screens) {
+                val tile = MotorBackground.tileWidthPx(h)
+                val spots = MotorBackground.tilesOnScreen(screenWidth = w, screenHeight = h, composition = composition)
+
+                for (placed in composition.tiles.filter { !it.offGrid }) withClue("$name, ${w}x$h, ${placed.id}") {
+                    // The seams lie half a tile either side of the middle tile's middle, the screen's
+                    val fromSeam = ((spots.getValue(placed.id).left - (w / 2 - tile / 2)) / tile).mod(1.0)
+
+                    min(fromSeam, 1.0 - fromSeam) shouldBe (0.0 plusOrMinus 0.01)
+                }
+            }
+        }
+    }
+
+    "every composition stays on the screen" {
+        for ((name, composition) in compositions) {
+            for ((w, h) in screens) {
+                val spots = MotorBackground.tilesOnScreen(screenWidth = w, screenHeight = h, composition = composition)
+
+                for ((id, rect) in spots) withClue("$name, ${w}x$h, $id") {
+                    rect.top shouldBeGreaterThanOrEqual 0.0
+                    rect.bottom shouldBeLessThanOrEqual h + 0.5
+                }
+            }
+        }
+    }
+
+    "the start page's composition stands where its title always stood" {
+        for ((_, h) in screens) {
+            // Before the tiles: the title's plate, a tile row of gauges and the panel's 250 px in the middle of the
+            // screen (the clamp on the title's middle, 12 % to 40 %, does not reach these screens)
+            val tile = MotorBackground.tileWidthPx(h)
+            val title = MotorBackground.tilesOnScreen(1920.0, h, PlateComposition.start).getValue(PlacedTile.TITLE)
+
+            title.top shouldBe ((h - 2 * tile - 250.0) / 2 plusOrMinus 0.5)
+            title.height shouldBe (tile plusOrMinus 0.01)
+            MotorBackground.titlePlateBottomShare(h) * h shouldBe (title.bottom plusOrMinus 0.01)
+        }
+    }
+
+    "the Motor's board lies a row under the title's plate: the gauges' row between" {
         for ((w, h) in screens) {
-            val plate = MotorBackground.boardPlateOnScreen(screenWidth = w, screenHeight = h)
+            val spots = MotorBackground.tilesOnScreen(w, h, PlateComposition.motorBoard)
             val tile = MotorBackground.tileWidthPx(h)
 
-            plate.width shouldBe (MotorBackground.BOARD_COLUMNS * tile plusOrMinus 1.0)
-            plate.height shouldBe (MotorBackground.BOARD_ROWS * tile plusOrMinus 0.01)
-            (plate.left + plate.right) / 2 shouldBe (w / 2 plusOrMinus 0.01)
-        }
-    }
-
-    "the board's plate starts a row under the title's plate: the gauges' row lies between" {
-        for ((w, h) in screens) {
-            val plate = MotorBackground.boardPlateOnScreen(screenWidth = w, screenHeight = h)
-            val titleBottom = MotorBackground.titlePlateBottomShare(h) * h
-
-            plate.top shouldBe (titleBottom + MotorBackground.tileWidthPx(h) plusOrMinus 0.5)
-        }
-    }
-
-    "the board's plate stays on the screen" {
-        for ((w, h) in screens) {
-            val plate = MotorBackground.boardPlateOnScreen(screenWidth = w, screenHeight = h)
-
-            plate.bottom shouldBeLessThanOrEqual h
+            spots.getValue(PlateComposition.BOARD).top shouldBe (spots.getValue(PlacedTile.TITLE).bottom + tile plusOrMinus 0.5)
         }
     }
 

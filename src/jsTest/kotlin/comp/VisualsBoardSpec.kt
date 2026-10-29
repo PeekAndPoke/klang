@@ -41,7 +41,7 @@ class VisualsBoardSpec : StringSpec({
                         put("inset", "0")
                     }
 
-                    VisualsBoard(onLeave = {}, lamp = lamp)
+                    VisualsBoard(composition = PlateComposition.motorBoard, onLeave = {}, lamp = lamp)
                 }
             }) { root ->
                 test(root.single())
@@ -99,7 +99,7 @@ class VisualsBoardSpec : StringSpec({
         board(lamp = { null }) { view ->
             val w = window.innerWidth.toDouble()
             val h = window.innerHeight.toDouble()
-            val plate = MotorBackground.boardPlateOnScreen(screenWidth = w, screenHeight = h)
+            val plate = MotorBackground.tilesOnScreen(w, h, PlateComposition.motorBoard).getValue(PlateComposition.BOARD)
             val tile = MotorBackground.tileWidthPx(h)
 
             eventually {

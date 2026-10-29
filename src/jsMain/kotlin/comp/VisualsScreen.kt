@@ -10,16 +10,24 @@ import io.peekandpoke.klang.ui.comp.KlangCloseKey
 import io.peekandpoke.klang.ui.comp.KlangSwatchButton
 import io.peekandpoke.klang.ui.feel.KlangLookShelf
 import io.peekandpoke.klang.ui.feel.KlangTheme
+import io.peekandpoke.klang.workshop.keys.openKeyLayer
 import io.peekandpoke.kraft.components.ComponentRef
+import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
 import io.peekandpoke.kraft.components.comp
+import io.peekandpoke.kraft.modals.ModalsManager
+import io.peekandpoke.kraft.modals.ModalsManager.Companion.modals
+import io.peekandpoke.kraft.semanticui.modals.FadingModal
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.html.onMouseMove
+import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
+import io.peekandpoke.ultra.streams.ops.distinct
+import io.peekandpoke.ultra.streams.ops.map
 import kotlinx.browser.window
 import kotlinx.html.ButtonType
 import kotlinx.html.FlowContent
@@ -33,29 +41,115 @@ fun Tag.VisualsScreen() = comp {
 }
 
 /**
- * A visual over the whole window (the maintainer, 2026-10-29: "Add a tab in the bottom toolbar called "visuals" and add
- * one link card. This one will open a fullscreen overlay with the background of the startpage, no gauges, no popup. Esc
- * leaves the screen. Moving the mouse shows a close button top right with text "Close: Esc""): the start page's plate
- * and its swaying lamp, lit, and the Motor laid out under the title ([VisualsBoard]), whose menu button leaves. Mounted once at the app's root;
- * [open] shows it. The mouse at the bottom
- * edge brings up the looks, to wear one right there (the maintainer, 2026-10-29: "going with the mouse to the bottom of
- * the overlay will show a menu with the themes").
+ * The visuals over the whole window (the maintainer, 2026-10-29: "Add a tab in the bottom toolbar called "visuals" and
+ * add one link card. This one will open a fullscreen overlay with the background of the startpage"), each a
+ * composition of tiles on the start page's plate under its swaying lamp ([PlateComposition], [VisualsBoard]).
+ *
+ * Mounted once at the app's root; [shown] opens one, as a modal (the maintainer, 2026-10-29: "make the visual a Modal
+ * ... then they react to back-navigation and close"): Esc, the close key, the menu button and the browser's back all
+ * leave it.
  */
 class VisualsScreen(ctx: NoProps) : PureComponent(ctx) {
 
-    companion object {
-        /** Whether the visual is shown. */
-        val open = StreamSource(false)
+    /** The visuals there are, a card each in the Visuals tab. */
+    enum class Visual(val title: String, val description: String, val composition: () -> PlateComposition) {
+        /** The start page's lamp over its plate, the Motor laid out under the title. */
+        Plate(
+            title = "The Motor's plate",
+            description = "The start page's lamp over its plate, the whole window",
+            composition = { PlateComposition.motorBoard },
+        ),
 
-        /** How long the close key stays after the mouse last moved. */
-        private const val CLOSE_KEY_MS = 2000
+        /** The Motor's elements as an old desktop player behind glass, a part of its own on the tiles. */
+        Klangamp(
+            title = "Klang Amp",
+            description = "The Motor as a desktop player behind glass, the built-in songs on its playlist",
+            composition = { PlateComposition.klangampGlass },
+        ),
 
-        /** The mouse this close to the bottom edge brings up the looks; further up than [THEMES_LEAVE_PX] they go. */
-        private const val THEMES_EDGE_PX = 80.0
-        private const val THEMES_LEAVE_PX = 170.0
+        /** Klangamp made of the plate's own tiles. */
+        KlangampTiles(
+            title = "Klang Amp tiles",
+            description = "A player built from the plate's tiles: gauges, scope and spectrum, playlist",
+            composition = { PlateComposition.klangampTiles },
+        ),
     }
 
-    private val shown by subscribingTo(open) { if (it) lightUp() }
+    companion object {
+        /** The visual shown; null while none is. */
+        val shown = StreamSource<Visual?>(null)
+
+        /** Whether a visual is shown. */
+        val open: Stream<Boolean> = shown.map { it != null }.distinct()
+    }
+
+    /** The modal showing [shown]'s visual; null while none is open. */
+    private var handle: ModalsManager.Handle<Boolean>? = null
+
+    /** The visual the open modal shows. */
+    private var opened: Visual? = null
+
+    @Suppress("unused")
+    private val visual by subscribingTo(shown) { visual ->
+        val open = handle
+
+        // Asked for the one already open: nothing to do
+        if (open != null && visual != null && opened == visual) {
+            return@subscribingTo
+        }
+
+        handle = null
+        open?.close()
+
+        if (visual != null) {
+            val next = modals.show { h -> VisualsModal(handle = h, visual = visual) }
+
+            handle = next
+            opened = visual
+            next.onClose {
+                if (handle === next) {
+                    handle = null
+                    shown(null)
+                }
+            }
+        }
+    }
+
+    override fun VDom.render() {
+        // Nothing of its own: the visual shows in the modals' stage
+    }
+}
+
+@Suppress("FunctionName")
+private fun Tag.VisualsModal(handle: ModalsManager.Handle<Boolean>, visual: VisualsScreen.Visual) = comp(
+    VisualsModal.Props(handle = handle, visual = visual)
+) {
+    VisualsModal(it)
+}
+
+/**
+ * A visual in its modal: the plate under its lamp, the tiles' parts on it, a close key top right after the mouse moved
+ * ("Close: Esc"), and the looks at the bottom edge, to wear one right there (the maintainer, 2026-10-29: "going with the
+ * mouse to the bottom of the overlay will show a menu with the themes"). It fades in (the maintainer, 2026-10-29: "the
+ * overlay should fade in as well ... it appears to sudden").
+ */
+private class VisualsModal(ctx: Ctx<Props>) : FadingModal<VisualsModal.Props, Boolean>(ctx) {
+
+    data class Props(
+        override val handle: ModalsManager.Handle<Boolean>,
+        val visual: VisualsScreen.Visual,
+    ) : FadingModal.Props<Boolean>() {
+        override val transition: Transition = Transition(fadeInTimeMs = 700, fadeOutTimeMs = 400)
+    }
+
+    private companion object {
+        /** How long the close key stays after the mouse last moved. */
+        const val CLOSE_KEY_MS = 2000
+
+        /** The mouse this close to the bottom edge brings up the looks; further up than [THEMES_LEAVE_PX] they go. */
+        const val THEMES_EDGE_PX = 80.0
+        const val THEMES_LEAVE_PX = 170.0
+    }
 
     /** Whether the close key shows: the mouse moved a moment ago. */
     private var closeKey: Boolean by value(false)
@@ -75,7 +169,11 @@ class VisualsScreen(ctx: NoProps) : PureComponent(ctx) {
     private val background = ComponentRef.Tracker<MotorBackground>()
 
     init {
+        // Its keys over the page's: Esc closes the visual, not what lies under it
+        openKeyLayer()
+
         lifecycle {
+            onMount { lightUp() }
             onUnmount { hideTimer?.let { window.clearTimeout(it) } }
         }
     }
@@ -96,12 +194,6 @@ class VisualsScreen(ctx: NoProps) : PureComponent(ctx) {
         bg.settle()
     }
 
-    private fun close() {
-        open(false)
-        closeKey = false
-        themes = false
-    }
-
     private fun mouseMoved(clientY: Double) {
         val fromBottom = window.innerHeight - clientY
 
@@ -116,29 +208,26 @@ class VisualsScreen(ctx: NoProps) : PureComponent(ctx) {
         hideTimer = window.setTimeout({ closeKey = false }, CLOSE_KEY_MS)
     }
 
-    override fun VDom.render() {
-        if (!shown) {
-            return
-        }
+    override fun FlowContent.renderContent() {
+        val composition = props.visual.composition()
 
         div {
             key = "visuals-screen"
             css {
-                // Over everything: its own layer, the background's canvas inside it
+                // Over the whole window, the background's canvas inside it; the dimmer's centred, unselectable text undone
                 put("position", "fixed")
                 put("inset", "0")
-                put("z-index", "2000")
                 put("background", "#000")
+                put("text-align", "left")
+                put("user-select", "auto")
                 put("cursor", if (closeKey) "default" else "none")
             }
 
             onMouseMove { e -> mouseMoved(clientY = (e.asDynamic().clientY as Number).toDouble()) }
 
-            MotorBackground(ref = background, boardPlate = true)
+            MotorBackground(ref = background, composition = composition)
 
-            // The Motor laid out on the plate: the gauges on the tiles, the scope in a hole, the spectrum on a screen
-            // (the maintainer, 2026-10-29); its menu button leaves the visual
-            VisualsBoard(onLeave = { close() }, lamp = { background()?.lamp })
+            VisualsBoard(composition = composition, onLeave = { close() }, lamp = { background()?.lamp })
 
             // The close key: Esc always (it answers while mounted), the pill only after the mouse moved
             button(type = ButtonType.button) {

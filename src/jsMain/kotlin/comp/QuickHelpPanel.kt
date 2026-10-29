@@ -118,24 +118,29 @@ class QuickHelpPanel(
                         put("gap", "10px")
                     }
 
-                    KlangButton(
-                        onClick = { VisualsScreen.open(true) },
-                        surface = KlangButton.Surface.Domed,
-                        shape = KlangButton.Shape.Tile,
-                    ) {
-                        div {
-                            css {
-                                put("font-size", "14px")
-                                put("font-weight", "700")
+                    for (visual in VisualsScreen.Visual.entries) {
+                        KlangButton(
+                            onClick = { VisualsScreen.shown(visual) },
+                            surface = KlangButton.Surface.Domed,
+                            shape = KlangButton.Shape.Tile,
+                        ) {
+                            // A small picture of the visual (the maintainer, 2026-10-29: "Add a preview to the cards")
+                            VisualPreview(visual)
+
+                            div {
+                                css {
+                                    put("font-size", "14px")
+                                    put("font-weight", "700")
+                                }
+                                +visual.title
                             }
-                            +"The Motor's plate"
-                        }
-                        div {
-                            css {
-                                put("font-size", "12px")
-                                put("opacity", "0.8")
+                            div {
+                                css {
+                                    put("font-size", "12px")
+                                    put("opacity", "0.8")
+                                }
+                                +visual.description
                             }
-                            +"The start page's lamp over its plate, the whole window"
                         }
                     }
                 }

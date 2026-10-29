@@ -66,9 +66,9 @@ val motorBackgroundRef: ComponentRef.Tracker<MotorBackground> = ComponentRef.Tra
 @Suppress("FunctionName")
 fun Tag.MotorBackground(
     ref: ComponentRef.Tracker<MotorBackground>? = motorBackgroundRef,
-    boardPlate: Boolean = false,
+    composition: PlateComposition = PlateComposition.start,
 ): ComponentRef<MotorBackground> {
-    val created = comp(MotorBackground.Props(boardPlate = boardPlate)) { MotorBackground(it) }
+    val created = comp(MotorBackground.Props(composition = composition)) { MotorBackground(it) }
     return if (ref != null) created.track(ref) else created
 }
 
@@ -87,11 +87,10 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
 
     data class Props(
         /**
-         * A second plate under the gauges' row, over the middle three tiles of the two rows below it: the visual's
-         * board, where its scope and its spectrum sit (the maintainer, 2026-10-29: "The osci and spectrum must share one
-         * big tile"). The start page has none.
+         * The tiles laid on the grid: the title on its plate, and whatever plates a screen places for its parts (the
+         * maintainer, 2026-10-29: "implement the tiles individually and compose the screen as needed").
          */
-        val boardPlate: Boolean,
+        val composition: PlateComposition,
     )
 
     companion object {
@@ -117,40 +116,37 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
         private const val PANEL_CELL = 330.0
 
         /**
-         * The start page's result panel, in screen px, under the gauges' row, which is one tile row high: the title,
-         * the gauges and the panel are placed as one.
-         */
-        private const val PANEL_UNDER_GAUGES_PX = 250.0
-
-        /**
-         * The share of the free height above the title; the rest is under the block. Half: the title and the block
-         * stand in the middle of the screen, under the light, which stands there too (the maintainer, 2026-10-26: "When
-         * i am in fullscreen everything is too far up", and at a third above: "Still too far up").
+         * The share of the free height above a composition; the rest is under it. Half: the composition stands in the
+         * middle of the screen, under the light, which stands there too (the maintainer, 2026-10-26: "When i am in
+         * fullscreen everything is too far up", and at a third above: "Still too far up").
          */
         private const val FREE_ABOVE = 0.5
 
-        /** The plate's reach above and below the title's middle, as shares of the texture's height. */
-        private val plateReach: Pair<Double, Double> by lazy {
-            val plate = titlePlate(width = TEX_HEIGHT, height = TEX_HEIGHT, centerShare = 0.0)
+        /** How far KLANGMOTOR's middle lies under its plate's top, as a share of the texture's height. */
+        private val titleAbove: Double by lazy {
+            val (ascent, descent) = letterReach("KLANGMOTOR")
 
-            (-plate.top / TEX_HEIGHT) to (plate.bottom / TEX_HEIGHT)
-        }
-
-        /** Where KLANGMOTOR's middle sits in a screen [screenHeight] px high, as a share of it from the top. */
-        fun titleCenterShare(screenHeight: Double): Double {
-            val (above, below) = plateReach
-            val composition = (above + below) * screenHeight + tileWidthPx(screenHeight) + PANEL_UNDER_GAUGES_PX
-            val free = (screenHeight - composition).coerceAtLeast(0.0)
-
-            return ((free * FREE_ABOVE + above * screenHeight) / screenHeight).coerceIn(0.12, 0.4)
+            (PANEL_CELL + ascent - descent) / 2.0 / TEX_HEIGHT
         }
 
         /**
-         * Where the title's plate ends in a screen [screenHeight] px high, as a share of it from the top: the texture
-         * spans the screen, so the start page sets its gauges under it at the same gap as the panel under the gauges
-         * (the maintainer, 2026-10-26).
+         * Where a [composition]'s top row starts on a screen [screenHeight] px high, as a share of it from the top: the
+         * composition and the room it asks below in the middle; the title's middle never higher than 12 % nor lower
+         * than 40 % of the screen, as it always stood.
          */
-        fun titlePlateBottomShare(screenHeight: Double): Double = titleCenterShare(screenHeight) + plateReach.second
+        fun topShare(screenHeight: Double, composition: PlateComposition): Double {
+            val tall = composition.rows * tileWidthPx(screenHeight) + composition.roomBelowPx
+            val free = (screenHeight - tall).coerceAtLeast(0.0)
+
+            return (free * FREE_ABOVE / screenHeight).coerceIn(0.12 - titleAbove, 0.4 - titleAbove)
+        }
+
+        /**
+         * Where the start page's title plate ends in a screen [screenHeight] px high, as a share of it from the top: the
+         * start page sets its gauges under it (the maintainer, 2026-10-26).
+         */
+        fun titlePlateBottomShare(screenHeight: Double): Double =
+            topShare(screenHeight, PlateComposition.start) + PANEL_CELL / TEX_HEIGHT
 
         /**
          * A tile's width on a screen [screenHeight] px high, in screen px: the texture spans the screen's height. The
@@ -159,46 +155,40 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
          */
         fun tileWidthPx(screenHeight: Double): Double = PANEL_CELL / TEX_HEIGHT * screenHeight
 
-        /** The board's plate ([Props.boardPlate]): this many tiles wide, the middle ones, and this many rows high. */
-        const val BOARD_COLUMNS = 3
-        const val BOARD_ROWS = 2
-
-        /** A rectangle on the screen, in px. */
-        data class ScreenRect(val left: Double, val top: Double, val right: Double, val bottom: Double) {
-            val width: Double get() = right - left
-            val height: Double get() = bottom - top
-        }
-
-        /**
-         * The board's plate in a texture [width] px wide whose title plate ends at [titleBottom]: [BOARD_COLUMNS] tiles
-         * round the middle (the columns are centred, a tile's middle on the screen's), [BOARD_ROWS] rows under the
-         * gauges' row, which runs under the title's plate.
-         */
-        private fun boardPlateIn(width: Int, titleBottom: Double): TitlePlate {
+        /** A [composition]'s tiles in a texture [width] px wide whose top row starts at [topShare] of its height. */
+        private fun tilesIn(width: Int, topShare: Double, composition: PlateComposition): List<Pair<PlacedTile, TitlePlate>> {
             val cx = width / 2.0
-            val halfWidth = BOARD_COLUMNS * PANEL_CELL / 2.0
+            val top = topShare * TEX_HEIGHT
 
-            return TitlePlate(
-                left = cx - halfWidth,
-                top = titleBottom + PANEL_CELL,
-                right = cx + halfWidth,
-                bottom = titleBottom + (1 + BOARD_ROWS) * PANEL_CELL,
-            )
+            return composition.tiles.map { tile ->
+                tile to TitlePlate(
+                    left = cx + tile.left * PANEL_CELL,
+                    top = top + tile.row * PANEL_CELL,
+                    right = cx + (tile.left + tile.columns) * PANEL_CELL,
+                    bottom = top + (tile.row + tile.rows) * PANEL_CELL,
+                )
+            }
         }
 
         /**
-         * Where the board's plate lies on a screen [screenWidth] by [screenHeight] px, in screen px: the plate the
-         * texture draws, worked out as the texture works it out (its width follows the screen's aspect, its height
-         * spans the screen), so the visual sets its scope and spectrum on it ([VisualsBoard]).
+         * Where a [composition]'s tiles lie on a screen [screenWidth] by [screenHeight] px, in screen px, by their ids:
+         * the plates the texture draws, worked out as the texture works them out (its width follows the screen's aspect,
+         * its height spans the screen), so a screen sets each tile's content on its plate.
          */
-        fun boardPlateOnScreen(screenWidth: Double, screenHeight: Double): ScreenRect {
+        fun tilesOnScreen(screenWidth: Double, screenHeight: Double, composition: PlateComposition): Map<String, ScreenRect> {
             val texWidth = ceil(TEX_HEIGHT * screenWidth / screenHeight).toInt()
-            val title = titlePlate(width = texWidth, height = TEX_HEIGHT, centerShare = titleCenterShare(screenHeight))
-            val plate = boardPlateIn(width = texWidth, titleBottom = title.bottom)
             val sx = screenWidth / texWidth
             val sy = screenHeight / TEX_HEIGHT
 
-            return ScreenRect(left = plate.left * sx, top = plate.top * sy, right = plate.right * sx, bottom = plate.bottom * sy)
+            return tilesIn(width = texWidth, topShare = topShare(screenHeight, composition), composition = composition)
+                .associate { (tile, plate) ->
+                    tile.id to ScreenRect(
+                        left = plate.left * sx,
+                        top = plate.top * sy,
+                        right = plate.right * sx,
+                        bottom = plate.bottom * sy,
+                    )
+                }
         }
 
         /**
@@ -213,10 +203,8 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
         }
 
         /**
-         * The plate under KLANGMOTOR (the maintainer, 2026-10-26: "one nice tile underneith the text so that no lines
-         * are crossing it"; then smaller, "NOT be alligned with the rest of the grid", and "a bit wider and raise it
-         * instead of carving it"): the title's box and a margin, a plate standing on the tiles wherever the grid
-         * runs; no seam crosses it. [left], [top], [right] and [bottom] are in texture px.
+         * A plate's corners in texture px: the title's and every other tile a composition raises ([PlacedTile]); no seam
+         * crosses it.
          */
         private data class TitlePlate(
             val left: Double,
@@ -239,40 +227,37 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
             tctx.asDynamic().letterSpacing = "-0.03em"
         }
 
-        /**
-         * The plate under the title in a texture [width] by [height]: one tile row high round the letters' own outline
-         * (not the font's box, whose middle sits above the capitals' middle), so the title sits in its middle, and an
-         * even number of tiles wide.
-         */
-        private fun titlePlate(width: Int, height: Int, centerShare: Double): TitlePlate {
+        /** How far [text]'s letters reach above and below their middle line, in texture px: their own outline. */
+        private fun letterReach(text: String): Pair<Double, Double> {
             val cnv = document.createElement("canvas") as HTMLCanvasElement
             val tctx = cnv.getContext("2d") as CanvasRenderingContext2D
 
-            applyTitleTextStyle(tctx, height)
+            applyTitleTextStyle(tctx, TEX_HEIGHT)
 
-            val metrics = tctx.measureText("KLANGMOTOR")
-            val cx = width / 2.0
-            val cy = height * centerShare
-            val ascent = metrics.actualBoundingBoxAscent
-            val descent = metrics.actualBoundingBoxDescent
-            // Exactly one tile row high, so the rows can run along its edges (the maintainer, 2026-10-26: the tiles
-            // aligned with the title, "but only vertically")
-            val margin = ((PANEL_CELL - ascent - descent) / 2.0).coerceAtLeast((ascent + descent) * 0.2)
+            val metrics = tctx.measureText(text)
 
-            // An even number of tiles wide, round the screen's middle, where a tile's middle sits: so its sides end
-            // half way across a tile, as far from the grid's lines as can be, on purpose (the maintainer, 2026-10-26:
-            // "Try half"). The least that leaves the letters some air
+            return metrics.actualBoundingBoxAscent to metrics.actualBoundingBoxDescent
+        }
+
+        /**
+         * How many tiles a title's plate is wide (the maintainer, 2026-10-26: "one nice tile underneith the text so that
+         * no lines are crossing it"): an even number, round the screen's middle, where a tile's middle sits, so its sides
+         * end half way across a tile, as far from the grid's lines as can be, on purpose ("Try half"); the least that
+         * leaves the letters some air.
+         */
+        fun titleColumns(text: String): Int {
+            val cnv = document.createElement("canvas") as HTMLCanvasElement
+            val tctx = cnv.getContext("2d") as CanvasRenderingContext2D
+
+            applyTitleTextStyle(tctx, TEX_HEIGHT)
+
+            val metrics = tctx.measureText(text)
+            val tall = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent
             val textWidth = metrics.actualBoundingBoxLeft + metrics.actualBoundingBoxRight
-            val leastWidth = textWidth + 2 * (ascent + descent) * 0.3
-            val tiles = ceil(leastWidth / PANEL_CELL).toInt().let { if (it % 2 == 0) it else it + 1 }
-            val halfWidth = tiles * PANEL_CELL / 2.0
+            val leastWidth = textWidth + 2 * tall * 0.3
+            val tiles = ceil(leastWidth / PANEL_CELL).toInt()
 
-            return TitlePlate(
-                left = cx - halfWidth,
-                top = cy - ascent - margin,
-                right = cx + halfWidth,
-                bottom = cy + descent + margin,
-            )
+            return if (tiles % 2 == 0) tiles else tiles + 1
         }
 
         /** A role's colour as a number for three.js; a value that is not `#rrggbb` takes the role's default. */
@@ -455,22 +440,47 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
     private fun gridOrigin(size: Int): Double = ((size / 2.0 - PANEL_CELL / 2.0) % PANEL_CELL + PANEL_CELL) % PANEL_CELL
 
     /**
-     * Where the panel grid's rows start: on the title's [plate], one row high, so the rows run along its top and its
-     * bottom (the maintainer, 2026-10-26: aligned with the title, "but only vertically"; the columns stay centred).
+     * Where the panel grid's rows start: on the composition's top, so the rows run along its tiles' tops and bottoms
+     * (the maintainer, 2026-10-26: aligned with the title, "but only vertically"; the columns stay centred).
      */
-    private fun gridOriginY(plate: TitlePlate): Double = (plate.top % PANEL_CELL + PANEL_CELL) % PANEL_CELL
+    private fun gridOriginY(height: Int): Double {
+        val top = buildTopShare * height
+
+        return (top % PANEL_CELL + PANEL_CELL) % PANEL_CELL
+    }
+
+    /** The build's tiles in a texture [width] px wide. */
+    private fun placedTiles(width: Int): List<Pair<PlacedTile, TitlePlate>> =
+        tilesIn(width = width, topShare = buildTopShare, composition = props.composition)
+
+    /** The raised ones among them: plates standing on the tiles. */
+    private fun raisedPlates(width: Int): List<TitlePlate> = placedTiles(width).filter { it.first.raised }.map { it.second }
 
     /**
-     * The board's plate ([Props.boardPlate]) in a texture [width] wide: the middle three tiles (the columns are centred,
-     * a tile's middle on the screen's) of the two rows under the gauges' row, which runs under the title's [plate].
+     * Which grid rows lie half a tile over, by row index from -1 ([rowIndexOf]): those a tile with its edges half way
+     * across a tile lies in ([PlacedTile.offGrid]), the title's row as ever.
      */
-    private fun boardPlate(width: Int, plate: TitlePlate): TitlePlate? {
-        if (!props.boardPlate) {
-            return null
+    private fun offsetRows(width: Int, height: Int): BooleanArray {
+        val originY = gridOriginY(height)
+        val rows = BooleanArray((height / PANEL_CELL).toInt() + 3)
+
+        for ((tile, plate) in placedTiles(width)) {
+            if (tile.raised && tile.offGrid) {
+                val first = rowIndexOf(plate.top + 1.0, originY)
+
+                for (r in first until first + tile.rows) {
+                    if (r + 1 in rows.indices) {
+                        rows[r + 1] = true
+                    }
+                }
+            }
         }
 
-        return boardPlateIn(width = width, titleBottom = plate.bottom)
+        return rows
     }
+
+    /** The grid row a texture row [y] lies in, numbered from the grid's [originY]; -1 above it. */
+    private fun rowIndexOf(y: Double, originY: Double): Int = floor((y - originY) / PANEL_CELL).toInt()
 
     /**
      * Where the columns start in the title plate's row: half a tile over from the others, like a course of bricks, so
@@ -509,15 +519,24 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
         return true
     }
 
-    /** Where the title's middle sits, as a share of the window's height, for the build that runs: taken as it starts. */
-    private var buildCenter = 0.25
+    /** Where the composition's top row starts, as a share of the window's height, for the build that runs: taken as it starts. */
+    private var buildTopShare = 0.2
 
     /** A rebuild runs; one asked for meanwhile waits for it ([rebuildPending]). */
     private var rebuilding = false
     private var rebuildPending = false
 
-    /** Where the title's middle sits in the textures the running build makes. */
-    private fun titleCenter(): Double = buildCenter
+    /** The engraving the running build cuts: its text and its middle in texture px; null for none. */
+    private fun engraving(width: Int, height: Int): Triple<String, Double, Double>? {
+        val (tile, plate) = placedTiles(width).firstOrNull { it.first.engraving != null } ?: return null
+        val text = tile.engraving ?: return null
+        val (ascent, descent) = letterReach(text)
+        // The letters' own outline in the middle of the plate's row, not the font's box, whose middle sits above the
+        // capitals' middle
+        val cy = plate.top * height / TEX_HEIGHT + (PANEL_CELL + ascent - descent) / 2.0
+
+        return Triple(text, (plate.left + plate.right) / 2.0, cy)
+    }
 
     /**
      * Brushed steel on the plate and the tiles (the maintainer, 2026-10-26: "a little like brushed steel... very fine
@@ -578,7 +597,7 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
         val ctx = sceneCtx ?: return
         val addon = threeAddon ?: return
         preparing = true
-        buildCenter = titleCenterShare(window.innerHeight.toDouble())
+        buildTopShare = topShare(window.innerHeight.toDouble(), props.composition)
 
         try {
             val texW = ceil(TEX_HEIGHT * aspect).toInt()
@@ -915,7 +934,7 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
         }
 
         rebuilding = true
-        buildCenter = titleCenterShare(window.innerHeight.toDouble())
+        buildTopShare = topShare(window.innerHeight.toDouble(), props.composition)
 
         val newTexW = ceil(TEX_HEIGHT * aspect).toInt()
         generateMotorNormalMap(addon, newTexW, TEX_HEIGHT) { newNormal ->
@@ -1065,7 +1084,8 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
     private fun n2c(n: Double): Int = max(0.0, min(255.0, (n + 1.0) * 127.5)).toInt()
 
     /**
-     * Renders "KLANGMOTOR" flat (no perspective) at the title position.
+     * Renders the composition's engraving ("KLANGMOTOR", "KLANG AMP") flat (no perspective) in the middle of its plate;
+     * nothing when it has none.
      *
      * Caller is responsible for clip / blur / fillStyle setup on `tctx`.
      */
@@ -1075,10 +1095,10 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
         height: Int,
         fillStyle: String,
     ) {
-        val textCy = height * titleCenter()
+        val (text, cx, cy) = engraving(width, height) ?: return
         tctx.fillStyle = fillStyle
         applyTitleTextStyle(tctx, height)
-        tctx.fillText("KLANGMOTOR", width / 2.0, textCy)
+        tctx.fillText(text, cx, cy)
     }
 
     /**
@@ -1096,11 +1116,12 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
         tctx.fillStyle = "#ffffff"
         tctx.fillRect(0.0, 0.0, width.toDouble(), height.toDouble())
 
-        val plate = titlePlate(width = width, height = height, centerShare = titleCenter())
-        val board = boardPlate(width = width, plate = plate)
+        val plates = raisedPlates(width)
+        val originY = gridOriginY(height)
+        val offset = offsetRows(width, height)
 
         // Dark seam lines on the panel grid: albedo crispness on top of the normal-map bevels, about half the face's
-        // brightness, as they were. None crosses the title's plate: a line that would stops at its edges.
+        // brightness, as they were. None crosses a plate, and none runs along its sides, which are its own edges.
         tctx.strokeStyle = "#858585"
         tctx.lineWidth = 2.0
 
@@ -1111,50 +1132,59 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
             tctx.stroke()
         }
 
-        // The columns, above and below the plate's row
-        var gx = gridOrigin(width)
+        // The columns, a row at a time: in a row a plate with its sides half way across a tile lies in, the tiles lie
+        // half a tile over, so their seams meet its sides ([offsetRows])
+        var row = rowIndexOf(0.0, originY)
 
-        while (gx <= width) {
-            line(gx, 0.0, gx, plate.top)
+        while (originY + row * PANEL_CELL < height) {
+            val y0 = originY + row * PANEL_CELL
+            val y1 = y0 + PANEL_CELL
+            val inRow = plates.filter { it.top < y1 - 1.0 && it.bottom > y0 + 1.0 }
+            var gx = if (offset.getOrElse(row + 1) { false }) gridOriginInPlateRow(width) else gridOrigin(width)
 
-            // None across the board's plate, and none along its sides, which are its own edges
-            if (board != null && gx >= board.left - 1.0 && gx <= board.right + 1.0) {
-                line(gx, plate.bottom, gx, board.top)
-                line(gx, board.bottom, gx, height.toDouble())
-            } else {
-                line(gx, plate.bottom, gx, height.toDouble())
+            while (gx <= width) {
+                if (inRow.none { gx >= it.left - 1.0 && gx <= it.right + 1.0 }) {
+                    line(gx, max(y0, 0.0), gx, min(y1, height.toDouble()))
+                }
+
+                gx += PANEL_CELL
             }
 
-            gx += PANEL_CELL
+            row++
         }
 
-        // In the plate's row the tiles lie half a tile over, so their seams meet the plate's sides; none on the plate,
-        // and none along its sides, which are its own edges
-        gx = gridOriginInPlateRow(width)
-
-        while (gx <= width) {
-            if (gx < plate.left - 1.0 || gx > plate.right + 1.0) {
-                line(gx, plate.top, gx, plate.bottom)
-            }
-
-            gx += PANEL_CELL
-        }
-
-        var gy = gridOriginY(plate)
+        // The rows, across the screen but for the plates they meet: no line along a plate's top or bottom
+        var gy = originY
 
         while (gy <= height) {
-            // The rows along the plate's top and bottom stop at its sides: no line round the plate
-            if (gy >= plate.top - 1.0 && gy <= plate.bottom + 1.0) {
-                line(0.0, gy, plate.left, gy)
-                line(plate.right, gy, width.toDouble(), gy)
-            } else if (board != null && gy >= board.top - 1.0 && gy <= board.bottom + 1.0) {
-                line(0.0, gy, board.left, gy)
-                line(board.right, gy, width.toDouble(), gy)
-            } else {
-                line(0.0, gy, width.toDouble(), gy)
+            var x = 0.0
+
+            for (plate in plates.filter { gy >= it.top - 1.0 && gy <= it.bottom + 1.0 }.sortedBy { it.left }) {
+                if (plate.left > x) {
+                    line(x, gy, plate.left, gy)
+                }
+
+                x = max(x, plate.right)
+            }
+
+            if (x < width) {
+                line(x, gy, width.toDouble(), gy)
             }
 
             gy += PANEL_CELL
+        }
+
+        // Only the composition's own tiles, the rest left black: the plate's face kept where a tile lies, clear outside,
+        // the material's transparency shows the black backdrop there ([PlateComposition.bareOutside])
+        if (props.composition.bareOutside) {
+            tctx.globalCompositeOperation = "destination-in"
+            tctx.fillStyle = "#ffffff"
+
+            for (plate in plates) {
+                tctx.fillRect(plate.left, plate.top, plate.right - plate.left, plate.bottom - plate.top)
+            }
+
+            tctx.globalCompositeOperation = "source-over"
         }
 
         val tex = addon.createCanvasTexture(cnv)
@@ -1186,7 +1216,7 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
         // Clip so the blur halo doesn't bleed below the letter baseline — the
         // bottom edge of the engraving stays sharp.
         val fontSize = titleFontSize(height)
-        val textCy = height * titleCenter()
+        val textCy = engraving(width, height)?.third ?: 0.0
         val textBottomY = textCy + fontSize / 2.0
         tctx.save()
         tctx.beginPath()
@@ -1314,7 +1344,7 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
         // Clip so the blur doesn't bleed below the letter baseline — the bottom
         // edge of the relief stays crisp instead of fading into the plate.
         val fontSize = titleFontSize(height)
-        val textCy = height * titleCenter()
+        val textCy = engraving(width, height)?.third ?: 0.0
         val textBottomY = textCy + fontSize / 2.0
         tctx.save()
         tctx.beginPath()
@@ -1368,9 +1398,9 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
         val seamHalf = 3.0
         val bevel = 0.55
         val originX = gridOrigin(width)
-        val plate = titlePlate(width = width, height = height, centerShare = titleCenter())
-        val board = boardPlate(width = width, plate = plate)
-        val originY = gridOriginY(plate)
+        val plates = raisedPlates(width)
+        val originY = gridOriginY(height)
+        val offset = offsetRows(width, height)
         val plateRowOriginX = gridOriginInPlateRow(width)
         // Whether a tile lies turned, worked out when the loop enters another tile, not for every pixel
         var turnedCol = Int.MIN_VALUE
@@ -1383,18 +1413,21 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
                 val idx = (py * width + px) * 4
 
                 // The panels before the grid's origin are numbered from -1 down: floor, not truncation
-                // The plate's row lies half a tile over ([gridOriginInPlateRow])
-                val rowOriginX = if (py >= plate.top && py < plate.bottom) plateRowOriginX else originX
-                val col = floor((px - rowOriginX) / PANEL_CELL).toInt()
+                // A row a plate with its sides half way across a tile lies in lies half a tile over ([offsetRows])
                 val row = floor((py - originY) / PANEL_CELL).toInt()
+                val rowOriginX = if (offset.getOrElse(row + 1) { false }) plateRowOriginX else originX
+                val col = floor((px - rowOriginX) / PANEL_CELL).toInt()
                 val u = px - rowOriginX - col * PANEL_CELL
                 val v = py - originY - row * PANEL_CELL
 
-                // On the title's plate or the board's: a flat face, no seams, and its edges stepping up from the tiles
-                val on = when {
-                    plate.contains(px.toDouble(), py.toDouble()) -> plate
-                    board != null && board.contains(px.toDouble(), py.toDouble()) -> board
-                    else -> null
+                // On a plate: a flat face, no seams, and its edges stepping up from the tiles
+                var on: TitlePlate? = null
+
+                for (plate in plates) {
+                    if (plate.contains(px.toDouble(), py.toDouble())) {
+                        on = plate
+                        break
+                    }
                 }
                 val onPlate = on != null
 

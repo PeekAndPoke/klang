@@ -586,3 +586,15 @@ body {
     from { opacity: 0; }
     to { opacity: 1; }
 }
+
+/* Klangamp's song title running past on its display: half of the text, which holds it twice over, then round again
+   (KlangampBoard) */
+@keyframes kl-klangamp-marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+}
+
+/* Klangamp's playlist: the row under the mouse lights up */
+.kl-klangamp-row:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
