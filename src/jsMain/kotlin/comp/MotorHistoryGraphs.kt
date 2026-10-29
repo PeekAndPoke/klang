@@ -9,6 +9,7 @@ import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_engine.KlangDiagnostics
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.ui.comp.KlangLamp
+import io.peekandpoke.klang.ui.comp.KlangScreen
 import io.peekandpoke.klang.ui.svgRoot
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
@@ -62,10 +63,11 @@ class MotorHistoryGraphs(ctx: NoProps) : PureComponent(ctx) {
         )
 
         /**
-         * A graph's range where it is not its metrics' own: CPU up to twice the budget, so a load over it shows how far
-         * over (the maintainer, 2026-10-29: "draw the CPU graph between 0 and 200%").
+         * The graphs whose metrics' max is a budget, a line over it tinted red ([overBudget]); elsewhere the max only
+         * ends a scale. Every graph scales to its values ([topFor]; the maintainer, 2026-10-29: "draw the CPU graph
+         * between 0 and 200%", "Make the CPU max 120%", "Or also auto-scale, sorry").
          */
-        private val CATEGORY_RANGE = mapOf("CPU" to 0.0..200.0)
+        private val BUDGETED = setOf("CPU")
 
         /**
          * A line over its metric's budget, its [KlangDiagnostics.Metric.max], is drawn in its colour tinted red, the
@@ -73,6 +75,26 @@ class MotorHistoryGraphs(ctx: NoProps) : PureComponent(ctx) {
          * just the line not the fill").
          */
         private fun overBudget(color: String): String = "color-mix(in srgb, $color 40%, #ff3b30)"
+
+        /** A graph that scales itself never ends lower than this. */
+        private const val LEAST_TOP = 5.0
+
+        /**
+         * Where a graph ends: a round number (1, 2 or 5 times a power of ten) a little over
+         * the highest value in view, at least [LEAST_TOP] (the maintainer, 2026-10-29: "Can the voices / cylinders
+         * graph scale with the max-value on the fly?"). Round, so the scale does not move with every reading.
+         */
+        fun topFor(highest: Double): Double {
+            // NaN-guard: no values, or none above nought, take the least top
+            val wanted = (highest * 1.1).takeIf { it > LEAST_TOP } ?: return LEAST_TOP
+            var power = 1.0
+
+            while (power * 10 <= wanted) {
+                power *= 10
+            }
+
+            return listOf(1.0, 2.0, 5.0, 10.0).map { it * power }.first { it >= wanted }
+        }
     }
 
     /** The current player's history; null while there is none. */
@@ -115,11 +137,11 @@ class MotorHistoryGraphs(ctx: NoProps) : PureComponent(ctx) {
         colorOf: (KlangDiagnostics.Series) -> String,
         size: Int,
     ) {
-        // One scale for the category: its metrics share a unit, the widest range holds them all, unless the category
-        // has a range of its own
-        val range = CATEGORY_RANGE[category]
-        val min = range?.start ?: series.minOf { it.metric.min }
-        val max = range?.endInclusive ?: series.maxOf { it.metric.max }
+        // One scale for the category, its metrics sharing a unit: from the lowest of them up to a round number over
+        // the highest value in view
+        val min = series.minOf { it.metric.min }
+        val max = topFor(series.maxOf { s -> s.values.maxOf { it ?: 0.0 } })
+        val budgeted = category in BUDGETED
 
         div {
             key = "graph-$category"
@@ -133,42 +155,67 @@ class MotorHistoryGraphs(ctx: NoProps) : PureComponent(ctx) {
                 +category
             }
 
+            // A small screen, its corners cut as the app's screens are (the maintainer, 2026-10-29: "the graph displays
+            // need the triangular corners again")
             div {
                 css {
                     put("height", "${HEIGHT.toInt()}px")
-                    put("background", "var(--kl-ground-sunken)")
-                    put("border", "1px solid var(--kl-edge)")
-                    put("border-radius", "var(--kl-radius)")
-                    put("overflow", "hidden")
+                    put("display", "flex")
+                    put("flex-direction", "column")
                 }
 
-                svgRoot(viewBox = "0 0 $WIDTH $HEIGHT", style = "display:block;height:100%;") {
-                    attributes["preserveAspectRatio"] = "none"
-
-                    for (i in 1..3) {
-                        val y = (HEIGHT * i / 4).toString()
-
-                        custom("line") {
-                            attributes["x1"] = "0"
-                            attributes["y1"] = y
-                            attributes["x2"] = WIDTH.toString()
-                            attributes["y2"] = y
-                            attributes["style"] = "stroke: var(--kl-edge); stroke-width: 1"
-                            attributes["vector-effect"] = "non-scaling-stroke"
+                KlangScreen(size = KlangScreen.Size.Small, bezel = "var(--kl-ground-panel)") {
+                    div {
+                        css {
+                            put("position", "relative")
+                            put("flex", "1")
+                            put("min-height", "0")
+                            put("overflow", "hidden")
                         }
-                    }
 
-                    for (s in series) {
-                        renderLine(
-                            values = s.values,
-                            min = min,
-                            max = max,
-                            // Over the budget only on a graph with a range of its own, the CPU's: elsewhere the
-                            // metric's max is where the scale ends, not a budget
-                            budget = if (range != null) s.metric.max else Double.POSITIVE_INFINITY,
-                            size = size,
-                            color = colorOf(s),
-                        )
+                        // Where the scale ends, in the top corner: a scale that moves says where it is
+                        div {
+                            css {
+                                put("position", "absolute")
+                                // Clear of the cut corner
+                                put("top", "2px")
+                                put("right", "12px")
+                                put("font-size", "9px")
+                                put("font-family", "monospace")
+                                put("color", "var(--kl-ink-label)")
+                                put("pointer-events", "none")
+                            }
+                            +"${max.roundToInt()}${series.first().metric.unit}"
+                        }
+
+                        svgRoot(viewBox = "0 0 $WIDTH $HEIGHT", style = "display:block;height:100%;") {
+                            attributes["preserveAspectRatio"] = "none"
+
+                            for (i in 1..3) {
+                                val y = (HEIGHT * i / 4).toString()
+
+                                custom("line") {
+                                    attributes["x1"] = "0"
+                                    attributes["y1"] = y
+                                    attributes["x2"] = WIDTH.toString()
+                                    attributes["y2"] = y
+                                    attributes["style"] = "stroke: var(--kl-edge); stroke-width: 1"
+                                    attributes["vector-effect"] = "non-scaling-stroke"
+                                }
+                            }
+
+                            for (s in series) {
+                                renderLine(
+                                    values = s.values,
+                                    min = min,
+                                    max = max,
+                                    // Over the budget only on a budgeted graph, the CPU's: elsewhere a metric's max is no budget
+                                    budget = if (budgeted) s.metric.max else Double.POSITIVE_INFINITY,
+                                    size = size,
+                                    color = colorOf(s),
+                                )
+                            }
+                        }
                     }
                 }
             }
