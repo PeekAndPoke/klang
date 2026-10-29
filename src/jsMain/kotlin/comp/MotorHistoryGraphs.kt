@@ -11,13 +11,15 @@ import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.ui.comp.KlangLamp
 import io.peekandpoke.klang.ui.comp.KlangScreen
 import io.peekandpoke.klang.ui.svgRoot
-import io.peekandpoke.kraft.components.NoProps
-import io.peekandpoke.kraft.components.PureComponent
+import io.peekandpoke.kraft.components.Component
+import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.kraft.vdom.custom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
+import io.peekandpoke.ultra.streams.Stream
+import io.peekandpoke.ultra.streams.ops.cutoffWhen
 import kotlinx.css.px
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
@@ -28,7 +30,9 @@ import kotlin.math.floor
 import kotlin.math.roundToInt
 
 @Suppress("FunctionName")
-fun Tag.MotorHistoryGraphs() = comp {
+fun Tag.MotorHistoryGraphs(paused: Stream<Boolean> = NeverPaused) = comp(
+    MotorHistoryGraphs.Props(paused = paused)
+) {
     MotorHistoryGraphs(it)
 }
 
@@ -41,7 +45,13 @@ fun Tag.MotorHistoryGraphs() = comp {
  * "I would decide the colors on the ui side"). The player and the playbacks keep the metrics
  * ([KlangPlayer.diagnostics]); this only draws them.
  */
-class MotorHistoryGraphs(ctx: NoProps) : PureComponent(ctx) {
+class MotorHistoryGraphs(ctx: Ctx<Props>) : Component<MotorHistoryGraphs.Props>(ctx) {
+
+    data class Props(
+        /** While true, the graphs are not drawn again: the history goes on being kept ([NeverPaused]). */
+        val paused: Stream<Boolean>,
+    )
+
 
     companion object {
         /** The graph's drawing, in the SVG's own units; it stretches to the window's width. */
@@ -95,7 +105,7 @@ class MotorHistoryGraphs(ctx: NoProps) : PureComponent(ctx) {
     }
 
     /** The current player's history; null while there is none. */
-    private val history by subscribingTo(Player.diagnostics.history)
+    private val history by subscribingTo(Player.diagnostics.history.cutoffWhen(props.paused))
 
     override fun VDom.render() {
         val h = history

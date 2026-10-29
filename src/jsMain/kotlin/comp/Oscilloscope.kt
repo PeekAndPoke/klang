@@ -15,6 +15,7 @@ import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.streams.Stream
+import io.peekandpoke.ultra.streams.ops.cutoffWhen
 import io.peekandpoke.ultra.streams.ops.map
 import io.peekandpoke.ultra.streams.ops.switchMapNotNull
 import kotlinx.browser.window
@@ -29,9 +30,9 @@ import org.khronos.webgl.get
 import org.w3c.dom.CanvasLineCap
 import org.w3c.dom.CanvasLineJoin
 import org.w3c.dom.CanvasRenderingContext2D
-import org.w3c.dom.ROUND
 import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.Path2D
+import org.w3c.dom.ROUND
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.roundToInt
@@ -45,6 +46,7 @@ fun Tag.Oscilloscope(
     centerLineWidth: Double = 1.0,
     pixelSkip: Int = 5,
     preview: Float32Array? = null,
+    paused: Stream<Boolean> = NeverPaused,
 ) = comp(
     Oscilloscope.Props(
         player = player,
@@ -54,6 +56,7 @@ fun Tag.Oscilloscope(
         centerLineWidth = centerLineWidth,
         pixelSkip = pixelSkip,
         preview = preview,
+        paused = paused,
     )
 ) {
     Oscilloscope(it)
@@ -81,6 +84,8 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         val pixelSkip: Int,
         /** A still frame to draw instead of the player's waveform; null for the live trace. */
         val preview: Float32Array?,
+        /** While true, nothing is drawn: the waveform is let go until it is false again ([NeverPaused]). */
+        val paused: Stream<Boolean>,
     )
 
     companion object {
@@ -144,7 +149,7 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
     /** The player's waveform, followed to the next player; null (no player, or a player without an analyzer) keeps the last frame. */
     @Suppress("unused")
     private val waveform by subscribingTo(
-        props.player.map { it?.getAnalyzer() }.switchMapNotNull { it.waveform }
+        props.player.map { it?.getAnalyzer() }.switchMapNotNull { it.waveform }.cutoffWhen(props.paused)
     ) { history ->
         if (history != null) {
             lastHistory = history

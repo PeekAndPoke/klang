@@ -19,9 +19,7 @@ import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.html.onMouseLeave
 import io.peekandpoke.ultra.html.onMouseMove
 import io.peekandpoke.ultra.maths.Ease
-import kotlin.math.floor
-import kotlin.math.pow
-import kotlin.math.roundToInt
+import io.peekandpoke.ultra.streams.Stream
 import kotlinx.browser.window
 import kotlinx.css.Color
 import kotlinx.css.Display
@@ -41,6 +39,9 @@ import kotlinx.html.div
 import org.khronos.webgl.set
 import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.HTMLCanvasElement
+import kotlin.math.floor
+import kotlin.math.pow
+import kotlin.math.roundToInt
 
 @Suppress("FunctionName")
 fun Tag.Spectrumeter(
@@ -61,10 +62,12 @@ fun Tag.Spectrumeter(
     lighting: Spectrumeter.Lighting = Spectrumeter.Lighting.Own,
     labelAtTop: Boolean = false,
     preview: List<Double>? = null,
+    paused: Stream<Boolean> = NeverPaused,
     player: () -> KlangPlayer?,
 ) = comp(
     Spectrumeter.Props(
         player = player,
+        paused = paused,
         preview = preview,
         colors = colors,
         gap = gap,
@@ -85,6 +88,8 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
 
     data class Props(
         val player: () -> KlangPlayer?,
+        /** While true, the spectrum is neither read nor drawn: its loop rests until it is false again ([NeverPaused]). */
+        val paused: Stream<Boolean>,
         /**
          * Still levels per column, 0 to 1, drawn instead of the player's spectrum: a picture of itself (the look
          * editor's card, KLANG-00382; the maintainer, 2026-10-28: "these component implement a preview mode, when they
@@ -181,10 +186,27 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
     private var canvas: HTMLCanvasElement? = null
     private var ctx2d: CanvasRenderingContext2D? = null
 
+    private var mounted = false
+
+    /** Whether the spectrum rests ([Props.paused]): its loop stops, and starts again when it is over. */
+    private val paused by subscribingTo(props.paused) { resting ->
+        if (resting) {
+            visualizerAnimFrame?.let { window.cancelAnimationFrame(it) }
+            visualizerAnimFrame = null
+        } else if (mounted && visualizerAnimFrame == null) {
+            visualizerAnimFrame = window.requestAnimationFrame { processVisualizer() }
+        }
+    }
+
+
     init {
         lifecycle {
             onMount {
-                visualizerAnimFrame = window.requestAnimationFrame { processVisualizer() }
+                mounted = true
+
+                if (!paused) {
+                    visualizerAnimFrame = window.requestAnimationFrame { processVisualizer() }
+                }
 
                 dom?.let { container ->
                     canvas = dom?.querySelector("canvas") as HTMLCanvasElement?
@@ -198,6 +220,7 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
             }
 
             onUnmount {
+                mounted = false
                 visualizerAnimFrame?.let { window.cancelAnimationFrame(it) }
             }
 
@@ -223,7 +246,7 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
 
         drawSpectrum()
 
-        visualizerAnimFrame = window.requestAnimationFrame { processVisualizer() }
+        visualizerAnimFrame = if (paused) null else window.requestAnimationFrame { processVisualizer() }
     }
 
     private fun drawSpectrum() {

@@ -15,6 +15,7 @@ import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
+import io.peekandpoke.ultra.streams.Stream
 import kotlinx.css.Color
 import kotlinx.css.Position
 import kotlinx.css.TextAlign
@@ -35,8 +36,9 @@ import kotlinx.html.div
 @Suppress("FunctionName")
 fun Tag.Motoer(
     menu: KlangWorkbench.Menu? = null,
+    paused: Stream<Boolean> = NeverPaused,
 ) = comp(
-    Motor.Props(menu = menu)
+    Motor.Props(menu = menu, paused = paused)
 ) {
     Motor(it)
 }
@@ -98,6 +100,8 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
     data class Props(
         /** The menu button beside the gauges, opening a workbench's drawer; null for none (an empty spot). */
         val menu: KlangWorkbench.Menu?,
+        /** While true, its gauges, scope and spectrum rest: a visual covers the page ([NeverPaused]). */
+        val paused: Stream<Boolean>,
     )
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -127,7 +131,7 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
                     height = TOP_SLOT_HEIGHT
                     zIndex = 2
                 }
-                PlayerMiniStats(showVolume = true, menu = props.menu)
+                PlayerMiniStats(showVolume = true, menu = props.menu, paused = props.paused)
             }
 
             div {
@@ -151,7 +155,7 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
                         height = 100.pct
                     }
 
-                    Oscilloscope(player = Player.player, strokeColor = Color(look[KlangRole.ScopeTrace]))
+                    Oscilloscope(player = Player.player, strokeColor = Color(look[KlangRole.ScopeTrace]), paused = props.paused)
                 }
             }
 
@@ -178,6 +182,7 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
                     colorStep = SPECTRUM_COLOR_STEP,
                     numBuckets = SPECTRUM_COLUMNS,
                     labelMiddle = ((FRAME_HEIGHT_REM - OSCILLOSCOPE_TOP_REM - OSCILLOSCOPE_HEIGHT_REM) / 2.0).rem,
+                    paused = props.paused,
                 ) { Player.get() }
             }
         }

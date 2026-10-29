@@ -23,6 +23,7 @@ import io.peekandpoke.klang.ui.comp.KlangScreen
 import io.peekandpoke.klang.ui.comp.KlangSearchField
 import io.peekandpoke.klang.ui.comp.KlangWorkbench
 import io.peekandpoke.klang.version
+import io.peekandpoke.klang.visuals.VisualsScreen
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
@@ -132,14 +133,16 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
                         SidebarMenu()
                     }
                 },
-                motor = { menu -> Motoer(menu = menu) },
+                // The Motor and its window rest while a visual covers the page: one place for all of them (the
+                // maintainer, 2026-10-29)
+                motor = { menu -> Motoer(menu = menu, paused = VisualsScreen.open) },
                 content = { props.inner(this) },
                 tools = listOf(
                     KlangWorkbench.Tool(id = "motor", title = "Motor", icon = { tachometer_alternate }) {
                         // Sections under silkscreen headings, a divider between them (the maintainer, 2026-10-28)
                         // The gauges' last two minutes first, as a task manager shows a machine's load, then the
                         // warehouse, then the build (the maintainer, 2026-10-28: "Flip the order")
-                        motorSection(title = "The last two minutes", first = true) { MotorHistoryGraphs() }
+                        motorSection(title = "The last two minutes", first = true) { MotorHistoryGraphs(paused = VisualsScreen.open) }
                         motorSection(title = "Warehouse") { PlayerWarehouseStats() }
                         motorSection(title = "Build") { renderBuild() }
                     },

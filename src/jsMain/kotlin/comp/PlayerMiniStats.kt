@@ -18,6 +18,8 @@ import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.semanticui.noui
 import io.peekandpoke.ultra.semanticui.ui
+import io.peekandpoke.ultra.streams.Stream
+import io.peekandpoke.ultra.streams.ops.cutoffWhen
 import io.peekandpoke.ultra.streams.ops.map
 import io.peekandpoke.ultra.streams.ops.smooth
 import kotlinx.css.Display
@@ -34,8 +36,9 @@ import kotlin.math.roundToInt
 fun Tag.PlayerMiniStats(
     showVolume: Boolean = false,
     menu: KlangWorkbench.Menu? = null,
+    paused: Stream<Boolean> = NeverPaused,
 ) = comp(
-    PlayerMiniStats.Props(showVolume = showVolume, menu = menu)
+    PlayerMiniStats.Props(showVolume = showVolume, menu = menu, paused = paused)
 ) {
     PlayerMiniStats(it)
 }
@@ -75,12 +78,14 @@ class PlayerMiniStats(ctx: Ctx<Props>) : Component<PlayerMiniStats.Props>(ctx) {
         val showVolume: Boolean,
         /** The menu button in the spot beside the gauges (KLANG-00340); null keeps the spot empty. */
         val menu: KlangWorkbench.Menu?,
+        /** While true, the readings are let go and the needles rest ([NeverPaused]). */
+        val paused: Stream<Boolean>,
     )
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
     /** The current player's latest diagnostics; null while there is no player, so the gauges go offline. */
-    private val online = Player.diagnostics.stream
+    private val online = Player.diagnostics.stream.cutoffWhen(props.paused)
 
     // The readings, smoothed as streams (KLANG-00345): the gauges draw what they get
 
