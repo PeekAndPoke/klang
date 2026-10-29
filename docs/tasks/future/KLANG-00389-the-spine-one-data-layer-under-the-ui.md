@@ -104,7 +104,7 @@ What makes the move more than a move:
 | Loop | Rests when |
 |---|---|
 | `UiWork.frames` (Spine): the lamp's light, the rain, the spectrum, the start page | the UI rests, or (spectrum, Motor) its `paused` |
-| three.js's render loop (the plate, start page and each visual) | only on unmount; a pause asked of Ultra |
+| three.js's render loop (the plate, start page and each visual) | only on unmount; a pause and a shared clock are ULTRA-00270 |
 | `smooth()` (the gauges) and `analyzer.waveform` (`animTicker`) | when settled or unsubscribed; each asks for its **own** animation frame (Ultra's `AnimationFrameClock` requests one per `next()`), so they are not yet in `UiWork`'s one |
 | `KlangAdsrCurve` (klangui), the highlight buffer's Pixi ticker | idle or unmount; the Pixi ticker also skips without focus |
 | `RouterWithTransitions` 100 ms ticker | never (the app's root) |

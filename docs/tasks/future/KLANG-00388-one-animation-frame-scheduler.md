@@ -9,8 +9,8 @@
 > components subscribe to it and call their step function()"). On it: the lamp's light (and through it the plate's and
 > the domes' reflections), the rain, the spectrum, the start page (was a 16 ms ticker). Still on frames of their own:
 > `smooth()` and `animTicker()` (Ultra's `AnimationFrameClock` asks for one frame per `next()`, so each smoothing and
-> the analyser's waveform ask separately; asked of Ultra to share one frame), three.js's loop, `KlangAdsrCurve`, the
-> highlight buffer's Pixi ticker.
+> the analyser's waveform ask separately; ULTRA-00269 batches them into one frame), three.js's loop (ULTRA-00270: a
+> pause and a `clock` prop to join the shared frame), `KlangAdsrCurve`, the highlight buffer's Pixi ticker.
 
 ## Why this exists
 

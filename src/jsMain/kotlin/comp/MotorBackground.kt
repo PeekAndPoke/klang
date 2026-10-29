@@ -786,7 +786,7 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
 
             if (!failed) {
                 // The lamp rests while the window has no attention (VisualState.light), but Kraft's three.js loop draws
-                // every frame regardless: a pause for it is asked of Ultra (2026-10-29, numbered after the refill)
+                // every frame regardless: a pause for it, and a clock to join the shared frame, is ULTRA-00270
                 ThreeJs(
                     onReady = { ctx -> setupScene(ctx) },
                     onFrame = { f -> animate(f) },
