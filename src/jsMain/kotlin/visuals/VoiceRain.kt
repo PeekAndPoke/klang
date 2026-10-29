@@ -16,6 +16,7 @@ import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.streams.ops.map
 import io.peekandpoke.ultra.streams.ops.switchMapNotNull
+import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.html.Tag
 import kotlinx.html.canvas
@@ -24,6 +25,7 @@ import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.HTMLElement
 import kotlin.js.Date
+import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -69,6 +71,18 @@ class VoiceRain(ctx: Ctx<Props>) : Component<VoiceRain.Props>(ctx) {
 
         /** The longest text a drop carries; a longer one is cut. */
         const val MAX_LETTERS = 18
+
+        /** The most drop pictures kept ([sprites]). */
+        const val MAX_SPRITES = 96
+
+        /** The head's glow, and the room round a sprite for it, as a share of a letter. */
+        const val GLOW_SHARE = 0.8
+
+        /** A sprite's width, besides its glow, as a share of a letter. */
+        const val SPRITE_WIDTH_SHARE = 1.2
+
+        /** The least time between two frames drawn: thirty a second. */
+        const val FRAME_MS = 1000.0 / 30
     }
 
     /** A voice still to fall: when, and its text. */
@@ -140,8 +154,89 @@ class VoiceRain(ctx: Ctx<Props>) : Component<VoiceRain.Props>(ctx) {
         pending.addLast(Pending(atMs = voice.startTime * 1000.0, text = text.take(MAX_LETTERS)))
     }
 
+    /**
+     * The drops' columns drawn once, by their text, for the [spriteLetter], [spriteInk] and [spriteRatio] they were drawn
+     * at: a frame then copies a drop's picture instead of drawing each of its letters, its glow too (the maintainer,
+     * 2026-10-29: "The display as is currently is pretty hard on the cpu"). At most [MAX_SPRITES], the least used let go
+     * first: it never grows.
+     */
+    private val sprites = LinkedHashMap<String, HTMLCanvasElement>()
+    private var spriteLetter = 0.0
+    private var spriteInk = ""
+    private var spriteRatio = 0.0
+
+    /** Whether the canvas was left empty: with nothing falling, a frame has nothing to clear. */
+    private var blank = true
+
+    /** When a frame was last drawn. */
+    private var drawnMs = 0.0
+
+    /** A drop's column as a picture: its letters downwards, the last one bright and glowing, those above it fading. */
+    private fun spriteOf(text: String, letter: Double, ratio: Double): HTMLCanvasElement {
+        if (letter != spriteLetter || ink != spriteInk || ratio != spriteRatio) {
+            sprites.clear()
+            spriteLetter = letter
+            spriteInk = ink
+            spriteRatio = ratio
+        }
+
+        sprites.remove(text)?.let { kept ->
+            // Back at the end: the most recently used
+            sprites[text] = kept
+            return kept
+        }
+
+        val glow = letter * GLOW_SHARE
+        val width = letter * SPRITE_WIDTH_SHARE + 2 * glow
+        val height = text.length * letter + 2 * glow
+        val sprite = document.createElement("canvas") as HTMLCanvasElement
+
+        sprite.width = ceil(width * ratio).toInt()
+        sprite.height = ceil(height * ratio).toInt()
+
+        val g = sprite.getContext("2d") as CanvasRenderingContext2D
+
+        g.setTransform(ratio, 0.0, 0.0, ratio, 0.0, 0.0)
+        g.font = "${letter.roundToInt()}px monospace"
+        g.asDynamic().textAlign = "center"
+        g.asDynamic().textBaseline = "bottom"
+
+        val letters = text.length
+
+        for (i in 0 until letters) {
+            val isHead = i == letters - 1
+
+            g.globalAlpha = if (isHead) 1.0 else 0.25 + 0.6 * (i + 1).toDouble() / letters
+            g.fillStyle = if (isHead) "#ffffff" else ink
+            g.asDynamic().shadowColor = ink
+            g.asDynamic().shadowBlur = if (isHead) glow else 0.0
+            g.fillText(text[i].toString(), width / 2, glow + (i + 1) * letter)
+        }
+
+        sprites[text] = sprite
+
+        if (sprites.size > MAX_SPRITES) {
+            sprites.remove(sprites.keys.first())
+        }
+
+        return sprite
+    }
+
     private fun step() {
         frame = window.requestAnimationFrame { step() }
+
+        val now = Date.now()
+
+        // A frame every [FRAME_MS] at the most: the letters fall slowly, thirty a second is smooth
+        if (now - drawnMs < FRAME_MS) {
+            return
+        }
+
+        // Nothing falling and nothing to come: the canvas is already empty
+        if (drops.isEmpty() && pending.isEmpty() && blank) {
+            lastMs = now
+            return
+        }
 
         val canvas = dom?.querySelector("canvas") as? HTMLCanvasElement ?: return
         val box = canvas.parentElement as? HTMLElement ?: return
@@ -158,12 +253,12 @@ class VoiceRain(ctx: Ctx<Props>) : Component<VoiceRain.Props>(ctx) {
             canvas.height = (height * ratio).toInt()
         }
 
-        val now = Date.now()
+        drawnMs = now
         // NaN-guard: a first frame, or one after a long pause, moves the drops by a frame at the most
         val dt = min(0.1, max(0.0, (now - lastMs) / 1000.0))
         lastMs = now
 
-        val letter = (height * LETTER_SHARE).coerceIn(LETTER_MIN_PX, LETTER_MAX_PX)
+        val letter = (height * LETTER_SHARE).coerceIn(LETTER_MIN_PX, LETTER_MAX_PX).roundToInt().toDouble()
         val columns = max(1, (width / letter).toInt())
 
         // The voices whose time has come drop, each in a column of its own where one is free
@@ -182,10 +277,8 @@ class VoiceRain(ctx: Ctx<Props>) : Component<VoiceRain.Props>(ctx) {
 
         g.setTransform(ratio, 0.0, 0.0, ratio, 0.0, 0.0)
         g.clearRect(0.0, 0.0, width.toDouble(), height.toDouble())
-        g.font = "${letter.roundToInt()}px monospace"
-        g.asDynamic().textAlign = "center"
-        g.asDynamic().textBaseline = "bottom"
 
+        val glow = letter * GLOW_SHARE
         val iterator = drops.iterator()
 
         while (iterator.hasNext()) {
@@ -193,34 +286,24 @@ class VoiceRain(ctx: Ctx<Props>) : Component<VoiceRain.Props>(ctx) {
 
             drop.headY += drop.speed * props.speed * dt
 
-            val letters = drop.text.length
+            val sprite = spriteOf(drop.text, letter, ratio)
+            val spriteWidth = sprite.width / ratio
+            val spriteHeight = sprite.height / ratio
             val x = (drop.column + 0.5) * (width.toDouble() / columns)
+            // The sprite's last letter sits on the head
+            val top = drop.headY - drop.text.length * letter - glow
 
-            // The text reads downwards, its last letter the head; the letters above it fade
-            for (i in 0 until letters) {
-                val y = drop.headY - (letters - 1 - i) * letter
-
-                if (y < 0 || y - letter > height) {
-                    continue
-                }
-
-                val isHead = i == letters - 1
-
-                g.globalAlpha = if (isHead) 1.0 else 0.25 + 0.6 * (i + 1).toDouble() / letters
-                g.fillStyle = if (isHead) "#ffffff" else ink
-                g.asDynamic().shadowColor = ink
-                g.asDynamic().shadowBlur = if (isHead) letter * 0.8 else 0.0
-                g.fillText(drop.text[i].toString(), x, y)
+            if (top < height) {
+                g.drawImage(sprite, x - spriteWidth / 2, top, spriteWidth, spriteHeight)
             }
 
             // Fallen out: its first letter past the bottom
-            if (drop.headY - (letters - 1) * letter - letter > height) {
+            if (top + glow > height) {
                 iterator.remove()
             }
         }
 
-        g.globalAlpha = 1.0
-        g.asDynamic().shadowBlur = 0.0
+        blank = drops.isEmpty()
     }
 
     override fun VDom.render() {
