@@ -42,13 +42,16 @@ import kotlinx.browser.window
 import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlinx.html.style
+import org.khronos.webgl.Uint8ClampedArray
 import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.events.Event
+import kotlin.js.Date
 import kotlin.math.PI
 import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.floor
+import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
@@ -111,6 +114,69 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
 
         /** The texture's height in px; its width follows the screen's aspect. */
         private const val TEX_HEIGHT = 2048
+
+        /** While tiles come in one by one, the texture goes up to the GPU this often at the most. */
+        private const val UPLOAD_EVERY_MS = 120.0
+
+        /** The last plate surface any background built ([SurfaceCache]); null before the first. */
+        private var surfaceCache: SurfaceCache? = null
+
+        /**
+         * A plate surface built (the normal map's pixels) and what it was built for. A tile's surface depends only on
+         * where it lies and on the metal's seed, so a build at the same size and seed takes from it every tile that no
+         * plate covers, then or now, and that lies in a row laid the same way. One at a time, each build replacing it: it never grows.
+         */
+        private class SurfaceCache(
+            val seed: Int,
+            val width: Int,
+            val height: Int,
+            val originY: Double,
+            val offset: BooleanArray,
+            val plates: List<TitlePlate>,
+            val pixels: Uint8ClampedArray,
+        ) {
+            companion object {
+                fun of(
+                    seed: Int,
+                    width: Int,
+                    height: Int,
+                    originY: Double,
+                    offset: BooleanArray,
+                    plates: List<TitlePlate>,
+                    data: Uint8ClampedArray,
+                ): SurfaceCache {
+                    val copy = Uint8ClampedArray(data.length)
+
+                    copy.asDynamic().set(data)
+
+                    return SurfaceCache(seed, width, height, originY, offset.copyOf(), plates, copy)
+                }
+            }
+
+            /** Whether the [cell] ([x0, y0, x1, y1, row]) is the same in a build with [offset] and [plates]. */
+            fun holds(cell: IntArray, offset: BooleanArray, plates: List<TitlePlate>): Boolean {
+                val (x0, y0, x1, y1) = cell
+                val row = cell[4]
+
+                fun clear(of: List<TitlePlate>) =
+                    of.none { it.left < x1 && it.right > x0 && it.top < y1 && it.bottom > y0 }
+
+                return this.offset.getOrElse(row + 1) { false } == offset.getOrElse(row + 1) { false } &&
+                    clear(this.plates) && clear(plates)
+            }
+
+            /** Copies the [cell]'s pixels into [target], an image's pixels of the same size. */
+            fun copyInto(target: dynamic, cell: IntArray) {
+                val (x0, y0, x1, y1) = cell
+
+                for (py in y0 until y1) {
+                    val from = (py * width + x0) * 4
+                    val to = (py * width + x1) * 4
+
+                    target.set(pixels.asDynamic().subarray(from, to), from)
+                }
+            }
+        }
 
         /** Panel-grid cell size in texture px: shared by the normal map, the albedo seams and the title's plate. */
         private const val PANEL_CELL = 330.0
@@ -601,23 +667,30 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
 
         try {
             val texW = ceil(TEX_HEIGHT * aspect).toInt()
-            generateMotorNormalMap(addon, texW, TEX_HEIGHT) { normalMap ->
-                val plateMap = buildPlateBaseMap(addon, texW, TEX_HEIGHT)
-                buildTitleOverlayMaps(addon, texW, TEX_HEIGHT) { titleAlbedo, titleNormal ->
-                    buildMeshes(ctx, addon, normalMap, plateMap, titleAlbedo, titleNormal)
-                    prepared = true
-                    preparing = false
+            val plateMap = buildPlateBaseMap(addon, texW, TEX_HEIGHT)
 
-                    // The plate shows once the Motor warms up: dim until it is powered on
-                    if (warming && !poweredOn) {
-                        targetIntensity = standbyIntensity
-                    }
+            buildTitleOverlayMaps(addon, texW, TEX_HEIGHT) { titleAlbedo, titleNormal ->
+                // The meshes as soon as the surface starts: its tiles come in one by one; ready once all are in
+                generateMotorNormalMap(
+                    addon = addon,
+                    width = texW,
+                    height = TEX_HEIGHT,
+                    onStart = { normalMap -> buildMeshes(ctx, addon, normalMap, plateMap, titleAlbedo, titleNormal) },
+                    onDone = {
+                        prepared = true
+                        preparing = false
 
-                    onPrepared.forEach { it() }
-                    onPrepared.clear()
+                        // The plate shows once the Motor warms up: dim until it is powered on
+                        if (warming && !poweredOn) {
+                            targetIntensity = standbyIntensity
+                        }
 
-                    rebuildIfPending(addon)
-                }
+                        onPrepared.forEach { it() }
+                        onPrepared.clear()
+
+                        rebuildIfPending(addon)
+                    },
+                )
             }
         } catch (e: Throwable) {
             markFailed(e)
@@ -952,34 +1025,43 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
         buildTopShare = topShare(window.innerHeight.toDouble(), props.composition)
 
         val newTexW = ceil(TEX_HEIGHT * aspect).toInt()
-        generateMotorNormalMap(addon, newTexW, TEX_HEIGHT) { newNormal ->
-            val newBase = buildPlateBaseMap(addon, newTexW, TEX_HEIGHT)
-            buildTitleOverlayMaps(addon, newTexW, TEX_HEIGHT) { newTitleAlbedo, newTitleNormal ->
-                material?.let { mat ->
-                    val mDyn = mat.asDynamic()
-                    val existingNormal = mDyn.normalMap
-                    if (existingNormal != null && existingNormal != undefined) existingNormal.dispose()
-                    mDyn.normalMap = newNormal
-                    val existingBase = mDyn.map
-                    if (existingBase != null && existingBase != undefined) existingBase.dispose()
-                    mDyn.map = newBase
-                    mDyn.needsUpdate = true
-                }
-                titleMaterial?.let { mat ->
-                    val mDyn = mat.asDynamic()
-                    val existingNormal = mDyn.normalMap
-                    if (existingNormal != null && existingNormal != undefined) existingNormal.dispose()
-                    mDyn.normalMap = newTitleNormal
-                    val existingBase = mDyn.map
-                    if (existingBase != null && existingBase != undefined) existingBase.dispose()
-                    mDyn.map = newTitleAlbedo
-                    mDyn.needsUpdate = true
-                }
-                baseMap = newBase
-                rebuilding = false
+        val newBase = buildPlateBaseMap(addon, newTexW, TEX_HEIGHT)
 
-                rebuildIfPending(addon)
-            }
+        buildTitleOverlayMaps(addon, newTexW, TEX_HEIGHT) { newTitleAlbedo, newTitleNormal ->
+            // The surface goes in as it starts, its tiles coming in one by one; the next build waits for it
+            generateMotorNormalMap(
+                addon = addon,
+                width = newTexW,
+                height = TEX_HEIGHT,
+                onStart = { newNormal ->
+                    material?.let { mat ->
+                        val mDyn = mat.asDynamic()
+                        val existingNormal = mDyn.normalMap
+                        if (existingNormal != null && existingNormal != undefined) existingNormal.dispose()
+                        mDyn.normalMap = newNormal
+                        val existingBase = mDyn.map
+                        if (existingBase != null && existingBase != undefined) existingBase.dispose()
+                        mDyn.map = newBase
+                        mDyn.needsUpdate = true
+                    }
+                    titleMaterial?.let { mat ->
+                        val mDyn = mat.asDynamic()
+                        val existingNormal = mDyn.normalMap
+                        if (existingNormal != null && existingNormal != undefined) existingNormal.dispose()
+                        mDyn.normalMap = newTitleNormal
+                        val existingBase = mDyn.map
+                        if (existingBase != null && existingBase != undefined) existingBase.dispose()
+                        mDyn.map = newTitleAlbedo
+                        mDyn.needsUpdate = true
+                    }
+                    baseMap = newBase
+                },
+                onDone = {
+                    rebuilding = false
+
+                    rebuildIfPending(addon)
+                },
+            )
         }
     }
 
@@ -1051,7 +1133,11 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
 
     ////  TEARDOWN  ///////////////////////////////////////////////////////////////////////////////////////////////
 
+    /** Taken down: a build that still runs stops. */
+    private var tornDown = false
+
     private fun teardown() {
+        tornDown = true
         resizeListener?.let { window.removeEventListener("resize", it) }
         resizeTimer?.let { window.clearTimeout(it) }
         resizeListener = null
@@ -1269,8 +1355,26 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
         val engraveMask = buildEngraveMask(width, height)
         val engraveStrength = 2.5
 
-        runChunked(height, { pyFrom, pyTo ->
-        for (py in pyFrom until pyTo) {
+        // Only the rows round the letters are worked out, the rest is flat: the mask is nought there, so is its
+        // gradient (the maintainer, 2026-10-29: "Generating the tiles takes quite a bit")
+        val letters = engraving(width, height)?.third
+        val reach = titleFontSize(height)
+        val bandFrom = letters?.let { max(0.0, it - reach).toInt() } ?: 0
+        val bandTo = letters?.let { min(height.toDouble(), it + reach).toInt() } ?: 0
+
+        for (py in (0 until bandFrom) + (bandTo until height)) {
+            for (px in 0 until width) {
+                val idx = (py * width + px) * 4
+
+                d[idx] = 127
+                d[idx + 1] = 127
+                d[idx + 2] = 255
+                d[idx + 3] = 255
+            }
+        }
+
+        runChunked(bandTo - bandFrom, { fromInBand, toInBand ->
+        for (py in bandFrom + fromInBand until bandFrom + toInBand) {
             for (px in 0 until width) {
                 val idx = (py * width + px) * 4
                 val i1D = py * width + px
@@ -1386,17 +1490,21 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
     }
 
     /**
-     * Generates the machined panel-grid normal map — near-black panels with
-     * sharp V-groove seams and per-panel micro-tilts that react crisply to
-     * the light.
+     * Generates the machined panel-grid normal map: near-black panels with sharp V-groove seams and per-panel
+     * micro-tilts that react crisply to the light. The "KLANGMOTOR" engraving lives on the separate title overlay
+     * plane, see [buildTitleOverlayMaps].
      *
-     * The "KLANGMOTOR" engraving lives on the separate title overlay plane —
-     * see [buildTitleOverlayMaps].
+     * Tile by tile (the maintainer, 2026-10-29: "Generating the tiles takes quite a bit. Can we bring them in one by
+     * one?", "Or can we cache the tiles?"): every tile the last build made that is still the same ([SurfaceCache]) is
+     * copied at once; [onStart] then gets the texture, so it shows right away, smooth metal where a tile is still to
+     * come; the rest is made one tile a macrotask, from the middle outward, each shown as it is done. [onDone] gets the
+     * finished texture.
      */
     private fun generateMotorNormalMap(
         addon: ThreeJsAddon,
         width: Int,
         height: Int,
+        onStart: (CanvasTexture) -> Unit,
         onDone: (CanvasTexture) -> Unit,
     ) {
         val cnv = document.createElement("canvas") as HTMLCanvasElement
@@ -1426,83 +1534,177 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
         var turnedRow = Int.MIN_VALUE
         var tileTurned = false
 
-        runChunked(height, { pyFrom, pyTo ->
-        for (py in pyFrom until pyTo) {
-            for (px in 0 until width) {
-                val idx = (py * width + px) * 4
+        fun pixel(px: Int, py: Int) {
+            val idx = (py * width + px) * 4
 
-                // The panels before the grid's origin are numbered from -1 down: floor, not truncation
-                // A row a plate with its sides half way across a tile lies in lies half a tile over ([offsetRows])
-                val row = floor((py - originY) / PANEL_CELL).toInt()
-                val rowOriginX = if (offset.getOrElse(row + 1) { false }) plateRowOriginX else originX
-                val col = floor((px - rowOriginX) / PANEL_CELL).toInt()
-                val u = px - rowOriginX - col * PANEL_CELL
-                val v = py - originY - row * PANEL_CELL
+            // The panels before the grid's origin are numbered from -1 down: floor, not truncation
+            // A row a plate with its sides half way across a tile lies in lies half a tile over ([offsetRows])
+            val row = floor((py - originY) / PANEL_CELL).toInt()
+            val rowOriginX = if (offset.getOrElse(row + 1) { false }) plateRowOriginX else originX
+            val col = floor((px - rowOriginX) / PANEL_CELL).toInt()
+            val u = px - rowOriginX - col * PANEL_CELL
+            val v = py - originY - row * PANEL_CELL
 
-                // On a plate: a flat face, no seams, and its edges stepping up from the tiles
-                var on: TitlePlate? = null
+            // On a plate: a flat face, no seams, and its edges stepping up from the tiles
+            var on: TitlePlate? = null
 
-                for (plate in plates) {
-                    if (plate.contains(px.toDouble(), py.toDouble())) {
-                        on = plate
-                        break
-                    }
+            for (plate in plates) {
+                if (plate.contains(px.toDouble(), py.toDouble())) {
+                    on = plate
+                    break
                 }
-                val onPlate = on != null
+            }
+            val onPlate = on != null
 
-                // Per-panel constant tilt; the plate's face lies flat
-                val tiltX = if (onPlate) 0.0 else (hashCell(col * 3 + 11, row * 7 + 29) - 0.5) * 0.08
-                val tiltY = if (onPlate) 0.0 else (hashCell(col * 5 + 43, row * 3 + 71) - 0.5) * 0.08
+            // Per-panel constant tilt; the plate's face lies flat
+            val tiltX = if (onPlate) 0.0 else (hashCell(col * 3 + 11, row * 7 + 29) - 0.5) * 0.08
+            val tiltY = if (onPlate) 0.0 else (hashCell(col * 5 + 43, row * 3 + 71) - 0.5) * 0.08
 
-                // V-groove seams along the grid lines; the plate's edges as a tile's, so it meets its neighbours as tiles
-                // meet (the maintainer, 2026-10-26)
-                val seamNx = when {
-                    on != null && px - on.left < seamHalf -> -bevel * (1.0 - (px - on.left) / seamHalf)
-                    on != null && on.right - px <= seamHalf -> bevel * (1.0 - (on.right - px) / seamHalf)
-                    on != null -> 0.0
-                    u < seamHalf -> -bevel * (1.0 - u / seamHalf)
-                    u > PANEL_CELL - seamHalf -> bevel * (1.0 - (PANEL_CELL - u) / seamHalf)
-                    else -> 0.0
+            // V-groove seams along the grid lines; the plate's edges as a tile's, so it meets its neighbours as tiles
+            // meet (the maintainer, 2026-10-26)
+            val seamNx = when {
+                on != null && px - on.left < seamHalf -> -bevel * (1.0 - (px - on.left) / seamHalf)
+                on != null && on.right - px <= seamHalf -> bevel * (1.0 - (on.right - px) / seamHalf)
+                on != null -> 0.0
+                u < seamHalf -> -bevel * (1.0 - u / seamHalf)
+                u > PANEL_CELL - seamHalf -> bevel * (1.0 - (PANEL_CELL - u) / seamHalf)
+                else -> 0.0
+            }
+            val seamNy = when {
+                on != null && py - on.top < seamHalf -> -bevel * (1.0 - (py - on.top) / seamHalf)
+                on != null && on.bottom - py <= seamHalf -> bevel * (1.0 - (on.bottom - py) / seamHalf)
+                on != null -> 0.0
+                v < seamHalf -> -bevel * (1.0 - v / seamHalf)
+                v > PANEL_CELL - seamHalf -> bevel * (1.0 - (PANEL_CELL - v) / seamHalf)
+                else -> 0.0
+            }
+
+            // Brushed steel, the plate and every tile: hairlines along the brushing tilt the face across them. A
+            // tile laid turned by 90 degrees, as if fitted the wrong way round, is brushed up and down (the
+            // maintainer, 2026-10-26); the title's plate lies straight
+            if (col != turnedCol || row != turnedRow) {
+                turnedCol = col
+                turnedRow = row
+                tileTurned = isTurned(col, row)
+            }
+
+            val turned = !onPlate && tileTurned
+            // The title's plate has no rivets (the maintainer, 2026-10-28: "remove the rivets on the Klangmotor
+            // tile"; they came 2026-10-26)
+            val nx = tiltX + seamNx + if (turned) brushed(px = py, py = px) else 0.0
+            val ny = tiltY + seamNy + if (turned) 0.0 else brushed(px, py)
+
+            val nz = sqrt(max(0.01, 1.0 - nx * nx - ny * ny))
+
+            d[idx] = n2c(nx)
+            d[idx + 1] = n2c(-ny) // negate Y: canvas Y-down → WebGL Y-up
+            d[idx + 2] = n2c(nz)
+            d[idx + 3] = 255
+        }
+
+        // The grid's cells, a tile each, in texture px [x0, y0, x1, y1): a pixel lies in the cell [pixel] numbers it by
+        val cells = mutableListOf<IntArray>()
+        var row = rowIndexOf(0.0, originY)
+
+        while (originY + row * PANEL_CELL < height) {
+            val y0 = max(0.0, ceil(originY + row * PANEL_CELL)).toInt()
+            val y1 = min(height.toDouble(), ceil(originY + (row + 1) * PANEL_CELL)).toInt()
+            val rowOriginX = if (offset.getOrElse(row + 1) { false }) plateRowOriginX else originX
+            var col = floor(-rowOriginX / PANEL_CELL).toInt()
+
+            while (rowOriginX + col * PANEL_CELL < width) {
+                val x0 = max(0.0, ceil(rowOriginX + col * PANEL_CELL)).toInt()
+                val x1 = min(width.toDouble(), ceil(rowOriginX + (col + 1) * PANEL_CELL)).toInt()
+
+                if (x1 > x0 && y1 > y0) {
+                    cells.add(intArrayOf(x0, y0, x1, y1, row))
                 }
-                val seamNy = when {
-                    on != null && py - on.top < seamHalf -> -bevel * (1.0 - (py - on.top) / seamHalf)
-                    on != null && on.bottom - py <= seamHalf -> bevel * (1.0 - (on.bottom - py) / seamHalf)
-                    on != null -> 0.0
-                    v < seamHalf -> -bevel * (1.0 - v / seamHalf)
-                    v > PANEL_CELL - seamHalf -> bevel * (1.0 - (PANEL_CELL - v) / seamHalf)
-                    else -> 0.0
+
+                col++
+            }
+
+            row++
+        }
+
+        // From the cache what is still the same; the rest to make, the middle first
+        val cache = surfaceCache?.takeIf {
+            it.seed == seed && it.width == width && it.height == height && it.originY == originY
+        }
+        val (cached, toMake) = cells.partition { cell -> cache != null && cache.holds(cell, offset, plates) }
+        val cx = width / 2.0
+        val cy = height / 2.0
+        val queue = toMake.sortedBy { (x0, y0, x1, y1) -> hypot((x0 + x1) / 2.0 - cx, (y0 + y1) / 2.0 - cy) }
+
+        for (cell in cached) {
+            cache?.copyInto(d, cell)
+        }
+
+        // Smooth metal where a tile is still to come
+        for (cell in queue) {
+            for (py in cell[1] until cell[3]) {
+                for (px in cell[0] until cell[2]) {
+                    val idx = (py * width + px) * 4
+
+                    d[idx] = 128
+                    d[idx + 1] = 128
+                    d[idx + 2] = 255
+                    d[idx + 3] = 255
                 }
-
-                // Brushed steel, the plate and every tile: hairlines along the brushing tilt the face across them. A
-                // tile laid turned by 90 degrees, as if fitted the wrong way round, is brushed up and down (the
-                // maintainer, 2026-10-26); the title's plate lies straight
-                if (col != turnedCol || row != turnedRow) {
-                    turnedCol = col
-                    turnedRow = row
-                    tileTurned = isTurned(col, row)
-                }
-
-                val turned = !onPlate && tileTurned
-                // The title's plate has no rivets (the maintainer, 2026-10-28: "remove the rivets on the Klangmotor
-                // tile"; they came 2026-10-26)
-                val nx = tiltX + seamNx + if (turned) brushed(px = py, py = px) else 0.0
-                val ny = tiltY + seamNy + if (turned) 0.0 else brushed(px, py)
-
-                val nz = sqrt(max(0.01, 1.0 - nx * nx - ny * ny))
-
-                d[idx] = n2c(nx)
-                d[idx + 1] = n2c(-ny) // negate Y: canvas Y-down → WebGL Y-up
-                d[idx + 2] = n2c(nz)
-                d[idx + 3] = 255
             }
         }
-        }, onDone = {
-            g2d.putImageData(imageData, 0.0, 0.0)
 
-            val tex = addon.createCanvasTexture(cnv)
-            tex.wrapS = TextureWrapping.ClampToEdgeWrapping
-            tex.wrapT = TextureWrapping.ClampToEdgeWrapping
-            onDone(tex)
-        })
+        g2d.putImageData(imageData, 0.0, 0.0)
+
+        val tex = addon.createCanvasTexture(cnv)
+        tex.wrapS = TextureWrapping.ClampToEdgeWrapping
+        tex.wrapT = TextureWrapping.ClampToEdgeWrapping
+        onStart(tex)
+
+        var uploadedMs = Date.now()
+
+        fun step(i: Int) {
+            // The steps run as detached macrotasks: an escaping exception would silently strand prepare() waiters,
+            // so every step fails soft; a background taken down stops building
+            try {
+                if (tornDown) {
+                    return
+                }
+
+                if (i >= queue.size) {
+                    g2d.putImageData(imageData, 0.0, 0.0)
+                    tex.asDynamic().needsUpdate = true
+                    surfaceCache = SurfaceCache.of(seed, width, height, originY, offset, plates, data)
+                    onDone(tex)
+                    return
+                }
+
+                val (x0, y0, x1, y1) = queue[i]
+
+                for (py in y0 until y1) {
+                    for (px in x0 until x1) {
+                        pixel(px, py)
+                    }
+                }
+
+                g2d.putImageData(
+                    imageData, 0.0, 0.0,
+                    x0.toDouble(), y0.toDouble(), (x1 - x0).toDouble(), (y1 - y0).toDouble(),
+                )
+
+                // To the GPU now and then, not per tile: a whole texture goes up each time
+                val now = Date.now()
+
+                if (now - uploadedMs >= UPLOAD_EVERY_MS) {
+                    uploadedMs = now
+                    tex.asDynamic().needsUpdate = true
+                }
+
+                window.setTimeout({ step(i + 1) }, 0)
+            } catch (e: Throwable) {
+                markFailed(e)
+            }
+        }
+
+        step(0)
     }
 }
