@@ -126,9 +126,6 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
 
     private val voices by subscribingTo(MotorReadings.voices())
 
-    /** The scope's signal now, 0 (silence) to 1 (full scale), smoothed. */
-    private val signal by subscribingTo(MotorReadings.signal())
-
     override fun VDom.render() {
         val width = window.innerWidth.toDouble()
         val height = window.innerHeight.toDouble()
@@ -259,8 +256,6 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
      * in the scope's own colour, brighter the louder.
      */
     private fun FlowContent.renderHole(width: Double, height: Double) {
-        val glow = (signal ?: 0.0) * 100
-
         div {
             key = "hole"
             css {
@@ -271,12 +266,7 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
                 // Cut corners, as the screens have, not round ones (the maintainer, 2026-10-29: "do not use round
                 // corners but the triangle again")
                 put("clip-path", VisualsParts.cutCorners(CUT_PX))
-                put(
-                    "background",
-                    "radial-gradient(ellipse at center, " +
-                        "color-mix(in srgb, var(--kl-scope-trace) ${(glow * 0.55).roundToInt()}%, transparent) 0%, " +
-                        "transparent 75%), #050505",
-                )
+                put("background", "#050505")
                 put(
                     "box-shadow",
                     "inset 0 6px 14px rgba(0, 0, 0, 0.9), inset 0 -1px 0 rgba(255, 255, 255, 0.08), " +
@@ -284,6 +274,8 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
                 )
                 put("overflow", "hidden")
             }
+
+            ScopeGlow(strength = ScopeGlow.HOLE)
 
             div {
                 css {
