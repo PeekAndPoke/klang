@@ -80,9 +80,6 @@ class VoiceRain(ctx: Ctx<Props>) : Component<VoiceRain.Props>(ctx) {
 
         /** A sprite's width, besides its glow, as a share of a letter. */
         const val SPRITE_WIDTH_SHARE = 1.2
-
-        /** The least time between two frames drawn: thirty a second. */
-        const val FRAME_MS = 1000.0 / 30
     }
 
     /** A voice still to fall: when, and its text. */
@@ -168,8 +165,6 @@ class VoiceRain(ctx: Ctx<Props>) : Component<VoiceRain.Props>(ctx) {
     /** Whether the canvas was left empty: with nothing falling, a frame has nothing to clear. */
     private var blank = true
 
-    /** When a frame was last drawn. */
-    private var drawnMs = 0.0
 
     /** A drop's column as a picture: its letters downwards, the last one bright and glowing, those above it fading. */
     private fun spriteOf(text: String, letter: Double, ratio: Double): HTMLCanvasElement {
@@ -227,11 +222,6 @@ class VoiceRain(ctx: Ctx<Props>) : Component<VoiceRain.Props>(ctx) {
 
         val now = Date.now()
 
-        // A frame every [FRAME_MS] at the most: the letters fall slowly, thirty a second is smooth
-        if (now - drawnMs < FRAME_MS) {
-            return
-        }
-
         // Nothing falling and nothing to come: the canvas is already empty
         if (drops.isEmpty() && pending.isEmpty() && blank) {
             lastMs = now
@@ -253,7 +243,6 @@ class VoiceRain(ctx: Ctx<Props>) : Component<VoiceRain.Props>(ctx) {
             canvas.height = (height * ratio).toInt()
         }
 
-        drawnMs = now
         // NaN-guard: a first frame, or one after a long pause, moves the drops by a frame at the most
         val dt = min(0.1, max(0.0, (now - lastMs) / 1000.0))
         lastMs = now
