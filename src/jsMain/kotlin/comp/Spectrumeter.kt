@@ -7,6 +7,7 @@ package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.audio_bridge.analyzer.createAnalyzerBuffer
 import io.peekandpoke.klang.audio_engine.KlangPlayer
+import io.peekandpoke.klang.spine.Frames
 import io.peekandpoke.klang.spine.UiWork
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.components.Component
@@ -21,7 +22,7 @@ import io.peekandpoke.ultra.html.onMouseLeave
 import io.peekandpoke.ultra.html.onMouseMove
 import io.peekandpoke.ultra.maths.Ease
 import io.peekandpoke.ultra.streams.Stream
-import kotlinx.browser.window
+import io.peekandpoke.ultra.streams.ops.cutoffWhen
 import kotlinx.css.Color
 import kotlinx.css.Display
 import kotlinx.css.LinearDimension
@@ -166,8 +167,6 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
         }
     }
 
-    private var visualizerAnimFrame: Int? = null
-
     // One value per frequency bin, as many as the binning reads (half the analyser's FFT size)
     private val visualizerBuffer = createAnalyzerBuffer(props.binning.fftBinCount).also { buffer ->
         // Initialize with silence (-100 dB) so nothing displays before audio starts
@@ -187,14 +186,14 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
     private var canvas: HTMLCanvasElement? = null
     private var ctx2d: CanvasRenderingContext2D? = null
 
-    /** Whether the spectrum rests ([Props.paused]): [processVisualizer] then reads and draws nothing. */
-    private val paused by subscribingTo(props.paused)
-
     init {
+        // A step a frame, on the page's frames ([Frames.all]), none while it rests ([Props.paused]); the subscription
+        // ends with the component (the maintainer, 2026-10-29: "spine exposes a single animationFrame stream and
+        // components subscribe to it and call their step function()")
+        Frames.all.cutoffWhen(props.paused).subscribe { processVisualizer() }
+
         lifecycle {
             onMount {
-                visualizerAnimFrame = window.requestAnimationFrame { processVisualizer() }
-
                 dom?.let { container ->
                     canvas = dom?.querySelector("canvas") as HTMLCanvasElement?
                     canvas?.let {
@@ -204,10 +203,6 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
 
                     ctx2d = canvas?.getContext("2d") as? CanvasRenderingContext2D
                 }
-            }
-
-            onUnmount {
-                visualizerAnimFrame?.let { window.cancelAnimationFrame(it) }
             }
 
             onResize { entries ->
@@ -225,14 +220,6 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
     }
 
     private fun processVisualizer() {
-        visualizerAnimFrame = window.requestAnimationFrame { processVisualizer() }
-
-        // Resting, nothing is read or drawn, the loop just goes on: checked here, every frame (the maintainer,
-        // 2026-10-29: no start and stop to get out of step)
-        if (paused) {
-            return
-        }
-
         props.player()?.let { player ->
             // This fills the buffer with frequency data in Decibels (dB)
             player.getAnalyzer()?.getFft(visualizerBuffer)

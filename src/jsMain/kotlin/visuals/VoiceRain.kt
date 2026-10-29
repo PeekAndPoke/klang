@@ -7,7 +7,7 @@ package io.peekandpoke.klang.visuals
 
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
-import io.peekandpoke.klang.spine.UiWork
+import io.peekandpoke.klang.spine.Frames
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
@@ -74,6 +74,9 @@ class VoiceRain(ctx: Ctx<Props>) : Component<VoiceRain.Props>(ctx) {
         /** The longest text a drop carries; a longer one is cut. */
         const val MAX_LETTERS = 18
 
+        /** A voice due longer ago than this was missed while the UI rested ([step]). */
+        const val STALE_MS = 250.0
+
         /** The most drop pictures kept ([sprites]). */
         const val MAX_SPRITES = 96
 
@@ -115,17 +118,18 @@ class VoiceRain(ctx: Ctx<Props>) : Component<VoiceRain.Props>(ctx) {
     @Suppress("unused")
     private val look by subscribingTo(KlangTheme.look) { readInk() }
 
-    private var frame: Int? = null
     private var lastMs = Date.now()
 
     /** The display's size in CSS px: read once, then kept by [onResize]. */
     private var boxWidth = 0
     private var boxHeight = 0
 
-    /** Whether showing things rests ([UiWork]): [step] then draws nothing. */
-    private val resting by subscribingTo(UiWork.resting)
-
     init {
+        // A step a frame, on the UI's frames ([Frames.ui]): none while the UI rests; the subscription ends with the
+        // component (the maintainer, 2026-10-29: "spine exposes a single animationFrame stream and components subscribe
+        // to it and call their step function()")
+        Frames.ui.subscribe { step() }
+
         lifecycle {
             onResize { entries ->
                 for (entry in entries) {
@@ -139,9 +143,7 @@ class VoiceRain(ctx: Ctx<Props>) : Component<VoiceRain.Props>(ctx) {
                     boxHeight = box.clientHeight
                 }
                 readInk()
-                frame = window.requestAnimationFrame { step() }
             }
-            onUnmount { frame?.let { window.cancelAnimationFrame(it) } }
         }
     }
 
@@ -237,21 +239,12 @@ class VoiceRain(ctx: Ctx<Props>) : Component<VoiceRain.Props>(ctx) {
     }
 
     private fun step() {
-        frame = window.requestAnimationFrame { step() }
-
         val now = Date.now()
 
-        // Resting, nothing is drawn, the loop just goes on: checked here, every frame, so no start or stop can get out
-        // of step with it (the maintainer, 2026-10-29). The voices due meanwhile are let go and the clock moves along,
-        // so on return nothing falls all at once and nothing jumps; the voices still to come stay, they come seconds
-        // ahead and fall on time after
-        if (resting) {
-            while (pending.isNotEmpty() && pending.first().atMs <= now) {
-                pending.removeFirst()
-            }
-
-            lastMs = now
-            return
+        // Voices long due were missed: the UI rested, no frames came. Let go, so on return nothing falls all at once;
+        // those still to come stay, they come seconds ahead and fall on time
+        while (pending.isNotEmpty() && pending.first().atMs < now - STALE_MS) {
+            pending.removeFirst()
         }
 
         // Nothing falling and nothing to come: the canvas is already empty

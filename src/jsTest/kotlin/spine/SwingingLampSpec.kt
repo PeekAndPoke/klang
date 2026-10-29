@@ -12,6 +12,7 @@ import io.kotest.matchers.doubles.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.peekandpoke.ultra.streams.ops.FrameClock
+import io.peekandpoke.ultra.streams.ops.ticker
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -201,7 +202,7 @@ class SwingingLampSpec : StringSpec({
 
         val clock = Clock()
         val lamp = SwingingLamp(seed = 7, random = Random(1))
-        val light = VisualState.lightOf(lamp = lamp, clock = clock)
+        val light = VisualState.lightOf(lamp = lamp, frames = ticker(clock))
 
         clock.asked shouldBe 0
 

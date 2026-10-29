@@ -16,6 +16,7 @@ import io.peekandpoke.klang.comp.MotorBackground
 import io.peekandpoke.klang.comp.PlayerMiniStats
 import io.peekandpoke.klang.comp.motorBackgroundRef
 import io.peekandpoke.klang.fs
+import io.peekandpoke.klang.spine.Frames
 import io.peekandpoke.klang.spine.VisualState
 import io.peekandpoke.klang.sprudel.lang.adsr
 import io.peekandpoke.klang.sprudel.lang.fast
@@ -54,7 +55,6 @@ import io.peekandpoke.ultra.html.onMouseLeave
 import io.peekandpoke.ultra.maths.Ease
 import io.peekandpoke.ultra.streams.ops.map
 import io.peekandpoke.ultra.streams.ops.smooth
-import io.peekandpoke.ultra.streams.ops.ticker
 import kotlinx.browser.window
 import kotlinx.css.Align
 import kotlinx.css.Color
@@ -95,7 +95,6 @@ import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlinx.html.title
 import kotlin.math.roundToInt
-import kotlin.time.Duration.Companion.milliseconds
 
 @Suppress("FunctionName")
 fun Tag.StartPage() = comp {
@@ -516,9 +515,12 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
     /** "Make Music Now" also enters fullscreen, when the user asks; not checked at first, "too overwhelming" (the maintainer). */
     private var enterFullscreen: Boolean by value(false)
 
-    /** Needed for ui updates */
+    /**
+     * The page moves on and redraws a frame at a time, on the UI's frames ([Frames.ui]): its fades and steps go by the
+     * clock, so a rest only holds them, and they catch up on return (KLANG-00388: one animation frame for the UI).
+     */
     @Suppress("unused")
-    private val ticker by subscribingTo(ticker(16.milliseconds)) { state.update() }
+    private val frame by subscribingTo(Frames.ui) { state.update() }
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
