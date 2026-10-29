@@ -5,8 +5,8 @@
 > independent from the ui... the SPINE ... the ui can send data there and receives from there").
 >
 > **Progress (2026-10-29):** the package `io.peekandpoke.klang.spine` exists with its first parts: `VisualState` (the
-> lamp, the song open on a page), `WindowFocus`, `UiWork` (the UI rests while the window has no attention) and
-> `Frames` (one animation frame stream, KLANG-00388). The sweep (work step 1) is done, below. Next: the design (step 2)
+> lamp, the song open on a page) and `UiWork` (the UI rests while the window has no attention, from Kraft's
+> `WindowController`, which the Spine hands to the app; and the one animation frame stream, KLANG-00388). The sweep (work step 1) is done, below. Next: the design (step 2)
 > with the maintainer, starting with `Player` (the maintainer, 2026-10-29: "I think the global Player object should also
 > move to the spine").
 
@@ -97,15 +97,15 @@ What makes the move more than a move:
 | elapsed time of what plays | two 250 ms intervals: `KlangampPlayer`, `KlangampPlaylist` |
 | scheduled voices to highlighted code | three pipelines: the editor's highlight buffer (Pixi ticker), `MnEditorBase` (timeouts), the tutorials' ADSR curves |
 | a look chosen and saved | `KlangTheme.choose` plus `LookStorage.save` by hand at 6 sites |
-| the window's focus | four ways: Kraft's `windowCtrl.hasFocus`, the highlight buffer's own listener, `KeysManager`'s blur, the Spine's `WindowFocus` |
+| the window's focus | four ways: Kraft's `windowCtrl.hasFocus`, the highlight buffer's own listener, `KeysManager`'s blur, the Spine's `WindowFocus` (gone: `UiWork` uses Kraft's, the same instance as the app's) |
 
 ### Per-frame and timer work (after `85f2986cf`)
 
 | Loop | Rests when |
 |---|---|
-| `Frames` (Spine): the lamp's light, the rain, the spectrum, the start page | the UI rests, or (spectrum, Motor) its `paused` |
+| `UiWork.frames` (Spine): the lamp's light, the rain, the spectrum, the start page | the UI rests, or (spectrum, Motor) its `paused` |
 | three.js's render loop (the plate, start page and each visual) | only on unmount; a pause asked of Ultra |
-| `smooth()` (the gauges) and `analyzer.waveform` (`animTicker`) | when settled or unsubscribed; each asks for its **own** animation frame (Ultra's `AnimationFrameClock` requests one per `next()`), so they are not yet in `Frames`' one |
+| `smooth()` (the gauges) and `analyzer.waveform` (`animTicker`) | when settled or unsubscribed; each asks for its **own** animation frame (Ultra's `AnimationFrameClock` requests one per `next()`), so they are not yet in `UiWork`'s one |
 | `KlangAdsrCurve` (klangui), the highlight buffer's Pixi ticker | idle or unmount; the Pixi ticker also skips without focus |
 | `RouterWithTransitions` 100 ms ticker | never (the app's root) |
 | `KlangampPlayer` 250 ms interval (redraws the whole player), `KlangampPlaylist` | unmount |
@@ -203,3 +203,6 @@ in each component.
   sweep (an Explore agent's read of the frontend, checked against the code) and a first plan for `Player`, on the
   maintainer's request: "map out how things are wired up in the frontend and enrich the spine ticket with your
   findings. this is a good point in time to get these things nailed and under control."
+- 2026-10-29: `Frames` merged into `UiWork`, and `WindowFocus` replaced by Kraft's `WindowController` (the maintainer:
+  "I think we can merge Frame and UiWork into one object? Also there already is WindowController in Kraft for detect
+  focus").

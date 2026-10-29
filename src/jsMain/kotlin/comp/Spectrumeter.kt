@@ -7,7 +7,6 @@ package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.audio_bridge.analyzer.createAnalyzerBuffer
 import io.peekandpoke.klang.audio_engine.KlangPlayer
-import io.peekandpoke.klang.spine.Frames
 import io.peekandpoke.klang.spine.UiWork
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.components.Component
@@ -187,10 +186,10 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
     private var ctx2d: CanvasRenderingContext2D? = null
 
     init {
-        // A step a frame, on the page's frames ([Frames.all]), none while it rests ([Props.paused]); the subscription
+        // A step a frame, on the page's frames ([UiWork.allFrames]), none while it rests ([Props.paused]); the subscription
         // ends with the component (the maintainer, 2026-10-29: "spine exposes a single animationFrame stream and
         // components subscribe to it and call their step function()")
-        Frames.all.cutoffWhen(props.paused).subscribe { processVisualizer() }
+        UiWork.allFrames.cutoffWhen(props.paused).subscribe { processVisualizer() }
 
         lifecycle {
             onMount {

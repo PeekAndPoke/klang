@@ -57,9 +57,9 @@ object VisualState {
         frames.map { frame -> lamp.advanceTo(frame.currentTime) }
 
     /**
-     * The [lamp]'s light, a frame at a time on the UI's frames ([Frames.ui]), only while someone listens and the UI does
+     * The [lamp]'s light, a frame at a time on the UI's frames ([UiWork.frames]), only while someone listens and the UI does
      * not rest: the lamp waits where it was (the maintainer, 2026-10-29: "Ideally we stop the calculations in
      * SwingingLamp when there is no subscriber").
      */
-    val light: Stream<SwingingLamp.Light> = lightOf(lamp = lamp, frames = Frames.ui)
+    val light: Stream<SwingingLamp.Light> = lightOf(lamp = lamp, frames = UiWork.frames)
 }

@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang
 
+import io.peekandpoke.klang.spine.UiWork
 import io.peekandpoke.klang.sprudel.ui.registerSprudelUiTools
 import io.peekandpoke.klang.storage.KeymapStorage
 import io.peekandpoke.klang.storage.LookStorage
@@ -45,6 +46,9 @@ val kraft = kraftApp {
     semanticUI()
 
     keys(keysManager, hint = KlangKeyHint.render, waiting = KlangKeyHint.waiting)
+
+    // The Spine's window controller: the app and the UI's rest follow the same focus (UiWork)
+    windowCtrl(UiWork.window)
 
     addons {
         browserDetect()

@@ -3,8 +3,8 @@
 > **Status (2026-10-29): NOT SCHEDULED.** Asked for by the maintainer (2026-10-29: "file a ticket to have one animation
 > frame scheduler which collects all and runs them").
 >
-> **Progress (2026-10-29):** the Spine's `Frames` (85f2986cf): `Frames.all`, one Ultra `ticker` on the animation frames
-> that every subscriber shares, and `Frames.ui`, cut off while the UI rests (KLANG-00389). Components subscribe with
+> **Progress (2026-10-29):** the Spine's frames (85f2986cf, now in `UiWork`): `UiWork.allFrames`, one Ultra `ticker` on
+> the animation frames that every subscriber shares, and `UiWork.frames`, cut off while the UI rests (KLANG-00389). Components subscribe with
 > Kraft's `subscribe { step() }`, which ends with them (the maintainer: "spine exposes a single animationFrame stream and
 > components subscribe to it and call their step function()"). On it: the lamp's light (and through it the plate's and
 > the domes' reflections), the rain, the spectrum, the start page (was a 16 ms ticker). Still on frames of their own:
