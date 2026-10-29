@@ -16,6 +16,7 @@ import io.peekandpoke.klang.comp.SongColumn
 import io.peekandpoke.klang.comp.SongSettings
 import io.peekandpoke.klang.layouts.WorkbenchSlots
 import io.peekandpoke.klang.script.stdlibLib
+import io.peekandpoke.klang.spine.VisualState
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
 import io.peekandpoke.klang.storage.EditorSettings
 import io.peekandpoke.klang.storage.SongStorage
@@ -186,10 +187,15 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
             onMount {
                 codeEditorRef { it.setMaxHighlightsPerEvent(highlightPerEvent) }
                 fillWorkbench()
+                // The visuals play this song, as it stands in the editor
+                withdrawSong = VisualState.offerSong(openSong)
             }
             onUnmount {
                 ctrl.stop()
                 emptyWorkbench()
+
+                withdrawSong?.invoke()
+                withdrawSong = null
             }
         }
     }
@@ -198,11 +204,21 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     private fun onPlay() {
         KlangGuiDance.dance.used(KlangGuiDance.SONG_PLAY)
+        playSong()
+    }
 
+    /** Plays the song as it stands in the editor: the page's Play, and a visual's ([VisualState.openSong]). */
+    private fun playSong() {
         // Persist the current code before starting (matches original strategy of persist-on-play).
         songStorage.code(ctrl.state().code)
         ctrl.play()
     }
+
+    /** This page's song for the visuals: played here, the page's own way. */
+    private val openSong = VisualState.OpenSong(play = { playSong() })
+
+    /** Takes the song back from the visuals: when the page leaves. */
+    private var withdrawSong: (() -> Unit)? = null
 
     /**
      * The song in the workbench's column, and the page's tool windows (KLANG-00349). A copy of the page that the

@@ -339,12 +339,19 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
             } else if (props.composition.tiles.any { it.id == VisualsCompositions.BOARD }) {
                 // On the Motor's plate the menu button's dress plays and stops (the maintainer, 2026-10-29: "on the first
                 // visual replace the motor button with a play / stop button ... same button style other icons and
-                // functionality"): whatever plays stops; nothing playing, Klang Amp's last song plays again
+                // functionality"): whatever plays stops; nothing playing, the song open on the page under it plays, as it
+                // stands in its editor ("the first visual has to play the song the user had open"), else Klang Amp's
+                // last song, at first the playlist's first
                 val playing = nowPlaying != null
 
                 KlangMenuButton(
                     open = playing,
-                    onClick = { if (playing) KlangampDeck.stop() else KlangampDeck.playAgain() },
+                    onClick = {
+                        when {
+                            playing -> KlangampDeck.stop()
+                            else -> VisualState.openSong()?.play?.invoke() ?: KlangampDeck.playAgain()
+                        }
+                    },
                     size = (tile * KNOB).px,
                     label = if (playing) "Stop" else "Play",
                     icon = if (playing) ({ stop }) else ({ play }),

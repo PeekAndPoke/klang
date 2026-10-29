@@ -7,6 +7,7 @@ package io.peekandpoke.klang.spine
 
 import io.peekandpoke.klang.storage.SeedStorage
 import io.peekandpoke.ultra.streams.Stream
+import io.peekandpoke.ultra.streams.StreamSource
 import io.peekandpoke.ultra.streams.ops.FrameClock
 import io.peekandpoke.ultra.streams.ops.animationFrames
 import io.peekandpoke.ultra.streams.ops.map
@@ -20,6 +21,35 @@ import io.peekandpoke.ultra.streams.ops.ticker
  * others too").
  */
 object VisualState {
+
+    /** A song open on a page, to be played from a visual the page's own way ([play]): its code as it stands there. */
+    data class OpenSong(val play: () -> Unit)
+
+    /** The songs offered by the pages mounted now, the latest last ([offerSong]). */
+    private val offered = mutableListOf<OpenSong>()
+
+    private val openSongSource = StreamSource<OpenSong?>(null)
+
+    /**
+     * The song open on the page under the visuals, the latest offered and not withdrawn; null when no page offers one.
+     * The Motor's plate plays it (the maintainer, 2026-10-29: "the first visual has to play the song the user had
+     * open... so pass in a song when possible").
+     */
+    val openSong: Stream<OpenSong?> = openSongSource
+
+    /**
+     * A page offers its [song] while it is mounted; the way to withdraw it comes back. Offers, not one slot: the page's
+     * router may hold a page twice while it changes, and the copy that leaves must not take the other's song along.
+     */
+    fun offerSong(song: OpenSong): () -> Unit {
+        offered.add(song)
+        openSongSource(offered.lastOrNull())
+
+        return {
+            offered.remove(song)
+            openSongSource(offered.lastOrNull())
+        }
+    }
 
     /** The one lamp over every plate: the start page's and the visuals'. */
     val lamp = SwingingLamp(seed = SeedStorage.metal)
