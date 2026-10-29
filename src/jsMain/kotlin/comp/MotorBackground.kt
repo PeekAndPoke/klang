@@ -1177,13 +1177,16 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
         // Only the composition's own tiles, the rest left black: the plate's face kept where a tile lies, clear outside,
         // the material's transparency shows the black backdrop there ([PlateComposition.bareOutside])
         if (props.composition.bareOutside) {
+            // One path for all of them, filled once: a fill per plate would keep only what lies in every plate
             tctx.globalCompositeOperation = "destination-in"
             tctx.fillStyle = "#ffffff"
+            tctx.beginPath()
 
             for (plate in plates) {
-                tctx.fillRect(plate.left, plate.top, plate.right - plate.left, plate.bottom - plate.top)
+                tctx.rect(plate.left, plate.top, plate.right - plate.left, plate.bottom - plate.top)
             }
 
+            tctx.fill()
             tctx.globalCompositeOperation = "source-over"
         }
 
