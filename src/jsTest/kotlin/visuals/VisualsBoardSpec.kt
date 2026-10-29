@@ -8,9 +8,12 @@ package io.peekandpoke.klang.visuals
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
+import io.kotest.matchers.doubles.shouldBeGreaterThan
+import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.peekandpoke.klang.comp.MotorBackground
+import io.peekandpoke.klang.spine.SwingingLamp
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.workshop.keys.KeyPlatform
 import io.peekandpoke.klang.workshop.keys.KeysManager
@@ -18,6 +21,8 @@ import io.peekandpoke.klang.workshop.keys.keys
 import io.peekandpoke.kraft.testing.TestBed
 import io.peekandpoke.kraft.testing.eventually
 import io.peekandpoke.ultra.html.css
+import io.peekandpoke.ultra.streams.Stream
+import io.peekandpoke.ultra.streams.StreamSource
 import kotlinx.browser.window
 import kotlinx.html.div
 import org.w3c.dom.Element
@@ -30,7 +35,7 @@ import org.w3c.dom.HTMLElement
 class VisualsBoardSpec : StringSpec({
 
     /** The board over the window, with the app's key manager its knob and its menu button answer through. */
-    suspend fun board(lamp: () -> MotorBackground.Lamp?, test: suspend (Element) -> Unit) {
+    suspend fun board(light: Stream<SwingingLamp.Light>, test: suspend (Element) -> Unit) {
         val manager = KeysManager(platform = KeyPlatform.Pc, hintDelayMs = 10).apply { define(KlangKeyBindings) }
 
         try {
@@ -42,7 +47,7 @@ class VisualsBoardSpec : StringSpec({
                         put("inset", "0")
                     }
 
-                    VisualsBoard(composition = VisualsCompositions.motorBoard, onLeave = {}, lamp = lamp)
+                    VisualsBoard(composition = VisualsCompositions.motorBoard, onLeave = {}, light = light)
                 }
             }) { root ->
                 test(root.single())
@@ -59,31 +64,53 @@ class VisualsBoardSpec : StringSpec({
         return (0 until found.length).map { found.item(it) as HTMLElement }
     }
 
-    /** The board: the element that carries the fade-in. */
-    fun Element.boardElement(): HTMLElement = domes().first().let { dome ->
-        var el: HTMLElement = dome
+    "the glass mirrors the lamp: each dome's highlight moved toward it and lit by it, nothing painted again" {
+        val lamp = SwingingLamp.Light(
+            x = 0.5 * SwingingLamp.SWAY,
+            y = -0.25 * SwingingLamp.SWAY,
+            z = SwingingLamp.DEFAULT_Z,
+            intensity = 3.0,
+            level = 3.0,
+            fill = 0.0,
+        )
 
-        while (!el.style.getPropertyValue("animation").contains("kl-visuals-fade-in")) {
-            el = el.parentElement as HTMLElement
-        }
-
-        el
-    }
-
-    "the glass reflects the lamp: its place, and its light held to twice the rest" {
-        board(lamp = { MotorBackground.Lamp(x = 0.5, y = -0.25, level = 3.0) }) { view ->
+        board(light = StreamSource(lamp)) { view ->
             eventually {
-                val board = view.boardElement()
+                val highlights = view.querySelectorAll(".${VisualsParts.HIGHLIGHT}")
 
-                board.style.getPropertyValue("--kl-glass-x") shouldBe "0.5"
-                board.style.getPropertyValue("--kl-glass-y") shouldBe "-0.25"
-                board.style.getPropertyValue("--kl-glass-light") shouldBe "2"
+                highlights.length shouldBe 2
+
+                for (i in 0 until highlights.length) {
+                    val style = (highlights.item(i) as HTMLElement).style
+
+                    // The browser keeps six digits of each per cent
+                    val shown = Regex("""-?[0-9.]+""").findAll(style.transform).map { it.value.toDouble() }.toList()
+                    val wanted = Regex("""-?[0-9.]+""").findAll(VisualsParts.highlightTransform(swayX = 0.5, swayY = -0.25))
+                        .map { it.value.toDouble() }.toList()
+
+                    shown.size shouldBe 2
+                    shown[0] shouldBe (wanted[0] plusOrMinus 1e-3)
+                    shown[1] shouldBe (wanted[1] plusOrMinus 1e-3)
+                    // At three times its rest the lamp lights the glass as at twice, the most
+                    style.opacity shouldBe "1"
+                }
             }
         }
     }
 
+    "the highlight follows the lamp: right is right, up is up, its light from nought to twice the rest" {
+        VisualsParts.highlightTransform(swayX = 0.0, swayY = 0.0) shouldBe "translate(0%, 0%)"
+        VisualsParts.highlightTransform(swayX = 1.0, swayY = 1.0).let { t ->
+            t.substringAfter("translate(").substringBefore("%").toDouble() shouldBeGreaterThan 0.0
+            t.substringAfter(", ").substringBefore("%").toDouble() shouldBeLessThan 0.0
+        }
+        VisualsParts.highlightOpacity(level = 0.0) shouldBe 0.0
+        VisualsParts.highlightOpacity(level = 1.0) shouldBe 0.5
+        VisualsParts.highlightOpacity(level = 9.0) shouldBe 1.0
+    }
+
     "a dome over the hole and one over the screen, both with their corners cut" {
-        board(lamp = { null }) { view ->
+        board(light = StreamSource(SwingingLamp.Light.dark)) { view ->
             eventually {
                 val domes = view.domes()
 
@@ -97,7 +124,7 @@ class VisualsBoardSpec : StringSpec({
     }
 
     "the hole and the screen lie on the board's plate, each in the middle of its row, the margins kept" {
-        board(lamp = { null }) { view ->
+        board(light = StreamSource(SwingingLamp.Light.dark)) { view ->
             val w = window.innerWidth.toDouble()
             val h = window.innerHeight.toDouble()
             val plate = MotorBackground.tilesOnScreen(w, h, VisualsCompositions.motorBoard).getValue(VisualsCompositions.BOARD)

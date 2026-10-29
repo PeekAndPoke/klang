@@ -8,6 +8,7 @@ package io.peekandpoke.klang.visuals
 import io.peekandpoke.klang.comp.Motor
 import io.peekandpoke.klang.comp.MotorBackground
 import io.peekandpoke.klang.comp.PlateComposition
+import io.peekandpoke.klang.spine.VisualState
 import io.peekandpoke.klang.storage.LookStorage
 import io.peekandpoke.klang.ui.comp.KlangCloseKey
 import io.peekandpoke.klang.ui.comp.KlangSwatchButton
@@ -223,7 +224,7 @@ private class VisualsModal(ctx: Ctx<Props>) : FadingModal<VisualsModal.Props, Bo
         }
     }
 
-    /** The light on once the background is mounted: as on the start page after the dyno, settled. */
+    /** The plate built once the background is mounted, and the light on: as on the start page after the dyno, settled. */
     private fun lightUp(attempt: Int = 0) {
         val bg = background()
 
@@ -235,8 +236,10 @@ private class VisualsModal(ctx: Ctx<Props>) : FadingModal<VisualsModal.Props, Bo
             return
         }
 
-        bg.powerOn()
-        bg.settle()
+        // The plate builds itself; the lamp is the Spine's, on and settled
+        bg.prepare()
+        VisualState.lamp.powerOn()
+        VisualState.lamp.settle()
     }
 
     private fun mouseMoved(clientY: Double) {
@@ -278,7 +281,6 @@ private class VisualsModal(ctx: Ctx<Props>) : FadingModal<VisualsModal.Props, Bo
             VisualsBoard(
                 composition = composition,
                 onLeave = { close() },
-                lamp = { background()?.lamp },
                 // Klang Amp tiles: the Motor button steps through its tiles, its title alone, nothing (the maintainer,
                 // 2026-10-29)
                 rainSpeed = rainSpeed,

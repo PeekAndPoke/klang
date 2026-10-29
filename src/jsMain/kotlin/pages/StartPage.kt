@@ -16,6 +16,7 @@ import io.peekandpoke.klang.comp.MotorBackground
 import io.peekandpoke.klang.comp.PlayerMiniStats
 import io.peekandpoke.klang.comp.motorBackgroundRef
 import io.peekandpoke.klang.fs
+import io.peekandpoke.klang.spine.VisualState
 import io.peekandpoke.klang.sprudel.lang.adsr
 import io.peekandpoke.klang.sprudel.lang.fast
 import io.peekandpoke.klang.sprudel.lang.gain
@@ -237,6 +238,12 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
     private inner class StateOffline : State {
         override val key = KlangIgnition.Position.Off
 
+        init {
+            // Black until the key turns, as ever: the lamp is one for every plate now (the Spine's), and a visual may
+            // have left it on
+            VisualState.lamp.off()
+        }
+
         override fun update() {
             // noop
         }
@@ -289,11 +296,10 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 workletReady = true
             }
 
-            // The screen was black until now: the standby light fades in while the Motor warms up
-            motorBackgroundRef {
-                it.prepare { backgroundReady = true }
-                it.warmUp()
-            }
+            // The screen was black until now: the standby light fades in while the Motor warms up, once the plate is
+            // built (the lamp is the Spine's, KLANG-00389)
+            motorBackgroundRef { it.prepare { backgroundReady = true } }
+            VisualState.lamp.warmUp()
         }
 
         private fun elapsedMs() = Kronos.systemUtc.millisNow() - start
@@ -320,7 +326,8 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
         init {
             // The background light fades in at once; the scan and the test wait
-            motorBackgroundRef { it.powerOn() }
+            motorBackgroundRef { it.prepare() }
+            VisualState.lamp.powerOn()
         }
 
         private fun elapsedMs() = Kronos.systemUtc.millisNow() - startMs
@@ -373,7 +380,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
             // The light stays clean until a while after the run (the maintainer, 2026-10-28), then the bulb settles
             if (!settled && Kronos.systemUtc.millisNow() - startMs >= LIGHT_CLEAN_AFTER_RUN_MS) {
                 settled = true
-                motorBackgroundRef { it.settle() }
+                VisualState.lamp.settle()
             }
         }
 
@@ -822,8 +829,8 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
                                 // The light swells only over a key that can be pressed, and not over the checkbox under it
                                 if (complete != null) {
-                                    onMouseEnter { motorBackgroundRef { it.hoverStart() } }
-                                    onMouseLeave { motorBackgroundRef { it.hoverEnd() } }
+                                    onMouseEnter { VisualState.lamp.hoverStart() }
+                                    onMouseLeave { VisualState.lamp.hoverEnd() }
                                 }
 
                                 KlangButton(

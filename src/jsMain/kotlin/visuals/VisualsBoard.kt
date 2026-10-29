@@ -16,6 +16,8 @@ import io.peekandpoke.klang.comp.ScopeGlow
 import io.peekandpoke.klang.comp.ScreenRect
 import io.peekandpoke.klang.comp.Spectrumeter
 import io.peekandpoke.klang.comp.VolumeKnob
+import io.peekandpoke.klang.spine.SwingingLamp
+import io.peekandpoke.klang.spine.VisualState
 import io.peekandpoke.klang.ui.comp.KlangGauge
 import io.peekandpoke.klang.ui.comp.KlangKnob
 import io.peekandpoke.klang.ui.comp.KlangMenuButton
@@ -28,6 +30,8 @@ import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
+import io.peekandpoke.ultra.streams.Stream
+import io.peekandpoke.ultra.streams.Unsubscribe
 import kotlinx.browser.window
 import kotlinx.css.Color
 import kotlinx.css.px
@@ -44,7 +48,7 @@ import kotlin.math.roundToInt
 fun Tag.VisualsBoard(
     composition: PlateComposition,
     onLeave: () -> Unit,
-    lamp: () -> MotorBackground.Lamp?,
+    light: Stream<SwingingLamp.Light> = VisualState.light,
     onMotorButton: () -> Unit = onLeave,
     rainSpeed: Double = 1.0,
     onRainSpeed: (Double) -> Unit = {},
@@ -52,7 +56,7 @@ fun Tag.VisualsBoard(
     VisualsBoard.Props(
         composition = composition,
         onLeave = onLeave,
-        lamp = lamp,
+        light = light,
         onMotorButton = onMotorButton,
         rainSpeed = rainSpeed,
         onRainSpeed = onRainSpeed,
@@ -82,8 +86,8 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
     data class Props(
         val composition: PlateComposition,
         val onLeave: () -> Unit,
-        /** The plate's lamp, which the glass domes reflect; null until the plate is mounted. */
-        val lamp: () -> MotorBackground.Lamp?,
+        /** The lamp's light, which the glass domes reflect ([VisualState.light]). */
+        val light: Stream<SwingingLamp.Light>,
         /** What the menu button in the gauges' row does: leave, or switch the tiles (Klang Amp tiles). */
         val onMotorButton: () -> Unit,
         /** How fast the voices fall on the rain's display ([VisualsCompositions.RAIN]), 1 as made. */
@@ -129,14 +133,15 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
 
     private val look by subscribingTo(KlangTheme.look)
 
-    /** The frame that follows the lamp, for the glass; none once unmounted. */
-    private var lightFrame: Int? = null
+    /** The lamp followed for the glass; none once unmounted. */
+    private var lightFollow: Unsubscribe? = null
 
     init {
         lifecycle {
-            onMount { followLight() }
+            onMount { lightFollow = props.light.subscribeToStream { reflect(it) } }
             onUnmount {
-                lightFrame?.let { window.cancelAnimationFrame(it) }
+                lightFollow?.invoke()
+                lightFollow = null
                 // A song Klangamp started stops when the visual is left
                 KlangampDeck.leave()
             }
@@ -144,20 +149,23 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
     }
 
     /**
-     * The lamp's place and brightness into the board's CSS, every frame, for the glass domes' reflection: two variables
-     * on the board's element, no redraw.
+     * The lamp mirrored in the glass domes: each dome's highlight moved toward the lamp and brightened with its light,
+     * by its transform and its opacity alone, which the compositor does without painting anything again (the
+     * maintainer's trace, 2026-10-29: the domes' gradients, which read the lamp from variables on the board, were
+     * repainted every frame, and the page layer under them). Written onto the highlights, not drawn by Kraft: a frame
+     * redraws nothing.
      */
-    private fun followLight() {
-        val lamp = props.lamp()
-        val style = (dom as? HTMLElement)?.style
+    private fun reflect(light: SwingingLamp.Light) {
+        val highlights = (dom as? HTMLElement)?.querySelectorAll(".${VisualsParts.HIGHLIGHT}") ?: return
+        val transform = VisualsParts.highlightTransform(swayX = light.swayX, swayY = light.swayY)
+        val opacity = VisualsParts.highlightOpacity(level = light.level).toString()
 
-        if (lamp != null && style != null) {
-            style.setProperty("--kl-glass-x", lamp.x.toString())
-            style.setProperty("--kl-glass-y", lamp.y.toString())
-            style.setProperty("--kl-glass-light", lamp.level.coerceIn(0.0, 2.0).toString())
+        for (i in 0 until highlights.length) {
+            val style = (highlights.item(i) as? HTMLElement)?.style ?: continue
+
+            style.transform = transform
+            style.opacity = opacity
         }
-
-        lightFrame = window.requestAnimationFrame { followLight() }
     }
 
     private val cylinders by subscribingTo(MotorReadings.cylinders())

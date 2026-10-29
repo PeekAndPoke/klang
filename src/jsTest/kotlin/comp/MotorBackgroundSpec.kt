@@ -20,7 +20,7 @@ import kotlin.math.min
 
 /**
  * The start page's and the visuals' plate, without WebGL (the test browser has none): where every composition's tiles
- * lie on screens of every common size, and how the lamp sways over them.
+ * lie on screens of every common size. The lamp over them is the Spine's ([io.peekandpoke.klang.spine.SwingingLamp]).
  */
 class MotorBackgroundSpec : StringSpec({
 
@@ -113,43 +113,5 @@ class MotorBackgroundSpec : StringSpec({
 
             spots.getValue(VisualsCompositions.BOARD).top shouldBe (spots.getValue(PlacedTile.TITLE).bottom + tile plusOrMinus 0.5)
         }
-    }
-
-    "the lamp starts over the middle and is back there after half a swing" {
-        val (x0, y0) = MotorBackground.lampSwayAt(0.0)
-        val (xHalf, yHalf) = MotorBackground.lampSwayAt(MotorBackground.LIGHT_SWAY_PERIOD_MS / 2)
-
-        hypot(x0, y0) shouldBe (0.0 plusOrMinus 1e-9)
-        hypot(xHalf, yHalf) shouldBe (0.0 plusOrMinus 1e-9)
-    }
-
-    "the lamp swings out to its sway and never further" {
-        val (xOut, yOut) = MotorBackground.lampSwayAt(MotorBackground.LIGHT_SWAY_PERIOD_MS / 4)
-
-        hypot(xOut, yOut) shouldBe (MotorBackground.LIGHT_SWAY plusOrMinus 1e-9)
-
-        // Five minutes, a frame at a time
-        var ms = 0.0
-
-        while (ms < 300_000.0) {
-            val (x, y) = MotorBackground.lampSwayAt(ms)
-
-            hypot(x, y) shouldBeLessThanOrEqual MotorBackground.LIGHT_SWAY + 1e-9
-            ms += 16.0
-        }
-    }
-
-    "the line the lamp swings along turns round" {
-        /** The swing's direction at its far end, [swings] swings in, in radians. */
-        fun directionAt(swings: Int): Double {
-            val (x, y) = MotorBackground.lampSwayAt(MotorBackground.LIGHT_SWAY_PERIOD_MS * (swings + 0.25))
-
-            return atan2(y, x)
-        }
-
-        val turnPerSwing = 2 * PI * MotorBackground.LIGHT_SWAY_PERIOD_MS / MotorBackground.LIGHT_SWAY_TURN_MS
-        val turned = directionAt(1) - directionAt(0)
-
-        abs(turned) shouldBe (turnPerSwing plusOrMinus 1e-6)
     }
 })

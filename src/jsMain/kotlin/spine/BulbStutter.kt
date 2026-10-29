@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-package io.peekandpoke.klang.comp
+package io.peekandpoke.klang.spine
 
 import io.peekandpoke.ultra.maths.Smoothing
 import kotlin.math.sqrt

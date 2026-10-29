@@ -6,6 +6,8 @@
 package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.common.math.PerlinNoise2D
+import io.peekandpoke.klang.spine.SwingingLamp
+import io.peekandpoke.klang.spine.VisualState
 import io.peekandpoke.klang.storage.SeedStorage
 import io.peekandpoke.klang.ui.feel.KlangLook
 import io.peekandpoke.klang.ui.feel.KlangRole
@@ -33,10 +35,7 @@ import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.utils.jsObject
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.key
-import io.peekandpoke.ultra.maths.Smoothing
-import io.peekandpoke.ultra.streams.StreamSource
 import io.peekandpoke.ultra.streams.Unsubscribe
-import io.peekandpoke.ultra.streams.ops.smooth
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.html.Tag
@@ -49,12 +48,10 @@ import org.w3c.dom.events.Event
 import kotlin.js.Date
 import kotlin.math.PI
 import kotlin.math.ceil
-import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.random.Random
@@ -97,21 +94,6 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
     )
 
     companion object {
-        /**
-         * The lamp sways as if it hung on a cord, left and right of the centre, very slightly and very slowly (the
-         * maintainer, 2026-10-28; 2026-10-29 "a bit wider", then "a bit faster and wider": 0.12, 0.18 with 16 s): this
-         * far at the most, in the scene's units (the plate is 2 high, the lamp 3.5 in front of it), and one swing there
-         * and back in [LIGHT_SWAY_PERIOD_MS].
-         */
-        internal const val LIGHT_SWAY = 0.22
-        internal const val LIGHT_SWAY_PERIOD_MS = 13_000.0
-
-        /**
-         * The line the lamp sways along turns slowly round, as a Foucault pendulum's (the maintainer, 2026-10-28: "make
-         * the light pendulum direction rotate slowly"): once round in this time.
-         */
-        internal const val LIGHT_SWAY_TURN_MS = 90_000.0
-
         /** The texture's height in px; its width follows the screen's aspect. */
         private const val TEX_HEIGHT = 2048
 
@@ -265,17 +247,6 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
         }
 
         /**
-         * The lamp's place [elapsedMs] into its sway, in the scene's units: a pendulum swinging [LIGHT_SWAY] out to either
-         * side every [LIGHT_SWAY_PERIOD_MS], the line it swings along turning once in [LIGHT_SWAY_TURN_MS].
-         */
-        fun lampSwayAt(elapsedMs: Double): Pair<Double, Double> {
-            val swing = LIGHT_SWAY * sin(2.0 * PI * elapsedMs / LIGHT_SWAY_PERIOD_MS)
-            val direction = 2.0 * PI * elapsedMs / LIGHT_SWAY_TURN_MS
-
-            return (swing * cos(direction)) to (swing * sin(direction))
-        }
-
-        /**
          * A plate's corners in texture px: the title's and every other tile a composition raises ([PlacedTile]); no seam
          * crosses it.
          */
@@ -393,107 +364,15 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
 
     ////  LIGHTING STATE MACHINE  /////////////////////////////////////////////////////////////////////////////////
 
-    private var poweredOn = false
-
     /**
-     * The light at rest (the maintainer, 2026-10-27: 1.62 was "a bit too bright"; 1.35 then); raised as the lamp hung
-     * further away for a wider cone (2026-10-29), so the middle stays as bright: the light falls off with distance.
+     * The lamp's light, from the Spine's one lamp ([VisualState.light], KLANG-00389): this plate only shows it. Followed
+     * while mounted; the lamp works only while someone looks.
      */
-    private val defaultIntensity = 1.55
-    /**
-     * Over "Make Music Now" (the maintainer, 2026-10-26 and 27: twice the first swell was too bright, then 4.5 "a bit
-     * too bright" too).
-     */
-    private val hoverIntensity = 3.6
-
-    /** The light while the Motor warms up ([warmUp]): the plate and the title show, dim (the maintainer, 2026-10-26). */
-    private val standbyIntensity = defaultIntensity * 0.18
-    private var targetIntensity = 0.0
-
-    /** Whether the Motor warms up: the standby light is on from then. */
-    private var warming = false
-
-    /** How far the light moves toward its target each frame: calm, but quick while it warms up to the standby. */
-    private val intensityEase = 0.01
-    private val warmUpEase = 0.05
-    private var currentEase = intensityEase
+    private var light = SwingingLamp.Light.dark
+    private var lightFollow: Unsubscribe? = null
 
     // Ceiling for the plate's blend over the black backdrop: the light, not the backdrop, decides how bright it is
     private val maxPlateOpacity = 0.85
-
-    // Light "radius": pulling the light further from the plate widens the illuminated area, so hover reads as the light
-    // growing bigger (the maintainer, 2026-10-26, once the plate was as bright as before: "the circle of light is too
-    // big")
-    // A bit wider at rest (the maintainer, 2026-10-29: "make the normal lightcone a bit wider"; 3.0 before)
-    private val defaultLightZ = 3.5
-    /** Over "Make Music Now" the cone opens wider, "like opening your eyes" (the maintainer, 2026-10-26: wider still). */
-    private val hoverLightZ = 5.2
-    private var targetLightZ = defaultLightZ
-    private var targetFillIntensity = 0.0
-
-    ////  LIGHT MOTION  ///////////////////////////////////////////////////////////////////////////////////////////
-
-    // Fixed cone size: Z only moves toward the hover/default target ([moveCone]).
-    private var lightZ = defaultLightZ
-
-    /**
-     * The cone's move to [targetLightZ]: from [coneFrom], over [coneMs], easing out hard, so the eye opens quickly and
-     * settles slowly (the maintainer, 2026-10-26: "Stronger ease out and longer eye opening").
-     */
-    private var coneFrom = defaultLightZ
-    private var coneElapsedMs = 0.0
-    private var coneMs = 1.0
-
-    /**
-     * The eye opening over "Make Music Now", and closing again (the maintainer: "longer please", then rather than
-     * twice as long, "just stronger ease out": [easeOutExpo]).
-     */
-    private val coneOpenMs = 5000.0
-    private val coneCloseMs = 2000.0
-
-    private fun moveCone(to: Double, ms: Double) {
-        coneFrom = lightZ
-        targetLightZ = to
-        coneElapsedMs = 0.0
-        coneMs = ms
-    }
-
-    /**
-     * Ease out, exponential: most of the way at first, then a long, very soft arrival (the maintainer: "much stronger
-     * ease out" than a quintic).
-     */
-    private fun easeOutExpo(t: Double): Double = if (t >= 1.0) 1.0 else 1.0 - 2.0.pow(-10.0 * t)
-
-    // Eased intensity lives here (not on the light) so the flicker riding on
-    // top never pollutes the easing state.
-    private var currentIntensity = 0.0
-    private var flickerTime = 0.0
-
-    /** How long the lamp has been swaying, for its pendulum. */
-    private var swayElapsedMs = 0.0
-
-    /**
-     * The bulb about to break ([BulbStutter]): its goals go into [bulbGoal], and the light reads them smoothed, each
-     * stutter by a law of its own (the maintainer, 2026-10-28: "build a stream with .smooth() for how bright the light
-     * is and throw values in it"). One smoothed stream for the lamp's life: a stutter swaps the law ([bulbLaw]), the
-     * motion goes on where it is ("when you recreate the bulbFollow you lose the history").
-     */
-    private val bulbGoal = StreamSource<Double?>(1.0)
-
-    /** The law the bulb's light moves by now; a stutter puts its own. */
-    private val bulbLaw = SwappableSmoothing(Smoothing.Exponential(keepPer10Ms = 0.5))
-
-    /** The bulb's share of the light as smoothed, read every frame. */
-    private var bulbShown = 1.0
-
-    private var bulbFollow: Unsubscribe? = bulbGoal.smooth(smoothing = bulbLaw, rest = 1.0, near = 0.002)
-        .subscribeToStream { bulbShown = it ?: 1.0 }
-
-    /** Clean from the start: no stutter, no shimmer, until [settle] (the maintainer, 2026-10-28). */
-    private val bulb = BulbStutter(onStutter = { bulbLaw.law = it }).apply { steady = true }
-
-    /** How much of the filament's shimmer shows: none while the bulb is clean, easing in once it [settle]s. */
-    private var shimmer = 0.0
 
     ////  DEFERRED TEXTURE BUILD  /////////////////////////////////////////////////////////////////////////////////
 
@@ -753,9 +632,8 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
                         preparing = false
 
                         // The plate shows once the Motor warms up: dim until it is powered on
-                        if (warming && !poweredOn) {
-                            targetIntensity = standbyIntensity
-                        }
+                        // The standby light may show now, while the Motor warms up
+                        VisualState.lamp.plateReady()
 
                         onPrepared.forEach { it() }
                         onPrepared.clear()
@@ -851,71 +729,8 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
 
     ////  PUBLIC API (call via motorBackgroundRef)  ///////////////////////////////////////////////////////////////
 
-    /**
-     * The Motor warms up: the standby light fades in from black, quickly; once the plate is built if it is not yet.
-     * Call when the key turns to ON.
-     */
-    fun warmUp() {
-        prepare()
-        warming = true
-        currentEase = warmUpEase
-
-        if (prepared && !poweredOn) {
-            targetIntensity = standbyIntensity
-        }
-    }
-
-    fun powerOn() {
-        // Self-heal for flows that never called prepare() — idempotent, and the
-        // plate simply fades in whenever the build finishes.
-        prepare()
-        warming = true
-        poweredOn = true
-        currentEase = intensityEase
-        targetIntensity = defaultIntensity
-        targetFillIntensity = 0.12
-    }
-
-    /**
-     * The light comes on clean and stays so, no stutter, no shimmer, until this (the maintainer, 2026-10-28: "The light
-     * must come clean on and stay clean until 5 seconds after the dynamo test"): then the shimmer eases in and the
-     * bulb stutters now and then, calmly ([BulbStutter.SETTLED]).
-     */
-    fun settle() {
-        bulb.temper = BulbStutter.SETTLED
-        bulb.steady = false
-    }
-
-    /**
-     * The lamp as things that reflect it see it, the visual's glass domes (the maintainer, 2026-10-29): where it is in
-     * its sway, [x] and [y] from -1 to 1 ([LIGHT_SWAY] out to either side; up is positive), and how bright it is
-     * against its rest, [level] (1 at rest, 0 off).
-     */
-    data class Lamp(val x: Double, val y: Double, val level: Double)
-
-    /** The lamp now; read every frame. */
-    val lamp: Lamp
-        get() = Lamp(
-            x = (mainLight?.position?.x ?: 0.0) / LIGHT_SWAY,
-            y = (mainLight?.position?.y ?: 0.0) / LIGHT_SWAY,
-            level = currentIntensity / defaultIntensity,
-        )
-
-    /** Boosts the light and widens the cone. Call from an element's mouse-enter. */
-    fun hoverStart() {
-        targetIntensity = hoverIntensity
-        moveCone(to = hoverLightZ, ms = coneOpenMs)
-    }
-
-    /** Reverts the hover effect. Call from the element's mouse-leave. */
-    fun hoverEnd() {
-        targetIntensity = when {
-            poweredOn -> defaultIntensity
-            warming -> standbyIntensity
-            else -> 0.0
-        }
-        moveCone(to = defaultLightZ, ms = coneCloseMs)
-    }
+    // The lamp's commands (warm up, power on, settle, hover) are the Spine's: VisualState.lamp. This plate only shows its
+    // light, and builds itself: [prepare]
 
     ////  LIFECYCLE  //////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -940,6 +755,10 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
 
     init {
         lifecycle {
+            onMount {
+                // The lamp works while a plate shows it
+                lightFollow = VisualState.light.subscribeToStream { light = it }
+            }
             onUpdate {
                 if (props.composition != builtFor) {
                     builtFor = props.composition
@@ -1032,7 +851,7 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
 
         // Start dark — light turns on when powerOn() is called
         val main = addon.createPointLight(color = lightColor, intensity = 0.0, distance = 0.0, decay = 1.0)
-        main.position.set(0.0, 0.0, defaultLightZ)
+        main.position.set(0.0, 0.0, SwingingLamp.DEFAULT_Z)
         ctx.scene.add(main)
         mainLight = main
 
@@ -1153,52 +972,24 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
         markFailed(e)
     }
 
-    private fun animateUnsafe(frame: ThreeJsFrame) {
+    private fun animateUnsafe(@Suppress("UNUSED_PARAMETER") frame: ThreeJsFrame) {
         if (failed) return
-        val delta = min(frame.deltaMs, 100.0)
 
-        // The light hangs over the centre of the screen and sways a little, as a pendulum. The cone size stays FIXED:
-        // Z only moves toward the hover/default target ([moveCone]), no breathing
-        swayElapsedMs += delta
+        // The lamp's light as the Spine works it out ([VisualState.light]): where it hangs, how bright it shines
+        val lamp = light
 
-        mainLight?.position?.let { pos ->
-            val (x, y) = lampSwayAt(swayElapsedMs)
-
-            pos.x = x
-            pos.y = y
-            coneElapsedMs += delta
-            lightZ = coneFrom + (targetLightZ - coneFrom) * easeOutExpo(min(1.0, coneElapsedMs / coneMs))
-            pos.z = lightZ
+        mainLight?.let { main ->
+            main.position.x = lamp.x
+            main.position.y = lamp.y
+            main.position.z = lamp.z
+            main.intensity = lamp.intensity
         }
-
-        // Smooth intensity transitions
-        currentIntensity += (targetIntensity - currentIntensity) * currentEase
-        fillLight?.let { it.intensity += (targetFillIntensity - it.intensity) * 0.02 }
-
-        // Subtle lamp flicker — a slow drift plus a faster shimmer, both smooth
-        // noise. Stays within a few percent so it reads as a living filament,
-        // not a faulty one.
-        flickerTime += delta
-        // None while the bulb is clean; once it settles, the shimmer eases in over a couple of seconds
-        shimmer += ((if (bulb.steady) 0.0 else 1.0) - shimmer) * 0.02
-        val flicker = 1.0 + shimmer * (
-                // Three times slower than at first (the maintainer, 2026-10-26: "it flickers too often")
-                // A bit livelier between the stutters (the maintainer, 2026-10-27: "a bit less stable in between")
-                grainNoise.noise(flickerTime * 0.0012, 7.7) * 0.07 +
-                        grainNoise.noise(flickerTime * 0.007, 3.3) * 0.035
-                )
-        val bulbHeads = bulb.next(delta)
-
-        if (bulbHeads != bulbGoal()) {
-            bulbGoal(bulbHeads)
-        }
-
-        mainLight?.let { it.intensity = currentIntensity * flicker * bulbShown }
+        fillLight?.let { it.intensity = lamp.fill }
 
         // The plate fades in with the main light: while the light is off the canvas is transparent and the black
         // backdrop shows through. The title overlay is exempt from the dimming cap and stays bright. Driven by the
-        // unflickered intensity so the fade itself stays steady.
-        val lit = min(1.0, currentIntensity / defaultIntensity)
+        // unflickered level so the fade itself stays steady.
+        val lit = min(1.0, lamp.level)
         material?.asDynamic()?.opacity = maxPlateOpacity * lit
         titleMaterial?.asDynamic()?.opacity = lit
     }
@@ -1214,8 +1005,8 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
         resizeTimer?.let { window.clearTimeout(it) }
         resizeListener = null
         resizeTimer = null
-        bulbFollow?.invoke()
-        bulbFollow = null
+        lightFollow?.invoke()
+        lightFollow = null
     }
 
     ////  PROCEDURAL NORMAL MAP  //////////////////////////////////////////////////////////////////////////////////
