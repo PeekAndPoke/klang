@@ -24,7 +24,7 @@ fun Tag.ScopeGlow(strength: Double) = comp(
 /**
  * The light of the scope's signal behind its trace: a soft glow in the trace's own colour, the brighter the louder the
  * signal ([MotorReadings.signal]). It fills its parent; laid under the scope. Its own component, so only it redraws
- * with the signal. [Props.strength] is how far the loudest signal takes it: the visual's hole 0.55, the code page's
+ * with the signal. [Props.strength] is how far the loudest signal takes it: the visual's hole 0.85, the code page's
  * screen less (the maintainer, 2026-10-29: "give the osci in the code song page the same glow as in the visual ...
  * maybe a bit more descent").
  */
