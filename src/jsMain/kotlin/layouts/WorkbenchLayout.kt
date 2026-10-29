@@ -19,6 +19,7 @@ import io.peekandpoke.klang.storage.WorkbenchLayoutStorage
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.klang.ui.comp.KlangDrawer
 import io.peekandpoke.klang.ui.comp.KlangLookPicker
+import io.peekandpoke.klang.ui.comp.KlangScreen
 import io.peekandpoke.klang.ui.comp.KlangSearchField
 import io.peekandpoke.klang.ui.comp.KlangWorkbench
 import io.peekandpoke.klang.version
@@ -249,39 +250,51 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
     private fun FlowContent.renderBuild() {
         val info = versionInfo.takeIf { it.isAvailable } ?: return
 
+        // A display of its own, as the graphs and the warehouse have (the maintainer, 2026-10-29: "Make the build stats
+        // another "display""): a small screen, its corners cut, the values in the displays' ink
         div {
             css {
-                put("display", "grid")
-                put("grid-template-columns", "auto minmax(0, 1fr)")
-                put("column-gap", "14px")
-                put("row-gap", "4px")
-                put("align-items", "baseline")
+                put("display", "flex")
+                put("flex-direction", "column")
             }
 
-            val rows = listOfNotNull(
-                "Engine" to "${info.project} v${info.version}",
-                "Branch" to info.gitBranch,
-                "Revision" to info.gitDesc,
-                info.date?.let { "Built" to it },
-            )
-
-            for ((label, value) in rows) {
+            KlangScreen(size = KlangScreen.Size.Small, bezel = "var(--kl-ground-panel)") {
                 div {
                     css {
-                        put("font-size", "12px")
-                        put("color", "var(--kl-ink-label)")
+                        put("display", "grid")
+                        put("grid-template-columns", "auto minmax(0, 1fr)")
+                        put("column-gap", "14px")
+                        put("row-gap", "4px")
+                        put("align-items", "baseline")
+                        put("padding", "8px 10px")
                     }
-                    +label
-                }
 
-                div {
-                    css {
-                        put("font-family", "monospace")
-                        put("font-size", "12px")
-                        put("color", "var(--kl-ink-text)")
-                        put("overflow-wrap", "anywhere")
+                    val rows = listOfNotNull(
+                        "Engine" to "${info.project} v${info.version}",
+                        "Branch" to info.gitBranch,
+                        "Revision" to info.gitDesc,
+                        info.date?.let { "Built" to it },
+                    )
+
+                    for ((label, value) in rows) {
+                        div {
+                            css {
+                                put("font-size", "11px")
+                                put("color", "var(--kl-ink-label)")
+                            }
+                            +label
+                        }
+
+                        div {
+                            css {
+                                put("font-family", "monospace")
+                                put("font-size", "12px")
+                                put("color", "var(--kl-lcd-ink)")
+                                put("overflow-wrap", "anywhere")
+                            }
+                            +value
+                        }
                     }
-                    +value
                 }
             }
         }
