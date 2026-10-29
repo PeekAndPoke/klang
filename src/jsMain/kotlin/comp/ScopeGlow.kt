@@ -54,11 +54,12 @@ class ScopeGlow(ctx: Ctx<Props>) : Component<ScopeGlow.Props>(ctx) {
                 put("position", "absolute")
                 put("inset", "0")
                 put("pointer-events", "none")
-                // Round the middle, narrower than the display (the maintainer, 2026-10-29: "make the glow a bit
-                // narrower"; the farthest corner's ellipse to 75 % before)
+                // As wide as ever, the farthest corner's ellipse faded out at 75 % reaching 53 % of the width to each
+                // side, but flatter: 30 % of the height to each side (the maintainer, 2026-10-29: "make the glow a bit
+                // narrower", then "By narrow i mean narrower vertically. Please restore the horizontal extent")
                 put(
                     "background",
-                    "radial-gradient(ellipse 35% 60% at center, " +
+                    "radial-gradient(ellipse 53% 30% at center, " +
                         "color-mix(in srgb, var(--kl-scope-trace) $percent%, transparent) 0%, transparent 100%)",
                 )
             }
