@@ -34,7 +34,7 @@ class SwingingLamp(seed: Int, random: Random = Random.Default) {
         /**
          * The lamp sways as if it hung on a cord, left and right of the centre, very slightly and very slowly (the
          * maintainer, 2026-10-28; 2026-10-29 "a bit wider", then "a bit faster and wider": 0.12, 0.18 with 16 s): this
-         * far at the most, in the scene's units (the plate is 2 high, the lamp 3.5 in front of it), and one swing there
+         * far at the most, in the scene's units (the plate is 2 high, the lamp 4.5 in front of it), and one swing there
          * and back in [SWAY_PERIOD_MS].
          */
         const val SWAY = 0.22
@@ -48,10 +48,10 @@ class SwingingLamp(seed: Int, random: Random = Random.Default) {
 
         /**
          * The light at rest (the maintainer, 2026-10-27: 1.62 was "a bit too bright"; 1.35 then); raised as the lamp
-         * hung further away for a wider cone (2026-10-29), so the middle stays as bright: the light falls off with
-         * distance.
+         * hung further away for a wider cone (2026-10-29: 1.55 at 3.5, 2.0 at 4.5), so the middle stays as bright: the
+         * light falls off with distance.
          */
-        const val DEFAULT_INTENSITY = 1.55
+        const val DEFAULT_INTENSITY = 2.0
 
         /**
          * Over "Make Music Now" (the maintainer, 2026-10-26 and 27: twice the first swell was too bright, then 4.5 "a
@@ -67,10 +67,12 @@ class SwingingLamp(seed: Int, random: Random = Random.Default) {
 
         /**
          * How far the lamp hangs in front of the plate: further away, its circle of light is wider (the maintainer,
-         * 2026-10-29: "make the normal lightcone a bit wider"; 3.0 before). Over "Make Music Now" the cone opens wider,
+         * 2026-10-29: "make the normal lightcone a bit wider", 3.0 to 3.5; then "the light normal radius can be half a
+         * tile wider", 4.5: the circle is the plate's sheen, its radius in step with the height, about two tiles at
+         * 3.5). Over "Make Music Now" the cone opens wider,
          * "like opening your eyes" (the maintainer, 2026-10-26: wider still).
          */
-        const val DEFAULT_Z = 3.5
+        const val DEFAULT_Z = 4.5
         const val HOVER_Z = 5.2
 
         /**
