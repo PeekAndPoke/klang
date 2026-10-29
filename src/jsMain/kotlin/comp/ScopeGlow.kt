@@ -35,8 +35,8 @@ class ScopeGlow(ctx: Ctx<Props>) : Component<ScopeGlow.Props>(ctx) {
     )
 
     companion object {
-        /** The visual's hole: the glow fills it at a loud signal. */
-        const val HOLE = 0.55
+        /** The visual's hole: the glow fills it at a loud signal (0.55 before it was flatter; "a bit brighter now"). */
+        const val HOLE = 0.85
 
         /** The code page's screen: quieter, the spectrum under it stays to be read. */
         const val SCREEN = 0.3
@@ -46,7 +46,8 @@ class ScopeGlow(ctx: Ctx<Props>) : Component<ScopeGlow.Props>(ctx) {
     private val signal by subscribingTo(MotorReadings.signal())
 
     override fun VDom.render() {
-        val percent = ((signal ?: 0.0) * 100 * props.strength).roundToInt()
+        // At most the trace's own colour: a loud signal at a strong glow would ask for more than all of it
+        val percent = ((signal ?: 0.0) * 100 * props.strength).roundToInt().coerceIn(0, 100)
 
         div {
             attributes["aria-hidden"] = "true"
