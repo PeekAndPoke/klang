@@ -95,8 +95,8 @@ class VisualsScreen(ctx: NoProps) : PureComponent(ctx) {
         /** What Klang Amp tiles shows under its parts; its Motor button steps through them, kept while the app runs. */
         val klangampTiles = StreamSource(TilesState.Tiles)
 
-        /** What the voices drop in Klang Amp rain; its Motor button steps through them, kept while the app runs. */
-        val rainText = StreamSource(VoiceRain.Text.Note)
+        /** How fast the voices fall in Klang Amp rain, 1 as made; its speed knob turns it, kept while the app runs. */
+        val rainSpeed = StreamSource(1.0)
     }
 
     /**
@@ -206,7 +206,7 @@ private class VisualsModal(ctx: Ctx<Props>) : FadingModal<VisualsModal.Props, Bo
 
     private val tilesState by subscribingTo(VisualsScreen.klangampTiles)
 
-    private val rainText by subscribingTo(VisualsScreen.rainText)
+    private val rainSpeed by subscribingTo(VisualsScreen.rainSpeed)
 
     private var hideTimer: Int? = null
 
@@ -281,12 +281,10 @@ private class VisualsModal(ctx: Ctx<Props>) : FadingModal<VisualsModal.Props, Bo
                 lamp = { background()?.lamp },
                 // Klang Amp tiles: the Motor button steps through its tiles, its title alone, nothing (the maintainer,
                 // 2026-10-29)
-                rainText = rainText,
+                rainSpeed = rainSpeed,
+                onRainSpeed = { VisualsScreen.rainSpeed(it) },
                 onMotorButton = when (props.visual) {
                     VisualsScreen.Visual.KlangampTiles -> { -> VisualsScreen.klangampTiles(tilesState.next) }
-                    // Klang Amp rain: what falls, the notes, the sounds, the code (the maintainer, 2026-10-29: "What
-                    // could the Motor-Button do here?")
-                    VisualsScreen.Visual.KlangampRain -> { -> VisualsScreen.rainText(rainText.next) }
                     else -> { -> close() }
                 },
             )

@@ -17,6 +17,7 @@ import io.peekandpoke.klang.comp.ScreenRect
 import io.peekandpoke.klang.comp.Spectrumeter
 import io.peekandpoke.klang.comp.VolumeKnob
 import io.peekandpoke.klang.ui.comp.KlangGauge
+import io.peekandpoke.klang.ui.comp.KlangKnob
 import io.peekandpoke.klang.ui.comp.KlangMenuButton
 import io.peekandpoke.klang.ui.feel.KlangRole
 import io.peekandpoke.klang.ui.feel.KlangTheme
@@ -33,7 +34,10 @@ import kotlinx.css.px
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
+import kotlinx.html.title
 import org.w3c.dom.HTMLElement
+import kotlin.math.ln
+import kotlin.math.pow
 import kotlin.math.roundToInt
 
 @Suppress("FunctionName")
@@ -42,14 +46,16 @@ fun Tag.VisualsBoard(
     onLeave: () -> Unit,
     lamp: () -> MotorBackground.Lamp?,
     onMotorButton: () -> Unit = onLeave,
-    rainText: VoiceRain.Text = VoiceRain.Text.Note,
+    rainSpeed: Double = 1.0,
+    onRainSpeed: (Double) -> Unit = {},
 ) = comp(
     VisualsBoard.Props(
         composition = composition,
         onLeave = onLeave,
         lamp = lamp,
         onMotorButton = onMotorButton,
-        rainText = rainText,
+        rainSpeed = rainSpeed,
+        onRainSpeed = onRainSpeed,
     )
 ) {
     VisualsBoard(it)
@@ -80,8 +86,10 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
         val lamp: () -> MotorBackground.Lamp?,
         /** What the menu button in the gauges' row does: leave, or switch the tiles (Klang Amp tiles). */
         val onMotorButton: () -> Unit,
-        /** What the voices drop on the rain's display ([VisualsCompositions.RAIN]). */
-        val rainText: VoiceRain.Text,
+        /** How fast the voices fall on the rain's display ([VisualsCompositions.RAIN]), 1 as made. */
+        val rainSpeed: Double,
+        /** The rain's speed knob turned: in the gauges' row where the menu button stands elsewhere. */
+        val onRainSpeed: (Double) -> Unit,
     )
 
     companion object {
@@ -105,6 +113,18 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
 
         /** How far the displays' corners are cut, as a large screen's (KlangScreen.Size.Large). */
         private const val CUT_PX = 14
+
+        /** The rain's speed knob: from a quarter of the speed to three times, evenly on a log scale, 1 a little past the middle. */
+        private const val RAIN_SLOWEST = 0.25
+        private const val RAIN_FASTEST = 3.0
+
+        /** The rain's speed at the knob's [position], 0 to 1. */
+        fun rainSpeedOf(position: Double): Double =
+            RAIN_SLOWEST * (RAIN_FASTEST / RAIN_SLOWEST).pow(position.coerceIn(0.0, 1.0))
+
+        /** The knob's position for the rain's [speed]. */
+        fun rainKnobOf(speed: Double): Double =
+            (ln(speed.coerceIn(RAIN_SLOWEST, RAIN_FASTEST) / RAIN_SLOWEST) / ln(RAIN_FASTEST / RAIN_SLOWEST)).coerceIn(0.0, 1.0)
     }
 
     private val look by subscribingTo(KlangTheme.look)
@@ -206,7 +226,7 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
                             height = rect.height - 2 * margin,
                             padding = "8px",
                         ) {
-                            VoiceRain(text = props.rainText)
+                            VoiceRain(speed = props.rainSpeed)
                         }
                     }
 
@@ -278,7 +298,23 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
                 display = { it.roundToInt().toString() },
             )
 
-            KlangMenuButton(open = false, onClick = { props.onMotorButton() }, size = (tile * KNOB).px)
+            // With the rain's display beside them, a knob for how fast the voices fall in the menu button's place (the
+            // maintainer, 2026-10-29: "Instead of the Motor button we could have another knob changing the speed")
+            if (props.composition.tiles.any { it.id == VisualsCompositions.RAIN }) {
+                div {
+                    title = "Falling speed: ${(props.rainSpeed * 100).roundToInt()} %\ndrag, or the arrow keys"
+
+                    KlangKnob(
+                        name = "Falling speed",
+                        value = rainKnobOf(props.rainSpeed),
+                        onChange = { props.onRainSpeed(rainSpeedOf(it)) },
+                        size = (tile * KNOB).px,
+                        dragPixels = 200.0,
+                    )
+                }
+            } else {
+                KlangMenuButton(open = false, onClick = { props.onMotorButton() }, size = (tile * KNOB).px)
+            }
         }
     }
 

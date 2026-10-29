@@ -119,4 +119,16 @@ class VisualsBoardSpec : StringSpec({
             }
         }
     }
+
+    "the rain's speed knob: a quarter at the left, three times at the right, its speed and position one way and back" {
+        VisualsBoard.rainSpeedOf(0.0) shouldBe (0.25 plusOrMinus 1e-9)
+        VisualsBoard.rainSpeedOf(1.0) shouldBe (3.0 plusOrMinus 1e-9)
+
+        for (speed in listOf(0.25, 0.5, 1.0, 2.0, 3.0)) {
+            VisualsBoard.rainSpeedOf(VisualsBoard.rainKnobOf(speed)) shouldBe (speed plusOrMinus 1e-9)
+        }
+
+        // As made a little past the middle, so slower has as much room as faster on the log scale
+        VisualsBoard.rainKnobOf(1.0) shouldBe (0.558 plusOrMinus 0.001)
+    }
 })
