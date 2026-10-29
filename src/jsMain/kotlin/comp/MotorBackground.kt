@@ -101,14 +101,14 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
          * far at the most, in the scene's units (the plate is 2 high, the lamp 3.5 in front of it), and one swing there
          * and back in [LIGHT_SWAY_PERIOD_MS].
          */
-        private const val LIGHT_SWAY = 0.22
-        private const val LIGHT_SWAY_PERIOD_MS = 13_000.0
+        internal const val LIGHT_SWAY = 0.22
+        internal const val LIGHT_SWAY_PERIOD_MS = 13_000.0
 
         /**
          * The line the lamp sways along turns slowly round, as a Foucault pendulum's (the maintainer, 2026-10-28: "make
          * the light pendulum direction rotate slowly"): once round in this time.
          */
-        private const val LIGHT_SWAY_TURN_MS = 90_000.0
+        internal const val LIGHT_SWAY_TURN_MS = 90_000.0
 
         /** The texture's height in px; its width follows the screen's aspect. */
         private const val TEX_HEIGHT = 2048
@@ -158,6 +158,59 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
          * tile's width out (the maintainer, 2026-10-27: each gauge centred in its tile).
          */
         fun tileWidthPx(screenHeight: Double): Double = PANEL_CELL / TEX_HEIGHT * screenHeight
+
+        /** The board's plate ([Props.boardPlate]): this many tiles wide, the middle ones, and this many rows high. */
+        const val BOARD_COLUMNS = 3
+        const val BOARD_ROWS = 2
+
+        /** A rectangle on the screen, in px. */
+        data class ScreenRect(val left: Double, val top: Double, val right: Double, val bottom: Double) {
+            val width: Double get() = right - left
+            val height: Double get() = bottom - top
+        }
+
+        /**
+         * The board's plate in a texture [width] px wide whose title plate ends at [titleBottom]: [BOARD_COLUMNS] tiles
+         * round the middle (the columns are centred, a tile's middle on the screen's), [BOARD_ROWS] rows under the
+         * gauges' row, which runs under the title's plate.
+         */
+        private fun boardPlateIn(width: Int, titleBottom: Double): TitlePlate {
+            val cx = width / 2.0
+            val halfWidth = BOARD_COLUMNS * PANEL_CELL / 2.0
+
+            return TitlePlate(
+                left = cx - halfWidth,
+                top = titleBottom + PANEL_CELL,
+                right = cx + halfWidth,
+                bottom = titleBottom + (1 + BOARD_ROWS) * PANEL_CELL,
+            )
+        }
+
+        /**
+         * Where the board's plate lies on a screen [screenWidth] by [screenHeight] px, in screen px: the plate the
+         * texture draws, worked out as the texture works it out (its width follows the screen's aspect, its height
+         * spans the screen), so the visual sets its scope and spectrum on it ([VisualsBoard]).
+         */
+        fun boardPlateOnScreen(screenWidth: Double, screenHeight: Double): ScreenRect {
+            val texWidth = ceil(TEX_HEIGHT * screenWidth / screenHeight).toInt()
+            val title = titlePlate(width = texWidth, height = TEX_HEIGHT, centerShare = titleCenterShare(screenHeight))
+            val plate = boardPlateIn(width = texWidth, titleBottom = title.bottom)
+            val sx = screenWidth / texWidth
+            val sy = screenHeight / TEX_HEIGHT
+
+            return ScreenRect(left = plate.left * sx, top = plate.top * sy, right = plate.right * sx, bottom = plate.bottom * sy)
+        }
+
+        /**
+         * The lamp's place [elapsedMs] into its sway, in the scene's units: a pendulum swinging [LIGHT_SWAY] out to either
+         * side every [LIGHT_SWAY_PERIOD_MS], the line it swings along turning once in [LIGHT_SWAY_TURN_MS].
+         */
+        fun lampSwayAt(elapsedMs: Double): Pair<Double, Double> {
+            val swing = LIGHT_SWAY * sin(2.0 * PI * elapsedMs / LIGHT_SWAY_PERIOD_MS)
+            val direction = 2.0 * PI * elapsedMs / LIGHT_SWAY_TURN_MS
+
+            return (swing * cos(direction)) to (swing * sin(direction))
+        }
 
         /**
          * The plate under KLANGMOTOR (the maintainer, 2026-10-26: "one nice tile underneith the text so that no lines
@@ -416,14 +469,7 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
             return null
         }
 
-        val cx = width / 2.0
-
-        return TitlePlate(
-            left = cx - 1.5 * PANEL_CELL,
-            top = plate.bottom + PANEL_CELL,
-            right = cx + 1.5 * PANEL_CELL,
-            bottom = plate.bottom + 3 * PANEL_CELL,
-        )
+        return boardPlateIn(width = width, titleBottom = plate.bottom)
     }
 
     /**
@@ -677,13 +723,19 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
     }
 
     /**
-     * Where the lamp is in its sway, -1 to 1 each way ([LIGHT_SWAY] out to either side; up is positive), and how bright
-     * it is against its rest (1 at rest, 0 off), for things that reflect it: the visual's glass domes (the maintainer,
-     * 2026-10-29). Read every frame; no object is made.
+     * The lamp as things that reflect it see it, the visual's glass domes (the maintainer, 2026-10-29): where it is in
+     * its sway, [x] and [y] from -1 to 1 ([LIGHT_SWAY] out to either side; up is positive), and how bright it is
+     * against its rest, [level] (1 at rest, 0 off).
      */
-    val lightX: Double get() = (mainLight?.position?.x ?: 0.0) / LIGHT_SWAY
-    val lightY: Double get() = (mainLight?.position?.y ?: 0.0) / LIGHT_SWAY
-    val lightLevel: Double get() = currentIntensity / defaultIntensity
+    data class Lamp(val x: Double, val y: Double, val level: Double)
+
+    /** The lamp now; read every frame. */
+    val lamp: Lamp
+        get() = Lamp(
+            x = (mainLight?.position?.x ?: 0.0) / LIGHT_SWAY,
+            y = (mainLight?.position?.y ?: 0.0) / LIGHT_SWAY,
+            level = currentIntensity / defaultIntensity,
+        )
 
     /** Boosts the light and widens the cone. Call from an element's mouse-enter. */
     fun hoverStart() {
@@ -922,11 +974,10 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
         swayElapsedMs += delta
 
         mainLight?.position?.let { pos ->
-            val swing = LIGHT_SWAY * sin(2.0 * PI * swayElapsedMs / LIGHT_SWAY_PERIOD_MS)
-            val direction = 2.0 * PI * swayElapsedMs / LIGHT_SWAY_TURN_MS
+            val (x, y) = lampSwayAt(swayElapsedMs)
 
-            pos.x = swing * cos(direction)
-            pos.y = swing * sin(direction)
+            pos.x = x
+            pos.y = y
             coneElapsedMs += delta
             lightZ = coneFrom + (targetLightZ - coneFrom) * easeOutExpo(min(1.0, coneElapsedMs / coneMs))
             pos.z = lightZ

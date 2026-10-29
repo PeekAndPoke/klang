@@ -140,6 +140,28 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
 
     private val state by subscribingTo(props.ctrl.state)
 
+    /**
+     * Whether a visual covers the window ([VisualsScreen]): no highlights then, none drawn and none scheduled, to save
+     * the CPU for the visual (the maintainer, 2026-10-29: "while a visual is open we can stop the code highlights to
+     * save cpu"); on leaving, the voices are emitted again and the highlights pick up where the song is.
+     */
+    private var visualOpen = VisualsScreen.open()
+
+    @Suppress("unused")
+    private val visualSub by subscribingTo(VisualsScreen.open) { open ->
+        if (open == visualOpen) {
+            return@subscribingTo
+        }
+
+        visualOpen = open
+
+        if (open) {
+            highlightBuffer.cancelAll()
+        } else {
+            props.ctrl.reemitVoiceSignals()
+        }
+    }
+
     @Suppress("unused")
     private val signalSub by subscribingTo(props.ctrl.signals) { signal ->
         when {
@@ -151,7 +173,7 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
                 highlightBuffer.cancelAll()
             }
 
-            signal is KlangPlaybackSignal.VoicesScheduled && props.pauseHighlightsWhen?.invoke() != true -> {
+            signal is KlangPlaybackSignal.VoicesScheduled && !visualOpen && props.pauseHighlightsWhen?.invoke() != true -> {
                 signal.voices.forEach { voiceEvent ->
                     highlightBuffer.scheduleHighlight(voiceEvent)
                     props.extraVoiceHandler?.invoke(voiceEvent)

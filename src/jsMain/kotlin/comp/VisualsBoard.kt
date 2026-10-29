@@ -33,8 +33,8 @@ import kotlin.math.max
 import kotlin.math.roundToInt
 
 @Suppress("FunctionName")
-fun Tag.VisualsBoard(onLeave: () -> Unit, background: () -> MotorBackground?) = comp(
-    VisualsBoard.Props(onLeave = onLeave, background = background)
+fun Tag.VisualsBoard(onLeave: () -> Unit, lamp: () -> MotorBackground.Lamp?) = comp(
+    VisualsBoard.Props(onLeave = onLeave, lamp = lamp)
 ) {
     VisualsBoard(it)
 }
@@ -51,8 +51,8 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
 
     data class Props(
         val onLeave: () -> Unit,
-        /** The plate's background, whose lamp the glass domes reflect; null until it is mounted. */
-        val background: () -> MotorBackground?,
+        /** The plate's lamp, which the glass domes reflect; null until the plate is mounted. */
+        val lamp: () -> MotorBackground.Lamp?,
     )
 
     companion object {
@@ -61,17 +61,15 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
         private const val SIDE_GAUGE = 0.5
         private const val KNOB = 0.36
 
-        /** The hole and the screen, as tiles wide and as shares of a tile high. */
-        private const val HOLE_TILES = 3.0
+        /** The hole's and the screen's heights, as shares of a tile; they are as wide as the board's plate. */
         private const val HOLE_HEIGHT = 0.42
-        private const val SCREEN_TILES = 3.0
         private const val SCREEN_HEIGHT = 0.8
 
         /**
          * The margin left and right of the hole and the screen inside the board's plate, as a share of a tile (the
          * maintainer, 2026-10-29: "Keep a left and right margin").
          */
-        private const val SIDE_MARGIN = 0.15
+        const val SIDE_MARGIN = 0.15
 
         /** How far the hole's and the screen's corners are cut, as a large screen's (KlangScreen.Size.Large). */
         private const val CUT_PX = 14
@@ -102,13 +100,13 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
      * on the board's element, no redraw.
      */
     private fun followLight() {
-        val bg = props.background()
+        val lamp = props.lamp()
         val style = (dom as? HTMLElement)?.style
 
-        if (bg != null && style != null) {
-            style.setProperty("--kl-glass-x", bg.lightX.toString())
-            style.setProperty("--kl-glass-y", bg.lightY.toString())
-            style.setProperty("--kl-glass-light", bg.lightLevel.coerceIn(0.0, 2.0).toString())
+        if (lamp != null && style != null) {
+            style.setProperty("--kl-glass-x", lamp.x.toString())
+            style.setProperty("--kl-glass-y", lamp.y.toString())
+            style.setProperty("--kl-glass-light", lamp.level.coerceIn(0.0, 2.0).toString())
         }
 
         lightFrame = window.requestAnimationFrame { followLight() }
@@ -156,7 +154,9 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
     override fun VDom.render() {
         val height = window.innerHeight.toDouble()
         val tile = MotorBackground.tileWidthPx(height)
-        val top = MotorBackground.titlePlateBottomShare(height) * height
+        // The plate the texture draws under the scope and the spectrum; the gauges' row runs above it
+        val plate = MotorBackground.boardPlateOnScreen(screenWidth = window.innerWidth.toDouble(), screenHeight = height)
+        val top = plate.top - tile
 
         div {
             key = "visuals-board"
@@ -178,8 +178,8 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
             // A tile row each, the content in its middle, the hole and the screen three tiles wide on the middle three
             // (the maintainer, 2026-10-29: "align the osci and spectrum to the tiles")
             renderGauges(tile)
-            tileRow(tile, "hole-row") { renderHole(tile) }
-            tileRow(tile, "screen-row") { renderScreen(tile) }
+            tileRow(tile, "hole-row") { renderHole(tile = tile, width = plate.width) }
+            tileRow(tile, "screen-row") { renderScreen(tile = tile, width = plate.width) }
         }
     }
 
@@ -247,14 +247,14 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
      * The scope in a hole cut into the plate: a dark recess, its rim catching the light, its inside lit by the signal
      * in the scope's own colour, brighter the louder.
      */
-    private fun FlowContent.renderHole(tile: Double) {
+    private fun FlowContent.renderHole(tile: Double, width: Double) {
         val glow = (signal ?: 0.0) * 100
 
         div {
             key = "hole"
             css {
                 put("position", "relative")
-                put("width", "${tile * (HOLE_TILES - 2 * SIDE_MARGIN)}px")
+                put("width", "${width - 2 * SIDE_MARGIN * tile}px")
                 put("height", "${tile * HOLE_HEIGHT}px")
                 // Cut corners, as the screens have, not round ones (the maintainer, 2026-10-29: "do not use round
                 // corners but the triangle again")
@@ -293,7 +293,7 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
      * its light (`--kl-glass-light`). The middle stays clear, so the scope and the spectrum read through it.
      */
     private fun FlowContent.glassDome() {
-        div {
+        div(classes = "kl-glass-dome") {
             attributes["aria-hidden"] = "true"
             css {
                 put("position", "absolute")
@@ -324,12 +324,12 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
     }
 
     /** The spectrum on a screen of its own, the editor's kind: a well with cut corners. */
-    private fun FlowContent.renderScreen(tile: Double) {
+    private fun FlowContent.renderScreen(tile: Double, width: Double) {
         div {
             key = "screen"
             css {
                 put("display", "flex")
-                put("width", "${tile * (SCREEN_TILES - 2 * SIDE_MARGIN)}px")
+                put("width", "${width - 2 * SIDE_MARGIN * tile}px")
                 put("height", "${tile * SCREEN_HEIGHT}px")
             }
 
@@ -338,6 +338,8 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
             div {
                 css {
                     put("flex", "1")
+                    // As wide as the screen and no wider: the spectrum's canvas would push it out on a small window
+                    put("min-width", "0")
                     put("min-height", "0")
                     put("position", "relative")
                     // Room under the spectrum's floor too, as at its sides (the maintainer, 2026-10-29)

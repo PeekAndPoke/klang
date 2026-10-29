@@ -138,7 +138,7 @@ class VisualsScreen(ctx: NoProps) : PureComponent(ctx) {
 
             // The Motor laid out on the plate: the gauges on the tiles, the scope in a hole, the spectrum on a screen
             // (the maintainer, 2026-10-29); its menu button leaves the visual
-            VisualsBoard(onLeave = { close() }, background = { background() })
+            VisualsBoard(onLeave = { close() }, lamp = { background()?.lamp })
 
             // The close key: Esc always (it answers while mounted), the pill only after the mouse moved
             button(type = ButtonType.button) {
