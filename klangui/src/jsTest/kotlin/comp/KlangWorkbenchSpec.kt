@@ -9,6 +9,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.peekandpoke.klang.ui.GuiDance
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.workshop.keys.KeyPlatform
 import io.peekandpoke.klang.workshop.keys.KeysManager
@@ -1304,4 +1305,69 @@ class KlangWorkbenchSpec : StringSpec({
             root.q(".${styles.workbenchFloating}") shouldNotBe null
         }
     }
+
+    /** A bench whose bottom panel's key and its Terms tab are a walkthrough's first two steps. */
+    fun VDom.guidedBench(dance: GuiDance, layout: KlangWorkbench.Layout? = null) {
+        KlangWorkbench(
+            column = { span { +"COLUMN" } },
+            motor = { _ -> span { +"MOTOR" } },
+            content = { span { +"CONTENT" } },
+            bottom = KlangWorkbench.Bottom(
+                title = "Help",
+                icon = { question_circle },
+                beaconStep = "bench.bottom",
+                tabs = listOf(
+                    KlangWorkbench.Tab(id = "help", title = "Quick") { +"HELP BODY" },
+                    KlangWorkbench.Tab(id = "terms", title = "Terms", beaconStep = "bench.terms") { +"TERMS BODY" },
+                ),
+            ),
+            layout = layout,
+            guiDance = dance,
+        )
+    }
+
+    fun guide() = GuiDance(
+        arcs = listOf(GuiDance.Arc(id = "bench", title = "Bench", steps = listOf("bench.bottom", "bench.terms", "after"))),
+        store = GuiDance.MemoryStore(),
+    )
+
+    fun HTMLElement.lit(): Boolean = styles.beacon.toString() in className.split(" ")
+
+    "a walkthrough lights the bottom panel's key, then its tab: opened and shown, each step is used" {
+        val dance = guide()
+
+        keyedBed(view = { guidedBench(dance) }) { root ->
+            val bench = root.single()
+
+            eventually { bench.q("button[aria-label='Help']")!!.lit() shouldBe true }
+
+            bench.q("button[aria-label='Help']")!!.click()
+
+            eventually { dance.lit() shouldBe "bench.terms" }
+
+            /** The bottom panel's tab key titled [title]; null while the panel is not drawn. */
+            fun tab(title: String): HTMLElement? {
+                val tabs = bench.querySelectorAll(".${styles.toolWindowTab}")
+
+                return (0 until tabs.length).map { tabs.item(it) as HTMLElement }.firstOrNull { it.textContent == title }
+            }
+
+            eventually { tab("Terms")!!.lit() shouldBe true }
+
+            tab("Terms")!!.click()
+
+            eventually { dance.lit() shouldBe "after" }
+        }
+    }
+
+    "a step already satisfied counts as used: the panel open and its tab shown skip theirs" {
+        // Pressing the lit key would only close the open panel (the maintainer, 2026-10-29)
+        val dance = guide()
+        val open = KlangWorkbench.Layout(bottomOpen = true, bottomPinned = true, bottomTab = "terms")
+
+        keyedBed(view = { guidedBench(dance, layout = open) }) {
+            eventually { dance.lit() shouldBe "after" }
+        }
+    }
 })
+

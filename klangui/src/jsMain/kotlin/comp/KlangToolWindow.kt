@@ -71,7 +71,8 @@ class KlangToolWindow(ctx: Ctx<Props>) : Component<KlangToolWindow.Props>(ctx) {
     }
 
     /** One of the window's tabs: its [id], and its [title] in the header. */
-    data class Tab(val id: String, val title: String)
+    /** A tab of the window's header; a [beacon] lights its key, a walkthrough's step ([io.peekandpoke.klang.ui.GuiDance]). */
+    data class Tab(val id: String, val title: String, val beacon: Boolean = false)
 
     data class Props(
         val title: String,
@@ -151,7 +152,9 @@ class KlangToolWindow(ctx: Ctx<Props>) : Component<KlangToolWindow.Props>(ctx) {
             attributes["aria-label"] = props.title
 
             for (tab in props.tabs) {
-                button(type = ButtonType.button, classes = styles.toolWindowTab.toString()) {
+                val classes = listOfNotNull(styles.toolWindowTab, styles.beacon.takeIf { tab.beacon })
+
+                button(type = ButtonType.button, classes = classes.joinToString(" ")) {
                     attributes["aria-pressed"] = (tab == shown).toString()
                     onClick { props.onTab?.invoke(tab.id) }
                     +tab.title

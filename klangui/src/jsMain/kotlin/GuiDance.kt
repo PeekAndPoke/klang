@@ -75,13 +75,17 @@ class GuiDance(
     /** The step of the current arc that is lit; back to its start on every visit. */
     private var stepIndex = 0
 
+    /** An arc started out of its order ([start]): the current one until it is done; null for the order. */
+    private var started: String? = null
+
     private val litSource = StreamSource(litStep())
 
     /** The step lit now: the current arc's current step; null while muted, or once every arc is done. */
     val lit: Stream<String?> = litSource
 
-    /** The arc being danced now, or null once every arc is done. */
-    fun currentArc(): Arc? = arcs.firstOrNull { it.id !in done }
+    /** The arc being danced now: one [start]ed, else the first not done in the order; null once every arc is done. */
+    fun currentArc(): Arc? =
+        started?.let { id -> arcs.firstOrNull { it.id == id && it.id !in done } } ?: arcs.firstOrNull { it.id !in done }
 
     /** The arcs done, in their order. */
     fun doneArcs(): List<Arc> = arcs.filter { it.id in done }
@@ -108,6 +112,8 @@ class GuiDance(
         if (stepIndex == arc.steps.size) {
             done = done + arc.id
             stepIndex = 0
+            // A started arc done, the order goes on
+            started = null
             store.saveDone(done)
             onArcDone(arc)
         }
@@ -133,6 +139,53 @@ class GuiDance(
         if (currentArc() != before) {
             stepIndex = 0
         }
+
+        litSource(litStep())
+    }
+
+    /**
+     * Marks the arc [arcId] done without dancing it (the maintainer, 2026-10-29: a walkthrough's card links
+     * "Complete / Reopen"): the next arc in the order lights up when it was the current one. A done or unknown arc
+     * changes nothing.
+     */
+    fun complete(arcId: String) {
+        val arc = arcs.firstOrNull { it.id == arcId } ?: return
+
+        if (arc.id in done) {
+            return
+        }
+
+        val before = currentArc()
+
+        done = done + arc.id
+        store.saveDone(done)
+
+        if (started == arc.id) {
+            started = null
+        }
+
+        if (currentArc() != before) {
+            stepIndex = 0
+        }
+
+        litSource(litStep())
+    }
+
+    /**
+     * Starts the arc [arcId] now, from its first step, done or to come, wherever it stands in the order (the maintainer,
+     * 2026-10-29: "add a "start tour" button ... to each tour"). It is the current arc until it is done; then the order
+     * goes on. A mute is the caller's to lift. An unknown id changes nothing.
+     */
+    fun start(arcId: String) {
+        val arc = arcs.firstOrNull { it.id == arcId } ?: return
+
+        if (arc.id in done) {
+            done = done - arc.id
+            store.saveDone(done)
+        }
+
+        started = arc.id
+        stepIndex = 0
 
         litSource(litStep())
     }

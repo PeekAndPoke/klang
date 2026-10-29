@@ -196,4 +196,65 @@ class GuiDanceSpec : StringSpec({
         dance.lit() shouldBe "song.play"
         store.loadMutedUntil() shouldBe 0.0
     }
+
+    "a started arc is lit at once from its first step, out of its order; done, the order goes on" {
+        val store = GuiDance.MemoryStore()
+        val dance = GuiDance(arcs = arcs, store = store)
+
+        dance.used("song.play")
+        dance.start("docs")
+
+        dance.currentArc()?.id shouldBe "docs"
+        dance.lit() shouldBe "motor.menu"
+
+        dance.used("motor.menu")
+        dance.used("drawer.docs")
+
+        store.loadDone() shouldBe setOf("docs")
+        // Back to the order, the first arc from its start
+        dance.currentArc()?.id shouldBe "first-song"
+        dance.lit() shouldBe "song.play"
+    }
+
+    "a finished arc started again is taken back from the done ones and lit from its first step" {
+        val store = GuiDance.MemoryStore(done = setOf("first-song", "docs"))
+        val dance = GuiDance(arcs = arcs, store = store)
+
+        dance.lit() shouldBe null
+
+        dance.start("first-song")
+
+        store.loadDone() shouldBe setOf("docs")
+        dance.lit() shouldBe "song.play"
+    }
+
+    "starting an unknown arc changes nothing" {
+        val dance = GuiDance(arcs = arcs, store = GuiDance.MemoryStore())
+
+        dance.start("nothing")
+
+        dance.lit() shouldBe "song.play"
+    }
+
+    "an arc completed without dancing it is kept done, and the next one lights up" {
+        val store = GuiDance.MemoryStore()
+        val dance = GuiDance(arcs = arcs, store = store)
+
+        dance.used("song.play")
+        dance.complete("first-song")
+
+        store.loadDone() shouldBe setOf("first-song")
+        dance.lit() shouldBe "motor.menu"
+        dance.currentArc()?.id shouldBe "docs"
+    }
+
+    "completing an arc that is not the current one leaves the current one where it is" {
+        val dance = GuiDance(arcs = arcs, store = GuiDance.MemoryStore())
+
+        dance.used("song.play")
+        dance.complete("docs")
+
+        dance.lit() shouldBe "motor.menu"
+        dance.currentArc()?.id shouldBe "first-song"
+    }
 })

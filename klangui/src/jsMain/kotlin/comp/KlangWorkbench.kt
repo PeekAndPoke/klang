@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.ui.comp
 
+import io.peekandpoke.klang.ui.GuiDance
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
@@ -17,6 +18,8 @@ import io.peekandpoke.ultra.html.onPointerDown
 import io.peekandpoke.ultra.html.onPointerMove
 import io.peekandpoke.ultra.html.onPointerUp
 import io.peekandpoke.ultra.semanticui.SemanticIconFn
+import io.peekandpoke.ultra.streams.Stream
+import io.peekandpoke.ultra.streams.StreamSource
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.html.DIV
@@ -44,6 +47,7 @@ fun Tag.KlangWorkbench(
     markLink: KlangWorkbench.Link? = null,
     layout: KlangWorkbench.Layout? = null,
     onLayout: ((KlangWorkbench.Layout) -> Unit)? = null,
+    guiDance: GuiDance? = null,
 ) = comp(
     KlangWorkbench.Props(
         column = column,
@@ -57,6 +61,7 @@ fun Tag.KlangWorkbench(
         markLink = markLink,
         layout = layout,
         onLayout = onLayout,
+        guiDance = guiDance,
     )
 ) {
     KlangWorkbench(it)
@@ -129,16 +134,22 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
         val title: String,
         val icon: SemanticIconFn,
         val tabs: List<Tab>,
+        /** The walkthrough's step its key stands for: lit, the key wears the beacon; the panel opened uses it. */
+        val beaconStep: String? = null,
     ) {
         init {
             require(tabs.isNotEmpty()) { "The bottom panel $title has no tabs" }
         }
     }
 
-    /** One of the bottom panel's tabs: its [id] (kept with the layout), its [title] in the header, its [content]. */
+    /**
+     * One of the bottom panel's tabs: its [id] (kept with the layout), its [title] in the header, its [content]; the
+     * walkthrough's step its key stands for, [beaconStep]: lit, the key wears the beacon; the tab shown uses it.
+     */
     data class Tab(
         val id: String,
         val title: String,
+        val beaconStep: String? = null,
         val content: DIV.() -> Unit,
     )
 
@@ -167,6 +178,12 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
         val layout: Layout?,
         /** Gets the layout whenever it changed, to keep it; a drag of the bottom panel reports once, at its end. */
         val onLayout: ((Layout) -> Unit)?,
+        /**
+         * The app's walkthroughs: the bottom panel's key and its tabs wear the beacon while their step is lit
+         * ([Bottom.beaconStep], [Tab.beaconStep]), and report the step used when the panel opens or the tab shows; null
+         * for none.
+         */
+        val guiDance: GuiDance?,
     )
 
     /**
@@ -209,6 +226,44 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
     /** The bottom panel's tab shown, by its id; the first when null, or when the panel has no such tab. */
     private var bottomTab: String? by value(props.layout?.bottomTab)
 
+    /** The walkthroughs' step lit now; the beacons on the bottom panel's key and its tabs follow it. */
+    private val litStep: String? by subscribingTo(props.guiDance?.lit ?: NoStepLit) { useSatisfied() }
+
+    /**
+     * A step already satisfied counts as used (the maintainer, 2026-10-29: "when the toolbox is open and the tour wants
+     * me to click the icon it hides the tools ... preconditions to skip a step, f.e. when the tools are already open?"):
+     * the bottom panel's key while the panel is open, a tab's key while it shows. Reported a moment later, outside the
+     * notification or the update that found it, so a run of satisfied steps does not nest.
+     */
+    private fun useSatisfied() {
+        if (litStep == null || props.bottom == null) {
+            return
+        }
+
+        window.setTimeout({
+            val step = litStep ?: return@setTimeout
+            val bottom = props.bottom ?: return@setTimeout
+
+            if (!bottomOpen) {
+                return@setTimeout
+            }
+
+            val shown = bottom.tabs.firstOrNull { it.id == bottomTab } ?: bottom.tabs.first()
+
+            if (step == bottom.beaconStep || step == shown.beaconStep) {
+                used(step)
+            }
+        }, 0)
+    }
+
+    /** Whether [step] is the walkthroughs' lit one. */
+    private fun lit(step: String?): Boolean = step != null && step == litStep
+
+    /** Reports [step] used to the walkthroughs, when there is one. */
+    private fun used(step: String?) {
+        step?.let { props.guiDance?.used(it) }
+    }
+
     /** The layout as last reported (or started with), so a redraw that changed nothing of it reports nothing. */
     private var reported: Layout = props.layout ?: Layout()
 
@@ -232,7 +287,10 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
         openWaitingTool(props.tools)
 
         lifecycle {
-            onUpdate { reportLayout() }
+            onUpdate {
+                reportLayout()
+                useSatisfied()
+            }
 
             // A tool window or a drawer that leaves the props closes, so it does not open again by itself when it comes
             // back; a pinned one waits for it, as it would after a reload (a page left and come back to)
@@ -373,6 +431,7 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
     private fun openBottom() {
         focusBeforeBottom = document.activeElement as? HTMLElement
         bottomOpen = true
+        used(props.bottom?.beaconStep)
     }
 
     /** Closes the bottom panel (its toggle, its close button; Esc when it flies in); a focus lost with it goes back. */
@@ -576,6 +635,7 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
                                 label = bottom.title,
                                 on = bottomOpen,
                                 large = true,
+                                beacon = lit(bottom.beaconStep),
                                 onClick = { if (bottomOpen) closeBottom() else openBottom() },
                             )
                         }
@@ -693,9 +753,12 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
             // Flying in, Esc closes it through the key manager; pinned, it is part of the bench
             closeOnEsc = !bottomPinned,
             edge = KlangToolWindow.Edge.Bottom,
-            tabs = bottom.tabs.map { KlangToolWindow.Tab(id = it.id, title = it.title) },
+            tabs = bottom.tabs.map { KlangToolWindow.Tab(id = it.id, title = it.title, beacon = lit(it.beaconStep)) },
             selectedTab = bottomTab,
-            onTab = { id -> bottomTab = id },
+            onTab = { id ->
+                bottomTab = id
+                used(bottom.tabs.firstOrNull { it.id == id }?.beaconStep)
+            },
         ) {
             val shown = bottom.tabs.firstOrNull { it.id == bottomTab } ?: bottom.tabs.first()
 
@@ -729,3 +792,6 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
         }
     }
 }
+
+/** No walkthroughs: no step is ever lit. */
+private val NoStepLit: Stream<String?> = StreamSource(null)
