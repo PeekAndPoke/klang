@@ -22,8 +22,8 @@ import * from "sprudel"
 // Song Status: Upcoming Garage Band ...
 
 let feel          =    5    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
-let transposition =   -3    // -1 .. D# | 0 .. E | 1 .. F
-let drunk         =    1    // How many beers did each band member have?
+let transposition =   -2    // -1 .. D# | 0 .. E | 1 .. F
+let drunk         =  0.8    // How many liters of beers did each band member have?
 let snareHz       =  205    // Where does the snare cut through?
 
 // Guitar rig  ------------------------------------------------------------------------------------------------------------------------------------------------
@@ -123,9 +123,9 @@ let cabStock = Ign.fn(x => x.lowpass(5000).lowpass(5000))
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = Ign.fn(x => x
   .eq(e => e
-    .band(freq =  120, q = 0.7, db =  2.20)        // thump: closed-back box resonance
-    .band(freq =  380, q = 0.5, db =  4.30)        // roar:  low mids
-    .band(freq = 2700, q = 1.7, db =  4.20)        // bark:  the upper-mid speaker peak
+    .band(freq =  120, q = 0.7, db =  1.50)        // thump: closed-back box resonance
+    .band(freq =  400, q = 0.5, db =  2.50)        // roar:  low mids
+    .band(freq = 2700, q = 1.7, db =  2.50)        // bark:  the upper-mid speaker peak
   )
   .lowpass(4980, 0.707, x => x.passes(3))          // the wall: 36 dB/oct, the fizz is gone
   .highpass(80, 0.707, x => x.passes(2)))
@@ -170,11 +170,11 @@ let makeGuitar = (rig) => {
 
   let saw = Ign.supersaw(x => x.voices(pVoices).spread(pSpread)
     // enable the phase-pool for consistent onsets and fundamentals
-    .phasePool(on = 1, kMin = 0.75, kMax = 0.975, warmup = 0, selection = "normal")
+    .phasePool(on = 1, kMin = 0.70, kMax = 0.90, warmup = 0, selection = "normal")
     // character knobs, plain scalars on the supersaw builder
-    .spreadPower(1.0).sideAtten(0.5).gainJitter(0.30).centerJitter(0.30)
+    .spreadPower(1.0).sideAtten(0.5).gainJitter(0.10).centerJitter(0.50)
     // analog settings
-    .analog(pAnalog).analogSpread(0.15)
+    .analog(pAnalog).analogSpread(0.05)
   )
  
   let signal = saw.mul(Ign.slot.pregain)
@@ -191,7 +191,7 @@ let makeGuitar = (rig) => {
   // frequency, and a filter that moves with every note gave every note the same shape, which the ear reads as
   // synthetic (2026-09-14)
   return rig(signal)
-    .mul(0.15)
+    .mul(0.20)
     .classic()
 }
 
@@ -373,7 +373,7 @@ let gummiEimer = (() => {
   let beater = Ign.whitenoise().adsr(0.0005, 0.035, 0.0, 0.015).lowpass(1500).mul(6.00)    
  
   return head.plus(harms).plus(m2).plus(m3).plus(beater)
-    .distort(0.80, "softsat", 2)
+    .distort(0.50, "soft", 2)
     .mul(0.1)
     .classic()
 })()
@@ -383,11 +383,11 @@ export trommel_pat = `<[~ 0 1 ~  0 ~ 2 ~] [0 ~ 0 -4  -3 ~ -1 ~] [~ 0 -1 0  ~ 0 ~
 
 export trommel_shape = x => x.sound(gummiEimer).adsrOff() // .solo()
   .velocity("1.0 0.8 0.9 0.8".sub(perlin(0.0, 0.02))).body(material = "membrane", wet = 0.4)
-  .hpf(550).lpf("1800".add(perlin(-100, 100).fast(4))).clip(1.5)
+  .hpf(600).lpf("2500".add(perlin(-100, 100).fast(4))).clip(1.0)
   .pan(0.40).superimpose(pan(0.60))
 
 export trommel_arrange = x => x.orbit(5) // .solo(0.5)
-  .scale("e4:minor").gain(0.17)
+  .scale("e5:minor").gain(0.22)
   .mute("<1!96 0!32>")                          
   .late(berlin(0.0030, 0.0045).seed(100).mul(drunk).fast(4))
 
@@ -536,7 +536,7 @@ export song = stack(
   , // Master
   master(Katalyst(k => k
     .reverb(0.10, 7, 4500)
-    .gain(4.2)
+    .gain(4.0)
     .bands(b => b
       .band(low => low.distort(0.01, "soft", 4).mul(1.00)).cut(150)
       .band(mid => mid.distort(0.15, "soft", 4).mul(0.90)).cut(5000)
