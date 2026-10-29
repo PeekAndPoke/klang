@@ -24,6 +24,7 @@ import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlinx.html.span
 import kotlinx.html.title
+import kotlin.math.floor
 import kotlin.math.roundToInt
 
 @Suppress("FunctionName")
@@ -76,24 +77,20 @@ class MotorHistoryGraphs(ctx: NoProps) : PureComponent(ctx) {
          */
         private fun overBudget(color: String): String = "color-mix(in srgb, $color 40%, #ff3b30)"
 
-        /** A graph that scales itself never ends lower than this. */
-        private const val LEAST_TOP = 5.0
+        /** A graph's scale goes in steps of this. */
+        private const val SCALE_STEP = 20.0
 
         /**
-         * Where a graph ends: a round number (1, 2 or 5 times a power of ten) a little over
-         * the highest value in view, at least [LEAST_TOP] (the maintainer, 2026-10-29: "Can the voices / cylinders
-         * graph scale with the max-value on the fly?"). Round, so the scale does not move with every reading.
+         * Where a graph ends: the multiple of [SCALE_STEP] above the highest value in view, so the line never touches the
+         * top and the scale moves only in whole steps (the maintainer, 2026-10-29: "Can the voices / cylinders graph scale
+         * with the max-value on the fly?", then "make the scaling in full multiples of 20... the multiple of 20 above the
+         * current max on the graph"). A quiet graph ends at the first step.
          */
         fun topFor(highest: Double): Double {
-            // NaN-guard: no values, or none above nought, take the least top
-            val wanted = (highest * 1.1).takeIf { it > LEAST_TOP } ?: return LEAST_TOP
-            var power = 1.0
+            // NaN-guard: no values, or none above nought, take the first step
+            val value = highest.takeIf { it > 0.0 } ?: return SCALE_STEP
 
-            while (power * 10 <= wanted) {
-                power *= 10
-            }
-
-            return listOf(1.0, 2.0, 5.0, 10.0).map { it * power }.first { it >= wanted }
+            return (floor(value / SCALE_STEP) + 1) * SCALE_STEP
         }
     }
 

@@ -8,20 +8,22 @@ package io.peekandpoke.klang.comp
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 
-/** A graph without a range of its own scales to the highest value in view: a round top, a little over it. */
+/** A graph scales to the highest value in view: the multiple of 20 above it. */
 class MotorHistoryGraphsSpec : StringSpec({
 
-    "the top is the next round number a little over the highest value" {
-        MotorHistoryGraphs.topFor(9.0) shouldBe 10.0
-        MotorHistoryGraphs.topFor(12.0) shouldBe 20.0
-        MotorHistoryGraphs.topFor(23.0) shouldBe 50.0
-        MotorHistoryGraphs.topFor(46.0) shouldBe 100.0
-        MotorHistoryGraphs.topFor(150.0) shouldBe 200.0
+    "the top is the multiple of 20 above the highest value" {
+        MotorHistoryGraphs.topFor(9.0) shouldBe 20.0
+        MotorHistoryGraphs.topFor(23.0) shouldBe 40.0
+        MotorHistoryGraphs.topFor(46.0) shouldBe 60.0
+        MotorHistoryGraphs.topFor(150.0) shouldBe 160.0
     }
 
-    "a quiet graph ends at the least top, not on its noise" {
-        MotorHistoryGraphs.topFor(0.0) shouldBe 5.0
-        MotorHistoryGraphs.topFor(3.0) shouldBe 5.0
-        MotorHistoryGraphs.topFor(Double.NaN) shouldBe 5.0
+    "a value right on a multiple gets the next one: the line never touches the top" {
+        MotorHistoryGraphs.topFor(40.0) shouldBe 60.0
+    }
+
+    "a quiet graph ends at the first step" {
+        MotorHistoryGraphs.topFor(0.0) shouldBe 20.0
+        MotorHistoryGraphs.topFor(Double.NaN) shouldBe 20.0
     }
 })
