@@ -144,6 +144,10 @@ For the design step, to agree with the maintainer. One area at a time, each a co
    its owner), the `Player.status` leak fixed; `KlangampDeck`'s start time moves with it.
 6. **The diagnostics' history** kept only while someone reads it, or kept cheaply (decide with the Motor window).
 
+Decided: the parts keep their `paused: Stream<Boolean>` prop, `UiWork.resting` by default; the layout passes more where a
+part rests for more (the workbench's Motor under a visual). Not a Kraft attribute for it (the maintainer, 2026-10-29:
+"i think it is fine as is for testing ... Let's keep it").
+
 Questions for the maintainer: the name (`Player` or `Playback` in the Spine); whether the Spine reaches the UI as a
 Kraft attribute or as globals (today almost everything is a global); whether `ensure()` stays a call from the key's
 click (it must run inside a user gesture).
