@@ -41,6 +41,7 @@ fun FlowContent.VisualPreview(visual: VisualsScreen.Visual) {
                     VisualsScreen.Visual.Plate -> PLATE
                     VisualsScreen.Visual.Klangamp -> KLANGAMP
                     VisualsScreen.Visual.KlangampTiles -> KLANGAMP_TILES
+                    VisualsScreen.Visual.KlangampRain -> KLANGAMP_RAIN
                 },
             )
         }
@@ -164,4 +165,42 @@ private val KLANGAMP_TILES = """
     <path d="M10 29 L64 29" stroke-width="0.6"/><text x="10" y="26" font-size="8" fill="$INK" stroke="none">gauges</text>
     <path d="M178 47 L230 47" stroke-width="0.6"/><text x="180" y="44" font-size="8" fill="$INK" stroke="none">scope+spectrum</text>
     <path d="M178 75 L230 75" stroke-width="0.6"/><text x="180" y="72" font-size="8" fill="$INK" stroke="none">playlist</text>
+""".trimIndent()
+
+/** Klang Amp's column of tiles on the left; on the right a tall display, the voices falling down it as letters. */
+private val KLANGAMP_RAIN = """
+    <rect x="22" y="3" width="95" height="16" fill="$MARKER" stroke="none"/>
+    <rect x="22" y="3" width="95" height="16"/>
+    <text x="69" y="15" font-size="9" text-anchor="middle" letter-spacing="1" fill="$INK" stroke="none">KLANG AMP</text>
+    <rect x="22" y="21" width="95" height="16"/>
+    <circle cx="32" cy="29" r="3"/><circle cx="50" cy="29" r="4"/><circle cx="69" cy="29" r="5"/>
+    <circle cx="88" cy="29" r="4"/><circle cx="106" cy="29" r="3"/>
+    <rect x="22" y="39" width="95" height="16"/>
+    <path d="M26 42 L66 42 L66 52 L26 52 Z"/><path d="M28 47 Q32 43 36 47 T44 47 T52 47 T60 47 T64 47"/>
+    <path d="M73 42 L113 42 L113 52 L73 52 Z"/>
+    <path d="M77 51 L77 47 M81 51 L81 45 M85 51 L85 46 M89 51 L89 44 M93 51 L93 47 M97 51 L97 45 M101 51 L101 48 M105 51 L105 46 M109 51 L109 49"/>
+    <rect x="22" y="57" width="95" height="36"/>
+    <rect x="26" y="66" width="87" height="6" fill="$MARKER" stroke="none"/>
+    <path d="M28 64 L70 64 M28 70 L80 70 M28 76 L64 76 M28 82 L74 82 M28 88 L58 88" stroke-width="0.7"/>
+    <rect x="121" y="3" width="76" height="90"/>
+    <text x="132" y="24" font-size="8" text-anchor="middle" fill="$INK" stroke="none" opacity="0.55">c</text>
+    <text x="132" y="33" font-size="8" text-anchor="middle" fill="$INK" stroke="none" opacity="1">4</text>
+    <path d="M132 8 L132 16" stroke-width="0.5" stroke-dasharray="1 2"/>
+    <text x="146" y="40" font-size="8" text-anchor="middle" fill="$INK" stroke="none" opacity="0.55">b</text>
+    <text x="146" y="49" font-size="8" text-anchor="middle" fill="$INK" stroke="none" opacity="1">d</text>
+    <path d="M146 24 L146 32" stroke-width="0.5" stroke-dasharray="1 2"/>
+    <text x="160" y="18" font-size="8" text-anchor="middle" fill="$INK" stroke="none" opacity="0.55">e</text>
+    <text x="160" y="27" font-size="8" text-anchor="middle" fill="$INK" stroke="none" opacity="0.55">b</text>
+    <text x="160" y="36" font-size="8" text-anchor="middle" fill="$INK" stroke="none" opacity="1">3</text>
+    <path d="M160 6 L160 10" stroke-width="0.5" stroke-dasharray="1 2"/>
+    <text x="174" y="50" font-size="8" text-anchor="middle" fill="$INK" stroke="none" opacity="0.55">s</text>
+    <text x="174" y="59" font-size="8" text-anchor="middle" fill="$INK" stroke="none" opacity="0.55">a</text>
+    <text x="174" y="68" font-size="8" text-anchor="middle" fill="$INK" stroke="none" opacity="1">w</text>
+    <path d="M174 34 L174 42" stroke-width="0.5" stroke-dasharray="1 2"/>
+    <text x="188" y="32" font-size="8" text-anchor="middle" fill="$INK" stroke="none" opacity="0.55">g</text>
+    <text x="188" y="41" font-size="8" text-anchor="middle" fill="$INK" stroke="none" opacity="1">2</text>
+    <path d="M188 16 L188 24" stroke-width="0.5" stroke-dasharray="1 2"/>
+    <path d="M200 30 Q214 26 222 34 M200 30 L204 27 M200 30 L204 33" stroke-width="0.8"/>
+    <text x="206" y="48" font-size="8" fill="$INK" stroke="none">voices</text>
+    <text x="206" y="58" font-size="8" fill="$INK" stroke="none">falling</text>
 """.trimIndent()

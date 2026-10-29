@@ -15,6 +15,10 @@ object VisualsCompositions {
     const val AMP = "amp"
     const val SCOPE_SPECTRUM = "scope-spectrum"
     const val PLAYLIST = "playlist"
+    const val RAIN = "rain"
+
+    /** Where Klang Amp's column starts when the rain's display stands beside it: the two together round the middle. */
+    private const val AMP_LEFT = -4.5
 
     /**
      * The Motor's plate: the start page's, its title where the start page's stands, and under the gauges one plate
@@ -52,6 +56,26 @@ object VisualsCompositions {
                 PlacedTile.centred(id = PlateComposition.GAUGES, row = 1, columns = 5),
                 PlacedTile.centred(id = SCOPE_SPECTRUM, row = 2, columns = 5),
                 PlacedTile.centred(id = PLAYLIST, row = 3, columns = 5, rows = 2),
+            ),
+            rows = 5,
+            bareOutside = true,
+        )
+    }
+
+    /**
+     * Klang Amp's tiles moved to the left, and on the right a display as high as they are, the voices falling down it
+     * (the maintainer, 2026-10-29: "take the third (Klang amp on tiles), move it entirely to the left and add a big
+     * "display" on the right. This display will show the voice played falling from the top text vertically, matrix
+     * style"): nine tiles wide together, round the middle, the window round them black.
+     */
+    val klangampRain: PlateComposition by lazy {
+        PlateComposition(
+            tiles = listOf(
+                PlacedTile.title("KLANG AMP", columns = 5).copy(left = AMP_LEFT),
+                PlacedTile.centred(id = PlateComposition.GAUGES, row = 1, columns = 5).copy(left = AMP_LEFT),
+                PlacedTile.centred(id = SCOPE_SPECTRUM, row = 2, columns = 5).copy(left = AMP_LEFT),
+                PlacedTile.centred(id = PLAYLIST, row = 3, columns = 5, rows = 2).copy(left = AMP_LEFT),
+                PlacedTile(id = RAIN, left = AMP_LEFT + 5, row = 0, columns = 4, rows = 5),
             ),
             rows = 5,
             bareOutside = true,

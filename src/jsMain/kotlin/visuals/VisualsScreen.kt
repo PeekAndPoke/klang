@@ -76,6 +76,13 @@ class VisualsScreen(ctx: NoProps) : PureComponent(ctx) {
             description = "A player built from the plate's tiles: gauges, scope and spectrum, playlist",
             composition = { VisualsCompositions.klangampTiles },
         ),
+
+        /** Klang Amp's tiles on the left, the voices falling down a big display on the right. */
+        KlangampRain(
+            title = "Klang Amp rain",
+            description = "Klang Amp's tiles, and the voices falling down a big display beside them",
+            composition = { VisualsCompositions.klangampRain },
+        ),
     }
 
     companion object {
@@ -87,6 +94,9 @@ class VisualsScreen(ctx: NoProps) : PureComponent(ctx) {
 
         /** What Klang Amp tiles shows under its parts; its Motor button steps through them, kept while the app runs. */
         val klangampTiles = StreamSource(TilesState.Tiles)
+
+        /** What the voices drop in Klang Amp rain; its Motor button steps through them, kept while the app runs. */
+        val rainText = StreamSource(VoiceRain.Text.Note)
     }
 
     /**
@@ -196,6 +206,8 @@ private class VisualsModal(ctx: Ctx<Props>) : FadingModal<VisualsModal.Props, Bo
 
     private val tilesState by subscribingTo(VisualsScreen.klangampTiles)
 
+    private val rainText by subscribingTo(VisualsScreen.rainText)
+
     private var hideTimer: Int? = null
 
     /** The visual's own background, not the start page's shared one. */
@@ -269,8 +281,12 @@ private class VisualsModal(ctx: Ctx<Props>) : FadingModal<VisualsModal.Props, Bo
                 lamp = { background()?.lamp },
                 // Klang Amp tiles: the Motor button steps through its tiles, its title alone, nothing (the maintainer,
                 // 2026-10-29)
+                rainText = rainText,
                 onMotorButton = when (props.visual) {
                     VisualsScreen.Visual.KlangampTiles -> { -> VisualsScreen.klangampTiles(tilesState.next) }
+                    // Klang Amp rain: what falls, the notes, the sounds, the code (the maintainer, 2026-10-29: "What
+                    // could the Motor-Button do here?")
+                    VisualsScreen.Visual.KlangampRain -> { -> VisualsScreen.rainText(rainText.next) }
                     else -> { -> close() }
                 },
             )

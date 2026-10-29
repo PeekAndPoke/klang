@@ -42,8 +42,15 @@ fun Tag.VisualsBoard(
     onLeave: () -> Unit,
     lamp: () -> MotorBackground.Lamp?,
     onMotorButton: () -> Unit = onLeave,
+    rainText: VoiceRain.Text = VoiceRain.Text.Note,
 ) = comp(
-    VisualsBoard.Props(composition = composition, onLeave = onLeave, lamp = lamp, onMotorButton = onMotorButton)
+    VisualsBoard.Props(
+        composition = composition,
+        onLeave = onLeave,
+        lamp = lamp,
+        onMotorButton = onMotorButton,
+        rainText = rainText,
+    )
 ) {
     VisualsBoard(it)
 }
@@ -60,6 +67,7 @@ fun Tag.VisualsBoard(
  * - [VisualsCompositions.SCOPE_SPECTRUM]: the hole and the well side by side, one tile row.
  * - [VisualsCompositions.PLAYLIST]: the built-in songs in a well, what plays above them ([KlangampPlaylist]).
  * - [VisualsCompositions.AMP]: the desktop player ([KlangampPlayer]) behind glass, scaled to its plate.
+ * - [VisualsCompositions.RAIN]: the voices played falling down a display, matrix style ([VoiceRain]).
  *
  * The displays wear glass domes that mirror the plate's lamp.
  */
@@ -72,6 +80,8 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
         val lamp: () -> MotorBackground.Lamp?,
         /** What the menu button in the gauges' row does: leave, or switch the tiles (Klang Amp tiles). */
         val onMotorButton: () -> Unit,
+        /** What the voices drop on the rain's display ([VisualsCompositions.RAIN]). */
+        val rainText: VoiceRain.Text,
     )
 
     companion object {
@@ -187,6 +197,17 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
 
                     VisualsCompositions.AMP -> spot(key = placed.id, rect = rect) {
                         renderAmp(size = rect.width - 2 * margin)
+                    }
+
+                    VisualsCompositions.RAIN -> spot(key = placed.id, rect = rect) {
+                        well(
+                            key = "rain",
+                            width = rect.width - 2 * margin,
+                            height = rect.height - 2 * margin,
+                            padding = "8px",
+                        ) {
+                            VoiceRain(text = props.rainText)
+                        }
                     }
 
                     // The title is cut into the plate; a tile this board does not know stays a plain plate

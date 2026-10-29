@@ -42,6 +42,7 @@ class MotorBackgroundSpec : StringSpec({
         "motor board" to VisualsCompositions.motorBoard,
         "klangamp glass" to VisualsCompositions.klangampGlass,
         "klangamp tiles" to VisualsCompositions.klangampTiles,
+        "klangamp rain" to VisualsCompositions.klangampRain,
     )
 
     "each tile is as wide and as high as its tiles, where its place says, round the screen's middle" {
