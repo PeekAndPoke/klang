@@ -187,13 +187,16 @@ class KlangGauge(ctx: Ctx<Props>) : Component<KlangGauge.Props>(ctx) {
             KlangGaugeDial(hotFraction = hotFraction)
 
             svgRoot(viewBox = "0 0 100 100", style = "display:block;height:100%;position:absolute;inset:0;") {
-                if (online) {
-                    // The whole sweep, shown up to the reading by its dash: a length of 100 along the path
+                // Nothing at nought, as the arc of old: a dash of no length still wears its round caps
+                if (online && fraction > 0.0) {
+                    // The whole sweep, shown up to the reading by its dash: a length of 100 along the path. The gap is
+                    // longer than the path, so no next dash starts at its end: one of no length drew a dot there, near
+                    // the end of the scale, at a reading of 0 (the maintainer, 2026-10-29)
                     custom("path") {
                         attributes["class"] = if (hot) "${styles.gaugeArc} ${styles.gaugeArcHot}" else "${styles.gaugeArc}"
                         attributes["d"] = FULL_ARC
                         attributes["pathLength"] = "100"
-                        attributes["stroke-dasharray"] = "100 100"
+                        attributes["stroke-dasharray"] = "100 200"
                         attributes["stroke-dashoffset"] = (100.0 * (1.0 - fraction)).toString()
                         attributes["stroke-width"] = "4"
                     }

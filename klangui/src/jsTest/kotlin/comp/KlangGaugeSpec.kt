@@ -111,6 +111,27 @@ class KlangGaugeSpec : StringSpec({
         }
     }
 
+    "at a reading of nought no arc is drawn; above it, the arc's gap is longer than the path, so no dot shows at its end" {
+        // A dash of no length at the path's end still wore its round caps: a dot near the scale's end (the maintainer,
+        // 2026-10-29)
+        TestBed.preact(
+            view = {
+                KlangGauge(name = "a", value = 0.0)
+                KlangGauge(name = "b", value = 0.5)
+            },
+        ) { root ->
+            val meters = root.selectCss("[role=meter]")
+
+            meters[0].querySelectorAll(".${styles.gaugeArc}").length shouldBe 0
+
+            val arc = meters[1].querySelector(".${styles.gaugeArc}")!!
+            val (dash, gap) = arc.getAttribute("stroke-dasharray")!!.split(" ").map { it.toDouble() }
+
+            dash shouldBe 100.0
+            (gap > arc.getAttribute("pathLength")!!.toDouble()) shouldBe true
+        }
+    }
+
     "the needle points bottom left at the range's start, up in its middle, bottom right at its end" {
         TestBed.preact(
             view = {
