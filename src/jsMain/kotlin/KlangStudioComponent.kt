@@ -6,6 +6,7 @@
 package io.peekandpoke.klang
 
 import io.peekandpoke.klang.comp.RouterWithTransitions
+import io.peekandpoke.klang.comp.VisualsScreen
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
 import io.peekandpoke.kraft.components.comp
@@ -30,6 +31,8 @@ class KlangStudioComponent(ctx: NoProps) : PureComponent(ctx) {
 
         div(classes = "app") {
             RouterWithTransitions()
+            // A visual over the whole window, from the bottom panel's Visuals tab
+            VisualsScreen()
         }
     }
 }

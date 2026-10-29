@@ -8,12 +8,13 @@ package io.peekandpoke.klang.comp
 import io.peekandpoke.klang.layouts.WorkbenchSlots
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.codemirror.ToolCallSite
+import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangKeyHint
 import io.peekandpoke.klang.ui.comp.KlangWorkbench
 import io.peekandpoke.ultra.html.css
-import kotlinx.css.CssBuilder
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.streams.StreamSource
+import kotlinx.css.CssBuilder
 import kotlinx.html.FlowContent
 import kotlinx.html.div
 import kotlinx.html.span
@@ -34,6 +35,7 @@ class QuickHelpPanel(
         const val TAB_QUICK_HELP = "quick-help"
         const val TAB_LEXIKON = "lexikon"
         const val TAB_SPRUDEL = "sprudel"
+        const val TAB_VISUALS = "visuals"
     }
 
     /** The call around the editor's cursor whose tool the Sprudel tab shows; null outside one. */
@@ -102,6 +104,39 @@ class QuickHelpPanel(
                         key = "sprudel-$pageKey"
                         css { fillsPanel() }
                         SprudelToolTab(site = toolCall, contextOf = contextOf)
+                    }
+                }
+            },
+        ) + listOf(
+            // Visuals over the whole window (the maintainer, 2026-10-29), a card each; after Sprudel
+            KlangWorkbench.Tab(id = TAB_VISUALS, title = "Visuals") {
+                div {
+                    key = "visuals-$pageKey"
+                    css {
+                        put("display", "grid")
+                        put("grid-template-columns", "repeat(auto-fill, minmax(220px, 1fr))")
+                        put("gap", "10px")
+                    }
+
+                    KlangButton(
+                        onClick = { VisualsScreen.open(true) },
+                        surface = KlangButton.Surface.Domed,
+                        shape = KlangButton.Shape.Tile,
+                    ) {
+                        div {
+                            css {
+                                put("font-size", "14px")
+                                put("font-weight", "700")
+                            }
+                            +"The Motor's plate"
+                        }
+                        div {
+                            css {
+                                put("font-size", "12px")
+                                put("opacity", "0.8")
+                            }
+                            +"The start page's lamp over its plate, the whole window"
+                        }
                     }
                 }
             },

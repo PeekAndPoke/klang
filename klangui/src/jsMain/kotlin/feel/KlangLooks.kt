@@ -219,12 +219,14 @@ object KlangLooks {
             KlangRole.AccentMuted to "#b8862f",
             // Royal blue beside the gold (the maintainer, 2026-10-28: "the blue needs to be a more royal blue")
             KlangRole.LampOn to "#4169e1",
-            // The spectrum: A real rainbow: the same colours as the default, saturated, no dust (the maintainer, 2026-10-28)
-            KlangRole.SpectrumQuiet to "#1fc6dc",
-            KlangRole.SpectrumLow to "#5cd65a",
-            KlangRole.SpectrumMid to "#ffd93a",
-            KlangRole.SpectrumHot to "#ff972e",
-            KlangRole.SpectrumPeak to "#ff4f3a",
+            // The spectrum: blues only, from the lamp's royal blue at the floor, lighter to the top (the maintainer,
+            // 2026-10-29, after gold at the top and a violet between: "only blue tones maybe"; a rainbow before)
+            // Starting darker, a deep royal blue, to the same icy top, a steeper gradient (the maintainer, 2026-10-29)
+            KlangRole.SpectrumQuiet to "#14266e",
+            KlangRole.SpectrumLow to "#2348b8",
+            KlangRole.SpectrumMid to "#4f7be8",
+            KlangRole.SpectrumHot to "#93b3f5",
+            KlangRole.SpectrumPeak to "#d2e2ff",
             // The texture and the corners, each look its own (the maintainer, 2026-10-28):
             // The maintainer's, 2026-10-28: a strong grain, tight corners
             KlangRole.Grain to "0.67",

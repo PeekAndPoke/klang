@@ -26,9 +26,9 @@ import io.peekandpoke.kraft.addons.threejs.js.PointLight
 import io.peekandpoke.kraft.addons.threejs.js.TextureWrapping
 import io.peekandpoke.kraft.addons.threejs.js.WebGLRenderer
 import io.peekandpoke.kraft.addons.threejs.threeJs
+import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.ComponentRef
-import io.peekandpoke.kraft.components.NoProps
-import io.peekandpoke.kraft.components.PureComponent
+import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.utils.jsObject
 import io.peekandpoke.kraft.vdom.VDom
@@ -66,8 +66,9 @@ val motorBackgroundRef: ComponentRef.Tracker<MotorBackground> = ComponentRef.Tra
 @Suppress("FunctionName")
 fun Tag.MotorBackground(
     ref: ComponentRef.Tracker<MotorBackground>? = motorBackgroundRef,
+    boardPlate: Boolean = false,
 ): ComponentRef<MotorBackground> {
-    val created = comp { MotorBackground(it) }
+    val created = comp(MotorBackground.Props(boardPlate = boardPlate)) { MotorBackground(it) }
     return if (ref != null) created.track(ref) else created
 }
 
@@ -82,16 +83,26 @@ fun Tag.MotorBackground(
  * while the Motor warms up (the maintainer, 2026-10-26: "In the very beginning leave it full black"); [powerOn]
  * brings the light up, [hoverStart] and [hoverEnd] swell it under an element the mouse is over.
  */
-class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
+class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
+
+    data class Props(
+        /**
+         * A second plate under the gauges' row, over the middle three tiles of the two rows below it: the visual's
+         * board, where its scope and its spectrum sit (the maintainer, 2026-10-29: "The osci and spectrum must share one
+         * big tile"). The start page has none.
+         */
+        val boardPlate: Boolean,
+    )
 
     companion object {
         /**
          * The lamp sways as if it hung on a cord, left and right of the centre, very slightly and very slowly (the
-         * maintainer, 2026-10-28): this far at the most, in the scene's units (the plate is 2 high, the lamp 3 in
-         * front of it), and one swing there and back in [LIGHT_SWAY_PERIOD_MS].
+         * maintainer, 2026-10-28; 2026-10-29 "a bit wider", then "a bit faster and wider": 0.12, 0.18 with 16 s): this
+         * far at the most, in the scene's units (the plate is 2 high, the lamp 3.5 in front of it), and one swing there
+         * and back in [LIGHT_SWAY_PERIOD_MS].
          */
-        private const val LIGHT_SWAY = 0.12
-        private const val LIGHT_SWAY_PERIOD_MS = 16_000.0
+        private const val LIGHT_SWAY = 0.22
+        private const val LIGHT_SWAY_PERIOD_MS = 13_000.0
 
         /**
          * The line the lamp sways along turns slowly round, as a Foucault pendulum's (the maintainer, 2026-10-28: "make
@@ -273,8 +284,11 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
 
     private var poweredOn = false
 
-    /** The light at rest (the maintainer, 2026-10-27: 1.62 was "a bit too bright"). */
-    private val defaultIntensity = 1.35
+    /**
+     * The light at rest (the maintainer, 2026-10-27: 1.62 was "a bit too bright"; 1.35 then); raised as the lamp hung
+     * further away for a wider cone (2026-10-29), so the middle stays as bright: the light falls off with distance.
+     */
+    private val defaultIntensity = 1.55
     /**
      * Over "Make Music Now" (the maintainer, 2026-10-26 and 27: twice the first swell was too bright, then 4.5 "a bit
      * too bright" too).
@@ -299,7 +313,8 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     // Light "radius": pulling the light further from the plate widens the illuminated area, so hover reads as the light
     // growing bigger (the maintainer, 2026-10-26, once the plate was as bright as before: "the circle of light is too
     // big")
-    private val defaultLightZ = 3.0
+    // A bit wider at rest (the maintainer, 2026-10-29: "make the normal lightcone a bit wider"; 3.0 before)
+    private val defaultLightZ = 3.5
     /** Over "Make Music Now" the cone opens wider, "like opening your eyes" (the maintainer, 2026-10-26: wider still). */
     private val hoverLightZ = 5.2
     private var targetLightZ = defaultLightZ
@@ -391,6 +406,25 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
      * bottom (the maintainer, 2026-10-26: aligned with the title, "but only vertically"; the columns stay centred).
      */
     private fun gridOriginY(plate: TitlePlate): Double = (plate.top % PANEL_CELL + PANEL_CELL) % PANEL_CELL
+
+    /**
+     * The board's plate ([Props.boardPlate]) in a texture [width] wide: the middle three tiles (the columns are centred,
+     * a tile's middle on the screen's) of the two rows under the gauges' row, which runs under the title's [plate].
+     */
+    private fun boardPlate(width: Int, plate: TitlePlate): TitlePlate? {
+        if (!props.boardPlate) {
+            return null
+        }
+
+        val cx = width / 2.0
+
+        return TitlePlate(
+            left = cx - 1.5 * PANEL_CELL,
+            top = plate.bottom + PANEL_CELL,
+            right = cx + 1.5 * PANEL_CELL,
+            bottom = plate.bottom + 3 * PANEL_CELL,
+        )
+    }
 
     /**
      * Where the columns start in the title plate's row: half a tile over from the others, like a course of bricks, so
@@ -641,6 +675,15 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         bulb.temper = BulbStutter.SETTLED
         bulb.steady = false
     }
+
+    /**
+     * Where the lamp is in its sway, -1 to 1 each way ([LIGHT_SWAY] out to either side; up is positive), and how bright
+     * it is against its rest (1 at rest, 0 off), for things that reflect it: the visual's glass domes (the maintainer,
+     * 2026-10-29). Read every frame; no object is made.
+     */
+    val lightX: Double get() = (mainLight?.position?.x ?: 0.0) / LIGHT_SWAY
+    val lightY: Double get() = (mainLight?.position?.y ?: 0.0) / LIGHT_SWAY
+    val lightLevel: Double get() = currentIntensity / defaultIntensity
 
     /** Boosts the light and widens the cone. Call from an element's mouse-enter. */
     fun hoverStart() {
@@ -1003,6 +1046,7 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         tctx.fillRect(0.0, 0.0, width.toDouble(), height.toDouble())
 
         val plate = titlePlate(width = width, height = height, centerShare = titleCenter())
+        val board = boardPlate(width = width, plate = plate)
 
         // Dark seam lines on the panel grid: albedo crispness on top of the normal-map bevels, about half the face's
         // brightness, as they were. None crosses the title's plate: a line that would stops at its edges.
@@ -1021,7 +1065,14 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
 
         while (gx <= width) {
             line(gx, 0.0, gx, plate.top)
-            line(gx, plate.bottom, gx, height.toDouble())
+
+            // None across the board's plate, and none along its sides, which are its own edges
+            if (board != null && gx >= board.left - 1.0 && gx <= board.right + 1.0) {
+                line(gx, plate.bottom, gx, board.top)
+                line(gx, board.bottom, gx, height.toDouble())
+            } else {
+                line(gx, plate.bottom, gx, height.toDouble())
+            }
 
             gx += PANEL_CELL
         }
@@ -1045,6 +1096,9 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
             if (gy >= plate.top - 1.0 && gy <= plate.bottom + 1.0) {
                 line(0.0, gy, plate.left, gy)
                 line(plate.right, gy, width.toDouble(), gy)
+            } else if (board != null && gy >= board.top - 1.0 && gy <= board.bottom + 1.0) {
+                line(0.0, gy, board.left, gy)
+                line(board.right, gy, width.toDouble(), gy)
             } else {
                 line(0.0, gy, width.toDouble(), gy)
             }
@@ -1264,6 +1318,7 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         val bevel = 0.55
         val originX = gridOrigin(width)
         val plate = titlePlate(width = width, height = height, centerShare = titleCenter())
+        val board = boardPlate(width = width, plate = plate)
         val originY = gridOriginY(plate)
         val plateRowOriginX = gridOriginInPlateRow(width)
         // Whether a tile lies turned, worked out when the loop enters another tile, not for every pixel
@@ -1284,8 +1339,13 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
                 val u = px - rowOriginX - col * PANEL_CELL
                 val v = py - originY - row * PANEL_CELL
 
-                // On the title's plate: a flat face, no seams, and its edges stepping up from the tiles
-                val onPlate = plate.contains(px.toDouble(), py.toDouble())
+                // On the title's plate or the board's: a flat face, no seams, and its edges stepping up from the tiles
+                val on = when {
+                    plate.contains(px.toDouble(), py.toDouble()) -> plate
+                    board != null && board.contains(px.toDouble(), py.toDouble()) -> board
+                    else -> null
+                }
+                val onPlate = on != null
 
                 // Per-panel constant tilt; the plate's face lies flat
                 val tiltX = if (onPlate) 0.0 else (hashCell(col * 3 + 11, row * 7 + 29) - 0.5) * 0.08
@@ -1294,17 +1354,17 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
                 // V-groove seams along the grid lines; the plate's edges as a tile's, so it meets its neighbours as tiles
                 // meet (the maintainer, 2026-10-26)
                 val seamNx = when {
-                    onPlate && px - plate.left < seamHalf -> -bevel * (1.0 - (px - plate.left) / seamHalf)
-                    onPlate && plate.right - px <= seamHalf -> bevel * (1.0 - (plate.right - px) / seamHalf)
-                    onPlate -> 0.0
+                    on != null && px - on.left < seamHalf -> -bevel * (1.0 - (px - on.left) / seamHalf)
+                    on != null && on.right - px <= seamHalf -> bevel * (1.0 - (on.right - px) / seamHalf)
+                    on != null -> 0.0
                     u < seamHalf -> -bevel * (1.0 - u / seamHalf)
                     u > PANEL_CELL - seamHalf -> bevel * (1.0 - (PANEL_CELL - u) / seamHalf)
                     else -> 0.0
                 }
                 val seamNy = when {
-                    onPlate && py - plate.top < seamHalf -> -bevel * (1.0 - (py - plate.top) / seamHalf)
-                    onPlate && plate.bottom - py <= seamHalf -> bevel * (1.0 - (plate.bottom - py) / seamHalf)
-                    onPlate -> 0.0
+                    on != null && py - on.top < seamHalf -> -bevel * (1.0 - (py - on.top) / seamHalf)
+                    on != null && on.bottom - py <= seamHalf -> bevel * (1.0 - (on.bottom - py) / seamHalf)
+                    on != null -> 0.0
                     v < seamHalf -> -bevel * (1.0 - v / seamHalf)
                     v > PANEL_CELL - seamHalf -> bevel * (1.0 - (PANEL_CELL - v) / seamHalf)
                     else -> 0.0

@@ -579,3 +579,10 @@ body {
 #spa {
     min-height: 100vh;
 }
+
+/* The visual's board fades in after the plate's light (VisualsBoard; the maintainer, 2026-10-29: "Fade in the ui after
+   the background") */
+@keyframes kl-visuals-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}

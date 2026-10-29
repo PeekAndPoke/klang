@@ -19,6 +19,9 @@ import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.html.onMouseLeave
 import io.peekandpoke.ultra.html.onMouseMove
 import io.peekandpoke.ultra.maths.Ease
+import kotlin.math.floor
+import kotlin.math.pow
+import kotlin.math.roundToInt
 import kotlinx.browser.window
 import kotlinx.css.Color
 import kotlinx.css.Display
@@ -38,8 +41,6 @@ import kotlinx.html.div
 import org.khronos.webgl.set
 import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.HTMLCanvasElement
-import kotlin.math.floor
-import kotlin.math.roundToInt
 
 @Suppress("FunctionName")
 fun Tag.Spectrumeter(
@@ -57,6 +58,8 @@ fun Tag.Spectrumeter(
     numBuckets: Int = 16,
     binning: SpectrumBinning = SpectrumBinning(numBuckets = numBuckets),
     labelMiddle: LinearDimension = 12.px,
+    lighting: Spectrumeter.Lighting = Spectrumeter.Lighting.Own,
+    labelAtTop: Boolean = false,
     preview: List<Double>? = null,
     player: () -> KlangPlayer?,
 ) = comp(
@@ -71,6 +74,8 @@ fun Tag.Spectrumeter(
         numBuckets = numBuckets,
         binning = binning,
         labelMiddle = labelMiddle,
+        lighting = lighting,
+        labelAtTop = labelAtTop,
     )
 ) {
     Spectrumeter(it)
@@ -99,7 +104,61 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
         val binning: SpectrumBinning,
         /** How high over the spectrum's floor the middle of a hovered column's frequencies sits. */
         val labelMiddle: LinearDimension,
+        /** How the columns are lit by their energy ([Lighting]). */
+        val lighting: Lighting,
+        /** The hovered column's frequencies at the top edge instead of at [labelMiddle] over the floor. */
+        val labelAtTop: Boolean,
     )
+
+    /**
+     * How a column is lit by its energy (the maintainer, 2026-10-29: "Make this effect configurable"): [floor] for a
+     * silent column, full for a loud one, [power] shaping the step between. The levels are decibels already (0 to 1
+     * spans [DB_RANGE], linear in dB), so both ways measure on the log scale (the maintainer: "the decibel scale is
+     * logarithmic ... so should be the lighting"):
+     *
+     * - not [relative]: a column by its own level, fully lit from [fullAt] of the scale on;
+     * - [relative]: a column by how many dB it lies below the loudest of the frame, fully lit at the loudest, at the floor
+     *   [rangeDb] below it; the light moves through the columns as a melody moves through the frequencies ("as if they
+     *   are dancing"). A ratio of two levels, as first written, meant nothing on a dB scale.
+     */
+    data class Lighting(
+        val floor: Double,
+        val power: Double,
+        val relative: Boolean,
+        val fullAt: Double = 0.8,
+        val rangeDb: Double = 24.0,
+    ) {
+        companion object {
+            /** The span of a level from 0 to 1: −99 dB to −10 dB ([SpectrumBinning.process]'s defaults). */
+            const val DB_RANGE = 89.0
+
+            /**
+             * Each column by its own level, with more contrast than the first 0.5 to 1 (the maintainer, 2026-10-29: "a bit
+             * more", then "bit more on the code page"): the code page's Motor.
+             */
+            val Own = Lighting(floor = 0.25, power = 1.5, relative = false)
+
+            /**
+             * Against the loudest, by the dB below it: the light dances through the columns; the visual's, soft (the
+             * maintainer, 2026-10-29: "too strong", twice, before it was measured in dB; the floor 0.3 then "a bit too
+             * low").
+             */
+            val Dancing = Lighting(floor = 0.45, power = 1.5, relative = true, rangeDb = 24.0)
+        }
+
+        fun alpha(level: Double, loudest: Double): Double {
+            // NaN-guard: a range or a fullAt that is not a positive number counts as the whole scale
+            val measured = if (relative) {
+                val belowDb = (loudest - level) * DB_RANGE
+                1.0 - belowDb / (rangeDb.takeIf { it > 0.0 } ?: DB_RANGE)
+            } else {
+                level / (fullAt.takeIf { it > 0.0 } ?: 1.0)
+            }
+            val share = measured.coerceIn(0.0, 1.0)
+
+            return floor + (1.0 - floor) * share.pow(power)
+        }
+    }
 
     private var visualizerAnimFrame: Int? = null
 
@@ -225,8 +284,9 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
         val n = palette.size.coerceAtLeast(1)
         for (i in 0 until n) {
             val t = if (n == 1) 0.0 else i.toDouble() / (n - 1)
-            // Ease-out falloff — 0.45 at bottom, reaches 0 by ~77% up (faster than full-height).
-            val aMax = 0.6 * Ease.Out.quad((1.0 - t * 1.3).coerceAtLeast(0.0))
+            // Ease-out falloff, reaching 0 half way up; 0.35 at most (the maintainer, 2026-10-29: "The heat glow behind
+            // the spectrumeter should be more subtle", "should not reach so far up"; 0.6, and 0 at ~77 % up, before)
+            val aMax = 0.35 * Ease.Out.quad((1.0 - t * 2.0).coerceAtLeast(0.0))
 
             // Sometimes parsing the color fails, so we need to round the alpha:
             // Failed to execute 'addColorStop' on 'CanvasGradient': The value provided ('rgba(209, 154, 102, 6e-320.0)') could not be parsed as a color.
@@ -256,6 +316,15 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
         val boxHeight = ((height.toInt() - maxBoxes * gap) / maxBoxes.coerceAtLeast(1)).coerceAtLeast(1)
         val boxWithGap = boxHeight + gap
 
+        // The loudest column this frame, for a lighting relative to it
+        var loudest = 0.0
+
+        for (v in bucketValues) {
+            if (v > loudest) {
+                loudest = v
+            }
+        }
+
         for (bucketIdx in 0 until numBuckets) {
             val normalized = bucketValues[bucketIdx]
 
@@ -263,7 +332,7 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
 
             val x = columns.xOf(bucketIdx).toDouble()
             val effectiveWidth = if (columns.step > props.gap) columns.step - props.gap else columns.step.toDouble()
-            val boxAlpha = 0.5 + (normalized * 0.5)
+            val boxAlpha = props.lighting.alpha(level = normalized, loudest = loudest)
 
             val colorsWithAlpha = colors.map { it.withAlpha(boxAlpha) }
 
@@ -329,10 +398,17 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
         div {
             css {
                 position = Position.absolute
-                bottom = props.labelMiddle
                 left = 50.pct
-                // Its middle on that line, both ways
-                put("transform", "translate(-50%, 50%)")
+
+                if (props.labelAtTop) {
+                    // At the top edge, over the columns (the visual's; the maintainer, 2026-10-29)
+                    put("top", "4px")
+                    put("transform", "translateX(-50%)")
+                } else {
+                    bottom = props.labelMiddle
+                    // Its middle on that line, both ways
+                    put("transform", "translate(-50%, 50%)")
+                }
                 put("pointer-events", "none")
                 put("padding", "1px 5px")
                 put("border-radius", "3px")
