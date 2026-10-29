@@ -222,11 +222,13 @@ object KlangLooks {
             // The spectrum: blues only, from the lamp's royal blue at the floor, lighter to the top (the maintainer,
             // 2026-10-29, after gold at the top and a violet between: "only blue tones maybe"; a rainbow before)
             // Starting darker, a deep royal blue, to the same icy top, a steeper gradient (the maintainer, 2026-10-29);
-            // its floor then a step lighter ("the darkest blue is a bit too dark": #14266e before)
+            // its floor then a step lighter ("the darkest blue is a bit too dark": #14266e before); the three between
+            // even steps of brightness from the floor to the top, worked out in OKLab ("make the color transition to the
+            // other color smooth. Keep the lowest and highest color as is and interpolate the brightness between")
             KlangRole.SpectrumQuiet to "#1e3a9e",
-            KlangRole.SpectrumLow to "#2348b8",
-            KlangRole.SpectrumMid to "#4f7be8",
-            KlangRole.SpectrumHot to "#93b3f5",
+            KlangRole.SpectrumLow to "#4665b8",
+            KlangRole.SpectrumMid to "#728ed0",
+            KlangRole.SpectrumHot to "#a1b8e8",
             KlangRole.SpectrumPeak to "#d2e2ff",
             // The texture and the corners, each look its own (the maintainer, 2026-10-28):
             // The maintainer's, 2026-10-28: a strong grain, tight corners
