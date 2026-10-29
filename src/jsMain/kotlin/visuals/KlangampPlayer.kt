@@ -3,10 +3,16 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-package io.peekandpoke.klang.comp
+package io.peekandpoke.klang.visuals
 
 import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.Player
+import io.peekandpoke.klang.comp.Motor
+import io.peekandpoke.klang.comp.MotorReadings
+import io.peekandpoke.klang.comp.Oscilloscope
+import io.peekandpoke.klang.comp.PlayerMiniStats
+import io.peekandpoke.klang.comp.Spectrumeter
+import io.peekandpoke.klang.comp.VolumeKnob
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangFinish
 import io.peekandpoke.klang.ui.comp.KlangGauge

@@ -50,6 +50,7 @@ IntelliJ MCP is".
 | date | what | tool | what it would have saved |
 |---|---|---|---|
 | 2026-10-23 | The five `io.ktor` star imports in `audio_fe` (`AssetLoader.kt`, `DiskUrlCache.kt`) written out by hand at the maintainer's word: the used names found by reading each file, and one resolution checked by hand (`Charsets`: a star import outranks Kotlin's default `kotlin.text.Charsets`, so the explicit import is ktor's, the same as before) | IntelliJ Optimize Imports, once the emptied star list is loaded | reading two files and the resolution question, a few minutes; the compile check on JVM and JS is needed either way |
+| 2026-10-29 | The visuals moved from `io.peekandpoke.klang.comp` into their own package `io.peekandpoke.klang.visuals` (seven files and a spec, `git mv`), the visuals' compositions split out of `PlateComposition` into `VisualsCompositions`: package lines, the imports in both directions and one KDoc link done by a script, then two compile rounds (a duplicate import, the missing imports listed by the compiler) | IntelliJ Move (to package) and Move Members | the import script and the two compile rounds, ten minutes or so; the compile and the specs are needed either way |
 
 ## Uses of Optimize Imports
 

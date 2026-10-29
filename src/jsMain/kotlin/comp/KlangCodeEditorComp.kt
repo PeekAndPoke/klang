@@ -19,6 +19,7 @@ import io.peekandpoke.klang.ui.codemirror.BookmarkOptions
 import io.peekandpoke.klang.ui.codemirror.KlangScriptEditorComp
 import io.peekandpoke.klang.ui.codemirror.QuickHelpHandler
 import io.peekandpoke.klang.ui.codemirror.ToolCallSite
+import io.peekandpoke.klang.visuals.VisualsScreen
 import io.peekandpoke.kraft.addons.pixijs.PixiJsAddon
 import io.peekandpoke.kraft.addons.pixijs.pixiJs
 import io.peekandpoke.kraft.addons.registry.AddonRegistry.Companion.addons

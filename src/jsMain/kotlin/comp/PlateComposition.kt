@@ -69,17 +69,13 @@ data class PlateComposition(
     /**
      * With [bareOutside], whether its tiles show: off, the parts float on black, only an engraving cut into the dark
      * (the maintainer, 2026-10-29: "without the tiles was also nice... can we have a switch somewhere? Maybe the
-     * Motorbutton"); without the engraving too, nothing at all ([VisualsScreen.TilesState]).
+     * Motorbutton"); without the engraving too, nothing at all (the visuals' Klang Amp tiles).
      */
     val platesShown: Boolean = true,
 ) {
     companion object {
-        /** The ids of the tiles the compositions here place. */
+        /** The gauges' row: the start page's, and the visuals'. */
         const val GAUGES = "gauges"
-        const val BOARD = "board"
-        const val AMP = "amp"
-        const val SCOPE_SPECTRUM = "scope-spectrum"
-        const val PLAYLIST = "playlist"
 
         /**
          * The room the start page keeps under its gauges for its panel: the composition stands as before, its title
@@ -96,46 +92,6 @@ data class PlateComposition(
                 ),
                 rows = 2,
                 roomBelowPx = START_PANEL_PX,
-            )
-        }
-
-        /**
-         * The Motor's plate: the start page's, its title where the start page's stands, and under the gauges one plate
-         * for the scope and the spectrum (the maintainer, 2026-10-29: "The osci and spectrum must share one big tile").
-         */
-        val motorBoard: PlateComposition by lazy {
-            start.copy(tiles = start.tiles + PlacedTile.centred(id = BOARD, row = 2, columns = 3, rows = 2))
-        }
-
-        /**
-         * Klangamp under glass: the desktop player as a part of its own, laid on three by three tiles under the title
-         * (the maintainer, 2026-10-29: "Hide this winamp behind glass and aligned to the tiles as if it was its own
-         * element that can be placed in the board of tiles").
-         */
-        val klangampGlass: PlateComposition by lazy {
-            PlateComposition(
-                tiles = listOf(
-                    PlacedTile.title("KLANGMOTOR"),
-                    PlacedTile.centred(id = AMP, row = 1, columns = 3, rows = 3),
-                ),
-                rows = 4,
-            )
-        }
-
-        /**
-         * Klangamp made of tiles (the maintainer, 2026-10-29: "a player composed of our tile. Header tile "Klangamp".
-         * Gauges tile. Osci & Spectrum tile. Playlist tile"): five tiles wide, one under the other.
-         */
-        val klangampTiles: PlateComposition by lazy {
-            PlateComposition(
-                tiles = listOf(
-                    PlacedTile.title("KLANG AMP", columns = 5),
-                    PlacedTile.centred(id = GAUGES, row = 1, columns = 5),
-                    PlacedTile.centred(id = SCOPE_SPECTRUM, row = 2, columns = 5),
-                    PlacedTile.centred(id = PLAYLIST, row = 3, columns = 5, rows = 2),
-                ),
-                rows = 5,
-                bareOutside = true,
             )
         }
     }

@@ -3,14 +3,24 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-package io.peekandpoke.klang.comp
+package io.peekandpoke.klang.visuals
 
 import io.peekandpoke.klang.Player
-import io.peekandpoke.klang.comp.VisualsParts.glassDome
+import io.peekandpoke.klang.comp.Motor
+import io.peekandpoke.klang.comp.MotorBackground
+import io.peekandpoke.klang.comp.MotorReadings
+import io.peekandpoke.klang.comp.Oscilloscope
+import io.peekandpoke.klang.comp.PlateComposition
+import io.peekandpoke.klang.comp.PlayerMiniStats
+import io.peekandpoke.klang.comp.ScopeGlow
+import io.peekandpoke.klang.comp.ScreenRect
+import io.peekandpoke.klang.comp.Spectrumeter
+import io.peekandpoke.klang.comp.VolumeKnob
 import io.peekandpoke.klang.ui.comp.KlangGauge
 import io.peekandpoke.klang.ui.comp.KlangMenuButton
 import io.peekandpoke.klang.ui.feel.KlangRole
 import io.peekandpoke.klang.ui.feel.KlangTheme
+import io.peekandpoke.klang.visuals.VisualsParts.glassDome
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
@@ -45,11 +55,11 @@ fun Tag.VisualsBoard(
  *
  * - [PlateComposition.GAUGES]: the volume knob, the three gauges and the menu button, each in the middle of its tile;
  *   the menu button leaves the visual, or does what the visual gives it ([Props.onMotorButton]).
- * - [PlateComposition.BOARD]: the scope in a hole cut into the plate, its inside lit by the signal, and under it the
+ * - [VisualsCompositions.BOARD]: the scope in a hole cut into the plate, its inside lit by the signal, and under it the
  *   spectrum in a well, a tile row each (the maintainer, 2026-10-29).
- * - [PlateComposition.SCOPE_SPECTRUM]: the hole and the well side by side, one tile row.
- * - [PlateComposition.PLAYLIST]: the built-in songs in a well, what plays above them ([KlangampPlaylist]).
- * - [PlateComposition.AMP]: the desktop player ([KlangampPlayer]) behind glass, scaled to its plate.
+ * - [VisualsCompositions.SCOPE_SPECTRUM]: the hole and the well side by side, one tile row.
+ * - [VisualsCompositions.PLAYLIST]: the built-in songs in a well, what plays above them ([KlangampPlaylist]).
+ * - [VisualsCompositions.AMP]: the desktop player ([KlangampPlayer]) behind glass, scaled to its plate.
  *
  * The displays wear glass domes that mirror the plate's lamp.
  */
@@ -152,7 +162,7 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
                     PlateComposition.GAUGES -> spot(key = placed.id, rect = rect) { renderGauges(tile) }
 
                     // A tile row each (the maintainer, 2026-10-29: "align the osci and spectrum to the tiles")
-                    PlateComposition.BOARD -> {
+                    VisualsCompositions.BOARD -> {
                         val holeRow = rect.copy(bottom = rect.top + tile)
                         val screenRow = rect.copy(top = rect.top + tile)
 
@@ -164,18 +174,18 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
                         }
                     }
 
-                    PlateComposition.SCOPE_SPECTRUM -> spot(key = placed.id, rect = rect, gap = margin) {
+                    VisualsCompositions.SCOPE_SPECTRUM -> spot(key = placed.id, rect = rect, gap = margin) {
                         val each = (rect.width - 3 * margin) / 2
 
                         renderHole(width = each, height = tile * SIDE_BY_SIDE_HEIGHT)
                         renderScreen(width = each, height = tile * SIDE_BY_SIDE_HEIGHT)
                     }
 
-                    PlateComposition.PLAYLIST -> spot(key = placed.id, rect = rect) {
+                    VisualsCompositions.PLAYLIST -> spot(key = placed.id, rect = rect) {
                         renderPlaylist(width = rect.width - 2 * margin, height = rect.height - 2 * margin)
                     }
 
-                    PlateComposition.AMP -> spot(key = placed.id, rect = rect) {
+                    VisualsCompositions.AMP -> spot(key = placed.id, rect = rect) {
                         renderAmp(size = rect.width - 2 * margin)
                     }
 

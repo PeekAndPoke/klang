@@ -11,6 +11,8 @@ import io.peekandpoke.klang.ui.codemirror.ToolCallSite
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangKeyHint
 import io.peekandpoke.klang.ui.comp.KlangWorkbench
+import io.peekandpoke.klang.visuals.VisualPreview
+import io.peekandpoke.klang.visuals.VisualsScreen
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.streams.StreamSource

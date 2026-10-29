@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-package io.peekandpoke.klang.comp
+package io.peekandpoke.klang.visuals
 
 import io.peekandpoke.ultra.html.css
 import kotlinx.html.FlowContent

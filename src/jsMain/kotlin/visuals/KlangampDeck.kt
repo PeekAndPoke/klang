@@ -3,11 +3,12 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-package io.peekandpoke.klang.comp
+package io.peekandpoke.klang.visuals
 
 import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.Song
+import io.peekandpoke.klang.comp.KlangCodePlaybackCtrl
 import kotlin.js.Date
 
 /**

@@ -6,7 +6,7 @@
 package io.peekandpoke.klang
 
 import io.peekandpoke.klang.comp.RouterWithTransitions
-import io.peekandpoke.klang.comp.VisualsScreen
+import io.peekandpoke.klang.visuals.VisualsScreen
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
 import io.peekandpoke.kraft.components.comp

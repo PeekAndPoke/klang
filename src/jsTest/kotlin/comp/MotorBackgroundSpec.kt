@@ -5,12 +5,13 @@
 
 package io.peekandpoke.klang.comp
 
-import io.kotest.core.spec.style.StringSpec
 import io.kotest.assertions.withClue
+import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.doubles.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.visuals.VisualsCompositions
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -38,9 +39,9 @@ class MotorBackgroundSpec : StringSpec({
     /** Every composition a screen is made of. */
     val compositions = mapOf(
         "start" to PlateComposition.start,
-        "motor board" to PlateComposition.motorBoard,
-        "klangamp glass" to PlateComposition.klangampGlass,
-        "klangamp tiles" to PlateComposition.klangampTiles,
+        "motor board" to VisualsCompositions.motorBoard,
+        "klangamp glass" to VisualsCompositions.klangampGlass,
+        "klangamp tiles" to VisualsCompositions.klangampTiles,
     )
 
     "each tile is as wide and as high as its tiles, where its place says, round the screen's middle" {
@@ -106,10 +107,10 @@ class MotorBackgroundSpec : StringSpec({
 
     "the Motor's board lies a row under the title's plate: the gauges' row between" {
         for ((w, h) in screens) {
-            val spots = MotorBackground.tilesOnScreen(w, h, PlateComposition.motorBoard)
+            val spots = MotorBackground.tilesOnScreen(w, h, VisualsCompositions.motorBoard)
             val tile = MotorBackground.tileWidthPx(h)
 
-            spots.getValue(PlateComposition.BOARD).top shouldBe (spots.getValue(PlacedTile.TITLE).bottom + tile plusOrMinus 0.5)
+            spots.getValue(VisualsCompositions.BOARD).top shouldBe (spots.getValue(PlacedTile.TITLE).bottom + tile plusOrMinus 0.5)
         }
     }
 

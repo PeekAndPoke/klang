@@ -3,13 +3,14 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-package io.peekandpoke.klang.comp
+package io.peekandpoke.klang.visuals
 
-import io.kotest.core.spec.style.StringSpec
 import io.kotest.assertions.withClue
+import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
+import io.peekandpoke.klang.comp.MotorBackground
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.workshop.keys.KeyPlatform
 import io.peekandpoke.klang.workshop.keys.KeysManager
@@ -41,7 +42,7 @@ class VisualsBoardSpec : StringSpec({
                         put("inset", "0")
                     }
 
-                    VisualsBoard(composition = PlateComposition.motorBoard, onLeave = {}, lamp = lamp)
+                    VisualsBoard(composition = VisualsCompositions.motorBoard, onLeave = {}, lamp = lamp)
                 }
             }) { root ->
                 test(root.single())
@@ -99,7 +100,7 @@ class VisualsBoardSpec : StringSpec({
         board(lamp = { null }) { view ->
             val w = window.innerWidth.toDouble()
             val h = window.innerHeight.toDouble()
-            val plate = MotorBackground.tilesOnScreen(w, h, PlateComposition.motorBoard).getValue(PlateComposition.BOARD)
+            val plate = MotorBackground.tilesOnScreen(w, h, VisualsCompositions.motorBoard).getValue(VisualsCompositions.BOARD)
             val tile = MotorBackground.tileWidthPx(h)
 
             eventually {

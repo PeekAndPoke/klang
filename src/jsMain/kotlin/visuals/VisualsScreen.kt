@@ -3,8 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-package io.peekandpoke.klang.comp
+package io.peekandpoke.klang.visuals
 
+import io.peekandpoke.klang.comp.Motor
+import io.peekandpoke.klang.comp.MotorBackground
+import io.peekandpoke.klang.comp.PlateComposition
 import io.peekandpoke.klang.storage.LookStorage
 import io.peekandpoke.klang.ui.comp.KlangCloseKey
 import io.peekandpoke.klang.ui.comp.KlangSwatchButton
@@ -57,21 +60,21 @@ class VisualsScreen(ctx: NoProps) : PureComponent(ctx) {
         Plate(
             title = "The Motor's plate",
             description = "The start page's lamp over its plate, the whole window",
-            composition = { PlateComposition.motorBoard },
+            composition = { VisualsCompositions.motorBoard },
         ),
 
         /** The Motor's elements as an old desktop player behind glass, a part of its own on the tiles. */
         Klangamp(
             title = "Klang Amp",
             description = "The Motor as a desktop player behind glass, the built-in songs on its playlist",
-            composition = { PlateComposition.klangampGlass },
+            composition = { VisualsCompositions.klangampGlass },
         ),
 
         /** Klangamp made of the plate's own tiles. */
         KlangampTiles(
             title = "Klang Amp tiles",
             description = "A player built from the plate's tiles: gauges, scope and spectrum, playlist",
-            composition = { PlateComposition.klangampTiles },
+            composition = { VisualsCompositions.klangampTiles },
         ),
     }
 
