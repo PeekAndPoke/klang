@@ -9,10 +9,10 @@ import io.peekandpoke.klang.BuiltInJingles
 import io.peekandpoke.klang.Jingle
 
 /**
- * The marimba and the melody of "Der Schmetterling" (`builtinsongs/DerSchmetterling.kt`), four cycles: the melody twice
+ * The marimba and the melody of "Der Schmetterling" (`builtinsongs/DerSchmetterling.kt`), two cycles: the melody once
  * (the maintainer, 2026-10-29: "take the marimba and the melody from Schmetterling and make it the new jingle when
- * Startpage is done for 4 cycles"). The song's lead as it plays there: its shape, its key (E minor, three semitones
- * down), its room and its master's level, without the band.
+ * Startpage is done for 4 cycles", then by hand: "i reduced to two cycles on the jingle"). The song's lead as it plays
+ * there: its shape, its key (E minor, three semitones down), its room and its master's level, without the band.
  */
 internal val schmetterlingJingle = Jingle(
     id = "${BuiltInJingles.PREFIX}-schmetterling",
