@@ -115,8 +115,15 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
         /** The texture's height in px; its width follows the screen's aspect. */
         private const val TEX_HEIGHT = 2048
 
-        /** While tiles come in one by one, the texture goes up to the GPU this often at the most. */
-        private const val UPLOAD_EVERY_MS = 120.0
+        /**
+         * While tiles come in one by one, the texture goes up to the GPU this often at the most: the whole of it each
+         * time, about 30 MB on a large screen.
+         */
+        private const val UPLOAD_EVERY_MS = 250.0
+
+        /** The brush's pressure is sampled this far apart, along a stroke and across ([pressure]). */
+        private const val PRESSURE_STEP_X = 8.0
+        private const val PRESSURE_STEP_Y = 4.0
 
         /** The last plate surface any background built ([SurfaceCache]); null before the first. */
         private var surfaceCache: SurfaceCache? = null
@@ -618,18 +625,83 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
             // The stroke's slight angle: each layer its own
             val y = py + px * if (layer == 0) 0.004 else -0.007
             val row = floor(y).toInt()
-            val length = 140.0 + 260.0 * hashCell(row, 31 + layer)
-            val along = (px + hashCell(row, 47 + layer) * length) / length
-            val stroke = floor(along).toInt()
-            val fade = sin(PI * (along - stroke))
-            val depth = hashCell(row * 7 + stroke, 59 + layer) - 0.5
 
-            sum += depth * 0.11 * fade
+            // A row's stroke length and shift, and a stroke's depth, kept while the pixels stay in them: the same
+            // numbers, worked out once a stroke instead of once a pixel
+            if (row != strokeRow[layer]) {
+                strokeRow[layer] = row
+                strokeLength[layer] = 140.0 + 260.0 * hashCell(row, 31 + layer)
+                strokeShift[layer] = hashCell(row, 47 + layer) * strokeLength[layer]
+                strokeIndex[layer] = Int.MIN_VALUE
+            }
+
+            val along = (px + strokeShift[layer]) / strokeLength[layer]
+            val stroke = floor(along).toInt()
+
+            if (stroke != strokeIndex[layer]) {
+                strokeIndex[layer] = stroke
+                strokeDepth[layer] = hashCell(row * 7 + stroke, 59 + layer) - 0.5
+            }
+
+            val fade = sin(PI * (along - stroke))
+
+            sum += strokeDepth[layer] * 0.11 * fade
         }
 
-        val pressure = 0.55 + 0.45 * grainNoise.noise(px * 0.006 + 3.1, py * 0.02 + 8.7)
+        return sum * pressure(px, py)
+    }
 
-        return sum * pressure
+    /** The strokes [brushed] is in, a layer each: their row, length, shift, and the stroke and its depth. */
+    private val strokeRow = IntArray(2) { Int.MIN_VALUE }
+    private val strokeLength = DoubleArray(2)
+    private val strokeShift = DoubleArray(2)
+    private val strokeIndex = IntArray(2) { Int.MIN_VALUE }
+    private val strokeDepth = DoubleArray(2)
+
+    /** The pressure's samples, every [PRESSURE_STEP_X] by [PRESSURE_STEP_Y] px; made for a [pressureSpan] square. */
+    private var pressureGrid = DoubleArray(0)
+    private var pressureCols = 0
+    private var pressureSpan = -1
+
+    /**
+     * How hard the brush pressed at [px], [py]: harder in some patches than in others. The noise moves slowly, so it is
+     * sampled on a coarse grid ([preparePressure]) and blended between the samples, once per build instead of once a
+     * pixel; the difference does not show.
+     */
+    private fun pressure(px: Int, py: Int): Double {
+        val fx = px / PRESSURE_STEP_X
+        val fy = py / PRESSURE_STEP_Y
+        val c = floor(fx).toInt()
+        val r = floor(fy).toInt()
+        val tx = fx - c
+        val ty = fy - r
+        val i = r * pressureCols + c
+        val top = pressureGrid[i] + (pressureGrid[i + 1] - pressureGrid[i]) * tx
+        val bottom = pressureGrid[i + pressureCols] + (pressureGrid[i + pressureCols + 1] - pressureGrid[i + pressureCols]) * tx
+
+        return top + (bottom - top) * ty
+    }
+
+    /** The pressure's samples for coordinates up to [span] either way: a turned tile's are swapped. */
+    private fun preparePressure(span: Int) {
+        if (span == pressureSpan) {
+            return
+        }
+
+        val cols = (span / PRESSURE_STEP_X).toInt() + 2
+        val rows = (span / PRESSURE_STEP_Y).toInt() + 2
+        val grid = DoubleArray(cols * rows)
+
+        for (r in 0 until rows) {
+            for (c in 0 until cols) {
+                grid[r * cols + c] =
+                    0.55 + 0.45 * grainNoise.noise(c * PRESSURE_STEP_X * 0.006 + 3.1, r * PRESSURE_STEP_Y * 0.02 + 8.7)
+            }
+        }
+
+        pressureGrid = grid
+        pressureCols = cols
+        pressureSpan = span
     }
 
     /**
@@ -1536,10 +1608,16 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
         val originY = gridOriginY(height)
         val offset = offsetRows(width, height)
         val plateRowOriginX = gridOriginInPlateRow(width)
-        // Whether a tile lies turned, worked out when the loop enters another tile, not for every pixel
+        // Whether a tile lies turned, and its tilt, worked out when the loop enters another tile, not for every pixel
         var turnedCol = Int.MIN_VALUE
         var turnedRow = Int.MIN_VALUE
         var tileTurned = false
+        var tileTiltX = 0.0
+        var tileTiltY = 0.0
+        // The plates the cell being made touches: most touch none
+        var cellPlates: List<TitlePlate> = plates
+
+        preparePressure(max(width, height))
 
         fun pixel(px: Int, py: Int) {
             val idx = (py * width + px) * 4
@@ -1555,7 +1633,7 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
             // On a plate: a flat face, no seams, and its edges stepping up from the tiles
             var on: TitlePlate? = null
 
-            for (plate in plates) {
+            for (plate in cellPlates) {
                 if (plate.contains(px.toDouble(), py.toDouble())) {
                     on = plate
                     break
@@ -1563,9 +1641,17 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
             }
             val onPlate = on != null
 
+            if (col != turnedCol || row != turnedRow) {
+                turnedCol = col
+                turnedRow = row
+                tileTurned = isTurned(col, row)
+                tileTiltX = (hashCell(col * 3 + 11, row * 7 + 29) - 0.5) * 0.08
+                tileTiltY = (hashCell(col * 5 + 43, row * 3 + 71) - 0.5) * 0.08
+            }
+
             // Per-panel constant tilt; the plate's face lies flat
-            val tiltX = if (onPlate) 0.0 else (hashCell(col * 3 + 11, row * 7 + 29) - 0.5) * 0.08
-            val tiltY = if (onPlate) 0.0 else (hashCell(col * 5 + 43, row * 3 + 71) - 0.5) * 0.08
+            val tiltX = if (onPlate) 0.0 else tileTiltX
+            val tiltY = if (onPlate) 0.0 else tileTiltY
 
             // V-groove seams along the grid lines; the plate's edges as a tile's, so it meets its neighbours as tiles
             // meet (the maintainer, 2026-10-26)
@@ -1589,12 +1675,6 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
             // Brushed steel, the plate and every tile: hairlines along the brushing tilt the face across them. A
             // tile laid turned by 90 degrees, as if fitted the wrong way round, is brushed up and down (the
             // maintainer, 2026-10-26); the title's plate lies straight
-            if (col != turnedCol || row != turnedRow) {
-                turnedCol = col
-                turnedRow = row
-                tileTurned = isTurned(col, row)
-            }
-
             val turned = !onPlate && tileTurned
             // The title's plate has no rivets (the maintainer, 2026-10-28: "remove the rivets on the Klangmotor
             // tile"; they came 2026-10-26)
@@ -1686,6 +1766,8 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
                 }
 
                 val (x0, y0, x1, y1) = queue[i]
+
+                cellPlates = plates.filter { it.left < x1 && it.right > x0 && it.top < y1 && it.bottom > y0 }
 
                 for (py in y0 until y1) {
                     for (px in x0 until x1) {
