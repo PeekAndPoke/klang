@@ -59,6 +59,19 @@ class MotorHistoryGraphs(ctx: NoProps) : PureComponent(ctx) {
             "#9575cd",
             "#ff8a65",
         )
+
+        /**
+         * A graph's range where it is not its metrics' own: CPU up to twice the budget, so a load over it shows how far
+         * over (the maintainer, 2026-10-29: "draw the CPU graph between 0 and 200%").
+         */
+        private val CATEGORY_RANGE = mapOf("CPU" to 0.0..200.0)
+
+        /**
+         * A line over its metric's budget, its [KlangDiagnostics.Metric.max], is drawn in its colour tinted red, the
+         * fill under it as ever (the maintainer, 2026-10-29: "over-budget parts in red taint of the graph color ...
+         * just the line not the fill").
+         */
+        private fun overBudget(color: String): String = "color-mix(in srgb, $color 40%, #ff3b30)"
     }
 
     /** The current player's history; null while there is none. */
@@ -101,9 +114,11 @@ class MotorHistoryGraphs(ctx: NoProps) : PureComponent(ctx) {
         colorOf: (KlangDiagnostics.Series) -> String,
         size: Int,
     ) {
-        // One scale for the category: its metrics share a unit, the widest range holds them all
-        val min = series.minOf { it.metric.min }
-        val max = series.maxOf { it.metric.max }
+        // One scale for the category: its metrics share a unit, the widest range holds them all, unless the category
+        // has a range of its own
+        val range = CATEGORY_RANGE[category]
+        val min = range?.start ?: series.minOf { it.metric.min }
+        val max = range?.endInclusive ?: series.maxOf { it.metric.max }
 
         div {
             key = "graph-$category"
@@ -143,7 +158,14 @@ class MotorHistoryGraphs(ctx: NoProps) : PureComponent(ctx) {
                     }
 
                     for (s in series) {
-                        renderLine(values = s.values, min = min, max = max, size = size, color = colorOf(s))
+                        renderLine(
+                            values = s.values,
+                            min = min,
+                            max = max,
+                            budget = s.metric.max,
+                            size = size,
+                            color = colorOf(s),
+                        )
                     }
                 }
             }
@@ -192,15 +214,30 @@ class MotorHistoryGraphs(ctx: NoProps) : PureComponent(ctx) {
         }
     }
 
-    /** One metric's line over a faint area, a stretch between its gaps each. */
-    private fun FlowContent.renderLine(values: List<Double?>, min: Double, max: Double, size: Int, color: String) {
+    /** A point of a line: where it is drawn, and the value it stands for. */
+    private class Point(val x: Double, val y: Double, val value: Double)
+
+    /**
+     * One metric's line over a faint area, a stretch between its gaps each; where it runs over its [budget] the line is
+     * tinted red ([overBudget]), cut where it crosses the budget.
+     */
+    private fun FlowContent.renderLine(
+        values: List<Double?>,
+        min: Double,
+        max: Double,
+        budget: Double,
+        size: Int,
+        color: String,
+    ) {
         val step = WIDTH / (size - 1)
         // The newest at the right edge: while the history fills, it starts further right
         val offset = size - values.size
         // NaN-guard: a range of nothing scales by 1
         val span = (max - min).takeIf { it > 0.0 } ?: 1.0
-        val stretches = mutableListOf<List<Pair<Double, Double>>>()
-        var current = mutableListOf<Pair<Double, Double>>()
+        val stretches = mutableListOf<List<Point>>()
+        var current = mutableListOf<Point>()
+
+        fun yOf(v: Double) = HEIGHT - ((v - min) / span).coerceIn(0.0, 1.0) * HEIGHT
 
         for ((i, v) in values.withIndex()) {
             if (v == null) {
@@ -209,8 +246,7 @@ class MotorHistoryGraphs(ctx: NoProps) : PureComponent(ctx) {
                     current = mutableListOf()
                 }
             } else {
-                val y = HEIGHT - ((v - min) / span).coerceIn(0.0, 1.0) * HEIGHT
-                current.add((offset + i) * step to y)
+                current.add(Point(x = (offset + i) * step, y = yOf(v), value = v))
             }
         }
 
@@ -218,21 +254,46 @@ class MotorHistoryGraphs(ctx: NoProps) : PureComponent(ctx) {
             stretches.add(current)
         }
 
+        fun polyline(points: List<Pair<Double, Double>>, stroke: String) {
+            custom("polyline") {
+                attributes["points"] = points.joinToString(" ") { (x, y) -> "${x.fmt()},${y.fmt()}" }
+                attributes["style"] = "fill: none; stroke: $stroke; stroke-width: 1.1"
+                attributes["vector-effect"] = "non-scaling-stroke"
+            }
+        }
+
         for (points in stretches) {
-            val line = points.joinToString(" ") { (x, y) -> "${x.fmt()},${y.fmt()}" }
+            val line = points.joinToString(" ") { "${it.x.fmt()},${it.y.fmt()}" }
 
             custom("polygon") {
-                val (first, last) = points.first().first.fmt() to points.last().first.fmt()
+                val (first, last) = points.first().x.fmt() to points.last().x.fmt()
 
                 attributes["points"] = "$first,$HEIGHT $line $last,$HEIGHT"
                 attributes["style"] = "fill: color-mix(in srgb, $color 16%, transparent)"
             }
 
-            custom("polyline") {
-                attributes["points"] = line
-                attributes["style"] = "fill: none; stroke: $color; stroke-width: 1.1"
-                attributes["vector-effect"] = "non-scaling-stroke"
+            // The line in pieces, a new one where it crosses the budget
+            var over = points.first().value > budget
+            var piece = mutableListOf(points.first().x to points.first().y)
+
+            for (i in 1 until points.size) {
+                val a = points[i - 1]
+                val b = points[i]
+
+                if ((b.value > budget) != over) {
+                    val t = (budget - a.value) / (b.value - a.value)
+                    val cross = (a.x + (b.x - a.x) * t) to yOf(budget)
+
+                    piece.add(cross)
+                    polyline(piece, stroke = if (over) overBudget(color) else color)
+                    piece = mutableListOf(cross)
+                    over = !over
+                }
+
+                piece.add(b.x to b.y)
             }
+
+            polyline(piece, stroke = if (over) overBudget(color) else color)
         }
     }
 
