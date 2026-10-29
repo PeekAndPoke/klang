@@ -8,6 +8,7 @@ package io.peekandpoke.klang.comp
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
+import io.peekandpoke.klang.audio_engine.KlangPlaybackSource
 import io.peekandpoke.klang.audio_engine.play
 import io.peekandpoke.klang.sprudel.SprudelDiagnostic
 import io.peekandpoke.klang.sprudel.SprudelDiagnostics
@@ -34,7 +35,17 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) {
 
     companion object {
         fun builder() = Builder()
+
+        /** Controllers made so far: each takes the next number for its [source]'s id. */
+        private var made = 0
     }
+
+    /**
+     * Who plays, for the playbacks this controller starts: the same id over stop and play, so its pattern work goes on
+     * one line in the Motor's history, the song's title its name (the maintainer, 2026-10-29: "when i play and stop the
+     * same song the sprudel entries pile up").
+     */
+    private val sourceId = "ctrl-${++made}"
 
     data class Config(
         val initialCode: String,
@@ -223,7 +234,7 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) {
 
             when (val current = _playback()) {
                 null -> {
-                    val pb = player.play(pattern)
+                    val pb = player.play(pattern, source = KlangPlaybackSource(id = sourceId, name = _state().title))
                     _playback(pb)
                     playingCode = codeToPlay
                     _state {

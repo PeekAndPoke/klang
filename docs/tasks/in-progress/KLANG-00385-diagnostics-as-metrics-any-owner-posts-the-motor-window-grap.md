@@ -35,8 +35,11 @@ warehouse.
 
 **Sprudel's runtime is the first new metric.** The pattern scheduler times its pattern queries (the next cycles and
 the sample look-ahead) with the playback's clock, adds up the milliseconds, and every quarter second posts the share of
-real time they took: Sprudel runtime (CPU, %, 0 to 100), one per playback, registered when it starts, closed when it
-stops. The playback context hands the player's diagnostics to the scheduler.
+real time they took: Sprudel runtime (CPU, %, 0 to 100), registered when a playback starts, closed when it stops.
+The playback context hands the player's diagnostics to the scheduler. A line is a metric's id, and the scheduler takes
+its id from who plays (`KlangPlaybackSource`, a playback controller's own id, the song's title as its name), so the
+same song played, stopped and played again from one place goes on in one line after a gap instead of piling up a line
+per play (the maintainer, 2026-10-29); two songs playing at once are two lines.
 
 **The Motor window draws one graph per category.** Its metrics are lines in it, each in its own colour, on the
 category's scale (the widest of its metrics' ranges), with a legend: a lamp in the line's colour, the name, the latest
@@ -61,10 +64,14 @@ side by side.
 ## Acceptance
 
 - The Motor window shows CPU (Motor heat and Sprudel runtime), Cylinders and Voices, with a legend each.
-- A song playing shows Sprudel runtime; stopped, its line ends and scrolls out.
+- A song playing shows Sprudel runtime; stopped, its line ends and scrolls out; played again from the same place, it
+  goes on in the same line.
 - No object is made per post; closing every metric leaves the registry empty.
 
 ## History
 
 - 2026-10-28: created; the plan written and built: `KlangDiagnostics`, the player's three metrics, Sprudel runtime
   in the scheduler, the graphs per category with a lamp legend; waiting for the maintainer's look.
+- 2026-10-29: Option B (one summed metric owned by the player) not taken: the maintainer saw the lines pile up on play
+  and stop and asked for "an identifier that "survives" stop and play". The history keys its lines by metric id; the
+  scheduler's id comes from who plays (`KlangPlaybackSource`).

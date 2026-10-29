@@ -22,7 +22,10 @@ import kotlin.concurrent.Volatile
  * - [metric]: a metric any owner registers (the player its Motor readings, a playback its pattern work), posts plain
  *   numbers to, and closes when it ends: metrics belong to their owner, so the registry never grows with use.
  * - [history]: every metric's last [capacity] readings, one per tick of [ticks], each the metric's latest value when it
- *   posted within [FRESH_MS], else a gap (null). A closed metric's line stays until it scrolls out.
+ *   posted within [FRESH_MS], else a gap (null). A closed metric's line stays until it scrolls out. A line is a metric's
+ *   [Metric.id]: a metric registered again under an id continues its line, after a gap (the maintainer, 2026-10-29:
+ *   "when i play and stop the same song the sprudel entries pile up", "would need an identifier that "survives" stop and
+ *   play").
  *
  * A clock reads the registry rather than combining the metrics' streams: those come and go with their owners. The tick
  * reads in a map; an operator that samples a stream on a clock is ULTRA-00267.
@@ -79,13 +82,13 @@ class KlangDiagnostics(
         }
     }
 
-    /** A metric's readings, oldest first, null for a gap. */
+    /** A metric's readings, oldest first, null for a gap; [metric] is the latest registered under its id. */
     class Series(val metric: Metric, val values: List<Double?>) {
         /** The newest reading; null while the metric gives none. */
         val latest: Double? get() = values.lastOrNull()
     }
 
-    /** The last [capacity] readings of every metric that gave one, in the order they first did. */
+    /** The last [capacity] readings of every metric id that gave one, in the order they first did. */
     class History(val series: List<Series>, val capacity: Int) {
         /** The series by their metric's category, the categories in the order they first came. */
         val byCategory: Map<String, List<Series>> get() = series.groupBy { it.metric.category }
@@ -111,28 +114,37 @@ class KlangDiagnostics(
         lock.withLock { registry.remove(metric) }
     }
 
-    /** One tick's readings: each registered metric's latest value when it is fresh. */
-    private fun read(): Map<Metric, Double> {
+    /** A metric's reading at one tick. */
+    private class Reading(val metric: Metric, val value: Double)
+
+    /** One tick's readings, by metric id: each registered metric's latest value when it is fresh. */
+    private fun read(): Map<String, Reading> {
         val now = nowMs()
 
         return metrics.mapNotNull { metric ->
             // NaN-guard: a metric that never posted has a NaN value and no time; it gives no reading
-            metric.value.takeIf { !it.isNaN() && now - metric.postedAtMs <= FRESH_MS }?.let { metric to it }
+            metric.value.takeIf { !it.isNaN() && now - metric.postedAtMs <= FRESH_MS }?.let { metric.id to Reading(metric, it) }
         }.toMap()
     }
 
     /** The last [capacity] readings, one per tick. */
-    private val readings: Stream<List<Map<Metric, Double>>> = ticks.map { read() }.history(capacity = capacity)
+    private val readings: Stream<List<Map<String, Reading>>> = ticks.map { read() }.history(capacity = capacity)
 
-    /** The history, anew per tick. */
+    /** The history, anew per tick: a line per metric id, named by the metric that read last under it. */
     val history: Stream<History> = readings.map { all ->
-        val metrics = LinkedHashSet<Metric>()
+        val latest = LinkedHashMap<String, Metric>()
 
         for (reading in all) {
-            metrics.addAll(reading.keys)
+            for ((id, r) in reading) {
+                // Kept in the order the ids first came; the newest metric under an id names its line
+                latest[id] = r.metric
+            }
         }
 
-        History(series = metrics.map { m -> Series(metric = m, values = all.map { it[m] }) }, capacity = capacity)
+        History(
+            series = latest.map { (id, metric) -> Series(metric = metric, values = all.map { it[id]?.value }) },
+            capacity = capacity,
+        )
     }
 
     private var running: List<Unsubscribe> = emptyList()

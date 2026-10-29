@@ -96,4 +96,25 @@ class KlangDiagnosticsSpec : StringSpec({
         heat.close()
         rig.diagnostics.metrics.shouldBeEmpty()
     }
+
+    "a metric registered again under an id goes on in the same line, after a gap, named by the newest" {
+        // The same song played, stopped and played again from the same place (the maintainer, 2026-10-29)
+        val rig = Rig().apply { diagnostics.start() }
+        val first = rig.diagnostics.metric(id = "s", name = "Sprudel: A", category = "CPU", unit = "%", min = 0.0, max = 100.0)
+
+        first.post(5.0)
+        rig.tick()
+        first.close()
+        rig.tick()
+
+        val again = rig.diagnostics.metric(id = "s", name = "Sprudel: B", category = "CPU", unit = "%", min = 0.0, max = 100.0)
+
+        again.post(7.0)
+        rig.tick()
+
+        val line = rig.diagnostics.history().series.single()
+
+        line.values shouldContainExactly listOf(null, 5.0, null, 7.0)
+        line.metric.name shouldBe "Sprudel: B"
+    }
 })

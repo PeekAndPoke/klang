@@ -18,16 +18,19 @@ expect suspend fun klangPlayer(
 
 /**
  * Start continuous playback that runs indefinitely until stopped.
- * This is the default mode for live coding.
+ * This is the default mode for live coding. [source] is who plays it, the same over stop and play
+ * ([KlangPlaybackSource]); null for a playback of its own.
  */
 fun KlangPlayer.play(
     pattern: KlangPattern,
+    source: KlangPlaybackSource? = null,
 ): KlangCyclicPlayback {
     lateinit var playback: KlangCyclicPlayback
     playback = ContinuousPlayback(
         playbackId = generatePlaybackId(),
         pattern = pattern,
         context = playbackContext,
+        source = source,
         onStarted = { registerPlayback(playback) },
         onStopped = { unregisterPlayback(playback) },
     )
