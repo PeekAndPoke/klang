@@ -241,7 +241,10 @@ Klang out of it and the move is a copy. Klang's modules depend on it.
   action; a modal needs a layer that blocks the keys below it. Decide with step 5 (ULTRA-00239).
 - **Kraft parity for the move:** of Kraft's managers only the modals manager is an interface with an implementation;
   the popups and toasts managers are classes, as `KeysManager` is (it adds its listeners in its constructor);
-  `Component.keys` is a generic name on every component. Settle when it moves. Also for the move: the stage's
+  `Component.keys` is a generic name on every component. Its listeners added in the constructor pile up per app in a
+  test bed, as ULTRA-00268 found for Kraft's `WindowController`: reuse the shape 00268 settles on (Ultra-Main-Dev,
+  2026-10-29). ULTRA-00239 has taken this ticket as its plan and waits for the maintainer's go for the move (step 5);
+  ULTRA-00265's keyboard step builds on it too, with a key layer per drag session. Settle when it moves. Also for the move: the stage's
   `visibleBox` treats `overflow-x: clip` with a visible `overflow-y` as clipping both axes, and cuts an absolute or
   fixed anchor by ancestors that are not its containing block; no anchor in Klang is either (2026-10-25). Layers
   follow the component tree, not the stack on screen: a component drawn on an app-wide stage (a popup opened from
