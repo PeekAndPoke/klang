@@ -311,6 +311,31 @@ class KlangampPlayer(ctx: Ctx<Props>) : Component<KlangampPlayer.Props>(ctx) {
                     readout(label = "SONG", value = if (index >= 0) "${index + 1}/${BuiltInSongs.songs.size}" else "--")
                     readout(label = "STEREO", value = null)
                 }
+
+                // The keys, up beside the time, at its foot (the maintainer, 2026-10-29: "move the playback buttons up")
+                div {
+                    css {
+                        put("display", "flex")
+                        put("gap", "6px")
+                        put("margin-top", "auto")
+                    }
+
+                    transportKey(label = "Previous song", onClick = { KlangampDeck.skip(now = now, step = -1) }) {
+                        icon.step_backward()
+                    }
+                    transportKey(
+                        label = "Play",
+                        onClick = {
+                            if (index >= 0) KlangampDeck.play(BuiltInSongs.songs[index]) else KlangampDeck.skip(now, 0)
+                        },
+                    ) {
+                        icon.play()
+                    }
+                    transportKey(label = "Stop", onClick = { KlangampDeck.stop() }) { icon.stop() }
+                    transportKey(label = "Next song", onClick = { KlangampDeck.skip(now = now, step = 1) }) {
+                        icon.step_forward()
+                    }
+                }
             }
         }
 
@@ -325,59 +350,75 @@ class KlangampPlayer(ctx: Ctx<Props>) : Component<KlangampPlayer.Props>(ctx) {
             )
         }
 
-        // The keys, the gauges and the volume
+        // The volume on the left, as on the code page's Motor, right beside the gauges; the gauges in the middle; a
+        // place kept on the right (the maintainer, 2026-10-29: "Put the gauges centered and the volume knob left as in
+        // the Code SongPage. Put a "placeholder" on the right of the gauges", then "Move the volume button there")
         div {
             css {
-                put("display", "flex")
+                put("display", "grid")
+                put("grid-template-columns", "1fr auto 1fr")
                 put("align-items", "center")
-                put("gap", "6px")
                 put("margin-top", "6px")
             }
 
-            transportKey(label = "Previous song", onClick = { KlangampDeck.skip(now = now, step = -1) }) {
-                icon.step_backward()
-            }
-            transportKey(
-                label = "Play",
-                onClick = { if (index >= 0) KlangampDeck.play(BuiltInSongs.songs[index]) else KlangampDeck.skip(now, 0) },
-            ) {
-                icon.play()
-            }
-            transportKey(label = "Stop", onClick = { KlangampDeck.stop() }) { icon.stop() }
-            transportKey(label = "Next song", onClick = { KlangampDeck.skip(now = now, step = 1) }) { icon.step_forward() }
-
-            div { css { put("flex", "1") } }
-
-            KlangGauge(
-                name = "Active cylinders",
-                value = cylinders,
-                range = 0.0..32.0,
-                size = 44.px,
-                icon = { layer_group },
-                display = { it.roundToInt().toString() },
-            )
-            KlangGauge(
-                name = "Motor heat",
-                value = heat,
-                size = 52.px,
-                icon = { microchip },
-                display = { "${(it * 100).roundToInt()}%" },
-                hotFrom = PlayerMiniStats.HEAT_HOT_FROM,
-            )
-            KlangGauge(
-                name = "Active voices",
-                value = voices,
-                range = 0.0..100.0,
-                size = 44.px,
-                icon = { music },
-                display = { it.roundToInt().toString() },
-            )
-
             div {
-                css { put("margin-left", "4px") }
+                css {
+                    put("justify-self", "end")
+                    put("margin-right", "6px")
+                }
                 VolumeKnob(size = 40.px)
             }
+
+            div {
+                css {
+                    put("display", "flex")
+                    put("align-items", "center")
+                    put("gap", "6px")
+                }
+
+                gauges()
+            }
+
+            // The placeholder: the knob's room, empty for now
+            div {
+                key = "placeholder"
+                attributes["aria-hidden"] = "true"
+                css {
+                    put("justify-self", "start")
+                    put("margin-left", "6px")
+                    put("width", "40px")
+                    put("height", "40px")
+                }
+            }
         }
+    }
+
+    /** The Motor's three gauges: cylinders, heat, voices. */
+    private fun FlowContent.gauges() {
+        KlangGauge(
+            name = "Active cylinders",
+            value = cylinders,
+            range = 0.0..32.0,
+            size = 44.px,
+            icon = { layer_group },
+            display = { it.roundToInt().toString() },
+        )
+        KlangGauge(
+            name = "Motor heat",
+            value = heat,
+            size = 52.px,
+            icon = { microchip },
+            display = { "${(it * 100).roundToInt()}%" },
+            hotFrom = PlayerMiniStats.HEAT_HOT_FROM,
+        )
+        KlangGauge(
+            name = "Active voices",
+            value = voices,
+            range = 0.0..100.0,
+            size = 44.px,
+            icon = { music },
+            display = { it.roundToInt().toString() },
+        )
     }
 
     /** A small readout: its label, its value; a value of null is a lamp, lit. */
