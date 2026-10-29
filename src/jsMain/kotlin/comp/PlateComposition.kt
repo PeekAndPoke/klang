@@ -66,6 +66,12 @@ data class PlateComposition(
      * outside black"); else the grid of plain tiles runs to the window's edges.
      */
     val bareOutside: Boolean = false,
+    /**
+     * With [bareOutside], whether its tiles show: off, the parts float on black, only the title cut into the dark (the
+     * maintainer, 2026-10-29: "without the tiles was also nice... can we have a switch somewhere? Maybe the
+     * Motorbutton").
+     */
+    val platesShown: Boolean = true,
 ) {
     companion object {
         /** The ids of the tiles the compositions here place. */

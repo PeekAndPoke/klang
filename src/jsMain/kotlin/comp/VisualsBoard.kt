@@ -31,8 +31,9 @@ fun Tag.VisualsBoard(
     composition: PlateComposition,
     onLeave: () -> Unit,
     lamp: () -> MotorBackground.Lamp?,
+    onMotorButton: () -> Unit = onLeave,
 ) = comp(
-    VisualsBoard.Props(composition = composition, onLeave = onLeave, lamp = lamp)
+    VisualsBoard.Props(composition = composition, onLeave = onLeave, lamp = lamp, onMotorButton = onMotorButton)
 ) {
     VisualsBoard(it)
 }
@@ -43,7 +44,7 @@ fun Tag.VisualsBoard(
  * both placed by the same geometry ([MotorBackground.tilesOnScreen]):
  *
  * - [PlateComposition.GAUGES]: the volume knob, the three gauges and the menu button, each in the middle of its tile;
- *   the menu button leaves the visual.
+ *   the menu button leaves the visual, or does what the visual gives it ([Props.onMotorButton]).
  * - [PlateComposition.BOARD]: the scope in a hole cut into the plate, its inside lit by the signal, and under it the
  *   spectrum in a well, a tile row each (the maintainer, 2026-10-29).
  * - [PlateComposition.SCOPE_SPECTRUM]: the hole and the well side by side, one tile row.
@@ -59,6 +60,8 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
         val onLeave: () -> Unit,
         /** The plate's lamp, which the glass domes reflect; null until the plate is mounted. */
         val lamp: () -> MotorBackground.Lamp?,
+        /** What the menu button in the gauges' row does: leave, or switch the tiles (Klang Amp tiles). */
+        val onMotorButton: () -> Unit,
     )
 
     companion object {
@@ -247,7 +250,7 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
                 display = { it.roundToInt().toString() },
             )
 
-            KlangMenuButton(open = false, onClick = { props.onLeave() }, size = (tile * KNOB).px)
+            KlangMenuButton(open = false, onClick = { props.onMotorButton() }, size = (tile * KNOB).px)
         }
     }
 

@@ -81,6 +81,9 @@ class VisualsScreen(ctx: NoProps) : PureComponent(ctx) {
 
         /** Whether a visual is shown. */
         val open: Stream<Boolean> = shown.map { it != null }.distinct()
+
+        /** Whether Klang Amp tiles shows its tiles; its Motor button switches them, kept while the app runs. */
+        val klangampTilesShown = StreamSource(true)
     }
 
     /** The modal showing [shown]'s visual; null while none is open. */
@@ -163,6 +166,8 @@ private class VisualsModal(ctx: Ctx<Props>) : FadingModal<VisualsModal.Props, Bo
     @Suppress("unused")
     private val look by subscribingTo(KlangTheme.look)
 
+    private val tilesShown by subscribingTo(VisualsScreen.klangampTilesShown)
+
     private var hideTimer: Int? = null
 
     /** The visual's own background, not the start page's shared one. */
@@ -209,7 +214,10 @@ private class VisualsModal(ctx: Ctx<Props>) : FadingModal<VisualsModal.Props, Bo
     }
 
     override fun FlowContent.renderContent() {
-        val composition = props.visual.composition()
+        val composition = when (props.visual) {
+            VisualsScreen.Visual.KlangampTiles -> props.visual.composition().copy(platesShown = tilesShown)
+            else -> props.visual.composition()
+        }
 
         div {
             key = "visuals-screen"
@@ -227,7 +235,16 @@ private class VisualsModal(ctx: Ctx<Props>) : FadingModal<VisualsModal.Props, Bo
 
             MotorBackground(ref = background, composition = composition)
 
-            VisualsBoard(composition = composition, onLeave = { close() }, lamp = { background()?.lamp })
+            VisualsBoard(
+                composition = composition,
+                onLeave = { close() },
+                lamp = { background()?.lamp },
+                // Klang Amp tiles: the Motor button switches the tiles on and off (the maintainer, 2026-10-29)
+                onMotorButton = when (props.visual) {
+                    VisualsScreen.Visual.KlangampTiles -> { -> VisualsScreen.klangampTilesShown(!tilesShown) }
+                    else -> { -> close() }
+                },
+            )
 
             // The close key: Esc always (it answers while mounted), the pill only after the mouse moved
             button(type = ButtonType.button) {

@@ -790,8 +790,23 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
         onPrepared.clear()
     }
 
+    /** The composition the textures were last asked for: another one rebuilds them. */
+    private var builtFor: PlateComposition = props.composition
+
     init {
         lifecycle {
+            onUpdate {
+                if (props.composition != builtFor) {
+                    builtFor = props.composition
+                    // As a resize does: a build that runs rebuilds when it is done
+                    threeAddon?.let { addon ->
+                        when {
+                            prepared -> rebuildTextures(addon)
+                            preparing -> rebuildPending = true
+                        }
+                    }
+                }
+            }
             onUnmount { teardown() }
             onError { e -> markFailed(e) }
         }
@@ -1175,14 +1190,15 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
         }
 
         // Only the composition's own tiles, the rest left black: the plate's face kept where a tile lies, clear outside,
-        // the material's transparency shows the black backdrop there ([PlateComposition.bareOutside])
+        // the material's transparency shows the black backdrop there ([PlateComposition.bareOutside]); with its tiles
+        // switched off, none ([PlateComposition.platesShown])
         if (props.composition.bareOutside) {
             // One path for all of them, filled once: a fill per plate would keep only what lies in every plate
             tctx.globalCompositeOperation = "destination-in"
             tctx.fillStyle = "#ffffff"
             tctx.beginPath()
 
-            for (plate in plates) {
+            for (plate in plates.takeIf { props.composition.platesShown }.orEmpty()) {
                 tctx.rect(plate.left, plate.top, plate.right - plate.left, plate.bottom - plate.top)
             }
 
