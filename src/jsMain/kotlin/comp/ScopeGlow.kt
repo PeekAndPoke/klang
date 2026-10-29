@@ -55,13 +55,13 @@ class ScopeGlow(ctx: Ctx<Props>) : Component<ScopeGlow.Props>(ctx) {
                 put("position", "absolute")
                 put("inset", "0")
                 put("pointer-events", "none")
-                // As wide as ever, the farthest corner's ellipse faded out at 75 % reaching 53 % of the width to each
-                // side, but flatter: 40 % of the height to each side (the maintainer, 2026-10-29: "make the glow a bit
-                // narrower", then "By narrow i mean narrower vertically. Please restore the horizontal extent", then
-                // from 30 %: "now to narrow vertically ... bit more please")
+                // 65 % of the width and 40 % of the height to each side (the maintainer, 2026-10-29: "make the glow a
+                // bit narrower", then "By narrow i mean narrower vertically. Please restore the horizontal extent",
+                // then from 30 %: "now to narrow vertically ... bit more please", then from 53 %: "Make it wider
+                // horizontally please")
                 put(
                     "background",
-                    "radial-gradient(ellipse 53% 40% at center, " +
+                    "radial-gradient(ellipse 65% 40% at center, " +
                         "color-mix(in srgb, var(--kl-scope-trace) $percent%, transparent) 0%, transparent 100%)",
                 )
             }
