@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.comp
 
+import io.peekandpoke.klang.KlangGuiDance
 import io.peekandpoke.klang.layouts.WorkbenchSlots
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.codemirror.ToolCallSite
@@ -73,6 +74,8 @@ class QuickHelpPanel(
         title = "Help and tools",
         // The tools' icon: the panel holds the Quick help, the Lexikon and the Sprudel tool (the maintainer, 2026-10-28)
         icon = { tools },
+        // Its key, the Visuals walkthrough's first step
+        beaconStep = KlangGuiDance.BOTTOM_PANEL,
         tabs = listOf(
             KlangWorkbench.Tab(id = TAB_QUICK_HELP, title = "Quick help") {
                 div {
@@ -111,7 +114,7 @@ class QuickHelpPanel(
             },
         ) + listOf(
             // Visuals over the whole window (the maintainer, 2026-10-29), a card each; after Sprudel
-            KlangWorkbench.Tab(id = TAB_VISUALS, title = "Visuals") {
+            KlangWorkbench.Tab(id = TAB_VISUALS, title = "Visuals", beaconStep = KlangGuiDance.VISUALS_TAB) {
                 div {
                     key = "visuals-$pageKey"
                     css {
@@ -120,11 +123,23 @@ class QuickHelpPanel(
                         put("gap", "10px")
                     }
 
+                    // Klang Amp tiles is the Visuals walkthrough's third step: its card wears the beacon while lit
+                    val guidedLit = KlangGuiDance.dance.lit() == KlangGuiDance.VISUAL_KLANGAMP_TILES
+
                     for (visual in VisualsScreen.Visual.entries) {
+                        val guided = visual == VisualsScreen.Visual.KlangampTiles
+
                         KlangButton(
-                            onClick = { VisualsScreen.shown(visual) },
+                            onClick = {
+                                if (guided) {
+                                    KlangGuiDance.dance.used(KlangGuiDance.VISUAL_KLANGAMP_TILES)
+                                }
+
+                                VisualsScreen.shown(visual)
+                            },
                             surface = KlangButton.Surface.Domed,
                             shape = KlangButton.Shape.Tile,
+                            beacon = guided && guidedLit,
                         ) {
                             // A small picture of the visual (the maintainer, 2026-10-29: "Add a preview to the cards")
                             VisualPreview(visual)

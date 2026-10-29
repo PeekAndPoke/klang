@@ -18,9 +18,14 @@ import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.modals.ModalsManager
 import io.peekandpoke.kraft.semanticui.modals.FadingModal
 import io.peekandpoke.ultra.html.css
+import io.peekandpoke.ultra.html.key
+import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.semanticui.ui
+import kotlinx.css.px
+import kotlinx.html.ButtonType
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
+import kotlinx.html.button
 import kotlinx.html.div
 import kotlinx.html.title
 import org.w3c.dom.HTMLElement
@@ -83,14 +88,21 @@ class WalkthroughsWindow(ctx: Ctx<Props>) : FadingModal<WalkthroughsWindow.Props
     private enum class MuteChoice { Keep, Hour, Day, Unmute }
 
     /** The finished walkthroughs marked to be taken again, their lamps off. */
-    private var toReopen: Set<String> by value(emptySet())
+    /**
+     * The walkthroughs whose state Confirm turns over: a finished one taken again, one to come marked finished. Clicked
+     * again, the mark goes.
+     */
+    private var toTurn: Set<String> by value(emptySet())
+
+    /** Whether [arc] shows as finished: as it is, or turned over by a mark. */
+    private fun shownFinished(arc: GuiDance.Arc): Boolean = (arc in props.dance.doneArcs()) != (arc.id in toTurn)
 
     private var muteChoice: MuteChoice by value(MuteChoice.Keep)
 
     override fun FlowContent.renderContent() {
         val dance = props.dance
         val done = dance.doneArcs()
-        val toCome = dance.remaining() + toReopen.size
+        val toCome = dance.arcs.count { !shownFinished(it) }
         val mutedUntil = dance.mutedUntil()
 
         div {
@@ -100,8 +112,9 @@ class WalkthroughsWindow(ctx: Ctx<Props>) : FadingModal<WalkthroughsWindow.Props
                 put("top", "50%")
                 put("left", "50%")
                 put("transform", "translate(-50%, -50%)")
-                // Wide enough for the walkthroughs two to a row (the maintainer, 2026-10-28)
-                put("width", "600px")
+                // Wide enough for the walkthroughs' cards two to a row (the maintainer, 2026-10-28; wider for the cards,
+                // 2026-10-29)
+                put("width", "780px")
                 put("max-width", "calc(100vw - 32px)")
                 put("outline", "none")
                 put("text-align", "left")
@@ -118,24 +131,13 @@ class WalkthroughsWindow(ctx: Ctx<Props>) : FadingModal<WalkthroughsWindow.Props
 
                 ui.divider()
 
-                if (done.isEmpty()) {
-                    div { +"No walkthrough finished yet." }
-                } else {
-                    twoToARow {
-                        // A finished walkthrough, pressed, is marked to be taken again: it stays, its lamp off; pressed again,
-                        // it stays finished (the maintainer, 2026-10-27: "keep it on the screen but disable the light")
-                        for (arc in done) {
-                            val again = arc.id in toReopen
-
-                            KlangButton(
-                                onClick = { toReopen = if (again) toReopen - arc.id else toReopen + arc.id },
-                                pressed = again,
-                                lamp = if (again) KlangLamp.State.Off else KlangLamp.State.On,
-                            ) {
-                                title = if (again) "Keep it finished" else "Take this walkthrough again"
-                                +arc.title
-                            }
-                        }
+                // A card per walkthrough: its lamp, lit when finished, its title, and two links under it, to turn it
+                // over (finished, taken again; to come, marked finished) and to start it now (the maintainer, 2026-10-29:
+                // "a small card for each tour. Lamp left. Title and below two "links" to click: 1. "Complete / Reopen"
+                // and 2. "Start"")
+                twoToARow {
+                    for (arc in dance.arcs) {
+                        renderCard(arc)
                     }
                 }
 
@@ -200,6 +202,81 @@ class WalkthroughsWindow(ctx: Ctx<Props>) : FadingModal<WalkthroughsWindow.Props
         }
     }
 
+    /** A walkthrough's card; its lamp and its first link show the state Confirm will leave it in. */
+    private fun FlowContent.renderCard(arc: GuiDance.Arc) {
+        val finished = shownFinished(arc)
+
+        div {
+            key = "arc-${arc.id}"
+            attributes["data-arc"] = arc.id
+            css {
+                put("display", "flex")
+                put("align-items", "flex-start")
+                put("gap", "10px")
+                put("padding", "10px 12px")
+                put("background", "var(--kl-ground-raised)")
+                put("border", "1px solid var(--kl-edge)")
+                put("border-radius", "var(--kl-radius)")
+            }
+
+            div {
+                css { put("padding-top", "3px") }
+                KlangLamp(state = if (finished) KlangLamp.State.On else KlangLamp.State.Off, size = 10.px)
+            }
+
+            div {
+                css {
+                    put("flex", "1")
+                    put("min-width", "0")
+                }
+
+                div {
+                    css {
+                        put("font-size", "13px")
+                        put("color", "var(--kl-ink-strong)")
+                    }
+                    +arc.title
+                }
+
+                div {
+                    css {
+                        put("display", "flex")
+                        put("gap", "16px")
+                        put("margin-top", "6px")
+                    }
+
+                    link(
+                        label = if (finished) "Reopen" else "Complete",
+                        hint = if (finished) "Take this walkthrough again" else "Mark this walkthrough as finished",
+                    ) {
+                        toTurn = if (arc.id in toTurn) toTurn - arc.id else toTurn + arc.id
+                    }
+
+                    link(label = "Start", hint = "Start this walkthrough now") { start(arc) }
+                }
+            }
+        }
+    }
+
+    /** A link-like key on a card. */
+    private fun FlowContent.link(label: String, hint: String, onClick: () -> Unit) {
+        button(type = ButtonType.button) {
+            title = hint
+            onClick { onClick() }
+            css {
+                put("padding", "0")
+                put("border", "none")
+                put("background", "none")
+                put("color", "var(--kl-accent)")
+                put("font-size", "12px")
+                put("text-decoration", "underline")
+                put("text-underline-offset", "2px")
+                put("cursor", "pointer")
+            }
+            +label
+        }
+    }
+
     private fun FlowContent.twoToARow(content: FlowContent.() -> Unit) {
         div {
             css {
@@ -232,16 +309,38 @@ class WalkthroughsWindow(ctx: Ctx<Props>) : FadingModal<WalkthroughsWindow.Props
         val dance = props.dance
         val wasMuted = dance.mutedUntil() != null
 
-        toReopen.forEach { dance.reopen(it) }
+        val reopened = dance.doneArcs().filter { it.id in toTurn }
+
+        for (arc in dance.arcs.filter { it.id in toTurn }) {
+            if (arc in reopened) {
+                dance.reopen(arc.id)
+            } else {
+                dance.complete(arc.id)
+            }
+        }
 
         // A mute chosen while walkthroughs were to come, then left with none to come, does not count
         val toCome = dance.remaining()
 
         when (muteChoice) {
-            MuteChoice.Keep -> if (wasMuted && toReopen.isNotEmpty()) props.unmute()
+            MuteChoice.Keep -> if (wasMuted && reopened.isNotEmpty()) props.unmute()
             MuteChoice.Hour -> if (toCome > 0) props.mute(HOUR_MS)
             MuteChoice.Day -> if (toCome > 0) props.mute(DAY_MS)
             MuteChoice.Unmute -> props.unmute()
+        }
+
+        close(result = true)
+    }
+
+    /**
+     * Starts [arc] now, from its first step, and closes the window so its lamp shows at once; a mute ends, else the
+     * walkthrough started would seem to do nothing. The window's other choices are left as they were.
+     */
+    private fun start(arc: GuiDance.Arc) {
+        props.dance.start(arc.id)
+
+        if (props.dance.mutedUntil() != null) {
+            props.unmute()
         }
 
         close(result = true)

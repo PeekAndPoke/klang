@@ -5,12 +5,14 @@
 
 package io.peekandpoke.klang.visuals
 
+import io.peekandpoke.klang.KlangGuiDance
 import io.peekandpoke.klang.comp.Motor
 import io.peekandpoke.klang.comp.MotorBackground
 import io.peekandpoke.klang.comp.PlateComposition
 import io.peekandpoke.klang.spine.VisualState
 import io.peekandpoke.klang.storage.LookStorage
 import io.peekandpoke.klang.ui.comp.KlangCloseKey
+import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.klang.ui.comp.KlangSwatchButton
 import io.peekandpoke.klang.ui.feel.KlangLookShelf
 import io.peekandpoke.klang.ui.feel.KlangTheme
@@ -28,6 +30,7 @@ import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.html.onMouseMove
+import io.peekandpoke.ultra.semanticui.icon
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
 import io.peekandpoke.ultra.streams.ops.distinct
@@ -199,6 +202,9 @@ private class VisualsModal(ctx: Ctx<Props>) : FadingModal<VisualsModal.Props, Bo
     /** Whether the looks show at the bottom: the mouse came to the bottom edge. */
     private var themes: Boolean by value(false)
 
+    /** The walkthroughs' lit step: the lure at the bottom edge shows while it is [KlangGuiDance.VISUALS_LOOKS]. */
+    private val guiDanceLit by subscribingTo(KlangGuiDance.dance.lit)
+
     private val shelf by subscribingTo(KlangLookShelf)
 
     /** Redraws the looks' row when a look is worn. */
@@ -220,7 +226,12 @@ private class VisualsModal(ctx: Ctx<Props>) : FadingModal<VisualsModal.Props, Bo
 
         lifecycle {
             onMount { lightUp() }
-            onUnmount { hideTimer?.let { window.clearTimeout(it) } }
+            onUnmount {
+                hideTimer?.let { window.clearTimeout(it) }
+
+                // Left, by Esc, the close key or back: the Visuals walkthrough's last step
+                KlangGuiDance.dance.used(KlangGuiDance.VISUALS_CLOSE)
+            }
         }
     }
 
@@ -247,6 +258,11 @@ private class VisualsModal(ctx: Ctx<Props>) : FadingModal<VisualsModal.Props, Bo
 
         if (fromBottom <= THEMES_EDGE_PX) {
             themes = true
+
+            // The Visuals walkthrough's last step: the looks found at the bottom edge
+            if (guiDanceLit == KlangGuiDance.VISUALS_LOOKS) {
+                KlangGuiDance.dance.used(KlangGuiDance.VISUALS_LOOKS)
+            }
         } else if (fromBottom > THEMES_LEAVE_PX) {
             themes = false
         }
@@ -291,8 +307,11 @@ private class VisualsModal(ctx: Ctx<Props>) : FadingModal<VisualsModal.Props, Bo
                 },
             )
 
-            // The close key: Esc always (it answers while mounted), the pill only after the mouse moved
-            button(type = ButtonType.button) {
+            // The close key: Esc always (it answers while mounted), the pill only after the mouse moved, or while the
+            // Visuals walkthrough's last step asks for it, wearing the beacon then
+            val closeLit = guiDanceLit == KlangGuiDance.VISUALS_CLOSE
+
+            button(type = ButtonType.button, classes = if (closeLit) KlangControlStyles.beacon.toString() else null) {
                 attributes["aria-label"] = "Close the visual"
                 onClick { close() }
 
@@ -304,14 +323,51 @@ private class VisualsModal(ctx: Ctx<Props>) : FadingModal<VisualsModal.Props, Bo
                     put("border", "none")
                     put("background", "transparent")
                     put("cursor", "pointer")
-                    put("opacity", if (closeKey) "1" else "0")
+                    put("opacity", if (closeKey || closeLit) "1" else "0")
                     put("transition", "opacity 300ms ease")
                 }
 
                 KlangCloseKey(onClose = { close() })
             }
 
+            renderLure()
             renderThemes()
+        }
+    }
+
+    /**
+     * The lure at the bottom edge, while the Visuals walkthrough's last step is lit and the looks are not up yet: a
+     * small "Looks" with an arrow down, wearing the beacon, that draws the mouse down to them (the maintainer,
+     * 2026-10-29: "a "bait" to move the mouse to the bottom to get the theme selection").
+     */
+    private fun FlowContent.renderLure() {
+        if (guiDanceLit != KlangGuiDance.VISUALS_LOOKS || themes) {
+            return
+        }
+
+        div(classes = KlangControlStyles.beacon.toString()) {
+            key = "visuals-lure"
+            attributes["aria-hidden"] = "true"
+            css {
+                put("position", "absolute")
+                put("left", "50%")
+                put("bottom", "24px")
+                put("transform", "translateX(-50%)")
+                put("display", "flex")
+                put("align-items", "center")
+                put("gap", "8px")
+                put("padding", "6px 14px")
+                put("border-radius", "999px")
+                put("border", "1px solid var(--kl-edge)")
+                put("background", "color-mix(in srgb, var(--kl-ground-panel) 80%, transparent)")
+                put("color", "var(--kl-ink-text)")
+                put("font-size", "12px")
+                put("letter-spacing", "0.08em")
+                put("pointer-events", "none")
+            }
+
+            +"Looks"
+            icon.angle_double_down()
         }
     }
 
@@ -333,7 +389,9 @@ private class VisualsModal(ctx: Ctx<Props>) : FadingModal<VisualsModal.Props, Bo
                 put("border-bottom", "none")
                 put("border-radius", "6px 6px 0 0")
                 put("box-shadow", "0 -8px 24px rgba(0, 0, 0, 0.5)")
-                put("transform", if (themes) "translate(-50%, 0)" else "translate(-50%, 110%)")
+                // Hidden by its height and its shadow's reach above it too: 110 % left the shadow on screen (the
+                // maintainer, 2026-10-29)
+                put("transform", if (themes) "translate(-50%, 0)" else "translate(-50%, calc(100% + 40px))")
                 put("transition", "transform 220ms ease")
             }
 

@@ -90,18 +90,33 @@ class WalkthroughsWindowSpec : StringSpec({
         return (0 until buttons.length).map { buttons.item(it) as HTMLElement }.first { it.textContent?.contains(text) == true }
     }
 
+    /** The card of the walkthrough titled [title]. */
+    fun card(title: String): HTMLElement {
+        val cards = dialog()!!.querySelectorAll("[data-arc]")
+
+        return (0 until cards.length).map { cards.item(it) as HTMLElement }.first { it.textContent?.contains(title) == true }
+    }
+
+    /** The link [label] on the card of the walkthrough titled [title]. */
+    fun link(title: String, label: String): HTMLElement {
+        val links = card(title).querySelectorAll("button")
+
+        return (0 until links.length).map { links.item(it) as HTMLElement }.first { it.textContent == label }
+    }
+
     "a finished walkthrough marked, then Cancel: nothing changes" {
         withPage { page ->
             page.open(GuiDance(arcs = arcs, store = GuiDance.MemoryStore(done = setOf("first"))))
 
             eventually { dialog()?.textContent shouldContain "1 more to come." }
 
-            key("Your first song").click()
+            link("Your first song", "Reopen").click()
 
-            // Marked: it stays on the list, its lamp off, and the count counts it
+            // Marked: it stays on the list, its lamp off, its link now taking the mark back, and the count counts it
             eventually {
                 dialog()!!.textContent shouldContain "2 more to come."
-                key("Your first song").querySelector("[data-lamp]")?.getAttribute("data-lamp") shouldBe "Off"
+                card("Your first song").querySelector("[data-lamp]")?.getAttribute("data-lamp") shouldBe "Off"
+                link("Your first song", "Complete")
             }
 
             key("Cancel").click()
@@ -117,7 +132,7 @@ class WalkthroughsWindowSpec : StringSpec({
 
             eventually { (dialog() != null) shouldBe true }
 
-            key("Your first song").click()
+            link("Your first song", "Reopen").click()
             eventually { dialog()!!.textContent shouldContain "2 more to come." }
             key("Confirm").click()
 
@@ -134,10 +149,10 @@ class WalkthroughsWindowSpec : StringSpec({
 
             eventually { dialog()?.textContent shouldContain "That was every walkthrough" }
 
-            key("Your first song").click()
+            link("Your first song", "Reopen").click()
             eventually { dialog()!!.textContent shouldContain "1 more to come." }
             key("Mute for an hour").click()
-            key("Your first song").click()
+            eventually { link("Your first song", "Complete").click() }
             eventually { dialog()!!.textContent shouldContain "That was every walkthrough" }
             key("Confirm").click()
 
@@ -154,11 +169,41 @@ class WalkthroughsWindowSpec : StringSpec({
 
             eventually { dialog()?.textContent shouldContain "Muted until" }
 
-            key("Your first song").click()
+            link("Your first song", "Reopen").click()
             eventually { dialog()!!.textContent shouldContain "2 more to come." }
             key("Confirm").click()
 
             eventually { dialog() shouldBe null }
+            page.calls shouldContainExactly listOf("unmute")
+        }
+    }
+
+    "a walkthrough to come, completed, then Confirm: it is finished without dancing it" {
+        withPage { page ->
+            page.open(GuiDance(arcs = arcs, store = GuiDance.MemoryStore()))
+
+            eventually { dialog()?.textContent shouldContain "2 more to come." }
+
+            link("Your first song", "Complete").click()
+            eventually { dialog()!!.textContent shouldContain "1 more to come." }
+            key("Confirm").click()
+
+            eventually { dialog() shouldBe null }
+            page.dance.doneArcs().map { it.id } shouldContainExactly listOf("first")
+            page.dance.lit() shouldBe "workbench.fullscreen"
+        }
+    }
+
+    "Start begins a walkthrough at once, out of its order, the window closed and a mute lifted" {
+        withPage { page ->
+            page.open(GuiDance(arcs = arcs, store = GuiDance.MemoryStore(mutedUntil = 9.0e15)))
+
+            eventually { dialog()?.textContent shouldContain "Muted until" }
+
+            link("Fullscreen", "Start").click()
+
+            eventually { dialog() shouldBe null }
+            page.dance.currentArc()?.id shouldBe "second"
             page.calls shouldContainExactly listOf("unmute")
         }
     }

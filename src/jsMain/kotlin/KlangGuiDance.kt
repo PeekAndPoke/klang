@@ -53,6 +53,25 @@ object KlangGuiDance {
     /** The Edit key in the drawer's LOOK heading, to the look editor. */
     const val LOOK_EDIT = "look.edit"
 
+    /** The bottom panel's key at the workbench strip's foot. */
+    const val BOTTOM_PANEL = "workbench.bottom-panel"
+
+    /** The Visuals tab in the bottom panel. */
+    const val VISUALS_TAB = "bottom.visuals"
+
+    /**
+     * Klang Amp tiles' card in the Visuals tab: its playlist plays a song with a click, so the visual shows something
+     * even when nothing played before (the maintainer, 2026-10-29: "Take the third visual because the first one does not
+     * do anything when there is no song playing").
+     */
+    const val VISUAL_KLANGAMP_TILES = "visuals.klangamp-tiles"
+
+    /** The lure at the bottom edge of a visual, to bring up its looks. */
+    const val VISUALS_LOOKS = "visuals.looks"
+
+    /** A visual's close key, "Close: Esc", and leaving the visual. */
+    const val VISUALS_CLOSE = "visuals.close"
+
     /** The looks the Looks walkthrough lights in the drawer, by their steps. */
     val LOOK_STEPS: Map<String, String> = mapOf(LOOK_COPPER to "copper", LOOK_SUN to "sun", LOOK_ASPHALT to "asphalt")
 
@@ -86,6 +105,15 @@ object KlangGuiDance {
             id = "looks",
             title = "Looks, dress the Motor",
             steps = listOf(MOTOR_MENU, LOOK_COPPER, LOOK_SUN, LOOK_ASPHALT, LOOK_EDIT),
+        ),
+        // The fifth (the maintainer, 2026-10-29: "add a new guidance tour to one of the visuals", with "a "bait" to move
+        // the mouse to the bottom to get the theme selection"): the bottom panel, its Visuals tab, Klang Amp tiles,
+        // then the lure at the visual's bottom edge that brings up the looks, and last the way out ("the ESC: close
+        // must be part of the visuals tour")
+        GuiDance.Arc(
+            id = "visuals",
+            title = "Visuals, the Motor on the whole screen",
+            steps = listOf(BOTTOM_PANEL, VISUALS_TAB, VISUAL_KLANGAMP_TILES, VISUALS_LOOKS, VISUALS_CLOSE),
         ),
     )
 

@@ -150,6 +150,8 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
                 bottom = pageBottom,
                 layout = keptLayout,
                 onLayout = { WorkbenchLayoutStorage.save(it) },
+                // The walkthroughs' beacons on the bottom panel's key and its tabs
+                guiDance = KlangGuiDance.dance,
                 drawer = { close ->
                     KlangDrawer(
                         title = "Where to",
