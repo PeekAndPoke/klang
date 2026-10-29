@@ -82,8 +82,33 @@ class VisualsScreen(ctx: NoProps) : PureComponent(ctx) {
         /** Whether a visual is shown. */
         val open: Stream<Boolean> = shown.map { it != null }.distinct()
 
-        /** Whether Klang Amp tiles shows its tiles; its Motor button switches them, kept while the app runs. */
-        val klangampTilesShown = StreamSource(true)
+        /** What Klang Amp tiles shows under its parts; its Motor button steps through them, kept while the app runs. */
+        val klangampTiles = StreamSource(TilesState.Tiles)
+    }
+
+    /**
+     * What Klang Amp tiles shows under its parts (the maintainer, 2026-10-29: "without the tiles was also nice... can we
+     * have a switch somewhere? Maybe the Motorbutton", "And a third state with no tiles at all").
+     */
+    enum class TilesState {
+        /** Its tiles, the window round them black. */
+        Tiles,
+
+        /** No tiles: the parts on black, the title cut into the dark. */
+        TitleOnly,
+
+        /** Nothing: the parts alone on black. */
+        Bare;
+
+        /** The state the Motor button steps on to, round. */
+        val next: TilesState get() = entries[(ordinal + 1) % entries.size]
+
+        /** The composition as this state shows it. */
+        fun apply(composition: PlateComposition): PlateComposition = when (this) {
+            Tiles -> composition
+            TitleOnly -> composition.copy(platesShown = false)
+            Bare -> composition.copy(platesShown = false, tiles = composition.tiles.map { it.copy(engraving = null) })
+        }
     }
 
     /** The modal showing [shown]'s visual; null while none is open. */
@@ -166,7 +191,7 @@ private class VisualsModal(ctx: Ctx<Props>) : FadingModal<VisualsModal.Props, Bo
     @Suppress("unused")
     private val look by subscribingTo(KlangTheme.look)
 
-    private val tilesShown by subscribingTo(VisualsScreen.klangampTilesShown)
+    private val tilesState by subscribingTo(VisualsScreen.klangampTiles)
 
     private var hideTimer: Int? = null
 
@@ -215,7 +240,7 @@ private class VisualsModal(ctx: Ctx<Props>) : FadingModal<VisualsModal.Props, Bo
 
     override fun FlowContent.renderContent() {
         val composition = when (props.visual) {
-            VisualsScreen.Visual.KlangampTiles -> props.visual.composition().copy(platesShown = tilesShown)
+            VisualsScreen.Visual.KlangampTiles -> tilesState.apply(props.visual.composition())
             else -> props.visual.composition()
         }
 
@@ -239,9 +264,10 @@ private class VisualsModal(ctx: Ctx<Props>) : FadingModal<VisualsModal.Props, Bo
                 composition = composition,
                 onLeave = { close() },
                 lamp = { background()?.lamp },
-                // Klang Amp tiles: the Motor button switches the tiles on and off (the maintainer, 2026-10-29)
+                // Klang Amp tiles: the Motor button steps through its tiles, its title alone, nothing (the maintainer,
+                // 2026-10-29)
                 onMotorButton = when (props.visual) {
-                    VisualsScreen.Visual.KlangampTiles -> { -> VisualsScreen.klangampTilesShown(!tilesShown) }
+                    VisualsScreen.Visual.KlangampTiles -> { -> VisualsScreen.klangampTiles(tilesState.next) }
                     else -> { -> close() }
                 },
             )

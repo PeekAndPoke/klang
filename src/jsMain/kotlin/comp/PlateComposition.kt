@@ -67,9 +67,9 @@ data class PlateComposition(
      */
     val bareOutside: Boolean = false,
     /**
-     * With [bareOutside], whether its tiles show: off, the parts float on black, only the title cut into the dark (the
-     * maintainer, 2026-10-29: "without the tiles was also nice... can we have a switch somewhere? Maybe the
-     * Motorbutton").
+     * With [bareOutside], whether its tiles show: off, the parts float on black, only an engraving cut into the dark
+     * (the maintainer, 2026-10-29: "without the tiles was also nice... can we have a switch somewhere? Maybe the
+     * Motorbutton"); without the engraving too, nothing at all ([VisualsScreen.TilesState]).
      */
     val platesShown: Boolean = true,
 ) {
