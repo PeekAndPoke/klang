@@ -91,6 +91,12 @@ class KlangMenuButton(ctx: Ctx<Props>) : Component<KlangMenuButton.Props>(ctx) {
             css {
                 width = props.size
                 height = props.size
+
+                // Another button in its dress lights in the knobs' colour, as the volume knob's ring beside it (the
+                // maintainer, 2026-10-29): the ring, its glow and the icon all read the lamp's colour
+                if (props.icon != null) {
+                    put("--kl-lamp-on", "var(--kl-knob-arc)")
+                }
             }
 
             svg(classes = ringClasses.joinToString(" ")) {
