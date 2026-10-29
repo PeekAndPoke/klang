@@ -138,7 +138,12 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
 
     init {
         lifecycle {
-            onMount { lightFollow = props.light.subscribeToStream { reflect(it) } }
+            onMount {
+                findHighlights()
+                lightFollow = props.light.subscribeToStream { reflect(it) }
+            }
+            // A redraw may bring other domes (the Motor button's tile states, a resize)
+            onUpdate { findHighlights() }
             onUnmount {
                 lightFollow?.invoke()
                 lightFollow = null
@@ -156,16 +161,22 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
      * redraws nothing.
      */
     private fun reflect(light: SwingingLamp.Light) {
-        val highlights = (dom as? HTMLElement)?.querySelectorAll(".${VisualsParts.HIGHLIGHT}") ?: return
         val transform = VisualsParts.highlightTransform(swayX = light.swayX, swayY = light.swayY)
         val opacity = VisualsParts.highlightOpacity(level = light.level).toString()
 
-        for (i in 0 until highlights.length) {
-            val style = (highlights.item(i) as? HTMLElement)?.style ?: continue
-
-            style.transform = transform
-            style.opacity = opacity
+        for (highlight in highlights) {
+            highlight.style.transform = transform
+            highlight.style.opacity = opacity
         }
+    }
+
+    /** The domes' highlights, looked up when the board is drawn, not on every light. */
+    private var highlights: List<HTMLElement> = emptyList()
+
+    private fun findHighlights() {
+        val found = (dom as? HTMLElement)?.querySelectorAll(".${VisualsParts.HIGHLIGHT}")
+
+        highlights = found?.let { list -> (0 until list.length).mapNotNull { list.item(it) as? HTMLElement } } ?: emptyList()
     }
 
     private val cylinders by subscribingTo(MotorReadings.cylinders())

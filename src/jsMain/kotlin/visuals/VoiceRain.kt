@@ -11,6 +11,7 @@ import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
+import io.peekandpoke.kraft.utils.onResize
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
@@ -116,9 +117,23 @@ class VoiceRain(ctx: Ctx<Props>) : Component<VoiceRain.Props>(ctx) {
     private var frame: Int? = null
     private var lastMs = Date.now()
 
+    /** The display's size in CSS px: read once, then kept by [onResize]. */
+    private var boxWidth = 0
+    private var boxHeight = 0
+
     init {
         lifecycle {
+            onResize { entries ->
+                for (entry in entries) {
+                    boxWidth = entry.contentRect.width.toInt()
+                    boxHeight = entry.contentRect.height.toInt()
+                }
+            }
             onMount {
+                (dom as? HTMLElement)?.let { box ->
+                    boxWidth = box.clientWidth
+                    boxHeight = box.clientHeight
+                }
                 readInk()
                 frame = window.requestAnimationFrame { step() }
             }
@@ -229,10 +244,11 @@ class VoiceRain(ctx: Ctx<Props>) : Component<VoiceRain.Props>(ctx) {
         }
 
         val canvas = dom?.querySelector("canvas") as? HTMLCanvasElement ?: return
-        val box = canvas.parentElement as? HTMLElement ?: return
         val ratio = window.devicePixelRatio
-        val width = box.clientWidth
-        val height = box.clientHeight
+        // Remembered, not read every frame: a size read after the page changed makes the browser lay it out first (the
+        // maintainer's trace, 2026-10-29: 30 ms a second in `clientWidth`)
+        val width = boxWidth
+        val height = boxHeight
 
         if (width <= 0 || height <= 0) {
             return

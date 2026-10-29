@@ -184,7 +184,22 @@ fun dslEditorExtension(
         return wordDocAtPos(view = view, pos = pos)
     }
 
+    /** Whether the editor shows a Ctrl/Cmd underline now: only then is there one to clear. */
+    fun hasUnderline(view: EditorView): Boolean {
+        val set = view.state.asDynamic().field(underlineField, false)
+
+        return set != null && set != undefined && (set.size as Int) > 0
+    }
+
+    /**
+     * Takes the Ctrl/Cmd underline away. Every mouse move over the editor asks for it; a transaction only when there is
+     * one (the maintainer's trace, 2026-10-29: a transaction a move, about 19 ms a second while the mouse moved).
+     */
     fun dispatchClear(view: EditorView) {
+        if (!hasUnderline(view)) {
+            return
+        }
+
         view.dispatch(view.state.update(jsObject {
             this.effects = clearUnderlineEffect.of(Unit.unsafeCast<Unit>())
         }))
