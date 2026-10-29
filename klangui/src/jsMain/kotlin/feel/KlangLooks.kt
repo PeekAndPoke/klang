@@ -221,8 +221,9 @@ object KlangLooks {
             KlangRole.LampOn to "#4169e1",
             // The spectrum: blues only, from the lamp's royal blue at the floor, lighter to the top (the maintainer,
             // 2026-10-29, after gold at the top and a violet between: "only blue tones maybe"; a rainbow before)
-            // Starting darker, a deep royal blue, to the same icy top, a steeper gradient (the maintainer, 2026-10-29)
-            KlangRole.SpectrumQuiet to "#14266e",
+            // Starting darker, a deep royal blue, to the same icy top, a steeper gradient (the maintainer, 2026-10-29);
+            // its floor then a step lighter ("the darkest blue is a bit too dark": #14266e before)
+            KlangRole.SpectrumQuiet to "#1e3a9e",
             KlangRole.SpectrumLow to "#2348b8",
             KlangRole.SpectrumMid to "#4f7be8",
             KlangRole.SpectrumHot to "#93b3f5",
