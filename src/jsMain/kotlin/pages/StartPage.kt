@@ -384,7 +384,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
          */
         fun go() {
             val song = sound("<[sd sd sd sd  [bd, cr] ~ ~ ~] ~>").fast(1)
-                .gain(0.7)
+                .gain(0.6)
                 .adsr(0.005, 0.2, 0.3, 10.0)
                 .reverb(wet = 0.2, size = 3.0, lowpass = 5000.0)
 
@@ -997,7 +997,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                     color = Color("var(--kl-ink-label)")
                 }
 
-                +"Performance may be limited"
+                +"Performance will be limited."
             }
         }
     }

@@ -125,7 +125,7 @@ let cab4x12 = Ign.fn(x => x
   .eq(e => e
     .band(freq =  120, q = 0.7, db =  2.50)        // thump: closed-back box resonance
     .band(freq =  380, q = 0.5, db =  4.45)        // roar:  low mids
-    .band(freq = 2700, q = 1.7, db =  4.30)        // bark:  the upper-mid speaker peak
+    .band(freq = 2700, q = 1.7, db =  4.20)        // bark:  the upper-mid speaker peak
   )
   .lowpass(4980, 0.707, x => x.passes(3))          // the wall: 36 dB/oct, the fizz is gone
   .highpass(80, 0.707, x => x.passes(2)))
@@ -367,7 +367,7 @@ let gummiEimer = (() => {
   let harms = Ign.sine(x => x.harmonics(6, 1.2).fundamental(0).analog(pAnalog).analogSpread(0.2))
     .pitchEnvelope(21, x => x.adsr(0.010, 0.050, 0, 0)).adsr(0.010, 0.35, 0.0, 0.40).mul(1.5)
  
-  let m2 = Ign.sine(Ign.freq().mul(1.59), x => x.analog(pAnalog)).adsr(0.002, 0.10, 0.0, 0.20).mul(0.45)
+  let m2 = Ign.sine(Ign.freq().mul(1.59), x => x.analog(pAnalog)).adsr(0.002, 0.10, 0.0, 0.20).mul(0.35)
   let m3 = Ign.sine(Ign.freq().mul(2.14), x => x.analog(pAnalog)).adsr(0.002, 0.06, 0.0, 0.10).mul(0.40)
   // wood core: a crack, the force of the hit the skin gives, and the hit reads as hard
   let beater = Ign.whitenoise().adsr(0.0005, 0.035, 0.0, 0.015).lowpass(1500).mul(6.00)    
@@ -405,7 +405,7 @@ let metalKick = (() => {
     .adsr(0.0005, 0.20, 0.0, 0.05)
     .distort(0.5, "soft")   // the hard hit: the loud start clips, the tail stays clean
  
-  let crack = Ign.whitenoise().bandpass(3500, 0.8).adsr(0.0003, 0.020, 0.0, 0.02).mul(3.0)
+  let crack = Ign.whitenoise().bandpass(3400, 0.8).adsr(0.0003, 0.012, 0.0, 0.02).mul(3.2)
 
   return thump.plus(crack)
     .mul(0.26)                                     // level: as loud as the bd shape it replaced, at the same gain(0.25)
@@ -485,7 +485,7 @@ export hats_pat = `<[hh hh hh hh]!16 [hh hh oh hh]!24 [cr hh cr hh]!24 [~ rd ~ r
 export hats_shape = x => x.gain(0.14).pan(0.425)
   .hpf(800).lpf(freq = "13500".add(perlin.mul(50).fast(4)), q = 0.5).adsr(perlin(0.001, 0.003), 0.1, 0.70, 2.0)
 export hats_arrange = x => x.orbit(8).mute("<0!128 1!32>").late(berlin(0.0015, 0.0030).mul(drunk).seg(4))
-export hats = sound(hats_pat).fast(2).apply(hats_shape).velocity("<1.0 0.85 0.93 0.85>*4".sub(berlin(0.0, 0.05).slow(4))).tag("hats")
+export hats = sound(hats_pat).fast(2).apply(hats_shape).velocity("<1.0 0.90 0.95 0.88>*8".sub(berlin(0.0, 0.05).slow(4))).tag("hats")
 
 export shaker_pat = `<white ~ white ~ white ~ white ~ white>*8`
 export shaker_shape = x => x.gain(0.02).velocity("<1.0 0.80 0.90 0.80>*8") //  . mute()
