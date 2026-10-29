@@ -40,6 +40,15 @@ class ScopeGlow(ctx: Ctx<Props>) : Component<ScopeGlow.Props>(ctx) {
 
         /** The code page's screen: quieter, the spectrum under it stays to be read. */
         const val SCREEN = 0.3
+
+        /** How much of the light is left at [FADE_AT] % of the way out. */
+        private const val FADE_SHARE = 1.0 / 3.0
+
+        /** Where a third of the light is left, in % of the way out. */
+        private const val FADE_AT = 30
+
+        /** Where the light is gone, in % of the way out. */
+        private const val GONE_AT = 65
     }
 
     /** The scope's signal now, 0 (silence) to 1 (full scale), smoothed. */
@@ -48,6 +57,7 @@ class ScopeGlow(ctx: Ctx<Props>) : Component<ScopeGlow.Props>(ctx) {
     override fun VDom.render() {
         // At most the trace's own colour: a loud signal at a strong glow would ask for more than all of it
         val percent = ((signal ?: 0.0) * 100 * props.strength).roundToInt().coerceIn(0, 100)
+        val fading = (percent * FADE_SHARE).roundToInt()
 
         div {
             attributes["aria-hidden"] = "true"
@@ -58,11 +68,15 @@ class ScopeGlow(ctx: Ctx<Props>) : Component<ScopeGlow.Props>(ctx) {
                 // 65 % of the width and 40 % of the height to each side (the maintainer, 2026-10-29: "make the glow a
                 // bit narrower", then "By narrow i mean narrower vertically. Please restore the horizontal extent",
                 // then from 30 %: "now to narrow vertically ... bit more please", then from 53 %: "Make it wider
-                // horizontally please")
+                // horizontally please"). The light falls off soon: a third of it left at 30 % of the way out, none
+                // from 65 % ("the glow is too much ... maybe the gradient should fade out faster"; it faded evenly to
+                // the edge)
                 put(
                     "background",
                     "radial-gradient(ellipse 65% 40% at center, " +
-                        "color-mix(in srgb, var(--kl-scope-trace) $percent%, transparent) 0%, transparent 100%)",
+                        "color-mix(in srgb, var(--kl-scope-trace) $percent%, transparent) 0%, " +
+                        "color-mix(in srgb, var(--kl-scope-trace) $fading%, transparent) $FADE_AT%, " +
+                        "transparent $GONE_AT%)",
                 )
             }
         }
