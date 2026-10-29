@@ -18,7 +18,7 @@ internal val schmetterlingJingle = Jingle(
     id = "${BuiltInJingles.PREFIX}-schmetterling",
     title = "Der Schmetterling",
     rpm = 33.0,
-    cycles = 4,
+    cycles = 2,
     code = """
 // Jingle: the marimba and the melody of "Der Schmetterling"
 // Inspired by: Editors - Papillon
