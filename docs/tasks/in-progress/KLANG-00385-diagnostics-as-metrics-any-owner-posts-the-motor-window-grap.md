@@ -63,7 +63,8 @@ side by side.
 
 ## Acceptance
 
-- The Motor window shows CPU (Motor heat and Sprudel runtime), Cylinders and Voices, with a legend each.
+- The Motor window shows CPU (Motor heat and Sprudel runtime, 0 to 200 %, over the budget in red) and Cylinders and
+  voices in one graph (the maintainer, 2026-10-29), with a legend each.
 - A song playing shows Sprudel runtime; stopped, its line has a gap; played again, it goes on in the same line.
 - No object is made per post; closing every metric leaves the registry empty.
 

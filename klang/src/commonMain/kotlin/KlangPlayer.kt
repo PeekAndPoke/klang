@@ -102,15 +102,16 @@ class KlangPlayer(
     )
 
     // The Motor's own metrics, the player their owner: posted from every diagnostics the backend sends, closed at
-    // the shutdown
+    // the shutdown. Cylinders and voices are both counts, in one graph (the maintainer, 2026-10-29: "combine active
+    // voices and active cylinders into one graph")
     private val motorHeat = diagnostics.metric(
         id = "motor-heat", name = "Motor heat", category = "CPU", unit = "%", min = 0.0, max = 100.0,
     )
     private val motorCylinders = diagnostics.metric(
-        id = "motor-cylinders", name = "Active cylinders", category = "Cylinders", unit = "", min = 0.0, max = 32.0,
+        id = "motor-cylinders", name = "Active cylinders", category = "Cylinders and voices", unit = "", min = 0.0, max = 32.0,
     )
     private val motorVoices = diagnostics.metric(
-        id = "motor-voices", name = "Active voices", category = "Voices", unit = "", min = 0.0, max = 100.0,
+        id = "motor-voices", name = "Active voices", category = "Cylinders and voices", unit = "", min = 0.0, max = 100.0,
     )
 
     private var motorFeed: Unsubscribe? = diagnostics.stream.subscribeToStream { d ->

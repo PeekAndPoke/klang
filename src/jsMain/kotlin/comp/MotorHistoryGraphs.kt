@@ -163,7 +163,9 @@ class MotorHistoryGraphs(ctx: NoProps) : PureComponent(ctx) {
                             values = s.values,
                             min = min,
                             max = max,
-                            budget = s.metric.max,
+                            // Over the budget only on a graph with a range of its own, the CPU's: elsewhere the
+                            // metric's max is where the scale ends, not a budget
+                            budget = if (range != null) s.metric.max else Double.POSITIVE_INFINITY,
                             size = size,
                             color = colorOf(s),
                         )
