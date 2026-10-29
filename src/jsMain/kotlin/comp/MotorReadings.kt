@@ -82,11 +82,14 @@ object MotorReadings {
 internal class GlowFollower {
 
     companion object {
-        /** How much of a rise is still to go after 10 ms: a beat lights it at once. */
-        const val ATTACK_KEEP = 0.2
+        /**
+         * How much of a rise is still to go after 10 ms: a beat lights it within a few frames (0.2 lit it at once and
+         * was "too bouncy ... too much movement", the maintainer, 2026-10-29).
+         */
+        const val ATTACK_KEEP = 0.5
 
-        /** How much of a fall is still to go after 10 ms: it dies away between the beats. */
-        const val RELEASE_KEEP = 0.86
+        /** How much of a fall is still to go after 10 ms: it dies away between the beats (0.86 before, too bouncy). */
+        const val RELEASE_KEEP = 0.92
 
         /** The sample rate assumed while no player tells its own. */
         const val SAMPLE_RATE = 48_000

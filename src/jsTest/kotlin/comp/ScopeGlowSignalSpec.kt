@@ -49,20 +49,20 @@ class ScopeGlowSignalSpec : StringSpec({
         glowEnergy(frame = frame, size = 2048, sampleRate = 48_000) shouldBeLessThan 0.05
     }
 
-    "the follower jumps up with a beat within a frame or two" {
+    "the follower rises with a beat within a few frames" {
         val follower = GlowFollower()
 
         follower.follow(target = 0.0, nowMs = 0.0)
-        // 0.2 of the gap left after 10 ms, 0.04 after 20
-        follower.follow(target = 1.0, nowMs = 20.0) shouldBe (0.96 plusOrMinus 1e-9)
+        // 0.5 of the gap left after 10 ms, 0.25 after 20
+        follower.follow(target = 1.0, nowMs = 20.0) shouldBe (0.75 plusOrMinus 1e-9)
     }
 
     "the follower dies away slowly after the beat" {
         val follower = GlowFollower()
 
         follower.follow(target = 1.0, nowMs = 0.0)
-        // 0.86 of the gap kept per 10 ms: about 0.74 after 20 ms, still a glow
-        follower.follow(target = 0.0, nowMs = 20.0) shouldBe (0.86 * 0.86 plusOrMinus 1e-9)
+        // 0.92 of the gap kept per 10 ms: about 0.85 after 20 ms, still a glow
+        follower.follow(target = 0.0, nowMs = 20.0) shouldBe (0.92 * 0.92 plusOrMinus 1e-9)
     }
 
     "the first frame takes its target as it is" {
