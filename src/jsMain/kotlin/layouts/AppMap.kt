@@ -86,6 +86,7 @@ object AppMap {
             pages = listOf(
                 page(label = "Dev status", icon = { satellite_dish }, route = Nav.devStatus()),
                 page(label = "Storage", icon = { database }, route = Nav.devStorage()),
+                page(label = "Jingles", icon = { bell }, route = Nav.devJingles()),
                 page(label = "UI kitchen sink", icon = { palette }, route = Nav.uiKitchenSink()),
             ),
         ),

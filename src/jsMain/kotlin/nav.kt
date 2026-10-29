@@ -12,6 +12,7 @@ import io.peekandpoke.klang.pages.CodeSongPage
 import io.peekandpoke.klang.pages.CreditsPage
 import io.peekandpoke.klang.pages.DashboardPage
 import io.peekandpoke.klang.pages.DevStatusPage
+import io.peekandpoke.klang.pages.DevJinglesPage
 import io.peekandpoke.klang.pages.DevStoragePage
 import io.peekandpoke.klang.pages.LooksPage
 import io.peekandpoke.klang.pages.MidiPlaygroundPage
@@ -88,6 +89,9 @@ object Nav {
     /** What this browser keeps for Klang, to reset all of it or a part. */
     val devStorage = Static("$devToolsBase/storage")
 
+    /** The jingles, to hear as the start page plays them and to change in an editor. */
+    val devJingles = Static("$devToolsBase/jingles")
+
     val tour = Static("/tour")
 
     /** The look editor: the equip grid, the bench, a look of one's own (KLANG-00382). */
@@ -143,6 +147,7 @@ fun RootRouterBuilder.mountNav() {
 
         mount(Nav.devStatus) { DevStatusPage() }
         mount(Nav.devStorage) { DevStoragePage() }
+        mount(Nav.devJingles) { DevJinglesPage() }
         mount(Nav.uiKitchenSink) { UiKitchenSinkPage() }
     }
 

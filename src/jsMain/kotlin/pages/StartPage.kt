@@ -5,24 +5,21 @@
 
 package io.peekandpoke.klang.pages
 
+import io.peekandpoke.klang.BuiltInJingles
 import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_engine.KlangBenchmark
-import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
-import io.peekandpoke.klang.audio_engine.playOnce
 import io.peekandpoke.klang.comp.KlangCodePlaybackCtrl
 import io.peekandpoke.klang.comp.MotorBackground
 import io.peekandpoke.klang.comp.PlayerMiniStats
 import io.peekandpoke.klang.comp.motorBackgroundRef
+import io.peekandpoke.klang.compile
 import io.peekandpoke.klang.fs
+import io.peekandpoke.klang.playJingle
 import io.peekandpoke.klang.spine.UiWork
 import io.peekandpoke.klang.spine.VisualState
-import io.peekandpoke.klang.sprudel.lang.adsr
-import io.peekandpoke.klang.sprudel.lang.fast
-import io.peekandpoke.klang.sprudel.lang.gain
-import io.peekandpoke.klang.sprudel.lang.reverb
-import io.peekandpoke.klang.sprudel.lang.sound
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangCheckbox
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
@@ -369,6 +366,8 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
             // The dyno is done: "Gestrandet" fades in while the result waits for "Make Music Now"
             songFadeIn.start()
             waitingSong.play()
+            // Compiled now, so "Make Music Now" plays it at once
+            launch { jinglePattern = jingle.compile() }
         }
 
         private val startMs = Kronos.systemUtc.millisNow()
@@ -389,17 +388,18 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
          * page"). The song page stops only its own playback, so the jingle ends by itself.
          */
         fun go() {
-            val song = sound("<[sd sd sd sd  [bd, cr] ~ ~ ~] ~>").fast(1)
-                .gain(0.6)
-                .adsr(0.005, 0.2, 0.3, 10.0)
-                .reverb(wet = 0.2, size = 3.0, lowpass = 5000.0)
-
             // The waiting song stops, its notes ringing out, and the jingle takes over at the user's volume
             songFadeIn.end()
             waitingSong.stop()
 
-            // No player (the worklet failed?): no jingle, the way on all the same
-            Player.get()?.playOnce(song)?.start(KlangCyclicPlayback.Options(rpm = 50.0))
+            // No player (the worklet failed?): no jingle, the way on all the same. Not compiled yet (a quick click):
+            // compiled now, and it follows a moment later
+            Player.get()?.let { player ->
+                when (val ready = jinglePattern) {
+                    null -> launch { jingle.compile()?.let { player.playJingle(jingle = jingle, pattern = it) } }
+                    else -> player.playJingle(jingle = jingle, pattern = ready)
+                }
+            }
 
             // Still in the click: the browser grants fullscreen only to a user's gesture
             if (enterFullscreen) {
@@ -411,6 +411,16 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
     }
 
     private var state: State by value(StateOffline())
+
+    /**
+     * The jingle "Make Music Now" plays, one of [BuiltInJingles.all] at random (the maintainer, 2026-10-29: "prepare for
+     * a set of jingles in the StartPage so that later we can randomly play one of them"; the drums before it went:
+     * "Drop the current drums jingle ... it is bad").
+     */
+    private val jingle = BuiltInJingles.all.random()
+
+    /** [jingle] compiled, once the dyno is done; null before, or when it does not compile. */
+    private var jinglePattern: SprudelPattern? = null
 
     private val benchmark = KlangBenchmark()
 

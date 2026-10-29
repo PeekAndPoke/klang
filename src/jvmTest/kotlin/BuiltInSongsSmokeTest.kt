@@ -49,6 +49,13 @@ class BuiltInSongsSmokeTest : StringSpec({
             withClue(song) { pattern.shouldNotBeNull() }
         }
     }
+
+    "every BuiltInJingles entry compiles to a SprudelPattern" {
+        for (jingle in BuiltInJingles.all) {
+            val pattern = SprudelPattern.compile(engine(), jingle.code)
+            withClue(jingle.id) { pattern.shouldNotBeNull() }
+        }
+    }
 })
 
 private inline fun <T> withClue(clue: Any, block: () -> T): T = io.kotest.assertions.withClue(clue, block)
