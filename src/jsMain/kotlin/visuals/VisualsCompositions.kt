@@ -11,7 +11,7 @@ import io.peekandpoke.klang.comp.PlateComposition
 /** The visuals' screens, each a composition of tiles on the start page's plate ([PlateComposition]). */
 object VisualsCompositions {
     /** The ids of the tiles the visuals place, besides the title and the gauges' row ([PlateComposition.GAUGES]). */
-    const val BOARD = "board"
+    const val BOARD = PlateComposition.SCREEN
     const val AMP = "amp"
     const val SCOPE_SPECTRUM = "scope-spectrum"
     const val PLAYLIST = "playlist"
@@ -21,14 +21,11 @@ object VisualsCompositions {
     private const val AMP_LEFT = -4.5
 
     /**
-     * The Motor's plate: the start page's, its title where the start page's stands, and under the gauges one plate
-     * for the scope and the spectrum (the maintainer, 2026-10-29: "The osci and spectrum must share one big tile").
+     * The Motor's plate: the start page's, its title where the start page's stands, and under the gauges its three by
+     * two tile ([BOARD], the dyno's screen there) for the scope and the spectrum (the maintainer, 2026-10-29: "The
+     * osci and spectrum must share one big tile").
      */
-    val motorBoard: PlateComposition by lazy {
-        val start = PlateComposition.start
-
-        start.copy(tiles = start.tiles + PlacedTile.centred(id = BOARD, row = 2, columns = 3, rows = 2))
-    }
+    val motorBoard: PlateComposition get() = PlateComposition.start
 
     /**
      * Klangamp under glass: the desktop player as a part of its own, laid on three by three tiles under the title

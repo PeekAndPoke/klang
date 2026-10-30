@@ -78,17 +78,28 @@ data class PlateComposition(
         const val GAUGES = "gauges"
 
         /**
+         * The three by two tile under the gauges: the start page's dyno screen (KLANG-00394), the Motor's plate's scope
+         * and spectrum in the visuals.
+         */
+        const val SCREEN = "screen"
+
+        /**
          * The room the start page keeps under its gauges for its panel: the composition stands as before, its title
          * where it always was (the maintainer, 2026-10-26).
          */
         const val START_PANEL_PX = 250.0
 
-        /** The start page: KLANGMOTOR on its plate, the gauges on the tiles under it, the panel's room below. */
+        /**
+         * The start page: KLANGMOTOR on its plate, the gauges on the tiles under it, and under them in the panel's room
+         * a three by two tile for the dyno's screen ([SCREEN]; the maintainer, 2026-10-30: "replace the Dynamo Test popup
+         * with a 3x2 tile screen").
+         */
         val start: PlateComposition by lazy {
             PlateComposition(
                 tiles = listOf(
                     PlacedTile.title("KLANGMOTOR"),
                     PlacedTile.centred(id = GAUGES, row = 1, columns = 5, raised = false),
+                    PlacedTile.centred(id = SCREEN, row = 2, columns = 3, rows = 2),
                 ),
                 rows = 2,
                 roomBelowPx = START_PANEL_PX,

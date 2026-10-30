@@ -12,6 +12,7 @@ import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_engine.KlangBenchmark
 import io.peekandpoke.klang.comp.KlangCodePlaybackCtrl
 import io.peekandpoke.klang.comp.MotorBackground
+import io.peekandpoke.klang.comp.PlateComposition
 import io.peekandpoke.klang.comp.PlayerMiniStats
 import io.peekandpoke.klang.comp.motorBackgroundRef
 import io.peekandpoke.klang.compile
@@ -22,15 +23,15 @@ import io.peekandpoke.klang.spine.VisualState
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangCheckbox
-import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.klang.ui.comp.KlangFinish
 import io.peekandpoke.klang.ui.comp.KlangGauge
 import io.peekandpoke.klang.ui.comp.KlangIgnition
 import io.peekandpoke.klang.ui.comp.KlangLamp
-import io.peekandpoke.klang.ui.comp.KlangPanel
 import io.peekandpoke.klang.ui.comp.KlangSpinner
 import io.peekandpoke.klang.ui.comp.KlangYesNoModal
 import io.peekandpoke.klang.version
+import io.peekandpoke.klang.visuals.VisualsBoard
+import io.peekandpoke.klang.visuals.VisualsParts
 import io.peekandpoke.kraft.addons.browserdetect.BrowserDetect
 import io.peekandpoke.kraft.addons.browserdetect.BrowserDetectAddon
 import io.peekandpoke.kraft.addons.browserdetect.browserDetect
@@ -132,6 +133,9 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
         /** The page's padding at its top. */
         const val PAGE_PADDING_PX = 32
+
+        /** How far the dyno's screen's corners are cut, as the visuals' screens are. */
+        private const val DYNO_SCREEN_CUT_PX = 14
     }
 
     //  PERFORMANCE TIERS  //////////////////////////////////////////////////////////////////////////////////////
@@ -669,6 +673,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 // From the run on, everything stands where it stays, so nothing moves when the result comes in (the
                 // maintainer, 2026-10-26: "Once the Motor is started all of this should be on screen all the time")
                 renderRun(current as? StateBenchmarkComplete)
+                renderDynoScreen(current as? StateBenchmarkComplete)
             }
         }
     }
@@ -767,15 +772,10 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
     }
 
     /**
-     * The run and its result in one layout: the Motor's three gauges, big; under them a panel in the dialog's look,
-     * which shows the test while it runs and the tier when it is done, with "Make Music Now" in its key row, waiting
-     * until then (the maintainer, 2026-10-26: "put the "Make Music Now" Button where the yes no buttons would be").
-     * [complete] is null while the test runs.
+     * The run: the Motor's three gauges, big, on the gauges' row. The test and its result stand on the screen under
+     * them ([renderDynoScreen]). [complete] is null while the test runs.
      */
     private fun DIV.renderRun(complete: StateBenchmarkComplete?) {
-        val styles = KlangControlStyles
-        val rating = complete?.let { getPerformanceRating(it.result.maxSafeVoices) }
-
         div {
             key = "run"
             css {
@@ -788,99 +788,129 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
             }
 
             renderDynoGauges()
+        }
+    }
 
-            // The panel on the tile line under the gauges' row
+    /**
+     * The test and its result on a screen cut into the plate's three by two tile under the gauges
+     * ([PlateComposition.SCREEN]), the visuals' kind: the test while it runs, the tier when it is done, "Make Music Now"
+     * at its foot, waiting until then (the maintainer, 2026-10-30: "On the StartPage replace the Dynamo Test popup with
+     * a 3x2 tile screen"; KLANG-00394). It stands where the tile lies on the window, so it moves with the plate.
+     */
+    private fun DIV.renderDynoScreen(complete: StateBenchmarkComplete?) {
+        val rating = complete?.let { getPerformanceRating(it.result.maxSafeVoices) }
+        val screenWidth = window.innerWidth.toDouble()
+        val screenHeight = window.innerHeight.toDouble()
+        val tile = MotorBackground.tileWidthPx(screenHeight)
+        val rect = MotorBackground.tilesOnScreen(
+            screenWidth = screenWidth,
+            screenHeight = screenHeight,
+            composition = PlateComposition.start,
+        )[PlateComposition.SCREEN] ?: return
+        val margin = tile * VisualsBoard.SIDE_MARGIN
+
+        div {
+            key = "dyno-screen"
+            css {
+                position = Position.absolute
+                put("left", "${rect.left + margin}px")
+                put("top", "${rect.top + margin}px")
+                put("width", "${rect.width - 2 * margin}px")
+                put("height", "${rect.height - 2 * margin}px")
+                put("box-sizing", "border-box")
+                display = Display.flex
+                flexDirection = FlexDirection.column
+                put("gap", "8px")
+                put("padding", "12px 16px")
+                textAlign = TextAlign.left
+                opacity = currentOpacity
+                put("overflow", "hidden")
+                // A well cut into the plate, as the visuals' screens are
+                put("background", "#000")
+                put("clip-path", VisualsParts.cutCorners(DYNO_SCREEN_CUT_PX))
+                put("box-shadow", "inset 0 6px 14px rgba(0, 0, 0, 0.9), inset 0 0 0 1px rgba(255, 255, 255, 0.06)")
+            }
+
+            // The test, or the tier's lamp
             div {
                 css {
-                    width = 100.pct
-                    textAlign = TextAlign.left
+                    fontFamily = "monospace"
+                    fontSize = 12.px
+                    color = Color("var(--kl-ink-label)")
                 }
 
-                KlangPanel(bottomRivets = false) {
-                    div(classes = styles.dialogTitle.toString()) {
-                        if (rating == null) {
-                            renderTestingTitle()
+                if (rating == null) {
+                    renderTestingTitle()
+                } else {
+                    KlangLamp(state = rating.lamp, size = 10.px, label = rating.tier.uppercase())
+                }
+            }
+
+            div {
+                css {
+                    display = Display.flex
+                    // From the top: a long tier message grows down, never over the title
+                    alignItems = Align.flexStart
+                    justifyContent = JustifyContent.spaceBetween
+                    put("gap", "16px")
+                    flexGrow = 1.0
+                    put("min-height", "0")
+                }
+
+                div {
+                    css { flexGrow = 1.0 }
+
+                    if (rating == null || complete == null) {
+                        renderRounds()
+                    } else {
+                        renderTier(rating = rating, voices = complete.result.maxSafeVoices)
+                    }
+                }
+
+                renderVoices(complete)
+            }
+
+            // The page's one way on, at the screen's foot
+            div {
+                css {
+                    display = Display.flex
+                    alignItems = Align.center
+                    justifyContent = JustifyContent.spaceBetween
+                    put("gap", "16px")
+                }
+
+                div {
+                    // The light swells only over a key that can be pressed, and not over the checkbox beside it
+                    if (complete != null) {
+                        onMouseEnter { VisualState.lamp.hoverStart() }
+                        onMouseLeave { VisualState.lamp.hoverEnd() }
+                    }
+
+                    KlangButton(
+                        onClick = { complete?.go() },
+                        finish = KlangFinish.Silver,
+                        availability = if (complete != null) {
+                            KlangButton.Availability.Enabled
                         } else {
-                            KlangLamp(state = rating.lamp, size = 10.px, label = rating.tier.uppercase())
+                            KlangButton.Availability.Disabled
+                        },
+                        beacon = complete != null,
+                    ) {
+                        // The page's one way on: bigger than a dialog's key (the maintainer, 2026-10-26)
+                        css {
+                            put("min-height", "46px")
+                            fontSize = 18.px
                         }
-                    }
 
-                    div(classes = styles.dialogBody.toString()) {
-                        div {
-                            css {
-                                display = Display.flex
-                                alignItems = Align.center
-                                justifyContent = JustifyContent.spaceBetween
-                                put("gap", "24px")
-                                // The test and the tier take the same room
-                                put("min-height", "80px")
-                            }
-
-                            div {
-                                css { flexGrow = 1.0 }
-
-                                @Suppress("SENSELESS_COMPARISON")
-                                if (rating == null || complete == null) {
-                                    renderRounds()
-                                } else {
-                                    renderTier(rating = rating, voices = complete.result.maxSafeVoices)
-                                }
-                            }
-
-                            renderVoices(complete)
-                        }
-                    }
-
-                    div(classes = styles.dialogKeys.toString()) {
-                        div(classes = styles.dialogKey.toString()) {
-                            div {
-                                css {
-                                    display = Display.flex
-                                    flexDirection = FlexDirection.column
-                                }
-
-                                // The light swells only over a key that can be pressed, and not over the checkbox under it
-                                if (complete != null) {
-                                    onMouseEnter { VisualState.lamp.hoverStart() }
-                                    onMouseLeave { VisualState.lamp.hoverEnd() }
-                                }
-
-                                KlangButton(
-                                    onClick = { complete?.go() },
-                                    finish = KlangFinish.Silver,
-                                    availability = if (complete != null) {
-                                        KlangButton.Availability.Enabled
-                                    } else {
-                                        KlangButton.Availability.Disabled
-                                    },
-                                    beacon = complete != null,
-                                ) {
-                                    // The page's one way on: bigger than a dialog's key (the maintainer, 2026-10-26)
-                                    css {
-                                        put("min-height", "46px")
-                                        fontSize = 18.px
-                                    }
-
-                                    +"Make Music Now"
-                                }
-                            }
-
-                            div {
-                                css {
-                                    display = Display.flex
-                                    justifyContent = JustifyContent.center
-                                    marginTop = 10.px
-                                }
-
-                                KlangCheckbox(
-                                    label = "Enter fullscreen",
-                                    checked = enterFullscreen,
-                                    onChange = { enterFullscreen = it },
-                                )
-                            }
-                        }
+                        +"Make Music Now"
                     }
                 }
+
+                KlangCheckbox(
+                    label = "Enter fullscreen",
+                    checked = enterFullscreen,
+                    onChange = { enterFullscreen = it },
+                )
             }
         }
     }
@@ -990,8 +1020,8 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         // cylinders" or similar); the run's voices are supersaws, each cylinder with its reverb
         div {
             css {
-                marginBottom = 6.px
-                fontSize = 13.px
+                marginBottom = 4.px
+                fontSize = 12.px
                 color = Color("var(--kl-ink-label)")
             }
 
@@ -1000,8 +1030,8 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
         div {
             css {
-                fontSize = 16.px
-                put("line-height", "1.5")
+                fontSize = 14.px
+                put("line-height", "1.35")
                 color = Color("var(--kl-ink-strong)")
             }
 
@@ -1011,8 +1041,8 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         if (rating.showWarning) {
             div {
                 css {
-                    marginTop = 8.px
-                    fontSize = 13.px
+                    marginTop = 4.px
+                    fontSize = 12.px
                     color = Color("var(--kl-ink-label)")
                 }
 
@@ -1029,13 +1059,13 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
             css {
                 textAlign = TextAlign.center
                 whiteSpace = WhiteSpace.nowrap
-                // Room for any count, so the panel keeps its width while the number grows
-                put("min-width", "150px")
+                // Room for any count, so the screen's text keeps its width while the number grows
+                put("min-width", "120px")
             }
 
             div {
                 css {
-                    fontSize = 44.px
+                    fontSize = 34.px
                     put("font-weight", "700")
                     put("line-height", "1")
                     put("font-variant-numeric", "tabular-nums")
@@ -1047,8 +1077,8 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
             div {
                 css {
-                    marginTop = 8.px
-                    fontSize = 12.px
+                    marginTop = 6.px
+                    fontSize = 11.px
                     color = Color("var(--kl-ink-label)")
                 }
 
