@@ -22,7 +22,7 @@ import * from "sprudel"
 // Song Status: Upcoming Garage Band ...
 
 let feel          =    5    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
-let transposition =   -3    // -1 .. D# | 0 .. E | 1 .. F
+let transposition =   -0    // -1 .. D# | 0 .. E | 1 .. F
 let drunk         =  0.8    // How many liters of beers did each band member have?
 let snareHz       =  205    // Where does the snare cut through?
 
@@ -192,7 +192,7 @@ let makeGuitar = (rig) => {
   // synthetic (2026-09-14)
   return rig(signal)
     .mul(0.18)
-    .shape("soft", 2)
+    .shape("soft", 1)
     .classic()
 }
 
@@ -230,7 +230,7 @@ let bass = (() => {
   return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -3)) // let the snare cut through
     .mul(0.2)
-    .shape("soft", 2)
+    .shape("soft", 1)
     .classic()
 })()
 
@@ -340,8 +340,8 @@ export bass_pat =
     [0 0 2 4 0 0 -2 -1]!2
     [0 0 -1 3  7 0 -2 -1] [0 0 3 [0 -2]  0 0 [0 4 7 9] 6]>/8`
 
-export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.35) // . mute()
-    .ignp("sub", 0.95).ignp("harmonics", 1.00).clip("0.90".sub(perlin(0.0, 0.05).slow(8)))  // . solo()
+export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.36) // . mute()
+    .ignp("sub", 0.97).ignp("harmonics", 1.00).clip("0.90".sub(perlin(0.0, 0.05).slow(8)))  // . solo()
     .adsr(0.003, 0.50, 0.33, 0.015).hpf(35)
 
 export bass_arrange = x => x.orbit(4) // . mute()
@@ -363,21 +363,20 @@ let gummiEimer = (() => {
  
   let ring = Ign.constant(160).div(Ign.freq()).mul(0.85)  
  
-  let head  = Ign.sine(x => x.analog(pAnalog)).pitchEnvelope(7, x => x.adsr(0.008, 0.050, 0, 0)).adsr(0.010, ring, 0.3, 2.0).mul(0.5)
+  let head  = Ign.sine(x => x.analog(pAnalog)).pitchEnvelope(7, x => x.adsr(0.008, 0.050, 0, 0)).adsr(0.010, ring, 0.3, 0.5).mul(0.5)
   // the harmonics 2f..8f, fundamental left out: the ear rebuilds it, so the drum sits low in the mix and keeps its pitch,
   // and the pitch drop is heard up here, not felt at 70 Hz. They die well before the head does.
-  let harms = Ign.sine(x => x.harmonics(6, 1.2).fundamental(0).analog(pAnalog).analogSpread(0.2))
-    .pitchEnvelope(12, x => x.adsr(0.008, 0.050, 0, 0)).adsr(0.010, 0.35, 0.4, 0.40).mul(1.2)
+  let harms = Ign.sine(x => x.harmonics(6, 1.0).fundamental(0).analog(pAnalog).analogSpread(0.2))
+    .pitchEnvelope(12, x => x.adsr(0.008, 0.050, 0, 0)).adsr(0.010, 0.35, 0.4, 0.30).mul(1.2)
  
   let m2 = Ign.sine(Ign.freq().mul(1.59), x => x.analog(pAnalog)).adsr(0.002, 0.10, 0.2, 0.20).mul(0.25)
-  let m3 = Ign.sine(Ign.freq().mul(2.10), x => x.analog(pAnalog)).adsr(0.002, 0.06, 0.2, 0.10).mul(0.15)
+  let m3 = Ign.sine(Ign.freq().mul(2.14), x => x.analog(pAnalog)).adsr(0.002, 0.06, 0.2, 0.10).mul(0.15)
   // wood core: a crack, the force of the hit the skin gives, and the hit reads as hard
   let beater = Ign.whitenoise().adsr(0.001, 0.035, 0.0, 0.015).lowpass(1500).mul(6.00)    
  
   return head.plus(harms).plus(m2).plus(m3).plus(beater)
     .distort(0.80, "soft", 2)
     .mul(0.1)
-    .shape("soft", 2)
     .classic()
 })()
 
@@ -386,16 +385,15 @@ export trommel_pat = `<[~ 0 1 ~  0 ~ 2 ~] [0 ~ 0 -4  -3 ~ -1 0] [~ 0 -1 0  ~ 0 ~
 
 export trommel_shape = x => x.sound(gummiEimer).adsrOff() //  .solo()
   .velocity("1.0 0.8 0.9 0.8".sub(perlin(0.0, 0.02))).body(material = "membrane", wet = 0.4)
-  .hpf(600).lpf("2500".add(perlin(-100, 100).fast(4))).clip(1.02)
+  .hpf(520).lpf("2500".add(perlin(-100, 100).fast(4))).clip(0.2)
   .apply(
     x => x.pan(0.33).late(berlin(0.0025, 0.0030).seed(100).mul(drunk).slow(4)),
     x => x.pan(0.67).late(berlin(0.0030, 0.0035).seed(100).mul(drunk).slow(4)),
   )
 
 export trommel_arrange = x => x.orbit(5) // .solo(0.5)
-  .scale("e3:minor").gain(0.35)
+  .scale("e4:minor").gain(0.22)
   .mute("<1!96 0!32>")                          
- 
 
 export trommel = n(trommel_pat).apply(trommel_shape).tag("trommel")
 
@@ -415,7 +413,7 @@ let metalKick = (() => {
 
   return thump.plus(crack)
     .mul(0.26)                                     // level: as loud as the bd shape it replaced, at the same gain(0.25)
-    .shape("soft", 2)
+    .shape("soft", 1)
     .classic()
 })()
 
@@ -472,7 +470,9 @@ let metalSnare = (() => {
   // master limiter worked on the snare alone. A soft clip rounds that first peak and leaves the body as it was: 6 dB less
   // peak at the same loudness (2026-09-30).
   return drum.plus(crack)
-    .mul(0.3).shape("soft", 2).mul(1.4895)         // level: as loud as the snare before the clip, at the same gain
+    .mul(0.3)
+    .shape("soft", 1)
+    .mul(1.4895)         // level: as loud as the snare before the clip, at the same gain
     .classic()
 })()
 
@@ -543,7 +543,7 @@ export song = stack(
   , // Master
   master(Katalyst(k => k
     .reverb(0.10, 7, 4500)
-    .gain(5.5)
+    .gain(5.2)
     .bands(b => b
       .band(low => low.distort(0.01, "soft", 4).mul(1.00)).cut(150)
       .band(mid => mid.distort(0.15, "soft", 4).mul(0.90)).cut(5000)
