@@ -30,7 +30,8 @@ import io.peekandpoke.ultra.streams.ops.ticker
  *   again by itself; nobody listening, no frame is asked for.
  *
  * One object, the focus taken from Kraft's [WindowController] (the maintainer, 2026-10-29: "I think we can merge Frame
- * and UiWork into one object? Also there already is WindowController in Kraft for detect focus").
+ * and UiWork into one object? Also there already is WindowController in Kraft for detect focus"). Frames that rest on
+ * a stream are asked of Kraft itself (ULTRA-00284); until then these three lines do it.
  */
 object UiWork {
 
