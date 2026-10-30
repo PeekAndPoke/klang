@@ -186,6 +186,10 @@ kraftApp {
   microtask, so an assertion that the old DOM already satisfies ("still closed") passes before the redraw. Wait
   first for a sign of the new render (an attribute the change flips), then assert; for an effect a frame later
   (a focus moved in `requestAnimationFrame`), await the frames, then assert once.
+- **A TestBed block runs in a `TestBedScope`** (Kraft 0.117.0, KLANG-00396, 2026-10-31): the block gets the `app` and
+  its `router`, so a function reference handed on as the block (`test = test`) no longer compiles; wrap it
+  (`{ test(it) }`, `KlangWorkbenchSpec`'s `keyedBed`). A spec moves between pages with `router.navToUri(uri)` and then
+  `router.awaitUri(uri)` (`io.peekandpoke.kraft.testing`) before it reads the new page (`LearnPagesSpec`).
 - **Moving a key boundary keeps alive what used to be fresh** (KLANG-00341, 2026-10-26): when a subtree stops
   remounting (the layouts kept mounted across pages), list what the remount did implicitly (a scroller's position,
   the focus, component state, a CSS animation restarted) and redo what must still happen (`RouterWithTransitions`
