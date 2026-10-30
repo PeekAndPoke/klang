@@ -19,6 +19,7 @@ import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.ops.cutoffWhen
 import io.peekandpoke.ultra.streams.ops.map
 import io.peekandpoke.ultra.streams.ops.switchMapNotNull
+import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.css.Color
 import kotlinx.css.height
@@ -48,6 +49,7 @@ fun Tag.Oscilloscope(
     pixelSkip: Int = 5,
     preview: Float32Array? = null,
     paused: Stream<Boolean> = UiWork.resting,
+    swingPx: Double? = null,
 ) = comp(
     Oscilloscope.Props(
         player = player,
@@ -58,6 +60,7 @@ fun Tag.Oscilloscope(
         pixelSkip = pixelSkip,
         preview = preview,
         paused = paused,
+        swingPx = swingPx,
     )
 ) {
     Oscilloscope(it)
@@ -65,8 +68,8 @@ fun Tag.Oscilloscope(
 
 /**
  * The oscilloscope: the newest frame of the player's waveform as a trace over a faint centre line, with a soft shadow
- * under it. The trace eases off towards both ends, as a string held at its ends, and each frame fades the last one
- * out, a short afterglow.
+ * under it. The trace eases off towards both ends, as a string held at its ends, and each frame draws the last one back
+ * blurred and fainter, so the trace seems to radiate (KLANG-00392).
  * Without a player it draws the idle line. With [Props.preview] it draws that frame and nothing else, a still picture
  * of itself (the look editor's card, KLANG-00382; the maintainer, 2026-10-28: "these component implement a preview
  * mode, when they get static data").
@@ -87,6 +90,12 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         val preview: Float32Array?,
         /** While true, nothing is drawn: the waveform is let go until it is false again ([UiWork.resting], the default). */
         val paused: Stream<Boolean>,
+        /**
+         * How far a full-scale signal swings from the centre line, in CSS pixels; null for half the height. Given, the
+         * swing does not grow with a taller canvas, and a louder signal than there is room for is cut at the edge
+         * (KLANG-00391).
+         */
+        val swingPx: Double?,
     )
 
     companion object {
@@ -96,8 +105,16 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         /** How steeply the trace eases off towards its ends. */
         private const val DEFLECTION_STRENGTH = 4.0
 
-        /** How much of the last frame each new one fades out: the afterglow. */
-        private const val AFTERGLOW_FADE = 0.95
+        /**
+         * How much of the last frame each new one keeps, drawn back blurred by [RADIANCE_BLUR_PX]: frame after frame the
+         * trails spread and fade, the trace radiates (the maintainer, 2026-10-30: "we overpaint the current contents
+         * with 90% black, leading to a fadeout effect. Let us do this plus blurring the current content on every render
+         * step"; it kept 5 %, unblurred).
+         */
+        private const val RADIANCE_KEEP = 0.8
+
+        /** The blur each frame, in CSS pixels: a few frames on, the trail is a few pixels wide. */
+        private const val RADIANCE_BLUR_PX = 1.0
 
         /** How far the shade's stroke lies below the string's, a share of the string's width. */
         private const val SHADE_OFFSET = 0.3
@@ -136,6 +153,13 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
 
     private var canvas: HTMLCanvasElement? = null
     private var ctx2d: CanvasRenderingContext2D? = null
+
+    /** The last frame, copied aside to be drawn back blurred ([radiate]); the canvas's size. */
+    private val lastFrame = document.createElement("canvas") as HTMLCanvasElement
+    private val lastFrame2d = lastFrame.getContext("2d") as? CanvasRenderingContext2D
+
+    /** The backing store per CSS pixel, for the blur's width in the store's pixels. */
+    private var backingRatio = 1.0
 
     /** The canvas's size in CSS pixels, which the drawing works in. */
     private var cssWidth = 0
@@ -212,8 +236,11 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
 
         cssWidth = width.toInt()
         cssHeight = height.toInt()
+        backingRatio = ratio
         c.width = (width * ratio).roundToInt()
         c.height = (height * ratio).roundToInt()
+        lastFrame.width = c.width
+        lastFrame.height = c.height
         c.style.width = "${width}px"
         c.style.height = "${height}px"
         ctx2d?.setTransform(ratio, 0.0, 0.0, ratio, 0.0, 0.0)
@@ -238,7 +265,7 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         val width = cssWidth
         val centerY = cssHeight / 2.0
 
-        ctx.fadeout(AFTERGLOW_FADE)
+        ctx.radiate()
 
         props.centerLineColor?.let { line ->
             ctx.strokeStyle = line.toString()
@@ -256,11 +283,11 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         val easeOff = deflectionFor(width)
         val step = props.pixelSkip.coerceAtLeast(1)
 
-        fun yOf(value: Float, x: Double): Double {
-            val eased = value * easeOff[x.toInt().coerceIn(0, easeOff.size - 1)]
-
-            return centerY - eased * centerY
-        }
+        fun yOf(value: Float, x: Double): Double = traceY(
+            value = value * easeOff[x.toInt().coerceIn(0, easeOff.size - 1)],
+            centerY = centerY,
+            swingPx = props.swingPx,
+        )
 
         // The trace's points first, then one rounded path through them
         val points = TracePoints(capacity = 2 * maxOf(width, bufferLength) + 2)
@@ -355,14 +382,30 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         ctx.restore()
     }
 
-    private fun CanvasRenderingContext2D.fadeout(amount: Double) {
-        save()
+    /**
+     * The last frame back, blurred and fainter ([RADIANCE_KEEP], [RADIANCE_BLUR_PX]): copied aside, the canvas cleared,
+     * the copy drawn over it. A browser without canvas filters draws it unblurred, an afterglow that only fades.
+     */
+    private fun CanvasRenderingContext2D.radiate() {
+        val width = canvas.width.toDouble()
+        val height = canvas.height.toDouble()
+        val aside = lastFrame2d
 
         // The whole backing store, whatever the drawing's scale
+        save()
         setTransform(1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
-        globalCompositeOperation = "destination-in"
-        fillStyle = Color.black.withAlpha(1.0 - amount).toString()
-        fillRect(0.0, 0.0, canvas.width.toDouble(), canvas.height.toDouble())
+
+        if (aside == null || lastFrame.width != canvas.width || lastFrame.height != canvas.height) {
+            clearRect(0.0, 0.0, width, height)
+        } else {
+            aside.clearRect(0.0, 0.0, width, height)
+            aside.drawImage(canvas, 0.0, 0.0)
+
+            clearRect(0.0, 0.0, width, height)
+            asDynamic().filter = "blur(${RADIANCE_BLUR_PX * backingRatio}px)"
+            globalAlpha = RADIANCE_KEEP
+            drawImage(lastFrame, 0.0, 0.0)
+        }
 
         restore()
     }
@@ -378,6 +421,17 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
             canvas("oscilloscope-canvas") {}
         }
     }
+}
+
+/**
+ * Where a sample of [value] (-1 to 1 at full scale) is drawn: [swingPx] from the centre line at [centerY] at full scale,
+ * up for a positive value; with no [swingPx], half the height ([centerY]).
+ */
+internal fun traceY(value: Double, centerY: Double, swingPx: Double?): Double {
+    // NaN-guard: a swing that is not a positive number is half the height
+    val swing = swingPx?.takeIf { it > 0.0 } ?: centerY
+
+    return centerY - value * swing
 }
 
 /**

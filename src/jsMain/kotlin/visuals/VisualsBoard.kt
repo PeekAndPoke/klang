@@ -12,7 +12,6 @@ import io.peekandpoke.klang.comp.MotorReadings
 import io.peekandpoke.klang.comp.Oscilloscope
 import io.peekandpoke.klang.comp.PlateComposition
 import io.peekandpoke.klang.comp.PlayerMiniStats
-import io.peekandpoke.klang.comp.ScopeGlow
 import io.peekandpoke.klang.comp.ScreenRect
 import io.peekandpoke.klang.comp.Spectrumeter
 import io.peekandpoke.klang.comp.VolumeKnob
@@ -108,6 +107,14 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
 
         /** The hole's and the screen's height side by side on one tile row, as a share of a tile. */
         private const val SIDE_BY_SIDE_HEIGHT = 0.66
+
+        /**
+         * How far a full-scale signal swings in every hole, as a share of a tile: the Motor's plate's, half its hole
+         * (the maintainer, 2026-10-30: "the distance from the center must not depend on the height of the element ...
+         * the 3x1 tiles version has the correct setting"; side by side, the taller hole swung 1.6 times as far,
+         * "hectic"; KLANG-00391).
+         */
+        private const val SCOPE_SWING = HOLE_HEIGHT / 2
 
         /**
          * The margin round a display inside its plate, as a share of a tile (the maintainer, 2026-10-29: "Keep a left
@@ -221,7 +228,7 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
                         val screenRow = rect.copy(top = rect.top + tile)
 
                         spot(key = "hole-row", rect = holeRow) {
-                            renderHole(width = rect.width - 2 * margin, height = tile * HOLE_HEIGHT)
+                            renderHole(width = rect.width - 2 * margin, height = tile * HOLE_HEIGHT, tile = tile)
                         }
                         spot(key = "screen-row", rect = screenRow) {
                             renderScreen(width = rect.width - 2 * margin, height = tile * SCREEN_HEIGHT)
@@ -231,7 +238,7 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
                     VisualsCompositions.SCOPE_SPECTRUM -> spot(key = placed.id, rect = rect, gap = margin) {
                         val each = (rect.width - 3 * margin) / 2
 
-                        renderHole(width = each, height = tile * SIDE_BY_SIDE_HEIGHT)
+                        renderHole(width = each, height = tile * SIDE_BY_SIDE_HEIGHT, tile = tile)
                         renderScreen(width = each, height = tile * SIDE_BY_SIDE_HEIGHT)
                     }
 
@@ -363,10 +370,10 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
     }
 
     /**
-     * The scope in a hole cut into the plate: a dark recess, its rim catching the light, its inside lit by the signal
-     * in the scope's own colour, brighter the louder.
+     * The scope in a hole cut into the plate: a dark recess, its rim catching the light, the trace radiating in it. Its
+     * swing is the same in every hole, [SCOPE_SWING] of a [tile].
      */
-    private fun FlowContent.renderHole(width: Double, height: Double) {
+    private fun FlowContent.renderHole(width: Double, height: Double, tile: Double) {
         div {
             key = "hole"
             css {
@@ -386,15 +393,17 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
                 put("overflow", "hidden")
             }
 
-            ScopeGlow(strength = ScopeGlow.HOLE)
-
             div {
                 css {
                     put("position", "absolute")
                     put("inset", "0 ${height * 0.36}px")
                 }
 
-                Oscilloscope(player = Player.player, strokeColor = Color(look[KlangRole.ScopeTrace]))
+                Oscilloscope(
+                    player = Player.player,
+                    strokeColor = Color(look[KlangRole.ScopeTrace]),
+                    swingPx = tile * SCOPE_SWING,
+                )
             }
 
             glassDome()

@@ -145,11 +145,8 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
                     height = OSCILLOSCOPE_HEIGHT_REM.rem
                     zIndex = 2
                 }
-                // The signal's glow behind the trace, as in the visual's hole, quieter (the maintainer, 2026-10-29)
-                ScopeGlow(strength = ScopeGlow.SCREEN)
-
-                // The trace in the look's own colour for it (KLANG-00334 item 36): a new look changes it at once. Laid
-                // over the glow: the glow is positioned, so the trace must be too
+                // The trace in the look's own colour for it (KLANG-00334 item 36): a new look changes it at once. It
+                // radiates by itself (KLANG-00392), no glow behind it any more
                 div {
                     css {
                         position = Position.relative

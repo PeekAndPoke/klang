@@ -14,9 +14,21 @@ private fun samples(vararg values: Float) = Float32Array(values.toTypedArray())
 
 /**
  * The scope's trace where samples outnumber pixels: a pixel's lowest and highest go in the order the signal reached
- * them, so the trace follows the wave instead of rising from every pixel's lowest to the next one's highest.
+ * them, so the trace follows the wave instead of rising from every pixel's lowest to the next one's highest. And how far
+ * the trace swings: a given swing does not grow with the scope's height (KLANG-00391).
  */
 class OscilloscopeSpec : StringSpec({
+
+    "a given swing is the same in a tall scope and a flat one" {
+        traceY(value = 1.0, centerY = 20.0, swingPx = 10.0) shouldBe 10.0
+        traceY(value = 1.0, centerY = 40.0, swingPx = 10.0) shouldBe 30.0
+        traceY(value = -0.5, centerY = 40.0, swingPx = 10.0) shouldBe 45.0
+    }
+
+    "with no swing given, full scale reaches the edge" {
+        traceY(value = 1.0, centerY = 40.0, swingPx = null) shouldBe 0.0
+        traceY(value = -1.0, centerY = 40.0, swingPx = null) shouldBe 80.0
+    }
 
     "a pixel whose signal falls gives its highest first" {
         extremesInOrder(buffer = samples(0.5f, 0.75f, 0.125f, -0.625f), start = 0, end = 4) shouldBe (0.75f to -0.625f)

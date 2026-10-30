@@ -92,7 +92,7 @@ What makes the move more than a move:
 |---|---|
 | cylinders, heat, voices smoothed from `Player.diagnostics.stream` | `PlayerMiniStats`, and `MotorReadings` once per caller: `VisualsBoard` and `KlangampPlayer` each run three chains, both mounted in the glass visual; `VisualsBoard` smooths them in compositions with no gauges too |
 | the same smoothing on the dyno | `StartPage` |
-| the waveform (`player.map { analyzer }.switchMapNotNull { waveform }`) | `Oscilloscope`, `MotorReadings.signal()` (one per `ScopeGlow`) |
+| the waveform (`player.map { analyzer }.switchMapNotNull { waveform }`) | `Oscilloscope`, `MotorReadings.signal()` (one per `ScopeGlow`; both gone 2026-10-30, KLANG-00392) |
 | a playback's signals | `KlangCodePlaybackCtrl`, `VoiceRain` (through `nowPlaying`) |
 | elapsed time of what plays | two 250 ms intervals: `KlangampPlayer`, `KlangampPlaylist` |
 | scheduled voices to highlighted code | three pipelines: the editor's highlight buffer (Pixi ticker), `MnEditorBase` (timeouts), the tutorials' ADSR curves |
@@ -118,7 +118,7 @@ What makes the move more than a move:
   remount as they scroll into view). The same in `RealtimePlaybackCtrl` (per MIDI page visit), and a dropped raw
   subscription in `MidiPlaygroundPage`. Listeners never removed: `FullscreenController`'s resize, `KeysManager`
   (its detach is never called), `LookStorage`'s shelf subscription.
-- **Hidden parts still working:** the Motor's `ScopeGlow` under a visual (it has no `paused`), `PlayerWarehouseStats`,
+- **Hidden parts still working:** the Motor's `ScopeGlow` under a visual (it has no `paused`; gone, KLANG-00392), `PlayerWarehouseStats`,
   the three.js loop, `VisualsBoard`'s gauges in compositions without gauges, the diagnostics' history.
 - **Persistence done four ways:** on subscription (the shelf, `SongStorage`, `KlangToolAutoUpdate`), in setters
   (`EditorSettings`, `TutorialStorage`), at the call sites (`LookStorage.save`, the volume, the layout, MIDI), on first
@@ -138,7 +138,7 @@ For the design step, to agree with the maintainer. One area at a time, each a co
 3. **One writer of the volume:** the Spine owns the output gain and offers a fade (the start page asks for it, the knob
    sets the target); a turn of the knob during a fade wins.
 4. **The Motor's readings derived once:** `MotorReadings`' factories become values in the Spine, each smoothed once and
-   cut off while nothing shows them; `PlayerMiniStats`, `VisualsBoard`, `KlangampPlayer` and `ScopeGlow` read them.
+   cut off while nothing shows them; `PlayerMiniStats`, `VisualsBoard` and `KlangampPlayer` read them.
    The waveform and the spectrum as Spine streams too (decide: push the FFT on `Frames`, or keep the pull).
 5. **The playback model out of `comp/`:** `KlangCodePlaybackCtrl` to the Spine with a lifetime (made and released by
    its owner), the `Player.status` leak fixed; `KlangampDeck`'s start time moves with it.
