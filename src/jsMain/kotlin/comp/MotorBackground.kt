@@ -1248,11 +1248,11 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
         // Two-octave stepped surface: fine per-pixel grain + coarser facets. The facets stay hard-edged, but their
         // tilt is drawn from 2D Perlin sampled once per facet, so neighbouring facets lean in related directions and
         // the letters read as one flowing surface instead of uncorrelated sparkle. The amplitudes set how far a normal
-        // swings off-axis; lower means the letters face the light more uniformly. The facets lead and the grain only
-        // roughens them, so a moving lamp lights facet after facet (the maintainer, 2026-10-30: "make the KLANGMOTOR
-        // texture a little bit more coarse so that the lighting has more effect when the lamp moves").
-        val fineAmp = 0.24
-        val coarseAmp = 0.45
+        // swings off-axis; lower means the letters face the light more uniformly. The facets lean a little steeper than
+        // they began, so a moving lamp catches them (the maintainer, 2026-10-30: "just a little steeper edges in the
+        // original coarsnes so it reacts more to the light").
+        val fineAmp = 0.34
+        val coarseAmp = 0.22
         // Perlin lattice units per facet: how fast the direction field turns. Higher means neighbouring facets
         // diverge sooner.
         val coarseFreq = 0.0625
@@ -1262,7 +1262,7 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
         // belongs to the facet of the nearest point. Square facets laid on a grid showed as a grid on a fine display
         // (the maintainer, 2026-10-30: "On the Macbook the resolution is so fine that i can see "a grid" in the
         // headline").
-        val coarseBlock = 9
+        val coarseBlock = 6
         val cellCols = width / coarseBlock + 2
         val cellRowFrom = bandFrom / coarseBlock - 1
         val cellRows = bandTo / coarseBlock + 2 - cellRowFrom
