@@ -18,6 +18,7 @@ import io.peekandpoke.klang.comp.motorBackgroundRef
 import io.peekandpoke.klang.compile
 import io.peekandpoke.klang.fs
 import io.peekandpoke.klang.playJingle
+import io.peekandpoke.klang.spine.SwingingLamp
 import io.peekandpoke.klang.spine.UiWork
 import io.peekandpoke.klang.spine.VisualState
 import io.peekandpoke.klang.sprudel.SprudelPattern
@@ -32,6 +33,7 @@ import io.peekandpoke.klang.ui.comp.KlangYesNoModal
 import io.peekandpoke.klang.version
 import io.peekandpoke.klang.visuals.VisualsBoard
 import io.peekandpoke.klang.visuals.VisualsParts
+import io.peekandpoke.klang.visuals.VisualsParts.glassDome
 import io.peekandpoke.kraft.addons.browserdetect.BrowserDetect
 import io.peekandpoke.kraft.addons.browserdetect.BrowserDetectAddon
 import io.peekandpoke.kraft.addons.browserdetect.browserDetect
@@ -92,6 +94,7 @@ import kotlinx.html.DIV
 import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlinx.html.title
+import org.w3c.dom.HTMLElement
 import kotlin.math.roundToInt
 
 @Suppress("FunctionName")
@@ -136,6 +139,16 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
         /** How far the dyno's screen's corners are cut, as the visuals' screens are. */
         private const val DYNO_SCREEN_CUT_PX = 14
+
+        /** The tile's width at which the dyno's screen shows its text at its given sizes: a window about 800 px high. */
+        private const val DYNO_SCREEN_TILE_PX = 140.0
+
+        /** How far the dyno's screen's text shrinks and grows with the tiles. */
+        private const val DYNO_SCREEN_SCALE_MIN = 0.85
+        private const val DYNO_SCREEN_SCALE_MAX = 1.6
+
+        /** [px] at the dyno's screen's scale (`--kl-dyno-scale`, 1 outside it). */
+        private fun scaled(px: Int): String = "calc(${px}px * var(--kl-dyno-scale, 1))"
     }
 
     //  PERFORMANCE TIERS  //////////////////////////////////////////////////////////////////////////////////////
@@ -536,6 +549,11 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
     @Suppress("unused")
     private val frame by subscribingTo(UiWork.frames) { state.update() }
 
+    init {
+        // The lamp in the dyno screen's glass, a frame at a time while the lamp is followed; ends with the page
+        VisualState.light.subscribe { reflect(it) }
+    }
+
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     /** A phone or a browser other than Chrome: ask before the Motor starts; no keeps the key at OFF. */
@@ -808,6 +826,9 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
             composition = PlateComposition.start,
         )[PlateComposition.SCREEN] ?: return
         val margin = tile * VisualsBoard.SIDE_MARGIN
+        // The text grows with the tiles, so a big window's screen is not a small text in a big black (the maintainer,
+        // 2026-10-30: "The positioning in the "screen" needs some work")
+        val scale = (tile / DYNO_SCREEN_TILE_PX).coerceIn(DYNO_SCREEN_SCALE_MIN, DYNO_SCREEN_SCALE_MAX)
 
         div {
             key = "dyno-screen"
@@ -821,7 +842,9 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 display = Display.flex
                 flexDirection = FlexDirection.column
                 put("gap", "8px")
-                put("padding", "12px 16px")
+                put("padding", "${12 * scale}px ${16 * scale}px")
+                // The parts' sizes below are this many times their size at a window 800 px high
+                put("--kl-dyno-scale", scale.toString())
                 textAlign = TextAlign.left
                 opacity = currentOpacity
                 put("overflow", "hidden")
@@ -831,28 +854,41 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 put("box-shadow", "inset 0 6px 14px rgba(0, 0, 0, 0.9), inset 0 0 0 1px rgba(255, 255, 255, 0.06)")
             }
 
-            // The test, or the tier's lamp
+            // The headline stays; the grade in the top right corner once the test is done (the maintainer, 2026-10-30:
+            // "Keep "Dynamometer Test" as the headline", then "put the grade in the top right corner")
             div {
                 css {
+                    display = Display.flex
+                    alignItems = Align.center
+                    justifyContent = JustifyContent.spaceBetween
+                    put("gap", scaled(12))
                     fontFamily = "monospace"
-                    fontSize = 12.px
+                    put("font-size", scaled(12))
                     color = Color("var(--kl-ink-label)")
                 }
 
-                if (rating == null) {
-                    renderTestingTitle()
-                } else {
-                    KlangLamp(state = rating.lamp, size = 10.px, label = rating.tier.uppercase())
+                renderDynoTitle(running = rating == null)
+
+                if (rating != null) {
+                    div {
+                        css {
+                            put("letter-spacing", "0.14em")
+                            color = Color("var(--kl-ink-strong)")
+                        }
+
+                        KlangLamp(state = rating.lamp, size = 10.px, label = rating.tier.uppercase())
+                    }
                 }
             }
 
             div {
+                // In the middle of the room between the title and the foot; one too long for it starts at its top
+                // instead of growing over the title ("safe")
                 css {
                     display = Display.flex
-                    // From the top: a long tier message grows down, never over the title
-                    alignItems = Align.flexStart
+                    put("align-items", "safe center")
                     justifyContent = JustifyContent.spaceBetween
-                    put("gap", "16px")
+                    put("gap", scaled(20))
                     flexGrow = 1.0
                     put("min-height", "0")
                 }
@@ -860,14 +896,14 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 div {
                     css { flexGrow = 1.0 }
 
-                    if (rating == null || complete == null) {
+                    if (rating == null) {
                         renderRounds()
                     } else {
                         renderTier(rating = rating, voices = complete.result.maxSafeVoices)
                     }
                 }
 
-                renderVoices(complete)
+                renderVoices(complete = complete)
             }
 
             // The page's one way on, at the screen's foot
@@ -878,6 +914,14 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                     justifyContent = JustifyContent.spaceBetween
                     put("gap", "16px")
                 }
+
+                // The checkbox on the left, the key on the right (the maintainer, 2026-10-30: "Swap "Make Music Now" and
+                // "enter fullscreen"")
+                KlangCheckbox(
+                    label = "Enter fullscreen",
+                    checked = enterFullscreen,
+                    onChange = { enterFullscreen = it },
+                )
 
                 div {
                     // The light swells only over a key that can be pressed, and not over the checkbox beside it
@@ -898,21 +942,30 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                     ) {
                         // The page's one way on: bigger than a dialog's key (the maintainer, 2026-10-26)
                         css {
-                            put("min-height", "46px")
-                            fontSize = 18.px
+                            put("min-height", scaled(46))
+                            put("font-size", scaled(18))
                         }
 
                         +"Make Music Now"
                     }
                 }
-
-                KlangCheckbox(
-                    label = "Enter fullscreen",
-                    checked = enterFullscreen,
-                    onChange = { enterFullscreen = it },
-                )
             }
+
+            // Glass over it as over the visuals' screens, the lamp mirrored in it ([reflect]; the maintainer,
+            // 2026-10-30: "Does this "screen" have the lamp reflection?")
+            glassDome()
         }
+    }
+
+    /**
+     * The lamp mirrored in the dyno screen's glass: its highlight moved toward the lamp and lit with it, by its
+     * transform and opacity alone, as the visuals' domes are (`VisualsBoard.reflect`).
+     */
+    private fun reflect(light: SwingingLamp.Light) {
+        val highlight = (dom as? HTMLElement)?.querySelector(".${VisualsParts.HIGHLIGHT}") as? HTMLElement ?: return
+
+        highlight.style.transform = VisualsParts.highlightTransform(swayX = light.swayX, swayY = light.swayY)
+        highlight.style.opacity = VisualsParts.highlightOpacity(level = light.level).toString()
     }
 
     /** The Motor's gauges at the dyno's size, glowing in the background lamp's colour as the Motor's do here. */
@@ -964,7 +1017,8 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
     }
 
     /** While the test runs, the panel's title: its name with the spinner. */
-    private fun DIV.renderTestingTitle() {
+    /** The screen's headline, while the test runs and after (the maintainer, 2026-10-30); a spinner while it runs. */
+    private fun DIV.renderDynoTitle(running: Boolean) {
         div {
             css {
                 display = Display.flex
@@ -973,7 +1027,10 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 put("letter-spacing", "0.14em")
             }
 
-            KlangSpinner(label = "Testing the Motor", size = 16.px)
+            if (running) {
+                KlangSpinner(label = "Testing the Motor", size = 16.px)
+            }
+
             +"DYNAMOMETER TEST"
         }
     }
@@ -990,7 +1047,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 alignItems = Align.center
                 put("gap", "10px")
                 fontFamily = "monospace"
-                fontSize = 12.px
+                put("font-size", scaled(12))
                 put("letter-spacing", "0.14em")
                 color = Color("var(--kl-ink-label)")
             }
@@ -1020,8 +1077,8 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         // cylinders" or similar); the run's voices are supersaws, each cylinder with its reverb
         div {
             css {
-                marginBottom = 4.px
-                fontSize = 12.px
+                put("margin-bottom", scaled(6))
+                put("font-size", scaled(12))
                 color = Color("var(--kl-ink-label)")
             }
 
@@ -1030,8 +1087,10 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
         div {
             css {
-                fontSize = 14.px
-                put("line-height", "1.35")
+                // As large as the lines above and below it (the maintainer, 2026-10-30: "make the "seriously" text the
+                // same fontsize as the text above and below it"), brighter than they are
+                put("font-size", scaled(12))
+                put("line-height", "1.4")
                 color = Color("var(--kl-ink-strong)")
             }
 
@@ -1041,8 +1100,8 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         if (rating.showWarning) {
             div {
                 css {
-                    marginTop = 4.px
-                    fontSize = 12.px
+                    put("margin-top", scaled(6))
+                    put("font-size", scaled(12))
                     color = Color("var(--kl-ink-label)")
                 }
 
@@ -1060,12 +1119,12 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 textAlign = TextAlign.center
                 whiteSpace = WhiteSpace.nowrap
                 // Room for any count, so the screen's text keeps its width while the number grows
-                put("min-width", "120px")
+                put("min-width", scaled(120))
             }
 
             div {
                 css {
-                    fontSize = 34.px
+                    put("font-size", scaled(36))
                     put("font-weight", "700")
                     put("line-height", "1")
                     put("font-variant-numeric", "tabular-nums")
@@ -1077,8 +1136,8 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
             div {
                 css {
-                    marginTop = 6.px
-                    fontSize = 11.px
+                    put("margin-top", scaled(6))
+                    put("font-size", scaled(11))
                     color = Color("var(--kl-ink-label)")
                 }
 

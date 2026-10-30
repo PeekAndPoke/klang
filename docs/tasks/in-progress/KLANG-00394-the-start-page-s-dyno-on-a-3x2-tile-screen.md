@@ -30,3 +30,7 @@ as screens cut into them.
 
 - 2026-10-30: created.
 - 2026-10-30: built; checked in a headless browser (no WebGL there, so the tile itself shows only in a real browser).
+- 2026-10-30: the maintainer's rounds by eye: the result in the middle of the screen and the text scaled with the tiles
+  ("The positioning in the "screen" needs some work"); "DYNAMOMETER TEST" stays the headline, the grade in the top
+  right corner; the tier's message as large as the lines round it; "Enter fullscreen" left, "Make Music Now" right;
+  the visuals' glass dome over the screen, the lamp mirrored in it.
