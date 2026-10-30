@@ -1245,6 +1245,46 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
             }
         }
 
+        // Two-octave stepped surface: fine per-pixel grain + coarser facets. The facets stay hard-edged, but their
+        // tilt is drawn from 2D Perlin sampled once per facet, so neighbouring facets lean in related directions and
+        // the letters read as one flowing surface instead of uncorrelated sparkle. The amplitudes set how far a normal
+        // swings off-axis; lower means the letters face the light more uniformly.
+        val fineAmp = 0.34
+        val coarseAmp = 0.15
+        // Perlin lattice units per facet: how fast the direction field turns. Higher means neighbouring facets
+        // diverge sooner.
+        val coarseFreq = 0.0625
+        // Layers stacked on that base flow, each half the amplitude at twice the frequency.
+        val coarseOctaves = 4
+        // The facets are irregular: each [coarseBlock] square cell holds one point somewhere inside it, and a texel
+        // belongs to the facet of the nearest point. Square facets laid on a grid showed as a grid on a fine display
+        // (the maintainer, 2026-10-30: "On the Macbook the resolution is so fine that i can see "a grid" in the
+        // headline").
+        val coarseBlock = 6
+        val cellCols = width / coarseBlock + 2
+        val cellRowFrom = bandFrom / coarseBlock - 1
+        val cellRows = bandTo / coarseBlock + 2 - cellRowFrom
+        val facetX = DoubleArray(cellCols * cellRows)
+        val facetY = DoubleArray(cellCols * cellRows)
+        val facetTiltX = DoubleArray(cellCols * cellRows)
+        val facetTiltY = DoubleArray(cellCols * cellRows)
+
+        for (cellRow in 0 until cellRows) {
+            for (cellCol in 0 until cellCols) {
+                val row = cellRow + cellRowFrom
+                val cell = cellRow * cellCols + cellCol
+                val x = cellCol + hashCell(cellCol * 7 + 3, row * 13 + 1)
+                val y = row + hashCell(row * 11 + 29, cellCol * 5 + 7)
+                facetX[cell] = x * coarseBlock
+                facetY[cell] = y * coarseBlock
+                // Two far-apart slices of the same field drive x and y independently. The fractional offsets keep
+                // every sample off the lattice nodes, where Perlin is 0 by construction. Halved: Perlin is centred on
+                // 0 and spans ±1, the hash spans ±0.5.
+                facetTiltX[cell] = fbm(x * coarseFreq + 0.37, y * coarseFreq + 0.61, coarseOctaves) * 0.5
+                facetTiltY[cell] = fbm(x * coarseFreq + 41.7, y * coarseFreq - 23.3, coarseOctaves) * 0.5
+            }
+        }
+
         runChunked(bandTo - bandFrom, { fromInBand, toInBand ->
         for (py in bandFrom + fromInBand until bandFrom + toInBand) {
             for (px in 0 until width) {
@@ -1256,36 +1296,30 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
                 var ny = 0.0
                 var nz = 1.0
                 if (maskVal > 0.5) {
-                    // Two-octave stepped surface: fine per-pixel grain + coarser facets.
-                    // The facets stay hard-edged (block-quantized), but their tilt is
-                    // drawn from 2D Perlin sampled once per block — so neighbouring
-                    // facets lean in related directions and the letters read as one
-                    // flowing surface instead of uncorrelated sparkle. The amplitudes
-                    // set how far a normal swings off-axis; lower means the letters
-                    // face the light more uniformly.
-                    val fineBlock = 1
-                    val coarseBlock = 6
-                    val fineAmp = 0.34
-                    val coarseAmp = 0.15
-                    // Perlin lattice units per facet — how fast the direction field
-                    // turns. Higher means neighbouring facets diverge sooner.
-                    val coarseFreq = 0.0625
-                    // Layers stacked on that base flow, each half the amplitude at
-                    // twice the frequency.
-                    val coarseOctaves = 4
-                    val fbc = px / fineBlock
-                    val fbr = py / fineBlock
-                    val cbc = (px / coarseBlock) * coarseFreq
-                    val cbr = (py / coarseBlock) * coarseFreq
-                    val f1 = hashCell(fbc + 17, fbr * 3 + 5)
-                    val f2 = hashCell(fbr * 5 + 11, fbc + 23)
-                    // Two far-apart slices of the same field drive x and y independently.
-                    // The fractional offsets keep every sample off the lattice nodes,
-                    // where Perlin is 0 by construction — without them a coarseFreq that
-                    // divides 1.0 would stamp a regular grid of dead, flat facets.
-                    // Halved: Perlin is centred on 0 and spans ±1, the hash spans ±0.5.
-                    val c1 = fbm(cbc + 0.37, cbr + 0.61, coarseOctaves) * 0.5
-                    val c2 = fbm(cbc + 41.7, cbr - 23.3, coarseOctaves) * 0.5
+                    val f1 = hashCell(px + 17, py * 3 + 5)
+                    val f2 = hashCell(py * 5 + 11, px + 23)
+                    // The nearest facet point lies in this texel's cell or one of its eight neighbours
+                    val ownCol = px / coarseBlock
+                    val ownRow = py / coarseBlock - cellRowFrom
+                    var nearest = 0
+                    var nearestDistance = Double.MAX_VALUE
+
+                    for (cellRow in max(0, ownRow - 1)..min(cellRows - 1, ownRow + 1)) {
+                        for (cellCol in max(0, ownCol - 1)..min(cellCols - 1, ownCol + 1)) {
+                            val cell = cellRow * cellCols + cellCol
+                            val dx = px + 0.5 - facetX[cell]
+                            val dy = py + 0.5 - facetY[cell]
+                            val distance = dx * dx + dy * dy
+
+                            if (distance < nearestDistance) {
+                                nearestDistance = distance
+                                nearest = cell
+                            }
+                        }
+                    }
+
+                    val c1 = facetTiltX[nearest]
+                    val c2 = facetTiltY[nearest]
                     nx = (f1 - 0.5) * fineAmp + c1 * coarseAmp
                     ny = (f2 - 0.5) * fineAmp + c2 * coarseAmp
                     nz = sqrt(max(0.01, 1.0 - nx * nx - ny * ny))
