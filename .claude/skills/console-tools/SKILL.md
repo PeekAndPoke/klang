@@ -113,6 +113,9 @@ at the end of `settings.gradle.kts`): `<module>/build/` becomes `.build-claude/<
 - A JS task's XML holds one extra suite, `Kotest`, with one "Executor[js, browser, ...]" case (and the
   printed output of every spec), so its count is one above the number of tests. JS suites all carry
   the same timestamp, the moment the results were written.
+- **A change in a module also runs the tests of the modules that use it** (rule, weekly meeting 2026-10-30): a
+  `klangui` change runs `:klangui:jsTest` and the app's `:jsTest`, whose specs use klangui's parts. 649198205 ran only
+  `:klangui:jsTest`, and the app's `LearnPagesSpec` stayed red until KLANG-00382.
 - `:audio_be:jvmTest` leaves out the `ClickHunt` tag unless `-Pkotest.tags=ClickHunt` is given.
 - `audio-wire-codec-ksp` has no test sources.
 
@@ -301,6 +304,25 @@ console/tools/hooks/hooks.py check [REV]    # run the pre-commit checks on a com
   `core.hooksPath` are denied). A quoted title or URL with a dash: URLs pass; put `dash-ok` on the line
   (`<!-- dash-ok -->` in Markdown).
 - `hooks.json` next to the script holds this repo's switches and `dash_skip` (the paths docs-lint exempts).
+
+## Screenshots of the app (a recipe)
+
+For dated screenshots (the dev history, a look checked by eye), Klang-Main-Dev's and Klang-Research's recipe in one
+(weekly meeting 2026-10-30). Headless Chrome only against 127.0.0.1 or localhost.
+
+1. **An old commit:** `git worktree add --detach /opt/dev/peekandpoke/klang-worktrees/<name> <sha>`, then
+   `env KLANG_LOCK_TIMEOUT=7200 /opt/dev/peekandpoke/klang/console/with-build-lock.sh ./gradlew
+   :jsBrowserDistribution -q` in it (the main checkout's script and lock, not the old commit's); the app is in
+   `build/dist/js/productionExecutable`. The current app: the same task in the main checkout.
+2. **Serve the folder** on 127.0.0.1, any path that is not a file answered with `index.html` (the app routes by path).
+3. **Chrome over its DevTools protocol** (`--headless=new --remote-debugging-port=<p> --user-data-dir=<scratch>`):
+   `Emulation.setFocusEmulationEnabled` first, since without focus a UI that rests on blur stops drawing; then
+   `Emulation.setDeviceMetricsOverride` with `deviceScaleFactor: 2` as well as 1, since a fine display shows what a
+   normal one hides (`dd897fc0c`); `Page.navigate`, wait, `Page.captureScreenshot`.
+4. **WebGL:** headless Chrome has none, not even with `--use-angle=swiftshader --enable-unsafe-swiftshader` alone;
+   under `xvfb-run -a` with those flags it has. Start it in a process group of its own and stop the group: stopping
+   `xvfb-run` alone leaves Chrome and Xvfb running (tried 2026-10-30).
+5. Stop the server and Chrome by their own PIDs; remove the worktree when the shots are in.
 
 ## Repo notes
 

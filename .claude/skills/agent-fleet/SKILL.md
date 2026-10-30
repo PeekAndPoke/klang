@@ -155,7 +155,9 @@ and the build lock is the real guard.
   skill edits into a coordinator's commit. Name each file you changed; before committing, read `git diff --cached
   --stat` and check every line of it is yours. Never `git restore --staged .` to undo: it also clears other people's
   staging (an intent-to-add mark was lost that way); unstage your own paths one by one. Commit with the paths named
-  (`git commit -- <paths>`), so a file someone else stages in the meantime stays out. And never undo with
+  (`git commit -- <paths>`), so a file someone else stages in the meantime stays out, and stage nothing ahead of a
+  commit: a `git add -N` for a new file runs in the same `&&` chain as its commit (rule, weekly meeting 2026-10-30:
+  70770094 took another session's staged deletion with it). And never undo with
   `git reset HEAD~1` while others commit: the same day, another session committed in the three seconds between a
   commit and its reset, and the reset took back THEIR commit (restored from the reflog). Fix a commit with a follow-up
   commit; look at `git log` first if anything must be rewound. Never `git stash` in the shared tree either: it takes back
@@ -167,6 +169,11 @@ and the build lock is the real guard.
   commit on the checked-out branch by explicit paths (`git add <paths>`, `git commit -- <paths>`); the check runs on
   that commit in `klang-worktrees/measure` (`/project-layout`, Repo notes), and a red check is fixed by a follow-up
   commit, never by rewinding.
+- **An edit left in the shared tree compiles** (rule, weekly meeting 2026-10-30), its lock files with it (a new npm
+  package and `kotlin-js-store/yarn.lock` in one change). The other session builds whatever is in the tree: an
+  uncompiled edit written while Klang-Research held the build for the Gradle 9 upgrade, and `@codemirror/search` added
+  without its lock (both 2026-10-26), broke or blurred the other's run. While another session holds the build, work that
+  does not compile yet waits in a worktree or the scratchpad.
 
 ## IntelliJ's tools: read-only, plus Optimize Imports (maintainer, 2026-10-20 and 2026-10-23) *(provisional)*
 
@@ -225,6 +232,9 @@ order: it can ADD imports of an object's own members (Cylinder.kt, Ignitors.kt, 
   expensive than a right answer from Opus.
 
 ## Changelog
+
+- **2026-10-30**: weekly meeting (MC-00017): stage nothing ahead of a commit (`git add -N` in the commit's `&&` chain),
+  and an edit left in the shared tree compiles, lock files with it.
 
 - **2026-10-24**: the IDE action gate allows `OptimizeImports` and `SaveAll`; the two Optimize Imports traps noted.
 

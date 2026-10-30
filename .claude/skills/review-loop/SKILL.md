@@ -72,6 +72,11 @@ Apply this standard whenever reviewing changes or writing tests — including wh
 - **Scope by risk.** The full two-reviewer loop is for changes touching DSP/production code.
   Test-only or doc-only portions get ONE reviewer or none — mutation checks (Standard 2) already
   guard tests harder than a reviewer can.
+- *(provisional)* **The light lane for look tuning** (weekly meeting 2026-10-30, Klang-Research's proposal): look
+  tuning done at the maintainer's word, at the screen, takes no review round. It ships a screenshot at 1x and at 2x
+  (`/console-tools`, Screenshots), a mutation-checked spec for any logic in it, and the maintainer's word in the commit
+  message. The diff decides, not judgment: a new branch, field, stream, state or public member takes the normal round,
+  and `.claude/**`, `CLAUDE.md`, the engine (`audio_be`, `audio_bridge`) and the wire never take the lane.
 - **Never silently drop a finding.** Every finding ends as fix / reject+reason / user-decision.
 - **A rule with a closed list is reviewed by table** (2026-09-18, ledger): when a change lands or
   edits a rule that enumerates cases (which door is in which list, which stage has which gate),
@@ -349,6 +354,8 @@ reader.
 
 ## Changelog
 
+- **2026-10-30**: the light lane for look tuning, provisional (weekly meeting, MC-00017). The fixer level, the top
+  rung's two charters and "stop and simplify" wait for Mission Control's MC-00036.
 - **2026-10-24**: the top rung is Opus 5.5 at max effort, one reviewer, no Fable (maintainer: "No more Fable
   reviewers, instead we will use Opus reviewers on max effort", then "Opus max on the highest review tier. The two
   lower ones stay as they are"). `reviewer-xhigh` (fable) is renamed `reviewer-max` and repinned; the Opus plus
