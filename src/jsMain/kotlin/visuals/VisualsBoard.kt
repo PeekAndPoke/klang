@@ -417,7 +417,7 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
                     player = Player.player,
                     strokeColor = Color(look[KlangRole.ScopeTrace]),
                     swingPx = tile * SCOPE_SWING,
-                    smokeRoom = Oscilloscope.SmokeRoom(
+                    smoke = Oscilloscope.Smoke(
                         top = tile * SMOKE_UP,
                         sides = tile * SMOKE_SIDES,
                         bottom = tile * SMOKE_DOWN,

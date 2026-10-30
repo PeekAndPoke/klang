@@ -50,7 +50,7 @@ fun Tag.Oscilloscope(
     preview: Float32Array? = null,
     paused: Stream<Boolean> = UiWork.resting,
     swingPx: Double? = null,
-    smokeRoom: Oscilloscope.SmokeRoom = Oscilloscope.SmokeRoom.None,
+    smoke: Oscilloscope.Smoke = Oscilloscope.Smoke(),
 ) = comp(
     Oscilloscope.Props(
         player = player,
@@ -62,7 +62,7 @@ fun Tag.Oscilloscope(
         preview = preview,
         paused = paused,
         swingPx = swingPx,
-        smokeRoom = smokeRoom,
+        smoke = smoke,
     )
 ) {
     Oscilloscope(it)
@@ -99,20 +99,34 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
          * (KLANG-00391).
          */
         val swingPx: Double?,
-        /** How far past the scope its smoke may go, out over what lies round it. */
-        val smokeRoom: SmokeRoom,
+        /** Its smoke: how far past the scope it may go, and how it spreads, fades and rises. */
+        val smoke: Smoke,
     )
 
     /**
-     * How far the smoke may go past the scope, in CSS pixels: up most, it rises (the maintainer, 2026-10-30: "would
-     * be nice if the smoke would cover the gauges", and in the visuals "if the smoke could come "out of the hole"").
-     * [None] keeps it in the scope.
+     * The scope's smoke, all of it in one place. The defaults are the house smoke (the companion's constants, whose
+     * KDocs keep how each value was found) kept inside the scope.
      */
-    data class SmokeRoom(val top: Double, val sides: Double, val bottom: Double) {
-        companion object {
-            val None = SmokeRoom(top = 0.0, sides = 0.0, bottom = 0.0)
-        }
-    }
+    data class Smoke(
+        /**
+         * How far the smoke may go past the scope, in CSS pixels: up most, it rises (the maintainer, 2026-10-30:
+         * "would be nice if the smoke would cover the gauges", and in the visuals "if the smoke could come "out of the
+         * hole""). All 0 keeps it in the scope.
+         */
+        val top: Double = 0.0,
+        val sides: Double = 0.0,
+        val bottom: Double = 0.0,
+        /** How much of the smoke each frame keeps ([RADIANCE_KEEP]). */
+        val keep: Double = RADIANCE_KEEP,
+        /** How much the smoke's canvas shows over the scope's ground ([SMOKE_OPACITY]). */
+        val opacity: Double = SMOKE_OPACITY,
+        /** The blur each frame, in CSS pixels ([RADIANCE_BLUR_PX]). */
+        val blurPx: Double = RADIANCE_BLUR_PX,
+        /** How far the last frame grows on every side each frame, in CSS pixels ([RADIANCE_GROW_PX]). */
+        val growPx: Double = RADIANCE_GROW_PX,
+        /** How far the smoke moves up each frame, in CSS pixels ([SMOKE_RISE_PX]). */
+        val risePx: Double = SMOKE_RISE_PX,
+    )
 
     companion object {
         /** The canvases' classes: the trace's, and its smoke's under it. */
@@ -290,7 +304,7 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
 
         // The smoke's canvas reaches past the scope by its room, the scope's own place inside it
         smoke?.let { under ->
-            val room = props.smokeRoom
+            val room = props.smoke
             val smokeWidth = width + 2 * room.sides
             val smokeHeight = height + room.top + room.bottom
 
@@ -391,7 +405,7 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         // The trace into the smoke, plain, in its colour, where the scope lies in the smoke's canvas
         smoke2d?.let { under ->
             under.save()
-            under.translate(props.smokeRoom.sides, props.smokeRoom.top)
+            under.translate(props.smoke.sides, props.smoke.top)
             under.strokeStyle = props.strokeColor.toString()
             under.lineWidth = props.strokeWidth
             under.lineJoin = CanvasLineJoin.ROUND
@@ -461,8 +475,8 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
     }
 
     /**
-     * The last frame back, blurred, fainter, a little bigger and a little higher ([RADIANCE_KEEP], [RADIANCE_BLUR_PX],
-     * [RADIANCE_GROW_PX], [SMOKE_RISE_PX]): copied aside, the canvas cleared, the copy drawn over it. A browser without canvas filters draws it unblurred, an afterglow that only fades.
+     * The last frame back, blurred, fainter, a little bigger and a little higher ([Smoke.keep], [Smoke.blurPx],
+     * [Smoke.growPx], [Smoke.risePx]): copied aside, the canvas cleared, the copy drawn over it. A browser without canvas filters draws it unblurred, an afterglow that only fades.
      */
     private fun CanvasRenderingContext2D.radiate() {
         val width = canvas.width.toDouble()
@@ -479,21 +493,21 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
             aside.clearRect(0.0, 0.0, width, height)
             aside.drawImage(canvas, 0.0, 0.0)
 
-            val grow = RADIANCE_GROW_PX * backingRatio
-            val rise = SMOKE_RISE_PX * backingRatio
-            val room = props.smokeRoom
+            val setting = props.smoke
+            val grow = setting.growPx * backingRatio
+            val rise = setting.risePx * backingRatio
             // It grows round the scope's middle, not the smoke canvas's: with more room above than below, growing round
             // the canvas's middle pushed the scope's smoke down, it fell (the maintainer, 2026-10-30: "The smoke now
             // "falls" down"). The scope's edges move out by [grow], as before the room was there
-            val middleX = (room.sides + cssWidth / 2.0) * backingRatio
-            val middleY = (room.top + cssHeight / 2.0) * backingRatio
+            val middleX = (setting.sides + cssWidth / 2.0) * backingRatio
+            val middleY = (setting.top + cssHeight / 2.0) * backingRatio
             // NaN-guard: a scope of no size grows by nothing
             val scaleX = 1.0 + ((grow / (cssWidth / 2.0 * backingRatio)).takeIf { it.isFinite() } ?: 0.0)
             val scaleY = 1.0 + ((grow / (cssHeight / 2.0 * backingRatio)).takeIf { it.isFinite() } ?: 0.0)
 
             clearRect(0.0, 0.0, width, height)
-            asDynamic().filter = "blur(${RADIANCE_BLUR_PX * backingRatio}px)"
-            globalAlpha = RADIANCE_KEEP
+            asDynamic().filter = "blur(${setting.blurPx * backingRatio}px)"
+            globalAlpha = setting.keep
             drawImage(
                 lastFrame,
                 middleX - middleX * scaleX,
@@ -521,7 +535,7 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
                     put("position", "absolute")
                     put("left", "0")
                     put("top", "0")
-                    put("opacity", SMOKE_OPACITY.toString())
+                    put("opacity", props.smoke.opacity.toString())
                     put("pointer-events", "none")
                 }
             }
