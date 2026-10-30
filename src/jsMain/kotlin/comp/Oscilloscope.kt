@@ -152,7 +152,10 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
          */
         private const val RADIANCE_KEEP = 0.975
 
-        /** How much the smoke's canvas shows over the scope's ground: faint, the trace stays clear over it (0.4, then 0.35 before). */
+        /**
+         * How much the smoke's canvas shows over the scope's ground: faint, the trace stays clear over it (0.4, then
+         * 0.35 before).
+         */
         private const val SMOKE_OPACITY = 0.20
 
         /** The blur each frame, in CSS pixels: a few frames on, the trail is a few pixels wide. */
