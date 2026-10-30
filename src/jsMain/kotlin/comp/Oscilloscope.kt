@@ -122,8 +122,10 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         val opacity: Double = SMOKE_OPACITY,
         /** The blur each frame, in CSS pixels ([RADIANCE_BLUR_PX]). */
         val blurPx: Double = RADIANCE_BLUR_PX,
-        /** How far the last frame grows on every side each frame, in CSS pixels ([RADIANCE_GROW_PX]). */
-        val growPx: Double = RADIANCE_GROW_PX,
+        /** How far the last frame grows to either side each frame, in CSS pixels ([RADIANCE_GROW_X_PX]). */
+        val growXPx: Double = RADIANCE_GROW_X_PX,
+        /** How far the last frame grows up and down each frame, in CSS pixels ([RADIANCE_GROW_Y_PX]). */
+        val growYPx: Double = RADIANCE_GROW_Y_PX,
         /** How far the smoke moves up each frame, in CSS pixels ([SMOKE_RISE_PX]). */
         val risePx: Double = SMOKE_RISE_PX,
     )
@@ -156,12 +158,16 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         private const val RADIANCE_BLUR_PX = 1.0
 
         /**
-         * How far the last frame grows on every side each frame, in CSS pixels: drawn back a little bigger round the
+         * How far the last frame grows up and down each frame, in CSS pixels: drawn back a little bigger round the
          * middle, the trails drift outward like puffs of smoke (the maintainer, 2026-10-30: "draw the previous state a
-         * bit bigger, so that it appears like "smoke puffs" going into all directions"). The same distance up and down
-         * as sideways, so a wide scope's puffs do not only spread sideways.
+         * bit bigger, so that it appears like "smoke puffs" going into all directions"). Sideways it grows less,
+         * [RADIANCE_GROW_X_PX]: the same distance both ways looked like ""dust" flying from a carpet that is hit" (the
+         * maintainer, 2026-10-30: "The x-zoom must be less than the y zoom i guess").
          */
-        private const val RADIANCE_GROW_PX = 1.15
+        private const val RADIANCE_GROW_Y_PX = 1.15
+
+        /** How far the last frame grows to either side each frame, in CSS pixels: less than up and down, a third. */
+        private const val RADIANCE_GROW_X_PX = 0.4
 
         /**
          * How far the smoke moves up each frame, in CSS pixels, as it grows: it rises (the maintainer, 2026-10-30: "on
@@ -476,7 +482,7 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
 
     /**
      * The last frame back, blurred, fainter, a little bigger and a little higher ([Smoke.keep], [Smoke.blurPx],
-     * [Smoke.growPx], [Smoke.risePx]): copied aside, the canvas cleared, the copy drawn over it. A browser without canvas filters draws it unblurred, an afterglow that only fades.
+     * [Smoke.growXPx], [Smoke.growYPx], [Smoke.risePx]): copied aside, the canvas cleared, the copy drawn over it. A browser without canvas filters draws it unblurred, an afterglow that only fades.
      */
     private fun CanvasRenderingContext2D.radiate() {
         val width = canvas.width.toDouble()
@@ -494,16 +500,17 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
             aside.drawImage(canvas, 0.0, 0.0)
 
             val setting = props.smoke
-            val grow = setting.growPx * backingRatio
+            val growX = setting.growXPx * backingRatio
+            val growY = setting.growYPx * backingRatio
             val rise = setting.risePx * backingRatio
             // It grows round the scope's middle, not the smoke canvas's: with more room above than below, growing round
             // the canvas's middle pushed the scope's smoke down, it fell (the maintainer, 2026-10-30: "The smoke now
-            // "falls" down"). The scope's edges move out by [grow], as before the room was there
+            // "falls" down"). The scope's edges move out by [growX] and [growY], as before the room was there
             val middleX = (setting.sides + cssWidth / 2.0) * backingRatio
             val middleY = (setting.top + cssHeight / 2.0) * backingRatio
             // NaN-guard: a scope of no size grows by nothing
-            val scaleX = 1.0 + ((grow / (cssWidth / 2.0 * backingRatio)).takeIf { it.isFinite() } ?: 0.0)
-            val scaleY = 1.0 + ((grow / (cssHeight / 2.0 * backingRatio)).takeIf { it.isFinite() } ?: 0.0)
+            val scaleX = 1.0 + ((growX / (cssWidth / 2.0 * backingRatio)).takeIf { it.isFinite() } ?: 0.0)
+            val scaleY = 1.0 + ((growY / (cssHeight / 2.0 * backingRatio)).takeIf { it.isFinite() } ?: 0.0)
 
             clearRect(0.0, 0.0, width, height)
             asDynamic().filter = "blur(${setting.blurPx * backingRatio}px)"
