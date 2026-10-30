@@ -67,8 +67,12 @@ class VoiceRain(ctx: Ctx<Props>) : Component<VoiceRain.Props>(ctx) {
         const val LETTER_MIN_PX = 12.0
         const val LETTER_MAX_PX = 22.0
 
-        /** How fast a drop falls, in letters a second, from the slowest to the fastest. */
-        const val SPEED_MIN = 5.0
+        /**
+         * How fast a drop falls, in letters a second, from the slowest to the fastest: the slow ones far behind, a
+         * depth (the maintainer, 2026-10-30: "Keep the max as is but allow for a smaller minimum to increase the
+         * paralax "depth""; it was 5, KLANG-00393).
+         */
+        const val SPEED_MIN = 2.0
         const val SPEED_MAX = 11.0
 
         /** The longest text a drop carries; a longer one is cut. */
