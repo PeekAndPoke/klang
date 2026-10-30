@@ -408,7 +408,7 @@ class KlangampPlayer(ctx: Ctx<Props>) : Component<KlangampPlayer.Props>(ctx) {
             value = heat,
             size = 52.px,
             icon = { microchip },
-            display = { "${(it * 100).roundToInt()}%" },
+            display = { "${(it * 100).roundToInt()}" },
             hotFrom = PlayerMiniStats.HEAT_HOT_FROM,
         )
         KlangGauge(

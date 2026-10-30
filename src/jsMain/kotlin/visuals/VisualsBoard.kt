@@ -321,7 +321,7 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
                 value = heat,
                 size = (tile * MIDDLE_GAUGE).px,
                 icon = { microchip },
-                display = { "${(it * 100).roundToInt()}%" },
+                display = { "${(it * 100).roundToInt()}" },
                 hotFrom = PlayerMiniStats.HEAT_HOT_FROM,
             )
 

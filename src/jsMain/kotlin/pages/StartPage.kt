@@ -1034,7 +1034,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 value = dynoHeat,
                 size = DYNO_MIDDLE_PX.px,
                 icon = { microchip },
-                display = { "${(it * 100).roundToInt()}%" },
+                display = { "${(it * 100).roundToInt()}" },
                 hotFrom = PlayerMiniStats.HEAT_HOT_FROM,
             )
 

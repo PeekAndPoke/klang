@@ -338,7 +338,7 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
                         value = 0.38,
                         size = 92.px,
                         icon = { microchip },
-                        display = { "${(it * 100).toInt()}%" },
+                        display = { "${(it * 100).toInt()}" },
                         hotFrom = 0.85,
                     )
                     KlangGauge(
