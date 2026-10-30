@@ -140,17 +140,3 @@ class BulbStutter(
     private fun draw(range: ClosedFloatingPointRange<Double>): Double =
         range.start + random.nextDouble() * (range.endInclusive - range.start)
 }
-
-/**
- * A [Smoothing] whose [law] can change on the way: each step goes by the law of the moment, and the motion (where the
- * value is, how fast it moves) stays with the stream that smooths, so a change of law never starts it over. Local
- * until Ultra has its own (ULTRA-00264: `smooth()` taking a `Stream<Smoothing?>`).
- */
-class SwappableSmoothing(var law: Smoothing) : Smoothing {
-
-    override fun step(motion: Smoothing.Motion, goal: Double, elapsedMs: Double): Smoothing.Motion =
-        law.step(motion = motion, goal = goal, elapsedMs = elapsedMs)
-
-    override fun isSettled(motion: Smoothing.Motion, goal: Double, near: Double): Boolean =
-        law.isSettled(motion = motion, goal = goal, near = near)
-}

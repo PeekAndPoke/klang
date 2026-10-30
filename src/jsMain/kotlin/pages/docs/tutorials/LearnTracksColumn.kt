@@ -181,8 +181,7 @@ class LearnTracksColumn(ctx: NoProps) : PureComponent(ctx) {
     /**
      * Chooses [name] in the filter [param], or lets it go: the overview with its address changed, a step in the history
      * (Back undoes it); from elsewhere the overview opens with it. The overview follows its address, and a change of
-     * the query alone does not fade the page. Not `replaceUri`: under the hash strategy Kraft's writes a path, the route
-     * is not resolved (ULTRA-00263).
+     * the query alone does not fade the page.
      */
     private fun choose(param: String, chosen: Set<String>, name: String, on: Boolean, order: List<String>) {
         val current = router.current()

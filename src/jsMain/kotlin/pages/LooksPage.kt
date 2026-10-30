@@ -29,6 +29,9 @@ import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
+import io.peekandpoke.kraft.dnd.DndManager.Companion.dnd
+import io.peekandpoke.kraft.dnd.Drag
+import io.peekandpoke.kraft.dnd.dropZone
 import io.peekandpoke.kraft.modals.ModalsManager.Companion.modals
 import io.peekandpoke.kraft.routing.JoinedPageTitle
 import io.peekandpoke.kraft.vdom.VDom
@@ -36,6 +39,7 @@ import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.html.onInput
+import io.peekandpoke.ultra.html.onPointerDown
 import kotlinx.browser.window
 import kotlinx.css.Color
 import kotlinx.css.px
@@ -72,7 +76,9 @@ fun Tag.LooksPage(slot: Int?) = comp(
  *
  * **Equipping** is pick and place, as games equip (the maintainer, 2026-10-28: "Like equipping in a video game"): a
  * click takes a look in hand, a click on a slot puts it there ([KlangLoadout.place]), the bench takes it off. It is
- * the mouse's, the keyboard's and the touch screen's way at once; the drag waits for Kraft's dnd (ULTRA-00265).
+ * the mouse's, the keyboard's and the touch screen's way at once. A look can also be dragged onto a slot, or from a
+ * slot onto the bench, with Kraft's drag and drop (ULTRA-00265): a drop does what the two clicks would, and selects
+ * the look dropped, as the first click does.
  *
  * **Live, then back:** while the page is open the app wears the look being edited, its draft included
  * ([KlangTheme.preview]); leaving, it goes back to the look worn. **Apply** keeps the draft in the look, **Wear it**
@@ -121,10 +127,41 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
     /** The knob card's preview turns, so its arc shows; the gauge card's needle follows it. */
     private var knobPreview: Double by value(0.6)
 
+    /** A look on its way to a slot or the bench, by id: a class of its own, as drop zones match payloads by class. */
+    private class DraggedLook(val id: String)
+
+    /** The place a dragged look is over and may be dropped on: a slot's or the bench's [DROP_ATTR] value; null for none. */
+    private var dropOver: String? by value(null)
+
     init {
         lifecycle {
             onMount { KlangTheme.preview(draft) }
             onUnmount { KlangTheme.endPreview() }
+        }
+
+        // Every slot takes a look dragged from the bench or another slot (a swap, as the click's), the bench one
+        // dragged off a slot
+        for (slot in 0 until KlangLoadout.SIZE) {
+            dropPlace(name = "slot-$slot", accepts = { it.source != slot }) { look -> equip(look.id, slot) }
+        }
+
+        dropPlace(name = "bench", accepts = { it.source is Int }) { look ->
+            shelf.loadout.slotOf(look.id)?.let { KlangLookShelf.unequip(it) }
+        }
+    }
+
+    /** A drop zone on the element whose [DROP_ATTR] is [name]: lit while a look is over it, [drop] on a drop. */
+    private fun dropPlace(name: String, accepts: (Drag<DraggedLook>) -> Boolean, drop: (DraggedLook) -> Unit) {
+        dropZone<DraggedLook>(element = { dom?.querySelector("[$DROP_ATTR='$name']") }, accepts = accepts) {
+            onEnter { dropOver = name }
+            onLeave { if (dropOver == name) dropOver = null }
+            onDragStop { dropOver = null }
+            onDrop { drag ->
+                drop(drag.payload)
+                inHand = null
+                // As the click that takes a look in hand: the look dropped is the one shown for editing
+                shelf.byId(drag.payload.id)?.let { select(it) }
+            }
         }
     }
 
@@ -166,14 +203,10 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
         when {
             hand == look.id -> inHand = null
 
-            hand != null && slot != null -> {
-                KlangLookShelf.place(hand, slot)
-                inHand = null
-            }
+            hand != null && slot != null -> equip(hand, slot)
 
             waiting != null && slot == null -> {
-                KlangLookShelf.place(look.id, waiting)
-                target = null
+                equip(look.id, waiting)
                 select(look)
             }
 
@@ -189,10 +222,22 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
         val hand = inHand
 
         if (hand != null) {
-            KlangLookShelf.place(hand, slot)
-            inHand = null
+            equip(hand, slot)
         } else {
             target = if (target == slot) null else slot
+        }
+    }
+
+    /**
+     * [id] on [slot], by click or by drop: nothing stays in hand, and a slot that waited for a look is filled, so it
+     * waits no more (else the next look picked would take that slot from the one just placed).
+     */
+    private fun equip(id: String, slot: Int) {
+        KlangLookShelf.place(id, slot)
+        inHand = null
+
+        if (target == slot) {
+            target = null
         }
     }
 
@@ -242,12 +287,7 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
         )
 
         KlangLookShelf.keep(look)
-
-        target?.let {
-            KlangLookShelf.place(look.id, it)
-            target = null
-        }
-
+        target?.let { equip(look.id, it) }
         select(look)
     }
 
@@ -278,6 +318,11 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
                     if (yes) {
                         KlangLookShelf.delete(look.id)
                         Drafts.forget(look.id)
+
+                        // Not left in hand: a slot clicked next would take an id no look has any more
+                        if (inHand == look.id) {
+                            inHand = null
+                        }
 
                         if (KlangTheme.worn.id == look.id) {
                             KlangTheme.choose(KlangLooks.Default)
@@ -408,7 +453,14 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
                     put("display", "grid")
                     put("grid-template-columns", "repeat(auto-fill, minmax(96px, 1fr))")
                     put("gap", "8px")
+                    put("border-radius", "var(--kl-radius-domed)")
+
+                    if (dropOver == "bench") {
+                        put("outline", "2px dashed var(--kl-focus)")
+                        put("outline-offset", "4px")
+                    }
                 }
+                attributes[DROP_ATTR] = "bench"
 
                 for (look in shelf.bench) {
                     renderLook(look, slot = null)
@@ -434,7 +486,10 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
             title = look.name
             attributes["aria-pressed"] = hand.toString()
             attributes["aria-label"] = look.name + (if (hand) ", in hand" else "")
+            slot?.let { attributes[DROP_ATTR] = "slot-$it" }
             onClick { pick(look, slot) }
+            // A drag starts past a few pixels; a press that stays put is the click above
+            onPointerDown { e -> dnd.startDrag(e, payload = DraggedLook(look.id), source = slot, preview = { lookChip(look) }) }
 
             css {
                 put("display", "flex")
@@ -453,14 +508,19 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
                 put("font-size", "12px")
                 put("cursor", "pointer")
                 put("box-shadow", "inset 0 1px 0 rgba(255,255,255,0.12), 0 2px 4px rgba(0,0,0,0.5)")
+                // A touch drags the look instead of scrolling the page, and a long press selects nothing
+                put("touch-action", "none")
+                put("user-select", "none")
+                put("-webkit-user-select", "none")
+                put("-webkit-touch-callout", "none")
 
                 if (look.id == selectedId) {
                     put("outline", "2px solid var(--kl-lamp-on)")
                     put("outline-offset", "1px")
                 }
 
-                // In hand: a dashed ring in the focus blue, never the trail's gold
-                if (hand) {
+                // In hand, or a dragged look over its slot: a dashed ring in the focus blue, never the trail's gold
+                if (hand || (slot != null && dropOver == "slot-$slot")) {
                     put("outline", "2px dashed var(--kl-focus)")
                     put("outline-offset", "3px")
                 }
@@ -489,18 +549,51 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
         }
     }
 
+    /** What a dragged look shows at the pointer: its swatch and its name, as its tile does. */
+    private fun FlowContent.lookChip(look: KlangLookPreset) {
+        div {
+            css {
+                put("display", "flex")
+                put("align-items", "center")
+                put("gap", "6px")
+                put("padding", "6px 10px")
+                put("border-radius", "var(--kl-radius-domed)")
+                put("border", "1px solid var(--kl-edge)")
+                put("background", "radial-gradient(circle at 50% 0%, var(--kl-cap-light), var(--kl-cap-dark) 70%)")
+                put("color", "var(--kl-ink-strong)")
+                put("font-size", "12px")
+                put("white-space", "nowrap")
+                put("box-shadow", "0 6px 14px rgba(0,0,0,0.6)")
+                put("opacity", "0.9")
+            }
+
+            span {
+                css {
+                    put("width", "14px")
+                    put("height", "14px")
+                    put("border-radius", "50%")
+                    put("border", "1px solid var(--kl-edge)")
+                    put("background", "radial-gradient(circle at 40% 30%, ${look.swatch.joinToString(", ")})")
+                }
+            }
+
+            +look.name
+        }
+    }
+
     private fun FlowContent.renderEmptySlot(slot: Int) {
         val waiting = target == slot
 
         button(type = ButtonType.button) {
             key = "slot-$slot"
             attributes["aria-label"] = if (waiting) "Empty slot, waiting for a look" else "Empty slot"
+            attributes[DROP_ATTR] = "slot-$slot"
             onClick { pickEmpty(slot) }
 
             css {
                 put("height", "56px")
                 put("border-radius", "var(--kl-radius-domed)")
-                put("border", "1px dashed " + if (waiting) "var(--kl-focus)" else "var(--kl-cap-light)")
+                put("border", "1px dashed " + if (waiting || dropOver == "slot-$slot") "var(--kl-focus)" else "var(--kl-cap-light)")
                 put("background", "transparent")
                 put("color", "var(--kl-ink-label)")
                 put("font-size", "16px")
@@ -547,7 +640,7 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
             when {
                 hand != null -> +"\"${hand.name}\" in hand: click a slot to equip it, the bench to take it off, the look again to put it down."
                 waiting != null -> +"Slot ${waiting + 1} waits: click a look on the bench, or make a new one, to fill it."
-                else -> +"Click a look to take it in hand, then a slot to equip it. The drawer shows the eight equipped."
+                else -> +"Click a look to take it in hand, then a slot to equip it, or drag it there. The drawer shows the eight equipped."
             }
         }
     }
@@ -1298,11 +1391,14 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
     }
 }
 
+/** The attribute that names a place a look can be dropped on: `slot-<n>` or `bench`. */
+private const val DROP_ATTR = "data-look-drop"
+
 /**
  * The drafts not applied yet, per look, kept while the app runs (KLANG-00382): leaving the editor keeps them, coming
- * back shows them. The ticket's first design asked before leaving; Kraft's router has no guard for leaving a page (its
- * middleware runs for the target and can only redirect), and a kept draft loses nothing without one. A reload or a
- * closed tab would lose them: the browser asks first while one is pending.
+ * back shows them, so leaving the page needs no question. A reload or a closed tab would lose them: the browser asks
+ * first while one is pending, for the app's life. Not Kraft's `guardLeaving(beforeUnload = true)` (ULTRA-00266): it
+ * holds only while its page is mounted, and the drafts outlive the page.
  */
 private object Drafts {
 

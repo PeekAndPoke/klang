@@ -68,8 +68,7 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
 
     /**
      * The address, for the levels and depths chosen in the Learn column (several of each, lists in it: a link keeps
-     * them). Read, never written here: Kraft's urlParam writes back through replaceUri, which under the hash strategy
-     * writes a path (ULTRA-00263), and it stays subscribed after the page.
+     * them). Read, never written here: the column writes it, a step in the history for each choice.
      */
     private val currentRoute by subscribingTo(router.current)
 

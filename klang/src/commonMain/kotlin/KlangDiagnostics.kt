@@ -28,7 +28,7 @@ import kotlin.concurrent.Volatile
  *   simpler": every playback's Sprudel runtime is one id).
  *
  * A clock reads the registry rather than combining the metrics' streams: those come and go with their owners. The tick
- * reads in a map; an operator that samples a stream on a clock is ULTRA-00267.
+ * reads in a map: Ultra's `sampled()` (ULTRA-00267) samples one stream, and the registry is none.
  */
 class KlangDiagnostics(
     /** The latest SYSTEM diagnostics from the backend; null before the first. */

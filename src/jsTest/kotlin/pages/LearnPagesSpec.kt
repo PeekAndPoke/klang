@@ -37,6 +37,8 @@ import io.peekandpoke.kraft.addons.pixijs.pixiJs
 import io.peekandpoke.kraft.addons.registry.addons
 import io.peekandpoke.kraft.routing.RootRouterBuilder
 import io.peekandpoke.kraft.testing.TestBed
+import io.peekandpoke.kraft.testing.TestBedScope
+import io.peekandpoke.kraft.testing.awaitUri
 import io.peekandpoke.kraft.testing.eventually
 import kotlinx.browser.document
 import kotlinx.browser.window
@@ -75,7 +77,7 @@ class LearnPagesSpec : StringSpec({
 
     val path = theKlangPathTrack.lessons
 
-    suspend fun withLearn(done: Set<String> = emptySet(), test: suspend (root: Element) -> Unit) {
+    suspend fun withLearn(done: Set<String> = emptySet(), test: suspend TestBedScope.(root: Element) -> Unit) {
         allTutorials.forEach { TutorialStorage.setCompleted(it.slug, it.slug in done) }
         // The search is shared by the column and the overview: each case starts with it empty
         LearnSearch.text("")
@@ -103,9 +105,12 @@ class LearnPagesSpec : StringSpec({
         }
     }
 
-    /** Goes to a place in Learn by the hash, as a link would: [path] under the tutorials' base. */
-    fun go(path: String = "") {
-        window.location.hash = "${Nav.tutorialsBase}$path"
+    /** Goes to a place in Learn through the app's router, as a link would: [path] under the tutorials' base. */
+    suspend fun TestBedScope.go(path: String = "") {
+        val uri = "${Nav.tutorialsBase}$path"
+
+        router.navToUri(uri)
+        router.awaitUri(uri)
     }
 
     fun Element.states(selector: String): List<String> {

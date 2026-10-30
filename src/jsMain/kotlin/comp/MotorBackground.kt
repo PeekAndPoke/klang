@@ -7,6 +7,7 @@ package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.common.math.PerlinNoise2D
 import io.peekandpoke.klang.spine.SwingingLamp
+import io.peekandpoke.klang.spine.UiWork
 import io.peekandpoke.klang.spine.VisualState
 import io.peekandpoke.klang.storage.SeedStorage
 import io.peekandpoke.klang.ui.feel.KlangLook
@@ -783,14 +784,15 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
                     "z-index:-1;pointer-events:none;background-color:#000;"
 
             if (!failed) {
-                // The lamp rests while the window has no attention (VisualState.light), but Kraft's three.js loop draws
-                // every frame regardless: a pause for it, and a clock to join the shared frame, is ULTRA-00270
+                // The plate rests with the rest of the UI while the window has no attention: no frame is asked for, and
+                // the scene stays as it was (ULTRA-00270). The frames are the browser's, shared with the UI's streams
                 ThreeJs(
                     onReady = { ctx -> setupScene(ctx) },
                     onFrame = { f -> animate(f) },
                     createCamera = { a -> buildCamera(a) },
                     alpha = true,
                     antialias = false,
+                    paused = UiWork.resting,
                 )
             }
         }
@@ -888,6 +890,10 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
             titlePlane?.let { pl ->
                 pl.geometry.dispose()
                 pl.geometry = addon.createPlaneGeometry(2.0 * aspect, 2.0)
+            }
+            // A resize clears the canvas, and while the plate rests no frame draws it again: drawn once here
+            if (UiWork.resting()) {
+                sceneCtx?.let { c -> c.renderer.render(c.scene, c.camera) }
             }
             resizeTimer?.let { window.clearTimeout(it) }
             resizeTimer = window.setTimeout({
