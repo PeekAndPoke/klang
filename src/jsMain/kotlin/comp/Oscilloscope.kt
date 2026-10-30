@@ -50,6 +50,7 @@ fun Tag.Oscilloscope(
     preview: Float32Array? = null,
     paused: Stream<Boolean> = UiWork.resting,
     swingPx: Double? = null,
+    smokeRoom: Oscilloscope.SmokeRoom = Oscilloscope.SmokeRoom.None,
 ) = comp(
     Oscilloscope.Props(
         player = player,
@@ -61,6 +62,7 @@ fun Tag.Oscilloscope(
         preview = preview,
         paused = paused,
         swingPx = swingPx,
+        smokeRoom = smokeRoom,
     )
 ) {
     Oscilloscope(it)
@@ -97,7 +99,20 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
          * (KLANG-00391).
          */
         val swingPx: Double?,
+        /** How far past the scope its smoke may go, out over what lies round it. */
+        val smokeRoom: SmokeRoom,
     )
+
+    /**
+     * How far the smoke may go past the scope, in CSS pixels: up most, it rises (the maintainer, 2026-10-30: "would
+     * be nice if the smoke would cover the gauges", and in the visuals "if the smoke could come "out of the hole"").
+     * [None] keeps it in the scope.
+     */
+    data class SmokeRoom(val top: Double, val sides: Double, val bottom: Double) {
+        companion object {
+            val None = SmokeRoom(top = 0.0, sides = 0.0, bottom = 0.0)
+        }
+    }
 
     companion object {
         /** The canvases' classes: the trace's, and its smoke's under it. */
@@ -121,7 +136,7 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         private const val RADIANCE_KEEP = 0.9
 
         /** How much the smoke's canvas shows over the scope's ground: faint, the trace stays clear over it (0.4 before). */
-        private const val SMOKE_OPACITY = 0.55
+        private const val SMOKE_OPACITY = 0.35
 
         /** The blur each frame, in CSS pixels: a few frames on, the trail is a few pixels wide. */
         private const val RADIANCE_BLUR_PX = 1.0
@@ -132,13 +147,13 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
          * bit bigger, so that it appears like "smoke puffs" going into all directions"). The same distance up and down
          * as sideways, so a wide scope's puffs do not only spread sideways.
          */
-        private const val RADIANCE_GROW_PX = 1.5
+        private const val RADIANCE_GROW_PX = 1.15
 
         /**
          * How far the smoke moves up each frame, in CSS pixels, as it grows: it rises (the maintainer, 2026-10-30: "on
          * every redraw move the zoomed paint up slightly, so that it looks as if the smoke rises").
          */
-        private const val SMOKE_RISE_PX = 0.6
+        private const val SMOKE_RISE_PX = 0.1
 
         /** How far the shade's stroke lies below the string's, a share of the string's width. */
         private const val SHADE_OFFSET = 0.3
@@ -269,17 +284,24 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         backingRatio = ratio
         c.width = (width * ratio).roundToInt()
         c.height = (height * ratio).roundToInt()
-        lastFrame.width = c.width
-        lastFrame.height = c.height
         c.style.width = "${width}px"
         c.style.height = "${height}px"
         ctx2d?.setTransform(ratio, 0.0, 0.0, ratio, 0.0, 0.0)
 
+        // The smoke's canvas reaches past the scope by its room, the scope's own place inside it
         smoke?.let { under ->
-            under.width = c.width
-            under.height = c.height
-            under.style.width = "${width}px"
-            under.style.height = "${height}px"
+            val room = props.smokeRoom
+            val smokeWidth = width + 2 * room.sides
+            val smokeHeight = height + room.top + room.bottom
+
+            under.width = (smokeWidth * ratio).roundToInt()
+            under.height = (smokeHeight * ratio).roundToInt()
+            under.style.width = "${smokeWidth}px"
+            under.style.height = "${smokeHeight}px"
+            under.style.left = "${-room.sides}px"
+            under.style.top = "${-room.top}px"
+            lastFrame.width = under.width
+            lastFrame.height = under.height
             smoke2d?.setTransform(ratio, 0.0, 0.0, ratio, 0.0, 0.0)
         }
     }
@@ -366,13 +388,16 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         // Built once, stroked for the smoke, the shadow, then the string
         val path = points.roundedPath()
 
-        // The trace into the smoke, plain, in its colour
+        // The trace into the smoke, plain, in its colour, where the scope lies in the smoke's canvas
         smoke2d?.let { under ->
+            under.save()
+            under.translate(props.smokeRoom.sides, props.smokeRoom.top)
             under.strokeStyle = props.strokeColor.toString()
             under.lineWidth = props.strokeWidth
             under.lineJoin = CanvasLineJoin.ROUND
             under.lineCap = CanvasLineCap.ROUND
             under.stroke(path)
+            under.restore()
         }
 
         // A dark band behind the trace, a little lower, so it reads as the string's shadow (the maintainer, 2026-10-26)
@@ -456,11 +481,26 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
 
             val grow = RADIANCE_GROW_PX * backingRatio
             val rise = SMOKE_RISE_PX * backingRatio
+            val room = props.smokeRoom
+            // It grows round the scope's middle, not the smoke canvas's: with more room above than below, growing round
+            // the canvas's middle pushed the scope's smoke down, it fell (the maintainer, 2026-10-30: "The smoke now
+            // "falls" down"). The scope's edges move out by [grow], as before the room was there
+            val middleX = (room.sides + cssWidth / 2.0) * backingRatio
+            val middleY = (room.top + cssHeight / 2.0) * backingRatio
+            // NaN-guard: a scope of no size grows by nothing
+            val scaleX = 1.0 + ((grow / (cssWidth / 2.0 * backingRatio)).takeIf { it.isFinite() } ?: 0.0)
+            val scaleY = 1.0 + ((grow / (cssHeight / 2.0 * backingRatio)).takeIf { it.isFinite() } ?: 0.0)
 
             clearRect(0.0, 0.0, width, height)
             asDynamic().filter = "blur(${RADIANCE_BLUR_PX * backingRatio}px)"
             globalAlpha = RADIANCE_KEEP
-            drawImage(lastFrame, -grow, -grow - rise, width + 2 * grow, height + 2 * grow)
+            drawImage(
+                lastFrame,
+                middleX - middleX * scaleX,
+                middleY - middleY * scaleY - rise,
+                width * scaleX,
+                height * scaleY,
+            )
         }
 
         restore()

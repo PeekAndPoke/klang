@@ -70,6 +70,9 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
         const val OSCILLOSCOPE_TOP_REM = 5.800
         const val OSCILLOSCOPE_HEIGHT_REM = 4.00
 
+        /** How far the scope's smoke may go past it: up over the gauges, a little to the sides and down. */
+        private val SMOKE_ROOM = Oscilloscope.SmokeRoom(top = 80.0, sides = 12.0, bottom = 12.0)
+
         /** The spectrum stands on the frame's floor, behind the scope; its boxes stack up from there. */
         const val SPECTRUM_HEIGHT_REM = 7.0
 
@@ -153,7 +156,14 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
                         height = 100.pct
                     }
 
-                    Oscilloscope(player = Player.player, strokeColor = Color(look[KlangRole.ScopeTrace]), paused = props.paused)
+                    // Its smoke rises over the gauges (the maintainer, 2026-10-30: "would be nice if the smoke would
+                    // cover the gauges")
+                    Oscilloscope(
+                        player = Player.player,
+                        strokeColor = Color(look[KlangRole.ScopeTrace]),
+                        paused = props.paused,
+                        smokeRoom = SMOKE_ROOM,
+                    )
                 }
             }
 

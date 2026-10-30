@@ -116,6 +116,11 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
          */
         private const val SCOPE_SWING = HOLE_HEIGHT / 2
 
+        /** How far the scope's smoke may rise out of its hole, and go to its sides and below it, as shares of a tile. */
+        private const val SMOKE_UP = 0.6
+        private const val SMOKE_SIDES = 0.3
+        private const val SMOKE_DOWN = 0.2
+
         /**
          * The margin round a display inside its plate, as a share of a tile (the maintainer, 2026-10-29: "Keep a left
          * and right margin").
@@ -374,6 +379,9 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
      * swing is the same in every hole, [SCOPE_SWING] of a [tile].
      */
     private fun FlowContent.renderHole(width: Double, height: Double, tile: Double) {
+        // The hole, the scope and the glass as layers of their own, so only the hole and its glass are cut to its
+        // shape and the scope's smoke can rise out of it (the maintainer, 2026-10-30: "if the smoke could come "out of
+        // the hole"")
         div {
             key = "hole"
             css {
@@ -381,16 +389,22 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
                 put("flex", "none")
                 put("width", "${width}px")
                 put("height", "${height}px")
-                // Cut corners, as the screens have, not round ones (the maintainer, 2026-10-29: "do not use round
-                // corners but the triangle again")
-                put("clip-path", VisualsParts.cutCorners(CUT_PX))
-                put("background", "#050505")
-                put(
-                    "box-shadow",
-                    "inset 0 6px 14px rgba(0, 0, 0, 0.9), inset 0 -1px 0 rgba(255, 255, 255, 0.08), " +
-                        "0 1px 0 rgba(255, 255, 255, 0.12)",
-                )
-                put("overflow", "hidden")
+            }
+
+            div {
+                css {
+                    put("position", "absolute")
+                    put("inset", "0")
+                    // Cut corners, as the screens have, not round ones (the maintainer, 2026-10-29: "do not use round
+                    // corners but the triangle again")
+                    put("clip-path", VisualsParts.cutCorners(CUT_PX))
+                    put("background", "#050505")
+                    put(
+                        "box-shadow",
+                        "inset 0 6px 14px rgba(0, 0, 0, 0.9), inset 0 -1px 0 rgba(255, 255, 255, 0.08), " +
+                            "0 1px 0 rgba(255, 255, 255, 0.12)",
+                    )
+                }
             }
 
             div {
@@ -403,10 +417,24 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
                     player = Player.player,
                     strokeColor = Color(look[KlangRole.ScopeTrace]),
                     swingPx = tile * SCOPE_SWING,
+                    smokeRoom = Oscilloscope.SmokeRoom(
+                        top = tile * SMOKE_UP,
+                        sides = tile * SMOKE_SIDES,
+                        bottom = tile * SMOKE_DOWN,
+                    ),
                 )
             }
 
-            glassDome()
+            div {
+                css {
+                    put("position", "absolute")
+                    put("inset", "0")
+                    put("clip-path", VisualsParts.cutCorners(CUT_PX))
+                    put("pointer-events", "none")
+                }
+
+                glassDome()
+            }
         }
     }
 

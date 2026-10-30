@@ -38,3 +38,7 @@ the low end's energy: the same shape whatever plays. The scope's own afterglow k
   a bit bigger, so that it appears like "smoke puffs""); then the smoke on a canvas of its own under the trace, kept
   longer (0.94 a frame) and shown at 0.4, the trace's canvas clear each frame ("a second canvas for the "smoke" ... keep
   the "smoke" at a low opacity so that it does not smear the actual osci").
+- 2026-10-30: it rises (0.6 px a frame); out of its place: `Oscilloscope.SmokeRoom`, how far the smoke may go past the
+  scope, over the Motor's gauges on the code page and out of the visuals' hole (the hole, the scope and the glass as
+  layers, only the hole and the glass cut to its shape); it grows round the scope's middle, not its canvas's, which
+  with more room above had made it fall.
