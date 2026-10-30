@@ -68,8 +68,9 @@ fun Tag.Oscilloscope(
 
 /**
  * The oscilloscope: the newest frame of the player's waveform as a trace over a faint centre line, with a soft shadow
- * under it. The trace eases off towards both ends, as a string held at its ends, and each frame draws the last one back
- * blurred and fainter, so the trace seems to radiate (KLANG-00392).
+ * under it. The trace eases off towards both ends, as a string held at its ends. Under it, on a canvas of its own and
+ * faint, its smoke: every frame of the trace drawn into it, and each frame what is there drawn back blurred, a little
+ * bigger and a little fainter, so the trace seems to give off puffs of smoke (KLANG-00392).
  * Without a player it draws the idle line. With [Props.preview] it draws that frame and nothing else, a still picture
  * of itself (the look editor's card, KLANG-00382; the maintainer, 2026-10-28: "these component implement a preview
  * mode, when they get static data").
@@ -99,6 +100,10 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
     )
 
     companion object {
+        /** The canvases' classes: the trace's, and its smoke's under it. */
+        private const val TRACE_CANVAS = "oscilloscope-canvas"
+        private const val SMOKE_CANVAS = "oscilloscope-smoke"
+
         /** The idle frame's length, all silence. */
         private const val IDLE_FRAME_SIZE = 2048
 
@@ -106,15 +111,27 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         private const val DEFLECTION_STRENGTH = 4.0
 
         /**
-         * How much of the last frame each new one keeps, drawn back blurred by [RADIANCE_BLUR_PX]: frame after frame the
-         * trails spread and fade, the trace radiates (the maintainer, 2026-10-30: "we overpaint the current contents
-         * with 90% black, leading to a fadeout effect. Let us do this plus blurring the current content on every render
-         * step"; it kept 5 %, unblurred).
+         * How much of the smoke each frame keeps, drawn back blurred by [RADIANCE_BLUR_PX]: frame after frame it spreads
+         * and fades (the maintainer, 2026-10-30: "overpaint the current contents with 90% black ... plus blurring the
+         * current content on every render step"). Slow, now that the smoke has a canvas of its own and shows faint
+         * ([SMOKE_OPACITY]): it lingers without smearing the trace ("a second canvas for the "smoke" ... then we do not
+         * need to fade out so fast but can keep the "smoke" at a low opacity"; on the trace's canvas it kept 0.8).
          */
-        private const val RADIANCE_KEEP = 0.8
+        private const val RADIANCE_KEEP = 0.94
+
+        /** How much the smoke's canvas shows over the scope's ground: faint, the trace stays clear over it. */
+        private const val SMOKE_OPACITY = 0.4
 
         /** The blur each frame, in CSS pixels: a few frames on, the trail is a few pixels wide. */
         private const val RADIANCE_BLUR_PX = 1.0
+
+        /**
+         * How far the last frame grows on every side each frame, in CSS pixels: drawn back a little bigger round the
+         * middle, the trails drift outward like puffs of smoke (the maintainer, 2026-10-30: "draw the previous state a
+         * bit bigger, so that it appears like "smoke puffs" going into all directions"). The same distance up and down
+         * as sideways, so a wide scope's puffs do not only spread sideways.
+         */
+        private const val RADIANCE_GROW_PX = 1.5
 
         /** How far the shade's stroke lies below the string's, a share of the string's width. */
         private const val SHADE_OFFSET = 0.3
@@ -154,7 +171,11 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
     private var canvas: HTMLCanvasElement? = null
     private var ctx2d: CanvasRenderingContext2D? = null
 
-    /** The last frame, copied aside to be drawn back blurred ([radiate]); the canvas's size. */
+    /** The smoke's canvas, under the trace's, and its context ([radiate]). */
+    private var smoke: HTMLCanvasElement? = null
+    private var smoke2d: CanvasRenderingContext2D? = null
+
+    /** The smoke's last frame, copied aside to be drawn back blurred ([radiate]); the canvases' size. */
     private val lastFrame = document.createElement("canvas") as HTMLCanvasElement
     private val lastFrame2d = lastFrame.getContext("2d") as? CanvasRenderingContext2D
 
@@ -199,8 +220,10 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
 
             onMount {
                 dom?.let { container ->
-                    canvas = container.querySelector("canvas") as HTMLCanvasElement?
+                    canvas = container.querySelector("canvas.$TRACE_CANVAS") as HTMLCanvasElement?
                     ctx2d = canvas?.getContext("2d") as? CanvasRenderingContext2D
+                    smoke = container.querySelector("canvas.$SMOKE_CANVAS") as HTMLCanvasElement?
+                    smoke2d = smoke?.getContext("2d") as? CanvasRenderingContext2D
 
                     sizeCanvas(width = container.clientWidth.toDouble(), height = container.clientHeight.toDouble())
                 }
@@ -244,6 +267,14 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         c.style.width = "${width}px"
         c.style.height = "${height}px"
         ctx2d?.setTransform(ratio, 0.0, 0.0, ratio, 0.0, 0.0)
+
+        smoke?.let { under ->
+            under.width = c.width
+            under.height = c.height
+            under.style.width = "${width}px"
+            under.style.height = "${height}px"
+            smoke2d?.setTransform(ratio, 0.0, 0.0, ratio, 0.0, 0.0)
+        }
     }
 
     /** The preview's frame, else the newest frame of the last waveform, else the idle line. */
@@ -265,7 +296,13 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         val width = cssWidth
         val centerY = cssHeight / 2.0
 
-        ctx.radiate()
+        // The trace's canvas shows this frame alone; the smoke moves on under it
+        ctx.save()
+        ctx.setTransform(1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
+        ctx.clearRect(0.0, 0.0, ctx.canvas.width.toDouble(), ctx.canvas.height.toDouble())
+        ctx.restore()
+
+        smoke2d?.radiate()
 
         props.centerLineColor?.let { line ->
             ctx.strokeStyle = line.toString()
@@ -319,8 +356,17 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
             }
         }
 
-        // Built once, stroked twice: the shadow, then the string
+        // Built once, stroked for the smoke, the shadow, then the string
         val path = points.roundedPath()
+
+        // The trace into the smoke, plain, in its colour
+        smoke2d?.let { under ->
+            under.strokeStyle = props.strokeColor.toString()
+            under.lineWidth = props.strokeWidth
+            under.lineJoin = CanvasLineJoin.ROUND
+            under.lineCap = CanvasLineCap.ROUND
+            under.stroke(path)
+        }
 
         // A dark band behind the trace, a little lower, so it reads as the string's shadow (the maintainer, 2026-10-26)
         strokeShifted(
@@ -383,8 +429,8 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
     }
 
     /**
-     * The last frame back, blurred and fainter ([RADIANCE_KEEP], [RADIANCE_BLUR_PX]): copied aside, the canvas cleared,
-     * the copy drawn over it. A browser without canvas filters draws it unblurred, an afterglow that only fades.
+     * The last frame back, blurred, fainter and a little bigger ([RADIANCE_KEEP], [RADIANCE_BLUR_PX],
+     * [RADIANCE_GROW_PX]): copied aside, the canvas cleared, the copy drawn over it. A browser without canvas filters draws it unblurred, an afterglow that only fades.
      */
     private fun CanvasRenderingContext2D.radiate() {
         val width = canvas.width.toDouble()
@@ -401,10 +447,12 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
             aside.clearRect(0.0, 0.0, width, height)
             aside.drawImage(canvas, 0.0, 0.0)
 
+            val grow = RADIANCE_GROW_PX * backingRatio
+
             clearRect(0.0, 0.0, width, height)
             asDynamic().filter = "blur(${RADIANCE_BLUR_PX * backingRatio}px)"
             globalAlpha = RADIANCE_KEEP
-            drawImage(lastFrame, 0.0, 0.0)
+            drawImage(lastFrame, -grow, -grow, width + 2 * grow, height + 2 * grow)
         }
 
         restore()
@@ -416,9 +464,25 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
 
             css {
                 height = 100.pct
+                put("position", "relative")
             }
 
-            canvas("oscilloscope-canvas") {}
+            // The smoke under the trace, faint
+            canvas(SMOKE_CANVAS) {
+                css {
+                    put("position", "absolute")
+                    put("left", "0")
+                    put("top", "0")
+                    put("opacity", SMOKE_OPACITY.toString())
+                    put("pointer-events", "none")
+                }
+            }
+
+            canvas(TRACE_CANVAS) {
+                css {
+                    put("position", "relative")
+                }
+            }
         }
     }
 }
