@@ -17,8 +17,6 @@ import io.peekandpoke.kraft.addons.threejs.ThreeJs
 import io.peekandpoke.kraft.addons.threejs.ThreeJsAddon
 import io.peekandpoke.kraft.addons.threejs.ThreeJsContext
 import io.peekandpoke.kraft.addons.threejs.ThreeJsFrame
-import io.peekandpoke.kraft.addons.threejs.createCanvasTexture
-import io.peekandpoke.kraft.addons.threejs.createVector2
 import io.peekandpoke.kraft.addons.threejs.js.Camera
 import io.peekandpoke.kraft.addons.threejs.js.CanvasTexture
 import io.peekandpoke.kraft.addons.threejs.js.DirectionalLight

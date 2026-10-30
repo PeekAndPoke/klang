@@ -118,7 +118,7 @@ private suspend fun keyedBed(view: VDom.() -> Any?, test: suspend (element: KQue
     val manager = KeysManager(platform = KeyPlatform.Pc, hintDelayMs = 10).apply { define(KlangKeyBindings) }
 
     try {
-        TestBed.preact(appSetup = { keys(manager) }, view = view, test = test)
+        TestBed.preact(appSetup = { keys(manager) }, view = view) { test(it) }
     } finally {
         manager.dispose()
     }

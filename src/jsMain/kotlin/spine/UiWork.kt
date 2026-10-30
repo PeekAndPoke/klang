@@ -35,8 +35,8 @@ import io.peekandpoke.ultra.streams.ops.ticker
  */
 object UiWork {
 
-    /** The app's window controller: the Kraft app is given this one (`index.kt`), so both follow the same focus. */
-    val window = WindowController()
+    /** The page's window controller, Kraft's one for every app, so the app and the UI's rest follow the same focus. */
+    val window: WindowController = WindowController.default
 
     /** True while showing things is pointless: the window has no attention (hidden or not focused). */
     val resting: Stream<Boolean> = window.hasFocus.map { !it }.distinct()

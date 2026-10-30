@@ -39,8 +39,8 @@ the cabinet, the pedal, the pickup. Not a single filter or clipper; those are th
 - **The fun part:** every instrument looks different because its wiring is different, so a new instrument is
   something to show around.
 - **Wait for:** the DSL work names this before anything is drawn (`/dsl-design`: one word, the door shape, parity
-  across KlangScript, Kotlin and the wire). "Sound first" puts it after the engine streams; the Three.js extension
-  in the app (`externals/kraftThreejsExt`) is a possible start.
+  across KlangScript, Kotlin and the wire). "Sound first" puts it after the engine streams; Kraft's three.js addon
+  (its members since 0.117.0, ULTRA-00246) is a possible start.
 
 ## Decide before implementing
 
