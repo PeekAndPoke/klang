@@ -21,8 +21,8 @@ internal val soundOfTheSeaSong = Song(
       import * from  "stdlib"
        import * from "sprudel"
         let wind       = perlin(0.500, 1.200)
-         let water      = perlin(0.100, 0.150)
-          let waves      = perlin(0.165, 0.300)
+         let water      = perlin(0.050, 0.150)
+          let waves      = perlin(0.100, 0.300)
            let windSpiel  = 3.250
             let randSeed   = sineOfDay.add(1).mul(100)
 

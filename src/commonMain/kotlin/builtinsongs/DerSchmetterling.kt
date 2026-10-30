@@ -182,7 +182,7 @@ let makeGuitar = (rig) => {
     .pitchEnvelope(0.2, x => x.adsr(0.030, 0.05, 0, 0))
     //.lowpass(freq = Ign.freq().times(4).add(Ign.constant(5000).adsr(pAttack, 1.0, 0.0, 0.050)), q = 0.7)
     // noise burst
-    .plus(Ign.whitenoise().adsr(0.003, 0.008, 0.0, 0.05).highpass(1200).mul(0.12))
+    .plus(Ign.whitenoise().adsr(0.003, 0.008, 0.0, 0.05).highpass(Ign.perlin(1).mul(100).add(2500)).mul(0.10))
     //.plus(Ign.crackle(1.3).highpass(1200).adsr(0.003, 0.001, 0.0, 0.05).mul(1.5))
     // the string - lowpass adsr for the string sound and adsr for the string
     .adsr(pAttack, pDecay, pSustain, pRelease, e => e.curves("exp", "exp", "linear"))
@@ -236,7 +236,7 @@ export guitarDyna = (s) => "0.98!2 0.65!6  0.85!2 0.65!2 0.80!2 0.65!2"
   .sub(perlin(0.00, 0.05).seed(s)).mul("[1.00 0.90 0.95 0.90  1.00 0.90 0.95 0.90]")
 export guitarClip = (s) => "<0.97!31 0.84 0.97!31 0.82 0.97!30 0.84 0.81>"
   .sub("<[0.0!7 0.05] [0.0!7 0.06] [0.0!7 0.05] [0.0!7 0.07]>").sub(perlin(0.00, 0.01).seed(s))
-export guitarDecay = (s) => "<0.480!16 0.500!16 0.480!16 0.520!16>".mul(perlin(0.90, 1.00).seed(s))
+export guitarDecay = (s) => "<0.520!16 0.500!16 0.520!16 0.550!16>".mul(perlin(0.95, 1.05).seed(s))
 
 // Lead - Inspired by: Editors - Papillon  ---------------------------------------------------------------------------------------------------------------------
 export lead_pat =
@@ -339,7 +339,7 @@ export bass_pat =
     [0 0 -1 3  7 0 -2 -1] [0 0 3 [0 -2]  0 0 [0 4 7 9] 6]>/8`
 
 export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.36) // . mute()
-    .ignp("sub", 0.92).ignp("harmonics", 1.00).clip("0.90".sub(perlin(0.0, 0.05).slow(8)))  // . solo()
+    .ignp("sub", 0.95).ignp("harmonics", 1.00).clip("0.90".sub(perlin(0.0, 0.05).slow(8)))  // . solo()
     .adsr(0.003, 0.50, 0.33, 0.015).hpf(35)
 
 export bass_arrange = x => x.orbit(4) // . mute()
@@ -350,7 +350,7 @@ export bass_arrange = x => x.orbit(4) // . mute()
 export bass = n(bass_pat).struct(
   `< x x x [x x]  x x [x x] [x!4]    x x [x x] x  [x x] x x [x!4]
     [x x@2 x]!6 [x x]!2   [x x@2 [x!2]]!4 [x x] [x x] [x [x x]]!2
-    [x x] [x [x x]] [x x] [x [x x]]  [[x x] [~ x]] [x x] [[x x] x] [x [x x]]    [x x] [x [x x]] [x x] [x x?]  [[x x] x] [x x]!3
+    [x x] [x [x x]] [x x] [x [x x]]  [[x x] [~ x]] [x x] [[x x] x] [[x x] x]    [x x] [x [x x]] [x x] [x x?]  [[x x] x] [x x] [[x x] x]!2
     [x!4]!4 [[x x] x] [[x x] x] [[x x] x] [x!4]   [x!2 x@2] [x!2] [x!2 x@2] x [x x] [x [x x]] [x [x x]] [x@3 x]>`
 ).fast(2).apply(bass_shape).tag("bass")
 
@@ -361,19 +361,19 @@ let gummiEimer = (() => {
  
   let ring = Ign.constant(200).div(Ign.freq()).mul(0.85)  
  
-  let head  = Ign.sine(x => x.analog(pAnalog)).pitchEnvelope(14, x => x.adsr(0.010, 0.075, 0, 0)).adsr(0.010, ring, 0.0, 2.0).mul(0.4)
+  let head  = Ign.sine(x => x.analog(pAnalog)).pitchEnvelope(7, x => x.adsr(0.010, 0.075, 0, 0)).adsr(0.010, ring, 0.3, 2.0).mul(0.4)
   // the harmonics 2f..8f, fundamental left out: the ear rebuilds it, so the drum sits low in the mix and keeps its pitch,
   // and the pitch drop is heard up here, not felt at 70 Hz. They die well before the head does.
   let harms = Ign.sine(x => x.harmonics(6, 1.2).fundamental(0).analog(pAnalog).analogSpread(0.2))
-    .pitchEnvelope(21, x => x.adsr(0.010, 0.050, 0, 0)).adsr(0.010, 0.35, 0.0, 0.40).mul(1.5)
+    .pitchEnvelope(12, x => x.adsr(0.010, 0.050, 0, 0)).adsr(0.010, 0.35, 0.4, 0.40).mul(1.5)
  
-  let m2 = Ign.sine(Ign.freq().mul(1.59), x => x.analog(pAnalog)).adsr(0.002, 0.10, 0.0, 0.20).mul(0.35)
-  let m3 = Ign.sine(Ign.freq().mul(2.14), x => x.analog(pAnalog)).adsr(0.002, 0.06, 0.0, 0.10).mul(0.40)
+  let m2 = Ign.sine(Ign.freq().mul(1.59), x => x.analog(pAnalog)).adsr(0.002, 0.10, 0.2, 0.20).mul(0.35)
+  let m3 = Ign.sine(Ign.freq().mul(2.14), x => x.analog(pAnalog)).adsr(0.002, 0.06, 0.2, 0.10).mul(0.40)
   // wood core: a crack, the force of the hit the skin gives, and the hit reads as hard
   let beater = Ign.whitenoise().adsr(0.0005, 0.035, 0.0, 0.015).lowpass(1500).mul(6.00)    
  
   return head.plus(harms).plus(m2).plus(m3).plus(beater)
-    .distort(0.50, "soft", 2)
+    .distort(0.80, "soft", 2)
     .mul(0.1)
     .classic()
 })()
@@ -383,13 +383,16 @@ export trommel_pat = `<[~ 0 1 ~  0 ~ 2 ~] [0 ~ 0 -4  -3 ~ -1 ~] [~ 0 -1 0  ~ 0 ~
 
 export trommel_shape = x => x.sound(gummiEimer).adsrOff() // .solo()
   .velocity("1.0 0.8 0.9 0.8".sub(perlin(0.0, 0.02))).body(material = "membrane", wet = 0.4)
-  .hpf(600).lpf("2500".add(perlin(-100, 100).fast(4))).clip(1.0)
-  .pan(0.40).superimpose(pan(0.60))
+  .hpf(600).lpf("2600".add(perlin(-100, 100).fast(4))).clip(1.1)
+  .apply(
+    x => x.pan(0.33).late(berlin(0.0025, 0.0035).seed(100).mul(drunk).slow(4)),
+    x => x.pan(0.67).late(berlin(0.0025, 0.0035).seed(101).mul(drunk).slow(4)),
+  )
 
 export trommel_arrange = x => x.orbit(5) // .solo(0.5)
-  .scale("e5:minor").gain(0.22)
+  .scale("e3:minor").gain(0.24)
   .mute("<1!96 0!32>")                          
-  .late(berlin(0.0030, 0.0045).seed(100).mul(drunk).fast(4))
+ 
 
 export trommel = n(trommel_pat).apply(trommel_shape).tag("trommel")
 
@@ -536,7 +539,7 @@ export song = stack(
   , // Master
   master(Katalyst(k => k
     .reverb(0.10, 7, 4500)
-    .gain(4.0)
+    .gain(4.2)
     .bands(b => b
       .band(low => low.distort(0.01, "soft", 4).mul(1.00)).cut(150)
       .band(mid => mid.distort(0.15, "soft", 4).mul(0.90)).cut(5000)
@@ -545,6 +548,7 @@ export song = stack(
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)
   ))
 )
+
 
 
     """,

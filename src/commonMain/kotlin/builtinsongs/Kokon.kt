@@ -257,7 +257,7 @@ export liftPower = `<[-2,2] [-1,3] [0,4]>`
 
 // The melody, in two phrases of one round each. The second fits the cocoon and the lift alike.
 export melodyOne = `<[4@4 3 0 1 2] [3@4 ~ 4 1 2] [4@3 5 4@2 0 2] [1@6 ~@2]>`
-export melodyTwo = `<[7@4 6 1 3 4] [8@4 ~ 4 7 6] [9@3 8 7@2 2 4] [4@6 ~@2]>`
+export melodyTwo = `<[7@4 6 1 3 4] [8@4 ~ 4 6 8] [9@3 8 7@2 2 4] [4@6 ~@2]>`
 
 // Out of the cocoon flies the Schmetterling's own lead.
 export schmetterlingLead = `<[-7 0 2 4] [-7 0 4 [2 0]] [-5 -1 2 4|[4 4|4|-1]] [-6 -1 4 3|3|[3 3]]>`
@@ -553,6 +553,7 @@ export song = stack(
 // Inspired by: Philip Glass and Steve Reich, the additive process of minimal music. The spinning arpeggio grows thread
 // by thread through its mask, and the listener hears the same notes transform instead of new ones arriving.
 // Inspired by: Editors - Papillon, through the Schmetterling's lead that flies off at the end.
+
 
 
 
