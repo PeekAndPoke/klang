@@ -115,12 +115,13 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
          * and fades (the maintainer, 2026-10-30: "overpaint the current contents with 90% black ... plus blurring the
          * current content on every render step"). Slow, now that the smoke has a canvas of its own and shows faint
          * ([SMOKE_OPACITY]): it lingers without smearing the trace ("a second canvas for the "smoke" ... then we do not
-         * need to fade out so fast but can keep the "smoke" at a low opacity"; on the trace's canvas it kept 0.8).
+         * need to fade out so fast but can keep the "smoke" at a low opacity"; on the trace's canvas it kept 0.8; then
+         * 0.94 faded too slowly: "a bit stronger but fade a bit faster").
          */
-        private const val RADIANCE_KEEP = 0.94
+        private const val RADIANCE_KEEP = 0.9
 
-        /** How much the smoke's canvas shows over the scope's ground: faint, the trace stays clear over it. */
-        private const val SMOKE_OPACITY = 0.4
+        /** How much the smoke's canvas shows over the scope's ground: faint, the trace stays clear over it (0.4 before). */
+        private const val SMOKE_OPACITY = 0.55
 
         /** The blur each frame, in CSS pixels: a few frames on, the trail is a few pixels wide. */
         private const val RADIANCE_BLUR_PX = 1.0
