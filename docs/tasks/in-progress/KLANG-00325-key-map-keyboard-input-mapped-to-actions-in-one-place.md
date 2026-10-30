@@ -477,3 +477,7 @@ OkCancel real buttons and focus; their Esc stays ours until the key map carries 
 - 2026-10-27: `KlangKeyHint`'s caps on the look's colours (`--kl-*`), so the Esc and Alt+Q caps match in Copper and
   Cream; the hover hand-over cancelled when the mouse leaves the editor, on an edit, and when the editor is gone.
 - 2026-10-27: Out of scope: the interaction manager idea (KLANG-00365), for when a second case comes.
+- 2026-10-30: `WorkshopDomainSpec` (root `src/jvmTest`, borrowed from spross at the weekly meeting): no Klang word in
+  the workshop's sources, package lines and ticket numbers aside; the one hit, "the Motor menu" in `KeysManager`'s
+  KDoc, reworded. 3 mutants killed. Requests to Ultra: keyboard modifiers in kraft:testing (ULTRA-00279, Work 3) and
+  modal and popup key layers (ULTRA-00285, IDEA); the key manager itself follows as a request after step 4.
