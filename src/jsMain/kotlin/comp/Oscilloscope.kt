@@ -43,7 +43,7 @@ import kotlin.math.roundToInt
 fun Tag.Oscilloscope(
     player: Stream<KlangPlayer?>,
     strokeColor: Color = Color.white,
-    strokeWidth: Double = 3.0,
+    strokeWidth: Double = 3.1,
     centerLineColor: Color? = Color.white.withAlpha(0.07),
     centerLineWidth: Double = 1.0,
     pixelSkip: Int = 5,
@@ -147,15 +147,16 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
          * current content on every render step"). Slow, now that the smoke has a canvas of its own and shows faint
          * ([SMOKE_OPACITY]): it lingers without smearing the trace ("a second canvas for the "smoke" ... then we do not
          * need to fade out so fast but can keep the "smoke" at a low opacity"; on the trace's canvas it kept 0.8; then
-         * 0.94 faded too slowly: "a bit stronger but fade a bit faster").
+         * 0.94 faded too slowly: "a bit stronger but fade a bit faster"). 0.975 since the maintainer's tuning of
+         * 2026-10-30, with the smoke fainter, finer and slower to grow: a long, quiet trail.
          */
-        private const val RADIANCE_KEEP = 0.9
+        private const val RADIANCE_KEEP = 0.975
 
-        /** How much the smoke's canvas shows over the scope's ground: faint, the trace stays clear over it (0.4 before). */
-        private const val SMOKE_OPACITY = 0.35
+        /** How much the smoke's canvas shows over the scope's ground: faint, the trace stays clear over it (0.4, then 0.35 before). */
+        private const val SMOKE_OPACITY = 0.20
 
         /** The blur each frame, in CSS pixels: a few frames on, the trail is a few pixels wide. */
-        private const val RADIANCE_BLUR_PX = 1.0
+        private const val RADIANCE_BLUR_PX = 0.25
 
         /**
          * How far the last frame grows up and down each frame, in CSS pixels: drawn back a little bigger round the
@@ -164,16 +165,16 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
          * [RADIANCE_GROW_X_PX]: the same distance both ways looked like ""dust" flying from a carpet that is hit" (the
          * maintainer, 2026-10-30: "The x-zoom must be less than the y zoom i guess").
          */
-        private const val RADIANCE_GROW_Y_PX = 1.15
+        private const val RADIANCE_GROW_Y_PX = 0.3
 
         /** How far the last frame grows to either side each frame, in CSS pixels: less than up and down, a third. */
-        private const val RADIANCE_GROW_X_PX = 0.4
+        private const val RADIANCE_GROW_X_PX = 0.1
 
         /**
          * How far the smoke moves up each frame, in CSS pixels, as it grows: it rises (the maintainer, 2026-10-30: "on
          * every redraw move the zoomed paint up slightly, so that it looks as if the smoke rises").
          */
-        private const val SMOKE_RISE_PX = 0.1
+        private const val SMOKE_RISE_PX = 0.08
 
         /** How far the shade's stroke lies below the string's, a share of the string's width. */
         private const val SHADE_OFFSET = 0.3

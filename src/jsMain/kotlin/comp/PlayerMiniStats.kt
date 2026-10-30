@@ -144,7 +144,7 @@ class PlayerMiniStats(ctx: Ctx<Props>) : Component<PlayerMiniStats.Props>(ctx) {
                         value = heat,
                         size = MIDDLE_GAUGE_PX.px,
                         icon = { microchip },
-                        display = { "${(it * 100).roundToInt()}%" },
+                        display = { "${(it * 100).roundToInt()}" },
                         hotFrom = HEAT_HOT_FROM,
                     )
                 }

@@ -114,7 +114,7 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
          * the 3x1 tiles version has the correct setting"; side by side, the taller hole swung 1.6 times as far,
          * "hectic"; KLANG-00391).
          */
-        private const val SCOPE_SWING = HOLE_HEIGHT / 2
+        private const val SCOPE_SWING = HOLE_HEIGHT * 0.4
 
         /** How far the scope's smoke may rise out of its hole, and go to its sides and below it, as shares of a tile. */
         private const val SMOKE_UP = 0.6

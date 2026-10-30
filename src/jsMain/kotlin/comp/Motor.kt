@@ -23,8 +23,10 @@ import kotlinx.css.TextAlign
 import kotlinx.css.bottom
 import kotlinx.css.height
 import kotlinx.css.left
+import kotlinx.css.paddingLeft
 import kotlinx.css.pct
 import kotlinx.css.position
+import kotlinx.css.px
 import kotlinx.css.rem
 import kotlinx.css.right
 import kotlinx.css.textAlign
@@ -154,6 +156,7 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
                     css {
                         position = Position.relative
                         height = 100.pct
+                        paddingLeft = 2.px
                     }
 
                     // Its smoke rises over the gauges (the maintainer, 2026-10-30: "would be nice if the smoke would
@@ -162,6 +165,8 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
                         player = Player.player,
                         strokeColor = Color(look[KlangRole.ScopeTrace]),
                         paused = props.paused,
+                        strokeWidth = 2.8,
+                        swingPx = 22.0,
                         smoke = SMOKE,
                     )
                 }
