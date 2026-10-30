@@ -134,6 +134,12 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
          */
         private const val RADIANCE_GROW_PX = 1.5
 
+        /**
+         * How far the smoke moves up each frame, in CSS pixels, as it grows: it rises (the maintainer, 2026-10-30: "on
+         * every redraw move the zoomed paint up slightly, so that it looks as if the smoke rises").
+         */
+        private const val SMOKE_RISE_PX = 0.6
+
         /** How far the shade's stroke lies below the string's, a share of the string's width. */
         private const val SHADE_OFFSET = 0.3
 
@@ -430,8 +436,8 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
     }
 
     /**
-     * The last frame back, blurred, fainter and a little bigger ([RADIANCE_KEEP], [RADIANCE_BLUR_PX],
-     * [RADIANCE_GROW_PX]): copied aside, the canvas cleared, the copy drawn over it. A browser without canvas filters draws it unblurred, an afterglow that only fades.
+     * The last frame back, blurred, fainter, a little bigger and a little higher ([RADIANCE_KEEP], [RADIANCE_BLUR_PX],
+     * [RADIANCE_GROW_PX], [SMOKE_RISE_PX]): copied aside, the canvas cleared, the copy drawn over it. A browser without canvas filters draws it unblurred, an afterglow that only fades.
      */
     private fun CanvasRenderingContext2D.radiate() {
         val width = canvas.width.toDouble()
@@ -449,11 +455,12 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
             aside.drawImage(canvas, 0.0, 0.0)
 
             val grow = RADIANCE_GROW_PX * backingRatio
+            val rise = SMOKE_RISE_PX * backingRatio
 
             clearRect(0.0, 0.0, width, height)
             asDynamic().filter = "blur(${RADIANCE_BLUR_PX * backingRatio}px)"
             globalAlpha = RADIANCE_KEEP
-            drawImage(lastFrame, -grow, -grow, width + 2 * grow, height + 2 * grow)
+            drawImage(lastFrame, -grow, -grow - rise, width + 2 * grow, height + 2 * grow)
         }
 
         restore()
