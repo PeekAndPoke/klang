@@ -1,6 +1,6 @@
 # KLANG-00329: experiment: tool look-out, where a tool would beat a hand edit
 
-> **Status (2026-10-23): IN PROGRESS.** Experiment until the meeting of 2026-10-30 (maintainer, 2026-10-23, Mission Control's MC-00029); the meeting deletes it or turns it into a rule.
+> **Status (2026-10-30): DONE.** Ended at the weekly meeting of 2026-10-30 (topic 6): Refactor Rename, Move and Safe Delete allowed with safeguards (the maintainer: "Yes to the four new intellij tool use with proposed safeguards"), Reformat Code stays off; the rules live in /agent-fleet (b475d110).
 
 ## Why this exists
 
@@ -68,3 +68,4 @@ incident).
 - 2026-10-23: Optimize Imports allowed as the first IntelliJ write action (maintainer, via Mission Control).
 - 2026-10-24: the IDE action gate (MC-00031, baseline revision 5): `.claude/hooks/idea-actions.allow` lists only OptimizeImports; first use under the gate logged.
 - 2026-10-24: `SaveAll` on the allowlist (maintainer); the import reorder logged, with the two traps Spross found first (edits stay in the buffers until Save All; own-member imports get added).
+- 2026-10-30: DONE. Ended at the weekly meeting of 2026-10-30 (topic 6): Refactor Rename, Move and Safe Delete allowed with safeguards (the maintainer: "Yes to the four new intellij tool use with proposed safeguards"), Reformat Code stays off; the rules live in /agent-fleet (b475d110).

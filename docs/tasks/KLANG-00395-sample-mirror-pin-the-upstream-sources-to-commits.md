@@ -1,6 +1,6 @@
 # KLANG-00395: Sample mirror: pin the upstream sources to commits
 
-> **Status (2026-10-30): IDEA.**
+> **Status (2026-10-30): DESIGNED.** Decided by the maintainer, 2026-10-30: pin to commit shas (the mirror tool and the bootstrap script take recorded shas; a new sha only with the maintainer's OK).
 >
 > **Part of:** KLANG-00356 (Sound sources: instruments, samples, soundfonts)
 
@@ -20,12 +20,15 @@ song that uses it after the next upload, and nobody would see it in a diff here.
 maintainer, 2026-10-30, "1 to 4 sound good", MC-00035): external data we fetch falls under the same rule as code, a
 pinned source and a refresh only with the maintainer's OK.
 
-## Decide before implementing
+## Decided (the maintainer, 2026-10-30)
 
-- **Pin or copy:** pin each upstream to a commit sha (the manifest URL and the clone take the sha), or treat our mirror
-  as the source of truth and keep a copy of the deployed tree (KLANG-00182 already says "a rebuild is not a backup").
-  Both together are possible: the shas record where the mirror came from.
-- **Who refreshes:** a new sha only with the maintainer's OK, like a version bump.
+- **Pin to commit shas:** the mirror tool and the bootstrap script take recorded shas; a new sha only with the
+  maintainer's OK, like a version bump.
+
+## Open before implementing
+
+- Which sha each source was mirrored from (2026-08-17/18): find the upstream commit whose manifest matches the deployed
+  one, so pinning changes nothing on the mirror. That needs a fetch from GitHub, which the maintainer runs or allows.
 
 ## The work
 
@@ -42,3 +45,4 @@ pinned source and a refresh only with the maintainer's OK.
 ## History
 
 - 2026-10-30: created.
+- 2026-10-30: DESIGNED. Decided by the maintainer, 2026-10-30: pin to commit shas (the mirror tool and the bootstrap script take recorded shas; a new sha only with the maintainer's OK).
