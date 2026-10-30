@@ -1,5 +1,8 @@
 # IDE actions invoke_ide_action may run without a prompt (one id per line). Everything else asks the maintainer.
 # klang: Optimize Imports (maintainer, 2026-10-23) and Save All, which writes its result to disk (maintainer, 2026-10-24);
-# every other write action waits for the 2026-10-30 meeting.
+# Refactor Move (classes, packages and members) and Safe Delete (weekly meeting 2026-10-30, the maintainer's yes,
+# with the safeguards in /agent-fleet). Rename runs through the rename_refactoring tool. Reformat Code stays off.
 OptimizeImports
 SaveAll
+Move
+SafeDelete

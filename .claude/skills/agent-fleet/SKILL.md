@@ -175,25 +175,36 @@ and the build lock is the real guard.
   without its lock (both 2026-10-26), broke or blurred the other's run. While another session holds the build, work that
   does not compile yet waits in a worktree or the scratchpad.
 
-## IntelliJ's tools: read-only, plus Optimize Imports (maintainer, 2026-10-20 and 2026-10-23) *(provisional)*
+## IntelliJ's tools: read-only, plus five write actions (maintainer, 2026-10-20, 2026-10-23, 2026-10-30)
 
 The `mcp__idea__*` tools query IntelliJ's index, with types and references resolved. The read-only ones are allowed:
 symbol and structural search, `analyze_calls`, the PSI tree, `get_file_problems`, `run_inspection_kts` and the other
 lookups. They answer "every caller", "every writer of this field" or "every case of this `when`" in one query, where
-grep only comes close. Write and build actions stay off (`apply_patch`, `rename_refactoring`, `reformat_file`,
-`apply_quick_fix`, `build_project`, `execute_run_configuration`, `execute_terminal_command`): a build there bypasses
-the build lock, and an edit lands in the maintainer's open editor. When the same case keeps coming up where one would
-help (a rename refactoring, say), bring it to the maintainer.
+grep only comes close. Build actions stay off (`build_project`, `execute_run_configuration`,
+`execute_terminal_command`): a build there bypasses the build lock. Other write tools stay off unless listed below
+(`apply_patch`, `reformat_file`, `apply_quick_fix`): an edit lands in the maintainer's open editor.
 
-**One write action is allowed: Optimize Imports** (maintainer, 2026-10-23, relayed by Mission Control), through
-`invoke_ide_action` with `actionId: "OptimizeImports"` and the files in `filePaths`. The safeguards: klang's absolute
-`projectPath` on every call, checked with `get_repositories` first; afterwards `git diff` shows only import lines;
-the main checkout only; only where the maintainer expects it. Since 2026-10-24 the IDE action gate decides
-(`.claude/hooks/idea-actions.allow`, MC-00031): `OptimizeImports` and `SaveAll` run without a prompt, any other action
-asks the maintainer. Optimize Imports changes only IntelliJ's buffers: `SaveAll` writes them to disk, and it also
-saves the maintainer's own unsaved edits, so say so before a batch. Check the import set per file, not only the
-order: it can ADD imports of an object's own members (Cylinder.kt, Ignitors.kt, 2026-10-24). Until the meeting of
-2026-10-30 each use gets a row in KLANG-00329.
+**Allowed write actions:** Optimize Imports (2026-10-23) and Save All (2026-10-24); Refactor Rename, Move (classes,
+packages and members) and Safe Delete (weekly meeting 2026-10-30, the maintainer's yes with the safeguards below).
+Rename runs through `rename_refactoring`; the others through `invoke_ide_action` (`OptimizeImports`, `SaveAll`,
+`Move`, `SafeDelete`, the files in `filePaths`), which the IDE action gate lets through
+(`.claude/hooks/idea-actions.allow`, MC-00031); any other action asks the maintainer. Reformat Code stays off.
+
+The safeguards, for every write action:
+- klang's absolute `projectPath` on every call, checked with `get_repositories` first; the main checkout only, never
+  a worktree; a file changed outside the IDE gets a VFS refresh first.
+- Only while the maintainer is not typing in the IDE: a write action takes IntelliJ's app-wide write lock and freezes
+  every window.
+- **The shared tree:** before a Rename or Move, `git status` on the files it will touch; one with another session's
+  uncommitted edits waits or is agreed first, and the commit names the touched paths only.
+- A call can return before its edits are on disk: `SaveAll` after every write action, then `git diff`. `SaveAll` also
+  saves the maintainer's own unsaved edits, so say so before a batch.
+- Read the diff for anything that is not the action's own kind and take it back: Optimize Imports on 101 files
+  (2026-10-24) added imports of an object's own members (Cylinder.kt, Ignitors.kt) and stripped a trailing space.
+- After a Rename or Move, a repo-wide grep for the old name: the IDE misses prose (docs, skills, tickets,
+  `MEMORY.md`) and every name KlangScript or sprudel registers, which lives in strings (songs, docs examples, the
+  Lexikon); then a compile and the DSL doc example spec. A rename of a serialized type or of a property without its
+  own `@SerialName` changes the wire format: run its round-trip spec before the commit.
 
 - **The index is the open checkout**, the maintainer's working copy with its unsaved edits, never a worktree. A table
   built from a query says which commit it reflects.
@@ -233,6 +244,8 @@ order: it can ADD imports of an object's own members (Cylinder.kt, Ignitors.kt, 
 
 ## Changelog
 
+- **2026-10-30**: IntelliJ Refactor Rename, Move and Safe Delete allowed with the meeting's safeguards; the gate
+  lists `Move` and `SafeDelete` (maintainer, in the coordinator's session). Reformat Code stays off.
 - **2026-10-30**: weekly meeting (MC-00017): stage nothing ahead of a commit (`git add -N` in the commit's `&&` chain),
   and an edit left in the shared tree compiles, lock files with it.
 

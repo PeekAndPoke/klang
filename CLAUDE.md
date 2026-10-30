@@ -58,11 +58,11 @@ should be broken on purpose, consult the maintainer, and the rules do not have t
 | Code style: braces always, blank lines around `if`, flat directories, no FQCN, exhaustive `when`, NaN-guard comment, named arguments where they could be swapped (2026-10-07), copyright header (hot-path code: the engine rules). | 2026-04 | `/code-style` |
 | No em-dashes in user-facing text. The commit hooks block them in docs, KDoc and commit messages; UI strings, tutorials and reports are on us. | 2026-08, hooks 2026-10-24 | `/code-style` §22, `/console-tools` |
 | Every task and plan is a ticket, `KLANG-<nnnnn>-<title>.md`, in the folder its status word names: ideas and plans in `docs/tasks/future/`, the rest in `docs/tasks/`, the tickets being worked on in `docs/tasks/in-progress/`, finished ones in `docs/tasks-archive/<month>/`. References name the number, never the path; the `ticket` tool takes numbers and moves files. | 2026-06, in-progress 2026-10-10, tickets 2026-10-20 | `/project-layout`, `/console-tools` |
-| Commit completed, reviewed steps on the working branch; leave work uncommitted only when the maintainer asks to inspect first. | 2026-09-06 | this file                                     |
+| Commit completed, reviewed steps on the working branch; leave work uncommitted only when the maintainer asks to inspect first. In the shared checkout: commit by paths, the tree compiles. | 2026-09-06, shared checkout 2026-10-30 | this file, `/agent-fleet` |
 | Every commit an AI agent wrote or co-wrote carries a `Co-Authored-By:` trailer naming the model; a commit the maintainer wrote alone carries none. The commit-msg hook blocks a Claude Code commit without one. It is the provenance record funding applications rely on. Commits before 2026-08 are inconsistent: `docs/funding/gaps.md` G4. | 2026-09-24, hook 2026-10-24 | this file |
 | *(provisional)* Credits: every person, idea, paper, standard, tool or piece of music Klang builds on is credited in `CREDITS.MD` AND on the in-app Credits page (`src/jsMain/kotlin/pages/CreditsPage.kt`), the two kept in step, in the same change that brings it in. An idea only named in a plan or a research note is credited when it lands; a song credits its inspirations in its own "Inspired by" lines. Commercial products are not credited (maintainer, 2026-10-10): a public idea behind one is credited as the idea, an idea that is not public is not credited at all. | 2026-10-09, products 2026-10-10 | this line |
 | Nothing in the backend or the frontend allocates without a way to clean it up: per-playback state lives in a storage the playback owns or in a per-playbackId registry that is freed when the playback dies; process-wide maps that grow per edit are debt (tracked in KLANG-00210 (signal flow redesign) §11). | 2026-09-17 | this file |
-| *(provisional)* Two kinds of check: a check for the future (it guards behaviour we keep), or scaffolding (it guards one rewrite or addition, names that work, and goes in the change that finishes it, so it adds no weight after). Decide which when the check is written. Songs move freely: no check goes red because a song was edited, except when the edit breaks the song itself: it no longer compiles, or an engine pass fails on it (a real break, not a moved value) (maintainer, 2026-10-13, wording 2026-10-16). | 2026-09-06, kinds 2026-10-13 | this line |
+| Two kinds of check: a check for the future (it guards behaviour we keep), or scaffolding (it guards one rewrite or addition, names that work, and goes in the change that finishes it, so it adds no weight after). Decide which when the check is written. Songs move freely: no check goes red because a song was edited, except when the edit breaks the song itself: it no longer compiles, or an engine pass fails on it (a real break, not a moved value) (maintainer, 2026-10-13, wording 2026-10-16). | 2026-09-06, kinds 2026-10-13, proven 2026-10-30 | this line |
 
 ### Guideline
 
@@ -94,9 +94,8 @@ porting an old song). History keeps its words.
 Each runs until the meeting named; the meeting deletes its line or turns it into a rule. Notes go into the ticket,
 never here (maintainer, 2026-10-23).
 
-| Experiment | Until | Ticket |
-|------------|-------|--------|
-| Tool look-out: note each case where a tool (IntelliJ Optimize Imports, Auto-Format, Rename, Move) would have beaten a hand edit, and where Auto-Format differs from `/code-style`. IntelliJ stays read-only except Optimize Imports (allowed 2026-10-23) and Save All, which writes its result to disk (2026-10-24); every other write action waits for the meeting. | 2026-10-30 | KLANG-00329 |
+None running. The tool look-out (KLANG-00329) ended at the meeting of 2026-10-30; IntelliJ's allowed actions are in
+`/agent-fleet`.
 
 ## Agents and skills
 
@@ -112,3 +111,4 @@ the task. The `music-platform-strategist` agent runs only when asked for by name
 - `stack-merge`: reviewed branches onto a new `stack/<name>` branch; only pure insertions auto-resolved, main untouched.
 - `ticket`: take a ticket number, move a ticket to its status's folder, find one, check them all; never by hand.
 - `hooks`: pre-commit and commit-msg block dashes, control bytes and a missing agent trailer on added lines; never go around them.
+- `app-shot`: screenshots of a locally served app (focus emulated, 1x or 2x, WebGL on request); localhost only.

@@ -64,6 +64,7 @@ LOCK="env KLANG_LOCK_TIMEOUT=7200 console/with-build-lock.sh"
 | Landing a batch of reviewed branches together | `stack-merge` |
 | Creating, starting, pausing or finishing a task or plan; finding one; before committing docs | `ticket` |
 | Every commit (git runs it); a commit it blocks; what an old commit would have tripped | `hooks` (installed), `hooks.py check <rev>` |
+| Screenshots of the app, an old commit's or today's (the dev history, a look checked by eye) | `app-shot` |
 
 ## test-digest
 
@@ -309,6 +310,14 @@ console/tools/hooks/hooks.py check [REV]    # run the pre-commit checks on a com
 
 For dated screenshots (the dev history, a look checked by eye), Klang-Main-Dev's and Klang-Research's recipe in one
 (weekly meeting 2026-10-30). Headless Chrome only against 127.0.0.1 or localhost.
+
+```
+python3 console/tools/app-shot/app_shot.py <plan.json>    # the plan's fields: the tool's docstring
+```
+
+`app-shot` (klang's own tool, the maintainer's OK 2026-10-30) does steps 2 to 4: it serves the folder, emulates the
+focus, sets the scale, runs the steps of each shot (a script, a click, a wait) and refuses any host but the local one.
+The recipe in full:
 
 1. **An old commit:** `git worktree add --detach /opt/dev/peekandpoke/klang-worktrees/<name> <sha>`, then
    `env KLANG_LOCK_TIMEOUT=7200 /opt/dev/peekandpoke/klang/console/with-build-lock.sh ./gradlew
