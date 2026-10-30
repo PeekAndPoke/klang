@@ -104,3 +104,14 @@ findings-led ladder: no CRITICAL or MAJOR, its MINORs real and fixed, about 0.36
 incident in section 3). After the ladder (2026-10-25 to 2026-10-28): KLANG-00325's later steps ran level 1 rounds;
 two found MAJORs (Esc under a code tool's modal; Esc skipping a tool's revert), each fixed and cleared by one level 2
 round. No round reached level 3, so the week adds no data on whether one Opus max is enough at the top.
+
+## Corrections (after checking the session log during the meeting, 2026-10-30)
+
+- **Top-rung rounds:** six this week, not one: the volume knob's rounds 3 to 5 (2026-10-24/25, still the
+  round-number ladder), KLANG-00325's round 3 (the incident) and the overlay step's rounds 2 and 3. One MAJOR among
+  them (the overlay's round 2: a non-ASCII test missed `@` and dead keys).
+- **"Each cleared by one level 2 round"** held for the priorities step only. Three times on 2026-10-26 a MAJOR's
+  re-check continued the same reviewer at the same level (step 3a at level 2, 3b's fix step and the grouped key overview
+  at level 1): an incident line in `_incidents.md`.
+- **The manifests (section 3, 10-23):** the app has loaded its samples from our mirror since 2026-08-18; only the
+  mirror tooling reads upstream `main` (KLANG-00395, decided: pin to commit shas).
