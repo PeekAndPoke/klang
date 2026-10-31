@@ -428,7 +428,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
             KlangValueKnob(
                 name = "Revolutions per minute",
                 value = state.rpm,
-                range = 10.0..120.0,
+                range = KlangCodePlaybackCtrl.RPM_RANGE,
                 step = 0.5,
                 onChange = { ctrl.setRpm(it) },
                 unit = "RPM",
