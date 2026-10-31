@@ -257,8 +257,13 @@ two rates meet, and only for the difference (in 2x steps of the cascade).
 - Factors: rounded down to a power of two (3 to 2, 5 and 7 to 4); 1 or less is a no-op. The rate stops at 16x without
   an error: a guard against absurd values only (a later "Ignitor analyzer" shows the cost).
 
-**Sources at the region rate:** yes. Oscillators read the sample rate from their context. Constants and knobs counted
-in samples (`SAW_RESET_SAMPLES`, `resetSamples`, `flankSamples`) mean base-rate samples and are scaled by the factor.
+**Sources stay at 1x** (maintainer, 2026-10-31, superseding the first answer "yes, sources at the region rate"): every
+producing node (oscillators, noises, plucks, samples) and its pitch modulation runs at the base rate, also when it is
+written inside a region's braces; it is converted up once where it enters the region, exactly like the region's input.
+A modulation source in a knob (an LFO on a cutoff inside a region) is converted the same way. Generating sources at a
+higher rate is a possible later optimization, not part of this plan: the blind test showed conversions are not
+audible, and a supersaw at 4x costs four times as much. `Ign.oversampleAtLeast(4) { Ign.sine() }` as a way to a 4x
+sine is off the table.
 
 **Nesting:** a nested region steps on from the current rate, never back to 1x in between. Adjacent regions (down, then
 up again) get an editor hint, never an engine merge (section 2: the engine never rewrites).
@@ -281,9 +286,8 @@ buses aligned in phase like parallel branches.
   read on 1x, not per bus).
 - A region at the very end of a voice hands over at its rate, so a 4x voice lands on a 4x orbit's bus directly; a
   region in the middle of a voice closes normally.
-- What is written inside the braces runs at the region rate, what comes in from outside is converted:
-  `Ign.oversampleAtLeast(4) { Ign.sine().distort(0.5.ign) }` gives a sine born at 4x (no conversion up), while
-  `Ign.sine().oversampleAtLeast(4) { it.distort(0.5.ign) }` renders the sine at 1x and converts it up once.
+- The braces rule (revised the same day, "Ok sounds good"): inside a region the processing stages run at the region
+  rate; sources and their modulation run at 1x and are converted up once where they enter (see "Sources stay at 1x").
 
 ## 11. Build in steps, on Der Schmetterling (maintainer, 2026-10-31)
 
@@ -309,7 +313,8 @@ per voice today, one with a region).
   24 kHz, which each decimation used to remove.
 
 **Which nodes know the rate** (the maintainer's question, 2026-10-31: which nodes need adjustments at a higher rate,
-which do not care; asked as a question, not yet a change of step 1's scope). The audit of the 79 Ignitor node types (coordinator, 2026-10-31, from the code), the rule being that a node inside a
+which do not care; asked as a question). Since sources stay at 1x (section 10), the source rows below need no
+change; what is left for the region is `Shape`, `Distort`, `Coarse` and `Shimmer`. The audit of the 79 Ignitor node types (coordinator, 2026-10-31, from the code), the rule being that a node inside a
 region sounds as it does outside, only with less aliasing:
 - **Do not care** (pointwise or structural): `Abs`, `Affine`, `Ceil`, `Clamp`, `Constant`, `Div`, `Exp`, `Floor`,
   `Frac`, `Freq`, `Lerp`, `Log`, `Max`, `Min`, `Minus`, `Mod`, `Neg`, `Param`, `Plus`, `Pow`, `Range`, `Recip`,
@@ -335,7 +340,7 @@ region sounds as it does outside, only with less aliasing:
     after decimation);
   - a pitch node outside a region over a source inside it: its modulation must reach the source at the region rate.
 
-**Later steps:** 2, sources inside the braces born at the region rate, the sample-counted knobs scaled; 3, a voice's
+**Later steps:** 2, a source written inside the braces rendered at 1x and converted up where it enters; 3, a voice's
 end region hands over at its rate and the orbits get their rate and per-rate buses; 4, the stages' own `oversample`
 factors retired (section 9, answer 2) and the songs moved to regions; the full phase 0 (section 3) where a step needs
 it.
@@ -348,3 +353,4 @@ it.
 - 2026-10-31: blind test verdict (no difference heard); section 10, the design: two region doors, power-of-two factors capped at 16x, the orbit's rate from its chain.
 - 2026-10-31: section 10's proposals decided; section 11, build in steps on Der Schmetterling, step 1 the guitar preamps.
 - 2026-10-31: section 11, the audit of which Ignitor nodes know the rate.
+- 2026-10-31: sources stay at 1x, also inside the braces, converted up where they enter (maintainer).
