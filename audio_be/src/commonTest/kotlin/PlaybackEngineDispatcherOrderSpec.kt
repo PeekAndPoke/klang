@@ -49,18 +49,27 @@ class PlaybackEngineDispatcherOrderSpec : StringSpec({
             }
         }
 
-        /** Renders one block 60 ms of wall time later, so the dispatcher emits diagnostics; returns the last one. */
+        /**
+         * Renders until the dispatcher emits diagnostics (every 20 ms of audio rendered, KLANG-00399), 60 ms of wall
+         * time a block; returns that one. The ones the earlier renders emitted are dropped first.
+         */
         fun diagnostics(): KlangCommLink.Feedback.Diagnostics {
-            timeMs += 60.0
-            render()
+            while (commLink.frontend.feedback.receive() != null) {
+                // Earlier renders' feedback: not about the state now
+            }
 
             var last: KlangCommLink.Feedback.Diagnostics? = null
 
-            while (true) {
-                val msg = commLink.frontend.feedback.receive() ?: break
+            while (last == null) {
+                timeMs += 60.0
+                render()
 
-                if (msg is KlangCommLink.Feedback.Diagnostics) {
-                    last = msg
+                while (true) {
+                    val msg = commLink.frontend.feedback.receive() ?: break
+
+                    if (msg is KlangCommLink.Feedback.Diagnostics) {
+                        last = msg
+                    }
                 }
             }
 

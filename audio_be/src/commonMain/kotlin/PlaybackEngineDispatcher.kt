@@ -57,7 +57,10 @@ class PlaybackEngineDispatcher(
 
     // Aggregated diagnostics (D5) — emission moved here from per-engine VoiceScheduler so the gauges
     // still update when the engine map is empty (idle → zeros), and headroom times the WHOLE block.
-    private var lastDiagnosticsTimeMs = 0.0
+    // Counted in frames rendered, not wall time (KLANG-00399): the frontend's clock runs on these reports, so a
+    // backend that renders less reports less, and a wall clock stepping back cannot silence them.
+    private var framesSinceDiagnostics = 0
+    private val diagnosticsEveryFrames = (context.sampleRateDouble * DIAGNOSTICS_EVERY_SEC).toInt()
     private var avgHeadroom = 1.0
 
     // The counts of one emission ([emitDiagnostics]), summed over the engines by [countDiagnostics].
@@ -235,24 +238,28 @@ class PlaybackEngineDispatcher(
         disposeDrainedEngines()
         // Deferred clearing of returned rings and networks, a bounded slice per block (round 3).
         context.warehouse.housekeep()
-        emitDiagnostics(startMs)
+        emitDiagnostics(startMs = startMs, blockEndFrame = cursorFrame + context.blockFrames)
     }
 
     /**
-     * Emit one aggregate [KlangCommLink.Feedback.Diagnostics] per ~20 ms. Runs every block regardless
-     * of engine count, so a fully-idle backend reports zero voices / zero cylinders (the gauges drop to
-     * 0 on stop) and the headroom reflects the WHOLE block — all engines + master — not one scheduler.
+     * Emit one aggregate [KlangCommLink.Feedback.Diagnostics] per [DIAGNOSTICS_EVERY_SEC] of audio rendered. Runs
+     * every block regardless of engine count, so a fully-idle backend reports zero voices / zero cylinders (the
+     * gauges drop to 0 on stop) and the headroom reflects the WHOLE block (all engines + master), not one scheduler.
+     * It carries the timeline at [blockEndFrame], the end of the block just rendered.
      */
-    private fun emitDiagnostics(startMs: Double) {
+    private fun emitDiagnostics(startMs: Double, blockEndFrame: Double) {
         val endMs = context.performanceTimeMs()
         val durationMs = endMs - startMs
         val blockDurationMs = (context.blockFrames.toDouble() / context.sampleRateDouble) * 1000.0
         avgHeadroom = (avgHeadroom * 9.0 + (1.0 - (durationMs / blockDurationMs))) / 10.0
 
-        if (endMs - lastDiagnosticsTimeMs <= 20.0) {
+        framesSinceDiagnostics += context.blockFrames
+
+        if (framesSinceDiagnostics < diagnosticsEveryFrames) {
             return
         }
-        lastDiagnosticsTimeMs = endMs
+
+        framesSinceDiagnostics = 0
 
         // The message carries its own list of cylinder states (it crosses to the frontend), so that list is new per
         // emission; the counts are fields, so the walk needs no closure.
@@ -274,7 +281,7 @@ class PlaybackEngineDispatcher(
                 renderHeadroom = avgHeadroom,
                 activeVoiceCount = diagnosticVoices,
                 cylinders = cylinderStates,
-                backendNowMs = endMs,
+                backendNowMs = context.clock.secAt(blockEndFrame) * 1000.0,
                 // The warehouse's own snapshot: rebuilt only when one of its parts changed.
                 warehouse = context.warehouse.stats(
                     droppedVoices = diagnosticDroppedVoices,
@@ -358,12 +365,16 @@ class PlaybackEngineDispatcher(
     internal fun engine(playbackId: String): PlaybackEngine? = engines[playbackId]
 
     companion object {
+        /** How much audio is rendered between two diagnostics: about fifty a second. */
+        const val DIAGNOSTICS_EVERY_SEC = 0.02
+
         /** Builds the backend host with its shared context + clock. Engines are created lazily per playback. */
         fun create(
             sampleRate: Int,
             blockFrames: Int,
             commLink: KlangCommLink.BackendEndpoint,
             performanceTimeMs: () -> Double,
+            voiceWatch: VoiceWatch? = null,
         ): PlaybackEngineDispatcher {
             val clock = BackendClock(sampleRate)
             val context = AudioBackendContext.create(
@@ -372,6 +383,7 @@ class PlaybackEngineDispatcher(
                 commLink = commLink,
                 clock = clock,
                 performanceTimeMs = performanceTimeMs,
+                voiceWatch = voiceWatch,
             )
             return PlaybackEngineDispatcher(context = context, clock = clock)
         }

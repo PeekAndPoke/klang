@@ -61,7 +61,7 @@ class KlangPatternSchedulerTempoSpec : StringSpec({
             replace.voices.single().data.freqHz shouldBe 1.0
             // Cycle 10 plays across the switch: its highlight ends on the map, a tenth on the old tempo, the rest on the new
             val highlighted = seen.drop(seenBefore).filterIsInstance<KlangPlaybackSignal.VoicesScheduled>().flatMap { it.voices }
-            highlighted.single { it.data.note == "10" }.endTime - START_SEC - 0.1 shouldBe (21.1 plusOrMinus eps)
+            highlighted.single { it.data.note == "10" }.endTime - START_SEC shouldBe (21.1 plusOrMinus eps)
             // The old tempo's highlights are cancelled first
             seen[seenBefore] shouldBe KlangPlaybackSignal.PatternUpdated
 
@@ -85,7 +85,7 @@ class KlangPatternSchedulerTempoSpec : StringSpec({
 
             // Cycle 9 ends at 20 s on the first tempo, cycle 10 at 21.5 s on the second
             val completed = seen.filterIsInstance<KlangPlaybackSignal.CycleCompleted>()
-            val ends = completed.filter { it.cycleIndex in 9..10 }.map { it.atTimeSec - START_SEC - 0.1 }
+            val ends = completed.filter { it.cycleIndex in 9..10 }.map { it.atTimeSec - START_SEC }
             ends.size shouldBe 2
             ends.zip(listOf(20.0, 21.5)).forEach { (end, expected) -> end shouldBe (expected plusOrMinus eps) }
         }
@@ -150,8 +150,8 @@ class KlangPatternSchedulerTempoSpec : StringSpec({
             val completed = seen.filterIsInstance<KlangPlaybackSignal.CycleCompleted>()
             completed.map { it.cycleIndex } shouldBe (0..12).toList()
 
-            // Each at the end of its cycle on the map, plus the clock sync's offset (0.1 s before any report)
-            val ends = completed.drop(10).map { it.atTimeSec - START_SEC - 0.1 }
+            // Each at the end of its cycle on the map; no report, no output latency
+            val ends = completed.drop(10).map { it.atTimeSec - START_SEC }
             ends.zip(listOf(21.1, 22.1, 23.1)).forEach { (end, expected) -> end shouldBe (expected plusOrMinus eps) }
         }
     }
@@ -205,7 +205,8 @@ class KlangPatternSchedulerTempoSpec : StringSpec({
                 // The signals go out at once, inside the round that sends them
                 callbackDispatcher = Dispatchers.Unconfined,
                 backendReady = backendReady,
-                clockSync = BackendClockSync(nowMs = nowMs),
+                // No report: the clock reads the spec's clock, the backend's timeline as the frontend found it
+                clock = PlaybackClock(localMs = nowMs),
                 diagnostics = KlangDiagnostics(
                     stream = StreamSource<KlangCommLink.Feedback.Diagnostics?>(null),
                     ticks = StreamSource(Unit),
@@ -223,7 +224,7 @@ class KlangPatternSchedulerTempoSpec : StringSpec({
                 context = context,
                 signals = signals,
                 registrar = context.registrarFor("tempo"),
-                nowMs = nowMs,
+                uiMs = nowMs,
                 pause = {
                     rig.idle.send(Unit)
                     rig.go.receive()

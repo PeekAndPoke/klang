@@ -22,6 +22,7 @@ import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import kotlin.math.ceil
 
 /**
  * The warehouse stats feed (KLANG-00177 (warehouse stats feed), maintainer 2026-09-04):
@@ -149,8 +150,10 @@ class WarehouseStatsSpec : StringSpec({
             )
         )
         val out = StereoBuffer(blockFrames)
-        // Diagnostics go out every ~20 ms of wall time; advance the fake clock past that.
-        repeat(3) {
+        // Diagnostics go out every 20 ms of audio rendered (KLANG-00399): render three of those.
+        val blocksPerReport = ceil(PlaybackEngineDispatcher.DIAGNOSTICS_EVERY_SEC * sampleRate / blockFrames).toInt()
+
+        repeat(3 * blocksPerReport) {
             now += 25.0
             dispatcher.renderBlock(dispatcher.clockForTest.cursorFrame, out)
         }

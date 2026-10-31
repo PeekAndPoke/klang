@@ -38,7 +38,7 @@ class AudioBackendContext(
     val katalystRegistry: KatalystRegistry,
     /** The single audio timeline (read-only here; written by the main loop via [BackendClock]). */
     val clock: RenderClock,
-    /** Wall clock in ms — for render-headroom measurement + FE drift reporting. */
+    /** Wall clock in ms, for the render headroom. The diagnostics report the timeline, never this (KLANG-00399). */
     val performanceTimeMs: () -> Double,
     /**
      * Fixed seed for the per-playback unison phase pools (`ignitor.PhasePools`); null = live —
@@ -46,6 +46,8 @@ class AudioBackendContext(
      * so pool vocabularies reproduce.
      */
     val phasePoolSeed: Int? = null,
+    /** What became of each voice at its start, for the [OfflineBackend]'s specs; null (the live backends) for nobody. */
+    val voiceWatch: VoiceWatch? = null,
     /**
      * Where the backend's expensive buffers come from — one per backend, shared across playbacks and
      * kept from the warmup engine rather than disposed with it. Owned here, not a Kotlin `object`,
@@ -97,6 +99,7 @@ class AudioBackendContext(
             clock: RenderClock,
             performanceTimeMs: () -> Double = { 0.0 },
             phasePoolSeed: Int? = null,
+            voiceWatch: VoiceWatch? = null,
         ): AudioBackendContext = AudioBackendContext(
             sampleRate = sampleRate,
             blockFrames = blockFrames,
@@ -106,6 +109,7 @@ class AudioBackendContext(
             katalystRegistry = KatalystRegistry(),
             clock = clock,
             performanceTimeMs = performanceTimeMs,
+            voiceWatch = voiceWatch,
         )
     }
 }

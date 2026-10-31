@@ -119,12 +119,13 @@ Two `KlangRingBuffer` channels: `frontend→backend` (Cmd) and `backend→fronte
 
 ### Feedback (backend → frontend)
 
-| Feedback subclass          | Payload         | Effect                                 |
-|----------------------------|-----------------|----------------------------------------|
-| `Feedback.RequestSample`   | `SampleRequest` | ask frontend to load + decode a sample |
-| `Feedback.SampleReceived`  | `SampleRequest` | confirm a sample was accepted          |
-| `Feedback.PlaybackLatency` | latency info    | diagnostics for timing calibration     |
-| `Feedback.Diagnostics`     | engine stats    | debug info (voice count, CPU, etc.)    |
+| Feedback subclass           | Payload         | Effect                                                                  |
+|-----------------------------|-----------------|-------------------------------------------------------------------------|
+| `Feedback.BackendReady`     | none            | the warmup is done; the first playback may start                        |
+| `Feedback.RequestSample`    | `SampleRequest` | ask frontend to load + decode a sample                                  |
+| `Feedback.SampleReceived`   | `SampleRequest` | confirm a sample was accepted                                           |
+| `Feedback.PlaybackAnchored` | `epochSec`      | where the backend started a playback; its time counts from there        |
+| `Feedback.Diagnostics`      | engine stats    | voice count, headroom, and the timeline the frontend's clock runs on    |
 
 ## Platform Backends
 

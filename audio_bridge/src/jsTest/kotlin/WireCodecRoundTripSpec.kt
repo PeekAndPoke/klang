@@ -376,8 +376,9 @@ class WireCodecRoundTripSpec : StringSpec({
         // and kept their signature. A deliberate wire change updates this number in the same change: step 3 of
         // KLANG-00302 (katalyst knob expressions) moved it from 1330155241 (the Katalyst knobs left
         // `IgnitorDsl` for `KatalystKnobDsl`), step 4 from 1168938423 (the knob expressions joined it), step 5a from
-        // 615137850 (the modulators joined it).
-        WIRE_SCHEMA_HASH shouldBe 211191718
+        // 615137850 (the modulators joined it); KLANG-00399 step 3a from 211191718 (Feedback.PlaybackAnchored joined
+        // it).
+        WIRE_SCHEMA_HASH shouldBe -1360551677
     }
 
     "ScheduledVoice round-trips a minimal (mostly-null) VoiceData" {
@@ -392,6 +393,7 @@ class WireCodecRoundTripSpec : StringSpec({
     "Feedback round-trips (sealed dispatch + nested list)" {
         val cases = listOf<KlangCommLink.Feedback>(
             KlangCommLink.Feedback.BackendReady(),
+            KlangCommLink.Feedback.PlaybackAnchored("pb", epochSec = 1234.5),
             KlangCommLink.Feedback.RequestSample("pb", SampleRequest(bank = "b", sound = "s", index = 1, note = "c3")),
             KlangCommLink.Feedback.Diagnostics(
                 playbackId = "pb", sampleRate = 48000, renderHeadroom = 0.8, activeVoiceCount = 3,

@@ -491,7 +491,13 @@ class VoiceScheduler(
             // every playback's first note was exactly one block late.
             val nowSec = context.clock.nowSec()
             val latency = maxOf(0.0, nowSec - voice.playbackStartTime)
-            playback = createPlaybackCtx(pid = voice.playbackId, nowSec = nowSec, epoch = voice.playbackStartTime + latency)
+            val pCtx = createPlaybackCtx(pid = voice.playbackId, nowSec = nowSec, epoch = voice.playbackStartTime + latency)
+            playback = pCtx
+
+            // The frontend counts the playback's time from here (KLANG-00399), not from the second it asked for
+            context.commLink.feedback.send(
+                KlangCommLink.Feedback.PlaybackAnchored(playbackId = voice.playbackId, epochSec = pCtx.epoch)
+            )
         }
     }
 
@@ -582,6 +588,7 @@ class VoiceScheduler(
             // on time nor shifted, and two silent-note bugs reachable only in that state.
             if (!(absoluteStartSec >= nowSec)) { // NaN-guard: a non-finite start is dropped like a late one
                 pCtx.droppedVoices++
+                context.voiceWatch?.late(playbackId = head.playbackId, data = head.data, atSec = absoluteStartSec)
                 continue
             }
 
@@ -624,13 +631,27 @@ class VoiceScheduler(
             removeDoneVoices()
         }
 
-        voiceFactory.makeVoice(
+        val voice = voiceFactory.makeVoice(
             scheduled = absoluteVoice,
             backendStartTimeSec = context.clock.startTimeSec,
             playbackCtx = pCtx,
             getSample = ::getCompleteSample,
-        )?.let { voice ->
+        )
+
+        if (voice != null) {
             active.add(ActiveVoice(voice = voice, sourceId = absoluteVoice.data.sourceId, origin = origin))
+        }
+
+        val watch = context.voiceWatch
+
+        if (watch != null) {
+            val playbackId = absoluteVoice.playbackId
+
+            if (voice != null) {
+                watch.started(playbackId = playbackId, data = absoluteVoice.data, atSec = absoluteVoice.startTime)
+            } else {
+                watch.soundless(playbackId = playbackId, data = absoluteVoice.data, atSec = absoluteVoice.startTime)
+            }
         }
     }
 

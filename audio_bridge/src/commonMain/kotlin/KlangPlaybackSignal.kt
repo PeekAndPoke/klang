@@ -61,7 +61,8 @@ sealed class KlangPlaybackSignal {
      * Stall-safe: if multiple cycles are missed due to CPU stalls, all cycles are emitted in order.
      *
      * @param cycleIndex The cycle that just completed (0-based). cycleIndex=0 means cycle [0,1) completed.
-     * @param atTimeSec Wall-clock boundary time in seconds (from KlangTime epoch), with latency offset applied.
+     * @param atTimeSec When the cycle's end is heard, in seconds on the UI's clock (`Date.now()` in the browser), the
+     *   output latency included (KLANG-00399).
      */
     data class CycleCompleted(
         val cycleIndex: Int,
@@ -72,8 +73,8 @@ sealed class KlangPlaybackSignal {
      * Emitted when voices are scheduled for a cycle chunk.
      * Contains all voices scheduled in this batch for efficient processing.
      *
-     * Note: Uses absolute wall-clock times (seconds from KlangTime epoch)
-     * for UI highlighting (compared with Date.now()).
+     * Note: its times are when a voice is heard, in seconds on the UI's clock (`Date.now()` in the browser, which the
+     * highlights compare with), the output latency included (KLANG-00399). Not `KlangTime`: after a sleep it can lag.
      */
     data class VoicesScheduled(
         /** All voice events scheduled in this batch */

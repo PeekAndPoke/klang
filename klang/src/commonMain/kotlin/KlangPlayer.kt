@@ -140,9 +140,9 @@ class KlangPlayer(
     // Completes once the backend has emitted Feedback.BackendReady (post-warmup).
     val backendReady = CompletableDeferred<Unit>()
 
-    // The single FE↔BE clock offset (GLOBAL) — corrected from the SYSTEM Diagnostics, read by controllers.
+    // The backend's timeline on the frontend (KLANG-00399): moved on by the SYSTEM Diagnostics, read by every playback.
     // (Inline-Ignitor and engine registries are playbackId-bound — they live on each playback now (InlineDslRegistrar), not the scheduler.)
-    private val clockSync = BackendClockSync()
+    private val clock = PlaybackClock()
 
     // Context bundle for playback implementations (reduces constructor parameter lists)
     val playbackContext = KlangPlaybackContext(
@@ -153,7 +153,7 @@ class KlangPlayer(
         fetcherDispatcher = fetcherDispatcher,
         callbackDispatcher = callbackDispatcher,
         backendReady = backendReady,
-        clockSync = clockSync,
+        clock = clock,
         diagnostics = diagnostics,
     )
 
@@ -224,8 +224,8 @@ class KlangPlayer(
 
                     // System messages go to player signals
                     is KlangCommLink.Feedback.Diagnostics -> {
-                        // Correct the single GLOBAL FE↔BE clock offset from the SYSTEM diagnostics stream.
-                        clockSync.onDiagnostics(feedback)
+                        // The backend's position: the diagnostics carry its timeline.
+                        clock.onDiagnostics(feedback)
 
                         if (!hasLoggedDiagnostics) {
                             hasLoggedDiagnostics = true

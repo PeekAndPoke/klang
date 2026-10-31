@@ -1,8 +1,9 @@
 # KLANG-00399: Frontend and backend on one clock: the backend's frames drive playback, an OfflineBackend tests it
 
-> **Status (2026-10-31): DESIGNED, step 1 done.** Analysis and design agreed with the maintainer, revised after a
-> design review (level 2); the maintainer chose A1, B and C (below). Step 1, the tempo map, is done; the later steps touch `audio_be` and
-> wait for Klang-Main-Dev's DSP refactoring to leave it.
+> **Status (2026-10-31): IN WORK, steps 1, 2 and 3a done.** Analysis and design agreed with the maintainer, revised
+> after a design review (level 2); the maintainer chose A1, B and C (below). Step 1 (the tempo map), step 2 (the
+> `OfflineBackend`) and step 3a (the backend's timeline, `PlaybackClock`, the anchor) are done; 3b to 3d follow.
+> Built in windows Klang-Main-Dev gave in `audio_be`.
 
 ## Why this exists
 
@@ -250,19 +251,58 @@ render near real time (`CorpusCheck` renders 256 cycles per song).
    `TempoMapSpec` (7), `KlangPatternSchedulerTempoSpec` (6, the loop stepped by hand on a fake clock); 14 mutants
    killed; three review rounds (level 2).
 2. **`OfflineBackend`, layer 1** (`audio_be`): the primitives and the hook. Its rows land with steps 3a to 3d.
+   **Done (2026-10-31):** `OfflineBackend` (the live dispatcher; `render`, `renderUntil`, `drain`; `BackendReady` at
+   once; the timeline from `startTimeSec`) and `VoiceWatch` (started, late, soundless, for each voice that reached its
+   start; null on the live path). The frontend-side primitives (a backend or a frontend that stands still, sleep,
+   drift) live in the klang rig built on it (`KlangPlaybackSyncSpec`), not in `audio_be`; the fast-forward waits for
+   the drift row. The holder reads the feedback as it renders: the link's ring is bounded.
 3. **The rework, in four cuts:**
    - 3a. The backend reports its timeline (choice A) with a cadence in frames, and `PlaybackAnchored`; the frontend
      estimates the position (`PlaybackClock`, or `BackendClockSync` turned into it). Fixes 2, 3, 4, 10.
+     **Done (2026-10-31):** the diagnostics carry the timeline at the end of the block, one per 20 ms of audio
+     rendered; `Feedback.PlaybackAnchored` from `ensureEpoch`; `PlaybackClock` replaces `BackendClockSync` (the last
+     report plus the local time since, capped at 3 of the longest of the last 16 report gaps within 0.1 to 0.5 s, so
+     bursts do not stop it; never backwards; before the first report a guess on the frontend's clock that holds
+     nothing back; a lock, as the JVM reads it from several threads). The scheduler: its time is `clock.nowSec() -
+     epochSec`, the epoch
+     asked for is the clock's now (choice C with no lead) and then the backend's anchor; `startTimeMs`, the
+     `localFrameCounter` (its `Int` too) and the scheduler's `KlangTime` for timing are gone. The UI's times are put
+     on `uiClockMs()`, which is `Date.now()` in the browser, the clock every consumer compares with, plus the output
+     latency. Deviation: a report is stamped where the player polls the link, not in `port.onmessage`, so every
+     estimate lags the backend by up to one poll (16 ms) plus the message's transit: highlights up to a frame late,
+     the look-ahead that much shorter. Small enough for now; the rig delivers with no poll, so no spec sees it.
+     Stamping in `onmessage` is the fix if it shows.
    - 3b. The pull API (choice B), lookahead in seconds, the bounded catch-up keeping control events, a one-shot's
      end on the clock, the lost-sample count. Fixes 5, 6, 7, 8, 11.
-   - 3c. `playbackStartTime` and the epoch's `max` as choice C decides.
-   - 3d. The UI consumers on `PlaybackClock`.
+     From 3a's review: the cap follows the longest recent report gap, so a stall of S raises it to 3 S (at most
+     0.5 s) for the next 16 reports; while it is up, the clock runs that far past a stalled backend: a playback
+     started then begins that much late, highlights come that much early, and a one-shot ending on the estimate
+     could still lose its last half second (problem 6). End a one-shot on the last reported position, not the
+     estimate; optionally let only a gap the backend kept up across (a burst) raise the cap.
+   - 3c. `playbackStartTime` and the epoch's `max` as choice C decides. From 3a's review: a pattern whose first sound
+     comes after the first fetches (an intro rest longer than the look-ahead) sends nothing at first, so the backend
+     sets the epoch only at the first voice, late, and `max` shifts the whole playback by that much; since 3a the
+     frontend follows the late anchor (highlights on the sound, the cycle counter pausing for the shift). Open the
+     playback at its start even when the first cycles are empty (accepting a past epoch instead would drop the first
+     note as late).
+   - 3d. The UI consumers on `PlaybackClock`. Checked on 3a (the maintainer, 2026-10-31: "check all consumers in the
+     frontend that displays things based on the timing of the audio-events"): the code highlights
+     (`CodeMirrorHighlightBuffer`), the mini-notation and staff editors (`MnEditorBase`, `NoteStaffEditor`), the ADSR
+     curves (`AdsrSignals`, `KlangAdsrCurve`) and the voice rain (`VoiceRain`) all compare the signals' times with
+     `Date.now()`, which the signals are now on, so they follow the backend with nothing else changed. Left for 3d:
+     the cycle counter (`KlangCodePlaybackCtrl`) counts a cycle when the scheduler sees it end, not when it is heard
+     (the output latency early, as before); Klang Amp's play time (`KlangampDeck`) is wall time since the start, so
+     after a stall it runs ahead of what played; `OneShotPlayback`'s end (3b).
    - Open from step 1's review: a voice kept by the grace window keeps the gate end the old tempo gave it, so on a
      faster tempo the note at the switch rings into the next one and its highlight ends before its sound. As before
      the map; decide in 3b whether a tempo change re-sends it.
    - Beside them, on a device: AudioContext state handling (`statechange`, `resume()` on a user gesture) for 9.
 4. **Layer 2:** the decisions above, then the offline renderer on the real player in lockstep; the render specs
    (klang, sprudel) on the real path; a render identical before and after (after the stable heap).
+   From 3a's review: an `OfflineBackend` at second 0 sends `BackendReady` before any report, so a playback asks for
+   its epoch from the clock's guess (the wall clock, about 1.8e9 s) and the backend never reaches it. The driver
+   gives the scheduler the backend's exact position first, or the `OfflineBackend` starts on the wall clock as the
+   live backends do.
 
 ## Acceptance
 
@@ -275,6 +315,8 @@ render near real time (`CorpusCheck` renders 256 cycles per song).
 
 ## Related
 
+- KLANG-00183 (worklet clock divergence): largely answered by step 3a, the frontend's clock running on the backend's
+  frames.
 - KLANG-00398 (a song started while the Motor loads plays on after its page is gone): the same scheduler, a separate
   fix.
 
@@ -297,3 +339,5 @@ render near real time (`CorpusCheck` renders 256 cycles per song).
 - 2026-10-31: revised after the design review: two new causes, the corrections, choices A to C, step 3 in four cuts.
 - 2026-10-31: the maintainer chose A1 (the diagnostics), B (the pull API, the live loop moves into a driver), C.
 - 2026-10-31: step 1 done, the tempo map (Klang-Research), built in a window Klang-Main-Dev gave.
+- 2026-10-31: steps 2 and 3a done (Klang-Research): the OfflineBackend, the backend's timeline in its reports,
+  `PlaybackClock`, the anchor; the UI consumers checked; reviews at level 2 and 3, the last clean.

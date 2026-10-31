@@ -224,6 +224,17 @@ class KlangCommLink(capacity: Int = 8192) {
             val req: SampleRequest,
         ) : Feedback
 
+        /**
+         * The backend started a playback (KLANG-00399): its second 0 is [epochSec] on the backend's timeline, the later
+         * of the `playbackStartTime` its first voice asked for and the backend's now. Sent once per start, a resume
+         * after a stop included; every voice's `startTime` counts from it.
+         */
+        @WireName("playback-anchored")
+        data class PlaybackAnchored(
+            override val playbackId: String,
+            val epochSec: Double,
+        ) : Feedback
+
         @WireName("diagnostics")
         data class Diagnostics(
             override val playbackId: String,
@@ -246,8 +257,9 @@ class KlangCommLink(capacity: Int = 8192) {
              */
             val cylinders: List<CylinderState>,
             /**
-             * Backend KlangTime.internalMsNow() at the moment this message was sent.
-             * Used by the frontend to continuously correct clock drift via EMA.
+             * The backend's timeline at the end of the block just rendered, in ms: its start plus the frames rendered,
+             * never a wall clock (KLANG-00399). A backend that stutters renders, and so reports, fewer frames. The
+             * frontend's `PlaybackClock` runs on it.
              */
             val backendNowMs: Double,
             /** AudioContext.baseLatency in ms (browser's audio processing pipeline). 0.0 on JVM. */
