@@ -234,22 +234,60 @@ will anyway change the way how oversampling works in the future so we need to ke
 3. The IIR half-band we have, for now; plan for configurable kernels.
 4. Yes: a body may generate its own source at the region rate.
 
-**A principle (maintainer, 2026-10-31):** up and down sampling as little as possible, and never repeatedly; the
-maintainer suspects that it creates serious artifacts. A blind test checks it first: `tmp/listening/resample-blind/`
-(untouched, 4 and 8 chained 4x round trips of the engine's `Oversampler`, music and clicks with hats; the key is held
-by the coordinator until the verdict). Measured on the clicks and hats: the level of every frequency is unchanged to
-22 kHz (0.00 dB), and the top arrives later than the rest, after 8 trips by 7.6 samples at 10 kHz, 22 at 15 kHz and 67
-at 20 kHz (the IIR's phase, section 8b), so a click is smeared at the very top.
+**A principle (maintainer, 2026-10-31):** up and down sampling as little as possible, and never repeatedly. A blind
+test checked whether repeated round trips are audible: `tmp/listening/resample-blind/` (untouched, 4 and 8 chained 4x
+round trips of the engine's `Oversampler`, music and clicks with hats, delay compensated). **Verdict: the maintainer
+heard no difference in any of them.** Measured on the clicks and hats: the level of every frequency is unchanged to
+22 kHz (0.00 dB); the top arrives later than the rest, after 8 trips by 7.6 samples at 10 kHz, 22 at 15 kHz and 67 at
+20 kHz (the IIR's phase, section 8b). So the principle stands as a matter of CPU and design cleanliness, and a
+conversion that cannot be avoided is not a sound problem.
 
-**New design questions (maintainer, 2026-10-31), open:**
-1. Can a source (`Osc.sine()`) produce an oversampled signal itself?
-2. Can an oversampled buffer pass from an Ignitor into a Katalyst, and how?
-3. How does nesting work?
-4. Filters at an oversampled rate, for performance: compute the coefficients at the base rate and apply them for the
-   N oversampled samples?
+## 10. The design (maintainer and coordinator, 2026-10-31)
+
+Answers to the four design questions of 2026-10-31 and what followed from them.
+
+**The buffer carries its rate.** A stage reads its rate from the buffer it receives; a conversion happens only where
+two rates meet, and only for the difference (in 2x steps of the cascade).
+
+**Two region doors** (replace the plain `oversample(n) { ... }` of section 2):
+- `oversampleBy(n) { ... }`: relative, multiplies the incoming rate (1x to 2x, 4x to 8x).
+- `oversampleAtLeast(n) { ... }`: a floor, steps up only to what is missing; at or above it, it is a no-op with no
+  conversion. The door for reusable pieces (a preset that needs 4x adds nothing inside an 8x region).
+- A region hands back the rate it was entered with.
+- Factors: rounded down to a power of two (3 to 2, 5 and 7 to 4); 1 or less is a no-op. The rate stops at 16x without
+  an error: a guard against absurd values only (a later "Ignitor analyzer" shows the cost).
+
+**Sources at the region rate:** yes. Oscillators read the sample rate from their context. Constants and knobs counted
+in samples (`SAW_RESET_SAMPLES`, `resetSamples`, `flankSamples`) mean base-rate samples and are scaled by the factor.
+
+**Nesting:** a nested region steps on from the current rate, never back to 1x in between. Adjacent regions (down, then
+up again) get an editor hint, never an engine merge (section 2: the engine never rewrites).
+
+**Filters:** the SVF already computes its coefficients twice per block, so their cost does not grow with the rate;
+the per-sample recurrence does, by N. A linear filter gains nothing in a region (TPT is prewarped): guidance and an
+editor hint, keep clean filters outside regions.
+
+**Orbits:** an orbit always ends at 1x before the master. Its rate comes from its own Katalyst chain: the rate its
+first stage asks for on a 1x input (a head `oversampleAtLeast(4) { ... }` makes it a 4x orbit; a chain that begins
+with an ordinary stage is a 1x orbit). No separate rate setting. The orbit keeps one mix bus per voice rate that
+occurs; each bus is converted once to the orbit's rate (one conversion per rate per orbit, never per voice), the
+buses aligned in phase like parallel branches.
+
+**Proposed, waiting for the maintainer:**
+- Where the orbit's rate is read: when the cylinder builds the chain from its `katalyst(...)` declaration (idle orbit:
+  at once; sounding orbit: the chain swap). The rate is a property of the built chain; during a swap each chain
+  converts the rate buses to its own rate.
+- A bus above the orbit's rate is stepped down to it (the chain runs at one rate; `AtLeast` at the head of an orbit is
+  read on 1x, not per bus).
+- A region at the very end of a voice hands over at its rate, so a 4x voice lands on a 4x orbit's bus directly; a
+  region in the middle of a voice closes normally.
+- What is written inside the braces runs at the region rate, what comes in from outside is converted:
+  `Ign.oversampleAtLeast(4) { Ign.sine().distort(0.5.ign) }` gives a sine born at 4x (no conversion up), while
+  `Ign.sine().oversampleAtLeast(4) { it.distort(0.5.ign) }` renders the sine at 1x and converts it up once.
 
 ## History
 
 - 2026-10-20: numbered KLANG-00214 (was `docs/tasks/oversampling-regions.md`).
 - 2026-10-27: part of KLANG-00354 (The Motor's shape: signal flow and the graph), the epic grouping.
 - 2026-10-31: the maintainer answered section 9, set the principle of as few conversions as possible, and asked four design questions; the blind test rendered.
+- 2026-10-31: blind test verdict (no difference heard); section 10, the design: two region doors, power-of-two factors capped at 16x, the orbit's rate from its chain.
