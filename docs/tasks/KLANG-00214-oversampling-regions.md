@@ -308,6 +308,33 @@ per voice today, one with a region).
   CPU before and after. A sound change is expected: the second clipper now sees the first one's harmonics above
   24 kHz, which each decimation used to remove.
 
+**Which nodes know the rate** (the maintainer's question, 2026-10-31: which nodes need adjustments at a higher rate,
+which do not care; asked as a question, not yet a change of step 1's scope). The audit of the 79 Ignitor node types (coordinator, 2026-10-31, from the code), the rule being that a node inside a
+region sounds as it does outside, only with less aliasing:
+- **Do not care** (pointwise or structural): `Abs`, `Affine`, `Ceil`, `Clamp`, `Constant`, `Div`, `Exp`, `Floor`,
+  `Frac`, `Freq`, `Lerp`, `Log`, `Max`, `Min`, `Minus`, `Mod`, `Neg`, `Param`, `Plus`, `Pow`, `Range`, `Recip`,
+  `Round`, `Select`, `Sign`, `Silence`, `Sq`, `Sqrt`, `Tanh`, `Times`, `Drive`, `Crush`, `Detune`, `Variants`,
+  `OptimizerHint`. The nonlinear ones among them gain: they alias less.
+- **Already read the rate from the context** (correct under the region's child context, to be pinned by tests): the
+  oscillators' pitch (`Sine` with its banks, `Saw`, `Ramp`, `Square`, `Pulze`, `Tri`, `Zawtooth`, `Zamp`, `RawPulze`,
+  the `Super*` family, `Impulse`'s rate), the filters (`Lowpass`, `Highpass`, `Bandpass`, `Notch`, `OnePoleLowpass`,
+  `Eq`, their envelopes and the humanize drift lane), the envelopes (`Adsr`; the frame counters scaled by the child
+  context), `Tremolo`, `Phaser`, `Vibrato`, `Accelerate`, `PitchEnvelope`, `Fm`, `PitchMod`, `PitchModSemitones`,
+  `Dust`'s density, the Karplus delay length, the analog drift lanes, `Parallel` (twins inside one region).
+- **Need a change** (something counted in samples or designed for one rate):
+  - the oscillator edges: `resetSamples` (saw, ramp), `flankSamples` (square), `PULSE_MIN_FLANK_SAMPLES`, scaled by
+    the factor;
+  - `Shape`, `Distort`: the own factor acts as `oversampleAtLeast` (the bridge), the DC blocker's pole mapped;
+  - `Coarse`: the hold factor scaled;
+  - `Shimmer`: its ring is 96,000 samples, sized for the rate;
+  - `Pluck`, `SuperPluck`: the brightness one-pole and the stiffness all-pass coefficients mapped;
+  - `Sample`: the playback rate is fixed at build for the base rate, divided by the factor;
+  - the noises: `WhiteNoise` (the level after decimation, the tilt filter), `PinkNoise` (a filter designed per sample,
+    the level), `BrownNoise` (the leak per sample, the level), `PerlinNoise` and `BerlinNoise` (the step per sample),
+    `Crackle` (a per-sample chaotic map, no rate mapping exists), `Dust` and `Impulse` (one-sample clicks lose level
+    after decimation);
+  - a pitch node outside a region over a source inside it: its modulation must reach the source at the region rate.
+
 **Later steps:** 2, sources inside the braces born at the region rate, the sample-counted knobs scaled; 3, a voice's
 end region hands over at its rate and the orbits get their rate and per-rate buses; 4, the stages' own `oversample`
 factors retired (section 9, answer 2) and the songs moved to regions; the full phase 0 (section 3) where a step needs
@@ -320,3 +347,4 @@ it.
 - 2026-10-31: the maintainer answered section 9, set the principle of as few conversions as possible, and asked four design questions; the blind test rendered.
 - 2026-10-31: blind test verdict (no difference heard); section 10, the design: two region doors, power-of-two factors capped at 16x, the orbit's rate from its chain.
 - 2026-10-31: section 10's proposals decided; section 11, build in steps on Der Schmetterling, step 1 the guitar preamps.
+- 2026-10-31: section 11, the audit of which Ignitor nodes know the rate.
