@@ -147,6 +147,7 @@ let makeGuitar = (rig) => {
   // synthetic (2026-09-14)
   return rig(signal)
     .mul(0.14)
+    .shape("soft", 4)
     .classic()
 }
 

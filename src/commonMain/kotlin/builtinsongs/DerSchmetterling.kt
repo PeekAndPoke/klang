@@ -23,7 +23,7 @@ import * from "sprudel"
 
 let feel          =    3    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
 let transposition =   -4    // -1 .. D# | 0 .. E | 1 .. F
-let drunk         =  1.2    // How many liters of beers did each band member have?
+let drunk         =  1.1    // How many liters of beers did each band member have?
 let snareHz       =  205    // Where does the snare cut through?
 
 // Guitar rig  ------------------------------------------------------------------------------------------------------------------------------------------------
@@ -172,7 +172,7 @@ let makeGuitar = (rig) => {
     // enable the phase-pool for consistent onsets and fundamentals
     .phasePool(on = 1, kMin = 0.60, kMax = 0.90, warmup = 0, selection = "normal")
     // character knobs, plain scalars on the supersaw builder
-    .spreadPower(1.0).sideAtten(0.5).gainJitter(0.10).centerJitter(0.50)
+    .spreadPower(1.0).sideAtten(0.5).gainJitter(0.20).centerJitter(0.50)
     // analog settings
     .analog(pAnalog).analogSpread(0.05)
   )
@@ -225,7 +225,7 @@ let bass = (() => {
 
   // Harmonics: sine partials at 2f .. 6f, gain 1/n, the fundamental left to the sub above. On the
   // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
-  let harmonics = Ign.sine(x => x.harmonics(6, 0.90).fundamental(0).analog(pAnalog).analogSpread(0.05)).mul(pHarm)
+  let harmonics = Ign.sine(x => x.harmonics(8, 0.90).fundamental(0).analog(pAnalog).analogSpread(0.05)).mul(pHarm)
 
   return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -3)) // let the snare cut through
@@ -272,7 +272,7 @@ export lead_shape = x => x.sound(marimba).ply("1|1|1|1|1|1|2".fast(3.sqrt())).ad
   .clip(0.80)
 
 export lead_arrange = x => x.orbit(0) //  .mute()
-  .scale("<e5:minor!48 e6:minor!16>").gain("<0.50!48 0.35!16>").gain(mul(0.26))
+  .scale("<e5:minor!48 e6:minor!16>").gain("<0.50!48 0.35!16>").gain(mul(0.27))
   .velocity()
   .shuffle("<1!80 1!1 4/8!14 1!33>")
   .mute("<1!64 0!32 1!48 0!16 1!32>")
@@ -313,7 +313,7 @@ export guitar2_arrange = x => x.orbit(2)  // . solo()
   .scale("<e2:minor>").gain(0.0975).mute("<0!128 1!16 0!16>") // .mute()
   .late(berlin(0.0006, 0.0009).mul(drunk).seed(2))
 
-export guitar2 = n(guitar2_pat).struct("<[x!16]!7 [x!24]!1 [x!8]!16>").apply(guitar2_shape).tag("guitar2")
+export guitar2 = n(guitar2_pat).struct("<[x!16]!7 [x!24]!1 [x!8]!15 [x!16]>").apply(guitar2_shape).tag("guitar2")
 
 // Guitar 3  --------------------------------------------------------------------------------------------------------------------------------------------------
 export guitar3_pat =
@@ -352,14 +352,14 @@ export bass_arrange = x => x.orbit(4) // . mute()
 export bass = n(bass_pat).struct(
   `< x x x [x x]  x x [x x] [x!4]    x x [x x] x  [x x] x x [x!4]
     [x x@2 x]!6 [x x]!2   [x x@2 [x!2]]!4 [x x] [x x] [x [x x]]!2
-    [x x] [x [x x]] [x x] [x [x x]]  [[x x] [~ x]] [x x] [[x x] x] [[x x] x]    [x x] [x [x x]] [x x] [x x?]  [[x x] x] [x x] [[x x] x]!2
+    [x x] [x [x x]] [x x] [x [x x]]  [[x x] [~ x]] [x x] [[x x] x] [[x x] x]    [x x] [x [x x]] [x@3 x] [x@3 x]  [[x x] x] [x x] [[x x] x]!2
     [x!4]!4 [[x x] x] [[x x] x] [[x x] x] [x!4]   [x!2 x@2] [x!2] [x!2 x@2] x [x x] [x [x x]] [x [x x]] [x@3 x]>`
 ).fast(2).apply(bass_shape).tag("bass")
 
 // Gummieimer  ------------------------------------------------------------------------------------------------------------------------------------------
 // A traditional Rubber-bucket, similar in design to a Orchestertrommel
 let gummiEimer = (() => {
-  let pAnalog = Ign.slot.analog.mul(30)
+  let pAnalog = Ign.slot.analog.mul(20)
  
   let ring = Ign.constant(320).div(Ign.freq()).mul(0.85)  
  
@@ -392,7 +392,7 @@ export trommel_shape = x => x.sound(gummiEimer).adsrOff() //  .solo()
   )
 
 export trommel_arrange = x => x.orbit(5)  // .solo(0.5)
-  .scale("e4:minor").gain(0.28)
+  .scale("e4:minor").gain(0.25)
   .mute("<1!96 0!32>")                          
 
 export trommel = n(trommel_pat).apply(trommel_shape).tag("trommel")
