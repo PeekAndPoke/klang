@@ -31,6 +31,7 @@ core/src/
     ├── modals/                   # Modal system
     ├── toasts/                   # Toast notifications
     ├── popups/                   # Popup/tooltip system
+    ├── dnd/                      # Drag and drop (DndManager, Drag, DndStage); every app registers it, no dnd() call
     ├── messages/                 # Message handling
     ├── routing/                  # Client-side router, route builder DSL
     ├── vdom/                     # VDom abstraction + Preact integration
@@ -104,7 +105,7 @@ Don't guess — the source is authoritative.
 ```
 semanticui/src/jsMain/kotlin/
 ├── forms/        # field_input.kt, field_checkbox.kt, field_textarea.kt, form_helpers.kt
-├── dnd/          # Dnd.kt, drag-handle.kt, drop-target.kt
+├── dnd/          # DropZoneState.kt (drag and drop itself is in core since 0.117.0)
 ├── components/   # CollapsableComponent
 ├── modals/       # OkCancelModal, FadingModal
 ├── menu/         # DropdownMenu
