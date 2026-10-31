@@ -1,7 +1,7 @@
 # KLANG-00399: Frontend and backend on one clock: the backend's frames drive playback, an OfflineBackend tests it
 
 > **Status (2026-10-31): DESIGNED.** Analysis and design agreed with the maintainer, revised after a design review
-> (level 2); three choices wait for the maintainer (below). Step 1 can start; the later steps touch `audio_be` and
+> (level 2); the maintainer chose A1, B and C (below). Step 1 can start; the later steps touch `audio_be` and
 > wait for Klang-Main-Dev's DSP refactoring to leave it.
 
 ## Why this exists
@@ -138,7 +138,7 @@ frontend; the seconds on the wire become a playback's own seconds, counted in th
 scheduler's own `KlangTime`, absolute times and offsets in the signals, the UI's `Date.now()` for audio; and, in step
 3c, `playbackStartTime` on the wire (choice C).
 
-## Choices for the maintainer
+## Choices (decided by the maintainer, 2026-10-31: A1, B, C)
 
 - **A. Where the frontend reads the backend's position.**
   (1) From the diagnostics: the backend puts its timeline in `backendNowMs` (what its KDoc already claims), with a
@@ -149,13 +149,19 @@ scheduler's own `KlangTime`, absolute times and offsets in the signals, the UI's
   rendered) with `performance.now()`, output-side, which is what the UI needs; the worklet's timeline aligns on
   `currentFrame`. No extrapolation, no cap, no jitter; the JVM and offline still need (1).
   Recommendation: (1) first, it is one code path and fixes the most; (2) later on JS if (1) shows jitter.
+  **Decided: (1), the diagnostics.**
 - **B. Report-driven scheduler or a pull API.** Reports reach the frontend through the same main thread and its
   16 ms poll, so "driven by reports" helps nothing against a main-thread stall. Recommendation: the pull API
   `tick(playbackNowSec)`, a timer live, the driver offline; it also makes lockstep simple.
+  **Decided: the pull API.** The 16 ms loop stays live; what changes is who owns it. Today the loop sits inside the
+  scheduler and reads the scheduler's own wall clock. Afterwards the scheduler is a plain object with `tick`, and
+  a small live driver keeps the loop: every 16 ms it calls `tick(clock.now())` with `PlaybackClock`'s time. The
+  offline driver calls the same `tick` with the backend's exact position, no timer at all.
 - **C. The epoch: "backend now" or `max(requested, now)`.** Keeping `max` with a requested start on the playback's
   own timeline costs nothing and leaves a door open (a start quantized to a bar of another playback). Recommendation:
   keep `max`, but the requested start is in timeline seconds the frontend learned from the backend, never a
   frontend clock.
+  **Decided: keep `max`, with the requested start in timeline seconds.**
 
 ## Testing: an OfflineBackend
 
@@ -281,3 +287,4 @@ render near real time (`CorpusCheck` renders 256 cycles per song).
 
 - 2026-10-31: created from the analysis with the maintainer (Klang-Research).
 - 2026-10-31: revised after the design review: two new causes, the corrections, choices A to C, step 3 in four cuts.
+- 2026-10-31: the maintainer chose A1 (the diagnostics), B (the pull API, the live loop moves into a driver), C.
