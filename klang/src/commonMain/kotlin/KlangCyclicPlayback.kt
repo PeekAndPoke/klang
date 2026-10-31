@@ -34,6 +34,12 @@ interface KlangCyclicPlayback : KlangPlayback {
     fun reemitVoiceSignals()
 
     /**
+     * The seconds of this playback heard so far: where the backend reported it was, less the output latency, from the
+     * playback's start (KLANG-00399). Stands still while the backend does. Null before the playback has started.
+     */
+    fun heardSec(): Double?
+
+    /**
      * Start playback with the given options.
      */
     fun start(options: Options = Options())

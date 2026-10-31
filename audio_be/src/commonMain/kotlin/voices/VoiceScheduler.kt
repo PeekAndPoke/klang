@@ -200,6 +200,9 @@ class VoiceScheduler(
      */
     fun droppedVoiceCount(): Int = playback?.droppedVoices ?: 0
 
+    /** The voices of this playback that made no sound (see [PlaybackCtx.soundlessVoices]). */
+    fun soundlessVoiceCount(): Int = playback?.soundlessVoices ?: 0
+
     /** Register a custom oscillator for THIS playback — lands on the per-engine fork, not the shared parent. */
     fun registerIgnitor(name: String, dsl: IgnitorDsl) = ignitorFork.register(name, dsl)
 
@@ -640,6 +643,8 @@ class VoiceScheduler(
 
         if (voice != null) {
             active.add(ActiveVoice(voice = voice, sourceId = absoluteVoice.data.sourceId, origin = origin))
+        } else {
+            pCtx.soundlessVoices++
         }
 
         val watch = context.voiceWatch

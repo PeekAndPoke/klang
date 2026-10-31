@@ -120,13 +120,17 @@ class OfflineBackendSpec : StringSpec({
         rig.seen.lines[1].second shouldBe (0.5 plusOrMinus 1e-9)
     }
 
-    "a sample voice without its sample makes no sound, and the watch says so" {
+    "a sample voice without its sample makes no sound: the watch says so, the diagnostics count it" {
         val rig = Rig()
 
         rig.send(note = "a", atSec = 0.1, sound = "no-such-sample")
         rig.backend.renderUntil(0.2)
 
         rig.seen.lines.map { it.first } shouldBe listOf("soundless a")
+        // Counted in the diagnostics, apart from the late voices
+        val diagnostics = rig.feedback().filterIsInstance<KlangCommLink.Feedback.Diagnostics>().last()
+        diagnostics.soundlessVoices shouldBe 1
+        diagnostics.warehouse.droppedVoices shouldBe 0
     }
 
     "the backend tells the frontend where it started a playback, once per start" {

@@ -52,6 +52,8 @@ internal class ContinuousPlayback internal constructor(
         controller.reemitVoiceSignals()
     }
 
+    override fun heardSec(): Double? = controller.heardSec()
+
     override fun start() {
         start(KlangCyclicPlayback.Options())
     }

@@ -221,7 +221,7 @@ class KlangampPlayer(ctx: Ctx<Props>) : Component<KlangampPlayer.Props>(ctx) {
     private fun DIV.renderMain() {
         val now = nowPlaying
         val index = KlangampDeck.indexOf(now)
-        val seconds = KlangampDeck.secondsAt(nowMs)
+        val seconds = KlangampDeck.seconds()
 
         div {
             css {

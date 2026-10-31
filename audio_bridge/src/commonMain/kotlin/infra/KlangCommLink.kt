@@ -278,6 +278,11 @@ class KlangCommLink(capacity: Int = 8192) {
              * changes; the snapshot is rebuilt only then), so reading is a plain read.
              */
             val warehouse: WarehouseStats,
+            /**
+             * Voices that made no sound: their sample had not arrived (or was empty) or their sound was unknown, summed
+             * over the playbacks (KLANG-00399). Counted apart from the late voices, which the warehouse stats carry.
+             */
+            val soundlessVoices: Int = 0,
         ) : Feedback {
             data class CylinderState(
                 /** Cylinder ID (0-15 typically) */

@@ -8,8 +8,8 @@ package io.peekandpoke.klang.visuals
 import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.Song
+import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
 import io.peekandpoke.klang.comp.KlangCodePlaybackCtrl
-import kotlin.js.Date
 
 /**
  * Klangamp's deck: the one player its playlists play the built-in songs on (the maintainer, 2026-10-29: "a playlist of
@@ -23,21 +23,19 @@ object KlangampDeck {
      */
     private val ctrl: KlangCodePlaybackCtrl by lazy { KlangCodePlaybackCtrl.builder().exclusive().build() }
 
-    /** When the playback now on stage started; null while nothing plays. */
-    private var startedMs: Double? = null
+    /** The playback now on stage; null while nothing plays. */
+    private var playing: KlangCyclicPlayback? = null
 
-    private var lastPlayback: Any? = null
-
-    /** Called by whoever shows the time, on each change of what plays: the start of a new playback is noted. */
+    /** Called by whoever shows the time, on each change of what plays. */
     fun noteNowPlaying(now: Player.NowPlaying?) {
-        if (now?.playback != lastPlayback) {
-            startedMs = if (now == null) null else Date.now()
-            lastPlayback = now?.playback
-        }
+        playing = now?.playback
     }
 
-    /** The seconds the playback on stage has played at [nowMs]; null while nothing plays. */
-    fun secondsAt(nowMs: Double): Int? = startedMs?.let { ((nowMs - it) / 1000).toInt().coerceAtLeast(0) }
+    /**
+     * The seconds the playback on stage has been heard; null while nothing plays. Counted on the backend's position,
+     * not the wall clock (KLANG-00399): after a stall it shows what played, not the time that passed.
+     */
+    fun seconds(): Int? = playing?.heardSec()?.toInt()
 
     /** The built-in song [now] plays, by its place in the list; -1 when nothing plays or it is not one of them. */
     fun indexOf(now: Player.NowPlaying?): Int = now?.let { n -> BuiltInSongs.songs.indexOfFirst { it.title == n.title } } ?: -1

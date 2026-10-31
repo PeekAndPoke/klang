@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_engine
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeLessThan
+import io.kotest.matchers.ints.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBackend
 import io.peekandpoke.klang.audio_be.OfflineBackend
@@ -15,6 +16,7 @@ import io.peekandpoke.klang.audio_be.VoiceWatch
 import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_bridge.KlangPatternEvent
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
+import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_fe.samples.NullAudioDecoder
@@ -34,7 +36,7 @@ import kotlin.math.min
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * The frontend and the backend on one clock (KLANG-00399, step 3a): a [KlangPatternScheduler] wired to an
+ * The frontend and the backend on one clock (KLANG-00399, steps 3a to 3c): a [KlangPatternScheduler] wired to an
  * [OfflineBackend], the frontend's time a fake and the backend rendering only when the spec says so. The playback's
  * time is the backend's, as [PlaybackClock] knows it from its reports, and counts from where the backend started the
  * playback ([KlangCommLink.Feedback.PlaybackAnchored]).
@@ -92,19 +94,147 @@ class KlangPlaybackSyncSpec : StringSpec({
             sync.highlightAt("3") shouldBe (sync.heardAt("3") plusOrMinus 0.03)
         }
     }
+
+    "a main thread that stalls for 1.2 s at 120 rpm loses nothing: the look-ahead is at least 1.5 s" {
+        withSync { sync ->
+            sync.run(ms = 500.0)
+            sync.start(KlangCyclicPlayback.Options(rpm = 120.0, prefetchCycles = 0))
+            sync.run(ms = 2000.0)
+
+            // Two cycles are one second at 120 rpm; the main thread stands still for longer, the backend plays on
+            sync.run(ms = 1200.0, frontendRuns = false)
+            sync.run(ms = 3000.0)
+
+            sync.late shouldBe emptyList()
+        }
+    }
+
+    "after a stall longer than the look-ahead, the cycles gone by are skipped, the state they set holds" {
+        withSync(pattern = everyCycle(masters = true)) { sync ->
+            sync.run(ms = 500.0)
+            sync.start(rpm60)
+            sync.run(ms = 1000.0)
+
+            // The main thread stands still for five seconds: cycles 3 to 5 go by unsent
+            sync.run(ms = 5000.0, frontendRuns = false)
+            sync.run(ms = 1000.0)
+
+            // Their sounds are not sent late; at most the note of the cycle now running comes late
+            sync.late.filter { it in listOf("3", "4", "5") } shouldBe emptyList()
+            sync.late.size shouldBeLessThanOrEqual 1
+            // The master the last of them set is sent as a control event, so it holds from now on; at its own second,
+            // before cycle 6's, so the current cycle's newer master, sent late, still comes after it
+            val controls = sync.sent.filter { it.data.control == true }
+            controls.map { it.data.master } shouldBe listOf("m5")
+            controls.single().startTime shouldBe (5.0 plusOrMinus 1e-9)
+        }
+    }
+
+    "after a stall longer than the look-ahead, a solo control still running holds on; an ended one and a note's do not" {
+        // Solo control events: at cycle 3 one cycle long (over by now), at cycle 4 four cycles long (on to cycle 8);
+        // and a soloed note at cycle 4, which never sets a solo's end (SoloTracker)
+        val soloed = object : KlangPattern {
+            private val notes = listOf(
+                Note(cycle = 3, master = false, solo = 1.0, cycles = 1.0, control = true),
+                Note(cycle = 4, master = false, solo = 1.0, cycles = 4.0, control = true),
+                Note(cycle = 4, master = false, solo = 1.0, cycles = 5.0),
+            )
+
+            override fun queryEvents(fromCycles: Double, toCycles: Double, cps: Double): List<KlangPatternEvent> =
+                notes.filter { it.startCycles >= fromCycles && it.startCycles < toCycles }
+        }
+
+        withSync(pattern = soloed) { sync ->
+            sync.run(ms = 500.0)
+            sync.start(rpm60)
+            sync.run(ms = 1000.0)
+
+            // The stall skips cycles 3 to 5
+            sync.run(ms = 5000.0, frontendRuns = false)
+            sync.run(ms = 1000.0)
+
+            val solos = sync.sent.filter { it.data.control == true && it.data.solo != null }
+            solos.map { it.startTime to it.gateEndTime } shouldBe listOf(4.0 to 8.0)
+        }
+    }
+
+    "a cycle counts as completed only when the backend has rendered it, not when the clock runs on past a stall" {
+        withSync { sync ->
+            sync.run(ms = 500.0)
+            sync.start(rpm60)
+            sync.run(ms = 500.0)
+            val epoch = sync.epochSec()
+
+            // Cycle 2 ends at 3 s; the backend stops 50 ms before, the clock runs on past it by its cap
+            sync.runUntilBackendAt(epoch + 2.95)
+            sync.run(ms = 1000.0, backendRuns = false)
+            sync.completed() shouldBe listOf(0, 1)
+
+            sync.run(ms = 500.0)
+            sync.completed() shouldBe listOf(0, 1, 2)
+        }
+    }
+
+    "a playback that begins with rests starts when it is asked to, not at its first sound" {
+        withSync(pattern = everyCycle(from = 3)) { sync ->
+            sync.run(ms = 500.0)
+            val askedAt = sync.backend.nowSec
+
+            sync.start(rpm60)
+            sync.run(ms = 5000.0)
+
+            // Cycle 3 three seconds after the start, give or take the step the backend takes the start in
+            sync.startedAt("3") - askedAt shouldBe (3.0 plusOrMinus 0.05)
+        }
+    }
+
+    "the time heard counts what the backend played, less the output latency, and stands still with it" {
+        withSync { sync ->
+            sync.run(ms = 500.0)
+            sync.start(rpm60)
+            sync.run(ms = 2000.0)
+
+            // On the backend's last report, from the playback's start, the 100 ms output latency off
+            val played = sync.backend.nowSec - sync.epochSec()
+            sync.heardSec() shouldBe (played - 0.1 plusOrMinus 0.03)
+
+            // The backend stands still for three seconds: so does the time heard
+            sync.run(ms = 3000.0, backendRuns = false)
+            sync.heardSec() shouldBe (played - 0.1 plusOrMinus 0.03)
+        }
+    }
+
+    "after half an hour asleep the playback goes on from where the backend stood: no flood, nothing late" {
+        withSync { sync ->
+            sync.run(ms = 500.0)
+            sync.start(rpm60)
+            sync.run(ms = 2000.0)
+
+            // The audio stopped while the machine slept; the frontend's clock ran on
+            sync.run(ms = 30 * 60 * 1000.0, backendRuns = false, stepMs = 1000.0)
+            sync.run(ms = 3000.0)
+
+            sync.late shouldBe emptyList()
+            val ahead = sync.latestSentSec() - (sync.backend.nowSec - sync.epochSec())
+            ahead shouldBeLessThan 2.5
+        }
+    }
 }) {
     private companion object {
         const val SAMPLE_RATE = 48000
         const val BLOCK = 128
 
-        /** One note on every cycle, a cycle long, named after its cycle. */
-        val everyCycle = object : KlangPattern {
+        /**
+         * One note on every cycle from cycle [from] on, a cycle long, named after its cycle; with [masters], each sets
+         * the master "m<cycle>".
+         */
+        fun everyCycle(from: Int = 0, masters: Boolean = false) = object : KlangPattern {
             override fun queryEvents(fromCycles: Double, toCycles: Double, cps: Double): List<KlangPatternEvent> =
-                (ceil(fromCycles).toInt() until ceil(toCycles).toInt()).map { Note(cycle = it) }
+                (maxOf(from, ceil(fromCycles).toInt()) until ceil(toCycles).toInt()).map { Note(cycle = it, master = masters) }
         }
 
-        private suspend fun withSync(test: suspend (Sync) -> Unit) {
-            val sync = Sync()
+        private suspend fun withSync(pattern: KlangPattern = everyCycle(), test: suspend (Sync) -> Unit) {
+            val sync = Sync(pattern)
 
             try {
                 withTimeout(30.seconds) {
@@ -116,11 +246,23 @@ class KlangPlaybackSyncSpec : StringSpec({
         }
     }
 
-    private class Note(cycle: Int) : KlangPatternEvent {
+    private class Note(
+        cycle: Int,
+        master: Boolean,
+        solo: Double? = null,
+        cycles: Double = 1.0,
+        control: Boolean? = null,
+    ) : KlangPatternEvent {
         override val startCycles = cycle.toDouble()
-        override val durationCycles = 1.0
+        override val durationCycles = cycles
         override val sourceLocations: SourceLocationChain? = null
-        private val data = VoiceData.empty.copy(note = "$cycle")
+        private val data = VoiceData.empty.copy(
+            note = "$cycle",
+            master = if (master) "m$cycle" else null,
+            solo = solo,
+            sourceId = if (solo != null) "s$cycle" else null,
+            control = control,
+        )
 
         override fun toVoiceData() = data
     }
@@ -130,7 +272,7 @@ class KlangPlaybackSyncSpec : StringSpec({
      * [lagSec] while both run, and falls further behind when it stands still. The scheduler's loop is stepped by hand:
      * one round per 16 ms step of [run], after the feedback is delivered.
      */
-    private class Sync {
+    private class Sync(pattern: KlangPattern) {
         var localMs = 1_000_000.0
         var lagSec = 0.0
 
@@ -143,6 +285,12 @@ class KlangPlaybackSyncSpec : StringSpec({
         private val link = KlangCommLink(capacity = 16384)
         private val started = mutableMapOf<String, Double>()
         private val sentStarts = mutableListOf<Double>()
+
+        /** The notes the backend dropped as late. */
+        val late = mutableListOf<String>()
+
+        /** Every voice sent to the backend. */
+        val sent = mutableListOf<ScheduledVoice>()
         private val seen = mutableListOf<KlangPlaybackSignal>()
         private val idle = Channel<Unit>()
         private val go = Channel<Unit>()
@@ -157,6 +305,10 @@ class KlangPlaybackSyncSpec : StringSpec({
             voiceWatch = object : VoiceWatch {
                 override fun started(playbackId: String, data: VoiceData, atSec: Double) {
                     started[data.note ?: ""] = atSec
+                }
+
+                override fun late(playbackId: String, data: VoiceData, atSec: Double) {
+                    late += data.note ?: ""
                 }
             },
         )
@@ -180,6 +332,7 @@ class KlangPlaybackSyncSpec : StringSpec({
             val sendControl = { cmd: KlangCommLink.Cmd ->
                 if (cmd is KlangCommLink.Cmd.ScheduleVoices) {
                     sentStarts += cmd.voices.map { it.startTime }
+                    sent += cmd.voices
                 }
 
                 link.frontend.control.send(cmd)
@@ -209,7 +362,7 @@ class KlangPlaybackSyncSpec : StringSpec({
 
             scheduler = KlangPatternScheduler(
                 playbackId = "sync",
-                pattern = everyCycle,
+                pattern = pattern,
                 context = context,
                 signals = signals,
                 registrar = context.registrarFor("sync"),
@@ -229,14 +382,15 @@ class KlangPlaybackSyncSpec : StringSpec({
         }
 
         /**
-         * [ms] pass in steps of 16 ms. Each step the backend renders up to the wall clock less [lagSec], or stands
-         * still ([backendRuns] false: the lag grows), the feedback reaches the frontend, and the scheduler runs a round.
+         * [ms] pass in steps of [stepMs]. Each step the backend renders up to the wall clock less [lagSec], or stands
+         * still ([backendRuns] false: the lag grows), the feedback reaches the frontend, and the scheduler runs a round,
+         * unless the main thread stands still ([frontendRuns] false: no feedback read, no round).
          */
-        suspend fun run(ms: Double, backendRuns: Boolean = true) {
+        suspend fun run(ms: Double, backendRuns: Boolean = true, frontendRuns: Boolean = true, stepMs: Double = 16.0) {
             var left = ms
 
             while (left > 0.0) {
-                val step = min(16.0, left)
+                val step = min(stepMs, left)
                 localMs += step
                 left -= step
 
@@ -244,6 +398,10 @@ class KlangPlaybackSyncSpec : StringSpec({
                     backend.renderUntil(localMs / 1000.0 - lagSec)
                 } else {
                     lagSec += step / 1000.0
+                }
+
+                if (!frontendRuns) {
+                    continue
                 }
 
                 deliver()
@@ -267,6 +425,19 @@ class KlangPlaybackSyncSpec : StringSpec({
                 }
             }
         }
+
+        /** Runs in steps until the backend has rendered up to [sec]. */
+        suspend fun runUntilBackendAt(sec: Double) {
+            while (backend.nowSec < sec) {
+                run(ms = 16.0)
+            }
+        }
+
+        /** The playback's seconds heard so far ([KlangPatternScheduler.heardSec]). */
+        fun heardSec(): Double = scheduler.heardSec() ?: Double.NaN
+
+        /** The cycles reported completed so far. */
+        fun completed(): List<Int> = seen.filterIsInstance<KlangPlaybackSignal.CycleCompleted>().map { it.cycleIndex }
 
         /** The backend second the voice of [note] started at. */
         fun startedAt(note: String): Double = started.getValue(note)

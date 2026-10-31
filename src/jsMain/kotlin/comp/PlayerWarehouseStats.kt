@@ -47,6 +47,9 @@ class PlayerWarehouseStats(ctx: NoProps) : PureComponent(ctx) {
         Player.diagnostics.stream.map { it?.warehouse }.distinct()
     )
 
+    /** The voices that made no sound, beside the warehouse's late ones (KLANG-00399). */
+    private val soundless: Int by subscribingTo(Player.diagnostics.stream.map { it?.soundlessVoices ?: 0 }.distinct())
+
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     override fun VDom.render() {
@@ -153,6 +156,14 @@ class PlayerWarehouseStats(ctx: NoProps) : PureComponent(ctx) {
             unit = "dropped",
             details = listOf("since the start"),
             warn = w.droppedVoices > 0,
+        )
+        tile(
+            name = "Silent voices",
+            hint = "Voices that made no sound: their sample had not arrived in time, or their sound was unknown",
+            figure = soundless.toString(),
+            unit = "silent",
+            details = listOf("since the start"),
+            warn = soundless > 0,
         )
         tile(
             name = "Playing dry",

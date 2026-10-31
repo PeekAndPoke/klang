@@ -107,6 +107,22 @@ internal class PlaybackClock(
         }
     }
 
+    /**
+     * Where the backend said it was in its last report, no run-on (KLANG-00399, step 3b): what has surely been rendered.
+     * What ends with the sound (a cycle completed, a one-shot's stop) waits for this, not for [nowSec], which may run up
+     * to [capSec] ahead of a backend that stalled. Before the first report, the same guess as [nowSec].
+     */
+    fun reportedSec(): Double {
+        val atMs = localMs()
+
+        return lock.withLock {
+            when {
+                reportSec.isNaN() -> atMs / 1000.0
+                else -> reportSec
+            }
+        }
+    }
+
     private fun longestGap(): Double {
         var longest = 0.0
 

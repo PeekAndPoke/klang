@@ -10,6 +10,7 @@ import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_bridge.KlangTime
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
+import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.common.infra.KlangAtomicBool
 import io.peekandpoke.klang.common.infra.KlangLock
@@ -63,6 +64,18 @@ internal class KlangPatternScheduler(
 
         /** How often the pattern's work is posted: as the diagnostics read it, four times a second. */
         const val RUNTIME_WINDOW_MS = 250.0
+
+        /**
+         * The least look-ahead, in seconds, whatever the tempo (KLANG-00399, step 3b): a main thread that stalls for less
+         * loses no voice. Two cycles are one second at 120 rpm and 0.12 s at 999 rpm, too little for a busy phone.
+         */
+        const val LOOKAHEAD_MIN_SEC = 1.5
+
+        /**
+         * How many of the cycles a catch-up skips are read for the state they set: a main thread that stalled for longer
+         * than this gets the state of the last ones only, and the catch-up stays short.
+         */
+        const val CATCH_UP_MAX_CYCLES = 64.0
     }
 
     // Extract dependencies from context for convenience
@@ -97,6 +110,7 @@ internal class KlangPatternScheduler(
      * A reader takes it once and keeps that map for its whole computation.
      */
     private var tempo = TempoMap(cyclesPerSecond = 0.5)
+    /** The look-ahead in cycles, at least [LOOKAHEAD_MIN_SEC] seconds of them. */
     private var lookaheadCycles: Double = 2.0
 
     // ===== Fetcher State =====
@@ -359,9 +373,10 @@ internal class KlangPatternScheduler(
         // voices in the batch slip into the past.
         try {
             val firstCycleEvents = queryEvents(from = 0.0, to = fetchChunk, sendSignals = true)
-            if (firstCycleEvents.isNotEmpty()) {
-                sendControl(KlangCommLink.Cmd.ScheduleVoices(playbackId = playbackId, voices = firstCycleEvents))
-            }
+            // A first cycle with nothing in it still opens the playback, so the backend starts it now, where it was
+            // asked to, not at the first sound (KLANG-00399, step 3c): a silent control event at second 0
+            val opening = firstCycleEvents.ifEmpty { listOf(openingEvent()) }
+            sendControl(KlangCommLink.Cmd.ScheduleVoices(playbackId = playbackId, voices = opening))
             queryCursorCycles = fetchChunk
         } catch (e: Exception) {
             e.printStackTrace()
@@ -370,21 +385,100 @@ internal class KlangPatternScheduler(
         // Emit started signal
         signals(KlangPlaybackSignal.PlaybackStarted)
 
+        // The live driver: asks the scheduler every round with the playback clock's time
         while (scope.isActive) {
-            // Emit completed cycles (stall-safe)
-            emitCompletedCycles()
-            // Look ahead for sample sound
-            lookAheadForSampleSounds(from = queryCursorCycles + sampleSoundLookAheadCycles, dur = 1.0)
-            // Request the next cycles from the source
-            requestNextCyclesAndAdvanceCursor()
-            // The share of real time the pattern's queries took, now and then
-            postRuntime()
+            tick(nowSec = elapsedSec())
             // roughly 60 FPS
             pause()
         }
 
         println("KlangPatternScheduler stopped")
     }
+
+    /**
+     * One round at [nowSec], the playback's time (KLANG-00399, choice B): the scheduler keeps no time of its own, it is
+     * asked. The live loop asks every 16 ms with the playback clock's time; an offline driver can ask with the
+     * backend's exact position.
+     */
+    internal fun tick(nowSec: Double) {
+        // Emit completed cycles (stall-safe)
+        emitCompletedCycles()
+        // Behind now after a stall: skip what has gone by, keep the state it set
+        catchUp(nowSec)
+        // Look ahead for sample sound
+        lookAheadForSampleSounds(from = queryCursorCycles + sampleSoundLookAheadCycles, dur = 1.0)
+        // Request the next cycles from the source
+        requestNextCyclesAndAdvanceCursor(nowSec)
+        // The share of real time the pattern's queries took, now and then
+        postRuntime()
+    }
+
+    /**
+     * When the query cursor is behind [nowSec] (the main thread stalled for longer than the look-ahead), the cycles up
+     * to now have gone by: their voices would come late, and the backend would drop them. They are skipped, but the
+     * state they set holds from now on, so it is sent as control events, each carrying one kind of state: the last
+     * `master`, the last `katalyst` of each orbit, and every solo control event that has not ended yet (a note's own
+     * solo never sets the end, `SoloTracker`, so a skipped note's is not sent). They keep their own
+     * times, which have gone by: the backend applies a control event's state even when it comes late, and in time
+     * order, so the current cycle's newer state, sent next, still wins. At most [CATCH_UP_MAX_CYCLES] cycles are read.
+     */
+    private fun catchUp(nowSec: Double) {
+        val nowCycle = floor(tempo.cycleAt(nowSec))
+
+        if (queryCursorCycles >= nowCycle) {
+            return
+        }
+
+        val from = maxOf(queryCursorCycles, nowCycle - CATCH_UP_MAX_CYCLES)
+        queryCursorCycles = nowCycle
+
+        // In time order: the events come grouped by cycle, in no order within one
+        val skipped = try {
+            queryEvents(from = from, to = nowCycle, sendSignals = false).sortedBy { it.startTime }
+        } catch (t: Throwable) {
+            if (t is CancellationException) {
+                throw t
+            }
+
+            t.printStackTrace()
+
+            return
+        }
+
+        val master = skipped.lastOrNull { it.data.master != null }
+            ?.let { it.control(it.data.copy(katalyst = null, solo = null)) }
+        val katalysts = skipped.filter { it.data.katalyst != null }
+            .associateBy { it.data.cylinder ?: 0 }.values
+            .map { it.control(it.data.copy(master = null, solo = null)) }
+        val solos = skipped.filter { it.data.control == true && it.data.solo != null && it.gateEndTime > nowSec }
+            .map { it.control(it.data.copy(master = null, katalyst = null)) }
+
+        val controls = (listOfNotNull(master) + katalysts + solos).sortedBy { it.startTime }
+
+        if (controls.isEmpty()) {
+            return
+        }
+
+        sendControl(KlangCommLink.Cmd.ScheduleVoices(playbackId = playbackId, voices = controls))
+    }
+
+    /** This event as a control event carrying [data]: it sets state, it sounds no note. */
+    private fun ScheduledVoice.control(data: VoiceData): ScheduledVoice = copy(data = data.copy(control = true))
+
+    /** See [KlangCyclicPlayback.heardSec]. */
+    fun heardSec(): Double? = when {
+        begun -> maxOf(0.0, clock.reportedSec() - epochSec - clock.outputLatencySec)
+        else -> null
+    }
+
+    /** A control event that sets nothing, at the playback's second 0: it only makes the backend start the playback. */
+    private fun openingEvent(): ScheduledVoice = ScheduledVoice(
+        playbackId = playbackId,
+        data = VoiceData.empty.copy(control = true),
+        startTime = 0.0,
+        gateEndTime = 0.0,
+        playbackStartTime = requestedEpochSec,
+    )
 
     /** The seconds since the playback's start, on the backend's timeline. */
     private fun elapsedSec(): Double = clock.nowSec() - epochSec
@@ -406,7 +500,9 @@ internal class KlangPatternScheduler(
         }
 
         val map = tempo
-        val completedCycle = floor(map.cycleAt(elapsedSec())).toInt() - 1
+        // On what the backend reported, not on the run-on past it: a cycle is completed when it has surely been
+        // rendered, so a one-shot that stops on its last cycle loses nothing to a stalled backend (KLANG-00399)
+        val completedCycle = floor(map.cycleAt(clock.reportedSec() - epochSec)).toInt() - 1
 
         if (completedCycle > lastEmittedCycle) {
             // Emit all missing cycles in order
@@ -562,9 +658,12 @@ internal class KlangPatternScheduler(
      */
     private fun getNowCycle(): Double = tempo.cycleAt(elapsedSec())
 
-    private fun requestNextCyclesAndAdvanceCursor() {
-        val nowCycles = tempo.cycleAt(elapsedSec())
-        val targetCycles = nowCycles + lookaheadCycles
+    private fun requestNextCyclesAndAdvanceCursor(nowSec: Double) {
+        // The look-ahead in seconds: its cycles, but never less than LOOKAHEAD_MIN_SEC
+        val map = tempo
+        val nowCycles = map.cycleAt(nowSec)
+        val lookaheadSec = maxOf(LOOKAHEAD_MIN_SEC, map.secondsAt(nowCycles + lookaheadCycles) - nowSec)
+        val targetCycles = map.cycleAt(nowSec + lookaheadSec)
 
         // Fetch as many new cycles as needed
         while (queryCursorCycles < targetCycles) {
@@ -580,7 +679,10 @@ internal class KlangPatternScheduler(
 
                 queryCursorCycles = to
             } catch (t: Throwable) {
-                if (t is CancellationException) throw t
+                if (t is CancellationException) {
+                    throw t
+                }
+
                 t.printStackTrace()
             }
         }

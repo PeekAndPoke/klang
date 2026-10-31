@@ -377,8 +377,8 @@ class WireCodecRoundTripSpec : StringSpec({
         // KLANG-00302 (katalyst knob expressions) moved it from 1330155241 (the Katalyst knobs left
         // `IgnitorDsl` for `KatalystKnobDsl`), step 4 from 1168938423 (the knob expressions joined it), step 5a from
         // 615137850 (the modulators joined it); KLANG-00399 step 3a from 211191718 (Feedback.PlaybackAnchored joined
-        // it).
-        WIRE_SCHEMA_HASH shouldBe -1360551677
+        // it), step 3b from -1360551677 (Diagnostics.soundlessVoices joined it).
+        WIRE_SCHEMA_HASH shouldBe 170881894
     }
 
     "ScheduledVoice round-trips a minimal (mostly-null) VoiceData" {
@@ -417,6 +417,7 @@ class WireCodecRoundTripSpec : StringSpec({
                     sampleBytes = 12_345_678.0, sampleCount = 7, sampleAllocationFailures = 0,
                     droppedVoices = 3, deniedRents = 1,
                 ),
+                soundlessVoices = 2,
             ),
         )
         cases.forEach { decode_KlangCommLink_Feedback(encode_KlangCommLink_Feedback(it)) shouldBe it }

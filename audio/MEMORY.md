@@ -105,6 +105,15 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
 
 - **Block size 128, pinned everywhere** (`AudioBackendContext.RENDER_QUANTUM_FRAMES`, whose KDoc lists what
   depends on it): it is a tone parameter; never change it to speed a render.
+- **One clock, the backend's frames** (KLANG-00399): the timeline is the backend's start plus the frames rendered;
+  `Diagnostics.backendNowMs` carries it, one report per 20 ms of audio (`DIAGNOSTICS_EVERY_SEC`, counted in frames,
+  never wall time); `Feedback.PlaybackAnchored` tells where a playback started (`max(asked, now)`), and its voices
+  count from there. The frontend's `PlaybackClock` runs on the reports (at most 0.5 s past the last, never backwards),
+  the scheduler is asked `tick(now)` with it, looks ahead at least 1.5 s (`LOOKAHEAD_MIN_SEC`), skips what a long
+  stall let go by but keeps its `master`, `katalyst` and running solo controls (at their own times), and puts the UI's
+  times on `Date.now()` plus the output latency. `OfflineBackend` renders only when told, for the specs
+  (`KlangPlaybackSyncSpec`); `VoiceWatch` tells each voice's fate there. Voices without their sample are counted
+  (`Diagnostics.soundlessVoices`).
 - **The envelope law** is `EnvelopeCore` (its KDoc). Voice defaults `VOICE_ADSR_*` (0.01, 0.1, 1.0, 0.05); curves
   are index knobs with the reader's default, both Exponential; `ADSR_EXP_K` 3.0; de-click `ENV_DECLICK_SECONDS`
   1 ms on `classic()`. Knobs and `Adsr.on`: `audio/ref/voice-synthesis.md`.
@@ -384,6 +393,9 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-31 One clock, the backend's frames (KLANG-00399, steps 1 to 3d): the tempo map, the `OfflineBackend`, the
+  timeline in the diagnostics, `PlaybackAnchored`, `PlaybackClock`, `tick(now)`, the look-ahead floor, the catch-up,
+  the soundless count; `BackendClockSync` gone.
 - 2026-10-19 `GraphCensus` counts the vibrato as its composition (7b and 7c): the LFO, the multiply, the converter, the
   ratio loop, the source's read, plus a built range (per note, as `hasBuiltRange`), a signal depth's floor and a moving
   phase's read; every `classic()` voice's census steps by 2 passes and 4 of traffic (3 and 6 with a vibrato range

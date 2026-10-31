@@ -133,7 +133,7 @@ class KlangampPlaylist(ctx: Ctx<Props>) : Component<KlangampPlaylist.Props>(ctx)
 
     /** What plays and for how long; the keys to stop it and to skip on. */
     private fun FlowContent.renderNowLine(now: Player.NowPlaying?, index: Int) {
-        val seconds = KlangampDeck.secondsAt(nowMs)
+        val seconds = KlangampDeck.seconds()
 
         div {
             css {

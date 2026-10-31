@@ -50,7 +50,8 @@ internal class TempoMap private constructor(private val pieces: List<Piece>) {
 
     /**
      * This map with the tempo [cyclesPerSecond] from [atCycle] on; a change already in it at or after [atCycle] gives
-     * way. The pieces that end at or before [foldBefore] go: nothing asks for those cycles any more.
+     * way. The pieces that end at or before [foldBefore] go: only a catch-up may still ask for those cycles, for state,
+     * and gets them on the first kept piece's tempo.
      */
     fun changed(atCycle: Double, cyclesPerSecond: Double, foldBefore: Double): TempoMap {
         val kept = pieces.filter { it.startCycle < atCycle }

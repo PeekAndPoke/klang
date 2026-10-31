@@ -25,6 +25,8 @@ class PlaybackCtx(
     var epoch: Double = 0.0,
     /** Voices refused at admission because their start was already in the past (block-framing B2). */
     var droppedVoices: Int = 0,
+    /** Voices that made no sound: no voice could be made, their sample not there (or empty) or their sound unknown. */
+    var soundlessVoices: Int = 0,
     /**
      * Root of the per-playback RNG DERIVATION TREE (seeded-voice-rng): every voice deals
      * its own child stream (`Random(coreRandom.nextInt())`) at creation — EVERY makeVoice

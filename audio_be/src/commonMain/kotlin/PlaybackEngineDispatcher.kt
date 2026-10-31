@@ -66,6 +66,7 @@ class PlaybackEngineDispatcher(
     // The counts of one emission ([emitDiagnostics]), summed over the engines by [countDiagnostics].
     private var diagnosticVoices = 0
     private var diagnosticDroppedVoices = 0
+    private var diagnosticSoundlessVoices = 0
     private var diagnosticDeniedRents = 0
 
     val ignitorRegistry: IgnitorRegistry get() = context.ignitorRegistry
@@ -267,6 +268,7 @@ class PlaybackEngineDispatcher(
 
         diagnosticVoices = 0
         diagnosticDroppedVoices = 0
+        diagnosticSoundlessVoices = 0
         diagnosticDeniedRents = 0
 
         // Every engine that renders counts, a detached one still releasing included, in render order.
@@ -287,11 +289,15 @@ class PlaybackEngineDispatcher(
                     droppedVoices = diagnosticDroppedVoices,
                     deniedRents = diagnosticDeniedRents,
                 ),
+                soundlessVoices = diagnosticSoundlessVoices,
             )
         )
     }
 
-    /** Adds [engine]'s voices, dropped voices and denied rents to the diagnostic counts, and its cylinders' states. */
+    /**
+     * Adds [engine]'s voices, dropped and soundless voices and denied rents to the diagnostic counts, and its cylinders'
+     * states.
+     */
     private fun countDiagnostics(
         engine: PlaybackEngine,
         cylinderStates: MutableList<KlangCommLink.Feedback.Diagnostics.CylinderState>,
@@ -299,6 +305,7 @@ class PlaybackEngineDispatcher(
         // The gauge is "voices rendering audio": every listed voice renders (a culled one has left).
         diagnosticVoices += engine.scheduler.getActiveVoiceCount()
         diagnosticDroppedVoices += engine.scheduler.droppedVoiceCount()
+        diagnosticSoundlessVoices += engine.scheduler.soundlessVoiceCount()
 
         val cylinders = engine.cylinders.cylinders
 

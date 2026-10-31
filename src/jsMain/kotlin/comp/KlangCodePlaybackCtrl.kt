@@ -20,6 +20,8 @@ import io.peekandpoke.ultra.streams.ops.debounce
 import io.peekandpoke.ultra.streams.ops.distinct
 import io.peekandpoke.ultra.streams.ops.map
 import io.peekandpoke.ultra.streams.ops.switchMapNotNull
+import kotlin.js.Date
+import kotlinx.browser.window
 
 /**
  * Non-UI controller that owns the compile → play → signals → stop lifecycle for a single
@@ -126,16 +128,34 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) {
             if (newRpm > 0.0) _playback()?.updateRpm(newRpm)
         }
 
-        // The cycle counter follows the playing playback's completed cycles.
+        // The cycle counter follows the playing playback's completed cycles, when their end is heard (KLANG-00399): a
+        // cycle completes once the backend has rendered it, and is heard the output latency later
         signals.subscribeToStream { signal ->
             if (signal is KlangPlaybackSignal.CycleCompleted) {
-                _state { it.copy(currentCycle = signal.cycleIndex + 1) }
+                countWhenHeard(signal)
             }
         }
 
         // Mirror the global player loading state into our combined state.
         Player.status.subscribeToStream { status ->
             _state { it.copy(playerStatus = status) }
+        }
+    }
+
+    /** Counts [completed] at its [KlangPlaybackSignal.CycleCompleted.atTimeSec], if the same playback still plays. */
+    private fun countWhenHeard(completed: KlangPlaybackSignal.CycleCompleted) {
+        val playback = _playback()
+        val count = {
+            if (_playback() === playback) {
+                _state { it.copy(currentCycle = completed.cycleIndex + 1) }
+            }
+        }
+        val inMs = completed.atTimeSec * 1000.0 - Date.now()
+
+        if (inMs <= 0.0) {
+            count()
+        } else {
+            window.setTimeout(count, inMs.toInt())
         }
     }
 

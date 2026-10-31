@@ -1,8 +1,10 @@
 # KLANG-00399: Frontend and backend on one clock: the backend's frames drive playback, an OfflineBackend tests it
 
-> **Status (2026-10-31): IN WORK, steps 1, 2 and 3a done.** Analysis and design agreed with the maintainer, revised
-> after a design review (level 2); the maintainer chose A1, B and C (below). Step 1 (the tempo map), step 2 (the
-> `OfflineBackend`) and step 3a (the backend's timeline, `PlaybackClock`, the anchor) are done; 3b to 3d follow.
+> **Status (2026-10-31): IN WORK, steps 1 to 3d done.** Analysis and design agreed with the maintainer, revised after
+> a design review (level 2); the maintainer chose A1, B and C (below). Steps 1 (the tempo map), 2 (the
+> `OfflineBackend`), 3a (the backend's timeline, `PlaybackClock`, the anchor) and 3b to 3d (`tick`, the look-ahead
+> floor, the catch-up, the one-shot's end, the soundless count, the opening event, the UI on the sound) are done; the
+> maintainer smoke-tested 3a. Left: AudioContext state handling (problem 9, on a device) and layer 2 (step 4).
 > Built in windows Klang-Main-Dev gave in `audio_be`.
 
 ## Why this exists
@@ -279,12 +281,23 @@ render near real time (`CorpusCheck` renders 256 cycles per song).
      started then begins that much late, highlights come that much early, and a one-shot ending on the estimate
      could still lose its last half second (problem 6). End a one-shot on the last reported position, not the
      estimate; optionally let only a gap the backend kept up across (a burst) raise the cap.
+     **Done (2026-10-31):** `tick(nowSec)`, the live loop its driver; the look-ahead at least `LOOKAHEAD_MIN_SEC` 1.5 s;
+     `catchUp`: a cursor behind now skips the cycles gone by (at most 64 read) and sends their state as control events
+     at their own times (the backend applies a late control's state in time order, so the current cycle's newer state
+     still wins): the last `master`, the last `katalyst` of each orbit, every solo control event still running (a
+     note's solo never sets the end, `SoloTracker`); `CycleCompleted` on the last reported position
+     (`PlaybackClock.reportedSec`), so a one-shot ends when its last cycle has been rendered; the soundless voices
+     counted (`PlaybackCtx.soundlessVoices`, `Diagnostics.soundlessVoices`, a "Silent voices" tile beside "Late
+     voices"). Not done: the burst-only cap (the cost above stays bounded by 0.5 s and no longer reaches a one-shot).
    - 3c. `playbackStartTime` and the epoch's `max` as choice C decides. From 3a's review: a pattern whose first sound
      comes after the first fetches (an intro rest longer than the look-ahead) sends nothing at first, so the backend
      sets the epoch only at the first voice, late, and `max` shifts the whole playback by that much; since 3a the
      frontend follows the late anchor (highlights on the sound, the cycle counter pausing for the shift). Open the
      playback at its start even when the first cycles are empty (accepting a past epoch instead would drop the first
      note as late).
+     **Done (2026-10-31):** choice C was already in place with 3a (the epoch asked for is the clock's now, on the
+     timeline); a first cycle with nothing in it sends a silent control event at second 0, so the backend opens the
+     playback where it was asked to.
    - 3d. The UI consumers on `PlaybackClock`. Checked on 3a (the maintainer, 2026-10-31: "check all consumers in the
      frontend that displays things based on the timing of the audio-events"): the code highlights
      (`CodeMirrorHighlightBuffer`), the mini-notation and staff editors (`MnEditorBase`, `NoteStaffEditor`), the ADSR
@@ -293,9 +306,14 @@ render near real time (`CorpusCheck` renders 256 cycles per song).
      the cycle counter (`KlangCodePlaybackCtrl`) counts a cycle when the scheduler sees it end, not when it is heard
      (the output latency early, as before); Klang Amp's play time (`KlangampDeck`) is wall time since the start, so
      after a stall it runs ahead of what played; `OneShotPlayback`'s end (3b).
+     **Done (2026-10-31):** the cycle counter counts a cycle at its `atTimeSec`, when it is heard; Klang Amp shows
+     `KlangCyclicPlayback.heardSec()`, the backend's reported position less the output latency, which stands still
+     with the backend.
    - Open from step 1's review: a voice kept by the grace window keeps the gate end the old tempo gave it, so on a
      faster tempo the note at the switch rings into the next one and its highlight ends before its sound. As before
-     the map; decide in 3b whether a tempo change re-sends it.
+     the map; decide in 3b whether a tempo change re-sends it. Decided in 3b: left as it is. The note is already
+     sounding or about to (within the 0.2 s grace); re-sending it would cut it or play it twice, and the overlap lasts
+     at most one note, only on a faster tempo. Revisit if it is heard.
    - Beside them, on a device: AudioContext state handling (`statechange`, `resume()` on a user gesture) for 9.
 4. **Layer 2:** the decisions above, then the offline renderer on the real player in lockstep; the render specs
    (klang, sprudel) on the real path; a render identical before and after (after the stable heap).
@@ -341,3 +359,5 @@ render near real time (`CorpusCheck` renders 256 cycles per song).
 - 2026-10-31: step 1 done, the tempo map (Klang-Research), built in a window Klang-Main-Dev gave.
 - 2026-10-31: steps 2 and 3a done (Klang-Research): the OfflineBackend, the backend's timeline in its reports,
   `PlaybackClock`, the anchor; the UI consumers checked; reviews at level 2 and 3, the last clean.
+- 2026-10-31: steps 3b to 3d done (Klang-Research), the maintainer having smoke-tested 3a ("the RPM dial now works
+  perfectly").
