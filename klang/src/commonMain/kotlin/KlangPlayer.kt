@@ -15,8 +15,10 @@ import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.common.infra.KlangAtomicInt
 import io.peekandpoke.klang.common.infra.KlangLock
 import io.peekandpoke.klang.common.infra.withLock
+import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
 import io.peekandpoke.ultra.streams.Unsubscribe
+import io.peekandpoke.ultra.streams.ops.distinct
 import io.peekandpoke.ultra.streams.ops.filterIsInstanceOf
 import io.peekandpoke.ultra.streams.ops.map
 import io.peekandpoke.ultra.streams.ops.ticker
@@ -83,7 +85,9 @@ class KlangPlayer(
 
     // Thread-safe state management
     private val lock = KlangLock()
-    private val _activePlaybacks = mutableListOf<KlangPlayback>()
+
+    // The active playbacks: the one store, changed only under the lock
+    private val _playbacks = StreamSource<List<KlangPlayback>>(emptyList())
 
     // Signal stream for system-wide signals (diagnostics, etc.)
     private val _signals = StreamSource<KlangPlaybackSignal>(KlangPlaybackSignal.Idle)
@@ -153,11 +157,22 @@ class KlangPlayer(
         diagnostics = diagnostics,
     )
 
-    /**
-     * Read-only list of currently active playbacks
-     */
+    /** The active playbacks now; [playbacks] follows them. */
     val activePlaybacks: List<KlangPlayback>
-        get() = lock.withLock { _activePlaybacks.toList() }
+        get() = lock.withLock { _playbacks() }
+
+    /**
+     * The active playbacks, anew whenever one starts or stops. Its handlers (and [playing]'s) run at once, inside the
+     * player's lock, on the thread that starts or stops: they must not start or stop a playback, nor block.
+     */
+    val playbacks: Stream<List<KlangPlayback>> = _playbacks.readonly
+
+    /**
+     * Whether something plays: a cyclic playback is active (a song, an example, a jingle, a sample's preview). The
+     * realtime voices are not counted: always on while their page lives, they would never let it go (the app keeps the
+     * screen awake on this).
+     */
+    val playing: Stream<Boolean> = playbacks.map { all -> all.any { it is KlangCyclicPlayback } }.distinct()
 
     init {
         diagnostics.start()
@@ -233,7 +248,7 @@ class KlangPlayer(
                     // Playback-specific messages go to the matching playback
                     else -> {
                         val playback = lock.withLock {
-                            _activePlaybacks.find { it.playbackId == feedback.playbackId }
+                            _playbacks().find { it.playbackId == feedback.playbackId }
                         }
                         playback?.handleFeedback(feedback)
                     }
@@ -264,7 +279,7 @@ class KlangPlayer(
      */
     fun registerPlayback(playback: KlangPlayback) {
         lock.withLock {
-            _activePlaybacks.add(playback)
+            _playbacks(_playbacks() + playback)
         }
     }
 
@@ -274,7 +289,7 @@ class KlangPlayer(
      */
     fun unregisterPlayback(playback: KlangPlayback) {
         lock.withLock {
-            _activePlaybacks.remove(playback)
+            _playbacks(_playbacks() - playback)
         }
     }
 
@@ -290,7 +305,7 @@ class KlangPlayer(
         val playbackId = "custom-$name"
 
         lock.withLock {
-            _activePlaybacks.filterIsInstance<KlangRealtimeVoicePlayback>()
+            _playbacks().filterIsInstance<KlangRealtimeVoicePlayback>()
                 .firstOrNull { it.playbackId == playbackId }
                 ?.let { return it }
 
@@ -298,7 +313,7 @@ class KlangPlayer(
                 player = this,
                 playbackId = playbackId,
                 registrar = playbackContext.registrarFor(playbackId),
-            ).also { _activePlaybacks.add(it) }
+            ).also { _playbacks(_playbacks() + it) }
         }
     }
 
@@ -347,9 +362,9 @@ class KlangPlayer(
      */
     fun shutdown() {
         lock.withLock {
-            // Stop all active playbacks (use toList() to avoid concurrent modification)
-            _activePlaybacks.toList().forEach { it.stop() }
-            _activePlaybacks.clear()
+            // Stop each playback of the snapshot: each stop unregisters itself (the lock is re-entrant)
+            _playbacks().forEach { it.stop() }
+            _playbacks(emptyList())
 
             // Shutdown the backend and clear reference
             backendJob?.cancel()

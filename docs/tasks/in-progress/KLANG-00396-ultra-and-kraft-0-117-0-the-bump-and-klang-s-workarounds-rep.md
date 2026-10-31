@@ -1,6 +1,7 @@
 # KLANG-00396: Ultra and Kraft 0.117.0: the bump, and klang's workarounds replaced by what Ultra now has
 
-> **Status (2026-10-31): IN PROGRESS.** Steps 1 to 9 done; the Looks page's drag waits for the maintainer's look.
+> **Status (2026-10-31): IN PROGRESS.** Steps 1 to 10 done; the Looks page's drag waits for the maintainer's look
+> (and its touch question, step 9).
 >
 > **Part of:** KLANG-00334 (UI workbench: the Motor-centred layout, tool windows and the first-visit trail)
 
@@ -51,6 +52,13 @@ core).
    the pointer. Every placement, click or drop or a new look, goes through one `equip`: nothing stays in hand, and a
    waiting slot that is filled waits no more. Open for the maintainer: the whole tile is the drag's handle on touch
    (`touch-action: none`), so a swipe that starts on a tile drags rather than scrolls; Kraft's advice is a grip.
+10. **The screen stays awake while something plays** (ULTRA-00275; the maintainer, 2026-10-31: whenever a song plays,
+    not only in the visuals; "these kinds of wirings should always be done through the stream"). `KlangPlayer.playbacks`
+    is its active playbacks, their one store (changed under its lock), and `KlangPlayer.playing` says whether a cyclic
+    playback is among them (the MIDI keyboard's always-on voices do not count); the app's `Player.playing` follows the
+    current player's; `ScreenAwake`, mounted once at the app's root, mounts Kraft's `WakeLockComponent` while it says
+    so. The MIDI page holds its own, always (the maintainer, 2026-10-31: "On the midi page we can have a dedicated
+    wakelock always"): a keyboard over USB or Bluetooth never touches the screen.
 
 ## Acceptance
 
@@ -76,9 +84,16 @@ core).
 - **Review round 2** (level 2, the delta and the code it touches): clean. 1 MINOR applied (pre-existing: a deleted look
   stayed in hand, and a slot clicked next took its id), 1 NIT applied (a new look on the waiting slot through
   `equip`), 1 NIT left (a bench look clicked with a slot look in hand while a slot waits fills the waiting slot).
+- **Step 10:** the app's and klang's tests green (153; `ScreenAwakeSpec`, `KlangPlayerPlaybacksSpec` on a real player,
+  JVM and JS); 5 mutants killed (always awake, never awake, a stop not emitted, the realtime voices counted, the
+  realtime voices not stored). Not seen on a device: a phone kept awake. Review round 1 (level 1): 2 MINOR applied (a
+  second copy of the playbacks beside the stream, now the one store; the core without a test), 3 NIT applied, 1 for the
+  maintainer (the MIDI page: its own lock, always). An older bug found on the way: KLANG-00398. Round 2 (level 1, the
+  delta and the MIDI page): clean; 5 NIT applied (KDocs, the lock's handlers, the MIDI page's lock below its heading).
 
 ## History
 
 - 2026-10-30: created; step 1 started.
 - 2026-10-30: step 1 committed: Ultra and Kraft 0.117.0.
 - 2026-10-31: steps 2 to 9 reviewed in two rounds (the second clean), committed.
+- 2026-10-31: step 10, the wake lock, reviewed in two rounds (the second clean), committed.

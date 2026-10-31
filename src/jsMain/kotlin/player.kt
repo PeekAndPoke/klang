@@ -24,6 +24,8 @@ import io.peekandpoke.kraft.utils.launch
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
 import io.peekandpoke.ultra.streams.ops.combinedWith
+import io.peekandpoke.ultra.streams.ops.distinct
+import io.peekandpoke.ultra.streams.ops.map
 import io.peekandpoke.ultra.streams.ops.switchMapNotNull
 import kotlinx.browser.window
 import kotlinx.coroutines.CompletableDeferred
@@ -64,6 +66,12 @@ object Player {
      * [Diagnostics.history] for the last two minutes (the maintainer, 2026-10-28).
      */
     val diagnostics = Diagnostics(player)
+
+    /**
+     * Whether something plays on the current player ([KlangPlayer.playing]); false while there is none. The screen
+     * stays awake on it ([io.peekandpoke.klang.comp.ScreenAwake]).
+     */
+    val playing: Stream<Boolean> = player.switchMapNotNull { it.playing }.map { it == true }.distinct()
 
     private val _samples = StreamSource<Samples?>(null)
     val samples: Stream<Samples?> = _samples.readonly

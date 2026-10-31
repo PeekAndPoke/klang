@@ -31,6 +31,7 @@ import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.semanticui.forms.UiInputField
+import io.peekandpoke.kraft.utils.WakeLockComponent
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
@@ -452,6 +453,12 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
 
             ui.basic.segment {
                 ui.header H1 { +"Midi Playground" }
+
+                // The screen stays awake on this page, always (the maintainer, 2026-10-31: "On the midi page we can have
+                // a dedicated wakelock always"): a keyboard played over USB or Bluetooth never touches the screen, and a
+                // phone or tablet that locks it stops the sound. The realtime voices do not count for Player.playing.
+                // Below the heading: a hidden first child would still take `.ui.segment:first-child`'s place.
+                WakeLockComponent()
 
                 when {
                     ctrlState.isReady -> renderPlayground()

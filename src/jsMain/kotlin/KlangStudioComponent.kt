@@ -6,6 +6,7 @@
 package io.peekandpoke.klang
 
 import io.peekandpoke.klang.comp.RouterWithTransitions
+import io.peekandpoke.klang.comp.ScreenAwake
 import io.peekandpoke.klang.visuals.VisualsScreen
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
@@ -33,6 +34,8 @@ class KlangStudioComponent(ctx: NoProps) : PureComponent(ctx) {
             RouterWithTransitions()
             // A visual over the whole window, from the bottom panel's Visuals tab
             VisualsScreen()
+            // The screen stays awake while something plays
+            ScreenAwake()
         }
     }
 }
