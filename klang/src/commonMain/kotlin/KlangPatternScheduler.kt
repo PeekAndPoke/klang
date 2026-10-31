@@ -46,6 +46,10 @@ internal class KlangPatternScheduler(
     private val registrar: InlineDslRegistrar,
     private val onStarted: () -> Unit = {},
     private val onStopped: () -> Unit = {},
+    /** Now, in milliseconds: the scheduler's clock. The specs pass their own. */
+    private val nowMs: () -> Double = KlangTime.create()::internalMsNow,
+    /** The pause between two rounds of the fetch loop. The specs pass their own, to step the loop by hand. */
+    private val pause: suspend () -> Unit = { delay(16.milliseconds) },
 ) {
     companion object {
         /**
@@ -83,9 +87,12 @@ internal class KlangPatternScheduler(
     private var fetcherJob: Job? = null
 
     // ===== Playback Parameters =====
-    private var cyclesPerSecond: Double = 0.5
+    /**
+     * Cycles to seconds from the playback's start; a tempo change swaps in a map with one piece more (KLANG-00399).
+     * A reader takes it once and keeps that map for its whole computation.
+     */
+    private var tempo = TempoMap(cyclesPerSecond = 0.5)
     private var lookaheadCycles: Double = 2.0
-    private val secPerCycle get() = 1.0 / cyclesPerSecond
 
     // ===== Fetcher State =====
     private val sampleSoundLookAheadCycles = 8.0
@@ -97,11 +104,11 @@ internal class KlangPatternScheduler(
     private var startTimeMs = 0.0
     private var localFrameCounter = 0
 
+    /** Whether [startTimeMs] is set: the playback's origin, from which the backend counts every voice. */
+    private var begun = false
+
     // ===== Cycle Tracking (for CycleCompleted signal) =====
     private var lastEmittedCycle = -1
-
-    // ===== Resources =====
-    private val klangTime = KlangTime.create()
 
     // ===== Latency Compensation =====
     /** The single FE↔BE clock offset — GLOBAL, owned by [KlangPlayer]; read-only here. */
@@ -142,21 +149,30 @@ internal class KlangPatternScheduler(
      * still (or run backwards), causing the scheduler to spin or produce NaN anchors.
      */
     fun updateRpm(rpm: Double) {
-        val safeRpm = rpm.coerceAtLeast(MIN_RPM)
-        val cps = safeRpm / 60.0
+        val cps = rpm.coerceAtLeast(MIN_RPM) / 60.0
+
+        // Nothing is timed yet: the playback starts at the new tempo
+        if (!begun) {
+            tempo = TempoMap(cyclesPerSecond = cps)
+
+            return
+        }
+
         // The grace window (same as in resyncCurrentCycle) defines the switchover point:
         // voices before it keep the old tempo, voices after it use the new tempo.
-        val nowMs = klangTime.internalMsNow()
-        val cutoffMs = nowMs + resyncGraceWindowSec * 1000.0
-        // Cycle position at the cutoff under the OLD cps
-        val cutoffElapsedSec = (cutoffMs - startTimeMs) / 1000.0
-        val cutoffCycle = cutoffElapsedSec * cyclesPerSecond
-        // Update tempo
-        this.cyclesPerSecond = cps
-        // Recalculate startTimeMs so cutoffCycle maps to the same wall-clock time under new cps
-        startTimeMs = cutoffMs - (cutoffCycle / cyclesPerSecond) * 1000.0
+        // The origin stays: the backend counts every voice from it, so only the map changes (KLANG-00399).
+        // One reading of the clock for the switch and the resync's cutoff, so the two meet exactly.
+        val nowSec = elapsedSec()
+        val old = tempo
+        val cutoffCycle = old.cycleAt(nowSec + resyncGraceWindowSec)
+        // The cycles the counter has not reported yet still need their pieces
+        val foldBefore = minOf(floor(old.cycleAt(nowSec)), (lastEmittedCycle + 1).toDouble())
+
+        tempo = old.changed(atCycle = cutoffCycle, cyclesPerSecond = cps, foldBefore = foldBefore)
+        // The old tempo's highlights are already scheduled ahead in the UI; cancel them before the new ones arrive
+        signals(KlangPlaybackSignal.PatternUpdated)
         // Re-request current cycle with new tempo
-        resyncCurrentCycle()
+        resyncCurrentCycle(nowSec = nowSec)
     }
 
     fun start(options: KlangCyclicPlayback.Options = KlangCyclicPlayback.Options()) {
@@ -169,7 +185,7 @@ internal class KlangPatternScheduler(
         onStarted()
 
         // Update playback parameters
-        this.cyclesPerSecond = options.rpm.coerceAtLeast(MIN_RPM) / 60.0
+        this.tempo = TempoMap(cyclesPerSecond = options.rpm.coerceAtLeast(MIN_RPM) / 60.0)
         this.lookaheadCycles = options.lookaheadCycles
 
         // Start the fetcher job
@@ -193,6 +209,8 @@ internal class KlangPatternScheduler(
             fetcherJob?.cancel()
             fetcherJob = null
         }
+
+        begun = false
 
         // Send clean up command to backend
         cleanUpBackend()
@@ -301,7 +319,8 @@ internal class KlangPatternScheduler(
 
         // ===== RECORD START TIME =====
         // Must be set BEFORE scheduling first cycle so voices have correct playbackStartTime
-        startTimeMs = klangTime.internalMsNow()
+        startTimeMs = nowMs()
+        begun = true
 
         // ===== THE PATTERN'S WORK, MEASURED FROM HERE =====
         runtime?.close()
@@ -348,17 +367,18 @@ internal class KlangPatternScheduler(
             // The share of real time the pattern's queries took, now and then
             postRuntime()
             // roughly 60 FPS
-            delay(16.milliseconds)
+            pause()
         }
 
         println("KlangPatternScheduler stopped")
     }
 
     private fun updateLocalFrameCounter() {
-        val elapsedMs = klangTime.internalMsNow() - startTimeMs
-        val elapsedSec = elapsedMs / 1000.0
-        localFrameCounter = (elapsedSec * playerOptions.sampleRate).toInt()
+        localFrameCounter = (elapsedSec() * playerOptions.sampleRate).toInt()
     }
+
+    /** The seconds since the playback's start. */
+    private fun elapsedSec(): Double = (nowMs() - startTimeMs) / 1000.0
 
     /**
      * Emit CycleCompleted signals for all cycles that have been completed since last emission.
@@ -370,9 +390,8 @@ internal class KlangPatternScheduler(
             return
         }
 
-        val elapsedMs = klangTime.internalMsNow() - startTimeMs
-        val elapsedSec = elapsedMs / 1000.0
-        val completedCycle = floor(elapsedSec / secPerCycle).toInt() - 1
+        val map = tempo
+        val completedCycle = floor(map.cycleAt(elapsedSec())).toInt() - 1
 
         if (completedCycle > lastEmittedCycle) {
             // Emit all missing cycles in order
@@ -387,7 +406,7 @@ internal class KlangPatternScheduler(
                     // Calculate boundary time for this cycle
                     val playbackStartTimeSec = startTimeMs / 1000.0
                     val latencyOffsetSec = clockSync.offsetSec
-                    val boundaryTimeSec = playbackStartTimeSec + ((cycle + 1) * secPerCycle) + latencyOffsetSec
+                    val boundaryTimeSec = playbackStartTimeSec + map.secondsAt((cycle + 1).toDouble()) + latencyOffsetSec
 
                     signals(KlangPlaybackSignal.CycleCompleted(cycleIndex = cycle, atTimeSec = boundaryTimeSec))
                 }
@@ -402,12 +421,12 @@ internal class KlangPatternScheduler(
      */
     /** Every pattern query, timed: the time goes into the pattern's work ([postRuntime]). */
     private fun queryEvents(from: Double, to: Double, sendSignals: Boolean): List<ScheduledVoice> {
-        val startedMs = klangTime.internalMsNow()
+        val startedMs = nowMs()
 
         try {
             return queryEventsUntimed(from = from, to = to, sendSignals = sendSignals)
         } finally {
-            runtimeSpentMs += klangTime.internalMsNow() - startedMs
+            runtimeSpentMs += nowMs() - startedMs
         }
     }
 
@@ -416,8 +435,8 @@ internal class KlangPatternScheduler(
      * plain numbers, no object made.
      */
     private fun postRuntime() {
-        val nowMs = klangTime.internalMsNow()
-        val elapsedMs = nowMs - runtimeWindowStartMs
+        val now = nowMs()
+        val elapsedMs = now - runtimeWindowStartMs
 
         if (elapsedMs < RUNTIME_WINDOW_MS) {
             return
@@ -425,11 +444,23 @@ internal class KlangPatternScheduler(
 
         runtime?.post(runtimeSpentMs / elapsedMs * 100.0)
         runtimeSpentMs = 0.0
-        runtimeWindowStartMs = nowMs
+        runtimeWindowStartMs = now
     }
 
     private fun queryEventsUntimed(from: Double, to: Double, sendSignals: Boolean): List<ScheduledVoice> {
-        val events = pattern.queryEvents(fromCycles = from, toCycles = to, cps = cyclesPerSecond)
+        val map = tempo
+
+        // A part per tempo: the pattern reads the tempo it is queried at (sprudel's `cps`, `beats`)
+        val events = buildList {
+            var at = from
+
+            while (at < to) {
+                val until = minOf(to, map.nextChangeAfter(at) ?: to)
+
+                addAll(pattern.queryEvents(fromCycles = at, toCycles = until, cps = map.cyclesPerSecondAt(at)))
+                at = until
+            }
+        }
 
         // Announce every inline DSL these events reference BEFORE they are scheduled, so the
         // synthetic names resolve on the backend by the time voices referencing them arrive.
@@ -437,8 +468,7 @@ internal class KlangPatternScheduler(
         // announce-once gate and the sweep itself live there.
         registrar.announceAll(events)
 
-        // Transform to ScheduledVoice using absolute time from KlangTime epoch
-        val secPerCycle = 1.0 / cyclesPerSecond
+        // Transform to ScheduledVoice: seconds from the playback's start, through the tempo map
         val playbackStartTimeSec = startTimeMs / 1000.0
 
         // Latency compensation for UI signals
@@ -448,8 +478,8 @@ internal class KlangPatternScheduler(
         val signalEvents = mutableListOf<KlangPlaybackSignal.VoicesScheduled.VoiceEvent>()
 
         val voices = events.map { event ->
-            val relativeStartTime = event.startCycles * secPerCycle
-            val duration = event.durationCycles * secPerCycle
+            val relativeStartTime = map.secondsAt(event.startCycles)
+            val duration = map.secondsAt(event.startCycles + event.durationCycles) - relativeStartTime
 
             // Absolute times for UI callbacks
             val absoluteStartTime = playbackStartTimeSec + relativeStartTime
@@ -516,19 +546,15 @@ internal class KlangPatternScheduler(
     }
 
     /**
-     * Get the current cycle position accounting for backend latency.
+     * The cycle playing now, on the scheduler's clock, through the tempo map.
      */
-    private fun getNowCycle(): Double {
-        val nowMs = klangTime.internalMsNow()
-        val elapsedSec = (nowMs - startTimeMs) / 1000.0
-        return elapsedSec / secPerCycle
-    }
+    private fun getNowCycle(): Double = tempo.cycleAt(elapsedSec())
 
     private fun requestNextCyclesAndAdvanceCursor() {
         // Use local frame counter for autonomous progression
         val nowFrame = localFrameCounter
         val nowSec = nowFrame.toDouble() / playerOptions.sampleRate.toDouble()
-        val nowCycles = nowSec / secPerCycle
+        val nowCycles = tempo.cycleAt(nowSec)
         val targetCycles = nowCycles + lookaheadCycles
 
         // Fetch as many new cycles as needed
@@ -575,25 +601,25 @@ internal class KlangPatternScheduler(
     /**
      * Re-requests the current cycle and sends events to backend.
      * Uses the [resyncGraceWindowSec] grace window: voices about to play within the window are
-     * preserved, only voices beyond the cutoff are replaced.
+     * preserved, only voices beyond the cutoff are replaced. [nowSec] is a caller's reading of the clock, so its own
+     * cut and this one meet exactly.
      */
-    private fun resyncCurrentCycle() {
-        val nowCycle = getNowCycle()
-        val cutoffCycle = nowCycle + (resyncGraceWindowSec * cyclesPerSecond)
+    private fun resyncCurrentCycle(nowSec: Double = elapsedSec()) {
+        val cutoffSec = nowSec + resyncGraceWindowSec
 
-        val from = floor(nowCycle)
+        val from = floor(tempo.cycleAt(nowSec))
         val to = ceil(queryCursorCycles)
 
         try {
             val voices = queryEvents(from = from, to = to, sendSignals = true)
             // Only send voices beyond the grace window
-            val futureVoices = voices.filter { it.startTime / secPerCycle >= cutoffCycle }
+            val futureVoices = voices.filter { it.startTime >= cutoffSec }
 
             sendControl(
                 KlangCommLink.Cmd.ReplaceVoices(
                     playbackId = playbackId,
                     voices = futureVoices,
-                    afterTimeSec = cutoffCycle * secPerCycle,
+                    afterTimeSec = cutoffSec,
                 )
             )
 

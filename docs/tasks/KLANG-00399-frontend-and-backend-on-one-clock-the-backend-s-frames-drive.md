@@ -1,7 +1,7 @@
 # KLANG-00399: Frontend and backend on one clock: the backend's frames drive playback, an OfflineBackend tests it
 
-> **Status (2026-10-31): DESIGNED.** Analysis and design agreed with the maintainer, revised after a design review
-> (level 2); the maintainer chose A1, B and C (below). Step 1 can start; the later steps touch `audio_be` and
+> **Status (2026-10-31): DESIGNED, step 1 done.** Analysis and design agreed with the maintainer, revised after a
+> design review (level 2); the maintainer chose A1, B and C (below). Step 1, the tempo map, is done; the later steps touch `audio_be` and
 > wait for Klang-Main-Dev's DSP refactoring to leave it.
 
 ## Why this exists
@@ -244,6 +244,11 @@ render near real time (`CorpusCheck` renders 256 cycles per song).
    Specs on the scheduler: `playbackStartTime` stays the same across `updateRpm`, the next voice's `startTime`
    follows the map, two changes in a row, an edit after a change, the cycle counter steady; mutant: today's moving
    origin. Fixes the tempo jump on its own, nothing in `audio_be`.
+   **Done (2026-10-31):** `TempoMap` (immutable, a piece per tempo, folded behind the cycle counter); the scheduler's
+   origin fixed, every conversion through the map, a query split where the tempo changes so each part is asked at its
+   own tempo (sprudel's `cps`, `beats`), one clock reading per change; seams `nowMs` and `pause`.
+   `TempoMapSpec` (7), `KlangPatternSchedulerTempoSpec` (6, the loop stepped by hand on a fake clock); 14 mutants
+   killed; three review rounds (level 2).
 2. **`OfflineBackend`, layer 1** (`audio_be`): the primitives and the hook. Its rows land with steps 3a to 3d.
 3. **The rework, in four cuts:**
    - 3a. The backend reports its timeline (choice A) with a cadence in frames, and `PlaybackAnchored`; the frontend
@@ -252,6 +257,9 @@ render near real time (`CorpusCheck` renders 256 cycles per song).
      end on the clock, the lost-sample count. Fixes 5, 6, 7, 8, 11.
    - 3c. `playbackStartTime` and the epoch's `max` as choice C decides.
    - 3d. The UI consumers on `PlaybackClock`.
+   - Open from step 1's review: a voice kept by the grace window keeps the gate end the old tempo gave it, so on a
+     faster tempo the note at the switch rings into the next one and its highlight ends before its sound. As before
+     the map; decide in 3b whether a tempo change re-sends it.
    - Beside them, on a device: AudioContext state handling (`statechange`, `resume()` on a user gesture) for 9.
 4. **Layer 2:** the decisions above, then the offline renderer on the real player in lockstep; the render specs
    (klang, sprudel) on the real path; a render identical before and after (after the stable heap).
@@ -288,3 +296,4 @@ render near real time (`CorpusCheck` renders 256 cycles per song).
 - 2026-10-31: created from the analysis with the maintainer (Klang-Research).
 - 2026-10-31: revised after the design review: two new causes, the corrections, choices A to C, step 3 in four cuts.
 - 2026-10-31: the maintainer chose A1 (the diagnostics), B (the pull API, the live loop moves into a driver), C.
+- 2026-10-31: step 1 done, the tempo map (Klang-Research), built in a window Klang-Main-Dev gave.
