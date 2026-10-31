@@ -4,8 +4,8 @@
 >
 > **Part of:** KLANG-00354 (The Motor's shape: signal flow and the graph)
 
-> **Status 2026-09-28: phases 1 to 3 DONE, phase 4 waits for a second pattern kind, phase 5 (the
-> announcements) in progress.** Section 11 keeps the open points.
+> **Status 2026-10-31: phases 1 to 3 DONE, phase 4 split off as KLANG-00397, phase 5 (the announcements) in
+> progress; when it is done, this plan is complete.** Section 11 keeps the open points.
 > Designed 2026-09-17 with the maintainer. Umbrella for
 > KLANG-00236 (katalyst dsl) (its first phase), pregain
 > (phase 2) and the built-in instruments (phase 3, KLANG-00237 (builtin instruments)). Every phase leaves every existing song byte-identical
@@ -409,7 +409,8 @@ Each phase is its own task, review loop and commit; each ends with the guards gr
    every voice is its tree. The diagnostic, step 11, is deferred: KLANG-00244 (editor voice door diagnostics).
    2026-09-28: phase 3 is done; the record, archived: KLANG-00237 (builtin instruments)
    section 9, with its open items' new homes at the top.)
-4. **Interoperability lift**: when the second pattern kind exists, not before.
+4. **Interoperability lift**: split off 2026-10-31 as KLANG-00397 (the maintainer: the new pattern kind is not needed
+   for the DSP work). This plan no longer waits on it.
 5. **The announcements, last.** Everything that describes a retired surface is re-read and
    rewritten once the surfaces are gone: the whitepaper (`src/jsMain/resources/klang-whitepaper.html`,
    which explains the voice pipeline, `postgain`, the per-voice effect fields and the Strudel
@@ -550,3 +551,4 @@ is due at the 5b checkpoint; candidates seen on 2026-09-18 without reading them:
 
 - 2026-10-20: numbered KLANG-00210 (was `docs/plans/signal-flow-redesign.md`).
 - 2026-10-27: part of KLANG-00354 (The Motor's shape: signal flow and the graph), the epic grouping.
+- 2026-10-31: phase 4 split off as KLANG-00397 (maintainer); phase 5 is all that is left.

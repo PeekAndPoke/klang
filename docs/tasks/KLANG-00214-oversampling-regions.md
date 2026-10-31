@@ -227,7 +227,29 @@ will anyway change the way how oversampling works in the future so we need to ke
    `classic()` keeps the old.
 4. Whether a body may generate its own source at the region rate.
 
+**Answered (maintainer, 2026-10-31):**
+1. The master: out, for now.
+2. `crush`, `coarse` and `distort` lose their own oversampling settings; a stage reads its rate from the buffer it
+   receives (the buffers carry their rate, section 4).
+3. The IIR half-band we have, for now; plan for configurable kernels.
+4. Yes: a body may generate its own source at the region rate.
+
+**A principle (maintainer, 2026-10-31):** up and down sampling as little as possible, and never repeatedly; the
+maintainer suspects that it creates serious artifacts. A blind test checks it first: `tmp/listening/resample-blind/`
+(untouched, 4 and 8 chained 4x round trips of the engine's `Oversampler`, music and clicks with hats; the key is held
+by the coordinator until the verdict). Measured on the clicks and hats: the level of every frequency is unchanged to
+22 kHz (0.00 dB), and the top arrives later than the rest, after 8 trips by 7.6 samples at 10 kHz, 22 at 15 kHz and 67
+at 20 kHz (the IIR's phase, section 8b), so a click is smeared at the very top.
+
+**New design questions (maintainer, 2026-10-31), open:**
+1. Can a source (`Osc.sine()`) produce an oversampled signal itself?
+2. Can an oversampled buffer pass from an Ignitor into a Katalyst, and how?
+3. How does nesting work?
+4. Filters at an oversampled rate, for performance: compute the coefficients at the base rate and apply them for the
+   N oversampled samples?
+
 ## History
 
 - 2026-10-20: numbered KLANG-00214 (was `docs/tasks/oversampling-regions.md`).
 - 2026-10-27: part of KLANG-00354 (The Motor's shape: signal flow and the graph), the epic grouping.
+- 2026-10-31: the maintainer answered section 9, set the principle of as few conversions as possible, and asked four design questions; the blind test rendered.
