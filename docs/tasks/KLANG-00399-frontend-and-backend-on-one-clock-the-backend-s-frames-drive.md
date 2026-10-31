@@ -4,7 +4,8 @@
 > a design review (level 2); the maintainer chose A1, B and C (below). Steps 1 (the tempo map), 2 (the
 > `OfflineBackend`), 3a (the backend's timeline, `PlaybackClock`, the anchor) and 3b to 3d (`tick`, the look-ahead
 > floor, the catch-up, the one-shot's end, the soundless count, the opening event, the UI on the sound) are done; the
-> maintainer smoke-tested 3a. Left: AudioContext state handling (problem 9, on a device) and layer 2 (step 4).
+> maintainer smoke-tested 3a. Problem 9's AudioContext handling is done, still to try on a device. Left: layer 2
+> (step 4), waiting for the maintainer's decisions.
 > Built in windows Klang-Main-Dev gave in `audio_be`.
 
 ## Why this exists
@@ -315,6 +316,11 @@ render near real time (`CorpusCheck` renders 256 cycles per song).
      sounding or about to (within the 0.2 s grace); re-sending it would cut it or play it twice, and the overlap lasts
      at most one note, only on a faster tempo. Revisit if it is heard.
    - Beside them, on a device: AudioContext state handling (`statechange`, `resume()` on a user gesture) for 9.
+     **Done (2026-10-31):** `keepRunning` (`audio_be/src/jsMain/kotlin/_audio_context_wake.kt`): a context the browser
+     stopped ("suspended", iOS "interrupted") is asked to `resume()` on every gesture (`pointerup`, `touchend`,
+     `click`, `keydown`: a tap's `pointerdown` is no gesture) and, once at a time, when the page is shown again; the
+     state change itself only logs. `AudioContextWakeSpec` guards the wiring (6 mutants); what each browser takes as a
+     gesture is a device check, not yet made. With a mouse the wake comes on release: nothing plays on press today.
 4. **Layer 2:** the decisions above, then the offline renderer on the real player in lockstep; the render specs
    (klang, sprudel) on the real path; a render identical before and after (after the stable heap).
    From 3a's review: an `OfflineBackend` at second 0 sends `BackendReady` before any report, so a playback asks for
@@ -361,3 +367,4 @@ render near real time (`CorpusCheck` renders 256 cycles per song).
   `PlaybackClock`, the anchor; the UI consumers checked; reviews at level 2 and 3, the last clean.
 - 2026-10-31: steps 3b to 3d done (Klang-Research), the maintainer having smoke-tested 3a ("the RPM dial now works
   perfectly").
+- 2026-10-31: problem 9, the AudioContext woken on a gesture or when shown (Klang-Research); reviews at level 2 and 3.

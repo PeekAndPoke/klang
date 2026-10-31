@@ -17,6 +17,7 @@ import io.peekandpoke.klang.audio_bridge.analyzer.SPECTRUM_FFT_SIZE
 import io.peekandpoke.klang.audio_bridge.guessDeviceLatencyMs
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.common.infra.KlangRingBuffer
+import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.NonCancellable
@@ -84,6 +85,16 @@ class JsAudioBackend(
             console.log("AudioContext is suspended - this is normal before user interaction")
             console.log("It will auto-resume when audio playback starts")
         }
+
+        // Back to running when the browser stopped it (KLANG-00399, problem 9)
+        val stopKeepingRunning = keepRunning(
+            target = document,
+            visible = { document.asDynamic().visibilityState == "visible" },
+            state = { ctx.state },
+            resume = { ctx.resume() },
+        )
+
+        ctx.onstatechange = { console.log("JsAudioBackend AudioContext state: ${ctx.state}") }
 
         try {
             console.log("JsAudioBackend loading worklet")
@@ -234,6 +245,9 @@ class JsAudioBackend(
             console.error("AudioWorklet Error:", e)
             throw e
         } finally {
+            stopKeepingRunning()
+            ctx.onstatechange = null
+
             // Cleanup when the coroutine is cancelled (Player.stop()). Drop the node reference
             // FIRST: BOTH post paths (drainControl and the timer's chunk drip) read the field, so
             // after this nothing can post to a port that is about to be disconnected.

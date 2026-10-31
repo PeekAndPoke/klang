@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_bridge
 import org.khronos.webgl.ArrayBuffer
 import org.khronos.webgl.Float32Array
 import org.w3c.dom.MessagePort
+import org.w3c.dom.events.Event
 import kotlin.js.Promise
 
 // https://developer.mozilla.org/de/docs/Web/API/AudioWorkletProcessor
@@ -16,6 +17,9 @@ external class AudioContext(options: AudioContextOptions = definedExternally) {
     val audioWorklet: AudioWorklet
     val destination: AudioNode
     val state: String
+
+    /** Called when [state] changes; null for nobody. */
+    var onstatechange: ((Event) -> Unit)?
     val sampleRate: Float
 
     /** Estimated latency of the current output device in seconds (hardware buffer → speakers). */
