@@ -273,7 +273,7 @@ with an ordinary stage is a 1x orbit). No separate rate setting. The orbit keeps
 occurs; each bus is converted once to the orbit's rate (one conversion per rate per orbit, never per voice), the
 buses aligned in phase like parallel branches.
 
-**Proposed, waiting for the maintainer:**
+**Decided (maintainer, 2026-10-31, "Ok sounds good"):**
 - Where the orbit's rate is read: when the cylinder builds the chain from its `katalyst(...)` declaration (idle orbit:
   at once; sounding orbit: the chain swap). The rate is a property of the built chain; during a swap each chain
   converts the rate buses to its own rate.
@@ -285,9 +285,38 @@ buses aligned in phase like parallel branches.
   `Ign.oversampleAtLeast(4) { Ign.sine().distort(0.5.ign) }` gives a sine born at 4x (no conversion up), while
   `Ign.sine().oversampleAtLeast(4) { it.distort(0.5.ign) }` renders the sine at 1x and converts it up once.
 
+## 11. Build in steps, on Der Schmetterling (maintainer, 2026-10-31)
+
+Built in steps, each heard in Der Schmetterling. Step 1 is the guitar preamps: several oversampled stages in a row
+with filters between them (`preampHighGain`: three `distort(..., 8)` with highpasses between, so three 8x round trips
+per voice today, one with a region).
+
+**Step 1: an Ignitor region for the preamps.**
+- 1a. Audit the stages the rigs use inside a region (`distort`, `highpass`, `lowpass`, `eq`, `mul`, `parallel`,
+  `serial`, `Ign.fn`): anything that reads the rate at build time or counts in samples. The SVF and one-pole filters
+  read `ctx.sampleRate` per block (seen 2026-10-31).
+- 1b. The node in `audio_bridge`: `oversampleBy` and `oversampleAtLeast` with a body lambda, both doors (`Ign` and the
+  script's `Ignitor`), the wire, the walk. The body is applied to a region-input placeholder, so the engine knows
+  where the outside ends (the braces rule, section 10).
+- 1c. The engine: the region renders its input at the outer rate, steps up only the missing 2x steps, runs the body
+  under a child `IgniteContext` at the region rate (sample rate and frame counters scaled, buffers from the
+  oversample pool), steps back down. It reports its group delay so `parallel` stays aligned (section 8b).
+- Bridge until step 4: a stage's own `oversample` factor acts as `oversampleAtLeast(n)` around that stage, so inside an
+  8x region `distort(0.3, "tube", 8)` converts nothing. Songs outside regions sound as before.
+- 1d. Tests (mutation-checked), the review loop.
+- 1e. The song: the preamps wrapped in one region each; an A/B render of the guitars for the maintainer's ears and the
+  CPU before and after. A sound change is expected: the second clipper now sees the first one's harmonics above
+  24 kHz, which each decimation used to remove.
+
+**Later steps:** 2, sources inside the braces born at the region rate, the sample-counted knobs scaled; 3, a voice's
+end region hands over at its rate and the orbits get their rate and per-rate buses; 4, the stages' own `oversample`
+factors retired (section 9, answer 2) and the songs moved to regions; the full phase 0 (section 3) where a step needs
+it.
+
 ## History
 
 - 2026-10-20: numbered KLANG-00214 (was `docs/tasks/oversampling-regions.md`).
 - 2026-10-27: part of KLANG-00354 (The Motor's shape: signal flow and the graph), the epic grouping.
 - 2026-10-31: the maintainer answered section 9, set the principle of as few conversions as possible, and asked four design questions; the blind test rendered.
 - 2026-10-31: blind test verdict (no difference heard); section 10, the design: two region doors, power-of-two factors capped at 16x, the orbit's rate from its chain.
+- 2026-10-31: section 10's proposals decided; section 11, build in steps on Der Schmetterling, step 1 the guitar preamps.
