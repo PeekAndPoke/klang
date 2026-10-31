@@ -1,7 +1,7 @@
 # KLANG-00396: Ultra and Kraft 0.117.0: the bump, and klang's workarounds replaced by what Ultra now has
 
-> **Status (2026-10-31): IN PROGRESS.** Steps 1 to 10 done; the Looks page's drag waits for the maintainer's look
-> (and its touch question, step 9).
+> **Status (2026-10-31): IN PROGRESS.** Steps 1 to 10 done; the Looks page's drag waits for the maintainer's look;
+> its long press on touch waits for ULTRA-00287 (step 9).
 >
 > **Part of:** KLANG-00334 (UI workbench: the Motor-centred layout, tool windows and the first-visit trail)
 
@@ -52,6 +52,9 @@ core).
    the pointer. Every placement, click or drop or a new look, goes through one `equip`: nothing stays in hand, and a
    waiting slot that is filled waits no more. Open for the maintainer: the whole tile is the drag's handle on touch
    (`touch-action: none`), so a swipe that starts on a tile drags rather than scrolls; Kraft's advice is a grip.
+   The maintainer, 2026-10-31: "We could initiate the drag with a long press?" Kraft's dnd cannot yet (no hold
+   before the drag, nothing that holds off the browser's pan): asked of Ultra as ULTRA-00287 (IDEA). Until it lands
+   the whole tile stays the handle; then the tile goes to `touch-action: pan-y` and hands the hold to `startDrag`.
 10. **The screen stays awake while something plays** (ULTRA-00275; the maintainer, 2026-10-31: whenever a song plays,
     not only in the visuals; "these kinds of wirings should always be done through the stream"). `KlangPlayer.playbacks`
     is its active playbacks, their one store (changed under its lock), and `KlangPlayer.playing` says whether a cyclic
@@ -97,3 +100,4 @@ core).
 - 2026-10-30: step 1 committed: Ultra and Kraft 0.117.0.
 - 2026-10-31: steps 2 to 9 reviewed in two rounds (the second clean), committed.
 - 2026-10-31: step 10, the wake lock, reviewed in two rounds (the second clean), committed.
+- 2026-10-31: step 9's touch question answered by the maintainer (a long press); asked of Ultra as ULTRA-00287.
