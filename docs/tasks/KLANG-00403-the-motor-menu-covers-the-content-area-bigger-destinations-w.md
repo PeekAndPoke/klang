@@ -14,9 +14,19 @@ columns, and the look row (seven looks and an empty slot).
 
 ## The design
 
-- **Where it opens:** over the whole content area of the workbench's centre, inset a little, as one riveted panel. The
-  column (with the Motor and its menu button, lit while the menu is open) and the tool strip stay. The bottom panel
-  stays under it, so the MIDI tool (KLANG-00402) keeps playing while one browses the menu.
+- **Where it opens:** over everything right of the column: the content, the bottom panel, the tool windows and the
+  tool strip, inset a little, as one riveted panel. Only the column stays, with the Motor and its menu button, lit
+  while the menu is open: the menu grows out of the Motor. So it is always the same size, whatever is pinned or open
+  (the maintainer, 2026-11-01: "it will always look the same and that is what you want from a navigation hub...
+  should go into your hands without the need to search for anything everytime"). It changes with the window only.
+- **A real overlay:** the page under it stays mounted (the maintainer: "we cannot unmount the underlying screen,
+  otherwise f.e. a song would stop play"). While the menu is open, what it covers is `inert` (no focus, no clicks, no
+  screen reader behind it) and may rest its drawing (`UiWork`, KLANG-00389), but plays on: a song, the MIDI rig
+  (KLANG-00402), whose held notes keep sounding.
+- **Its keys:** the menu button, Alt+M (`KlangKeyBindings.MotorMenu`, today's), and Shift Shift or Ctrl+K / Cmd+K
+  (`KlangKeyBindings.SearchEverywhere`, declared for "the search over everything" and never bound until now: the
+  maintainer, 2026-11-01, "now we also know what 'shift + shift' does ... it opens this menu"). Each opens it with the
+  focus in the search field; Esc closes it and gives the focus back.
 - **The header:** "Where to", a wide search field (it takes the focus on open, as today), "Close: Esc" and the close
   button.
 - **The destinations:** the same eight (`AppArea`, Account still "later"), in four columns, each about 100 px high
@@ -40,26 +50,29 @@ columns, and the look row (seven looks and an empty slot).
 
 ## Decide before implementing
 
-- **D1:** the menu over the content only (proposal; the bottom panel stays usable) or over the bottom panel too.
-- **D2:** what "last opened" holds: songs only, or songs, lessons and docs pages (proposal: all three, as drawn).
-- **D3:** the look picker's place: in the menu as drawn, and also on the Looks page (unchanged).
+- **D1:** what "last opened" holds: songs only, or songs, lessons and docs pages (proposal: all three, as drawn).
+- **D2:** the look picker's place: in the menu as drawn, and also on the Looks page (unchanged).
 
 ## The work
 
-1. `KlangDrawer` gets the large layout and `KlangWorkbench` places it over the centre (both in `klangui`, with the
-   kitchen sink's entry updated).
+1. `KlangDrawer` gets the large layout; `KlangWorkbench` places it over everything right of the column, the rest
+   `inert` under it; `SearchEverywhere` bound to open it (all in `klangui`, the kitchen sink's entry updated).
 2. The record of what was opened, in the Spine; "Pick up where you left off" reads it.
 3. The loadouts' section (looks now; MIDI with KLANG-00402).
 4. The search results in columns.
 
 ## Acceptance
 
-- The menu opens over the content area, takes the focus in the search field, closes on Esc and on a pick, and gives
-  the focus back as today.
+- The menu opens over everything right of the column at the same size whatever is pinned or open, from the button,
+  Alt+M, Shift Shift and Ctrl+K; takes the focus in the search field, closes on Esc and on a pick, and gives the
+  focus back as today.
+- A song playing under the open menu plays on; nothing under it takes a click or the focus.
 - A song opened shows first under "last opened" the next time the menu opens, also after a reload.
 - Every look and every destination is reachable by keyboard; the destinations keep their `aria-current`.
 
 ## History
 
 - 2026-11-01: created from the maintainer's ask; the mockup on a design canvas, built on a screenshot of today's
-  drawer (the brass look) and the look roles of `KlangRole`.
+  drawer (the brass look) and the look roles of `KlangRole`. The same day: a real overlay over the mounted page,
+  Shift Shift opens it, and it covers the tool windows and the bottom panel too, so it always looks the same (the
+  maintainer's word).
