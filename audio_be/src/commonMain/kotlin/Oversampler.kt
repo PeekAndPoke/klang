@@ -53,19 +53,31 @@ import kotlin.math.roundToInt
  * **`stages = 0`**: [upsample] and [decimate] are no-ops (zero work, no state change), for callers that may receive
  * `oversample = 1` from a DSL.
  *
+ * **`firstStage`**: an oversampler that starts ABOVE the base rate (inside an oversampling region, KLANG-00214
+ * (oversampling regions)) is the upper part of a longer cascade: its stages take the designs of the stages they
+ * continue, [LATER_STAGE] from the second on, so a 2x step inside a 2x region runs the cheaper design, not the sharp
+ * one meant for the base rate. What that design lets through sits above the base band, and for linear content the
+ * region's own last step down, at the base rate, takes it out; a nonlinear stage at the higher rate can fold a small
+ * part of it down (images of the top 7 kHz of a 2x region's band instead of the top 3 kHz, far below what that stage
+ * itself folds).
+ *
  * @param stages Number of 2x stages. 1 = 2x, 2 = 4x, 3 = 8x. Negative values are coerced to 0 (no oversampling).
+ * @param firstStage the cascade stage the first of them is (0 at the base rate, the default; 1 inside a 2x region).
  */
-class Oversampler(stages: Int) {
+class Oversampler(stages: Int, firstStage: Int = 0) {
 
     val stages: Int = stages.coerceAtLeast(0)
 
     val factor: Int = 1 shl this.stages
 
-    /** The up half per stage, stage 0 at the base rate. */
-    private val ups = Array(this.stages) { HalfBand(chainsOf(it)) }
+    /** The cascade stage of the first of [stages] (0 at the base rate). */
+    val firstStage: Int = firstStage.coerceAtLeast(0)
 
-    /** The down half per stage, stage 0 at the base rate (run highest first). */
-    private val downs = Array(this.stages) { HalfBand(chainsOf(it)) }
+    /** The up half per stage, the first at this oversampler's input rate. */
+    private val ups = Array(this.stages) { HalfBand(chainsOf(this.firstStage + it)) }
+
+    /** The down half per stage, the first at this oversampler's input rate (run highest first). */
+    private val downs = Array(this.stages) { HalfBand(chainsOf(this.firstStage + it)) }
 
     /**
      * The FIRST HALF of a round trip: upsamples `source[offset, offset + length)` into [work] and returns the
@@ -399,12 +411,14 @@ class Oversampler(stages: Int) {
          * by `(1 - a) / (1 + a)` samples of that rate; a stage's round trip delays DC by the MEAN of its two chains' sums
          * (a half-band at DC is the average of its two branches), scaled to input samples by `2^-stage`. 3.07, 4.40,
          * 5.06, 5.39 at 2x to 16x; the measured centroid of the impulse response agrees to 1e-12
-         * (`OversamplerGroupDelaySpec`). Toward the top the delay rises (see the class KDoc).
+         * (`OversamplerGroupDelaySpec`). Toward the top the delay rises (see the class KDoc). With a [firstStage] above
+         * 0 (an oversampler inside a region), in samples of ITS input rate.
          */
-        fun groupDelaySamples(stages: Int): Double {
+        fun groupDelaySamples(stages: Int, firstStage: Int = 0): Double {
             var delay = 0.0
 
-            for (stage in 0 until stages) {
+            for (step in 0 until stages) {
+                val stage = firstStage + step
                 val coefficients = coefficientsOf(stage)
                 var sum = 0.0
 
@@ -414,7 +428,7 @@ class Oversampler(stages: Int) {
 
                 // the even chain's sum plus the odd chain's, halved: the mean of the two (each section counts 2(1-a)/(1+a)
                 // at the stage's high rate, (1-a)/(1+a) at its low rate)
-                delay += sum / (1 shl stage)
+                delay += sum / (1 shl step)
             }
 
             return delay

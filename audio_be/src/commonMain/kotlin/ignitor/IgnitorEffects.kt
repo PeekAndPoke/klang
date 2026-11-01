@@ -147,11 +147,22 @@ fun Ignitor.drive(amount: Double): Ignitor {
  *   "rectify").
  */
 fun Ignitor.shape(shape: String = "soft", oversampleStages: Int = 0): Ignitor =
-    ShapeIgnitor(this, parseDistortionShape(shape), oversampleStages)
+    ShapeIgnitor(upstream = this, core = DistortionCore(shape = parseDistortionShape(shape), oversampleStages = oversampleStages))
 
-/** The waveshaper with the shape already resolved (from an index knob, at build): the DSL runtime's form. */
-internal fun Ignitor.shape(shape: DistortionShape, oversampleStages: Int): Ignitor =
-    ShapeIgnitor(this, shape, oversampleStages)
+/**
+ * The waveshaper with the shape already resolved (from an index knob, at build): the DSL runtime's form. Inside an
+ * oversampling region the build passes the region's [firstStage] and the DC blocker's pole for the region's rate
+ * ([dcBlockCoefficient], `DistortionCore`).
+ */
+internal fun Ignitor.shape(
+    shape: DistortionShape,
+    oversampleStages: Int,
+    firstStage: Int = 0,
+    dcBlockCoefficient: Double = DEFAULT_DC_BLOCK_COEFF,
+): Ignitor = ShapeIgnitor(
+    upstream = this,
+    core = DistortionCore(shape = shape, oversampleStages = oversampleStages, dcBlockCoefficient = dcBlockCoefficient, firstStage = firstStage),
+)
 
 /**
  * The `Shape` node: the shaper and the DC blocker are [DistortionCore] at drive 1.0 (the gain comes from an upstream
@@ -161,10 +172,8 @@ internal fun Ignitor.shape(shape: DistortionShape, oversampleStages: Int): Ignit
  */
 private class ShapeIgnitor(
     private val upstream: Ignitor,
-    shape: DistortionShape,
-    oversampleStages: Int,
+    private val core: DistortionCore,
 ) : Ignitor {
-    private val core = DistortionCore(shape = shape, oversampleStages = oversampleStages)
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         ctx.scratchBuffers.use { work ->
@@ -202,9 +211,20 @@ private class ShapeIgnitor(
  * @param amount the drive amount, read once per block; see [DistortionCore.drive].
  * @param shape the waveshaper, resolved at build.
  * @param oversampleStages 2x stages, read at build; 0 is the plain path.
+ * @param firstStage the cascade stage the oversampler starts at, above 0 inside an oversampling region.
+ * @param dcBlockCoefficient the DC blocker's pole, the voice's 0.995 mapped to a region's rate inside one.
  */
-internal fun Ignitor.fusedDistort(amount: Ignitor, shape: DistortionShape, oversampleStages: Int): Ignitor =
-    FusedDistortIgnitor(upstream = this, amount = amount, core = DistortionCore(shape, oversampleStages))
+internal fun Ignitor.fusedDistort(
+    amount: Ignitor,
+    shape: DistortionShape,
+    oversampleStages: Int,
+    firstStage: Int = 0,
+    dcBlockCoefficient: Double = DEFAULT_DC_BLOCK_COEFF,
+): Ignitor = FusedDistortIgnitor(
+    upstream = this,
+    amount = amount,
+    core = DistortionCore(shape = shape, oversampleStages = oversampleStages, dcBlockCoefficient = dcBlockCoefficient, firstStage = firstStage),
+)
 
 private class FusedDistortIgnitor(
     private val upstream: Ignitor,
@@ -552,7 +572,14 @@ fun Ignitor.shimmer(
     tone: Ignitor,
     pitches: List<Double> = listOf(0.0, 7.0, 12.0),
     floor: Ignitor = ParamIgnitor("floor", 0.0),
-): Ignitor = ShimmerIgnitor(upstream = this, wet = wet, feedback = feedback, tone = tone, pitches = pitches, floor = floor)
+    ringFrames: Int = SHIMMER_RING_FRAMES,
+): Ignitor = ShimmerIgnitor(upstream = this, wet = wet, feedback = feedback, tone = tone, pitches = pitches, floor = floor, ringFrames = ringFrames)
+
+/**
+ * The shimmer's grain ring at the base rate, 96,000 frames (2 s at 48 kHz). Inside an oversampling region the build
+ * passes this times the region's factor, so the ring holds the same time.
+ */
+internal const val SHIMMER_RING_FRAMES: Int = 96_000
 
 // NOTE: shimmer is WIP — internal grain bookkeeping may still change. Keep the
 // per-block logic readable; revisit perf rules (audio/ref/performance.md) once
@@ -564,11 +591,12 @@ private class ShimmerIgnitor(
     private val tone: Ignitor,
     pitches: List<Double>,
     private val floor: Ignitor,
+    ringFrames: Int,
 ) : Ignitor {
     /** True once the grain engine has produced state that a bypass must clear. */
     private var stateDirty = false
 
-    private val ringSize = 96_000
+    private val ringSize = ringFrames
     private val ring = AudioBuffer(ringSize)
     private var writePos: Int = 0
 
@@ -802,15 +830,17 @@ private class DcBlockIgnitor(
  * TWINS a `parallel` node puts on a branch that lacks those oversamplers (see [BuiltIgnitor.oversamplers]). A round
  * trip is flat in level (an all-pass), so a twin changes only the phase, by exactly what the oversampler does to a
  * branch that runs through it. The oversamplers are allocated here, at build; with no stages the signal is returned as
- * it is.
+ * it is. Inside an oversampling region every twin starts at the region's [firstStage], as every oversampler there does.
  */
-internal fun Ignitor.phaseTwins(stages: List<Int>): Ignitor = stages.fold(this) { upstream, s -> PhaseTwinIgnitor(upstream = upstream, stages = s) }
+internal fun Ignitor.phaseTwins(stages: List<Int>, firstStage: Int = 0): Ignitor =
+    stages.fold(this) { upstream, s -> PhaseTwinIgnitor(upstream = upstream, stages = s, firstStage = firstStage) }
 
 private class PhaseTwinIgnitor(
     private val upstream: Ignitor,
     stages: Int,
+    firstStage: Int,
 ) : Ignitor {
-    private val oversampler = Oversampler(stages)
+    private val oversampler = Oversampler(stages = stages, firstStage = firstStage)
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         upstream.generate(buffer, freqHz, ctx)

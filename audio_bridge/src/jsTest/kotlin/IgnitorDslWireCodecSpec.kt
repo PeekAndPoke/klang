@@ -37,6 +37,10 @@ class IgnitorDslWireCodecSpec : StringSpec({
     "Sample" { check(IgnitorDsl.Sample) }
     "Constant" { check(IgnitorDsl.Constant(42.0)) }
     "Parallel" { check(IgnitorDsl.Sine().parallel({ it }, { it.lowpass(800.0.ign) }, { it.mul(0.5.ign) })) }
+    "OversampleBy" { check(IgnitorDsl.Sine().oversampleBy(4.ign) { it.lowpass(800.0.ign) }) }
+    "OversampleAtLeast, nested, the outer input inside the inner body" {
+        check(IgnitorDsl.Sine().oversampleAtLeast(2.ign) { y -> IgnitorDsl.Silence.oversampleBy(2.ign) { z -> z.plus(y) } })
+    }
 
     // The by-ear A/B hatch travels over the wire to the browser worklet, which is exactly where
     // it gets used; every field non-default so a dropped one shows up.

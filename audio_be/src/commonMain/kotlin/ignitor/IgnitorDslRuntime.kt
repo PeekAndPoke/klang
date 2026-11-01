@@ -6,9 +6,11 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.AudioBackendContext
+import io.peekandpoke.klang.audio_be.DistortionCore
 import io.peekandpoke.klang.audio_be.DistortionShape
 import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.distortionShapeAt
+import io.peekandpoke.klang.audio_be.filters.DEFAULT_DC_BLOCK_COEFF
 import io.peekandpoke.klang.audio_be.filters.butterworthQLadder
 import io.peekandpoke.klang.audio_be.filters.eqSectionSpec
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
@@ -76,7 +78,10 @@ fun IgnitorDsl.buildExciter(
      *  (every voice that is not a sample) builds that leaf as silence. See [IgnitorBuildCache.sampleSource]. */
     sampleSource: Ignitor? = null,
 ): BuiltIgnitor {
-    val cache = IgnitorBuildCache(soundIndex = soundIndex, phasePools = phasePools, orbit = orbit, random = random, freqHz = freqHz, sampleRate = sampleRate, blockFrames = blockFrames, sampleSource = sampleSource)
+    val cache = IgnitorBuildCache(
+        soundIndex = soundIndex, phasePools = phasePools, orbit = orbit, random = random, freqHz = freqHz,
+        baseSampleRate = sampleRate, baseBlockFrames = blockFrames, sampleSource = sampleSource,
+    )
     return buildIgnitor(ignitorParams, cache)
 }
 
@@ -135,13 +140,12 @@ internal class IgnitorBuildCache(
      *  it), which is how a pitch-relative release such as `Ignitor.freq().recip().mul(200)` resolves for
      *  voice lifetime. Carried here like [soundIndex] rather than threaded through every arm. */
     val freqHz: Double = 0.0,
-    /** The backend's sample rate; read only by a `humanize` filter's drift lane. See
-     *  [DEFAULT_BUILD_SAMPLE_RATE] for what the default means. */
-    val sampleRate: Int = DEFAULT_BUILD_SAMPLE_RATE,
-    /** The backend's block size; read only by a `humanize` filter's drift lane, which steps
-     *  once per block. Pinned to 128 everywhere (it is a tone parameter, see
-     *  [AudioBackendContext.RENDER_QUANTUM_FRAMES]). */
-    val blockFrames: Int = AudioBackendContext.RENDER_QUANTUM_FRAMES,
+    /** The backend's sample rate. See [DEFAULT_BUILD_SAMPLE_RATE] for what the default means. Inside an oversampling
+     *  region the build reads [sampleRate], the region's. */
+    val baseSampleRate: Int = DEFAULT_BUILD_SAMPLE_RATE,
+    /** The backend's block size. Pinned to 128 everywhere (it is a tone parameter, see
+     *  [AudioBackendContext.RENDER_QUANTUM_FRAMES]). Inside an oversampling region the build reads [blockFrames]. */
+    val baseBlockFrames: Int = AudioBackendContext.RENDER_QUANTUM_FRAMES,
     /** The voice's sample playhead (phase 3 step 7): the runtime of the [IgnitorDsl.Sample] leaf. The engine
      *  resolves the sample and builds the playhead from the voice's playback fields (`VoiceFactory`), before the
      *  build, so its drift lane draws first; carried here like [soundIndex] to reach the leaf. Null builds the
@@ -152,18 +156,48 @@ internal class IgnitorBuildCache(
      *  Identity-compared as part of the cache key (pushed/popped by the Detune build arm). */
     var detuneContext: DetuneContext? = null
 
+    /** The oversampling region at the current recursion point, null outside every region (KLANG-00214 (oversampling
+     *  regions)). Identity-compared as part of the cache key, set by the region arms and the 1x rule for sources
+     *  ([inRegion]). */
+    var region: RegionScope? = null
+
+    /** The region's rate in 2x steps from the base rate, 0 outside every region. */
+    val regionStages: Int get() = region?.stages ?: 0
+
+    /** The rate the build is at: the backend's, times the region's factor inside one. Read by the build-time consumers
+     *  of a rate (a `humanize` filter's drift lane, the tremolo's edges). */
+    val sampleRate: Int get() = baseSampleRate shl regionStages
+
+    /** The block size the build is at: the backend's, times the region's factor inside one (a memo's cache, a drift
+     *  lane's step). */
+    val blockFrames: Int get() = baseBlockFrames shl regionStages
+
+    /** Builds [block] in [scope] (null: outside every region), then returns to the scope it was in. */
+    inline fun <T> inRegion(scope: RegionScope?, block: () -> T): T {
+        val saved = region
+        region = scope
+
+        try {
+            return block()
+        } finally {
+            region = saved
+        }
+    }
+
     private val dslKeys = ArrayList<IgnitorDsl>()
     private val modKeys = ArrayList<Ignitor?>()
     private val ctxKeys = ArrayList<DetuneContext?>()
+    private val regionKeys = ArrayList<RegionScope?>()
     private val values = ArrayList<BuiltIgnitor>()
 
     inline fun getOrPut(key: IgnitorDsl, mod: Ignitor?, compute: () -> BuiltIgnitor): BuiltIgnitor {
         // Snapshot: the entry must be FILED under the context it was looked up in, even if
         // compute() misbehaves with the mutable field (review round 1 hardening).
         val ctx = detuneContext
+        val scope = region
 
         for (i in dslKeys.indices) {
-            if (dslKeys[i] === key && modKeys[i] === mod && ctxKeys[i] === ctx) {
+            if (dslKeys[i] === key && modKeys[i] === mod && ctxKeys[i] === ctx && regionKeys[i] === scope) {
                 val existing = values[i]
 
                 onShared(i)
@@ -178,6 +212,7 @@ internal class IgnitorBuildCache(
         dslKeys.add(key)
         modKeys.add(mod)
         ctxKeys.add(ctx)
+        regionKeys.add(scope)
         values.add(v)
 
         return v
@@ -371,6 +406,28 @@ internal fun IgnitorDsl.buildIgnitor(
         }
     }
 
+    // ── Inside an oversampling region a SOURCE stays at the base rate (maintainer, 2026-10-31; KLANG-00214
+    //    (oversampling regions) section 10): it is built outside every region, renders in the voice's context and is
+    //    converted up once, to the region's rate, where it enters. Its pitch modulation is built outside every region
+    //    too (the pitch arms below). The stages around it run at the region's rate. ──
+    val scope = cache.region
+
+    if (scope != null && isSource()) {
+        val atBase = cache.inRegion(null) { buildIgnitor(ignitorParams, cache, accumulatedMod) }
+        // The phase twins of what the input ran through before the outermost region (see [RegionScope.inputOversamplers]).
+        // A source runs through no oversampler and has no latency of its own: its arm builds its knobs only.
+        val twins = scope.inputOversamplers.orEmpty()
+        // Its latency in the body counts from the region's input (see [RegionScope.inputDelay]): usually earlier.
+        val relative = scope.relativeLatency(baseDelay = twins.sumOf { Oversampler.groupDelaySamples(stages = it) })
+
+        return atBase.copy(
+            ignitor = LiftedSourceIgnitor(source = atBase.ignitor.phaseTwins(stages = twins), oversampler = Oversampler(stages = scope.stages)),
+            latencySamples = relative,
+            // aligned: the same cascade as the input, so a `parallel` can twin it exactly
+            oversamplers = if (isAlignedWithRegionInput(relative)) emptyList() else null,
+        )
+    }
+
     // ── Optimizer marker: a registration-time hint, invisible at render. Dissolve it. ──
     if (this is IgnitorDsl.OptimizerHint) {
         return inner.buildIgnitor(ignitorParams, cache, accumulatedMod)
@@ -382,6 +439,9 @@ internal fun IgnitorDsl.buildIgnitor(
     }
 
     // ── Pitch-mod nodes: absorb into mod, descend. No cache entry for this node itself; its mod is memoized (`combineMods`).
+    //    Inside an oversampling region the mod is built outside every region (`inRegion(null)`): only sources read it,
+    //    and they render at the base rate, in the voice's context (KLANG-00214 (oversampling regions) section 10); the
+    //    bent child is built where the node stands.
     //    The five with a switch knob are GATED first (pitch pipeline step 0; `pitchModSemitones` at a literal mod, 7a):
     //    off, the walk descends with the UNCHANGED mod and builds nothing of the node (see `gatedOff`, "a gated PITCH
     //    arm"; a build-time walk over the DSL, the detune fold predicate, still sees its knobs). `PitchMod` is not
@@ -396,15 +456,18 @@ internal fun IgnitorDsl.buildIgnitor(
 
             // A composition since pitch pipeline 7b (`vibratoModIgnitor`). Build order is rng draw order: rate, then
             // semitones, as before; then the range and the phase (7c), which build nothing at their literal defaults.
-            val ranged = hasBuiltRange(ignitorParams = ignitorParams, cache = cache)
-            val vibMod = vibratoModIgnitor(
-                rate = this.rate.finiteLiteralOr(ignitorParams = ignitorParams, cache = cache, fallback = VIBRATO_RATE_HZ),
-                semitones = this.semitones.finiteLiteralOr(ignitorParams = ignitorParams, cache = cache, fallback = VIBRATO_SEMITONES),
-                rangeFrom = if (ranged) rangeFrom.finiteLiteralOr(ignitorParams = ignitorParams, cache = cache, fallback = VIBRATO_RANGE_FROM) else null,
-                rangeTo = if (ranged) rangeTo.finiteLiteralOr(ignitorParams = ignitorParams, cache = cache, fallback = VIBRATO_RANGE_TO) else null,
-                phase = vibratoPhase(ignitorParams = ignitorParams, cache = cache),
-            )
-            return inner.buildIgnitor(ignitorParams, cache, cache.combineMods(accumulatedMod, vibMod, node = this))
+            val combined = cache.inRegion(null) {
+                val ranged = hasBuiltRange(ignitorParams = ignitorParams, cache = cache)
+                val vibMod = vibratoModIgnitor(
+                    rate = this.rate.finiteLiteralOr(ignitorParams = ignitorParams, cache = cache, fallback = VIBRATO_RATE_HZ),
+                    semitones = this.semitones.finiteLiteralOr(ignitorParams = ignitorParams, cache = cache, fallback = VIBRATO_SEMITONES),
+                    rangeFrom = if (ranged) rangeFrom.finiteLiteralOr(ignitorParams = ignitorParams, cache = cache, fallback = VIBRATO_RANGE_FROM) else null,
+                    rangeTo = if (ranged) rangeTo.finiteLiteralOr(ignitorParams = ignitorParams, cache = cache, fallback = VIBRATO_RANGE_TO) else null,
+                    phase = vibratoPhase(ignitorParams = ignitorParams, cache = cache),
+                )
+                cache.combineMods(accumulatedMod, vibMod, node = this)
+            }
+            return inner.buildIgnitor(ignitorParams, cache, combined)
         }
 
         is IgnitorDsl.Accelerate -> {
@@ -413,8 +476,11 @@ internal fun IgnitorDsl.buildIgnitor(
                 return inner.buildIgnitor(ignitorParams, cache, accumulatedMod)
             }
 
-            val accelMod = accelerateModIgnitor(this.semitones.buildIgnitor(ignitorParams, cache).ignitor)
-            return inner.buildIgnitor(ignitorParams, cache, cache.combineMods(accumulatedMod, accelMod, node = this))
+            val combined = cache.inRegion(null) {
+                val accelMod = accelerateModIgnitor(this.semitones.buildIgnitor(ignitorParams, cache).ignitor)
+                cache.combineMods(accumulatedMod, accelMod, node = this)
+            }
+            return inner.buildIgnitor(ignitorParams, cache, combined)
         }
 
         is IgnitorDsl.PitchEnvelope -> {
@@ -427,23 +493,29 @@ internal fun IgnitorDsl.buildIgnitor(
             // sustain in the slot the anchor had (the dropped `curve` was a leaf and drew nothing).
             // The three curves are read leaf-only (`adsrCurveKnob`) and build nothing.
             // The release is NOT reported as a tail: a pitch release never extends the voice.
-            val peMod = pitchEnvelopeModIgnitor(
-                attack = this.attack.buildIgnitor(ignitorParams, cache).ignitor,
-                decay = this.decay.buildIgnitor(ignitorParams, cache).ignitor,
-                release = this.release.buildIgnitor(ignitorParams, cache).ignitor,
-                semitones = this.semitones.buildIgnitor(ignitorParams, cache).ignitor,
-                sustain = this.sustain.buildIgnitor(ignitorParams, cache).ignitor,
-                attackCurve = this.attackCurve.adsrCurveKnob(ignitorParams, cache, MOD_ENV_CURVE),
-                decayCurve = this.decayCurve.adsrCurveKnob(ignitorParams, cache, MOD_ENV_CURVE),
-                releaseCurve = this.releaseCurve.adsrCurveKnob(ignitorParams, cache, MOD_ENV_CURVE),
-            )
-            return inner.buildIgnitor(ignitorParams, cache, cache.combineMods(accumulatedMod, peMod, node = this))
+            val combined = cache.inRegion(null) {
+                val peMod = pitchEnvelopeModIgnitor(
+                    attack = this.attack.buildIgnitor(ignitorParams, cache).ignitor,
+                    decay = this.decay.buildIgnitor(ignitorParams, cache).ignitor,
+                    release = this.release.buildIgnitor(ignitorParams, cache).ignitor,
+                    semitones = this.semitones.buildIgnitor(ignitorParams, cache).ignitor,
+                    sustain = this.sustain.buildIgnitor(ignitorParams, cache).ignitor,
+                    attackCurve = this.attackCurve.adsrCurveKnob(ignitorParams, cache, MOD_ENV_CURVE),
+                    decayCurve = this.decayCurve.adsrCurveKnob(ignitorParams, cache, MOD_ENV_CURVE),
+                    releaseCurve = this.releaseCurve.adsrCurveKnob(ignitorParams, cache, MOD_ENV_CURVE),
+                )
+                cache.combineMods(accumulatedMod, peMod, node = this)
+            }
+            return inner.buildIgnitor(ignitorParams, cache, combined)
         }
 
         is IgnitorDsl.PitchMod -> {
-            val userMod = this.mod.buildIgnitor(ignitorParams, cache).ignitor
-            val ratioMod = deviationToRatioIgnitor(userMod)
-            return inner.buildIgnitor(ignitorParams, cache, cache.combineMods(accumulatedMod, ratioMod, node = this))
+            val combined = cache.inRegion(null) {
+                val userMod = this.mod.buildIgnitor(ignitorParams, cache).ignitor
+                val ratioMod = deviationToRatioIgnitor(userMod)
+                cache.combineMods(accumulatedMod, ratioMod, node = this)
+            }
+            return inner.buildIgnitor(ignitorParams, cache, combined)
         }
 
         is IgnitorDsl.PitchModSemitones -> {
@@ -453,9 +525,12 @@ internal fun IgnitorDsl.buildIgnitor(
                 return inner.buildIgnitor(ignitorParams, cache, accumulatedMod)
             }
 
-            val userMod = this.mod.buildIgnitor(ignitorParams, cache).ignitor
-            val ratioMod = semitonesToRatioIgnitor(userMod)
-            return inner.buildIgnitor(ignitorParams, cache, cache.combineMods(accumulatedMod, ratioMod, node = this))
+            val combined = cache.inRegion(null) {
+                val userMod = this.mod.buildIgnitor(ignitorParams, cache).ignitor
+                val ratioMod = semitonesToRatioIgnitor(userMod)
+                cache.combineMods(accumulatedMod, ratioMod, node = this)
+            }
+            return inner.buildIgnitor(ignitorParams, cache, combined)
         }
 
         is IgnitorDsl.Fm -> {
@@ -471,19 +546,22 @@ internal fun IgnitorDsl.buildIgnitor(
             // outer mod). A pitch node means what it wraps (the placement rule, maintainer, 2026-10-09): one on
             // the carrier only does not reach the modulator, one on the modulator stays the modulator's own.
             val modulatorPitch = if (accumulatedMod != null) cache.carrierFreqMod(node = this, mod = accumulatedMod) else null
-            val modulatorBuilt = modulator.buildIgnitor(ignitorParams, cache, modulatorPitch)
-            val fmMod = FmModIgnitor(
-                modulator = modulatorBuilt.ignitor,
-                ratio = this.ratio.buildIgnitor(ignitorParams, cache).ignitor,
-                depth = this.depth.buildIgnitor(ignitorParams, cache).ignitor,
-                attack = this.attack.buildIgnitor(ignitorParams, cache).ignitor,
-                decay = this.decay.buildIgnitor(ignitorParams, cache).ignitor,
-                sustain = this.sustain.buildIgnitor(ignitorParams, cache).ignitor,
-                release = this.release.buildIgnitor(ignitorParams, cache).ignitor,
-                freq = this.freq.buildIgnitor(ignitorParams, cache).ignitor,
-                modulatorPitch = modulatorPitch,
-            )
-            val carrierBuilt = carrier.buildIgnitor(ignitorParams, cache, cache.combineMods(accumulatedMod, fmMod, node = this))
+            val modulatorBuilt = cache.inRegion(null) { modulator.buildIgnitor(ignitorParams, cache, modulatorPitch) }
+            val combined = cache.inRegion(null) {
+                val fmMod = FmModIgnitor(
+                    modulator = modulatorBuilt.ignitor,
+                    ratio = this.ratio.buildIgnitor(ignitorParams, cache).ignitor,
+                    depth = this.depth.buildIgnitor(ignitorParams, cache).ignitor,
+                    attack = this.attack.buildIgnitor(ignitorParams, cache).ignitor,
+                    decay = this.decay.buildIgnitor(ignitorParams, cache).ignitor,
+                    sustain = this.sustain.buildIgnitor(ignitorParams, cache).ignitor,
+                    release = this.release.buildIgnitor(ignitorParams, cache).ignitor,
+                    freq = this.freq.buildIgnitor(ignitorParams, cache).ignitor,
+                    modulatorPitch = modulatorPitch,
+                )
+                cache.combineMods(accumulatedMod, fmMod, node = this)
+            }
+            val carrierBuilt = carrier.buildIgnitor(ignitorParams, cache, combined)
             // The modulator is not on the amplitude spine, but the old `maxReleaseSec` counted it
             // (`maxOf(carrier, modulator)`). Keep counting it: over-counting only over-allocates
             // lifetime, whereas dropping it would silently shorten voices that render fine today.
@@ -1157,7 +1235,10 @@ private fun IgnitorDsl.buildRaw(
 
     // How late the signal spine is, exact (see [BuiltIgnitor.latencySamples]): the latest of the signal children,
     // absorbed along the same edges as the tail, plus what THIS node adds ([ownLatency], set by the oversampled arms).
+    // The first timed child sets it, so a negative latency (a source inside a region, earlier than the region's input)
+    // is kept; 0 with no timed signal child.
     var spineLatency = 0.0
+    var spineSeen = false
     var ownLatency = 0.0
 
     // Which oversamplers the signal spine ran through (see [BuiltIgnitor.oversamplers]): merged from the same signal
@@ -1171,7 +1252,12 @@ private fun IgnitorDsl.buildRaw(
         spineTail = maxTail(a = spineTail, b = built.releaseTailSec)
         spineGatesOutput = spineGatesOutput || built.gatesOutput
         lastChildEndsInEnvelope = built.endsInEnvelope
-        spineLatency = maxOf(spineLatency, built.latencySamples)
+        // A block-constant child (a constant, a slot, a constant expression) has no time: it takes no part, so its 0 does
+        // not hide a source's earlier latency inside a region.
+        if (!built.ignitor.isBlockConstant) {
+            spineLatency = if (spineSeen) maxOf(spineLatency, built.latencySamples) else built.latencySamples
+            spineSeen = true
+        }
         spineOversamplers = mergeOversamplers(a = spineOversamplers, b = built.oversamplers)
         return built
     }
@@ -1214,6 +1300,65 @@ private fun IgnitorDsl.buildRaw(
         }
 
         return applyMod(source, accumulatedMod)
+    }
+
+    /**
+     * An oversampling region (KLANG-00214 (oversampling regions) sections 10 and 11). [factor] is read once, leaf-only,
+     * rounded down to a power of two (`oversampleStagesKnob`); [relative] (`oversampleBy`) adds its steps to the rate the
+     * region is in, otherwise (`oversampleAtLeast`) it is a floor. The rate stops at [REGION_MAX_STAGES] (16x).
+     *
+     * No step to take: no region, the body on [inner] in this scope, as if the region were not written.
+     * Otherwise [inner] is built here, at the incoming rate, and the body in a new [RegionScope]. The body's tail and
+     * gate are the region's; its latency counts from the region's input in the region's samples
+     * ([RegionScope.inputDelay]), so it is divided down, and the region adds its round trip's. The region reports its
+     * oversampler as one of [steps] stages, so a `parallel` beside it twins it exactly; a body that runs oversamplers
+     * of its own, or reads a signal not aligned with its input, reports none (`null`), and a `parallel` around it pads
+     * whole samples instead.
+     */
+    fun buildRegion(inner: IgnitorDsl, body: IgnitorDsl, factor: IgnitorDsl, relative: Boolean): Ignitor {
+        val current = cache.regionStages
+        val asked = factor.oversampleStagesKnob(ignitorParams, cache)
+        val target = (if (relative) current + asked else maxOf(current, asked)).coerceAtMost(REGION_MAX_STAGES).coerceAtLeast(current)
+        val steps = target - current
+
+        if (steps == 0) {
+            // The body IS the node here, as a gated-off stage is its inner: its envelope answer passes on.
+            val signal = body.withRegionInput(inner).withMod()
+            builtEnvelope = lastChildEndsInEnvelope
+
+            return signal
+        }
+
+        val innerBuilt = inner.withModBuilt()
+        val outer = cache.region
+        val inputDelay = (outer?.inputDelay ?: 0.0) + innerBuilt.latencySamples / (1 shl current)
+        val holder = RegionInputHolder()
+        val scope = RegionScope(
+            stages = target,
+            input = holder,
+            outer = outer,
+            inputDelay = inputDelay,
+            inputOversamplers = if (outer == null) innerBuilt.oversamplers else outer.inputOversamplers,
+        )
+        val bodyBuilt = cache.inRegion(scope) {
+            body.buildIgnitor(ignitorParams, cache, accumulatedMod)
+        }
+
+        spineTail = maxTail(a = spineTail, b = bodyBuilt.releaseTailSec)
+        spineGatesOutput = spineGatesOutput || bodyBuilt.gatesOutput
+        ownLatency = Oversampler.groupDelaySamples(stages = steps, firstStage = current) + bodyBuilt.latencySamples / (1 shl steps)
+        ownOversampler = steps
+
+        if (bodyBuilt.oversamplers?.isEmpty() != true) {
+            spineOversamplers = null
+        }
+
+        return OversampleRegionIgnitor(
+            inner = innerBuilt.ignitor,
+            body = bodyBuilt.ignitor,
+            oversampler = Oversampler(stages = steps, firstStage = current),
+            input = holder,
+        )
     }
 
     val ignitor = when (this) {
@@ -1393,6 +1538,41 @@ private fun IgnitorDsl.buildRaw(
 
         is IgnitorDsl.Plus -> left.withMod() + right.withMod()
 
+        // An oversampling region (KLANG-00214 (oversampling regions)): `buildRegion` below.
+        is IgnitorDsl.OversampleBy -> buildRegion(inner = inner, body = body, factor = factor, relative = true)
+        is IgnitorDsl.OversampleAtLeast -> buildRegion(inner = inner, body = body, factor = factor, relative = false)
+
+        // Where a region's input enters its body: `up` regions out from here. The innermost reads its holder as it is;
+        // an outer one is converted up to this rate, and its latency counts from this region's input, as a source's
+        // does. One that points past every region (or is read by a source or as a pitch modulation, both built outside
+        // every region) is silence.
+        is IgnitorDsl.RegionInput -> {
+            var scope = cache.region
+            var hops = up
+
+            while (scope != null && hops > 0) {
+                scope = scope.outer
+                hops--
+            }
+
+            val here = cache.region
+
+            when {
+                scope == null || here == null || up < 0 -> Ignitors.silence()
+                scope === here -> RegionInputIgnitor(scope.input)
+                else -> {
+                    val steps = here.stages - scope.stages
+                    ownLatency = here.relativeLatency(baseDelay = scope.inputDelay)
+
+                    if (!isAlignedWithRegionInput(ownLatency)) {
+                        spineOversamplers = null
+                    }
+
+                    OuterRegionInputIgnitor(holder = scope.input, oversampler = Oversampler(stages = steps, firstStage = scope.stages))
+                }
+            }
+        }
+
         // Branches side by side, summed, every branch matched in phase to the others, so an oversampled branch does not
         // comb against a dry one. The branches share their input by identity (the door hands every branch the same
         // node), so the build cache builds it once. When every branch knows its oversamplers, each one gets an unshaped
@@ -1407,9 +1587,11 @@ private fun IgnitorDsl.buildRaw(
 
             val padded = if (union != null) {
                 spineOversamplers = union
-                spineLatency = union.sumOf { Oversampler.groupDelaySamples(it) }
+                spineLatency = union.sumOf { Oversampler.groupDelaySamples(stages = it, firstStage = cache.regionStages) }
 
-                built.map { it.ignitor.phaseTwins(stages = Oversampler.missingFrom(have = it.oversamplers.orEmpty(), union = union)) }
+                built.map {
+                    it.ignitor.phaseTwins(stages = Oversampler.missingFrom(have = it.oversamplers.orEmpty(), union = union), firstStage = cache.regionStages)
+                }
             } else {
                 val latest = spineLatency
                 // Rounded here and only here: the pad is whole samples, the latencies it compares are exact.
@@ -1748,11 +1930,18 @@ private fun IgnitorDsl.buildRaw(
             val signal = inner.withMod()
             val drive = amount.noMod()
             val shaper = shape.distortionShapeKnob(ignitorParams, cache)
-            val stages = oversample.oversampleStagesKnob(ignitorParams, cache)
-            ownLatency = Oversampler.groupDelaySamples(stages)
+            // The factor is a floor inside a region, as in the `Shape` arm.
+            val stages = (oversample.oversampleStagesKnob(ignitorParams, cache) - cache.regionStages).coerceAtLeast(0)
+            ownLatency = Oversampler.groupDelaySamples(stages = stages, firstStage = cache.regionStages)
             ownOversampler = stages
 
-            signal.fusedDistort(drive, shaper, stages)
+            signal.fusedDistort(
+                amount = drive,
+                shape = shaper,
+                oversampleStages = stages,
+                firstStage = cache.regionStages,
+                dcBlockCoefficient = DistortionCore.dcBlockCoefficientAt(coefficient = DEFAULT_DC_BLOCK_COEFF, stages = cache.regionStages),
+            )
         }
 
         // GATE ROW `drive`: at or below 0.0, or unset. THE row the authoring doors reach, because
@@ -1781,11 +1970,18 @@ private fun IgnitorDsl.buildRaw(
             // In the order these were always built (inner, shape, oversample): build order is draw order.
             val signal = inner.withMod()
             val shaper = shape.distortionShapeKnob(ignitorParams, cache)
-            val stages = oversample.oversampleStagesKnob(ignitorParams, cache)
-            ownLatency = Oversampler.groupDelaySamples(stages)
+            // Inside a region the factor is a floor (the bridge until the factors retire, KLANG-00214 section 11): only
+            // the steps the region lacks.
+            val stages = (oversample.oversampleStagesKnob(ignitorParams, cache) - cache.regionStages).coerceAtLeast(0)
+            ownLatency = Oversampler.groupDelaySamples(stages = stages, firstStage = cache.regionStages)
             ownOversampler = stages
 
-            signal.shape(shaper, stages)
+            signal.shape(
+                shape = shaper,
+                oversampleStages = stages,
+                firstStage = cache.regionStages,
+                dcBlockCoefficient = DistortionCore.dcBlockCoefficientAt(coefficient = DEFAULT_DC_BLOCK_COEFF, stages = cache.regionStages),
+            )
         }
 
         // GATE ROW `crush`: BELOW 1.0, or unset, and NOT 0. `CrushIgnitor` itself bypasses below two
@@ -1808,7 +2004,12 @@ private fun IgnitorDsl.buildRaw(
         is IgnitorDsl.Coarse -> if (factor.gatedOff(ignitorParams, cache) { it <= 1.0 }) {
             inner.passThrough()
         } else {
-            inner.withMod().coarse(factor.noMod())
+            // The hold is counted in samples: inside a region, in the region's, so it holds the same time. Inner first,
+            // then the knob: build order is draw order.
+            val signal = inner.withMod()
+            val hold = factor.noMod()
+
+            signal.coarse(if (cache.regionStages > 0) hold * ConstantIgnitor((1 shl cache.regionStages).toDouble()) else hold)
         }
 
         // NOT gated: no per-voice phaser is reachable from a built-in tail (the strip's per-voice
@@ -1858,7 +2059,10 @@ private fun IgnitorDsl.buildRaw(
                 )
             }
         }
-        is IgnitorDsl.Shimmer -> inner.withMod().shimmer(wet = wet.noMod(), feedback = feedback.noMod(), tone = tone.noMod(), pitches = pitches, floor = floor.noMod())
+        is IgnitorDsl.Shimmer -> inner.withMod().shimmer(
+            wet = wet.noMod(), feedback = feedback.noMod(), tone = tone.noMod(), pitches = pitches, floor = floor.noMod(),
+            ringFrames = SHIMMER_RING_FRAMES shl cache.regionStages,
+        )
     }
 
     return BuiltIgnitor(

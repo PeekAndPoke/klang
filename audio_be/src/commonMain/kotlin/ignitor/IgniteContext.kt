@@ -79,6 +79,14 @@ class IgniteContext(
      */
     var phaseMod: DoubleArray? = null,
 ) {
+    /**
+     * The voice's own context when this one is an oversampling region's (`OversampleRegionIgnitor`), null for the voice's
+     * own. Sources stay at the base rate (KLANG-00214 (oversampling regions) section 10): a source inside a region
+     * renders in this context and is converted up where it enters (`LiftedSourceIgnitor`). Set by the region before
+     * every block, with the window the voice's context has then.
+     */
+    var rootContext: IgniteContext? = null
+
     // ── Mutable per block (updated by caller before each generate() call) ──────
 
     /** Start index in buffer for this block. Moved via [updateOffsetAndLength] / [updateOffset]. */

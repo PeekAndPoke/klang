@@ -88,6 +88,15 @@ data class BuiltIgnitor(
      * [oversamplers]); it then delays every branch to the latest one, rounding only that pad, so two 4x stages are 8.79
      * late and pad a dry branch by 9, not by the 8 two rounded stages would say.
      *
+     * Inside an oversampling region it counts from the region's input, in the region's samples (`RegionScope.inputDelay`):
+     * a source converted up from the base rate, or an outer region's input, is usually earlier, so negative. A
+     * block-constant child (a constant, a slot) has no time and takes no part in the maximum; a moving gain built from
+     * neither (an envelope over a constant, `Ign.constant(1).adsr(...)`) reports the input's time and, in a `mul`, hides
+     * an earlier branch: put the envelope on the source instead. Only a signal aligned with the input keeps an
+     * oversampler list; any other pads whole samples. A nested source lacks only the upper stages' twins (within about
+     * 1 dB to 20 kHz for up to three 4x steps); a source whose input's oversamplers are unknown (`null`) lacks the
+     * base-rate one, and its pad can notch the top of a sum (KLANG-00214 (oversampling regions)).
+     *
      * Absorbed along the spine like [releaseTailSec] and carried in the cached value for the same reason. A plain sum
      * ([IgnitorDsl.Plus]) does not align its operands; it only reports the later one.
      *
@@ -100,7 +109,7 @@ data class BuiltIgnitor(
     /**
      * The oversamplers on the SIGNAL SPINE of this subtree, as their stage counts in ascending order (a 2x stage after
      * a 4x one: `[1, 2]`), or `null` when signal children disagree (a plain sum of a 2x and a 4x signal). A child with
-     * none does not disagree with anyone, the way a latency of 0 never wins [latencySamples]' maximum.
+     * none does not disagree with anyone, the way a block-constant child takes no part in [latencySamples]' maximum.
      *
      * Read by the `parallel` node. An IIR round trip delays the top more than the bass (`Oversampler`: 3.07 samples
      * at 1 kHz, 4.74 at 20 kHz at 2x), so no whole-sample pad matches a dry branch to an oversampled one above about

@@ -55,6 +55,8 @@ import io.peekandpoke.klang.audio_bridge.notch
 import io.peekandpoke.klang.audio_bridge.octaveDown
 import io.peekandpoke.klang.audio_bridge.octaveUp
 import io.peekandpoke.klang.audio_bridge.onepole
+import io.peekandpoke.klang.audio_bridge.oversampleAtLeast
+import io.peekandpoke.klang.audio_bridge.oversampleBy
 import io.peekandpoke.klang.audio_bridge.parallel
 import io.peekandpoke.klang.audio_bridge.phaser
 import io.peekandpoke.klang.audio_bridge.pitchEnvelope
@@ -799,6 +801,62 @@ internal object KlangScriptIgnitorExtensions {
             example = "x => x.distort(0.5)",
             isResult = { it is IgnitorDsl },
         ),
+    )
+
+    /**
+     * Runs the stages in the body at a HIGHER sample rate, the incoming rate times [factor], and comes back down once
+     * at the end: several distortion stages in a row share one trip up and one trip down instead of one each.
+     *
+     * ```KlangScript
+     * // a three-stage preamp at 8x: the clippers alias less, and only one conversion up and one down
+     * let preamp = x => x.oversampleBy(8, y => y
+     *   .distort(0.30, "tube").highpass(100)
+     *   .distort(0.45, "softsat").highpass(90)
+     *   .distort(0.70, "soft"))
+     * ```
+     *
+     * The body is a function from the signal to a signal; the signal enters it converted up. Inside, every stage reads
+     * the region's rate, so a filter keeps its cutoff and an envelope its times. The factor is read once per note and
+     * rounded down to a power of two (3 is 2, 6 is 4); 1 or less runs the body at the rate it is in, and the rate stops
+     * at 16x. Nested, it steps on from the rate it is in: `oversampleBy(2)` inside `oversampleBy(2)` is 4x. Oscillators
+     * and noise stay at the normal rate and are converted up where they enter. For a piece that only needs a minimum
+     * rate, `oversampleAtLeast` adds nothing when the rate is already there.
+     *
+     * @param factor how many times the incoming rate: 2, 4, 8 or 16.
+     * @param body a function from the signal to a signal, the stages that run at the higher rate.
+     */
+    @KlangScript.Method(name = "oversampleBy")
+    internal fun scriptOversampleBy(self: IgnitorDsl, factor: IgnitorDslLike, body: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl =
+        self.oversampleBy(factor = factor.toIgnitorDsl(), body = checkedBody(door = "Ignitor oversampleBy", body = body))
+
+    /**
+     * Runs the stages in the body at [factor] times the normal sample rate AT LEAST: only what is missing is added, and
+     * when the rate is already there (inside an `oversampleBy(8)`, say) nothing is converted at all. The door for a
+     * reusable piece that needs a minimum rate:
+     *
+     * ```KlangScript
+     * // the preamp needs 4x; inside an 8x region it simply runs at 8x
+     * let crunch = x => x.oversampleAtLeast(4, y => y.distort(0.3, "tube").highpass(90).distort(0.3, "tube"))
+     * ```
+     *
+     * The factor and the body as in `oversampleBy`: read once per note, a power of two, at most 16x.
+     *
+     * @param factor the lowest rate the body runs at, times the normal rate: 2, 4, 8 or 16.
+     * @param body a function from the signal to a signal, the stages that run at the higher rate.
+     */
+    @KlangScript.Method(name = "oversampleAtLeast")
+    internal fun scriptOversampleAtLeast(self: IgnitorDsl, factor: IgnitorDslLike, body: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl =
+        self.oversampleAtLeast(factor = factor.toIgnitorDsl(), body = checkedBody(door = "Ignitor oversampleAtLeast", body = body))
+
+    /** The body of an oversampling region, wrapped in its check ([checkedStage]), as `blend` checks its branch. */
+    private fun checkedBody(door: String, body: (IgnitorDsl) -> IgnitorDsl): (IgnitorDsl) -> IgnitorDsl = checkedStage(
+        door = door,
+        noun = "body",
+        index = 0,
+        stage = body,
+        returns = "signal",
+        example = "x => x.distort(0.5)",
+        isResult = { it is IgnitorDsl },
     )
 
     /**

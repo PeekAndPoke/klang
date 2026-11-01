@@ -348,6 +348,10 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
             return GraphCensus(passes = 1, traffic = 2 * f + 2 + 2 + oversampleTraffic(oversample), bytes = oversampleBytes(oversample) + 24)
         }
 
+        /** An oversampling region's trip up and down at [factor] (none at 1 or less): [shaped]'s conversion without the shaper. */
+        private fun regionTrip(factor: Int): GraphCensus =
+            if (Oversampler.factorToStages(factor) == 0) NONE else GraphCensus(passes = 1, traffic = 2 + oversampleTraffic(factor), bytes = oversampleBytes(factor))
+
         /**
          * A filter's `passes` knob as the count the runtime reads at voice build: a `Constant` or `Param`
          * leaf through [coercePasses]; anything else is one pass, the runtime's leaf-only answer. A
@@ -486,7 +490,8 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
                 is IgnitorDsl.Sq, is IgnitorDsl.Sqrt, is IgnitorDsl.Exp, is IgnitorDsl.Log, is IgnitorDsl.Tanh,
                 is IgnitorDsl.Sign, is IgnitorDsl.Floor, is IgnitorDsl.Ceil, is IgnitorDsl.Round, is IgnitorDsl.Frac,
                 is IgnitorDsl.Recip, is IgnitorDsl.Clamp, is IgnitorDsl.Range, is IgnitorDsl.Lerp, is IgnitorDsl.Select,
-                is IgnitorDsl.Affine, is IgnitorDsl.Parallel, is IgnitorDsl.Variants, is IgnitorDsl.OptimizerHint -> {
+                is IgnitorDsl.Affine, is IgnitorDsl.Parallel, is IgnitorDsl.Variants, is IgnitorDsl.OptimizerHint,
+                is IgnitorDsl.OversampleBy, is IgnitorDsl.OversampleAtLeast -> {
                     var sum = NONE
 
                     for (child in renderedChildren(node)) {
@@ -513,6 +518,9 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
                 is IgnitorDsl.Tremolo -> modReaders(node = node.inner, seen = seen)
                 is IgnitorDsl.Phaser -> modReaders(node = node.inner, seen = seen)
                 is IgnitorDsl.Shimmer -> modReaders(node = node.inner, seen = seen)
+
+                // the region's input is its inner, counted there
+                is IgnitorDsl.RegionInput -> NONE
             }
         }
 
@@ -688,6 +696,16 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
 
             // structure that leaves no trace at render time
             is IgnitorDsl.Variants, is IgnitorDsl.OptimizerHint -> NONE
+
+            // an oversampling region: the trip up and down at its factor, as an oversampled shaper's. NOT counted,
+            // deliberately: that the body's stages run at the region's
+            // rate (each of them `factor` times its work) and that a source in the body renders at the base rate and takes
+            // a trip up of its own; the census counts the body as if at the base rate, an under-count. The factor read as
+            // written, without the region's place (an `oversampleAtLeast` inside a region at its rate converts nothing).
+            is IgnitorDsl.OversampleBy -> regionTrip(factorOf(node.factor))
+            is IgnitorDsl.OversampleAtLeast -> regionTrip(factorOf(node.factor))
+            // the copy of the region's converted input
+            is IgnitorDsl.RegionInput -> GraphCensus(passes = 1, traffic = 2, bytes = 0)
         }
     }
 }

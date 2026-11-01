@@ -45,7 +45,10 @@ import kotlin.math.pow
  * @param shape the waveshaper, resolved by the host (a name through `parseDistortionShape`, an index
  *   knob through `distortionShapeAt`).
  * @param oversampleStages 2x stages of the oversampler, 0 for none (the plain path).
- * @param dcBlockCoefficient the DC blocker's pole. The default, `DEFAULT_DC_BLOCK_COEFF` (0.995, a knee
+ * @param firstStage the cascade stage the oversampler starts at (`Oversampler`'s `firstStage`): above 0 inside an
+ *   oversampling region, where this core runs at the region's rate.
+ * @param dcBlockCoefficient the DC blocker's pole. Inside an oversampling region the host maps it to the region's rate
+ *   ([dcBlockCoefficientAt]), so the knee stays where it is in Hz. The default, `DEFAULT_DC_BLOCK_COEFF` (0.995, a knee
  *   near 35 Hz), is the voice's law and the two Ignitor nodes keep it. A bus carries the whole low end
  *   of a mix, where that knee takes about 2.5 dB off 40 Hz, so the Katalyst stage passes the house
  *   stage's 0.999 (near 7 Hz, `MasterStage`).
@@ -54,9 +57,10 @@ internal class DistortionCore(
     private val shape: DistortionShape,
     oversampleStages: Int,
     dcBlockCoefficient: Double = DEFAULT_DC_BLOCK_COEFF,
+    firstStage: Int = 0,
 ) {
     private val oversampler: Oversampler? =
-        if (oversampleStages > 0) Oversampler(oversampleStages) else null
+        if (oversampleStages > 0) Oversampler(stages = oversampleStages, firstStage = firstStage) else null
 
     private val dcBlocker = LowPassHighPassFilters.DcBlocker(dcBlockCoefficient)
 
@@ -281,5 +285,13 @@ internal class DistortionCore(
          * knob. The one conversion; the Ignitor `drive` door reads it too.
          */
         fun drive(amount: Double): Double = 10.0.pow(amount * 1.2)
+
+        /**
+         * The DC blocker's pole [coefficient] at `2^stages` times the rate it was chosen for, so the knee stays where it
+         * is in Hz: the pole of `exp(-w / fs)` at `factor * fs` is its `factor`-th root. At 0 stages the coefficient as
+         * it is, exactly (no `pow`). For a core inside an oversampling region (KLANG-00214 (oversampling regions)).
+         */
+        fun dcBlockCoefficientAt(coefficient: Double, stages: Int): Double =
+            if (stages <= 0) coefficient else coefficient.pow(1.0 / (1 shl stages))
     }
 }

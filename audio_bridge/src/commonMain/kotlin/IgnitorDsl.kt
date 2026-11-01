@@ -1167,6 +1167,62 @@ sealed interface IgnitorDsl {
         }
     }
 
+    /**
+     * An oversampling REGION that raises the rate by [factor]: its [body] runs at the incoming rate times [factor]
+     * (1x to 2x, 4x to 8x), and the region hands back the rate it was entered with. Built by the `oversampleBy` door
+     * as `x.oversampleBy(f) { ... }`: [inner] is `x`, rendered at the incoming rate, and [body] is the lambda applied to
+     * [RegionInput], the place where `x` enters, converted up (KLANG-00214 (oversampling regions) section 10).
+     *
+     * [factor] is read ONCE, at voice build, leaf-only (a non-leaf is 1, no region), and rounded down to a power of two
+     * (3 is 2, 5 and 7 are 4); 1 or less is no region, the body on [inner] directly. The rate stops at 16x: a guard
+     * against absurd values, not an error. Inside, the stages read the region's rate (filters, envelopes); sources stay
+     * at 1x. Twin: [OversampleAtLeast], the floor.
+     */
+    @WireName("oversampleBy")
+    data class OversampleBy(
+        val inner: IgnitorDsl,
+        val body: IgnitorDsl,
+        val factor: IgnitorDsl,
+    ) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out); body.collectParams(out); factor.collectParams(out)
+        }
+    }
+
+    /**
+     * An oversampling REGION with a floor: its [body] runs at [factor] times the base rate AT LEAST, stepping up only the
+     * 2x steps that are missing (1x to 4x, 2x to 4x); at or above the floor it is no region and converts nothing. Built
+     * by the `oversampleAtLeast` door as `x.oversampleAtLeast(f) { ... }`, the door for reusable pieces: a preset that
+     * needs 4x adds nothing inside an 8x region. [inner], [body] and [factor] as in [OversampleBy], the twin.
+     */
+    @WireName("oversampleAtLeast")
+    data class OversampleAtLeast(
+        val inner: IgnitorDsl,
+        val body: IgnitorDsl,
+        val factor: IgnitorDsl,
+    ) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out); body.collectParams(out); factor.collectParams(out)
+        }
+    }
+
+    /**
+     * Where the signal of a region ([OversampleBy], [OversampleAtLeast]) enters its body: that region's `inner`,
+     * converted up to the rate it is read at. [up] says WHICH region, counted outward from where it stands: 0 is the
+     * innermost region whose body holds it, 1 the one around that, and so on (a de Bruijn index). So a body lambda's
+     * parameter keeps its meaning in a nested body: in `x.oversampleBy(2) { y -> y.oversampleBy(2) { z -> z.plus(y) } }`
+     * the `z` is `RegionInput(0)` and the `y` inside the nested body `RegionInput(1)`, the outer region's signal,
+     * converted up to the nested rate. The doors write it ([bindRegionInput]); one that points past every region (a
+     * parameter used outside its lambda) renders silence, and so does one read by a source (an oscillator's knob), which
+     * stays at 1x, or used as a pitch modulation (`pitchMod`, an `fm` modulator), which is built with its source. A
+     * region with no step to take hands its body the input itself, so there such a use does read the signal; neither is
+     * a use to build on.
+     */
+    @WireName("regionInput")
+    data class RegionInput(val up: Int) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {}
+    }
+
     /** Additive combinator. Sums two ignitor signals sample-by-sample. */
     @WireName("plus")
     data class Plus(val left: IgnitorDsl, val right: IgnitorDsl) : IgnitorDsl {
@@ -2639,6 +2695,96 @@ fun IgnitorDsl.parallel(vararg branches: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl
     0 -> this
     1 -> branches[0](this)
     else -> IgnitorDsl.Parallel(branches = branches.map { it(this) })
+}
+
+/**
+ * Runs [body] in an oversampling REGION at the incoming rate times [factor] (1x to 2x, 4x to 8x), and hands back the
+ * rate it was entered with: `x.oversampleBy(4.ign) { it.distort(0.5.ign).highpass(100.ign) }`. This signal enters the
+ * body as `it`, converted up once; the stages inside read the region's rate (a filter keeps its cutoff in Hz), and the
+ * region converts down once at its end. [factor] is read once per note, rounded down to a power of two (3 is 2), 1 or
+ * less is no region, and the rate stops at 16x. Nested, it steps on from the rate it is in. Sources stay at 1x.
+ * Twin: [oversampleAtLeast], the floor (KLANG-00214 (oversampling regions)).
+ */
+fun IgnitorDsl.oversampleBy(factor: IgnitorDsl, body: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl.OversampleBy {
+    val placeholder = IgnitorDsl.RegionInput(up = REGION_INPUT_UNBOUND)
+
+    return IgnitorDsl.OversampleBy(inner = this, body = body(placeholder).bindRegionInput(placeholder), factor = factor)
+}
+
+/**
+ * Runs [body] in an oversampling REGION at [factor] times the base rate AT LEAST: only the missing 2x steps are taken
+ * (1x to 4x, 2x to 4x), and at or above the floor it is no region and converts nothing, so a piece that needs 4x costs
+ * nothing inside an 8x region: `x.oversampleAtLeast(8.ign) { it.distort(0.3.ign, "tube").highpass(100.ign) }`.
+ * [factor] and [body] as in [oversampleBy], the twin.
+ */
+fun IgnitorDsl.oversampleAtLeast(factor: IgnitorDsl, body: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl.OversampleAtLeast {
+    val placeholder = IgnitorDsl.RegionInput(up = REGION_INPUT_UNBOUND)
+
+    return IgnitorDsl.OversampleAtLeast(inner = this, body = body(placeholder).bindRegionInput(placeholder), factor = factor)
+}
+
+/**
+ * The [IgnitorDsl.RegionInput.up] of a door's placeholder while its body lambda runs: no region yet. The door finds its
+ * own placeholder by IDENTITY in what the lambda returned and binds it ([bindRegionInput]); one that escaped the lambda
+ * keeps this value and renders silence.
+ */
+const val REGION_INPUT_UNBOUND: Int = -1
+
+/**
+ * This body with every occurrence of [placeholder] (by identity) written as the [IgnitorDsl.RegionInput] that points at
+ * the region whose door made it: `up` 0 in the body itself, one more inside each nested region's body. Each node is
+ * rewritten once per depth (identity), so shared nodes stay shared, and a subtree without the placeholder is returned
+ * as it is.
+ */
+internal fun IgnitorDsl.bindRegionInput(placeholder: IgnitorDsl.RegionInput): IgnitorDsl {
+    val doneNodes = ArrayList<IgnitorDsl>()
+    val doneDepths = ArrayList<Int>()
+    val made = ArrayList<IgnitorDsl>()
+
+    fun IgnitorDsl.bound(depth: Int): IgnitorDsl {
+        if (this === placeholder) {
+            return IgnitorDsl.RegionInput(up = depth)
+        }
+
+        for (i in doneNodes.indices) {
+            if (doneNodes[i] === this && doneDepths[i] == depth) {
+                return made[i]
+            }
+        }
+
+        val result = when (this) {
+            is IgnitorDsl.OversampleBy -> {
+                val i = inner.bound(depth)
+                val b = body.bound(depth + 1)
+                val f = factor.bound(depth)
+
+                if (i === inner && b === body && f === factor) this else copy(inner = i, body = b, factor = f)
+            }
+
+            is IgnitorDsl.OversampleAtLeast -> {
+                val i = inner.bound(depth)
+                val b = body.bound(depth + 1)
+                val f = factor.bound(depth)
+
+                if (i === inner && b === body && f === factor) this else copy(inner = i, body = b, factor = f)
+            }
+
+            else -> {
+                val children = childNodes()
+                val replaced = children.map { it.bound(depth) }
+
+                if (children.indices.all { children[it] === replaced[it] }) this else withChildNodes(replaced)
+            }
+        }
+
+        doneNodes.add(this)
+        doneDepths.add(depth)
+        made.add(result)
+
+        return result
+    }
+
+    return bound(depth = 0)
 }
 
 /**

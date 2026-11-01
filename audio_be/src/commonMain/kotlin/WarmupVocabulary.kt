@@ -39,6 +39,8 @@ import io.peekandpoke.klang.audio_bridge.neg
 import io.peekandpoke.klang.audio_bridge.notch
 import io.peekandpoke.klang.audio_bridge.onepole
 import io.peekandpoke.klang.audio_bridge.optimizer
+import io.peekandpoke.klang.audio_bridge.oversampleAtLeast
+import io.peekandpoke.klang.audio_bridge.oversampleBy
 import io.peekandpoke.klang.audio_bridge.parallel
 import io.peekandpoke.klang.audio_bridge.phaser
 import io.peekandpoke.klang.audio_bridge.pitchMod
@@ -223,6 +225,11 @@ object WarmupVocabulary {
         .distort(amount = 0.5.ign, shape = "hard", oversample = 4.ign) // = Drive + Shape (oversampled)
         .let { IgnitorDsl.Distort(inner = it, amount = Constant(0.3), oversample = Constant(2.0)) } // the gated drive+shape unit
         .parallel({ it }, { it.distort(amount = 0.3.ign, shape = "soft", oversample = 2.ign) }) // branches summed, the dry one padded to the late one
+        // an oversampling region with a nested floor, a source inside it (rendered at 1x) and the region's input
+        .oversampleBy(2.ign) { y ->
+            y.oversampleAtLeast(4.ign) { it.distort(amount = 0.3.ign, shape = "tube").highpass(100.ign) }
+                .plus(IgnitorDsl.Sine(freq = Constant(5.0)).mul(Constant(0.01)))
+        }
         .crush(6.0.ign)
         .coarse(3.0.ign)
         .phaser(wet = 0.5.ign, rate = 0.7.ign, center = 800.0.ign)

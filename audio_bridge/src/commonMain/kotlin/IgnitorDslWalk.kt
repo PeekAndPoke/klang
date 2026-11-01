@@ -9,7 +9,7 @@ package io.peekandpoke.klang.audio_bridge
  * Generic child enumeration and rebuild for [IgnitorDsl] trees, the substrate the graph
  * optimizer walks on.
  *
- * Both functions are EXHAUSTIVE expression-form `when`s over all 79 node types, with NO
+ * Both functions are EXHAUSTIVE expression-form `when`s over all 82 node types, with NO
  * `else` arm on purpose: a fallback would silently stop descending into any node added later,
  * so optimizations would quietly stop firing under it with nothing failing to compile. Adding a
  * node type must break this file.
@@ -129,6 +129,9 @@ fun IgnitorDsl.childNodes(): List<IgnitorDsl> {
         is IgnitorDsl.Tri -> listOf(freq, analog, phase)
         is IgnitorDsl.Variants -> children
         is IgnitorDsl.Parallel -> branches
+        is IgnitorDsl.OversampleBy -> listOf(inner, body, factor)
+        is IgnitorDsl.OversampleAtLeast -> listOf(inner, body, factor)
+        is IgnitorDsl.RegionInput -> emptyList()
         is IgnitorDsl.Vibrato -> listOf(inner, rate, semitones, rangeFrom, rangeTo, phase)
         is IgnitorDsl.WhiteNoise -> listOf(color)
         is IgnitorDsl.Zamp -> listOf(freq, analog, phase)
@@ -330,6 +333,9 @@ fun IgnitorDsl.withChildNodes(new: List<IgnitorDsl>): IgnitorDsl {
         is IgnitorDsl.Tri -> copy(freq = new[0], analog = new[1], phase = new[2])
         is IgnitorDsl.Variants -> copy(children = new)
         is IgnitorDsl.Parallel -> copy(branches = new)
+        is IgnitorDsl.OversampleBy -> copy(inner = new[0], body = new[1], factor = new[2])
+        is IgnitorDsl.OversampleAtLeast -> copy(inner = new[0], body = new[1], factor = new[2])
+        is IgnitorDsl.RegionInput -> this
         is IgnitorDsl.Vibrato -> copy(inner = new[0], rate = new[1], semitones = new[2], rangeFrom = new[3], rangeTo = new[4], phase = new[5])
         is IgnitorDsl.WhiteNoise -> copy(color = new[0])
         is IgnitorDsl.Zamp -> copy(freq = new[0], analog = new[1], phase = new[2])

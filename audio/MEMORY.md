@@ -239,6 +239,15 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   gives every branch the phase twins of the oversamplers it lacks against their union (`phaseTwins`,
   `Oversampler.unionOf`); a branch that mixes two in a plain `plus` lists none (`null`), and then every earlier branch
   is padded by whole samples to the latest (`delayedBy`). A plain `plus` stays unaligned.
+- **Oversampling regions on the Ignitor** (2026-11-01, KLANG-00214 (oversampling regions) step 1): `x.oversampleBy(f)
+  { y -> ... }` and `x.oversampleAtLeast(f) { y -> ... }`; the factor read once, leaf-only, rounded down to a power of
+  two, at most 16x (`REGION_MAX_STAGES`). The body runs in a child `IgniteContext` at the region's rate, one trip up and
+  one down (`OversampleRegion.kt`); `y` is `IgnitorDsl.RegionInput(up)`, a de Bruijn index. Sources stay at 1x, also
+  inside (`LiftedSourceIgnitor`), and so does their pitch modulation. A `distort` or `shape` factor inside is a floor.
+  Inside a body latencies count from the region's input (`RegionScope.inputDelay`), a block-constant child takes no
+  part; a source takes phase twins of what the input ran through before the outermost region (exact), what lies
+  inside the outer bodies is padded by whole samples. Not cheaper
+  per se: filters and DC blockers inside run at the high rate (Der Schmetterling's preamps: about 3% slower).
 - **`parallel` on the Katalyst** (`KatalystParallelEffect`, 2026-10-10): each branch is a `KatalystChain` of its own,
   run on a copy of the bus and SUMMED; branches are matched in phase (the twins of the oversamplers a branch lacks,
   `KatalystLatentEffect.oversamplers`, and a ring for the lookahead it lacks; the stage's latency is the union's plus
@@ -371,7 +380,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   `Ignitor.freq()` anywhere renders once per pitch; a layer detuned under an `fm` or a `Freq`-reading pitch mod renders
   the mod again); the build-time diagnostic for the second, an fm above a forking detune:
   KLANG-00291 (fm above forking detune diagnostic).
-- **Scheduled or designed**: KLANG-00214 (oversampling regions), KLANG-00137 (master dsl followups),
+- **Scheduled or designed**: KLANG-00214 (oversampling regions; step 1 landed, steps 2 on open), KLANG-00137 (master dsl followups),
   KLANG-00211 (katalyst master configure doors), KLANG-00155 (pluck release tail),
   KLANG-00138 (voice takeover) (blocked on a design decision), KLANG-00158 (playback layer decomposition).
 - **Katalyst, future**: `reverb-models.md` (with `room-reverb.md`), `one-chain-host.md`, `delay-ceiling-edges.md`, `transition-times.md`,
@@ -395,6 +404,8 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-11-01 Oversampling regions on the Ignitor, `oversampleBy` and `oversampleAtLeast`; Der Schmetterling's
+  preamps in regions (KLANG-00214 (oversampling regions), step 1).
 - 2026-11-01 Offline renders on the real playback path, the stable voice heap; the corpus re-based (KLANG-00399,
   step 4).
 - 2026-10-31 One clock, the backend's frames (KLANG-00399, steps 1 to 3d): the tempo map, the `OfflineBackend`, the

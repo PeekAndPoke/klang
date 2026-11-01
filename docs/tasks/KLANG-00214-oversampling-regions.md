@@ -312,6 +312,23 @@ per voice today, one with a region).
   CPU before and after. A sound change is expected: the second clipper now sees the first one's harmonics above
   24 kHz, which each decimation used to remove.
 
+**Step 1, landed (2026-11-01).** The doors, the wire node `RegionInput(up)` (a de Bruijn index, so a body lambda's
+parameter keeps its meaning in a nested body), the engine (`OversampleRegion.kt`), the bridge for `Shape` and
+`Distort` (their factor a floor, the DC blocker's pole mapped), `Coarse`'s hold and `Shimmer`'s ring scaled. Sources
+stay at 1x inside a region already (what was step 2 below), with their pitch modulation. Inside a body every latency
+counts from the region's input (`RegionScope.inputDelay`), and a constant or a slot takes no part, so a `parallel`
+there lines up its branches wherever they come from. A source takes phase twins of the oversamplers the input ran
+through before the outermost region, also in a nested region, so it is exact at every frequency (maintainer,
+2026-11-01); what a nested region's input ran through inside the outer bodies is padded by whole samples (one case
+measured within 0.3 dB to 20 kHz, because the upper stages disperse little). Review: round 2's MAJOR (a misaligned
+`parallel` in a body, -27 dB at 4.75 kHz) fixed in round 3; round 3's MAJOR (a gain on the branch hid its latency)
+fixed in round 4, both with the maintainer's go. A/B of the song (`tmp/listening/schmetterling-regions/`):
+level the same within 0.03 dB, spectrum within 0.2 dB up to 20 kHz, the guitars 0.2 ms earlier; the render about 3%
+SLOWER, since the highpasses, DC blockers and soft caps inside run at 8x. Left for later: the oscillator edges, `Pluck`,
+`Sample` and the noises are not rate-mapped (they stay at 1x, so nothing reads them at a higher rate yet); the shimmer
+ring is 12 MB at 16x; in a no-step region the body's input reaches a pitch modulation or a source's knob, in a real
+region it is silence there.
+
 **Which nodes know the rate** (the maintainer's question, 2026-10-31: which nodes need adjustments at a higher rate,
 which do not care; asked as a question). Since sources stay at 1x (section 10), the source rows below need no
 change; what is left for the region is `Shape`, `Distort`, `Coarse` and `Shimmer`. The audit of the 79 Ignitor node types (coordinator, 2026-10-31, from the code), the rule being that a node inside a
@@ -354,3 +371,4 @@ it.
 - 2026-10-31: section 10's proposals decided; section 11, build in steps on Der Schmetterling, step 1 the guitar preamps.
 - 2026-10-31: section 11, the audit of which Ignitor nodes know the rate.
 - 2026-10-31: sources stay at 1x, also inside the braces, converted up where they enter (maintainer).
+- 2026-11-01: step 1 landed: the region doors and engine, Der Schmetterling's preamps in regions.
