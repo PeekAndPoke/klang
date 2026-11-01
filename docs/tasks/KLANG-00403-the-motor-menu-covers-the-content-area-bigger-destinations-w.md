@@ -94,4 +94,5 @@ columns, and the look row (seven looks and an empty slot).
 - 2026-11-01: created from the maintainer's ask; the mockup on a design canvas, built on a screenshot of today's
   drawer (the brass look) and the look roles of `KlangRole`. The same day: a real overlay over the mounted page,
   Shift Shift opens it, and it covers the tool windows and the bottom panel too, so it always looks the same (the
-  maintainer's word). The modal rules: closed by any change of the URI, no history entry of its own. D2 decided (the look picker as drawn); D1 decided: songs and tutorials, docs to bookmarks (KLANG-00404).
+  maintainer's word). The modal rules: closed by any change of the URI, no history entry of its own. D2 decided
+  (the look picker as drawn); D1 decided: songs and tutorials, docs to bookmarks (KLANG-00404).
