@@ -360,12 +360,19 @@ class KeysManagerSpec : StringSpec({
     "hints: AltGr never shows them, also when the trigger is Ctrl+Alt" {
         val host = document.createElement("div") as HTMLElement
         document.body!!.appendChild(host)
-        val keys = KeysManager(platform = KeyPlatform.Pc, hintTrigger = "Ctrl-Alt", hintDelayMs = 30, target = host)
+        val keys = KeysManager(platform = KeyPlatform.Pc, hintTriggers = listOf("Ctrl-Alt"), hintDelayMs = 30, target = host)
 
         try {
             host.dispatchEvent(keyEvent(key = "AltGraph", code = "AltRight", ctrl = true, alt = true, altGraph = true))
             delay(80)
             keys.hints() shouldBe false
+
+            withClue("with Ctrl+Alt as the trigger a lone Alt is no gesture of ours, the browser keeps it") {
+                host.dispatchEvent(keyEvent(key = "Alt", code = "AltLeft", alt = true))
+                val release = keyEvent(key = "Alt", code = "AltLeft", type = "keyup")
+                host.dispatchEvent(release)
+                release.defaultPrevented shouldBe false
+            }
 
             withClue("a real Ctrl+Alt shows them") {
                 host.dispatchEvent(keyEvent(key = "Alt", code = "AltLeft", ctrl = true, alt = true))
@@ -375,6 +382,119 @@ class KeysManagerSpec : StringSpec({
         } finally {
             keys.dispose()
             host.remove()
+        }
+    }
+
+    "hints: with two triggers (Mod and Alt) either one held alone shows them, both together do not start them" {
+        suspend fun check(platform: KeyPlatform) {
+            val host = document.createElement("div") as HTMLElement
+            document.body!!.appendChild(host)
+            val keys = KeysManager(platform = platform, hintTriggers = listOf("Mod", "Alt"), hintDelayMs = 30, target = host)
+            val mac = platform == KeyPlatform.Mac
+            val (modKey, modCode) = if (mac) "Meta" to "MetaLeft" else "Control" to "ControlLeft"
+
+            try {
+                withClue("$platform: Alt (Option) alone shows them, its release hides them") {
+                    host.dispatchEvent(keyEvent(key = "Alt", code = "AltLeft", alt = true))
+                    delay(80)
+                    keys.hints() shouldBe true
+                    val release = keyEvent(key = "Alt", code = "AltLeft", type = "keyup")
+                    host.dispatchEvent(release)
+                    keys.hints() shouldBe false
+
+                    withClue("the lone Alt's release is kept from the browser's menu") {
+                        release.defaultPrevented shouldBe true
+                    }
+                }
+
+                withClue("$platform: a quick lone Alt (Option), no hints shown, is kept from the browser's menu too") {
+                    host.dispatchEvent(keyEvent(key = "Alt", code = "AltLeft", alt = true))
+                    val release = keyEvent(key = "Alt", code = "AltLeft", type = "keyup")
+                    host.dispatchEvent(release)
+                    release.defaultPrevented shouldBe true
+                }
+
+                withClue("$platform: Alt+Tab (the window loses the focus) is no lone Alt, its release is left alone") {
+                    host.dispatchEvent(keyEvent(key = "Alt", code = "AltLeft", alt = true))
+                    window.dispatchEvent(Event("blur"))
+                    val release = keyEvent(key = "Alt", code = "AltLeft", type = "keyup")
+                    host.dispatchEvent(release)
+                    release.defaultPrevented shouldBe false
+                }
+
+                withClue("$platform: Alt after Alt+M is no lone Alt, its release is left alone") {
+                    host.dispatchEvent(keyEvent(key = "Alt", code = "AltLeft", alt = true))
+                    host.dispatchEvent(keyEvent(key = "m", code = "KeyM", alt = true))
+                    host.dispatchEvent(keyEvent(key = "m", code = "KeyM", alt = true, type = "keyup"))
+                    val release = keyEvent(key = "Alt", code = "AltLeft", type = "keyup")
+                    host.dispatchEvent(release)
+                    release.defaultPrevented shouldBe false
+                }
+
+                if (mac) {
+                    withClue("Mac: an Option the browser reports as AltGraph still shows them") {
+                        host.dispatchEvent(keyEvent(key = "Alt", code = "AltLeft", alt = true, altGraph = true))
+                        delay(80)
+                        keys.hints() shouldBe true
+                        host.dispatchEvent(keyEvent(key = "Alt", code = "AltLeft", type = "keyup"))
+                    }
+                }
+
+                withClue("$platform: Mod alone still shows them") {
+                    host.dispatchEvent(keyEvent(key = modKey, code = modCode, ctrl = !mac, meta = mac))
+                    delay(80)
+                    keys.hints() shouldBe true
+                    host.dispatchEvent(keyEvent(key = modKey, code = modCode, type = "keyup"))
+                    keys.hints() shouldBe false
+                }
+
+                withClue("$platform: Mod and Alt together are neither trigger alone") {
+                    host.dispatchEvent(keyEvent(key = modKey, code = modCode, ctrl = !mac, meta = mac))
+                    host.dispatchEvent(keyEvent(key = "Alt", code = "AltLeft", ctrl = !mac, meta = mac, alt = true))
+                    delay(80)
+                    keys.hints() shouldBe false
+                    val release = keyEvent(key = "Alt", code = "AltLeft", type = "keyup")
+                    host.dispatchEvent(release)
+                    host.dispatchEvent(keyEvent(key = modKey, code = modCode, type = "keyup"))
+
+                    withClue("an Alt released after Mod and Alt is no lone Alt") {
+                        release.defaultPrevented shouldBe false
+                    }
+                }
+
+                withClue("$platform: AltGr never shows them") {
+                    host.dispatchEvent(keyEvent(key = "AltGraph", code = "AltRight", alt = true, altGraph = true))
+                    delay(80)
+                    keys.hints() shouldBe false
+                }
+
+                if (!mac) {
+                    withClue("PC: an Alt reported with AltGraph (AltGr) does not show them") {
+                        host.dispatchEvent(keyEvent(key = "AltGraph", code = "AltRight", type = "keyup"))
+                        host.dispatchEvent(keyEvent(key = "Alt", code = "AltRight", alt = true, altGraph = true))
+                        delay(80)
+                        keys.hints() shouldBe false
+                    }
+                }
+            } finally {
+                keys.dispose()
+                host.remove()
+            }
+        }
+
+        check(KeyPlatform.Pc)
+        check(KeyPlatform.Mac)
+    }
+
+    "hints: without Alt among the triggers a lone Alt's release is left to the browser" {
+        withManager(hintDelayMs = 30) { _, host ->
+            host.dispatchEvent(keyEvent(key = "Alt", code = "AltLeft", alt = true))
+            val release = keyEvent(key = "Alt", code = "AltLeft", type = "keyup")
+            host.dispatchEvent(release)
+
+            withClue("without Alt among the triggers the browser keeps its lone Alt") {
+                release.defaultPrevented shouldBe false
+            }
         }
     }
 

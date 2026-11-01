@@ -29,8 +29,11 @@ import io.peekandpoke.kraft.kraftApp
 import io.peekandpoke.kraft.semanticui.semanticUI
 import io.peekandpoke.kraft.vdom.preact.PreactVDomEngine
 
-/** Every key of the app (KLANG-00325): Klang's actions, the user's keys kept in localStorage, hints on a held Ctrl (Cmd on a Mac). */
-val keysManager = KeysManager(store = KeymapStorage).apply {
+/**
+ * Every key of the app (KLANG-00325): Klang's actions, the user's keys kept in localStorage, hints on a held Ctrl or Alt
+ * (Cmd or Option on a Mac; the maintainer, 2026-11-01).
+ */
+val keysManager = KeysManager(store = KeymapStorage, hintTriggers = listOf("Mod", "Alt")).apply {
     define(KlangKeyBindings)
     // The code editor's keys: the editor runs them through EditorKeyTable, the user's keys included
     define(KlangEditorKeyBindings)

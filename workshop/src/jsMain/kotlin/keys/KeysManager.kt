@@ -38,10 +38,13 @@ import kotlin.math.abs
  *     its sequence, Esc or any other key ends the wait (and does nothing else), as do a click, the blur, a tap pair
  *     that acts, a layer that opens and the time running out. When a chord is both an action's own key and how a
  *     sequence begins ([Keymap.Problem.PrefixClash]), the answering registration decides whether it acts or waits.
- * - **Hints:** [hints] is true while the [hintTrigger] (by default `Mod`: Ctrl on a PC, Cmd on a Mac) is held alone for
- *   [hintDelayMs], and false again on its release, on any other key, a click or the wheel (Ctrl+click, Ctrl+wheel), or
- *   when the window loses focus. Moving the mouse while the delay runs stops it (Ctrl+hover in the code editor). AltGr
- *   never shows them. Components show their key while it is true, in their own look ([labelOf], [keymap]).
+ * - **Hints:** [hints] is true while one of the [hintTriggers] (by default `Mod`: Ctrl on a PC, Cmd on a Mac) is held
+ *   alone for [hintDelayMs], and false again when no trigger is held any more, on any other key, a click or the wheel
+ *   (Ctrl+click, Ctrl+wheel), or when the window loses focus. Moving the mouse while the delay runs stops it (Ctrl+hover
+ *   in the code editor). AltGr never shows them (on a PC; the Mac has none, its Option may be reported as AltGraph).
+ *   With Alt among the triggers, the release of a lone Alt (no other key since it went down) prevents its default,
+ *   so the browser does not take the focus to its menu (the maintainer, 2026-11-01: "stop the lone alt press").
+ *   Components show their key while it is true, in their own look ([labelOf], [keymap]).
  *
  * One listener on [target] (the document) answers every key, after the page's own handlers: a key a component already
  * handled (`defaultPrevented`: the code editor's own keys while it has the focus) is left alone, and so is a held key's
@@ -56,9 +59,9 @@ import kotlin.math.abs
 class KeysManager(
     val platform: KeyPlatform = KeyPlatform.detect(),
     private val store: KeymapStore = KeymapStore.InMemory(),
-    /** The modifiers whose holding shows the hints, as a [KeyChord]'s modifiers (`"Mod"`, `"Ctrl-Shift"`). */
-    hintTrigger: String = "Mod",
-    /** How long the [hintTrigger] is held before the hints show, in milliseconds. */
+    /** The modifiers whose holding shows the hints, each as a [KeyChord]'s modifiers (`"Mod"`, `"Alt"`, `"Ctrl-Shift"`). */
+    hintTriggers: List<String> = listOf("Mod"),
+    /** How long a hint trigger is held before the hints show, in milliseconds. */
     val hintDelayMs: Int = 300,
     /** The longest a modifier may be held and still count as a tap in keys in a row ([KeySequence]), in milliseconds. */
     val tapMaxMs: Int = 300,
@@ -181,7 +184,7 @@ class KeysManager(
     /** Which keys trigger which action, now; a new one on every change. */
     val keymap: Stream<Keymap> = _keymap.readonly
 
-    private val trigger = KeyChord.parse("$hintTrigger-X", platform)
+    private val triggers = hintTriggers.map { KeyChord.parse("$it-X", platform) }
 
     private val _hints = StreamSource(false)
 
@@ -196,6 +199,12 @@ class KeysManager(
     /** The taps so far of keys in a row, with the time of the last one. */
     private var taps: List<TapModifier> = emptyList()
     private var lastTapAt = 0.0
+
+    /** Alt is down and no other key went down since: its release is kept from the browser when Alt is a trigger. */
+    private var loneAlt = false
+
+    /** Alt held alone is a trigger: only then is a lone Alt a gesture of ours (a `Ctrl-Alt` trigger leaves it alone). */
+    private val altTrigger = triggers.any { it.alt && !it.ctrl && !it.shift && !it.meta }
 
     private val _waiting = StreamSource<List<KeyChord>>(emptyList())
 
@@ -219,6 +228,8 @@ class KeysManager(
     }
     private val onPointerMove: (Event) -> Unit = { event -> (event as? MouseEvent)?.let { pointerMove(it) } }
     private val onBlur: (Event) -> Unit = {
+        // Alt+Tab: the system takes the Tab and the window loses the focus; the Alt let go later is no lone Alt
+        loneAlt = false
         hideHints()
         breakTaps()
         stopWaiting()
@@ -421,6 +432,10 @@ class KeysManager(
     private fun hintKeyDown(event: KeyboardEvent) {
         followTaps(event)
 
+        if (!event.repeat) {
+            loneAlt = event.key == "Alt" && !event.ctrlKey && !event.shiftKey && !event.metaKey
+        }
+
         // Waiting for the second chord of chords in a row: every key is the wait's, before the page's handlers see it
         if (_waiting().isNotEmpty() && event.key !in KeyChord.MODIFIER_KEY_NAMES) {
             // A key an input method composes with is the field's: the user moved on, the wait is over
@@ -442,8 +457,11 @@ class KeysManager(
             return
         }
 
-        // Any other key, and AltGr, which types characters (Windows sends a Control keydown before it)
-        if (event.key !in KeyChord.MODIFIER_KEY_NAMES || event.key == "AltGraph" || event.getModifierState("AltGraph")) {
+        // Any other key, and AltGr, which types characters (Windows sends a Control keydown before it). The Mac has no
+        // AltGr; a browser may still report its Option as AltGraph, which would keep an Option trigger from showing them
+        val altGraph = event.key == "AltGraph" || (platform == KeyPlatform.Pc && event.getModifierState("AltGraph"))
+
+        if (event.key !in KeyChord.MODIFIER_KEY_NAMES || altGraph) {
             hideHints()
 
             return
@@ -455,8 +473,10 @@ class KeysManager(
             return
         }
 
-        val heldAlone = event.ctrlKey == trigger.ctrl && event.altKey == trigger.alt &&
-            event.shiftKey == trigger.shift && event.metaKey == trigger.meta
+        val heldAlone = triggers.any { trigger ->
+            event.ctrlKey == trigger.ctrl && event.altKey == trigger.alt &&
+                event.shiftKey == trigger.shift && event.metaKey == trigger.meta
+        }
 
         when {
             !heldAlone -> hideHints()
@@ -494,7 +514,9 @@ class KeysManager(
     }
 
     private fun triggerHeld(ctrl: Boolean, alt: Boolean, shift: Boolean, meta: Boolean): Boolean =
-        (!trigger.ctrl || ctrl) && (!trigger.alt || alt) && (!trigger.shift || shift) && (!trigger.meta || meta)
+        triggers.any { trigger ->
+            (!trigger.ctrl || ctrl) && (!trigger.alt || alt) && (!trigger.shift || shift) && (!trigger.meta || meta)
+        }
 
     private fun now(): Double = window.performance.now()
 
@@ -591,6 +613,14 @@ class KeysManager(
         }
 
         tapEnded(event)
+
+        // A lone Alt let go: the browser would take it as a way to its menu (on Windows Chrome and Edge focus their
+        // menu button, Firefox opens its menu bar) and the next keys would go there
+        if (event.key == "Alt" && loneAlt && altTrigger) {
+            event.preventDefault()
+        }
+
+        loneAlt = false
 
         if (!triggerHeld(ctrl = event.ctrlKey, alt = event.altKey, shift = event.shiftKey, meta = event.metaKey)) {
             hideHints()

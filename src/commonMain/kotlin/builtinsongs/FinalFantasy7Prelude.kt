@@ -29,7 +29,7 @@ const reverbSize = 6.0
 // Hints:
 // - Put the cursor on a function and press Alt+Q: its help opens below in the Quick Help tab
 // - Put the cursor inside a call, as lpf( ): its tool opens below, in the Sprudel tab
-// - Hold Ctrl and the UI will show available keyboard shortcuts
+// - Hold Ctrl or Alt and the UI will show available keyboard shortcuts
 // - Alt+M opens the Motor's menu: the songs, the docs, the looks
 
 stack(

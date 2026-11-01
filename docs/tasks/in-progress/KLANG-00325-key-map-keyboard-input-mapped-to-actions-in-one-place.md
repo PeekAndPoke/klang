@@ -481,3 +481,14 @@ OkCancel real buttons and focus; their Esc stays ours until the key map carries 
   the workshop's sources, package lines and ticket numbers aside; the one hit, "the Motor menu" in `KeysManager`'s
   KDoc, reworded. 3 mutants killed. Requests to Ultra: keyboard modifiers in kraft:testing (ULTRA-00279, Work 3) and
   modal and popup key layers (ULTRA-00285, IDEA); the key manager itself follows as a request after step 4.
+- 2026-11-01: the hints show on a held Alt too (Option on a Mac), beside Ctrl (Cmd): the maintainer, "it would be nice
+  to also see the keyboard shortcuts when 'Alt' is held, so both 'Ctrl' and 'Alt' and the Mac equivalents".
+  `KeysManager`'s `hintTrigger` became `hintTriggers`, a list (default `Mod` alone); the app passes `Mod` and `Alt`.
+  Either held alone starts them, both together do not; AltGr never does (on a PC; on the Mac an Option reported as
+  AltGraph still shows them). With Alt among the triggers, a lone Alt's release (no other key since it went down, the
+  window kept the focus) prevents its default (the maintainer: "Can you stop the lone alt press event in any case?"),
+  against the menu focus on Windows; that the browsers honour it there is a hand test, not done yet (no Windows at
+  hand). Alt+Tab is the system's and is not affected. Review round 1: 2 MAJOR (the lone Alt; Option as AltGraph on
+  the Mac), fixed. Round 2 (level 2) clean; its MINORs applied: only Alt alone as a trigger counts (a `Ctrl-Alt`
+  trigger leaves the lone Alt to the browser), and the release after Mod and Alt asserted. 10 mutants killed. Parked
+  for the maintainer: Option types characters on non-US Mac layouts (@, brackets), so a slow Option+8 shows the hints.
