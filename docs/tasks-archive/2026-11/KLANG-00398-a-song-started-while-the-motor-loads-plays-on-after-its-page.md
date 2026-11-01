@@ -1,6 +1,6 @@
 # KLANG-00398: A song started while the Motor loads plays on after its page is gone
 
-> **Status (2026-10-31): NOT SCHEDULED.** Found in KLANG-00396's wake lock review; the lock now stays on with it.
+> **Status (2026-11-01): DONE.** fixed with KLANG-00406 step 2
 
 ## Why this exists
 
@@ -33,3 +33,8 @@ browser.
 
 - 2026-10-31: created.
 - 2026-11-01: the ctrl moved to `spine/` with `release()`; the same race on `SongDeck` (KLANG-00406 step 1's review).
+- 2026-11-01: fixed with KLANG-00406 step 2: `KlangCodePlaybackCtrl` counts its stops, and a start that waited for the
+  engine gives up when a stop came after its Play (`SongDeckSpec`, "a stop while the engine starts wins"). Leaving a
+  song page now stops nothing by design (the song plays on, on the deck); Klang Amp's leave and every Stop still win
+  over a start that waits.
+- 2026-11-01: DONE. fixed with KLANG-00406 step 2

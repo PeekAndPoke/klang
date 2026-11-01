@@ -7,6 +7,7 @@ package io.peekandpoke.klang.visuals
 
 import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.Song
+import io.peekandpoke.klang.spine.KlangCodePlaybackCtrl
 import io.peekandpoke.klang.spine.Playbacks
 
 /**
@@ -28,8 +29,8 @@ object KlangampDeck {
     /** The song Klang Amp played last; null before the first. */
     private var last: Song? = null
 
-    /** The song Klang Amp put on the deck last: [leave] stops it while it is still the one on. */
-    private var started: Song? = null
+    /** The controller Klang Amp put on the deck last: [leave] stops it while it is still the one on. */
+    private var started: KlangCodePlaybackCtrl? = null
 
     /** Plays the song Klang Amp played last again, or the playlist's first: a visual's play button. */
     fun playAgain() {
@@ -39,8 +40,7 @@ object KlangampDeck {
     /** Puts [song] on the deck: the song before stops, also one a page plays, as the deck takes the stage. */
     fun play(song: Song) {
         last = song
-        started = song
-        Playbacks.song.play(song)
+        started = Playbacks.song.play(song)
     }
 
     /** Stops what plays: Klangamp's song, or a page's, which gives the stage up as it would to another song. */
@@ -60,7 +60,7 @@ object KlangampDeck {
 
     /** Stops the song Klangamp started, when its visual is left; one a page started plays on. */
     fun leave() {
-        if (started != null && Playbacks.song.onDeck() === started) {
+        if (started != null && Playbacks.song.onDeck()?.ctrl === started) {
             Playbacks.song.stop()
         }
 

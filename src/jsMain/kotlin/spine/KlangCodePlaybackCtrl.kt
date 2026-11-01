@@ -128,6 +128,9 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) : Pl
     /** Baseline for [State.isCodeModified]: the exact string that was last submitted to a playback. */
     private var playingCode: String? = null
 
+    /** Counts the stops: a start that waited for the engine gives up when a stop came meanwhile (KLANG-00398). */
+    private var stops = 0
+
     /** The subscriptions this controller holds till it is [release]d. */
     private val subscriptions: List<() -> Unit> = listOf(
         // Backend tempo sync: debounced on rpm changes only, so typing code doesn't delay the sync.
@@ -204,10 +207,14 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) : Pl
         if (config.exclusive) {
             Playbacks.requestExclusivePlayback(self = this)
         }
-        launch { runPlay() }
+
+        val stopsAtPlay = stops
+
+        launch { runPlay(stopsAtPlay = stopsAtPlay) }
     }
 
     override fun stop() {
+        stops++
         val stopping = _playback()
         // Off the signals first: what the playback sends while it stops does not reach the editor.
         _playback(null)
@@ -235,7 +242,8 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) : Pl
 
     // ── Impl ─────────────────────────────────────────────────────────────────
 
-    private suspend fun runPlay() {
+    /** Compiles and plays; gives up after the engine's start when a stop came since the Play ([stopsAtPlay]). */
+    private suspend fun runPlay(stopsAtPlay: Int) {
         _errors(emptyList())
 
         // Pattern building swallows errors on purpose, so a bad edit mid-performance cannot kill
@@ -252,6 +260,12 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) : Pl
         try {
             val codeToPlay = _state().code
             val player = config.engine.readyPlayer()
+
+            // Stopped since the Play, while the engine started (its first start of a visit): nothing plays
+            if (stops != stopsAtPlay) {
+                return
+            }
+
             val engine = config.engine.scriptEngine()
             val pattern = SprudelDiagnostics.collectingInto(swallowed) {
                 SprudelPattern.compile(engine, codeToPlay)

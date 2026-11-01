@@ -19,20 +19,29 @@ import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
 import io.peekandpoke.kraft.testing.eventually
 import io.peekandpoke.ultra.streams.StreamSource
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 
 /**
- * The song that plays, in the Spine (KLANG-00406, step 1): put on, a new one in its place, a live update, the stop,
- * the stage taken from a page's playback and given up to one, live play left alone, and a controller's release.
+ * The song that plays, in the Spine (KLANG-00406, steps 1 and 2): Klang Amp's song and a page's on the deck, a new one
+ * in place of the one before, a page's song playing on after its page and taken back by it, the controllers' release,
+ * the stage, live play left alone, and a stop while the engine starts (KLANG-00398).
  */
 class SongDeckSpec : StringSpec({
 
-    /** A player whose backend never comes: the playbacks are bookkeeping, the rules run without audio. */
-    class SilentEngine(initial: Player.Status = Player.Status.READY) : PlaybackEngine {
+    /**
+     * A player whose backend never comes: the playbacks are bookkeeping, the rules run without audio. [ready], when
+     * given, holds the engine's start until it completes.
+     */
+    class SilentEngine(
+        initial: Player.Status = Player.Status.READY,
+        private val ready: CompletableDeferred<Unit>? = null,
+    ) : PlaybackEngine {
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
         val player = KlangPlayer(
@@ -56,7 +65,11 @@ class SongDeckSpec : StringSpec({
 
         override val status = statusSource.readonly
 
-        override suspend fun readyPlayer(): KlangPlayer = player
+        override suspend fun readyPlayer(): KlangPlayer {
+            ready?.await()
+
+            return player
+        }
 
         override fun scriptEngine(): KlangScriptEngine = KlangScriptEngine.Builder().apply {
             registerLibrary(stdlibLib)
@@ -71,8 +84,20 @@ class SongDeckSpec : StringSpec({
 
     fun song(id: String) = Song(id = id, title = "Song $id", rpm = 30.0, code = "import * from \"sprudel\"\nsound(\"bd\")")
 
-    suspend fun withDeck(test: suspend (SongDeck, SilentEngine) -> Unit) {
-        val engine = SilentEngine()
+    /** A page's controller for the song [id], as a song page builds it: not exclusive, on the deck by its Play. */
+    fun SilentEngine.page(id: String): KlangCodePlaybackCtrl =
+        KlangCodePlaybackCtrl.builder().code(song(id).code).title("Song $id").engine(this).build()
+
+    /** Whether [ctrl] still follows the engine's status: a released one does not. */
+    fun SilentEngine.follows(ctrl: KlangCodePlaybackCtrl): Boolean {
+        val next = if (statusSource() == Player.Status.READY) Player.Status.LOADING else Player.Status.READY
+
+        statusSource(next)
+
+        return ctrl.state().playerStatus == next
+    }
+
+    suspend fun withDeck(engine: SilentEngine = SilentEngine(), test: suspend (SongDeck, SilentEngine) -> Unit) {
         val deck = SongDeck(engine = engine)
 
         try {
@@ -83,68 +108,115 @@ class SongDeckSpec : StringSpec({
         }
     }
 
-    "a song put on the deck plays, and is on the stage" {
+    "Klang Amp's way: a song put on the deck plays, and is on the stage" {
         withDeck { deck, engine ->
-            val a = song("a")
+            val ctrl = deck.play(song("a"))
 
-            deck.play(a)
-
-            eventually { deck.state().isPlaying shouldBe true }
-            deck.onDeck() shouldBe a
+            eventually { ctrl.state().isPlaying shouldBe true }
+            deck.onDeck() shouldBe SongDeck.OnDeck(songId = "a", ctrl = ctrl, fromPage = false)
             Playbacks.nowPlaying()?.title shouldBe "Song a"
             engine.player.playbacks().size shouldBe 1
         }
     }
 
-    "a new song stops the one before: one playback, the new song on the deck" {
+    "a new song stops the one before, which is released as no page shows it" {
         withDeck { deck, engine ->
+            val first = deck.play(song("a"))
+            eventually { first.state().isPlaying shouldBe true }
+
+            val second = deck.play(song("b"))
+
+            eventually { second.state().isPlaying shouldBe true }
+            first.state().isPlaying shouldBe false
+            engine.player.playbacks() shouldBe listOf(second.playback())
+            deck.onDeck()?.songId shouldBe "b"
+            withClue("the song before released") { engine.follows(first) shouldBe false }
+        }
+    }
+
+    "a page's song plays on when the page goes, and the page opened again takes it back" {
+        withDeck { deck, engine ->
+            val page = engine.page("p")
+            val hide = deck.show(page)
+
+            deck.play(songId = "p", ctrl = page)
+            eventually { page.state().isPlaying shouldBe true }
+
+            hide()
+
+            withClue("the song plays on after its page") { page.state().isPlaying shouldBe true }
+            engine.player.playbacks().size shouldBe 1
+            engine.follows(page) shouldBe true
+            deck.ctrlFor("p") shouldBeSameInstanceAs page
+            deck.ctrlFor("q") shouldBe null
+        }
+    }
+
+    "two pages showing one controller (one fading out): it is released when the last goes, a hide counting once" {
+        withDeck { deck, engine ->
+            val page = engine.page("p")
+            val fadingOut = deck.show(page)
+            val opened = deck.show(page)
+
+            fadingOut()
+            fadingOut()
+
+            withClue("kept for the page still showing it") { engine.follows(page) shouldBe true }
+
+            opened()
+
+            engine.follows(page) shouldBe false
+        }
+    }
+
+    "a song Klang Amp put on is not taken by its page: the page shows the user's version" {
+        withDeck { deck, _ ->
             deck.play(song("a"))
-            eventually { deck.state().isPlaying shouldBe true }
-            val first = deck.playback()
 
-            deck.play(song("b"))
-
-            eventually {
-                withClue("a new playback in place of the first") {
-                    (deck.state().isPlaying && deck.playback() != null && deck.playback() !== first) shouldBe true
-                }
-            }
-            engine.player.playbacks() shouldBe listOf(deck.playback())
-            deck.onDeck()?.id shouldBe "b"
+            withClue("Klang Amp's song is not the page's") { deck.ctrlFor("a") shouldBe null }
         }
     }
 
-    "an update changes the song as it plays: the same playback, the song kept on the deck" {
-        withDeck { deck, _ ->
-            val a = song("a")
+    "a page's song stopped while the page shows it stays with the page, and is released when the page goes" {
+        withDeck { deck, engine ->
+            val page = engine.page("p")
+            val hide = deck.show(page)
 
-            deck.play(a)
-            eventually { deck.state().isPlaying shouldBe true }
-            val first = deck.playback()
+            deck.play(songId = "p", ctrl = page)
+            eventually { page.state().isPlaying shouldBe true }
 
-            deck.update(code = "import * from \"sprudel\"\nsound(\"hh\")", rpm = 60.0)
+            page.stop()
 
-            eventually { (deck.state().code.endsWith("sound(\"hh\")") && !deck.state().isCodeModified) shouldBe true }
-            deck.playback() shouldBeSameInstanceAs first
-            deck.state().rpm shouldBe 60.0
-            deck.onDeck() shouldBe a
+            deck.onDeck() shouldBe null
+            withClue("kept for the page that shows it") { engine.follows(page) shouldBe true }
+
+            hide()
+
+            withClue("released when its page goes") { engine.follows(page) shouldBe false }
         }
     }
 
-    "an update with no song on the deck changes nothing" {
-        withDeck { deck, _ ->
-            val before = deck.state().code
+    "the page's Update plays on the deck live: the same playback, the new code" {
+        withDeck { deck, engine ->
+            val page = engine.page("p")
 
-            deck.update(code = "sound(\"hh\")", rpm = 60.0)
+            deck.play(songId = "p", ctrl = page)
+            eventually { page.state().isPlaying shouldBe true }
+            val first = page.playback()
 
-            withClue("no song on the deck") { deck.state().code shouldBe before }
+            page.setCode("import * from \"sprudel\"\nsound(\"hh\")")
+            deck.play(songId = "p", ctrl = page)
+
+            eventually { page.state().isCodeModified shouldBe false }
+            page.playback() shouldBeSameInstanceAs first
+            deck.onDeck()?.ctrl shouldBeSameInstanceAs page
         }
     }
 
     "a stop takes the song off the deck and off the stage" {
         withDeck { deck, engine ->
-            deck.play(song("a"))
-            eventually { deck.state().isPlaying shouldBe true }
+            val ctrl = deck.play(song("a"))
+            eventually { ctrl.state().isPlaying shouldBe true }
 
             deck.stop()
 
@@ -154,30 +226,30 @@ class SongDeckSpec : StringSpec({
         }
     }
 
-    "the deck takes the stage from a page's playback, and a page that takes it back takes the song off the deck" {
+    "the deck takes the stage from a waiting song, and a code example that takes it back takes the song off the deck" {
         withDeck { deck, engine ->
-            val page = KlangCodePlaybackCtrl.builder().code(song("p").code).engine(engine).build()
+            val waiting = engine.page("w")
             val example = KlangCodePlaybackCtrl.builder().code(song("e").code).exclusive().engine(engine).build()
 
             try {
-                page.play()
-                eventually { page.state().isPlaying shouldBe true }
+                waiting.play()
+                eventually { waiting.state().isPlaying shouldBe true }
 
-                deck.play(song("a"))
+                val ctrl = deck.play(song("a"))
 
                 eventually {
-                    withClue("the page's playback stopped by the deck") {
-                        (deck.state().isPlaying && !page.state().isPlaying) shouldBe true
+                    withClue("the waiting song stopped by the deck") {
+                        (ctrl.state().isPlaying && !waiting.state().isPlaying) shouldBe true
                     }
                 }
 
                 example.play()
 
                 eventually { example.state().isPlaying shouldBe true }
-                deck.state().isPlaying shouldBe false
+                ctrl.state().isPlaying shouldBe false
                 deck.onDeck() shouldBe null
             } finally {
-                page.release()
+                waiting.release()
                 example.release()
             }
         }
@@ -187,22 +259,37 @@ class SongDeckSpec : StringSpec({
         withDeck { deck, engine ->
             val keys = engine.player.createRealtimePlayback("keys")
 
-            deck.play(song("a"))
-            eventually { deck.state().isPlaying shouldBe true }
+            val ctrl = deck.play(song("a"))
+            eventually { ctrl.state().isPlaying shouldBe true }
 
             engine.player.playbacks().contains(keys) shouldBe true
         }
     }
 
-    "a released controller stops what it plays: its owner, a page, leaves nothing playing" {
+    "a stop while the engine starts wins: nothing plays once it is ready (KLANG-00398)" {
+        val ready = CompletableDeferred<Unit>()
+
+        withDeck(engine = SilentEngine(ready = ready)) { deck, engine ->
+            val ctrl = deck.play(song("a"))
+
+            deck.stop()
+            ready.complete(Unit)
+            delay(100)
+
+            withClue("nothing plays after a stop during the start") { engine.player.playbacks() shouldBe emptyList() }
+            ctrl.state().isPlaying shouldBe false
+        }
+    }
+
+    "a released controller stops what it plays: its owner, a code example, leaves nothing playing" {
         val engine = SilentEngine()
-        val page = KlangCodePlaybackCtrl.builder().code(song("p").code).engine(engine).build()
+        val example = engine.page("e")
 
         try {
-            page.play()
-            eventually { page.state().isPlaying shouldBe true }
+            example.play()
+            eventually { example.state().isPlaying shouldBe true }
 
-            page.release()
+            example.release()
 
             withClue("nothing plays after the release") { engine.player.playbacks() shouldBe emptyList() }
         } finally {

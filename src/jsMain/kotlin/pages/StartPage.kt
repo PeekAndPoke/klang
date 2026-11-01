@@ -17,6 +17,7 @@ import io.peekandpoke.klang.compile
 import io.peekandpoke.klang.fs
 import io.peekandpoke.klang.playJingle
 import io.peekandpoke.klang.spine.KlangCodePlaybackCtrl
+import io.peekandpoke.klang.spine.Playbacks
 import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.spine.SwingingLamp
 import io.peekandpoke.klang.spine.UiWork
@@ -377,9 +378,13 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         override val key = KlangIgnition.Position.Start
 
         init {
-            // The dyno is done: "Gestrandet" fades in while the result waits for "Make Music Now"
-            songFadeIn.start()
-            waitingSong.play()
+            // The dyno is done: "Gestrandet" fades in while the result waits for "Make Music Now". A song on the deck
+            // plays on instead (KLANG-00406, D2): the waiting song neither starts over it nor fades the volume under it
+            if (Playbacks.song.onDeck() == null) {
+                songFadeIn.start()
+                waitingSong.play()
+            }
+
             // Compiled now, so "Make Music Now" plays it at once
             launch { jinglePattern = jingle.compile() }
         }

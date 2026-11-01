@@ -1,7 +1,7 @@
 # KLANG-00406: The song that plays lives in the Spine: navigate anywhere while it plays
 
-> **Status (2026-11-01): IN PROGRESS.** Steps 1 and 3 done: `SongDeck` in the Spine, Klang Amp on it. Next: step 2,
-> the song page as a view of the deck.
+> **Status (2026-11-01): IN PROGRESS.** Steps 1 to 3 done: `SongDeck` in the Spine, Klang Amp on it, the song page
+> plays on it and its song plays on when the page is left. Next: step 4, the Motor's now-playing line and the Stop key.
 
 ## Why this exists
 
@@ -81,6 +81,11 @@ Spine, with the song's identity and the fade added:
   calls `play`), Klang Amp's playlist (`play` with a built-in song), the Motor's now-playing line (title, time, stop),
   the Stop key, the visuals.
 
+- **As built (step 2):** the deck holds the controller that plays (`onDeck`: the song's id, the controller, whether
+  a page put it on): `play(song)` for Klang Amp, `play(songId, ctrl)` for a song page (its Play and its Update),
+  `stop()`, `ctrlFor(songId)` and `show(ctrl)` for the page. No `update`: the page's Update plays its controller on the
+  deck again, live.
+
 ## The Spine's playbacks
 
 The maintainer, 2026-11-01: "So we would need a spine.playbacks object or similar. This would container
@@ -139,7 +144,9 @@ object Playbacks {
 - **D2, decided:** the start page's waiting song is a preview (the maintainer: "yes would make sense if you see no
   reason why this might be wrong"). One case to watch: a real song already playing when one comes back to the start
   page. Proposal: then the waiting song does not start, the real song plays on (and the dyno's run, which measures
-  the machine, would measure the song's load too).
+  the machine, would measure the song's load too). Done with step 2 (its review found the case
+  easy to reach now, by the browser's back button from a playing song page): with a song on the deck the waiting song
+  does not start and the volume does not fade under it. The dyno's run still measures with the song playing.
 - **D3, decided: not now** (the maintainer: "No not now"). After a reload nothing is offered.
 - **D4, decided:** `SongDeck` (the maintainer: "SongDeck is fine as a name"; what it does: "SongDeck", below).
 - **D5, decided: a one-shot fades nothing** (the maintainer: "no it should not, because imagine we have
@@ -152,11 +159,16 @@ After KLANG-00389's `Player` steps 1 and 2 (the move into the Spine, typed owner
 
 1. `SongDeck` in the Spine with its specs (taking the stage, stopping, a live update, the exclusive rule and the
    live-play exception); `KlangCodePlaybackCtrl`'s logic moves into it, the `Player.status` leak fixed on the way.
-   Done 2026-11-01, with step 3: `Playbacks` (the stage, out of `Player`) holds `song`, the deck; the deck keeps one
-   `KlangCodePlaybackCtrl`, which moved to the Spine with a `release()` its owners call; Klang Amp plays on the deck.
-   The specs run on a `KlangPlayer` without a backend (`PlaybackEngine`, the seam).
+   Done 2026-11-01, with step 3: `Playbacks` (the stage, out of `Player`) holds `song`, the deck; the deck keeps the
+   `KlangCodePlaybackCtrl` on it (one of its own until step 2), which moved to the Spine with a `release()`; Klang Amp
+   plays on the deck. The specs run on a `KlangPlayer` without a backend (`PlaybackEngine`, the seam).
 2. The song page as a view: attach to the song that plays, take the stage, stop nothing on leave; the editor's
-   highlights from the deck.
+   highlights from the deck. Done 2026-11-01: the page's Play puts its own controller on the deck
+   (`SongDeck.play(songId, ctrl)`); opened again on that song it takes the controller back (`ctrlFor`), its editor,
+   highlights, cycle and Update going on. A controller is released when neither the deck nor a page holds it
+   (`show`). A song Klang Amp put on is not taken by its page, which shows the user's version (Klang Amp plays the
+   originals); its Play takes the stage. KLANG-00398's race fixed with it: a stop after the Play wins over a start
+   still waiting for the engine.
 3. Klang Amp on the deck (done with step 1).
 4. The Motor's now-playing line and the Stop key from anywhere.
 5. The per-playback gain in the engine (D1), with Klang-Main-Dev: the command, the ramped gain, the codec specs.
@@ -184,3 +196,6 @@ After KLANG-00389's `Player` steps 1 and 2 (the move into the Spine, typed owner
 - 2026-11-01: IN PROGRESS, step 1 with step 3 (the maintainer: "Yes go ahead"): `Playbacks`, `SongDeck`,
   `PlaybackEngine`; `KlangCodePlaybackCtrl` in the Spine with `release()`; Klang Amp on the deck, its seconds read
   from the stage (the two components that fed it no longer do).
+- 2026-11-01: step 2 (the maintainer: "ok please go ahead"): the song page plays on the deck, its song plays on when
+  the page is left, and the page opened again goes on with it; `SongDeck` keeps the controller on it rather than one of
+  its own, `update` gone (the page's Update is a Play of the controller on the deck). KLANG-00398 fixed with it.
