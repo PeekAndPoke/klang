@@ -7,8 +7,9 @@ package io.peekandpoke.klang.ui.feel
 
 /**
  * The built-in looks (KLANG-00339): the three the maintainer picked from the kitchen sink's samples (2026-10-25), and
- * Army, the first Cream kept when Cream became creamy, Forest, Sun, Asphalt and Neon (2026-10-28). Which of them a new
- * user finds equipped is [equippedByDefault]; the rest wait on the bench (KLANG-00382).
+ * Army, the first Cream kept when Cream became creamy, Forest, Sun, Asphalt and Neon (2026-10-28); Party, Cake,
+ * Unicorn and Pink Noir, and Claude's own Abyss and Amber (2026-11-01). Which of them a new user finds equipped is
+ * [equippedByDefault]; the rest wait on the bench (KLANG-00382).
  */
 object KlangLooks {
 
@@ -350,11 +351,314 @@ object KlangLooks {
         ),
     )
 
-    val all: List<KlangLookPreset> = listOf(Default, Copper, Cream, Army, Forest, Sun, Asphalt, Neon)
+    /**
+     * A party (the maintainer, 2026-11-01: "some really girly ones ... Maybe "party" and "cake"", then "make the color
+     * more spread on the color circle"): a raspberry-black ground and rose-gold metal; on them the colours of a party
+     * all round the circle: bubblegum gauges with a violet glow, the knobs in turquoise, the scope in lime, the display
+     * in lemon, a coral accent, selected in a bright blue; a fine glitter grain, round corners; the spectrum confetti.
+     */
+    val Party = KlangLookPreset(
+        id = "party",
+        name = "Party",
+        values = mapOf(
+            KlangRole.GroundApp to "#1d0e17",
+            KlangRole.GroundDeep to "#25111d",
+            KlangRole.GroundPanel to "#2c1a25",
+            KlangRole.GroundRaised to "#3b2733",
+            KlangRole.GroundSunken to "#12070e",
+            KlangRole.CapLight to "#6a3a55",
+            KlangRole.CapDark to "#26101d",
+            KlangRole.InkText to "#fbe1ee",
+            KlangRole.InkStrong to "#fff5fa",
+            KlangRole.InkLabel to "#e0a8c4",
+            KlangRole.MetalLight to "#ffe3ea",
+            KlangRole.MetalMid to "#e8a3b4",
+            KlangRole.MetalDark to "#9c5a6e",
+            KlangRole.MetalInk to "#2a0a18",
+            KlangRole.LampOn to "#3f8cff",
+            KlangRole.LampWarning to "#ffb347",
+            KlangRole.LampCritical to "#ff3f6c",
+            KlangRole.GaugeArc to "#ff5fb0",
+            KlangRole.GaugeTick to "#a8789a",
+            KlangRole.GaugeGlow to "#9b5cff",
+            KlangRole.KnobArc to "#2fe0d0",
+            KlangRole.ScopeTrace to "#a8f05a",
+            KlangRole.LcdInk to "#ffe94a",
+            KlangRole.Accent to "#ff7a5c",
+            KlangRole.AccentMuted to "#9b5cff",
+            KlangRole.Focus to "#2fe0d0",
+            // Glitter: a strong, very fine grain, no brushing; round corners
+            KlangRole.Grain to "0.3",
+            KlangRole.GrainSize to "0.08",
+            KlangRole.Brushed to "0",
+            KlangRole.Radius to "6px",
+            KlangRole.RadiusDomed to "14px",
+            KlangRole.Glow to "0.35",
+            // The spectrum: confetti, violet, turquoise, lime, lemon and the party's pink on top
+            KlangRole.SpectrumQuiet to "#7a5cff",
+            KlangRole.SpectrumLow to "#2fd0e0",
+            KlangRole.SpectrumMid to "#8ff06a",
+            KlangRole.SpectrumHot to "#ffd23f",
+            KlangRole.SpectrumPeak to "#ff4fa3",
+        ),
+    )
+
+    /**
+     * A strawberry cake (the maintainer, 2026-11-01, with Party, the colours spread round the circle): a dark
+     * chocolate ground and metal of strawberry frosting; cherry gauges with a raspberry glow, the knobs in mint, the
+     * scope in vanilla, the display in pistachio, a raspberry accent with a lavender second, selected in sky blue;
+     * smooth as icing, soft corners; the spectrum the sprinkles.
+     */
+    val Cake = KlangLookPreset(
+        id = "cake",
+        name = "Cake",
+        values = mapOf(
+            KlangRole.GroundApp to "#1e1412",
+            KlangRole.GroundDeep to "#261916",
+            KlangRole.GroundPanel to "#2d2220",
+            KlangRole.GroundRaised to "#3b2f2c",
+            KlangRole.GroundSunken to "#150d0b",
+            KlangRole.CapLight to "#6a4a48",
+            KlangRole.CapDark to "#28191a",
+            KlangRole.InkText to "#f7e4e4",
+            KlangRole.InkStrong to "#fff8f6",
+            KlangRole.InkLabel to "#d9aeb4",
+            KlangRole.MetalLight to "#ffeef3",
+            KlangRole.MetalMid to "#f7b8cc",
+            KlangRole.MetalDark to "#c27a92",
+            KlangRole.MetalInk to "#3a1220",
+            KlangRole.LampOn to "#6ab8ff",
+            KlangRole.GaugeArc to "#ff6f8f",
+            KlangRole.GaugeTick to "#a88a8a",
+            KlangRole.GaugeGlow to "#d94f8a",
+            KlangRole.KnobArc to "#7fe0b8",
+            KlangRole.ScopeTrace to "#fff0c0",
+            KlangRole.LcdInk to "#b8e88a",
+            KlangRole.Accent to "#f0507f",
+            KlangRole.AccentMuted to "#a88ad8",
+            KlangRole.Focus to "#7fe0b8",
+            // Icing: a soft, faint grain, hardly brushed, soft corners
+            KlangRole.Grain to "0.1",
+            KlangRole.GrainSize to "0.3",
+            KlangRole.Brushed to "0.02",
+            KlangRole.Radius to "6px",
+            KlangRole.RadiusDomed to "12px",
+            // The spectrum: sprinkles, sky, pistachio, lemon, orange and cherry
+            KlangRole.SpectrumQuiet to "#7fc8f0",
+            KlangRole.SpectrumLow to "#a8e690",
+            KlangRole.SpectrumMid to "#fff08a",
+            KlangRole.SpectrumHot to "#ffb070",
+            KlangRole.SpectrumPeak to "#ff6f8f",
+        ),
+    )
+
+    /**
+     * A unicorn (with Party and Cake, 2026-11-01, the colours spread round the circle): a dusk-lilac ground and pearly
+     * metal; lilac gauges with a pink glow, the knobs in sky blue, the scope in mint, the display in lemon, a pink
+     * accent with a peach second, selected in aqua; pearl-smooth, very round; the spectrum a pastel rainbow.
+     */
+    val Unicorn = KlangLookPreset(
+        id = "unicorn",
+        name = "Unicorn",
+        values = mapOf(
+            KlangRole.GroundApp to "#17121f",
+            KlangRole.GroundDeep to "#1d1728",
+            KlangRole.GroundPanel to "#252030",
+            KlangRole.GroundRaised to "#332d3f",
+            KlangRole.GroundSunken to "#0f0b15",
+            KlangRole.CapLight to "#544870",
+            KlangRole.CapDark to "#1f1829",
+            KlangRole.InkText to "#ece4fb",
+            KlangRole.InkStrong to "#fdfaff",
+            KlangRole.InkLabel to "#bfaee0",
+            KlangRole.MetalLight to "#f6efff",
+            KlangRole.MetalMid to "#d4c2f0",
+            KlangRole.MetalDark to "#8f7cb8",
+            KlangRole.MetalInk to "#1e1430",
+            KlangRole.LampOn to "#5fe8e0",
+            KlangRole.GaugeArc to "#c39aff",
+            KlangRole.GaugeTick to "#8e84a8",
+            KlangRole.GaugeGlow to "#ff8fd0",
+            KlangRole.KnobArc to "#8fd0ff",
+            KlangRole.ScopeTrace to "#9ff0c8",
+            KlangRole.LcdInk to "#fff09a",
+            KlangRole.Accent to "#ff8fd8",
+            KlangRole.AccentMuted to "#ffb59a",
+            KlangRole.Focus to "#8fd0ff",
+            // Pearl: almost no grain, no brushing, very round
+            KlangRole.Grain to "0.06",
+            KlangRole.GrainSize to "0.15",
+            KlangRole.Brushed to "0",
+            KlangRole.Radius to "5px",
+            KlangRole.RadiusDomed to "14px",
+            KlangRole.Glow to "0.3",
+            // The spectrum: a pastel rainbow, lilac to rose
+            KlangRole.SpectrumQuiet to "#b8a0ff",
+            KlangRole.SpectrumLow to "#8fd0ff",
+            KlangRole.SpectrumMid to "#9ff0c8",
+            KlangRole.SpectrumHot to "#fff09a",
+            KlangRole.SpectrumPeak to "#ffb0d8",
+        ),
+    )
+
+    /**
+     * Pink and black (the maintainer, 2026-11-01: "We need a really pink and black one too"): pure black grounds, metal
+     * of hot pink, and pink on everything that glows; the one colour it chooses that is not pink is white, for the text
+     * and the selected lamp; glossy lacquer, no grain; the spectrum pink from the dark to white-hot.
+     */
+    val PinkNoir = KlangLookPreset(
+        id = "pink-noir",
+        name = "Pink Noir",
+        values = mapOf(
+            KlangRole.GroundApp to "#0a0a0a",
+            KlangRole.GroundDeep to "#050505",
+            KlangRole.GroundPanel to "#141214",
+            KlangRole.GroundRaised to "#221d21",
+            KlangRole.GroundSunken to "#000000",
+            KlangRole.CapLight to "#3a2a35",
+            KlangRole.CapDark to "#0e0a0d",
+            KlangRole.InkText to "#ffe0f0",
+            KlangRole.InkStrong to "#ffffff",
+            KlangRole.InkLabel to "#ff7ac0",
+            KlangRole.MetalLight to "#ffc2e2",
+            KlangRole.MetalMid to "#ff4fa8",
+            KlangRole.MetalDark to "#9e1a5e",
+            KlangRole.MetalInk to "#0a0005",
+            KlangRole.LampOff to "#2a0f1e",
+            KlangRole.LampOn to "#ffffff",
+            KlangRole.LampCritical to "#ff1f4f",
+            KlangRole.GaugeArc to "#ff2fa0",
+            KlangRole.GaugeTick to "#7a4a65",
+            KlangRole.GaugeGlow to "#ff2fa0",
+            KlangRole.KnobArc to "#ff2fa0",
+            KlangRole.ScopeTrace to "#ff6fc0",
+            KlangRole.LcdInk to "#ff4fb0",
+            KlangRole.Accent to "#ff2fa0",
+            KlangRole.AccentMuted to "#b0206e",
+            KlangRole.Focus to "#ff8fd0",
+            // Glossy lacquer: no grain, no brushing; round corners
+            KlangRole.Grain to "0",
+            KlangRole.GrainSize to "0.2",
+            KlangRole.Brushed to "0",
+            KlangRole.Radius to "4px",
+            KlangRole.RadiusDomed to "10px",
+            KlangRole.Glow to "0.45",
+            // The spectrum: pink only, from the dark to white-hot
+            KlangRole.SpectrumQuiet to "#5a0a35",
+            KlangRole.SpectrumLow to "#a0105e",
+            KlangRole.SpectrumMid to "#e81f8a",
+            KlangRole.SpectrumHot to "#ff6fbf",
+            KlangRole.SpectrumPeak to "#ffd6ec",
+        ),
+    )
+
+    /**
+     * The deep sea (Claude's own, 2026-11-01): grounds of the abyss, near black with a blue-green cast, metal of wet
+     * dark steel, gauges and the accent in the glow of the creatures down there, selected in a clear blue; a little
+     * silt in the grain; the spectrum rising from the deep to the light at the surface.
+     */
+    val Abyss = KlangLookPreset(
+        id = "abyss",
+        name = "Abyss",
+        values = mapOf(
+            KlangRole.GroundApp to "#07121a",
+            KlangRole.GroundDeep to "#0a1720",
+            KlangRole.GroundPanel to "#132029",
+            KlangRole.GroundRaised to "#1f2d37",
+            KlangRole.GroundSunken to "#030a0f",
+            KlangRole.CapLight to "#2f4a58",
+            KlangRole.CapDark to "#0c1820",
+            KlangRole.InkText to "#d6ecef",
+            KlangRole.InkStrong to "#f2fdff",
+            KlangRole.InkLabel to "#8fb4bd",
+            KlangRole.MetalLight to "#cfe6ea",
+            KlangRole.MetalMid to "#6f97a3",
+            KlangRole.MetalDark to "#2c4a55",
+            KlangRole.MetalInk to "#04131a",
+            KlangRole.GaugeArc to "#3ff5c8",
+            KlangRole.GaugeTick to "#5f8590",
+            KlangRole.GaugeGlow to "#1f8fd6",
+            KlangRole.KnobArc to "#3ff5c8",
+            KlangRole.ScopeTrace to "#9ff8e4",
+            KlangRole.Accent to "#3ff5c8",
+            KlangRole.AccentMuted to "#1f7f8f",
+            KlangRole.Focus to "#7ff8dc",
+            KlangRole.LampOn to "#4f9dff",
+            // Silt: a broad, faint grain, little brushing
+            KlangRole.Grain to "0.12",
+            KlangRole.GrainSize to "0.5",
+            KlangRole.Brushed to "0.06",
+            KlangRole.Radius to "3px",
+            KlangRole.Glow to "0.35",
+            // The spectrum: from the deep blue to the light at the surface
+            KlangRole.SpectrumQuiet to "#0b3d6e",
+            KlangRole.SpectrumLow to "#1f6fa8",
+            KlangRole.SpectrumMid to "#20b5c8",
+            KlangRole.SpectrumHot to "#3ff5c8",
+            KlangRole.SpectrumPeak to "#d8fff4",
+        ),
+    )
+
+    /**
+     * An amber terminal (Claude's own, 2026-11-01): the old phosphor screens, everything in one amber on near black,
+     * brass for the metal; the tube's lines and glow strong, no grain to speak of, square corners. Selected and focused
+     * in a pale blue, the one colour it chooses that is not amber, and the accent a deeper orange, so none is the
+     * trail's gold.
+     */
+    val Amber = KlangLookPreset(
+        id = "amber",
+        name = "Amber",
+        values = mapOf(
+            KlangRole.GroundApp to "#120c05",
+            KlangRole.GroundDeep to "#170f06",
+            KlangRole.GroundPanel to "#1d150b",
+            KlangRole.GroundRaised to "#2a1f12",
+            KlangRole.GroundSunken to "#0a0602",
+            KlangRole.CapLight to "#4a3518",
+            KlangRole.CapDark to "#1a1208",
+            KlangRole.InkText to "#ffcf80",
+            KlangRole.InkStrong to "#ffe8bf",
+            KlangRole.InkLabel to "#c8944a",
+            KlangRole.MetalLight to "#ffe2a8",
+            KlangRole.MetalMid to "#d9a24a",
+            KlangRole.MetalDark to "#7a521c",
+            KlangRole.MetalInk to "#1a0f02",
+            KlangRole.GaugeArc to "#ffb000",
+            KlangRole.GaugeTick to "#8a6a3a",
+            KlangRole.GaugeGlow to "#ff8a00",
+            KlangRole.KnobArc to "#ffb000",
+            KlangRole.ScopeTrace to "#ffb000",
+            KlangRole.LcdInk to "#ffb000",
+            KlangRole.Accent to "#ff8a1f",
+            KlangRole.AccentMuted to "#a85a10",
+            // The focus ring in the selected lamp's blue: an amber ring would read as the trail's gold beacon
+            KlangRole.Focus to "#6fd0ff",
+            KlangRole.LampOn to "#6fd0ff",
+            // The tube: strong lines and glow, hardly any grain, no brushing, square corners
+            KlangRole.Grain to "0.04",
+            KlangRole.GrainSize to "0.2",
+            KlangRole.Brushed to "0",
+            KlangRole.Radius to "1px",
+            KlangRole.RadiusDomed to "2px",
+            KlangRole.Scanlines to "0.22",
+            KlangRole.Glow to "0.4",
+            // The spectrum: one amber, dark to bright
+            KlangRole.SpectrumQuiet to "#5a3200",
+            KlangRole.SpectrumLow to "#8f5200",
+            KlangRole.SpectrumMid to "#c87800",
+            KlangRole.SpectrumHot to "#ffb000",
+            KlangRole.SpectrumPeak to "#ffe6a8",
+        ),
+    )
+
+    val all: List<KlangLookPreset> = listOf(
+        Default, Copper, Cream, Army, Forest, Sun, Asphalt, Neon, Party, Cake, Unicorn, PinkNoir, Abyss, Amber,
+    )
 
     /**
      * The looks a new user finds equipped, in the drawer's order, the last slot left empty for a look of their own:
-     * every built-in but Army, on the bench for Neon (the maintainer, 2026-10-28).
+     * the first eight built-ins but Army, on the bench for Neon (the maintainer, 2026-10-28); the looks of 2026-11-01
+     * (Party, Cake, Unicorn, Pink Noir, Abyss, Amber) wait on the bench from the start, to be equipped on the Looks page.
      */
     val equippedByDefault: List<KlangLookPreset> = listOf(Default, Copper, Cream, Forest, Sun, Asphalt, Neon)
 

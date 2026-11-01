@@ -18,9 +18,12 @@ class KlangLooksSpec : StringSpec({
         KlangTheme.clearLayer(Layer.User)
     }
 
-    "the presets are Default, Copper and Cream, each found by its id; an unknown id finds none" {
+    "the built-in presets, each found by its id; an unknown id finds none" {
         KlangLooks.all.map { it.id } shouldContainExactly
-            listOf("default", "copper", "cream", "army", "forest", "sun", "asphalt", "neon")
+            listOf(
+                "default", "copper", "cream", "army", "forest", "sun", "asphalt", "neon",
+                "party", "cake", "unicorn", "pink-noir", "abyss", "amber",
+            )
 
         for (preset in KlangLooks.all) {
             KlangLooks.byId(preset.id) shouldBe preset
