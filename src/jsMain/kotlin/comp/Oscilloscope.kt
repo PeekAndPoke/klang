@@ -128,6 +128,8 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         val growYPx: Double = RADIANCE_GROW_Y_PX,
         /** How far the smoke moves up each frame, in CSS pixels ([SMOKE_RISE_PX]). */
         val risePx: Double = SMOKE_RISE_PX,
+        /** How wide the clear frame round the copy is, in CSS pixels ([SMOKE_EDGE_PX]). */
+        val edgePx: Double = SMOKE_EDGE_PX,
     )
 
     companion object {
@@ -156,10 +158,10 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
          * How much the smoke's canvas shows over the scope's ground: faint, the trace stays clear over it (0.4, then
          * 0.35 before).
          */
-        private const val SMOKE_OPACITY = 0.20
+        private const val SMOKE_OPACITY = 0.30
 
         /** The blur each frame, in CSS pixels: a few frames on, the trail is a few pixels wide. */
-        private const val RADIANCE_BLUR_PX = 0.25
+        private const val RADIANCE_BLUR_PX = 0.125
 
         /**
          * How far the last frame grows up and down each frame, in CSS pixels: drawn back a little bigger round the
@@ -168,7 +170,7 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
          * [RADIANCE_GROW_X_PX]: the same distance both ways looked like ""dust" flying from a carpet that is hit" (the
          * maintainer, 2026-10-30: "The x-zoom must be less than the y zoom i guess").
          */
-        private const val RADIANCE_GROW_Y_PX = 0.3
+        private const val RADIANCE_GROW_Y_PX = 0.5
 
         /** How far the last frame grows to either side each frame, in CSS pixels: less than up and down, a third. */
         private const val RADIANCE_GROW_X_PX = 0.1
@@ -177,7 +179,16 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
          * How far the smoke moves up each frame, in CSS pixels, as it grows: it rises (the maintainer, 2026-10-30: "on
          * every redraw move the zoomed paint up slightly, so that it looks as if the smoke rises").
          */
-        private const val SMOKE_RISE_PX = 0.08
+        private const val SMOKE_RISE_PX = 0.0
+
+        /**
+         * How wide a frame round the canvas is cleared to full transparency each frame, before the copy is drawn back
+         * blurred, in CSS pixels. The fade never takes the faintest smoke to nothing (8-bit alpha rounds it back up),
+         * and the blur spread it to the canvas's edges as a faint but visible dust over everything (the maintainer,
+         * 2026-11-01: "otherwise the blur eats up everything to the edge of the canvas. Everything somehow fills with
+         * a very transparent but visible "dust""); the clear frame drains it at the edges.
+         */
+        private const val SMOKE_EDGE_PX = 2.0
 
         /** How far the shade's stroke lies below the string's, a share of the string's width. */
         private const val SHADE_OFFSET = 0.3
@@ -504,6 +515,13 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
             aside.drawImage(canvas, 0.0, 0.0)
 
             val setting = props.smoke
+
+            // A clear frame round the copy, before the blur: the dust drains at the edges ([SMOKE_EDGE_PX])
+            val edge = minOf(setting.edgePx * backingRatio, width / 2.0, height / 2.0)
+            aside.clearRect(0.0, 0.0, width, edge)
+            aside.clearRect(0.0, height - edge, width, edge)
+            aside.clearRect(0.0, 0.0, edge, height)
+            aside.clearRect(width - edge, 0.0, edge, height)
             val growX = setting.growXPx * backingRatio
             val growY = setting.growYPx * backingRatio
             val rise = setting.risePx * backingRatio
