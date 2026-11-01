@@ -1,0 +1,1312 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The handshake: ask, answer, first note</title>
+<!--
+  Figure 4 of docs/blog/2026-11-01-the-handshake-seals-the-contract/index.md. One file, no build step, no sound.
+
+  A SIMULATION of the rules in the code, not a recording (Fig. 3 is the recording): the rules below are ported
+  line by line and run in the page, so every number on the screen comes out of them. All at commit 14a4f8f18.
+
+  Two views of one state. The first is the exchange: the ask, the answer and what the old frontend never reads, as a
+  timing diagram with a lane each for the old frontend, the backend and the new frontend. The second is the same
+  handshake on the wall clock, against the backend's timeline, with the stall and the bursts of a phone.
+
+  - klang/src/commonMain/kotlin/PlaybackClock.kt: constants 36 to 46 (MIN_CAP_SEC 0.1, MAX_CAP_SEC 0.5, CAP_GAPS 3,
+    GAPS_KEPT 16), onReport 77 to 91 (a gap per report, the cap), nowSec 94 to 108 (the report plus the time since,
+    held by the cap and by the last reading).
+  - audio_be/src/commonMain/kotlin/PlaybackEngineDispatcher.kt: emitDiagnostics 251 to 295 with
+    DIAGNOSTICS_EVERY_SEC = 0.02 (line 393): a report once 960 frames have been rendered since the last one, so every
+    8th block of 128 frames at 48 kHz (21.3 ms), carrying the timeline at that block's end (line 286).
+  - audio_be/src/commonMain/kotlin/voices/VoiceScheduler.kt: ensureEpoch 489 to 505: nowSec is the start of the next
+    block to render (BackendClock.kt, RenderClock.cursorFrame), latency = max(0, nowSec - asked), epoch = asked + latency,
+    and the backend answers with PlaybackAnchored(epochSec). A voice with startTime s plays at epoch + s.
+  - klang/src/commonMain/kotlin/KlangPatternScheduler.kt: begin 364 to 396 (requestedEpochSec = clock.nowSec() at line
+    367, epochSec = requestedEpochSec, the first cycle sent at once at line 396), handleFeedback 263 to 271
+    (PlaybackAnchored becomes the epoch, only afterwards). The old frontend asked with its own wall clock and never
+    took an answer: the same file at 2f139199d^, lines 322 (startTimeMs = nowMs()) and 510 (playbackStartTime), and
+    PlaybackEngineDispatcher.kt at bef558a7c line 277 (backendNowMs = endMs, the worklet's Date.now()).
+  - klang/src/commonTest/kotlin/KlangPlaybackSyncSpec.kt lines 54 to 66: "The first round's highlights were timed while
+    the backend stood; the later ones are on the sound", bounded to 30 ms.
+  - The phone: PlaybackClock.kt's KDoc ("Android hands process() over in bursts of 40 to 100 ms"). The burst model is our
+    sketch of it: 36 blocks (96 ms of audio) at once every 96 ms of wall time; its reports reach the frontend together.
+
+  A highlight is early by (when its note sounds on the wall clock) minus (when the frontend's clock expected it). The
+  first round of notes is timed from the second asked for, before the answer is back (both frontends), so it is early
+  by (first note's wall time) - (the press). Every later note: the old frontend keeps counting from the second it asked
+  for and never takes an answer, so it stays that early; the new one takes PlaybackAnchored, so it is about 0 (the spec
+  bounds it to 30 ms), shown as 0.
+
+  The one made-up number: the delay from the ask to the backend reading it (200 ms by default). The real delay is the
+  first cycle's query time plus the message's transit; no file holds it. It is a scenario setting, made long so the
+  effect shows. The answer takes the same delay back; no number depends on that.
+
+  What the model leaves out, on purpose: the reports reach the frontend at once (as in the spec rig; the post's last
+  section names the real lag of a poll plus the transit), the output latency, a thread that starts a block late.
+  The next block to render is the first block boundary at or after the backend's position (one block is 2.7 ms).
+
+  Without script the two drawings, the numbers and the sentence stay as they were at the defaults; with script the
+  same drawings are redrawn live. A link can open the figure in a state: handshake.html#stall=2&len=2&t0=3&d=200&bursts=0
+-->
+<script>document.documentElement.className = "js";</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
+<style>
+    /* Tokens copied from the blog page (console/blog/blog.css): the Klang UI palette, dark only. The post's static
+       figures use gray for the backend, crimson for the old way, green for the new way and gold for the bursts;
+       the three are lightened here for the dark page. */
+    :root {
+        color-scheme: dark;
+        --void: #12131C;
+        --paper: #191C22;
+        --surface: #21252B;
+        --surface-2: #2C313A;
+        --ink: #D7DADF;
+        --muted: #ABB2BF;
+        --dim: #8A92A2;
+        --faint: #5C6370;
+        --rule: #353A42;
+        --signal: #56B6C2;
+        --gold: #E8B84B;
+        --gray: #8F98A8;
+        --old: #E5675F;
+        --new: #56BD83;
+
+        --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+        --f-mono: "Share Tech Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; background: var(--paper); }
+    body {
+        margin: 0;
+        padding: 2px 2px 4px;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--f-mono);
+        font-size: 12px;
+        line-height: 1.45;
+        -webkit-font-smoothing: antialiased;
+    }
+    button, input { font: inherit; color: inherit; }
+    :focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+    .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    html.no-js .js-only { display: none !important; }
+
+    .fig { max-width: 920px; margin: 0 auto; }
+
+    /* ---------- the bar: scenes, and what to do ---------- */
+    .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 5px; margin: 0 0 7px; }
+    .bar .scenes { display: contents; }
+    .lab { color: var(--dim); font-size: 11px; margin-right: 2px; }
+    .hint { color: var(--muted); font-size: 11px; margin-left: 4px; }
+    .chip {
+        appearance: none; padding: 0 7px; min-height: 22px; line-height: 20px; background: var(--surface);
+        border: 1px solid var(--rule); color: var(--muted); font-size: 11px; cursor: pointer;
+    }
+    .chip:hover { border-color: var(--faint); color: var(--ink); }
+    .chip[aria-pressed="true"], .chip[aria-checked="true"] { border-color: var(--gold); background: rgba(232, 184, 75, .12); color: var(--ink); }
+
+    /* ---------- the two views: a left column and a right column each ---------- */
+    .main, .main2 { display: grid; grid-template-columns: minmax(0, 1fr) 236px; gap: 0 14px; align-items: start; }
+    .main2 { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--rule); }
+    .colL, .colR, .colL2, .colR2 { min-width: 0; }
+    /* a phone: the exchange and the sliders that move it, the words, the numbers; then the plane and its sliders */
+    @media (max-width: 639px) {
+        .main, .main2 { display: flex; flex-direction: column; align-items: stretch; }
+        .colL, .colR, .colL2, .colR2 { display: contents; }
+        .excol { order: 1; }
+        .ctlsA { order: 2; margin-top: 4px; }
+        .sentence { order: 3; }
+        .readout { order: 4; margin-top: 8px; }
+        .planecol { order: 1; }
+        .ctlsB { order: 2; margin-top: 4px; }
+        .note2 { order: 3; }
+    }
+
+    svg.plot { display: block; width: 100%; height: auto; overflow: visible; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+    .plot text { font-family: var(--f-mono); font-size: 10px; fill: var(--muted); }
+    .plot .lab-o { fill: var(--old); } .plot .lab-n { fill: var(--new); }
+    .plot .halo { paint-order: stroke; stroke: var(--paper); stroke-width: 3px; stroke-linejoin: round; }
+    .plot .small { font-size: 9px; fill: var(--dim); }
+    .plot .dim { fill: var(--dim); }
+    .plot .ink { fill: var(--ink); }
+    .plot .grid { stroke: var(--rule); stroke-width: 1; }
+    .plot .axis { stroke: var(--faint); stroke-width: 1; }
+    .plot .strip { fill: var(--surface); opacity: .75; }
+    .plot .band-stall { fill: var(--old); opacity: .13; }
+    .plot .band-burst { fill: var(--gold); opacity: .09; }
+    .plot .be { fill: none; stroke: var(--gray); stroke-width: 6; opacity: .62; stroke-linejoin: round; }
+    .plot .cl-new { fill: none; stroke: var(--new); stroke-width: 1.8; stroke-linejoin: round; }
+    .plot .cl-old { fill: none; stroke: var(--old); stroke-width: 1.8; stroke-dasharray: 5 4; }
+    .plot .cap-line { fill: none; stroke: var(--new); stroke-width: 1.3; stroke-linejoin: round; }
+    .plot .cap-fill { fill: var(--new); opacity: .16; }
+    .plot .pole { stroke: var(--ink); stroke-width: 1; stroke-dasharray: 1 3; opacity: .55; }
+    .plot .so { stroke: var(--old); } .plot .sn { stroke: var(--new); }
+    .plot .fo { fill: var(--old); } .plot .fn { fill: var(--new); }
+    .plot .nline { stroke-width: 1; stroke-dasharray: 1.5 3; fill: none; opacity: .5; }
+    .plot .nline.first { stroke-width: 1.4; opacity: .95; }
+    .plot .drop { stroke-width: 1; stroke-dasharray: 1.5 3; fill: none; opacity: .5; }
+    .plot .drop.first { opacity: .95; }
+    .plot .mark.rest { opacity: .7; }
+    .plot .dotp { stroke: var(--paper); stroke-width: 1.2; }
+    .plot .arrow { stroke-width: 1.4; fill: none; }
+    .plot .jump { stroke-width: 1.2; stroke-dasharray: 3 2; fill: none; }
+    .plot .ring { fill: var(--paper); stroke: var(--ink); stroke-width: 1.3; }
+    .plot .anchor { fill: var(--paper); stroke-width: 1.4; }
+    .plot .gap { stroke: var(--ink); stroke-width: 1; fill: none; }
+    .plot .cross { fill: none; stroke-width: 1.7; stroke-linecap: round; }
+
+    /* the exchange: three lanes, the old frontend's wall clock, the backend, the new frontend's PlaybackClock */
+    .exs .lane-o { stroke: var(--old); stroke-width: 1.8; stroke-dasharray: 5 4; fill: none; }
+    .exs .lane-n { stroke: var(--new); stroke-width: 1.8; fill: none; }
+    .exs .lane-b { stroke: var(--gray); stroke-width: 6; opacity: .62; fill: none; }
+    .exs .pole { opacity: .5; }
+
+    /* a row of the table lit up (or a mark of the exchange hovered): what it names stays, the rest steps back */
+    .fig[data-hl] .hs > * { opacity: .16; }
+    .fig[data-hl="A"] .hs > .hA, .fig[data-hl="now"] .hs > .hnow, .fig[data-hl="E"] .hs > .hE,
+    .fig[data-hl="first"] .hs > .hfirst, .fig[data-hl="after"] .hs > .hfirst { opacity: 1; }
+    .fig[data-hl="A"] .xs > :not(.hA), .fig[data-hl="now"] .xs > :not(.hnow), .fig[data-hl="E"] .xs > :not(.hE) { opacity: .16; }
+
+    /* the handles drawn over the plane and the exchange */
+    .ui .handle { cursor: grab; touch-action: none; outline: none; }
+    html.no-js .ui .handle { cursor: default; pointer-events: none; }
+    html.no-js .ui .gl, html.no-js .ui .gr, html.no-js .ui .tab, html.no-js .ui .ringh { display: none; }
+    .ui .handle.drag { cursor: grabbing; }
+    .ui .hz { fill: transparent; }
+    .ui .gl, .ui .gr { cursor: ew-resize; }
+    .ui .flag-tab { fill: var(--surface-2); stroke: var(--ink); stroke-width: 1; }
+    .ui text { fill: var(--ink); font-size: 10.5px; }
+    .ui .flag:hover .flag-tab, .ui .flag.drag .flag-tab { fill: #3A414C; }
+    .ui .flag:focus-visible .flag-tab { stroke: var(--gold); stroke-width: 2; }
+    .ui .st-tab { fill: var(--old); fill-opacity: .32; stroke: var(--old); stroke-width: 1; }
+    .ui .handle:hover .st-tab, .ui .handle.drag .st-tab { fill-opacity: .5; }
+    .ui .handle:focus-visible .st-tab { stroke: var(--gold); stroke-width: 2; }
+    .ui .edge { stroke: var(--old); stroke-width: 1.5; }
+    .ui .edge.ghost { stroke-dasharray: 3 3; opacity: .55; }
+    .ui .grip { fill: var(--old); stroke: var(--paper); stroke-width: 1; }
+    .ui .handle:hover .grip, .ui .handle.drag .grip { fill: #F08A84; }
+    .ui .handle:focus-visible .grip { stroke: var(--gold); stroke-width: 2; }
+    .ui .dring { fill: none; stroke: transparent; stroke-width: 1.5; }
+    .ui .dring.cue { stroke: var(--faint); stroke-dasharray: 2 3; }
+    .ui .handle:hover .dring, .ui .handle.drag .dring { stroke: var(--ink); stroke-dasharray: none; }
+    .ui .handle:focus-visible .dring { stroke: var(--gold); stroke-width: 2; stroke-dasharray: none; }
+    .ui .ew { cursor: ew-resize; }
+
+    /* ---------- words under the exchange ---------- */
+    .xkey { margin: 3px 0 0; display: flex; flex-wrap: wrap; gap: 1px 14px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+    .xkey span { display: inline-flex; align-items: baseline; gap: 5px; }
+    .xkey svg { width: 11px; height: 11px; fill: var(--ink); flex: none; align-self: flex-start; margin-top: 3px; }
+    .xkey .ringk { fill: none; stroke: var(--ink); stroke-width: 1.3; }
+    .xkey b { color: var(--ink); font-weight: 400; }
+    .xkey .tail { color: var(--dim); }
+    .lead2 { margin: 0 0 4px; color: var(--muted); font-size: 11px; line-height: 1.45; }
+    .lead2 b { color: var(--ink); font-weight: 400; }
+    .keys { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin: 0 0 5px; }
+    .key {
+        display: inline-flex; align-items: center; gap: 6px; padding: 1px 7px 1px 6px; min-height: 22px;
+        background: var(--surface); border: 1px solid var(--rule); color: var(--ink); font-size: 11.5px; line-height: 1.2;
+    }
+    .key svg { width: 22px; height: 8px; flex: none; overflow: visible; }
+    html.js .key[role="button"] { cursor: pointer; }
+    html.js .key[role="button"]:hover { border-color: var(--faint); }
+    .key[aria-pressed="false"] { color: var(--dim); }
+    .key[aria-pressed="false"] svg { opacity: .35; }
+    .symkey { margin: 2px 0 0 34px; display: flex; flex-wrap: wrap; gap: 1px 12px; color: var(--dim); font-size: 10.5px; line-height: 1.5; }
+    .symkey span { display: inline-flex; align-items: center; gap: 4px; }
+    .symkey svg { width: 11px; height: 11px; fill: var(--muted); }
+    .symkey .ringk { fill: none; stroke: var(--muted); stroke-width: 1.3; }
+    .sentence { margin: 6px 0 0; color: var(--muted); font-size: 11.5px; line-height: 1.5; }
+    .sentence b { color: var(--ink); font-weight: 400; }
+    .sentence .o, .sentence .n { display: block; margin-top: 3px; padding-left: 7px; border-left: 2px solid; }
+    .sentence .o { color: var(--old); border-left-color: var(--old); }
+    .sentence .n { color: var(--new); border-left-color: var(--new); }
+    .note2 { margin: 0; color: var(--dim); font-size: 10.5px; line-height: 1.5; }
+
+    /* ---------- the readout table ---------- */
+    .readout { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+    .readout th, .readout td { padding: 2px 0; border-bottom: 1px solid #2A2E36; font-weight: 400; }
+    .readout thead th { border-bottom: 1px solid var(--rule); color: var(--dim); text-align: right; padding-bottom: 3px; }
+    .readout th.o, .readout td.o { color: var(--old); } .readout th.n, .readout td.n { color: var(--new); }
+    .readout tbody th { text-align: left; color: var(--muted); padding-right: 6px; }
+    .readout tbody th[colspan] { color: var(--dim); font-size: 10.5px; padding: 6px 0 2px; border-bottom-color: var(--rule); }
+    .readout tbody:first-of-type th[colspan] { padding-top: 3px; }
+    .readout td { text-align: right; width: 4.4em; font-variant-numeric: tabular-nums; white-space: nowrap; vertical-align: top; }
+    .readout tbody th[scope="row"] { vertical-align: top; line-height: 1.3; padding-top: 3px; }
+    .readout td { padding-top: 3px; }
+    .readout td b { font-weight: 400; color: inherit; text-shadow: 0 0 0 currentColor; }
+    .readout td i { font-style: normal; color: var(--dim); }
+    .readout tbody tr:hover { background: var(--surface); }
+    .readout tbody tr.pin { background: var(--surface-2); }
+    .readout tbody tr.lit { background: var(--surface); }
+    .readout tr.lead th, .readout tr.lead td { border-bottom-color: var(--faint); }
+    .readout tr.big td { font-size: 13px; }
+
+    /* ---------- the sliders ---------- */
+    .ctls { padding: 4px 0 2px; border-top: 1px solid var(--rule); }
+    .ctl { display: grid; grid-template-columns: 4.7em minmax(0, 1fr) 4.2em; align-items: center; gap: 0 6px; min-height: 26px; }
+    .ctl label { color: var(--muted); font-size: 11.5px; }
+    .ctl output { text-align: right; color: var(--ink); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+    .ctl.st label, .ctl.st output { color: var(--old); }
+    .ctl.wide { grid-template-columns: minmax(0, 1fr) 4.2em; row-gap: 0; padding-top: 2px; }
+    .ctl.wide label { line-height: 1.3; }
+    .ctl.wide label i { font-style: normal; color: var(--dim); font-size: 10.5px; }
+    .ctl.wide input { grid-column: 1 / -1; }
+    .ctl.wide output { align-self: start; }
+    .row2 { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 2px; }
+    .row2 .chip[role="switch"] { border-color: var(--rule); }
+    .row2 .chip[role="switch"][aria-checked="true"] { border-color: var(--gold); color: var(--gold); }
+
+    input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 26px; margin: 0; background: transparent; cursor: pointer; }
+    input[type="range"]::-webkit-slider-runnable-track { height: 4px; background: var(--rule); border-radius: 2px; }
+    input[type="range"]::-moz-range-track { height: 4px; background: var(--rule); border-radius: 2px; }
+    input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 15px; height: 15px; margin-top: -5.5px; border-radius: 50%; background: var(--ink); border: 2px solid var(--paper); }
+    input[type="range"]::-moz-range-thumb { width: 11px; height: 11px; border-radius: 50%; background: var(--ink); border: 2px solid var(--paper); }
+    .ctl.st input[type="range"]::-webkit-slider-thumb { background: var(--old); }
+    .ctl.st input[type="range"]::-moz-range-thumb { background: var(--old); }
+    input[type="range"]:focus-visible { outline: 2px solid var(--gold); outline-offset: 0; border-radius: 3px; }
+
+    .print { margin: 8px 0 0; padding-top: 6px; border-top: 1px solid var(--rule); color: var(--dim); font-size: 10.5px; line-height: 1.5; }
+    .print b { color: var(--muted); font-weight: 400; }
+    .print p { margin: 0 0 4px; }
+    .print summary { cursor: pointer; color: var(--muted); }
+    .print details p { margin: 4px 0 0; }
+
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="fig" id="fig">
+  <div class="bar" id="bar">
+    <div class="scenes js-only" role="group" aria-label="Scenes">
+      <span class="lab">try</span>
+      <button type="button" class="chip" data-scene="slow" aria-pressed="true">slow ask</button>
+      <button type="button" class="chip" data-scene="stall" aria-pressed="false">during a stall</button>
+      <button type="button" class="chip" data-scene="late" aria-pressed="false">stall, start later</button>
+      <button type="button" class="chip" data-scene="phone" aria-pressed="false">phone bursts</button>
+      <button type="button" class="chip" id="c-reset">reset</button>
+    </div>
+    <span class="hint">A simulation. <span class="js-only">Drag the ring, the flag or the red band, or move a slider.</span></span>
+  </div>
+
+  <div class="main">
+    <div class="colL">
+      <div class="excol" id="excol">
+<!--static:exchange-->
+<svg class="plot exs" id="ex" viewBox="0 0 506 196" role="img" aria-label="Timing diagram of the exchange between the old frontend, the backend and the new frontend. Press at 5.00 s, with no stall. Both frontends ask for 5.000 s. The backend reads the ask 200 ms later, when its own position is 5.200 s, and answers 5.200 s, the later of the ask and its position. The old frontend never reads the answer and counts from 5.000 s, so its highlights run 0.200 s early for the whole playback. Its first note sounds at 5.200 s, 0.200 s after the press. The new one takes the answer as its epoch and counts from 5.200 s. The highlights of its first round, timed before the answer came back, are 0.200 s early; the later ones are on time. Its first note sounds at 5.200 s, 0.200 s after the press."><g id="xgfx" aria-hidden="true"><defs><marker id="xah-o" viewBox="0 0 6 6" refX="5.5" refY="3" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L6 3L0 6z" class="fo"></path></marker><marker id="xah-n" viewBox="0 0 6 6" refX="5.5" refY="3" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L6 3L0 6z" class="fn"></path></marker></defs><line class="lane-b" x1="80" y1="102" x2="504" y2="102"></line><line class="lane-o" x1="94" y1="46" x2="504" y2="46"></line><line class="lane-n" x1="94" y1="158" x2="504" y2="158"></line><text class="lab-o" x="6" y="49.5" text-anchor="start">old frontend</text><text class="ink" x="6" y="105.5" text-anchor="start">the backend</text><text class="lab-n" x="6" y="161.5" text-anchor="start">new frontend</text><text class="small" x="100" y="10" text-anchor="middle">press at 5.00 s</text><text class="small" x="504" y="10" text-anchor="end">wall time →</text><g class="xs"><line class="pole" x1="100" y1="50" x2="100" y2="154"></line><circle class="ring hnow" cx="180" cy="102" r="7"></circle><text class="halo ink hnow" x="193" y="105.5" text-anchor="start">now 5.200</text><line class="arrow so hA" x1="100" y1="51" x2="173.4" y2="97.8" marker-end="url(#xah-o)"></line><circle class="dotp fo hA" cx="100" cy="46" r="3.6"></circle><text class="halo lab-o hA" x="91" y="62" text-anchor="end">A 5.000</text><text class="halo lab-o hA" x="94" y="77.5" text-anchor="end">ask, 200 ms</text><line class="arrow so hE" x1="187" y1="97.1" x2="254.1" y2="50.1" marker-end="url(#xah-o)"></line><text class="halo lab-o hE" x="253.3" y="66" text-anchor="start">the answer E = 5.200</text><text class="halo dim hE" x="253.3" y="78" text-anchor="start">now is later: 5.200 &gt; 5.000</text><text class="halo dim hE" x="253.3" y="90" text-anchor="start">back in 200 ms</text><path class="anchor so hE" d="M260 40.5L265.5 46L260 51.5L254.5 46z"></path><path class="cross so hE" d="M255 41L265 51M255 51L265 41"></path><text class="halo lab-o hE" x="272" y="25" text-anchor="start">never reads E</text><text class="halo lab-o hA" x="272" y="37" text-anchor="start">counts from 5.000</text><line class="arrow sn hA" x1="100" y1="153" x2="173.4" y2="106.2" marker-end="url(#xah-n)"></line><circle class="dotp fn hA" cx="100" cy="158" r="3.6"></circle><text class="halo lab-n hA" x="91" y="150" text-anchor="end">A 5.000</text><text class="halo lab-n hA" x="94" y="133.5" text-anchor="end">ask, 200 ms</text><line class="arrow sn hE" x1="187" y1="106.9" x2="254.1" y2="153.9" marker-end="url(#xah-n)"></line><text class="halo lab-n hE" x="251.9" y="122" text-anchor="start">the answer E = 5.200</text><text class="halo dim hE" x="251.9" y="134" text-anchor="start">now is later: 5.200 &gt; 5.000</text><text class="halo dim hE" x="251.9" y="146" text-anchor="start">back in 200 ms</text><path class="dotp fn hE" d="M260 152.5L265.5 158L260 163.5L254.5 158z"></path><text class="halo lab-n hE" x="272" y="177" text-anchor="start">takes E as epoch</text><text class="halo lab-n hE" x="272" y="189" text-anchor="start">counts from 5.200</text></g></g><g id="xui" class="ui"><g class="handle ringh" id="h-d" tabindex="0" role="slider" aria-label="Delay until the backend reads the ask, in milliseconds" aria-valuemin="0" aria-valuemax="300" aria-valuenow="200" aria-valuetext="200 milliseconds"><rect class="hz hnow ew" rx="6" width="30" height="30" x="165" y="87"></rect><circle class="dring cue" r="11.5" cx="180" cy="102"></circle></g></g></svg>
+<!--/static:exchange-->
+        <p class="xkey">
+          <span><svg viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="3.4"/></svg><b>A</b> the ask: the second the frontend's clock reads when the playback starts</span>
+          <span><svg viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="4.6" class="ringk"/></svg><b>now</b> the backend's position when it reads the ask</span>
+          <span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 .5L11.5 6L6 11.5L.5 6z"/></svg><b>E</b> the answer (PlaybackAnchored), the epoch: the later of the two</span>
+          <span class="tail">All three are seconds on the backend's timeline.</span>
+        </p>
+      </div>
+      <p class="sentence" id="sentence"><!--static:sentence-->
+Press at 5.00 s, with no stall. Both frontends ask for 5.000 s. The backend reads the ask 200 ms later, when its own position is 5.200 s, and answers 5.200 s, the later of the ask and its position. <span class="o">The old frontend never reads the answer and counts from 5.000 s, so its highlights run 0.200 s early for the whole playback. Its first note sounds at 5.200 s, 0.200 s after the press.</span> <span class="n">The new one takes the answer as its epoch and counts from 5.200 s. The highlights of its first round, timed before the answer came back, are 0.200 s early; the later ones are on time. Its first note sounds at 5.200 s, 0.200 s after the press.</span>
+<!--/static:sentence--></p>
+    </div>
+
+    <div class="colR">
+      <div class="ctls ctlsA js-only" id="ctlsA">
+        <div class="ctl"><label for="c-t0">press at</label><input id="c-t0" type="range" min="0" max="11" step="0.05" value="5" aria-label="The playback starts at, in seconds on the wall clock"><output for="c-t0" id="o-t0">5.00 s</output></div>
+        <div class="ctl wide"><label for="c-d" title="A scenario setting, made long so the effect shows: not measured.">delay until the backend reads the ask <i>(the first query and the message)</i></label><output for="c-d" id="o-d">200 ms</output><input id="c-d" type="range" min="0" max="300" step="5" value="200" aria-label="Delay until the backend reads the ask, in milliseconds"></div>
+      </div>
+      <table class="readout" id="readout" aria-label="The handshake in numbers">
+<!--static:table-->
+<thead><tr><th scope="col"><span class="sr">seconds</span></th><th scope="col" class="o">old</th><th scope="col" class="n">new</th></tr></thead><tbody><tr><th scope="colgroup" colspan="3">on the backend's timeline (s)</th></tr><tr data-hl="A"><th scope="row" title="The second the frontend's clock reads when the playback starts.">the ask A</th><td class="o">5.000</td><td class="n">5.000</td></tr><tr data-hl="now"><th scope="row" title="The backend's position when it reads the ask: the start of the next block it renders.">the backend's now</th><td class="o"><b>5.200</b></td><td class="n"><b>5.200</b></td></tr><tr class="lead" data-hl="E"><th scope="row" title="The epoch: the later of the ask and the backend's now. It goes back as PlaybackAnchored.">the answer E</th><td class="o"><b>5.200</b></td><td class="n"><b>5.200</b></td></tr></tbody><tbody><tr><th scope="colgroup" colspan="3">on the wall clock, press at 5.00 s</th></tr><tr class="big" data-hl="first"><th scope="row" title="The wall time at which the first note, at E on the backend's timeline, is rendered.">first note sounds</th><td class="o"><b>5.200</b></td><td class="n"><b>5.200</b></td></tr></tbody><tbody><tr><th scope="colgroup" colspan="3">highlights early by (s)</th></tr><tr data-hl="first"><th scope="row" title="The first round: timed from the second asked for. Early by the first note's wall time minus the press, for both.">timed before the answer came back</th><td class="o">0.200</td><td class="n">0.200</td></tr><tr data-hl="first"><th scope="row" title="Every later note. The old frontend never takes an answer and stays that early for good; the new one counts from E (the spec bounds it to 30 ms).">timed after the answer came back</th><td class="o">0.200</td><td class="n" title="within 30 ms in the spec">0</td></tr></tbody>
+<!--/static:table-->
+      </table>
+    </div>
+  </div>
+
+  <div class="main2">
+    <div class="colL2">
+      <div class="planecol" id="plotcol">
+        <p class="lead2"><b>The same handshake on the wall clock.</b> Across, wall time; up, the backend's own timeline, in seconds. Where the gray line is flat the backend stands still.</p>
+        <div class="keys" id="head">
+          <span class="key" data-key="be"><svg viewBox="0 0 22 8" aria-hidden="true"><line x1="0" y1="4" x2="22" y2="4" stroke="#8F98A8" stroke-width="6" opacity=".62"/></svg>the backend</span>
+          <span class="key" data-key="old"><svg viewBox="0 0 22 8" aria-hidden="true"><line x1="0" y1="4" x2="22" y2="4" stroke="#E5675F" stroke-width="1.8" stroke-dasharray="5 4"/></svg>old: wall clock</span>
+          <span class="key" data-key="new"><svg viewBox="0 0 22 8" aria-hidden="true"><line x1="0" y1="4" x2="22" y2="4" stroke="#56BD83" stroke-width="1.8"/></svg>new: PlaybackClock</span>
+        </div>
+<!--static:plot-->
+<svg class="plot" id="plot" viewBox="0 0 506 333" role="img" aria-label="The same handshake on the wall clock, against the backend&#x27;s timeline, with the first notes of both frontends. Press at 5.00 s, with no stall. Both frontends ask for 5.000 s. The backend reads the ask 200 ms later, when its own position is 5.200 s, and answers 5.200 s, the later of the ask and its position. The old frontend never reads the answer and counts from 5.000 s, so its highlights run 0.200 s early for the whole playback. Its first note sounds at 5.200 s, 0.200 s after the press. The new one takes the answer as its epoch and counts from 5.200 s. The highlights of its first round, timed before the answer came back, are 0.200 s early; the later ones are on time. Its first note sounds at 5.200 s, 0.200 s after the press."><g id="gfx" aria-hidden="true"><defs><marker id="ah-o" viewBox="0 0 6 6" refX="5.5" refY="3" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L6 3L0 6z" class="fo"></path></marker><marker id="ah-n" viewBox="0 0 6 6" refX="5.5" refY="3" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L6 3L0 6z" class="fn"></path></marker><clipPath id="clip-plot"><rect x="34" y="20" width="458" height="204"></rect></clipPath></defs><rect class="strip" x="34" y="229" width="458" height="14"></rect><rect class="strip" x="34" y="255" width="458" height="14"></rect><rect class="strip" x="34" y="274" width="458" height="20"></rect><line class="grid" x1="34" y1="20" x2="34" y2="297"></line><line class="grid" x1="110.3" y1="20" x2="110.3" y2="297"></line><line class="grid" x1="186.7" y1="20" x2="186.7" y2="297"></line><line class="grid" x1="263" y1="20" x2="263" y2="297"></line><line class="grid" x1="339.3" y1="20" x2="339.3" y2="297"></line><line class="grid" x1="415.7" y1="20" x2="415.7" y2="297"></line><line class="grid" x1="492" y1="20" x2="492" y2="297"></line><line class="grid" x1="34" y1="190" x2="492" y2="190"></line><line class="grid" x1="34" y1="156" x2="492" y2="156"></line><line class="grid" x1="34" y1="122" x2="492" y2="122"></line><line class="grid" x1="34" y1="88" x2="492" y2="88"></line><line class="grid" x1="34" y1="54" x2="492" y2="54"></line><line class="grid" x1="34" y1="20" x2="492" y2="20"></line><line class="axis" x1="34" y1="20" x2="34" y2="297"></line><line class="axis" x1="34" y1="224" x2="492" y2="224"></line><line class="axis" x1="34" y1="297" x2="492" y2="297"></line><line class="axis" x1="72.2" y1="297" x2="72.2" y2="300"></line><line class="axis" x1="110.3" y1="297" x2="110.3" y2="302"></line><line class="axis" x1="148.5" y1="297" x2="148.5" y2="300"></line><line class="axis" x1="186.7" y1="297" x2="186.7" y2="302"></line><line class="axis" x1="224.8" y1="297" x2="224.8" y2="300"></line><line class="axis" x1="263" y1="297" x2="263" y2="302"></line><line class="axis" x1="301.2" y1="297" x2="301.2" y2="300"></line><line class="axis" x1="339.3" y1="297" x2="339.3" y2="302"></line><line class="axis" x1="377.5" y1="297" x2="377.5" y2="300"></line><line class="axis" x1="415.7" y1="297" x2="415.7" y2="302"></line><line class="axis" x1="453.8" y1="297" x2="453.8" y2="300"></line><line class="axis" x1="492" y1="297" x2="492" y2="302"></line><text x="34" y="312" text-anchor="middle">0</text><text x="110.3" y="312" text-anchor="middle">2</text><text x="186.7" y="312" text-anchor="middle">4</text><text x="263" y="312" text-anchor="middle">6</text><text x="339.3" y="312" text-anchor="middle">8</text><text x="415.7" y="312" text-anchor="middle">10</text><text x="492" y="312" text-anchor="middle">12</text><text x="28" y="227.5" text-anchor="end">0</text><text x="28" y="193.5" text-anchor="end">2</text><text x="28" y="159.5" text-anchor="end">4</text><text x="28" y="125.5" text-anchor="end">6</text><text x="28" y="91.5" text-anchor="end">8</text><text x="28" y="57.5" text-anchor="end">10</text><text x="28" y="23.5" text-anchor="end">12</text><text transform="translate(9 122) rotate(-90)" text-anchor="middle" class="small">backend position (s)</text><text class="small" x="34" y="325" text-anchor="start">wall time (s)</text><text x="28" y="239.5" text-anchor="end" class="lab-o">old</text><text x="28" y="265.5" text-anchor="end" class="lab-n">new</text><text x="28" y="287" text-anchor="end" class="small">cap</text><path class="be" d="M34 224L492 20"></path><path class="cl-new" d="M34 224L492 20"></path><line class="cl-old" x1="34" y1="224" x2="492" y2="20"></line><path class="cap-fill" d="M34 292L492 292L492 292L34 292Z"></path><path class="cap-line" d="M34 292L492 292"></path><g class="hs"><line class="pole" x1="224.8" y1="20" x2="224.8" y2="297"></line><circle class="ring hnow" cx="232.5" cy="135.6" r="8"></circle><text class="halo ink hnow" x="243.5" y="152.6" text-anchor="start">now</text><line class="nline so first hfirst" x1="34" y1="135.6" x2="232.5" y2="135.6"></line><line class="so hfirst" x1="34" y1="135.6" x2="40" y2="135.6" stroke-width="2"></line><line class="drop so first hfirst" x1="232.5" y1="135.6" x2="232.5" y2="229"></line><circle class="dotp fo hfirst" cx="232.5" cy="135.6" r="3.6"></circle><rect class="mark fo hfirst" x="230" y="230" width="5" height="12"></rect><text class="small halo lab-o hfirst" x="239.5" y="239.5" text-anchor="start">5.200</text><line class="nline so" x1="34" y1="118.6" x2="270.6" y2="118.6"></line><line class="so" x1="34" y1="118.6" x2="40" y2="118.6" stroke-width="2" opacity=".6"></line><line class="drop so" x1="270.6" y1="118.6" x2="270.6" y2="229"></line><circle class="dotp fo" cx="270.6" cy="118.6" r="2.6"></circle><rect class="mark fo rest" x="269.1" y="232" width="3" height="8"></rect><line class="nline so" x1="34" y1="101.6" x2="308.8" y2="101.6"></line><line class="so" x1="34" y1="101.6" x2="40" y2="101.6" stroke-width="2" opacity=".6"></line><line class="drop so" x1="308.8" y1="101.6" x2="308.8" y2="229"></line><circle class="dotp fo" cx="308.8" cy="101.6" r="2.6"></circle><rect class="mark fo rest" x="307.3" y="232" width="3" height="8"></rect><line class="nline so" x1="34" y1="84.6" x2="347" y2="84.6"></line><line class="so" x1="34" y1="84.6" x2="40" y2="84.6" stroke-width="2" opacity=".6"></line><line class="drop so" x1="347" y1="84.6" x2="347" y2="229"></line><circle class="dotp fo" cx="347" cy="84.6" r="2.6"></circle><rect class="mark fo rest" x="345.5" y="232" width="3" height="8"></rect><line class="arrow so hA" x1="227.8" y1="139" x2="232.5" y2="139" marker-end="url(#ah-o)"></line><line class="so hA" x1="30" y1="139" x2="38" y2="139" stroke-width="2"></line><line class="nline so hA" x1="34" y1="139" x2="224.8" y2="139"></line><circle class="dotp fo hA" cx="224.8" cy="139" r="3.4"></circle><text class="halo lab-o hA" x="216.8" y="142.5" text-anchor="end">A</text><line class="jump so hE" x1="232.5" y1="139" x2="232.5" y2="135.6"></line><path class="dotp fo hE" d="M232.5 130.1L238 135.6L232.5 141.1L227 135.6z"></path><text class="halo lab-o hE" x="249.1" y="139.1" text-anchor="start">E</text><line class="nline sn first hfirst" x1="34" y1="135.6" x2="232.5" y2="135.6"></line><line class="sn hfirst" x1="34" y1="135.6" x2="40" y2="135.6" stroke-width="2"></line><line class="drop sn first hfirst" x1="232.5" y1="135.6" x2="232.5" y2="255"></line><circle class="dotp fn hfirst" cx="232.5" cy="135.6" r="3.6"></circle><rect class="mark fn hfirst" x="230" y="256" width="5" height="12"></rect><text class="small halo lab-n hfirst" x="239.5" y="265.5" text-anchor="start">5.200</text><line class="nline sn" x1="34" y1="118.6" x2="270.6" y2="118.6"></line><line class="sn" x1="34" y1="118.6" x2="40" y2="118.6" stroke-width="2" opacity=".6"></line><line class="drop sn" x1="270.6" y1="118.6" x2="270.6" y2="255"></line><circle class="dotp fn" cx="270.6" cy="118.6" r="2.6"></circle><rect class="mark fn rest" x="269.1" y="258" width="3" height="8"></rect><line class="nline sn" x1="34" y1="101.6" x2="308.8" y2="101.6"></line><line class="sn" x1="34" y1="101.6" x2="40" y2="101.6" stroke-width="2" opacity=".6"></line><line class="drop sn" x1="308.8" y1="101.6" x2="308.8" y2="255"></line><circle class="dotp fn" cx="308.8" cy="101.6" r="2.6"></circle><rect class="mark fn rest" x="307.3" y="258" width="3" height="8"></rect><line class="nline sn" x1="34" y1="84.6" x2="347" y2="84.6"></line><line class="sn" x1="34" y1="84.6" x2="40" y2="84.6" stroke-width="2" opacity=".6"></line><line class="drop sn" x1="347" y1="84.6" x2="347" y2="255"></line><circle class="dotp fn" cx="347" cy="84.6" r="2.6"></circle><rect class="mark fn rest" x="345.5" y="258" width="3" height="8"></rect><line class="arrow sn hA" x1="227.8" y1="139" x2="232.5" y2="139" marker-end="url(#ah-n)"></line><line class="sn hA" x1="30" y1="139" x2="38" y2="139" stroke-width="2"></line><line class="nline sn hA" x1="34" y1="139" x2="224.8" y2="139"></line><circle class="dotp fn hA" cx="224.8" cy="139" r="3.4"></circle><text class="halo lab-n hA" x="216.8" y="142.5" text-anchor="end">A</text><line class="jump sn hE" x1="232.5" y1="139" x2="232.5" y2="135.6"></line><path class="dotp fn hE" d="M232.5 130.1L238 135.6L232.5 141.1L227 135.6z"></path><text class="halo lab-n hE" x="249.1" y="139.1" text-anchor="start">E</text><text class="small halo ink hfirst" x="240.5" y="252" text-anchor="start">same</text></g></g><g id="scrub" aria-hidden="true" pointer-events="none" visibility="hidden"></g><rect id="hit" fill="transparent" x="34" y="20" width="458" height="204"></rect><g id="ui" class="ui"><g class="handle gl" id="h-gl" tabindex="0" role="slider" aria-label="Stall start, in seconds, the end stays" aria-valuemin="0.00" aria-valuemax="2.00" aria-valuenow="2.00" aria-valuetext="stall starts at 2.00 seconds"><rect class="hz" x="96.3" y="20" width="14" height="277"></rect><line class="edge ghost" x1="110.3" x2="110.3" y1="20" y2="297" style="display: none;"></line><rect class="grip" rx="2" width="6" height="22" x="107.3" y="111" style="display: none;"></rect></g><g class="handle gr" id="h-gr" tabindex="0" role="slider" aria-label="Stall end, in seconds, the start stays" aria-valuemin="2.00" aria-valuemax="6.00" aria-valuenow="2.00" aria-valuetext="stall ends at 2.00 seconds"><rect class="hz" x="110.3" y="20" width="14" height="277"></rect><line class="edge ghost" x1="110.3" x2="110.3" y1="20" y2="297"></line><rect class="grip" rx="2" width="6" height="22" x="107.3" y="111"></rect></g><g class="handle tab" id="h-tab" tabindex="0" role="slider" aria-label="Move the stall, start in seconds" aria-valuemin="0" aria-valuemax="8" aria-valuenow="2.00" aria-valuetext="no stall, would start at 2.00 seconds"><rect class="hz" x="92.3" y="0" width="36" height="18"></rect><rect class="st-tab" rx="2" height="14" x="92.3" y="2" width="36"></rect><text text-anchor="middle" y="12.5" x="110.3">stall</text></g><g class="handle flag" id="h-flag" tabindex="0" role="slider" aria-label="Press play at, in seconds" transform="translate(224.8 313)" aria-valuemin="0" aria-valuemax="11" aria-valuenow="5.00" aria-valuetext="5.00 seconds"><rect class="hz" x="-26" y="6" width="52" height="34"></rect><path class="flag-tab" d="M0 0L-6 7H-24V23H24V7H6Z"></path><text text-anchor="middle" y="19">5.00 s</text></g></g></svg>
+<!--/static:plot-->
+        <p class="symkey" aria-hidden="true">
+          <span><svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="3.4"/></svg>A the ask</span>
+          <span><svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.6" class="ringk"/></svg>now</span>
+          <span><svg viewBox="0 0 12 12"><path d="M6 .5L11.5 6L6 11.5L.5 6z"/></svg>E the answer</span>
+          <span><svg viewBox="0 0 12 12"><rect x="4" y="1" width="4" height="10"/></svg>note sounds</span>
+        </p>
+      </div>
+    </div>
+
+    <div class="colR2">
+      <div class="ctls ctlsB js-only" id="ctlsB">
+        <div class="ctl st"><label for="c-stall">stall at</label><input id="c-stall" type="range" min="0" max="8" step="0.1" value="2" aria-label="The stall starts at, in seconds"><output for="c-stall" id="o-stall">2.0 s</output></div>
+        <div class="ctl st"><label for="c-len">lasts</label><input id="c-len" type="range" min="0" max="4" step="0.1" value="0" aria-label="The stall lasts, in seconds, zero for none"><output for="c-len" id="o-len">none</output></div>
+        <div class="row2">
+          <button type="button" class="chip" id="c-bursts" role="switch" aria-checked="false">bursts: off</button>
+        </div>
+      </div>
+      <p class="note2">A dotted line from E on the left axis runs across to the gray line and drops to the strip where that note sounds, and the number is when. The gap between the two first notes is marked. The bottom strip is the new clock's cap, which a stall raises. <span class="js-only">Hover the drawing to read the three clocks.</span></p>
+    </div>
+  </div>
+
+  <div class="print">
+    <p><b>A simulation of the rules in the code, not a recording.</b> A highlight is early by when its note sounds minus when the frontend's clock expected it. The first round is timed before the answer is back, for both frontends; the new frontend's later highlights are within 30 ms in the spec (KlangPlaybackSyncSpec), shown as 0. <b>The delay of 200 ms is a scenario setting, made long so the effect shows; it is not measured.</b> PlaybackClock reaches the backend's reports at once; the real report lags by a poll and the message, which the post names as open.</p>
+    <details>
+      <summary>The model's settings and the rules it ports</summary>
+      <p>The answer takes the same delay back, and no number depends on that. Blocks of 128 frames at 48 kHz; the backend reports every 8th block (21.3 ms); PlaybackClock is read every 16 ms. One note a second (60 rpm). Bursts: 36 blocks (96 ms) at once, every 96 ms. Rules at 14a4f8f18: PlaybackClock.kt, VoiceScheduler.ensureEpoch, PlaybackEngineDispatcher.emitDiagnostics, KlangPatternScheduler.begin. <span class="js-only">Keys: Tab to the ring, the flag or an edge of the band, the arrow keys move it, Shift moves ten steps.</span></p>
+    </details>
+  </div>
+  <div class="sr" id="live" aria-live="polite" aria-atomic="true"></div>
+</div>
+
+<script>
+(function () {
+"use strict";
+
+/*MODEL*/
+// ============================================================================================================
+// The model: the rules of the code, ported. All times in seconds; wall time is the x axis of the plane.
+// ============================================================================================================
+var SR = 48000, BLOCK = 128;
+var BPS = SR / BLOCK;                                   // 375 blocks a second, a block is 2.667 ms
+var REPORT_EVERY_SEC = 0.02;                            // PlaybackEngineDispatcher.DIAGNOSTICS_EVERY_SEC
+var REPORT_BLOCKS = Math.ceil(Math.floor(SR * REPORT_EVERY_SEC) / BLOCK);   // 960 frames: the 8th block, 1024 frames
+var MIN_CAP = 0.1, MAX_CAP = 0.5, CAP_GAPS = 3, GAPS_KEPT = 16;             // PlaybackClock.kt
+var LOOP_SEC = 0.016;                                   // the live loop's pause
+var BURST_BLOCKS = 36;                                  // a phone: 96 ms of audio rendered at once
+var RPM = 60, CYCLE_SEC = 60 / RPM, NOTES = 4;          // one note per cycle
+var XMAX = 12, YMAX = 12;
+
+// PlaybackClock, line by line. localMs is the wall time in milliseconds.
+function PlaybackClock() {
+    var reportSec = NaN, reportAtMs = 0, lastReadSec = -Infinity;
+    var gaps = [], gapsSeen = 0, cap = MIN_CAP, i;
+    for (i = 0; i < GAPS_KEPT; i++) { gaps.push(0); }
+
+    function longestGap() {
+        var longest = 0, n = Math.min(gapsSeen, GAPS_KEPT), j;
+        for (j = 0; j < n; j++) { longest = Math.max(longest, gaps[j]); }
+        return longest;
+    }
+
+    return {
+        onReport: function (timelineSec, atMs) {
+            if (!isNaN(reportSec)) {
+                gaps[gapsSeen % GAPS_KEPT] = (atMs - reportAtMs) / 1000;
+                gapsSeen++;
+                cap = Math.min(MAX_CAP, Math.max(MIN_CAP, CAP_GAPS * longestGap()));
+            }
+            reportSec = timelineSec;
+            reportAtMs = atMs;
+        },
+        nowSec: function (atMs) {
+            if (isNaN(reportSec)) { return atMs / 1000; }                       // a guess, the first report replaces it
+            var now = Math.max(reportSec + Math.min((atMs - reportAtMs) / 1000, cap), lastReadSec);
+            lastReadSec = now;
+            return now;
+        },
+        cap: function () { return cap; }
+    };
+}
+
+// The backend: where it stands at a wall time, when each report leaves, when a position is rendered.
+// A stall starts between two blocks and renders nothing for its length; afterwards the backend goes on from where it
+// stood (it does not catch up). With bursts the backend renders BURST_BLOCKS at once every BURST_BLOCKS / BPS.
+function Backend(stallStart, stallLen, bursts) {
+    var s0 = Math.round(stallStart * BPS) / BPS;
+    var len = stallLen > 0 ? stallLen : 0;
+    var s1 = s0 + len;
+    var self = { s0: s0, s1: s1, len: len, bursts: !!bursts };
+    var m, j, w, list, nextN;
+
+    if (!bursts) {
+        self.pos = function (t) { return t < s0 ? t : (t <= s1 ? s0 : t - len); };
+        self.cursor = function (t) { return Math.ceil(self.pos(t) * BPS - 1e-9) / BPS; };
+        self.sound = function (q) { return q < s0 ? q : q + len; };             // the wall time a position is rendered
+        self.reports = function (tEnd) {
+            var out = [], n, q, wall;
+            for (n = REPORT_BLOCKS; ; n += REPORT_BLOCKS) {
+                q = n / BPS;
+                wall = q <= s0 ? q : q + len;
+                if (wall > tEnd) { break; }
+                out.push({ w: wall, tl: q });
+            }
+            return out;
+        };
+        self.path = function () {
+            return len > 0 ? [[0, 0], [s0, s0], [s1, s0], [XMAX, XMAX - len]] : [[0, 0], [XMAX, XMAX]];
+        };
+    } else {
+        list = [];
+        m = 0;
+        for (j = 1; j * BURST_BLOCKS / BPS <= 60; j++) {
+            w = j * BURST_BLOCKS / BPS;
+            if (w >= s0 && w < s1) { continue; }                                // the audio thread starves: no burst
+            m++;
+            list.push({ w: w, end: m * BURST_BLOCKS / BPS });
+        }
+        self.list = list;
+        self.pos = function (t) {
+            var lo = 0, hi = list.length - 1, mid, best = -1;
+            while (lo <= hi) { mid = (lo + hi) >> 1; if (list[mid].w <= t + 1e-9) { best = mid; lo = mid + 1; } else { hi = mid - 1; } }
+            return best < 0 ? 0 : list[best].end;
+        };
+        self.cursor = self.pos;
+        self.sound = function (q) {
+            var idx = Math.floor(q * BPS / BURST_BLOCKS + 1e-9);
+            return idx < list.length ? list[idx].w : Infinity;
+        };
+        self.reports = function (tEnd) {
+            var out = [], i;
+            nextN = REPORT_BLOCKS;
+            for (i = 0; i < list.length && list[i].w <= tEnd; i++) {
+                while (nextN <= (i + 1) * BURST_BLOCKS) { out.push({ w: list[i].w, tl: nextN / BPS }); nextN += REPORT_BLOCKS; }
+            }
+            return out;
+        };
+        self.path = function () {
+            var pts = [[0, 0]], prev = 0, i;
+            for (i = 0; i < list.length && list[i].w <= XMAX; i++) { pts.push([list[i].w, prev]); pts.push([list[i].w, list[i].end]); prev = list[i].end; }
+            pts.push([XMAX, prev]);
+            return pts;
+        };
+    }
+    return self;
+}
+
+// The frontend's clock, read on the live loop's grid, plus one read at t0 (the ask: KlangPatternScheduler.begin).
+function simulateClock(reports, t0) {
+    var clock = PlaybackClock();
+    var n = Math.round(XMAX / LOOP_SEC);
+    var T = [], V = [], C = [], ri = 0, ask = NaN, askDone = false, i, t;
+
+    function feed(upTo) {
+        while (ri < reports.length && reports[ri].w <= upTo + 1e-9) { clock.onReport(reports[ri].tl, reports[ri].w * 1000); ri++; }
+    }
+
+    for (i = 0; i <= n; i++) {
+        t = i * LOOP_SEC;
+        if (!askDone && t0 <= t) { feed(t0); ask = clock.nowSec(t0 * 1000); askDone = true; }
+        feed(t);
+        T.push(t); V.push(clock.nowSec(t * 1000)); C.push(clock.cap());
+    }
+    if (!askDone) { feed(t0); ask = clock.nowSec(t0 * 1000); }
+    return { t: T, v: V, cap: C, ask: ask };
+}
+
+// The handshake: the ask reaches the backend after d; ensureEpoch answers; the answer reaches the frontend after d.
+// A highlight is early by (when its note sounds) minus (when the frontend's clock expected it). The first round is timed
+// from the second asked for, before the answer is back, whichever frontend: early by (first note's wall time) - (the
+// press). Every later note: a frontend that takes the answer counts from E, so about 0 (the spec bounds it to 30 ms);
+// the old one never takes it and keeps the first round's error for the whole playback.
+function handshake(be, asked, t0, d, takesAnswer) {
+    var t1 = t0 + d, t2 = t1 + d;
+    var now = be.cursor(t1);                            // the start of the next block to render
+    var latency = Math.max(0, now - asked);             // VoiceScheduler.ensureEpoch
+    var E = asked + latency;
+    var ts = [], k, after;
+    for (k = 0; k < NOTES; k++) { ts.push(be.sound(E + k * CYCLE_SEC)); }
+    after = ts[0] - t0;
+    return { A: asked, now: now, E: E, latency: latency, ts: ts, after: after, t1: t1, t2: t2,
+        early1: after, early2: takesAnswer ? 0 : after };
+}
+
+function compute(S) {
+    var be = Backend(S.stall, S.len, S.bursts);
+    var clock = simulateClock(be.reports(XMAX + 0.05), S.t0);
+    return { be: be, clock: clock, old: handshake(be, S.t0, S.t0, S.d, false), neu: handshake(be, clock.ask, S.t0, S.d, true) };
+}
+/*ENDMODEL*/
+
+// ============================================================================================================
+// State
+// ============================================================================================================
+// The defaults: the backend healthy, press at 5.0 s, 200 ms until the backend reads the ask (a scenario setting).
+// A scene sets what it names and leaves the rest (the delay stays where the slider holds it).
+var DEFAULTS = { stall: 2, len: 0, t0: 5, d: 0.2, bursts: false };
+var SCENES = {
+    slow: { stall: 2, len: 0, t0: 5, d: 0.2, bursts: false },
+    stall: { stall: 2, len: 2, t0: 3, bursts: false },
+    late: { stall: 2, len: 2, t0: 3.9, bursts: false },
+    phone: { stall: 2, len: 2, t0: 3, bursts: true }
+};
+var S = { stall: 2, len: 0, t0: 5, d: 0.2, bursts: false, show: { old: true, neu: true } };
+var M = null;
+
+function sameState(a, b) {
+    if (b.len > 0 && Math.abs(a.stall - b.stall) > 1e-6) { return false; }
+    if (Math.abs(a.len - b.len) > 1e-6 || Math.abs(a.t0 - b.t0) > 1e-6 || a.bursts !== b.bursts) { return false; }
+    return b.d === undefined || Math.abs(a.d - b.d) < 1e-6;
+}
+function setState(p) {
+    ["stall", "len", "t0", "d", "bursts"].forEach(function (k) { if (Object.prototype.hasOwnProperty.call(p, k)) { S[k] = p[k]; } });
+    update();
+}
+
+// ============================================================================================================
+// Text
+// ============================================================================================================
+var $ = function (id) { return document.getElementById(id); };
+function f3(v) { return v.toFixed(3); }
+function f2(v) { return v.toFixed(2); }
+var EPS = 0.0005;
+
+function stallWord(S, be) {
+    if (be.len <= 0) { return "with no stall"; }
+    if (S.t0 < be.s0) { return "before the stall"; }
+    return S.t0 < be.s1 ? "during the stall" : "after the stall";
+}
+function delayWord(S) {
+    var ms = Math.round(S.d * 1000);
+    return ms > 0 ? ms + " ms later" : "at once";
+}
+function firstWhen(h) {
+    if (!isFinite(h.ts[0])) { return "much later"; }
+    return "at " + f3(h.ts[0]) + " s" + (h.ts[0] > XMAX ? " (past the " + XMAX + " s axis)" : "") + ", " + f3(h.after) + " s after the press";
+}
+function leadText(S, M) {
+    var o = M.old, n = M.neu, same = Math.abs(o.A - n.A) < EPS, sameE = Math.abs(o.E - n.E) < EPS;
+    return "Press at " + f2(S.t0) + " s, " + stallWord(S, M.be) + (S.bursts ? ", on a phone that renders in bursts" : "") + ". " +
+        (same ? "Both frontends ask for " + f3(o.A) + " s. "
+            : "The old frontend asks for " + f3(o.A) + " s (its wall clock), the new one for " + f3(n.A) + " s (PlaybackClock). ") +
+        "The backend reads the ask " + delayWord(S) + ", when its own position is " + f3(o.now) + " s, and answers " +
+        (sameE ? f3(o.E) + " s, the later of the ask and its position."
+            : f3(o.E) + " s to the old frontend and " + f3(n.E) + " s to the new one, each the later of its ask and the position.");
+}
+function oldText(h) {
+    return "The old frontend never reads the answer and counts from " + f3(h.A) + " s" +
+        (h.early2 >= EPS ? ", so its highlights run " + f3(h.early2) + " s early for the whole playback"
+            : ", which here is the right second") +
+        ". Its first note sounds " + firstWhen(h) + ".";
+}
+function newText(h) {
+    return "The new one takes the answer as its epoch and counts from " + f3(h.E) + " s. " +
+        (h.early1 >= EPS ? "The highlights of its first round, timed before the answer came back, are " + f3(h.early1) + " s early; the later ones are on time"
+            : "Its highlights are on time") +
+        ". Its first note sounds " + firstWhen(h) + ".";
+}
+function sentenceHtml(S, M) {
+    return leadText(S, M) + ' <span class="o">' + oldText(M.old) + '</span> <span class="n">' + newText(M.neu) + "</span>";
+}
+function sentenceText(S, M) {
+    return leadText(S, M) + " " + oldText(M.old) + " " + newText(M.neu);
+}
+
+function winner(a, b) {                                  // which of two values E took: the later one
+    return a > b + EPS ? 0 : (b > a + EPS ? 1 : 2);
+}
+function cell(cls, text, bold, title) { return '<td class="' + cls + '"' + (title ? ' title="' + title + '"' : "") + ">" + (bold ? "<b>" + text + "</b>" : text) + "</td>"; }
+function late(v, text) { return v > XMAX ? text + '<i title="past the ' + XMAX + ' s axis"> &raquo;</i>' : text; }
+function fe(v) { return isFinite(v) ? f3(v) : "later"; }
+
+function tableHtml(S, M) {
+    var o = M.old, n = M.neu, wo = winner(o.A, o.now), wn = winner(n.A, n.now), b = [];
+    function grp(text) { return '<tr><th scope="colgroup" colspan="3">' + text + "</th></tr>"; }
+    function row(hl, cls, th, title, a, c) {
+        return '<tr' + (cls ? ' class="' + cls + '"' : "") + ' data-hl="' + hl + '"><th scope="row" title="' + title + '">' + th + "</th>" + a + c + "</tr>";
+    }
+    b.push('<tbody>' + grp("on the backend's timeline (s)") +
+        row("A", "", "the ask A", "The second the frontend's clock reads when the playback starts.", cell("o", f3(o.A), wo !== 1), cell("n", f3(n.A), wn !== 1)) +
+        row("now", "", "the backend's now", "The backend's position when it reads the ask: the start of the next block it renders.", cell("o", f3(o.now), wo !== 0), cell("n", f3(n.now), wn !== 0)) +
+        row("E", "lead", "the answer E", "The epoch: the later of the ask and the backend's now. It goes back as PlaybackAnchored.", cell("o", f3(o.E), true), cell("n", f3(n.E), true)) +
+        "</tbody>");
+    b.push('<tbody>' + grp("on the wall clock, press at " + f2(S.t0) + " s") +
+        row("first", "big", "first note sounds", "The wall time at which the first note, at E on the backend's timeline, is rendered.",
+            cell("o", late(o.ts[0], fe(o.ts[0])), true), cell("n", late(n.ts[0], fe(n.ts[0])), true)) +
+        "</tbody>");
+    b.push('<tbody>' + grp("highlights early by (s)") +
+        row("first", "", "timed before the answer came back", "The first round: timed from the second asked for. Early by the first note's wall time minus the press, for both.",
+            cell("o", fe(o.early1)), cell("n", fe(n.early1))) +
+        row("first", "", "timed after the answer came back", "Every later note. The old frontend never takes an answer and stays that early for good; the new one counts from E (the spec bounds it to 30 ms).",
+            cell("o", fe(o.early2)), cell("n", n.early2 === 0 ? "0" : fe(n.early2), false, "within 30 ms in the spec")) +
+        "</tbody>");
+    return '<thead><tr><th scope="col"><span class="sr">seconds</span></th><th scope="col" class="o">old</th><th scope="col" class="n">new</th></tr></thead>' + b.join("");
+}
+
+// ============================================================================================================
+// The exchange: a lane each for the old frontend, the backend and the new frontend; time runs to the right
+// ============================================================================================================
+var CH = 6.1;                                            // the width of a character at 10 px, for fitting labels
+function tx(x, y, anchor, cls, text) {
+    return '<text class="' + cls + '" x="' + r1(x) + '" y="' + r1(y) + '" text-anchor="' + anchor + '">' + text + "</text>";
+}
+function unit(dx, dy) { var l = Math.sqrt(dx * dx + dy * dy) || 1; return [dx / l, dy / l]; }
+
+function layoutEx(W) {
+    var ML = 6, xp = ML + 74 + 20;
+    return { W: W, H: 196, ML: ML, xp: xp, kx: clamp((W - xp - 160) / 2 / 300, 0.03, 0.34),
+        yT: 10, yO: 46, yB: 102, yN: 158 };
+}
+function exDpx(XL, S) { return 12 + Math.round(S.d * 1000) * XL.kx; }       // the width of one leg, in pixels
+
+function winLabel(h, x, W) {
+    var w = h.A > h.now + EPS ? 0 : (h.now > h.A + EPS ? 1 : 2);
+    var longer = w === 2 ? "A = now = " + f3(h.A) : (w === 0 ? "A is later: " + f3(h.A) + " &gt; " + f3(h.now) : "now is later: " + f3(h.now) + " &gt; " + f3(h.A));
+    var plain = w === 2 ? "A = now = " + f3(h.A) : (w === 0 ? "A is later: " + f3(h.A) + " > " + f3(h.now) : "now is later: " + f3(h.now) + " > " + f3(h.A));
+    if (x + plain.length * CH > W - 3) { return w === 2 ? "A = now" : (w === 0 ? "A is later" : "now is later"); }
+    return longer;
+}
+
+function renderEx(S, M, XL) {
+    var o = [], hs = [], xp = XL.xp, W = XL.W, xr = W - 2, ms = Math.round(S.d * 1000), dpx = exDpx(XL, S);
+    var x1 = xp + dpx, x2 = x1 + dpx, yO = XL.yO, yB = XL.yB, yN = XL.yN, labW = XL.ML + 74, be = M.be;
+    var stalled = be.len > 0 && S.t0 + S.d > be.s0 + 1e-9 && S.t0 + S.d <= be.s1 + 1e-9;
+    var dtxt = ms === 0 ? "no delay" : ms + " ms", back = ms === 0 ? "back at once" : "back in " + ms + " ms";
+
+    o.push('<defs>' +
+        '<marker id="xah-o" viewBox="0 0 6 6" refX="5.5" refY="3" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L6 3L0 6z" class="fo"/></marker>' +
+        '<marker id="xah-n" viewBox="0 0 6 6" refX="5.5" refY="3" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L6 3L0 6z" class="fn"/></marker></defs>');
+
+    // the lanes, with their names at the left
+    o.push('<line class="lane-b" x1="' + labW + '" y1="' + yB + '" x2="' + xr + '" y2="' + yB + '"/>');
+    o.push('<line class="lane-o" x1="' + (xp - 6) + '" y1="' + yO + '" x2="' + xr + '" y2="' + yO + '"/>');
+    o.push('<line class="lane-n" x1="' + (xp - 6) + '" y1="' + yN + '" x2="' + xr + '" y2="' + yN + '"/>');
+    o.push(tx(XL.ML, yO + 3.5, "start", "lab-o", "old frontend"));
+    o.push(tx(XL.ML, yB + 3.5, "start", "ink", "the backend"));
+    o.push(tx(XL.ML, yN + 3.5, "start", "lab-n", "new frontend"));
+    o.push(tx(xp, XL.yT, "middle", "small", "press at " + f2(S.t0) + " s"));
+    o.push(tx(xr, XL.yT, "end", "small", "wall time →"));
+
+    // the press: one instant on both frontends
+    hs.push('<line class="pole" x1="' + r1(xp) + '" y1="' + (yO + 4) + '" x2="' + r1(xp) + '" y2="' + (yN - 4) + '"/>');
+
+    // the backend reads the ask: its position at that moment
+    hs.push('<circle class="ring hnow" cx="' + r1(x1) + '" cy="' + yB + '" r="7"/>');
+    hs.push(tx(x1 + 13, yB + 3.5, "start", "halo ink hnow", "now " + f3(M.old.now) + (stalled ? " (stalled)" : "")));
+
+    [["o", M.old, yO, "so", "fo", "lab-o", "xah-o"], ["n", M.neu, yN, "sn", "fn", "lab-n", "xah-n"]].forEach(function (sd) {
+        var key = sd[0], h = sd[1], yL = sd[2], sc = sd[3], fc = sd[4], lc = sd[5], mk = sd[6];
+        var up = yL < yB, c = (yB + yL) / 2, u, v, ex0, ey0, x, ya, xb;
+
+        // the ask: read on the frontend's clock at the press, sent to the backend
+        u = unit(x1 - xp, yB - (yL + (up ? 5 : -5)));
+        hs.push('<line class="arrow ' + sc + ' hA" x1="' + r1(xp) + '" y1="' + r1(yL + (up ? 5 : -5)) + '" x2="' + r1(x1 - 7.8 * u[0]) + '" y2="' + r1(yB - 7.8 * u[1]) + '" marker-end="url(#' + mk + ')"/>');
+        hs.push('<circle class="dotp ' + fc + ' hA" cx="' + r1(xp) + '" cy="' + yL + '" r="3.6"/>');
+        hs.push(tx(xp - 9, up ? yL + 16 : yL - 8, "end", "halo " + lc + " hA", "A " + f3(h.A)));
+        hs.push(tx(xp - 6, c + 3.5, "end", "halo " + lc + " hA", "ask, " + dtxt));
+
+        // the answer: the later of the ask and the backend's now, back after the same delay
+        v = unit(x2 - x1, yL - yB);
+        ex0 = x1 + 8.6 * v[0]; ey0 = yB + 8.6 * v[1];
+        hs.push('<line class="arrow ' + sc + ' hE" x1="' + r1(ex0) + '" y1="' + r1(ey0) + '" x2="' + r1(x2 - 7.2 * v[0]) + '" y2="' + r1(yL - 7.2 * v[1]) + '" marker-end="url(#' + mk + ')"/>');
+        ya = up ? c - 17 : c + 16;                                               // the block's edge nearest the far end
+        x = x1 + Math.abs(yB - ya) / Math.abs(yB - yL) * (x2 - x1) + 9;
+        hs.push(tx(x, c - 8, "start", "halo " + lc + " hE", "the answer E = " + f3(h.E)));
+        hs.push(tx(x, c + 4, "start", "halo dim hE", winLabel(h, x, W)));
+        hs.push(tx(x, c + 16, "start", "halo dim hE", back));
+
+        // what the frontend does with it
+        if (key === "o") {
+            hs.push('<path class="anchor so hE" d="M' + r1(x2) + " " + (yL - 5.5) + "L" + r1(x2 + 5.5) + " " + yL + "L" + r1(x2) + " " + (yL + 5.5) + "L" + r1(x2 - 5.5) + " " + yL + 'z"/>');
+            hs.push('<path class="cross so hE" d="M' + r1(x2 - 5) + " " + (yL - 5) + "L" + r1(x2 + 5) + " " + (yL + 5) + "M" + r1(x2 - 5) + " " + (yL + 5) + "L" + r1(x2 + 5) + " " + (yL - 5) + '"/>');
+        } else {
+            hs.push('<path class="dotp fn hE" d="M' + r1(x2) + " " + (yL - 5.5) + "L" + r1(x2 + 5.5) + " " + yL + "L" + r1(x2) + " " + (yL + 5.5) + "L" + r1(x2 - 5.5) + " " + yL + 'z"/>');
+        }
+        xb = x2 + 12;
+        if (key === "o") {
+            hs.push(tx(xb, yL - 21, "start", "halo lab-o hE", "never reads E"));
+            hs.push(tx(xb, yL - 9, "start", "halo lab-o hA", "counts from " + f3(h.A)));
+        } else {
+            hs.push(tx(xb, yL + 19, "start", "halo lab-n hE", "takes E as epoch"));
+            hs.push(tx(xb, yL + 31, "start", "halo lab-n hE", "counts from " + f3(h.E)));
+        }
+    });
+    o.push('<g class="xs">' + hs.join("") + "</g>");
+    return o.join("");
+}
+
+// ============================================================================================================
+// The plane: wall time against the backend's timeline
+// ============================================================================================================
+function layout(W) {
+    var ML = 34, MR = 14, MT = 20;
+    var PH = W >= 460 ? 204 : Math.max(170, Math.round(W * 0.6));
+    var pb = MT + PH;
+    var stripH = 14, gapH = 12, capH = 20;
+    var stripOld = pb + 5, gapY = stripOld + stripH, stripNew = gapY + gapH, capY = stripNew + stripH + 5;
+    var axisY = capY + capH + 3;
+    return { W: W, H: axisY + 36, ML: ML, MR: MR, MT: MT, PH: PH, pb: pb, XW: W - ML - MR,
+        stripH: stripH, gapH: gapH, capH: capH, stripOld: stripOld, gapY: gapY, stripNew: stripNew, capY: capY, axisY: axisY };
+}
+function X(L, t) { return L.ML + t / XMAX * L.XW; }
+function Y(L, v) { return L.MT + L.PH - v / YMAX * L.PH; }
+function r1(v) { return (Math.round(v * 10) / 10).toString(); }
+
+// Ramer-Douglas-Peucker: a path of 750 samples needs about thirty points at a fifth of a pixel
+function simplify(pts, eps) {
+    var n = pts.length, keep = [], stack = [[0, n - 1]], i, seg, a, b, ax, ay, dx, dy, len, dmax, idx, d;
+    if (n < 3) { return pts; }
+    for (i = 0; i < n; i++) { keep.push(false); }
+    keep[0] = true; keep[n - 1] = true;
+    while (stack.length) {
+        seg = stack.pop(); a = seg[0]; b = seg[1];
+        ax = pts[a][0]; ay = pts[a][1]; dx = pts[b][0] - ax; dy = pts[b][1] - ay; len = Math.sqrt(dx * dx + dy * dy) || 1;
+        dmax = 0; idx = -1;
+        for (i = a + 1; i < b; i++) {
+            d = Math.abs((pts[i][0] - ax) * dy - (pts[i][1] - ay) * dx) / len;
+            if (d > dmax) { dmax = d; idx = i; }
+        }
+        if (dmax > eps) { keep[idx] = true; stack.push([a, idx]); stack.push([idx, b]); }
+    }
+    return pts.filter(function (p, j) { return keep[j]; });
+}
+function pathOf(pts) { return pts.map(function (p, j) { return (j ? "L" : "M") + r1(p[0]) + " " + r1(p[1]); }).join(""); }
+
+function renderGfx(S, M, L) {
+    var o = [], top = L.MT, bot = L.axisY, x0 = X(L, 0), x12 = X(L, XMAX), be = M.be, i, k, t, v;
+
+    o.push('<defs>' +
+        '<marker id="ah-o" viewBox="0 0 6 6" refX="5.5" refY="3" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L6 3L0 6z" class="fo"/></marker>' +
+        '<marker id="ah-n" viewBox="0 0 6 6" refX="5.5" refY="3" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L6 3L0 6z" class="fn"/></marker>' +
+        '<clipPath id="clip-plot"><rect x="' + r1(x0) + '" y="' + top + '" width="' + r1(L.XW) + '" height="' + L.PH + '"/></clipPath></defs>');
+
+    // bands, behind everything
+    if (S.bursts) { o.push('<rect class="band-burst" x="' + r1(x0) + '" y="' + top + '" width="' + r1(L.XW) + '" height="' + (bot - top) + '"/>'); }
+    if (be.len > 0) { o.push('<rect class="band-stall" x="' + r1(X(L, be.s0)) + '" y="' + top + '" width="' + r1(X(L, be.s1) - X(L, be.s0)) + '" height="' + (bot - top) + '"/>'); }
+
+    // strips
+    [[L.stripOld, L.stripH], [L.stripNew, L.stripH], [L.capY, L.capH]].forEach(function (s) {
+        o.push('<rect class="strip" x="' + r1(x0) + '" y="' + s[0] + '" width="' + r1(L.XW) + '" height="' + s[1] + '"/>');
+    });
+
+    // grid, axes and ticks
+    for (t = 0; t <= XMAX; t += 2) { o.push('<line class="grid" x1="' + r1(X(L, t)) + '" y1="' + top + '" x2="' + r1(X(L, t)) + '" y2="' + bot + '"/>'); }
+    for (v = 2; v <= YMAX; v += 2) { o.push('<line class="grid" x1="' + r1(x0) + '" y1="' + r1(Y(L, v)) + '" x2="' + r1(x12) + '" y2="' + r1(Y(L, v)) + '"/>'); }
+    o.push('<line class="axis" x1="' + r1(x0) + '" y1="' + top + '" x2="' + r1(x0) + '" y2="' + bot + '"/>');
+    o.push('<line class="axis" x1="' + r1(x0) + '" y1="' + L.pb + '" x2="' + r1(x12) + '" y2="' + L.pb + '"/>');
+    o.push('<line class="axis" x1="' + r1(x0) + '" y1="' + bot + '" x2="' + r1(x12) + '" y2="' + bot + '"/>');
+    for (t = 1; t <= XMAX; t += 1) { o.push('<line class="axis" x1="' + r1(X(L, t)) + '" y1="' + bot + '" x2="' + r1(X(L, t)) + '" y2="' + (bot + (t % 2 ? 3 : 5)) + '"/>'); }
+    for (t = 0; t <= XMAX; t += 2) { o.push('<text x="' + r1(X(L, t)) + '" y="' + (bot + 15) + '" text-anchor="middle">' + t + '</text>'); }
+    for (v = 0; v <= YMAX; v += 2) { o.push('<text x="' + r1(x0 - 6) + '" y="' + r1(Y(L, v) + 3.5) + '" text-anchor="end">' + v + '</text>'); }
+    o.push('<text transform="translate(9 ' + r1(top + L.PH / 2) + ') rotate(-90)" text-anchor="middle" class="small">backend position (s)</text>');
+    // the x axis is named beside the flag's tab, on the side the flag is not
+    var titleLeft = X(L, S.t0) > x0 + 110;
+    o.push('<text class="small" x="' + r1(titleLeft ? x0 : x12) + '" y="' + (bot + 28) + '" text-anchor="' + (titleLeft ? "start" : "end") + '">wall time (s)</text>');
+
+    // strip labels
+    o.push('<text x="' + (x0 - 6) + '" y="' + (L.stripOld + 10.5) + '" text-anchor="end" class="lab-o">old</text>');
+    o.push('<text x="' + (x0 - 6) + '" y="' + (L.stripNew + 10.5) + '" text-anchor="end" class="lab-n">new</text>');
+    o.push('<text x="' + (x0 - 6) + '" y="' + (L.capY + 13) + '" text-anchor="end" class="small">cap</text>');
+
+    // the backend: thick gray
+    var bp = be.path().map(function (p, j) { return (j ? "L" : "M") + r1(X(L, p[0])) + " " + r1(Y(L, p[1])); }).join("");
+    o.push('<path class="be" d="' + bp + '"/>');
+
+    // the new clock, sampled every 16 ms; the old clock on top, dashed, so where they agree both show
+    var cl = M.clock, np = [];
+    for (i = 0; i < cl.t.length; i++) { np.push([X(L, cl.t[i]), Y(L, cl.v[i])]); }
+    np = pathOf(simplify(np, 0.2));
+    if (S.show.neu) { o.push('<path class="cl-new" d="' + np + '"/>'); }
+    if (S.show.old) { o.push('<line class="cl-old" x1="' + r1(x0) + '" y1="' + r1(Y(L, 0)) + '" x2="' + r1(x12) + '" y2="' + r1(Y(L, YMAX)) + '"/>'); }
+
+    // the cap of the new clock, as a small trace under the strips
+    if (S.show.neu) {
+        var cy = function (c) { return L.capY + L.capH - 2 - (c - MIN_CAP) / (MAX_CAP - MIN_CAP) * (L.capH - 4); };
+        var cpts = [], peak = MIN_CAP, peakAt = 0, cp;
+        for (i = 0; i < cl.t.length; i++) {
+            cpts.push([X(L, cl.t[i]), cy(cl.cap[i])]);
+            if (cl.cap[i] > peak + 1e-9) { peak = cl.cap[i]; peakAt = i; }
+        }
+        cp = pathOf(simplify(cpts, 0.2));
+        o.push('<path class="cap-fill" d="' + cp + 'L' + r1(x12) + " " + (L.capY + L.capH - 2) + "L" + r1(x0) + " " + (L.capY + L.capH - 2) + 'Z"/>');
+        o.push('<path class="cap-line" d="' + cp + '"/>');
+        if (peak > MIN_CAP + 0.005) {
+            var px = X(L, cl.t[peakAt]), flip = px + 80 > L.W;
+            o.push('<text class="small halo" x="' + r1(flip ? px - 6 : px + 6) + '" y="' + (L.capY + 8) + '" text-anchor="' + (flip ? "end" : "start") + '">cap ' + f2(peak) + ' s</text>');
+        }
+    }
+
+    // ---- the handshake ------------------------------------------------------------------------------------
+    var hs = [], sides = [["o", M.old, S.show.old, "so", "fo"], ["n", M.neu, S.show.neu, "sn", "fn"]];
+    var xp = X(L, S.t0);
+    hs.push('<line class="pole" x1="' + r1(xp) + '" y1="' + top + '" x2="' + r1(xp) + '" y2="' + bot + '"/>');
+
+    // the backend's now when the ask arrives, on the backend's line: the answers sit inside this ring when it wins
+    var nx = X(L, M.old.t1), ny = Y(L, M.old.now);
+    hs.push('<circle class="ring hnow" cx="' + r1(nx) + '" cy="' + r1(ny) + '" r="8"/>');
+    var nflip = nx + 11 + 22 > L.W - 2;
+    hs.push('<text class="halo ink hnow" x="' + r1(nflip ? nx - 11 : nx + 11) + '" y="' + r1(ny + 17) + '" text-anchor="' + (nflip ? "end" : "start") + '">now</text>');
+
+    sides.forEach(function (sd) {
+        var key = sd[0], h = sd[1], on = sd[2], sc = sd[3], fc = sd[4], yA = Y(L, h.A), yE = Y(L, h.E);
+        if (!on) { return; }
+        var xA = X(L, S.t0), x1 = X(L, h.t1), x2 = X(L, h.t2), first, q, ts, y, x, rect;
+
+        // the notes: E + k on the y axis, across to the backend's line, down to the strip
+        for (k = 0; k < NOTES; k++) {
+            q = h.E + k * CYCLE_SEC; ts = h.ts[k]; first = k === 0; y = Y(L, q);
+            var hc = first ? " hfirst" : "";
+            var stripTop = key === "o" ? L.stripOld : L.stripNew;
+            if (q <= YMAX) {
+                var xe = ts <= XMAX ? X(L, ts) : x12;
+                hs.push('<line class="nline ' + sc + (first ? " first" : "") + hc + '" x1="' + r1(x0) + '" y1="' + r1(y) + '" x2="' + r1(xe) + '" y2="' + r1(y) + '"/>');
+                hs.push('<line class="' + sc + hc + '" x1="' + r1(x0) + '" y1="' + r1(y) + '" x2="' + r1(x0 + 6) + '" y2="' + r1(y) + '" stroke-width="2"' + (first ? "" : ' opacity=".6"') + '/>');
+            }
+            if (ts <= XMAX) {
+                x = X(L, ts);
+                hs.push('<line class="drop ' + sc + (first ? " first" : "") + hc + '" x1="' + r1(x) + '" y1="' + r1(y) + '" x2="' + r1(x) + '" y2="' + stripTop + '"/>');
+                hs.push('<circle class="dotp ' + fc + hc + '" cx="' + r1(x) + '" cy="' + r1(y) + '" r="' + (first ? 3.6 : 2.6) + '"/>');
+                rect = first ? [x - 2.5, stripTop + 1, 5, L.stripH - 2] : [x - 1.5, stripTop + 3, 3, L.stripH - 6];
+                hs.push('<rect class="mark ' + fc + (first ? "" : " rest") + hc + '" x="' + r1(rect[0]) + '" y="' + r1(rect[1]) + '" width="' + rect[2] + '" height="' + rect[3] + '"/>');
+                if (first && L.XW / XMAX >= 30) {
+                    var tx2 = x + 7, flipT = tx2 + 36 > L.W - 4;
+                    hs.push('<text class="small halo ' + (key === "o" ? "lab-o" : "lab-n") + hc + '" x="' + r1(flipT ? x - 7 : tx2) + '" y="' + (stripTop + 10.5) + '" text-anchor="' + (flipT ? "end" : "start") + '">' + f3(ts) + '</text>');
+                }
+            } else if (isFinite(ts) || ts === Infinity) {
+                // the first note past the axis: an arrow at the right end of its strip
+                var prevOn = k > 0 && h.ts[k - 1] > XMAX;
+                if (!prevOn) {
+                    var ym = stripTop + L.stripH / 2;
+                    hs.push('<path class="' + fc + hc + '" d="M' + r1(x12 - 8) + " " + r1(ym - 4.5) + "L" + r1(x12) + " " + r1(ym) + "L" + r1(x12 - 8) + " " + r1(ym + 4.5) + 'z"/>');
+                    if (first) { hs.push('<text class="small halo ' + (key === "o" ? "lab-o" : "lab-n") + hc + '" x="' + r1(x12 - 12) + '" y="' + (stripTop + 10.5) + '" text-anchor="end">' + ("later " + (isFinite(ts) ? ts.toFixed(1) + " s" : "")) + '</text>'); }
+                }
+            }
+        }
+
+        // the ask: read on the clock at t0, sent to the backend; it arrives after d
+        var hA = " hA";
+        if (x1 - xA > 7) { hs.push('<line class="arrow ' + sc + hA + '" x1="' + r1(xA + 3) + '" y1="' + r1(yA) + '" x2="' + r1(x1) + '" y2="' + r1(yA) + '" marker-end="url(#ah-' + key + ')"/>'); }
+        hs.push('<line class="' + sc + hA + '" x1="' + r1(x0 - 4) + '" y1="' + r1(yA) + '" x2="' + r1(x0 + 4) + '" y2="' + r1(yA) + '" stroke-width="2"/>');
+        if (h.E > h.A + 0.0005) { hs.push('<line class="nline ' + sc + hA + '" x1="' + r1(x0) + '" y1="' + r1(yA) + '" x2="' + r1(xA) + '" y2="' + r1(yA) + '"/>'); }
+        hs.push('<circle class="dotp ' + fc + hA + '" cx="' + r1(xA) + '" cy="' + r1(yA) + '" r="3.4"/>');
+        hs.push('<text class="halo ' + (key === "o" ? "lab-o" : "lab-n") + hA + '" x="' + r1(xA - 8) + '" y="' + r1(yA + 3.5) + '" text-anchor="end">A</text>');
+
+        // the answer: the later of the ask and the backend's now; it comes back after d
+        var hE = " hE";
+        if (h.E > h.A + 0.0005) { hs.push('<line class="jump ' + sc + hE + '" x1="' + r1(x1) + '" y1="' + r1(yA) + '" x2="' + r1(x1) + '" y2="' + r1(yE) + '"/>'); }
+        if (x2 - x1 > 9) { hs.push('<line class="arrow ' + sc + hE + '" x1="' + r1(x1 + 5) + '" y1="' + r1(yE) + '" x2="' + r1(x2 - 3) + '" y2="' + r1(yE) + '" marker-end="url(#ah-' + key + ')"/>'); }
+        hs.push('<path class="dotp ' + fc + hE + '" d="M' + r1(x1) + " " + r1(yE - 5.5) + "L" + r1(x1 + 5.5) + " " + r1(yE) + "L" + r1(x1) + " " + r1(yE + 5.5) + "L" + r1(x1 - 5.5) + " " + r1(yE) + 'z"/>');
+        if (x2 - x1 > 12) { hs.push('<circle class="anchor ' + sc + hE + '" cx="' + r1(x2) + '" cy="' + r1(yE) + '" r="3.4"/>'); }
+        var ex = Math.max(x1, x2) + 9, flipE = ex + 12 > L.W - 6;
+        hs.push('<text class="halo ' + (key === "o" ? "lab-o" : "lab-n") + hE + '" x="' + r1(flipE ? x1 - 9 : ex) + '" y="' + r1(yE + 3.5) + '" text-anchor="' + (flipE ? "end" : "start") + '">E</text>');
+    });
+
+    // the gap between the first notes
+    var go = M.old.ts[0], gn = M.neu.ts[0];
+    if (S.show.old && S.show.neu && go <= XMAX && gn <= XMAX) {
+        var gy = L.gapY + L.gapH / 2, xa = X(L, gn), xb = X(L, go);
+        if (xb - xa > 1.5) {
+            hs.push('<path class="gap hfirst" d="M' + r1(xa) + " " + r1(gy - 3.5) + "V" + r1(gy + 3.5) + "M" + r1(xa) + " " + r1(gy) + "H" + r1(xb) + "M" + r1(xb) + " " + r1(gy - 3.5) + "V" + r1(gy + 3.5) + '"/>');
+            var gt = f3(go - gn) + " s", gflip = xb + 8 + 44 > L.W - 2;
+            hs.push('<text class="small halo ink hfirst" x="' + r1(gflip ? xa - 6 : xb + 6) + '" y="' + (gy + 3) + '" text-anchor="' + (gflip ? "end" : "start") + '">' + gt + '</text>');
+        } else {
+            var sflip = xa + 8 + 30 > L.W - 2;
+            hs.push('<text class="small halo ink hfirst" x="' + r1(sflip ? xa - 8 : xa + 8) + '" y="' + (gy + 3) + '" text-anchor="' + (sflip ? "end" : "start") + '">same</text>');
+        }
+    }
+    o.push('<g class="hs">' + hs.join("") + "</g>");
+
+    // the stall and the bursts, named
+    var sx1 = X(L, be.s1);
+    if (be.len > 0) {
+        var lab = "the audio thread starves " + be.len.toFixed(1) + " s";
+        var lw = lab.length * 6.1, rx = sx1 + 8, fl = rx + lw > L.W - 4;
+        o.push('<text class="lab-o" x="' + r1(fl ? X(L, be.s0) - 8 : rx) + '" y="13" text-anchor="' + (fl ? "end" : "start") + '">' + lab + '</text>');
+    }
+    if (S.bursts) {
+        o.push('<text x="' + r1(x12 - 4) + '" y="' + (L.pb - 6) + '" text-anchor="end" style="fill:var(--gold)">bursts: 36 blocks (96 ms) at once</text>');
+    }
+
+    return o.join("");
+}
+
+// ============================================================================================================
+// The persistent layers: the handles and the scrub line (never rebuilt, so focus stays)
+// ============================================================================================================
+var svg = $("plot"), ex = $("ex"), L = null, XL = null;
+var uiBuilt = false, gfxG, scrubG, hitR, uiG, flagG, tabG, gripLG, gripRG;
+var exBuilt = false, xgfxG, xuiG, ringG;
+var NSV = "http://www.w3.org/2000/svg";
+
+function mk(tag, attrs, parent) {
+    var e = document.createElementNS(NSV, tag), a;
+    for (a in attrs) { if (Object.prototype.hasOwnProperty.call(attrs, a)) { e.setAttribute(a, attrs[a]); } }
+    if (parent) { parent.appendChild(e); }
+    return e;
+}
+
+function buildUi() {
+    var old = svg.querySelectorAll("#gfx, #scrub, #hit, #ui");
+    old.forEach(function (n) { n.parentNode.removeChild(n); });
+    gfxG = mk("g", { id: "gfx", "aria-hidden": "true" }, svg);
+    scrubG = mk("g", { id: "scrub", "aria-hidden": "true", "pointer-events": "none", visibility: "hidden" }, svg);
+    hitR = mk("rect", { id: "hit", fill: "transparent" }, svg);
+    uiG = mk("g", { id: "ui", class: "ui" }, svg);
+
+    // the stall: its edges (grips) outside the band, its tab on top to move it
+    gripLG = mk("g", { class: "handle gl", id: "h-gl", tabindex: "0", role: "slider", "aria-label": "Stall start, in seconds, the end stays" }, uiG);
+    mk("rect", { class: "hz" }, gripLG); mk("line", { class: "edge" }, gripLG); mk("rect", { class: "grip", rx: "2", width: "6", height: "22" }, gripLG);
+    gripRG = mk("g", { class: "handle gr", id: "h-gr", tabindex: "0", role: "slider", "aria-label": "Stall end, in seconds, the start stays" }, uiG);
+    mk("rect", { class: "hz" }, gripRG); mk("line", { class: "edge" }, gripRG); mk("rect", { class: "grip", rx: "2", width: "6", height: "22" }, gripRG);
+    tabG = mk("g", { class: "handle tab", id: "h-tab", tabindex: "0", role: "slider", "aria-label": "Move the stall, start in seconds" }, uiG);
+    mk("rect", { class: "hz" }, tabG); mk("rect", { class: "st-tab", rx: "2", height: "14" }, tabG);
+    mk("text", { "text-anchor": "middle", y: "10.5" }, tabG);
+
+    // the flag
+    flagG = mk("g", { class: "handle flag", id: "h-flag", tabindex: "0", role: "slider", "aria-label": "Press play at, in seconds" }, uiG);
+    mk("rect", { class: "hz", x: "-26", y: "6", width: "52", height: "34" }, flagG);
+    mk("path", { class: "flag-tab", d: "M0 0L-6 7H-24V23H24V7H6Z" }, flagG);
+    mk("text", { "text-anchor": "middle", y: "19" }, flagG);
+    uiBuilt = true;
+}
+
+function adoptUi() {
+    // static markup already holds the layers (the no-script drawing): take them over
+    gfxG = $("gfx"); scrubG = $("scrub"); hitR = $("hit"); uiG = $("ui");
+    if (!(gfxG && scrubG && hitR && uiG && $("h-flag"))) { buildUi(); return; }
+    flagG = $("h-flag"); tabG = $("h-tab"); gripLG = $("h-gl"); gripRG = $("h-gr");
+    uiBuilt = true;
+}
+
+function buildEx() {
+    var old = ex.querySelectorAll("#xgfx, #xui");
+    old.forEach(function (n) { n.parentNode.removeChild(n); });
+    xgfxG = mk("g", { id: "xgfx", "aria-hidden": "true" }, ex);
+    xuiG = mk("g", { id: "xui", class: "ui" }, ex);
+    // the ring on the backend's lane: pull it to change the delay
+    ringG = mk("g", { class: "handle ringh", id: "h-d", tabindex: "0", role: "slider", "aria-label": "Delay until the backend reads the ask, in milliseconds" }, xuiG);
+    mk("rect", { class: "hz hnow ew", rx: "6", width: "30", height: "30" }, ringG);
+    mk("circle", { class: "dring cue", r: "11.5" }, ringG);
+    exBuilt = true;
+}
+
+function adoptEx() {
+    xgfxG = $("xgfx"); xuiG = $("xui"); ringG = $("h-d");
+    if (!(xgfxG && xuiG && ringG)) { buildEx(); return; }
+    exBuilt = true;
+}
+
+function setExUi(S, XL) {
+    var ms = Math.round(S.d * 1000), x1 = XL.xp + exDpx(XL, S), hz = ringG.childNodes[0], rg = ringG.childNodes[1];
+    hz.setAttribute("x", r1(x1 - 15)); hz.setAttribute("y", XL.yB - 15);
+    rg.setAttribute("cx", r1(x1)); rg.setAttribute("cy", XL.yB);
+    ringG.setAttribute("aria-valuemin", "0"); ringG.setAttribute("aria-valuemax", "300");
+    ringG.setAttribute("aria-valuenow", String(ms)); ringG.setAttribute("aria-valuetext", ms + " milliseconds");
+}
+
+function setUi(S, M, L) {
+    var be = M.be, hz, xs0 = X(L, be.s0), xs1 = X(L, be.s1), mid = L.MT + L.PH / 2 - 11, h = L.axisY - L.MT;
+
+    hitR.setAttribute("x", L.ML); hitR.setAttribute("y", L.MT); hitR.setAttribute("width", L.XW); hitR.setAttribute("height", L.PH);
+
+    // flag
+    var fx = X(L, S.t0);
+    flagG.setAttribute("transform", "translate(" + r1(fx) + " " + (L.axisY + 16) + ")");
+    flagG.lastChild.textContent = f2(S.t0) + " s";
+    flagG.setAttribute("aria-valuemin", "0"); flagG.setAttribute("aria-valuemax", "11");
+    flagG.setAttribute("aria-valuenow", f2(S.t0)); flagG.setAttribute("aria-valuetext", f2(S.t0) + " seconds");
+
+    // stall grips: left outside the left edge, right outside the right edge. With no stall one grip is left, on the
+    // right, to pull a stall out of; the edge lines show only when there is a band.
+    [[gripLG, xs0, -14, false], [gripRG, xs1, 0, true]].forEach(function (g) {
+        var ch = g[0].childNodes, one = be.len <= 0 && g[3];
+        ch[0].setAttribute("x", r1(g[1] + g[2])); ch[0].setAttribute("y", L.MT); ch[0].setAttribute("width", 14); ch[0].setAttribute("height", h);
+        ch[1].setAttribute("x1", r1(g[1])); ch[1].setAttribute("x2", r1(g[1])); ch[1].setAttribute("y1", L.MT); ch[1].setAttribute("y2", L.axisY);
+        ch[1].style.display = be.len > 0 || one ? "" : "none";
+        ch[1].setAttribute("class", be.len > 0 ? "edge" : "edge ghost");
+        ch[2].setAttribute("x", r1(g[1] - 3)); ch[2].setAttribute("y", r1(mid));
+        ch[2].style.display = be.len > 0 || one ? "" : "none";
+    });
+    gripLG.setAttribute("aria-valuemin", f2(Math.max(0, be.s1 - 4))); gripLG.setAttribute("aria-valuemax", f2(be.s1));
+    gripLG.setAttribute("aria-valuenow", f2(be.s0)); gripLG.setAttribute("aria-valuetext", "stall starts at " + f2(be.s0) + " seconds");
+    gripRG.setAttribute("aria-valuemin", f2(be.s0)); gripRG.setAttribute("aria-valuemax", f2(Math.min(XMAX, be.s0 + 4)));
+    gripRG.setAttribute("aria-valuenow", f2(be.s1)); gripRG.setAttribute("aria-valuetext", "stall ends at " + f2(be.s1) + " seconds");
+
+    // the tab over the band
+    var tw = Math.max(36, xs1 - xs0), tcx = (xs0 + xs1) / 2;
+    hz = tabG.childNodes[0]; hz.setAttribute("x", r1(tcx - tw / 2)); hz.setAttribute("y", 0); hz.setAttribute("width", r1(tw)); hz.setAttribute("height", 18);
+    var tb = tabG.childNodes[1]; tb.setAttribute("x", r1(tcx - tw / 2)); tb.setAttribute("y", 2); tb.setAttribute("width", r1(tw));
+    var tt = tabG.childNodes[2]; tt.setAttribute("x", r1(tcx)); tt.setAttribute("y", 12.5); tt.textContent = be.len > 0 ? "" : "stall";
+    tabG.setAttribute("aria-valuemin", "0"); tabG.setAttribute("aria-valuemax", "8");
+    tabG.setAttribute("aria-valuenow", f2(be.s0)); tabG.setAttribute("aria-valuetext", be.len > 0 ? "stall from " + f2(be.s0) + " to " + f2(be.s1) + " seconds" : "no stall, would start at " + f2(be.s0) + " seconds");
+}
+
+// ============================================================================================================
+// Update
+// ============================================================================================================
+var pending = false, announce = false, liveTimer = 0, hl = null, pinned = null;
+
+function widthNow() {
+    var w = Math.floor($("plotcol").getBoundingClientRect().width);
+    return Math.max(260, w || 510);
+}
+function exWidthNow() {
+    var w = Math.floor($("excol").getBoundingClientRect().width);
+    return Math.max(260, w || 506);
+}
+
+function update() {
+    var W = widthNow();
+    L = layout(W);
+    XL = layoutEx(exWidthNow());
+    M = compute(S);
+
+    svg.setAttribute("viewBox", "0 0 " + L.W + " " + L.H);
+    gfxG.innerHTML = renderGfx(S, M, L);
+    setUi(S, M, L);
+    svg.setAttribute("role", "group");
+    svg.setAttribute("aria-label", "The handshake on the wall clock against the backend's timeline. The handles are sliders; the sentence says what it shows.");
+
+    ex.setAttribute("viewBox", "0 0 " + XL.W + " " + XL.H);
+    xgfxG.innerHTML = renderEx(S, M, XL);
+    setExUi(S, XL);
+    ex.setAttribute("role", "group");
+    ex.setAttribute("aria-label", "The exchange: the ask, the answer and what each frontend does with it. The ring is a slider for the delay; the sentence below says what it shows.");
+
+    $("readout").innerHTML = tableHtml(S, M);
+    $("sentence").innerHTML = sentenceHtml(S, M);
+
+    // controls
+    $("c-stall").value = S.stall; $("o-stall").textContent = S.stall.toFixed(1) + " s";
+    $("c-len").value = S.len; $("o-len").textContent = S.len > 0 ? S.len.toFixed(1) + " s" : "none";
+    $("c-t0").value = S.t0; $("o-t0").textContent = f2(S.t0) + " s";
+    $("c-d").value = Math.round(S.d * 1000); $("o-d").textContent = Math.round(S.d * 1000) + " ms";
+    var bs = $("c-bursts"); bs.setAttribute("aria-checked", S.bursts ? "true" : "false"); bs.textContent = "bursts: " + (S.bursts ? "on" : "off");
+    document.querySelectorAll("[data-scene]").forEach(function (b) { b.setAttribute("aria-pressed", sameState(S, SCENES[b.getAttribute("data-scene")]) ? "true" : "false"); });
+    document.querySelectorAll(".key[data-key]").forEach(function (k) {
+        var key = k.getAttribute("data-key");
+        if (key !== "be") { k.setAttribute("aria-pressed", S.show[key === "new" ? "neu" : key] ? "true" : "false"); }
+    });
+    rehighlight();
+    report();
+
+    if (announce) {
+        clearTimeout(liveTimer);
+        liveTimer = setTimeout(function () { $("live").textContent = sentenceText(S, M); }, 700);
+    }
+    announce = false;
+}
+function schedule() {
+    announce = true;
+    if (pending) { return; }
+    pending = true;
+    requestAnimationFrame(function () { pending = false; update(); });
+}
+
+// ============================================================================================================
+// Interaction
+// ============================================================================================================
+function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
+function snap(v, step) { return Math.round(Math.round(v / step) * step * 1000) / 1000; }
+function timeAt(e) {
+    var r = svg.getBoundingClientRect(), k = r.width / L.W;
+    return ((e.clientX - r.left) / k - L.ML) / L.XW * XMAX;
+}
+function exXAt(e) {
+    var r = ex.getBoundingClientRect();
+    return (e.clientX - r.left) / (r.width / XL.W);
+}
+
+function dragOn(g, onStart, onMove, pos) {
+    var origin = null;
+    pos = pos || timeAt;
+    g.addEventListener("touchstart", function (e) { e.preventDefault(); }, { passive: false });
+    g.addEventListener("pointerdown", function (e) {
+        if (e.pointerType === "mouse" && e.button !== 0) { return; }
+        g.setPointerCapture(e.pointerId);
+        g.classList.add("drag");
+        origin = onStart(pos(e));
+        e.preventDefault();
+        g.focus({ preventScroll: true });
+    });
+    g.addEventListener("pointermove", function (e) {
+        if (origin === null || !g.hasPointerCapture(e.pointerId)) { return; }
+        onMove(pos(e), origin);
+        schedule();
+    });
+    function end(e) { origin = null; g.classList.remove("drag"); try { g.releasePointerCapture(e.pointerId); } catch (x) { /* none */ } }
+    g.addEventListener("pointerup", end);
+    g.addEventListener("pointercancel", end);
+}
+
+function setStall(s0, s1) {
+    s0 = clamp(snap(s0, 0.1), 0, 8); s1 = clamp(snap(s1, 0.1), s0, Math.min(XMAX, s0 + 4));
+    S.stall = Math.round(s0 * 10) / 10; S.len = Math.round((s1 - s0) * 10) / 10;
+}
+function setDelay(ms) { S.d = clamp(snap(ms, 5), 0, 300) / 1000; }
+function keysOn(g, getV, setV, lo, hi, step) {
+    g.addEventListener("keydown", function (e) {
+        var big = e.shiftKey ? 10 : 1, v = getV(), handled = true;
+        if (e.key === "ArrowRight" || e.key === "ArrowUp") { v += step * big; }
+        else if (e.key === "ArrowLeft" || e.key === "ArrowDown") { v -= step * big; }
+        else if (e.key === "PageUp") { v += step * 10; }
+        else if (e.key === "PageDown") { v -= step * 10; }
+        else if (e.key === "Home") { v = lo(); }
+        else if (e.key === "End") { v = hi(); }
+        else { handled = false; }
+        if (handled) { e.preventDefault(); setV(v); announce = true; update(); }
+    });
+}
+
+function wire() {
+    // the ring on the backend's lane: the delay until the backend reads the ask
+    dragOn(ringG, function (x) { return x - (XL.xp + exDpx(XL, S)); },
+        function (x, off) { setDelay((x - off - XL.xp - 12) / XL.kx); }, exXAt);
+    keysOn(ringG, function () { return Math.round(S.d * 1000); }, function (v) { setDelay(v); },
+        function () { return 0; }, function () { return 300; }, 5);
+
+    // the flag: press play at t0
+    dragOn(flagG, function (t) { return t - S.t0; }, function (t, off) { S.t0 = clamp(snap(t - off, 0.05), 0, 11); });
+    keysOn(flagG, function () { return S.t0; }, function (v) { S.t0 = clamp(snap(v, 0.05), 0, 11); }, function () { return 0; }, function () { return 11; }, 0.05);
+
+    // the stall: the tab moves it, the grips pull one edge
+    dragOn(tabG, function (t) { return t - M.be.s0; }, function (t, off) { setStall(t - off, t - off + S.len); });
+    keysOn(tabG, function () { return S.stall; }, function (v) { setStall(v, v + S.len); }, function () { return 0; }, function () { return 8; }, 0.1);
+    dragOn(gripLG, function (t) { return t - M.be.s0; }, function (t, off) {
+        var s1 = M.be.s1; var s0 = clamp(snap(t - off, 0.1), Math.max(0, s1 - 4), s1);
+        S.stall = Math.round(s0 * 10) / 10; S.len = Math.round((s1 - s0) * 10) / 10;
+    });
+    keysOn(gripLG, function () { return M.be.s0; }, function (v) {
+        var s1 = M.be.s1, s0 = clamp(snap(v, 0.1), Math.max(0, s1 - 4), s1);
+        S.stall = Math.round(s0 * 10) / 10; S.len = Math.round((s1 - s0) * 10) / 10;
+    }, function () { return Math.max(0, M.be.s1 - 4); }, function () { return M.be.s1; }, 0.1);
+    dragOn(gripRG, function (t) { return t - M.be.s1; }, function (t, off) { setStall(S.stall, t - off); });
+    keysOn(gripRG, function () { return M.be.s1; }, function (v) { setStall(S.stall, v); }, function () { return M.be.s0; }, function () { return Math.min(XMAX, M.be.s0 + 4); }, 0.1);
+
+    // the scrub line: a hairline and a one-line readout of the three clocks and the cap
+    var touchTimer = 0;
+    function scrubAt(e) {
+        var t = clamp(timeAt(e), 0, XMAX), i = Math.round(t / LOOP_SEC), cl = M.clock;
+        i = clamp(i, 0, cl.t.length - 1);
+        var tt = cl.t[i], b = M.be.pos(tt), v = cl.v[i], cap = cl.cap[i], x = X(L, tt), g = scrubG;
+        var lines = [
+            "t " + f2(tt) + " s",
+            "backend " + f2(b) + "  old " + f2(tt) + "  new " + f2(v),
+            "new vs backend " + (v - b >= 0 ? "+" : "") + Math.round((v - b) * 1000) + " ms, cap " + f2(cap) + " s"
+        ];
+        var bw = 0; lines.forEach(function (s) { bw = Math.max(bw, s.length * 6.1); });
+        bw += 10;
+        var html = '<line x1="' + r1(x) + '" y1="' + L.MT + '" x2="' + r1(x) + '" y2="' + L.axisY + '" stroke="var(--ink)" stroke-width="1" opacity=".7"/>';
+        [[b, "var(--gray)"], [tt, "var(--old)"], [v, "var(--new)"]].forEach(function (p) {
+            html += '<circle cx="' + r1(x) + '" cy="' + r1(Y(L, p[0])) + '" r="3" fill="' + p[1] + '" stroke="var(--paper)" stroke-width="1.2"/>';
+        });
+        html += '<rect x="' + (L.ML + 6) + '" y="' + (L.MT + 4) + '" width="' + Math.min(bw, L.XW - 12) + '" height="42" fill="var(--void)" stroke="var(--rule)" opacity=".94"/>';
+        lines.forEach(function (s, n) { html += '<text x="' + (L.ML + 11) + '" y="' + (L.MT + 17 + n * 12) + '" style="fill:var(--ink)">' + s + "</text>"; });
+        g.innerHTML = html; g.setAttribute("visibility", "visible");
+        if (e.pointerType !== "mouse") { clearTimeout(touchTimer); touchTimer = setTimeout(function () { g.setAttribute("visibility", "hidden"); }, 3000); }
+    }
+    hitR.addEventListener("pointermove", scrubAt);
+    hitR.addEventListener("pointerdown", scrubAt);
+    hitR.addEventListener("pointerleave", function (e) { if (e.pointerType === "mouse") { scrubG.setAttribute("visibility", "hidden"); } });
+
+    // the controls
+    function num(id, apply) { $(id).addEventListener("input", function (e) { apply(parseFloat(e.target.value)); schedule(); }); }
+    num("c-stall", function (v) { S.stall = clamp(Math.round(v * 10) / 10, 0, 8); });
+    num("c-len", function (v) { S.len = clamp(Math.round(v * 10) / 10, 0, 4); });
+    num("c-t0", function (v) { S.t0 = clamp(Math.round(v * 100) / 100, 0, 11); });
+    num("c-d", function (v) { S.d = clamp(v, 0, 300) / 1000; });
+    $("c-bursts").addEventListener("click", function () { S.bursts = !S.bursts; announce = true; update(); });
+    $("c-reset").addEventListener("click", function () { S.show.old = true; S.show.neu = true; announce = true; setState(DEFAULTS); });
+    document.querySelectorAll("[data-scene]").forEach(function (b) {
+        b.addEventListener("click", function () { announce = true; setState(SCENES[b.getAttribute("data-scene")]); });
+    });
+
+    // the keys over the plane show and hide a line with what hangs on it
+    document.querySelectorAll(".key[data-key]").forEach(function (k) {
+        var key = k.getAttribute("data-key");
+        if (key === "be") { return; }
+        var prop = key === "new" ? "neu" : key;
+        k.setAttribute("role", "button"); k.setAttribute("tabindex", "0"); k.setAttribute("aria-pressed", "true");
+        function toggle() { S.show[prop] = !S.show[prop]; announce = true; update(); }
+        k.addEventListener("click", toggle);
+        k.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
+    });
+
+    // a row of the table lights up what it names in both drawings
+    var table = $("readout");
+    table.addEventListener("pointerover", function (e) {
+        var tr = e.target.closest ? e.target.closest("tr[data-hl]") : null;
+        if (tr && pinned === null) { hl = tr.getAttribute("data-hl"); rehighlight(); }
+    });
+    table.addEventListener("pointerleave", function () { if (pinned === null) { hl = null; rehighlight(); } });
+    table.addEventListener("click", function (e) {
+        var tr = e.target.closest ? e.target.closest("tr[data-hl]") : null;
+        if (!tr) { return; }
+        var k = tr.getAttribute("data-hl");
+        pinned = pinned === k ? null : k;
+        hl = pinned;
+        rehighlight();
+    });
+
+    // and the other way: a mark of the exchange lights its row and what it names in the plane
+    function markOf(t) {
+        var c;
+        while (t && t !== ex) {
+            c = t.classList;
+            if (c) {
+                if (c.contains("hA")) { return "A"; }
+                if (c.contains("hnow")) { return "now"; }
+                if (c.contains("hE")) { return "E"; }
+            }
+            t = t.parentNode;
+        }
+        return null;
+    }
+    ex.addEventListener("pointerover", function (e) {
+        if (e.pointerType === "touch" || pinned !== null) { return; }
+        hl = markOf(e.target); rehighlight();
+    });
+    ex.addEventListener("pointerleave", function () { if (pinned === null) { hl = null; rehighlight(); } });
+}
+
+function rehighlight() {
+    var fig = $("fig");
+    if (hl) { fig.setAttribute("data-hl", hl); } else { fig.removeAttribute("data-hl"); }
+    document.querySelectorAll("#readout tr[data-hl]").forEach(function (tr) {
+        tr.classList.toggle("pin", pinned !== null && tr.getAttribute("data-hl") === pinned);
+        tr.classList.toggle("lit", pinned === null && hl !== null && tr.getAttribute("data-hl") === hl);
+    });
+}
+
+// ============================================================================================================
+// Height reporting and start
+// ============================================================================================================
+function report() {
+    var h = Math.ceil($("fig").getBoundingClientRect().height) + 8;
+    try { window.parent.postMessage({ type: "klang-figure-height", height: h }, "*"); } catch (e) { /* no host */ }
+}
+
+function fromHash() {
+    var m = /^#(.*)$/.exec(location.hash || "");
+    if (!m) { return; }
+    m[1].split("&").forEach(function (kv) {
+        var p = kv.split("="), v = parseFloat(p[1]);
+        if (p[0] === "stall" && isFinite(v)) { S.stall = clamp(v, 0, 8); }
+        else if (p[0] === "len" && isFinite(v)) { S.len = clamp(v, 0, 4); }
+        else if (p[0] === "t0" && isFinite(v)) { S.t0 = clamp(v, 0, 11); }
+        else if (p[0] === "d" && isFinite(v)) { S.d = clamp(v, 0, 300) / 1000; }
+        else if (p[0] === "bursts") { S.bursts = p[1] === "1" || p[1] === "true"; }
+    });
+}
+
+adoptUi();
+adoptEx();
+fromHash();
+update();
+wire();
+// the markup the no-script reader sees: the same drawings at the default width, refreshed by "window.__static()"
+window.__static = function () {
+    return { plot: svg.innerHTML, ex: ex.innerHTML, table: $("readout").innerHTML, sentence: $("sentence").innerHTML,
+        w: L.W, h: L.H, xw: XL.W, xh: XL.H, text: sentenceText(S, M) };
+};
+
+var lastW = widthNow();
+if (window.ResizeObserver) {
+    new ResizeObserver(function () { var w = widthNow(); if (Math.abs(w - lastW) >= 1) { lastW = w; update(); } else { report(); } }).observe($("fig"));
+} else {
+    window.addEventListener("resize", update);
+}
+window.addEventListener("load", function () { update(); });
+if (document.fonts && document.fonts.ready) { document.fonts.ready.then(report); }
+})();
+</script>
+</body>
+</html>

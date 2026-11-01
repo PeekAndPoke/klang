@@ -337,9 +337,18 @@ figcaption {
 <div class="intro">
 <h1>Klang blog</h1>
 <p>Notes from building Klang: what we measured, what we tried, and what we kept.</p>
-<p class="count">25 posts, newest first. A post marked Draft is still being written.</p>
+<p class="count">26 posts, newest first. A post marked Draft is still being written.</p>
 </div>
 <ul class="cards">
+<li class="card">
+  <img class="hero" src="the-handshake-seals-the-contract/clock-trace.png" alt="" loading="lazy">
+  <div class="card-body">
+    <div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-11-01">2026-11-01</time><ul class="tags"><li>engine</li><li>timing</li><li>synchronization</li><li>playback</li><li>testing</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
+    <h2><a href="the-handshake-seals-the-contract/">The Handshake Seals the Contract</a></h2>
+    <p class="subtitle">One timeline counted in the backend&#x27;s own frames, a handshake that says where a playback starts, and a backend that renders only when told</p>
+    <p class="summary">Klang&#x27;s sound is made on one thread and its notes are scheduled from another, and for a long time the two kept time by comparing wall clocks. A tempo change, a closed laptop and a stuttering phone each pulled them apart. The frontend&#x27;s clock now runs on the frames the backend has rendered, the backend tells each playback where its time starts, and a backend that renders only when told made the stalls testable. A phone has not heard it yet.</p>
+  </div>
+</li>
 <li class="card">
   <img class="hero" src="the-score-so-far/song-axis.png" alt="" loading="lazy">
   <div class="card-body">
