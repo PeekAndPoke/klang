@@ -121,31 +121,34 @@ object Player {
     private val _nowPlaying = StreamSource<NowPlaying?>(null)
     val nowPlaying: Stream<NowPlaying?> = _nowPlaying.readonly
 
-    private var nowPlayingOwner: Any? = null
+    private var nowPlayingOwner: PlaybackOwner? = null
 
     /**
-     * Publishes (or clears) the "now playing" snapshot. A clear is only honored when [handle]
-     * matches the current owner, so a stale controller can't wipe someone else's state.
+     * Publishes (or clears) the "now playing" snapshot. A clear is only honored when [owner]
+     * is the current owner, so a stale controller can't wipe someone else's state.
      */
-    fun publishNowPlaying(handle: Any, value: NowPlaying?) {
+    fun publishNowPlaying(owner: PlaybackOwner, value: NowPlaying?) {
         if (value == null) {
-            if (nowPlayingOwner === handle) {
+            if (nowPlayingOwner === owner) {
                 nowPlayingOwner = null
                 _nowPlaying(null)
             }
         } else {
-            nowPlayingOwner = handle
+            nowPlayingOwner = owner
             _nowPlaying(value)
         }
     }
 
     /**
-     * Opt-in "only one at a time" coordination. If any other handle is the current [nowPlaying]
-     * owner, [stopOther] is invoked with it so the caller can shut it down before taking the stage.
+     * Opt-in "only one at a time" coordination: the current [nowPlaying] owner, when it is not [self],
+     * is stopped, which clears the stage for [self].
      */
-    fun requestExclusivePlayback(self: Any, stopOther: (Any) -> Unit) {
+    fun requestExclusivePlayback(self: PlaybackOwner) {
         val other = nowPlayingOwner
-        if (other != null && other !== self) stopOther(other)
+
+        if (other != null && other !== self) {
+            other.stop()
+        }
     }
 
     private var deferred: CompletableDeferred<KlangPlayer>? = null

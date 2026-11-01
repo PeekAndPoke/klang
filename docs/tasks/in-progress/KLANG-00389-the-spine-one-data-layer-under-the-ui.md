@@ -1,7 +1,8 @@
 # KLANG-00389: The Spine: one data layer under the UI
 
-> **Status (2026-11-01): IN PROGRESS.** "Player in the Spine", step 1 done: `Player` moved as it is to
-> `spine/Player.kt`, its volume store to `spine/storage/`. Next: step 2, typed ownership.
+> **Status (2026-11-01): IN PROGRESS.** "Player in the Spine", steps 1 and 2 done: `Player` moved as it is to
+> `spine/Player.kt`, its volume store to `spine/storage/`; the stage's owner typed (`PlaybackOwner`). Next: the lanes,
+> KLANG-00406.
 >
 > **Progress (2026-10-29):** the package `io.peekandpoke.klang.spine` exists with its first parts: `VisualState` (the
 > lamp, the song open on a page) and `UiWork` (the UI rests while the window has no attention, from Kraft's
@@ -135,6 +136,8 @@ For the design step, to agree with the maintainer. One area at a time, each a co
    previews, MIDI. One rule for exclusivity: a new playback stops the one before; live play is the exception, it
    stops nothing and nothing stops it but a panic (a song plays and the MIDI rig plays along, KLANG-00402). The lanes
    (`Playbacks`: `song`, `previews`, `sounds`, `live`) and their rules: KLANG-00406.
+   Done 2026-11-01 as far as the type goes: `PlaybackOwner` (`stop()`) in place of `Any`, the casts gone, no
+   behaviour changed. Every playback through it and the one rule come with KLANG-00406's `Playbacks`.
 3. **One writer of the volume:** the Spine owns the output gain and offers a fade (the start page asks for it, the knob
    sets the target); a turn of the knob during a fade wins.
 4. **The Motor's readings derived once:** `MotorReadings`' factories become values in the Spine, each smoothed once and
@@ -232,3 +235,5 @@ next, the MIDI rig first (KLANG-00402). A global object outside the Spine is a d
 - 2026-11-01: "Player in the Spine", step 1: `Player` moved as it is (name, globals, behaviour kept) to
   `spine/Player.kt`, `OutputVolumeStorage` to `spine/storage/` (the maintainer: "Ok please go ahead!"). The name
   (`Player` or `Playback`) and a Kraft attribute stay open for the maintainer; the sweep above keeps its old paths.
+- 2026-11-01: step 2, typed ownership: `PlaybackOwner` in place of `Any` for `publishNowPlaying` and
+  `requestExclusivePlayback`, `KlangCodePlaybackCtrl` one; the lanes and their rules left to KLANG-00406.

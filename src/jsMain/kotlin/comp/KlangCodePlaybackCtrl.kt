@@ -9,6 +9,7 @@ import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
 import io.peekandpoke.klang.audio_engine.play
 import io.peekandpoke.klang.spine.Player
+import io.peekandpoke.klang.spine.PlaybackOwner
 import io.peekandpoke.klang.sprudel.SprudelDiagnostic
 import io.peekandpoke.klang.sprudel.SprudelDiagnostics
 import io.peekandpoke.klang.sprudel.SprudelPattern
@@ -32,7 +33,7 @@ import kotlinx.browser.window
  * subscribe once via [state] instead of juggling a fistful of individual streams. Event-ish
  * streams ([signals], [errors], [playback]) stay separate because they have different semantics.
  */
-class KlangCodePlaybackCtrl private constructor(private val config: Config) {
+class KlangCodePlaybackCtrl private constructor(private val config: Config) : PlaybackOwner {
 
     companion object {
         /**
@@ -196,14 +197,12 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) {
      */
     fun play() {
         if (config.exclusive) {
-            Player.requestExclusivePlayback(self = this) { other ->
-                (other as? KlangCodePlaybackCtrl)?.stop()
-            }
+            Player.requestExclusivePlayback(self = this)
         }
         launch { runPlay() }
     }
 
-    fun stop() {
+    override fun stop() {
         val stopping = _playback()
         // Off the signals first: what the playback sends while it stops does not reach the editor.
         _playback(null)
@@ -216,7 +215,7 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) {
                 isCodeModified = false,
             )
         }
-        Player.publishNowPlaying(handle = this, value = null)
+        Player.publishNowPlaying(owner = this, value = null)
     }
 
     fun reemitVoiceSignals() {
@@ -294,7 +293,7 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) {
     private fun publishNowPlaying(pb: KlangCyclicPlayback) {
         val s = _state()
         Player.publishNowPlaying(
-            handle = this,
+            owner = this,
             value = Player.NowPlaying(
                 title = s.title,
                 code = s.code,

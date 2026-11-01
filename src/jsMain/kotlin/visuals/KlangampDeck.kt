@@ -59,7 +59,7 @@ object KlangampDeck {
 
     /** Stops what plays: Klangamp's song, or a page's, which gives the stage up as it would to another song. */
     fun stop() {
-        Player.requestExclusivePlayback(self = ctrl) { other -> (other as? KlangCodePlaybackCtrl)?.stop() }
+        Player.requestExclusivePlayback(self = ctrl)
         ctrl.stop()
     }
 
