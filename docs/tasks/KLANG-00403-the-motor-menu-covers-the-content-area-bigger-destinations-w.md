@@ -35,7 +35,7 @@ columns, and the look row (seven looks and an empty slot).
   - **Pick up where you left off:** the last opened songs (six, title, RPM and when), the tutorial track in progress
     with its next lesson and a progress bar, and the docs pages last read.
   - **Loadouts:** the look loadout (the eight slots of `KlangLookShelf`, larger, each with three colour dots and its
-    name; "Edit looks"), and the MIDI instruments' loadout (KLANG-00402; "Edit on the MIDI page").
+    name; "Edit looks"), and the MIDI instruments' loadout (KLANG-00402; "Edit MIDI", the same pattern).
 - **Searching:** with text in the field, the lower part becomes the results in four columns: songs, docs, samples,
   actions.
 
