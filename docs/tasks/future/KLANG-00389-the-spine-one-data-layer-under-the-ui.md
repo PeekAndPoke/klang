@@ -134,7 +134,8 @@ For the design step, to agree with the maintainer. One area at a time, each a co
 1. **Move it as it is** into `spine/` (the object, its name kept or `Playback`), callers adjusted. No behaviour changes.
 2. **Typed ownership:** a small interface for what can play and be stopped, in place of `Any` and the casts;
    `requestExclusivePlayback` and `publishNowPlaying` take it. Every playback goes through it: the jingle, the sample
-   previews, MIDI. One rule for exclusivity: a new playback stops the one before.
+   previews, MIDI. One rule for exclusivity: a new playback stops the one before; live play is the exception, it
+   stops nothing and nothing stops it but a panic (a song plays and the MIDI rig plays along, KLANG-00402).
 3. **One writer of the volume:** the Spine owns the output gain and offers a fade (the start page asks for it, the knob
    sets the target); a turn of the knob during a fade wins.
 4. **The Motor's readings derived once:** `MotorReadings`' factories become values in the Spine, each smoothed once and
@@ -180,7 +181,8 @@ next, the MIDI rig first (KLANG-00402). A global object outside the Spine is a d
 - **Sending:** plain functions on the Spine, or commands as data. Who may write what.
 - **Persistence:** the stores under `storage/` move behind the Spine; what is saved, when, and how a saved value is
   read back on start. Decided (the maintainer, 2026-11-01: "Storage should be a subfolder of the spine, maybe", then
-  "yes new stores straight into spine/storage"): `src/jsMain/kotlin/spine/storage/`, package `io.peekandpoke.klang.spine.storage`, with all nine stores and
+  "yes new stores straight into spine/storage"): `src/jsMain/kotlin/spine/storage/`, package
+  `io.peekandpoke.klang.spine.storage`, with all nine stores and
   `StorageKeys`. The stores are the Spine's own: only the Spine's areas read and write them, the UI asks the area
   (the look, the volume, the song's code). Kotlin has no package-private, so a spec keeps it: no file outside
   `spine/` imports `spine.storage`. The Dev Storage page's reset then goes through the Spine, which resets the
