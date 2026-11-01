@@ -102,7 +102,8 @@ today's `MidiBindings`:
   `Move("cc-n")`. Every MIDI keyboard plays without a profile of its own.
 - The controller monitor keeps showing the raw messages: it is the tool for writing a new profile.
 
-**Laptop keys.** `LaptopKeys` listens to `keydown` / `keyup` on the window and maps the physical key
+**Laptop keys.** `LaptopKeys` listens to `keydown` / `keyup` while the MIDI tool has the focus (section 6) and maps
+the physical key
 (`KeyboardEvent.code`), not the printed letter, so the shape is the same on QWERTZ, QWERTY and AZERTY. The labels drawn
 on the keys come from `navigator.keyboard.getLayoutMap()` where the browser has it (Chromium), else from `event.key`
 as each key is first pressed, else QWERTY. The German labels:
@@ -121,16 +122,17 @@ as each key is first pressed, else QWERTY. The German labels:
 - Octave and velocity are the laptop's own state, the way the KeyLab's Oct buttons stay inside the KeyLab: the source
   shifts its notes and sends `NoteDown` with its velocity. Unlike the KeyLab, the laptop knows its octave, so its
   drawing is always aligned (no "keybed alignment" buttons).
-- A key's auto-repeat (`event.repeat`) is ignored; a key with Ctrl, Alt or Meta held is the browser's; a key typed into
-  an input or an editor (the page has two CodeMirror editors) plays nothing. Only a key the source acts on gets
-  `preventDefault` (Space scrolls, Tab moves the focus, `'` and `/` open Firefox's quick find).
-- The window losing focus or the tab hiding sends `AllUp`: the `keyup` of a key held then never arrives.
+- A key plays only while the MIDI tool has the focus, so an editor, a page's shortcut or a song's Space never meets
+  it. A key's auto-repeat (`event.repeat`) is ignored; a key with Ctrl, Alt or Meta held is the browser's. Only a key
+  the source acts on gets `preventDefault` (Space scrolls, Tab moves the focus, `'` and `/` open Firefox's quick find).
+- The tool losing the focus, the window losing it or the tab hiding sends `AllUp`: the `keyup` of a key held then
+  never arrives.
 - Many laptop keyboards drop the third or fourth key of some chords (rollover, ghosting). Nothing to fix; one line of
   help under the keyboard says so.
 
-**Screen.** The drawn panels take pointer input (mouse, finger): a key, a pad, a button, a fader dragged. Source
-"screen". A phone or a tablet gets something to play, and the knobs and faders, which a laptop has no keys for, get a
-way to move.
+**Screen.** Every drawn control takes pointer input (mouse, finger), on the laptop keyboard and on a device's
+drawing alike (section 6). Source "screen". A phone or a tablet gets something to play, and the knobs and faders,
+which a laptop has no keys for, get a way to move.
 
 ### 4. The routing
 
@@ -161,11 +163,21 @@ The held-note bookkeeping moves out of `MidiConnector` into one place every sour
 notes only, and sustain. Pure Kotlin, common code, specs for each case. The same note on the laptop and on the KeyLab
 is two voices, as two channels are today.
 
-### 6. The page
+### 6. The MIDI tool and the MIDI page
+
+The maintainer, 2026-11-01: "the midi controller must live at any time, so the user can run a beat and play along".
 
 ```
-+- Midi Playground ------------------------------------------------------------------------------+
-| [o Motor running]   inputs: [KeyLab 49 mk3 o] [Laptop keys o] [Screen o]     [Panic]           |
++- any page, a song running ---------------------------------------------------------------------+
+|  the page's own content                                                                        |
++= bottom panel: [the page's tabs ...] [MIDI] ===================================================+
+| MIDI  [o keys play]  octave C4  vel 96  warmSaw (1/4)  sustain  C4 E4 G4               [Panic] |
+|  KeyLab drawing (while one is connected; every control clickable)                              |
+|  Laptop keys: pads [1][2][3][4] [Q][W][E][R] | functions | keybed with the letters on the keys |
++------------------------------------------------------------------------------------------------+
+
++- the MIDI page: configuration ------------------------------------------------------------------+
+| devices: [KeyLab 49 mk3 o]                                                             [Panic] |
 +-----------------------------------------------+------------------------------------------------+
 | PLAY CODE                           [Apply]   | INSTRUMENTS                    [New instrument] |
 |  let warmSaw = Ign.saw()...                   |  Loadout: [1 warmSaw x] [2 pad x] [3 supersaw x] |
@@ -173,18 +185,31 @@ is two voices, as two channels are today.
 |                                               |    warmSaw  pad   (drag, click)                  |
 |  x => x.sound(warmSaw).reverb(wet = 0.2)      |  Built-in: supersaw sine sawtooth ... pluck      |
 +-----------------------------------------------+------------------------------------------------+
-| NOW PLAYING   C4 96  E4 80  G4 88   pad 3   sustain held                                       |
-| UNDER THE HOOD (folded)   [Events] [Routing] [MIDI monitor]                                    |
-+================================================================================================+
-| PLAY SURFACE, docked to the bottom of the window, never scrolls away                           |
-|  KeyLab drawing (only while one is connected; lit from ControlEvents)                          |
-|  Laptop keys: pads [1][2][3][4] [Q][W][E][R] | functions | keybed with the letters on the keys |
+| [Events] [Routing] [MIDI monitor]                                                              |
 +------------------------------------------------------------------------------------------------+
 ```
 
-- **The play surface is docked** to the bottom of the window (the maintainer, 2026-11-01: "the input device it fixed
-  to the bottom of the screen and does not scroll"). It is kept low: pads, functions and keybed side by side; the
-  page above scrolls and ends with room for the dock, so nothing hides under it.
+- **The rig lives with the app**, not with a page. `MidiRig` (D6) is made once by the workbench layout and holds the
+  connector, the sources, the routing, `NoteVoicing`, the applied play code and the realtime playback
+  (`RealtimePlaybackCtrl`, which today the page makes and tears down). A KeyLab plays on every page, shown or not; a
+  song keeps running and you play along. Moving to another page mid-chord releases nothing.
+- **The MIDI tool** is a tab of the workbench's bottom panel on every page, beside the page's own tabs (a page
+  without a bottom panel gets one with the MIDI tab alone). It is the play surface: the KeyLab drawing while one is
+  connected, the laptop keyboard (folded to a strip while a KeyLab is connected, D5), and a line with the octave,
+  the velocity, the instrument, sustain and what is sounding. The bottom panel already docks, opens, resizes and
+  keeps its layout over a reload (`KlangWorkbench.Layout`): that is the dock the maintainer asked for ("fixed to the
+  bottom of the screen and does not scroll").
+- **The laptop keys play only while the MIDI tool has the focus** (the maintainer: "Only the laptop keys would need
+  some way to focus the midi tool, so that keys presses get routed through it"). A click into the tool gives it the
+  focus (D8: also a key that gives it from anywhere); while it has it, the tool wears a lit edge and says "keys
+  play". With the focus anywhere else every key is the page's again.
+- **Every drawn control takes clicks and touches** (the maintainer: "Clicks on the inputs should also work, not just
+  for the keys but for any midi vizualization"), on the laptop keyboard and on a device's drawing alike: keys, pads
+  and buttons press and release; knobs, faders and the mod wheel follow a vertical drag (pointer capture); the pitch
+  bend drags and springs back to the middle on release; the endless main encoder turns a drag into `Nudge` steps.
+  All of it is source "screen", so a click does what the control does on the hardware, through the same routing.
+- **The MIDI page configures**: the play code with the instruments, the loadout, the devices, the routing, the event
+  log and the MIDI monitor. The bottom panel is there too, so a change is heard at once.
 - **One input holds everything** (D7, the maintainer's proposal, 2026-11-01: `x => x.sound(myInst).kat()`, and "the
   input with 'let warmSaw' should not exist, should all be in the one input"): the left half of the page, written
   like a song. The instruments are `let`s of Ignitors at the top (`let pad = Ign.supersaw(...)`), and the script
@@ -205,9 +230,9 @@ is two voices, as two channels are today.
   steps through all of them.
 - Saved in localStorage like `MidiInstrumentStorage` today: the play code and the loadout. An old save (an Ignitor
   and a mapper) loads once as one play code: the Ignitor as a `let`, the mapper with `.sound(<it>)` in front.
-- The page renders at once. The keyboard is there before the Motor: the first key or click is the user gesture that
-  starts it (`keydown` already wakes the AudioContext, `_audio_context_wake.kt`). D4 decides whether that first note
-  plays once the Motor is up.
+- The tool is there before the Motor: the first key or click in it is the user gesture that starts it (`keydown`
+  already wakes the AudioContext, `_audio_context_wake.kt`). D4 decides whether that first note plays once the Motor
+  is up. A KeyLab note is no gesture: before the Motor runs, the tool says "click to start".
 - The event log shows `ControlEvent`s ("laptop  NoteDown C4 vel 0.75", "keylab  Press pad-3"); the MIDI monitor keeps
   the raw bytes; the routing tab shows the table read-only.
 
@@ -219,24 +244,29 @@ should have a dedicated midi package for all ui and data in the frontend"): `io.
 - `src/jsMain/kotlin/midi/`: what is there today (`MidiConnector`, `MidiDevicePanel`, `WebMidi`), plus the page
   (`MidiPlaygroundPage`, from `pages/`), the drawing (`MidiPanel`, from `comp/`), the playback controller
   (`RealtimePlaybackCtrl`, from `comp/`; only the playground uses it), the instrument storage
-  (`MidiInstrumentStorage`, from `storage/`), and the new `LaptopKeys` and the device profiles.
+  (`MidiInstrumentStorage`, from `storage/`), and the new `MidiRig`, the bottom tab `MidiTool`, `LaptopKeys` and the
+  device profiles.
 - `src/commonMain/kotlin/midi/`, the same package: the parts with no browser in them (`ControlEvent`, `Routing`,
   `NoteVoicing`), so their specs run on the JVM.
-- The page leaves `pages/`, where every other page lives: a feature folder keeps its page with it. `nav.kt` is the
-  only file outside that imports any of it.
+- The page leaves `pages/`, where every other page lives: a feature folder keeps its page with it. Outside the
+  folder only `nav.kt` (the page) and `WorkbenchLayout` (the rig and the tab) import any of it.
 
 ## Decide before implementing
 
 - **D1, the laptop map** as drawn in section 3: Y to - white, S D G H J L Ö black, the upper rows functions (no
   second octave on the Q row, as asked). Arrows for octave and velocity, Space, Tab, Esc.
 - **D2, the pads**: drum hits by default (proposal), or notes as today. Drum hits need the realtime path to load
-  samples, which it does not yet (`KlangRealtimeVoicePlayback` starts voices only); the kit preloads on mount.
+  samples, which it does not yet (`KlangRealtimeVoicePlayback` starts voices only); the kit preloads with the rig.
 - **D3, octave stays in each source** (proposal: as the hardware does it) or one playground-wide transpose for all.
 - **D4, the first key**: starts the Motor and plays once it is up (proposal), or only starts it.
-- **D5, the laptop keyboard while a KeyLab is connected**: folded to a strip that opens (proposal), or always full.
-- **D6, the names**: `ControlEvent`, `Routing`, `PlayFunction`, `NoteVoicing`, `LaptopKeys`.
+- **D5, the laptop keyboard in the tool while a KeyLab is connected**: folded to a strip that opens (proposal), or
+  always full.
+- **D6, the names**: `ControlEvent`, `Routing`, `PlayFunction`, `NoteVoicing`, `LaptopKeys`, `MidiRig`, `MidiTool`.
 - **D7, one play-code input** with the instruments by name and a loadout (section 6): the maintainer's proposal;
   open only in its detail (the built-in picker becomes part of the instrument list; old saves converted once).
+- **D8, giving the tool the focus**: a click into it (v1), and a key from anywhere. Proposal: the MIDI tab's key in
+  the strip opens the bottom panel on the MIDI tab and focuses it; a keyboard shortcut waits until one is free
+  of the browser's and the pages' own.
 
 ## The work
 
@@ -244,10 +274,12 @@ should have a dedicated midi package for all ui and data in the frontend"): `io.
 1. `ControlEvent`, `NoteVoicing`, `Routing` in common code with specs; `MidiConnector` down to ports and bytes; the
    KeyLab and the generic profile; the page's `handle` speaks `ControlEvent` only. Audible change: the pads (D2).
 2. `LaptopKeys` and its drawing: `MidiPanel` learns key labels, the laptop keyboard is a panel value like the KeyLab's.
-3. Screen input on the drawn panels.
-4. The page layout of section 6: the docked play surface, the one play-code input, the instruments and the
-   loadout, the Motor started by the first key.
-5. Later, own tickets: editing the routing and learning a control; key switches and splits; a backing loop for
+3. Screen input on every drawn control (keys, pads, buttons, knobs, faders, wheels, the encoder).
+4. `MidiRig` app-wide and the MIDI tool in the bottom panel of every page, the laptop keys behind its focus, the
+   Motor started by the first key.
+5. The MIDI page as configuration (section 6): the one play-code input, the instruments and the loadout, the
+   devices, the routing, the event log and the monitor.
+6. Later, own tickets: editing the routing and learning a control; key switches and splits; a backing loop for
    play / stop.
 
 Specs per step: a profile turns bytes into the right events (pads, bank, buttons, encoder, bend, sustain); the laptop
@@ -256,15 +288,19 @@ source's `AllUp`, the same note from two sources); the routing lookup order. New
 
 ## Acceptance
 
-- Without MIDI hardware (Firefox, Safari, a phone) the page shows a keyboard that plays from the laptop keys and by
-  touch.
+- On any page, a song running, the KeyLab and the laptop keys (the MIDI tool focused) play along; moving to another
+  page mid-chord leaves the notes as they were.
+- Without MIDI hardware (Firefox, Safari, a phone) every page's bottom panel has a keyboard that plays from the laptop
+  keys and by touch.
+- A click or a touch on any drawn control does what that control does on the hardware.
 - The KeyLab plays as today; its pads do what the routing says; its drawing lights from the translated events.
-- Typing in an editor never plays a note; switching the tab while holding a key leaves no note hanging.
-- No MIDI type reaches the page: it handles `ControlEvent`s only.
+- With the MIDI tool not focused no key plays a note; switching the tab while holding a key leaves no note hanging.
+- No MIDI type reaches a page or the tool: they handle `ControlEvent`s only.
 
 ## History
 
 - 2026-11-01: created. Designed from the maintainer's ask; the code read: `MidiPlaygroundPage`, `MidiConnector`,
-  `MidiDevicePanel`, `MidiPanel`, `RealtimePlaybackCtrl`, KLANG-00159, KLANG-00160, KLANG-00228. The same day: the
-  one package for the frontend's MIDI code (section 7, step 0), the maintainer's word. Then the one play-code input, the
-  instruments with a loadout, and the play surface docked to the bottom (section 6), the maintainer's ideas.
+  `MidiDevicePanel`, `MidiPanel`, `RealtimePlaybackCtrl`, KLANG-00159, KLANG-00160, KLANG-00228. The same day, the
+  maintainer's ideas: one package for the frontend's MIDI code (section 7, step 0); the one play-code input, the
+  instruments with a loadout, the play surface docked; then the rig app-wide, the MIDI tool in the bottom panel of
+  every page, the keys behind its focus, every drawn control clickable, the MIDI page for configuring (section 6).
