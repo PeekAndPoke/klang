@@ -143,11 +143,11 @@ The functions, v1 (each one small, each one a branch of an exhaustive `when`):
 
 | Function | Does | Default from |
 |---|---|---|
-| Play the instrument | a note through the applied Ignitor and mapper (today's `eventsFor`) | every keybed |
+| Play the instrument | a note through the play code (section 6; today's `eventsFor`) | every keybed |
 | Hit pad n | a drum sound per pad: bd sd hh oh / cp rim lt cr (D2) | KeyLab pads, 1-4 Q-R |
 | Sustain | held notes keep sounding after their key is up, until sustain is up | Tab, CC 64 |
 | Panic | `AllUp` for every source, every voice released | Esc; CC 120 / 123 as today |
-| Sound -/+ | the previous / next built-in sound or saved instrument | main encoder, Ü + |
+| Instrument -/+ | the previous / next instrument of the loadout (section 6) | main encoder, Ü + |
 | Knob / fader value | a value the next note reads at its onset; a ringing note follows after KLANG-00160 | knobs, faders, mod wheel |
 | Play / stop | nothing in v1 (the light only); later a backing loop or a metronome | Space, the KeyLab's Play and Stop |
 
@@ -166,22 +166,41 @@ is two voices, as two channels are today.
 ```
 +- Midi Playground ------------------------------------------------------------------------------+
 | [o Motor running]   inputs: [KeyLab 49 mk3 o] [Laptop keys o] [Screen o]     [Panic]           |
-+------------------------------------------------------------------------------------------------+
-| PLAY SURFACE                                                                                   |
-|  KeyLab drawing (only while one is connected; lit from ControlEvents)                          |
-|  Laptop keyboard (always; folds to a strip while a hardware keyboard is connected, D5)         |
-|    pads [1][2][3][4] [Q][W][E][R]   oct <- C4 ->   vel v 96 ^   Tab sustain   Esc panic        |
-|    keybed with the letters on the keys, lit while held                                         |
-+-----------------------------------------------------+------------------------------------------+
-| INSTRUMENT                                          | NOW PLAYING                              |
-|  [Warm saw v] [Apply] [Save] [Delete]               |  C4 96  E4 80  G4 88   pad 3             |
-|  Ignitor editor        |  Mapper editor             |  sustain held                            |
-|  Built-in sound (when the Ignitor is blank)         |                                          |
-+-----------------------------------------------------+------------------------------------------+
++-----------------------------------------------+------------------------------------------------+
+| PLAY CODE                           [Apply]   | INSTRUMENTS                    [New instrument] |
+|  x => x                                       |  Loadout: [1 warmSaw x] [2 pad x] [3 supersaw x] |
+|    .sound(warmSaw)                            |  Yours:   warmSaw  pad  lead   (drag, click)     |
+|    .reverb(wet = 0.2)                         |  let warmSaw = <its Ignitor editor>              |
+|                                               |  Built-in: supersaw sine sawtooth ... pluck      |
++-----------------------------------------------+------------------------------------------------+
+| NOW PLAYING   C4 96  E4 80  G4 88   pad 3   sustain held                                       |
 | UNDER THE HOOD (folded)   [Events] [Routing] [MIDI monitor]                                    |
++================================================================================================+
+| PLAY SURFACE, docked to the bottom of the window, never scrolls away                           |
+|  KeyLab drawing (only while one is connected; lit from ControlEvents)                          |
+|  Laptop keys: pads [1][2][3][4] [Q][W][E][R] | functions | keybed with the letters on the keys |
 +------------------------------------------------------------------------------------------------+
 ```
 
+- **The play surface is docked** to the bottom of the window (the maintainer, 2026-11-01: "the input device it fixed
+  to the bottom of the screen and does not scroll"). It is kept low: pads, functions and keybed side by side; the
+  page above scrolls and ends with room for the dock, so nothing hides under it.
+- **One input for what a key plays** (D7, the maintainer's proposal, 2026-11-01: `x => x.sound(myInst).kat()`): a
+  function from the key's one-note pattern to what sounds, the left half of the page. It replaces today's two
+  inputs (Ignitor and mapper). Every instrument on the right is in scope by its name, the way a song writes
+  `let pad = Ign.supersaw(...)` and then `.sound(pad)`; a built-in is a name in quotes, `.sound("supersaw")`.
+  `startEvents` already announces an inline Ignitor before its voice; the registry finds one it knows, so only the
+  frontend builds it again per note.
+- **The instruments**, the right half: yours (a name that is a KlangScript identifier, and its Ignitor, edited below
+  the list when selected) and the built-ins. A click plays one: it rewrites the play code's `.sound(...)`.
+- **The loadout** (the maintainer, 2026-11-01: "We would also need a loadout again, so the user can configure the
+  instruments that will be switched through by the change instrument inputs"): the instruments that
+  "instrument -/+" steps through (Ü +, the KeyLab's main encoder). Filled by drag and drop from the list, as the
+  Looks page equips; a slot takes a drop to replace it, the row's end a drop to add, × removes. An empty loadout
+  steps through all of them.
+- Saved in localStorage like `MidiInstrumentStorage` today: the instruments, the play code, the loadout. An old
+  save (an Ignitor and a mapper) loads once as an instrument plus a play code with `.sound(<it>)` in front of the
+  mapper.
 - The page renders at once. The keyboard is there before the Motor: the first key or click is the user gesture that
   starts it (`keydown` already wakes the AudioContext, `_audio_context_wake.kt`). D4 decides whether that first note
   plays once the Motor is up.
@@ -212,6 +231,8 @@ should have a dedicated midi package for all ui and data in the frontend"): `io.
 - **D4, the first key**: starts the Motor and plays once it is up (proposal), or only starts it.
 - **D5, the laptop keyboard while a KeyLab is connected**: folded to a strip that opens (proposal), or always full.
 - **D6, the names**: `ControlEvent`, `Routing`, `PlayFunction`, `NoteVoicing`, `LaptopKeys`.
+- **D7, one play-code input** with the instruments by name and a loadout (section 6): the maintainer's proposal;
+  open only in its detail (the built-in picker becomes part of the instrument list; old saves converted once).
 
 ## The work
 
@@ -220,7 +241,8 @@ should have a dedicated midi package for all ui and data in the frontend"): `io.
    KeyLab and the generic profile; the page's `handle` speaks `ControlEvent` only. Audible change: the pads (D2).
 2. `LaptopKeys` and its drawing: `MidiPanel` learns key labels, the laptop keyboard is a panel value like the KeyLab's.
 3. Screen input on the drawn panels.
-4. The page layout of section 6, the Motor started by the first key.
+4. The page layout of section 6: the docked play surface, the one play-code input, the instruments and the
+   loadout, the Motor started by the first key.
 5. Later, own tickets: editing the routing and learning a control; key switches and splits; a backing loop for
    play / stop.
 
@@ -240,4 +262,5 @@ source's `AllUp`, the same note from two sources); the routing lookup order. New
 
 - 2026-11-01: created. Designed from the maintainer's ask; the code read: `MidiPlaygroundPage`, `MidiConnector`,
   `MidiDevicePanel`, `MidiPanel`, `RealtimePlaybackCtrl`, KLANG-00159, KLANG-00160, KLANG-00228. The same day: the
-  one package for the frontend's MIDI code (section 7, step 0), the maintainer's word.
+  one package for the frontend's MIDI code (section 7, step 0), the maintainer's word. Then the one play-code input, the
+  instruments with a loadout, and the play surface docked to the bottom (section 6), the maintainer's ideas.
