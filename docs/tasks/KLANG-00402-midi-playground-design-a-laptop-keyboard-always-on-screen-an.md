@@ -195,7 +195,8 @@ is two voices, as two channels are today.
 - **The instruments**, the right half, a view of the code, not a second editor: yours are the play code's top-level
   `let`s whose value is an Ignitor, then the built-ins. After Apply, the names come from the parsed script's
   top-level `let`s (a small AST walker, in `klangscript` where walkers live) and each value from
-  `KlangScriptEngine.getVariable(name)`; the engine has no call that lists its bindings. A click plays one: it rewrites the first `.sound(...)` of the play code.
+  `KlangScriptEngine.getVariable(name)`; the engine has no call that lists its bindings. A click plays one: it
+  rewrites the first `.sound(...)` of the play code.
   "New instrument" adds a `let` at the top.
 - **The loadout** (the maintainer, 2026-11-01: "We would also need a loadout again, so the user can configure the
   instruments that will be switched through by the change instrument inputs"): the instruments that
