@@ -74,11 +74,13 @@ fun Tag.LooksPage(slot: Int?) = comp(
  * The look editor (KLANG-00382): the equip grid and the bench side by side, and below them the look clicked last, its
  * roles in tiles by [KlangRoleGroup].
  *
- * **Equipping** is pick and place, as games equip (the maintainer, 2026-10-28: "Like equipping in a video game"): a
- * click takes a look in hand, a click on a slot puts it there ([KlangLoadout.place]), the bench takes it off. It is
- * the mouse's, the keyboard's and the touch screen's way at once. A look can also be dragged onto a slot, or from a
- * slot onto the bench, with Kraft's drag and drop (ULTRA-00265): a drop does what the two clicks would, and selects
- * the look dropped, as the first click does.
+ * **Equipping** is drag and drop, with Kraft's (ULTRA-00265): a look dragged onto a slot goes there
+ * ([KlangLoadout.place], a swap from another slot), one dragged off its slot onto the bench comes off. A drop leaves
+ * the selection as it is (the maintainer, 2026-10-31: "the drop should not call select()"). While a look is dragged,
+ * the place under the pointer lights up ([DROP_LIGHT], [DROP_WASH]), no ring. A click on a look shows it for editing
+ * (the gold ring); the pick and place by clicks of 2026-10-28 is gone (the maintainer, 2026-10-31: "remove the "in
+ * hand" logic completely. Say somewhere "use drag and drop""). Only the drawer's "+" still fills by click: its slot
+ * waits ([target]), and a look clicked on the bench goes there.
  *
  * **Live, then back:** while the page is open the app wears the look being edited, its draft included
  * ([KlangTheme.preview]); leaving, it goes back to the look worn. **Apply** keeps the draft in the look, **Wear it**
@@ -102,10 +104,7 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
     /** The look clicked last, shown below for editing. */
     private var selectedId: String by value(KlangTheme.worn.id)
 
-    /** The look taken in hand, to be placed on a slot or the bench; null for none. */
-    private var inHand: String? by value(null)
-
-    /** An empty slot waiting to be filled by the next look picked (from the drawer's "+"). */
+    /** An empty slot waiting to be filled by the next look clicked on the bench (from the drawer's "+"). */
     private var target: Int? by value(props.slot?.takeIf { it in 0 until KlangLoadout.SIZE })
 
     /** The selected look's roles as edited, not applied yet. */
@@ -139,7 +138,7 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
             onUnmount { KlangTheme.endPreview() }
         }
 
-        // Every slot takes a look dragged from the bench or another slot (a swap, as the click's), the bench one
+        // Every slot takes a look dragged from the bench or another slot (a swap from another slot), the bench one
         // dragged off a slot
         for (slot in 0 until KlangLoadout.SIZE) {
             dropPlace(name = "slot-$slot", accepts = { it.source != slot }) { look -> equip(look.id, slot) }
@@ -156,12 +155,8 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
             onEnter { dropOver = name }
             onLeave { if (dropOver == name) dropOver = null }
             onDragStop { dropOver = null }
-            onDrop { drag ->
-                drop(drag.payload)
-                inHand = null
-                // As the click that takes a look in hand: the look dropped is the one shown for editing
-                shelf.byId(drag.payload.id)?.let { select(it) }
-            }
+            // The selection stays: a drop only moves a look
+            onDrop { drag -> drop(drag.payload) }
         }
     }
 
@@ -195,58 +190,27 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
         Drafts.keep(selected, name = draftName, values = draft)
     }
 
-    /** A click on a look, in a slot ([slot]) or on the bench (null). */
+    /** A click on a look, in a slot ([slot]) or on the bench (null): shown for editing; a waiting slot takes a bench look. */
     private fun pick(look: KlangLookPreset, slot: Int?) {
-        val hand = inHand
         val waiting = target
 
-        when {
-            hand == look.id -> inHand = null
-
-            hand != null && slot != null -> equip(hand, slot)
-
-            waiting != null && slot == null -> {
-                equip(look.id, waiting)
-                select(look)
-            }
-
-            else -> {
-                inHand = look.id
-                select(look)
-            }
+        if (waiting != null && slot == null) {
+            equip(look.id, waiting)
         }
-    }
 
-    /** A click on an empty slot: the look in hand goes there, else the slot waits for the next look picked. */
-    private fun pickEmpty(slot: Int) {
-        val hand = inHand
-
-        if (hand != null) {
-            equip(hand, slot)
-        } else {
-            target = if (target == slot) null else slot
-        }
+        select(look)
     }
 
     /**
-     * [id] on [slot], by click or by drop: nothing stays in hand, and a slot that waited for a look is filled, so it
-     * waits no more (else the next look picked would take that slot from the one just placed).
+     * [id] on [slot], by a drop or onto the waiting slot: a slot that waited for a look is filled, so it waits no more
+     * (else the next look clicked on the bench would take that slot from the one just placed).
      */
     private fun equip(id: String, slot: Int) {
         KlangLookShelf.place(id, slot)
-        inHand = null
 
         if (target == slot) {
             target = null
         }
-    }
-
-    /** The look in hand off its slot, to the bench. */
-    private fun toBench() {
-        val hand = inHand ?: return
-
-        shelf.loadout.slotOf(hand)?.let { KlangLookShelf.unequip(it) }
-        inHand = null
     }
 
     private fun apply(): KlangLookPreset {
@@ -318,11 +282,6 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
                     if (yes) {
                         KlangLookShelf.delete(look.id)
                         Drafts.forget(look.id)
-
-                        // Not left in hand: a slot clicked next would take an id no look has any more
-                        if (inHand == look.id) {
-                            inHand = null
-                        }
 
                         if (KlangTheme.worn.id == look.id) {
                             KlangTheme.choose(KlangLooks.Default)
@@ -455,9 +414,9 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
                     put("gap", "8px")
                     put("border-radius", "var(--kl-radius-domed)")
 
+                    // A look dragged off its slot over the bench: a faint wash, no ring
                     if (dropOver == "bench") {
-                        put("outline", "2px dashed var(--kl-focus)")
-                        put("outline-offset", "4px")
+                        put("background", DROP_WASH)
                     }
                 }
                 attributes[DROP_ATTR] = "bench"
@@ -466,26 +425,23 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
                     renderLook(look, slot = null)
                 }
 
-                // The bench takes a look in hand off its slot
-                val hand = inHand
-
-                if (hand != null && shelf.loadout.slotOf(hand) != null) {
-                    dashedKey(label = "To the bench", action = { toBench() })
-                }
-
                 dashedKey(label = "+ New look", action = { create(name = "Mine", values = KlangTheme.worn.values) })
             }
         }
     }
 
     private fun FlowContent.renderLook(look: KlangLookPreset, slot: Int?) {
-        val hand = inHand == look.id
+        val chosen = look.id == selectedId
 
         button(type = ButtonType.button) {
             key = "look-${look.id}"
             title = look.name
-            attributes["aria-pressed"] = hand.toString()
-            attributes["aria-label"] = look.name + (if (hand) ", in hand" else "")
+            // The look shown for editing: the current one of the choice, not a toggle (a click does not undo it)
+            if (chosen) {
+                attributes["aria-current"] = "true"
+            }
+
+            attributes["aria-label"] = look.name
             slot?.let { attributes[DROP_ATTR] = "slot-$it" }
             onClick { pick(look, slot) }
             // A drag starts past a few pixels; a press that stays put is the click above
@@ -514,15 +470,15 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
                 put("-webkit-user-select", "none")
                 put("-webkit-touch-callout", "none")
 
-                if (look.id == selectedId) {
+                if (chosen) {
                     put("outline", "2px solid var(--kl-lamp-on)")
                     put("outline-offset", "1px")
                 }
 
-                // In hand, or a dragged look over its slot: a dashed ring in the focus blue, never the trail's gold
-                if (hand || (slot != null && dropOver == "slot-$slot")) {
-                    put("outline", "2px dashed var(--kl-focus)")
-                    put("outline-offset", "3px")
+                // A dragged look over its slot: the slot lights up, no ring, so it does not look picked (the maintainer,
+                // 2026-10-31: "This should not happen when dragging")
+                if (slot != null && dropOver == "slot-$slot") {
+                    put("filter", DROP_LIGHT)
                 }
             }
 
@@ -584,23 +540,34 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
     private fun FlowContent.renderEmptySlot(slot: Int) {
         val waiting = target == slot
 
-        button(type = ButtonType.button) {
+        // Not a key: only a drop fills it (or a bench look clicked while it waits, from the drawer's "+")
+        val name = if (waiting) "Empty slot, waiting for a look" else "Empty slot"
+
+        div {
             key = "slot-$slot"
-            attributes["aria-label"] = if (waiting) "Empty slot, waiting for a look" else "Empty slot"
+            title = name
             attributes[DROP_ATTR] = "slot-$slot"
-            onClick { pickEmpty(slot) }
 
             css {
                 put("height", "56px")
                 put("border-radius", "var(--kl-radius-domed)")
-                put("border", "1px dashed " + if (waiting || dropOver == "slot-$slot") "var(--kl-focus)" else "var(--kl-cap-light)")
-                put("background", "transparent")
+                put("border", "1px dashed " + if (waiting) "var(--kl-focus)" else "var(--kl-cap-light)")
+                // A dragged look over it: a faint wash
+                put("background", if (dropOver == "slot-$slot") DROP_WASH else "transparent")
+                put("display", "flex")
+                put("align-items", "center")
+                put("justify-content", "center")
                 put("color", "var(--kl-ink-label)")
                 put("font-size", "16px")
-                put("cursor", "pointer")
             }
 
-            +"+"
+            // A plain div's title is not read out: the name goes in as hidden text
+            span(classes = KlangControlStyles.visuallyHidden.toString()) { +name }
+
+            span {
+                attributes["aria-hidden"] = "true"
+                +"+"
+            }
         }
     }
 
@@ -626,7 +593,6 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
     }
 
     private fun FlowContent.renderHint() {
-        val hand = inHand?.let { shelf.byId(it) }
         val waiting = target
 
         div {
@@ -638,9 +604,8 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
             }
 
             when {
-                hand != null -> +"\"${hand.name}\" in hand: click a slot to equip it, the bench to take it off, the look again to put it down."
-                waiting != null -> +"Slot ${waiting + 1} waits: click a look on the bench, or make a new one, to fill it."
-                else -> +"Click a look to take it in hand, then a slot to equip it, or drag it there. The drawer shows the eight equipped."
+                waiting != null -> +"Slot ${waiting + 1} waits: click a look on the bench, drag one there, or make a new one."
+                else -> +"Use drag and drop: drag a look onto a slot to equip it, onto the bench to take it off. Click a look to edit it."
             }
         }
     }
@@ -1267,7 +1232,11 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
                     put("height", "${Motor.OSCILLOSCOPE_HEIGHT_REM}rem")
                 }
 
-                Oscilloscope(player = Player.player, strokeColor = Color(look[KlangRole.ScopeTrace]), preview = SCOPE_FRAME)
+                Oscilloscope(
+                    player = Player.player,
+                    strokeColor = Color(look[KlangRole.ScopeTrace]),
+                    preview = SCOPE_FRAME,
+                )
             }
 
             "screen" -> div {
@@ -1393,6 +1362,12 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
 
 /** The attribute that names a place a look can be dropped on: `slot-<n>` or `bench`. */
 private const val DROP_ATTR = "data-look-drop"
+
+/** A look under a dragged one, where the drop would land: a little brighter, no ring. */
+private const val DROP_LIGHT = "brightness(1.35)"
+
+/** Where a dragged look would land, when no look is there to light up: the focus blue, faint. */
+private const val DROP_WASH = "color-mix(in srgb, var(--kl-focus) 18%, transparent)"
 
 /**
  * The drafts not applied yet, per look, kept while the app runs (KLANG-00382): leaving the editor keeps them, coming

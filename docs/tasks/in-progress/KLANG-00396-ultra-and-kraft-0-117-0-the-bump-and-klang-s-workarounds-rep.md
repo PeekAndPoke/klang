@@ -1,7 +1,8 @@
 # KLANG-00396: Ultra and Kraft 0.117.0: the bump, and klang's workarounds replaced by what Ultra now has
 
-> **Status (2026-10-31): IN PROGRESS.** Steps 1 to 10 done; the Looks page's drag waits for the maintainer's look;
-> its long press on touch waits for ULTRA-00287 (step 9).
+> **Status (2026-10-31): IN PROGRESS.** Steps 1 to 10 done; the Looks page's drag reworked after the maintainer's
+> look (drag and drop only, no select on a drop, no ring while dragging); its long press on touch waits for
+> ULTRA-00287 (step 9).
 >
 > **Part of:** KLANG-00334 (UI workbench: the Motor-centred layout, tool windows and the first-visit trail)
 
@@ -47,14 +48,19 @@ core).
    only while its page is mounted, and the drafts outlive the page. The KDoc says so.
 8. **Specs on the app's router** (ULTRA-00243): `LearnPagesSpec` goes to a place with `router.navToUri` and
    `router.awaitUri` inside TestBed's scope, instead of writing `window.location.hash`.
-9. **Drag in the Looks page** (ULTRA-00265): a look dragged onto a slot (a swap from a slot, as the click's), or from
-   a slot onto the bench, beside pick and place; the place under the pointer gets the dashed ring, a chip follows
-   the pointer. Every placement, click or drop or a new look, goes through one `equip`: nothing stays in hand, and a
-   waiting slot that is filled waits no more. Open for the maintainer: the whole tile is the drag's handle on touch
+9. **Drag in the Looks page** (ULTRA-00265): a look dragged onto a slot (a swap from another slot), or from a slot
+   onto the bench; the place under the pointer lights up, a chip follows the pointer. Every placement, a drop, a
+   bench look clicked onto the waiting slot or a new look, goes through one `equip`, and a waiting slot that is
+   filled waits no more. Open for the maintainer: the whole tile is the drag's handle on touch
    (`touch-action: none`), so a swipe that starts on a tile drags rather than scrolls; Kraft's advice is a grip.
    The maintainer, 2026-10-31: "We could initiate the drag with a long press?" Kraft's dnd cannot yet (no hold
    before the drag, nothing that holds off the browser's pan): asked of Ultra as ULTRA-00287 (IDEA). Until it lands
    the whole tile stays the handle; then the tile goes to `touch-action: pan-y` and hands the hold to `startDrag`.
+   The maintainer, 2026-10-31, after a look: "the drop should not call select()", and no ring while dragging: the
+   look under the pointer brightens, an empty slot or the bench gets a faint blue wash. Then: "remove the "in hand"
+   logic completely. Say somewhere "use drag and drop"": equipping is drag and drop only, a click shows a look for
+   editing (the gold ring), the hint says "Use drag and drop"; the drawer's "+" keeps its waiting slot, which a bench
+   look clicked fills. The keyboard loses its way to equip (pick and place was it).
 10. **The screen stays awake while something plays** (ULTRA-00275; the maintainer, 2026-10-31: whenever a song plays,
     not only in the visuals; "these kinds of wirings should always be done through the stream"). `KlangPlayer.playbacks`
     is its active playbacks, their one store (changed under its lock), and `KlangPlayer.playing` says whether a cyclic
