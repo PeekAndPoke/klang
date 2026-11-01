@@ -5,12 +5,12 @@
 
 package io.peekandpoke.klang.comp
 
-import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KlangPatternEvent
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_engine.KlangRealtimeVoicePlayback
+import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.kraft.utils.launch
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource

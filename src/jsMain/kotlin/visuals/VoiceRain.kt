@@ -5,8 +5,8 @@
 
 package io.peekandpoke.klang.visuals
 
-import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
+import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.spine.UiWork
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.components.Component

@@ -6,10 +6,10 @@
 package io.peekandpoke.klang.visuals
 
 import io.peekandpoke.klang.BuiltInSongs
-import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.Song
 import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
 import io.peekandpoke.klang.comp.KlangCodePlaybackCtrl
+import io.peekandpoke.klang.spine.Player
 
 /**
  * Klangamp's deck: the one player its playlists play the built-in songs on (the maintainer, 2026-10-29: "a playlist of

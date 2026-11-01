@@ -6,7 +6,7 @@
 package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.KlangGuiDance
-import io.peekandpoke.klang.Player
+import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.spine.UiWork
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.comp.KlangGauge

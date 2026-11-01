@@ -5,7 +5,7 @@
 
 package io.peekandpoke.klang.comp
 
-import io.peekandpoke.klang.Player
+import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp

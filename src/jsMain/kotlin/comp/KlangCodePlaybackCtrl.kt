@@ -5,10 +5,10 @@
 
 package io.peekandpoke.klang.comp
 
-import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
 import io.peekandpoke.klang.audio_engine.play
+import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.sprudel.SprudelDiagnostic
 import io.peekandpoke.klang.sprudel.SprudelDiagnostics
 import io.peekandpoke.klang.sprudel.SprudelPattern

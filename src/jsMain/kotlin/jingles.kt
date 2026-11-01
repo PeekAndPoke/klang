@@ -8,6 +8,7 @@ package io.peekandpoke.klang
 import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.audio_engine.playOnce
+import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.sprudel.SprudelPattern
 
 /** This jingle's code as a pattern; null, and said in the console, when it does not compile. */

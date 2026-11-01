@@ -5,8 +5,8 @@
 
 package io.peekandpoke.klang.comp
 
-import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.ui.comp.KlangScreen
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent

@@ -5,9 +5,9 @@
 
 package io.peekandpoke.klang.comp
 
-import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_engine.KlangDiagnostics
 import io.peekandpoke.klang.audio_engine.KlangPlayer
+import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.spine.UiWork
 import io.peekandpoke.klang.ui.comp.KlangLamp
 import io.peekandpoke.klang.ui.comp.KlangScreen

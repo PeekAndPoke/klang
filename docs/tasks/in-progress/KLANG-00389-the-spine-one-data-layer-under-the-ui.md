@@ -1,14 +1,12 @@
 # KLANG-00389: The Spine: one data layer under the UI
 
-> **Status (2026-10-29): NOT SCHEDULED.** Asked for by the maintainer (2026-10-29: "we need to do a sweep through the
-> whole ui and check how data streams are flowing. The whole data storage and data flow must all reside in a layer
-> independent from the ui... the SPINE ... the ui can send data there and receives from there").
+> **Status (2026-11-01): IN PROGRESS.** "Player in the Spine", step 1 done: `Player` moved as it is to
+> `spine/Player.kt`, its volume store to `spine/storage/`. Next: step 2, typed ownership.
 >
 > **Progress (2026-10-29):** the package `io.peekandpoke.klang.spine` exists with its first parts: `VisualState` (the
 > lamp, the song open on a page) and `UiWork` (the UI rests while the window has no attention, from Kraft's
-> `WindowController`, which the Spine hands to the app; and the one animation frame stream, KLANG-00388). The sweep (work step 1) is done, below. Next: the design (step 2)
-> with the maintainer, starting with `Player` (the maintainer, 2026-10-29: "I think the global Player object should also
-> move to the spine").
+> `WindowController`, which the Spine hands to the app; and the one animation frame stream, KLANG-00388). The sweep
+> (work step 1) is done, below. The design (step 2) goes area by area with the maintainer, `Player` first.
 
 ## Why this exists
 
@@ -230,3 +228,7 @@ next, the MIDI rig first (KLANG-00402). A global object outside the Spine is a d
   point for all global state the app has" ("The aim"). Asked while designing the MIDI rig (KLANG-00402), which lives
   in the Spine too.
 - 2026-11-01: decided, the stores in `spine/storage/`; new stores go there at once ("Persistence").
+- 2026-11-01: IN PROGRESS. Player moved into the Spine (step 1)
+- 2026-11-01: "Player in the Spine", step 1: `Player` moved as it is (name, globals, behaviour kept) to
+  `spine/Player.kt`, `OutputVolumeStorage` to `spine/storage/` (the maintainer: "Ok please go ahead!"). The name
+  (`Player` or `Playback`) and a Kraft attribute stay open for the maintainer; the sweep above keeps its old paths.

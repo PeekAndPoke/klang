@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.visuals
 
-import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.comp.Motor
 import io.peekandpoke.klang.comp.MotorBackground
 import io.peekandpoke.klang.comp.MotorReadings
@@ -15,6 +14,7 @@ import io.peekandpoke.klang.comp.PlayerMiniStats
 import io.peekandpoke.klang.comp.ScreenRect
 import io.peekandpoke.klang.comp.Spectrumeter
 import io.peekandpoke.klang.comp.VolumeKnob
+import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.spine.SwingingLamp
 import io.peekandpoke.klang.spine.VisualState
 import io.peekandpoke.klang.ui.comp.KlangGauge

@@ -5,9 +5,9 @@
 
 package io.peekandpoke.klang.pages
 
-import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_engine.playOnce
 import io.peekandpoke.klang.audio_fe.samples.Samples
+import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.sprudel.lang.adsr
 import io.peekandpoke.klang.sprudel.lang.bank
 import io.peekandpoke.klang.sprudel.lang.n

@@ -5,7 +5,7 @@
 
 package io.peekandpoke.klang.comp
 
-import io.peekandpoke.klang.Player
+import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.spine.UiWork
 import io.peekandpoke.klang.ui.comp.KlangWorkbench
 import io.peekandpoke.klang.ui.feel.KlangRole

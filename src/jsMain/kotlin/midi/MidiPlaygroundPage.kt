@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.midi
 
-import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KlangPatternEvent
 import io.peekandpoke.klang.audio_bridge.SampleRequest
@@ -15,6 +14,7 @@ import io.peekandpoke.klang.script.runtime.FunctionValue
 import io.peekandpoke.klang.script.runtime.convertFunctionToKotlin
 import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.spine.MidiSettings
+import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.lang.note
 import io.peekandpoke.klang.sprudel.lang.sound

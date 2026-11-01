@@ -6,13 +6,13 @@
 package io.peekandpoke.klang.pages
 
 import io.peekandpoke.klang.Nav
-import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.comp.Motor
 import io.peekandpoke.klang.comp.Oscilloscope
 import io.peekandpoke.klang.comp.Spectrumeter
 import io.peekandpoke.klang.layouts.MenuPickUp
 import io.peekandpoke.klang.layouts.menuLessonTile
 import io.peekandpoke.klang.pages.docs.tutorials.soundDesignBasicsTrack
+import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.storage.LookStorage
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangControlStyles

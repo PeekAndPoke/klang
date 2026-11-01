@@ -7,11 +7,11 @@ package io.peekandpoke.klang.pages
 
 import io.peekandpoke.klang.BuiltInJingles
 import io.peekandpoke.klang.Jingle
-import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
 import io.peekandpoke.klang.comp.PlayableCodeExample
 import io.peekandpoke.klang.compile
 import io.peekandpoke.klang.playJingle
+import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.kraft.components.NoProps

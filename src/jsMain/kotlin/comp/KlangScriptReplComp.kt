@@ -5,11 +5,11 @@
 
 package io.peekandpoke.klang.comp
 
-import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.runtime.NullValue
 import io.peekandpoke.klang.script.runtime.RuntimeValue
 import io.peekandpoke.klang.script.stdlibLib
+import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.ui.codemirror.KlangScriptEditorComp
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.components.Component

@@ -6,7 +6,7 @@
 package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.MasterVolumeScale
-import io.peekandpoke.klang.Player
+import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.comp.KlangKnob
 import io.peekandpoke.klang.workshop.keys.OnKey

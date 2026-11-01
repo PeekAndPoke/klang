@@ -8,7 +8,6 @@ package io.peekandpoke.klang.pages
 import io.peekandpoke.klang.BuiltInJingles
 import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.Nav
-import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_engine.KlangBenchmark
 import io.peekandpoke.klang.comp.KlangCodePlaybackCtrl
 import io.peekandpoke.klang.comp.MotorBackground
@@ -18,6 +17,7 @@ import io.peekandpoke.klang.comp.motorBackgroundRef
 import io.peekandpoke.klang.compile
 import io.peekandpoke.klang.fs
 import io.peekandpoke.klang.playJingle
+import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.spine.SwingingLamp
 import io.peekandpoke.klang.spine.UiWork
 import io.peekandpoke.klang.spine.VisualState
