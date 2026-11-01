@@ -179,12 +179,13 @@ next, the MIDI rig first (KLANG-00402). A global object outside the Spine is a d
   UI reaches it (a Kraft attribute set at the app's root, as `addons` and `keys` are, rather than globals).
 - **Sending:** plain functions on the Spine, or commands as data. Who may write what.
 - **Persistence:** the stores under `storage/` move behind the Spine; what is saved, when, and how a saved value is
-  read back on start. Proposed (the maintainer asked, 2026-11-01: "Storage should be a subfolder of the spine,
-  maybe"): `src/jsMain/kotlin/spine/storage/`, package `io.peekandpoke.klang.spine.storage`, with all nine stores and
+  read back on start. Decided (the maintainer, 2026-11-01: "Storage should be a subfolder of the spine, maybe", then
+  "yes new stores straight into spine/storage"): `src/jsMain/kotlin/spine/storage/`, package `io.peekandpoke.klang.spine.storage`, with all nine stores and
   `StorageKeys`. The stores are the Spine's own: only the Spine's areas read and write them, the UI asks the area
   (the look, the volume, the song's code). Kotlin has no package-private, so a spec keeps it: no file outside
   `spine/` imports `spine.storage`. The Dev Storage page's reset then goes through the Spine, which resets the
-  holders in memory too (the sweep's "the stores that save on change write the old values back").
+  holders in memory too (the sweep's "the stores that save on change write the old values back"). A new store goes there
+  from the start (the first: KLANG-00403's `Recents`); the nine stores of `storage/` move with this ticket.
 - **Lifetimes:** per-playback and per-page state is freed when its owner ends (the standing rule: nothing allocates
   without a way to clean it up).
 - **Ultra:** what the Spine needs from Ultra's streams (a sampling operator, ULTRA-00267; one frame clock, KLANG-00388)
@@ -224,3 +225,4 @@ next, the MIDI rig first (KLANG-00402). A global object outside the Spine is a d
 - 2026-11-01: decided, the maintainer: "The global Player object should also live in the Spine. This is the collection
   point for all global state the app has" ("The aim"). Asked while designing the MIDI rig (KLANG-00402), which lives
   in the Spine too.
+- 2026-11-01: decided, the stores in `spine/storage/`; new stores go there at once ("Persistence").

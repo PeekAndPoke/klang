@@ -58,8 +58,8 @@ columns, and the look row (seven looks and an empty slot).
   saved in its storage; a page reports what it opened.
 - **The tutorial in progress:** `TutorialStorage` knows the finished lessons; the next one per track is derived.
 - **The MIDI loadout:** KLANG-00402.
-- **Search over docs, samples and actions:** check what the drawer's search covers today before building the
-  columns.
+- **Search:** the field searches nothing today (`WorkbenchLayout` keeps the text, nothing reads it). The index over
+  songs, docs, samples and actions is its own ticket, KLANG-00405; until then the field stays as it is.
 
 ## Decide before implementing
 
@@ -81,7 +81,7 @@ columns, and the look row (seven looks and an empty slot).
    `inert` under it; `SearchEverywhere` bound to open it (all in `klangui`, the kitchen sink's entry updated).
 2. The record of what was opened, in the Spine; "Pick up where you left off" reads it.
 3. The loadouts' section (looks now; MIDI with KLANG-00402).
-4. The search results in columns.
+4. The search results in columns, once KLANG-00405 has the index.
 
 ## Acceptance
 
