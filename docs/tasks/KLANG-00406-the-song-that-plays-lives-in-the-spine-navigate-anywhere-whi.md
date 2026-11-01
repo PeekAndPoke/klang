@@ -40,24 +40,45 @@ its signals and how long it has been heard. It is the one controller where today
   its own, owned by its page as today, and ends when its page goes.
 - **A new song stops the one before.** Live play (the MIDI rig, KLANG-00402) plays along with anything and is stopped
   by nothing but a panic.
-- **A code example makes the song step aside, and the song comes back** (D1; the maintainer asked: "should it just
-  fade out and when the example is done fade in again?"). Proposal:
-  - **Out:** the song's voices still waiting are cleared and the sounding ones released, so it ends on its own
-    release tails, a fade without a new gain in the engine (the wire has no per-playback gain today, checked
-    against `KlangCommLink.Cmd`).
-  - **Meanwhile:** the song's clock runs on (its scheduler is asked as ever, KLANG-00399's `tick`) but sends no
-    voices: it costs nothing to render, which matters on a phone.
-  - **Back:** when no example plays any more, the song comes in again at its next cycle, in time, as if it had played
-    on; its control state is there (the scheduler's catch-up keeps it).
-  - Should the release tails sound too abrupt: a per-playback gain in the engine for a real fade, its own ticket.
+- **A code example fades the song out, and in again after it** (D1, decided, the maintainer, 2026-11-01: "i would
+  not step aside, there might be a one minute long release tail... fade out over 2 seconds and in over 2 seconds
+  again"):
+  - **Out:** the song's gain goes to silence over 2 s; the song plays on underneath, in time, its voices and tails
+    included.
+  - **In:** when no example plays any more, its gain comes back over 2 s.
+  - **Needs a per-playback gain in the engine:** the wire has none today (checked against `KlangCommLink.Cmd`). A new
+    command (the playback, a target gain, a ramp in seconds) and a gain with a ramp on each playback's output before
+    the house master. It is engine and wire work: `audio_be`, `audio_bridge` and the codec specs, by the engine's
+    rules (`audio/CLAUDE.md`), agreed with Klang-Main-Dev, who works there.
+  - **The cost:** the faded song still renders. On a phone that is the song's load plus the example's; measure it
+    before deciding anything else.
+  - **The same gain serves the start page** (D2): its waiting song fades in on its own gain instead of the engine's
+    output volume, which ends one of the two writers of the volume KLANG-00389 found ("One writer of the volume").
 - **The logic and the state of all this live in the Spine** (the maintainer, 2026-11-01: "Logic and state handling
   for this should then also live in the spine"): which song is on the deck, which examples play, whether the song
-  stands aside, when it comes back. The pages only ask (play this example, stop it) and show what the Spine says.
+  is faded out, when it fades in. The pages only ask (play this example, stop it) and show what the Spine says.
 - **What lives where:** the deck and the song's state in the Spine; the edits in `SongStorage` (into
   `spine/storage/` with the other stores, KLANG-00389), as today saved while one types. The deck plays the code last
   sent to it, so a song edited and not yet updated plays on as it was, as on the page today.
 - **A reload ends it.** Audio needs a user gesture after a reload, so the song does not go on by itself; the
   now-playing line could offer to start it again (D3).
+
+## SongDeck
+
+The one owner of the real song that plays. In short, today's `KlangCodePlaybackCtrl` made once and kept by the
+Spine, with the song's identity and the fade added:
+
+- **What it holds:** which song (its id, built-in or yours, its title), the code it plays, the RPM, its state
+  (stopped, compiling, playing), the compile errors, the playback's signals (what the editor's highlights and the
+  visuals follow), how long the song has been heard.
+- **What one can ask it:** `play(song, code, rpm)` puts a song on (and stops the song before it); `update(code, rpm)`
+  changes the song that plays, live, as the song page's Update does today; `stop()`. From the lane's rules, not from
+  pages: `fadeOut()` and `fadeIn()` (2 s, D1).
+- **What it does itself:** compiles the code to a pattern (as `KlangCodePlaybackCtrl.runPlay` does today) and reports
+  the errors; starts the playback on the `Player` and ends it; publishes to `nowPlaying`.
+- **Who uses it:** the song page (opened on the song that plays it shows it and edits it; opened on another, its Play
+  calls `play`), Klang Amp's playlist (`play` with a built-in song), the Motor's now-playing line (title, time, stop),
+  the Stop key, the visuals.
 
 ## The Spine's playbacks
 
@@ -97,7 +118,7 @@ object Playbacks {
 ```
 
 - **The rules, in one place:** a new song stops the song before it; a new preview stops the preview before it; while a
-  preview plays the song stands aside and comes back in time after it (D1); live plays along with everything and
+  preview plays the song is faded out, playing on, and fades in after it (D1); live plays along with everything and
   stops for nothing but a panic.
 - **Handles, not `Any`:** a page asks a lane and gets a handle back (play, stop, its state as a stream); the handle
   ends with its owner (a preview's page unmounting stops it). This is KLANG-00389's typed ownership (its `Player`
@@ -109,14 +130,16 @@ object Playbacks {
 
 ## Decide before implementing
 
-- **D1, a code example while a song plays:** the song steps aside and comes back in time after the example
-  (proposal, as above), or it stops, or a real fade with an engine gain from the start.
-- **D2, the start page's waiting song:** on the same deck (proposal), or kept the start page's own as a jingle.
-- **D3, after a reload:** the now-playing line remembers the last song and offers to start it (proposal), or nothing.
-- **D4, the names:** `SongDeck` for the stage; the song page's controller becomes a view of it.
+- **D1, decided:** a 2 s fade out and a 2 s fade in on a per-playback gain (above).
+- **D2, decided:** the start page's waiting song is a preview (the maintainer: "yes would make sense if you see no
+  reason why this might be wrong"). One case to watch: a real song already playing when one comes back to the start
+  page. Proposal: then the waiting song does not start, the real song plays on (and the dyno's run, which measures
+  the machine, would measure the song's load too).
+- **D3, decided: not now** (the maintainer: "No not now"). After a reload nothing is offered.
+- **D4, the name:** `SongDeck` (what it does: "SongDeck", below).
 - **D5, the lanes:** `Playbacks` with `song`, `previews`, `live` (proposal, above). And whether a short one-shot (a
-  sample preview of a second, a jingle) also sets the song aside, or plays over it (proposal: over it; only an
-  example that plays on until stopped sets the song aside).
+  sample preview of a second, a jingle) also fades the song out, or plays over it (proposal: over it; only an
+  example that plays on until stopped fades the song out).
 
 ## The work
 
@@ -128,8 +151,9 @@ After KLANG-00389's `Player` steps 1 and 2 (the move into the Spine, typed owner
    highlights from the deck.
 3. Klang Amp on the deck.
 4. The Motor's now-playing line and the Stop key from anywhere.
-5. The code examples by D1: the Spine sets the song aside while one plays and brings it back in time; then the start
-   page by D2.
+5. The per-playback gain in the engine (D1), with Klang-Main-Dev: the command, the ramped gain, the codec specs.
+6. The code examples by D1: the song fades out over 2 s while one plays and in again after it; then the start page
+   as a preview (D2), its fade-in on its own gain.
 
 ## Acceptance
 
@@ -137,8 +161,8 @@ After KLANG-00389's `Player` steps 1 and 2 (the move into the Spine, typed owner
 - Back on its page, the editor shows the song that plays, its highlights running, and Update changes it live.
 - From any page, the Motor shows what plays and stops it; the Stop key does too.
 - Two songs never play at once; the MIDI rig plays along with either.
-- A code example started while a song plays: the song steps aside, and when the example stops it comes back at its
-  next cycle, in time.
+- A code example started while a song plays: the song fades out over 2 s and plays on silently; when the example
+  stops, it fades in over 2 s, in time.
 
 ## History
 
@@ -146,4 +170,5 @@ After KLANG-00389's `Player` steps 1 and 2 (the move into the Spine, typed owner
   `KlangampDeck`, `KlangCodePlaybackCtrl`, the start page's and the code examples' controllers. The same day: only
   real songs on the deck; a code example sets the song aside and it comes back in time (D1 proposal); all of it
   decided and kept in the Spine (the maintainer's word). Then the Spine's `Playbacks` with three lanes (`song`,
-  `previews`, `live`), on the maintainer's question.
+  `previews`, `live`), on the maintainer's question. D1 decided (a 2 s fade each way, a per-playback gain in the
+  engine), D2 (the waiting song a preview), D3 (not now).
