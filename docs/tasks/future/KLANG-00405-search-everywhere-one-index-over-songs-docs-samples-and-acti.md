@@ -28,7 +28,7 @@ as well 3. appearance in current song, with line number and line preview 4. Anyt
 | Docs entry (Sprudel, Stdlib, KlangScript functions) | the name and its aliases (`lpf` is `lowpass`'s), tags | the brief | the entry |
 | Lexikon entry | the word, its aliases | the brief | the entry |
 | The current song (on a song page only) | the code, line by line | the line number and the line | the editor at that line |
-| Songs (proposal) | the title (the built-ins and yours) | the RPM, built-in or yours | the song |
+| Songs (the maintainer: "4. would find songs too") | the title (the built-ins and yours) | the RPM, built-in or yours | the song |
 | Tutorials (proposal) | a lesson's and a track's title | the track, done or not | the lesson |
 | Samples (proposal) | a bank's and a sound's name (`bd`, `piano`) | the bank, how many | a preview on the `sounds` lane (KLANG-00406) |
 | Actions and pages (proposal) | the key actions' titles (`KlangKeyBindings`), the pages' names | the key | runs it, goes there |
