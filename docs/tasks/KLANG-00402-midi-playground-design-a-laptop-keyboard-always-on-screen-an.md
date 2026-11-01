@@ -188,6 +188,20 @@ is two voices, as two channels are today.
 - The event log shows `ControlEvent`s ("laptop  NoteDown C4 vel 0.75", "keylab  Press pad-3"); the MIDI monitor keeps
   the raw bytes; the routing tab shows the table read-only.
 
+### 7. Where the code lives
+
+One package for everything MIDI and live play in the frontend, its UI and its data (the maintainer, 2026-11-01: "We
+should have a dedicated midi package for all ui and data in the frontend"): `io.peekandpoke.klang.midi`, flat.
+
+- `src/jsMain/kotlin/midi/`: what is there today (`MidiConnector`, `MidiDevicePanel`, `WebMidi`), plus the page
+  (`MidiPlaygroundPage`, from `pages/`), the drawing (`MidiPanel`, from `comp/`), the playback controller
+  (`RealtimePlaybackCtrl`, from `comp/`; only the playground uses it), the instrument storage
+  (`MidiInstrumentStorage`, from `storage/`), and the new `LaptopKeys` and the device profiles.
+- `src/commonMain/kotlin/midi/`, the same package: the parts with no browser in them (`ControlEvent`, `Routing`,
+  `NoteVoicing`), so their specs run on the JVM.
+- The page leaves `pages/`, where every other page lives: a feature folder keeps its page with it. `nav.kt` is the
+  only file outside that imports any of it.
+
 ## Decide before implementing
 
 - **D1, the laptop map** as drawn in section 3: Y to - white, S D G H J L Ö black, the upper rows functions (no
@@ -201,6 +215,7 @@ is two voices, as two channels are today.
 
 ## The work
 
+0. The move of section 7, alone and with no other change, so the history keeps each file's line.
 1. `ControlEvent`, `NoteVoicing`, `Routing` in common code with specs; `MidiConnector` down to ports and bytes; the
    KeyLab and the generic profile; the page's `handle` speaks `ControlEvent` only. Audible change: the pads (D2).
 2. `LaptopKeys` and its drawing: `MidiPanel` learns key labels, the laptop keyboard is a panel value like the KeyLab's.
@@ -224,4 +239,5 @@ source's `AllUp`, the same note from two sources); the routing lookup order. New
 ## History
 
 - 2026-11-01: created. Designed from the maintainer's ask; the code read: `MidiPlaygroundPage`, `MidiConnector`,
-  `MidiDevicePanel`, `MidiPanel`, `RealtimePlaybackCtrl`, KLANG-00159, KLANG-00160, KLANG-00228.
+  `MidiDevicePanel`, `MidiPanel`, `RealtimePlaybackCtrl`, KLANG-00159, KLANG-00160, KLANG-00228. The same day: the
+  one package for the frontend's MIDI code (section 7, step 0), the maintainer's word.
