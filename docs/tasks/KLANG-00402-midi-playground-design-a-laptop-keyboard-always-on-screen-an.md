@@ -329,4 +329,5 @@ source's `AllUp`, the same note from two sources); the routing lookup order. New
   `MidiDevicePanel`, `MidiPanel`, `RealtimePlaybackCtrl`, KLANG-00159, KLANG-00160, KLANG-00228. The same day, the
   maintainer's ideas: one package for the frontend's MIDI code (section 7, step 0); the one play-code input, the
   instruments with a loadout, the play surface docked; then the rig app-wide, the MIDI tool in the bottom panel of
-  every page, the keys behind its focus, every drawn control clickable, the MIDI page for configuring (section 6); the rig in the Spine (section 7).
+  every page, the keys behind its focus, every drawn control clickable, the MIDI page for configuring (section 6);
+  the rig in the Spine (section 7).
