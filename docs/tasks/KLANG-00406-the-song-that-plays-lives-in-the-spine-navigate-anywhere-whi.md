@@ -1,6 +1,6 @@
 # KLANG-00406: The song that plays lives in the Spine: navigate anywhere while it plays
 
-> **Status (2026-11-01): DESIGNED.** Nothing built; decisions D1 to D4 open.
+> **Status (2026-11-01): DESIGNED.** Nothing built; D1 to D5 decided.
 
 ## Why this exists
 
@@ -90,21 +90,25 @@ mainPlayback?, realtimePlayback, something else?". What plays in the app today, 
 | a song on its page | `CodeSongPage`'s own `KlangCodePlaybackCtrl` | `song` |
 | a song from Klang Amp's playlist | `KlangampDeck`'s controller | `song` |
 | a code example in the docs or a tutorial | `PlayableCodeExample`'s controller | `previews` |
-| a sample from the library | `SamplesLibraryPage.playSample`, `playOnce` | `previews` |
-| a jingle | `jingles.kt`, `DevJinglesPage` | `previews` |
+| a sample from the library | `SamplesLibraryPage.playSample`, `playOnce` | `sounds` |
+| a jingle | `jingles.kt`, `DevJinglesPage` | `sounds` |
+| a sound effect on a button (none yet) | | `sounds` |
 | the start page's waiting song | `StartPage`'s `waitingSong` | `previews` (D2) |
 | a key on the MIDI keyboard | `RealtimePlaybackCtrl`, `createRealtimePlayback` | `live` |
 
 So `Spine.playbacks` (`Playbacks`, next to `Player`, which keeps the engine itself: its start, the samples, the
-volume, the diagnostics) holds three lanes and the rules between them:
+volume, the diagnostics) holds four lanes and the rules between them:
 
 ```kotlin
 object Playbacks {
     /** The real song: one at a time, plays on while one navigates (SongDeck). */
     val song: SongDeck
 
-    /** Short sounds a page asks for: an example, a sample, a jingle. One at a time; ends with its page. */
+    /** What a page plays until it is stopped: a code example, the start page's waiting song. One at a time. */
     val previews: Previews
+
+    /** One-shots that end by themselves: a sample, a jingle, a button's sound effect. Over everything, many at once. */
+    val sounds: Sounds
 
     /** Live play: the MIDI rig's realtime voices (KLANG-00402). Plays along with anything. */
     val live: LivePlay
@@ -118,13 +122,13 @@ object Playbacks {
 ```
 
 - **The rules, in one place:** a new song stops the song before it; a new preview stops the preview before it; while a
-  preview plays the song is faded out, playing on, and fades in after it (D1); live plays along with everything and
-  stops for nothing but a panic.
+  preview plays the song is faded out, playing on, and fades in after it (D1); sounds play over everything, several
+  at once, and fade nothing (D5); live plays along with everything and stops for nothing but a panic.
 - **Handles, not `Any`:** a page asks a lane and gets a handle back (play, stop, its state as a stream); the handle
   ends with its owner (a preview's page unmounting stops it). This is KLANG-00389's typed ownership (its `Player`
   plan, step 2) in place of `requestExclusivePlayback(self: Any, ...)` and the casts.
 - **Names:** `song` rather than "main" (it is the real song, and only that), `live` rather than "realtime" (the epic's
-  word, KLANG-00363), `previews` for the short ones (D5).
+  word, KLANG-00363), `previews` for what plays until stopped, `sounds` for the one-shots.
 - **The MIDI rig** (KLANG-00402, `MidiRig`) keeps its sources, routing and instruments, and plays through
   `playbacks.live`.
 
@@ -136,10 +140,10 @@ object Playbacks {
   page. Proposal: then the waiting song does not start, the real song plays on (and the dyno's run, which measures
   the machine, would measure the song's load too).
 - **D3, decided: not now** (the maintainer: "No not now"). After a reload nothing is offered.
-- **D4, the name:** `SongDeck` (what it does: "SongDeck", below).
-- **D5, the lanes:** `Playbacks` with `song`, `previews`, `live` (proposal, above). And whether a short one-shot (a
-  sample preview of a second, a jingle) also fades the song out, or plays over it (proposal: over it; only an
-  example that plays on until stopped fades the song out).
+- **D4, decided:** `SongDeck` (the maintainer: "SongDeck is fine as a name"; what it does: "SongDeck", below).
+- **D5, decided: a one-shot fades nothing** (the maintainer: "no it should not, because imagine we have
+  sound-effects when clicking a button"). So the one-shots get a lane of their own, `sounds`, beside `previews`:
+  `Playbacks` with `song`, `previews`, `sounds`, `live` (above).
 
 ## The work
 
@@ -171,4 +175,5 @@ After KLANG-00389's `Player` steps 1 and 2 (the move into the Spine, typed owner
   real songs on the deck; a code example sets the song aside and it comes back in time (D1 proposal); all of it
   decided and kept in the Spine (the maintainer's word). Then the Spine's `Playbacks` with three lanes (`song`,
   `previews`, `live`), on the maintainer's question. D1 decided (a 2 s fade each way, a per-playback gain in the
-  engine), D2 (the waiting song a preview), D3 (not now).
+  engine), D2 (the waiting song a preview), D3 (not now). D4 (`SongDeck`) and D5 (one-shots fade nothing, their own
+  lane `sounds`) decided.
