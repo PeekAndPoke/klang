@@ -142,7 +142,8 @@ For the design step, to agree with the maintainer. One area at a time, each a co
    cut off while nothing shows them; `PlayerMiniStats`, `VisualsBoard` and `KlangampPlayer` read them.
    The waveform and the spectrum as Spine streams too (decide: push the FFT on `Frames`, or keep the pull).
 5. **The playback model out of `comp/`:** `KlangCodePlaybackCtrl` to the Spine with a lifetime (made and released by
-   its owner), the `Player.status` leak fixed; `KlangampDeck`'s start time moves with it.
+   its owner), the `Player.status` leak fixed; `KlangampDeck`'s start time moves with it. Designed in KLANG-00406: one
+   `SongDeck` in the Spine owns the song that plays, so it plays on while one navigates (the maintainer, 2026-11-01).
 6. **The diagnostics' history** kept only while someone reads it, or kept cheaply (decide with the Motor window).
 
 Decided: the parts keep their `paused: Stream<Boolean>` prop, `UiWork.resting` by default; the layout passes more where a
