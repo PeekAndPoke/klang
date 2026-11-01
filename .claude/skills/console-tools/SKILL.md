@@ -399,6 +399,9 @@ dash scan, stack-merge's exit code by exception type, test-digest's foreign-suit
 <!-- Findings this repo sent back to Mission Control, not merged into the blueprint yet:
      - yyyy-mm-dd: <what, one line> (<where it happened>)
      Remove an item when an update arrives that contains it. -->
+- 2026-11-01: mutate reads a JS mutant as NOT-RUN when `test_command` runs `:jsTest -q`: the quiet log names only
+  the failed aggregate `:jsTest`, so test-digest drops the `jsBrowserTest` results. Until the port (missioncontrol
+  74dba44), drop `-q` or run `:jsBrowserTest` (KLANG-00406 step 1)
 
 ## Changes
 

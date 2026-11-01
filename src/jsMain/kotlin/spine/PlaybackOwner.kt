@@ -6,8 +6,8 @@
 package io.peekandpoke.klang.spine
 
 /**
- * What plays on the [Player] and can be stopped: the owner of [Player.nowPlaying], and what
- * [Player.requestExclusivePlayback] stops when another takes the stage (KLANG-00389, "Player in the Spine", step 2).
+ * What plays on the [Player] and can be stopped: the owner of [Playbacks.nowPlaying], and what
+ * [Playbacks.requestExclusivePlayback] stops when another takes the stage (KLANG-00389, "Player in the Spine", step 2).
  */
 interface PlaybackOwner {
     /** Stops what this owner plays and gives up the stage. */

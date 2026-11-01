@@ -237,3 +237,6 @@ next, the MIDI rig first (KLANG-00402). A global object outside the Spine is a d
   (`Player` or `Playback`) and a Kraft attribute stay open for the maintainer; the sweep above keeps its old paths.
 - 2026-11-01: step 2, typed ownership: `PlaybackOwner` in place of `Any` for `publishNowPlaying` and
   `requestExclusivePlayback`, `KlangCodePlaybackCtrl` one; the lanes and their rules left to KLANG-00406.
+- 2026-11-01: with KLANG-00406 step 1: `nowPlaying` and the stage moved from `Player` to `Playbacks`;
+  `KlangCodePlaybackCtrl` in `spine/` with `release()`, which its owners call (the `Player.status` leak of "Problems
+  found" fixed; `RealtimePlaybackCtrl`'s is not yet); Klang Amp's seconds read from the stage.

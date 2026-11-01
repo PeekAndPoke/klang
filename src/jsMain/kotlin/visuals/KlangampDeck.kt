@@ -7,64 +7,50 @@ package io.peekandpoke.klang.visuals
 
 import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.Song
-import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
-import io.peekandpoke.klang.comp.KlangCodePlaybackCtrl
-import io.peekandpoke.klang.spine.Player
+import io.peekandpoke.klang.spine.Playbacks
 
 /**
- * Klangamp's deck: the one player its playlists play the built-in songs on (the maintainer, 2026-10-29: "a playlist of
- * all built in songs and clicking one plays the song"), and what plays now, from here or from any page.
+ * Klangamp's deck: the playlist that plays the built-in songs on the Spine's song deck (the maintainer, 2026-10-29:
+ * "a playlist of all built in songs and clicking one plays the song"), and what plays now, from here or from any page.
  */
 object KlangampDeck {
-
-    /**
-     * The playlist's one controller, made once: a controller per song would keep its subscriptions for good. It takes
-     * the stage, so a song playing on a page stops when a song here starts.
-     */
-    private val ctrl: KlangCodePlaybackCtrl by lazy { KlangCodePlaybackCtrl.builder().exclusive().build() }
-
-    /** The playback now on stage; null while nothing plays. */
-    private var playing: KlangCyclicPlayback? = null
-
-    /** Called by whoever shows the time, on each change of what plays. */
-    fun noteNowPlaying(now: Player.NowPlaying?) {
-        playing = now?.playback
-    }
 
     /**
      * The seconds the playback on stage has been heard; null while nothing plays. Counted on the backend's position,
      * not the wall clock (KLANG-00399): after a stall it shows what played, not the time that passed.
      */
-    fun seconds(): Int? = playing?.heardSec()?.toInt()
+    fun seconds(): Int? = Playbacks.nowPlaying()?.playback?.heardSec()?.toInt()
 
     /** The built-in song [now] plays, by its place in the list; -1 when nothing plays or it is not one of them. */
-    fun indexOf(now: Player.NowPlaying?): Int = now?.let { n -> BuiltInSongs.songs.indexOfFirst { it.title == n.title } } ?: -1
+    fun indexOf(now: Playbacks.NowPlaying?): Int =
+        now?.let { n -> BuiltInSongs.songs.indexOfFirst { it.title == n.title } } ?: -1
 
     /** The song Klang Amp played last; null before the first. */
     private var last: Song? = null
+
+    /** The song Klang Amp put on the deck last: [leave] stops it while it is still the one on. */
+    private var started: Song? = null
 
     /** Plays the song Klang Amp played last again, or the playlist's first: a visual's play button. */
     fun playAgain() {
         play(last ?: BuiltInSongs.songs.first())
     }
 
+    /** Puts [song] on the deck: the song before stops, also one a page plays, as the deck takes the stage. */
     fun play(song: Song) {
         last = song
-        ctrl.stop()
-        ctrl.setCode(song.code)
-        ctrl.setRpm(song.rpm)
-        ctrl.setTitle(song.title)
-        ctrl.play()
+        started = song
+        Playbacks.song.play(song)
     }
 
     /** Stops what plays: Klangamp's song, or a page's, which gives the stage up as it would to another song. */
     fun stop() {
-        Player.requestExclusivePlayback(self = ctrl)
-        ctrl.stop()
+        Playbacks.stopNowPlaying()
+        Playbacks.song.stop()
     }
 
     /** Plays the song [step] places on from [now]'s, round the list; the first when nothing of the list plays. */
-    fun skip(now: Player.NowPlaying?, step: Int) {
+    fun skip(now: Playbacks.NowPlaying?, step: Int) {
         val songs = BuiltInSongs.songs
         val from = indexOf(now)
         val next = if (from < 0) 0 else (from + step + songs.size) % songs.size
@@ -74,7 +60,11 @@ object KlangampDeck {
 
     /** Stops the song Klangamp started, when its visual is left; one a page started plays on. */
     fun leave() {
-        ctrl.stop()
+        if (started != null && Playbacks.song.onDeck() === started) {
+            Playbacks.song.stop()
+        }
+
+        started = null
     }
 
     /** Seconds as m:ss. */

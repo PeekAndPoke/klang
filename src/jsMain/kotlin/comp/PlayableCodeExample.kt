@@ -7,6 +7,7 @@ package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.script.stdlibLib
+import io.peekandpoke.klang.spine.KlangCodePlaybackCtrl
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
 import io.peekandpoke.klang.storage.EditorSettings
 import io.peekandpoke.klang.ui.comp.KlangButton
@@ -99,8 +100,8 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
             onUnmount {
                 unmounted = true
                 copiedTimer?.let { window.clearTimeout(it) }
-                // Stopped first, so the stop still reaches whoever follows the playback
-                ctrl.stop()
+                // Stopped first, so the stop still reaches whoever follows the playback; released, as the example goes
+                ctrl.release()
                 passSignals()
             }
         }

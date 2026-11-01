@@ -3,13 +3,12 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-package io.peekandpoke.klang.comp
+package io.peekandpoke.klang.spine
 
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
 import io.peekandpoke.klang.audio_engine.play
-import io.peekandpoke.klang.spine.Player
-import io.peekandpoke.klang.spine.PlaybackOwner
+import io.peekandpoke.klang.comp.mapToEditorError
 import io.peekandpoke.klang.sprudel.SprudelDiagnostic
 import io.peekandpoke.klang.sprudel.SprudelDiagnostics
 import io.peekandpoke.klang.sprudel.SprudelPattern
@@ -26,8 +25,9 @@ import kotlinx.browser.window
 
 /**
  * Non-UI controller that owns the compile → play → signals → stop lifecycle for a single
- * KlangScript code buffer. It is intentionally framework-free — it exposes ultra streams and
+ * KlangScript code buffer. It is intentionally framework-free: it exposes ultra streams and
  * action methods so both a Kraft component and a page-owned custom button bar can cooperate.
+ * Its owner makes it and [release]s it when done (KLANG-00389): it follows the [PlaybackEngine]'s status till then.
  *
  * Scalar UI state (code, rpm, title, isPlaying, ...) is bundled into [State] so consumers can
  * subscribe once via [state] instead of juggling a fistful of individual streams. Event-ish
@@ -50,6 +50,7 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) : Pl
         val initialRpm: Double,
         val initialTitle: String?,
         val exclusive: Boolean,
+        val engine: PlaybackEngine,
     )
 
     class Builder {
@@ -57,6 +58,7 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) : Pl
         private var rpm: Double = 30.0
         private var title: String? = null
         private var exclusive: Boolean = false
+        private var engine: PlaybackEngine? = null
 
         fun code(c: String) = apply { code = c }
         fun rpm(r: Double) = apply { rpm = r }
@@ -65,8 +67,11 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) : Pl
         /** Opt-in: when calling [play], stop any other controller that has claimed the primary slot. */
         fun exclusive(v: Boolean = true) = apply { exclusive = v }
 
+        /** What it plays on: the app's [Player] when none is given (so a spec's builder never starts it). */
+        fun engine(e: PlaybackEngine) = apply { engine = e }
+
         fun build(): KlangCodePlaybackCtrl = KlangCodePlaybackCtrl(
-            Config(initialCode = code, initialRpm = rpm, initialTitle = title, exclusive = exclusive)
+            Config(initialCode = code, initialRpm = rpm, initialTitle = title, exclusive = exclusive, engine = engine ?: Player)
         )
     }
 
@@ -74,7 +79,7 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) : Pl
      * The full scalar UI state of the controller. Consumers subscribe to [state] and destructure
      * whichever fields they care about.
      *
-     * [playerStatus] mirrors [Player.status] — the controller publishes it here as a convenience
+     * [playerStatus] mirrors [PlaybackEngine.status]: the controller publishes it here as a convenience
      * so a button bar only needs one subscription. It carries the ENUM, not a
      * `isPlayerLoading` boolean: collapsing it loses FAILED, and a Play button that cannot say
      * "the engine did not start" just spins.
@@ -102,7 +107,7 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) : Pl
             isPlaying = false,
             isCodeModified = false,
             currentCycle = 0,
-            playerStatus = Player.status(),
+            playerStatus = config.engine.status(),
         )
     )
     val state: Stream<State> = _state.readonly
@@ -120,14 +125,15 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) : Pl
 
     // ── Internal ─────────────────────────────────────────────────────────────
 
-    /** Baseline for [State.isCodeModified] — the exact string that was last submitted to a playback. */
+    /** Baseline for [State.isCodeModified]: the exact string that was last submitted to a playback. */
     private var playingCode: String? = null
 
-    init {
-        // Backend tempo sync — debounced on rpm changes only, so typing code doesn't delay the sync.
+    /** The subscriptions this controller holds till it is [release]d. */
+    private val subscriptions: List<() -> Unit> = listOf(
+        // Backend tempo sync: debounced on rpm changes only, so typing code doesn't delay the sync.
         _state.map { it.rpm }.distinct().debounce(150).subscribeToStream { newRpm ->
             if (newRpm > 0.0) _playback()?.updateRpm(newRpm)
-        }
+        },
 
         // The cycle counter follows the playing playback's completed cycles, when their end is heard (KLANG-00399): a
         // cycle completes once the backend has rendered it, and is heard the output latency later
@@ -135,13 +141,12 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) : Pl
             if (signal is KlangPlaybackSignal.CycleCompleted) {
                 countWhenHeard(signal)
             }
-        }
-
-        // Mirror the global player loading state into our combined state.
-        Player.status.subscribeToStream { status ->
+        },
+        // Mirror the engine's loading state into our combined state.
+        config.engine.status.subscribeToStream { status ->
             _state { it.copy(playerStatus = status) }
-        }
-    }
+        },
+    )
 
     /** Counts [completed] at its [KlangPlaybackSignal.CycleCompleted.atTimeSec], if the same playback still plays. */
     private fun countWhenHeard(completed: KlangPlaybackSignal.CycleCompleted) {
@@ -193,11 +198,11 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) : Pl
 
     /**
      * Compile and start playback if stopped, or compile and call [KlangCyclicPlayback.updatePattern]
-     * if already playing. Non-suspending — the work runs in a coroutine via [launch].
+     * if already playing. Non-suspending: the work runs in a coroutine via [launch].
      */
     fun play() {
         if (config.exclusive) {
-            Player.requestExclusivePlayback(self = this)
+            Playbacks.requestExclusivePlayback(self = this)
         }
         launch { runPlay() }
     }
@@ -215,7 +220,13 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) : Pl
                 isCodeModified = false,
             )
         }
-        Player.publishNowPlaying(owner = this, value = null)
+        Playbacks.publishNowPlaying(owner = this, value = null)
+    }
+
+    /** Stops what plays and ends the subscriptions: the owner is done with this controller (it leaves, or unmounts). */
+    fun release() {
+        stop()
+        subscriptions.forEach { it() }
     }
 
     fun reemitVoiceSignals() {
@@ -235,13 +246,13 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) : Pl
         // Declared OUTSIDE the try, and published in a `finally`, because installing a collector
         // stops SprudelDiagnostics from printing. If the build then threw (or returned null),
         // publishing from inside the try would lose the diagnostic from the editor AND from the
-        // console — strictly less than before this change existed.
+        // console: strictly less than before this change existed.
         val swallowed = mutableListOf<SprudelDiagnostic>()
 
         try {
             val codeToPlay = _state().code
-            val player = Player.ensure().await()
-            val engine = Player.createEngine(player = player)
+            val player = config.engine.readyPlayer()
+            val engine = config.engine.scriptEngine()
             val pattern = SprudelDiagnostics.collectingInto(swallowed) {
                 SprudelPattern.compile(engine, codeToPlay)
             } ?: error("Failed to compile Sprudel pattern from code")
@@ -275,7 +286,7 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) : Pl
             // APPEND: a failure here must not discard markers published for swallowed errors.
             _errors(_errors() + mapToEditorError(e))
         } finally {
-            // Runs on every path — success, throw, and the null-compile elvis — so a swallowed
+            // Runs on every path (success, throw, and the null-compile elvis), so a swallowed
             // error is never silently dropped. Keeps playing either way: a marker is
             // information, not a reason to stop the music.
             if (swallowed.isNotEmpty()) {
@@ -292,9 +303,9 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) : Pl
 
     private fun publishNowPlaying(pb: KlangCyclicPlayback) {
         val s = _state()
-        Player.publishNowPlaying(
+        Playbacks.publishNowPlaying(
             owner = this,
-            value = Player.NowPlaying(
+            value = Playbacks.NowPlaying(
                 title = s.title,
                 code = s.code,
                 rpm = s.rpm,

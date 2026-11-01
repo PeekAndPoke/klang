@@ -1,6 +1,7 @@
 # KLANG-00406: The song that plays lives in the Spine: navigate anywhere while it plays
 
-> **Status (2026-11-01): DESIGNED.** Nothing built; D1 to D5 decided.
+> **Status (2026-11-01): IN PROGRESS.** Steps 1 and 3 done: `SongDeck` in the Spine, Klang Amp on it. Next: step 2,
+> the song page as a view of the deck.
 
 ## Why this exists
 
@@ -151,9 +152,12 @@ After KLANG-00389's `Player` steps 1 and 2 (the move into the Spine, typed owner
 
 1. `SongDeck` in the Spine with its specs (taking the stage, stopping, a live update, the exclusive rule and the
    live-play exception); `KlangCodePlaybackCtrl`'s logic moves into it, the `Player.status` leak fixed on the way.
+   Done 2026-11-01, with step 3: `Playbacks` (the stage, out of `Player`) holds `song`, the deck; the deck keeps one
+   `KlangCodePlaybackCtrl`, which moved to the Spine with a `release()` its owners call; Klang Amp plays on the deck.
+   The specs run on a `KlangPlayer` without a backend (`PlaybackEngine`, the seam).
 2. The song page as a view: attach to the song that plays, take the stage, stop nothing on leave; the editor's
    highlights from the deck.
-3. Klang Amp on the deck.
+3. Klang Amp on the deck (done with step 1).
 4. The Motor's now-playing line and the Stop key from anywhere.
 5. The per-playback gain in the engine (D1), with Klang-Main-Dev: the command, the ramped gain, the codec specs.
 6. The code examples by D1: the song fades out over 2 s while one plays and in again after it; then the start page
@@ -177,3 +181,6 @@ After KLANG-00389's `Player` steps 1 and 2 (the move into the Spine, typed owner
   `previews`, `live`), on the maintainer's question. D1 decided (a 2 s fade each way, a per-playback gain in the
   engine), D2 (the waiting song a preview), D3 (not now). D4 (`SongDeck`) and D5 (one-shots fade nothing, their own
   lane `sounds`) decided.
+- 2026-11-01: IN PROGRESS, step 1 with step 3 (the maintainer: "Yes go ahead"): `Playbacks`, `SongDeck`,
+  `PlaybackEngine`; `KlangCodePlaybackCtrl` in the Spine with `release()`; Klang Amp on the deck, its seconds read
+  from the stage (the two components that fed it no longer do).

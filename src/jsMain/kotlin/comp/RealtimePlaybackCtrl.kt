@@ -18,7 +18,7 @@ import kotlinx.coroutines.Deferred
 
 /**
  * Non-UI controller owning the engine-startup → durable-playback → voice-forwarding lifecycle for
- * ONE realtime playback. The realtime sibling of [KlangCodePlaybackCtrl].
+ * ONE realtime playback. The realtime sibling of [io.peekandpoke.klang.spine.KlangCodePlaybackCtrl].
  *
  * It is deliberately a **pipe, not a manager**: an id goes in with a voice, the same id stops it.
  * It knows nothing about notes, MIDI, or what a voice sounds like: the note bookkeeping is
@@ -31,7 +31,7 @@ class RealtimePlaybackCtrl(
 ) {
     /**
      * Scalar state, mirrored once from [Player.status] so consumers subscribe here only — the same
-     * shape [KlangCodePlaybackCtrl] uses.
+     * shape [io.peekandpoke.klang.spine.KlangCodePlaybackCtrl] uses.
      *
      * It carries the [Player.Status] ENUM rather than a collapsed boolean: the song page can fold
      * "not started" into "ready" because its Play button doubles as the engine-start gesture, but

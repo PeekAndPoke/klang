@@ -9,7 +9,6 @@ import io.peekandpoke.klang.BuiltInJingles
 import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.audio_engine.KlangBenchmark
-import io.peekandpoke.klang.comp.KlangCodePlaybackCtrl
 import io.peekandpoke.klang.comp.MotorBackground
 import io.peekandpoke.klang.comp.PlateComposition
 import io.peekandpoke.klang.comp.PlayerMiniStats
@@ -17,6 +16,7 @@ import io.peekandpoke.klang.comp.motorBackgroundRef
 import io.peekandpoke.klang.compile
 import io.peekandpoke.klang.fs
 import io.peekandpoke.klang.playJingle
+import io.peekandpoke.klang.spine.KlangCodePlaybackCtrl
 import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.spine.SwingingLamp
 import io.peekandpoke.klang.spine.UiWork
@@ -495,7 +495,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
             // Left another way than by "Make Music Now" (the Motor's menu, the browser's back): the song stops too
             onUnmount {
                 songFadeIn.end()
-                waitingSong.stop()
+                waitingSong.release()
             }
         }
     }

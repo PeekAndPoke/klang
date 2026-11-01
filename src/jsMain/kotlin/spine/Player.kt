@@ -6,7 +6,6 @@
 package io.peekandpoke.klang.spine
 
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
-import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
 import io.peekandpoke.klang.audio_engine.KlangDiagnostics
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.audio_engine.klangPlayer
@@ -32,7 +31,7 @@ import kotlinx.browser.window
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
 
-object Player {
+object Player : PlaybackEngine {
 
     enum class Status {
         /** Initial state */
@@ -46,7 +45,7 @@ object Player {
     }
 
     private val _status = StreamSource(Status.NOT_LOADED)
-    val status: Stream<Status> = _status.readonly
+    override val status: Stream<Status> = _status.readonly
 
     private val _player = StreamSource<KlangPlayer?>(null)
     val player: Stream<KlangPlayer?> = _player.readonly
@@ -104,53 +103,6 @@ object Player {
         OutputVolumeStorage.save(_outputVolume())
     }
 
-    /**
-     * Snapshot of whatever is considered the "primary" playback across the app.
-     *
-     * Controllers created via [io.peekandpoke.klang.comp.KlangCodePlaybackCtrl] publish into this
-     * when they start/stop so that other UI (sidebar badges, headers, the song list, ...) can
-     * reactively observe what's currently on stage without subscribing to every controller.
-     */
-    data class NowPlaying(
-        val title: String?,
-        val code: String,
-        val rpm: Double,
-        val playback: KlangCyclicPlayback,
-    )
-
-    private val _nowPlaying = StreamSource<NowPlaying?>(null)
-    val nowPlaying: Stream<NowPlaying?> = _nowPlaying.readonly
-
-    private var nowPlayingOwner: PlaybackOwner? = null
-
-    /**
-     * Publishes (or clears) the "now playing" snapshot. A clear is only honored when [owner]
-     * is the current owner, so a stale controller can't wipe someone else's state.
-     */
-    fun publishNowPlaying(owner: PlaybackOwner, value: NowPlaying?) {
-        if (value == null) {
-            if (nowPlayingOwner === owner) {
-                nowPlayingOwner = null
-                _nowPlaying(null)
-            }
-        } else {
-            nowPlayingOwner = owner
-            _nowPlaying(value)
-        }
-    }
-
-    /**
-     * Opt-in "only one at a time" coordination: the current [nowPlaying] owner, when it is not [self],
-     * is stopped, which clears the stage for [self].
-     */
-    fun requestExclusivePlayback(self: PlaybackOwner) {
-        val other = nowPlayingOwner
-
-        if (other != null && other !== self) {
-            other.stop()
-        }
-    }
-
     private var deferred: CompletableDeferred<KlangPlayer>? = null
 
     // We force downloading the sample immediately (better user experience later)
@@ -175,6 +127,12 @@ object Player {
     }
 
     fun get(): KlangPlayer? = player()
+
+    /** The player, started on the first call (inside a user gesture, for the browser's audio); see [ensure]. */
+    override suspend fun readyPlayer(): KlangPlayer = ensure().await()
+
+    /** A script engine for a playback's code: [createEngine] with no console of its own. */
+    override fun scriptEngine(): KlangScriptEngine = createEngine()
 
     /**
      * Creates a KlangScriptEngine with sprudel and stdlib registered.

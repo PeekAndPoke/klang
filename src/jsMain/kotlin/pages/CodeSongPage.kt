@@ -9,13 +9,13 @@ import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.KlangGuiDance
 import io.peekandpoke.klang.comp.HelpWindow
 import io.peekandpoke.klang.comp.KlangCodeEditorComp
-import io.peekandpoke.klang.comp.KlangCodePlaybackCtrl
 import io.peekandpoke.klang.comp.LcdDisplay
 import io.peekandpoke.klang.comp.QuickHelpPanel
 import io.peekandpoke.klang.comp.SongColumn
 import io.peekandpoke.klang.comp.SongSettings
 import io.peekandpoke.klang.layouts.WorkbenchSlots
 import io.peekandpoke.klang.script.stdlibLib
+import io.peekandpoke.klang.spine.KlangCodePlaybackCtrl
 import io.peekandpoke.klang.spine.Recents
 import io.peekandpoke.klang.spine.VisualState
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
@@ -201,7 +201,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                 withdrawSong = VisualState.offerSong(openSong)
             }
             onUnmount {
-                ctrl.stop()
+                ctrl.release()
                 emptyWorkbench()
 
                 withdrawSong?.invoke()

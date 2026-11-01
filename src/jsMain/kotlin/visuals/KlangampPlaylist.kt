@@ -6,7 +6,7 @@
 package io.peekandpoke.klang.visuals
 
 import io.peekandpoke.klang.BuiltInSongs
-import io.peekandpoke.klang.spine.Player
+import io.peekandpoke.klang.spine.Playbacks
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
@@ -49,7 +49,7 @@ class KlangampPlaylist(ctx: Ctx<Props>) : Component<KlangampPlaylist.Props>(ctx)
         const val CLOCK_MS = 250
     }
 
-    private val nowPlaying by subscribingTo(Player.nowPlaying) { KlangampDeck.noteNowPlaying(it) }
+    private val nowPlaying by subscribingTo(Playbacks.nowPlaying)
 
     /** The clock's now, stepped while the time shows. */
     private var nowMs: Double by value(Date.now())
@@ -132,7 +132,7 @@ class KlangampPlaylist(ctx: Ctx<Props>) : Component<KlangampPlaylist.Props>(ctx)
     }
 
     /** What plays and for how long; the keys to stop it and to skip on. */
-    private fun FlowContent.renderNowLine(now: Player.NowPlaying?, index: Int) {
+    private fun FlowContent.renderNowLine(now: Playbacks.NowPlaying?, index: Int) {
         val seconds = KlangampDeck.seconds()
 
         div {

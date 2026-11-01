@@ -12,6 +12,7 @@ import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.common.strings.offsetToSourceLocation
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.types.KlangSymbol
+import io.peekandpoke.klang.spine.KlangCodePlaybackCtrl
 import io.peekandpoke.klang.storage.EditorSettings
 import io.peekandpoke.klang.ui.HoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolContext

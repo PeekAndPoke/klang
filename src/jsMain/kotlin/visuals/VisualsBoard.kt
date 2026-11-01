@@ -14,6 +14,7 @@ import io.peekandpoke.klang.comp.PlayerMiniStats
 import io.peekandpoke.klang.comp.ScreenRect
 import io.peekandpoke.klang.comp.Spectrumeter
 import io.peekandpoke.klang.comp.VolumeKnob
+import io.peekandpoke.klang.spine.Playbacks
 import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.spine.SwingingLamp
 import io.peekandpoke.klang.spine.VisualState
@@ -193,7 +194,7 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
     }
 
     /** What plays now, from here or from any page: the Motor's plate's play/stop shows it. */
-    private val nowPlaying by subscribingTo(Player.nowPlaying)
+    private val nowPlaying by subscribingTo(Playbacks.nowPlaying)
 
     private val cylinders by subscribingTo(MotorReadings.cylinders())
 

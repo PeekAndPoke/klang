@@ -12,6 +12,7 @@ import io.peekandpoke.klang.comp.Oscilloscope
 import io.peekandpoke.klang.comp.PlayerMiniStats
 import io.peekandpoke.klang.comp.Spectrumeter
 import io.peekandpoke.klang.comp.VolumeKnob
+import io.peekandpoke.klang.spine.Playbacks
 import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangFinish
@@ -75,7 +76,7 @@ class KlangampPlayer(ctx: Ctx<Props>) : Component<KlangampPlayer.Props>(ctx) {
 
     private val look by subscribingTo(KlangTheme.look)
 
-    private val nowPlaying by subscribingTo(Player.nowPlaying) { KlangampDeck.noteNowPlaying(it) }
+    private val nowPlaying by subscribingTo(Playbacks.nowPlaying)
 
     /** The clock's now, stepped while mounted, for the time on the display. */
     private var nowMs: Double by value(Date.now())
