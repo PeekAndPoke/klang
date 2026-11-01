@@ -65,7 +65,7 @@ class KlangLookPickerSpec : StringSpec({
             val buttons = root.selectCss("button")
 
             buttons.map { it.textContent?.trim() } shouldContainExactly
-                listOf("\u270EEdit", "Default", "+", "Sun", "+", "+", "+", "+", "+")
+                listOf("\u270EEdit", "Default", "+", "Sun", "+", "+", "+", "+", "+", "+", "+", "+", "+")
 
             (buttons[0] as HTMLElement).click()
             (buttons[2] as HTMLElement).click()

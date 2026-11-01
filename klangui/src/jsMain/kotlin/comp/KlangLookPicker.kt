@@ -32,7 +32,7 @@ fun Tag.KlangLookPicker(
 }
 
 /**
- * The LOOK row (KLANG-00339, KLANG-00334 item 33): the eight equipped looks ([KlangLookShelf], KLANG-00382) as swatch
+ * The LOOK row (KLANG-00339, KLANG-00334 item 33): the twelve equipped looks ([KlangLookShelf], KLANG-00382) as swatch
  * buttons, the one worn pressed.
  *
  * A press puts the look on the user's layer ([KlangTheme.choose]) and hands it to [Props.onChosen], where the app

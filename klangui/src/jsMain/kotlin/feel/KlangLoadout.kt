@@ -14,8 +14,11 @@ package io.peekandpoke.klang.ui.feel
 data class KlangLoadout(val slots: List<String?>) {
 
     companion object {
-        /** The drawer's two rows of four. */
-        const val SIZE = 8
+        /**
+         * The menu's three rows of four (the maintainer, 2026-11-01, of the Motor menu's look half: "We now comfortably
+         * have space for 12 or 15 slots here"; two rows of four before).
+         */
+        const val SIZE = 12
 
         /** The looks a new user finds equipped ([KlangLooks.equippedByDefault]), the last slot empty. */
         val default: KlangLoadout = KlangLoadout(KlangLooks.equippedByDefault.map { it.id })

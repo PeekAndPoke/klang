@@ -729,6 +729,8 @@ object KlangControlStyles : StyleSheet("kl-controls") {
     val lookRow by rule {
         put("display", "grid")
         put("grid-template-columns", "repeat(4, minmax(0, 1fr))")
+        // Every row as tall as one with looks in it: a row of empty slots alone would shrink to the "+"
+        put("grid-auto-rows", "1fr")
         put("gap", "6px")
         put("margin-top", "8px")
 
