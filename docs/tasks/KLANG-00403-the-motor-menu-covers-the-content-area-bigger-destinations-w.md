@@ -32,8 +32,8 @@ columns, and the look row (seven looks and an empty slot).
 - **The destinations:** the same eight (`AppArea`, Account still "later"), in four columns, each about 100 px high
   with its icon, its label in large type, its second line and its lamp; the current one pressed, its lamp on.
 - **Below, two halves:**
-  - **Pick up where you left off:** the last opened songs (six, title, RPM and when), the tutorial track in progress
-    with its next lesson and a progress bar, and the docs pages last read.
+  - **Pick up where you left off:** the last opened songs (six, title, RPM and when) and the tutorial track in
+    progress with its next lesson and a progress bar (D1).
   - **Loadouts:** the look loadout (the eight slots of `KlangLookShelf`, larger, each with three colour dots and its
     name; "Edit looks"), and the MIDI instruments' loadout (KLANG-00402; "Edit MIDI", the same pattern).
 - **Searching:** with text in the field, the lower part becomes the results in four columns: songs, docs, samples,
@@ -41,7 +41,7 @@ columns, and the look row (seven looks and an empty slot).
 
 ## What it needs that does not exist yet
 
-- **A record of what was opened:** the last songs, the last docs pages. Global state, so in the Spine (KLANG-00389),
+- **A record of what was opened:** the last songs and lessons (D1). Global state, so in the Spine (KLANG-00389),
   saved in its storage; a page reports what it opened.
 - **The tutorial in progress:** `TutorialStorage` knows the finished lessons; the next one per track is derived.
 - **The MIDI loadout:** KLANG-00402.
@@ -50,18 +50,13 @@ columns, and the look row (seven looks and an empty slot).
 
 ## Decide before implementing
 
-- **D1, what counts as "last opened"** (the maintainer, 2026-11-01: "might be nice to show not only the songs, but
-  which content then counts?"). Proposal, one rule: content with its own identity that one comes back to work in or
-  read; not the places, which are the destination tiles already.
+- **D1, decided: songs and tutorials** (the maintainer, 2026-11-01: "I would only add the Songs and Tutorial to the
+  'recently open'... For the docs and such we might think about a bookmark system", KLANG-00404).
   - **Counts:** a song opened in the editor (a built-in or yours, also without playing it); a tutorial lesson
-    opened (the track's "continue" is its next unfinished lesson, from `TutorialStorage`); a docs entry (a Lexikon
-    word, a Sprudel or Stdlib function, a KlangScript or manual page) that stayed open a few seconds, so paging
-    through on the way somewhere does not count.
-  - **Does not count:** the area pages (the songs list, the docs overview, the tutorials list), Credits, Dev Tools,
-    the Looks page, the MIDI page.
-  - **Later, if wanted:** sample banks previewed (useful while writing a song).
-  - **Shown in groups, as drawn,** not as one mixed list: songs (six), the track in progress, docs (six). Each group
-    in the same place every time, for the same reason the menu has one size.
+    opened (the track's "continue" is its next unfinished lesson, from `TutorialStorage`).
+  - **Does not count:** docs pages (bookmarks instead, KLANG-00404), the area pages, Credits, Dev Tools, the Looks
+    page, the MIDI page.
+  - **Shown in groups, as drawn:** songs (six), then the track in progress, each in the same place every time.
   - **The record:** one Spine area (`Recents`), entries of kind, id, title and time, the newest first, capped per
     kind, saved in the Spine's storage; a page reports what it opened.
 - **D2, decided** (the maintainer, 2026-11-01: "yes look picker is ok like this"): the look picker in the menu as
@@ -89,4 +84,4 @@ columns, and the look row (seven looks and an empty slot).
 - 2026-11-01: created from the maintainer's ask; the mockup on a design canvas, built on a screenshot of today's
   drawer (the brass look) and the look roles of `KlangRole`. The same day: a real overlay over the mounted page,
   Shift Shift opens it, and it covers the tool windows and the bottom panel too, so it always looks the same (the
-  maintainer's word). D2 decided (the look picker as drawn); D1 got its rule of what counts, for the maintainer's OK.
+  maintainer's word). D2 decided (the look picker as drawn); D1 decided: songs and tutorials, docs to bookmarks (KLANG-00404).
