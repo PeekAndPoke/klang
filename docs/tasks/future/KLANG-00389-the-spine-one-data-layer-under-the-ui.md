@@ -163,17 +163,28 @@ click (it must run inside a user gesture).
 What a stream needs (smoothing, a rate, a pause while nothing shows it, persistence) is decided in the Spine, once, not
 in each component.
 
+**The Spine is the collection point for all global state the app has** (the maintainer, 2026-11-01: "The global Player
+object should also live in the Spine. This is the collection point for all global state the app has"). Decided with
+it: `Player` moves into the Spine whole, and so does every other global holder in the sweep's table (the stores, the
+Gui-dance, `WorkbenchSlots`, `VisualsScreen`'s state, `KlangampDeck`, `MotorReadings`), and anything global that comes
+next, the MIDI rig first (KLANG-00402). A global object outside the Spine is a debt to move, not a choice.
+
 ## Decide before implementing
 
 - **Plain, not clever** (the stone rule against complexity): plain Kotlin objects and Ultra streams, no new framework,
   no generated code. Consult the maintainer before anything heavier.
 - **Where it lives:** a module of its own (commonMain where it can, so its flows can be tested on the JVM) or a package
-  in the app first. What of `Player` belongs in it.
+  in the app first. (`Player` belongs in it whole: decided 2026-11-01, "The aim".)
 - **Shape:** one entry point or a few areas (playback, Motor, settings and storage, looks, visuals, Gui-dance); how the
   UI reaches it (a Kraft attribute set at the app's root, as `addons` and `keys` are, rather than globals).
 - **Sending:** plain functions on the Spine, or commands as data. Who may write what.
 - **Persistence:** the stores under `storage/` move behind the Spine; what is saved, when, and how a saved value is
-  read back on start.
+  read back on start. Proposed (the maintainer asked, 2026-11-01: "Storage should be a subfolder of the spine,
+  maybe"): `src/jsMain/kotlin/spine/storage/`, package `io.peekandpoke.klang.spine.storage`, with all nine stores and
+  `StorageKeys`. The stores are the Spine's own: only the Spine's areas read and write them, the UI asks the area
+  (the look, the volume, the song's code). Kotlin has no package-private, so a spec keeps it: no file outside
+  `spine/` imports `spine.storage`. The Dev Storage page's reset then goes through the Spine, which resets the
+  holders in memory too (the sweep's "the stores that save on change write the old values back").
 - **Lifetimes:** per-playback and per-page state is freed when its owner ends (the standing rule: nothing allocates
   without a way to clean it up).
 - **Ultra:** what the Spine needs from Ultra's streams (a sampling operator, ULTRA-00267; one frame clock, KLANG-00388)
@@ -210,3 +221,6 @@ in each component.
 - 2026-10-29: `Frames` merged into `UiWork`, and `WindowFocus` replaced by Kraft's `WindowController` (the maintainer:
   "I think we can merge Frame and UiWork into one object? Also there already is WindowController in Kraft for detect
   focus").
+- 2026-11-01: decided, the maintainer: "The global Player object should also live in the Spine. This is the collection
+  point for all global state the app has" ("The aim"). Asked while designing the MIDI rig (KLANG-00402), which lives
+  in the Spine too.

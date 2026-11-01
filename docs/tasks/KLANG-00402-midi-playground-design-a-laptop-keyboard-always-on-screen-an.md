@@ -243,12 +243,14 @@ there and reads from there. The rig is such data, so it lives in the Spine; the 
 shows it live in one MIDI package (the maintainer, 2026-11-01: "We should have a dedicated midi package for all ui and
 data in the frontend"; then "So where in the 'spine' will midi live?").
 
-**In the Spine** (`src/jsMain/kotlin/spine/`): `MidiRig`, one object for the app's life, as `VisualState` hosts the
-lamp. It owns the live instances and the state:
+**In the Spine** (`src/jsMain/kotlin/spine/`), the collection point for all the app's global state (the maintainer,
+2026-11-01, KLANG-00389), beside `Player`: `MidiRig`, one object for the app's life, as `VisualState` hosts the lamp.
+It owns the live instances and the state:
 
 - the `MidiConnector` (Web MIDI is the browser, but it is input and output, not UI, as `Player` is), the device
   profiles in use, the `LaptopKeys` and screen sources, the `Routing`, `NoteVoicing`, the realtime playback;
-- the applied play code, its instruments and the loadout, and their saving (`MidiInstrumentStorage` today);
+- the applied play code, its instruments and the loadout, and their saving (`MidiInstrumentStorage` today, which
+  moves with the other stores, KLANG-00389);
 - what the UI reads, as streams: the devices, what is held and sounding, each control's value (to light the
   drawings), the octave, velocity and instrument, sustain, the event log, the Motor-not-started state.
 
@@ -271,8 +273,8 @@ Two points of the Spine's plan for `Player` touch it:
   `LaptopKeys`, the device profiles (bytes to events) and the panels' data (`MidiDevicePanel`, the KeyLab's, the
   laptop's), so their specs run on the JVM.
 - `src/jsMain/kotlin/midi/`: `MidiConnector` and `WebMidi`; the UI: `MidiTool` (the bottom tab), `MidiPanel` (the
-  drawing, from `comp/`), `MidiPlaygroundPage` (the configuration, from `pages/`); `RealtimePlaybackCtrl` (from
-  `comp/`) until the Spine's playback step takes it.
+  drawing, from `comp/`), `MidiPlaygroundPage` (the configuration, from `pages/`). `RealtimePlaybackCtrl` (from
+  `comp/`) is global state and goes to the Spine with the rig.
 - The page leaves `pages/`, where every other page lives: a feature folder keeps its page with it. Outside the
   package only the Spine (the rig), `nav.kt` (the page) and `WorkbenchLayout` (the tab) use it.
 
@@ -301,8 +303,8 @@ Two points of the Spine's plan for `Player` touch it:
 2. `LaptopKeys` and its drawing: `MidiPanel` learns key labels, the laptop keyboard is a panel value like the KeyLab's.
 3. Screen input on every drawn control (keys, pads, buttons, knobs, faders, wheels, the encoder).
 4. `MidiRig` in the Spine, the MIDI tool in the bottom panel of every page, the laptop keys behind its focus, the
-   Motor started by the first key. With the Spine's `Player` steps 1 and 2 (KLANG-00389) if they come first; else the
-   rig asks `Player` as it is today and moves with it.
+   Motor started by the first key. After `Player` has moved into the Spine (KLANG-00389, its plan's steps 1 and 2: the
+   move, then typed ownership, which the rig's "not exclusive" needs).
 5. The MIDI page as configuration (section 6): the one play-code input, the instruments and the loadout, the
    devices, the routing, the event log and the monitor.
 6. Later, own tickets: editing the routing and learning a control; key switches and splits; a backing loop for
