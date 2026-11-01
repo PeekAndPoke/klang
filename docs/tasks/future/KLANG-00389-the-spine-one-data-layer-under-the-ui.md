@@ -135,7 +135,8 @@ For the design step, to agree with the maintainer. One area at a time, each a co
 2. **Typed ownership:** a small interface for what can play and be stopped, in place of `Any` and the casts;
    `requestExclusivePlayback` and `publishNowPlaying` take it. Every playback goes through it: the jingle, the sample
    previews, MIDI. One rule for exclusivity: a new playback stops the one before; live play is the exception, it
-   stops nothing and nothing stops it but a panic (a song plays and the MIDI rig plays along, KLANG-00402).
+   stops nothing and nothing stops it but a panic (a song plays and the MIDI rig plays along, KLANG-00402). The lanes
+   (`Playbacks`: `song`, `previews`, `live`) and their rules: KLANG-00406.
 3. **One writer of the volume:** the Spine owns the output gain and offers a fade (the start page asks for it, the knob
    sets the target); a turn of the knob during a fade wins.
 4. **The Motor's readings derived once:** `MotorReadings`' factories become values in the Spine, each smoothed once and

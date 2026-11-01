@@ -59,6 +59,54 @@ its signals and how long it has been heard. It is the one controller where today
 - **A reload ends it.** Audio needs a user gesture after a reload, so the song does not go on by itself; the
   now-playing line could offer to start it again (D3).
 
+## The Spine's playbacks
+
+The maintainer, 2026-11-01: "So we would need a spine.playbacks object or similar. This would container
+mainPlayback?, realtimePlayback, something else?". What plays in the app today, read from the code:
+
+| Plays | Where today | Lane |
+|---|---|---|
+| a song on its page | `CodeSongPage`'s own `KlangCodePlaybackCtrl` | `song` |
+| a song from Klang Amp's playlist | `KlangampDeck`'s controller | `song` |
+| a code example in the docs or a tutorial | `PlayableCodeExample`'s controller | `previews` |
+| a sample from the library | `SamplesLibraryPage.playSample`, `playOnce` | `previews` |
+| a jingle | `jingles.kt`, `DevJinglesPage` | `previews` |
+| the start page's waiting song | `StartPage`'s `waitingSong` | `previews` (D2) |
+| a key on the MIDI keyboard | `RealtimePlaybackCtrl`, `createRealtimePlayback` | `live` |
+
+So `Spine.playbacks` (`Playbacks`, next to `Player`, which keeps the engine itself: its start, the samples, the
+volume, the diagnostics) holds three lanes and the rules between them:
+
+```kotlin
+object Playbacks {
+    /** The real song: one at a time, plays on while one navigates (SongDeck). */
+    val song: SongDeck
+
+    /** Short sounds a page asks for: an example, a sample, a jingle. One at a time; ends with its page. */
+    val previews: Previews
+
+    /** Live play: the MIDI rig's realtime voices (KLANG-00402). Plays along with anything. */
+    val live: LivePlay
+
+    /** Everything audible now, for the Motor's line, the visuals and Klang Amp (replaces Player.nowPlaying). */
+    val nowPlaying: Stream<NowPlaying>
+
+    /** Every lane quiet at once: the Panic key, CC 120 / 123. */
+    fun panic()
+}
+```
+
+- **The rules, in one place:** a new song stops the song before it; a new preview stops the preview before it; while a
+  preview plays the song stands aside and comes back in time after it (D1); live plays along with everything and
+  stops for nothing but a panic.
+- **Handles, not `Any`:** a page asks a lane and gets a handle back (play, stop, its state as a stream); the handle
+  ends with its owner (a preview's page unmounting stops it). This is KLANG-00389's typed ownership (its `Player`
+  plan, step 2) in place of `requestExclusivePlayback(self: Any, ...)` and the casts.
+- **Names:** `song` rather than "main" (it is the real song, and only that), `live` rather than "realtime" (the epic's
+  word, KLANG-00363), `previews` for the short ones (D5).
+- **The MIDI rig** (KLANG-00402, `MidiRig`) keeps its sources, routing and instruments, and plays through
+  `playbacks.live`.
+
 ## Decide before implementing
 
 - **D1, a code example while a song plays:** the song steps aside and comes back in time after the example
@@ -66,6 +114,9 @@ its signals and how long it has been heard. It is the one controller where today
 - **D2, the start page's waiting song:** on the same deck (proposal), or kept the start page's own as a jingle.
 - **D3, after a reload:** the now-playing line remembers the last song and offers to start it (proposal), or nothing.
 - **D4, the names:** `SongDeck` for the stage; the song page's controller becomes a view of it.
+- **D5, the lanes:** `Playbacks` with `song`, `previews`, `live` (proposal, above). And whether a short one-shot (a
+  sample preview of a second, a jingle) also sets the song aside, or plays over it (proposal: over it; only an
+  example that plays on until stopped sets the song aside).
 
 ## The work
 
@@ -94,4 +145,5 @@ After KLANG-00389's `Player` steps 1 and 2 (the move into the Spine, typed owner
 - 2026-11-01: created from the maintainer's ask; the code read: `CodeSongPage` (its controller and its unmount),
   `KlangampDeck`, `KlangCodePlaybackCtrl`, the start page's and the code examples' controllers. The same day: only
   real songs on the deck; a code example sets the song aside and it comes back in time (D1 proposal); all of it
-  decided and kept in the Spine (the maintainer's word).
+  decided and kept in the Spine (the maintainer's word). Then the Spine's `Playbacks` with three lanes (`song`,
+  `previews`, `live`), on the maintainer's question.
