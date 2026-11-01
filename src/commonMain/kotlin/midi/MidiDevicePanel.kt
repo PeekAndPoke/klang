@@ -23,6 +23,9 @@ data class MidiDevicePanel(
     val body: String = "#2b2b2f",
     val keyBed: KeyBed? = null,
     val controls: List<PanelControl> = emptyList(),
+    /** Where the [name] is printed: the KeyLab's spot left of its keybed by default. */
+    val nameX: Int = 35,
+    val nameY: Int = 190,
     val bindings: MidiBindings = MidiBindings(),
 )
 

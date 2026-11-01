@@ -31,6 +31,7 @@ fun Tag.MidiPanel(
     tints: Map<String, String> = emptyMap(),
     outlines: Map<String, String> = emptyMap(),
     noteOffset: Int = 0,
+    keyLabels: Map<Int, String> = emptyMap(),
 ) = comp(
     MidiPanel.Props(
         panel = panel,
@@ -39,6 +40,7 @@ fun Tag.MidiPanel(
         tints = tints,
         outlines = outlines,
         noteOffset = noteOffset,
+        keyLabels = keyLabels,
     )
 ) {
     MidiPanel(it)
@@ -80,6 +82,8 @@ class MidiPanel(ctx: Ctx<Props>) : Component<MidiPanel.Props>(ctx) {
          * to the untransposed note at that number: the offset simply is not in the data.
          */
         val noteOffset: Int = 0,
+        /** The letter printed on a key of the keybed, by the note it plays: the laptop keys' (KLANG-00402). */
+        val keyLabels: Map<Int, String> = emptyMap(),
     )
 
     companion object {
@@ -154,7 +158,7 @@ class MidiPanel(ctx: Ctx<Props>) : Component<MidiPanel.Props>(ctx) {
             p.controls.forEach { renderControl(it) }
 
             svgText(
-                x = 35, y = 190, text = p.name.uppercase(),
+                x = p.nameX, y = p.nameY, text = p.name.uppercase(),
                 fill = "#6c7178", fontSize = "13", fontWeight = "600",
             )
         }
@@ -177,6 +181,15 @@ class MidiPanel(ctx: Ctx<Props>) : Component<MidiPanel.Props>(ctx) {
                 rx = "3", stroke = "#1a1a1c", strokeWidth = "1",
                 key = "w-$note",
             )
+            props.keyLabels[note]?.let { label ->
+                svgText(
+                    x = x + whiteW / 2, y = bed.y + bed.height - 26,
+                    text = label,
+                    fill = INK_ON_LIGHT, fontSize = "16", textAnchor = "middle",
+                    key = "wk-$note",
+                )
+            }
+
             // Octave marker on every C, the way a keyboard is read at a glance.
             if (note % 12 == 0) {
                 svgText(
@@ -196,6 +209,16 @@ class MidiPanel(ctx: Ctx<Props>) : Component<MidiPanel.Props>(ctx) {
                 rx = "3", stroke = "#000", strokeWidth = "1",
                 key = "b-$note",
             )
+
+            props.keyLabels[note]?.let { label ->
+                svgText(
+                    x = x + whiteW * 0.3, y = bed.y + bed.height * 0.62 - 10,
+                    text = label,
+                    // Dark on a lit key, where white has too little contrast
+                    fill = if (note in props.heldNotes) INK_ON_LIGHT else KEY_WHITE, fontSize = "14", textAnchor = "middle",
+                    key = "bk-$note",
+                )
+            }
         }
     }
 
@@ -277,7 +300,8 @@ class MidiPanel(ctx: Ctx<Props>) : Component<MidiPanel.Props>(ctx) {
                 c.label?.let {
                     svgText(
                         x = c.x + 6, y = c.y + c.size - 6, text = it,
-                        fill = "#7f8794", fontSize = "10", key = "${c.id}-lbl",
+                        // Dark on the light of a struck pad, where the grey has no contrast
+                        fill = if (pressed(c.id)) INK_ON_LIGHT else "#7f8794", fontSize = "10", key = "${c.id}-lbl",
                     )
                 }
             }
@@ -291,8 +315,10 @@ class MidiPanel(ctx: Ctx<Props>) : Component<MidiPanel.Props>(ctx) {
                 )
                 c.label?.let {
                     svgText(
-                        x = c.x + c.width / 2.0, y = c.y + c.height / 2.0 + 4, text = it,
-                        fill = c.tint ?: LABEL, fontSize = "9", textAnchor = "middle", key = "${c.id}-lbl",
+                        // The text grows with the button: 9 on the KeyLab's 20 high ones
+                        x = c.x + c.width / 2.0, y = c.y + c.height / 2.0 + c.height * 0.2, text = it,
+                        fill = if (pressed(c.id)) INK_ON_LIGHT else c.tint ?: LABEL,
+                        fontSize = "${c.height * 0.45}", textAnchor = "middle", key = "${c.id}-lbl",
                     )
                 }
             }

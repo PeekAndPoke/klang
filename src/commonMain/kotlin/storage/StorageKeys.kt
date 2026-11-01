@@ -23,6 +23,9 @@ object StorageKeys {
     /** The instrument the Midi Playground's editors held when last applied. */
     const val MIDI_INSTRUMENT_DRAFT = "klang-midi-instrument-draft"
 
+    /** The laptop keys' layout chosen by hand, a layout's name; absent for "Automatic" (KLANG-00402, D9). */
+    const val MIDI_KEY_LAYOUT = "klang-midi-key-layout"
+
     /** The master volume, a linear gain from 0.0 to 1.0 (KLANG-00330). */
     const val MASTER_VOLUME = "klang-master-volume"
 
@@ -138,6 +141,7 @@ object StorageKeys {
             precious = true,
             covers = exactly(MIDI_INSTRUMENTS, MIDI_INSTRUMENT_DRAFT),
         ),
+        Part(name = "Laptop keys' layout", about = "The letters the laptop keyboard prints", covers = exactly(MIDI_KEY_LAYOUT)),
         // The random seeds (the maintainer, 2026-10-28: "Make a random seeds "section" in the storage and the first
         // entry will be the seed for grain noise and the metal brushes"); reset, one is made anew on the next load
         Part(

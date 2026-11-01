@@ -1,6 +1,6 @@
 # KLANG-00402: MIDI playground design: a laptop keyboard always on screen, and a control layer between the devices and what they do
 
-> **Status (2026-11-01): IN PROGRESS.** D1 to D8 decided, all as proposed (the maintainer, 2026-11-01); step 0 done, step 1 next.
+> **Status (2026-11-01): IN PROGRESS.** D1 to D8 decided, all as proposed (the maintainer, 2026-11-01); D9 built as proposed; steps 0 to 2 done, step 3 next.
 >
 > **Part of:** KLANG-00363 (Live play: MIDI and realtime)
 
@@ -109,8 +109,8 @@ on the keys come from `navigator.keyboard.getLayoutMap()` where the browser has 
 as each key is first pressed, else QWERTY. The German labels:
 
 ```
-  Number row   [1][2][3][4]  pads 1-4                  [Ü][+]  sound -/+     (BracketLeft, BracketRight)
-  Top row      [Q][W][E][R]  pads 5-8   (2 x 4, as the KeyLab's pads)
+  Number row   [1][2][3][4]  pads 1-4
+  Top row      [Q][W][E][R]  pads 5-8   (2 x 4, as the KeyLab's pads)   [Ü][+]  sound -/+  (BracketLeft, BracketRight)
   Home row        [S][D]   [G][H][J]   [L][Ö]          black keys: C# D#   F# G# A#   C# D#
   Bottom row   [Y][X][C][V][B][N][M][,][.][-]          white keys: C D E F G A B C D E
   Arrows       [<-][->] octave -/+    [v][^] velocity -/+
@@ -342,6 +342,31 @@ as proposed"). D7 was the maintainer's own proposal.
      `when`s; browsing a sound drops the applied Ignitor, so the sound browsed is heard; the scaffolding nothing used
      yet removed (it comes with steps 2 and 3); wrong comments corrected.
 2. `LaptopKeys` and its drawing: `MidiPanel` learns key labels, the laptop keyboard is a panel value like the KeyLab's.
+   **Done (2026-11-01):**
+   - `LaptopKeys` (common): key positions to `ControlEvent`s, the map of D1; the octave (C1 to C7) and the velocity
+     (32 to 127 in seven steps) its own; a key's up stops the note its down started; repeat and modified keys; the
+     focus lost lets everything go (`AllUp`, `FocusLost`).
+   - D9: `KeyLayout` (English, German, French: only the letters the drawing prints); "Automatic" takes the browser's
+     map (the Keyboard Map API, Chrome and Edge), else learns each key's letter from its first press, else English.
+     The choice is kept by a new Spine area, `MidiSettings` (store `MidiSettingsStorage`, `klang-midi-key-layout`).
+   - The drawing: `laptopKeyboardPanel` (common), a `MidiDevicePanel` value like the KeyLab's; `MidiPanel` prints
+     each key's letter (`keyLabels`), lets a panel place its name, sizes button text by the button and darkens the
+     text on a lit control. On the MIDI page: the laptop keys under the KeyLab's drawing, playing while focused (a
+     click into it, D8), with the octave, the velocity and the layout choice; folded while a KeyLab is connected (D5).
+     In the kitchen sink: a MIDI section with the laptop keyboard (German letters with a chord, a pad and sustain
+     lit; French letters an octave up).
+   - Held notes and pressed controls are kept per source, so each drawing lights its own.
+   - Specs: `LaptopKeysSpec`, `KeyLayoutSpec` (JVM).
+   - Seen only in the kitchen sink: the MIDI page's engine does not start in headless Chrome, so the page itself
+     (focus, keys, the strip) is checked by hand, not by a screenshot.
+   - Review: round 1 (level 1) one MAJOR, fixed: the keybed's gaps were not the source's, so `'` opened Firefox's
+     quick find on an English board; the gaps (A, F, K, `'`, the key left of Y) are ours and silent. Its MINORs
+     fixed: Meta's up lets everything go (macOS sends no up under Meta); folding, and a KeyLab plugged in while
+     folded, let the keys go (a removed element sends no blur); the lights per source by reason; no letter learned
+     with Shift; the keyboard map's refusal caught; dark letters on a lit black key; one helper for the letters by
+     octave. Round 2 (level 2) clean; its MINORs applied: Shift+Tab leaves the keys (the keyboard's way out, named
+     under the drawing), the diagram's row of Ü and +, two members private. Not taken: a spec for the page's light
+     logic; it moves into the rig in the Spine with step 4, where its specs come. 11 mutants killed in all.
 3. Screen input on every drawn control (keys, pads, buttons, knobs, faders, wheels, the encoder).
 4. `MidiRig` in the Spine, the MIDI tool in the bottom panel of every page, the laptop keys behind its focus, the
    Motor started by the first key. After `Player` has moved into the Spine (KLANG-00389, its plan's steps 1 and 2: the

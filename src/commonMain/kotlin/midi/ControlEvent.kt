@@ -8,7 +8,6 @@ package io.peekandpoke.klang.midi
 /** Which input said it: "keylab-49-mk3", "midi:<port name>", "laptop", "screen". */
 data class SourceId(val id: String) {
     companion object {
-        /** The laptop keys (step 2). */
         val Laptop = SourceId("laptop")
     }
 }
@@ -25,6 +24,10 @@ data class ControlId(val id: String) {
         val PitchBend = ControlId("pitch-bend")
         val ModWheel = ControlId("mod-wheel")
         val MainEncoder = ControlId("main-encoder")
+
+        /** The laptop's two instrument keys (Ü and +). */
+        val InstrumentPrevious = ControlId("instrument-previous")
+        val InstrumentNext = ControlId("instrument-next")
 
         fun pad(n: Int) = ControlId("pad-$n")
     }
@@ -100,5 +103,8 @@ sealed interface ControlEvent {
 
         /** The device was unplugged mid-chord. */
         Disconnected,
+
+        /** The laptop keys lost the focus (the tool, the window, the tab): a key held then never sends its up. */
+        FocusLost,
     }
 }

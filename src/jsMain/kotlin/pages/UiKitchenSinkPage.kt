@@ -11,6 +11,11 @@ import io.peekandpoke.klang.comp.LcdDisplay
 import io.peekandpoke.klang.comp.Oscilloscope
 import io.peekandpoke.klang.layouts.MenuPickUp
 import io.peekandpoke.klang.layouts.menuPickUpView
+import io.peekandpoke.klang.midi.ControlId
+import io.peekandpoke.klang.midi.KeyLayout
+import io.peekandpoke.klang.midi.LaptopKeys
+import io.peekandpoke.klang.midi.MidiPanel
+import io.peekandpoke.klang.midi.laptopKeyboardPanel
 import io.peekandpoke.klang.pages.docs.tutorials.soundDesignBasicsTrack
 import io.peekandpoke.klang.spine.Recents
 import io.peekandpoke.klang.storage.LookStorage
@@ -157,6 +162,7 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
             renderFields()
             renderButtons()
             renderPopups()
+            renderMidi()
             renderToday()
         }
     }
@@ -879,6 +885,38 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
                     KlangPanel {
                         +"A plate held by four rivets: the frame of every popup."
                     }
+                }
+            }
+        }
+    }
+
+    private fun FlowContent.renderMidi() {
+        section("MIDI") {
+            cell(
+                name = "Laptop keys: German letters, C E G held, pad 5 struck (KLANG-00402)",
+                source = "midi/MidiPanel.kt, midi/LaptopKeyboard.kt",
+            ) {
+                div {
+                    css { put("width", "720px") }
+
+                    MidiPanel(
+                        panel = laptopKeyboardPanel(label = KeyLayout.German::labelOf),
+                        heldNotes = setOf(60, 64, 67),
+                        activeControls = mapOf("pad-5" to 0.8, ControlId.Sustain.id to 1.0),
+                        keyLabels = LaptopKeys.keyLabels(octave = 0, label = KeyLayout.German::labelOf),
+                    )
+                }
+            }
+
+            cell(name = "Laptop keys: French letters, an octave up, at rest", source = "midi/LaptopKeyboard.kt") {
+                div {
+                    css { put("width", "720px") }
+
+                    MidiPanel(
+                        panel = laptopKeyboardPanel(label = KeyLayout.French::labelOf),
+                        noteOffset = 12,
+                        keyLabels = LaptopKeys.keyLabels(octave = 1, label = KeyLayout.French::labelOf),
+                    )
                 }
             }
         }

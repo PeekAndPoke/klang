@@ -51,6 +51,8 @@ data class Routing(val routes: Map<ControlRef, PlayFunction>) {
                 put(ControlRef(source = null, control = ControlId.Sustain), PlayFunction.Sustain)
                 put(ControlRef(source = null, control = ControlId.Panic), PlayFunction.Panic)
                 put(ControlRef(source = null, control = ControlId.MainEncoder), PlayFunction.BrowseInstrument(direction = 1))
+                put(ControlRef(source = null, control = ControlId.InstrumentPrevious), PlayFunction.BrowseInstrument(direction = -1))
+                put(ControlRef(source = null, control = ControlId.InstrumentNext), PlayFunction.BrowseInstrument(direction = 1))
                 put(ControlRef(source = null, control = ControlId.ModWheel), PlayFunction.Value)
 
                 for (n in 1..9) {

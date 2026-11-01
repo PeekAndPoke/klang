@@ -14,6 +14,7 @@ import io.peekandpoke.klang.script.KlangScriptEngine
 import io.peekandpoke.klang.script.runtime.FunctionValue
 import io.peekandpoke.klang.script.runtime.convertFunctionToKotlin
 import io.peekandpoke.klang.script.stdlibLib
+import io.peekandpoke.klang.spine.MidiSettings
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.lang.note
 import io.peekandpoke.klang.sprudel.lang.sound
@@ -31,12 +32,17 @@ import io.peekandpoke.kraft.utils.WakeLockComponent
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
+import io.peekandpoke.ultra.html.onBlur
 import io.peekandpoke.ultra.html.onClick
+import io.peekandpoke.ultra.html.onFocus
+import io.peekandpoke.ultra.html.onKeyDown
+import io.peekandpoke.ultra.html.onKeyUp
 import io.peekandpoke.ultra.semanticui.icon
 import io.peekandpoke.ultra.semanticui.noui
 import io.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.ultra.streams.ops.distinct
 import io.peekandpoke.ultra.streams.ops.map
+import kotlinx.browser.window
 import kotlinx.css.FontWeight
 import kotlinx.css.Padding
 import kotlinx.css.fontFamily
@@ -47,11 +53,14 @@ import kotlinx.css.padding
 import kotlinx.css.px
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
+import kotlinx.html.div
 import kotlinx.html.tbody
 import kotlinx.html.td
 import kotlinx.html.th
 import kotlinx.html.thead
 import kotlinx.html.tr
+import org.w3c.dom.events.KeyboardEvent
+import kotlin.js.Promise
 import kotlin.math.roundToInt
 
 @Suppress("FunctionName")
@@ -87,14 +96,45 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
     /** The voices sounding, as [voicing] holds them, for the drawing and the pressed keys. */
     private var held: Map<NoteVoicing.Key, NoteVoicing.Held> by value(emptyMap())
 
-    /** The momentary controls held down (pads, buttons), each with its velocity; a pad also with its bank's colour. */
-    private var pressed: Map<String, Double> by value(emptyMap())
+    /** The momentary controls held down (pads, buttons) by source and id, each with its velocity. */
+    private var pressed: Map<Pair<SourceId, String>, Double> by value(emptyMap())
 
+    /** A KeyLab pad held down lights in its bank's colour. */
     private var pressedTints: Map<String, String> by value(emptyMap())
+
+    /** The laptop's keys as a source (KLANG-00402, step 2); they play while their drawing has the focus. */
+    private val laptop = LaptopKeys()
+
+    /** The laptop's octave and velocity, mirrored after each key so the page redraws them. */
+    private var laptopState: Pair<Int, Int> by value(laptop.octave to laptop.velocity)
+
+    private var laptopFocused: Boolean by value(false)
+
+    /** Opened by hand while a KeyLab is connected, when the laptop keys fold to a strip (D5). */
+    private var laptopOpen: Boolean by value(false)
+
+    /** The layout chosen by hand; null for "Automatic" (D9). */
+    private val keyLayout by subscribingTo(MidiSettings.layout)
+
+    /** The browser's own letters by key position, where it tells them (Chrome, Edge); null elsewhere. */
+    private var browserLetters: Map<String, String>? by value(null)
+
+    /** The letters learned from the keys pressed, by position: what "Automatic" shows where the browser tells nothing. */
+    private var learnedLetters: Map<String, String> by value(emptyMap())
 
     private val ctrlState by subscribingTo(ctrl.state)
 
     private val midiState by subscribingTo(midi.state)
+
+    /** A KeyLab plugged in folds the laptop keys away (D5): a removed element sends no blur, so they let go here. */
+    @Suppress("unused")
+    private val keyLabPlugged by subscribingTo(
+        midi.state.map { state -> state.devices.any { it.contains("KeyLab", ignoreCase = true) } }.distinct()
+    ) { connected ->
+        if (connected && !laptopOpen) {
+            releaseLaptop()
+        }
+    }
 
     /** The kit loads as soon as the engine is up, so a pad's first hit sounds (D2). */
     @Suppress("unused")
@@ -218,6 +258,7 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
         lifecycle {
             onMount {
                 applyInstrument()
+                readBrowserLetters()
                 midi.start()
                 midi.events.subscribeToStream { evt -> evt?.let { onMidi(it) } }
             }
@@ -393,15 +434,29 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
             }
 
             is ControlEvent.AllUp -> {
-                // A MIDI panic releases every source's notes, as it always did; a port gone only its own
+                // A MIDI panic releases every source's notes, as it always did; a port gone or keys unfocused only their own
                 val outs = when (evt.reason) {
                     ControlEvent.Reason.Panic -> voicing.panic()
-                    ControlEvent.Reason.Disconnected -> voicing.allUp(evt)
+                    ControlEvent.Reason.Disconnected, ControlEvent.Reason.FocusLost -> voicing.allUp(evt)
                 }
 
-                // The controls held light no more: their releases may never come (a device sends CC 123 on 16 channels)
-                pressed = emptyMap()
-                pressedTints = emptyMap()
+                // The source's controls held light no more: their releases may never come (a device unplugged, the keys
+                // unfocused); a panic puts out every light
+                when (evt.reason) {
+                    ControlEvent.Reason.Panic -> {
+                        pressed = emptyMap()
+                        pressedTints = emptyMap()
+                    }
+
+                    ControlEvent.Reason.Disconnected, ControlEvent.Reason.FocusLost -> {
+                        pressed = pressed.filterKeys { (source, _) -> source != evt.source }
+
+                        // The tints are the devices' pads only
+                        if (evt.source != LaptopKeys.source) {
+                            pressedTints = emptyMap()
+                        }
+                    }
+                }
 
                 if (outs.isNotEmpty()) {
                     logEvent(evt.tsMs, "ALL UP (${evt.reason}): ${outs.size} voice(s) released")
@@ -412,14 +467,18 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
 
             is ControlEvent.Press -> {
                 logEvent(evt.tsMs, "PRESS ${evt.control.id} vel ${velocityLabel(evt.velocity)}")
-                pressed = pressed + (evt.control.id to evt.velocity)
-                padTint(evt.control)?.let { pressedTints = pressedTints + (evt.control.id to it) }
+                pressed = pressed + ((evt.source to evt.control.id) to evt.velocity)
+                padTint(evt)?.let { pressedTints = pressedTints + (evt.control.id to it) }
                 routing.functionOf(source = evt.source, control = evt.control)?.let { onPressed(it, evt) }
             }
 
             is ControlEvent.Release -> {
-                pressed = pressed - evt.control.id
-                pressedTints = pressedTints - evt.control.id
+                pressed = pressed - (evt.source to evt.control.id)
+
+                // The tints are the devices' pads only: a laptop pad's release leaves a KeyLab pad's colour alone
+                if (evt.source != LaptopKeys.source) {
+                    pressedTints = pressedTints - evt.control.id
+                }
                 routing.functionOf(source = evt.source, control = evt.control)?.let { onReleased(it, evt) }
             }
 
@@ -515,8 +574,13 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
         controlValues = controlValues + (controlId to value)
     }
 
-    /** Held notes on the KEYBED: the pads are presses now, so every held note is a key. */
-    private fun heldKeyNotes(): Set<Int> = held.keys.map { it.note }.toSet()
+    /** The notes held on the laptop's keys, or on the devices' keybeds: each drawing lights its own. */
+    private fun heldNotesOf(laptopKeys: Boolean): Set<Int> =
+        held.keys.filter { (it.source == LaptopKeys.source) == laptopKeys }.map { it.note }.toSet()
+
+    /** The controls held down on the laptop, or on the devices, by id: each drawing lights its own. */
+    private fun pressedOf(laptopKeys: Boolean): Map<String, Double> =
+        pressed.filterKeys { (source, _) -> (source == LaptopKeys.source) == laptopKeys }.mapKeys { it.key.second }
 
     /** Every pad outlined in the active bank's colour, so the bank is readable at rest. */
     private fun padOutlines(): Map<String, String> {
@@ -525,9 +589,9 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
         return (1..8).associate { "pad-$it" to color }
     }
 
-    /** A pad struck lights in its bank's colour, the bank its note said; null for any other control. */
-    private fun padTint(control: ControlId): String? = when {
-        !control.id.startsWith("pad-") -> null
+    /** A device's pad struck lights in its bank's colour, the bank its note said; null for any other control. */
+    private fun padTint(evt: ControlEvent.Press): String? = when {
+        evt.source == LaptopKeys.source || !evt.control.id.startsWith("pad-") -> null
         activeBank == "A" -> BANK_A_COLOR
         else -> BANK_B_COLOR
     }
@@ -625,7 +689,7 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
 
                     ctrlState.isLoading -> {
                         icon.loading.spinner()
-                        +"Starting the Motör ..."
+                        +"Starting the Motor ..."
                     }
 
                     else -> {
@@ -647,6 +711,7 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
     private fun FlowContent.renderPlayground() {
         renderDevices()
         renderPanel()
+        renderLaptopKeys()
         renderInstrument()
         renderSoundPicker()
         renderPressedKeys()
@@ -705,12 +770,165 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
             renderTransposeControl()
             MidiPanel(
                 panel = DEVICE,
-                heldNotes = heldKeyNotes(),
-                activeControls = controlValues + pressed,
+                heldNotes = heldNotesOf(laptopKeys = false),
+                activeControls = controlValues + pressedOf(laptopKeys = false),
                 tints = pressedTints,
                 outlines = padOutlines(),
                 noteOffset = keyBedOffset,
             )
+        }
+    }
+
+    /**
+     * The laptop's keys (KLANG-00402, step 2): drawn as a panel with each key's letter, playing while the drawing has
+     * the focus (a click into it, D8), so an editor or a page's own key never meets them. Folded to a strip while a
+     * KeyLab is connected (D5), and opened from it by hand.
+     */
+    private fun FlowContent.renderLaptopKeys() {
+        val keyLabConnected = midiState.devices.any { it.contains("KeyLab", ignoreCase = true) }
+        val shown = !keyLabConnected || laptopOpen
+        val (octave, velocity) = laptopState
+
+        ui.basic.segment {
+            key = "laptop-keys"
+
+            ui.horizontal.list {
+                noui.item { noui.header { +"Laptop keys" } }
+
+                noui.item {
+                    +when {
+                        !shown -> "Folded while a KeyLab is connected"
+                        laptopFocused -> "Playing: octave C${4 + octave}, velocity $velocity"
+                        else -> "Click the keyboard, then play"
+                    }
+                }
+
+                noui.item {
+                    ui.mini.buttons {
+                        layoutButton(layout = null, title = "Automatic")
+
+                        KeyLayout.entries.forEach { layoutButton(layout = it, title = it.title) }
+                    }
+                }
+
+                if (keyLabConnected) {
+                    noui.item {
+                        ui.mini.basic.button {
+                            onClick {
+                                // Folding takes the drawing away, and a removed element sends no blur
+                                if (laptopOpen) {
+                                    releaseLaptop()
+                                }
+
+                                laptopOpen = !laptopOpen
+                            }
+                            +(if (laptopOpen) "Fold" else "Open")
+                        }
+                    }
+                }
+            }
+
+            if (shown) {
+                div {
+                    attributes["tabindex"] = "0"
+                    attributes["role"] = "application"
+                    attributes["aria-label"] = "Laptop keys: click, then play"
+                    css {
+                        put("outline", if (laptopFocused) "2px solid #4a9eff" else "1px dashed #55555c")
+                        put("border-radius", "4px")
+                        put("max-width", "1000px")
+                    }
+
+                    onKeyDown { e -> laptopKey(e, down = true) }
+                    onKeyUp { e -> laptopKey(e, down = false) }
+                    onFocus { laptopFocused = true }
+                    // A key held when the focus goes never sends its up: everything the keys hold lets go
+                    onBlur { releaseLaptop() }
+
+                    val panel = laptopKeyboardPanel(label = ::letterOf)
+
+                    MidiPanel(
+                        panel = panel,
+                        heldNotes = heldNotesOf(laptopKeys = true),
+                        activeControls = pressedOf(laptopKeys = true),
+                        noteOffset = octave * 12,
+                        keyLabels = LaptopKeys.keyLabels(octave = octave, label = ::letterOf),
+                    )
+                }
+
+                noui.small.text {
+                    +"Shift+Tab leaves the keyboard (Tab is the sustain, Esc the panic). Many laptop keyboards drop the third or "
+                    +"fourth key of some chords: that is the keyboard, not Klang."
+                }
+            }
+        }
+    }
+
+    /** The laptop keys let go of everything they hold: a key held when the focus goes never sends its up. */
+    private fun releaseLaptop() {
+        laptopFocused = false
+        laptop.focusLost(tsMs = window.performance.now()).forEach { handle(it) }
+    }
+
+    private fun FlowContent.layoutButton(layout: KeyLayout?, title: String) {
+        ui.given(keyLayout == layout) { primary }.button {
+            key = "layout-${layout?.name ?: "auto"}"
+            onClick { MidiSettings.chooseLayout(layout) }
+            +title
+        }
+    }
+
+    /** A key on the laptop's drawing: through [laptop]; a key that is the laptop's does not reach the browser too. */
+    private fun laptopKey(e: KeyboardEvent, down: Boolean) {
+        val result = when (down) {
+            true -> laptop.keyDown(
+                code = e.code,
+                repeat = e.repeat,
+                modified = e.ctrlKey || e.altKey || e.metaKey,
+                tsMs = e.timeStamp.toDouble(),
+                shift = e.shiftKey,
+            )
+
+            false -> laptop.keyUp(code = e.code, tsMs = e.timeStamp.toDouble())
+        }
+
+        if (result.handled) {
+            e.preventDefault()
+
+            // "Automatic" learns each key's letter as it is first pressed, where the browser does not tell the layout; not
+            // with Shift, which prints another sign (Shift and the comma is "<" on an English board)
+            if (down && !e.shiftKey && e.key.length == 1 && e.code !in learnedLetters) {
+                learnedLetters = learnedLetters + (e.code to e.key.uppercase())
+            }
+        }
+
+        result.events.forEach { handle(it) }
+        laptopState = laptop.octave to laptop.velocity
+    }
+
+    /** The letter on the key at [code]: the layout chosen, else the browser's, else learned, else the English one. */
+    private fun letterOf(code: String): String =
+        keyLayout?.labelOf(code) ?: browserLetters?.get(code) ?: learnedLetters[code] ?: KeyLayout.English.labelOf(code)
+
+    /** Asks the browser for its layout's letters, where it tells them (Chrome, Edge: the Keyboard Map API). */
+    private fun readBrowserLetters() {
+        val keyboard = window.navigator.asDynamic().keyboard ?: return
+
+        try {
+            val read: Promise<dynamic> = keyboard.getLayoutMap().unsafeCast<Promise<dynamic>>()
+
+            read.then<Unit> { map ->
+                val letters = mutableMapOf<String, String>()
+                val note: (String, String) -> Unit = { letter, code -> letters[code] = letter.uppercase() }
+
+                map.forEach(note)
+                browserLetters = letters
+            }.catch { e ->
+                // Refused (a frame without the keyboard-map permission): the letters are learned instead
+                console.warn("[MidiPlayground] the browser's keyboard map is not readable", e)
+            }
+        } catch (e: Throwable) {
+            console.warn("[MidiPlayground] the browser's keyboard map is not readable", e)
         }
     }
 
