@@ -168,10 +168,10 @@ is two voices, as two channels are today.
 | [o Motor running]   inputs: [KeyLab 49 mk3 o] [Laptop keys o] [Screen o]     [Panic]           |
 +-----------------------------------------------+------------------------------------------------+
 | PLAY CODE                           [Apply]   | INSTRUMENTS                    [New instrument] |
-|  x => x                                       |  Loadout: [1 warmSaw x] [2 pad x] [3 supersaw x] |
-|    .sound(warmSaw)                            |  Yours:   warmSaw  pad  lead   (drag, click)     |
-|    .reverb(wet = 0.2)                         |  let warmSaw = <its Ignitor editor>              |
-|                                               |  Built-in: supersaw sine sawtooth ... pluck      |
+|  let warmSaw = Ign.saw()...                   |  Loadout: [1 warmSaw x] [2 pad x] [3 supersaw x] |
+|  let pad = Ign.supersaw(...)                  |  Yours (the lets of the play code):              |
+|                                               |    warmSaw  pad   (drag, click)                  |
+|  x => x.sound(warmSaw).reverb(wet = 0.2)      |  Built-in: supersaw sine sawtooth ... pluck      |
 +-----------------------------------------------+------------------------------------------------+
 | NOW PLAYING   C4 96  E4 80  G4 88   pad 3   sustain held                                       |
 | UNDER THE HOOD (folded)   [Events] [Routing] [MIDI monitor]                                    |
@@ -185,22 +185,25 @@ is two voices, as two channels are today.
 - **The play surface is docked** to the bottom of the window (the maintainer, 2026-11-01: "the input device it fixed
   to the bottom of the screen and does not scroll"). It is kept low: pads, functions and keybed side by side; the
   page above scrolls and ends with room for the dock, so nothing hides under it.
-- **One input for what a key plays** (D7, the maintainer's proposal, 2026-11-01: `x => x.sound(myInst).kat()`): a
-  function from the key's one-note pattern to what sounds, the left half of the page. It replaces today's two
-  inputs (Ignitor and mapper). Every instrument on the right is in scope by its name, the way a song writes
-  `let pad = Ign.supersaw(...)` and then `.sound(pad)`; a built-in is a name in quotes, `.sound("supersaw")`.
+- **One input holds everything** (D7, the maintainer's proposal, 2026-11-01: `x => x.sound(myInst).kat()`, and "the
+  input with 'let warmSaw' should not exist, should all be in the one input"): the left half of the page, written
+  like a song. The instruments are `let`s of Ignitors at the top (`let pad = Ign.supersaw(...)`), and the script
+  ends in a function from the key's one-note pattern to what sounds (`x => x.sound(pad).reverb(wet = 0.2)`); a
+  built-in is a name in quotes, `.sound("supersaw")`. It replaces today's two inputs (Ignitor and mapper).
   `startEvents` already announces an inline Ignitor before its voice; the registry finds one it knows, so only the
   frontend builds it again per note.
-- **The instruments**, the right half: yours (a name that is a KlangScript identifier, and its Ignitor, edited below
-  the list when selected) and the built-ins. A click plays one: it rewrites the play code's `.sound(...)`.
+- **The instruments**, the right half, a view of the code, not a second editor: yours are the play code's top-level
+  `let`s whose value is an Ignitor, then the built-ins. After Apply, the names come from the parsed script's
+  top-level `let`s (a small AST walker, in `klangscript` where walkers live) and each value from
+  `KlangScriptEngine.getVariable(name)`; the engine has no call that lists its bindings. A click plays one: it rewrites the first `.sound(...)` of the play code.
+  "New instrument" adds a `let` at the top.
 - **The loadout** (the maintainer, 2026-11-01: "We would also need a loadout again, so the user can configure the
   instruments that will be switched through by the change instrument inputs"): the instruments that
   "instrument -/+" steps through (Ü +, the KeyLab's main encoder). Filled by drag and drop from the list, as the
   Looks page equips; a slot takes a drop to replace it, the row's end a drop to add, × removes. An empty loadout
   steps through all of them.
-- Saved in localStorage like `MidiInstrumentStorage` today: the instruments, the play code, the loadout. An old
-  save (an Ignitor and a mapper) loads once as an instrument plus a play code with `.sound(<it>)` in front of the
-  mapper.
+- Saved in localStorage like `MidiInstrumentStorage` today: the play code and the loadout. An old save (an Ignitor
+  and a mapper) loads once as one play code: the Ignitor as a `let`, the mapper with `.sound(<it>)` in front.
 - The page renders at once. The keyboard is there before the Motor: the first key or click is the user gesture that
   starts it (`keydown` already wakes the AudioContext, `_audio_context_wake.kt`). D4 decides whether that first note
   plays once the Motor is up.
