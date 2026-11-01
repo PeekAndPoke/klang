@@ -27,10 +27,14 @@ columns, and the look row (seven looks and an empty slot).
   Then it would also react to back navigation, or it would close automatically on uri change"). It behaves as a
   modal: the focus stays inside while it is open, what it covers is `inert`, Esc closes it. Not Kraft's modal stack:
   that covers the whole window, and the column with the Motor must stay. Two rules more:
-  - **Any change of the URI closes it:** a pick, a link inside it, the browser's Back and Forward. So Back with the
-    menu open goes back and closes it, one rule for every way of leaving.
-  - **Opening it adds no history entry:** Back never stops at "the menu was open", and the URI never says it. (A
-    phone's back gesture closing only the menu would need such an entry; decide that with the phone layout.)
+  - **Back closes it and stays on the page** (the maintainer, 2026-11-01: "as long as we have the back navigation
+    trap armed"): the open menu arms Kraft's `trapBackNavigation`, as `FadingModal` does (and with it the visuals,
+    `VisualsScreen`): its callback closes the menu and lets the navigation through, which only takes the trap's own
+    entry. Closed any other way (Esc, the button, a pick), the trap goes back over its entry itself. A phone's back
+    gesture does the same.
+  - **Any other change of the URI closes it too:** a pick, a link inside it, Forward. As `FadingModal` watches the
+    router's page, the menu does; on a pick, check the order of closing and navigating so no empty entry of the trap
+    stays in the history.
   - A dialog open (its own key layer) keeps Shift Shift and Alt+M: the menu does not open over a dialog.
 - **Its keys:** the menu button, Alt+M (`KlangKeyBindings.MotorMenu`, today's), and Shift Shift or Ctrl+K / Cmd+K
   (`KlangKeyBindings.SearchEverywhere`, declared for "the search over everything" and never bound until now: the
@@ -85,7 +89,8 @@ columns, and the look row (seven looks and an empty slot).
   Alt+M, Shift Shift and Ctrl+K; takes the focus in the search field, closes on Esc and on a pick, and gives the
   focus back as today.
 - A song playing under the open menu plays on; nothing under it takes a click or the focus.
-- Back, Forward or any other change of the URI closes the menu; opening it leaves the history as it was.
+- Back closes the menu and stays on the page; any other change of the URI closes it too; after a pick, Back goes to
+  the page before it (no entry of the trap left over).
 - A song opened shows first under "last opened" the next time the menu opens, also after a reload.
 - Every look and every destination is reachable by keyboard; the destinations keep their `aria-current`.
 
@@ -94,5 +99,5 @@ columns, and the look row (seven looks and an empty slot).
 - 2026-11-01: created from the maintainer's ask; the mockup on a design canvas, built on a screenshot of today's
   drawer (the brass look) and the look roles of `KlangRole`. The same day: a real overlay over the mounted page,
   Shift Shift opens it, and it covers the tool windows and the bottom panel too, so it always looks the same (the
-  maintainer's word). The modal rules: closed by any change of the URI, no history entry of its own. D2 decided
+  maintainer's word). The modal rules: Back closes it (Kraft's back navigation trap), any change of the URI too. D2 decided
   (the look picker as drawn); D1 decided: songs and tutorials, docs to bookmarks (KLANG-00404).
