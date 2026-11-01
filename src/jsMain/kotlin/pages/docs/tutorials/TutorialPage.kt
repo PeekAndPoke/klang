@@ -12,6 +12,7 @@ import io.peekandpoke.klang.comp.lexikonSlugOf
 import io.peekandpoke.klang.comp.toAdsrSignals
 import io.peekandpoke.klang.layouts.WorkbenchSlots
 import io.peekandpoke.klang.pages.docs.lexikon.lexikonAutoLinks
+import io.peekandpoke.klang.spine.Recents
 import io.peekandpoke.klang.storage.TutorialStorage
 import io.peekandpoke.klang.ui.comp.KlangAdsrSignal
 import io.peekandpoke.klang.ui.comp.KlangButton
@@ -27,6 +28,8 @@ import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
+import io.peekandpoke.ultra.streams.ops.distinct
+import io.peekandpoke.ultra.streams.ops.map
 import kotlinx.css.CssBuilder
 import kotlinx.html.ButtonType
 import kotlinx.html.DIV
@@ -72,6 +75,19 @@ class TutorialPage(ctx: NoProps) : PureComponent(ctx) {
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
     private val currentRoute by subscribingTo(router.current)
+
+    // The lesson opened, with the track it was opened in, for the Motor's menu (KLANG-00403). The copy of the page
+    // fading out (inert) reports nothing: the page just opened does
+    @Suppress("unused")
+    private val recent by subscribingTo(
+        router.current.map { it.matchedRoute["slug"] to it.matchedRoute.queryParams[PARAM_TRACK] }.distinct()
+    ) { (slug, track) ->
+        val tutorial = allTutorials.find { it.slug == slug }
+
+        if (tutorial != null && dom?.closest("[inert]") == null) {
+            Recents.openedTutorial(slug = tutorial.slug, title = tutorial.title, track = tutorialTrack(track, tutorial)?.slug)
+        }
+    }
 
     private val done by subscribingTo(TutorialStorage.done)
 

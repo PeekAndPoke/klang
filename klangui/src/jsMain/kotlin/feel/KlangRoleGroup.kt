@@ -90,6 +90,7 @@ enum class KlangRoleGroup(val title: String, val elements: List<Element>) {
             ),
             Element(id = "scrollbar", title = "Scrollbar", roles = listOf(KlangRole.ScrollThumbHover to "Thumb, hovered")),
             Element(id = "focus", title = "Focus ring", roles = listOf(KlangRole.Focus to "Focus")),
+            Element(id = "progress", title = "Progress bar", roles = listOf(KlangRole.Progress to "Fill")),
         ),
     ),
 

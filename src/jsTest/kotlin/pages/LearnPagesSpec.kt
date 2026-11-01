@@ -29,6 +29,8 @@ import io.peekandpoke.klang.pages.docs.tutorials.firstStepsTrack
 import io.peekandpoke.klang.pages.docs.tutorials.patternLanguageTrack
 import io.peekandpoke.klang.pages.docs.tutorials.soundDesignBasicsTrack
 import io.peekandpoke.klang.pages.docs.tutorials.theKlangPathTrack
+import io.peekandpoke.klang.spine.Recents
+import io.peekandpoke.klang.storage.StorageKeys
 import io.peekandpoke.klang.storage.TutorialStorage
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.kraft.addons.browserdetect.browserDetect
@@ -41,6 +43,7 @@ import io.peekandpoke.kraft.testing.TestBedScope
 import io.peekandpoke.kraft.testing.awaitUri
 import io.peekandpoke.kraft.testing.eventually
 import kotlinx.browser.document
+import kotlinx.browser.localStorage
 import kotlinx.browser.window
 import kotlinx.coroutines.delay
 import kotlinx.html.div
@@ -391,6 +394,43 @@ class LearnPagesSpec : StringSpec({
             delay(600)
 
             WorkbenchSlots.column() shouldNotBe null
+        }
+    }
+
+    "a lesson opened is recorded for the Motor's menu with the track it was read in, the latest first" {
+        val kept = localStorage.getItem(StorageKeys.RECENTS)
+        val filters = soundDesignBasicsTrack.lessons[3]
+
+        try {
+            withLearn {
+                go("/${filters.slug}?${TutorialPage.PARAM_TRACK}=${soundDesignBasicsTrack.slug}")
+
+                eventually {
+                    val last = Recents.entries().first()
+
+                    last.kind shouldBe Recents.Kind.Tutorial
+                    last.id shouldBe filters.slug
+                    last.title shouldBe filters.title
+                    last.track shouldBe soundDesignBasicsTrack.slug
+                }
+
+                go("/${path[1].slug}")
+
+                eventually {
+                    Recents.entries().first().id shouldBe path[1].slug
+                    // Read in no track: the main path holds it
+                    Recents.entries().first().track shouldBe theKlangPathTrack.slug
+                }
+
+                Recents.entries().filter { it.kind == Recents.Kind.Tutorial }.take(2).map { it.id } shouldContainExactly
+                    listOf(path[1].slug, filters.slug)
+            }
+        } finally {
+            if (kept == null) {
+                localStorage.removeItem(StorageKeys.RECENTS)
+            } else {
+                localStorage.setItem(StorageKeys.RECENTS, kept)
+            }
         }
     }
 

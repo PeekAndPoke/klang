@@ -110,6 +110,32 @@ columns, and the look row (seven looks and an empty slot).
    - Seen in the second campaign, in two of its eight runs: `KlangNoticeModalSpec` with a page key answered twice; two
      reruns of the whole suite green. Unexplained; watch it.
 2. The record of what was opened, in the Spine; "Pick up where you left off" reads it.
+   **Done (2026-11-01):**
+   - `spine/Recents`: the Spine's record of the songs (six kept) and lessons (three kept) opened, the newest first, one
+     entry per thing; `record` is the pure rule. Kept by `spine/storage/RecentsStorage` (`klang-recents`, JSON; an
+     entry that cannot be read is left out), the first store in the Spine's own storage; the Dev Storage page lists
+     it as "Last opened". `SpineStorageSpec` (JVM) keeps the rule that only `spine/` imports `spine.storage`.
+   - The song page reports its song (again on a new title or tempo); the tutorial page its lesson with the track it
+     was read in (the main path when none). A page fading out (inert) reports nothing.
+   - `MenuPickUp` in the menu's left half: the songs as tiles (title, RPM, when: "just now", "5 min ago", "yesterday"),
+     and "Continue learning": the last lesson's track, its next lesson not done and a progress bar; all done leads to
+     the track's page. With nothing opened yet it says so.
+   - The lesson tile and its progress bar are new elements: the bar under the text at the tile's whole width, inside
+     its padding (the maintainer, 2026-11-01: "below the text full width while respecting the padding of the button"),
+     filled in a new look role, `Progress` (`--kl-progress`, follows the selected lamp, `LampOn`). Both in the kitchen
+     sink (the menu's cell, and a cell with each state: nothing yet, begun, part done, all done) and in the look editor
+     (a "Progress bar" card under Lamps, accent and focus), at the maintainer's word: "these new elements need to go
+     into the kitchen sink and theme editor as well".
+   - Specs: `RecentsSpec` (the order of opening, also with a clock set back; the counts; the codec), `MenuPickUpSpec`
+     (when, which track, a gone lesson passed over, a gone song not offered, where a pick leads), a `LearnPagesSpec`
+     case (a lesson recorded with its track), `SpineStorageSpec` (JVM). 15 mutants killed (light tier).
+   - Review: round 1 (level 1) clean; its MINORs applied as one batch: the order of opening instead of the clock, a
+     lesson or song gone from the app passed over, a cleared title recorded as the song's own, the count of lessons
+     in the tile's text (a progressbar role inside a button is lost to a screen reader), the samples from the track
+     itself. Declined: a spec for the song page's report and its inert guard (the page needs the code editor and the
+     player in a TestBed; the guard is the line its `fillWorkbench` already uses on the same page).
+   - Not yet: the Dev Storage page's reset leaves the list in memory until a reload (the Spine's reset through its
+     areas is KLANG-00389's).
 3. The loadouts' section (looks now; MIDI with KLANG-00402).
 4. The search results in columns, once KLANG-00405 has the index.
 

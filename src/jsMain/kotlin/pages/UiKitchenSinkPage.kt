@@ -5,9 +5,14 @@
 
 package io.peekandpoke.klang.pages
 
+import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.comp.LcdDisplay
 import io.peekandpoke.klang.comp.Oscilloscope
+import io.peekandpoke.klang.layouts.MenuPickUp
+import io.peekandpoke.klang.layouts.menuPickUpView
+import io.peekandpoke.klang.pages.docs.tutorials.soundDesignBasicsTrack
+import io.peekandpoke.klang.spine.Recents
 import io.peekandpoke.klang.storage.LookStorage
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.comp.KlangBackLink
@@ -61,6 +66,7 @@ import kotlinx.html.h1
 import kotlinx.html.h2
 import kotlinx.html.p
 import kotlinx.html.span
+import kotlin.js.Date
 import kotlin.time.Duration.Companion.seconds
 
 @Suppress("FunctionName")
@@ -76,6 +82,26 @@ fun Tag.UiKitchenSinkPage() = comp {
  * canvas is refreshed from it. The last section shows today's components for comparison until they are replaced.
  */
 class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
+
+    /** Songs as the menu's half shows them, opened a little while ago. */
+    private val sampleSongs: List<Recents.Entry> = listOf(
+        Triple("Final Synthasy VII Prelude", 40.0, 2.0),
+        Triple("Kokon", 19.0, 35.0),
+        Triple("Die Kirschblüte", 27.0, 60.0 * 5),
+        Triple("A Synth Worth Lying For", 31.0, 60.0 * 30),
+        Triple("Synthsturm", 34.0, 60.0 * 24 * 3),
+    ).map { (title, rpm, minutesAgo) ->
+        Recents.Entry(kind = Recents.Kind.Song, id = title, title = title, rpm = rpm, at = Date.now() - minutesAgo * 60_000)
+    }
+
+    /** The Sound Design Basics track with its first [done] lessons done. */
+    private fun sampleLearning(done: Int) = MenuPickUp.Continue(
+        title = soundDesignBasicsTrack.title,
+        next = soundDesignBasicsTrack.lessons.getOrNull(done)?.title,
+        done = done,
+        total = soundDesignBasicsTrack.lessons.size,
+        target = Nav.tutorials(),
+    )
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -725,8 +751,31 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
                                 keyHint = "Mod K",
                             )
                         },
+                        pickUp = {
+                            menuPickUpView(songs = sampleSongs, learning = sampleLearning(done = 3), now = Date.now(), onOpen = {})
+                        },
                         loadouts = { KlangLookPicker(onChosen = { LookStorage.save(it) }) },
                     )
+                }
+            }
+
+            cell(
+                name = "Pick up where you left off: nothing yet, a track begun, part done, all done",
+                source = "layouts/MenuPickUp.kt, klangui/comp/KlangControlStyles.kt (drawerLesson, drawerProgress)",
+            ) {
+                row {
+                    for ((songs, learning) in listOf(
+                        emptyList<Recents.Entry>() to null,
+                        sampleSongs.take(2) to sampleLearning(done = 0),
+                        sampleSongs to sampleLearning(done = 3),
+                        sampleSongs.take(1) to sampleLearning(done = 8),
+                    )) {
+                        div(classes = KlangControlStyles.drawerSection.toString()) {
+                            css { put("width", "520px") }
+
+                            menuPickUpView(songs = songs, learning = learning, now = Date.now(), onOpen = {})
+                        }
+                    }
                 }
             }
 

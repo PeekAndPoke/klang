@@ -175,6 +175,13 @@ enum class KlangRole(
     /** The keyboard focus ring. */
     Focus(cssVar = "--kl-focus", kind = Kind.Color, default = "#8fb0ff"),
 
+    /**
+     * How far along something is, a progress bar's fill (KLANG-00403: a track's lessons in the Motor's menu): the
+     * selected lamp's colour, [LampOn], unless a look sets it (the maintainer, 2026-11-01: the new elements go "into the
+     * kitchen sink and theme editor as well").
+     */
+    Progress(cssVar = "--kl-progress", kind = Kind.Color, default = LampOn.default, follows = LampOn),
+
     // ── Shape ─────────────────────────────────────────────────────────────────
 
     /** The corner of a flat control: a machined chamfer, never a pill (KLANG-00207). */

@@ -57,6 +57,9 @@ object StorageKeys {
     /** The workbench's layout: its pinned tool windows and the bottom panel, as JSON (KLANG-00349). */
     const val WORKBENCH_LAYOUT = "klang-workbench-layout"
 
+    /** The songs and lessons opened last, as JSON, kept by the Spine (KLANG-00403). */
+    const val RECENTS = "klang-recents"
+
     /** A song's code; [version] is the app's version, [songId] the song's id (a built-in song's, or "new"). */
     fun songCode(version: String, songId: String): String = songKey(version = version, songId = songId, part = "code")
 
@@ -125,6 +128,7 @@ object StorageKeys {
             about = "Pinned tool windows and the bottom panel",
             covers = exactly(WORKBENCH_LAYOUT),
         ),
+        Part(name = "Last opened", about = "The songs and lessons the Motor's menu offers to pick up", covers = exactly(RECENTS)),
         Part(name = "Lessons done", about = "The tutorials you finished") {
             it.startsWith("klang-tutorial-completed-")
         },

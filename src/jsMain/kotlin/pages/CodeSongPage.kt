@@ -16,6 +16,7 @@ import io.peekandpoke.klang.comp.SongColumn
 import io.peekandpoke.klang.comp.SongSettings
 import io.peekandpoke.klang.layouts.WorkbenchSlots
 import io.peekandpoke.klang.script.stdlibLib
+import io.peekandpoke.klang.spine.Recents
 import io.peekandpoke.klang.spine.VisualState
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
 import io.peekandpoke.klang.storage.EditorSettings
@@ -179,6 +180,15 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     private val titlePersist by subscribingTo(ctrl.state.map { it.title }.distinct()) { newTitle ->
         if (newTitle != null) {
             songStorage.title(newTitle)
+        }
+    }
+
+    // The song opened, for the Motor's menu (KLANG-00403); again with a new title or tempo, so the menu shows them. The
+    // copy of the page fading out (inert) reports nothing: the page just opened does
+    @Suppress("unused")
+    private val recent by subscribingTo(ctrl.state.map { it.title to it.rpm }.distinct()) { (title, rpm) ->
+        if (dom?.closest("[inert]") == null) {
+            Recents.openedSong(id = songId, title = title?.ifBlank { null } ?: builtIn?.title ?: "New Song", rpm = rpm)
         }
     }
 

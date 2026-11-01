@@ -5,10 +5,14 @@
 
 package io.peekandpoke.klang.pages
 
+import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.comp.Motor
 import io.peekandpoke.klang.comp.Oscilloscope
 import io.peekandpoke.klang.comp.Spectrumeter
+import io.peekandpoke.klang.layouts.MenuPickUp
+import io.peekandpoke.klang.layouts.menuLessonTile
+import io.peekandpoke.klang.pages.docs.tutorials.soundDesignBasicsTrack
 import io.peekandpoke.klang.storage.LookStorage
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
@@ -1211,6 +1215,22 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
                     put("outline-offset", "2px")
                 }
                 +"Focused"
+            }
+
+            // The lesson tile of the Motor's menu, three of eight done (KLANG-00403)
+            "progress" -> div {
+                css { put("width", "200px") }
+
+                menuLessonTile(
+                    learning = MenuPickUp.Continue(
+                        title = soundDesignBasicsTrack.title,
+                        next = soundDesignBasicsTrack.lessons[3].title,
+                        done = 3,
+                        total = soundDesignBasicsTrack.lessons.size,
+                        target = Nav.tutorials(),
+                    ),
+                    onOpen = {},
+                )
             }
 
             // The knob card's knob turns the gauge too (the maintainer, 2026-10-28)

@@ -653,6 +653,78 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("border", "1px solid var(--kl-edge)")
     }
 
+    /** A small caption over a group in a half: "Last opened songs", "Continue learning". */
+    val drawerCaption by rule {
+        put("display", "block")
+        put("margin", "12px 0 6px")
+        put("font-size", "12px")
+        put("color", "var(--kl-ink-label)")
+    }
+
+    /** What one comes back to: tiles in three columns, each a title over a small second line. */
+    val drawerRecentGrid by rule {
+        put("display", "grid")
+        put("grid-template-columns", "repeat(3, minmax(0, 1fr))")
+        put("gap", "8px")
+
+        rule("& > button") {
+            put("min-height", "56px")
+            put("align-items", "flex-start")
+            put("justify-content", "center")
+            put("padding", "8px 12px")
+            put("text-align", "left")
+        }
+    }
+
+    /** A title on a tile that may be long: one line, cut with an ellipsis. */
+    val drawerRecentTitle by rule {
+        put("display", "block")
+        put("max-width", "100%")
+        put("overflow", "hidden")
+        put("white-space", "nowrap")
+        put("text-overflow", "ellipsis")
+        put("font-size", "14px")
+        put("font-weight", "700")
+    }
+
+    /** The row holding the lesson tile, which takes its whole width. */
+    val drawerLessonRow by rule {
+        put("display", "grid")
+
+        rule("& > button") {
+            put("padding", "8px 12px")
+        }
+    }
+
+    /**
+     * The lesson tile: the track and its next lesson, the progress bar under them at the tile's whole width, inside its
+     * padding (the maintainer, 2026-11-01: "below the text full width while respecting the padding of the button").
+     */
+    val drawerLesson by rule {
+        put("display", "flex")
+        put("flex-direction", "column")
+        put("align-items", "stretch")
+        put("gap", "8px")
+        put("width", "100%")
+        put("text-align", "left")
+    }
+
+    /** How far along a track is: a sunken bar, filled in the progress colour (the selected lamp's, unless a look sets it). */
+    val drawerProgress by rule {
+        put("display", "block")
+        put("width", "100%")
+        put("height", "8px")
+        put("border-radius", "4px")
+        put("overflow", "hidden")
+        put("background", "var(--kl-ground-sunken)")
+
+        rule("& > span") {
+            put("display", "block")
+            put("height", "100%")
+            put("background", "var(--kl-progress)")
+        }
+    }
+
     /** The look picker's row: the presets as equal tiles. */
     val lookRow by rule {
         put("display", "grid")
