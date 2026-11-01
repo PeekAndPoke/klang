@@ -22,7 +22,7 @@ import * from "sprudel"
 // Song Status: Upcoming Garage Band ...
 
 let feel          =    3    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
-let transposition =   -3    // -1 .. D# | 0 .. E | 1 .. F
+let transposition =   -4    // -1 .. D# | 0 .. E | 1 .. F
 let drunk         =  1.0    // How many liters of beers did each band member have?
 let snareHz       =  205    // Where does the snare cut through?
 
@@ -97,7 +97,7 @@ let preampHighGain = Ign.fn(x => x
   .distort(0.30, "tube", 8).highpass(100)
   .distort(0.45, "softsat", 8).highpass(90)
   .distort(0.70, "soft", 8)
-  .lowpass(4000)                                   // the fizz
+  .lowpass(4500)                                   // the fizz
   .mul(0.30))                                      // volume
 
 // Power amps: the last saturating stage. Tells: symmetric or not, and the presence bump. The last mul is the master.
@@ -182,7 +182,7 @@ let makeGuitar = (rig) => {
     .pitchEnvelope(0.2, x => x.adsr(0.030, 0.05, 0, 0))
     //.lowpass(freq = Ign.freq().times(4).add(Ign.constant(5000).adsr(pAttack, 1.0, 0.0, 0.050)), q = 0.7)
     // noise burst
-    .plus(Ign.whitenoise().adsr(0.003, 0.008, 0.0, 0.05).highpass(Ign.perlin(1).mul(100).add(2500)).mul(0.05))
+    .plus(Ign.whitenoise().adsr(0.003, 0.008, 0.0, 0.05).highpass(Ign.perlin(1).mul(100).add(2500)).mul(0.08))
     //.plus(Ign.crackle(1.3).highpass(1200).adsr(0.003, 0.001, 0.0, 0.05).mul(1.5))
     // the string - lowpass adsr for the string sound and adsr for the string
     .adsr(pAttack, pDecay, pSustain, pRelease, e => e.curves("exp", "exp", "linear"))
@@ -239,7 +239,7 @@ export guitarDyna = (s) => "0.98!2 0.65!6  0.85!2 0.65!2 0.80!2 0.65!2"
   .sub(perlin(0.00, 0.05).seed(s)).mul("[1.00 0.90 0.95 0.90  1.00 0.90 0.95 0.90]")
 export guitarClip = (s) => "<0.97!31 0.84 0.97!31 0.82 0.97!30 0.84 0.81>"
   .sub("<[0.0!7 0.05] [0.0!7 0.06] [0.0!7 0.05] [0.0!7 0.07]>").add(perlin(0.00, 0.01).slow(8).seed(s))
-export guitarDecay = (s) => "5.0".mul(perlin(0.95, 1.05).slow(4).seed(s))
+export guitarDecay = (s) => "5.0".mul(perlin(0.975, 1.025).slow(4).seed(s))
 
 // Lead - Inspired by: Editors - Papillon  ---------------------------------------------------------------------------------------------------------------------
 export lead_pat =
