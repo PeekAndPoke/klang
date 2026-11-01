@@ -76,8 +76,9 @@ let pedalBoost = Ign.fn(x => x
 // Preamps: the amp's gain stages. Tells: how many stages, what each coupling cap lets through, and how tight the bass
 // is BEFORE it clips. The last mul is the preamp's volume, set so the power amp is pushed about as hard as stock.
 let preampStock = Ign.fn(x => x
-  .distort(0.20, "tube", 4).highpass(100)
-  .distort(0.50, "soft", 4).highpass(100))
+  .oversampleAtLeast(4, y => y
+    .distort(0.20, "tube").highpass(100)
+    .distort(0.50, "soft").highpass(100)))
 
 // Clean: one lightly driven tube stage and a bright cap that lets the top through.
 let preampClean = Ign.fn(x => x
@@ -87,16 +88,18 @@ let preampClean = Ign.fn(x => x
 
 // Crunch: two tube stages, coupled loosely so the bass goes along and the clipping stays round.
 let preampCrunch = Ign.fn(x => x
-  .distort(0.30, "tube", 4).highpass(90)
-  .distort(0.30, "tube", 4).highpass(90)
+  .oversampleAtLeast(4, y => y
+    .distort(0.30, "tube").highpass(90)
+    .distort(0.30, "tube").highpass(90))
   .mul(1.9))                                       // volume
 
 // High gain: tighten the bass BEFORE it clips, three cascaded stages, the last one hard, then tame the fizz.
 let preampHighGain = Ign.fn(x => x
   .highpass(110)                                    // tight: no bass into the gain stages
-  .distort(0.30, "tube", 8).highpass(100)
-  .distort(0.45, "softsat", 8).highpass(90)
-  .distort(0.70, "soft", 8)
+  .oversampleAtLeast(8, y => y                       // the three stages at 8x: one trip up, one down
+    .distort(0.30, "tube").highpass(100)
+    .distort(0.45, "softsat").highpass(90)
+    .distort(0.70, "soft"))
   .lowpass(4500)                                   // the fizz
   .mul(0.30))                                      // volume
 
