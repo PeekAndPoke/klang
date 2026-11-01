@@ -1412,6 +1412,8 @@ object KlangControlStyles : StyleSheet("kl-controls") {
             put("min-height", "0")
             put("overflow-y", "auto")
             put("border-radius", "0")
+            // Edge to edge, no drop shadow: it would fall over the column beside it
+            put("box-shadow", "inset 0 1px 0 rgba(255,255,255,0.09)")
         }
 
         // Holding the focus only when it has no control of its own: a frame, not a control, so no ring
