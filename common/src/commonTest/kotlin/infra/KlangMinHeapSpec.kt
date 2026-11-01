@@ -118,6 +118,28 @@ class KlangMinHeapSpec : StringSpec({
         heap.size() shouldBe 0
     }
 
+    "stable: elements that tie come out in the order they were pushed, whatever pops came between" {
+        val heap = KlangMinHeap<Pair<Int, String>> { a, b -> a.first < b.first }
+
+        listOf(2 to "a", 1 to "x", 2 to "b", 2 to "c").forEach { heap.push(it) }
+        heap.pop() shouldBe (1 to "x")
+        listOf(2 to "d", 3 to "y", 2 to "e").forEach { heap.push(it) }
+
+        heap.popAll().map { it.second } shouldBe listOf("a", "b", "c", "d", "e", "y")
+    }
+
+    "stable: many ties, the push order kept through growth and removals" {
+        val heap = KlangMinHeap<Pair<Int, Int>> { a, b -> a.first < b.first }
+
+        (0 until 100).forEach { heap.push((it % 3) to it) }
+        heap.removeWhen { it.second % 10 == 0 }
+
+        val popped = heap.popAll()
+        popped.map { it.first } shouldBe popped.map { it.first }.sorted()
+        // Within each value, the push order
+        popped.groupBy { it.first }.values.forEach { group -> group.map { it.second } shouldBe group.map { it.second }.sorted() }
+    }
+
     "removeWhen: heap order correct after removing root" {
         val heap = intHeap()
         listOf(10, 20, 30, 40, 50).forEach { heap.push(it) }

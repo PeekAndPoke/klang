@@ -54,7 +54,7 @@ AUDIO BACKEND (audio thread)
          └─ The playback's master: a KatalystChain on the summed orbits, swapped by ChainSwap
             (phase 3 step 12; `master(Katalyst(k => ...))`)
 
-       KlangAudioRenderer
+       MasterStage (in PlaybackEngineDispatcher, live and offline)
          ├─ Apply DC blockers, then master limiter (−1 dB, 20:1, 5 ms lookahead)
          ├─ Clip ±1.0 into the floating-point output (a StereoBuffer, no quantisation)
          └─ Send to platform audio output (Web Audio takes the floats; the JVM line and the

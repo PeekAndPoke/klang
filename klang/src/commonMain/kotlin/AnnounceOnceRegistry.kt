@@ -33,8 +33,8 @@ import io.peekandpoke.klang.common.infra.withLock
  * @param uniqueId The process-wide synthetic name for a DSL tree. Must be content-derived: this
  *   class trusts it to be equal for equal trees and distinct for distinct ones.
  * @param announce Where a first sighting goes. The live path sends a `Cmd.Register*` over the
- *   wire; an in-process path (e.g. the offline renderer) registers straight into a backend
- *   registry. Same contract, different destination.
+ *   wire (the offline renderer too, since KLANG-00399 step 4); an in-process path (a spec that drives
+ *   an engine directly) registers straight into a backend registry. Same contract, different destination.
  */
 internal class AnnounceOnceRegistry<T : Any>(
     private val uniqueId: (T) -> String,

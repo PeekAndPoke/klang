@@ -76,6 +76,9 @@ internal class KlangPatternScheduler(
          * than this gets the state of the last ones only, and the catch-up stays short.
          */
         const val CATCH_UP_MAX_CYCLES = 64.0
+
+        /** The look-ahead in cycles when nothing else is asked for: the options' default. */
+        val DEFAULT_LOOKAHEAD_CYCLES: Double = KlangCyclicPlayback.Options().lookaheadCycles
     }
 
     // Extract dependencies from context for convenience
@@ -111,7 +114,7 @@ internal class KlangPatternScheduler(
      */
     private var tempo = TempoMap(cyclesPerSecond = 0.5)
     /** The look-ahead in cycles, at least [LOOKAHEAD_MIN_SEC] seconds of them. */
-    private var lookaheadCycles: Double = 2.0
+    private var lookaheadCycles: Double = DEFAULT_LOOKAHEAD_CYCLES
 
     // ===== Fetcher State =====
     private val sampleSoundLookAheadCycles = 8.0
@@ -130,6 +133,12 @@ internal class KlangPatternScheduler(
 
     /** Whether [epochSec] is set: the playback's origin, from which the backend counts every voice. */
     private var begun = false
+
+    /**
+     * Started by [startDriven]: its holder renders, so a pattern query that fails is the holder's error, not one to
+     * print and play on past.
+     */
+    private var driven = false
 
     // ===== Cycle Tracking (for CycleCompleted signal) =====
     private var lastEmittedCycle = -1
@@ -208,9 +217,8 @@ internal class KlangPatternScheduler(
 
         onStarted()
 
-        // Update playback parameters
-        this.tempo = TempoMap(cyclesPerSecond = options.rpm.coerceAtLeast(MIN_RPM) / 60.0)
-        this.lookaheadCycles = options.lookaheadCycles
+        driven = false
+        reset(cyclesPerSecond = options.rpm.coerceAtLeast(MIN_RPM) / 60.0, lookaheadCycles = options.lookaheadCycles)
 
         // Start the fetcher job
         val prefetchCycles = options.prefetchCycles?.toDouble() ?: 2.0
@@ -327,11 +335,6 @@ internal class KlangPatternScheduler(
     }
 
     private suspend fun runPlayback(scope: CoroutineScope, prefetchCycles: Double) {
-        // Reset state
-        queryCursorCycles = 0.0
-        sampleSoundLookAheadPointer = 0.0
-        lastEmittedCycle = -1
-
         // ===== WAIT FOR BACKEND WARMUP =====
         // Ensures the audio thread's hot path is JIT'd before the first real voice hits.
         // Completes immediately if the backend already signalled ready earlier in the session.
@@ -345,6 +348,20 @@ internal class KlangPatternScheduler(
         // ===== PRELOAD PHASE =====
         preloadSamples(prefetchCycles)
 
+        begin()
+
+        // The live driver: asks the scheduler every round with the playback clock's time
+        while (scope.isActive) {
+            tick(nowSec = elapsedSec())
+            // roughly 60 FPS
+            pause()
+        }
+
+        println("KlangPatternScheduler stopped")
+    }
+
+    /** Sets the playback's start, sends its first cycle and says it started: the same live and driven. */
+    private fun begin() {
         // ===== RECORD START TIME =====
         // Must be set BEFORE scheduling first cycle so voices have correct playbackStartTime
         requestedEpochSec = clock.nowSec()
@@ -379,20 +396,45 @@ internal class KlangPatternScheduler(
             sendControl(KlangCommLink.Cmd.ScheduleVoices(playbackId = playbackId, voices = opening))
             queryCursorCycles = fetchChunk
         } catch (e: Exception) {
+            if (driven) {
+                throw e
+            }
+
             e.printStackTrace()
         }
 
         // Emit started signal
         signals(KlangPlaybackSignal.PlaybackStarted)
+    }
 
-        // The live driver: asks the scheduler every round with the playback clock's time
-        while (scope.isActive) {
-            tick(nowSec = elapsedSec())
-            // roughly 60 FPS
-            pause()
+    /**
+     * Starts the playback driven by its holder, not by its own loop (KLANG-00399, step 4): nothing is awaited and
+     * nothing preloaded, the first cycle goes out at once, and the holder then calls [tick] with the playback's time.
+     * The offline renderer drives it so, block by block, in lockstep with its backend.
+     */
+    internal fun startDriven(cyclesPerSecond: Double) {
+        if (!running.compareAndSet(expect = false, update = true)) {
+            return
         }
 
-        println("KlangPatternScheduler stopped")
+        onStarted()
+
+        driven = true
+        // The tempo as given, not through rpm; the holder counts its length on the same floor
+        reset(cyclesPerSecond = cyclesPerSecond.coerceAtLeast(MIN_RPM / 60.0), lookaheadCycles = DEFAULT_LOOKAHEAD_CYCLES)
+        // The holder loads every sample before the first block: no look-ahead for samples
+        sampleSoundLookAheadPointer = Double.POSITIVE_INFINITY
+
+        begin()
+    }
+
+    /** The playback's tempo and look-ahead, and its state as at a start. */
+    private fun reset(cyclesPerSecond: Double, lookaheadCycles: Double) {
+        tempo = TempoMap(cyclesPerSecond = cyclesPerSecond)
+        this.lookaheadCycles = lookaheadCycles
+        queryCursorCycles = 0.0
+        sampleSoundLookAheadPointer = 0.0
+        lastEmittedCycle = -1
     }
 
     /**
@@ -436,7 +478,7 @@ internal class KlangPatternScheduler(
         val skipped = try {
             queryEvents(from = from, to = nowCycle, sendSignals = false).sortedBy { it.startTime }
         } catch (t: Throwable) {
-            if (t is CancellationException) {
+            if (t is CancellationException || driven) {
                 throw t
             }
 
@@ -587,7 +629,7 @@ internal class KlangPatternScheduler(
 
         val voices = events.map { event ->
             val relativeStartTime = map.secondsAt(event.startCycles)
-            val duration = map.secondsAt(event.startCycles + event.durationCycles) - relativeStartTime
+            val duration = map.durationSec(startCycle = event.startCycles, durationCycles = event.durationCycles)
 
             // The UI's times: when it is heard, on the wall clock
             val uiStartTime = uiOffsetSec + relativeStartTime
@@ -640,8 +682,18 @@ internal class KlangPatternScheduler(
 
         sampleSoundLookAheadPointer = to
 
-        // Lookup events
-        val events = queryEvents(from = from, to = to, sendSignals = false)
+        // Lookup events; a cycle whose query fails has no samples to load, and the playback plays on
+        val events = try {
+            queryEvents(from = from, to = to, sendSignals = false)
+        } catch (t: Throwable) {
+            if (t is CancellationException) {
+                throw t
+            }
+
+            t.printStackTrace()
+
+            return
+        }
 
         // Get unique sample requests
         val sampleRequests = events
@@ -679,11 +731,13 @@ internal class KlangPatternScheduler(
 
                 queryCursorCycles = to
             } catch (t: Throwable) {
-                if (t is CancellationException) {
+                if (t is CancellationException || driven) {
                     throw t
                 }
 
                 t.printStackTrace()
+                // On past the chunk that failed: asked again, it would fail again, in a loop that never yields
+                queryCursorCycles = to
             }
         }
     }
@@ -721,24 +775,37 @@ internal class KlangPatternScheduler(
         val from = floor(tempo.cycleAt(nowSec))
         val to = ceil(queryCursorCycles)
 
-        try {
-            val voices = queryEvents(from = from, to = to, sendSignals = true)
-            // Only send voices beyond the grace window
-            val futureVoices = voices.filter { it.startTime >= cutoffSec }
+        // Cycle by cycle, as the fetch asks: a cycle whose query fails is left out, the others are still replaced
+        val voices = ArrayList<ScheduledVoice>()
+        var cycle = from
 
-            sendControl(
-                KlangCommLink.Cmd.ReplaceVoices(
-                    playbackId = playbackId,
-                    voices = futureVoices,
-                    afterTimeSec = cutoffSec,
-                )
-            )
+        while (cycle < to) {
+            try {
+                voices.addAll(queryEvents(from = cycle, to = cycle + fetchChunk, sendSignals = true))
+            } catch (t: Throwable) {
+                if (t is CancellationException) {
+                    throw t
+                }
 
-            // Update cursor so the fetch loop continues from where resync left off
-            queryCursorCycles = to
-        } catch (e: Exception) {
-            e.printStackTrace()
+                t.printStackTrace()
+            }
+
+            cycle += fetchChunk
         }
+
+        // Only send voices beyond the grace window
+        val futureVoices = voices.filter { it.startTime >= cutoffSec }
+
+        sendControl(
+            KlangCommLink.Cmd.ReplaceVoices(
+                playbackId = playbackId,
+                voices = futureVoices,
+                afterTimeSec = cutoffSec,
+            )
+        )
+
+        // Update cursor so the fetch loop continues from where resync left off
+        queryCursorCycles = to
     }
 
     private fun requestAndSendSample(req: SampleRequest) {

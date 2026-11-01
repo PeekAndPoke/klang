@@ -192,7 +192,7 @@ class SongBenchmark(
 
         val rawEvents = pattern.queryEvents(fromCycles = 0.0, toCycles = case.cycles.toDouble(), cps = cps)
 
-        // Register inline oscillators (same as KlangOfflineRenderer).
+        // Register inline oscillators (the same names a playback announces over the wire).
         rawEvents.asSequence()
             .mapNotNull { it.sound as? SoundValue.Dsl }
             .forEach { sv ->

@@ -11,7 +11,8 @@ import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 
 /**
- * Standalone single-engine render, used by the offline renderer and the benchmarks. Its output is the
+ * Standalone single-engine render: the engine alone, for the benchmarks and the specs that measure it. Songs and the
+ * render specs render through `KlangOfflineRenderer` on the real playback path since KLANG-00399 step 4. Its output is the
  * engine's floating-point stereo block (see [MasterStage.process]); a caller that needs 16-bit PCM
  * converts at its own edge with [writePcm16].
  *

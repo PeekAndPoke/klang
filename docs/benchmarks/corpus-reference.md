@@ -14,25 +14,25 @@ engine sound change that moved a frozen text or an unedited live song. An engine
 the same change rides along as INFO, which is why a neutrality proof reads "the corpus GREEN with no live song
 edited (or accept first)".
 
-Accepted on 2026-10-23, tree `ea470167-dirty`.
+Accepted on 2026-11-01, tree `1b98559e1-dirty`.
 
 | song | code | hash | peak |
 |---|---|---|---|
-| Final Synthasy VII Prelude | f286893a239c01cc | f91ffdccb17b59e3 | 0.3866 |
-| Kokon | 0142f163977ce7a8 | 05ce0ad31386d65a | 0.7440 |
-| Die Kirschblüte | 77725fe200a5c902 | a18405ffedce68aa | 0.7038 |
-| Der Schmetterling | ef1390d4fea3445f | 639bb01e2a5554a2 | 0.7568 |
-| Gestrandet | a962895a572fc098 | 09ee233fd4a79694 | 0.0550 |
-| Seltsamere Dinge | 064dc0ef445ff932 | 4a02a77e0726c0f4 | 0.9217 |
-| Stein um Stein | 8ffa5142260feb48 | 6dfae9e37f91e993 | 0.9066 |
-| Remix: Echo um Echo | 42978eab3f4bf3ba | b2875ce90a8bdc7f | 0.4931 |
-| Greensleeves | d7390440bfa6e83e | bac90329a1dd4b4d | 0.4896 |
-| A Synth Worth Lying For | dd43f145b709cb30 | 852e15e20976fc7e | 0.9220 |
-| The Synthsale Piper's Last Rave | 754f5bd86e3aee07 | 5a2457590de5fa5a | 0.9064 |
-| Synthsturm | 74464ed7811defad | 9d388ab23f98b3d2 | 0.8641 |
-| The Synthsale Piper's Farewell | 4b9caa4a49e4bf59 | 55cbbd8c4b93e528 | 0.3457 |
-| Smalltown Synth | dc6e828e4b09ee88 | 9643b2874b42c492 | 0.9108 |
-| Drunken Synthlor | f076f371d34fff8c | d274594ba5b2fdc0 | 0.8508 |
-| frozen derSchmetterling_2026_09_25 | ad38dddae123a069 | b0151ba274832b17 | 0.9249 |
-| frozen strangerThings_2026_07_03 | bd29f1f5289c3292 | c79eb3ffed863fef | 0.6647 |
-| frozen piece derSchmetterling_2026_09_16 | 816b24cab402d05a | e37e6174f55c1ab3 | 0.9144 |
+| Final Synthasy VII Prelude | 01cb117fe4edc1e0 | 8476798fd53deab6 | 0.3875 |
+| Kokon | f84927eb36e91e88 | e0fb9820d4d23e73 | 0.7664 |
+| Die Kirschblüte | 1701665b809e9c61 | 14b385ebf24f1f5c | 0.7459 |
+| Der Schmetterling | 461f490e8e7b358f | f98387bb84adb9f4 | 0.7518 |
+| Gestrandet | a5424878277ca92c | 77db888833a1cef1 | 0.0695 |
+| Seltsamere Dinge | e46e69b6c7656cb9 | 675e2d6deb69c636 | 0.7510 |
+| Stein um Stein | b98d8a48fa262fe7 | 6a43f1f384deea5d | 0.7609 |
+| Remix: Echo um Echo | 3fc60ffe8bb2be10 | c11fe59933a5ae4e | 0.4931 |
+| Greensleeves Chant | 16579cad1833540e | 77c222b0c3c67ee5 | 0.4578 |
+| A Synth Worth Lying For | cb10099d79a66b7e | 9adc0236e36ec305 | 0.7559 |
+| The Synthsale Piper's Last Rave | c211f68535874a42 | 94ea6b283d36f21c | 0.8953 |
+| Synthsturm | 74464ed7811defad | 6a9e77aef79be597 | 0.8542 |
+| The Synthsale Piper's Farewell | 4b9caa4a49e4bf59 | 8c6714174476f7ff | 0.3457 |
+| Smalltown Synth | dc6e828e4b09ee88 | 28609e132bc7447e | 0.9108 |
+| Drunken Synthlor | f076f371d34fff8c | 412580f1bdd07d07 | 0.8508 |
+| frozen derSchmetterling_2026_09_25 | ad38dddae123a069 | 0a6577be2b1f8f4a | 0.9246 |
+| frozen strangerThings_2026_07_03 | bd29f1f5289c3292 | 84cb8742d2ac3c7f | 0.6984 |
+| frozen piece derSchmetterling_2026_09_16 | 816b24cab402d05a | 2914218ed0f62dd1 | 0.9143 |

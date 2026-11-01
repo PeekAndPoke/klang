@@ -72,7 +72,7 @@ workstream and de-duplicates the cyclic path in one move.
 
 Ordered by value. Each is independently shippable.
 
-### P1 — `InlineDslRegistrar` shared by composition (**unblocks MIDI v1**) — ✅ DONE 2026-08-29 (live paths), offline pending
+### P1: `InlineDslRegistrar` shared by composition (**unblocks MIDI v1**): ✅ DONE 2026-08-29 (live paths), offline 2026-09-17
 
 **Shipped (uncommitted):** the three registry classes are gone, replaced by
 `AnnounceOnceRegistry<T>` + `InlineDslRegistrar` (which also owns the sweep).
@@ -81,7 +81,7 @@ and `OneShotPlayback` mint it and hand it to the scheduler; `KlangRealtimeVoiceP
 `registerIgnitor(dsl): String`. `InlineDslRegistrarTest` (10 rows) replaces `IgnitorRegistryTest`;
 3 mutations killed.
 
-**Still open:** `KlangOfflineRenderer` keeps its own hand-rolled sweep — it needs the local
+**Closed 2026-09-17** (the in-process sink), and since KLANG-00399 step 4 the offline renderer takes the wire path. Was: `KlangOfflineRenderer` kept its own hand-rolled sweep; it needs the local
 (in-process) sink rather than the wire sink. Deferred deliberately: the maintainer plans to
 rewrite the offline path anyway. Until then the live/offline drift risk in §5.7 remains.
 
@@ -189,10 +189,11 @@ engine state); `createEngine()` becomes a free function (it touches none of `Pla
 
 ## 5b. Offline renderer — impact assessment
 
-`KlangOfflineRenderer` (202 lines) deliberately bypasses the live playback stack: it drives
-`KlangAudioRenderer` directly, block by block, with its own `KlangCommLink` that nothing pumps.
-It therefore has **no** clock, cursor, lookahead, resync or signal concerns — P2-P6 do not touch
-it at all.
+**Superseded by KLANG-00399 step 4 (2026-11-01):** `KlangOfflineRenderer` now runs the live
+playback stack in lockstep (`KlangPatternScheduler.startDriven`, `tick`, an `OfflineBackend` on the
+dispatcher), so any change to the scheduler's clock, cursor or lookahead reaches it. What follows
+describes it as it was: it drove `KlangAudioRenderer` directly, block by block, with its own
+`KlangCommLink` that nothing pumped, and had no clock, cursor, lookahead, resync or signal concerns.
 
 It IS touched by P1, and beneficially:
 

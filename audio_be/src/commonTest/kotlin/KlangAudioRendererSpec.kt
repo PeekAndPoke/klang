@@ -34,10 +34,10 @@ class KlangAudioRendererSpec : StringSpec({
 
     "renderBlock leaves the clock on the NEXT block — the same convention as the live dispatcher" {
         // Block-framing B1: between renders the clock is the next block to be rendered. The live
-        // dispatcher and this offline renderer must agree, or a voice scheduled between two offline
+        // dispatcher and this engine-only renderer must agree, or a voice scheduled between two
         // renders would land one block off from where the same schedule lands live. Review round 1
-        // noted this line had no spec: deleting it was green because offline schedules everything
-        // before block 0 — which is exactly why the two hosts could drift apart unnoticed.
+        // noted this line had no spec: deleting it was green because a caller that schedules
+        // everything before block 0 never sees it — which is how the two hosts could drift apart.
         val renderer = createRenderer()
         renderer.clockForTest.cursorFrame shouldBe 0.0
 
@@ -63,7 +63,7 @@ class KlangAudioRendererSpec : StringSpec({
         }
 
         // The engagement: a renderer that always writes zeros passes everything above. One sine
-        // voice, scheduled before the first render as the offline renderer does, must come out
+        // voice, scheduled before the first render, must come out
         // within the master limiter's lookahead plus a few blocks.
         val playing = createRenderer()
 

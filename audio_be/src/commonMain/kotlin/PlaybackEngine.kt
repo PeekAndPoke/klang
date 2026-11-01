@@ -23,7 +23,7 @@ import kotlin.math.min
  * ## The end of life: one [Phase]
  *
  * The engine's whole lifecycle is its [phase] (tidy-up step 9, audit item C3.1). The dispatcher asks it and never
- * keeps a lifecycle of its own; the offline renderer never stops its engine. States times events, every transition
+ * keeps a lifecycle of its own; `KlangAudioRenderer` never stops its engine. States times events, every transition
  * (a dash: the phase stays):
  *
  * | phase \ event | [renderInto]                                                        | [stop]    | [resume]  | [dispose]  |

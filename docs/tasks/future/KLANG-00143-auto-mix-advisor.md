@@ -84,7 +84,7 @@ converts to loudness.
 
 ## 4. Stem export (new build item)
 
-One offline render → per-orbit WAVs + the master. Belongs in the offline render path (`KlangAudioRenderer` /
+One offline render → per-orbit WAVs + the master. Belongs in the offline render path (`KlangOfflineRenderer` on the dispatcher /
 `console/record.sh --stems`), where the cylinder buffers are already summed separately before the master stage.
 Independently useful beyond this feature (debugging, remixing, external mastering). Constraint: stems must be pre-master
 (post-orbit-effects), and the manifest should record the orbit → pattern-voice mapping so attribution reports can name

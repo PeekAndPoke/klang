@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_engine
 
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.ints.shouldBeGreaterThan
@@ -25,11 +26,16 @@ class KlangOfflineRendererTest : StringSpec({
         a.size != b.size || a.indices.any { !a[it].contentEquals(b[it]) }
 
     /**
-     * Minimal pattern that produces a single event at a given sound name.
+     * Minimal pattern that produces a single event at a given sound name, at cycle 0. Like every pattern it answers a
+     * query with the events that start in it: the renderer asks cycle by cycle, as a live playback does.
      */
     fun singleNotePattern(sound: String, freqHz: Double = 440.0): KlangPattern {
         return object : KlangPattern {
             override fun queryEvents(fromCycles: Double, toCycles: Double, cps: Double): List<KlangPatternEvent> {
+                if (!(fromCycles <= 0.0 && 0.0 < toCycles)) {
+                    return emptyList()
+                }
+
                 return listOf(
                     object : KlangPatternEvent {
                         override val startCycles = 0.0
@@ -43,6 +49,81 @@ class KlangOfflineRendererTest : StringSpec({
                 )
             }
         }
+    }
+
+    "a render repeats bit for bit: a chord of random-seeded sounds, rendered twice" {
+        // Three voices at once, each drawing random numbers (noise, unison phases): the playback id seeds their streams,
+        // the order they are promoted in deals them (KLANG-00399, step 4)
+        val chord = object : KlangPattern {
+            override fun queryEvents(fromCycles: Double, toCycles: Double, cps: Double): List<KlangPatternEvent> {
+                if (!(fromCycles <= 0.0 && 0.0 < toCycles)) {
+                    return emptyList()
+                }
+
+                return listOf("white", "supersaw", "pink").map { sound ->
+                    object : KlangPatternEvent {
+                        override val startCycles = 0.0
+                        override val durationCycles = 1.0
+                        override val sourceLocations: SourceLocationChain? = null
+                        override fun toVoiceData() = VoiceData.empty.copy(sound = sound, freqHz = 220.0, gain = 0.2)
+                    }
+                }
+            }
+        }
+
+        suspend fun render(): List<DoubleArray> {
+            val blocks = mutableListOf<DoubleArray>()
+
+            KlangOfflineRenderer(sampleRate = 48_000).render(
+                pattern = chord,
+                cycles = 1,
+                cyclesPerSecond = 2.0,
+                tailSec = 0.1,
+                onBlock = { out, _ -> blocks.add(out.left + out.right) },
+            )
+
+            return blocks
+        }
+
+        val first = render()
+
+        first.any { block -> block.any { it != 0.0 } } shouldBe true
+        rendersDiffer(first, render()) shouldBe false
+    }
+
+    "a pattern whose query fails makes the render fail, not spin" {
+        val failsAtCycle3 = object : KlangPattern {
+            override fun queryEvents(fromCycles: Double, toCycles: Double, cps: Double): List<KlangPatternEvent> {
+                check(!(fromCycles <= 3.0 && 3.0 < toCycles)) { "cycle 3 does not query" }
+
+                return emptyList()
+            }
+        }
+
+        val error = shouldThrow<IllegalStateException> {
+            KlangOfflineRenderer(sampleRate = 48_000).render(
+                pattern = failsAtCycle3,
+                cycles = 8,
+                cyclesPerSecond = 1.0,
+                tailSec = 0.0,
+                onBlock = { _, _ -> },
+            )
+        }
+
+        error.message shouldBe "cycle 3 does not query"
+    }
+
+    "a tempo under the 1 rpm floor renders at the floor, and its length follows" {
+        val result = KlangOfflineRenderer(sampleRate = 8_000).render(
+            pattern = singleNotePattern("sine"),
+            cycles = 1,
+            cyclesPerSecond = 0.001,
+            tailSec = 0.0,
+            onBlock = { _, _ -> },
+        )
+
+        // One cycle at 1 rpm is a minute, not the 1000 s the asked tempo would give
+        result.durationSec shouldBe 60.0
     }
 
     "render with default ignitors produces non-zero audio" {

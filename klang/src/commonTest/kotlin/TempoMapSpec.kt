@@ -71,6 +71,24 @@ class TempoMapSpec : StringSpec({
         map.cycleAt(6.5) shouldBe (5.0 plusOrMinus eps)
     }
 
+    "the tempo comes back as given, not as the inverse of its inverse" {
+        // 1 / (1 / x) is not x for this one; a pattern reads the tempo it is asked at (sprudel's cps)
+        val cps = 0.4395792082655184
+
+        TempoMap(cyclesPerSecond = cps).cyclesPerSecondAt(2.0) shouldBe cps
+    }
+
+    "a length within one tempo is its cycles times the seconds per cycle, to the last bit; across a change, end less start" {
+        val cps = 34.5 / 60.0
+        val map = TempoMap(cyclesPerSecond = cps)
+
+        // (3.1 - 3.0) cycles: the end less the start differs from 0.1 times the seconds per cycle in the last bit
+        map.durationSec(startCycle = 3.0, durationCycles = 0.1) shouldBe 0.1 * (1.0 / cps)
+
+        val changed = map.changed(atCycle = 4.0, cyclesPerSecond = 1.0, foldBefore = 0.0)
+        changed.durationSec(startCycle = 3.5, durationCycles = 1.0) shouldBe (0.5 / cps + 0.5 plusOrMinus eps)
+    }
+
     "a change makes a new map and leaves the old one as it was" {
         val old = TempoMap(cyclesPerSecond = 0.5)
 

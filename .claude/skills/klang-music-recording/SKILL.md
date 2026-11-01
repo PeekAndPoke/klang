@@ -15,7 +15,7 @@ Sprudel code (String)
   --> KlangScript engine (compile + execute)
   --> KlangPattern (last expression)
   --> KlangOfflineRenderer.render(pattern, cycles, cps, tailSec, onBlock)
-      --> VoiceScheduler + KlangAudioRenderer (tight loop, full CPU speed)
+      --> KlangPatternScheduler + OfflineBackend, the live path in lockstep (full CPU speed)
       --> onBlock(StereoBuffer, frames) callback per block (the engine's float output)
   --> WavFileWriter (JVM) converts to 16-bit (writePcm16) and streams blocks to disk
   --> 16-bit stereo PCM WAV @ 48kHz
@@ -25,7 +25,7 @@ Sprudel code (String)
 
 | File                   | Location                                              | Purpose                                                                                                                |
 |------------------------|-------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------|
-| `KlangOfflineRenderer` | `klang/src/commonMain/kotlin/KlangOfflineRenderer.kt` | Platform-independent renderer. Drives DSP graph directly, calls `onBlock` per rendered block. Available on JVM and JS. |
+| `KlangOfflineRenderer` | `klang/src/commonMain/kotlin/KlangOfflineRenderer.kt` | Platform-independent renderer on the live path, in lockstep; calls `onBlock` per rendered block. Available on JVM and JS. |
 | `WavFileWriter`        | `klang/src/jvmMain/kotlin/cli/WavFileWriter.kt`       | Streams 16-bit stereo PCM to a WAV file. Writes placeholder header, patches sizes on close. JVM only.                  |
 | `RenderWavCommand`     | `klang/src/jvmMain/kotlin/cli/RenderWavCommand.kt`    | Clikt CLI command `klang:record:wav`. Takes a `compilePattern` lambda to decouple from sprudel.                        |
 | `Cli.kt`               | `src/jvmMain/kotlin/Cli.kt`                           | Root CLI entry point. Wires KlangScript engine + sprudel lib into `RenderWavCommand`.                                  |
@@ -67,16 +67,21 @@ Sprudel code (String)
 
 ## How the Offline Renderer Works
 
-1. Creates a standalone DSP graph: `KlangCommLink` + `Cylinders` + `VoiceScheduler` + `KlangAudioRenderer`
-2. Queries ALL pattern events upfront for the full cycle range
-3. Converts each event to a `ScheduledVoice` with timing relative to time zero
-4. Pre-schedules all voices into `VoiceScheduler` (min-heap handles progressive activation)
-5. Renders blocks in a tight loop — no delays, no real-time pacing
-6. Calls `onBlock(StereoBuffer, frames)` for each block with the engine's clipped float output; the buffer is
+Since KLANG-00399 step 4 it runs the live playback path, driven instead of timed:
+
+1. Creates an `OfflineBackend` (the live `PlaybackEngineDispatcher`, rendering only when told; phase pool seed 1) on a
+   `KlangCommLink`, and registers the custom ignitors on its parent registry
+2. Loads every sample the song plays and hands it to the backend before the first block
+3. Starts a `KlangPatternScheduler` driven (`startDriven`) under the fixed playback id "offline" (it seeds the voices'
+   random streams): it queries the pattern cycle by cycle, as live playback does, and sends its voices and inline DSLs
+   over the link
+4. Loops: `tick` with the backend's exact position, render one block, deliver the feedback (the playback's anchor);
+   until the musical end, the tail and the output latency
+5. Calls `onBlock(StereoBuffer, frames)` for each block with the engine's clipped float output; the buffer is
    reused, so a caller copies what it keeps (caller decides what to do with the audio)
 
-This bypasses the real-time infrastructure entirely (`KlangPatternScheduler`, `JvmAudioBackend`, `KlangCommLink` IPC).
-The `KlangCommLink` instance is created but its feedback is never consumed — harmless.
+A pattern query that fails makes `render` fail. The engine-only harness `KlangAudioRenderer` stays for the benchmarks
+and the engine specs.
 
 ## Pattern Compilation
 

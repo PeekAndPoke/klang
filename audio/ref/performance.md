@@ -291,8 +291,8 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   the result stayed non-integral until `MasterStage.reset()`): about 2 and 4 KB per block at the master. It is the
   likely cause, unproven, of the V8 pass's "a noise voice allocates" (noise plus saw is loud enough to engage the
   limiter; no noise box reproduces on either bundle). The realtime master stage runs in `PlaybackEngineDispatcher`
-  and the offline one in `KlangAudioRenderer`, not in `PlaybackEngine`, so a probe that stops at `PlaybackEngine` or
-  at one voice does not see it.
+  (offline too, since KLANG-00399 step 4; the engine benchmarks' in `KlangAudioRenderer`), not in `PlaybackEngine`,
+  so a probe that stops at `PlaybackEngine` or at one voice does not see it.
   The delay, reverb and phaser were located in the V8 allocation pass (2026-10-08). Run with ten times V8's inlining
   budgets (`--max-inlined-bytecode-size-cumulative=9200 --max-inlined-bytecode-size=4600`) the delay and the phaser
   allocate nothing and the reverb about 5 bytes per block (5.2 on the production bundle, 3.9 on the development one),

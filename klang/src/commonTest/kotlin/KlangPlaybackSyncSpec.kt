@@ -7,9 +7,11 @@ package io.peekandpoke.klang.audio_engine
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
+import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.ints.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.AudioBackend
 import io.peekandpoke.klang.audio_be.OfflineBackend
 import io.peekandpoke.klang.audio_be.VoiceWatch
@@ -188,6 +190,30 @@ class KlangPlaybackSyncSpec : StringSpec({
         }
     }
 
+    "a pattern whose query fails in one cycle: the playback plays on past it" {
+        withSync(pattern = failingAt(cycle = 2)) { sync ->
+            sync.run(ms = 500.0)
+            sync.start(rpm60)
+            sync.run(ms = 5000.0)
+
+            // Cycle 2 is lost, the ones after it play
+            sync.startedOrNull("2") shouldBe null
+            sync.startedAt("3") shouldBeGreaterThan sync.startedAt("1")
+            sync.startedAt("4") shouldBeGreaterThan sync.startedAt("3")
+        }
+    }
+
+    "a pattern whose query fails where the sample look-ahead asks first: the playback plays on" {
+        // The look-ahead for samples asks eight cycles ahead of the fetch: it meets cycle 12 first
+        withSync(pattern = failingAt(cycle = 12)) { sync ->
+            sync.run(ms = 500.0)
+            sync.start(rpm60)
+            sync.run(ms = 6000.0)
+
+            listOf("1", "2", "3", "4", "5").forEach { sync.startedOrNull(it) shouldNotBe null }
+        }
+    }
+
     "the time heard counts what the backend played, less the output latency, and stands still with it" {
         withSync { sync ->
             sync.run(ms = 500.0)
@@ -231,6 +257,17 @@ class KlangPlaybackSyncSpec : StringSpec({
         fun everyCycle(from: Int = 0, masters: Boolean = false) = object : KlangPattern {
             override fun queryEvents(fromCycles: Double, toCycles: Double, cps: Double): List<KlangPatternEvent> =
                 (maxOf(from, ceil(fromCycles).toInt()) until ceil(toCycles).toInt()).map { Note(cycle = it, master = masters) }
+        }
+
+        /** [everyCycle], but a query that reaches [cycle] fails. */
+        fun failingAt(cycle: Int) = object : KlangPattern {
+            private val notes = everyCycle()
+
+            override fun queryEvents(fromCycles: Double, toCycles: Double, cps: Double): List<KlangPatternEvent> {
+                check(!(fromCycles <= cycle && cycle < toCycles)) { "cycle $cycle does not query" }
+
+                return notes.queryEvents(fromCycles = fromCycles, toCycles = toCycles, cps = cps)
+            }
         }
 
         private suspend fun withSync(pattern: KlangPattern = everyCycle(), test: suspend (Sync) -> Unit) {
@@ -441,6 +478,9 @@ class KlangPlaybackSyncSpec : StringSpec({
 
         /** The backend second the voice of [note] started at. */
         fun startedAt(note: String): Double = started.getValue(note)
+
+        /** The backend second the voice of [note] started at; null when it never started. */
+        fun startedOrNull(note: String): Double? = started[note]
 
         /** The wall second the voice of [note] is heard: the backend's second plus the lag and the output latency. */
         fun heardAt(note: String): Double = startedAt(note) + lagSec + outputLatencyMs / 1000.0

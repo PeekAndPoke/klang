@@ -1,12 +1,6 @@
 # KLANG-00399: Frontend and backend on one clock: the backend's frames drive playback, an OfflineBackend tests it
 
-> **Status (2026-10-31): IN WORK, steps 1 to 3d done.** Analysis and design agreed with the maintainer, revised after
-> a design review (level 2); the maintainer chose A1, B and C (below). Steps 1 (the tempo map), 2 (the
-> `OfflineBackend`), 3a (the backend's timeline, `PlaybackClock`, the anchor) and 3b to 3d (`tick`, the look-ahead
-> floor, the catch-up, the one-shot's end, the soundless count, the opening event, the UI on the sound) are done; the
-> maintainer smoke-tested 3a. Problem 9's AudioContext handling is done, still to try on a device. Left: layer 2
-> (step 4), waiting for the maintainer's decisions.
-> Built in windows Klang-Main-Dev gave in `audio_be`.
+> **Status (2026-11-01): PAUSED.** Steps 1 to 4 and problem 9 done; waiting for the maintainer's checks on a device (a laptop's sleep, a phone's stutter, the AudioContext's wake).
 
 ## Why this exists
 
@@ -327,6 +321,19 @@ render near real time (`CorpusCheck` renders 256 cycles per song).
    its epoch from the clock's guess (the wall clock, about 1.8e9 s) and the backend never reaches it. The driver
    gives the scheduler the backend's exact position first, or the `OfflineBackend` starts on the wall clock as the
    live backends do.
+   **Done (2026-11-01),** the maintainer's decisions: a fixed playback id ("offline"); a STABLE voice heap
+   (`KlangMinHeap`: ties pop in push order, so live and offline deal seeds and cut groups alike); the benchmarks and
+   engine specs keep `KlangAudioRenderer`. `KlangOfflineRenderer` now runs the real path in lockstep: the scheduler
+   (`startDriven`, `tick` with the backend's position, a `PlaybackClock` on it, so the epoch question above is moot)
+   sends over the wire to an `OfflineBackend` (seed 1); samples are loaded up front; a query error fails the render
+   (a live one steps past the chunk). The tempo map keeps the tempo as given and times a note's length as cycles
+   times seconds per cycle within one tempo, so its last bits match the old path. Corpus (`runSongBenchmark
+   --args=corpus`, in a worktree of HEAD plus this step): 17 of the 18 renders are bit-identical to the old path
+   with the stable heap; the stable heap alone moved 7 (4 live songs, 3 frozen), accepted with
+   `corpus-accept-engine` as the new baseline. The 18th, "The Synthsale Piper's Last Rave" (an edited live song, so
+   information only), differs because sprudel answers it differently for one whole-song query (the old path) than
+   cycle by cycle (the new path, as live playback): KLANG-00401. The new path renders it as it plays live. The corpus
+   also renders faster (180 s against 250 s).
 
 ## Acceptance
 
@@ -336,9 +343,13 @@ render near real time (`CorpusCheck` renders 256 cycles per song).
   reload; on a phone a stutter delays the sound but drops no voice that arrived in time, and what is lost is counted.
 - No `Date.now()` and no `KlangTime` in the frontend's audio sync.
 - One host (`PlaybackEngineDispatcher`) for live and offline playback; renders identical before and after step 4.
+  Met for 17 of 18 songs: the new path is bit-identical to the old one; the stable heap, decided by the maintainer,
+  moved 7 renders once and is the new baseline. The 18th renders as it plays live now, the old path having differed
+  from live (KLANG-00401).
 
 ## Related
 
+- KLANG-00401 (sprudel answers differently for one long query than cycle by cycle): found by step 4's review.
 - KLANG-00183 (worklet clock divergence): largely answered by step 3a, the frontend's clock running on the backend's
   frames.
 - KLANG-00398 (a song started while the Motor loads plays on after its page is gone): the same scheduler, a separate
@@ -368,3 +379,5 @@ render near real time (`CorpusCheck` renders 256 cycles per song).
 - 2026-10-31: steps 3b to 3d done (Klang-Research), the maintainer having smoke-tested 3a ("the RPM dial now works
   perfectly").
 - 2026-10-31: problem 9, the AudioContext woken on a gesture or when shown (Klang-Research); reviews at level 2 and 3.
+- 2026-11-01: step 4 done (Klang-Research): offline renders on the real path, the stable heap, the corpus re-based.
+- 2026-11-01: PAUSED. Steps 1 to 4 and problem 9 done; waiting for the maintainer's checks on a device (a laptop's sleep, a phone's stutter, the AudioContext's wake).

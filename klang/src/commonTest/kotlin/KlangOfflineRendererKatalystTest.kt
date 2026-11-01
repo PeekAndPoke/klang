@@ -24,11 +24,11 @@ import io.peekandpoke.klang.common.SourceLocationChain
  * or a recorded WAV would not match what the song sounds like. Twin of
  * `KlangOfflineRendererMasterTest`, for the orbit chain.
  *
- * It exercises the renderer's actual registration step rather than a copy of it: since 2026-09-17
- * that step is `InlineDslRegistrar.intoRegistries(...).announceAll(events)`, the same sweep the
- * live playback runs with the wire as its sink. The chain itself is silent in this step (the
- * cylinder starts reading declared chains in step 2), so what is asserted is registration, which
- * is the whole of what the offline path owes it today.
+ * It exercises the registration sweep an engine driven in process uses,
+ * `InlineDslRegistrar.intoRegistries(...).announceAll(events)`, the same sweep a playback runs with the wire as its
+ * sink. The offline renderer itself goes over the wire since KLANG-00399 step 4, so its own registration is the live
+ * path's, which the root render helpers (`_katalyst_render_helpers`) exercise end to end. The chain itself is silent
+ * in this step (the cylinder starts reading declared chains in step 2), so what is asserted is registration.
  */
 class KlangOfflineRendererKatalystTest : StringSpec({
 
@@ -58,7 +58,7 @@ class KlangOfflineRendererKatalystTest : StringSpec({
         ).announceAll(events)
     }
 
-    "a declared chain lands in the offline renderer's katalyst registry, under its synthetic name" {
+    "a declared chain lands in the in-process engine's katalyst registry, under its synthetic name" {
         val chain = KatalystDsl.of(KatalystStageDsl.Reverb(wet = KatalystKnobDsl.Constant(0.17)))
         val renderer = renderer()
 
@@ -71,9 +71,9 @@ class KlangOfflineRendererKatalystTest : StringSpec({
     }
 
     "the chain lands on the PARENT registry, so each engine fork resolves it through its parent" {
-        // The offline path registers on the renderer's parent rather than sending
-        // `Cmd.RegisterKatalyst`, which is the one way it differs from live. A fork that could not
-        // see it would leave every declared chain unresolved in an offline render.
+        // An engine driven in process (`intoRegistries`) registers on the parent rather than sending
+        // `Cmd.RegisterKatalyst`. A fork that could not see it would leave every declared chain
+        // unresolved there. (The offline renderer goes over the wire since KLANG-00399 step 4.)
         val chain = KatalystDsl.of(KatalystStageDsl.Gain(gain = KatalystKnobDsl.Constant(1.8)))
         val renderer = renderer()
 
@@ -82,10 +82,10 @@ class KlangOfflineRendererKatalystTest : StringSpec({
         renderer.katalystRegistry.fork().find(chain.uniqueId()) shouldBe chain
     }
 
-    "the offline sweep is the shared one: a master and an orbit chain both land in the ONE registry" {
-        // The point of routing the renderer through `InlineDslRegistrar` is that adding a DSL kind
-        // is one edit. This is the row that fails if the offline path ever grows its own copy again
-        // and forgets one position: the output chain (`master(...)`) is a Katalyst too since
+    "the in-process sweep is the shared one: a master and an orbit chain both land in the ONE registry" {
+        // The point of routing every registration through `InlineDslRegistrar` is that adding a DSL
+        // kind is one edit. This row fails if the in-process sweep ever grows its own copy and
+        // forgets one position: the output chain (`master(...)`) is a Katalyst too since
         // phase 3 step 12 C5, and the master bus resolves it in the same registry the orbits read.
         val chain = KatalystDsl.of(KatalystStageDsl.Delay(wet = KatalystKnobDsl.Constant(0.11)))
         val master = KatalystDsl.of(KatalystStageDsl.Gain(gain = KatalystKnobDsl.Constant(1.9)))

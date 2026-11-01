@@ -92,7 +92,7 @@ internal class OneShotPlayback internal constructor(
  * A pattern wrapper that filters out events beyond a cycle limit.
  * Generic replacement for strudel's `filterWhen` DSL method.
  */
-private class CycleLimitedPattern(
+internal class CycleLimitedPattern(
     private val inner: KlangPattern,
     private val maxCycles: Int,
 ) : KlangPattern {

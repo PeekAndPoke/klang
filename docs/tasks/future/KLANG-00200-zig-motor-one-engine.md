@@ -72,10 +72,10 @@ Every host needs the same four things and nothing else:
 - The Kotlin class `PlaybackEngineDispatcher` survives only as a forwarding shim for the Kotlin
   hosts, so they compile unchanged. It goes when they go.
 
-**Prerequisite refactor, in Kotlin, before any Zig:** `klang/.../KlangOfflineRenderer.kt` bypasses
-the dispatcher and pokes registries and the scheduler directly. Move it onto `Cmd` like every other
-host (register, upload, schedule). This removes the second engine API surface and is worth doing on
-its own.
+**Prerequisite refactor, in Kotlin, before any Zig:** done by KLANG-00399 step 4 (2026-11-01).
+`klang/.../KlangOfflineRenderer.kt` used to bypass the dispatcher and poke registries and the scheduler
+directly; it now drives the live scheduler over `Cmd` to an `OfflineBackend` on the dispatcher
+(register, upload, schedule). Only its custom ignitors still go straight onto the parent registry.
 
 ## Repository layout
 
@@ -190,7 +190,8 @@ then needs its own small set of DSL trees defined in Zig; they are plain structs
 
 ## Sequence
 
-1. Refactor `KlangOfflineRenderer` onto `Cmd`. Kotlin only, independently valuable.
+1. Refactor `KlangOfflineRenderer` onto `Cmd`. Kotlin only, independently valuable. Done by KLANG-00399
+   step 4 (2026-11-01): it drives the live scheduler over the wire to an `OfflineBackend`.
 2. Map names to ids on the frontend and make sample loading eager. Kotlin only, independently
    valuable (dedups pitched recordings, removes `RequestSample`).
 3. Freeze the golden corpus from the Kotlin engine.
@@ -213,7 +214,7 @@ then needs its own small set of DSL trees defined in Zig; they are plain structs
 - `audio_bridge/.../infra/KlangCommLink.kt`: the protocol; `audio_bridge/.../SampleRequest.kt`: the
   key that becomes `sampleId`.
 - `audio-wire-codec-ksp/`: the generator that grows a byte layout and a Zig target.
-- `klang/.../KlangOfflineRenderer.kt`: the host to move onto `Cmd` first.
+- `klang/.../KlangOfflineRenderer.kt`: on `Cmd` since KLANG-00399 step 4.
 
 ## History
 

@@ -352,6 +352,23 @@ class PlaybackEngineDispatcher(
     /** True when every idle ring and network on the warehouse's shelves is zeroed (see [WarmupRunner.tick]). */
     val isWarehouseClean: Boolean get() = context.warehouse.isClean
 
+    /**
+     * Frames of latency the output adds: the master stage's (the house limiter's lookahead) plus the longest master
+     * chain an engine has in service. A render that stops must run this many frames past its musical end, or the last
+     * samples are still in a delay ring; read it per block, as a master event swaps a chain mid-song. The offline
+     * renderer reads it (KLANG-00399, step 4), as it read `KlangAudioRenderer.latencyFrames` before.
+     */
+    val latencyFrames: Int
+        get() {
+            var longest = 0
+
+            for (i in 0 until rendering.size) {
+                longest = maxOf(longest, rendering[i].masterLatencyFrames)
+            }
+
+            return master.latencyFrames + longest
+        }
+
     /** The real block size — the warmup buckets on it, not on a constant. */
     val blockFrames: Int get() = context.blockFrames
 
@@ -382,6 +399,7 @@ class PlaybackEngineDispatcher(
             commLink: KlangCommLink.BackendEndpoint,
             performanceTimeMs: () -> Double,
             voiceWatch: VoiceWatch? = null,
+            phasePoolSeed: Int? = null,
         ): PlaybackEngineDispatcher {
             val clock = BackendClock(sampleRate)
             val context = AudioBackendContext.create(
@@ -391,6 +409,7 @@ class PlaybackEngineDispatcher(
                 clock = clock,
                 performanceTimeMs = performanceTimeMs,
                 voiceWatch = voiceWatch,
+                phasePoolSeed = phasePoolSeed,
             )
             return PlaybackEngineDispatcher(context = context, clock = clock)
         }

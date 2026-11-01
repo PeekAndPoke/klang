@@ -4,7 +4,8 @@
 
 `audio_be/src/commonMain/kotlin/KlangAudioRenderer.kt`
 
-The top-level render loop driver. Called once per audio block by the platform backend.
+A single-engine render loop: the engine alone, for the benchmarks and the engine specs. What is heard, live and in an
+offline render (KLANG-00399 step 4), renders through `PlaybackEngineDispatcher`, which runs the same chain.
 
 ```
 renderBlock(cursorFrame: Double, out: StereoBuffer)

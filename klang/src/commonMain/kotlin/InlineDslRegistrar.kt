@@ -24,9 +24,10 @@ import io.peekandpoke.klang.audio_bridge.uniqueId
  * `KlangPatternScheduler`, which meant the realtime path silently could not use inline DSLs at
  * all.
  *
- * Shared by **composition, not inheritance**: the offline renderer needs exactly this too and is
- * not a `KlangPlayback`, so a base class could never cover it. Swap [ignitors]/[katalysts]' sinks (see [AnnounceOnceRegistry]) and the same object serves an
- * in-process renderer.
+ * Shared by **composition, not inheritance**: a realtime playback needs exactly this too, and the
+ * offline renderer, on the real playback path since KLANG-00399 step 4, sends over the wire like any playback. Swap
+ * [ignitors]/[katalysts]' sinks (see [AnnounceOnceRegistry]) and the same object serves a spec that drives an engine
+ * in process.
  *
  * The synthetic names come from the process-wide `uniqueId()` maps in `audio_bridge`; this class
  * only owns the per-playback "have I announced it yet" gate. Both sides free it when the playback
@@ -67,10 +68,10 @@ internal class InlineDslRegistrar(
          * The in-process wiring: first sighting of a DSL registers it straight into the backend's
          * PARENT registries, with no `Cmd.Register*` and no wire.
          *
-         * This is what the class KDoc means by "swap the sinks": the offline renderer owns a single
-         * engine and can write to its registries directly, so it gets the same announce-once
-         * bookkeeping and, more to the point, the same [announceAll] sweep. It used to hand-write
-         * that sweep, which is how the sweep came to exist in two places in the first place.
+         * This is what the class KDoc means by "swap the sinks": a spec that drives a single engine
+         * (`KlangAudioRenderer`) writes to its registries directly, with the same announce-once
+         * bookkeeping and the same [announceAll] sweep. The offline renderer used it until
+         * KLANG-00399 step 4; it now goes over the wire like a live playback.
          *
          * An ignitor name that is already taken is left alone: the built-in sounds are seeded in
          * the same registry, and a synthetic `ignitor-N` must never shadow one.
@@ -103,9 +104,8 @@ internal class InlineDslRegistrar(
      * This sweep is the one that used to be hand-written twice (in the scheduler's query path and
      * again in the offline renderer): two copies that had to be kept in step by memory. Adding a
      * new inline-DSL kind now means touching this method and the two sink factories above, and
-     * nothing outside this file. The offline renderer reaches it through [intoRegistries]; before
-     * 2026-09-17 it still had its own copy of the sweep, and the claim was only true for the live
-     * path.
+     * nothing outside this file. The offline renderer reaches it over the wire like a live playback
+     * (KLANG-00399 step 4); before 2026-09-17 it still had its own copy of the sweep.
      */
     fun announceAll(events: List<KlangPatternEvent>) {
         events.asSequence()

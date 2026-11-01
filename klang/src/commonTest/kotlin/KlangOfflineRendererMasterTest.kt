@@ -24,15 +24,20 @@ import kotlin.math.abs
  * The master chain must apply to **offline renders** too, not just live playback — otherwise a
  * recorded WAV would not match what the song sounds like.
  *
- * The offline path differs from live in one way that matters: it registers chains directly on the
- * renderer's *parent* Katalyst registry rather than sending `Cmd.RegisterKatalyst`, so the
- * per-engine fork resolves them through its parent and the master bus builds the chain on request.
+ * Since KLANG-00399 step 4 the offline renderer takes the live path: the chain goes over the wire
+ * (`Cmd.RegisterKatalyst`) to the playback's engine, and the master bus builds it on request.
  */
 class KlangOfflineRendererMasterTest : StringSpec({
 
-    /** A held note, optionally with a control-only `master(…)` carrier event at [masterAtCycles]. */
+    /**
+     * A held note, optionally with a control-only `master(…)` carrier event at [masterAtCycles]. Like every pattern it
+     * answers a query with the events that start in it: the renderer asks cycle by cycle, as a live playback does.
+     */
     fun pattern(master: KatalystDsl?, masterAtCycles: Double = 0.0): KlangPattern = object : KlangPattern {
-        override fun queryEvents(fromCycles: Double, toCycles: Double, cps: Double): List<KlangPatternEvent> {
+        override fun queryEvents(fromCycles: Double, toCycles: Double, cps: Double): List<KlangPatternEvent> =
+            allEvents(master, masterAtCycles).filter { it.startCycles >= fromCycles && it.startCycles < toCycles }
+
+        private fun allEvents(master: KatalystDsl?, masterAtCycles: Double): List<KlangPatternEvent> {
             val note = object : KlangPatternEvent {
                 override val startCycles = 0.0
                 override val durationCycles = 4.0

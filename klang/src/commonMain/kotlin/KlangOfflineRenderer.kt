@@ -5,22 +5,34 @@
 
 package io.peekandpoke.klang.audio_engine
 
+import io.peekandpoke.klang.audio_be.AudioBackend
 import io.peekandpoke.klang.audio_be.AudioBackendContext
-import io.peekandpoke.klang.audio_be.KlangAudioRenderer
+import io.peekandpoke.klang.audio_be.OfflineBackend
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KlangPattern
+import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_bridge.KlangTime
-import io.peekandpoke.klang.audio_bridge.ScheduledVoice
-import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import io.peekandpoke.klang.audio_fe.samples.NullAudioDecoder
 import io.peekandpoke.klang.audio_fe.samples.Samples
+import io.peekandpoke.klang.audio_fe.utils.AssetLoader
+import io.peekandpoke.ultra.streams.StreamSource
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 
 /**
- * Offline renderer that drives the DSP graph directly at full CPU speed.
+ * Renders a pattern offline, at full CPU speed, through the same path a live playback takes (KLANG-00399, step 4):
+ * the [KlangPatternScheduler] sends its voices over the wire to an [OfflineBackend], the live dispatcher, in lockstep
+ * on one thread. Before each block the scheduler is asked with the backend's exact position ([KlangPatternScheduler.tick]),
+ * then the block renders. Nothing waits on a timer, so a render runs as fast as the engine.
  *
- * Platform-independent: produces audio blocks via a callback.
- * Bypasses the real-time playback infrastructure entirely.
+ * What it adds to the live path, so a render repeats: a fixed playback id ("offline", it seeds the voices' random
+ * streams), a fixed seed for the unison phase pools, every sample loaded and handed to the backend before the first
+ * block. Platform-independent: produces audio blocks via a callback.
  */
 class KlangOfflineRenderer(
     private val sampleRate: Int = 48_000,
@@ -31,6 +43,11 @@ class KlangOfflineRenderer(
      */
     private val blockFrames: Int = AudioBackendContext.RENDER_QUANTUM_FRAMES,
 ) {
+    companion object {
+        /** The playback id of every render: it seeds the voices' random streams, so a render repeats. */
+        const val PLAYBACK_ID = "offline"
+    }
+
     data class Result(
         val durationSec: Double,
         val totalFrames: Int,
@@ -60,130 +77,163 @@ class KlangOfflineRenderer(
         val klangTime = KlangTime.create()
         val startMs = klangTime.internalMsNow()
 
-        // 1. Single-engine DSP graph for offline render-to-PCM — independent of the live
-        //    per-playback dispatcher (which is the realtime host).
+        // The tempo the playback plays at, its floor included: the render's length and its samples are counted on it
+        val cps = cyclesPerSecond.coerceAtLeast(KlangPatternScheduler.MIN_RPM / 60.0)
+
         val commLink = KlangCommLink()
-        val renderer = KlangAudioRenderer.create(
-            sampleRate = sampleRate,
-            blockFrames = blockFrames,
-            commLink = commLink.backend,
-            performanceTimeMs = { klangTime.internalMsNow() },
+        val backend = OfflineBackend(
+            config = AudioBackend.Config(commLink = commLink.backend, sampleRate = sampleRate, blockSize = blockFrames),
             // Fixed seed: offline unison phase pools reproduce across renders (doc §5 rng row).
             phasePoolSeed = 1,
         )
-        val ignitorRegistry = renderer.ignitorRegistry
-        val katalystRegistry = renderer.katalystRegistry
-        val voiceScheduler = renderer.voices
 
-        // Register this render's custom ignitors on top of the built-in defaults.
+        // This render's custom ignitors on top of the built-in defaults, before the playback's engine forks them
         for ((name, dsl) in customIgnitors) {
-            if (ignitorRegistry.contains(name)) {
+            if (backend.ignitorRegistry.contains(name)) {
                 println("[KlangOfflineRenderer] Custom ignitor '$name' overrides built-in sound")
             }
-            ignitorRegistry.register(name, dsl)
+
+            backend.ignitorRegistry.register(name, dsl)
         }
 
-        renderer.setBackendStartTime(0.0)
-
-        // 2. Query all events and cache voice data (toVoiceData() creates new objects)
-        data class CachedEvent(
-            val startCycles: Double,
-            val durationCycles: Double,
-            val voiceData: VoiceData,
-        )
-
-        val rawEvents = pattern.queryEvents(
-            fromCycles = 0.0,
-            toCycles = cycles.toDouble(),
-            cps = cyclesPerSecond,
-        )
-
-        // Pre-register every inline DSL this render references with the in-process BE, so the
-        // synthetic names (`IgnitorDsl.uniqueId()` and friends) resolve at voice scheduling time.
-        // The SAME sweep the live playback runs, with the registries as its sink instead of the
-        // wire, which is what `InlineDslRegistrar` exists for.
-        InlineDslRegistrar.intoRegistries(
-            ignitors = ignitorRegistry,
-            katalysts = katalystRegistry,
-        ).announceAll(rawEvents)
-
-        val events = rawEvents.map { CachedEvent(it.startCycles, it.durationCycles, it.toVoiceData()) }
-
-        // 3. Preload samples
         if (samples != null) {
-            val sampleRequests = events
-                .map { it.voiceData.asSampleRequest() }
-                .filter { !ignitorRegistry.contains(it.sound ?: "") }
-                .toSet()
-
-            for (req in sampleRequests) {
-                try {
-                    val loaded = samples.get(req) ?: continue
-                    val pcm = loaded.pcm ?: continue
-
-                    voiceScheduler.addSample(
-                        KlangCommLink.Cmd.Sample.Complete(
-                            req = req,
-                            note = loaded.sample.note,
-                            pitchHz = loaded.sample.pitchHz,
-                            sample = pcm,
-                        )
-                    )
-                } catch (e: Exception) {
-                    println("[KlangOfflineRenderer] Failed to load sample ${req.sound}: ${e.message}")
-                }
-            }
-        }
-
-        // 4. Schedule all voices
-        val secPerCycle = 1.0 / cyclesPerSecond
-        val playbackId = "offline"
-
-        for (event in events) {
-            val relativeStart = event.startCycles * secPerCycle
-            val duration = event.durationCycles * secPerCycle
-
-            voiceScheduler.scheduleVoice(
-                ScheduledVoice(
-                    playbackId = playbackId,
-                    data = event.voiceData,
-                    startTime = relativeStart,
-                    gateEndTime = relativeStart + duration,
-                    playbackStartTime = 0.0,
-                )
+            loadSamples(
+                pattern = pattern,
+                cycles = cycles,
+                cyclesPerSecond = cps,
+                samples = samples,
+                commLink = commLink,
+                backend = backend,
             )
         }
 
-        // 5. Calculate total frames
-        val musicalDurationSec = cycles.toDouble() * secPerCycle
-        val totalDurationSec = musicalDurationSec + tailSec
+        // Nothing here waits: signals go out inline, the preloader has nothing to load (the samples are in)
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
+        val nowMs = { backend.nowSec * 1000.0 }
+        val sendControl: (KlangCommLink.Cmd) -> Unit = { commLink.frontend.control.send(it) }
+        val noSamples = Samples(
+            index = Samples.Index(banks = emptyList()),
+            loader = object : AssetLoader {
+                override suspend fun download(uri: String): ByteArray? = null
+            },
+            decoder = NullAudioDecoder(),
+        )
+
+        val context = KlangPlaybackContext(
+            playerOptions = KlangPlayer.Options(samples = noSamples),
+            samplePreloader = SamplePreloader(
+                samples = noSamples,
+                sendControl = {},
+                scope = scope,
+                dispatcher = Dispatchers.Unconfined,
+            ),
+            sendControl = sendControl,
+            scope = scope,
+            fetcherDispatcher = Dispatchers.Unconfined,
+            callbackDispatcher = Dispatchers.Unconfined,
+            backendReady = CompletableDeferred(Unit),
+            // No report needed: its clock before the first report is the backend's position itself
+            clock = PlaybackClock(localMs = nowMs),
+            diagnostics = KlangDiagnostics(
+                stream = StreamSource<KlangCommLink.Feedback.Diagnostics?>(null),
+                ticks = StreamSource(Unit),
+                capacity = 1,
+                nowMs = nowMs,
+            ),
+        )
+
+        val scheduler = KlangPatternScheduler(
+            playbackId = PLAYBACK_ID,
+            pattern = CycleLimitedPattern(inner = pattern, maxCycles = cycles),
+            context = context,
+            signals = StreamSource<KlangPlaybackSignal>(KlangPlaybackSignal.Idle),
+            registrar = context.registrarFor(PLAYBACK_ID),
+            uiMs = nowMs,
+        )
+
+        // Render past the end by the engine's own output latency, otherwise the last samples are still sitting in a
+        // delay ring (the house limiter's lookahead, a master chain's lookahead or oversampler) when the loop stops.
+        // Matters at tailSec = 0.0, where the truncated tail is the actual music rather than a reverb tail. Read again
+        // after every block: a master event later in the song swaps the chain in the middle of the render.
+        val totalDurationSec = cycles.toDouble() / cps + tailSec
         val musicalAndTailFrames = (totalDurationSec * sampleRate).toInt()
-        // Render past the end by the engine's own output latency, otherwise the last samples are
-        // still sitting in a delay ring (the house limiter's lookahead, a master chain's lookahead or
-        // oversampler) when the loop stops. Matters at tailSec = 0.0, where the truncated tail is the
-        // actual music rather than a reverb tail. Read again after every block: a master event later in
-        // the song swaps the chain in the middle of the render.
-        var totalFrames = musicalAndTailFrames + renderer.latencyFrames
+        var totalFrames = musicalAndTailFrames + backend.latencyFrames
 
-        // 6. Render loop
-        val out = StereoBuffer(blockFrames)
-        // Absolute backend frame — Double, see RenderClock.cursorFrame. An offline render is short
-        // enough that Int would do, but the type has to match the live path.
-        var currentFrame = 0.0
+        try {
+            scheduler.startDriven(cyclesPerSecond = cps)
 
-        while (currentFrame < totalFrames) {
-            renderer.renderBlock(cursorFrame = currentFrame, out = out)
-            onBlock(out, blockFrames)
-            currentFrame += blockFrames
-            totalFrames = musicalAndTailFrames + renderer.latencyFrames
+            while (backend.cursorFrame < totalFrames) {
+                // The playback started at the backend's second 0: its time is the backend's position
+                scheduler.tick(nowSec = backend.nowSec - backend.startTimeSec)
+                backend.render(blocks = 1) { out -> onBlock(out, blockFrames) }
+                deliverFeedback(commLink = commLink, scheduler = scheduler)
+                totalFrames = musicalAndTailFrames + backend.latencyFrames
+            }
+        } finally {
+            scheduler.stop()
+            scope.cancel()
         }
-
-        val elapsedMs = klangTime.internalMsNow() - startMs
 
         return Result(
             durationSec = totalDurationSec,
             totalFrames = totalFrames,
-            elapsedMs = elapsedMs,
+            elapsedMs = klangTime.internalMsNow() - startMs,
         )
+    }
+
+    /**
+     * Every sample the render plays, loaded and handed to the backend before the first block: offline, nothing may wait
+     * for one. A sound the backend plays itself (a built-in or custom ignitor) is not a sample; an inline one's synthetic
+     * name is asked for and not found, which costs a lookup.
+     */
+    private suspend fun loadSamples(
+        pattern: KlangPattern,
+        cycles: Int,
+        cyclesPerSecond: Double,
+        samples: Samples,
+        commLink: KlangCommLink,
+        backend: OfflineBackend,
+    ) {
+        // Cycle by cycle, as the scheduler asks: a pattern may answer a longer span otherwise (KLANG-00401)
+        val requests = (0 until cycles)
+            .flatMap { cycle -> pattern.queryEvents(fromCycles = cycle.toDouble(), toCycles = cycle + 1.0, cps = cyclesPerSecond) }
+            .map { it.toVoiceData().asSampleRequest() }
+            .filter { !backend.ignitorRegistry.contains(it.sound ?: "") }
+            .toSet()
+
+        for (req in requests) {
+            try {
+                val loaded = samples.get(req) ?: continue
+                val pcm = loaded.pcm ?: continue
+
+                commLink.frontend.control.send(
+                    KlangCommLink.Cmd.Sample.Complete(
+                        req = req,
+                        note = loaded.sample.note,
+                        pitchHz = loaded.sample.pitchHz,
+                        sample = pcm,
+                    )
+                )
+                // One at a time: the link's ring is bounded, a song may have more samples than it holds
+                backend.drain()
+            } catch (e: Exception) {
+                println("[KlangOfflineRenderer] Failed to load sample ${req.sound}: ${e.message}")
+            }
+        }
+    }
+
+    /** The backend's feedback after a block: where it started the playback reaches the scheduler, the rest is not needed. */
+    private fun deliverFeedback(commLink: KlangCommLink, scheduler: KlangPatternScheduler) {
+        while (true) {
+            when (val feedback = commLink.frontend.feedback.receive() ?: break) {
+                is KlangCommLink.Feedback.PlaybackAnchored -> scheduler.handleFeedback(feedback)
+
+                is KlangCommLink.Feedback.BackendReady,
+                is KlangCommLink.Feedback.Diagnostics,
+                is KlangCommLink.Feedback.RequestSample,
+                is KlangCommLink.Feedback.SampleReceived,
+                -> {}
+            }
+        }
     }
 }

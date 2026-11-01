@@ -17,12 +17,18 @@ package io.peekandpoke.klang.audio_engine
  */
 internal class TempoMap private constructor(private val pieces: List<Piece>) {
 
-    /** A tempo from [startCycle], which plays at [startSec], up to the next piece. */
-    private class Piece(val startCycle: Double, val startSec: Double, val secPerCycle: Double)
+    /**
+     * A tempo from [startCycle], which plays at [startSec], up to the next piece. It keeps the tempo as given
+     * ([cyclesPerSecond]) beside its inverse: `1 / (1 / x)` may differ from `x` in the last bit, and a pattern reads the
+     * tempo it is asked at (sprudel's `cps`).
+     */
+    private class Piece(val startCycle: Double, val startSec: Double, val cyclesPerSecond: Double) {
+        val secPerCycle = 1.0 / cyclesPerSecond
+    }
 
     /** One tempo from second 0 on. */
     constructor(cyclesPerSecond: Double) : this(
-        listOf(Piece(startCycle = 0.0, startSec = 0.0, secPerCycle = 1.0 / cyclesPerSecond))
+        listOf(Piece(startCycle = 0.0, startSec = 0.0, cyclesPerSecond = cyclesPerSecond))
     )
 
     /** How many pieces the map keeps. */
@@ -43,7 +49,23 @@ internal class TempoMap private constructor(private val pieces: List<Piece>) {
     }
 
     /** The tempo at [cycle], in cycles per second. */
-    fun cyclesPerSecondAt(cycle: Double): Double = 1.0 / pieceAtCycle(cycle).secPerCycle
+    fun cyclesPerSecondAt(cycle: Double): Double = pieceAtCycle(cycle).cyclesPerSecond
+
+    /**
+     * How long [durationCycles] from [startCycle] last, in seconds. Within one piece it is the cycles times the seconds
+     * per cycle, as before the map (the end less the start may differ in the last bit); across a change it is the end
+     * less the start.
+     */
+    fun durationSec(startCycle: Double, durationCycles: Double): Double {
+        val piece = pieceAtCycle(startCycle)
+        val endCycle = startCycle + durationCycles
+
+        if (pieceAtCycle(endCycle) === piece) {
+            return durationCycles * piece.secPerCycle
+        }
+
+        return secondsAt(endCycle) - secondsAt(startCycle)
+    }
 
     /** The first cycle after [cycle] where the tempo changes; null when it stays. */
     fun nextChangeAfter(cycle: Double): Double? = pieces.firstOrNull { it.startCycle > cycle }?.startCycle
@@ -55,7 +77,7 @@ internal class TempoMap private constructor(private val pieces: List<Piece>) {
      */
     fun changed(atCycle: Double, cyclesPerSecond: Double, foldBefore: Double): TempoMap {
         val kept = pieces.filter { it.startCycle < atCycle }
-        val added = Piece(startCycle = atCycle, startSec = secondsAt(atCycle), secPerCycle = 1.0 / cyclesPerSecond)
+        val added = Piece(startCycle = atCycle, startSec = secondsAt(atCycle), cyclesPerSecond = cyclesPerSecond)
         val all = kept + added
         // The last piece starting at or before the fold starts the map
         val first = all.indexOfLast { it.startCycle <= foldBefore }.coerceAtLeast(0)

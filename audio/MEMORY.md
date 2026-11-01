@@ -112,8 +112,10 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   the scheduler is asked `tick(now)` with it, looks ahead at least 1.5 s (`LOOKAHEAD_MIN_SEC`), skips what a long
   stall let go by but keeps its `master`, `katalyst` and running solo controls (at their own times), and puts the UI's
   times on `Date.now()` plus the output latency. `OfflineBackend` renders only when told, for the specs
-  (`KlangPlaybackSyncSpec`); `VoiceWatch` tells each voice's fate there. Voices without their sample are counted
-  (`Diagnostics.soundlessVoices`).
+  (`KlangPlaybackSyncSpec`) and `KlangOfflineRenderer`, which drives the scheduler on it in lockstep (`startDriven`,
+  `tick`); `VoiceWatch` tells each voice's fate there. Voices without their sample are counted
+  (`Diagnostics.soundlessVoices`). The scheduled-voice heap is stable (`KlangMinHeap`): voices that start together are
+  promoted in the order they were scheduled, live and offline alike.
 - **The envelope law** is `EnvelopeCore` (its KDoc). Voice defaults `VOICE_ADSR_*` (0.01, 0.1, 1.0, 0.05); curves
   are index knobs with the reader's default, both Exponential; `ADSR_EXP_K` 3.0; de-click `ENV_DECLICK_SECONDS`
   1 ms on `classic()`. Knobs and `Adsr.on`: `audio/ref/voice-synthesis.md`.
@@ -393,6 +395,8 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-11-01 Offline renders on the real playback path, the stable voice heap; the corpus re-based (KLANG-00399,
+  step 4).
 - 2026-10-31 One clock, the backend's frames (KLANG-00399, steps 1 to 3d): the tempo map, the `OfflineBackend`, the
   timeline in the diagnostics, `PlaybackAnchored`, `PlaybackClock`, `tick(now)`, the look-ahead floor, the catch-up,
   the soundless count; `BackendClockSync` gone.

@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be
 
+import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.awaitCancellation
@@ -26,6 +27,8 @@ class OfflineBackend(
     /** The timeline's second at frame 0; a live backend takes it from its clock at the start. */
     val startTimeSec: Double = 0.0,
     voiceWatch: VoiceWatch? = null,
+    /** A fixed seed for the unison phase pools, so a render repeats; null for a fresh stream per playback. */
+    phasePoolSeed: Int? = null,
 ) : AudioBackend {
 
     private val commLink = config.commLink
@@ -45,7 +48,14 @@ class OfflineBackend(
         commLink = commLink,
         performanceTimeMs = { nowSec * 1000.0 },
         voiceWatch = voiceWatch,
+        phasePoolSeed = phasePoolSeed,
     )
+
+    /** The parent ignitor registry: custom sounds registered here before the first playback reach every playback. */
+    val ignitorRegistry: IgnitorRegistry get() = dispatcher.ignitorRegistry
+
+    /** See [PlaybackEngineDispatcher.latencyFrames]. */
+    val latencyFrames: Int get() = dispatcher.latencyFrames
 
     /** The last block rendered. */
     val out = StereoBuffer(blockFrames)
