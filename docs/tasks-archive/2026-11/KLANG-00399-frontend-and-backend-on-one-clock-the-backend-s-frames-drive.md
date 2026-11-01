@@ -1,6 +1,6 @@
 # KLANG-00399: Frontend and backend on one clock: the backend's frames drive playback, an OfflineBackend tests it
 
-> **Status (2026-11-01): PAUSED.** Steps 1 to 4 and problem 9 done; waiting for the maintainer's checks on a device (a laptop's sleep, a phone's stutter, the AudioContext's wake).
+> **Status (2026-11-01): DONE.** The maintainer's device checks (2026-11-01): a closed and reopened laptop resumes the song where it stopped, no reload; on the phone it seems to work, the browser itself tries to reload the tab at times; the maintainer keeps an eye on it. Open beside it: KLANG-00401 (sprudel).
 
 ## Why this exists
 
@@ -381,3 +381,4 @@ render near real time (`CorpusCheck` renders 256 cycles per song).
 - 2026-10-31: problem 9, the AudioContext woken on a gesture or when shown (Klang-Research); reviews at level 2 and 3.
 - 2026-11-01: step 4 done (Klang-Research): offline renders on the real path, the stable heap, the corpus re-based.
 - 2026-11-01: PAUSED. Steps 1 to 4 and problem 9 done; waiting for the maintainer's checks on a device (a laptop's sleep, a phone's stutter, the AudioContext's wake).
+- 2026-11-01: DONE. The maintainer's device checks (2026-11-01): a closed and reopened laptop resumes the song where it stopped, no reload; on the phone it seems to work, the browser itself tries to reload the tab at times; the maintainer keeps an eye on it. Open beside it: KLANG-00401 (sprudel).
