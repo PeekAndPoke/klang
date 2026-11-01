@@ -299,6 +299,15 @@ as proposed"). D7 was the maintainer's own proposal.
   the strip opens the bottom panel on the MIDI tab and focuses it; a keyboard shortcut waits until one is free
   of the browser's and the pages' own.
 
+- **D9, the keyboard layout** (the maintainer, 2026-11-01: "The user must be able to switch keyboard layouts. I f.e.
+  have English keyboards usually. Can we detect this, probably not..."). What plays never depends on the layout: the
+  keys are read by position (`KeyboardEvent.code`), and every key of the map sits where ANSI (US) and ISO (German,
+  UK, French) boards both have one, so the German Y X C V is the English Z X C V, the same keys. Only the letters
+  printed on the drawn keys differ. Detecting: Chrome and Edge tell the layout (`navigator.keyboard.getLayoutMap()`);
+  Firefox and Safari do not, but each key's own letter arrives with its first press (`event.key`). Proposal: a
+  layout choice in the MIDI settings, "Automatic" by default (the map where the browser has it, else learned key by
+  key), and English (QWERTY), German (QWERTZ), French (AZERTY) to set it by hand, kept with the MIDI settings.
+
 ## The work
 
 0. The move of section 7, alone and with no other change, so the history keeps each file's line.
@@ -309,6 +318,29 @@ as proposed"). D7 was the maintainer's own proposal.
    until the rig and the stores move into the Spine (step 4, KLANG-00389).
 1. `ControlEvent`, `NoteVoicing`, `Routing` in common code with specs; `MidiConnector` down to ports and bytes; the
    KeyLab and the generic profile; the page's `handle` speaks `ControlEvent` only. Audible change: the pads (D2).
+   **Done (2026-11-01):**
+   - Common code (`src/commonMain/kotlin/midi/`): `ControlEvent` with `SourceId` and `ControlId`; `NoteVoicing` (the
+     held map by source, channel and note, the retrigger, sustain per source, one source's `AllUp`, the panic);
+     `Routing` with `PlayFunction` and the v1 defaults. Notes are not routed in v1 (every keybed plays the
+     instrument), so the design's `notes` map waits for a split or a key switch. `DeviceProfile`: bytes to events,
+     the control's drawn kind saying how (a button presses, the relative encoder nudges, a knob, fader or wheel
+     moves); the KeyLab's by its port name, else the generic one; the bank guess (A), turned by the Bank button,
+     corrected by every pad note.
+   - `MidiConnector` down to ports and bytes (`Message`, `PortGone`); the page makes a profile per port and handles
+     `ControlEvent`s only; the pads hit the kit (D2) as one-shots with a 1 s gate, the kit loaded when the engine is
+     up. The main encoder and Ü + browse the built-in sounds until the loadout (step 5).
+   - The realtime path loads samples (`klang`, handed over by Klang-Main-Dev): `KlangRealtimeVoicePlayback.preload`
+     (awaitable, the kit), and the backend's `RequestSample` answered as the cyclic path answers it, for any voice
+     started without its sample (a fallback: that first hit plays silent).
+   - Not yet: which port of a device plays (the KeyLab's DAW port sends buttons as notes; all ports play, as before).
+   - Specs: `NoteVoicingSpec`, `RoutingSpec`, `DeviceProfileSpec` (JVM), `KlangRealtimeSamplesSpec` (klang). 16
+     mutants killed (3 of them at the mandatory tier, in klang).
+   - Review: round 1 (level 1) clean; its MINORs applied as one batch: the realtime path answers the backend's
+     sample requests instead of asking for every event's sound (no growth per note or per Apply, and `startVoice`
+     covered too); a MIDI panic releases every source, as before; the bank set only by a pad or the Bank button; the
+     encoder drawn again; the lights of held controls cleared on an all-up; the routed functions in exhaustive
+     `when`s; browsing a sound drops the applied Ignitor, so the sound browsed is heard; the scaffolding nothing used
+     yet removed (it comes with steps 2 and 3); wrong comments corrected.
 2. `LaptopKeys` and its drawing: `MidiPanel` learns key labels, the laptop keyboard is a panel value like the KeyLab's.
 3. Screen input on every drawn control (keys, pads, buttons, knobs, faders, wheels, the encoder).
 4. `MidiRig` in the Spine, the MIDI tool in the bottom panel of every page, the laptop keys behind its focus, the

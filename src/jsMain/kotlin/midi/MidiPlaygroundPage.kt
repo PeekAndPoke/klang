@@ -8,11 +8,8 @@ package io.peekandpoke.klang.midi
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KlangPatternEvent
+import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.comp.RealtimePlaybackCtrl
-import io.peekandpoke.klang.midi.KeyLabEssential49Mk3
-import io.peekandpoke.klang.midi.MidiConnector
-import io.peekandpoke.klang.midi.NoteKey
-import io.peekandpoke.klang.midi.padBankOf
 import io.peekandpoke.klang.script.KlangScriptEngine
 import io.peekandpoke.klang.script.runtime.FunctionValue
 import io.peekandpoke.klang.script.runtime.convertFunctionToKotlin
@@ -38,6 +35,8 @@ import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.semanticui.icon
 import io.peekandpoke.ultra.semanticui.noui
 import io.peekandpoke.ultra.semanticui.ui
+import io.peekandpoke.ultra.streams.ops.distinct
+import io.peekandpoke.ultra.streams.ops.map
 import kotlinx.css.FontWeight
 import kotlinx.css.Padding
 import kotlinx.css.fontFamily
@@ -53,6 +52,7 @@ import kotlinx.html.td
 import kotlinx.html.th
 import kotlinx.html.thead
 import kotlinx.html.tr
+import kotlin.math.roundToInt
 
 @Suppress("FunctionName")
 fun Tag.MidiPlaygroundPage() = comp {
@@ -62,10 +62,10 @@ fun Tag.MidiPlaygroundPage() = comp {
 /**
  * Midi Playground: play the engine live from a MIDI keyboard.
  *
- * The page owns only two things: **the translation** ([voiceFor], what a note sounds like) and
- * the wiring ([handle]). Engine lifecycle lives in [RealtimePlaybackCtrl]; devices, byte parsing,
- * liveIds and note bookkeeping live in [MidiConnector]. See
- * KLANG-00159 (realtime playback controller).
+ * The page owns **the translation** ([eventsFor], what a note sounds like; [padEvents], what a pad hits) and the
+ * wiring ([handle]). Engine lifecycle lives in [RealtimePlaybackCtrl]; the ports and bytes in [MidiConnector]; what
+ * the bytes mean in a [DeviceProfile] per port; the held notes in [NoteVoicing]; what a control does in [Routing]
+ * (KLANG-00402, step 1). See KLANG-00159 (realtime playback controller).
  */
 class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
 
@@ -73,11 +73,36 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
 
     private val ctrl = RealtimePlaybackCtrl(playbackName = "midi-playground")
 
-    private val midi = MidiConnector(nextLiveId = ctrl::nextLiveId)
+    private val midi = MidiConnector()
+
+    /** The held notes of every source: retrigger, sustain, one source letting go (KLANG-00402, section 5). */
+    private val voicing = NoteVoicing(nextLiveId = ctrl::nextLiveId)
+
+    /** What each control does: the v1 defaults (KLANG-00402, section 4). */
+    private val routing = Routing.defaults
+
+    /** One profile per port, made on its first message: its bytes to [ControlEvent]s. */
+    private val profiles = mutableMapOf<String, DeviceProfile>()
+
+    /** The voices sounding, as [voicing] holds them, for the drawing and the pressed keys. */
+    private var held: Map<NoteVoicing.Key, NoteVoicing.Held> by value(emptyMap())
+
+    /** The momentary controls held down (pads, buttons), each with its velocity; a pad also with its bank's colour. */
+    private var pressed: Map<String, Double> by value(emptyMap())
+
+    private var pressedTints: Map<String, String> by value(emptyMap())
 
     private val ctrlState by subscribingTo(ctrl.state)
 
     private val midiState by subscribingTo(midi.state)
+
+    /** The kit loads as soon as the engine is up, so a pad's first hit sounds (D2). */
+    @Suppress("unused")
+    private val kitLoad by subscribingTo(ctrl.state.map { it.isReady }.distinct()) { ready ->
+        if (ready) {
+            ctrl.preload(requests = kitRequests())
+        }
+    }
 
     /** Last events, newest first; pure UI, so it lives here. */
     private var eventLog: List<String> by value(emptyList())
@@ -169,8 +194,11 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
         private const val BANK_A_COLOR = "#4a9eff"
         private const val BANK_B_COLOR = "#f0a33c"
 
-        /** The Bank button. Reports presses only, never which bank went live. */
-        private const val CC_BANK = 118
+        /** What the pads hit, pad 1 to 8: bd sd hh oh / cp rim lt cr (KLANG-00402, D2). */
+        private val KIT = listOf("bd", "sd", "hh", "oh", "cp", "rim", "lt", "cr")
+
+        /** A pad's hit is a one-shot: its release does not cut it, the gate ends it. */
+        private const val PAD_GATE_SEC = 1.0
 
         /**
          * The playable built-ins, grouped for the picker. Names must match the backend's default
@@ -191,17 +219,18 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
             onMount {
                 applyInstrument()
                 midi.start()
-                midi.events.subscribeToStream { evt -> evt?.let { handle(it) } }
+                midi.events.subscribeToStream { evt -> evt?.let { onMidi(it) } }
             }
 
             onUnmount {
-                midi.tearDown() // releases held notes first, then unhooks
+                midi.tearDown()
+                // Its Cleanup releases every voice the playback still holds, sustained ones included
                 ctrl.tearDown()
             }
         }
     }
 
-    //  THE TRANSLATION — voice shape, sound and params live here  //////////////////////////////
+    //  THE TRANSLATION: voice shape, sound and params live here  //////////////////////////////
 
     /**
      * A key becomes a one-note sprudel pattern: the note, its velocity, the applied ignitor (or the
@@ -212,9 +241,9 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
      * Key velocity goes through sprudel's own `velocity`, which folds into the wire's one level word
      * (signal-flow plan section 6).
      */
-    private fun eventsFor(evt: MidiConnector.Event.NoteOn): List<KlangPatternEvent> {
-        val base = note(evt.key.note.toString())
-            .velocity(evt.velocity / 127.0)
+    private fun eventsFor(note: Int, velocity: Double): List<KlangPatternEvent> {
+        val base = note(note.toString())
+            .velocity(velocity)
             .sound(appliedIgnitor ?: selectedSound)
 
         val pattern = appliedMapper?.let { mapper -> mapPattern(mapper, base) } ?: base
@@ -222,6 +251,19 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
         return pattern.queryEvents(fromCycles = 0.0, toCycles = 1.0, cps = MAPPER_CPS)
             .filter { it.startCycles == 0.0 }
     }
+
+    /** Pad [pad]'s hit at [velocity]: its sound of the [KIT], as sprudel plays it, unmapped. */
+    private fun padEvents(pad: Int, velocity: Double): List<KlangPatternEvent> {
+        val name = KIT.getOrNull(pad - 1) ?: return emptyList()
+
+        return sound(name).velocity(velocity)
+            .queryEvents(fromCycles = 0.0, toCycles = 1.0, cps = MAPPER_CPS)
+            .filter { it.startCycles == 0.0 }
+    }
+
+    /** The kit's samples, asked for exactly as the pads' hits will ask. */
+    private fun kitRequests(): Set<SampleRequest> =
+        KIT.indices.flatMap { padEvents(pad = it + 1, velocity = 1.0) }.map { it.toVoiceData().asSampleRequest() }.toSet()
 
     /** Runs the user's mapper; a failure shows under its editor and the note plays unmapped. */
     private fun mapPattern(mapper: (Any?) -> Any?, base: SprudelPattern): SprudelPattern = try {
@@ -231,7 +273,7 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
         base
     }
 
-    //  THE INSTRUMENT — two KlangScript inputs, compiled on apply  /////////////////////////////
+    //  THE INSTRUMENT: two KlangScript inputs, compiled on apply  /////////////////////////////
 
     /**
      * Compiles both inputs and stores the draft. An input that fails keeps its previous applied
@@ -311,51 +353,161 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
         MidiInstrumentStorage.saveAll(savedInstruments)
     }
 
-    /** Exhaustive by design: a new connector event fails the build until this page decides. */
-    private fun handle(evt: MidiConnector.Event): Unit = when (evt) {
-        is MidiConnector.Event.NoteOn -> {
-            logEvent(evt.tsMs, "ON  ${noteLabel(evt.key)} vel ${evt.velocity} ch ${evt.key.channel}")
-            // A pad note is ground truth about the bank — the note number says which bank sent it.
-            // Note there is NO equivalent for the keybed: nothing in a note message reveals the
-            // device's transpose/octave setting, so keybed alignment stays a manual control.
-            if (DEVICE.bindings.notes[evt.key.channel to evt.key.note] != null) {
-                padBankOf(evt.key.note)?.let { activeBank = it }
+    /** A port's word: a message goes to the monitor and through the port's profile; a port gone lets its keys go. */
+    private fun onMidi(evt: MidiConnector.Event): Unit = when (evt) {
+        is MidiConnector.Event.Message -> {
+            observe(evt.message)
+
+            val profile = profiles.getOrPut(evt.message.port) { DeviceProfile.forPort(evt.message.port) }
+            val events = profile.translate(evt.message)
+
+            // The bank first, so a pad lights in the bank its own note said; and only from a pad or the Bank button, so
+            // another port of the device (or another device) cannot put it back to its own guess
+            if (events.any { it is ControlEvent.Press && (it.control.id.startsWith("pad-") || it.control.id == DeviceProfile.BANK) }) {
+                activeBank = profile.bank
             }
-            ctrl.startEvents(liveId = evt.liveId, events = eventsFor(evt), gateDurSec = null)
+
+            events.forEach { handle(it) }
         }
 
-        is MidiConnector.Event.NoteOff -> {
-            logEvent(evt.tsMs, "OFF ${noteLabel(evt.key)} ch ${evt.key.channel}")
-            ctrl.stopVoice(evt.liveId)
-        }
-
-        is MidiConnector.Event.AllNotesOff -> {
-            logEvent(0.0, "PANIC (${evt.reason}) — releasing ${evt.liveIds.size} voice(s)")
-            evt.liveIds.forEach { ctrl.stopVoice(it) }
-        }
-
-        is MidiConnector.Event.ControlChange -> {
-            observeControl("CC ${evt.cc}", evt.value, evt.channel)
-            DEVICE.bindings.cc[evt.cc]?.let { moveControl(it, evt.value / 127.0) }
-            // Only on PRESS: a button that also reports its release would otherwise toggle twice
-            // and appear to do nothing.
-            if (evt.cc == CC_BANK && evt.value > 0) {
-                activeBank = if (activeBank == "A") "B" else "A"
+        is MidiConnector.Event.PortGone -> {
+            profiles.remove(evt.port)?.let { profile ->
+                handle(ControlEvent.AllUp(source = profile.source, reason = ControlEvent.Reason.Disconnected, tsMs = 0.0))
             }
-            // return
+
             Unit
         }
+    }
 
-        is MidiConnector.Event.Other -> {
-            observeControl(otherLabel(evt.kind, evt.data1), evt.data2, evt.channel)
-            // Pitch bend is 14-bit across both data bytes, unlike everything else here.
-            if (evt.kind == 0xE0) {
-                DEVICE.bindings.pitchBend?.let {
-                    moveControl(it, ((evt.data2 shl 7) or evt.data1) / 16383.0)
+    /** Exhaustive by design: a new control event fails the build until this page decides what it does. */
+    private fun handle(evt: ControlEvent) {
+        when (evt) {
+            is ControlEvent.NoteDown -> {
+                logEvent(evt.tsMs, "ON  ${noteLabel(evt.note)} vel ${velocityLabel(evt.velocity)} ch ${evt.channel}")
+                play(voicing.down(evt))
+            }
+
+            is ControlEvent.NoteUp -> {
+                logEvent(evt.tsMs, "OFF ${noteLabel(evt.note)} ch ${evt.channel}")
+                play(voicing.up(evt))
+            }
+
+            is ControlEvent.AllUp -> {
+                // A MIDI panic releases every source's notes, as it always did; a port gone only its own
+                val outs = when (evt.reason) {
+                    ControlEvent.Reason.Panic -> voicing.panic()
+                    ControlEvent.Reason.Disconnected -> voicing.allUp(evt)
                 }
+
+                // The controls held light no more: their releases may never come (a device sends CC 123 on 16 channels)
+                pressed = emptyMap()
+                pressedTints = emptyMap()
+
+                if (outs.isNotEmpty()) {
+                    logEvent(evt.tsMs, "ALL UP (${evt.reason}): ${outs.size} voice(s) released")
+                }
+
+                play(outs)
             }
-            Unit
+
+            is ControlEvent.Press -> {
+                logEvent(evt.tsMs, "PRESS ${evt.control.id} vel ${velocityLabel(evt.velocity)}")
+                pressed = pressed + (evt.control.id to evt.velocity)
+                padTint(evt.control)?.let { pressedTints = pressedTints + (evt.control.id to it) }
+                routing.functionOf(source = evt.source, control = evt.control)?.let { onPressed(it, evt) }
+            }
+
+            is ControlEvent.Release -> {
+                pressed = pressed - evt.control.id
+                pressedTints = pressedTints - evt.control.id
+                routing.functionOf(source = evt.source, control = evt.control)?.let { onReleased(it, evt) }
+            }
+
+            is ControlEvent.Move -> {
+                // The bend is drawn 0..1 like every other control: -1..1 shifted into it. A moved value is read by the
+                // next note once notes carry it (KLANG-00160): drawn for now
+                val drawn = if (evt.control == ControlId.PitchBend) (evt.value + 1) / 2 else evt.value
+
+                moveControl(evt.control.id, drawn)
+            }
+
+            is ControlEvent.Nudge -> {
+                logEvent(evt.tsMs, "TURN ${evt.control.id} ${evt.steps}")
+                // Drawn as the raw byte was, a direction around the middle
+                moveControl(evt.control.id, (64 + evt.steps) / 127.0)
+                routing.functionOf(source = evt.source, control = evt.control)?.let { onTurned(it, evt) }
+            }
         }
+
+        held = voicing.held
+    }
+
+    /** What a routed control does when it goes down. */
+    private fun onPressed(function: PlayFunction, evt: ControlEvent.Press) {
+        when (function) {
+            is PlayFunction.HitPad -> ctrl.startEvents(
+                liveId = ctrl.nextLiveId(),
+                events = padEvents(pad = function.pad, velocity = evt.velocity),
+                gateDurSec = PAD_GATE_SEC,
+            )
+
+            PlayFunction.Sustain -> play(voicing.sustain(source = evt.source, on = true))
+
+            PlayFunction.Panic -> {
+                logEvent(evt.tsMs, "PANIC")
+                play(voicing.panic())
+            }
+
+            is PlayFunction.BrowseInstrument -> browseSound(function.direction)
+
+            // Read when it moves, not pressed; nothing yet for Play and Stop (the light only)
+            PlayFunction.Value, PlayFunction.PlayStop -> Unit
+        }
+    }
+
+    /** What a routed control does when it comes up: only the sustain cares (a pad's hit is a one-shot). */
+    private fun onReleased(function: PlayFunction, evt: ControlEvent.Release) {
+        when (function) {
+            PlayFunction.Sustain -> play(voicing.sustain(source = evt.source, on = false))
+
+            is PlayFunction.HitPad, PlayFunction.Panic, is PlayFunction.BrowseInstrument, PlayFunction.Value,
+            PlayFunction.PlayStop,
+            -> Unit
+        }
+    }
+
+    /** What a routed endless control does when it turns: only the browsing, by its steps. */
+    private fun onTurned(function: PlayFunction, evt: ControlEvent.Nudge) {
+        when (function) {
+            is PlayFunction.BrowseInstrument -> browseSound(function.direction * evt.steps)
+
+            is PlayFunction.HitPad, PlayFunction.Sustain, PlayFunction.Panic, PlayFunction.Value, PlayFunction.PlayStop -> Unit
+        }
+    }
+
+    /** The playback does what the voicing says. */
+    private fun play(outs: List<NoteVoicing.Out>) {
+        for (out in outs) {
+            when (out) {
+                is NoteVoicing.Out.Start ->
+                    ctrl.startEvents(liveId = out.liveId, events = eventsFor(out.key.note, out.velocity), gateDurSec = null)
+
+                is NoteVoicing.Out.Stop -> ctrl.stopVoice(out.liveId)
+            }
+        }
+    }
+
+    /**
+     * The built-in sound [steps] away from the selected one, round the list (the instrument loadout comes later). The
+     * applied Ignitor goes, so the sound browsed is the one heard; the Ignitor's code stays in its editor for the
+     * next Apply.
+     */
+    private fun browseSound(steps: Int) {
+        val all = SOUND_GROUPS.flatMap { it.second }
+        val at = all.indexOf(selectedSound).coerceAtLeast(0)
+
+        appliedIgnitor = null
+        selectedSound = all[((at + steps) % all.size + all.size) % all.size]
     }
 
     /** Moves an on-screen control to [value] (`0..1`). */
@@ -363,30 +515,9 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
         controlValues = controlValues + (controlId to value)
     }
 
-    /**
-     * Held notes that belong on the KEYBED.
-     *
-     * The pads send notes too (channel 10, notes 36-51 on a KeyLab), and those numbers land inside
-     * the drawn key range, so without this filter, hitting a pad lights a piano key. The device's
-     * note bindings decide which is which.
-     */
-    private fun heldKeyNotes(): Set<Int> = midiState.held.keys
-        .filter { DEVICE.bindings.notes[it.channel to it.note] == null }
-        .map { it.note }
-        .toSet()
+    /** Held notes on the KEYBED: the pads are presses now, so every held note is a key. */
+    private fun heldKeyNotes(): Set<Int> = held.keys.map { it.note }.toSet()
 
-    /** Pads currently struck, as panel controls, lit at their strike velocity. */
-    private fun heldPads(): Map<String, Double> = midiState.held.entries
-        .mapNotNull { (key, note) ->
-            DEVICE.bindings.notes[key.channel to key.note]?.let { it to note.velocity / 127.0 }
-        }
-        .toMap()
-
-    /**
-     * Colours struck pads by bank: the Bank button only reports that it was pressed, never which
-     * bank went live, so the note itself is what says which one you are on, and colour shows it
-     * without a readout.
-     */
     /** Every pad outlined in the active bank's colour, so the bank is readable at rest. */
     private fun padOutlines(): Map<String, String> {
         val color = if (activeBank == "A") BANK_A_COLOR else BANK_B_COLOR
@@ -394,17 +525,12 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
         return (1..8).associate { "pad-$it" to color }
     }
 
-    private fun padTints(): Map<String, String> = midiState.held.entries
-        .mapNotNull { (key, _) ->
-            val control = DEVICE.bindings.notes[key.channel to key.note] ?: return@mapNotNull null
-            val color = when (padBankOf(key.note)) {
-                "A" -> BANK_A_COLOR
-                "B" -> BANK_B_COLOR
-                else -> return@mapNotNull null
-            }
-            control to color
-        }
-        .toMap()
+    /** A pad struck lights in its bank's colour, the bank its note said; null for any other control. */
+    private fun padTint(control: ControlId): String? = when {
+        !control.id.startsWith("pad-") -> null
+        activeBank == "A" -> BANK_A_COLOR
+        else -> BANK_B_COLOR
+    }
 
     /**
      * Records a controller movement. This is how a device's knob/fader map gets discovered: twist
@@ -414,6 +540,15 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
      * It has to be empirical: a KeyLab's encoders send whatever its MIDI Control Center preset
      * says, and the manual publishes no defaults for them, so no chart can tell us.
      */
+    private fun observe(message: MidiMessage) {
+        when (message.kind) {
+            // Notes are the keys' and the pads': the event log shows them
+            0x80, 0x90 -> Unit
+            0xB0 -> observeControl("CC ${message.data1}", message.data2, message.channel)
+            else -> observeControl(otherLabel(message.kind, message.data1), message.data2, message.channel)
+        }
+    }
+
     private fun observeControl(label: String, raw: Int, channel: Int) {
         observed = observed + (
             label to ObservedControl(
@@ -441,8 +576,11 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
     /** DOMHighResTimeStamp ms with one decimal, e.g. "12345.7" */
     private fun formatTs(tsMs: Double): String = tsMs.asDynamic().toFixed(1).unsafeCast<String>()
 
-    private fun noteLabel(key: NoteKey): String =
-        "${Midi.midiToNoteName(key.note.toDouble())} (${key.note})"
+    private fun noteLabel(note: Int): String =
+        "${Midi.midiToNoteName(note.toDouble())} ($note)"
+
+    /** A velocity 0..1 as the MIDI number it came from, 0..127. */
+    private fun velocityLabel(velocity: Double): String = (velocity * 127).roundToInt().toString()
 
     //  RENDER  /////////////////////////////////////////////////////////////////////////////////
 
@@ -544,8 +682,8 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
                     onClick { keyBedOffset = 0 }
                     +when {
                         keyBedOffset == 0 -> "aligned"
-                        keyBedOffset > 0 -> "+$keyBedOffset — reset"
-                        else -> "$keyBedOffset — reset"
+                        keyBedOffset > 0 -> "+$keyBedOffset: reset"
+                        else -> "$keyBedOffset: reset"
                     }
                 }
                 ui.button {
@@ -568,8 +706,8 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
             MidiPanel(
                 panel = DEVICE,
                 heldNotes = heldKeyNotes(),
-                activeControls = controlValues + heldPads(),
-                tints = padTints(),
+                activeControls = controlValues + pressed,
+                tints = pressedTints,
                 outlines = padOutlines(),
                 noteOffset = keyBedOffset,
             )
@@ -589,7 +727,7 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
 
             if (observed.isEmpty()) {
                 noui.content {
-                    +"Move a knob, fader, wheel or pad — every controller it sends shows up here "
+                    +"Move a knob, fader, wheel or pad: every controller it sends shows up here "
                     +"with its number, so we can map them."
                 }
             } else {
@@ -791,7 +929,7 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
 
             MidiConnector.Status.Ready -> if (midiState.devices.isEmpty()) {
                 ui.info.message {
-                    +"No MIDI devices found. Plug in a keyboard — it will show up here automatically."
+                    +"No MIDI devices found. Plug in a keyboard, and it will show up here automatically."
                 }
             } else {
                 ui.horizontal.list {
@@ -813,8 +951,6 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
             key = "pressed-keys"
             css { minHeight = 90.px }
 
-            val held = midiState.held
-
             if (held.isEmpty()) {
                 ui.header H3 {
                     css { fontWeight = FontWeight.normal }
@@ -824,10 +960,10 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
                 ui.labels {
                     held.values.sortedBy { it.key.note }.forEach { note ->
                         ui.big.label {
-                            key = "note-${note.key.channel}-${note.key.note}"
+                            key = "note-${note.key.source.id}-${note.key.channel}-${note.key.note}"
                             css { fontSize = 24.px }
-                            +noteLabel(note.key)
-                            noui.detail { +"vel ${note.velocity}" }
+                            +noteLabel(note.key.note)
+                            noui.detail { +"vel ${velocityLabel(note.velocity)}" }
                         }
                     }
                 }

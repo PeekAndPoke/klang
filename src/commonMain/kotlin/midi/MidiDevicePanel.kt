@@ -226,7 +226,7 @@ val KeyLabEssential49Mk3: MidiDevicePanel = MidiDevicePanel(
 
         // ── Right button block ───────────────────────────────────────────────
         // Only Part reaches the wire (CC 119). Prog, Hold, Chord, Scale and Arp send NOTHING on
-        // any of the device's five ports — VERIFIED 2026-08-29 against the raw message log, not
+        // any of the device's five ports, VERIFIED 2026-08-29 against the raw message log, not
         // assumed. They change internal keyboard state, like Transpose and Octave, so they are
         // drawn but can never light up.
         add(PanelControl.Button("prog", 918, 30, 44, 20, "Prog"))
@@ -252,7 +252,7 @@ val KeyLabEssential49Mk3: MidiDevicePanel = MidiDevicePanel(
             // Knobs 96-104 and faders 105-113, MEASURED on a unit running FACTORY settings
             // (2026-08-29). Not published anywhere: the manual gives no defaults for the knobs and
             // faders because they follow whatever the MIDI Control Center preset holds. Factory
-            // state makes these a good default for any KeyLab Essential mk3 — but a device someone
+            // state makes these a good default for any KeyLab Essential mk3, but a device someone
             // has reconfigured will send something else, which is exactly why the binding is data
             // and the playground has a monitor to re-learn it.
             for (i in 0..8) {
@@ -282,7 +282,7 @@ val KeyLabEssential49Mk3: MidiDevicePanel = MidiDevicePanel(
             put(46, "ctx-3")
             put(47, "ctx-4")
 
-            // The big clickable encoder — RELATIVE, MEASURED (2026-08-29): it never sends a
+            // The big clickable encoder: RELATIVE, MEASURED (2026-08-29): it never sends a
             // position, only a DIRECTION around a centre of 64 (> 64 clockwise, < 64 counter-
             // clockwise), and in practice only 62..66. Its click is a second CC entirely, so it
             // gets its own id (see [PanelControl.Knob.pressId]).
@@ -294,13 +294,13 @@ val KeyLabEssential49Mk3: MidiDevicePanel = MidiDevicePanel(
 
             // The one control the manual does pin down.
             put(1, "mod-wheel")
-            // Measured. The Bank button reports that it was PRESSED, not which bank is now live —
+            // Measured. The Bank button reports that it was PRESSED, not which bank is now live,
             // so the active bank is inferred from the pad notes instead (see [padBankOf]).
             put(118, "bank")
         },
         pitchBend = "pitch-bend",
         notes = buildMap {
-            // ⚠️ Channel 11, NOT the 10 the manual states — MEASURED (2026-08-29). MIDI channels
+            // ⚠️ Channel 11, NOT the 10 the manual states: MEASURED (2026-08-29). MIDI channels
             // are 0-15 on the wire and 1-16 in every UI; `MidiConnector` reports the 1-based form,
             // so the manual's "channel 10" is the RAW wire value and arrives here as 11. Do not
             // "correct" this back to 10 against the manual: the hardware is the authority, and the
@@ -310,7 +310,7 @@ val KeyLabEssential49Mk3: MidiDevicePanel = MidiDevicePanel(
 
             // Both banks confirmed on the unit (2026-08-29). Bank B also settled the manual's
             // misprint: it prints pad 2 as "48 (C#2)" but the hardware sends 49. (Its octave names
-            // also run one lower than ours — Arturia numbers 60 as C3, we use C4.)
+            // also run one lower than ours: Arturia numbers 60 as C3, we use C4.)
             PAD_NOTES_BANK_A.forEachIndexed { i, note -> put(padChannel to note, "pad-${i + 1}") }
             PAD_NOTES_BANK_B.forEachIndexed { i, note -> put(padChannel to note, "pad-${i + 1}") }
         },

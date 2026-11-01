@@ -9,10 +9,12 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KlangPatternEvent
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_bridge.RealtimeVoice
+import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
+import kotlinx.coroutines.Deferred
 
 /**
  * An always-on playback that plays voices "now" — the realtime counterpart of
@@ -39,8 +41,8 @@ class KlangRealtimeVoicePlayback internal constructor(
      * Starts a voice immediately under a caller-supplied [liveId].
      *
      * The explicit-id form exists because a note source generally has to know the id BEFORE the
-     * voice exists — a MIDI connector maps (channel, note) to the id it will later stop, and that
-     * mapping has to be in place before the note-on is even sent.
+     * voice exists: the MIDI playground's note voicing maps (source, channel, note) to the id it will
+     * later stop, and that mapping has to be in place before the note-on is even sent.
      *
      * @param data The synthesis payload.
      * @param gateDurSec Gate length in seconds; null = held until [stopVoice].
@@ -82,6 +84,13 @@ class KlangRealtimeVoicePlayback internal constructor(
     }
 
     /**
+     * Loads the samples [requests] name and sends them to the backend: the realtime path loads nothing on its own (it
+     * has no timeline to look ahead on), so a source with a known set of sounds, such as the MIDI rig's drum kit, loads
+     * them here before it plays. Completes once the backend has them all (KLANG-00402, D2).
+     */
+    fun preload(requests: Set<SampleRequest>): Deferred<Unit> = player.samplePreloader.ensureLoadedDeferred(requests = requests)
+
+    /**
      * Announces an inline [IgnitorDsl] to this playback's backend engine and returns the
      * synthetic name to put in [VoiceData.sound].
      *
@@ -102,8 +111,24 @@ class KlangRealtimeVoicePlayback internal constructor(
         )
     }
 
+    /**
+     * The backend asks for a sample a voice needs and does not have: it is loaded and sent, as the cyclic path does. A
+     * fallback, not a guarantee: the voice has started already, so the first hit of a sample not loaded plays silent. A
+     * source that knows its sounds ahead (the MIDI rig's drum kit) loads them with [preload] and waits for it.
+     */
     override fun handleFeedback(feedback: KlangCommLink.Feedback) {
-        // No feedback consumed yet — diagnostics are handled at player level.
+        when (feedback) {
+            is KlangCommLink.Feedback.RequestSample -> {
+                player.samplePreloader.ensureLoadedSilently(requests = setOf(feedback.req))
+            }
+
+            // The player's: these never need a realtime playback's answer
+            is KlangCommLink.Feedback.PlaybackAnchored,
+            is KlangCommLink.Feedback.Diagnostics,
+            is KlangCommLink.Feedback.SampleReceived,
+            is KlangCommLink.Feedback.BackendReady,
+            -> Unit
+        }
     }
 
     override fun start() {

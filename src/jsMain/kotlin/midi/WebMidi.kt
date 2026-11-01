@@ -50,7 +50,7 @@ external interface MidiAccess {
     var onstatechange: ((MidiConnectionEvent) -> Unit)?
 }
 
-/** Reads one byte of the message as Int — no Byte types on Kotlin/JS. */
+/** Reads one byte of the message as Int: no Byte types on Kotlin/JS. */
 fun MidiMessageEvent.byteAt(index: Int): Int =
     data.asDynamic()[index].unsafeCast<Int>()
 

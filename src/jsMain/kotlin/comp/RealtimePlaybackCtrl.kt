@@ -8,19 +8,21 @@ package io.peekandpoke.klang.comp
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KlangPatternEvent
+import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_engine.KlangRealtimeVoicePlayback
 import io.peekandpoke.kraft.utils.launch
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
+import kotlinx.coroutines.Deferred
 
 /**
  * Non-UI controller owning the engine-startup → durable-playback → voice-forwarding lifecycle for
  * ONE realtime playback. The realtime sibling of [KlangCodePlaybackCtrl].
  *
  * It is deliberately a **pipe, not a manager**: an id goes in with a voice, the same id stops it.
- * It knows nothing about notes, MIDI, or what a voice sounds like — a note source (see
- * `MidiConnector`) owns per-note bookkeeping, and the page owns voice shape. That split is what
+ * It knows nothing about notes, MIDI, or what a voice sounds like: the note bookkeeping is
+ * `NoteVoicing`'s, and the page owns voice shape. That split is what
  * keeps this class reusable for a computer-keyboard fallback, UI sound effects or a pad grid.
  */
 class RealtimePlaybackCtrl(
@@ -120,6 +122,12 @@ class RealtimePlaybackCtrl(
     fun startEvents(liveId: Int, events: List<KlangPatternEvent>, gateDurSec: Double? = null) {
         playback?.startEvents(liveId = liveId, events = events, gateDurSec = gateDurSec)
     }
+
+    /**
+     * Loads the samples [requests] name ahead (the MIDI pads' kit, KLANG-00402 D2), so their first hit sounds; null while
+     * the engine is not up. The Deferred completes once the backend has them.
+     */
+    fun preload(requests: Set<SampleRequest>): Deferred<Unit>? = playback?.preload(requests = requests)
 
     /** Releases the voice(s) under [liveId] into their ADSR tail. Unknown id = no-op. */
     fun stopVoice(liveId: Int) {

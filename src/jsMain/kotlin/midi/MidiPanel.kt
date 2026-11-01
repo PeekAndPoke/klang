@@ -217,7 +217,7 @@ class MidiPanel(ctx: Ctx<Props>) : Component<MidiPanel.Props>(ctx) {
                 if (c.relative) {
                     // No pointer: an endless encoder reports a STEP, not a position, so there is
                     // no angle to point at. The raw number is the only honest thing to show, and
-                    // it goes in the middle, where the pointer would have been — in dark ink on
+                    // it goes in the middle, where the pointer would have been, in dark ink on
                     // the silver face, which the default blue has no contrast against.
                     renderValue(
                         c.id, c.x, c.y + 5,
@@ -225,7 +225,7 @@ class MidiPanel(ctx: Ctx<Props>) : Component<MidiPanel.Props>(ctx) {
                         fontSize = "14",
                     )
                 } else {
-                    // The pointer carries the value by ROTATING, the way a real knob reads — a
+                    // The pointer carries the value by ROTATING, the way a real knob reads: a
                     // colour change would say "moving" and then lie about it forever. Sweep is
                     // the usual 280°.
                     val a = absoluteAngle(c.id)
