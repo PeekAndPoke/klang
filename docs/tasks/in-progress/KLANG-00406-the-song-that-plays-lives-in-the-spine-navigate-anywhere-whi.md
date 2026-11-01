@@ -199,3 +199,5 @@ After KLANG-00389's `Player` steps 1 and 2 (the move into the Spine, typed owner
 - 2026-11-01: step 2 (the maintainer: "ok please go ahead"): the song page plays on the deck, its song plays on when
   the page is left, and the page opened again goes on with it; `SongDeck` keeps the controller on it rather than one of
   its own, `update` gone (the page's Update is a Play of the controller on the deck). KLANG-00398 fixed with it.
+- 2026-11-01: step 2 tested by hand by the maintainer: "the song keeps playing when i navigate around and starting
+  another song stop the first one and the second one starts playing".
