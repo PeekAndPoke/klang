@@ -1,6 +1,6 @@
 # KLANG-00402: MIDI playground design: a laptop keyboard always on screen, and a control layer between the devices and what they do
 
-> **Status (2026-11-01): DESIGNED.** Waiting for the maintainer's decisions D1 to D6; nothing built.
+> **Status (2026-11-01): IN PROGRESS.** D1 to D8 decided, all as proposed (the maintainer, 2026-11-01); step 0 done, step 1 next.
 >
 > **Part of:** KLANG-00363 (Live play: MIDI and realtime)
 
@@ -280,6 +280,10 @@ Two points of the Spine's plan for `Player` touch it:
 
 ## Decide before implementing
 
+**Decided (the maintainer, 2026-11-01), all as proposed:** D2 drum hits on the pads; D3 the octave stays in each
+source; D5 the laptop keyboard folds to a strip while a KeyLab is connected; D1, D4, D6 and D8 as written ("Yes, all
+as proposed"). D7 was the maintainer's own proposal.
+
 - **D1, the laptop map** as drawn in section 3: Y to - white, S D G H J L Ö black, the upper rows functions (no
   second octave on the Q row, as asked). Arrows for octave and velocity, Space, Tab, Esc.
 - **D2, the pads**: drum hits by default (proposal), or notes as today. Drum hits need the realtime path to load
@@ -298,6 +302,11 @@ Two points of the Spine's plan for `Player` touch it:
 ## The work
 
 0. The move of section 7, alone and with no other change, so the history keeps each file's line.
+   **Done (2026-11-01):** `MidiDevicePanel` to `src/commonMain/kotlin/midi/` (no browser in it); `MidiPanel` (from
+   `comp/`) and `MidiPlaygroundPage` (from `pages/`) to `src/jsMain/kotlin/midi/`, beside `MidiConnector` and
+   `WebMidi`. Only the package lines, two imports and the KDoc's em dashes changed (the commit hook
+   reads a moved file as new; the code comments' and UI strings' dashes go with step 1). `RealtimePlaybackCtrl` and `MidiInstrumentStorage` stay
+   until the rig and the stores move into the Spine (step 4, KLANG-00389).
 1. `ControlEvent`, `NoteVoicing`, `Routing` in common code with specs; `MidiConnector` down to ports and bytes; the
    KeyLab and the generic profile; the page's `handle` speaks `ControlEvent` only. Audible change: the pads (D2).
 2. `LaptopKeys` and its drawing: `MidiPanel` learns key labels, the laptop keyboard is a panel value like the KeyLab's.
@@ -333,3 +342,5 @@ source's `AllUp`, the same note from two sources); the routing lookup order. New
   instruments with a loadout, the play surface docked; then the rig app-wide, the MIDI tool in the bottom panel of
   every page, the keys behind its focus, every drawn control clickable, the MIDI page for configuring (section 6);
   the rig in the Spine (section 7).
+- 2026-11-01: D1 to D8 decided, all as proposed (D2 drum hits, D3 the octave per source, D5 folded to a strip).
+- 2026-11-01: IN PROGRESS.

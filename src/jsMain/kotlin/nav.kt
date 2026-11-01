@@ -8,6 +8,7 @@ package io.peekandpoke.klang
 import io.peekandpoke.klang.layouts.FullscreenLayout
 import io.peekandpoke.klang.layouts.MotorBackgroundLayout
 import io.peekandpoke.klang.layouts.WorkbenchLayout
+import io.peekandpoke.klang.midi.MidiPlaygroundPage
 import io.peekandpoke.klang.pages.CodeSongPage
 import io.peekandpoke.klang.pages.CreditsPage
 import io.peekandpoke.klang.pages.DashboardPage
@@ -15,7 +16,6 @@ import io.peekandpoke.klang.pages.DevStatusPage
 import io.peekandpoke.klang.pages.DevJinglesPage
 import io.peekandpoke.klang.pages.DevStoragePage
 import io.peekandpoke.klang.pages.LooksPage
-import io.peekandpoke.klang.pages.MidiPlaygroundPage
 import io.peekandpoke.klang.pages.NotFoundPage
 import io.peekandpoke.klang.pages.ResourcesPage
 import io.peekandpoke.klang.pages.SamplesLibraryPage

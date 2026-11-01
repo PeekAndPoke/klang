@@ -31,7 +31,7 @@ data class MidiDevicePanel(
  *
  * Data rather than code, and separate from the drawing on purpose: the same panel can be re-bound
  * when a device is reconfigured (a KeyLab's encoders send whatever its MIDI Control Center preset
- * holds), and a control that has no binding yet still draws — it simply never lights up.
+ * holds), and a control that has no binding yet still draws; it simply never lights up.
  */
 data class MidiBindings(
     /** CC number -> control id. */
@@ -78,7 +78,7 @@ sealed interface PanelControl {
         /** Silver clickable main encoder vs the small dark ones. */
         val accent: Boolean = false,
         /**
-         * Endless encoder: it reports a DIRECTION around a centre of 64, not a position — above 64
+         * Endless encoder: it reports a DIRECTION around a centre of 64, not a position: above 64
          * is clockwise, below is counter-clockwise, and 64 itself is no motion.
          *
          * The distinction is not cosmetic. An absolute knob's byte says where it is; a relative
@@ -89,7 +89,7 @@ sealed interface PanelControl {
         /**
          * Id of the companion "clicked" binding, for encoders that are also pushbuttons.
          *
-         * A separate id because the two send separate CCs and mean different things — folding the
+         * A separate id because the two send separate CCs and mean different things; folding the
          * click into [id] would have a press overwrite the turn value in the same slot.
          */
         val pressId: String? = null,
@@ -134,7 +134,7 @@ sealed interface PanelControl {
         val label: String? = null,
     ) : PanelControl
 
-    /** The LCD module — inert, drawn for recognisability. */
+    /** The LCD module: inert, drawn for recognisability. */
     data class Display(
         override val id: String,
         override val x: Int,
@@ -152,11 +152,11 @@ sealed interface PanelControl {
  * (§3.2 Front Panel). What the manual does NOT provide, and what therefore is not encoded here:
  * the CC numbers of the 9 encoders and 9 faders. In ARTURIA mode they drive Analog Lab macros and
  * in USER mode they are whatever the MIDI Control Center preset says, so they must be learned from
- * the device — see the playground's MIDI monitor.
+ * the device (see the playground's MIDI monitor).
  *
  * What the manual DOES pin down (used by the adapter, not by this drawing): pads send notes on
- * channel 10 — bank A 40,41,42,43,36,37,38,39 and bank B 48,49,50,51,44,45,46,47 (the manual
- * misprints 49 as "48") — the mod wheel is CC 1, and the pads send polyphonic aftertouch.
+ * channel 10: bank A 40,41,42,43,36,37,38,39 and bank B 48,49,50,51,44,45,46,47 (the manual
+ * misprints 49 as "48"); the mod wheel is CC 1, and the pads send polyphonic aftertouch.
  */
 /** Pad notes per bank, in pad order 1-8. Both measured on the hardware. */
 val PAD_NOTES_BANK_A: List<Int> = listOf(40, 41, 42, 43, 36, 37, 38, 39)
@@ -166,7 +166,7 @@ val PAD_NOTES_BANK_B: List<Int> = listOf(48, 49, 50, 51, 44, 45, 46, 47)
  * Which pad bank a note came from, or null if it is not a pad note.
  *
  * The Bank button only announces that it was pressed (CC 118), never which bank became active, so
- * asking the notes is the only reliable answer — and unlike tracking button presses it cannot
+ * asking the notes is the only reliable answer, and unlike tracking button presses it cannot
  * drift out of sync with the hardware.
  */
 fun padBankOf(note: Int): String? = when (note) {

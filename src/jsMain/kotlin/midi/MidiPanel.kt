@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-package io.peekandpoke.klang.comp
+package io.peekandpoke.klang.midi
 
 import io.peekandpoke.klang.midi.MidiDevicePanel
 import io.peekandpoke.klang.midi.PanelControl
@@ -67,7 +67,7 @@ class MidiPanel(ctx: Ctx<Props>) : Component<MidiPanel.Props>(ctx) {
          * control id -> outline colour, drawn whether or not the control is active.
          *
          * Separate from [tints] because it answers a different question: tint says "this is being
-         * played right now", outline says "this is the mode you are in" — and the second has to be
+         * played right now", outline says "this is the mode you are in", and the second has to be
          * visible when nothing is being touched at all.
          */
         val outlines: Map<String, String> = emptyMap(),
@@ -77,7 +77,7 @@ class MidiPanel(ctx: Ctx<Props>) : Component<MidiPanel.Props>(ctx) {
          *
          * The caller must supply this; it cannot be derived here. Transpose/Octave buttons change
          * what the keys transmit and send nothing themselves, and a transposed note is identical
-         * to the untransposed note at that number — the offset simply is not in the data.
+         * to the untransposed note at that number: the offset simply is not in the data.
          */
         val noteOffset: Int = 0,
     )
@@ -99,7 +99,7 @@ class MidiPanel(ctx: Ctx<Props>) : Component<MidiPanel.Props>(ctx) {
     }
 
     /**
-     * True once a CONTINUOUS control (knob, fader, wheel) is known — it has sent a value, so it is
+     * True once a CONTINUOUS control (knob, fader, wheel) is known: it has sent a value, so it is
      * bound and its position is real rather than a resting guess. Deliberately not value-based: a
      * fader pulled fully down is still bound, and should not look unbound at zero.
      */
@@ -113,7 +113,7 @@ class MidiPanel(ctx: Ctx<Props>) : Component<MidiPanel.Props>(ctx) {
      */
     private fun pressed(id: String): Boolean = (props.activeControls[id] ?: 0.0) > 0.0
 
-    /** The colour a lit control should use — caller override, else the default highlight. */
+    /** The colour a lit control should use: the caller's override, else the default highlight. */
     private fun litColor(id: String): String = props.tints[id] ?: LIT
 
     /** Pointer angle of a POSITION knob: its value across the usual 280° sweep, centred at rest. */

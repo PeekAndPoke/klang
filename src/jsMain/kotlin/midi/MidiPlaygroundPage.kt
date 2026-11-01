@@ -3,12 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-package io.peekandpoke.klang.pages
+package io.peekandpoke.klang.midi
 
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KlangPatternEvent
-import io.peekandpoke.klang.comp.MidiPanel
 import io.peekandpoke.klang.comp.RealtimePlaybackCtrl
 import io.peekandpoke.klang.midi.KeyLabEssential49Mk3
 import io.peekandpoke.klang.midi.MidiConnector
@@ -61,9 +60,9 @@ fun Tag.MidiPlaygroundPage() = comp {
 }
 
 /**
- * Midi Playground — play the engine live from a MIDI keyboard.
+ * Midi Playground: play the engine live from a MIDI keyboard.
  *
- * The page owns only two things: **the translation** ([voiceFor] — what a note sounds like) and
+ * The page owns only two things: **the translation** ([voiceFor], what a note sounds like) and
  * the wiring ([handle]). Engine lifecycle lives in [RealtimePlaybackCtrl]; devices, byte parsing,
  * liveIds and note bookkeeping live in [MidiConnector]. See
  * KLANG-00159 (realtime playback controller).
@@ -80,7 +79,7 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
 
     private val midiState by subscribingTo(midi.state)
 
-    /** Last events, newest first — pure UI, so it lives here. */
+    /** Last events, newest first; pure UI, so it lives here. */
     private var eventLog: List<String> by value(emptyList())
 
     /** One row per distinct controller seen, for discovering a device's map. */
@@ -89,7 +88,7 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
     private var observed: Map<String, ObservedControl> by value(emptyMap())
 
     /**
-     * Live positions of the device's controls, `0..1`, keyed by panel control id — this is what
+     * Live positions of the device's controls, `0..1`, keyed by panel control id; this is what
      * makes the on-screen faders follow the physical ones. Fed by the device's [MidiBindings];
      * anything unbound simply never appears here and stays at its resting position.
      */
@@ -98,10 +97,10 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
     /**
      * Which pad bank we believe is live.
      *
-     * The device never announces this — the Bank button (CC 118) only reports that it was pressed.
+     * The device never announces this: the Bank button (CC 118) only reports that it was pressed.
      * So this starts as a GUESS ("A", the power-on default) and is kept honest two ways: pressing
      * Bank toggles it, and any pad note CORRECTS it, because the note number says unambiguously
-     * which bank produced it. The correction is what makes a wrong guess self-healing — one pad hit
+     * which bank produced it. The correction is what makes a wrong guess self-healing: one pad hit
      * and the display is right again.
      */
     private var activeBank: String by value("A")
@@ -114,15 +113,15 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
      * untransposed note below it. Nothing in the stream distinguishes them.
      *
      * An earlier version guessed this from notes landing outside the drawn range. That was not
-     * inference — an out-of-range note only says the drawing cannot show it, not why (a second
-     * device on another range does the same thing) — and once this became settable it silently
+     * inference: an out-of-range note only says the drawing cannot show it, not why (a second
+     * device on another range does the same thing), and once this became settable it silently
      * overrode the user's own choice. Removed deliberately; do not reintroduce it.
      */
     private var keyBedOffset: Int by value(0)
 
     /**
      * The built-in oscillator the NEXT note will use. Notes already sounding keep the sound they
-     * were started with — the voice is built at note-on, and re-sounding a held key would be a
+     * were started with: the voice is built at note-on, and re-sounding a held key would be a
      * glitch, not a feature.
      */
     private var selectedSound: String by value("supersaw")
@@ -166,7 +165,7 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
             mapperCode = "x => x.reverb(wet = 0.2)",
         )
 
-        /** Pad bank A / B highlight colours — distinct hues, since the bank is otherwise invisible. */
+        /** Pad bank A / B highlight colours: distinct hues, since the bank is otherwise invisible. */
         private const val BANK_A_COLOR = "#4a9eff"
         private const val BANK_B_COLOR = "#f0a33c"
 
@@ -368,7 +367,7 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
      * Held notes that belong on the KEYBED.
      *
      * The pads send notes too (channel 10, notes 36-51 on a KeyLab), and those numbers land inside
-     * the drawn key range — so without this filter, hitting a pad lights a piano key. The device's
+     * the drawn key range, so without this filter, hitting a pad lights a piano key. The device's
      * note bindings decide which is which.
      */
     private fun heldKeyNotes(): Set<Int> = midiState.held.keys
@@ -385,7 +384,7 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
 
     /**
      * Colours struck pads by bank: the Bank button only reports that it was pressed, never which
-     * bank went live, so the note itself is what says which one you are on — and colour shows it
+     * bank went live, so the note itself is what says which one you are on, and colour shows it
      * without a readout.
      */
     /** Every pad outlined in the active bank's colour, so the bank is readable at rest. */
@@ -412,7 +411,7 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
      * something and watch which row moves. Keyed by label, so each control is one row however many
      * messages it sends.
      *
-     * It has to be empirical — a KeyLab's encoders send whatever its MIDI Control Center preset
+     * It has to be empirical: a KeyLab's encoders send whatever its MIDI Control Center preset
      * says, and the manual publishes no defaults for them, so no chart can tell us.
      */
     private fun observeControl(label: String, raw: Int, channel: Int) {
@@ -470,7 +469,7 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
 
     /**
      * The engine gate. Browsers only start an AudioContext from a user gesture, so this button IS
-     * the gesture — an honest state rather than a silently suspended context.
+     * the gesture: an honest state rather than a silently suspended context.
      */
     private fun FlowContent.renderStartEngine() {
         ui.basic.segment {
@@ -523,7 +522,7 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
      * Has to be manual: Transp -/+ changes what the keys send WITHOUT emitting anything, and a
      * note transposed down a semitone is byte-for-byte identical to the untransposed note below
      * it. Nothing in the stream distinguishes them, so the display can only be told. (Octave
-     * shifts DO get detected — they eventually push notes off the drawn range, which is visible.)
+     * shifts DO get detected: they eventually push notes off the drawn range, which is visible.)
      */
     private fun FlowContent.renderTransposeControl() {
         ui.basic.segment {
@@ -578,7 +577,7 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
     }
 
     /**
-     * Live map of every controller the device emits — the tool that makes wiring knobs possible,
+     * Live map of every controller the device emits: the tool that makes wiring knobs possible,
      * since a KeyLab's encoder CCs live in its MIDI Control Center preset rather than in any chart.
      * Twist one control at a time and note which row appears.
      */
