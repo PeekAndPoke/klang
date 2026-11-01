@@ -299,7 +299,10 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
                             put("height", "52px")
                         }
 
-                        Oscilloscope(player = Player.player, strokeColor = Color(look[KlangRole.ScopeTrace]))
+                        Oscilloscope(
+                            player = Player.player,
+                            strokeColor = Color(look[KlangRole.ScopeTrace]),
+                        )
                     }
                 }
 

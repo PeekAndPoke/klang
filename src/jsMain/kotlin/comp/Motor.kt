@@ -73,7 +73,14 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
         const val OSCILLOSCOPE_HEIGHT_REM = 4.00
 
         /** How far the scope's smoke may go past it: up over the gauges, a little to the sides and down. */
-        private val SMOKE = Oscilloscope.Smoke(top = 80.0, sides = 12.0, bottom = 12.0)
+        private val SMOKE = Oscilloscope.Smoke(
+            opacity = 0.2,
+            keep = 0.95,
+            top = 80.0,
+            sides = 12.0,
+            bottom = 80.0,
+            blurPx = 0.25,
+        )
 
         /** The spectrum stands on the frame's floor, behind the scope; its boxes stack up from there. */
         const val SPECTRUM_HEIGHT_REM = 7.0

@@ -142,7 +142,7 @@ class VoiceRain(ctx: Ctx<Props>) : Component<VoiceRain.Props>(ctx) {
                 }
             }
             onMount {
-                (dom as? HTMLElement)?.let { box ->
+                dom?.let { box ->
                     boxWidth = box.clientWidth
                     boxHeight = box.clientHeight
                 }
@@ -152,7 +152,7 @@ class VoiceRain(ctx: Ctx<Props>) : Component<VoiceRain.Props>(ctx) {
     }
 
     private fun readInk() {
-        val el = dom as? HTMLElement ?: return
+        val el = dom ?: return
         val value = window.getComputedStyle(el).getPropertyValue("--kl-lcd-ink").trim()
 
         if (value.isNotEmpty()) {

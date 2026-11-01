@@ -90,12 +90,12 @@ let powerClassA = Ign.fn(x => x
 
 let cab4x12 = Ign.fn(x => x
   .eq(e => e
-    .band(freq =  120, q = 0.7, db =  2.60)        // thump: closed-back box resonance
-    .band(freq =  380, q = 0.5, db =  4.50)        // roar:  low mids
-    .band(freq = 2700, q = 1.7, db =  4.30)        // bark:  the upper-mid speaker peak
+    .band(freq =  120, q = 0.7, db =  2.00)        // thump: closed-back box resonance
+    .band(freq =  380, q = 0.5, db =  3.30)        // roar:  low mids
+    .band(freq = 2700, q = 1.7, db =  3.00)        // bark:  the upper-mid speaker peak
   )
   .lowpass(4980, 0.707, x => x.passes(3))          // the wall: 36 dB/oct, the fizz is gone
-  .highpass(80, 0.707, x => x.passes(2)))
+  .highpass(60, 0.707, x => x.passes(2)))
 
 let cab1x12 = Ign.fn(x => x
   .highpass(120, 0.707, x => x.passes(2))
@@ -169,7 +169,7 @@ let metalKick = (() => {
     .adsr(0.0005, 0.22, 0.0, 0.05)
     .distort(0.5, "soft")   // the hard hit: the loud start clips, the tail stays clean
  
-  let crack = Ign.whitenoise().bandpass(3500, 0.8).adsr(0.0003, 0.025, 0.0, 0.02).mul(2.8)
+  let crack = Ign.whitenoise().bandpass(3200, 0.8).adsr(0.0003, 0.020, 0.0, 0.02).mul(3.0)
 
   return thump.plus(crack)
     .mul(0.26)                                     // level: as loud as the bd shape it replaced, at the same gain(0.25)
@@ -257,8 +257,8 @@ export liftRoots = `<5 6 0>`
 export liftPower = `<[-2,2] [-1,3] [0,4]>`
 
 // The melody, in two phrases of one round each. The second fits the cocoon and the lift alike.
-export melodyOne = `<[4@4 3 0 1 2] [3@4 ~ 4 1 2] [4@3 5 4@2 0 2] [1@6 ~@2]>`
-export melodyTwo = `<[7@4 6 1 3 4] [8@4 ~ 4 6 8] [9@3 8 7@2 2 4] [4@6 ~@2]>`
+export melodyOne = `<[4@4 3 0 2 [3 7]] [3@4 ~ 4 2 1] [0@3 4 3@2 2 2] [1@6 ~@2]>`
+export melodyTwo = `<[7@4 6 [0 1] 2 [4 6]] [8@4 ~ 7 2 [6 8]] [9@3 8 7@2 2 [2 3]] [4@6 ~@2]>`
 
 // Out of the cocoon flies the Schmetterling's own lead.
 export schmetterlingLead = `<[-7 0 2 4] [-7 0 4 [2 0]] [-5 -1 2 4|[4 4|4|-1]] [-6 -1 4 3|3|[3 3]]>`
@@ -280,26 +280,26 @@ export spin = notes => n(notes)
 // Sing: the melody on the bright rig, an octave up.
 export sing = notes => n(notes.add(7))
   .sound(bright).adsrOff().unison(voices = 11, spread = 0.04) // a narrow chorus: a held note stays one note
-  .ignp("decay", 5.0).clip(0.99)
+  .ignp("decay", 10.0).clip(0.99)
   .tremolo(rate = beatRate(0.33), depth = perlin(0.200, 0.250))  // The guitar finger
   .vibrato(rate = beatRate(0.33), semitones = perlin(0.025, 0.040))
-  .hpf(180)                                        // the 4x12 roar sits on the arp; the lowest note is D4 at 293 Hz
-  .lpf(3800)                                       // the crunch fizz on held notes covers the arp's picks
+  .hpf(220)                                        // the 4x12 roar sits on the arp; the lowest note is D4 at 293 Hz
+  .lpf(4000)                                       // the crunch fizz on held notes covers the arp's picks
   .gain(0.14).pan(0.6)                             // the melody stands near the centre, a little right
   .orbit(2).body(wet = 0.15, material = "rosewood").late(perlin(0.0005, 0.0015))
 
 // Soar: the melody two octaves up, wider, over the wings.
 export soar = notes => n(notes.add(14))
-  .sound(bright).adsrOff().unison(voices = 11, spread = 0.05)
-  .ignp("decay", 2.8).clip(1.5)
-  .hpf(500)                                        // two octaves up, nothing of the melody lives below
-  .lpf(4300)                                       // less fizz, the wall keeps its own
-  .gain(0.45).pan(0.5)
+  .sound(bright).adsrOff().unison(voices = 9, spread = 0.06)
+  .ignp("decay", 1.5).clip(2.0)
+  .hpf(220)                                        // two octaves up, nothing of the melody lives below
+  .lpf(4250)                                       // less fizz, the wall keeps its own
+  .gain(0.43).pan(0.5)
   .orbit(6)
 
 // Swell: volume-knob swells, the thing inside stretching. Doubled on the left, a little late.
 export swell = chords => n(chords.add(7))
-  .sound(bright).adsrOff().unison(voices = 5, spread = 0.06)
+  .sound(bright).adsrOff().unison(voices = 5, spread = 0.04)
   .ignp("attack", 1.3).ignp("decay", 1.8).clip(1)
   .lpf(3500)
   .gain(0.07).pan(0.05).superimpose(x => x.pan(0.95).late(0.015)) // far left and far right, the right a little late
@@ -318,7 +318,7 @@ export chug = roots => n(roots.add(-7)).struct("[x x] x@2  [x x] x@2  [x x] x")
   .sound(heavy).adsrOff().unison(voices = 7, spread = 0.08)
   //.ignp("decay", "0.4 0.8!2 0.4 0.8!2 0.3 0.2").clip(1)
   .velocity("1.0 0.90 0.80 0.85  0.90 0.80 0.75 0.85".sub(perlin(0.0, 0.2).seed(2)))
-  .gain(0.58).late(perlin(0.0005, 0.0010).seed(2)).apply(
+  .gain(0.65).late(perlin(0.0005, 0.0010).seed(2)).apply(
     x => x.pan(0.20),
     x => x.pan(0.80),
   )
@@ -329,7 +329,7 @@ export wings = chords => n(chords).ply(16)
   .sound(heavy).adsrOff().unison(voices = 7, spread = 0.08)
   .ignp("decay", "[0.9 0.8]*8").clip(1)
   .velocity("1.0 0.90!2 0.96 0.88 0.92 0.94 0.92".sub(perlin(0.0, 0.2).seed(3)))
-  .gain(0.64).late(perlin(0.0010, 0.0015).seed(3)).apply(
+  .gain(0.70).late(perlin(0.0010, 0.0015).seed(3)).apply(
     x => x.pan(0.05),
     x => x.pan(0.95),
   )
@@ -344,7 +344,7 @@ export strike = chords => n(chords)
 
 // Chime: a melody on the clean rig, two octaves up, picked and let ring. The butterfly after the storm.
 export chime = notes => n(notes.add(14))
-  .sound(clean).adsrOff().unison(voices = 7, spread = 0.10).pregain(0.7)
+  .sound(clean).adsrOff().unison(voices = 9, spread = 0.08).pregain(0.7)
   .ignp("decay", 0.30).ignp("sustain", 0.35).ignp("release", 1.2).clip(2)
   .velocity("1.0 0.8 0.9 0.8 0.95 0.8 0.9 0.8".sub(perlin(0.0, 0.10)))
   .gain(0.33).pan(0.75).late(perlin(0.001, 0.002))
@@ -383,10 +383,10 @@ export hats = pat => sound(pat).n(0)
 // Bass: the Schmetterling's bass guitar, on every kick, on the chord's root two octaves down.
 export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
   .sound(bass).velocity("0.98 0.94 0.96 0.94")
-  .ignp("sub", 0.90).ignp("harmonics", 1.00)
+  .ignp("sub", 0.95).ignp("harmonics", 1.00)
   .adsr(0.003, 0.75, 0.5, 0.040).hpf(30).notch(freq = snareHz, q = 1.0)
   .clip(0.90)
-  .gain(1.25).pan(0.5)
+  .gain(0.50).pan(0.25).superimpose(pan(0.75))
   .orbit(15)
 
 // Parts  -----------------------------------------------------------------------------------------------------------
@@ -444,7 +444,7 @@ let breakingOpen = stack(
 // The melody steps aside and the cocoon's own thread unravels over the heavy wall: the arpeggio an octave up, leading,
 // in the centre between the wings.
 let unravelling = stack(
-  spin(cocoonArp.add(7)).ply(2).gain(0.70).pan(0.5),
+  spin(cocoonArp.add(7)).ply(2).gain(0.65).pan(0.5),
   wings(cocoonPower2),
   chug(cocoonRoots),
   beat(cocoonRoots).pan(0.5).gain(0.10).lpf(1600),
@@ -454,8 +454,8 @@ let unravelling = stack(
 let lifting = stack(
   //spin(liftArp.add(14).ply(4)).gain(0.05).ignp("sustain", 0.0).clip(0.25).pan(0.25).superimpose(pan(0.75)),
   soar(melodyTwo)
-    .tremolo(rate = beatRate(0.25), depth = saw.slow(4).pow(3).mul(0.25).add(0.01))
-    .vibrato(rate = beatRate(0.25), semitones = saw.slow(4).pow(3).mul(0.10).add(0.01)),
+    .tremolo(rate = beatRate(0.25), depth = saw.slow(4).pow(3).mul(0.25).add(0.02))
+    .vibrato(rate = beatRate(0.25), semitones = saw.slow(4).pow(3).mul(0.10).add(0.02)),
   wings(liftPower),
   chug(liftRoots),    
   beat(cocoonRoots).pan(0.5).gain(0.10).lpf(1600),
@@ -536,7 +536,7 @@ export song = stack(
  
   , master(Katalyst(k => k
     .reverb(0.20, 7, 7500)                         // the hall: one room for the whole band, about 2 s, warm
-    .gain(1.05)                                    // the house level, -14 LUFS
+    .gain(1.02)                                    // the house level, -14 LUFS
     .bands(b => b
       .band(low => low.distort(0.01, "soft", 4).mul(1.00)).cut(150)
       .band(mid => mid.distort(0.15, "soft", 4).mul(0.90)).cut(5000)
@@ -549,11 +549,12 @@ export song = stack(
 
 
 // Written by Claude (Opus 5.5) on the guitar of Der Schmetterling, which the maintainer and Claude built stage by stage.
-// Fine-tuned and arranged with peekandpoke
+// Melody refined, fine-tuned and arranged with peekandpoke
 //
 // Inspired by: Philip Glass and Steve Reich, the additive process of minimal music. The spinning arpeggio grows thread
 // by thread through its mask, and the listener hears the same notes transform instead of new ones arriving.
 // Inspired by: Editors - Papillon, through the Schmetterling's lead that flies off at the end.
+
 
 
 

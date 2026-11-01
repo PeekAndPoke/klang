@@ -22,6 +22,7 @@ import io.peekandpoke.klang.ui.comp.KlangKnob
 import io.peekandpoke.klang.ui.comp.KlangMenuButton
 import io.peekandpoke.klang.ui.feel.KlangRole
 import io.peekandpoke.klang.ui.feel.KlangTheme
+import io.peekandpoke.klang.visuals.VisualsBoard.Companion.SCOPE_SWING
 import io.peekandpoke.klang.visuals.VisualsParts.glassDome
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
@@ -117,9 +118,9 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
         private const val SCOPE_SWING = HOLE_HEIGHT * 0.4
 
         /** How far the scope's smoke may rise out of its hole, and go to its sides and below it, as shares of a tile. */
-        private const val SMOKE_UP = 0.6
-        private const val SMOKE_SIDES = 0.3
-        private const val SMOKE_DOWN = 0.2
+        private const val SMOKE_UP = 1.33
+        private const val SMOKE_SIDES = 1.33
+        private const val SMOKE_DOWN = 1.33
 
         /**
          * The margin round a display inside its plate, as a share of a tile (the maintainer, 2026-10-29: "Keep a left
@@ -186,7 +187,7 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
     private var highlights: List<HTMLElement> = emptyList()
 
     private fun findHighlights() {
-        val found = (dom as? HTMLElement)?.querySelectorAll(".${VisualsParts.HIGHLIGHT}")
+        val found = dom?.querySelectorAll(".${VisualsParts.HIGHLIGHT}")
 
         highlights = found?.let { list -> (0 until list.length).mapNotNull { list.item(it) as? HTMLElement } } ?: emptyList()
     }
@@ -402,7 +403,7 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
                     put(
                         "box-shadow",
                         "inset 0 6px 14px rgba(0, 0, 0, 0.9), inset 0 -1px 0 rgba(255, 255, 255, 0.08), " +
-                            "0 1px 0 rgba(255, 255, 255, 0.12)",
+                                "0 1px 0 rgba(255, 255, 255, 0.12)",
                     )
                 }
             }
@@ -418,9 +419,14 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
                     strokeColor = Color(look[KlangRole.ScopeTrace]),
                     swingPx = tile * SCOPE_SWING,
                     smoke = Oscilloscope.Smoke(
+                        opacity = 0.3,
                         top = tile * SMOKE_UP,
                         sides = tile * SMOKE_SIDES,
                         bottom = tile * SMOKE_DOWN,
+                        keep = 0.99,
+                        growYPx = 0.75,
+                        growXPx = 0.75,
+                        blurPx = 0.5,
                     ),
                 )
             }

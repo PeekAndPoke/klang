@@ -332,7 +332,7 @@ class TutorialPage(ctx: NoProps) : PureComponent(ctx) {
         val isDone = tutorial.slug in done
 
         fun goNext() {
-            if (next != null && track != null) {
+            if (next != null) {
                 router.navToUri(Nav.tutorialInTrack(slug = next.slug, trackSlug = track.slug))
             }
         }

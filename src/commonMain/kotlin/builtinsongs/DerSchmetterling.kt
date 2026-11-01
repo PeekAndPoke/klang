@@ -22,8 +22,8 @@ import * from "sprudel"
 // Song Status: Upcoming Garage Band ...
 
 let feel          =    3    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
-let transposition =   -4    // -1 .. D# | 0 .. E | 1 .. F
-let drunk         =  1.1    // How many liters of beers did each band member have?
+let transposition =   -3    // -1 .. D# | 0 .. E | 1 .. F
+let drunk         =  1.0    // How many liters of beers did each band member have?
 let snareHz       =  205    // Where does the snare cut through?
 
 // Guitar rig  ------------------------------------------------------------------------------------------------------------------------------------------------
@@ -172,7 +172,7 @@ let makeGuitar = (rig) => {
     // enable the phase-pool for consistent onsets and fundamentals
     .phasePool(on = 1, kMin = 0.60, kMax = 0.90, warmup = 0, selection = "normal")
     // character knobs, plain scalars on the supersaw builder
-    .spreadPower(1.0).sideAtten(0.5).gainJitter(0.20).centerJitter(0.50)
+    .spreadPower(1.0).sideAtten(0.5).gainJitter(0.25).centerJitter(0.02)
     // analog settings
     .analog(pAnalog).analogSpread(0.05)
   )
@@ -191,8 +191,9 @@ let makeGuitar = (rig) => {
   // frequency, and a filter that moves with every note gave every note the same shape, which the ear reads as
   // synthetic (2026-09-14)
   return rig(signal)
-    .mul(0.15)
-    .shape("soft", 8).mul(1.1)
+    // Missing piece in the chain: Mircophone
+    .mul(0.15).shape("soft", 8).mul(1.1)
+    // sprudel classic
     .classic()
 }
 
@@ -225,7 +226,7 @@ let bass = (() => {
 
   // Harmonics: sine partials at 2f .. 6f, gain 1/n, the fundamental left to the sub above. On the
   // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
-  let harmonics = Ign.sine(x => x.harmonics(8, 0.90).fundamental(0).analog(pAnalog).analogSpread(0.05)).mul(pHarm)
+  let harmonics = Ign.sine(x => x.harmonics(6, 0.88).fundamental(0).analog(pAnalog).analogSpread(0.05)).mul(pHarm)
 
   return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -3)) // let the snare cut through
@@ -249,7 +250,7 @@ export lead_pat =
 // under the bar in which the thump rings at the fundamental. Its energy sits at 250 to 650 Hz, under the guitar wall.
 let marimba = (() => {
   let pAnalog = Ign.slot.analog
-  let ring = Ign.constant(320).div(Ign.freq())                                                            // seconds: 1.2 s on e4, 0.6 s on e5
+  let ring = Ign.constant(300).div(Ign.freq())                                                            // seconds: 1.2 s on e4, 0.6 s on e5
   let f1  = Ign.sine(x => x.analog(pAnalog)).adsr(0.001, ring, 0.0, 0.40)
   let f4  = Ign.sine(Ign.freq().mul(4.05), x => x.analog(pAnalog)).adsr(0.001, 0.12, 0.0, 0.10).mul(0.35)
   let f10 = Ign.sine(Ign.freq().mul(10.075), x => x.analog(pAnalog)).adsr(0.001, 0.08, 0.0, 0.05).mul(0.25)
@@ -272,7 +273,7 @@ export lead_shape = x => x.sound(marimba).ply("1|1|1|1|1|1|2".fast(3.sqrt())).ad
   .clip(0.80)
 
 export lead_arrange = x => x.orbit(0) //  .mute()
-  .scale("<e5:minor!48 e6:minor!16>").gain("<0.50!48 0.35!16>").gain(mul(0.27))
+  .scale("<e5:minor!140 e6:minor!32>").gain("<0.50!140 0.35!32>").gain(mul(0.27))
   .velocity()
   .shuffle("<1!80 1!1 4/8!14 1!33>")
   .mute("<1!64 0!32 1!48 0!16 1!32>")
@@ -331,7 +332,7 @@ export guitar3_arrange = x => x.orbit(3) //  . solo()
   .scale("<e2:minor>").gain(0.0950).mute("<0!128 1!16 0!16>") //.mute()
   .late(berlin(0.0003, 0.0006).mul(drunk).seed(3))
 
-export guitar3 = n(guitar3_pat).struct("<[x!8]!7 [x!24]!1 [x!4]!8 [x!8]!8>").apply(guitar3_shape).tag("guitar3")
+export guitar3 = n(guitar3_pat).struct("<[x!8]!7 [x!24]!1 [x!4]!8 [x!8]!7 [x!16]>").apply(guitar3_shape).tag("guitar3")
 
 // Bass  ------------------------------------------------------------------------------------------------------------------------------------------------------
 export bass_pat =
@@ -352,18 +353,18 @@ export bass_arrange = x => x.orbit(4) // . mute()
 export bass = n(bass_pat).struct(
   `< x x x [x x]  x x [x x] [x!4]    x x [x x] x  [x x] x x [x!4]
     [x x@2 x]!6 [x x]!2   [x x@2 [x!2]]!4 [x x] [x x] [x [x x]]!2
-    [x x] [x [x x]] [x x] [x [x x]]  [[x x] [~ x]] [x x] [[x x] x] [[x x] x]    [x x] [x [x x]] [x@3 x] [x@3 x]  [[x x] x] [x x] [[x x] x]!2
+    [x x] [x [x x]] [x x] [x [x x]]  [[x x] [~ x]] [x x] [[x x] x] [[x x] x]    [x x] [x [x x]] [x x] [~ x]  [[x x] x] [x x] [[x x] x]!2
     [x!4]!4 [[x x] x] [[x x] x] [[x x] x] [x!4]   [x!2 x@2] [x!2] [x!2 x@2] x [x x] [x [x x]] [x [x x]] [x@3 x]>`
 ).fast(2).apply(bass_shape).tag("bass")
 
 // Gummieimer  ------------------------------------------------------------------------------------------------------------------------------------------
 // A traditional Rubber-bucket, similar in design to a Orchestertrommel
 let gummiEimer = (() => {
-  let pAnalog = Ign.slot.analog.mul(20)
+  let pAnalog = Ign.slot.analog.add(60)
  
-  let ring = Ign.constant(320).div(Ign.freq()).mul(0.85)  
+  let ring = Ign.constant(300).div(Ign.freq()).mul(0.85)  
  
-  let head  = Ign.sine(x => x.analog(pAnalog)).pitchEnvelope(4, x => x.adsr(0.015, 0.050, 0, 0)).adsr(0.010, ring, 0.3, 0.5).mul(0.5)
+  let head  = Ign.sine(x => x.analog(pAnalog)).pitchEnvelope(4, x => x.adsr(0.015, 0.050, 0, 0)).adsr(0.010, ring, 0.3, 0.5).mul(0.45)
   // the harmonics 2f..8f, fundamental left out: the ear rebuilds it, so the drum sits low in the mix and keeps its pitch,
   // and the pitch drop is heard up here, not felt at 70 Hz. They die well before the head does.
   let harms = Ign.sine(x => x.harmonics(6, 0.8).fundamental(0).analog(pAnalog).analogSpread(0.2))
@@ -392,7 +393,7 @@ export trommel_shape = x => x.sound(gummiEimer).adsrOff() //  .solo()
   )
 
 export trommel_arrange = x => x.orbit(5)  // .solo(0.5)
-  .scale("e4:minor").gain(0.25)
+  .scale("e4:minor").gain(0.23)
   .mute("<1!96 0!32>")                          
 
 export trommel = n(trommel_pat).apply(trommel_shape).tag("trommel")
@@ -543,7 +544,7 @@ export song = stack(
   , // Master
   master(Katalyst(k => k
     .reverb(0.10, 7, 4500)
-    .gain(5.0)
+    .gain(4.8)
     .bands(b => b
       .band(low => low.distort(0.01, "soft", 4).mul(1.00)).cut(150)
       .band(mid => mid.distort(0.15, "soft", 4).mul(0.90)).cut(5000)
