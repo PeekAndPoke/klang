@@ -128,8 +128,8 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         val growYPx: Double = RADIANCE_GROW_Y_PX,
         /** How far the smoke moves up each frame, in CSS pixels ([SMOKE_RISE_PX]). */
         val risePx: Double = SMOKE_RISE_PX,
-        /** How wide the clear frame round the copy is, in CSS pixels ([SMOKE_EDGE_PX]). */
-        val edgePx: Double = SMOKE_EDGE_PX,
+        /** How much of the room on each side the smoke fades out over, a share ([SMOKE_FALLOFF]). */
+        val falloff: Double = SMOKE_FALLOFF,
     )
 
     companion object {
@@ -182,13 +182,17 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         private const val SMOKE_RISE_PX = 0.0
 
         /**
-         * How wide a frame round the canvas is cleared to full transparency each frame, before the copy is drawn back
-         * blurred, in CSS pixels. The fade never takes the faintest smoke to nothing (8-bit alpha rounds it back up),
-         * and the blur spread it to the canvas's edges as a faint but visible dust over everything (the maintainer,
-         * 2026-11-01: "otherwise the blur eats up everything to the edge of the canvas. Everything somehow fills with
-         * a very transparent but visible "dust""); the clear frame drains it at the edges.
+         * How much of the room past the scope, on each side, the smoke fades out over: each frame, before the copy is
+         * drawn back blurred, a soft eraser runs over that band, nothing where it starts and all at the canvas's edge.
+         * The fade never takes the faintest smoke to nothing (8-bit alpha rounds it back up), and the blur spread it to
+         * the canvas's edges as a faint but visible dust ending in a hard rectangle (the maintainer, 2026-11-01:
+         * "Everything somehow fills with a very transparent but visible "dust""; "it somehow needs to fall off at the
+         * edges"). A 2 px clear frame drained it at the edge only; the band fades it out before.
          */
-        private const val SMOKE_EDGE_PX = 2.0
+        private const val SMOKE_FALLOFF = 0.6
+
+        /** The least width of the smoke's fade at an edge, in CSS pixels: where there is little or no room past the scope. */
+        private const val SMOKE_FALLOFF_MIN_PX = 6.0
 
         /** How far the shade's stroke lies below the string's, a share of the string's width. */
         private const val SHADE_OFFSET = 0.3
@@ -499,6 +503,36 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
      * The last frame back, blurred, fainter, a little bigger and a little higher ([Smoke.keep], [Smoke.blurPx],
      * [Smoke.growXPx], [Smoke.growYPx], [Smoke.risePx]): copied aside, the canvas cleared, the copy drawn over it. A browser without canvas filters draws it unblurred, an afterglow that only fades.
      */
+    /** The fade's width at an edge with [roomPx] CSS pixels of room past the scope, in the store's pixels, at most [limit]. */
+    private fun falloffOf(roomPx: Double, falloff: Double, limit: Double): Double =
+        minOf(maxOf(roomPx * falloff, SMOKE_FALLOFF_MIN_PX) * backingRatio, limit)
+
+    /**
+     * Erases towards the edges: [top], [bottom] and [sides] wide bands (in the store's pixels), each a gradient from
+     * nothing where it starts to all at the canvas's edge. The corners, in two bands, go faster.
+     */
+    private fun CanvasRenderingContext2D.fadeEdges(top: Double, bottom: Double, sides: Double) {
+        val width = canvas.width.toDouble()
+        val height = canvas.height.toDouble()
+
+        fun band(x0: Double, y0: Double, x1: Double, y1: Double, x: Double, y: Double, w: Double, h: Double) {
+            // From all erased at (x0, y0), the edge, to nothing at (x1, y1)
+            val gradient = createLinearGradient(x0, y0, x1, y1)
+            gradient.addColorStop(0.0, "rgba(0, 0, 0, 1)")
+            gradient.addColorStop(1.0, "rgba(0, 0, 0, 0)")
+            fillStyle = gradient
+            fillRect(x, y, w, h)
+        }
+
+        save()
+        globalCompositeOperation = "destination-out"
+        band(x0 = 0.0, y0 = 0.0, x1 = 0.0, y1 = top, x = 0.0, y = 0.0, w = width, h = top)
+        band(x0 = 0.0, y0 = height, x1 = 0.0, y1 = height - bottom, x = 0.0, y = height - bottom, w = width, h = bottom)
+        band(x0 = 0.0, y0 = 0.0, x1 = sides, y1 = 0.0, x = 0.0, y = 0.0, w = sides, h = height)
+        band(x0 = width, y0 = 0.0, x1 = width - sides, y1 = 0.0, x = width - sides, y = 0.0, w = sides, h = height)
+        restore()
+    }
+
     private fun CanvasRenderingContext2D.radiate() {
         val width = canvas.width.toDouble()
         val height = canvas.height.toDouble()
@@ -516,12 +550,13 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
 
             val setting = props.smoke
 
-            // A clear frame round the copy, before the blur: the dust drains at the edges ([SMOKE_EDGE_PX])
-            val edge = minOf(setting.edgePx * backingRatio, width / 2.0, height / 2.0)
-            aside.clearRect(0.0, 0.0, width, edge)
-            aside.clearRect(0.0, height - edge, width, edge)
-            aside.clearRect(0.0, 0.0, edge, height)
-            aside.clearRect(width - edge, 0.0, edge, height)
+            // The smoke fades out towards the canvas's edges, over the outer part of the room on each side
+            aside.fadeEdges(
+                top = falloffOf(roomPx = setting.top, falloff = setting.falloff, limit = height / 2.0),
+                bottom = falloffOf(roomPx = setting.bottom, falloff = setting.falloff, limit = height / 2.0),
+                sides = falloffOf(roomPx = setting.sides, falloff = setting.falloff, limit = width / 2.0),
+            )
+
             val growX = setting.growXPx * backingRatio
             val growY = setting.growYPx * backingRatio
             val rise = setting.risePx * backingRatio

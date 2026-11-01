@@ -118,9 +118,9 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
         private const val SCOPE_SWING = HOLE_HEIGHT * 0.4
 
         /** How far the scope's smoke may rise out of its hole, and go to its sides and below it, as shares of a tile. */
-        private const val SMOKE_UP = 1.33
-        private const val SMOKE_SIDES = 1.33
-        private const val SMOKE_DOWN = 1.33
+        private const val SMOKE_UP = 1.20
+        private const val SMOKE_SIDES = 1.20
+        private const val SMOKE_DOWN = 1.20
 
         /**
          * The margin round a display inside its plate, as a share of a tile (the maintainer, 2026-10-29: "Keep a left
@@ -419,11 +419,11 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
                     strokeColor = Color(look[KlangRole.ScopeTrace]),
                     swingPx = tile * SCOPE_SWING,
                     smoke = Oscilloscope.Smoke(
-                        opacity = 0.3,
+                        opacity = 0.2,
                         top = tile * SMOKE_UP,
                         sides = tile * SMOKE_SIDES,
                         bottom = tile * SMOKE_DOWN,
-                        keep = 0.99,
+                        keep = 0.98,
                         growYPx = 0.75,
                         growXPx = 0.75,
                         blurPx = 0.5,
