@@ -1,6 +1,6 @@
 # KLANG-00402: MIDI playground design: a laptop keyboard always on screen, and a control layer between the devices and what they do
 
-> **Status (2026-11-01): IN PROGRESS.** D1 to D8 decided, all as proposed (the maintainer, 2026-11-01); D9 built as proposed; steps 0 to 2 done, step 3 next.
+> **Status (2026-11-01): IN PROGRESS.** D1 to D8 decided, all as proposed (the maintainer, 2026-11-01); D9 built as proposed; steps 0 to 3 done; step 4 waits for `Player` in the Spine (KLANG-00389).
 >
 > **Part of:** KLANG-00363 (Live play: MIDI and realtime)
 
@@ -368,6 +368,27 @@ as proposed"). D7 was the maintainer's own proposal.
      under the drawing), the diagram's row of Ü and +, two members private. Not taken: a spec for the page's light
      logic; it moves into the rig in the Spine with step 4, where its specs come. 11 mutants killed in all.
 3. Screen input on every drawn control (keys, pads, buttons, knobs, faders, wheels, the encoder).
+   **Done (2026-11-01):**
+   - `ScreenControls` (common): a pointer's gesture to `ControlEvent`s, one state per pointer so several fingers play:
+     a key and a pad go down and up; a fader and a wheel follow the finger's height (the pitch wheel -1 to 1, back to
+     the middle on the up); a knob turns as the finger drags (150 panel units from 0 to 1); the encoder steps every 12.
+     `gripAt` tells what a point of a panel offers; `KeyBedLayout`, the keybed's one geometry, which `MidiPanel` now
+     paints from too.
+   - `MidiPanel` takes pointers when given a source and an `onInput` (capture for the drag, no `touch-action`, the
+     click's focus kept for the laptop keys). On the MIDI page each drawing is a source of its own ("screen:device",
+     "screen:laptop"), lit on its own drawing. In the kitchen sink a live cell: both drawings played by pointer,
+     lit, no sound.
+   - Specs: `ScreenControlsSpec` (JVM). 13 mutants killed.
+   - Review: round 1 (level 1) two MAJOR, fixed: a key held on the laptop drawing while it folded rang on (a drawing
+     taken away sends no up; `MidiPanel` now lets its pointers go on unmount); the encoder's steps rounded down, so a
+     click's wobble of a pixel changed the instrument (now a whole step each way). MINORs fixed: a down on a pointer
+     still holding lets the old hold go, and a mouse move with no button down is the up that never came; two fingers
+     on one key or button hold it as one; the kitchen sink's drawings each their own state. Recorded as a limit, not
+     changed: the laptop drawing's buttons act for the drawing's own source, so its sustain holds the notes clicked
+     there, not the laptop keys', its octave and velocity are labels, and a click plays at velocity 100; the MIDI
+     tool (step 4) brings the laptop's state and its drawing together. Round 2 (level 2) clean; its MINORs applied: a
+     fader and a wheel map the range their cap is drawn in (a click on the cap moves it nowhere); the pitch wheel
+     springs back only when its last finger lets go; two fingers on one button tested.
 4. `MidiRig` in the Spine, the MIDI tool in the bottom panel of every page, the laptop keys behind its focus, the
    Motor started by the first key. After `Player` has moved into the Spine (KLANG-00389, its plan's steps 1 and 2: the
    move, then typed ownership, which the rig's "not exclusive" needs).

@@ -11,10 +11,13 @@ import io.peekandpoke.klang.comp.LcdDisplay
 import io.peekandpoke.klang.comp.Oscilloscope
 import io.peekandpoke.klang.layouts.MenuPickUp
 import io.peekandpoke.klang.layouts.menuPickUpView
+import io.peekandpoke.klang.midi.ControlEvent
 import io.peekandpoke.klang.midi.ControlId
+import io.peekandpoke.klang.midi.KeyLabEssential49Mk3
 import io.peekandpoke.klang.midi.KeyLayout
 import io.peekandpoke.klang.midi.LaptopKeys
 import io.peekandpoke.klang.midi.MidiPanel
+import io.peekandpoke.klang.midi.SourceId
 import io.peekandpoke.klang.midi.laptopKeyboardPanel
 import io.peekandpoke.klang.pages.docs.tutorials.soundDesignBasicsTrack
 import io.peekandpoke.klang.spine.Recents
@@ -125,6 +128,12 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
     private var title: String by value("Final Synthasy VII Prelude")
     private var checkedOn: Boolean by value(true)
     private var menuChoice: String by value("nothing yet")
+
+    /** The MIDI drawings played by pointer here, each its own: the notes held and the controls' values, no sound. */
+    private var laptopPlayed: MidiPlayed by value(MidiPlayed())
+
+    private var keyLabPlayed: MidiPlayed by value(MidiPlayed())
+
     private var dialogChoice: String by value("nothing yet")
     private var pinned: Set<String> by value(setOf("pinned"))
 
@@ -890,6 +899,26 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
         }
     }
 
+    /** What a drawing here shows, played by pointer (KLANG-00402): the notes held and the controls lit. */
+    private data class MidiPlayed(val held: Set<Int> = emptySet(), val controls: Map<String, Double> = emptyMap()) {
+
+        /** After [events]: a pad or a button lit while it is down, a moved control at its value, the bend drawn 0..1. */
+        fun after(events: List<ControlEvent>): MidiPlayed = events.fold(this) { played, event ->
+            when (event) {
+                is ControlEvent.NoteDown -> played.copy(held = played.held + event.note)
+                is ControlEvent.NoteUp -> played.copy(held = played.held - event.note)
+                is ControlEvent.Press -> played.copy(controls = played.controls + (event.control.id to event.velocity))
+                is ControlEvent.Release -> played.copy(controls = played.controls - event.control.id)
+                is ControlEvent.Move -> played.copy(
+                    controls = played.controls +
+                        (event.control.id to if (event.control == ControlId.PitchBend) (event.value + 1) / 2 else event.value),
+                )
+                is ControlEvent.Nudge -> played.copy(controls = played.controls + (event.control.id to (64 + event.steps) / 127.0))
+                is ControlEvent.AllUp -> played.copy(held = emptySet())
+            }
+        }
+    }
+
     private fun FlowContent.renderMidi() {
         section("MIDI") {
             cell(
@@ -904,6 +933,39 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
                         heldNotes = setOf(60, 64, 67),
                         activeControls = mapOf("pad-5" to 0.8, ControlId.Sustain.id to 1.0),
                         keyLabels = LaptopKeys.keyLabels(octave = 0, label = KeyLayout.German::labelOf),
+                    )
+                }
+            }
+
+            cell(
+                name = "Click and drag: every key, pad, button, knob, fader and wheel plays (no sound here)",
+                source = "midi/MidiPanel.kt, midi/ScreenControls.kt",
+            ) {
+                div {
+                    css { put("width", "720px") }
+
+                    MidiPanel(
+                        panel = laptopKeyboardPanel(label = KeyLayout.English::labelOf),
+                        heldNotes = laptopPlayed.held,
+                        activeControls = laptopPlayed.controls,
+                        keyLabels = LaptopKeys.keyLabels(octave = 0, label = KeyLayout.English::labelOf),
+                        screen = SourceId("screen:sink-laptop"),
+                        onInput = { laptopPlayed = laptopPlayed.after(it) },
+                    )
+                }
+
+                div {
+                    css {
+                        put("width", "720px")
+                        put("margin-top", "12px")
+                    }
+
+                    MidiPanel(
+                        panel = KeyLabEssential49Mk3,
+                        heldNotes = keyLabPlayed.held,
+                        activeControls = keyLabPlayed.controls,
+                        screen = SourceId("screen:sink-keylab"),
+                        onInput = { keyLabPlayed = keyLabPlayed.after(it) },
                     )
                 }
             }

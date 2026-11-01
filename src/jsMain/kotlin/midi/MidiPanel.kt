@@ -16,8 +16,16 @@ import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
+import io.peekandpoke.ultra.html.css
+import io.peekandpoke.ultra.html.onPointerCancel
+import io.peekandpoke.ultra.html.onPointerDown
+import io.peekandpoke.ultra.html.onPointerMove
+import io.peekandpoke.ultra.html.onPointerUp
+import kotlinx.browser.window
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
+import kotlinx.html.div
+import org.w3c.dom.pointerevents.PointerEvent
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.roundToInt
@@ -32,6 +40,8 @@ fun Tag.MidiPanel(
     outlines: Map<String, String> = emptyMap(),
     noteOffset: Int = 0,
     keyLabels: Map<Int, String> = emptyMap(),
+    screen: SourceId? = null,
+    onInput: ((List<ControlEvent>) -> Unit)? = null,
 ) = comp(
     MidiPanel.Props(
         panel = panel,
@@ -41,6 +51,8 @@ fun Tag.MidiPanel(
         outlines = outlines,
         noteOffset = noteOffset,
         keyLabels = keyLabels,
+        screen = screen,
+        onInput = onInput,
     )
 ) {
     MidiPanel(it)
@@ -84,6 +96,12 @@ class MidiPanel(ctx: Ctx<Props>) : Component<MidiPanel.Props>(ctx) {
         val noteOffset: Int = 0,
         /** The letter printed on a key of the keybed, by the note it plays: the laptop keys' (KLANG-00402). */
         val keyLabels: Map<Int, String> = emptyMap(),
+        /**
+         * The drawn controls as a source (KLANG-00402, step 3): with [screen] and [onInput] every key, pad, button,
+         * knob, fader and wheel takes a pointer (mouse, finger), and what it does goes to [onInput] as from [screen].
+         */
+        val screen: SourceId? = null,
+        val onInput: ((List<ControlEvent>) -> Unit)? = null,
     )
 
     companion object {
@@ -96,10 +114,6 @@ class MidiPanel(ctx: Ctx<Props>) : Component<MidiPanel.Props>(ctx) {
 
         /** Readout colour for text sitting ON a control's light face, where [LIT] has no contrast. */
         private const val INK_ON_LIGHT = "#1b1e23"
-
-        private val BLACK_SEMITONES = setOf(1, 3, 6, 8, 10)
-
-        fun isBlackKey(note: Int): Boolean = (note % 12) in BLACK_SEMITONES
     }
 
     /**
@@ -147,9 +161,111 @@ class MidiPanel(ctx: Ctx<Props>) : Component<MidiPanel.Props>(ctx) {
         )
     }
 
+    init {
+        lifecycle {
+            // A drawing taken away (folded, its page left) sends no up for a pointer that holds a key: it lets go here
+            onUnmount {
+                val released = screenControls?.releaseAll(tsMs = window.performance.now()).orEmpty()
+
+                if (released.isNotEmpty()) {
+                    props.onInput?.invoke(released)
+                }
+            }
+        }
+    }
+
+    /** The pointers on the drawing, one at a time each; made with the first, from [Props.screen]. */
+    private var screenControls: ScreenControls? = null
+
+    private fun screenControls(): ScreenControls? =
+        screenControls ?: props.screen?.let { ScreenControls(source = it) }?.also { screenControls = it }
+
+    /** A pointer's place in the panel's own units, from where it is on the drawing. */
+    private fun panelPoint(e: PointerEvent): Pair<Double, Double>? {
+        val rect = dom?.getBoundingClientRect() ?: return null
+
+        if (rect.width <= 0.0 || rect.height <= 0.0) {
+            return null
+        }
+
+        return ((e.clientX - rect.left) * props.panel.width / rect.width) to
+            ((e.clientY - rect.top) * props.panel.height / rect.height)
+    }
+
+    private fun pointerDown(e: PointerEvent) {
+        val onInput = props.onInput ?: return
+        val screen = screenControls() ?: return
+
+        // The mouse's main button, a finger, a pen
+        if (e.button.toInt() != 0) {
+            return
+        }
+
+        val (x, y) = panelPoint(e) ?: return
+        val grip = ScreenControls.gripAt(
+            panel = props.panel,
+            x = x,
+            y = y,
+            noteOffset = props.noteOffset,
+            valueOf = { props.activeControls[it] },
+        ) ?: return
+
+        // No preventDefault: it would also stop the mouse's down, and with it the focus a click gives the laptop keys.
+        // The capture keeps the drag's moves and its up here. A pointer that cannot be captured is still held: its up
+        // may come elsewhere, and then the next down of the same pointer, a move with no button down, or the drawing
+        // going away lets it go
+        try {
+            dom?.setPointerCapture(e.pointerId)
+        } catch (t: Throwable) {
+            console.warn("[MidiPanel] the pointer could not be captured", t)
+        }
+
+        onInput(screen.down(pointer = e.pointerId, grip = grip, y = y, tsMs = e.timeStamp.toDouble()))
+    }
+
+    private fun pointerMove(e: PointerEvent) {
+        val onInput = props.onInput ?: return
+
+        // A move with no button down: its up never came here (released outside, the capture refused)
+        if (e.pointerType == "mouse" && e.buttons.toInt() == 0) {
+            pointerUp(e)
+
+            return
+        }
+
+        val (_, y) = panelPoint(e) ?: return
+
+        screenControls()?.move(pointer = e.pointerId, y = y, tsMs = e.timeStamp.toDouble())?.takeIf { it.isNotEmpty() }?.let(onInput)
+    }
+
+    private fun pointerUp(e: PointerEvent) {
+        val onInput = props.onInput ?: return
+
+        screenControls()?.up(pointer = e.pointerId, tsMs = e.timeStamp.toDouble())?.takeIf { it.isNotEmpty() }?.let(onInput)
+    }
+
     override fun VDom.render() {
         val p = props.panel
 
+        div {
+            // A finger drags the controls, not the page
+            css {
+                put("touch-action", if (props.onInput != null) "none" else "auto")
+                put("user-select", "none")
+            }
+
+            onPointerDown { e -> pointerDown(e) }
+            onPointerMove { e -> pointerMove(e) }
+            onPointerUp { e -> pointerUp(e) }
+            onPointerCancel { e -> pointerUp(e) }
+            // The capture lost without an up reaching the drawing; ultra.html has no helper for this one
+            consumer.onTagEvent(this, "onlostpointercapture", { e: PointerEvent -> pointerUp(e) }.asDynamic())
+
+            renderPanel(p)
+        }
+    }
+
+    private fun FlowContent.renderPanel(p: MidiDevicePanel) {
         svgRoot(viewBox = "0 0 ${p.width} ${p.height}") {
             svgRect(0, 0, p.width, p.height, fill = p.body, rx = "10")
 
@@ -164,17 +280,13 @@ class MidiPanel(ctx: Ctx<Props>) : Component<MidiPanel.Props>(ctx) {
         }
     }
 
-    private fun FlowContent.renderKeyBed(bed: io.peekandpoke.klang.midi.KeyBed) {
-        val from = bed.fromNote + props.noteOffset
-        val to = bed.toNote + props.noteOffset
-        val whites = (from..to).filter { !isBlackKey(it) }
-        val whiteW = bed.width.toDouble() / whites.size
+    private fun FlowContent.renderKeyBed(bed: KeyBed) {
+        // The one geometry the drawing paints and a pointer is tested against
+        val layout = KeyBedLayout(bed = bed, offset = props.noteOffset)
+        val whiteW = layout.whiteWidth
 
-        /** White-key index of a note, i.e. its x slot. */
-        fun whiteIndex(note: Int): Int = (from until note).count { !isBlackKey(it) }
-
-        whites.forEach { note ->
-            val x = bed.x + whiteIndex(note) * whiteW
+        layout.whites.forEach { note ->
+            val x = layout.xOf(note)
             svgRect(
                 x = x, y = bed.y, width = whiteW - 1.5, height = bed.height,
                 fill = if (note in props.heldNotes) LIT else KEY_WHITE,
@@ -201,10 +313,10 @@ class MidiPanel(ctx: Ctx<Props>) : Component<MidiPanel.Props>(ctx) {
             }
         }
 
-        (from..to).filter { isBlackKey(it) }.forEach { note ->
-            val x = bed.x + whiteIndex(note) * whiteW - whiteW * 0.30
+        layout.blacks.forEach { note ->
+            val x = layout.xOf(note)
             svgRect(
-                x = x, y = bed.y, width = whiteW * 0.6, height = bed.height * 0.62,
+                x = x, y = bed.y, width = layout.blackWidth, height = layout.blackHeight,
                 fill = if (note in props.heldNotes) LIT else KEY_BLACK,
                 rx = "3", stroke = "#000", strokeWidth = "1",
                 key = "b-$note",
@@ -212,7 +324,7 @@ class MidiPanel(ctx: Ctx<Props>) : Component<MidiPanel.Props>(ctx) {
 
             props.keyLabels[note]?.let { label ->
                 svgText(
-                    x = x + whiteW * 0.3, y = bed.y + bed.height * 0.62 - 10,
+                    x = x + layout.blackWidth / 2, y = bed.y + layout.blackHeight - 10,
                     text = label,
                     // Dark on a lit key, where white has too little contrast
                     fill = if (note in props.heldNotes) INK_ON_LIGHT else KEY_WHITE, fontSize = "14", textAnchor = "middle",

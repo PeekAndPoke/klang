@@ -234,6 +234,10 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
         private const val BANK_A_COLOR = "#4a9eff"
         private const val BANK_B_COLOR = "#f0a33c"
 
+        /** The drawings as sources: what is clicked or touched on each (KLANG-00402, step 3). */
+        private val DEVICE_SCREEN = SourceId("screen:device")
+        private val LAPTOP_SCREEN = SourceId("screen:laptop")
+
         /** What the pads hit, pad 1 to 8: bd sd hh oh / cp rim lt cr (KLANG-00402, D2). */
         private val KIT = listOf("bd", "sd", "hh", "oh", "cp", "rim", "lt", "cr")
 
@@ -452,7 +456,7 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
                         pressed = pressed.filterKeys { (source, _) -> source != evt.source }
 
                         // The tints are the devices' pads only
-                        if (evt.source != LaptopKeys.source) {
+                        if (!onLaptopSide(evt.source)) {
                             pressedTints = emptyMap()
                         }
                     }
@@ -476,7 +480,7 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
                 pressed = pressed - (evt.source to evt.control.id)
 
                 // The tints are the devices' pads only: a laptop pad's release leaves a KeyLab pad's colour alone
-                if (evt.source != LaptopKeys.source) {
+                if (!onLaptopSide(evt.source)) {
                     pressedTints = pressedTints - evt.control.id
                 }
                 routing.functionOf(source = evt.source, control = evt.control)?.let { onReleased(it, evt) }
@@ -574,13 +578,16 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
         controlValues = controlValues + (controlId to value)
     }
 
+    /** The laptop's drawing lights the laptop's keys and what is clicked on it; the device's drawing the rest. */
+    private fun onLaptopSide(source: SourceId): Boolean = source == LaptopKeys.source || source == LAPTOP_SCREEN
+
     /** The notes held on the laptop's keys, or on the devices' keybeds: each drawing lights its own. */
     private fun heldNotesOf(laptopKeys: Boolean): Set<Int> =
-        held.keys.filter { (it.source == LaptopKeys.source) == laptopKeys }.map { it.note }.toSet()
+        held.keys.filter { onLaptopSide(it.source) == laptopKeys }.map { it.note }.toSet()
 
     /** The controls held down on the laptop, or on the devices, by id: each drawing lights its own. */
     private fun pressedOf(laptopKeys: Boolean): Map<String, Double> =
-        pressed.filterKeys { (source, _) -> (source == LaptopKeys.source) == laptopKeys }.mapKeys { it.key.second }
+        pressed.filterKeys { (source, _) -> onLaptopSide(source) == laptopKeys }.mapKeys { it.key.second }
 
     /** Every pad outlined in the active bank's colour, so the bank is readable at rest. */
     private fun padOutlines(): Map<String, String> {
@@ -591,7 +598,7 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
 
     /** A device's pad struck lights in its bank's colour, the bank its note said; null for any other control. */
     private fun padTint(evt: ControlEvent.Press): String? = when {
-        evt.source == LaptopKeys.source || !evt.control.id.startsWith("pad-") -> null
+        onLaptopSide(evt.source) || !evt.control.id.startsWith("pad-") -> null
         activeBank == "A" -> BANK_A_COLOR
         else -> BANK_B_COLOR
     }
@@ -775,6 +782,8 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
                 tints = pressedTints,
                 outlines = padOutlines(),
                 noteOffset = keyBedOffset,
+                screen = DEVICE_SCREEN,
+                onInput = { events -> events.forEach { handle(it) } },
             )
         }
     }
@@ -853,6 +862,8 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
                         activeControls = pressedOf(laptopKeys = true),
                         noteOffset = octave * 12,
                         keyLabels = LaptopKeys.keyLabels(octave = octave, label = ::letterOf),
+                        screen = LAPTOP_SCREEN,
+                        onInput = { events -> events.forEach { handle(it) } },
                     )
                 }
 
