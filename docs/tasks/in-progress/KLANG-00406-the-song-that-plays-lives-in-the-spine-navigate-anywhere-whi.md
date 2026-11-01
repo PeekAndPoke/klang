@@ -2,7 +2,8 @@
 
 > **Status (2026-11-01): IN PROGRESS.** Steps 1 to 4 done: `SongDeck` in the Spine, Klang Amp on it, the song page
 > plays on it and its song plays on when the page is left, the Motor's now-playing line and the Stop key from anywhere.
-> Next: step 5, the per-playback gain in the engine, with Klang-Main-Dev.
+> Next: step 5, the per-playback gain in the engine: proposed to Klang-Main-Dev on 2026-11-02 (below), awaiting
+> their answer.
 
 ## Why this exists
 
@@ -180,6 +181,35 @@ After KLANG-00389's `Player` steps 1 and 2 (the move into the Spine, typed owner
 6. The code examples by D1: the song fades out over 2 s while one plays and in again after it; then the start page
    as a preview (D2), its fade-in on its own gain.
 
+## Step 5: the per-playback gain (proposal to Klang-Main-Dev, 2026-11-02)
+
+Read from the code on 2026-11-02: `KlangCommLink.Cmd` (no gain command), `PlaybackEngineDispatcher` (the engines sum
+into one `mix`, then `MasterStage`), `PlaybackEngine.renderInto` (a straight path into the mix, or the engine's own
+`bus` while a master chain or the stop release is in play), `TailRelease` and `KnobGlide` (the ramps it has).
+
+- **The wire:** `Cmd.SetGain(playbackId, gain: Double, rampSec: Double)`, `@WireName("set-gain")`, a round-trip row
+  in `WireCodecRoundTripSpec`. Seconds only (the stone rule). The ramp starts when the backend receives it, as
+  `StartRealtimeVoice` does: a fade needs no musical time.
+- **The dispatcher:** `engines[cmd.playbackId]?.setGain(...)`, an EXISTING engine only, as `StopRealtimeVoice` and
+  `ReplaceVoices` do. Through `engineFor` it would resume a stopped engine (`scheduledAgain`), so a fade-in sent to a
+  song that just stopped would revive it.
+- **The engine:** a gain on the engine's output, after its master chain and before the sum into the mix (so the house
+  limiter sees the faded song, and the song's own master chain hears it at full level: the sound stays itself, only
+  quieter). At gain 1 and settled it takes the straight path as today, byte-identical; otherwise the own-bus path, the
+  gain applied to the bus before `addFrom`, or before `TailRelease.addReleased` while releasing. A ramp per sample, in
+  whole blocks with an exact landing (`KnobGlide`'s law), its span from the command rather than fixed at
+  construction. A new target mid-ramp starts from where the gain IS. A non-finite gain or ramp is ignored, the stored
+  values substituted (the cached-config rule); no clamp otherwise (the Motor stays raw).
+- **The frontend:** `KlangPlayback` gets `setGain(gain, rampSec)`; the pattern scheduler keeps the last value and
+  sends it again after its first `ScheduleVoices` of a (re)start, since a disposed engine comes back at 1. The Spine
+  (step 6) is its only caller.
+- **Specs:** `audio_be` at the mandatory tier: unity is byte-identical; a ramp lands exactly on its target at the
+  block it names; a second engine at gain 1 is untouched; a gain sent to a stopped playback revives nothing; NaN is
+  ignored. Each mutation-checked.
+- **Open for Klang-Main-Dev:** the ramp's shape (linear in amplitude is the plain choice: -6 dB at half time; linear
+  in dB sounds more even over 2 s, one `exp` per sample as `TailRelease` pays); and who builds it: Klang-Main-Dev, or
+  Klang-Research under Klang-Main-Dev's review with the audio reviewer.
+
 ## Acceptance
 
 - A song started on its page plays on while one reads the docs, opens a tutorial or another song's page.
@@ -208,3 +238,5 @@ After KLANG-00389's `Player` steps 1 and 2 (the move into the Spine, typed owner
   another song stop the first one and the second one starts playing".
 - 2026-11-01: step 4 (the maintainer: "Ok please go ahead"): the now-playing line, the Stop key from anywhere, one clock
   for the time heard; in the kitchen sink and the look editor's LCD card.
+- 2026-11-02: step 5 proposed to Klang-Main-Dev (the maintainer: "Ok please continue", to the question whether to):
+  `Cmd.SetGain`, an existing engine only, a ramped gain on the engine's output before the mix.
