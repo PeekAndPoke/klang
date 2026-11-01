@@ -189,8 +189,8 @@ The maintainer, 2026-11-01: "the midi controller must live at any time, so the u
 +------------------------------------------------------------------------------------------------+
 ```
 
-- **The rig lives with the app**, not with a page. `MidiRig` (D6) is made once by the workbench layout and holds the
-  connector, the sources, the routing, `NoteVoicing`, the applied play code and the realtime playback
+- **The rig lives with the app**, not with a page: `MidiRig` (D6) in the Spine (section 7) holds the connector, the
+  sources, the routing, `NoteVoicing`, the applied play code, the loadout and the realtime playback
   (`RealtimePlaybackCtrl`, which today the page makes and tears down). A KeyLab plays on every page, shown or not; a
   song keeps running and you play along. Moving to another page mid-chord releases nothing.
 - **The MIDI tool** is a tab of the workbench's bottom panel on every page, beside the page's own tabs (a page
@@ -238,18 +238,43 @@ The maintainer, 2026-11-01: "the midi controller must live at any time, so the u
 
 ### 7. Where the code lives
 
-One package for everything MIDI and live play in the frontend, its UI and its data (the maintainer, 2026-11-01: "We
-should have a dedicated midi package for all ui and data in the frontend"): `io.peekandpoke.klang.midi`, flat.
+The rule of the Spine (KLANG-00389): the app's data and its flow live in a layer apart from the UI; the UI sends
+there and reads from there. The rig is such data, so it lives in the Spine; the parts it is built from and the UI that
+shows it live in one MIDI package (the maintainer, 2026-11-01: "We should have a dedicated midi package for all ui and
+data in the frontend"; then "So where in the 'spine' will midi live?").
 
-- `src/jsMain/kotlin/midi/`: what is there today (`MidiConnector`, `MidiDevicePanel`, `WebMidi`), plus the page
-  (`MidiPlaygroundPage`, from `pages/`), the drawing (`MidiPanel`, from `comp/`), the playback controller
-  (`RealtimePlaybackCtrl`, from `comp/`; only the playground uses it), the instrument storage
-  (`MidiInstrumentStorage`, from `storage/`), and the new `MidiRig`, the bottom tab `MidiTool`, `LaptopKeys` and the
-  device profiles.
-- `src/commonMain/kotlin/midi/`, the same package: the parts with no browser in them (`ControlEvent`, `Routing`,
-  `NoteVoicing`), so their specs run on the JVM.
+**In the Spine** (`src/jsMain/kotlin/spine/`): `MidiRig`, one object for the app's life, as `VisualState` hosts the
+lamp. It owns the live instances and the state:
+
+- the `MidiConnector` (Web MIDI is the browser, but it is input and output, not UI, as `Player` is), the device
+  profiles in use, the `LaptopKeys` and screen sources, the `Routing`, `NoteVoicing`, the realtime playback;
+- the applied play code, its instruments and the loadout, and their saving (`MidiInstrumentStorage` today);
+- what the UI reads, as streams: the devices, what is held and sounding, each control's value (to light the
+  drawings), the octave, velocity and instrument, sustain, the event log, the Motor-not-started state.
+
+The UI hands it input and never holds notes: the MIDI tool, while it has the focus, passes each key's code to the
+rig's `LaptopKeys` and calls `AllUp` on blur; a drawn control's press, drag and release go to the rig's screen source.
+So `LaptopKeys` is a translation from key codes to `ControlEvent`s, with no DOM in it, and tests on the JVM.
+
+Two points of the Spine's plan for `Player` touch it:
+
+- **Not exclusive.** "A new playback stops the one before" (KLANG-00389, Player step 2) must not hold for live play:
+  a song plays, and the rig plays along. The rig registers as a playback that stops nothing and is stopped by nothing
+  but a panic.
+- **Seen by `nowPlaying`.** The sweep found that MIDI plays past it, so the visuals miss it; the rig publishes there.
+  It also ends the leak the sweep found in `RealtimePlaybackCtrl` (one `Player.status` subscription per MIDI page
+  visit): one rig, one subscription.
+
+**In the MIDI package** (`io.peekandpoke.klang.midi`, flat):
+
+- `src/commonMain/kotlin/midi/`: the parts with no browser in them, `ControlEvent`, `Routing`, `NoteVoicing`,
+  `LaptopKeys`, the device profiles (bytes to events) and the panels' data (`MidiDevicePanel`, the KeyLab's, the
+  laptop's), so their specs run on the JVM.
+- `src/jsMain/kotlin/midi/`: `MidiConnector` and `WebMidi`; the UI: `MidiTool` (the bottom tab), `MidiPanel` (the
+  drawing, from `comp/`), `MidiPlaygroundPage` (the configuration, from `pages/`); `RealtimePlaybackCtrl` (from
+  `comp/`) until the Spine's playback step takes it.
 - The page leaves `pages/`, where every other page lives: a feature folder keeps its page with it. Outside the
-  folder only `nav.kt` (the page) and `WorkbenchLayout` (the rig and the tab) import any of it.
+  package only the Spine (the rig), `nav.kt` (the page) and `WorkbenchLayout` (the tab) use it.
 
 ## Decide before implementing
 
@@ -275,8 +300,9 @@ should have a dedicated midi package for all ui and data in the frontend"): `io.
    KeyLab and the generic profile; the page's `handle` speaks `ControlEvent` only. Audible change: the pads (D2).
 2. `LaptopKeys` and its drawing: `MidiPanel` learns key labels, the laptop keyboard is a panel value like the KeyLab's.
 3. Screen input on every drawn control (keys, pads, buttons, knobs, faders, wheels, the encoder).
-4. `MidiRig` app-wide and the MIDI tool in the bottom panel of every page, the laptop keys behind its focus, the
-   Motor started by the first key.
+4. `MidiRig` in the Spine, the MIDI tool in the bottom panel of every page, the laptop keys behind its focus, the
+   Motor started by the first key. With the Spine's `Player` steps 1 and 2 (KLANG-00389) if they come first; else the
+   rig asks `Player` as it is today and moves with it.
 5. The MIDI page as configuration (section 6): the one play-code input, the instruments and the loadout, the
    devices, the routing, the event log and the monitor.
 6. Later, own tickets: editing the routing and learning a control; key switches and splits; a backing loop for
@@ -303,4 +329,4 @@ source's `AllUp`, the same note from two sources); the routing lookup order. New
   `MidiDevicePanel`, `MidiPanel`, `RealtimePlaybackCtrl`, KLANG-00159, KLANG-00160, KLANG-00228. The same day, the
   maintainer's ideas: one package for the frontend's MIDI code (section 7, step 0); the one play-code input, the
   instruments with a loadout, the play surface docked; then the rig app-wide, the MIDI tool in the bottom panel of
-  every page, the keys behind its focus, every drawn control clickable, the MIDI page for configuring (section 6).
+  every page, the keys behind its focus, every drawn control clickable, the MIDI page for configuring (section 6); the rig in the Spine (section 7).
