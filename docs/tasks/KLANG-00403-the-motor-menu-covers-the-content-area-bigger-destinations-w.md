@@ -50,8 +50,22 @@ columns, and the look row (seven looks and an empty slot).
 
 ## Decide before implementing
 
-- **D1:** what "last opened" holds: songs only, or songs, lessons and docs pages (proposal: all three, as drawn).
-- **D2:** the look picker's place: in the menu as drawn, and also on the Looks page (unchanged).
+- **D1, what counts as "last opened"** (the maintainer, 2026-11-01: "might be nice to show not only the songs, but
+  which content then counts?"). Proposal, one rule: content with its own identity that one comes back to work in or
+  read; not the places, which are the destination tiles already.
+  - **Counts:** a song opened in the editor (a built-in or yours, also without playing it); a tutorial lesson
+    opened (the track's "continue" is its next unfinished lesson, from `TutorialStorage`); a docs entry (a Lexikon
+    word, a Sprudel or Stdlib function, a KlangScript or manual page) that stayed open a few seconds, so paging
+    through on the way somewhere does not count.
+  - **Does not count:** the area pages (the songs list, the docs overview, the tutorials list), Credits, Dev Tools,
+    the Looks page, the MIDI page.
+  - **Later, if wanted:** sample banks previewed (useful while writing a song).
+  - **Shown in groups, as drawn,** not as one mixed list: songs (six), the track in progress, docs (six). Each group
+    in the same place every time, for the same reason the menu has one size.
+  - **The record:** one Spine area (`Recents`), entries of kind, id, title and time, the newest first, capped per
+    kind, saved in the Spine's storage; a page reports what it opened.
+- **D2, decided** (the maintainer, 2026-11-01: "yes look picker is ok like this"): the look picker in the menu as
+  drawn, and on the Looks page as today.
 
 ## The work
 
@@ -75,4 +89,4 @@ columns, and the look row (seven looks and an empty slot).
 - 2026-11-01: created from the maintainer's ask; the mockup on a design canvas, built on a screenshot of today's
   drawer (the brass look) and the look roles of `KlangRole`. The same day: a real overlay over the mounted page,
   Shift Shift opens it, and it covers the tool windows and the bottom panel too, so it always looks the same (the
-  maintainer's word).
+  maintainer's word). D2 decided (the look picker as drawn); D1 got its rule of what counts, for the maintainer's OK.
