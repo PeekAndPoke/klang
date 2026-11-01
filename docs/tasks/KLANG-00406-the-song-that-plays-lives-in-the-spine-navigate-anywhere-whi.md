@@ -35,8 +35,24 @@ its signals and how long it has been heard. It is the one controller where today
   title and time, play and stop; a click on the title opens its page. The Stop key (`KlangKeyBindings.Stop`,
   Ctrl/Cmd+Shift+.) stops it from anywhere while no editor holds the key. The Motor menu (KLANG-00403) shows it at
   the top of "Pick up where you left off".
-- **Exclusive, with one exception.** A new song on the stage stops the one before (one rule, KLANG-00389's typed
-  ownership); live play (the MIDI rig, KLANG-00402) plays along and is stopped by nothing but a panic.
+- **Only real songs are on the deck** (the maintainer, 2026-11-01: "This is only true for a 'real' song, not for code
+  examples"). A song page or Klang Amp puts a song on it; a code example in the docs or a tutorial is a playback of
+  its own, owned by its page as today, and ends when its page goes.
+- **A new song stops the one before.** Live play (the MIDI rig, KLANG-00402) plays along with anything and is stopped
+  by nothing but a panic.
+- **A code example makes the song step aside, and the song comes back** (D1; the maintainer asked: "should it just
+  fade out and when the example is done fade in again?"). Proposal:
+  - **Out:** the song's voices still waiting are cleared and the sounding ones released, so it ends on its own
+    release tails, a fade without a new gain in the engine (the wire has no per-playback gain today, checked
+    against `KlangCommLink.Cmd`).
+  - **Meanwhile:** the song's clock runs on (its scheduler is asked as ever, KLANG-00399's `tick`) but sends no
+    voices: it costs nothing to render, which matters on a phone.
+  - **Back:** when no example plays any more, the song comes in again at its next cycle, in time, as if it had played
+    on; its control state is there (the scheduler's catch-up keeps it).
+  - Should the release tails sound too abrupt: a per-playback gain in the engine for a real fade, its own ticket.
+- **The logic and the state of all this live in the Spine** (the maintainer, 2026-11-01: "Logic and state handling
+  for this should then also live in the spine"): which song is on the deck, which examples play, whether the song
+  stands aside, when it comes back. The pages only ask (play this example, stop it) and show what the Spine says.
 - **What lives where:** the deck and the song's state in the Spine; the edits in `SongStorage` (into
   `spine/storage/` with the other stores, KLANG-00389), as today saved while one types. The deck plays the code last
   sent to it, so a song edited and not yet updated plays on as it was, as on the page today.
@@ -45,9 +61,8 @@ its signals and how long it has been heard. It is the one controller where today
 
 ## Decide before implementing
 
-- **D1, a docs or tutorial example while a song plays:** it takes the stage and stops the song (proposal: one rule;
-  the Motor's line then offers the song again), or it plays over the song, or the song pauses and comes back after
-  the example.
+- **D1, a code example while a song plays:** the song steps aside and comes back in time after the example
+  (proposal, as above), or it stops, or a real fade with an engine gain from the start.
 - **D2, the start page's waiting song:** on the same deck (proposal), or kept the start page's own as a jingle.
 - **D3, after a reload:** the now-playing line remembers the last song and offers to start it (proposal), or nothing.
 - **D4, the names:** `SongDeck` for the stage; the song page's controller becomes a view of it.
@@ -62,7 +77,8 @@ After KLANG-00389's `Player` steps 1 and 2 (the move into the Spine, typed owner
    highlights from the deck.
 3. Klang Amp on the deck.
 4. The Motor's now-playing line and the Stop key from anywhere.
-5. The code examples and the start page by D1 and D2.
+5. The code examples by D1: the Spine sets the song aside while one plays and brings it back in time; then the start
+   page by D2.
 
 ## Acceptance
 
@@ -70,8 +86,12 @@ After KLANG-00389's `Player` steps 1 and 2 (the move into the Spine, typed owner
 - Back on its page, the editor shows the song that plays, its highlights running, and Update changes it live.
 - From any page, the Motor shows what plays and stops it; the Stop key does too.
 - Two songs never play at once; the MIDI rig plays along with either.
+- A code example started while a song plays: the song steps aside, and when the example stops it comes back at its
+  next cycle, in time.
 
 ## History
 
 - 2026-11-01: created from the maintainer's ask; the code read: `CodeSongPage` (its controller and its unmount),
-  `KlangampDeck`, `KlangCodePlaybackCtrl`, the start page's and the code examples' controllers.
+  `KlangampDeck`, `KlangCodePlaybackCtrl`, the start page's and the code examples' controllers. The same day: only
+  real songs on the deck; a code example sets the song aside and it comes back in time (D1 proposal); all of it
+  decided and kept in the Spine (the maintainer's word).
