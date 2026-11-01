@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Sixty-Seven Microseconds to 385 Nanoseconds · Klang blog</title>
+<title>Policy of Truth · Klang blog</title>
 <meta name="description" content="A scheduled voice crosses from the page to the audio worklet through a message port, and on the far side, on the audio thread, it was decoded by kotlinx serialization&#x27;s dynamic decoder at sixty-four to sixty-seven microseconds per voice. ProtoBuf was tried and was slower on Kotlin/JS. A hand-rolled decoder that simply reads the fields it knows are there ran in 398 nanoseconds, and a KSP processor that generates that decoder for every wire type made it 385: 174 times faster, the encode ten times. Because both ends of the wire are one build, the codec can trust its input, and a structural hash of the schema, stamped on every message, catches the one case where they are not.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -337,8 +337,8 @@ figcaption {
 <main>
 <div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-06-07">2026-06-07</time><ul class="tags"><li>series-fairphone</li><li>wire</li><li>worklet</li><li>ksp</li><li>kotlin-js</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
 <article class="prose">
-<h1 id="sixty-seven-microseconds-to-385-nanoseconds">Sixty-Seven Microseconds to 385 Nanoseconds</h1>
-<p><em>The worklet decoded every scheduled voice with a generic serializer on the audio thread; a generated codec that trusts its input replaced it, and a schema hash guards the one case where trust would be misplaced.</em></p>
+<h1 id="policy-of-truth">Policy of Truth</h1>
+<p><em>From sixty-seven microseconds to 385 nanoseconds: the worklet decoded every scheduled voice with a generic serializer on the audio thread; a generated codec that trusts its input replaced it, and a schema hash guards the one case where trust would be misplaced.</em></p>
 <p>In the browser, Klangmotor's engine runs inside an audio worklet <a href="#w3c-webaudio">[1]</a>, on the thread that has to hand the sound card a 128-frame block every few milliseconds, under three at any common sample rate, and cannot afford to wait. It is the same thread <a href="../the-phone-that-does-not-get-faster/">the rest of this series</a> measures on the phone, and the engine it feeds had just been <a href="../one-engine-for-five-waves/">consolidated</a> two days earlier. Everything the engine is told, a voice to schedule, an instrument to register, a sample's chunks, arrives on that thread through a message port as a JavaScript object, and until June 7 the first thing the worklet did with a scheduled voice was decode it:</p>
 <div class="code" data-lang="kotlin"><pre><code class="language-kotlin">    <span class="kw">private</span> <span class="kw">fun</span> decodeScheduledVoice(obj: dynamic): ScheduledVoice {
         <span class="kw">return</span> codec.decodeFromDynamic(ScheduledVoice.serializer(), obj)

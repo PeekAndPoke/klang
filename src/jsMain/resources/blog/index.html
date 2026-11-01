@@ -506,8 +506,8 @@ figcaption {
   <img class="hero" src="sixty-seven-microseconds-to-385-nanoseconds/codec-ns.png" alt="" loading="lazy">
   <div class="card-body">
     <div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-06-07">2026-06-07</time><ul class="tags"><li>series-fairphone</li><li>wire</li><li>worklet</li><li>ksp</li><li>kotlin-js</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
-    <h2><a href="sixty-seven-microseconds-to-385-nanoseconds/">Sixty-Seven Microseconds to 385 Nanoseconds</a></h2>
-    <p class="subtitle">The worklet decoded every scheduled voice with a generic serializer on the audio thread; a generated codec that trusts its input replaced it, and a schema hash guards the one case where trust would be misplaced</p>
+    <h2><a href="sixty-seven-microseconds-to-385-nanoseconds/">Policy of Truth</a></h2>
+    <p class="subtitle">From sixty-seven microseconds to 385 nanoseconds: the worklet decoded every scheduled voice with a generic serializer on the audio thread; a generated codec that trusts its input replaced it, and a schema hash guards the one case where trust would be misplaced</p>
     <p class="summary">A scheduled voice crosses from the page to the audio worklet through a message port, and on the far side, on the audio thread, it was decoded by kotlinx serialization&#x27;s dynamic decoder at sixty-four to sixty-seven microseconds per voice. ProtoBuf was tried and was slower on Kotlin/JS. A hand-rolled decoder that simply reads the fields it knows are there ran in 398 nanoseconds, and a KSP processor that generates that decoder for every wire type made it 385: 174 times faster, the encode ten times. Because both ends of the wire are one build, the codec can trust its input, and a structural hash of the schema, stamped on every message, catches the one case where they are not.</p>
   </div>
 </li>

@@ -1,6 +1,6 @@
 ---
-title: "Sixty-Seven Microseconds to 385 Nanoseconds"
-subtitle: "The worklet decoded every scheduled voice with a generic serializer on the audio thread; a generated codec that trusts its input replaced it, and a schema hash guards the one case where trust would be misplaced"
+title: "Policy of Truth"
+subtitle: "From sixty-seven microseconds to 385 nanoseconds: the worklet decoded every scheduled voice with a generic serializer on the audio thread; a generated codec that trusts its input replaced it, and a schema hash guards the one case where trust would be misplaced"
 date: 2026-06-07
 slug: sixty-seven-microseconds-to-385-nanoseconds
 tags: [ series-fairphone, wire, worklet, ksp, kotlin-js, klang ]
@@ -25,9 +25,9 @@ references:
     url: https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Structured_clone_algorithm
 ---
 
-# Sixty-Seven Microseconds to 385 Nanoseconds
+# Policy of Truth
 
-*The worklet decoded every scheduled voice with a generic serializer on the audio thread; a generated codec that trusts its input replaced it, and a schema hash guards the one case where trust would be misplaced.*
+*From sixty-seven microseconds to 385 nanoseconds: the worklet decoded every scheduled voice with a generic serializer on the audio thread; a generated codec that trusts its input replaced it, and a schema hash guards the one case where trust would be misplaced.*
 
 In the browser, Klangmotor's engine runs inside an audio worklet [[1]](#w3c-webaudio), on the thread that has to hand the sound card a 128-frame block every few milliseconds, under three at any common sample rate, and cannot afford to wait. It is the same thread [the rest of this series](../2026-08-19-the-phone-that-does-not-get-faster/index.md) measures on the phone, and the engine it feeds had just been [consolidated](../2026-06-05-one-engine-for-five-waves/index.md) two days earlier. Everything the engine is told, a voice to schedule, an instrument to register, a sample's chunks, arrives on that thread through a message port as a JavaScript object, and until June 7 the first thing the worklet did with a scheduled voice was decode it:
 
