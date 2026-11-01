@@ -240,3 +240,5 @@ next, the MIDI rig first (KLANG-00402). A global object outside the Spine is a d
 - 2026-11-01: with KLANG-00406 step 1: `nowPlaying` and the stage moved from `Player` to `Playbacks`;
   `KlangCodePlaybackCtrl` in `spine/` with `release()`, which its owners call (the `Player.status` leak of "Problems
   found" fixed; `RealtimePlaybackCtrl`'s is not yet); Klang Amp's seconds read from the stage.
+- 2026-11-01: "Derived twice", the elapsed time: Klang Amp's two 250 ms intervals (each redrawing its whole component)
+  replaced by `Playbacks.heardSeconds`, one ticker in the Spine that runs only while shown (KLANG-00406 step 4).

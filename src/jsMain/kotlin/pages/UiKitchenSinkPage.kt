@@ -8,6 +8,7 @@ package io.peekandpoke.klang.pages
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.comp.LcdDisplay
 import io.peekandpoke.klang.comp.Oscilloscope
+import io.peekandpoke.klang.comp.nowPlayingLineView
 import io.peekandpoke.klang.layouts.MenuPickUp
 import io.peekandpoke.klang.layouts.menuPickUpView
 import io.peekandpoke.klang.midi.ControlEvent
@@ -19,8 +20,10 @@ import io.peekandpoke.klang.midi.MidiPanel
 import io.peekandpoke.klang.midi.SourceId
 import io.peekandpoke.klang.midi.laptopKeyboardPanel
 import io.peekandpoke.klang.pages.docs.tutorials.soundDesignBasicsTrack
+import io.peekandpoke.klang.spine.Playbacks
 import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.spine.Recents
+import io.peekandpoke.klang.spine.SongDeck
 import io.peekandpoke.klang.storage.LookStorage
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.comp.KlangBackLink
@@ -990,6 +993,27 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
                 row {
                     LcdDisplay(value = 42)
                     LcdDisplay(value = 42, dim = true)
+                }
+            }
+
+            cell(
+                name = "The song that plays, under the Motor: nothing, starting, playing, a long title",
+                source = "comp/NowPlayingLine.kt (KLANG-00406)",
+            ) {
+                for (line in listOf(
+                    null,
+                    Playbacks.SongLine(playing = SongDeck.Playing(songId = "a", title = "Gestrandet", isPlaying = false), seconds = null),
+                    Playbacks.SongLine(playing = SongDeck.Playing(songId = "a", title = "Gestrandet", isPlaying = true), seconds = 83),
+                    Playbacks.SongLine(
+                        playing = SongDeck.Playing(songId = "b", title = "A song with a title far too long for the line", isPlaying = true),
+                        seconds = 754,
+                    ),
+                )) {
+                    div {
+                        css { put("width", "280px") }
+
+                        nowPlayingLineView(line = line, onOpen = {}, onStop = {})
+                    }
                 }
             }
 

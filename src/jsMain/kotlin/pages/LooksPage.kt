@@ -9,10 +9,13 @@ import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.comp.Motor
 import io.peekandpoke.klang.comp.Oscilloscope
 import io.peekandpoke.klang.comp.Spectrumeter
+import io.peekandpoke.klang.comp.nowPlayingLineView
 import io.peekandpoke.klang.layouts.MenuPickUp
 import io.peekandpoke.klang.layouts.menuLessonTile
 import io.peekandpoke.klang.pages.docs.tutorials.soundDesignBasicsTrack
+import io.peekandpoke.klang.spine.Playbacks
 import io.peekandpoke.klang.spine.Player
+import io.peekandpoke.klang.spine.SongDeck
 import io.peekandpoke.klang.storage.LookStorage
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
@@ -1290,17 +1293,36 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
                 }
             }
 
-            "lcd" -> span {
-                css {
-                    put("padding", "4px 10px")
-                    put("background", "var(--kl-ground-sunken)")
-                    put("color", "var(--kl-lcd-ink)")
-                    put("font-family", "monospace")
-                    put("font-size", "18px")
-                    put("border", "1px solid var(--kl-edge)")
-                    put("border-radius", "var(--kl-radius)")
+            "lcd" -> div {
+                span {
+                    css {
+                        put("padding", "4px 10px")
+                        put("background", "var(--kl-ground-sunken)")
+                        put("color", "var(--kl-lcd-ink)")
+                        put("font-family", "monospace")
+                        put("font-size", "18px")
+                        put("border", "1px solid var(--kl-edge)")
+                        put("border-radius", "var(--kl-radius)")
+                    }
+                    +"128"
                 }
-                +"128"
+
+                // The song that plays, under the Motor (KLANG-00406)
+                div {
+                    css {
+                        put("width", "240px")
+                        put("margin-top", "12px")
+                    }
+
+                    nowPlayingLineView(
+                        line = Playbacks.SongLine(
+                            playing = SongDeck.Playing(songId = "a", title = "Gestrandet", isPlaying = true),
+                            seconds = 83,
+                        ),
+                        onOpen = {},
+                        onStop = {},
+                    )
+                }
             }
 
             // As tall as the Motor's, so its cells are the Motor's

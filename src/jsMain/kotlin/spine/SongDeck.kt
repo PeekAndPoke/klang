@@ -8,6 +8,9 @@ package io.peekandpoke.klang.spine
 import io.peekandpoke.klang.Song
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
+import io.peekandpoke.ultra.streams.ops.distinct
+import io.peekandpoke.ultra.streams.ops.map
+import io.peekandpoke.ultra.streams.ops.switchMapNotNull
 
 /**
  * The one owner of the real song that plays (KLANG-00406, "SongDeck"): the [KlangCodePlaybackCtrl] that plays it, kept
@@ -27,6 +30,9 @@ class SongDeck(private val engine: PlaybackEngine = Player) {
     /** What is on the deck: the song's id, the controller that plays it, and whether a song page put it on. */
     data class OnDeck(val songId: String, val ctrl: KlangCodePlaybackCtrl, val fromPage: Boolean)
 
+    /** The song on the deck as a display shows it: its id, its title as it is now, whether it plays yet. */
+    data class Playing(val songId: String, val title: String?, val isPlaying: Boolean)
+
     private val _onDeck = StreamSource<OnDeck?>(null)
 
     /**
@@ -34,6 +40,11 @@ class SongDeck(private val engine: PlaybackEngine = Player) {
      * it stopped, from here or because another playback took the stage.
      */
     val onDeck: Stream<OnDeck?> = _onDeck.readonly
+
+    /** The song on the deck for a display (the Motor's line); a new title or the start shows at once. Null with none. */
+    val playing: Stream<Playing?> = onDeck
+        .switchMapNotNull { on -> on.ctrl.state.map { Playing(songId = on.songId, title = it.title, isPlaying = it.isPlaying) } }
+        .distinct()
 
     /** The pages showing a controller, by controller: one page, or two while the router fades one out. */
     private val shown = mutableMapOf<KlangCodePlaybackCtrl, Int>()

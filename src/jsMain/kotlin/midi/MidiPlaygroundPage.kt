@@ -206,7 +206,7 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
     /** The applied ignitor; null = the built-in [selectedSound]. */
     private var appliedIgnitor: IgnitorDsl? by value(null)
 
-    /** The applied sprudel mapper (`x => x.reverb(wet = 0.2)`); null = none. */
+    /** The applied sprudel mapper (`reverb(wet = 0.2)`, or a function as `x => x.reverb(wet = 0.2)`); null = none. */
     private var appliedMapper: ((Any?) -> Any?)? by value(null)
 
     private var ignitorError: String? by value(null)
@@ -227,7 +227,7 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
         private val DEFAULT_INSTRUMENT = MidiInstrument(
             name = "Warm saw",
             ignitorCode = "Ign.saw()\n  .plus(Ign.sine().detune(12).mul(0.3))\n  .lowpass(1800)\n  .adsr(0.01, 0.3, 0.6, 0.4)",
-            mapperCode = "x => x.reverb(wet = 0.2)",
+            mapperCode = "reverb(wet = 0.2)",
         )
 
         /** Pad bank A / B highlight colours: distinct hues, since the bank is otherwise invisible. */
@@ -370,7 +370,7 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
             is FunctionValue -> result.convertFunctionToKotlin(arity = 1)
             // A native mapper value, e.g. one sprudel hands out.
             else -> result.value as? Function1<Any?, Any?>
-        } ?: error("Expected a function, e.g. x => x.reverb(wet = 0.2), got ${result.toDisplayString()}")
+        } ?: error("Expected a mapper, e.g. reverb(wet = 0.2) or x => x.reverb(wet = 0.2), got ${result.toDisplayString()}")
     }
 
     /** Saves the draft under its name, replacing a saved instrument of the same name. */
@@ -1060,7 +1060,7 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
                     renderCodeInput(
                         id = "mapper",
                         title = "Sprudel mapper",
-                        hint = "Evaluates to a function from pattern to pattern, e.g. x => x.reverb(wet = 0.2). Blank = none.",
+                        hint = "A pattern mapper: reverb(wet = 0.2), or a function, x => x.reverb(wet = 0.2). Blank = none.",
                         code = draft.mapperCode,
                         onChange = { draft = draft.copy(mapperCode = it) },
                         error = mapperError,

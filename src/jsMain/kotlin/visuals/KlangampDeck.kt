@@ -16,12 +16,6 @@ import io.peekandpoke.klang.spine.Playbacks
  */
 object KlangampDeck {
 
-    /**
-     * The seconds the playback on stage has been heard; null while nothing plays. Counted on the backend's position,
-     * not the wall clock (KLANG-00399): after a stall it shows what played, not the time that passed.
-     */
-    fun seconds(): Int? = Playbacks.nowPlaying()?.playback?.heardSec()?.toInt()
-
     /** The built-in song [now] plays, by its place in the list; -1 when nothing plays or it is not one of them. */
     fun indexOf(now: Playbacks.NowPlaying?): Int =
         now?.let { n -> BuiltInSongs.songs.indexOfFirst { it.title == n.title } } ?: -1
@@ -66,7 +60,4 @@ object KlangampDeck {
 
         started = null
     }
-
-    /** Seconds as m:ss. */
-    fun clock(seconds: Int): String = "${seconds / 60}:${(seconds % 60).toString().padStart(2, '0')}"
 }

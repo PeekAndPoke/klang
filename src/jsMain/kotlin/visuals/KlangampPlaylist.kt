@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.visuals
 
 import io.peekandpoke.klang.BuiltInSongs
+import io.peekandpoke.klang.comp.clockOf
 import io.peekandpoke.klang.spine.Playbacks
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
@@ -15,7 +16,7 @@ import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.semanticui.icon
-import kotlinx.browser.window
+import io.peekandpoke.ultra.streams.steady
 import kotlinx.html.ButtonType
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
@@ -23,7 +24,6 @@ import kotlinx.html.button
 import kotlinx.html.div
 import kotlinx.html.span
 import kotlinx.html.title
-import kotlin.js.Date
 import kotlin.math.roundToInt
 
 @Suppress("FunctionName")
@@ -44,28 +44,10 @@ class KlangampPlaylist(ctx: Ctx<Props>) : Component<KlangampPlaylist.Props>(ctx)
         val nowLine: Boolean,
     )
 
-    private companion object {
-        /** How often the time steps. */
-        const val CLOCK_MS = 250
-    }
-
     private val nowPlaying by subscribingTo(Playbacks.nowPlaying)
 
-    /** The clock's now, stepped while the time shows. */
-    private var nowMs: Double by value(Date.now())
-
-    private var clockTimer: Int? = null
-
-    init {
-        lifecycle {
-            onMount {
-                if (props.nowLine) {
-                    clockTimer = window.setInterval({ nowMs = Date.now() }, CLOCK_MS)
-                }
-            }
-            onUnmount { clockTimer?.let { window.clearInterval(it) } }
-        }
-    }
+    /** The seconds heard, from the Spine's one clock; only while the now line shows them. */
+    private val seconds by subscribingTo(if (props.nowLine) Playbacks.heardSeconds else steady(null))
 
     override fun VDom.render() {
         val songs = BuiltInSongs.songs
@@ -133,8 +115,6 @@ class KlangampPlaylist(ctx: Ctx<Props>) : Component<KlangampPlaylist.Props>(ctx)
 
     /** What plays and for how long; the keys to stop it and to skip on. */
     private fun FlowContent.renderNowLine(now: Playbacks.NowPlaying?, index: Int) {
-        val seconds = KlangampDeck.seconds()
-
         div {
             css {
                 put("display", "flex")
@@ -151,7 +131,7 @@ class KlangampPlaylist(ctx: Ctx<Props>) : Component<KlangampPlaylist.Props>(ctx)
                     put("font-size", "18px")
                     put("text-shadow", "0 0 6px color-mix(in srgb, var(--kl-lcd-ink) 60%, transparent)")
                 }
-                +(seconds?.let { KlangampDeck.clock(it) } ?: "-:--")
+                +(seconds?.let { clockOf(it) } ?: "-:--")
             }
             span {
                 css {

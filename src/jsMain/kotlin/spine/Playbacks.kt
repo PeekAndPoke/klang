@@ -8,6 +8,11 @@ package io.peekandpoke.klang.spine
 import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
+import io.peekandpoke.ultra.streams.steady
+import io.peekandpoke.ultra.streams.ops.distinct
+import io.peekandpoke.ultra.streams.ops.map
+import io.peekandpoke.ultra.streams.ops.switchMapNotNull
+import io.peekandpoke.ultra.streams.ops.ticker
 
 /**
  * What plays in the app, next to the [Player], which keeps the engine itself (KLANG-00406, "The Spine's playbacks"):
@@ -38,6 +43,18 @@ object Playbacks {
 
     private var nowPlayingOwner: PlaybackOwner? = null
 
+    /** How often [heardSeconds] looks at the playback: a second's change shows within a quarter of a second. */
+    private const val HEARD_TICK_MS = 250
+
+    /**
+     * The seconds the playback on stage has been heard, a value per second; null while nothing plays. Counted on the
+     * backend's position, not the wall clock (KLANG-00399): after a stall it shows what played, not the time that
+     * passed. Ticks only while something shows it: one clock for every display of the time (the Motor's line, Klang Amp).
+     */
+    val heardSeconds: Stream<Int?> = ticker(HEARD_TICK_MS)
+        .map { nowPlaying()?.playback?.heardSec()?.toInt() }
+        .distinct()
+
     /**
      * Publishes (or clears) the "now playing" snapshot. A clear is only honored when [owner]
      * is the current owner, so a stale controller can't wipe someone else's state.
@@ -63,6 +80,26 @@ object Playbacks {
 
         if (other != null && other !== self) {
             other.stop()
+        }
+    }
+
+    /** The song on the deck and the seconds it has been heard: what the Motor's line shows. */
+    data class SongLine(val playing: SongDeck.Playing, val seconds: Int?)
+
+    /**
+     * The song on the deck and the seconds its own playback has been heard, for the Motor's line (KLANG-00406, step 4);
+     * null while no song is on. The clock ticks only while the song plays and something shows it: in silence, and for a
+     * song still starting or whose start failed, nothing ticks.
+     */
+    val songLine: Stream<SongLine?> by lazy {
+        song.playing.switchMapNotNull { playing ->
+            when {
+                !playing.isPlaying -> steady(SongLine(playing = playing, seconds = null))
+
+                else -> ticker(HEARD_TICK_MS)
+                    .map { SongLine(playing = playing, seconds = song.onDeck()?.ctrl?.playback()?.heardSec()?.toInt()) }
+                    .distinct()
+            }
         }
     }
 

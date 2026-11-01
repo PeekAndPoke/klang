@@ -55,9 +55,6 @@ class MenuPickUp(ctx: Ctx<Props>) : Component<MenuPickUp.Props>(ctx) {
     )
 
     companion object {
-        /** The id the song page gives the user's own song, the new one. */
-        const val NEW_SONG = "new"
-
         /** When something was opened, said plainly: "just now", "5 min ago", "3 h ago", "yesterday", "4 days ago". */
         fun whenText(now: Double, at: Double): String {
             val minutes = ((now - at) / 60_000).toInt()
@@ -101,7 +98,7 @@ class MenuPickUp(ctx: Ctx<Props>) : Component<MenuPickUp.Props>(ctx) {
         menuPickUpView(
             // A song the app no longer has (a built-in renamed or gone in an update) is not offered
             songs = entries.filter { entry ->
-                entry.kind == Recents.Kind.Song && (entry.id == NEW_SONG || BuiltInSongs.songs.any { it.id == entry.id })
+                entry.kind == Recents.Kind.Song && (entry.id == Nav.NEW_SONG_ID || BuiltInSongs.songs.any { it.id == entry.id })
             },
             learning = continueOf(entries = entries, done = done),
             now = Date.now(),
@@ -136,7 +133,7 @@ fun FlowContent.menuPickUpView(
         div(classes = styles.drawerRecentGrid.toString()) {
             for (song in songs) {
                 KlangButton(
-                    onClick = { onOpen(if (song.id == MenuPickUp.NEW_SONG) Nav.newSongCode() else Nav.editSongCode(song.id)) },
+                    onClick = { onOpen(Nav.song(song.id)) },
                     shape = KlangButton.Shape.Tile,
                 ) {
                     span(classes = styles.drawerRecentTitle.toString()) { +song.title }

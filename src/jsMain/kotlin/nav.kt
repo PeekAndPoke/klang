@@ -32,6 +32,7 @@ import io.peekandpoke.klang.pages.docs.tutorials.TutorialPage
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialTrackPage
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialsListPage
 import io.peekandpoke.kraft.routing.RootRouterBuilder
+import io.peekandpoke.kraft.routing.Route
 import io.peekandpoke.kraft.routing.Route1
 import io.peekandpoke.kraft.routing.Static
 
@@ -46,6 +47,12 @@ object Nav {
 
     val newSongCode = Static("/song/code")
     val editSongCode = Route1("/song/code/{id}")
+
+    /** The id of the song a page opens without one: the new song, its page and what the browser keeps of it. */
+    const val NEW_SONG_ID = "new"
+
+    /** The page of the song [id]: the new song's for [NEW_SONG_ID]. */
+    fun song(id: String): Route.Bound = if (id == NEW_SONG_ID) newSongCode() else editSongCode(id)
 
     val samplesLibrary = Static("/samples/library")
 

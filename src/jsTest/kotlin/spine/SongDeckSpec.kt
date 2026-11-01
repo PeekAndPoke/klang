@@ -213,6 +213,30 @@ class SongDeckSpec : StringSpec({
         }
     }
 
+    "the line a display shows: the song's id, its title as it is now, playing once it plays, nothing once it stops" {
+        withDeck { deck, engine ->
+            var shown: SongDeck.Playing? = null
+            val unsubscribe = deck.playing.subscribeToStream { shown = it }
+
+            try {
+                val page = engine.page("p")
+
+                deck.play(songId = "p", ctrl = page)
+                shown shouldBe SongDeck.Playing(songId = "p", title = "Song p", isPlaying = false)
+
+                eventually { shown?.isPlaying shouldBe true }
+
+                page.setTitle("Renamed")
+                withClue("a new title shows at once") { shown?.title shouldBe "Renamed" }
+
+                deck.stop()
+                shown shouldBe null
+            } finally {
+                unsubscribe()
+            }
+        }
+    }
+
     "a stop takes the song off the deck and off the stage" {
         withDeck { deck, engine ->
             val ctrl = deck.play(song("a"))

@@ -1,7 +1,8 @@
 # KLANG-00406: The song that plays lives in the Spine: navigate anywhere while it plays
 
-> **Status (2026-11-01): IN PROGRESS.** Steps 1 to 3 done: `SongDeck` in the Spine, Klang Amp on it, the song page
-> plays on it and its song plays on when the page is left. Next: step 4, the Motor's now-playing line and the Stop key.
+> **Status (2026-11-01): IN PROGRESS.** Steps 1 to 4 done: `SongDeck` in the Spine, Klang Amp on it, the song page
+> plays on it and its song plays on when the page is left, the Motor's now-playing line and the Stop key from anywhere.
+> Next: step 5, the per-playback gain in the engine, with Klang-Main-Dev.
 
 ## Why this exists
 
@@ -170,7 +171,11 @@ After KLANG-00389's `Player` steps 1 and 2 (the move into the Spine, typed owner
    originals); its Play takes the stage. KLANG-00398's race fixed with it: a stop after the Play wins over a start
    still waiting for the engine.
 3. Klang Amp on the deck (done with step 1).
-4. The Motor's now-playing line and the Stop key from anywhere.
+4. The Motor's now-playing line and the Stop key from anywhere. Done 2026-11-01: `NowPlayingLine` under the Motor
+   on every page (the time, the title opening its page, a stop key), dim with nothing on; the Stop key binds there
+   (on the song's page its own Stop answers first). The time is the deck's own playback's, from one clock in the Spine
+   (`Playbacks.songLine`) that ticks only while the song plays; Klang Amp's two 250 ms timers went to
+   `Playbacks.heardSeconds`. Not yet: the line at the top of the Motor menu's "Pick up where you left off".
 5. The per-playback gain in the engine (D1), with Klang-Main-Dev: the command, the ramped gain, the codec specs.
 6. The code examples by D1: the song fades out over 2 s while one plays and in again after it; then the start page
    as a preview (D2), its fade-in on its own gain.
@@ -201,3 +206,5 @@ After KLANG-00389's `Player` steps 1 and 2 (the move into the Spine, typed owner
   its own, `update` gone (the page's Update is a Play of the controller on the deck). KLANG-00398 fixed with it.
 - 2026-11-01: step 2 tested by hand by the maintainer: "the song keeps playing when i navigate around and starting
   another song stop the first one and the second one starts playing".
+- 2026-11-01: step 4 (the maintainer: "Ok please go ahead"): the now-playing line, the Stop key from anywhere, one clock
+  for the time heard; in the kitchen sink and the look editor's LCD card.

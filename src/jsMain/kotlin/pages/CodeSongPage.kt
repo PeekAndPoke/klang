@@ -7,6 +7,7 @@ package io.peekandpoke.klang.pages
 
 import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.KlangGuiDance
+import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.comp.HelpWindow
 import io.peekandpoke.klang.comp.KlangCodeEditorComp
 import io.peekandpoke.klang.comp.LcdDisplay
@@ -106,7 +107,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         sound("bd hh sd oh")
     """.trimIndent()
 
-    val songId get() = props.id ?: "new"
+    val songId get() = props.id ?: Nav.NEW_SONG_ID
 
     val builtIn = BuiltInSongs.songs.firstOrNull { it.id == songId }
 

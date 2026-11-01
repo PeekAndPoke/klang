@@ -10,6 +10,7 @@ import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.comp.FullscreenToggleButton
 import io.peekandpoke.klang.comp.Motoer
 import io.peekandpoke.klang.comp.MotorHistoryGraphs
+import io.peekandpoke.klang.comp.NowPlayingLine
 import io.peekandpoke.klang.comp.PlayerWarehouseStats
 import io.peekandpoke.klang.comp.WalkthroughsButton
 import io.peekandpoke.klang.fs
@@ -144,7 +145,11 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
                 },
                 // The Motor and its window rest while a visual covers the page: one place for all of them (the
                 // maintainer, 2026-10-29)
-                motor = { menu -> Motoer(menu = menu, paused = motorPaused) },
+                motor = { menu ->
+                    Motoer(menu = menu, paused = motorPaused)
+                    // The song that plays, its time and a stop, on every page (KLANG-00406)
+                    NowPlayingLine()
+                },
                 content = { props.inner(this) },
                 tools = listOf(
                     KlangWorkbench.Tool(id = "motor", title = "Motor", icon = { tachometer_alternate }) {

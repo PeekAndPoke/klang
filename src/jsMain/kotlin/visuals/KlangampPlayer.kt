@@ -12,6 +12,7 @@ import io.peekandpoke.klang.comp.Oscilloscope
 import io.peekandpoke.klang.comp.PlayerMiniStats
 import io.peekandpoke.klang.comp.Spectrumeter
 import io.peekandpoke.klang.comp.VolumeKnob
+import io.peekandpoke.klang.comp.clockOf
 import io.peekandpoke.klang.spine.Playbacks
 import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.ui.comp.KlangButton
@@ -27,7 +28,6 @@ import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.semanticui.icon
-import kotlinx.browser.window
 import kotlinx.css.Color
 import kotlinx.css.px
 import kotlinx.html.ButtonType
@@ -38,7 +38,6 @@ import kotlinx.html.button
 import kotlinx.html.div
 import kotlinx.html.span
 import kotlinx.html.title
-import kotlin.js.Date
 import kotlin.math.roundToInt
 
 @Suppress("FunctionName")
@@ -69,32 +68,20 @@ class KlangampPlayer(ctx: Ctx<Props>) : Component<KlangampPlayer.Props>(ctx) {
 
         /** How far the displays' corners are cut. */
         private const val CUT_PX = 6
-
-        /** How often the time on the display steps. */
-        private const val CLOCK_MS = 250
     }
 
     private val look by subscribingTo(KlangTheme.look)
 
     private val nowPlaying by subscribingTo(Playbacks.nowPlaying)
 
-    /** The clock's now, stepped while mounted, for the time on the display. */
-    private var nowMs: Double by value(Date.now())
-
-    private var clockTimer: Int? = null
+    /** The seconds heard, for the time on the display: the Spine's one clock. */
+    private val seconds by subscribingTo(Playbacks.heardSeconds)
 
     private val cylinders by subscribingTo(MotorReadings.cylinders())
 
     private val heat by subscribingTo(MotorReadings.heat())
 
     private val voices by subscribingTo(MotorReadings.voices())
-
-    init {
-        lifecycle {
-            onMount { clockTimer = window.setInterval({ nowMs = Date.now() }, CLOCK_MS) }
-            onUnmount { clockTimer?.let { window.clearInterval(it) } }
-        }
-    }
 
     override fun VDom.render() {
         div {
@@ -222,7 +209,6 @@ class KlangampPlayer(ctx: Ctx<Props>) : Component<KlangampPlayer.Props>(ctx) {
     private fun DIV.renderMain() {
         val now = nowPlaying
         val index = KlangampDeck.indexOf(now)
-        val seconds = KlangampDeck.seconds()
 
         div {
             css {
@@ -249,7 +235,7 @@ class KlangampPlayer(ctx: Ctx<Props>) : Component<KlangampPlayer.Props>(ctx) {
                             put("letter-spacing", "0.05em")
                             put("text-shadow", "0 0 6px color-mix(in srgb, var(--kl-lcd-ink) 60%, transparent)")
                         }
-                        +(seconds?.let { KlangampDeck.clock(it) } ?: "-:--")
+                        +(seconds?.let { clockOf(it) } ?: "-:--")
                     }
                 }
                 div {
