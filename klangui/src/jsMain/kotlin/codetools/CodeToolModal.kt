@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.ui.codetools
 
+import io.peekandpoke.klang.workshop.keys.openKeyLayer
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.modals.ModalsManager
@@ -40,6 +41,12 @@ class CodeToolModal(ctx: Ctx<Props>) : FadingModal<CodeToolModal.Props, Unit>(ct
     ) : FadingModal.Props<Unit>()
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
+
+    init {
+        // Its keys over the page's, as the other modals have them: Shift Shift or Alt+M must not open the Motor's menu
+        // behind it (KLANG-00403)
+        openKeyLayer()
+    }
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 

@@ -1,6 +1,7 @@
 # KLANG-00403: The Motor menu covers the content area: bigger destinations, what was last opened, the loadouts
 
-> **Status (2026-11-01): DESIGNED.** A clickable mockup (a design canvas, "Motor Menu Redesign"); nothing built.
+> **Status (2026-11-01): IN PROGRESS.** Step 1 done (the menu over everything right of the column, its keys, its back
+> navigation, the large layout with the looks); next, step 2 (what was last opened).
 
 ## Why this exists
 
@@ -15,7 +16,8 @@ columns, and the look row (seven looks and an empty slot).
 ## The design
 
 - **Where it opens:** over everything right of the column: the content, the bottom panel, the tool windows and the
-  tool strip, inset a little, as one riveted panel. Only the column stays, with the Motor and its menu button, lit
+  tool strip, edge to edge and square (the maintainer, 2026-11-01: "cover 'everything' except the left side. No
+  padding and not rounded corners"), one riveted panel. Only the column stays, with the Motor and its menu button, lit
   while the menu is open: the menu grows out of the Motor. So it is always the same size, whatever is pinned or open
   (the maintainer, 2026-11-01: "it will always look the same and that is what you want from a navigation hub...
   should go into your hands without the need to search for anything everytime"). It changes with the window only.
@@ -79,6 +81,34 @@ columns, and the look row (seven looks and an empty slot).
 
 1. `KlangDrawer` gets the large layout; `KlangWorkbench` places it over everything right of the column, the rest
    `inert` under it; `SearchEverywhere` bound to open it (all in `klangui`, the kitchen sink's entry updated).
+   **Done (2026-11-01):**
+   - `KlangWorkbench`: the menu in a frame of its own (`KlangWorkbenchMenu`, mounted only while open) over
+     `workbenchRight`, edge to edge. It arms Kraft's `trapBackNavigation` (Back closes it, the page stays), watches the
+     router (a move to another page closes it, as `FadingModal` does) and opens a key layer: the keys outside it wait,
+     the Motor's included; in it Esc, Alt+M (closes) and Shift Shift or Ctrl+K (back to the search field). While it is
+     open the centre, a pinned tool window, the strip and the column's list are `inert`; the Motor stays. The menu's
+     content gets a `MenuHandle`: `close`, and `leaveTo(uri)`, which writes the page with `router.replaceUri` in the
+     trap's place, so Back from there leads to the page the menu opened on. `OnKey(SearchEverywhere)` sits by the
+     Motor while there is a menu.
+   - `KlangDrawer`: the search in the header row, the tiles in four columns with an icon each (`Entry.icon`;
+     `AppArea.icon` in the app), the halves `pickUp` (its caller in step 2) and `loadouts` (the look picker; so the
+     looks of step 3 are in).
+   - `CodeToolModal` opens a key layer, as the app's other modals do, so the menu cannot open behind it.
+   - Specs: `KlangWorkbenchSpec` (inert, the keys and the key layer, Back, a pick's history, a move closing it, Esc
+     giving the trap's entry back; the history rows on path routing, as the app routes), `KlangDrawerSpec` (the header,
+     the halves, the icons), `CodeToolModalSpec`. 223 `klangui` specs and 86 app specs green.
+   - Review: round 1 (level 1) one MAJOR, fixed: the column's list stayed live, so a page picked there pushed past the
+     trap's entry (escape ledger row); MINORs: `CodeToolModal`'s layer fixed, the Gui-dance step on the key and the
+     early `pickUp` slot rejected. Round 2 (level 2, `reviewer-high`) clean; its MINORs applied (a spec for the code
+     tool's layer, two long lines).
+   - Mutation-checked (light tier, 12 mutants, all KILLED after two spec corrections): the parts not covered, the
+     column's list not inert, the search key opening nothing, the open menu's search key not refocusing, Alt+M not
+     closing, no key layer (survived first: its spec's key sat in the inert content, moved into the Motor), Back not
+     closing, `leaveTo` pushing, a router move not closing (survived first under hash routing, where the change also
+     fires a popstate; the history specs now route by path), the code tool's layer gone, the halves never split, the
+     icon not hidden.
+   - Seen in the second campaign, in two of its eight runs: `KlangNoticeModalSpec` with a page key answered twice; two
+     reruns of the whole suite green. Unexplained; watch it.
 2. The record of what was opened, in the Spine; "Pick up where you left off" reads it.
 3. The loadouts' section (looks now; MIDI with KLANG-00402).
 4. The search results in columns, once KLANG-00405 has the index.
@@ -101,3 +131,4 @@ columns, and the look row (seven looks and an empty slot).
   Shift Shift opens it, and it covers the tool windows and the bottom panel too, so it always looks the same (the
   maintainer's word). The modal rules: Back closes it (Kraft's back navigation trap), any change of the URI too. D2 decided
   (the look picker as drawn); D1 decided: songs and tutorials, docs to bookmarks (KLANG-00404).
+- 2026-11-01: IN PROGRESS.

@@ -691,21 +691,27 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
 
     private fun FlowContent.renderPopups() {
         section("Popups and windows, the popups with rivets") {
-            cell(name = "The menu drawer", source = "klangui/comp/KlangDrawer.kt, KlangSearchField.kt, KlangLookPicker.kt") {
+            cell(name = "The Motor's menu", source = "klangui/comp/KlangDrawer.kt, KlangSearchField.kt, KlangLookPicker.kt") {
+                // As wide as the menu over a laptop's content area (KLANG-00403)
                 div {
-                    css { put("width", "300px") }
+                    css {
+                        put("width", "1100px")
+                        put("max-width", "100%")
+                    }
 
                     KlangDrawer(
                         title = "Where to",
                         entries = listOf(
-                            KlangDrawer.Entry(id = "songs", label = "Songs", sub = "Yours and the built-ins"),
-                            KlangDrawer.Entry(id = "learn", label = "Learn", sub = "Tutorials and tracks"),
-                            KlangDrawer.Entry(id = "docs", label = "Docs", sub = "Lexikon, Sprudel, Stdlib"),
-                            KlangDrawer.Entry(id = "samples", label = "Samples", sub = "The library"),
-                            KlangDrawer.Entry(id = "midi", label = "MIDI", sub = "Playground, devices"),
-                            KlangDrawer.Entry(id = "credits", label = "Credits", sub = "Who we build on"),
-                            KlangDrawer.Entry(id = "community", label = "Community", sub = "With the backend", later = true),
-                            KlangDrawer.Entry(id = "account", label = "Account", sub = "With the backend", later = true),
+                            KlangDrawer.Entry(id = "songs", label = "Songs", sub = "Yours and the built-ins", icon = { music }),
+                            KlangDrawer.Entry(id = "learn", label = "Learn", sub = "Tutorials and tracks", icon = { graduation_cap }),
+                            KlangDrawer.Entry(id = "docs", label = "Docs", sub = "Lexikon, Sprudel, Stdlib", icon = { book_open }),
+                            KlangDrawer.Entry(id = "samples", label = "Samples", sub = "The library", icon = { wave_square }),
+                            KlangDrawer.Entry(id = "midi", label = "MIDI", sub = "Playground, devices", icon = { keyboard }),
+                            KlangDrawer.Entry(id = "credits", label = "Credits", sub = "Who we build on", icon = { bullhorn }),
+                            KlangDrawer.Entry(
+                                id = "community", label = "Community", sub = "With the backend", later = true, icon = { users },
+                            ),
+                            KlangDrawer.Entry(id = "account", label = "Account", sub = "With the backend", later = true, icon = { user }),
                         ),
                         current = drawerAt,
                         onPick = { drawerAt = it },
@@ -719,7 +725,7 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
                                 keyHint = "Mod K",
                             )
                         },
-                        footer = { KlangLookPicker(onChosen = { LookStorage.save(it) }) },
+                        loadouts = { KlangLookPicker(onChosen = { LookStorage.save(it) }) },
                     )
                 }
             }

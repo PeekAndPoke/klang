@@ -95,9 +95,9 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
 
     private val entries = AppArea.entries
         .filter { it != AppArea.Other }
-        .map { KlangDrawer.Entry(id = it.name, label = it.label, sub = it.sub) } +
+        .map { KlangDrawer.Entry(id = it.name, label = it.label, sub = it.sub, icon = it.icon) } +
             listOf(
-                KlangDrawer.Entry(id = "account", label = "Account", sub = "With the backend", later = true),
+                KlangDrawer.Entry(id = "account", label = "Account", sub = "With the backend", later = true, icon = { user }),
             )
 
     /** Where a drawer entry leads: the area's own page; null for no area. */
@@ -112,11 +112,12 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
         AppArea.Other -> null
     }
 
-    private fun go(id: String) {
-        val area = AppArea.entries.firstOrNull { it.name == id } ?: return
-        val route = landing(area) ?: return
+    /** From the menu to the area [id]'s page, in the menu's place in the history (Back then leads to where it opened). */
+    private fun go(menu: KlangWorkbench.MenuHandle, id: String) {
+        val area = AppArea.entries.firstOrNull { it.name == id } ?: return menu.close()
+        val route = landing(area) ?: return menu.close()
 
-        router.navToUri(route())
+        menu.leaveTo(router.strategy.render(route()))
     }
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -160,7 +161,7 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
                 onLayout = { WorkbenchLayoutStorage.save(it) },
                 // The walkthroughs' beacons on the bottom panel's key and its tabs
                 guiDance = KlangGuiDance.dance,
-                drawer = { close ->
+                drawer = { menu ->
                     KlangDrawer(
                         title = "Where to",
                         entries = entries,
@@ -185,15 +186,14 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
                                 }
                             }
 
-                            close()
-                            go(id)
+                            go(menu = menu, id = id)
                         },
                         beacon = when (guiDanceLit) {
                             KlangGuiDance.DRAWER_SONGS -> AppArea.Songs.name
                             KlangGuiDance.DRAWER_LEARN -> AppArea.Learn.name
                             else -> null
                         },
-                        onClose = close,
+                        onClose = menu.close,
                         closeOnEsc = true,
                         search = {
                             KlangSearchField(
@@ -203,7 +203,7 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
                                 placeholder = "Songs, docs, samples, actions",
                             )
                         },
-                        footer = {
+                        loadouts = {
                             KlangLookPicker(
                                 onChosen = {
                                     LookStorage.save(it)
@@ -215,8 +215,7 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
                                 // The look editor, an empty slot ready to be filled (KLANG-00382)
                                 onEdit = { slot ->
                                     KlangGuiDance.dance.used(KlangGuiDance.LOOK_EDIT)
-                                    close()
-                                    router.navToUri(if (slot == null) Nav.looks() else Nav.looksSlot(slot.toString()))
+                                    menu.leaveTo(router.strategy.render(if (slot == null) Nav.looks() else Nav.looksSlot(slot.toString())))
                                 },
                                 beacon = when (guiDanceLit) {
                                     KlangGuiDance.LOOK_EDIT -> KlangLookPicker.EDIT

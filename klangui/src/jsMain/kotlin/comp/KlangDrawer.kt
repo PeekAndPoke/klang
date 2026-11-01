@@ -9,9 +9,12 @@ import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
+import io.peekandpoke.ultra.semanticui.SemanticIconFn
+import io.peekandpoke.ultra.semanticui.icon
 import kotlinx.html.DIV
 import kotlinx.html.Tag
 import kotlinx.html.div
+import kotlinx.html.section
 import kotlinx.html.span
 
 @Suppress("FunctionName")
@@ -24,7 +27,8 @@ fun Tag.KlangDrawer(
     onClose: (() -> Unit)? = null,
     closeOnEsc: Boolean = false,
     search: (DIV.() -> Unit)? = null,
-    footer: (DIV.() -> Unit)? = null,
+    pickUp: (DIV.() -> Unit)? = null,
+    loadouts: (DIV.() -> Unit)? = null,
 ) = comp(
     KlangDrawer.Props(
         title = title,
@@ -35,29 +39,34 @@ fun Tag.KlangDrawer(
         onClose = onClose,
         closeOnEsc = closeOnEsc,
         search = search,
-        footer = footer,
+        pickUp = pickUp,
+        loadouts = loadouts,
     )
 ) {
     KlangDrawer(it)
 }
 
 /**
- * The menu drawer (KLANG-00339): what the Motor button opens (KLANG-00334, layout A). A riveted panel with a printed
- * title and a close button (with the pill "Close: Esc" when Esc closes it), a search field when one is given, the
- * destinations as tiles in two columns, and a footer (the look picker).
+ * The Motor's menu (KLANG-00339, made large in KLANG-00403): what the Motor button opens over everything right of the
+ * column. A riveted panel; its header holds the printed title, the search field when one is given, and the close button
+ * (with the pill "Close: Esc" when Esc closes it). Then the destinations as large tiles in four columns, each with its
+ * icon, its label and its second line ("The button like 'Songs' can then also be bigger", the maintainer,
+ * 2026-11-01). Below them two halves: what one comes back to ([Props.pickUp]) and the loadouts ([Props.loadouts], the
+ * look picker); one given alone takes the whole width.
  *
  * The current destination is drawn pressed with its lamp on and announced as `aria-current`; the others' lamps are
  * off; one that is not there yet ([Entry.later]) is a dashed tile without a lamp that cannot be picked. The drawer
- * fills the width it is given: its size and where it opens (above the Motor) are the shell's.
+ * fills the size it is given: its size and where it opens are the shell's.
  */
 class KlangDrawer(ctx: Ctx<Props>) : Component<KlangDrawer.Props>(ctx) {
 
-    /** One destination: [id] is what [Props.onPick] gets, [sub] a short line under the [label]. */
+    /** One destination: [id] is what [Props.onPick] gets, [sub] a short line under the [label], [icon] beside them. */
     data class Entry(
         val id: String,
         val label: String,
         val sub: String? = null,
         val later: Boolean = false,
+        val icon: SemanticIconFn? = null,
     )
 
     data class Props(
@@ -73,7 +82,10 @@ class KlangDrawer(ctx: Ctx<Props>) : Component<KlangDrawer.Props>(ctx) {
         /** Esc closes it, through the key manager, with its pill "Close: Esc" beside the close button ([KlangCloseKey]). */
         val closeOnEsc: Boolean,
         val search: (DIV.() -> Unit)?,
-        val footer: (DIV.() -> Unit)?,
+        /** The left half under the destinations: what one comes back to (the last songs); null for none. */
+        val pickUp: (DIV.() -> Unit)?,
+        /** The right half under the destinations: the loadouts (the looks); null for none. */
+        val loadouts: (DIV.() -> Unit)?,
     )
 
     override fun VDom.render() {
@@ -86,6 +98,10 @@ class KlangDrawer(ctx: Ctx<Props>) : Component<KlangDrawer.Props>(ctx) {
             div(classes = styles.drawerHeader.toString()) {
                 span(classes = styles.heading.toString()) { +props.title }
 
+                props.search?.let { search ->
+                    div(classes = styles.drawerSearch.toString()) { search() }
+                }
+
                 props.onClose?.let { close ->
                     span(classes = styles.drawerHeaderEnd.toString()) {
                         if (props.closeOnEsc) {
@@ -96,8 +112,6 @@ class KlangDrawer(ctx: Ctx<Props>) : Component<KlangDrawer.Props>(ctx) {
                     }
                 }
             }
-
-            props.search?.invoke(this)
 
             div(classes = styles.drawerGrid.toString()) {
                 for (entry in props.entries) {
@@ -115,14 +129,35 @@ class KlangDrawer(ctx: Ctx<Props>) : Component<KlangDrawer.Props>(ctx) {
                             else -> KlangLamp.State.Off
                         },
                     ) {
-                        span { +entry.label }
-                        entry.sub?.let { sub -> span(classes = styles.drawerSub.toString()) { +sub } }
+                        div(classes = styles.drawerTile.toString()) {
+                            entry.icon?.let { iconFn ->
+                                icon.iconFn().render { attributes["aria-hidden"] = "true" }
+                            }
+
+                            div(classes = styles.drawerTileText.toString()) {
+                                span(classes = styles.drawerLabel.toString()) { +entry.label }
+                                entry.sub?.let { sub -> span(classes = styles.drawerTileSub.toString()) { +sub } }
+                            }
+                        }
                     }
                 }
             }
 
-            props.footer?.let { footer ->
-                div(classes = styles.drawerFooter.toString()) { footer() }
+            val pickUp = props.pickUp
+            val loadouts = props.loadouts
+
+            if (pickUp != null || loadouts != null) {
+                val split = if (pickUp != null && loadouts != null) styles.drawerBelowSplit else null
+
+                div(classes = listOfNotNull(styles.drawerBelow, split).joinToString(" ")) {
+                    pickUp?.let { half ->
+                        section(classes = styles.drawerSection.toString()) { div { half() } }
+                    }
+
+                    loadouts?.let { half ->
+                        section(classes = styles.drawerSection.toString()) { div { half() } }
+                    }
+                }
             }
         }
     }

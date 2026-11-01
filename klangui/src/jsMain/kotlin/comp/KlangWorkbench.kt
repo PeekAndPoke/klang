@@ -6,9 +6,17 @@
 package io.peekandpoke.klang.ui.comp
 
 import io.peekandpoke.klang.ui.GuiDance
+import io.peekandpoke.klang.ui.KlangKeyBindings
+import io.peekandpoke.klang.workshop.keys.OnKey
+import io.peekandpoke.klang.workshop.keys.onKeyController
+import io.peekandpoke.klang.workshop.keys.openKeyLayer
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
+import io.peekandpoke.kraft.components.getAttributeRecursiveOrNull
+import io.peekandpoke.kraft.routing.BackNavigationTrap
+import io.peekandpoke.kraft.routing.BackNavigationTrap.Companion.trapBackNavigation
+import io.peekandpoke.kraft.routing.Router
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
@@ -20,6 +28,7 @@ import io.peekandpoke.ultra.html.onPointerUp
 import io.peekandpoke.ultra.semanticui.SemanticIconFn
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
+import io.peekandpoke.ultra.streams.Unsubscribe
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.html.DIV
@@ -41,7 +50,7 @@ fun Tag.KlangWorkbench(
     content: DIV.() -> Unit,
     tools: List<KlangWorkbench.Tool> = emptyList(),
     bottom: KlangWorkbench.Bottom? = null,
-    drawer: (FlowContent.(close: () -> Unit) -> Unit)? = null,
+    drawer: (FlowContent.(menu: KlangWorkbench.MenuHandle) -> Unit)? = null,
     keys: (FlowContent.() -> Unit)? = null,
     mark: String? = null,
     markLink: KlangWorkbench.Link? = null,
@@ -71,9 +80,15 @@ fun Tag.KlangWorkbench(
  * The workbench (KLANG-00340, KLANG-00334 layout A): the shell the pages live in.
  *
  * - The column on the left: its content scrolls on its own, the Motor under it never moves (item 25). The Motor is the
- *   caller's: it gets the [Menu] to draw the menu button with, and the drawer opens just above it. Opened, the
- *   drawer takes the focus (Esc then closes it); closed, the focus goes back to where it came from (the menu
- *   button).
+ *   caller's: it gets the [Menu] to draw the menu button with.
+ * - The Motor's menu (KLANG-00403): a modal of the workbench over everything right of the column (the content, the
+ *   bottom panel, the tool windows, the strip), the same size whatever is pinned or open (the maintainer,
+ *   2026-11-01: "it will always look the same and that is what you want from a navigation hub"). The page under it
+ *   stays mounted (a song plays on) and is `inert` while it is open, and so is the column's list; the Motor stays.
+ *   Opened (the menu button; Shift Shift or Ctrl+K, `KlangKeyBindings.SearchEverywhere`), it takes the focus; Esc,
+ *   Back (it arms Kraft's back navigation trap) and any move to another page close it, and a focus lost with it goes
+ *   back to where it came from (the menu button). A pick goes on with [MenuHandle.leaveTo], which takes the menu's
+ *   place in the history.
  * - The content in the middle, and under it the bottom panel, docked, shown or hidden from the strip.
  * - The tool strip on the right: a toggle per tool window, the bottom panel's toggle; at its foot the caller's
  *   [Props.keys] for every page (the app's fullscreen: KLANG-00349) and the maker's [Props.mark] written upwards
@@ -109,6 +124,12 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
 
         /** The content kept above the bottom panel at its highest. */
         const val CONTENT_KEPT_PX = 120.0
+
+        /**
+         * The value of `inert` on what the menu covers. Not "": the renderer sets `inert` as the element's property,
+         * where an empty string is false.
+         */
+        const val INERT = "true"
     }
 
     /**
@@ -159,6 +180,17 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
         val toggle: () -> Unit,
     )
 
+    /**
+     * What the open menu's content gets: the way to [close] it, and to [leaveTo] another page (the address, as the
+     * router writes it). [leaveTo] writes the page in place of the history entry the menu's back navigation trap added,
+     * so Back from there goes to the page the menu was opened on, not to it a second time; without a router it only
+     * closes.
+     */
+    class MenuHandle(
+        val close: () -> Unit,
+        val leaveTo: (uri: String) -> Unit,
+    )
+
     data class Props(
         val column: DIV.() -> Unit,
         /** The Motor; it gets the [Menu] for its menu button, null when there is no drawer to open. */
@@ -166,8 +198,8 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
         val content: DIV.() -> Unit,
         val tools: List<Tool>,
         val bottom: Bottom?,
-        /** The drawer the Motor's menu button opens; it gets the way to close itself (after a pick, say). */
-        val drawer: (FlowContent.(close: () -> Unit) -> Unit)?,
+        /** The menu the Motor's menu button opens; it gets the [MenuHandle] to close itself or to leave for a page. */
+        val drawer: (FlowContent.(menu: MenuHandle) -> Unit)?,
         /** Keys at the strip's foot, above the mark, for what every page has (fullscreen); null for none. */
         val keys: (FlowContent.() -> Unit)?,
         /** The maker's mark at the strip's foot ("KLANGMOTOR"); null for none. */
@@ -282,6 +314,17 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
 
     /** Where the focus was when the bottom panel opened, to give it back when the panel closes. */
     private var focusBeforeBottom: HTMLElement? = null
+
+    /** What the menu's content gets; made once, it closes and leaves through this workbench whatever its props. */
+    private val menuHandle = MenuHandle(
+        close = { closeDrawer() },
+        leaveTo = { uri ->
+            // Written in place of the trap's entry while the menu is still open, so the trap finds the address changed
+            // and leaves the history as it is when it goes
+            getAttributeRecursiveOrNull(Router.key)?.replaceUri(uri)
+            closeDrawer()
+        },
+    )
 
     init {
         openWaitingTool(props.tools)
@@ -485,7 +528,11 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
         focusBeforeDrawer = document.activeElement as? HTMLElement
         drawerOpen = true
 
-        // After the drawer is drawn: its field takes the focus (the search), else its first control, else the drawer
+        focusDrawer()
+    }
+
+    /** After the next draw: the drawer's field takes the focus (the search), else its first control, else the drawer. */
+    private fun focusDrawer() {
         window.requestAnimationFrame {
             val drawer = dom?.querySelector(".${KlangControlStyles.workbenchDrawer}")
             val target = drawer?.querySelector(FIELD) ?: drawer?.querySelector(FOCUSABLE) ?: drawer
@@ -522,17 +569,14 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
                 val drawer = props.drawer
 
                 div(classes = styles.workbenchColumnArea.toString()) {
-                    div(classes = styles.workbenchColumnScroll.toString()) {
-                        props.column(this)
+                    // Under the open menu the column's list waits too: a page picked there would land past the menu's
+                    // history entry, and Tab would leave the menu. The Motor below stays: its menu button closes it
+                    if (drawerOpen && drawer != null) {
+                        attributes["inert"] = INERT
                     }
 
-                    if (drawerOpen && drawer != null) {
-                        div(classes = styles.workbenchDrawer.toString()) {
-                            // The focus lands here when the drawer has no control of its own
-                            attributes["tabindex"] = "-1"
-
-                            drawer { closeDrawer() }
-                        }
+                    div(classes = styles.workbenchColumnScroll.toString()) {
+                        props.column(this)
                     }
                 }
 
@@ -541,62 +585,80 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
                         Menu(open = drawerOpen) { if (drawerOpen) closeDrawer() else openDrawer() }
                     }
 
+                    // Shift Shift or Ctrl+K, the search over everything: the menu opens with the focus in its search field
+                    // (the maintainer, 2026-11-01: "now we also know what 'shift + shift' does"); open, its own keys answer
+                    if (drawer != null) {
+                        OnKey(action = KlangKeyBindings.SearchEverywhere, showHint = false) { openDrawer() }
+                    }
+
                     props.motor(this, menu)
                 }
             }
 
-            main(classes = styles.workbenchCentre.toString()) {
-                key = "centre"
+            // Everything right of the column, the menu laid over it while it is open
+            div(classes = styles.workbenchRight.toString()) {
+                key = "right"
 
-                div(classes = styles.workbenchContent.toString()) {
-                    key = "content"
+                renderRight(tool = tool, bottom = bottom)
 
-                    props.content(this)
+                val drawer = props.drawer
+
+                if (drawerOpen && drawer != null) {
+                    KlangWorkbenchMenu(onClose = { closeDrawer() }, onSearch = { focusDrawer() }) { drawer(menuHandle) }
                 }
+            }
+        }
+    }
 
-                // The bottom panel: pinned, docked under the content; else flying in over it from below (the
-                // maintainer, 2026-10-27: "a "fly in" and a pinned variant", as the tool windows have)
-                if (bottom != null && bottomOpen) {
-                    val placement = if (bottomPinned) styles.workbenchBottomPinned else styles.workbenchBottomFloating
+    /** The centre, a pinned tool window and the strip; `inert` while the menu covers them. */
+    private fun FlowContent.renderRight(tool: Tool?, bottom: Bottom?) {
+        val styles = KlangControlStyles
+        val covered = drawerOpen && props.drawer != null
 
-                    div(classes = placement.toString()) {
-                        key = if (bottomPinned) "bottom-pinned" else "bottom-floating"
-                        attributes["tabindex"] = "-1"
-                        css { put("height", "${bottomHeight}px") }
+        main(classes = styles.workbenchCentre.toString()) {
+            key = "centre"
 
-                        // Its header is its handle: dragged up or down, the panel grows or shrinks
-                        onPointerDown { e -> startBottomDrag(e) }
-                        onPointerMove { e -> dragBottom(e) }
-                        onPointerUp {
-                            bottomDrag = null
-                            reportLayout()
-                        }
-                        onPointerCancel {
-                            bottomDrag = null
-                            reportLayout()
-                        }
+            if (covered) {
+                attributes["inert"] = INERT
+            }
 
-                        renderBottom(bottom)
+            div(classes = styles.workbenchContent.toString()) {
+                key = "content"
+
+                props.content(this)
+            }
+
+            // The bottom panel: pinned, docked under the content; else flying in over it from below (the
+            // maintainer, 2026-10-27: "a "fly in" and a pinned variant", as the tool windows have)
+            if (bottom != null && bottomOpen) {
+                val placement = if (bottomPinned) styles.workbenchBottomPinned else styles.workbenchBottomFloating
+
+                div(classes = placement.toString()) {
+                    key = if (bottomPinned) "bottom-pinned" else "bottom-floating"
+                    attributes["tabindex"] = "-1"
+                    css { put("height", "${bottomHeight}px") }
+
+                    // Its header is its handle: dragged up or down, the panel grows or shrinks
+                    onPointerDown { e -> startBottomDrag(e) }
+                    onPointerMove { e -> dragBottom(e) }
+                    onPointerUp {
+                        bottomDrag = null
+                        reportLayout()
                     }
-                }
-
-                if (tool != null && tool.id !in pinned) {
-                    div(classes = styles.workbenchFloating.toString()) {
-                        // Per tool: another tool window is a new panel, its close key registers anew, so the newest
-                        // open panel closes first
-                        key = "floating-${tool.id}"
-
-                        // The focus lands here when the window opens from the strip
-                        attributes["tabindex"] = "-1"
-
-                        renderTool(tool)
+                    onPointerCancel {
+                        bottomDrag = null
+                        reportLayout()
                     }
+
+                    renderBottom(bottom)
                 }
             }
 
-            if (tool != null && tool.id in pinned) {
-                div(classes = styles.workbenchPinned.toString()) {
-                    key = "pinned"
+            if (tool != null && tool.id !in pinned) {
+                div(classes = styles.workbenchFloating.toString()) {
+                    // Per tool: another tool window is a new panel, its close key registers anew, so the newest
+                    // open panel closes first
+                    key = "floating-${tool.id}"
 
                     // The focus lands here when the window opens from the strip
                     attributes["tabindex"] = "-1"
@@ -604,73 +666,92 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
                     renderTool(tool)
                 }
             }
+        }
 
-            // A group, not a toolbar: a toolbar promises arrow keys and one tab stop, which the strip does not have yet
-            div(classes = styles.workbenchStrip.toString()) {
-                key = "strip"
+        if (tool != null && tool.id in pinned) {
+            div(classes = styles.workbenchPinned.toString()) {
+                key = "pinned"
 
-                attributes["role"] = "group"
-                attributes["aria-label"] = "Tool windows"
-
-                for (t in props.tools) {
-                    KlangIconToggle(
-                        icon = t.icon,
-                        label = t.title,
-                        on = t.id == openTool,
-                        large = true,
-                        onClick = { toggleTool(t.id) },
-                    )
+                if (covered) {
+                    attributes["inert"] = INERT
                 }
 
-                val keys = props.keys
-                val mark = props.mark
+                // The focus lands here when the window opens from the strip
+                attributes["tabindex"] = "-1"
 
-                if (bottom != null || keys != null || mark != null) {
-                    div(classes = styles.workbenchStripFoot.toString()) {
-                        // The bottom panel's key at the foot, near the panel it opens; the top keeps the tool windows
-                        // on the right (the maintainer, 2026-10-28)
-                        if (bottom != null) {
-                            KlangIconToggle(
-                                icon = bottom.icon,
-                                label = bottom.title,
-                                on = bottomOpen,
-                                large = true,
-                                beacon = lit(bottom.beaconStep),
-                                onClick = { if (bottomOpen) closeBottom() else openBottom() },
-                            )
+                renderTool(tool)
+            }
+        }
+
+        // A group, not a toolbar: a toolbar promises arrow keys and one tab stop, which the strip does not have yet
+        div(classes = styles.workbenchStrip.toString()) {
+            key = "strip"
+
+            attributes["role"] = "group"
+            attributes["aria-label"] = "Tool windows"
+
+            if (covered) {
+                attributes["inert"] = INERT
+            }
+
+            for (t in props.tools) {
+                KlangIconToggle(
+                    icon = t.icon,
+                    label = t.title,
+                    on = t.id == openTool,
+                    large = true,
+                    onClick = { toggleTool(t.id) },
+                )
+            }
+
+            val keys = props.keys
+            val mark = props.mark
+
+            if (bottom != null || keys != null || mark != null) {
+                div(classes = styles.workbenchStripFoot.toString()) {
+                    // The bottom panel's key at the foot, near the panel it opens; the top keeps the tool windows
+                    // on the right (the maintainer, 2026-10-28)
+                    if (bottom != null) {
+                        KlangIconToggle(
+                            icon = bottom.icon,
+                            label = bottom.title,
+                            on = bottomOpen,
+                            large = true,
+                            beacon = lit(bottom.beaconStep),
+                            onClick = { if (bottomOpen) closeBottom() else openBottom() },
+                        )
+                    }
+
+                    if (keys != null) {
+                        div(classes = styles.workbenchStripKeys.toString()) {
+                            attributes["role"] = "group"
+                            attributes["aria-label"] = "View"
+
+                            keys()
                         }
+                    }
 
-                        if (keys != null) {
-                            div(classes = styles.workbenchStripKeys.toString()) {
-                                attributes["role"] = "group"
-                                attributes["aria-label"] = "View"
+                    if (mark != null) {
+                        div(classes = styles.workbenchMark.toString()) {
+                            val link = props.markLink
 
-                                keys()
-                            }
-                        }
+                            if (link == null) {
+                                span { +mark }
+                            } else {
+                                // Home, the same way as any app link: a plain click inside the app
+                                a(href = link.href) {
+                                    onClick { event ->
+                                        val mouse = event.asDynamic()
 
-                        if (mark != null) {
-                            div(classes = styles.workbenchMark.toString()) {
-                                val link = props.markLink
-
-                                if (link == null) {
-                                    span { +mark }
-                                } else {
-                                    // Home, the same way as any app link: a plain click inside the app
-                                    a(href = link.href) {
-                                        onClick { event ->
-                                            val mouse = event.asDynamic()
-
-                                            if (mouse.button == 0 && mouse.ctrlKey != true && mouse.metaKey != true &&
-                                                mouse.shiftKey != true && mouse.altKey != true
-                                            ) {
-                                                event.preventDefault()
-                                                link.onFollow()
-                                            }
+                                        if (mouse.button == 0 && mouse.ctrlKey != true && mouse.metaKey != true &&
+                                            mouse.shiftKey != true && mouse.altKey != true
+                                        ) {
+                                            event.preventDefault()
+                                            link.onFollow()
                                         }
-
-                                        +mark
                                     }
+
+                                    +mark
                                 }
                             }
                         }
@@ -789,6 +870,87 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
             closeOnEsc = tool.id !in pinned,
         ) {
             tool.content(this)
+        }
+    }
+}
+
+@Suppress("FunctionName")
+private fun Tag.KlangWorkbenchMenu(onClose: () -> Unit, onSearch: () -> Unit, content: DIV.() -> Unit) = comp(
+    KlangWorkbenchMenu.Props(onClose = onClose, onSearch = onSearch, content = content)
+) {
+    KlangWorkbenchMenu(it)
+}
+
+/**
+ * The open menu's frame over everything right of the column (KLANG-00403). Mounted only while the menu is open, so what
+ * it arms lives exactly as long: Kraft's back navigation trap, as `FadingModal` has it (Back closes the menu and the
+ * page stays; closed any other way, the trap goes back over its own entry), a watch on the router that closes the menu
+ * when it moves to another page (a link inside it, Forward), and a layer of keys over the page's, as a modal has: the
+ * page's keys wait under it. In it, the menu's own: its Esc (its content's close key), Alt+M closes it as the menu
+ * button would, Shift Shift or Ctrl+K puts the focus back into its search field.
+ */
+private class KlangWorkbenchMenu(ctx: Ctx<Props>) : Component<KlangWorkbenchMenu.Props>(ctx) {
+
+    data class Props(
+        val onClose: () -> Unit,
+        val onSearch: () -> Unit,
+        val content: DIV.() -> Unit,
+    )
+
+    /** Made first, so the keys of the content below it find it at once. */
+    @Suppress("unused")
+    private val layer = openKeyLayer()
+
+    @Suppress("unused")
+    private val menuKey = onKeyController(action = KlangKeyBindings.MotorMenu) { props.onClose() }
+
+    @Suppress("unused")
+    private val searchKey = onKeyController(action = KlangKeyBindings.SearchEverywhere) { props.onSearch() }
+
+    /** Back closes the menu and lets the navigation through, which only takes the trap's own entry. */
+    @Suppress("unused")
+    private val backTrap = trapBackNavigation {
+        props.onClose()
+
+        BackNavigationTrap.TrapResult.Continue
+    }
+
+    /** Ends the watch on the router's page, while mounted. */
+    private var unwatchPage: Unsubscribe? = null
+
+    init {
+        lifecycle {
+            onMount {
+                // As FadingModal: a move to another page closes it, a query-only replaceUri (a urlParam) does not. Under
+                // hash routing the router follows a written address a task later: until it arrives, the page it is still
+                // on is no reason to close
+                getAttributeRecursiveOrNull(Router.key)?.let { router ->
+                    val page = Router.pageOf(router.strategy.getUriFromWindowLocation())
+                    var stillOn = Router.pageOf(router.current().uri)
+
+                    unwatchPage = router.current.subscribeToStream {
+                        when (Router.pageOf(it.uri)) {
+                            page -> stillOn = page
+                            stillOn -> Unit
+                            else -> props.onClose()
+                        }
+                    }
+                }
+            }
+
+            onUnmount {
+                unwatchPage?.invoke()
+                unwatchPage = null
+            }
+        }
+    }
+
+    override fun VDom.render() {
+        div(classes = KlangControlStyles.workbenchDrawer.toString()) {
+            // The focus lands here when the menu has no control of its own
+            attributes["tabindex"] = "-1"
+
+            props.content(this)
         }
     }
 }

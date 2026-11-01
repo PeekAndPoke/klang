@@ -553,39 +553,104 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("white-space", "nowrap")
     }
 
-    // ── Drawer ────────────────────────────────────────────────────────────────
+    // ── Drawer: the Motor's menu (KLANG-00403) ──────────────────────────────────
 
+    /** The title, the search field taking the room between, the close key and button at the end. */
     val drawerHeader by rule {
         put("display", "flex")
         put("align-items", "center")
-        put("justify-content", "space-between")
-        put("gap", "8px")
-        put("margin-bottom", "12px")
+        put("gap", "20px")
+        put("margin-bottom", "18px")
     }
 
     /** The header's right end: the close key's pill beside the close button. */
     val drawerHeaderEnd by rule {
         put("display", "inline-flex")
         put("align-items", "center")
+        put("margin-left", "auto")
     }
 
+    /** The search field in the header, as wide as the header leaves it. */
+    val drawerSearch by rule {
+        put("flex", "1")
+        put("min-width", "0")
+    }
+
+    /** The destinations: large tiles in four columns (the maintainer: "The button like 'Songs' can then also be bigger"). */
     val drawerGrid by rule {
         put("display", "grid")
-        put("grid-template-columns", "repeat(2, minmax(0, 1fr))")
-        put("gap", "8px")
-        put("margin-top", "12px")
+        put("grid-template-columns", "repeat(4, minmax(0, 1fr))")
+        put("gap", "14px")
+
+        rule("& > button") {
+            put("min-height", "96px")
+            put("justify-content", "center")
+            put("padding", "14px 16px 14px 30px")
+        }
     }
 
+    /** A destination's face: its icon beside its label and second line. */
+    val drawerTile by rule {
+        put("display", "flex")
+        put("align-items", "center")
+        put("gap", "16px")
+        put("width", "100%")
+
+        rule("& > i.icon") {
+            put("flex-shrink", "0")
+            put("margin", "0")
+            put("font-size", "28px")
+            put("width", "36px")
+            put("opacity", "0.9")
+        }
+    }
+
+    val drawerTileText by rule {
+        put("display", "flex")
+        put("flex-direction", "column")
+        put("gap", "4px")
+        put("min-width", "0")
+        put("text-align", "left")
+    }
+
+    val drawerLabel by rule {
+        put("font-size", "20px")
+        put("font-weight", "700")
+        put("line-height", "1.15")
+    }
+
+    val drawerTileSub by rule {
+        put("font-size", "13px")
+        put("font-weight", "400")
+        put("color", "var(--kl-ink-label)")
+    }
+
+    /** A second line in the label's colour, small: a song's RPM on its tile. */
     val drawerSub by rule {
         put("font-size", "11px")
         put("font-weight", "400")
         put("color", "var(--kl-ink-label)")
     }
 
-    val drawerFooter by rule {
-        put("margin-top", "14px")
-        put("padding-top", "12px")
-        put("border-top", "1px solid var(--kl-ground-deep)")
+    /** Under the destinations: what one comes back to, and the loadouts; one alone takes the width. */
+    val drawerBelow by rule {
+        put("display", "grid")
+        put("grid-template-columns", "minmax(0, 1fr)")
+        put("gap", "20px")
+        put("margin-top", "20px")
+    }
+
+    /** Both halves: the left one a little wider. */
+    val drawerBelowSplit by rule {
+        put("grid-template-columns", "minmax(0, 7fr) minmax(0, 5fr)")
+    }
+
+    /** One half under the destinations, sunk into the panel. */
+    val drawerSection by rule {
+        put("padding", "16px 18px")
+        put("border-radius", "4px")
+        put("background", "color-mix(in srgb, var(--kl-ground-deep) 45%, transparent)")
+        put("border", "1px solid var(--kl-edge)")
     }
 
     /** The look picker's row: the presets as equal tiles. */
@@ -1299,7 +1364,7 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         brushed()
     }
 
-    /** The column above the Motor: its scroller, and the drawer laid over it, its foot just above the Motor. */
+    /** The column above the Motor: its scroller. */
     val workbenchColumnArea by rule {
         put("position", "relative")
         put("display", "flex")
@@ -1319,15 +1384,35 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("border-top", "1px solid var(--kl-edge)")
     }
 
-    /** Over the column, just above the Motor; taller than the column, it scrolls, whatever the Motor's height. */
+    /** Everything right of the column: the centre, a pinned tool window, the strip; the Motor's menu is laid over it. */
+    val workbenchRight by rule {
+        put("position", "relative")
+        put("display", "flex")
+        put("flex", "1")
+        put("min-width", "0")
+    }
+
+    /**
+     * The Motor's menu (KLANG-00403): over everything right of the column, edge to edge and square (the maintainer,
+     * 2026-11-01: "cover 'everything' except the left side. No padding and not rounded corners"), above the tool windows
+     * and the bottom panel flying in. Its panel fills it; taller than the window, the panel scrolls.
+     */
     val workbenchDrawer by rule {
         put("position", "absolute")
-        put("left", "10px")
-        put("bottom", "8px")
-        put("width", "300px")
-        put("max-height", "calc(100% - 16px)")
-        put("overflow-y", "auto")
-        put("z-index", "20")
+        put("top", "0")
+        put("right", "0")
+        put("bottom", "0")
+        put("left", "0")
+        put("z-index", "30")
+        put("display", "flex")
+        put("flex-direction", "column")
+
+        rule("& > .$panel") {
+            put("flex", "1")
+            put("min-height", "0")
+            put("overflow-y", "auto")
+            put("border-radius", "0")
+        }
 
         // Holding the focus only when it has no control of its own: a frame, not a control, so no ring
         rule("&:focus") {

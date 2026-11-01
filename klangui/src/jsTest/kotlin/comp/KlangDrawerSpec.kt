@@ -9,6 +9,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.workshop.keys.KeyPlatform
 import io.peekandpoke.klang.workshop.keys.KeysManager
@@ -25,7 +26,7 @@ import org.w3c.dom.HTMLElement
 import org.w3c.dom.events.KeyboardEvent
 import org.w3c.dom.events.KeyboardEventInit
 
-/** The menu drawer (KLANG-00339): its destinations as tiles, the current one, those not there yet, close, slots. */
+/** The Motor's menu (KLANG-00339, KLANG-00403): its destinations as tiles, the current one, those not there yet, close, slots. */
 class KlangDrawerSpec : StringSpec({
 
     val entries = listOf(
@@ -93,7 +94,7 @@ class KlangDrawerSpec : StringSpec({
         }
     }
 
-    "the search and the footer go where they belong: the search above the tiles, the footer below" {
+    "the search sits in the header between the title and the close button, the halves under the tiles" {
         TestBed.preact(
             view = {
                 KlangDrawer(
@@ -101,23 +102,64 @@ class KlangDrawerSpec : StringSpec({
                     entries = entries,
                     current = null,
                     onPick = {},
+                    onClose = {},
                     search = { span { +"SEARCH" } },
-                    footer = { span { +"FOOTER" } },
+                    pickUp = { span { +"PICKUP" } },
+                    loadouts = { span { +"LOADOUTS" } },
                 )
             },
         ) { root ->
+            val header = root.selectCss(".${KlangControlStyles.drawerHeader}").single()
+
+            // The title, the search, then the close button: one row
+            header.textContent!!.startsWith("tSEARCH") shouldBe true
+            header.querySelector(".${KlangControlStyles.drawerSearch}")!!.textContent shouldBe "SEARCH"
+            header.querySelector("button[aria-label=Close]") shouldNotBe null
+
             val text = root.selectCss("[role=navigation]").textContent()
 
-            // The title "t", then the search, then the tiles
-            text.startsWith("tSEARCH") shouldBe true
-            (text.indexOf("FOOTER") > text.indexOf("AccountLater")) shouldBe true
-            root.selectCss(".${KlangControlStyles.drawerFooter}").textContent() shouldBe "FOOTER"
+            // Under the tiles, the halves in their order: what one comes back to, then the loadouts
+            (text.indexOf("PICKUP") > text.indexOf("AccountLater")) shouldBe true
+            (text.indexOf("LOADOUTS") > text.indexOf("PICKUP")) shouldBe true
+
+            val below = root.selectCss(".${KlangControlStyles.drawerBelow}").single()
+
+            below.classList.contains(KlangControlStyles.drawerBelowSplit.toString()) shouldBe true
+            below.querySelectorAll(".${KlangControlStyles.drawerSection}").length shouldBe 2
         }
     }
 
-    "without search and footer there is neither" {
+    "one half alone takes the whole width; with neither there is nothing under the tiles" {
+        TestBed.preact(
+            view = { KlangDrawer(title = "t", entries = entries, current = null, onPick = {}, loadouts = { span { +"LOADOUTS" } }) },
+        ) { root ->
+            val below = root.selectCss(".${KlangControlStyles.drawerBelow}").single()
+
+            below.classList.contains(KlangControlStyles.drawerBelowSplit.toString()) shouldBe false
+            below.textContent shouldBe "LOADOUTS"
+        }
+
         TestBed.preact(view = { KlangDrawer(title = "t", entries = entries, current = null, onPick = {}) }) { root ->
-            root.selectCss(".${KlangControlStyles.drawerFooter}").toList().shouldBeEmpty()
+            root.selectCss(".${KlangControlStyles.drawerBelow}").toList().shouldBeEmpty()
+            root.selectCss(".${KlangControlStyles.drawerSearch}").toList().shouldBeEmpty()
+        }
+    }
+
+    "a destination's icon stands beside its label, hidden from screen readers; one without an icon has none" {
+        val withIcon = listOf(
+            KlangDrawer.Entry(id = "songs", label = "Songs", icon = { music }),
+            KlangDrawer.Entry(id = "learn", label = "Learn"),
+        )
+
+        TestBed.preact(view = { KlangDrawer(title = "t", entries = withIcon, current = null, onPick = {}) }) { root ->
+            val tiles = tiles(root.single())
+            val icon = tiles[0].querySelector(".${KlangControlStyles.drawerTile} > i")!!
+
+            icon.classList.contains("music") shouldBe true
+            icon.getAttribute("aria-hidden") shouldBe "true"
+            // Beside the label, not in it: the tile's name stays the label and its line
+            tiles[0].querySelector(".${KlangControlStyles.drawerLabel}")!!.textContent shouldBe "Songs"
+            tiles[1].querySelector("i") shouldBe null
         }
     }
 

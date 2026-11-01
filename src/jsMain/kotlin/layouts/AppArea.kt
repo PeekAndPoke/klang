@@ -7,24 +7,26 @@ package io.peekandpoke.klang.layouts
 
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.kraft.routing.Route
+import io.peekandpoke.ultra.semanticui.SemanticIconFn
 
 /**
  * The areas of the app (KLANG-00341): the workbench's column shows the area's list under its [label], the Motor's
- * drawer offers each area as a destination ([sub] its second line) and marks the one a route belongs to.
+ * menu offers each area as a destination ([sub] its second line, [icon] the first page's icon in the column's list)
+ * and marks the one a route belongs to.
  */
-enum class AppArea(val label: String, val sub: String) {
-    Songs(label = "Songs", sub = "Yours and the built-ins"),
-    Learn(label = "Learn", sub = "Tutorials and tracks"),
-    Docs(label = "Docs", sub = "Lexikon, Sprudel, Stdlib"),
-    Samples(label = "Samples", sub = "The library"),
-    Midi(label = "MIDI", sub = "Playground, devices"),
-    Credits(label = "Credits", sub = "Who we build on"),
+enum class AppArea(val label: String, val sub: String, val icon: SemanticIconFn) {
+    Songs(label = "Songs", sub = "Yours and the built-ins", icon = { music }),
+    Learn(label = "Learn", sub = "Tutorials and tracks", icon = { graduation_cap }),
+    Docs(label = "Docs", sub = "Lexikon, Sprudel, Stdlib", icon = { book_open }),
+    Samples(label = "Samples", sub = "The library", icon = { wave_square }),
+    Midi(label = "MIDI", sub = "Playground, devices", icon = { keyboard }),
+    Credits(label = "Credits", sub = "Who we build on", icon = { bullhorn }),
 
     /** Where Klang stands, what this browser keeps, every part of the UI (the maintainer, 2026-10-28: "Dev Tools"). */
-    DevTools(label = "Dev Tools", sub = "Status, storage, the parts"),
+    DevTools(label = "Dev Tools", sub = "Status, storage, the parts", icon = { satellite_dish }),
 
     /** A route of no area (the dashboard): the column shows the list of the smaller areas. */
-    Other(label = "More", sub = "");
+    Other(label = "More", sub = "", icon = { ellipsis_horizontal });
 
     companion object {
         /** The area [route] belongs to; tutorials before docs, their paths share the manuals' base. */

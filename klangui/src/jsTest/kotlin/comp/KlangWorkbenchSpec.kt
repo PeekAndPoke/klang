@@ -13,13 +13,18 @@ import io.peekandpoke.klang.ui.GuiDance
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.workshop.keys.KeyPlatform
 import io.peekandpoke.klang.workshop.keys.KeysManager
+import io.peekandpoke.klang.workshop.keys.OnKey
 import io.peekandpoke.klang.workshop.keys.keys
 import io.peekandpoke.kraft.components.ComponentRef
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
 import io.peekandpoke.kraft.components.comp
+import io.peekandpoke.kraft.routing.RouterComponent
+import io.peekandpoke.kraft.routing.Static
 import io.peekandpoke.kraft.testing.KQuery
 import io.peekandpoke.kraft.testing.TestBed
+import io.peekandpoke.kraft.testing.TestBedScope
+import io.peekandpoke.kraft.testing.awaitUri
 import io.peekandpoke.kraft.testing.eventually
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
@@ -84,7 +89,7 @@ private class ChangingHost(ctx: NoProps) : PureComponent(ctx) {
     }
 
     override fun VDom.render() {
-        val drawer: (FlowContent.(close: () -> Unit) -> Unit)? = if (withDrawer) { _ -> button { +"DRAWER" } } else null
+        val drawer: (FlowContent.(menu: KlangWorkbench.MenuHandle) -> Unit)? = if (withDrawer) { _ -> button { +"DRAWER" } } else null
 
         KlangWorkbench(
             column = {},
@@ -147,6 +152,7 @@ class KlangWorkbenchSpec : StringSpec({
                             onClick { menu?.toggle?.invoke() }
                             +"MOTOR"
                         }
+                        button { attributes["data-test"] = "motor-target" }
                     },
                     content = {
                         span { +"CONTENT" }
@@ -163,20 +169,20 @@ class KlangWorkbenchSpec : StringSpec({
                         icon = { chart_bar },
                         tabs = listOf(KlangWorkbench.Tab(id = "analysis", title = "Analysis") { span { +"BOTTOM BODY" } }),
                     ),
-                    drawer = { close ->
+                    drawer = { menu ->
                         // A drawer's content brings its close key, as KlangDrawer with closeOnEsc does in the app
-                        KlangCloseKey(onClose = close)
+                        KlangCloseKey(onClose = menu.close)
                         button {
                             attributes["data-test"] = "drawer-close"
-                            onClick { close() }
+                            onClick { menu.close() }
                             +"DRAWER"
                         }
-                        // A pick that puts the focus elsewhere, as a destination whose page focuses its editor
+                        // A pick that puts the focus elsewhere; all but the Motor is inert while the menu is open, so there
                         button {
                             attributes["data-test"] = "drawer-pick"
                             onClick {
-                                (document.querySelector("[data-test=content-target]") as HTMLElement).focus()
-                                close()
+                                (document.querySelector("[data-test=motor-target]") as HTMLElement).focus()
+                                menu.close()
                             }
                         }
                     },
@@ -573,10 +579,10 @@ class KlangWorkbenchSpec : StringSpec({
         }
     }
 
-    "the Motor's menu opens the drawer above the Motor and puts the focus in it; Esc and its close close it, the focus goes back" {
+    "the Motor's menu opens over everything right of the column and takes the focus; Esc and its close close it, the focus goes back" {
         withWorkbench { root ->
             fun menu() = root.q("[data-test=motor-menu]")!!
-            fun drawer() = root.q(".${styles.workbenchColumnArea} > .${styles.workbenchDrawer}")
+            fun drawer() = root.q(".${styles.workbenchRight} > .${styles.workbenchDrawer}")
 
             drawer() shouldBe null
             menu().getAttribute("data-open") shouldBe "false"
@@ -943,7 +949,7 @@ class KlangWorkbenchSpec : StringSpec({
             nextFrame()
             nextFrame()
 
-            document.activeElement?.getAttribute("data-test") shouldBe "content-target"
+            document.activeElement?.getAttribute("data-test") shouldBe "motor-target"
         }
     }
 
@@ -967,7 +973,7 @@ class KlangWorkbenchSpec : StringSpec({
     }
 
     "the drawer's field takes the focus, else its first control (a link counts, a disabled button not), else the drawer" {
-        suspend fun focusedOnOpen(drawer: FlowContent.(close: () -> Unit) -> Unit): Element? {
+        suspend fun focusedOnOpen(drawer: FlowContent.(menu: KlangWorkbench.MenuHandle) -> Unit): Element? {
             var focused: Element? = null
 
             keyedBed(
@@ -1177,13 +1183,13 @@ class KlangWorkbenchSpec : StringSpec({
                         },
                         KlangWorkbench.Tool(id = "keys", title = "Keys", icon = { keyboard }) { span { +"KEYS" } },
                     ),
-                    drawer = { close ->
+                    drawer = { menu ->
                         KlangDrawer(
                             title = "Where to",
                             entries = listOf(KlangDrawer.Entry(id = "songs", label = "Songs")),
                             current = null,
                             onPick = {},
-                            onClose = close,
+                            onClose = menu.close,
                             closeOnEsc = true,
                         )
                     },
@@ -1198,53 +1204,27 @@ class KlangWorkbenchSpec : StringSpec({
         target.dispatchEvent(KeyboardEvent("keydown", KeyboardEventInit(key = "Escape", bubbles = true, cancelable = true)))
     }
 
-    "one Esc, one panel: from outside, the newest open panel closes first, then the one before it" {
+    "one Esc, one panel: the menu over a tool window flying in closes first, then the window" {
         withPanels { root ->
-            root.q("[data-test=motor-menu]")!!.click()
-
-            eventually { root.q(".${styles.workbenchDrawer}") shouldNotBe null }
-
             root.toggle("Keys").click()
 
             eventually { root.q(".${styles.workbenchFloating}") shouldNotBe null }
+
+            root.q("[data-test=motor-menu]")!!.click()
+
+            eventually { root.q(".${styles.workbenchDrawer}") shouldNotBe null }
 
             (document.activeElement as? HTMLElement)?.blur()
             escOn(document.body!!)
 
             eventually {
-                root.q(".${styles.workbenchFloating}") shouldBe null
-                root.q(".${styles.workbenchDrawer}") shouldNotBe null
+                root.q(".${styles.workbenchDrawer}") shouldBe null
+                root.q(".${styles.workbenchFloating}") shouldNotBe null
             }
 
             escOn(document.body!!)
 
-            eventually { root.q(".${styles.workbenchDrawer}") shouldBe null }
-        }
-    }
-
-    "Esc from inside the drawer still closes the newest panel first: a newer tool window, then the drawer" {
-        withPanels { root ->
-            root.q("[data-test=motor-menu]")!!.click()
-
-            eventually { root.q(".${styles.workbenchDrawer}") shouldNotBe null }
-
-            root.toggle("Keys").click()
-
-            eventually { root.q(".${styles.workbenchFloating}") shouldNotBe null }
-
-            val tile = root.q(".${styles.workbenchDrawer} .${styles.drawerGrid} button")!!
-
-            tile.focus()
-            escOn(tile)
-
-            eventually {
-                root.q(".${styles.workbenchFloating}") shouldBe null
-                root.q(".${styles.workbenchDrawer}") shouldNotBe null
-            }
-
-            escOn(document.activeElement ?: document.body!!)
-
-            eventually { root.q(".${styles.workbenchDrawer}") shouldBe null }
+            eventually { root.q(".${styles.workbenchFloating}") shouldBe null }
         }
     }
 
@@ -1260,30 +1240,6 @@ class KlangWorkbenchSpec : StringSpec({
             escOn(field)
 
             eventually { root.q(".${styles.workbenchFloating}") shouldBe null }
-        }
-    }
-
-    "switching to another tool window makes it the newest panel: Esc closes it before the drawer opened earlier" {
-        withPanels { root ->
-            root.toggle("Docs").click()
-
-            eventually { root.q(".${styles.workbenchFloating}") shouldNotBe null }
-
-            root.q("[data-test=motor-menu]")!!.click()
-
-            eventually { root.q(".${styles.workbenchDrawer}") shouldNotBe null }
-
-            root.toggle("Keys").click()
-
-            eventually { root.q(".${styles.workbenchFloating}")?.textContent?.contains("KEYS") shouldBe true }
-
-            (document.activeElement as? HTMLElement)?.blur()
-            escOn(document.body!!)
-
-            eventually {
-                root.q(".${styles.workbenchFloating}") shouldBe null
-                root.q(".${styles.workbenchDrawer}") shouldNotBe null
-            }
         }
     }
 
@@ -1303,6 +1259,239 @@ class KlangWorkbenchSpec : StringSpec({
             nextFrame()
 
             root.q(".${styles.workbenchFloating}") shouldNotBe null
+        }
+    }
+
+    // ── The Motor's menu as a modal of the workbench (KLANG-00403) ──────────────────────────────────────────────
+
+    "while the menu is open, the rest is inert: the content, a pinned tool window, the strip, the column's list; not the Motor" {
+        withWorkbench { root ->
+            root.toggle("Docs").click()
+            eventually { root.q(".${styles.workbenchFloating}") shouldNotBe null }
+            root.q(".${styles.workbenchFloating} button[aria-pressed]")!!.click()
+            eventually { root.q(".${styles.workbenchPinned}") shouldNotBe null }
+
+            fun inert(selector: String): Boolean = root.q(selector)!!.closest("[inert]") != null
+
+            root.q("[data-test=motor-menu]")!!.click()
+            eventually { root.q(".${styles.workbenchDrawer}") shouldNotBe null }
+
+            inert(".${styles.workbenchCentre}") shouldBe true
+            inert(".${styles.workbenchPinned}") shouldBe true
+            inert(".${styles.workbenchStrip}") shouldBe true
+            inert(".${styles.workbenchColumnArea}") shouldBe true
+            inert(".${styles.workbenchMotor}") shouldBe false
+            inert(".${styles.workbenchDrawer}") shouldBe false
+
+            root.q("[data-test=drawer-close]")!!.click()
+            eventually { root.q(".${styles.workbenchDrawer}") shouldBe null }
+
+            root.q("[inert]") shouldBe null
+        }
+    }
+
+    /**
+     * A keyed bench whose menu holds a search field, and whose Motor answers Play / Update: the Motor is not inert under
+     * the open menu, so only the menu's key layer can make its keys wait.
+     */
+    suspend fun withSearchMenu(played: () -> Unit, block: suspend (root: Element) -> Unit) {
+        keyedBed(
+            view = {
+                KlangWorkbench(
+                    column = {},
+                    motor = { menu ->
+                        button {
+                            attributes["data-test"] = "motor-menu"
+                            onClick { menu?.toggle?.invoke() }
+                        }
+                        button {
+                            attributes["data-test"] = "motor-key"
+                            OnKey(KlangKeyBindings.PlayOrUpdate) { played() }
+                        }
+                    },
+                    content = {},
+                    drawer = { menu ->
+                        KlangCloseKey(onClose = menu.close)
+                        button { attributes["data-test"] = "menu-first" }
+                        input { attributes["data-test"] = "menu-search" }
+                    },
+                )
+            },
+        ) { root ->
+            block(root.single())
+        }
+    }
+
+    fun keyOn(target: EventTarget, key: String, code: String, ctrl: Boolean = false, shift: Boolean = false, alt: Boolean = false) {
+        target.dispatchEvent(
+            KeyboardEvent(
+                "keydown",
+                KeyboardEventInit(
+                    key = key, code = code, ctrlKey = ctrl, shiftKey = shift, altKey = alt, bubbles = true, cancelable = true,
+                ),
+            )
+        )
+    }
+
+    "Ctrl+K, the search over everything, opens the menu with the focus in its field; open, Alt+M closes it" {
+        withSearchMenu(played = {}) { root ->
+            fun drawer() = root.q(".${styles.workbenchDrawer}")
+
+            keyOn(document.body!!, key = "k", code = "KeyK", ctrl = true)
+
+            eventually {
+                drawer() shouldNotBe null
+                document.activeElement?.getAttribute("data-test") shouldBe "menu-search"
+            }
+
+            // Open, the same key brings the focus back into the field
+            root.q("[data-test=menu-first]")!!.focus()
+            keyOn(document.activeElement!!, key = "k", code = "KeyK", ctrl = true)
+
+            eventually { document.activeElement?.getAttribute("data-test") shouldBe "menu-search" }
+
+            keyOn(document.activeElement!!, key = "m", code = "KeyM", alt = true)
+
+            eventually { drawer() shouldBe null }
+        }
+    }
+
+    "the keys outside the open menu wait under it, as under a modal; also the Motor's, which is not inert" {
+        var played = 0
+
+        withSearchMenu(played = { played++ }) { root ->
+            root.q("[data-test=motor-menu]")!!.click()
+            eventually { root.q(".${styles.workbenchDrawer}") shouldNotBe null }
+
+            keyOn(document.body!!, key = "Enter", code = "Enter", ctrl = true, shift = true)
+            nextFrame()
+
+            played shouldBe 0
+
+            escOn(document.activeElement ?: document.body!!)
+            eventually { root.q(".${styles.workbenchDrawer}") shouldBe null }
+
+            keyOn(document.body!!, key = "Enter", code = "Enter", ctrl = true, shift = true)
+
+            eventually { played shouldBe 1 }
+        }
+    }
+
+    /**
+     * The workbench around a router with two pages, as the app has it (path routing: a move to another page fires no
+     * popstate, so the back trap does not see it); its menu's pick leaves for "/b".
+     */
+    suspend fun withRoutedMenu(block: suspend TestBedScope.(root: Element) -> Unit) {
+        val originalHref = window.location.href
+        val manager = KeysManager(platform = KeyPlatform.Pc, hintDelayMs = 10).apply { define(KlangKeyBindings) }
+
+        try {
+            TestBed.preact(
+                appSetup = {
+                    keys(manager)
+                    routing {
+                        usePathStrategy()
+                        mount(Static("/a")) { span { +"PAGE A" } }
+                        mount(Static("/b")) { span { +"PAGE B" } }
+                    }
+                },
+                view = {
+                    KlangWorkbench(
+                        column = {},
+                        motor = { menu ->
+                            button {
+                                attributes["data-test"] = "motor-menu"
+                                onClick { menu?.toggle?.invoke() }
+                            }
+                        },
+                        content = { RouterComponent() },
+                        drawer = { menu ->
+                            KlangCloseKey(onClose = menu.close)
+                            button {
+                                attributes["data-test"] = "leave-b"
+                                onClick { menu.leaveTo("/b") }
+                            }
+                        },
+                    )
+                },
+            ) { root ->
+                block(root.single())
+            }
+        } finally {
+            manager.dispose()
+            window.history.replaceState(null, "", originalHref.substringBefore('#'))
+        }
+    }
+
+    "Back with the menu open closes it, and the page stays" {
+        withRoutedMenu { root ->
+            router.navToUri("/a")
+            router.awaitUri("/a")
+
+            root.q("[data-test=motor-menu]")!!.click()
+            eventually { root.q(".${styles.workbenchDrawer}") shouldNotBe null }
+
+            window.history.back()
+
+            eventually { root.q(".${styles.workbenchDrawer}") shouldBe null }
+            // A popstate the trap let through would follow it
+            delay(100)
+
+            router.current().uri shouldBe "/a"
+            root.textContent!!.contains("PAGE A") shouldBe true
+        }
+    }
+
+    "a pick leaves in the menu's place in the history: Back from there leads to the page the menu opened on" {
+        withRoutedMenu { root ->
+            router.navToUri("/a")
+            router.awaitUri("/a")
+            window.history.replaceState("page-a", "", window.location.href)
+
+            root.q("[data-test=motor-menu]")!!.click()
+            eventually { root.q(".${styles.workbenchDrawer}") shouldNotBe null }
+
+            root.q("[data-test=leave-b]")!!.click()
+
+            router.awaitUri("/b")
+            eventually { root.q(".${styles.workbenchDrawer}") shouldBe null }
+            // The trap's leaving runs on a queue of its own
+            delay(100)
+
+            window.history.back()
+
+            router.awaitUri("/a")
+            // The page's own entry, not one the menu left behind
+            (window.history.state == "page-a") shouldBe true
+        }
+    }
+
+    "a move to another page closes the menu; Esc gives its history entry back" {
+        withRoutedMenu { root ->
+            router.navToUri("/a")
+            router.awaitUri("/a")
+            window.history.replaceState("page-a", "", window.location.href)
+
+            root.q("[data-test=motor-menu]")!!.click()
+            eventually { root.q(".${styles.workbenchDrawer}") shouldNotBe null }
+
+            (window.history.state == "page-a") shouldBe false
+
+            escOn(document.activeElement ?: document.body!!)
+
+            eventually {
+                root.q(".${styles.workbenchDrawer}") shouldBe null
+                (window.history.state == "page-a") shouldBe true
+            }
+
+            root.q("[data-test=motor-menu]")!!.click()
+            eventually { root.q(".${styles.workbenchDrawer}") shouldNotBe null }
+
+            // A link inside it, say: the router goes elsewhere
+            router.navToUri("/b")
+
+            router.awaitUri("/b")
+            eventually { root.q(".${styles.workbenchDrawer}") shouldBe null }
         }
     }
 
