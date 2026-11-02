@@ -313,12 +313,12 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         modals.show<Boolean> { handle ->
             KlangYesNoModal(
                 handle = handle,
-                headline = "Back to the original?",
+                headline = "Revert to the original?",
                 content = {
                     +"Your changes to \"${original.title}\" are lost: the code, the title and the tempo go back to the "
                     +"original. A playing song keeps playing, with the original."
                 },
-                yesText = "Back to the original",
+                yesText = "Revert",
                 noText = "Keep my changes",
                 onResult = { yes ->
                     if (yes) {

@@ -47,7 +47,7 @@ fun Tag.PlayableCodeExample(
 
 /**
  * A code example to play (KLANG-00370, the canvas's "The example player"): the song page's transport, small, over the
- * code on a small screen: Play (Update while it plays), Stop, the cycle, the RPM on a knob, and "Back to the original"
+ * code on a small screen: Play (Update while it plays), Stop, the cycle, the RPM on a knob, and Revert
  * once the code was changed, and Copy. One example plays at a time. The highlights per sound event are the editor setting the
  * song page has (no EVT field of its own). Given [Props.help], Alt+Q and a hover show a name's help in the page's
  * bottom panel; without, the editor's own popup. [Props.onSignal] hears what the playback signals, for a picture that
@@ -193,8 +193,9 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                     button(type = ButtonType.button, classes = "kl-quiet-key") {
                         onClick { backToOriginal() }
 
+                        title = "Back to the original"
                         icon.undo()
-                        +"Back to the original"
+                        +"Revert"
                     }
                 }
 
@@ -204,7 +205,10 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                     title = "Copy the code"
                     onClick { copy(state.code) }
                     // As wide as "Copied": its word changing moves nothing beside it
-                    css { put("min-width", "12ch") }
+                    css {
+                        put("min-width", "12ch")
+                        put("text-align", "right")
+                    }
 
                     icon.copy_outline()
                     +if (copied) "Copied" else "Copy"

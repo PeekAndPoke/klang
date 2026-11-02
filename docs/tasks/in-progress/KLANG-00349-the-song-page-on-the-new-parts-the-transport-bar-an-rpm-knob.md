@@ -155,3 +155,6 @@ Requests made while the Quick help was looked at in the browser, each with what 
   MAJORs (the hover's timer, a kind kept across names), round 2 one (a kept height larger than the room), round 3 one
   (a right press starting a drag a menu kept), round 4 clean; their MINORs applied but two NITs accepted (the scope's
   pair per pixel, the screen fill spec as a light check). The new rows mutation-checked, every mutant killed.
+- 2026-11-02: the song column's keys moved up into the "This song" heading line, right-aligned, quiet keys with an icon;
+  "Back to the original" renamed "Revert" there, in its dialog and on the code examples (the maintainer); the minimap's
+  press starts no text selection; the transport bar on a grid of equal columns.

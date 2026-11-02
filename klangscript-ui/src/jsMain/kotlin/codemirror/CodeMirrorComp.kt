@@ -46,6 +46,7 @@ import kotlinx.html.id
 import org.w3c.dom.Element
 import org.w3c.dom.HTMLDivElement
 import org.w3c.dom.events.Event
+import org.w3c.dom.events.MouseEvent
 
 /** Backward-compatible alias. */
 @Suppress("unused")
@@ -289,18 +290,7 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
             return emptyList()
         }
 
-        val config = jsObject<MinimapConfig> {
-            create = { _ ->
-                // A plain object: inside a jsObject lambda `dom` would bind to this component's own `dom`
-                val holder: dynamic = js("{}")
-                holder.dom = document.createElement("div")
-                holder
-            }
-            displayText = "blocks"
-            showOverlay = "always"
-        }
-
-        return listOf(showMinimap.of(config))
+        return listOf(klangMinimap())
     }
 
     /**
@@ -579,4 +569,33 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
             }
         }
     }
+}
+
+/**
+ * The editor's minimap (`@replit/codemirror-minimap`): blocks, its overlay always shown. A press on it starts its drag,
+ * never a text selection across the page (the maintainer, 2026-11-02: "when the code is scrolled by dragging the minimap
+ * preview, then text selection on the page must be disabled"): the package's own listeners, on its overlay inside this
+ * element, still see the press and drive the scroll.
+ */
+internal fun klangMinimap(): Extension {
+    val config = jsObject<MinimapConfig> {
+        create = { _ ->
+            // A plain object: inside a jsObject lambda `dom` would bind to an outer `dom`
+            val holder: dynamic = js("{}")
+            val minimap = document.createElement("div")
+
+            minimap.addEventListener("mousedown", { event ->
+                if ((event as MouseEvent).button.toInt() == 0) {
+                    event.preventDefault()
+                }
+            })
+
+            holder.dom = minimap
+            holder
+        }
+        displayText = "blocks"
+        showOverlay = "always"
+    }
+
+    return showMinimap.of(config)
 }

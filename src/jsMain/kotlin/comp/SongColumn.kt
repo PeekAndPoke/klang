@@ -7,7 +7,6 @@ package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.Song
 import io.peekandpoke.klang.spine.KlangCodePlaybackCtrl
-import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.klang.ui.comp.KlangTextField
 import io.peekandpoke.kraft.components.Component
@@ -15,10 +14,16 @@ import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
+import io.peekandpoke.ultra.html.onClick
+import io.peekandpoke.ultra.semanticui.icon
 import kotlinx.browser.window
+import kotlinx.html.ButtonType
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
+import kotlinx.html.button
 import kotlinx.html.div
+import kotlinx.html.span
+import kotlinx.html.title
 
 @Suppress("FunctionName")
 fun Tag.SongColumn(
@@ -32,8 +37,8 @@ fun Tag.SongColumn(
 }
 
 /**
- * The open song in the workbench's column (KLANG-00349, the canvas's board A): its title to edit, copy the code, back
- * to the original for a built-in song that was changed, and what the song is made of: its file, its imports, its
+ * The open song in the workbench's column (KLANG-00349, the canvas's board A): its title to edit, copy the code, revert
+ * a built-in song that was changed to its original, and what the song is made of: its file, its imports, its
  * versions. The sounds in use come with the code analysis that can name them.
  */
 class SongColumn(ctx: Ctx<Props>) : Component<SongColumn.Props>(ctx) {
@@ -44,6 +49,9 @@ class SongColumn(ctx: Ctx<Props>) : Component<SongColumn.Props>(ctx) {
 
         /** The libraries [code] imports, in order, each once. */
         fun importsOf(code: String): List<String> = IMPORT.findAll(code).map { it.groupValues[1] }.distinct().toList()
+
+        /** A key's padding in a heading's line: close together (the maintainer, 2026-11-02: "Reduce the spacing"). */
+        private const val HEADING_KEY_PADDING = "6px 4px"
     }
 
     //  PROPS  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -65,10 +73,17 @@ class SongColumn(ctx: Ctx<Props>) : Component<SongColumn.Props>(ctx) {
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+    /** Copies the code; "Copied" only once it is. Outside a secure context (a dev URL over http) there is no clipboard. */
     private fun copyCode() {
-        window.asDynamic().navigator.clipboard.writeText(props.ctrl.state().code)
-        justCopied = true
-        window.setTimeout({ justCopied = false }, 2000)
+        val clipboard = window.navigator.asDynamic().clipboard ?: return
+
+        clipboard.writeText(props.ctrl.state().code).then(
+            {
+                justCopied = true
+                window.setTimeout({ justCopied = false }, 2000)
+            },
+            { e: dynamic -> console.warn("SongColumn: could not copy the code", e) },
+        )
     }
 
     override fun VDom.render() {
@@ -84,7 +99,30 @@ class SongColumn(ctx: Ctx<Props>) : Component<SongColumn.Props>(ctx) {
                 put("color", "var(--kl-ink-text)")
             }
 
-            section("This song")
+            // Its keys up in the heading's line, at the right, quiet as a code example's copy key (the maintainer,
+            // 2026-11-02: "move these buttons up, right aligned and in the 'copy code' style"); Copy last, where it
+            // stays whether Revert shows or not
+            section("This song") {
+                if (changed) {
+                    button(type = ButtonType.button, classes = "kl-quiet-key") {
+                        title = "Back to the original"
+                        onClick { props.onReset() }
+                        css { put("padding", HEADING_KEY_PADDING) }
+
+                        icon.undo()
+                        +"Revert"
+                    }
+                }
+
+                button(type = ButtonType.button, classes = "kl-quiet-key") {
+                    title = "Copy the code"
+                    onClick { copyCode() }
+                    css { put("padding", HEADING_KEY_PADDING) }
+
+                    icon.copy_outline()
+                    +if (justCopied) "Copied" else "Copy"
+                }
+            }
 
             KlangTextField(
                 label = "Song title",
@@ -92,22 +130,6 @@ class SongColumn(ctx: Ctx<Props>) : Component<SongColumn.Props>(ctx) {
                 onInput = { props.ctrl.setTitle(it) },
                 placeholder = "Song title",
             )
-
-            div {
-                css {
-                    put("display", "flex")
-                    put("flex-wrap", "wrap")
-                    put("gap", "8px")
-                }
-
-                KlangButton(onClick = { copyCode() }) {
-                    +if (justCopied) "Copied" else "Copy the code"
-                }
-
-                if (changed) {
-                    KlangButton(onClick = { props.onReset() }) { +"Back to the original" }
-                }
-            }
 
             section("Files")
             line("song.klang")
@@ -124,11 +146,26 @@ class SongColumn(ctx: Ctx<Props>) : Component<SongColumn.Props>(ctx) {
         }
     }
 
-    private fun FlowContent.section(title: String) {
-        div(classes = KlangControlStyles.heading.toString()) {
+    /** A section's heading; [keys], when given, at the right end of its line. */
+    private fun FlowContent.section(title: String, keys: (FlowContent.() -> Unit)? = null) {
+        div(classes = KlangControlStyles.lookHeading.toString()) {
             css { put("margin-top", "8px") }
 
-            +title
+            div(classes = KlangControlStyles.heading.toString()) { +title }
+
+            if (keys != null) {
+                span {
+                    css {
+                        put("display", "flex")
+                        put("align-items", "center")
+                        // The keys' own padding is their room: the line keeps the heading's height, the last key's word
+                        // ends at the column's edge
+                        put("margin", "-6px -4px -6px 0")
+                    }
+
+                    keys()
+                }
+            }
         }
     }
 
