@@ -49,7 +49,7 @@ object Playbacks {
     /**
      * The seconds the playback on stage has been heard, a value per second; null while nothing plays. Counted on the
      * backend's position, not the wall clock (KLANG-00399): after a stall it shows what played, not the time that
-     * passed. Ticks only while something shows it: one clock for every display of the time (the Motor's line, Klang Amp).
+     * passed. Ticks only while something shows it: one clock for every display of the time (the status bar, Klang Amp).
      */
     val heardSeconds: Stream<Int?> = ticker(HEARD_TICK_MS)
         .map { nowPlaying()?.playback?.heardSec()?.toInt() }
@@ -83,11 +83,11 @@ object Playbacks {
         }
     }
 
-    /** The song on the deck and the seconds it has been heard: what the Motor's line shows. */
+    /** The song on the deck and the seconds it has been heard: what the status bar shows. */
     data class SongLine(val playing: SongDeck.Playing, val seconds: Int?)
 
     /**
-     * The song on the deck and the seconds its own playback has been heard, for the Motor's line (KLANG-00406, step 4);
+     * The song on the deck and the seconds its own playback has been heard, for the status bar (KLANG-00406, step 4);
      * null while no song is on. The clock ticks only while the song plays and something shows it: in silence, and for a
      * song still starting or whose start failed, nothing ticks.
      */

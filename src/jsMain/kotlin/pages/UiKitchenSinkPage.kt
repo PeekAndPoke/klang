@@ -8,7 +8,7 @@ package io.peekandpoke.klang.pages
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.comp.LcdDisplay
 import io.peekandpoke.klang.comp.Oscilloscope
-import io.peekandpoke.klang.comp.nowPlayingLineView
+import io.peekandpoke.klang.comp.statusBarView
 import io.peekandpoke.klang.layouts.MenuPickUp
 import io.peekandpoke.klang.layouts.menuPickUpView
 import io.peekandpoke.klang.midi.ControlEvent
@@ -997,8 +997,8 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
             }
 
             cell(
-                name = "The song that plays, under the Motor: nothing, starting, playing, a long title",
-                source = "comp/NowPlayingLine.kt (KLANG-00406)",
+                name = "The status bar: no song (the engine's revision rolls), starting, playing, a long title",
+                source = "comp/StatusBar.kt (KLANG-00406)",
             ) {
                 for (line in listOf(
                     null,
@@ -1012,7 +1012,7 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
                     div {
                         css { put("width", "280px") }
 
-                        nowPlayingLineView(line = line, onOpen = {}, onStop = {})
+                        statusBarView(line = line, onOpen = {}, onStop = {}, idleText = "Klangmotor v0.8.8 revision: 757b87da")
                     }
                 }
             }

@@ -41,7 +41,7 @@ class SongDeck(private val engine: PlaybackEngine = Player) {
      */
     val onDeck: Stream<OnDeck?> = _onDeck.readonly
 
-    /** The song on the deck for a display (the Motor's line); a new title or the start shows at once. Null with none. */
+    /** The song on the deck for a display (the status bar); a new title or the start shows at once. Null with none. */
     val playing: Stream<Playing?> = onDeck
         .switchMapNotNull { on -> on.ctrl.state.map { Playing(songId = on.songId, title = it.title, isPlaying = it.isPlaying) } }
         .distinct()

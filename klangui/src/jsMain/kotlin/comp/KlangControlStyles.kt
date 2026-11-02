@@ -1418,11 +1418,31 @@ object KlangControlStyles : StyleSheet("kl-controls") {
 
     val workbench by rule {
         put("display", "flex")
+        put("flex-direction", "column")
         put("width", "100%")
         put("height", "100%")
         put("overflow", "hidden")
         put("color", "var(--kl-ink-text)")
         put("background", "var(--kl-ground-app)")
+    }
+
+    /**
+     * The column and everything right of it, side by side, over the status bar: all the height the bar leaves. Framed
+     * left, top and right in the status bar's black, so the two close around the page (the maintainer, 2026-11-02: "Give
+     * the entire page a black spacing like the status bar on each side, left, top, right", then "a bit bigger"), its top
+     * inner corners cut as a screen's are ("black triangular corner please"): the [screenCorner] triangles, in the
+     * frame's black.
+     */
+    val workbenchBody by rule {
+        put("--kl-screen-cut", "14px")
+        put("--kl-screen-bezel", "var(--kl-ground-sunken)")
+        put("position", "relative")
+        put("display", "flex")
+        put("flex", "1")
+        put("min-height", "0")
+        put("overflow", "hidden")
+        put("border", "10px solid var(--kl-ground-sunken)")
+        put("border-bottom", "none")
     }
 
     /** The column on the left: its content scrolls, the Motor under it never moves (KLANG-00334 item 25). */
@@ -1456,6 +1476,11 @@ object KlangControlStyles : StyleSheet("kl-controls") {
     val workbenchMotor by rule {
         put("flex-shrink", "0")
         put("border-top", "1px solid var(--kl-edge)")
+    }
+
+    /** The status bar's slot across the whole window's foot, under everything: as tall as what it holds, never squeezed. */
+    val workbenchStatusBar by rule {
+        put("flex-shrink", "0")
     }
 
     /** Everything right of the column: the centre, a pinned tool window, the strip; the Motor's menu is laid over it. */
@@ -1994,6 +2019,18 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("color", "var(--kl-metal-ink)")
     }
 
+    /**
+     * A line of text rolling through its display from the right edge out at the left, for ever (the now-playing line
+     * while no song plays, the maintainer, 2026-11-02). Its parent clips it (`overflow: hidden`); still, at the left,
+     * under "reduce motion".
+     */
+    val marquee by rule {
+        put("display", "inline-block")
+        put("padding-left", "100%")
+        put("white-space", "nowrap")
+        put("animation", "kl-marquee 18s linear infinite")
+    }
+
     // ── Motion ────────────────────────────────────────────────────────────────
 
     /**
@@ -2027,6 +2064,10 @@ object KlangControlStyles : StyleSheet("kl-controls") {
                 0%, 100% { opacity: 0.45; }
                 50% { opacity: 1; }
             }
+            @keyframes kl-marquee {
+                from { transform: translateX(0); }
+                to { transform: translateX(-100%); }
+            }
             @keyframes kl-lamp-pulse {
                 0%, 100% { filter: brightness(0.8); }
                 50% { filter: brightness(1.3); }
@@ -2041,6 +2082,7 @@ object KlangControlStyles : StyleSheet("kl-controls") {
                 .$quietKey.$beacon::after { animation: none; box-shadow: 0 0 0 2px var(--kl-lamp-try); }
                 .$knobTurn.$ignitionTurn { transition: none; }
                 .$spinner.$spinner > svg { animation: kl-spin-still 1.6s ease-in-out infinite; }
+                .$marquee.$marquee { animation: none; padding-left: 0; }
             }
         """.trimIndent()
     )

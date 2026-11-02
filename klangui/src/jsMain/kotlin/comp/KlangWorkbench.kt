@@ -48,6 +48,7 @@ fun Tag.KlangWorkbench(
     column: DIV.() -> Unit,
     motor: FlowContent.(menu: KlangWorkbench.Menu?) -> Unit,
     content: DIV.() -> Unit,
+    statusBar: (FlowContent.() -> Unit)? = null,
     tools: List<KlangWorkbench.Tool> = emptyList(),
     bottom: KlangWorkbench.Bottom? = null,
     drawer: (FlowContent.(menu: KlangWorkbench.MenuHandle) -> Unit)? = null,
@@ -62,6 +63,7 @@ fun Tag.KlangWorkbench(
         column = column,
         motor = motor,
         content = content,
+        statusBar = statusBar,
         tools = tools,
         bottom = bottom,
         drawer = drawer,
@@ -196,6 +198,11 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
         /** The Motor; it gets the [Menu] for its menu button, null when there is no drawer to open. */
         val motor: FlowContent.(menu: Menu?) -> Unit,
         val content: DIV.() -> Unit,
+        /**
+         * The status bar: across the whole window at its very bottom, edge to edge, everything else above it (the
+         * maintainer, 2026-11-02: "call it StatusBar", then "make the status bar full width"); null for none.
+         */
+        val statusBar: (FlowContent.() -> Unit)?,
         val tools: List<Tool>,
         val bottom: Bottom?,
         /** The menu the Motor's menu button opens; it gets the [MenuHandle] to close itself or to leave for a page. */
@@ -563,49 +570,81 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
         // Keys on the parts that come and go, so a part that appears never takes over its neighbour's element (and the
         // focus in it): the pinned window between the centre and the strip, the bottom panel before a floating window
         div(classes = styles.workbench.toString()) {
-            aside(classes = styles.workbenchColumn.toString()) {
-                key = "column"
+            // The column and everything right of it, over the status bar
+            div(classes = styles.workbenchBody.toString()) {
+                key = "body"
 
-                val drawer = props.drawer
+                renderBody(tool = tool, bottom = bottom)
 
-                div(classes = styles.workbenchColumnArea.toString()) {
-                    // Under the open menu the column's list waits too: a page picked there would land past the menu's
-                    // history entry, and Tab would leave the menu. The Motor below stays: its menu button closes it
-                    if (drawerOpen && drawer != null) {
-                        attributes["inert"] = INERT
+                // The frame's top corners, cut as a screen's: laid over them, never catching the mouse. None at the
+                // bottom, where the status bar meets the page (the maintainer, 2026-11-02: "remove both on the bottom")
+                val corners = listOf(styles.screenCornerTopLeft, styles.screenCornerTopRight)
+
+                for (corner in corners) {
+                    div(classes = "${styles.screenCorner} $corner") {
+                        attributes["aria-hidden"] = "true"
                     }
-
-                    div(classes = styles.workbenchColumnScroll.toString()) {
-                        props.column(this)
-                    }
-                }
-
-                div(classes = styles.workbenchMotor.toString()) {
-                    val menu = drawer?.let {
-                        Menu(open = drawerOpen) { if (drawerOpen) closeDrawer() else openDrawer() }
-                    }
-
-                    // Shift Shift or Ctrl+K, the search over everything: the menu opens with the focus in its search field
-                    // (the maintainer, 2026-11-01: "now we also know what 'shift + shift' does"); open, its own keys answer
-                    if (drawer != null) {
-                        OnKey(action = KlangKeyBindings.SearchEverywhere, showHint = false) { openDrawer() }
-                    }
-
-                    props.motor(this, menu)
                 }
             }
 
-            // Everything right of the column, the menu laid over it while it is open
-            div(classes = styles.workbenchRight.toString()) {
-                key = "right"
+            val statusBar = props.statusBar
 
-                renderRight(tool = tool, bottom = bottom)
+            if (statusBar != null) {
+                div(classes = styles.workbenchStatusBar.toString()) {
+                    key = "status-bar"
 
-                val drawer = props.drawer
-
-                if (drawerOpen && drawer != null) {
-                    KlangWorkbenchMenu(onClose = { closeDrawer() }, onSearch = { focusDrawer() }) { drawer(menuHandle) }
+                    statusBar()
                 }
+            }
+        }
+    }
+
+    /** The column, with the Motor at its foot, and everything right of it. */
+    private fun FlowContent.renderBody(tool: Tool?, bottom: Bottom?) {
+        val styles = KlangControlStyles
+
+        aside(classes = styles.workbenchColumn.toString()) {
+            key = "column"
+
+            val drawer = props.drawer
+
+            div(classes = styles.workbenchColumnArea.toString()) {
+                // Under the open menu the column's list waits too: a page picked there would land past the menu's
+                // history entry, and Tab would leave the menu. The Motor below stays: its menu button closes it
+                if (drawerOpen && drawer != null) {
+                    attributes["inert"] = INERT
+                }
+
+                div(classes = styles.workbenchColumnScroll.toString()) {
+                    props.column(this)
+                }
+            }
+
+            div(classes = styles.workbenchMotor.toString()) {
+                val menu = drawer?.let {
+                    Menu(open = drawerOpen) { if (drawerOpen) closeDrawer() else openDrawer() }
+                }
+
+                // Shift Shift or Ctrl+K, the search over everything: the menu opens with the focus in its search field
+                // (the maintainer, 2026-11-01: "now we also know what 'shift + shift' does"); open, its own keys answer
+                if (drawer != null) {
+                    OnKey(action = KlangKeyBindings.SearchEverywhere, showHint = false) { openDrawer() }
+                }
+
+                props.motor(this, menu)
+            }
+        }
+
+        // Everything right of the column, the menu laid over it while it is open
+        div(classes = styles.workbenchRight.toString()) {
+            key = "right"
+
+            renderRight(tool = tool, bottom = bottom)
+
+            val drawer = props.drawer
+
+            if (drawerOpen && drawer != null) {
+                KlangWorkbenchMenu(onClose = { closeDrawer() }, onSearch = { focusDrawer() }) { drawer(menuHandle) }
             }
         }
     }

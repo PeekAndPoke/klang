@@ -9,7 +9,7 @@ import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.comp.Motor
 import io.peekandpoke.klang.comp.Oscilloscope
 import io.peekandpoke.klang.comp.Spectrumeter
-import io.peekandpoke.klang.comp.nowPlayingLineView
+import io.peekandpoke.klang.comp.statusBarView
 import io.peekandpoke.klang.layouts.MenuPickUp
 import io.peekandpoke.klang.layouts.menuLessonTile
 import io.peekandpoke.klang.pages.docs.tutorials.soundDesignBasicsTrack
@@ -1307,18 +1307,19 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
                     +"128"
                 }
 
-                // The song that plays, under the Motor (KLANG-00406)
+                // The status bar with a song on (KLANG-00406)
                 div {
                     css {
                         put("width", "240px")
                         put("margin-top", "12px")
                     }
 
-                    nowPlayingLineView(
+                    statusBarView(
                         line = Playbacks.SongLine(
                             playing = SongDeck.Playing(songId = "a", title = "Gestrandet", isPlaying = true),
                             seconds = 83,
                         ),
+                        idleText = "Klangmotor",
                         onOpen = {},
                         onStop = {},
                     )
