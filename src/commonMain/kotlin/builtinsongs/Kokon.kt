@@ -48,7 +48,7 @@ let pickupSingle = Ign.fn(x => x
 
 // Humbucker at the bridge: a lower, broader resonance, fat and dark, hot output that pushes the amp harder.
 let pickupHumbucker = Ign.fn(x => x
-  .lowpass(3000, 1.6)                              // the peak, low and wide
+  .lowpass(3200, 1.6)                              // the peak, low and wide
   .mul(1.2))                                       // hot output
 
 // Humbucker at the neck: darker still, and the neck position cancels the 4th harmonic (the hollow, woody tell).
@@ -289,7 +289,7 @@ let bass = (() => {
 
   // Harmonics: sine partials at 2f .. 8f, gain 1/n, the fundamental left to the sub above. On the
   // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
-  let harmonics = Ign.sine(x => x.harmonics(6, 0.90).fundamental(0).analog(pAnalog).analogSpread(0.01)).mul(pHarm)
+  let harmonics = Ign.sine(x => x.harmonics(8, 0.95).fundamental(0).analog(pAnalog).analogSpread(0.01)).mul(pHarm)
 
   return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -3)) // let the snare cut through
@@ -313,7 +313,7 @@ export liftRoots = `<5 6 0>`
 export liftPower = `<[-2,2] [-1,3] [0,4]>`
 
 // The melody, in two phrases of one round each. The second fits the cocoon and the lift alike.
-export melodyOne = `<[4@4 3 0     2 [3 7]] [3@4 ~ 4 2 1]     [0@3 4 3@2 2 2]     [1@6 ~@2]>`
+export melodyOne = `<[4@4 3 0     2 [3 7]] [3@4 ~ 4 2 1]     [0@3 4 3@2 2@2]     [1@6 ~@2]>`
 export melodyTwo = `<[7@4 6 [0 1] 2 [4 6]] [8@4 ~ 4 2 [6 8]] [9@3 8 7@2 2 [2 3]] [4@6 ~@2]>`
 
 // Out of the cocoon flies the Schmetterling's own lead.
@@ -374,7 +374,7 @@ export chug = roots => n(roots.add(-7)).struct("[x x] x@2  [x x] x@2  [x x] x")
   .sound(heavy).adsrOff().unison(voices = 7, spread = 0.08)
   //.ignp("decay", "0.4 0.8!2 0.4 0.8!2 0.3 0.2").clip(1)
   .velocity("1.0 0.90 0.80 0.85  0.90 0.80 0.75 0.85".sub(perlin(0.0, 0.2).seed(2)))
-  .gain(0.63).late(perlin(0.0005, 0.0010).seed(2)).apply(
+  .gain(0.67).late(perlin(0.0005, 0.0010).seed(2)).apply(
     x => x.pan(0.20),
     x => x.pan(0.80),
   )
@@ -385,7 +385,7 @@ export wings = chords => n(chords).ply(16)
   .sound(heavy).adsrOff().unison(voices = 7, spread = 0.08)
   .ignp("decay", "[0.9 0.8]*8").clip(1)
   .velocity("1.0 0.90!2 0.96 0.88 0.92 0.94 0.92".sub(perlin(0.0, 0.2).seed(3)))
-  .gain(0.68).late(perlin(0.0010, 0.0015).seed(3)).apply(
+  .gain(0.70).late(perlin(0.0010, 0.0015).seed(3)).apply(
     x => x.pan(0.05),
     x => x.pan(0.95),
   )
@@ -420,14 +420,14 @@ let drumRoom = x => x.reverb(wet = 0.3, size = 5)
 
 export kick = pat => sound("bd").struct(pat)
   .sound(metalKick).adsrOff().note("a1").velocity("1.0 0.94 0.96 0.94")
-  .gain(1.00).pan(0.5)
+  .gain(0.98).pan(0.5)
   .orbit(11).apply(drumRoom)
 
 export snare = pat => sound(pat)
   .sound(metalSnare).adsrOff().freq(snareHz)
   .gain(0.45).pan(0.575)
   .lpf(freq = "12500".add(saw(0, 1200).slow(12)), q = 0.5)
-  .delay(0.33, pure(1/16).div(cps), 0.85, 24) // Snare needs it own orbit for the dalay!
+  .delay(0.33, pure(4/65).div(cps), 0.875, 24) // Snare needs it own orbit for the dalay!
   .orbit(12).apply(drumRoom).late(perlin(0.001, 0.0015))
 
 export hats = pat => sound(pat).n(0)
@@ -441,9 +441,7 @@ export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
   .sound(bass).velocity("0.98 0.94 0.96 0.94")
   .ignp("sub", 0.95).ignp("harmonics", 1.00)
   .adsr(0.003, 0.75, 0.5, 0.040).hpf(30)
-  .clip(0.90)
-  .gain(0.45).pan(0.3).superimpose(pan(0.7))
-  .orbit(15)
+  .clip(0.90).gain(0.80).orbit(15)
 
 // Parts  -----------------------------------------------------------------------------------------------------------
 // Lines played together. Every part starts on its own first cycle, so a round of the cocoon always starts on Dm.
@@ -591,8 +589,8 @@ export song = stack(
     .apply(drumRoom)
  
   , master(Katalyst(k => k
-    .reverb(0.20, 9.5, 6500)                         // the hall: one room for the whole band, about 2 s, warm
-    .gain(1.00)                                    // the house level, -14 LUFS
+    .reverb(0.20, 9.5, 6500)                       // the hall: one room for the whole band, about 2 s, warm
+    .gain(1.05)                                    // the house level, -14 LUFS
     .bands(b => b
       .band(low => low.distort(0.01, "soft", 4).mul(1.00)).cut(150)
       .band(mid => mid.distort(0.15, "soft", 4).mul(0.85)).cut(5000)

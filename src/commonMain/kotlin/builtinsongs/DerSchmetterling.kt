@@ -21,7 +21,7 @@ import * from "sprudel"
 
 // Song Status: Upcoming Garage Band ... 
 
-let feel          =   10    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
+let feel          =    5    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
 let transposition =   -3    // -1 .. D# | 0 .. E | 1 .. F
 let drunk         =  0.8    // How many liters of beers did each band member have?
 let snareHz       =  205    // Where does the snare cut through?
@@ -43,7 +43,7 @@ let pickupSingle = Ign.fn(x => x
 
 // Humbucker at the bridge: a lower, broader resonance, fat and dark, hot output that pushes the amp harder.
 let pickupHumbucker = Ign.fn(x => x
-  .lowpass(3000, 1.6)                              // the peak, low and wide
+  .lowpass(3200, 1.6)                              // the peak, low and wide
   .mul(1.2))                                       // hot output
 
 // Humbucker at the neck: darker still, and the neck position cancels the 4th harmonic (the hollow, woody tell).
@@ -92,10 +92,10 @@ let preampClean = Ign.fn(x => x
 // Crunch: two tube stages, coupled loosely so the bass goes along and the clipping stays round.
 let preampCrunch = Ign.fn(x => x
   .oversampleAtLeast(4, y => y
-    .distort(0.30, "tube").highpass(90)
-    .distort(0.30, "tube").highpass(90))
-  .lowpass(5000)
-  .mul(1.9))                                       // volume
+    .distort(0.25, "tube").highpass(90)
+    .distort(0.35, "asym").highpass(90))
+  .lowpass(5500)
+  .mul(0.65))                                       // volume
 
 // High gain: tighten the bass BEFORE it clips, three cascaded stages, the last one hard, then tame the fizz.
 let preampHighGain = Ign.fn(x => x
@@ -130,8 +130,8 @@ let cabStock = Ign.fn(x => x.lowpass(5000).lowpass(5000))
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = Ign.fn(x => x
   .eq(e => e
-    .band(freq =  120, q = 0.7, db =  2.00)        // thump: closed-back box resonance
-    .band(freq =  380, q = 0.5, db =  3.50)        // roar:  low mids
+    .band(freq =  120, q = 0.7, db =  1.80)        // thump: closed-back box resonance
+    .band(freq =  400, q = 0.5, db =  3.50)        // roar:  low mids
     .band(freq = 2700, q = 1.7, db =  2.50)        // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
@@ -189,7 +189,7 @@ let makeGuitar = (rig) => {
     .pitchEnvelope(0.2, x => x.adsr(0.030, 0.05, 0, 0))
     //.lowpass(freq = Ign.freq().times(4).add(Ign.constant(5000).adsr(pAttack, 1.0, 0.0, 0.050)), q = 0.7)
     // noise burst
-    .plus(Ign.whitenoise().adsr(pAttack, 0.5, 0.0, pRelease).highpass(Ign.perlin(1).mul(100).add(2500)).mul(0.03))
+    .plus(Ign.whitenoise().adsr(pAttack, 0.8, 0.0, pRelease).highpass(Ign.perlin(1).mul(100).add(2500)).mul(0.02))
     //.plus(Ign.crackle(1.3).highpass(1200).adsr(0.003, 0.001, 0.0, 0.05).mul(1.5))
     // the string - lowpass adsr for the string sound and adsr for the string
     .adsr(pAttack, pDecay, pSustain, pRelease, e => e.curves("exp", "exp", "linear"))
@@ -337,10 +337,10 @@ export guitar3_shape = x => x.pregain(guitarDyna(3).fast(2)).sound(guitar).adsrO
   .body(material = "mahogany", wet = 0.15)
 
 export guitar3_arrange = x => x.orbit(3) //  . solo()
-  .scale("<e2:minor>").gain(0.100).mute("<0!128 1!16 0!16>") //.mute()
+  .scale("<e2:minor>").gain(0.095).mute("<0!128 1!16 0!16>") //.mute()
   .late(berlin(0.0003, 0.0006).mul(drunk).seed(3))
 
-export guitar3 = n(guitar3_pat).struct("<[x!4]!4 [x!8]!3 [x!24]!1 [[x!2] x!3]!8 [[x!2] x!7]!7 [x!16]>").apply(guitar3_shape).tag("guitar3")
+export guitar3 = n(guitar3_pat).struct("<[x!4]!4 [x!8]!3 [x!24]!1 [[x!2] x!3]!8 [x!8]!7 [x!16]>").apply(guitar3_shape).tag("guitar3")
 
 // Bass  ------------------------------------------------------------------------------------------------------------------------------------------------------
 export bass_pat =
@@ -499,7 +499,7 @@ export snare = sound(snare_pat).apply(snare_shape).tag("snare") // .solo()
 
 export hats_pat = `<[hh hh hh hh]!16 [hh hh oh hh]!24 [cr hh cr hh]!24 [~ rd ~ rd]!32>`
 export hats_shape = x => x.gain(0.13).pan(0.425)
-  .hpf(800).lpf(freq = "13500".add(perlin.mul(50).fast(4)), q = 0.5).adsr(perlin(0.001, 0.003), 0.1, 0.70, 2.0)
+  .hpf(800).lpf(freq = "14000".add(perlin.mul(500).slow(4)), q = 0.5).adsr(perlin(0.001, 0.003), 0.1, 0.70, 2.0)
 export hats_arrange = x => x.orbit(8).mute("<0!128 1!32>").late(berlin(0.0015, 0.0030).mul(drunk).seg(4))
 export hats = sound(hats_pat).fast(2).apply(hats_shape).velocity("<1.0 0.90 0.95 0.88>*8".sub(berlin(0.0, 0.05).slow(4))).tag("hats")
 
@@ -552,13 +552,13 @@ export song = stack(
   , // Master
   master(Katalyst(k => k
     .reverb(0.10, 7, 6500)
-    .gain(6.0)
+    .gain(5.5)
     .bands(b => b
       .band(low => low.distort(0.01, "soft", 4).mul(1.00)).cut(150)
       .band(mid => mid.distort(0.15, "soft", 4).mul(0.85)).cut(5000)
-      .band(low => low.distort(0.01, "soft", 4).mul(1.10))
+      .band(low => low.distort(0.01, "soft", 4).mul(1.15))
     ) // the glue on the mids only: the kick and the hats stay clean
-    .mul(0.90)
+    .mul(0.95)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)
   ))
 )
