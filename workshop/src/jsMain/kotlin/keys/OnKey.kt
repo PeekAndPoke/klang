@@ -30,9 +30,8 @@ typealias KeyHintRenderer = FlowContent.(KeyHintState) -> Unit
  * it; [placement] and [hint] default to the app's (`KraftApp.Builder.keys`), [showHint] false shows none. In a button,
  * a link or an element with a button's role, the key also goes into the element's hover text (`title`), after the
  * element's own: "Menu (Alt+M)"; it follows a key the user changes, and the element's own title when the page changes
- * it, and goes with the OnKey (Klang's maintainer, 2026-11-02). Of two OnKeys in one element, the first whose key shows
- * and acts writes it. It renders an empty `span`, so it belongs
- * where a `span` may stand (a button, a `div`; not straight into a `tr` or `ul`). The machinery is an
+ * it, and goes with the OnKey. Of two OnKeys in one element, the first whose key shows and acts writes it. It renders an
+ * empty `span`, so it belongs where a `span` may stand (a button, a `div`; not straight into a `tr` or `ul`). The machinery is an
  * [OnKeyController]; a component that draws its key in its own way uses one directly.
  */
 @Suppress("FunctionName")
