@@ -209,7 +209,10 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
                         },
                         // What was opened last, from the Spine (KLANG-00403, step 2)
                         pickUp = {
-                            MenuPickUp(onOpen = { target -> menu.leaveTo(router.strategy.render(target)) })
+                            MenuPickUp(
+                                currentSongId = Nav.songIdOn(currentRoute),
+                                onOpen = { target -> menu.leaveTo(router.strategy.render(target)) },
+                            )
                         },
                         loadouts = {
                             KlangLookPicker(

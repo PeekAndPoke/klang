@@ -770,7 +770,14 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
                             )
                         },
                         pickUp = {
-                            menuPickUpView(songs = sampleSongs, learning = sampleLearning(done = 3), now = Date.now(), onOpen = {})
+                            // The first song's page open: its lamp lit
+                            menuPickUpView(
+                                songs = sampleSongs,
+                                learning = sampleLearning(done = 3),
+                                now = Date.now(),
+                                currentSongId = sampleSongs.first().id,
+                                onOpen = {},
+                            )
                         },
                         loadouts = { KlangLookPicker(onChosen = { LookStorage.save(it) }) },
                     )

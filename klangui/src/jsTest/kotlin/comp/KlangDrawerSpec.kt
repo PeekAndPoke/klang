@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.ui.comp
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
@@ -41,7 +42,7 @@ class KlangDrawerSpec : StringSpec({
         return (0 until list.length).mapNotNull { list.item(it) as? Element }
     }
 
-    "a navigation named by its title, a tile per destination, the current one marked, the others' lamps off" {
+    "a navigation named by its title, a tile per destination, the current one marked, the others' lamps off, a later one unlit" {
         TestBed.preact(view = { KlangDrawer(title = "Where to", entries = entries, current = "songs", onPick = {}) }) { root ->
             root.selectCss("[role=navigation]").attr("aria-label") shouldContainExactly listOf("Where to")
 
@@ -49,7 +50,7 @@ class KlangDrawerSpec : StringSpec({
 
             tiles.map { it.textContent } shouldContainExactly listOf("SongsYours", "Learn", "AccountLater")
             tiles.map { it.getAttribute("aria-current") } shouldContainExactly listOf("true", null, null)
-            tiles.map { it.querySelector("[data-lamp]")?.getAttribute("data-lamp") } shouldContainExactly listOf("On", "Off", null)
+            tiles.map { it.querySelector("[data-lamp]")?.getAttribute("data-lamp") } shouldContainExactly listOf("On", "Off", "Unlit")
             tiles.map { it.getAttribute("aria-disabled") } shouldContainExactly listOf(null, null, "true")
         }
     }
@@ -145,7 +146,7 @@ class KlangDrawerSpec : StringSpec({
         }
     }
 
-    "a destination's icon stands beside its label, hidden from screen readers; one without an icon has none" {
+    "a destination's icon stands at the tile's right end, after its label, hidden from screen readers; one without has none" {
         val withIcon = listOf(
             KlangDrawer.Entry(id = "songs", label = "Songs", icon = { music }),
             KlangDrawer.Entry(id = "learn", label = "Learn"),
@@ -157,6 +158,15 @@ class KlangDrawerSpec : StringSpec({
 
             icon.classList.contains("music") shouldBe true
             icon.getAttribute("aria-hidden") shouldBe "true"
+            withClue("the lamp before the label, left of the headline") {
+                val head = tiles[0].querySelector(".${KlangControlStyles.drawerTileHead}")!!
+
+                head.firstElementChild!!.hasAttribute("data-lamp") shouldBe true
+            }
+            withClue("after the text, at the right end") {
+                (icon.parentElement!!.lastElementChild === icon) shouldBe true
+                icon.previousElementSibling!!.classList.contains(KlangControlStyles.drawerTileText.toString()) shouldBe true
+            }
             // Beside the label, not in it: the tile's name stays the label and its line
             tiles[0].querySelector(".${KlangControlStyles.drawerLabel}")!!.textContent shouldBe "Songs"
             tiles[1].querySelector("i") shouldBe null

@@ -585,7 +585,8 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         rule("& > button") {
             put("min-height", "96px")
             put("justify-content", "center")
-            put("padding", "14px 16px 14px 30px")
+            // Even on both sides: the lamp sits in the text now, before the label, not in the corner
+            put("padding", "14px 16px")
         }
     }
 
@@ -596,9 +597,10 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("gap", "16px")
         put("width", "100%")
 
+        // At the right end, the text taking the room before it
         rule("& > i.icon") {
             put("flex-shrink", "0")
-            put("margin", "0")
+            put("margin", "0 0 0 auto")
             put("font-size", "28px")
             put("width", "36px")
             put("opacity", "0.9")
@@ -619,7 +621,16 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("line-height", "1.15")
     }
 
+    /** A tile's lamp and its label in a row ([KlangDrawer.LAMP_PX], [KlangDrawer.LAMP_GAP_PX]). */
+    val drawerTileHead by rule {
+        put("display", "flex")
+        put("align-items", "center")
+        put("gap", "${KlangDrawer.LAMP_GAP_PX}px")
+    }
+
+    /** A tile's second line, under the label's text, past its lamp. */
     val drawerTileSub by rule {
+        put("padding-left", "${KlangDrawer.LAMP_PX + KlangDrawer.LAMP_GAP_PX}px")
         put("font-size", "13px")
         put("font-weight", "400")
         put("color", "var(--kl-ink-label)")

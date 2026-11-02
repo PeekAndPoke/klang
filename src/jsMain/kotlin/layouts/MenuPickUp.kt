@@ -14,6 +14,7 @@ import io.peekandpoke.klang.spine.Recents
 import io.peekandpoke.klang.storage.TutorialStorage
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
+import io.peekandpoke.klang.ui.comp.KlangLamp
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
@@ -21,6 +22,7 @@ import io.peekandpoke.kraft.routing.Route
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import kotlinx.css.pct
+import kotlinx.css.px
 import kotlinx.css.width
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
@@ -29,7 +31,9 @@ import kotlinx.html.span
 import kotlin.js.Date
 
 @Suppress("FunctionName")
-fun Tag.MenuPickUp(onOpen: (Route.Bound) -> Unit) = comp(MenuPickUp.Props(onOpen = onOpen)) {
+fun Tag.MenuPickUp(currentSongId: String? = null, onOpen: (Route.Bound) -> Unit) = comp(
+    MenuPickUp.Props(currentSongId = currentSongId, onOpen = onOpen)
+) {
     MenuPickUp(it)
 }
 
@@ -40,7 +44,11 @@ fun Tag.MenuPickUp(onOpen: (Route.Bound) -> Unit) = comp(MenuPickUp.Props(onOpen
  */
 class MenuPickUp(ctx: Ctx<Props>) : Component<MenuPickUp.Props>(ctx) {
 
-    data class Props(val onOpen: (Route.Bound) -> Unit)
+    data class Props(
+        /** The song whose page one is on ([Nav.songIdOn]): its tile's lamp is lit. */
+        val currentSongId: String?,
+        val onOpen: (Route.Bound) -> Unit,
+    )
 
     /**
      * The track to go on with: its [title], the [next] lesson's title (null once all are done), [done] of [total], and
@@ -102,19 +110,27 @@ class MenuPickUp(ctx: Ctx<Props>) : Component<MenuPickUp.Props>(ctx) {
             },
             learning = continueOf(entries = entries, done = done),
             now = Date.now(),
+            currentSongId = props.currentSongId,
             onOpen = props.onOpen,
         )
     }
 }
 
+/** A song tile's lamp and the gap after it: the subtitle is indented by both, under the title's text. */
+private const val LAMP_PX = 7
+private const val LAMP_GAP_PX = 6
+
 /**
  * How [MenuPickUp] draws: the [songs] opened as tiles, the track to go on with ([learning]) as a wide tile with its
- * progress bar under the text; apart from the component, so the kitchen sink draws it in each state.
+ * progress bar under the text; apart from the component, so the kitchen sink draws it in each state. Each song's tile
+ * has a lamp, lit on the song whose page one is on ([currentSongId]; the maintainer, 2026-11-02: "a small led that is
+ * lit for the item the user is currently on").
  */
 fun FlowContent.menuPickUpView(
     songs: List<Recents.Entry>,
     learning: MenuPickUp.Continue?,
     now: Double,
+    currentSongId: String? = null,
     onOpen: (Route.Bound) -> Unit,
 ) {
     val styles = KlangControlStyles
@@ -136,12 +152,30 @@ fun FlowContent.menuPickUpView(
                     onClick = { onOpen(Nav.song(song.id)) },
                     shape = KlangButton.Shape.Tile,
                 ) {
-                    span(classes = styles.drawerRecentTitle.toString()) { +song.title }
+                    span {
+                        css {
+                            put("display", "flex")
+                            put("align-items", "center")
+                            put("gap", "${LAMP_GAP_PX}px")
+                            put("min-width", "0")
+                            put("max-width", "100%")
+                        }
+
+                        KlangLamp(state = if (song.id == currentSongId) KlangLamp.State.On else KlangLamp.State.Off, size = LAMP_PX.px)
+                        span(classes = styles.drawerRecentTitle.toString()) {
+                            css { put("min-width", "0") }
+                            +song.title
+                        }
+                    }
 
                     // As the songs page shows it: 40, 37.2
                     val tempo = song.rpm?.let { "$it RPM · " } ?: ""
 
-                    span(classes = styles.drawerSub.toString()) { +"$tempo${MenuPickUp.whenText(now = now, at = song.at)}" }
+                    // Under the title's text, past its lamp (the maintainer, 2026-11-02: "indent the 'subtitle'")
+                    span(classes = styles.drawerSub.toString()) {
+                        css { put("padding-left", "${LAMP_PX + LAMP_GAP_PX}px") }
+                        +"$tempo${MenuPickUp.whenText(now = now, at = song.at)}"
+                    }
                 }
             }
         }

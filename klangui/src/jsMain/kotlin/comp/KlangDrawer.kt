@@ -11,6 +11,7 @@ import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.semanticui.SemanticIconFn
 import io.peekandpoke.ultra.semanticui.icon
+import kotlinx.css.px
 import kotlinx.html.DIV
 import kotlinx.html.Tag
 import kotlinx.html.div
@@ -55,12 +56,19 @@ fun Tag.KlangDrawer(
  * look picker); one given alone takes the whole width.
  *
  * The current destination is drawn pressed with its lamp on and announced as `aria-current`; the others' lamps are
- * off; one that is not there yet ([Entry.later]) is a dashed tile without a lamp that cannot be picked. The drawer
+ * off; one that is not there yet ([Entry.later]) is a dashed tile with an unlit lamp that cannot be picked. A tile's
+ * lamp sits before its label, its second line under the label's text, its icon at the right end. The drawer
  * fills the size it is given: its size and where it opens are the shell's.
  */
 class KlangDrawer(ctx: Ctx<Props>) : Component<KlangDrawer.Props>(ctx) {
 
-    /** One destination: [id] is what [Props.onPick] gets, [sub] a short line under the [label], [icon] beside them. */
+    companion object {
+        /** A tile's lamp, before its label; the second line is indented by it and the gap after it. */
+        const val LAMP_PX = 8
+        const val LAMP_GAP_PX = 8
+    }
+
+    /** One destination: [id] is what [Props.onPick] gets, [sub] a short line under the [label], [icon] at the right. */
     data class Entry(
         val id: String,
         val label: String,
@@ -123,20 +131,28 @@ class KlangDrawer(ctx: Ctx<Props>) : Component<KlangDrawer.Props>(ctx) {
                         current = isCurrent,
                         availability = if (entry.later) KlangButton.Availability.Later else KlangButton.Availability.Enabled,
                         beacon = entry.id == props.beacon,
-                        lamp = when {
-                            entry.later -> null
-                            isCurrent -> KlangLamp.State.On
-                            else -> KlangLamp.State.Off
-                        },
                     ) {
+                        // The lamp before the label, the second line under the label's text, the icon at the right end
+                        // (the maintainer, 2026-11-02: "Put the led left of the headline. Put the icon on the right")
                         div(classes = styles.drawerTile.toString()) {
-                            entry.icon?.let { iconFn ->
-                                icon.iconFn().render { attributes["aria-hidden"] = "true" }
+                            div(classes = styles.drawerTileText.toString()) {
+                                span(classes = styles.drawerTileHead.toString()) {
+                                    KlangLamp(
+                                        state = when {
+                                            entry.later -> KlangLamp.State.Unlit
+                                            isCurrent -> KlangLamp.State.On
+                                            else -> KlangLamp.State.Off
+                                        },
+                                        size = LAMP_PX.px,
+                                    )
+                                    span(classes = styles.drawerLabel.toString()) { +entry.label }
+                                }
+
+                                entry.sub?.let { sub -> span(classes = styles.drawerTileSub.toString()) { +sub } }
                             }
 
-                            div(classes = styles.drawerTileText.toString()) {
-                                span(classes = styles.drawerLabel.toString()) { +entry.label }
-                                entry.sub?.let { sub -> span(classes = styles.drawerTileSub.toString()) { +sub } }
+                            entry.icon?.let { iconFn ->
+                                icon.iconFn().render { attributes["aria-hidden"] = "true" }
                             }
                         }
                     }

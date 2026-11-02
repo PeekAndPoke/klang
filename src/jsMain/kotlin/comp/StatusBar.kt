@@ -55,11 +55,7 @@ class StatusBar(ctx: NoProps) : PureComponent(ctx) {
             return false
         }
 
-        return when (currentRoute.route) {
-            Nav.editSongCode -> currentRoute.matchedRoute["id"] == songId
-            Nav.newSongCode -> songId == Nav.NEW_SONG_ID
-            else -> false
-        }
+        return Nav.songIdOn(currentRoute) == songId
     }
 
     override fun VDom.render() {

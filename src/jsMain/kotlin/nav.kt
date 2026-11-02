@@ -31,6 +31,7 @@ import io.peekandpoke.klang.pages.docs.lexikon.LexikonPage
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialPage
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialTrackPage
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialsListPage
+import io.peekandpoke.kraft.routing.ActiveRoute
 import io.peekandpoke.kraft.routing.RootRouterBuilder
 import io.peekandpoke.kraft.routing.Route
 import io.peekandpoke.kraft.routing.Route1
@@ -53,6 +54,16 @@ object Nav {
 
     /** The page of the song [id]: the new song's for [NEW_SONG_ID]. */
     fun song(id: String): Route.Bound = if (id == NEW_SONG_ID) newSongCode() else editSongCode(id)
+
+    /** The id of the song whose page [current] is ([song]'s inverse); null on any other page. */
+    fun songIdOn(current: ActiveRoute): String? = songIdOf(route = current.route, id = current.matchedRoute["id"])
+
+    /** The id of the song whose page [route] is, [id] its path's id; null for any other route. */
+    fun songIdOf(route: Route, id: String?): String? = when (route) {
+        editSongCode -> id
+        newSongCode -> NEW_SONG_ID
+        else -> null
+    }
 
     val samplesLibrary = Static("/samples/library")
 

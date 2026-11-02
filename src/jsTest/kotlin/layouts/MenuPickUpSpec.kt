@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.layouts
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
@@ -28,6 +29,12 @@ import org.w3c.dom.HTMLElement
 class MenuPickUpSpec : StringSpec({
 
     val minute = 60_000.0
+
+    "the song whose page is open: a song's page gives its id, the new song's page the new song, any other page none" {
+        Nav.songIdOf(route = Nav.editSongCode, id = "builtin-song-kokon") shouldBe "builtin-song-kokon"
+        Nav.songIdOf(route = Nav.newSongCode, id = null) shouldBe Nav.NEW_SONG_ID
+        Nav.songIdOf(route = Nav.songs, id = null) shouldBe null
+    }
 
     "when something was opened, said plainly" {
         val now = 1_000_000_000.0
@@ -83,7 +90,7 @@ class MenuPickUpSpec : StringSpec({
         MenuPickUp.continueOf(entries = listOf(gone, before), done = emptySet())!!.title shouldBe soundDesignBasicsTrack.title
     }
 
-    "the songs opened show with their tempo, the newest first; a pick leads to the song, the new song to its own page" {
+    "the songs opened show with their tempo, the newest first, the one whose page is open lit; a pick leads to the song" {
         val kept = localStorage.getItem(StorageKeys.RECENTS)
         val picked = mutableListOf<Route.Bound>()
 
@@ -93,7 +100,7 @@ class MenuPickUpSpec : StringSpec({
             // A built-in song gone from the app (renamed in an update): not offered
             Recents.openedSong(id = "builtin-song-gone", title = "Gone song", rpm = 25.0)
 
-            TestBed.preact(view = { MenuPickUp(onOpen = { picked.add(it) }) }) { root ->
+            TestBed.preact(view = { MenuPickUp(currentSongId = "builtin-song-kokon", onOpen = { picked.add(it) }) }) { root ->
                 val view = root[0]
 
                 // Other specs may have opened songs too (the record is the app's one): the two of this spec by their titles
@@ -113,6 +120,10 @@ class MenuPickUpSpec : StringSpec({
                 eventually { (tile("Kokon") != null && tile("My draft") != null) shouldBe true }
 
                 tile("Kokon")!!.textContent!! shouldContain "19 RPM"
+                withClue("the lamp of the song whose page is open lit, the others dark") {
+                    tile("Kokon")!!.querySelector("[data-lamp]")!!.getAttribute("data-lamp") shouldBe "On"
+                    tile("My draft")!!.querySelector("[data-lamp]")!!.getAttribute("data-lamp") shouldBe "Off"
+                }
                 tile("Gone song") shouldBe null
                 (indexOf("Kokon") < indexOf("My draft")) shouldBe true
 
