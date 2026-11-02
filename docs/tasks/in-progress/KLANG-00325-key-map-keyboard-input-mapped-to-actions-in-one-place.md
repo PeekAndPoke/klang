@@ -492,3 +492,8 @@ OkCancel real buttons and focus; their Esc stays ours until the key map carries 
   the Mac), fixed. Round 2 (level 2) clean; its MINORs applied: only Alt alone as a trigger counts (a `Ctrl-Alt`
   trigger leaves the lone Alt to the browser), and the release after Mod and Alt asserted. 10 mutants killed. Parked
   for the maintainer: Option types characters on non-US Mac layouts (@, brackets), so a slow Option+8 shows the hints.
+- 2026-11-02: the key in a button's hover text (the maintainer: "when i hover a button or similar that has a binding it
+  should show in the hover text ... title"): `OnKey` in a button, a link or an element with a button's role writes
+  its key after the element's own title; of two in one element the first whose key shows and acts. Two review rounds
+  (round 1 one MAJOR: two OnKeys made the title grow, fixed by a first-writer mark; round 2 clean, its MINORs
+  applied). 10 mutants killed.

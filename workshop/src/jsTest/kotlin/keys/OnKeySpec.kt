@@ -13,11 +13,16 @@ import io.peekandpoke.kraft.vdom.VDom
 import kotlinx.browser.document
 import kotlinx.coroutines.delay
 import kotlinx.html.Tag
+import kotlinx.html.button
 import kotlinx.html.div
 import kotlinx.html.span
+import kotlinx.html.title
 
 private val save = KeyAction(id = "save", title = "Save", keys = listOf("Mod-S"))
 private val open = KeyAction(id = "open", title = "Open", keys = listOf("Mod-O"))
+
+/** An onKey that is the same function at every render, so an OnKey's props stay equal. */
+private val stableOnKey: () -> Unit = {}
 
 /** The page under test: an OnKey whose presence, state and action the test changes. */
 private class OnKeyHost(ctx: NoProps) : PureComponent(ctx) {
@@ -31,6 +36,18 @@ private class OnKeyHost(ctx: NoProps) : PureComponent(ctx) {
     var showHint by value(true)
     var inert by value(false)
     var label by value("first")
+
+    /** Whether the OnKey sits in a button, and the button's own title; else in a plain `div`. */
+    var inButton by value(false)
+    var buttonTitle: String? by value("Save it")
+
+    /** A second OnKey in the button, for Open. */
+    var twoKeys by value(false)
+
+    /** A `div` with a button's role while [roleOn], its own title [divTitle], an OnKey whose props never change. */
+    var roleDiv by value(false)
+    var roleOn by value(true)
+    var divTitle by value("Open it")
     val pressed = mutableListOf<String>()
 
     init {
@@ -44,10 +61,40 @@ private class OnKeyHost(ctx: NoProps) : PureComponent(ctx) {
                 attributes["inert"] = "inert"
             }
 
-            if (shown) {
+            if (shown && !inButton) {
                 // A new lambda every render: the newest one must answer
                 val version = "${action.id}, enabled=$enabled, $label"
                 OnKey(action = action, enabled = enabled, showHint = showHint) { pressed.add(version) }
+            }
+
+            if (roleDiv) {
+                div {
+                    attributes["data-test"] = "role-div"
+
+                    if (roleOn) {
+                        attributes["role"] = "button"
+                    }
+
+                    title = divTitle
+                    // The same props at every render: a title the page changes must still get the key
+                    OnKey(action = open, onKey = stableOnKey)
+                }
+            }
+
+            if (inButton) {
+                button {
+                    buttonTitle?.let { title = it }
+
+                    if (shown) {
+                        OnKey(action = action, enabled = enabled, showHint = showHint) { pressed.add("button") }
+                    }
+
+                    if (twoKeys) {
+                        OnKey(action = open) { pressed.add("open") }
+                    }
+
+                    +"Save"
+                }
             }
         }
     }
@@ -178,6 +225,83 @@ class OnKeySpec : StringSpec({
             document.querySelector(".app-hint") shouldBe null
 
             document.body!!.dispatchEvent(keyEvent(key = "Control", code = "ControlLeft", type = "keyup"))
+        }
+    }
+
+    "in a button, the key goes into its hover text after its own; it follows a new key, the page's title, and goes with it" {
+        withApp { keys, host ->
+            fun title() = document.querySelector("button")?.getAttribute("title")
+
+            withClue("in a div: no hover text") { document.querySelector("div[title]") shouldBe null }
+
+            host.inButton = true
+
+            eventually { title() shouldBe "Save it (Ctrl+S)" }
+
+            keys.setUserKeys(actionId = "save", keys = listOf("F2"))
+            withClue("a key the user changes") { eventually { title() shouldBe "Save it (F2)" } }
+
+            host.buttonTitle = "Keep it"
+            withClue("the page's own title, changed") { eventually { title() shouldBe "Keep it (F2)" } }
+
+            host.showHint = false
+            withClue("no hint shown: its own title alone") { eventually { title() shouldBe "Keep it" } }
+
+            host.showHint = true
+            eventually { title() shouldBe "Keep it (F2)" }
+
+            host.shown = false
+            withClue("the OnKey gone: the button's own title back") { eventually { title() shouldBe "Keep it" } }
+
+            host.shown = true
+            host.buttonTitle = null
+            withClue("a button without a title of its own: the key alone") { eventually { title() shouldBe "F2" } }
+
+            host.enabled = false
+            // Preact leaves an empty title where the page's own went
+            withClue("a key that does not act: not in the hover text") { eventually { title().isNullOrEmpty() shouldBe true } }
+
+            host.enabled = true
+            host.buttonTitle = "Save it"
+            eventually { title() shouldBe "Save it (F2)" }
+
+            host.twoKeys = true
+            delay(30)
+            host.label = "redrawn"
+            delay(30)
+            withClue("two keys in one button: the first writes the hover text, once, however often they redraw") {
+                title() shouldBe "Save it (F2)"
+            }
+
+            host.enabled = false
+            withClue("the first's key not acting: the second's in the hover text") {
+                eventually { title() shouldBe "Save it (Ctrl+O)" }
+            }
+
+            host.enabled = true
+            delay(30)
+
+            host.twoKeys = false
+            host.buttonTitle = "Store it"
+            host.shown = false
+            withClue("the page's own title changed as the key goes: the page's stays") { eventually { title() shouldBe "Store it" } }
+        }
+    }
+
+    "an element with a button's role takes the key; a title the page changes gets it again; no role, no key" {
+        withApp { _, host ->
+            fun title() = document.querySelector("[data-test=role-div]")?.getAttribute("title")
+
+            host.roleDiv = true
+            eventually { title() shouldBe "Open it (Ctrl+O)" }
+
+            host.divTitle = "Open the file"
+            withClue("the page's title changed, the OnKey's props the same: the key again") {
+                eventually { title() shouldBe "Open the file (Ctrl+O)" }
+            }
+
+            host.roleOn = false
+            withClue("no longer a button: its own title back") { eventually { title() shouldBe "Open the file" } }
         }
     }
 })
