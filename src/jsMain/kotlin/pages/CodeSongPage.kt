@@ -88,6 +88,9 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     private companion object {
         /** Counts the pages drawn, for [pageKey]. */
         var pagesDrawn = 0
+
+        /** A column of the transport bar's grid: room for the widest word Play shows ("Loading" with its spinner). */
+        const val TRANSPORT_COLUMN_PX = 112
     }
 
     //  PROPS  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -421,7 +424,13 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         div {
             key = "transport-bar"
             css {
-                put("display", "flex")
+                // A grid of equal columns (the maintainer, 2026-11-02: "on a grid of equal width"): Play and Stop fill
+                // theirs, so Play does not change its size as its word changes ("Play" / "Update"); the RPM knob and
+                // its display take two
+                put("display", "grid")
+                put("grid-auto-flow", "column")
+                put("grid-auto-columns", "${TRANSPORT_COLUMN_PX}px")
+                put("justify-content", "start")
                 put("align-items", "center")
                 put("gap", "12px")
                 put("flex-shrink", "0")
@@ -446,18 +455,28 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                 +"Stop"
             }
 
-            LcdDisplay(value = state.currentCycle, digits = 4, dim = !state.isPlaying)
+            div {
+                css { put("justify-self", "center") }
+                LcdDisplay(value = state.currentCycle, digits = 4, dim = !state.isPlaying)
+            }
 
-            KlangValueKnob(
-                name = "Revolutions per minute",
-                value = state.rpm,
-                range = KlangCodePlaybackCtrl.RPM_RANGE,
-                step = 0.5,
-                onChange = { ctrl.setRpm(it) },
-                unit = "RPM",
-                decimals = 2,
-                perPixel = 0.05,
-            )
+            div {
+                css {
+                    put("grid-column", "span 2")
+                    put("justify-self", "start")
+                }
+
+                KlangValueKnob(
+                    name = "Revolutions per minute",
+                    value = state.rpm,
+                    range = KlangCodePlaybackCtrl.RPM_RANGE,
+                    step = 0.5,
+                    onChange = { ctrl.setRpm(it) },
+                    unit = "RPM",
+                    decimals = 2,
+                    perPixel = 0.05,
+                )
+            }
         }
     }
 
