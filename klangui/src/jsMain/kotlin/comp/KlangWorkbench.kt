@@ -576,9 +576,13 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
 
                 renderBody(tool = tool, bottom = bottom)
 
-                // The frame's top corners, cut as a screen's: laid over them, never catching the mouse. None at the
-                // bottom, where the status bar meets the page (the maintainer, 2026-11-02: "remove both on the bottom")
-                val corners = listOf(styles.screenCornerTopLeft, styles.screenCornerTopRight)
+                // The frame's inner corners, cut as a screen's: laid over them, never catching the mouse
+                val corners = listOf(
+                    styles.screenCornerTopLeft,
+                    styles.screenCornerTopRight,
+                    styles.screenCornerBottomLeft,
+                    styles.screenCornerBottomRight,
+                )
 
                 for (corner in corners) {
                     div(classes = "${styles.screenCorner} $corner") {

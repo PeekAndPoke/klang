@@ -1428,10 +1428,10 @@ object KlangControlStyles : StyleSheet("kl-controls") {
 
     /**
      * The column and everything right of it, side by side, over the status bar: all the height the bar leaves. Framed
-     * left, top and right in the status bar's black, so the two close around the page (the maintainer, 2026-11-02: "Give
-     * the entire page a black spacing like the status bar on each side, left, top, right", then "a bit bigger"), its top
-     * inner corners cut as a screen's are ("black triangular corner please"): the [screenCorner] triangles, in the
-     * frame's black.
+     * on every side in the status bar's black, the bar below the frame (the maintainer, 2026-11-02: "Give the entire
+     * page a black spacing like the status bar", "a bit bigger", then "put the status bar below the bottom tools. Keep
+     * the frame, but make it narrow on the bottom like the other sides"), its inner corners cut as a screen's are
+     * ("black triangular corner please"): the [screenCorner] triangles, in the frame's black.
      */
     val workbenchBody by rule {
         put("--kl-screen-cut", "14px")
@@ -1442,7 +1442,6 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("min-height", "0")
         put("overflow", "hidden")
         put("border", "10px solid var(--kl-ground-sunken)")
-        put("border-bottom", "none")
     }
 
     /** The column on the left: its content scrolls, the Motor under it never moves (KLANG-00334 item 25). */
