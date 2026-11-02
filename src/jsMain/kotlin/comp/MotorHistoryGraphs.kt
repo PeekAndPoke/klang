@@ -31,8 +31,8 @@ import kotlin.math.floor
 import kotlin.math.roundToInt
 
 @Suppress("FunctionName")
-fun Tag.MotorHistoryGraphs(paused: Stream<Boolean> = UiWork.resting) = comp(
-    MotorHistoryGraphs.Props(paused = paused)
+fun Tag.MotorHistoryGraphs(paused: Stream<Boolean> = UiWork.resting, ground: String = "var(--kl-ground-panel)") = comp(
+    MotorHistoryGraphs.Props(paused = paused, ground = ground)
 ) {
     MotorHistoryGraphs(it)
 }
@@ -51,6 +51,8 @@ class MotorHistoryGraphs(ctx: Ctx<Props>) : Component<MotorHistoryGraphs.Props>(
     data class Props(
         /** While true, the graphs are not drawn again: the history goes on being kept ([UiWork.resting], the default). */
         val paused: Stream<Boolean>,
+        /** The ground the graphs sit on, which their screens' cut corners show: a tool window's panel, or the column's. */
+        val ground: String,
     )
 
 
@@ -172,7 +174,7 @@ class MotorHistoryGraphs(ctx: Ctx<Props>) : Component<MotorHistoryGraphs.Props>(
                     put("flex-direction", "column")
                 }
 
-                KlangScreen(size = KlangScreen.Size.Small, bezel = "var(--kl-ground-panel)") {
+                KlangScreen(size = KlangScreen.Size.Small, bezel = props.ground) {
                     div {
                         css {
                             put("position", "relative")

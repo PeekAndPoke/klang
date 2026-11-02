@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.ui.comp
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
@@ -616,6 +617,66 @@ class KlangWorkbenchSpec : StringSpec({
             eventually {
                 drawer() shouldBe null
                 (document.activeElement == menu()) shouldBe true
+            }
+        }
+    }
+
+    "with a side of its own, the open menu fills the workbench: its side over the waiting list, live; the list kept" {
+        keyedBed(
+            view = {
+                KlangWorkbench(
+                    column = { span { +"PROJECT" } },
+                    motor = { menu ->
+                        button {
+                            attributes["data-test"] = "motor-menu"
+                            onClick { menu?.toggle?.invoke() }
+                            +"MOTOR"
+                        }
+                    },
+                    content = { span { +"CONTENT" } },
+                    drawer = { _ -> span { +"DRAWER" } },
+                    drawerSide = { _ -> span { +"SIDE" } },
+                )
+            },
+        ) { root ->
+            val bench = root.single()
+            fun list() = bench.querySelector(".${KlangControlStyles.workbenchColumnScroll}") as HTMLElement
+            fun side() = bench.querySelector(".${KlangControlStyles.workbenchColumnSide}") as HTMLElement?
+
+            // The page's own column content: the element that must live on under the menu
+            val columnBefore = list().firstElementChild
+
+            side() shouldBe null
+
+            (bench.querySelector("[data-test=motor-menu]") as HTMLElement).click()
+
+            eventually {
+                side()?.textContent shouldBe "SIDE"
+                withClue("the side is the menu's own, live") { side()!!.closest("[inert]") shouldBe null }
+                withClue("the list waits under it, inert") { list().closest("[inert]") shouldNotBe null }
+            }
+
+            withClue("the side lies over the list: the column's area whole, and what a press there meets") {
+                val area = bench.querySelector(".${KlangControlStyles.workbenchColumnArea}")!!.getBoundingClientRect()
+                val sideBox = side()!!.getBoundingClientRect()
+
+                sideBox.top shouldBe area.top
+                sideBox.height shouldBe area.height
+                side()!!.contains(document.elementFromPoint(area.left + area.width / 2, area.top + area.height / 2)) shouldBe true
+            }
+
+            withClue("nothing of the list shows through the side") {
+                window.getComputedStyle(list()).visibility shouldBe "hidden"
+            }
+
+            (bench.querySelector("[data-test=motor-menu]") as HTMLElement).click()
+
+            eventually { side() shouldBe null }
+
+            withClue("the list kept, not drawn anew: its scroll and the focus to come back to stay") {
+                (list().firstElementChild === columnBefore) shouldBe true
+                list().textContent shouldBe "PROJECT"
+                window.getComputedStyle(list()).visibility shouldBe "visible"
             }
         }
     }
@@ -1279,7 +1340,7 @@ class KlangWorkbenchSpec : StringSpec({
             inert(".${styles.workbenchCentre}") shouldBe true
             inert(".${styles.workbenchPinned}") shouldBe true
             inert(".${styles.workbenchStrip}") shouldBe true
-            inert(".${styles.workbenchColumnArea}") shouldBe true
+            inert(".${styles.workbenchColumnScroll}") shouldBe true
             inert(".${styles.workbenchMotor}") shouldBe false
             inert(".${styles.workbenchDrawer}") shouldBe false
 

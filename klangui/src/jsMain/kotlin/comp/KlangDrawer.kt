@@ -51,7 +51,7 @@ fun Tag.KlangDrawer(
 
 /**
  * The Motor's menu (KLANG-00339, made large in KLANG-00403): what the Motor button opens over everything right of the
- * column. A riveted panel; its header holds the printed title, the search field when one is given, and the close button
+ * column. A riveted panel named by its title; its header holds the search field when one is given, and the close button
  * (with the pill "Close: Esc" when Esc closes it). Then the destinations as large tiles in four columns, each with its
  * icon, its label and its second line ("The button like 'Songs' can then also be bigger", the maintainer, 2026-11-01).
  * Below them two halves: what one comes back to ([Props.pickUp]) and the loadouts ([Props.loadouts], the look picker);
@@ -108,11 +108,10 @@ class KlangDrawer(ctx: Ctx<Props>) : Component<KlangDrawer.Props>(ctx) {
 
         KlangPanel {
             attributes["role"] = "navigation"
+            // Named by its title, not printing it (the maintainer, 2026-11-02: "Please remove the 'where to'")
             attributes["aria-label"] = props.title
 
             div(classes = styles.drawerHeader.toString()) {
-                span(classes = styles.heading.toString()) { +props.title }
-
                 props.search?.let { search ->
                     div(classes = styles.drawerSearch.toString()) { search() }
                 }

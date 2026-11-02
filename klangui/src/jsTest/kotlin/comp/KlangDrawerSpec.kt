@@ -95,7 +95,7 @@ class KlangDrawerSpec : StringSpec({
         }
     }
 
-    "the search sits in the header between the title and the close button, the halves under the tiles" {
+    "the search leads the header, the close button after it, the title not printed; the halves under the tiles" {
         TestBed.preact(
             view = {
                 KlangDrawer(
@@ -112,8 +112,8 @@ class KlangDrawerSpec : StringSpec({
         ) { root ->
             val header = root.selectCss(".${KlangControlStyles.drawerHeader}").single()
 
-            // The title, the search, then the close button: one row
-            header.textContent!!.startsWith("tSEARCH") shouldBe true
+            // The search, then the close button: one row; the title names the menu without being printed
+            header.textContent!!.startsWith("SEARCH") shouldBe true
             header.querySelector(".${KlangControlStyles.drawerSearch}")!!.textContent shouldBe "SEARCH"
             header.querySelector("button[aria-label=Close]") shouldNotBe null
 

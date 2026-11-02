@@ -165,6 +165,18 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
                 onLayout = { WorkbenchLayoutStorage.save(it) },
                 // The walkthroughs' beacons on the bottom panel's key and its tabs
                 guiDance = KlangGuiDance.dance,
+                // The open menu fills the workbench: on its left, over the Motor, the Motor's last two minutes (the
+                // maintainer, 2026-11-02: "Put the performance graphs on the left side for now only")
+                drawerSide = { _ ->
+                    div {
+                        css { put("padding", "16px 14px") }
+
+                        // The screens' corners in the column's ground, which they sit on here
+                        motorSection(title = "The last two minutes", first = true) {
+                            MotorHistoryGraphs(paused = motorPaused, ground = "var(--kl-ground-deep)")
+                        }
+                    }
+                },
                 drawer = { menu ->
                     KlangDrawer(
                         title = "Where to",

@@ -51,6 +51,7 @@ fun Tag.KlangWorkbench(
     tools: List<KlangWorkbench.Tool> = emptyList(),
     bottom: KlangWorkbench.Bottom? = null,
     drawer: (FlowContent.(menu: KlangWorkbench.MenuHandle) -> Unit)? = null,
+    drawerSide: (DIV.(menu: KlangWorkbench.MenuHandle) -> Unit)? = null,
     keys: (FlowContent.() -> Unit)? = null,
     mark: String? = null,
     markLink: KlangWorkbench.Link? = null,
@@ -65,6 +66,7 @@ fun Tag.KlangWorkbench(
         tools = tools,
         bottom = bottom,
         drawer = drawer,
+        drawerSide = drawerSide,
         keys = keys,
         mark = mark,
         markLink = markLink,
@@ -84,7 +86,8 @@ fun Tag.KlangWorkbench(
  * - The Motor's menu (KLANG-00403): a modal of the workbench over everything right of the column (the content, the
  *   bottom panel, the tool windows, the strip), the same size whatever is pinned or open (the maintainer,
  *   2026-11-01: "it will always look the same and that is what you want from a navigation hub"). The page under it
- *   stays mounted (a song plays on) and is `inert` while it is open, and so is the column's list; the Motor stays.
+ *   stays mounted (a song plays on) and is `inert` while it is open, and so is the column's list; the Motor stays. With
+ *   a side of its own ([Props.drawerSide]) the menu lies over the waiting list too and fills the workbench.
  *   Opened (the menu button; Shift Shift or Ctrl+K, `KlangKeyBindings.SearchEverywhere`), it takes the focus; Esc,
  *   Back (it arms Kraft's back navigation trap) and any move to another page close it, and a focus lost with it goes
  *   back to where it came from (the menu button). A pick goes on with [MenuHandle.leaveTo], which takes the menu's
@@ -200,6 +203,14 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
         val bottom: Bottom?,
         /** The menu the Motor's menu button opens; it gets the [MenuHandle] to close itself or to leave for a page. */
         val drawer: (FlowContent.(menu: MenuHandle) -> Unit)?,
+        /**
+         * The menu's left side, laid over the column's waiting list above the Motor while the menu is open: the menu then
+         * fills the workbench, its Motor the column's own (the maintainer, 2026-11-02: "the Menu could be full size and
+         * have its own Motor component. Then the left side is 'up for grabs' ... Put the performance graphs on the left
+         * side"); null shows the waiting list. It is live for the pointer and the focus, outside the menu's key layer:
+         * a way to a page from it leaves through the [MenuHandle] it gets ([MenuHandle.leaveTo]), as a pick does.
+         */
+        val drawerSide: (DIV.(menu: MenuHandle) -> Unit)?,
         /** Keys at the strip's foot, above the mark, for what every page has (fullscreen); null for none. */
         val keys: (FlowContent.() -> Unit)?,
         /** The maker's mark at the strip's foot ("KLANGMOTOR"); null for none. */
@@ -595,15 +606,36 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
 
             val drawer = props.drawer
 
+            val drawerSide = props.drawerSide.takeIf { drawerOpen && drawer != null }
+
             div(classes = styles.workbenchColumnArea.toString()) {
-                // Under the open menu the column's list waits too: a page picked there would land past the menu's
-                // history entry, and Tab would leave the menu. The Motor below stays: its menu button closes it
-                if (drawerOpen && drawer != null) {
-                    attributes["inert"] = INERT
+                div(classes = styles.workbenchColumnScroll.toString()) {
+                    key = "column-list"
+
+                    // Under the open menu the column's list waits, kept as it is (its scroll, the focus to come back
+                    // to): a page picked there would land past the menu's history entry, and Tab would leave the menu.
+                    // The Motor below stays: its menu button closes it
+                    if (drawerOpen && drawer != null) {
+                        attributes["inert"] = INERT
+                    }
+
+                    // Under the menu's side not shown at all, its place and scroll kept: the side lies on the column's
+                    // own brushed ground, and nothing of the list shows through it
+                    if (drawerSide != null) {
+                        css { put("visibility", "hidden") }
+                    }
+
+                    props.column(this)
                 }
 
-                div(classes = styles.workbenchColumnScroll.toString()) {
-                    props.column(this)
+                // The open menu's own left side laid over the waiting list: the menu fills the workbench, the Motor
+                // below its Motor
+                if (drawerSide != null) {
+                    div(classes = styles.workbenchColumnSide.toString()) {
+                        key = "drawer-side"
+
+                        drawerSide(menuHandle)
+                    }
                 }
             }
 

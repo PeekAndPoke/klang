@@ -1475,6 +1475,17 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("min-height", "0")
     }
 
+    /**
+     * The open menu's left side, over the column's waiting list (hidden under it): on the column's own brushed ground,
+     * scrolling on its own.
+     */
+    val workbenchColumnSide by rule {
+        put("position", "absolute")
+        put("inset", "0")
+        put("z-index", "5")
+        put("overflow-y", "auto")
+    }
+
     val workbenchColumnScroll by rule {
         put("flex", "1")
         put("min-height", "0")
