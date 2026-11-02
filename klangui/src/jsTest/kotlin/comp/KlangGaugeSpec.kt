@@ -25,6 +25,7 @@ import kotlinx.browser.window
 import kotlinx.css.px
 import kotlinx.html.Tag
 import org.w3c.dom.Element
+import org.w3c.dom.HTMLElement
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -82,6 +83,19 @@ class KlangGaugeSpec : StringSpec({
             meter.attr("data-gauge") shouldContainExactly listOf("online")
             (styles.gaugeOnline.toString() in meter.classes().single()) shouldBe true
             root.selectCss(".${styles.gaugeValue}").textContent() shouldBe "38%"
+        }
+    }
+
+    "the light in the glass is a layer of its own inside the glass, which clips it, larger than it all round" {
+        TestBed.preact(view = { KlangGauge(name = "Motor heat", value = 0.5, display = { "50%" }) }) { root ->
+            val reflection = root.selectCss(".${styles.gaugeGlassReflection}").single() as HTMLElement
+            val glass = reflection.parentElement as HTMLElement
+
+            glass.classList.contains(styles.gaugeGlass.toString()) shouldBe true
+            window.getComputedStyle(glass).getPropertyValue("overflow") shouldBe "hidden"
+            // A lamp moving it by its most (22% of the glass) leaves the glass covered
+            (reflection.offsetWidth > glass.offsetWidth * 1.44) shouldBe true
+            (reflection.offsetHeight > glass.offsetHeight * 1.44) shouldBe true
         }
     }
 

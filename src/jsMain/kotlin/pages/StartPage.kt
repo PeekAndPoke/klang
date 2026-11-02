@@ -25,6 +25,7 @@ import io.peekandpoke.klang.spine.VisualState
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangCheckbox
+import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.klang.ui.comp.KlangFinish
 import io.peekandpoke.klang.ui.comp.KlangGauge
 import io.peekandpoke.klang.ui.comp.KlangIgnition
@@ -996,14 +997,38 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
     }
 
     /**
-     * The lamp mirrored in the dyno screen's glass: its highlight moved toward the lamp and lit with it, by its
-     * transform and opacity alone, as the visuals' domes are (`VisualsBoard.reflect`).
+     * The lamp mirrored in the dyno screen's glass and the dyno gauges': their highlights moved toward the lamp and lit
+     * with it, by transform and opacity alone, as the visuals' are (`VisualsBoard.reflect`).
      */
     private fun reflect(light: SwingingLamp.Light) {
-        val highlight = (dom as? HTMLElement)?.querySelector(".${VisualsParts.HIGHLIGHT}") as? HTMLElement ?: return
+        val page = dom as? HTMLElement ?: return
+        val opacity = VisualsParts.highlightOpacity(level = light.level).toString()
+        val highlight = page.querySelector(".${VisualsParts.HIGHLIGHT}") as? HTMLElement
 
-        highlight.style.transform = VisualsParts.highlightTransform(swayX = light.swayX, swayY = light.swayY)
-        highlight.style.opacity = VisualsParts.highlightOpacity(level = light.level).toString()
+        if (highlight != null) {
+            highlight.style.transform = VisualsParts.highlightTransform(swayX = light.swayX, swayY = light.swayY)
+            highlight.style.opacity = opacity
+        }
+
+        val gaugeTransform = VisualsParts.gaugeReflectionTransform(swayX = light.swayX, swayY = light.swayY)
+
+        for (reflection in gaugeReflectionsOf(page)) {
+            reflection.style.transform = gaugeTransform
+            reflection.style.opacity = opacity
+        }
+    }
+
+    /** The dyno gauges' glass reflections, kept between lights: looked up again only once one has left the page. */
+    private var gaugeReflections: List<HTMLElement> = emptyList()
+
+    private fun gaugeReflectionsOf(page: HTMLElement): List<HTMLElement> {
+        if (gaugeReflections.isEmpty() || gaugeReflections.any { !it.isConnected }) {
+            val found = page.querySelectorAll(".${KlangControlStyles.gaugeGlassReflection}")
+
+            gaugeReflections = (0 until found.length).mapNotNull { found.item(it) as? HTMLElement }
+        }
+
+        return gaugeReflections
     }
 
     /** The Motor's gauges at the dyno's size, glowing in the background lamp's colour as the Motor's do here. */

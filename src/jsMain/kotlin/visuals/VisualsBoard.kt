@@ -18,6 +18,7 @@ import io.peekandpoke.klang.spine.Playbacks
 import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.spine.SwingingLamp
 import io.peekandpoke.klang.spine.VisualState
+import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.klang.ui.comp.KlangGauge
 import io.peekandpoke.klang.ui.comp.KlangKnob
 import io.peekandpoke.klang.ui.comp.KlangMenuButton
@@ -182,15 +183,32 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
             highlight.style.transform = transform
             highlight.style.opacity = opacity
         }
+
+        // The gauges' glass too, by the same law (the maintainer, 2026-11-02: "the light reflection of the gauges must
+        // also follow the swinging lamp")
+        val gaugeTransform = VisualsParts.gaugeReflectionTransform(swayX = light.swayX, swayY = light.swayY)
+
+        for (reflection in gaugeReflections) {
+            reflection.style.transform = gaugeTransform
+            reflection.style.opacity = opacity
+        }
     }
 
     /** The domes' highlights, looked up when the board is drawn, not on every light. */
     private var highlights: List<HTMLElement> = emptyList()
 
-    private fun findHighlights() {
-        val found = dom?.querySelectorAll(".${VisualsParts.HIGHLIGHT}")
+    /** The gauges' glass reflections, looked up with the highlights. */
+    private var gaugeReflections: List<HTMLElement> = emptyList()
 
-        highlights = found?.let { list -> (0 until list.length).mapNotNull { list.item(it) as? HTMLElement } } ?: emptyList()
+    private fun findHighlights() {
+        highlights = elementsOf(".${VisualsParts.HIGHLIGHT}")
+        gaugeReflections = elementsOf(".${KlangControlStyles.gaugeGlassReflection}")
+    }
+
+    private fun elementsOf(selector: String): List<HTMLElement> {
+        val found = dom?.querySelectorAll(selector)
+
+        return found?.let { list -> (0 until list.length).mapNotNull { list.item(it) as? HTMLElement } } ?: emptyList()
     }
 
     /** What plays now, from here or from any page: the Motor's plate's play/stop shows it. */
@@ -420,11 +438,11 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
                     strokeColor = Color(look[KlangRole.ScopeTrace]),
                     swingPx = tile * SCOPE_SWING,
                     smoke = Oscilloscope.Smoke(
-                        opacity = 0.2,
+                        opacity = 0.15,
                         top = tile * SMOKE_UP,
                         sides = tile * SMOKE_SIDES,
                         bottom = tile * SMOKE_DOWN,
-                        keep = 0.98,
+                        keep = 0.95,
                         growYPx = 0.75,
                         growXPx = 0.75,
                         blurPx = 0.5,

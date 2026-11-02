@@ -63,6 +63,13 @@ class KlangGauge(ctx: Ctx<Props>) : Component<KlangGauge.Props>(ctx) {
         /** The glow's blur, as a share of the gauge's size (as today's `gaugeGlowBlur`). */
         const val GLOW_SHARE = 0.25
 
+        /**
+         * The glass's reflection layer ([KlangControlStyles.gaugeGlassReflection]), in per cent of the glass each way: a
+         * [REFLECTION_MARGIN] per cent margin all round, so a lamp moving it never uncovers the glass.
+         */
+        const val REFLECTION_MARGIN = 30.0
+        const val REFLECTION_SIZE = 100.0 + 2 * REFLECTION_MARGIN
+
         /** The scale's marks: one every tenth of the sweep, a long one at both ends and in the middle. */
         const val TICKS = 11
 
@@ -169,7 +176,9 @@ class KlangGauge(ctx: Ctx<Props>) : Component<KlangGauge.Props>(ctx) {
             }
 
             // Last, so it lies over the dial and the value
-            div(classes = styles.gaugeGlass.toString()) {}
+            div(classes = styles.gaugeGlass.toString()) {
+                div(classes = styles.gaugeGlassReflection.toString()) {}
+            }
         }
     }
 

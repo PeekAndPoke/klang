@@ -15,6 +15,7 @@ import io.kotest.matchers.string.shouldContain
 import io.peekandpoke.klang.comp.MotorBackground
 import io.peekandpoke.klang.spine.SwingingLamp
 import io.peekandpoke.klang.ui.KlangKeyBindings
+import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.klang.workshop.keys.KeyPlatform
 import io.peekandpoke.klang.workshop.keys.KeysManager
 import io.peekandpoke.klang.workshop.keys.keys
@@ -96,6 +97,47 @@ class VisualsBoardSpec : StringSpec({
                 }
             }
         }
+    }
+
+    "the gauges' glass mirrors the lamp as the domes do: its reflection moved toward it and lit by it" {
+        val lamp = SwingingLamp.Light(
+            x = 0.5 * SwingingLamp.SWAY,
+            y = -0.25 * SwingingLamp.SWAY,
+            z = SwingingLamp.DEFAULT_Z,
+            intensity = 3.0,
+            level = 3.0,
+            fill = 0.0,
+        )
+
+        board(light = StreamSource(lamp)) { view ->
+            eventually {
+                val reflections = view.querySelectorAll(".${KlangControlStyles.gaugeGlassReflection}")
+
+                withClue("the three gauges' glass") { reflections.length shouldBe 3 }
+
+                for (i in 0 until reflections.length) {
+                    val style = (reflections.item(i) as HTMLElement).style
+
+                    // The browser keeps six digits of each per cent
+                    val shown = Regex("""-?[0-9.]+""").findAll(style.transform).map { it.value.toDouble() }.toList()
+                    val wanted = Regex("""-?[0-9.]+""").findAll(VisualsParts.gaugeReflectionTransform(swayX = 0.5, swayY = -0.25))
+                        .map { it.value.toDouble() }.toList()
+
+                    withClue("gauge ${i + 1}: moved toward the lamp") {
+                        shown.size shouldBe 2
+                        shown[0] shouldBe (wanted[0] plusOrMinus 1e-3)
+                        shown[1] shouldBe (wanted[1] plusOrMinus 1e-3)
+                    }
+                    style.opacity shouldBe "1"
+                }
+            }
+        }
+    }
+
+    "a gauge's reflection follows the lamp: right is right, up is up, 22% of the glass at the most" {
+        VisualsParts.gaugeReflectionTransform(swayX = 0.0, swayY = 0.0) shouldBe "translate(0%, 0%)"
+        // The layer is 160% of the glass: 22% of the glass is 13.75% of the layer, inside its 30% margin
+        VisualsParts.gaugeReflectionTransform(swayX = 1.0, swayY = 1.0) shouldBe "translate(13.75%, -13.75%)"
     }
 
     "the highlight follows the lamp: right is right, up is up, its light from nought to twice the rest" {

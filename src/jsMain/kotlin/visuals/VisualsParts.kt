@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.visuals
 
+import io.peekandpoke.klang.ui.comp.KlangGauge
 import io.peekandpoke.ultra.html.css
 import kotlinx.html.FlowContent
 import kotlinx.html.div
@@ -39,6 +40,19 @@ object VisualsParts {
     fun highlightTransform(swayX: Double, swayY: Double): String {
         val x = swayX * FOLLOW * 100.0 / HIGHLIGHT_WIDTH
         val y = -swayY * FOLLOW * 100.0 / HIGHLIGHT_HEIGHT
+
+        return "translate($x%, $y%)"
+    }
+
+    /**
+     * A gauge's glass reflection's transform for the lamp at [swayX], [swayY] (`KlangControlStyles.gaugeGlassReflection`):
+     * toward the lamp by the same share of the glass as a dome's highlight goes ([FOLLOW]). A translate's per cent is of
+     * the layer's own size, [KlangGauge.REFLECTION_SIZE] per cent of the glass, so the glass's per cent is turned into
+     * the layer's. Its opacity is [highlightOpacity]'s: the layer is painted at twice its rest.
+     */
+    fun gaugeReflectionTransform(swayX: Double, swayY: Double): String {
+        val x = swayX * FOLLOW * 100.0 / KlangGauge.REFLECTION_SIZE
+        val y = -swayY * FOLLOW * 100.0 / KlangGauge.REFLECTION_SIZE
 
         return "translate($x%, $y%)"
     }

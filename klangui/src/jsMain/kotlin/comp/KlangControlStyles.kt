@@ -1717,19 +1717,53 @@ object KlangControlStyles : StyleSheet("kl-controls") {
     }
 
     /**
-     * Domed glass over the face, ever so slightly (the maintainer, 2026-10-26): light caught at the top of the dome,
-     * and the glass a touch darker where it curves down into the rim. Above the scale and the value, it takes no clicks.
+     * Domed glass over the face, ever so slightly (the maintainer, 2026-10-26): light caught at the top of the dome
+     * ([gaugeGlassReflection]), and the glass a touch darker where it curves down into the rim. Above the scale and the
+     * value, it takes no clicks; it clips its reflection.
      */
     val gaugeGlass by rule {
         put("position", "absolute")
         put("inset", GAUGE_RIM)
         put("border-radius", "50%")
+        put("overflow", "hidden")
         put("pointer-events", "none")
+
+        // The glass's curve over its reflection, as it lay over the reflection painted into the glass before: an inset
+        // shadow paints under the element's children, so it is drawn on a layer after them
+        rule("&::after") {
+            put("content", "''")
+            put("position", "absolute")
+            put("inset", "0")
+            put("border-radius", "inherit")
+            put("pointer-events", "none")
+            put("box-shadow", "inset 0 -2px 5px rgba(255,255,255,0.05), inset 0 0 6px rgba(0,0,0,0.35)")
+        }
+    }
+
+    /**
+     * The light caught in the glass, a layer of its own, so a lamp can move it by its transform and its opacity alone
+     * without painting the gauge again (the maintainer, 2026-11-02: "the light reflection of the gauges must also
+     * follow the swinging lamp"; the visuals' board and the start page move it as they move their domes' highlights).
+     * Painted at twice its old brightness and shown at half: at rest it is the reflection of old, and a brighter lamp
+     * can brighten it to twice that. Larger than the glass by [KlangGauge.REFLECTION_MARGIN] all round, so moved it
+     * never uncovers the glass; its gradient is the old one's (ellipse 72% by 46% of the glass, at 50% and 16%) in
+     * the layer's own per cent. Its own compositing layer: moved, it paints nothing again.
+     */
+    val gaugeGlassReflection by rule {
+        val size = KlangGauge.REFLECTION_SIZE
+        val margin = KlangGauge.REFLECTION_MARGIN
+
+        fun share(glassPct: Double): String = "${glassPct * 100.0 / size}%"
+
+        put("position", "absolute")
+        put("inset", "-$margin%")
+        put("opacity", "0.5")
+        put("will-change", "transform, opacity")
         put(
             "background",
-            "radial-gradient(ellipse 72% 46% at 50% 16%, rgba(255,255,255,0.13), rgba(255,255,255,0.03) 62%, transparent 76%)"
+            "radial-gradient(ellipse ${share(72.0)} ${share(46.0)} at 50% ${share(margin + 16.0)}, " +
+                    "rgba(255,255,255,0.26), rgba(255,255,255,0.06) 62%, transparent 76%)"
         )
-        put("box-shadow", "inset 0 -2px 5px rgba(255,255,255,0.05), inset 0 0 6px rgba(0,0,0,0.35)")
     }
 
     val gaugeScale by rule {
