@@ -46,11 +46,13 @@ object KlangLooks {
             KlangRole.AccentMuted to "#b0764c",
             // Selected in the blue opposite the copper (hue about 25, the azure about 204): warm and cold, a classic pair
             KlangRole.LampOn to "#4fa3d9",
-            // The spectrum: Patina rising to glowing copper, white-hot at the top
-            KlangRole.SpectrumQuiet to "#3f9a8c",
-            KlangRole.SpectrumLow to "#6fae8f",
-            KlangRole.SpectrumMid to "#c99a5e",
-            KlangRole.SpectrumHot to "#d9733f",
+            // The spectrum: the gauges' blue (their arcs, the default's) at the bottom only, then red copper from the
+            // second step, glowing up to white-hot at the top (the maintainer, 2026-11-02: "must go down to blue to match
+            // the highlights on the gauges", then "a bit too much blue, the red must start earlier")
+            KlangRole.SpectrumQuiet to "#56b6c2",
+            KlangRole.SpectrumLow to "#a8553a",
+            KlangRole.SpectrumMid to "#d9733f",
+            KlangRole.SpectrumHot to "#e8a06a",
             KlangRole.SpectrumPeak to "#ffcf9a",
             // The texture and the corners, each look its own (the maintainer, 2026-10-28):
             // Hammered copper: a coarser grain, little brushing
