@@ -678,6 +678,11 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("margin", "12px 0 6px")
         put("font-size", "12px")
         put("color", "var(--kl-ink-label)")
+
+        // The first caption of a half opens it: no room above it
+        rule("&:first-child") {
+            put("margin-top", "0")
+        }
     }
 
     /** What one comes back to: tiles in three columns, each a title over a small second line. */
@@ -704,6 +709,26 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("text-overflow", "ellipsis")
         put("font-size", "14px")
         put("font-weight", "700")
+    }
+
+    /** The row of the song that plays: its tile takes the width, its stop key beside it as tall as the tile. */
+    val drawerNowRow by rule {
+        put("display", "grid")
+        put("grid-template-columns", "minmax(0, 1fr) auto")
+        put("gap", "8px")
+
+        rule("& > button") {
+            put("min-height", "56px")
+            put("align-items", "flex-start")
+            put("justify-content", "center")
+            put("padding", "8px 12px")
+            put("text-align", "left")
+        }
+
+        rule("& > button:last-child") {
+            put("width", "56px")
+            put("align-items", "center")
+        }
     }
 
     /** The row holding the lesson tile, which takes its whole width. */

@@ -5,7 +5,8 @@
 > per-playback gain in the engine (agreed with Klang-Main-Dev), its fade linear (the maintainer's choice), and step 6's
 > first half: a code example fades the song out and in (`Previews`), and its second: the start page's waiting song a
 > preview fading in on its own gain (D2). The Stop key and the song line's stop stop the song, also while an example
-> plays over it (the maintainer). Left: the line at the top of the Motor menu's "Pick up where you left off".
+> plays over it (the maintainer). The song that plays at the top of the Motor menu's "Pick up where you left off".
+> Every step built; waits for the maintainer's hand test before it is closed.
 
 ## Why this exists
 
@@ -179,7 +180,8 @@ After KLANG-00389's `Player` steps 1 and 2 (the move into the Spine, typed owner
    on every page (the time, the title opening its page, a stop key), dim with nothing on; the Stop key binds there
    (on the song's page its own Stop answers first). The time is the deck's own playback's, from one clock in the Spine
    (`Playbacks.songLine`) that ticks only while the song plays; Klang Amp's two 250 ms timers went to
-   `Playbacks.heardSeconds`. Not yet: the line at the top of the Motor menu's "Pick up where you left off".
+   `Playbacks.heardSeconds`. The line at the top of the Motor menu's "Pick up where you left off": done 2026-11-02,
+   "Playing now", a tile with the title and the time (or "Starting ..."), opening its page, and a stop key beside it.
    2026-11-02, at the maintainer's word, after a full-width bar, one under the centre and a field in the column: the
    line became the `StatusBar`, LCD text on the Motor's screen floor (`Motoer`'s `display`): time, title, a stop key on
    the right; with no song the engine's version and revision roll through it. It fades out on the playing song's own
@@ -252,8 +254,8 @@ full-level first block at a start; a gain during a stop release documented; the 
 - Back on its page, the editor shows the song that plays, its highlights running, and Update changes it live.
 - From any page, the Motor shows what plays and stops it; the Stop key does too.
 - Two songs never play at once; the MIDI rig plays along with either.
-- A code example started while a song plays: the song fades out over 2 s and plays on silently; when the example
-  stops, it fades in over 2 s, in time.
+- A code example started while a song plays: the song fades out over 1 s and plays on silently; when the example
+  stops, it fades in over 2 s, in time (the fade out made 1 s by ear, 2026-11-02).
 
 ## History
 
@@ -297,3 +299,8 @@ full-level first block at a start; a gain during a stop release documented; the 
 - 2026-11-02: decided by the maintainer: "The stop button should stop the songs, not the example". While an example
   plays over the faded song, the Stop key (Ctrl/Cmd+Shift+.) and the song line's stop stop the song; the example plays
   on, and no song fades in after it. As built, nothing to change.
+- 2026-11-02: the last step: "Playing now" at the top of the Motor menu's "Pick up where you left off" (the menu
+  half's own heading removed at the maintainer's word). Review round 1 (level 1) clean, its MINORs applied as one
+  batch (a long title cut, the order and a dark lamp in the spec, a kitchen sink cell); declined: specs for the
+  component's two wiring lines (they need a song on the real deck; the lines read as they are), the focus after a stop
+  by key (the status bar's stop has the same shape; the menu stays open). 8 mutants killed.

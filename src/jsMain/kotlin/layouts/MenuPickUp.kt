@@ -7,10 +7,12 @@ package io.peekandpoke.klang.layouts
 
 import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.Nav
+import io.peekandpoke.klang.comp.clockOf
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialPage
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialProgress
 import io.peekandpoke.klang.pages.docs.tutorials.allTutorials
 import io.peekandpoke.klang.pages.docs.tutorials.tutorialTrack
+import io.peekandpoke.klang.spine.Playbacks
 import io.peekandpoke.klang.spine.Recents
 import io.peekandpoke.klang.storage.TutorialStorage
 import io.peekandpoke.klang.ui.comp.KlangButton
@@ -23,6 +25,7 @@ import io.peekandpoke.kraft.routing.ActiveRoute
 import io.peekandpoke.kraft.routing.Route
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
+import io.peekandpoke.ultra.semanticui.icon
 import kotlinx.css.pct
 import kotlinx.css.px
 import kotlinx.css.width
@@ -40,9 +43,10 @@ fun Tag.MenuPickUp(currentSongId: String? = null, currentTrackSlug: String? = nu
 }
 
 /**
- * "Pick up where you left off", the left half under the Motor menu's destinations (KLANG-00403, step 2): the songs
- * opened last, each with its tempo and when, and the track of the lesson opened last, with its next lesson and how far
- * along it is ([Recents], the Spine's record). A pick goes there through [Props.onOpen].
+ * "Pick up where you left off", the left half under the Motor menu's destinations (KLANG-00403, step 2): the song that
+ * plays on the deck at the top, with its time and a stop key (KLANG-00406), then the songs opened last, each with its
+ * tempo and when, and the track of the lesson opened last, with its next lesson and how far along it is ([Recents], the
+ * Spine's record). A pick goes there through [Props.onOpen].
  */
 class MenuPickUp(ctx: Ctx<Props>) : Component<MenuPickUp.Props>(ctx) {
 
@@ -125,6 +129,8 @@ class MenuPickUp(ctx: Ctx<Props>) : Component<MenuPickUp.Props>(ctx) {
 
     private val done by subscribingTo(TutorialStorage.done)
 
+    private val songLine by subscribingTo(Playbacks.songLine)
+
     override fun VDom.render() {
         menuPickUpView(
             // A song the app no longer has (a built-in renamed or gone in an update) is not offered
@@ -133,6 +139,8 @@ class MenuPickUp(ctx: Ctx<Props>) : Component<MenuPickUp.Props>(ctx) {
             },
             learning = continueOf(entries = entries, done = done),
             now = Date.now(),
+            songLine = songLine,
+            onStop = { Playbacks.song.stop() },
             currentSongId = props.currentSongId,
             currentTrackSlug = props.currentTrackSlug,
             onOpen = props.onOpen,
@@ -145,24 +153,33 @@ private const val LAMP_PX = 7
 private const val LAMP_GAP_PX = 6
 
 /**
- * How [MenuPickUp] draws: the [songs] opened as tiles, the track to go on with ([learning]) as a wide tile with its
- * progress bar under the text; apart from the component, so the kitchen sink draws it in each state. Each song's tile
- * has a lamp, lit on the song whose page one is on ([currentSongId]; the maintainer, 2026-11-02: "a small led that is
- * lit for the item the user is currently on").
+ * How [MenuPickUp] draws: the song on the deck ([songLine]) at the top as a wide tile with its stop key beside it, the
+ * [songs] opened as tiles, the track to go on with ([learning]) as a wide tile with its progress bar under the text;
+ * apart from the component, so the kitchen sink draws it in each state. Each tile has a lamp, lit on the item whose page
+ * one is on ([currentSongId]; the maintainer, 2026-11-02: "a small led that is lit for the item the user is currently
+ * on").
  */
 fun FlowContent.menuPickUpView(
     songs: List<Recents.Entry>,
     learning: MenuPickUp.Continue?,
     now: Double,
+    songLine: Playbacks.SongLine? = null,
     currentSongId: String? = null,
     currentTrackSlug: String? = null,
+    onStop: () -> Unit = {},
     onOpen: (Route.Bound) -> Unit,
 ) {
     val styles = KlangControlStyles
 
-    div(classes = styles.heading.toString()) { +"Pick up where you left off" }
+    // No heading of its own: its captions say what each group is (the maintainer, 2026-11-02: "Remove this headline
+    // please, it does not serve any purpose")
+    songLine?.let { menuNowPlaying(line = it, lit = it.playing.songId == currentSongId, onStop = onStop, onOpen = onOpen) }
 
     if (songs.isEmpty() && learning == null) {
+        if (songLine != null) {
+            return
+        }
+
         span(classes = styles.drawerCaption.toString()) { +"The songs and lessons you open wait here." }
 
         return
@@ -192,6 +209,32 @@ fun FlowContent.menuPickUpView(
         span(classes = styles.drawerCaption.toString()) { +"Continue learning" }
 
         menuLessonTile(learning = it, lit = it.trackSlug == currentTrackSlug, onOpen = onOpen)
+    }
+}
+
+/**
+ * The song on the deck as a wide tile, a pick opening its page, with its stop key beside it (KLANG-00406: "The Motor
+ * menu shows it at the top of 'Pick up where you left off'"): its title, and how long it has been heard, or that it
+ * still starts.
+ */
+private fun FlowContent.menuNowPlaying(line: Playbacks.SongLine, lit: Boolean, onStop: () -> Unit, onOpen: (Route.Bound) -> Unit) {
+    val styles = KlangControlStyles
+    val playing = line.playing
+    val title = playing.title?.ifBlank { null } ?: "Untitled"
+
+    span(classes = styles.drawerCaption.toString()) { +"Playing now" }
+
+    div(classes = styles.drawerNowRow.toString()) {
+        // Its title and line straight in the tile, as the last opened songs': a long title ends in an ellipsis
+        KlangButton(onClick = { onOpen(Nav.song(playing.songId)) }, shape = KlangButton.Shape.Tile) {
+            tileTitle(title = title, lit = lit)
+            // A song still starting shows as one, as the status bar shows it: the engine loads, or its code compiles
+            tileSub(text = if (playing.isPlaying) "Playing · ${line.seconds?.let { clockOf(it) } ?: "-:--"}" else "Starting ...")
+        }
+
+        KlangButton(onClick = onStop, shape = KlangButton.Shape.Tile, ariaLabel = "Stop the song") {
+            icon.stop { attributes["aria-hidden"] = "true" }
+        }
     }
 }
 

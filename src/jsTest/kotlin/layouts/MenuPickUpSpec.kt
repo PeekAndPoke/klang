@@ -16,16 +16,55 @@ import io.peekandpoke.klang.pages.docs.tutorials.patternLanguageTrack
 import io.peekandpoke.klang.pages.docs.tutorials.soundDesignBasicsTrack
 import io.peekandpoke.klang.pages.docs.tutorials.theFourWaveformsTutorial
 import io.peekandpoke.klang.pages.docs.tutorials.theKlangPathTrack
+import io.peekandpoke.klang.spine.Playbacks
 import io.peekandpoke.klang.spine.Recents
 import io.peekandpoke.klang.spine.Recents.Entry
 import io.peekandpoke.klang.spine.Recents.Kind
+import io.peekandpoke.klang.spine.SongDeck
 import io.peekandpoke.klang.storage.StorageKeys
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
+import io.peekandpoke.kraft.components.NoProps
+import io.peekandpoke.kraft.components.PureComponent
+import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.routing.Route
 import io.peekandpoke.kraft.testing.TestBed
 import io.peekandpoke.kraft.testing.eventually
+import io.peekandpoke.kraft.vdom.VDom
+import io.peekandpoke.ultra.streams.StreamSource
 import kotlinx.browser.localStorage
+import kotlinx.html.Tag
+import kotlinx.html.div
 import org.w3c.dom.HTMLElement
+
+@Suppress("FunctionName")
+private fun Tag.NowPlayingHost() = comp { NowPlayingHost(it) }
+
+/** The pick-up half drawn with a song line the spec sets, as [MenuPickUp] draws it with the Spine's. */
+private class NowPlayingHost(ctx: NoProps) : PureComponent(ctx) {
+    companion object {
+        var line = StreamSource<Playbacks.SongLine?>(null)
+        var onStop: () -> Unit = {}
+        var onOpen: (Route.Bound) -> Unit = {}
+        var currentSongId: String? = "builtin-song-kokon"
+        var songs: List<Entry> = emptyList()
+    }
+
+    private val songLine by subscribingTo(line)
+
+    override fun VDom.render() {
+        div {
+            menuPickUpView(
+                songs = songs,
+                learning = null,
+                now = 0.0,
+                songLine = songLine,
+                currentSongId = currentSongId,
+                onStop = onStop,
+                onOpen = onOpen,
+            )
+        }
+    }
+}
 
 /** "Pick up where you left off" in the Motor's menu (KLANG-00403, step 2): what it says and where a pick leads. */
 class MenuPickUpSpec : StringSpec({
@@ -184,6 +223,93 @@ class MenuPickUpSpec : StringSpec({
             } else {
                 localStorage.setItem(StorageKeys.RECENTS, kept)
             }
+        }
+    }
+
+    "the song on the deck at the top: its title and time, a pick opens its page, its stop key stops it; starting, it says so" {
+        val picked = mutableListOf<Route.Bound>()
+        var stops = 0
+        val line = StreamSource<Playbacks.SongLine?>(null)
+
+        NowPlayingHost.line = line
+        NowPlayingHost.onStop = { stops++ }
+        NowPlayingHost.onOpen = { picked.add(it) }
+
+        TestBed.preact(view = { NowPlayingHost() }) { root ->
+            val view = root[0]
+
+            fun buttons() = view.querySelectorAll("button").let { all -> (0 until all.length).map { all.item(it) as HTMLElement } }
+
+            withClue("no song on the deck: no row, and the half says what waits here") {
+                buttons().size shouldBe 0
+                view.textContent!! shouldContain "The songs and lessons you open wait here."
+            }
+
+            line(
+                Playbacks.SongLine(
+                    playing = SongDeck.Playing(songId = "builtin-song-kokon", title = "Kokon", isPlaying = false),
+                    seconds = null,
+                )
+            )
+
+            eventually { buttons().firstOrNull()?.textContent shouldBe "KokonStarting ..." }
+
+            line(
+                Playbacks.SongLine(
+                    playing = SongDeck.Playing(songId = "builtin-song-kokon", title = "Kokon", isPlaying = true),
+                    seconds = 83,
+                )
+            )
+
+            eventually { buttons().first().textContent shouldBe "KokonPlaying · 1:23" }
+
+            withClue("only the song's row: nothing opened yet says no more") {
+                view.textContent!!.contains("wait here") shouldBe false
+            }
+            withClue("on its page, its lamp lit") {
+                buttons().first().querySelector("[data-lamp]")!!.getAttribute("data-lamp") shouldBe "On"
+            }
+
+            buttons().first().click()
+            picked shouldContainExactly listOf(Nav.song("builtin-song-kokon"))
+
+            buttons()[1].getAttribute("aria-label") shouldBe "Stop the song"
+            buttons()[1].click()
+            stops shouldBe 1
+        }
+    }
+
+    "the song that plays comes first, before the songs opened; on another page its lamp is dark" {
+        NowPlayingHost.line = StreamSource(
+            Playbacks.SongLine(
+                playing = SongDeck.Playing(songId = "builtin-song-kokon", title = "Kokon", isPlaying = true),
+                seconds = 5,
+            )
+        )
+        NowPlayingHost.currentSongId = null
+        NowPlayingHost.songs = listOf(Entry(kind = Kind.Song, id = "new", title = "My draft", rpm = 30.0, at = 0.0))
+
+        try {
+            TestBed.preact(view = { NowPlayingHost() }) { root ->
+                val view = root[0]
+
+                eventually {
+                    val all = view.querySelectorAll("button")
+                    val texts = (0 until all.length).map { (all.item(it) as HTMLElement).textContent ?: "" }
+
+                    withClue("the playing row first, its stop key, then the songs opened") {
+                        texts.size shouldBe 3
+                        texts[0] shouldBe "KokonPlaying · 0:05"
+                        texts[2].startsWith("My draft") shouldBe true
+                    }
+                    withClue("not on its page: its lamp dark") {
+                        (all.item(0) as HTMLElement).querySelector("[data-lamp]")!!.getAttribute("data-lamp") shouldBe "Off"
+                    }
+                }
+            }
+        } finally {
+            NowPlayingHost.currentSongId = "builtin-song-kokon"
+            NowPlayingHost.songs = emptyList()
         }
     }
 })

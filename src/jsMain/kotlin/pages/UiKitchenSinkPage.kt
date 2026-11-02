@@ -105,6 +105,12 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
         Recents.Entry(kind = Recents.Kind.Song, id = title, title = title, rpm = rpm, at = Date.now() - minutesAgo * 60_000)
     }
 
+    /** A song on the deck for the menu's "Playing now": the first sample song, heard [seconds], or still starting. */
+    private fun sampleSongLine(seconds: Int?) = Playbacks.SongLine(
+        playing = SongDeck.Playing(songId = sampleSongs.first().id, title = sampleSongs.first().title, isPlaying = seconds != null),
+        seconds = seconds,
+    )
+
     /** The Sound Design Basics track with its first [done] lessons done. */
     private fun sampleLearning(done: Int) = MenuPickUp.Continue(
         trackSlug = soundDesignBasicsTrack.slug,
@@ -776,6 +782,7 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
                                 songs = sampleSongs,
                                 learning = sampleLearning(done = 3),
                                 now = Date.now(),
+                                songLine = sampleSongLine(seconds = 83),
                                 currentSongId = sampleSongs.first().id,
                                 onOpen = {},
                             )
@@ -786,15 +793,17 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
             }
 
             cell(
-                name = "Pick up where you left off: nothing yet, a track begun, part done, all done",
+                name = "Pick up where you left off: nothing yet, a song playing alone, a track begun, part done (a song " +
+                    "starting), all done (a song playing)",
                 source = "layouts/MenuPickUp.kt, klangui/comp/KlangControlStyles.kt (drawerLesson, drawerProgress)",
             ) {
                 row {
-                    for ((songs, learning) in listOf(
-                        emptyList<Recents.Entry>() to null,
-                        sampleSongs.take(2) to sampleLearning(done = 0),
-                        sampleSongs to sampleLearning(done = 3),
-                        sampleSongs.take(1) to sampleLearning(done = 8),
+                    for ((songs, learning, line) in listOf(
+                        Triple(emptyList<Recents.Entry>(), null, null),
+                        Triple(emptyList(), null, sampleSongLine(seconds = 83)),
+                        Triple(sampleSongs.take(2), sampleLearning(done = 0), null),
+                        Triple(sampleSongs, sampleLearning(done = 3), sampleSongLine(seconds = null)),
+                        Triple(sampleSongs.take(1), sampleLearning(done = 8), sampleSongLine(seconds = 754)),
                     )) {
                         div(classes = KlangControlStyles.drawerSection.toString()) {
                             css { put("width", "520px") }
@@ -804,6 +813,7 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
                                 songs = songs,
                                 learning = learning,
                                 now = Date.now(),
+                                songLine = line,
                                 currentTrackSlug = soundDesignBasicsTrack.slug.takeIf { learning?.done == 3 },
                                 onOpen = {},
                             )

@@ -1,7 +1,9 @@
 # KLANG-00403: The Motor menu covers the content area: bigger destinations, what was last opened, the loadouts
 
-> **Status (2026-11-01): IN PROGRESS.** Step 1 done (the menu over everything right of the column, its keys, its back
-> navigation, the large layout with the looks); next, step 2 (what was last opened).
+> **Status (2026-11-02): IN PROGRESS.** Steps 1 and 2 done (the menu over everything right of the column, its keys,
+> its back navigation, the large layout with the looks; what was last opened, now with the song that plays at its top,
+> KLANG-00406); the menu fills the workbench with its own left side (the performance graphs). Left: step 3's MIDI
+> part (waits for KLANG-00402), step 4 (waits for KLANG-00405's index).
 
 ## Why this exists
 
@@ -158,3 +160,5 @@ columns, and the look row (seven looks and an empty slot).
   maintainer's word). The modal rules: Back closes it (Kraft's back navigation trap), any change of the URI too. D2 decided
   (the look picker as drawn); D1 decided: songs and tutorials, docs to bookmarks (KLANG-00404).
 - 2026-11-01: IN PROGRESS.
+- 2026-11-02: step 2 has the song that plays at its top (KLANG-00406), the half's heading removed (the maintainer: "it does not
+  serve any purpose"); the menu fills the workbench with its own left side, the performance graphs (c72880d46).
