@@ -72,11 +72,12 @@ let preampCrunch = Ign.fn(x => x
   .mul(1.9))
 
 let preampHighGain = Ign.fn(x => x
-  .highpass(110)                                    // tight: no bass into the gain stages
-  .distort(0.35, "tube", 4).highpass(100)
-  .distort(0.45, "softsat", 4).highpass(90)
-  .distort(0.65, "soft", 4)
-  .lowpass(5000)                                   // the fizz
+  .highpass(90)                                    // tight: no bass into the gain stages
+  .oversampleAtLeast(8, y => y                       // the three stages at 8x: one trip up, one down
+    .distort(0.25, "tube").highpass(90)
+    .distort(0.45, "softsat").highpass(90)
+    .distort(0.70, "soft").highpass(90))
+  .lowpass(4000)                                   // the fizz
   .mul(0.30))                                      // volume
 
 let powerPushPull = Ign.fn(x => x
@@ -292,9 +293,9 @@ export sing = notes => n(notes.add(7))
 export soar = notes => n(notes.add(14))
   .sound(bright).adsrOff().unison(voices = 9, spread = 0.06)
   .ignp("decay", 1.5).clip(2.0)
-  .hpf(220)                                        // two octaves up, nothing of the melody lives below
+  .hpf(280)                                        // two octaves up, nothing of the melody lives below
   .lpf(4250)                                       // less fizz, the wall keeps its own
-  .gain(0.43).pan(0.5)
+  .gain(0.42).pan(0.5)
   .orbit(6)
 
 // Swell: volume-knob swells, the thing inside stretching. Doubled on the left, a little late.
@@ -536,7 +537,7 @@ export song = stack(
  
   , master(Katalyst(k => k
     .reverb(0.20, 7, 7500)                         // the hall: one room for the whole band, about 2 s, warm
-    .gain(1.02)                                    // the house level, -14 LUFS
+    .gain(1.00)                                    // the house level, -14 LUFS
     .bands(b => b
       .band(low => low.distort(0.01, "soft", 4).mul(1.00)).cut(150)
       .band(mid => mid.distort(0.15, "soft", 4).mul(0.90)).cut(5000)

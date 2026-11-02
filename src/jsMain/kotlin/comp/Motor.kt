@@ -76,7 +76,7 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
 
         /** How far the scope's smoke may go past it: up over the gauges, a little to the sides and down. */
         private val SMOKE = Oscilloscope.Smoke(
-            opacity = 0.2,
+            opacity = 0.15,
             keep = 0.95,
             top = 80.0,
             sides = 12.0,
