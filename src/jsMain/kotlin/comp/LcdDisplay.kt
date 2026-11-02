@@ -37,9 +37,9 @@ import kotlinx.html.span
 fun Tag.LcdDisplay(
     value: Int,
     digits: Int = 4,
-    // 20px keeps the 0.9em digit cells at exactly 18px — integer pixel grid,
-    // so the rolling strip never sits on half-pixels (which renders blurry).
-    size: LinearDimension = 20.px,
+    // The value knob's LCD's digits (the maintainer, 2026-11-02: "Use the same style on the Counter as in the inputs");
+    // with 1em cells the rolling strip stays on whole pixels, never blurry
+    size: LinearDimension = 18.px,
     dim: Boolean = false,
 ) = comp(
     LcdDisplay.Props(
@@ -147,9 +147,10 @@ class LcdDisplay(ctx: Ctx<Props>) : Component<LcdDisplay.Props>(ctx) {
                 put("border-radius", "var(--kl-radius)")
                 put("box-shadow", "inset 0 2px 4px rgba(0,0,0,0.6), 0 1px 0 rgba(255,255,255,0.06)")
                 height = compHeight
-                put("padding", "0 6px")
+                put("padding", "0 9px")
                 put("gap", "1px")
-                put("font-family", "'Courier New', 'Consolas', monospace")
+                // The value knob's LCD's face (`KlangControlStyles.lcd`), so the two read alike side by side
+                put("font-family", "monospace")
                 fontWeight = FontWeight.normal
                 fontSize = props.size
                 if (props.dim) {
@@ -164,7 +165,7 @@ class LcdDisplay(ctx: Ctx<Props>) : Component<LcdDisplay.Props>(ctx) {
                 div {
                     css {
                         this.position = Position.relative
-                        width = LinearDimension("0.7em")
+                        width = LinearDimension("0.6em")
                         height = LinearDimension("${ENTRY_EM}em")
                         overflow = Overflow.hidden
                     }
@@ -179,8 +180,6 @@ class LcdDisplay(ctx: Ctx<Props>) : Component<LcdDisplay.Props>(ctx) {
                             alignItems = Align.center
                             justifyContent = JustifyContent.center
                             put("color", ghost)
-                            // Optical centering — Courier digits sit high otherwise (2px by eye)
-                            put("transform", "translateY(2px)")
                         }
                         +"8"
                     }
@@ -197,8 +196,7 @@ class LcdDisplay(ctx: Ctx<Props>) : Component<LcdDisplay.Props>(ctx) {
                             } else {
                                 put("transition", "none")
                             }
-                            // The +2px matches the ghost "8" optical-centering nudge
-                            put("transform", "translateY(calc(-${(pos + 0.5) * ENTRY_EM}em + 2px))")
+                            put("transform", "translateY(-${(pos + 0.5) * ENTRY_EM}em)")
                         }
 
                         for (d in 0 until STRIP_SIZE) {
@@ -209,7 +207,7 @@ class LcdDisplay(ctx: Ctx<Props>) : Component<LcdDisplay.Props>(ctx) {
                                     alignItems = Align.center
                                     justifyContent = JustifyContent.center
                                     put("color", ink)
-                                    put("text-shadow", "0 0 3px color-mix(in srgb, var(--kl-lcd-ink) 40%, transparent)")
+                                    put("text-shadow", "0 0 6px color-mix(in srgb, var(--kl-lcd-ink) 55%, transparent)")
                                 }
                                 +"${d % 10}"
                             }
@@ -244,7 +242,7 @@ class LcdDisplay(ctx: Ctx<Props>) : Component<LcdDisplay.Props>(ctx) {
     companion object {
         private const val STRIP_SIZE = 30
         private const val MIDDLE = 10
-        private const val ENTRY_EM = 0.9
+        private const val ENTRY_EM = 1.0
 
         private fun toDigits(value: Int, count: Int): List<Int> =
             value.toString().takeLast(count).padStart(count, '0').map { it.digitToInt() }
