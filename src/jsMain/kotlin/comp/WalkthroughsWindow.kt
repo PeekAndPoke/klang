@@ -207,7 +207,7 @@ class WalkthroughsWindow(ctx: Ctx<Props>) : FadingModal<WalkthroughsWindow.Props
         }
     }
 
-    /** How many walkthroughs are still to come, a card like theirs, its lamp unlit, with no links. */
+    /** How many walkthroughs are still to come, a card like theirs, its lamp off as theirs is, with no links. */
     private fun FlowContent.renderToCome(toCome: Int) {
         div {
             key = "to-come"
@@ -216,7 +216,8 @@ class WalkthroughsWindow(ctx: Ctx<Props>) : FadingModal<WalkthroughsWindow.Props
 
             div {
                 css { put("padding-top", "3px") }
-                KlangLamp(state = KlangLamp.State.Unlit, size = 10.px)
+                // Off, as an unfinished walkthrough's (the maintainer, 2026-11-02: "the same off led as the others")
+                KlangLamp(state = KlangLamp.State.Off, size = 10.px)
             }
 
             div {

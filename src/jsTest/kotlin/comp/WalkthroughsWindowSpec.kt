@@ -116,6 +116,7 @@ class WalkthroughsWindowSpec : StringSpec({
 
                 toCome.textContent shouldBe "1 more to come."
                 toCome.querySelectorAll("a, button").length shouldBe 0
+                toCome.querySelector("[data-lamp]")?.getAttribute("data-lamp") shouldBe "Off"
                 (toCome.parentElement === card("Your first song").parentElement) shouldBe true
             }
 
