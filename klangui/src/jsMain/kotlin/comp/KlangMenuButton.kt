@@ -6,16 +6,23 @@
 package io.peekandpoke.klang.ui.comp
 
 import io.peekandpoke.klang.workshop.keys.KeyAction
+import io.peekandpoke.klang.workshop.keys.KeySequence
+import io.peekandpoke.klang.workshop.keys.KeysManager
+import io.peekandpoke.klang.workshop.keys.Keymap
 import io.peekandpoke.klang.workshop.keys.OnKey
+import io.peekandpoke.klang.workshop.keys.keys
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
+import io.peekandpoke.kraft.components.getAttributeRecursiveOrNull
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.kraft.vdom.custom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.semanticui.SemanticIconFn
 import io.peekandpoke.ultra.semanticui.icon
+import io.peekandpoke.ultra.streams.ops.map
+import io.peekandpoke.ultra.streams.steady
 import kotlinx.css.LinearDimension
 import kotlinx.css.height
 import kotlinx.css.px
@@ -34,11 +41,21 @@ fun Tag.KlangMenuButton(
     onClick: () -> Unit,
     size: LinearDimension = 42.px,
     key: KeyAction? = null,
+    alsoKey: KeyAction? = null,
     beacon: Boolean = false,
     label: String = "Menu",
     icon: SemanticIconFn? = null,
 ) = comp(
-    KlangMenuButton.Props(open = open, onClick = onClick, size = size, key = key, beacon = beacon, label = label, icon = icon)
+    KlangMenuButton.Props(
+        open = open,
+        onClick = onClick,
+        size = size,
+        key = key,
+        alsoKey = alsoKey,
+        beacon = beacon,
+        label = label,
+        icon = icon,
+    )
 ) {
     KlangMenuButton(it)
 }
@@ -53,6 +70,14 @@ fun Tag.KlangMenuButton(
  */
 class KlangMenuButton(ctx: Ctx<Props>) : Component<KlangMenuButton.Props>(ctx) {
 
+    /**
+     * The keymap, followed, so the other key's hint ([Props.alsoKey]) follows a key the user changes at once; none in an
+     * app without the key manager.
+     */
+    private val keymap by subscribingTo(
+        getAttributeRecursiveOrNull(KeysManager.key)?.keymap?.map<Keymap, Keymap?> { it } ?: steady(null)
+    )
+
     data class Props(
         val open: Boolean,
         val onClick: () -> Unit,
@@ -60,6 +85,12 @@ class KlangMenuButton(ctx: Ctx<Props>) : Component<KlangMenuButton.Props>(ctx) {
         val size: LinearDimension,
         /** The key that presses it, answered through the key manager, its hint drawn by the button; null for none. */
         val key: KeyAction?,
+        /**
+         * Another key that opens what it opens, answered elsewhere, shown in its hint beside [key]'s: its keys in a row
+         * where it has them, else its first binding (the maintainer, 2026-11-02: the Motor's button shows "Shift Shift"
+         * next to "Alt+M"); null for none.
+         */
+        val alsoKey: KeyAction?,
         /** The first-visit trail's "try me" on it (KLANG-00350), while the drawer is closed. */
         val beacon: Boolean,
         /** What it is called, for screen readers and the tooltip. */
@@ -123,7 +154,18 @@ class KlangMenuButton(ctx: Ctx<Props>) : Component<KlangMenuButton.Props>(ctx) {
                 title = props.label
                 onClick { props.onClick() }
 
-                props.key?.let { action -> OnKey(action) { props.onClick() } }
+                props.key?.let { action ->
+                    // The other key as the keymap has it now, beside this key's caps: its keys in a row where it has them
+                    // (Shift Shift, not the search's Ctrl+K: the maintainer asked for "Shift Shift"), else its first
+                    val also = props.alsoKey?.let { other ->
+                        val bindings = keymap?.bindingsOf(other.id).orEmpty()
+
+                        (bindings.firstOrNull { it is KeySequence } ?: bindings.firstOrNull())
+                            ?.keyGroups(platform = keys.platform, compact = true)
+                    }
+
+                    OnKey(action = action, hint = also?.let { KlangKeyHint.renderAlso(also = listOf(it)) }) { props.onClick() }
+                }
 
                 css {
                     put("position", "absolute")

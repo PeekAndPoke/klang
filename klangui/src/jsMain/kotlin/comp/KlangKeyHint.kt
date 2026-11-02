@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.ui.comp
 
+import io.peekandpoke.klang.workshop.keys.KeyBinding
 import io.peekandpoke.klang.workshop.keys.KeyCapGlyphs.keyCapGlyph
 import io.peekandpoke.klang.workshop.keys.KeyChord
 import io.peekandpoke.klang.workshop.keys.KeyHintRenderer
@@ -96,6 +97,22 @@ object KlangKeyHint {
             style = (listOf("display: inline-flex", "padding: 3px 5px") + frameStyle).joinToString("; ")
 
             capsGroups(groups = state.keyGroups(compact = true), enabled = state.enabled)
+        }
+    }
+
+    /**
+     * A hint with more ways to the same place than its own key: its key's caps, then each of [also] (a binding's groups
+     * of caps, as [KeyBinding.keyGroups] gives them) a little apart. The Motor's button: Alt+M, and Shift Shift, the
+     * search, which opens the menu too.
+     */
+    fun renderAlso(also: List<List<List<String>>>): KeyHintRenderer = { state ->
+        span(classes = CLASS) {
+            style = (listOf("display: inline-flex", "align-items: center", "gap: 10px", "padding: 3px 5px") + frameStyle)
+                .joinToString("; ")
+
+            capsGroups(groups = state.keyGroups(compact = true), enabled = state.enabled)
+
+            also.forEach { groups -> capsGroups(groups = groups, enabled = state.enabled) }
         }
     }
 

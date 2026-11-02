@@ -170,6 +170,8 @@ class PlayerMiniStats(ctx: Ctx<Props>) : Component<PlayerMiniStats.Props>(ctx) {
                                 },
                                 size = VOLUME_KNOB_PX.px,
                                 key = KlangKeyBindings.MotorMenu,
+                                // Shift Shift, the search, opens the menu too (the maintainer, 2026-11-02)
+                                alsoKey = KlangKeyBindings.SearchEverywhere,
                                 beacon = guiDanceLit == KlangGuiDance.MOTOR_MENU,
                             )
                         } else {

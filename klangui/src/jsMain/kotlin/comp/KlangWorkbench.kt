@@ -89,7 +89,7 @@ fun Tag.KlangWorkbench(
  *   stays mounted (a song plays on) and is `inert` while it is open, and so is the column's list; the Motor stays. With
  *   a side of its own ([Props.drawerSide]) the menu lies over the waiting list too and fills the workbench.
  *   Opened (the menu button; Shift Shift or Ctrl+K, `KlangKeyBindings.SearchEverywhere`), it takes the focus; Esc,
- *   Back (it arms Kraft's back navigation trap) and any move to another page close it, and a focus lost with it goes
+ *   the same keys again, Back (it arms Kraft's back navigation trap) and any move to another page close it, and a focus lost with it goes
  *   back to where it came from (the menu button). A pick goes on with [MenuHandle.leaveTo], which takes the menu's
  *   place in the history.
  * - The content in the middle, and under it the bottom panel, docked, shown or hidden from the strip.
@@ -645,7 +645,8 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
                 }
 
                 // Shift Shift or Ctrl+K, the search over everything: the menu opens with the focus in its search field
-                // (the maintainer, 2026-11-01: "now we also know what 'shift + shift' does"); open, its own keys answer
+                // (the maintainer, 2026-11-01: "now we also know what 'shift + shift' does"); open, its own keys answer,
+                // and the same keys close it
                 if (drawer != null) {
                     OnKey(action = KlangKeyBindings.SearchEverywhere, showHint = false) { openDrawer() }
                 }
@@ -663,7 +664,7 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
             val drawer = props.drawer
 
             if (drawerOpen && drawer != null) {
-                KlangWorkbenchMenu(onClose = { closeDrawer() }, onSearch = { focusDrawer() }) { drawer(menuHandle) }
+                KlangWorkbenchMenu(onClose = { closeDrawer() }) { drawer(menuHandle) }
             }
         }
     }
@@ -933,8 +934,8 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
 }
 
 @Suppress("FunctionName")
-private fun Tag.KlangWorkbenchMenu(onClose: () -> Unit, onSearch: () -> Unit, content: DIV.() -> Unit) = comp(
-    KlangWorkbenchMenu.Props(onClose = onClose, onSearch = onSearch, content = content)
+private fun Tag.KlangWorkbenchMenu(onClose: () -> Unit, content: DIV.() -> Unit) = comp(
+    KlangWorkbenchMenu.Props(onClose = onClose, content = content)
 ) {
     KlangWorkbenchMenu(it)
 }
@@ -945,13 +946,13 @@ private fun Tag.KlangWorkbenchMenu(onClose: () -> Unit, onSearch: () -> Unit, co
  * page stays; closed any other way, the trap goes back over its own entry), a watch on the router that closes the menu
  * when it moves to another page (a link inside it, Forward), and a layer of keys over the page's, as a modal has: the
  * page's keys wait under it. In it, the menu's own: its Esc (its content's close key), Alt+M closes it as the menu
- * button would, Shift Shift or Ctrl+K puts the focus back into its search field.
+ * button would, and so do Shift Shift and Ctrl+K, which opened it (the maintainer, 2026-11-02: "When the menu is open
+ * 'Shift Shift' should close it again").
  */
 private class KlangWorkbenchMenu(ctx: Ctx<Props>) : Component<KlangWorkbenchMenu.Props>(ctx) {
 
     data class Props(
         val onClose: () -> Unit,
-        val onSearch: () -> Unit,
         val content: DIV.() -> Unit,
     )
 
@@ -963,7 +964,7 @@ private class KlangWorkbenchMenu(ctx: Ctx<Props>) : Component<KlangWorkbenchMenu
     private val menuKey = onKeyController(action = KlangKeyBindings.MotorMenu) { props.onClose() }
 
     @Suppress("unused")
-    private val searchKey = onKeyController(action = KlangKeyBindings.SearchEverywhere) { props.onSearch() }
+    private val searchKey = onKeyController(action = KlangKeyBindings.SearchEverywhere) { props.onClose() }
 
     /** Back closes the menu and lets the navigation through, which only takes the trap's own entry. */
     @Suppress("unused")

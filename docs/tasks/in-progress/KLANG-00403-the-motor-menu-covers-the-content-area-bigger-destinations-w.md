@@ -87,7 +87,7 @@ columns, and the look row (seven looks and an empty slot).
    - `KlangWorkbench`: the menu in a frame of its own (`KlangWorkbenchMenu`, mounted only while open) over
      `workbenchRight`, edge to edge. It arms Kraft's `trapBackNavigation` (Back closes it, the page stays), watches the
      router (a move to another page closes it, as `FadingModal` does) and opens a key layer: the keys outside it wait,
-     the Motor's included; in it Esc, Alt+M (closes) and Shift Shift or Ctrl+K (back to the search field). While it is
+     the Motor's included; in it Esc, Alt+M (closes) and Shift Shift or Ctrl+K (back to the search field; since 2026-11-02 they close it, the maintainer's word). While it is
      open the centre, a pinned tool window, the strip and the column's list are `inert`; the Motor stays. The menu's
      content gets a `MenuHandle`: `close`, and `leaveTo(uri)`, which writes the page with `router.replaceUri` in the
      trap's place, so Back from there leads to the page the menu opened on. `OnKey(SearchEverywhere)` sits by the
@@ -162,3 +162,4 @@ columns, and the look row (seven looks and an empty slot).
 - 2026-11-01: IN PROGRESS.
 - 2026-11-02: step 2 has the song that plays at its top (KLANG-00406), the half's heading removed (the maintainer: "it does not
   serve any purpose"); the menu fills the workbench with its own left side, the performance graphs (c72880d46).
+- 2026-11-02: Shift Shift and Ctrl+K close the open menu, as Alt+M does; the Motor's button shows Shift Shift beside Alt+M in its hint.

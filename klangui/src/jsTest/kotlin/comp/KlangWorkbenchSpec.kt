@@ -1394,7 +1394,7 @@ class KlangWorkbenchSpec : StringSpec({
         )
     }
 
-    "Ctrl+K, the search over everything, opens the menu with the focus in its field; open, Alt+M closes it" {
+    "Ctrl+K, the search over everything, opens the menu with the focus in its field; open, the same key closes it, and Alt+M" {
         withSearchMenu(played = {}) { root ->
             fun drawer() = root.q(".${styles.workbenchDrawer}")
 
@@ -1405,11 +1405,15 @@ class KlangWorkbenchSpec : StringSpec({
                 document.activeElement?.getAttribute("data-test") shouldBe "menu-search"
             }
 
-            // Open, the same key brings the focus back into the field
+            // Open, the same key closes it, from wherever the focus is in it
             root.q("[data-test=menu-first]")!!.focus()
             keyOn(document.activeElement!!, key = "k", code = "KeyK", ctrl = true)
 
-            eventually { document.activeElement?.getAttribute("data-test") shouldBe "menu-search" }
+            eventually { drawer() shouldBe null }
+
+            keyOn(document.body!!, key = "k", code = "KeyK", ctrl = true)
+
+            eventually { drawer() shouldNotBe null }
 
             keyOn(document.activeElement!!, key = "m", code = "KeyM", alt = true)
 

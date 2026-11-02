@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.ui.comp
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
@@ -15,6 +16,7 @@ import io.peekandpoke.klang.workshop.keys.keys
 import io.peekandpoke.kraft.testing.TestBed
 import io.peekandpoke.kraft.testing.attr
 import io.peekandpoke.kraft.testing.classes
+import io.peekandpoke.kraft.testing.eventually
 import io.peekandpoke.kraft.testing.selectCss
 import kotlinx.browser.document
 import kotlinx.css.px
@@ -87,6 +89,50 @@ class KlangMenuButtonSpec : StringSpec({
                 )
 
                 clicks shouldBe 1
+            }
+        } finally {
+            manager.dispose()
+        }
+    }
+
+    "its hint shows another way to what it opens beside its own key: Alt+M, then Shift Shift (the search)" {
+        val manager = KeysManager(platform = KeyPlatform.Pc, hintDelayMs = 10).apply { define(KlangKeyBindings) }
+
+        try {
+            TestBed.preact(
+                // Klang's look of a hint, as the app sets it
+                appSetup = { keys(manager, hint = KlangKeyHint.render) },
+                view = {
+                    KlangMenuButton(
+                        open = false,
+                        onClick = {},
+                        key = KlangKeyBindings.MotorMenu,
+                        alsoKey = KlangKeyBindings.SearchEverywhere,
+                    )
+                },
+            ) { _ ->
+                document.body!!.dispatchEvent(
+                    KeyboardEvent(
+                        "keydown",
+                        KeyboardEventInit(key = "Control", code = "ControlLeft", ctrlKey = true, bubbles = true, cancelable = true),
+                    )
+                )
+
+                eventually {
+                    val hint = document.querySelector(".${KlangKeyHint.CLASS}")!!
+                    val caps = hint.querySelectorAll(".${KlangKeyHint.KEY_CLASS}")
+
+                    withClue("Alt and M, then Shift and Shift: four caps in one hint") { caps.length shouldBe 4 }
+                    withClue("the first is Alt+M's") { caps.item(1)!!.textContent shouldBe "M" }
+                    withClue("then the search's keys in a row, Shift twice, not its Ctrl+K") {
+                        (caps.item(3)!!.textContent == "K") shouldBe false
+                        (caps.item(3) as HTMLElement).innerHTML shouldBe (caps.item(2) as HTMLElement).innerHTML
+                    }
+                }
+
+                document.body!!.dispatchEvent(
+                    KeyboardEvent("keyup", KeyboardEventInit(key = "Control", code = "ControlLeft", bubbles = true))
+                )
             }
         } finally {
             manager.dispose()
