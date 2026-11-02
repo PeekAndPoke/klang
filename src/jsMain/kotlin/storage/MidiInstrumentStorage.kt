@@ -7,29 +7,15 @@ package io.peekandpoke.klang.storage
 
 import kotlinx.browser.localStorage
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * One instrument authored in the Midi Playground: both inputs as KlangScript source.
- *
- * @property ignitorCode Evaluates to an Ignitor; blank = the built-in sound picked on the page.
- * @property mapperCode Evaluates to a pattern mapper (`x => x.reverb(wet = 0.2)`); blank = none.
- */
-data class MidiInstrument(
-    val name: String,
-    val ignitorCode: String,
-    val mapperCode: String,
-)
-
-/**
- * The playground's instruments in the browser's localStorage: the saved list, plus the draft the
- * editors held when last applied, so a reload picks up where we left off.
+ * The playground's instruments as the page kept them in the browser's localStorage before the one play code (KLANG-00402,
+ * D7): the saved list and the draft. Only read now, once, for the play code's first load (`MidiPlayCodeStorage`).
  */
 object MidiInstrumentStorage {
 
@@ -47,10 +33,6 @@ object MidiInstrumentStorage {
         }
     }
 
-    fun saveAll(instruments: List<MidiInstrument>) {
-        localStorage.setItem(KEY_INSTRUMENTS, JsonArray(instruments.map { encode(it) }).toString())
-    }
-
     fun loadDraft(): MidiInstrument? {
         val raw = localStorage.getItem(KEY_DRAFT) ?: return null
 
@@ -61,18 +43,6 @@ object MidiInstrumentStorage {
             null
         }
     }
-
-    fun saveDraft(instrument: MidiInstrument) {
-        localStorage.setItem(KEY_DRAFT, encode(instrument).toString())
-    }
-
-    private fun encode(instrument: MidiInstrument): JsonObject = JsonObject(
-        mapOf(
-            "name" to JsonPrimitive(instrument.name),
-            "ignitor" to JsonPrimitive(instrument.ignitorCode),
-            "mapper" to JsonPrimitive(instrument.mapperCode),
-        )
-    )
 
     private fun decode(obj: JsonObject): MidiInstrument? {
         val name = obj["name"]?.jsonPrimitive?.contentOrNull ?: return null

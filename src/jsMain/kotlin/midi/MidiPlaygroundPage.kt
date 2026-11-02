@@ -9,13 +9,10 @@ import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.spine.MidiRig
 import io.peekandpoke.klang.spine.Playbacks
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
-import io.peekandpoke.klang.storage.MidiInstrument
-import io.peekandpoke.klang.storage.MidiInstrumentStorage
 import io.peekandpoke.klang.ui.codemirror.KlangScriptEditorComp
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
 import io.peekandpoke.kraft.components.comp
-import io.peekandpoke.kraft.semanticui.forms.UiInputField
 import io.peekandpoke.kraft.utils.WakeLockComponent
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
@@ -24,6 +21,8 @@ import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.semanticui.icon
 import io.peekandpoke.ultra.semanticui.noui
 import io.peekandpoke.ultra.semanticui.ui
+import io.peekandpoke.ultra.streams.ops.distinct
+import io.peekandpoke.ultra.streams.ops.map
 import kotlinx.css.FontWeight
 import kotlinx.css.Padding
 import kotlinx.css.fontFamily
@@ -51,8 +50,8 @@ fun Tag.MidiPlaygroundPage() = comp {
  * What plays lives in the Spine, the MIDI rig ([Playbacks.live], KLANG-00402 step 4): the ports, the profiles, the
  * routing, the held notes, the realtime playback and the translation. The page brings it up, hands it input and draws
  * what it publishes; leaving the page releases nothing but the laptop's keys, whose drawing goes with it. The drawings
- * are the MIDI tool's too ([DeviceView], [LaptopKeysView]); the page keeps what only it shows: the instrument's editors
- * and the saved instruments, the monitor and the log. See KLANG-00159 (realtime playback controller).
+ * are the MIDI tool's too ([DeviceView], [LaptopKeysView]); the page keeps what only it shows: the play code's editor and
+ * its instruments, the monitor and the log. See KLANG-00159 (realtime playback controller).
  */
 class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
 
@@ -66,17 +65,36 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
 
     private val midiState by subscribingTo(rig.devices)
 
-    /**
-     * What the two editors hold right now, and the name it is saved under. Takes effect on
-     * [applyInstrument]; until then notes keep playing the last applied version.
-     */
-    private var draft: MidiInstrument by value(MidiInstrumentStorage.loadDraft() ?: MidiRig.DEFAULT_INSTRUMENT)
+    /** What the play code's editor holds: the rig's play code, and the user's changes until they apply them. */
+    private var draft: String by value("")
 
-    /** The instruments saved in localStorage, in the order they were first saved. */
-    private var savedInstruments: List<MidiInstrument> by value(MidiInstrumentStorage.loadAll())
-
-    /** Bumped when a saved instrument is loaded, so the editors remount with its code. */
+    /** Bumped when the play code changes from outside the editor (an instrument chosen, a step), so it shows it. */
     private var editorGeneration: Int by value(0)
+
+    /**
+     * The play code that played last, as this page saw it: the editor holds no changes of the user's while its text
+     * equals this.
+     */
+    private var shown: String = ""
+
+    /**
+     * The play code that plays, changed by an Apply that worked, a choice or a step (a KeyLab's encoder, on any page).
+     * The editor follows it while it holds no changes of the user's; changes not applied yet are never touched from
+     * outside (the maintainer, 2026-11-02: "Never touch my edits"), and a note says they do not play.
+     */
+    @Suppress("unused")
+    private val playingShown by subscribingTo(rig.state.map { it.playing }.distinct()) { _ ->
+        // The rig's current one, not the value delivered: Kraft hands the first one over a moment late, and by then it
+        // may be stale (the page's mount has applied the kept play code meanwhile)
+        val code = rig.state().playing
+
+        if (draft == shown && draft != code) {
+            draft = code
+            editorGeneration += 1
+        }
+
+        shown = code
+    }
 
     companion object {
         private val EDITOR_LIBS = listOf(stdlibLib, sprudelLib)
@@ -88,40 +106,30 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
                 // Once for the app's life; the rig plays on when the page goes. The MIDI page asks for the devices
                 rig.start()
                 rig.connectDevices()
+
+                // The play code as the rig has it, also one kept that failed: to be corrected here
+                val state = rig.state()
+
+                if (draft != state.playCode) {
+                    draft = state.playCode
+                    editorGeneration += 1
+                }
+
+                shown = state.playing
             }
         }
     }
 
-    //  THE INSTRUMENT: two KlangScript inputs, applied by the rig  ////////////////////////////
+    //  THE PLAY CODE: one KlangScript input, applied by the rig (D7)  /////////////////////////
 
-    /** The rig plays the draft from the next note on, and keeps it for the next visit. */
-    private fun applyInstrument() {
-        rig.apply(draft)
-    }
+    /** A new instrument, a `let` at the top of the editor's play code under a name it does not have yet. */
+    private fun newInstrument() {
+        val taken = MidiPlayCode.namesOf(draft)
+        val name = generateSequence(1) { it + 1 }.map { "instrument$it" }.first { it !in taken }
 
-    /** Saves the draft under its name, replacing a saved instrument of the same name. */
-    private fun saveInstrument() {
-        val toSave = draft.copy(name = draft.name.trim().ifBlank { "Untitled" })
-        val exists = savedInstruments.any { it.name == toSave.name }
-
-        draft = toSave
-        savedInstruments = when {
-            exists -> savedInstruments.map { if (it.name == toSave.name) toSave else it }
-            else -> savedInstruments + toSave
-        }
-        MidiInstrumentStorage.saveAll(savedInstruments)
-        applyInstrument()
-    }
-
-    private fun loadInstrument(instrument: MidiInstrument) {
-        draft = instrument
+        // Ended by ";": a play code that begins `(x) =>` would else read as a call of the Ignitor
+        draft = "let $name = Ign.saw();\n\n$draft"
         editorGeneration += 1
-        applyInstrument()
-    }
-
-    private fun deleteInstrument(name: String) {
-        savedInstruments = savedInstruments.filter { it.name != name }
-        MidiInstrumentStorage.saveAll(savedInstruments)
     }
 
     //  RENDER  /////////////////////////////////////////////////////////////////////////////////
@@ -190,8 +198,7 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
         renderDevices()
         renderPanel()
         renderLaptopKeys()
-        renderInstrument()
-        renderSoundPicker()
+        renderPlayCode()
         renderPressedKeys()
         renderMonitor()
         renderEventLog()
@@ -259,152 +266,125 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
         }
     }
 
-    private fun FlowContent.renderInstrument() {
+    /**
+     * The play code (D7, the maintainer's proposal: "should all be in the one input"): its editor on the left, with
+     * Apply; on the right its instruments, a view of the code: yours (its `let`s holding an Ignitor) and the built-ins.
+     * A click plays one: the `.sound(...)` a key plays names it in the editor's code, applied.
+     */
+    private fun FlowContent.renderPlayCode() {
         ui.segment {
-            key = "instrument"
-
-            ui.header H4 { +"Instrument" }
-
-            if (savedInstruments.isNotEmpty()) {
-                noui.tiny.header { +"Saved" }
-
-                ui.basic.segment {
-                    css { padding = Padding(0.px, 0.px, 8.px, 0.px) }
-
-                    savedInstruments.forEach { instrument ->
-                        ui.small.given(instrument.name == draft.name) { primary }.button {
-                            key = "instrument-${instrument.name}"
-                            onClick { loadInstrument(instrument) }
-                            +instrument.name
-                        }
-                    }
-                }
-            }
-
-            ui.form {
-                UiInputField(draft.name, { draft = draft.copy(name = it) }) {
-                    placeholder("Instrument name")
-                    leftLabel {
-                        ui.grey.label { +"Name" }
-                    }
-                }
-            }
-
-            ui.basic.segment {
-                css { padding = Padding(8.px, 0.px) }
-
-                ui.primary.button {
-                    onClick { applyInstrument() }
-                    icon.play()
-                    +"Apply"
-                }
-
-                ui.button {
-                    onClick { saveInstrument() }
-                    icon.save()
-                    +"Save"
-                }
-
-                if (savedInstruments.any { it.name == draft.name }) {
-                    ui.basic.button {
-                        onClick { deleteInstrument(draft.name) }
-                        icon.trash()
-                        +"Delete"
-                    }
-                }
-            }
+            key = "play-code"
 
             ui.two.column.stackable.grid {
                 noui.column {
-                    renderCodeInput(
-                        id = "ignitor",
-                        title = "Ignitor",
-                        hint = "Evaluates to an Ignitor, e.g. Ign.saw().lowpass(1800). Blank plays the built-in sound below.",
-                        code = draft.ignitorCode,
-                        onChange = { draft = draft.copy(ignitorCode = it) },
-                        error = rigState.ignitorError,
-                    )
+                    ui.header H4 { +"Play code" }
+
+                    noui.content {
+                        css { padding = Padding(0.px, 0.px, 4.px, 0.px) }
+                        +"Your instruments as lets at the top, then what a key plays: x => x.sound(warmSaw).reverb(wet = 0.2). "
+                        +"A built-in is a name in quotes, x.sound(\"supersaw\"). After a let, write x =>, not (x) =>."
+                    }
+
+                    // Keyed by generation: a play code changed from outside remounts the editor with it
+                    ui.segment {
+                        key = "play-code-editor-$editorGeneration"
+                        css { padding = Padding(0.px) }
+
+                        KlangScriptEditorComp(
+                            code = draft,
+                            onCodeChanged = { draft = it },
+                            availableLibraries = EDITOR_LIBS,
+                            autoImportedLibraries = EDITOR_LIBS,
+                        )
+                    }
+
+                    ui.primary.button {
+                        onClick { rig.apply(draft) }
+                        icon.play()
+                        +"Apply"
+                    }
+
+                    // The user's changes do not play until applied; an applied text that fails does not play either
+                    when {
+                        draft != rigState.playCode && draft != rigState.playing ->
+                            noui.small.text { +"Not applied yet: the keys play the play code before these changes." }
+
+                        draft != rigState.playing ->
+                            noui.small.text { +"This play code does not play: the keys play the one before it, or the plain built-in." }
+                    }
+
+                    rigState.playCodeError?.let { error ->
+                        ui.negative.message { +error }
+                    }
                 }
 
                 noui.column {
-                    renderCodeInput(
-                        id = "mapper",
-                        title = "Sprudel mapper",
-                        hint = "A pattern mapper: reverb(wet = 0.2), or a function, x => x.reverb(wet = 0.2). Blank = none.",
-                        code = draft.mapperCode,
-                        onChange = { draft = draft.copy(mapperCode = it) },
-                        error = rigState.mapperError,
-                    )
+                    renderInstruments()
                 }
             }
         }
     }
 
-    private fun FlowContent.renderCodeInput(
-        id: String,
-        title: String,
-        hint: String,
-        code: String,
-        onChange: (String) -> Unit,
-        error: String?,
-    ) {
-        noui.tiny.header { +title }
+    /** The instruments to choose: the play code's own and a key for a new one, then the built-ins by group. */
+    private fun FlowContent.renderInstruments() {
+        ui.header H4 { +"Instruments" }
 
-        noui.content {
-            css { padding = Padding(0.px, 0.px, 4.px, 0.px) }
-            +hint
-        }
+        noui.tiny.header { +"Yours" }
 
-        // Keyed by generation: loading a saved instrument remounts the editor with its code.
-        ui.segment {
-            key = "$id-editor-$editorGeneration"
-            css { padding = Padding(0.px) }
+        ui.basic.segment {
+            css { padding = Padding(0.px, 0.px, 8.px, 0.px) }
 
-            KlangScriptEditorComp(
-                code = code,
-                onCodeChanged = onChange,
-                availableLibraries = EDITOR_LIBS,
-                autoImportedLibraries = EDITOR_LIBS,
-            )
-        }
-
-        if (error != null) {
-            ui.negative.message { +error }
-        }
-    }
-
-    private fun FlowContent.renderSoundPicker() {
-        ui.segment {
-            key = "sound-picker"
-
-            ui.header H4 { +"Built-in sound" }
-
-            noui.content {
-                css { padding = Padding(0.px, 0.px, 4.px, 0.px) }
-                +"Plays while the Ignitor input is blank."
+            if (rigState.instruments.isEmpty()) {
+                noui.content { +"No let of the play code holds an Ignitor yet." }
             }
 
-            ui.two.column.grid {
-                MidiRig.SOUND_GROUPS.forEach { (groupName, sounds) ->
-                    noui.column {
-                        key = "sound-group-$groupName"
-                        css { padding = Padding(4.px, 0.px) }
+            rigState.instruments.forEach { name -> soundButton(sound = MidiPlayCode.Sound.Own(name), label = name) }
 
-                        noui.tiny.header { +groupName }
+            ui.small.basic.button {
+                onClick { newInstrument() }
+                icon.plus()
+                +"New instrument"
+            }
+        }
 
-                        ui.buttons {
-                            sounds.forEach { sound ->
-                                ui.given(sound == rigState.selectedSound) { primary }.button {
-                                    key = "sound-$sound"
-                                    onClick { rig.selectSound(sound) }
-                                    +sound
-                                }
-                            }
-                        }
-                    }
+        noui.tiny.header { +"Built-in" }
+
+        ui.two.column.grid {
+            MidiRig.SOUND_GROUPS.forEach { (groupName, sounds) ->
+                noui.column {
+                    key = "sound-group-$groupName"
+                    css { padding = Padding(4.px, 0.px) }
+
+                    noui.tiny.header { +groupName }
+
+                    sounds.forEach { name -> soundButton(sound = MidiPlayCode.Sound.BuiltIn(name), label = name) }
                 }
             }
         }
+    }
+
+    /**
+     * A key that plays [sound], lit while it plays: the user's own choice, so it goes into the editor's text, changes and
+     * all, in the `.sound(...)` a key plays, and that text is applied.
+     */
+    private fun FlowContent.soundButton(sound: MidiPlayCode.Sound, label: String) {
+        ui.small.given(sound == rigState.sound) { primary }.button {
+            key = "sound-${sound.code}"
+            onClick { chooseHere(sound) }
+            +label
+        }
+    }
+
+    private fun chooseHere(sound: MidiPlayCode.Sound) {
+        val changed = MidiPlayCode.withSound(draft, sound)
+
+        if (changed != null && changed != draft) {
+            draft = changed
+            editorGeneration += 1
+        }
+
+        // The rig says so where the text names no sound to change
+        rig.choose(sound = sound, code = draft)
     }
 
     private fun FlowContent.renderDevices() {

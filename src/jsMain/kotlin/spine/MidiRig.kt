@@ -14,19 +14,18 @@ import io.peekandpoke.klang.midi.DeviceProfile
 import io.peekandpoke.klang.midi.LaptopKeys
 import io.peekandpoke.klang.midi.MidiConnector
 import io.peekandpoke.klang.midi.MidiMessage
+import io.peekandpoke.klang.midi.MidiPlayCode
 import io.peekandpoke.klang.midi.NoteVoicing
 import io.peekandpoke.klang.midi.PlayFunction
 import io.peekandpoke.klang.midi.Routing
 import io.peekandpoke.klang.midi.SourceId
-import io.peekandpoke.klang.script.KlangScriptEngine
 import io.peekandpoke.klang.script.runtime.FunctionValue
 import io.peekandpoke.klang.script.runtime.convertFunctionToKotlin
+import io.peekandpoke.klang.spine.storage.MidiPlayCodeStorage
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.lang.note
 import io.peekandpoke.klang.sprudel.lang.sound
 import io.peekandpoke.klang.sprudel.lang.velocity
-import io.peekandpoke.klang.storage.MidiInstrument
-import io.peekandpoke.klang.storage.MidiInstrumentStorage
 import io.peekandpoke.klang.tones.midi.Midi
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
@@ -45,7 +44,7 @@ import kotlin.math.roundToInt
  * releases nothing, so a chord held rings on while one goes elsewhere.
  *
  * Live play is no one's stage: the rig plays along with a song and stops none (KLANG-00406, the lanes); only a panic
- * stops it. The app has one, [Playbacks.live]; the specs make their own and never [start] it.
+ * stops it. The app has one, [Playbacks.live]; the specs make their own, and start one only to read a reload.
  */
 class MidiRig {
 
@@ -75,17 +74,24 @@ class MidiRig {
          * any pad note corrects it, because the note says which bank sent it.
          */
         val activeBank: String = "A",
-        /**
-         * The built-in sound the next note plays while no Ignitor is applied. Notes sounding keep the sound they were
-         * started with: the voice is built at note-on.
-         */
-        val selectedSound: String = "supersaw",
         /** Whether the devices were asked for ([connectDevices]): before, a device plays nothing. */
         val devicesAsked: Boolean = false,
-        /** The applied instrument's name while its Ignitor plays; null while the built-in [selectedSound] plays. */
-        val instrument: String? = null,
-        val ignitorError: String? = null,
-        val mapperError: String? = null,
+        /**
+         * The user's text (KLANG-00402, D7): the play code applied last, kept also when it failed, to be corrected; a step
+         * of the session goes into it only where it held no changes of the user's. The stored one is what the user applied.
+         */
+        val playCode: String = "",
+        /** The play code that plays: the last one applied that worked; a choice or a step starts from it. */
+        val playing: String = "",
+        /**
+         * What a key plays, the `.sound(...)` of the play code's function ([MidiPlayCode.soundOf]); null where it names none
+         * the rig can read. Notes sounding keep the sound they were started with: the voice is built at note-on.
+         */
+        val sound: MidiPlayCode.Sound? = null,
+        /** The play code's own instruments: its top-level `let`s whose value is an Ignitor, in order. */
+        val instruments: List<String> = emptyList(),
+        /** Why the play code, or a key through it, failed; null while it plays. */
+        val playCodeError: String? = null,
     ) {
         /** The notes held on the laptop's side, or on the devices' keybeds: each drawing lights its own. */
         fun heldNotes(laptopSide: Boolean): Set<Int> =
@@ -121,13 +127,6 @@ class MidiRig {
             "Unison" to listOf("supersaw", "superramp", "supersquare", "supertri", "supersine", "superpulse"),
             "Plucked" to listOf("pluck", "superpluck"),
             "Noise" to listOf("whitenoise", "pinknoise", "brownnoise", "dust", "crackle", "perlinnoise", "berlinnoise"),
-        )
-
-        /** The instrument played before any is applied. */
-        val DEFAULT_INSTRUMENT = MidiInstrument(
-            name = "Warm saw",
-            ignitorCode = "Ign.saw()\n  .plus(Ign.sine().detune(12).mul(0.3))\n  .lowpass(1800)\n  .adsr(0.01, 0.3, 0.6, 0.4)",
-            mapperCode = "reverb(wet = 0.2)",
         )
 
         /** Pad bank A / B colours: distinct hues, since the bank is otherwise invisible. */
@@ -179,13 +178,7 @@ class MidiRig {
     /** The laptop's keys as a source; they play while a drawing of them has the focus. */
     private val laptop = LaptopKeys()
 
-    /** The applied ignitor; null plays the built-in [State.selectedSound]. */
-    private var appliedIgnitor: IgnitorDsl? = null
-
-    /** The name of the instrument whose Ignitor was applied last. */
-    private var appliedName: String? = null
-
-    /** The applied sprudel mapper (`reverb(wet = 0.2)`, or a function as `x => x.reverb(wet = 0.2)`); null for none. */
+    /** The play code's function from the key's one-note pattern to what sounds; null before one applied. */
     private var appliedMapper: ((Any?) -> Any?)? = null
 
     private var started = false
@@ -202,8 +195,8 @@ class MidiRig {
     val devices: Stream<MidiConnector.State> = midi.state
 
     /**
-     * Brings the rig up, once for the app's life: the saved instrument applied, its playback started as soon as the
-     * Motor runs (started by anything: no gesture is needed then), and the kit loads once the playback is up, so a pad's
+     * Brings the rig up, once for the app's life: the stored play code played (or the app's own), its playback started
+     * as soon as the Motor runs (started by anything: no gesture is needed then), and the kit loads once the playback is up, so a pad's
      * first hit sounds (D2). Asked by what first shows the rig, and at the app's start where MIDI was granted before
      * ([connectIfGranted]); later calls do nothing. The devices are asked for apart ([connectDevices]), so a plain
      * visit asks the user nothing.
@@ -215,7 +208,10 @@ class MidiRig {
 
         started = true
 
-        apply(MidiInstrumentStorage.loadDraft() ?: DEFAULT_INSTRUMENT)
+        // The play code the user applied last plays again (one stored code, the maintainer, 2026-11-02: a step is for
+        // the session); one that fails now shows with its error, never as an empty editor. Nothing is saved here: the
+        // play code a first visit starts with stays the app's until the user applies one
+        run(code = MidiPlayCodeStorage.load() ?: MidiPlayCode.DEFAULT, byUser = true)
 
         // The Motor running, whoever started it: the keys play along at once
         Player.status.subscribeToStream { status ->
@@ -294,9 +290,10 @@ class MidiRig {
     //  THE TRANSLATION: voice shape, sound and params live here  //////////////////////////////
 
     /**
-     * A key becomes a one-note sprudel pattern: the note, its velocity, the applied ignitor (or the built-in sound). The
-     * applied mapper then shapes it like any sprudel pattern, and whatever starts at cycle 0 sounds now, under the key's
-     * liveId. Later onsets (a mapper with `off` or `fast`) are dropped: a realtime voice has no timeline to land on.
+     * A key becomes a one-note sprudel pattern: the note, its velocity, the built-in [MidiPlayCode.FALLBACK_SOUND]. The
+     * play code's function then makes it what sounds, its `.sound(...)` the instrument, and whatever starts at cycle 0
+     * sounds now, under the key's liveId. Later onsets (`off`, `fast`) are dropped: a realtime voice has no timeline to
+     * land on.
      *
      * Key velocity goes through sprudel's own `velocity`, which folds into the wire's one level word (signal-flow plan
      * section 6).
@@ -304,7 +301,7 @@ class MidiRig {
     private fun eventsFor(note: Int, velocity: Double): List<KlangPatternEvent> {
         val base = note(note.toString())
             .velocity(velocity)
-            .sound(appliedIgnitor ?: _state().selectedSound)
+            .sound(MidiPlayCode.FALLBACK_SOUND)
 
         val pattern = appliedMapper?.let { mapper -> mapPattern(mapper, base) } ?: base
 
@@ -325,83 +322,103 @@ class MidiRig {
     private fun kitRequests(): Set<SampleRequest> =
         KIT.indices.flatMap { padEvents(pad = it + 1, velocity = 1.0) }.map { it.toVoiceData().asSampleRequest() }.toSet()
 
-    /** Runs the user's mapper; a failure shows under its editor and the note plays unmapped. */
+    /** Runs the play code's function; a failure shows under its editor and the note plays as the key gave it. */
     private fun mapPattern(mapper: (Any?) -> Any?, base: SprudelPattern): SprudelPattern = try {
-        mapper(base) as? SprudelPattern ?: error("The mapper must return a pattern")
+        mapper(base) as? SprudelPattern ?: error("The play code's function must return a pattern")
     } catch (e: Throwable) {
-        _state { it.copy(mapperError = e.message ?: e.toString()) }
+        _state { it.copy(playCodeError = e.message ?: e.toString()) }
         base
     }
 
-    //  THE INSTRUMENT: two KlangScript inputs, compiled on apply  /////////////////////////////
+    //  THE PLAY CODE: one KlangScript input, its instruments and what a key plays (D7)  ///////
 
     /**
-     * Applies [instrument] and keeps it as the draft for the next visit. An input that fails keeps its previous applied
-     * version, so a typo never silences the keyboard mid-play.
+     * Applies [code], the user's text, and keeps it for the next visit: the one play code stored. Its last expression is
+     * the function a key goes through; its top-level `let`s holding an Ignitor are its instruments. A play code that
+     * fails keeps the one before playing, so a typo never silences the keyboard mid-play.
      */
-    fun apply(instrument: MidiInstrument) {
-        MidiInstrumentStorage.saveDraft(instrument)
+    fun apply(code: String) {
+        MidiPlayCodeStorage.save(code)
+        run(code = code, byUser = true)
+    }
+
+    /**
+     * Plays [code]: the user's text ([byUser]), or a choice or a step from outside the editor, which changes what plays
+     * for this session only (nothing saved: every open tab's rig hears a step) and leaves the user's text alone where it
+     * differs from what played (the maintainer, 2026-11-02: "Never touch my edits").
+     */
+    private fun run(code: String, byUser: Boolean) {
+        // The user's text holds changes of theirs: it differs from what plays
+        val edited = _state().playCode != _state().playing
 
         val engine = Player.createEngine()
         engine.execute("""import * from "stdlib"""")
         engine.execute("""import * from "sprudel"""")
 
-        var ignitorError: String? = null
-        var mapperError: String? = null
-
         try {
-            appliedIgnitor = compileIgnitor(engine, instrument.ignitorCode)
-            // The name of what plays: an Ignitor that fails keeps the one before, and its name with it
-            appliedName = instrument.name.trim().ifBlank { "Untitled" }
+            val result = engine.execute(code + "\n")
+
+            appliedMapper = (result as? FunctionValue)?.convertFunctionToKotlin(arity = 1)
+                ?: error("The play code ends in a function, e.g. x => x.sound(warmSaw), got ${result.toDisplayString()}")
+
+            val instruments = MidiPlayCode.namesOf(code).filter { name ->
+                runCatching { engine.getVariable(name).value is IgnitorDsl }.getOrDefault(false)
+            }
+
+            // The text follows what plays where it is the user's, or held no changes of theirs
+            val text = if (byUser || !edited) code else _state().playCode
+
+            _state {
+                it.copy(
+                    playCode = text,
+                    playing = code,
+                    sound = MidiPlayCode.soundOf(code),
+                    instruments = instruments,
+                    // A step leaves the error of the user's text that failed where it is: that text stays to be corrected
+                    playCodeError = if (byUser || !edited) null else it.playCodeError,
+                )
+            }
         } catch (e: Throwable) {
-            ignitorError = e.message ?: e.toString()
-        }
-
-        try {
-            appliedMapper = compileMapper(engine, instrument.mapperCode)
-        } catch (e: Throwable) {
-            mapperError = e.message ?: e.toString()
-        }
-
-        _state {
-            it.copy(
-                instrument = appliedName.takeIf { appliedIgnitor != null },
-                ignitorError = ignitorError,
-                mapperError = mapperError,
-            )
+            _state { state -> state.copy(playCode = if (byUser) code else state.playCode, playCodeError = e.message ?: e.toString()) }
         }
     }
 
-    private fun compileIgnitor(engine: KlangScriptEngine, code: String): IgnitorDsl? {
-        if (code.isBlank()) {
-            return null
+    /**
+     * Plays [sound] from the next key on: the play code that plays, or [code], the user's text (the page gives its
+     * editor's), with it in the `.sound(...)` a key plays, applied. Where that names no instrument the rig can change, it
+     * says so.
+     */
+    fun choose(sound: MidiPlayCode.Sound, code: String? = null) {
+        val changed = MidiPlayCode.withSound(code ?: _state().playing, sound)
+
+        // Nothing plays yet to step from (a stored play code that fails now): its own error stays
+        if (changed == null && code == null && _state().playing.isEmpty()) {
+            return
         }
 
-        val result = engine.execute(code + "\n")
+        if (changed == null) {
+            _state {
+                it.copy(
+                    playCodeError = "To choose an instrument, the play code must read and name its sound in its function: " +
+                        "x => x.sound(warmSaw)",
+                )
+            }
 
-        return result.value as? IgnitorDsl
-            ?: error("Expected an Ignitor, e.g. Ign.saw(), got ${result.toDisplayString()}")
-    }
-
-    private fun compileMapper(engine: KlangScriptEngine, code: String): ((Any?) -> Any?)? {
-        if (code.isBlank()) {
-            return null
+            return
         }
 
-        val result = engine.execute(code + "\n")
-
-        @Suppress("UNCHECKED_CAST")
-        return when (result) {
-            is FunctionValue -> result.convertFunctionToKotlin(arity = 1)
-            // A native mapper value, e.g. one sprudel hands out.
-            else -> result.value as? Function1<Any?, Any?>
-        } ?: error("Expected a mapper, e.g. reverb(wet = 0.2) or x => x.reverb(wet = 0.2), got ${result.toDisplayString()}")
+        // The page's choice is the user's own Apply; a step plays for this session
+        if (code != null) {
+            apply(changed)
+        } else {
+            run(code = changed, byUser = false)
+        }
     }
 
-    /** Plays the built-in [sound] from the next note on, while no Ignitor is applied. */
-    fun selectSound(sound: String) {
-        _state { it.copy(selectedSound = sound) }
-    }
+    /** Every instrument there is to choose: the play code's own, then the built-ins. */
+    private fun allSounds(): List<MidiPlayCode.Sound> =
+        _state().instruments.map { MidiPlayCode.Sound.Own(it) } +
+            SOUND_GROUPS.flatMap { (_, names) -> names.map { MidiPlayCode.Sound.BuiltIn(it) } }
 
     //  INPUT  //////////////////////////////////////////////////////////////////////////////////
 
@@ -601,17 +618,13 @@ class MidiRig {
         }
     }
 
-    /**
-     * The built-in sound [steps] away from the selected one, round the list (the instrument loadout comes later). The
-     * applied Ignitor goes, so the sound browsed is the one heard; the Ignitor's code stays in its editor for the next
-     * Apply.
-     */
+    /** The instrument [steps] away from the one playing, round the list (the loadout comes with step 5c), chosen. */
     private fun browseSound(steps: Int) {
-        val all = SOUND_GROUPS.flatMap { it.second }
-        val at = all.indexOf(_state().selectedSound).coerceAtLeast(0)
+        val all = allSounds()
+        // A sound not in the list (an alias, a let holding no Ignitor): forward from before the first, back from the first
+        val at = all.indexOf(_state().sound).takeIf { it >= 0 } ?: if (steps > 0) -1 else 0
 
-        appliedIgnitor = null
-        _state { it.copy(instrument = null, selectedSound = all[((at + steps) % all.size + all.size) % all.size]) }
+        choose(all[((at + steps) % all.size + all.size) % all.size])
     }
 
     /** Moves an on-screen control to [value] (`0..1`). */

@@ -9,6 +9,9 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.script.ast.AstIndex
+import io.peekandpoke.klang.script.ast.ExpressionStatement
+import io.peekandpoke.klang.script.ast.Identifier
+import io.peekandpoke.klang.script.ast.lastCallInChain
 import io.peekandpoke.klang.script.parser.KlangScriptParser
 
 class AstCallFinderTest : StringSpec({
@@ -147,5 +150,19 @@ class AstCallFinderTest : StringSpec({
     "positional argument - has no name" {
         val src = "x.body(0.4, \"wood\")"
         findAt(src, src.indexOf("wood")).shouldNotBeNull().argName shouldBe null
+    }
+
+    "the call of a name a chain reads last: walked down from its last link; one inside an argument is not the chain's" {
+        fun lastSoundOf(source: String): String? {
+            val statement = KlangScriptParser.parse(source).statements.last() as ExpressionStatement
+            val call = statement.expression.lastCallInChain("sound") ?: return null
+
+            return (call.arguments.first().value as? Identifier)?.name ?: "string"
+        }
+
+        lastSoundOf("x.sound(lead).reverb(wet = 0.2).sound(pad)") shouldBe "pad"
+        lastSoundOf("x.sound(lead).superimpose(y => y.sound(bell))") shouldBe "lead"
+        lastSoundOf("sound(\"bd\").fast(2)") shouldBe "string"
+        lastSoundOf("x.reverb(wet = 0.2)") shouldBe null
     }
 })

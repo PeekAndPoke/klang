@@ -161,7 +161,13 @@ class MidiTool(ctx: NoProps) : PureComponent(ctx) {
                 return@div
             }
 
-            span { +"Plays: ${rigState.instrument ?: rigState.selectedSound}" }
+            // A sound the play code names by an expression: said so, not named wrongly; no play code playing: the plain one
+            val plays = when {
+                rigState.playing.isEmpty() -> MidiPlayCode.FALLBACK_SOUND
+                else -> rigState.sound?.let { sound -> sound.code.trim('"') } ?: "as the play code says"
+            }
+
+            span { +"Plays: $plays" }
 
             if (rigState.pressed.keys.any { (_, control) -> control == ControlId.Sustain.id }) {
                 span { +"Sustain" }

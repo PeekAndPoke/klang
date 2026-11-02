@@ -221,7 +221,8 @@ The maintainer, 2026-11-01: "the midi controller must live at any time, so the u
   `let`s whose value is an Ignitor, then the built-ins. After Apply, the names come from the parsed script's
   top-level `let`s (a small AST walker, in `klangscript` where walkers live) and each value from
   `KlangScriptEngine.getVariable(name)`; the engine has no call that lists its bindings. A click plays one: it
-  rewrites the first `.sound(...)` of the play code.
+  rewrites the first `.sound(...)` of the play code (as built: the `.sound(...)` a key plays, the last of the
+  function's own chain).
   "New instrument" adds a `let` at the top.
 - **The loadout** (the maintainer, 2026-11-01: "We would also need a loadout again, so the user can configure the
   instruments that will be switched through by the change instrument inputs"): the instruments that
@@ -428,6 +429,31 @@ as proposed"). D7 was the maintainer's own proposal.
    Step 4 done: next, step 5 (the MIDI page as configuration).
 5. The MIDI page as configuration (section 6): the one play-code input, the instruments and the loadout, the
    devices, the routing, the event log and the monitor.
+   **Plan (2026-11-02):**
+   - 5a. The one play code (D7): `MidiPlayCode` (common, JVM specs): the code's top-level names, the
+     instrument of the `.sound(...)` a key plays (a name or a built-in in quotes) and the code with another one in its place (only
+     where that argument is a single name or string; anything else is left alone and said so). The walk itself in
+     `klangscript` (`lastCallInChain`, its rule). The rig applies the play code (its last expression a function from
+     the key's one-note pattern to what sounds), keeps it, and steps the instruments (the encoder, `[` and `]`) by
+     rewriting that `.sound(...)` (as built: the last of the function's own chain, the one a key plays). The store `MidiPlayCodeStorage` (spine/storage); an old save (the draft and
+     the saved instruments) loads once as one play code: each saved instrument and the draft's Ignitor a `let`, the
+     draft's mapper with `.sound(<it>)` in front.
+   - 5b. The page: the play code's editor on the left with Apply; on the right the instruments, a view of the code:
+     yours (its `let`s whose value is an Ignitor) and the built-ins; a click plays one (rewrites the
+     `.sound(...)` a key plays), "New instrument" adds a `let` at the top. The old two inputs and the saved instruments go.
+   **5a and 5b done (2026-11-02):** as planned, with the maintainer's decisions after the review rounds: "Never touch
+   my edits" (the user's unapplied changes are never changed from outside; a note says they do not play) and "One
+   stored code" (only the play code the user applied is stored; a step plays for the session and saves nothing, as
+   every open tab's rig hears it; a reload plays the stored code, one that fails shows with its error; a first visit's
+   play code stays the app's). The sound a key plays is the last `.sound`/`.s` of the function's own chain
+   (`lastCallInChain`, klangscript). An old save is converted once, always into code that parses; the page's own
+   untouched default stays the app's. Reviews: eight rounds across the decisions (the MAJORs: unapplied edits replaced
+   by a step, a fresh load emptying the editor, a failed reload losing the text, another tab's step overwriting the
+   text, a reload replaying the text over a step); the last round clean, its MINORs applied. About 40 mutants killed.
+   Checked by hand only: the page itself (its engine does not start in headless Chrome).
+   - 5c. The loadout: the instruments the steps go through, filled by drag and drop as the Looks page equips; empty,
+     the steps go through all.
+   - 5d. The page's lower half in tabs: the events, the routing (read only), the MIDI monitor.
 6. Later, own tickets: editing the routing and learning a control; key switches and splits; a backing loop for
    play / stop.
 
@@ -459,3 +485,4 @@ source's `AllUp`, the same note from two sources); the routing lookup order. New
 - 2026-11-02: step 4a, the MIDI rig in the Spine (`Playbacks.live`); the page draws from it.
 - 2026-11-02: step 4b, the MIDI tool in every page's bottom panel, closed until opened on a page without its own.
 - 2026-11-02: step 4c, the first key starts the Motor; held notes sound once it is up (the maintainer: "Only held notes wait").
+- 2026-11-02: steps 5a and 5b, the one play code and the instruments panel ("Never touch my edits", "One stored code").
