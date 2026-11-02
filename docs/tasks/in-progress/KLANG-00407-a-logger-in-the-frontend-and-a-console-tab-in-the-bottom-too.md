@@ -1,6 +1,7 @@
 # KLANG-00407: A Logger in the frontend and a Console tab in the bottom tools
 
-> **Status (2026-11-02): IN PROGRESS.** D1 decided (the ignore list); a check of it in the browsers comes first
+> **Status (2026-11-02): IN PROGRESS.** Steps 2 and 3 built, step 4 in part (uncaught errors, rejected promises);
+> the ignore list waits for the maintainer's look in Chrome and Firefox; step 5 (D6) not started
 
 ## Why this exists
 
@@ -86,12 +87,17 @@ caller; Firefox's support to be checked). Way 4 works everywhere at the cost of 
   `SourceMapDevToolPlugin`, option `ignoreList`, set in `webpack.config.d`), so the developer tools show the first
   frame outside it: the caller. Checked in Chrome and Firefox before the Logger is built.
 - **D2, the size of the buffer** and what leaves it first (the oldest; proposal: 1000 records, `debug` dropped first).
+  TAKEN AS PROPOSED 2026-11-02, open to change.
 - **D3, what the buffer takes besides the app's Logger**: the uncaught errors and rejected promises (proposal: yes),
   the engine's worklet messages (proposal: yes, through the feedback the worklet already sends), the libraries' own
-  `console` calls (proposal: no; wrapping `console` itself hides every caller's location).
+  `console` calls (proposal: no; wrapping `console` itself hides every caller's location). IN PART 2026-11-02: the
+  uncaught errors and the rejected promises are in (the Console only; Chrome's harmless ResizeObserver notice left
+  out); the worklet's messages not yet.
 - **D4, the levels the browser console listener writes** in a release build (proposal: `info` and above; `debug` only
-  in a development build or when switched on in the Console tab).
+  in a development build or when switched on in the Console tab). OPEN: for now every level goes to the browser's
+  console in every build (Chrome hides `debug` under "Verbose" by default).
 - **D5, where the Console tab lives**: every page's bottom panel as the MIDI tool (proposal), or the Dev Tools only.
+  TAKEN AS PROPOSED 2026-11-02: opened from its key while the key counts errors, the panel opens at the Console.
 - **D6, the existing `console` calls**: moved to the Logger in this ticket, all 64 and the engine's (proposal), or as
   they are touched.
 
@@ -104,6 +110,22 @@ caller; Firefox's support to be checked). Way 4 works everywhere at the cost of 
 3. The Console tab, its filters, Clear, Copy, the follow, the strip key's count of errors.
 4. The uncaught errors, the rejected promises and the engine's messages into the buffer (D3).
 5. The existing `console` calls moved to the Logger (D6).
+
+## Where it stands (2026-11-02)
+
+- **The Logger** (`common`, so `klangui` and `audio_fe` can use it too): `common/src/commonMain/kotlin/logging/`
+  (`KlangLog`, `Logger`, `LogRecord`, `LogBuffer`) and `common/src/jsMain/kotlin/logging/BrowserConsoleListener.kt`.
+  Every `logging/` directory of a Kotlin source set is on the source maps' ignore list
+  (`webpack.config.d/04-log-ignore-list.js`); the built map lists both files beside Kotlin's own entry. Webpack
+  writes the standard key `ignoreList`, not `x_google_ignoreList`. **To check by the maintainer:** after a dev server
+  restart, DevTools in Chrome and in Firefox show `[App] rendering app ...` at `KlangStudioComponent.kt`, not at
+  `BrowserConsoleListener.kt` or `KlangLog.kt`.
+- **The Console** (`spine/ConsoleLog.kt`, `comp/ConsoleTool.kt`): a tab beside the MIDI tool on every page
+  (`layouts/BottomTools.kt`); where a page has no panel of its own, the two make a panel "Tools" (a toolbox). Its
+  key and the tab's title count the errors not seen yet; showing the tab sees them.
+- **Taken as proposed, open to change:** D2 (1000 records, `debug` dropped first), D3 in part (uncaught errors and
+  rejected promises, into the Console only, since the browser prints them itself; the worklet's messages not yet),
+  D5 (every page's bottom panel). D4 and D6 are not decided yet.
 
 ## Acceptance
 
@@ -119,4 +141,5 @@ caller; Firefox's support to be checked). Way 4 works everywhere at the cost of 
   KLANG-00406's hand test, KLANG-00389's open steps) is done.
 - 2026-11-02: the spike on way 1 (inline): the call moves into the caller, the source map still points at the Logger; D1 open.
 - 2026-11-02: D1 decided, the ignore list; in progress.
+- 2026-11-02: the Logger, the ignore list, the Console tab and the uncaught errors built; the browsers' check waits.
 - 2026-11-02: IN PROGRESS.

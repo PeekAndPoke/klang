@@ -42,14 +42,8 @@ class MidiTool(ctx: NoProps) : PureComponent(ctx) {
         /** The tool as a tab of a bottom panel, with this id beside the page's own tabs. */
         const val TAB_ID = "midi"
 
-        /** The tool as a tab of a bottom panel. */
+        /** The tool as a tab of a bottom panel (on every page: `BottomTools`). */
         val tab = KlangWorkbench.Tab(id = TAB_ID, title = "MIDI") { MidiTool() }
-
-        /** The bottom panel of a page that has none of its own: the MIDI tool alone, closed until opened. */
-        val panel = KlangWorkbench.Bottom(title = "MIDI", icon = { keyboard }, tabs = listOf(tab), ambient = true)
-
-        /** [page]'s bottom panel with the MIDI tool beside its own tabs; the MIDI tool alone for a page with none. */
-        fun with(page: KlangWorkbench.Bottom?): KlangWorkbench.Bottom = page?.copy(tabs = page.tabs + tab) ?: panel
     }
 
     private val rig = Playbacks.live

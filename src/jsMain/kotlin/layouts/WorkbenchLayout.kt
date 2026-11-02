@@ -14,8 +14,8 @@ import io.peekandpoke.klang.comp.PlayerWarehouseStats
 import io.peekandpoke.klang.comp.StatusBar
 import io.peekandpoke.klang.comp.WalkthroughsButton
 import io.peekandpoke.klang.fs
-import io.peekandpoke.klang.midi.MidiTool
 import io.peekandpoke.klang.pages.docs.tutorials.LearnSearch
+import io.peekandpoke.klang.spine.ConsoleLog
 import io.peekandpoke.klang.spine.UiWork
 import io.peekandpoke.klang.storage.LookStorage
 import io.peekandpoke.klang.storage.WorkbenchLayoutStorage
@@ -36,6 +36,8 @@ import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.streams.ops.combinedWith
+import io.peekandpoke.ultra.streams.ops.distinct
+import io.peekandpoke.ultra.streams.ops.map
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
@@ -79,6 +81,9 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
     private val pageTools by subscribingTo(WorkbenchSlots.tools)
 
     private val pageBottom by subscribingTo(WorkbenchSlots.bottom)
+
+    /** The errors logged that the Console has not shown yet: the bottom panel's key counts them (KLANG-00407). */
+    private val unseenErrors by subscribingTo(ConsoleLog.state.map { it.unseenErrors }.distinct())
 
     /**
      * The workbench's layout as the last visit left it, read once: its pinned tool windows come back (KLANG-00349). A
@@ -161,8 +166,9 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
                         motorSection(title = "Build") { renderBuild() }
                     },
                 ) + pageTools,
-                // The MIDI tool beside the page's own tabs, on every page (KLANG-00402, step 4)
-                bottom = MidiTool.with(pageBottom),
+                // The MIDI tool (KLANG-00402, step 4) and the Console (KLANG-00407) beside the page's own tabs, on
+                // every page
+                bottom = BottomTools.with(page = pageBottom, unseenErrors = unseenErrors),
                 layout = keptLayout,
                 onLayout = { WorkbenchLayoutStorage.save(it) },
                 // The walkthroughs' beacons on the bottom panel's key and its tabs

@@ -42,6 +42,24 @@ class KlangIconToggleSpec : StringSpec({
         }
     }
 
+    "a count on its corner and in its name, above 0 only, more than 99 as 99+ (KLANG-00407)" {
+        TestBed.preact(
+            view = {
+                KlangIconToggle(icon = { toolbox }, label = "Tools", on = false, onClick = {}, count = 3)
+                KlangIconToggle(icon = { toolbox }, label = "Tools", on = false, onClick = {}, count = 99)
+                KlangIconToggle(icon = { toolbox }, label = "Tools", on = false, onClick = {}, count = 120)
+                KlangIconToggle(icon = { toolbox }, label = "Tools", on = false, onClick = {})
+            },
+        ) { root ->
+            val buttons = root.selectCss("button")
+
+            buttons.attr("aria-label") shouldContainExactly listOf("Tools (3 new)", "Tools (99 new)", "Tools (99+ new)", "Tools")
+            buttons.map { button ->
+                (button as HTMLElement).querySelector(".${styles.iconToggleCount}")?.textContent
+            } shouldContainExactly listOf("3", "99", "99+", null)
+        }
+    }
+
     "the trail's beacon shows only on the toggle it is given to (KLANG-00350)" {
         TestBed.preact(
             view = {

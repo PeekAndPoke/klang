@@ -166,6 +166,10 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
          * and a page's own as on the way to none (the maintainer, 2026-11-02: closed until opened).
          */
         val ambient: Boolean = false,
+        /** What its key wears on its corner: how many new things wait in it (the Console's unseen errors, KLANG-00407). */
+        val count: Int = 0,
+        /** The tab that holds what [count] counts: opened by its key while it counts, the panel opens there. */
+        val countTab: String? = null,
     ) {
         init {
             require(tabs.isNotEmpty()) { "The bottom panel $title has no tabs" }
@@ -506,6 +510,21 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
     }
 
     /**
+     * The bottom panel opened by its key: while the key counts something new ([Bottom.count]), at the tab that holds it
+     * ([Bottom.countTab]). Only the key: a tab asked for by name ([showBottom]: Alt+Q, a hover, a link) is the one shown.
+     */
+    private fun openBottomByKey() {
+        openBottom()
+
+        val bottom = props.bottom ?: return
+        val countTab = bottom.countTab
+
+        if (bottom.count > 0 && countTab != null && bottom.tabs.any { it.id == countTab }) {
+            bottomTab = countTab
+        }
+    }
+
+    /**
      * Whether the bottom panel shows open: open, and, for a panel there on every page ([Bottom.ambient]), at one of its
      * own tabs, so the open state another page's panel left does not open it.
      */
@@ -804,7 +823,8 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
                             on = bottomShown(),
                             large = true,
                             beacon = lit(bottom.beaconStep),
-                            onClick = { if (bottomShown()) closeBottom() else openBottom() },
+                            count = bottom.count,
+                            onClick = { if (bottomShown()) closeBottom() else openBottomByKey() },
                         )
                     }
 

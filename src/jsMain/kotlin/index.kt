@@ -5,6 +5,9 @@
 
 package io.peekandpoke.klang
 
+import io.peekandpoke.klang.common.logging.BrowserConsoleListener
+import io.peekandpoke.klang.common.logging.KlangLog
+import io.peekandpoke.klang.spine.ConsoleLog
 import io.peekandpoke.klang.spine.Playbacks
 import io.peekandpoke.klang.sprudel.ui.registerSprudelUiTools
 import io.peekandpoke.klang.storage.KeymapStorage
@@ -70,6 +73,12 @@ val fs = FullscreenController()
 val version = VersionController()
 
 fun main() {
+    // The log's messages to the browser's console, each at the line that logged it, and to the app's own Console tab
+    // (KLANG-00407)
+    KlangLog.addListener(BrowserConsoleListener)
+    ConsoleLog.install()
+    ConsoleLog.captureUncaught()
+
     // Read CSS custom properties and establish the active look-and-feel before render
     KlangTheme.initialize()
     // The user's own looks and the equipped slots (KLANG-00382), then the look the user chose last time (KLANG-00339)

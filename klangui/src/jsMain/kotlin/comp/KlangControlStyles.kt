@@ -1073,6 +1073,8 @@ object KlangControlStyles : StyleSheet("kl-controls") {
 
     /** A small icon button: a tool window's pin, the tool strip's toggles. Printed, not raised; on, it sinks in. */
     val iconToggle by rule {
+        // Positioned: the count sits on its corner (iconToggleCount)
+        put("position", "relative")
         put("display", "inline-flex")
         put("align-items", "center")
         put("justify-content", "center")
@@ -1104,6 +1106,26 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("background", "var(--kl-ground-sunken)")
         put("border-color", "var(--kl-edge)")
         put("box-shadow", "inset 0 2px 4px rgba(0,0,0,0.8)")
+    }
+
+    /** The count on an icon toggle's corner ([KlangIconToggle.Props.count]): a small critical lamp with a number in it. */
+    val iconToggleCount by rule {
+        put("position", "absolute")
+        put("top", "-4px")
+        put("right", "-4px")
+        put("min-width", "16px")
+        put("height", "16px")
+        put("padding", "0 4px")
+        put("box-sizing", "border-box")
+        put("border-radius", "8px")
+        put("background", "var(--kl-lamp-critical)")
+        put("box-shadow", "0 0 6px var(--kl-lamp-critical)")
+        put("color", "#fff")
+        put("font-size", "10px")
+        put("font-weight", "700")
+        put("line-height", "16px")
+        put("text-align", "center")
+        put("pointer-events", "none")
     }
 
     /** The tool strip's size of it. */

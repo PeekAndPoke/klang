@@ -15,6 +15,7 @@ import io.peekandpoke.ultra.semanticui.icon
 import kotlinx.html.ButtonType
 import kotlinx.html.Tag
 import kotlinx.html.button
+import kotlinx.html.span
 import kotlinx.html.title
 
 @Suppress("FunctionName")
@@ -25,8 +26,9 @@ fun Tag.KlangIconToggle(
     onClick: () -> Unit,
     large: Boolean = false,
     beacon: Boolean = false,
+    count: Int = 0,
 ) = comp(
-    KlangIconToggle.Props(icon = icon, label = label, on = on, onClick = onClick, large = large, beacon = beacon)
+    KlangIconToggle.Props(icon = icon, label = label, on = on, onClick = onClick, large = large, beacon = beacon, count = count)
 ) {
     KlangIconToggle(it)
 }
@@ -47,6 +49,11 @@ class KlangIconToggle(ctx: Ctx<Props>) : Component<KlangIconToggle.Props>(ctx) {
         val large: Boolean,
         /** The first-visit trail's "try me" on it (KLANG-00350). */
         val beacon: Boolean,
+        /**
+         * How many new things wait behind it (the Console's errors not seen yet, KLANG-00407): above 0, a count on its
+         * corner and in its label.
+         */
+        val count: Int = 0,
     )
 
     override fun VDom.render() {
@@ -58,15 +65,26 @@ class KlangIconToggle(ctx: Ctx<Props>) : Component<KlangIconToggle.Props>(ctx) {
             if (props.beacon) styles.beacon else null,
         )
 
+        // More than two digits do not fit the corner: the badge and the name say "99+" alike
+        val count = if (props.count > 99) "99+" else props.count.toString()
+        val label = if (props.count > 0) "${props.label} ($count new)" else props.label
+
         button(type = ButtonType.button, classes = classes.joinToString(" ")) {
-            attributes["aria-label"] = props.label
+            attributes["aria-label"] = label
             attributes["aria-pressed"] = props.on.toString()
-            title = props.label
+            title = label
             onClick { props.onClick() }
 
             val iconFn = props.icon
 
             icon.iconFn().render { attributes["aria-hidden"] = "true" }
+
+            if (props.count > 0) {
+                span(classes = styles.iconToggleCount.toString()) {
+                    attributes["aria-hidden"] = "true"
+                    +count
+                }
+            }
         }
     }
 }

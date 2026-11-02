@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang
 
+import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.klang.comp.RouterWithTransitions
 import io.peekandpoke.klang.comp.ScreenAwake
 import io.peekandpoke.klang.visuals.VisualsScreen
@@ -14,6 +15,8 @@ import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
 import kotlinx.html.Tag
 import kotlinx.html.div
+
+private val log = Logger("App")
 
 @Suppress("FunctionName")
 fun Tag.KlangStudioComponent() = comp {
@@ -28,7 +31,7 @@ class KlangStudioComponent(ctx: NoProps) : PureComponent(ctx) {
 
     override fun VDom.render() {
 
-        console.info("rendering app ...")
+        log.info("rendering app ...")
 
         div(classes = "app") {
             RouterWithTransitions()

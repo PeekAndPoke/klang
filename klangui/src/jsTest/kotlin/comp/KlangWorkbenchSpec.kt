@@ -215,6 +215,51 @@ class KlangWorkbenchSpec : StringSpec({
 
     fun Element.toggle(label: String): HTMLElement = q("[role=group] button[aria-label='$label']")!!
 
+    "opened by its key while it counts something, the panel opens at the tab that holds it; a tab asked for by name wins (KLANG-00407)" {
+        // The count, whether the key opens it (else the tab "quick" is asked for by name), the body shown
+        val cases = listOf(
+            Triple(2, true, "TERMS BODY"),
+            Triple(0, true, "QUICK BODY"),
+            Triple(2, false, "QUICK BODY"),
+        )
+
+        cases.forEach { (count, byKey, body) ->
+            keyedBed(
+                view = {
+                    KlangWorkbench(
+                        column = {},
+                        motor = { _ -> span { +"MOTOR" } },
+                        content = {},
+                        bottom = KlangWorkbench.Bottom(
+                            title = "Help",
+                            icon = { question_circle },
+                            tabs = listOf(
+                                KlangWorkbench.Tab(id = "quick", title = "Quick") { +"QUICK BODY" },
+                                KlangWorkbench.Tab(id = "terms", title = "Terms") { +"TERMS BODY" },
+                            ),
+                            count = count,
+                            countTab = "terms",
+                        ),
+                    ).track(workbenchRef)
+                },
+            ) { root ->
+                val r = root.single()
+
+                fun panel() = r.q(".${styles.workbenchBottomFloating}, .${styles.workbenchBottomPinned}")
+
+                if (byKey) {
+                    r.toggle(if (count > 0) "Help ($count new)" else "Help").click()
+                } else {
+                    workbenchRef { it.showBottom(tab = "quick") }
+                }
+
+                withClue("counting $count, by the key: $byKey: open at the tab with $body") {
+                    eventually { panel()?.textContent?.contains(body) shouldBe true }
+                }
+            }
+        }
+    }
+
     "with a link, the mark leads there: a real link, a plain click inside the app, with Ctrl the browser's way" {
         val followed = mutableListOf<String>()
 
