@@ -156,13 +156,29 @@ class MotorHistoryGraphs(ctx: Ctx<Props>) : Component<MotorHistoryGraphs.Props>(
         div {
             key = "graph-$category"
 
+            // The category, and where the scale ends at the row's right end, above the graph (the maintainer,
+            // 2026-11-02: "move the max value of the performance graphs out of the graph and on top of the graph"): a
+            // scale that moves says where it is
             div {
                 css {
+                    put("display", "flex")
+                    put("justify-content", "space-between")
+                    put("align-items", "baseline")
                     put("margin-bottom", "4px")
                     put("font-size", "11px")
                     put("color", "var(--kl-ink-label)")
                 }
-                +category
+
+                span { +category }
+
+                span {
+                    css {
+                        // At the right edge, as the legend's values under the graph
+                        put("font-size", "10px")
+                        put("font-family", "monospace")
+                    }
+                    +"${max.roundToInt()}${series.first().metric.unit}"
+                }
             }
 
             // A small screen, its corners cut as the app's screens are (the maintainer, 2026-10-29: "the graph displays
@@ -181,21 +197,6 @@ class MotorHistoryGraphs(ctx: Ctx<Props>) : Component<MotorHistoryGraphs.Props>(
                             put("flex", "1")
                             put("min-height", "0")
                             put("overflow", "hidden")
-                        }
-
-                        // Where the scale ends, in the top corner: a scale that moves says where it is
-                        div {
-                            css {
-                                put("position", "absolute")
-                                // Clear of the cut corner
-                                put("top", "2px")
-                                put("right", "12px")
-                                put("font-size", "9px")
-                                put("font-family", "monospace")
-                                put("color", "var(--kl-ink-label)")
-                                put("pointer-events", "none")
-                            }
-                            +"${max.roundToInt()}${series.first().metric.unit}"
                         }
 
                         svgRoot(viewBox = "0 0 $WIDTH $HEIGHT", style = "display:block;height:100%;") {
