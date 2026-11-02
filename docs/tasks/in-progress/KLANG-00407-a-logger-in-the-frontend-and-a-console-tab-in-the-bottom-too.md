@@ -1,6 +1,6 @@
 # KLANG-00407: A Logger in the frontend and a Console tab in the bottom tools
 
-> **Status (2026-11-02): NOT STARTED.** the maintainer's ask, 2026-11-02: after Klang-Research's open work
+> **Status (2026-11-02): IN PROGRESS.** D1 decided (the ignore list); a check of it in the browsers comes first
 
 ## Why this exists
 
@@ -67,9 +67,24 @@ project's Kotlin/JS build and its source maps; step 1 checks them in Chrome and 
 Proposal: 1 (inline), checked first; 3 as the fallback in Chrome; 4 kept for the buffer's records of `warn` and
 `error`, so the Console tab can show where a message came from (the file and line, mapped or not, a decision).
 
+**Spike, 2026-11-02 (way 1, checked in this project's development build):** a throwaway `inline fun spikeWarn`
+calling `console.warn`, called from another file, built once and removed. The compiler does copy the body into the
+caller: the generated JavaScript has the `console.warn` inside the caller's function (marked "Inline function ...
+call"). But the source map maps that line to the inline function's own Kotlin line (`SpikeLog.kt:12`), not to the
+caller's (`SpikeCaller.kt:10`). So with source maps on, as the developer tools have them, the location shown is the
+Logger's, not the caller's; only the frame's function name and the generated JavaScript's line are the caller's.
+**Way 1 alone does not keep the caller's location.** Ways 2 and 3 are behaviour of the developer tools, still
+UNVERIFIED here: the bound function (the call stands in the caller's code, so its mapped line is the caller's; the
+buffer then needs its own call), and the ignore list (the Logger's file listed in the source map's
+`x_google_ignoreList`, which webpack's source map plugin can write; Chrome then shows the first frame outside it, the
+caller; Firefox's support to be checked). Way 4 works everywhere at the cost of a stack per message.
+
 ## Decide before implementing
 
-- **D1, the location**: inline functions (proposal), bound functions, the ignore list, or the location in the message.
+- **D1, the location**: DECIDED 2026-11-02 by the maintainer: the ignore list. The Logger stays a plain function that
+  fans out to its listeners; its file is listed in the source map's `x_google_ignoreList` (webpack's
+  `SourceMapDevToolPlugin`, option `ignoreList`, set in `webpack.config.d`), so the developer tools show the first
+  frame outside it: the caller. Checked in Chrome and Firefox before the Logger is built.
 - **D2, the size of the buffer** and what leaves it first (the oldest; proposal: 1000 records, `debug` dropped first).
 - **D3, what the buffer takes besides the app's Logger**: the uncaught errors and rejected promises (proposal: yes),
   the engine's worklet messages (proposal: yes, through the feedback the worklet already sends), the libraries' own
@@ -102,3 +117,6 @@ Proposal: 1 (inline), checked first; 3 as the fallback in Chrome; 4 kept for the
 
 - 2026-11-02: created from the maintainer's ask; to be taken up when Klang-Research's open work (KLANG-00402 step 5,
   KLANG-00406's hand test, KLANG-00389's open steps) is done.
+- 2026-11-02: the spike on way 1 (inline): the call moves into the caller, the source map still points at the Logger; D1 open.
+- 2026-11-02: D1 decided, the ignore list; in progress.
+- 2026-11-02: IN PROGRESS.
