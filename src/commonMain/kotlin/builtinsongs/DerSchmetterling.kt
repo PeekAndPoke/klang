@@ -126,7 +126,7 @@ let cabStock = Ign.fn(x => x.lowpass(5000).lowpass(5000))
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = Ign.fn(x => x
   .eq(e => e
-    .band(freq =  120, q = 0.7, db =  2.80)        // thump: closed-back box resonance
+    .band(freq =  120, q = 0.7, db =  2.70)        // thump: closed-back box resonance
     .band(freq =  380, q = 0.5, db =  3.90)        // roar:  low mids
     .band(freq = 2700, q = 1.7, db =  1.20)        // bark:  the upper-mid speaker peak
   )
@@ -553,7 +553,7 @@ export song = stack(
       .band(mid => mid.distort(0.15, "soft", 4).mul(0.85)).cut(5000)
       .band(low => low.distort(0.01, "soft", 4).mul(1.10))
     ) // the glue on the mids only: the kick and the hats stay clean
-    .mul(0.9)
+    .mul(0.90)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)
   ))
 )
