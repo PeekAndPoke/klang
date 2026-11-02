@@ -453,48 +453,70 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         .code(BuiltInSongs.soundOfTheSea.code)
         .rpm(BuiltInSongs.soundOfTheSea.rpm)
         .title(BuiltInSongs.soundOfTheSea.title)
+        // A preview (KLANG-00406, D2): a song put on the deck stops it, and it fades in on its own gain
+        .preview()
         .build()
 
     /**
-     * The waiting song's fade-in: the player's output from silence up to the user's volume over [DURATION_MS]. The
-     * user's volume itself ([Player.outputVolume], the knob's and the stored one) is never touched; [end] gives the
-     * player that volume back at once.
+     * The waiting song's fade-in on its own gain (KLANG-00406, D2), from silence to full over [DURATION_MS], counted
+     * from its first sound, not from its Play: its samples may load for seconds. The user's volume is not touched any
+     * more: the volume knob is its one writer (KLANG-00389, "One writer of the volume"). Squared, as before: the ear
+     * hears the first part of a linear gain ramp as the loudest change; the engine ramps linearly, so the curve goes as
+     * linear pieces of [STEP_MS], each to where the square stands at its end.
      */
-    private class SongFadeIn {
+    private class SongFadeIn(private val song: KlangCodePlaybackCtrl) {
         companion object {
             const val DURATION_MS = 15_000.0
 
-            /** How often the volume steps; the backend glides between the steps. */
-            const val STEP_MS = 100
+            /** A piece of the curve: the engine ramps linearly to the next point over this time. */
+            const val STEP_MS = 500
         }
 
         private var timer: Int? = null
 
+        /** Silent from its start; the fade starts with its first sound. Call before the song's Play. */
         fun start() {
-            val startMs = Kronos.systemUtc.millisNow()
+            var heardFromMs: Double? = null
+            var seenPlaying = false
 
-            Player.get()?.setOutputVolume(0.0)
+            song.setGain(gain = 0.0, rampSec = 0.0)
 
             timer = window.setInterval({
-                val progress = ((Kronos.systemUtc.millisNow() - startMs) / DURATION_MS).coerceIn(0.0, 1.0)
+                val playing = song.state().isPlaying
+                val heard = (song.playback()?.heardSec() ?: 0.0) > 0.0
 
-                // Squared: the ear hears the first part of a linear gain ramp as the loudest change
-                Player.get()?.setOutputVolume(Player.outputVolume() * progress * progress)
+                when {
+                    // Stopped from outside (a song put on the deck, Klang Amp's stop, a failed start): nothing to fade
+                    seenPlaying && !playing -> end()
 
-                if (progress >= 1.0) {
-                    end()
+                    // Not heard yet: still compiling or loading, the fade waits
+                    !heard -> seenPlaying = seenPlaying || playing
+
+                    else -> {
+                        seenPlaying = true
+
+                        val nowMs = Kronos.systemUtc.millisNow().toDouble()
+                        val fromMs = heardFromMs ?: nowMs.also { heardFromMs = it }
+                        val progress = ((nowMs + STEP_MS - fromMs) / DURATION_MS).coerceIn(0.0, 1.0)
+
+                        song.setGain(gain = progress * progress, rampSec = STEP_MS / 1000.0)
+
+                        if (progress >= 1.0) {
+                            end()
+                        }
+                    }
                 }
             }, STEP_MS)
         }
 
+        /** The fade ends where it stands: at full gain, the song stopped, or the page left. */
         fun end() {
             timer?.let { window.clearInterval(it) }
             timer = null
-            Player.get()?.setOutputVolume(Player.outputVolume())
         }
     }
 
-    private val songFadeIn = SongFadeIn()
+    private val songFadeIn = SongFadeIn(song = waitingSong)
 
     init {
         lifecycle {

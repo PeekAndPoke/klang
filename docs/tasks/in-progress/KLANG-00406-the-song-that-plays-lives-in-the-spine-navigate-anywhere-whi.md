@@ -3,8 +3,9 @@
 > **Status (2026-11-02): IN PROGRESS.** Steps 1 to 5 done: `SongDeck` in the Spine, Klang Amp on it, the song page
 > plays on it and its song plays on when the page is left, the status bar and the Stop key from anywhere, the
 > per-playback gain in the engine (agreed with Klang-Main-Dev), its fade linear (the maintainer's choice), and step 6's
-> first half: a code example fades the song out and in (`Previews`). Next: the start page's waiting song as a preview
-> (D2). Open for the maintainer: what the Stop key stops while an example plays over a faded song.
+> first half: a code example fades the song out and in (`Previews`), and its second: the start page's waiting song a
+> preview fading in on its own gain (D2). Open for the maintainer: what the Stop key stops while an example plays over a
+> faded song; then the line at the top of the Motor menu's "Pick up where you left off".
 
 ## Why this exists
 
@@ -288,3 +289,8 @@ full-level first block at a start; a gain during a stop release documented; the 
 - 2026-11-02: step 6, first half: the code examples fade the song out and in (`Previews`). Two review rounds (round 1:
   a failed example start left the song silent, fixed; round 2 clean), every new row mutation-checked.
 - 2026-11-02: the maintainer heard step 6 ("the song fade out works"); the fade out made 1 s, the fade in kept at 2 s.
+- 2026-11-02: step 6, second half (the maintainer: "continue with step 6"): the start page's waiting song is a preview;
+  it starts silent and fades in on its own gain, 15 s squared as before, counted from its first sound; the output
+  volume is no longer touched by the start page (KLANG-00389's "one writer of the volume": the knob is the one writer).
+  A song put on the deck (Klang Amp over the start page) stops it, where the old volume fade went on fading that song.
+  Review round clean; the fade itself is page glue on a browser timer, untested.
