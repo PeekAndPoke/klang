@@ -656,11 +656,15 @@ object KlangLooks {
     )
 
     /**
-     * The looks a new user finds equipped, in the drawer's order, the last slot left empty for a look of their own:
-     * the first eight built-ins but Army, on the bench for Neon (the maintainer, 2026-10-28); the looks of 2026-11-01
-     * (Party, Cake, Unicorn, Pink Noir, Abyss, Amber) wait on the bench from the start, to be equipped on the Looks page.
+     * The looks a new user finds equipped, in the drawer's order, the last slot left empty for a look of their own (the
+     * maintainer, 2026-11-02: "Please fill the loadout an leave one empty by default", then "Make this the default"):
+     * three rows of four. Army, Cake and Unicorn wait on the bench, to be equipped on the Looks page.
      */
-    val equippedByDefault: List<KlangLookPreset> = listOf(Default, Copper, Cream, Forest, Sun, Asphalt, Neon)
+    val equippedByDefault: List<KlangLookPreset> = listOf(
+        Default, Copper, Cream, Forest,
+        Sun, Amber, Asphalt, Abyss,
+        Party, Neon, PinkNoir,
+    )
 
     /** The preset with [id]; null for an id no preset has (one remembered from an older version, say). */
     fun byId(id: String): KlangLookPreset? = all.firstOrNull { it.id == id }

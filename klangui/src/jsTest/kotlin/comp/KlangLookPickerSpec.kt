@@ -36,8 +36,10 @@ class KlangLookPickerSpec : StringSpec({
 
             val buttons = root.selectCss("button")
 
-            buttons.map { it.textContent } shouldContainExactly listOf("Default", "Copper", "Cream", "Forest", "Sun", "Asphalt", "Neon")
-            buttons.attr("aria-pressed") shouldContainExactly listOf("false", "false", "true", "false", "false", "false", "false")
+            buttons.map { it.textContent } shouldContainExactly listOf(
+                "Default", "Copper", "Cream", "Forest", "Sun", "Amber", "Asphalt", "Abyss", "Party", "Neon", "Pink Noir",
+            )
+            buttons.attr("aria-pressed") shouldContainExactly listOf("false", "false", "true") + List(8) { "false" }
         }
     }
 
@@ -49,7 +51,7 @@ class KlangLookPickerSpec : StringSpec({
 
             eventually {
                 KlangTheme.chosen shouldBe KlangLooks.Copper
-                root.selectCss("button").attr("aria-pressed") shouldContainExactly listOf("false", "true", "false", "false", "false", "false", "false")
+                root.selectCss("button").attr("aria-pressed") shouldContainExactly listOf("false", "true") + List(9) { "false" }
             }
 
             handed shouldContainExactly listOf(KlangLooks.Copper)
