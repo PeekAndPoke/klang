@@ -13,7 +13,7 @@ import io.peekandpoke.klang.Song
 internal val derSchmetterlingSong = Song(
     id = "${BuiltInSongs.PREFIX}-der-schmetterling",
     title = "Der Schmetterling",
-    rpm = 35.0,
+    rpm = 34.5,
     icon = "bug",
     code = """
 import * from "stdlib"
@@ -21,7 +21,7 @@ import * from "sprudel"
 
 // Song Status: Upcoming Garage Band ...
 
-let feel          =   10    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
+let feel          =    5    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
 let transposition =   -3    // -1 .. D# | 0 .. E | 1 .. F
 let drunk         =  0.8    // How many liters of beers did each band member have?
 let snareHz       =  205    // Where does the snare cut through?
@@ -185,7 +185,7 @@ let makeGuitar = (rig) => {
     .pitchEnvelope(0.2, x => x.adsr(0.030, 0.05, 0, 0))
     //.lowpass(freq = Ign.freq().times(4).add(Ign.constant(5000).adsr(pAttack, 1.0, 0.0, 0.050)), q = 0.7)
     // noise burst
-    .plus(Ign.whitenoise().adsr(0.003, 0.008, 0.0, 0.05).highpass(Ign.perlin(1).mul(100).add(2500)).mul(0.08))
+    .plus(Ign.whitenoise().adsr(0.005, 0.08, 0.0, pRelease).highpass(Ign.perlin(1).mul(100).add(2500)).mul(0.03))
     //.plus(Ign.crackle(1.3).highpass(1200).adsr(0.003, 0.001, 0.0, 0.05).mul(1.5))
     // the string - lowpass adsr for the string sound and adsr for the string
     .adsr(pAttack, pDecay, pSustain, pRelease, e => e.curves("exp", "exp", "linear"))
@@ -293,7 +293,7 @@ export guitar1_pat =
 
 export guitar1_shape = x => x.pregain(guitarDyna(1).fast(2).mul(0.8)).sound(guitarMelody).adsrOff().unison(voices = 11, spread = 0.07) // . solo()
   .ignp("decay", guitarDecay(1)) //. mute()
-  .clip(guitarClip(1).fast(2)).pan(0.5).body(material = "oak", wet = 0.16)
+  .clip(guitarClip(1).fast(2)).pan(0.5).body(material = "spruce", wet = 0.15)
 
 export guitar1_arrange = x => x.orbit(1)  // . solo()
   .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").gain(0.165)  // .mute()
@@ -493,7 +493,7 @@ export snare_arrange = x => x.orbit(7).mute("<0!128 1!32>").late(berlin(0.005, 0
 export snare = sound(snare_pat).apply(snare_shape).tag("snare") // .solo()
 
 export hats_pat = `<[hh hh hh hh]!16 [hh hh oh hh]!24 [cr hh cr hh]!24 [~ rd ~ rd]!32>`
-export hats_shape = x => x.gain(0.14).pan(0.425)
+export hats_shape = x => x.gain(0.13).pan(0.425)
   .hpf(800).lpf(freq = "13500".add(perlin.mul(50).fast(4)), q = 0.5).adsr(perlin(0.001, 0.003), 0.1, 0.70, 2.0)
 export hats_arrange = x => x.orbit(8).mute("<0!128 1!32>").late(berlin(0.0015, 0.0030).mul(drunk).seg(4))
 export hats = sound(hats_pat).fast(2).apply(hats_shape).velocity("<1.0 0.90 0.95 0.88>*8".sub(berlin(0.0, 0.05).slow(4))).tag("hats")

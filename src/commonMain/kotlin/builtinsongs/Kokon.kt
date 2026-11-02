@@ -33,7 +33,7 @@ import * from "sprudel"
 //   parts  lines played together; a part starts on its own first cycle
 //   song   arrange(): which part, for how many cycles (3 s each), in which order
 
-let feel  = 10   // analog drift of the guitars, as in Der Schmetterling
+let feel  =  5   // analog drift of the guitars, as in Der Schmetterling
 let drunk =  1   // two guitarists, sober this time, mostly
 
 // Rig stages (from Der Schmetterling)  ------------------------------------------------------------
@@ -72,9 +72,9 @@ let preampCrunch = Ign.fn(x => x
   .mul(1.9))
 
 let preampHighGain = Ign.fn(x => x
-  .highpass(90)                                    // tight: no bass into the gain stages
-  .oversampleAtLeast(8, y => y                       // the three stages at 8x: one trip up, one down
-    .distort(0.25, "tube").highpass(90)
+  .highpass(100)                                   // tight: no bass into the gain stages
+  .oversampleAtLeast(8, y => y                     // the three stages at 8x: one trip up, one down
+    .distort(0.25, "tube").highpass(100)
     .distort(0.45, "softsat").highpass(90)
     .distort(0.70, "soft").highpass(90))
   .lowpass(4000)                                   // the fizz
@@ -91,11 +91,11 @@ let powerClassA = Ign.fn(x => x
 
 let cab4x12 = Ign.fn(x => x
   .eq(e => e
-    .band(freq =  120, q = 0.7, db =  2.00)        // thump: closed-back box resonance
-    .band(freq =  380, q = 0.5, db =  3.30)        // roar:  low mids
-    .band(freq = 2700, q = 1.7, db =  3.00)        // bark:  the upper-mid speaker peak
+    .band(freq =  120, q = 0.7, db =  2.40)        // thump: closed-back box resonance
+    .band(freq =  380, q = 0.5, db =  3.80)        // roar:  low mids
+    .band(freq = 2700, q = 1.7, db =  1.20)        // bark:  the upper-mid speaker peak
   )
-  .lowpass(4980, 0.707, x => x.passes(3))          // the wall: 36 dB/oct, the fizz is gone
+  .lowpass(5000, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
   .highpass(60, 0.707, x => x.passes(2)))
 
 let cab1x12 = Ign.fn(x => x
@@ -292,10 +292,10 @@ export sing = notes => n(notes.add(7))
 // Soar: the melody two octaves up, wider, over the wings.
 export soar = notes => n(notes.add(14))
   .sound(bright).adsrOff().unison(voices = 9, spread = 0.06)
-  .ignp("decay", 1.5).clip(2.0)
+  .ignp("decay", 2.5).clip(2.0)
   .hpf(280)                                        // two octaves up, nothing of the melody lives below
   .lpf(4250)                                       // less fizz, the wall keeps its own
-  .gain(0.42).pan(0.5)
+  .gain(0.45).pan(0.5)
   .orbit(6)
 
 // Swell: volume-knob swells, the thing inside stretching. Doubled on the left, a little late.
@@ -387,7 +387,7 @@ export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
   .ignp("sub", 0.95).ignp("harmonics", 1.00)
   .adsr(0.003, 0.75, 0.5, 0.040).hpf(30).notch(freq = snareHz, q = 1.0)
   .clip(0.90)
-  .gain(0.50).pan(0.25).superimpose(pan(0.75))
+  .gain(0.55).pan(0.25).superimpose(pan(0.75))
   .orbit(15)
 
 // Parts  -----------------------------------------------------------------------------------------------------------
@@ -445,7 +445,7 @@ let breakingOpen = stack(
 // The melody steps aside and the cocoon's own thread unravels over the heavy wall: the arpeggio an octave up, leading,
 // in the centre between the wings.
 let unravelling = stack(
-  spin(cocoonArp.add(7)).ply(2).gain(0.65).pan(0.5),
+  spin(cocoonArp.add(7)).ply(2).gain(0.68).pan(0.5),
   wings(cocoonPower2),
   chug(cocoonRoots),
   beat(cocoonRoots).pan(0.5).gain(0.10).lpf(1600),
@@ -536,8 +536,8 @@ export song = stack(
     .apply(drumRoom)
  
   , master(Katalyst(k => k
-    .reverb(0.20, 7, 7500)                         // the hall: one room for the whole band, about 2 s, warm
-    .gain(1.00)                                    // the house level, -14 LUFS
+    .reverb(0.20, 9.5, 7500)                         // the hall: one room for the whole band, about 2 s, warm
+    .gain(1.03)                                    // the house level, -14 LUFS
     .bands(b => b
       .band(low => low.distort(0.01, "soft", 4).mul(1.00)).cut(150)
       .band(mid => mid.distort(0.15, "soft", 4).mul(0.90)).cut(5000)
