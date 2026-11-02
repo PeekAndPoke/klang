@@ -24,7 +24,7 @@ import org.w3c.dom.HTMLElement
 class KlangLookPickerSpec : StringSpec({
 
     afterTest {
-        KlangTheme.choose(KlangLooks.Default)
+        KlangTheme.choose(KlangLooks.Classic)
         KlangLookShelf.restore(own = emptyList(), slots = null)
     }
 
@@ -37,7 +37,7 @@ class KlangLookPickerSpec : StringSpec({
             val buttons = root.selectCss("button")
 
             buttons.map { it.textContent } shouldContainExactly listOf(
-                "Default", "Copper", "Cream", "Forest", "Sun", "Amber", "Asphalt", "Abyss", "Party", "Neon", "Pink Noir",
+                "Classic", "Copper", "Cream", "Forest", "Sun", "Amber", "Asphalt", "Abyss", "Party", "Neon", "Pink Noir",
             )
             buttons.attr("aria-pressed") shouldContainExactly listOf("false", "false", "true") + List(8) { "false" }
         }
@@ -61,13 +61,13 @@ class KlangLookPickerSpec : StringSpec({
     "with an editor, the Edit key opens it, an empty slot opens it with its index" {
         val edits = mutableListOf<Int?>()
 
-        KlangLookShelf.restore(own = emptyList(), slots = listOf("default", null, "sun"))
+        KlangLookShelf.restore(own = emptyList(), slots = listOf("classic", null, "sun"))
 
         TestBed.preact(view = { KlangLookPicker(onEdit = { edits.add(it) }) }) { root ->
             val buttons = root.selectCss("button")
 
             buttons.map { it.textContent?.trim() } shouldContainExactly
-                listOf("\u270EEdit", "Default", "+", "Sun", "+", "+", "+", "+", "+", "+", "+", "+", "+")
+                listOf("\u270EEdit", "Classic", "+", "Sun", "+", "+", "+", "+", "+", "+", "+", "+", "+")
 
             (buttons[0] as HTMLElement).click()
             (buttons[2] as HTMLElement).click()

@@ -25,7 +25,7 @@ object KlangLookShelf : Stream<KlangLookShelf.State> {
         val all: List<KlangLookPreset> get() = KlangLooks.all + own
 
         /** The look with [id]; null for none. */
-        fun byId(id: String): KlangLookPreset? = all.firstOrNull { it.id == id }
+        fun byId(id: String): KlangLookPreset? = KlangLooks.currentId(id).let { now -> all.firstOrNull { it.id == now } }
 
         /** The slots, each with its look or null. */
         val equipped: List<KlangLookPreset?> get() = loadout.slots.map { id -> id?.let { byId(it) } }
@@ -43,7 +43,8 @@ object KlangLookShelf : Stream<KlangLookShelf.State> {
     /** What the app kept: the own looks, and the slots, cleaned of ids no look has any more. */
     fun restore(own: List<KlangLookPreset>, slots: List<String?>?) {
         val known = KlangLooks.all + own
-        val loadout = slots?.let { KlangLoadout(it) } ?: KlangLoadout.default
+        // A slot remembered by a look's old id holds it by its new one
+        val loadout = slots?.let { KlangLoadout(it.map { id -> id?.let(KlangLooks::currentId) }) } ?: KlangLoadout.default
 
         source(State(own = own, loadout = loadout.normalized(known.map { it.id })))
     }

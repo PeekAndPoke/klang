@@ -13,7 +13,11 @@ package io.peekandpoke.klang.ui.feel
  */
 object KlangLooks {
 
-    val Default = KlangLookPreset(id = "default", name = "Default", values = emptyMap())
+    /** The theme's own values, no role set apart (the maintainer, 2026-11-02: "Call the 'Default' them 'Classic'"). */
+    val Classic = KlangLookPreset(id = "classic", name = "Classic", values = emptyMap())
+
+    /** The ids an older version stored that a look has changed since: "default" is Classic's. */
+    private val RENAMED = mapOf("default" to Classic.id)
 
     val Copper = KlangLookPreset(
         id = "copper",
@@ -652,7 +656,7 @@ object KlangLooks {
     )
 
     val all: List<KlangLookPreset> = listOf(
-        Default, Copper, Cream, Army, Forest, Sun, Asphalt, Neon, Party, Cake, Unicorn, PinkNoir, Abyss, Amber,
+        Classic, Copper, Cream, Army, Forest, Sun, Asphalt, Neon, Party, Cake, Unicorn, PinkNoir, Abyss, Amber,
     )
 
     /**
@@ -661,11 +665,14 @@ object KlangLooks {
      * three rows of four. Army, Cake and Unicorn wait on the bench, to be equipped on the Looks page.
      */
     val equippedByDefault: List<KlangLookPreset> = listOf(
-        Default, Copper, Cream, Forest,
+        Classic, Copper, Cream, Forest,
         Sun, Amber, Asphalt, Abyss,
         Party, Neon, PinkNoir,
     )
 
-    /** The preset with [id]; null for an id no preset has (one remembered from an older version, say). */
-    fun byId(id: String): KlangLookPreset? = all.firstOrNull { it.id == id }
+    /** A look's id as it is now: one an older version stored, renamed since, read as its new one. */
+    fun currentId(id: String): String = RENAMED[id] ?: id
+
+    /** The preset with [id], also by an id it had before; null for an id no preset has (one gone in an update, say). */
+    fun byId(id: String): KlangLookPreset? = currentId(id).let { now -> all.firstOrNull { it.id == now } }
 }

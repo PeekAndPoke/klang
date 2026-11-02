@@ -74,7 +74,7 @@ object KlangTheme : Stream<KlangLookAndFeel> {
         applyLayers(lookLayers.cleared(layer))
     }
 
-    private var wornLook: KlangLookPreset = KlangLooks.Default
+    private var wornLook: KlangLookPreset = KlangLooks.Classic
 
     /** The look worn: the one chosen last, built-in or the user's own. */
     val worn: KlangLookPreset get() = wornLook

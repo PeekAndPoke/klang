@@ -16,7 +16,7 @@ class KlangLoadoutSpec : StringSpec({
 
     "the default is the looks equipped by default, in their order, the last slot empty; Army, Cake, Unicorn wait on the bench" {
         KlangLoadout.default.slots shouldContainExactly listOf(
-            "default", "copper", "cream", "forest",
+            "classic", "copper", "cream", "forest",
             "sun", "amber", "asphalt", "abyss",
             "party", "neon", "pink-noir", null,
         )

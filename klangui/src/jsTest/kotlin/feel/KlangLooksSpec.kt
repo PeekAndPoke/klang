@@ -21,7 +21,7 @@ class KlangLooksSpec : StringSpec({
     "the built-in presets, each found by its id; an unknown id finds none" {
         KlangLooks.all.map { it.id } shouldContainExactly
             listOf(
-                "default", "copper", "cream", "army", "forest", "sun", "asphalt", "neon",
+                "classic", "copper", "cream", "army", "forest", "sun", "asphalt", "neon",
                 "party", "cake", "unicorn", "pink-noir", "abyss", "amber",
             )
 
@@ -30,6 +30,20 @@ class KlangLooksSpec : StringSpec({
         }
 
         KlangLooks.byId("no-such-look") shouldBe null
+    }
+
+    "an id an older version stored finds the look by its new one: \"default\" is Classic, also in a remembered slot" {
+        KlangLooks.byId("default") shouldBe KlangLooks.Classic
+
+        try {
+            KlangLookShelf.restore(own = emptyList(), slots = listOf("copper", "default"))
+
+            withClue("the slot remembered as \"default\" holds Classic") {
+                KlangLookShelf().equipped.take(2) shouldContainExactly listOf(KlangLooks.Copper, KlangLooks.Classic)
+            }
+        } finally {
+            KlangLookShelf.restore(own = emptyList(), slots = null)
+        }
     }
 
     "every value of every preset fits its role, so none is dropped when it is chosen" {
@@ -48,10 +62,10 @@ class KlangLooksSpec : StringSpec({
         KlangTheme.layers[Layer.User] shouldBe KlangLooks.Copper.values
         KlangTheme.chosen shouldBe KlangLooks.Copper
 
-        KlangTheme.choose(KlangLooks.Default)
+        KlangTheme.choose(KlangLooks.Classic)
 
         KlangTheme.layers[Layer.User] shouldBe emptyMap()
-        KlangTheme.chosen shouldBe KlangLooks.Default
+        KlangTheme.chosen shouldBe KlangLooks.Classic
     }
 
     "a user's layer that matches no preset has none chosen" {
@@ -63,7 +77,7 @@ class KlangLooksSpec : StringSpec({
     "a swatch is the preset's metal, lit to dark, the light a small highlight, the defaults where it has none" {
         KlangLooks.Copper.swatch shouldContainExactly listOf("#f6d6bd", "#c98a5e", "#c98a5e", "#7a4a2c", "#7a4a2c")
 
-        KlangLooks.Default.swatch shouldContainExactly listOf(
+        KlangLooks.Classic.swatch shouldContainExactly listOf(
             KlangRole.MetalLight.default,
             KlangRole.MetalMid.default,
             KlangRole.MetalMid.default,

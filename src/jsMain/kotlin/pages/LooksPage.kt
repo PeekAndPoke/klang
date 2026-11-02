@@ -169,7 +169,7 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
 
     //  ACTIONS  ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    private val selected: KlangLookPreset get() = shelf.byId(selectedId) ?: KlangLooks.Default
+    private val selected: KlangLookPreset get() = shelf.byId(selectedId) ?: KlangLooks.Classic
 
     private val dirty: Boolean get() = selected.own && (draft != selected.values || draftName != selected.name)
 
@@ -291,8 +291,8 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
                         Drafts.forget(look.id)
 
                         if (KlangTheme.worn.id == look.id) {
-                            KlangTheme.choose(KlangLooks.Default)
-                            LookStorage.save(KlangLooks.Default)
+                            KlangTheme.choose(KlangLooks.Classic)
+                            LookStorage.save(KlangLooks.Classic)
                         }
 
                         select(KlangTheme.worn)
