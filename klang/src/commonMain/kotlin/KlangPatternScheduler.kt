@@ -155,9 +155,36 @@ internal class KlangPatternScheduler(
      */
     private val resyncGraceWindowSec = 0.2
 
+    /**
+     * The playback's output gain, as last asked for ([setGain], KLANG-00406 step 5): kept while stopped, and sent at
+     * the next start.
+     */
+    private var gain = 1.0
+
+    /**
+     * Orders [setGain]'s look at [running] and its send against the start's and the stop's flip of it: a gain sent
+     * while started is on its way before the stop's cleanup is (on the JVM, where they may run on two threads).
+     */
+    private val gainLock = KlangLock()
+
     // ===== Public API =====
     @Suppress("unused")
     val isRunning: Boolean get() = running.get()
+
+    /**
+     * Moves the playback's output gain to [gain] over [rampSec] seconds. The value is always kept, but SENT only while
+     * the playback is started: this is the gate `KlangCommLink.Cmd.SetGain`'s KDoc names. Sent after the stop's
+     * cleanup, it would create an engine on the backend that nothing ever stops.
+     */
+    fun setGain(gain: Double, rampSec: Double) {
+        gainLock.withLock {
+            this.gain = gain
+
+            if (running.get()) {
+                sendControl(KlangCommLink.Cmd.SetGain(playbackId = playbackId, gain = gain, rampSec = rampSec))
+            }
+        }
+    }
 
     /**
      * Update the pattern being played
@@ -209,10 +236,16 @@ internal class KlangPatternScheduler(
     }
 
     fun start(options: KlangCyclicPlayback.Options = KlangCyclicPlayback.Options()) {
-        // Atomically transition from stopped to running
-        if (!running.compareAndSet(expect = false, update = true)) {
-            // Already running
-            return
+        gainLock.withLock {
+            // Atomically transition from stopped to running
+            if (!running.compareAndSet(expect = false, update = true)) {
+                // Already running
+                return
+            }
+
+            // The gain kept goes first, at once: one port keeps the order, so the first block that sounds has it.
+            // Sent at 1 too, as the backend may still hold this id's engine at another gain
+            sendControl(KlangCommLink.Cmd.SetGain(playbackId = playbackId, gain = gain, rampSec = 0.0))
         }
 
         onStarted()
@@ -230,10 +263,12 @@ internal class KlangPatternScheduler(
     }
 
     fun stop() {
-        // Atomically transition from running to stopped
-        if (!running.compareAndSet(expect = true, update = false)) {
-            // Already stopped
-            return
+        gainLock.withLock {
+            // Atomically transition from running to stopped
+            if (!running.compareAndSet(expect = true, update = false)) {
+                // Already stopped
+                return
+            }
         }
 
         // Cancel the fetcher job

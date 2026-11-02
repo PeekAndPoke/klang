@@ -105,6 +105,9 @@ class PlaybackEngine(
     /** The release of the stopped engine's whole output, restarted once when its hold ends ([renderInto]). */
     private val tailRelease: TailRelease = TailRelease(sampleRate = sampleRate, blockFrames = blockFrames)
 
+    /** The playback's output gain and its ramp ([setGain]); 1 and settled until a `Cmd.SetGain` arrives. */
+    private val gain: PlaybackGain = PlaybackGain(sampleRate = sampleRate, blockFrames = blockFrames)
+
     /**
      * The tail-hold bound in blocks, derived per engine.
      *
@@ -118,6 +121,22 @@ class PlaybackEngine(
 
     /** The master bus — exposed for tests asserting cache/tail behaviour. */
     internal val masterBusForTest: MasterBus get() = masterBus
+
+    /** The gain [setGain] last asked for: where the ramp goes, or stands. */
+    internal val gainTargetForTest: Double get() = gain.target
+
+    /**
+     * Moves this playback's output gain to [gain] over [rampSec] seconds (`Cmd.SetGain`, KLANG-00406 step 5). Any
+     * phase takes it and none changes: a `Stopped` engine is not resumed. The dispatcher gives a releasing engine none
+     * (it detaches it instead); given one, it would multiply with the [TailRelease] gain.
+     *
+     * The gain is applied to the engine's output only, after its master chain: what decides the end of life (the
+     * voice count behind [quietBlocks], the orbits' activity, [MasterBus.isRinging]) is measured before it, so a
+     * playback stopped at gain 0 keeps its tails exactly as at gain 1.
+     */
+    fun setGain(gain: Double, rampSec: Double) {
+        this.gain.retarget(gain = gain, rampSec = rampSec)
+    }
 
     /** Frames this playback's master chain in service delays its output by ([MasterBus.latencyFrames]). */
     internal val masterLatencyFrames: Int get() = masterBus.latencyFrames
@@ -137,10 +156,11 @@ class PlaybackEngine(
      * Render this engine's voices through its own cylinders, accumulating into [target]: one path for every phase
      * (audit item A2.11).
      *
-     * - **Straight into [target]** while neither a master chain nor a release is in play: byte-identical to the
-     *   engine before authored masters (the orbits sum straight into the shared mix, no copy).
+     * - **Straight into [target]** while neither a master chain nor a release nor a gain other than 1 is in play:
+     *   byte-identical to the engine before authored masters (the orbits sum straight into the shared mix, no copy).
      * - **Through the engine's own bus** otherwise: the orbits sum into it, the master chain runs on it when one
-     *   is active, and it joins [target] whole, or under the [TailRelease] gain while `Releasing` or `Released`.
+     *   is active, the playback's gain ([setGain]) after it, and it joins [target] whole, or under the [TailRelease]
+     *   gain while `Releasing` or `Released`.
      *
      * The master bus learns that a block has been produced at the END of the call (master round M1): "this engine
      * has rendered" is true from the next block on, so a `master(…)` promoted in the engine's FIRST block still sees
@@ -177,8 +197,9 @@ class PlaybackEngine(
         }
         // Read before the orbits render: they cannot change it (only the swap's own process can).
         val mastered = masterBus.isActive
+        val gained = !gain.isUnity
 
-        if (!releasing && !mastered) {
+        if (!releasing && !mastered && !gained) {
             cylinders.processAndMix(target, cursorFrame)
         } else {
             val ownBus = bus
@@ -188,6 +209,11 @@ class PlaybackEngine(
 
             if (mastered) {
                 masterBus.process(ownBus, blockFrames)
+            }
+
+            // After the master chain, which measures its own ringing on the bus before this
+            if (gained) {
+                gain.applyTo(ownBus)
             }
 
             if (!releasing) {

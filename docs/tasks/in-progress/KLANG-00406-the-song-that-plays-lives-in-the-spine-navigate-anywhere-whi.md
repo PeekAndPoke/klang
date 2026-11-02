@@ -1,9 +1,9 @@
 # KLANG-00406: The song that plays lives in the Spine: navigate anywhere while it plays
 
-> **Status (2026-11-01): IN PROGRESS.** Steps 1 to 4 done: `SongDeck` in the Spine, Klang Amp on it, the song page
-> plays on it and its song plays on when the page is left, the Motor's now-playing line and the Stop key from anywhere.
-> Next: step 5, the per-playback gain in the engine: proposed to Klang-Main-Dev on 2026-11-02 (below), awaiting
-> their answer.
+> **Status (2026-11-02): IN PROGRESS.** Steps 1 to 5 done: `SongDeck` in the Spine, Klang Amp on it, the song page
+> plays on it and its song plays on when the page is left, the status bar and the Stop key from anywhere, the
+> per-playback gain in the engine (agreed with Klang-Main-Dev). Open for the maintainer, by ear: the gain ramp's shape
+> (built as p³, below). Next: step 6, the code examples fade the song out and in.
 
 ## Why this exists
 
@@ -177,7 +177,10 @@ After KLANG-00389's `Player` steps 1 and 2 (the move into the Spine, typed owner
    (on the song's page its own Stop answers first). The time is the deck's own playback's, from one clock in the Spine
    (`Playbacks.songLine`) that ticks only while the song plays; Klang Amp's two 250 ms timers went to
    `Playbacks.heardSeconds`. Not yet: the line at the top of the Motor menu's "Pick up where you left off".
+   2026-11-02, at the maintainer's word: the line became the `StatusBar`, across the whole window at its foot, the
+   page framed above it; the song on its left, and with no song the engine's version and revision rolling through it.
 5. The per-playback gain in the engine (D1), with Klang-Main-Dev: the command, the ramped gain, the codec specs.
+   Done 2026-11-02 ("As built", below).
 6. The code examples by D1: the song fades out over 2 s while one plays and in again after it; then the start page
    as a preview (D2), its fade-in on its own gain.
 
@@ -210,6 +213,26 @@ into one `mix`, then `MasterStage`), `PlaybackEngine.renderInto` (a straight pat
   in dB sounds more even over 2 s, one `exp` per sample as `TailRelease` pays); and who builds it: Klang-Main-Dev, or
   Klang-Research under Klang-Main-Dev's review with the audio reviewer.
 
+**Klang-Main-Dev's answer (2026-11-02):** agreed; Klang-Research builds it, Klang-Main-Dev reviews. Four points, all
+in: quietness is measured before the gain (a spec row: stopped at gain 0, a playback lives as long as at gain 1); no
+full-level first block at a start; a gain during a stop release documented; the ramp's shape goes to the maintainer.
+
+**As built (2026-11-02), where it differs from the proposal:**
+
+- **The start's gain goes first.** The worklet handles each message in its own task, so a render can fall between two
+  messages, and a fresh playback sounds one block after its first voices. So the frontend sends its gain BEFORE the
+  first `ScheduleVoices` (one port keeps the order), and the dispatcher creates the engine for a `SetGain` when none is
+  filed under the id (as the registrations do), never resuming a stopped one. Klang-Main-Dev's condition: the
+  frontend's playback is the one gate. It keeps every gain and sends only while started (a lock orders it against
+  the start and the stop on the JVM), so no `SetGain` follows the stop's `Cleanup` and creates an engine nothing stops.
+- **An engine still releasing a stopped playback** is detached by a `SetGain`, as a schedule does, and the gain goes to
+  a fresh engine: the release fades on undisturbed (review round 1, both reviewers).
+- **The ramp:** `PlaybackGain`, a position ramped linearly in whole blocks, per sample, landing exactly; the gain is
+  p³ (Klang-Main-Dev's proposal: about even in dB over the top 40 to 50 dB, lands on 0, two multiplies a sample). The
+  law lives in `gainOf` and `positionOf` alone, for the maintainer's ear.
+- **Not yet:** a fade-in asked for right after a start runs while the playback still loads; step 6 asks for it once the
+  playback has begun (`KlangCyclicPlayback.setGain`'s KDoc).
+
 ## Acceptance
 
 - A song started on its page plays on while one reads the docs, opens a tutorial or another song's page.
@@ -240,3 +263,7 @@ into one `mix`, then `MasterStage`), `PlaybackEngine.renderInto` (a straight pat
   for the time heard; in the kitchen sink and the look editor's LCD card.
 - 2026-11-02: step 5 proposed to Klang-Main-Dev (the maintainer: "Ok please continue", to the question whether to):
   `Cmd.SetGain`, an existing engine only, a ramped gain on the engine's output before the mix.
+- 2026-11-02: step 5 built (Klang-Main-Dev: "Please build it; I'll review"): `Cmd.SetGain`, `PlaybackGain`, the gain
+  on each engine's output after its master chain, the frontend's gate. One review round, clean (coding, audio, and the
+  status bar's). The same day, at the maintainer's word: the now-playing line became the `StatusBar` across the
+  window's foot, the page framed above it in the bar's black, its top corners cut.

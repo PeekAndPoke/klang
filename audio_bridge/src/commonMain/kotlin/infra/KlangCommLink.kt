@@ -95,6 +95,25 @@ class KlangCommLink(capacity: Int = 8192) {
             val liveId: Int,
         ) : Cmd
 
+        /**
+         * Moves the playback's output gain to [gain] over [rampSec] seconds, from where it is when the backend
+         * receives this (a fade needs no musical time); `rampSec <= 0` sets it at once (KLANG-00406, step 5).
+         * Sent while the id's engine still releases a stopped playback, it goes to a fresh engine for the start it comes
+         * before, and the release fades on undisturbed.
+         *
+         * **Sent only while the playback is started**, between its start and its stop; the frontend's playback is
+         * the gate. It stores every value and sends it again at a (re)start, BEFORE the first [ScheduleVoices]: the
+         * backend creates the engine for it when none is filed under the id (one port keeps the order, so the first
+         * block that sounds already has the gain). Sent after the stop's [Cleanup], it would create an empty engine
+         * that nothing ever stops: it would render for ever.
+         */
+        @WireName("set-gain")
+        data class SetGain(
+            override val playbackId: String,
+            val gain: Double,
+            val rampSec: Double,
+        ) : Cmd
+
         /** Registers a custom IgnitorDsl in the backend's exciter registry. */
         @WireName("register-ignitor")
         data class RegisterIgnitor(

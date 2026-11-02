@@ -378,8 +378,9 @@ class WireCodecRoundTripSpec : StringSpec({
         // `IgnitorDsl` for `KatalystKnobDsl`), step 4 from 1168938423 (the knob expressions joined it), step 5a from
         // 615137850 (the modulators joined it); KLANG-00399 step 3a from 211191718 (Feedback.PlaybackAnchored joined
         // it), step 3b from -1360551677 (Diagnostics.soundlessVoices joined it); KLANG-00214 (oversampling regions)
-        // step 1 from 170881894 (the Ignitor's `OversampleBy`, `OversampleAtLeast` and `RegionInput` joined it).
-        WIRE_SCHEMA_HASH shouldBe 827954479
+        // step 1 from 170881894 (the Ignitor's `OversampleBy`, `OversampleAtLeast` and `RegionInput` joined it);
+        // KLANG-00406 step 5 from 827954479 (`Cmd.SetGain` joined it).
+        WIRE_SCHEMA_HASH shouldBe 1660499267
     }
 
     "ScheduledVoice round-trips a minimal (mostly-null) VoiceData" {
@@ -442,6 +443,7 @@ class WireCodecRoundTripSpec : StringSpec({
             KlangCommLink.Cmd.StartRealtimeVoice("pb", RealtimeVoice(liveId = 7, data = voice.data, gateDurSec = 0.4)),
             KlangCommLink.Cmd.StartRealtimeVoice("pb", RealtimeVoice(liveId = 8, data = voice.data, gateDurSec = null)),
             KlangCommLink.Cmd.StopRealtimeVoice("pb", liveId = 8),
+            KlangCommLink.Cmd.SetGain(playbackId = "pb", gain = 0.25, rampSec = 2.0),
             KlangCommLink.Cmd.RegisterIgnitor(playbackId = "pb", name = "mysynth", dsl = dsl),
             KlangCommLink.Cmd.RegisterKatalyst(
                 playbackId = "pb", name = "katalyst-0",

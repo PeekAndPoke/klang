@@ -54,6 +54,10 @@ internal class ContinuousPlayback internal constructor(
 
     override fun heardSec(): Double? = controller.heardSec()
 
+    override fun setGain(gain: Double, rampSec: Double) {
+        controller.setGain(gain = gain, rampSec = rampSec)
+    }
+
     override fun start() {
         start(KlangCyclicPlayback.Options())
     }

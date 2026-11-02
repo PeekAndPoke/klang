@@ -368,6 +368,7 @@ class JsAudioBackend(
                 is KlangCommLink.Cmd.ReplaceVoices,
                 is KlangCommLink.Cmd.ScheduleVoice,
                 is KlangCommLink.Cmd.ScheduleVoices,
+                is KlangCommLink.Cmd.SetGain,
                 is KlangCommLink.Cmd.StartRealtimeVoice,
                 is KlangCommLink.Cmd.StopRealtimeVoice,
                     -> node.port.sendCmd(cmd)

@@ -108,13 +108,18 @@ class PlaybackEngineDispatcher(
         }
 
         Phase.Releasing, Phase.Released -> {
-            engines.delete(engine.playbackId)
-            rendering.remove(engine)
-            rendering.add(engine)
-            ending.remove(engine)
-            ending.add(0, engine)
+            detach(engine)
             false
         }
+    }
+
+    /** Takes the releasing [engine] off its id: it finishes its release among the detached ones, then is disposed. */
+    private fun detach(engine: PlaybackEngine) {
+        engines.delete(engine.playbackId)
+        rendering.remove(engine)
+        rendering.add(engine)
+        ending.remove(engine)
+        ending.add(0, engine)
     }
 
     /** A fresh engine for [playbackId], rendering after the attached ones and before the detached ones. */
@@ -162,6 +167,36 @@ class PlaybackEngineDispatcher(
 
         is KlangCommLink.Cmd.RegisterKatalyst ->
             engineFor(cmd.playbackId).registerKatalyst(cmd.name, cmd.dsl)
+
+        is KlangCommLink.Cmd.SetGain ->
+            setGain(playbackId = cmd.playbackId, gain = cmd.gain, rampSec = cmd.rampSec)
+    }
+
+    /**
+     * Never through [engineFor], which resumes a stopped engine: a fade sent to a song that just stopped must not
+     * revive it. The engine is created when none is filed under the id, because a start sends its gain BEFORE its
+     * first voices; the frontend's playback is the gate that sends it only while started (`Cmd.SetGain`'s KDoc).
+     *
+     * An engine still releasing a stopped playback is detached, as a schedule does ([scheduledAgain]), and the gain goes
+     * to a fresh engine for the start it comes before: the release fades on undisturbed, the new start has its gain.
+     */
+    private fun setGain(playbackId: String, gain: Double, rampSec: Double) {
+        val attached = engines[playbackId]
+
+        val engine = if (attached == null) {
+            createEngine(playbackId)
+        } else {
+            when (attached.phase) {
+                Phase.Playing, Phase.Stopped, Phase.Disposed -> attached
+
+                Phase.Releasing, Phase.Released -> {
+                    detach(attached)
+                    createEngine(playbackId)
+                }
+            }
+        }
+
+        engine.setGain(gain = gain, rampSec = rampSec)
     }
 
     private fun scheduleVoices(playbackId: String, voices: List<ScheduledVoice>) {

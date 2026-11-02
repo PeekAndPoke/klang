@@ -40,6 +40,16 @@ interface KlangCyclicPlayback : KlangPlayback {
     fun heardSec(): Double?
 
     /**
+     * Moves the playback's output gain to [gain] over [rampSec] seconds (KLANG-00406 step 5): a song faded under a code
+     * example, a preview fading in. Kept while stopped and sent again at the next start.
+     *
+     * The ramp runs from when the backend gets it, not from the first sound: a fade-in asked for right after [start]
+     * runs while the playback still waits for the engine and loads its samples, and may be over before a note sounds.
+     * Ask for it once the playback has begun.
+     */
+    fun setGain(gain: Double, rampSec: Double)
+
+    /**
      * Start playback with the given options.
      */
     fun start(options: Options = Options())
