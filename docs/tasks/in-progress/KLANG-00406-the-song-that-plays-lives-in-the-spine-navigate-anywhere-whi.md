@@ -143,7 +143,8 @@ object Playbacks {
 
 ## Decide before implementing
 
-- **D1, decided:** a 2 s fade out and a 2 s fade in on a per-playback gain (above).
+- **D1, decided:** a 2 s fade out and a 2 s fade in on a per-playback gain (above); heard on 2026-11-02, the fade out
+  made 1 s (the maintainer: "make the fade out faster: 1 sec only, keep the fade in").
 - **D2, decided:** the start page's waiting song is a preview (the maintainer: "yes would make sense if you see no
   reason why this might be wrong"). One case to watch: a real song already playing when one comes back to the start
   page. Proposal: then the waiting song does not start, the real song plays on (and the dyno's run, which measures
@@ -286,3 +287,4 @@ full-level first block at a start; a gain during a stop release documented; the 
   linear. Step 6 started (the maintainer: "Please continue").
 - 2026-11-02: step 6, first half: the code examples fade the song out and in (`Previews`). Two review rounds (round 1:
   a failed example start left the song silent, fixed; round 2 clean), every new row mutation-checked.
+- 2026-11-02: the maintainer heard step 6 ("the song fade out works"); the fade out made 1 s, the fade in kept at 2 s.

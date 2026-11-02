@@ -7,10 +7,10 @@ package io.peekandpoke.klang.spine
 
 /**
  * What a page plays until it is stopped, over the real song (KLANG-00406, step 6, D1): a code example in the docs or a
- * tutorial. One at a time. A preview takes the stage, but the song on the [deck] it fades out over [FADE_SEC], where it
- * plays on underneath, in time, its tails included; when no preview plays any more the song fades in again over
- * [FADE_SEC] and takes the stage back (the maintainer, 2026-11-01: "fade out over 2 seconds and in over 2 seconds
- * again"). A preview that fails to start counts as stopped. A song put on the deck stops the preview.
+ * tutorial. One at a time. A preview takes the stage, but the song on the [deck] it fades out over [FADE_OUT_SEC], where
+ * it plays on underneath, in time, its tails included; when no preview plays any more the song fades in again over
+ * [FADE_IN_SEC] and takes the stage back (the maintainer, 2026-11-01: "fade out over 2 seconds and in over 2 seconds
+ * again"; 2026-11-02, heard: "make the fade out faster: 1 sec only, keep the fade in"). A preview that fails to start counts as stopped. A song put on the deck stops the preview.
  *
  * The app has one, [Playbacks.previews], on [Playbacks.song]; the specs make their own on their own deck. A preview's
  * controller is built with [KlangCodePlaybackCtrl.Builder.preview], which sends its Play and its stop here.
@@ -23,8 +23,11 @@ class Previews(private val deck: SongDeck) {
     }
 
     companion object {
-        /** The song's fade, out under a preview and in after it (D1). */
-        const val FADE_SEC = 2.0
+        /** The song's fade out under a preview (D1). */
+        const val FADE_OUT_SEC = 1.0
+
+        /** The song's fade in after the last preview (D1). */
+        const val FADE_IN_SEC = 2.0
     }
 
     /** The preview that plays, or is starting; null with none. */
@@ -47,7 +50,7 @@ class Previews(private val deck: SongDeck) {
         val song = deck.onDeck()?.ctrl
 
         Playbacks.requestExclusivePlayback(self = preview, spare = song)
-        song?.setGain(gain = 0.0, rampSec = FADE_SEC)
+        song?.setGain(gain = 0.0, rampSec = FADE_OUT_SEC)
     }
 
     /** Stops the preview that plays or is starting: a song was put on the deck. */
@@ -65,7 +68,7 @@ class Previews(private val deck: SongDeck) {
 
         val song = deck.onDeck()?.ctrl ?: return
 
-        song.setGain(gain = 1.0, rampSec = FADE_SEC)
+        song.setGain(gain = 1.0, rampSec = FADE_IN_SEC)
         song.showOnStage()
     }
 }
