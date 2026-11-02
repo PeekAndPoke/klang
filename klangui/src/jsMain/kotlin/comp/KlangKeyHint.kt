@@ -35,6 +35,9 @@ object KlangKeyHint {
     /** The CSS class of the chip of chords in a row waiting for their next key. */
     const val WAITING_CLASS = "klang-key-waiting"
 
+    /** The CSS class of the divider between two ways to the same place in one hint. */
+    const val DIVIDER_CLASS = "klang-key-hint-divider"
+
     /** The CSS class of one key cap. */
     const val KEY_CLASS = "klang-key-cap"
 
@@ -102,7 +105,7 @@ object KlangKeyHint {
 
     /**
      * A hint with more ways to the same place than its own key: its key's caps, then each of [also] (a binding's groups
-     * of caps, as [KeyBinding.keyGroups] gives them) a little apart. The Motor's button: Alt+M, and Shift Shift, the
+     * of caps, as [KeyBinding.keyGroups] gives them), a "/" between them. The Motor's button: Alt+M, and Shift Shift, the
      * search, which opens the menu too.
      */
     fun renderAlso(also: List<List<List<String>>>): KeyHintRenderer = { state ->
@@ -112,7 +115,17 @@ object KlangKeyHint {
 
             capsGroups(groups = state.keyGroups(compact = true), enabled = state.enabled)
 
-            also.forEach { groups -> capsGroups(groups = groups, enabled = state.enabled) }
+            // A divider between the ways (the maintainer, 2026-11-02: "we need something like a divider between each, a
+            // '|' or '/'")
+            also.forEach { groups ->
+                span(classes = DIVIDER_CLASS) {
+                    style = "color: var(--kl-ink-label); font-size: 12px"
+                    attributes["aria-hidden"] = "true"
+                    +"/"
+                }
+
+                capsGroups(groups = groups, enabled = state.enabled)
+            }
         }
     }
 

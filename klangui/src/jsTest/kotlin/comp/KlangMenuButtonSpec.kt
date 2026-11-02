@@ -124,6 +124,9 @@ class KlangMenuButtonSpec : StringSpec({
 
                     withClue("Alt and M, then Shift and Shift: four caps in one hint") { caps.length shouldBe 4 }
                     withClue("the first is Alt+M's") { caps.item(1)!!.textContent shouldBe "M" }
+                    withClue("a divider between the two ways") {
+                        hint.querySelectorAll(".${KlangKeyHint.DIVIDER_CLASS}").length shouldBe 1
+                    }
                     withClue("then the search's keys in a row, Shift twice, not its Ctrl+K") {
                         (caps.item(3)!!.textContent == "K") shouldBe false
                         (caps.item(3) as HTMLElement).innerHTML shouldBe (caps.item(2) as HTMLElement).innerHTML
