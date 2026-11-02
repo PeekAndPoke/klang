@@ -12,6 +12,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.pages.docs.tutorials.filtersTutorial
+import io.peekandpoke.klang.pages.docs.tutorials.patternLanguageTrack
 import io.peekandpoke.klang.pages.docs.tutorials.soundDesignBasicsTrack
 import io.peekandpoke.klang.pages.docs.tutorials.theFourWaveformsTutorial
 import io.peekandpoke.klang.pages.docs.tutorials.theKlangPathTrack
@@ -19,6 +20,7 @@ import io.peekandpoke.klang.spine.Recents
 import io.peekandpoke.klang.spine.Recents.Entry
 import io.peekandpoke.klang.spine.Recents.Kind
 import io.peekandpoke.klang.storage.StorageKeys
+import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.kraft.routing.Route
 import io.peekandpoke.kraft.testing.TestBed
 import io.peekandpoke.kraft.testing.eventually
@@ -34,6 +36,50 @@ class MenuPickUpSpec : StringSpec({
         Nav.songIdOf(route = Nav.editSongCode, id = "builtin-song-kokon") shouldBe "builtin-song-kokon"
         Nav.songIdOf(route = Nav.newSongCode, id = null) shouldBe Nav.NEW_SONG_ID
         Nav.songIdOf(route = Nav.songs, id = null) shouldBe null
+    }
+
+    "the track one is in: a lesson's page in the track it was opened in, else the main path; a track's page; else none" {
+        val lesson = filtersTutorial.slug
+
+        MenuPickUp.trackSlugOf(route = Nav.tutorial, slug = lesson, trackParam = soundDesignBasicsTrack.slug) shouldBe
+            soundDesignBasicsTrack.slug
+        MenuPickUp.trackSlugOf(route = Nav.tutorial, slug = lesson, trackParam = null) shouldBe theKlangPathTrack.slug
+        MenuPickUp.trackSlugOf(route = Nav.tutorialTrack, slug = soundDesignBasicsTrack.slug, trackParam = null) shouldBe
+            soundDesignBasicsTrack.slug
+        MenuPickUp.trackSlugOf(route = Nav.songs, slug = null, trackParam = null) shouldBe null
+        withClue("a track that does not hold the lesson: the main path, as the lesson's page resolves it") {
+            MenuPickUp.trackSlugOf(route = Nav.tutorial, slug = lesson, trackParam = patternLanguageTrack.slug) shouldBe
+                theKlangPathTrack.slug
+        }
+        withClue("a lesson the app does not have: no track") {
+            MenuPickUp.trackSlugOf(route = Nav.tutorial, slug = "no-such-lesson", trackParam = null) shouldBe null
+        }
+    }
+
+    "the lesson tile's lamp is lit while one is in its track, dark elsewhere" {
+        val kept = localStorage.getItem(StorageKeys.RECENTS)
+
+        try {
+            Recents.openedTutorial(slug = filtersTutorial.slug, title = "Filters", track = soundDesignBasicsTrack.slug)
+
+            for ((track, lamp) in listOf(soundDesignBasicsTrack.slug to "On", theKlangPathTrack.slug to "Off", null to "Off")) {
+                TestBed.preact(view = { MenuPickUp(currentTrackSlug = track, onOpen = {}) }) { root ->
+                    eventually {
+                        val tile = root[0].querySelector(".${KlangControlStyles.drawerLesson}") as HTMLElement
+
+                        withClue("in the track $track") {
+                            tile.querySelector("[data-lamp]")!!.getAttribute("data-lamp") shouldBe lamp
+                        }
+                    }
+                }
+            }
+        } finally {
+            if (kept == null) {
+                localStorage.removeItem(StorageKeys.RECENTS)
+            } else {
+                localStorage.setItem(StorageKeys.RECENTS, kept)
+            }
+        }
     }
 
     "when something was opened, said plainly" {

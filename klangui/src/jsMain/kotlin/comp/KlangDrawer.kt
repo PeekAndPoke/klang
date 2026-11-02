@@ -24,6 +24,7 @@ fun Tag.KlangDrawer(
     entries: List<KlangDrawer.Entry>,
     current: String?,
     onPick: (String) -> Unit,
+    lit: String? = current,
     beacon: String? = null,
     onClose: (() -> Unit)? = null,
     closeOnEsc: Boolean = false,
@@ -36,6 +37,7 @@ fun Tag.KlangDrawer(
         entries = entries,
         current = current,
         onPick = onPick,
+        lit = lit,
         beacon = beacon,
         onClose = onClose,
         closeOnEsc = closeOnEsc,
@@ -51,14 +53,13 @@ fun Tag.KlangDrawer(
  * The Motor's menu (KLANG-00339, made large in KLANG-00403): what the Motor button opens over everything right of the
  * column. A riveted panel; its header holds the printed title, the search field when one is given, and the close button
  * (with the pill "Close: Esc" when Esc closes it). Then the destinations as large tiles in four columns, each with its
- * icon, its label and its second line ("The button like 'Songs' can then also be bigger", the maintainer,
- * 2026-11-01). Below them two halves: what one comes back to ([Props.pickUp]) and the loadouts ([Props.loadouts], the
- * look picker); one given alone takes the whole width.
- *
- * The current destination is drawn pressed with its lamp on and announced as `aria-current`; the others' lamps are
- * off; one that is not there yet ([Entry.later]) is a dashed tile with an unlit lamp that cannot be picked. A tile's
- * lamp sits before its label, its second line under the label's text, its icon at the right end. The drawer
- * fills the size it is given: its size and where it opens are the shell's.
+ * icon, its label and its second line ("The button like 'Songs' can then also be bigger", the maintainer, 2026-11-01).
+ * Below them two halves: what one comes back to ([Props.pickUp]) and the loadouts ([Props.loadouts], the look picker);
+ * one given alone takes the whole width. The current destination is drawn pressed and announced as `aria-current`; the
+ * lit one ([Props.lit], the current one unless told otherwise) has its lamp on, the others' are off; one that is not
+ * there yet ([Entry.later]) is a dashed tile with an unlit lamp that cannot be picked. A tile's lamp sits before its
+ * label, its second line under the label's text, its icon at the right end. The drawer fills the size it is given: its
+ * size and where it opens are the shell's.
  */
 class KlangDrawer(ctx: Ctx<Props>) : Component<KlangDrawer.Props>(ctx) {
 
@@ -80,9 +81,15 @@ class KlangDrawer(ctx: Ctx<Props>) : Component<KlangDrawer.Props>(ctx) {
     data class Props(
         val title: String,
         val entries: List<Entry>,
-        /** The id of the destination the user is at; null for none. */
+        /** The id of the destination the user is at, drawn pressed; null for none. */
         val current: String?,
         val onPick: (String) -> Unit,
+        /**
+         * The id of the destination whose lamp is lit: the one the user's page belongs to, also where the tile is not
+         * [current] (the maintainer, 2026-11-02: "when the user is in the learn section turn on the led on the learn
+         * button"); null for none.
+         */
+        val lit: String?,
         /** The id of the destination the first-visit trail lights, its "try me" (KLANG-00350); null for none. */
         val beacon: String?,
         /** Shows a close button when given. */
@@ -140,7 +147,7 @@ class KlangDrawer(ctx: Ctx<Props>) : Component<KlangDrawer.Props>(ctx) {
                                     KlangLamp(
                                         state = when {
                                             entry.later -> KlangLamp.State.Unlit
-                                            isCurrent -> KlangLamp.State.On
+                                            entry.id == props.lit -> KlangLamp.State.On
                                             else -> KlangLamp.State.Off
                                         },
                                         size = LAMP_PX.px,

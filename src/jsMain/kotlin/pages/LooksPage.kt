@@ -1226,6 +1226,7 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
 
                 menuLessonTile(
                     learning = MenuPickUp.Continue(
+                        trackSlug = soundDesignBasicsTrack.slug,
                         title = soundDesignBasicsTrack.title,
                         next = soundDesignBasicsTrack.lessons[3].title,
                         done = 3,

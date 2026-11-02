@@ -173,6 +173,8 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
                         // leads somewhere, and a pressed-looking key reads as one that cannot be pressed (the
                         // maintainer, 2026-10-26)
                         current = area.name.takeIf { landing(area) == currentRoute.route },
+                        // Its lamp lit on every page of the area, the area's own page or not (AppArea.of, the one map)
+                        lit = area.name,
                         onPick = { id ->
                             when (id) {
                                 AppArea.Songs.name -> {
@@ -211,6 +213,7 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
                         pickUp = {
                             MenuPickUp(
                                 currentSongId = Nav.songIdOn(currentRoute),
+                                currentTrackSlug = MenuPickUp.trackSlugOn(currentRoute),
                                 onOpen = { target -> menu.leaveTo(router.strategy.render(target)) },
                             )
                         },

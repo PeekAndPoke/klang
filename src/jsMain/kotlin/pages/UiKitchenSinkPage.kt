@@ -107,6 +107,7 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
 
     /** The Sound Design Basics track with its first [done] lessons done. */
     private fun sampleLearning(done: Int) = MenuPickUp.Continue(
+        trackSlug = soundDesignBasicsTrack.slug,
         title = soundDesignBasicsTrack.title,
         next = soundDesignBasicsTrack.lessons.getOrNull(done)?.title,
         done = done,
@@ -798,7 +799,14 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
                         div(classes = KlangControlStyles.drawerSection.toString()) {
                             css { put("width", "520px") }
 
-                            menuPickUpView(songs = songs, learning = learning, now = Date.now(), onOpen = {})
+                            // In the track: the lesson tile's lamp lit (on the one with three of eight done)
+                            menuPickUpView(
+                                songs = songs,
+                                learning = learning,
+                                now = Date.now(),
+                                currentTrackSlug = soundDesignBasicsTrack.slug.takeIf { learning?.done == 3 },
+                                onOpen = {},
+                            )
                         }
                     }
                 }

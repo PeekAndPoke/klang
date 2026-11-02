@@ -146,6 +146,18 @@ class KlangDrawerSpec : StringSpec({
         }
     }
 
+    "the lit destination has its lamp on also where it is not the current one, which alone is pressed" {
+        TestBed.preact(view = { KlangDrawer(title = "t", entries = entries, current = null, lit = "learn", onPick = {}) }) { root ->
+            val tiles = tiles(root.single())
+
+            withClue("the section one is in lit, nothing pressed") {
+                tiles.map { it.querySelector("[data-lamp]")?.getAttribute("data-lamp") } shouldContainExactly
+                    listOf("Off", "On", "Unlit")
+                tiles.map { it.getAttribute("aria-current") } shouldContainExactly listOf(null, null, null)
+            }
+        }
+    }
+
     "a destination's icon stands at the tile's right end, after its label, hidden from screen readers; one without has none" {
         val withIcon = listOf(
             KlangDrawer.Entry(id = "songs", label = "Songs", icon = { music }),

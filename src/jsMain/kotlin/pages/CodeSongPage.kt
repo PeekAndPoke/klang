@@ -14,6 +14,9 @@ import io.peekandpoke.klang.comp.LcdDisplay
 import io.peekandpoke.klang.comp.QuickHelpPanel
 import io.peekandpoke.klang.comp.SongColumn
 import io.peekandpoke.klang.comp.SongSettings
+import io.peekandpoke.klang.comp.transportCentred
+import io.peekandpoke.klang.comp.transportGrid
+import io.peekandpoke.klang.comp.transportSpanTwo
 import io.peekandpoke.klang.layouts.WorkbenchSlots
 import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.spine.KlangCodePlaybackCtrl
@@ -88,9 +91,6 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     private companion object {
         /** Counts the pages drawn, for [pageKey]. */
         var pagesDrawn = 0
-
-        /** A column of the transport bar's grid: room for the widest word Play shows ("Loading" with its spinner). */
-        const val TRANSPORT_COLUMN_PX = 112
     }
 
     //  PROPS  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -424,58 +424,45 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         div {
             key = "transport-bar"
             css {
-                // A grid of equal columns (the maintainer, 2026-11-02: "on a grid of equal width"): Play and Stop fill
-                // theirs, so Play does not change its size as its word changes ("Play" / "Update"); the RPM knob and
-                // its display take two
-                put("display", "grid")
-                put("grid-auto-flow", "column")
-                put("grid-auto-columns", "${TRANSPORT_COLUMN_PX}px")
-                put("justify-content", "start")
-                put("align-items", "center")
-                put("gap", "12px")
                 put("flex-shrink", "0")
                 put("padding", "10px 14px")
                 // The column's and the strip's ground, one panel with the bezel round the editor's screen
                 put("background", "var(--kl-ground-deep)")
             }
 
-            renderPlayButton()
+            transportGrid {
+                renderPlayButton()
 
-            KlangButton(
-                onClick = { ctrl.stop() },
-                finish = KlangFinish.Silver,
-                surface = KlangButton.Surface.Flat,
-                // A pill with its word, as Play (the maintainer)
-                shape = KlangButton.Shape.Pill,
-                availability = if (state.isPlaying) KlangButton.Availability.Enabled else KlangButton.Availability.Disabled,
-            ) {
-                OnKey(KlangKeyBindings.Stop, enabled = state.isPlaying, showHint = state.isPlaying) { ctrl.stop() }
-                title = "Stop playback"
-                icon.stop()
-                +"Stop"
-            }
-
-            div {
-                css { put("justify-self", "center") }
-                LcdDisplay(value = state.currentCycle, digits = 4, dim = !state.isPlaying)
-            }
-
-            div {
-                css {
-                    put("grid-column", "span 2")
-                    put("justify-self", "start")
+                KlangButton(
+                    onClick = { ctrl.stop() },
+                    finish = KlangFinish.Silver,
+                    surface = KlangButton.Surface.Flat,
+                    // A pill with its word, as Play (the maintainer)
+                    shape = KlangButton.Shape.Pill,
+                    availability = if (state.isPlaying) KlangButton.Availability.Enabled else KlangButton.Availability.Disabled,
+                ) {
+                    OnKey(KlangKeyBindings.Stop, enabled = state.isPlaying, showHint = state.isPlaying) { ctrl.stop() }
+                    title = "Stop playback"
+                    icon.stop()
+                    +"Stop"
                 }
 
-                KlangValueKnob(
-                    name = "Revolutions per minute",
-                    value = state.rpm,
-                    range = KlangCodePlaybackCtrl.RPM_RANGE,
-                    step = 0.5,
-                    onChange = { ctrl.setRpm(it) },
-                    unit = "RPM",
-                    decimals = 2,
-                    perPixel = 0.05,
-                )
+                transportCentred {
+                    LcdDisplay(value = state.currentCycle, digits = 4, dim = !state.isPlaying)
+                }
+
+                transportSpanTwo {
+                    KlangValueKnob(
+                        name = "Revolutions per minute",
+                        value = state.rpm,
+                        range = KlangCodePlaybackCtrl.RPM_RANGE,
+                        step = 0.5,
+                        onChange = { ctrl.setRpm(it) },
+                        unit = "RPM",
+                        decimals = 2,
+                        perPixel = 0.05,
+                    )
+                }
             }
         }
     }

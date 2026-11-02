@@ -145,53 +145,70 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                 put("padding", "8px 10px")
             }
 
-            renderPlayButton()
+            // The transport's controls on the equal grid, as on the song page; the keys after it on the right
+            transportGrid {
+                renderPlayButton()
 
-            KlangButton(
-                onClick = { ctrl.stop() },
-                finish = KlangFinish.Silver,
-                surface = KlangButton.Surface.Flat,
-                shape = KlangButton.Shape.Pill,
-                availability = if (state.isPlaying) KlangButton.Availability.Enabled else KlangButton.Availability.Disabled,
-            ) {
-                title = "Stop playback"
-                icon.stop()
-                +"Stop"
-            }
+                KlangButton(
+                    onClick = { ctrl.stop() },
+                    finish = KlangFinish.Silver,
+                    surface = KlangButton.Surface.Flat,
+                    shape = KlangButton.Shape.Pill,
+                    availability = if (state.isPlaying) KlangButton.Availability.Enabled else KlangButton.Availability.Disabled,
+                ) {
+                    title = "Stop playback"
+                    icon.stop()
+                    +"Stop"
+                }
 
-            LcdDisplay(value = state.currentCycle, digits = 4, dim = !state.isPlaying)
+                transportCentred {
+                    LcdDisplay(value = state.currentCycle, digits = 4, dim = !state.isPlaying)
+                }
 
-            KlangValueKnob(
-                name = "Revolutions per minute",
-                value = state.rpm,
-                range = KlangCodePlaybackCtrl.RPM_RANGE,
-                step = 0.5,
-                onChange = { ctrl.setRpm(it) },
-                unit = "RPM",
-                decimals = 2,
-                perPixel = 0.05,
-            )
-
-            div { css { put("flex", "1") } }
-
-            // Quiet, and only once there is something to go back from, as Reset was
-            if (isModifiedFromOriginal) {
-                button(type = ButtonType.button, classes = "kl-quiet-key") {
-                    onClick { backToOriginal() }
-
-                    icon.undo()
-                    +"Back to the original"
+                transportSpanTwo {
+                    KlangValueKnob(
+                        name = "Revolutions per minute",
+                        value = state.rpm,
+                        range = KlangCodePlaybackCtrl.RPM_RANGE,
+                        step = 0.5,
+                        onChange = { ctrl.setRpm(it) },
+                        unit = "RPM",
+                        decimals = 2,
+                        perPixel = 0.05,
+                    )
                 }
             }
 
-            // What the editor holds, edits included (the maintainer, 2026-10-27: "please add a copy button here")
-            button(type = ButtonType.button, classes = "kl-quiet-key") {
-                attributes["data-copy"] = ""
-                title = "Copy the code"
-                onClick { copy(state.code) }
+            // The keys at the right, also when they wrap to a line of their own
+            div {
+                css {
+                    put("display", "flex")
+                    put("align-items", "center")
+                    put("gap", "10px")
+                    put("margin-left", "auto")
+                }
 
-                icon.copy_outline()
-                +if (copied) "Copied" else "Copy"
+                // Quiet, and only once there is something to go back from, as Reset was
+                if (isModifiedFromOriginal) {
+                    button(type = ButtonType.button, classes = "kl-quiet-key") {
+                        onClick { backToOriginal() }
+
+                        icon.undo()
+                        +"Back to the original"
+                    }
+                }
+
+                // What the editor holds, edits included (the maintainer, 2026-10-27: "please add a copy button here")
+                button(type = ButtonType.button, classes = "kl-quiet-key") {
+                    attributes["data-copy"] = ""
+                    title = "Copy the code"
+                    onClick { copy(state.code) }
+                    // As wide as "Copied": its word changing moves nothing beside it
+                    css { put("min-width", "12ch") }
+
+                    icon.copy_outline()
+                    +if (copied) "Copied" else "Copy"
+                }
             }
         }
     }

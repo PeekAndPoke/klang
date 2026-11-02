@@ -7,6 +7,7 @@ package io.peekandpoke.klang.layouts
 
 import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.Nav
+import io.peekandpoke.klang.pages.docs.tutorials.TutorialPage
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialProgress
 import io.peekandpoke.klang.pages.docs.tutorials.allTutorials
 import io.peekandpoke.klang.pages.docs.tutorials.tutorialTrack
@@ -18,6 +19,7 @@ import io.peekandpoke.klang.ui.comp.KlangLamp
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
+import io.peekandpoke.kraft.routing.ActiveRoute
 import io.peekandpoke.kraft.routing.Route
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
@@ -31,8 +33,8 @@ import kotlinx.html.span
 import kotlin.js.Date
 
 @Suppress("FunctionName")
-fun Tag.MenuPickUp(currentSongId: String? = null, onOpen: (Route.Bound) -> Unit) = comp(
-    MenuPickUp.Props(currentSongId = currentSongId, onOpen = onOpen)
+fun Tag.MenuPickUp(currentSongId: String? = null, currentTrackSlug: String? = null, onOpen: (Route.Bound) -> Unit) = comp(
+    MenuPickUp.Props(currentSongId = currentSongId, currentTrackSlug = currentTrackSlug, onOpen = onOpen)
 ) {
     MenuPickUp(it)
 }
@@ -47,14 +49,17 @@ class MenuPickUp(ctx: Ctx<Props>) : Component<MenuPickUp.Props>(ctx) {
     data class Props(
         /** The song whose page one is on ([Nav.songIdOn]): its tile's lamp is lit. */
         val currentSongId: String?,
+        /** The track one is in ([trackSlugOn]): the lesson tile's lamp is lit when it is its track. */
+        val currentTrackSlug: String?,
         val onOpen: (Route.Bound) -> Unit,
     )
 
     /**
-     * The track to go on with: its [title], the [next] lesson's title (null once all are done), [done] of [total], and
-     * the [target] a pick leads to (the next lesson in the track, or the track's page once all are done).
+     * The track to go on with: its [trackSlug] and [title], the [next] lesson's title (null once all are done), [done] of
+     * [total], and the [target] a pick leads to (the next lesson in the track, or the track's page once all are done).
      */
     data class Continue(
+        val trackSlug: String,
         val title: String,
         val next: String?,
         val done: Int,
@@ -63,6 +68,23 @@ class MenuPickUp(ctx: Ctx<Props>) : Component<MenuPickUp.Props>(ctx) {
     )
 
     companion object {
+        /** The track one is in on the page [current] ([trackSlugOf]); null outside the lessons. */
+        fun trackSlugOn(current: ActiveRoute): String? = trackSlugOf(
+            route = current.route,
+            slug = current.matchedRoute["slug"],
+            trackParam = current.matchedRoute.queryParams[TutorialPage.PARAM_TRACK],
+        )
+
+        /**
+         * The track one is in on [route], [slug] its path's slug: a lesson's page, in the track it was opened in ([trackParam])
+         * or else the main path, as the lesson's page itself resolves it; a track's page; null on any other page.
+         */
+        fun trackSlugOf(route: Route, slug: String?, trackParam: String?): String? = when (route) {
+            Nav.tutorial -> allTutorials.firstOrNull { it.slug == slug }?.let { tutorialTrack(trackSlug = trackParam, tutorial = it)?.slug }
+            Nav.tutorialTrack -> slug
+            else -> null
+        }
+
         /** When something was opened, said plainly: "just now", "5 min ago", "3 h ago", "yesterday", "4 days ago". */
         fun whenText(now: Double, at: Double): String {
             val minutes = ((now - at) / 60_000).toInt()
@@ -88,6 +110,7 @@ class MenuPickUp(ctx: Ctx<Props>) : Component<MenuPickUp.Props>(ctx) {
             val next = track.lessons.firstOrNull { it.slug !in done }
 
             return Continue(
+                trackSlug = track.slug,
                 title = track.title,
                 next = next?.title,
                 done = TutorialProgress(done = done).doneIn(track),
@@ -111,12 +134,13 @@ class MenuPickUp(ctx: Ctx<Props>) : Component<MenuPickUp.Props>(ctx) {
             learning = continueOf(entries = entries, done = done),
             now = Date.now(),
             currentSongId = props.currentSongId,
+            currentTrackSlug = props.currentTrackSlug,
             onOpen = props.onOpen,
         )
     }
 }
 
-/** A song tile's lamp and the gap after it: the subtitle is indented by both, under the title's text. */
+/** A tile's lamp and the gap after it: the subtitle is indented by both, under the title's text. */
 private const val LAMP_PX = 7
 private const val LAMP_GAP_PX = 6
 
@@ -131,6 +155,7 @@ fun FlowContent.menuPickUpView(
     learning: MenuPickUp.Continue?,
     now: Double,
     currentSongId: String? = null,
+    currentTrackSlug: String? = null,
     onOpen: (Route.Bound) -> Unit,
 ) {
     val styles = KlangControlStyles
@@ -152,30 +177,12 @@ fun FlowContent.menuPickUpView(
                     onClick = { onOpen(Nav.song(song.id)) },
                     shape = KlangButton.Shape.Tile,
                 ) {
-                    span {
-                        css {
-                            put("display", "flex")
-                            put("align-items", "center")
-                            put("gap", "${LAMP_GAP_PX}px")
-                            put("min-width", "0")
-                            put("max-width", "100%")
-                        }
-
-                        KlangLamp(state = if (song.id == currentSongId) KlangLamp.State.On else KlangLamp.State.Off, size = LAMP_PX.px)
-                        span(classes = styles.drawerRecentTitle.toString()) {
-                            css { put("min-width", "0") }
-                            +song.title
-                        }
-                    }
+                    tileTitle(title = song.title, lit = song.id == currentSongId)
 
                     // As the songs page shows it: 40, 37.2
                     val tempo = song.rpm?.let { "$it RPM · " } ?: ""
 
-                    // Under the title's text, past its lamp (the maintainer, 2026-11-02: "indent the 'subtitle'")
-                    span(classes = styles.drawerSub.toString()) {
-                        css { put("padding-left", "${LAMP_PX + LAMP_GAP_PX}px") }
-                        +"$tempo${MenuPickUp.whenText(now = now, at = song.at)}"
-                    }
+                    tileSub(text = "$tempo${MenuPickUp.whenText(now = now, at = song.at)}")
                 }
             }
         }
@@ -184,22 +191,22 @@ fun FlowContent.menuPickUpView(
     learning?.let {
         span(classes = styles.drawerCaption.toString()) { +"Continue learning" }
 
-        menuLessonTile(learning = it, onOpen = onOpen)
+        menuLessonTile(learning = it, lit = it.trackSlug == currentTrackSlug, onOpen = onOpen)
     }
 }
 
 /** The track to go on with as a wide tile: its title and next lesson, the progress bar under them at its whole width. */
-fun FlowContent.menuLessonTile(learning: MenuPickUp.Continue, onOpen: (Route.Bound) -> Unit) {
+fun FlowContent.menuLessonTile(learning: MenuPickUp.Continue, lit: Boolean = false, onOpen: (Route.Bound) -> Unit) {
     val styles = KlangControlStyles
 
     div(classes = styles.drawerLessonRow.toString()) {
         KlangButton(onClick = { onOpen(learning.target) }, shape = KlangButton.Shape.Tile) {
             div(classes = styles.drawerLesson.toString()) {
                 div(classes = styles.drawerTileText.toString()) {
-                    span(classes = styles.drawerRecentTitle.toString()) { +learning.title }
-                    span(classes = styles.drawerSub.toString()) {
-                        +"${learning.next?.let { "Next: $it" } ?: "Every lesson done"} · ${learning.done} of ${learning.total}"
-                    }
+                    // Its lamp lit while one is in its track (the maintainer, 2026-11-02: "give the continue learning an
+                    // led too")
+                    tileTitle(title = learning.title, lit = lit)
+                    tileSub(text = "${learning.next?.let { "Next: $it" } ?: "Every lesson done"} · ${learning.done} of ${learning.total}")
                 }
 
                 // The count is in the text: a button's children are presentational, a progressbar role inside is lost
@@ -212,5 +219,35 @@ fun FlowContent.menuLessonTile(learning: MenuPickUp.Continue, onOpen: (Route.Bou
                 }
             }
         }
+    }
+}
+
+/**
+ * A tile's title with its lamp before it, lit on the item one is on (the maintainer, 2026-11-02: "a small led that is lit
+ * for the item the user is currently on"); a long title ends in an ellipsis.
+ */
+private fun FlowContent.tileTitle(title: String, lit: Boolean) {
+    span {
+        css {
+            put("display", "flex")
+            put("align-items", "center")
+            put("gap", "${LAMP_GAP_PX}px")
+            put("min-width", "0")
+            put("max-width", "100%")
+        }
+
+        KlangLamp(state = if (lit) KlangLamp.State.On else KlangLamp.State.Off, size = LAMP_PX.px)
+        span(classes = KlangControlStyles.drawerRecentTitle.toString()) {
+            css { put("min-width", "0") }
+            +title
+        }
+    }
+}
+
+/** A tile's second line, under the title's text past its lamp (the maintainer, 2026-11-02: "indent the 'subtitle'"). */
+private fun FlowContent.tileSub(text: String) {
+    span(classes = KlangControlStyles.drawerSub.toString()) {
+        css { put("padding-left", "${LAMP_PX + LAMP_GAP_PX}px") }
+        +text
     }
 }
