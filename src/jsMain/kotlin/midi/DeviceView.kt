@@ -59,7 +59,14 @@ class DeviceView(ctx: NoProps) : PureComponent(ctx) {
                 outlines = rigState.padOutlines(),
                 noteOffset = keyBedOffset,
                 screen = MidiRig.DEVICE_SCREEN,
-                onInput = { events -> events.forEach { rig.handle(it) } },
+                // A press on the drawing that plays is a gesture: it may start the Motor (D4), then it plays
+                onInput = { events ->
+                    if (MidiRig.plays(events)) {
+                        rig.startEngine()
+                    }
+
+                    events.forEach { rig.handle(it) }
+                },
             )
         }
     }

@@ -97,6 +97,12 @@ class LaptopKeysView(ctx: NoProps) : PureComponent(ctx) {
 
     /** A key on the drawing: through the rig; a key that is the laptop's does not reach the browser too. */
     private fun key(e: KeyboardEvent, down: Boolean) {
+        // A key that plays is a gesture: the first starts the Motor, its note sounds once it is up while held (D4). With
+        // Ctrl, Alt or Meta it is the browser's shortcut, which plays nothing
+        if (down && !e.repeat && !(e.ctrlKey || e.altKey || e.metaKey) && rig.laptopKeyPlays(e.code)) {
+            rig.startEngine()
+        }
+
         val handled = when (down) {
             true -> rig.laptopKeyDown(
                 code = e.code,
@@ -188,7 +194,7 @@ class LaptopKeysView(ctx: NoProps) : PureComponent(ctx) {
                         noteOffset = octave * 12,
                         keyLabels = LaptopKeys.keyLabels(octave = octave, label = letterOf),
                         screen = MidiRig.LAPTOP_SCREEN,
-                        onInput = { events -> events.forEach { rig.handle(it) } },
+                        onInput = { events -> drawn(events) },
                     )
                 }
 
@@ -198,6 +204,15 @@ class LaptopKeysView(ctx: NoProps) : PureComponent(ctx) {
                 }
             }
         }
+    }
+
+    /** A press on the drawing that plays is a gesture too: it may start the Motor (D4), then it plays. */
+    private fun drawn(events: List<ControlEvent>) {
+        if (MidiRig.plays(events)) {
+            rig.startEngine()
+        }
+
+        events.forEach { rig.handle(it) }
     }
 
     private fun FlowContent.layoutButton(layout: KeyLayout?, title: String) {

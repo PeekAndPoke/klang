@@ -169,4 +169,17 @@ class MidiRigSpec : StringSpec({
             }
         }
     }
+
+    "what is a gesture that starts the Motor: a laptop key or a press that plays; the panic, the octave, the velocity are not" {
+        val rig = MidiRig()
+
+        withClue("a note and a pad play") { listOf("KeyZ", "Digit1").map { rig.laptopKeyPlays(it) } shouldBe listOf(true, true) }
+        withClue("the panic, the octave, the velocity and the sustain do not") {
+            listOf("Escape", "ArrowLeft", "ArrowUp", "Tab").map { rig.laptopKeyPlays(it) } shouldBe listOf(false, false, false, false)
+        }
+        withClue("on a drawing, the panic does not, a pad does") {
+            MidiRig.plays(listOf(press(MidiRig.LAPTOP_SCREEN, ControlId.Panic))) shouldBe false
+            MidiRig.plays(listOf(press(MidiRig.LAPTOP_SCREEN, ControlId("pad-2")))) shouldBe true
+        }
+    }
 })

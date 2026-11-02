@@ -1,6 +1,6 @@
 # KLANG-00402: MIDI playground design: a laptop keyboard always on screen, and a control layer between the devices and what they do
 
-> **Status (2026-11-02): IN PROGRESS.** D1 to D8 decided, all as proposed (the maintainer, 2026-11-01); D9 built as proposed; steps 0 to 3 done; step 4 begun: 4a, the rig in the Spine, and 4b, the MIDI tool on every page, done; next 4c, the first key starts the Motor.
+> **Status (2026-11-02): IN PROGRESS.** D1 to D8 decided, all as proposed (the maintainer, 2026-11-01); D9 built as proposed; steps 0 to 3 done; step 4 done (the rig in the Spine, the MIDI tool on every page, the first key starts the Motor); next step 5, the MIDI page as configuration.
 >
 > **Part of:** KLANG-00363 (Live play: MIDI and realtime)
 
@@ -415,7 +415,17 @@ as proposed"). D7 was the maintainer's own proposal.
    17 mutants killed. Round 2 (level 2) clean; its MINORs applied: the rig's playback starts by itself once the Motor
    runs (whoever started it), the tool shows a browser without MIDI or a refusal, a panel flying in closes both ways
    between a page's own and the one there on every page, two KDocs name the startup path.
-   Next: 4c, the first key starts the Motor.
+   **4c done (2026-11-02):** the first key starts the Motor (D4), as the maintainer decided it after two review rounds
+   with a MAJOR each (both from pad hits queued while the Motor came up): "Only held notes wait". A laptop key that
+   plays (a note or a pad, not with Ctrl, Alt or Meta) or a press on a drawing that plays starts the Motor; a device's
+   key is no gesture. While the playback is not up, a start does nothing and the voicing keeps the note; when the
+   playback comes up, every note still held, by its key or a sustain, starts. One let go before never sounds; a pad's
+   hit never waits (a first tap on a pad starts the Motor without a sound). No queue of its own and no tracking of
+   start attempts: bounded by the keys held. Checked by hand (no spec rig comes up): a note held across the start
+   sounds. Review: the new design's round (level 2) clean; its MINORs applied (the queue removed for the voicing's
+   own held notes, the KDocs say "its key or a sustain"). Mutation-checked: the gesture rules (every key a
+   gesture, a press on the panic a gesture), both red.
+   Step 4 done: next, step 5 (the MIDI page as configuration).
 5. The MIDI page as configuration (section 6): the one play-code input, the instruments and the loadout, the
    devices, the routing, the event log and the monitor.
 6. Later, own tickets: editing the routing and learning a control; key switches and splits; a backing loop for
@@ -448,3 +458,4 @@ source's `AllUp`, the same note from two sources); the routing lookup order. New
 - 2026-11-01: IN PROGRESS.
 - 2026-11-02: step 4a, the MIDI rig in the Spine (`Playbacks.live`); the page draws from it.
 - 2026-11-02: step 4b, the MIDI tool in every page's bottom panel, closed until opened on a page without its own.
+- 2026-11-02: step 4c, the first key starts the Motor; held notes sound once it is up (the maintainer: "Only held notes wait").

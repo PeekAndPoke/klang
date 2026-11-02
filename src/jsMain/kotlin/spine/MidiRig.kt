@@ -145,6 +145,14 @@ class MidiRig {
         /** A pad's hit is a one-shot: its release does not cut it, the gate ends it. */
         private const val PAD_GATE_SEC = 1.0
 
+        /**
+         * Whether a press on a drawing plays (a key, a pad): a gesture that may start the Motor (D4); a press on its
+         * panic or another button starts nothing.
+         */
+        fun plays(events: List<ControlEvent>): Boolean = events.any { evt ->
+            evt is ControlEvent.NoteDown || (evt is ControlEvent.Press && evt.control.id.startsWith("pad-"))
+        }
+
         /** The laptop's drawing lights the laptop's keys and what is clicked on it; the device's drawing the rest. */
         fun onLaptopSide(source: SourceId): Boolean = source == LaptopKeys.source || source == LAPTOP_SCREEN
 
@@ -219,6 +227,12 @@ class MidiRig {
         ctrl.state.map { it.isReady }.distinct().subscribeToStream { ready ->
             if (ready) {
                 ctrl.preload(requests = kitRequests())
+                // The notes still held while the Motor came up, by their keys or a sustain, sound now (D4, the maintainer,
+                // 2026-11-02: "Only held notes wait"): before, the voicing held them and the playback took none, so
+                // these are exactly the ones not started; one let go before is gone, a pad's hit never waits
+                voicing.held.values.forEach { held ->
+                    ctrl.startEvents(liveId = held.liveId, events = eventsFor(held.key.note, held.velocity), gateDurSec = null)
+                }
             }
         }
     }
@@ -263,11 +277,19 @@ class MidiRig {
 
     /**
      * Starts the engine and the realtime playback. Call it from a user gesture (a click, a key): browsers start an
-     * AudioContext only from one.
+     * AudioContext only from one. A laptop key or a press on a drawing that plays is one, so the first of them starts the
+     * Motor, and its note sounds once it is up while its key or a sustain still holds it (D4); a device's key is none,
+     * and before the Motor runs the tool shows its start key.
      */
     fun startEngine() {
         ctrl.start()
     }
+
+    /**
+     * Whether a laptop key at [code] plays (a note, a pad): such a key is a gesture that may start the Motor (D4); the
+     * panic, the octave and the velocity keys start nothing.
+     */
+    fun laptopKeyPlays(code: String): Boolean = laptop.noteOf(code) != null || code in LaptopKeys.PADS
 
     //  THE TRANSLATION: voice shape, sound and params live here  //////////////////////////////
 
@@ -429,6 +451,7 @@ class MidiRig {
                 // A MIDI panic releases every source's notes, as it always did; a port gone or keys unfocused only their own
                 val outs = when (evt.reason) {
                     ControlEvent.Reason.Panic -> voicing.panic()
+
                     ControlEvent.Reason.Disconnected, ControlEvent.Reason.FocusLost -> voicing.allUp(evt)
                 }
 
@@ -524,6 +547,7 @@ class MidiRig {
     /** What a routed control does when it goes down. */
     private fun onPressed(function: PlayFunction, evt: ControlEvent.Press) {
         when (function) {
+            // A one-shot: while the playback is not up it is dropped, never kept to sound later
             is PlayFunction.HitPad -> ctrl.startEvents(
                 liveId = ctrl.nextLiveId(),
                 events = padEvents(pad = function.pad, velocity = evt.velocity),
@@ -568,6 +592,7 @@ class MidiRig {
     private fun play(outs: List<NoteVoicing.Out>) {
         for (out in outs) {
             when (out) {
+                // While the playback is not up, a start does nothing and the voicing keeps the note, to start once it is
                 is NoteVoicing.Out.Start ->
                     ctrl.startEvents(liveId = out.liveId, events = eventsFor(out.key.note, out.velocity), gateDurSec = null)
 
