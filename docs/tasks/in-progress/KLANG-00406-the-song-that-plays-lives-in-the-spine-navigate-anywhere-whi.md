@@ -4,8 +4,8 @@
 > plays on it and its song plays on when the page is left, the status bar and the Stop key from anywhere, the
 > per-playback gain in the engine (agreed with Klang-Main-Dev), its fade linear (the maintainer's choice), and step 6's
 > first half: a code example fades the song out and in (`Previews`), and its second: the start page's waiting song a
-> preview fading in on its own gain (D2). Open for the maintainer: what the Stop key stops while an example plays over a
-> faded song; then the line at the top of the Motor menu's "Pick up where you left off".
+> preview fading in on its own gain (D2). The Stop key and the song line's stop stop the song, also while an example
+> plays over it (the maintainer). Left: the line at the top of the Motor menu's "Pick up where you left off".
 
 ## Why this exists
 
@@ -294,3 +294,6 @@ full-level first block at a start; a gain during a stop release documented; the 
   volume is no longer touched by the start page (KLANG-00389's "one writer of the volume": the knob is the one writer).
   A song put on the deck (Klang Amp over the start page) stops it, where the old volume fade went on fading that song.
   Review round clean; the fade itself is page glue on a browser timer, untested.
+- 2026-11-02: decided by the maintainer: "The stop button should stop the songs, not the example". While an example
+  plays over the faded song, the Stop key (Ctrl/Cmd+Shift+.) and the song line's stop stop the song; the example plays
+  on, and no song fades in after it. As built, nothing to change.
