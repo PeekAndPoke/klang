@@ -142,7 +142,7 @@ class KlangampPlaylist(ctx: Ctx<Props>) : Component<KlangampPlaylist.Props>(ctx)
                 }
                 +when {
                     now == null -> "Pick a song"
-                    index >= 0 -> "${index + 1}. ${now.title ?: "Untitled"}"
+                    index >= 0 -> "${index + 1}. ${BuiltInSongs.songs[index].title}"
                     else -> now.title ?: "Untitled"
                 }
             }

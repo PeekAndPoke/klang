@@ -71,7 +71,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
     private val ctrl = KlangCodePlaybackCtrl.builder()
         .code(props.code)
         .rpm(props.rpm)
-        .exclusive()
+        .preview()
         .build()
 
     private val editorCompRef = ComponentRef.Tracker<KlangCodeEditorComp>()

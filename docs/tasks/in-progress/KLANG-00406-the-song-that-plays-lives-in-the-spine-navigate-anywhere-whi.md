@@ -2,8 +2,9 @@
 
 > **Status (2026-11-02): IN PROGRESS.** Steps 1 to 5 done: `SongDeck` in the Spine, Klang Amp on it, the song page
 > plays on it and its song plays on when the page is left, the status bar and the Stop key from anywhere, the
-> per-playback gain in the engine (agreed with Klang-Main-Dev), its fade linear (the maintainer's choice). Next: step 6,
-> the code examples fade the song out and in.
+> per-playback gain in the engine (agreed with Klang-Main-Dev), its fade linear (the maintainer's choice), and step 6's
+> first half: a code example fades the song out and in (`Previews`). Next: the start page's waiting song as a preview
+> (D2). Open for the maintainer: what the Stop key stops while an example plays over a faded song.
 
 ## Why this exists
 
@@ -185,6 +186,14 @@ After KLANG-00389's `Player` steps 1 and 2 (the move into the Spine, typed owner
    Done 2026-11-02 ("As built", below).
 6. The code examples by D1: the song fades out over 2 s while one plays and in again after it; then the start page
    as a preview (D2), its fade-in on its own gain.
+   First half done 2026-11-02: `Playbacks.previews` (`Previews`), the code examples' lane; a code example's controller
+   is a preview (`KlangCodePlaybackCtrl.Builder.preview`, in place of `exclusive`). It stops another preview and what
+   else holds the stage, fades the song on the deck to 0 over 2 s, and when none plays any more the song fades in over
+   2 s and takes the stage back. A preview that fails to start counts as stopped; a song put on the deck stops the
+   preview, also one still starting; a song leaving the deck goes back to full gain; the gain asked for while a song
+   still starts reaches its playback before its first sound. Klang Amp follows its song on the deck while an example
+   holds the stage. Open: the Stop key over a faded song (it stops the song, not the example one hears); a faded song's
+   Update or rename would republish it to the stage (unreachable today: no example beside a song page's editor).
 
 ## Step 5: the per-playback gain (proposal to Klang-Main-Dev, 2026-11-02)
 
@@ -275,3 +284,6 @@ full-level first block at a start; a gain during a stop release documented; the 
   fade on the playing song's own page; the workbench's slot for it removed again. Review round clean, MINORs applied.
 - 2026-11-02: the fade's law decided by the maintainer: linear ("The 2-second fade linear"); `PlaybackGain`'s law made
   linear. Step 6 started (the maintainer: "Please continue").
+
+- 2026-11-02: step 6, first half: the code examples fade the song out and in (`Previews`). Two review rounds (round 1:
+  a failed example start left the song silent, fixed; round 2 clean), every new row mutation-checked.

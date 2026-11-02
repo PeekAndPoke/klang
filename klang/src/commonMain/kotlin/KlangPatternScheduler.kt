@@ -159,7 +159,8 @@ internal class KlangPatternScheduler(
      * The playback's output gain, as last asked for ([setGain], KLANG-00406 step 5): kept while stopped, and sent at
      * the next start.
      */
-    private var gain = 1.0
+    var gain = 1.0
+        private set
 
     /**
      * Orders [setGain]'s look at [running] and its send against the start's and the stop's flip of it: a gain sent

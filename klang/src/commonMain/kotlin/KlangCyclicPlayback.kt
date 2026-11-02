@@ -49,6 +49,9 @@ interface KlangCyclicPlayback : KlangPlayback {
      */
     fun setGain(gain: Double, rampSec: Double)
 
+    /** The gain last asked for by [setGain], where its ramp goes or stands; 1 until then. */
+    val gain: Double
+
     /**
      * Start playback with the given options.
      */

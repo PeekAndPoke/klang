@@ -16,9 +16,20 @@ import io.peekandpoke.klang.spine.Playbacks
  */
 object KlangampDeck {
 
-    /** The built-in song [now] plays, by its place in the list; -1 when nothing plays or it is not one of them. */
-    fun indexOf(now: Playbacks.NowPlaying?): Int =
-        now?.let { n -> BuiltInSongs.songs.indexOfFirst { it.title == n.title } } ?: -1
+    /**
+     * The built-in song that plays, by its place in the list; -1 when nothing plays or it is not one of them. The song
+     * playing on the deck first, by its id: it plays on, faded, while a code example holds the stage [now] (KLANG-00406,
+     * D1). A display shows the list's title with the place, not [now]'s.
+     */
+    fun indexOf(now: Playbacks.NowPlaying?): Int {
+        val onDeck = Playbacks.song.onDeck()
+
+        if (onDeck != null && onDeck.ctrl.state().isPlaying) {
+            return BuiltInSongs.songs.indexOfFirst { it.id == onDeck.songId }
+        }
+
+        return now?.let { n -> BuiltInSongs.songs.indexOfFirst { it.title == n.title } } ?: -1
+    }
 
     /** The song Klang Amp played last; null before the first. */
     private var last: Song? = null

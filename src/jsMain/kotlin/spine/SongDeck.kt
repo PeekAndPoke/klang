@@ -49,6 +49,9 @@ class SongDeck(private val engine: PlaybackEngine = Player) {
     /** The pages showing a controller, by controller: one page, or two while the router fades one out. */
     private val shown = mutableMapOf<KlangCodePlaybackCtrl, Int>()
 
+    /** The previews over this deck ([Previews]), which register here: a song put on stops theirs. */
+    internal var previews: Previews? = null
+
     /** Ends the deck's watch on what is on it. */
     private var watching: (() -> Unit)? = null
 
@@ -117,6 +120,8 @@ class SongDeck(private val engine: PlaybackEngine = Player) {
     private fun play(next: OnDeck) {
         if (_onDeck()?.ctrl !== next.ctrl) {
             letGo(stop = true)
+            // A song put on ends the preview over the one before, also one still starting (KLANG-00406, D1)
+            previews?.stop()
             _onDeck(next)
             watch(next.ctrl)
             // The song takes the stage: what held it (a code example, a page's own playback) stops
@@ -150,6 +155,9 @@ class SongDeck(private val engine: PlaybackEngine = Player) {
         if (stop) {
             before.ctrl.stop()
         }
+
+        // Off the deck no preview fades it: a page that plays it again plays it at full gain
+        before.ctrl.setGain(gain = 1.0, rampSec = 0.0)
 
         if (shown[before.ctrl] == null) {
             before.ctrl.release()

@@ -269,7 +269,7 @@ class KlangampPlayer(ctx: Ctx<Props>) : Component<KlangampPlayer.Props>(ctx) {
                 display(key = "marquee", style = mapOf("height" to "22px")) {
                     val text = when {
                         now == null -> "Klang Amp  ***  pick a song from the playlist  ***  "
-                        index >= 0 -> "${index + 1}. ${now.title ?: "Untitled"}  ***  "
+                        index >= 0 -> "${index + 1}. ${BuiltInSongs.songs[index].title}  ***  "
                         else -> "${now.title ?: "Untitled"}  ***  "
                     }
 

@@ -49,7 +49,8 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) : Pl
         val initialCode: String,
         val initialRpm: Double,
         val initialTitle: String?,
-        val exclusive: Boolean,
+        /** The lane a preview plays on ([Builder.preview]); null for a controller that is no preview. */
+        val previews: (() -> Previews)?,
         val engine: PlaybackEngine,
     )
 
@@ -57,21 +58,25 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) : Pl
         private var code: String = ""
         private var rpm: Double = 30.0
         private var title: String? = null
-        private var exclusive: Boolean = false
+        private var previews: (() -> Previews)? = null
         private var engine: PlaybackEngine? = null
 
         fun code(c: String) = apply { code = c }
         fun rpm(r: Double) = apply { rpm = r }
         fun title(t: String?) = apply { title = t }
 
-        /** Opt-in: when calling [play], stop any other controller that has claimed the primary slot. */
-        fun exclusive(v: Boolean = true) = apply { exclusive = v }
+        /**
+         * A preview, a code example (KLANG-00406, D1): its [play] stops another preview and whatever else holds the
+         * stage, and fades the song on the deck out instead; its stop fades the song in again ([Previews]). On [lane],
+         * the app's [Playbacks.previews] when none is given.
+         */
+        fun preview(lane: Previews? = null) = apply { previews = { lane ?: Playbacks.previews } }
 
         /** What it plays on: the app's [Player] when none is given (so a spec's builder never starts it). */
         fun engine(e: PlaybackEngine) = apply { engine = e }
 
         fun build(): KlangCodePlaybackCtrl = KlangCodePlaybackCtrl(
-            Config(initialCode = code, initialRpm = rpm, initialTitle = title, exclusive = exclusive, engine = engine ?: Player)
+            Config(initialCode = code, initialRpm = rpm, initialTitle = title, previews = previews, engine = engine ?: Player)
         )
     }
 
@@ -130,6 +135,13 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) : Pl
 
     /** Counts the stops: a start that waited for the engine gives up when a stop came meanwhile (KLANG-00398). */
     private var stops = 0
+
+    /**
+     * The output gain asked for ([setGain]): the playback has it, and a playback still to start gets it before its
+     * first sound (a song still starting when a preview begins starts faded).
+     */
+    var gain: Double = 1.0
+        private set
 
     /** The subscriptions this controller holds till it is [release]d. */
     private val subscriptions: List<() -> Unit> = listOf(
@@ -197,6 +209,12 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) : Pl
         _errors(emptyList())
     }
 
+    /** Moves the output gain to [gain] over [rampSec] seconds: now, on what plays, and kept for what starts later. */
+    fun setGain(gain: Double, rampSec: Double) {
+        this.gain = gain
+        _playback()?.setGain(gain = gain, rampSec = rampSec)
+    }
+
     // ── Actions ──────────────────────────────────────────────────────────────
 
     /**
@@ -204,9 +222,7 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) : Pl
      * if already playing. Non-suspending: the work runs in a coroutine via [launch].
      */
     fun play() {
-        if (config.exclusive) {
-            Playbacks.requestExclusivePlayback(self = this)
-        }
+        config.previews?.invoke()?.play(preview = this)
 
         val stopsAtPlay = stops
 
@@ -228,6 +244,12 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) : Pl
             )
         }
         Playbacks.publishNowPlaying(owner = this, value = null)
+        config.previews?.invoke()?.stopped(preview = this)
+    }
+
+    /** Takes the stage again with what plays, after a preview held it: what the stage's displays show is this again. */
+    fun showOnStage() {
+        _playback()?.let { publishNowPlaying(it) }
     }
 
     /** Stops what plays and ends the subscriptions: the owner is done with this controller (it leaves, or unmounts). */
@@ -284,6 +306,8 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) : Pl
                         )
                     }
 
+                    // The gain asked for meanwhile, before the first sound: kept by the playback, sent at its start
+                    pb.setGain(gain = gain, rampSec = 0.0)
                     pb.start(KlangCyclicPlayback.Options(rpm = _state().rpm))
                     publishNowPlaying(pb)
                 }
@@ -299,6 +323,11 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) : Pl
             console.error("KlangCodePlaybackCtrl: play failed", e)
             // APPEND: a failure here must not discard markers published for swallowed errors.
             _errors(_errors() + mapToEditorError(e))
+
+            // A preview that failed to start plays nothing: the song it faded out comes back
+            if (_playback() == null) {
+                config.previews?.invoke()?.stopped(preview = this)
+            }
         } finally {
             // Runs on every path (success, throw, and the null-compile elvis), so a swallowed
             // error is never silently dropped. Keeps playing either way: a marker is

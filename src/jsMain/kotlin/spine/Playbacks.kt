@@ -16,13 +16,16 @@ import io.peekandpoke.ultra.streams.ops.ticker
 
 /**
  * What plays in the app, next to the [Player], which keeps the engine itself (KLANG-00406, "The Spine's playbacks"):
- * the real song on its [song] deck, and the stage, what plays now for the visuals and Klang Amp ([nowPlaying]).
- * The other lanes (previews, sounds, live) come with KLANG-00406's later steps.
+ * the real song on its [song] deck, the code examples over it ([previews], which fade it out and in), and the stage,
+ * what plays now for the visuals and Klang Amp ([nowPlaying]). The other lanes (sounds, live) are still to come.
  */
 object Playbacks {
 
     /** The real song that plays: one at a time, kept while one navigates. Made on first use, as it starts the engine's status. */
     val song: SongDeck by lazy { SongDeck() }
+
+    /** What a page plays until it is stopped, over the song, which it fades out and in again ([Previews], D1). */
+    val previews: Previews by lazy { Previews(deck = song) }
 
     /**
      * Snapshot of whatever is considered the "primary" playback across the app.
@@ -72,13 +75,13 @@ object Playbacks {
     }
 
     /**
-     * Opt-in "only one at a time" coordination: the current [nowPlaying] owner, when it is not [self],
-     * is stopped, which clears the stage for [self].
+     * Clears the stage for [self]: the current [nowPlaying] owner, when it is neither [self] nor [spare], is stopped. A
+     * preview spares the song it fades out ([Previews.play]).
      */
-    fun requestExclusivePlayback(self: PlaybackOwner) {
+    fun requestExclusivePlayback(self: PlaybackOwner, spare: PlaybackOwner? = null) {
         val other = nowPlayingOwner
 
-        if (other != null && other !== self) {
+        if (other != null && other !== self && other !== spare) {
             other.stop()
         }
     }
