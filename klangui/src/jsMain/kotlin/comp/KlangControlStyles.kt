@@ -860,10 +860,24 @@ object KlangControlStyles : StyleSheet("kl-controls") {
 
     // ── Dialog ────────────────────────────────────────────────────────────────
 
+    /** The dialog's title, and its aside at the row's right end. */
+    val dialogTitleRow by rule {
+        put("display", "flex")
+        put("align-items", "baseline")
+        put("justify-content", "space-between")
+        put("gap", "16px")
+    }
+
     val dialogTitle by rule {
         put("font-size", "16px")
         put("font-weight", "700")
         put("color", "var(--kl-ink-strong)")
+    }
+
+    /** A line beside the dialog's title, in the text's voice. */
+    val dialogAside by rule {
+        put("font-size", "14px")
+        put("color", "var(--kl-ink-text)")
     }
 
     val dialogBody by rule {

@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.ui.comp
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
@@ -86,6 +87,27 @@ class KlangDialogSpec : StringSpec({
             }
         } finally {
             manager.dispose()
+        }
+    }
+
+    "an aside sits on the title's row, at its end; the dialog stays named by its title alone" {
+        TestBed.preact(
+            view = {
+                KlangDialog(title = "Walkthrough guidance", actions = emptyList(), aside = "Let's dance through the gui.") {
+                    +"The cards."
+                }
+            },
+        ) { root ->
+            val dialog = root.selectCss("[role=dialog]").single()
+            val row = root.selectCss(".${styles.dialogTitleRow}").single()
+
+            withClue("the title, then the aside, in one row") {
+                row.querySelector(".${styles.dialogAside}")!!.textContent shouldBe "Let's dance through the gui."
+                row.textContent shouldBe "Walkthrough guidanceLet's dance through the gui."
+            }
+            withClue("named by the title alone") {
+                document.getElementById(dialog.getAttribute("aria-labelledby")!!)!!.textContent shouldBe "Walkthrough guidance"
+            }
         }
     }
 })

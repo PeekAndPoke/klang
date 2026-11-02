@@ -15,14 +15,16 @@ import kotlinx.html.DIV
 import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlinx.html.id
+import kotlinx.html.span
 
 @Suppress("FunctionName")
 fun Tag.KlangDialog(
     title: String,
     actions: List<KlangDialog.Action>,
+    aside: String? = null,
     content: DIV.() -> Unit,
 ) = comp(
-    KlangDialog.Props(title = title, actions = actions, content = content)
+    KlangDialog.Props(title = title, actions = actions, aside = aside, content = content)
 ) {
     KlangDialog(it)
 }
@@ -60,6 +62,8 @@ class KlangDialog(ctx: Ctx<Props>) : Component<KlangDialog.Props>(ctx) {
     data class Props(
         val title: String,
         val actions: List<Action>,
+        /** A line at the right end of the title's row, in the text's voice; null for none. */
+        val aside: String?,
         val content: DIV.() -> Unit,
     )
 
@@ -72,9 +76,15 @@ class KlangDialog(ctx: Ctx<Props>) : Component<KlangDialog.Props>(ctx) {
             attributes["aria-labelledby"] = "$idBase-title"
             attributes["aria-describedby"] = "$idBase-body"
 
-            div(classes = styles.dialogTitle.toString()) {
-                id = "$idBase-title"
-                +props.title
+            // The title, and at the right end of its row the aside (the maintainer, 2026-11-02, of the walkthroughs' "Let's
+            // dance through the gui": "move it to the right, same line as the header"); the dialog is named by the title
+            div(classes = styles.dialogTitleRow.toString()) {
+                div(classes = styles.dialogTitle.toString()) {
+                    id = "$idBase-title"
+                    +props.title
+                }
+
+                props.aside?.let { aside -> span(classes = styles.dialogAside.toString()) { +aside } }
             }
 
             div(classes = styles.dialogBody.toString()) {

@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.comp
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
@@ -109,6 +110,14 @@ class WalkthroughsWindowSpec : StringSpec({
             page.open(GuiDance(arcs = arcs, store = GuiDance.MemoryStore(done = setOf("first"))))
 
             eventually { dialog()?.textContent shouldContain "1 more to come." }
+
+            withClue("what is to come: a card of its own beside the walkthroughs', with no links") {
+                val toCome = dialog()!!.querySelector("[data-to-come]")!!
+
+                toCome.textContent shouldBe "1 more to come."
+                toCome.querySelectorAll("a, button").length shouldBe 0
+                (toCome.parentElement === card("Your first song").parentElement) shouldBe true
+            }
 
             link("Your first song", "Reopen").click()
 

@@ -23,6 +23,7 @@ import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.semanticui.ui
 import kotlinx.css.px
 import kotlinx.html.ButtonType
+import kotlinx.html.DIV
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.button
@@ -124,11 +125,7 @@ class WalkthroughsWindow(ctx: Ctx<Props>) : FadingModal<WalkthroughsWindow.Props
             // Focusable, so a click on the text keeps the keyboard in the modal
             attributes["tabindex"] = "-1"
 
-            KlangDialog(title = "Walkthrough guidance", actions = actions()) {
-                div {
-                    +"Let's dance through the gui."
-                }
-
+            KlangDialog(title = "Walkthrough guidance", actions = actions(), aside = "Let's dance through the gui.") {
                 ui.divider()
 
                 // A card per walkthrough: its lamp, lit when finished, its title, and two links under it, to turn it
@@ -139,16 +136,10 @@ class WalkthroughsWindow(ctx: Ctx<Props>) : FadingModal<WalkthroughsWindow.Props
                     for (arc in dance.arcs) {
                         renderCard(arc)
                     }
-                }
 
-                div {
-                    css { put("margin-top", "14px") }
-
-                    +when (toCome) {
-                        0 -> "That was every walkthrough, for now."
-                        1 -> "1 more to come."
-                        else -> "$toCome more to come."
-                    }
+                    // What is still to come, as a card of its own beside them, with no links (the maintainer, 2026-11-02:
+                    // "a card/panel like the already discovered ones, but without any links")
+                    renderToCome(toCome)
                 }
 
                 renderMute(mutedUntil = mutedUntil, toCome = toCome)
@@ -203,21 +194,53 @@ class WalkthroughsWindow(ctx: Ctx<Props>) : FadingModal<WalkthroughsWindow.Props
     }
 
     /** A walkthrough's card; its lamp and its first link show the state Confirm will leave it in. */
+    /** A card's frame: its ground, its edge, its lamp beside its text. */
+    private fun DIV.cardFrame() {
+        css {
+            put("display", "flex")
+            put("align-items", "flex-start")
+            put("gap", "10px")
+            put("padding", "10px 12px")
+            put("background", "var(--kl-ground-raised)")
+            put("border", "1px solid var(--kl-edge)")
+            put("border-radius", "var(--kl-radius)")
+        }
+    }
+
+    /** How many walkthroughs are still to come, a card like theirs, its lamp unlit, with no links. */
+    private fun FlowContent.renderToCome(toCome: Int) {
+        div {
+            key = "to-come"
+            attributes["data-to-come"] = toCome.toString()
+            cardFrame()
+
+            div {
+                css { put("padding-top", "3px") }
+                KlangLamp(state = KlangLamp.State.Unlit, size = 10.px)
+            }
+
+            div {
+                css {
+                    put("font-size", "13px")
+                    put("color", "var(--kl-ink-strong)")
+                }
+
+                +when (toCome) {
+                    0 -> "That was every walkthrough, for now."
+                    1 -> "1 more to come."
+                    else -> "$toCome more to come."
+                }
+            }
+        }
+    }
+
     private fun FlowContent.renderCard(arc: GuiDance.Arc) {
         val finished = shownFinished(arc)
 
         div {
             key = "arc-${arc.id}"
             attributes["data-arc"] = arc.id
-            css {
-                put("display", "flex")
-                put("align-items", "flex-start")
-                put("gap", "10px")
-                put("padding", "10px 12px")
-                put("background", "var(--kl-ground-raised)")
-                put("border", "1px solid var(--kl-edge)")
-                put("border-radius", "var(--kl-radius)")
-            }
+            cardFrame()
 
             div {
                 css { put("padding-top", "3px") }
