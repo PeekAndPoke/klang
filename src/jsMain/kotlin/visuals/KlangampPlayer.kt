@@ -7,12 +7,12 @@ package io.peekandpoke.klang.visuals
 
 import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.comp.Motor
-import io.peekandpoke.klang.comp.MotorReadings
 import io.peekandpoke.klang.comp.Oscilloscope
 import io.peekandpoke.klang.comp.PlayerMiniStats
 import io.peekandpoke.klang.comp.Spectrumeter
 import io.peekandpoke.klang.comp.VolumeKnob
 import io.peekandpoke.klang.comp.clockOf
+import io.peekandpoke.klang.spine.MotorReadings
 import io.peekandpoke.klang.spine.Playbacks
 import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.ui.comp.KlangButton
@@ -77,11 +77,11 @@ class KlangampPlayer(ctx: Ctx<Props>) : Component<KlangampPlayer.Props>(ctx) {
     /** The seconds heard, for the time on the display: the Spine's one clock. */
     private val seconds by subscribingTo(Playbacks.heardSeconds)
 
-    private val cylinders by subscribingTo(MotorReadings.cylinders())
+    private val cylinders by subscribingTo(MotorReadings.cylinders)
 
-    private val heat by subscribingTo(MotorReadings.heat())
+    private val heat by subscribingTo(MotorReadings.heat)
 
-    private val voices by subscribingTo(MotorReadings.voices())
+    private val voices by subscribingTo(MotorReadings.voices)
 
     override fun VDom.render() {
         div {

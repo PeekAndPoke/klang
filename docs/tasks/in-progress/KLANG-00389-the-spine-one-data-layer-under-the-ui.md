@@ -140,9 +140,20 @@ For the design step, to agree with the maintainer. One area at a time, each a co
    behaviour changed. Every playback through it and the one rule come with KLANG-00406's `Playbacks`.
 3. **One writer of the volume:** the Spine owns the output gain and offers a fade (the start page asks for it, the knob
    sets the target); a turn of the knob during a fade wins.
+   Done 2026-11-02 another way, by KLANG-00406 step 6: the start page fades its waiting song on that playback's own
+   gain (`setGain`), so the master volume has one writer, the knob (through `Player.setOutputVolume`), and a fade and a
+   turn of the knob never meet. Checked by a grep of `setOutputVolume` and `setGain` in `src/jsMain` and `klangui`.
 4. **The Motor's readings derived once:** `MotorReadings`' factories become values in the Spine, each smoothed once and
    cut off while nothing shows them; `PlayerMiniStats`, `VisualsBoard` and `KlangampPlayer` read them.
    The waveform and the spectrum as Spine streams too (decide: push the FFT on `Frames`, or keep the pull).
+   Done 2026-11-02 for the readings: `spine/MotorReadings` holds `cylinders`, `heat` and `voices` as values, each
+   smoothed once and listening to the diagnostics only while a gauge listens (Ultra's `smooth` and `cutoffWhen` let go
+   upstream with their last subscriber), cut off while the window rests; `PlayerMiniStats` reads them through its own
+   pause, `VisualsBoard` and `KlangampPlayer` as they are; the needles' pace (`NEEDLE_SMOOTHING`, `NEEDLE_NEAR`) moved
+   there from `PlayerMiniStats`. The Motor's gauges let go of them only while covered (the visuals screen), not for the
+   window resting, which the readings do upstream: so a needle lands its swing and swings on when the window comes
+   back, as before (review round 1). Left: `VisualsBoard` listens also in a composition without gauges (it did before);
+   the waveform and the spectrum, a decision.
 5. **The playback model out of `comp/`:** `KlangCodePlaybackCtrl` to the Spine with a lifetime (made and released by
    its owner), the `Player.status` leak fixed; `KlangampDeck`'s start time moves with it. Designed in KLANG-00406: one
    `SongDeck` in the Spine owns the song that plays, so it plays on while one navigates (the maintainer, 2026-11-01).
@@ -242,3 +253,6 @@ next, the MIDI rig first (KLANG-00402). A global object outside the Spine is a d
   found" fixed; `RealtimePlaybackCtrl`'s is not yet); Klang Amp's seconds read from the stage.
 - 2026-11-01: "Derived twice", the elapsed time: Klang Amp's two 250 ms intervals (each redrawing its whole component)
   replaced by `Playbacks.heardSeconds`, one ticker in the Spine that runs only while shown (KLANG-00406 step 4).
+- 2026-11-02: step 3 recorded as done by KLANG-00406 step 6 (the start page fades its own song, the knob alone writes
+  the master volume).
+- 2026-11-02: step 4, the readings derived once: `MotorReadings` in the Spine, values in place of factories.

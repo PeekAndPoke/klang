@@ -6,7 +6,7 @@
 package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.KlangGuiDance
-import io.peekandpoke.klang.spine.Player
+import io.peekandpoke.klang.spine.MotorReadings
 import io.peekandpoke.klang.spine.UiWork
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.comp.KlangGauge
@@ -20,9 +20,8 @@ import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.semanticui.noui
 import io.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.ultra.streams.Stream
+import io.peekandpoke.ultra.streams.ops.combinedWith
 import io.peekandpoke.ultra.streams.ops.cutoffWhen
-import io.peekandpoke.ultra.streams.ops.map
-import io.peekandpoke.ultra.streams.ops.smooth
 import kotlinx.css.Display
 import kotlinx.css.display
 import kotlinx.css.height
@@ -64,12 +63,6 @@ class PlayerMiniStats(ctx: Ctx<Props>) : Component<PlayerMiniStats.Props>(ctx) {
 
         /** Where the heat gauge turns hot, as in the kitchen sink (KLANG-00344). */
         const val HEAT_HOT_FROM = 0.85
-
-        /** How slowly the needles follow new readings: the share of the way kept per 10 ms, the Motor's old pace. */
-        const val NEEDLE_SMOOTHING = 0.933
-
-        /** Where a needle counts as there: a thousandth of its gauge's sweep, times the sweep below. */
-        const val NEEDLE_NEAR = 0.001
     }
 
     //  PROPS  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -85,26 +78,21 @@ class PlayerMiniStats(ctx: Ctx<Props>) : Component<PlayerMiniStats.Props>(ctx) {
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
-    /** The current player's latest diagnostics; null while there is no player, so the gauges go offline. */
-    private val online = Player.diagnostics.stream.cutoffWhen(props.paused)
+    /**
+     * When the gauges let go of the shared readings: while paused, but not for the window resting alone. The readings
+     * rest with the window themselves, upstream of their smoothing, so a needle held on to lands its swing and swings on
+     * when the window comes back; let go of, it would freeze mid-swing and snap on its return.
+     */
+    private val letGo = props.paused.combinedWith(UiWork.resting) { paused, resting -> paused && !resting }
 
-    // The readings, smoothed as streams (KLANG-00345): the gauges draw what they get
+    // The readings, smoothed once in the Spine for every gauge (KLANG-00345, KLANG-00389 step 4): the gauges draw what
+    // they get
 
-    private val cylinders by subscribingTo(
-        online.map { d -> d?.cylinders?.count { it.active }?.toDouble() }
-            .smooth(sharePer10Ms = NEEDLE_SMOOTHING, near = 32 * NEEDLE_NEAR)
-    )
+    private val cylinders by subscribingTo(MotorReadings.cylinders.cutoffWhen(letGo))
 
-    /** The heat is what the render does not have to spare. */
-    private val heat by subscribingTo(
-        online.map { d -> d?.renderHeadroom?.let { 1.0 - it } }
-            .smooth(sharePer10Ms = NEEDLE_SMOOTHING, near = 1 * NEEDLE_NEAR)
-    )
+    private val heat by subscribingTo(MotorReadings.heat.cutoffWhen(letGo))
 
-    private val voices by subscribingTo(
-        online.map { d -> d?.activeVoiceCount?.toDouble() }
-            .smooth(sharePer10Ms = NEEDLE_SMOOTHING, near = 100 * NEEDLE_NEAR)
-    )
+    private val voices by subscribingTo(MotorReadings.voices.cutoffWhen(letGo))
 
     /** The Gui-dance's lit step: the menu button wears its beacon when it is the button's (KLANG-00350). */
     private val guiDanceLit by subscribingTo(KlangGuiDance.dance.lit)

@@ -17,6 +17,7 @@ import io.peekandpoke.klang.compile
 import io.peekandpoke.klang.fs
 import io.peekandpoke.klang.playJingle
 import io.peekandpoke.klang.spine.KlangCodePlaybackCtrl
+import io.peekandpoke.klang.spine.MotorReadings
 import io.peekandpoke.klang.spine.Playbacks
 import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.spine.SwingingLamp
@@ -542,7 +543,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
     private val dynoCylinders by subscribingTo(
         benchmark.progress.map<KlangBenchmark.Progress, Double?> { it.activeCylinders.toDouble() }
-            .smooth(sharePer10Ms = PlayerMiniStats.NEEDLE_SMOOTHING, near = KlangBenchmark.CYLINDERS * PlayerMiniStats.NEEDLE_NEAR)
+            .smooth(sharePer10Ms = MotorReadings.NEEDLE_SMOOTHING, near = KlangBenchmark.CYLINDERS * MotorReadings.NEEDLE_NEAR)
     )
 
     /**
@@ -551,12 +552,12 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
      */
     private val dynoHeat by subscribingTo(
         benchmark.progress.map<KlangBenchmark.Progress, Double?> { if (it.isComplete) 0.99 else it.currentRtf.coerceAtMost(1.0) }
-            .smooth(sharePer10Ms = PlayerMiniStats.NEEDLE_SMOOTHING, near = PlayerMiniStats.NEEDLE_NEAR)
+            .smooth(sharePer10Ms = MotorReadings.NEEDLE_SMOOTHING, near = MotorReadings.NEEDLE_NEAR)
     )
 
     private val dynoVoices by subscribingTo(
         benchmark.progress.map<KlangBenchmark.Progress, Double?> { it.activeVoices.toDouble() }
-            .smooth(sharePer10Ms = PlayerMiniStats.NEEDLE_SMOOTHING, near = DYNO_VOICES_END * PlayerMiniStats.NEEDLE_NEAR)
+            .smooth(sharePer10Ms = MotorReadings.NEEDLE_SMOOTHING, near = DYNO_VOICES_END * MotorReadings.NEEDLE_NEAR)
     )
 
     /** The dyno fades in; everything else stands at full opacity. */

@@ -7,13 +7,13 @@ package io.peekandpoke.klang.visuals
 
 import io.peekandpoke.klang.comp.Motor
 import io.peekandpoke.klang.comp.MotorBackground
-import io.peekandpoke.klang.comp.MotorReadings
 import io.peekandpoke.klang.comp.Oscilloscope
 import io.peekandpoke.klang.comp.PlateComposition
 import io.peekandpoke.klang.comp.PlayerMiniStats
 import io.peekandpoke.klang.comp.ScreenRect
 import io.peekandpoke.klang.comp.Spectrumeter
 import io.peekandpoke.klang.comp.VolumeKnob
+import io.peekandpoke.klang.spine.MotorReadings
 import io.peekandpoke.klang.spine.Playbacks
 import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.spine.SwingingLamp
@@ -214,11 +214,11 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
     /** What plays now, from here or from any page: the Motor's plate's play/stop shows it. */
     private val nowPlaying by subscribingTo(Playbacks.nowPlaying)
 
-    private val cylinders by subscribingTo(MotorReadings.cylinders())
+    private val cylinders by subscribingTo(MotorReadings.cylinders)
 
-    private val heat by subscribingTo(MotorReadings.heat())
+    private val heat by subscribingTo(MotorReadings.heat)
 
-    private val voices by subscribingTo(MotorReadings.voices())
+    private val voices by subscribingTo(MotorReadings.voices)
 
     override fun VDom.render() {
         val width = window.innerWidth.toDouble()
