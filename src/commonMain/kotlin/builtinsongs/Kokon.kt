@@ -258,7 +258,7 @@ export liftRoots = `<5 6 0>`
 export liftPower = `<[-2,2] [-1,3] [0,4]>`
 
 // The melody, in two phrases of one round each. The second fits the cocoon and the lift alike.
-export melodyOne = `<[4@4 3 0 2 [3 7]] [3@4 ~ 4 2 1] [0@3 4 3@2 2 2] [1@6 ~@2]>`
+export melodyOne = `<[4@4 3 0     2 [3 7]] [3@4 ~ 4 2 1]     [0@3 4 3@2 2 2]     [1@6 ~@2]>`
 export melodyTwo = `<[7@4 6 [0 1] 2 [4 6]] [8@4 ~ 7 2 [6 8]] [9@3 8 7@2 2 [2 3]] [4@6 ~@2]>`
 
 // Out of the cocoon flies the Schmetterling's own lead.
@@ -387,7 +387,7 @@ export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
   .ignp("sub", 0.95).ignp("harmonics", 1.00)
   .adsr(0.003, 0.75, 0.5, 0.040).hpf(30).notch(freq = snareHz, q = 1.0)
   .clip(0.90)
-  .gain(0.55).pan(0.25).superimpose(pan(0.75))
+  .gain(0.50).pan(0.25).superimpose(pan(0.75))
   .orbit(15)
 
 // Parts  -----------------------------------------------------------------------------------------------------------
@@ -537,12 +537,13 @@ export song = stack(
  
   , master(Katalyst(k => k
     .reverb(0.20, 9.5, 7500)                         // the hall: one room for the whole band, about 2 s, warm
-    .gain(1.03)                                    // the house level, -14 LUFS
+    .gain(1.05)                                    // the house level, -14 LUFS
     .bands(b => b
       .band(low => low.distort(0.01, "soft", 4).mul(1.00)).cut(150)
-      .band(mid => mid.distort(0.15, "soft", 4).mul(0.90)).cut(5000)
-      .band(low => low.distort(0.01, "soft", 4).mul(1.25))
+      .band(mid => mid.distort(0.15, "soft", 4).mul(0.85)).cut(5000)
+      .band(low => low.distort(0.01, "soft", 4).mul(1.15))
     ) // the glue on the mids only: the kick and the hats stay clean
+    .mul(0.9)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005) // the ceiling: peaks only
   ))
 )
