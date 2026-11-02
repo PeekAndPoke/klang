@@ -2055,15 +2055,12 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         // Ends well before the middle (the maintainer, 2026-10-28: "it goes too far into the center"; it reached 42 %)
         put("height", "26%")
         put("transform", "translateX(-50%)")
-        put("border-radius", "2px")
+        put("border-radius", "1px")
         put("background", "var(--kl-ink-strong)")
-        // Cut into the cap, not painted on (the maintainer, 2026-10-28: "should look like mechanically created"): its
-        // walls in shadow, a fine bright lip where the cut meets the face
-        put(
-            "box-shadow",
-            "inset 0 1px 2px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(0, 0, 0, 0.25), " +
-                "0 0 0 1px rgba(255, 255, 255, 0.16)",
-        )
+        // Cut into the cap, not painted on (the maintainer, 2026-10-28: "should look like mechanically created"), with
+        // hard edges like the gauges' needles (2026-11-02: "needs a sharper edge ... too soft"): its upper wall in
+        // shadow and a crisp dark rim, nothing blurred
+        put("box-shadow", "inset 0 1px 0 rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0, 0, 0, 0.6)")
     }
 
     /** The pointer as a dot at the rim, when an icon sits on the cap. */
