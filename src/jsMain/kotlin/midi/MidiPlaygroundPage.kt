@@ -36,8 +36,10 @@ import kotlinx.css.fontWeight
 import kotlinx.css.minHeight
 import kotlinx.css.padding
 import kotlinx.css.px
+import kotlinx.html.ButtonType
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
+import kotlinx.html.button
 import kotlinx.html.div
 import kotlinx.html.tbody
 import kotlinx.html.td
@@ -115,6 +117,16 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
 
     /** The place a dragged instrument is over and may be dropped on: a [DROP_ATTR] value; null for none. */
     private var dropOver: String? by value(null)
+
+    /** The page's lower half (step 5d): what came in, what each control does, and the raw controllers, as tabs. */
+    private enum class LowerTab(val title: String) {
+        Events("Events"),
+        Routing("Routing"),
+        Monitor("MIDI monitor"),
+    }
+
+    /** The tab of the lower half shown. */
+    private var lowerTab: LowerTab by value(LowerTab.Events)
 
     init {
         // Every slot takes an instrument: a new one in place of its own, one already in the loadout swaps with it (the
@@ -228,8 +240,79 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
         renderLaptopKeys()
         renderPlayCode()
         renderPressedKeys()
-        renderMonitor()
-        renderEventLog()
+        renderLowerTabs()
+    }
+
+    private fun FlowContent.renderLowerTabs() {
+        ui.secondary.pointing.menu {
+            key = "lower-tabs"
+
+            // Buttons, so the keyboard reaches them, in the menu's item look; the one shown is pressed
+            LowerTab.entries.forEach { tab ->
+                button(type = ButtonType.button, classes = if (tab == lowerTab) "active item" else "item") {
+                    key = "lower-tab-${tab.name}"
+                    attributes["aria-pressed"] = (tab == lowerTab).toString()
+                    onClick { lowerTab = tab }
+                    css {
+                        // Fomantic's item does not reset a button's own frame and font; its underline stays
+                        put("border-top", "none")
+                        put("border-left", "none")
+                        put("border-right", "none")
+                        put("background", "transparent")
+                        put("font", "inherit")
+                        put("cursor", "pointer")
+                    }
+                    +tab.title
+                }
+            }
+        }
+
+        when (lowerTab) {
+            LowerTab.Events -> renderEventLog()
+            LowerTab.Routing -> renderRouting()
+            LowerTab.Monitor -> renderMonitor()
+        }
+    }
+
+    /**
+     * What each control does, read only (section 4; editing it and learning a control are a later ticket): the routes
+     * of [Routing.defaults], the rig's, a control on any source unless a route names one.
+     */
+    private fun FlowContent.renderRouting() {
+        ui.basic.segment {
+            key = "routing"
+
+            ui.very.compact.celled.table Table {
+                thead {
+                    tr {
+                        th { +"Control" }
+                        th { +"On" }
+                        th { +"Does" }
+                    }
+                }
+                tbody {
+                    Routing.defaults.routes.entries.sortedBy { it.key.control.id }.forEach { (ref, function) ->
+                        tr {
+                            td { +ref.control.id }
+                            td { +(ref.source?.id ?: "any source") }
+                            td { +describe(function) }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /** What a routed control does, in words. */
+    private fun describe(function: PlayFunction): String = when (function) {
+        is PlayFunction.HitPad -> "hits pad ${function.pad}"
+        PlayFunction.Sustain -> "sustain"
+        PlayFunction.Panic -> "panic: every note off"
+        // An endless control (the main encoder) turns by its steps, either way
+        is PlayFunction.BrowseInstrument ->
+            if (function.direction < 0) "previous instrument" else "next instrument (an endless control: either way, by its turn)"
+        PlayFunction.Value -> "a value (drawn for now)"
+        PlayFunction.PlayStop -> "nothing yet (its light)"
     }
 
     private fun FlowContent.renderPanel() {

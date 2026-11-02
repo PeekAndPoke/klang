@@ -1,6 +1,8 @@
 # KLANG-00402: MIDI playground design: a laptop keyboard always on screen, and a control layer between the devices and what they do
 
-> **Status (2026-11-02): IN PROGRESS.** D1 to D8 decided, all as proposed (the maintainer, 2026-11-01); D9 built as proposed; steps 0 to 3 done; step 4 done (the rig in the Spine, the MIDI tool on every page, the first key starts the Motor); next step 5, the MIDI page as configuration.
+> **Status (2026-11-02): IN PROGRESS.** Steps 0 to 5 built: the control layer, the laptop keys, every drawn control,
+> the rig in the Spine with the MIDI tool on every page and the first key starting the Motor, the one play code with
+> its instruments and the loadout, the page's tabs. Waits for the maintainer's hand test; step 6 is later tickets.
 >
 > **Part of:** KLANG-00363 (Live play: MIDI and realtime)
 
@@ -463,6 +465,9 @@ as proposed"). D7 was the maintainer's own proposal.
    round 2: touch drags, the maintainer's two decisions); round 3 clean, its MINOR applied (swap decided by the
    instrument, the separate swap gone). About 20 mutants killed.
    - 5d. The page's lower half in tabs: the events, the routing (read only), the MIDI monitor.
+   **5d done (2026-11-02):** the page's lower half in three tabs (buttons, so the keyboard reaches them): Events,
+   Routing (the rig's `Routing.defaults` read only, each function in words) and the MIDI monitor; the held notes above
+   them. Review round 1 (level 2) clean, its MINORs applied (the encoder's words, buttons for the tabs).
 6. Later, own tickets: editing the routing and learning a control; key switches and splits; a backing loop for
    play / stop.
 
@@ -496,3 +501,4 @@ source's `AllUp`, the same note from two sources); the routing lookup order. New
 - 2026-11-02: step 4c, the first key starts the Motor; held notes sound once it is up (the maintainer: "Only held notes wait").
 - 2026-11-02: steps 5a and 5b, the one play code and the instruments panel ("Never touch my edits", "One stored code").
 - 2026-11-02: step 5c, the loadout, filled by drag and drop ("Like the Looks page", "Swap them").
+- 2026-11-02: step 5d, the page's lower half in tabs; steps 0 to 5 built, waiting for the maintainer's hand test.
