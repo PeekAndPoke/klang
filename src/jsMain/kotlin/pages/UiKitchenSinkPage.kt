@@ -1010,7 +1010,11 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
                     ),
                 )) {
                     div {
-                        css { put("width", "280px") }
+                        // On the Motor's dark screen, as in place
+                        css {
+                            put("width", "280px")
+                            put("background", "var(--kl-ground-sunken)")
+                        }
 
                         statusBarView(line = line, onOpen = {}, onStop = {}, idleText = "Klangmotor v0.8.8 revision: 757b87da")
                     }

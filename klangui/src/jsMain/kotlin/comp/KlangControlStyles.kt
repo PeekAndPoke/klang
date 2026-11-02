@@ -1418,7 +1418,6 @@ object KlangControlStyles : StyleSheet("kl-controls") {
 
     val workbench by rule {
         put("display", "flex")
-        put("flex-direction", "column")
         put("width", "100%")
         put("height", "100%")
         put("overflow", "hidden")
@@ -1427,11 +1426,10 @@ object KlangControlStyles : StyleSheet("kl-controls") {
     }
 
     /**
-     * The column and everything right of it, side by side, over the status bar: all the height the bar leaves. Framed
-     * on every side in the status bar's black, the bar below the frame (the maintainer, 2026-11-02: "Give the entire
-     * page a black spacing like the status bar", "a bit bigger", then "put the status bar below the bottom tools. Keep
-     * the frame, but make it narrow on the bottom like the other sides"), its inner corners cut as a screen's are
-     * ("black triangular corner please"): the [screenCorner] triangles, in the frame's black.
+     * The column and everything right of it, side by side, framed on every side in a well's black (the maintainer,
+     * 2026-11-02: "Give the entire page a black spacing", "a bit bigger", "Keep the frame, but make it narrow on the
+     * bottom like the other sides", "a wider frame", then "Make the frame thin"), its inner corners cut as a screen's
+     * are ("black triangular corner please"): the [screenCorner] triangles, in the frame's black.
      */
     val workbenchBody by rule {
         put("--kl-screen-cut", "14px")
@@ -1441,7 +1439,7 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("flex", "1")
         put("min-height", "0")
         put("overflow", "hidden")
-        put("border", "10px solid var(--kl-ground-sunken)")
+        put("border", "4px solid var(--kl-ground-sunken)")
     }
 
     /** The column on the left: its content scrolls, the Motor under it never moves (KLANG-00334 item 25). */
@@ -1475,11 +1473,6 @@ object KlangControlStyles : StyleSheet("kl-controls") {
     val workbenchMotor by rule {
         put("flex-shrink", "0")
         put("border-top", "1px solid var(--kl-edge)")
-    }
-
-    /** The status bar's slot across the whole window's foot, under everything: as tall as what it holds, never squeezed. */
-    val workbenchStatusBar by rule {
-        put("flex-shrink", "0")
     }
 
     /** Everything right of the column: the centre, a pinned tool window, the strip; the Motor's menu is laid over it. */

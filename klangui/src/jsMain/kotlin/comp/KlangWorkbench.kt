@@ -48,7 +48,6 @@ fun Tag.KlangWorkbench(
     column: DIV.() -> Unit,
     motor: FlowContent.(menu: KlangWorkbench.Menu?) -> Unit,
     content: DIV.() -> Unit,
-    statusBar: (FlowContent.() -> Unit)? = null,
     tools: List<KlangWorkbench.Tool> = emptyList(),
     bottom: KlangWorkbench.Bottom? = null,
     drawer: (FlowContent.(menu: KlangWorkbench.MenuHandle) -> Unit)? = null,
@@ -63,7 +62,6 @@ fun Tag.KlangWorkbench(
         column = column,
         motor = motor,
         content = content,
-        statusBar = statusBar,
         tools = tools,
         bottom = bottom,
         drawer = drawer,
@@ -198,11 +196,6 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
         /** The Motor; it gets the [Menu] for its menu button, null when there is no drawer to open. */
         val motor: FlowContent.(menu: Menu?) -> Unit,
         val content: DIV.() -> Unit,
-        /**
-         * The status bar: across the whole window at its very bottom, edge to edge, everything else above it (the
-         * maintainer, 2026-11-02: "call it StatusBar", then "make the status bar full width"); null for none.
-         */
-        val statusBar: (FlowContent.() -> Unit)?,
         val tools: List<Tool>,
         val bottom: Bottom?,
         /** The menu the Motor's menu button opens; it gets the [MenuHandle] to close itself or to leave for a page. */
@@ -570,7 +563,7 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
         // Keys on the parts that come and go, so a part that appears never takes over its neighbour's element (and the
         // focus in it): the pinned window between the centre and the strip, the bottom panel before a floating window
         div(classes = styles.workbench.toString()) {
-            // The column and everything right of it, over the status bar
+            // The column and everything right of it, in the frame
             div(classes = styles.workbenchBody.toString()) {
                 key = "body"
 
@@ -588,16 +581,6 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
                     div(classes = "${styles.screenCorner} $corner") {
                         attributes["aria-hidden"] = "true"
                     }
-                }
-            }
-
-            val statusBar = props.statusBar
-
-            if (statusBar != null) {
-                div(classes = styles.workbenchStatusBar.toString()) {
-                    key = "status-bar"
-
-                    statusBar()
                 }
             }
         }

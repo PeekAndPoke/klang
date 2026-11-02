@@ -34,50 +34,70 @@ fun Tag.StatusBar() = comp {
 }
 
 /**
- * The status bar, across the whole window at its foot on every page (the maintainer, 2026-11-02: "call it StatusBar",
- * "make the status bar full width"). On its left the song that plays (KLANG-00406, step 4): its time, its title (a
- * click opens its page) and a stop key; the Stop key stops it from anywhere. While no song is on, the engine's name,
- * version and revision roll through it, dim. It redraws once a second while a song plays, the Motor not at all.
+ * The status bar, on the Motor's screen, a line of LCD text on its floor (the maintainer, 2026-11-02: "call it
+ * StatusBar", then, after a full-width bar and a field in the column, "try the lcd"). It shows the song that plays
+ * (KLANG-00406, step 4): its time, its title (a click opens its page) and a stop key, on every page but the song's own;
+ * the Stop key stops it from there. While no song is on, the engine's name, version and revision roll through it, dim.
+ * It redraws once a second while a song plays, the Motor not at all.
  */
 class StatusBar(ctx: NoProps) : PureComponent(ctx) {
 
     private val line by subscribingTo(Playbacks.songLine)
     private val versionInfo by subscribingTo(version)
+    private val currentRoute by subscribingTo(router.current)
+
+    /**
+     * True on the page of the song [songId] when that page put it on the deck: the page then shows its own time and
+     * Stop. A song Klang Amp put on is not the page's (`SongDeck.ctrlFor`).
+     */
+    private fun onPageOf(songId: String): Boolean {
+        if (Playbacks.song.onDeck()?.fromPage != true) {
+            return false
+        }
+
+        return when (currentRoute.route) {
+            Nav.editSongCode -> currentRoute.matchedRoute["id"] == songId
+            Nav.newSongCode -> songId == Nav.NEW_SONG_ID
+            else -> false
+        }
+    }
 
     override fun VDom.render() {
+        val playing = line?.playing
+        // Not on the playing song's own page, whose transport is there; it fades out and in (the maintainer,
+        // 2026-11-02: "show it only when not on the page of the song", "Fade it in and out")
+        val shown = playing == null || !onPageOf(playing.songId)
         val info = versionInfo.takeIf { it.isAvailable }
 
         statusBarView(
             line = line,
+            shown = shown,
             idleText = info?.let { "Klangmotor v${it.version} revision: ${it.gitRev}" } ?: "Klangmotor",
             onOpen = { songId -> router.navToUri(Nav.song(songId)) },
             onStop = { Playbacks.song.stop() },
         ) {
-            // Mounted with the bar, from the app's start, so a song page's own Stop, bound later, is the newest binding
-            // and answers first on its song's page; here everywhere else
-            OnKey(KlangKeyBindings.Stop, enabled = line != null, showHint = line != null) { Playbacks.song.stop() }
+            // Bound before any song page's own Stop, which is the newest binding there and answers first once it is on;
+            // while the page's is off (its song still starting) this one stops the song. Its hint only while shown
+            OnKey(KlangKeyBindings.Stop, enabled = line != null, showHint = line != null && shown) {
+                Playbacks.song.stop()
+            }
         }
     }
 }
-
-/**
- * The song's place on the bar's left, under the frame's 10px and the column's 320px: it starts at the bar's 16px inset,
- * 6px past the frame, and ends 6px inside the column's edge, the same space on both sides as the eye reads it.
- */
-private const val SONG_PLACE_PX = 10 + 320 - 16 - 6
 
 /** Seconds as m:ss. */
 fun clockOf(seconds: Int): String = "${seconds / 60}:${(seconds % 60).toString().padStart(2, '0')}"
 
 /**
- * The bar itself, for [StatusBar] and the kitchen sink: an LCD's well as the transport bar's. On its left, under the
- * column above it, [line]'s time and title in the LCD's ink and the stop key. With no song, [idleText] rolls
- * through the whole bar, and there is no time and no stop key (the maintainer, 2026-11-02). [stopKey] goes into the
+ * The bar itself, for [StatusBar] and the kitchen sink: LCD text on the Motor's screen. [line]'s time and title in the
+ * LCD's ink, the stop key at the right end. With no song, [idleText] rolls through the whole line, and there is no time
+ * and no stop key (the maintainer, 2026-11-02). Not [shown], it fades out and takes no clicks. [stopKey] goes into the
  * song's place, which is there with or without a song: the Stop key's binding and its hint.
  */
 fun FlowContent.statusBarView(
     line: Playbacks.SongLine?,
     idleText: String,
+    shown: Boolean = true,
     onOpen: (songId: String) -> Unit,
     onStop: () -> Unit,
     stopKey: FlowContent.() -> Unit = {},
@@ -88,39 +108,39 @@ fun FlowContent.statusBarView(
     div {
         key = "status-bar"
         css {
+            // LCD text on the Motor's screen, no box of its own (the maintainer, 2026-11-02: "try the lcd"): a light
+            // shade under it, rising from the floor, keeps it readable over the spectrum's boxes, which still show
+            // through ("it must not be fully opaque at the bottom")
             put("display", "flex")
             put("align-items", "center")
-            put("height", "28px")
-            // Edge to edge, square (the maintainer, 2026-11-02: "put it to the very bottom, no padding, also left and
-            // right no padding"); the text keeps its inset, a little more on the left ("The text needs a little padding
-            // on the left")
-            put("padding", "0 4px 0 16px")
+            put("height", "24px")
+            put("padding", "0 10px")
             put("box-sizing", "border-box")
-            put("background", "var(--kl-ground-sunken)")
-            put("border-top", "1px solid var(--kl-edge)")
-            put("box-shadow", "inset 0 2px 4px rgba(0,0,0,0.6), 0 1px 0 rgba(255,255,255,0.06)")
+            put("overflow", "hidden")
+            put("background", "linear-gradient(to top, rgba(0,0,0,0.4), rgba(0,0,0,0.15) 70%, transparent)")
             put("font-family", "'Courier New', 'Consolas', monospace")
-            put("font-size", "13px")
+            put("font-size", "12px")
             put("color", "var(--kl-lcd-ink)")
-
-            if (playing == null) {
-                put("filter", "brightness(0.7)")
-            }
+            put("text-shadow", "0 0 6px color-mix(in srgb, var(--kl-lcd-ink) 60%, transparent)")
+            // Faded out it ends hidden: no clicks, out of the Tab order (hidden only at the fade's end, visible at
+            // once at a fade in's start: a discrete transition)
+            put("transition", "opacity 0.5s ease, visibility 0.5s")
+            put("opacity", if (shown) "1" else "0")
+            put("visibility", if (shown) "visible" else "hidden")
+            put("pointer-events", "auto")
         }
 
-        // The song on the left, under the column above it (the maintainer: "The song must still be shown on the
-        // left"); with no song it takes no room, and keeps only the Stop key, so the key stays where it was bound
+        // The song: its time and title on the left, the stop key at the field's right end (the maintainer, 2026-11-02:
+        // "Now the stop button can go back to the right"); a title too long for the field cut short. With no song it
+        // takes no room and keeps only the Stop key, so the key stays where it was bound
         div {
             key = "song"
             css {
                 put("display", "flex")
                 put("align-items", "center")
                 put("gap", "8px")
-                put("flex", "none")
-                // The stop key as far inside the column's edge as the text is inside the frame's (the maintainer,
-                // 2026-11-02: "the playbutton needs the same padding on the right")
-                put("width", if (playing == null) "0" else "${SONG_PLACE_PX}px")
-                put("max-width", "100%")
+                put("flex", if (playing == null) "0 1 auto" else "1")
+                put("min-width", "0")
             }
 
             stopKey()
@@ -129,7 +149,6 @@ fun FlowContent.statusBarView(
                 span {
                     css {
                         put("flex", "none")
-                        put("text-shadow", "0 0 6px color-mix(in srgb, var(--kl-lcd-ink) 60%, transparent)")
                     }
                     +(line?.seconds?.let { clockOf(it) } ?: "-:--")
                 }
@@ -168,7 +187,7 @@ fun FlowContent.statusBarView(
                         put("color", "inherit")
                         put("cursor", "pointer")
                     }
-                    // Its square ends where the song's place ends: no padding, no margin, no wider box than the glyph
+                    // No margin and no box wider than the glyph: the square ends where the field's inset begins
                     icon.stop {
                         css {
                             put("margin", "0")
@@ -183,6 +202,8 @@ fun FlowContent.statusBarView(
             span {
                 key = "idle"
                 css {
+                    // Dim while no song plays
+                    put("filter", "brightness(0.7)")
                     put("flex", "1")
                     put("min-width", "0")
                     put("overflow", "hidden")

@@ -33,6 +33,7 @@ import kotlinx.css.textAlign
 import kotlinx.css.top
 import kotlinx.css.width
 import kotlinx.css.zIndex
+import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
 
@@ -40,8 +41,9 @@ import kotlinx.html.div
 fun Tag.Motoer(
     menu: KlangWorkbench.Menu? = null,
     paused: Stream<Boolean> = UiWork.resting,
+    display: (FlowContent.() -> Unit)? = null,
 ) = comp(
-    Motor.Props(menu = menu, paused = paused)
+    Motor.Props(menu = menu, paused = paused, display = display)
 ) {
     Motor(it)
 }
@@ -115,6 +117,11 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
         val menu: KlangWorkbench.Menu?,
         /** While true, its gauges, scope and spectrum rest: a visual covers the page ([UiWork.resting], the default). */
         val paused: Stream<Boolean>,
+        /**
+         * A line of text on the screen's floor, over the spectrum's lowest boxes, as a car radio shows its station (the
+         * status bar, KLANG-00406; the maintainer, 2026-11-02: "try the lcd"); null for none.
+         */
+        val display: (FlowContent.() -> Unit)?,
     )
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -204,6 +211,24 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
                     labelMiddle = ((FRAME_HEIGHT_REM - OSCILLOSCOPE_TOP_REM - OSCILLOSCOPE_HEIGHT_REM) / 2.0).rem,
                     paused = props.paused,
                 ) { Player.get() }
+            }
+
+            val display = props.display
+
+            if (display != null) {
+                div {
+                    key = "display"
+                    css {
+                        position = Position.absolute
+                        bottom = 0.rem
+                        left = 0.rem
+                        right = 0.rem
+                        zIndex = 3
+                        // The spectrum's hover goes through; the line takes its own clicks
+                        put("pointer-events", "none")
+                    }
+                    display()
+                }
             }
         }
     }

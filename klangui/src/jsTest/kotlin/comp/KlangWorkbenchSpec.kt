@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.ui.comp
 
-import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
@@ -203,43 +202,6 @@ class KlangWorkbenchSpec : StringSpec({
     fun Element.q(selector: String): HTMLElement? = querySelector(selector) as HTMLElement?
 
     fun Element.toggle(label: String): HTMLElement = q("[role=group] button[aria-label='$label']")!!
-
-    "the status bar spans the whole window's foot, under the column and the centre; without one there is no slot" {
-        TestBed.preact(
-            view = {
-                KlangWorkbench(
-                    column = { span { +"COLUMN" } },
-                    motor = { _ -> span { +"MOTOR" } },
-                    content = { span { +"CONTENT" } },
-                    statusBar = { span { +"STATUS" } },
-                )
-            },
-        ) { root ->
-            val bench = root.single().querySelector(".${KlangControlStyles.workbench}") as HTMLElement
-            val last = bench.lastElementChild as HTMLElement
-
-            withClue("the status bar closes the workbench, outside the column") {
-                last.classList.contains(KlangControlStyles.workbenchStatusBar.toString()) shouldBe true
-            }
-            last.textContent shouldBe "STATUS"
-            withClue("the column and the centre above it") {
-                (last.previousElementSibling as HTMLElement).querySelector(".${KlangControlStyles.workbenchColumn}") shouldNotBe null
-            }
-            last.getBoundingClientRect().width shouldBe bench.getBoundingClientRect().width
-        }
-
-        TestBed.preact(
-            view = {
-                KlangWorkbench(
-                    column = { span { +"COLUMN" } },
-                    motor = { _ -> span { +"MOTOR" } },
-                    content = { span { +"CONTENT" } },
-                )
-            },
-        ) { root ->
-            root.single().querySelector(".${KlangControlStyles.workbenchStatusBar}") shouldBe null
-        }
-    }
 
     "with a link, the mark leads there: a real link, a plain click inside the app, with Ctrl the browser's way" {
         val followed = mutableListOf<String>()

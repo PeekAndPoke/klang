@@ -146,11 +146,10 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
                 // The Motor and its window rest while a visual covers the page: one place for all of them (the
                 // maintainer, 2026-10-29)
                 motor = { menu ->
-                    Motoer(menu = menu, paused = motorPaused)
+                    // The song that plays, its time and a stop, on the Motor's screen on every page (KLANG-00406)
+                    Motoer(menu = menu, paused = motorPaused, display = { StatusBar() })
                 },
                 content = { props.inner(this) },
-                // The song that plays, its time and a stop, on every page (KLANG-00406)
-                statusBar = { StatusBar() },
                 tools = listOf(
                     KlangWorkbench.Tool(id = "motor", title = "Motor", icon = { tachometer_alternate }) {
                         // Sections under silkscreen headings, a divider between them (the maintainer, 2026-10-28)

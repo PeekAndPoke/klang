@@ -177,8 +177,10 @@ After KLANG-00389's `Player` steps 1 and 2 (the move into the Spine, typed owner
    (on the song's page its own Stop answers first). The time is the deck's own playback's, from one clock in the Spine
    (`Playbacks.songLine`) that ticks only while the song plays; Klang Amp's two 250 ms timers went to
    `Playbacks.heardSeconds`. Not yet: the line at the top of the Motor menu's "Pick up where you left off".
-   2026-11-02, at the maintainer's word: the line became the `StatusBar`, across the whole window at its foot, the
-   page framed above it; the song on its left, and with no song the engine's version and revision rolling through it.
+   2026-11-02, at the maintainer's word, after a full-width bar, one under the centre and a field in the column: the
+   line became the `StatusBar`, LCD text on the Motor's screen floor (`Motoer`'s `display`): time, title, a stop key on
+   the right; with no song the engine's version and revision roll through it. It fades out on the playing song's own
+   page. The page is framed, thin, its corners cut.
 5. The per-playback gain in the engine (D1), with Klang-Main-Dev: the command, the ramped gain, the codec specs.
    Done 2026-11-02 ("As built", below).
 6. The code examples by D1: the song fades out over 2 s while one plays and in again after it; then the start page
@@ -269,3 +271,5 @@ full-level first block at a start; a gain during a stop release documented; the 
   window's foot, the page framed above it in the bar's black, its top corners cut.
 - 2026-11-02: step 5 reviewed by Klang-Main-Dev (b53d8a6e2): no CRITICAL or MAJOR, no action. The p³ law and the
   wire command wait for the maintainer's word, which Klang-Main-Dev put to them.
+- 2026-11-02: the status bar settled on the Motor's screen as LCD text (the maintainer: "try the lcd"), hidden with a
+  fade on the playing song's own page; the workbench's slot for it removed again. Review round clean, MINORs applied.

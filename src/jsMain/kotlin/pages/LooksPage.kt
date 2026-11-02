@@ -1307,11 +1307,12 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
                     +"128"
                 }
 
-                // The status bar with a song on (KLANG-00406)
+                // The status bar with a song on (KLANG-00406), on the Motor's dark screen as in place
                 div {
                     css {
                         put("width", "240px")
                         put("margin-top", "12px")
+                        put("background", "var(--kl-ground-sunken)")
                     }
 
                     statusBarView(
