@@ -654,6 +654,13 @@ class KlangWorkbenchSpec : StringSpec({
                 delay(50)
 
                 withClue("a redraw keeps it open") { panel()?.textContent?.contains("MIDI BODY") shouldBe true }
+
+                host.withBottom = true
+                host.withAmbient = false
+
+                withClue("flying in, it goes with it on the way to a page's own panel too") {
+                    eventually { panel() shouldBe null }
+                }
             }
         } finally {
             ChangingHost.reset()

@@ -30,7 +30,8 @@ object Playbacks {
 
     /**
      * Live play, the MIDI rig (KLANG-00402, step 4): for the app's life, playing along with whatever plays, stopping
-     * nothing and stopped by nothing but a panic. Made on first use; brought up by what first shows it ([MidiRig.start]).
+     * nothing and stopped by nothing but a panic. Made on first use; brought up by what first shows it, or at the app's
+     * start where MIDI was granted before ([MidiRig.start], [MidiRig.connectIfGranted]).
      */
     val live: MidiRig by lazy { MidiRig() }
 

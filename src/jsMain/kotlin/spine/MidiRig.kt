@@ -194,9 +194,11 @@ class MidiRig {
     val devices: Stream<MidiConnector.State> = midi.state
 
     /**
-     * Brings the rig up, once for the app's life: the saved instrument applied, and the kit loads as soon as the engine
-     * is up, so a pad's first hit sounds (D2). Asked by what first shows the rig; later calls do nothing. The devices
-     * are asked for apart ([connectDevices]), so a plain visit asks the user nothing.
+     * Brings the rig up, once for the app's life: the saved instrument applied, its playback started as soon as the
+     * Motor runs (started by anything: no gesture is needed then), and the kit loads once the playback is up, so a pad's
+     * first hit sounds (D2). Asked by what first shows the rig, and at the app's start where MIDI was granted before
+     * ([connectIfGranted]); later calls do nothing. The devices are asked for apart ([connectDevices]), so a plain
+     * visit asks the user nothing.
      */
     fun start() {
         if (started) {
@@ -206,6 +208,13 @@ class MidiRig {
         started = true
 
         apply(MidiInstrumentStorage.loadDraft() ?: DEFAULT_INSTRUMENT)
+
+        // The Motor running, whoever started it: the keys play along at once
+        Player.status.subscribeToStream { status ->
+            if (status == Player.Status.READY) {
+                ctrl.start()
+            }
+        }
 
         ctrl.state.map { it.isReady }.distinct().subscribeToStream { ready ->
             if (ready) {

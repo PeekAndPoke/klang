@@ -412,7 +412,9 @@ as proposed"). D7 was the maintainer's own proposal.
    devices", so a plain visit asks the user nothing. Review round 1 (level 1): one MAJOR, fixed (every page opened onto
    MIDI and asked for it on a first visit); its MINORs applied (a drawing of the laptop keys releases them only while it
    has the focus, a blank instrument named "Untitled", specs for the panic, the instrument's name and the letters).
-   17 mutants killed.
+   17 mutants killed. Round 2 (level 2) clean; its MINORs applied: the rig's playback starts by itself once the Motor
+   runs (whoever started it), the tool shows a browser without MIDI or a refusal, a panel flying in closes both ways
+   between a page's own and the one there on every page, two KDocs name the startup path.
    Next: 4c, the first key starts the Motor.
 5. The MIDI page as configuration (section 6): the one play-code input, the instruments and the loadout, the
    devices, the routing, the event log and the monitor.

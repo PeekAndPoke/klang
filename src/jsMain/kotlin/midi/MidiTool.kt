@@ -7,6 +7,7 @@ package io.peekandpoke.klang.midi
 
 import io.peekandpoke.klang.spine.MidiRig
 import io.peekandpoke.klang.spine.Playbacks
+import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.ui.comp.KlangWorkbench
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
@@ -90,6 +91,31 @@ class MidiTool(ctx: NoProps) : PureComponent(ctx) {
         }
     }
 
+    /**
+     * The devices: a key that asks for them, where the browser has MIDI and they were not asked for yet; then what the
+     * browser said, a refusal or the devices plugged in.
+     */
+    private fun FlowContent.renderDevices() {
+        when {
+            !isWebMidiSupported() -> span { +"No MIDI in this browser: the laptop keys play" }
+
+            !rigState.devicesAsked -> ui.small.basic.button {
+                onClick { rig.connectDevices() }
+                icon.plug()
+                +"Connect MIDI devices"
+            }
+
+            else -> span {
+                +when (midiState.status) {
+                    MidiConnector.Status.Unsupported -> "No MIDI in this browser"
+                    MidiConnector.Status.Requesting -> "Asking for MIDI ..."
+                    MidiConnector.Status.Denied -> "MIDI not allowed${midiState.error?.let { ": $it" } ?: ""}"
+                    MidiConnector.Status.Ready -> midiState.devices.joinToString(", ").ifEmpty { "No MIDI devices plugged in" }
+                }
+            }
+        }
+    }
+
     /** What plays, the sustain and the notes sounding; or, before the Motor runs, the key that starts it. */
     private fun FlowContent.renderLine() {
         div {
@@ -98,6 +124,13 @@ class MidiTool(ctx: NoProps) : PureComponent(ctx) {
                 put("align-items", "center")
                 put("gap", "12px")
                 put("flex-wrap", "wrap")
+            }
+
+            // The Motor running, the rig's own playback starts by itself: a moment, no key
+            if (!ctrlState.isReady && ctrlState.playerStatus == Player.Status.READY) {
+                span { +"Getting the keys ready ..." }
+
+                return@div
             }
 
             if (!ctrlState.isReady) {
@@ -140,13 +173,7 @@ class MidiTool(ctx: NoProps) : PureComponent(ctx) {
                 +rigState.held.keys.sortedBy { it.note }.joinToString(" ") { MidiRig.noteLabel(it.note).substringBefore(" ") }
             }
 
-            if (!rigState.devicesAsked) {
-                ui.small.basic.button {
-                    onClick { rig.connectDevices() }
-                    icon.plug()
-                    +"Connect MIDI devices"
-                }
-            }
+            renderDevices()
 
             ui.small.basic.button {
                 onClick { rig.panic(tsMs = window.performance.now()) }

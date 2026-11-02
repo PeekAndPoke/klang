@@ -162,8 +162,8 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
         val beaconStep: String? = null,
         /**
          * There on every page, not the page's own (the MIDI tool where a page has no panel): it never opens by itself,
-         * only shown open while one of its tabs is the one last chosen, and a page's own panel flying in closes on the way
-         * to it as on the way to none (the maintainer, 2026-11-02: closed until opened).
+         * only shown open while one of its tabs is the one last chosen, and a panel flying in closes on the way between it
+         * and a page's own as on the way to none (the maintainer, 2026-11-02: closed until opened).
          */
         val ambient: Boolean = false,
     ) {
@@ -368,9 +368,9 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
                 openWaitingTool(next.tools)
 
                 // The bottom panel flying in goes with its page; pinned, it waits for the next page that brings one. A
-                // drag ends with it either way. A page's own panel giving way to the one there on every page goes as to
-                // none; between pages that both have only that one, nothing changes (props come anew at every redraw)
-                val pageLeft = previous.bottom?.ambient != true && next.bottom?.ambient == true
+                // drag ends with it either way. Between a page's own panel and the one there on every page, either way,
+                // it goes as to none; between two pages alike, nothing changes (props come anew at every redraw)
+                val pageLeft = previous.bottom != null && next.bottom != null && previous.bottom.ambient != next.bottom.ambient
 
                 if (next.bottom == null || pageLeft) {
                     bottomDrag = null
