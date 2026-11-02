@@ -284,6 +284,5 @@ full-level first block at a start; a gain during a stop release documented; the 
   fade on the playing song's own page; the workbench's slot for it removed again. Review round clean, MINORs applied.
 - 2026-11-02: the fade's law decided by the maintainer: linear ("The 2-second fade linear"); `PlaybackGain`'s law made
   linear. Step 6 started (the maintainer: "Please continue").
-
 - 2026-11-02: step 6, first half: the code examples fade the song out and in (`Previews`). Two review rounds (round 1:
   a failed example start left the song silent, fixed; round 2 clean), every new row mutation-checked.
