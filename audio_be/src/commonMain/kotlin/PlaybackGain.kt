@@ -6,7 +6,6 @@
 package io.peekandpoke.klang.audio_be
 
 import io.peekandpoke.klang.audio_be.utils.isFiniteInline
-import kotlin.math.cbrt
 import kotlin.math.round
 
 /**
@@ -14,15 +13,16 @@ import kotlin.math.round
  * and in again after it, a preview fading in. One per [PlaybackEngine], created with it; nothing allocates after
  * construction.
  *
- * **The law.** The ramp moves a POSITION p linearly and the gain is [gainOf] p, today `p³` (Klang-Main-Dev's
- * proposal, 2026-11-02, the shape is the maintainer's to decide by ear): about even in dB over the top 40 to 50 dB, it
- * lands exactly on 0 and on any target, two multiplies per sample. [gainOf] and [positionOf] are the law's only home;
- * the ramp around them does not depend on it.
+ * **The law.** The ramp moves a POSITION p linearly and the gain is [gainOf] p: linear in amplitude (the maintainer,
+ * 2026-11-02, by ear: "The 2-second fade linear"), so the position IS the gain. [gainOf] and [positionOf] are the law's
+ * only home; the ramp around them does not depend on it (a cube, `p³`, was proposed and not chosen).
  *
  * **Whole blocks, per sample, exact landing** (`KnobGlide`'s law): the ramp spans its time rounded to whole blocks, the
  * position after `k` of them is interpolated from the ramp's start, not accumulated, and within a block it moves per
  * sample from where the previous block ended, so there is no per-block zipper. The landing block's last sample is the
- * target gain bit for bit, and from there on [applyTo] multiplies by the target itself.
+ * target gain bit for bit (its position is the target's own, and [gainOf] of [positionOf] is the gain itself: a law
+ * other than the linear one would have to keep that, or land on the target by hand), and from there on [applyTo]
+ * multiplies by the target itself.
  *
  * **A new target mid-ramp starts from where the gain IS** (the position the last block ended on) and takes its full
  * time again. `rampSec <= 0`, or a ramp shorter than half a block, sets the gain at once. A non-finite gain or ramp is
@@ -120,19 +120,14 @@ internal class PlaybackGain(private val sampleRate: Int, private val blockFrames
         }
         val step = (to - from) / frames
 
-        // Written from the END, `to - step * (frames - 1 - i)`, so the block's last sample is the block's position
-        for (i in 0 until frames - 1) {
+        // Written from the END, `to - step * (frames - 1 - i)`, so the block's last sample is the block's position: in
+        // the landing block the target's own position, which the linear law makes the target, bit for bit
+        for (i in 0 until frames) {
             val g = gainOf(to - step * (frames - 1 - i))
 
             left[i] *= g
             right[i] *= g
         }
-
-        // The last sample: the target itself in the landing block, bit for bit
-        val last = if (remaining == 0) state[TARGET] else gainOf(to)
-
-        left[frames - 1] *= last
-        right[frames - 1] *= last
 
         state[POSITION] = to
     }
@@ -144,11 +139,11 @@ internal class PlaybackGain(private val sampleRate: Int, private val blockFrames
         const val TARGET = 3
         const val STATE_SIZE = 4
 
-        /** The law: the gain at ramp position [p]. Its inverse is [positionOf]. */
+        /** The law: the gain at ramp position [p], linear. Its inverse is [positionOf]. */
         @Suppress("NOTHING_TO_INLINE")
-        inline fun gainOf(p: Double): Double = p * p * p
+        inline fun gainOf(p: Double): Double = p
 
         /** The ramp position of [gain], the inverse of [gainOf]; called once per ramp, never per sample. */
-        fun positionOf(gain: Double): Double = cbrt(gain)
+        fun positionOf(gain: Double): Double = gain
     }
 }

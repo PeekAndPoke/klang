@@ -2,8 +2,8 @@
 
 > **Status (2026-11-02): IN PROGRESS.** Steps 1 to 5 done: `SongDeck` in the Spine, Klang Amp on it, the song page
 > plays on it and its song plays on when the page is left, the status bar and the Stop key from anywhere, the
-> per-playback gain in the engine (agreed with Klang-Main-Dev). Open for the maintainer, by ear: the gain ramp's shape
-> (built as p³, below). Next: step 6, the code examples fade the song out and in.
+> per-playback gain in the engine (agreed with Klang-Main-Dev), its fade linear (the maintainer's choice). Next: step 6,
+> the code examples fade the song out and in.
 
 ## Why this exists
 
@@ -230,8 +230,8 @@ full-level first block at a start; a gain during a stop release documented; the 
 - **An engine still releasing a stopped playback** is detached by a `SetGain`, as a schedule does, and the gain goes to
   a fresh engine: the release fades on undisturbed (review round 1, both reviewers).
 - **The ramp:** `PlaybackGain`, a position ramped linearly in whole blocks, per sample, landing exactly; the gain is
-  p³ (Klang-Main-Dev's proposal: about even in dB over the top 40 to 50 dB, lands on 0, two multiplies a sample). The
-  law lives in `gainOf` and `positionOf` alone, for the maintainer's ear.
+  the position, linear in amplitude (the maintainer, 2026-11-02, by ear: "The 2-second fade linear"; Klang-Main-Dev
+  had proposed p³). The law lives in `gainOf` and `positionOf` alone.
 - **Not yet:** a fade-in asked for right after a start runs while the playback still loads; step 6 asks for it once the
   playback has begun (`KlangCyclicPlayback.setGain`'s KDoc).
 
@@ -273,3 +273,5 @@ full-level first block at a start; a gain during a stop release documented; the 
   wire command wait for the maintainer's word, which Klang-Main-Dev put to them.
 - 2026-11-02: the status bar settled on the Motor's screen as LCD text (the maintainer: "try the lcd"), hidden with a
   fade on the playing song's own page; the workbench's slot for it removed again. Review round clean, MINORs applied.
+- 2026-11-02: the fade's law decided by the maintainer: linear ("The 2-second fade linear"); `PlaybackGain`'s law made
+  linear. Step 6 started (the maintainer: "Please continue").

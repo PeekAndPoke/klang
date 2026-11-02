@@ -12,7 +12,6 @@ import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import kotlin.math.abs
-import kotlin.math.cbrt
 
 /**
  * A playback's gain ramp ([PlaybackGain], KLANG-00406 step 5): it lands exactly on its target in the block its time
@@ -38,8 +37,8 @@ class PlaybackGainSpec : StringSpec({
 
     "a ramp lands exactly on its target in the block its time names, and stays there" {
         val gain = PlaybackGain(sampleRate = sampleRate, blockFrames = blockFrames)
-        // A target its law's round trip misses (the cube of its cube root is not quite it): only an exact landing hits it
-        val target = listOf(0.1, 0.3, 0.2, 0.7, 0.6, 0.35).first { val p = cbrt(it); p * p * p != it }
+        // A target the ramp's arithmetic misses (1 + (0.3 - 1) is 0.30000000000000004): only an exact landing hits it
+        val target = 0.3
 
         gain.retarget(gain = target, rampSec = rampOf(10))
 
@@ -59,17 +58,17 @@ class PlaybackGainSpec : StringSpec({
         val samples = listOf(1.0) + (0 until 4).flatMap { gain.block().toList() }
         val largest = samples.zipWithNext { a, b -> abs(b - a) }.max()
 
-        // From 1 to 0 over 512 samples: the cube's steepest step is 3 / 512, about 0.006
+        // From 1 to 0 over 512 samples, linear: each step is 1 / 512, about 0.002
         largest shouldBeLessThan 0.01
     }
 
-    "the law: the position moves linearly, the gain is its cube" {
+    "the law: linear in amplitude, half way is half the gain" {
         val gain = PlaybackGain(sampleRate = sampleRate, blockFrames = blockFrames)
 
         gain.retarget(gain = 0.0, rampSec = rampOf(2))
 
         // Half way from position 1 to position 0 is the end of the first block
-        gain.block().last() shouldBe (0.125 plusOrMinus 1e-12)
+        gain.block().last() shouldBe (0.5 plusOrMinus 1e-12)
     }
 
     "a new target mid-ramp starts from where the gain is" {
@@ -83,7 +82,7 @@ class PlaybackGainSpec : StringSpec({
 
         withClue("no jump at the new target") { abs(after.first() - before) shouldBeLessThan 0.01 }
         withClue("on its way up from there") { (after.last() > before) shouldBe true }
-        withClue("on the way down, not back at 1") { before shouldBeLessThan 0.5 }
+        withClue("on the way down, not back at 1") { before shouldBeLessThan 0.75 }
     }
 
     "a ramp of 0 sets the gain at once; back at 1 the gain is unity" {
