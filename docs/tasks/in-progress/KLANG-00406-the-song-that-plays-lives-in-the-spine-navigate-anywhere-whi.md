@@ -267,3 +267,5 @@ full-level first block at a start; a gain during a stop release documented; the 
   on each engine's output after its master chain, the frontend's gate. One review round, clean (coding, audio, and the
   status bar's). The same day, at the maintainer's word: the now-playing line became the `StatusBar` across the
   window's foot, the page framed above it in the bar's black, its top corners cut.
+- 2026-11-02: step 5 reviewed by Klang-Main-Dev (b53d8a6e2): no CRITICAL or MAJOR, no action. The p³ law and the
+  wire command wait for the maintainer's word, which Klang-Main-Dev put to them.
