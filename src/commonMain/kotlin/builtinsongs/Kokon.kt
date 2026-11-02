@@ -74,11 +74,11 @@ let preampCrunch = Ign.fn(x => x
 let preampHighGain = Ign.fn(x => x
   .highpass(100)                                   // tight: no bass into the gain stages
   .oversampleAtLeast(8, y => y                     // the three stages at 8x: one trip up, one down
-    .distort(0.25, "tube").highpass(100)
+    .distort(0.35, "tube").highpass(100)
     .distort(0.45, "softsat").highpass(90)
     .distort(0.70, "soft").highpass(90))
-  .lowpass(4000)                                   // the fizz
-  .mul(0.30))                                      // volume
+  .lowpass(4400)                                   // the fizz
+  .mul(0.28))                                      // volume
 
 let powerPushPull = Ign.fn(x => x
   .distort(0.25, "soft", 2)
@@ -259,7 +259,7 @@ export liftPower = `<[-2,2] [-1,3] [0,4]>`
 
 // The melody, in two phrases of one round each. The second fits the cocoon and the lift alike.
 export melodyOne = `<[4@4 3 0     2 [3 7]] [3@4 ~ 4 2 1]     [0@3 4 3@2 2 2]     [1@6 ~@2]>`
-export melodyTwo = `<[7@4 6 [0 1] 2 [4 6]] [8@4 ~ 7 2 [6 8]] [9@3 8 7@2 2 [2 3]] [4@6 ~@2]>`
+export melodyTwo = `<[7@4 6 [0 1] 2 [4 6]] [8@4 ~ 4 2 [6 8]] [9@3 8 7@2 2 [2 3]] [4@6 ~@2]>`
 
 // Out of the cocoon flies the Schmetterling's own lead.
 export schmetterlingLead = `<[-7 0 2 4] [-7 0 4 [2 0]] [-5 -1 2 4|[4 4|4|-1]] [-6 -1 4 3|3|[3 3]]>`
@@ -319,7 +319,7 @@ export chug = roots => n(roots.add(-7)).struct("[x x] x@2  [x x] x@2  [x x] x")
   .sound(heavy).adsrOff().unison(voices = 7, spread = 0.08)
   //.ignp("decay", "0.4 0.8!2 0.4 0.8!2 0.3 0.2").clip(1)
   .velocity("1.0 0.90 0.80 0.85  0.90 0.80 0.75 0.85".sub(perlin(0.0, 0.2).seed(2)))
-  .gain(0.65).late(perlin(0.0005, 0.0010).seed(2)).apply(
+  .gain(0.63).late(perlin(0.0005, 0.0010).seed(2)).apply(
     x => x.pan(0.20),
     x => x.pan(0.80),
   )
@@ -330,7 +330,7 @@ export wings = chords => n(chords).ply(16)
   .sound(heavy).adsrOff().unison(voices = 7, spread = 0.08)
   .ignp("decay", "[0.9 0.8]*8").clip(1)
   .velocity("1.0 0.90!2 0.96 0.88 0.92 0.94 0.92".sub(perlin(0.0, 0.2).seed(3)))
-  .gain(0.70).late(perlin(0.0010, 0.0015).seed(3)).apply(
+  .gain(0.68).late(perlin(0.0010, 0.0015).seed(3)).apply(
     x => x.pan(0.05),
     x => x.pan(0.95),
   )
@@ -365,7 +365,7 @@ let drumRoom = x => x.reverb(wet = 0.3, size = 5)
 
 export kick = pat => sound("bd").struct(pat)
   .sound(metalKick).adsrOff().note("a1").velocity("1.0 0.94 0.96 0.94")
-  .gain(1.10).pan(0.5)
+  .gain(1.05).pan(0.5)
   .orbit(11).apply(drumRoom)
 
 export snare = pat => sound(pat)
@@ -385,9 +385,9 @@ export hats = pat => sound(pat).n(0)
 export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
   .sound(bass).velocity("0.98 0.94 0.96 0.94")
   .ignp("sub", 0.95).ignp("harmonics", 1.00)
-  .adsr(0.003, 0.75, 0.5, 0.040).hpf(30).notch(freq = snareHz, q = 1.0)
+  .adsr(0.003, 0.75, 0.5, 0.040).hpf(30)
   .clip(0.90)
-  .gain(0.50).pan(0.25).superimpose(pan(0.75))
+  .gain(0.48).pan(0.3).superimpose(pan(0.7))
   .orbit(15)
 
 // Parts  -----------------------------------------------------------------------------------------------------------
@@ -536,8 +536,8 @@ export song = stack(
     .apply(drumRoom)
  
   , master(Katalyst(k => k
-    .reverb(0.20, 9.5, 7500)                         // the hall: one room for the whole band, about 2 s, warm
-    .gain(1.05)                                    // the house level, -14 LUFS
+    .reverb(0.20, 9.5, 6500)                         // the hall: one room for the whole band, about 2 s, warm
+    .gain(1.00)                                    // the house level, -14 LUFS
     .bands(b => b
       .band(low => low.distort(0.01, "soft", 4).mul(1.00)).cut(150)
       .band(mid => mid.distort(0.15, "soft", 4).mul(0.85)).cut(5000)

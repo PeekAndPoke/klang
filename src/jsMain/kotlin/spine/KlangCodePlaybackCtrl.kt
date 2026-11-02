@@ -40,7 +40,7 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) : Pl
          * The RPM knob's range. Up to 999 since the tempo map took the jumps out of the knob (the maintainer, 2026-10-31,
          * KLANG-00399: "the RPM dial now works perfectly. Please set the RPM max to 999").
          */
-        val RPM_RANGE: ClosedFloatingPointRange<Double> = 10.0..999.0
+        val RPM_RANGE: ClosedFloatingPointRange<Double> = 10.0..200.0
 
         fun builder() = Builder()
     }

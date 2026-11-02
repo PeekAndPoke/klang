@@ -456,7 +456,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                         name = "Revolutions per minute",
                         value = state.rpm,
                         range = KlangCodePlaybackCtrl.RPM_RANGE,
-                        step = 0.5,
+                        step = 0.1,
                         onChange = { ctrl.setRpm(it) },
                         unit = "RPM",
                         decimals = 2,
