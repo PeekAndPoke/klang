@@ -7,7 +7,6 @@ package io.peekandpoke.klang.midi
 
 import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.spine.MidiRig
-import io.peekandpoke.klang.spine.MidiSettings
 import io.peekandpoke.klang.spine.Playbacks
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
 import io.peekandpoke.klang.storage.MidiInstrument
@@ -21,17 +20,10 @@ import io.peekandpoke.kraft.utils.WakeLockComponent
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
-import io.peekandpoke.ultra.html.onBlur
 import io.peekandpoke.ultra.html.onClick
-import io.peekandpoke.ultra.html.onFocus
-import io.peekandpoke.ultra.html.onKeyDown
-import io.peekandpoke.ultra.html.onKeyUp
 import io.peekandpoke.ultra.semanticui.icon
 import io.peekandpoke.ultra.semanticui.noui
 import io.peekandpoke.ultra.semanticui.ui
-import io.peekandpoke.ultra.streams.ops.distinct
-import io.peekandpoke.ultra.streams.ops.map
-import kotlinx.browser.window
 import kotlinx.css.FontWeight
 import kotlinx.css.Padding
 import kotlinx.css.fontFamily
@@ -42,14 +34,11 @@ import kotlinx.css.padding
 import kotlinx.css.px
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
-import kotlinx.html.div
 import kotlinx.html.tbody
 import kotlinx.html.td
 import kotlinx.html.th
 import kotlinx.html.thead
 import kotlinx.html.tr
-import org.w3c.dom.events.KeyboardEvent
-import kotlin.js.Promise
 
 @Suppress("FunctionName")
 fun Tag.MidiPlaygroundPage() = comp {
@@ -61,9 +50,9 @@ fun Tag.MidiPlaygroundPage() = comp {
  *
  * What plays lives in the Spine, the MIDI rig ([Playbacks.live], KLANG-00402 step 4): the ports, the profiles, the
  * routing, the held notes, the realtime playback and the translation. The page brings it up, hands it input and draws
- * what it publishes; leaving the page releases nothing but the laptop's keys, whose drawing goes with it. The page keeps
- * what only it shows: the instrument's editors and the saved instruments, the keybed's alignment, the laptop drawing's
- * focus and letters. See KLANG-00159 (realtime playback controller).
+ * what it publishes; leaving the page releases nothing but the laptop's keys, whose drawing goes with it. The drawings
+ * are the MIDI tool's too ([DeviceView], [LaptopKeysView]); the page keeps what only it shows: the instrument's editors
+ * and the saved instruments, the monitor and the log. See KLANG-00159 (realtime playback controller).
  */
 class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
 
@@ -76,44 +65,6 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
     private val ctrlState by subscribingTo(rig.playback)
 
     private val midiState by subscribingTo(rig.devices)
-
-    private var laptopFocused: Boolean by value(false)
-
-    /** Opened by hand while a KeyLab is connected, when the laptop keys fold to a strip (D5). */
-    private var laptopOpen: Boolean by value(false)
-
-    /** The layout chosen by hand; null for "Automatic" (D9). */
-    private val keyLayout by subscribingTo(MidiSettings.layout)
-
-    /** The browser's own letters by key position, where it tells them (Chrome, Edge); null elsewhere. */
-    private var browserLetters: Map<String, String>? by value(null)
-
-    /** The letters learned from the keys pressed, by position: what "Automatic" shows where the browser tells nothing. */
-    private var learnedLetters: Map<String, String> by value(emptyMap())
-
-    /** A KeyLab plugged in folds the laptop keys away (D5): a removed element sends no blur, so they let go here. */
-    @Suppress("unused")
-    private val keyLabPlugged by subscribingTo(
-        rig.devices.map { state -> state.devices.any { it.contains("KeyLab", ignoreCase = true) } }.distinct()
-    ) { connected ->
-        if (connected && !laptopOpen) {
-            releaseLaptop()
-        }
-    }
-
-    /**
-     * Semitone shift of the drawn keybed, matching the device's Transpose/Octave setting.
-     *
-     * MANUAL, and it cannot be otherwise: those buttons change what the keys transmit and send no
-     * MIDI at all, and a note transposed down a semitone is byte-for-byte identical to the
-     * untransposed note below it. Nothing in the stream distinguishes them.
-     *
-     * An earlier version guessed this from notes landing outside the drawn range. That was not
-     * inference: an out-of-range note only says the drawing cannot show it, not why (a second
-     * device on another range does the same thing), and once this became settable it silently
-     * overrode the user's own choice. Removed deliberately; do not reintroduce it.
-     */
-    private var keyBedOffset: Int by value(0)
 
     /**
      * What the two editors hold right now, and the name it is saved under. Takes effect on
@@ -128,22 +79,15 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
     private var editorGeneration: Int by value(0)
 
     companion object {
-        /** The device this page draws and binds. One value per supported controller. */
-        private val DEVICE = KeyLabEssential49Mk3
-
         private val EDITOR_LIBS = listOf(stdlibLib, sprudelLib)
     }
 
     init {
         lifecycle {
             onMount {
+                // Once for the app's life; the rig plays on when the page goes. The MIDI page asks for the devices
                 rig.start()
-                readBrowserLetters()
-            }
-
-            onUnmount {
-                // The rig plays on; the laptop's keys go with their drawing, and a removed element sends no blur
-                releaseLaptop()
+                rig.connectDevices()
             }
         }
     }
@@ -253,218 +197,19 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
         renderEventLog()
     }
 
-    /**
-     * Aligns the drawing to the device's Transpose setting.
-     *
-     * Has to be manual: Transp -/+ changes what the keys send WITHOUT emitting anything, and a
-     * note transposed down a semitone is byte-for-byte identical to the untransposed note below
-     * it. Nothing in the stream distinguishes them, so the display can only be told. (Octave
-     * shifts DO get detected: they eventually push notes off the drawn range, which is visible.)
-     */
-    private fun FlowContent.renderTransposeControl() {
-        ui.basic.segment {
-            key = "transpose"
-            css { padding = Padding(0.px, 0.px, 4.px, 0.px) }
-
-            noui.tiny.header { +"Keybed alignment" }
-
-            ui.mini.buttons {
-                ui.button {
-                    onClick { keyBedOffset -= 1 }
-                    +"semitone -"
-                }
-                ui.button {
-                    onClick { keyBedOffset -= 12 }
-                    +"oct -"
-                }
-                ui.basic.button {
-                    onClick { keyBedOffset = 0 }
-                    +when {
-                        keyBedOffset == 0 -> "aligned"
-                        keyBedOffset > 0 -> "+$keyBedOffset: reset"
-                        else -> "$keyBedOffset: reset"
-                    }
-                }
-                ui.button {
-                    onClick { keyBedOffset += 12 }
-                    +"oct +"
-                }
-                ui.button {
-                    onClick { keyBedOffset += 1 }
-                    +"semitone +"
-                }
-            }
-        }
-    }
-
     private fun FlowContent.renderPanel() {
         ui.basic.segment {
             key = "device-panel"
 
-            renderTransposeControl()
-            MidiPanel(
-                panel = DEVICE,
-                heldNotes = rigState.heldNotes(laptopSide = false),
-                activeControls = rigState.controlValues + rigState.pressed(laptopSide = false),
-                tints = rigState.pressedTints,
-                outlines = rigState.padOutlines(),
-                noteOffset = keyBedOffset,
-                screen = MidiRig.DEVICE_SCREEN,
-                onInput = { events -> events.forEach { rig.handle(it) } },
-            )
+            DeviceView()
         }
     }
 
-    /**
-     * The laptop's keys (KLANG-00402, step 2): drawn as a panel with each key's letter, playing while the drawing has
-     * the focus (a click into it, D8), so an editor or a page's own key never meets them. Folded to a strip while a
-     * KeyLab is connected (D5), and opened from it by hand.
-     */
     private fun FlowContent.renderLaptopKeys() {
-        val keyLabConnected = midiState.devices.any { it.contains("KeyLab", ignoreCase = true) }
-        val shown = !keyLabConnected || laptopOpen
-        val octave = rigState.laptopOctave
-        val velocity = rigState.laptopVelocity
-
         ui.basic.segment {
             key = "laptop-keys"
 
-            ui.horizontal.list {
-                noui.item { noui.header { +"Laptop keys" } }
-
-                noui.item {
-                    +when {
-                        !shown -> "Folded while a KeyLab is connected"
-                        laptopFocused -> "Playing: octave C${4 + octave}, velocity $velocity"
-                        else -> "Click the keyboard, then play"
-                    }
-                }
-
-                noui.item {
-                    ui.mini.buttons {
-                        layoutButton(layout = null, title = "Automatic")
-
-                        KeyLayout.entries.forEach { layoutButton(layout = it, title = it.title) }
-                    }
-                }
-
-                if (keyLabConnected) {
-                    noui.item {
-                        ui.mini.basic.button {
-                            onClick {
-                                // Folding takes the drawing away, and a removed element sends no blur
-                                if (laptopOpen) {
-                                    releaseLaptop()
-                                }
-
-                                laptopOpen = !laptopOpen
-                            }
-                            +(if (laptopOpen) "Fold" else "Open")
-                        }
-                    }
-                }
-            }
-
-            if (shown) {
-                div {
-                    attributes["tabindex"] = "0"
-                    attributes["role"] = "application"
-                    attributes["aria-label"] = "Laptop keys: click, then play"
-                    css {
-                        put("outline", if (laptopFocused) "2px solid #4a9eff" else "1px dashed #55555c")
-                        put("border-radius", "4px")
-                        put("max-width", "1000px")
-                    }
-
-                    onKeyDown { e -> laptopKey(e, down = true) }
-                    onKeyUp { e -> laptopKey(e, down = false) }
-                    onFocus { laptopFocused = true }
-                    // A key held when the focus goes never sends its up: everything the keys hold lets go
-                    onBlur { releaseLaptop() }
-
-                    val panel = laptopKeyboardPanel(label = ::letterOf)
-
-                    MidiPanel(
-                        panel = panel,
-                        heldNotes = rigState.heldNotes(laptopSide = true),
-                        activeControls = rigState.pressed(laptopSide = true),
-                        noteOffset = octave * 12,
-                        keyLabels = LaptopKeys.keyLabels(octave = octave, label = ::letterOf),
-                        screen = MidiRig.LAPTOP_SCREEN,
-                        onInput = { events -> events.forEach { rig.handle(it) } },
-                    )
-                }
-
-                noui.small.text {
-                    +"Shift+Tab leaves the keyboard (Tab is the sustain, Esc the panic). Many laptop keyboards drop the third or "
-                    +"fourth key of some chords: that is the keyboard, not Klang."
-                }
-            }
-        }
-    }
-
-    /** The laptop keys let go of everything they hold: a key held when the focus goes never sends its up. */
-    private fun releaseLaptop() {
-        laptopFocused = false
-        rig.laptopFocusLost(tsMs = window.performance.now())
-    }
-
-    private fun FlowContent.layoutButton(layout: KeyLayout?, title: String) {
-        ui.given(keyLayout == layout) { primary }.button {
-            key = "layout-${layout?.name ?: "auto"}"
-            onClick { MidiSettings.chooseLayout(layout) }
-            +title
-        }
-    }
-
-    /** A key on the laptop's drawing: through the rig; a key that is the laptop's does not reach the browser too. */
-    private fun laptopKey(e: KeyboardEvent, down: Boolean) {
-        val handled = when (down) {
-            true -> rig.laptopKeyDown(
-                code = e.code,
-                repeat = e.repeat,
-                modified = e.ctrlKey || e.altKey || e.metaKey,
-                shift = e.shiftKey,
-                tsMs = e.timeStamp.toDouble(),
-            )
-
-            false -> rig.laptopKeyUp(code = e.code, tsMs = e.timeStamp.toDouble())
-        }
-
-        if (handled) {
-            e.preventDefault()
-
-            // "Automatic" learns each key's letter as it is first pressed, where the browser does not tell the layout; not
-            // with Shift, which prints another sign (Shift and the comma is "<" on an English board)
-            if (down && !e.shiftKey && e.key.length == 1 && e.code !in learnedLetters) {
-                learnedLetters = learnedLetters + (e.code to e.key.uppercase())
-            }
-        }
-    }
-
-    /** The letter on the key at [code]: the layout chosen, else the browser's, else learned, else the English one. */
-    private fun letterOf(code: String): String =
-        keyLayout?.labelOf(code) ?: browserLetters?.get(code) ?: learnedLetters[code] ?: KeyLayout.English.labelOf(code)
-
-    /** Asks the browser for its layout's letters, where it tells them (Chrome, Edge: the Keyboard Map API). */
-    private fun readBrowserLetters() {
-        val keyboard = window.navigator.asDynamic().keyboard ?: return
-
-        try {
-            val read: Promise<dynamic> = keyboard.getLayoutMap().unsafeCast<Promise<dynamic>>()
-
-            read.then<Unit> { map ->
-                val letters = mutableMapOf<String, String>()
-                val note: (String, String) -> Unit = { letter, code -> letters[code] = letter.uppercase() }
-
-                map.forEach(note)
-                browserLetters = letters
-            }.catch { e ->
-                // Refused (a frame without the keyboard-map permission): the letters are learned instead
-                console.warn("[MidiPlayground] the browser's keyboard map is not readable", e)
-            }
-        } catch (e: Throwable) {
-            console.warn("[MidiPlayground] the browser's keyboard map is not readable", e)
+            LaptopKeysView()
         }
     }
 

@@ -14,6 +14,7 @@ import io.peekandpoke.klang.comp.PlayerWarehouseStats
 import io.peekandpoke.klang.comp.StatusBar
 import io.peekandpoke.klang.comp.WalkthroughsButton
 import io.peekandpoke.klang.fs
+import io.peekandpoke.klang.midi.MidiTool
 import io.peekandpoke.klang.pages.docs.tutorials.LearnSearch
 import io.peekandpoke.klang.spine.UiWork
 import io.peekandpoke.klang.storage.LookStorage
@@ -160,7 +161,8 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
                         motorSection(title = "Build") { renderBuild() }
                     },
                 ) + pageTools,
-                bottom = pageBottom,
+                // The MIDI tool beside the page's own tabs, on every page (KLANG-00402, step 4)
+                bottom = MidiTool.with(pageBottom),
                 layout = keptLayout,
                 onLayout = { WorkbenchLayoutStorage.save(it) },
                 // The walkthroughs' beacons on the bottom panel's key and its tabs

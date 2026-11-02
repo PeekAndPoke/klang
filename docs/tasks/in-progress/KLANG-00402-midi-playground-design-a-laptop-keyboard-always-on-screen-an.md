@@ -1,6 +1,6 @@
 # KLANG-00402: MIDI playground design: a laptop keyboard always on screen, and a control layer between the devices and what they do
 
-> **Status (2026-11-02): IN PROGRESS.** D1 to D8 decided, all as proposed (the maintainer, 2026-11-01); D9 built as proposed; steps 0 to 3 done; step 4 begun: 4a, the rig in the Spine, done; next 4b, the MIDI tool on every page.
+> **Status (2026-11-02): IN PROGRESS.** D1 to D8 decided, all as proposed (the maintainer, 2026-11-01); D9 built as proposed; steps 0 to 3 done; step 4 begun: 4a, the rig in the Spine, and 4b, the MIDI tool on every page, done; next 4c, the first key starts the Motor.
 >
 > **Part of:** KLANG-00363 (Live play: MIDI and realtime)
 
@@ -401,7 +401,19 @@ as proposed"). D7 was the maintainer's own proposal.
    drawing's focus and letters. Live play stops nothing and nothing stops it: it holds no stage. `MidiRigSpec` (the
    lights by side, the tints, a source letting go, a panic, the laptop keys); 8 mutants killed. Review round 1 (level
    1) clean; its MINORs applied: the tint rules bound by the spec, the unused `ignitorApplied` and teardowns removed.
-   Next: 4b, the MIDI tool in every page's bottom panel; 4c, the first key starts the Motor.
+   **4b done (2026-11-02):** `MidiTool`, a tab of every page's bottom panel (`MidiTool.with`): after the page's own
+   tabs, or, on a page with none, a panel of its own that is there on every page and never opens by itself
+   (`KlangWorkbench.Bottom.ambient`, the maintainer's choice: "closed until opened"; shown open only at its own tab, a
+   page's own panel flying in closes on the way to it). A line (what plays, the sustain, the notes sounding, a panic
+   key; before the Motor runs, a key that starts it), the KeyLab's drawing while one is connected, the laptop keys. The
+   drawings are shared with the page (`DeviceView`, `LaptopKeysView`); the letters and the keybed's alignment moved to
+   `MidiSettings`. The devices are asked for apart from the rig's start: the MIDI page asks; the tool and the app's
+   start hook them only where MIDI was granted before (the Permissions API), else the tool offers "Connect MIDI
+   devices", so a plain visit asks the user nothing. Review round 1 (level 1): one MAJOR, fixed (every page opened onto
+   MIDI and asked for it on a first visit); its MINORs applied (a drawing of the laptop keys releases them only while it
+   has the focus, a blank instrument named "Untitled", specs for the panic, the instrument's name and the letters).
+   17 mutants killed.
+   Next: 4c, the first key starts the Motor.
 5. The MIDI page as configuration (section 6): the one play-code input, the instruments and the loadout, the
    devices, the routing, the event log and the monitor.
 6. Later, own tickets: editing the routing and learning a control; key switches and splits; a backing loop for
@@ -433,3 +445,4 @@ source's `AllUp`, the same note from two sources); the routing lookup order. New
 - 2026-11-01: D1 to D8 decided, all as proposed (D2 drum hits, D3 the octave per source, D5 folded to a strip).
 - 2026-11-01: IN PROGRESS.
 - 2026-11-02: step 4a, the MIDI rig in the Spine (`Playbacks.live`); the page draws from it.
+- 2026-11-02: step 4b, the MIDI tool in every page's bottom panel, closed until opened on a page without its own.

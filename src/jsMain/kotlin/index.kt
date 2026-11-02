@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang
 
+import io.peekandpoke.klang.spine.Playbacks
 import io.peekandpoke.klang.sprudel.ui.registerSprudelUiTools
 import io.peekandpoke.klang.storage.KeymapStorage
 import io.peekandpoke.klang.storage.LookStorage
@@ -83,6 +84,10 @@ fun main() {
 
     // Register UI tools
     registerSprudelUiTools()
+
+    // The MIDI devices where the user granted MIDI before, so a KeyLab plays on every page (KLANG-00402, step 4); a
+    // first visit is asked nothing
+    Playbacks.live.connectIfGranted()
 
     kraft.mount(selector = "#spa", engine = PreactVDomEngine()) {
         KlangStudioComponent()

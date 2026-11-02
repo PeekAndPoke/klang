@@ -32,6 +32,8 @@ import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
 import io.peekandpoke.ultra.streams.ops.distinct
 import io.peekandpoke.ultra.streams.ops.map
+import kotlinx.browser.window
+import kotlin.js.Promise
 import kotlin.math.roundToInt
 
 /**
@@ -78,6 +80,10 @@ class MidiRig {
          * started with: the voice is built at note-on.
          */
         val selectedSound: String = "supersaw",
+        /** Whether the devices were asked for ([connectDevices]): before, a device plays nothing. */
+        val devicesAsked: Boolean = false,
+        /** The applied instrument's name while its Ignitor plays; null while the built-in [selectedSound] plays. */
+        val instrument: String? = null,
         val ignitorError: String? = null,
         val mapperError: String? = null,
     ) {
@@ -101,6 +107,9 @@ class MidiRig {
         /** The drawings as sources: what is clicked or touched on each (KLANG-00402, step 3). */
         val DEVICE_SCREEN = SourceId("screen:device")
         val LAPTOP_SCREEN = SourceId("screen:laptop")
+
+        /** The panic key drawn by the MIDI tool, a source of its own. */
+        private val PANIC_KEY = SourceId("screen:panic")
 
         /**
          * The playable built-ins, grouped for the picker. Names must match the backend's default ignitor registry
@@ -165,6 +174,9 @@ class MidiRig {
     /** The applied ignitor; null plays the built-in [State.selectedSound]. */
     private var appliedIgnitor: IgnitorDsl? = null
 
+    /** The name of the instrument whose Ignitor was applied last. */
+    private var appliedName: String? = null
+
     /** The applied sprudel mapper (`reverb(wet = 0.2)`, or a function as `x => x.reverb(wet = 0.2)`); null for none. */
     private var appliedMapper: ((Any?) -> Any?)? = null
 
@@ -182,9 +194,9 @@ class MidiRig {
     val devices: Stream<MidiConnector.State> = midi.state
 
     /**
-     * Brings the rig up, once for the app's life: the ports are asked for (the browser may ask the user), the saved
-     * instrument applied, and the kit loads as soon as the engine is up, so a pad's first hit sounds (D2). Asked by
-     * what first shows the rig; later calls do nothing.
+     * Brings the rig up, once for the app's life: the saved instrument applied, and the kit loads as soon as the engine
+     * is up, so a pad's first hit sounds (D2). Asked by what first shows the rig; later calls do nothing. The devices
+     * are asked for apart ([connectDevices]), so a plain visit asks the user nothing.
      */
     fun start() {
         if (started) {
@@ -194,13 +206,49 @@ class MidiRig {
         started = true
 
         apply(MidiInstrumentStorage.loadDraft() ?: DEFAULT_INSTRUMENT)
-        midi.start()
-        midi.events.subscribeToStream { evt -> evt?.let { onMidi(it) } }
 
         ctrl.state.map { it.isReady }.distinct().subscribeToStream { ready ->
             if (ready) {
                 ctrl.preload(requests = kitRequests())
             }
+        }
+    }
+
+    /**
+     * Asks the browser for MIDI and hooks the devices, once for the app's life, the rig brought up with them; the browser
+     * may ask the user then.
+     */
+    fun connectDevices() {
+        if (_state().devicesAsked) {
+            return
+        }
+
+        start()
+        _state { it.copy(devicesAsked = true) }
+        midi.start()
+        midi.events.subscribeToStream { evt -> evt?.let { onMidi(it) } }
+    }
+
+    /**
+     * Hooks the devices without a question: only where the user granted MIDI before (the browser's Permissions API
+     * says so); else nothing, and the user asks for them ([connectDevices]).
+     */
+    fun connectIfGranted() {
+        val permissions = window.navigator.asDynamic().permissions ?: return
+
+        try {
+            val query: Promise<dynamic> = permissions.query(js("({ name: 'midi' })")).unsafeCast<Promise<dynamic>>()
+
+            query.then<Unit> { status ->
+                if (status.state == "granted") {
+                    connectDevices()
+                }
+            }.catch { e ->
+                // A browser that does not know the name (Firefox, Safari): the user asks
+                console.warn("[MidiRig] the MIDI permission is not readable", e)
+            }
+        } catch (e: Throwable) {
+            console.warn("[MidiRig] the MIDI permission is not readable", e)
         }
     }
 
@@ -272,6 +320,8 @@ class MidiRig {
 
         try {
             appliedIgnitor = compileIgnitor(engine, instrument.ignitorCode)
+            // The name of what plays: an Ignitor that fails keeps the one before, and its name with it
+            appliedName = instrument.name.trim().ifBlank { "Untitled" }
         } catch (e: Throwable) {
             ignitorError = e.message ?: e.toString()
         }
@@ -282,7 +332,13 @@ class MidiRig {
             mapperError = e.message ?: e.toString()
         }
 
-        _state { it.copy(ignitorError = ignitorError, mapperError = mapperError) }
+        _state {
+            it.copy(
+                instrument = appliedName.takeIf { appliedIgnitor != null },
+                ignitorError = ignitorError,
+                mapperError = mapperError,
+            )
+        }
     }
 
     private fun compileIgnitor(engine: KlangScriptEngine, code: String): IgnitorDsl? {
@@ -429,6 +485,11 @@ class MidiRig {
         _state { it.copy(held = voicing.held) }
     }
 
+    /** Every note of every source lets go and every light goes out, as a device's panic does. */
+    fun panic(tsMs: Double) {
+        handle(ControlEvent.AllUp(source = PANIC_KEY, reason = ControlEvent.Reason.Panic, tsMs = tsMs))
+    }
+
     /**
      * A laptop key went down, from a drawing of the laptop's keys that has the focus: through [LaptopKeys]. True when the
      * key is the laptop's, so it does not reach the browser too.
@@ -516,7 +577,7 @@ class MidiRig {
         val at = all.indexOf(_state().selectedSound).coerceAtLeast(0)
 
         appliedIgnitor = null
-        _state { it.copy(selectedSound = all[((at + steps) % all.size + all.size) % all.size]) }
+        _state { it.copy(instrument = null, selectedSound = all[((at + steps) % all.size + all.size) % all.size]) }
     }
 
     /** Moves an on-screen control to [value] (`0..1`). */

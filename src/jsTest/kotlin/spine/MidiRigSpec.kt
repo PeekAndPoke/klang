@@ -12,6 +12,9 @@ import io.peekandpoke.klang.midi.ControlEvent
 import io.peekandpoke.klang.midi.ControlId
 import io.peekandpoke.klang.midi.LaptopKeys
 import io.peekandpoke.klang.midi.SourceId
+import io.peekandpoke.klang.storage.MidiInstrument
+import io.peekandpoke.klang.storage.StorageKeys
+import kotlinx.browser.localStorage
 
 /**
  * The MIDI rig (KLANG-00402, step 4): what it lights, by source, as the drawings show it. A rig of the spec's own, never
@@ -114,5 +117,56 @@ class MidiRigSpec : StringSpec({
         rig.laptopKeyDown(code = "ArrowRight", repeat = false, modified = false, shift = false, tsMs = 0.0)
 
         rig.state().laptopOctave shouldBe before + 1
+    }
+
+    "the tool's panic lets every source go and puts out every light" {
+        val rig = MidiRig()
+
+        rig.handle(press(keyLab))
+        rig.handle(ControlEvent.NoteDown(source = keyLab, channel = 0, note = 60, velocity = 0.5, tsMs = 0.0))
+        rig.laptopKeyDown(code = "KeyZ", repeat = false, modified = false, shift = false, tsMs = 0.0)
+
+        rig.panic(tsMs = 0.0)
+
+        withClue("nothing held, nothing lit") {
+            rig.state().held shouldBe emptyMap()
+            rig.state().pressed shouldBe emptyMap()
+            rig.state().pressedTints shouldBe emptyMap()
+        }
+    }
+
+    "what plays is named: the instrument whose Ignitor applied, kept when the next fails; a built-in once browsed" {
+        // An apply keeps its instrument as the draft for the next visit: this browser's own is put back
+        val kept = localStorage.getItem(StorageKeys.MIDI_INSTRUMENT_DRAFT)
+        val rig = MidiRig()
+
+        try {
+            rig.apply(MidiInstrument(name = "  Lead ", ignitorCode = "Ign.saw()", mapperCode = ""))
+            withClue("an Ignitor applied: its instrument's name, trimmed") { rig.state().instrument shouldBe "Lead" }
+
+            rig.apply(MidiInstrument(name = "Broken", ignitorCode = "Ign.saw(", mapperCode = ""))
+            withClue("an Ignitor that fails: the one before plays on, and its name") {
+                rig.state().instrument shouldBe "Lead"
+                (rig.state().ignitorError != null) shouldBe true
+            }
+
+            rig.apply(MidiInstrument(name = " ", ignitorCode = "Ign.sine()", mapperCode = ""))
+            withClue("a blank name: Untitled") { rig.state().instrument shouldBe "Untitled" }
+
+            rig.laptopKeyDown(code = "BracketRight", repeat = false, modified = false, shift = false, tsMs = 0.0)
+            withClue("a built-in browsed: no instrument, the sound") {
+                rig.state().instrument shouldBe null
+                (rig.state().selectedSound != "supersaw") shouldBe true
+            }
+
+            rig.apply(MidiInstrument(name = "Plain", ignitorCode = "", mapperCode = ""))
+            withClue("no Ignitor: the built-in plays, no instrument named") { rig.state().instrument shouldBe null }
+        } finally {
+            if (kept == null) {
+                localStorage.removeItem(StorageKeys.MIDI_INSTRUMENT_DRAFT)
+            } else {
+                localStorage.setItem(StorageKeys.MIDI_INSTRUMENT_DRAFT, kept)
+            }
+        }
     }
 })

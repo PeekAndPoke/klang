@@ -160,6 +160,12 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
         val tabs: List<Tab>,
         /** The walkthrough's step its key stands for: lit, the key wears the beacon; the panel opened uses it. */
         val beaconStep: String? = null,
+        /**
+         * There on every page, not the page's own (the MIDI tool where a page has no panel): it never opens by itself,
+         * only shown open while one of its tabs is the one last chosen, and a page's own panel flying in closes on the way
+         * to it as on the way to none (the maintainer, 2026-11-02: closed until opened).
+         */
+        val ambient: Boolean = false,
     ) {
         init {
             require(tabs.isNotEmpty()) { "The bottom panel $title has no tabs" }
@@ -287,7 +293,7 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
             val step = litStep ?: return@setTimeout
             val bottom = props.bottom ?: return@setTimeout
 
-            if (!bottomOpen) {
+            if (!bottomShown()) {
                 return@setTimeout
             }
 
@@ -348,7 +354,7 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
 
             // A tool window or a drawer that leaves the props closes, so it does not open again by itself when it comes
             // back; a pinned one waits for it, as it would after a reload (a page left and come back to)
-            onNextProps { next, _ ->
+            onNextProps { next, previous ->
                 val leaving = openTool
 
                 if (leaving != null && next.tools.none { it.id == leaving }) {
@@ -362,8 +368,11 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
                 openWaitingTool(next.tools)
 
                 // The bottom panel flying in goes with its page; pinned, it waits for the next page that brings one. A
-                // drag ends with it either way
-                if (next.bottom == null) {
+                // drag ends with it either way. A page's own panel giving way to the one there on every page goes as to
+                // none; between pages that both have only that one, nothing changes (props come anew at every redraw)
+                val pageLeft = previous.bottom?.ambient != true && next.bottom?.ambient == true
+
+                if (next.bottom == null || pageLeft) {
                     bottomDrag = null
 
                     if (!bottomPinned) {
@@ -449,7 +458,7 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
             bottomTab = tab
         }
 
-        if (!bottomOpen) {
+        if (!bottomShown()) {
             openBottom()
         }
     }
@@ -483,9 +492,27 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
     }
 
     private fun openBottom() {
+        val bottom = props.bottom
+
         focusBeforeBottom = document.activeElement as? HTMLElement
         bottomOpen = true
-        used(props.bottom?.beaconStep)
+
+        // A panel there on every page shows open only at its own tab: opened, its tab is the one chosen
+        if (bottom != null && bottom.ambient && bottom.tabs.none { it.id == bottomTab }) {
+            bottomTab = bottom.tabs.first().id
+        }
+
+        used(bottom?.beaconStep)
+    }
+
+    /**
+     * Whether the bottom panel shows open: open, and, for a panel there on every page ([Bottom.ambient]), at one of its
+     * own tabs, so the open state another page's panel left does not open it.
+     */
+    private fun bottomShown(): Boolean {
+        val bottom = props.bottom ?: return false
+
+        return bottomOpen && (!bottom.ambient || bottom.tabs.any { it.id == bottomTab })
     }
 
     /** Closes the bottom panel (its toggle, its close button; Esc when it flies in); a focus lost with it goes back. */
@@ -689,7 +716,7 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
 
             // The bottom panel: pinned, docked under the content; else flying in over it from below (the
             // maintainer, 2026-10-27: "a "fly in" and a pinned variant", as the tool windows have)
-            if (bottom != null && bottomOpen) {
+            if (bottom != null && bottomShown()) {
                 val placement = if (bottomPinned) styles.workbenchBottomPinned else styles.workbenchBottomFloating
 
                 div(classes = placement.toString()) {
@@ -774,10 +801,10 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
                         KlangIconToggle(
                             icon = bottom.icon,
                             label = bottom.title,
-                            on = bottomOpen,
+                            on = bottomShown(),
                             large = true,
                             beacon = lit(bottom.beaconStep),
-                            onClick = { if (bottomOpen) closeBottom() else openBottom() },
+                            onClick = { if (bottomShown()) closeBottom() else openBottom() },
                         )
                     }
 
