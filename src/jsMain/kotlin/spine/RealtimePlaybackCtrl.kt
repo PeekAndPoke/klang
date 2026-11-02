@@ -3,14 +3,13 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-package io.peekandpoke.klang.comp
+package io.peekandpoke.klang.spine
 
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KlangPatternEvent
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_engine.KlangRealtimeVoicePlayback
-import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.kraft.utils.launch
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
@@ -22,7 +21,7 @@ import kotlinx.coroutines.Deferred
  *
  * It is deliberately a **pipe, not a manager**: an id goes in with a voice, the same id stops it.
  * It knows nothing about notes, MIDI, or what a voice sounds like: the note bookkeeping is
- * `NoteVoicing`'s, and the page owns voice shape. That split is what
+ * `NoteVoicing`'s, and the MIDI rig owns voice shape (`MidiRig`). That split is what
  * keeps this class reusable for a computer-keyboard fallback, UI sound effects or a pad grid.
  */
 class RealtimePlaybackCtrl(
@@ -30,16 +29,16 @@ class RealtimePlaybackCtrl(
     private val playbackName: String,
 ) {
     /**
-     * Scalar state, mirrored once from [Player.status] so consumers subscribe here only — the same
+     * Scalar state, mirrored once from [Player.status] so consumers subscribe here only: the same
      * shape [io.peekandpoke.klang.spine.KlangCodePlaybackCtrl] uses.
      *
      * It carries the [Player.Status] ENUM rather than a collapsed boolean: the song page can fold
      * "not started" into "ready" because its Play button doubles as the engine-start gesture, but
-     * this page shows a separate "Start Engine" screen and needs the distinction — and both need
+     * this page shows a separate "Start Engine" screen and needs the distinction, and both need
      * to tell FAILED apart from LOADING.
      */
     data class State(
-        /** Mirrored from [Player.status] — global engine bootstrap state. */
+        /** Mirrored from [Player.status]: the global engine bootstrap state. */
         val playerStatus: Player.Status,
         /** True once THIS controller's durable playback exists and can take voices. */
         val isReady: Boolean,
@@ -104,7 +103,7 @@ class RealtimePlaybackCtrl(
     fun nextLiveId(): Int = liveIdCounter++
 
     /**
-     * Fires a voice now. No-op until [start] has completed — a key pressed before the engine is up
+     * Fires a voice now. No-op until [start] has completed: a key pressed before the engine is up
      * is dropped rather than queued.
      *
      * @param gateDurSec null = held until [stopVoice].
@@ -140,14 +139,4 @@ class RealtimePlaybackCtrl(
      * register it, play notes with the returned name.
      */
     fun registerIgnitor(dsl: IgnitorDsl): String? = playback?.registerIgnitor(dsl)
-
-    /**
-     * Stops the playback and drops it. The backend releases everything the playback still holds
-     * (`Cmd.Cleanup` releases held realtime voices), so nothing can ring on after the page is gone.
-     */
-    fun tearDown() {
-        playback?.stop()
-        playback = null
-        _state { it.copy(isReady = false) }
-    }
 }

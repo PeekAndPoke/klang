@@ -1,6 +1,6 @@
 # KLANG-00402: MIDI playground design: a laptop keyboard always on screen, and a control layer between the devices and what they do
 
-> **Status (2026-11-01): IN PROGRESS.** D1 to D8 decided, all as proposed (the maintainer, 2026-11-01); D9 built as proposed; steps 0 to 3 done; step 4 waits for `Player` in the Spine (KLANG-00389).
+> **Status (2026-11-02): IN PROGRESS.** D1 to D8 decided, all as proposed (the maintainer, 2026-11-01); D9 built as proposed; steps 0 to 3 done; step 4 begun: 4a, the rig in the Spine, done; next 4b, the MIDI tool on every page.
 >
 > **Part of:** KLANG-00363 (Live play: MIDI and realtime)
 
@@ -392,6 +392,16 @@ as proposed"). D7 was the maintainer's own proposal.
 4. `MidiRig` in the Spine, the MIDI tool in the bottom panel of every page, the laptop keys behind its focus, the
    Motor started by the first key. After `Player` has moved into the Spine (KLANG-00389, its plan's steps 1 and 2: the
    move, then typed ownership, which the rig's "not exclusive" needs).
+   **4a done (2026-11-02):** `MidiRig` in the Spine (`spine/MidiRig.kt`), the app's one `Playbacks.live`: the ports,
+   the profiles, the routing, the voicing, the laptop's keys, the realtime playback (`RealtimePlaybackCtrl`, moved to
+   `spine/`), the translation and the applied instrument, the lights, the log and the monitor, published as one
+   `State`. Brought up by the page (`start()`, once for the app's life) and never torn down: leaving the page releases
+   nothing but the laptop's keys, whose drawing goes with it; one `Player.status` subscription in all, which ends the
+   leak of one per visit. The page keeps the editors, the saved instruments, the keybed's alignment and the laptop
+   drawing's focus and letters. Live play stops nothing and nothing stops it: it holds no stage. `MidiRigSpec` (the
+   lights by side, the tints, a source letting go, a panic, the laptop keys); 8 mutants killed. Review round 1 (level
+   1) clean; its MINORs applied: the tint rules bound by the spec, the unused `ignitorApplied` and teardowns removed.
+   Next: 4b, the MIDI tool in every page's bottom panel; 4c, the first key starts the Motor.
 5. The MIDI page as configuration (section 6): the one play-code input, the instruments and the loadout, the
    devices, the routing, the event log and the monitor.
 6. Later, own tickets: editing the routing and learning a control; key switches and splits; a backing loop for
@@ -422,3 +432,4 @@ source's `AllUp`, the same note from two sources); the routing lookup order. New
   the rig in the Spine (section 7).
 - 2026-11-01: D1 to D8 decided, all as proposed (D2 drum hits, D3 the octave per source, D5 folded to a strip).
 - 2026-11-01: IN PROGRESS.
+- 2026-11-02: step 4a, the MIDI rig in the Spine (`Playbacks.live`); the page draws from it.

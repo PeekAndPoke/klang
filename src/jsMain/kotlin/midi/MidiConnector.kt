@@ -37,9 +37,7 @@ class MidiConnector {
     private val _events = StreamSource<Event?>(null)
     val events: Stream<Event?> = _events.readonly
 
-    private var access: MidiAccess? = null
-
-    /** Requests MIDI access and hooks every input. Safe to call once per mount. */
+    /** Requests MIDI access and hooks every input; called once, by the MIDI rig, which keeps it for the app's life. */
     fun start() {
         if (!isWebMidiSupported()) {
             console.warn("[MidiConnector] Web MIDI API not available on navigator")
@@ -52,7 +50,6 @@ class MidiConnector {
         requestMidiAccess()
             .then { granted ->
                 console.log("[MidiConnector] MIDI access GRANTED")
-                access = granted
                 hookInputs(granted)
                 granted.onstatechange = { evt ->
                     console.log("[MidiConnector] state change:", evt.port.name, evt.port.type, evt.port.state)
@@ -68,15 +65,6 @@ class MidiConnector {
                 console.error("[MidiConnector] MIDI setup failed:", err)
                 _state { it.copy(status = Status.Denied, error = err.message ?: err.toString()) }
             }
-    }
-
-    /** Unhooks the devices. */
-    fun tearDown() {
-        access?.let { granted ->
-            granted.onstatechange = null
-            granted.inputs.forEach { input, _ -> input.onmidimessage = null }
-        }
-        access = null
     }
 
     //  MIDI  ///////////////////////////////////////////////////////////////////////////////////

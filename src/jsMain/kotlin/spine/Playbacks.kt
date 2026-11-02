@@ -17,7 +17,8 @@ import io.peekandpoke.ultra.streams.ops.ticker
 /**
  * What plays in the app, next to the [Player], which keeps the engine itself (KLANG-00406, "The Spine's playbacks"):
  * the real song on its [song] deck, the code examples over it ([previews], which fade it out and in), and the stage,
- * what plays now for the visuals and Klang Amp ([nowPlaying]). The other lanes (sounds, live) are still to come.
+ * what plays now for the visuals and Klang Amp ([nowPlaying]), and [live] play, the MIDI rig. The sounds' lane is still
+ * to come.
  */
 object Playbacks {
 
@@ -26,6 +27,12 @@ object Playbacks {
 
     /** What a page plays until it is stopped, over the song, which it fades out and in again ([Previews], D1). */
     val previews: Previews by lazy { Previews(deck = song) }
+
+    /**
+     * Live play, the MIDI rig (KLANG-00402, step 4): for the app's life, playing along with whatever plays, stopping
+     * nothing and stopped by nothing but a panic. Made on first use; brought up by what first shows it ([MidiRig.start]).
+     */
+    val live: MidiRig by lazy { MidiRig() }
 
     /**
      * Snapshot of whatever is considered the "primary" playback across the app.
