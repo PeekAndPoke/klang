@@ -46,6 +46,7 @@ class StorageKeysSpec : StringSpec({
             StorageKeys.MIDI_INSTRUMENTS shouldBe "klang-midi-instruments"
             StorageKeys.MIDI_INSTRUMENT_DRAFT shouldBe "klang-midi-instrument-draft"
             StorageKeys.MIDI_PLAY_CODE shouldBe "klang-midi-play-code"
+            StorageKeys.MIDI_LOADOUT shouldBe "klang-midi-loadout"
         }
 
         withClue("the tutorials") {

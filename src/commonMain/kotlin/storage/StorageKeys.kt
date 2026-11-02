@@ -26,6 +26,9 @@ object StorageKeys {
     /** The MIDI play code (KLANG-00402, D7): one KlangScript input with the instruments and what a key plays. */
     const val MIDI_PLAY_CODE = "klang-midi-play-code"
 
+    /** The MIDI loadout (KLANG-00402, step 5c): the instruments the instrument keys step through, as their codes. */
+    const val MIDI_LOADOUT = "klang-midi-loadout"
+
     /** The laptop keys' layout chosen by hand, a layout's name; absent for "Automatic" (KLANG-00402, D9). */
     const val MIDI_KEY_LAYOUT = "klang-midi-key-layout"
 
@@ -144,6 +147,7 @@ object StorageKeys {
             precious = true,
             covers = exactly(MIDI_PLAY_CODE, MIDI_INSTRUMENTS, MIDI_INSTRUMENT_DRAFT),
         ),
+        Part(name = "MIDI loadout", about = "The instruments the instrument keys step through", covers = exactly(MIDI_LOADOUT)),
         Part(name = "Laptop keys' layout", about = "The letters the laptop keyboard prints", covers = exactly(MIDI_KEY_LAYOUT)),
         // The random seeds (the maintainer, 2026-10-28: "Make a random seeds "section" in the storage and the first
         // entry will be the seed for grain noise and the metal brushes"); reset, one is made anew on the next load

@@ -453,6 +453,15 @@ as proposed"). D7 was the maintainer's own proposal.
    Checked by hand only: the page itself (its engine does not start in headless Chrome).
    - 5c. The loadout: the instruments the steps go through, filled by drag and drop as the Looks page equips; empty,
      the steps go through all.
+   **5c done (2026-11-02):** `MidiLoadout` (common): the instruments the instrument keys step through, in their
+   order, each once, 12 at most; empty, the keys step through all; a slot whose instrument the play code no longer has
+   is passed over (dimmed on the page, not chosen into the play code by a click). Filled by drag and drop on the MIDI
+   page, as the Looks page equips (touch drags as there, the maintainer's choice): a new instrument dropped on a slot
+   takes it, one already in the loadout swaps with it ("Swap them"), the row's end adds or moves one to the end, x
+   takes one out. Kept apart (`klang-midi-loadout`), written by the user's drops only. The MIDI tool's line shows the
+   instrument's place, "warmSaw (1/4)". Reviews: three rounds (round 1: a drop on its own slot dropped the next one;
+   round 2: touch drags, the maintainer's two decisions); round 3 clean, its MINOR applied (swap decided by the
+   instrument, the separate swap gone). About 20 mutants killed.
    - 5d. The page's lower half in tabs: the events, the routing (read only), the MIDI monitor.
 6. Later, own tickets: editing the routing and learning a control; key switches and splits; a backing loop for
    play / stop.
@@ -486,3 +495,4 @@ source's `AllUp`, the same note from two sources); the routing lookup order. New
 - 2026-11-02: step 4b, the MIDI tool in every page's bottom panel, closed until opened on a page without its own.
 - 2026-11-02: step 4c, the first key starts the Motor; held notes sound once it is up (the maintainer: "Only held notes wait").
 - 2026-11-02: steps 5a and 5b, the one play code and the instruments panel ("Never touch my edits", "One stored code").
+- 2026-11-02: step 5c, the loadout, filled by drag and drop ("Like the Looks page", "Swap them").

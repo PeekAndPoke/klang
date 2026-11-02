@@ -13,16 +13,21 @@ import io.peekandpoke.klang.ui.codemirror.KlangScriptEditorComp
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
 import io.peekandpoke.kraft.components.comp
+import io.peekandpoke.kraft.dnd.DndManager.Companion.dnd
+import io.peekandpoke.kraft.dnd.Drag
+import io.peekandpoke.kraft.dnd.dropZone
 import io.peekandpoke.kraft.utils.WakeLockComponent
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.html.onClick
+import io.peekandpoke.ultra.html.onPointerDown
 import io.peekandpoke.ultra.semanticui.icon
 import io.peekandpoke.ultra.semanticui.noui
 import io.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.ultra.streams.ops.distinct
 import io.peekandpoke.ultra.streams.ops.map
+import kotlinx.css.CssBuilder
 import kotlinx.css.FontWeight
 import kotlinx.css.Padding
 import kotlinx.css.fontFamily
@@ -33,10 +38,12 @@ import kotlinx.css.padding
 import kotlinx.css.px
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
+import kotlinx.html.div
 import kotlinx.html.tbody
 import kotlinx.html.td
 import kotlinx.html.th
 import kotlinx.html.thead
+import kotlinx.html.title
 import kotlinx.html.tr
 
 @Suppress("FunctionName")
@@ -98,9 +105,30 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
 
     companion object {
         private val EDITOR_LIBS = listOf(stdlibLib, sprudelLib)
+
+        /** The attribute that names a place an instrument may be dropped on: a loadout's slot, or its end. */
+        private const val DROP_ATTR = "data-loadout-drop"
     }
 
+    /** An instrument on its way into the loadout; from a slot ([Drag.source], its index) or from the instruments. */
+    private class DraggedSound(val sound: MidiPlayCode.Sound)
+
+    /** The place a dragged instrument is over and may be dropped on: a [DROP_ATTR] value; null for none. */
+    private var dropOver: String? by value(null)
+
     init {
+        // Every slot takes an instrument: a new one in place of its own, one already in the loadout swaps with it (the
+        // maintainer, 2026-11-02: "Swap them"); the end adds one, or moves one of the loadout's to the end
+        for (slot in 0 until MidiLoadout.MAX) {
+            dropPlace(name = "slot-$slot", accepts = { it.source != slot }) { drag ->
+                rig.equip(sound = drag.payload.sound, slot = slot)
+            }
+        }
+
+        dropPlace(name = "end", accepts = { true }) { drag ->
+            rig.equip(sound = drag.payload.sound, slot = rig.state().loadout.sounds.size)
+        }
+
         lifecycle {
             onMount {
                 // Once for the app's life; the rig plays on when the page goes. The MIDI page asks for the devices
@@ -325,9 +353,25 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
         }
     }
 
-    /** The instruments to choose: the play code's own and a key for a new one, then the built-ins by group. */
+    /** A drop zone on the element whose [DROP_ATTR] is [name]: lit while an instrument is over it, [drop] on a drop. */
+    private fun dropPlace(name: String, accepts: (Drag<DraggedSound>) -> Boolean, drop: (Drag<DraggedSound>) -> Unit) {
+        dropZone<DraggedSound>(element = { dom?.querySelector("[$DROP_ATTR='$name']") }, accepts = accepts) {
+            onEnter { dropOver = name }
+            onLeave {
+                if (dropOver == name) {
+                    dropOver = null
+                }
+            }
+            onDragStop { dropOver = null }
+            onDrop { drag -> drop(drag) }
+        }
+    }
+
+    /** The instruments to choose: the loadout, the play code's own and a key for a new one, then the built-ins by group. */
     private fun FlowContent.renderInstruments() {
         ui.header H4 { +"Instruments" }
+
+        renderLoadout()
 
         noui.tiny.header { +"Yours" }
 
@@ -371,8 +415,116 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
         ui.small.given(sound == rigState.sound) { primary }.button {
             key = "sound-${sound.code}"
             onClick { chooseHere(sound) }
+            // A drag into the loadout starts past a few pixels; a press that stays put is the click above
+            onPointerDown { e -> dnd.startDrag(e, payload = DraggedSound(sound), source = null, preview = { soundChip(label) }) }
+            css { touchDrags() }
             +label
         }
+    }
+
+    /**
+     * The loadout (step 5c): the instruments the instrument keys step through, in their order, filled by drag and drop
+     * as the Looks page equips: a slot takes a drop in place of its own, the row's end adds one, x takes one out. Empty,
+     * the keys step through every instrument.
+     */
+    private fun FlowContent.renderLoadout() {
+        val loadout = rigState.loadout
+
+        noui.tiny.header { +"Loadout" }
+
+        noui.content {
+            css { padding = Padding(0.px, 0.px, 4.px, 0.px) }
+            +"Drag instruments here: the instrument keys step through them, in this order. Empty, they step through all."
+        }
+
+        div {
+            key = "loadout"
+            css {
+                put("display", "flex")
+                put("flex-wrap", "wrap")
+                put("gap", "6px")
+                put("margin-bottom", "12px")
+            }
+
+            val available = rigState.allSounds()
+
+            loadout.sounds.forEachIndexed { slot, sound ->
+                val label = sound.code.trim('"')
+                // One the play code no longer has (a let renamed or gone): dimmed, the keys pass it over
+                // Not while nothing plays (a stored play code that fails now): its instruments are not known then
+                val gone = rigState.playing.isNotEmpty() && sound !in available
+
+                div {
+                    key = "loadout-$slot"
+                    attributes[DROP_ATTR] = "slot-$slot"
+                    css {
+                        put("display", "inline-flex")
+                        put("border-radius", "4px")
+                        put("outline", if (dropOver == "slot-$slot") "2px solid #4a9eff" else "none")
+
+                        if (gone) {
+                            put("opacity", "0.5")
+                        }
+                    }
+
+                    if (gone) {
+                        title = "Not in the play code: the instrument keys pass it over"
+                    }
+
+                    ui.small.given(sound == rigState.sound) { primary }.buttons {
+                        ui.button {
+                            // Gone from the play code: not chosen into it, where every key would fail; still dragged, taken out
+                            if (!gone) {
+                                onClick { chooseHere(sound) }
+                            }
+
+                            css { touchDrags() }
+                            onPointerDown { e ->
+                                dnd.startDrag(e, payload = DraggedSound(sound), source = slot, preview = { soundChip(label) })
+                            }
+                            +label
+                        }
+
+                        ui.icon.button {
+                            attributes["aria-label"] = "Take $label out of the loadout"
+                            title = "Take it out"
+                            onClick { rig.unequip(slot) }
+                            icon.times()
+                        }
+                    }
+                }
+            }
+
+            if (loadout.sounds.size < MidiLoadout.MAX) {
+                div {
+                    key = "loadout-end"
+                    attributes[DROP_ATTR] = "end"
+                    css {
+                        put("display", "inline-flex")
+                        put("align-items", "center")
+                        put("padding", "4px 10px")
+                        put("border", "1px dashed #55555c")
+                        put("border-radius", "4px")
+                        put("outline", if (dropOver == "end") "2px solid #4a9eff" else "none")
+                        put("font-size", "12px")
+                    }
+                    +"Drop an instrument here"
+                }
+            }
+        }
+    }
+
+    /** A touch drags the instrument instead of scrolling the page, and a long press selects nothing (as the Looks page). */
+    private fun CssBuilder.touchDrags() {
+        put("touch-action", "none")
+        put("user-select", "none")
+        put("-webkit-user-select", "none")
+        put("-webkit-touch-callout", "none")
+    }
+
+    /** What a dragged instrument looks like on its way: its name. */
+    private fun FlowContent.soundChip(label: String) {
+        ui.small.label { +label }
     }
 
     private fun chooseHere(sound: MidiPlayCode.Sound) {

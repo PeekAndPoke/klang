@@ -384,4 +384,51 @@ class MidiRigSpec : StringSpec({
             }
         }
     }
+
+    "the instrument keys step through the loadout, in its order; it is kept for the next visit" {
+        val kept = keptPlayCode()
+        val keptLoadout = localStorage.getItem(StorageKeys.MIDI_LOADOUT)
+
+        try {
+            val rig = MidiRig()
+
+            rig.apply("let lead = Ign.saw()\nlet pad = Ign.supersaw()\nlet bass = Ign.square()\n\nx => x.sound(lead)")
+            // As the loadout's end takes a drop
+            rig.equip(MidiPlayCode.Sound.Own("bass"), slot = rig.state().loadout.sounds.size)
+            rig.equip(MidiPlayCode.Sound.Own("lead"), slot = rig.state().loadout.sounds.size)
+
+            withClue("from lead, the loadout's next: round to bass, then lead; pad is not in it") {
+                step(rig)
+                rig.state().sound shouldBe MidiPlayCode.Sound.Own("bass")
+                step(rig)
+                rig.state().sound shouldBe MidiPlayCode.Sound.Own("lead")
+            }
+
+            withClue("kept, in its order") { localStorage.getItem(StorageKeys.MIDI_LOADOUT) shouldBe """["bass","lead"]""" }
+
+            withClue("read back by the next visit's rig") {
+                val next = MidiRig()
+
+                next.start()
+                next.state().loadout.sounds shouldBe listOf(MidiPlayCode.Sound.Own("bass"), MidiPlayCode.Sound.Own("lead"))
+            }
+
+            // lead dropped on bass's slot: swapped
+            rig.equip(MidiPlayCode.Sound.Own("lead"), slot = 0)
+
+            withClue("two slots swapped: kept so") { localStorage.getItem(StorageKeys.MIDI_LOADOUT) shouldBe """["lead","bass"]""" }
+
+            rig.unequip(0)
+
+            withClue("a slot out: kept so") { localStorage.getItem(StorageKeys.MIDI_LOADOUT) shouldBe """["bass"]""" }
+        } finally {
+            putBack(kept)
+
+            if (keptLoadout == null) {
+                localStorage.removeItem(StorageKeys.MIDI_LOADOUT)
+            } else {
+                localStorage.setItem(StorageKeys.MIDI_LOADOUT, keptLoadout)
+            }
+        }
+    }
 })

@@ -166,8 +166,14 @@ class MidiTool(ctx: NoProps) : PureComponent(ctx) {
                 rigState.playing.isEmpty() -> MidiPlayCode.FALLBACK_SOUND
                 else -> rigState.sound?.let { sound -> sound.code.trim('"') } ?: "as the play code says"
             }
+            // Where it sits in the loadout, as the design drew it: "warmSaw (1/4)"
+            // Counted over what the keys step through, the loadout's instruments that still are: only for one in it
+            val stepping = rigState.stepping()
+            val inLoadout = stepping.indexOf(rigState.sound).takeIf { it >= 0 && rigState.sound in rigState.loadout.sounds }
+                ?.let { at -> " (${at + 1}/${stepping.size})" }
+                .orEmpty()
 
-            span { +"Plays: $plays" }
+            span { +"Plays: $plays$inLoadout" }
 
             if (rigState.pressed.keys.any { (_, control) -> control == ControlId.Sustain.id }) {
                 span { +"Sustain" }

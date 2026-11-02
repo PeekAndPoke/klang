@@ -13,6 +13,7 @@ import io.peekandpoke.klang.midi.ControlId
 import io.peekandpoke.klang.midi.DeviceProfile
 import io.peekandpoke.klang.midi.LaptopKeys
 import io.peekandpoke.klang.midi.MidiConnector
+import io.peekandpoke.klang.midi.MidiLoadout
 import io.peekandpoke.klang.midi.MidiMessage
 import io.peekandpoke.klang.midi.MidiPlayCode
 import io.peekandpoke.klang.midi.NoteVoicing
@@ -21,6 +22,7 @@ import io.peekandpoke.klang.midi.Routing
 import io.peekandpoke.klang.midi.SourceId
 import io.peekandpoke.klang.script.runtime.FunctionValue
 import io.peekandpoke.klang.script.runtime.convertFunctionToKotlin
+import io.peekandpoke.klang.spine.storage.MidiLoadoutStorage
 import io.peekandpoke.klang.spine.storage.MidiPlayCodeStorage
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.lang.note
@@ -92,7 +94,17 @@ class MidiRig {
         val instruments: List<String> = emptyList(),
         /** Why the play code, or a key through it, failed; null while it plays. */
         val playCodeError: String? = null,
+        /** The instruments the instrument keys step through ([MidiLoadout]); empty, they step through all. */
+        val loadout: MidiLoadout = MidiLoadout(),
     ) {
+        /** Every instrument there is to choose: the play code's own, then the built-ins. */
+        fun allSounds(): List<MidiPlayCode.Sound> =
+            instruments.map { MidiPlayCode.Sound.Own(it) } +
+                SOUND_GROUPS.flatMap { (_, names) -> names.map { MidiPlayCode.Sound.BuiltIn(it) } }
+
+        /** What the instrument keys step through: the loadout's instruments that still are, else all of them. */
+        fun stepping(): List<MidiPlayCode.Sound> = loadout.stepsThrough(allSounds())
+
         /** The notes held on the laptop's side, or on the devices' keybeds: each drawing lights its own. */
         fun heldNotes(laptopSide: Boolean): Set<Int> =
             held.keys.filter { onLaptopSide(it.source) == laptopSide }.map { it.note }.toSet()
@@ -212,6 +224,8 @@ class MidiRig {
         // the session); one that fails now shows with its error, never as an empty editor. Nothing is saved here: the
         // play code a first visit starts with stays the app's until the user applies one
         run(code = MidiPlayCodeStorage.load() ?: MidiPlayCode.DEFAULT, byUser = true)
+
+        _state { it.copy(loadout = MidiLoadoutStorage.load()) }
 
         // The Motor running, whoever started it: the keys play along at once
         Player.status.subscribeToStream { status ->
@@ -415,11 +429,6 @@ class MidiRig {
         }
     }
 
-    /** Every instrument there is to choose: the play code's own, then the built-ins. */
-    private fun allSounds(): List<MidiPlayCode.Sound> =
-        _state().instruments.map { MidiPlayCode.Sound.Own(it) } +
-            SOUND_GROUPS.flatMap { (_, names) -> names.map { MidiPlayCode.Sound.BuiltIn(it) } }
-
     //  INPUT  //////////////////////////////////////////////////////////////////////////////////
 
     /** A port's word: a message goes to the monitor and through the port's profile; a port gone lets its keys go. */
@@ -618,13 +627,29 @@ class MidiRig {
         }
     }
 
-    /** The instrument [steps] away from the one playing, round the list (the loadout comes with step 5c), chosen. */
+    /** The instrument [steps] away from the one playing, chosen: through the loadout, or through all where it is empty. */
     private fun browseSound(steps: Int) {
-        val all = allSounds()
-        // A sound not in the list (an alias, a let holding no Ignitor): forward from before the first, back from the first
-        val at = all.indexOf(_state().sound).takeIf { it >= 0 } ?: if (steps > 0) -1 else 0
+        _state().loadout.next(from = _state().sound, steps = steps, available = _state().allSounds())?.let { choose(it) }
+    }
 
-        choose(all[((at + steps) % all.size + all.size) % all.size])
+    /**
+     * [sound] into the loadout (a drop on the MIDI page) on [slot], as [MidiLoadout.place] puts it (one already in the
+     * loadout swaps); kept for the next visit.
+     */
+    fun equip(sound: MidiPlayCode.Sound, slot: Int) {
+        changeLoadout { loadout -> loadout.place(slot, sound) }
+    }
+
+    /** Slot [slot] out of the loadout; kept for the next visit. */
+    fun unequip(slot: Int) {
+        changeLoadout { loadout -> loadout.remove(slot) }
+    }
+
+    private fun changeLoadout(change: (MidiLoadout) -> MidiLoadout) {
+        val next = change(_state().loadout)
+
+        MidiLoadoutStorage.save(next)
+        _state { it.copy(loadout = next) }
     }
 
     /** Moves an on-screen control to [value] (`0..1`). */
