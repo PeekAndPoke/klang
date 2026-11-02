@@ -585,8 +585,9 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         rule("& > button") {
             put("min-height", "96px")
             put("justify-content", "center")
-            // Even on both sides: the lamp sits in the text now, before the label, not in the corner
-            put("padding", "14px 16px")
+            // The lamp sits in the text, before the label; the icon gets more room at the right end (the maintainer,
+            // 2026-11-02: "a bit more padding to the right of the button")
+            put("padding", "14px 24px 14px 16px")
         }
     }
 
@@ -597,13 +598,20 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("gap", "16px")
         put("width", "100%")
 
-        // At the right end, the text taking the room before it
+        // At the right end, the text taking the room before it; raised from the tile (the maintainer, 2026-11-02,
+        // after trying it engraved: "Ok well maybe raised?"): lighter than the cap, its upper edge catching the light,
+        // its shadow below
         rule("& > i.icon") {
             put("flex-shrink", "0")
             put("margin", "0 0 0 auto")
             put("font-size", "28px")
             put("width", "36px")
-            put("opacity", "0.9")
+            put("color", "color-mix(in srgb, var(--kl-cap-light), white 22%)")
+            put(
+                "text-shadow",
+                "0 -1px 0 color-mix(in srgb, var(--kl-cap-light), white 55%), " +
+                        "0 1px 0 rgba(0, 0, 0, 0.55), 0 2px 4px rgba(0, 0, 0, 0.45)",
+            )
         }
     }
 
