@@ -40,6 +40,7 @@ import kotlinx.html.div
 import org.khronos.webgl.set
 import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.HTMLCanvasElement
+import kotlin.math.cbrt
 import kotlin.math.floor
 import kotlin.math.pow
 import kotlin.math.roundToInt
@@ -57,6 +58,7 @@ fun Tag.Spectrumeter(
     boxGap: Double = 2.0,
     numBoxesInStack: Int = 30,
     colorStep: Double? = null,
+    blend: Double = 0.0,
     numBuckets: Int = 16,
     binning: SpectrumBinning = SpectrumBinning(numBuckets = numBuckets),
     labelMiddle: LinearDimension = 12.px,
@@ -75,6 +77,7 @@ fun Tag.Spectrumeter(
         boxGap = boxGap,
         numBoxesInStack = numBoxesInStack,
         colorStep = colorStep,
+        blend = blend,
         numBuckets = numBuckets,
         binning = binning,
         labelMiddle = labelMiddle,
@@ -106,6 +109,8 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
          * spreads the colours evenly over the whole column.
          */
         val colorStep: Double?,
+        /** How far each colour's cells fade into the next colour, 0 to 1 ([spectrumCellColors]). */
+        val blend: Double,
         val numBuckets: Int,
         val binning: SpectrumBinning,
         /** How high over the spectrum's floor the middle of a hovered column's frequencies sits. */
@@ -175,6 +180,9 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
     }
 
     private val bucketValues = DoubleArray(props.numBuckets)
+
+    /** Each cell's colour, floor to top, with what it was worked out from; again only when that changes. */
+    private var cells: Pair<List<Any>, List<Color>> = Pair(emptyList(), emptyList())
 
     /** The column under the mouse, whose frequencies the label shows; null while the mouse is elsewhere. */
     private var hovered: Int? by value(null)
@@ -281,7 +289,8 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
         // the cubic ease-in keeps mid-heat levels virtually unaffected.
         val fullBoost = 1.0 + 0.2 * Ease.In.pow(2.0).invoke(heatNorm)
         val glow = ctx.createLinearGradient(0.0, height, 0.0, 0.0)
-        val palette = props.colors
+        // Opaque hex: the gradient sets its own alpha, and kotlin-css reads no `#rgba` (it threw)
+        val palette = props.colors.map { opaqueHex(it) }
         val n = palette.size.coerceAtLeast(1)
         for (i in 0 until n) {
             val t = if (n == 1) 0.0 else i.toDouble() / (n - 1)
@@ -317,6 +326,23 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
         val boxHeight = ((height.toInt() - maxBoxes * gap) / maxBoxes.coerceAtLeast(1)).coerceAtLeast(1)
         val boxWithGap = boxHeight + gap
 
+        // Each cell's colour, worked out again only when the look or the layout changes
+        val cellsFrom = listOf(colors, maxBoxes, boxesPerColor, props.blend)
+
+        if (cells.first != cellsFrom) {
+            cells = Pair(
+                cellsFrom,
+                spectrumCellColors(
+                    colors = colors,
+                    cells = maxBoxes,
+                    cellsPerColor = boxesPerColor,
+                    blend = props.blend,
+                ),
+            )
+        }
+
+        val cellColors = cells.second
+
         // The loudest column this frame, for a lighting relative to it
         var loudest = 0.0
 
@@ -334,18 +360,24 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
             val x = columns.xOf(bucketIdx).toDouble()
             val effectiveWidth = if (columns.step > props.gap) columns.step - props.gap else columns.step.toDouble()
             val boxAlpha = props.lighting.alpha(level = normalized, loudest = loudest)
-
-            val colorsWithAlpha = colors.map { it.withAlpha(boxAlpha) }
+            // A cell the colour of the one below reuses its style: without a blend a band's cells are one colour
+            var lastColor: Color? = null
+            var lastStyle = ""
 
             for (boxIdx in 0 until numBoxesToDraw) {
                 val boxY = height - ((boxIdx + 1) * boxWithGap)
 
                 // Each colour a band of the same height, the last one on to the top: the red was never reached when
                 // the bands were cut by one colour less (the maintainer, 2026-10-26: "never red")
-                val colorIdx = (boxIdx / boxesPerColor).coerceIn(0, numColors - 1)
-                val boxColor = colorsWithAlpha[colorIdx]
+                // A level over the top keeps the top cell's colour, as the last band always went on to the top
+                val boxColor = cellColors.getOrNull(boxIdx.coerceAtMost(cellColors.lastIndex)) ?: break
 
-                ctx.fillStyle = boxColor.toString()
+                if (boxColor != lastColor) {
+                    lastColor = boxColor
+                    lastStyle = boxColor.withAlpha(boxAlpha).toString()
+                }
+
+                ctx.fillStyle = lastStyle
                 ctx.fillRect(x, boxY, effectiveWidth, boxHeight.toDouble())
             }
         }
@@ -462,6 +494,131 @@ internal data class SpectrumColumns(val step: Int, val left: Int) {
 
         return column.takeIf { it in 0 until count }
     }
+}
+
+/**
+ * The colour of each of a column's [cells], floor to top: [colors] in bands of [cellsPerColor] cells, the last colour
+ * on to the top. With a [blend] above 0 a band's cells fade towards the next band's colour, its top cell by
+ * `blend * (cellsPerColor - 1) / cellsPerColor`, so at 1 the steps run into each other; the top band stays as it is.
+ * The lowest band starts with two cells of its colour, the floor cell a shade darker ([FLOOR_SHADE] at a blend of 1),
+ * and fades from the second (the maintainer, 2026-11-03: "the blue is too thin and we could need two row of blue, a
+ * darker one below"); a band of one cell is only the darker floor, as is a single colour's. A blend of 0 gives each
+ * band its colour unchanged. Hex colours come out as opaque `#rrggbb` ([opaqueHex]): the draw sets each cell's alpha.
+ */
+internal fun spectrumCellColors(colors: List<Color>, cells: Int, cellsPerColor: Int, blend: Double): List<Color> {
+    if (colors.isEmpty()) {
+        return emptyList()
+    }
+
+    val bands = colors.map { opaqueHex(it) }
+    val perColor = cellsPerColor.coerceAtLeast(1)
+    // NaN-guard: a blend that is not a number counts as none
+    val share = if (blend.isNaN()) 0.0 else blend.coerceIn(0.0, 1.0)
+
+    return List(cells.coerceAtLeast(0)) { cell ->
+        val band = (cell / perColor).coerceAtMost(bands.lastIndex)
+        val from = bands[band]
+        val towards = bands.getOrNull(band + 1)
+        val step = cell % perColor
+        // The lowest band fades over its cells above the floor, the others over all of theirs
+        val t = when {
+            band > 0 -> share * step / perColor
+            step == 0 -> 0.0
+            else -> share * (step - 1) / (perColor - 1)
+        }
+
+        if (band == 0 && step == 0 && share > 0.0) {
+            mixed(from = from, to = BLACK, t = FLOOR_SHADE * share)
+        } else if (towards == null || t <= 0.0) {
+            from
+        } else {
+            mixed(from = from, to = towards, t = t)
+        }
+    }
+}
+
+// 0.3 first: the cells are a pixel or two high, and the floor went dark into the ground (the maintainer, 2026-11-03: "I
+// still only see one line of blue")
+/** How much darker the spectrum's floor cell is at a full blend ([spectrumCellColors]): a share of the way to black. */
+private const val FLOOR_SHADE = 0.15
+
+private val BLACK = Color("#000000")
+
+/**
+ * A hex colour as `#rrggbb`, its alpha dropped; a colour in another form as it is. The spectrum sets each cell's alpha
+ * itself, and kotlin-css's `withAlpha` cannot read `#rgba` (a look may give it: it threw in the draw).
+ */
+internal fun opaqueHex(color: Color): Color {
+    val channels = hexChannels(color.value) ?: return color
+
+    return Color("#" + channels.take(3).joinToString("") { it.toString(16).padStart(2, '0') })
+}
+
+/**
+ * [from] moved the share [t] of the way to [to], in OKLab (Björn Ottosson's perceptual colour space): a plain mix of
+ * the channels ran Copper's blue into its copper through a grey-green (the maintainer, 2026-11-03: "the second color
+ * is now green-ish ... find a color near this one that better fits the copper palette"), in OKLab the way runs through
+ * a warm grey. A look's colours are hex; a colour in another form is not mixed, [from] stays.
+ */
+private fun mixed(from: Color, to: Color, t: Double): Color {
+    val a = hexChannels(from.value) ?: return from
+    val b = hexChannels(to.value) ?: return from
+
+    val labA = toOklab(a)
+    val labB = toOklab(b)
+    val rgb = fromOklab(List(3) { i -> labA[i] + (labB[i] - labA[i]) * t })
+    return Color("#" + rgb.joinToString("") { it.toString(16).padStart(2, '0') })
+}
+
+/** A colour's L, a and b in OKLab, from its red, green and blue, 0 to 255 (an alpha after them is not read). */
+private fun toOklab(rgb: List<Int>): List<Double> {
+    val (r, g, b) = rgb.take(3).map { toLinear(it / 255.0) }
+
+    val l = cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b)
+    val m = cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b)
+    val s = cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b)
+
+    return listOf(
+        0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+        1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+        0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s,
+    )
+}
+
+/** Red, green and blue, 0 to 255, of an OKLab colour, clipped to what the screen shows. */
+private fun fromOklab(lab: List<Double>): List<Int> {
+    val (lightness, a, b) = lab
+
+    val l = (lightness + 0.3963377774 * a + 0.2158037573 * b).pow(3)
+    val m = (lightness - 0.1055613458 * a - 0.0638541728 * b).pow(3)
+    val s = (lightness - 0.0894841775 * a - 1.2914855480 * b).pow(3)
+
+    return listOf(
+        4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+        -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+        -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s,
+    ).map { (fromLinear(it.coerceIn(0.0, 1.0)) * 255.0).roundToInt() }
+}
+
+/** An sRGB channel, 0 to 1, as linear light. */
+private fun toLinear(c: Double): Double = if (c <= 0.04045) c / 12.92 else ((c + 0.055) / 1.055).pow(2.4)
+
+/** Linear light, 0 to 1, as an sRGB channel. */
+private fun fromLinear(c: Double): Double = if (c <= 0.0031308) c * 12.92 else 1.055 * c.pow(1.0 / 2.4) - 0.055
+
+/** Red, green, blue and alpha, 0 to 255, of `#rgb`, `#rgba`, `#rrggbb` or `#rrggbbaa`; null for another form. */
+private fun hexChannels(hex: String): List<Int>? {
+    val digits = hex.removePrefix("#").takeIf { hex.startsWith("#") } ?: return null
+
+    val pairs = when (digits.length) {
+        3, 4 -> digits.map { "$it$it" }
+        6, 8 -> digits.chunked(2)
+        else -> return null
+    }
+
+    val channels = pairs.map { it.toIntOrNull(16) ?: return null }
+
+    return if (channels.size == 3) channels + 255 else channels
 }
 
 /** [count] columns in [width] pixels, pixel exact: as wide as fits whole, the pixels left over half on either side. */

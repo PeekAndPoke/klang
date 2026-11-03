@@ -1343,6 +1343,7 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
                     colors = Motor.SPECTRUM_ROLES.map { Color(look[it]) },
                     numBoxesInStack = Motor.SPECTRUM_BOXES,
                     colorStep = Motor.SPECTRUM_COLOR_STEP,
+                    blend = Motor.spectrumBlendOf(look),
                     numBuckets = Motor.SPECTRUM_COLUMNS,
                     preview = SPECTRUM_LEVELS,
                 ) { null }

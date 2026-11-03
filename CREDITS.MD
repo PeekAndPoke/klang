@@ -194,6 +194,8 @@ Visuals and editor effects are powered by these libraries (integrated via Kraft 
 
 - **[PixiJS](https://pixijs.com)** — WebGL-accelerated rendering of live playback highlights in the editor
 - **[Three.js](https://threejs.org)** — 3D graphics for the animated Motor background and visualizations
+- **[OKLab](https://bottosson.github.io/posts/oklab/)** by Björn Ottosson: the perceptual colour space a look's
+  spectrum steps blend in, so Copper's blue fades into its copper through a warm grey, not a green one
 
 ## The Editor
 

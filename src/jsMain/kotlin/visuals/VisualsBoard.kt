@@ -470,6 +470,7 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
                 colors = Motor.SPECTRUM_ROLES.map { Color(look[it]) },
                 numBoxesInStack = Motor.SPECTRUM_BOXES,
                 colorStep = Motor.SPECTRUM_COLOR_STEP,
+                blend = Motor.spectrumBlendOf(look),
                 numBuckets = Motor.SPECTRUM_COLUMNS,
                 // The light dancing through the columns, stronger than on the code page (the maintainer, 2026-10-29)
                 lighting = Spectrumeter.Lighting.Dancing,

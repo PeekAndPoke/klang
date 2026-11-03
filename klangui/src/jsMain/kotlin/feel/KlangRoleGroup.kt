@@ -127,6 +127,7 @@ enum class KlangRoleGroup(val title: String, val elements: List<Element>) {
                     KlangRole.SpectrumMid to "Mid",
                     KlangRole.SpectrumLow to "Low",
                     KlangRole.SpectrumQuiet to "Quiet",
+                    KlangRole.SpectrumBlend to "Blend",
                 ),
             ),
         ),

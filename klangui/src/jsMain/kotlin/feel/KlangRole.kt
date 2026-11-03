@@ -157,6 +157,14 @@ enum class KlangRole(
     /** The spectrum's top step: a hot coral, as a meter's peak LED. */
     SpectrumPeak(cssVar = "--kl-spectrum-peak", kind = Kind.Color, default = "#ff6b4a"),
 
+    /**
+     * How far each step's cells fade into the next step's colour, from 0 (clear steps, each cell its step's colour) to 1
+     * (a step's top cell almost the next one's): a look whose steps lie far apart, as Copper's blue below its copper,
+     * blends them (the maintainer, 2026-11-03: "We still need a smoother transition in color between the lowest blue and
+     * the second rows orange").
+     */
+    SpectrumBlend(cssVar = "--kl-spectrum-blend", kind = Kind.Amount, default = "0"),
+
     // ── Accent ────────────────────────────────────────────────────────────────
 
     /** Selection, links. */

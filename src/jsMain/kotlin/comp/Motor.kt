@@ -8,6 +8,7 @@ package io.peekandpoke.klang.comp
 import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.spine.UiWork
 import io.peekandpoke.klang.ui.comp.KlangWorkbench
+import io.peekandpoke.klang.ui.feel.KlangLook
 import io.peekandpoke.klang.ui.feel.KlangRole
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.components.Component
@@ -108,6 +109,9 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
             KlangRole.SpectrumHot,
             KlangRole.SpectrumPeak,
         )
+
+        /** How far the look's spectrum steps fade into each other ([KlangRole.SpectrumBlend]), 0 to 1. */
+        fun spectrumBlendOf(look: KlangLook): Double = look[KlangRole.SpectrumBlend].toDoubleOrNull() ?: 0.0
     }
 
     //  PROPS  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -207,6 +211,7 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
                     colors = SPECTRUM_ROLES.map { Color(look[it]) },
                     numBoxesInStack = SPECTRUM_BOXES,
                     colorStep = SPECTRUM_COLOR_STEP,
+                    blend = spectrumBlendOf(look),
                     numBuckets = SPECTRUM_COLUMNS,
                     labelMiddle = ((FRAME_HEIGHT_REM - OSCILLOSCOPE_TOP_REM - OSCILLOSCOPE_HEIGHT_REM) / 2.0).rem,
                     paused = props.paused,

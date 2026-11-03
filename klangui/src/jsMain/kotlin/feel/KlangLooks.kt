@@ -54,6 +54,9 @@ object KlangLooks {
             KlangRole.SpectrumMid to "#d9733f",
             KlangRole.SpectrumHot to "#e8a06a",
             KlangRole.SpectrumPeak to "#ffcf9a",
+            // The steps fade into each other, the blue into the copper above it (the maintainer, 2026-11-03: "a smoother
+            // transition in color between the lowest blue and the second rows orange")
+            KlangRole.SpectrumBlend to "1",
             // The texture and the corners, each look its own (the maintainer, 2026-10-28):
             // Hammered copper: a coarser grain, little brushing
             KlangRole.Grain to "0.22",

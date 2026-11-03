@@ -251,6 +251,7 @@ class KlangampPlayer(ctx: Ctx<Props>) : Component<KlangampPlayer.Props>(ctx) {
                         colors = Motor.SPECTRUM_ROLES.map { Color(look[it]) },
                         numBoxesInStack = 12,
                         colorStep = Motor.SPECTRUM_COLOR_STEP,
+                        blend = Motor.spectrumBlendOf(look),
                         numBuckets = 19,
                         lighting = Spectrumeter.Lighting.Dancing,
                     ) { Player.get() }
