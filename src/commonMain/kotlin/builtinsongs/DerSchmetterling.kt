@@ -93,10 +93,10 @@ let preampClean = Ign.fn(x => x
 let preampCrunch = Ign.fn(x => x
   .highpass(120)
   .oversampleAtLeast(4, y => y
-    .distort(0.25, "tube").highpass(110)
-    .distort(0.30, "asym").highpass(100))
-  .lowpass(6000)
-  .mul(0.65))                                       // volume
+    .distort(0.50, "tube").highpass(110)
+    .distort(0.25, "asym").highpass(100))
+  .lowpass(6500)
+  .mul(0.50))                                       // volume
 
 // High gain: tighten the bass BEFORE it clips, three cascaded stages, the last one hard, then tame the fizz.
 let preampHighGain = Ign.fn(x => x
