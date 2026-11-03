@@ -38,7 +38,7 @@ let pickupStock = Ign.fn(x => x)
 
 // Single coil at the bridge: a high, sharp resonance, thin and bright, low output.
 let pickupSingle = Ign.fn(x => x
-  .lowpass(4800, 2.5)                              // the peak, up high and narrow
+  .lowpass(4800, 2.2)                              // the peak, up high and narrow
   .mul(0.8))                                       // low output, the amp stays cleaner
 
 // Humbucker at the bridge: a lower, broader resonance, fat and dark, hot output that pushes the amp harder.
@@ -101,7 +101,7 @@ let preampCrunch = Ign.fn(x => x
 // High gain: tighten the bass BEFORE it clips, three cascaded stages, the last one hard, then tame the fizz.
 let preampHighGain = Ign.fn(x => x
   .highpass(120)                                    // tight: no bass into the gain stages
-  .oversampleAtLeast(8, y => y                      // the three stages at 8x: one trip up, one down
+  .oversampleAtLeast(4, y => y                      // the three stages at 8x: one trip up, one down
     .distort(0.20, "tube").highpass(110)
     .distort(0.25, "asym").highpass(100)
     .distort(0.50, "soft"))
@@ -173,7 +173,7 @@ let makeGuitar = (rig) => {
   let pAttack     = Ign.param("attack",       0.005, "Attack")
   let pDecay      = Ign.param("decay",        1.000, "Decay")
   let pSustain    = Ign.param("sustain",      0.000, "sustain")
-  let pRelease    = Ign.param("release",      0.015, "Release")
+  let pRelease    = Ign.param("release",      0.012, "Release")
   // --------------------------------------------------------------------------------------------------------------
 
   let saw = Ign.supersaw(x => x.voices(pVoices).spread(pSpread)
@@ -301,7 +301,7 @@ export guitar1_shape = x => x.pregain(guitarDyna(1).fast(2).mul(0.8)).sound(guit
   .clip(guitarClip(1).fast(2)).pan(0.5).body(material = "spruce", wet = 0.15)
 
 export guitar1_arrange = x => x.orbit(1)  // . solo()
-  .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").gain(0.165)  // .mute()
+  .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").gain(0.168)  // .mute()
   .mute("<0!128 1!64 0!32>")
   .late(berlin(0.0009, 0.0012).mul(drunk).seed(1))
 
@@ -373,11 +373,11 @@ let gummiEimer = (() => {
  
   let ring = Ign.constant(300).div(Ign.freq()).mul(0.85)  
  
-  let head  = Ign.sine(x => x.analog(pAnalog)).pitchEnvelope(0.5, x => x.adsr(0.015, 0.050, 0, 0)).adsr(0.010, ring, 0.3, 0.5).mul(0.45)
+  let head  = Ign.sine(x => x.analog(pAnalog)).pitchEnvelope(1.5, x => x.adsr(0.015, 0.050, 0, 0)).adsr(0.010, ring, 0.3, 0.5).mul(0.45)
   // the harmonics 2f..8f, fundamental left out: the ear rebuilds it, so the drum sits low in the mix and keeps its pitch,
   // and the pitch drop is heard up here, not felt at 70 Hz. They die well before the head does.
   let harms = Ign.sine(x => x.harmonics(15, 0.8).fundamental(0).analog(pAnalog).analogSpread(0.2))
-    .pitchEnvelope(9, x => x.adsr(0.015, 0.050, 0, 0)).adsr(0.010, 0.35, 0.4, 0.30).mul(1.3)
+    .pitchEnvelope(12, x => x.adsr(0.015, 0.050, 0, 0)).adsr(0.010, 0.35, 0.4, 0.30).mul(1.3)
  
   let m2 = Ign.sine(Ign.freq().mul(1.59), x => x.analog(pAnalog)).adsr(0.002, 0.10, 0.2, 0.20).mul(0.25)
   let m3 = Ign.sine(Ign.freq().mul(2.14), x => x.analog(pAnalog)).adsr(0.002, 0.06, 0.2, 0.10).mul(0.15)
@@ -402,7 +402,7 @@ export trommel_shape = x => x.sound(gummiEimer).adsrOff() //  .solo()
   )
 
 export trommel_arrange = x => x.orbit(5)  // .solo(0.5)
-  .scale("e4:minor").gain(0.23)
+  .scale("e4:minor").gain(0.21)
   .mute("<1!96 0!32>")                          
 
 export trommel = n(trommel_pat).apply(trommel_shape).tag("trommel")
@@ -557,7 +557,7 @@ export song = stack(
     .bands(b => b
       .band(low => low.distort(0.01, "soft", 4).mul(1.00)).cut(150)
       .band(mid => mid.distort(0.15, "soft", 4).mul(0.85)).cut(5000)
-      .band(low => low.distort(0.01, "soft", 4).mul(1.10))
+      .band(low => low.distort(0.01, "soft", 4).mul(1.15))
     ) // the glue on the mids only: the kick and the hats stay clean
     .mul(0.90)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)

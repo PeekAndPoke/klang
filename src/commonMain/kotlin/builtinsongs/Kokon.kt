@@ -43,7 +43,7 @@ let pickupStock = Ign.fn(x => x)
 
 // Single coil at the bridge: a high, sharp resonance, thin and bright, low output.
 let pickupSingle = Ign.fn(x => x
-  .lowpass(4600, 2.0)                              // the peak, up high and narrow
+  .lowpass(4800, 2.5)                              // the peak, up high and narrow
   .mul(0.8))                                       // low output, the amp stays cleaner
 
 // Humbucker at the bridge: a lower, broader resonance, fat and dark, hot output that pushes the amp harder.
@@ -139,8 +139,8 @@ let cab4x12 = Ign.fn(x => x
     .band(freq =  380, q = 0.5, db =  3.50)        // roar:  low mids
     .band(freq = 2700, q = 1.7, db =  2.50)        // bark:  the upper-mid speaker peak
   )
-  .lowpass(5000, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
-  .highpass(60, 0.707, x => x.passes(2)))
+  .lowpass(5000, 0.707, x => x.passes(3))          // the wall: 36 dB/oct, the fizz is gone
+  .highpass(75, 0.707, x => x.passes(2)))
 
 // 1x12 open back: the open back cancels the bass, the top chimes and rolls off late and soft.
 let cab1x12 = Ign.fn(x => x
@@ -358,7 +358,7 @@ export swell = chords => n(chords.add(7))
   .sound(bright).adsrOff().unison(voices = 5, spread = 0.04)
   .ignp("attack", 1.3).ignp("decay", 1.8).clip(1)
   .lpf(3500)
-  .gain(0.07).pan(0.05).superimpose(x => x.pan(0.95).late(0.015)) // far left and far right, the right a little late
+  .gain(0.06).pan(0.05).superimpose(x => x.pan(0.75).late(0.015)) // far left and far right, the right a little late
   .orbit(7).reverb(wet = 0.2, size = 6)       // a slight room of their own, inside the hall
 
 // Beat: the heartbeat under the skin, 3-3-2 on the root, an octave down.
@@ -374,7 +374,7 @@ export chug = roots => n(roots.add(-7)).struct("[x x] x@2  [x x] x@2  [x x] x")
   .sound(heavy).adsrOff().unison(voices = 7, spread = 0.08)
   //.ignp("decay", "0.4 0.8!2 0.4 0.8!2 0.3 0.2").clip(1)
   .velocity("1.0 0.90 0.80 0.85  0.90 0.80 0.75 0.85".sub(perlin(0.0, 0.2).seed(2)))
-  .gain(0.67).late(perlin(0.0005, 0.0010).seed(2)).apply(
+  .gain(0.70).late(perlin(0.0005, 0.0010).seed(2)).apply(
     x => x.pan(0.20),
     x => x.pan(0.80),
   )
@@ -385,7 +385,7 @@ export wings = chords => n(chords).ply(16)
   .sound(heavy).adsrOff().unison(voices = 7, spread = 0.08)
   .ignp("decay", "[0.9 0.8]*8").clip(1)
   .velocity("1.0 0.90!2 0.96 0.88 0.92 0.94 0.92".sub(perlin(0.0, 0.2).seed(3)))
-  .gain(0.70).late(perlin(0.0010, 0.0015).seed(3)).apply(
+  .gain(0.65).late(perlin(0.0010, 0.0015).seed(3)).apply(
     x => x.pan(0.05),
     x => x.pan(0.95),
   )
@@ -602,9 +602,8 @@ export song = stack(
 )
 
 
-
-// Written by Claude (Opus 5.5) on the guitar of Der Schmetterling, which the maintainer and Claude built stage by stage.
-// Melody refined, fine-tuned and arranged with peekandpoke
+// Initial foundation written by Claude (Opus 5.5) on the guitar of Der Schmetterling, which the maintainer and Claude built stage by stage.
+// Melody, instruments and arrangment refined and fine-tuned by peekandpoke
 //
 // Inspired by: Philip Glass and Steve Reich, the additive process of minimal music. The spinning arpeggio grows thread
 // by thread through its mask, and the listener hears the same notes transform instead of new ones arriving.
