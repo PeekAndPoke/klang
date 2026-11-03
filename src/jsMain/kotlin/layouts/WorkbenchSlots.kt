@@ -11,9 +11,10 @@ import io.peekandpoke.ultra.streams.StreamSource
 import kotlinx.html.DIV
 
 /**
- * What a page puts into the workbench while it is shown (KLANG-00349): the column's content and tool windows of its
- * own. The page fills them when it mounts and empties them when it unmounts; the `WorkbenchLayout` reads them. A page
- * that fills nothing gets the area's list in the column and the layout's tool windows only.
+ * What a page puts into the workbench while it is shown (KLANG-00349): the column's content, tool windows and bottom
+ * panel tabs of its own; the `WorkbenchLayout` reads them. A page fills them through [PageWorkbench] (KLANG-00409),
+ * which fills them when it mounts and empties them when it unmounts. A page that fills nothing gets the area's list in
+ * the column, the layout's tool windows and the app's tabs ([BottomTools]) only.
  */
 object WorkbenchSlots {
 
@@ -23,16 +24,16 @@ object WorkbenchSlots {
     /** The page's own tool windows, after the layout's (the song page: Settings). */
     val tools = StreamSource<List<KlangWorkbench.Tool>>(emptyList())
 
-    /** The page's bottom panel (the song page: Help, wide enough for signatures and parameters); null for none. */
-    val bottom = StreamSource<KlangWorkbench.Bottom?>(null)
+    /** The page's own tabs in the bottom panel, before the app's (the help pages: Quick help, Lexikon); empty for none. */
+    val bottomTabs = StreamSource<List<KlangWorkbench.Tab>>(emptyList())
 
     /** The workbench drawn now, so a page can show its panels by a key (Alt+Q shows the Help). */
     val workbench = ComponentRef.Tracker<KlangWorkbench>()
 
-    /** Empties the slots: the page that filled them is gone. */
+    /** Empties the slots; for the specs, as a page empties only its own parts ([PageWorkbench]). */
     fun clear() {
         column(null)
         tools(emptyList())
-        bottom(null)
+        bottomTabs(emptyList())
     }
 }

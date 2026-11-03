@@ -58,12 +58,11 @@ import org.w3c.dom.pointerevents.PointerEventInit
 /** The workbench the host draws, so a spec can show a tool window from outside, as the song page does on Alt+Q. */
 private val workbenchRef = ComponentRef.Tracker<KlangWorkbench>()
 
-/** A panel there on every page, as the app's MIDI tool is where a page has none. */
-private val ambientBottom = KlangWorkbench.Bottom(
-    title = "MIDI",
-    icon = { keyboard },
+/** The panel on another page: the same key, other tabs, as the app's panel is where a page has no tabs of its own. */
+private val otherPageBottom = KlangWorkbench.Bottom(
+    title = "Help",
+    icon = { question_circle },
     tabs = listOf(KlangWorkbench.Tab(id = "midi", title = "MIDI") { +"MIDI BODY" }),
-    ambient = true,
 )
 
 /** A workbench whose tool windows and drawer its parent changes, as a page's may. */
@@ -93,8 +92,8 @@ private class ChangingHost(ctx: NoProps) : PureComponent(ctx) {
 
     var withBottom: Boolean by value(true)
 
-    /** Without the page's own panel: one there on every page in its place (the MIDI tool's), not none. */
-    var withAmbient: Boolean by value(false)
+    /** Without the first page's panel: another page's in its place, not none. */
+    var withOtherPage: Boolean by value(false)
 
     init {
         current = this
@@ -115,7 +114,7 @@ private class ChangingHost(ctx: NoProps) : PureComponent(ctx) {
             },
             content = {},
             tools = if (withDocs) listOf(KlangWorkbench.Tool(id = "docs", title = "Docs", icon = { book }) { +"DOCS" }) else emptyList(),
-            bottom = if (!withBottom) ambientBottom.takeIf { withAmbient } else KlangWorkbench.Bottom(
+            bottom = if (!withBottom) otherPageBottom.takeIf { withOtherPage } else KlangWorkbench.Bottom(
                 title = "Help",
                 icon = { question_circle },
                 tabs = listOf(
@@ -607,7 +606,7 @@ class KlangWorkbenchSpec : StringSpec({
         }
     }
 
-    "the bottom panel flying in goes with its page; pinned it comes back with the next page that has one" {
+    "with no bottom panel in the props, one flying in closes; pinned it comes back with the next panel" {
         ChangingHost.reset()
 
         try {
@@ -641,7 +640,7 @@ class KlangWorkbenchSpec : StringSpec({
         }
     }
 
-    "a panel there on every page never opens by itself: closed where another page's was open, open at its own tab once opened" {
+    "from one page's panel to the next it stays as it was, open or closed; a tab the next lacks shows its first (KLANG-00409)" {
         ChangingHost.reset()
 
         try {
@@ -651,65 +650,46 @@ class KlangWorkbenchSpec : StringSpec({
 
                 fun panel() = r.q(".${styles.workbenchBottomPinned}, .${styles.workbenchBottomFloating}")
 
-                // The page's own panel pinned open, as the song page's help is on a first visit
+                fun toPage(other: Boolean) {
+                    host.withBottom = !other
+                    host.withOtherPage = other
+                }
+
+                // Flying in, at the second tab
+                r.toggle("Help").click()
+                eventually { panel() shouldNotBe null }
+                panel()!!.q(".${styles.toolWindowTab}:nth-child(2)")!!.click()
+                eventually { panel()?.q("[role=region]")?.textContent shouldBe "TERMS BODY" }
+
+                toPage(other = true)
+
+                withClue("on the next page it stays open, at its first tab: the one chosen is not there") {
+                    eventually { panel()?.q("[role=region]")?.textContent shouldBe "MIDI BODY" }
+                    r.q(".${styles.workbenchBottomFloating}") shouldNotBe null
+                }
+
+                toPage(other = false)
+
+                withClue("back, the tab chosen shows again") {
+                    eventually { panel()?.q("[role=region]")?.textContent shouldBe "TERMS BODY" }
+                }
+
+                r.toggle("Help").click()
+                eventually { panel() shouldBe null }
+                toPage(other = true)
+                delay(50)
+
+                withClue("closed, it stays closed: a page never opens it") { panel() shouldBe null }
+
                 r.toggle("Help").click()
                 eventually { panel() shouldNotBe null }
                 r.q(".${styles.workbenchBottomFloating} button[aria-label='Pin under the editor']")!!.click()
                 eventually { r.q(".${styles.workbenchBottomPinned}") shouldNotBe null }
+                toPage(other = false)
 
-                host.withBottom = false
-                host.withAmbient = true
-
-                withClue("a page with only the panel there everywhere: its key, the panel closed") {
-                    eventually { r.q("[role=group] button[aria-label='MIDI']") shouldNotBe null }
-                    delay(50)
-                    panel() shouldBe null
-                }
-
-                r.toggle("MIDI").click()
-
-                withClue("opened by its key: open at its own tab") {
-                    eventually { panel()?.textContent?.contains("MIDI BODY") shouldBe true }
-                }
-
-                // Unpinned, it flies in; the page's own panel flying in closes on the way to it, as to none
-                host.withBottom = true
-                host.withAmbient = false
-                eventually { panel()?.textContent?.contains("HELP BODY") shouldBe true }
-                r.q(".${styles.workbenchBottomPinned} button[aria-label='Pin under the editor']")!!.click()
-                eventually { r.q(".${styles.workbenchBottomFloating}") shouldNotBe null }
-
-                host.withBottom = false
-                host.withAmbient = true
-
-                withClue("a panel flying in goes with its page, also to the one there everywhere") {
-                    eventually { panel() shouldBe null }
-                }
-
-                host.withBottom = true
-                host.withAmbient = false
-                delay(50)
-
-                withClue("back on a page with its own panel: the panel that flew in is gone, not waiting") {
-                    panel() shouldBe null
-                }
-
-                // Opened between two pages that have only the panel there everywhere, it stays: a redraw is no page
-                host.withBottom = false
-                host.withAmbient = true
-                eventually { r.q("[role=group] button[aria-label='MIDI']") shouldNotBe null }
-                r.toggle("MIDI").click()
-                eventually { panel()?.textContent?.contains("MIDI BODY") shouldBe true }
-                host.withDocs = !host.withDocs
-                delay(50)
-
-                withClue("a redraw keeps it open") { panel()?.textContent?.contains("MIDI BODY") shouldBe true }
-
-                host.withBottom = true
-                host.withAmbient = false
-
-                withClue("flying in, it goes with it on the way to a page's own panel too") {
-                    eventually { panel() shouldBe null }
+                withClue("pinned, it stays pinned and open") {
+                    eventually { panel()?.q("[role=region]")?.textContent shouldBe "TERMS BODY" }
+                    r.q(".${styles.workbenchBottomPinned}") shouldNotBe null
                 }
             }
         } finally {

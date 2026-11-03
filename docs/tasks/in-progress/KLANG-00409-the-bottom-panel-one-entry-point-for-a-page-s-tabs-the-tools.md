@@ -1,6 +1,8 @@
 # KLANG-00409: The bottom panel: one entry point for a page's tabs, the tools on every page owned by the layout
 
-> **Status (2026-11-03): NOT SCHEDULED.** Asked for by the maintainer; a design proposal, its decisions open.
+> **Status (2026-11-03): IN PROGRESS.** Steps 1 to 5 built, reviewed and mutation-checked (the maintainer: "work on
+> the central tool window registration"; D1 to D5 taken as proposed, D3 with one change, below). Waits for the
+> maintainer's look at the panel across pages.
 
 ## Why this exists
 
@@ -84,7 +86,10 @@ A page that adds nothing writes nothing: it gets the app's tabs.
 - **D3: Does the panel open with a page?** Today a page's panel reopens with the page when it was open, and the
   "Tools" panel never opens by itself. With one panel on every page, proposal: it stays as you left it, open or
   closed, across pages; a page never opens it on its own. When it is open on a tab that the next page does not have,
-  it shows the first of the app's tabs.
+  it shows the first of the app's tabs. **Built (2026-11-03) with one change:** it shows the next page's first tab
+  (its own first, the Quick help on a help page; the Visuals where a page has none), the tab chosen is kept, and back
+  on a page that has it, it shows again. Flying in or pinned alike: only a workbench with no panel at all still
+  closes one flying in.
 - **D4: Order.** Proposal: the page's tabs first, then Visuals, MIDI, Console. Alternative: the app's tabs first, so
   they never move.
 - **D5: Tool windows and the column.** Proposal: through the same helper (`column`, `tool`), as above, so a page has
@@ -116,3 +121,14 @@ A page that adds nothing writes nothing: it gets the app's tabs.
 
 - 2026-11-03: created. Fixed at once beforehand, outside this ticket: the panel's key wears the toolbox on every page
   (`BottomTools.ICON`, the maintainer: "should always be the same, the toolbox icon").
+- 2026-11-03: IN PROGRESS. The maintainer: "work on the central tool window registration"; D1 to D5 taken as
+  proposed. The same day, before it: the key's icon became the tools the song page had (the maintainer: "i was wrong
+  please replace it with the other 'tools' icon that we already had on the song page"), commit f2e8961a5.
+- 2026-11-03: steps 1 to 5 built. `PageWorkbench` (`layouts/`) with its spec; `WorkbenchSlots.bottomTabs`;
+  `BottomTools.with(pageTabs, unseenErrors)` builds the one panel ("Tools", the tools icon, the walkthrough's step,
+  the page's tabs, then Visuals, MIDI, Console); `visuals/VisualsTab.kt`; `QuickHelpPanel.tabs()`; the song page, a
+  tutorial and the docs page each one `PageWorkbench` call; `KlangWorkbench.Bottom.ambient` gone, D3 in
+  `KlangWorkbenchSpec`.
+- 2026-11-03: review round 1 (level 1): no BLOCKER or MAJOR; its MINORs and NITs applied in one batch (braces in
+  `PageWorkbench`, each slot's guard and the Visuals tab's walkthrough step under test, comments and two tickets,
+  KLANG-00389 and KLANG-00402, pointed here). Mutation-checked: 11 mutants, 11 killed for the expected reason.

@@ -15,6 +15,7 @@ import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldNotContain
 import io.peekandpoke.klang.KlangGuiDance
 import io.peekandpoke.klang.Nav
+import io.peekandpoke.klang.comp.QuickHelpPanel
 import io.peekandpoke.klang.comp.RouterWithTransitions
 import io.peekandpoke.klang.layouts.WorkbenchSlots
 import io.peekandpoke.klang.pages.docs.tutorials.LearnSearch
@@ -504,13 +505,13 @@ class LearnPagesSpec : StringSpec({
         }
     }
 
-    "a tutorial puts its column and the help panel into the workbench; the overview takes them back out" {
+    "a tutorial puts its column and the help tabs into the workbench; the overview takes them back out" {
         withLearn { root ->
             go("/${path[0].slug}")
 
             eventually {
                 WorkbenchSlots.column() shouldNotBe null
-                WorkbenchSlots.bottom() shouldNotBe null
+                WorkbenchSlots.bottomTabs().map { it.id } shouldBe listOf(QuickHelpPanel.TAB_QUICK_HELP, QuickHelpPanel.TAB_LEXIKON)
             }
 
             go()
@@ -520,7 +521,7 @@ class LearnPagesSpec : StringSpec({
             delay(600)
 
             WorkbenchSlots.column() shouldBe null
-            WorkbenchSlots.bottom() shouldBe null
+            WorkbenchSlots.bottomTabs() shouldBe emptyList()
         }
     }
 

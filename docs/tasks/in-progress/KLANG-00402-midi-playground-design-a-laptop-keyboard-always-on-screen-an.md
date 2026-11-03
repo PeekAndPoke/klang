@@ -407,8 +407,9 @@ as proposed"). D7 was the maintainer's own proposal.
    **4b done (2026-11-02):** `MidiTool`, a tab of every page's bottom panel (`MidiTool.with`): after the page's own
    tabs, or, on a page with none, a panel of its own that is there on every page and never opens by itself
    (`KlangWorkbench.Bottom.ambient`, the maintainer's choice: "closed until opened"; shown open only at its own tab, a
-   page's own panel flying in closes on the way to it). A line (what plays, the sustain, the notes sounding, a panic
-   key; before the Motor runs, a key that starts it), the KeyLab's drawing while one is connected, the laptop keys. The
+   page's own panel flying in closes on the way to it; since KLANG-00409 one panel on every page, `ambient` gone).
+   A line (what plays, the sustain, the notes sounding, a panic key; before the Motor runs, a key that starts it), the
+   KeyLab's drawing while one is connected, the laptop keys. The
    drawings are shared with the page (`DeviceView`, `LaptopKeysView`); the letters and the keybed's alignment moved to
    `MidiSettings`. The devices are asked for apart from the rig's start: the MIDI page asks; the tool and the app's
    start hook them only where MIDI was granted before (the Permissions API), else the tool offers "Connect MIDI

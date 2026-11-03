@@ -10,7 +10,7 @@ import io.peekandpoke.klang.comp.PlayableCodeExample
 import io.peekandpoke.klang.comp.QuickHelpPanel
 import io.peekandpoke.klang.comp.lexikonSlugOf
 import io.peekandpoke.klang.comp.toAdsrSignals
-import io.peekandpoke.klang.layouts.WorkbenchSlots
+import io.peekandpoke.klang.layouts.PageWorkbench
 import io.peekandpoke.klang.pages.docs.lexikon.lexikonAutoLinks
 import io.peekandpoke.klang.spine.Recents
 import io.peekandpoke.klang.storage.TutorialStorage
@@ -32,7 +32,6 @@ import io.peekandpoke.ultra.streams.ops.distinct
 import io.peekandpoke.ultra.streams.ops.map
 import kotlinx.css.CssBuilder
 import kotlinx.html.ButtonType
-import kotlinx.html.DIV
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.button
@@ -99,42 +98,16 @@ class TutorialPage(ctx: NoProps) : PureComponent(ctx) {
 
     private val helpPanel = QuickHelpPanel(pageKey = "tutorial-${++pagesDrawn}")
 
-    /** The column this page put into the workbench; null while it put none. */
-    private var slotColumn: (DIV.() -> Unit)? = null
-
     private fun currentTutorial(): Tutorial? = allTutorials.find { it.slug == currentRoute.matchedRoute["slug"] }
 
-    init {
-        lifecycle {
-            onMount { fillWorkbench() }
-            onUnmount { emptyWorkbench() }
-        }
+    /** The lessons in the workbench's column, the help in the bottom panel (KLANG-00349, KLANG-00409). */
+    @Suppress("unused")
+    private val workbench = PageWorkbench(this) {
+        column { TutorialColumn() }
+        bottomTabs(helpPanel.tabs())
     }
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
-
-    private fun fillWorkbench() {
-        // The copy of the page fading out after a change of page is inert: it must neither fill nor empty the slots,
-        // or its cleanup would take the next page's column away (as the song page guards it)
-        if (dom?.closest("[inert]") != null) {
-            return
-        }
-
-        val column: DIV.() -> Unit = { TutorialColumn() }
-
-        slotColumn = column
-        WorkbenchSlots.column(column)
-        WorkbenchSlots.bottom(helpPanel.bottom())
-    }
-
-    /** Empties the workbench's slots, unless another page has filled them since. */
-    private fun emptyWorkbench() {
-        if (slotColumn != null && WorkbenchSlots.column() === slotColumn) {
-            WorkbenchSlots.clear()
-        }
-
-        slotColumn = null
-    }
 
     /** A plain click on a Lexikon link in the prose opens it in the Lexikon tab; with a key held, the link's own way. */
     private fun openLexikonInPlace(event: Event) {

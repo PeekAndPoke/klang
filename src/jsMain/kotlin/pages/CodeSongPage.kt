@@ -17,7 +17,7 @@ import io.peekandpoke.klang.comp.SongSettings
 import io.peekandpoke.klang.comp.transportCentred
 import io.peekandpoke.klang.comp.transportGrid
 import io.peekandpoke.klang.comp.transportSpanTwo
-import io.peekandpoke.klang.layouts.WorkbenchSlots
+import io.peekandpoke.klang.layouts.PageWorkbench
 import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.spine.KlangCodePlaybackCtrl
 import io.peekandpoke.klang.spine.Playbacks
@@ -34,7 +34,6 @@ import io.peekandpoke.klang.ui.comp.KlangFinish
 import io.peekandpoke.klang.ui.comp.KlangScreen
 import io.peekandpoke.klang.ui.comp.KlangSpinner
 import io.peekandpoke.klang.ui.comp.KlangValueKnob
-import io.peekandpoke.klang.ui.comp.KlangWorkbench
 import io.peekandpoke.klang.ui.comp.KlangYesNoModal
 import io.peekandpoke.klang.version
 import io.peekandpoke.klang.workshop.keys.OnKey
@@ -159,9 +158,6 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         ctrl.reemitVoiceSignals()
     }
 
-    /** The column's content this page put into the workbench; null while it put none. */
-    private var slotColumn: (DIV.() -> Unit)? = null
-
     /** This page's own key for its parts in the workbench: two pages never share one, even on one song id ("new"). */
     private val pageKey = ++pagesDrawn
 
@@ -171,6 +167,25 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         // The Sprudel tab's tool works through the editor, which knows the code and the playback (KLANG-00374)
         toolContext = { site -> codeEditorRef.getOrNull()?.liveToolContext(site) },
     )
+
+    /**
+     * The song in the workbench's column, the page's Settings, and its help in the bottom panel (KLANG-00349,
+     * KLANG-00409): under the editor, wide enough for signatures and parameters (the maintainer, 2026-10-27: the tabs
+     * in the panel's header, a tab's own options in its content).
+     */
+    @Suppress("unused")
+    private val workbench = PageWorkbench(this) {
+        // Keyed by the page: from one song straight to another (a history jump), the workbench draws them anew rather
+        // than handing this page's parts to the next one, still listening to this page's streams
+        column {
+            div {
+                key = "song-column-$pageKey"
+                SongColumn(ctrl = ctrl, builtIn = builtIn, onReset = { askToReset() })
+            }
+        }
+        tool(id = "settings", title = "Settings", icon = { sliders_horizontal }) { SongSettings() }
+        bottomTabs(helpPanel.tabs())
+    }
 
     // On rpm changes: persist to localStorage AND cancel highlights to avoid stale timing across tempo shifts.
     @Suppress("unused")
@@ -208,14 +223,12 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         lifecycle {
             onMount {
                 codeEditorRef { it.setMaxHighlightsPerEvent(highlightPerEvent) }
-                fillWorkbench()
                 // The visuals play this song, as it stands in the editor
                 withdrawSong = VisualState.offerSong(openSong)
             }
             onUnmount {
                 // The song plays on: leaving the page stops nothing (KLANG-00406)
                 hideCtrl()
-                emptyWorkbench()
 
                 withdrawSong?.invoke()
                 withdrawSong = null
@@ -246,48 +259,9 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     /** Takes the song back from the visuals: when the page leaves. */
     private var withdrawSong: (() -> Unit)? = null
 
-    /**
-     * The song in the workbench's column, and the page's tool windows (KLANG-00349). A copy of the page that the
-     * router draws fading out (inside its inert layer) leaves the workbench alone: the page just opened owns it.
-     */
-    private fun fillWorkbench() {
-        if (dom?.closest("[inert]") != null) {
-            return
-        }
-
-        // Keyed by the page: from one song straight to another (a history jump), the workbench draws them anew
-        // rather than handing this page's parts to the next one, still listening to this page's streams
-        val column: DIV.() -> Unit = {
-            div {
-                key = "song-column-$pageKey"
-                SongColumn(ctrl = ctrl, builtIn = builtIn, onReset = { askToReset() })
-            }
-        }
-
-        slotColumn = column
-        WorkbenchSlots.column(column)
-        WorkbenchSlots.tools(
-            listOf(
-                KlangWorkbench.Tool(id = "settings", title = "Settings", icon = { sliders_horizontal }) { SongSettings() },
-            )
-        )
-        // Under the editor, wide enough for signatures and parameters: the quick help, and the Lexikon beside it
-        // (the maintainer, 2026-10-27: the tabs in the panel's header, a tab's own options in its content)
-        WorkbenchSlots.bottom(helpPanel.bottom())
-    }
-
     /** Puts the cursor in the song's code: a use clicked in the Quick help's "Used on" list. */
     private fun jumpTo(pos: Int) {
         codeEditorRef { it.jumpTo(pos) }
-    }
-
-    /** Empties the workbench's slots, unless another page has filled them since. */
-    private fun emptyWorkbench() {
-        if (slotColumn != null && WorkbenchSlots.column() === slotColumn) {
-            WorkbenchSlots.clear()
-        }
-
-        slotColumn = null
     }
 
     /** Back to the built-in song's code, title and rpm; a playing song goes on, updated to the original (the maintainer). */

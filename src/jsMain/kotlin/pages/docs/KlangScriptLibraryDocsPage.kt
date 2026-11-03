@@ -10,7 +10,7 @@ import io.peekandpoke.klang.comp.KlangScriptReplComp
 import io.peekandpoke.klang.comp.PlayableCodeExample
 import io.peekandpoke.klang.comp.QuickHelpPanel
 import io.peekandpoke.klang.comp.klangScopeLabel
-import io.peekandpoke.klang.layouts.WorkbenchSlots
+import io.peekandpoke.klang.layouts.PageWorkbench
 import io.peekandpoke.klang.pages.docs.lexikon.lexikonAutoLinks
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
@@ -24,7 +24,6 @@ import io.peekandpoke.klang.script.types.KlangMutability
 import io.peekandpoke.klang.script.types.KlangProperty
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
-import io.peekandpoke.klang.ui.comp.KlangWorkbench
 import io.peekandpoke.klang.ui.comp.MarkdownDisplay
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.components.Component
@@ -121,35 +120,10 @@ class KlangScriptLibraryDocsPage(ctx: Ctx<Props>) : Component<KlangScriptLibrary
      */
     private val helpPanel = QuickHelpPanel(pageKey = "docs-${++pagesDrawn}")
 
-    /** The bottom panel this page put into the workbench; null while it put none. */
-    private var slotBottom: KlangWorkbench.Bottom? = null
-
-    init {
-        lifecycle {
-            onMount { fillWorkbench() }
-            onUnmount { emptyWorkbench() }
-        }
-    }
-
-    private fun fillWorkbench() {
-        // The copy fading out after a change of page is inert: it neither fills nor empties (as the song page guards it)
-        if (dom?.closest("[inert]") != null) {
-            return
-        }
-
-        val bottom = helpPanel.bottom()
-
-        slotBottom = bottom
-        WorkbenchSlots.bottom(bottom)
-    }
-
-    /** Takes the panel back out, unless another page has put its own since. */
-    private fun emptyWorkbench() {
-        if (slotBottom != null && WorkbenchSlots.bottom() === slotBottom) {
-            WorkbenchSlots.bottom(null)
-        }
-
-        slotBottom = null
+    /** The help in the bottom panel (KLANG-00409). */
+    @Suppress("unused")
+    private val workbench = PageWorkbench(this) {
+        bottomTabs(helpPanel.tabs())
     }
 
     //  REGISTRY  ///////////////////////////////////////////////////////////////////////////////////////////////////

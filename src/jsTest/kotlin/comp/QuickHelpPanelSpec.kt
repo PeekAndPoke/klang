@@ -35,7 +35,8 @@ private class PanelHost(ctx: Ctx<QuickHelpPanel>) : Component<QuickHelpPanel>(ct
             column = { span { +"COLUMN" } },
             motor = { _ -> span { +"MOTOR" } },
             content = { span { +"CONTENT" } },
-            bottom = props.bottom(),
+            // The panel the layout builds around the page's tabs (KLANG-00409); its own tabs only, here
+            bottom = KlangWorkbench.Bottom(title = "Tools", icon = { tools }, tabs = props.tabs()),
         ).track(WorkbenchSlots.workbench)
     }
 }

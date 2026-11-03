@@ -41,7 +41,7 @@ work.
 |---|---|---|---|
 | `Player` (`player.kt`) | engine status, the player, diagnostics, samples, output volume, `nowPlaying` | `klang-master-volume` | see "Player" below |
 | `KlangGuiDance` | the walkthroughs (`dance`, `lit`), a mute timer | `klang-gui-dance-*` | written from 9 files, read from 9; passed as a prop to `KlangWorkbench` too |
-| `WorkbenchSlots` | the workbench's column, tools, bottom panel; a ref to the workbench | no | pages fill and clear their own entries; the fading copy of a page is kept out by an `[inert]` check |
+| `WorkbenchSlots` | the workbench's column, tools, a page's bottom tabs; a ref to the workbench | no | pages fill and empty their own entries through `PageWorkbench` (KLANG-00409), which keeps the fading copy of a page out by an `[inert]` check |
 | `VisualsScreen` companion | `shown`, `open`, `klangampTiles`, `rainSpeed` | no | `open` read directly by the editor (highlights pause) and the layout (Motor pause) |
 | `VisualState` (Spine) | the lamp and its light, the song open on a page | lamp seed via `SeedStorage` | the light runs only while subscribed and while the UI does not rest |
 | `MotorReadings` | **factories** for the smoothed cylinders, heat, voices, signal | no | each caller builds its own chains (see "Derived twice") |

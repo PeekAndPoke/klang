@@ -76,11 +76,10 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
     /** The build, shown in the Motor tool window (the Motor's title, which carried it, went up the strip). */
     private val versionInfo by subscribingTo(version)
 
-    /** The page's column and its own tool windows (KLANG-00349), when it puts any into the workbench. */
+    /** The page's column, its own tool windows and bottom panel tabs (KLANG-00349, KLANG-00409), when it gives any. */
     private val pageColumn by subscribingTo(WorkbenchSlots.column)
     private val pageTools by subscribingTo(WorkbenchSlots.tools)
-
-    private val pageBottom by subscribingTo(WorkbenchSlots.bottom)
+    private val pageBottomTabs by subscribingTo(WorkbenchSlots.bottomTabs)
 
     /** The errors logged that the Console has not shown yet: the bottom panel's key counts them (KLANG-00407). */
     private val unseenErrors by subscribingTo(ConsoleLog.state.map { it.unseenErrors }.distinct())
@@ -166,9 +165,9 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
                         motorSection(title = "Build") { renderBuild() }
                     },
                 ) + pageTools,
-                // The MIDI tool (KLANG-00402, step 4) and the Console (KLANG-00407) beside the page's own tabs, on
-                // every page
-                bottom = BottomTools.with(page = pageBottom, unseenErrors = unseenErrors),
+                // One panel on every page: the page's own tabs, then the Visuals, the MIDI tool and the Console
+                // (KLANG-00409)
+                bottom = BottomTools.with(pageTabs = pageBottomTabs, unseenErrors = unseenErrors),
                 layout = keptLayout,
                 onLayout = { WorkbenchLayoutStorage.save(it) },
                 // The walkthroughs' beacons on the bottom panel's key and its tabs

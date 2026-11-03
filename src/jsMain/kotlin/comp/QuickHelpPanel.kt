@@ -5,16 +5,11 @@
 
 package io.peekandpoke.klang.comp
 
-import io.peekandpoke.klang.KlangGuiDance
-import io.peekandpoke.klang.layouts.BottomTools
 import io.peekandpoke.klang.layouts.WorkbenchSlots
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.codemirror.ToolCallSite
-import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangKeyHint
 import io.peekandpoke.klang.ui.comp.KlangWorkbench
-import io.peekandpoke.klang.visuals.VisualPreview
-import io.peekandpoke.klang.visuals.VisualsScreen
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.streams.StreamSource
@@ -39,7 +34,6 @@ class QuickHelpPanel(
         const val TAB_QUICK_HELP = "quick-help"
         const val TAB_LEXIKON = "lexikon"
         const val TAB_SPRUDEL = "sprudel"
-        const val TAB_VISUALS = "visuals"
     }
 
     /** The call around the editor's cursor whose tool the Sprudel tab shows; null outside one. */
@@ -70,100 +64,46 @@ class QuickHelpPanel(
         put("padding-bottom", "16px")
     }
 
-    /** The panel for the workbench's bottom slot. */
-    fun bottom(): KlangWorkbench.Bottom = KlangWorkbench.Bottom(
-        title = "Help and tools",
-        // The layout puts its own icon on every page's panel (BottomTools.ICON); this one is replaced
-        icon = BottomTools.ICON,
-        // Its key, the Visuals walkthrough's first step
-        beaconStep = KlangGuiDance.BOTTOM_PANEL,
-        tabs = listOf(
-            KlangWorkbench.Tab(id = TAB_QUICK_HELP, title = "Quick help") {
+    /**
+     * The page's tabs in the bottom panel (KLANG-00409): the Quick help, the Lexikon and, with a [toolContext], Sprudel.
+     * The panel itself, with the app's tabs after these, is the layout's (`BottomTools`).
+     */
+    fun tabs(): List<KlangWorkbench.Tab> = listOf(
+        KlangWorkbench.Tab(id = TAB_QUICK_HELP, title = "Quick help") {
+            div {
+                key = "help-$pageKey"
+                // The tab fills the panel's height, so an empty one's hint sits in its middle; a long help ends with
+                // the panel's own air below it
+                css { fillsPanel() }
+                HelpWindow(
+                    entry = help,
+                    onJump = { pos -> jump(pos) },
+                    options = { renderOptions() },
+                    onLexikon = { slug -> showLexikon(slug) },
+                )
+            }
+        },
+        KlangWorkbench.Tab(id = TAB_LEXIKON, title = "Lexikon") {
+            div {
+                key = "lexikon-$pageKey"
+                css {
+                    // The ground an empty Lexikon's hint is centred on
+                    put("position", "relative")
+                    put("height", "100%")
+                }
+                LexikonPanel(slug = lexikonSlug, onPick = { lexikonSlug(it) })
+            }
+        },
+    ) + listOfNotNull(
+        toolContext?.let { contextOf ->
+            KlangWorkbench.Tab(id = TAB_SPRUDEL, title = "Sprudel") {
                 div {
-                    key = "help-$pageKey"
-                    // The tab fills the panel's height, so an empty one's hint sits in its middle; a long help ends with
-                    // the panel's own air below it
+                    key = "sprudel-$pageKey"
                     css { fillsPanel() }
-                    HelpWindow(
-                        entry = help,
-                        onJump = { pos -> jump(pos) },
-                        options = { renderOptions() },
-                        onLexikon = { slug -> showLexikon(slug) },
-                    )
+                    SprudelToolTab(site = toolCall, contextOf = contextOf)
                 }
-            },
-            KlangWorkbench.Tab(id = TAB_LEXIKON, title = "Lexikon") {
-                div {
-                    key = "lexikon-$pageKey"
-                    css {
-                        // The ground an empty Lexikon's hint is centred on
-                        put("position", "relative")
-                        put("height", "100%")
-                    }
-                    LexikonPanel(slug = lexikonSlug, onPick = { lexikonSlug(it) })
-                }
-            },
-        ) + listOfNotNull(
-            toolContext?.let { contextOf ->
-                KlangWorkbench.Tab(id = TAB_SPRUDEL, title = "Sprudel") {
-                    div {
-                        key = "sprudel-$pageKey"
-                        css { fillsPanel() }
-                        SprudelToolTab(site = toolCall, contextOf = contextOf)
-                    }
-                }
-            },
-        ) + listOf(
-            // Visuals over the whole window (the maintainer, 2026-10-29), a card each; after Sprudel
-            KlangWorkbench.Tab(id = TAB_VISUALS, title = "Visuals", beaconStep = KlangGuiDance.VISUALS_TAB) {
-                div {
-                    key = "visuals-$pageKey"
-                    css {
-                        put("display", "grid")
-                        put("grid-template-columns", "repeat(auto-fill, minmax(220px, 1fr))")
-                        put("gap", "10px")
-                    }
-
-                    // Klang Amp tiles is the Visuals walkthrough's third step: its card wears the beacon while lit
-                    val guidedLit = KlangGuiDance.dance.lit() == KlangGuiDance.VISUAL_KLANGAMP_TILES
-
-                    for (visual in VisualsScreen.Visual.entries) {
-                        val guided = visual == VisualsScreen.Visual.KlangampTiles
-
-                        KlangButton(
-                            onClick = {
-                                if (guided) {
-                                    KlangGuiDance.dance.used(KlangGuiDance.VISUAL_KLANGAMP_TILES)
-                                }
-
-                                VisualsScreen.shown(visual)
-                            },
-                            surface = KlangButton.Surface.Domed,
-                            shape = KlangButton.Shape.Tile,
-                            beacon = guided && guidedLit,
-                        ) {
-                            // A small picture of the visual (the maintainer, 2026-10-29: "Add a preview to the cards")
-                            VisualPreview(visual)
-
-                            div {
-                                css {
-                                    put("font-size", "14px")
-                                    put("font-weight", "700")
-                                }
-                                +visual.title
-                            }
-                            div {
-                                css {
-                                    put("font-size", "12px")
-                                    put("opacity", "0.8")
-                                }
-                                +visual.description
-                            }
-                        }
-                    }
-                }
-            },
-        ),
+            }
+        },
     )
 
     /**

@@ -9,57 +9,46 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeSameInstanceAs
+import io.peekandpoke.klang.KlangGuiDance
 import io.peekandpoke.klang.comp.ConsoleTool
 import io.peekandpoke.klang.midi.MidiTool
 import io.peekandpoke.klang.ui.comp.KlangWorkbench
+import io.peekandpoke.klang.visuals.VisualsTab
 
 /**
- * The tools on every page (KLANG-00402, step 4; KLANG-00407): the MIDI tool and the Console, tabs of the page's bottom
- * panel or a panel of their own, its key counting the Console's unseen errors.
+ * The bottom panel, the same on every page (KLANG-00409): a page's own tabs, then the app's (the Visuals, the MIDI tool
+ * of KLANG-00402, the Console of KLANG-00407), its key counting the Console's unseen errors.
  */
 class BottomToolsSpec : StringSpec({
 
-    val tools = listOf(MidiTool.TAB_ID, ConsoleTool.TAB_ID)
+    val appTabs = listOf(VisualsTab.TAB_ID, MidiTool.TAB_ID, ConsoleTool.TAB_ID)
 
-    "a page with no bottom panel gets the tools alone, closed until opened; a page's own panel gets them after its own tabs" {
-        val alone = BottomTools.with(page = null, unseenErrors = 0)
-
-        withClue("no panel of the page's own: the tools'") {
-            alone.title shouldBe BottomTools.TITLE
-            alone.tabs.map { it.id } shouldBe tools
-            alone.ambient shouldBe true
-            alone.icon shouldBeSameInstanceAs BottomTools.ICON
-        }
-
+    "one panel on every page: the page's tabs first, then the app's; one title, one icon, the walkthroughs' steps on its key and the Visuals" {
         val help = KlangWorkbench.Tab(id = "help", title = "Help") {}
-        val page = KlangWorkbench.Bottom(title = "Help", icon = { question_circle }, tabs = listOf(help))
-        val withTools = BottomTools.with(page = page, unseenErrors = 0)
 
-        withClue("the page's panel, its title and its tabs kept, the tools last; its key the tools, as everywhere") {
-            withTools.title shouldBe "Help"
-            withTools.icon shouldBeSameInstanceAs BottomTools.ICON
-            withTools.ambient shouldBe false
-            withTools.tabs.map { it.id } shouldBe listOf("help") + tools
+        listOf(emptyList(), listOf(help)).forEach { pageTabs ->
+            withClue("the page's tabs: ${pageTabs.map { it.id }}") {
+                val panel = BottomTools.with(pageTabs = pageTabs, unseenErrors = 0)
+
+                panel.tabs.map { it.id } shouldBe pageTabs.map { it.id } + appTabs
+                panel.title shouldBe BottomTools.TITLE
+                panel.icon shouldBeSameInstanceAs BottomTools.ICON
+                panel.beaconStep shouldBe KlangGuiDance.BOTTOM_PANEL
+                panel.tabs.first { it.id == VisualsTab.TAB_ID }.beaconStep shouldBe KlangGuiDance.VISUALS_TAB
+            }
         }
     }
 
-    "the unseen errors on the panel's key and in the Console's tab, on either panel" {
-        val help = KlangWorkbench.Tab(id = "help", title = "Help") {}
-        val page = KlangWorkbench.Bottom(title = "Help", icon = { question_circle }, tabs = listOf(help))
+    "the unseen errors on the panel's key and in the Console's tab" {
+        val counted = BottomTools.with(pageTabs = emptyList(), unseenErrors = 3)
 
-        listOf(null, page).forEach { own ->
-            withClue("page panel: ${own != null}") {
-                val counted = BottomTools.with(page = own, unseenErrors = 3)
+        counted.count shouldBe 3
+        counted.countTab shouldBe ConsoleTool.TAB_ID
+        counted.tabs.first { it.id == ConsoleTool.TAB_ID }.count shouldBe 3
 
-                counted.count shouldBe 3
-                counted.countTab shouldBe ConsoleTool.TAB_ID
-                counted.tabs.first { it.id == ConsoleTool.TAB_ID }.count shouldBe 3
+        val none = BottomTools.with(pageTabs = emptyList(), unseenErrors = 0)
 
-                val none = BottomTools.with(page = own, unseenErrors = 0)
-
-                none.count shouldBe 0
-                none.tabs.first { it.id == ConsoleTool.TAB_ID }.count shouldBe 0
-            }
-        }
+        none.count shouldBe 0
+        none.tabs.first { it.id == ConsoleTool.TAB_ID }.count shouldBe 0
     }
 })
