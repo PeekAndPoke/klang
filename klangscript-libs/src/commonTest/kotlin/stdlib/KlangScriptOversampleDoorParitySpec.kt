@@ -9,11 +9,16 @@ import io.kotest.assertions.throwables.shouldThrowAny
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
+import io.peekandpoke.klang.audio_bridge.DistortionShapes
 import io.peekandpoke.klang.audio_bridge.Ign
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.KatalystBuilder
+import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.distort
 import io.peekandpoke.klang.audio_bridge.highpass
 import io.peekandpoke.klang.audio_bridge.ign
+import io.peekandpoke.klang.audio_bridge.kat
 import io.peekandpoke.klang.audio_bridge.oversampleAtLeast
 import io.peekandpoke.klang.audio_bridge.oversampleBy
 import io.peekandpoke.klang.audio_bridge.plus
@@ -21,10 +26,12 @@ import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
 
 /**
- * The Ignitor's oversampling regions on both doors (KLANG-00214 (oversampling regions) step 1): `oversampleBy(factor,
- * body)` and `oversampleAtLeast(factor, body)` build their node with the signal as `inner`, the body applied to
- * [IgnitorDsl.RegionInput] and the factor as written, the same value from the script door and the Kotlin door. What a
- * region does is rendered in `OversampleRegionSpec` (audio_be); this spec pins the shape the doors write.
+ * The oversampling regions on both doors (KLANG-00214 (oversampling regions)). The Ignitor's (step 1):
+ * `oversampleBy(factor, body)` and `oversampleAtLeast(factor, body)` build their node with the signal as `inner`, the
+ * body applied to [IgnitorDsl.RegionInput] and the factor as written. The Katalyst's (step 3a): the same two words
+ * append a stage holding the factor and the body's stages, the body given an empty builder. Each the same value from
+ * the script door and the Kotlin door. What a region does is rendered in `OversampleRegionSpec` and
+ * `KatalystRegionEffectSpec` (audio_be); this spec pins the shape the doors write.
  */
 class KlangScriptOversampleDoorParitySpec : StringSpec({
 
@@ -98,5 +105,43 @@ class KlangScriptOversampleDoorParitySpec : StringSpec({
     "a body that returns nothing or something else is named" {
         errorOf { ignitor("Ignitor.saw().oversampleBy(4, y => { y.highpass(100) })") } shouldContain "body 1 of Ignitor oversampleBy returned nothing"
         errorOf { ignitor("Ignitor.saw().oversampleAtLeast(4, y => 3)") } shouldContain "body 1 of Ignitor oversampleAtLeast"
+    }
+
+    // ── The Katalyst's regions (step 3a) ────────────────────────────────────────────────────────
+
+    fun katalyst(code: String): KatalystDsl {
+        val engine = klangScript()
+        engine.execute("""import * from "stdlib"""")
+        return engine.execute(code).toObjectOrNull<KatalystDsl>()!!
+    }
+
+    "Katalyst oversampleBy: the stage written out, the body's stages from an empty builder, from both doors" {
+        val expected = KatalystDsl.of(
+            KatalystStageDsl.Gain(gain = 0.5.kat),
+            KatalystStageDsl.OversampleBy(
+                factor = 4,
+                body = KatalystDsl.of(KatalystStageDsl.Distort(amount = 0.3.kat, shape = DistortionShapes.indexOf("tube").toInt())),
+            ),
+        )
+
+        katalyst("""Katalyst(k => k.gain(0.5).oversampleBy(4, r => r.distort(0.3, "tube")))""") shouldBe expected
+        KatalystBuilder().gain(0.5.kat).oversampleBy(4) { it.distort(amount = 0.3.kat, shape = "tube") }.node shouldBe expected
+    }
+
+    "Katalyst oversampleAtLeast: the floor's stage, nested in a region, from both doors" {
+        val expected = KatalystDsl.of(
+            KatalystStageDsl.OversampleBy(
+                factor = 2,
+                body = KatalystDsl.of(KatalystStageDsl.OversampleAtLeast(factor = 8, body = KatalystDsl.of(KatalystStageDsl.Gain(gain = 2.0.kat)))),
+            ),
+        )
+
+        katalyst("Katalyst(k => k.oversampleBy(2, r => r.oversampleAtLeast(8, s => s.gain(2))))") shouldBe expected
+        KatalystBuilder().oversampleBy(2) { r -> r.oversampleAtLeast(8) { it.gain(2.0.kat) } }.node shouldBe expected
+    }
+
+    "a Katalyst region's body that returns nothing or something else is named" {
+        errorOf { katalyst("Katalyst(k => k.oversampleBy(4, r => { r.gain(2) }))") } shouldContain "body 1 of Katalyst oversampleBy returned nothing"
+        errorOf { katalyst("Katalyst(k => k.oversampleAtLeast(4, r => 3))") } shouldContain "body 1 of Katalyst oversampleAtLeast"
     }
 })

@@ -315,6 +315,25 @@ data class KatalystBuilder(val node: KatalystDsl = KatalystDsl(emptyList())) {
      */
     fun bands(configure: ((KatalystBandsBuilder) -> KatalystBandsBuilder)? = null): KatalystBuilder =
         copy(node = KatalystDsl(node.stages + KatalystBandsBuilder().configured(configure).split()))
+
+    /**
+     * Runs [body]'s stages in an oversampling REGION at the incoming rate times [factor] (1x to 2x, 4x to 8x), the bus
+     * converted up once where it enters and down once at the end: `k.oversampleBy(4) { it.distort(0.5.kat).eq(...) }`.
+     * The body is given an EMPTY builder, the bus at this position, as a `parallel` branch is. [factor] is fixed with
+     * the chain, rounded down to a power of two, 1 or less is no region, and the rate stops at 16x
+     * ([KatalystStageDsl.OversampleBy]; script knob `oversampleBy`). Twin: [oversampleAtLeast].
+     */
+    fun oversampleBy(factor: Int, body: (KatalystBuilder) -> KatalystBuilder): KatalystBuilder =
+        append(KatalystStageDsl.OversampleBy(factor = factor, body = body(KatalystBuilder()).node))
+
+    /**
+     * Runs [body]'s stages in an oversampling REGION at [factor] times the base rate AT LEAST: only the missing 2x
+     * steps are taken, and at or above the floor nothing is converted ([KatalystStageDsl.OversampleAtLeast]; script
+     * knob `oversampleAtLeast`). At the head of a chain it sets the orbit's rate. [factor] and [body] as in
+     * [oversampleBy], the twin.
+     */
+    fun oversampleAtLeast(factor: Int, body: (KatalystBuilder) -> KatalystBuilder): KatalystBuilder =
+        append(KatalystStageDsl.OversampleAtLeast(factor = factor, body = body(KatalystBuilder()).node))
 }
 
 /**

@@ -92,7 +92,7 @@ class KatalystChainBuilderSpec : StringSpec({
         chain.compressor.shouldNotBeNull() shouldBeSameInstanceAs chain.pipeline[5]
     }
 
-    "a chain declares a tail exactly when it declares a reverb, a delay or a distort (the list of KatalystChain.declaresTail)" {
+    "a chain declares a tail exactly when it declares a reverb, a delay, a distort, a parallel with one or a region (the list of KatalystChain.declaresTail)" {
         // The master's "is a tail possible at all" test reads this (`MasterBus.isRinging`); it moved from the master
         // onto the chain in engine tidy-up step 13 (A2.1).
         val wet = KatalystKnobDsl.Constant(0.4)

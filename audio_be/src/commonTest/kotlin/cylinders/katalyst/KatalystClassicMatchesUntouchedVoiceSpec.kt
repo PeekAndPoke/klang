@@ -102,8 +102,10 @@ class KatalystClassicMatchesUntouchedVoiceSpec : StringSpec({
                 is KatalystStageDsl.Distort -> listOf(stage.amount)
                 is KatalystStageDsl.Eq -> emptyList()
                 is KatalystStageDsl.Gain -> listOf(stage.gain)
-                // The classic chain declares no parallel stage.
+                // The classic chain declares no parallel stage, and no region.
                 is KatalystStageDsl.Parallel -> emptyList()
+                is KatalystStageDsl.OversampleBy -> emptyList()
+                is KatalystStageDsl.OversampleAtLeast -> emptyList()
                 // Nor any arithmetic stage.
                 is KatalystStageDsl.Plus -> listOf(stage.other)
                 is KatalystStageDsl.Minus -> listOf(stage.other)

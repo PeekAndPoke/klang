@@ -707,6 +707,62 @@ internal fun KatalystBuilder.scriptParallel(vararg branches: (KatalystBuilder) -
 )
 
 /**
+ * Runs the stages in the body at a HIGHER sample rate, the incoming rate times [factor], and comes back down once at
+ * the end: the bus is converted up once where it enters, whatever the voices on it are, and the stages inside alias
+ * less. At the head of a chain the whole orbit runs at that rate.
+ *
+ * ```KlangScript
+ * // the orbit's distortion and its tone at 4x: one trip up and one down for the whole bus
+ * Katalyst(k => k.oversampleBy(4, r => r.distort(0.5, "tube").eq(e => e.band(freq = 2500, q = 1.0, db = -3.0))).reverb(0.2, 5))
+ * ```
+ *
+ * The body is a function from a builder to a builder and receives an EMPTY one, the bus at this position, as a
+ * `parallel` branch does. Inside, every stage keeps its sound: a delay its time, a reverb its room, a filter its
+ * cutoff. The factor is fixed with the chain and rounded down to a power of two (3 is 2, 6 is 4); 1 or less runs the
+ * body at the rate it is in, and the rate stops at 16x. Nested, it steps on from the rate it is in. A `distort`'s own
+ * `oversample` inside is a floor: inside a 4x region, `oversample = 2` converts nothing. For a piece that only needs a
+ * minimum rate, `oversampleAtLeast` adds nothing when the rate is already there. A `duck` inside the body is the
+ * orbit's duck, as anywhere in the chain.
+ *
+ * @param factor how many times the incoming rate: 2, 4, 8 or 16.
+ * @param body a function from a builder to a builder, given an empty one: the stages that run at the higher rate.
+ */
+@KlangScript.Function(name = "oversampleBy")
+internal fun KatalystBuilder.scriptOversampleBy(factor: Int, body: (KatalystBuilder) -> KatalystBuilder): KatalystBuilder =
+    this.oversampleBy(factor = factor, body = checkedRegionBody(door = "Katalyst oversampleBy", body = body))
+
+/**
+ * Runs the stages in the body at [factor] times the normal sample rate AT LEAST: only what is missing is added, and when
+ * the rate is already there (inside an `oversampleBy(8)`, say) nothing is converted at all. The door for a reusable
+ * piece that needs a minimum rate, and for an orbit that should run at a rate:
+ *
+ * ```KlangScript
+ * // a 4x orbit: everything on it is converted up once, distorted, and converted down once
+ * let crunchBus = k => k.oversampleAtLeast(4, r => r.distort(0.4, "tube").distort(0.3, "soft"))
+ * Katalyst(k => crunchBus(k).reverb(0.15, 4))
+ * ```
+ *
+ * The factor and the body as in `oversampleBy`: fixed with the chain, a power of two, at most 16x.
+ *
+ * @param factor the lowest rate the body runs at, times the normal rate: 2, 4, 8 or 16.
+ * @param body a function from a builder to a builder, given an empty one: the stages that run at the higher rate.
+ */
+@KlangScript.Function(name = "oversampleAtLeast")
+internal fun KatalystBuilder.scriptOversampleAtLeast(factor: Int, body: (KatalystBuilder) -> KatalystBuilder): KatalystBuilder =
+    this.oversampleAtLeast(factor = factor, body = checkedRegionBody(door = "Katalyst oversampleAtLeast", body = body))
+
+/** The body of a bus region, wrapped in its check ([checkedStage]), as `blend` checks its branch. */
+private fun checkedRegionBody(door: String, body: (KatalystBuilder) -> KatalystBuilder): (KatalystBuilder) -> KatalystBuilder = checkedStage(
+    door = door,
+    noun = "body",
+    index = 0,
+    stage = body,
+    returns = "builder",
+    example = "r => r.distort(0.5)",
+    isResult = { it is KatalystBuilder },
+)
+
+/**
  * A dry/wet blend of the bus, the linear law: `k.blend(wet, f)` sums the bus times `1 - wet` with [branch]'s stages
  * times `wet` (a `parallel` of two). The branch receives an empty builder, the bus at this position, as a `parallel`
  * branch does. `wet` comes first, as on every door with one.

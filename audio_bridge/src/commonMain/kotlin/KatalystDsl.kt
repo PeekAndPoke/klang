@@ -655,4 +655,34 @@ sealed interface KatalystStageDsl {
     data class Parallel(
         val branches: List<KatalystDsl>,
     ) : KatalystStageDsl
+
+    /**
+     * An oversampling REGION of the bus that raises the rate by [factor]: the stages of [body] run at the incoming rate
+     * times [factor] (1x to 2x, 4x to 8x), and the region hands back the rate it was entered with. The bus at this
+     * position is converted up once where it enters and down once at the end (KLANG-00214 (oversampling regions)).
+     * At the head of a chain it makes the orbit run at that rate: one conversion per orbit, not per voice.
+     *
+     * [factor] is a plain number fixed with the chain, as the `distort` stage's `oversample`: rounded down to a power
+     * of two (3 is 2, 5 and 7 are 4); 1 or less is no region, the body's stages in place. The rate stops at 16x: a
+     * guard against absurd values, not an error. Inside, every stage keeps its sound in seconds and Hz (a delay its
+     * time, a reverb its room, a filter its cutoff); a `distort`'s own factor is a floor there. A `duck` in the body is
+     * the orbit's duck, as in a `parallel` branch. Twin: [OversampleAtLeast], the floor.
+     */
+    @WireName("oversampleBy")
+    data class OversampleBy(
+        val factor: Int,
+        val body: KatalystDsl,
+    ) : KatalystStageDsl
+
+    /**
+     * An oversampling REGION of the bus with a floor: the stages of [body] run at [factor] times the base rate AT
+     * LEAST, stepping up only the 2x steps that are missing; at or above the floor it is no region and converts
+     * nothing. The door for reusable pieces: a preset that needs 4x adds nothing inside an 8x region. [factor] and
+     * [body] as in [OversampleBy], the twin.
+     */
+    @WireName("oversampleAtLeast")
+    data class OversampleAtLeast(
+        val factor: Int,
+        val body: KatalystDsl,
+    ) : KatalystStageDsl
 }

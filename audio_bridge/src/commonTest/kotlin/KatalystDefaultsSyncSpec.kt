@@ -84,8 +84,10 @@ class KatalystDefaultsSyncSpec : StringSpec({
             is KatalystStageDsl.Distort -> listOf(stage.amount)
             is KatalystStageDsl.Eq -> emptyList()
             is KatalystStageDsl.Gain -> listOf(stage.gain)
-            // The classic chain declares no parallel stage.
+            // The classic chain declares no parallel stage, and no region.
             is KatalystStageDsl.Parallel -> emptyList()
+            is KatalystStageDsl.OversampleBy -> emptyList()
+            is KatalystStageDsl.OversampleAtLeast -> emptyList()
             // Nor any arithmetic stage.
             is KatalystStageDsl.Plus -> listOf(stage.other)
             is KatalystStageDsl.Minus -> listOf(stage.other)
@@ -427,6 +429,8 @@ class KatalystDefaultsSyncSpec : StringSpec({
                     is KatalystStageDsl.Gain -> KatalystStageDsl.Gain(freshKnob(stage.gain))
                     // The classic chain declares no parallel stage; the arm keeps the `when` exhaustive.
                     is KatalystStageDsl.Parallel -> KatalystStageDsl.Parallel(stage.branches.toList())
+                    is KatalystStageDsl.OversampleBy -> stage.copy()
+                    is KatalystStageDsl.OversampleAtLeast -> stage.copy()
                     // Nor any arithmetic stage; the arms keep the `when` exhaustive.
                     is KatalystStageDsl.Plus -> KatalystStageDsl.Plus(freshKnob(stage.other))
                     is KatalystStageDsl.Minus -> KatalystStageDsl.Minus(freshKnob(stage.other))

@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.audio_be.warehouse
 
 import io.peekandpoke.klang.audio_be.effects.Reverb
+import io.peekandpoke.klang.audio_be.ignitor.REGION_MAX_STAGES
 
 /**
  * The warehouse's shelf of idle [Reverb] units (resource-warehouse step 2d).
@@ -33,6 +34,20 @@ class ReverbUnits(
     private class Idle(val unit: Reverb, var clean: Boolean)
 
     private val shelf = ArrayList<Idle>()
+
+    /**
+     * The shelves for the reverbs inside oversampling regions, by their 2x steps above the base rate (index 0 is 2x),
+     * each created on its first [atFactor], on the base shelf only: a unit at 4x is four times as long and only serves
+     * a 4x region (KLANG-00214 (oversampling regions)). They are kept and housekept by the base shelf ([housekeep],
+     * [isClean]); their counters are their own.
+     */
+    private val scaled = arrayOfNulls<ReverbUnits>(REGION_MAX_STAGES)
+
+    /** How many times the base rate this shelf's units run at: 1 for the base shelf, the region's for a scaled one. */
+    private var factor: Int = 1
+
+    /** The base shelf a scaled one belongs to; null on the base shelf itself. */
+    private var base: ReverbUnits? = null
 
     /** Idle units on the shelf right now. */
     val idleCount: Int get() = shelf.size
@@ -65,8 +80,54 @@ class ReverbUnits(
     var dirtyCount: Int = 0
         private set
 
-    /** True when every idle unit is zeroed — the warmup waits for this before `BackendReady`. */
-    val isClean: Boolean get() = dirtyCount == 0
+    /** True when every idle unit is zeroed, the scaled shelves' too: the warmup waits for this before `BackendReady`. */
+    val isClean: Boolean
+        get() {
+            if (dirtyCount != 0) {
+                return false
+            }
+
+            for (child in scaled) {
+                if (child != null && !child.isClean) {
+                    return false
+                }
+            }
+
+            return true
+        }
+
+    /**
+     * The shelf of units for a region at [factor] times THIS shelf's rate (2, 4, 8, 16; a power of two, as the region
+     * builder hands it): on a scaled shelf the factors multiply, so a 2x region inside a 2x region reaches the one 4x
+     * shelf. Created on the first call and kept by the base shelf: its units run at the base rate times the whole
+     * factor, their damping mapped by it ([Reverb.factor]). It holds at most [maxIdle] divided by that factor idle
+     * units (at least one): a unit is that many times as large. [factor] 1 or less is this shelf.
+     */
+    fun atFactor(factor: Int): ReverbUnits {
+        if (factor <= 1) {
+            return this
+        }
+
+        val root = base ?: this
+        // The steps of a power of two above the base rate (2 is 1, 4 is 2, ...); a region stops at 16x, the array's size
+        val steps = (31 - (this.factor * factor).countLeadingZeroBits()).coerceAtMost(REGION_MAX_STAGES)
+
+        return root.scaled[steps - 1] ?: root.scaledShelf(steps).also { root.scaled[steps - 1] = it }
+    }
+
+    /** A new shelf on this base shelf for units [steps] 2x steps above its rate. */
+    private fun scaledShelf(steps: Int): ReverbUnits {
+        val whole = 1 shl steps
+
+        return ReverbUnits(
+            sampleRate = sampleRate * whole,
+            maxIdle = (maxIdle / whole).coerceAtLeast(1),
+            allocate = { rate -> allocateOrNull(sampleRate = rate, factor = whole) },
+        ).also {
+            it.factor = whole
+            it.base = this
+        }
+    }
 
     /**
      * A unit at constructor defaults with all-zero state, or `null` if none is idle and allocation
@@ -142,9 +203,18 @@ class ReverbUnits(
         dirtyCount++
     }
 
-    /** Zeroes ONE dirty idle unit (oldest return first). Returns true if it did; an integer compare when clean. */
+    /**
+     * Zeroes ONE dirty idle unit (oldest return first), this shelf's before a scaled shelf's ([atFactor]). Returns true
+     * if it did; integer compares when clean.
+     */
     fun housekeep(): Boolean {
         if (dirtyCount == 0) {
+            for (child in scaled) {
+                if (child != null && child.housekeep()) {
+                    return true
+                }
+            }
+
             return false
         }
 
@@ -168,8 +238,11 @@ class ReverbUnits(
         const val MAX_IDLE_UNITS: Int = 32
 
         /** The one place a reverb network is built; see [SizedBuffers.allocateOrNull] for why the catch is sound. */
-        fun allocateOrNull(sampleRate: Int): Reverb? = try {
-            Reverb(sampleRate)
+        fun allocateOrNull(sampleRate: Int): Reverb? = allocateOrNull(sampleRate = sampleRate, factor = 1)
+
+        /** [allocateOrNull] for a unit inside a region at [factor] times the base rate ([Reverb.factor]). */
+        fun allocateOrNull(sampleRate: Int, factor: Int): Reverb? = try {
+            Reverb(sampleRate = sampleRate, factor = factor)
         } catch (e: Throwable) {
             null
         }

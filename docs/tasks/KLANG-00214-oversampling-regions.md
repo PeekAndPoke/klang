@@ -362,6 +362,64 @@ end region hands over at its rate and the orbits get their rate and per-rate bus
 factors retired (section 9, answer 2) and the songs moved to regions; the full phase 0 (section 3) where a step needs
 it.
 
+**Step 3, cut in two (coordinator, 2026-11-03, from an audit of the Katalyst stages).** A Katalyst stage takes its
+rate and block size when it is built, not from a context per block, so a region on the bus builds its body at N times
+both. With that, a region at the head of a chain already makes the orbit run at its rate, one conversion up and one
+down per orbit, which is most of what step 3 is for. So:
+- **3a, Katalyst regions:** `oversampleBy(n) { ... }` and `oversampleAtLeast(n) { ... }` on the Katalyst, anywhere in a
+  chain, on both doors and the wire. Outside every region the chain stays at 1x, so the duck (run after every orbit)
+  and the chain swap need no change.
+- **3b, the hand-over:** a voice whose region ends the voice lands at its rate on a bus of that rate in its orbit
+  (one conversion per rate per orbit), and the chain swap blends two chains of different rates at 1x. An optimization
+  on top of 3a.
+
+**Step 3a, landed (2026-11-03).** Reviewed in two rounds: round 1 (level 2) found one MAJOR, both reviewers
+independently (a reverb in a nested region mapped by the relative factor and rented from a second shelf), fixed;
+round 2 (level 3, two phases) clean; its MINORs applied as one batch (a `parallel`'s pad from the exact latency, the
+latency rows). 33 mutants, 32 killed; one equivalent (the chain's pure delay at a first stage above 0 rounds the
+same with either kernel's group delay for every reachable step count). Corpus green on the final tree (3 frozen and
+12 unedited live songs identical), its engagement control (the reverb's damping nudged by 0.01%) red on every song.
+- The doors: `KatalystBuilder.oversampleBy(factor, body)` / `oversampleAtLeast(factor, body)`, the body given an empty
+  builder as a `parallel` branch is; the script's `k.oversampleBy(4, r => r.distort(0.5))`. The factor is a plain
+  number fixed with the chain, as the Katalyst `distort`'s `oversample` (the Ignitor's is a knob read per note);
+  rounded down to a power of two, 1 or less no region, at most 16x. The wire: `KatalystStageDsl.OversampleBy`,
+  `OversampleAtLeast` (factor, body); schema hash 1660499267 to -640226917.
+- The engine: `KatalystRegionEffect` converts the bus up by its steps (the cascade continued from the chain's stage),
+  runs its body, a `KatalystChain` built at the region's rate and block size, and converts down. A region with no
+  step to take is no region: its body's stages in place, bit for bit. It reports its round trip as an oversampler,
+  so a dry `parallel` branch beside it gets the exact phase twin; the body's own latency is divided down and counts
+  as pure delay.
+- Inside a body every stage keeps its sound: a delay its time, a filter its cutoff; the knob modulators keep the
+  orbit's clock (a noise walked by a region's clock would run N times faster); a `distort`'s own factor is a floor
+  (the Ignitor's bridge), its twins and DC blocker at the region's stage; a `parallel` twins from the region's stage;
+  a reverb rents a unit at the region's rate from a shelf for that rate (`ReverbUnits.atFactor`, kept and housekept
+  by the base shelf; nested regions reach the one shelf of their whole factor, which holds `maxIdle / factor` idle
+  units), its comb damping's pole mapped (`damping^(1/N)`) and its `lowpass` read against the base Nyquist. A `duck`
+  in a body is the orbit's duck, as in a branch. A region always declares a tail (its down conversion rings).
+- The reverb's room inside a region, against the same reverb at 1x: broadband, its length and brightness agree within
+  10% (measured: the late against early energy of the tail, and its first difference against itself, at 4x and at
+  2x inside 2x). Per band the top decays faster: mapping the pole keeps the one-pole's corner but not its response
+  near the base Nyquist. The audio reviewer's analytic T60 ratio (in a region against 1x, size 5, default damping,
+  2 to 20 kHz): 0.98 at 2 kHz, 0.95 at 4, 0.91 at 6, 0.87 at 8, 0.84 at 10, 0.80 at 12, 0.73 at 16, 0.65 at 20 (with
+  `lowpass` 5000: 0.98 to 0.71); about the same at every factor from 2x. **For the maintainer's ear:** keep the
+  pole mapping, or match the one-pole's magnitude at a reference frequency instead (a closed form per block).
+- Latency: a region rounds once, at its own level, its body's latency carried unrounded (`exactLatency`); held
+  within half a frame of the measured centroid of its impulse response. A `parallel` written inside a body twins its
+  branches exactly, from the region's stage. A `parallel` AROUND a region twins the region's round trip and pads what
+  its body adds (a nested oversampler, a lookahead) by the nearest whole frame: about -1 dB at 20 kHz for a distort at
+  8x in a 4x region beside a dry branch, the precedent the Ignitor's regions set.
+- Left as they are, recorded: a delay's repeats are a little brighter inside a region when its time falls between
+  samples (at 1x the linear read of a half sample loses 2.4 dB at 10 kHz per repeat; at 4x that time is whole); the
+  compressor's two floors in samples (a lookahead under 8 frames is off; inside a
+  region 8 region frames, an anti-click guard measured in samples); the phaser's feedback is one sample, so at high
+  feedback its peaks sit a little differently inside a region. The master is out (section 9, answer 1), but a
+  `master(...)` chain is built by the same builder, so a region written there works; nothing stops it. The warmup
+  runs the classic chain only, so a first region pays its JIT.
+- Memory at 16x: a delay ring grows with the rate (a 2 s delay at 16x is a 24.6 MB class, rented on first use), a
+  reverb unit is about 3.5 MB. Open in the warehouse: the scaled reverb shelves are not in `WarehouseStats`, their
+  units bypass an injected allocator (the out-of-memory seam), and housekeeping zeroes one whole unit per block, at
+  16x about 16 base units' stores in one block.
+
 ## History
 
 - 2026-10-20: numbered KLANG-00214 (was `docs/tasks/oversampling-regions.md`).
@@ -372,3 +430,4 @@ it.
 - 2026-10-31: section 11, the audit of which Ignitor nodes know the rate.
 - 2026-10-31: sources stay at 1x, also inside the braces, converted up where they enter (maintainer).
 - 2026-11-01: step 1 landed: the region doors and engine, Der Schmetterling's preamps in regions.
+- 2026-11-03: step 3 cut in two; step 3a landed: regions on the Katalyst.

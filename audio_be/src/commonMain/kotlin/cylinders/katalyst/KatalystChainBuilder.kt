@@ -5,9 +5,11 @@
 
 package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
+import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.effects.Phaser
 import io.peekandpoke.klang.audio_be.filters.EqSectionSpec
 import io.peekandpoke.klang.audio_be.filters.eqSectionSpec
+import io.peekandpoke.klang.audio_be.ignitor.REGION_MAX_STAGES
 import io.peekandpoke.klang.audio_be.utils.isFiniteInline
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
@@ -72,12 +74,21 @@ object KatalystChainBuilder {
         rings = rings,
         reverbs = reverbs,
         noises = KatalystNoiseOrdinals(),
+        stages = 0,
+        knobRate = sampleRate,
+        knobBlockFrames = blockFrames,
     )
 
     /**
      * [build] with the chain's running count of noise modulators, [noises]: one counter per chain, handed to every knob
-     * and on into a `parallel`'s branches, so the n-th noise of the whole chain is seeded by n (see
+     * and on into a `parallel`'s branches and a region's body, so the n-th noise of the whole chain is seeded by n (see
      * [KatalystNoiseOrdinals]).
+     *
+     * [stages] is how many 2x steps above the base rate this chain runs at: 0 on an orbit or the master, the region's
+     * inside an oversampling region's body (KLANG-00214 (oversampling regions)), where [sampleRate] and [blockFrames]
+     * are already scaled by it and [reverbs] is the shelf for that rate. The knobs keep the orbit's clock, [knobRate]
+     * and [knobBlockFrames]: a modulator ticks once a block at any rate, and a clock on the region's rate would walk a
+     * noise faster and shorten an edge.
      */
     private fun build(
         dsl: KatalystDsl,
@@ -86,16 +97,20 @@ object KatalystChainBuilder {
         rings: SizedBuffers,
         reverbs: ReverbUnits,
         noises: KatalystNoiseOrdinals,
+        stages: Int,
+        knobRate: Int,
+        knobBlockFrames: Int,
     ): KatalystChain {
         val pipeline = mutableListOf<KatalystEffect>()
         val writers = mutableListOf<KatalystSlotWriter>()
         var duckStage: KatalystStageDsl.Duck? = null
 
-        // Every knob of the chain, on its sample rate and block size (a modulator's clock) and its one noise counter.
-        // Each stage's knobs are built BEFORE the stage, in the order its writer lists them (the noise ordinals follow
-        // that order), so the stage can glide a modulated knob over one block (`KnobGlide`'s span, step 5b, D2).
+        // Every knob of the chain, on the orbit's sample rate and block size (a modulator's clock, also inside a region)
+        // and its one noise counter. Each stage's knobs are built BEFORE the stage, in the order its writer lists them
+        // (the noise ordinals follow that order), so the stage can glide a modulated knob over one block (`KnobGlide`'s
+        // span, step 5b, D2).
         fun knob(node: KatalystKnobDsl): KatalystKnob =
-            KatalystKnob(node = node, noises = noises, sampleRate = sampleRate, blockFrames = blockFrames)
+            KatalystKnob(node = node, noises = noises, sampleRate = knobRate, blockFrames = knobBlockFrames)
 
         // One arithmetic stage and, when it has an operand, its writer (ABS has none). A non-finite operand the stage
         // reads as unset: its identity lives in the stage alone.
@@ -114,7 +129,34 @@ object KatalystChainBuilder {
             }
         }
 
-        for (stage in dsl.stages) {
+        // A region with [steps] to take, at least one (one without is inlined, see the loop): its body is a chain of its
+        // own at the region's rate and block size, its reverbs from the shelf for that rate (KLANG-00214 (oversampling
+        // regions)). A duck in the body is the orbit's duck, as in a branch.
+        fun region(steps: Int, body: KatalystDsl) {
+            val inner = build(
+                dsl = body.withoutDucks(),
+                sampleRate = sampleRate shl steps,
+                blockFrames = blockFrames shl steps,
+                rings = rings,
+                reverbs = reverbs.atFactor(1 shl steps),
+                noises = noises,
+                stages = stages + steps,
+                knobRate = knobRate,
+                knobBlockFrames = knobBlockFrames,
+            )
+            val fx = KatalystRegionEffect(body = inner, steps = steps, firstStage = stages, blockFrames = blockFrames)
+            pipeline.add(fx)
+            writers.add(KatalystNestedChainsWriter(chains = arrayOf(inner)))
+
+            val bodyDuck = body.stages.lastDuck()
+
+            if (bodyDuck != null) {
+                duckStage = bodyDuck
+            }
+        }
+
+        // A region with no step to take is no region: its body's stages stand in its place ([inlineStepless]).
+        for (stage in dsl.stages.inlineStepless(stages)) {
             when (stage) {
                 // Body / vowel resonators, timbre shapers of the whole orbit (moved off the
                 // per-voice chain). In the classic chain they run first, so they color the dry
@@ -192,8 +234,8 @@ object KatalystChainBuilder {
                     val lowpass = knobOrUnset(
                         node = stage.lowpass,
                         noises = noises,
-                        sampleRate = sampleRate,
-                        blockFrames = blockFrames,
+                        sampleRate = knobRate,
+                        blockFrames = knobBlockFrames,
                     )
                     val fx = KatalystReverbEffect(
                         units = reverbs,
@@ -280,6 +322,7 @@ object KatalystChainBuilder {
                         shapeIndex = stage.shape,
                         oversampleFactor = stage.oversample,
                         amountModulated = amount.isModulated,
+                        firstStage = stages,
                     )
                     pipeline.add(fx)
 
@@ -310,7 +353,7 @@ object KatalystChainBuilder {
                     // 2026-09-19, which is bit-transparent and is what let `katp("gain.gain", x)`
                     // reach the fader of an orbit that declares nothing one step before every
                     // other knob could.
-                    val knobs = eqKnobs(specs = specs, sampleRate = sampleRate, blockFrames = blockFrames)
+                    val knobs = eqKnobs(specs = specs, sampleRate = knobRate, blockFrames = knobBlockFrames)
 
                     writers.add(KatalystEqWriter(fx = fx, knobs = knobs))
                 }
@@ -354,18 +397,28 @@ object KatalystChainBuilder {
                             rings = rings,
                             reverbs = reverbs,
                             noises = noises,
+                            stages = stages,
+                            knobRate = knobRate,
+                            knobBlockFrames = knobBlockFrames,
                         )
                     }
-                    val fx = KatalystParallelEffect(branches = branches, blockFrames = blockFrames)
+                    val fx = KatalystParallelEffect(branches = branches, blockFrames = blockFrames, firstStage = stages)
                     pipeline.add(fx)
-                    writers.add(KatalystParallelWriter(fx = fx))
+                    writers.add(KatalystNestedChainsWriter(chains = branches))
 
-                    val branchDuck = stage.lastDuck()
+                    val branchDuck = stage.branches.flatMap { it.stages }.lastDuck()
 
                     if (branchDuck != null) {
                         duckStage = branchDuck
                     }
                 }
+
+                // An oversampling region with a step to take; one without was inlined above (see [region]).
+                is KatalystStageDsl.OversampleBy ->
+                    region(steps = regionSteps(relative = true, factor = stage.factor, stages = stages), body = stage.body)
+
+                is KatalystStageDsl.OversampleAtLeast ->
+                    region(steps = regionSteps(relative = false, factor = stage.factor, stages = stages), body = stage.body)
             }
         }
 
@@ -402,37 +455,80 @@ object KatalystChainBuilder {
             // [KatalystChain.ducksWith]). A writer, not a build-time flag, because `.katp` can
             // name the orbit after the chain was built.
             duckWriter = duckWriter,
+            firstStage = stages,
         )
     }
 
-    /** The last duck declared in this stage's branches, nested stages included, in the order written. */
-    private fun KatalystStageDsl.Parallel.lastDuck(): KatalystStageDsl.Duck? {
+    /**
+     * The 2x steps a region takes in a chain at [stages]: `oversampleBy` ([relative]) adds its [factor]'s to them,
+     * `oversampleAtLeast` is a floor and takes only the missing ones; the rate stops at 16x. 0 is no region
+     * ([inlineStepless]).
+     */
+    private fun regionSteps(relative: Boolean, factor: Int, stages: Int): Int {
+        val asked = Oversampler.factorToStages(factor)
+        val target = if (relative) stages + asked else maxOf(stages, asked)
+
+        return target.coerceAtMost(REGION_MAX_STAGES).coerceAtLeast(stages) - stages
+    }
+
+    /**
+     * These stages with every region that takes no step in a chain at [stages] replaced by its body's stages, nested
+     * ones included: such a region is no region, as if it were not written (a factor of 1 or less, or a floor the rate
+     * already meets).
+     */
+    private fun List<KatalystStageDsl>.inlineStepless(stages: Int): List<KatalystStageDsl> = flatMap { stage ->
+        when (stage) {
+            is KatalystStageDsl.OversampleBy -> if (regionSteps(relative = true, factor = stage.factor, stages = stages) == 0) {
+                stage.body.stages.inlineStepless(stages)
+            } else {
+                listOf(stage)
+            }
+
+            is KatalystStageDsl.OversampleAtLeast -> if (regionSteps(relative = false, factor = stage.factor, stages = stages) == 0) {
+                stage.body.stages.inlineStepless(stages)
+            } else {
+                listOf(stage)
+            }
+
+            // Exhaustive on purpose, as in [lastDuck]: only a region can be stepless.
+            is KatalystStageDsl.Body, is KatalystStageDsl.Vowel, is KatalystStageDsl.Delay, is KatalystStageDsl.Reverb,
+            is KatalystStageDsl.Phaser, is KatalystStageDsl.Compressor, is KatalystStageDsl.Distort, is KatalystStageDsl.Duck,
+            is KatalystStageDsl.Eq, is KatalystStageDsl.Gain, is KatalystStageDsl.Plus, is KatalystStageDsl.Minus,
+            is KatalystStageDsl.Times, is KatalystStageDsl.Div, is KatalystStageDsl.Pow, is KatalystStageDsl.Min,
+            is KatalystStageDsl.Max, is KatalystStageDsl.Abs, is KatalystStageDsl.Parallel -> listOf(stage)
+        }
+    }
+
+    /** The last duck declared in these stages, inside branches and region bodies included, in the order written. */
+    private fun List<KatalystStageDsl>.lastDuck(): KatalystStageDsl.Duck? {
         var last: KatalystStageDsl.Duck? = null
 
-        for (branch in branches) {
-            for (stage in branch.stages) {
-                // Exhaustive on purpose: a new stage kind that holds chains of its own must decide here.
-                when (stage) {
-                    is KatalystStageDsl.Duck -> last = stage
-                    is KatalystStageDsl.Parallel -> last = stage.lastDuck() ?: last
-                    is KatalystStageDsl.Body, is KatalystStageDsl.Vowel, is KatalystStageDsl.Delay, is KatalystStageDsl.Reverb,
-                    is KatalystStageDsl.Phaser, is KatalystStageDsl.Compressor, is KatalystStageDsl.Distort, is KatalystStageDsl.Eq,
-                    is KatalystStageDsl.Gain, is KatalystStageDsl.Plus, is KatalystStageDsl.Minus, is KatalystStageDsl.Times,
-                    is KatalystStageDsl.Div, is KatalystStageDsl.Pow, is KatalystStageDsl.Min, is KatalystStageDsl.Max,
-                    is KatalystStageDsl.Abs -> Unit
-                }
+        for (stage in this) {
+            // Exhaustive on purpose: a new stage kind that holds chains of its own must decide here.
+            when (stage) {
+                is KatalystStageDsl.Duck -> last = stage
+                is KatalystStageDsl.Parallel -> last = stage.branches.flatMap { it.stages }.lastDuck() ?: last
+                is KatalystStageDsl.OversampleBy -> last = stage.body.stages.lastDuck() ?: last
+                is KatalystStageDsl.OversampleAtLeast -> last = stage.body.stages.lastDuck() ?: last
+                is KatalystStageDsl.Body, is KatalystStageDsl.Vowel, is KatalystStageDsl.Delay, is KatalystStageDsl.Reverb,
+                is KatalystStageDsl.Phaser, is KatalystStageDsl.Compressor, is KatalystStageDsl.Distort, is KatalystStageDsl.Eq,
+                is KatalystStageDsl.Gain, is KatalystStageDsl.Plus, is KatalystStageDsl.Minus, is KatalystStageDsl.Times,
+                is KatalystStageDsl.Div, is KatalystStageDsl.Pow, is KatalystStageDsl.Min, is KatalystStageDsl.Max,
+                is KatalystStageDsl.Abs -> Unit
             }
         }
 
         return last
     }
 
-    /** This chain with every duck taken out, nested branches included (see the Parallel arm). */
+    /** This chain with every duck taken out, nested branches and region bodies included (see the Parallel arm). */
     private fun KatalystDsl.withoutDucks(): KatalystDsl = KatalystDsl(
         stages.mapNotNull { stage ->
             when (stage) {
                 is KatalystStageDsl.Duck -> null
                 is KatalystStageDsl.Parallel -> KatalystStageDsl.Parallel(branches = stage.branches.map { it.withoutDucks() })
+                is KatalystStageDsl.OversampleBy -> stage.copy(body = stage.body.withoutDucks())
+                is KatalystStageDsl.OversampleAtLeast -> stage.copy(body = stage.body.withoutDucks())
                 // Exhaustive on purpose, as in [lastDuck].
                 is KatalystStageDsl.Body, is KatalystStageDsl.Vowel, is KatalystStageDsl.Delay, is KatalystStageDsl.Reverb,
                 is KatalystStageDsl.Phaser, is KatalystStageDsl.Compressor, is KatalystStageDsl.Distort, is KatalystStageDsl.Eq,

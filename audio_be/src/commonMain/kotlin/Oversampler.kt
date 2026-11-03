@@ -440,7 +440,8 @@ class Oversampler(stages: Int, firstStage: Int = 0) {
          * `ln(1e-6) / ln(max a)`: 268 frames with any oversampling, 0 without. At 2x the ring is under 1e-6 by frame 254;
          * at 4x and 8x the cascade meets that pole twice and stays above 1e-6 to about frame 300, under -114 dB past
          * 268 (audio review, round 2). A host that must not cut a tail asks this (the Katalyst `distort` stage's hold,
-         * the `parallel` stage's twins).
+         * the `parallel` stage's twins). Inside a region (a first stage above 0) the later stages' design rings
+         * shorter, so this errs towards holding longer there.
          */
         fun tailFrames(stages: Int): Int {
             if (stages <= 0) {
@@ -454,7 +455,7 @@ class Oversampler(stages: Int, firstStage: Int = 0) {
          * [groupDelaySamples] in whole frames, rounded (3, 4, 5 at 2x, 4x, 8x): the latency a bus stage reports
          * (`KatalystDistortEffect`). A voice keeps the exact delay and rounds only its pad (`BuiltIgnitor.latencySamples`).
          */
-        fun latencyFrames(stages: Int): Int = groupDelaySamples(stages).roundToInt()
+        fun latencyFrames(stages: Int, firstStage: Int = 0): Int = groupDelaySamples(stages, firstStage).roundToInt()
 
         /**
          * The oversamplers a `parallel` stage pads its branches to, each branch listing its own as stage counts: every

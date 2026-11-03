@@ -93,24 +93,33 @@ class KatalystDistortEffect(
      * above 0.
      */
     amountModulated: Boolean = false,
+    /**
+     * The 2x steps above the base rate the chain runs at, 0 on an orbit; inside an oversampling region the region's
+     * (KLANG-00214 (oversampling regions)): [oversampleFactor] is then a floor, only the steps above the region's are
+     * taken (from this cascade stage on), and the DC blocker's pole is mapped to stay where it is in Hz.
+     */
+    firstStage: Int = 0,
 ) : KatalystEffect, KatalystLatentEffect {
 
     private val fadeLen: Int = (sampleRate * KNOB_GLIDE_SECONDS).toInt().coerceAtLeast(1)
 
     private val invFadeLen: Double = 1.0 / fadeLen
 
-    private val stages: Int = Oversampler.factorToStages(oversampleFactor)
+    /** The factor's steps the region around this stage does not already take: a floor inside a region. */
+    private val stages: Int = (Oversampler.factorToStages(oversampleFactor) - firstStage).coerceAtLeast(0)
 
     private val coreL = DistortionCore(
         shape = distortionShapeAt(shapeIndex.toDouble()),
         oversampleStages = stages,
-        dcBlockCoefficient = HOUSE_DC_BLOCK_COEFF,
+        dcBlockCoefficient = DistortionCore.dcBlockCoefficientAt(coefficient = HOUSE_DC_BLOCK_COEFF, stages = firstStage),
+        firstStage = firstStage,
     )
 
     private val coreR = DistortionCore(
         shape = distortionShapeAt(shapeIndex.toDouble()),
         oversampleStages = stages,
-        dcBlockCoefficient = HOUSE_DC_BLOCK_COEFF,
+        dcBlockCoefficient = DistortionCore.dcBlockCoefficientAt(coefficient = HOUSE_DC_BLOCK_COEFF, stages = firstStage),
+        firstStage = firstStage,
     )
 
     /**
@@ -120,7 +129,10 @@ class KatalystDistortEffect(
     private val scratch: ScratchBuffers = ScratchBuffers(blockFrames).also { it.oversample(1 shl stages) }
 
     /** Frames this stage delays the orbit by, in every state: the oversampler's group delay, rounded; 0 without. */
-    override val latencyFrames: Int = Oversampler.latencyFrames(stages)
+    override val latencyFrames: Int = Oversampler.latencyFrames(stages = stages, firstStage = firstStage)
+
+    /** The oversampler's group delay, unrounded ([KatalystLatentEffect.exactLatency]). */
+    override val exactLatency: Double = Oversampler.groupDelaySamples(stages = stages, firstStage = firstStage)
 
     /** The cores' oversampler, the whole of [latencyFrames]; empty without. */
     override val oversamplers: List<Int> = if (stages > 0) listOf(stages) else emptyList()
@@ -146,8 +158,8 @@ class KatalystDistortEffect(
      * matched only the low-frequency delay, and the IIR's delay rises toward the top). Running in every state, as the
      * rings did, so the dry is continuous whenever a state needs it.
      */
-    private val twinL: Oversampler? = if (stages > 0) Oversampler(stages) else null
-    private val twinR: Oversampler? = if (stages > 0) Oversampler(stages) else null
+    private val twinL: Oversampler? = if (stages > 0) Oversampler(stages = stages, firstStage = firstStage) else null
+    private val twinR: Oversampler? = if (stages > 0) Oversampler(stages = stages, firstStage = firstStage) else null
 
     private val amountGlide = KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames, modulated = amountModulated)
 

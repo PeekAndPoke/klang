@@ -609,13 +609,14 @@ internal class KatalystDuckWriter(
 }
 
 /**
- * Parallel: no knob of its own; it hands the orbit's param state to every branch chain, so a branch's stages resolve
- * and apply exactly as the chain's own do (each branch keeps its own identity gate, [KatalystChain.resolveParams]).
- * Holds the state between the two halves and drops it on a resolve from null, as every chain does
- * ([KatalystChain.reset] forgets through that path).
+ * A stage that holds chains of its own, `parallel` (its branches) and an oversampling region (its body): no knob of its
+ * own; it hands the orbit's param state to every nested chain, so their stages resolve and apply exactly as the
+ * chain's own do (each nested chain keeps its own identity gate, [KatalystChain.resolveParams]). Holds the state
+ * between the two halves and drops it on a resolve from null, as every chain does ([KatalystChain.reset] forgets
+ * through that path).
  */
-internal class KatalystParallelWriter(
-    private val fx: KatalystParallelEffect,
+internal class KatalystNestedChainsWriter(
+    private val chains: Array<KatalystChain>,
 ) : KatalystSlotWriter {
 
     private var params: KlangMap<Double>? = null
@@ -623,21 +624,21 @@ internal class KatalystParallelWriter(
     override fun resolve(params: KlangMap<Double>?) {
         this.params = params
 
-        for (i in fx.branches.indices) {
-            fx.branches[i].resolveParams(params)
+        for (i in chains.indices) {
+            chains[i].resolveParams(params)
         }
     }
 
     override fun apply() {
-        for (i in fx.branches.indices) {
-            fx.branches[i].applyParams(params)
+        for (i in chains.indices) {
+            chains[i].applyParams(params)
         }
     }
 
     /**
-     * Never, whatever the branches hold: each branch is a chain that ticks its own modulated writers in its own
-     * `process`, which [KatalystParallelEffect] calls once per branch per block. Ticking them here too would advance
-     * every branch clock twice a block.
+     * Never, whatever the nested chains hold: each is a chain that ticks its own modulated writers in its own
+     * `process`, which its stage calls once per block. Ticking them here too would advance every nested clock twice a
+     * block.
      */
     override val isModulated: Boolean = false
 

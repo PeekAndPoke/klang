@@ -75,6 +75,13 @@ import kotlin.math.pow
  */
 class Reverb(
     val sampleRate: Int,
+    /**
+     * How many times the base rate [sampleRate] is, 1 outside an oversampling region (KLANG-00214 (oversampling
+     * regions)). The lines are sized for [sampleRate], so the room keeps its times; the comb damping, a one-pole per
+     * sample, has its pole mapped (`damping^(1 / factor)`) and `lowpass` is read against the base rate's Nyquist, so the
+     * room keeps its brightness. At 1 nothing is mapped, bit for bit.
+     */
+    val factor: Int = 1,
 ) {
     // --- Tuning (Freeverb canonical, scaled to actual sample rate) ---
     private val srScale = sampleRate / REFERENCE_SAMPLE_RATE.toDouble()
@@ -198,7 +205,8 @@ class Reverb(
      * The damping LPF is a convex combination of already-read cells whose pre-revolution memory
      * weight is `damping^N` — indistinguishable from zero for every supported comb length
      * (the SHORTEST comb is N ~ 558 at the 22.05 kHz support floor, damping <= 0.4 via
-     * DAMP_SCALE; the convexity additionally needs `damping < 1`, which holds structurally: the
+     * DAMP_SCALE; inside a region the mapped damping is nearer 1 and N longer by the same factor,
+     * so `damping^N` is the same; the convexity additionally needs `damping < 1`, which holds structurally: the
      * effective damp is [DEFAULT_DAMP] or derived from [lowpass] bounded to [0, 1]) — so cell peaks
      * contract by at least `|feedback|` per revolution REGARDLESS of damping (round 2 settled
      * this after round 1's dominant-root stretch argument, which is real only for toy-sized
@@ -338,13 +346,14 @@ class Reverb(
         val lp = lowpass
         // NaN-guard: NaN is the unset cutoff ([lowpass] never holds an infinity).
         val effectiveDamp = if (lp == lp) {
-            val nyquist = sampleRate / 2.0
+            val nyquist = sampleRate / (2.0 * factor)
             val normalised = (lp / nyquist).coerceIn(0.0, 1.0)
             1.0 - normalised
         } else {
             DEFAULT_DAMP
         }
-        val damping = effectiveDamp * DAMP_SCALE
+        // Inside a region the per-sample pole is mapped to stay where it is in Hz (one `pow` per block)
+        val damping = if (factor > 1) (effectiveDamp * DAMP_SCALE).pow(1.0 / factor) else effectiveDamp * DAMP_SCALE
         val invDamping = 1.0 - damping
         val outputGain = FIXED_GAIN
 

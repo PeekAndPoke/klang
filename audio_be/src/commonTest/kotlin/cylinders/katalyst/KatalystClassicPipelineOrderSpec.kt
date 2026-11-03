@@ -60,6 +60,8 @@ class KatalystClassicPipelineOrderSpec : StringSpec({
         is KatalystStageDsl.Distort -> "KatalystDistortEffect"
         // Branches side by side (2026-10-10); the classic chain does not carry it either.
         is KatalystStageDsl.Parallel -> "KatalystParallelEffect"
+        // The oversampling regions (KLANG-00214); the classic chain carries none.
+        is KatalystStageDsl.OversampleBy, is KatalystStageDsl.OversampleAtLeast -> "KatalystRegionEffect"
         // The arithmetic stages (2026-10-11); the classic chain carries none of them.
         is KatalystStageDsl.Plus, is KatalystStageDsl.Minus, is KatalystStageDsl.Times, is KatalystStageDsl.Div,
         is KatalystStageDsl.Pow, is KatalystStageDsl.Min, is KatalystStageDsl.Max, is KatalystStageDsl.Abs -> "KatalystArithmeticEffect"

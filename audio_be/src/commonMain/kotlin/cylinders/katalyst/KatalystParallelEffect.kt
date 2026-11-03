@@ -32,14 +32,19 @@ import kotlin.math.min
  * by up to 2400 frames after the distort stage it twins has gone quiet, so it reports a tail until
  * [Oversampler.tailFrames] quiet frames have entered it.
  *
- * The branches' slots are resolved through [KatalystParallelWriter]; a branch reads the orbit's param state like the
+ * The branches' slots are resolved through [KatalystNestedChainsWriter]; a branch reads the orbit's param state like the
  * chain around it, so a slot named in a branch is the same slot as one of that name outside it.
  */
 class KatalystParallelEffect internal constructor(
     /** The branches, in the order written; at least one (the builder skips an empty stage). */
     internal val branches: Array<KatalystChain>,
-    /** The frames of one render block, pinned to 128 in the engine. */
+    /** The frames of one render block, pinned to 128 in the engine; inside an oversampling region the region's. */
     blockFrames: Int,
+    /**
+     * The 2x steps above the base rate the chain runs at, 0 on an orbit, the region's inside an oversampling region:
+     * every branch's oversamplers start there, and so do the twins (KLANG-00214 (oversampling regions)).
+     */
+    private val firstStage: Int = 0,
 ) : KatalystEffect, KatalystLatentEffect {
 
     /** Every branch's oversamplers together: each branch is padded to this cascade by twins. */
@@ -49,7 +54,12 @@ class KatalystParallelEffect internal constructor(
     private val pureDelayFrames: Int = branches.maxOf { it.pureDelayFrames }
 
     /** The latency of every padded branch: the union's oversamplers and the longest pure delay. */
-    override val latencyFrames: Int = oversamplers.sumOf { Oversampler.latencyFrames(it) } + pureDelayFrames
+    override val latencyFrames: Int =
+        oversamplers.sumOf { Oversampler.latencyFrames(stages = it, firstStage = firstStage) } + pureDelayFrames
+
+    /** The union's group delays unrounded, and the longest pure delay ([KatalystLatentEffect.exactLatency]). */
+    override val exactLatency: Double =
+        oversamplers.sumOf { Oversampler.groupDelaySamples(stages = it, firstStage = firstStage) } + pureDelayFrames
 
     /** Each branch's own bus, the copy of the input it processes in place. */
     private val contexts: Array<KatalystContext> = Array(branches.size) {
@@ -61,6 +71,7 @@ class KatalystParallelEffect internal constructor(
         Pad(
             twinStages = Oversampler.missingFrom(have = branches[it].oversamplers, union = oversamplers),
             delayFrames = pureDelayFrames - branches[it].pureDelayFrames,
+            firstStage = firstStage,
         )
     }
 
@@ -159,9 +170,9 @@ class KatalystParallelEffect internal constructor(
      * One branch's pad: an unshaped round trip per entry of [twinStages] (a stage count) on both channels, in place, then
      * a fixed delay of [delayFrames] frames, added into the sum. With neither, the branch is added as it is.
      */
-    private class Pad(val twinStages: List<Int>, delayFrames: Int) {
-        private val twinsL = Array(twinStages.size) { Oversampler(twinStages[it]) }
-        private val twinsR = Array(twinStages.size) { Oversampler(twinStages[it]) }
+    private class Pad(val twinStages: List<Int>, delayFrames: Int, firstStage: Int) {
+        private val twinsL = Array(twinStages.size) { Oversampler(stages = twinStages[it], firstStage = firstStage) }
+        private val twinsR = Array(twinStages.size) { Oversampler(stages = twinStages[it], firstStage = firstStage) }
         private val left = DoubleArray(delayFrames)
         private val right = DoubleArray(delayFrames)
         private var pos = 0

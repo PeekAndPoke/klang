@@ -211,6 +211,16 @@ class WireCodecRoundTripSpec : StringSpec({
                         KatalystDsl.of(KatalystStageDsl.Parallel(branches = listOf(KatalystDsl.of(KatalystStageDsl.Duck())))),
                     ),
                 ),
+                // The oversampling regions (KLANG-00214): a factor each, a body of two, a region nested in a body, an
+                // empty body.
+                KatalystStageDsl.OversampleBy(
+                    factor = 4,
+                    body = KatalystDsl.of(
+                        KatalystStageDsl.Distort(),
+                        KatalystStageDsl.OversampleAtLeast(factor = 8, body = KatalystDsl.of(KatalystStageDsl.Gain(gain = KatalystKnobDsl.Param("r", 0.5)))),
+                    ),
+                ),
+                KatalystStageDsl.OversampleAtLeast(factor = 2, body = KatalystDsl(emptyList())),
             ),
         ).forEach { decode_KatalystDsl(encode_KatalystDsl(it)) shouldBe it }
     }
@@ -379,8 +389,9 @@ class WireCodecRoundTripSpec : StringSpec({
         // 615137850 (the modulators joined it); KLANG-00399 step 3a from 211191718 (Feedback.PlaybackAnchored joined
         // it), step 3b from -1360551677 (Diagnostics.soundlessVoices joined it); KLANG-00214 (oversampling regions)
         // step 1 from 170881894 (the Ignitor's `OversampleBy`, `OversampleAtLeast` and `RegionInput` joined it);
-        // KLANG-00406 step 5 from 827954479 (`Cmd.SetGain` joined it).
-        WIRE_SCHEMA_HASH shouldBe 1660499267
+        // KLANG-00406 step 5 from 827954479 (`Cmd.SetGain` joined it); KLANG-00214 step 3a from 1660499267 (the
+        // Katalyst's `OversampleBy` and `OversampleAtLeast` joined it).
+        WIRE_SCHEMA_HASH shouldBe -640226917
     }
 
     "ScheduledVoice round-trips a minimal (mostly-null) VoiceData" {

@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
 import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.common.infra.KlangMap
+import kotlin.math.roundToInt
 
 /**
  * Writes a chain's own slots into ONE built stage, with no voice in sight: the chain is the
@@ -90,6 +91,12 @@ class KatalystChain internal constructor(
      * `.katp` can change while the chain runs.
      */
     private val duckWriter: KatalystDuckWriter?,
+    /**
+     * The 2x steps above the base rate this chain runs at: 0 for an orbit's or the master's chain, the region's for the
+     * body of an oversampling region (KLANG-00214 (oversampling regions)). Every oversampler in [oversamplers] starts
+     * here, so [pureDelayFrames] counts them from it.
+     */
+    val firstStage: Int = 0,
 ) {
     /**
      * The processing order as a read-only view, for the hosts and the specs: `List`, not the
@@ -146,14 +153,15 @@ class KatalystChain internal constructor(
      * True when this chain declares a stage that can ring on after its input stops: the reverb, the delay, and the
      * distort stage (its DC blocker decays from the offset an asymmetric shape made, `KatalystDistortEffect.hasTail`;
      * review round 2 of KLANG-00292 (katalyst distort stage): without it a stopped playback's master cut that decay).
-     * A `parallel` stage declares one when a branch does.
+     * A `parallel` stage declares one when a branch does; a region always does: whatever its body holds, its down
+     * conversion rings out what the body last produced (`KatalystRegionEffect.hasTail`'s hold), as the distort's oversampler does.
      * The master's "is a tail possible at all" test (`MasterBus.isRinging`), cheap, no buffer scan; [hasTail] then
      * answers whether one is there. Body, vowel and phaser may ring too; whether that is audible is
      * KLANG-00293 (chain swap cuts ringing inserts).
      */
     val declaresTail: Boolean = serial.any {
         it is KatalystReverbEffect || it is KatalystDelayEffect || it is KatalystDistortEffect ||
-                (it is KatalystParallelEffect && it.declaresTail)
+                (it is KatalystParallelEffect && it.declaresTail) || it is KatalystRegionEffect
     }
 
     /**
@@ -164,11 +172,22 @@ class KatalystChain internal constructor(
      */
     val latencyFrames: Int = serial.sumOf { (it as? KatalystLatentEffect)?.latencyFrames ?: 0 }
 
-    /** The oversamplers inside [latencyFrames] ([KatalystLatentEffect.oversamplers]), ascending, for a `parallel` stage. */
+    /** [latencyFrames] before each stage rounded it ([KatalystLatentEffect.exactLatency]), for an oversampling region. */
+    val exactLatency: Double = serial.sumOf { (it as? KatalystLatentEffect)?.exactLatency ?: 0.0 }
+
+    /**
+     * The oversamplers inside [latencyFrames] ([KatalystLatentEffect.oversamplers]), ascending, for a `parallel` stage;
+     * each starts at [firstStage].
+     */
     val oversamplers: List<Int> = serial.flatMap { (it as? KatalystLatentEffect)?.oversamplers.orEmpty() }.sorted()
 
-    /** The part of [latencyFrames] that is a pure delay (a compressor's lookahead): what the oversamplers leave. */
-    val pureDelayFrames: Int = latencyFrames - oversamplers.sumOf { Oversampler.latencyFrames(it) }
+    /**
+     * The part of [latencyFrames] that is a pure delay (a compressor's lookahead, a region's body): what the oversamplers
+     * leave of [exactLatency], rounded once, so a `parallel` pads it by the nearest whole frame. Without a region it is
+     * the whole-frame lookaheads, as before.
+     */
+    val pureDelayFrames: Int =
+        (exactLatency - oversamplers.sumOf { Oversampler.groupDelaySamples(stages = it, firstStage = firstStage) }).roundToInt()
 
     /** Rents the warehouse refused any stage of this chain, for the diagnostics feedback. */
     val deniedRents: Int
@@ -412,7 +431,8 @@ class KatalystChain internal constructor(
     /**
      * True while a stage holds a tail that can NEVER end on its own, which a stopped engine
      * releases after its hold instead of waiting for (phase 3 step 12 decision (j)). Only a delay
-     * can, also inside a `parallel` branch: at |feedback| >= 1 it recirculates without loss ([KatalystDelayEffect.sustainsItself]).
+     * can, also inside a `parallel` branch or a region's body: at |feedback| >= 1 it recirculates without loss
+     * ([KatalystDelayEffect.sustainsItself]).
      * Every other stage's tail ends: the reverb's comb feedback is at most 0.98 (its size is
      * bounded to 0..1 before it reaches the unit, `Reverb.normalizeSize`), the phaser's feedback is clamped at 0.95
      * (`PhaserCore.MAX_FEEDBACK`), the body and vowel resonators are stable filters, and the
@@ -428,6 +448,10 @@ class KatalystChain internal constructor(
             }
 
             if (stage is KatalystParallelEffect && stage.sustainsItself()) {
+                return true
+            }
+
+            if (stage is KatalystRegionEffect && stage.sustainsItself()) {
                 return true
             }
         }

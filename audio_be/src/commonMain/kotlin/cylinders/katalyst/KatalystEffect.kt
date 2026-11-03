@@ -79,8 +79,9 @@ interface KatalystEffect {
 /**
  * A stage that delays the orbit it runs on: [latencyFrames] frames, in every state, fixed when the stage is built.
  * The chain sums them (`KatalystChain.latencyFrames`), and a chain swap places two chains' weights by that sum
- * (`ChainSwap`). Three stages delay today: the compressor with a lookahead, the distort stage with oversampling, and a
- * `parallel` stage by the union of its branches' oversamplers plus their longest lookahead.
+ * (`ChainSwap`). Four stages delay today: the compressor with a lookahead, the distort stage with oversampling, a
+ * `parallel` stage by the union of its branches' oversamplers plus their longest lookahead, and an oversampling
+ * region by its round trip plus its body's latency divided down.
  */
 interface KatalystLatentEffect {
     /** Frames this stage delays the orbit by; 0 when it does not. */
@@ -93,4 +94,12 @@ interface KatalystLatentEffect {
      * with an unshaped round trip of it (a phase twin) rather than with whole frames.
      */
     val oversamplers: List<Int> get() = emptyList()
+
+    /**
+     * [latencyFrames] before it was rounded: an oversampler's group delay is a fraction of a frame. Read by an
+     * oversampling region, which divides its body's latency down and rounds once, at its own level (KLANG-00214
+     * (oversampling regions)); rounded first, a nested region's latency was off by over half a frame. A stage whose
+     * delay is whole frames (a lookahead) keeps the default.
+     */
+    val exactLatency: Double get() = latencyFrames.toDouble()
 }
