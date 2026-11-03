@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.pages
 
+import io.peekandpoke.klang.common.logging.LogArea
+import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.klang.storage.StorageKeys
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
@@ -25,6 +27,8 @@ import kotlinx.html.div
 import kotlinx.html.h1
 import kotlinx.html.span
 import kotlinx.html.title
+
+private val log = Logger(area = LogArea.Ui, source = "DevStoragePage")
 
 @Suppress("FunctionName")
 fun Tag.DevStoragePage() = comp {
@@ -50,7 +54,7 @@ class DevStoragePage(ctx: NoProps) : PureComponent(ctx) {
     private fun allKeys(): List<String> = try {
         (0 until localStorage.length).mapNotNull { localStorage.key(it) }.sorted()
     } catch (e: Throwable) {
-        console.warn("DevStoragePage: could not read the storage", e)
+        log.warn("Could not read the storage", e)
         emptyList()
     }
 
@@ -65,7 +69,7 @@ class DevStoragePage(ctx: NoProps) : PureComponent(ctx) {
             try {
                 localStorage.removeItem(key)
             } catch (e: Throwable) {
-                console.warn("DevStoragePage: could not remove $key", e)
+                log.warn("Could not remove $key", e)
             }
         }
 

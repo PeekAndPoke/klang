@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.storage
 
+import io.peekandpoke.klang.common.logging.LogArea
+import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.klang.ui.comp.KlangWorkbench
 import kotlinx.browser.localStorage
 import kotlinx.serialization.json.Json
@@ -15,6 +17,8 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonObject
+
+private val log = Logger(area = LogArea.Storage, source = "WorkbenchLayoutStorage")
 
 /**
  * The workbench's layout in the browser's localStorage (KLANG-00349): the pinned tool windows and the bottom panel
@@ -32,7 +36,7 @@ object WorkbenchLayoutStorage {
 
             decode(Json.parseToJsonElement(raw).jsonObject)
         } catch (e: Throwable) {
-            console.warn("WorkbenchLayoutStorage: ignoring an unreadable layout", e)
+            log.warn("Ignoring an unreadable layout", e)
             null
         }
     }
@@ -41,7 +45,7 @@ object WorkbenchLayoutStorage {
         try {
             localStorage.setItem(StorageKeys.WORKBENCH_LAYOUT, encode(layout).toString())
         } catch (e: Throwable) {
-            console.warn("WorkbenchLayoutStorage: could not remember the layout", e)
+            log.warn("Could not remember the layout", e)
         }
     }
 

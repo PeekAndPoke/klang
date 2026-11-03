@@ -10,6 +10,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.common.logging.KlangLog
+import io.peekandpoke.klang.common.logging.LogArea
 import io.peekandpoke.klang.common.logging.LogLevel
 import io.peekandpoke.klang.common.logging.LogRecord
 import io.peekandpoke.klang.common.logging.Logger
@@ -25,7 +26,7 @@ class ConsoleLogSpec : StringSpec({
         ConsoleLog.install()
 
         try {
-            val log = Logger("Spec")
+            val log = Logger(area = LogArea.App, source = "Spec")
 
             log.info("one")
             log.error("two")
@@ -68,7 +69,7 @@ class ConsoleLogSpec : StringSpec({
 
     "the unseen errors counted at most so far, the records still kept" {
         val many = (1..ConsoleLog.MAX_COUNTED + 5).fold(ConsoleLog.State()) { state, i ->
-            state.add(LogRecord(level = LogLevel.Error, source = "S", message = "e$i", error = null, timeMs = 1.0))
+            state.add(LogRecord(level = LogLevel.Error, area = LogArea.App, source = "S", message = "e$i", error = null, timeMs = 1.0))
         }
 
         many.unseenErrors shouldBe ConsoleLog.MAX_COUNTED

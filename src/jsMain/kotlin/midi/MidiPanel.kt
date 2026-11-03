@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.midi
 
+import io.peekandpoke.klang.common.logging.LogArea
+import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.klang.midi.MidiDevicePanel
 import io.peekandpoke.klang.midi.PanelControl
 import io.peekandpoke.klang.ui.svgCircle
@@ -30,6 +32,8 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
+
+private val log = Logger(area = LogArea.Midi, source = "MidiPanel")
 
 @Suppress("FunctionName")
 fun Tag.MidiPanel(
@@ -217,7 +221,7 @@ class MidiPanel(ctx: Ctx<Props>) : Component<MidiPanel.Props>(ctx) {
         try {
             dom?.setPointerCapture(e.pointerId)
         } catch (t: Throwable) {
-            console.warn("[MidiPanel] the pointer could not be captured", t)
+            log.warn("The pointer could not be captured", t)
         }
 
         onInput(screen.down(pointer = e.pointerId, grip = grip, y = y, tsMs = e.timeStamp.toDouble()))

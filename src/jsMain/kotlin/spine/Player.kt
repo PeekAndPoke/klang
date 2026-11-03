@@ -12,6 +12,8 @@ import io.peekandpoke.klang.audio_engine.klangPlayer
 import io.peekandpoke.klang.audio_fe.create
 import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.Samples
+import io.peekandpoke.klang.common.logging.LogArea
+import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.klang.registerBuiltInSongsAsModules
 import io.peekandpoke.klang.script.KlangScriptEngine
 import io.peekandpoke.klang.script.stdlib.ConsoleLevel
@@ -30,6 +32,8 @@ import io.peekandpoke.ultra.streams.ops.switchMapNotNull
 import kotlinx.browser.window
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
+
+private val log = Logger(area = LogArea.Engine, source = "Player")
 
 object Player : PlaybackEngine {
 
@@ -179,7 +183,7 @@ object Player : PlaybackEngine {
                 // And once more after: a turn of the knob while the engine started
                 playerInstance.setOutputVolume(_outputVolume())
 
-                console.log("KlangPlayer ready", playerInstance)
+                log.info("KlangPlayer ready")
 
                 _samples(samples)
                 _player(playerInstance)
@@ -189,7 +193,7 @@ object Player : PlaybackEngine {
             } catch (t: Throwable) {
                 // Without this the deferred never completes: status would sit at LOADING forever
                 // and every awaiter would hang: a Play button spinning with no explanation.
-                console.error("KlangPlayer failed to start", t)
+                log.error("KlangPlayer failed to start", t)
 
                 _status(Status.FAILED)
 

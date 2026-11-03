@@ -16,7 +16,7 @@ class BrowserConsoleListenerSpec : StringSpec({
         LogLevel.entries.map { BrowserConsoleListener.methodOf(it) } shouldBe listOf("debug", "info", "warn", "error")
     }
 
-    "a record reaches the console at its level as `[source] message`, its error after it" {
+    "a record reaches the console at its level as `[area/source] message`, its error after it" {
         val heard = mutableListOf<Pair<String, List<Any?>>>()
         val console = console.asDynamic()
         val kept = LogLevel.entries.associate { level -> level to console[BrowserConsoleListener.methodOf(level)] }
@@ -30,15 +30,26 @@ class BrowserConsoleListenerSpec : StringSpec({
 
             val boom = IllegalStateException("boom")
 
-            fun record(level: LogLevel, source: String, message: String, error: Throwable?) =
-                LogRecord(level = level, source = source, message = message, error = error, timeMs = 1.0)
+            fun write(level: LogLevel, area: LogArea, source: String, message: String, error: Throwable? = null) =
+                BrowserConsoleListener.onRecord(
+                    LogRecord(level = level, area = area, source = source, message = message, error = error, timeMs = 1.0)
+                )
 
-            BrowserConsoleListener.onRecord(record(level = LogLevel.Warn, source = "Rig", message = "careful", error = boom))
-            BrowserConsoleListener.onRecord(record(level = LogLevel.Info, source = "App", message = "hello", error = null))
+            write(level = LogLevel.Warn, area = LogArea.Midi, source = "Rig", message = "careful", error = boom)
+            write(level = LogLevel.Info, area = LogArea.App, source = "Start", message = "hello")
 
-            withClue("the warning at warn, the error after the text") { heard[0] shouldBe ("warn" to listOf("[Rig] careful", boom)) }
-            withClue("the info at info, the text alone") { heard[1] shouldBe ("info" to listOf("[App] hello")) }
+            withClue("the warning at warn, the error after the text") { heard[0] shouldBe ("warn" to listOf("[midi/Rig] careful", boom)) }
+            withClue("the info at info, the text alone") { heard[1] shouldBe ("info" to listOf("[app/Start] hello")) }
+
+            BrowserConsoleListener.least = LogLevel.Info
+            write(level = LogLevel.Debug, area = LogArea.App, source = "Start", message = "quiet")
+            write(level = LogLevel.Info, area = LogArea.App, source = "Start", message = "loud")
+
+            withClue("below the least level: not written; at it: written") {
+                heard.drop(2) shouldBe listOf("info" to listOf("[app/Start] loud"))
+            }
         } finally {
+            BrowserConsoleListener.least = LogLevel.Debug
             kept.forEach { (level, function) -> console[BrowserConsoleListener.methodOf(level)] = function }
         }
     }

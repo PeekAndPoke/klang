@@ -8,6 +8,8 @@ package io.peekandpoke.klang.spine
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KlangPatternEvent
 import io.peekandpoke.klang.audio_bridge.SampleRequest
+import io.peekandpoke.klang.common.logging.LogArea
+import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.klang.midi.ControlEvent
 import io.peekandpoke.klang.midi.ControlId
 import io.peekandpoke.klang.midi.DeviceProfile
@@ -36,6 +38,8 @@ import io.peekandpoke.ultra.streams.ops.map
 import kotlinx.browser.window
 import kotlin.js.Promise
 import kotlin.math.roundToInt
+
+private val log = Logger(area = LogArea.Midi, source = "MidiRig")
 
 /**
  * The MIDI rig (KLANG-00402, step 4, section 7): what plays live, for the app's life, not a page's. It holds the
@@ -277,11 +281,11 @@ class MidiRig {
                     connectDevices()
                 }
             }.catch { e ->
-                // A browser that does not know the name (Firefox, Safari): the user asks
-                console.warn("[MidiRig] the MIDI permission is not readable", e)
+                // A browser that does not know the name (Firefox, Safari): the user asks; expected, so only a note
+                log.info("The MIDI permission is not readable", e)
             }
         } catch (e: Throwable) {
-            console.warn("[MidiRig] the MIDI permission is not readable", e)
+            log.info("The MIDI permission is not readable", e)
         }
     }
 

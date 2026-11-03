@@ -5,8 +5,13 @@
 
 package io.peekandpoke.klang.midi
 
+import io.peekandpoke.klang.common.logging.LogArea
+import io.peekandpoke.klang.common.logging.Logger
+import io.peekandpoke.klang.utils.BuildMode
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
+
+private val log = Logger(area = LogArea.Midi, source = "MidiConnector")
 
 /**
  * The browser's MIDI, as ports and bytes (KLANG-00402, section 3): device discovery and hot-plug, and one raw
@@ -35,24 +40,27 @@ class MidiConnector {
     val state: Stream<State> = _state.readonly
 
     private val _events = StreamSource<Event?>(null)
+
+    /** Whether the last message failed in its consumers: its failure is logged, the ones after it are not. */
+    private var failing = false
     val events: Stream<Event?> = _events.readonly
 
     /** Requests MIDI access and hooks every input; called once, by the MIDI rig, which keeps it for the app's life. */
     fun start() {
         if (!isWebMidiSupported()) {
-            console.warn("[MidiConnector] Web MIDI API not available on navigator")
+            log.warn("Web MIDI API not available on navigator")
             _state { it.copy(status = Status.Unsupported) }
             return
         }
 
-        console.log("[MidiConnector] requesting MIDI access ...")
+        log.debug("Requesting MIDI access ...")
 
         requestMidiAccess()
             .then { granted ->
-                console.log("[MidiConnector] MIDI access GRANTED")
+                log.info("MIDI access granted")
                 hookInputs(granted)
                 granted.onstatechange = { evt ->
-                    console.log("[MidiConnector] state change:", evt.port.name, evt.port.type, evt.port.state)
+                    log.debug("State change: ${evt.port.name} ${evt.port.type} ${evt.port.state}")
                     // An unplugged device can never send its note-offs
                     if (evt.port.type == "input" && evt.port.state == "disconnected") {
                         _events(Event.PortGone(port = evt.port.name ?: evt.port.id))
@@ -61,8 +69,16 @@ class MidiConnector {
                 }
             }
             .catch { err ->
-                // Also catches a throw inside the handler above, not only permission denial.
-                console.error("[MidiConnector] MIDI setup failed:", err)
+                // Also catches a throw inside the handler above, not only permission denial. A refusal is the user's
+                // choice, shown as the MIDI tool's status: a warning; anything else is a failure: an error
+                val refused = err.asDynamic().name in listOf("SecurityError", "NotAllowedError")
+
+                if (refused) {
+                    log.warn("MIDI access refused", err)
+                } else {
+                    log.error("MIDI setup failed", err)
+                }
+
                 _state { it.copy(status = Status.Denied, error = err.message ?: err.toString()) }
             }
     }
@@ -82,7 +98,7 @@ class MidiConnector {
             input.onmidimessage = { evt -> onMidiMessage(portName, evt) }
         }
 
-        console.log("[MidiConnector] ${names.size} input(s) hooked")
+        log.info("${names.size} input(s) hooked")
         _state { it.copy(status = Status.Ready, devices = names) }
     }
 
@@ -94,11 +110,15 @@ class MidiConnector {
             return
         }
 
-        // Raw log of everything that reaches us, so "the device sends nothing for this button" is a checkable claim
-        console.log(
-            "[MidiConnector] <$port> status=0x${status.toString(16)} d1=${evt.byteAt(1)} d2=${evt.byteAt(2)} " +
-                "len=${evt.data.length}"
-        )
+        // Raw log of everything that reaches us, so "the device sends nothing for this button" is a checkable claim. Not
+        // through the Logger, on purpose: one line per message is a stream, which the log never takes (KLANG-00407, D7),
+        // and the Console would redraw on every note while playing. The developer tools only, in a development build
+        if (BuildMode.isDevelopment) {
+            console.asDynamic().debug(
+                "[midi/MidiConnector] <$port> status=0x${status.toString(16)} d1=${evt.byteAt(1)} d2=${evt.byteAt(2)} " +
+                    "len=${evt.data.length}"
+            )
+        }
 
         // A throw in a consumer would die silently inside the MIDI callback
         try {
@@ -107,8 +127,14 @@ class MidiConnector {
                     MidiMessage(port = port, status = status, data1 = evt.byteAt(1), data2 = evt.byteAt(2), tsMs = evt.timeStamp)
                 )
             )
+            failing = false
         } catch (e: Throwable) {
-            console.error("[MidiConnector] message handling failed:", e)
+            // Logged once, not for every message that fails after it: a consumer that throws on each would make a
+            // stream of errors (KLANG-00407, D7); again once a message goes through
+            if (!failing) {
+                failing = true
+                log.error("Message handling failed; failures after it are not logged until a message goes through", e)
+            }
         }
     }
 }

@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.comp
 
+import io.peekandpoke.klang.common.logging.LogArea
+import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.klang.pages.docs.lexikon.lexikonAutoLinks
 import io.peekandpoke.klang.script.intel.LocalUsage
 import io.peekandpoke.klang.script.types.KlangCallable
@@ -37,6 +39,8 @@ import kotlinx.html.title
 import org.w3c.dom.Element
 import org.w3c.dom.events.Event
 import org.w3c.dom.events.MouseEvent
+
+private val log = Logger(area = LogArea.Ui, source = "QuickHelpView")
 
 /**
  * A KDoc reference (`[semitones]`, `[PitchEnvelopeBuilder]`) as code, as the docs mean it; a markdown link
@@ -665,7 +669,7 @@ class QuickHelpView(ctx: Ctx<Props>) : Component<QuickHelpView.Props>(ctx) {
                     }, 2000)
                 }
             },
-            { e: dynamic -> console.warn("QuickHelpView: could not copy the example", e) },
+            { e: dynamic -> log.warn("Could not copy the example", e) },
         )
     }
 }

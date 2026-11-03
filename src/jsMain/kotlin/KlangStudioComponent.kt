@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang
 
+import io.peekandpoke.klang.common.logging.LogArea
 import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.klang.comp.RouterWithTransitions
 import io.peekandpoke.klang.comp.ScreenAwake
@@ -16,7 +17,7 @@ import io.peekandpoke.kraft.vdom.VDom
 import kotlinx.html.Tag
 import kotlinx.html.div
 
-private val log = Logger("App")
+private val log = Logger(area = LogArea.App, source = "App")
 
 @Suppress("FunctionName")
 fun Tag.KlangStudioComponent() = comp {
@@ -27,12 +28,16 @@ class KlangStudioComponent(ctx: NoProps) : PureComponent(ctx) {
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
+    init {
+        lifecycle {
+            // Not in the render: a render logs nothing (see Logger)
+            onMount { log.info("The app is on the page") }
+        }
+    }
+
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     override fun VDom.render() {
-
-        log.info("rendering app ...")
-
         div(classes = "app") {
             RouterWithTransitions()
             // A visual over the whole window, from the bottom panel's Visuals tab

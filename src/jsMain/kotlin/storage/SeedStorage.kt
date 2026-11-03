@@ -5,8 +5,12 @@
 
 package io.peekandpoke.klang.storage
 
+import io.peekandpoke.klang.common.logging.LogArea
+import io.peekandpoke.klang.common.logging.Logger
 import kotlinx.browser.localStorage
 import kotlin.random.Random
+
+private val log = Logger(area = LogArea.Storage, source = "SeedStorage")
 
 /**
  * The user's random seeds, kept in the browser (the maintainer, 2026-10-28: "every user should get a ui-seed in the
@@ -22,7 +26,7 @@ object SeedStorage {
         val kept = try {
             localStorage.getItem(key)?.toIntOrNull()
         } catch (e: Throwable) {
-            console.warn("SeedStorage: could not read $key", e)
+            log.warn("Could not read $key", e)
             null
         }
 
@@ -35,7 +39,7 @@ object SeedStorage {
         try {
             localStorage.setItem(key, made.toString())
         } catch (e: Throwable) {
-            console.warn("SeedStorage: could not keep $key", e)
+            log.warn("Could not keep $key", e)
         }
 
         return made

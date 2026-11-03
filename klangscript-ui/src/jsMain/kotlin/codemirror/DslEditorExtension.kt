@@ -15,6 +15,8 @@ import io.peekandpoke.klang.codemirror.ext.SelectionRange
 import io.peekandpoke.klang.codemirror.ext.StateEffect
 import io.peekandpoke.klang.codemirror.ext.StateField
 import io.peekandpoke.klang.codemirror.ext.StateFieldConfig
+import io.peekandpoke.klang.common.logging.LogArea
+import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.klang.script.intel.AnalyzedAst
 import io.peekandpoke.klang.script.intel.LocalDefinition
 import io.peekandpoke.klang.script.intel.LocalUsage
@@ -39,6 +41,8 @@ import kotlinx.css.minWidth
 import kotlinx.css.px
 import kotlinx.html.FlowContent
 import org.w3c.dom.events.KeyboardEvent
+
+private val log = Logger(area = LogArea.Editor, source = "DslEditorExtension")
 
 /**
  * The word under the mouse and what it names: its docs [symbol] and, for a local, its [definition] (null for a library
@@ -338,8 +342,6 @@ fun dslEditorExtension(
 
     // Right-click → context menu
     val onContextMenu: (event: dynamic, view: EditorView) -> Boolean = contextmenu@{ event, view ->
-        // console.log("onContextMenu", event)
-
         try {
             // A local the analysis cannot place right now offers neither its declaration nor docs
             val wordDoc = wordDocAt(view, event)?.takeIf { it.definition != null || it.docsSymbol != null }
@@ -351,7 +353,7 @@ fun dslEditorExtension(
             showContextMenu(event, wordDoc, toolAt, view)
             true
         } catch (e: Throwable) {
-            console.error("dslEditorExtension contextmenu error:", e)
+            log.error("The context menu failed", e)
             false
         }
     }

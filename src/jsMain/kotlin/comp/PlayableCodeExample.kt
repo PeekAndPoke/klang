@@ -6,6 +6,8 @@
 package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
+import io.peekandpoke.klang.common.logging.LogArea
+import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.spine.KlangCodePlaybackCtrl
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
@@ -32,6 +34,8 @@ import kotlinx.html.Tag
 import kotlinx.html.button
 import kotlinx.html.div
 import kotlinx.html.title
+
+private val log = Logger(area = LogArea.Ui, source = "PlayableCodeExample")
 
 @Suppress("FunctionName")
 fun Tag.PlayableCodeExample(
@@ -232,7 +236,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                     }, 2000)
                 }
             },
-            { e: dynamic -> console.warn("PlayableCodeExample: could not copy the code", e) },
+            { e: dynamic -> log.warn("Could not copy the code", e) },
         )
     }
 

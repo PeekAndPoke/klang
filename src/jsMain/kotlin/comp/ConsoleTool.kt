@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.comp
 
+import io.peekandpoke.klang.common.logging.LogArea
 import io.peekandpoke.klang.common.logging.LogBuffer
 import io.peekandpoke.klang.common.logging.LogLevel
 import io.peekandpoke.klang.common.logging.LogRecord
@@ -38,7 +39,7 @@ import org.w3c.dom.HTMLSelectElement
 import kotlin.js.Date
 import kotlin.js.Promise
 
-private val log = Logger("Console")
+private val log = Logger(area = LogArea.Ui, source = "Console")
 
 @Suppress("FunctionName")
 fun Tag.ConsoleTool() = comp {
@@ -47,9 +48,9 @@ fun Tag.ConsoleTool() = comp {
 
 /**
  * The Console (KLANG-00407): the app's log, a tab of the bottom panel on every page, as the MIDI tool is. The records
- * newest last, each with its time, its level's lamp, its source and its message; filters by level and by source; Clear
- * and Copy (what is shown, as text, for a report). It follows the newest unless the user scrolled up. Shown, it marks the
- * errors seen, which the panel's key counts until then.
+ * newest last, each with its time, its level's lamp, its area and source and its message; filters by level, by area and
+ * by source; Clear and Copy (what is shown, as text, for a report). It follows the newest unless the user scrolled up.
+ * Shown, it marks the errors seen, which the panel's key counts until then.
  */
 class ConsoleTool(ctx: NoProps) : PureComponent(ctx) {
 
@@ -105,15 +106,21 @@ class ConsoleTool(ctx: NoProps) : PureComponent(ctx) {
             return if (text in record.message) "" else ": $text"
         }
 
-        /** [record] as one line of text, for Copy: `14:03:07.215 WARN [MidiRig] message: the error`. */
-        fun lineOf(record: LogRecord): String =
-            "${timeOf(record.timeMs)} ${record.level.name.uppercase()} [${record.source}] ${record.message}${errorSuffixOf(record)}"
+        /** [record] as one line of text, for Copy: `14:03:07.215 WARN [midi/MidiRig] message: the error`. */
+        fun lineOf(record: LogRecord): String {
+            val level = record.level.name.uppercase()
+
+            return "${timeOf(record.timeMs)} $level [${record.area.label}/${record.source}] ${record.message}${errorSuffixOf(record)}"
+        }
     }
 
     private val console by subscribingTo(ConsoleLog.state)
 
     /** The levels shown; all at first. */
     private var levels: Set<LogLevel> by value(LogLevel.entries.toSet())
+
+    /** The area shown; null for all. */
+    private var area: LogArea? by value(null)
 
     /** The source shown; null for all. */
     private var source: String? by value(null)
@@ -162,7 +169,7 @@ class ConsoleTool(ctx: NoProps) : PureComponent(ctx) {
     }
 
     private fun shown(): List<LogBuffer.Entry> = console.buffer.entries.filter { (_, record) ->
-        record.level in levels && (source == null || record.source == source)
+        record.level in levels && (area == null || record.area == area) && (source == null || record.source == source)
     }
 
     override fun VDom.render() {
@@ -211,39 +218,29 @@ class ConsoleTool(ctx: NoProps) : PureComponent(ctx) {
                 }
             }
 
-            val sources = console.buffer.records.map { it.source }.distinct().sorted()
+            // The areas, all of them always, so the picker does not change as records come
+            renderPicker(
+                label = "Area",
+                all = "All areas",
+                choices = LogArea.entries.map { it.label },
+                chosen = area?.label,
+                onChoose = { label ->
+                    area = LogArea.entries.firstOrNull { it.label == label }
+                    // A source of another area would show nothing
+                    source = null
+                },
+            )
 
-            select {
-                attributes["aria-label"] = "Source"
-                // The look's own ground and ink, not the browser's white field
-                css {
-                    put("height", "28px")
-                    put("padding", "0 8px")
-                    put("background", "var(--kl-ground-sunken)")
-                    put("color", "var(--kl-ink-text)")
-                    put("border", "1px solid var(--kl-edge)")
-                    put("border-radius", "var(--kl-radius)")
-                    put("font", "inherit")
-                }
-                onChange { event ->
-                    source = (event.target as? HTMLSelectElement)?.value?.takeIf { it.isNotEmpty() }
-                }
+            // The sources there are, in the area chosen; one chosen before its records were cleared stays a choice
+            val sources = console.buffer.records.filter { area == null || it.area == area }.map { it.source }
 
-                option {
-                    value = ""
-                    selected = source == null
-                    +"All sources"
-                }
-
-                // A source chosen before its records were cleared stays a choice
-                (sources + listOfNotNull(source)).distinct().forEach { name ->
-                    option {
-                        value = name
-                        selected = name == source
-                        +name
-                    }
-                }
-            }
+            renderPicker(
+                label = "Source",
+                all = "All sources",
+                choices = (sources + listOfNotNull(source)).distinct().sorted(),
+                chosen = source,
+                onChoose = { source = it },
+            )
 
             span { css { put("flex", "1") } }
 
@@ -299,6 +296,44 @@ class ConsoleTool(ctx: NoProps) : PureComponent(ctx) {
             },
             onRejected = { e -> log.warn("Could not copy", e) },
         )
+    }
+
+    /** A picker of the bar: [all] (null), then each of the [choices]; [chosen] selected. */
+    private fun FlowContent.renderPicker(
+        label: String,
+        all: String,
+        choices: List<String>,
+        chosen: String?,
+        onChoose: (String?) -> Unit,
+    ) {
+        select {
+            attributes["aria-label"] = label
+            // The look's own ground and ink, not the browser's white field
+            css {
+                put("height", "28px")
+                put("padding", "0 8px")
+                put("background", "var(--kl-ground-sunken)")
+                put("color", "var(--kl-ink-text)")
+                put("border", "1px solid var(--kl-edge)")
+                put("border-radius", "var(--kl-radius)")
+                put("font", "inherit")
+            }
+            onChange { event -> onChoose((event.target as? HTMLSelectElement)?.value?.takeIf { it.isNotEmpty() }) }
+
+            option {
+                value = ""
+                selected = chosen == null
+                +all
+            }
+
+            choices.forEach { name ->
+                option {
+                    value = name
+                    selected = name == chosen
+                    +name
+                }
+            }
+        }
     }
 
     /** The records shown, newest last. */
@@ -370,7 +405,7 @@ class ConsoleTool(ctx: NoProps) : PureComponent(ctx) {
                     put("flex-shrink", "0")
                 }
 
-                +"[${record.source}]"
+                +"[${record.area.label}/${record.source}]"
             }
 
             span {

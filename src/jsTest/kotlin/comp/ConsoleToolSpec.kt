@@ -9,19 +9,23 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldMatch
+import io.peekandpoke.klang.common.logging.LogArea
 import io.peekandpoke.klang.common.logging.LogLevel
 import io.peekandpoke.klang.common.logging.LogRecord
 import io.peekandpoke.klang.spine.ConsoleLog
 import io.peekandpoke.klang.ui.comp.KlangLamp
 import io.peekandpoke.kraft.testing.TestBed
 import io.peekandpoke.kraft.testing.eventually
+import org.w3c.dom.EventInit
 import org.w3c.dom.HTMLElement
+import org.w3c.dom.HTMLSelectElement
+import org.w3c.dom.events.Event
 
 /** The Console (KLANG-00407): what a record reads as, on its line and in Copy. */
 class ConsoleToolSpec : StringSpec({
 
     fun record(message: String, error: Throwable? = null) =
-        LogRecord(level = LogLevel.Warn, source = "MidiRig", message = message, error = error, timeMs = 0.0)
+        LogRecord(level = LogLevel.Warn, area = LogArea.Midi, source = "MidiRig", message = message, error = error, timeMs = 0.0)
 
     "each level its lamp" {
         LogLevel.entries.map { ConsoleTool.lampOf(it) } shouldBe
@@ -30,7 +34,7 @@ class ConsoleToolSpec : StringSpec({
 
     "a line for Copy: time, level, source, message and the error" {
         ConsoleTool.lineOf(record("Could not keep it", IllegalStateException("full"))) shouldMatch
-                Regex("""\d\d:\d\d:\d\d\.\d\d\d WARN \[MidiRig\] Could not keep it: full""")
+                Regex("""\d\d:\d\d:\d\d\.\d\d\d WARN \[midi/MidiRig\] Could not keep it: full""")
     }
 
     "the tab's title counts the unseen errors, more than 99 as 99+" {
@@ -40,8 +44,9 @@ class ConsoleToolSpec : StringSpec({
         ConsoleTool.tab(unseenErrors = 100).title shouldBe "Console (99+)"
     }
 
-    "shown, the Console sees the errors there and those that come; gone, they count again; a level switched off hides its records" {
-        fun error(message: String) = LogRecord(level = LogLevel.Error, source = "S", message = message, error = null, timeMs = 1.0)
+    "shown, the Console sees the errors there and those that come; gone, they count again; it filters by level and by area" {
+        fun error(message: String) =
+            LogRecord(level = LogLevel.Error, area = LogArea.App, source = "S", message = message, error = null, timeMs = 1.0)
 
         ConsoleLog.clear()
 
@@ -77,6 +82,43 @@ class ConsoleToolSpec : StringSpec({
                         r.textContent!!.contains("a warning") shouldBe false
                         r.textContent!!.contains("before") shouldBe true
                     }
+                }
+
+                warn.click()
+
+                withClue("each row with its area and source") {
+                    eventually { r.textContent!!.contains("[midi/MidiRig]") shouldBe true }
+                }
+
+                fun choose(label: String, value: String) {
+                    val select = r.querySelector("select[aria-label=$label]") as HTMLSelectElement
+
+                    select.value = value
+                    select.dispatchEvent(Event("change", EventInit(bubbles = true)))
+                }
+
+                fun sourceOptions(): List<String> {
+                    val options = r.querySelectorAll("select[aria-label=Source] option")
+
+                    return (0 until options.length).map { (options.item(it) as HTMLElement).textContent.orEmpty() }
+                }
+
+                choose(label = "Source", value = "S")
+
+                withClue("the source S: the warning from MidiRig hidden") {
+                    eventually { r.textContent!!.contains("a warning") shouldBe false }
+                }
+
+                choose(label = "Area", value = LogArea.Midi.label)
+
+                withClue("the area midi: the source chosen before let go, its warning shown, the app's errors hidden") {
+                    eventually {
+                        r.textContent!!.contains("a warning") shouldBe true
+                        r.textContent!!.contains("before") shouldBe false
+                    }
+                }
+                withClue("the sources to choose: only the area's") {
+                    eventually { sourceOptions() shouldBe listOf("All sources", "MidiRig") }
                 }
             }
 

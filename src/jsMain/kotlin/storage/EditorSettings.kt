@@ -5,9 +5,13 @@
 
 package io.peekandpoke.klang.storage
 
+import io.peekandpoke.klang.common.logging.LogArea
+import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
 import kotlinx.browser.localStorage
+
+private val log = Logger(area = LogArea.Storage, source = "EditorSettings")
 
 /**
  * The code editor's settings, kept in the browser's localStorage (KLANG-00349; the song page's Settings tool window):
@@ -53,7 +57,7 @@ object EditorSettings {
     private fun read(key: String): String? = try {
         localStorage.getItem(key)
     } catch (e: Throwable) {
-        console.warn("EditorSettings: could not read $key", e)
+        log.warn("Could not read $key", e)
         null
     }
 
@@ -61,7 +65,7 @@ object EditorSettings {
         try {
             localStorage.setItem(key, value)
         } catch (e: Throwable) {
-            console.warn("EditorSettings: could not remember $key", e)
+            log.warn("Could not remember $key", e)
         }
     }
 }

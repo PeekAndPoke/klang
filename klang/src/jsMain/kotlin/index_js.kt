@@ -8,8 +8,12 @@ package io.peekandpoke.klang.audio_engine
 import io.peekandpoke.klang.audio_be.JsAudioBackend
 import io.peekandpoke.klang.audio_bridge.AudioContext
 import io.peekandpoke.klang.audio_bridge.AudioContextOptions
+import io.peekandpoke.klang.common.logging.LogArea
+import io.peekandpoke.klang.common.logging.Logger
 import kotlinx.coroutines.Dispatchers
 import kotlin.js.json
+
+private val log = Logger(area = LogArea.Engine, source = "KlangPlayer")
 
 /**
  * Create a KlangPlayer for JS. Suspends until the audio backend has completed warmup.
@@ -19,7 +23,7 @@ actual suspend fun klangPlayer(
 ): KlangPlayer {
     val sampleRate = resolveBestSampleRate(options.sampleRate)
 
-    console.log("[KlangPlayer][JS] using sample rate $sampleRate")
+    log.info("Using sample rate $sampleRate")
 
     val effectiveOptions = options.copy(sampleRate = sampleRate)
 
@@ -47,7 +51,7 @@ fun resolveBestSampleRate(desired: Int): Int {
 
         actual
     } catch (e: dynamic) {
-        console.log("[KlangPlayer][JS] Failed to create AudioContext with desired sample rate $desired:", e)
+        log.warn("Could not create an AudioContext at $desired Hz, trying the browser's own rate", e)
 
         // Fallback: Create a default context and see what the browser prefers
         try {
@@ -56,7 +60,7 @@ fun resolveBestSampleRate(desired: Int): Int {
             ctx.close()
             actual
         } catch (e2: dynamic) {
-            console.log("[KlangPlayer][JS] Failed to create default AudioContext:", e2)
+            log.warn("Could not create a default AudioContext either, taking 48000 Hz", e2)
 
             // Absolute fallback ... safe bet as most hardware run natively on 48000
             48000

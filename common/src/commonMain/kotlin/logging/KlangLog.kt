@@ -17,11 +17,37 @@ enum class LogLevel {
 }
 
 /**
- * One message to the log: its [level], the [source] that logged it, its [message], an [error] when there is one, and its
- * [timeMs] (epoch milliseconds).
+ * The part of the app a message comes from, a fixed set the Console filters by (the maintainer, 2026-11-03: "categories
+ * of message ... like ui, backend etc"); the [Logger]'s source is the finer tag inside it. The engine is the audio
+ * engine (the "backend" of the Motor), apart from a server side to come.
+ */
+enum class LogArea(val label: String) {
+    /** Starting up, the shell around the pages, the browser's uncaught errors. */
+    App("app"),
+
+    /** The pages and their components. */
+    Ui("ui"),
+
+    /** The code editor. */
+    Editor("editor"),
+
+    /** The audio engine and its player: log a change of state or a summary, never a stream (see KLANG-00407, D7). */
+    Engine("engine"),
+
+    /** The MIDI devices and the rig. */
+    Midi("midi"),
+
+    /** What the browser keeps. */
+    Storage("storage"),
+}
+
+/**
+ * One message to the log: its [level], the [area] and the [source] that logged it, its [message], an [error] when there
+ * is one, and its [timeMs] (epoch milliseconds).
  */
 data class LogRecord(
     val level: LogLevel,
+    val area: LogArea,
     val source: String,
     val message: String,
     val error: Throwable?,
@@ -120,26 +146,32 @@ object KlangLog {
 }
 
 /**
- * A logger for one [source], the tag its records carry: `private val log = Logger("MidiRig")`, then
- * `log.warn("Could not keep the play code", e)`.
+ * A logger for one [source] in its [area], the tags its records carry:
+ * `private val log = Logger(area = LogArea.Midi, source = "MidiRig")`, then `log.warn("Could not keep the play code", e)`.
  *
  * Never log from a component's render: the Console shows the records, and an error logged in a render redraws the
  * workbench that renders it again.
  */
-class Logger(val source: String) {
+class Logger(val area: LogArea, val source: String) {
 
-    fun debug(message: String, error: Throwable? = null) = log(LogLevel.Debug, message, error)
+    fun debug(message: String, cause: Any? = null) = log(level = LogLevel.Debug, message = message, cause = cause)
 
-    fun info(message: String, error: Throwable? = null) = log(LogLevel.Info, message, error)
+    fun info(message: String, cause: Any? = null) = log(level = LogLevel.Info, message = message, cause = cause)
 
-    fun warn(message: String, error: Throwable? = null) = log(LogLevel.Warn, message, error)
+    fun warn(message: String, cause: Any? = null) = log(level = LogLevel.Warn, message = message, cause = cause)
 
-    fun error(message: String, error: Throwable? = null) = log(LogLevel.Error, message, error)
+    fun error(message: String, cause: Any? = null) = log(level = LogLevel.Error, message = message, cause = cause)
 
-    /** A record at [level] to the [KlangLog]. */
-    fun log(level: LogLevel, message: String, error: Throwable? = null) {
+    /**
+     * A record at [level] to the [KlangLog]. A [cause] that is an error goes with it as its [LogRecord.error]; any other
+     * (what a promise was rejected with, say) is told after the message.
+     */
+    fun log(level: LogLevel, message: String, cause: Any? = null) {
+        val error = cause as? Throwable
+        val text = if (cause != null && error == null) "$message: $cause" else message
+
         KlangLog.publish(
-            LogRecord(level = level, source = source, message = message, error = error, timeMs = KlangLog.nowMs())
+            LogRecord(level = level, area = area, source = source, message = text, error = error, timeMs = KlangLog.nowMs())
         )
     }
 }

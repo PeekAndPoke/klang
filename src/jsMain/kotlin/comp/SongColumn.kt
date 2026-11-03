@@ -6,6 +6,8 @@
 package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.Song
+import io.peekandpoke.klang.common.logging.LogArea
+import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.klang.spine.KlangCodePlaybackCtrl
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.klang.ui.comp.KlangTextField
@@ -24,6 +26,8 @@ import kotlinx.html.button
 import kotlinx.html.div
 import kotlinx.html.span
 import kotlinx.html.title
+
+private val log = Logger(area = LogArea.Ui, source = "SongColumn")
 
 @Suppress("FunctionName")
 fun Tag.SongColumn(
@@ -82,7 +86,7 @@ class SongColumn(ctx: Ctx<Props>) : Component<SongColumn.Props>(ctx) {
                 justCopied = true
                 window.setTimeout({ justCopied = false }, 2000)
             },
-            { e: dynamic -> console.warn("SongColumn: could not copy the code", e) },
+            { e: dynamic -> log.warn("Could not copy the code", e) },
         )
     }
 

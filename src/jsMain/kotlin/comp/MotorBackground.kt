@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.comp
 
+import io.peekandpoke.klang.common.logging.LogArea
+import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.klang.common.math.PerlinNoise2D
 import io.peekandpoke.klang.spine.SwingingLamp
 import io.peekandpoke.klang.spine.UiWork
@@ -54,6 +56,8 @@ import kotlin.math.min
 import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.random.Random
+
+private val log = Logger(area = LogArea.Ui, source = "MotorBackground")
 
 /**
  * Shared ref to the mounted [MotorBackground] so sibling components
@@ -741,7 +745,7 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
      */
     private fun markFailed(e: Any?) {
         if (failed) return
-        console.error("MotorBackground error — falling back to flat bg", e)
+        log.error("The Motor's background failed, falling back to the flat one", e)
         runCatching { teardown() }
         failed = true
         preparing = false

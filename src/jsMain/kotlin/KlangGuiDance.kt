@@ -5,11 +5,15 @@
 
 package io.peekandpoke.klang
 
+import io.peekandpoke.klang.common.logging.LogArea
+import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.klang.storage.StorageKeys
 import io.peekandpoke.klang.ui.GuiDance
 import kotlinx.browser.localStorage
 import kotlinx.browser.window
 import kotlin.js.Date
+
+private val log = Logger(area = LogArea.Ui, source = "KlangGuiDance")
 
 /**
  * Klang's Gui-dance (KLANG-00350): its story arcs and their steps, and the arcs done kept in the browser. A component
@@ -174,7 +178,7 @@ object KlangGuiDance {
                 ?.split(",")?.filter { it.isNotBlank() }?.toSet()
                 ?: emptySet()
         } catch (e: Throwable) {
-            console.warn("KlangGuiDance: could not read the arcs done", e)
+            log.warn("Could not read the arcs done", e)
             emptySet()
         }
 
@@ -182,14 +186,14 @@ object KlangGuiDance {
             try {
                 localStorage.setItem(StorageKeys.GUI_DANCE_ARCS_DONE, done.joinToString(","))
             } catch (e: Throwable) {
-                console.warn("KlangGuiDance: could not remember the arcs done", e)
+                log.warn("Could not remember the arcs done", e)
             }
         }
 
         override fun loadMutedUntil(): Double = try {
             localStorage.getItem(StorageKeys.GUI_DANCE_MUTED_UNTIL)?.toDoubleOrNull() ?: 0.0
         } catch (e: Throwable) {
-            console.warn("KlangGuiDance: could not read the mute", e)
+            log.warn("Could not read the mute", e)
             0.0
         }
 
@@ -197,7 +201,7 @@ object KlangGuiDance {
             try {
                 localStorage.setItem(StorageKeys.GUI_DANCE_MUTED_UNTIL, until.toString())
             } catch (e: Throwable) {
-                console.warn("KlangGuiDance: could not remember the mute", e)
+                log.warn("Could not remember the mute", e)
             }
         }
     }

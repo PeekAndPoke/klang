@@ -20,6 +20,8 @@ import io.peekandpoke.klang.codemirror.ext.javascript
 import io.peekandpoke.klang.codemirror.ext.lintGutter
 import io.peekandpoke.klang.codemirror.ext.linter
 import io.peekandpoke.klang.codemirror.ext.showMinimap
+import io.peekandpoke.klang.common.logging.LogArea
+import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.intel.toCodeMirrorSeverity
 import io.peekandpoke.klang.script.intel.toOffsets
@@ -47,6 +49,8 @@ import org.w3c.dom.Element
 import org.w3c.dom.HTMLDivElement
 import org.w3c.dom.events.Event
 import org.w3c.dom.events.MouseEvent
+
+private val log = Logger(area = LogArea.Editor, source = "CodeMirror")
 
 /** Backward-compatible alias. */
 @Suppress("unused")
@@ -254,7 +258,7 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
             val view = EditorView(viewConfig)
             editor = view
         } catch (e: Throwable) {
-            console.error("Error initializing CodeMirror:", e)
+            log.error("Error initializing CodeMirror", e)
         }
 
         // Clicking an entry in the lint panel places the cursor at the START of
@@ -426,7 +430,7 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
         return try {
             analyzerDiagnostics(view) + runtimeErrorDiagnostics(view)
         } catch (e: Throwable) {
-            console.error("Error building diagnostics:", e)
+            log.error("Error building diagnostics", e)
             emptyArray()
         }
     }
@@ -506,9 +510,7 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
                 val to = from + error.len
 
                 if (from < 0 || to > view.state.doc.length) {
-                    console.warn(
-                        "Diagnostic position out of bounds: from=$from, to=$to, doc.length=${view.state.doc.length}"
-                    )
+                    log.warn("Diagnostic position out of bounds: from=$from, to=$to, doc.length=${view.state.doc.length}")
                     return@mapNotNull null
                 }
 
@@ -519,7 +521,7 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
                     this.message = error.message
                 }
             } catch (e: Throwable) {
-                console.error("Error converting EditorError to Diagnostic:", e)
+                log.error("Error converting EditorError to Diagnostic", e)
                 null
             }
         }.toTypedArray()
@@ -556,7 +558,7 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
             view.dispatch(jsObject<dynamic> {})
             forceLinting(view)
         } catch (e: Throwable) {
-            console.error("Error requesting a lint run:", e)
+            log.error("Error requesting a lint run", e)
         }
     }
 

@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.spine.storage
 
+import io.peekandpoke.klang.common.logging.LogArea
+import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.klang.spine.Recents
 import io.peekandpoke.klang.storage.StorageKeys
 import kotlinx.browser.localStorage
@@ -15,6 +17,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
+
+private val log = Logger(area = LogArea.Storage, source = "RecentsStorage")
 
 /**
  * Where [Recents] keeps what was opened, as JSON in the browser's localStorage: the first store in the Spine's own
@@ -28,7 +32,7 @@ object RecentsStorage {
             ?.let { decode(Json.parseToJsonElement(it)) }
             ?: emptyList()
     } catch (e: Throwable) {
-        console.warn("RecentsStorage: ignoring an unreadable list", e)
+        log.warn("Ignoring an unreadable list", e)
         emptyList()
     }
 
@@ -36,7 +40,7 @@ object RecentsStorage {
         try {
             localStorage.setItem(StorageKeys.RECENTS, encode(entries).toString())
         } catch (e: Throwable) {
-            console.warn("RecentsStorage: could not remember what was opened", e)
+            log.warn("Could not remember what was opened", e)
         }
     }
 

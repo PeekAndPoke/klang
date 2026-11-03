@@ -14,7 +14,7 @@ import io.kotest.matchers.shouldBe
 class LogBufferSpec : StringSpec({
 
     fun record(level: LogLevel, message: String) =
-        LogRecord(level = level, source = "S", message = message, error = null, timeMs = 1.0)
+        LogRecord(level = level, area = LogArea.App, source = "S", message = message, error = null, timeMs = 1.0)
 
     fun LogBuffer.messages() = records.map { it.message }
 

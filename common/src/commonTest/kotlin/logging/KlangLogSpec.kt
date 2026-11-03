@@ -30,7 +30,7 @@ class KlangLogSpec : StringSpec({
         val boom = IllegalStateException("boom")
 
         withListeners(LogListener { first.add(it) }, LogListener { second.add(it) }) {
-            val log = Logger("MidiRig")
+            val log = Logger(area = LogArea.Midi, source = "MidiRig")
 
             log.debug("d")
             log.info("i")
@@ -45,6 +45,7 @@ class KlangLogSpec : StringSpec({
             Triple(LogLevel.Error, "MidiRig", "e"),
         )
         first.map { it.error } shouldBe listOf(null, null, boom, null)
+        withClue("each with the logger's area") { first.map { it.area }.distinct() shouldBe listOf(LogArea.Midi) }
         withClue("the second listener the same records") { second shouldBe first }
         withClue("each with its time") { first.all { it.timeMs > 0.0 } shouldBe true }
     }
@@ -55,12 +56,12 @@ class KlangLogSpec : StringSpec({
 
         withListeners(listener, listener) {
             KlangLog.listeners.count { it == listener } shouldBe 1
-            Logger("A").info("once")
+            Logger(area = LogArea.App, source = "A").info("once")
         }
 
         withClue("heard once") { heard.map { it.message } shouldBe listOf("once") }
 
-        Logger("A").info("after")
+        Logger(area = LogArea.App, source = "A").info("after")
 
         withClue("off the log: not heard") { heard.map { it.message } shouldBe listOf("once") }
         KlangLog.listeners.filter { it == listener }.shouldBeEmpty()
@@ -70,7 +71,7 @@ class KlangLogSpec : StringSpec({
         val heard = mutableListOf<String>()
 
         withListeners(LogListener { throw IllegalStateException("broken") }, LogListener { heard.add(it.message) }) {
-            Logger("A").warn("still here")
+            Logger(area = LogArea.App, source = "A").warn("still here")
         }
 
         heard shouldBe listOf("still here")
@@ -85,12 +86,12 @@ class KlangLogSpec : StringSpec({
                 first.add(record.message)
 
                 if (record.message == "one") {
-                    Logger("Echo").info("two")
+                    Logger(area = LogArea.App, source = "Echo").info("two")
                 }
             },
             LogListener { second.add(it.message) },
         ) {
-            Logger("A").info("one")
+            Logger(area = LogArea.App, source = "A").info("one")
         }
 
         first shouldBe listOf("one", "two")
@@ -104,33 +105,44 @@ class KlangLogSpec : StringSpec({
 
         val echo = LogListener {
             heard++
-            Logger("Echo").info("again")
+            Logger(area = LogArea.App, source = "Echo").info("again")
         }
 
         withListeners(echo) {
-            Logger("A").info("start")
+            Logger(area = LogArea.App, source = "A").info("start")
         }
 
         heard shouldBe 1 + KlangLog.MAX_WAITING
 
         withListeners(echo) {
-            Logger("A").info("start again")
+            Logger(area = LogArea.App, source = "A").info("start again")
         }
 
         withClue("a second time as many: the bound is each record's, not used up") { heard shouldBe 2 * (1 + KlangLog.MAX_WAITING) }
 
         withClue("the next record handed on as any other") {
             withListeners(LogListener { heard++ }) {
-                Logger("A").info("after")
+                Logger(area = LogArea.App, source = "A").info("after")
             }
 
             heard shouldBe 2 * (1 + KlangLog.MAX_WAITING) + 1
         }
     }
 
+    "a cause that is no error is told after the message" {
+        val heard = mutableListOf<LogRecord>()
+
+        withListeners(LogListener { heard.add(it) }) {
+            Logger(area = LogArea.App, source = "Copy").warn("could not copy", "NotAllowedError")
+        }
+
+        heard.single().message shouldBe "could not copy: NotAllowedError"
+        heard.single().error shouldBe null
+    }
+
     "with no listener a record goes nowhere and nothing fails" {
         KlangLog.listeners.shouldBeEmpty()
 
-        Logger("A").error("into the void")
+        Logger(area = LogArea.App, source = "A").error("into the void")
     }
 })

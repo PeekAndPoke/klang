@@ -10,10 +10,14 @@ import io.peekandpoke.klang.audio_bridge.KlangPatternEvent
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_engine.KlangRealtimeVoicePlayback
+import io.peekandpoke.klang.common.logging.LogArea
+import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.kraft.utils.launch
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
 import kotlinx.coroutines.Deferred
+
+private val log = Logger(area = LogArea.Engine, source = "RealtimePlaybackCtrl")
 
 /**
  * Non-UI controller owning the engine-startup → durable-playback → voice-forwarding lifecycle for
@@ -91,7 +95,7 @@ class RealtimePlaybackCtrl(
                 playback = player.createRealtimePlayback(playbackName)
                 _state { it.copy(isReady = true, error = null) }
             } catch (t: Throwable) {
-                console.error("[RealtimePlaybackCtrl] failed to start:", t)
+                log.error("Failed to start", t)
                 _state { it.copy(error = t.message ?: t.toString()) }
             } finally {
                 starting = false

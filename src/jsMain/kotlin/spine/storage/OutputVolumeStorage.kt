@@ -5,8 +5,12 @@
 
 package io.peekandpoke.klang.spine.storage
 
+import io.peekandpoke.klang.common.logging.LogArea
+import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.klang.storage.StorageKeys
 import kotlinx.browser.localStorage
+
+private val log = Logger(area = LogArea.Storage, source = "OutputVolumeStorage")
 
 /**
  * The master volume in the browser's localStorage (KLANG-00330): the linear gain, 0.0 to 1.0, that `Player.outputVolume`
@@ -22,7 +26,7 @@ object OutputVolumeStorage {
         val stored = try {
             localStorage.getItem(StorageKeys.MASTER_VOLUME)?.toDoubleOrNull()
         } catch (e: Throwable) {
-            console.warn("OutputVolumeStorage: could not read the volume", e)
+            log.warn("Could not read the volume", e)
             null
         }
 
@@ -38,7 +42,7 @@ object OutputVolumeStorage {
         try {
             localStorage.setItem(StorageKeys.MASTER_VOLUME, gain.toString())
         } catch (e: Throwable) {
-            console.warn("OutputVolumeStorage: could not remember the volume", e)
+            log.warn("Could not remember the volume", e)
         }
     }
 }

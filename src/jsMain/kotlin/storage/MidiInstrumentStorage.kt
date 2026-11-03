@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.storage
 
+import io.peekandpoke.klang.common.logging.LogArea
+import io.peekandpoke.klang.common.logging.Logger
 import kotlinx.browser.localStorage
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -12,6 +14,8 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+
+private val log = Logger(area = LogArea.Storage, source = "MidiInstrumentStorage")
 
 /**
  * The playground's instruments as the page kept them in the browser's localStorage before the one play code (KLANG-00402,
@@ -28,7 +32,7 @@ object MidiInstrumentStorage {
         return try {
             Json.parseToJsonElement(raw).jsonArray.mapNotNull { decode(it.jsonObject) }
         } catch (e: Throwable) {
-            console.warn("MidiInstrumentStorage: ignoring unreadable instruments", e)
+            log.warn("Ignoring unreadable instruments", e)
             emptyList()
         }
     }
@@ -39,7 +43,7 @@ object MidiInstrumentStorage {
         return try {
             decode(Json.parseToJsonElement(raw).jsonObject)
         } catch (e: Throwable) {
-            console.warn("MidiInstrumentStorage: ignoring unreadable draft", e)
+            log.warn("Ignoring unreadable draft", e)
             null
         }
     }

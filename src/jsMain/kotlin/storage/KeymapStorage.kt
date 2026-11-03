@@ -5,8 +5,12 @@
 
 package io.peekandpoke.klang.storage
 
+import io.peekandpoke.klang.common.logging.LogArea
+import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.klang.workshop.keys.KeymapStore
 import kotlinx.browser.localStorage
+
+private val log = Logger(area = LogArea.Storage, source = "KeymapStorage")
 
 /**
  * The keys the user gave Klang's actions, in the browser's localStorage (KLANG-00325), as [KeymapJson] writes them.
@@ -21,7 +25,7 @@ object KeymapStorage : KeymapStore {
         val stored = try {
             localStorage.getItem(StorageKeys.KEYMAP)
         } catch (e: Throwable) {
-            console.warn("KeymapStorage: could not read the keymap", e)
+            log.warn("Could not read the keymap", e)
             null
         }
 
@@ -32,7 +36,7 @@ object KeymapStorage : KeymapStore {
         try {
             localStorage.setItem(StorageKeys.KEYMAP, KeymapJson.write(userKeys))
         } catch (e: Throwable) {
-            console.warn("KeymapStorage: could not keep the keymap", e)
+            log.warn("Could not keep the keymap", e)
         }
     }
 }

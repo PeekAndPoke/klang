@@ -5,10 +5,14 @@
 
 package io.peekandpoke.klang.storage
 
+import io.peekandpoke.klang.common.logging.LogArea
+import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.klang.pages.docs.tutorials.allTutorials
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
 import kotlinx.browser.localStorage
+
+private val log = Logger(area = LogArea.Storage, source = "TutorialStorage")
 
 /**
  * Which tutorials the user marked as done, in the browser's localStorage; [done] as a stream, so the Learn column,
@@ -32,7 +36,7 @@ object TutorialStorage {
                 localStorage.removeItem(StorageKeys.tutorialCompleted(slug))
             }
         } catch (e: Throwable) {
-            console.warn("TutorialStorage: could not keep the tutorial's state", e)
+            log.warn("Could not keep the tutorial's state", e)
         }
 
         doneSource(if (completed) doneSource() + slug else doneSource() - slug)
@@ -41,7 +45,7 @@ object TutorialStorage {
     private fun readDone(): Set<String> = try {
         allTutorials.map { it.slug }.filter { localStorage.getItem(StorageKeys.tutorialCompleted(it)) == "true" }.toSet()
     } catch (e: Throwable) {
-        console.warn("TutorialStorage: could not read the tutorials' state", e)
+        log.warn("Could not read the tutorials' state", e)
         emptySet()
     }
 }

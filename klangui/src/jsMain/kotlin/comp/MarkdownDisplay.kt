@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.ui.comp
 
+import io.peekandpoke.klang.common.logging.LogArea
+import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.kraft.addons.marked.marked
 import io.peekandpoke.kraft.addons.registry.AddonRegistry.Companion.addons
 import io.peekandpoke.kraft.components.Component
@@ -18,6 +20,8 @@ import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlinx.html.unsafe
 import kotlin.time.Duration.Companion.milliseconds
+
+private val log = Logger(area = LogArea.Ui, source = "MarkdownDisplay")
 
 @Suppress("FunctionName")
 fun Tag.MarkdownDisplay(
@@ -92,7 +96,7 @@ class MarkdownDisplay(ctx: Ctx<Props>) : Component<MarkdownDisplay.Props>(ctx) {
                 }
             }
         } catch (e: Exception) {
-            console.warn("Error rendering markdown:", e)
+            log.warn("Error rendering markdown", e)
             markdown
         }
     }

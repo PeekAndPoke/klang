@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.spine
 
+import io.peekandpoke.klang.common.logging.LogArea
+import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.klang.midi.KeyLayout
 import io.peekandpoke.klang.spine.storage.MidiSettingsStorage
 import io.peekandpoke.ultra.streams.Stream
@@ -12,6 +14,8 @@ import io.peekandpoke.ultra.streams.StreamSource
 import io.peekandpoke.ultra.streams.ops.combinedWith
 import kotlinx.browser.window
 import kotlin.js.Promise
+
+private val log = Logger(area = LogArea.Midi, source = "MidiSettings")
 
 /**
  * The MIDI settings, a part of the Spine (KLANG-00402): the laptop keys' [layout] and the [letters] it gives, which only
@@ -73,10 +77,10 @@ object MidiSettings {
                 browserLetters(letters)
             }.catch { e ->
                 // Refused (a frame without the keyboard-map permission): the letters are learned instead
-                console.warn("[MidiSettings] the browser's keyboard map is not readable", e)
+                log.warn("The browser's keyboard map is not readable", e)
             }
         } catch (e: Throwable) {
-            console.warn("[MidiSettings] the browser's keyboard map is not readable", e)
+            log.warn("The browser's keyboard map is not readable", e)
         }
     }
 

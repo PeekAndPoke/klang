@@ -7,10 +7,14 @@ package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.common.SourceLocationAware
+import io.peekandpoke.klang.common.logging.LogArea
+import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.klang.script.runtime.KlangScriptError
 import io.peekandpoke.klang.ui.codemirror.EditorError
 import io.peekandpoke.klang.ui.codemirror.KlangScriptEditorComp
 import io.peekandpoke.kraft.components.ComponentRef
+
+private val log = Logger(area = LogArea.Editor, source = "Editor")
 
 /**
  * Maps a Throwable into an EditorError for display in the CodeMirror editor.
@@ -98,7 +102,7 @@ suspend fun withEditorErrorHandling(
     try {
         block()
     } catch (e: Throwable) {
-        console.error("Editor error:", e)
+        log.error("Editor error", e)
         editorRef { it.setErrors(listOf(mapToEditorError(e))) }
     }
 }

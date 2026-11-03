@@ -8,9 +8,13 @@ package io.peekandpoke.klang.audio_fe
 import io.peekandpoke.klang.audio_bridge.AudioContext
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_fe.samples.AudioDecoder
+import io.peekandpoke.klang.common.logging.LogArea
+import io.peekandpoke.klang.common.logging.Logger
 import kotlinx.coroutines.await
 import org.khronos.webgl.Float32Array
 import org.khronos.webgl.Int8Array
+
+private val log = Logger(area = LogArea.Engine, source = "BrowserAudioDecoder")
 
 class BrowserAudioDecoder : AudioDecoder {
     // We need an AudioContext to decode, even if we don't play anything with it.
@@ -27,12 +31,10 @@ class BrowserAudioDecoder : AudioDecoder {
             val ctx: AudioContext = try {
                 js("new OfflineAudioContext(1, 1, 48000)")
             } catch (e: Throwable) {
-                console.error("[BrowserAudioDecoder] Failed to create OfflineAudioContext", e.printStackTrace())
+                log.error("Failed to create OfflineAudioContext", e)
                 // Use the default context
                 defaultCtx
             }
-
-            // console.log("[BrowserAudioDecoder] Created AudioContext", ctx, "with sample rate", ctx.sampleRate)
 
             // 2. Decode (Async)
             // decodeAudioData returns a Promise<AudioBuffer>
@@ -44,9 +46,6 @@ class BrowserAudioDecoder : AudioDecoder {
             // getChannelData returns a Float32Array
             val pcmFloat32: Float32Array = audioBuffer.getChannelData(0)
 
-            // console.log("Decoded ${pcmFloat32.length} samples ... use pcmFloat32.unsafeCast<FloatArray>()")
-            // console.log("pcmFloat32", pcmFloat32)
-
             // 4. Return
             // The engine's canonical sample type is Double — widen Float32Array → DoubleArray here
             // (Kotlin/JS DoubleArray is backed by Float64Array). One-shot per decoded asset.
@@ -56,7 +55,7 @@ class BrowserAudioDecoder : AudioDecoder {
                 pcm = DoubleArray(asFloatArray.size) { asFloatArray[it].toDouble() }
             )
         } catch (e: Throwable) {
-            console.error("[BrowserAudioDecoder] Failed to decode audio", e)
+            log.error("Failed to decode audio", e)
             null
         }
     }

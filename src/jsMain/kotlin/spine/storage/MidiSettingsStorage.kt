@@ -5,9 +5,13 @@
 
 package io.peekandpoke.klang.spine.storage
 
+import io.peekandpoke.klang.common.logging.LogArea
+import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.klang.midi.KeyLayout
 import io.peekandpoke.klang.storage.StorageKeys
 import kotlinx.browser.localStorage
+
+private val log = Logger(area = LogArea.Storage, source = "MidiSettingsStorage")
 
 /**
  * Where [io.peekandpoke.klang.spine.MidiSettings] keeps the laptop keys' layout, a layout's name in the browser's
@@ -20,7 +24,7 @@ object MidiSettingsStorage {
     fun loadLayout(): KeyLayout? = try {
         localStorage.getItem(StorageKeys.MIDI_KEY_LAYOUT)?.let { name -> KeyLayout.entries.firstOrNull { it.name == name } }
     } catch (e: Throwable) {
-        console.warn("MidiSettingsStorage: could not read the layout", e)
+        log.warn("Could not read the layout", e)
         null
     }
 
@@ -32,7 +36,7 @@ object MidiSettingsStorage {
                 localStorage.setItem(StorageKeys.MIDI_KEY_LAYOUT, layout.name)
             }
         } catch (e: Throwable) {
-            console.warn("MidiSettingsStorage: could not keep the layout", e)
+            log.warn("Could not keep the layout", e)
         }
     }
 }

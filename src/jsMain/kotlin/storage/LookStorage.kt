@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.storage
 
+import io.peekandpoke.klang.common.logging.LogArea
+import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.klang.ui.feel.KlangLookPreset
 import io.peekandpoke.klang.ui.feel.KlangLookShelf
 import io.peekandpoke.klang.ui.feel.KlangLookText
@@ -17,6 +19,8 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
+
+private val log = Logger(area = LogArea.Storage, source = "LookStorage")
 
 /**
  * The looks in the browser's localStorage: the look the user chose, by its id (KLANG-00339), and the user's own looks
@@ -33,7 +37,7 @@ object LookStorage {
         val json = try {
             localStorage.getItem(StorageKeys.LOOKS)?.let { Json.parseToJsonElement(it).jsonObject }
         } catch (e: Throwable) {
-            console.warn("LookStorage: could not read the looks", e)
+            log.warn("Could not read the looks", e)
             null
         }
 
@@ -56,7 +60,7 @@ object LookStorage {
         try {
             localStorage.setItem(StorageKeys.LOOKS, json.toString())
         } catch (e: Throwable) {
-            console.warn("LookStorage: could not remember the looks", e)
+            log.warn("Could not remember the looks", e)
         }
     }
 
@@ -65,7 +69,7 @@ object LookStorage {
         val id = try {
             localStorage.getItem(StorageKeys.LOOK)
         } catch (e: Throwable) {
-            console.warn("LookStorage: could not read the look", e)
+            log.warn("Could not read the look", e)
             null
         }
 
@@ -76,7 +80,7 @@ object LookStorage {
         try {
             localStorage.setItem(StorageKeys.LOOK, preset.id)
         } catch (e: Throwable) {
-            console.warn("LookStorage: could not remember the look", e)
+            log.warn("Could not remember the look", e)
         }
     }
 }

@@ -8,6 +8,8 @@ package io.peekandpoke.klang.codemirror
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.codemirror.ext.EditorView
 import io.peekandpoke.klang.common.SourceLocation
+import io.peekandpoke.klang.common.logging.LogArea
+import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.kraft.addons.pixijs.PixiJsAddon
 import io.peekandpoke.kraft.addons.pixijs.followElementSize
 import io.peekandpoke.kraft.addons.pixijs.js.Application
@@ -22,6 +24,8 @@ import kotlinx.coroutines.await
 import org.w3c.dom.events.Event
 import kotlin.js.Date
 import kotlin.math.min
+
+private val log = Logger(area = LogArea.Editor, source = "CodeMirrorHighlightBuffer")
 
 /**
  * PixiJS (WebGL) playback highlight buffer for CodeMirror.
@@ -249,7 +253,7 @@ class CodeMirrorHighlightBuffer(
                 if (pendingOps.isNotEmpty() || activeMarks.isNotEmpty()) ensureTickerRunning()
             } catch (t: Throwable) {
                 initializing = false
-                console.error("Failed to initialize PixiJS highlight overlay", t)
+                log.error("Failed to initialize PixiJS highlight overlay", t)
             }
         }
     }

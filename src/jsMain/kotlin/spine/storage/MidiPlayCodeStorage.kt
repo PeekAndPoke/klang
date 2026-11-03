@@ -5,11 +5,15 @@
 
 package io.peekandpoke.klang.spine.storage
 
+import io.peekandpoke.klang.common.logging.LogArea
+import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.klang.midi.MidiPlayCode
 import io.peekandpoke.klang.storage.MidiInstrument
 import io.peekandpoke.klang.storage.MidiInstrumentStorage
 import io.peekandpoke.klang.storage.StorageKeys
 import kotlinx.browser.localStorage
+
+private val log = Logger(area = LogArea.Storage, source = "MidiPlayCodeStorage")
 
 /**
  * Where the MIDI rig keeps its play code (KLANG-00402, D7), in the browser's localStorage: the one the user applied last
@@ -30,7 +34,7 @@ object MidiPlayCodeStorage {
     fun load(): String? = try {
         localStorage.getItem(StorageKeys.MIDI_PLAY_CODE) ?: fromOld()?.also { save(it) }
     } catch (e: Throwable) {
-        console.warn("MidiPlayCodeStorage: could not read the play code", e)
+        log.warn("Could not read the play code", e)
         null
     }
 
@@ -38,7 +42,7 @@ object MidiPlayCodeStorage {
         try {
             localStorage.setItem(StorageKeys.MIDI_PLAY_CODE, code)
         } catch (e: Throwable) {
-            console.warn("MidiPlayCodeStorage: could not keep the play code", e)
+            log.warn("Could not keep the play code", e)
         }
     }
 

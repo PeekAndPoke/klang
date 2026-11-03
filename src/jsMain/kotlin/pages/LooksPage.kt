@@ -6,6 +6,8 @@
 package io.peekandpoke.klang.pages
 
 import io.peekandpoke.klang.Nav
+import io.peekandpoke.klang.common.logging.LogArea
+import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.klang.comp.Motor
 import io.peekandpoke.klang.comp.Oscilloscope
 import io.peekandpoke.klang.comp.Spectrumeter
@@ -69,6 +71,8 @@ import kotlin.math.PI
 import kotlin.math.exp
 import kotlin.math.roundToInt
 import kotlin.math.sin
+
+private val log = Logger(area = LogArea.Ui, source = "LooksPage")
 
 @Suppress("FunctionName")
 fun Tag.LooksPage(slot: Int?) = comp(
@@ -309,7 +313,7 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
 
         clipboard.writeText(KlangLookText.encode(look)).then(
             { _: dynamic -> copied = true },
-            { e: dynamic -> console.warn("LooksPage: could not copy the look", e) },
+            { e: dynamic -> log.warn("Could not copy the look", e) },
         )
     }
 

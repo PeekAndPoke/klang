@@ -8,14 +8,18 @@ package io.peekandpoke.klang
 import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.audio_engine.playOnce
+import io.peekandpoke.klang.common.logging.LogArea
+import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.sprudel.SprudelPattern
+
+private val log = Logger(area = LogArea.Ui, source = "Jingles")
 
 /** This jingle's code as a pattern; null, and said in the console, when it does not compile. */
 fun Jingle.compile(): SprudelPattern? = try {
     SprudelPattern.compile(Player.createEngine(), code)
 } catch (e: Throwable) {
-    console.error("Jingle $id does not compile", e)
+    log.error("Jingle $id does not compile", e)
     null
 }
 

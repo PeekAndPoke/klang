@@ -1,7 +1,7 @@
 # KLANG-00407: A Logger in the frontend and a Console tab in the bottom tools
 
-> **Status (2026-11-02): IN PROGRESS.** Steps 2 and 3 built, step 4 in part (uncaught errors, rejected promises);
-> the ignore list waits for the maintainer's look in Chrome and Firefox; step 5 (D6) not started
+> **Status (2026-11-03): IN PROGRESS.** Steps 2, 3 and 5 built, with areas; step 4 in part (uncaught errors, rejected
+> promises; the engine's messages wait for D7); the ignore list waits for the maintainer's look in Chrome and Firefox
 
 ## Why this exists
 
@@ -94,12 +94,23 @@ caller; Firefox's support to be checked). Way 4 works everywhere at the cost of 
   uncaught errors and the rejected promises are in (the Console only; Chrome's harmless ResizeObserver notice left
   out); the worklet's messages not yet.
 - **D4, the levels the browser console listener writes** in a release build (proposal: `info` and above; `debug` only
-  in a development build or when switched on in the Console tab). OPEN: for now every level goes to the browser's
-  console in every build (Chrome hides `debug` under "Verbose" by default).
+  in a development build or when switched on in the Console tab). TAKEN AS PROPOSED 2026-11-03, open to change:
+  `BuildMode` reads webpack's mode; a development build writes every level, a release `info` and up. The switch in
+  the Console tab is not built.
 - **D5, where the Console tab lives**: every page's bottom panel as the MIDI tool (proposal), or the Dev Tools only.
   TAKEN AS PROPOSED 2026-11-02: opened from its key while the key counts errors, the panel opens at the Console.
 - **D6, the existing `console` calls**: moved to the Logger in this ticket, all 64 and the engine's (proposal), or as
-  they are touched.
+  they are touched. TAKEN 2026-11-03 for the page's own code (34 files). Left as they are: the engine's own lines
+  (`audio_be`, `audio_jsworklet`; part of them run in the worklet, another JS realm), which wait for D7;
+  `KlangBenchmark` (its console lines are its report), KlangScript's `console` (the user's script output), `workshop`
+  (no Klang dependency), and `StartPage.kt` and `KlangCodePlaybackCtrl.kt` (another session's work), to move when they
+  are free.
+- **D7, the engine's messages** (the maintainer, 2026-11-03: "which backend message would we log, to not overwhelm
+  the ui?"). PROPOSAL, not built: log a change of state or a summary, never a stream. `BackendReady` once (info: the
+  rate, the latency); a playback's start at debug at most; samples as one summary per song and a warning per sample
+  that fails, not each request; `Diagnostics` never as such, only its transitions (an overload began; it ended, how
+  long, how many blocks late: warn); the player failing to start (error). With it, identical records in a row fold
+  into one line with a count in the Console.
 
 ## The work
 
@@ -111,21 +122,24 @@ caller; Firefox's support to be checked). Way 4 works everywhere at the cost of 
 4. The uncaught errors, the rejected promises and the engine's messages into the buffer (D3).
 5. The existing `console` calls moved to the Logger (D6).
 
-## Where it stands (2026-11-02)
+## Where it stands (2026-11-03)
 
 - **The Logger** (`common`, so `klangui` and `audio_fe` can use it too): `common/src/commonMain/kotlin/logging/`
   (`KlangLog`, `Logger`, `LogRecord`, `LogBuffer`) and `common/src/jsMain/kotlin/logging/BrowserConsoleListener.kt`.
   Every `logging/` directory of a Kotlin source set is on the source maps' ignore list
   (`webpack.config.d/04-log-ignore-list.js`); the built map lists both files beside Kotlin's own entry. Webpack
   writes the standard key `ignoreList`, not `x_google_ignoreList`. **To check by the maintainer:** after a dev server
-  restart, DevTools in Chrome and in Firefox show `[App] rendering app ...` at `KlangStudioComponent.kt`, not at
+  restart, DevTools in Chrome and in Firefox show `[app/App] The app is on the page` at `KlangStudioComponent.kt`, not at
   `BrowserConsoleListener.kt` or `KlangLog.kt`.
 - **The Console** (`spine/ConsoleLog.kt`, `comp/ConsoleTool.kt`): a tab beside the MIDI tool on every page
   (`layouts/BottomTools.kt`); where a page has no panel of its own, the two make a panel "Tools" (a toolbox). Its
   key and the tab's title count the errors not seen yet; showing the tab sees them.
+- **Areas** (the maintainer, 2026-11-03: "categories of message ... like ui, backend etc"): each record has an
+  area, `app`, `ui`, `editor`, `engine`, `midi`, `storage` (`LogArea`; the engine's is the audio engine, apart from
+  a server side to come), beside its finer source; the Console filters by both.
 - **Taken as proposed, open to change:** D2 (1000 records, `debug` dropped first), D3 in part (uncaught errors and
   rejected promises, into the Console only, since the browser prints them itself; the worklet's messages not yet),
-  D5 (every page's bottom panel). D4 and D6 are not decided yet.
+  D5 (every page's bottom panel), D4 and D6 (2026-11-03, see below).
 
 ## Acceptance
 
@@ -142,4 +156,5 @@ caller; Firefox's support to be checked). Way 4 works everywhere at the cost of 
 - 2026-11-02: the spike on way 1 (inline): the call moves into the caller, the source map still points at the Logger; D1 open.
 - 2026-11-02: D1 decided, the ignore list; in progress.
 - 2026-11-02: the Logger, the ignore list, the Console tab and the uncaught errors built; the browsers' check waits.
+- 2026-11-03: areas, D4 and D6 taken; D7 proposed.
 - 2026-11-02: IN PROGRESS.

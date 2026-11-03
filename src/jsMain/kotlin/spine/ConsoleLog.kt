@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.spine
 
 import io.peekandpoke.klang.common.logging.KlangLog
+import io.peekandpoke.klang.common.logging.LogArea
 import io.peekandpoke.klang.common.logging.LogBuffer
 import io.peekandpoke.klang.common.logging.LogLevel
 import io.peekandpoke.klang.common.logging.LogListener
@@ -112,7 +113,7 @@ object ConsoleLog {
     }
 
     /**
-     * The record of an uncaught error, an error from [UNCAUGHT]; null for what the browser reports there but does not
+     * The record of an uncaught error, an error of the app's from [UNCAUGHT]; null for what the browser reports there but does not
      * show in its own console: the ResizeObserver's "loop completed with undelivered notifications", harmless, which
      * comes with no error.
      */
@@ -123,6 +124,7 @@ object ConsoleLog {
 
         return LogRecord(
             level = LogLevel.Error,
+            area = LogArea.App,
             source = UNCAUGHT,
             message = uncaughtMessage(message = message, file = file, line = line, column = column),
             error = error as? Throwable,
@@ -139,7 +141,7 @@ object ConsoleLog {
             else -> "Rejected with nothing"
         }
 
-        return LogRecord(level = LogLevel.Error, source = UNHANDLED, message = message, error = error, timeMs = timeMs)
+        return LogRecord(level = LogLevel.Error, area = LogArea.App, source = UNHANDLED, message = message, error = error, timeMs = timeMs)
     }
 
     /** An uncaught error's message, where the browser has one, and where it was thrown: `Boom (app.js:12:7)`. */

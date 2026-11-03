@@ -5,11 +5,15 @@
 
 package io.peekandpoke.klang.utils
 
+import io.peekandpoke.klang.common.logging.LogArea
+import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
 import io.peekandpoke.ultra.streams.Unsubscribe
 import kotlinx.browser.document
 import kotlinx.browser.window
+
+private val log = Logger(area = LogArea.Ui, source = "Fullscreen")
 
 class FullscreenController : Stream<FullscreenController.FullscreenState> {
 
@@ -65,9 +69,9 @@ class FullscreenController : Stream<FullscreenController.FullscreenState> {
         }
 
         try {
-            root.requestFullscreen().catch { console.warn("Fullscreen refused:", it) }
+            root.requestFullscreen().catch { log.warn("Fullscreen refused", it) }
         } catch (e: Throwable) {
-            console.warn("Fullscreen failed:", e)
+            log.warn("Fullscreen failed", e)
         }
     }
 
@@ -75,7 +79,7 @@ class FullscreenController : Stream<FullscreenController.FullscreenState> {
         val currentState = getCurrentState()
         if (currentState.isFullscreen && !currentState.canExitWithClick) {
             // Cannot programmatically exit F11 fullscreen, do nothing
-            console.warn("Cannot exit F11 fullscreen programmatically.")
+            log.warn("Cannot exit F11 fullscreen programmatically.")
             return
         }
 

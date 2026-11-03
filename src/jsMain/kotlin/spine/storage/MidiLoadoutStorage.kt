@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.spine.storage
 
+import io.peekandpoke.klang.common.logging.LogArea
+import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.klang.midi.MidiLoadout
 import io.peekandpoke.klang.storage.StorageKeys
 import kotlinx.browser.localStorage
@@ -14,6 +16,8 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
+
+private val log = Logger(area = LogArea.Storage, source = "MidiLoadoutStorage")
 
 /**
  * Where the MIDI rig keeps its loadout (KLANG-00402, step 5c), in the browser's localStorage: the instruments' codes in
@@ -29,7 +33,7 @@ object MidiLoadoutStorage {
 
         MidiLoadout.ofCodes(codes)
     } catch (e: Throwable) {
-        console.warn("MidiLoadoutStorage: could not read the loadout", e)
+        log.warn("Could not read the loadout", e)
         MidiLoadout()
     }
 
@@ -37,7 +41,7 @@ object MidiLoadoutStorage {
         try {
             localStorage.setItem(StorageKeys.MIDI_LOADOUT, JsonArray(loadout.codes.map { JsonPrimitive(it) }).toString())
         } catch (e: Throwable) {
-            console.warn("MidiLoadoutStorage: could not keep the loadout", e)
+            log.warn("Could not keep the loadout", e)
         }
     }
 }
