@@ -147,7 +147,7 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
              * Each column by its own level, with more contrast than the first 0.5 to 1 (the maintainer, 2026-10-29: "a bit
              * more", then "bit more on the code page"): the code page's Motor.
              */
-            val Own = Lighting(floor = 0.30, power = 1.5, relative = false)
+            val Own = Lighting(floor = 0.25, power = 1.5, relative = false)
 
             /**
              * Against the loudest, by the dB below it: the light dances through the columns; the visual's, soft (the

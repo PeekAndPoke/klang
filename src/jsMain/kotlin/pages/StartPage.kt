@@ -1024,7 +1024,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
      * with it, by transform and opacity alone, as the visuals' are (`VisualsBoard.reflect`).
      */
     private fun reflect(light: SwingingLamp.Light) {
-        val page = dom as? HTMLElement ?: return
+        val page = dom ?: return
         val opacity = VisualsParts.highlightOpacity(level = light.level).toString()
         val highlight = page.querySelector(".${VisualsParts.HIGHLIGHT}") as? HTMLElement
 

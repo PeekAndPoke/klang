@@ -146,7 +146,7 @@ fun FlowContent.statusBarView(
                     css {
                         put("flex", "none")
                     }
-                    +(line?.seconds?.let { clockOf(it) } ?: "-:--")
+                    +(line.seconds?.let { clockOf(it) } ?: "-:--")
                 }
 
                 button(type = ButtonType.button) {
