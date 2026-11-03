@@ -67,7 +67,7 @@ and `retire` stay a synchronous hard cut, and `Cylinder` calls them only on a si
 | gain | never off | per-sample glide over `KNOB_GLIDE_SECONDS` |
 | arithmetic (`plus`, `minus`, `times`, `div`, `pow`, `min`, `max`, `abs`; 2026-10-11) | never off, memoryless: the Ignitor's per-sample law (`_arithmetic_laws.kt`) on every sample; an unset operand is the operator's identity, an unset cap or floor passes the bus | the operand glides per sample over `KNOB_GLIDE_SECONDS`, the law taken with the operand at each sample; a divisor glides as its reciprocal (a level) and divides again once settled; a cap's or a floor's first operand after unset arrives at once, and a cleared one lets go at the next block (`KatalystArithmeticEffect`) |
 | parallel | none of its own: each branch is a chain whose stages switch as above | none of its own: the orbit's param state reaches every branch's stages (`KatalystNestedChainsWriter`) |
-| region (`oversampleBy`, `oversampleAtLeast`; KLANG-00214 step 3a) | none of its own: the body is a chain at the region's rate whose stages switch as above; the converters run while the orbit does | none of its own: the param state reaches the body's stages (`KatalystNestedChainsWriter`); the knobs keep the orbit's clock |
+| region (`oversampleBy`, `oversampleAtLeast`; KLANG-00214 step 3a) | none of its own: the body is a chain at the region's rate whose stages switch as above; the converters run while the orbit does. At a chain's head it takes the orbit's rate buses in (step 3b) | none of its own: the param state reaches the body's stages (`KatalystNestedChainsWriter`); the knobs keep the orbit's clock |
 
 `KnobGlide` (`audio_be/.../KnobGlide.kt`, its KDoc is the contract) moves one knob linearly over
 `KNOB_GLIDE_SECONDS` (0.05) in whole 128-frame blocks, lands bit-exactly, restarts from where the knob stands on a
@@ -104,6 +104,9 @@ The glide time itself is an open question for the maintainer's ear: KLANG-00213 
   over `ChainSwap.CUT_SECONDS` (0.15 s), and a request during the fade cuts where the fade ends; the request lands
   about 0.2 s after it was made (maintainer, 2026-10-17: KLANG-00318 (chain swap request during drain)).
   Chains of different latency are placed so their weights meet at the output (`KatalystChain.latencyFrames`).
+  Chains of different rates (KLANG-00214 step 3b) each bring the orbit's rate buses to their own rate: the leaving
+  chain gets a copy of every bus ramped by the same line, read between the frames (`Crossfade.rampDown(steps)`), and
+  its buses are zeroed after each run (`ChainSwap.processLeaving`); the blend and the duck stay at 1x.
 - **`TailRelease` is the one release law** (`audio_be/.../TailRelease.kt`): exponential from exactly 1, 60 dB per
   `RT60_SECONDS` (3 s), retired under `FLOOR_DB` (-90 dB), 4.5 s in all.
 - **A stopped playback is never hard-cut** (`PlaybackEngine.isIdle` KDoc is the home): finite tails ring out in

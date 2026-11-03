@@ -189,6 +189,24 @@ class KatalystChain internal constructor(
     val pureDelayFrames: Int =
         (exactLatency - oversamplers.sumOf { Oversampler.groupDelaySamples(stages = it, firstStage = firstStage) }).roundToInt()
 
+    /**
+     * The region that begins an orbit's chain, which takes the orbit's rate buses in at its rate (KLANG-00214
+     * (oversampling regions) step 3b), or null: the chain does not begin with a region, or it is a region's body.
+     */
+    private val busHead: KatalystRegionEffect? = (serial.firstOrNull() as? KatalystRegionEffect)?.takeIf { firstStage == 0 }
+
+    /**
+     * The rate this chain runs an orbit at, in 2x steps above the base rate: its head region's (section 10, "Orbits":
+     * what the first stage asks for on a base-rate input), 0 for a chain that begins with anything else.
+     */
+    private val rateSteps: Int = busHead?.steps ?: 0
+
+    /**
+     * Steps the orbit's rate buses above [rateSteps] down to it. Built for every chain at the base rate, a master's and a
+     * `parallel` branch's too, whose contexts never hold a bus (the ladder then returns at once); none in a region's body.
+     */
+    private val busLadder: KatalystBusLadder? = if (firstStage == 0) KatalystBusLadder(level = rateSteps) else null
+
     /** Rents the warehouse refused any stage of this chain, for the diagnostics feedback. */
     val deniedRents: Int
         get() {
@@ -300,7 +318,18 @@ class KatalystChain internal constructor(
     fun process(ctx: KatalystContext) {
         tickModulated()
 
-        for (i in serial.indices) {
+        // The orbit's rate buses meet at the chain's rate (step 3b): in the head region, or stepped down into the mix.
+        val head = busHead
+        var first = 0
+
+        if (head != null) {
+            head.process(ctx = ctx, ladder = busLadder)
+            first = 1
+        } else {
+            busLadder?.addAbove(ctx = ctx, target = ctx.mixBuffer)
+        }
+
+        for (i in first until serial.size) {
             serial[i].process(ctx)
         }
 
@@ -340,6 +369,7 @@ class KatalystChain internal constructor(
      */
     fun reset() {
         forgetParams()
+        busLadder?.reset()
 
         for (i in stages.indices) {
             stages[i].reset()
@@ -357,6 +387,7 @@ class KatalystChain internal constructor(
      */
     fun retire() {
         forgetParams()
+        busLadder?.reset()
 
         for (i in stages.indices) {
             stages[i].retire()

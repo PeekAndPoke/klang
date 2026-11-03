@@ -11,6 +11,8 @@ import io.peekandpoke.klang.audio_be.ignitor.BuiltIgnitor
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
+import io.peekandpoke.klang.audio_be.ignitor.MemoizingIgnitor
+import io.peekandpoke.klang.audio_be.ignitor.OversampleRegionIgnitor
 import io.peekandpoke.klang.audio_be.ignitor.SampleIgnitor
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.ignitor.buildExciter
@@ -348,7 +350,15 @@ class VoiceFactory(
             random = voiceRandom,
         )
 
-        val pipeline = listOf(IgniteRenderer(signal = signal, signalCtx = signalCtx, freqHz = freqHz)) + treeStages
+        // A tree that ends in an oversampling region hands its output over at the region's rate, and the orbit
+        // converts every voice at that rate at once (KLANG-00214 (oversampling regions) step 3b): only the teardown
+        // fade and the send follow the tree, and both run at the voice's rate. The build wraps the root in a per-block
+        // memo, which a root, read by the voice alone, never needs: the region renders without it.
+        val region = ((signal as? MemoizingIgnitor)?.inner ?: signal) as? OversampleRegionIgnitor
+        val rateSteps = region?.handOver() ?: 0
+        val rendered = if (region != null && rateSteps > 0) region else signal
+
+        val pipeline = listOf(IgniteRenderer(signal = rendered, signalCtx = signalCtx, freqHz = freqHz)) + treeStages
 
         val blockCtx = BlockContext(
             audioBuffer = voiceBuffer,
@@ -356,6 +366,7 @@ class VoiceFactory(
             sampleRate = sampleRate,
             // The voice's time limits, one instance: the voice owns and writes it, every stage reads it.
             limits = VoiceLimits(startFrame = startFrame, gateEndFrame = gateEndFrame, endFrame = endFrame),
+            rateSteps = rateSteps,
         )
 
         return Voice(

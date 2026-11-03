@@ -43,6 +43,12 @@ class BlockContext(
      * instance, which a realtime note-off moves. Stages read it on every render call and never keep a copy.
      */
     val limits: VoiceLimits,
+    /**
+     * The 2x steps above the base rate the voice hands its output over at (KLANG-00214 (oversampling regions) step 3b),
+     * 0 for a voice at the base rate. Above 0, [audioBuffer] runs at that rate: the window is [offset] to [windowEnd]
+     * times `1 shl rateSteps`, and the stages after the tree read their frame positions between the frames.
+     */
+    val rateSteps: Int = 0,
 ) {
     // ═══════════════════════════════════════════════════════════════════════════
     // Mutable per block (updated before pipeline runs)

@@ -9,6 +9,7 @@ import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChain
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystContext
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystDuckEffect
 import io.peekandpoke.klang.audio_be.effects.TailCeiling
+import io.peekandpoke.klang.audio_be.ignitor.REGION_MAX_STAGES
 import io.peekandpoke.klang.audio_be.utils.copyRangeInto
 import io.peekandpoke.klang.audio_be.utils.finiteOrZero
 import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
@@ -102,7 +103,8 @@ import kotlin.math.max
  * block's weights ([Crossfade.blendHeld]). So [Fading.process] tests [Crossfade.isComplete] FIRST and
  * then runs the entered state's block in the same call.
  *
- * Not thread-safe; everything runs on the audio thread. Nothing here allocates after construction.
+ * Not thread-safe; everything runs on the audio thread. Nothing here allocates after construction, except the leaving
+ * context's rate buses, made once per rate on first use ([KatalystContext.busAt], KLANG-00214 step 3b).
  */
 internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
 
@@ -295,9 +297,29 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
             val mix = ctx.mixBuffer
 
             fade.rampDown(target = leavingMix, source = mix, frames = blockFrames)
-            out.process(leavingContext)
+            rampBusesDown(ctx)
+            processLeaving(out)
             chain.process(ctx)
             fade.rampUpAndAdd(target = mix, outgoing = leavingMix, frames = blockFrames)
+        }
+
+        /**
+         * The host's rate buses (KLANG-00214 (oversampling regions) step 3b), each scaled by the outgoing weight into
+         * the leaving chain's own bus at that rate, before the arriving chain steps the live ones down in place: the
+         * leaving chain hears every voice fade, whichever rate it was handed over at.
+         */
+        private fun rampBusesDown(ctx: KatalystContext) {
+            val active = ctx.activeBuses
+
+            for (steps in 1..REGION_MAX_STAGES) {
+                if (active and (1 shl steps) == 0) {
+                    continue
+                }
+
+                val source = ctx.buses[steps] ?: continue
+
+                fade.rampDown(target = leavingContext.busAt(steps), source = source, frames = blockFrames, steps = steps)
+            }
         }
 
         override fun processDuck(chain: KatalystChain, ctx: KatalystContext) {
@@ -429,7 +451,7 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
             val out = leaving ?: return
 
             leavingMix.clear()
-            out.process(leavingContext)
+            processLeaving(out)
             chain.process(ctx)
             // The draining chain's ring-out, at full weight: it is the host's own tail, not a second mix.
             ctx.mixBuffer.addFrom(source = leavingMix, frames = blockFrames)
@@ -528,7 +550,7 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
             val out = leaving ?: return
 
             leavingMix.clear()
-            out.process(leavingContext)
+            processLeaving(out)
             chain.process(ctx)
 
             if (release.addReleased(target = ctx.mixBuffer, source = leavingMix)) {
@@ -596,7 +618,7 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
             val out = leaving ?: return
 
             leavingMix.clear()
-            out.process(leavingContext)
+            processLeaving(out)
             chain.process(ctx)
 
             // Locals for the loop (`audio/ref/effect-state-machines.md`, section 2).
@@ -652,6 +674,16 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
     /** [TAIL_MEASURE_SECONDS] in frames, at least one. */
     private val tailMeasureFrames: Int = (TAIL_MEASURE_SECONDS * sampleRate).toInt().coerceAtLeast(1)
 
+
+    /**
+     * Runs the leaving chain on [leavingContext], then zeroes the rate buses it read: the ramped copies of the fade, or
+     * the silent bus its steps down rang out on (KLANG-00214 (oversampling regions) step 3b). Nothing else clears that
+     * context, so a bus left as the chain stepped it down in place would be read again.
+     */
+    private fun processLeaving(out: KatalystChain) {
+        out.process(leavingContext)
+        leavingContext.clearBuses()
+    }
 
     private val idle = Idle()
     private val fading = Fading()

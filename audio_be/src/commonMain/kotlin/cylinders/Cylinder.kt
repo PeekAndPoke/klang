@@ -532,7 +532,15 @@ class Cylinder(
         if (!isActive) return
 
         mixBuffer.clear()
+        katalystContext.clearBuses()
     }
+
+    /**
+     * The mix at [steps] 2x steps above the base rate, for a voice that hands its output over at its region's rate
+     * (KLANG-00214 (oversampling regions) step 3b): [mixBuffer] at 0, else the rate bus, made the first time a voice
+     * lands there. The chain brings every bus to its own rate, once per orbit ([KatalystContext.buses]).
+     */
+    fun mixBufferAt(steps: Int): StereoBuffer = if (steps == 0) mixBuffer else katalystContext.busAt(steps)
 
     /**
      * Processes all bus effects in the chain's order: Body → Vowel → Delay → Reverb → Phaser →
@@ -676,6 +684,7 @@ class Cylinder(
         ownerParams = null
         ownerParamsAge = OWNER_STATE_BLOCKS
         mixBuffer.clear()
+        katalystContext.clearBuses()
         isActive = false
         silentBlockCount = 0
     }
@@ -747,7 +756,9 @@ class Cylinder(
         // The mix buffer is not cleared while the orbit is inactive (see [clear]), so the last
         // block's sub-floor output would otherwise still be in it when a voice reactivates the
         // orbit: summed into that block's mix and, since step 5b-2, fed into its delay and room.
+        // The rate buses likewise: the chain's steps down may have rung out on one this block.
         mixBuffer.clear()
+        katalystContext.clearBuses()
 
         // A chain that was requested while this orbit was sounding lands HERE, the first moment
         // the swap is inaudible. An install that SWAPPED retires the outgoing chain (units back to

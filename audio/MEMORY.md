@@ -258,6 +258,16 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   (the top of the room decays a little faster: open for the maintainer's ear). Latency: `exactLatency` unrounded
   through bodies, a region rounds once; a `parallel` around a region pads its body by the nearest frame. A region
   always declares a tail. Chains without a region render bit for bit as before.
+- **The hand-over** (2026-11-03, KLANG-00214 step 3b): a voice whose tree ENDS in a region (the root, under its build
+  memo) does not convert down; it lands on its orbit's rate bus (`KatalystContext.buses`, `Cylinder.mixBufferAt`), its
+  teardown fade, cut fade, solo ramp and pan running at that rate (the same lines read between the frames). The orbit's
+  chain brings every bus to its rate once (a head region's steps, else 0): the head region converts the mix up one
+  stage at a time and adds each lower bus on the way, `KatalystBusLadder` steps the higher ones down in place, both
+  with the `Oversampler`'s own stages, so a bus continues its voice's cascade: in phase with the voices converted at the
+  orbit at or below its rate; a bus above keeps the round trip of the stages above (untwinned, as before 3b). With one
+  voice per rate on an orbit it costs more than converting in the voice (stereo after the pan); break-even is two. The ladder rings out on a silent bus for `Oversampler.tailFrames` after the
+  last voice above its rate. A swap ramps every bus for the leaving chain (`Crossfade.rampDown(steps)`); the duck and
+  the blend stay at 1x. Buses and the raised voice buffers are made on first use and kept.
 - **`parallel` on the Katalyst** (`KatalystParallelEffect`, 2026-10-10): each branch is a `KatalystChain` of its own,
   run on a copy of the bus and SUMMED; branches are matched in phase (the twins of the oversamplers a branch lacks,
   `KatalystLatentEffect.oversamplers`, and a ring for the lookahead it lacks; the stage's latency is the union's plus
@@ -390,7 +400,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   `Ignitor.freq()` anywhere renders once per pitch; a layer detuned under an `fm` or a `Freq`-reading pitch mod renders
   the mod again); the build-time diagnostic for the second, an fm above a forking detune:
   KLANG-00291 (fm above forking detune diagnostic).
-- **Scheduled or designed**: KLANG-00214 (oversampling regions; steps 1 and 3a landed, 3b and 4 open), KLANG-00137 (master dsl followups),
+- **Scheduled or designed**: KLANG-00214 (oversampling regions; steps 1, 3a and 3b landed, 4 open), KLANG-00137 (master dsl followups),
   KLANG-00211 (katalyst master configure doors), KLANG-00155 (pluck release tail),
   KLANG-00138 (voice takeover) (blocked on a design decision), KLANG-00158 (playback layer decomposition).
 - **Katalyst, future**: `reverb-models.md` (with `room-reverb.md`), `one-chain-host.md`, `delay-ceiling-edges.md`, `transition-times.md`,
@@ -414,6 +424,8 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-11-03 The hand-over: a voice ending in a region lands on its orbit's rate bus, one conversion per rate per
+  orbit (KLANG-00214 (oversampling regions), step 3b).
 - 2026-11-03 Oversampling regions on the Katalyst, `oversampleBy` and `oversampleAtLeast` (KLANG-00214
   (oversampling regions), step 3a).
 - 2026-11-01 Oversampling regions on the Ignitor, `oversampleBy` and `oversampleAtLeast`; Der Schmetterling's

@@ -40,13 +40,16 @@ class SendRenderer(
         val panNorm = voice.pan.coerceIn(0.0, 1.0)
         val panAngle = panNorm * (PI / 2.0)
 
-        // Pre-fetch cylinder buffers
+        // Pre-fetch cylinder buffers. A voice that hands over (KLANG-00214 (oversampling regions) step 3b) lands on the
+        // orbit's bus at its rate, 2^rateSteps samples per frame; the orbit converts every voice there at once.
+        val steps = ctx.rateSteps
         val audioBuffer = ctx.audioBuffer
-        val outL = cylinder.mixBuffer.left
-        val outR = cylinder.mixBuffer.right
+        val mix = cylinder.mixBufferAt(steps)
+        val outL = mix.left
+        val outR = mix.right
 
-        val offset = ctx.offset
-        val length = ctx.length
+        val offset = ctx.offset shl steps
+        val length = ctx.length shl steps
 
         if (ctx.measurePeak) {
             measurePeak(ctx = ctx, audioBuffer = audioBuffer, offset = offset, length = length)
@@ -54,7 +57,7 @@ class SendRenderer(
 
         // The solo/mute multiplier moved since the last block: ramp it across this one (no step, no click).
         if (voice.gainMultiplierFrom != voice.gainMultiplier) {
-            mixRamped(ctx = ctx, panAngle = panAngle, audioBuffer = audioBuffer, outL = outL, outR = outR)
+            mixRamped(ctx = ctx, panAngle = panAngle, audioBuffer = audioBuffer, outL = outL, outR = outR, offset = offset, length = length)
 
             return
         }
@@ -93,15 +96,18 @@ class SendRenderer(
         audioBuffer: AudioBuffer,
         outL: AudioBuffer,
         outR: AudioBuffer,
+        /** The window in the buffer's samples: frames times `1 shl rateSteps` (see [render]). */
+        offset: Int,
+        length: Int,
     ) {
         val from = voice.gainMultiplierFrom
         val delta = voice.gainMultiplier - from
-        val blockFrames = ctx.renderContext.blockFrames.toDouble()
+        // In samples at the voice's rate, so a voice that hands over reads the same line between the frames.
+        val blockFrames = (ctx.renderContext.blockFrames shl ctx.rateSteps).toDouble()
         val baseL = cos(panAngle) * voice.gain
         val baseR = sin(panAngle) * voice.gain
-        val offset = ctx.offset
 
-        for (i in 0 until ctx.length) {
+        for (i in 0 until length) {
             val idx = offset + i
             val multiplier = from + delta * (idx + 1) / blockFrames
             val signal = audioBuffer[idx]

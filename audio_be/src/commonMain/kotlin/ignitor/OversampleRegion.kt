@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.Oversampler
+import io.peekandpoke.klang.audio_be.utils.copyRangeInto
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.childNodes
 import io.peekandpoke.klang.audio_bridge.withChildNodes
@@ -134,6 +135,24 @@ internal class OversampleRegionIgnitor(
 ) : Ignitor {
     private var child: IgniteContext? = null
 
+    /**
+     * The 2x steps this region hands its output over at, 0 while it converts down itself (KLANG-00214 (oversampling
+     * regions) step 3b). Set by [handOver].
+     */
+    private var handOverSteps: Int = 0
+
+    /**
+     * Makes this region, the root of a voice's tree, hand its output over at its rate instead of converting it down:
+     * [generate] then writes `length shl steps` samples from `offset shl steps` of a buffer at the region's rate, and the
+     * orbit converts every voice at that rate at once. Returns the steps. Only for a region at the base rate, which the
+     * root of a tree is.
+     */
+    fun handOver(): Int {
+        handOverSteps = oversampler.stages
+
+        return handOverSteps
+    }
+
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         val factor = oversampler.factor
         val c = child ?: IgniteContext(
@@ -159,7 +178,12 @@ internal class OversampleRegionIgnitor(
             ctx.scratchBuffers.oversample(factor).use { out ->
                 input.buffer = work
                 body.generate(out, freqHz, c)
-                oversampler.decimate(work = out, target = buffer, offset = ctx.offset, length = ctx.length)
+
+                if (handOverSteps > 0) {
+                    out.copyRangeInto(destination = buffer, destinationOffset = ctx.offset * factor, startIndex = 0, endIndex = ctx.length * factor)
+                } else {
+                    oversampler.decimate(work = out, target = buffer, offset = ctx.offset, length = ctx.length)
+                }
             }
         }
     }

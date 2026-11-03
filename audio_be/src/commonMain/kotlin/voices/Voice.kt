@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.voices
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
+import io.peekandpoke.klang.audio_be.ignitor.REGION_MAX_STAGES
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.utils.fadeToZero
 import io.peekandpoke.klang.audio_bridge.constants.CUT_FADE_SECONDS
@@ -402,7 +403,7 @@ class Voice(
         val length = (vEnd - vStart).toInt()
 
         // Update per-block state
-        blockCtx.audioBuffer = ctx.voiceBuffer
+        blockCtx.audioBuffer = ctx.voiceBufferAt(blockCtx.rateSteps)
         blockCtx.updateOffsetAndLength(offset = offset, length = length)
         blockCtx.blockStart = ctx.blockStart
         blockCtx.renderContext = ctx
@@ -461,13 +462,16 @@ class Voice(
         val fadeStart = fading.fadeStartFrame
         val zeroFrame = ceil(fading.fadeEndFrame) - 1.0
 
+        // A voice that hands over runs at 2^rateSteps samples per frame: the same line, read between the frames.
+        val steps = blockCtx.rateSteps
+
         fadeToZero(
             buffer = blockCtx.audioBuffer,
-            startIndex = blockCtx.offset,
-            endIndex = blockCtx.windowEnd,
+            startIndex = blockCtx.offset shl steps,
+            endIndex = blockCtx.windowEnd shl steps,
             // The buffer index at which the gain reaches zero (frame = blockStart + index).
-            zeroIndex = zeroFrame - blockCtx.blockStart,
-            scale = 1.0 / (zeroFrame - fadeStart).coerceAtLeast(1.0),
+            zeroIndex = (zeroFrame - blockCtx.blockStart) * (1 shl steps),
+            scale = 1.0 / (zeroFrame - fadeStart).coerceAtLeast(1.0) / (1 shl steps),
         )
     }
 
@@ -573,6 +577,22 @@ class Voice(
     ) {
         // Absolute backend frame — Double, see RenderClock.cursorFrame.
         var blockStart: Double = 0.0
+
+        // The voice buffers above the base rate, by 2x steps, for voices that hand over (see [voiceBufferAt]).
+        private val raisedVoiceBuffers = arrayOfNulls<AudioBuffer>(REGION_MAX_STAGES + 1)
+
+        /**
+         * The voice buffer at [steps] 2x steps above the base rate (KLANG-00214 (oversampling regions) step 3b):
+         * [voiceBuffer] at 0, else one shared buffer per rate, made the first time a voice renders at it and kept,
+         * like [voiceBuffer], for the context's life.
+         */
+        fun voiceBufferAt(steps: Int): AudioBuffer {
+            if (steps == 0) {
+                return voiceBuffer
+            }
+
+            return raisedVoiceBuffers[steps] ?: AudioBuffer(blockFrames shl steps).also { raisedVoiceBuffers[steps] = it }
+        }
     }
 
     companion object {

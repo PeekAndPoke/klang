@@ -207,6 +207,32 @@ internal class Crossfade(sampleRate: Int) {
     }
 
     /**
+     * [rampDown] for a rate bus [steps] 2x steps above the base rate (KLANG-00214 (oversampling regions) step 3b):
+     * `frames shl steps` samples, each weighted by the outgoing line at its place between the frames, so the leaving
+     * chain hears every rate fade out together. For a bus above the base rate (`steps` at least 1).
+     */
+    fun rampDown(target: StereoBuffer, source: StereoBuffer, frames: Int, steps: Int) {
+        val targetLeft = target.left
+        val targetRight = target.right
+        val sourceLeft = source.left
+        val sourceRight = source.right
+        val total = totalFrames.toDouble()
+        val start = (pos - outgoingInputDelayFrames).toDouble()
+        val step = 1.0 / (1 shl steps)
+
+        // The same line as at the base rate, read between its frames: sample i of the bus sits at frame i / 2^steps.
+        for (i in 0 until (frames shl steps)) {
+            val d = start + i * step
+            val t = if (d >= totalFrames) 1.0 else if (d <= 0.0) 0.0 else d / total
+            val u = 1.0 - t
+
+            // Sterilised tap, as in the base-rate ramp above.
+            targetLeft[i] = sourceLeft[i].finiteOrZero() * u
+            targetRight[i] = sourceRight[i].finiteOrZero() * u
+        }
+    }
+
+    /**
      * Scales [frames] of [target] by the INCOMING weight (0 up to 1), adds [outgoing] at FULL
      * weight, and advances the ramp.
      *

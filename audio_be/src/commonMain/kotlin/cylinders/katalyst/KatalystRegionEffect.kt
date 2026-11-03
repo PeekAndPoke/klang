@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
 import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.StereoBuffer
+import io.peekandpoke.klang.audio_be.utils.copyRangeInto
 import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -27,7 +28,14 @@ import kotlin.math.roundToInt
  * down, rounded once ([latencyFrames]). Only the round trip is an oversampler a `parallel` can twin; the body's part
  * counts as pure delay, so a nested oversampler or a lookahead inside is matched by whole frames.
  *
- * **Allocation:** the region's bus and the four converters, here at build; [process] allocates nothing.
+ * **At the head of an orbit's chain** the region is where the orbit's rate buses meet (KLANG-00214 step 3b): the chain
+ * calls [process] with its [KatalystBusLadder], the mix is converted up one stage at a time and each bus below the
+ * region's rate is added at its own rate on the way, the bus at the region's rate at the top, and the ladder steps the
+ * buses above it down. The stages are the ones a voice's region converted with, so a bus continues the cascade its
+ * voice began: a bus at or below the region's rate meets the voices converted here in phase; a bus above it keeps its
+ * voice's round trip of the stages above the region's rate (as a voice converting down itself did before), untwinned.
+ *
+ * **Allocation:** the region's bus and the converters, here at build; [process] allocates nothing.
  *
  * **Lifecycle:** every question the chain asks is passed to [body]. The region reports a tail of its own while the
  * down conversion may still ring out what the body last produced ([Oversampler.tailFrames] quiet frames).
@@ -36,7 +44,7 @@ class KatalystRegionEffect internal constructor(
     /** The stages inside, built at the region's rate; never holds a duck (the builder takes it out). */
     internal val body: KatalystChain,
     /** The 2x steps the region takes, at least 1 (a region with none is built as its body's stages in place). */
-    private val steps: Int,
+    internal val steps: Int,
     /** The cascade stage of the region's first step: the steps of the chain it sits in (0 on an orbit). */
     firstStage: Int,
     /** The frames of one block of the chain the region sits in. */
@@ -48,9 +56,12 @@ class KatalystRegionEffect internal constructor(
         KatalystContext(blockFrames = frames, mixBuffer = StereoBuffer(frames))
     }
 
-    // One converter per channel; each holds its up and its down half.
+    // Down: one converter per channel over all the steps. Up: one per channel and step, so the orbit's rate buses can be
+    // added between the steps; the same arithmetic as one converter over all of them.
     private val left = Oversampler(stages = steps, firstStage = firstStage)
     private val right = Oversampler(stages = steps, firstStage = firstStage)
+    private val upLeft = Array(steps) { Oversampler(stages = 1, firstStage = firstStage + it) }
+    private val upRight = Array(steps) { Oversampler(stages = 1, firstStage = firstStage + it) }
 
     /** The round trip, the one oversampler of this stage a `parallel` can twin. */
     override val oversamplers: List<Int> = listOf(steps)
@@ -74,12 +85,40 @@ class KatalystRegionEffect internal constructor(
     override val deniedRents: Int get() = body.deniedRents
 
     override fun process(ctx: KatalystContext) {
+        process(ctx = ctx, ladder = null)
+    }
+
+    /**
+     * One block; with a [ladder], the region heads an orbit's chain and takes the orbit's rate buses in (see the class
+     * KDoc): the ladder's level is this region's rate.
+     */
+    internal fun process(ctx: KatalystContext, ladder: KatalystBusLadder?) {
         val frames = ctx.blockFrames
         val mix = ctx.mixBuffer
         val region = inner.mixBuffer
 
-        left.upsample(source = mix.left, offset = 0, length = frames, work = region.left)
-        right.upsample(source = mix.right, offset = 0, length = frames, work = region.right)
+        upLeft[0].upsample(source = mix.left, offset = 0, length = frames, work = region.left)
+        upRight[0].upsample(source = mix.right, offset = 0, length = frames, work = region.right)
+
+        var length = 2 * frames
+
+        for (stage in 1 until steps) {
+            if (ladder != null) {
+                addBus(ctx = ctx, steps = stage, length = length)
+            }
+
+            // The next step reads the upper half (`Oversampler.upsample`'s own cascade).
+            region.left.copyRangeInto(destination = region.left, destinationOffset = length, startIndex = 0, endIndex = length)
+            region.right.copyRangeInto(destination = region.right, destinationOffset = length, startIndex = 0, endIndex = length)
+            upLeft[stage].upsample(source = region.left, offset = length, length = length, work = region.left)
+            upRight[stage].upsample(source = region.right, offset = length, length = length, work = region.right)
+            length *= 2
+        }
+
+        if (ladder != null) {
+            addBus(ctx = ctx, steps = steps, length = length)
+            ladder.addAbove(ctx = ctx, target = region)
+        }
 
         body.process(inner)
 
@@ -87,6 +126,15 @@ class KatalystRegionEffect internal constructor(
 
         left.decimate(work = region.left, target = mix.left, offset = 0, length = frames)
         right.decimate(work = region.right, target = mix.right, offset = 0, length = frames)
+    }
+
+    /** Adds the orbit's bus at [steps], when it holds audio this block, into the region's bus at that rate. */
+    private fun addBus(ctx: KatalystContext, steps: Int, length: Int) {
+        if (ctx.activeBuses and (1 shl steps) == 0) {
+            return
+        }
+
+        ctx.buses[steps]?.let { inner.mixBuffer.addFrom(source = it, frames = length) }
     }
 
     /** One block of the body's output against [SILENCE_FLOOR]: a loud one starts the hold again, a quiet one counts. */
@@ -126,6 +174,12 @@ class KatalystRegionEffect internal constructor(
     private fun clear() {
         left.reset()
         right.reset()
+
+        for (stage in 0 until steps) {
+            upLeft[stage].reset()
+            upRight[stage].reset()
+        }
+
         inner.mixBuffer.clear()
         quietFrames = holdFrames
     }

@@ -420,6 +420,32 @@ same with either kernel's group delay for every reachable step count). Corpus gr
   units bypass an injected allocator (the out-of-memory seam), and housekeeping zeroes one whole unit per block, at
   16x about 16 base units' stores in one block.
 
+**Step 3b, landed (2026-11-03): the hand-over.** A voice whose tree ENDS in a region (its root, under the build's
+memo) does not convert down: it lands on its orbit's rate bus, and its teardown fade, cut fade, solo ramp and pan run at
+that rate (the same lines read between the frames). An orbit's chain brings every bus to its own rate once: a chain
+that begins with a region runs at that region's rate, which converts the mix up one stage at a time and adds each
+lower bus on the way; `KatalystBusLadder` steps the higher buses down in place, through the `Oversampler`'s own
+stages, and rings out on a silent bus for `Oversampler.tailFrames` after the last voice above. A chain swap hands the
+leaving chain every bus ramped by the same line; the blend and the duck stay at 1x. Buses and the raised voice buffers
+are made on first use and kept, one per rate per host.
+- Phase: a bus continues its voice's cascade, so at or below the orbit's rate it meets the voices converted at the
+  orbit in phase, with no pad. A bus ABOVE the orbit's rate keeps the round trip of the stages above (an 8x voice on a
+  4x orbit: 0.665 samples, an equal correlated sum -0.86 dB at 10 kHz, -3.99 dB at 20 kHz, no notch, swept 20 Hz to
+  20 kHz in 10 Hz steps), untwinned. Before 3b the same pair differed by a whole 8x round trip (notches to -57.7 dB).
+  Twinning it would cost a round trip on all lower content, against "as few conversions as possible": kept as is,
+  open for the maintainer.
+- Cost: one conversion per rate per orbit, but in stereo after the pan, where a voice decimated mono: with one voice
+  of a rate on an orbit the hand-over costs about twice the conversion (a 4x voice: 5120 against 2560 section updates
+  per block); break-even is two voices of a rate sounding together.
+- Review: round 1 (level 2) clean from both reviewers; its MINORs applied as one batch (the phase wording above, two
+  KDocs naming the lazy allocations, a dead branch, two members made private). Left as they are: a ladder is built for
+  every base-rate chain (a master's, a branch's), which never receives a bus; the ladder's one ring hold for all its
+  stages (what a lower stage loses when a higher hold ends starts from a signal faded to zero, under -120 dB).
+- Tests: `VoiceHandOverSpec`, 13 rows, oracles the voice converting down itself and bare `Oversampler`s fed with the
+  captured buses; 22 mutants killed (one survivor in the first campaign, the leaving chain's buses left uncleared, killed
+  by a row added for a leaving chain whose steps ring out). Corpus green on the tree (3 frozen and 12 live songs
+  identical; no song hands over yet), its control (the base-rate teardown fade nudged by 0.01%) red on 5 songs.
+
 ## History
 
 - 2026-10-20: numbered KLANG-00214 (was `docs/tasks/oversampling-regions.md`).
@@ -431,3 +457,4 @@ same with either kernel's group delay for every reachable step count). Corpus gr
 - 2026-10-31: sources stay at 1x, also inside the braces, converted up where they enter (maintainer).
 - 2026-11-01: step 1 landed: the region doors and engine, Der Schmetterling's preamps in regions.
 - 2026-11-03: step 3 cut in two; step 3a landed: regions on the Katalyst.
+- 2026-11-03: step 3b landed, the hand-over: a voice ending in a region lands on its orbit's rate bus; the orbit's chain converts each rate once.

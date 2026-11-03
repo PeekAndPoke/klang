@@ -74,9 +74,14 @@ object TeardownFadeRenderer : BlockRenderer {
         // The `> 1.0` clamp absorbs a 1-ulp overshoot at the entry frame.
         val fadeScale = 1.0 / (lastFrame - fadeStart).coerceAtLeast(1.0)
 
+        // A voice that hands over (KLANG-00214 (oversampling regions) step 3b) runs at 2^rateSteps samples per frame:
+        // the same line, read between the frames, so its zero falls on the first sample of the last frame.
+        val steps = ctx.rateSteps
+        val factor = (1 shl steps).toDouble()
+
         // Hoisted per block so the per-sample path stays an Int compare.
-        val lastIdx = lastFrame - ctx.blockStart
-        val fadeStartIdx = ceil(fadeStart - ctx.blockStart).toInt()
+        val lastIdx = (lastFrame - ctx.blockStart) * factor
+        val fadeStartIdx = ceil((fadeStart - ctx.blockStart) * factor).toInt()
 
         // No de-click smoother here, and this is REQUIRED, not merely free: inside the window the
         // target ramps 1.0 -> 0, so a one-pole would lag and leave a non-zero final sample, losing
@@ -87,10 +92,10 @@ object TeardownFadeRenderer : BlockRenderer {
         // fadeStartIdx that ceil().toInt() produces on later blocks.
         fadeToZero(
             buffer = ctx.audioBuffer,
-            startIndex = maxOf(ctx.offset, fadeStartIdx),
-            endIndex = ctx.windowEnd,
+            startIndex = maxOf(ctx.offset shl steps, fadeStartIdx),
+            endIndex = ctx.windowEnd shl steps,
             zeroIndex = lastIdx,
-            scale = fadeScale,
+            scale = fadeScale / factor,
         )
     }
 }
