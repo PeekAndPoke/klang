@@ -296,7 +296,9 @@ export guitar1_pat =
     [[-3,-7] [[-4,-8] [-1,-4]] [0,-3] <[[4 6],[-2 3]] [0,-1]>]
     [<[7,4] [[7 4 6 0  7 4 2 0]!2]> [2 0 -1 0] 0 [[-3 -2 0 2] 3]]>/4`
 
-export guitar1_shape = x => x.pregain(guitarDyna(1).fast(2).mul(0.8)).sound(guitarMelody).adsrOff().unison(voices = 11, spread = 0.07) // . solo()
+export guitar1_shape = x => x.pregain(guitarDyna(1).fast(2).mul(0.8))
+  .sound(guitarMelody).adsrOff().unison(voices = 11, spread = 0.07) // . solo()
+  .ignp("attack", perlin(0.004, 0.006).seed(1))
   .ignp("decay", guitarDecay(1)) //. mute()
   .clip(guitarClip(1).fast(2)).pan(0.5).body(material = "spruce", wet = 0.15)
 
@@ -314,7 +316,9 @@ export guitar2_pat =
     [4 4 6 8     4 4 5 6]  [4 4 6 8          11 11 9 10] 
     [4 4 3 6     4 4 2 3]  [7 11 [3 7] [6 7] [4 4 6 4]!2 [0 2 4 7] 8]>/4`
 
-export guitar2_shape = x => x.pregain(guitarDyna(2).fast(2)).sound(guitar).adsrOff().unison(voices = 7, spread = 0.08)
+export guitar2_shape = x => x.pregain(guitarDyna(2).fast(2))
+  .sound(guitar).adsrOff().unison(voices = 7, spread = 0.08)
+  .ignp("attack", perlin(0.004, 0.006).seed(2))
   .ignp("decay", guitarDecay(2))
   .clip(guitarClip(2).fast(2)).pan(0.15).superimpose(pan(0.85))
   .body(material = "maple", wet = 0.15)
@@ -332,7 +336,9 @@ export guitar3_pat =
     [0 0  2 4  0 0 -2 -1]  [0 [[0 3 4 5] 7] 2 [[4 5] 6 4 6]   [[7 6] 7] [7 0] -2 -1]
     [0 0 -1 3  0 0 -2 -1]  [0 0 3 [0 -2]                      0 0 [0 4 7 9] 6]>/4`
 
-export guitar3_shape = x => x.pregain(guitarDyna(3).fast(2)).sound(guitar).adsrOff().unison(voices = 5, spread = 0.08)
+export guitar3_shape = x => x.pregain(guitarDyna(3).fast(2))
+  .sound(guitar).adsrOff().unison(voices = 5, spread = 0.08)
+  .ignp("attack", perlin(0.004, 0.006).seed(3))
   .ignp("decay", guitarDecay(3))
   .clip(guitarClip(3).fast(2)).pan(0.15).superimpose(pan(0.85))
   .body(material = "mahogany", wet = 0.15)
