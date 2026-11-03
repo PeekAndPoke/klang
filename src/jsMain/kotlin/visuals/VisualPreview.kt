@@ -12,8 +12,10 @@ import kotlinx.html.unsafe
 
 /**
  * A small picture of a visual on its card in the Visuals tab (the maintainer, 2026-10-29: "Add a preview to the
- * cards", then "can you draw them as with pen and paper?", "the lines need to be a bit more straight"): a sketch in ink
- * on a sheet of ruled paper, its lines a touch shaky and drawn twice, as a steady hand draws them. The paper is paper in every look.
+ * cards", then "can you draw them as with pen and paper?", "the lines need to be a bit more straight"): a sketch, its
+ * lines a touch shaky and drawn twice, as a steady hand draws them. Drawn in the look's own ink on its deep ground, the
+ * highlighter in the look's accent, the lines glowing a little; cream ruled paper before, the same in every look (the
+ * maintainer, 2026-11-03: "Can we render them in the theme colors as well?", then "make the lines glow a little").
  */
 fun FlowContent.VisualPreview(visual: VisualsScreen.Visual) {
     div {
@@ -24,14 +26,14 @@ fun FlowContent.VisualPreview(visual: VisualsScreen.Visual) {
             put("margin-bottom", "8px")
             put("overflow", "hidden")
             put("border-radius", "2px")
-            // Ruled paper, a little worn at its edges
-            put(
-                "background",
-                "radial-gradient(ellipse at center, transparent 55%, rgba(120, 90, 40, 0.18) 100%), " +
-                    "repeating-linear-gradient(0deg, rgba(70, 110, 190, 0.16) 0 1px, transparent 1px 12px), " +
-                    "#ebe4d2",
-            )
-            put("box-shadow", "inset 0 0 0 1px rgba(0, 0, 0, 0.25)")
+            // A little room around the sketch (the maintainer, 2026-11-03: "could us a little padding, just a little")
+            put("padding", "5px 8px")
+            put("box-sizing", "border-box")
+            // The look's ink on the side column's deep ground, darker than the card (the maintainer, 2026-11-03: "Please
+            // use a darker color for the preview backgrounds"); the sketch draws in currentColor
+            put("background", "var(--kl-ground-deep)")
+            put("color", "var(--kl-ink-text)")
+            put("box-shadow", "inset 0 0 0 1px var(--kl-edge)")
         }
 
         unsafe {
@@ -48,11 +50,14 @@ fun FlowContent.VisualPreview(visual: VisualsScreen.Visual) {
     }
 }
 
-/** The ink. */
-private const val INK = "#26324f"
+/** The ink: the look's text colour, set on the sketch's box ([VisualPreview]). */
+private const val INK = "currentColor"
 
-/** The highlighter, for what the eye should find. */
-private const val MARKER = "rgba(245, 205, 60, 0.55)"
+/**
+ * The highlighter, for what the eye should find: the look's accent, see-through. A style, not a `fill`: an SVG
+ * attribute does not read a CSS variable.
+ */
+private const val MARKER = "fill: var(--kl-accent); fill-opacity: 0.35"
 
 /**
  * A drawing in ink, made shaky by a noise that bends its lines, and drawn a second time a hair off and fainter with
@@ -63,7 +68,8 @@ private fun sketch(id: String, drawing: String): String {
     val shakier = "kl-sketch-$id-b"
 
     return """
-        <svg viewBox="0 0 240 96" width="100%" height="96" preserveAspectRatio="xMidYMid meet" style="display:block">
+        <svg viewBox="0 0 240 96" width="100%" height="100%" preserveAspectRatio="xMidYMid meet"
+             style="display:block; filter: drop-shadow(0 0 1.5px color-mix(in oklab, currentColor 60%, transparent))">
           <defs>
             <filter id="$shaky"><feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="1" seed="3"/>
               <feDisplacementMap in="SourceGraphic" scale="1.1"/></filter>
@@ -86,7 +92,7 @@ private val PLATE = """
     <path d="M14 26 L10 30 M24 28 L24 33 M34 26 L38 30" stroke-width="0.8"/>
     <text x="12" y="44" font-size="9" fill="$INK" stroke="none">lamp</text>
     <path d="M40 22 Q56 18 66 16" stroke-dasharray="2 3" stroke-width="0.8"/>
-    <rect x="70" y="5" width="100" height="21" fill="$MARKER" stroke="none"/>
+    <rect x="70" y="5" width="100" height="21" style="$MARKER" stroke="none"/>
     <rect x="70" y="5" width="100" height="21"/>
     <text x="120" y="20" font-size="11" text-anchor="middle" letter-spacing="1.5" fill="$INK" stroke="none">KLANGMOTOR</text>
     <circle cx="88" cy="38" r="4"/><path d="M88 38 L86 35"/>
@@ -132,7 +138,7 @@ private val KLANGAMP = """
     <rect x="58" y="52" width="124" height="41"/>
     <path d="M61 57 L90 57 M61 59 L90 59 M150 57 L176 57 M150 59 L176 59" stroke-width="0.6"/>
     <text x="120" y="60" font-size="6.5" text-anchor="middle" letter-spacing="1" fill="$INK" stroke="none">PLAYLIST</text>
-    <rect x="62" y="69" width="116" height="7" fill="$MARKER" stroke="none"/>
+    <rect x="62" y="69" width="116" height="7" style="$MARKER" stroke="none"/>
     <text x="64" y="68" font-size="6" fill="$INK" stroke="none">1.</text><path d="M72 66 L118 66 M162 66 L174 66" stroke-width="0.7"/>
     <text x="64" y="75" font-size="6" fill="$INK" stroke="none">2.</text><path d="M72 73 L132 73 M162 73 L174 73" stroke-width="0.7"/>
     <text x="64" y="82" font-size="6" fill="$INK" stroke="none">3.</text><path d="M72 80 L110 80 M162 80 L174 80" stroke-width="0.7"/>
@@ -144,7 +150,7 @@ private val KLANGAMP = """
 
 /** KLANGAMP on its plate, then the gauges' plate, the scope and the spectrum side by side, the playlist; tiles all. */
 private val KLANGAMP_TILES = """
-    <rect x="70" y="3" width="100" height="16" fill="$MARKER" stroke="none"/>
+    <rect x="70" y="3" width="100" height="16" style="$MARKER" stroke="none"/>
     <rect x="70" y="3" width="100" height="16"/>
     <text x="120" y="15" font-size="10" text-anchor="middle" letter-spacing="1.5" fill="$INK" stroke="none">KLANG AMP</text>
     <rect x="70" y="21" width="100" height="16"/>
@@ -158,7 +164,7 @@ private val KLANGAMP_TILES = """
     <path d="M127 51 L127 47 M131 51 L131 45 M135 51 L135 46 M139 51 L139 44 M143 51 L143 47 M147 51 L147 45
              M151 51 L151 48 M155 51 L155 46 M159 51 L159 49 M163 51 L163 48"/>
     <rect x="70" y="57" width="100" height="36"/>
-    <rect x="75" y="68" width="90" height="6" fill="$MARKER" stroke="none"/>
+    <rect x="75" y="68" width="90" height="6" style="$MARKER" stroke="none"/>
     <path d="M75 61 L165 61" stroke-width="0.6"/>
     <path d="M78 66 L120 66 M78 72 L130 72 M78 78 L112 78 M78 84 L124 84 M78 90 L104 90" stroke-width="0.7"/>
     <path d="M10 11 L60 11" stroke-width="0.6"/><text x="10" y="8" font-size="8" fill="$INK" stroke="none">header</text>
@@ -169,7 +175,7 @@ private val KLANGAMP_TILES = """
 
 /** Klang Amp's column of tiles on the left; on the right a tall display, the voices falling down it as letters. */
 private val KLANGAMP_RAIN = """
-    <rect x="22" y="3" width="95" height="16" fill="$MARKER" stroke="none"/>
+    <rect x="22" y="3" width="95" height="16" style="$MARKER" stroke="none"/>
     <rect x="22" y="3" width="95" height="16"/>
     <text x="69" y="15" font-size="9" text-anchor="middle" letter-spacing="1" fill="$INK" stroke="none">KLANG AMP</text>
     <rect x="22" y="21" width="95" height="16"/>
@@ -180,7 +186,7 @@ private val KLANGAMP_RAIN = """
     <path d="M73 42 L113 42 L113 52 L73 52 Z"/>
     <path d="M77 51 L77 47 M81 51 L81 45 M85 51 L85 46 M89 51 L89 44 M93 51 L93 47 M97 51 L97 45 M101 51 L101 48 M105 51 L105 46 M109 51 L109 49"/>
     <rect x="22" y="57" width="95" height="36"/>
-    <rect x="26" y="66" width="87" height="6" fill="$MARKER" stroke="none"/>
+    <rect x="26" y="66" width="87" height="6" style="$MARKER" stroke="none"/>
     <path d="M28 64 L70 64 M28 70 L80 70 M28 76 L64 76 M28 82 L74 82 M28 88 L58 88" stroke-width="0.7"/>
     <rect x="121" y="3" width="76" height="90"/>
     <text x="132" y="24" font-size="8" text-anchor="middle" fill="$INK" stroke="none" opacity="0.55">c</text>

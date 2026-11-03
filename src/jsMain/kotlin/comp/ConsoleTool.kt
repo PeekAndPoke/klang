@@ -58,14 +58,15 @@ class ConsoleTool(ctx: NoProps) : PureComponent(ctx) {
         /** The tool as a tab of a bottom panel, with this id beside the page's own tabs. */
         const val TAB_ID = "console"
 
-        /** The tool as a tab of a bottom panel; its title counts the errors not seen yet. */
+        /**
+         * The tool as a tab of a bottom panel; its badge counts the errors not seen yet, as the panel's key does (the
+         * maintainer, 2026-11-03: "show a red marker on the console, like on the icon on the right"; "Console (1)"
+         * in its title before).
+         */
         fun tab(unseenErrors: Int) = KlangWorkbench.Tab(
             id = TAB_ID,
-            title = when {
-                unseenErrors > 99 -> "Console (99+)"
-                unseenErrors > 0 -> "Console ($unseenErrors)"
-                else -> "Console"
-            },
+            title = "Console",
+            count = unseenErrors,
         ) { ConsoleTool() }
 
         /** The bar's buttons: Fomantic's small basic look on a real button. */

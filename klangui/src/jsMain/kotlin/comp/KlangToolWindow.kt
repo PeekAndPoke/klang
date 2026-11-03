@@ -70,9 +70,12 @@ class KlangToolWindow(ctx: Ctx<Props>) : Component<KlangToolWindow.Props>(ctx) {
         Bottom(pinLabel = "Pin under the editor"),
     }
 
-    /** One of the window's tabs: its [id], and its [title] in the header. */
-    /** A tab of the window's header; a [beacon] lights its key, a walkthrough's step ([io.peekandpoke.klang.ui.GuiDance]). */
-    data class Tab(val id: String, val title: String, val beacon: Boolean = false)
+    /**
+     * One of the window's tabs: its [id], and its [title] in the header; a [beacon] lights its key, a walkthrough's
+     * step ([io.peekandpoke.klang.ui.GuiDance]); a [count] above 0 shows after the title as a badge, as on an icon
+     * toggle ([KlangIconToggle]), more than 99 as "99+".
+     */
+    data class Tab(val id: String, val title: String, val beacon: Boolean = false, val count: Int = 0)
 
     data class Props(
         val title: String,
@@ -158,6 +161,18 @@ class KlangToolWindow(ctx: Ctx<Props>) : Component<KlangToolWindow.Props>(ctx) {
                     attributes["aria-pressed"] = (tab == shown).toString()
                     onClick { props.onTab?.invoke(tab.id) }
                     +tab.title
+
+                    if (tab.count > 0) {
+                        // More than two digits do not fit the badge: it and the name say "99+" alike
+                        val count = if (tab.count > 99) "99+" else tab.count.toString()
+
+                        attributes["aria-label"] = "${tab.title} ($count new)"
+
+                        span(classes = styles.toolWindowTabCount.toString()) {
+                            attributes["aria-hidden"] = "true"
+                            +count
+                        }
+                    }
                 }
             }
         }

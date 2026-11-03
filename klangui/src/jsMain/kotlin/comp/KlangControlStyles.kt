@@ -1113,19 +1113,18 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         put("position", "absolute")
         put("top", "-4px")
         put("right", "-4px")
-        put("min-width", "16px")
-        put("height", "16px")
-        put("padding", "0 4px")
-        put("box-sizing", "border-box")
-        put("border-radius", "8px")
-        put("background", "var(--kl-lamp-critical)")
-        put("box-shadow", "0 0 6px var(--kl-lamp-critical)")
-        put("color", "#fff")
-        put("font-size", "10px")
-        put("font-weight", "700")
-        put("line-height", "16px")
-        put("text-align", "center")
-        put("pointer-events", "none")
+        COUNT_BADGE.forEach { (property, value) -> put(property, value) }
+    }
+
+    /**
+     * The count after a tab's title ([KlangToolWindow.Tab.count]): the icon toggle's badge, in the line (the
+     * maintainer, 2026-11-03: "show a red marker on the console, like on the icon on the right").
+     */
+    val toolWindowTabCount by rule {
+        put("display", "inline-block")
+        put("margin-left", "6px")
+        put("letter-spacing", "0")
+        COUNT_BADGE.forEach { (property, value) -> put(property, value) }
     }
 
     /** The tool strip's size of it. */
@@ -2201,3 +2200,32 @@ object KlangControlStyles : StyleSheet("kl-controls") {
         """.trimIndent()
     )
 }
+
+/**
+ * The look of a count badge, on an icon toggle's corner and after a tab's title alike: a small lit error lamp with a
+ * number in it, in the lamp's own colours, no roles of its own (the maintainer, 2026-11-03: "I would probably not
+ * introduce new colors but use the one the lamp use"). One place, so both badges change together. A parent may set
+ * `--kl-badge-lamp` to another lamp's colour (the look editor shows it in each); unset, it is the error lamp.
+ */
+private val COUNT_BADGE = listOf(
+    "min-width" to "16px",
+    "height" to "16px",
+    "padding" to "0 4px",
+    "box-sizing" to "border-box",
+    "border-radius" to "8px",
+    "background" to "var(--kl-badge-lamp, var(--kl-lamp-critical))",
+    "box-shadow" to "0 0 6px var(--kl-badge-lamp, var(--kl-lamp-critical))",
+    // The number engraved in the lamp, as the menu tiles' icons are raised from their caps (the maintainer, 2026-11-03:
+    // "a similar raised or engraved style as the big icons on the main buttons in the menu"): cut in, it is darker than
+    // the lamp, its lower edge catching the light; white was too weak on the coral ("The contrast is not good")
+    "color" to "color-mix(in srgb, var(--kl-badge-lamp, var(--kl-lamp-critical)), black 68%)",
+    "text-shadow" to "0 1px 0 color-mix(in srgb, var(--kl-badge-lamp, var(--kl-lamp-critical)), white 40%), " +
+        "0 -1px 0 rgba(0, 0, 0, 0.3)",
+    "font-family" to "inherit",
+    "font-size" to "10px",
+    "font-weight" to "700",
+    "line-height" to "16px",
+    "text-align" to "center",
+    "text-transform" to "none",
+    "pointer-events" to "none",
+)

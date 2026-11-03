@@ -178,12 +178,14 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
 
     /**
      * One of the bottom panel's tabs: its [id] (kept with the layout), its [title] in the header, its [content]; the
-     * walkthrough's step its key stands for, [beaconStep]: lit, the key wears the beacon; the tab shown uses it.
+     * walkthrough's step its key stands for, [beaconStep]: lit, the key wears the beacon; the tab shown uses it. A
+     * [count] above 0 shows after the title as a badge ([KlangToolWindow.Tab.count]).
      */
     data class Tab(
         val id: String,
         val title: String,
         val beaconStep: String? = null,
+        val count: Int = 0,
         val content: DIV.() -> Unit,
     )
 
@@ -940,7 +942,9 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
             // Flying in, Esc closes it through the key manager; pinned, it is part of the bench
             closeOnEsc = !bottomPinned,
             edge = KlangToolWindow.Edge.Bottom,
-            tabs = bottom.tabs.map { KlangToolWindow.Tab(id = it.id, title = it.title, beacon = lit(it.beaconStep)) },
+            tabs = bottom.tabs.map {
+                KlangToolWindow.Tab(id = it.id, title = it.title, beacon = lit(it.beaconStep), count = it.count)
+            },
             selectedTab = bottomTab,
             onTab = { id ->
                 bottomTab = id

@@ -720,6 +720,25 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
                 }
             }
 
+            cell(
+                name = "Count badge, in the error lamp's colours: a strip key's corner, a tab's title",
+                source = "klangui/comp/KlangIconToggle.kt (count), KlangToolWindow.kt (Tab.count)",
+            ) {
+                row {
+                    KlangIconToggle(icon = { tools }, label = "Tools", on = false, large = true, count = 3, onClick = {})
+                    KlangIconToggle(icon = { tools }, label = "Tools", on = true, large = true, count = 120, onClick = {})
+                }
+                KlangToolWindow(
+                    title = "Tools",
+                    pinned = true,
+                    tabs = listOf(
+                        KlangToolWindow.Tab(id = "midi", title = "MIDI"),
+                        KlangToolWindow.Tab(id = "console", title = "Console", count = 7),
+                    ),
+                    selectedTab = "midi",
+                ) {}
+            }
+
             cell(name = "Toggle with a lamp", source = "KlangButton(pressed, lamp)") {
                 row {
                     KlangButton(

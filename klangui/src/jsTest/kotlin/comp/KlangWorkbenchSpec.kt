@@ -235,7 +235,7 @@ class KlangWorkbenchSpec : StringSpec({
                             icon = { question_circle },
                             tabs = listOf(
                                 KlangWorkbench.Tab(id = "quick", title = "Quick") { +"QUICK BODY" },
-                                KlangWorkbench.Tab(id = "terms", title = "Terms") { +"TERMS BODY" },
+                                KlangWorkbench.Tab(id = "terms", title = "Terms", count = count) { +"TERMS BODY" },
                             ),
                             count = count,
                             countTab = "terms",
@@ -255,6 +255,11 @@ class KlangWorkbenchSpec : StringSpec({
 
                 withClue("counting $count, by the key: $byKey: open at the tab with $body") {
                     eventually { panel()?.textContent?.contains(body) shouldBe true }
+                }
+
+                withClue("counting $count: the tab's badge, as the key's") {
+                    panel()?.querySelector(".${styles.toolWindowTabCount}")?.textContent shouldBe
+                        count.takeIf { it > 0 }?.toString()
                 }
             }
         }

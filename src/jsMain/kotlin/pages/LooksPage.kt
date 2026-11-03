@@ -22,9 +22,11 @@ import io.peekandpoke.klang.storage.LookStorage
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.klang.ui.comp.KlangGauge
+import io.peekandpoke.klang.ui.comp.KlangIconToggle
 import io.peekandpoke.klang.ui.comp.KlangIgnition
 import io.peekandpoke.klang.ui.comp.KlangScreen
 import io.peekandpoke.klang.ui.comp.KlangTextField
+import io.peekandpoke.klang.ui.comp.KlangToolWindow
 import io.peekandpoke.klang.ui.comp.KlangValueKnob
 import io.peekandpoke.klang.ui.comp.KlangYesNoModal
 import io.peekandpoke.klang.ui.feel.KlangLoadout
@@ -1158,14 +1160,70 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
                 KlangButton(onClick = {}, surface = KlangButton.Surface.Domed, pressed = true) { +"Pressed" }
             }
 
-            "lamps" -> for (lamp in listOf("off", "on", "try", "warning", "critical")) {
-                span {
+            // The lamps, and under them the count badges: a strip key's corner and a tab's title in the error lamp's
+            // colours, then the badge in each lamp's (the maintainer, 2026-11-03: "show the previews and the badges in
+            // one 2x wide card", "Show the badge preview in all colors please")
+            "lamps" -> div {
+                css {
+                    put("display", "flex")
+                    put("flex-direction", "column")
+                    put("align-items", "center")
+                    put("gap", "18px")
+                }
+
+                div {
                     css {
-                        put("width", "14px")
-                        put("height", "14px")
-                        put("border-radius", "50%")
-                        put("background", "var(--kl-lamp-$lamp)")
-                        put("box-shadow", if (lamp == "off") "inset 0 1px 2px rgba(0,0,0,0.6)" else "0 0 8px var(--kl-lamp-$lamp)")
+                        put("display", "flex")
+                        put("gap", "14px")
+                    }
+
+                    for (lamp in listOf("off", "on", "try", "warning", "critical")) {
+                        span {
+                            css {
+                                put("width", "14px")
+                                put("height", "14px")
+                                put("border-radius", "50%")
+                                put("background", "var(--kl-lamp-$lamp)")
+                                put(
+                                    "box-shadow",
+                                    if (lamp == "off") "inset 0 1px 2px rgba(0,0,0,0.6)" else "0 0 8px var(--kl-lamp-$lamp)",
+                                )
+                            }
+                        }
+                    }
+                }
+
+                div {
+                    css {
+                        put("display", "flex")
+                        put("align-items", "center")
+                        put("gap", "16px")
+                    }
+
+                    KlangIconToggle(icon = { tools }, label = "Tools", on = false, large = true, count = 3, onClick = {})
+                    KlangToolWindow(
+                        title = "Tools",
+                        pinned = true,
+                        tabs = listOf(KlangToolWindow.Tab(id = "console", title = "Console", count = 12)),
+                    ) {}
+                }
+
+                // The badge in each lamp's colour, under the lamps (the maintainer, 2026-11-03: "Show the badge preview
+                // in all colors please"); the app's badges wear the error lamp
+                div {
+                    css {
+                        put("display", "flex")
+                        put("gap", "6px")
+                    }
+
+                    for ((index, lamp) in listOf("off", "on", "try", "warning", "critical").withIndex()) {
+                        span(classes = KlangControlStyles.toolWindowTabCount.toString()) {
+                            css {
+                                put("--kl-badge-lamp", "var(--kl-lamp-$lamp)")
+                                put("margin-left", "0")
+                            }
+                            +"${index + 1}"
+                        }
                     }
                 }
             }
@@ -1378,7 +1436,7 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
         private const val FIELD_HEIGHT_PX = 28
 
         /** The cards two tiles wide, their preview left of their controls. */
-        private val WIDE_ELEMENTS = setOf("screen", "spectrum")
+        private val WIDE_ELEMENTS = setOf("screen", "spectrum", "lamps")
 
         /** The scope card's still frame: a tone with an overtone, as a song might show it. */
         private val SCOPE_FRAME = Float32Array(2048).also { frame ->

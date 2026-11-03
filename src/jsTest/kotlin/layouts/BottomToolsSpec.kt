@@ -8,6 +8,7 @@ package io.peekandpoke.klang.layouts
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.peekandpoke.klang.comp.ConsoleTool
 import io.peekandpoke.klang.midi.MidiTool
 import io.peekandpoke.klang.ui.comp.KlangWorkbench
@@ -27,14 +28,16 @@ class BottomToolsSpec : StringSpec({
             alone.title shouldBe BottomTools.TITLE
             alone.tabs.map { it.id } shouldBe tools
             alone.ambient shouldBe true
+            alone.icon shouldBeSameInstanceAs BottomTools.ICON
         }
 
         val help = KlangWorkbench.Tab(id = "help", title = "Help") {}
         val page = KlangWorkbench.Bottom(title = "Help", icon = { question_circle }, tabs = listOf(help))
         val withTools = BottomTools.with(page = page, unseenErrors = 0)
 
-        withClue("the page's panel, its title and its tabs kept, the tools last") {
+        withClue("the page's panel, its title and its tabs kept, the tools last; its key the tools, as everywhere") {
             withTools.title shouldBe "Help"
+            withTools.icon shouldBeSameInstanceAs BottomTools.ICON
             withTools.ambient shouldBe false
             withTools.tabs.map { it.id } shouldBe listOf("help") + tools
         }
@@ -50,12 +53,12 @@ class BottomToolsSpec : StringSpec({
 
                 counted.count shouldBe 3
                 counted.countTab shouldBe ConsoleTool.TAB_ID
-                counted.tabs.first { it.id == ConsoleTool.TAB_ID }.title shouldBe "Console (3)"
+                counted.tabs.first { it.id == ConsoleTool.TAB_ID }.count shouldBe 3
 
                 val none = BottomTools.with(page = own, unseenErrors = 0)
 
                 none.count shouldBe 0
-                none.tabs.first { it.id == ConsoleTool.TAB_ID }.title shouldBe "Console"
+                none.tabs.first { it.id == ConsoleTool.TAB_ID }.count shouldBe 0
             }
         }
     }

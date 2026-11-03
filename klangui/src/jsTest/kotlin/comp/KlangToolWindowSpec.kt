@@ -68,4 +68,28 @@ class KlangToolWindowSpec : StringSpec({
             windows[2].querySelectorAll("button").length shouldBe 0
         }
     }
+
+    "a tab that counts shows a badge after its title and says it in its name; 99 as it is, past 99 as 99+; at 0 none" {
+        TestBed.preact(
+            view = {
+                KlangToolWindow(
+                    title = "Tools",
+                    pinned = true,
+                    tabs = listOf(
+                        KlangToolWindow.Tab(id = "midi", title = "MIDI"),
+                        KlangToolWindow.Tab(id = "console", title = "Console", count = 3),
+                        KlangToolWindow.Tab(id = "full", title = "Full", count = 99),
+                        KlangToolWindow.Tab(id = "many", title = "Many", count = 120),
+                    ),
+                ) {}
+            },
+        ) { root ->
+            val tabs = root.selectCss(".${styles.toolWindowTab}")
+
+            tabs.map { it.querySelector(".${styles.toolWindowTabCount}")?.textContent } shouldContainExactly
+                listOf(null, "3", "99", "99+")
+            tabs.map { it.getAttribute("aria-label") } shouldContainExactly
+                listOf(null, "Console (3 new)", "Full (99 new)", "Many (99+ new)")
+        }
+    }
 })

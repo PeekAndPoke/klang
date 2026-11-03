@@ -37,11 +37,9 @@ class ConsoleToolSpec : StringSpec({
                 Regex("""\d\d:\d\d:\d\d\.\d\d\d WARN \[midi/MidiRig\] Could not keep it: full""")
     }
 
-    "the tab's title counts the unseen errors, more than 99 as 99+" {
-        ConsoleTool.tab(unseenErrors = 0).title shouldBe "Console"
-        ConsoleTool.tab(unseenErrors = 7).title shouldBe "Console (7)"
-        ConsoleTool.tab(unseenErrors = 99).title shouldBe "Console (99)"
-        ConsoleTool.tab(unseenErrors = 100).title shouldBe "Console (99+)"
+    "the tab is the Console, its badge counts the unseen errors" {
+        ConsoleTool.tab(unseenErrors = 0).let { listOf(it.title, it.count) } shouldBe listOf("Console", 0)
+        ConsoleTool.tab(unseenErrors = 7).let { listOf(it.title, it.count) } shouldBe listOf("Console", 7)
     }
 
     "shown, the Console sees the errors there and those that come; gone, they count again; it filters by level and by area" {

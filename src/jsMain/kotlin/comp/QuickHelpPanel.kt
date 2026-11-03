@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.KlangGuiDance
+import io.peekandpoke.klang.layouts.BottomTools
 import io.peekandpoke.klang.layouts.WorkbenchSlots
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.codemirror.ToolCallSite
@@ -72,8 +73,8 @@ class QuickHelpPanel(
     /** The panel for the workbench's bottom slot. */
     fun bottom(): KlangWorkbench.Bottom = KlangWorkbench.Bottom(
         title = "Help and tools",
-        // The tools' icon: the panel holds the Quick help, the Lexikon and the Sprudel tool (the maintainer, 2026-10-28)
-        icon = { tools },
+        // The layout puts its own icon on every page's panel (BottomTools.ICON); this one is replaced
+        icon = BottomTools.ICON,
         // Its key, the Visuals walkthrough's first step
         beaconStep = KlangGuiDance.BOTTOM_PANEL,
         tabs = listOf(
