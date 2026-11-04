@@ -1,61 +1,25 @@
-# Next steps (2026-10-20, after the pause)
+# Next steps (2026-11-04)
 
-The pause after v0.7.2 ended the same day for one work package (maintainer): both parked branches on `main`, then
-the ticket numbers. This note is the queue, in order. The note of the pause itself is in git history.
+The queue of the engine stream (Klang-Main-Dev), in order. The note of 2026-10-20 (after the pause) is in git history.
 
 ## Where things stand
 
-- `main` holds everything: v0.7.2 (tagged 2026-10-20), Ultra 0.114.0, the console tools (`c90a19f0`) and engine
-  alloc batch 2 (`1ade10ef`), both merged before their review rounds (maintainer, 2026-10-20). The full check of
-  `1ade10ef`: tests GREEN (18,296), corpus 3 of 3 frozen identical, allocation 80 of 80. No branch but `main`, no
-  worktree.
-- Every task and plan is a ticket since 2026-10-20: KLANG-00001 to KLANG-00320, `/project-layout`. The open
-  tickets' status words were read from their own status text; the maintainer may correct any with `ticket move`.
-- Work runs sequentially on the main checkout; a full check may run in `klang-worktrees/measure`
-  (`/project-layout`, Repo notes).
+- `main` holds everything; the allocation check is green again (80 of 80, 2026-11-04, after the budgets were raised
+  for the diagnostics KLANG-00399 counts since 2026-10-31, `audio_benchmark/alloc-budgets.txt`).
+- KLANG-00214 (oversampling regions): steps 1, 3a, 3b and 4 landed; the soft cap inside a region heard and accepted;
+  the first merge, Der Schmetterling's two guitar rigs in one 4x region each, made by the maintainer. PAUSED: the
+  other merges are by ear, song by song (Kokon's four rigs next, an A/B on request).
+- KLANG-00290 (engine follow-ups): PAUSED, everything left waits on a decision (its status paragraph).
 
 ## Queue (Klang-Main-Dev)
 
-0. **The rules retro (MC-00017), 2026-10-23: done.** Klang's items: the register slimmed from 47 rows to 21 with
-   each area's rules moved to that area (b78b8c28, the maintainer's OK in session); `docs/tasks/_incidents.md`; the
-   "world-class" line, the heavy-agent cap and the defect-density ledger retired; the Fable experiment
-   (`docs/housekeeping/2026-10-23-fable-experiment-5a3.md`). Waiting on Mission Control's rollouts: hooks, checks,
-   the gradlew lock, the command list, the review-loop blueprint (`/review-loop` stays untouched until then), home
-   memory off. **Until the next meeting (Friday 2026-10-30, after the refill; maintainer, 2026-10-23):** every
-   review round on the top rung runs one Opus 5.5 max reviewer AND one Fable reviewer, the same brief, blind to
-   each other; the round's findings record per finding who found it (both, Opus only, Fable only) and each
-   reviewer's tokens. No repeat runs. Rules wait for the meeting; incidents go into `_incidents.md`.
-1. **Console tools: done 2026-10-20.** Review round 2 (reviewer-high): 1 MAJOR (docs-lint read the git-ignored
-   `tmp/`) and 2 MINORs, fixed in 8d9fa057; every round-1 fix holds. Two rounds without a clean one: the safety
-   valve; no round 3 (maintainer, 2026-10-21), the tools review is closed. The approved condense is applied (the `CLAUDE.md` tool block
-   with `ticket`, shorter pointers elsewhere); the skill `mission-control-link` is in.
-2. **Engine alloc batch 2: done 2026-10-21.** Review round 1 clean (code and audio), the MINOR batch applied, the
-   mutation campaign 7 of 7 KILLED (KLANG-00290, item 45's last paragraph).
-3. **Editor features** (maintainer, 2026-10-21): KLANG-00321 (go to definition) and KLANG-00323 (bookmarks,
-   56b4d843, the look c98e0ae8; full check aa59d49e GREEN) done and hand-tested. KLANG-00322 (back to the last edit,
-   the step back centred 00851631) done and hand-tested 2026-10-25. KLANG-00330 (the master volume knob, 4ce4f3ab) done and hand-tested 2026-10-25. Next KLANG-00325, the key map (the first
-   epic, keyboard shortcuts): the PC keys decided in the interview, the Mac table
-   and the design draft wait for the maintainer's look; when built, stop after the first draft of `OnKey` and the
-   hints (the Play button) for the maintainer's code review. Then KLANG-00324 (the shortcuts page reads the key map).
-   Ideas from the interview: KLANG-00326 (clipboard history), KLANG-00327 (navigate back and forward).
-4. **Master follow-up 8, option (a): done 2026-10-23.** The offline render counts the master chain's latency
-   (KLANG-00137 (master dsl followups) §8); it moved exactly the two predicted corpus rows (Der Schmetterling,
-   Kokon), accepted with the change. The live sibling (highlighting early by a master chain's lookahead) is noted
-   there.
-5. **KLANG-00290: done as far as it goes without the maintainer (2026-10-23).** Item 46 the last (4276585a, full
-   check d828f401 GREEN). What is left waits on a decision: 14 (by ear), 15 (does a replace resume a stopped
-   engine?), 11 (the Zig port), 37 (a sound change), section 6; 10c and 10d wait for the FM round.
-6. **The docs-lint findings: done 2026-10-23.** The ticket sweep replaced the stale task paths, the two task-place
-   findings carry PAUSED in `docs/tasks/` (KLANG-00127, KLANG-00145), and the `_priorities.md` tremolo entry says
-   DONE (tools review round 1, MINOR 17).
-7. **Mission Control's review-loop RFC: answered 2026-10-23** (the six open questions of its draft,
-   `/opt/dev/peekandpoke/missioncontrol/blueprints/skills/review-loop/SKILL.md`): delta marked, rejections loop
-   reconcile-only, MINOR batch with a landing record, provisional self-rejection, the ledger on disk, ladder
-   agents named by model and effort. The tier names are agreed (strict / standard / light). Nothing is adopted
-   until the maintainer decides. Our two Kraft pitfalls come back
-   with Mission Control's merged `kraft-knowhow`.
-8. **The lexer and an unclosed block comment: done 2026-10-23** (a syntax error now, review round 1 clean,
-   [`klangscript/MEMORY.md`](../../../klangscript/MEMORY.md) History).
+1. **KLANG-00210 (signal flow redesign), phase 5: the announcements** (the maintainer, 2026-11-04: continue the
+   unification). The grep for the retired words (`PipelineDsl`, `postgain`, `pedal`, the voice pipeline, the filter
+   pipeline, `voices/strip`) over `docs/`, the skills, the tutorials and the songs; the plan is complete when it is
+   empty outside the history.
+2. **KLANG-00245 (pitch pipeline into the tree), 7f**: `progress()` and `elapsed()` as public signals (decided, Q13).
+3. Then, the maintainer's pick: KLANG-00293 (a chain swap may cut a ringing insert), KLANG-00137 (master dsl
+   followups), the edge bugs of KLANG-00353.
 
 ## Katalyst stream (Klang-Research)
 
@@ -64,6 +28,10 @@ Unchanged since 2026-10-13: its task is closed and archived, and what is left wa
 
 ## Open with the maintainer
 
+- KLANG-00214's merges by ear (Kokon next) and the leftovers in its section 11 (sources not rate-mapped inside a
+  region, the shimmer ring at 16x).
+- KLANG-00290's decisions: 14 (by ear), 15 (does a replace resume a stopped engine?), 11 (the Zig port), 37 (a sound
+  change), section 6.
 - An FM round together: KLANG-00305 (fm revisit), now with the open sites of engine follow-ups 10c and 10d.
 - Completion, left open: a local that shadows a library name shows two rows; a local bound to an arrow shows no type;
   after a named argument the list still shows locals and library names; a new line inside a multi-line call offers

@@ -399,7 +399,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   `Ignitor.freq()` anywhere renders once per pitch; a layer detuned under an `fm` or a `Freq`-reading pitch mod renders
   the mod again); the build-time diagnostic for the second, an fm above a forking detune:
   KLANG-00291 (fm above forking detune diagnostic).
-- **Scheduled or designed**: KLANG-00214 (oversampling regions; steps 1 to 4 landed; merges song by song, by ear), KLANG-00137 (master dsl followups),
+- **Scheduled or designed**: KLANG-00214 (oversampling regions; steps 1 to 4 landed, the first merge in Der Schmetterling; merges song by song, by ear), KLANG-00245 (pitch pipeline into the tree; left: 7f, `progress()` and `elapsed()`), KLANG-00210 (signal flow redesign; left: phase 5, the announcements), KLANG-00137 (master dsl followups),
   KLANG-00211 (katalyst master configure doors), KLANG-00155 (pluck release tail),
   KLANG-00138 (voice takeover) (blocked on a design decision), KLANG-00158 (playback layer decomposition).
 - **Katalyst, future**: `reverb-models.md` (with `room-reverb.md`), `one-chain-host.md`, `delay-ceiling-edges.md`, `transition-times.md`,

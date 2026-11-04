@@ -1,7 +1,9 @@
 # KLANG-00290: Engine follow-ups after the tidy-up
 
-> **Status (2026-10-21): IN PROGRESS.** Items 4, 45 and 13: merged before their review (maintainer, 2026-10-20),
-> then reviewed (round 1 clean, code and audio) and mutation-checked (7 of 7 KILLED); see item 45's last paragraph.
+> **Status (2026-11-04): PAUSED.** Done as far as it goes without the maintainer: what is left waits on a decision
+> (the paragraph below). Was IN PROGRESS since 2026-10-21. Items 4, 45 and 13: merged before their review
+> (maintainer, 2026-10-20), then reviewed (round 1 clean, code and audio) and mutation-checked (7 of 7 KILLED); see
+> item 45's last paragraph.
 >
 > **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
@@ -19,7 +21,7 @@ maintainer (16 to 19 and 28 DONE 2026-10-19, 20 and 46 DONE 2026-10-23). What is
 one-time sound change, by ear), 15 (does a replace resume a stopped engine?), 11 (with the Zig port), 37 (a sound
 change) and section 6's shape and sound steps. Open with the maintainer: C1 to C11 (the FM diagnostic is C6) in
 `docs/housekeeping/2026-10-10-baseline.md`, and Q13, Q29 (`duty(width)`) and Q30 to Q33 in
-[`_maintainer-questions.md`](../_maintainer-questions.md).
+[`_maintainer-questions.md`](_maintainer-questions.md).
 
 Status: **open, collected 2026-10-09** when the engine tidy-up was archived
 (KLANG-00286 (engine tidy up), "the record" below; v0.6.0). Each
@@ -2510,7 +2512,7 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
 ## 6. The audit's later steps and its open decisions
 
 The tidy-up ran the audit's order (section D of
-[`../audio-audit/2026-10-07-engine-tidy-audit.md`](../../audio-audit/2026-10-07-engine-tidy-audit.md)) through step 13,
+[`../audio-audit/2026-10-07-engine-tidy-audit.md`](../audio-audit/2026-10-07-engine-tidy-audit.md)) through step 13,
 and step 14 (the empty-variants bug) first. Steps 15 to 20 are shape and sound changes; each needs the maintainer.
 Each was checked against the code: none is done (item 21's package dissolve aside).
 
@@ -2544,7 +2546,7 @@ Each was checked against the code: none is done (item 21's package dissolve asid
 
 ## 7. Questions with the maintainer
 
-Open, in [`_maintainer-questions.md`](../_maintainer-questions.md), not repeated here: Q19 (the engine disposal order),
+Open, in [`_maintainer-questions.md`](_maintainer-questions.md), not repeated here: Q19 (the engine disposal order),
 Q24 (the third Kotlin spelling of the Ignitor doors) and Q28 (solo protects the SOLOED voice, the refinement of Q14).
 
 Decided 2026-10-09 and done in the batch of small items between pitch pipeline steps 3b and 4: Q14 (a soloed release
@@ -2558,3 +2560,5 @@ ramp times (1.5 s in and out, a 2 s hold), recorded in the same solo task.
 
 - 2026-10-20: numbered KLANG-00290 (was `docs/tasks/in-progress/engine-follow-ups.md`).
 - 2026-10-27: part of KLANG-00353 (The Motor: correct at the edges), the epic grouping.
+- 2026-11-04: PAUSED (housekeeping): nothing left that goes without the maintainer's decisions.
+- 2026-11-04: PAUSED.

@@ -1,6 +1,8 @@
 # KLANG-00245: The pitch pipeline moves into the Ignitor tree
 
-> **Status (2026-10-20): SCHEDULED.**
+> **Status (2026-11-04): SCHEDULED.** Steps 0 to 5 and 7a to 7c released; 7d and 7e decided (the pitch envelope
+> and accelerate stay nodes, Q32 and Q33, 2026-10-13); Q30 and Q31 settled. Left: 7f, `progress()` and `elapsed()`
+> as public signals (decided, Q13; not built).
 >
 > **Part of:** KLANG-00354 (The Motor's shape: signal flow and the graph)
 

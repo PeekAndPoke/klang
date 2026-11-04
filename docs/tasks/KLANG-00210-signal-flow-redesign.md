@@ -1,11 +1,12 @@
 # KLANG-00210: Signal flow redesign: three owners, one setter each
 
-> **Status (2026-10-20): PAUSED.**
+> **Status (2026-11-04): SCHEDULED.** Phases 1 to 3 done, phase 4 split off as KLANG-00397; left: phase 5, the
+> announcements (section 10).
 >
 > **Part of:** KLANG-00354 (The Motor's shape: signal flow and the graph)
 
-> **Status 2026-10-31: phases 1 to 3 DONE, phase 4 split off as KLANG-00397, phase 5 (the announcements) in
-> progress; when it is done, this plan is complete.** Section 11 keeps the open points.
+> **2026-10-31: phases 1 to 3 DONE, phase 4 split off as KLANG-00397, phase 5 (the announcements) left; when it is
+> done, this plan is complete.** Section 11 keeps the open points.
 > Designed 2026-09-17 with the maintainer. Umbrella for
 > KLANG-00236 (katalyst dsl) (its first phase), pregain
 > (phase 2) and the built-in instruments (phase 3, KLANG-00237 (builtin instruments)). Every phase leaves every existing song byte-identical
