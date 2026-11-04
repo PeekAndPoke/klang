@@ -213,8 +213,13 @@ let makeGuitar = (rig) => {
 //   cab:    cabStock    | cab4x12       | cab1x12         | cabCombo
 // Two guitarists, two rigs: the rhythm rig on guitars 2 and 3 (hard left and right), the melody rig on guitar 1 in the
 // centre. On one rig the humbucker, the screamer and the cab all peak near 2.6 kHz; three guitars on it pile up there.
-let rhythmRig = Ign.fn(x => x.serial(pickupHumbucker, pedalScreamer, preampHighGain, powerPushPull, snareCut, cab4x12))
-let melodyRig = Ign.fn(x => x.serial(pickupSingle,    pedalBoost,    preampCrunch,   powerPushPull, snareCut, cab4x12))
+let rhythmRig = Ign.fn(x => x.serial(pickupHumbucker)
+  .oversampleAtLeast(4, y => y.serial(pedalScreamer, preampHighGain, powerPushPull))
+  .serial(snareCut, cab4x12))
+
+let melodyRig = Ign.fn(x => x.serial(pickupSingle)
+  .oversampleAtLeast(4, y => y.serial(pedalBoost, preampCrunch, powerPushPull))
+  .serial(snareCut, cab4x12))
 
 let guitar       = makeGuitar(rhythmRig)
 let guitarMelody = makeGuitar(melodyRig)
