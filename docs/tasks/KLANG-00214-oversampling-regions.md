@@ -499,8 +499,9 @@ bit").
   half-band rings on a hard-clipped edge, so a hard-driven door can peak past 1 again (the reviewer's model: Sandsturm's
   lead from 1.00 to about 1.5, +3.5 dB at the voice; A Truth Worth Lying For's guitar about +2 dB). The tone barely
   moves (the mix spectrum within 0.3 dB, Sandsturm only); the peaks reach the orbit and the master limiter. Recorded as
-  a sound change, for the ear with the merges: Sandsturm, A Truth Worth Lying For, the fuzz pedals, the gummi bucket
-  and the peak clippers of Der Schmetterling and Kokon. The doors' KDoc says the ceiling holds before a region's down
+  a sound change: Sandsturm, A Truth Worth Lying For, the fuzz pedals, the gummi bucket and the peak clippers of Der
+  Schmetterling and Kokon. Heard and accepted by the maintainer on 2026-11-04 (`tmp/listening/oversample-step4/`):
+  "The listening is ok for the soft cap". The doors' KDoc says the ceiling holds before a region's down
   conversion.
 - Frozen: `FrozenSongs` holds new snapshots of Der Schmetterling and Seltsamere Dinge (2026-11-03); the 2026-09-25 Der
   Schmetterling moved to `FrozenPieces` for the rig suite (its trommel anchor follows the region), migrated
