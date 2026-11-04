@@ -226,6 +226,24 @@ mod (that node's memo was filled under the first pin). The author rule: give eac
 inside its detune, and sum them, `x.fm(m1) + x.fm(m2).detune(7)`. A build-time diagnostic is its own task
 (KLANG-00291 (fm above forking detune diagnostic)).
 
+## The note clocks: `progress()` and `elapsed()`
+
+Two leaves of the tree (KLANG-00245 (pitch pipeline into the tree) step 7f, decided 2026-10-13, Q13), runtime in
+`ignitor/NoteClockIgnitors.kt`. Each sample is computed from its frame alone (`frame / gate`, `frame / sampleRate`),
+so both are block-framing invariant; neither is block-constant, and neither takes a pitch modulation.
+
+- **`progress()`** (`IgnitorDsl.Progress`): `frame / voiceDurationFrames`, exactly 1.0 at the gate frame, on past 1
+  at the same pace through the release. A gate of zero frames or less reads 1.0 from the first frame (accelerate's
+  rule, Q27). A held live note (`IgniteContext.gateKnown` false, set by the scheduler for a realtime voice started
+  with no gate length) reads 0 throughout, also after its note-off: its `voiceDurationFrames` is the held-voice
+  horizon, and a note-off never moves it. A live note with a gate length that a note-off cuts short keeps its
+  scheduled gate as the base, as `accelerate` does, so it enters its release below 1.0.
+- **`elapsed()`** (`IgnitorDsl.Elapsed`): seconds since the onset. Inside an oversampling region both count at the
+  region's rate, so the values are the same.
+
+A curve on `progress` is its own feature (KLANG-00304 (curves)). `accelerate` stays a node (Q33), not a composition
+over `progress`.
+
 ## Envelope / voice-lifetime semantics
 
 > **The longest amplitude tail wins. Modulator envelopes are best-effort within.**

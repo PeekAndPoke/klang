@@ -37,6 +37,15 @@ object Ign {
     fun freq(): IgnitorDsl = IgnitorDsl.Freq
 
     /**
+     * The note's progress through its gate: 0 at the onset, 1.0 at the gate close, on past 1 at the same pace through
+     * the release ([IgnitorDsl.Progress]). Script door: `Ignitor.progress()`.
+     */
+    fun progress(): IgnitorDsl = IgnitorDsl.Progress
+
+    /** Seconds since the note's onset ([IgnitorDsl.Elapsed]). Script door: `Ignitor.elapsed()`. */
+    fun elapsed(): IgnitorDsl = IgnitorDsl.Elapsed
+
+    /**
      * A sine oscillator, with the partial banks and the repeatable `partial` on its builder. Script door:
      * `Ignitor.sine(freq, configure)`, the same [OscSineBuilder] (knobs `analog`, `fundamental`, `harmonics`,
      * `octaves`, `suboctaves`, `partial`, `analogSpread`, `phase`).

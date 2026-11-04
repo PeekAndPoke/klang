@@ -79,6 +79,32 @@ internal object KlangScriptIgnitor {
     fun freq(): IgnitorDsl = IgnitorDsl.Freq
 
     /**
+     * Returns the note's progress through its gate: 0 at the onset, 1 when the note ends (its gate closes), and on
+     * past 1 at the same pace through the release. Use it for what follows the note's shape whatever its length: a
+     * filter that closes over each note, a swell, or an effect that sounds only in the release tail. A note held
+     * live (its length not known when it starts) reads 0 throughout. For time in seconds, use `elapsed()`.
+     *
+     * ```KlangScript
+     * Ignitor.saw().lowpass(Ignitor.progress().clamp(0, 1).mul(-3600).plus(4000))   // 4000 Hz down to 400 over each note
+     * Ignitor.saw().mul(Ignitor.progress().max(1))                                   // a swell that peaks as the note ends
+     * ```
+     */
+    @KlangScript.Method
+    fun progress(): IgnitorDsl = IgnitorDsl.Progress
+
+    /**
+     * Returns the seconds since the note started. Use it for what happens in real time, also on notes played live:
+     * a vibrato that starts 0.3 seconds in, a sweep of a fixed length. For the note's shape whatever its length, use
+     * `progress()`.
+     *
+     * ```KlangScript
+     * Ignitor.sine().vibrato(5, Ignitor.elapsed().sub(0.3).clamp(0, 1).mul(0.3))   // enters at 0.3 s, full after 1.3 s
+     * ```
+     */
+    @KlangScript.Method
+    fun elapsed(): IgnitorDsl = IgnitorDsl.Elapsed
+
+    /**
      * Creates a sine wave oscillator. The builder can add banks of sine PARTIALS at multiples of the sine's own
      * frequency, rendered in one pass: `harmonics(count, rolloff)` at `2f, 3f, 4f ...`, `octaves(count, rolloff)` at
      * `2f, 4f, 8f ...`, `suboctaves(count, rolloff)` at `f/2, f/4 ...`, and `partial(ratio, gain, phase)` adds one

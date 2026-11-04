@@ -197,6 +197,32 @@ sealed interface IgnitorDsl {
     }
 
     /**
+     * The note's progress through its gate, per sample: 0 at the onset, 1.0 at the gate close, and on past 1 at the
+     * same pace through the release, so a shape can sound only in the release tail. For what follows the note's
+     * shape whatever its length (a filter closing over each note, a swell). A gate of zero frames reads 1.0 from
+     * the first frame on (no pace to grow at). A note whose gate length is not known when it starts (a held live
+     * note) reads 0 throughout, also after its note-off. A live note with a gate length that a note-off cuts short
+     * keeps that gate as its base, as `accelerate` does: it enters its release below 1.0.
+     *
+     * KLANG-00245 (pitch pipeline into the tree) step 7f, decided 2026-10-13 (Q13).
+     */
+    @WireName("progress")
+    data object Progress : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {}
+    }
+
+    /**
+     * Seconds since the note's onset, per sample: for what happens in real time (a vibrato that starts 0.3 s in),
+     * and on live notes, whose gate length is not known.
+     *
+     * KLANG-00245 (pitch pipeline into the tree) step 7f, decided 2026-10-13 (Q13).
+     */
+    @WireName("elapsed")
+    data object Elapsed : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {}
+    }
+
+    /**
      * Canonical open parameter slots that mirror sprudel's `ignp(name, value)` calls.
      *
      * Use these when defining a custom sound that should respond to sprudel modulation

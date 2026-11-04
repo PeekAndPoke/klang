@@ -421,6 +421,8 @@ internal fun IgnitorDsl.buildIgnitor(
 
         is IgnitorDsl.Constant -> return BuiltIgnitor(ConstantIgnitor(value))
         is IgnitorDsl.Freq -> return BuiltIgnitor(FreqIgnitor)
+        is IgnitorDsl.Progress -> return BuiltIgnitor(ProgressIgnitor)
+        is IgnitorDsl.Elapsed -> return BuiltIgnitor(ElapsedIgnitor)
         else -> { /* fall through */
         }
     }
@@ -1322,7 +1324,7 @@ private fun IgnitorDsl.buildRaw(
     }
 
     val ignitor = when (this) {
-        is IgnitorDsl.Param, is IgnitorDsl.Constant, is IgnitorDsl.Freq ->
+        is IgnitorDsl.Param, is IgnitorDsl.Constant, is IgnitorDsl.Freq, is IgnitorDsl.Progress, is IgnitorDsl.Elapsed ->
             error("Leaf DSL nodes must be built in buildIgnitor, not buildRaw")
 
         is IgnitorDsl.Vibrato, is IgnitorDsl.Accelerate, is IgnitorDsl.PitchEnvelope, is IgnitorDsl.Fm, is IgnitorDsl.PitchMod,

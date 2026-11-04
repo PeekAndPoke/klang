@@ -241,6 +241,8 @@ Ignitor.supersaw(55, x => x.voices(7))
 | Method                            | Description                                     |
 |-----------------------------------|-------------------------------------------------|
 | `Ignitor.freq()`                      | Voice note frequency (use as param source)      |
+| `Ignitor.progress()`                  | The note's progress: 0 at the onset, 1 at the gate close, on past 1 in the release |
+| `Ignitor.elapsed()`                   | Seconds since the note's onset                  |
 | `Ignitor.param(name, default, desc?)` | Named parameter slot (overridable at play time) |
 | `Ignitor.constant(value)`             | Fixed value (not overridable)                   |
 | `Ignitor.silence()`                   | Zero output                                     |
@@ -707,6 +709,23 @@ Ignitor.sine()  // freq defaults to Ignitor.freq() when omitted
 Ignitor.sine(Ignitor.freq())  // equivalent to above
 Ignitor.sine(5)  // fixed 5 Hz (for LFO use)
 ```
+
+### `Ignitor.progress()` and `Ignitor.elapsed()`: the note's clocks
+
+Two signals that move per sample with the note (KLANG-00245 step 7f):
+
+- `Ignitor.progress()` is 0 at the onset, 1 when the gate closes, and grows on past 1 at the same pace through the
+  release. It follows the note's shape whatever its length. A note held live (no length known when it starts) reads 0
+  throughout; a note with `legato(0)` reads 1 from its first sample.
+- `Ignitor.elapsed()` is the seconds since the onset: for what happens in real time, also on live notes.
+
+```javascript
+Ignitor.saw().lowpass(Ignitor.progress().clamp(0, 1).mul(-3600).plus(4000))  // 4000 Hz down to 400 over each note
+Ignitor.saw().mul(Ignitor.progress().max(1))                                  // a swell that peaks as the note ends
+Ignitor.sine().vibrato(5, Ignitor.elapsed().sub(0.3).clamp(0, 1).mul(0.3))    // the vibrato enters at 0.3 s
+```
+
+Neither keeps a voice alive: what sounds past 1 sounds only as long as the amplitude envelope's release lasts.
 
 ### `.classic()`: the pattern's voice doors on your instrument
 

@@ -78,6 +78,15 @@ class IgniteContext(
      * its source.
      */
     var phaseMod: DoubleArray? = null,
+    // ── Static per voice (set at creation, never changes) ──────────────────────
+    /**
+     * Whether [voiceDurationFrames] is the note's real gate length: false for a held realtime voice (a live note
+     * started with no gate length, KLANG-00157 (realtime note off gate release)), whose gate is the far held-voice
+     * horizon until its note-off, and the note-off never moves [voiceDurationFrames]. Read by [ProgressIgnitor],
+     * which reads 0 throughout on such a voice (KLANG-00245 step 7f). Defaults to true: a scheduled voice, or a
+     * context used without a voice (specs, benchmarks).
+     */
+    val gateKnown: Boolean = true,
 ) {
     /**
      * The voice's own context when this one is an oversampling region's (`OversampleRegionIgnitor`), null for the voice's

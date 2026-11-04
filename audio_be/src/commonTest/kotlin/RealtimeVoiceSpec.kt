@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
@@ -23,7 +24,10 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.RealtimeVoice
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import io.peekandpoke.klang.audio_bridge.max
+import io.peekandpoke.klang.audio_bridge.mul
 import kotlin.math.abs
 import kotlin.random.Random
 
@@ -602,5 +606,35 @@ class RealtimeVoiceSpec : StringSpec({
         val midTail = tail.subList(8, 14).maxOf { maxAbs(it) }
         (midTail < heldPeak / 2).shouldBeTrue()
         tail.takeLast(6).any { hasAudio(it) }.shouldBeFalse()
+    }
+
+    "progress() on a held live note reads 0 throughout, also after its note-off; a fixed gate moves it" {
+        // KLANG-00245 step 7f: a held voice's gate is the held-voice horizon, so without the gateKnown flag its progress
+        // would grow by about 4e-5 per second (44.1 kHz). The instrument scales that by 1e9 and caps it at 1, so ANY
+        // progress above 0 sounds the sine at full level; only a progress of exactly 0 is silence.
+        fun register(d: PlaybackEngineDispatcher) = d.handle(
+            KlangCommLink.Cmd.RegisterIgnitor(
+                playbackId = "rt", name = "progresssine",
+                dsl = IgnitorDsl.Sine().mul(IgnitorDsl.Progress.mul(1e9.ign).max(1.ign)),
+            )
+        )
+        val data = VoiceData.empty.copy(sound = "progresssine", freqHz = 440.0)
+
+        val held = newDispatcher().also { register(it) }
+        renderBlocks(held, 0.0, 4)
+        start(held, liveId = 1, data = data)
+        withClue("the held live note sounded while held") {
+            renderBlocks(held, 4.0 * blockFrames, 20).any { hasAudio(it) }.shouldBeFalse()
+        }
+        stop(held, liveId = 1)
+        withClue("the held live note sounded after its note-off") {
+            renderBlocks(held, 24.0 * blockFrames, 30).any { hasAudio(it) }.shouldBeFalse()
+        }
+
+        // The control: the same instrument on a realtime note with a known gate sounds.
+        val gated = newDispatcher().also { register(it) }
+        renderBlocks(gated, 0.0, 4)
+        gated.handle(KlangCommLink.Cmd.StartRealtimeVoice("rt", RealtimeVoice(liveId = 2, data = data, gateDurSec = 0.5)))
+        renderBlocks(gated, 4.0 * blockFrames, 20).drop(3).all { hasAudio(it) }.shouldBeTrue()
     }
 })

@@ -49,6 +49,9 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   included), so every sprudel `accelerate` under a release tail changed in step 3 (in the corpus only Kokon's
   `strike`); the Ignitor node rose on past the gate before the hold (an authored `accelerate` under a release tail,
   after the gate, no corpus song).
+- **The note clocks** `progress()` and `elapsed()` (KLANG-00245 step 7f, 2026-11-04): leaves of the tree, per sample from
+  the frame alone; `progress` is `frame / gate` on past 1, 1.0 from the first frame on a zero gate, 0 throughout on a held
+  live note (`IgniteContext.gateKnown`). `audio/ref/voice-synthesis.md`, "The note clocks".
 - **Voice lifetime** = gate end plus the tree's own release tail (`VoiceFactory.treeLifetime`, floored at 0;
   `VOICE_ADSR_RELEASE_SEC` when the tree has no static answer). `TeardownFadeRenderer` runs unless the root is a
   built amplitude envelope with a static release (`BuiltIgnitor.endsInEnvelope`). A silent release is culled: the
@@ -399,7 +402,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   `Ignitor.freq()` anywhere renders once per pitch; a layer detuned under an `fm` or a `Freq`-reading pitch mod renders
   the mod again); the build-time diagnostic for the second, an fm above a forking detune:
   KLANG-00291 (fm above forking detune diagnostic).
-- **Scheduled or designed**: KLANG-00214 (oversampling regions; steps 1 to 4 landed, the first merge in Der Schmetterling; merges song by song, by ear), KLANG-00245 (pitch pipeline into the tree; left: 7f, `progress()` and `elapsed()`), KLANG-00210 (signal flow redesign; left: phase 5, the announcements), KLANG-00137 (master dsl followups),
+- **Scheduled or designed**: KLANG-00214 (oversampling regions; steps 1 to 4 landed, the first merge in Der Schmetterling; merges song by song, by ear), KLANG-00137 (master dsl followups),
   KLANG-00211 (katalyst master configure doors), KLANG-00155 (pluck release tail),
   KLANG-00138 (voice takeover) (blocked on a design decision), KLANG-00158 (playback layer decomposition).
 - **Katalyst, future**: `reverb-models.md` (with `room-reverb.md`), `one-chain-host.md`, `delay-ceiling-edges.md`, `transition-times.md`,
@@ -423,6 +426,8 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-11-04 The note clocks `progress()` and `elapsed()` on both doors, the held live note's `gateKnown` flag
+  (KLANG-00245 (pitch pipeline into the tree), step 7f, its last; `audio/ref/voice-synthesis.md`).
 - 2026-11-04 The voice build's extra allocations since regions step 1 removed (about 850 B per voice on the JVM); the
   allocation check's engine cases count the diagnostics since KLANG-00399 (`audio/ref/performance.md`, measuring).
 - 2026-11-04 The allocation budgets raised for the diagnostics, every engine case (maintainer; `alloc-budgets.txt`).

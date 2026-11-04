@@ -638,6 +638,8 @@ class VoiceScheduler(
             scheduled = absoluteVoice,
             backendStartTimeSec = context.clock.startTimeSec,
             playbackCtx = pCtx,
+            // A held live note has no gate length yet: its gate is the held-voice horizon.
+            gateKnown = !(origin is VoiceOrigin.Realtime && origin.held),
             getSample = ::getCompleteSample,
         )
 

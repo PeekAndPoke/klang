@@ -1,8 +1,6 @@
 # KLANG-00245: The pitch pipeline moves into the Ignitor tree
 
-> **Status (2026-11-04): SCHEDULED.** Steps 0 to 5 and 7a to 7c released; 7d and 7e decided (the pitch envelope
-> and accelerate stay nodes, Q32 and Q33, 2026-10-13); Q30 and Q31 settled. Left: 7f, `progress()` and `elapsed()`
-> as public signals (decided, Q13; not built).
+> **Status (2026-11-04): DONE.** Steps 0 to 5 and 7a to 7c released; 7d and 7e decided (the pitch envelope and accelerate stay nodes, Q32 and Q33, 2026-10-13); Q30 and Q31 settled; 7f, `progress()` and `elapsed()`, built 2026-11-04 (its record below, with two points for the maintainer's word).
 >
 > **Part of:** KLANG-00354 (The Motor's shape: signal flow and the graph)
 
@@ -1730,6 +1728,30 @@ After step 5. The doors and the nodes stay as descriptions; the runtime arms com
     method, and the curve itself becomes its own feature: a curve is a node that plugs in anywhere, Ignitor and
     Katalyst alike, from the `adsr` curves (`AdsrCurves`) to tweens (KLANG-00216 (signal graph engine) 6.8)
     and fully individual curves. Its own deep design round: KLANG-00304 (curves).
+  - **Built 2026-11-04.** Two leaves, `IgnitorDsl.Progress` (`progress`) and `IgnitorDsl.Elapsed` (`elapsed`), on
+    both doors (`Ign.progress()`, `Ign.elapsed()`; `Ignitor.progress()`, `Ignitor.elapsed()`), with parity rows; the
+    runtime in `audio_be/.../ignitor/NoteClockIgnitors.kt`, each sample from its frame alone (`frame / gate`,
+    `frame / sampleRate`, a division so the gate frame reads exactly 1.0), so both are block-framing invariant. "No
+    known gate" is a new `IgniteContext.gateKnown`, false for a realtime voice started with no gate length
+    (`VoiceScheduler.activateVoice`, through `VoiceFactory.makeVoice` and into an oversampling region's child
+    context). **Decided by default, for the maintainer to confirm:** a gate of zero frames or less (`legato(0)`)
+    reads 1.0 from the first frame and stays there, the rule accelerate follows (Q27), since there is no pace to grow
+    at. No song uses the clocks, so nothing that ships changes. Specs: `NoteClockIgnitorsSpec` (the law, three
+    framings, the zero gate, the unknown gate, the build, the region) and a full-engine row in `RealtimeVoiceSpec`
+    (a held live note reads 0 while held and after its note-off; a fixed-gate live note moves); mutation campaign
+    8 of 8 killed. Docs: `audio/ref/voice-synthesis.md` ("The note clocks"), the music-writing Ignitor reference.
+    The wire schema hash moved from 210338569 to -583834474 (two new wire nodes; a stale worklet is refused), and the
+    warmup vocabulary builds both leaves (`WarmupVocabularySpec`).
+    **Review:** round 1 (level 1): audio clean; code one MAJOR (the warmup vocabulary did not build the clocks, the
+    suite caught it too; fixed) and MINORs (the census counted two uses of the singleton clocks as one shared memo,
+    fixed with a hand-counted `GraphCensusSpec` row; `makeVoice`'s defaulted flag, kept and documented; the
+    cut-short live note and the region's frame limit for `elapsed`, documented). Round 2 (level 2): clean from both,
+    two MINORs applied (a KDoc sentence that said a cut-short note never reaches 1.0, wrong: it grows on through the
+    release; the census row's hand count). Mutation: 12 of 12 killed over four campaigns. Full corpus identical
+    (3 frozen, 13 live; Kokon and Der Schmetterling at the maintainer's edits' hashes).
+    **For the maintainer's word:** (a) a gate of zero frames or less reads 1.0 from the first frame; (b) a live note
+    with a gate length that a note-off cuts short keeps its scheduled gate as the base, accelerate's rule, so it enters
+    its release below 1.0 (stopped at a quarter, at 0.25).
 - **7e. Accelerate composed, FM stays a node** (D11, revised 2026-10-09: accelerate from `progress()` and
   `pitchModSemitones`; FM keeps its node for D1). **Decided 2026-10-13 (maintainer, Q32 and Q33): accelerate stays a node, as the pitch
   envelope does (7d)**, the two answered alike. A first answer that day said "compose" and was taken back the same
@@ -1874,3 +1896,4 @@ After step 5. The doors and the nodes stay as descriptions; the runtime arms com
 
 - 2026-10-20: numbered KLANG-00245 (was `docs/tasks/pitch-pipeline-into-the-tree.md`).
 - 2026-10-27: part of KLANG-00354 (The Motor's shape: signal flow and the graph), the epic grouping.
+- 2026-11-04: DONE.

@@ -64,6 +64,8 @@ fun IgnitorDsl.childNodes(): List<IgnitorDsl> {
         is IgnitorDsl.Fm -> listOf(carrier, modulator, ratio, depth, attack, decay, sustain, release, freq)
         is IgnitorDsl.Frac -> listOf(inner)
         is IgnitorDsl.Freq -> emptyList()
+        is IgnitorDsl.Progress -> emptyList()
+        is IgnitorDsl.Elapsed -> emptyList()
         is IgnitorDsl.Highpass -> listOf(
             inner, freq, q, analog, passes, env, attack, decay, sustain, release, attackCurve, decayCurve, releaseCurve,
         )
@@ -220,6 +222,8 @@ fun IgnitorDsl.withChildNodes(new: List<IgnitorDsl>): IgnitorDsl {
         )
         is IgnitorDsl.Frac -> copy(inner = new[0])
         is IgnitorDsl.Freq -> this
+        is IgnitorDsl.Progress -> this
+        is IgnitorDsl.Elapsed -> this
         is IgnitorDsl.Highpass -> copy(
             inner = new[0], freq = new[1], q = new[2], analog = new[3], passes = new[4],
             env = new[5], attack = new[6], decay = new[7], sustain = new[8], release = new[9],

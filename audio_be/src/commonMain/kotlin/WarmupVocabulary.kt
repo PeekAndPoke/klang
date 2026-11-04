@@ -181,7 +181,9 @@ object WarmupVocabulary {
         // the fill shape is block-constant, and a Plus folds a block-constant operand as a scalar
         // without rendering it: a filter consumes it unconditionally, so the fill really runs
         val filled = IgnitorDsl.Affine(Constant(0.25), pre = Constant(0.1), mul = Constant(0.2)).lowpass(1000.0.ign)
-        forward.plus(filled).detune(7.0.ign).optimizer(on = 1).mul(Constant(0.5))
+        // the note clocks, capped at 1 (`max` is the clamp "at most"), so the product stays in 0..1
+        val clocks = IgnitorDsl.Progress.max(Constant(1.0)).mul(IgnitorDsl.Elapsed.max(Constant(1.0))).mul(Constant(0.1))
+        forward.plus(filled).plus(clocks).detune(7.0.ign).optimizer(on = 1).mul(Constant(0.5))
     }
 
     /**

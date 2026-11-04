@@ -531,4 +531,21 @@ class GraphCensusSpec : StringSpec({
             it.bytes shouldBe 3 * 64 + 128 * 8
         }
     }
+
+    "a note clock used twice is two passes, not a shared memo: the build makes each use a leaf of its own" {
+        // `Progress` and `Elapsed` are singletons, so two uses are one instance; the runtime still renders each.
+        val twice = GraphCensus.of(IgnitorDsl.Sine().mul(IgnitorDsl.Progress).plus(IgnitorDsl.Saw().mul(IgnitorDsl.Progress)))
+        val two = GraphCensus.of(IgnitorDsl.Sine().mul(IgnitorDsl.Progress).plus(IgnitorDsl.Saw().mul(IgnitorDsl.Elapsed)))
+
+        twice shouldBe two
+        twice.bytes shouldBe GraphCensus.of(IgnitorDsl.Sine().plus(IgnitorDsl.Saw())).bytes
+
+        // By hand: each clock writes its block (a pass, traffic 1), the sum of two signals is a pass over three
+        // streams (traffic 3); no memo, no bytes.
+        for (clock in listOf(IgnitorDsl.Progress, IgnitorDsl.Elapsed)) {
+            withClue("$clock used twice") {
+                GraphCensus.of(clock.plus(clock)) shouldBe GraphCensus(passes = 3, traffic = 5, bytes = 0)
+            }
+        }
+    }
 })

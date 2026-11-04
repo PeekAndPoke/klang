@@ -161,6 +161,7 @@ internal class OversampleRegionIgnitor(
             gateEndFrame = timesSaturated(ctx.gateEndFrame, factor),
             scratchBuffers = ctx.scratchBuffers.oversample(factor),
             random = ctx.random,
+            gateKnown = ctx.gateKnown,
         ).also { child = it }
 
         c.updateOffsetAndLength(offset = 0, length = ctx.length * factor)
@@ -362,7 +363,8 @@ internal fun IgnitorDsl.isSource(): Boolean = when (this) {
     is IgnitorDsl.Abs, is IgnitorDsl.Accelerate, is IgnitorDsl.Adsr, is IgnitorDsl.Affine, is IgnitorDsl.Bandpass,
     is IgnitorDsl.Ceil, is IgnitorDsl.Clamp, is IgnitorDsl.Coarse, is IgnitorDsl.Constant, is IgnitorDsl.Crush,
     is IgnitorDsl.Detune, is IgnitorDsl.Distort, is IgnitorDsl.Div, is IgnitorDsl.Drive, is IgnitorDsl.Eq, is IgnitorDsl.Exp,
-    is IgnitorDsl.Floor, is IgnitorDsl.Fm, is IgnitorDsl.Frac, is IgnitorDsl.Freq, is IgnitorDsl.Highpass, is IgnitorDsl.Lerp,
+    is IgnitorDsl.Floor, is IgnitorDsl.Fm, is IgnitorDsl.Frac, is IgnitorDsl.Freq, is IgnitorDsl.Progress, is IgnitorDsl.Elapsed,
+    is IgnitorDsl.Highpass, is IgnitorDsl.Lerp,
     is IgnitorDsl.Log, is IgnitorDsl.Lowpass, is IgnitorDsl.Max, is IgnitorDsl.Min, is IgnitorDsl.Minus, is IgnitorDsl.Mod,
     is IgnitorDsl.Neg, is IgnitorDsl.Notch, is IgnitorDsl.OnePoleLowpass, is IgnitorDsl.OptimizerHint, is IgnitorDsl.Param,
     is IgnitorDsl.Phaser, is IgnitorDsl.PitchEnvelope, is IgnitorDsl.PitchMod, is IgnitorDsl.PitchModSemitones,

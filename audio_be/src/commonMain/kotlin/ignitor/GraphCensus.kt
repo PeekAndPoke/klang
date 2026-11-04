@@ -268,6 +268,12 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
                 return NONE
             }
 
+            // The note clocks are singletons, so every use is the same instance, yet the build makes each one a leaf
+            // of its own (no memo): each use renders its own pass.
+            if (node === IgnitorDsl.Progress || node === IgnitorDsl.Elapsed) {
+                return own(node)
+            }
+
             val shared = refs.of(node) > 1
 
             // a shared node renders once into a memo, and every consumer, the first included,
@@ -437,8 +443,8 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
             seen.add(node)
 
             return when (node) {
-                // leaves: no source
-                is IgnitorDsl.Constant, is IgnitorDsl.Param, IgnitorDsl.Freq -> NONE
+                // leaves: no source (the note clocks take no pitch modulation)
+                is IgnitorDsl.Constant, is IgnitorDsl.Param, IgnitorDsl.Freq, IgnitorDsl.Progress, IgnitorDsl.Elapsed -> NONE
 
                 // pitched sources: a read of the ratio per voice loop
                 is IgnitorDsl.Sine -> ratioReader(freq = node.freq, reads = 1)
@@ -548,6 +554,9 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
         private fun own(node: IgnitorDsl): GraphCensus = when (node) {
             // leaves: one value per block
             is IgnitorDsl.Constant, is IgnitorDsl.Param, IgnitorDsl.Freq -> NONE
+
+            // the note clocks: one pass that writes the block, a value per sample
+            IgnitorDsl.Progress, IgnitorDsl.Elapsed -> GraphCensus(passes = 1, traffic = 1, bytes = 0)
 
             // sources: one pass that writes the block (silence fills it)
             is IgnitorDsl.Silence -> GraphCensus(passes = 1, traffic = 1, bytes = 0)

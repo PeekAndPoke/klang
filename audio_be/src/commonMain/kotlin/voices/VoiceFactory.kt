@@ -70,11 +70,16 @@ class VoiceFactory(
      * `sampleStartFrame` below for the floor that used to need it).
      *
      * Returns null if the voice cannot be created (unknown sound, missing sample, etc.).
+     *
+     * [gateKnown] is false for a held realtime voice, whose gate is the held-voice horizon (`IgniteContext.gateKnown`).
+     * Its default departs from the no-default rule `voiceRandom` follows, on purpose: about twenty specs build voices
+     * here, and the one production caller, `VoiceScheduler.activateVoice`, passes it; `RealtimeVoiceSpec` guards that.
      */
     fun makeVoice(
         scheduled: ScheduledVoice,
         backendStartTimeSec: Double,
         playbackCtx: PlaybackCtx,
+        gateKnown: Boolean = true,
         getSample: (SampleRequest) -> SampleStore.SampleEntry.Complete?,
     ): Voice? {
         val data = scheduled.data
@@ -153,7 +158,8 @@ class VoiceFactory(
                 ) ?: return null
 
                 buildVoice(
-                    data = data, releaseSec = treeLifetime(built), startFrame = startFrame, gateEndFrame = gateEndFrame, voiceDurationFrames = voiceDurationFrames, cylinder = cylinder,
+                    data = data, releaseSec = treeLifetime(built), startFrame = startFrame, gateEndFrame = gateEndFrame, voiceDurationFrames = voiceDurationFrames, gateKnown = gateKnown,
+                    cylinder = cylinder,
                     gain = gain,
                     signal = built.ignitor, freqHz = freqHz ?: 0.0, voiceRandom = voiceRandom,
                     cull = treeCull(cull, built),
@@ -274,7 +280,8 @@ class VoiceFactory(
                 )
 
                 buildVoice(
-                    data = data, releaseSec = treeLifetime(built), startFrame = sampleStartFrame, gateEndFrame = gateEndFrame, voiceDurationFrames = voiceDurationFrames, cylinder = cylinder,
+                    data = data, releaseSec = treeLifetime(built), startFrame = sampleStartFrame, gateEndFrame = gateEndFrame, voiceDurationFrames = voiceDurationFrames, gateKnown = gateKnown,
+                    cylinder = cylinder,
                     gain = gain,
                     signal = built.ignitor, freqHz = baseSamplePitchHz,
                     voiceRandom = voiceRandom,
@@ -328,6 +335,8 @@ class VoiceFactory(
         startFrame: Double,
         gateEndFrame: Double,
         voiceDurationFrames: Int,
+        /** See `IgniteContext.gateKnown`. */
+        gateKnown: Boolean,
         cylinder: Int,
         gain: Double,
         signal: Ignitor,
@@ -348,6 +357,7 @@ class VoiceFactory(
             gateEndFrame = voiceDurationFrames,
             scratchBuffers = scratchBuffers,
             random = voiceRandom,
+            gateKnown = gateKnown,
         )
 
         // A tree that ends in an oversampling region hands its output over at the region's rate, and the orbit

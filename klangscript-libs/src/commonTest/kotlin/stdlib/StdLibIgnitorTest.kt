@@ -84,6 +84,14 @@ class StdLibIgnitorTest : StringSpec({
         dsl shouldBe IgnitorDsl.Freq
     }
 
+    "Ignitor.progress() returns IgnitorDsl.Progress" {
+        evalIgnitorDsl("Ignitor.progress()") shouldBe IgnitorDsl.Progress
+    }
+
+    "Ignitor.elapsed() returns IgnitorDsl.Elapsed" {
+        evalIgnitorDsl("Ignitor.elapsed()") shouldBe IgnitorDsl.Elapsed
+    }
+
     "Ignitor.sine(Ignitor.freq().div(2)) produces Sine with halved Freq" {
         val dsl = evalIgnitorDsl("Ignitor.sine(Ignitor.freq().div(2))")
         dsl.shouldBeInstanceOf<IgnitorDsl.Sine>()

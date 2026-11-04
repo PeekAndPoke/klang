@@ -49,6 +49,8 @@ class KotlinIgnObjectParitySpec : StringSpec({
     val rows: List<Pair<String, () -> IgnitorDsl>> = listOf(
         // ── basics
         "Ign.freq()" to { Ign.freq() },
+        "Ign.progress()" to { Ign.progress() },
+        "Ign.elapsed()" to { Ign.elapsed() },
         "Ign.silence()" to { Ign.silence() },
         "Ign.constant(0.3)" to { Ign.constant(0.3) },
         "Ign.param(\"cut\", 800)" to { Ign.param("cut", 800.0) },
