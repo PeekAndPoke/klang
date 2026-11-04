@@ -46,7 +46,7 @@ class ResourceWarehouse(
     val samples: SampleStore = SampleStore(KlangCommLink(capacity = 16).backend),
     budgetBytes: Int = SHELF_BUDGET_BYTES,
     allocate: (frames: Int) -> StereoBuffer? = SizedBuffers::allocateOrNull,
-    allocateReverb: (sampleRate: Int) -> Reverb? = ReverbUnits::allocateOrNull,
+    allocateReverb: (sampleRate: Int, factor: Int) -> Reverb? = ReverbUnits::allocateOrNull,
 ) {
     /** Delay rings. Class 0 is [MIN_RING_SECONDS] at [sampleRate]. */
     val sized: SizedBuffers = SizedBuffers.forRings(sampleRate = sampleRate, budgetBytes = budgetBytes, allocate = allocate)
@@ -101,12 +101,13 @@ class ResourceWarehouse(
             ringFailures = sized.failures,
             ringDropped = sized.dropped,
             ringSyncCleans = sized.syncCleans,
-            reverbIdleCount = reverbs.idleCount,
-            reverbDirtyCount = reverbs.dirtyCount,
-            reverbAllocations = reverbs.allocations,
-            reverbHits = reverbs.hits,
-            reverbFailures = reverbs.failures,
-            reverbDropped = reverbs.dropped,
+            // Every reverb shelf, the scaled ones inside regions included, a unit counted once whatever its factor.
+            reverbIdleCount = reverbs.totalIdleCount,
+            reverbDirtyCount = reverbs.totalDirtyCount,
+            reverbAllocations = reverbs.totalAllocations,
+            reverbHits = reverbs.totalHits,
+            reverbFailures = reverbs.totalFailures,
+            reverbDropped = reverbs.totalDropped,
             cylinderIdleCount = cylinders.idleCount,
             cylinderAllocations = cylinders.allocations,
             cylinderHits = cylinders.hits,

@@ -39,9 +39,9 @@ class LazyReverbSpec : StringSpec({
     // Holds the allocator lambda rather than implementing the function type (forbidden on Kotlin/JS).
     class Recording(var failing: Boolean = false) {
         var asked = 0
-        val allocate: (Int) -> Reverb? = { sampleRate ->
+        val allocate: (Int, Int) -> Reverb? = { sampleRate, factor ->
             asked++
-            if (failing) null else Reverb(sampleRate)
+            if (failing) null else Reverb(sampleRate = sampleRate, factor = factor)
         }
     }
 
@@ -294,7 +294,7 @@ class LazyReverbSpec : StringSpec({
         // same shape as SizedBuffers.allocateOrNull / SampleStore.allocatePcmOrNull, whose specs
         // exercise a real OOM. This row pins only the happy path (review round 3: the old name
         // claimed the catch).
-        ReverbUnits.allocateOrNull(sampleRate).shouldNotBeNull().sampleRate shouldBe sampleRate
+        ReverbUnits(sampleRate).rent().shouldNotBeNull().sampleRate shouldBe sampleRate
     }
 
     // ── The master bus: same shelf, same return path ────────────────────────────────────────────

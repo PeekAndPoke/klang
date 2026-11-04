@@ -1317,7 +1317,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
     "deniedRents sums both chains while both are live" {
         // A shelf that serves no room at all: each chain that asks for one is refused exactly once
         // (the effect latches the refusal, see `KatalystReverbEffect`).
-        val rig = Rig(reverbs = ReverbUnits(sampleRate, maxIdle = 0, allocate = { null }))
+        val rig = Rig(reverbs = ReverbUnits(sampleRate, maxIdle = 0, allocate = { _, _ -> null }))
         rig.registry.register("room", roomChain(6.0))
         rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = roomState(size = 6.0).toKlangMap())
 

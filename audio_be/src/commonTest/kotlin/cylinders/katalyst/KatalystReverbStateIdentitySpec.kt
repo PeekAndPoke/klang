@@ -283,7 +283,7 @@ class KatalystReverbStateIdentitySpec : StringSpec({
         see(effect.currentState)
 
         // Off + an ON-config the shelf REFUSES, with no unit to fall back on: the effect stays Off.
-        val starved = createEffect(ReverbUnits(sampleRate, allocate = { null }))
+        val starved = createEffect(ReverbUnits(sampleRate, allocate = { _, _ -> null }))
         val starvedOff = starved.currentState
 
         starved.configure(size = 0.5, lowpass = null, wet = 1.0)

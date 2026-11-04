@@ -1,7 +1,7 @@
 # KLANG-00214: Oversampling regions, and one core per effect
 
 > **Status (2026-11-03): steps 1, 3a, 3b and 4 landed (section 11).** Left: merging neighbouring stages into one
-> region, song by song, by ear (Der Schmetterling first); the warehouse items of step 3a.
+> region, song by song, by ear (Der Schmetterling first).
 >
 > **Part of:** KLANG-00354 (The Motor's shape: signal flow and the graph)
 
@@ -417,9 +417,19 @@ same with either kernel's group delay for every reachable step count). Corpus gr
   `master(...)` chain is built by the same builder, so a region written there works; nothing stops it. The warmup
   runs the classic chain only, so a first region pays its JIT.
 - Memory at 16x: a delay ring grows with the rate (a 2 s delay at 16x is a 24.6 MB class, rented on first use), a
-  reverb unit is about 3.5 MB. Open in the warehouse: the scaled reverb shelves are not in `WarehouseStats`, their
-  units bypass an injected allocator (the out-of-memory seam), and housekeeping zeroes one whole unit per block, at
-  16x about 16 base units' stores in one block.
+  reverb unit is about 3.5 MB. Left open in the warehouse then, closed on 2026-11-04 (below): the scaled reverb shelves
+  were not in `WarehouseStats`, their units bypassed an injected allocator (the out-of-memory seam), and housekeeping
+  zeroed one whole unit per block, at 16x about 16 base units' stores in one block.
+- **The warehouse items, closed (2026-11-04).** `ReverbUnits` takes its allocator with the factor
+  (`(sampleRate, factor) -> Reverb?`) and hands it to its scaled shelves, so an injected refusal reaches a unit inside
+  a region; the base shelf's `version` and `total*` counts cover its scaled shelves, so `WarehouseStats` counts them
+  (a unit once, whatever its factor) and re-snapshots when one changes; housekeeping zeroes a scaled unit in slices
+  of one base unit's stores per block (`Reverb.resetPart`, rounded up, so a 16x unit takes sixteen blocks), and a rent
+  of a dirty unit zeroes it on the spot from where housekeeping stopped (still newest return first). Base units are
+  housekept as before, one per block. Review round 1 (level 1) clean from both reviewers; its MINORs applied (the
+  one-argument allocator overload gone, the spec's lines filled end to end at 8x, the player's Reverbs hint). 6
+  mutants, 6 killed. Left as it was: a rent that finds only dirty units still zeroes one on the spot, at 16x a large
+  one in one block (rare: a return and a re-rent within the sixteen housekeeping blocks).
 
 **Step 3b, landed (2026-11-03): the hand-over.** A voice whose tree ENDS in a region (its root, under the build's
 memo) does not convert down: it lands on its orbit's rate bus, and its teardown fade, cut fade, solo ramp and pan run at
@@ -522,3 +532,4 @@ bit").
 - 2026-11-03: step 3b landed, the hand-over: a voice ending in a region lands on its orbit's rate bus; the orbit's chain converts each rate once.
 - 2026-11-03: step 4 landed: the stages' own oversampling factors retired, the songs moved one region per stage, the frozen songs re-snapshotted.
 - 2026-11-04: the reverb damping in a region kept as built, the pole mapping (maintainer).
+- 2026-11-04: step 3a's warehouse items closed: the scaled reverb shelves allocate through the injected allocator, count in the stats, and are housekept in slices.

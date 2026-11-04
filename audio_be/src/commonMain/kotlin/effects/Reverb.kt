@@ -115,6 +115,16 @@ class Reverb(
     private val apBufsR = Array(numAllPass) { AudioBuffer(allPassTuning[it] + stereoSpread) }
     private val apPosR = IntArray(numAllPass)
 
+    /** Every line, in the order [resetPart] zeroes them: the combs and the all-passes, left then right. */
+    private val lines: Array<AudioBuffer> = arrayOf(*combBufsL, *combBufsR, *apBufsL, *apBufsR)
+
+    /** How many samples the lines hold together: the stores [reset] writes. A unit inside a region holds factor times more. */
+    val storeCount: Int = lines.sumOf { it.size }
+
+    /** Where an unfinished [resetPart] stands: the line, and the first sample of it not yet zeroed. */
+    private var resetLine = 0
+    private var resetFrom = 0
+
     // --- Parameters ---
 
     /** Decay tail length (comb feedback), normalized. 0 = short tail, 1 = long tail. NaN/Inf silently ignored. */
@@ -251,20 +261,65 @@ class Reverb(
      * are preserved.
      */
     fun reset() {
+        for (line in lines) {
+            line.fill(0.0)
+        }
+
+        resetStoresAndPositions()
+    }
+
+    /**
+     * [reset] in slices, for the warehouse's housekeeping of a large idle unit (one inside a region is factor times a
+     * base unit, KLANG-00214 (oversampling regions)): zeroes up to [budget] more line samples from where the last call
+     * stopped, and returns true once every line is zero, the LPF stores and the read positions too, as [reset] leaves
+     * them. Only an idle unit is sliced; a [reset] in between finishes the job and starts the next slicing from the
+     * top. A [budget] below 1 is taken as 1.
+     */
+    fun resetPart(budget: Int): Boolean {
+        var left = budget.coerceAtLeast(1)
+
+        while (resetLine < lines.size) {
+            val line = lines[resetLine]
+            val to = minOf(line.size, resetFrom + left)
+
+            line.fill(0.0, resetFrom, to)
+            left -= to - resetFrom
+
+            if (to < line.size) {
+                resetFrom = to
+
+                return false
+            }
+
+            resetLine++
+            resetFrom = 0
+
+            if (left <= 0 && resetLine < lines.size) {
+                return false
+            }
+        }
+
+        resetStoresAndPositions()
+
+        return true
+    }
+
+    /** The comb LPF stores and every read position back to 0, and the slicing of [resetPart] back to the top. */
+    private fun resetStoresAndPositions() {
         for (c in 0 until numCombs) {
-            combBufsL[c].fill(0.0)
-            combBufsR[c].fill(0.0)
             combStoreL[c] = 0.0
             combStoreR[c] = 0.0
             combPosL[c] = 0
             combPosR[c] = 0
         }
+
         for (a in 0 until numAllPass) {
-            apBufsL[a].fill(0.0)
-            apBufsR[a].fill(0.0)
             apPosL[a] = 0
             apPosR[a] = 0
         }
+
+        resetLine = 0
+        resetFrom = 0
     }
 
     /**

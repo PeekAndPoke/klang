@@ -200,7 +200,7 @@ class MasterOutputChainSpec : StringSpec({
 
     "a refused master room stays dry and active, and engages from the block the shelf gets a unit back, from an empty unit" {
         var asked = 0
-        val units = ReverbUnits(sampleRate, allocate = { _ ->
+        val units = ReverbUnits(sampleRate, allocate = { _, _ ->
             asked++
             null
         })
@@ -272,9 +272,9 @@ class MasterOutputChainSpec : StringSpec({
     "a reset re-arms the allocating retry: the fade into a refused master allocates on its next block" {
         var failing = true
         var asked = 0
-        val units = ReverbUnits(sampleRate, allocate = { sr ->
+        val units = ReverbUnits(sampleRate, allocate = { sr, factor ->
             asked++
-            if (failing) null else Reverb(sr)
+            if (failing) null else Reverb(sampleRate = sr, factor = factor)
         })
         val registry = KatalystRegistry().apply {
             register("room", KatalystDsl.of(KatalystStageDsl.Reverb(wet = c(0.4), size = c(6.0))))

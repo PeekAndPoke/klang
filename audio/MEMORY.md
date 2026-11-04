@@ -252,7 +252,8 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   bus up, runs its body (a `KatalystChain` BUILT at the region's rate and block size: a Katalyst stage takes its rate
   when built, not per block), converts down; a region with no step is inlined. At a chain's head it makes the orbit
   run at that rate, one conversion per orbit. Inside: the knob modulators keep the orbit's clock; `parallel` twins from the region's stage (`firstStage`); a reverb rents from a shelf per whole
-  factor (`ReverbUnits.atFactor`, kept by the base shelf, `maxIdle / factor`), its comb pole mapped `damping^(1/N)`
+  factor (`ReverbUnits.atFactor`, kept by the base shelf, `maxIdle / factor`; allocated through the shelf's injected
+  allocator, counted in `WarehouseStats`, housekept a base unit's stores per block), its comb pole mapped `damping^(1/N)`
   (the top of the room decays a little faster; kept, maintainer 2026-11-04). Latency: `exactLatency` unrounded
   through bodies, a region rounds once; a `parallel` around a region pads its body by the nearest frame. A region
   always declares a tail. Chains without a region render bit for bit as before.
@@ -422,6 +423,8 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-11-04 The reverb shelves inside regions: the injected allocator, the warehouse stats, housekeeping in slices
+  (KLANG-00214 (oversampling regions), step 3a's warehouse items).
 - 2026-11-03 The stages' own oversampling factors retired (voice and bus `distort`, `shape`, sprudel's three slots);
   the songs moved to one region per stage, the frozen texts re-snapshotted (KLANG-00214 (oversampling regions), step 4).
 - 2026-11-03 The hand-over: a voice ending in a region lands on its orbit's rate bus, one conversion per rate per

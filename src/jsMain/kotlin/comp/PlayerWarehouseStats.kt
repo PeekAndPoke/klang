@@ -109,7 +109,7 @@ class PlayerWarehouseStats(ctx: NoProps) : PureComponent(ctx) {
         )
         tile(
             name = "Reverbs",
-            hint = "Reverb networks: one size each, built on the first reverb()",
+            hint = "Reverb networks, built on the first reverb(); one inside an oversampling region is larger and counts as one",
             figure = w.reverbIdleCount.toString(),
             unit = "idle",
             details = listOf(

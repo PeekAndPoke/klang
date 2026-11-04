@@ -106,6 +106,16 @@ class WarehouseStatsSpec : StringSpec({
         s6.sampleCount shouldBe 1
         s6.sampleBytes shouldBe 8000.0
 
+        // A reverb inside a region rents from a scaled shelf: it counts, and its change re-snapshots.
+        val before = w.stats(droppedVoices = 0, deniedRents = 0)
+        val scaled = w.reverbs.atFactor(4)
+        scaled.giveBack(scaled.rent().shouldNotBeNull())
+        val withScaled = w.stats(droppedVoices = 0, deniedRents = 0)
+        withScaled shouldNotBeSameInstanceAs before
+        withScaled.reverbAllocations shouldBe before.reverbAllocations + 1
+        withScaled.reverbIdleCount shouldBe before.reverbIdleCount + 1
+        withScaled.reverbDirtyCount shouldBe before.reverbDirtyCount + 1
+
         // The engine-side counters are folded in: a change re-snapshots, no change does not.
         val s7 = w.stats(droppedVoices = 2, deniedRents = 1)
         s7 shouldNotBeSameInstanceAs s6
