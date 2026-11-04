@@ -1,7 +1,7 @@
 # KLANG-00214: Oversampling regions, and one core per effect
 
-> **Status (2026-11-03): steps 1, 3a, 3b and 4 landed (section 11).** Left: merging neighbouring stages into one
-> region, song by song, by ear (Der Schmetterling first).
+> **Status (2026-11-04): steps 1, 3a, 3b and 4 landed (section 11); the first merge, Der Schmetterling's guitar rigs,
+> made by the maintainer.** Left: merging neighbouring stages into one region in the other songs, song by song, by ear.
 >
 > **Part of:** KLANG-00354 (The Motor's shape: signal flow and the graph)
 
@@ -527,7 +527,17 @@ bit").
   with the same figures as on this step's tree (33 to 35 of 80 cases over budget; every engine case about 85 to 120 B
   per block on V8 where the last scoreboard row, 2026-10-25, read 20 to 60, and 23 B on the JVM where it read 0; the
   JVM runs now on 17.0.17, the earlier rows on 21). Its cause lies between 2026-10-25 and step 3a; open for the
-  maintainer (a bisect).
+  maintainer (a bisect). Closed on 2026-11-04: the bisect found two causes. KLANG-00399 steps 2 and 3a (2f139199d)
+  made the harness count the dispatcher's diagnostics (about 50 B per block on V8, 23 to 26 B on the JVM, every
+  engine case; green with diagnostics off); step 1 here grew the voice build (fixed, db61d1553). The maintainer had
+  the budgets raised for the diagnostics ("raise both budgets"): `audio_benchmark/alloc-budgets.txt`, the re-set of
+  2026-11-04.
+- **The first merge, by ear** (maintainer, 2026-11-04): Der Schmetterling's two rigs put the pedal, the preamp and the
+  power amp in one `oversampleAtLeast(4, ...)`, the pickup, the snare cut and the cab outside; the stages' own regions
+  inside convert nothing. A/B before it (`tmp/listening/schmetterling-merge/`, the first 60 s, mono sum): level within
+  0.01 dB, every octave band within 0.1 dB, the waveform changed (residual -12 dB after a 5-sample alignment), the
+  guitars alone about as fast, the full mix about 10% slower (the filters and soft caps between the stages at 4x).
+  The maintainer made the edit in the song.
 
 ## History
 
@@ -545,3 +555,5 @@ bit").
 - 2026-11-04: the reverb damping in a region kept as built, the pole mapping (maintainer).
 - 2026-11-04: step 3a's warehouse items closed: the scaled reverb shelves allocate through the injected allocator, count in the stats, and are housekept in slices.
 - 2026-11-04: step 1's allocation escape found by a bisect and fixed (the voice build back to its old size on V8, +24 B on the JVM).
+- 2026-11-04: the soft cap inside a region heard and accepted; the allocation budgets raised for the diagnostics (maintainer).
+- 2026-11-04: the first merge: Der Schmetterling's rigs, pedal to power amp in one 4x region (maintainer, by ear).

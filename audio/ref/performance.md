@@ -704,8 +704,9 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
 - **The engine cases count the diagnostics** since KLANG-00399 steps 2 and 3a: the dispatcher sends its
   `Diagnostics` every 20 ms of rendered audio, and the engine rig's wall clock `{ 0.0 }` no longer hides it (before,
   it sent on wall time, which never moved there). About 50 B per block on V8 and 23 B on the JVM on every engine case,
-  the production cost the browser always paid. To compare engine cases with rows before 2026-10-31, switch the
-  emission off in a throwaway copy (`emitDiagnostics`) and measure both sides that way.
+  the production cost the browser always paid. The budgets include it since 2026-11-04 (the maintainer; the JVM's
+  engine lines at 32 B, `audio_benchmark/alloc-budgets.txt`). To compare engine cases with rows before 2026-10-31,
+  switch the emission off in a throwaway copy (`emitDiagnostics`) and measure both sides that way.
 - **It names the case, not the box.** After an `OVER` line, locate the box by hand, on the case it names:
   1. **V8, which function allocates:** the sampling heap profiler, with the collected objects included (node's
      `--heap-prof` keeps only what is alive at exit, which misses every box). A preload file:

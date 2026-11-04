@@ -224,8 +224,22 @@
 #   KnobGlide.retarget as a plain method (M1, re-measured on this tree: rounds 246.1 to 259.7) and not HEAD's code
 #   (under it in every round). The isFinite group (G1) was not re-measured; the claim that E-kat-mix catches it is
 #   withdrawn until it is.
+#   Re-set on 2026-11-04 (maintainer: "raise both budgets"), every engine case at once: since KLANG-00399 steps 2
+#   and 3a (2f139199d) the dispatcher sends diagnostics every 20 ms of audio, and the harness counts them (its clock
+#   stub no longer keeps them quiet). They cost about 50 B per block on V8 and 23 to 26 B on the JVM on every E-
+#   case; a run with diagnostics off read the old figures (bisect, KLANG-00214). From one run on 55392b509 (three V8
+#   rounds, nine JVM rounds): each E- line on V8 below that run's median plus 40 B moved there, rounded up to 8
+#   (E-delay 112 to 144, E-stages 96 to 136, E-arith 96 to 144, E-arith-glide 500 to 552, E-distort, E-comp, E-gain,
+#   E-parallel, E-kat-sine, E-kat-sawfm, E-kat-perlin 96 to 128, E-eq, E-bands, E-kat-square 96 to 136,
+#   E-body-vowel 96 to 144, E-duck 112 to 176, E-kat-dyn 96 to 168, E-kat-res 144 to 184, E-kat-gates 112 to 144,
+#   E-kat-mix 96 to 160; E-C-n1 13,210 to 13,296, 45 B above the median, its old rule). Not re-measured: the mutants
+#   named above. Shifted by the same 50 B they stay over their lines, except the closest: E-kat-dyn's five setters
+#   (median 120 then, about 170 now, 2 B over 168) and E-kat-mix's G1 (its claim already withdrawn). The lines that
+#   already sat 40 B above the new median (E-sawC-sus, E-noisesaw-sus, E-kat-all7, E-C-rel05-n16) stay.
 # - JVM: 6 B where that run read 0, which tells 0 from one Double per block (24 B) and from one every other
 #   block (12 B). A budget is breached by a reading strictly above it. (12 B until review round 1 of 2026-10-10.)
+#   The E- cases read 23 to 26 B since the diagnostics (above); their lines are 32 since 2026-11-04, which still tells
+#   one more Double per block (39 B and up). E-C-n1 6,628 to 6,661 and E-arith-glide 211 to 236, 6 B above this run.
 #
 # Two limits, said plainly:
 # - V8 resolution (maintainer decision 2, 2026-10-10): the method's noise (about 25 B per block either way) is larger
@@ -290,53 +304,53 @@ C-remap            jvm       36      item 2; reads 0 B in every row since 2026-1
 C-kat-remap        v8        64      a slot expression evaluated on a new map every block: the evaluation allocates nothing (no remedy)
 C-kat-remap        jvm       6       a slot expression evaluated on a new map every block
 E-sawC-sus         v8        160     item 3, the limiter's level (the per-sample class only)
-E-sawC-sus         jvm       6       item 3, the limiter's level; item 8
+E-sawC-sus         jvm       32      item 3, the limiter's level; item 8
 E-noisesaw-sus     v8        160     item 3, the limiter's gain (the per-sample class only)
-E-noisesaw-sus     jvm       6       item 3, the limiter's gain
-E-delay            v8        112     item 1, the orbit delay's sites as a whole (its parts: the KDocs)
-E-delay            jvm       6       item 1, the orbit delay
-E-stages           v8        96      item 1: a revert of everything; the delay's sites with all three running; the per-sample class in the reverb and the phaser (the reverb's and the phaser's per-block sites only in part: their KDocs)
-E-stages           jvm       6       item 1, the three orbit stages
-E-C-n1             v8        13210   item 2 steps 3 and 5: the registry and the sound name per note, a needless lowercase (not the dispatcher's map: its comment)
-E-C-n1             jvm       6628    the voice build per note; one Double per note (item 2 allocates nothing on the JVM)
-E-arith            v8        96      the eight arithmetic stages, constant operands: the per-sample laws and once per block (the KDoc of applyLaw); the operand by reference (item 36: a revert reads high in about half the rounds)
-E-arith            jvm       6       the eight arithmetic stages, constant operands
-E-arith-glide      v8        500     the arithmetic glide: the per-sample ramp, div's reciprocal, an unset cap arriving at once (with the note path)
-E-arith-glide      jvm       211     the arithmetic glide; 204 to 207 B of it is the note path (since the merge of 2026-10-11)
-E-distort          v8        96      the bus distort in a 2x region: the per-sample class and the sub-pool map (item 34)
-E-distort          jvm       6       the bus distort in a 2x region
-E-comp             v8        96      the orbit compressor and a lookahead limiter
-E-comp             jvm       6       the orbit compressor and a lookahead limiter
-E-eq               v8        96      the orbit eq: two bells and a tap
-E-eq               jvm       6       the orbit eq
-E-gain             v8        96      the group fader off unity; the factor by reference (item 45) only by its KDoc (a revert boxes only under a squeezed budget)
-E-gain             jvm       6       the group fader off unity
-E-duck             v8        112     the duck with a sounding sidechain (item 38, the per-block setters: guarded by the comment at the site)
-E-duck             jvm       6       the duck with a sounding sidechain
-E-parallel         v8        96      items 33 and 34, a single view per block and the sub-pool map; parallel, a distorted branch in a 2x region and its twin: the per-sample class
-E-parallel         jvm       6       parallel, a distorted branch in a 2x region and its phase twin
-E-bands            v8        96      items 33 and 34, one view per branch (not one per block) and the sub-pool map; bands, three with the mids distorted in a 2x region: the per-sample class
-E-bands            jvm       6       bands, three with the mids distorted in a 2x region
-E-body-vowel       v8        96      the body and the vowel on an orbit (V8; the JVM's guard is KatalystResonatorAllocationSpec)
-E-body-vowel       jvm       6       the body and the vowel on an orbit
-E-kat-sine         v8        96      one sine on the fader: the per-sample class only (HEAD reads under it)
-E-kat-sine         jvm       6       one sine on the fader
-E-kat-square       v8        96      a square with a slot-expression duty: the per-sample class only
-E-kat-square       jvm       6       a square with a slot-expression duty
-E-kat-sawfm        v8        96      a saw whose freq is a sine (a rebake per block): the per-sample class only
-E-kat-sawfm        jvm       6       a saw whose freq is a sine
-E-kat-perlin       v8        96      perlin at 1 and 8 octaves: fbm on two noise sites (item 39) and the per-sample class
-E-kat-perlin       jvm       6       perlin at 1 and 8 octaves
+E-noisesaw-sus     jvm       32      item 3, the limiter's gain
+E-delay            v8        144     item 1, the orbit delay's sites as a whole (its parts: the KDocs)
+E-delay            jvm       32      item 1, the orbit delay
+E-stages           v8        136     item 1: a revert of everything; the delay's sites with all three running; the per-sample class in the reverb and the phaser (the reverb's and the phaser's per-block sites only in part: their KDocs)
+E-stages           jvm       32      item 1, the three orbit stages
+E-C-n1             v8        13296   item 2 steps 3 and 5: the registry and the sound name per note, a needless lowercase (not the dispatcher's map: its comment)
+E-C-n1             jvm       6661    the voice build per note; one Double per note (item 2 allocates nothing on the JVM)
+E-arith            v8        144     the eight arithmetic stages, constant operands: the per-sample laws and once per block (the KDoc of applyLaw); the operand by reference (item 36: a revert reads high in about half the rounds)
+E-arith            jvm       32      the eight arithmetic stages, constant operands
+E-arith-glide      v8        552     the arithmetic glide: the per-sample ramp, div's reciprocal, an unset cap arriving at once (with the note path)
+E-arith-glide      jvm       236     the arithmetic glide; 204 to 207 B of it is the note path (since the merge of 2026-10-11)
+E-distort          v8        128     the bus distort in a 2x region: the per-sample class and the sub-pool map (item 34)
+E-distort          jvm       32      the bus distort in a 2x region
+E-comp             v8        128     the orbit compressor and a lookahead limiter
+E-comp             jvm       32      the orbit compressor and a lookahead limiter
+E-eq               v8        136     the orbit eq: two bells and a tap
+E-eq               jvm       32      the orbit eq
+E-gain             v8        128     the group fader off unity; the factor by reference (item 45) only by its KDoc (a revert boxes only under a squeezed budget)
+E-gain             jvm       32      the group fader off unity
+E-duck             v8        176     the duck with a sounding sidechain (item 38, the per-block setters: guarded by the comment at the site)
+E-duck             jvm       32      the duck with a sounding sidechain
+E-parallel         v8        128     items 33 and 34, a single view per block and the sub-pool map; parallel, a distorted branch in a 2x region and its twin: the per-sample class
+E-parallel         jvm       32      parallel, a distorted branch in a 2x region and its phase twin
+E-bands            v8        136     items 33 and 34, one view per branch (not one per block) and the sub-pool map; bands, three with the mids distorted in a 2x region: the per-sample class
+E-bands            jvm       32      bands, three with the mids distorted in a 2x region
+E-body-vowel       v8        144     the body and the vowel on an orbit (V8; the JVM's guard is KatalystResonatorAllocationSpec)
+E-body-vowel       jvm       32      the body and the vowel on an orbit
+E-kat-sine         v8        128     one sine on the fader: the per-sample class only (HEAD reads under it)
+E-kat-sine         jvm       32      one sine on the fader
+E-kat-square       v8        136     a square with a slot-expression duty: the per-sample class only
+E-kat-square       jvm       32      a square with a slot-expression duty
+E-kat-sawfm        v8        128     a saw whose freq is a sine (a rebake per block): the per-sample class only
+E-kat-sawfm        jvm       32      a saw whose freq is a sine
+E-kat-perlin       v8        128     perlin at 1 and 8 octaves: fbm on two noise sites (item 39) and the per-sample class
+E-kat-perlin       jvm       32      perlin at 1 and 8 octaves
 E-kat-all7         v8        250     all seven kinds: the per-sample class only, above its tail (a round of 207); item 39 by its KDoc
-E-kat-all7         jvm       6       all seven kinds
-E-kat-dyn          v8        96      the compressor's five, the duck's depth and attack: Compressor.knobArgs, the five setters put back (item 40, mutant 120); Compressor.glideArgs; Ducking.knobArgs (item 45) only by its KDoc (a revert boxes in a mixed profile, not in the check's single-case one)
-E-kat-dyn          jvm       6       the compressor's five, the duck's depth and attack
-E-kat-res          v8        144     the body's and the vowel's wet and floor: the per-sample class (KnobGlide.retarget's mutant reads over it, not reliably)
-E-kat-res          jvm       6       the body's and the vowel's wet and floor
-E-kat-gates        v8        112     a delay time, a reverb size and lowpass through their gates: the per-sample class (mutant 1,180 to 1,196); item 41 by its comments
-E-kat-gates        jvm       6       a delay time, a reverb size and lowpass through their gates
-E-kat-mix          v8        96      the mixed orbit: KnobGlide.retarget inline (mutant 246 to 260); item 41 by its comments
-E-kat-mix          jvm       6       the mixed orbit
+E-kat-all7         jvm       32      all seven kinds
+E-kat-dyn          v8        168     the compressor's five, the duck's depth and attack: Compressor.knobArgs, the five setters put back (item 40, mutant 120); Compressor.glideArgs; Ducking.knobArgs (item 45) only by its KDoc (a revert boxes in a mixed profile, not in the check's single-case one)
+E-kat-dyn          jvm       32      the compressor's five, the duck's depth and attack
+E-kat-res          v8        184     the body's and the vowel's wet and floor: the per-sample class (KnobGlide.retarget's mutant reads over it, not reliably)
+E-kat-res          jvm       32      the body's and the vowel's wet and floor
+E-kat-gates        v8        144     a delay time, a reverb size and lowpass through their gates: the per-sample class (mutant 1,180 to 1,196); item 41 by its comments
+E-kat-gates        jvm       32      a delay time, a reverb size and lowpass through their gates
+E-kat-mix          v8        160     the mixed orbit: KnobGlide.retarget inline (mutant 246 to 260); item 41 by its comments
+E-kat-mix          jvm       32      the mixed orbit
 E-C-rel05-n16      v8        1500    item 10b and item 8 across about 12 voices; item 3, the limiter
 E-C-rel05-n16      jvm       450     item 11, the voice build
 S-doors            v8        36500   item 2 step 4: the param bags' KlangMap storage and its JS copy fast path (per event)
