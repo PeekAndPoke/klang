@@ -14,11 +14,11 @@ import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.kotest.matchers.types.shouldNotBeSameInstanceAs
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.cylinders.Cylinder
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystContext
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystReverbEffect
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.reverb
 import io.peekandpoke.klang.audio_be.effects.Reverb
+import io.peekandpoke.klang.audio_be.katalyst.KatalystContext
+import io.peekandpoke.klang.audio_be.katalyst.KatalystRegistry
+import io.peekandpoke.klang.audio_be.katalyst.KatalystReverbEffect
+import io.peekandpoke.klang.audio_be.katalyst.reverb
 import io.peekandpoke.klang.audio_be.master.MasterBus
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl

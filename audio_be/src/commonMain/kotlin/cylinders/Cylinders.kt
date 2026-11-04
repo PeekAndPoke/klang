@@ -6,7 +6,7 @@
 package io.peekandpoke.klang.audio_be.cylinders
 
 import io.peekandpoke.klang.audio_be.StereoBuffer
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
+import io.peekandpoke.klang.audio_be.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.warehouse.CylinderUnits
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits

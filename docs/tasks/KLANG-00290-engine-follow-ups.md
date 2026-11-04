@@ -1570,7 +1570,7 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     KLANG-00301 (katalyst stage measurements), "Built". **Cause:** Kotlin/JS's `copyInto` on
     a typed array runs the stdlib's `arrayCopy`, `destination.set(source.subarray(startIndex, endIndex), offset)`, and
     the view is a new object on every call: two per branch and block, four in `E-parallel`, six in `E-bands`. **Fix**
-    (`audio_be/.../cylinders/katalyst/KatalystParallelEffect.kt`): the house helper `copyRangeInto`
+    (`audio_be/.../katalyst/KatalystParallelEffect.kt`): the house helper `copyRangeInto`
     (`utils/buffer_copy.kt`; the rule in `audio/MEMORY.md`, "Guardrails", and `audio/ref/performance.md`), a plain
     loop, so the same samples arrive and the copy no longer allocates on V8. What `process` still allocates there is
     the distorted branch's oversampled path and its phase twins (`Pad.addPadded`), item 34's.
@@ -2041,7 +2041,7 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     without loop predication 1.42; alone, every flag set read 0.28 to 0.29 (C1 0.56). So the slow code is C2's
     unrolled form of a loop compiled inside a large method whose profile the other operators had filled first;
     measured, not explained further (no disassembly). **Fix**
-    (`audio_be/.../cylinders/katalyst/KatalystArithmeticEffect.kt`): `process` dispatches to one private method per
+    (`audio_be/.../katalyst/KatalystArithmeticEffect.kt`): `process` dispatches to one private method per
     operator (`plusBlock` to `maxBlock`), each with its own loops and so its own profile. They take no double: the
     block's ramp reaches them through `ramp`, a `DoubleArray(2)` written in `process` (on V8 a double handed to a call
     that is not inlined is a heap number). The comment above the methods is the guard; no test can pin a JIT's
@@ -2126,7 +2126,7 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     per block, and the depth's `coerceIn`), so every one V8 leaves out takes a double as a heap number (the rule in
     `audio/ref/performance.md`; item 40's class, a stage writing knobs through setters per block). A hand-edited
     bundle that skipped both setters on an unchanged value read 62.3 to 78.4 at 250 (3 rounds). **Fix**
-    (`audio_be/.../cylinders/katalyst/KatalystDuckEffect.kt`): each setter runs only when the arriving setting differs
+    (`audio_be/.../katalyst/KatalystDuckEffect.kt`): each setter runs only when the arriving setting differs
     from what the `Ducking` stores (`sameKnob`, which tells -0.0 from 0.0 and two NaNs alike). Exact for what the
     writer hands: the setter keeps a finite value as it is (the depth clamped to [0, 1]) and ignores a non-finite one,
     and `KatalystDuckWriter.fill` hands a finite attack (`DUCK_ATTACK_SECONDS` for a non-finite one) and the depth of a
@@ -2243,7 +2243,7 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     `--predictable` single-case processes, the sampling heap profiler with a warm-up-only run subtracted): on HEAD it
     booked 48.4 B per block in `KatalystCompressorEffect.configure` on `E-kat-dyn` and 32.1 B on `E-kat-mix`, and the
     compiled `configure` held the five setter calls. **Fix** (`effects/Compressor.kt`,
-    `cylinders/katalyst/KatalystCompressorEffect.kt`):
+    `katalyst/KatalystCompressorEffect.kt`):
     - **`Compressor.knobArgs`** (a `DoubleArray(5)`, slots `KNOB_THRESHOLD` to `KNOB_RELEASE`) and
       **`applyKnobArgs()`**, which takes no double: each knob guarded and coerced as its setter does (`isFiniteInline`,
       the same answer as `isFinite()` for every input; the setters' `coerceAtLeast` written out, its stdlib body, so

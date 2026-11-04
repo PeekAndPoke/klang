@@ -16,7 +16,7 @@ import io.peekandpoke.klang.audio_be.cylinders.CylinderSwapRig.Companion.dryChai
 import io.peekandpoke.klang.audio_be.cylinders.CylinderSwapRig.Companion.duckedRoomChain
 import io.peekandpoke.klang.audio_be.cylinders.CylinderSwapRig.Companion.roomChain
 import io.peekandpoke.klang.audio_be.cylinders.CylinderSwapRig.Companion.roomState
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
+import io.peekandpoke.klang.audio_be.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl

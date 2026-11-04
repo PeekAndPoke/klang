@@ -13,8 +13,8 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.kotest.matchers.types.shouldNotBeSameInstanceAs
 import io.peekandpoke.klang.audio_be.StereoBuffer
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystDelayEffect
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
+import io.peekandpoke.klang.audio_be.katalyst.KatalystDelayEffect
 
 /**
  * The warehouse in isolation — step 1 of KLANG-00230 (resource warehouse). No DSP anywhere in

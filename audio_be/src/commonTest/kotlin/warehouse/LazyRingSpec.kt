@@ -17,11 +17,11 @@ import io.kotest.matchers.types.shouldNotBeSameInstanceAs
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.cylinders.Cylinder
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChainBuilder
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystContext
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystDelayEffect
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.delay
 import io.peekandpoke.klang.audio_be.effects.DelayLine
+import io.peekandpoke.klang.audio_be.katalyst.KatalystChainBuilder
+import io.peekandpoke.klang.audio_be.katalyst.KatalystContext
+import io.peekandpoke.klang.audio_be.katalyst.KatalystDelayEffect
+import io.peekandpoke.klang.audio_be.katalyst.delay
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl

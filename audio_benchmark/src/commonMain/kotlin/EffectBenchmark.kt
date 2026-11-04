@@ -8,8 +8,6 @@ package io.peekandpoke.klang.audio_benchmark
 import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.StereoBuffer
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChainBuilder
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystContext
 import io.peekandpoke.klang.audio_be.effects.Compressor
 import io.peekandpoke.klang.audio_be.effects.DelayLine
 import io.peekandpoke.klang.audio_be.effects.Ducking
@@ -31,6 +29,8 @@ import io.peekandpoke.klang.audio_be.ignitor.notch
 import io.peekandpoke.klang.audio_be.ignitor.onePoleHighpass
 import io.peekandpoke.klang.audio_be.ignitor.onePoleLowpass
 import io.peekandpoke.klang.audio_be.ignitor.plus
+import io.peekandpoke.klang.audio_be.katalyst.KatalystChainBuilder
+import io.peekandpoke.klang.audio_be.katalyst.KatalystContext
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.BodyMaterials

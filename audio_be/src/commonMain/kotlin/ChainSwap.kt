@@ -5,11 +5,11 @@
 
 package io.peekandpoke.klang.audio_be
 
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChain
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystContext
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystDuckEffect
 import io.peekandpoke.klang.audio_be.effects.TailCeiling
 import io.peekandpoke.klang.audio_be.ignitor.REGION_MAX_STAGES
+import io.peekandpoke.klang.audio_be.katalyst.KatalystChain
+import io.peekandpoke.klang.audio_be.katalyst.KatalystContext
+import io.peekandpoke.klang.audio_be.katalyst.KatalystDuckEffect
 import io.peekandpoke.klang.audio_be.utils.copyRangeInto
 import io.peekandpoke.klang.audio_be.utils.finiteOrZero
 import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR

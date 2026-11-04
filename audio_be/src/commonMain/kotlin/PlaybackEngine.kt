@@ -7,7 +7,7 @@ package io.peekandpoke.klang.audio_be
 
 import io.peekandpoke.klang.audio_be.PlaybackEngine.Companion.MAX_TAIL_HOLD_SECONDS
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
+import io.peekandpoke.klang.audio_be.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.master.MasterBus
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
 import io.peekandpoke.klang.audio_bridge.KatalystDsl

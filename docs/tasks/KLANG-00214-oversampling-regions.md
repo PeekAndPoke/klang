@@ -66,7 +66,7 @@ three differently factored sets of effects, is the outcome this task exists to p
 ## 3. Phase 0: the effects audit and the factoring (first, before any region code)
 
 The deliverable is a table with one row per effect, across every host that exists when the task
-starts: the Ignitor nodes (`audio_be/.../ignitor/`), the Katalyst stages (`cylinders/katalyst/`), the
+starts: the Ignitor nodes (`audio_be/.../ignitor/`), the Katalyst stages (`katalyst/`), the
 master stages (the voice strip's renderers retired in phase 3 step 9, so they are no host any more). Per row:
 
 - **the DSP core** and every host wrapper around it, with file and line;

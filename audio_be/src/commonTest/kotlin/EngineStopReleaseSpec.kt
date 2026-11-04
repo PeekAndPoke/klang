@@ -13,10 +13,10 @@ import io.kotest.matchers.ints.shouldBeLessThan
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldNotBeSameInstanceAs
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.delay
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
+import io.peekandpoke.klang.audio_be.katalyst.KatalystRegistry
+import io.peekandpoke.klang.audio_be.katalyst.delay
 import io.peekandpoke.klang.audio_be.warehouse.ResourceWarehouse
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl

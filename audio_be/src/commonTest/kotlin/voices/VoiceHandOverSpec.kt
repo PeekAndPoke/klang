@@ -16,13 +16,13 @@ import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.cylinders.Cylinder
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChainBuilder
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystContext
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.PhasePools
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
+import io.peekandpoke.klang.audio_be.katalyst.KatalystChainBuilder
+import io.peekandpoke.klang.audio_be.katalyst.KatalystContext
+import io.peekandpoke.klang.audio_be.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.Ign
@@ -42,7 +42,7 @@ import kotlin.random.Random
 /**
  * The hand-over (KLANG-00214 (oversampling regions) step 3b): a voice whose tree ends in an oversampling region lands
  * on its orbit's bus at the region's rate, and the orbit's chain brings every bus to its own rate once, whatever the
- * voices on it ([io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystBusLadder], the head region of a chain).
+ * voices on it ([io.peekandpoke.klang.audio_be.katalyst.KatalystBusLadder], the head region of a chain).
  *
  * The oracles: a voice that hands over against the same voice converting down itself (its gain written after the
  * region instead of inside it, so its root is no region): equal to rounding while gain and pan are constant, since the

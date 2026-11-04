@@ -18,10 +18,10 @@ import io.peekandpoke.klang.audio_be.PlaybackEngineDispatcher
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.cylinders.CapLaw
 import io.peekandpoke.klang.audio_be.cylinders.CutLaw
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChainBuilder
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystContext
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.interleavedCopy
+import io.peekandpoke.klang.audio_be.katalyst.KatalystChainBuilder
+import io.peekandpoke.klang.audio_be.katalyst.KatalystContext
+import io.peekandpoke.klang.audio_be.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.releaseStarted
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers

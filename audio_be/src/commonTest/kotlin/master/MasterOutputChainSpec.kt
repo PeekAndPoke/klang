@@ -10,11 +10,11 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChain
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChainBuilder
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystContext
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.effects.Reverb
+import io.peekandpoke.klang.audio_be.katalyst.KatalystChain
+import io.peekandpoke.klang.audio_be.katalyst.KatalystChainBuilder
+import io.peekandpoke.klang.audio_be.katalyst.KatalystContext
+import io.peekandpoke.klang.audio_be.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.warehouse.ResourceWarehouse
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers

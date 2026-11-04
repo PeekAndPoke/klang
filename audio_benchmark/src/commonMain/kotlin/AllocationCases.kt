@@ -11,11 +11,11 @@ import io.peekandpoke.klang.audio_be.PlaybackEngineDispatcher
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.cylinders.Cylinder
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.PhasePools
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
+import io.peekandpoke.klang.audio_be.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.voices.PlaybackCtx
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceFactory

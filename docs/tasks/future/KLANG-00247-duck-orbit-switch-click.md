@@ -41,7 +41,7 @@ The ducking design as a whole is being rethought as composition (bus references,
 bus): KLANG-00216 (signal graph engine) section 5 and
 KLANG-00168 (ducking unfinished). If that lands first, this decision may dissolve.
 
-Code: `audio_be/src/commonMain/kotlin/cylinders/katalyst/KatalystDuckEffect.kt`, the handover in
+Code: `audio_be/src/commonMain/kotlin/katalyst/KatalystDuckEffect.kt`, the handover in
 `Cylinder.handOverDuck`.
 
 ## History

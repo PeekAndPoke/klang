@@ -62,7 +62,7 @@ sharing one onset).
 ### What comes free from the engine
 
 `body()` / `vowel()` are **orbit-level Katalyst effects** — they run once on the summed cylinder mix, not per voice
-(`cylinders/katalyst/`, `audio/ref/katalyst.md`). Delay and reverb are likewise cylinder-level tanks. So fading a voice at the
+(`katalyst/`, `audio/ref/katalyst.md`). Delay and reverb are likewise cylinder-level tanks. So fading a voice at the
 **send** stage stops it *feeding* those resonators while their own high-Q state keeps ringing out.
 
 That is exactly the acoustic caricature we want, for free: **the string stops, the body does not.**

@@ -5,8 +5,8 @@
 
 package io.peekandpoke.klang.audio_engine
 
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
+import io.peekandpoke.klang.audio_be.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystValue
 import io.peekandpoke.klang.audio_bridge.KlangPatternEvent

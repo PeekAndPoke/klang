@@ -8,7 +8,7 @@ package io.peekandpoke.klang.audio_be.master
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
+import io.peekandpoke.klang.audio_be.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl

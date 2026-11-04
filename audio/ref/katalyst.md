@@ -9,7 +9,7 @@ KLANG-00238 (phase3 step12 master as katalyst).
 ## One chain type, two positions
 
 - **The chain** is a `KatalystChain` built by `KatalystChainBuilder` from a wire `KatalystDsl`
-  (`audio_be/.../cylinders/katalyst/`). `KatalystDsl.classic` is `body, vowel, delay, reverb, phaser, compressor,
+  (`audio_be/.../katalyst/`). `KatalystDsl.classic` is `body, vowel, delay, reverb, phaser, compressor,
   gain`, with `duck` declared last and run OUTSIDE the list in the cross-orbit pass (so a ducked orbit is ducked
   after its own fader). `Eq` is a stage type that the classic chain does not carry.
 - **The orbit host** is `Cylinder`: every orbit is born with the classic chain, a pattern declares another with

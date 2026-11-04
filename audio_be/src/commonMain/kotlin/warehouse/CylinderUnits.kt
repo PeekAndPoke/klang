@@ -6,7 +6,7 @@
 package io.peekandpoke.klang.audio_be.warehouse
 
 import io.peekandpoke.klang.audio_be.cylinders.Cylinder
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
+import io.peekandpoke.klang.audio_be.katalyst.KatalystRegistry
 
 /**
  * The warehouse's shelf of idle [Cylinder]s (resource warehouse, step 3 — maintainer 2026-09-04:

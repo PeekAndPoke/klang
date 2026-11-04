@@ -69,7 +69,7 @@ Cmd → PlaybackEngineDispatcher.handle
 - `cylinders/Cylinder.kt`: one orbit: its `KatalystChain` (the born-with `Katalyst.classic`, or a declared one),
   its owner (the newest `Sounding` voice: `offer`, `commitOwner`), the check-in, the chain cache and the swap,
   `tryDeactivate` (tail check).
-- `cylinders/katalyst/`: `KatalystChain` + `KatalystChainBuilder` (the wire `KatalystDsl` to stages), one effect per
+- `katalyst/`: `KatalystChain` + `KatalystChainBuilder` (the wire `KatalystDsl` to stages), one effect per
   stage (`Eq`, `Gain`, `Delay`, `Reverb`, `Phaser`, `Compressor`, `Resonator` for body and vowel (one class, two kinds; its
   tables `ResonatorTables`), `Duck`),
   `KatalystFilterSwap` (the body and vowel bank crossfade), `KatalystSlots` + `KatalystSlotWriters` (`katp`),

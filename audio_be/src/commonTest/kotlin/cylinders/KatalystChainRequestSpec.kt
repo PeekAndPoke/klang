@@ -12,10 +12,10 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.PlaybackEngineDispatcher
 import io.peekandpoke.klang.audio_be.StereoBuffer
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.body
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.delay
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.pipeline
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.reverb
+import io.peekandpoke.klang.audio_be.katalyst.body
+import io.peekandpoke.klang.audio_be.katalyst.delay
+import io.peekandpoke.klang.audio_be.katalyst.pipeline
+import io.peekandpoke.klang.audio_be.katalyst.reverb
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl

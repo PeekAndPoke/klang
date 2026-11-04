@@ -7,7 +7,7 @@
 Status: **future, correctness, small; not planned.** Carried 2026-09-28 out of the Katalyst DSL record when it was
 archived (KLANG-00236 (katalyst dsl),
 section 9, found in the step 5c-5 review of 2026-09-19). Both are pre-existing and both live in
-`audio_be/src/commonMain/kotlin/cylinders/katalyst/KatalystDelayEffect.kt` and the closed-form tail ceiling it asks
+`audio_be/src/commonMain/kotlin/katalyst/KatalystDelayEffect.kt` and the closed-form tail ceiling it asks
 (`audio_be/src/commonMain/kotlin/effects/TailCeiling.kt`, home of `CEILING_MAX`), which decides when an orbit's delay
 has nothing left to say.
 

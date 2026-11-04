@@ -15,7 +15,7 @@ import io.peekandpoke.klang.audio_be.BackendClock
 import io.peekandpoke.klang.audio_be.PlaybackEngineDispatcher
 import io.peekandpoke.klang.audio_be.SampleStore
 import io.peekandpoke.klang.audio_be.StereoBuffer
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
+import io.peekandpoke.klang.audio_be.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
 import io.peekandpoke.klang.audio_bridge.SampleRequest
