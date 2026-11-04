@@ -190,7 +190,7 @@ class KatalystReverbEffect(
      * was (the cell floor, which holds a room about 20 dB past inaudible, decides when an orbit, the
      * master and an engine go idle, and the corpus pins that), while a drain, which only frees a slot
      * and some CPU, ends near the room's audible ring-out. A chain that leaves service is retired and
-     * a chain that enters it is reset (`Cylinder.beginFade`, `MasterBus.land`), so one re-used from
+     * a chain that enters it is reset (`Cylinder.beginFade`, `MasterBus.landChain`), so one re-used from
      * the cache starts on the ordinary floor again.
      */
     private var swapDraining: Boolean = false

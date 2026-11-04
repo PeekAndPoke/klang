@@ -13,13 +13,18 @@ KLANG-00238 (phase3 step12 master as katalyst).
   gain`, with `duck` declared last and run OUTSIDE the list in the cross-orbit pass (so a ducked orbit is ducked
   after its own fader). `Eq` is a stage type that the classic chain does not carry.
 - **The orbit host** is `Cylinder`: every orbit is born with the classic chain, a pattern declares another with
-  `katalyst(...)`. `Katalyst(k => k.classic())` is a bit-exact no-op (`chainFor` hands back `classicChain`).
+  `katalyst(...)`. `Katalyst(k => k.classic())` is a bit-exact no-op (`ChainHost.chainFor` hands back the born-with
+  classic chain).
 - **The output host** is `MasterBus` (`audio_be/.../master/`): `master(Katalyst(k => ...))`, off with
   `master(Katalyst())`. It keeps three rules of its own (its class KDoc): a chain that arrives before the engine's
   first block is adopted at full weight; it never deactivates or resets on silence; its tail keeps the engine alive
   (`isRinging`). Nothing fills its slots (`applyParams(null)`), and a duck stage is built there but inert.
-- **One registry fork per playback** (`KatalystRegistry`) serves both positions. Two hosts still duplicate chain
-  plumbing: KLANG-00243 (one chain host).
+- **One registry fork per playback** (`KatalystRegistry`) serves both positions.
+- **One chain host** (`ChainHost`, `audio_be/.../ChainHost.kt`, KLANG-00243 (one chain host), 2026-11-04): both
+  positions own one for the plumbing they share: the chain in service and its name, the bounded cache
+  (`ChainHost.MAX_CACHED_CHAINS`, 8), the parked request, the lookup and the `ChainSwap`. What a position does when a
+  chain lands stays the position's (`ChainHost.Position.land`): the orbit installs at once while idle and fades with
+  the duck handover while sounding; the output adopts at once before its first block and fades after it.
 
 ## Where a knob comes from
 

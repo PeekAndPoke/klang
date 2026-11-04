@@ -351,7 +351,7 @@ class LimiterLookaheadSpec : StringSpec({
     }
 
     "reset() clears the delay ring — no stale audio into the first block after warmup" {
-        // WarmupRunner -> dispatcher.resetPostChain() -> MasterStage.reset(), and MasterBus.land
+        // WarmupRunner -> dispatcher.resetPostChain() -> MasterStage.reset(), and MasterBus.landChain
         // resets chains ON THE AUDIO THREAD. Without clearing the ring, whatever was mid-flight
         // replays into the next block.
         val limiter = houseLimiter()

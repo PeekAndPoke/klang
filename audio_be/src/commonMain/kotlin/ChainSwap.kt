@@ -759,7 +759,7 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
      * The incoming weight is exactly 0 until its delayed start, on the chains and on the duck
      * handover alike, so what the arriving chain emits there is dropped by the law. When the
      * arriving chain is the LATER one that is its own ring, silent because the host hands in a chain
-     * that is fresh or was reset when it retired (`Cylinder.chainFor`, `KatalystChain.retire`); a
+     * that is fresh or was reset when it retired (`ChainHost.chainFor`, `KatalystChain.retire`); a
      * host that handed in a used chain would drop stale audio there, not play it. When it is the
      * EARLIER one it is its first frames, dropped on purpose so the two copies meet under the
      * crossfade. For the duck the partner is the live mix, and the 0 keeps the leaving duck fully in

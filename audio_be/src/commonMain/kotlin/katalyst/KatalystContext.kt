@@ -47,7 +47,7 @@ class KatalystContext(
      * The bus at [steps] above the base rate, marked as holding this block's audio. Made here the first time it is
      * asked for (a voice landing at that rate, a swap's ramped copy, a chain's steps down ringing out), on the audio
      * thread: at most one per rate per context, kept for its life (the bounded exception a chain build is, see
-     * `Cylinder.chainFor`).
+     * `ChainHost.chainFor`).
      */
     fun busAt(steps: Int): StereoBuffer {
         val bus = buses[steps] ?: StereoBuffer(blockFrames shl steps).also { buses[steps] = it }

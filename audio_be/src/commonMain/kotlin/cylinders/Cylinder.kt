@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.cylinders
 
+import io.peekandpoke.klang.audio_be.ChainHost
 import io.peekandpoke.klang.audio_be.ChainSwap
 import io.peekandpoke.klang.audio_be.Crossfade
 import io.peekandpoke.klang.audio_be.StereoBuffer
@@ -32,7 +33,12 @@ import io.peekandpoke.klang.common.infra.KlangMap
  * outgoing chain rings out (step 3b, see [processEffects]). EVERY chain reads its knobs from the
  * orbit's param state, the owner voice's `katalystParams`, the born-with one included (step 5b-1),
  * and a declaration whose content IS the historical chain resolves back to the born-with instance
- * rather than swapping. See `KatalystChainBuilder` and [chainFor].
+ * rather than swapping. See `KatalystChainBuilder` and [ChainHost.chainFor].
+ *
+ * The chain plumbing (the chain in service and its name, the cache, the parked request, the lookup,
+ * the [ChainSwap]) is the [ChainHost] this cylinder shares with `MasterBus` (KLANG-00243 (one chain
+ * host)); what is the orbit's stays here: when a request installs at once and when it fades, the
+ * duck handover, the owner and the silence reset.
  *
  * The duck runs in a separate pass after all orbits are processed (cross-orbit dependency).
  */
@@ -64,15 +70,6 @@ class Cylinder(
 
     companion object {
         /**
-         * How many built chains one cylinder keeps, the orbit twin of `MasterBus`'s bound (8).
-         *
-         * Chain names are content-derived (`KatalystDsl.uniqueId()`), so every EDIT of a chain
-         * while live coding mints a new one. Without a bound, each edit's stage instances would be
-         * retained for the life of the cylinder. The chain in play is never evicted.
-         */
-        internal const val MAX_CACHED_CHAINS: Int = 8
-
-        /**
          * How many blocks the orbit's param state survives its owner's last commit ([commitOwner]): the
          * block it was written on plus one. Past that the state is dropped and a chain arriving on the
          * orbit's tail resolves from what it authored.
@@ -85,25 +82,34 @@ class Cylinder(
     // ════════════════════════════════════════════════════════════════════════════
 
     /**
-     * The registry this cylinder resolves chain names against. Re-pointed by [adopt] and DROPPED
-     * by [retire]: a shelved cylinder must not hold the registry of a stopped playback, or the
-     * shelf would pin every chain that playback ever registered for as long as it keeps the
-     * cylinder (the allocation-cleanup rule, 2026-09-17). A cylinder without a registry resolves
-     * no name, which is what an idle shelf slot should do.
-     */
-    private var katalysts: KatalystRegistry? = katalysts
-
-    /**
-     * The chain this cylinder is born with, and the ONE chain it can always fall back to: the
-     * historical stages. Never evicted and never cached by name, so a retired cylinder [adopt]ed
-     * for another orbit costs no build.
+     * The chain plumbing this orbit shares with the output ([ChainHost]): the chain in service, the
+     * cache, the parked request and the [swap].
      *
-     * Slot-driven like every other chain since step 5b-1 (2026-09-19), so a bus door or a `katp`
-     * reaches it through the orbit's param state and nothing else. A pattern writing
-     * `Katalyst.classic()` declares the same stages and now resolves to THIS instance (see
-     * [chainFor]), which makes that declaration a no-op instead of a crossfade.
+     * Born with the CLASSIC chain, the historical stages, the one chain this cylinder can always fall
+     * back to: never evicted and never cached by name, so a retired cylinder [adopt]ed for another
+     * orbit costs no build. Slot-driven like every other chain since step 5b-1 (2026-09-19), so a bus
+     * door or a `katp` reaches it through the orbit's param state and nothing else. A pattern writing
+     * `Katalyst.classic()` declares the same stages and resolves to THIS instance
+     * ([ChainHost.chainFor]), which makes that declaration a no-op instead of a crossfade.
+     *
+     * Its registry, where a chain NAME is resolved, is re-pointed by [adopt] and DROPPED by
+     * [retire]: a shelved cylinder must not hold the registry of a stopped playback, or the shelf
+     * would pin every chain that playback ever registered for as long as it keeps the cylinder (the
+     * allocation-cleanup rule, 2026-09-17). A cylinder without a registry resolves no name, which is
+     * what an idle shelf slot should do.
      */
-    private val classicChain: KatalystChain = buildChain(KatalystDsl.classic)
+    private val host = ChainHost(
+        sampleRate = sampleRate,
+        blockFrames = blockFrames,
+        position = object : ChainHost.Position {
+            override fun build(dsl: KatalystDsl): KatalystChain = buildChain(dsl)
+
+            override fun land(key: String, rawName: String, dsl: KatalystDsl): Boolean = landChain(key = key, rawName = rawName, dsl = dsl)
+        },
+        bornWithDsl = KatalystDsl.classic,
+        bornWithAnswersItsContent = true,
+        registry = katalysts,
+    )
 
     /**
      * This orbit's effect chain: the stage instances own the orbit's DSP state (delay ring, reverb
@@ -111,72 +117,22 @@ class Cylinder(
      * voice may do. Nothing is allocated eagerly that is lazy today: the delay's ring and the
      * reverb's network are still rented on the first activating configure.
      */
-    private var chain: KatalystChain = classicChain
-
-    /**
-     * The key [chain] was requested under: the LOWERCASED name, which is what
-     * [KatalystRegistry.findByKey] and [chains] are keyed by. Null while the cylinder still runs
-     * the classic chain.
-     */
-    private var chainKey: String? = null
-
-    /**
-     * The RAW spelling of the last request that landed on [chain], for [requestChain]'s fast
-     * path: a re-emitted `katalyst("Bus")` compares equal here and allocates nothing, whatever
-     * case it is written in. Null with [chainKey].
-     */
-    private var chainRawName: String? = null
-
-    /**
-     * A requested chain that could not be installed yet, as its registry KEY (normalized once, at
-     * request time): the `RegisterKatalyst` command had not arrived, or a fade or drain still held
-     * the [swap]'s one leaving slot. Retried per block by [pollPendingChain] and on the next request,
-     * never resolved to the classic chain instead (the master's rule: an unknown name must not
-     * silently pin an orbit to the wrong chain).
-     *
-     * A key, not a name, because the retry runs on the render path: [KatalystRegistry.findByKey]
-     * allocates nothing on a miss, so a name that never resolves costs one map probe per block
-     * instead of two strings (the §7 rule, and the review finding that closed it).
-     */
-    private var pendingKey: String? = null
-
-    /**
-     * Built declared chains by LOWERCASED name (the registry's own key, so two spellings of one
-     * chain share one entry), bounded by [MAX_CACHED_CHAINS]. A chain that is not [chain] has been
-     * retired (its rented units are back on the shelves), so an idle entry holds nothing but its
-     * stage shells and is ready to go straight back into service.
-     *
-     * Keyed by NAME: two different names that happen to carry equal content get one entry each.
-     * Content hashing a stage list per request would cost more than the one chain it saves, and a
-     * content-derived name (`KatalystDsl.uniqueId()`) is what a song normally carries anyway.
-     *
-     * ONE content is compared, and it never enters this map: a declaration equal to
-     * [KatalystDsl.classic] short-circuits to [classicChain] (see [chainFor], step 5b-1), so the
-     * born-with chain is neither cached nor evictable. [chainFor] runs that compare BEFORE the
-     * cache lookup, so it is paid on every request that gets past [requestChain]'s raw and key
-     * fast paths, which is every actual SWITCH: a live A/B between two declared names pays one
-     * list equality each way. It is O(stages) on a list of at most a dozen data classes, off the
-     * per-block path, and it buys the born-with chain never being rebuilt.
-     */
-    private val chains = mutableMapOf<String, KatalystChain>()
+    private val chain: KatalystChain get() = host.current
 
     /** Built chains held by this cylinder, for the specs asserting the cache stays bounded. */
-    internal val cachedChainCount: Int get() = chains.size
+    internal val cachedChainCount: Int get() = host.cachedChainCount
 
     /**
      * The chain swap of a SOUNDING orbit (phase 3 step 12 C1): the chain LEAVING service, fading
      * out over [Crossfade] and then draining, and the duck handover of the fade (see [ChainSwap],
-     * whose table is authoritative for the edges). Its one leaving slot is why a request arriving
-     * while it is taken waits in [pendingKey]: this host asks [ChainSwap.settled] before it begins
-     * a swap and parks the key otherwise, which is the master's retarget policy (a) and what keeps
-     * [chain] and the leaving chain from ever being the same object (see [requestChain]). The
-     * swap's own refusal of a second begin (it retires the offered chain) is the leak-safe
-     * backstop, never reached from here.
+     * whose table is authoritative for the edges). The [host] asks [ChainSwap.settled] before it
+     * lands a request and parks the key otherwise, which is what keeps [chain] and the leaving chain
+     * from ever being the same object.
      *
      * It also carries the rents the warehouse refused the chains this cylinder has swapped AWAY
      * from ([ChainSwap.retire]), because a stage zeroes its own count when it retires.
      */
-    private val swap = ChainSwap(sampleRate = sampleRate, blockFrames = blockFrames)
+    private val swap: ChainSwap = host.swap
 
     /**
      * Test seams: which phase of a swap this cylinder is in. The audio shows the blend, but a spec
@@ -418,114 +374,40 @@ class Cylinder(
     private fun voiceCheckedIn(blockStart: Double): Boolean = checkedIn && (blockStart - lastCheckInFrame) <= blockFrames
 
     /**
-     * Requests the chain registered as [name], the orbit twin of `MasterBus.requestSwap`: the
-     * scheduler calls this when it consumes a `katalyst(…)` reference, whether or not the event
-     * also sounds.
+     * Requests the chain registered as [name]: the scheduler calls this when it consumes a
+     * `katalyst(…)` reference, whether or not the event also sounds. The paths (already in service,
+     * not registered yet, the swap busy) are the [ChainHost]'s; a request that can land lands here
+     * ([landChain]):
      *
-     * The cases, all of them cheap enough for the promotion path:
-     *
-     *  - **The name is already running** (the same raw spelling, or the same key): nothing to do,
-     *    and a queued request is dropped, because the last expressed intent is the chain already
-     *    playing. This is what makes a top-level `katalyst(…)`, which re-emits its event every
-     *    cycle, free after the first application, and the RAW compare is what makes it
-     *    allocation-free.
-     *  - **The name is unknown here** (the `RegisterKatalyst` command has not arrived, or was
-     *    dropped): remembered as [pendingKey] and retried per idle block and on the next request.
-     *    Never a silent fall back to classic: the caller must be able to tell "unknown, try again"
-     *    from "known" (`KatalystRegistry`).
      *  - **The cylinder is idle**: installed now, which is the one moment no crossfade is needed.
      *    A name whose CONTENT equals the historical chain resolves to the chain the cylinder was
-     *    born with, so the install is the name and nothing else (see [chainFor]).
+     *    born with, so the install is the name and nothing else ([ChainHost.chainFor]).
      *  - **The cylinder is sounding**: faded in now (step 3b), over [Crossfade], while the chain
      *    it replaces fades out and then rings out (see [processEffects]).
-     *  - **A fade, drain, release or cut is already running**: queued in [pendingKey], the swap is
-     *    told a request waits ([ChainSwap.requestWaiting]: a ring-out is cut over
-     *    [ChainSwap.CUT_SECONDS], maintainer 2026-10-17), and started when the one outgoing slot
-     *    frees. Cutting a running fade would drop its outgoing chain at full weight,
-     *    the very click the crossfade exists to prevent (the master's retarget policy (a)). A
-     *    request for the chain fading IN is the first case above and costs nothing; a request for
-     *    the chain fading OUT is queued like any other rather than reversing the ramp, because
-     *    reversing needs the outgoing chain's name, key and declaration tracked alongside the
-     *    incoming one's for a case that is one live-coding undo inside 60 ms (decided 2026-09-17,
-     *    the stone rule on complexity).
      *
-     * The name is normalized ONCE here, past the raw fast path, and every later hop (the registry
-     * lookup, the cache, the retry) takes that key: §7's "resolve on request or registration,
-     * never per block".
+     * A request for the chain fading OUT is parked like any other rather than reversing the ramp,
+     * because reversing needs the outgoing chain's name, key and declaration tracked alongside the
+     * incoming one's for a case that is one live-coding undo inside 60 ms (decided 2026-09-17, the
+     * stone rule on complexity).
      */
     fun requestChain(name: String) {
-        if (name == chainRawName) {
-            pendingKey = null
-
-            return
-        }
-
-        // The ONE normalization: the key the registry and the cache are both keyed by.
-        val key = name.lowercase()
-
-        if (key == chainKey) {
-            // The chain already playing, under another spelling. Adopt the spelling too, so the
-            // next re-emission takes the fast path above.
-            chainRawName = name
-            pendingKey = null
-
-            return
-        }
-
-        val dsl = katalysts?.findByKey(key)
-
-        if (dsl == null) {
-            pendingKey = key
-
-            return
-        }
-
-        if (isActive && !swap.settled) {
-            // The one leaving slot is taken by a running fade, drain, release or cut: park the key
-            // (the swap would refuse the begin) and tell the swap a request waits, so a ring-out is
-            // cut instead of waited for (maintainer, 2026-10-17; see [ChainSwap]).
-            pendingKey = key
-            swap.requestWaiting()
-
-            return
-        }
-
-        // The last expressed intent wins: an earlier request that is still queued (unknown then,
-        // or waiting behind a fade) must not land after this one.
-        pendingKey = null
-
-        if (isActive) {
-            beginFade(key = key, rawName = name, dsl = dsl)
-
-            return
-        }
-
-        install(key = key, rawName = name, dsl = dsl)
+        host.request(name)
     }
 
     /**
-     * Installs a chain that is queued on this orbit, polled once per block by
-     * [Cylinders.processAndMix].
+     * Lands a chain that is parked on this orbit, polled once per block by
+     * [Cylinders.processAndMix] ([ChainHost.pollPending]).
      *
      * This is what makes a LATE registration land: the request arrived before its
      * `RegisterKatalyst` command and no further request is coming (a one-shot `.katalyst(…)` on a
      * single note emits once), so without a poll the chain would wait for the orbit's next note.
-     * It is also what starts a QUEUED swap once the fade it waited behind has finished, on a
-     * sounding orbit that never goes silent. Costs one field read per cylinder per block on the
-     * normal path.
-     *
-     * On the STUCK path (a name that never resolves, because its `RegisterKatalyst` was dropped)
-     * it costs one map probe per registry in the fork chain, and still no allocation: the retry
-     * takes the key [requestChain] normalized once, through [KatalystRegistry.findByKey]. A poll
-     * that re-normalized the name here would be a string per cylinder per block on the audio
-     * thread, which is what the delta review caught.
+     * It is also what starts a PARKED swap once the fade it waited behind has finished, on a
+     * sounding orbit that never goes silent. One field read per cylinder per block on the normal
+     * path; on a name that never resolves, one map probe per registry in the fork chain, and still
+     * no allocation.
      */
     fun pollPendingChain() {
-        if (pendingKey == null) {
-            return
-        }
-
-        installPending()
+        host.pollPending()
     }
 
     fun clear() {
@@ -631,8 +513,8 @@ class Cylinder(
      */
     fun retire() {
         startNewLife()
-        // The registry goes with the engine that lent it (see [katalysts]).
-        katalysts = null
+        // The registry goes with the engine that lent it (see [host]).
+        host.registry = null
     }
 
     /**
@@ -643,7 +525,7 @@ class Cylinder(
     fun adopt(id: Int, silentBlocksBeforeTailCheck: Int, katalysts: KatalystRegistry) {
         this.id = id
         this.silentBlocksBeforeTailCheck = silentBlocksBeforeTailCheck
-        this.katalysts = katalysts
+        host.registry = katalysts
         // The SAME clean slate [retire] reaches, not a subset: a cylinder normally arrives here
         // through the shelf, but a caller that re-labels one directly must not be the path where a
         // ring stays inside a chain nobody can reach any more.
@@ -663,22 +545,12 @@ class Cylinder(
      * the current chain being one of them costs nothing.
      */
     private fun startNewLife() {
-        chain.retire()
-        classicChain.retire()
         // Any fade or drain ends here, at whatever weight it had reached: this cylinder is not
         // going to render again for the orbit it was fading FOR. The leaving chain is normally the
-        // classic one or a cache entry (eviction never takes it), so the retires around this line
-        // already cover it; the hard cut retires it anyway, because retire is idempotent and a
-        // stranded ring is the one mistake this method exists to make impossible. It also starts
-        // the denied-rents count of the new life over.
-        swap.hardCut()
-
-        for (cached in chains.values) {
-            cached.retire()
-        }
-
-        chains.clear()
-        selectClassicChain()
+        // classic one or a cache entry (eviction never takes it), so the chains' retires already
+        // cover it; the swap's hard cut retires it anyway, because retire is idempotent and a
+        // stranded ring is the one mistake this method exists to make impossible.
+        host.retireAll()
         candidate = null
         checkedIn = false
         ownerParams = null
@@ -767,7 +639,7 @@ class Cylinder(
         // dirty on purpose (see KatalystChain.retire). A pending key that resolved to the chain
         // already in service installs nothing, and then the reset below is still owed: it is what
         // keeps the next life's first owner from inheriting this life's DSP state.
-        if (installPending()) {
+        if (host.pollPending()) {
             return
         }
 
@@ -794,8 +666,8 @@ class Cylinder(
     }
 
     /**
-     * Installs the queued chain if there is one and it can be resolved by now: at once on an idle
-     * orbit, through a crossfade on a sounding one.
+     * Lands a request the [host] resolved, while the swap is settled ([ChainHost.Position.land]): at
+     * once on an idle orbit ([install]), through a crossfade on a sounding one ([beginFade]).
      *
      * **What the return value means, per branch**, because the two are not quite the same question:
      * the IDLE branch reports whether the chain actually CHANGED, which is what [tryDeactivate]
@@ -805,40 +677,15 @@ class Cylinder(
      * harmless and deliberate: the only caller that reads the value is [tryDeactivate], which runs
      * on an orbit that has just gone silent, so the sounding branch is unreachable from it. Giving
      * [beginFade] a Boolean of its own would buy nothing today and one more thing to keep true.
-     *
-     * A name that is still unknown STAYS queued: the registration may yet arrive. So does one that
-     * is waiting behind a running fade or drain.
      */
-    private fun installPending(): Boolean {
-        val key = pendingKey ?: return false
-
-        if (isActive && !swap.settled) {
-            // Still behind the swap. A name that has meanwhile been registered could land, so the
-            // swap hears that a request waits (idempotent): one map probe per block while a key is
-            // parked behind a swap, which since the cut is a fifth of a second.
-            if (katalysts?.findByKey(key) != null) {
-                swap.requestWaiting()
-            }
-
-            return false
-        }
-
-        // The key door, never the normalizing one: this runs on the render path, every block the
-        // name is still unknown.
-        val dsl = katalysts?.findByKey(key) ?: return false
-
-        pendingKey = null
-
+    private fun landChain(key: String, rawName: String, dsl: KatalystDsl): Boolean {
         if (isActive) {
-            beginFade(key = key, rawName = key, dsl = dsl)
+            beginFade(key = key, rawName = rawName, dsl = dsl)
 
             return true
         }
 
-        // What the caller needs is "did the chain change", not "was the key consumed": a
-        // content-classic key lands on the chain already in service (see [chainFor]), and
-        // [tryDeactivate] must still reach its own clean slate in that case (review round 1, m1).
-        return install(key = key, rawName = key, dsl = dsl)
+        return install(key = key, rawName = rawName, dsl = dsl)
     }
 
     /**
@@ -851,36 +698,34 @@ class Cylinder(
      * synchronous unit reset (a shelved ring is zeroed on return, ~27k stores for the smallest
      * class) and can be DENIED under shelf pressure, leaving that chain's echo or room absent
      * until the next rent. That is the trade the warehouse exists for: keeping up to
-     * [MAX_CACHED_CHAINS] chains' units alive per orbit would hold megabytes per orbit for chains
-     * nobody is playing, and a swap is an edit-time event, not a per-block one. [beginFade] keeps
+     * [ChainHost.MAX_CACHED_CHAINS] chains' units alive per orbit would hold megabytes per orbit
+     * for chains nobody is playing, and a swap is an edit-time event, not a per-block one. [beginFade] keeps
      * two chains alive for the length of the fade and the outgoing chain's ring-out, which is the
      * one case that needs both.
      *
      * The incoming chain needs no reset: nothing that is not the current chain holds state.
      *
      * The incoming chain is never the outgoing one, so retiring after the assignment cannot wipe
-     * what was just installed: both callers return early when the requested KEY is the one already
-     * playing, and [chain] is either [classicChain] (never in [chains]) or the [chains] entry for
-     * [chainKey].
+     * what was just installed: the [host] lands nothing when the requested KEY is the one already
+     * playing, and [chain] is either the born-with classic chain (never cached by name) or the
+     * cache entry for its key.
      */
     private fun install(key: String, rawName: String, dsl: KatalystDsl): Boolean {
-        val next = chainFor(key, dsl)
+        val next = host.chainFor(key, dsl)
         val leaving = chain
 
-        chainKey = key
-        chainRawName = rawName
+        host.enter(chain = next, key = key, rawName = rawName)
 
         // The requested chain is the one already in service, under a name it did not carry before:
         // a content-classic declaration on an orbit still running the chain it was born with (see
-        // [chainFor]). Adopting the name is the whole of the install; retiring `leaving` below
-        // would hand back the ring and the network of the chain we just "installed", and forgetting
-        // the owner would re-deal the orbit for nothing. FALSE, not true: the caller has to know
-        // that nothing was installed, or [tryDeactivate] would skip the reset that is its own job.
-        if (next === chain) {
+        // [ChainHost.chainFor]). Adopting the name is the whole of the install; retiring `leaving`
+        // below would hand back the ring and the network of the chain we just "installed", and
+        // forgetting the owner would re-deal the orbit for nothing. FALSE, not true: the caller has
+        // to know that nothing was installed, or [tryDeactivate] would skip the reset that is its
+        // own job.
+        if (next === leaving) {
             return false
         }
-
-        chain = next
 
         // The denied rents are carried BEFORE the retire, which zeroes the stage's own count: the
         // orbit's diagnostics number is about this cylinder's life, not about its current chain.
@@ -902,7 +747,7 @@ class Cylinder(
      *
      * The incoming chain is RESET: a cached chain is retired when it leaves service, so it holds
      * no DSP state in practice, but it is coming back in over live audio, where a replayed tail
-     * would be audible, so the clean slate is asserted here rather than assumed (`MasterBus.land`
+     * would be audible, so the clean slate is asserted here rather than assumed (`MasterBus.landChain`
      * does the same).
      *
      * **The owner is NOT forgotten**, unlike in [install]: the owner voice is alive and sounding, and
@@ -913,21 +758,18 @@ class Cylinder(
      * declared chain is configured from its own slots right here rather than waiting for an owner.
      */
     private fun beginFade(key: String, rawName: String, dsl: KatalystDsl) {
-        val next = chainFor(key, dsl)
+        val next = host.chainFor(key, dsl)
         val leaving = chain
 
-        chainKey = key
-        chainRawName = rawName
+        host.enter(chain = next, key = key, rawName = rawName)
 
         // Already in service (see [install]): there is nothing to fade, and a fade would RESET the
         // running chain, cutting the orbit's own tail on a declaration that changes nothing.
-        if (next === chain) {
+        if (next === leaving) {
             return
         }
 
         next.reset()
-
-        chain = next
 
         // The arriving chain reads the orbit's live param state FIRST, without writing anything:
         // `handOverDuck` below asks whether it will duck, and a duck whose orbit or depth comes
@@ -993,72 +835,12 @@ class Cylinder(
     }
 
     /**
-     * The built chain for [name]: the classic instance for the historical declaration, a cache hit,
-     * or a fresh build.
-     *
-     * **Building here is on the audio thread**, the same bounded exception `MasterBus` documents:
-     * a swap is applied from the scheduler's promotion path, inside the render callback. The build
-     * is small by construction (stage shells only; the delay's ring and the reverb's network are
-     * still rented lazily on first activation), and the cache keeps a live-coded edit from paying
-     * it twice.
+     * Builds a chain for this orbit. **On the audio thread**, the same bounded exception `MasterBus`
+     * documents: a swap is applied from the scheduler's promotion path, inside the render callback.
+     * The build is small by construction (stage shells only; the delay's ring and the reverb's
+     * network are still rented lazily on first activation), and the [host]'s cache keeps a
+     * live-coded edit from paying it twice.
      */
-    private fun chainFor(key: String, dsl: KatalystDsl): KatalystChain {
-        // A declaration whose CONTENT is the historical chain gets the instance this cylinder was
-        // born with (step 5b-1, 2026-09-19). Both are slot-driven now, so the two are the same
-        // chain in every observable way, and handing back a second instance would cost a crossfade
-        // that is not bit-transparent (the arriving room and ring warm from empty) for a
-        // declaration that changes nothing. The 2026-09-18 decision that forbade this shortcut
-        // stood on the born-with chain being VOICE-driven, which made a classic declaration inert;
-        // that reason is gone with the owner writers.
-        //
-        // The shortcut also keeps [classicChain] out of [chains], so it is never evicted and never
-        // retired as a cache victim. Both callers of this function then have to handle
-        // "the chain we are installing is already in service", which is what their identity checks
-        // are for.
-        if (dsl.stages == KatalystDsl.classic.stages) {
-            return classicChain
-        }
-
-        chains[key]?.let { return it }
-
-        evictIfNeeded()
-
-        return buildChain(dsl).also { chains[key] = it }
-    }
-
-    /**
-     * Drops cached chains until there is room for one more, keeping the cache bounded. The chain
-     * in play is never evicted, and neither is one that is fading or draining ([ChainSwap.leaving]):
-     * retiring a chain that is still audible would hand its ring and network to another orbit
-     * mid-tail. An evicted chain is retired, which is a no-op for its rents (it had none) and the
-     * clean slate for its shells.
-     */
-    private fun evictIfNeeded() {
-        while (chains.size >= MAX_CACHED_CHAINS) {
-            // Insertion order (the map's own): the oldest declaration a live-coding session has
-            // moved past is the one least likely to come back.
-            val victim = chains.entries.firstOrNull { (_, cached) ->
-                cached !== chain && cached !== swap.leaving
-            } ?: return
-
-            // Copy the entry out BEFORE the removal: Kotlin/JS refuses to read a map entry once
-            // the backing map has changed (the lesson MasterBus.evictIfNeeded records).
-            val victimName = victim.key
-            val victimChain = victim.value
-
-            chains.remove(victimName)
-            victimChain.retire()
-        }
-    }
-
-    /** The classic chain is the current one again, under no name. */
-    private fun selectClassicChain() {
-        chain = classicChain
-        chainKey = null
-        chainRawName = null
-        pendingKey = null
-    }
-
     private fun buildChain(dsl: KatalystDsl): KatalystChain = KatalystChainBuilder.build(
         dsl = dsl,
         sampleRate = sampleRate,

@@ -12,6 +12,7 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.kotest.matchers.types.shouldNotBeSameInstanceAs
+import io.peekandpoke.klang.audio_be.ChainHost
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.katalyst.KatalystRegistry
@@ -244,7 +245,7 @@ class CylinderChainSwapSpec : StringSpec({
         //
         // ONE content is compared, and it is the exception this row does not cover: a declaration
         // equal to `KatalystDsl.classic` resolves to the chain the cylinder was born with (step
-        // 5b-1, `Cylinder.chainFor`), which is what the "no build, no swap" row above is about.
+        // 5b-1, `ChainHost.chainFor`), which is what the "no build, no swap" row above is about.
         val rig = Rig()
         rig.registry.register("gain", gainChain(1.5))
         rig.registry.register("gain-again", gainChain(1.5))
@@ -326,7 +327,7 @@ class CylinderChainSwapSpec : StringSpec({
 
     "a QUEUED content-classic key still lets the deactivation reach its clean slate" {
         // Review round 1, m1. `install` returns FALSE when the requested chain is the one already
-        // in service, so `installPending` reports "nothing installed" and `tryDeactivate` falls
+        // in service, so `landChain` reports "nothing installed" and `tryDeactivate` falls
         // through to its own reset. Without that the orbit went inactive with its DSP state and its
         // owner state intact, and the next life's first owner inherited this life's settings, which the
         // reset exists to prevent.
@@ -343,7 +344,7 @@ class CylinderChainSwapSpec : StringSpec({
 
         // The request arrives BEFORE its `RegisterKatalyst`, which is what puts the key in the
         // queue rather than installing it: a request on a sounding orbit whose name IS known goes
-        // through `beginFade` and never reaches `installPending` at all.
+        // through `beginFade` and never reaches the poll (`ChainHost.pollPending`) at all.
         //
         // This is the cheapest way to reach the guarded path, NOT the production scenario, and a
         // future reader should not go looking for a late registration. In production
@@ -395,13 +396,13 @@ class CylinderChainSwapSpec : StringSpec({
     "the cache is bounded: nine declared chains, eight kept" {
         val rig = Rig()
 
-        for (i in 0 until Cylinder.MAX_CACHED_CHAINS + 1) {
+        for (i in 0 until ChainHost.MAX_CACHED_CHAINS + 1) {
             val name = "chain-$i"
             rig.registry.register(name, gainChain(1.0 + i))
             rig.cylinder.requestChain(name)
         }
 
-        rig.cylinder.cachedChainCount shouldBe Cylinder.MAX_CACHED_CHAINS
+        rig.cylinder.cachedChainCount shouldBe ChainHost.MAX_CACHED_CHAINS
     }
 
     "a swap hands the outgoing chain's ring back to the SHELF, where the next one finds it" {
@@ -477,7 +478,7 @@ class CylinderChainSwapSpec : StringSpec({
     "eviction never takes the chain in service, even when it is the OLDEST entry" {
         val rig = Rig()
 
-        for (i in 0 until Cylinder.MAX_CACHED_CHAINS) {
+        for (i in 0 until ChainHost.MAX_CACHED_CHAINS) {
             val name = "chain-$i"
             rig.registry.register(name, gainChain(1.0 + i))
             rig.cylinder.requestChain(name)
@@ -487,12 +488,12 @@ class CylinderChainSwapSpec : StringSpec({
         // service, which is exactly the case insertion-order eviction would get wrong.
         rig.cylinder.requestChain("chain-0")
         val inService = rig.cylinder.pipeline
-        rig.cylinder.cachedChainCount shouldBe Cylinder.MAX_CACHED_CHAINS
+        rig.cylinder.cachedChainCount shouldBe ChainHost.MAX_CACHED_CHAINS
 
         rig.registry.register("chain-8", gainChain(9.0))
         rig.cylinder.requestChain("chain-8")
 
-        rig.cylinder.cachedChainCount shouldBe Cylinder.MAX_CACHED_CHAINS
+        rig.cylinder.cachedChainCount shouldBe ChainHost.MAX_CACHED_CHAINS
 
         // chain-0 must still be the cached chain it was: evicting the chain that was in service
         // would have retired it under its own feet, and coming back would build a new one.
@@ -555,7 +556,12 @@ class CylinderChainSwapSpec : StringSpec({
         rig.cylinder.isActive shouldBe false
 
         // The queued "echo" is gone with the cylinder's life: a new engine's orbit must not
-        // inherit a chain the previous one declared.
+        // inherit a chain the previous one declared. The next engine knows the name too, so a key
+        // kept across the retire would land there (a shelved cylinder has no registry to land it on).
+        val next = KatalystRegistry()
+        next.register("echo", delayChain(0.25))
+        rig.cylinder.adopt(id = 5, silentBlocksBeforeTailCheck = 0, katalysts = next)
+
         rig.sound()
         rig.goQuiet()
 

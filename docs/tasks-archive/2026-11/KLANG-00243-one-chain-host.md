@@ -1,6 +1,6 @@
 # KLANG-00243: One chain host: `Cylinder` and `MasterBus` share their chain plumbing
 
-> **Status (2026-11-04): IN PROGRESS.**
+> **Status (2026-11-04): DONE.** Both steps landed: the package move and the shared `ChainHost`.
 >
 > **Part of:** KLANG-00354 (The Motor's shape: signal flow and the graph)
 
@@ -52,8 +52,39 @@ Not planned yet: the duplication is small, both copies are pinned by their specs
 both hosts anyway. Stone rule: complexity is the enemy; do this only when a third host appears or the two copies
 start to drift.
 
+## The build (2026-11-04)
+
+The maintainer picked it after KLANG-00210 (signal flow redesign) closed, with the package move ("Build it, plus
+package move"), knowing the ticket's own rule above (no third host yet, no drift): the coordinator had recommended it
+and named the rule only afterwards.
+
+- **Step 1, the package move** (442e75a34): `audio_be/.../cylinders/katalyst/` to `audio_be/.../katalyst/`, main and
+  tests, package lines and imports only, the docs that name the path. Three moved KDocs lost their old em dashes (the
+  commit hook reads a moved file as new). audio_be jvmTest green.
+- **Step 2, the shared host**: `ChainHost` (`audio_be/.../ChainHost.kt`, internal), owned by `Cylinder` and
+  `MasterBus`: the chain in service with its key and raw spelling, the bounded cache (`MAX_CACHED_CHAINS`, 8), the
+  parked request, the lookup, the `ChainSwap`, the clean slate (`retireAll`). The position's rules stay with the
+  position through `ChainHost.Position` (`build`, `land`): the orbit's idle install and sounding fade with the duck
+  handover, the output's first-block adoption; the orbit's born-with classic chain answers a declaration of its
+  content (`bornWithAnswersItsContent`), the output's empty chain does not, as before. One simplification: the orbit
+  parked on `isActive && !swap.settled`, the host on `!swap.settled`, since an idle orbit's swap is always settled.
+  Evidence: audio_be jvmTest and jsBrowserTest green (5753 tests); the corpus identical (3 frozen, 13 unedited live
+  songs; Kokon and Der Schmetterling edited by the maintainer, information only); a mutation campaign on the host,
+  7 of 7 killed. One survived first: `CylinderChainSwapSpec`'s "retire clears the cache, drops the pending name" could
+  not see a kept key, because a retired cylinder has no registry; it now adopts onto a registry that knows the name,
+  and the mutant is killed.
+- **Review**: round 1 (level 1, blind, a code and an audio reviewer) clean from both: every request path, the poll,
+  the install, the fade, the land and both clean slates found identical, the idle-orbit simplification verified from
+  the code. Its MINORs applied as one batch: stale member names in KDoc and comments (`MasterBus.land`,
+  `Cylinder.chainFor`, `installPending`), the eviction's leaving-chain guard kept and named a backstop (a chain lands
+  only on a settled swap), `bornWith` private. Recorded, not changed: the master's dispose now retires the chain in
+  service before the swap's hard cut, so units return to the shelf in another order (inaudible: a rent hands out
+  zeroed memory); the master's `land` returns a constant true.
+
 ## History
 
 - 2026-10-20: numbered KLANG-00243 (was `docs/tasks/future/one-chain-host.md`).
 - 2026-10-27: part of KLANG-00354 (The Motor's shape: signal flow and the graph), the epic grouping.
 - 2026-11-04: IN PROGRESS.
+- 2026-11-04: started (maintainer); step 1, the package move, landed (442e75a34); step 2, the shared host, landed after a clean review round; DONE.
+- 2026-11-04: DONE.

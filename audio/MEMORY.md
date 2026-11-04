@@ -426,6 +426,8 @@ One line per step, newest first. A link to the archived task record where one ex
 - 2026-11-04 The voice build's extra allocations since regions step 1 removed (about 850 B per voice on the JVM); the
   allocation check's engine cases count the diagnostics since KLANG-00399 (`audio/ref/performance.md`, measuring).
 - 2026-11-04 The allocation budgets raised for the diagnostics, every engine case (maintainer; `alloc-budgets.txt`).
+- 2026-11-04 One chain host: the Katalyst package out of `cylinders/` to `katalyst/`, the orbit's and the output's chain
+  plumbing in `ChainHost` (KLANG-00243 (one chain host); `audio/ref/katalyst.md`).
 - 2026-11-04 The reverb shelves inside regions: the injected allocator, the warehouse stats, housekeeping in slices
   (KLANG-00214 (oversampling regions), step 3a's warehouse items).
 - 2026-11-03 The stages' own oversampling factors retired (voice and bus `distort`, `shape`, sprudel's three slots);

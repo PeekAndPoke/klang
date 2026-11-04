@@ -382,7 +382,7 @@ class CylinderKatalystParamsSpec : StringSpec({
 
     "a DECLARED classic resolves the state: the same stages, listening to the slots" {
         // `Katalyst(k => k.classic())` by name. Since step 5b-1 it resolves BACK to the instance
-        // the cylinder was born with (`Cylinder.chainFor`), which is why the room it shows here is
+        // the cylinder was born with (`ChainHost.chainFor`), which is why the room it shows here is
         // the same room the born-with rows above show: the two are one chain.
         val rig = Rig()
         rig.registry.register("classic", KatalystDsl.classic)
@@ -399,7 +399,7 @@ class CylinderKatalystParamsSpec : StringSpec({
     }
 
     "a content-classic declaration installs NO second chain: the born-with instance keeps playing" {
-        // The consequence of the shortcut in `Cylinder.chainFor`, and the reason it exists: with
+        // The consequence of the shortcut in `ChainHost.chainFor`, and the reason it exists: with
         // both chains slot-driven, a `Katalyst(k => k.classic())` on an orbit changes nothing, so
         // it must not cost a crossfade (which is not bit-transparent: the arriving room and ring
         // warm from empty). Read off the DSP state rather than off a flag: the reverb network the

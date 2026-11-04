@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.master
 
+import io.peekandpoke.klang.audio_be.ChainHost
 import io.peekandpoke.klang.audio_be.ChainSwap
 import io.peekandpoke.klang.audio_be.Crossfade
 import io.peekandpoke.klang.audio_be.StereoBuffer
@@ -12,7 +13,6 @@ import io.peekandpoke.klang.audio_be.katalyst.KatalystChain
 import io.peekandpoke.klang.audio_be.katalyst.KatalystChainBuilder
 import io.peekandpoke.klang.audio_be.katalyst.KatalystContext
 import io.peekandpoke.klang.audio_be.katalyst.KatalystRegistry
-import io.peekandpoke.klang.audio_be.master.MasterBus.Companion.MAX_CACHED_CHAINS
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
@@ -31,7 +31,7 @@ import io.peekandpoke.klang.audio_bridge.KatalystDsl
  *  - **it never deactivates or resets on silence** (plan risk R5): a cylinder resets its chain when
  *    its orbit goes quiet, the output does not, so a limiter envelope or a room carries across a gap
  *    exactly as the old master chain did. The only reset is the one a chain gets when it comes into
- *    service ([land]).
+ *    service ([landChain]).
  *
  * A master swap is requested by the scheduler when it consumes a `master(…)` event
  * ([requestSwap]) and takes effect in [process].
@@ -47,19 +47,19 @@ import io.peekandpoke.klang.audio_bridge.KatalystDsl
  * two chains' OUTPUTS and cut the leaving one, tail and all, at the end of the fade.
  *
  * What stays this host's (the [ChainSwap] class KDoc lists what a host keeps):
- *  - **the chain in service** ([current]) and **the instant install**: a master that arrives before
- *    the engine has rendered its first block is adopted at full weight, no fade (master round M1,
- *    plan risk R4; [hasRendered] is the predicate);
- *  - **the parked request** ([pendingKey], latest wins): a request while the swap is busy (a fade, a
- *    drain, a release or a cut; since 2026-10-17 the swap cuts a ring-out a request waits behind, so
- *    it lands within about a fifth of a second, see [ChainSwap]) or for a name not registered yet.
- *    [pollPendingSwap] offers it again every block;
+ *  - **the instant install**: a master that arrives before the engine has rendered its first block
+ *    is adopted at full weight, no fade (master round M1, plan risk R4; [hasRendered] is the
+ *    predicate);
  *  - **no duck**: a duck stage is inert at the output (decision (c)), so this host raises none of the
  *    swap's duck events.
  *
+ * **The chain plumbing is the [ChainHost] this bus shares with every orbit** (KLANG-00243 (one chain
+ * host)): the chain in service and its name, the cache, the parked request (latest wins, offered
+ * again by [pollPendingSwap] every block) and the lookup.
+ *
  * **A chain is built once, on the request that first lands it, and cached.** Registration builds
  * nothing: the one Katalyst registry serves both positions, so a registered chain may be an orbit's
- * that never reaches the output. A chain is built when a request for it LANDS ([land], on the
+ * that never reaches the output. A chain is built when a request for it LANDS ([landChain], on the
  * request itself when the swap is idle, inside `scheduler.process` before any orbit of the block
  * processes; or on the block's poll when it was parked), and cached, so a repeat is a map lookup. A
  * Katalyst stage rents its unit at its first configure, so the build configures the chain at once
@@ -89,29 +89,19 @@ import io.peekandpoke.klang.audio_bridge.KatalystDsl
  * (resource-warehouse step 2e: master delays rent from the same class-sized shelf as the orbits). The
  * first master delay of a class on a backend still allocates in render, by decision (D2,
  * 2026-09-04), as an orbit's does. Returning to a chain that has since been evicted from the bounded
- * cache (last landed more than [MAX_CACHED_CHAINS] edits ago) rebuilds it the same way.
+ * cache (last landed more than [ChainHost.MAX_CACHED_CHAINS] edits ago) rebuilds it the same way.
  */
 class MasterBus(
     private val sampleRate: Int,
     private val blockFrames: Int,
     /** The engine's chain registry fork, the one its cylinders read too. */
-    private val registry: KatalystRegistry,
+    registry: KatalystRegistry,
     /** The backend's ring shelf; master delays rent from it and chains leaving service return to it. */
     private val rings: SizedBuffers = SizedBuffers.forRings(sampleRate),
     /** The backend's reverb-unit shelf, same contract. */
     private val reverbs: ReverbUnits = ReverbUnits(sampleRate),
 ) {
     companion object {
-        /**
-         * How many built chains one bus keeps.
-         *
-         * Names are content-derived (`KatalystDsl.uniqueId()`), so every *edit* of a master while live
-         * coding mints a new one. A chain out of service holds only its stage shells (see the class
-         * KDoc), and the bound keeps even those from piling up for the life of the engine. The chain in
-         * service is never evicted.
-         */
-        private const val MAX_CACHED_CHAINS = 8
-
         /** Peak below which the master output counts as silent for the cheap tail pre-check. */
         private const val TAIL_SILENCE_THRESHOLD = 1e-4
 
@@ -126,42 +116,37 @@ class MasterBus(
     }
 
     /**
+     * The chain plumbing this bus shares with the orbits ([ChainHost]). Born with the EMPTY chain: no
+     * stage, so [isActive] is false and the engine keeps its fast path. A `master(Katalyst())`
+     * declares the same content and is built as a chain of its own (the output never answered a
+     * declaration with its born-with chain).
+     */
+    private val host = ChainHost(
+        sampleRate = sampleRate,
+        blockFrames = blockFrames,
+        position = object : ChainHost.Position {
+            override fun build(dsl: KatalystDsl): KatalystChain = buildChain(dsl)
+
+            override fun land(key: String, rawName: String, dsl: KatalystDsl): Boolean = landChain(key = key, rawName = rawName, dsl = dsl)
+        },
+        bornWithDsl = KatalystDsl(emptyList()),
+        bornWithAnswersItsContent = false,
+        registry = registry,
+    )
+
+    /**
      * The chain swap (step 12 C4, the orbit's [ChainSwap]): the chain LEAVING service, fading out
-     * and then draining. Its one leaving slot is why a request arriving while it is taken waits in
-     * [pendingKey]: this host asks [ChainSwap.settled] before it begins a swap. The swap's own
-     * refusal of a second begin (it retires the offered chain) is the leak-safe backstop, never
-     * reached from here.
+     * and then draining. The [host] asks [ChainSwap.settled] before it lands a request and parks it
+     * otherwise.
      */
-    private val swap = ChainSwap(sampleRate = sampleRate, blockFrames = blockFrames)
+    private val swap: ChainSwap = host.swap
 
-    /** Built chains by (lowercased) key: built when a request for them first lands, then a map lookup. */
-    private val chains = mutableMapOf<String, KatalystChain>()
-
-    /** The empty chain: no stage, so [isActive] is false and the engine keeps its fast path. */
-    private val unity: KatalystChain = buildChain(KatalystDsl(emptyList()))
-
-    /** The chain in service. Unity until a `master(…)` event says otherwise. */
-    private var current: KatalystChain = unity
-
-    /** The registry key of [current]; null while it is [unity]. */
-    private var currentKey: String? = null
-
-    /**
-     * The spelling [current] was last requested by: a top-level `master(…)` re-emits the same string
-     * every cycle, and comparing it raw is what makes the repeat free (no lowercase allocation).
-     */
-    private var currentRawName: String? = null
-
-    /**
-     * A request that could not land yet, as its registry KEY: the swap was busy (a fade or a drain)
-     * or the name was not registered. Latest wins. Offered again by [pollPendingSwap] every block,
-     * and dropped by a request for the chain already in service (the last intent).
-     */
-    private var pendingKey: String? = null
+    /** The chain in service. The empty one until a `master(…)` event says otherwise. */
+    private val current: KatalystChain get() = host.current
 
     /**
      * True once the owning engine has rendered at least one block. Gates the first-master
-     * adoption in [land] (master round M1): before the first block nothing audible
+     * adoption in [landChain] (master round M1): before the first block nothing audible
      * exists, so a chain is adopted at full weight; afterwards a swap must crossfade.
      *
      * Set by [markRendered] rather than inside [process], because [process] is exactly what
@@ -237,8 +222,8 @@ class MasterBus(
     /** True when a chain in play declares a stage that can ring ([KatalystChain.declaresTail]): cheap, no buffer scan. */
     private fun hasTailUnits(): Boolean = current.declaresTail || swap.leaving?.declaresTail == true
 
-    /** Number of built chains held by this bus — for tests asserting the cache stays bounded. */
-    internal val cachedChainCount: Int get() = chains.size
+    /** Number of built chains held by this bus, for tests asserting the cache stays bounded. */
+    internal val cachedChainCount: Int get() = host.cachedChainCount
 
     /** Test seam: the swap, for the specs that name its phase or its leaving chain. */
     internal val chainSwap: ChainSwap get() = swap
@@ -261,62 +246,16 @@ class MasterBus(
      * is being disposed (resource warehouse, 2f). The bus must not process afterwards.
      */
     fun releaseAll() {
-        // The leaving chain is a cached one too, so the loop below retires it again: a retire is
-        // idempotent (a stage hands back only the unit it still holds). The cut drops the reference.
-        swap.hardCut()
-
-        for (chain in chains.values) {
-            chain.retire()
-        }
-
-        chains.clear()
-        current = unity
-        currentKey = null
-        currentRawName = null
-        pendingKey = null
-    }
-
-    /**
-     * Drops cached chains that are not in service, keeping the cache bounded.
-     *
-     * Only [current] needs the guard: a chain is built only by a [land], which runs while the swap
-     * is settled, so no chain is leaving service at that moment, and a parked request is a key, not
-     * a built chain.
-     */
-    private fun evictIfNeeded() {
-        while (chains.size >= MAX_CACHED_CHAINS) {
-            val victim = chains.entries.firstOrNull { (_, chain) -> chain !== current } ?: return
-
-            // Copy the entry out BEFORE the removal: Kotlin/JS refuses to read a map entry once the
-            // backing map has changed (ConcurrentModificationException, found by the JS suite).
-            val victimName = victim.key
-            val victimChain = victim.value
-
-            chains.remove(victimName)
-            // Already retired when it left service; this is the clean slate for its shells.
-            victimChain.retire()
-        }
+        // A retire is idempotent (a stage hands back only the unit it still holds), so the leaving
+        // chain, a cached one too, is retired twice at no cost. The cut drops the reference.
+        host.retireAll()
     }
 
     /**
      * Requests a swap to the master registered as [name], starting with the next processed block.
-     *
-     * The cases, the orbit's (`Cylinder.requestChain`), minus the duck:
-     *  - **The name is already in service** (the same raw spelling, or the same key): nothing to
-     *    do, and a parked request is dropped, because the last expressed intent is the chain
-     *    already playing. This is what makes a top-level `master(…)`, which re-emits its event
-     *    every cycle, free after the first application; the raw compare makes it allocation-free.
-     *  - **The name is not registered here** (the `RegisterKatalyst` command has not arrived, or
-     *    was dropped): parked and retried every block ([pollPendingSwap]), never a silent fall back
-     *    to unity. A later re-emission of the event lands it too.
-     *  - **A fade, drain, release or cut is running**: parked (latest wins), the swap is told a
-     *    request waits ([ChainSwap.requestWaiting]), and it lands once the swap is settled. The swap
-     *    cuts the leaving chain's ring-out over [ChainSwap.CUT_SECONDS] instead of waiting for it
-     *    (maintainer, 2026-10-17; decision (g) until then), and a running fade finishes first:
-     *    cutting a fade short would drop its leaving chain at full weight, the click the swap exists
-     *    to prevent. About 0.15 to 0.22 s in all. A request for the chain leaving service parks like
-     *    any other and comes back empty.
-     *  - **Otherwise** it lands now ([land]).
+     * The scheduler calls it when it consumes a `master(…)` event. The paths (already in service,
+     * not registered yet, the swap busy) are the [ChainHost]'s, the orbit's own; a request that can
+     * land lands in [landChain].
      *
      * Note this does *not* rescue a **recreated engine**: the backend registry is a per-engine fork
      * that dies with the engine, while the frontend's send-once set is never cleared, so the
@@ -325,72 +264,21 @@ class MasterBus(
      * fix.
      */
     fun requestSwap(name: String) {
-        if (name == currentRawName) {
-            pendingKey = null
-
-            return
-        }
-
-        // The ONE normalization: the key the registry and the cache are both keyed by.
-        val key = name.lowercase()
-
-        if (key == currentKey) {
-            // The chain in service, under another spelling: adopt the spelling, so the next
-            // re-emission takes the raw path above.
-            currentRawName = name
-            pendingKey = null
-
-            return
-        }
-
-        val dsl = registry.findByKey(key)
-
-        if (dsl == null || !swap.settled) {
-            pendingKey = key
-
-            if (dsl != null) {
-                // A known chain waits behind the swap: a ring-out is cut, not waited for
-                // (maintainer, 2026-10-17; see [ChainSwap]).
-                swap.requestWaiting()
-            }
-
-            return
-        }
-
-        // The last expressed intent wins: an earlier request still parked must not land after this one.
-        pendingKey = null
-
-        land(key = key, rawName = name, dsl = dsl)
+        host.request(name)
     }
 
     /**
      * Lands the parked request once it can: its name has been registered and the swap is settled.
      * Called by the owning engine once per block, after the scheduler, whether or not this bus is
-     * active (a parked name must be able to land on an engine still on its fast path). One field
-     * read when nothing is parked; a map probe while a name stays unknown, no allocation
-     * ([KatalystRegistry.findByKey] takes the key as it is).
+     * active (a parked name must be able to land on an engine still on its fast path).
      */
     fun pollPendingSwap() {
-        val key = pendingKey ?: return
-
-        if (!swap.settled) {
-            // A name registered meanwhile could land: the swap hears that a request waits (idempotent).
-            if (registry.findByKey(key) != null) {
-                swap.requestWaiting()
-            }
-
-            return
-        }
-
-        val dsl = registry.findByKey(key) ?: return
-
-        pendingKey = null
-
-        land(key = key, rawName = key, dsl = dsl)
+        host.pollPending()
     }
 
     /**
-     * Puts the chain for [key] in service. Only while the swap is settled (both callers ask).
+     * Puts the chain for [key] in service, for the [host] ([ChainHost.Position.land]); only while the
+     * swap is settled.
      *
      * The arriving chain is RESET: a cached chain was retired when it left service, so it holds no
      * rented unit, but its small stages (a compressor's envelope) and a refused-unit latch are
@@ -405,36 +293,26 @@ class MasterBus(
      * (DerSchmetterling's gain(2.6); also Tetris, StrangerThings, ATruthWorthLyingFor,
      * IrishLamentTechno). The discriminator is "this bus has never rendered" and NOT "no master
      * yet": a mid-song first master arrives over audible signal and genuinely wants the fade.
+     *
+     * Returns true: the output's callers do not ask.
      */
-    private fun land(key: String, rawName: String, dsl: KatalystDsl) {
-        val next = chainFor(key, dsl)
+    private fun landChain(key: String, rawName: String, dsl: KatalystDsl): Boolean {
+        val next = host.chainFor(key, dsl)
         val leaving = current
 
         next.reset()
 
-        current = next
-        currentKey = key
-        currentRawName = rawName
+        host.enter(chain = next, key = key, rawName = rawName)
 
         if (!hasRendered) {
             swap.retire(leaving)
 
-            return
+            return true
         }
 
         swap.begin(leaving = leaving, arrivingLatencyFrames = next.latencyFrames, duckingOut = null, duckFadingIn = false)
-    }
 
-    /**
-     * The built chain for [key] (already lowercased) and its [dsl]: a cache hit, or a fresh build
-     * (see the class KDoc).
-     */
-    private fun chainFor(key: String, dsl: KatalystDsl): KatalystChain {
-        chains[key]?.let { return it }
-
-        evictIfNeeded()
-
-        return buildChain(dsl).also { chains[key] = it }
+        return true
     }
 
     /**

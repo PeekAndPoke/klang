@@ -13,8 +13,8 @@ The queue of the engine stream (Klang-Main-Dev), in order. The note of 2026-10-2
 
 ## Queue (Klang-Main-Dev)
 
-1. **KLANG-00243 (one chain host)** (the maintainer, 2026-11-04): the orbit's and the output's chain plumbing in one
-   place. KLANG-00210 (signal flow redesign) is DONE, its phase 5 closed by its sweep the same day.
+1. **KLANG-00243 (one chain host): DONE 2026-11-04**, the Katalyst package moved to `audio_be/.../katalyst/` and the
+   orbit's and the output's chain plumbing in one `ChainHost`.
 2. **KLANG-00245 (pitch pipeline into the tree), 7f**: `progress()` and `elapsed()` as public signals (decided, Q13).
 3. Then, the maintainer's pick: KLANG-00293 (a chain swap may cut a ringing insert), KLANG-00137 (master dsl
    followups), the edge bugs of KLANG-00353.
