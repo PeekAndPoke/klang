@@ -1,6 +1,6 @@
 # KLANG-00214: Oversampling regions, and one core per effect
 
-> **Status (2026-11-04): steps 1, 3a, 3b and 4 landed (section 11); the first merge, Der Schmetterling's guitar rigs,
+> **Status (2026-11-04): PAUSED, steps 1, 3a, 3b and 4 landed (section 11); the first merge, Der Schmetterling's guitar rigs,
 > made by the maintainer.** Left: merging neighbouring stages into one region in the other songs, song by song, by ear.
 >
 > **Part of:** KLANG-00354 (The Motor's shape: signal flow and the graph)
