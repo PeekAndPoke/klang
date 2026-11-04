@@ -210,14 +210,8 @@ class LangDoorFormsSpec : StringSpec({
             ctrl = "0.5 10", expected = listOf(0.5, 10.0), head = true),
         k("distort.shape", "distort(shape = %s)", { it.distortShape }, { p, c -> p.distort(shape = c) }, { s, c -> s.distort(shape = c) }, { c -> distort(shape = c) }, { m, c -> m.distort(shape = c) },
             ctrl = "soft hard", expected = listOf("soft", "hard"), continuous = null),
-        k("distort.oversample", "distort(oversample = %s)", { it.distortOversample }, { p, c -> p.distort(oversample = c) }, { s, c -> s.distort(oversample = c) }, { c -> distort(oversample = c) }, { m, c -> m.distort(oversample = c) },
-            ctrl = "2 4", expected = listOf(2, 4), continuous = null),
         k("crush.bits", "crush(%s)", { it.crush }, { p, c -> p.crush(c) }, { s, c -> s.crush(c) }, { c -> crush(c) }, { m, c -> m.crush(c) }, head = true),
-        k("crush.oversample", "crush(oversample = %s)", { it.crushOversample }, { p, c -> p.crush(oversample = c) }, { s, c -> s.crush(oversample = c) }, { c -> crush(oversample = c) }, { m, c -> m.crush(oversample = c) },
-            ctrl = "2 4", expected = listOf(2, 4), continuous = null),
         k("coarse.factor", "coarse(%s)", { it.coarse }, { p, c -> p.coarse(c) }, { s, c -> s.coarse(c) }, { c -> coarse(c) }, { m, c -> m.coarse(c) }, head = true),
-        k("coarse.oversample", "coarse(oversample = %s)", { it.coarseOversample }, { p, c -> p.coarse(oversample = c) }, { s, c -> s.coarse(oversample = c) }, { c -> coarse(oversample = c) }, { m, c -> m.coarse(oversample = c) },
-            ctrl = "2 4", expected = listOf(2, 4), continuous = null),
 
         // -- lpf and its alias ------------------------------------------------------------------------------------------
         k("lpf.freq", "lpf(%s)", { it.cutoff }, { p, c -> p.lpf(c) }, { s, c -> s.lpf(c) }, { c -> lpf(c) }, { m, c -> m.lpf(c) }, head = true),
@@ -482,16 +476,16 @@ class LangDoorFormsSpec : StringSpec({
                 { it.tremolo(0.5, 4, "sine") }, { it.tremolo(0.5, 4, "sine") }, { tremolo(0.5, 4, "sine") }, { it.tremolo(0.5, 4, "sine") },
             ),
             Door(
-                "distort", """0.5, "soft", 2""", { listOf(it.distort, it.distortShape, it.distortOversample) }, listOf(0.5, "soft", 2),
-                { it.distort(0.5, "soft", 2) }, { it.distort(0.5, "soft", 2) }, { distort(0.5, "soft", 2) }, { it.distort(0.5, "soft", 2) },
+                "distort", """0.5, "soft"""", { listOf(it.distort, it.distortShape) }, listOf(0.5, "soft"),
+                { it.distort(0.5, "soft") }, { it.distort(0.5, "soft") }, { distort(0.5, "soft") }, { it.distort(0.5, "soft") },
             ),
             Door(
-                "crush", """8, 2""", { listOf(it.crush, it.crushOversample) }, listOf(8.0, 2),
-                { it.crush(8, 2) }, { it.crush(8, 2) }, { crush(8, 2) }, { it.crush(8, 2) },
+                "crush", """8""", { listOf(it.crush) }, listOf(8.0),
+                { it.crush(8) }, { it.crush(8) }, { crush(8) }, { it.crush(8) },
             ),
             Door(
-                "coarse", """4, 2""", { listOf(it.coarse, it.coarseOversample) }, listOf(4.0, 2),
-                { it.coarse(4, 2) }, { it.coarse(4, 2) }, { coarse(4, 2) }, { it.coarse(4, 2) },
+                "coarse", """4""", { listOf(it.coarse) }, listOf(4.0),
+                { it.coarse(4) }, { it.coarse(4) }, { coarse(4) }, { it.coarse(4) },
             ),
             Door(
                 "lpf", """800, 2, 3, 12, 0.1, 0.2, 0.5, 0.3""", { listOf(it.cutoff, it.resonance, it.lpPasses, it.lpenv, it.lpattack, it.lpdecay, it.lpsustain, it.lprelease) }, listOf(800.0, 2.0, 3.0, 12.0, 0.1, 0.2, 0.5, 0.3),

@@ -32,8 +32,8 @@ history of a decision. Which functions exist is answered by the `lang/` files an
 - An authored instrument that does not end in `classic()` plays as its bare tree: a voice door reaches it
   only when its tree reads that slot (the editor hint waits in
   KLANG-00244 (editor voice door diagnostics)).
-- `crush.oversample` and `coarse.oversample` travel but nothing reads them
-  (KLANG-00214 (oversampling regions)); `distort.oversample` is a `classic()` slot, read at voice build.
+- `crush`, `coarse` and `distort` have no `oversample` slot (retired 2026-11-03, KLANG-00214 (oversampling regions)
+  step 4): the voice's strip runs at the base rate; sprudel has no region door.
 - `velocity` stops at the wire: `foldedGain()` multiplies it into `gain`, `VoiceData` has no `velocity`.
   Both unset gives `null`; a non-finite operand reads as unset before the product. Guard: `WireGainFoldSpec`.
 - `tag(name)` tags cross the wire as `VoiceData.tags`, an unordered set. The argument is a literal
@@ -235,3 +235,5 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
 - 2026-10-16: `duty(width)` (was `amount`) on the duty door, its three forms and the mapper (Q29); positional calls
   and the slot `duty` unchanged, `sndPulze(duty)` keeps the slot's word (KLANG-00290 (engine follow ups)
   item 44, `docs/retired-names.md`).
+- 2026-11-03: the `oversample` slots of `crush`, `coarse` and `distort` retired, with `SprudelVoiceData`'s three fields
+  and the distort editor's factor buttons (KLANG-00214 (oversampling regions) step 4, `docs/retired-names.md`).

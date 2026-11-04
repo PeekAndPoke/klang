@@ -18,7 +18,6 @@ import io.peekandpoke.klang.audio_bridge.constants.DELAY_FEEDBACK
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_TIME_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_WET
 import io.peekandpoke.klang.audio_bridge.constants.DISTORT_AMOUNT
-import io.peekandpoke.klang.audio_bridge.constants.DISTORT_OVERSAMPLE
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_DEPTH
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_KNEE_DB
@@ -183,15 +182,14 @@ data class KatalystBuilder(val node: KatalystDsl = KatalystDsl(emptyList())) {
 
     /**
      * Appends a distortion of the bus mix; [shape] is a NAME through [DistortionShapes.indexOf], the script knob's
-     * lookup (unknown = `soft`), and [shape] and [oversample] are plain values fixed with the chain, the forms the
-     * script offers (script knob `distort`).
+     * lookup (unknown = `soft`), a plain value fixed with the chain, the form the script offers (script knob
+     * `distort`).
      */
     fun distort(
         amount: KatalystKnobDsl = DISTORT_AMOUNT.kat,
         shape: String = DistortionShapes.names[DistortionShapes.SOFT_INDEX],
-        oversample: Int = DISTORT_OVERSAMPLE,
     ): KatalystBuilder = append(
-        KatalystStageDsl.Distort(amount = amount, shape = DistortionShapes.indexOf(shape).toInt(), oversample = oversample),
+        KatalystStageDsl.Distort(amount = amount, shape = DistortionShapes.indexOf(shape).toInt()),
     )
 
     /** Appends a sidechain duck; an omitted [orbit] is the "never set" marker, no ducking (script knob `duck`). */

@@ -1022,8 +1022,8 @@ private fun IgnitorDsl.filterEnvKnob(
 
 // ── The knobs read ONCE at voice build (phase 3 step 3b, 2026-09-25) ──
 //
-// A waveshaper's shape, its oversampling factor, and a tremolo's shape are chosen once per note, as
-// they always were: the shaper and the oversampler are built with the stage, and the shape picks the
+// A waveshaper's shape, a region's factor, and a tremolo's shape are chosen once per note, as
+// they always were: the shaper and the region's oversampler are built with the stage, and the shape picks the
 // LFO's oscillator. They are knobs so that `classic()` can fill
 // them from slots. Each is read the leaf-only way [filterEnvDef] reads its knobs: a `Param` or
 // `Constant` leaf gives its value, and anything else has no build-time answer, takes the knob's
@@ -1038,9 +1038,9 @@ private fun IgnitorDsl.distortionShapeKnob(ignitorParams: KlangMap<Double>?, cac
     distortionShapeAt(buildTimeKnobValue(ignitorParams, cache) ?: DistortionShapes.SOFT_INDEX.toDouble())
 
 /**
- * The oversampler STAGES an `oversample` factor knob asks for, through the one conversion
+ * The oversampler STAGES a region's factor knob asks for, through the one conversion
  * ([Oversampler.factorOf], then [Oversampler.factorToStages]): a factor of 1 or less, a non-finite
- * one and a non-leaf are all 0 stages, today's plain path. Decision D7's stopgap.
+ * one and a non-leaf are all 0 stages, no region.
  */
 private fun IgnitorDsl.oversampleStagesKnob(ignitorParams: KlangMap<Double>?, cache: IgnitorBuildCache): Int =
     Oversampler.factorToStages(Oversampler.factorOf(buildTimeKnobValue(ignitorParams, cache) ?: 0.0))
@@ -1234,7 +1234,7 @@ private fun IgnitorDsl.buildRaw(
     var lastChildEndsInEnvelope = false
 
     // How late the signal spine is, exact (see [BuiltIgnitor.latencySamples]): the latest of the signal children,
-    // absorbed along the same edges as the tail, plus what THIS node adds ([ownLatency], set by the oversampled arms).
+    // absorbed along the same edges as the tail, plus what THIS node adds ([ownLatency], set by the region arm).
     // The first timed child sets it, so a negative latency (a source inside a region, earlier than the region's input)
     // is kept; 0 with no timed signal child.
     var spineLatency = 0.0
@@ -1242,7 +1242,7 @@ private fun IgnitorDsl.buildRaw(
     var ownLatency = 0.0
 
     // Which oversamplers the signal spine ran through (see [BuiltIgnitor.oversamplers]): merged from the same signal
-    // children, plus THIS node's own ([ownOversampler], its stage count, set by the oversampled arms; 0 for none).
+    // children, plus THIS node's own ([ownOversampler], its stage count, set by the region arm; 0 for none).
     var spineOversamplers: List<Int>? = emptyList()
     var ownOversampler = 0
 
@@ -1911,7 +1911,7 @@ private fun IgnitorDsl.buildRaw(
         // added no distort stage for an amount at or below 0.
         //
         // Since phase 3 step 4 (decision D2, option A) the node renders the VOICE STRIP's law through
-        // `DistortionCore` (`fusedDistort`): the drive inside the oversampler, the DC blocker, no soft
+        // `DistortionCore` (`fusedDistort`): the drive in the shaper, the DC blocker, no soft
         // cap; it was proven bit-identical to the strip before the strip retired (phase 3 step 9). The gate is its ONLY
         // bypass: a modulated amount at or below 0 is not a leaf, is never gated, and runs at unity
         // drive with its state contiguous (ledger W5's hazard, see `fusedDistort`).
@@ -1922,24 +1922,18 @@ private fun IgnitorDsl.buildRaw(
         // 220 Hz sine: "soft" -1.77 dB, "tube" -6.24 dB, "zerosquare" up to +16.83 dB, "rectify" an
         // octave up). Now it does nothing, as it did on the strip.
         //
-        // The shape and the oversampling factor are knobs read once, here (see `distortionShapeKnob`).
+        // The shape is a knob read once, here (see `distortionShapeKnob`). The node runs at the rate it is in.
         is IgnitorDsl.Distort -> if (amount.gatedOff(ignitorParams, cache) { it <= 0.0 }) {
             inner.passThrough()
         } else {
-            // In the order these were always built (inner, amount, shape, oversample): build order is draw order.
+            // In the order these were always built (inner, amount, shape): build order is draw order.
             val signal = inner.withMod()
             val drive = amount.noMod()
             val shaper = shape.distortionShapeKnob(ignitorParams, cache)
-            // The factor is a floor inside a region, as in the `Shape` arm.
-            val stages = (oversample.oversampleStagesKnob(ignitorParams, cache) - cache.regionStages).coerceAtLeast(0)
-            ownLatency = Oversampler.groupDelaySamples(stages = stages, firstStage = cache.regionStages)
-            ownOversampler = stages
 
             signal.fusedDistort(
                 amount = drive,
                 shape = shaper,
-                oversampleStages = stages,
-                firstStage = cache.regionStages,
                 dcBlockCoefficient = DistortionCore.dcBlockCoefficientAt(coefficient = DEFAULT_DC_BLOCK_COEFF, stages = cache.regionStages),
             )
         }
@@ -1964,22 +1958,15 @@ private fun IgnitorDsl.buildRaw(
             inner.withMod().drive(amount.noMod())
         }
 
-        // NOT gated (no amount knob, see the `drive` row). Its shape and oversampling factor are knobs
-        // read once, here, at voice build (phase 3 step 3b; the factor is decision D7's stopgap).
+        // NOT gated (no amount knob, see the `drive` row). Its shape is a knob read once, here, at voice build
+        // (phase 3 step 3b). The node runs at the rate it is in.
         is IgnitorDsl.Shape -> {
-            // In the order these were always built (inner, shape, oversample): build order is draw order.
+            // In the order these were always built (inner, shape): build order is draw order.
             val signal = inner.withMod()
             val shaper = shape.distortionShapeKnob(ignitorParams, cache)
-            // Inside a region the factor is a floor (the bridge until the factors retire, KLANG-00214 section 11): only
-            // the steps the region lacks.
-            val stages = (oversample.oversampleStagesKnob(ignitorParams, cache) - cache.regionStages).coerceAtLeast(0)
-            ownLatency = Oversampler.groupDelaySamples(stages = stages, firstStage = cache.regionStages)
-            ownOversampler = stages
 
             signal.shape(
                 shape = shaper,
-                oversampleStages = stages,
-                firstStage = cache.regionStages,
                 dcBlockCoefficient = DistortionCore.dcBlockCoefficientAt(coefficient = DEFAULT_DC_BLOCK_COEFF, stages = cache.regionStages),
             )
         }

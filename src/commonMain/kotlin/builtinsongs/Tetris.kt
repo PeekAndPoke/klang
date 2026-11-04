@@ -75,7 +75,7 @@ export bassShape = (p) => p
 
 // Sub voice: tremoloed triangle, soft distortion.
 export subShape = (p) => p
-    .slow(2).orbit(2).clip(0.5).sound("tri").gain(0.7 * 0.82).distort(0.2, "tube", 2).analog(2.5)
+    .slow(2).orbit(2).clip(0.5).sound("tri").gain(0.7 * 0.82).distort(0.2, "tube").analog(2.5)
     .adsr(0.01, 0.2, 0.4, 0.09).lpf(attack = 0.01, decay = 0.1, sustain = 0.0, release = 0.09).hpf(55).lpf(freq = 200, env = 56.4, q = 1.0) // . solo()
 
 // Drums: tight, panned right, fast.
@@ -109,9 +109,9 @@ export song = stack(
     .reverb(0.10, 8, 5500)
     .gain(1.8)
     .bands(b => b
-      .band(low => low.distort(0.01, "soft", 4)).cut(150)
-      .band(mid => mid.distort(0.15, "soft", 4).mul(0.90)).cut(5000)
-      .band(low => low.distort(0.01, "soft", 4))
+      .band(low => low.oversampleAtLeast(4, r => r.distort(0.01, "soft"))).cut(150)
+      .band(mid => mid.oversampleAtLeast(4, r => r.distort(0.15, "soft")).mul(0.90)).cut(5000)
+      .band(low => low.oversampleAtLeast(4, r => r.distort(0.01, "soft")))
     ) // the glue on the mids only: the kick and the hats stay clean
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)
   )),

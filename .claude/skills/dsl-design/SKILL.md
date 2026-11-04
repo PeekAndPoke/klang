@@ -105,8 +105,8 @@ master(Katalyst(k => k.reverb(0.05, 9).gain(2.5).limiter()))   // reverb(wet, si
     the prefix its door needed (`curves`, not `adsrCurves`; `declick`, not `declickSeconds`). An envelope's
     builder offers only what THAT envelope can do (the chain: `curves`, `declick`; the filter and pitch
     envelopes: `curves`; FM's index envelope: none yet). Maintainer, 2026-09-25.
-  - A door whose only defaulted knob is temporary stays flat (`shape`, `distort`: their `oversample`
-    leaves with KLANG-00214 (oversampling regions)).
+  - A door with one defaulted knob stays flat (`shape`, `distort`: their `oversample` left with KLANG-00214
+    (oversampling regions) step 4, a region is the way up).
   - A knob that nothing reads is REMOVED, not moved (`drive`'s `driveType`, the pitch envelope's
     `releaseSec` and `curve`).
   - ONE shape per concept across the DSLs. On the Katalyst every door parameter is optional: an
@@ -172,8 +172,8 @@ script-only surface forces raw constructor calls and splits the vocabulary.
     as a plain number (or string) stays plain on the Kotlin door** (Q51). A number is a plain
     `Double` (the script's `resetSamples(4)` is Kotlin `resetSamples(4.0)`), no `Int` overloads.
     This is the one place the criterion lives; other texts point here instead of listing names.
-    Not to be confused with the engine's "build-time knobs" (`buildTimeKnobValue`: shapes, the
-    oversample factor, `passes`): those are read once per voice but FROM THE SLOTS, so they are
+    Not to be confused with the engine's "build-time knobs" (`buildTimeKnobValue`: shapes, a
+    region's factor, `passes`): those are read once per voice but FROM THE SLOTS, so they are
     typed like any knob (maintainer, 2026-10-16). Only a plain node field (a `Double`, `String` or
     `List` the script also takes plain) stays plain.
 - **The typed-door pattern** (spike S1 of KLANG-00314 (kotlin typed doors), 2026-10-16; this
@@ -240,7 +240,7 @@ script-only surface forces raw constructor calls and splits the vocabulary.
        - A word the script has and Kotlin lacked gets its Kotlin door in the same step (`pitchEnvelope`, `octaveUp`,
          `octaveDown`), and the script door delegates.
        - Before keeping a knob plain (point 3), check the runtime: a knob it reads per event from a slot is typed
-         (`shape`'s and `distort`'s `shape` and `oversample`, maintainer 2026-10-16), whatever the old door took.
+         (`shape`'s and `distort`'s `shape`, maintainer 2026-10-16), whatever the old door took.
        - A default symbol is the other surface's constant when the meaning is the same (the voice phaser's `center` and
          `sweep` are `PHASER_CENTER_HZ`, `PHASER_SWEEP_HZ`), otherwise a new constants file (`ShimmerDefaults.kt`); the
          node's field reads the same symbol.
@@ -466,7 +466,7 @@ Two complementary rules that are often confused:
 
 - **Coerce, never `require()`, on anything a user can reach** (sprudel args, KlangScript DSL
   args, UI inputs, imports). `passes.coerceIn(1, FILTER_MAX_PASSES)`, not `require(passes >= 1)`.
-  Crashing the engine because someone typed `oversample(-1)` is unacceptable. `require()` is for
+  Crashing the engine because someone typed `oversampleBy(-1)` is unacceptable. `require()` is for
   internal invariants only.
 - **Do not add safety clamps to audio parameters without asking.** The Motor is raw with sharp
   edges by design; delay feedback above 1.0 (bounded by its `cap`) or extreme drive is a creative

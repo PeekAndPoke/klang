@@ -21,8 +21,7 @@ import kotlin.math.roundToInt
  * [body] is a [KatalystChain] of its own, built by `KatalystChainBuilder` at the region's rate and block size (its
  * delay rings and reverb units sized for it, its knob modulators on the orbit's clock), so every stage inside keeps
  * its sound in seconds and Hz. The conversions are the engine's [Oversampler], the cascade continued from [firstStage]
- * (the chain the region sits in), the same kernel as a `distort` stage's: a region at the base rate is matched in a
- * `parallel` by the same phase twin as a `distort` with that factor ([oversamplers]).
+ * (the chain the region sits in): a `parallel` matches a region by a phase twin of its round trip ([oversamplers]).
  *
  * **Latency.** The round trip's group delay plus the body's own latency, which runs in region frames and is divided
  * down, rounded once ([latencyFrames]). Only the round trip is an oversampler a `parallel` can twin; the body's part

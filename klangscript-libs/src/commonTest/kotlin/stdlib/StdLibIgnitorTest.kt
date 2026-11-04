@@ -290,17 +290,15 @@ class StdLibIgnitorTest : StringSpec({
     "distort chaining produces Shape(Drive(...))" {
         val dsl = evalIgnitorDsl("Ignitor.saw().distort(0.5)")
         dsl.shouldBeInstanceOf<IgnitorDsl.Shape>()
-        dsl.oversample shouldBe IgnitorDsl.Constant(0.0)
         val drive = dsl.inner
         drive.shouldBeInstanceOf<IgnitorDsl.Drive>()
         drive.inner.shouldBeInstanceOf<IgnitorDsl.Saw>()
     }
 
-    "distort with oversample factor" {
-        val dsl = evalIgnitorDsl("""Ignitor.saw().distort(0.8, "exp", 4)""")
+    "distort with a shape" {
+        val dsl = evalIgnitorDsl("""Ignitor.saw().distort(0.8, "exp")""")
         dsl.shouldBeInstanceOf<IgnitorDsl.Shape>()
         dsl.shape shouldBe IgnitorDsl.Constant(DistortionShapes.indexOf("exp"))
-        dsl.oversample shouldBe IgnitorDsl.Constant(4.0)
         dsl.inner.shouldBeInstanceOf<IgnitorDsl.Drive>()
     }
 
@@ -473,14 +471,6 @@ class StdLibIgnitorTest : StringSpec({
         val dsl = evalIgnitorDsl("Ignitor.sine().shape()")
         dsl.shouldBeInstanceOf<IgnitorDsl.Shape>()
         dsl.shape shouldBe IgnitorDsl.Constant(DistortionShapes.indexOf("soft"))
-        dsl.oversample shouldBe IgnitorDsl.Constant(0.0)
-    }
-
-    "shape with oversample factor" {
-        val dsl = evalIgnitorDsl("""Ignitor.sine().shape("hard", 2)""")
-        dsl.shouldBeInstanceOf<IgnitorDsl.Shape>()
-        dsl.shape shouldBe IgnitorDsl.Constant(DistortionShapes.indexOf("hard"))
-        dsl.oversample shouldBe IgnitorDsl.Constant(2.0)
     }
 
     "bandpass chaining" {

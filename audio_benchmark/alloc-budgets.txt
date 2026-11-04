@@ -281,8 +281,8 @@ whitecolor         v8        64      item 3, the noise stays clean
 whitecolor         jvm       6       item 12's first JVM site
 C-dist             v8        72      item 8; item 9, the fused distort
 C-dist             jvm       6       item 9, the fused distort
-tube4x             v8        160     item 9, the Shape node oversampled: the per-sample class only
-tube4x             jvm       6       item 9, the Shape node oversampled
+tube4x             v8        160     item 9, the Shape node in a 4x region, handed over at its rate: the per-sample class only
+tube4x             jvm       6       item 9, the Shape node in a 4x region, handed over at its rate
 C-full             v8        112     item 8, the knob reads; item 29's SVF setup as a whole (its parts: the KDocs)
 C-full             jvm       6       item 12 step 2
 C-remap            v8        192     item 2, the decoder's KlangMap: a new orbit map per block (not item 8: the voice lines)
@@ -303,8 +303,8 @@ E-arith            v8        96      the eight arithmetic stages, constant opera
 E-arith            jvm       6       the eight arithmetic stages, constant operands
 E-arith-glide      v8        500     the arithmetic glide: the per-sample ramp, div's reciprocal, an unset cap arriving at once (with the note path)
 E-arith-glide      jvm       211     the arithmetic glide; 204 to 207 B of it is the note path (since the merge of 2026-10-11)
-E-distort          v8        96      the bus distort, 2x: the per-sample class and the sub-pool map (item 34)
-E-distort          jvm       6       the bus distort, 2x
+E-distort          v8        96      the bus distort in a 2x region: the per-sample class and the sub-pool map (item 34)
+E-distort          jvm       6       the bus distort in a 2x region
 E-comp             v8        96      the orbit compressor and a lookahead limiter
 E-comp             jvm       6       the orbit compressor and a lookahead limiter
 E-eq               v8        96      the orbit eq: two bells and a tap
@@ -313,10 +313,10 @@ E-gain             v8        96      the group fader off unity; the factor by re
 E-gain             jvm       6       the group fader off unity
 E-duck             v8        112     the duck with a sounding sidechain (item 38, the per-block setters: guarded by the comment at the site)
 E-duck             jvm       6       the duck with a sounding sidechain
-E-parallel         v8        96      items 33 and 34, a single view per block and the sub-pool map; parallel, a distorted branch and its twin: the per-sample class
-E-parallel         jvm       6       parallel, a distorted branch and its phase twin
-E-bands            v8        96      items 33 and 34, one view per branch (not one per block) and the sub-pool map; bands, three with the mids distorted: the per-sample class
-E-bands            jvm       6       bands, three with the mids distorted
+E-parallel         v8        96      items 33 and 34, a single view per block and the sub-pool map; parallel, a distorted branch in a 2x region and its twin: the per-sample class
+E-parallel         jvm       6       parallel, a distorted branch in a 2x region and its phase twin
+E-bands            v8        96      items 33 and 34, one view per branch (not one per block) and the sub-pool map; bands, three with the mids distorted in a 2x region: the per-sample class
+E-bands            jvm       6       bands, three with the mids distorted in a 2x region
 E-body-vowel       v8        96      the body and the vowel on an orbit (V8; the JVM's guard is KatalystResonatorAllocationSpec)
 E-body-vowel       jvm       6       the body and the vowel on an orbit
 E-kat-sine         v8        96      one sine on the fader: the per-sample class only (HEAD reads under it)

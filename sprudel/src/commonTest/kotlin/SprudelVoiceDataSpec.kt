@@ -537,8 +537,8 @@ private fun populatedVoiceData(seed: Int): SprudelVoiceData {
         pDecayCurve = AdsrCurve.entries[(seed + 1) % 6]
         pReleaseCurve = AdsrCurve.entries[(seed + 2) % 6]
         fmh = b + 21; fmAttack = b + 22; fmDecay = b + 23; fmSustain = b + 24; fmEnv = b + 25; fmRelease = b + 25.5
-        distort = b + 26; distortShape = "ds$seed"; distortOversample = seed + 27
-        coarse = b + 28; coarseOversample = seed + 29; crush = b + 30; crushOversample = seed + 31
+        distort = b + 26; distortShape = "ds$seed"
+        coarse = b + 28; crush = b + 30
         phaserRate = b + 32; phaserDepth = b + 33; phaserCenter = b + 34; phaserSweep = b + 35; phaserFloor = b + 35.5
         tremoloRate = b + 36; tremoloDepth = b + 37
         tremoloShape = "ts$seed"

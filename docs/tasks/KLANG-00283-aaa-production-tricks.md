@@ -376,9 +376,9 @@ Tags: **now**, **sugar**, **I1..I9**, **K1..K11**, **G1..G6**, **won't** (sectio
 | True peak (M23, M65) | K11 | |
 | Waveshaping, tube, tape on a voice (M28, M29) | now | 16 shapes with oversampling; a head bump is a bell; wow is `analog` |
 | ... on a bus (M28 to M32) | K1 | |
-| Exciter on a voice (M31) | now | `x.plus(x.highpass(3000).shape("tube", 2).highpass(3000).mul(0.1))` |
+| Exciter on a voice (M31) | now | `x.plus(x.highpass(3000).oversampleAtLeast(2, y => y.shape("tube")).highpass(3000).mul(0.1))` |
 | Air band, shelves, Pultec, tilt (M33, M36, M37) | I1 | |
-| Oversampling (M34) | now | `oversample` on distort and shape; ADAA a later CPU win |
+| Oversampling (M34) | now | regions, `oversampleBy` / `oversampleAtLeast` (KLANG-00214); ADAA a later CPU win |
 | Subtractive EQ, carving, notching (M35, M40, M41) | now | `eq`; the pocket principle in `rock-mix-tuning.md` |
 | Mid/side EQ (M39) | won't (for now) / 4.0 (b) | K2's `monoBelow` covers the main use |
 | Master chain order (M57) | partial | today eq, compressor, limiter; K1, K2 and I1 complete it |
@@ -446,7 +446,7 @@ let bassHarmonics = x => x.plus(
 )
 
 // An exciter on a lead: the top band, shaped, mixed back low
-let exciter = x => x.plus(x.highpass(3000).shape("tube", 2).highpass(3000).mul(0.1))
+let exciter = x => x.plus(x.highpass(3000).oversampleAtLeast(2, y => y.shape("tube")).highpass(3000).mul(0.1))
 
 // A transient shaper from followers (clumsy, one time constant each; I3 makes it a door)
 let snap = x => x.mul(

@@ -134,11 +134,10 @@ class GraphCensusSpec : StringSpec({
         }
     }
 
-    "an oversampled shaper counts its round trip: upsample, shaper loop, decimation stages, copy back" {
-        // distort(0.5, soft, 4) lowers to Drive then Shape at 4x: the drive is one pass in place;
-        // the IIR half-band round trip (2026-10-10): the first stage up reads one and writes two, the second moves its
-        // two inputs (read and write), reads them and writes four; down, each output reads two and writes one (2 at the
-        // second stage, 1 at the first); the copy back two. Then the DC blocker and the soft cap.
+    "an oversampler's round trip and a shaper: upsample, decimation stages, copy back; the shaper loop, blocker and cap" {
+        // The IIR half-band round trip at 4x, what a region counts (2026-10-10): the first stage up reads one and
+        // writes two, the second moves its two inputs (read and write), reads them and writes four; down, each output
+        // reads two and writes one (2 at the second stage, 1 at the first); the copy back two.
         GraphCensus.oversampleTraffic(4) shouldBe (1 + 2) + (2 + 2 + 2 + 4) + (2 * 3) + (1 * 3) + 2
         GraphCensus.oversampleTraffic(1) shouldBe 0
         // The state at 4x: two directions, two doubles (x1, y1) per all-pass section, 8 sections at the base-rate stage
@@ -146,23 +145,23 @@ class GraphCensusSpec : StringSpec({
         GraphCensus.oversampleBytes(4) shouldBe 2 * 2 * (8 + 6) * 8
         GraphCensus.oversampleBytes(1) shouldBe 0
 
-        val census = GraphCensus.of(saw.distort(amount = 0.5.ign, shape = "soft", oversample = 4.ign))
+        // distort(0.5, soft) lowers to Drive then Shape: the drive is one pass in place, the shaper loop, the DC
+        // blocker and the soft cap in place.
+        val census = GraphCensus.of(saw.distort(amount = 0.5.ign, shape = "soft"))
 
         census.passes shouldBe 3
-        census.traffic shouldBe 1 + 2 + (2 * 4 + 2 + 2 + GraphCensus.oversampleTraffic(4))
+        census.traffic shouldBe 1 + 2 + (2 + 2 + 2)
     }
 
     "the fused Distort node is ONE stage: the drive rides in the shaper loop, a copy out replaces the cap" {
         // classic()'s distort stage, the strip's law since phase 3 step 4 (D2): no separate drive pass.
-        // At 4x: the saw (one pass, one write, its 64 bytes); the stage reads one and writes four,
-        // drives and shapes eight in place (2 * 4), runs the DC blocker in place (2) and copies its
-        // work buffer out (2), plus the oversampler's round trip; its state is the oversampler's plus
-        // the DC blocker's 24 bytes.
-        val census = GraphCensus.of(IgnitorDsl.Distort(inner = saw, amount = IgnitorDsl.Constant(0.5), oversample = IgnitorDsl.Constant(4.0)))
+        // The saw (one pass, one write, its 64 bytes); the stage drives and shapes in place (2), runs the DC blocker
+        // in place (2) and copies its work buffer out (2); its state is the DC blocker's 24 bytes.
+        val census = GraphCensus.of(IgnitorDsl.Distort(inner = saw, amount = IgnitorDsl.Constant(0.5)))
 
         census.passes shouldBe 1 + 1
-        census.traffic shouldBe 1 + (2 * 4 + 2 + 2 + GraphCensus.oversampleTraffic(4))
-        census.bytes shouldBe 64 + (GraphCensus.oversampleBytes(4) + 24)
+        census.traffic shouldBe 1 + (2 + 2 + 2)
+        census.bytes shouldBe 64 + 24
     }
 
     "a shared node renders once into a memo, and every consumer copies the memo out" {

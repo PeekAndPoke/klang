@@ -220,7 +220,7 @@ class PlaybackEngineGainSpec : StringSpec({
     }
 
     "the gain comes after the song's master chain: the master hears the song at full level" {
-        val drive = KatalystDsl.of(KatalystStageDsl.Distort(amount = KatalystKnobDsl.Constant(0.8), oversample = 1))
+        val drive = KatalystDsl.of(KatalystStageDsl.Distort(amount = KatalystKnobDsl.Constant(0.8)))
         val a = Rig()
         val control = Rig()
 

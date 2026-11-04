@@ -50,7 +50,7 @@ class SharedScratchSpec : StringSpec({
     fun deepChain(): IgnitorDsl {
         var dsl: IgnitorDsl = IgnitorDsl.Sine()
         repeat(6) {
-            dsl = dsl.crush(3.0.ign).coarse(4.0.ign).distort(amount = 2.0.ign, oversample = 4.ign).tremolo(rate = 5.0.ign, depth = 0.5.ign)
+            dsl = dsl.crush(3.0.ign).coarse(4.0.ign).distort(amount = 2.0.ign).tremolo(rate = 5.0.ign, depth = 0.5.ign)
         }
         return dsl
     }
@@ -104,10 +104,6 @@ class SharedScratchSpec : StringSpec({
         // The claim. Before step 2a a fresh pool held 4 buffers and grew inside process() as the
         // chain nested.
         scratch.lateAllocations shouldBe 0
-        // The oversampled nodes in the chain render through the factor-4 SUB-pool, which has its
-        // own counters (review round 2: the parent's counter cannot see a sub-pool allocating).
-        scratch.oversample(4).lateAllocations shouldBe 0
-        scratch.oversample(4).highWater shouldBe 1 // one `use` per oversampled node, never nested
     }
 
     "the oversample sub-pools exist BEFORE the first render — their first use allocates nothing" {
@@ -121,9 +117,8 @@ class SharedScratchSpec : StringSpec({
         for (factor in listOf(2, 4, 8, 16)) {
             scratch.hasOversample(factor) shouldBe true
         }
-        // Its construction default (4) already covers the real depth of 1; the DoubleArray half of
-        // a sub-pool is deliberately EMPTY, no oversampled path calls useDouble (review round 2
-        // sized the warm-up to what is reachable).
+        // The DoubleArray half of a sub-pool is deliberately EMPTY, no oversampled path calls useDouble
+        // (review round 2 sized the warm-up to what is reachable).
         (scratch.oversample(16).capacity >= 1) shouldBe true
         scratch.oversample(16).doubleCapacity shouldBe 0
     }

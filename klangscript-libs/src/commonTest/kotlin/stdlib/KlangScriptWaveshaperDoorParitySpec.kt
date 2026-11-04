@@ -26,7 +26,7 @@ private fun IgnitorDsl.knobs(): Map<String, Any?> = when (this) {
     is IgnitorDsl.Tremolo -> linkedMapOf(
         "rate" to rate, "depth" to depth, "shape" to shape, "rangeFrom" to rangeFrom, "rangeTo" to rangeTo,
     )
-    is IgnitorDsl.Shape -> linkedMapOf("shape" to shape, "oversample" to oversample)
+    is IgnitorDsl.Shape -> linkedMapOf("shape" to shape)
     else -> error("not a tremolo or shape node: ${this::class.simpleName}")
 }
 
@@ -47,7 +47,7 @@ private fun IgnitorDsl.distortKnobs(): Map<String, Any?> {
  *    is FLAT, `tremolo(rate, depth, shape)`, a recorded asymmetry (the filter doors' precedent). The
  *    tremolo's `skew` and `phase` were dropped on 2026-09-29 (the tremolo became a composition of the
  *    oscillators);
- *  - `shape(shape, oversample)` and `distort(amount, shape, oversample)` flat on both, the shape a
+ *  - `shape(shape)` and `distort(amount, shape)` flat on both, the shape a
  *    NAME converted to its index in `DistortionShapes`. The script door also takes a number or a
  *    slot, and a slot is written on the Kotlin side through the node (a recorded asymmetry).
  *
@@ -105,29 +105,24 @@ class KlangScriptWaveshaperDoorParitySpec : StringSpec({
 
     // ── shape ────────────────────────────────────────────────────────────────────────────────────
 
-    "shape: every waveshaper name, alias and unknown name is the same node on both doors, with and without a factor" {
+    "shape: every waveshaper name, alias and unknown name is the same node on both doors" {
         val spellings = DistortionShapes.names + DistortionShapes.aliases.keys + listOf("TUBE", "nonexistent", "")
 
         for (name in spellings) {
             withClue(name) {
                 ks("""Ignitor.saw().shape("$name")""").knobs() shouldBe saw.shape(name).knobs()
-                ks("""Ignitor.saw().shape("$name", 4)""").knobs() shouldBe saw.shape(shape = name, oversample = 4.ign).knobs()
             }
         }
     }
 
-    "shape: the bare door, and a named factor with the shape omitted, default to soft on both doors" {
-        // The named call skips `shape`, so it only works if the script door's default is a safe
-        // literal the KSP turns into a thunk (the Slots-default guardrail).
+    "shape: the bare door defaults to soft on both doors" {
         ks("Ignitor.saw().shape()").knobs() shouldBe saw.shape().knobs()
-        ks("Ignitor.saw().shape(oversample = 4)").knobs() shouldBe saw.shape(oversample = 4.ign).knobs()
         ks("Ignitor.saw().shape()").knobs() shouldBe IgnitorDsl.Shape(inner = saw).knobs()
     }
 
-    "shape: the script door takes the index as a number and either knob as a slot" {
-        ks("Ignitor.saw().shape(10, 2)").knobs() shouldBe mapOf("shape" to c(10.0), "oversample" to c(2.0))
-        ks("""Ignitor.saw().shape(Ignitor.param("sh", 1), Ignitor.param("os", 4))""").knobs() shouldBe
-                mapOf("shape" to IgnitorDsl.Param("sh", 1.0), "oversample" to IgnitorDsl.Param("os", 4.0))
+    "shape: the script door takes the index as a number or a slot" {
+        ks("Ignitor.saw().shape(10)").knobs() shouldBe mapOf("shape" to c(10.0))
+        ks("""Ignitor.saw().shape(Ignitor.param("sh", 1))""").knobs() shouldBe mapOf("shape" to IgnitorDsl.Param("sh", 1.0))
     }
 
     // ── distort ──────────────────────────────────────────────────────────────────────────────────
@@ -137,17 +132,16 @@ class KlangScriptWaveshaperDoorParitySpec : StringSpec({
 
         for (name in spellings) {
             withClue(name) {
-                ks("""Ignitor.saw().distort(0.5, "$name", 2)""").distortKnobs() shouldBe saw.distort(amount = 0.5.ign, shape = name, oversample = 2.ign).distortKnobs()
                 ks("""Ignitor.saw().distort(0.5, "$name")""").distortKnobs() shouldBe saw.distort(amount = 0.5.ign, shape = name).distortKnobs()
             }
         }
     }
 
-    "distort: the bare door and a named factor default to soft on both doors; the number and slot forms reach the node" {
+    "distort: the bare door defaults to soft on both doors; the number and slot forms reach the node" {
         ks("Ignitor.saw().distort(0.5)").distortKnobs() shouldBe saw.distort(0.5.ign).distortKnobs()
-        ks("Ignitor.saw().distort(amount = 0.5, oversample = 4)").distortKnobs() shouldBe saw.distort(amount = 0.5.ign, oversample = 4.ign).distortKnobs()
 
-        ks("""Ignitor.saw().distort(0.5, 13, Ignitor.param("os", 2))""").distortKnobs() shouldBe
-                mapOf("shape" to c(13.0), "oversample" to IgnitorDsl.Param("os", 2.0), "amount" to c(0.5))
+        ks("Ignitor.saw().distort(0.5, 13)").distortKnobs() shouldBe mapOf("shape" to c(13.0), "amount" to c(0.5))
+        ks("""Ignitor.saw().distort(0.5, Ignitor.param("sh", 2))""").distortKnobs() shouldBe
+                mapOf("shape" to IgnitorDsl.Param("sh", 2.0), "amount" to c(0.5))
     }
 })

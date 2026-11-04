@@ -293,10 +293,9 @@ class IgnitorDslWireCodecSpec : StringSpec({
     // --- effects --------------------------------------------------------------------------------------------
     "Drive" { check(IgnitorDsl.Sine().drive(0.5.ign)) }
     "Shape" { check(IgnitorDsl.Sine().shape("hard")) }
-    // Phase 3 step 3b: `shape` is an INDEX knob and `oversample` a knob read at build (D7). Both
-    // non-default, one of them a slot, so a dropped or swapped field cannot round-trip green.
-    "Shape (index and oversample knobs)" {
-        check(IgnitorDsl.Shape(inner = IgnitorDsl.Sine(), shape = IgnitorDsl.Constant(10.0), oversample = IgnitorDsl.Param("os", 4.0)))
+    // Phase 3 step 3b: `shape` is an INDEX knob read at build; a slot, so a dropped field cannot round-trip green.
+    "Shape (the index knob)" {
+        check(IgnitorDsl.Shape(inner = IgnitorDsl.Sine(), shape = IgnitorDsl.Param("sh", 10.0)))
     }
     "Distort (Drive+Shape chain)" { check(IgnitorDsl.Sine().distort(0.5.ign)) }
     "Distort (the gated unit node, every field non-default)" {
@@ -305,7 +304,6 @@ class IgnitorDslWireCodecSpec : StringSpec({
                 inner = IgnitorDsl.Sine(),
                 amount = IgnitorDsl.Constant(0.7),
                 shape = IgnitorDsl.Param("d.shape", 14.0),
-                oversample = IgnitorDsl.Constant(8.0),
             )
         )
     }

@@ -295,8 +295,8 @@ class KatalystDefaultsSyncSpec : StringSpec({
         bus shouldBe (IgnitorDsl.Distort(inner = IgnitorDsl.Silence).amount as IgnitorDsl.Constant).value
         bus shouldBe (IgnitorDsl.Drive(inner = IgnitorDsl.Silence).amount as IgnitorDsl.Constant).value
 
-        // ...and the shape default is the voice's too: `soft`. The oversampling default is NOT (2x on a bus, 0 on a
-        // voice), a recorded asymmetry (`DISTORT_OVERSAMPLE`); `KatalystDistortEffectSpec` renders its latency.
+        // ...and the shape default is the voice's too: `soft`. Neither has an oversampling factor of its own since
+        // KLANG-00214 step 4 (the bus's was 2x by default): a region is the way up on both.
         KatalystStageDsl.Distort().shape shouldBe DistortionShapes.SOFT_INDEX
     }
 

@@ -18,7 +18,6 @@ import io.peekandpoke.klang.audio_bridge.constants.DELAY_FEEDBACK
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_TIME_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_WET
 import io.peekandpoke.klang.audio_bridge.constants.DISTORT_AMOUNT
-import io.peekandpoke.klang.audio_bridge.constants.DISTORT_OVERSAMPLE
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_DEPTH
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_CENTER_HZ
@@ -267,7 +266,7 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
  * coerced. The Motor stays raw, so a knob is never clamped beyond what
  * the underlying DSP already does. **The exceptions are the knobs fixed per chain**, plain numbers because they size
  * or pick something when the chain is built, so a slot there could never move, and the type says so:
- * [Compressor.lookahead] (a delay ring, phase 3 step 12 C2), [Distort.shape] and [Distort.oversample]. The other is
+ * [Compressor.lookahead] (a delay ring, phase 3 step 12 C2) and [Distort.shape]. The other is
  * [Eq]: its sections stay the [IgnitorDsl.EqSection] the voice uses (decision Q2, E2).
  *
  * **Every knob keeps the name and the scale of its sprudel door**, so a number means the same
@@ -451,29 +450,24 @@ sealed interface KatalystStageDsl {
      * intermodulate. That is the glue a master saturator is for and the growl of a guitar amp fed by
      * the whole chord; pushed hard, chords turn to mush. Per-note distortion stays the voice's.
      *
-     * The law is the voice's fused distort (`DistortionCore`): `shape(x * 10^(amount * 1.2))`, the
-     * drive applied inside the oversampler, then a DC blocker, no soft cap, run on each channel on its
-     * own. The house limiter after the master is the safety net; nothing here is clamped.
+     * The law is the voice's fused distort (`DistortionCore`): `shape(x * 10^(amount * 1.2))`, then a DC
+     * blocker, no soft cap, run on each channel on its own. The house limiter after the master is the safety
+     * net; nothing here is clamped. It runs at the bus's rate: to distort with less aliasing, write it inside a
+     * region (`oversampleAtLeast(2) { it.distort(...) }`). Its own oversampling factor (2x by default) retired
+     * with KLANG-00214 (oversampling regions) step 4.
      *
      * @param amount the drive, `10^(amount * 1.2)` into the shape: 0.1 is about +2.4 dB, 0.25 about
      *   +6 dB, 0.5 about +12 dB. Default [DISTORT_AMOUNT]. At or below 0, or unset, the stage is off
-     *   and the bus passes undistorted (with oversampling, still delayed by the stage's latency). A slot (`Katalyst.param`) moves it with a glide. No orbit twin:
+     *   and the bus passes undistorted. A slot (`Katalyst.param`) moves it with a glide. No orbit twin:
      *   sprudel's `distort(...)` is the voice's door.
      * @param shape the waveshaper as an INDEX into [DistortionShapes.names]; the doors take a name.
      *   A plain number fixed with the chain, never a slot: it picks the shaper when the chain is
      *   built, as a voice reads it once per note. An unknown or out-of-range index is `soft`.
-     * @param oversample the oversampling FACTOR (2, 4, 8; 0 or 1 is none; a non-power of two is
-     *   floored), the voice's knob and law (`Oversampler.factorOf`). A plain number fixed with the
-     *   chain: it sizes the oversampler. Oversampling delays the bus by the oversampler's group delay
-     *   (3 frames at 2x, 4 at 4x, 5 at 8x, rounded), in every state, and nothing compensates, as with the
-     *   compressor's lookahead. Default [DISTORT_OVERSAMPLE], 2x, unlike the voice's 0 (the reason is
-     *   on the constant). 0 or 1 turns it off.
      */
     @WireName("distort")
     data class Distort(
         val amount: KatalystKnobDsl = KatalystKnobDsl.Constant(DISTORT_AMOUNT),
         val shape: Int = DistortionShapes.SOFT_INDEX,
-        val oversample: Int = DISTORT_OVERSAMPLE,
     ) : KatalystStageDsl
 
     /**
@@ -634,8 +628,8 @@ sealed interface KatalystStageDsl {
      * stage only for two branches or more (none is the bus unchanged, one is that branch's stages
      * in place).
      *
-     * **Matched in phase:** a branch that delays the bus (a compressor's lookahead, an oversampled
-     * distort) would comb against the others in the sum, so every branch gets an unshaped round trip
+     * **Matched in phase:** a branch that delays the bus (a compressor's lookahead, an oversampling
+     * region) would comb against the others in the sum, so every branch gets an unshaped round trip
      * of each oversampler it lacks (a phase twin) and a delay for the lookahead it lacks. The stage
      * delays the bus by all the branches' oversamplers and the longest lookahead.
      *
@@ -662,10 +656,10 @@ sealed interface KatalystStageDsl {
      * position is converted up once where it enters and down once at the end (KLANG-00214 (oversampling regions)).
      * At the head of a chain it makes the orbit run at that rate: one conversion per orbit, not per voice.
      *
-     * [factor] is a plain number fixed with the chain, as the `distort` stage's `oversample`: rounded down to a power
+     * [factor] is a plain number fixed with the chain, as the `distort` stage's `shape`: rounded down to a power
      * of two (3 is 2, 5 and 7 are 4); 1 or less is no region, the body's stages in place. The rate stops at 16x: a
      * guard against absurd values, not an error. Inside, every stage keeps its sound in seconds and Hz (a delay its
-     * time, a reverb its room, a filter its cutoff); a `distort`'s own factor is a floor there. A `duck` in the body is
+     * time, a reverb its room, a filter its cutoff). A `duck` in the body is
      * the orbit's duck, as in a `parallel` branch. Twin: [OversampleAtLeast], the floor.
      */
     @WireName("oversampleBy")

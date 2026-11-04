@@ -190,12 +190,6 @@ class ClassicSlotParamsSpec : StringSpec({
         slots(note("c").loop()) shouldBe mapOf("loop" to 1.0)
     }
 
-    "the crush and coarse oversample travel under keys nothing reads; the distort one under its classic() slot" {
-        slots(note("c").crush(4, 2)) shouldBe mapOf("crush.bits" to 4.0, "crush.oversample" to 2.0)
-        slots(note("c").coarse(3, 2)) shouldBe mapOf("coarse.factor" to 3.0, "coarse.oversample" to 2.0)
-        slots(note("c").distort(0.5, oversample = 4))["distort.oversample"] shouldBe 4.0
-    }
-
     "every door writes every knob under its own key, with its own value: the full literal map, and every key a slot an instrument places" {
         // One DISTINCT value per knob (and a distinct curve triple per door, a distinct curve per stage), so a
         // translation that writes one knob's value under another knob's key is a red row here, not only a key
@@ -207,7 +201,7 @@ class ClassicSlotParamsSpec : StringSpec({
                 .bpf(901, 1.3, 13, 0.031, 0.032, 0.033, 0.034).bpfCurves("cube", "scurve", "invsquare")
                 .notch(1501, 1.4, 14, 0.041, 0.042, 0.043, 0.044).notchCurves("scurve", "invsquare", "exponential")
                 .adsr(0.051, 0.052, 0.53, 0.054).adsrCurves("invsquare", "exponential", "linear").adsrOff()
-                .crush(4.1, 2).coarse(3.1, 4).distort(0.31, "tube", 8).tremolo(0.61, 4.1, "square")
+                .crush(4.1).coarse(3.1).distort(0.31, "tube").tremolo(0.61, 4.1, "square")
                 .begin(0.11).end(0.91).speed(2.1).loop()
                 .penv(7.1, 0.061, 0.062, 0.63, 0.064).penvCurves("exponential", "linear", "square")
                 .vibrato(5.1, 0.71).accelerate(0.51)
@@ -229,9 +223,9 @@ class ClassicSlotParamsSpec : StringSpec({
             "notchCurves.attack" to 3.0, "notchCurves.decay" to 4.0, "notchCurves.release" to 5.0,
             "adsr.attack" to 0.051, "adsr.decay" to 0.052, "adsr.sustain" to 0.53, "adsr.release" to 0.054, "adsr.on" to 0.0,
             "adsrCurves.attack" to 4.0, "adsrCurves.decay" to 5.0, "adsrCurves.release" to 0.0,
-            "crush.bits" to 4.1, "crush.oversample" to 2.0,
-            "coarse.factor" to 3.1, "coarse.oversample" to 4.0,
-            "distort.amount" to 0.31, "distort.shape" to 10.0, "distort.oversample" to 8.0,
+            "crush.bits" to 4.1,
+            "coarse.factor" to 3.1,
+            "distort.amount" to 0.31, "distort.shape" to 10.0,
             "tremolo.depth" to 0.61, "tremolo.rate" to 4.1, "tremolo.shape" to 2.0,
             "begin" to 0.11, "end" to 0.91, "speed" to 2.1, "loop" to 1.0,
             "penv.semitones" to 7.1, "penv.attack" to 0.061, "penv.decay" to 0.062, "penv.sustain" to 0.63, "penv.release" to 0.064,
@@ -245,8 +239,7 @@ class ClassicSlotParamsSpec : StringSpec({
         IgnitorDsl.Saw().classic().collectParams(placed)
         val s = IgnitorDsl.Slots.sample
         val names = placed.map { it.name }.toSet() +
-            listOf(s.begin, s.end, s.speed, s.loop).map { (it as IgnitorDsl.Param).name } +
-            setOf("crush.oversample", "coarse.oversample") // no reader, by decision (Q5)
+            listOf(s.begin, s.end, s.speed, s.loop).map { (it as IgnitorDsl.Param).name }
 
         withClue("every key is a slot an instrument places") { (written.keys - names) shouldBe emptySet() }
     }

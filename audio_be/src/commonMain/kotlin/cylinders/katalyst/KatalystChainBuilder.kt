@@ -314,13 +314,12 @@ object KatalystChainBuilder {
 
                 is KatalystStageDsl.Distort -> {
                     val amount = knob(stage.amount)
-                    // The shape and the oversampling factor are fixed per chain, as on a voice per note: they
-                    // pick the shaper and size the oversampler here, at build time. The amount is a slot.
+                    // The shape is fixed per chain, as on a voice per note: it picks the shaper here, at build
+                    // time. The amount is a slot.
                     val fx = KatalystDistortEffect(
                         sampleRate = sampleRate,
                         blockFrames = blockFrames,
                         shapeIndex = stage.shape,
-                        oversampleFactor = stage.oversample,
                         amountModulated = amount.isModulated,
                         firstStage = stages,
                     )

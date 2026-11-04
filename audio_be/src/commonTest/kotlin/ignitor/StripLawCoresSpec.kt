@@ -10,11 +10,9 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.applyDistortionShape
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_be.parseDistortionShape
-import io.peekandpoke.klang.audio_be.roundTrip
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.floor
@@ -37,7 +35,7 @@ private val testRandom = Random(0x5EED)
  * brief states it, written the plain way:
  *
  *  - crush: `floor(x * hl) / hl`, clamped to `[-1, 1]`, a NaN out as 0, `hl = 2^bits / 2`;
- *  - distort: `shape(x * 10^(1.2 * amount))` with the drive INSIDE the oversampler, NaN out as 0, then
+ *  - distort: `shape(x * 10^(1.2 * amount))`, NaN out as 0, then
  *    the DC blocker, and no soft cap; the node runs a MODULATED amount at or below 0 at unity drive,
  *    contiguously (ledger W5's hazard designed out).
  */
@@ -117,41 +115,19 @@ class StripLawCoresSpec : StringSpec({
         return DoubleArray(input.size) { oracleFloor(x = input[it], hl = hl) }
     }
 
-    /**
-     * The distort law over blocks at a per-block DRIVE GAIN. [driveInside] false is the doors'
-     * placement (drive at the base rate, then upsample), kept only to prove the placement is observable.
-     */
-    fun oracleDistort(input: DoubleArray, drives: List<Double>, shapeName: String, stages: Int, driveInside: Boolean = true): DoubleArray {
+    /** The distort law over blocks at a per-block DRIVE GAIN. */
+    fun oracleDistort(input: DoubleArray, drives: List<Double>, shapeName: String): DoubleArray {
         val shape = parseDistortionShape(shapeName)
         val out = input.copyOf()
-        val os = if (stages > 0) Oversampler(stages) else null
         val dc = LowPassHighPassFilters.DcBlocker()
-        val scratch = ScratchBuffers(blockFrames)
 
         for (b in 0 until input.size / blockFrames) {
             val from = b * blockFrames
             val d = drives[b]
 
-            if (os != null) {
-                if (!driveInside) {
-                    for (i in from until from + blockFrames) {
-                        out[i] = out[i] * d
-                    }
-                }
-
-                val inside = if (driveInside) d else 1.0
-
-                os.roundTrip(buffer = out, offset = from, length = blockFrames, scratch = scratch) { work, count ->
-                    for (i in 0 until count) {
-                        val y = applyDistortionShape(shape, work[i] * inside)
-                        work[i] = if (y.isNaN()) 0.0 else y
-                    }
-                }
-            } else {
-                for (i in from until from + blockFrames) {
-                    val y = applyDistortionShape(shape, out[i] * d)
-                    out[i] = if (y.isNaN()) 0.0 else y
-                }
+            for (i in from until from + blockFrames) {
+                val y = applyDistortionShape(shape, out[i] * d)
+                out[i] = if (y.isNaN()) 0.0 else y
             }
 
             dc.process(buffer = out, offset = from, length = blockFrames)
@@ -210,33 +186,25 @@ class StripLawCoresSpec : StringSpec({
 
     // ── distort (D2) ─────────────────────────────────────────────────────────────────────────────
 
-    "distort: the fused node renders the strip's law, the drive INSIDE the oversampler and no cap (D2)" {
+    "distort: the fused node renders the strip's law, the drive in the shaper and no cap (D2)" {
         val blocks = 6
         val input = sine(blocks = blocks, amplitude = 0.9, hz = 220.0)
 
         for (shapeName in listOf("soft", "gentle", "tube")) {
-            for (stages in listOf(0, 1, 2)) {
-                for (amount in listOf(0.3, 1.0)) {
-                    val drives = List(blocks) { driveOf(amount) }
-                    val expected = oracleDistort(input, drives, shapeName, stages)
-                    val clue = "$shapeName x$stages amount $amount"
+            for (amount in listOf(0.3, 1.0)) {
+                val drives = List(blocks) { driveOf(amount) }
+                val expected = oracleDistort(input, drives, shapeName)
 
-                    withClue("$clue: the fused node") {
-                        val node = ArraySource(input).fusedDistort(ConstantIgnitor(amount), parseDistortionShape(shapeName), stages)
+                withClue("$shapeName amount $amount: the fused node") {
+                    val node = ArraySource(input).fusedDistort(ConstantIgnitor(amount), parseDistortionShape(shapeName))
 
-                        renderNode(node, blocks).bits() shouldBe expected.bits()
-                    }
-                    if (stages > 0) {
-                        withClue("$clue: not vacuous, the drive's place is observable") {
-                            oracleDistort(input, drives, shapeName, stages, driveInside = false).bits() shouldNotBe expected.bits()
-                        }
-                    }
+                    renderNode(node, blocks).bits() shouldBe expected.bits()
                 }
             }
         }
 
         withClue("no cap: gentle (doubled) at amount 1.0 leaves [-1, 1]") {
-            val node = ArraySource(input).fusedDistort(ConstantIgnitor(1.0), parseDistortionShape("gentle"), 1)
+            val node = ArraySource(input).fusedDistort(ConstantIgnitor(1.0), parseDistortionShape("gentle"))
             (renderNode(node, blocks).maxOf { abs(it) } > 1.0) shouldBe true
         }
     }
@@ -255,9 +223,9 @@ class StripLawCoresSpec : StringSpec({
         val amounts = List(blocks) { 0.5 * sin(2.0 * PI * 2.0 * (it * blockFrames).toDouble() / sampleRate + 0.3) }
         val input = sine(blocks = blocks, amplitude = 0.9, hz = 220.0)
         val drives = amounts.map { if (it <= 0.0) 1.0 else driveOf(it) }
-        val expected = oracleDistort(input, drives, "soft", 1)
+        val expected = oracleDistort(input, drives, "soft")
 
-        val node = renderNode(ArraySource(input).fusedDistort(PerBlock(amounts), parseDistortionShape("soft"), 1), blocks)
+        val node = renderNode(ArraySource(input).fusedDistort(PerBlock(amounts), parseDistortionShape("soft")), blocks)
 
         node.bits() shouldBe expected.bits()
 
@@ -270,8 +238,8 @@ class StripLawCoresSpec : StringSpec({
         }
 
         // The click metric compares a crossing with an ORDINARY block boundary. Every boundary of this
-        // render steps the drive (the LFO moves per block), and the oversampler's decimator smears that
-        // step over its first few output samples, so the fair bar for "no state reset" is what an
+        // render steps the drive (the LFO moves per block), and the step shows in the first few samples after it
+        // (with an oversampler, until KLANG-00214 step 4, its decimator smeared it further), so the fair bar for "no state reset" is what an
         // ordinary boundary does, not the smooth interior of a block. Measured (round 1 of the review,
         // the reviewer's metric "inside the blocks" tried both ways first):
         //  - interior taken as every frame 2 or more past a boundary: the bar is the render's start
@@ -304,17 +272,17 @@ class StripLawCoresSpec : StringSpec({
 
     "distort: a NaN modulated amount silences the shaper for that block, and the node recovers" {
         // `amt <= 0.0` is false for a NaN, so the block drives with NaN, `shape(x * NaN)` is NaN and
-        // the core's guard writes 0 for every shaped sample. What leaves the block is the oversampler's
-        // and the DC blocker's decaying tail from the block before (review round 1 asked for "all 0.0";
+        // the core's guard writes 0 for every shaped sample. What leaves the block is the
+        // DC blocker's decaying tail from the block before (review round 1 asked for "all 0.0";
         // measured, it is not, see the print), bit-equal to the oracle run with that block's drive NaN.
         // The next block is finite and renders the signal again.
         val amounts = listOf(0.3, 0.3, Double.NaN, 0.3, 0.3)
         val blocks = amounts.size
         val input = sine(blocks = blocks, amplitude = 0.9, hz = 220.0)
         val drives = amounts.map { if (it <= 0.0) 1.0 else driveOf(it) }
-        val expected = oracleDistort(input, drives, "soft", 1)
+        val expected = oracleDistort(input, drives, "soft")
 
-        val node = renderNode(ArraySource(input).fusedDistort(PerBlock(amounts), parseDistortionShape("soft"), 1), blocks)
+        val node = renderNode(ArraySource(input).fusedDistort(PerBlock(amounts), parseDistortionShape("soft")), blocks)
         val nanBlock = node.copyOfRange(2 * blockFrames, 3 * blockFrames)
         val nextBlock = node.copyOfRange(3 * blockFrames, 4 * blockFrames)
 

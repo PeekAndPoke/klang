@@ -75,8 +75,8 @@ object SongBenchmarkCases {
             "0 osc+env (superramp uni5)" to "",
             "1 +filters (hpf/lpf/lpe/lpq/lpadsr)" to
                     """.hpf(1500).lpf(freq = 1575, env = berlin.range(19.0, 19.6).fast(4), q = 2.3, attack = 0.007, decay = 1.3, sustain = 0.0, release = 0.01)""",
-            "2 +distort (0.62:tube:4)+clip" to
-                    """.distort(0.620, "tube", 4).gain("<0.220!48 0.110!16 0.220!48 0.330!16>".mul(0.50)).clip(0.89)""",
+            "2 +distort (0.62:tube)+clip" to
+                    """.distort(0.620, "tube").gain("<0.220!48 0.110!16 0.220!48 0.330!16>".mul(0.50)).clip(0.89)""",
             "3 +pitchmod (vibrato/shuffle)" to
                     """.adsr(release = "<0.04!16 0.11!16>").vibrato(rate = 8, semitones = 0.01).shuffle("<1!64 0!16 1!1 4/8!14 1!33>")""",
             "4 +superimpose (transpose+2xsuper)" to
@@ -114,9 +114,9 @@ object SongBenchmarkCases {
             "0 osc+env (supersaw uni9)" to "",
             "1 +filters (lpadsr/hpf/lpf-mod/lpe/lpq)" to
                     """.lpf(attack = 0.005, decay = 1.1, sustain = 0.0, release = 0.015).hpf("<550!16 360!16 550!16 800!16>").lpf(freq = "3450".add(saw.range(1, 0).pow(1.8).mul(800)).slow(4), env = 8.1, q = 2.0)""",
-            "2 +distortx2 (1:tube:4 + 0.80)+clip" to
-                    """.distort(1, "tube", 4).distort(0.80).clip("<0.86!31 0.77 0.86!31 0.85 0.86!30 0.80 0.70>".fast(2))""",
-            "3 +coarse(2,os4)" to """.coarse(factor = 2, oversample = 4)""",
+            "2 +distortx2 (1:tube + 0.80)+clip" to
+                    """.distort(1, "tube").distort(0.80).clip("<0.86!31 0.77 0.86!31 0.85 0.86!30 0.80 0.70>".fast(2))""",
+            "3 +coarse(2)" to """.coarse(factor = 2)""",
             "4 +superimpose#1 (pan copy)" to """.pan(0.15).superimpose(pan(0.85))""",
             "5 +superimpose#2 (hpf/lpf air)" to """.superimpose(hpf(3800).lpf(6700).gain(0.75 * 0.03))""",
             // Rung 6, `.pipeline("pedal")`, went with the preset (2026-09-25); see the LEAD ladder.
@@ -160,7 +160,7 @@ object SongBenchmarkCases {
             .analog(pAnalog).spreadPower(1.0).sideAtten(0.1).gainJitter(0.20).centerJitter(0.20))
             .pitchEnvelope(0.3, x => x.adsr(0.001, 0.02, 0, 0))
             .plus(Ign.whitenoise().highpass(2000).adsr(0.000, 0.05, 0.0, 0.005).mul(0.14))
-            .distort(0.35, "hard", 4)
+            .oversampleAtLeast(4, y => y.distort(0.35, "hard"))
 
           // `.classic()` last (phase 3 step 10's song edit): the pattern's `adsr` and other voice doors reach the
           // guitar, as they reached it through the voice strip before step 9 retired the strip.
@@ -314,10 +314,10 @@ object SongBenchmarkCases {
         n("<0 0 2 4 0 0 -2 -1>")
           .orbit(1).scale("<e2:minor>").struct("<[x!8]!14 [x!12]!2 [x!8]!32>").fast(2)
           .velocity("0.98 0.95!7 0.97 0.95!7".fast(2)).analog(feel)
-          .sound("supersaw").unison(voices = 7, spread = 0.09).gain(0.75 * 0.11).distort(1, "tube", 4).distort(0.85)
+          .sound("supersaw").unison(voices = 7, spread = 0.09).gain(0.75 * 0.11).distort(1, "tube").distort(0.85)
           .clip("<0.86!31 0.77 0.86!31 0.85 0.86!30 0.80 0.70>".fast(2)).adsr(0.005, 2.5, 0.0, 0.027).lpf(attack = 0.005, decay = 1.0, sustain = 0.0, release = 0.01)
           .hpf(120).lpf(freq = 3200, env = 8.1, q = 1.8)
-          .coarse(factor = 2, oversample = 4).pan(0.3).superimpose(
+          .coarse(factor = 2).pan(0.3).superimpose(
             x => x.pan(0.7),
             x => x.gain(0.75 * 0.09).hpf(240).lpf(3400).scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [-7 -3] 4!7 [2 [3 4@3]]!1 4!7 [-3 [2 4@3]]>")
                  .pan(0.2).superimpose(pan(0.8))
@@ -329,7 +329,7 @@ object SongBenchmarkCases {
         "BASS (full, saw)", "voice",
         """
         n("<0 0 2 4 0 0 -2 -1>").struct("<[x!1]!16 [x@3 x]!48 [x!4]!80>").fast(2).velocity("0.98 0.98 0.99 0.98".fast(2))
-          .orbit(4).scale("e1:minor").sound("saw").gain(0.5 * 0.20).distort(0.05, "soft", 2).clip(0.65)
+          .orbit(4).scale("e1:minor").sound("saw").gain(0.5 * 0.20).distort(0.05, "soft").clip(0.65)
           .adsr(0.007, 5.0, 0.0, 0.015).lpf(attack = 0.001, decay = 0.05, sustain = 0.0, release = 0.01).hpf(freq = 60, q = 1.0).lpf(freq = 200, env = 62, q = 1.0)
           .pan(0.50)
         """.trimIndent(),
@@ -362,7 +362,8 @@ object SongBenchmarkCases {
     // Targeted experiments
     // ────────────────────────────────────────────────────────────────────────────────────────
 
-    // Distort oversample sweep on a supersaw-uni9 + filters base (isolates oversampling cost).
+    // Distort on a supersaw-uni9 + filters base (isolates the shaper's cost; the stage's own oversample factor retired
+    // with KLANG-00214 step 4, and sprudel's voice has no region door).
     private val distortBase = """
         n("0 2 4 5").fast(2).orbit(1).scale("e3:minor").sound("supersaw").unison(voices = 9, spread = 0.08)
           .gain(0.75).adsr(0.005, 2.5, 0.0, 0.029).hpf(400).lpf(freq = 3000, env = 8.1, q = 2.0)
@@ -373,17 +374,14 @@ object SongBenchmarkCases {
 
     private val distortSweep = listOf(
         distortCase("no distort", ""),
-        distortCase("os1 (1:tube:1)", """.distort(1, "tube", 1)"""),
-        distortCase("os2 (1:tube:2)", """.distort(1, "tube", 2)"""),
-        distortCase("os4 (1:tube:4)", """.distort(1, "tube", 4)"""),
-        distortCase("os8 (1:tube:8)", """.distort(1, "tube", 8)"""),
-        distortCase("os4 x2 (double, as song)", """.distort(1, "tube", 4).distort(0.80)"""),
+        distortCase("1:tube", """.distort(1, "tube")"""),
+        distortCase("x2 (double, as song)", """.distort(1, "tube").distort(0.80)"""),
     )
 
     // Unison sweep on the FULL guitar-1 effect chain (osc-gen scales with unison; fixed effects don't).
     private val fullChainTail =
         """.lpf(attack = 0.005, decay = 1.1, sustain = 0.0, release = 0.015).hpf(400).lpf(freq = 3000, env = 8.1, q = 2.0)""" +
-                """.distort(1, "tube", 4).distort(0.80).clip(0.85).coarse(factor = 2, oversample = 4)""" +
+                """.distort(1, "tube").distort(0.80).clip(0.85).coarse(factor = 2)""" +
                 """.pan(0.15).superimpose(pan(0.85)).superimpose(hpf(3800).lpf(6700).gain(0.75 * 0.03))""" +
                 """.body(material = "wood", wet = 0.3)"""
 
@@ -400,7 +398,7 @@ object SongBenchmarkCases {
     private val fxBase = """
         n("0 2 4 5").fast(2).orbit(1).scale("e3:minor").sound("supersaw").unison(voices = 9, spread = 0.08)
           .gain(0.75).adsr(0.005, 2.5, 0.0, 0.029).hpf(400).lpf(freq = 3000, env = 8.1, q = 2.0)
-          .distort(1, "tube", 4).clip(0.85)
+          .distort(1, "tube").clip(0.85)
     """.trimIndent()
 
     private val fxIsolation = listOf(
@@ -418,7 +416,7 @@ object SongBenchmarkCases {
     // If the second is much larger than the first, superimpose amplifies body → multiplicative.
     private val intBase = """
         n("0 2 4 5").fast(2).orbit(1).scale("e3:minor").sound("supersaw").unison(voices = 9, spread = 0.08)
-          .gain(0.75).adsr(0.005, 2.5, 0.0, 0.029).hpf(400).lpf(freq = 3000, env = 8.1, q = 2.0).distort(1, "tube", 4).clip(0.85)
+          .gain(0.75).adsr(0.005, 2.5, 0.0, 0.029).hpf(400).lpf(freq = 3000, env = 8.1, q = 2.0).distort(1, "tube").clip(0.85)
     """.trimIndent()
 
     private val interactionSweep = listOf(
@@ -434,19 +432,19 @@ object SongBenchmarkCases {
 
     fun frozenSongs(): List<SongBenchmark.Case> = listOf(
         SongBenchmark.Case(
-            name = "Der Schmetterling (FULL frozen 09-25)",
-            code = FrozenSongs.derSchmetterling_2026_09_25,
+            name = "Der Schmetterling (FULL frozen 11-03)",
+            code = FrozenSongs.derSchmetterling_2026_11_03,
             group = "full-song",
-            rpm = FrozenSongs.derSchmetterlingRpm_2026_09_25,
+            rpm = FrozenSongs.derSchmetterlingRpm_2026_11_03,
             cycles = 48,
             warmupPasses = 1,
             measurePasses = 3,
         ),
         SongBenchmark.Case(
-            name = "Seltsamere Dinge (FULL frozen)",
-            code = FrozenSongs.strangerThings_2026_07_03,
+            name = "Seltsamere Dinge (FULL frozen 11-03)",
+            code = FrozenSongs.strangerThings_2026_11_03,
             group = "full-song",
-            rpm = FrozenSongs.strangerThingsRpm_2026_07_03,
+            rpm = FrozenSongs.strangerThingsRpm_2026_11_03,
             cycles = 48,
             warmupPasses = 1,
             measurePasses = 3,
@@ -459,10 +457,10 @@ object SongBenchmarkCases {
      */
     fun live(): List<SongBenchmark.Case> = listOf(
         SongBenchmark.Case(
-            name = "Der Schmetterling (FROZEN 09-25)",
-            code = FrozenSongs.derSchmetterling_2026_09_25,
+            name = "Der Schmetterling (FROZEN 11-03)",
+            code = FrozenSongs.derSchmetterling_2026_11_03,
             group = "full-song",
-            rpm = FrozenSongs.derSchmetterlingRpm_2026_09_25,
+            rpm = FrozenSongs.derSchmetterlingRpm_2026_11_03,
             cycles = 48,
             warmupPasses = 1,
             measurePasses = 3,
@@ -525,7 +523,7 @@ object SongBenchmarkCases {
     private val liveUngated: String by lazy { ungated(derSchmetterlingSong.code) }
 
     /** The text the rig suite edits: the frozen 2026-09-25 Der Schmetterling, ungated, so a song edit never moves it. */
-    private val rigUngated: String by lazy { ungated(FrozenSongs.derSchmetterling_2026_09_25) }
+    private val rigUngated: String by lazy { ungated(FrozenPieces.derSchmetterling_2026_09_25) }
 
     /**
      * The song axis of the optimization series (KLANG-00206 (blog optimization series), P16): every
@@ -568,7 +566,7 @@ object SongBenchmarkCases {
         SongBenchmark.Case(
             name = name,
             group = group,
-            rpm = FrozenSongs.derSchmetterlingRpm_2026_09_25,
+            rpm = FrozenPieces.derSchmetterlingRpm_2026_09_25,
             cycles = 8,
             code = edit(rigUngated) + "\n\n" + expr + "\n",
         )
@@ -677,7 +675,7 @@ object SongBenchmarkCases {
         // the drum, one component at a time
         rigCase(name = "trommel: full", group = "trommel", expr = TROMMEL),
         rigCase(name = "trommel: no harmonic bank", group = "trommel", expr = TROMMEL, edit = swap(from = ".plus(harms)", to = "")),
-        rigCase(name = "trommel: no distort", group = "trommel", expr = TROMMEL, edit = swap(from = Regex("""(\.plus\(beater\)\s*)\.distort\([0-9.]+, "[a-z]+", 2\)"""), to = "$1")),
+        rigCase(name = "trommel: no distort", group = "trommel", expr = TROMMEL, edit = swap(from = Regex("""(\.plus\(beater\)\s*)\.oversampleAtLeast\(2, y => y\.distort\([0-9.]+, "[a-z]+"\)\)"""), to = "$1")),
         rigCase(name = "trommel: no body", group = "trommel", expr = TROMMEL, edit = swap(from = Regex("""\.body\(material = "membrane", wet = [0-9.]+\)"""), to = "")),
         rigCase(name = "trommel: no analog", group = "trommel", expr = TROMMEL, edit = swap(from = "let pAnalog = Ign.slot.analog\n  \n  let ring = Ign.constant(", to = "let pAnalog = 0\n  \n  let ring = Ign.constant(")),
 

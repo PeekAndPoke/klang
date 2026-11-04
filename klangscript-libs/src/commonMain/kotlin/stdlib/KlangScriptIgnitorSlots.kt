@@ -193,7 +193,7 @@ internal object KlangScriptIgnitorSlots {
     @KlangScript.Property
     val coarse: KlangScriptIgnitorCoarseSlots = KlangScriptIgnitorCoarseSlots
 
-    /** The distort stage's slots: `amount`, `shape`, `oversample`. */
+    /** The distort stage's slots: `amount` and `shape`. */
     @KlangScript.Property
     val distort: KlangScriptIgnitorDistortSlots = KlangScriptIgnitorDistortSlots
 

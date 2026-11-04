@@ -142,7 +142,6 @@ class ClassicTailSpec : StringSpec({
             "coarse.factor" to 0.0,
             "distort.amount" to 0.0,
             "distort.shape" to DistortionShapes.SOFT_INDEX.toDouble(),
-            "distort.oversample" to 0.0,
         ) + listOf("hpf", "bpf", "notch", "lpf").flatMap { door ->
             val hasPasses = door == "hpf" || door == "lpf"
 

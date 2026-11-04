@@ -17,6 +17,7 @@ import io.peekandpoke.klang.audio_bridge.DistortionShapes
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.mul
+import io.peekandpoke.klang.audio_bridge.oversampleAtLeast
 import io.peekandpoke.klang.audio_bridge.parallel
 import kotlin.math.abs
 import kotlin.math.sqrt
@@ -101,8 +102,8 @@ class IgnitorParallelSpec : StringSpec({
 
     val saw = IgnitorDsl.Saw()
 
-    /** An oversampled shaper: changes the signal AND delays it by its oversampler's group delay. */
-    fun shaped(inner: IgnitorDsl, factor: Int) = IgnitorDsl.Shape(inner = inner, oversample = c(factor.toDouble()))
+    /** A shaper in a region of its own: changes the signal AND delays it by the region's round trip. */
+    fun shaped(inner: IgnitorDsl, factor: Int) = inner.oversampleAtLeast(c(factor.toDouble())) { IgnitorDsl.Shape(inner = it) }
 
     /** [signal] through an unshaped round trip of a bare [Oversampler] per entry of [stages], block by block. */
     fun twin(signal: DoubleArray, vararg stages: Int): DoubleArray {
@@ -152,14 +153,14 @@ class IgnitorParallelSpec : StringSpec({
 
     // ── Latency ─────────────────────────────────────────────────────────────────────────────────
 
-    "an oversampled stage reports its exact latency, a series adds up, a gated-off distort reports none" {
+    "a region reports its exact latency, a series adds up, a gated-off distort reports none" {
         build(saw).latencySamples shouldBe 0.0
         // The IIR half-band's low-frequency delays: 3.07, 4.40, 5.06 samples at 2x, 4x, 8x (OversamplerGroupDelaySpec).
         build(shaped(saw, 2)).latencySamples shouldBe (3.067 plusOrMinus 0.001)
         build(shaped(saw, 4)).latencySamples shouldBe (4.397 plusOrMinus 0.001)
-        build(IgnitorDsl.Distort(inner = saw, oversample = c(8.0))).latencySamples shouldBe (5.062 plusOrMinus 0.001)
+        build(saw.oversampleAtLeast(c(8.0)) { IgnitorDsl.Distort(inner = it) }).latencySamples shouldBe (5.062 plusOrMinus 0.001)
         build(shaped(shaped(saw, 4), 4)).latencySamples shouldBe (8.795 plusOrMinus 0.002)
-        build(IgnitorDsl.Distort(inner = shaped(saw, 2), amount = c(0.0), oversample = c(2.0))).latencySamples shouldBe (3.067 plusOrMinus 0.001)
+        build(IgnitorDsl.Distort(inner = shaped(saw, 2), amount = c(0.0))).latencySamples shouldBe (3.067 plusOrMinus 0.001)
     }
 
     "the oversamplers of the spine: listed in series, shared through a plain sum, unknown when a sum mixes two" {
@@ -168,7 +169,7 @@ class IgnitorParallelSpec : StringSpec({
         build(IgnitorDsl.Plus(left = shaped(saw, 2), right = saw)).oversamplers shouldBe listOf(1)
         build(IgnitorDsl.Plus(left = shaped(saw, 2), right = shaped(saw, 2))).oversamplers shouldBe listOf(1)
         build(IgnitorDsl.Plus(left = shaped(saw, 2), right = shaped(saw, 4))).oversamplers shouldBe null
-        build(IgnitorDsl.Distort(inner = shaped(saw, 2), amount = c(0.0), oversample = c(2.0))).oversamplers shouldBe listOf(1)
+        build(IgnitorDsl.Distort(inner = shaped(saw, 2), amount = c(0.0))).oversamplers shouldBe listOf(1)
         // An unknown child stays unknown through a later oversampler.
         build(shaped(IgnitorDsl.Plus(left = shaped(saw, 2), right = shaped(saw, 4)), 2)).oversamplers shouldBe null
     }
@@ -256,7 +257,7 @@ class IgnitorParallelSpec : StringSpec({
 
         for ((factors, freq) in listOf(listOf(2) to 18250.0, listOf(4) to 16750.0, listOf(8) to 18000.0, listOf(2, 4) to 18000.0)) {
             val sine = IgnitorDsl.Sine(freq = c(freq), analog = c(0.0)).mul(0.4.ign)
-            val shapedBranches = factors.map { IgnitorDsl.Shape(inner = sine, shape = hard, oversample = c(it.toDouble())) }
+            val shapedBranches = factors.map { f -> sine.oversampleAtLeast(c(f.toDouble())) { IgnitorDsl.Shape(inner = it, shape = hard) } }
             val dry = render(sine)
             val sum = render(IgnitorDsl.Parallel(branches = shapedBranches + sine))
 

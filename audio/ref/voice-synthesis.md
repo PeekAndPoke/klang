@@ -362,7 +362,7 @@ reorders the build changes songs with `analog > 0`.
   only these, and a gated-off stage (not built, `audio/ref/off-values.md`) also stops its sibling knob subtrees
   from drawing: chosen deliberately, pinned by `IgnitorGateSpec`.
 - **Build-time knobs are read leaf-only** (`buildTimeKnobValue` and its siblings in `IgnitorDslRuntime.kt`: shapes,
-  oversample factor, passes, curves, tremolo shape and phase): a `Param` or `Constant` leaf is read, a non-leaf
+  a region's factor, passes, curves, tremolo shape and phase): a `Param` or `Constant` leaf is read, a non-leaf
   takes the knob's default and is NOT built, so asking never moves a draw.
 - **`DriftLanes`** (`ignitor/DriftLanes.kt`): one int for the shared lane's seed at construction, then an own lane
   whenever `ensureLanes` first reaches its index; the shared lane takes nothing further, so lowering

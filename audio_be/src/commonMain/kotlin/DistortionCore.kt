@@ -7,12 +7,12 @@ package io.peekandpoke.klang.audio_be
 
 import io.peekandpoke.klang.audio_be.filters.DEFAULT_DC_BLOCK_COEFF
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
-import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.utils.nanGuard
 import kotlin.math.pow
 
 /**
- * The one shaper core of the engine: drive, shape and DC blocker, with the oversampler around the shaping. Two nodes
+ * The one shaper core of the engine: drive, shape and DC blocker, at the rate of the buffer it is handed (inside an
+ * oversampling region, the region's; its own oversampler retired with KLANG-00214 (oversampling regions) step 4). Two nodes
  * host it and adapt only their block contract (engine tidy-up step 11, audit B2.2, 2026-10-08):
  *  - the fused `Distort` node (`FusedDistortIgnitor`, the distort stage `classic()` builds) drives with the amount's
  *    gain, and its output is the core's output: the voice strip's law (phase 3 step 4, decision D2 option A,
@@ -22,19 +22,15 @@ import kotlin.math.pow
  *    `x * 1.0` is exact for every value, so the shared core is that node's law bit for bit.
  *
  * `StripLawCoresSpec` pins the law against an oracle written in the test; `OversamplerDecimatorParitySpec` pins both
- * nodes bit for bit, oversampled and at stage 0.
+ * nodes bit for bit.
  *
  * The law, per block:
- *  1. every sample is DRIVEN and SHAPED in one expression, `shape(x * drive)`, and NaN-guarded. With
- *     an oversampler, that expression runs on the UPSAMPLED stream, so the drive is applied INSIDE
- *     the oversampler (driving at the base rate first and upsampling after is not the same in the last
- *     bits: the interpolating all-pass filters do not round the same way);
+ *  1. every sample is DRIVEN and SHAPED in one expression, `shape(x * drive)`, and NaN-guarded;
  *  2. the DC blocker, on every shape, not only the asymmetric ones: at extreme drive any input
  *     asymmetry rail-locks a symmetric shaper toward +-1 and leaves a DC bias;
  *  3. NO soft cap here. The soft cap belongs to the `Shape` node. The two nodes are different laws on
  *     purpose (D2 kept both): the doors build `Shape(Drive(...))`, drive at the base rate and cap their
- *     output; `classic()` rebuilds the strip, which had its own downstream bounding stages. Whether the
- *     fused node should cap too is KLANG-00214 (oversampling regions)'s question, not this class's.
+ *     output; `classic()` rebuilds the strip, which had its own downstream bounding stages.
  *
  * The bypass belongs to the host, not here: the fused node is not built for a leaf amount at or below 0 and runs at
  * unity drive for a modulated one; the `Shape` node never bypasses.
@@ -44,9 +40,6 @@ import kotlin.math.pow
  *
  * @param shape the waveshaper, resolved by the host (a name through `parseDistortionShape`, an index
  *   knob through `distortionShapeAt`).
- * @param oversampleStages 2x stages of the oversampler, 0 for none (the plain path).
- * @param firstStage the cascade stage the oversampler starts at (`Oversampler`'s `firstStage`): above 0 inside an
- *   oversampling region, where this core runs at the region's rate.
  * @param dcBlockCoefficient the DC blocker's pole. Inside an oversampling region the host maps it to the region's rate
  *   ([dcBlockCoefficientAt]), so the knee stays where it is in Hz. The default, `DEFAULT_DC_BLOCK_COEFF` (0.995, a knee
  *   near 35 Hz), is the voice's law and the two Ignitor nodes keep it. A bus carries the whole low end
@@ -55,13 +48,8 @@ import kotlin.math.pow
  */
 internal class DistortionCore(
     private val shape: DistortionShape,
-    oversampleStages: Int,
     dcBlockCoefficient: Double = DEFAULT_DC_BLOCK_COEFF,
-    firstStage: Int = 0,
 ) {
-    private val oversampler: Oversampler? =
-        if (oversampleStages > 0) Oversampler(stages = oversampleStages, firstStage = firstStage) else null
-
     private val dcBlocker = LowPassHighPassFilters.DcBlocker(dcBlockCoefficient)
 
     /**
@@ -77,7 +65,7 @@ internal class DistortionCore(
      *
      * Since engine follow-up 34 (2026-10-16) [process] and [processRamped] are Kotlin `inline` and write this field
      * (and [rampFrom]) in the HOST's compiled code, so the drive crosses no call at all: the bus distort's `distort`
-     * handed it to a [process] that V8 did not inline into the chain, one heap number per block at 2x (the two cores
+     * handed it to a [process] that V8 did not inline into the chain, one heap number per block (the two cores
      * share the value), and two while the amount glided (the ramp's two ends). Internal, not private, because an
      * inline member writes it; only [process] and [processRamped] write it. Same guard: do not hand the drive to
      * [processBlock] or [processRampedBlock] as an argument.
@@ -88,12 +76,10 @@ internal class DistortionCore(
     internal var rampFrom: Double = 1.0
 
     /**
-     * Back to a fresh core: the oversampler's filter history and the DC blocker's state cleared. For a
-     * host that keeps its core across a hard cut (the Katalyst stage's `reset`); the voice builds a new
-     * core per note and never calls it.
+     * Back to a fresh core: the DC blocker's state cleared. For a host that keeps its core across a hard cut (the
+     * Katalyst stage's `reset`); the voice builds a new core per note and never calls it.
      */
     fun reset() {
-        oversampler?.reset()
         dcBlocker.reset()
     }
 
@@ -104,42 +90,23 @@ internal class DistortionCore(
      * `inline` so the drive lands in [blockDrive] in the caller's compiled code: see there.
      */
     @Suppress("NOTHING_TO_INLINE")
-    inline fun process(buffer: AudioBuffer, offset: Int, length: Int, drive: Double, scratchBuffers: ScratchBuffers) {
+    inline fun process(buffer: AudioBuffer, offset: Int, length: Int, drive: Double) {
         blockDrive = drive
-        processBlock(buffer = buffer, offset = offset, length = length, scratchBuffers = scratchBuffers)
+        processBlock(buffer = buffer, offset = offset, length = length)
     }
 
     /** Call only through [process]. [process]'s work, at the drive [process] staged in [blockDrive]. */
-    internal fun processBlock(buffer: AudioBuffer, offset: Int, length: Int, scratchBuffers: ScratchBuffers) {
-        val os = oversampler
-
-        if (os != null) {
-            // The round trip in two halves with the loop between them, inline: no closure per block (engine tidy-up
-            // step 2, audit B4.1); the drive goes through [blockDrive], see there.
-            scratchBuffers.oversample(os.factor).use { work ->
-                val count = os.upsample(source = buffer, offset = offset, length = length, work = work)
-
-                // NaN-guarded in the shaping loop: see "NaN and state" in the Oversampler KDoc.
-                shapeRun(buffer = work, from = 0, to = count)
-
-                os.decimate(work = work, target = buffer, offset = offset, length = length)
-            }
-        } else {
-            // NaN-guarded in the shaping loop: a NaN escaping here would permanently corrupt the DC blocker's IIR state.
-            shapeRun(buffer = buffer, from = offset, to = offset + length)
-        }
+    internal fun processBlock(buffer: AudioBuffer, offset: Int, length: Int) {
+        // NaN-guarded in the shaping loop: a NaN escaping here would permanently corrupt the DC blocker's IIR state.
+        shapeRun(buffer = buffer, from = offset, to = offset + length)
 
         dcBlocker.process(buffer = buffer, offset = offset, length = length)
     }
 
     /**
      * [process] with a drive that MOVES across the block, from [driveFrom] to [driveTo], for a host whose drive
-     * glides (the Katalyst stage's `amount`). The drive ramps linearly per sample of the stream the shaper sees (the
-     * oversampled one with an oversampler), written from the END so the last sample carries [driveTo] exactly, and it
-     * is applied where [process] applies its drive: on the shaper's input, inside the oversampler. So the
-     * oversampler's history stays in the input's own domain, and a block that glides and a block that does not meet
-     * without a seam (round 1 of KLANG-00292 (katalyst distort stage): a host that pre-multiplied the input at the
-     * base rate instead left the history one domain off at every change, a click at both ends of each glide).
+     * glides (the Katalyst stage's `amount`). The drive ramps linearly per sample, written from the END so the last
+     * sample carries [driveTo] exactly, and it is applied where [process] applies its drive: on the shaper's input.
      */
     @Suppress("NOTHING_TO_INLINE")
     inline fun processRamped(
@@ -148,31 +115,17 @@ internal class DistortionCore(
         length: Int,
         driveFrom: Double,
         driveTo: Double,
-        scratchBuffers: ScratchBuffers,
     ) {
         // `inline`, the two ends staged in fields: see [blockDrive].
         rampFrom = driveFrom
         blockDrive = driveTo
-        processRampedBlock(buffer = buffer, offset = offset, length = length, scratchBuffers = scratchBuffers)
+        processRampedBlock(buffer = buffer, offset = offset, length = length)
     }
 
     /** Call only through [processRamped]. Its work, from [rampFrom] to [blockDrive] as [processRamped] staged them. */
-    internal fun processRampedBlock(buffer: AudioBuffer, offset: Int, length: Int, scratchBuffers: ScratchBuffers) {
-        val os = oversampler
-
-        if (os != null) {
-            scratchBuffers.oversample(os.factor).use { work ->
-                val count = os.upsample(source = buffer, offset = offset, length = length, work = work)
-
-                // NaN-guarded in the shaping loop: see "NaN and state" in the Oversampler KDoc.
-                shapeRunRamped(buffer = work, offset = 0, length = count)
-
-                os.decimate(work = work, target = buffer, offset = offset, length = length)
-            }
-        } else {
-            // NaN-guarded in the shaping loop: a NaN escaping here would permanently corrupt the DC blocker's IIR state.
-            shapeRunRamped(buffer = buffer, offset = offset, length = length)
-        }
+    internal fun processRampedBlock(buffer: AudioBuffer, offset: Int, length: Int) {
+        // NaN-guarded in the shaping loop: a NaN escaping here would permanently corrupt the DC blocker's IIR state.
+        shapeRunRamped(buffer = buffer, offset = offset, length = length)
 
         dcBlocker.process(buffer = buffer, offset = offset, length = length)
     }
@@ -185,7 +138,7 @@ internal class DistortionCore(
      * **One loop per shape, the `when` outside the loop (V8; engine follow-up item 9, 2026-10-10), kept for SPEED.**
      * Do not fold this back into one loop. A loop over [applyDistortionShape] boxes every shaped sample that is not a
      * small integer into a heap number on V8 (Kotlin/JS leaves the `when`'s result unassigned in its `default` arm,
-     * so V8 carries it tagged from sample to sample): about 2 KB per block without oversampling, 8 KB at 4x, 33 KB at
+     * so V8 carries it tagged from sample to sample): about 2 KB per block at the base rate, 8 KB at 4x, 33 KB at
      * 16x (`tube`, production bundle), on every `Shape` and fused `Distort` node. The cheap statement form (an
      * initialized `var` assigned in a statement `when`, `audio/ref/performance.md`) removes those boxes too, but these
      * switch-free loops run 12 to 25 percent faster again than it; folding back to it gives that up with no test to

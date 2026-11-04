@@ -27,16 +27,6 @@ import io.peekandpoke.klang.common.infra.KlangMap
 // ═════════════════════════════════════════════════════════════════════════════════════════════
 
 /**
- * The key the wire carries for `crush(oversample = ...)`. `classic()`'s crush has no oversampler and places no
- * such slot, so nothing reads it (the knob waits for KLANG-00214 (oversampling regions)); it travels so the
- * value is not lost on the way.
- */
-internal const val CRUSH_OVERSAMPLE_KEY = "crush.oversample"
-
-/** The key for `coarse(oversample = ...)`; unread, like [CRUSH_OVERSAMPLE_KEY]. */
-internal const val COARSE_OVERSAMPLE_KEY = "coarse.oversample"
-
-/**
  * The wire's slot bag of this event: the event's own `ignitorParams` plus every typed voice door written under
  * its slot (`<door>.<param>`, the names read from the `Param` objects of [IgnitorDsl.Slots], never retyped).
  *
@@ -111,12 +101,9 @@ internal fun SprudelVoiceData.classicSlotParams(): KlangMap<Double>? {
 
     distortion?.let { d ->
         bag.put(k.crushBits, d.crush)
-        bag.put(k.crushOversample, d.crushOversample?.toDouble())
         bag.put(k.coarseFactor, d.coarse)
-        bag.put(k.coarseOversample, d.coarseOversample?.toDouble())
         bag.put(k.distortAmount, d.distort)
         bag.put(k.distortShape, d.distortShape?.let { DistortionShapes.indexOf(it) })
-        bag.put(k.distortOversample, d.distortOversample?.toDouble())
     }
 
     hpf?.let { bag.putFilter(it, k.hpf) }
@@ -209,12 +196,9 @@ private object ClassicSlotKeys {
     val penvCurveRelease = name(s.penvCurves.release)
 
     val crushBits = name(s.crush.bits)
-    val crushOversample = CRUSH_OVERSAMPLE_KEY
     val coarseFactor = name(s.coarse.factor)
-    val coarseOversample = COARSE_OVERSAMPLE_KEY
     val distortAmount = name(s.distort.amount)
     val distortShape = name(s.distort.shape)
-    val distortOversample = name(s.distort.oversample)
 
     val hpf = pass(s.hpf, s.hpfCurves)
     val bpf = band(s.bpf, s.bpfCurves)

@@ -81,7 +81,7 @@ data class BuiltIgnitor(
     val endsInEnvelope: Boolean = false,
     /**
      * How many samples the SIGNAL SPINE of this subtree delays the signal by, EXACT (a fraction where the delay is one):
-     * an oversampled `distort` or `shape` adds its oversampler's low-frequency group delay
+     * an oversampling region adds its round trip's low-frequency group delay
      * (`Oversampler.groupDelaySamples`: 3.07, 4.40, 5.06 at 2x, 4x, 8x), a series adds them up, and a node with several
      * signal children reports the latest of them, except a `parallel` that pads with phase twins: it reports the delay
      * of the union it padded every branch to (a 2x and a 4x branch: 3.07 + 4.40). Read by the `parallel` node when it cannot pad with phase twins (see

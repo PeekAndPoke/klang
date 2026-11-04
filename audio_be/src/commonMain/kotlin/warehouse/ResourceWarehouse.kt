@@ -182,21 +182,19 @@ class ResourceWarehouse(
         const val SCRATCH_DEPTH: Int = 64
 
         /**
-         * The WARMED oversample factors, not the set the DSL accepts. The `IgnitorDsl` `oversample`
+         * The WARMED oversample factors, not the set the DSL accepts. A region's factor
          * knob takes any number (`Oversampler.factorOf` truncates it to a whole factor) and
          * `Oversampler.factorToStages` floors that to a power of two, so 32× is legal; a factor
          * outside this list builds its sub-pool on first use, inside render, and `lateAllocations`
          * cannot see that (it counts growth, not creation). 16× is the largest anyone has authored;
          * beyond it the trade is the user's.
          *
-         * A sub-pool is NOT pre-sized beyond its construction default (4 work buffers). For a shaper's own round trip
-         * the depth is ONE (it holds a single `use` across `Oversampler.upsample` and `Oversampler.decimate`, and both
-         * shaper nodes render their upstream BEFORE `DistortionCore` opens it), and the DoubleArray half stays EMPTY,
-         * since nothing on an oversampled path calls `useDouble` (only `ModApplyingIgnitor`, on the main pool). Review
-         * round 1 had warmed both halves to depth 8, ~460 KB that no render can reach, paid eagerly in the worklet's
-         * first `process()` (review round 2). The proof is the sub-pool's own counters after a render.
+         * A sub-pool is NOT pre-sized beyond its construction default (4 work buffers), and the DoubleArray half stays
+         * EMPTY, since nothing on an oversampled path calls `useDouble` (only `ModApplyingIgnitor`, on the main pool).
+         * Review round 1 had warmed both halves to depth 8, ~460 KB that no render can reach, paid eagerly in the
+         * worklet's first `process()` (review round 2). The proof is the sub-pool's own counters after a render.
          *
-         * An oversampling REGION (KLANG-00214 (oversampling regions)) breaks the depth-one assumption: its body renders
+         * An oversampling REGION (KLANG-00214 (oversampling regions)) nests deeper than one lease: its body renders
          * with the sub-pool as its whole scratch, so the region's two leases plus every stage of its body nest there
          * (about 7 for a three-stage preamp), and a stage or a nested region inside it opens a sub-pool of the sub-pool,
          * which is not warmed. Both grow once per engine, at the first note that needs them, inside render; the warmup

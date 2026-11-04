@@ -55,7 +55,7 @@ travel as slot keys in `ignitorParams`, and the orbit stages as slot keys in `ka
 engine's slot names):
 
 - `classic()`'s slots, keyed `<door>.<param>` (`fm.depth`, `penv.semitones`, `penvCurves.attack`, `lpf.freq`, `lpf.q`,
-  `adsr.attack`, `adsrCurves.release`, `distort.oversample`, `tremolo.depth`, ...), plus the flat `accelerate`
+  `adsr.attack`, `adsrCurves.release`, `distort.shape`, `tremolo.depth`, ...), plus the flat `accelerate`
   (semitones, a pitch stage) and the flat `onepole` (Hz, its first amplitude stage, behind the pitch stages), declared in
   `IgnitorDsl.Slots` (`audio_bridge/.../IgnitorDsl.kt`, the stage slot groups in `IgnitorDslClassic.kt`); a tree without `classic()` reads none of them;
 - the sample instrument's playback slots, flat: `begin`, `end`, `speed`, `loop` (`Slots.sample`);

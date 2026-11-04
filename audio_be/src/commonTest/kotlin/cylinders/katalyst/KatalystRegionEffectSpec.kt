@@ -32,8 +32,8 @@ import kotlin.math.sin
  * converted up, the body's stages at the region's rate, converted down; the steps a factor takes, the cascade continued
  * from the chain's rate, every stage inside keeping its sound in seconds and Hz.
  *
- * **The oracles are bare [Oversampler]s**: a body of linear stages (a gain, a distort at amount 0, which is the input
- * through an unshaped round trip of its oversampler, `KatalystDistortEffectSpec`) is the input through the converters
+ * **The oracles are bare [Oversampler]s**: a body of linear stages (a gain, a nested region with an empty body) is the
+ * input through the converters
  * the region should hold, written out here; a stage that keeps its time or its room is held against the same stage
  * outside a region. No expected value comes from the region under test.
  */
@@ -52,9 +52,6 @@ class KatalystRegionEffectSpec : StringSpec({
         KatalystStageDsl.OversampleAtLeast(factor = factor, body = body(*stages))
 
     fun gain(value: Double) = KatalystStageDsl.Gain(gain = c(value))
-
-    /** A distort stage at amount 0: off, the dry bus through an unshaped round trip of its own oversampler. */
-    fun silentDistort(oversample: Int) = KatalystStageDsl.Distort(amount = c(0.0), oversample = oversample)
 
     fun chain(vararg stages: KatalystStageDsl, reverbs: ReverbUnits = ReverbUnits(sampleRate)): KatalystChain =
         KatalystChainBuilder.build(
@@ -250,34 +247,19 @@ class KatalystRegionEffectSpec : StringSpec({
 
     // ── The distort stage inside ─────────────────────────────────────────────────────────────────
 
-    "a distort's own factor is a floor inside a region: at or below it converts nothing, above it takes the steps above" {
-        val blocks = 5
-
-        // 4x region, distort asks 2x: nothing of its own, so the body is the plain round trip
-        run(chain(by(4, silentDistort(oversample = 2))), blocks = blocks).shouldMatch(
-            expectLeft = nested(::left, blocks, levels = listOf(2 to 0), inside = { _, _ -> }),
-            expectRight = nested(::right, blocks, levels = listOf(2 to 0), inside = { _, _ -> }),
-        )
-
-        // 4x region, distort asks 8x: one step of its own, the cascade's third stage, at the region's rate
-        run(chain(by(4, silentDistort(oversample = 8))), blocks = blocks).shouldMatch(
-            expectLeft = nested(::left, blocks, levels = listOf(2 to 0), inside = twin(steps = 1, first = 2)),
-            expectRight = nested(::right, blocks, levels = listOf(2 to 0), inside = twin(steps = 1, first = 2)),
-        )
-    }
-
     "a distort inside a region keeps its DC blocker in Hz: a DC step decays in the same time at 4x as at 1x" {
         // A small amount of the soft shape is nearly linear; the house DC blocker then takes the step down over about
-        // 23 ms. At 1x the stage oversamples by 4 itself, inside the 4x region not at all
-        val stage = KatalystStageDsl.Distort(amount = c(0.1), oversample = 4)
+        // 23 ms, at the bus's rate and at the region's alike. Measured from 64 frames after the peak, past the ring of
+        // the region's converters on the step's edge (which the stage outside a region does not have)
+        val stage = KatalystStageDsl.Distort(amount = c(0.1))
         val step: (Int) -> Double = { 0.1 }
         val later = 441
 
         fun decay(chain: KatalystChain): Double {
             val out = run(chain, blocks = 8, left = step, right = step).l
-            val first = out.indices.maxBy { abs(out[it]) }
+            val from = out.indices.maxBy { abs(out[it]) } + 64
 
-            return out[first + later] / out[first]
+            return out[from + later] / out[from]
         }
 
         val outside = decay(chain(stage))
@@ -312,12 +294,12 @@ class KatalystRegionEffectSpec : StringSpec({
 
         listOf(
             by(4, gain(1.0)),
-            // A distort at 8x inside a 4x region: its step at the region's rate, divided down
-            by(4, silentDistort(oversample = 8)),
-            // A distort at 4x inside a 2x region: its 2.66 region frames rounded first would be 1.5, not 1.33
-            by(2, silentDistort(oversample = 4)),
-            // The same distort in a parallel beside a dry branch: the parallel's latency unrounded too
-            by(2, KatalystStageDsl.Parallel(branches = listOf(KatalystDsl(emptyList()), body(silentDistort(oversample = 4))))),
+            // An 8x floor inside a 4x region: its step at the region's rate, divided down
+            by(4, atLeast(8)),
+            // A 4x floor inside a 2x region: its 2.66 region frames rounded first would be 1.5, not 1.33
+            by(2, atLeast(4)),
+            // The same floor in a parallel beside a dry branch: the parallel's latency unrounded too
+            by(2, KatalystStageDsl.Parallel(branches = listOf(KatalystDsl(emptyList()), body(atLeast(4))))),
             // Nested: the inner round trip from the cascade's second stage
             by(2, by(2, gain(1.0))),
             by(16, gain(1.0)),
@@ -381,9 +363,9 @@ class KatalystRegionEffectSpec : StringSpec({
         }
     }
 
-    "a parallel inside a region twins from the region's stage: a dry branch beside an 8x distort in a 4x region" {
+    "a parallel inside a region twins from the region's stage: a dry branch beside an 8x floor in a 4x region" {
         val blocks = 6
-        val stage = by(4, KatalystStageDsl.Parallel(branches = listOf(KatalystDsl(emptyList()), body(silentDistort(oversample = 8)))))
+        val stage = by(4, KatalystStageDsl.Parallel(branches = listOf(KatalystDsl(emptyList()), body(atLeast(8)))))
         val out = run(chain(stage), blocks)
         val twinL = twin(steps = 1, first = 2)
         val twinR = twin(steps = 1, first = 2)

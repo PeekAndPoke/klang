@@ -23,9 +23,9 @@ import kotlin.math.abs
  */
 class DistortionSpec : StringSpec({
 
-    /** [input] through the fused distort node at [amount] and [shape], no oversampling, one window. */
+    /** [input] through the fused distort node at [amount] and [shape], one window. */
     fun distorted(input: DoubleArray, amount: Double, shape: String = "soft"): DoubleArray =
-        renderThroughNode(input) { it.fusedDistort(ConstantIgnitor(amount), parseDistortionShape(shape), 0) }
+        renderThroughNode(input) { it.fusedDistort(ConstantIgnitor(amount), parseDistortionShape(shape)) }
 
     "the distort node: diode shape DC blocker removes offset over time" {
         val buffer = distorted(AudioBuffer(4096) { 0.5 }, 0.8, "diode")

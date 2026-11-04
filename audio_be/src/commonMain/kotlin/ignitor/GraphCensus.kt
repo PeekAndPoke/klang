@@ -30,8 +30,7 @@ import kotlin.random.Random
  * - [traffic]: reads plus writes of a block buffer per sample. A source writes once; an in-place
  *   pass reads and writes once each (2); a pass over two signals reads both and writes one (3); a
  *   signal coefficient makes the node render every coefficient through scratch (a read each); an
- *   oversampled shaper counts its upsample, its shaper loop, its decimation stages and the copy
- *   back; a pitch-mod node's mod renders into a memo that caches per block whatever its readers
+ *   oversampling region counts its upsample, its decimation stages and the copy back; a pitch-mod node's mod renders into a memo that caches per block whatever its readers
  *   (`combineMods`), and each reader copies it out (2): every pitched source under the node, wrapped
  *   once (`ModApplyingIgnitor`), then runs the ratio loop (a read and a write, its pass not counted)
  *   and reads the ratio in each of its voice loops, and a pitch node nested under it multiplies it
@@ -308,7 +307,7 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
         }
 
         /**
-         * An `oversample` knob as the whole factor the runtime reads at voice build: a `Constant` or
+         * A region's factor knob as the whole factor the runtime reads at voice build: a `Constant` or
          * `Param` leaf through the one conversion, [Oversampler.factorOf]; anything else is 0, which is
          * what the runtime's leaf-only read gives it. A non-finite override reads as unset and takes the
          * slot's default, as the runtime's `Param` leaf does.
@@ -340,15 +339,11 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
             return GraphCensus(passes = n, traffic = 2 * n - 1, bytes = SOURCE_BYTES + n * UNISON_VOICE_BYTES)
         }
 
-        private fun shaped(oversample: Int): GraphCensus {
-            // the shaper: its loop at the oversampled rate, the DC blocker, and the output pass in place
-            // (the soft cap on `Shape`, the copy out on the fused `Distort`, whose drive rides in the loop)
-            val f = 1 shl Oversampler.factorToStages(oversample)
+        // the shaper: its loop, the DC blocker, and the output pass in place (the soft cap on `Shape`, the copy out
+        // on the fused `Distort`, whose drive rides in the loop)
+        private fun shaped(): GraphCensus = GraphCensus(passes = 1, traffic = 2 + 2 + 2, bytes = 24)
 
-            return GraphCensus(passes = 1, traffic = 2 * f + 2 + 2 + oversampleTraffic(oversample), bytes = oversampleBytes(oversample) + 24)
-        }
-
-        /** An oversampling region's trip up and down at [factor] (none at 1 or less): [shaped]'s conversion without the shaper. */
+        /** An oversampling region's trip up and down at [factor] (none at 1 or less), the converters only. */
         private fun regionTrip(factor: Int): GraphCensus =
             if (Oversampler.factorToStages(factor) == 0) NONE else GraphCensus(passes = 1, traffic = 2 + oversampleTraffic(factor), bytes = oversampleBytes(factor))
 
@@ -647,9 +642,9 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
             }
 
             // shapers
-            is IgnitorDsl.Shape -> shaped(factorOf(node.oversample))
+            is IgnitorDsl.Shape -> shaped()
             // since phase 3 step 4 (D2) one fused stage, not a drive pass plus a shaper
-            is IgnitorDsl.Distort -> shaped(factorOf(node.oversample))
+            is IgnitorDsl.Distort -> shaped()
             is IgnitorDsl.Drive -> inPlace()
             is IgnitorDsl.Crush -> inPlace()
             is IgnitorDsl.Coarse -> inPlace(16)
@@ -697,7 +692,7 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
             // structure that leaves no trace at render time
             is IgnitorDsl.Variants, is IgnitorDsl.OptimizerHint -> NONE
 
-            // an oversampling region: the trip up and down at its factor, as an oversampled shaper's. NOT counted,
+            // an oversampling region: the trip up and down at its factor. NOT counted,
             // deliberately: that the body's stages run at the region's
             // rate (each of them `factor` times its work) and that a source in the body renders at the base rate and takes
             // a trip up of its own; the census counts the body as if at the base rate, an under-count. The factor read as

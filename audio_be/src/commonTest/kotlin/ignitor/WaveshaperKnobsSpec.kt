@@ -26,10 +26,10 @@ import kotlin.random.Random
  * reads them. The tremolo's LAW is `TremoloCompositionSpec`'s; the catalogues are
  * `ShapeCatalogueSpec`'s. This file is the plumbing between a knob on a node and the stage it builds:
  *
- *  - the `Shape` and `Distort` nodes' `shape` INDEX and `oversample` FACTOR, read once at voice build
- *    (decision D7 for the factor), against the hand-authoring API that takes a name and a stage count;
- *  - the bad values: a non-finite, negative, past-the-end or fractional index, a non-finite or
- *    fractional factor, and a knob that is not a leaf;
+ *  - the `Shape` and `Distort` nodes' `shape` INDEX, read once at voice build, against the hand-authoring API
+ *    that takes a name (their own oversampling factor, decision D7's stopgap, retired with KLANG-00214 step 4);
+ *  - the bad values: a non-finite, negative, past-the-end or fractional index, and a knob that is not a leaf;
+ *  - the factor conversion a region's factor knob goes through ([Oversampler.factorOf]);
  *  - the RNG STREAM: a build-time knob that is not a leaf is NOT BUILT, so a drawing node there moves
  *    no draw (the `filterEnvKnob` rule);
  *  - the tremolo's rate, read per BLOCK, which is why an expression works there and not in the
@@ -86,25 +86,25 @@ class WaveshaperKnobsSpec : StringSpec({
         return renderBuilt(ignitor, rng)
     }
 
-    /** The hand-authoring API over the same source: a shape NAME and a STAGE count, no knob in sight. */
-    fun renderHand(shapeName: String, stages: Int, drive: Double? = null): DoubleArray {
+    /** The hand-authoring API over the same source: a shape NAME, no knob in sight. */
+    fun renderHand(shapeName: String, drive: Double? = null): DoubleArray {
         val rng = seed()
         val source = saw.buildExciter(random = rng, freqHz = freqHz, sampleRate = sampleRate).ignitor
         val driven = if (drive != null) source.drive(drive) else source
 
-        return renderBuilt(driven.shape(shapeName, stages), rng)
+        return renderBuilt(driven.shape(shapeName), rng)
     }
 
     /**
-     * The same source through the runtime `fusedDistort` built by hand (the shape by name, the stage count): the
+     * The same source through the runtime `fusedDistort` built by hand (the shape by name): the
      * law (`DistortionCore`) the fused `Distort` node renders since phase 3 step 4 (decision D2), the voice
      * strip's distort until the strip retired (step 9). The law's oracle is `StripLawCoresSpec`'s.
      */
-    fun renderRuntime(shapeName: String, stages: Int, amount: Double): DoubleArray {
+    fun renderRuntime(shapeName: String, amount: Double): DoubleArray {
         val rng = seed()
         val source = saw.buildExciter(random = rng, freqHz = freqHz, sampleRate = sampleRate).ignitor
 
-        return renderBuilt(source.fusedDistort(ConstantIgnitor(amount), parseDistortionShape(shapeName), stages), rng)
+        return renderBuilt(source.fusedDistort(ConstantIgnitor(amount), parseDistortionShape(shapeName)), rng)
     }
 
     fun DoubleArray.bits(): List<Long> = map { it.toRawBits() }
@@ -116,77 +116,41 @@ class WaveshaperKnobsSpec : StringSpec({
     "the Shape node's index selects the shaper its name selects, for every shape" {
         for (name in DistortionShapes.names) {
             withClue(name) {
-                render(IgnitorDsl.Shape(inner = saw, shape = idx(name))).bits() shouldBe renderHand(name, 0).bits()
+                render(IgnitorDsl.Shape(inner = saw, shape = idx(name))).bits() shouldBe renderHand(name).bits()
             }
         }
 
         // Not vacuous: two shapes are two sounds.
-        renderHand("hard", 0).bits() shouldNotBe renderHand("soft", 0).bits()
+        renderHand("hard").bits() shouldNotBe renderHand("soft").bits()
     }
 
     "a shape index arriving through the bag is read at build, and the default is soft" {
         val slotted = IgnitorDsl.Shape(inner = saw, shape = IgnitorDsl.Param("drive.shape", DistortionShapes.indexOf("tube")))
 
-        render(slotted, mapOf("drive.shape" to DistortionShapes.indexOf("fold"))).bits() shouldBe renderHand("fold", 0).bits()
-        render(slotted).bits() shouldBe renderHand("tube", 0).bits()
-        render(IgnitorDsl.Shape(inner = saw)).bits() shouldBe renderHand("soft", 0).bits()
+        render(slotted, mapOf("drive.shape" to DistortionShapes.indexOf("fold"))).bits() shouldBe renderHand("fold").bits()
+        render(slotted).bits() shouldBe renderHand("tube").bits()
+        render(IgnitorDsl.Shape(inner = saw)).bits() shouldBe renderHand("soft").bits()
     }
 
     "a bad index is a defined shaper: non-finite, negative or past the end is soft, a fraction rounds" {
-        val soft = renderHand("soft", 0).bits()
+        val soft = renderHand("soft").bits()
 
         for (bad in listOf(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY, -3.0, 16.0, 1e9)) {
             withClue(bad) { render(IgnitorDsl.Shape(inner = saw, shape = IgnitorDsl.Constant(bad))).bits() shouldBe soft }
         }
 
         // 1.6 is position 2, gentle; on a node, not only in the catalogue function.
-        render(IgnitorDsl.Shape(inner = saw, shape = IgnitorDsl.Constant(1.6))).bits() shouldBe renderHand("gentle", 0).bits()
+        render(IgnitorDsl.Shape(inner = saw, shape = IgnitorDsl.Constant(1.6))).bits() shouldBe renderHand("gentle").bits()
     }
 
     "a shape knob that is not a leaf is soft, even when it would evaluate to another index" {
         // `2 + 8` = 10, tube, if anything evaluated it; the build-time read is leaf-only.
         val expression = IgnitorDsl.Plus(left = IgnitorDsl.Constant(2.0), right = IgnitorDsl.Constant(8.0))
 
-        render(IgnitorDsl.Shape(inner = saw, shape = expression)).bits() shouldBe renderHand("soft", 0).bits()
+        render(IgnitorDsl.Shape(inner = saw, shape = expression)).bits() shouldBe renderHand("soft").bits()
     }
 
-    // ── The oversample factor (D7) ───────────────────────────────────────────────────────────────
-
-    "the oversample knob is the factor the hand API's stage count means, read at build" {
-        for ((factor, stages) in listOf(0.0 to 0, 1.0 to 0, 2.0 to 1, 3.0 to 1, 4.0 to 2, 8.0 to 3)) {
-            withClue(factor) {
-                render(IgnitorDsl.Shape(inner = saw, shape = idx("hard"), oversample = IgnitorDsl.Constant(factor))).bits() shouldBe
-                        renderHand("hard", stages).bits()
-            }
-        }
-
-        // Not vacuous: the oversampler changes the sound.
-        renderHand("hard", 2).bits() shouldNotBe renderHand("hard", 0).bits()
-    }
-
-    "a factor from the bag is read at build; a fraction truncates, as the pattern door's asIntOrNull does" {
-        val slotted = IgnitorDsl.Shape(inner = saw, shape = idx("hard"), oversample = IgnitorDsl.Param("distort.oversample", 0.0))
-
-        render(slotted, mapOf("distort.oversample" to 4.0)).bits() shouldBe renderHand("hard", 2).bits()
-        render(slotted).bits() shouldBe renderHand("hard", 0).bits()
-
-        // 3.6 truncates to 3 (one stage, 2x); rounding would give 4 (two stages).
-        render(slotted, mapOf("distort.oversample" to 3.6)).bits() shouldBe renderHand("hard", 1).bits()
-    }
-
-    "a non-finite, negative or non-leaf factor is no oversampler at all" {
-        val plain = renderHand("hard", 0).bits()
-
-        for (bad in listOf(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY, -4.0)) {
-            withClue(bad) {
-                render(IgnitorDsl.Shape(inner = saw, shape = idx("hard"), oversample = IgnitorDsl.Constant(bad))).bits() shouldBe plain
-            }
-        }
-
-        val expression = IgnitorDsl.Plus(left = IgnitorDsl.Constant(2.0), right = IgnitorDsl.Constant(2.0))
-
-        render(IgnitorDsl.Shape(inner = saw, shape = idx("hard"), oversample = expression)).bits() shouldBe plain
-    }
+    // ── The factor conversion (a region's factor knob) ─────────────────────────────────────────────
 
     "factorOf: the one conversion, non-finite is off, a fraction truncates, huge saturates unclamped" {
         Oversampler.factorOf(Double.NaN) shouldBe 0
@@ -200,26 +164,24 @@ class WaveshaperKnobsSpec : StringSpec({
 
     // ── The fused Distort node (classic()'s distort stage, the strip's law since step 4) ─────────
 
-    "the Distort node reads its shape and factor as the Shape node does, and renders the strip's law" {
+    "the Distort node reads its shape as the Shape node does, and renders the strip's law" {
         // CHANGED in phase 3 step 4 (decision D2, option A): this row used to pin the node as
         // `drive(amount).shape(...)`, the doors' capped chain. The node now renders the voice strip's
-        // loop (DistortionCore: the drive inside the oversampler, no soft cap), so the reference is
-        // the runtime `fusedDistort` at the same shape and stage count. The knob plumbing
-        // this row is about (index and factor read at build, NaN is soft and off) is unchanged.
+        // loop (DistortionCore: no soft cap), so the reference is the runtime `fusedDistort` at the same
+        // shape. The knob plumbing this row is about (the index read at build, NaN is soft) is unchanged.
         val distort = IgnitorDsl.Distort(
             inner = saw,
             amount = IgnitorDsl.Constant(0.4),
             shape = IgnitorDsl.Param("d.shape", 0.0),
-            oversample = IgnitorDsl.Param("d.os", 0.0),
         )
-        val bag = mapOf("d.shape" to DistortionShapes.indexOf("asym"), "d.os" to 4.0)
+        val bag = mapOf("d.shape" to DistortionShapes.indexOf("asym"))
 
-        render(distort, bag).bits() shouldBe renderRuntime("asym", 2, amount = 0.4).bits()
-        render(distort).bits() shouldBe renderRuntime("soft", 0, amount = 0.4).bits()
-        render(distort, mapOf("d.shape" to Double.NaN, "d.os" to Double.NaN)).bits() shouldBe renderRuntime("soft", 0, amount = 0.4).bits()
+        render(distort, bag).bits() shouldBe renderRuntime("asym", amount = 0.4).bits()
+        render(distort).bits() shouldBe renderRuntime("soft", amount = 0.4).bits()
+        render(distort, mapOf("d.shape" to Double.NaN)).bits() shouldBe renderRuntime("soft", amount = 0.4).bits()
 
         // Not the doors' law any more: the loud saw drives the shaper past the doors' soft cap.
-        render(distort).bits() shouldNotBe renderHand("soft", 0, drive = 0.4).bits()
+        render(distort).bits() shouldNotBe renderHand("soft", drive = 0.4).bits()
     }
 
     // ── The rng stream ───────────────────────────────────────────────────────────────────────────
@@ -232,7 +194,6 @@ class WaveshaperKnobsSpec : StringSpec({
         val reference = render(IgnitorDsl.Shape(inner = noise)).bits()
 
         render(IgnitorDsl.Shape(inner = noise, shape = IgnitorDsl.PerlinNoise())).bits() shouldBe reference
-        render(IgnitorDsl.Shape(inner = noise, oversample = IgnitorDsl.PerlinNoise())).bits() shouldBe reference
 
         val tremolo = IgnitorDsl.Tremolo(inner = noise, rate = IgnitorDsl.Constant(37.3), depth = IgnitorDsl.Constant(0.8))
 

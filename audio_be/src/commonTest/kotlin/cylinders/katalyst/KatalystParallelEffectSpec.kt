@@ -44,8 +44,8 @@ import kotlin.math.sqrt
  *
  * **The oracles are the input's own definition**: a gain branch is the input times its factor, an empty branch is the
  * input, a limiter with a lookahead that compresses nothing is the input [delay] frames late
- * (`KatalystCompressorLookaheadSpec` pins that), and a distort stage at amount 0 is the input through an unshaped round
- * trip of its oversampler (`KatalystDistortEffectSpec` pins that), written here with bare [Oversampler]s; so every
+ * (`KatalystCompressorLookaheadSpec` pins that), and a region with an empty body is the input through an unshaped round
+ * trip of its converters (`KatalystRegionEffectSpec` pins that), written here with bare [Oversampler]s; so every
  * expected sample is written from the input, never from the stage under test.
  */
 class KatalystParallelEffectSpec : StringSpec({
@@ -206,8 +206,8 @@ class KatalystParallelEffectSpec : StringSpec({
 
     // ── Matched in phase: the oversamplers' twins ───────────────────────────────────────────────
 
-    /** A distort stage at [factor] that is off: the input through its oversampler's round trip, unshaped. */
-    fun distortOff(factor: Int) = KatalystStageDsl.Distort(amount = c(0.0), oversample = factor)
+    /** An oversampling region at [factor] with an empty body: the input through its round trip, unshaped. */
+    fun roundTrip(factor: Int) = KatalystStageDsl.OversampleBy(factor = factor, body = empty)
 
     /**
      * [signal] (the first [frames] frames of it, from 0) through an unshaped round trip of a bare [Oversampler] per
@@ -231,8 +231,8 @@ class KatalystParallelEffectSpec : StringSpec({
         return { k -> if (k - shift < 0) 0.0 else out[k - shift] }
     }
 
-    "an oversampled branch and a dry one meet in phase: the dry gets the twin of the distort's oversampler" {
-        val built = chain(parallel(branch(distortOff(2)), empty))
+    "an oversampled branch and a dry one meet in phase: the dry gets the twin of the region's round trip" {
+        val built = chain(parallel(branch(roundTrip(2)), empty))
         val stage = built.pipeline.single().shouldBeInstanceOf<KatalystParallelEffect>()
 
         stage.oversamplers shouldBe listOf(1)
@@ -247,7 +247,7 @@ class KatalystParallelEffectSpec : StringSpec({
     }
 
     "an oversampled branch and a lookahead: each pads the other's kind, a twin and a ring" {
-        val built = chain(parallel(branch(distortOff(2)), branch(late)))
+        val built = chain(parallel(branch(roundTrip(2)), branch(late)))
 
         built.latencyFrames shouldBe 3 + delay
 
@@ -259,7 +259,7 @@ class KatalystParallelEffectSpec : StringSpec({
     }
 
     "nested: a 2x branch holding a 4x parallel, against a dry branch that gets both twins" {
-        val built = chain(parallel(branch(distortOff(2), parallel(branch(distortOff(4)), empty)), empty))
+        val built = chain(parallel(branch(roundTrip(2), parallel(branch(roundTrip(4)), empty)), empty))
         val stage = built.pipeline.single().shouldBeInstanceOf<KatalystParallelEffect>()
 
         stage.oversamplers shouldBe listOf(1, 2)
@@ -274,7 +274,7 @@ class KatalystParallelEffectSpec : StringSpec({
     }
 
     "a reset clears the twins: the next life is the fresh round trip, not the last one's ring" {
-        val built = chain(parallel(branch(distortOff(2)), empty))
+        val built = chain(parallel(branch(roundTrip(2)), empty))
 
         run(built, blocks = 4)
         built.reset()
@@ -293,7 +293,7 @@ class KatalystParallelEffectSpec : StringSpec({
         // 16.75 kHz at 44.1 kHz repeats every 882 frames; the RMS spans whole periods from frame 1764 on.
         val hard = DistortionShapes.indexOf("hard").toInt()
         val sine = { k: Int -> 0.1 * sin(2.0 * PI * 16750.0 * k / sampleRate) }
-        val clean = KatalystStageDsl.Distort(amount = c(0.01), shape = hard, oversample = 2)
+        val clean = KatalystStageDsl.OversampleBy(factor = 2, body = branch(KatalystStageDsl.Distort(amount = c(0.01), shape = hard)))
         val blocks = (6 * 882) / blockFrames + 1
         val out = run(chain(parallel(branch(clean), empty)), blocks = blocks, left = sine, right = sine)
 
@@ -307,18 +307,20 @@ class KatalystParallelEffectSpec : StringSpec({
     }
 
     "a twin after a lookahead is a tail until it rings out, after every branch has gone quiet" {
-        // The lookahead branch gets the 2x twin; its output, so the twin's input, ends 220 frames after the bus input.
-        // After three quiet blocks the distort's hold (268) and the lookahead (220) have both passed, while the twin
-        // has seen at most 256 quiet frames of its 268; after five, nothing rings.
-        val built = chain(parallel(branch(distortOff(2)), branch(late)))
+        // The lookahead branch gets the 2x twin; its output, so the twin's input, ends 882 frames (20 ms) after the bus
+        // input. The region counts its hold (268) from its body's output, after the trip up has rung out, so it ends a
+        // few hundred frames after the input. After seven quiet blocks (896) the region and the lookahead have both
+        // passed, while the twin has seen at most 14 quiet frames of its 268; after ten (1280), nothing rings.
+        val longer = late.copy(lookahead = 0.02)
+        val built = chain(parallel(branch(roundTrip(2)), branch(longer)))
         val stage = built.pipeline.single().shouldBeInstanceOf<KatalystParallelEffect>()
 
         run(built, blocks = 4)
-        run(built, blocks = 3, left = { 0.0 }, right = { 0.0 })
+        run(built, blocks = 7, left = { 0.0 }, right = { 0.0 })
         stage.branches.none { it.hasTail() } shouldBe true
         stage.hasTail() shouldBe true
 
-        run(built, blocks = 2, left = { 0.0 }, right = { 0.0 })
+        run(built, blocks = 3, left = { 0.0 }, right = { 0.0 })
         stage.hasTail() shouldBe false
     }
 

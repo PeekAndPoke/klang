@@ -154,7 +154,7 @@ class KatalystChain internal constructor(
      * distort stage (its DC blocker decays from the offset an asymmetric shape made, `KatalystDistortEffect.hasTail`;
      * review round 2 of KLANG-00292 (katalyst distort stage): without it a stopped playback's master cut that decay).
      * A `parallel` stage declares one when a branch does; a region always does: whatever its body holds, its down
-     * conversion rings out what the body last produced (`KatalystRegionEffect.hasTail`'s hold), as the distort's oversampler does.
+     * conversion rings out what the body last produced (`KatalystRegionEffect.hasTail`'s hold).
      * The master's "is a tail possible at all" test (`MasterBus.isRinging`), cheap, no buffer scan; [hasTail] then
      * answers whether one is there. Body, vowel and phaser may ring too; whether that is audible is
      * KLANG-00293 (chain swap cuts ringing inserts).
@@ -166,7 +166,7 @@ class KatalystChain internal constructor(
 
     /**
      * Frames this chain delays the orbit by: the sum of its latent stages' delays ([KatalystLatentEffect]: a
-     * compressor's lookahead, phase 3 step 12 C2, and a distort stage's oversampling), since every stage runs in
+     * compressor's lookahead, phase 3 step 12 C2, an oversampling region, and a `parallel` holding either), since every stage runs in
      * series on the one mix. 0 for a chain without one. A chain swap delays its ramps by the later of the two
      * chains' latencies (`ChainSwap.begin`).
      */
@@ -467,7 +467,7 @@ class KatalystChain internal constructor(
      * Every other stage's tail ends: the reverb's comb feedback is at most 0.98 (its size is
      * bounded to 0..1 before it reaches the unit, `Reverb.normalizeSize`), the phaser's feedback is clamped at 0.95
      * (`PhaserCore.MAX_FEEDBACK`), the body and vowel resonators are stable filters, and the
-     * compressor's lookahead and the distort stage's oversampling hold at most a few frames. The gain, eq and duck
+     * compressor's lookahead and a region's conversions hold at most a few frames. The gain, eq and duck
      * hold nothing.
      */
     fun sustainsItself(): Boolean {

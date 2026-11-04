@@ -97,7 +97,7 @@ import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
  * [toKatalystKnob]) and nothing else: any Ignitor node, an `Ignitor.param(...)` included, is a script error at the stage
  * call; the reason is on [toKatalystKnob]. The chain reads its knobs once per block. The exceptions are the knobs fixed
  * when the chain is built, plain numbers or names: the compressor's and the limiter's `lookahead` (it sizes a delay
- * ring) and `distort`'s `shape` and `oversample`; the `eq` sections, whose knobs take a number or a param only
+ * ring) and `distort`'s `shape`; the `eq` sections, whose knobs take a number or a param only
  * ([toEqSectionKatalystKnob], over `eqSectionKnobOrNull` in `audio_bridge`).
  *
  * The builders themselves ([KatalystBuilder], its stage builders and the modulators' builders) and the knob arithmetic
@@ -439,17 +439,15 @@ internal fun KatalystBuilder.scriptLimiter(
  *   sprudel's `distort(...)` is the voice's door.
  * @param shape the waveshaper by name, from the voice's list (`soft`, `hard`, `tube`, `softsat`,
  *   `gentle`, ...); an unknown name is `soft`. Fixed with the chain.
- * @param oversample the oversampling factor (2, 4, 8; 0 or 1 is none). Fixed with the chain. It
- *   delays this orbit (at the output, the whole playback) by 3 frames at 2x, 4 at 4x and 5 at 8x. The
- *   default is 2x, unlike the voice's 0: a bus bends the whole mix, so its aliasing lands on every note.
- *   `oversample = 1` keeps the raw aliased character.
+ *
+ * It distorts at the rate of the bus it is in. A bus bends the whole mix, so its aliasing lands on every note: for
+ * less, write it inside a region, `k.oversampleAtLeast(2, r => r.distort(0.15))`.
  */
 @KlangScript.Function(name = "distort")
 internal fun KatalystBuilder.scriptDistort(
     amount: IgnitorDslLike? = null,
     shape: String = "soft",
-    oversample: Int = 2,
-): KatalystBuilder = this.distort(amount = amount?.toKatalystKnob() ?: DISTORT_AMOUNT.kat, shape = shape, oversample = oversample)
+): KatalystBuilder = this.distort(amount = amount?.toKatalystKnob() ?: DISTORT_AMOUNT.kat, shape = shape)
 
 /**
  * Appends a sidechain duck: this orbit is pulled down whenever the orbit it listens to sounds.
@@ -691,7 +689,7 @@ internal fun KatalystBuilder.scriptSerial(vararg stages: (KatalystBuilder) -> Ka
  *
  * The sum is plain (two identical branches are twice the level, +6 dB); a branch's own `gain` sets the blend. A `reverb`
  * or `delay` adds its return on top of the dry it is fed, so a branch with one carries the dry as well. A branch
- * that delays the bus (a compressor's lookahead, an oversampled distort) is matched in phase by the others, so the sum
+ * that delays the bus (a compressor's lookahead, an oversampling region) is matched in phase by the others, so the sum
  * does not comb. With no branch, `parallel()` returns the chain as it is; with one, it appends that branch's stages in
  * place, as written: a `classic()` in a branch is that branch's classic block, even next to one outside it (the
  * at-most-once rule of [classic] holds per builder, and a branch is a builder of its own). A `duck` inside a branch is
@@ -719,8 +717,7 @@ internal fun KatalystBuilder.scriptParallel(vararg branches: (KatalystBuilder) -
  * The body is a function from a builder to a builder and receives an EMPTY one, the bus at this position, as a
  * `parallel` branch does. Inside, every stage keeps its sound: a delay its time, a reverb its room, a filter its
  * cutoff. The factor is fixed with the chain and rounded down to a power of two (3 is 2, 6 is 4); 1 or less runs the
- * body at the rate it is in, and the rate stops at 16x. Nested, it steps on from the rate it is in. A `distort`'s own
- * `oversample` inside is a floor: inside a 4x region, `oversample = 2` converts nothing. For a piece that only needs a
+ * body at the rate it is in, and the rate stops at 16x. Nested, it steps on from the rate it is in. For a piece that only needs a
  * minimum rate, `oversampleAtLeast` adds nothing when the rate is already there. A `duck` inside the body is the
  * orbit's duck, as anywhere in the chain.
  *

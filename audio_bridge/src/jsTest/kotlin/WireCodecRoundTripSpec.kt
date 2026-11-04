@@ -101,7 +101,7 @@ class WireCodecRoundTripSpec : StringSpec({
             KatalystStageDsl.Phaser(rate = p(), wet = p(), center = p(), sweep = p(), floor = p()),
             KatalystStageDsl.Compressor(threshold = k(), ratio = k(), knee = k(), attack = k(), release = k(), lookahead = 0.002),
             KatalystStageDsl.Compressor(threshold = p(), ratio = p(), knee = p(), attack = p(), release = p()),
-            KatalystStageDsl.Distort(amount = k(), shape = 2, oversample = 8),
+            KatalystStageDsl.Distort(amount = k(), shape = 2),
             KatalystStageDsl.Distort(amount = p()),
             KatalystStageDsl.Duck(orbit = k(), depth = k(), attack = k()),
             KatalystStageDsl.Duck(orbit = p(), depth = p(), attack = p()),
@@ -181,9 +181,9 @@ class WireCodecRoundTripSpec : StringSpec({
                     orbit = KatalystKnobDsl.Constant(2.0), depth = KatalystKnobDsl.Constant(0.8),
                     attack = KatalystKnobDsl.Constant(0.05),
                 ),
-                // the bus distort: a slot amount and the two plain Int knobs fixed with the chain, and bare
+                // the bus distort: a slot amount and the plain Int shape fixed with the chain, and bare
                 KatalystStageDsl.Distort(
-                    amount = KatalystKnobDsl.Param("drive", 0.15), shape = DistortionShapes.indexOf("tube").toInt(), oversample = 4,
+                    amount = KatalystKnobDsl.Param("drive", 0.15), shape = DistortionShapes.indexOf("tube").toInt(),
                 ),
                 KatalystStageDsl.Distort(),
                 KatalystStageDsl.Eq(
@@ -390,8 +390,9 @@ class WireCodecRoundTripSpec : StringSpec({
         // it), step 3b from -1360551677 (Diagnostics.soundlessVoices joined it); KLANG-00214 (oversampling regions)
         // step 1 from 170881894 (the Ignitor's `OversampleBy`, `OversampleAtLeast` and `RegionInput` joined it);
         // KLANG-00406 step 5 from 827954479 (`Cmd.SetGain` joined it); KLANG-00214 step 3a from 1660499267 (the
-        // Katalyst's `OversampleBy` and `OversampleAtLeast` joined it).
-        WIRE_SCHEMA_HASH shouldBe -640226917
+        // Katalyst's `OversampleBy` and `OversampleAtLeast` joined it); KLANG-00214 step 4 from -640226917 (the
+        // `oversample` field left `IgnitorDsl.Shape`, `IgnitorDsl.Distort` and `KatalystStageDsl.Distort`).
+        WIRE_SCHEMA_HASH shouldBe 210338569
     }
 
     "ScheduledVoice round-trips a minimal (mostly-null) VoiceData" {

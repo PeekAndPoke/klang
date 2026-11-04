@@ -109,11 +109,8 @@ data class SvdFm(
 data class SvdDistortion(
     var distort: Double? = null,
     var distortShape: String? = null,
-    var distortOversample: Int? = null,
     var coarse: Double? = null,
-    var coarseOversample: Int? = null,
     var crush: Double? = null,
-    var crushOversample: Int? = null,
 )
 
 /** Phaser. */
@@ -239,11 +236,8 @@ fun mergeSvdDistortion(base: SvdDistortion?, over: SvdDistortion?): SvdDistortio
     return SvdDistortion(
         distort = over.distort ?: base.distort,
         distortShape = over.distortShape ?: base.distortShape,
-        distortOversample = over.distortOversample ?: base.distortOversample,
         coarse = over.coarse ?: base.coarse,
-        coarseOversample = over.coarseOversample ?: base.coarseOversample,
         crush = over.crush ?: base.crush,
-        crushOversample = over.crushOversample ?: base.crushOversample,
     )
 }
 

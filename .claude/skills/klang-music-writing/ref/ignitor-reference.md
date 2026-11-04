@@ -268,7 +268,7 @@ defaults to child 0.
 ```javascript
 // Open vs. palm-muted guitar — same scale, two timbres
 let open  = Ignitor.saw().lowpass(2200).adsr(0.005, 0.3, 0.4, 0.4)
-let muted = Ignitor.saw().lowpass(1800).distort(0.7, "tube", 4)
+let muted = Ignitor.saw().lowpass(1800).oversampleAtLeast(4, y => y.distort(0.7, "tube"))
                      .adsr(0.002, 0.08, 0.0, 0.04)
 let guitar = Ignitor.variants(open, muted).classic()
 
@@ -425,8 +425,10 @@ their short names) and `declick(seconds)` rounds the gain's corners (0 = off, th
 | Method                                  | Description                                |
 |-----------------------------------------|--------------------------------------------|
 | `.drive(amount)`                        | Pre-amplification: gain, no curve          |
-| `.shape(shape?, oversample?)`           | The waveshaper curve alone, no gain        |
-| `.distort(amount, shape?, oversample?)` | `.drive()` + `.shape()` in one node        |
+| `.shape(shape?)`                        | The waveshaper curve alone, no gain        |
+| `.distort(amount, shape?)`              | `.drive()` + `.shape()` in one node        |
+| `.oversampleBy(n, y => ...)`            | The body at n times the rate it is in      |
+| `.oversampleAtLeast(n, y => ...)`       | The body at n times the base rate at least |
 | `.crush(bits)`                          | Bit-depth reduction                        |
 | `.coarse(factor)`                       | Sample-rate reduction                      |
 | `.phaser(wet, rate, center?, sweep?, x => x.floor(f))` | Allpass phaser: wet FIRST, wet and rate required, center/sweep default 1000; the dry floor (default 0) is the builder knob |
@@ -444,9 +446,15 @@ Distort / shape curves: `"soft"` (tanh, default), `"hard"`, `"gentle"`, `"cubic"
 An unknown name is `"soft"`. The node carries the curve as its index in that list, so the door also takes the
 number, or an `Ignitor.param(...)` slot carrying it (read once per note).
 
-Oversample factor (on `.distort` / `.shape`): user-facing factor, floored to power of 2. `0` or `1` = off,
-`2` = 2x, `4` = 4x, `8` = 8x. Suppresses aliasing for heavy / bright distortion (e.g. `"exp"`, `"fold"`,
-`"hard"`). Example: `Ignitor.saw().distort(0.8, "exp", 4)`. Read once per note; a number or an `Ignitor.param(...)` slot.
+Oversampling is a REGION around the stages that need it (KLANG-00214, 2026-11): `x.oversampleAtLeast(4, y => y
+.distort(0.8, "exp"))` runs the body at 4x and comes back down once; it suppresses aliasing for heavy or bright
+distortion (`"exp"`, `"fold"`, `"hard"`). The factor is floored to a power of two (at most 16x), 1 or less is no
+region. `oversampleBy(n)` multiplies the rate it is in; `oversampleAtLeast(n)` only steps up to what is missing (the
+door for reusable pieces). Several stages in ONE region convert once (`y => y.distort(0.3, "tube").highpass(100)
+.distort(0.5, "soft")`); a separate region per stage converts per stage and sounds slightly different (the second
+clipper no longer sees the first one's harmonics above 24 kHz). Sources inside the braces still run at 1x. The stages
+have no `oversample` parameter of their own any more. The Katalyst has the same two doors (`k.oversampleAtLeast(2, r =>
+r.distort(0.15))`); sprudel's `distort` has none and runs at the voice's base rate.
 
 Tremolo shapes are read once per note, the rate every block, a fixed depth every block and a moving depth
 every sample (a moving depth at or below 0 leaves the signal unchanged). A `"square"` at depth 1 is silence for about
@@ -581,13 +589,13 @@ branch it is `x`; with one, that branch.
 
 ```javascript
 // parallel distortion: the clean string and a screaming copy of its highs, a little under it
-let screamer = x => x.parallel(clean => clean, dirt => dirt.highpass(720).distort(0.35, "soft", 2).mul(0.6))
+let screamer = x => x.parallel(clean => clean, dirt => dirt.highpass(720).oversampleAtLeast(2, y => y.distort(0.35, "soft")).mul(0.6))
 ```
 
 - The sum is plain: `x.parallel(y => y, y => y)` is twice `x` (+6 dB). Blend with a `mul` inside a branch.
-- A branch that is LATE (an oversampled `distort` or `shape`: about 3 samples at 2x, 4 at 4x, 5 at 8x) is matched in
+- A branch that is LATE (an oversampling region: about 3 samples at 2x, 4 at 4x, 5 at 8x) is matched in
   phase: the others run through an unshaped round trip of the same oversampler, so the clean and the dirty copy do not
-  comb. A plain `plus` does NOT do that: `x.plus(x.distort(0.35, "soft", 2))` sums them about 3 samples apart, a comb
+  comb. A plain `plus` does NOT do that: `x.plus(x.oversampleAtLeast(2, y => y.distort(0.35, "soft")))` sums them about 3 samples apart, a comb
   with its first notch near 8 kHz. Prefer `parallel` for wet/dry
   splits.
 - The Katalyst builder has `parallel` too (branches of bus stages, each from an empty builder): see the sprudel
@@ -726,7 +734,7 @@ note("c3 e3 g3").sound(guitar).lpf(1800).adsr(release = 0.2)
 The slots it places are grouped per stage on `Ignitor.slot`, named after the sprudel
 readers: `Ignitor.slot.lpf.freq`, `.q`, `.passes`, `.env`, `.attack`, `.decay`, `.sustain`, `.release` (the
 same on `hpf`; `bpf` and `notch` without `passes`), `Ignitor.slot.crush.bits`, `Ignitor.slot.coarse.factor`,
-`Ignitor.slot.distort.amount|shape|oversample`, `Ignitor.slot.tremolo.depth|rate|shape`,
+`Ignitor.slot.distort.amount|shape`, `Ignitor.slot.tremolo.depth|rate|shape`,
 `Ignitor.slot.adsr.attack|decay|sustain|release|on`, `Ignitor.slot.onepole`, `Ignitor.slot.adsrCurves.attack|decay|release`,
 the vibrato `Ignitor.slot.vibrato.rate|semitones|rangeFrom|rangeTo|phase` (`semitones` is the switch, unset = off), the accelerate
 `Ignitor.slot.accelerate` (flat, the switch, unset = off), the FM `Ignitor.slot.fm.ratio|depth|attack|decay|sustain|release`
@@ -743,8 +751,7 @@ envelope stages, for `crush`, `coarse`, the tremolo's knobs and the envelope's s
 - `adsr.on`: no door has the switch (on a door, not writing `adsr()` already means no envelope);
 - `distort.*`: the `distort` door builds a drive into a shaper whose shaper always runs and caps its
   output, while `.classic()` uses the one distort node that switches drive AND shape off together and
-  renders the retired voice strip's exact law (no cap, so a hot shape can go past 1.0; the drive inside the
-  oversampler). A slot on the door's distort would shape every note, written or not.
+  renders the retired voice strip's exact law (no cap, so a hot shape can go past 1.0). A slot on the door's distort would shape every note, written or not.
 
 **Every voice is its tree (phase 3 step 9, 2026-09-27).** The BUILT-IN sounds (`sound("saw")`) and the
 SAMPLES are `.classic()` voices, and so is every authored instrument whose tree ENDS in `.classic()`: the pattern

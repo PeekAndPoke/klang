@@ -35,7 +35,6 @@ import io.peekandpoke.klang.audio_bridge.constants.RAMP_SHAPE_MAX
 import io.peekandpoke.klang.audio_bridge.constants.RANGEX_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.SAW_RESET_SAMPLES
 import io.peekandpoke.klang.audio_bridge.constants.SAW_SHAPE_MAX
-import io.peekandpoke.klang.audio_bridge.constants.SHAPE_OVERSAMPLE
 import io.peekandpoke.klang.audio_bridge.constants.SHIMMER_FEEDBACK
 import io.peekandpoke.klang.audio_bridge.constants.SHIMMER_PITCHES
 import io.peekandpoke.klang.audio_bridge.constants.SHIMMER_TONE_HZ
@@ -303,7 +302,7 @@ sealed interface IgnitorDsl {
         /** The coarse stage: `coarse.factor`. */
         val coarse: CoarseSlots = CoarseSlots()
 
-        /** The distort stage: `distort.amount`, `distort.shape`, `distort.oversample`. */
+        /** The distort stage: `distort.amount`, `distort.shape`. */
         val distort: DistortSlots = DistortSlots()
 
         /** The highpass stage: `hpf.freq`, `hpf.q`, `hpf.passes`, `hpf.env` and its four stages. */
@@ -1151,7 +1150,7 @@ sealed interface IgnitorDsl {
      * `x.parallel(a, b)` = `a(x) + b(x)` with every branch reading the SAME `x` (one instance, built once; a pitch node
      * in a branch forks it, as it forks any shared node).
      *
-     * **Matched in phase.** A branch that delays the signal (an oversampled `distort` or `shape`, 3 to 5 samples)
+     * **Matched in phase.** A branch that delays the signal (an oversampling region, 3 to 5 samples)
      * would comb against the others in the sum, so the build gives every branch an unshaped round trip of each
      * oversampler it lacks (a phase twin), and all branches then share the same delay at every frequency. A branch
      * that mixes two oversamplers in a plain [Plus] falls back to a whole-sample delay, which matches the bass and
@@ -1581,7 +1580,7 @@ sealed interface IgnitorDsl {
          *
          * A KNOB since phase 3 step 5 (2026-09-25; it was a structural `Int`), so that
          * `classic()` can fill it from the `lpf.passes` / `hpf.passes` slot. **Read ONCE, at voice
-         * build**, the leaf-only way of the 3b `oversample` knob: a `Param` or `Constant` leaf gives
+         * build**, the leaf-only way of the `shape` knob: a `Param` or `Constant` leaf gives
          * its value, anything else has no build-time answer and is one pass (and is not built, so
          * no rng draw moves). The value goes through `coercePasses`, the one coercion, which ROUNDS
          * (as the strip always has for sprudel's `lpf(passes = ...)`), bounds it to
@@ -2142,22 +2141,18 @@ sealed interface IgnitorDsl {
      *   answer and is `soft`, and is not built at all (no rng draw moves). The index rounds to the
      *   nearest position; a non-finite, negative or past-the-end one is `soft`, exactly what an
      *   unknown name has always been. Default: `soft` (index 0).
-     * @param oversample the oversampling FACTOR (2 = 2x, 4 = 4x, 8 = 8x; floored to a power of two;
-     *   1 or less is no oversampler, today's plain path). **Read ONCE, at voice build**, the same
-     *   leaf-only way as [shape] (a non-leaf is 0, off), and truncated to a whole factor, as the
-     *   pattern door's `asIntOrNull` does; a non-finite one is off. No upper clamp (the Motor stays
-     *   raw). A STOPGAP (decision D7, KLANG-00237 (builtin instruments) section 3): a knob so that
-     *   `classic()` can fill it from `distort.oversample`, and KLANG-00214 (oversampling regions)
-     *   retires it for a region. Default: 0 (off).
+     *
+     * It runs at the rate of the signal it receives: written inside an oversampling region
+     * ([OversampleBy], [OversampleAtLeast]) it shapes at the region's rate. Its own oversampling factor (the D7
+     * stopgap) retired with KLANG-00214 (oversampling regions) step 4.
      */
     @WireName("shape")
     data class Shape(
         val inner: IgnitorDsl,
         val shape: IgnitorDsl = Constant(DistortionShapes.SOFT_INDEX.toDouble()),
-        val oversample: IgnitorDsl = Constant(SHAPE_OVERSAMPLE),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); shape.collectParams(out); oversample.collectParams(out)
+            inner.collectParams(out); shape.collectParams(out)
         }
     }
 
@@ -2170,30 +2165,28 @@ sealed interface IgnitorDsl {
      *
      * **Its law is the VOICE STRIP's, not the doors'** (phase 3 step 4, decision D2 option A,
      * 2026-09-25): the backend renders it through the loop the strip's distort ran
-     * (`DistortionCore`): `shape(x * 10^(amount * 1.2))` with the drive applied INSIDE the oversampler,
-     * then a DC blocker, and NO soft cap, so a hot shape (`gentle` is doubled) can leave `[-1, 1]`.
+     * (`DistortionCore`): `shape(x * 10^(amount * 1.2))`, then a DC blocker, and NO soft cap, so a hot shape (`gentle` is doubled) can leave `[-1, 1]`.
      * It was proven bit-identical to the strip before the strip retired (phase 3 step 9). The `distort`/`shape` doors keep
      * their capped `Shape(Drive(...))` law (drive at the base rate, `softCap` last), unchanged, because
      * songs depend on it.
      *
      * [amount] is read once per block. A leaf amount at or below 0, or unset, is not built (the gate);
      * a MODULATED amount at or below 0 is not a bypass: the node keeps shaping at unity drive, so its
-     * oversampler and DC blocker never go stale across a crossing (ledger W5's hazard).
+     * DC blocker never goes stale across a crossing (ledger W5's hazard).
      *
      * Its KDoc used to call it "kept for backward compatibility with serialized trees"; wire trees are
      * never persisted, and that was not the reason it exists.
      *
-     * [shape] and [oversample] are the knobs of [Shape], read the same way, at voice build.
+     * [shape] is the knob of [Shape], read the same way, at voice build. Like [Shape] it runs at the rate it receives.
      */
     @WireName("distort")
     data class Distort(
         val inner: IgnitorDsl,
         val amount: IgnitorDsl = Constant(0.5),
         val shape: IgnitorDsl = Constant(DistortionShapes.SOFT_INDEX.toDouble()),
-        val oversample: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); amount.collectParams(out); shape.collectParams(out); oversample.collectParams(out)
+            inner.collectParams(out); amount.collectParams(out); shape.collectParams(out)
         }
     }
 
@@ -2685,7 +2678,7 @@ fun IgnitorDsl.serial(vararg stages: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl =
 /**
  * Runs this signal through [branches] side by side and SUMS them, the twin of [serial]: `x.parallel(a, b)` is
  * `a(x) + b(x)`, every branch reading the same `x` (one instance, built once; a pitch node in a branch forks it). A
- * branch that delays the signal (an oversampled `distort` or `shape`) is matched in phase by the others, each running
+ * branch that delays the signal (an oversampling region) is matched in phase by the others, each running
  * through an unshaped round trip of the oversampler it lacks, so the sum does not comb ([IgnitorDsl.Parallel]).
  * The sum is plain: `x.parallel({ it }, { it })` is twice `x`; a branch's own `mul` sets the blend.
  *
@@ -3077,9 +3070,9 @@ fun IgnitorDsl.drive(amount: IgnitorDsl): IgnitorDsl.Drive = IgnitorDsl.Drive(in
 
 /**
  * Pure waveshaping without drive. [shape] is the waveshaper's INDEX in [DistortionShapes] (`DistortionShapes.SOFT_INDEX`,
- * `soft`, by default), [oversample] the oversampling factor (2, 4, 8; 0 or 1 = off); both are knobs the runtime reads
- * once per note, so each takes a number (`4.ign`) or a slot (a moving signal is a non-leaf and reads as the default). The name form
- * takes the waveshaper's name. See [IgnitorDsl.Shape] for the shapes:
+ * `soft`, by default), a knob the runtime reads once per note, so it takes a number (`4.ign`) or a slot (a moving signal
+ * is a non-leaf and reads as the default). The name form takes the waveshaper's name. To shape at a higher rate, write
+ * it inside a region (`oversampleAtLeast(4.ign) { it.shape("tube") }`). See [IgnitorDsl.Shape] for the shapes:
  *
  * Quick reference:
  *  - soft / gentle / softsat / cubic / exp / sineshaper: symmetric soft
@@ -3089,18 +3082,16 @@ fun IgnitorDsl.drive(amount: IgnitorDsl): IgnitorDsl.Drive = IgnitorDsl.Drive(in
  * Typed since the typed-doors rollout S3c (maintainer, 2026-10-16: slot knobs, not build-time knobs); the full text
  * lives on the script door (`KlangScriptIgnitorExtensions.shape`).
  */
-fun IgnitorDsl.shape(
-    shape: IgnitorDsl = DistortionShapes.SOFT_INDEX.ign,
-    oversample: IgnitorDsl = SHAPE_OVERSAMPLE.ign,
-): IgnitorDsl.Shape = IgnitorDsl.Shape(inner = this, shape = shape, oversample = oversample)
+fun IgnitorDsl.shape(shape: IgnitorDsl = DistortionShapes.SOFT_INDEX.ign): IgnitorDsl.Shape =
+    IgnitorDsl.Shape(inner = this, shape = shape)
 
 /**
  * [shape] by NAME (`shape("tube")`), through the lookup the script door uses ([DistortionShapes.indexOf]): an unknown
  * name is `soft`, coerced, never thrown. The name has no default here (pattern point 9: with the index form all-default,
  * a bare call would be ambiguous).
  */
-fun IgnitorDsl.shape(shape: String, oversample: IgnitorDsl = SHAPE_OVERSAMPLE.ign): IgnitorDsl.Shape =
-    shape(shape = DistortionShapes.indexOf(shape).ign, oversample = oversample)
+fun IgnitorDsl.shape(shape: String): IgnitorDsl.Shape =
+    shape(shape = DistortionShapes.indexOf(shape).ign)
 
 // Envelope
 
@@ -3159,18 +3150,16 @@ fun IgnitorDsl.fm(
 
 /**
  * Applies waveshaping distortion: [drive] by [amount], then [shape] with the waveshaper [shape] (an index, `soft` by
- * default) and the [oversample] factor, each a number or a slot, read once per note; the name form takes the waveshaper's name.
+ * default, a number or a slot, read once per note); the name form takes the waveshaper's name. To distort at a higher
+ * rate, write it inside a region (`oversampleAtLeast(4.ign) { it.distort(0.5.ign, "tube") }`).
  * See [IgnitorDsl.Shape] for the shapes, and the script door (`KlangScriptIgnitorExtensions.distort`) for the full text.
  */
-fun IgnitorDsl.distort(
-    amount: IgnitorDsl,
-    shape: IgnitorDsl = DistortionShapes.SOFT_INDEX.ign,
-    oversample: IgnitorDsl = SHAPE_OVERSAMPLE.ign,
-): IgnitorDsl.Shape = drive(amount = amount).shape(shape = shape, oversample = oversample)
+fun IgnitorDsl.distort(amount: IgnitorDsl, shape: IgnitorDsl = DistortionShapes.SOFT_INDEX.ign): IgnitorDsl.Shape =
+    drive(amount = amount).shape(shape = shape)
 
 /** [distort] with the waveshaper by NAME (`distort(amount = 0.4.ign, shape = "tube")`), through [DistortionShapes.indexOf]. */
-fun IgnitorDsl.distort(amount: IgnitorDsl, shape: String, oversample: IgnitorDsl = SHAPE_OVERSAMPLE.ign): IgnitorDsl.Shape =
-    drive(amount = amount).shape(shape = shape, oversample = oversample)
+fun IgnitorDsl.distort(amount: IgnitorDsl, shape: String): IgnitorDsl.Shape =
+    drive(amount = amount).shape(shape = shape)
 
 /**
  * Applies bit-crush quantization at the bit depth [bits] (`2^bits` levels; below 1 it passes through), a number

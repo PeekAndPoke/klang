@@ -495,30 +495,31 @@ internal object KlangScriptIgnitorExtensions {
      * @param shape a shape NAME, converted to its index in `DistortionShapes` (an unknown name is
      *   "soft"); or the index itself as a number; or a slot carrying it (`Ignitor.param("drive-shape", 10)`),
      *   the door being the only way to write one. Read once per note.
-     * @param oversample the oversampling factor (2 = 2x, 4 = 4x, 8 = 8x; 0 or 1 = off; a non-power of
-     *   two is floored), a number or a slot, read once per note. A stopgap until oversampling regions.
+     *
+     * It shapes at the rate it is in. For less aliasing, write it inside a region:
+     * `x.oversampleAtLeast(4, y => y.shape("tube"))`.
      */
     @KlangScript.Method
-    fun shape(self: IgnitorDsl, shape: IgnitorDslLike = "soft", oversample: IgnitorDslLike = 0): IgnitorDsl =
-        self.shape(shape = shapeIndex(shape), oversample = oversample.toIgnitorDsl())
+    fun shape(self: IgnitorDsl, shape: IgnitorDslLike = "soft"): IgnitorDsl =
+        self.shape(shape = shapeIndex(shape))
 
     /**
-     * Waveshaping distortion. Convenience for drive(amount) + shape(shape, oversample).
+     * Waveshaping distortion. Convenience for drive(amount) + shape(shape).
      *
      * Shapes:
      *  - **Symmetric soft:** "soft" (tanh), "gentle", "softsat", "cubic", "exp", "sineshaper".
      *  - **Symmetric hard / wavefolding:** "hard", "zerosquare", "chebyshev", "fold", "linearfold".
      *  - **Asymmetric (even harmonics):** "diode", "tube", "asym", "stompbox", "rectify".
      *
-     * [shape] and [oversample] take what [shape]'s do: a name, a number or a slot.
+     * [shape] takes what [shape]'s does: a name, a number or a slot. It distorts at the rate it is in; for less
+     * aliasing, write it inside a region: `x.oversampleAtLeast(4, y => y.distort(0.5, "tube"))`.
      */
     @KlangScript.Method
     fun distort(
         self: IgnitorDsl,
         amount: IgnitorDslLike,
         shape: IgnitorDslLike = "soft",
-        oversample: IgnitorDslLike = 0,
-    ): IgnitorDsl = self.distort(amount = amount.toIgnitorDsl(), shape = shapeIndex(shape), oversample = oversample.toIgnitorDsl())
+    ): IgnitorDsl = self.distort(amount = amount.toIgnitorDsl(), shape = shapeIndex(shape))
 
     /** A `shape` argument as the waveshaper's index knob: a name through `DistortionShapes`, a number or a slot as it is. */
     private fun shapeIndex(shape: IgnitorDslLike): IgnitorDsl =
@@ -762,7 +763,7 @@ internal object KlangScriptIgnitorExtensions {
      * ```
      *
      * The sum is plain (two identical branches are twice the level); a branch's own `mul` sets the blend. A branch
-     * that delays the signal (an oversampled `distort` or `shape`) is matched in phase by the others, so the sum does
+     * that delays the signal (an oversampling region) is matched in phase by the others, so the sum does
      * not comb; a plain `plus` does not do that. With no branch, `parallel()` returns the signal as it is; with one,
      * that branch's output. It builds what the Kotlin `IgnitorDsl.parallel(...)` builds, and checks every branch as
      * `serial` checks a stage.
@@ -872,7 +873,7 @@ internal object KlangScriptIgnitorExtensions {
      * starts the next one up; a band with no `band()` passes untouched, and a cut below the one before it is moved up
      * to it. The crossover is Linkwitz-Riley: with nothing processed the bands sum to flat level, with the phase
      * turned around each cut (the waveform changes, the balance does not). Every band reads the same signal, built
-     * once; a late band (an oversampled `distort`) is matched by delaying the others, as in `parallel`. With no
+     * once; a late band (an oversampling region) is matched by delaying the others, as in `parallel`. With no
      * `configure`, or no `cut`, it is the one band.
      *
      * @param configure receives the bands builder and returns it.

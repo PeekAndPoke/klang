@@ -153,7 +153,7 @@ class OversampleRegionSpec : StringSpec({
     val saw = IgnitorDsl.Saw()
     val tube = IgnitorDsl.Constant(DistortionShapes.indexOf("tube").toDouble())
 
-    fun shaped(inner: IgnitorDsl, factor: Int = 0) = IgnitorDsl.Shape(inner = inner, shape = tube, oversample = factor.ign)
+    fun shaped(inner: IgnitorDsl) = IgnitorDsl.Shape(inner = inner, shape = tube)
 
     // ── No step to take: no region ──────────────────────────────────────────────────────────────
 
@@ -421,15 +421,6 @@ class OversampleRegionSpec : StringSpec({
                 inside[k + delay] shouldBe (outside[k] plusOrMinus 0.01)
             }
         }
-    }
-
-    "a shaper's own factor inside a region converts only what the region lacks" {
-        // inside an 8x region a shaper's 8x converts nothing: the same bits as the shaper without a factor
-        shouldMatch(render(saw.oversampleAtLeast(8.ign) { shaped(it, factor = 8) }), render(saw.oversampleAtLeast(8.ign) { shaped(it) }), label = "bridge")
-
-        // inside a 2x region an 8x shaper adds the two steps the region lacks, and its delay counts in the region's samples
-        // (the same cascade as one 8x trip, stages 0 to 2: the literal of the region-latency row)
-        build(saw.oversampleBy(2.ign) { shaped(it, factor = 8) }).latencySamples shouldBe (5.062178167431685 plusOrMinus 1e-9)
     }
 
     "the DC blocker's pole is mapped to the region's rate, so its knee stays in Hz" {

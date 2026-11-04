@@ -82,13 +82,13 @@ object CorpusCheck {
         BuiltInSongs.songs.forEach { add(Song(title = it.title, code = it.code, rpm = it.rpm, frozen = false)) }
         add(
             Song(
-                title = "${FROZEN}derSchmetterling_2026_09_25",
-                code = FrozenSongs.derSchmetterling_2026_09_25,
-                rpm = FrozenSongs.derSchmetterlingRpm_2026_09_25,
+                title = "${FROZEN}derSchmetterling_2026_11_03",
+                code = FrozenSongs.derSchmetterling_2026_11_03,
+                rpm = FrozenSongs.derSchmetterlingRpm_2026_11_03,
                 frozen = true,
             )
         )
-        add(Song(title = "${FROZEN}strangerThings_2026_07_03", code = FrozenSongs.strangerThings_2026_07_03, rpm = FrozenSongs.strangerThingsRpm_2026_07_03, frozen = true))
+        add(Song(title = "${FROZEN}strangerThings_2026_11_03", code = FrozenSongs.strangerThings_2026_11_03, rpm = FrozenSongs.strangerThingsRpm_2026_11_03, frozen = true))
         add(
             Song(
                 title = "${FROZEN}piece derSchmetterling_2026_09_16",

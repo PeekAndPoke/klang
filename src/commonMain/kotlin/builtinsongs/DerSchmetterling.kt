@@ -60,14 +60,14 @@ let pedalStock = Ign.fn(x => x)
 let pedalScreamer = Ign.fn(x => x
   .parallel(
     clean => clean, 
-    dirt => dirt.highpass(720).distort(0.35, "soft", 2).mul(0.6)  // the clipper only ever sees the mids, the clean bass carries, both aligned
+    dirt => dirt.highpass(720).oversampleAtLeast(2, y => y.distort(0.35, "soft")).mul(0.6)  // the clipper only ever sees the mids, the clean bass carries, both aligned
   )
   .lowpass(3600)                                   // the tone knob, half way
   .mul(0.5))                                       // level
 
 // Fuzz: everything clips, hard and lopsided, splatty.
 let pedalFuzz = Ign.fn(x => x
-  .distort(0.70, "asym", 4)
+  .oversampleAtLeast(4, y => y.distort(0.70, "asym"))
   .lowpass(4500)
   .mul(0.28))                                      // level
 
@@ -85,7 +85,7 @@ let preampStock = Ign.fn(x => x
 
 // Clean: one lightly driven tube stage and a bright cap that lets the top through.
 let preampClean = Ign.fn(x => x
-  .distort(0.12, "tube", 2).highpass(80)
+  .oversampleAtLeast(2, y => y.distort(0.12, "tube")).highpass(80)
   .eq(e => e.band(freq = 3500, q = 0.7, db = 2.0)) // the bright cap
   .mul(3.5))                                       // volume
 
@@ -113,13 +113,13 @@ let powerStock = Ign.fn(x => x.drive(0.3))
 
 // Push-pull (class AB): symmetric clip, odd harmonics, and presence: the top opens up as it works.
 let powerPushPull = Ign.fn(x => x
-  .distort(0.25, "soft", 2)
+  .oversampleAtLeast(2, y => y.distort(0.25, "soft"))
   .eq(e => e.band(freq = 4000, q = 0.7, db = 2.0)) // presence
   .mul(1.6))                                       // master
 
 // Class A: a lopsided clip, even harmonics, the chime.
 let powerClassA = Ign.fn(x => x
-  .distort(0.25, "asym", 2)
+  .oversampleAtLeast(2, y => y.distort(0.25, "asym"))
   .mul(1.3))                                       // master
 
 // Cabinets: the linear half of the amp. All of these are static and linear, so they move to the orbit unchanged once
@@ -200,7 +200,7 @@ let makeGuitar = (rig) => {
   // synthetic (2026-09-14)
   return rig(signal)
     // Missing piece in the chain: Mircophone
-    .mul(0.17).shape("soft", 4).mul(1.1)
+    .mul(0.17).oversampleAtLeast(4, y => y.shape("soft")).mul(1.1)
     // sprudel classic
     .classic()
 }
@@ -239,7 +239,7 @@ let bass = (() => {
   return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -3)) // let the snare cut through
     .mul(0.2)
-    .shape("soft", 1)
+    .shape("soft")
     .classic()
 })()
 
@@ -391,7 +391,7 @@ let gummiEimer = (() => {
   let beater = Ign.whitenoise().adsr(0.010, 0.035, 0.0, 0.015).lowpass(1500).mul(6.00)    
  
   return head.plus(harms).plus(m2).plus(m3).plus(beater)
-    .distort(0.80, "soft", 2)
+    .oversampleAtLeast(2, y => y.distort(0.80, "soft"))
     .mul(0.1)
     .classic()
 })()
@@ -429,7 +429,7 @@ let metalKick = (() => {
 
   return thump.plus(crack)
     .mul(0.26)                                     // level: as loud as the bd shape it replaced, at the same gain(0.25)
-    .shape("soft", 2)
+    .oversampleAtLeast(2, y => y.shape("soft"))
     .classic()
 })()
 
@@ -487,7 +487,7 @@ let metalSnare = (() => {
   // peak at the same loudness (2026-09-30).
   return drum.plus(crack)
     .mul(0.3)
-   // .shape("soft", 1)
+   // .shape("soft")
     .mul(1.4895)         // level: as loud as the snare before the clip, at the same gain
     .classic()
 })()
@@ -561,9 +561,9 @@ export song = stack(
     .reverb(0.10, 7, 6500)
     .gain(4.5)
     .bands(b => b
-      .band(low => low.distort(0.01, "soft", 4).mul(1.00)).cut(150)
-      .band(mid => mid.distort(0.15, "soft", 4).mul(0.85)).cut(5000)
-      .band(low => low.distort(0.01, "soft", 4).mul(1.15))
+      .band(low => low.oversampleAtLeast(4, r => r.distort(0.01, "soft")).mul(1.00)).cut(150)
+      .band(mid => mid.oversampleAtLeast(4, r => r.distort(0.15, "soft")).mul(0.85)).cut(5000)
+      .band(low => low.oversampleAtLeast(4, r => r.distort(0.01, "soft")).mul(1.15))
     ) // the glue on the mids only: the kick and the hats stay clean
     .mul(0.90)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)

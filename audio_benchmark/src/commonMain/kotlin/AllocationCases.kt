@@ -30,6 +30,7 @@ import io.peekandpoke.klang.audio_bridge.distort
 import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.kat
+import io.peekandpoke.klang.audio_bridge.oversampleAtLeast
 import io.peekandpoke.klang.audio_bridge.plus
 import io.peekandpoke.klang.audio_bridge.range
 import io.peekandpoke.klang.audio_bridge.times
@@ -398,7 +399,7 @@ object AllocationCases {
             name = "tube4x",
             engine = false,
             sound = AUTHORED,
-            dsl = saw().distort(amount = 0.5.ign, shape = "tube", oversample = 4.ign),
+            dsl = saw().oversampleAtLeast(4.ign) { it.distort(amount = 0.5.ign, shape = "tube") },
         ),
         Case(name = "C-full", engine = false, sound = "saw", params = full),
         // A new owner, and so a new param map instance, on the orbit every block: the chain re-resolves its 27 slot
@@ -432,8 +433,8 @@ object AllocationCases {
             gateSec = GLIDE_GATE_SEC,
             newNoteEveryBlocks = GLIDE_NOTE_BLOCKS,
         ),
-        // The bus distort at its default 2x oversampling.
-        Case(name = "E-distort", engine = true, sound = "saw", chain = katalyst { it.distort(amount = 0.3.kat) }),
+        // The bus distort in a 2x region (its own 2x default until KLANG-00214 step 4): the converters and the sub-pool.
+        Case(name = "E-distort", engine = true, sound = "saw", chain = katalyst { it.oversampleAtLeast(2) { r -> r.distort(amount = 0.3.kat) } }),
         // A compressor without lookahead, then a limiter with one (its delay ring); the threshold sits under the saw.
         Case(
             name = "E-comp",
@@ -459,20 +460,20 @@ object AllocationCases {
             chain = katalyst { it.duck(orbit = TRIGGER_ORBIT.kat, depth = 0.6.kat) },
             duckTrigger = true,
         ),
-        // Parallel distortion: a distorted branch beside an empty one, which gets the distort's phase twin.
+        // Parallel distortion: a distorted branch in a 2x region beside an empty one, which gets the region's phase twin.
         Case(
             name = "E-parallel",
             engine = true,
             sound = "saw",
-            chain = katalyst { it.parallel({ b -> b.distort(amount = 0.4.kat) }, { b -> b }) },
+            chain = katalyst { it.parallel({ b -> b.oversampleAtLeast(2) { r -> r.distort(amount = 0.4.kat) } }, { b -> b }) },
         ),
-        // Three bands with the mids distorted (the `bands` door's own example): the crossovers, the all-pass matching
-        // and the phase twins of the other two bands.
+        // Three bands with the mids distorted in a 2x region (the `bands` door's own example): the crossovers, the
+        // all-pass matching and the phase twins of the other two bands.
         Case(
             name = "E-bands",
             engine = true,
             sound = "saw",
-            chain = katalyst { it.bands { b -> b.cut(150.0).band { m -> m.distort(amount = 0.15.kat) }.cut(5000.0) } },
+            chain = katalyst { it.bands { b -> b.cut(150.0).band { m -> m.oversampleAtLeast(2) { r -> r.distort(amount = 0.15.kat) } }.cut(5000.0) } },
         ),
         // A vowel sung through a body: the one resonator class, both kinds.
         Case(
@@ -664,15 +665,14 @@ object AllocationCases {
 
         private var block = 0
 
-        /** The cylinder of the last block: its mix is cleared at the start of the next one, so [peak] can read it. */
+        /** The cylinder of the last block: its mix and rate buses are cleared at the start of the next one ([clearCylinder]). */
         private var cylinder: Cylinder? = null
 
         override fun step() {
             val last = cylinder
 
             if (last != null) {
-                last.mixBuffer.left.fill(0.0)
-                last.mixBuffer.right.fill(0.0)
+                clearCylinder(last)
             }
 
             ctx.blockStart = (block * BLOCK_FRAMES).toDouble()
@@ -685,11 +685,7 @@ object AllocationCases {
             block++
         }
 
-        override fun peak(): Double {
-            val mix = cylinder?.mixBuffer ?: return 0.0
-
-            return peakOf(left = mix.left, right = mix.right, frames = BLOCK_FRAMES)
-        }
+        override fun peak(): Double = cylinder?.let { peakOfCylinder(it) } ?: 0.0
     }
 
     /**
@@ -757,8 +753,7 @@ object AllocationCases {
             val last = cylinder
 
             if (last != null) {
-                last.mixBuffer.left.fill(0.0)
-                last.mixBuffer.right.fill(0.0)
+                clearCylinder(last)
             }
 
             ctx.blockStart = (block * BLOCK_FRAMES).toDouble()
@@ -774,11 +769,33 @@ object AllocationCases {
             block++
         }
 
-        override fun peak(): Double {
-            val mix = cylinder?.mixBuffer ?: return 0.0
+        override fun peak(): Double = cylinder?.let { peakOfCylinder(it) } ?: 0.0
+    }
 
-            return peakOf(left = mix.left, right = mix.right, frames = BLOCK_FRAMES)
+    /**
+     * Clears what a hand-rolled rig's last block left in [cylinder]: its mix and its rate buses. A voice whose tree ends
+     * in a region lands on the bus of its rate (KLANG-00214 step 3b), which only a chain would otherwise clear.
+     */
+    private fun clearCylinder(cylinder: Cylinder) {
+        cylinder.mixBuffer.left.fill(0.0)
+        cylinder.mixBuffer.right.fill(0.0)
+        cylinder.katalystContext.clearBuses()
+    }
+
+    /** The peak of [cylinder]'s last block: its mix and every rate bus that held audio, each at its own length. */
+    private fun peakOfCylinder(cylinder: Cylinder): Double {
+        val buses = cylinder.katalystContext
+        var peak = peakOf(left = cylinder.mixBuffer.left, right = cylinder.mixBuffer.right, frames = BLOCK_FRAMES)
+
+        for (steps in 1 until buses.buses.size) {
+            val bus = buses.buses[steps]
+
+            if (bus != null && buses.activeBuses and (1 shl steps) != 0) {
+                peak = maxOf(peak, peakOf(left = bus.left, right = bus.right, frames = BLOCK_FRAMES shl steps))
+            }
         }
+
+        return peak
     }
 
     /** The engine: [PlaybackEngineDispatcher], its master stage included. */

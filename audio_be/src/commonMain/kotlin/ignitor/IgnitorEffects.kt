@@ -39,7 +39,9 @@ import kotlin.math.exp
  * for symmetric shapes at extreme drive where any input asymmetry causes the
  * output to rail-lock toward `±1` and produce a DC bias that can damage speakers.
  *
- * **Output is bounded to ±1 by a C¹-piecewise soft cap** ([ShapingFuncs.softCap]).
+ * **Output is bounded to ±1 by a C¹-piecewise soft cap** ([ShapingFuncs.softCap]), at the rate the stage runs: inside
+ * an oversampling region the cap comes BEFORE the region's down conversion, whose half-band can overshoot it on a
+ * near-square (measured up to about 1.5 on a hard-driven saw, KLANG-00214 step 4's review).
  * Below the linear-region threshold the cap is identity (clean signals
  * untouched); above, the rail-edge transients from the DC blocker's 2× HF gain
  * are smoothly compressed toward ±1 with continuous value + slope at the
@@ -54,8 +56,8 @@ import kotlin.math.exp
  *   - **Symmetric hard / harsh:** "hard" (clip), "zerosquare" (high-gain tanh → square), "chebyshev" (3rd-harmonic), "fold" (sin wavefold), "linearfold" (triangle wavefold).
  *   - **Asymmetric (even harmonics, DC):** "diode", "tube" (shifted-tanh), "asym" (poly), "stompbox" (diode pedal), "rectify" (full-wave).
  */
-fun Ignitor.distort(amount: Ignitor, shape: String = "soft", oversampleStages: Int = 0): Ignitor =
-    drive(amount).shape(shape, oversampleStages)
+fun Ignitor.distort(amount: Ignitor, shape: String = "soft"): Ignitor =
+    drive(amount).shape(shape)
 // NOTE for this Ignitor-amount door: only the DRIVE half bypasses at amount <= 0 — the shaper
 // keeps shaping at unity gain (tanh(1.0) = 0.76, a -2.4 dB peak squash with odd harmonics for
 // full-scale input; identity only well below |x| ~ 0.3). A CONSTANT 0 through the Double
@@ -72,11 +74,10 @@ fun Ignitor.distort(amount: Ignitor, shape: String = "soft", oversampleStages: I
  *
  * @param amount Drive intensity. 0.0 = bypass, 0.3 = warm, 1.0 = heavy, 2.0+ = extreme. Default: 0.0.
  * @param shape Waveshaper function. Default: "soft". See [distort] for all options.
- * @param oversampleStages Number of 2x oversampling stages. 0 = off, 1 = 2x, 2 = 4x, etc.
  */
-fun Ignitor.distort(amount: Double, shape: String = "soft", oversampleStages: Int = 0): Ignitor {
+fun Ignitor.distort(amount: Double, shape: String = "soft"): Ignitor {
     if (amount <= 0.0) return this
-    return distort(ParamIgnitor("amount", amount), shape, oversampleStages)
+    return distort(ParamIgnitor("amount", amount), shape)
 }
 
 /**
@@ -138,30 +139,28 @@ fun Ignitor.drive(amount: Double): Ignitor {
  *
  * **DC blocker is always applied** to guard against rail-lock when the input is
  * already heavily saturated (e.g. after `drive`). See [distort] for the rationale.
- * Output is bounded to ±1 by a C¹-piecewise soft cap ([ShapingFuncs.softCap])
- * — identity in the linear region, smooth saturation above. See [distort].
+ * Output is bounded to ±1 by a C¹-piecewise soft cap ([ShapingFuncs.softCap]), identity in the linear region,
+ * smooth saturation above, at the rate the stage runs (inside a region, before its down conversion). See [distort].
  *
  * @param shape Waveshaper function. Default: "soft" (tanh). See [distort] for the full
  *   list of options ("soft", "hard", "gentle", "softsat", "cubic", "exp", "sineshaper",
  *   "zerosquare", "chebyshev", "fold", "linearfold", "diode", "tube", "asym", "stompbox",
  *   "rectify").
  */
-fun Ignitor.shape(shape: String = "soft", oversampleStages: Int = 0): Ignitor =
-    ShapeIgnitor(upstream = this, core = DistortionCore(shape = parseDistortionShape(shape), oversampleStages = oversampleStages))
+fun Ignitor.shape(shape: String = "soft"): Ignitor =
+    ShapeIgnitor(upstream = this, core = DistortionCore(shape = parseDistortionShape(shape)))
 
 /**
  * The waveshaper with the shape already resolved (from an index knob, at build): the DSL runtime's form. Inside an
- * oversampling region the build passes the region's [firstStage] and the DC blocker's pole for the region's rate
- * ([dcBlockCoefficient], `DistortionCore`).
+ * oversampling region the build passes the DC blocker's pole for the region's rate ([dcBlockCoefficient],
+ * `DistortionCore`).
  */
 internal fun Ignitor.shape(
     shape: DistortionShape,
-    oversampleStages: Int,
-    firstStage: Int = 0,
     dcBlockCoefficient: Double = DEFAULT_DC_BLOCK_COEFF,
 ): Ignitor = ShapeIgnitor(
     upstream = this,
-    core = DistortionCore(shape = shape, oversampleStages = oversampleStages, dcBlockCoefficient = dcBlockCoefficient, firstStage = firstStage),
+    core = DistortionCore(shape = shape, dcBlockCoefficient = dcBlockCoefficient),
 )
 
 /**
@@ -179,7 +178,7 @@ private class ShapeIgnitor(
         ctx.scratchBuffers.use { work ->
             upstream.generate(work, freqHz, ctx)
 
-            core.process(buffer = work, offset = ctx.offset, length = ctx.length, drive = 1.0, scratchBuffers = ctx.scratchBuffers)
+            core.process(buffer = work, offset = ctx.offset, length = ctx.length, drive = 1.0)
 
             val end = ctx.windowEnd
 
@@ -193,37 +192,33 @@ private class ShapeIgnitor(
 /**
  * The runtime of the fused `IgnitorDsl.Distort` node, the distort stage `classic()` builds: drive and
  * shape as ONE unit rendering the VOICE STRIP's law through [DistortionCore], the loop the strip's
- * distort ran (phase 3 step 4, decision D2 option A, 2026-09-25): the drive INSIDE the
- * oversampler, the DC blocker, NO soft cap. The doors keep their own law (`distort` above).
+ * distort ran (phase 3 step 4, decision D2 option A, 2026-09-25): the drive, the shaper, the DC
+ * blocker, NO soft cap. The doors keep their own law (`distort` above).
  *
  * **D2 supersedes ledger W5's "delete it"** (maintainer, 2026-08-30), which removed an earlier fused
  * node. W5's REASON is designed out rather than reintroduced: that node bypassed per block, so a
- * MODULATED amount crossing 0 left the oversampler and the DC blocker holding stale state and popped
+ * MODULATED amount crossing 0 left the DC blocker holding stale state and popped
  * at every crossing. Here there is one bypass policy, and it is the build's:
  *  - a LEAF amount at or below 0 (or unset) is the build gate (`IgnitorDslRuntime`): the node is not
  *    built, which is exactly what the strip did: it skipped its stage for the note;
  *  - a MODULATED (non-leaf) amount at or below 0 is NOT a bypass: the core keeps running at UNITY drive
  *    (what the `Drive` node does there), so its state stays contiguous through the crossing. A NaN
  *    amount drives with NaN: the core's NaN guard writes 0 for every shaped sample of that block, and
- *    what leaves it is the oversampler's and the DC blocker's decaying tail from the block before;
+ *    what leaves it is the DC blocker's decaying tail from the block before;
  *    the next finite block renders the signal again.
  *
  * @param amount the drive amount, read once per block; see [DistortionCore.drive].
  * @param shape the waveshaper, resolved at build.
- * @param oversampleStages 2x stages, read at build; 0 is the plain path.
- * @param firstStage the cascade stage the oversampler starts at, above 0 inside an oversampling region.
  * @param dcBlockCoefficient the DC blocker's pole, the voice's 0.995 mapped to a region's rate inside one.
  */
 internal fun Ignitor.fusedDistort(
     amount: Ignitor,
     shape: DistortionShape,
-    oversampleStages: Int,
-    firstStage: Int = 0,
     dcBlockCoefficient: Double = DEFAULT_DC_BLOCK_COEFF,
 ): Ignitor = FusedDistortIgnitor(
     upstream = this,
     amount = amount,
-    core = DistortionCore(shape = shape, oversampleStages = oversampleStages, dcBlockCoefficient = dcBlockCoefficient, firstStage = firstStage),
+    core = DistortionCore(shape = shape, dcBlockCoefficient = dcBlockCoefficient),
 )
 
 private class FusedDistortIgnitor(
@@ -239,7 +234,7 @@ private class FusedDistortIgnitor(
             // Unity at or below 0, never a bypass: see the KDoc (W5's hazard).
             val drive = if (amt <= 0.0) 1.0 else DistortionCore.drive(amt)
 
-            core.process(buffer = work, offset = ctx.offset, length = ctx.length, drive = drive, scratchBuffers = ctx.scratchBuffers)
+            core.process(buffer = work, offset = ctx.offset, length = ctx.length, drive = drive)
 
             val end = ctx.windowEnd
 

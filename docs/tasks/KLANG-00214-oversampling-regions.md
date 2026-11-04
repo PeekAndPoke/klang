@@ -1,11 +1,12 @@
 # KLANG-00214: Oversampling regions, and one core per effect
 
-> **Status (2026-10-20): SCHEDULED.**
+> **Status (2026-11-03): steps 1, 3a, 3b and 4 landed (section 11).** Left: merging neighbouring stages into one
+> region, song by song, by ear (Der Schmetterling first); the reverb damping in a region (by ear); the warehouse items
+> of step 3a.
 >
 > **Part of:** KLANG-00354 (The Motor's shape: signal flow and the graph)
 
-Status: **scheduled, once the current plan (KLANG-00210 (signal flow redesign), phase 3 included) is
-fully complete** (maintainer, 2026-09-23). Not started.
+Scheduled on 2026-09-23 for after KLANG-00210 (signal flow redesign); started 2026-10-31 (section 11).
 
 > **2026-09-27, phase 3 step 9: what changed for the oversample knobs.** The voice strip retired, and with it
 > `CrushRenderer`, `CoarseRenderer` and `DistortionRenderer` (sections 3, 4 and 7 below name them as they were).
@@ -168,11 +169,11 @@ more than one place per effect, the factoring is not done.
   each in a region of its own, the factor read from its sprudel slot. That is bit-identical because the
   region uses the same `Oversampler` the strip renderers use. Merging a run of stages into one region is
   a sound change an AUTHOR makes; the engine never does it (section 2).
-- **Retired by this task** (one word per concept): the phase 3 stopgap knob (D7), the `oversample` parameter of the Ignitor's
+- **Retired by this task** (one word per concept; done in step 4, 2026-11-03, with the Katalyst `distort`'s factor too): the phase 3 stopgap knob (D7), the `oversample` parameter of the Ignitor's
   `distort(amount, shape, oversample)` and `shape(shape, oversample)`, and the `IgnitorDsl.Shape.oversample`
   field. Users today: Sandsturm, ATruthWorthLyingFor, DerSchmetterling (DialogueWithTheStars left the built-in songs 2026-09-25), and eleven sites in
   `FrozenPieces` (changing those needs the maintainer's word, phase 3 D5).
-- **Open:** whether the sprudel doors `crush`, `coarse` and `distort` keep an `oversample` slot (read by
+- **Decided (section 9, answer 2):** the sprudel doors `crush`, `coarse` and `distort` lose their `oversample` slot. Was open: whether they keep one (read by
   `classic()` into a one-stage region, so the word keeps its meaning) or lose it. Every shipped crush and
   coarse use pins `oversample = 1`; distort's is used by Tetris, TetrisRemix, IrishLamentTechno,
   ATruthWorthLyingFor (its bass, `distort(0.8, "tube", 4)`) and the frozen songs.
@@ -446,6 +447,67 @@ are made on first use and kept, one per rate per host.
   by a row added for a leaving chain whose steps ring out). Corpus green on the tree (3 frozen and 12 live songs
   identical; no song hands over yet), its control (the base-rate teardown fade nudged by 0.01%) red on 5 songs.
 
+**Step 4, landed (2026-11-03): the stages' own factors retired, the songs moved one-to-one.** Decided with the
+maintainer the same day: the Katalyst `distort`'s factor retires too (its 2x default with it), the live songs move one
+region per stage (merging neighbours is a sound change, song by song, by ear, later), and the frozen songs are
+re-snapshotted from the live songs ("You could also fully update the frozen songs ... the engine has evolved quite a
+bit").
+- Gone: the `oversample` parameter of the Ignitor's `distort` and `shape` and of the Katalyst's `distort`, on both
+  doors; the fields `IgnitorDsl.Shape.oversample`, `IgnitorDsl.Distort.oversample`, `KatalystStageDsl.Distort.oversample`
+  (wire schema hash -640226917 to 210338569); the `classic()` slot `distort.oversample`; sprudel's `oversample` slots on
+  `crush`, `coarse` and `distort`, their `SprudelVoiceData` fields and wire keys, and the distort editor's factor
+  buttons; `SHAPE_OVERSAMPLE`, `DISTORT_OVERSAMPLE`. In the engine `DistortionCore` lost its oversampler (and its
+  scratch-buffer parameter), the Ignitor build its floor bridge, and `KatalystDistortEffect` its latency, phase twins
+  and ring hold (it is no longer a `KatalystLatentEffect`). `docs/retired-names.md` has the row.
+- The songs: every Ignitor and Katalyst stage with a factor became `oversampleAtLeast(n, y => y.stage(...))` around
+  that one stage (Der Schmetterling, Kokon, Sandsturm, A Truth Worth Lying For, and the master `bands` of six songs);
+  IrishLamentTechno's bare master `distort`, 2x by default until now, got an explicit 2x region. Sprudel's
+  `distort(a, s, n)` lost its third argument (Tetris, TetrisRemix, IrishLamentTechno, A Truth Worth Lying For): those
+  voices now distort at 1x, decided on 2026-10-31 (section 9, answer 2). The dead `oversample = 1` on `crush` and
+  `coarse` went with its comment.
+- Measured, the edited songs before and after (first 60 s as the corpus renders them, mono sum, the residual after the
+  best whole-sample alignment; `tmp/listening/oversample-step4/` holds five pairs for the ear): every level within 0.03
+  dB and every octave band within 0.05 dB, except Sandsturm's lead (`distort(1.0, "soft", 4)`, its soft cap and DC
+  blocker now inside the region) +0.1 to +0.3 dB above 2.5 kHz. The one-to-one regions alone leave a residual of -70 dB
+  (the master `bands`: Sakura, Seltsamere Dinge) and -49 to -52 dB (the guitar rigs: Der Schmetterling, Kokon, both
+  frozen pieces). The sprudel voices now at 1x leave -17.5 dB (TetrisRemix's 32-voice bass), -22 dB
+  (IrishLamentTechno), -32 dB (A Truth Worth Lying For), -40 dB (Tetris): the changed aliasing, and the voices arriving 3
+  to 4 samples earlier, without the stage's oversampler delay.
+- **The soft cap of a door moved into a region** (review round 1, audio MAJOR; maintainer, 2026-11-04: "Accept,
+  listen later"): the `distort` and `shape` doors end in `softCap`, a ceiling that is identity up to 0.95. With the
+  stage's own oversampler it ran after the down conversion; inside a region it runs before the region's, whose
+  half-band rings on a hard-clipped edge, so a hard-driven door can peak past 1 again (the reviewer's model: Sandsturm's
+  lead from 1.00 to about 1.5, +3.5 dB at the voice; A Truth Worth Lying For's guitar about +2 dB). The tone barely
+  moves (the mix spectrum within 0.3 dB, Sandsturm only); the peaks reach the orbit and the master limiter. Recorded as
+  a sound change, for the ear with the merges: Sandsturm, A Truth Worth Lying For, the fuzz pedals, the gummi bucket
+  and the peak clippers of Der Schmetterling and Kokon. The doors' KDoc says the ceiling holds before a region's down
+  conversion.
+- Frozen: `FrozenSongs` holds new snapshots of Der Schmetterling and Seltsamere Dinge (2026-11-03); the 2026-09-25 Der
+  Schmetterling moved to `FrozenPieces` for the rig suite (its trommel anchor follows the region), migrated
+  one-to-one like the 2026-09-16 piece; the 2026-07-03 Seltsamere Dinge is gone (git keeps it). The corpus reference
+  was rewritten with `corpus-accept-engine` for the frozen rows only.
+- Tests: rows that pinned the stage's own oversampler deleted (the oversampled shaper parity rows, the factor knob
+  rows, the bus distort's latency, twin and hold rows, the bridge rows); rows that used it as a stand-in oversampler
+  moved to regions (the parallel twins, the region spec's nested floors, the click hunt); the region DC row now
+  measures from 64 frames after the peak, past the converters' ring on the step's edge, and the twin-tail row uses a
+  20 ms lookahead, since a region counts its hold from its body's output. 6 mutants on the new and changed rows, 6
+  killed. JVM and JS suites green; the wire schema hash pinned anew. Corpus: the five unedited live songs identical,
+  its control (the voice distort's DC pole nudged by 0.01%) red on exactly the two predicted (Gestrandet, Drunken
+  Synthlor); the frozen rows accepted with `corpus-accept-engine`.
+- Review: round 1 (level 1, blind): the audio MAJOR above (the soft cap), decided by the maintainer; a code MAJOR, three
+  allocation cases (`E-distort`, `E-parallel`, `E-bands`) that relied on the bus distort's 2x default and no longer ran
+  an oversampled path, fixed (each in a 2x region); checking it found `tube4x` silent in the allocation harness, whose
+  hand-rolled rigs read only the base mix while a voice ending in a region hands over to its rate bus (the rigs now
+  clear and read the rate buses); a code MAJOR on the song files missing from the pack, rejected (the pack skips that
+  folder; the songs are in the commit). Round 2 (level 2, two phases) clean from both; its MINORs and round 1's applied
+  as one batch (stale KDocs in `Oversampler.kt` and elsewhere, two Kotlin examples, the whitepaper's code samples and
+  two figures at the maintainer's word, the recipes of two tickets).
+- Found, not caused here: the allocation check is red at this step's base (6ada80833) and before step 3b (5f8581e85)
+  with the same figures as on this step's tree (33 to 35 of 80 cases over budget; every engine case about 85 to 120 B
+  per block on V8 where the last scoreboard row, 2026-10-25, read 20 to 60, and 23 B on the JVM where it read 0; the
+  JVM runs now on 17.0.17, the earlier rows on 21). Its cause lies between 2026-10-25 and step 3a; open for the
+  maintainer (a bisect).
+
 ## History
 
 - 2026-10-20: numbered KLANG-00214 (was `docs/tasks/oversampling-regions.md`).
@@ -458,3 +520,4 @@ are made on first use and kept, one per rate per host.
 - 2026-11-01: step 1 landed: the region doors and engine, Der Schmetterling's preamps in regions.
 - 2026-11-03: step 3 cut in two; step 3a landed: regions on the Katalyst.
 - 2026-11-03: step 3b landed, the hand-over: a voice ending in a region lands on its orbit's rate bus; the orbit's chain converts each rate once.
+- 2026-11-03: step 4 landed: the stages' own oversampling factors retired, the songs moved one region per stage, the frozen songs re-snapshotted.

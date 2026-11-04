@@ -191,9 +191,9 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
 - **Catalogues are index spaces, append only**: `DistortionShapes`, `LfoShapes`, `AdsrCurves`, `BodyMaterials`,
   `VowelBands` (audio_bridge). The index is the wire encoding; out of range or non-finite is index 0 for the
   shapes. Guards: `ShapeCatalogueSpec`, `CatalogueIndexSpec`, `AdsrCurvesSpec`.
-- **Build-time knobs** (shapes, the oversample factor, `passes`, curves, the tremolo shape) are read once,
+- **Build-time knobs** (shapes, a region's factor, `passes`, curves, the tremolo shape) are read once,
   leaf-only; a non-leaf takes the default and is not built. `Oversampler.factorOf`: non-finite is 0, a fraction
-  truncates, no upper clamp (the D7 stopgap until KLANG-00214 (oversampling regions)).
+  truncates, no upper clamp.
 - **Solo**: background gain `1 - max(amounts of the soloed sources)` (`solo(1.0)` is exact silence, `solo()` is 0.95),
   reached on the 1.5 s `SoloRamp`; `SoloTracker` (per playback, fixed arrays) keeps per source its NEWEST event (the
   latest start wins at once; the end comes from the control events, a note's gate never extends it), recorded from
@@ -217,15 +217,14 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
 - **`pregain`** is an ordinary slot (`Param("pregain", 1.0)`) on the source, before every nonlinearity. It changes
   timbre only where a nonlinearity follows; a saturating shaper driven hard makes it inert, on a wavefolder it is
   the fold depth. A `mul` slot's default must be a safe literal: unset is NOT off for `mul`.
-- **Distortion**: `classic()`'s distort is the fused `IgnitorDsl.Distort` running `DistortionCore` (drive inside
-  the oversampler, DC blocker, no cap; a modulated amount at or below 0 runs at unity drive). The `distort` and
+- **Distortion**: `classic()`'s distort is the fused `IgnitorDsl.Distort` running `DistortionCore` (drive, shaper,
+  DC blocker, no cap; a modulated amount at or below 0 runs at unity drive). Every shaper runs at the rate it is in:
+  the stages' own oversampling factors retired (2026-11-03, KLANG-00214 step 4), a region is the one way up. The `distort` and
   `shape` doors build `Shape(Drive(...))`, bounded to +-1 by `ShapingFuncs.softCap`. `CrushCore` floors. Guard for
   both laws: `StripLawCoresSpec`. The Katalyst `distort` stage (`KatalystDistortEffect`, 2026-10-09) runs the fused law
-  on each channel of a bus, with the house DC pole (`HOUSE_DC_BLOCK_COEFF`, near 7 Hz; the voice's is near 35 Hz) and
-  the oversampler's group delay, rounded, as its latency in every state (`Oversampler.groupDelaySamples`: 3.07, 4.40,
-  5.06; held as 3, 4 and 5 frames). Its dry path runs through the phase twins (an unshaped round trip of the same
-  oversampler per channel), so a fade between dry and distorted cannot notch; its tail hold is `Oversampler.tailFrames`.
-  It oversamples at 2x unless the author names a factor (`DISTORT_OVERSAMPLE`, 2026-10-10); the voice's stays at 0.
+  on each channel of a bus, with the house DC pole (`HOUSE_DC_BLOCK_COEFF`, near 7 Hz; the voice's is near 35 Hz), and
+  delays nothing (its 2x default, latency and phase twins went with the factor; the songs that relied on the 2x wrap
+  it in `oversampleAtLeast(2)`).
 - **The oversampler is an IIR half-band** (2026-10-10, KLANG-00298 (iir oversampler)): two all-pass
   chains per 2x stage, 8 coefficients at the base-rate stage and 6 above; the round trip is flat (0.00 dB to 20 kHz),
   aliases and images about 95 to 100 dB down, latency 3.07, 4.40, 5.06 samples at 2x, 4x, 8x, rising toward the top
@@ -234,8 +233,8 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   2x). Every input sample is sterilised (`flushState`: an IIR keeps a NaN for good), the states are flushed of
   denormals once per block. Guard: `OversamplerBenchSpec`, `OversamplerGroupDelaySpec`, `OversamplerDecimatorParitySpec`.
 - **`parallel` on the Ignitor** (`IgnitorDsl.Parallel`, 2026-10-10): the branches summed, every branch reading one
-  input instance; `BuiltIgnitor.latencySamples` is collected exactly along the signal spine (an oversampled `distort`
-  or `shape` adds `Oversampler.groupDelaySamples`: 3.07, 4.40, 5.06), and so is `BuiltIgnitor.oversamplers`. The node
+  input instance; `BuiltIgnitor.latencySamples` is collected exactly along the signal spine (a region adds its round
+  trip's `Oversampler.groupDelaySamples`: 3.07, 4.40, 5.06), and so is `BuiltIgnitor.oversamplers`. The node
   gives every branch the phase twins of the oversamplers it lacks against their union (`phaseTwins`,
   `Oversampler.unionOf`); a branch that mixes two in a plain `plus` lists none (`null`), and then every earlier branch
   is padded by whole samples to the latest (`delayedBy`). A plain `plus` stays unaligned.
@@ -243,7 +242,7 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   { y -> ... }` and `x.oversampleAtLeast(f) { y -> ... }`; the factor read once, leaf-only, rounded down to a power of
   two, at most 16x (`REGION_MAX_STAGES`). The body runs in a child `IgniteContext` at the region's rate, one trip up and
   one down (`OversampleRegion.kt`); `y` is `IgnitorDsl.RegionInput(up)`, a de Bruijn index. Sources stay at 1x, also
-  inside (`LiftedSourceIgnitor`), and so does their pitch modulation. A `distort` or `shape` factor inside is a floor.
+  inside (`LiftedSourceIgnitor`), and so does their pitch modulation.
   Inside a body latencies count from the region's input (`RegionScope.inputDelay`), a block-constant child takes no
   part; a source takes phase twins of what the input ran through before the outermost region (exact), what lies
   inside the outer bodies is padded by whole samples. Not cheaper
@@ -252,8 +251,7 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   `oversampleAtLeast(f) { ... }`, the factor a plain number fixed with the chain. `KatalystRegionEffect` converts the
   bus up, runs its body (a `KatalystChain` BUILT at the region's rate and block size: a Katalyst stage takes its rate
   when built, not per block), converts down; a region with no step is inlined. At a chain's head it makes the orbit
-  run at that rate, one conversion per orbit. Inside: the knob modulators keep the orbit's clock; `distort`'s own
-  factor is a floor; `parallel` twins from the region's stage (`firstStage`); a reverb rents from a shelf per whole
+  run at that rate, one conversion per orbit. Inside: the knob modulators keep the orbit's clock; `parallel` twins from the region's stage (`firstStage`); a reverb rents from a shelf per whole
   factor (`ReverbUnits.atFactor`, kept by the base shelf, `maxIdle / factor`), its comb pole mapped `damping^(1/N)`
   (the top of the room decays a little faster: open for the maintainer's ear). Latency: `exactLatency` unrounded
   through bodies, a region rounds once; a `parallel` around a region pads its body by the nearest frame. A region
@@ -379,7 +377,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 - **The click-hunt harness** `GuitarClickHuntTest` is tagged `ClickHunt`, out of the default run
   (`./gradlew :audio_be:jvmTest -Pkotest.tags=ClickHunt --tests io.peekandpoke.klang.audio_be.ignitor.GuitarClickHuntTest`);
   add a setup to it for every new click symptom or ignitor archetype.
-- **KlangScript doors forbid mixing positional and named arguments**: `distort(amount = 0.5, oversample = 4)`.
+- **KlangScript doors forbid mixing positional and named arguments**: `distort(amount = 0.5, shape = "tube")`.
 - **Platform facts**: `KlangTime.internalMsNow()` is monotonic, not wall clock; the JS targets compile to
   ES2015 classes (an `AudioWorkletProcessor` must extend a real class); `MonoSamplePcm` is always mono, stereo
   happens at pan and mix; a null `VoiceData` field means "the engine default".
@@ -400,7 +398,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   `Ignitor.freq()` anywhere renders once per pitch; a layer detuned under an `fm` or a `Freq`-reading pitch mod renders
   the mod again); the build-time diagnostic for the second, an fm above a forking detune:
   KLANG-00291 (fm above forking detune diagnostic).
-- **Scheduled or designed**: KLANG-00214 (oversampling regions; steps 1, 3a and 3b landed, 4 open), KLANG-00137 (master dsl followups),
+- **Scheduled or designed**: KLANG-00214 (oversampling regions; steps 1 to 4 landed; merges song by song, by ear), KLANG-00137 (master dsl followups),
   KLANG-00211 (katalyst master configure doors), KLANG-00155 (pluck release tail),
   KLANG-00138 (voice takeover) (blocked on a design decision), KLANG-00158 (playback layer decomposition).
 - **Katalyst, future**: `reverb-models.md` (with `room-reverb.md`), `one-chain-host.md`, `delay-ceiling-edges.md`, `transition-times.md`,
@@ -424,6 +422,8 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-11-03 The stages' own oversampling factors retired (voice and bus `distort`, `shape`, sprudel's three slots);
+  the songs moved to one region per stage, the frozen texts re-snapshotted (KLANG-00214 (oversampling regions), step 4).
 - 2026-11-03 The hand-over: a voice ending in a region lands on its orbit's rate bus, one conversion per rate per
   orbit (KLANG-00214 (oversampling regions), step 3b).
 - 2026-11-03 Oversampling regions on the Katalyst, `oversampleBy` and `oversampleAtLeast` (KLANG-00214

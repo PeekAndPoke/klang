@@ -19,6 +19,7 @@ import io.peekandpoke.klang.audio_bridge.bandpass
 import io.peekandpoke.klang.audio_bridge.highpass
 import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.lowpass
+import io.peekandpoke.klang.audio_bridge.oversampleAtLeast
 import io.peekandpoke.klang.audio_bridge.shape
 import kotlin.math.PI
 import kotlin.math.abs
@@ -271,7 +272,7 @@ class GuitarClickHuntTest : StringSpec({
     fun chainWithSources(sourceMix: IgnitorDsl, distortShape: String = "chebyshev"): IgnitorDsl {
         val withBp = sourceMix.bandpass(freq = 1000.0.ign, q = 0.1.ign).plusDsl(lowEndBranch())
         val swept = withBp.lowpassMod(sweepCutoff(), q = 1.25)
-        val distorted = IgnitorDsl.Drive(inner = swept, amount = IgnitorDsl.Constant(drive)).shape(shape = distortShape, oversample = 8.ign)
+        val distorted = IgnitorDsl.Drive(inner = swept, amount = IgnitorDsl.Constant(drive)).oversampleAtLeast(8.ign) { it.shape(shape = distortShape) }
         val postLp = distorted.lowpass(freq = brightness.ign, q = 0.9.ign)
         val hpf = postLp.highpass(100.0.ign)
         return hpf.adsr(attack = 0.004.ign, decay = 0.15.ign, sustain = 0.8.ign, release = 0.05.ign)
@@ -385,7 +386,7 @@ class GuitarClickHuntTest : StringSpec({
             val sources = coreSupersaw().plusDsl(zawtoothBranch()).plusDsl(squareBranch()).plusDsl(pickNoiseBranch())
             val withBp = sources.bandpass(freq = 1000.0.ign, q = 0.1.ign).plusDsl(lowEndBranch())
             val swept = withBp.lowpassMod(sweepCutoff(), q = 1.25)
-            val distorted = IgnitorDsl.Drive(inner = swept, amount = IgnitorDsl.Constant(drive)).shape(shape = shape, oversample = 4.ign)
+            val distorted = IgnitorDsl.Drive(inner = swept, amount = IgnitorDsl.Constant(drive)).oversampleAtLeast(4.ign) { it.shape(shape = shape) }
             val full = distorted.lowpass(freq = brightness.ign, q = 0.9.ign).highpass(100.0.ign).adsr(attack = 0.004.ign, decay = 0.15.ign, sustain = 0.8.ign, release = 0.05.ign)
 
             val perNote = mutableListOf<Pair<Int, Metrics>>()
@@ -417,7 +418,7 @@ class GuitarClickHuntTest : StringSpec({
             val sources = coreSupersaw().plusDsl(zawtoothBranch()).plusDsl(squareBranch()).plusDsl(pickNoiseBranch())
             val withBp = sources.bandpass(freq = 1000.0.ign, q = 0.1.ign).plusDsl(lowEndBranch())
             val swept = withBp.lowpassMod(sweepCutoff(), q = 1.25)
-            val distorted = IgnitorDsl.Drive(inner = swept, amount = IgnitorDsl.Constant(d)).shape(shape = "chebyshev", oversample = 8.ign)
+            val distorted = IgnitorDsl.Drive(inner = swept, amount = IgnitorDsl.Constant(d)).oversampleAtLeast(8.ign) { it.shape(shape = "chebyshev") }
             val full = distorted.lowpass(freq = brightness.ign, q = 0.9.ign).highpass(100.0.ign).adsr(attack = 0.004.ign, decay = 0.15.ign, sustain = 0.8.ign, release = 0.05.ign)
 
             val perNote = mutableListOf<Pair<Int, Metrics>>()
@@ -719,9 +720,9 @@ private fun IgnitorDsl.plusDsl(other: IgnitorDsl): IgnitorDsl = IgnitorDsl.Plus(
 private fun IgnitorDsl.lowpassMod(cutoff: IgnitorDsl, q: Double): IgnitorDsl =
     IgnitorDsl.Lowpass(inner = this, freq = cutoff, q = IgnitorDsl.Constant(q))
 
-/** Mirrors the script door `.distort(amount, "chebyshev", 8)` on a tree — `factorToStages(8) = 3` (8x oversample). */
+/** Mirrors the script door `.oversampleAtLeast(8, y => y.distort(amount, "chebyshev"))` on a tree (8x). */
 private fun IgnitorDsl.distortChebyshev8(driveAmount: Double): IgnitorDsl =
-    IgnitorDsl.Drive(inner = this, amount = IgnitorDsl.Constant(driveAmount)).shape(shape = "chebyshev", oversample = 8.ign)
+    IgnitorDsl.Drive(inner = this, amount = IgnitorDsl.Constant(driveAmount)).oversampleAtLeast(8.ign) { it.shape(shape = "chebyshev") }
 
 /** The tag of the click-hunt harness: excluded from `audio_be`'s default `jvmTest` run, see [GuitarClickHuntTest]. */
 object ClickHunt : Tag()

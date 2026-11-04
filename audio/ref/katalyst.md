@@ -39,7 +39,7 @@ KLANG-00238 (phase3 step12 master as katalyst).
   and every `parallel` branch modulate; its clocks run over the blocks the chain processes (paused while the orbit
   sleeps, not reset), and the n-th noise of a chain is seeded by its position. A slot leaf that reads a non-finite
   value unsets the whole knob, and an unset knob's clocks pause. The build-time knobs (`lookahead`, `distort`'s
-  `shape` and `oversample`) are numbers, and an `eq` section takes a number or a `Kat.param` only (decision Q2, E2).
+  `shape`, a region's factor) are numbers, and an `eq` section takes a number or a `Kat.param` only (decision Q2, E2).
 - **A non-finite knob is the declared OFF state** (`KatalystKnob.written` is false for it). This includes a
   non-finite `wet`, which turns the stage off for the whole orbit: not a pure improvement over the old field path,
   accepted so that "non-finite is unset" holds on every knob. Guard: `KatalystSlotResolverSpec`.
@@ -63,7 +63,7 @@ and `retire` stay a synchronous hard cut, and `Cylinder` calls them only on a si
 | compressor | a linear blend with dry over `KNOB_GLIDE_SECONDS`; ON fades a reset instance in; the instance is built with the effect, never on the audio thread | `threshold`, `ratio` (as its inverse), `knee` glide per sample (`Compressor.processGliding`) as one move when it only adds reduction; a move whose NET effect at 0 dBFS (a fixed loud reference, never the signal) is less reduction (threshold up, ratio down, knee narrower, or a mix that relaxes on balance) releases on the same shared fraction at the compressor's release time constant, never faster than the glide (`CompressorKnobMove`, by ear 2026-10-17); a modulated knob stays outside the move; `attack`, `release` apply at once |
 | phaser | the wet and floor coefficients glide to identity; the cascade is dropped only on the landing | `wet`, `floor` per sample; `center`, `sweep` per block with alpha continuous across the seam (`PhaserCore.prepareBlock`); `rate` at once |
 | duck | a weight rides the reduction to 0 dB (`gain = 1 + w * (g - 1)`), then lets go of the source orbit | `depth` per sample; `attack` at once; a `duck.orbit` switch has no mechanism (open: KLANG-00247 (duck orbit switch click)) |
-| distort | the compressor's law: a linear blend with the dry mix over `KNOB_GLIDE_SECONDS`; ON fades reset cores in; with oversampling the dry runs through the phase twins, an unshaped round trip of the same oversampler (2026-10-10); oversampling is 2x unless the author names a factor | `amount` glides linear in the amount over `KNOB_GLIDE_SECONDS`, the drive ramped per sample within a block; `shape` and `oversample` are fixed with the chain |
+| distort | the compressor's law: a linear blend with the dry mix over `KNOB_GLIDE_SECONDS`; ON fades reset cores in; it runs at the rate it is in (its own oversampling factor, 2x by default, retired 2026-11-03 with KLANG-00214 step 4: a region is the way up) | `amount` glides linear in the amount over `KNOB_GLIDE_SECONDS`, the drive ramped per sample within a block; `shape` is fixed with the chain |
 | gain | never off | per-sample glide over `KNOB_GLIDE_SECONDS` |
 | arithmetic (`plus`, `minus`, `times`, `div`, `pow`, `min`, `max`, `abs`; 2026-10-11) | never off, memoryless: the Ignitor's per-sample law (`_arithmetic_laws.kt`) on every sample; an unset operand is the operator's identity, an unset cap or floor passes the bus | the operand glides per sample over `KNOB_GLIDE_SECONDS`, the law taken with the operand at each sample; a divisor glides as its reciprocal (a level) and divides again once settled; a cap's or a floor's first operand after unset arrives at once, and a cleared one lets go at the next block (`KatalystArithmeticEffect`) |
 | parallel | none of its own: each branch is a chain whose stages switch as above | none of its own: the orbit's param state reaches every branch's stages (`KatalystNestedChainsWriter`) |
@@ -115,8 +115,9 @@ The glide time itself is an open question for the maintainer's ear: KLANG-00213 
 - **Lookahead**: the Katalyst `compressor` and `limiter` take a build-time `lookahead`, at most
   `Compressor.MAX_LOOKAHEAD_SECONDS` (0.05), fixed per chain; the orbit or playback runs late by it and nothing
   compensates, by the author's choice. The house limiter is not a Katalyst stage (`MasterStage`; `audio/MEMORY.md`, "House stage").
-  The `distort` stage's oversampling delays the same way, by the oversampler's group delay rounded (3 frames at 2x, 4
-  at 4x, 5 at 8x; `Oversampler.groupDelaySamples`, the IIR half-band's low-frequency delay since 2026-10-10). Both are `KatalystLatentEffect`s, and the chain sums them
+  An oversampling region delays the same way, by its round trip's group delay (3.07, 4.40, 5.06 frames at 2x, 4x, 8x;
+  `Oversampler.groupDelaySamples`, the IIR half-band's low-frequency delay) plus its body's latency divided down, rounded
+  once. Both are `KatalystLatentEffect`s, and the chain sums them
   (`KatalystChain.latencyFrames`). A `parallel` stage (2026-10-10, `KatalystParallelEffect`) matches its branches in phase, so the sum does not comb:
   each branch gets an unshaped round trip of every oversampler it lacks (a phase twin) and a ring for the lookahead it
   lacks; the stage reports the union of the oversamplers plus the longest lookahead as its latency.

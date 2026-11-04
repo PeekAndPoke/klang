@@ -66,11 +66,8 @@ class LangFieldAccessorsSpec : StringSpec({
     // Effects: one row per slot of the seven compound objects (distort, crush, coarse, reverb, delay, phaser, tremolo).
     val mappedEffects = listOf(
         row("distort.amount", """s("bd sd").distort(0.4).distort(mul(0.5))""", { it.distort }, 0.2, s("bd sd").distort(0.4).distort(mul(0.5))),
-        row("distort.oversample", """s("bd sd").distort(oversample = 2).distort(oversample = mul(2))""", { it.distortOversample?.toDouble() }, 4.0, s("bd sd").distort(oversample = 2).distort(oversample = mul(2))),
         row("crush.bits", """s("bd sd").crush(8).crush(div(2))""", { it.crush }, 4.0, s("bd sd").crush(8).crush(div(2))),
-        row("crush.oversample", """s("bd sd").crush(oversample = 2).crush(oversample = mul(2))""", { it.crushOversample?.toDouble() }, 4.0, s("bd sd").crush(oversample = 2).crush(oversample = mul(2))),
         row("coarse.factor", """s("bd sd").coarse(4).coarse(mul(2))""", { it.coarse }, 8.0, s("bd sd").coarse(4).coarse(mul(2))),
-        row("coarse.oversample", """s("bd sd").coarse(oversample = 2).coarse(oversample = mul(2))""", { it.coarseOversample?.toDouble() }, 4.0, s("bd sd").coarse(oversample = 2).coarse(oversample = mul(2))),
         row("reverb.wet", """s("bd sd").reverb(0.3).reverb(add(0.2))""", { it.katalystParams?.get("reverb.wet") }, 0.5, s("bd sd").reverb(0.3).reverb(add(0.2))),
         row("reverb.size", """s("bd sd").reverb(size = 4).reverb(size = mul(2))""", { it.katalystParams?.get("reverb.size") }, 8.0, s("bd sd").reverb(size = 4).reverb(size = mul(2))),
         row("reverb.lowpass", """s("bd sd").reverb(lowpass = 4000).reverb(lowpass = div(2))""", { it.katalystParams?.get("reverb.lowpass") }, 2000.0, s("bd sd").reverb(lowpass = 4000).reverb(lowpass = div(2))),
@@ -91,11 +88,8 @@ class LangFieldAccessorsSpec : StringSpec({
     // call, so a child read of a LATER slot in the same call sees the old value; chain instead.
     val readEffects = listOf(
         row("distort.amount", """s("bd sd").distort(0.4).pan(distort.amount)""", { it.pan }, 0.4, s("bd sd").distort(0.4).pan(distort.amount)),
-        row("distort.oversample", """s("bd sd").distort(oversample = 2).crush(oversample = distort.oversample)""", { it.crushOversample?.toDouble() }, 2.0, s("bd sd").distort(oversample = 2).crush(oversample = distort.oversample)),
         row("crush.bits", """s("bd sd").crush(8).coarse(crush.bits)""", { it.coarse }, 8.0, s("bd sd").crush(8).coarse(crush.bits)),
-        row("crush.oversample", """s("bd sd").crush(oversample = 2).coarse(oversample = crush.oversample)""", { it.coarseOversample?.toDouble() }, 2.0, s("bd sd").crush(oversample = 2).coarse(oversample = crush.oversample)),
         row("coarse.factor", """s("bd sd").coarse(4).crush(coarse.factor)""", { it.crush }, 4.0, s("bd sd").coarse(4).crush(coarse.factor)),
-        row("coarse.oversample", """s("bd sd").coarse(oversample = 2).distort(oversample = coarse.oversample)""", { it.distortOversample?.toDouble() }, 2.0, s("bd sd").coarse(oversample = 2).distort(oversample = coarse.oversample)),
         row("reverb.wet", """s("bd sd").reverb(0.3).delay(reverb.wet)""", { it.katalystParams?.get("delay.wet") }, 0.3, s("bd sd").reverb(0.3).delay(reverb.wet)),
         row("reverb.size", """s("bd sd").reverb(size = 4, lowpass = reverb.size)""", { it.katalystParams?.get("reverb.lowpass") }, 4.0, s("bd sd").reverb(size = 4, lowpass = reverb.size)),
         row("reverb.lowpass", """s("bd sd").reverb(lowpass = 4000).lpf(reverb.lowpass)""", { it.cutoff }, 4000.0, s("bd sd").reverb(lowpass = 4000).lpf(reverb.lowpass)),
@@ -416,9 +410,9 @@ class LangFieldAccessorsSpec : StringSpec({
             it.phaserCenter shouldBe 1000.0
             it.phaserSweep shouldBe 2000.0
         }
-        both(s("bd sd").apply(distort(amount = 0.5, oversample = 2)), """s("bd sd").apply(distort(amount = 0.5, oversample = 2))""") {
+        both(s("bd sd").apply(distort(amount = 0.5, shape = "tube")), """s("bd sd").apply(distort(amount = 0.5, shape = "tube"))""") {
             it.distort shouldBe 0.5
-            it.distortOversample shouldBe 2
+            it.distortShape shouldBe "tube"
         }
         // batch three: the notch door
         both(s("bd sd").apply(notch(1000, 5)), """s("bd sd").apply(notch(1000, 5))""") {
@@ -562,18 +556,15 @@ class LangFieldAccessorsSpec : StringSpec({
                 it.tremoloRate shouldBe 8.0
                 it.tremoloShape shouldBe "sine"
             },
-            Case("distort(oversample = mul(2))", s("bd sd").distort(0.5, "soft", 2).distort(oversample = mul(2)), """s("bd sd").distort(0.5, "soft", 2).distort(oversample = mul(2))""") {
-                it.distort shouldBe 0.5
-                it.distortShape shouldBe "soft"
-                it.distortOversample shouldBe 4
+            Case("distort(amount = mul(2))", s("bd sd").distort(0.5, "tube").distort(amount = mul(2)), """s("bd sd").distort(0.5, "tube").distort(amount = mul(2))""") {
+                it.distort shouldBe 1.0
+                it.distortShape shouldBe "tube"
             },
-            Case("crush(bits = div(2))", s("bd sd").crush(8, 2).crush(bits = div(2)), """s("bd sd").crush(8, 2).crush(bits = div(2))""") {
+            Case("crush(bits = div(2))", s("bd sd").crush(8).crush(bits = div(2)), """s("bd sd").crush(8).crush(bits = div(2))""") {
                 it.crush shouldBe 4.0
-                it.crushOversample shouldBe 2
             },
-            Case("coarse(oversample = mul(2))", s("bd sd").coarse(4, 2).coarse(oversample = mul(2)), """s("bd sd").coarse(4, 2).coarse(oversample = mul(2))""") {
-                it.coarse shouldBe 4.0
-                it.coarseOversample shouldBe 4
+            Case("coarse(factor = mul(2))", s("bd sd").coarse(4).coarse(factor = mul(2)), """s("bd sd").coarse(4).coarse(factor = mul(2))""") {
+                it.coarse shouldBe 8.0
             },
         ).forEach { case ->
             withClue(case.name) {

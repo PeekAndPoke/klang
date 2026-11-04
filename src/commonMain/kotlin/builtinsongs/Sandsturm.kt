@@ -33,7 +33,7 @@ import * from "sprudel"
 let lead = Ign.saw().mul(0.5)
     .plus(Ign.square().detune(31).mul(0.5))
     .lowpass(4200, 2.5)
-    .distort(1.0, "soft", 4)
+    .oversampleAtLeast(4, y => y.distort(1.0, "soft"))
     .adsr(0.001, 0.7, 0.0, 0.04)
     .classic()
 

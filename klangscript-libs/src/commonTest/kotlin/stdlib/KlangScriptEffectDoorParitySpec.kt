@@ -139,9 +139,9 @@ class KlangScriptEffectDoorParitySpec : StringSpec({
         Row("drive", { saw.drive(0.4.ign) }, "drive(0.4)", IgnitorDsl.Drive(inner = saw, amount = c(0.4))),
         Row(
             "distort", { saw.distort(amount = 0.4.ign) }, "distort(0.4)",
-            IgnitorDsl.Shape(inner = IgnitorDsl.Drive(inner = saw, amount = c(0.4)), shape = c(0.0), oversample = c(0.0)),
+            IgnitorDsl.Shape(inner = IgnitorDsl.Drive(inner = saw, amount = c(0.4)), shape = c(0.0)),
         ),
-        Row("shape", { saw.shape() }, "shape()", IgnitorDsl.Shape(inner = saw, shape = c(0.0), oversample = c(0.0))),
+        Row("shape", { saw.shape() }, "shape()", IgnitorDsl.Shape(inner = saw, shape = c(0.0))),
         Row("crush", { saw.crush(6.ign) }, "crush(6)", IgnitorDsl.Crush(inner = saw, bits = c(6.0))),
         Row("coarse", { saw.coarse(3.ign) }, "coarse(3)", IgnitorDsl.Coarse(inner = saw, factor = c(3.0))),
         Row("accelerate", { saw.accelerate(5.ign) }, "accelerate(5)", IgnitorDsl.Accelerate(inner = saw, semitones = c(5.0))),
@@ -163,7 +163,7 @@ class KlangScriptEffectDoorParitySpec : StringSpec({
 
     val p = IgnitorDsl.Param("p", 0.5)
     val driven = IgnitorDsl.Drive(inner = saw, amount = c(0.4))
-    fun shapeOf(inner: IgnitorDsl, shape: IgnitorDsl, oversample: IgnitorDsl) = IgnitorDsl.Shape(inner = inner, shape = shape, oversample = oversample)
+    fun shapeOf(inner: IgnitorDsl, shape: IgnitorDsl) = IgnitorDsl.Shape(inner = inner, shape = shape)
     val inputs = listOf(
         Row(
             "phaser center and sweep",
@@ -176,40 +176,20 @@ class KlangScriptEffectDoorParitySpec : StringSpec({
             "shimmer(0.3, 0.4, 3000, [0, 4, 7])",
             shimmerBase.copy(wet = c(0.3), feedback = c(0.4), tone = c(3000.0), pitches = listOf(0.0, 4.0, 7.0)),
         ),
-        Row(
-            "distort shape and oversample",
-            { saw.distort(amount = 0.4.ign, shape = "hard", oversample = 4.ign) }, "distort(0.4, \"hard\", 4)",
-            IgnitorDsl.Shape(inner = IgnitorDsl.Drive(inner = saw, amount = c(0.4)), shape = c(1.0), oversample = c(4.0)),
-        ),
-        // shape and distort: the index form and the name form, each with a slot for `shape` and for `oversample`
-        Row(
-            "shape, the index form, a slot oversample", { saw.shape(shape = 6.ign, oversample = IgnitorDsl.Param("os", 4.0)) },
-            "shape(6, Ignitor.param(\"os\", 4))", shapeOf(saw, c(6.0), IgnitorDsl.Param("os", 4.0)),
-        ),
+        // shape and distort: the index form and the name form, each with a slot for `shape`
+        Row("shape, the index form", { saw.shape(shape = 6.ign) }, "shape(6)", shapeOf(saw, c(6.0))),
         Row(
             "shape, the index form, a slot shape", { saw.shape(shape = IgnitorDsl.Param("sh", 3.0)) },
-            "shape(Ignitor.param(\"sh\", 3))", shapeOf(saw, IgnitorDsl.Param("sh", 3.0), c(0.0)),
+            "shape(Ignitor.param(\"sh\", 3))", shapeOf(saw, IgnitorDsl.Param("sh", 3.0)),
         ),
-        Row("shape, the name form", { saw.shape(shape = "tube", oversample = 2.ign) }, "shape(\"tube\", 2)", shapeOf(saw, c(10.0), c(2.0))),
-        Row("shape, the name form, its default oversample", { saw.shape(shape = "hard") }, "shape(\"hard\")", shapeOf(saw, c(1.0), c(0.0))),
+        Row("shape, the name form", { saw.shape(shape = "tube") }, "shape(\"tube\")", shapeOf(saw, c(10.0))),
+        Row("shape, an unknown name is soft", { saw.shape(shape = "wobble") }, "shape(\"wobble\")", shapeOf(saw, c(0.0))),
         Row(
-            "shape, the name form, a slot oversample", { saw.shape(shape = "tube", oversample = IgnitorDsl.Param("os", 4.0)) },
-            "shape(\"tube\", Ignitor.param(\"os\", 4))", shapeOf(saw, c(10.0), IgnitorDsl.Param("os", 4.0)),
+            "distort, the index form, a slot shape", { saw.distort(amount = 0.4.ign, shape = IgnitorDsl.Param("sh", 3.0)) },
+            "distort(0.4, Ignitor.param(\"sh\", 3))", shapeOf(driven, IgnitorDsl.Param("sh", 3.0)),
         ),
-        Row("shape, an unknown name is soft", { saw.shape(shape = "wobble", oversample = 2.ign) }, "shape(\"wobble\", 2)", shapeOf(saw, c(0.0), c(2.0))),
-        Row(
-            "distort, the index form, a slot shape", { saw.distort(amount = 0.4.ign, shape = IgnitorDsl.Param("sh", 3.0), oversample = 8.ign) },
-            "distort(0.4, Ignitor.param(\"sh\", 3), 8)", shapeOf(driven, IgnitorDsl.Param("sh", 3.0), c(8.0)),
-        ),
-        Row(
-            "distort, the index form, a slot oversample", { saw.distort(amount = 0.4.ign, shape = 5.ign, oversample = IgnitorDsl.Param("os", 4.0)) },
-            "distort(0.4, 5, Ignitor.param(\"os\", 4))", shapeOf(driven, c(5.0), IgnitorDsl.Param("os", 4.0)),
-        ),
-        Row(
-            "distort, the name form, a slot oversample", { saw.distort(amount = 0.4.ign, shape = "tube", oversample = IgnitorDsl.Param("os", 4.0)) },
-            "distort(0.4, \"tube\", Ignitor.param(\"os\", 4))", shapeOf(driven, c(10.0), IgnitorDsl.Param("os", 4.0)),
-        ),
-        Row("distort, the name form, its default oversample", { saw.distort(amount = 0.4.ign, shape = "hard") }, "distort(0.4, \"hard\")", shapeOf(driven, c(1.0), c(0.0))),
+        Row("distort, the index form", { saw.distort(amount = 0.4.ign, shape = 5.ign) }, "distort(0.4, 5)", shapeOf(driven, c(5.0))),
+        Row("distort, the name form", { saw.distort(amount = 0.4.ign, shape = "hard") }, "distort(0.4, \"hard\")", shapeOf(driven, c(1.0))),
         Row("adsr, a signal stage", { saw.adsr(attack = p, decay = 0.2.ign, sustain = 0.5.ign, release = 0.3.ign) }, "adsr(Ignitor.param(\"p\", 0.5), 0.2, 0.5, 0.3)", adsrBase.copy(attack = p)),
         Row("fm, a signal depth", { saw.fm(modulator = sine, ratio = 2.ign, depth = p) }, "fm(Ignitor.sine(), 2, Ignitor.param(\"p\", 0.5))", fmBase.copy(depth = p)),
         Row("pitchEnvelope, a signal depth", { saw.pitchEnvelope(p) }, "pitchEnvelope(Ignitor.param(\"p\", 0.5))", penvBase.copy(semitones = p)),

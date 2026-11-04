@@ -20,10 +20,9 @@ import io.peekandpoke.klang.common.infra.toMap
  * phase 3 step 9 cut them (the pitch envelope's until pitch pipeline step 1, the vibrato's until step 2, accelerate until step 3, the FM's until step 4) (a voice door travels as `classic()` slot keys in `ignitorParams` since step 8). Specs that
  * read more clearly as "a lowpass at 900 with an envelope" than as a list of slot keys state their settings here and
  * send them through [withClassicSlots], which writes the same key names, units and on/off rules as sprudel's
- * `classicSlotParams`. Three differences are deliberate and inaudible: the rig always writes `passes` (default 1.0)
- * where sprudel writes it only when set, it writes the filter envelope curves whenever a [DoorFilterEnv] is present
- * (curves alone never trigger the depth fill), and it omits the `crush.oversample` / `coarse.oversample` keys, which
- * nothing reads.
+ * `classicSlotParams`. Two differences are deliberate and inaudible: the rig always writes `passes` (default 1.0)
+ * where sprudel writes it only when set, and it writes the filter envelope curves whenever a [DoorFilterEnv] is present
+ * (curves alone never trigger the depth fill).
  */
 data class DoorFields(
     val vibratoRate: Double? = null,
@@ -37,7 +36,6 @@ data class DoorFields(
     val coarse: Double? = null,
     val distort: Double? = null,
     val distortShape: String? = null,
-    val distortOversample: Int? = null,
     val tremoloDepth: Double? = null,
     val tremoloRate: Double? = null,
     val tremoloShape: String? = null,
@@ -168,7 +166,6 @@ fun VoiceData.withClassicSlots(doors: DoorFields): VoiceData {
     put(s.coarse.factor, doors.coarse)
     put(s.distort.amount, doors.distort)
     put(s.distort.shape, doors.distortShape?.let { DistortionShapes.indexOf(it) })
-    put(s.distort.oversample, doors.distortOversample?.toDouble())
 
     for (def in doors.filters) {
         when (def) {

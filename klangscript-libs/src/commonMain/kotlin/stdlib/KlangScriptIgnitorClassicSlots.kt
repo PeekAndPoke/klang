@@ -160,10 +160,6 @@ internal object KlangScriptIgnitorDistortSlots {
     /** The waveshaper as its index in the shape list, default `soft`. Mirrors sprudel's `distort(shape = ...)`. */
     @KlangScript.Property
     val shape: IgnitorDsl = IgnitorDsl.Slots.distort.shape
-
-    /** Oversampling factor, default 0 (none). Mirrors sprudel's `distort.oversample`. */
-    @KlangScript.Property
-    val oversample: IgnitorDsl = IgnitorDsl.Slots.distort.oversample
 }
 
 /** `Ignitor.slot.hpf`: the highpass stage's slots. */

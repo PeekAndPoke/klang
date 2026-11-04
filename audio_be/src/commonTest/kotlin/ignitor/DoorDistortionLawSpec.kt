@@ -12,9 +12,7 @@ import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.DistortionShape
-import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.applyDistortionShape
-import io.peekandpoke.klang.audio_be.roundTrip
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.exp
@@ -34,8 +32,7 @@ import kotlin.math.sqrt
  * - The doors' chain (`Ignitor.drive` + `Ignitor.shape`, which `Ignitor.distort` is, decision D2 option A; the
  *   guitars of DerSchmetterling, Sandsturm and ATruthWorthLyingFor): drive `10^(1.2 amount)`, the shaper, the DC
  *   blocker `y = x - x[n-1] + 0.995 y[n-1]`, then `softCap` (identity to 0.95, `0.95 + 0.05 tanh((|x| - 0.95) / 0.05)`
- *   above). The oversampled rows run the shaper inside the production [Oversampler] (its law is `OversamplerSpec`'s);
- *   drive, shaper, blocker and cap are this spec's.
+ *   above); drive, shaper, blocker and cap are this spec's.
  */
 class DoorDistortionLawSpec : StringSpec({
 
@@ -143,11 +140,9 @@ class DoorDistortionLawSpec : StringSpec({
     fun source(n: Int, amplitude: Double): DoubleArray = DoubleArray(n) { i -> 0.05 + amplitude * sin(2.0 * PI * 220.0 * i / sampleRate) }
 
     /** The chain's output, and the largest magnitude that reached the cap (to show the cap acts in a fixture). */
-    fun oracleChain(input: DoubleArray, amount: Double, shape: DistortionShape, oversampleStages: Int): Pair<DoubleArray, Double> {
+    fun oracleChain(input: DoubleArray, amount: Double, shape: DistortionShape): Pair<DoubleArray, Double> {
         val gain = 10.0.pow(amount * 1.2)
         val blocker = Blocker()
-        val os = if (oversampleStages > 0) Oversampler(oversampleStages) else null
-        val scratch = ScratchBuffers(blockFrames)
         val out = DoubleArray(input.size)
         val work = DoubleArray(blockFrames)
         var capInPeak = 0.0
@@ -160,16 +155,8 @@ class DoorDistortionLawSpec : StringSpec({
                 work[i] = input[at + i] * gain
             }
 
-            if (os != null) {
-                os.roundTrip(buffer = work, offset = 0, length = n, scratch = scratch) { w, count ->
-                    for (i in 0 until count) {
-                        w[i] = curve(shape, w[i]).first
-                    }
-                }
-            } else {
-                for (i in 0 until n) {
-                    work[i] = curve(shape, work[i]).first
-                }
+            for (i in 0 until n) {
+                work[i] = curve(shape, work[i]).first
             }
 
             for (i in 0 until n) {
@@ -187,28 +174,26 @@ class DoorDistortionLawSpec : StringSpec({
 
     fun maxAbsDiff(a: DoubleArray, b: DoubleArray): Double = a.indices.maxOf { abs(a[it] - b[it]) }
 
-    "the doors' chain: drive, shaper, DC blocker, soft cap, in that order, on the plain and the oversampled path" {
+    "the doors' chain: drive, shaper, DC blocker, soft cap, in that order" {
         val total = 2048
         // The soft and tube guitars, a one-sided and an asymmetric shape, at a drive that rails the shaper (so the
         // blocker overshoots and the cap acts) and at lighter ones; the DSL name and the curve it selects.
         val cases = listOf(
-            DistortCase(1.0, "soft", DistortionShape.SOFT, 0, capActs = true),
-            DistortCase(0.35, "tube", DistortionShape.TUBE, 0, capActs = false),
-            DistortCase(0.5, "rectify", DistortionShape.RECTIFY, 0, capActs = false),
-            DistortCase(0.7, "asym", DistortionShape.ASYM, 0, capActs = true),
-            DistortCase(1.0, "soft", DistortionShape.SOFT, 2, capActs = true),
-            DistortCase(0.3, "tube", DistortionShape.TUBE, 1, capActs = false),
+            DistortCase(1.0, "soft", DistortionShape.SOFT, capActs = true),
+            DistortCase(0.35, "tube", DistortionShape.TUBE, capActs = false),
+            DistortCase(0.5, "rectify", DistortionShape.RECTIFY, capActs = false),
+            DistortCase(0.7, "asym", DistortionShape.ASYM, capActs = true),
         )
         val windows = List(total / blockFrames) { blockFrames }
 
-        // `Ignitor.distort(amount, shape, os)` IS `drive(amount).shape(shape, os)` (one line in IgnitorEffects.kt); both
+        // `Ignitor.distort(amount, shape)` IS `drive(amount).shape(shape)` (one line in IgnitorEffects.kt); both
         // spellings are rendered so a future divergence of the two doors shows here.
         for (c in cases) {
-            val label = "${c.name} x${c.os} at ${c.amount}"
+            val label = "${c.name} at ${c.amount}"
             val input = source(total, 0.8)
-            val (expected, capInPeak) = oracleChain(input, c.amount, c.shape, c.os)
-            val viaDistort = renderNodeWindows(ArrayIgnitor(input).distort(ParamIgnitor("amount", c.amount), c.name, c.os), windows, sampleRate)
-            val viaChain = renderNodeWindows(ArrayIgnitor(input).drive(ParamIgnitor("amount", c.amount)).shape(c.name, c.os), windows, sampleRate)
+            val (expected, capInPeak) = oracleChain(input, c.amount, c.shape)
+            val viaDistort = renderNodeWindows(ArrayIgnitor(input).distort(ParamIgnitor("amount", c.amount), c.name), windows, sampleRate)
+            val viaChain = renderNodeWindows(ArrayIgnitor(input).drive(ParamIgnitor("amount", c.amount)).shape(c.name), windows, sampleRate)
 
             if (c.capActs) {
                 withClue("$label: the blocker overshoots past the knee, so the cap acts in this fixture") {
@@ -224,4 +209,4 @@ class DoorDistortionLawSpec : StringSpec({
     }
 })
 
-private class DistortCase(val amount: Double, val name: String, val shape: DistortionShape, val os: Int, val capActs: Boolean)
+private class DistortCase(val amount: Double, val name: String, val shape: DistortionShape, val capActs: Boolean)

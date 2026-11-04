@@ -99,8 +99,7 @@ class BandFilterSlots internal constructor(door: String) {
 
 /**
  * The one slot of the crush stage (`Slots.crush`), mirroring sprudel's `crush.bits`: the bit depth.
- * Default 0.0, the strip's untouched value, which the gate reads as off (below 1). Sprudel's
- * `oversample` of this stage has no slot: it moved to KLANG-00214 (oversampling regions).
+ * Default 0.0, the strip's untouched value, which the gate reads as off (below 1).
  */
 class CrushSlots internal constructor() {
     val bits: IgnitorDsl = slot(door = "crush", param = "bits", default = 0.0)
@@ -109,17 +108,17 @@ class CrushSlots internal constructor() {
 /**
  * The one slot of the coarse stage (`Slots.coarse`), mirroring sprudel's `coarse.factor`: the
  * sample-hold factor. Default 0.0, the strip's untouched value, which the gate reads as off (1 or
- * less). Sprudel's `oversample` of this stage has no slot: it moved to KLANG-00214 (oversampling regions).
+ * less).
  */
 class CoarseSlots internal constructor() {
     val factor: IgnitorDsl = slot(door = "coarse", param = "factor", default = 0.0)
 }
 
 /**
- * The slots of the distort stage (`Slots.distort`), mirroring sprudel's `distort(amount, shape, oversample)`:
- * `distort.amount` (default 0.0, off), `distort.shape` (an INDEX into [DistortionShapes], default
- * `soft`; sprudel's name has no reader, the slot carries its index) and `distort.oversample` (the
- * factor, default 0, no oversampler; the D7 stopgap, read at voice build).
+ * The slots of the distort stage (`Slots.distort`), mirroring sprudel's `distort(amount, shape)`:
+ * `distort.amount` (default 0.0, off) and `distort.shape` (an INDEX into [DistortionShapes], default
+ * `soft`; sprudel's name has no reader, the slot carries its index). The D7 stopgap `distort.oversample`
+ * retired with KLANG-00214 (oversampling regions) step 4: the stage runs at the voice's base rate.
  */
 class DistortSlots internal constructor() {
     val amount: IgnitorDsl = slot(door = "distort", param = "amount", default = 0.0)
@@ -127,7 +126,6 @@ class DistortSlots internal constructor() {
         door = "distort", param = "shape", default = DistortionShapes.SOFT_INDEX.toDouble(),
         description = "The waveshaper as its index in the shape list; what sprudel's `distort(shape = ...)` names",
     )
-    val oversample: IgnitorDsl = slot(door = "distort", param = "oversample", default = 0.0)
 }
 
 /**
@@ -342,13 +340,11 @@ class SampleSlots internal constructor() {
  *
  * Per stage, what each node is and how it relates to the retired strip (proven bit-identical row by row
  * before the strip was deleted; their frozen fingerprints were retired at the phase 3 end checkpoint, 2026-10-02):
- *  - the crush renders the strip's own `floor` quantizer, one shared law (decision D1, landed in step 4).
- *    It has no oversampler, so `crush(oversample = ...)` does nothing (tracked in
- *    KLANG-00214 (oversampling regions));
+ *  - the crush renders the strip's own `floor` quantizer, one shared law (decision D1, landed in step 4);
  *  - the distort is the fused [IgnitorDsl.Distort] node, the one that switches drive AND shape off as a
  *    unit (`Shape(Drive(...))` would put the shaper on every voice). Decision D2 (option A, landed in
- *    step 4): the node renders the strip's loop (no soft cap, the drive inside the oversampler), so it
- *    is bit-identical, while the `distort`/`shape` doors keep their capped law;
+ *    step 4): the node renders the strip's loop (no soft cap), so it
+ *    was bit-identical, while the `distort`/`shape` doors keep their capped law;
  *  - the four filters humanize from the voice's `analog` slot, as the strip did, but draw per filter
  *    where the strip drew every tolerance first (the section 8 migration cost); their cutoff
  *    envelopes are the strip's since D3 (one law, the block interpolation, and the default curve
@@ -445,7 +441,6 @@ fun IgnitorDsl.classic(): IgnitorDsl {
         inner = coarsened,
         amount = s.distort.amount,
         shape = s.distort.shape,
-        oversample = s.distort.oversample,
     )
     val highpassed = IgnitorDsl.Highpass(
         inner = distorted,

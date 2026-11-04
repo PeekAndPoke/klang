@@ -11,7 +11,7 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 
 class LangDistortSpec : StringSpec({
 
-    // -- per-param (amount, shape, oversample) -----------------------------------------
+    // -- per-param (amount, shape) ----------------------------------------------------
 
     "distort() with amount only preserves backward compat" {
         val p = note("c").distort(0.7)

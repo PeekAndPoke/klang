@@ -19,9 +19,9 @@ Tuning by ear needs a vocabulary of the ear first. Without it, the knobs of a ch
 ```javascript
 let preampHighGain = x => x
   .highpass(120)
-  .distort(0.40, "tube", 4).highpass(110)
-  .distort(0.55, "softsat", 4).highpass(100)
-  .distort(0.65, "soft", 4)
+  .oversampleAtLeast(4, y => y.distort(0.40, "tube")).highpass(110)
+  .oversampleAtLeast(4, y => y.distort(0.55, "softsat")).highpass(100)
+  .oversampleAtLeast(4, y => y.distort(0.65, "soft"))
   .lowpass(5800)
   .mul(0.30)
 ```

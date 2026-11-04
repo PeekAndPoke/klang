@@ -52,7 +52,6 @@ class KlangScriptClassicDoorParitySpec : StringSpec({
         "coarse.factor" to s.coarse.factor,
         "distort.amount" to s.distort.amount,
         "distort.shape" to s.distort.shape,
-        "distort.oversample" to s.distort.oversample,
         "hpf.freq" to s.hpf.freq, "hpf.q" to s.hpf.q, "hpf.passes" to s.hpf.passes, "hpf.env" to s.hpf.env,
         "hpf.attack" to s.hpf.attack, "hpf.decay" to s.hpf.decay, "hpf.sustain" to s.hpf.sustain, "hpf.release" to s.hpf.release,
         "bpf.freq" to s.bpf.freq, "bpf.q" to s.bpf.q, "bpf.env" to s.bpf.env,

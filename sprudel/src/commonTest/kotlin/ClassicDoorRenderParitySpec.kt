@@ -160,7 +160,6 @@ class ClassicDoorRenderParitySpec : StringSpec({
         add(Row("coarse.factor", mapOf("coarse.factor" to 3.0)))
         add(Row("distort.amount", mapOf("distort.amount" to 0.5)))
         add(Row("distort.shape", mapOf("distort.amount" to 0.5, "distort.shape" to DistortionShapes.indexOf("tube"))))
-        add(Row("distort.oversample", mapOf("distort.amount" to 0.5, "distort.oversample" to 2.0)))
         addAll(filterRows("hpf", hasPasses = true))
         addAll(filterRows("bpf", hasPasses = false))
         addAll(filterRows("notch", hasPasses = false))

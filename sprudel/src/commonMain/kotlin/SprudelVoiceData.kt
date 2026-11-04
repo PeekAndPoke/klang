@@ -626,30 +626,15 @@ data class SprudelVoiceData(
         set(v) {
             if (v != null || distortion != null) distortionOrNew().distortShape = v
         }
-    var distortOversample: Int?
-        get() = distortion?.distortOversample
-        set(v) {
-            if (v != null || distortion != null) distortionOrNew().distortOversample = v
-        }
     var coarse: Double?
         get() = distortion?.coarse
         set(v) {
             if (v != null || distortion != null) distortionOrNew().coarse = v
         }
-    var coarseOversample: Int?
-        get() = distortion?.coarseOversample
-        set(v) {
-            if (v != null || distortion != null) distortionOrNew().coarseOversample = v
-        }
     var crush: Double?
         get() = distortion?.crush
         set(v) {
             if (v != null || distortion != null) distortionOrNew().crush = v
-        }
-    var crushOversample: Int?
-        get() = distortion?.crushOversample
-        set(v) {
-            if (v != null || distortion != null) distortionOrNew().crushOversample = v
         }
 
     var phaserRate: Double?

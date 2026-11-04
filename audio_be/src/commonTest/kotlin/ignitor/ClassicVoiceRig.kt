@@ -175,12 +175,11 @@ object ClassicVoiceRig {
 
         // ── distort (D2 option A, DistortionCore) ──
         *listOf(
-            Triple(0.5, "soft", 0), Triple(0.5, "gentle", 0), Triple(1.0, "hard", 0), Triple(1.0, "fold", 0),
-            Triple(0.5, "rectify", 0), Triple(0.5, "tube", 4),
-        ).map { (amount, shape, os) ->
+            0.5 to "soft", 0.5 to "gentle", 1.0 to "hard", 1.0 to "fold", 0.5 to "rectify", 0.5 to "tube",
+        ).map { (amount, shape) ->
             ClassicRow(
-                "distort $amount $shape x$os",
-                mapOf("distort.amount" to amount, "distort.shape" to DistortionShapes.indexOf(shape), "distort.oversample" to os.toDouble()),
+                "distort $amount $shape",
+                mapOf("distort.amount" to amount, "distort.shape" to DistortionShapes.indexOf(shape)),
             )
         }.toTypedArray(),
 

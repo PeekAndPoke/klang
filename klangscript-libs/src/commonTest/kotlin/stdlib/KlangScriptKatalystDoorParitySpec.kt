@@ -253,8 +253,8 @@ private val doors: List<StageDoor> = listOf(
         },
         script = { k, a -> k.scriptDuck(orbit = a["orbit"], depth = a["depth"], attack = a["attack"]) },
     ),
-    // The bus distort (2026-10-09): `amount` is its one slot-capable parameter; `shape` and `oversample` are fixed
-    // with the chain and have their own row below, like the compressor's lookahead.
+    // The bus distort (2026-10-09): `amount` is its one slot-capable parameter; `shape` is fixed
+    // with the chain and has its own row below, like the compressor's lookahead.
     StageDoor(
         stage = "distort",
         bare = KatalystStageDsl.Distort(),
@@ -455,17 +455,17 @@ class KlangScriptKatalystDoorParitySpec : StringSpec({
                 KatalystDsl.of(bareLimiter.copy(lookahead = 0.004))
     }
 
-    "distort's shape and oversample: a name and a factor fixed with the chain, positional and named, on both doors" {
-        // The voice's flat door, position for position: `distort(amount, shape, oversample)`. The shape arrives as a
-        // NAME and lands as its catalogue index, through the one shared `DistortionShapes.indexOf`.
+    "distort's shape: a name fixed with the chain, positional and named, on both doors" {
+        // The voice's flat door, position for position: `distort(amount, shape)`. The shape arrives as a NAME and
+        // lands as its catalogue index, through the one shared `DistortionShapes.indexOf`.
         val tube = DistortionShapes.indexOf("tube").toInt()
-        val expected = KatalystStageDsl.Distort(amount = k(0.3), shape = tube, oversample = 2)
+        val expected = KatalystStageDsl.Distort(amount = k(0.3), shape = tube)
 
         tube shouldNotBe DistortionShapes.SOFT_INDEX
 
-        ks("Katalyst(k => k.distort(0.3, \"tube\", 2))") shouldBe KatalystDsl.of(expected)
-        ks("Katalyst(k => k.distort(amount = 0.3, shape = \"tube\", oversample = 2))") shouldBe KatalystDsl.of(expected)
-        Kat.build { it.distort(amount = 0.3.kat, shape = "tube", oversample = 2) } shouldBe
+        ks("Katalyst(k => k.distort(0.3, \"tube\"))") shouldBe KatalystDsl.of(expected)
+        ks("Katalyst(k => k.distort(amount = 0.3, shape = \"tube\"))") shouldBe KatalystDsl.of(expected)
+        Kat.build { it.distort(amount = 0.3.kat, shape = "tube") } shouldBe
                 KatalystDsl.of(expected)
 
         // An unknown name is `soft`, the voice's rule, and the shape alone leaves the amount at the bare default.

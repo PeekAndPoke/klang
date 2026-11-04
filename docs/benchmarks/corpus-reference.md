@@ -14,25 +14,25 @@ engine sound change that moved a frozen text or an unedited live song. An engine
 the same change rides along as INFO, which is why a neutrality proof reads "the corpus GREEN with no live song
 edited (or accept first)".
 
-Accepted on 2026-11-01, tree `1b98559e1-dirty`.
+Accepted on 2026-11-03, tree `6ada80833-dirty`.
 
 | song | code | hash | peak |
 |---|---|---|---|
-| Final Synthasy VII Prelude | 01cb117fe4edc1e0 | 8476798fd53deab6 | 0.3875 |
-| Kokon | f84927eb36e91e88 | e0fb9820d4d23e73 | 0.7664 |
-| Die Kirschblüte | 1701665b809e9c61 | 14b385ebf24f1f5c | 0.7459 |
-| Der Schmetterling | 461f490e8e7b358f | f98387bb84adb9f4 | 0.7518 |
+| Final Synthasy VII Prelude | 6fef86c8f5b39523 | 8476798fd53deab6 | 0.3875 |
+| Kokon | b115fee4a521164f | 7a6fca3ccab16212 | 0.7340 |
+| Die Kirschblüte | db76c546476008ce | df2f7aeab50f3f04 | 0.7459 |
+| Der Schmetterling | f9e47711f59cf9ce | 4c9c76fcdd20c954 | 0.7446 |
 | Gestrandet | a5424878277ca92c | 77db888833a1cef1 | 0.0695 |
-| Seltsamere Dinge | e46e69b6c7656cb9 | 675e2d6deb69c636 | 0.7510 |
-| Stein um Stein | b98d8a48fa262fe7 | 6a43f1f384deea5d | 0.7609 |
-| Remix: Echo um Echo | 3fc60ffe8bb2be10 | c11fe59933a5ae4e | 0.4931 |
+| Seltsamere Dinge | 8ac4ee429e216874 | 7614cf7fcd0354e2 | 0.7510 |
+| Stein um Stein | 788bf52d51dead9c | 44a6622cb3f4543c | 0.7605 |
+| Remix: Echo um Echo | 3dd63fdaef403ad3 | c8ddaa321923da92 | 0.4881 |
 | Greensleeves Chant | 16579cad1833540e | 77c222b0c3c67ee5 | 0.4578 |
-| A Synth Worth Lying For | cb10099d79a66b7e | 9adc0236e36ec305 | 0.7559 |
-| The Synthsale Piper's Last Rave | c211f68535874a42 | 94ea6b283d36f21c | 0.8953 |
-| Synthsturm | 74464ed7811defad | 6a9e77aef79be597 | 0.8542 |
+| A Synth Worth Lying For | 852c94175774f739 | 209725b3be141562 | 0.7555 |
+| The Synthsale Piper's Last Rave | 152941900caceb8f | f75c6449340d9c06 | 0.8952 |
+| Synthsturm | e951b133312d65cc | 224b0ae5659ca732 | 0.8540 |
 | The Synthsale Piper's Farewell | 4b9caa4a49e4bf59 | 8c6714174476f7ff | 0.3457 |
 | Smalltown Synth | dc6e828e4b09ee88 | 28609e132bc7447e | 0.9108 |
 | Drunken Synthlor | f076f371d34fff8c | 412580f1bdd07d07 | 0.8508 |
-| frozen derSchmetterling_2026_09_25 | ad38dddae123a069 | 0a6577be2b1f8f4a | 0.9246 |
-| frozen strangerThings_2026_07_03 | bd29f1f5289c3292 | 84cb8742d2ac3c7f | 0.6984 |
-| frozen piece derSchmetterling_2026_09_16 | 816b24cab402d05a | 2914218ed0f62dd1 | 0.9143 |
+| frozen derSchmetterling_2026_11_03 | f9e47711f59cf9ce | 4c9c76fcdd20c954 | 0.7446 |
+| frozen strangerThings_2026_11_03 | 8ac4ee429e216874 | 7614cf7fcd0354e2 | 0.7510 |
+| frozen piece derSchmetterling_2026_09_16 | 0b2014f8923cc377 | c8a76ab6268a6436 | 0.9143 |

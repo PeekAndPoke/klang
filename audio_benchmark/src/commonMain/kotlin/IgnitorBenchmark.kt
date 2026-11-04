@@ -21,6 +21,7 @@ import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.mul
+import io.peekandpoke.klang.audio_bridge.oversampleAtLeast
 import io.peekandpoke.klang.audio_bridge.plus
 import io.peekandpoke.klang.audio_bridge.shape
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
@@ -368,20 +369,8 @@ class IgnitorBenchmark(
                     voiceData = voice("supersaw", ignitorParams = super8v, reverb = 0.5, reverbSize = 0.5, doors = lpf1k)
                 ),
                 Case("pluck+distort", voiceData = voice("pluck") { distort = 0.5; distortShape = "soft" }),
-                Case(
-                    "pluck+distort_2x",
-                    voiceData = voice("pluck") { distort = 0.5; distortShape = "soft"; distortOversample = 2 },
-                ),
-                Case(
-                    "pluck+distort_4x",
-                    voiceData = voice("pluck") { distort = 0.5; distortShape = "soft"; distortOversample = 4 },
-                ),
-                Case(
-                    "pluck+distort_8x",
-                    voiceData = voice("pluck") { distort = 0.5; distortShape = "soft"; distortOversample = 8 },
-                ),
-                Case("pluck+crush_4x", voiceData = voice("pluck") { crush = 4.0; crushOversample = 4 }),
-                Case("pluck+coarse_4x", voiceData = voice("pluck") { coarse = 4.0; coarseOversample = 4 }),
+                Case("pluck+crush", voiceData = voice("pluck") { crush = 4.0 }),
+                Case("pluck+coarse", voiceData = voice("pluck") { coarse = 4.0 }),
                 Case("square+fm", voiceData = voice("square") { fmh = 2.0; fmEnv = 200.0 }),
                 Case(
                     "sine+vibrato+tremolo",
@@ -404,7 +393,7 @@ class IgnitorBenchmark(
                     sounds = mapOf("guitar-rig-no-drive" to guitarRig(muls = true, drives = false))),
                 Case("guitar-rig-no-mul-no-drive", voiceData = voice("guitar-rig-no-mul-no-drive", ignitorParams = mapOf("analog" to 5.0)),
                     sounds = mapOf("guitar-rig-no-mul-no-drive" to guitarRig(muls = false, drives = false))),
-                // Where the rest of the rig's cost sits: the same rig with every shaper at oversample 0.
+                // Where the rest of the rig's cost sits: the same rig with every shaper at the base rate, no region.
                 Case("guitar-rig-no-oversample", voiceData = voice("guitar-rig-no-oversample", ignitorParams = mapOf("analog" to 5.0)),
                     sounds = mapOf("guitar-rig-no-oversample" to guitarRig(muls = true, drives = true, oversample = false))),
             )
@@ -414,8 +403,9 @@ class IgnitorBenchmark(
          * The rhythm guitar of Der Schmetterling as an inline tree. [muls] keeps the level knobs
          * (`mul` after a stage), [drives] keeps the Drive half of every `distort`; either off deletes
          * those nodes and leaves the rest of the chain as it is (every Eq is opened explicitly, so a
-         * deleted `mul` between two of them does not let `eq()` merge them). [oversample] off runs
-         * every shaper at oversample 0.
+         * deleted `mul` between two of them does not let `eq()` merge them). Each shaper sits in a region of its own
+         * factor (`oversampleAtLeast`, one region per stage, the song's old per-stage factor); [oversample] off runs
+         * every shaper at the base rate.
          */
         private fun guitarRig(muls: Boolean, drives: Boolean, oversample: Boolean = true): IgnitorDsl {
             fun IgnitorDsl.level(gain: Double): IgnitorDsl = if (muls) mul(IgnitorDsl.Constant(gain)) else this
@@ -426,7 +416,7 @@ class IgnitorBenchmark(
             fun IgnitorDsl.distortion(amount: Double, shape: String, os: Int): IgnitorDsl {
                 val driven = if (drives) IgnitorDsl.Drive(inner = this, amount = IgnitorDsl.Constant(amount)) else this
 
-                return driven.shape(shape = shape, oversample = (if (oversample) os else 0).ign)
+                return if (oversample) driven.oversampleAtLeast(os.ign) { it.shape(shape = shape) } else driven.shape(shape = shape)
             }
 
             val string = guitarString(muls)

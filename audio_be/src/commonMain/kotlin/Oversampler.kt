@@ -25,7 +25,7 @@ import kotlin.math.roundToInt
  *
  * Filter state persists across round trips for inter-block continuity. The work buffer is the caller's lease from
  * [ScratchBuffers.oversample], held across both halves: no per-voice allocation. A voice's instance is fresh per note and
- * never reset; the one caller of [reset] is the Katalyst `distort` stage (through `DistortionCore.reset`).
+ * never reset; the callers of [reset] are a Katalyst region's converters and a `parallel` stage's phase twins.
  *
  * **The design** (2026-10-10, KLANG-00298 (iir oversampler); the maintainer: "we make the iir the
  * standard for now and add other methods later"): the elliptic half-band as two all-pass branches (Valenzuela and
@@ -43,15 +43,15 @@ import kotlin.math.roundToInt
  * 5.39 input samples at 2x, 4x, 8x, 16x (the FIR: 4.0, 5.5, 6.25). Toward the top it rises (at 2x: 3.07 at 1 kHz, 3.33 at
  * 10 kHz, 3.89 at 16 kHz, 4.74 at 20 kHz), so a whole-sample pad on a dry path beside an oversampled one NOTCHES the top
  * of their sum (-28.5 dB at 18.25 kHz at 2x). A host that sums the two pads the dry path with a PHASE TWIN instead, an
- * unshaped round trip of the same oversampler (the `parallel` nodes and the Katalyst `distort` stage's dry path,
- * [unionOf]); the two then match at every frequency. A linear-phase kernel with a constant delay is a later type.
+ * unshaped round trip of the same oversampler (the `parallel` nodes and a region's
+ * twins, [unionOf]); the two then match at every frequency. A linear-phase kernel with a constant delay is a later type.
  *
  * **NaN and state**: an IIR keeps what it is fed. Every sample entering a chain is sterilised with [flushState] (NaN,
  * infinity and denormal to 0), so one bad sample can never silence a voice for good; the stored states are flushed of
  * denormals once per block.
  *
- * **`stages = 0`**: [upsample] and [decimate] are no-ops (zero work, no state change), for callers that may receive
- * `oversample = 1` from a DSL.
+ * **`stages = 0`**: [upsample] and [decimate] are no-ops (zero work, no state change), for callers whose step count
+ * may come out 0.
  *
  * **`firstStage`**: an oversampler that starts ABOVE the base rate (inside an oversampling region, KLANG-00214
  * (oversampling regions)) is the upper part of a longer cascade: its stages take the designs of the stages they
@@ -149,8 +149,8 @@ class Oversampler(stages: Int, firstStage: Int = 0) {
     }
 
     /**
-     * Clears all filter state. A voice never calls it (its instance is fresh per note-on); the Katalyst `distort` stage
-     * does, through `DistortionCore.reset`, when it enters Off or is cut hard: its cores live as long as their chain.
+     * Clears all filter state. A voice never calls it (its instance is fresh per note-on); a Katalyst region and a
+     * `parallel` stage's twins do, when their chain is cut hard: they live as long as their chain.
      */
     fun reset() {
         for (stage in 0 until stages) {
@@ -439,8 +439,8 @@ class Oversampler(stages: Int, firstStage: Int = 0) {
          * input: its slowest pole decays by the largest coefficient of the base-rate stage per input frame, so
          * `ln(1e-6) / ln(max a)`: 268 frames with any oversampling, 0 without. At 2x the ring is under 1e-6 by frame 254;
          * at 4x and 8x the cascade meets that pole twice and stays above 1e-6 to about frame 300, under -114 dB past
-         * 268 (audio review, round 2). A host that must not cut a tail asks this (the Katalyst `distort` stage's hold,
-         * the `parallel` stage's twins). Inside a region (a first stage above 0) the later stages' design rings
+         * 268 (audio review, round 2). A host that must not cut a tail asks this (a Katalyst region's hold, the bus
+         * ladder's ring, the `parallel` stage's twins). Inside a region (a first stage above 0) the later stages' design rings
          * shorter, so this errs towards holding longer there.
          */
         fun tailFrames(stages: Int): Int {
@@ -453,7 +453,7 @@ class Oversampler(stages: Int, firstStage: Int = 0) {
 
         /**
          * [groupDelaySamples] in whole frames, rounded (3, 4, 5 at 2x, 4x, 8x): the latency a bus stage reports
-         * (`KatalystDistortEffect`). A voice keeps the exact delay and rounds only its pad (`BuiltIgnitor.latencySamples`).
+         * (`KatalystParallelEffect`'s twins). A voice keeps the exact delay and rounds only its pad (`BuiltIgnitor.latencySamples`).
          */
         fun latencyFrames(stages: Int, firstStage: Int = 0): Int = groupDelaySamples(stages, firstStage).roundToInt()
 
@@ -489,10 +489,9 @@ class Oversampler(stages: Int, firstStage: Int = 0) {
         }
 
         /**
-         * A factor that arrives as a knob value (the Ignitor `Shape` and `Distort` nodes' `oversample`,
-         * read once at voice build since phase 3 step 3b, decision D7) as the whole factor
-         * [factorToStages] takes: TRUNCATED toward zero, as the pattern door's `asIntOrNull` truncates
-         * `distort(amount, shape, 2.9)` to 2, so both doors mean the same factor by the same number.
+         * A factor that arrives as a knob value (an Ignitor region's factor, read once at voice build) as
+         * the whole factor [factorToStages] takes: TRUNCATED toward zero, so 2.9 is 2 (the rule the
+         * retired stage factors had, kept for the regions).
          *
          * A non-finite value is 0 (off): the wire's "unset", and `+Infinity` must not become the
          * largest Int. A huge finite value saturates to it, deliberately unclamped (the Motor stays

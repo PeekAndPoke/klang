@@ -20,6 +20,7 @@ import io.peekandpoke.klang.audio_bridge.DistortionShapes
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_bridge.oversampleAtLeast
 import kotlin.math.abs
 import kotlin.random.Random
 
@@ -64,10 +65,9 @@ class TeardownFadeSpec : StringSpec({
     )
 
     fun amp(inner: IgnitorDsl) = IgnitorDsl.Highpass(
-        inner = IgnitorDsl.Distort(
-            inner = inner, amount = IgnitorDsl.Constant(0.80),
-            shape = IgnitorDsl.Constant(DistortionShapes.indexOf("tube")), oversample = IgnitorDsl.Constant(4.0),
-        ),
+        inner = inner.oversampleAtLeast(IgnitorDsl.Constant(4.0)) {
+            IgnitorDsl.Distort(inner = it, amount = IgnitorDsl.Constant(0.80), shape = IgnitorDsl.Constant(DistortionShapes.indexOf("tube")))
+        },
         freq = IgnitorDsl.Constant(100.0),
     )
 

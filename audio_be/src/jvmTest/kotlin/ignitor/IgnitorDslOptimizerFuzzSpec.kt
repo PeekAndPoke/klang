@@ -15,6 +15,7 @@ import io.peekandpoke.klang.audio_bridge.childNodes
 import io.peekandpoke.klang.audio_bridge.coercePasses
 import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.optimize
+import io.peekandpoke.klang.audio_bridge.oversampleAtLeast
 import io.peekandpoke.klang.audio_bridge.shape
 import kotlin.math.abs
 import kotlin.random.Random
@@ -149,7 +150,12 @@ class IgnitorDslOptimizerFuzzSpec : StringSpec({
             13 -> IgnitorDsl.Notch(inner, freq = IgnitorDsl.Constant(200.0 + r.nextDouble() * 4000.0))
             14 -> IgnitorDsl.Lowpass(inner, freq = IgnitorDsl.Param("cut", 1000.0), passes = IgnitorDsl.Constant((1 + r.nextInt(3)).toDouble()))
             15 -> IgnitorDsl.Drive(inner, amount = IgnitorDsl.Constant(r.nextDouble()))
-            16 -> inner.shape(listOf("soft", "tube", "hard", "asym")[r.nextInt(4)], oversample = listOf(0, 2, 4)[r.nextInt(3)].ign)
+            16 -> {
+                val shape = listOf("soft", "tube", "hard", "asym")[r.nextInt(4)]
+                val factor = listOf(0, 2, 4)[r.nextInt(3)]
+
+                if (factor == 0) inner.shape(shape) else inner.oversampleAtLeast(factor.ign) { it.shape(shape) }
+            }
             17 -> IgnitorDsl.Adsr(inner, attack = IgnitorDsl.Constant(0.001 + r.nextDouble() * 0.05), decay = IgnitorDsl.Constant(r.nextDouble() * 0.2))
             18 -> IgnitorDsl.Clamp(inner, lo = IgnitorDsl.Constant(-1.0), hi = IgnitorDsl.Constant(1.0))
             19 -> IgnitorDsl.Lerp(left = inner, right = tree(r, depth - 1, pool, stats), t = k)

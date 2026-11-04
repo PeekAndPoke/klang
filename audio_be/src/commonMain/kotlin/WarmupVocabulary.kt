@@ -222,9 +222,9 @@ object WarmupVocabulary {
         .adsr(attack = 0.005.ign, decay = 0.1.ign, sustain = 0.6.ign, release = 0.2.ign)
         .drive(0.4.ign)
         .shape("soft")
-        .distort(amount = 0.5.ign, shape = "hard", oversample = 4.ign) // = Drive + Shape (oversampled)
-        .let { IgnitorDsl.Distort(inner = it, amount = Constant(0.3), oversample = Constant(2.0)) } // the gated drive+shape unit
-        .parallel({ it }, { it.distort(amount = 0.3.ign, shape = "soft", oversample = 2.ign) }) // branches summed, the dry one padded to the late one
+        .oversampleAtLeast(4.ign) { it.distort(amount = 0.5.ign, shape = "hard") } // = Drive + Shape, in a region
+        .let { IgnitorDsl.Distort(inner = it, amount = Constant(0.3)) } // the gated drive+shape unit
+        .parallel({ it }, { b -> b.oversampleAtLeast(2.ign) { it.distort(amount = 0.3.ign, shape = "soft") } }) // branches summed, the dry one twinned to the region
         // an oversampling region with a nested floor, a source inside it (rendered at 1x) and the region's input
         .oversampleBy(2.ign) { y ->
             y.oversampleAtLeast(4.ign) { it.distort(amount = 0.3.ign, shape = "tube").highpass(100.ign) }

@@ -16,7 +16,7 @@ import kotlin.math.min
  * Branches side by side (`KatalystStageDsl.Parallel`): every branch, a [KatalystChain] of its own, runs on a copy of the
  * bus at this position, and the stage writes the SUM of the branches back into the bus.
  *
- * **Matched in phase.** A branch that delays the bus (a compressor's lookahead, an oversampled distort) would comb
+ * **Matched in phase.** A branch that delays the bus (a compressor's lookahead, an oversampling region) would comb
  * against the others in the sum: at a delay of 4 frames the first notch sits at `sampleRate / 8`, 6 kHz at 48 kHz. The
  * two kinds of delay are matched apart ([pads]). An oversampler's IIR round trip delays the top more than the bass, so
  * no whole-frame pad matches it above about 10 kHz: every branch gets an unshaped round trip of each oversampler it
@@ -29,7 +29,7 @@ import kotlin.math.min
  *
  * **Lifecycle:** every question the chain asks is passed to the branches. A ring is not reported as a tail of its own:
  * it holds what a latent branch also holds. A twin is: its input is its branch's OUTPUT, which a lookahead holds back
- * by up to 2400 frames after the distort stage it twins has gone quiet, so it reports a tail until
+ * by up to 2400 frames after the region it twins has gone quiet, so it reports a tail until
  * [Oversampler.tailFrames] quiet frames have entered it.
  *
  * The branches' slots are resolved through [KatalystNestedChainsWriter]; a branch reads the orbit's param state like the
