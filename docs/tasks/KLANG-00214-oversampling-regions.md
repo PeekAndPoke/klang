@@ -431,6 +431,16 @@ same with either kernel's group delay for every reachable step count). Corpus gr
   mutants, 6 killed. Left as it was: a rent that finds only dirty units still zeroes one on the spot, at 16x a large
   one in one block (rare: a return and a re-rent within the sixteen housekeeping blocks).
 
+**Step 1's allocation escape, fixed (2026-11-04).** A bisect of the red allocation check found that step 1 made every
+voice build allocate about 850 B more on the JVM and 670 B on V8, region or not: a fourth memo key list grown per
+build, a `spineSeen` flag and two locals (`ownLatency`, `ownOversampler`) captured by `buildRaw`'s local functions,
+each a heap cell per node. Fixed: the key list made on the first entry inside a region, the flag folded into the
+spine latency (minus infinity at the start), the region built in its arm. The JVM note case reads 6632 B per voice
+against 6608 before step 1 (the cache's two new fields); V8 at its old level. Corpus green on the fix (13 unedited
+songs and 3 frozen texts identical); review round 1 (level 1) clean from both reviewers. The check was red for a
+second reason too, not this task's: the engine cases count the diagnostics since KLANG-00399 (`audio/ref/performance.md`).
+Incident line in `docs/tasks/_incidents.md`.
+
 **Step 3b, landed (2026-11-03): the hand-over.** A voice whose tree ENDS in a region (its root, under the build's
 memo) does not convert down: it lands on its orbit's rate bus, and its teardown fade, cut fade, solo ramp and pan run at
 that rate (the same lines read between the frames). An orbit's chain brings every bus to its own rate once: a chain
@@ -533,3 +543,4 @@ bit").
 - 2026-11-03: step 4 landed: the stages' own oversampling factors retired, the songs moved one region per stage, the frozen songs re-snapshotted.
 - 2026-11-04: the reverb damping in a region kept as built, the pole mapping (maintainer).
 - 2026-11-04: step 3a's warehouse items closed: the scaled reverb shelves allocate through the injected allocator, count in the stats, and are housekept in slices.
+- 2026-11-04: step 1's allocation escape found by a bisect and fixed (the voice build back to its old size on V8, +24 B on the JVM).

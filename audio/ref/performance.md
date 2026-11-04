@@ -694,6 +694,18 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   single `Double` per block (24 B), or one every other block (its budgets are 6 B). A box usually shows on both,
   but it can be on one only: a V8 box comes from a megamorphic call site or a boxed expression result, a JVM box
   from a failed escape analysis, and the JVM can optimise away a box V8 keeps (review round 1 of the harness).
+- **The voice build is a per-note path, and `buildRaw`'s locals are its trap** (2026-11-04, KLANG-00214): a local
+  `var` of `buildRaw` that any of its local functions captures (even only reads) is a heap cell on EVERY node of
+  every voice build, on the JVM (`Ref$IntRef`, `Ref$DoubleRef`, ...) and on JS. Step 1 of the regions added three
+  (a `spineSeen` flag, and `ownLatency` and `ownOversampler` through a local `buildRegion`) and a fourth memo key list
+  grown per build: about 850 B per voice on the JVM, 670 B on V8, found three days later. Keep a new flag inside an
+  existing local (the spine latency starts at minus infinity), write such locals only in the `when` arms, and run the
+  allocation check before committing a change to the build or to a per-block path.
+- **The engine cases count the diagnostics** since KLANG-00399 steps 2 and 3a: the dispatcher sends its
+  `Diagnostics` every 20 ms of rendered audio, and the engine rig's wall clock `{ 0.0 }` no longer hides it (before,
+  it sent on wall time, which never moved there). About 50 B per block on V8 and 23 B on the JVM on every engine case,
+  the production cost the browser always paid. To compare engine cases with rows before 2026-10-31, switch the
+  emission off in a throwaway copy (`emitDiagnostics`) and measure both sides that way.
 - **It names the case, not the box.** After an `OVER` line, locate the box by hand, on the case it names:
   1. **V8, which function allocates:** the sampling heap profiler, with the collected objects included (node's
      `--heap-prof` keeps only what is alive at exit, which misses every box). A preload file:

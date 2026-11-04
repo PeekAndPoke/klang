@@ -187,7 +187,14 @@ internal class IgnitorBuildCache(
     private val dslKeys = ArrayList<IgnitorDsl>()
     private val modKeys = ArrayList<Ignitor?>()
     private val ctxKeys = ArrayList<DetuneContext?>()
-    private val regionKeys = ArrayList<RegionScope?>()
+
+    /**
+     * The region each entry was built in, made on the first entry built inside one (KLANG-00214 (oversampling regions)),
+     * padded with null for the entries before it: a voice without a region allocates nothing for it, and a missing
+     * list reads as "outside every region". A fourth list grown on every build cost about 150 B per voice on the JVM
+     * and 240 B on V8 (the allocation check's note cases, 2026-11-04).
+     */
+    private var regionKeys: ArrayList<RegionScope?>? = null
     private val values = ArrayList<BuiltIgnitor>()
 
     inline fun getOrPut(key: IgnitorDsl, mod: Ignitor?, compute: () -> BuiltIgnitor): BuiltIgnitor {
@@ -197,7 +204,7 @@ internal class IgnitorBuildCache(
         val scope = region
 
         for (i in dslKeys.indices) {
-            if (dslKeys[i] === key && modKeys[i] === mod && ctxKeys[i] === ctx && regionKeys[i] === scope) {
+            if (dslKeys[i] === key && modKeys[i] === mod && ctxKeys[i] === ctx && regionKeys?.get(i) === scope) {
                 val existing = values[i]
 
                 onShared(i)
@@ -208,11 +215,20 @@ internal class IgnitorBuildCache(
         }
 
         val v = compute()
+        val regions = regionKeys
+
+        if (regions != null) {
+            regions.add(scope)
+        } else if (scope != null) {
+            regionKeys = ArrayList<RegionScope?>(dslKeys.size + 1).also { made ->
+                repeat(dslKeys.size) { made.add(null) }
+                made.add(scope)
+            }
+        }
 
         dslKeys.add(key)
         modKeys.add(mod)
         ctxKeys.add(ctx)
-        regionKeys.add(scope)
         values.add(v)
 
         return v
@@ -367,6 +383,9 @@ private fun IgnitorDsl.Variants.pick(soundIndex: Int): IgnitorDsl {
 
     return children[soundIndex.mod(children.size)]
 }
+
+/** A spine latency that started at minus infinity (`buildRaw`) as 0 when no timed child set it. */
+private fun timedOrZero(latency: Double): Double = if (latency == Double.NEGATIVE_INFINITY) 0.0 else latency
 
 /**
  * Recursive tree walker.
@@ -1235,10 +1254,11 @@ private fun IgnitorDsl.buildRaw(
 
     // How late the signal spine is, exact (see [BuiltIgnitor.latencySamples]): the latest of the signal children,
     // absorbed along the same edges as the tail, plus what THIS node adds ([ownLatency], set by the region arm).
-    // The first timed child sets it, so a negative latency (a source inside a region, earlier than the region's input)
-    // is kept; 0 with no timed signal child.
-    var spineLatency = 0.0
-    var spineSeen = false
+    // It starts at minus infinity, so the first timed child sets it and a negative latency (a source inside a region,
+    // earlier than the region's input) is kept; read as 0 with no timed signal child. Not a second flag beside it: every
+    // local the helpers here capture is a heap cell per node built (a `var spineSeen` cost about 190 B per voice on the
+    // JVM and 380 B on V8, the allocation check's note cases, 2026-11-04).
+    var spineLatency = Double.NEGATIVE_INFINITY
     var ownLatency = 0.0
 
     // Which oversamplers the signal spine ran through (see [BuiltIgnitor.oversamplers]): merged from the same signal
@@ -1255,8 +1275,7 @@ private fun IgnitorDsl.buildRaw(
         // A block-constant child (a constant, a slot, a constant expression) has no time: it takes no part, so its 0 does
         // not hide a source's earlier latency inside a region.
         if (!built.ignitor.isBlockConstant) {
-            spineLatency = if (spineSeen) maxOf(spineLatency, built.latencySamples) else built.latencySamples
-            spineSeen = true
+            spineLatency = maxOf(spineLatency, built.latencySamples)
         }
         spineOversamplers = mergeOversamplers(a = spineOversamplers, b = built.oversamplers)
         return built
@@ -1300,65 +1319,6 @@ private fun IgnitorDsl.buildRaw(
         }
 
         return applyMod(source, accumulatedMod)
-    }
-
-    /**
-     * An oversampling region (KLANG-00214 (oversampling regions) sections 10 and 11). [factor] is read once, leaf-only,
-     * rounded down to a power of two (`oversampleStagesKnob`); [relative] (`oversampleBy`) adds its steps to the rate the
-     * region is in, otherwise (`oversampleAtLeast`) it is a floor. The rate stops at [REGION_MAX_STAGES] (16x).
-     *
-     * No step to take: no region, the body on [inner] in this scope, as if the region were not written.
-     * Otherwise [inner] is built here, at the incoming rate, and the body in a new [RegionScope]. The body's tail and
-     * gate are the region's; its latency counts from the region's input in the region's samples
-     * ([RegionScope.inputDelay]), so it is divided down, and the region adds its round trip's. The region reports its
-     * oversampler as one of [steps] stages, so a `parallel` beside it twins it exactly; a body that runs oversamplers
-     * of its own, or reads a signal not aligned with its input, reports none (`null`), and a `parallel` around it pads
-     * whole samples instead.
-     */
-    fun buildRegion(inner: IgnitorDsl, body: IgnitorDsl, factor: IgnitorDsl, relative: Boolean): Ignitor {
-        val current = cache.regionStages
-        val asked = factor.oversampleStagesKnob(ignitorParams, cache)
-        val target = (if (relative) current + asked else maxOf(current, asked)).coerceAtMost(REGION_MAX_STAGES).coerceAtLeast(current)
-        val steps = target - current
-
-        if (steps == 0) {
-            // The body IS the node here, as a gated-off stage is its inner: its envelope answer passes on.
-            val signal = body.withRegionInput(inner).withMod()
-            builtEnvelope = lastChildEndsInEnvelope
-
-            return signal
-        }
-
-        val innerBuilt = inner.withModBuilt()
-        val outer = cache.region
-        val inputDelay = (outer?.inputDelay ?: 0.0) + innerBuilt.latencySamples / (1 shl current)
-        val holder = RegionInputHolder()
-        val scope = RegionScope(
-            stages = target,
-            input = holder,
-            outer = outer,
-            inputDelay = inputDelay,
-            inputOversamplers = if (outer == null) innerBuilt.oversamplers else outer.inputOversamplers,
-        )
-        val bodyBuilt = cache.inRegion(scope) {
-            body.buildIgnitor(ignitorParams, cache, accumulatedMod)
-        }
-
-        spineTail = maxTail(a = spineTail, b = bodyBuilt.releaseTailSec)
-        spineGatesOutput = spineGatesOutput || bodyBuilt.gatesOutput
-        ownLatency = Oversampler.groupDelaySamples(stages = steps, firstStage = current) + bodyBuilt.latencySamples / (1 shl steps)
-        ownOversampler = steps
-
-        if (bodyBuilt.oversamplers?.isEmpty() != true) {
-            spineOversamplers = null
-        }
-
-        return OversampleRegionIgnitor(
-            inner = innerBuilt.ignitor,
-            body = bodyBuilt.ignitor,
-            oversampler = Oversampler(stages = steps, firstStage = current),
-            input = holder,
-        )
     }
 
     val ignitor = when (this) {
@@ -1538,9 +1498,82 @@ private fun IgnitorDsl.buildRaw(
 
         is IgnitorDsl.Plus -> left.withMod() + right.withMod()
 
-        // An oversampling region (KLANG-00214 (oversampling regions)): `buildRegion` below.
-        is IgnitorDsl.OversampleBy -> buildRegion(inner = inner, body = body, factor = factor, relative = true)
-        is IgnitorDsl.OversampleAtLeast -> buildRegion(inner = inner, body = body, factor = factor, relative = false)
+        // An oversampling region (KLANG-00214 (oversampling regions) sections 10 and 11). The factor is read once,
+        // leaf-only, rounded down to a power of two (`oversampleStagesKnob`); `oversampleBy` adds its steps to the rate the
+        // region is in, `oversampleAtLeast` is a floor. The rate stops at [REGION_MAX_STAGES] (16x).
+        //
+        // No step to take: no region, the body on the input in this scope, as if the region were not written. Otherwise
+        // the input is built here, at the incoming rate, and the body in a new [RegionScope]. The body's tail and gate are
+        // the region's; its latency counts from the region's input in the region's samples ([RegionScope.inputDelay]), so
+        // it is divided down, and the region adds its round trip's. The region reports its oversampler as one of `steps`
+        // stages, so a `parallel` beside it twins it exactly; a body that runs oversamplers of its own, or reads a signal
+        // not aligned with its input, reports none (`null`), and a `parallel` around it pads whole samples instead.
+        //
+        // Written here, in the arm, not in a local function: a local of `buildRaw` that a local function captures is a
+        // heap cell on EVERY node of every voice build, region or not (`ownLatency` and `ownOversampler` cost about 480 B
+        // per voice on the JVM that way, the allocation check's note cases, 2026-11-04).
+        is IgnitorDsl.OversampleBy, is IgnitorDsl.OversampleAtLeast -> {
+            val relative = this is IgnitorDsl.OversampleBy
+            val regionInner: IgnitorDsl
+            val regionBody: IgnitorDsl
+            val regionFactor: IgnitorDsl
+
+            if (this is IgnitorDsl.OversampleBy) {
+                regionInner = inner
+                regionBody = body
+                regionFactor = factor
+            } else {
+                val atLeast = this as IgnitorDsl.OversampleAtLeast
+
+                regionInner = atLeast.inner
+                regionBody = atLeast.body
+                regionFactor = atLeast.factor
+            }
+
+            val current = cache.regionStages
+            val asked = regionFactor.oversampleStagesKnob(ignitorParams, cache)
+            val target = (if (relative) current + asked else maxOf(current, asked)).coerceAtMost(REGION_MAX_STAGES).coerceAtLeast(current)
+            val steps = target - current
+
+            if (steps == 0) {
+                // The body IS the node here, as a gated-off stage is its inner: its envelope answer passes on.
+                val signal = regionBody.withRegionInput(regionInner).withMod()
+                builtEnvelope = lastChildEndsInEnvelope
+
+                signal
+            } else {
+                val innerBuilt = regionInner.withModBuilt()
+                val outer = cache.region
+                val inputDelay = (outer?.inputDelay ?: 0.0) + innerBuilt.latencySamples / (1 shl current)
+                val holder = RegionInputHolder()
+                val scope = RegionScope(
+                    stages = target,
+                    input = holder,
+                    outer = outer,
+                    inputDelay = inputDelay,
+                    inputOversamplers = if (outer == null) innerBuilt.oversamplers else outer.inputOversamplers,
+                )
+                val bodyBuilt = cache.inRegion(scope) {
+                    regionBody.buildIgnitor(ignitorParams, cache, accumulatedMod)
+                }
+
+                spineTail = maxTail(a = spineTail, b = bodyBuilt.releaseTailSec)
+                spineGatesOutput = spineGatesOutput || bodyBuilt.gatesOutput
+                ownLatency = Oversampler.groupDelaySamples(stages = steps, firstStage = current) + bodyBuilt.latencySamples / (1 shl steps)
+                ownOversampler = steps
+
+                if (bodyBuilt.oversamplers?.isEmpty() != true) {
+                    spineOversamplers = null
+                }
+
+                OversampleRegionIgnitor(
+                    inner = innerBuilt.ignitor,
+                    body = bodyBuilt.ignitor,
+                    oversampler = Oversampler(stages = steps, firstStage = current),
+                    input = holder,
+                )
+            }
+        }
 
         // Where a region's input enters its body: `up` regions out from here. The innermost reads its holder as it is;
         // an outer one is converted up to this rate, and its latency counts from this region's input, as a source's
@@ -1593,7 +1626,7 @@ private fun IgnitorDsl.buildRaw(
                     it.ignitor.phaseTwins(stages = Oversampler.missingFrom(have = it.oversamplers.orEmpty(), union = union), firstStage = cache.regionStages)
                 }
             } else {
-                val latest = spineLatency
+                val latest = timedOrZero(spineLatency)
                 // Rounded here and only here: the pad is whole samples, the latencies it compares are exact.
                 built.map { it.ignitor.delayedBy((latest - it.latencySamples).roundToInt()) }
             }
@@ -2057,7 +2090,7 @@ private fun IgnitorDsl.buildRaw(
         releaseTailSec = spineTail,
         gatesOutput = spineGatesOutput,
         endsInEnvelope = builtEnvelope,
-        latencySamples = spineLatency + ownLatency,
+        latencySamples = timedOrZero(spineLatency) + ownLatency,
         oversamplers = if (ownOversampler > 0) spineOversamplers?.plus(ownOversampler)?.sorted() else spineOversamplers,
     )
 }
