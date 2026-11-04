@@ -1,7 +1,6 @@
 # KLANG-00210: Signal flow redesign: three owners, one setter each
 
-> **Status (2026-11-04): SCHEDULED.** Phases 1 to 3 done, phase 4 split off as KLANG-00397; left: phase 5, the
-> announcements (section 10).
+> **Status (2026-11-04): DONE.** Phases 1 to 3 done, phase 4 split off as KLANG-00397, phase 5 (the announcements) closed by its sweep on 2026-11-04 (section 10). The next step of the shape: KLANG-00243 (one chain host).
 >
 > **Part of:** KLANG-00354 (The Motor's shape: signal flow and the graph)
 
@@ -423,6 +422,19 @@ Each phase is its own task, review loop and commit; each ends with the guards gr
    `pedal` and the per-voice bus doors with the date. A grep for each retired word over `docs/`,
    the skills, the tutorials and the builtin songs is the checklist; the phase ends when it is
    empty outside `docs/tasks-archive/`, `docs/history/` and the dev diary, which are never fixed.
+   **Closed 2026-11-04** (the maintainer chose to close it and go on to KLANG-00243). The whitepaper, the Lexikon and
+   the retired list were already re-read on 2026-09-28. The grep (`PipelineDsl`, `postgain`, `pedal(`,
+   `buildPitchPipeline`, `PitchPipeline`, `voices/strip`, "Pipeline DSL", "voice pipeline", "filter pipeline", "the
+   strip") is not empty, and nothing it finds describes a retired surface as current. Every hit is one of these:
+   - a history note that names a retirement as such ("retired with the Pipeline DSL, phase 3 step 9");
+   - a record: the audio audit's pilot plans, the funding evidence, the dated blog posts, the defect-density and
+     escape ledgers, the generated dev-status pages, the frozen pieces' own `pedal` functions;
+   - upstream (sprudel's test bundle of Strudel);
+   - "voice pipeline" in `BlockContext`, `BlockRenderer` and `SendRenderer`, which still names a voice's block stages
+     (Ignite, the teardown fade, Send) accurately.
+
+   The music-writing references (`ref/sprudel-reference.md`, `ref/ignitor-reference.md`, the klang-ai symlinks) and the
+   module `CLAUDE.md` and `MEMORY.md` files describe the current doors.
 
 ## 11. Open points
 
@@ -553,3 +565,5 @@ is due at the 5b checkpoint; candidates seen on 2026-09-18 without reading them:
 - 2026-10-20: numbered KLANG-00210 (was `docs/plans/signal-flow-redesign.md`).
 - 2026-10-27: part of KLANG-00354 (The Motor's shape: signal flow and the graph), the epic grouping.
 - 2026-10-31: phase 4 split off as KLANG-00397 (maintainer); phase 5 is all that is left.
+- 2026-11-04: phase 5 closed by its sweep; the plan DONE (maintainer: on to KLANG-00243).
+- 2026-11-04: DONE.
