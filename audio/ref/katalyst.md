@@ -134,11 +134,12 @@ reverb, the filter swap and the compressor copy it. What every copy must keep:
 
 - **The tail question has THREE askers, and a new stage answers all three** (2026-10-09, the `distort` stage's review,
   two escapes): the orbit's deactivation (it scans the mix AFTER the chain, so an insert's residue is seen without
-  asking), the chain swap (`ChainSwap` retires the leaving chain at the end of its input ramp unless `hasTail()`, NO
-  scan), and the master (`MasterBus.isRinging` asks `hasTail()` only for a chain whose `declaresTail` is true). A
-  stage whose state can put audio into a SILENT input (a DC blocker's decay, a ring, a delay line) answers
-  `hasTail()` from that state in O(1) AND joins `KatalystChain.declaresTail`. The "insert, so false" argument covers
-  the first asker only.
+  asking), the chain swap (`ChainSwap` drains the leaving chain at the end of its input ramp when `hasTail()` OR its
+  last block reached `SILENCE_FLOOR`, a scan since KLANG-00293 (chain swap cuts ringing inserts); before, a ringing
+  body, vowel, phaser or eq bell was retired in one sample), and the master (`MasterBus.isRinging` asks `hasTail()`
+  only for a chain whose `declaresTail` is true, NO scan). A stage whose state can put audio into a SILENT input (a
+  DC blocker's decay, a ring, a delay line) answers `hasTail()` from that state in O(1) AND joins
+  `KatalystChain.declaresTail`. The "insert, so false" argument covers the first two askers, not the master.
 - **A build-time option multiplies the behaviour rows** (the same review): a stage with a structural choice (the
   oversampling factor, a lookahead) runs every switching and gliding row at each value of it, not only at the default;
   the `distort` stage's amount glide clicked only with oversampling on, where no row ran.

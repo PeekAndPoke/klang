@@ -44,10 +44,10 @@ import io.peekandpoke.klang.audio_be.utils.finiteOrZero
  *    sum can bulge mid-fade by up to the gain reduction it gives back. Bounded by the fade and by
  *    the compressor's own release. At the master this is a limiter giving its reduction back
  *    across the fade.
- *  - A chain with no delay and no reverb retires one block after the ramp ends, so whatever its INSERTS
- *    still hold is dropped at that moment: a resonator's ring, a `KatalystFilterSwap` crossfade in
- *    flight. Silent input has just reached it, so the residue is small; if it is ever heard, the
- *    fix is `hasTail` on those stages, not a longer fade.
+ *  - A chain with no delay and no reverb leaves where the fade ends only if its INSERTS no longer ring: the swap
+ *    reads its output after the fade's end ([settledFrom]) and drains it while that is at or over the silence
+ *    floor (a resonator's ring, a phaser, an eq bell, a `KatalystFilterSwap` crossfade in flight). Until
+ *    KLANG-00293 (chain swap cuts ringing inserts) such a chain was retired there, its ring cut in one sample.
  *  - The drained tail bypasses the INCOMING chain's INSERTS: it is added to the mix after them, so
  *    the new chain's compressor and phaser do not govern the old chain's ring-out. Its DUCK does:
  *    the duck pass runs on the whole orbit mix, after the tail has been added
@@ -102,6 +102,15 @@ internal class Crossfade(sampleRate: Int) {
 
     /** True once the incoming chain has reached full weight, [incomingDelayFrames] after the ramp itself. */
     val isComplete: Boolean get() = pos >= totalFrames + incomingDelayFrames
+
+    /**
+     * The first frame of the last block [rampUpAndAdd] wrote from which the fade had ended: the leaving chain's input
+     * was silent there, and its output had come out of its own latency (the fade ends [incomingDelayFrames], the later
+     * latency, after the ramp). What the leaving chain put out from there on is its own ring and nothing else. [frames]
+     * when the fade ended at the block's end, so no frame of it shows that yet. KLANG-00293 (chain swap cuts ringing
+     * inserts).
+     */
+    fun settledFrom(frames: Int): Int = (totalFrames + incomingDelayFrames - blockFrom).coerceIn(0, frames)
 
     /**
      * True while the ramp has not moved yet: the block the swap was decided in, where the two

@@ -426,6 +426,8 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-11-04 A chain swap drains a leaving chain that still rings, tail or not (body, vowel, phaser, eq were cut in one
+  sample, up to a step of 0.28 on the `bell` body; KLANG-00293 (chain swap cuts ringing inserts); `audio/ref/katalyst.md`).
 - 2026-11-04 The note clocks `progress()` and `elapsed()` on both doors, the held live note's `gateKnown` flag
   (KLANG-00245 (pitch pipeline into the tree), step 7f, its last; `audio/ref/voice-synthesis.md`).
 - 2026-11-04 The voice build's extra allocations since regions step 1 removed (about 850 B per voice on the JVM); the

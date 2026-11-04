@@ -73,7 +73,7 @@ import kotlin.math.max
  * | state \ event | [begin] | [requestWaiting] | [process] | [processDuck] | [ownerClaimed] | [configureLeaving] | [hardCut] |
  * |---|---|---|---|---|---|---|---|
  * | **Idle** | **Fading** | nothing (the host lands its request itself) | the chain alone | the chain's duck | nothing | nothing | nothing |
- * | **Fading** | REFUSED, the offered chain retired | remembered: the fade ends in the cut | ramp not complete: both chains, the ramp; complete: the leaving chain has a tail ? (a request waits ? **Cutting** : **Draining**) : retired, **Idle**, and the entered state's block runs | the duck ramped in, ramped out, or the chain's own | the late duck takeover, only in the ramp's first block | the leaving chain is configured too | leaving chain retired, **Idle** |
+ * | **Fading** | REFUSED, the offered chain retired | remembered: the fade ends in the cut | ramp not complete: both chains, the ramp; complete (one more fade block first when the fade ended on the last block's end): the leaving chain has a tail, or its last block rang at or over `SILENCE_FLOOR` after the fade's end ? (a request waits ? **Cutting** : **Draining**) : retired, **Idle**, and the entered state's block runs | the duck ramped in, ramped out, or the chain's own | the late duck takeover, only in the ramp's first block | the leaving chain is configured too | leaving chain retired, **Idle** |
  * | **Draining** | REFUSED, the offered chain retired | **Cutting** from weight 1 | both chains, the leaving one on silence, added at full weight, its tails measured on entry and every [TAIL_MEASURE_SECONDS]; no tail left and the block's output under `SILENCE_FLOOR`: retired, **Idle**; a tail or output left and the drain [MAX_DRAIN_SECONDS] old: **Releasing** (from the next block) | the chain's duck | nothing | nothing | leaving chain retired, **Idle** |
  * | **Releasing** | REFUSED, the offered chain retired | **Cutting** from the release's gain | both chains, the leaving one on silence, its output added under the exponential release; the gain under the floor (inside this block): retired, **Idle** | the chain's duck | nothing | nothing | leaving chain retired, **Idle** |
  * | **Cutting** | REFUSED, the offered chain retired | nothing (already cutting) | both chains, the leaving one on silence, its output added under the raised-cosine cut; the weight at 0 (inside this block): retired, **Idle** | the chain's duck | nothing | nothing | leaving chain retired, **Idle** |
@@ -91,7 +91,7 @@ import kotlin.math.max
  *    (dropped when the fade ends, in either pass). [retire] carries a chain's denied rents BEFORE
  *    the chain's own retire zeroes them.
  * 3. *The Idle precondition:* the leaving chain reports no tail and its last block was under
- *    `SILENCE_FLOOR` ([Draining]), or its release gain is under the release's floor
+ *    `SILENCE_FLOOR` (after the fade's end in [Fading], the whole block in [Draining]), or its release gain is under the release's floor
  *    ([Releasing]), or its cut weight has reached 0 ([Cutting]), or the host guarantees silence
  *    ([hardCut], the cylinder's new life).
  * 4. *References and who drops them:* the leaving chain ([Fading], [Draining], [Releasing],
@@ -261,7 +261,10 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
             // Never null in this state; the check only narrows the type (`!!` could throw on the audio thread).
             val out = leaving ?: return
 
-            if (fade.isComplete) {
+            // The fade's end is decided on a block that shows the leaving chain's ring alone (below); when the fade
+            // ended exactly at the last block's end, this block runs as one more fade block first: the leaving input is
+            // silent and its output added at full weight, a drain block in all but name.
+            if (fade.isComplete && fade.settledFrom(blockFrames) < blockFrames) {
                 // The ramp ran out on the PREVIOUS block and the duck pass that follows it has had
                 // its last turn, so the chain leaves the fade now, not in the middle of the block
                 // that finished the ramp. The duck data goes too: an orbit whose sidechain has
@@ -274,7 +277,20 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
                 duckFadingIn = false
                 requestWaits = false
 
-                if (out.hasTail()) {
+                // The fade's end asks the drain's own question: a tail, OR a ring in the last block (still in
+                // `leavingMix`, at full weight) at or over the silence floor, read only on the frames after the fade had
+                // ended ([Crossfade.settledFrom]), where the input was silent: a chain that does not ring puts out
+                // exact zeros there, and retires here as it always did. A chain that puts out a constant on silence (an
+                // arithmetic offset, `plus(0.1)`, the author's business) reads as ringing: it drains to the cap and is
+                // released, where it used to leave a DC step. The second clause is for the stages that hold
+                // no tail of their own and still ring on a silent input: a body's or a vowel's resonators, a phaser,
+                // an eq's bell, and anything after them. Retiring such a chain here cut its ring in one sample: a
+                // 220 Hz sine through the `bell` body left a step of 0.28 (KLANG-00293 (chain swap cuts ringing
+                // inserts)). O(block), once per swap.
+                val settledFrom = fade.settledFrom(blockFrames)
+                val rings = TailCeiling.peakOf(buffer = leavingMix, frames = blockFrames, from = settledFrom) >= SILENCE_FLOOR
+
+                if (out.hasTail() || rings) {
                     if (cut) {
                         // The input ramp has just reached 0, so the output is at full weight: the
                         // cut starts from exactly 1.

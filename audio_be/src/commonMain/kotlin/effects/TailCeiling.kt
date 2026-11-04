@@ -300,17 +300,17 @@ class TailCeiling {
 
 
         /**
-         * The largest |sample| in the first [frames] of [buffer], both channels. O(frames).
+         * The largest |sample| of [buffer] from frame [from] to [frames] (exclusive), both channels. O(frames).
          *
          * Kotlin `inline` for the reason [observe] is: its double result fed the ceiling across a call V8 did not
          * always inline (engine follow-up 1).
          */
         @Suppress("NOTHING_TO_INLINE")
-        inline fun peakOf(buffer: StereoBuffer, frames: Int): Double {
+        inline fun peakOf(buffer: StereoBuffer, frames: Int, from: Int = 0): Double {
             val left = buffer.left
             val right = buffer.right
             var peak = 0.0
-            for (i in 0 until frames) {
+            for (i in from until frames) {
                 val l = if (left[i] < 0.0) -left[i] else left[i]
                 val r = if (right[i] < 0.0) -right[i] else right[i]
                 if (l > peak) {

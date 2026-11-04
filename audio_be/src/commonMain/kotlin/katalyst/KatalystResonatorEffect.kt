@@ -390,9 +390,11 @@ class KatalystResonatorEffect(
     /**
      * False, and NOT because this stage is stateless: the SVF integrators and the swap's crossfade do hold state. It
      * is because everything they hold lands in `ctx.mixBuffer`, and `Cylinder.isMixBufferSilent()` scans that buffer
-     * AFTER the chain has run, so the deactivation gate already sees this stage's residue without having to ask it. A
-     * future stage whose output does NOT reach the mix before that scan (a send-return, a chorus ring) must answer true
-     * while it rings, as the delay and the reverb do.
+     * AFTER the chain has run, so the deactivation gate already sees this stage's residue without having to ask it. The
+     * chain swap does the same where its fade ends: it drains a leaving chain whose last block reached the silence floor,
+     * tail or not (`ChainSwap`'s `Fading`, KLANG-00293 (chain swap cuts ringing inserts)); before that it retired this
+     * stage's ring in one sample. A future stage whose output does NOT reach the mix before those scans (a send-return,
+     * a chorus ring) must answer true while it rings, as the delay and the reverb do.
      */
     override fun hasTail(): Boolean = false
 

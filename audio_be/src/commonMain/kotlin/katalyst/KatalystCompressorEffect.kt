@@ -620,8 +620,8 @@ class KatalystCompressorEffect(
      *
      * With a lookahead, true while the ring may still hold audio above [SILENCE_FLOOR] (fewer
      * than [latencyFrames] quiet frames since the last loud input block): the orbit has not heard it
-     * yet, and a chain swap retires a leaving chain at the end of its ramp unless it reports a tail
-     * (`ChainSwap`), which would cut it.
+     * yet, so its deactivation's mix scan cannot see it. (A chain swap needs no answer for it: its
+     * fade ends the leaving chain's latency after the ramp, `Crossfade.settledFrom`.)
      */
     override fun hasTail(): Boolean = latent && quietFrames < latencyFrames
 
