@@ -19,10 +19,10 @@ internal val derSchmetterlingSong = Song(
 import * from "stdlib"
 import * from "sprudel"
 
-// Song Status: Upcoming Garage Band ... 
+// Song Status: Upcoming Garage Band ...
 
 let feel          =    5    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
-let transposition =   -3    // -1 .. D# | 0 .. E | 1 .. F
+let transposition =   -1    // -1 .. D# | 0 .. E | 1 .. F
 let drunk         =  0.8    // How many liters of beers did each band member have?
 let snareHz       =  205    // Where does the snare cut through?
 
@@ -59,7 +59,7 @@ let pedalStock = Ign.fn(x => x)
 // Screamer: only the mids go through the clipper, the clean signal goes around it: the mid hump over a clean bass.
 let pedalScreamer = Ign.fn(x => x
   .parallel(
-    clean => clean, 
+    clean => clean,
     dirt => dirt.highpass(720).oversampleAtLeast(2, y => y.distort(0.35, "soft")).mul(0.6)  // the clipper only ever sees the mids, the clean bass carries, both aligned
   )
   .lowpass(3600)                                   // the tone knob, half way
@@ -94,19 +94,19 @@ let preampCrunch = Ign.fn(x => x
   .highpass(120)
   .oversampleAtLeast(4, y => y
     .distort(0.50, "tube").highpass(110)
-    .distort(0.25, "asym").highpass(100))
-  .lowpass(6500)
-  .mul(0.50))                                       // volume
+    .distort(0.17, "asym").highpass(100))
+  .lowpass(6200)
+  .mul(0.58))                                       // volume
 
 // High gain: tighten the bass BEFORE it clips, three cascaded stages, the last one hard, then tame the fizz.
 let preampHighGain = Ign.fn(x => x
   .highpass(120)                                    // tight: no bass into the gain stages
   .oversampleAtLeast(4, y => y                      // the three stages at 8x: one trip up, one down
     .distort(0.20, "tube").highpass(110)
-    .distort(0.25, "asym").highpass(100)
-    .distort(0.50, "soft"))
-  .lowpass(5200)                                   // the fizz
-  .mul(0.38))                                      // volume
+    .distort(0.17, "asym").highpass(100)
+    .distort(0.40, "soft"))
+  .lowpass(5300)                                   // the fizz
+  .mul(0.58))                                      // volume
 
 // Power amps: the last saturating stage. Tells: symmetric or not, and the presence bump. The last mul is the master.
 let powerStock = Ign.fn(x => x.drive(0.3))
@@ -311,9 +311,9 @@ export guitar1 = n(guitar1_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(gu
 
 // Guitar 2  --------------------------------------------------------------------------------------------------------------------------------------------------
 export guitar2_pat =
-  `<[11 11 9  8  7 7 9 6]  [11 11 [13 11] 8   7  7 5  6] 
+  `<[11 11 9  8  7 7 9 6]  [11 11 [13 11] 8   7  7 5  6]
     [11 11 9 11  7 7 7 8]  [11 11 [13 9]  4   7  4 2  3]
-    [4 4 6 8     4 4 5 6]  [4 4 6 8          11 11 9 10] 
+    [4 4 6 8     4 4 5 6]  [4 4 6 8          11 11 9 10]
     [4 4 3 6     4 4 2 3]  [7 11 [3 7] [6 7] [4 4 6 4]!2 [0 2 4 7] 8]>/4`
 
 export guitar2_shape = x => x.pregain(guitarDyna(2).fast(2))
@@ -383,12 +383,12 @@ let gummiEimer = (() => {
   // the harmonics 2f..8f, fundamental left out: the ear rebuilds it, so the drum sits low in the mix and keeps its pitch,
   // and the pitch drop is heard up here, not felt at 70 Hz. They die well before the head does.
   let harms = Ign.sine(x => x.harmonics(15, 0.8).fundamental(0).analog(pAnalog).analogSpread(0.2))
-    .pitchEnvelope(12, x => x.adsr(0.015, 0.050, 0, 0)).adsr(0.010, 0.35, 0.4, 0.30).mul(1.3)
+    .pitchEnvelope(5, x => x.adsr(0.015, 0.050, 0, 0)).adsr(0.010, 0.25, 0.4, 0.30).mul(1.3)
  
   let m2 = Ign.sine(Ign.freq().mul(1.59), x => x.analog(pAnalog)).adsr(0.002, 0.10, 0.2, 0.20).mul(0.25)
   let m3 = Ign.sine(Ign.freq().mul(2.14), x => x.analog(pAnalog)).adsr(0.002, 0.06, 0.2, 0.10).mul(0.15)
   // wood core: a crack, the force of the hit the skin gives, and the hit reads as hard
-  let beater = Ign.whitenoise().adsr(0.010, 0.035, 0.0, 0.015).lowpass(1500).mul(6.00)    
+  let beater = Ign.whitenoise().adsr(0.010, 0.035, 0.0, 0.015).lowpass(1500).mul(1.00)    
  
   return head.plus(harms).plus(m2).plus(m3).plus(beater)
     .oversampleAtLeast(2, y => y.distort(0.80, "soft"))
@@ -562,7 +562,7 @@ export song = stack(
     .gain(4.5)
     .bands(b => b
       .band(low => low.oversampleAtLeast(4, r => r.distort(0.01, "soft")).mul(1.00)).cut(150)
-      .band(mid => mid.oversampleAtLeast(4, r => r.distort(0.15, "soft")).mul(0.85)).cut(5000)
+      .band(mid => mid.oversampleAtLeast(4, r => r.distort(0.10, "soft")).mul(0.90)).cut(5000)
       .band(low => low.oversampleAtLeast(4, r => r.distort(0.01, "soft")).mul(1.15))
     ) // the glue on the mids only: the kick and the hats stay clean
     .mul(0.90)

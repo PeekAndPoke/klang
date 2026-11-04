@@ -43,7 +43,7 @@ let pickupStock = Ign.fn(x => x)
 
 // Single coil at the bridge: a high, sharp resonance, thin and bright, low output.
 let pickupSingle = Ign.fn(x => x
-  .lowpass(4800, 2.5)                              // the peak, up high and narrow
+  .lowpass(4800, 2.2)                              // the peak, up high and narrow
   .mul(0.8))                                       // low output, the amp stays cleaner
 
 // Humbucker at the bridge: a lower, broader resonance, fat and dark, hot output that pushes the amp harder.
@@ -64,7 +64,7 @@ let pedalStock = Ign.fn(x => x)
 // Screamer: only the mids go through the clipper, the clean signal goes around it: the mid hump over a clean bass.
 let pedalScreamer = Ign.fn(x => x
   .parallel(
-    clean => clean, 
+    clean => clean,
     dirt => dirt.highpass(720).oversampleAtLeast(2, y => y.distort(0.35, "soft")).mul(0.6)  // the clipper only ever sees the mids, the clean bass carries, both aligned
   )
   .lowpass(3600)                                   // the tone knob, half way
@@ -78,7 +78,7 @@ let pedalFuzz = Ign.fn(x => x
 
 // Treble booster: cuts the bass and pushes the rest into the preamp. The classic bright crunch.
 let pedalBoost = Ign.fn(x => x
-  .highpass(300)
+  .highpass(320)
   .mul(1.2))                                       // level
 
 // Preamps: the amp's gain stages. Tells: how many stages, what each coupling cap lets through, and how tight the bass
@@ -96,21 +96,22 @@ let preampClean = Ign.fn(x => x
 
 // Crunch: two tube stages, coupled loosely so the bass goes along and the clipping stays round.
 let preampCrunch = Ign.fn(x => x
+  .highpass(120)
   .oversampleAtLeast(4, y => y
-    .distort(0.30, "tube").highpass(90)
-    .distort(0.30, "tube").highpass(90))
-  .lowpass(5000)
-  .mul(1.9))                                       // volume
+    .distort(0.50, "tube").highpass(110)
+    .distort(0.17, "asym").highpass(100))
+  .lowpass(6200)
+  .mul(0.58))                                       // volume
 
 // High gain: tighten the bass BEFORE it clips, three cascaded stages, the last one hard, then tame the fizz.
 let preampHighGain = Ign.fn(x => x
   .highpass(120)                                    // tight: no bass into the gain stages
-  .oversampleAtLeast(8, y => y                       // the three stages at 8x: one trip up, one down
-    .distort(0.25, "tube").highpass(100)
-    .distort(0.30, "softsat").highpass(100)
-    .distort(0.65, "soft"))
-  .lowpass(5500)                                   // the fizz
-  .mul(0.32))                                      // volume
+  .oversampleAtLeast(4, y => y                      // the three stages at 8x: one trip up, one down
+    .distort(0.20, "tube").highpass(110)
+    .distort(0.17, "asym").highpass(100)
+    .distort(0.40, "soft"))
+  .lowpass(5300)                                   // the fizz
+  .mul(0.58))                                      // volume
 
 // Power amps: the last saturating stage. Tells: symmetric or not, and the presence bump. The last mul is the master.
 let powerStock = Ign.fn(x => x.drive(0.3))
@@ -135,12 +136,12 @@ let cabStock = Ign.fn(x => x.lowpass(5000).lowpass(5000))
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = Ign.fn(x => x
   .eq(e => e
-    .band(freq =  120, q = 0.7, db =  2.00)        // thump: closed-back box resonance
-    .band(freq =  380, q = 0.5, db =  3.50)        // roar:  low mids
-    .band(freq = 2700, q = 1.7, db =  2.50)        // bark:  the upper-mid speaker peak
+    .band(freq =  120, q = 0.7, db =  1.40)        // thump: closed-back box resonance
+    .band(freq =  400, q = 0.5, db =  3.80)        // roar:  low mids
+    .band(freq = 2700, q = 1.7, db =  2.10)        // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(3))          // the wall: 36 dB/oct, the fizz is gone
-  .highpass(75, 0.707, x => x.passes(2)))
+  .highpass(80, 0.707, x => x.passes(2)))
 
 // 1x12 open back: the open back cancels the bass, the top chimes and rolls off late and soft.
 let cab1x12 = Ign.fn(x => x
@@ -157,7 +158,6 @@ let cabCombo = Ign.fn(x => x
     .band(freq = 750, q = 1.4, db = 4.0)           // honk: the boxy midrange
   )
   .lowpass(3800, 0.707, x => x.passes(2)))         // early roll-off
-
 
 // Drums and bass (from Der Schmetterling)  -------------------------------------------------------
 
@@ -314,7 +314,7 @@ export liftPower = `<[-2,2] [-1,3] [0,4]>`
 
 // The melody, in two phrases of one round each. The second fits the cocoon and the lift alike.
 export melodyOne = `<[4@4 3 0     2 [3 7]] [3@4 ~ 4 2 1]     [0@3 4 3@2 2@2]     [1@6 ~@2]>`
-export melodyTwo = `<[7@4 6 [0 1] 2 [4 6]] [8@4 ~ 4 2 [6 8]] [9@3 8 7@2 2 [2 3]] [4@6 ~@2]>`
+export melodyTwo = `<[7@4 6 [0 1] 2 [4 6]] [8@4 ~ 4 2 [4 8]] [9@3 8 7@2 2 [2 3]] [4@6 ~@2]>`
 
 // Out of the cocoon flies the Schmetterling's own lead.
 export schmetterlingLead = `<[-7 0 2 4] [-7 0 4 [2 0]] [-5 -1 2 4|[4 4|4|-1]] [-6 -1 4 3|3|[3 3]]>`
@@ -330,7 +330,7 @@ export spin = notes => n(notes)
   .sound(clean).adsrOff().unison(voices = 7, spread = 0.03).pregain(0.7)
   .ignp("decay", 1.50).ignp("sustain", 0.25).ignp("release", 0.8).clip(2.0)
   .velocity("1.0 0.8 0.9 0.8 0.95 0.8 0.9 0.8".sub(perlin(0.0, 0.05)))
-  .gain(0.22).pan(0.5).vibrato(beatRate(0.25).mul(perlin(0.95, 1.05).slow(4)), 0.03)  
+  .gain(0.21).pan(0.5).vibrato(beatRate(0.25).mul(perlin(0.95, 1.05).slow(4)), 0.03)  
   .orbit(1).body(wet = 0.1, material = "oak")
 
 // Sing: the melody on the bright rig, an octave up.
@@ -358,7 +358,7 @@ export swell = chords => n(chords.add(7))
   .sound(bright).adsrOff().unison(voices = 5, spread = 0.04)
   .ignp("attack", 1.3).ignp("decay", 1.8).clip(1)
   .lpf(3500)
-  .gain(0.06).pan(0.05).superimpose(x => x.pan(0.75).late(0.015)) // far left and far right, the right a little late
+  .gain(0.05).pan(0.05).superimpose(x => x.pan(0.75).late(0.030)) // far left and far right, the right a little late
   .orbit(7).reverb(wet = 0.2, size = 6)       // a slight room of their own, inside the hall
 
 // Beat: the heartbeat under the skin, 3-3-2 on the root, an octave down.
@@ -374,7 +374,7 @@ export chug = roots => n(roots.add(-7)).struct("[x x] x@2  [x x] x@2  [x x] x")
   .sound(heavy).adsrOff().unison(voices = 7, spread = 0.08)
   //.ignp("decay", "0.4 0.8!2 0.4 0.8!2 0.3 0.2").clip(1)
   .velocity("1.0 0.90 0.80 0.85  0.90 0.80 0.75 0.85".sub(perlin(0.0, 0.2).seed(2)))
-  .gain(0.70).late(perlin(0.0005, 0.0010).seed(2)).apply(
+  .gain(0.64).late(perlin(0.0005, 0.0010).seed(2)).apply(
     x => x.pan(0.20),
     x => x.pan(0.80),
   )
@@ -385,7 +385,7 @@ export wings = chords => n(chords).ply(16)
   .sound(heavy).adsrOff().unison(voices = 7, spread = 0.08)
   .ignp("decay", "[0.9 0.8]*8").clip(1)
   .velocity("1.0 0.90!2 0.96 0.88 0.92 0.94 0.92".sub(perlin(0.0, 0.2).seed(3)))
-  .gain(0.65).late(perlin(0.0010, 0.0015).seed(3)).apply(
+  .gain(0.64).late(perlin(0.0010, 0.0015).seed(3)).apply(
     x => x.pan(0.05),
     x => x.pan(0.95),
   )
@@ -400,8 +400,8 @@ export strike = chords => n(chords)
 
 // Chime: a melody on the clean rig, two octaves up, picked and let ring. The butterfly after the storm.
 export chime = notes => n(notes.add(14))
-  .sound(clean).adsrOff().unison(voices = 9, spread = 0.08).pregain(0.7)
-  .ignp("decay", 0.30).ignp("sustain", 0.35).ignp("release", 1.2).clip(2)
+  .sound(clean).adsrOff().unison(voices = 7, spread = 0.08).pregain(0.45)
+  .ignp("decay", 0.30).ignp("sustain", 0.35).ignp("release", 1.1).clip(2)
   .velocity("1.0 0.8 0.9 0.8 0.95 0.8 0.9 0.8".sub(perlin(0.0, 0.10)))
   .gain(0.33).pan(0.75).late(perlin(0.001, 0.002))
   .orbit(10)
@@ -439,7 +439,7 @@ export hats = pat => sound(pat).n(0)
 // Bass: the Schmetterling's bass guitar, on every kick, on the chord's root two octaves down.
 export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
   .sound(bass).velocity("0.98 0.94 0.96 0.94")
-  .ignp("sub", 0.95).ignp("harmonics", 1.00)
+  .ignp("sub", 0.98).ignp("harmonics", 1.00)
   .adsr(0.003, 0.75, 0.5, 0.040).hpf(30)
   .clip(0.90).gain(0.80).orbit(15)
 
@@ -608,6 +608,7 @@ export song = stack(
 // Inspired by: Philip Glass and Steve Reich, the additive process of minimal music. The spinning arpeggio grows thread
 // by thread through its mask, and the listener hears the same notes transform instead of new ones arriving.
 // Inspired by: Editors - Papillon, through the Schmetterling's lead that flies off at the end.
+
 
 
 
