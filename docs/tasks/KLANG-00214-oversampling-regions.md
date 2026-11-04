@@ -1,8 +1,7 @@
 # KLANG-00214: Oversampling regions, and one core per effect
 
 > **Status (2026-11-03): steps 1, 3a, 3b and 4 landed (section 11).** Left: merging neighbouring stages into one
-> region, song by song, by ear (Der Schmetterling first); the reverb damping in a region (by ear); the warehouse items
-> of step 3a.
+> region, song by song, by ear (Der Schmetterling first); the warehouse items of step 3a.
 >
 > **Part of:** KLANG-00354 (The Motor's shape: signal flow and the graph)
 
@@ -402,8 +401,9 @@ same with either kernel's group delay for every reachable step count). Corpus gr
   2x inside 2x). Per band the top decays faster: mapping the pole keeps the one-pole's corner but not its response
   near the base Nyquist. The audio reviewer's analytic T60 ratio (in a region against 1x, size 5, default damping,
   2 to 20 kHz): 0.98 at 2 kHz, 0.95 at 4, 0.91 at 6, 0.87 at 8, 0.84 at 10, 0.80 at 12, 0.73 at 16, 0.65 at 20 (with
-  `lowpass` 5000: 0.98 to 0.71); about the same at every factor from 2x. **For the maintainer's ear:** keep the
-  pole mapping, or match the one-pole's magnitude at a reference frequency instead (a closed form per block).
+  `lowpass` 5000: 0.98 to 0.71); about the same at every factor from 2x. Kept as built: the pole mapping
+  (maintainer, 2026-11-04, "Ok to the reverb"); matching the one-pole's magnitude at a reference frequency instead
+  (a closed form per block) was the alternative.
 - Latency: a region rounds once, at its own level, its body's latency carried unrounded (`exactLatency`); held
   within half a frame of the measured centroid of its impulse response. A `parallel` written inside a body twins its
   branches exactly, from the region's stage. A `parallel` AROUND a region twins the region's round trip and pads what
@@ -521,3 +521,4 @@ bit").
 - 2026-11-03: step 3 cut in two; step 3a landed: regions on the Katalyst.
 - 2026-11-03: step 3b landed, the hand-over: a voice ending in a region lands on its orbit's rate bus; the orbit's chain converts each rate once.
 - 2026-11-03: step 4 landed: the stages' own oversampling factors retired, the songs moved one region per stage, the frozen songs re-snapshotted.
+- 2026-11-04: the reverb damping in a region kept as built, the pole mapping (maintainer).

@@ -253,7 +253,7 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   when built, not per block), converts down; a region with no step is inlined. At a chain's head it makes the orbit
   run at that rate, one conversion per orbit. Inside: the knob modulators keep the orbit's clock; `parallel` twins from the region's stage (`firstStage`); a reverb rents from a shelf per whole
   factor (`ReverbUnits.atFactor`, kept by the base shelf, `maxIdle / factor`), its comb pole mapped `damping^(1/N)`
-  (the top of the room decays a little faster: open for the maintainer's ear). Latency: `exactLatency` unrounded
+  (the top of the room decays a little faster; kept, maintainer 2026-11-04). Latency: `exactLatency` unrounded
   through bodies, a region rounds once; a `parallel` around a region pads its body by the nearest frame. A region
   always declares a tail. Chains without a region render bit for bit as before.
 - **The hand-over** (2026-11-03, KLANG-00214 step 3b): a voice whose tree ENDS in a region (the root, under its build
