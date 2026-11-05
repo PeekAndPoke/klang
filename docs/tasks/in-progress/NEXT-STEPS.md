@@ -19,8 +19,15 @@ The queue of the engine stream (Klang-Main-Dev), in order. The note of 2026-10-2
    both doors. Both defaults kept by the maintainer 2026-11-05: a zero gate reads 1.0 from the first frame, and a live
    note with a gate length that a note-off cuts short keeps its scheduled gate as the base.
 3. **KLANG-00293 (a chain swap may cut a ringing insert): DONE 2026-11-04**, a swap drains a leaving chain that still
-   rings. Left from it: the master's stop-time keep-alive for insert-only chains (its record, a ticket to open).
-4. Then, the maintainer's pick: KLANG-00137 (master dsl followups), the edge bugs of KLANG-00353.
+   rings. Its two side effects accepted by the maintainer 2026-11-05; the master's stop-time residue is KLANG-00415
+   (master stop click on insert-only chains).
+4. **KLANG-00137 (master dsl followups)**, the maintainer's pick 2026-11-05: section 3 (a cache eviction can rebuild a
+   master chain on the audio thread) and section 8 (the offline render does not count the master chain's latency)
+   first.
+5. KLANG-00415 (master stop click on insert-only chains).
+6. KLANG-00290's three decided items (maintainer, 2026-11-05): 15 (a replace on a stopped engine is ignored), 37
+   (`perlin` and `berlin` at a rate per second, every DSL), 14 (unison start phases dealt by onset, no listening pair).
+7. KLANG-00214: Kokon's four rigs into regions, the maintainer's go 2026-11-05 ("if you want you can merge them").
 
 ## Katalyst stream (Klang-Research)
 
@@ -31,8 +38,7 @@ Unchanged since 2026-10-13: its task is closed and archived, and what is left wa
 
 - KLANG-00214's merges by ear (Kokon next) and the leftovers in its section 11 (sources not rate-mapped inside a
   region, the shimmer ring at 16x).
-- KLANG-00290's decisions: 14 (by ear), 15 (does a replace resume a stopped engine?), 11 (the Zig port), 37 (a sound
-  change), section 6.
+- KLANG-00290's decisions left: 11 (the Zig port), section 6.
 - An FM round together: KLANG-00305 (fm revisit), now with the open sites of engine follow-ups 10c and 10d.
 - Completion, left open: a local that shadows a library name shows two rows; a local bound to an arrow shows no type;
   after a named argument the list still shows locals and library names; a new line inside a multi-line call offers

@@ -19,7 +19,8 @@ hand-off through holders, the distort's `isFinite` swapped; two sites found on t
 closed by 34, the `DelayLine` per rent left for the Zig port with 11. Sections 2 to 5 are done as far as they go without the
 maintainer (16 to 19 and 28 DONE 2026-10-19, 20 and 46 DONE 2026-10-23). What is left waits on a decision: 14 (a
 one-time sound change, by ear), 15 (does a replace resume a stopped engine?), 11 (with the Zig port), 37 (a sound
-change) and section 6's shape and sound steps. Open with the maintainer: C1 to C11 (the FM diagnostic is C6) in
+change) and section 6's shape and sound steps. **Decided 2026-11-05 (maintainer): 14 fix it, 15 ignore, 37 per
+second**; left waiting: 11 and section 6. Open with the maintainer: C1 to C11 (the FM diagnostic is C6) in
 `docs/housekeeping/2026-10-10-baseline.md`, and Q13, Q29 (`duty(width)`) and Q30 to Q33 in
 [`_maintainer-questions.md`](_maintainer-questions.md).
 
@@ -1944,10 +1945,11 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     orbit's pool on the voice's first rendered block (`pool.next(...)` in `Ignitors.kt`), so a change to the render
     order re-deals phases (lifecycle step 5 did, audibly in places). The fix: draw at promotion in onset order, or
     keyed by the voice. A one-time sound change, by ear. Source: the record, "Found during voice lifecycle step 5" and
-    "Found during tidy-up step 10". M.
+    "Found during tidy-up step 10". M. **Decided (maintainer, 2026-11-05): fix it, "no listening pair needed".**
 15. **`Cmd.ReplaceVoices` on a stopped engine** schedules its voices without resuming the engine
     (`PlaybackEngineDispatcher.replaceVoices` goes straight to the scheduler). Decide whether a replace means "resume"
-    or is ignored after a stop. Source: the record, "Found during tidy-up steps 7 to 9". S.
+    or is ignored after a stop. Source: the record, "Found during tidy-up steps 7 to 9". S. **Decided (maintainer,
+    2026-11-05): ignored, "ignore the voices when the engine is stopped".**
 
 ## 4. Tests
 
@@ -2104,7 +2106,8 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     44.1 kHz (about 144 units per second against 132). Seconds are the house unit. The Katalyst's `Kat.perlin` and
     `Kat.berlin` inherit the law for parity (maintainer, 2026-10-11, Q12 of KLANG-00302 (katalyst knob expressions)),
     so both hosts change together: a rate per second, which moves the sound of every song that uses them at one of the
-    two rates. S.
+    two rates. S. **Decided (maintainer, 2026-11-05): per second in every DSL, "to match that kind of param as we have it
+    in other timed functions".**
 38. **DONE (2026-10-19): a per-block boxing site removed from the duck's `configure`, which wrote its two settings
     through `Ducking`'s setters every block (an unchanged setting now writes nothing); located through a squeezed
     inlining budget. Likely `E-duck`'s tail, not shown: the tail was too rare that day to count at V8's own
@@ -2562,3 +2565,4 @@ ramp times (1.5 s in and out, a 2 s hold), recorded in the same solo task.
 - 2026-10-27: part of KLANG-00353 (The Motor: correct at the edges), the epic grouping.
 - 2026-11-04: PAUSED (housekeeping): nothing left that goes without the maintainer's decisions.
 - 2026-11-04: PAUSED.
+- 2026-11-05: the maintainer decided 14 (fix), 15 (ignore after a stop) and 37 (per second); queued after KLANG-00137.

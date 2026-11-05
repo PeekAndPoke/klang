@@ -81,7 +81,8 @@ swaps away from a chain that rings; Kokon and Der Schmetterling at the maintaine
 said the swap retires a ringing insert, in `Crossfade` and `KatalystCompressorEffect.hasTail`; the comment on the
 constant-output case; a line over 140).
 
-**What else it changes** (from the review, no corpus song is affected):
+**What else it changes** (from the review, no corpus song is affected; the first two accepted by the maintainer
+2026-11-05):
 - A ringing insert now drains like a reverb, so it also falls under the parked-request rule (KLANG-00318 (chain swap request during drain)): a request
   that arrives during its fade waits for the 0.15 s cut. A pattern that switches chains holding a body per 16th at
   120 bpm (125 ms apart) now lands each switch after about 0.21 s instead of about 0.065 s, and the latest request
@@ -101,10 +102,12 @@ at 48 kHz) the engine is disposed. The audio reviewer's scenario: a master eq be
 (time constant about 43 ms) on a song whose last sound stops faster than that still rings at about half its level at
 disposal, an audible click; a slower release keeps it under -76 dB. The phaser is the other candidate. The cheap fix
 proposed: let the output audibility check that already runs (`isAudible`, threshold 1e-4) keep `ringing` true also
-when no stage declares a tail. A ticket of its own, not measured yet.
+when no stage declares a tail. Its own ticket since 2026-11-05: KLANG-00415 (master stop click on insert-only chains).
 
 ## History
 
 - 2026-10-20: numbered KLANG-00293 (was `docs/tasks/chain-swap-cuts-ringing-inserts.md`).
 - 2026-10-27: part of KLANG-00353 (The Motor: correct at the edges), the epic grouping.
 - 2026-11-04: DONE.
+- 2026-11-05: the maintainer accepted the parked-switch latency and the constant-output drain; the master's residue
+  went to KLANG-00415.
