@@ -28,7 +28,7 @@ each branch of an early-return ladder reads as its own step.
   attached to the `return` stays attached; the blank goes above the comment.
 
 ```kotlin
-val step = readParam(rate, freqHz, ctx) * PERLIN_STEP
+val step = readParam(rate, freqHz, ctx) * (PERLIN_UNITS_PER_SECOND / ctx.sampleRateD)
 val end = ctx.offset + ctx.length
 
 if (bConst) {

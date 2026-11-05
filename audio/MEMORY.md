@@ -426,6 +426,10 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-11-05 The master's keep-alive scans at `SILENCE_FLOOR` (was 1e-4); a chain with a stage that sounds on silence
+  (an offset) is an endless tail, released after the hold on both hosts (it kept a stopped engine for ever); `perlin`
+  and `berlin` walk per second, rate 1 = 144 units at every rate, 48 kHz bit-identical (KLANG-00290 (engine
+  follow-ups) items 25 and 37; `audio/ref/katalyst.md`).
 - 2026-11-05 A voice replace that reaches a stopped engine is ignored, never played after the stop (KLANG-00290
   (engine follow-ups) item 15).
 - 2026-11-05 A stopped engine's master is kept alive while its output is audible, whatever the chain (a +24 dB eq bell

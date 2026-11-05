@@ -220,6 +220,7 @@ Ignitor.supersaw(55, x => x.voices(7))
 |---------------|-------------------|--------------------------------------------------------------------------------------------|
 | `color`       | `whitenoise`      | Spectral tilt −1..1: `0` flat (default), `<0` darken toward pink/brown, `>0` brighten      |
 | `leak`        | `brownnoise`      | Per-sample white-leak (default 0.02): lower = deeper/slower brown, higher = brighter       |
+| `rate`        | `perlin`/`berlin` | Walk speed per second: `1` is 144 noise cells a second (default) at every sample rate        |
 | `octaves`     | `perlin`/`berlin` | fBm octaves: `1` plain (default, perf-neutral), higher = more fractal detail (capped at 8) |
 | `persistence` | `perlin`/`berlin` | fBm amplitude falloff per octave (default 0.5; lower = quieter upper octaves)              |
 | `tail`        | `dust`            | Heavy-tailed amplitude exponent: `1` uniform (default), `>1` = mostly-tiny / rare-loud     |
@@ -827,8 +828,8 @@ note("c3 e3 g3").s("supersaw").katalyst(bus).katp("fader", "<1 0.5>")
 **Kat modulators** (2026-10-12): a bus LFO the chain owns. `Kat.sine(freq)`, `Kat.saw(freq)`, `Kat.ramp(freq)`,
 `Kat.tri(freq)` and `Kat.square(freq)` take the rate in Hz, REQUIRED (there is no note on a bus), and a builder with
 `phase` (the square also `duty`): `Kat.square(1, x => x.duty(0.25))`. `Kat.perlin(rate)` and `Kat.berlin(rate)` are
-smooth noise walks; `rate` is required and is the Ignitor's noise unit (rate 1 is about 144 cells a second at 48 kHz,
-so a slow drift wants about 0.0005 to 0.01). Each swings about -1..1, so map it with `range(from, to)`; it takes the
+smooth noise walks; `rate` is required and is the Ignitor's noise unit (rate 1 is 144 cells a second at every sample
+rate, so a slow drift wants about 0.0005 to 0.01). Each swings about -1..1, so map it with `range(from, to)`; it takes the
 arithmetic like a param, and a param may sit inside it (`Kat.sine(Kat.param("lfo", 0.2))`). The chain reads it once
 per block and the stage ramps the knob across the block to that value; its clock runs while the orbit sounds and
 pauses while it sleeps. A modulated delay `time` steps through the delay's 50 ms tap crossfade (a stepping echo, not a

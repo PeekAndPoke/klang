@@ -1537,7 +1537,8 @@ object Ignitors {
             // scratch render + index (ledger O7: the raw read is the E5-bypass shape, and it
             // forced three full scratch renders per block for three constants), and the REAL
             // freqHz (ledger O6).
-            val step = readParam(rate, freqHz, ctx) * PERLIN_STEP
+            // Per second (PERLIN_UNITS_PER_SECOND): the per-sample step divided first, the old 0.003 at 48 kHz.
+            val step = readParam(rate, freqHz, ctx) * (PERLIN_UNITS_PER_SECOND / ctx.sampleRateD)
             val oct = readParam(octaves, freqHz, ctx).toInt().coerceIn(1, PERLIN_FBM_MAX_OCTAVES)
             val pers = readParam(persistence, freqHz, ctx)
             val end = ctx.windowEnd
@@ -1568,7 +1569,7 @@ object Ignitors {
 
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             // readParam + real freqHz — see PerlinNoiseIgnitor (ledger O6/O7).
-            val step = readParam(rate, freqHz, ctx) * PERLIN_STEP
+            val step = readParam(rate, freqHz, ctx) * (PERLIN_UNITS_PER_SECOND / ctx.sampleRateD)
             val oct = readParam(octaves, freqHz, ctx).toInt().coerceIn(1, PERLIN_FBM_MAX_OCTAVES)
             val pers = readParam(persistence, freqHz, ctx)
             val end = ctx.windowEnd
@@ -2963,7 +2964,7 @@ object Ignitors {
     // Internal helpers
     // ═════════════════════════════════════════════════════════════════════════════
 
-    // PERLIN_STEP and PERLIN_FBM_MAX_OCTAVES live in `_noise_laws.kt`, their one home in the module.
+    // PERLIN_UNITS_PER_SECOND and PERLIN_FBM_MAX_OCTAVES live in `_noise_laws.kt`, their one home in the module.
 
     // ═════════════════════════════════════════════════════════════════════════════
     // wrapPhase(), smallNumFastMod() live in `utils/phase_wrap.kt`; a semitone detune is

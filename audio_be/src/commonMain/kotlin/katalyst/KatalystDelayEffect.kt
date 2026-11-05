@@ -731,7 +731,8 @@ class KatalystDelayEffect(
      * True while this delay holds a tail that can NEVER end on its own: a charged ring at
      * |feedback| >= 1, Active or Draining (its countdown is then infinite). What a stopped engine
      * releases after its hold (phase 3 step 12 decision (j), maintainer 2026-09-28); every other
-     * tail rings out. The one stage that can: see `KatalystChain.sustainsItself`.
+     * tail rings out. The other kind of endless tail is an arithmetic stage that sounds on silence (an offset): see
+     * `KatalystChain.sustainsItself`.
      */
     fun sustainsItself(): Boolean = state.sustainsItself()
 

@@ -1171,7 +1171,13 @@ class MasterBusTest : StringSpec({
                     swapped.bus.isRinging shouldBe true
                 }
 
-                b >= releaseAt + releaseBlocks - 1 -> withClue("block $b: the release's last block retired the loop, nothing rings") {
+                // The release's last block (its gain near -90 dB) still sounds over the master's floor
+                // (`SILENCE_FLOOR`, -100 dBFS, since 2026-11-05): the bus rings through it and lets go on the next.
+                b == releaseAt + releaseBlocks - 1 -> withClue("block $b: the release's last block retired the loop") {
+                    swap.settled shouldBe true
+                }
+
+                b >= releaseAt + releaseBlocks -> withClue("block $b: the loop retired, nothing rings") {
                     swap.settled shouldBe true
                     swapped.bus.isRinging shouldBe false
                 }

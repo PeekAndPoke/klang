@@ -316,9 +316,14 @@ class MasterOutputChainSpec : StringSpec({
         // the stage's DC blocker decays from that offset for a few hundred milliseconds. The master asked a chain for
         // its tail only when it declared a reverb or a delay, so a stopped playback disposed the engine and cut the
         // decay in one sample. The step is measured in `KatalystDistortEffectSpec`; here, the host asks, inside the
-        // window where only the stage's answer keeps it ringing (round 3).
+        // window where only the stage's answer keeps it ringing (round 3). Since the master scans at the stage's own
+        // floor (`SILENCE_FLOOR`, 2026-11-05) that window needs a stage after the distort that turns it down: a fader
+        // at 0.05 puts the output under the floor while the blocker still holds about 26 dB more.
         val bus = adopted(
-            KatalystDsl.of(KatalystStageDsl.Distort(amount = c(0.5), shape = DistortionShapes.indexOf("tube").toInt())),
+            KatalystDsl.of(
+                KatalystStageDsl.Distort(amount = c(0.5), shape = DistortionShapes.indexOf("tube").toInt()),
+                KatalystStageDsl.Gain(gain = c(0.05)),
+            ),
             SizedBuffers.forRings(sampleRate),
             ReverbUnits(sampleRate),
         )
@@ -340,8 +345,8 @@ class MasterOutputChainSpec : StringSpec({
             block(loud = true, b = b)
         }
 
-        // Silence until the bus output is under the master's own audibility threshold (1e-4, the master's
-        // `TAIL_SILENCE_THRESHOLD`, written here as a literal): from here on the master no longer counts the output as
+        // Silence until the bus output is under the master's audibility threshold (`SILENCE_FLOOR`, the engine's one
+        // floor since 2026-11-05): from here on the master no longer counts the output as
         // audible and, after its interval of quiet blocks, ASKS the chain. The decay is still above the stage's floor.
         var quiet = 0
 
@@ -351,7 +356,7 @@ class MasterOutputChainSpec : StringSpec({
 
             val peak = maxOf(onBus.left.maxOf { abs(it) }, onBus.right.maxOf { abs(it) })
 
-            if (peak < 1e-4) {
+            if (peak < SILENCE_FLOOR) {
                 break
             }
 

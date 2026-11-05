@@ -34,9 +34,9 @@ const val VOICE_CULL_SECONDS: Double = 0.05
  * silent (above it is "still sounding"), except the voice cull, which counts a peak strictly BELOW
  * it as silent (`voiceOutputPeak < VOICE_CULL_FLOOR` in `Voice.render`).
  *
- * NOT the master's tail poll (`MasterBus.TAIL_SILENCE_THRESHOLD`, 1e-4): whether the output may
- * use another floor is an open maintainer decision (D9 of
- * `docs/audio-audit/2026-10-07-engine-tidy-audit.md`).
+ * The master's keep-alive scan of a stopped engine (`MasterBus.isAudible`) uses it too, since 2026-11-05 (D9 of
+ * `docs/audio-audit/2026-10-07-engine-tidy-audit.md`, decided by the maintainer: "the same as everywhere else";
+ * it had its own 1e-4 before).
  */
 const val SILENCE_FLOOR: Double = 1e-5
 

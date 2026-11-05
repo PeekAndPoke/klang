@@ -248,8 +248,8 @@ internal object KlangScriptKatalyst {
      * Katalyst(k => k.reverb(0.3, Kat.perlin(0.0005).range(3, 7)))
      * ```
      *
-     * @param rate the walk's speed, required: the Ignitor's unit, 0.003 noise cells per sample at rate 1 (about 144
-     *   cells a second at 48 kHz, so an LFO-like drift wants a rate around 0.0005 to 0.01).
+     * @param rate the walk's speed, required: the Ignitor's unit, 144 noise cells a second at rate 1 (so an LFO-like
+     *   drift wants a rate around 0.0005 to 0.01).
      * @param octaves fractal-Brownian-motion octaves: 1 = plain (default), higher = more detail (capped at 8).
      * @param persistence fBm amplitude falloff per octave (default 0.5; lower = quieter upper octaves).
      */

@@ -186,13 +186,14 @@ sealed interface KatalystKnobDsl {
      * Perlin noise, about `-1` to `1`: the Ignitor's `perlin` walk, seeded by its position in the chain (Q12: the
      * n-th noise of a chain takes the base seed plus n), so every build of a chain hears the same walks.
      *
-     * Read once per block, its `rate` reads in cells per block: rate 1 steps `128 * 0.003 = 0.384` cells a block
-     * (about 144 cells a second at 48 kHz), a noise AM rather than an LFO. Useful as a modulator from about 0.001 to
-     * 0.05 (about 0.15 to 7 cells a second at 48 kHz); each octave above the first moves twice as fast as the one
+     * Read once per block, its `rate` is a speed per second, the Ignitor's: rate 1 walks 144 cells a second at every
+     * sample rate (0.384 cells a block at 48 kHz), a noise AM rather than an LFO. Useful as a modulator from about
+     * 0.001 to 0.05 (about 0.15 to 7 cells a second); each octave above the first moves twice as fast as the one
      * below, so the top octaves turn into per-block jitter first.
      *
-     * @param rate walk speed in the Ignitor's unit: `rate * 0.003` noise units per SAMPLE, so its speed follows the
-     *   sample rate (Q12, inherited for parity).
+     * @param rate walk speed, the Ignitor's unit: `rate * 144` noise cells per SECOND (maintainer, 2026-11-05,
+     *   KLANG-00290 (engine follow-ups) item 37; until then 0.003 cells per sample, a speed that followed the sample
+     *   rate).
      * @param octaves fBm octaves, truncated to a whole number and held to `1..8`.
      * @param persistence fBm amplitude falloff per octave.
      */
@@ -207,7 +208,7 @@ sealed interface KatalystKnobDsl {
      * Berlin noise, `-1` to `1`: the Ignitor's `berlin` walk (piecewise-linear), seeded by its position in the chain
      * (Q12). Its `rate` reads as [PerlinNoise]'s, with the same useful range.
      *
-     * @param rate walk speed in the Ignitor's unit, per sample; see [PerlinNoise.rate].
+     * @param rate walk speed, `rate * 144` noise cells per second; see [PerlinNoise.rate].
      * @param octaves fBm octaves, truncated to a whole number and held to `1..8`.
      * @param persistence fBm amplitude falloff per octave.
      */

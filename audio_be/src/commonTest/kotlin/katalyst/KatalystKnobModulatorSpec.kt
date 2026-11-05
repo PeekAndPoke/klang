@@ -379,7 +379,7 @@ class KatalystKnobModulatorSpec : StringSpec({
         }
     }
 
-    "perlin and berlin sample the Ignitor's walk at each block start: rate * PERLIN_STEP per sample, a block a tick" {
+    "perlin and berlin sample the Ignitor's walk at each block start: rate * PERLIN_UNITS_PER_SECOND / sampleRate per sample, a block a tick" {
         // Block 0 is the Ignitor's first sample bit for bit (the same seed, the same construction). Later blocks: the
         // Ignitor adds its step 128 times per block where the knob adds 128 steps once, so they agree to rounding (the
         // walk position differs by a few ulps of about 300 over 64 blocks).
@@ -398,6 +398,24 @@ class KatalystKnobModulatorSpec : StringSpec({
                     withClue("${noise.name}, tick $k") { values[k] shouldBe (buffer[0] plusOrMinus 1e-8) }
                 }
             }
+        }
+    }
+
+    "perlin and berlin knobs walk per second: two ticks at 96 kHz land where one tick lands at 48 kHz" {
+        // `rate` is a speed per second (maintainer, 2026-11-05, KLANG-00290 (engine follow-ups) item 37, option A).
+        // A tick is one block of 128 frames, so a block at 96 kHz is half the time of one at 48 kHz. Value k is read
+        // at the clock of k ticks.
+        for (noise in noises) {
+            val slow = KatalystKnobProgram.compile(node = noise.node(c(2.0)), sampleRate = 48000, blockFrames = blockFrames, noises = KatalystNoiseOrdinals())
+            val fast = KatalystKnobProgram.compile(node = noise.node(c(2.0)), sampleRate = 96000, blockFrames = blockFrames, noises = KatalystNoiseOrdinals())
+            val at48 = slow.ticks(32)
+            val at96 = fast.ticks(64)
+
+            for (k in at48.indices) {
+                withClue("${noise.name}, tick $k") { at96[2 * k] shouldBe (at48[k] plusOrMinus 1e-9) }
+            }
+
+            withClue("${noise.name}: positive control, the walk moves") { (at48.toSet().size > 1) shouldBe true }
         }
     }
 

@@ -269,7 +269,7 @@ internal object KlangScriptIgnitor {
 
     /**
      * Creates a Perlin noise source (smooth organic noise).
-     * @param rate walk speed (default 1.0).
+     * @param rate walk speed, 144 noise cells a second at 1 (default 1.0).
      * @param octaves fractal-Brownian-motion octaves: 1 = plain (default), higher = more detail (capped at 8).
      * @param persistence fBm amplitude falloff per octave (default 0.5; lower = quieter upper octaves).
      */
@@ -287,7 +287,7 @@ internal object KlangScriptIgnitor {
 
     /**
      * Creates a Berlin noise source (piecewise-linear interpolated noise).
-     * @param rate walk speed (default 1.0).
+     * @param rate walk speed, 144 noise cells a second at 1 (default 1.0).
      * @param octaves fBm octaves: 1 = plain (default), higher = more detail (capped at 8).
      * @param persistence fBm amplitude falloff per octave (default 0.5).
      */

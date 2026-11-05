@@ -167,6 +167,38 @@ internal class KatalystArithmeticEffect(
     /** Memoryless: nothing of one block reaches the next. */
     override fun hasTail(): Boolean = false
 
+    /**
+     * True when this stage turns a silent bus into sound at its operand as it stands: its law at an input of 0 gives a
+     * sample that is not 0. Not compared with a floor: an offset under the floor can be raised by a later gain, or summed
+     * with another in a `parallel`, and the leak would be back (round 1 audio review). Asked per stage, so an offset a
+     * later stage removes (a distort's DC blocker, a `minus` of the same) still counts: a stopped engine is then
+     * released after its hold, and a finite tail that outlasts the hold beside it is released too, where it would
+     * otherwise ring out (decision (j)). Bounded, and in no song; a false no would keep the engine for ever. An offset ([KatalystArithmeticOp.PLUS], [KatalystArithmeticOp.MINUS]), a
+     * floor above 0 ([KatalystArithmeticOp.MAX]) or a cap below it ([KatalystArithmeticOp.MIN]), a power of 0 or less
+     * ([KatalystArithmeticOp.POW]); never a factor, a divisor or `abs`, and never while unset. The only stages of a
+     * chain that can sound with nothing to feed them, so a chain holding one sounds for ever
+     * ([KatalystChain.sustainsItself]): a stopped engine releases it after its hold (KLANG-00290 (engine follow-ups),
+     * the leak found in KLANG-00415 (master stop click on insert-only chains): a reverb with an offset kept a stopped
+     * engine for ever). A gliding operand is asked where it stands; the engine asks on every block after the hold.
+     */
+    fun soundsOnSilence(): Boolean {
+        if (unset) {
+            return false
+        }
+
+        val v = glide.value
+        val out = when (op) {
+            KatalystArithmeticOp.PLUS -> plusLaw(a = 0.0, b = v)
+            KatalystArithmeticOp.MINUS -> minusLaw(a = 0.0, b = v)
+            KatalystArithmeticOp.POW -> powLaw(a = 0.0, b = v)
+            KatalystArithmeticOp.MIN -> minLaw(a = 0.0, b = v)
+            KatalystArithmeticOp.MAX -> maxLaw(a = 0.0, b = v)
+            KatalystArithmeticOp.TIMES, KatalystArithmeticOp.DIV, KatalystArithmeticOp.ABS -> 0.0
+        }
+
+        return out != 0.0
+    }
+
     /** Rents nothing, so retiring is the clean slate. */
     override fun retire() {
         reset()

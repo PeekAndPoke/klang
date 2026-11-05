@@ -5,7 +5,9 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
@@ -70,5 +72,48 @@ class NoiseFbmEffectSpec : StringSpec({
     "berlin: persistence reaches the audio (with octaves > 1)" {
         render(Ignitors.berlinNoise(Random(11), octaves = ConstantIgnitor(4.0), persistence = ConstantIgnitor(0.3))) shouldNotBe
                 render(Ignitors.berlinNoise(Random(11), octaves = ConstantIgnitor(4.0), persistence = ConstantIgnitor(0.8)))
+    }
+
+    "perlin and berlin walk per second: one second lands on the same noise at 44.1, 48 and 96 kHz" {
+        // `rate` is a speed per second (maintainer, 2026-11-05, KLANG-00290 (engine follow-ups) item 37, option A:
+        // rate 1 is 144 noise units per second, the old per-sample walk's speed at 48 kHz). Before, the walk took a
+        // fixed step per sample: 8 % slower at 44.1 kHz, twice as fast on a 96 kHz host.
+        fun lastOfOneSecond(rate: Int, make: (Random) -> Ignitor): Double {
+            val ign = make(Random(7))
+            val buffer = AudioBuffer(blockFrames)
+            val ctx = IgniteContext(
+                sampleRate = rate,
+                voiceDurationFrames = rate,
+                gateEndFrame = rate,
+                scratchBuffers = ScratchBuffers(blockFrames),
+                random = testRandom,
+            )
+            var done = 0
+            var last = 0.0
+
+            // rate + 1 samples: the last one is the walk at exactly one second (sample 0 is at 0 s)
+            while (done < rate + 1) {
+                val n = minOf(blockFrames, rate + 1 - done)
+                ctx.updateOffsetAndLength(offset = 0, length = n)
+                ctx.voiceElapsedFrames = done
+                ign.generate(buffer, 0.0, ctx)
+                last = buffer[n - 1]
+                done += n
+            }
+
+            return last
+        }
+
+        val noises = listOf<Pair<String, (Random) -> Ignitor>>(
+            "perlin" to { rng -> Ignitors.perlinNoise(rng, rate = ConstantIgnitor(0.7)) },
+            "berlin" to { rng -> Ignitors.berlinNoise(rng, rate = ConstantIgnitor(0.7)) },
+        )
+
+        for ((name, make) in noises) {
+            val at48 = lastOfOneSecond(48000, make)
+
+            withClue("$name at 44.1 kHz") { lastOfOneSecond(44100, make) shouldBe (at48 plusOrMinus 1e-6) }
+            withClue("$name at 96 kHz") { lastOfOneSecond(96000, make) shouldBe (at48 plusOrMinus 1e-6) }
+        }
     }
 })

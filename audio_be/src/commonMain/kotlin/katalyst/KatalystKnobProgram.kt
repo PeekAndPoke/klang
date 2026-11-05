@@ -6,7 +6,7 @@
 package io.peekandpoke.klang.audio_be.katalyst
 
 import io.peekandpoke.klang.audio_be.ignitor.PERLIN_FBM_MAX_OCTAVES
-import io.peekandpoke.klang.audio_be.ignitor.PERLIN_STEP
+import io.peekandpoke.klang.audio_be.ignitor.PERLIN_UNITS_PER_SECOND
 import io.peekandpoke.klang.audio_be.ignitor.WaveVoiceState
 import io.peekandpoke.klang.audio_be.ignitor.absLaw
 import io.peekandpoke.klang.audio_be.ignitor.divLaw
@@ -90,7 +90,7 @@ internal const val PERLIN_CLOCK_PERIOD: Double = 256.0
 /**
  * Where the berlin walk's clock wraps: 2^23 cells, so its top octave (2^7 times the clock) stays below 2^31, where
  * `BerlinNoise.noise`'s `toInt()` would saturate and its value leave `[-1, 1]` without bound. The berlin hash has no
- * period, so the wrap is one step in the value: once per 2^23 cells either way, about 16 hours at rate 1 at 48 kHz.
+ * period, so the wrap is one step in the value: once per 2^23 cells either way, about 16 hours at rate 1.
  */
 internal const val BERLIN_CLOCK_SPAN: Double = 8388608.0
 
@@ -140,9 +140,9 @@ internal class KatalystNoiseOrdinals {
  * - [run] samples every modulator at its clock as it stands and never moves it.
  * - [tick] runs, then advances every clock by one block: a periodic shape by `dt * blockFrames` with
  *   `dt = freq / sampleRate` (the Ignitor's own per-sample increment), wrapped with [wrapPhase], whose modulo branch
- *   takes a block that steps two cycles or more; a noise by `rate * PERLIN_STEP * blockFrames`, the Ignitor's
- *   per-sample step times the block, wrapped by [PERLIN_CLOCK_PERIOD] (the same walk) or [BERLIN_CLOCK_SPAN] (one step
- *   per many hours). The advance reads the operands of the run just done, so a slot that moved the `freq` before a
+ *   takes a block that steps two cycles or more; a noise by `rate * perlinStep * blockFrames`, the Ignitor's
+ *   per-sample step (`PERLIN_UNITS_PER_SECOND / sampleRate`, divided first) times the block, wrapped by
+ *   [PERLIN_CLOCK_PERIOD] (the same walk) or [BERLIN_CLOCK_SPAN] (one step per many hours). The advance reads the operands of the run just done, so a slot that moved the `freq` before a
  *   tick sets that tick's advance.
  * - The clock starts at 0 when the program is compiled (a noise at its seeded start: the seed of its position in the
  *   chain, [KATALYST_KNOB_NOISE_SEED] and [KatalystNoiseOrdinals]) and moves only by [tick]: over the blocks the chain
@@ -207,6 +207,9 @@ internal class KatalystKnobProgram private constructor(
     /** The frames of one block, the clocks' step per [tick]. */
     private val blockFrames: Double,
 ) {
+    /** The noise walk's step per sample at `rate = 1`: per second, divided first, as the Ignitor's (`PERLIN_UNITS_PER_SECOND`). */
+    private val perlinStep: Double = PERLIN_UNITS_PER_SECOND / sampleRate
+
     /**
      * True when the whole tree folded at compile: no slot leaf and no modulator, so no instruction either, and the
      * value is [resultRegister]'s. A bare [KatalystKnobDsl.Param] root has no instruction but a slot leaf, so it is
@@ -267,7 +270,7 @@ internal class KatalystKnobProgram private constructor(
                 }
 
                 KatalystKnobModulator.PERLIN, KatalystKnobModulator.BERLIN -> {
-                    val next = clocks[m] + r[inA[i]] * PERLIN_STEP * blockFrames
+                    val next = clocks[m] + r[inA[i]] * perlinStep * blockFrames
 
                     // NaN-guard on a value the author can write: a non-finite `rate` holds the walk where it is (a
                     // finite `x - x` is 0, a non-finite one NaN; no `isFinite` call, a stdlib call on Kotlin/JS).

@@ -15,7 +15,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.cylinders.CylinderSwapRig
 import io.peekandpoke.klang.audio_be.cylinders.offerAndCommit
-import io.peekandpoke.klang.audio_be.ignitor.PERLIN_STEP
+import io.peekandpoke.klang.audio_be.ignitor.PERLIN_UNITS_PER_SECOND
 import io.peekandpoke.klang.audio_be.ignitor.plusLaw
 import io.peekandpoke.klang.audio_be.master.MasterBus
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
@@ -133,12 +133,12 @@ class KatalystModulatedChainSpec : StringSpec({
     "perlin and berlin on a gain stage: the noise seeded at its position, walked by hand, block by block" {
         val rate = 0.5
 
-        /** The hand walk: the seeded start, plus `rate * PERLIN_STEP * 128` a block, wrapped by the walk's span. */
+        /** The hand walk: the seeded start, plus `rate * (PERLIN_UNITS_PER_SECOND / sampleRate) * 128` a block, wrapped by the walk's span. */
         fun walk(start: Double, k: Int, span: Double): Double {
             var x = start
 
             repeat(k) {
-                x += rate * PERLIN_STEP * blockFrames
+                x += rate * (PERLIN_UNITS_PER_SECOND / sampleRate) * blockFrames
 
                 if (x >= span) {
                     x -= span * floor(x / span)

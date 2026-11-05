@@ -81,7 +81,9 @@ construction, so about -80 dBFS today (the eq bell: 8.7e-5), at the edge of audi
 1e-5 costs about 2.3 more time constants of life (about 100 ms for the eq bell) and moves the disposal moment of the
 tail chains too. The same question as the audit's decision D9 (KLANG-00290 section 6, item 25).
 
-**Found, not fixed (before this change too):** a master with a stage that declares a tail AND sounds on silence (a
+**Fixed 2026-11-05 in KLANG-00290 (engine follow-ups) item 25** (an offset is now an endless tail, released after the
+hold; this ticket's `ringsWithoutTail` clause went with it), as was the floor question above. **Found, not fixed
+(before this change too):** a master with a stage that declares a tail AND sounds on silence (a
 reverb with a `plus(0.1)`) keeps a stopped engine for ever: its output is always audible and nothing endless is
 declared, so neither the ring-out nor the release ends it (probe: not idle after 30 s). Widening the new clause to
 chains with a tail would also release a long finite master echo at the hold, against decision (j). Rare (an offset or

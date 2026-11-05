@@ -24,6 +24,7 @@ import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.common.infra.klangMapOf
 import kotlin.math.abs
@@ -34,7 +35,8 @@ import kotlin.math.abs
  * master's keep-alive asked only chains that declare a tail, so the engine was disposed as soon as its voices and
  * orbits were done, with the insert still ringing: a 220 Hz sine through a +24 dB eq bell at q 30 left a step of 0.30,
  * a bell body 0.026, a phaser centred at 200 Hz 7e-4. A dry master goes exactly when an unmastered engine does, and a
- * master that sounds on silence (an offset) is released after the hold, never kept for ever.
+ * master that sounds on silence (an offset) is released after the hold, never kept for ever. The floor is the engine's
+ * one, `SILENCE_FLOOR` (-100 dBFS; the master's own 1e-4 until 2026-11-05, KLANG-00290 (engine follow-ups) item 25).
  *
  * The engine is driven block by block through `renderInto` (the dispatcher's own order, minus the house stage, whose
  * limiter would hide the step); the step is the last sample before the engine reads idle, which the dispatcher then
@@ -129,7 +131,7 @@ class MasterStopRingingInsertSpec : StringSpec({
         return Stopped(step = abs(last), idleAt = -1, released = rig.engine.releaseStarted)
     }
 
-    "a master of insert stages keeps a stopped engine alive while it rings: disposed under -80 dB, not mid-ring" {
+    "a master of insert stages keeps a stopped engine alive while it rings: disposed under -100 dB, not mid-ring" {
         val unmastered = stopThrough()
 
         for ((name, stage) in listOf("eq bell" to eqBell, "bell body" to bellBody, "low phaser" to lowPhaser)) {
@@ -140,7 +142,7 @@ class MasterStopRingingInsertSpec : StringSpec({
             }
 
             withClue("$name: the step the disposal leaves") {
-                stopped.step shouldBeLessThan 1e-4
+                stopped.step shouldBeLessThan SILENCE_FLOOR
             }
 
             withClue("$name: rung out, not released") {

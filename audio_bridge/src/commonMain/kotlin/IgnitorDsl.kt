@@ -679,6 +679,7 @@ sealed interface IgnitorDsl {
     /** Perlin noise generator. Smooth, continuous random signal useful for organic modulation. */
     @WireName("perlin-noise")
     data class PerlinNoise(
+        /** Walk speed: `rate * 144` noise cells per second, at every sample rate (default 1). */
         val rate: IgnitorDsl = Slots.rate,
         /** fBm octaves: 1 = plain single-octave (default); higher = more fractal detail (engine caps at 8). */
         val octaves: IgnitorDsl = Slots.octaves,
@@ -693,6 +694,7 @@ sealed interface IgnitorDsl {
     /** Berlin noise generator. Bipolar variant of Perlin noise (output ranges -1..+1). */
     @WireName("berlin-noise")
     data class BerlinNoise(
+        /** Walk speed: `rate * 144` noise cells per second, at every sample rate (default 1). */
         val rate: IgnitorDsl = Slots.rate,
         /** fBm octaves: 1 = plain single-octave (default); higher = more fractal detail (engine caps at 8). */
         val octaves: IgnitorDsl = Slots.octaves,

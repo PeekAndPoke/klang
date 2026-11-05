@@ -462,9 +462,12 @@ class KatalystChain internal constructor(
 
     /**
      * True while a stage holds a tail that can NEVER end on its own, which a stopped engine
-     * releases after its hold instead of waiting for (phase 3 step 12 decision (j)). Only a delay
-     * can, also inside a `parallel` branch or a region's body: at |feedback| >= 1 it recirculates without loss
-     * ([KatalystDelayEffect.sustainsItself]).
+     * releases after its hold instead of waiting for (phase 3 step 12 decision (j)). Two kinds of stage
+     * can, also inside a `parallel` branch or a region's body: a delay at |feedback| >= 1 recirculates without loss
+     * ([KatalystDelayEffect.sustainsItself]), and an arithmetic stage that sounds on silence (an offset, a `max` above
+     * 0: [KatalystArithmeticEffect.soundsOnSilence]) feeds the stages after it for ever, a reverb or a delay included
+     * (before, such a chain kept a stopped engine for ever: its output never fell silent and nothing endless was
+     * declared).
      * Every other stage's tail ends: the reverb's comb feedback is at most 0.98 (its size is
      * bounded to 0..1 before it reaches the unit, `Reverb.normalizeSize`), the phaser's feedback is clamped at 0.95
      * (`PhaserCore.MAX_FEEDBACK`), the body and vowel resonators are stable filters, and the
@@ -476,6 +479,10 @@ class KatalystChain internal constructor(
             val stage = stages[i]
 
             if (stage is KatalystDelayEffect && stage.sustainsItself()) {
+                return true
+            }
+
+            if (stage is KatalystArithmeticEffect && stage.soundsOnSilence()) {
                 return true
             }
 

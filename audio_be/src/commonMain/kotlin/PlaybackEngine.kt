@@ -232,13 +232,11 @@ class PlaybackEngine(
         scheduler.getActiveVoiceCount() != 0 || cylinders.anyActive()
 
     /**
-     * True while a tail that can never end on its own rings, on an orbit or at the master. A master that still sounds
-     * with nothing of the engine's own left to feed it and no stage that can ring counts too ([MasterBus.ringsWithoutTail]):
-     * read only once the hold is over, when any insert has long rung out (KLANG-00415 (master stop click on insert-only
-     * chains)).
+     * True while a tail that can never end on its own rings, on an orbit or at the master (`KatalystChain.sustainsItself`:
+     * a delay at |feedback| >= 1, or a stage that sounds on silence, an offset). Every other tail is finite and rings out.
      */
     private fun sustainsItself(): Boolean =
-        cylinders.anySustainsItself() || masterBus.sustainsItself() || (!hasOwnSound() && masterBus.ringsWithoutTail)
+        cylinders.anySustainsItself() || masterBus.sustainsItself()
 
     /**
      * The playback was told to stop (`Cmd.Cleanup`): from now on its finite tails ring out and its
@@ -288,7 +286,8 @@ class PlaybackEngine(
      * **After a stop, no hard cut, ever** (step 12 decision (j), maintainer 2026-09-28, refined
      * the same day: release only ENDLESS tails). Every tail that can end on its own rings out in
      * full, however long it takes. Only a tail that can NEVER end ([KatalystChain.sustainsItself]:
-     * a delay recirculating at `|feedback| >= 1`, on an orbit or at the master) would keep a
+     * a delay recirculating at `|feedback| >= 1`, or an arithmetic stage that sounds on silence, an
+     * offset, on an orbit or at the master, while it still sounds) would keep a
      * stopped engine for ever; while one rings [MAX_TAIL_HOLD_SECONDS] after the notes ended (and
      * the master swap has settled), the engine's WHOLE output is released ([TailRelease], 60 dB per
      * 3 s from exactly 1, retired under -90 dB, 4.5 s), and idle once that has run out. The simple

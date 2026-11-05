@@ -20,8 +20,9 @@ closed by 34, the `DelayLine` per rent left for the Zig port with 11. Sections 2
 maintainer (16 to 19 and 28 DONE 2026-10-19, 20 and 46 DONE 2026-10-23). What is left waits on a decision: 14 (a
 one-time sound change, by ear), 15 (does a replace resume a stopped engine?), 11 (with the Zig port), 37 (a sound
 change) and section 6's shape and sound steps. **Decided 2026-11-05 (maintainer): 14 fix it, 15 ignore, 37 per
-second**; 15 DONE and 14 checked (already in onset order, no change) the same day; 37 next; left waiting: 11 and
-section 6. Open with the maintainer: C1 to C11 (the FM diagnostic is C6) in
+second**; 15 DONE and 14 checked (already in onset order, no change) the same day; 37 DONE (option A, rate 1 = 144
+units per second) and 25's floor DONE with the leak of KLANG-00415, also 2026-11-05; left waiting: 11, 25's
+`exp(-k / tau)` and the rest of section 6. Open with the maintainer: C1 to C11 (the FM diagnostic is C6) in
 `docs/housekeeping/2026-10-10-baseline.md`, and Q13, Q29 (`duty(width)`) and Q30 to Q33 in
 [`_maintainer-questions.md`](_maintainer-questions.md).
 
@@ -2133,7 +2134,17 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     `Kat.berlin` inherit the law for parity (maintainer, 2026-10-11, Q12 of KLANG-00302 (katalyst knob expressions)),
     so both hosts change together: a rate per second, which moves the sound of every song that uses them at one of the
     two rates. S. **Decided (maintainer, 2026-11-05): per second in every DSL, "to match that kind of param as we have it
-    in other timed functions".**
+    in other timed functions".** **DONE 2026-11-05, option A** (the maintainer's pick of what rate 1 means): rate 1 is
+    the old speed at 48 kHz, 144 noise units per second (`PERLIN_UNITS_PER_SECOND`, `_noise_laws.kt`), at every sample
+    rate. Each host takes its per-sample step as `PERLIN_UNITS_PER_SECOND / sampleRate`, divided first, which is the
+    old 0.003 bit for bit at 48 kHz: the corpus (rendered at 48 kHz) is identical and no song number moved. What
+    changes: a 44.1 kHz device walks 9 % faster than before (now as at 48 kHz), and any other host rate likewise. An
+    oversampling region changes nothing: a noise is a region source, rendered at the base rate, and a Katalyst knob
+    keeps the orbit's clock (both since 2026-10-31). Both hosts: the Ignitor's `perlin` and `berlin` (`Ignitors.kt`)
+    and the Katalyst knob modulators (`KatalystKnobProgram`). Rows:
+    `NoiseFbmEffectSpec` (one second lands on the same noise at 44.1, 48 and 96 kHz), `KatalystKnobModulatorSpec` (two
+    ticks at 96 kHz land where one does at 48 kHz). The KDoc of every door says "144 noise cells a second". Mutations:
+    3 of 3 KILLED (each host back to per sample).
 38. **DONE (2026-10-19): a per-block boxing site removed from the duck's `configure`, which wrote its two settings
     through `Ducking`'s setters every block (an unchanged setting now writes nothing); located through a squeezed
     inlining budget. Likely `E-duck`'s tail, not shown: the tail was too rare that day to count at V8's own
@@ -2561,7 +2572,40 @@ Each was checked against the code: none is done (item 21's package dissolve asid
     - `legato` on the wire or folded into the gate time by the frontend (decision D6, open; not bit-identical).
     - `Cmd.ScheduleVoice` and `Cmd.ClearScheduled` have no sender outside the specs (B1.10). S.
 25. **Step 19, sound, optional:** the per-sample `exp(-k / tau)` in `TailRelease` (B4.19), and one silence floor for
-    the master's tail poll (1e-4 against 1e-5 everywhere else, decision D9). S each.
+    the master's tail poll (1e-4 against 1e-5 everywhere else, decision D9). S each. **The floor: DONE 2026-11-05**
+    (maintainer: "make the master floor the same as everywhere else"): `MasterBus.isAudible` scans at `SILENCE_FLOOR`,
+    so a stopped engine is disposed with a step under -100 dBFS (it was under -80). Rows: `MasterStopRingingInsertSpec`
+    (the step under `SILENCE_FLOOR`), `MasterOutputChainSpec`'s distort row (a fader at 0.05 after the stage, so the
+    window where only the stage's own answer holds the engine still exists at one floor), `MasterBusTest`'s capped
+    release (the bus rings through the release's last block, near -90 dB, and lets go on the next). Mutation KILLED.
+    The `exp(-k / tau)` half stays open.
+
+    **With it, the leak found in KLANG-00415 (master stop click on insert-only chains): DONE 2026-11-05** (maintainer:
+    "fix the leak if there is a clear path"). A chain holding a stage that makes sound from a silent input kept a
+    stopped engine for ever when that chain also declared a tail (a reverb with `plus(0.1)`, at the master), and on an
+    orbit in every case (its mix never fell silent, so the orbit never deactivated). The clear path: in the Katalyst
+    only the arithmetic stages can sound with nothing to feed them (`plus` or `minus` of a non-zero offset, `max` above 0,
+    `min` below 0, `pow` of 0 or less; every other stage maps silence to silence or rings out), and each knows its operand.
+    `KatalystArithmeticEffect.soundsOnSilence()` takes its law at an input of 0 and asks whether it is not 0 (no floor:
+    an offset under the floor can be lifted by a later gain or summed in a `parallel`, and the leak would be back);
+    `KatalystChain.sustainsItself()` counts it, also inside a `parallel` branch or a region. So the engine's existing
+    path for an endless tail applies, on both hosts: the 20 s hold after the last note, then `TailRelease`. KLANG-00415's
+    clause `(!hasOwnSound() && masterBus.ringsWithoutTail)` is removed: an offset is now an endless tail of its own, and
+    the clause's other effect, releasing a FINITE insert ring that outlasted the hold, went against decision (j). Rows:
+    `KatalystArithmeticEffectSpec` (each operator against its own output on silence, a Param moved to 0, a floor
+    cleared to NaN), `EngineStopReleaseSpec` (a master reverb with an offset before or after it, and an orbit with one,
+    each released after the hold by the law, bit for bit against a control; and a finite orbit echo past the hold under
+    an eq-bell master rings out, never released, which pins the clause's removal). Mutations: 8 of 8 KILLED.
+
+    Review round 1 (level 1, code and audio): clean, MINORs applied (the stale KDoc of `SILENCE_FLOOR`, the delay's and
+    `isIdle`'s, the region claim, the comparison with 0, the removal's row). Accepted and documented in
+    `soundsOnSilence`'s KDoc, not fixed: the test is per stage, so an offset a LATER stage removes (a distort's DC
+    blocker, a `minus` of the same) still counts, and a stopped engine holding such a chain releases a finite tail
+    that outlasts the hold beside it instead of ringing it out. Bounded, in no song; telling them apart would split
+    the chain's question in two. Proposed and not taken: gating the master's answer on its own ringing (it changes
+    nothing audible: a cancelled offset is either silent with the rest, or the orbit's echo keeps the master ringing).
+    Not covered: a fractional `pow` after a reverb lifts the reverb's `ANTI_DENORMAL` residue (about 5e-17) to an
+    audible level for ever; contrived, the leak's last known shape.
 26. **Step 20, the Katalyst by-ear items**, each with a home: A1.1
     (KLANG-00246 (delay ceiling edges)), A1.2
     (KLANG-00247 (duck orbit switch click)), A1.3
@@ -2592,3 +2636,4 @@ ramp times (1.5 s in and out, a 2 s hold), recorded in the same solo task.
 - 2026-11-04: PAUSED (housekeeping): nothing left that goes without the maintainer's decisions.
 - 2026-11-04: PAUSED.
 - 2026-11-05: the maintainer decided 14 (fix), 15 (ignore after a stop) and 37 (per second); queued after KLANG-00137.
+- 2026-11-05: 37 DONE (option A); 25's master floor DONE and the offset leak of KLANG-00415 fixed.

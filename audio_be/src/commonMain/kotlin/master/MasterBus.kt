@@ -16,6 +16,7 @@ import io.peekandpoke.klang.audio_be.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
 
 /**
  * The master chain of one [io.peekandpoke.klang.audio_be.PlaybackEngine], and the swap that
@@ -102,9 +103,6 @@ class MasterBus(
     private val reverbs: ReverbUnits = ReverbUnits(sampleRate),
 ) {
     companion object {
-        /** Peak below which the master output counts as silent for the cheap tail pre-check. */
-        private const val TAIL_SILENCE_THRESHOLD = 1e-4
-
         /**
          * Silent blocks between two tail checks on the chains in play.
          *
@@ -201,17 +199,6 @@ class MasterBus(
      * a click (a +24 dB eq bell at q 30 left a step of 0.3).
      */
     val isRinging: Boolean get() = ringing && isActive
-
-    /**
-     * True while the output is audible though no chain in play declares a tail: an insert's ring, or a chain that makes
-     * sound on silence (an arithmetic offset, a `plus` of an oscillator). The engine releases a stopped playback whose
-     * master still does this once its own sound is gone and the hold is over ([PlaybackEngine]'s endless tails): an
-     * insert has usually rung out long before, so what is left can never end on its own. The exception: an orbit's
-     * long echo that outlasts the hold (counted from the last voice) leaves an insert ringing on its last residue when
-     * the orbit falls quiet; that finite ring is then released too, inaudibly (the release starts at exactly 1 and
-     * falls far slower than the ring), and the engine lives the release's 4.5 s instead of the ring's.
-     */
-    val ringsWithoutTail: Boolean get() = isRinging && !hasTailUnits()
 
     /** True while nothing is leaving the bus: no fade, drain or release of a chain swapped away runs. */
     val isSettled: Boolean get() = swap.settled
@@ -394,14 +381,18 @@ class MasterBus(
         }
     }
 
-    /** Cheap early-exit peak test over the block. */
+    /**
+     * Cheap early-exit peak test over the block, at the engine's one floor, [SILENCE_FLOOR] (-100 dBFS). It was 1e-4
+     * (-80 dBFS, decision D9 of the engine audit) until the maintainer made it the same as everywhere else
+     * (2026-11-05, KLANG-00290 (engine follow-ups) item 25): a stopped engine is disposed with a step under -100 dB.
+     */
     private fun isAudible(bus: StereoBuffer, frames: Int): Boolean {
         val left = bus.left
         val right = bus.right
 
         for (i in 0 until frames) {
-            if (left[i] > TAIL_SILENCE_THRESHOLD || left[i] < -TAIL_SILENCE_THRESHOLD ||
-                right[i] > TAIL_SILENCE_THRESHOLD || right[i] < -TAIL_SILENCE_THRESHOLD
+            if (left[i] > SILENCE_FLOOR || left[i] < -SILENCE_FLOOR ||
+                right[i] > SILENCE_FLOOR || right[i] < -SILENCE_FLOOR
             ) {
                 return true
             }

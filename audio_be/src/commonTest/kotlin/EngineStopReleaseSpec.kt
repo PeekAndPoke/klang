@@ -18,6 +18,7 @@ import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_be.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.katalyst.delay
 import io.peekandpoke.klang.audio_be.warehouse.ResourceWarehouse
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
@@ -190,6 +191,52 @@ class EngineStopReleaseSpec : StringSpec({
         releasedAgainstControl(a = a, b = b)
 
         withClue("the control's orbit still rings: it was the release that ended the stopped one") {
+            b.engine.cylinders.anyActive() shouldBe true
+        }
+    }
+
+    "a stopped playback whose master sounds on silence beside a reverb is released after the hold, either order" {
+        // An offset never falls silent, and before the leak's fix a chain that declared a tail kept a stopped engine
+        // for ever: nothing endless was declared and its output never went quiet (KLANG-00290 (engine follow-ups),
+        // found in KLANG-00415 (master stop click on insert-only chains)). The offset AFTER the reverb sounds beside its
+        // ring; BEFORE it, it feeds the room for ever.
+        val room = KatalystStageDsl.Reverb(wet = c(0.5), size = c(0.5))
+        val offset = KatalystStageDsl.Plus(c(0.2))
+
+        for (dsl in listOf(KatalystDsl.of(room, offset), KatalystDsl.of(offset, room))) {
+            val a = Rig()
+            val b = Rig()
+
+            for (r in listOf(a, b)) {
+                r.d.handle(KlangCommLink.Cmd.RegisterKatalyst(playbackId = "song", name = "lit", dsl = dsl))
+                r.d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = listOf(masterEvent("lit"), blip())))
+            }
+
+            withClue("$dsl") {
+                releasedAgainstControl(a = a, b = b)
+            }
+        }
+    }
+
+    "a stopped playback whose ORBIT sounds on silence is released after the hold, by the law, then idle" {
+        // The orbit's mix never falls silent, so the orbit never deactivated and the engine was never idle.
+        val lit = KatalystDsl.of(KatalystStageDsl.Reverb(wet = c(0.5), size = c(0.5)), KatalystStageDsl.Plus(c(0.2)))
+        val a = Rig()
+        val b = Rig()
+
+        for (r in listOf(a, b)) {
+            r.d.handle(KlangCommLink.Cmd.RegisterKatalyst(playbackId = "song", name = "lit", dsl = lit))
+            r.d.handle(
+                KlangCommLink.Cmd.ScheduleVoices(
+                    playbackId = "song",
+                    voices = listOf(blip().let { it.copy(data = it.data.copy(cylinder = 1, katalyst = "lit")) }),
+                )
+            )
+        }
+
+        releasedAgainstControl(a = a, b = b)
+
+        withClue("the control's orbit still sounds: it was the release that ended the stopped one") {
             b.engine.cylinders.anyActive() shouldBe true
         }
     }
@@ -508,9 +555,10 @@ class EngineStopReleaseSpec : StringSpec({
 
     /**
      * Stops A at block [stopAt] and renders A and B until A is idle (bounded by [bound]): A must be
-     * B sample for sample and never released. Returns the block A went idle, or -1.
+     * B sample for sample and never released. [afterBlock] sees each block after it rendered. Returns the block A went
+     * idle, or -1.
      */
-    fun ringsOutAgainstControl(a: Rig, b: Rig, stopAt: Int, bound: Int): Int {
+    fun ringsOutAgainstControl(a: Rig, b: Rig, stopAt: Int, bound: Int, afterBlock: (Int) -> Unit = {}): Int {
         for (blk in 0 until bound) {
             if (blk == stopAt) {
                 a.d.handle(KlangCommLink.Cmd.Cleanup(playbackId = "song"))
@@ -518,6 +566,8 @@ class EngineStopReleaseSpec : StringSpec({
 
             val got = a.block(blk)
             val want = b.block(blk)
+
+            afterBlock(blk)
 
             if (!got.contentEquals(want)) {
                 withClue("block $blk: the stopped engine is the control, sample for sample") {
@@ -555,6 +605,39 @@ class EngineStopReleaseSpec : StringSpec({
 
         withClue("idle because it was quiet: the orbit had gone silent in the control too") {
             b.engine.cylinders.anyActive() shouldBe false
+        }
+    }
+
+    "a FINITE orbit tail that outlasts the hold rings out in full under a ringing insert master, never released" {
+        // The eq bell rings on for a moment after the echo falls quiet, past the hold. KLANG-00415's clause released a
+        // master that rang with nothing of the engine's own left and no declared tail; a finite ring is not endless,
+        // so it rings out (decision (j); the clause went with KLANG-00290 (engine follow-ups) item 25).
+        val params = mapOf("delay.wet" to 0.5, "delay.time" to 0.25, "delay.feedback" to 0.9)
+        val bell = KatalystDsl.of(
+            KatalystStageDsl.Eq(
+                sections = listOf(
+                    IgnitorDsl.EqSection.Bell(freq = IgnitorDsl.Constant(440.0), q = IgnitorDsl.Constant(30.0), db = IgnitorDsl.Constant(24.0)),
+                ),
+            ),
+        )
+        val a = Rig()
+        val b = Rig()
+
+        for (r in listOf(a, b)) {
+            r.d.handle(KlangCommLink.Cmd.RegisterKatalyst(playbackId = "song", name = "bell", dsl = bell))
+            r.d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = listOf(masterEvent("bell"), blip(params))))
+        }
+
+        var orbitQuietAt = -1
+        val idleAt = ringsOutAgainstControl(a = a, b = b, stopAt = 100, bound = 30000) { blk ->
+            if (orbitQuietAt < 0 && !a.engine.cylinders.anyActive()) {
+                orbitQuietAt = blk
+            }
+        }
+
+        withClue("positive control: the orbit fell quiet after the hold (block $orbitQuietAt), and the bell rang on after it") {
+            orbitQuietAt shouldBeGreaterThan 100 + holdBlocks
+            idleAt shouldBeGreaterThan orbitQuietAt
         }
     }
 

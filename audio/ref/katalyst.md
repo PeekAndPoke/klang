@@ -115,8 +115,8 @@ The glide time itself is an open question for the maintainer's ear: KLANG-00213 
 - **`TailRelease` is the one release law** (`audio_be/.../TailRelease.kt`): exponential from exactly 1, 60 dB per
   `RT60_SECONDS` (3 s), retired under `FLOOR_DB` (-90 dB), 4.5 s in all.
 - **A stopped playback is never hard-cut** (`PlaybackEngine.isIdle` KDoc is the home): finite tails ring out in
-  full; only when an endless tail is present (`KatalystChain.sustainsItself`, a delay at `|feedback| >= 1`) is the
-  engine's whole output released, `MAX_TAIL_HOLD_SECONDS` (20 s) after the last note.
+  full; only when an endless tail is present (`KatalystChain.sustainsItself`: a delay at `|feedback| >= 1`, or an
+  arithmetic stage that sounds on silence, an offset, since 2026-11-05) is the engine's whole output released, `MAX_TAIL_HOLD_SECONDS` (20 s) after the last note.
 - **Lookahead**: the Katalyst `compressor` and `limiter` take a build-time `lookahead`, at most
   `Compressor.MAX_LOOKAHEAD_SECONDS` (0.05), fixed per chain; the orbit or playback runs late by it and nothing
   compensates, by the author's choice. The house limiter is not a Katalyst stage (`MasterStage`; `audio/MEMORY.md`, "House stage").
@@ -137,7 +137,8 @@ reverb, the filter swap and the compressor copy it. What every copy must keep:
   asking), the chain swap (`ChainSwap` drains the leaving chain at the end of its input ramp when `hasTail()` OR its
   last block reached `SILENCE_FLOOR`, a scan since KLANG-00293 (chain swap cuts ringing inserts); before, a ringing
   body, vowel, phaser or eq bell was retired in one sample), and the master (`MasterBus.isRinging`: an audible output
-  holds the engine whatever the chain, a scan since KLANG-00415 (master stop click on insert-only chains); a SILENT
+  holds the engine whatever the chain, a scan at `SILENCE_FLOOR` since KLANG-00415 (master stop click on insert-only
+  chains) and KLANG-00290 (engine follow-ups) item 25; a SILENT
   output asks `hasTail()`, at once for a chain whose `declaresTail` is false, after 10 quiet blocks for one whose
   `declaresTail` is true). A compressor's lookahead ring answers `hasTail()` without joining `declaresTail`: it
   holds at most 50 ms, asked at once. A stage whose state can put audio into a

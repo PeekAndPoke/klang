@@ -31,6 +31,7 @@ import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
 import io.peekandpoke.klang.common.infra.klangMapOf
 import kotlin.math.abs
 import kotlin.math.pow
@@ -444,5 +445,79 @@ class KatalystArithmeticEffectSpec : StringSpec({
         chain.reset()
         chain.applyParams(klangMapOf("t" to 0.4))
         block(chain, probe).forEach { it shouldBe probe * 0.4 }
+    }
+
+    "a chain sounds for ever exactly when a stage of it turns silence into sound: an offset, a floor above 0, a cap below 0, a power of 0 or less" {
+        // The oracle is the stage itself: what it makes of a silent block. Before, a chain with an offset was never
+        // told to end, and a stopped engine holding one lived for ever (KLANG-00290 (engine follow-ups), the leak of
+        // KLANG-00415 (master stop click on insert-only chains)).
+        fun c(v: Double) = KatalystKnobDsl.Constant(v)
+
+        val rows = listOf(
+            KatalystStageDsl.Plus(c(0.1)) to true,
+            KatalystStageDsl.Plus(c(-0.1)) to true,
+            KatalystStageDsl.Plus(c(0.0)) to false,
+            // Under the floor still counts: a later gain or a parallel sum can lift it
+            KatalystStageDsl.Plus(c(SILENCE_FLOOR / 2.0)) to true,
+            KatalystStageDsl.Minus(c(0.1)) to true,
+            KatalystStageDsl.Max(c(0.1)) to true,
+            KatalystStageDsl.Max(c(-0.1)) to false,
+            KatalystStageDsl.Min(c(-0.1)) to true,
+            KatalystStageDsl.Min(c(0.1)) to false,
+            KatalystStageDsl.Pow(c(0.0)) to true,
+            KatalystStageDsl.Pow(c(-1.0)) to true,
+            KatalystStageDsl.Pow(c(2.0)) to false,
+            KatalystStageDsl.Times(c(3.0)) to false,
+            KatalystStageDsl.Div(c(0.0)) to false,
+            KatalystStageDsl.Div(c(0.5)) to false,
+            KatalystStageDsl.Abs to false,
+            KatalystStageDsl.Plus(c(Double.NaN)) to false,
+            KatalystStageDsl.Max(c(Double.NaN)) to false,
+            // A branch and a region's body count like the chain's own stages
+            KatalystStageDsl.Parallel(listOf(KatalystDsl.of(KatalystStageDsl.Times(c(0.5))), KatalystDsl.of(KatalystStageDsl.Plus(c(0.1))))) to true,
+            KatalystStageDsl.OversampleBy(factor = 2, body = KatalystDsl.of(KatalystStageDsl.Max(c(0.1)))) to true,
+        )
+
+        for ((stage, sounds) in rows) {
+            val chain = build(stage)
+            chain.applyParams(null)
+            // Two blocks: a region's output arrives after its latency
+            block(chain, 0.0)
+            val out = block(chain, 0.0)
+
+            withClue("$stage: the stage's own output on silence (positive control of the expectation)") {
+                out.any { it != 0.0 } shouldBe sounds
+            }
+
+            withClue("$stage: sustainsItself") {
+                chain.sustainsItself() shouldBe sounds
+            }
+        }
+    }
+
+    "a Param offset sounds for ever while it is not 0, and a chain whose offset is moved to 0 ends" {
+        val chain = build(KatalystStageDsl.Plus(KatalystKnobDsl.Param("o", 0.0)))
+        chain.applyParams(klangMapOf("o" to 0.2))
+        block(chain, 0.0)
+        chain.sustainsItself() shouldBe true
+
+        chain.applyParams(klangMapOf("o" to 0.0))
+
+        for (b in 0 until glideBlocks + 2) {
+            block(chain, 0.0)
+        }
+
+        chain.sustainsItself() shouldBe false
+    }
+
+    "a floor cleared to NaN no longer sounds for ever: an unset bound passes the bus" {
+        val chain = build(KatalystStageDsl.Max(KatalystKnobDsl.Param("f", 0.0)))
+        chain.applyParams(klangMapOf("f" to 0.1))
+        block(chain, 0.0).forEach { it shouldBe 0.1 }
+        chain.sustainsItself() shouldBe true
+
+        chain.applyParams(klangMapOf("f" to Double.NaN))
+        block(chain, 0.0).forEach { it shouldBe 0.0 }
+        chain.sustainsItself() shouldBe false
     }
 })
