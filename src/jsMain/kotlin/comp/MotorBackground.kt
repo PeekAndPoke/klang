@@ -1272,11 +1272,14 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
         // swings off-axis; lower means the letters face the light more uniformly. The facets lean a little steeper than
         // they began, so a moving lamp catches them (the maintainer, 2026-10-30: "just a little steeper edges in the
         // original coarsnes so it reacts more to the light").
+        // The coarse facets a little flatter and their field turning about twice as fast: whole groups leaning away
+        // together showed as dark patches (the maintainer, 2026-11-05: "a bit too 'dirty' ... It should stay a
+        // fine-grained as it is but with less 'dark patches'", KLANG-00414; 0.22 and 0.0625 before)
         val fineAmp = 0.34
-        val coarseAmp = 0.22
+        val coarseAmp = 0.18
         // Perlin lattice units per facet: how fast the direction field turns. Higher means neighbouring facets
         // diverge sooner.
-        val coarseFreq = 0.0625
+        val coarseFreq = 0.12
         // Layers stacked on that base flow, each half the amplitude at twice the frequency.
         val coarseOctaves = 4
         // The facets are irregular: each [coarseBlock] square cell holds one point somewhere inside it, and a texel

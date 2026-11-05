@@ -30,9 +30,14 @@ But the corners are pretty dark", the visuals "ok"):
 - **The start page's corners lighter**: its own dark oval over the plate (the visuals have none) ends at about 0.75 in
   the corners, once nearly black (0.97).
 
+- **The title less patchy** (the maintainer: "The text is now a bit too 'dirty' ... It should stay a fine-grained as it
+  is but with less 'dark patches'"): the coarse facets' field turns about twice as fast (0.0625 to 0.12), so groups
+  leaning away together are small, and they lean a little less (0.22 to 0.18); the fine grain is as it was.
+
 Taste values, judged by eye: no spec holds them.
 
 ## History
 
 - 2026-11-05: created from the maintainer's two requests; built, screenshots before and after.
 - 2026-11-05: the lamp further away and a little lower, the start page's corners lighter.
+- 2026-11-05: the title's coarse facets smaller and a little flatter: fewer dark patches.
