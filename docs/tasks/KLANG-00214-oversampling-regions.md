@@ -1,7 +1,8 @@
 # KLANG-00214: Oversampling regions, and one core per effect
 
-> **Status (2026-11-04): PAUSED, steps 1, 3a, 3b and 4 landed (section 11); the first merge, Der Schmetterling's guitar rigs,
-> made by the maintainer.** Left: merging neighbouring stages into one region in the other songs, song by song, by ear.
+> **Status (2026-11-05): PAUSED, steps 1, 3a, 3b and 4 landed (section 11); the first merge, Der Schmetterling's guitar rigs,
+> made by the maintainer; the second, Kokon's four rigs, 2026-11-05.** Left: merging neighbouring stages into one
+> region in the other songs, song by song, by ear.
 >
 > **Part of:** KLANG-00354 (The Motor's shape: signal flow and the graph)
 
@@ -538,6 +539,13 @@ bit").
   0.01 dB, every octave band within 0.1 dB, the waveform changed (residual -12 dB after a 5-sample alignment), the
   guitars alone about as fast, the full mix about 10% slower (the filters and soft caps between the stages at 4x).
   The maintainer made the edit in the song.
+- **The second merge, Kokon's four rigs** (maintainer, 2026-11-05: "if you want you can merge them, thats fine"; the
+  songs are not being edited now). Der Schmetterling's shape: in each rig the pedal, the preamp and the power amp in
+  one `oversampleAtLeast` at the highest rate a stage of them asks for, the pickup, the snare cut and the cab outside.
+  The bright and heavy rigs at 4x (their crunch and high gain preamps are 4x), the clean and deep rigs at 2x (pedal
+  stock, the clean preamp and the class A power amp ask for 2x at most: a 4x region there would only cost). Corpus,
+  first 256 cycles at 48 kHz: Kokon's peak 0.7430 to 0.7447 (+0.02 dB), every other song identical. No A/B pair made
+  (no wav render in the tools; the Schmetterling pair was made by hand); one can be rendered on request.
 
 ## History
 
@@ -557,3 +565,4 @@ bit").
 - 2026-11-04: step 1's allocation escape found by a bisect and fixed (the voice build back to its old size on V8, +24 B on the JVM).
 - 2026-11-04: the soft cap inside a region heard and accepted; the allocation budgets raised for the diagnostics (maintainer).
 - 2026-11-04: the first merge: Der Schmetterling's rigs, pedal to power amp in one 4x region (maintainer, by ear).
+- 2026-11-05: the second merge: Kokon's four rigs, pedal to power amp in one region each (4x bright and heavy, 2x clean and deep).

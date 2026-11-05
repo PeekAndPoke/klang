@@ -7,8 +7,8 @@ The queue of the engine stream (Klang-Main-Dev), in order. The note of 2026-10-2
 - `main` holds everything; the allocation check is green again (80 of 80, 2026-11-04, after the budgets were raised
   for the diagnostics KLANG-00399 counts since 2026-10-31, `audio_benchmark/alloc-budgets.txt`).
 - KLANG-00214 (oversampling regions): steps 1, 3a, 3b and 4 landed; the soft cap inside a region heard and accepted;
-  the first merge, Der Schmetterling's two guitar rigs in one 4x region each, made by the maintainer. PAUSED: the
-  other merges are by ear, song by song (Kokon's four rigs next, an A/B on request).
+  the first merge, Der Schmetterling's two guitar rigs in one 4x region each, made by the maintainer; the second,
+  Kokon's four rigs, 2026-11-05. PAUSED: the other merges are by ear, song by song (an A/B on request).
 - KLANG-00290 (engine follow-ups): PAUSED, everything left waits on a decision (its status paragraph).
 
 ## Queue (Klang-Main-Dev)
@@ -28,7 +28,7 @@ The queue of the engine stream (Klang-Main-Dev), in order. The note of 2026-10-2
 6. KLANG-00290's three decided items (maintainer, 2026-11-05): 15 DONE (a replace on a stopped engine is ignored), 14
    checked (the takes already follow onset order, no change), 37 DONE (`perlin` and `berlin` per second, rate 1 = 144
    units a second, option A: 48 kHz bit-identical).
-7. KLANG-00214: Kokon's four rigs into regions, the maintainer's go 2026-11-05 ("if you want you can merge them").
+7. KLANG-00214: Kokon's four rigs into regions: DONE 2026-11-05 (the maintainer's go: "if you want you can merge them").
 
 ## Katalyst stream (Klang-Research)
 
@@ -37,7 +37,7 @@ Unchanged since 2026-10-13: its task is closed and archived, and what is left wa
 
 ## Open with the maintainer
 
-- KLANG-00214's merges by ear (Kokon next) and the leftovers in its section 11 (sources not rate-mapped inside a
+- KLANG-00214's merges by ear (the songs after Kokon) and the leftovers in its section 11 (sources not rate-mapped inside a
   region, the shimmer ring at 16x).
 - KLANG-00290's decisions left: 11 (the Zig port), section 6.
 - An FM round together: KLANG-00305 (fm revisit), now with the open sites of engine follow-ups 10c and 10d.

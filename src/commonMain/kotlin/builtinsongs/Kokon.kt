@@ -212,10 +212,24 @@ let makeGuitar = (rig) => {
 
 // Four rigs, one guitar. The cocoon is clean and dark, the answer is bright, the heartbeat is the clean rig into the big
 // box (the 4x12 keeps the thump the 1x12 cuts), and the wings are the Schmetterling's own rhythm rig.
-let cleanRig  = Ign.fn(x => x.serial(pickupNeck,      pedalStock,    preampClean,    powerClassA,   snareCut, cab1x12))
-let brightRig = Ign.fn(x => x.serial(pickupSingle,    pedalBoost,    preampCrunch,   powerPushPull, snareCut, cab4x12))
-let deepRig   = Ign.fn(x => x.serial(pickupNeck,      pedalStock,    preampClean,    powerClassA,   snareCut, cab4x12))
-let heavyRig  = Ign.fn(x => x.serial(pickupHumbucker, pedalScreamer, preampHighGain, powerPushPull, snareCut, cab4x12))
+// The pedal, the preamp and the power amp share ONE oversampling region per rig, at the highest rate a stage of them
+// asks for (the stages' own regions inside then convert nothing); the pickup, the snare cut and the cab are linear and
+// stay outside, as in Der Schmetterling.
+let cleanRig  = Ign.fn(x => x.serial(pickupNeck)
+  .oversampleAtLeast(2, y => y.serial(pedalStock, preampClean, powerClassA))
+  .serial(snareCut, cab1x12))
+
+let brightRig = Ign.fn(x => x.serial(pickupSingle)
+  .oversampleAtLeast(4, y => y.serial(pedalBoost, preampCrunch, powerPushPull))
+  .serial(snareCut, cab4x12))
+
+let deepRig   = Ign.fn(x => x.serial(pickupNeck)
+  .oversampleAtLeast(2, y => y.serial(pedalStock, preampClean, powerClassA))
+  .serial(snareCut, cab4x12))
+
+let heavyRig  = Ign.fn(x => x.serial(pickupHumbucker)
+  .oversampleAtLeast(4, y => y.serial(pedalScreamer, preampHighGain, powerPushPull))
+  .serial(snareCut, cab4x12))
 
 let clean  = makeGuitar(cleanRig)
 let bright = makeGuitar(brightRig)
