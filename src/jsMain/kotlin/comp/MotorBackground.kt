@@ -108,6 +108,15 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
 
         /** The brush's pressure is sampled this far apart, along a stroke and across ([pressure]). */
         private const val PRESSURE_STEP_X = 8.0
+
+        /** How far a tile leans its own way, either way of half this; 0.08 before KLANG-00414. */
+        private const val TILE_TILT = 0.04
+
+        /** The brushed hairlines' depth, under the strokes (KLANG-00414). */
+        private const val HAIRLINE_DEPTH = 0.03
+
+        /** The plate's roughness: the lower, the tighter the lamp's shine on it (KLANG-00414; 0.28 before). */
+        private const val PLATE_ROUGHNESS = 0.22
         private const val PRESSURE_STEP_Y = 4.0
 
         /** The last plate surface any background built ([SurfaceCache]); null before the first. */
@@ -527,7 +536,10 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
 
             val fade = sin(PI * (along - stroke))
 
-            sum += strokeDepth[layer] * 0.11 * fade
+            // Under the strokes, the fine hairlines of brushed steel: one depth a row, along all of it, so the light
+            // runs along the lines as on metal, not over a grain as on wood (the maintainer, 2026-11-05: "people still
+            // see it as 'wood' and not as metal", KLANG-00414)
+            sum += strokeDepth[layer] * 0.11 * fade + (hashCell(row, 83 + layer) - 0.5) * HAIRLINE_DEPTH
         }
 
         return sum * pressure(px, py)
@@ -661,7 +673,8 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
         val geometry = addon.createPlaneGeometry(2.0 * aspect, 2.0)
         val mat = addon.createMeshStandardMaterial(jsObject {
             color = 0xffffff            // set to the look's ground below; the map, neutral, shapes it
-            roughness = 0.28
+            // A tighter, brighter shine that follows the lamp: metal, not satin wood (KLANG-00414; it was 0.28)
+            roughness = PLATE_ROUGHNESS
             metalness = 0.97
             val d = this.asDynamic()
             d.map = plateMap
@@ -1482,8 +1495,10 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
                 turnedCol = col
                 turnedRow = row
                 tileTurned = isTurned(col, row)
-                tileTiltX = (hashCell(col * 3 + 11, row * 7 + 29) - 0.5) * 0.08
-                tileTiltY = (hashCell(col * 5 + 43, row * 3 + 71) - 0.5) * 0.08
+                // Each tile leans its own way, a little: half what it was, the tiles' tones "too stark" apart (the
+                // maintainer, 2026-11-05: "They seem to be point to much into different directions", KLANG-00414)
+                tileTiltX = (hashCell(col * 3 + 11, row * 7 + 29) - 0.5) * TILE_TILT
+                tileTiltY = (hashCell(col * 5 + 43, row * 3 + 71) - 0.5) * TILE_TILT
             }
 
             // Per-panel constant tilt; the plate's face lies flat
