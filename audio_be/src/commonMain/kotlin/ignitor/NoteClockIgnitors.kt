@@ -14,9 +14,9 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
  * `frame / gate`, where `frame` counts from the onset and `gate` is [IgniteContext.voiceDurationFrames]: 0 at the onset,
  * exactly 1.0 at the gate frame, and on past 1 at the same pace through the release. Each sample is computed from its
  * frame alone, so the output does not depend on how the voice is cut into blocks. A gate of zero frames or less
- * (sprudel's `legato(0)`) reads 1.0 from the first frame, the way `accelerate` holds its target from there (Q27). A
- * voice whose gate is not known ([IgniteContext.gateKnown] false, a held live note) reads 0 throughout, also after its
- * note-off: the note-off moves the voice's limits, never its scheduled gate. For the same reason a live note with a
+ * (sprudel's `legato(0)`) reads 1.0 from the first frame, the way `accelerate` holds its target from there (Q27; the
+ * maintainer kept it 2026-11-05). A voice whose gate is not known ([IgniteContext.gateKnown] false, a held live note)
+ * reads 0 throughout, also after its note-off: the note-off moves the voice's limits, never its scheduled gate. For the same reason a live note with a
  * gate length that a note-off cuts short keeps its scheduled gate as the base, the way `accelerate` does: stopped at a
  * quarter of its gate, it enters its release at 0.25, and reaches 1.0 only if its release outlasts the rest of its gate.
  *

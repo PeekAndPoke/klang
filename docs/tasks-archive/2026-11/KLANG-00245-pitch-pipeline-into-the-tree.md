@@ -1734,9 +1734,10 @@ After step 5. The doors and the nodes stay as descriptions; the runtime arms com
     `frame / sampleRate`, a division so the gate frame reads exactly 1.0), so both are block-framing invariant. "No
     known gate" is a new `IgniteContext.gateKnown`, false for a realtime voice started with no gate length
     (`VoiceScheduler.activateVoice`, through `VoiceFactory.makeVoice` and into an oversampling region's child
-    context). **Decided by default, for the maintainer to confirm:** a gate of zero frames or less (`legato(0)`)
-    reads 1.0 from the first frame and stays there, the rule accelerate follows (Q27), since there is no pace to grow
-    at. No song uses the clocks, so nothing that ships changes. Specs: `NoteClockIgnitorsSpec` (the law, three
+    context). **Decided by the maintainer 2026-11-05** ("yes we stay at 1.0"; decided by default before): a gate of
+    zero frames or less (`legato(0)`) reads 1.0 from the first frame and stays there, the rule accelerate follows
+    (Q27), since there is no pace to grow at. Unclamped, a very short gate races past 1 through the release while a zero
+    gate holds 1.0: a choice at the break, the safe one; a sweep through such a note's release uses `elapsed()`. No song uses the clocks, so nothing that ships changes. Specs: `NoteClockIgnitorsSpec` (the law, three
     framings, the zero gate, the unknown gate, the build, the region) and a full-engine row in `RealtimeVoiceSpec`
     (a held live note reads 0 while held and after its note-off; a fixed-gate live note moves); mutation campaign
     8 of 8 killed. Docs: `audio/ref/voice-synthesis.md` ("The note clocks"), the music-writing Ignitor reference.
@@ -1749,7 +1750,8 @@ After step 5. The doors and the nodes stay as descriptions; the runtime arms com
     two MINORs applied (a KDoc sentence that said a cut-short note never reaches 1.0, wrong: it grows on through the
     release; the census row's hand count). Mutation: 12 of 12 killed over four campaigns. Full corpus identical
     (3 frozen, 13 live; Kokon and Der Schmetterling at the maintainer's edits' hashes).
-    **For the maintainer's word:** (a) a gate of zero frames or less reads 1.0 from the first frame; (b) a live note
+    **For the maintainer's word:** (a) a gate of zero frames or less reads 1.0 from the first frame (decided
+    2026-11-05, kept); (b) a live note
     with a gate length that a note-off cuts short keeps its scheduled gate as the base, accelerate's rule, so it enters
     its release below 1.0 (stopped at a quarter, at 0.25).
 - **7e. Accelerate composed, FM stays a node** (D11, revised 2026-10-09: accelerate from `progress()` and

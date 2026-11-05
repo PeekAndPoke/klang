@@ -234,7 +234,7 @@ so both are block-framing invariant; neither is block-constant, and neither take
 
 - **`progress()`** (`IgnitorDsl.Progress`): `frame / voiceDurationFrames`, exactly 1.0 at the gate frame, on past 1
   at the same pace through the release. A gate of zero frames or less reads 1.0 from the first frame (accelerate's
-  rule, Q27). A held live note (`IgniteContext.gateKnown` false, set by the scheduler for a realtime voice started
+  rule, Q27; the maintainer, 2026-11-05). A held live note (`IgniteContext.gateKnown` false, set by the scheduler for a realtime voice started
   with no gate length) reads 0 throughout, also after its note-off: its `voiceDurationFrames` is the held-voice
   horizon, and a note-off never moves it. A live note with a gate length that a note-off cuts short keeps its
   scheduled gate as the base, as `accelerate` does, so it enters its release below 1.0.

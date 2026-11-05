@@ -16,8 +16,9 @@ The queue of the engine stream (Klang-Main-Dev), in order. The note of 2026-10-2
 1. **KLANG-00243 (one chain host): DONE 2026-11-04**, the Katalyst package moved to `audio_be/.../katalyst/` and the
    orbit's and the output's chain plumbing in one `ChainHost`.
 2. **KLANG-00245 (pitch pipeline into the tree): DONE 2026-11-04**, its last step 7f: `progress()` and `elapsed()` on
-   both doors. Two points wait for the maintainer's word (the ticket's 7f record): a zero gate reads 1.0 from the first
-   frame, and a live note with a gate length that a note-off cuts short keeps its scheduled gate as the base.
+   both doors. A zero gate reads 1.0 from the first frame (the maintainer kept it 2026-11-05). One point waits for the
+   maintainer's word (the ticket's 7f record): a live note with a gate length that a note-off cuts short keeps its
+   scheduled gate as the base.
 3. **KLANG-00293 (a chain swap may cut a ringing insert): DONE 2026-11-04**, a swap drains a leaving chain that still
    rings. Left from it: the master's stop-time keep-alive for insert-only chains (its record, a ticket to open).
 4. Then, the maintainer's pick: KLANG-00137 (master dsl followups), the edge bugs of KLANG-00353.

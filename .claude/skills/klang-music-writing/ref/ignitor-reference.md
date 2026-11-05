@@ -716,7 +716,8 @@ Two signals that move per sample with the note (KLANG-00245 step 7f):
 
 - `Ignitor.progress()` is 0 at the onset, 1 when the gate closes, and grows on past 1 at the same pace through the
   release. It follows the note's shape whatever its length. A note held live (no length known when it starts) reads 0
-  throughout; a note with `legato(0)` reads 1 from its first sample.
+  throughout; a note with `legato(0)` reads 1 from its first sample and stays there, so a sweep through its release
+  uses `elapsed()`.
 - `Ignitor.elapsed()` is the seconds since the onset: for what happens in real time, also on live notes.
 
 ```javascript
