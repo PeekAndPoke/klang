@@ -47,6 +47,12 @@ object StorageKeys {
     /** The editor's highlights per sound event, a whole number (KLANG-00349). */
     const val EDITOR_HIGHLIGHTS_PER_EVENT = "klang-editor-highlights-per-event"
 
+    /** Whether the editor shows the code highlights at all, `true` or `false` (KLANG-00411). */
+    const val EDITOR_HIGHLIGHTS_ON = "klang-editor-highlights-on"
+
+    /** The strength of the editor's highlights, a whole percent (KLANG-00411). */
+    const val EDITOR_HIGHLIGHT_STRENGTH = "klang-editor-highlight-strength"
+
     /** Whether the editor shows a name's quick help on hover, `true` or `false` (KLANG-00349). */
     const val EDITOR_HOVER_HELP = "klang-editor-hover-help"
 
@@ -124,8 +130,13 @@ object StorageKeys {
         Part(name = "Keys", about = "The keys you gave Klang's actions", precious = true, covers = exactly(KEYMAP)),
         Part(
             name = "Editor",
-            about = "Highlights per sound event, quick help on hover",
-            covers = exactly(EDITOR_HIGHLIGHTS_PER_EVENT, EDITOR_HOVER_HELP),
+            about = "The code highlights on or off, per sound event and their strength, quick help on hover",
+            covers = exactly(
+                EDITOR_HIGHLIGHTS_ON,
+                EDITOR_HIGHLIGHTS_PER_EVENT,
+                EDITOR_HIGHLIGHT_STRENGTH,
+                EDITOR_HOVER_HELP,
+            ),
         ),
         Part(
             name = "Walkthroughs",

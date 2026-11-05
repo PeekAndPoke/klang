@@ -19,7 +19,7 @@ import org.w3c.dom.events.MouseEvent
 import org.w3c.dom.events.MouseEventInit
 
 /**
- * The editor's minimap ([klangMinimap]): a press on it starts its drag, never a text selection across the page (the
+ * The editor's minimap ([KlangMinimap]): a press on it starts its drag, never a text selection across the page (the
  * maintainer, 2026-11-02), so its primary-button mousedown is prevented; another button's is left alone.
  */
 class CodeMirrorMinimapSpec : StringSpec({
@@ -34,7 +34,7 @@ class CodeMirrorMinimapSpec : StringSpec({
                 this.state = EditorState.create(
                     jsObject<EditorStateConfig> {
                         this.doc = (1..200).joinToString("\n") { "note(\"c3 e3\") // line $it" }
-                        this.extensions = arrayOf(klangMinimap())
+                        this.extensions = arrayOf(KlangMinimap().extension())
                     }
                 )
                 this.parent = parent

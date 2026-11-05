@@ -36,9 +36,9 @@ fun Tag.StatusBar() = comp {
 /**
  * The status bar, on the Motor's screen, a line of LCD text on its floor (the maintainer, 2026-11-02: "call it
  * StatusBar", then, after a full-width bar and a field in the column, "try the lcd"). It shows the song that plays
- * (KLANG-00406, step 4): its time, its title (a click opens its page) and a stop key, on every page but the song's own;
- * the Stop key stops it from there. While no song is on, the engine's name, version and revision roll through it, dim.
- * It redraws once a second while a song plays, the Motor not at all.
+ * (KLANG-00406, step 4): its time, its title (a click or Alt+P opens its page, KLANG-00412) and a stop key, on every
+ * page but the song's own; the Stop key stops it from there. While no song is on, the engine's name, version and
+ * revision roll through it, dim. It redraws once a second while a song plays, the Motor not at all.
  */
 class StatusBar(ctx: NoProps) : PureComponent(ctx) {
 
@@ -71,6 +71,7 @@ class StatusBar(ctx: NoProps) : PureComponent(ctx) {
             idleText = info?.let { "Klangmotor v${it.version} revision: ${it.gitRev}" } ?: "Klangmotor",
             onOpen = { songId -> router.navToUri(Nav.song(songId)) },
             onStop = { Playbacks.song.stop() },
+            openKey = true,
         ) {
             // Bound before any song page's own Stop, which is the newest binding there and answers first once it is on;
             // while the page's is off (its song still starting) this one stops the song. Its hint only while shown
@@ -88,7 +89,8 @@ fun clockOf(seconds: Int): String = "${seconds / 60}:${(seconds % 60).toString()
  * The bar itself, for [StatusBar] and the kitchen sink: LCD text on the Motor's screen. [line]'s time and title in the
  * LCD's ink, the stop key at the right end. With no song, [idleText] rolls through the whole line, and there is no time
  * and no stop key (the maintainer, 2026-11-02). Not [shown], it fades out and takes no clicks. [stopKey] goes into the
- * song's place, which is there with or without a song: the Stop key's binding and its hint.
+ * song's place, which is there with or without a song: the Stop key's binding and its hint. With [openKey], Alt+P opens
+ * the song's page as a click on its title does, while a song shows (KLANG-00412); the kitchen sink's bars bind no keys.
  */
 fun FlowContent.statusBarView(
     line: Playbacks.SongLine?,
@@ -96,6 +98,7 @@ fun FlowContent.statusBarView(
     shown: Boolean = true,
     onOpen: (songId: String) -> Unit,
     onStop: () -> Unit,
+    openKey: Boolean = false,
     stopKey: FlowContent.() -> Unit = {},
 ) {
     val playing = line?.playing
@@ -152,6 +155,14 @@ fun FlowContent.statusBarView(
                 button(type = ButtonType.button) {
                     title = "Open \"$songTitle\""
                     onClick { onOpen(playing.songId) }
+
+                    // Faded out (on the song's own page) the key is off and shows no hint, as the click takes none
+                    if (openKey) {
+                        OnKey(KlangKeyBindings.OpenPlayingSong, enabled = shown, showHint = shown) {
+                            onOpen(playing.songId)
+                        }
+                    }
+
                     css {
                         put("flex", "1")
                         put("min-width", "0")

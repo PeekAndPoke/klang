@@ -225,6 +225,12 @@ external val foldService: Facet<Any>
 external fun foldGutter(config: dynamic = definedExternally): Extension
 external fun codeFolding(config: dynamic = definedExternally): Extension
 
+/** The ranges folded in [state], each from the end of the line the fold starts on (the minimap's rows, KLANG-00410). */
+external fun foldedRanges(state: EditorState): RangeSet<Any>
+
+/** Folds a range (`{from, to}`): dispatched in an effect, as the fold gutter does. */
+external val foldEffect: StateEffectType<dynamic>
+
 // Indentation
 external val indentUnit: Facet<String>
 external fun indentOnInput(): Extension

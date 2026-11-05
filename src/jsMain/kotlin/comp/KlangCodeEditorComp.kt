@@ -129,7 +129,33 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
 
     private val highlightBuffer = CodeMirrorHighlightBuffer(
         maxHighlightsPerEvent = props.maxHighlightsPerEvent,
-    )
+    ).apply {
+        enabled = EditorSettings.highlightsOn()
+        strength = EditorSettings.highlightStrength() / 100.0
+    }
+
+    /**
+     * The highlights on or off, the editor's setting (KLANG-00411): off puts them out; on again, the voices are sent
+     * again and the highlights pick up where the song is, as after a visual.
+     */
+    @Suppress("unused")
+    private val highlightsOnSub by subscribingTo(EditorSettings.highlightsOn) { on ->
+        if (on == highlightBuffer.enabled) {
+            return@subscribingTo
+        }
+
+        highlightBuffer.enabled = on
+
+        if (on) {
+            props.ctrl.reemitVoiceSignals()
+        }
+    }
+
+    /** The highlights' strength, the editor's setting (KLANG-00411): every editor with highlights follows it. */
+    @Suppress("unused")
+    private val strengthSub by subscribingTo(EditorSettings.highlightStrength) { percent ->
+        highlightBuffer.strength = percent / 100.0
+    }
 
     /** Lazily-loaded PixiJS addon backing the highlight overlay; arrives asynchronously after mount. */
     private val pixiAddon: PixiJsAddon? by subscribingTo(addons.pixiJs)
@@ -197,7 +223,10 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
     init {
         lifecycle {
             onMount {
-                editorRef { editor -> editor.editorView?.let { highlightBuffer.attachTo(it) } }
+                editorRef { editor ->
+                    editor.editorView?.let { highlightBuffer.attachTo(it) }
+                    highlightBuffer.minimap = editor.minimap
+                }
                 highlightBuffer.maxHighlightsPerEvent = props.maxHighlightsPerEvent
                 highlightBuffer.currentSource = props.currentSource
                 highlightBuffer.setPixiAddon(pixiAddon)

@@ -68,6 +68,8 @@ class StorageKeysSpec : StringSpec({
 
     "the editor's settings keep their keys" {
         StorageKeys.EDITOR_HIGHLIGHTS_PER_EVENT shouldBe "klang-editor-highlights-per-event"
+        StorageKeys.EDITOR_HIGHLIGHT_STRENGTH shouldBe "klang-editor-highlight-strength"
+        StorageKeys.EDITOR_HIGHLIGHTS_ON shouldBe "klang-editor-highlights-on"
         StorageKeys.EDITOR_HOVER_HELP shouldBe "klang-editor-hover-help"
     }
 

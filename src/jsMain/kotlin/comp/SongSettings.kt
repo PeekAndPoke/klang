@@ -24,17 +24,22 @@ fun Tag.SongSettings() = comp {
 }
 
 /**
- * The song page's settings, in its Settings tool window (KLANG-00349): the highlights a sound event draws in the
- * code (once "EVT" in the header), and the quick help on hover, on by default (Alt+Q shows a name's help in the
- * Quick help panel, hover or not). Kept in the browser ([EditorSettings]); the Quick help's header has the same switch.
+ * The song page's settings, in its Settings tool window (KLANG-00349): the code highlights on or off, first (the
+ * maintainer, 2026-11-05: "As the first setting in the side-tool", KLANG-00411), the highlights a sound event draws
+ * in the code (once "EVT" in the header) and how strong they show (KLANG-00411), and the quick help on hover, on by
+ * default (Alt+Q shows a name's help in the Quick help panel, hover or not). Kept in the browser ([EditorSettings]);
+ * the Quick help's header has the same switch.
  */
 class SongSettings(ctx: NoProps) : PureComponent(ctx) {
 
     private val highlights by subscribingTo(EditorSettings.highlightsPerEvent)
+    private val highlightsOn by subscribingTo(EditorSettings.highlightsOn)
+    private val strength by subscribingTo(EditorSettings.highlightStrength)
     private val hoverHelp by subscribingTo(EditorSettings.hoverHelp)
 
     override fun VDom.render() {
         val range = EditorSettings.HIGHLIGHTS_PER_EVENT_RANGE
+        val strengthRange = EditorSettings.HIGHLIGHT_STRENGTH_RANGE
 
         div {
             css {
@@ -43,7 +48,21 @@ class SongSettings(ctx: NoProps) : PureComponent(ctx) {
                 put("gap", "12px")
             }
 
-            div(classes = KlangControlStyles.heading.toString()) { +"Highlights per sound" }
+            div(classes = KlangControlStyles.heading.toString()) { +"Code highlights" }
+
+            KlangButton(
+                onClick = { EditorSettings.setHighlightsOn(!highlightsOn) },
+                pressed = highlightsOn,
+                lamp = if (highlightsOn) KlangLamp.State.On else KlangLamp.State.Off,
+            ) {
+                +"While a song plays"
+            }
+
+            div(classes = KlangControlStyles.heading.toString()) {
+                css { put("margin-top", "8px") }
+
+                +"Highlights per sound"
+            }
 
             KlangValueKnob(
                 name = "Highlights per sound event",
@@ -54,6 +73,23 @@ class SongSettings(ctx: NoProps) : PureComponent(ctx) {
                 unit = "EVT",
                 decimals = 0,
                 perPixel = 0.25,
+            )
+
+            div(classes = KlangControlStyles.heading.toString()) {
+                css { put("margin-top", "8px") }
+
+                +"Highlight strength"
+            }
+
+            KlangValueKnob(
+                name = "Highlight strength",
+                value = strength.toDouble(),
+                range = strengthRange.first.toDouble()..strengthRange.last.toDouble(),
+                step = 1.0,
+                onChange = { EditorSettings.setHighlightStrength(it.toInt()) },
+                unit = "%",
+                decimals = 0,
+                perPixel = 0.5,
             )
 
             div(classes = KlangControlStyles.heading.toString()) {

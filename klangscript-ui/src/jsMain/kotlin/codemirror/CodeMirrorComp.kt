@@ -12,14 +12,12 @@ import io.peekandpoke.klang.codemirror.ext.EditorStateConfig
 import io.peekandpoke.klang.codemirror.ext.EditorView
 import io.peekandpoke.klang.codemirror.ext.EditorViewConfig
 import io.peekandpoke.klang.codemirror.ext.Extension
-import io.peekandpoke.klang.codemirror.ext.MinimapConfig
 import io.peekandpoke.klang.codemirror.ext.autocompletion
 import io.peekandpoke.klang.codemirror.ext.forEachDiagnostic
 import io.peekandpoke.klang.codemirror.ext.forceLinting
 import io.peekandpoke.klang.codemirror.ext.javascript
 import io.peekandpoke.klang.codemirror.ext.lintGutter
 import io.peekandpoke.klang.codemirror.ext.linter
-import io.peekandpoke.klang.codemirror.ext.showMinimap
 import io.peekandpoke.klang.common.logging.LogArea
 import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.klang.script.KlangScriptLibrary
@@ -39,7 +37,6 @@ import io.peekandpoke.kraft.popups.PopupsManager
 import io.peekandpoke.kraft.utils.jsObject
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.common.OnChange
-import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
@@ -48,7 +45,6 @@ import kotlinx.html.id
 import org.w3c.dom.Element
 import org.w3c.dom.HTMLDivElement
 import org.w3c.dom.events.Event
-import org.w3c.dom.events.MouseEvent
 
 private val log = Logger(area = LogArea.Editor, source = "CodeMirror")
 
@@ -143,6 +139,9 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
     val editorView: EditorView? get() = editor
 
     private val theme = CodeMirrorTheme()
+
+    /** The minimap with the code highlights on it (KLANG-00410), shown when [Props.showMinimap] is set. */
+    val minimap = KlangMinimap()
 
     /** The editor's own key map, for a host without a key manager (a test, another app). */
     private val ownKeymap by lazy { Keymap(platform = KeyPlatform.detect(), actions = KlangEditorKeyBindings.actions) }
@@ -294,7 +293,7 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
             return emptyList()
         }
 
-        return listOf(klangMinimap())
+        return listOf(minimap.extension())
     }
 
     /**
@@ -571,33 +570,4 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
             }
         }
     }
-}
-
-/**
- * The editor's minimap (`@replit/codemirror-minimap`): blocks, its overlay always shown. A press on it starts its drag,
- * never a text selection across the page (the maintainer, 2026-11-02: "when the code is scrolled by dragging the minimap
- * preview, then text selection on the page must be disabled"): the package's own listeners, on its overlay inside this
- * element, still see the press and drive the scroll.
- */
-internal fun klangMinimap(): Extension {
-    val config = jsObject<MinimapConfig> {
-        create = { _ ->
-            // A plain object: inside a jsObject lambda `dom` would bind to an outer `dom`
-            val holder: dynamic = js("{}")
-            val minimap = document.createElement("div")
-
-            minimap.addEventListener("mousedown", { event ->
-                if ((event as MouseEvent).button.toInt() == 0) {
-                    event.preventDefault()
-                }
-            })
-
-            holder.dom = minimap
-            holder
-        }
-        displayText = "blocks"
-        showOverlay = "always"
-    }
-
-    return showMinimap.of(config)
 }

@@ -10,6 +10,7 @@ import io.peekandpoke.klang.codemirror.ext.EditorView
 import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.common.logging.LogArea
 import io.peekandpoke.klang.common.logging.Logger
+import io.peekandpoke.klang.ui.codemirror.KlangMinimap
 import io.peekandpoke.kraft.addons.pixijs.PixiJsAddon
 import io.peekandpoke.kraft.addons.pixijs.followElementSize
 import io.peekandpoke.kraft.addons.pixijs.js.Application
@@ -60,6 +61,42 @@ class CodeMirrorHighlightBuffer(
      * `null` means "the main script" — matches main-script locations whose `source` field is `null`.
      */
     var currentSource: String? = null
+
+    /**
+     * Whether the highlights show at all (KLANG-00411, the editor's switch). Off puts out every highlight, in the
+     * editor and in the minimap, and schedules none until it is on again.
+     */
+    var enabled: Boolean = true
+        set(value) {
+            field = value
+
+            if (!value) {
+                cancelAll()
+            }
+        }
+
+    /**
+     * How strong the highlights show, 0 to 1 (KLANG-00411, the editor's setting): the whole layer's alpha, so it costs
+     * nothing per frame. At 0 nothing is scheduled at all, as with no highlights per event.
+     */
+    var strength: Double = 1.0
+        set(value) {
+            field = value.coerceIn(0.0, 1.0)
+            app?.stage?.alpha = field
+            minimap?.strength = field
+        }
+
+    /**
+     * The editor's minimap, lit with every highlight shown here (KLANG-00410): one scheduler for both, so the file
+     * filter, the per-event cap, the rate limit and a visual's pause hold for the minimap too. Null for an editor
+     * without one.
+     */
+    var minimap: KlangMinimap? = null
+        set(value) {
+            field?.clear()
+            field = value
+            value?.strength = strength
+        }
 
     private val minIntervalMs: Double get() = 1000.0 / maxRefreshRatePerLocation
 
@@ -126,6 +163,9 @@ class CodeMirrorHighlightBuffer(
     /** Pending show operations, drained by the ticker once their start time arrives. */
     private val pendingOps = mutableListOf<PendingShow>()
 
+    /** The highlights waiting for their start, for the specs. */
+    internal val pendingCount: Int get() = pendingOps.size
+
     /** Max age for a show op before it is silently dropped (ms) — drops marks that piled up while backgrounded. */
     private val maxOverdueMs = 300.0
 
@@ -155,6 +195,7 @@ class CodeMirrorHighlightBuffer(
         stopFollowingSize?.invoke()
         stopFollowingSize = null
         cancelAll()
+        minimap = null
         window.removeEventListener("blur", blurHandler)
         app?.let { application ->
             application.ticker.remove(tickCallback)
@@ -173,6 +214,10 @@ class CodeMirrorHighlightBuffer(
     // ── Public API ──────────────────────────────────────────────────────────
 
     fun scheduleHighlight(event: KlangPlaybackSignal.VoicesScheduled.VoiceEvent) {
+        if (!enabled || strength <= 0.0) {
+            return
+        }
+
         val chain = event.sourceLocations ?: return
         chain.locations.asReversed()
             .filter { it.isValid() }
@@ -184,6 +229,7 @@ class CodeMirrorHighlightBuffer(
     }
 
     fun cancelAll() {
+        minimap?.clear()
         pendingOps.clear()
         activeMarks.values.forEach { recycleMark(it) }
         activeMarks.clear()
@@ -244,6 +290,7 @@ class CodeMirrorHighlightBuffer(
                 // editor's box again inside the observer ("ResizeObserver loop completed with undelivered notifications")
                 stopFollowingSize = application.followElementSize(view.dom)
 
+                application.stage.alpha = strength
                 application.ticker.add(tickCallback)
                 application.ticker.stop()         // idle until a highlight appears
                 app = application
@@ -370,6 +417,16 @@ class CodeMirrorHighlightBuffer(
 
         // Deduplicate: recycle any existing mark for this location.
         activeMarks.remove(key)?.let { recycleMark(it) }
+
+        // The minimap, before the editor's own coordinates: a line scrolled out of the editor still shows there. The
+        // rate limit counts from here, so it holds for the minimap too; the cap on marks is the editor's alone
+        minimap?.light(
+            line = location.startLine,
+            fromColumn = location.startColumn,
+            toColumn = location.endColumn.takeIf { location.endLine == location.startLine },
+            durationMs = durationMs,
+        )
+        lastHighlightTime[key] = now
 
         // Resolve document positions.
         val from = lineColToPos(view, location.startLine, location.startColumn) ?: return

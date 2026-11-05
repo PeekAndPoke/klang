@@ -109,6 +109,16 @@ object KlangKeyBindings : KeyBindings {
     )
 
     /**
+     * Opens the page of the song that plays, as a click on its title in the status bar does (KLANG-00412; the
+     * maintainer, 2026-11-05: "A keyboard shortcut would be handy"). Bound by the status bar while it shows a song.
+     */
+    val OpenPlayingSong = KeyAction(
+        id = "klang.open-playing-song",
+        title = "Open the playing song",
+        keys = listOf("Alt-P"),
+    )
+
+    /**
      * Undo in a code tool's own editor (the mini-notation editor), in front of the page's keys while the tool is open
      * and has something to undo. The code editor's own undo (its scope's), when it has the focus and something to undo,
      * answers first and keeps the key.
@@ -126,6 +136,6 @@ object KlangKeyBindings : KeyBindings {
 
     override val actions: List<KeyAction> = listOf(
         PlayOrUpdate, Stop, DialogConfirm, DialogClose, SearchEverywhere, PanelClose, MotorMenu, FocusEditor, VolumeFocus,
-        ToolUndo, ToolRedo,
+        OpenPlayingSong, ToolUndo, ToolRedo,
     )
 }
