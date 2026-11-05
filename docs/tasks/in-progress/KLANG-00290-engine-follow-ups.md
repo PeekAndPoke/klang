@@ -1,9 +1,7 @@
 # KLANG-00290: Engine follow-ups after the tidy-up
 
-> **Status (2026-11-04): PAUSED.** Done as far as it goes without the maintainer: what is left waits on a decision
-> (the paragraph below). Was IN PROGRESS since 2026-10-21. Items 4, 45 and 13: merged before their review
-> (maintainer, 2026-10-20), then reviewed (round 1 clean, code and audio) and mutation-checked (7 of 7 KILLED); see
-> item 45's last paragraph.
+> **Status (2026-11-06): IN PROGRESS.** The maintainer's decisions of 2026-11-06 (the list below), worked in a loop. Was
+> PAUSED 2026-11-04, IN PROGRESS 2026-10-21 to then.
 >
 > **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
@@ -45,6 +43,19 @@ Sizes: S (an hour or two), M (a day), L (several days), as in the audit.
 - **Sequential, no rush:** these follow the pitch pipeline and the inharmonic partials, one at a time. The first two
   candidates by expected outcome are the shaper's per-sample boxes (item 9) and the noise voice (item 3), each to be
   measured on the production bundle first.
+
+**Decided 2026-11-06 (maintainer), worked in this order:**
+- 25's second half (the per-sample `exp` in `TailRelease`): do it. 23 (one word for the vowel stage): do it. 21 (fold
+  the voice contexts, the stages plain code): do it. 24's unused commands (`ScheduleVoice`, `ClearScheduled`): "if they
+  are not used, remove them" (`ScheduleVoice` has senders in tests and the allocation benchmark only, both can send
+  `ScheduleVoices`).
+- 22 (the duck's `attack`): skipped for now.
+- 24, D1: "cylinder" becomes the main sprudel door, now.
+- 24, D6: `legato` does not travel on the wire; the frontend folds it into the gate time.
+- 27, D2: `MasterStage` is renamed `HouseStage`. D4: "The offline renderer must be a complete transparent alternative
+  for the audio backend, so whatever works for JS/JVM backends must also work with the offline backend." D8: a shared
+  core where it reduces the code surface (and other places that would benefit). D11: `SampleStore` growing for the
+  backend's life is fine for now. C4.1 (the orbit's activity as a state machine) and C4.2 (`WarmupRunner` as an enum): yes.
 
 ## 1. Allocation on V8 (the worklet)
 
@@ -2639,3 +2650,5 @@ ramp times (1.5 s in and out, a 2 s hold), recorded in the same solo task.
 - 2026-11-05: the maintainer decided 14 (fix), 15 (ignore after a stop) and 37 (per second); queued after KLANG-00137.
 - 2026-11-05: 37 DONE (option A); 25's master floor DONE and the offset leak of KLANG-00415 fixed.
 - 2026-11-06: the status paragraph and section 7 no longer list questions answered in October.
+- 2026-11-06: the maintainer decided 21, 23, 24 (the commands, D1, D6), 25's `exp`, and 27 (D2, D4, D8, D11, C4.1, C4.2); 22 skipped.
+- 2026-11-06: IN PROGRESS. the maintainer's decisions of 2026-11-06, worked in a loop
