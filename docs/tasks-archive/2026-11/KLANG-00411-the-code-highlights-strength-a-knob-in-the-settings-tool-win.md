@@ -1,7 +1,6 @@
 # KLANG-00411: The code highlights' strength, a knob in the Settings tool window, 66 percent by default
 
-> **Status (2026-11-05): IN PROGRESS.** Built, reviewed and mutation-checked, the on/off switch (D4) too. Waits for
-> the maintainer's look at the Settings tool window.
+> **Status (2026-11-05): DONE.** Built with the on/off switch (D4), reviewed and mutation-checked (commit 57857e314); the maintainer's OK (2026-11-05: "all good like this").
 
 ## Why this exists
 
@@ -37,3 +36,4 @@ the UI."
   and `enabled`. The two knobs stay live while the switch is off, so they can be set before switching on. Reviewed,
   mutation-checked. Not checked by a spec: the Pixi stage's alpha and the schedule's early return (both need WebGL or
   the window's focus, which the test browser has not).
+- 2026-11-05: DONE. Built with the on/off switch (D4), reviewed and mutation-checked (commit 57857e314); the maintainer's OK (2026-11-05: "all good like this").

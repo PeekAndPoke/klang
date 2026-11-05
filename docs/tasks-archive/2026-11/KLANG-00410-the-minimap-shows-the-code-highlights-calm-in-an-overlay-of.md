@@ -1,8 +1,6 @@
 # KLANG-00410: The minimap shows the code highlights, calm, in an overlay of its own
 
-> **Status (2026-11-05): IN PROGRESS.** Built, reviewed (three rounds, the last clean but for minors) and
-> mutation-checked. The maintainer saw the bands: "the highlights seem to work nicely in the mimimap". Waits for the
-> maintainer's look at a folded song before it is archived.
+> **Status (2026-11-05): DONE.** Built, reviewed in three rounds and mutation-checked (commit 57857e314); the maintainer's OK (2026-11-05: "the highlights seem to work nicely in the mimimap", then "all good like this").
 
 ## Why this exists
 
@@ -65,3 +63,4 @@ I would not show them as 'hectic'... maybe static with a very short fade in and 
 - 2026-11-05: built. Review round 1: one MAJOR (folded code put the bands on the wrong rows), fixed with
   `FoldedLines`; round 2 clean but for minors (folds by start, a scrolled fold case, more unit cases), folded in.
   Mutation-checked.
+- 2026-11-05: DONE. Built, reviewed in three rounds and mutation-checked (commit 57857e314); the maintainer's OK (2026-11-05: "the highlights seem to work nicely in the mimimap", then "all good like this").

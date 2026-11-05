@@ -1,7 +1,6 @@
 # KLANG-00412: Alt+P opens the page of the song that plays
 
-> **Status (2026-11-05): IN PROGRESS.** Built, reviewed and mutation-checked. Waits for the maintainer's try of the
-> key.
+> **Status (2026-11-05): DONE.** Built, reviewed and mutation-checked (commit 57857e314); the maintainer's OK (2026-11-05: "all good like this").
 
 ## Why this exists
 
@@ -26,3 +25,4 @@ page, which is good. A keyboard shortcut would be handy. Which shortcut would yo
 - 2026-11-05: built: `KlangKeyBindings.OpenPlayingSong` (Alt+P), bound in the status bar's title button while the bar
   shows (`statusBarView(openKey = true)`); the kitchen sink's and the Looks page's bars bind none. Reviewed,
   mutation-checked.
+- 2026-11-05: DONE. Built, reviewed and mutation-checked (commit 57857e314); the maintainer's OK (2026-11-05: "all good like this").

@@ -1,7 +1,6 @@
 # KLANG-00414: The plate's tiles: closer to each other in tone, and a little more metal than wood
 
-> **Status (2026-11-05): IN PROGRESS.** Built; before and after screenshots sent. Waits for the maintainer's eye on the
-> start page and the Klang Amp tiles visual.
+> **Status (2026-11-05): DONE.** Tiles, lamp, the start page's corners and the title's facets tuned by eye (commits f718e222d, 3229d1c5f, b1079afbd); the maintainer's OK (2026-11-05: "all good like this").
 
 ## Why this exists
 
@@ -41,3 +40,4 @@ Taste values, judged by eye: no spec holds them.
 - 2026-11-05: created from the maintainer's two requests; built, screenshots before and after.
 - 2026-11-05: the lamp further away and a little lower, the start page's corners lighter.
 - 2026-11-05: the title's coarse facets smaller and a little flatter: fewer dark patches.
+- 2026-11-05: DONE. Tiles, lamp, the start page's corners and the title's facets tuned by eye (commits f718e222d, 3229d1c5f, b1079afbd); the maintainer's OK (2026-11-05: "all good like this").
