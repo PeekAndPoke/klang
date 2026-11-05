@@ -49,9 +49,10 @@ class SwingingLamp(seed: Int, random: Random = Random.Default) {
         /**
          * The light at rest (the maintainer, 2026-10-27: 1.62 was "a bit too bright"; 1.35 then); raised as the lamp
          * hung further away for a wider cone (2026-10-29: 1.55 at 3.5, 2.0 at 4.5), so the middle stays as bright: the
-         * light falls off with distance.
+         * light falls off with distance. At 5.2 (2026-11-05) lowered to 1.8 instead: the wider cone caught more of the
+         * plate, and softer reflections were the point.
          */
-        const val DEFAULT_INTENSITY = 2.0
+        const val DEFAULT_INTENSITY = 1.8
 
         /**
          * Over "Make Music Now" (the maintainer, 2026-10-26 and 27: twice the first swell was too bright, then 4.5 "a
@@ -69,11 +70,12 @@ class SwingingLamp(seed: Int, random: Random = Random.Default) {
          * How far the lamp hangs in front of the plate: further away, its circle of light is wider (the maintainer,
          * 2026-10-29: "make the normal lightcone a bit wider", 3.0 to 3.5; then "the light normal radius can be half a
          * tile wider", 4.5: the circle is the plate's sheen, its radius in step with the height, about two tiles at
-         * 3.5). Over "Make Music Now" the cone opens wider,
-         * "like opening your eyes" (the maintainer, 2026-10-26: wider still).
+         * 3.5; then 2026-11-05: "increase the distance of the lamp a bit, so that the light cone gets wider and the
+         * reflections are not as strong", 5.2, the light left as it was, so the middle is a little softer too). Over
+         * "Make Music Now" the cone opens wider, "like opening your eyes" (the maintainer, 2026-10-26: wider still).
          */
-        const val DEFAULT_Z = 4.5
-        const val HOVER_Z = 5.2
+        const val DEFAULT_Z = 5.2
+        const val HOVER_Z = 6.0
 
         /**
          * The eye opening over "Make Music Now", and closing again (the maintainer: "longer please", then rather than

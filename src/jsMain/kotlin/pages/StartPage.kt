@@ -641,10 +641,13 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                         // An oval round the screen's middle in the screen's proportions, a little taller (the
                         // maintainer, 2026-10-26: "back to the oval light so that it matches the screen proportions";
                         // "The y-radius needs to be a bit bigger"); black beyond it
-                        // A slow fade, in steps, to the edges ("it needs to fade out slower into the edges"); the corners
-                        // come out nearly black (about 0.97), at about 92 % of the oval's radius
-                        "radial-gradient(ellipse 71% 85% at 50% 50%, transparent 0%, transparent 30%, " +
-                                "rgba(0, 0, 0, 0.3) 50%, rgba(0, 0, 0, 0.65) 68%, rgba(0, 0, 0, 0.9) 85%, #000 95%)",
+                        // A slow fade, in steps, to the edges ("it needs to fade out slower into the edges"). The corners,
+                        // at about 92 % of the oval's radius, come out at about 0.75: once nearly black (0.97), lighter
+                        // since the plate's tighter shine leaves its own edges darker (the maintainer, 2026-11-05: "the
+                        // corners are pretty dark"; the visuals, without this oval, "ok", KLANG-00414)
+                        "radial-gradient(ellipse 71% 85% at 50% 50%, transparent 0%, transparent 35%, " +
+                                "rgba(0, 0, 0, 0.2) 55%, rgba(0, 0, 0, 0.45) 72%, rgba(0, 0, 0, 0.7) 88%, " +
+                                "rgba(0, 0, 0, 0.85) 100%)",
                     )
                 }
             }
