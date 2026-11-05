@@ -20,7 +20,8 @@ closed by 34, the `DelayLine` per rent left for the Zig port with 11. Sections 2
 maintainer (16 to 19 and 28 DONE 2026-10-19, 20 and 46 DONE 2026-10-23). What is left waits on a decision: 14 (a
 one-time sound change, by ear), 15 (does a replace resume a stopped engine?), 11 (with the Zig port), 37 (a sound
 change) and section 6's shape and sound steps. **Decided 2026-11-05 (maintainer): 14 fix it, 15 ignore, 37 per
-second**; left waiting: 11 and section 6. Open with the maintainer: C1 to C11 (the FM diagnostic is C6) in
+second**; 15 DONE and 14 checked (already in onset order, no change) the same day; 37 next; left waiting: 11 and
+section 6. Open with the maintainer: C1 to C11 (the FM diagnostic is C6) in
 `docs/housekeeping/2026-10-10-baseline.md`, and Q13, Q29 (`duty(width)`) and Q30 to Q33 in
 [`_maintainer-questions.md`](_maintainer-questions.md).
 
@@ -1946,10 +1947,35 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     order re-deals phases (lifecycle step 5 did, audibly in places). The fix: draw at promotion in onset order, or
     keyed by the voice. A one-time sound change, by ear. Source: the record, "Found during voice lifecycle step 5" and
     "Found during tidy-up step 10". M. **Decided (maintainer, 2026-11-05): fix it, "no listening pair needed".**
+    **Checked 2026-11-05: already in onset order, no code change** (confirmed by a reviewer reading every path). The
+    take is in the block of the take (the first rendered block, or for a `voices` signal that starts at 0 the first
+    block it rises to 2 or more, ledger O5, decided), in list order, and the list order IS the onset order by
+    construction since lifecycle step 5: the active list changes only by appending and by one in-place removal law
+    (`retainInOrder`, pinned by `VoiceSchedulerRemovalSpec`), the render loop walks it in index order, a voice is
+    activated in onset order by the scheduled heap, whose ties come out in push order (the stable heap of KLANG-00399,
+    pinned by `KlangMinHeapSpec`), and a promoted voice first renders in the block its onset falls in. Realtime
+    voices are their own playback, so never share a pool with timeline voices. The "re-deal once more" the lifecycle
+    record expected was that step itself. Not pinned by a spec: that the render loop walks the list in its order
+    (`VoiceScheduler.kt`, the block loop), and the per-command promotion below. Two corners, neither reachable from
+    today's frontend: each schedule command promotes on its own, so a later command in one drain carrying an earlier
+    onset in the same block is activated after the voice an earlier command promoted (the frontend sends its chunks
+    in time order, a replace at least the grace window ahead); and a NaN `startTime` in the heap compares as a tie with
+    everything, so the heap's order is no longer transitive until the promotion guard drops it (a malformed voice).
 15. **`Cmd.ReplaceVoices` on a stopped engine** schedules its voices without resuming the engine
     (`PlaybackEngineDispatcher.replaceVoices` goes straight to the scheduler). Decide whether a replace means "resume"
     or is ignored after a stop. Source: the record, "Found during tidy-up steps 7 to 9". S. **Decided (maintainer,
-    2026-11-05): ignored, "ignore the voices when the engine is stopped".**
+    2026-11-05): ignored, "ignore the voices when the engine is stopped".** **DONE 2026-11-05:**
+    `PlaybackEngineDispatcher.replaceVoices` lands a replace only on a `Playing` engine; `Stopped`, `Releasing` and
+    `Released` ignore it. Before, a stopped engine that still rang (a long release, a tail) took the voices into its
+    heap and played them after the stop; one that went idle first dropped them with itself. The frontend sends it from
+    `KlangPatternScheduler.resyncCurrentCycle`, which `updatePattern` reaches without asking whether the scheduler
+    runs (`setGain`, `reemitVoiceSignals` and `updateRpm` do ask): a resync racing a stop, or an edit on a stopped
+    playback still held by its caller (a `OneShotPlayback` that stopped itself). The editor drops its playback at a
+    stop, so it never sends one. `PlaybackEngineDispatcherTest` row: a stopped engine ringing a 2 s release, given a replace,
+    keeps the active voice count block for block of the same run without it, and is disposed; positive control, the
+    same voices scheduled (not replaced) resume the engine (`Playing`) and sound beside the release (two at once).
+    Mutation 2 of 2 killed: the `Stopped` arm replacing; a schedule that does not resume. Review round 1 (level 1, one coding reviewer: a ten-line change, scoped by risk) clean,
+    its MINORs applied (the positive control proved nothing until it counted two voices; the senders above).
 
 ## 4. Tests
 

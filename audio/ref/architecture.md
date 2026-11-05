@@ -34,7 +34,7 @@ AUDIO BACKEND (audio thread)
   ├─ Cmd.ScheduleVoice   → that engine's VoiceScheduler.scheduleVoice()
   │                           stores ScheduledVoice in min-heap (keyed by startTime)
   │
-  ├─ Cmd.ReplaceVoices   → that engine's VoiceScheduler.replaceVoices (grace-cutoff replace + dedup)
+  ├─ Cmd.ReplaceVoices   → that engine's VoiceScheduler.replaceVoices (grace-cutoff replace + dedup); a stopped engine ignores it
   │
   └─ Every block (128 frames, pinned):
        VoiceScheduler.processBlock()
@@ -108,7 +108,7 @@ Two `KlangRingBuffer` channels: `frontend→backend` (Cmd) and `backend→fronte
 | Cmd subclass          | Payload                                 | Effect                                                                                           |
 |-----------------------|-----------------------------------------|--------------------------------------------------------------------------------------------------|
 | `Cmd.ScheduleVoice`   | `ScheduledVoice`                        | enqueue a voice for future playback                                                              |
-| `Cmd.ReplaceVoices`   | `List<ScheduledVoice>` + `afterTimeSec` | live update: drop scheduled voices past a grace cutoff, reschedule, dedup vs still-active voices |
+| `Cmd.ReplaceVoices`   | `List<ScheduledVoice>` + `afterTimeSec` | live update: drop scheduled voices past a grace cutoff, reschedule, dedup vs still-active voices; ignored by a stopped engine |
 | `Cmd.ClearScheduled`  | —                                       | discard all pending (not yet active) voices                                                      |
 | `Cmd.Cleanup`         | —                                       | stop all voices, reset state                                                                     |
 | `Cmd.RegisterIgnitor` | name + `IgnitorDsl`                     | register an inline instrument on the playback's ignitor fork                                    |

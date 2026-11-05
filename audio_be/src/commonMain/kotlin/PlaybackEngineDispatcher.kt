@@ -208,7 +208,16 @@ class PlaybackEngineDispatcher(
     private fun replaceVoices(playbackId: String, voices: List<ScheduledVoice>, afterTimeSec: Double?) {
         // Replace targets an EXISTING playback — never lazily create an engine here, so a
         // "replace with nothing" cannot materialize (and then leak) an empty engine.
-        engines[playbackId]?.scheduler?.replaceVoices(voices = voices, afterTimeSec = afterTimeSec)
+        val engine = engines[playbackId] ?: return
+
+        when (engine.phase) {
+            Phase.Playing -> engine.scheduler.replaceVoices(voices = voices, afterTimeSec = afterTimeSec)
+
+            // A stopped playback stays stopped: a live edit that arrives after the stop is ignored, never scheduled
+            // into the stopped engine nor a resume (maintainer, 2026-11-05, KLANG-00290 (engine follow-ups) item 15).
+            // A start schedules through [engineFor], which resumes.
+            Phase.Stopped, Phase.Releasing, Phase.Released, Phase.Disposed -> Unit
+        }
     }
 
     /** Stop scheduling for a playback and let it ring out; disposed once drained (see [renderBlock]). */

@@ -16,6 +16,7 @@ import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import io.peekandpoke.klang.common.infra.klangMapOf
 
 /**
  * D2·b gate: every [KlangCommLink.Cmd] subtype is routed to the right place, engines are created
@@ -144,6 +145,79 @@ class PlaybackEngineDispatcherTest : StringSpec({
         d.handle(KlangCommLink.Cmd.ReplaceVoices(playbackId = "song", voices = listOf(a, b), afterTimeSec = null))
         d.renderBlock(far + blockFrames, out)
         d.engine("song").shouldNotBeNull().scheduler.getActiveVoiceCount() shouldBe 2
+    }
+
+    "ReplaceVoices after a stop is ignored: nothing sounds, the stopped engine stays stopped and goes idle" {
+        // The first note rings out a 2 s release after the stop, so the stopped engine lives past the replaced voice's
+        // start: scheduled into it, that voice would sound after the stop.
+        val short = voice("song", gateEndTime = 0.01)
+        val ringing = short.copy(data = short.data.copy(ignitorParams = klangMapOf("adsr.release" to 2.0)))
+
+        /** The active voice count per block after the stop, and whether the engine was disposed by the end. */
+        fun afterStop(replace: Boolean): Pair<List<Int>, Boolean> {
+            val d = newDispatcher()
+            val out = StereoBuffer(blockFrames)
+
+            d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = listOf(ringing)))
+            d.renderBlock(0.0, out)
+            d.handle(KlangCommLink.Cmd.Cleanup(playbackId = "song"))
+
+            if (replace) {
+                // A live edit that was in flight when the stop landed
+                d.handle(
+                    KlangCommLink.Cmd.ReplaceVoices(
+                        playbackId = "song",
+                        voices = listOf(voice("song", startTime = 0.5, gateEndTime = 1.5)),
+                        afterTimeSec = null,
+                    )
+                )
+            }
+
+            val counts = ArrayList<Int>()
+
+            for (b in 1 until sampleRate * 4 / blockFrames) {
+                d.renderBlock(b * blockFrames.toDouble(), out)
+                counts.add(d.engine("song")?.scheduler?.getActiveVoiceCount() ?: 0)
+            }
+
+            return counts to (d.engine("song") == null)
+        }
+
+        withClue("positive control: the same voices scheduled (not replaced) resume the playback and sound") {
+            val d = newDispatcher()
+            val out = StereoBuffer(blockFrames)
+
+            d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = listOf(ringing)))
+            d.renderBlock(0.0, out)
+            d.handle(KlangCommLink.Cmd.Cleanup(playbackId = "song"))
+            d.handle(
+                KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = listOf(voice("song", startTime = 0.5, gateEndTime = 1.5)))
+            )
+
+            d.engine("song").shouldNotBeNull().phase shouldBe PlaybackEngine.Phase.Playing
+
+            var most = 0
+
+            for (b in 1 until sampleRate * 2 / blockFrames) {
+                d.renderBlock(b * blockFrames.toDouble(), out)
+                most = maxOf(most, d.engine("song")?.scheduler?.getActiveVoiceCount() ?: 0)
+            }
+
+            // The ringing note and the new one together: the new one sounded beside the release
+            most shouldBe 2
+        }
+
+        val (withReplace, goneWithReplace) = afterStop(replace = true)
+        val (without, goneWithout) = afterStop(replace = false)
+
+        withClue("the replace after the stop sounded: active voices per block with it, without it") {
+            withReplace shouldBe without
+        }
+
+        withClue("the stopped engine went idle and was disposed, as without the replace") {
+            goneWithout shouldBe true
+            goneWithReplace shouldBe true
+        }
     }
 
     "ReplaceVoices for an unknown playback does not create an engine (no leak)" {
