@@ -373,7 +373,7 @@ class MasterOutputChainSpec : StringSpec({
         bus.isRinging shouldBe false
     }
 
-    "a limiter-only master never holds the engine: it has nothing that rings" {
+    "a limiter-only master holds the engine only while it sounds: its first silent block lets it go" {
         // What `k.limiter()` appends: the compressor stage with the limiter's numbers.
         val limiter = KatalystStageDsl.Compressor(
             threshold = c(-1.0), ratio = c(20.0), knee = c(2.0), attack = c(0.001), release = c(0.1),
@@ -388,6 +388,61 @@ class MasterOutputChainSpec : StringSpec({
         }
 
         bus.isActive shouldBe true
-        bus.isRinging shouldBe false
+
+        // An audible output holds the engine whatever the chain (KLANG-00415 (master stop click on insert-only chains))
+        withClue("audible") { bus.isRinging shouldBe true }
+
+        onBus.left.fill(0.0)
+        onBus.right.fill(0.0)
+        bus.process(onBus, blockFrames)
+        bus.markRendered()
+
+        // No stage can ring on, so no interval of quiet blocks is waited for: the first silent one is the end
+        withClue("one silent block") { bus.isRinging shouldBe false }
+    }
+
+    "a lookahead limiter holds the engine while its ring holds a hit not yet heard, though its output is silent" {
+        // A short hit in a block's last frames, after a gap: 20 ms of lookahead (882 frames) still hold it when the
+        // block's output, the input from 882 frames ago, is silent. Without the question the hit was disposed unplayed.
+        val limiter = KatalystStageDsl.Compressor(
+            threshold = c(-1.0), ratio = c(20.0), knee = c(2.0), attack = c(0.001), release = c(0.1), lookahead = 0.02,
+        )
+        val bus = adopted(KatalystDsl.of(limiter), SizedBuffers.forRings(sampleRate), ReverbUnits(sampleRate))
+        val onBus = StereoBuffer(blockFrames)
+
+        fun silentBlock() {
+            onBus.left.fill(0.0)
+            onBus.right.fill(0.0)
+            bus.process(onBus, blockFrames)
+            bus.markRendered()
+        }
+
+        for (b in 0 until 10) {
+            silentBlock()
+        }
+
+        onBus.left.fill(0.0)
+        onBus.right.fill(0.0)
+
+        for (i in blockFrames - 10 until blockFrames) {
+            onBus.left[i] = 0.5
+            onBus.right[i] = 0.5
+        }
+
+        bus.process(onBus, blockFrames)
+        bus.markRendered()
+
+        withClue("positive control: the hit's block came out silent") {
+            onBus.left.maxOf { abs(it) } shouldBe 0.0
+        }
+
+        withClue("the ring holds the hit") { bus.isRinging shouldBe true }
+
+        // Past the lookahead (7 blocks) the hit has come out and gone, and the ring holds nothing
+        for (b in 0 until 12) {
+            silentBlock()
+        }
+
+        withClue("the ring has played out") { bus.isRinging shouldBe false }
     }
 })

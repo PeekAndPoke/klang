@@ -18,7 +18,7 @@ KLANG-00238 (phase3 step12 master as katalyst).
 - **The output host** is `MasterBus` (`audio_be/.../master/`): `master(Katalyst(k => ...))`, off with
   `master(Katalyst())`. It keeps three rules of its own (its class KDoc): a chain that arrives before the engine's
   first block is adopted at full weight; it never deactivates or resets on silence; its tail keeps the engine alive
-  (`isRinging`). Nothing fills its slots (`applyParams(null)`), and a duck stage is built there but inert.
+  (`isRinging`: an audible output, or a declared tail that still holds energy). Nothing fills its slots (`applyParams(null)`), and a duck stage is built there but inert.
 - **One registry fork per playback** (`KatalystRegistry`) serves both positions.
 - **One chain host** (`ChainHost`, `audio_be/.../ChainHost.kt`, KLANG-00243 (one chain host), 2026-11-04): both
   positions own one for the plumbing they share: the chain in service and its name, the bounded cache
@@ -136,10 +136,14 @@ reverb, the filter swap and the compressor copy it. What every copy must keep:
   two escapes): the orbit's deactivation (it scans the mix AFTER the chain, so an insert's residue is seen without
   asking), the chain swap (`ChainSwap` drains the leaving chain at the end of its input ramp when `hasTail()` OR its
   last block reached `SILENCE_FLOOR`, a scan since KLANG-00293 (chain swap cuts ringing inserts); before, a ringing
-  body, vowel, phaser or eq bell was retired in one sample), and the master (`MasterBus.isRinging` asks `hasTail()`
-  only for a chain whose `declaresTail` is true, NO scan). A stage whose state can put audio into a SILENT input (a
-  DC blocker's decay, a ring, a delay line) answers `hasTail()` from that state in O(1) AND joins
-  `KatalystChain.declaresTail`. The "insert, so false" argument covers the first two askers, not the master.
+  body, vowel, phaser or eq bell was retired in one sample), and the master (`MasterBus.isRinging`: an audible output
+  holds the engine whatever the chain, a scan since KLANG-00415 (master stop click on insert-only chains); a SILENT
+  output asks `hasTail()`, at once for a chain whose `declaresTail` is false, after 10 quiet blocks for one whose
+  `declaresTail` is true). A compressor's lookahead ring answers `hasTail()` without joining `declaresTail`: it
+  holds at most 50 ms, asked at once. A stage whose state can put audio into a
+  silent input while its own output is silent (a delay line between echoes, a DC blocker's decay under the floor)
+  answers `hasTail()` from that state in O(1) AND joins `KatalystChain.declaresTail`. An insert that only rings while
+  audible (a body, an eq bell) is seen by all three scans.
 - **A build-time option multiplies the behaviour rows** (the same review): a stage with a structural choice (the
   oversampling factor, a lookahead) runs every switching and gliding row at each value of it, not only at the default;
   the `distort` stage's amount glide clicked only with oversampling on, where no row ran.

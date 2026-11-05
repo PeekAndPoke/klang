@@ -24,7 +24,8 @@ The queue of the engine stream (Klang-Main-Dev), in order. The note of 2026-10-2
 4. **KLANG-00137 (master dsl followups)**, the maintainer's pick 2026-11-05: section 3 (a cache eviction can rebuild a
    master chain on the audio thread) and section 8 (the offline render does not count the master chain's latency)
    first.
-5. KLANG-00415 (master stop click on insert-only chains).
+5. **KLANG-00415 (master stop click on insert-only chains): DONE 2026-11-05.** Left: the master's silence floor (1e-4
+   against 1e-5, the maintainer's call) and a master with a tail and an offset that never lets a stopped engine go.
 6. KLANG-00290's three decided items (maintainer, 2026-11-05): 15 (a replace on a stopped engine is ignored), 37
    (`perlin` and `berlin` at a rate per second, every DSL), 14 (unison start phases dealt by onset, no listening pair).
 7. KLANG-00214: Kokon's four rigs into regions, the maintainer's go 2026-11-05 ("if you want you can merge them").

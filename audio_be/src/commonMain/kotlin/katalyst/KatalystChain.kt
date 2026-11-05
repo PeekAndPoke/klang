@@ -155,9 +155,10 @@ class KatalystChain internal constructor(
      * review round 2 of KLANG-00292 (katalyst distort stage): without it a stopped playback's master cut that decay).
      * A `parallel` stage declares one when a branch does; a region always does: whatever its body holds, its down
      * conversion rings out what the body last produced (`KatalystRegionEffect.hasTail`'s hold).
-     * The master's "is a tail possible at all" test (`MasterBus.isRinging`), cheap, no buffer scan; [hasTail] then
-     * answers whether one is there. Body, vowel and phaser may ring too; whether that is audible is
-     * KLANG-00293 (chain swap cuts ringing inserts).
+     * The master's "may a SILENT output still hold a tail" test (`MasterBus.isRinging`), cheap, no buffer scan; [hasTail]
+     * then answers whether one is there. Body, vowel, eq and phaser ring too, but only while their output is audible:
+     * the swap scans their output (KLANG-00293 (chain swap cuts ringing inserts)), and so does the master
+     * (KLANG-00415 (master stop click on insert-only chains)).
      */
     val declaresTail: Boolean = serial.any {
         it is KatalystReverbEffect || it is KatalystDelayEffect || it is KatalystDistortEffect ||

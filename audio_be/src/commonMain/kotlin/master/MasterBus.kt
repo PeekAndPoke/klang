@@ -190,13 +190,28 @@ class MasterBus(
     val isActive: Boolean get() = current.pipeline.isNotEmpty() || !swap.settled
 
     /**
-     * True while a stage of the master chain that can ring ([KatalystChain.declaresTail]) may still be ringing.
+     * True while the master output may still be ringing: it was audible in the last block, or a stage that can ring
+     * ([KatalystChain.declaresTail]) may still hold energy. Read only while the bus [isActive]: a bus that went quiet
+     * on the empty chain is not processed, so its last answer is stale and nothing of it rings.
      *
      * The engine must stay alive until this clears, otherwise stopping a playback chops the master tail. The orbits
      * have the same protection in their deactivation (`Cylinder.tryDeactivate`: the mix scan, then the chain's
-     * `hasTail`).
+     * `hasTail`). An insert stage (an eq bell, a phaser, a body) declares no tail but rings on for a moment; until
+     * KLANG-00415 (master stop click on insert-only chains) a chain of inserts only was disposed while it still rang,
+     * a click (a +24 dB eq bell at q 30 left a step of 0.3).
      */
-    val isRinging: Boolean get() = ringing && hasTailUnits()
+    val isRinging: Boolean get() = ringing && isActive
+
+    /**
+     * True while the output is audible though no chain in play declares a tail: an insert's ring, or a chain that makes
+     * sound on silence (an arithmetic offset, a `plus` of an oscillator). The engine releases a stopped playback whose
+     * master still does this once its own sound is gone and the hold is over ([PlaybackEngine]'s endless tails): an
+     * insert has usually rung out long before, so what is left can never end on its own. The exception: an orbit's
+     * long echo that outlasts the hold (counted from the last voice) leaves an insert ringing on its last residue when
+     * the orbit falls quiet; that finite ring is then released too, inaudibly (the release starts at exactly 1 and
+     * falls far slower than the ring), and the engine lives the release's 4.5 s instead of the ring's.
+     */
+    val ringsWithoutTail: Boolean get() = isRinging && !hasTailUnits()
 
     /** True while nothing is leaving the bus: no fade, drain or release of a chain swapped away runs. */
     val isSettled: Boolean get() = swap.settled
@@ -351,22 +366,23 @@ class MasterBus(
     /**
      * Refreshes [isRinging] — cheaply on most blocks, thoroughly now and then.
      *
-     * A chain without a stage that can ring ([KatalystChain.declaresTail]) never rings. While the output is audible
-     * the answer is trivially yes. Only after a run of silent blocks is the tail question asked (does a stage still
-     * hold energy?), because a delay's output is silent between echoes and an output-only test would cut the rest of
-     * them. That question is [KatalystChain.hasTail], so it also counts a compressor's lookahead ring (at most 50 ms
-     * of audio not yet heard) in a chain that declares a tail; a limiter-only chain still never rings.
+     * While the output is audible the answer is yes, for every chain. A silent output of a chain without a stage that
+     * can ring ([KatalystChain.declaresTail]) asks [KatalystChain.hasTail] at once, an O(1) answer per stage: false for
+     * the inserts, true for a compressor's lookahead ring that still holds audio not yet heard (at most 50 ms; the
+     * review of KLANG-00415 (master stop click on insert-only chains): a last short hit after a gap was disposed
+     * unplayed). Otherwise only after a run of silent blocks is the tail question asked, because a delay's output is
+     * silent between echoes and an output-only test would cut the rest of them.
      */
     private fun updateTailState(bus: StereoBuffer, frames: Int) {
-        if (!hasTailUnits()) {
-            ringing = false
-            silentBlocks = 0
-            return
-        }
-
         if (isAudible(bus, frames)) {
             silentBlocks = 0
             ringing = true
+            return
+        }
+
+        if (!hasTailUnits()) {
+            ringing = current.hasTail() || swap.leaving?.hasTail() == true
+            silentBlocks = 0
             return
         }
 

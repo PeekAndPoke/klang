@@ -231,8 +231,14 @@ class PlaybackEngine(
     private fun hasOwnSound(): Boolean =
         scheduler.getActiveVoiceCount() != 0 || cylinders.anyActive()
 
-    /** True while a tail that can never end on its own rings, on an orbit or at the master. */
-    private fun sustainsItself(): Boolean = cylinders.anySustainsItself() || masterBus.sustainsItself()
+    /**
+     * True while a tail that can never end on its own rings, on an orbit or at the master. A master that still sounds
+     * with nothing of the engine's own left to feed it and no stage that can ring counts too ([MasterBus.ringsWithoutTail]):
+     * read only once the hold is over, when any insert has long rung out (KLANG-00415 (master stop click on insert-only
+     * chains)).
+     */
+    private fun sustainsItself(): Boolean =
+        cylinders.anySustainsItself() || masterBus.sustainsItself() || (!hasOwnSound() && masterBus.ringsWithoutTail)
 
     /**
      * The playback was told to stop (`Cmd.Cleanup`): from now on its finite tails ring out and its

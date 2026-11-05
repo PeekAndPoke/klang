@@ -93,8 +93,8 @@ class KatalystChainBuilderSpec : StringSpec({
     }
 
     "a chain declares a tail exactly when it declares a reverb, a delay, a distort, a parallel with one or a region (the list of KatalystChain.declaresTail)" {
-        // The master's "is a tail possible at all" test reads this (`MasterBus.isRinging`); it moved from the master
-        // onto the chain in engine tidy-up step 13 (A2.1).
+        // The master's "may a silent output still hold a tail" test reads this (`MasterBus.isRinging`); it moved from
+        // the master onto the chain in engine tidy-up step 13 (A2.1).
         val wet = KatalystKnobDsl.Constant(0.4)
 
         build(KatalystDsl.classic).declaresTail shouldBe true
