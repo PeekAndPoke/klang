@@ -24,7 +24,11 @@ KLANG-00238 (phase3 step12 master as katalyst).
   positions own one for the plumbing they share: the chain in service and its name, the bounded cache
   (`ChainHost.MAX_CACHED_CHAINS`, 8), the parked request, the lookup and the `ChainSwap`. What a position does when a
   chain lands stays the position's (`ChainHost.Position.land`): the orbit installs at once while idle and fades with
-  the duck handover while sounding; the output adopts at once before its first block and fades after it.
+  the duck handover while sounding; the output adopts at once before its first block and fades after it. The output
+  builds its chains AHEAD (`ChainHost.prepare`, KLANG-00137 (master dsl followups) §3): a schedule carrying a
+  `master(…)` event puts the chain's shells in the cache on the command path, so the landing in the render block is a
+  cache hit. A build is the shells only at both positions; the units rent at the chain's first configure. An orbit
+  builds on landing.
 
 ## Where a knob comes from
 

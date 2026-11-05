@@ -48,21 +48,40 @@ class MasterRingShelfSpec : StringSpec({
         val registry = KatalystRegistry()
         val bus = MasterBus(sampleRate = sampleRate, blockFrames = blockFrames, registry = registry, rings = rings)
 
-        // Before the engine's first block every request is adopted at once, and the chain it
-        // replaces leaves service there and then. A chain is built when its request lands.
+        // A chain rents its ring at its first configure, in the bus's first block after it lands, and returns it when it
+        // leaves service (at the end of its drain, once the bus has rendered).
         registry.register("m0", delayDsl(0.3))
         registry.register("m1", delayDsl(0.301))
         registry.register("m2", delayDsl(0.302))
 
+        val silence = StereoBuffer(blockFrames)
+
+        fun blocksUntilSettled() {
+            var guard = 0
+
+            do {
+                silence.clear()
+                bus.process(silence, blockFrames)
+                bus.markRendered()
+                guard++
+            } while (!bus.chainSwap.settled && guard < 20000)
+
+            bus.chainSwap.settled shouldBe true
+        }
+
         bus.requestSwap("m0")
+        blocksUntilSettled()
+        alloc.asked.size shouldBe 1
         rings.shelfCount shouldBe 0
 
         bus.requestSwap("m1")
-        // m1 had to allocate (m0 still held its ring while m1 was built), and m0's ring came back.
+        blocksUntilSettled()
+        // m1 had to allocate (m0 still held its ring while m1 rented), and m0's ring came back.
         alloc.asked.size shouldBe 2
         rings.shelfCount shouldBe 1
 
         bus.requestSwap("m2")
+        blocksUntilSettled()
         // The newcomer rented m0's ring, and m1's went back in its place: no third allocation.
         rings.hits shouldBe 1
         rings.shelfCount shouldBe 1

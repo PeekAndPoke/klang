@@ -21,9 +21,8 @@ The queue of the engine stream (Klang-Main-Dev), in order. The note of 2026-10-2
 3. **KLANG-00293 (a chain swap may cut a ringing insert): DONE 2026-11-04**, a swap drains a leaving chain that still
    rings. Its two side effects accepted by the maintainer 2026-11-05; the master's stop-time residue is KLANG-00415
    (master stop click on insert-only chains).
-4. **KLANG-00137 (master dsl followups)**, the maintainer's pick 2026-11-05: section 3 (a cache eviction can rebuild a
-   master chain on the audio thread) and section 8 (the offline render does not count the master chain's latency)
-   first.
+4. **KLANG-00137 (master dsl followups)**: section 3 DONE 2026-11-05 (master chains built ahead, between render
+   blocks; section 8 was done 2026-10-23); its highlight sibling is KLANG-00416, a future ticket. Open: 1, 4, 6, 7.
 5. **KLANG-00415 (master stop click on insert-only chains): DONE 2026-11-05.** Its two leftovers DONE the same day in
    KLANG-00290 item 25 (the master floor is `SILENCE_FLOOR`; an offset is an endless tail, released after the hold).
 6. KLANG-00290's three decided items (maintainer, 2026-11-05): 15 DONE (a replace on a stopped engine is ignored), 14

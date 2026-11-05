@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.warehouse
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.nulls.shouldBeNull
@@ -304,19 +305,40 @@ class LazyReverbSpec : StringSpec({
         val registry = KatalystRegistry()
         val bus = MasterBus(sampleRate = sampleRate, blockFrames = blockFrames, registry = registry, reverbs = units)
 
-        // Before the engine's first block every request is adopted at once and the chain it
-        // replaces is retired there and then (eager retire, step 12 C4); a chain is built when its
-        // request lands.
+        // A chain rents its unit at its first configure, in the bus's first block after it lands, and returns it when it
+        // leaves service: retired at once before the engine's first block, at the end of its drain after it.
         for (i in 0 until 3) {
             registry.register("m$i", KatalystDsl.of(KatalystStageDsl.Reverb(wet = KatalystKnobDsl.Constant(0.4), size = KatalystKnobDsl.Constant(5.0 + i * 0.1))))
         }
 
+        val silence = StereoBuffer(blockFrames)
+
+        fun blocksUntilSettled() {
+            var guard = 0
+
+            do {
+                silence.clear()
+                bus.process(silence, blockFrames)
+                bus.markRendered()
+                guard++
+            } while (!bus.chainSwap.settled && guard < 20000)
+
+            bus.chainSwap.settled shouldBe true
+        }
+
         bus.requestSwap("m0")
+        blocksUntilSettled()
         bus.requestSwap("m1")
-        units.idleCount shouldBe 1
+        blocksUntilSettled()
+
+        withClue("m0 left service and returned its unit; m1 holds the one it allocated") {
+            units.idleCount shouldBe 1
+        }
+
         val askedBefore = alloc.asked
 
         bus.requestSwap("m2")
+        blocksUntilSettled()
 
         units.hits shouldBe 1
         units.idleCount shouldBe 1

@@ -208,9 +208,9 @@ class MasterOutputChainSpec : StringSpec({
         val onBus = StereoBuffer(blockFrames)
 
         runRefused(bus, onBus, blocks = 20)
-        // Asked at the build (the first request) and once more after the adoption's reset re-armed
-        // the retry; the latched blocks only consult the shelf.
-        asked shouldBe 2
+        // Asked once, at the chain's first configure (its first block; the build rents nothing since 2026-11-05,
+        // KLANG-00137 (master dsl followups) §3); the latched blocks only consult the shelf.
+        asked shouldBe 1
 
         // An orbit hands its room back DIRTY, still charged: the shelf must zero it on the way out.
         val returned = Reverb(sampleRate).apply { size = 0.9 }
@@ -231,7 +231,7 @@ class MasterOutputChainSpec : StringSpec({
         )
 
         units.hits shouldBe 1
-        asked shouldBe 2
+        asked shouldBe 1
         wet shouldBeGreaterThan 1e-3
     }
 
@@ -245,7 +245,7 @@ class MasterOutputChainSpec : StringSpec({
         val onBus = StereoBuffer(blockFrames)
 
         runRefused(bus, onBus, blocks = 20)
-        asked shouldBe 2
+        asked shouldBe 1
 
         // A ring comes back DIRTY, full of an old echo.
         val frames = (sampleRate * ResourceWarehouse.MIN_RING_SECONDS).toInt() + ResourceWarehouse.RING_MARGIN_FRAMES
@@ -265,7 +265,7 @@ class MasterOutputChainSpec : StringSpec({
         )
 
         rings.hits shouldBe 1
-        asked shouldBe 2
+        asked shouldBe 1
         wet shouldBeGreaterThan 1e-3
     }
 
@@ -294,20 +294,20 @@ class MasterOutputChainSpec : StringSpec({
 
         bus.requestSwap("room")
         run(10)
-        asked shouldBe 2
+        asked shouldBe 1
 
         // The memory is there again, but a latched stage does not allocate: it only asks the shelf.
         failing = false
         run(10)
-        asked shouldBe 2
+        asked shouldBe 1
 
         // Away and back: the fade into "room" resets it, and the reset clears the latch.
         bus.requestSwap("loud")
         run(40)
-        asked shouldBe 2
+        asked shouldBe 1
         bus.requestSwap("room")
         run(1)
-        asked shouldBe 3
+        asked shouldBe 2
         units.allocations shouldBe 1
     }
 

@@ -307,6 +307,7 @@ class VoiceScheduler(
     fun scheduleVoice(voice: ScheduledVoice) {
         ensureEpoch(voice)
         scheduled.push(voice)
+        voice.data.master?.let { masterBus.prepare(it) }
         val cursor = context.clock.cursorFrame
         promoteScheduled(nowFrame = cursor, blockEnd = cursor + context.blockFrames)
         prefetchSampleSound(voice)
@@ -410,6 +411,8 @@ class VoiceScheduler(
             ensureEpoch(voice)
             scheduled.push(voice)
             prefetchSampleSound(voice)
+            // The master chain built here, between render blocks, and not in the block that lands it
+            voice.data.master?.let { masterBus.prepare(it) }
         }
         val cursor = context.clock.cursorFrame
         promoteScheduled(nowFrame = cursor, blockEnd = cursor + context.blockFrames)

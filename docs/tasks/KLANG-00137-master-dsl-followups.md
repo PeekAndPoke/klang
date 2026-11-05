@@ -13,6 +13,9 @@
 > `master(Katalyst(k => ...))`. Section 2 is DONE (decisions (i) and (j)), section 5 is DONE (every Katalyst stage,
 > `eq` included, works at the output). Sections 1, 3, 4, 6 and 7 stay open and are rewritten below to the current
 > surface; where a section still says "master" it means the Katalyst at the output position.
+>
+> **Status 2026-11-05:** sections 3 (the master's chains built ahead, between render blocks) and 8 (2026-10-23) are
+> DONE; the highlight sibling of 8 is KLANG-00416. Open: 1 (the parity audit), 4, 6 and 7.
 
 ## 1. Parameter parity audit — the principle, applied everywhere
 
@@ -97,6 +100,32 @@ idle. What a miss still allocates on the audio thread is the chain's stage shell
 
 **Proper fix belongs to the resource warehouse pool** — already written up there, see
 KLANG-00230 (resource warehouse) §"Master chains — the second customer".
+
+**DONE 2026-11-05** (maintainer: "complete the warehouse for the master"). A master chain's stage shells are built
+ahead, on the command path between render blocks: when a schedule carrying its `master(…)` event arrives
+(`VoiceScheduler.scheduleVoices` and `scheduleVoice` call `MasterBus.prepare`, beside the sample prefetch). The landing
+in the render block is then a cache hit. `ChainHost.prepare` (the output's door only; an orbit still builds on
+landing) evicts like a build on landing, so the cache stays bounded, and since it can now run while a swap fades or
+drains, the leaving chain's guard in `evictIfNeeded` holds something (a row pins it). A build is the shells only, on
+every path: the master's build no longer configures at once, so a chain out of service holds no units and every chain
+(built ahead, built on landing, back from the cache) rents its reverb unit and delay rings at one point, its first
+configure in `MasterBus.process`, as an orbit's chain does. Until now the build configured at once, so a fresh chain
+rented at its landing (the plan's risk R1, the unit rent order): the corpus renders identical with the rent at the
+first block, and the refusal rows ask the shelf once instead of twice. What a landing still costs in render: those
+rents, which allocate only when the shelf has none idle (the first master delay of a class on a backend, decision
+D2). Shells are built in render only when nothing built them ahead: a registration after its schedule (the frontend
+registers first, over one FIFO), a chain built ahead and evicted before it landed, the specs' direct `requestSwap`.
+
+Rows: `MasterChainPrepareSpec` (7: shells only with neither a reverb unit nor a ring rented until the first block,
+bit for bit the sound of a chain built on landing, the no-ops, the cache bound with the chain in service kept, a
+scheduled master built on the command path and landed by a block that builds nothing, the single `ScheduleVoice`,
+the leaving chain never evicted while it drains); `LazyReverbSpec` and `MasterRingShelfSpec` rewritten to rent at the
+first block. Mutations: 5 of 5 KILLED (both hooks, the leaving guard, a build that configures, the bound). Review
+round 1 (level 1, code): clean; its MINORs applied (one build flavour instead of two, a `preparePending` for a
+registration after a parked request dropped as unreachable live, the raw-name fast path dropped, the stale R1 and
+eviction KDocs, the single-voice and ring rows). Corpus: identical (13 live, 3 frozen); the offline render schedules
+every event before its first block, so each song's master is built ahead there and rents at its first block. JVM and
+JS suites green.
 
 ## 4. Delete-to-undo for `master(...)`
 
@@ -222,9 +251,10 @@ add the master chain's `latencyFrames` to the render's run-out.
 > Schmetterling `7d7bb963fb81231a` to `639bb01e2a5554a2`, peaks unchanged). Both songs were edited since the last
 > accept, so they read as information, not red, and a plain `corpus-accept` took them with their edits.
 >
-> **A sibling, open:** the live front end's latency budget (`JsAudioBackend`, the `MasterStageSpec` comment) leaves
-> the master chain's latency out as well, so the code highlighting can run early by up to a master chain's lookahead
-> (found by the review, 2026-10-23).
+> **A sibling, split out 2026-11-05 (maintainer) as KLANG-00416 (code highlight early by the master chain latency):**
+> the live front end's latency budget (`JsAudioBackend`, the `MasterStageSpec` comment) leaves the master chain's
+> latency out as well, so the code highlighting can run early by up to a master chain's lookahead (found by the
+> review, 2026-10-23).
 
 ## Links
 
@@ -240,3 +270,4 @@ add the master chain's `latencyFrames` to the render's run-out.
 - 2026-10-20: numbered KLANG-00137 (was `docs/tasks/master-dsl-followups.md`).
 - 2026-10-23: section 8 built (the offline run-out counts the master chain's latency).
 - 2026-10-27: part of KLANG-00357 (Effects: the Katalyst and the master), the epic grouping.
+- 2026-11-05: section 3 DONE (master chains built ahead, between render blocks); the highlight sibling of 8 split out as KLANG-00416.

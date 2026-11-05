@@ -58,14 +58,18 @@ import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
  * host)): the chain in service and its name, the cache, the parked request (latest wins, offered
  * again by [pollPendingSwap] every block) and the lookup.
  *
- * **A chain is built once, on the request that first lands it, and cached.** Registration builds
- * nothing: the one Katalyst registry serves both positions, so a registered chain may be an orbit's
- * that never reaches the output. A chain is built when a request for it LANDS ([landChain], on the
- * request itself when the swap is idle, inside `scheduler.process` before any orbit of the block
+ * **A chain is built once, ahead of its request or on the request that first lands it, and cached.**
+ * Ahead ([prepare], KLANG-00137 (master dsl followups) §3): when a schedule carrying its `master(…)`
+ * event arrives, the shells are built on the command path, between render blocks, and the landing is
+ * a cache hit. Registration builds nothing: the one Katalyst registry serves both positions, so a
+ * registered chain may be an orbit's that never reaches the output. Otherwise (no schedule built it,
+ * or it was evicted before it landed) a chain is built when a request for it LANDS ([landChain], on
+ * the request itself when the swap is idle, inside `scheduler.process` before any orbit of the block
  * processes; or on the block's poll when it was parked), and cached, so a repeat is a map lookup. A
- * Katalyst stage rents its unit at its first configure, so the build configures the chain at once
- * ([buildChain]): the rent happens where the offline renderer's master always rented (plan risk R1,
- * the unit rent order the corpus render pins).
+ * Katalyst stage rents its unit at its first configure, in the chain's first [process] after it lands
+ * ([buildChain] builds the shells only). Until 2026-11-05 the build configured at once, so the rent
+ * happened at the landing (plan risk R1, the unit rent order); the corpus renders identical with the
+ * rent at the first block (the shelf hands out a zeroed unit at its defaults either way).
  *
  * **A chain out of service holds no units** (eager retire, `Cylinder.install`'s rule, step 12 C4): the
  * chain an instant install replaces is retired at once, and a swapped-away chain when its drain ends.
@@ -85,12 +89,15 @@ import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
  * thread, as an orbit's stage does. Each new latch counts once in the chain's `deniedRents`
  * (telemetry only).
  *
- * Building therefore costs on the audio thread when a chain first lands: Freeverb buffers when the
- * shelf has no idle unit, and a delay ring only when the backend's shelf has none of that class idle
- * (resource-warehouse step 2e: master delays rent from the same class-sized shelf as the orbits). The
- * first master delay of a class on a backend still allocates in render, by decision (D2,
- * 2026-09-04), as an orbit's does. Returning to a chain that has since been evicted from the bounded
- * cache (last landed more than [ChainHost.MAX_CACHED_CHAINS] edits ago) rebuilds it the same way.
+ * What a landing still costs in the render block is the units, rented at the first configure:
+ * Freeverb buffers when the shelf has no idle unit, and a delay ring only when the backend's shelf has
+ * none of that class idle (resource-warehouse step 2e: master delays rent from the same class-sized
+ * shelf as the orbits). The first master delay of a class on a backend still allocates in render, by
+ * decision (D2, 2026-09-04), as an orbit's does. The shells are built in render only when nothing
+ * built them ahead: a registration that arrives after its schedule (the frontend registers first), a
+ * chain built ahead and evicted before it landed, the specs' direct [requestSwap]. Returning to a chain
+ * that has since been evicted from the bounded cache (last landed more than
+ * [ChainHost.MAX_CACHED_CHAINS] edits ago) builds it ahead again when its event is scheduled.
  */
 class MasterBus(
     private val sampleRate: Int,
@@ -114,6 +121,13 @@ class MasterBus(
     }
 
     /**
+     * Test seam: chains this bus has built, the born-with one included. Declared before [host], whose construction
+     * builds the born-with chain.
+     */
+    internal var builtChains: Int = 0
+        private set
+
+    /**
      * The chain plumbing this bus shares with the orbits ([ChainHost]). Born with the EMPTY chain: no
      * stage, so [isActive] is false and the engine keeps its fast path. A `master(Katalyst())`
      * declares the same content and is built as a chain of its own (the output never answered a
@@ -126,6 +140,7 @@ class MasterBus(
             override fun build(dsl: KatalystDsl): KatalystChain = buildChain(dsl)
 
             override fun land(key: String, rawName: String, dsl: KatalystDsl): Boolean = landChain(key = key, rawName = rawName, dsl = dsl)
+
         },
         bornWithDsl = KatalystDsl(emptyList()),
         bornWithAnswersItsContent = false,
@@ -231,17 +246,34 @@ class MasterBus(
     internal val chainSwap: ChainSwap get() = swap
 
     /**
-     * Builds the chain for [dsl] and configures it at once (see the class KDoc: the first configure
-     * is where a stage rents its unit, so it has to happen here and not in the first [process]).
-     * The configure writes the chain's own numbers; [process] writes them again every block.
+     * Builds the chain for [dsl]: its stage shells, unconfigured, so no unit is rented. A stage rents its unit at its
+     * first configure, in the first [process] after the chain lands, whether it was built ahead ([prepare]), on its
+     * landing, or comes back from the cache (one first-configure point, as an orbit's chain has).
      */
-    private fun buildChain(dsl: KatalystDsl): KatalystChain = KatalystChainBuilder.build(
-        dsl = dsl,
-        sampleRate = sampleRate,
-        blockFrames = blockFrames,
-        rings = rings,
-        reverbs = reverbs,
-    ).also { it.applyParams(null) }
+    private fun buildChain(dsl: KatalystDsl): KatalystChain {
+        builtChains++
+
+        return KatalystChainBuilder.build(
+            dsl = dsl,
+            sampleRate = sampleRate,
+            blockFrames = blockFrames,
+            rings = rings,
+            reverbs = reverbs,
+        )
+    }
+
+    /**
+     * Builds the master registered as [name] ahead of its request, between render blocks (KLANG-00137 (master dsl
+     * followups) §3): the scheduler calls it for every `master(…)` event of a schedule as it arrives, so the request
+     * that lands the chain later is a cache hit and the render block builds nothing. The chain rents its units at its
+     * first configure, from the shelf, as every chain does. Nothing when the chain is in service,
+     * already built, or not registered yet. See [ChainHost.prepare].
+     */
+    fun prepare(name: String) {
+        host.prepare(name)
+    }
+
+
 
     /**
      * Returns every cached chain's units to the warehouse and drops the cache — the owning engine

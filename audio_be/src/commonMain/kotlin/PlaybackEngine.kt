@@ -147,8 +147,9 @@ class PlaybackEngine(
      * The chain lands on this engine's fork, which is the registry every cylinder of this engine
      * AND its [MasterBus] resolve a name against (Katalyst step 3a; the output since phase 3 step 12
      * C5): a `katalyst(…)` reference on the voice stream then finds it, and the orbit installs it
-     * the next time it is idle; a `master(…)` reference finds it, and the bus builds it on that
-     * request. Registration builds nothing: a registered chain may never be played at the output.
+     * the next time it is idle; a `master(…)` reference finds it, and the bus builds it ahead when the
+     * schedule carrying the reference arrives ([MasterBus.prepare]). Registration builds nothing: a
+     * registered chain may never be played at the output.
      */
     fun registerKatalyst(name: String, dsl: KatalystDsl) = katalystRegistry.register(name, dsl)
 

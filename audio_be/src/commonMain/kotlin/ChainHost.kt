@@ -44,6 +44,12 @@ import io.peekandpoke.klang.audio_bridge.KatalystDsl
  * mints a new one. Building is on the audio thread (a swap lands from the scheduler's promotion path), and small by
  * construction: stage shells, the units rented at the first configure. A chain out of service holds no units (the
  * position retires it when it leaves), so a cached chain is its stage shells only.
+ *
+ * **A chain can be built ahead** ([prepare]): its shells go into the cache from the command path, between render
+ * blocks, so the request that lands it later is a cache hit and the render block builds nothing. The output does this
+ * when a schedule carrying a `master(…)` event arrives (`MasterBus.prepare`; KLANG-00137 (master dsl followups) §3,
+ * the warehouse's second customer). Its units are still rented at its first configure, from the shelf, as every
+ * chain's are.
  */
 internal class ChainHost(
     sampleRate: Int,
@@ -75,7 +81,7 @@ internal class ChainHost(
 
     /** The position's own rules, handed to the host once. */
     interface Position {
-        /** Builds the chain for [dsl] (the output configures it at once, so its units are rented where they always were). */
+        /** Builds the chain for [dsl]: its stage shells, renting nothing (a stage rents its unit at its first configure). */
         fun build(dsl: KatalystDsl): KatalystChain
 
         /**
@@ -188,6 +194,26 @@ internal class ChainHost(
     }
 
     /**
+     * Builds the chain registered as [name] ahead of its request, into the cache, so the request that lands it later
+     * finds it built. Called from the command path, between render blocks. Nothing happens when the chain is already
+     * built (the one in service is cached too) or not registered yet. Evicts like a build on landing, but unlike that one
+     * it can run while a swap fades or drains, so the leaving chain's guard in [evictIfNeeded] holds. The output's door
+     * only: an orbit, whose born-with chain may answer a declaration ([chainFor]), builds on landing.
+     */
+    fun prepare(name: String) {
+        val key = name.lowercase()
+
+        if (chains.containsKey(key)) {
+            return
+        }
+
+        val dsl = registry?.findByKey(key) ?: return
+
+        evictIfNeeded()
+        chains[key] = position.build(dsl)
+    }
+
+    /**
      * The built chain for [key] and its [dsl]: the born-with instance for a declaration of its content (when
      * [bornWithAnswersItsContent]), a cache hit, or a fresh build. The content compare runs before the cache lookup, so
      * every actual switch pays one list equality of at most a dozen data classes, off the per-block path.
@@ -237,8 +263,8 @@ internal class ChainHost(
 
     /**
      * Drops cached chains until there is room for one more. The chain in service is never evicted. Nor is one leaving
-     * it, as a backstop only: a chain lands only on a settled swap, so none is leaving when this runs; retiring one that
-     * is still audible would hand its units to another position mid-tail. An evicted chain is retired, a no-op for its
+     * it: a chain lands only on a settled swap, but [prepare] builds ahead while a swap fades or drains, and retiring a
+     * leaving chain that is still audible would hand its units to another position mid-tail. An evicted chain is retired, a no-op for its
      * rents (it had none) and the clean slate for its shells.
      */
     private fun evictIfNeeded() {
