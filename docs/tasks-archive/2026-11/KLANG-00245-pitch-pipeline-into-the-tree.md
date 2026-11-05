@@ -1751,7 +1751,9 @@ After step 5. The doors and the nodes stay as descriptions; the runtime arms com
     release; the census row's hand count). Mutation: 12 of 12 killed over four campaigns. Full corpus identical
     (3 frozen, 13 live; Kokon and Der Schmetterling at the maintainer's edits' hashes).
     **For the maintainer's word:** (a) a gate of zero frames or less reads 1.0 from the first frame (decided
-    2026-11-05, kept); (b) a live note
+    2026-11-05, kept); (b) decided by the maintainer 2026-11-05 ("yes sounds good", kept: a jump to 1.0 at the
+    note-off would step a signal that drives a filter or a gain, and `accelerate` keeps its base too; no app path cuts a
+    fixed-gate live note short today, pads are never stopped): a live note
     with a gate length that a note-off cuts short keeps its scheduled gate as the base, accelerate's rule, so it enters
     its release below 1.0 (stopped at a quarter, at 0.25).
 - **7e. Accelerate composed, FM stays a node** (D11, revised 2026-10-09: accelerate from `progress()` and
