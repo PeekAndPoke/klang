@@ -136,7 +136,8 @@ it changes no surface and no sound, so it fails the rule; closed 2026-10-19, bui
 **Additive, so a tutorial written before them does not become wrong:** `filter-envelope-configuration`
 (the filter curve doors; done 2026-09-25 in phase 3 step 5b c2), `sprudel-field-accessors` and its `klangscript-native-object-operators`
 prerequisite, `future/ignitor-optimizer-open-items`, `master-dsl-followups`
-(except the parity audit, which is the gate above), `klangscript-named-args-docs-polish`.
+(except the parity audit, which is the gate above; its own ticket since 2026-11-06, KLANG-00417, run after the DSP
+restructuring), `klangscript-named-args-docs-polish`.
 
 **New capability, not V1 stability:** `pluck-release-tail` (blocks credible physical modelling,
 which is a V2 promise).

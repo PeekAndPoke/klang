@@ -22,9 +22,9 @@ one-time sound change, by ear), 15 (does a replace resume a stopped engine?), 11
 change) and section 6's shape and sound steps. **Decided 2026-11-05 (maintainer): 14 fix it, 15 ignore, 37 per
 second**; 15 DONE and 14 checked (already in onset order, no change) the same day; 37 DONE (option A, rate 1 = 144
 units per second) and 25's floor DONE with the leak of KLANG-00415, also 2026-11-05; left waiting: 11, 25's
-`exp(-k / tau)` and the rest of section 6. Open with the maintainer: C1 to C11 (the FM diagnostic is C6) in
-`docs/housekeeping/2026-10-10-baseline.md`, and Q13, Q29 (`duty(width)`) and Q30 to Q33 in
-[`_maintainer-questions.md`](_maintainer-questions.md).
+`exp(-k / tau)` and the rest of section 6. (The C calls of `docs/housekeeping/2026-10-10-baseline.md` and the
+questions once listed here, Q13, Q19, Q24, Q28 to Q33, were all answered by 2026-10-14; checked 2026-11-06,
+[`_maintainer-questions.md`](_maintainer-questions.md) has none open.)
 
 Status: **open, collected 2026-10-09** when the engine tidy-up was archived
 (KLANG-00286 (engine tidy up), "the record" below; v0.6.0). Each
@@ -2619,8 +2619,9 @@ Each was checked against the code: none is done (item 21's package dissolve asid
 
 ## 7. Questions with the maintainer
 
-Open, in [`_maintainer-questions.md`](_maintainer-questions.md), not repeated here: Q19 (the engine disposal order),
-Q24 (the third Kotlin spelling of the Ignitor doors) and Q28 (solo protects the SOLOED voice, the refinement of Q14).
+None open (checked 2026-11-06). Answered 2026-10-13 in [`_maintainer-questions.md`](_maintainer-questions.md), Part 0:
+Q19 (the disposal order stays, documented in the dispatcher's KDoc), Q24 (typed Kotlin doors: KLANG-00314 (kotlin
+typed doors)) and Q28 (solo: the latest value wins at once, item 43).
 
 Decided 2026-10-09 and done in the batch of small items between pitch pipeline steps 3b and 4: Q14 (a soloed release
 tail beside another solo stays at full level while the voice lives:
@@ -2637,3 +2638,4 @@ ramp times (1.5 s in and out, a 2 s hold), recorded in the same solo task.
 - 2026-11-04: PAUSED.
 - 2026-11-05: the maintainer decided 14 (fix), 15 (ignore after a stop) and 37 (per second); queued after KLANG-00137.
 - 2026-11-05: 37 DONE (option A); 25's master floor DONE and the offset leak of KLANG-00415 fixed.
+- 2026-11-06: the status paragraph and section 7 no longer list questions answered in October.

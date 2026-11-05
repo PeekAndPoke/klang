@@ -15,9 +15,15 @@
 > surface; where a section still says "master" it means the Katalyst at the output position.
 >
 > **Status 2026-11-05:** sections 3 (the master's chains built ahead, between render blocks) and 8 (2026-10-23) are
-> DONE; the highlight sibling of 8 is KLANG-00416. Open: 1 (the parity audit), 4, 6 and 7.
+> DONE; the highlight sibling of 8 is KLANG-00416. Open: 4, 6 and 7.
+>
+> **2026-11-06:** section 1 (the parity audit) moved to its own ticket, KLANG-00417 (parameter parity audit across
+> every dsl surface), to run after the DSP restructuring (maintainer).
 
 ## 1. Parameter parity audit — the principle, applied everywhere
+
+**MOVED 2026-11-06 to KLANG-00417 (parameter parity audit across every dsl surface)**, which carries the brief below;
+kept here as the record.
 
 **The rule (user, 2026-08-02):** *"The same params must be available in the sprudel DSL, Ignitor, Master etc. and they
 need to mean the same thing. This is important for developer experience."*
@@ -62,7 +68,7 @@ the authored `limiter` stage at
 per-playback. `MasterDefaultsSyncSpec` asserts both the shared values and the divergence. See
 KLANG-00225 (master limiter lookahead) §3 and §4.
 
-Wants its own task doc once someone starts it; this is the brief.
+Wants its own task doc once someone starts it; this is the brief. (It has one since 2026-11-06: KLANG-00417.)
 
 ## 2. Engine disposal truncates a long delay tail (shared orbit + master)
 
@@ -271,3 +277,4 @@ add the master chain's `latencyFrames` to the render's run-out.
 - 2026-10-23: section 8 built (the offline run-out counts the master chain's latency).
 - 2026-10-27: part of KLANG-00357 (Effects: the Katalyst and the master), the epic grouping.
 - 2026-11-05: section 3 DONE (master chains built ahead, between render blocks); the highlight sibling of 8 split out as KLANG-00416.
+- 2026-11-06: section 1 (the parity audit) moved to KLANG-00417, after the DSP restructuring (maintainer).
