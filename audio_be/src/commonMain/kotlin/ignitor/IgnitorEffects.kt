@@ -21,6 +21,7 @@ import io.peekandpoke.klang.audio_be.utils.TWO_PI
 import io.peekandpoke.klang.audio_be.utils.fastSin
 import io.peekandpoke.klang.audio_be.utils.flushState
 import io.peekandpoke.klang.audio_be.utils.nanGuard
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_FLOOR
 import io.peekandpoke.klang.common.math.semitones
 import kotlin.math.exp
 
@@ -403,7 +404,8 @@ fun Ignitor.coarse(factor: Double): Ignitor {
  * sweep aliases at the block rate. `rate` is deliberately unclamped (raw engine).
  *
  * @param wet Wet/dry balance under the shared C4 law (correlated branch, p = 2):
- *   0.0 = bit-exact bypass, 0.5 = equal mix, 1.0 = phased only. Typical range: 0.3–1.0. FIRST,
+ *   0.0 = bit-exact bypass; at the default floor 1.0 the phased signal adds on top of the whole dry; at floor 0.0,
+ *   0.5 = equal mix and 1.0 = phased only. Typical range: 0.3 to 1.0. FIRST,
  *   as on the DSL door (`IgnitorDsl.phaser(wet, rate, ...)`), so a positional pair means the
  *   same thing on both Kotlin surfaces.
  * @param rate LFO speed in Hz. 0.0 = static, 0.5 = slow sweep, 2.0 = moderate,
@@ -412,15 +414,15 @@ fun Ignitor.coarse(factor: Double): Ignitor {
  *   Clamped to [100, 18000]. Typical range: 500–4000.
  * @param sweep Modulation width in Hz — how far the notch sweeps from center.
  *   Default: 1000.0. Clamped to [100, 18000]. Typical range: 500–3000.
- * @param floor Minimum dry coefficient in [0, 1]. Default 0.0 (true crossfade);
- *   1.0 makes the phaser purely additive like the cylinder-side phaser.
+ * @param floor Minimum dry coefficient in [0, 1]. Default [PHASER_FLOOR], 1.0: purely additive, as on a cylinder;
+ *   0.0 is a true crossfade.
  */
 fun Ignitor.phaser(
     wet: Ignitor,
     rate: Ignitor,
     center: Ignitor = ParamIgnitor("center", 1000.0),
     sweep: Ignitor = ParamIgnitor("sweep", 1000.0),
-    floor: Ignitor = ParamIgnitor("floor", 0.0),
+    floor: Ignitor = ParamIgnitor("floor", PHASER_FLOOR),
 ): Ignitor = PhaserIgnitor(upstream = this, rate = rate, wet = wet, center = center, sweep = sweep, floor = floor)
 
 private class PhaserIgnitor(
@@ -513,19 +515,19 @@ private class PhaserIgnitor(
 /**
  * 4-stage all-pass cascade phaser (convenience overload with fixed values).
  *
- * @param wet Wet/dry balance (shared C4 law, p = 2): 0.0 = bypass, 1.0 = phased only. First and
- *   required, as on the DSL door.
+ * @param wet Wet/dry balance (shared C4 law, p = 2): 0.0 = bypass; 1.0 = phased only at floor 0.0, dry plus full
+ *   phased at the default floor. First and required, as on the DSL door.
  * @param rate LFO speed in Hz. Typical range: 0.1–5.0.
  * @param center Center frequency in Hz. Default: 1000.0. Clamped to [100, 18000].
  * @param sweep Modulation width in Hz. Default: 1000.0. Clamped to [100, 18000].
- * @param floor Minimum dry coefficient. Default: 0.0 (true crossfade).
+ * @param floor Minimum dry coefficient. Default: [PHASER_FLOOR], 1.0 (purely additive, as on a cylinder).
  */
 fun Ignitor.phaser(
     wet: Double,
     rate: Double,
     center: Double = 1000.0,
     sweep: Double = 1000.0,
-    floor: Double = 0.0,
+    floor: Double = PHASER_FLOOR,
 ): Ignitor {
     if (wet <= 0.0) return this
     return phaser(

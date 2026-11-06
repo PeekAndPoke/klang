@@ -160,6 +160,8 @@ class IgnitorDryFloorSpec : StringSpec({
                 wet = ConstantIgnitor(wet),
                 center = ConstantIgnitor(1000.0),
                 sweep = ConstantIgnitor(500.0),
+                // The crossfade explicitly: the default floor is 1.0 since KLANG-00417 B4, which keeps the whole dry
+                floor = ConstantIgnitor(0.0),
             ),
             dryC = cos(wet * PI / 2.0).let { it * it },
         )
@@ -173,14 +175,14 @@ class IgnitorDryFloorSpec : StringSpec({
         )
     }
 
-    "ignitor phaser: default floor is 0.0, a true crossfade (bit-identical to explicit 0)" {
+    "ignitor phaser: default floor is PHASER_FLOOR, 1.0, additive as on a cylinder (bit-identical to explicit 1)" {
         val explicit = render(
             noiseSource().phaser(
                 rate = ConstantIgnitor(1.0),
                 wet = ConstantIgnitor(wet),
                 center = ConstantIgnitor(1000.0),
                 sweep = ConstantIgnitor(500.0),
-                floor = ConstantIgnitor(0.0),
+                floor = ConstantIgnitor(1.0),
             )
         )
         val defaulted = render(

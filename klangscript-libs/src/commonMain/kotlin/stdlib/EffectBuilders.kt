@@ -349,7 +349,8 @@ internal fun KatalystEqBuilder.scriptTap(freq: IgnitorDslLike, q: IgnitorDslLike
  */
 
 /**
- * Minimum dry coefficient of the phaser (default 0): the dry signal never drops below this share.
+ * Minimum dry coefficient of the phaser (default 1, purely additive, as on a cylinder): the dry signal never drops
+ * below this share; 0 is a true crossfade.
  * A knob on effect builders only, where it cannot meet the round-down `floor()` of a signal.
  */
 @KlangScript.Function(name = "floor")

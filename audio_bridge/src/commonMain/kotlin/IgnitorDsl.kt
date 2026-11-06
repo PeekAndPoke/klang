@@ -22,6 +22,7 @@ import io.peekandpoke.klang.audio_bridge.constants.FM_ENV_SUSTAIN_LEVEL
 import io.peekandpoke.klang.audio_bridge.constants.FM_RATIO
 import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_CENTER_HZ
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_SWEEP_HZ
 import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_ATTACK_SEC
 import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_DECAY_SEC
@@ -2254,15 +2255,17 @@ sealed interface IgnitorDsl {
      *
      * Wet/dry follows THE shared wet/dry law (`WetDryMix`, correlated branch, p = 2):
      * `out = max(floor, cos²(wet·π/2)) · dry + sin²(wet·π/2) · phased`. The phased path is
-     * the input through the allpass chain — fully correlated with the dry — so the crossfade
-     * holds constant AMPLITUDE across the knob.
+     * the input through the allpass chain, fully correlated with the dry. At the default floor (1.0) the dry stays
+     * whole and the phaser is additive (`dry + sin²(wet·π/2) · phased`); at floor 0.0 it is a crossfade that holds
+     * constant AMPLITUDE across the knob.
      *
-     * @param wet Wet/dry balance in [0, 1]. 0.0 = bit-exact bypass, 1.0 = phased signal only,
-     *   0.5 = equal mix (both coefficients 0.5). Default: 0.5. The FIRST parameter of the door on
-     *   both surfaces: `.phaser(0.3, rate)`.
-     * @param floor Minimum dry coefficient in [0, 1]. Default 0.0 (true crossfade). Raising
-     *   it keeps at least that much dry at every [wet]; at 1.0 the phaser is purely additive,
-     *   like the cylinder-side phaser. `floor` is a knob on effect builders only, where it cannot
+     * @param wet Wet amount in [0, 1]. 0.0 = bit-exact bypass. At the default floor 1.0 the phased signal is added on
+     *   top of the whole dry (1.0 = dry plus full phased); at floor 0.0, 1.0 = phased only and 0.5 = equal mix (both
+     *   coefficients 0.5). Default: 0.5. The FIRST parameter of the door on both surfaces: `.phaser(0.3, rate)`.
+     * @param floor Minimum dry coefficient in [0, 1]. Default [PHASER_FLOOR], 1.0: the dry stays whole and the
+     *   phaser is purely additive, as on a cylinder and at the master (one default on every surface since
+     *   KLANG-00417 B4, 2026-11-06; it was 0.0, a true crossfade, on a voice). Lower it toward 0.0 for a
+     *   crossfade. `floor` is a knob on effect builders only, where it cannot
      *   meet the round-down `floor()` of a signal, because a builder offers only its own knobs
      *   (maintainer, 2026-09-24).
      */
@@ -2273,7 +2276,7 @@ sealed interface IgnitorDsl {
         val wet: IgnitorDsl = Constant(0.5),
         val center: IgnitorDsl = Constant(PHASER_CENTER_HZ),
         val sweep: IgnitorDsl = Constant(PHASER_SWEEP_HZ),
-        val floor: IgnitorDsl = Constant(0.0),
+        val floor: IgnitorDsl = Constant(PHASER_FLOOR),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); rate.collectParams(out); wet.collectParams(out)

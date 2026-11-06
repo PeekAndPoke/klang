@@ -141,6 +141,10 @@ judgement, each item fixed or recorded. The songs, the jingles and the tutorials
   or tutorial called the tremolo positionally, and the corpus is identical (no song set a depth without a rate). The
   spec of an untyped receiver whose variants disagree took the FM as its example (its order difference is recorded);
   the tremolo's variants agree now.
+- **B4 DONE 2026-11-06:** the voice phaser's `floor` defaults to `PHASER_FLOOR` (1.0, additive) as on a cylinder and
+  at the master: the Ignitor node, the backend's two `Ignitor.phaser` helpers, the builder and script knob KDocs, the
+  skill's Ignitor reference. `Phaser`'s KDoc no longer claims the floor default differs. The corpus is identical (no
+  song relied on the voice default). The shimmer keeps its own floor default 0.0: it has no bus twin to agree with.
 
 ### Checked and consistent
 

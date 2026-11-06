@@ -105,8 +105,8 @@ class KlangScriptEffectDoorParitySpec : StringSpec({
     val penvS = "pitchEnvelope(12"
     val penvStages = penvBase.copy(attack = c(0.002), decay = c(0.05), sustain = c(0.25), release = c(0.1))
 
-    // The phaser: center and sweep 1000 Hz, no floor.
-    val phaserBase = IgnitorDsl.Phaser(inner = saw, rate = c(0.7), wet = c(0.3), center = c(1000.0), sweep = c(1000.0), floor = c(0.0))
+    // The phaser: center and sweep 1000 Hz, the default floor 1.0 (additive, as on a cylinder, KLANG-00417 B4).
+    val phaserBase = IgnitorDsl.Phaser(inner = saw, rate = c(0.7), wet = c(0.3), center = c(1000.0), sweep = c(1000.0), floor = c(1.0))
     val phaserK = { cfg: ((PhaserBuilder) -> PhaserBuilder)? ->
         saw.phaser(wet = 0.3.ign, rate = 0.7.ign, configure = cfg)
     }

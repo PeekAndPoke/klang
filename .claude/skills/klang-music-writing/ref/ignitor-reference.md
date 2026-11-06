@@ -434,7 +434,7 @@ their short names) and `declick(seconds)` rounds the gain's corners (0 = off, th
 | `.oversampleAtLeast(n, y => ...)`       | The body at n times the base rate at least |
 | `.crush(bits)`                          | Bit-depth reduction                        |
 | `.coarse(factor)`                       | Sample-rate reduction                      |
-| `.phaser(wet, rate, center?, sweep?, x => x.floor(f))` | Allpass phaser: wet FIRST, wet and rate required, center/sweep default 1000; the dry floor (default 0) is the builder knob |
+| `.phaser(wet, rate, center?, sweep?, x => x.floor(f))` | Allpass phaser: wet FIRST, wet and rate required, center/sweep default 1000; the dry floor (default 1, purely additive as on a cylinder; 0 is a crossfade) is the builder knob |
 | `.shimmer(wet?, feedback?, tone?, pitches?, x => x.floor(f))` | Granular pitch-shift cloud: wet 0.5, feedback 0.5, tone 4000, pitches `[0, 7, 12]`; dry floor on the builder |
 | `.tremolo(rate, depth, x => x.shape(name).range(from, to))` | Amplitude LFO: rate in Hz, depth 0 to 1; the builder sets the LFO shape (`"sine"` default, `"triangle"`, `"square"`, `"sawtooth"`, `"ramp"`), which is the oscillator of that name; the square, sawtooth and ramp get a 16 ms soft edge. `range(from, to)` places the swing in the -1..1 language of `range`, the gain being `1 + depth * that`: default `range(-1, 0)`, the dip from 1 to `1 - depth`; `range(0, 1)` swells upward to `1 + depth`, `range(-1, 1)` both ways; raw, no clamp |
 

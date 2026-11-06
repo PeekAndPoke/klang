@@ -37,8 +37,8 @@ import io.peekandpoke.klang.audio_bridge.constants.PHASER_WET
  * Pipeline DSL, phase 3 step 9.)
  *
  * The Ignitor-DSL phaser ([io.peekandpoke.klang.audio_be.ignitor.PhaserIgnitor]) is the
- * same law at `floor = 0.0`, applied ONCE inside the voice. They share [PhaserCore] for
- * the per-sample math; only the floor default differs.
+ * same law, applied ONCE inside the voice. They share [PhaserCore] for the per-sample math
+ * and, since KLANG-00417 B4 (2026-11-06), the floor default ([PHASER_FLOOR], 1.0).
  *
  * **Stereo image**: both channels share the same LFO phase (centred-mono image).
  * For wider stereo, use a future `stereoSpread` knob to offset the right LFO

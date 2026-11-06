@@ -73,10 +73,10 @@ class LangWetKnobSpec : StringSpec({
         sh.floor shouldBe IgnitorDsl.Constant(0.2)
     }
 
-    "ignitor node defaults: wet 0.5, floor 0.0 on both effects" {
+    "ignitor node defaults: wet 0.5 on both effects; floor 1.0 on the phaser (as on a cylinder), 0.0 on the shimmer" {
         val p = IgnitorDsl.Phaser(inner = IgnitorDsl.Sine())
         p.wet shouldBe IgnitorDsl.Constant(0.5)
-        p.floor shouldBe IgnitorDsl.Constant(0.0)
+        p.floor shouldBe IgnitorDsl.Constant(1.0)
 
         val sh = IgnitorDsl.Sine().shimmer()
         sh.wet shouldBe IgnitorDsl.Constant(0.5)

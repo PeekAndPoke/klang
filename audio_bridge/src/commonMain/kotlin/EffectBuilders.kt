@@ -10,6 +10,7 @@ import io.peekandpoke.klang.audio_bridge.constants.EQ_TAP_GAIN
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_PASSES
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_Q
 import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_FLOOR
 
 /*
  * The effect builders: what an effect door hands to its `configure` lambda, ONE set for both doors
@@ -242,7 +243,7 @@ data class FmBuilder(val node: IgnitorDsl.Fm) {
 
 /** Builder for [IgnitorDsl.Phaser], handed to the `configure` lambda of `.phaser(...)`. Knob: `floor`. */
 data class PhaserBuilder(val node: IgnitorDsl.Phaser) {
-    /** Minimum dry coefficient (default 0); the text is on the script knob `floor` (`scriptFloor` in `klangscript-libs`). */
+    /** Minimum dry coefficient (default [PHASER_FLOOR], 1.0); the text is on the script knob `floor` (`scriptFloor` in `klangscript-libs`). */
     fun floor(floor: IgnitorDsl): PhaserBuilder = copy(node = node.copy(floor = floor))
 }
 
