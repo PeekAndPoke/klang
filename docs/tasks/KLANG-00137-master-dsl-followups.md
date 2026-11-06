@@ -68,7 +68,8 @@ the authored `limiter` stage at
 per-playback. `MasterDefaultsSyncSpec` asserts both the shared values and the divergence. See
 KLANG-00225 (master limiter lookahead) §3 and §4.
 
-Wants its own task doc once someone starts it; this is the brief. (It has one since 2026-11-06: KLANG-00417.)
+Wants its own task doc once someone starts it; this is the brief. (It has one since 2026-11-06: KLANG-00417, DONE the same
+day.)
 
 ## 2. Engine disposal truncates a long delay tail (shared cylinder + master)
 
@@ -278,3 +279,4 @@ add the master chain's `latencyFrames` to the render's run-out.
 - 2026-10-27: part of KLANG-00357 (Effects: the Katalyst and the master), the epic grouping.
 - 2026-11-05: section 3 DONE (master chains built ahead, between render blocks); the highlight sibling of 8 split out as KLANG-00416.
 - 2026-11-06: section 1 (the parity audit) moved to KLANG-00417, after the DSP restructuring (maintainer).
+- 2026-11-06: the parity audit (KLANG-00417) DONE.

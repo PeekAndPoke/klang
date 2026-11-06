@@ -1,10 +1,6 @@
 # KLANG-00417: Parameter parity audit across every DSL surface
 
-> **Status (2026-11-06): DONE.** Steps 1 to 4 done the same day (the audit, the table, every gap fixed or recorded,
-> the pins). Started 2026-11-06 (maintainer: "please start with KLANG-00417 ...
-> backward compatibility is not a concern, but update any of the build-in songs, jingles and tutorials"). Split out of
-> KLANG-00137 (master dsl followups) section 1 the same day ("the parity audit should get its own ticket and should be
-> worked on when all the dsp restructuring is done"); the maintainer's start answers the first question below.
+> **Status (2026-11-06): DONE.** Steps 1 to 4 done the same day (the audit, the table, every gap fixed or recorded, the pins). Started 2026-11-06 (maintainer: "please start with KLANG-00417 ... backward compatibility is not a concern, but update any of the build-in songs, jingles and tutorials"). Split out of KLANG-00137 (master dsl followups) section 1 the same day ("the parity audit should get its own ticket and should be worked on when all the dsp restructuring is done"); the maintainer's start answers the first question below.
 >
 > **Part of:** KLANG-00357 (Effects: the Katalyst and the master)
 
@@ -890,3 +886,4 @@ already written down.
 - 2026-11-06: IN PROGRESS (maintainer: start now; no backward compatibility, the songs, jingles and tutorials follow).
 - 2026-11-06: the audit recorded (A and B); the maintainer decided B1 to B8, every recommendation.
 - 2026-11-06: B1 to B8, A1 to A5 and B9 done; step 4 (the pins) done; DONE.
+- 2026-11-06: DONE.
