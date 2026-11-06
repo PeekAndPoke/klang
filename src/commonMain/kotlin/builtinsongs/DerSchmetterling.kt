@@ -105,7 +105,7 @@ let preampHighGain = Ign.fn(x => x
     .distort(0.20, "tube").highpass(110)
     .distort(0.15, "asym").highpass(100)
     .distort(0.45, "soft"))
-  .lowpass(4900)                                   // the fizz
+  .lowpass(5200)                                   // the fizz
   .mul(0.57))                                      // volume
 
 // Power amps: the last saturating stage. Tells: symmetric or not, and the presence bump. The last mul is the master.
@@ -131,8 +131,8 @@ let cabStock = Ign.fn(x => x.lowpass(5000).lowpass(5000))
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = Ign.fn(x => x
   .eq(e => e
-    .band(freq =  120, q = 0.7, db =  2.20)        // thump: closed-back box resonance
-    .band(freq =  400, q = 0.5, db =  4.40)        // roar:  low mids
+    .band(freq =  120, q = 0.7, db =  1.80)        // thump: closed-back box resonance
+    .band(freq =  400, q = 0.5, db =  4.50)        // roar:  low mids
     .band(freq = 2700, q = 1.7, db =  1.30)        // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(3))          // the wall: 36 dB/oct, the fizz is gone
@@ -296,7 +296,7 @@ export lead = n(lead_pat).apply(lead_shape).tag("lead")
 
 // Guitar 1  --------------------------------------------------------------------------------------------------------------------------------------------------
 export guitar1_pat =
-  `<[[-7 -7] [[2 3] [4 2] 0] 2 [<4 1 3>!3 -1] [-7 -7 4 3] 0 2 <[-1 1 3@2] [[3 4] 6@2 7] [[1 3] 4 3 2] [[6 10 7 5]]>]!4
+  `<[[-7 -7] [[2 3] [4 2] 0] 2 [<4 0 3>!3 -1] [-7 -7 4 3] 0 2 <[-1 1 3@2] [[3 4] 6@2 7] [[1 3] 4 3 2] [[6 10 7 5]]>]!4
     [[4 [4 4 2 0] [4 3 2 0] 0] [-1 [1 [<3 2> 1] -1 -4]] [-3!4 -3!8 4 2 4 0] [2 [2 6@3]]]!2
     [[-3,-7] [[-4,-8] [-1,-4]] [0,-3] <[[4 6],[-2 3]] [0,-1]>]
     [<[7,4] [[7 4 6 0  7 4 2 0]!2]> [2 0 -1 0] 0 [[-3 -2 0 2] 3]]>/4`
@@ -329,7 +329,7 @@ export guitar2_shape = x => x.pregain(guitarDyna(2).fast(2))
   .body(material = "maple", wet = 0.15)
 
 export guitar2_arrange = x => x.orbit(2)  // . solo()
-  .scale("<e2:minor>").gain(0.0875).mute("<0!128 1!16 0!16>") // .mute()
+  .scale("<e2:minor>").gain(0.085).mute("<0!128 1!16 0!16>") // .mute()
   .late(berlin(0.0006, 0.0009).mul(drunk).seed(2))
 
 export guitar2 = n(guitar2_pat).struct("<[[x!2] x!7]!3 [x!16]!4 [x!24]!1 [[x!2]!2 x!6]!15 [x!16]>").apply(guitar2_shape).tag("guitar2")
@@ -349,7 +349,7 @@ export guitar3_shape = x => x.pregain(guitarDyna(3).fast(2))
   .body(material = "mahogany", wet = 0.15)
 
 export guitar3_arrange = x => x.orbit(3) //  . solo()
-  .scale("<e2:minor>").gain(0.0875).mute("<0!128 1!16 0!16>") //.mute()
+  .scale("<e2:minor>").gain(0.085).mute("<0!128 1!16 0!16>") //.mute()
   .late(berlin(0.0003, 0.0006).mul(drunk).seed(3))
 
 export guitar3 = n(guitar3_pat).struct("<[[x!2] x!3]!4 [x!8]!3 [x!24]!1 [[x!4] x!3]!8 [x!8]!7 [x!16]>").apply(guitar3_shape).tag("guitar3")
@@ -361,7 +361,7 @@ export bass_pat =
     [0 0 2 4 0 0 -2 -1]!2
     [0 0 -1 3  7 0 -2 -1] [0 0 3 [0 -2]  0 0 [0 4 7 9] 6]>/8`
 
-export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.37) // . mute()
+export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.35) // . mute()
     .ignp("sub", 0.97).ignp("harmonics", 1.00).clip("0.90".sub(perlin(0.0, 0.05).slow(8)))  // . solo()
     .adsr(0.003, 0.50, 0.33, 0.015).hpf(35)
 
@@ -396,7 +396,7 @@ let gummiEimer = (() => {
   let beater = Ign.whitenoise().adsr(0.010, 0.035, 0.0, 0.015).lowpass(1500).mul(1.00)    
  
   return head.plus(harms).plus(m2).plus(m3).plus(beater)
-    .oversampleAtLeast(2, y => y.distort(1.00, "diode"))
+    .oversampleAtLeast(2, y => y.distort(0.50, "diode"))
     .mul(0.1)
     .classic()
 })()
@@ -409,11 +409,11 @@ export trommel_shape = x => x.sound(gummiEimer).adsrOff() //  .solo()
   .hpf(600).lpf("2500".add(perlin(-100, 100).fast(4))).clip(0.33)
   .apply(
     x => x.pan(0.30).late(berlin(0.0015, 0.0020).seed(100).mul(drunk).slow(4)),
-    x => x.pan(0.70).late(berlin(0.0020, 0.0025).seed(100).mul(drunk).slow(4)),
+    x => x.pan(0.70).late(berlin(0.0017, 0.0022).seed(100).mul(drunk).slow(4)),
   )
 
 export trommel_arrange = x => x.orbit(5)  // .solo(0.5)
-  .scale("e4:minor").gain(0.27)
+  .scale("e4:minor").gain(0.40)
   .mute("<1!96 0!32>")                          
 
 export trommel = n(trommel_pat).apply(trommel_shape).tag("trommel")
@@ -564,7 +564,7 @@ export song = stack(
   , // Master
   master(Katalyst(k => k
     .reverb(0.10, 7, 6500)
-    .gain(4.5)
+    .gain(4.8)
     .bands(b => b
       .band(low => low.oversampleAtLeast(4, r => r.distort(0.01, "soft")).mul(1.00)).cut(150)
       .band(mid => mid.oversampleAtLeast(4, r => r.distort(0.10, "soft")).mul(0.90)).cut(5000)
