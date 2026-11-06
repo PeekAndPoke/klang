@@ -123,7 +123,7 @@ The glide time itself is an open question for the maintainer's ear: KLANG-00213 
   arithmetic stage that sounds on silence, an offset, since 2026-11-05) is the engine's whole output released, `MAX_TAIL_HOLD_SECONDS` (20 s) after the last note.
 - **Lookahead**: the Katalyst `compressor` and `limiter` take a build-time `lookahead`, at most
   `Compressor.MAX_LOOKAHEAD_SECONDS` (0.05), fixed per chain; the orbit or playback runs late by it and nothing
-  compensates, by the author's choice. The house limiter is not a Katalyst stage (`MasterStage`; `audio/MEMORY.md`, "House stage").
+  compensates, by the author's choice. The house limiter is not a Katalyst stage (`HouseStage`; `audio/MEMORY.md`, "House stage").
   An oversampling region delays the same way, by its round trip's group delay (3.07, 4.40, 5.06 frames at 2x, 4x, 8x;
   `Oversampler.groupDelaySamples`, the IIR half-band's low-frequency delay) plus its body's latency divided down, rounded
   once. Both are `KatalystLatentEffect`s, and the chain sums them

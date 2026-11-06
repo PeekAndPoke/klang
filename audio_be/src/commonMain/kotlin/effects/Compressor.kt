@@ -37,7 +37,7 @@ import kotlin.math.max
  *
  * Used in two places:
  *   1. Per-cylinder musical compressor (user-facing).
- *   2. Master brickwall limiter via `KlangAudioRenderer.kt:20-27`.
+ *   2. The house brickwall limiter in `HouseStage`.
  *
  * **Round 5 review (2026-04-30)** kept the topology and applied a code-quality cleanup pass.
  * Deferred-but-known items live in the user's memory at
@@ -69,7 +69,7 @@ class Compressor(
      * asks for more.
      *
      * Above [MIN_LOOKAHEAD_FRAMES] worth of samples this switches to the anticipating path, which
-     * delays the signal by this much. On the summed mix (the house limiter in `MasterStage`) the
+     * delays the signal by this much. On the summed mix (the house limiter in `HouseStage`) the
      * delay is uniform for everything downstream; on an orbit (a Katalyst `compressor` or `limiter`
      * stage with a `lookahead`) that orbit runs late by it, by the author's choice and uncompensated.
      *
@@ -248,7 +248,7 @@ class Compressor(
     private val delayFrames: Int = run {
         // guardOr like every sibling param: Infinity would saturate .toInt() to Int.MAX_VALUE and
         // ask for a 2-billion-element array. KatalystCompressorEffect already guards, but this class is public
-        // with two other call sites (MasterStage and EffectBenchmark).
+        // with two other call sites (HouseStage and EffectBenchmark).
         val seconds = guardOr(value = lookaheadSeconds, fallback = 0.0)
         val frames = (seconds * sampleRate).toInt()
         if (frames < MIN_LOOKAHEAD_FRAMES) 0 else frames
@@ -590,11 +590,11 @@ class Compressor(
             val outL = delayL[delayPos]
             val outR = delayR[delayPos]
 
-            // NaN-guard on the ring write too, not just the detector: MasterStage's clip maps NaN
+            // NaN-guard on the ring write too, not just the detector: HouseStage's clip maps NaN
             // to -1.0 (full-scale negative), so an unguarded NaN would surface as a click
             // delayFrames samples later, far from whatever produced it. Non-finite generally: an
             // Infinity survives `l != l`, is stored, and later emerges as `Inf * 0.0` = NaN, which
-            // MasterStage maps to -1.0, the exact full-scale click this guard prevents.
+            // HouseStage maps to -1.0, the exact full-scale click this guard prevents.
             delayL[delayPos] = l.finiteOrZero()
             delayR[delayPos] = r.finiteOrZero()
             delayPos = if (delayPos + 1 == delayFrames) 0 else delayPos + 1

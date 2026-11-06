@@ -18,7 +18,6 @@ import io.peekandpoke.klang.audio_bridge.constants.REVERB_SIZE
 import io.peekandpoke.klang.audio_bridge.constants.REVERB_WET
 import io.peekandpoke.klang.audio_bridge.highpass
 import io.peekandpoke.klang.audio_bridge.ign
-import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.audio_bridge.oversampleAtLeast
@@ -135,7 +134,6 @@ class IgnitorBenchmark(
         val renderer = KlangAudioRenderer.create(
             sampleRate = sampleRate,
             blockFrames = blockFrames,
-            commLink = KlangCommLink().backend,
         )
         val scheduler = renderer.voices
         renderer.setBackendStartTime(0.0)

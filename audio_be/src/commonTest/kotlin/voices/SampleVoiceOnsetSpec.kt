@@ -39,7 +39,7 @@ import kotlin.math.abs
  * removed. This spec pins the on-time half, and that a late voice is dropped and counted.
  *
  * Drives a bare [PlaybackEngine] rather than the dispatcher:
- *  - `PlaybackEngine.renderInto` skips `MasterStage`, whose limiter lookahead would delay the onset
+ *  - `PlaybackEngine.renderInto` skips `HouseStage`, whose limiter lookahead would delay the onset
  *    under test by 5 ms;
  *  - owning the [BackendClock] lets the spec advance `cursorFrame` in step with the render, so "now"
  *    on the promotion path (`ensureEpoch` reads `clock.nowSec()`) matches the block being rendered.

@@ -10,7 +10,7 @@ package io.peekandpoke.klang.audio_be
  *
  * Aliased to [Double] to eliminate per-sample Float↔Double conversions on the JVM
  * (no-ops on JS, real `d2f`/`f2d` ops on JVM). The engine's output is doubles too
- * ([MasterStage.process] writes a clipped [StereoBuffer]). Conversions only happen at the
+ * ([HouseStage.process] writes a clipped [StereoBuffer]). Conversions only happen at the
  * platform output boundaries (to `Float32Array` in the Web Audio worklet, to 16-bit PCM
  * bytes for `SourceDataLine` and the WAV writer through [writePcm16]) and at the
  * sample-asset playback boundary (`MonoSamplePcm.pcm: FloatArray` is widened to

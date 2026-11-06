@@ -11,19 +11,19 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 
 /**
- * Guards the final master/output stage extracted from KlangAudioRenderer (D2·1): [MasterStage.process] runs on the
+ * Guards the final master/output stage extracted from KlangAudioRenderer (D2·1): [HouseStage.process] runs on the
  * summed mix, so the wiring (DC → limiter → clip) is covered here in isolation. The clip is the real one:
- * [MasterStage.process] calls [clipOutput] and [clipSample], whose boundary table (both clamp branches, the
+ * [HouseStage.process] calls [clipOutput] and [clipSample], whose boundary table (both clamp branches, the
  * boundaries, the non-finite rows, no quantisation) lives in `OutputClipSpec`; the rows below show the clamp
- * firing through [MasterStage.process], and that no non-finite sample reaches it (phase 3 step 12, risk R0).
+ * firing through [HouseStage.process], and that no non-finite sample reaches it (phase 3 step 12, risk R0).
  */
-class MasterStageSpec : StringSpec({
+class HouseStageSpec : StringSpec({
 
     val sampleRate = 44100
     val blockFrames = 64
 
     "silent mix produces all-zero output" {
-        val master = MasterStage(sampleRate = sampleRate, blockFrames = blockFrames)
+        val master = HouseStage(sampleRate = sampleRate, blockFrames = blockFrames)
         val mix = StereoBuffer(blockFrames)            // cleared on construction
         val out = StereoBuffer(blockFrames).apply { fill(0.999) }  // non-zero, must be overwritten
 
@@ -34,9 +34,9 @@ class MasterStageSpec : StringSpec({
 
     "output routes channels independently" {
         // The master limiter has lookahead, so a left-only impulse emerges
-        // HOUSE_LIMITER_LOOKAHEAD_SECONDS later — past the end of a single 64-frame block. Render enough
+        // HOUSE_LIMITER_LOOKAHEAD_SECONDS later: past the end of a single 64-frame block. Render enough
         // blocks to carry it through, then look for it wherever it lands.
-        val master = MasterStage(sampleRate = sampleRate, blockFrames = blockFrames)
+        val master = HouseStage(sampleRate = sampleRate, blockFrames = blockFrames)
         val out = StereoBuffer(blockFrames)
         val leftSeen = mutableListOf<Int>()
         val rightSeen = mutableListOf<Int>()
@@ -58,7 +58,7 @@ class MasterStageSpec : StringSpec({
         rightSeen.shouldBeEmpty()            // ...and never leaks into the right channel
     }
 
-    "DC offset does not cost the limiter headroom — the blockers run BEFORE it" {
+    "DC offset does not cost the limiter headroom: the blockers run BEFORE it" {
         // The reorder is a required part of the lookahead fix, not a tidy-up: a DC blocker is a
         // ~7 Hz high-pass that OVERSHOOTS on onsets, so downstream of the limiter its overshoot
         // lands straight on the clip and eats the margin the limiter just earned.
@@ -70,7 +70,7 @@ class MasterStageSpec : StringSpec({
         // constant, so the first blocks legitimately still carry the offset. Including them would
         // measure the settling transient rather than the ordering.
         fun renderPeak(offset: Double): Double {
-            val master = MasterStage(sampleRate = sampleRate, blockFrames = blockFrames)
+            val master = HouseStage(sampleRate = sampleRate, blockFrames = blockFrames)
             val out = StereoBuffer(blockFrames)
             var peak = 0.0
             val settleBlocks = 200
@@ -97,7 +97,7 @@ class MasterStageSpec : StringSpec({
         val clean = renderPeak(0.0)
         val offset = renderPeak(0.35)
 
-        // Within ~1% — the DC is gone before the limiter ever sees it.
+        // Within ~1%: the DC is gone before the limiter ever sees it.
         (kotlin.math.abs(clean - offset) < clean / 100) shouldBe true
     }
 
@@ -105,8 +105,8 @@ class MasterStageSpec : StringSpec({
         // Phase 5: the FE latency budget adds HOUSE_LIMITER_LOOKAHEAD_SECONDS (JsAudioBackend), and the
         // offline renderer adds latencyFrames to its frame count (KlangOfflineRenderer), so the tail is not
         // cut. If either drifts from the real delay, visuals misalign or renders lose their end silently.
-        val master = MasterStage(sampleRate = sampleRate, blockFrames = blockFrames)
-        val expected = (MasterStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS * sampleRate).toInt()
+        val master = HouseStage(sampleRate = sampleRate, blockFrames = blockFrames)
+        val expected = (HouseStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS * sampleRate).toInt()
 
         master.latencyFrames shouldBe expected
 
@@ -131,7 +131,7 @@ class MasterStageSpec : StringSpec({
     "a mix too loud for the limiter reaches both rails through the real clip" {
         // The limiter is 20:1, not infinite: a sine at +60 dBFS leaves it near +2 dBFS, so the clip's
         // two clamp branches fire through process(), on the settled part.
-        val master = MasterStage(sampleRate = sampleRate, blockFrames = blockFrames)
+        val master = HouseStage(sampleRate = sampleRate, blockFrames = blockFrames)
         val out = StereoBuffer(blockFrames)
         var sawMax = false
         var sawMin = false
@@ -163,7 +163,7 @@ class MasterStageSpec : StringSpec({
         // None of that is heard: the DC blockers pass a non-finite sample on (and one more after
         // it), but the house limiter's delay ring stores it as 0.0, so the clip sees only finite
         // values. A quiet sine cannot reach a rail, so any rail sample here is a leaked non-finite.
-        val master = MasterStage(sampleRate = sampleRate, blockFrames = blockFrames)
+        val master = HouseStage(sampleRate = sampleRate, blockFrames = blockFrames)
         val out = StereoBuffer(blockFrames)
         val poison = mapOf(3 to Double.NaN, 5 to Double.POSITIVE_INFINITY, 7 to Double.NEGATIVE_INFINITY)
         var railHits = 0

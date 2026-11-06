@@ -8,7 +8,7 @@
 
 The live front end tells every visual that follows the audio (the code highlight, the block highlight) how late the
 sound reaches the speaker: `JsAudioBackend` adds `AudioContext.baseLatency`, the device's output latency and the
-house limiter's fixed lookahead (`MasterStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS`). It leaves out the latency of the
+house limiter's fixed lookahead (`HouseStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS`). It leaves out the latency of the
 song's own master chain (`MasterBus.latencyFrames`: a compressor's or limiter's authored `lookahead`, at most
 `Compressor.MAX_LOOKAHEAD_SECONDS` 0.05 s per stage, and an oversampling region's conversions). So with such a master
 the highlight runs early by that much.

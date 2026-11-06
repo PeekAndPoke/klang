@@ -22,7 +22,7 @@ second**; 15 DONE and 14 checked (already in onset order, no change) the same da
 units per second) and 25's floor DONE with the leak of KLANG-00415, also 2026-11-05; left waiting: 11, 25's
 `exp(-k / tau)` and the rest of section 6. (The C calls of `docs/housekeeping/2026-10-10-baseline.md` and the
 questions once listed here, Q13, Q19, Q24, Q28 to Q33, were all answered by 2026-10-14; checked 2026-11-06,
-[`_maintainer-questions.md`](_maintainer-questions.md) has none open.)
+[`_maintainer-questions.md`](../_maintainer-questions.md) has none open.)
 
 Status: **open, collected 2026-10-09** when the engine tidy-up was archived
 (KLANG-00286 (engine tidy up), "the record" below; v0.6.0). Each
@@ -56,6 +56,15 @@ Sizes: S (an hour or two), M (a day), L (several days), as in the audit.
   for the audio backend, so whatever works for JS/JVM backends must also work with the offline backend." D8: a shared
   core where it reduces the code surface (and other places that would benefit). D11: `SampleStore` growing for the
   backend's life is fine for now. C4.1 (the orbit's activity as a state machine) and C4.2 (`WarmupRunner` as an enum): yes.
+
+**Done 2026-11-06, one commit:** 21, 23, 24's commands, 25's `exp`, 27's D2, D4, C4.1 and C4.2 (each item's record
+below). Reviews: the small batch (level 1, two rounds: round 1 found the allocation benchmark's per-note list, round 2
+that a reused list's `clear()` allocates more on Kotlin/JS; clean after), item 21 with C4.1 and D4 (level 1, two rounds,
+clean). Mutations: 15 of 15 KILLED (TailRelease 4, two of them after two new rows; WarmupRunner 2; the voice stages 5;
+the orbit's activity 4, one after a new row and one by other specs than the one named). The audio suites green on the
+JVM and in the browser, the corpus identical (the two song edits of 2026-11-05 aside), the allocation check 80 of 80
+(E-C-n1 down from 13232 to 12938 B per block on V8 and from 6655 to 6431 on the JVM: the per-voice stage list and block
+context gone). Left from the list: D1 (KLANG-00418), D6 (`legato` off the wire), D8 (a shared core).
 
 ## 1. Allocation on V8 (the worklet)
 
@@ -1888,7 +1897,8 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
 
 ## 2. Allocation on the JVM, at build and per orbit
 
-11. **`Voice` copies its stage list into an `Array` per voice start** (`pipeline.toTypedArray()`), one small
+11. **The small half gone 2026-11-06 with item 21 (no stage list left to copy); the build in the render callback waits
+    for the Zig port, as decided.** `Voice` copied its stage list into an `Array` per voice start (`pipeline.toTypedArray()`), one small
     allocation per note, part of the voice build, kept on purpose. The bigger question behind it: the build runs in
     the render callback and allocates the whole voice. No allocation in the callback at all means building voices
     outside it, or pools per sound with a reset contract on every node. L to XL; decide with the Zig port. Source: the
@@ -2563,11 +2573,26 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
 ## 6. The audit's later steps and its open decisions
 
 The tidy-up ran the audit's order (section D of
-[`../audio-audit/2026-10-07-engine-tidy-audit.md`](../audio-audit/2026-10-07-engine-tidy-audit.md)) through step 13,
+[`../audio-audit/2026-10-07-engine-tidy-audit.md`](../../audio-audit/2026-10-07-engine-tidy-audit.md)) through step 13,
 and step 14 (the empty-variants bug) first. Steps 15 to 20 are shape and sound changes; each needs the maintainer.
 Each was checked against the code: none is done (item 21's package dissolve aside).
 
-21. **Step 15, planned work in its own order:** after the pitch pipeline
+21. **DONE 2026-11-06 (maintainer: "yes do it"), the last part: the voice contexts folded, the stages plain code.**
+    `BlockContext`, the `BlockRenderer` interface and the three stage classes are gone. `Voice.render` runs the fixed
+    stages in order as plain code: the tree (`Voice.ignite`, was `IgniteRenderer`), the teardown fade when the tree
+    does not end in its own envelope (`applyTeardownFade`, `voices/teardown_fade.kt`, was `TeardownFadeRenderer`), the
+    cut's fade, the channel (`mixIntoCylinder`, `voices/voice_channel.kt`, was `SendRenderer`: the "send" word is gone,
+    A2.5; it returns the block's peak instead of writing it into a context). The voice holds its tree, the tree's
+    `IgniteContext`, its `VoiceLimits`, its rate steps and a teardown flag; the window (`offset`, `length`,
+    `windowEnd`) and the buffer are locals of the block, computed once and passed on, so the window cannot go stale
+    (the reason `BlockContext` kept them `private set`). The shared per-block context is `Voice.RenderContext` alone;
+    the duplicates B3.2 listed (`sampleRate`, `scratchBuffers`, the cylinders) are gone with `BlockContext`, and the
+    factory's dead `voiceBuffer` parameter with them. Item 11's per-voice `toTypedArray()` copy is gone too (no stage
+    list left to copy). Behaviour-neutral by construction; the specs that built the old stages by hand
+    (`TeardownFadeSpec`, `IgnitorsTest`'s in-engine shape row, `VoiceTestHelpers`, `VoiceLifecycleSpec`) call the
+    new functions or a real voice.
+
+    The record of the earlier parts: **Step 15, planned work in its own order:** after the pitch pipeline
     (KLANG-00245 (pitch pipeline into the tree)), dissolve `voices/strip/` (done
     in its step 5, 2026-10-10: the package is `voices/`) and fold the contexts (B3.1, B3.2; `SendRenderer` loses the "send" word with it, A2.5); then
     KLANG-00243 (one chain host), extended by the two tail polls of one law (A2.10) and the
@@ -2575,13 +2600,23 @@ Each was checked against the code: none is done (item 21's package dissolve asid
 22. **Step 16, the duck's "attack" renamed** to what it is, a release (A2.7; `Ducking.kt` still says "named
     externally as attack for Strudel compat"): KLANG-00168 (ducking unfinished) item 1. A
     door rename. S to M.
-23. **Step 17, one word for the vowel stage** (B3.6): `LowPassHighPassFilters.createFormant` still says formant. S.
+23. **DONE 2026-11-06 (maintainer: "yes do it"). Step 17, one word for the vowel stage** (B3.6):
+    `LowPassHighPassFilters.createFormant` is `createVowel`, its spec `FormantBlendSpec` is `VowelBlendSpec`; the other
+    two names of B3.6 (`KatalystFormantEffect`, `FilterDef.Formant`) were gone since tidy-up step 12. "Formant" stays the
+    phonetic word for one band (KDoc), not a name. Behaviour-neutral (a rename). `docs/retired-names.md`.
 24. **Step 18, the wire and the words:**
     - "cylinder" is the word (decision D1, maintainer, 2026-10-07): sprudel's canonical door becomes `cylinder`, with
       `orbit` and `o` as aliases (today `orbit` is canonical), and the docs, KDoc, tutorials, UI text and the Katalyst
       vocabulary follow. L; plan it as its own step. A surface change.
     - `legato` on the wire or folded into the gate time by the frontend (decision D6, open; not bit-identical).
-    - `Cmd.ScheduleVoice` and `Cmd.ClearScheduled` have no sender outside the specs (B1.10). S.
+    - **DONE 2026-11-06 (maintainer: "if they are not used, remove them").** `Cmd.ScheduleVoice` and
+      `Cmd.ClearScheduled` have no sender outside the specs (B1.10). S. `ScheduleVoice` turned out to have one more,
+      the allocation benchmark (`AllocationCases`), which sends `ScheduleVoices` with one voice now, as do the specs;
+      `ClearScheduled`'s row in `PlaybackEngineDispatcherTest` is the clear the frontend really sends,
+      `ReplaceVoices` with no voices. The dispatcher's two arms, its `clearScheduled` and the JS backend's forwarding
+      went with them; `VoiceScheduler.scheduleVoice` stays (the benchmarks call it directly, and
+      `MasterChainPrepareSpec`'s single-voice row now drives it there). The wire schema hash moved from -583834474 to
+      1837919315 (`WireCodecRoundTripSpec`): a stale worklet is refused.
 25. **Step 19, sound, optional:** the per-sample `exp(-k / tau)` in `TailRelease` (B4.19), and one silence floor for
     the master's tail poll (1e-4 against 1e-5 everywhere else, decision D9). S each. **The floor: DONE 2026-11-05**
     (maintainer: "make the master floor the same as everywhere else"): `MasterBus.isAudible` scans at `SILENCE_FLOOR`,
@@ -2589,7 +2624,14 @@ Each was checked against the code: none is done (item 21's package dissolve asid
     (the step under `SILENCE_FLOOR`), `MasterOutputChainSpec`'s distort row (a fader at 0.05 after the stage, so the
     window where only the stage's own answer holds the engine still exists at one floor), `MasterBusTest`'s capped
     release (the bus rings through the release's last block, near -90 dB, and lets go on the next). Mutation KILLED.
-    The `exp(-k / tau)` half stays open.
+    **The `exp(-k / tau)` half: DONE 2026-11-06** (maintainer: "yes do the change"). `TailRelease` runs its gain as
+    the recurrence `g(k + 1) = g(k) * exp(-1 / tau)` from exactly 1, one multiply per sample; under the floor the gain
+    is set to 0 and stays 0 (no subnormal multiplies). Not bit-identical to the `exp` per sample: the oracle the release
+    specs share (`ReleaseLaw`) computes the same recurrence, so `EngineStopReleaseSpec`, `ChainSwapCapSpec` and
+    `ChainSwapCutSpec` still compare bit for bit, and the new `TailReleaseLawSpec` pins the recurrence to the law: at
+    44.1, 48 and 96 kHz within 1e-10 of `exp(-k / tau)`, relative, down to the floor, ending within one frame of the
+    closed form's floor frame and at about 4.5 s, and the engine's release equal to it frame by frame. The corpus does
+    not reach a release (it plays no stopped engine past its hold and no capped drain).
 
     **With it, the leak found in KLANG-00415 (master stop click on insert-only chains): DONE 2026-11-05** (maintainer:
     "fix the leak if there is a clear path"). A chain holding a stage that makes sound from a silent input kept a
@@ -2622,7 +2664,36 @@ Each was checked against the code: none is done (item 21's package dissolve asid
     (KLANG-00247 (duck orbit switch click)), A1.3
     (KLANG-00318 (chain swap request during drain)), A1.9
     (KLANG-00213 (transition times) §4).
-27. **The audit's decisions not taken yet** (section E): D2 (`MasterStage` against `MasterBus`, two "masters"), D4
+27. **Decided 2026-11-06 (maintainer), see the list at the top; done so far:**
+    - **D2 DONE 2026-11-06:** `MasterStage` is `HouseStage` (its spec `HouseStageSpec`), in the code, the module docs,
+      the skills and the open tickets; archived records keep the old word. A rename, behaviour-neutral.
+    - **D4 DONE 2026-11-06** (maintainer: "The offline renderer must be a complete transparent alternative for the
+      audio backend, so whatever works for JS/JVM backends must also work with the offline backend"). Found half done:
+      since KLANG-00399 steps 2 to 4 every song render (the corpus, the WAV export, the render specs) runs through
+      `OfflineBackend`, which IS the live `PlaybackEngineDispatcher` fed over the wire, so the audit's "offline renders
+      never run the dispatcher" no longer held. The second block driver left was `KlangAudioRenderer`, the benchmarks'
+      single-engine render (the song timing benchmark, `KlangBenchmark`, the Ignitor and effect benchmarks, its spec):
+      it ran a copy of the block (its own engine and house stage). It now holds a dispatcher and its `renderBlock` is
+      the dispatcher's, so the disposal sweep, the housekeeping and the diagnostics run there too; it keeps only a way
+      to schedule into the one engine and reach the registries without the wire (`PlaybackEngineDispatcher.openEngine`,
+      internal). One block driver in the engine now. The timing benchmarks pay the dispatcher's per-block bookkeeping
+      (the diagnostics every 20 ms), as the live backends do, so their numbers moved at D4. The renderer owns its comm
+      link (the callers no longer pass one) and empties the feedback after each block: nobody reads it, and an undrained
+      ring would keep up to 8192 diagnostics alive through a long render (review round 2). Reviewed (level 1, two
+      rounds, clean).
+    - **D11 settled 2026-11-06:** `SampleStore` grows for the life of the backend, "fine for now"; no change.
+    - **C4.1 DONE 2026-11-06:** the orbit's own activity (`Cylinder`) is a state machine: `isActive` and
+      `silentBlockCount` became a sealed `Activity` (`Inactive`, `Sounding`, `SilentGrace` with its count, `Held`),
+      `isActive` a getter over it, `tryDeactivate` one exhaustive `when`; the transition table is in `Activity`'s KDoc.
+      The owner's state (`candidate`, `ownerParams` and its age, `checkedIn`) stays as it is: it is the ownership
+      rule's, not the activity's, and the lease rework the audit expected is done. Behaviour-neutral, checked edge by
+      edge against the old flag code (a tail or a swap restarts the grace, a voice holds it at its end, the count never
+      passes the grace).
+    - **C4.2 DONE 2026-11-06:** `WarmupRunner`'s `started`, `finished` and `disposed` are one private enum,
+      `Phase` (`NotStarted`, `Running`, `WaitingForClean`, `Done`); `tick` dispatches on it with an exhaustive `when`;
+      `readyWhileDirty` stays, an outcome and not a phase. Behaviour-neutral.
+
+    The audit's decisions as they were listed before (section E): D2 (`MasterStage` against `MasterBus`, two "masters"), D4
     (one block driver or two: offline renders never run the dispatcher), D6 and D9 (above), D8 (the delay and reverb
     lifecycles: one core or two readable twins), D11 (`SampleStore` grows for the life of the backend), C4.1 and C4.2
     (the orbit's activity flags, `WarmupRunner`). D7 (own the RNG) is decided: deferred to the Zig port's preparation;
@@ -2630,7 +2701,7 @@ Each was checked against the code: none is done (item 21's package dissolve asid
 
 ## 7. Questions with the maintainer
 
-None open (checked 2026-11-06). Answered 2026-10-13 in [`_maintainer-questions.md`](_maintainer-questions.md), Part 0:
+None open (checked 2026-11-06). Answered 2026-10-13 in [`_maintainer-questions.md`](../_maintainer-questions.md), Part 0:
 Q19 (the disposal order stays, documented in the dispatcher's KDoc), Q24 (typed Kotlin doors: KLANG-00314 (kotlin
 typed doors)) and Q28 (solo: the latest value wins at once, item 43).
 

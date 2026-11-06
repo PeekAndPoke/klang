@@ -20,7 +20,7 @@ package io.peekandpoke.klang.audio_be.utils
  * clamps), and an infinite sample at gain 0 becomes NaN (`Inf * 0.0`).
  *
  * No smoother, on purpose: a one-pole would lag and leave a non-zero last sample. The one law of the voice's
- * teardown fade (`TeardownFadeRenderer`) and the cut (`Voice.applyCutFade`).
+ * teardown fade (`applyTeardownFade`) and the cut (`Voice.applyCutFade`).
  */
 @Suppress("NOTHING_TO_INLINE")
 inline fun fadeToZero(buffer: DoubleArray, startIndex: Int, endIndex: Int, zeroIndex: Double, scale: Double) {

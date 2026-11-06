@@ -15,7 +15,7 @@ import kotlin.random.Random
 /**
  * The 16-bit edge, [pcm16] and [writePcm16]: what the JVM `SourceDataLine` player and the WAV writer
  * get from the engine's floating-point output. Until 2026-10-07 the engine itself quantised its output
- * to 16 bits in `MasterStage`; the edge must produce the very same integers from the clipped floats, so
+ * to 16 bits in `HouseStage`; the edge must produce the very same integers from the clipped floats, so
  * a WAV render's bytes do not move (KLANG-00280 (float output)).
  *
  * The oracle is the retired rule, restated here on its own, plus a table of literal values: in
@@ -23,7 +23,7 @@ import kotlin.random.Random
  */
 class Pcm16EdgeSpec : StringSpec({
 
-    /** The retired 16-bit rule of `MasterStage` (before 2026-10-07), as an Int. */
+    /** The retired 16-bit rule of `HouseStage` (before 2026-10-07), as an Int. */
     fun retiredRule(sample: Double): Int =
         if (sample >= -1.0 && sample <= 1.0) {
             (sample * 32767.0).toInt()

@@ -409,7 +409,7 @@ internal class FmModIgnitor(
 
         // fmFreq's SIGN is stable for the voice's life in the constant-valued forms — the
         // default (FreqIgnitor inherits the argument's per-voice stability: a per-voice val in
-        // IgniteRenderer, detune rescales by 2^(s/12), strictly positive), a Constant, and a
+        // Voice.ignite, detune rescales by 2^(s/12), strictly positive), a Constant, and a
         // Param (build-time-folded) — and that is what licenses this bypass: a note-less voice
         // (fmFreq <= 0, e.g. an fm sound triggered via s() without a note) stays note-less
         // forever, no later block where modulator state could matter, the E2 always-advance

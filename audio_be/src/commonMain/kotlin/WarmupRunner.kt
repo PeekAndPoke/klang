@@ -137,20 +137,29 @@ class WarmupRunner(
         private const val EXTRA_EFFECT_KINDS = 4
     }
 
-    private var started = false
-    private var finished = false
+    /**
+     * The runner's four phases, in order (KLANG-00290 (engine follow ups) item 27, C4.2, maintainer 2026-11-06: an enum
+     * for what were three booleans):
+     *  - [NotStarted]: [start] not called yet; [tick] does nothing.
+     *  - [Running]: the warmup voices play through the real engine, [warmupBlocks] blocks.
+     *  - [WaitingForClean]: the warmup engine is disposed; the runner waits for the warehouse to zero what came back.
+     *  - [Done]: [KlangCommLink.Feedback.BackendReady] is out; [tick] does nothing.
+     */
+    private enum class Phase { NotStarted, Running, WaitingForClean, Done }
+
+    private var phase = Phase.NotStarted
     private var blocksRun = 0
 
     /** True while the runner is still priming the audio path. Callers should zero output in this window. */
-    val isWarming: Boolean get() = started && !finished
+    val isWarming: Boolean get() = phase == Phase.Running || phase == Phase.WaitingForClean
 
     /**
      * Register the synthetic warmup sample on the real scheduler and schedule the warmup voices.
      * Idempotent.
      */
     fun start() {
-        if (started) return
-        started = true
+        if (phase != Phase.NotStarted) return
+        phase = Phase.Running
 
         // Pre-register the all-zeros warmup sample (SYSTEM-wide sample cache). Reserved name —
         // no real song references it, so the entry is harmless left in the cache.
@@ -247,9 +256,6 @@ class WarmupRunner(
         )
     }
 
-    /** The warmup engine has been disposed; the runner is waiting for the warehouse to zero what came back. */
-    private var disposed = false
-
     /**
      * Test seam: true if `BackendReady` went out with the shelves still dirty — the wait hit
      * [maxCleanWaitBlocks]. Not surfaced anywhere yet; belongs in the warehouse stats feed
@@ -265,29 +271,40 @@ class WarmupRunner(
      * warehouse reports every shelved unit zeroed, [KlangCommLink.Feedback.BackendReady] goes out.
      * Returns true while still warming, false once done.
      */
-    fun tick(): Boolean {
-        if (!started || finished) return false
+    fun tick(): Boolean = when (phase) {
+        Phase.NotStarted, Phase.Done -> false
 
-        blocksRun++
+        Phase.Running, Phase.WaitingForClean -> {
+            blocksRun++
 
-        if (!disposed && blocksRun >= warmupBlocks) {
-            disposed = true
-            // Dispose the warmup engine entirely: the return path (2f) stocks the shelves for the
-            // first real playback. Nothing is zeroed here — the dispatcher's per-block housekeeping
-            // does that, a slice at a time (review round 3).
-            dispatcher.cleanupHard(WARMUP_PLAYBACK_ID)
-            // Wipe limiter state so the first real kick sees unity gain.
-            dispatcher.resetPostChain()
-        }
-
-        if (disposed) {
-            val clean = dispatcher.isWarehouseClean
-            if (clean || blocksRun >= warmupBlocks + maxCleanWaitBlocks) {
-                finished = true
-                readyWhileDirty = !clean
-                feedback.feedback.send(KlangCommLink.Feedback.BackendReady())
-                return false
+            if (phase == Phase.Running && blocksRun >= warmupBlocks) {
+                phase = Phase.WaitingForClean
+                // Dispose the warmup engine entirely: the return path (2f) stocks the shelves for the
+                // first real playback. Nothing is zeroed here: the dispatcher's per-block housekeeping
+                // does that, a slice at a time (review round 3).
+                dispatcher.cleanupHard(WARMUP_PLAYBACK_ID)
+                // Wipe limiter state so the first real kick sees unity gain.
+                dispatcher.resetPostChain()
             }
+
+            if (phase == Phase.WaitingForClean) {
+                awaitClean()
+            } else {
+                true
+            }
+        }
+    }
+
+    /** One tick of [Phase.WaitingForClean]: done, and `BackendReady` sent, once the shelves are zeroed or the wait ran out. */
+    private fun awaitClean(): Boolean {
+        val clean = dispatcher.isWarehouseClean
+
+        if (clean || blocksRun >= warmupBlocks + maxCleanWaitBlocks) {
+            phase = Phase.Done
+            readyWhileDirty = !clean
+            feedback.feedback.send(KlangCommLink.Feedback.BackendReady())
+
+            return false
         }
 
         return true

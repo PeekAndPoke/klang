@@ -84,7 +84,7 @@ reuse `computeSvfCoeffs(freq, q·A, sr)`; tap `v0 + m1·v1` with **`m1 = safeOut
 exactly +120 dB peak, recomputed m1 is 34 dB off). The `safeOut` is the whole guard chain: scrubs
 NaN (non-finite db handled upstream → 0 dB), caps the finite-but-astronomical window (db ∈
 [346, 6165) gives finite m1 up to 9e305 — unbounded it ducks the master limiter for seconds or
-lands NaN→full-scale DC in MasterStage) at SAFE_MAX per the house output-clamp contract; keeps
+lands NaN→full-scale DC in HouseStage) at SAFE_MAX per the house output-clamp contract; keeps
 db→gain monotone. NOT a musical clamp on db (Motor stays raw — none added). Peak gain at
 fc = A² = 10^(db/20); cut/boost exactly reciprocal *within the unclamped region* (q clamp
 `[0.1, 200]` applies to `q·A`, so deep cuts clamp bandwidth — at q=0.707 below ≈ −34 dB; peak

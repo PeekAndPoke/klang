@@ -354,7 +354,7 @@ class EffectBenchmark(
                 LowPassHighPassFilters.createBody(BODY_WOOD_MODES, 0.5, sr)
             },
             monoFilterCase("Vowel (a, 5-band, mix0.5)") { sr ->
-                LowPassHighPassFilters.createFormant(VOWEL_A_BANDS, 0.5, sr)
+                LowPassHighPassFilters.createVowel(VOWEL_A_BANDS, 0.5, sr)
             },
 
             // ── Filter humanization (analog > 0): the cost of the saturated branch on the tree's SVF.
@@ -546,7 +546,7 @@ class EffectBenchmark(
                 )
             },
             compressorCase("Compressor (limiter, 20:1)") { sr ->
-                // Same parameters as KlangAudioRenderer's master limiter
+                // Same parameters as the house limiter (`HouseStage`)
                 Compressor(
                     sampleRate = sr,
                     thresholdDb = -1.0,

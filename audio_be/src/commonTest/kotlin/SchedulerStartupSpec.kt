@@ -95,7 +95,7 @@ class SchedulerStartupSpec : StringSpec({
         renderOne(d, 0.0).max() shouldBeLessThan 1e-9
 
         // The first voice arrives BETWEEN renders, declaring a start (0.0) that has already passed.
-        d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = pid, voice = firstVoice()))
+        d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = pid, voices = listOf(firstVoice())))
 
         // Structural half: admitted (the eager promote saw it inside the next block's window) and
         // not dropped by B2. Under the old convention the epoch was block 0 — already rendered.
@@ -103,7 +103,7 @@ class SchedulerStartupSpec : StringSpec({
         scheduler.getActiveVoiceCount() shouldBe 1
         scheduler.droppedVoiceCount() shouldBe 0
 
-        // Acoustic half. The dispatcher path includes MasterStage, whose limiter lookahead delays
+        // Acoustic half. The dispatcher path includes HouseStage, whose limiter lookahead delays
         // the output by ~220 frames, so the onset lands in block 2, not block 1 (that is why
         // SampleVoiceOnsetSpec drives a bare PlaybackEngine instead). Concatenate three blocks and
         // look at the first audible frames wherever they fall.
@@ -125,7 +125,7 @@ class SchedulerStartupSpec : StringSpec({
     "B2: a voice whose start has already been rendered past is dropped and counted, never smeared" {
         val d = newDispatcher()
         // Establish the epoch with a first voice, render it well past.
-        d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = pid, voice = firstVoice()))
+        d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = pid, voices = listOf(firstVoice())))
         for (b in 0 until 10) renderOne(d, (b * blockFrames).toDouble())
 
         // A voice scheduled 3 blocks BEHIND the clock — inside the old 5-block window, which used to
@@ -134,7 +134,7 @@ class SchedulerStartupSpec : StringSpec({
         val scheduler = d.engine(pid).shouldNotBeNull().scheduler
         val before = scheduler.getActiveVoiceCount()
         val lateSec = (d.clockForTest.cursorFrame - 3 * blockFrames) / sampleRate
-        d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = pid, voice = firstVoice(startTime = lateSec)))
+        d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = pid, voices = listOf(firstVoice(startTime = lateSec))))
 
         scheduler.getActiveVoiceCount() shouldBe before
         scheduler.droppedVoiceCount() shouldBe 1
@@ -142,14 +142,14 @@ class SchedulerStartupSpec : StringSpec({
 
     "B2: the boundary is inclusive — a start exactly AT the next block is on time" {
         val d = newDispatcher()
-        d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = pid, voice = firstVoice()))
+        d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = pid, voices = listOf(firstVoice())))
         for (b in 0 until 4) renderOne(d, (b * blockFrames).toDouble())
 
         // Exactly at the clock, i.e. the first frame of the block about to be rendered. The frontend
         // schedules on block boundaries all the time; an exclusive test here would drop all of them.
         val scheduler = d.engine(pid).shouldNotBeNull().scheduler
         val before = scheduler.getActiveVoiceCount()
-        d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = pid, voice = firstVoice(startTime = d.clockForTest.cursorFrame / sampleRate)))
+        d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = pid, voices = listOf(firstVoice(startTime = d.clockForTest.cursorFrame / sampleRate))))
 
         withClue("admitted") { scheduler.getActiveVoiceCount() shouldBe before + 1 }
         scheduler.droppedVoiceCount() shouldBe 0

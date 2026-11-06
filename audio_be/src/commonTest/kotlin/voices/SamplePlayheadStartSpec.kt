@@ -64,7 +64,6 @@ class SamplePlayheadStartSpec : StringSpec({
         val factory = VoiceFactory(
             sampleRate = sampleRate,
             blockFrames = blockFrames,
-            voiceBuffer = voiceBuffer,
             scratchBuffers = ScratchBuffers(blockFrames),
         )
         val voice = factory.makeVoice(

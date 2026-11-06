@@ -14,7 +14,7 @@ import kotlin.math.nextUp
 import kotlin.math.sin
 
 /**
- * The engine's output clip, [clipSample] and its loop [clipOutput], the real ones [MasterStage.process]
+ * The engine's output clip, [clipSample] and its loop [clipOutput], the real ones [HouseStage.process]
  * runs (2026-10-07, KLANG-00280 (float output)). The rule: in `[-1, 1]` a
  * sample passes untouched, above 1 it is 1.0, anything else -1.0. Untouched means NO quantisation: the
  * engine used to truncate every sample to 16 bits here, so a sample under one 16-bit step (1 / 32767,
@@ -62,8 +62,8 @@ class OutputClipSpec : StringSpec({
 
     "non-finite samples, today's behaviour pinned (NaN is a full-scale negative click)" {
         // NaN fails both `in [-1, 1]` and `> 1`, so it takes the last branch: -1.0. That is a click,
-        // and it is pinned here as it is, not endorsed: through MasterStage.process no NaN reaches the
-        // clip, because the house limiter's ring stores non-finite samples as 0.0 (MasterStageSpec
+        // and it is pinned here as it is, not endorsed: through HouseStage.process no NaN reaches the
+        // clip, because the house limiter's ring stores non-finite samples as 0.0 (HouseStageSpec
         // guards that end to end). Changing the NaN branch is a sound decision.
         clipSample(Double.NaN) shouldBe -1.0
         clipSample(Double.POSITIVE_INFINITY) shouldBe 1.0
@@ -89,12 +89,12 @@ class OutputClipSpec : StringSpec({
         }
     }
 
-    "through MasterStage.process a value under one 16-bit step reaches the output" {
+    "through HouseStage.process a value under one 16-bit step reaches the output" {
         // End to end through the real stage: a 1e-5 sine (about a third of a 16-bit step, so the old
         // 16-bit output was all zeros) must come out non-zero, and near its own amplitude (the DC
         // blocker's onset may overshoot a little, so the upper bound leaves room).
         val blockFrames = 64
-        val master = MasterStage(sampleRate = 44100, blockFrames = blockFrames)
+        val master = HouseStage(sampleRate = 44100, blockFrames = blockFrames)
         val out = StereoBuffer(blockFrames)
         var peak = 0.0
 

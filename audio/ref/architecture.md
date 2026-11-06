@@ -18,7 +18,7 @@ audio_jsworklet  (JS worklet entry point — depends on audio_be)
 ```
 LIVE-CODING FRONTEND (main thread / JVM caller)
   │
-  │  KlangCommLink.frontend.send(Cmd.ScheduleVoices(...))   (batches; the single ScheduleVoice is not on the hot path)
+  │  KlangCommLink.frontend.send(Cmd.ScheduleVoices(...))   (the one schedule command; a batch of one is a single voice)
   │  KlangCommLink.frontend.send(Cmd.ReplaceVoices(...))
   ▼
 KlangRingBuffer (a small ring guarded by a lock: ReentrantLock on the JVM, a no-op lock in JS)
@@ -31,7 +31,7 @@ AUDIO BACKEND (audio thread)
   ├─ KlangCommLink.backend.poll()  →  Cmd sealed class
   │    → PlaybackEngineDispatcher routes each Cmd by playbackId to its own PlaybackEngine (see below)
   │
-  ├─ Cmd.ScheduleVoice   → that engine's VoiceScheduler.scheduleVoice()
+  ├─ Cmd.ScheduleVoices  → that engine's VoiceScheduler.scheduleVoices()
   │                           stores ScheduledVoice in min-heap (keyed by startTime)
   │
   ├─ Cmd.ReplaceVoices   → that engine's VoiceScheduler.replaceVoices (grace-cutoff replace + dedup); a stopped engine ignores it
@@ -54,7 +54,7 @@ AUDIO BACKEND (audio thread)
          └─ The playback's master: a KatalystChain on the summed orbits, swapped by ChainSwap
             (phase 3 step 12; `master(Katalyst(k => ...))`)
 
-       MasterStage (in PlaybackEngineDispatcher, live and offline)
+       HouseStage (in PlaybackEngineDispatcher, live and offline)
          ├─ Apply DC blockers, then master limiter (−1 dB, 20:1, 5 ms lookahead)
          ├─ Clip ±1.0 into the floating-point output (a StereoBuffer, no quantisation)
          └─ Send to platform audio output (Web Audio takes the floats; the JVM line and the
@@ -107,9 +107,8 @@ Two `KlangRingBuffer` channels: `frontend→backend` (Cmd) and `backend→fronte
 
 | Cmd subclass          | Payload                                 | Effect                                                                                           |
 |-----------------------|-----------------------------------------|--------------------------------------------------------------------------------------------------|
-| `Cmd.ScheduleVoice`   | `ScheduledVoice`                        | enqueue a voice for future playback                                                              |
+| `Cmd.ScheduleVoices`  | `List<ScheduledVoice>`                  | enqueue voices for future playback, one time snapshot for the batch                             |
 | `Cmd.ReplaceVoices`   | `List<ScheduledVoice>` + `afterTimeSec` | live update: drop scheduled voices past a grace cutoff, reschedule, dedup vs still-active voices; ignored by a stopped engine |
-| `Cmd.ClearScheduled`  | —                                       | discard all pending (not yet active) voices                                                      |
 | `Cmd.Cleanup`         | —                                       | stop all voices, reset state                                                                     |
 | `Cmd.RegisterIgnitor` | name + `IgnitorDsl`                     | register an inline instrument on the playback's ignitor fork                                    |
 | `Cmd.RegisterKatalyst`| name + `KatalystDsl`                    | register a chain on the playback's Katalyst fork (for `katalyst(...)` and `master(...)`)        |
@@ -159,9 +158,9 @@ Two `KlangRingBuffer` channels: `frontend→backend` (Cmd) and `backend→fronte
 | Constant             | Value                                        | Location             |
 |----------------------|----------------------------------------------|----------------------|
 | Max orbits           | 16                                           | `Cylinders`          |
-| Limiter threshold    | −1 dB                                        | `MasterLimiterDefaults.kt`, used by `MasterStage` |
-| Limiter ratio        | 20:1                                         | `MasterLimiterDefaults.kt`, used by `MasterStage` |
-| Limiter attack       | 5 ms — gain-SMOOTHING length, not a one-pole | `MasterStage`        |
-| Limiter lookahead    | 5 ms — delays the whole output uniformly     | `MasterStage`        |
-| Limiter release      | 100 ms                                       | `MasterLimiterDefaults.kt`, used by `MasterStage` |
+| Limiter threshold    | −1 dB                                        | `MasterLimiterDefaults.kt`, used by `HouseStage` |
+| Limiter ratio        | 20:1                                         | `MasterLimiterDefaults.kt`, used by `HouseStage` |
+| Limiter attack       | 5 ms: gain-SMOOTHING length, not a one-pole | `HouseStage`        |
+| Limiter lookahead    | 5 ms: delays the whole output uniformly     | `HouseStage`        |
+| Limiter release      | 100 ms                                       | `MasterLimiterDefaults.kt`, used by `HouseStage` |
 | Block size           | 128, pinned everywhere (a tone parameter)    | `AudioBackendContext.RENDER_QUANTUM_FRAMES` |

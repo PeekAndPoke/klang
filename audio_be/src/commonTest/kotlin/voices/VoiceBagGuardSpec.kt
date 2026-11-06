@@ -120,7 +120,6 @@ class VoiceBagGuardSpec : StringSpec({
         val factory = VoiceFactory(
             sampleRate = sampleRate,
             blockFrames = blockFrames,
-            voiceBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),
         )
         val scheduled = ScheduledVoice(

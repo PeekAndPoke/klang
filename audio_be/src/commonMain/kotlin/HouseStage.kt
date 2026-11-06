@@ -14,18 +14,20 @@ import io.peekandpoke.klang.audio_bridge.constants.LIMITER_RELEASE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_THRESHOLD_DB
 
 /**
- * The final master / output stage: master-out DC blockers, a brick-wall safety limiter, and the
- * transparent clip into the engine's floating-point stereo output.
+ * The house stage: the always-on output stage after every playback is summed. Output DC blockers, a
+ * brick-wall safety limiter, and the transparent clip into the engine's floating-point stereo output.
+ * Nothing authors it. Named `MasterStage` until 2026-11-06 (KLANG-00290 (engine follow ups) item 27, D2):
+ * "master" is the authored chain at a playback's output, `MasterBus`.
  *
  * The output is a [StereoBuffer] of doubles: Web Audio takes floats per channel, so the browser
  * worklet copies each channel straight into its output. The edges that need 16-bit integers (the JVM
  * `SourceDataLine` player, the WAV writer) convert there, through [pcm16] and [writePcm16].
  *
  * Extracted from [KlangAudioRenderer] so the per-playback mixdown can run it **once** on the summed
- * mix — the safety brick belongs on the final output, not per engine. See
+ * mix: the safety brick belongs on the final output, not per engine. See
  * KLANG-00176 (per playback engine) (D2). Behaviour is identical to the old inline post-chain.
  */
-class MasterStage(
+class HouseStage(
     sampleRate: Int,
     private val blockFrames: Int,
 ) {
@@ -38,14 +40,14 @@ class MasterStage(
      *
      * The two constants below are **house-only**: no DSL field carries them, because the house
      * limiter is not authorable. The opt-in stage has its own `AUTHORED_*` timing (also in the
-     * bridge) which deliberately differs — see `MasterDefaultsSyncSpec` for why, and for the
-     * assertions that keep the divergence intentional rather than accidental.
+     * bridge) which deliberately differs (see `MasterDefaultsSyncSpec` for why, and for the
+     * assertions that keep the divergence intentional rather than accidental).
      */
     companion object {
         /**
          * Lookahead: the limiter delays the mix by this much so it can start closing the gain
          * *before* a transient arrives. Without it the limiter contributes ~0 dB during a transient
-         * and the hard clip below does the work — 2-6 ms of clipping per hit, audible as a "knock".
+         * and the hard clip below does the work: 2 to 6 ms of clipping per hit, audible as a "knock".
          *
          * Uniform on the whole output (this stage runs once, after every playback is summed), so the
          * delay shifts everything together and nothing can desync. That is why the HOUSE lookahead
@@ -58,7 +60,7 @@ class MasterStage(
         const val HOUSE_LIMITER_LOOKAHEAD_SECONDS: Double = 0.005
 
         /**
-         * The gain-smoothing length — how fast the gain closes inside the lookahead window.
+         * The gain-smoothing length: how fast the gain closes inside the lookahead window.
          *
          * Equal to the window: peak performance is *invariant* to this value (the min-hold does the
          * anticipating), while low-frequency cleanliness tracks it directly, so at a fixed latency
@@ -69,7 +71,7 @@ class MasterStage(
     }
 
     /**
-     * Latency this stage adds, in frames — the limiter's lookahead delay.
+     * Latency this stage adds, in frames: the limiter's lookahead delay.
      *
      * The whole output is delayed by this, uniformly, so nothing desyncs *within* the audio. But it
      * is invisible to `AudioContext.outputLatency` (it happens inside the worklet, downstream of the
@@ -95,7 +97,7 @@ class MasterStage(
     //   1. DC eats headroom asymmetrically and inflates what the detector sees, so removing it
     //      first is simply the correct order.
     //   2. A DC blocker is NOT level-safe. It is a ~7 Hz high-pass whose pole transient overshoots
-    //      on onsets — measured, a limited (-1 dBFS) 55 Hz sine switched on cold comes out at
+    //      on onsets: measured, a limited (-1 dBFS) 55 Hz sine switched on cold comes out at
     //      -0.47 dBFS, a +0.53 dB gain decaying over ~21 ms. Downstream of the limiter that
     //      overshoot lands straight on the clip and eats most of the margin the limiter leaves.
     private val dcBlockerL = LowPassHighPassFilters.DcBlocker(coefficient = HOUSE_DC_BLOCK_COEFF)
@@ -132,7 +134,7 @@ class MasterStage(
 
 /**
  * The master's clip: writes [clipSample] of the first [frames] frames of [mix] into [out], channel by
- * channel. [MasterStage.process] runs it once per block, after the limiter; it is its own function so
+ * channel. [HouseStage.process] runs it once per block, after the limiter; it is its own function so
  * the specs exercise the real loop, not a copy.
  */
 internal fun clipOutput(mix: StereoBuffer, frames: Int, out: StereoBuffer) {
@@ -152,7 +154,7 @@ internal fun clipOutput(mix: StereoBuffer, frames: Int, out: StereoBuffer) {
  * 1.0, anything else -1.0. Most samples are in range, and they take the first branch with no clamp math.
  *
  * NaN fails both comparisons and lands on -1.0, a full-scale negative click. It cannot arrive through
- * [MasterStage.process]: the house limiter's delay ring stores every non-finite sample as 0.0
+ * [HouseStage.process]: the house limiter's delay ring stores every non-finite sample as 0.0
  * (`Compressor.processLookahead`), so the clip only ever sees finite values.
  *
  * Inline so the hot loop in [clipOutput] stays one flat body on both platforms.

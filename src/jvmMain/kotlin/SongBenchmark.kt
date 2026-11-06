@@ -179,11 +179,9 @@ class SongBenchmark(
     private fun renderPass(pattern: KlangPattern, case: Case, capture: Boolean): PassMetrics {
         val cps = case.rpm / 60.0
         val klangTime = KlangTime.create()
-        val commLink = KlangCommLink()
         val renderer = KlangAudioRenderer.create(
             sampleRate = sampleRate,
             blockFrames = blockFrames,
-            commLink = commLink.backend,
             performanceTimeMs = { klangTime.internalMsNow() },
         )
         val ignitorRegistry = renderer.ignitorRegistry

@@ -27,17 +27,17 @@ import kotlin.random.Random
 
 /**
  * `gain` is the one level word on the wire (signal-flow plan section 6): the channel fader, applied
- * once, with pan, in the send stage. Three things are guarded here.
+ * once, with pan, in the channel. Three things are guarded here.
  *
  * **At the factory.** A non-finite gain reads as UNSET, 1.0, like every other wire number. It is
  * not a clamp: a negative gain and a gain above 1 are legal and pass through raw (the Motor stays
  * raw).
  *
- * **At the send stage, absolutely.** One row renders a voice whose ignitor's samples the TEST knows
+ * **At the channel, absolutely.** One row renders a voice whose ignitor's samples the TEST knows
  * (`TestIgnitors.ramp`) and compares BOTH mix channels and the delay send bus against those samples
  * times the pan law computed here, by raw bits. Neither side of that comparison comes from the code
  * under test, so a constant trim in a stage THIS voice renders moves the bits: the amp VCA and the
- * send stage itself (the retired second multiplier at any value but 1, a stray `* 0.9`, a gain
+ * channel itself (the retired second multiplier at any value but 1, a stray `* 0.9`, a gain
  * dropped from one channel or from the send write). Its reach stops there: a trim inside a stage
  * only a factory-built voice instantiates, a filter or a waveshaper, is not in this voice's
  * pipeline and this row cannot see it. Nor can any bit comparison see a second multiplier at
@@ -49,7 +49,7 @@ import kotlin.random.Random
  * is exact whichever way the multiplication associates).
  *
  * **The two readers the guard exists for.** `Voice.heard` starts latched on a gain of exactly 0 and
- * `NaN == 0.0` is false, so a NaN voice used to start unlatched; and `SendRenderer.measurePeak`
+ * `NaN == 0.0` is false, so a NaN voice used to start unlatched; and `measureVoicePeak` (the channel's)
  * scales the block peak by `abs(gain)`, so a NaN gain made the peak NaN, which fails every compare
  * against the cull floor and reads as audible forever. Both are asserted through the one public
  * seam they have, [Voice.culled].
@@ -64,7 +64,6 @@ class VoiceGainWireSpec : StringSpec({
         val factory = VoiceFactory(
             sampleRate = sampleRate,
             blockFrames = blockFrames,
-            voiceBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),
         )
         val scheduled = ScheduledVoice(
@@ -112,7 +111,7 @@ class VoiceGainWireSpec : StringSpec({
 
     /**
      * A hand-built voice whose only settings are its gain and its pan, on the ramp ignitor. Its
-     * pipeline is the helper's: a transparent filter chain and the amp VCA, then the send stage,
+     * pipeline is the helper's: a transparent filter chain and the amp VCA, then the channel,
      * which is what the absolute rows below are about.
      *
      * The rows use POSITIVE gains on purpose. A negative gain would fail them at frame 0 for a
@@ -189,7 +188,7 @@ class VoiceGainWireSpec : StringSpec({
         wireGain(0.0) shouldBe 0.0
     }
 
-    // ── The send stage, against an oracle the code under test did not produce ─────────────────
+    // ── The channel, against an oracle the code under test did not produce ─────────────────
 
     "both mix channels are the ignitor's own samples times pan and gain" {
         // What the ramp ignitor writes, by its own definition: (i - offset) / length.
@@ -199,11 +198,11 @@ class VoiceGainWireSpec : StringSpec({
         val gain = 0.625
 
         // Why these are raw-bit comparisons and not approximations: the oracle GROUPS the product
-        // the way `SendRenderer` does, `sample * (panLaw * gain)`. Two properties of this voice are
+        // the way `mixIntoCylinder` does, `sample * (panLaw * gain)`. Two properties of this voice are
         // load-bearing for that, and both would have to be re-checked if they changed:
         // `gainMultiplier` is 1.0 (no scheduler has touched this voice), and the helper's always-on
         // envelope makes the amp VCA exactly `x * 1.0` (sustain 1.0, the de-click smoother primed at
-        // the first rendered gain), so the sample reaching the send stage IS the ignitor's. Being
+        // the first rendered gain), so the sample reaching the channel IS the ignitor's. Being
         // exact in binary, 0.625 only keeps the oracle readable; it is not what makes the bits agree.
         val (mixLeft, mixRight) = renderBuses(rampVoice(gain = gain, pan = pan))
 

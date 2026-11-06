@@ -15,12 +15,12 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
- * Guards `createFormant` (the vowel filter): the formants must clearly DOMINATE the dry floor,
+ * Guards `createVowel` (the vowel filter): the formants must clearly DOMINATE the dry floor,
  * otherwise the vowel is inaudible (regression: when VOWEL_TAME was too small / VOWEL_FLOOR too
  * high, F1 was only +7 dB over the valley and F2 was below the floor). Also pins that a `body()`
  * after it does not erase the vowel.
  */
-class FormantBlendSpec : StringSpec({
+class VowelBlendSpec : StringSpec({
 
     val sr = 44100.0
     val n = 8192
@@ -50,19 +50,19 @@ class FormantBlendSpec : StringSpec({
         return rms(buf) / inR
     }
 
-    "createFormant - vowel formants clearly dominate the floor" {
-        val f1 = gainAt(325.0, listOf(LowPassHighPassFilters.createFormant(bands = uBands, mix = 1.0, sampleRate = sr)))
-        val f2 = gainAt(700.0, listOf(LowPassHighPassFilters.createFormant(bands = uBands, mix = 1.0, sampleRate = sr)))
-        val valley = gainAt(1200.0, listOf(LowPassHighPassFilters.createFormant(bands = uBands, mix = 1.0, sampleRate = sr)))
+    "createVowel - vowel formants clearly dominate the floor" {
+        val f1 = gainAt(325.0, listOf(LowPassHighPassFilters.createVowel(bands = uBands, mix = 1.0, sampleRate = sr)))
+        val f2 = gainAt(700.0, listOf(LowPassHighPassFilters.createVowel(bands = uBands, mix = 1.0, sampleRate = sr)))
+        val valley = gainAt(1200.0, listOf(LowPassHighPassFilters.createVowel(bands = uBands, mix = 1.0, sampleRate = sr)))
 
         f1 shouldBeGreaterThan (valley * 8.0)    // strong F1 (measured ~14×)
         f2 shouldBeGreaterThan (valley * 2.5)    // present F2 (measured ~3.9×)
     }
 
-    "createFormant - a following body() does not erase the vowel" {
+    "createVowel - a following body() does not erase the vowel" {
         val chain = {
             listOf(
-                LowPassHighPassFilters.createFormant(bands = uBands, mix = 1.0, sampleRate = sr),
+                LowPassHighPassFilters.createVowel(bands = uBands, mix = 1.0, sampleRate = sr),
                 LowPassHighPassFilters.createBody(bands = woodModes, mix = 0.5, sampleRate = sr),
             )
         }

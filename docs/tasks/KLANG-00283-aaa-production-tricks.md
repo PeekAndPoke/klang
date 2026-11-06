@@ -112,7 +112,7 @@ can be scheduled to land exactly, because the downbeat is known in advance.
 
 These cut across many techniques. Each is a decision, not a node.
 
-**G1. Voices are mono.** The voice buffer is mono and `SendRenderer` pans it. So every per-voice width trick is out
+**G1. Voices are mono.** The voice buffer is mono and `mixIntoCylinder` pans it. So every per-voice width trick is out
 of reach:
 - unison spread across the stereo field (S32);
 - a Haas copy (M44, S86);
@@ -589,7 +589,7 @@ not forbidden; it is a reason to stop and ask the maintainer first.
 
 | Gap | Where the assumption lives today | Keep it that way |
 |---|---|---|
-| **G1, stereo voices** | A voice renders into one mono `AudioBuffer`; `SendRenderer` is the one place where mono becomes stereo (equal-power `pan`, `gain`). The cull and the teardown fade read the same one buffer | Keep the send as the single mono-to-stereo point. Add no per-voice stage after the send, and no new reader that relies on "a voice is one buffer" beyond those that exist, without a note here. Then a stereo voice is a change to the send, the cull and the fade, not to every node |
+| **G1, stereo voices** | A voice renders into one mono `AudioBuffer`; `mixIntoCylinder` is the one place where mono becomes stereo (equal-power `pan`, `gain`). The cull and the teardown fade read the same one buffer | Keep the send as the single mono-to-stereo point. Add no per-voice stage after the send, and no new reader that relies on "a voice is one buffer" beyond those that exist, without a note here. Then a stereo voice is a change to the send, the cull and the fade, not to every node |
 | **G2, bus signals** | Every Katalyst knob is read through `KatalystKnob` (a slot or the authored value) and moved by `KnobGlide`. The knobs stay typed as `IgnitorDsl` expressions (maintainer, 2026-10-07). The master has a param path and is fed `applyParams(null)` | Keep `KatalystKnob` the one read point (no stage caching a raw number it read around it), and keep the knob type an `IgnitorDsl`. Then "a knob is a per-block control signal" is a change in one class, and "the master receives slots" a change in one call |
 | **G3, routing** | The orbits sum in `Cylinders.processAndMix`, in rent order, and the duck runs there as the one cross-orbit pass. A chain is a stereo-in, stereo-out unit with two hosts (`Cylinder`, `MasterBus`; KLANG-00243 (one chain host)). A chain reports its latency (`KatalystChain.latencyFrames`); authored lookahead is uncompensated by choice | Keep the summation and the cross-orbit pass in one place, keep a chain host-free (stereo in, stereo out, its own tail and latency answers), and keep reporting latency: a routing graph with parallel paths needs it to compensate. This is the ground KLANG-00216 (signal graph engine) builds on |
 | **G4, a delay line on the voice** | `DelayLine` lives in `effects/`, fractional, crossfading; the Karplus string has its own loop | Keep `DelayLine` free of Katalyst and orbit types, so a voice node can own one. A per-voice ring is sized and allocated at voice build (tidy-up step 10's rule), never at render |

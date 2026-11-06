@@ -2063,7 +2063,7 @@ sealed interface IgnitorDsl {
          * hands on its inner's `BuiltIgnitor.endsInEnvelope` (the one home of the rule): when its inner is an
          * authored static-release envelope with nothing built over it (no stage of the instrument's own after
          * it, no written `classic()` stage), that envelope ends the voice; otherwise the voice ends on the teardown fade
-         * (`TeardownFadeRenderer`, since phase 3 step 6).
+         * (`applyTeardownFade`, since phase 3 step 6).
          */
         val on: IgnitorDsl = Constant(1.0),
     ) : IgnitorDsl {

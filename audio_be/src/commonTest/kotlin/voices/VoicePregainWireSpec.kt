@@ -34,7 +34,7 @@ import kotlin.random.Random
  * `PregainSlotRenderSpec` proves what the slot does to a hand-built tree. This one exists because
  * the production path has two things that spec does not: the optimizer, which rewrites
  * `x.mul(slot)` into an `Affine` and could in principle fold the slot away, and the whole voice
- * around the ignitor (envelope, filters, the send stage). Three claims:
+ * around the ignitor (envelope, filters, the channel). Three claims:
  *
  *  - **inert through the whole path**: on an instrument that never places the slot, a written
  *    `pregain` cannot move one sample of the mix bus;
@@ -82,7 +82,6 @@ class VoicePregainWireSpec : StringSpec({
         val factory = VoiceFactory(
             sampleRate = sampleRate,
             blockFrames = blockFrames,
-            voiceBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),
         )
         val scheduled = ScheduledVoice(

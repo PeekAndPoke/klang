@@ -7,7 +7,7 @@ package io.peekandpoke.klang.audio_be.master
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.audio_be.MasterStage
+import io.peekandpoke.klang.audio_be.HouseStage
 import io.peekandpoke.klang.audio_be.effects.Compressor
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_KNEE_DB
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_RATIO
@@ -25,12 +25,12 @@ import kotlin.math.tanh
  *
  * The master limiter is feed-forward with no lookahead, so it cannot reduce a peak it has not seen
  * yet. A kick-shaped transient driven over the ceiling escapes at very nearly its input level and is
- * dealt with by the hard clip in [MasterStage] instead — 2–6 ms of hard clipping per transient,
+ * dealt with by the hard clip in [HouseStage] instead: 2 to 6 ms of hard clipping per transient,
  * widening with the amount of limiting. That is what is audible as a knock.
  *
  * Two things about how this is measured, both load-bearing:
  *
- * 1. **It asserts on [Compressor] output directly, NOT on [MasterStage] output.** `MasterStage`
+ * 1. **It asserts on [Compressor] output directly, NOT on [HouseStage] output.** `HouseStage`
  *    emits its output through a hard clip, so "no sample exceeds 1.0" measured there is
  *    trivially true *with the bug present* — a textbook toothless guard.
  * 2. **Drive is bounded at +18 dB over threshold.** At `ratio = 20` the best achievable output is
@@ -63,15 +63,15 @@ class LimiterLookaheadSpec : StringSpec({
 
     val sampleRate = 44100
 
-    /** The house safety limiter, exactly as [MasterStage] configures it. */
+    /** The house safety limiter, exactly as [HouseStage] configures it. */
     fun houseLimiter() = Compressor(
         sampleRate = sampleRate,
         thresholdDb = LIMITER_THRESHOLD_DB,
         ratio = LIMITER_RATIO,
         kneeDb = LIMITER_KNEE_DB,
-        attackSeconds = MasterStage.HOUSE_LIMITER_ATTACK_SECONDS,
+        attackSeconds = HouseStage.HOUSE_LIMITER_ATTACK_SECONDS,
         releaseSeconds = LIMITER_RELEASE_SECONDS,
-        lookaheadSeconds = MasterStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS,
+        lookaheadSeconds = HouseStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS,
     )
 
     /**
@@ -137,7 +137,7 @@ class LimiterLookaheadSpec : StringSpec({
         // Added after mutation-checking: shrinking the min-hold window from D+1 to D sailed through
         // every peak-level assertion above, because a slow release still catches the tail and the
         // peak number stays defensible. Only the TIMING of the gain minimum exposes it.
-        val delayFrames = (MasterStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS * sampleRate).toInt()
+        val delayFrames = (HouseStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS * sampleRate).toInt()
         val frames = 4000
         val impulseAt = 500
 
@@ -205,7 +205,7 @@ class LimiterLookaheadSpec : StringSpec({
                 kneeDb = LIMITER_KNEE_DB,
                 attackSeconds = attack,
                 releaseSeconds = LIMITER_RELEASE_SECONDS,
-                lookaheadSeconds = MasterStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS,
+                lookaheadSeconds = HouseStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS,
             )
             val frames = sampleRate / 4
             val signal = kick(frames, peak = exp(12.0 / 20.0 * 2.302585092994046))
@@ -351,7 +351,7 @@ class LimiterLookaheadSpec : StringSpec({
     }
 
     "reset() clears the delay ring — no stale audio into the first block after warmup" {
-        // WarmupRunner -> dispatcher.resetPostChain() -> MasterStage.reset(), and MasterBus.landChain
+        // WarmupRunner -> dispatcher.resetPostChain() -> HouseStage.reset(), and MasterBus.landChain
         // resets chains ON THE AUDIO THREAD. Without clearing the ring, whatever was mid-flight
         // replays into the next block.
         val limiter = houseLimiter()
@@ -420,7 +420,7 @@ class LimiterLookaheadSpec : StringSpec({
         val right = signal.copyOf()
         houseLimiter().process(left = left, right = right, blockSize = frames)
 
-        val delayFrames = (MasterStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS * sampleRateLocal).toInt()
+        val delayFrames = (HouseStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS * sampleRateLocal).toInt()
         val probe = sampleRateLocal + period * 3 / 4           // settled, mid-gap
         val recovered = left[probe] / signal[probe - delayFrames]
 
@@ -434,7 +434,7 @@ class LimiterLookaheadSpec : StringSpec({
         // the whole hold window, and the master then fades the entire mix back in over ~160 ms — a
         // far bigger event than the click the guard was originally written for. Without the ring
         // guard the Inf is stored and emerges `delayFrames` later as `Inf * 0.0` = NaN, which
-        // MasterStage's clip maps to -1.0: full-scale negative.
+        // HouseStage's clip maps to -1.0: full-scale negative.
         //
         // Reachable in a raw engine via runaway feedback, and the DC blocker ahead of the limiter
         // passes the first Inf through unchanged.

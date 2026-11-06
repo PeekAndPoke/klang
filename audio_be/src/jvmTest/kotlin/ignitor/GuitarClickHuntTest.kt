@@ -146,7 +146,7 @@ class GuitarClickHuntTest : StringSpec({
 
     /**
      * Renders the ignitor and hard-clips each output sample to ±1 HERE, in the helper. The engine's
-     * `IgniteRenderer` applies no clip of its own (its KDoc); the bound in the engine is the per-stage
+     * `Voice.ignite` applies no clip of its own (its KDoc); the bound in the engine is the per-stage
      * soft cap of `shape()` and `distort()`. Kept as the click hunt's clipped variant.
      */
     fun renderVoiceThroughWrapper(dsl: IgnitorDsl, freqHz: Double, gateMs: Int = 250, releaseMs: Int = 200): AudioBuffer {
@@ -352,10 +352,10 @@ class GuitarClickHuntTest : StringSpec({
         println()
     }
 
-    "guitar click hunt — full guitar through IgniteRenderer wrap (the in-engine path)" {
+    "guitar click hunt: full guitar through the voice's tree stage (the in-engine path)" {
         println()
         println("================================================================")
-        println("In-engine path: full ignitor + IgniteRenderer hard-clip wrapper.")
+        println("In-engine path: full ignitor as the voice renders it.")
         println("This is what users actually hear — peak should be ≤ 1.0 (hard cap).")
         println("================================================================")
 

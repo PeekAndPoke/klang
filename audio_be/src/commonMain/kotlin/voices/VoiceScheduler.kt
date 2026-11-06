@@ -150,7 +150,6 @@ class VoiceScheduler(
     private val voiceFactory = VoiceFactory(
         sampleRate = context.sampleRate,
         blockFrames = context.blockFrames,
-        voiceBuffer = voiceBuffer,
         scratchBuffers = scratchBuffers,
     )
 
@@ -727,7 +726,7 @@ class VoiceScheduler(
      *
      * Every other voice is at or behind the ramp and takes its level, bit for bit as before: the ramp's own steps
      * stay below the fall limit while one transition moves the target by less than about 125 (sprudel coerces the
-     * amounts to 0 to 1, so the target moves by at most 1). What still moves fast: a voice entering a solo goes to 1.0 over one block (`SendRenderer`'s block ramp), a
+     * amounts to 0 to 1, so the target moves by at most 1). What still moves fast: a voice entering a solo goes to 1.0 over one block (the channel's block ramp, `mixIntoCylinder`), a
      * voice of a released source rising to the target does so over one block, and the ramp itself starts at once.
      */
     private fun backgroundLevel(voice: Voice, released: Boolean, rampLevel: Double, target: Double): Double {

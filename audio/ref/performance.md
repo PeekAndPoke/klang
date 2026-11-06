@@ -288,9 +288,9 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   `gainReductionDb`, 70 bytes, stays inlined). Engine follow-up item 3, 2026-10-10: the house limiter's
   `Compressor.lookaheadStep`, 974 bytes, boxed its level argument per sample whenever anything sounded, and its gain
   result per sample from its first reduction on (the release settles a few ulps below 1.0, never exactly 1.0, so
-  the result stayed non-integral until `MasterStage.reset()`): about 2 and 4 KB per block at the master. It is the
+  the result stayed non-integral until `HouseStage.reset()`): about 2 and 4 KB per block at the master. It is the
   likely cause, unproven, of the V8 pass's "a noise voice allocates" (noise plus saw is loud enough to engage the
-  limiter; no noise box reproduces on either bundle). The realtime master stage runs in `PlaybackEngineDispatcher`
+  limiter; no noise box reproduces on either bundle). The realtime house stage runs in `PlaybackEngineDispatcher`
   (offline too, since KLANG-00399 step 4; the engine benchmarks' in `KlangAudioRenderer`), not in `PlaybackEngine`,
   so a probe that stops at `PlaybackEngine` or at one voice does not see it.
   The delay, reverb and phaser were located in the V8 allocation pass (2026-10-08). Run with ten times V8's inlining

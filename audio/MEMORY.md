@@ -16,7 +16,7 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   `cleanup`, nothing filtered by id. File map:
   `docs/audio-backend-file-map.md`; data flow and isolation: `audio/ref/architecture.md`.
 - **Instrument = the voice's Ignitor tree** (phase 3, done 2026-09-28; its pitch modulations too since pitch pipeline
-  steps 1 to 4, the last, `fm`, 2026-10-10; step 5 removed the empty shell in front of it). `Voice` runs Ignite, (teardown fade), Send; the stages and `BlockContext` live in `voices/`. Every built-in sound is `IgnitorRegistry.builtInVoice(source)` = `source.pregain().classic()`;
+  steps 1 to 4, the last, `fm`, 2026-10-10; step 5 removed the empty shell in front of it). `Voice` runs its fixed stages as plain code in `render`: the tree (`ignite`), (the teardown fade), (the cut's fade), the channel (`mixIntoCylinder`); no stage list, no block context of its own (KLANG-00290 item 21). Every built-in sound is `IgnitorRegistry.builtInVoice(source)` = `source.pregain().classic()`;
   every sample voice is the same shape over `IgnitorDsl.Sample` (`IgnitorRegistry.SAMPLE_INSTRUMENT`, never
   registered under a name). An authored instrument gets the voice doors by ending in `.classic()` as its LAST call
   (`IgnitorDsl.endsInClassic()`); a tree without it plays bare: no doors, no default envelope.
@@ -53,7 +53,7 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   the frame alone; `progress` is `frame / gate` on past 1, 1.0 from the first frame on a zero gate, 0 throughout on a held
   live note (`IgniteContext.gateKnown`). `audio/ref/voice-synthesis.md`, "The note clocks".
 - **Voice lifetime** = gate end plus the tree's own release tail (`VoiceFactory.treeLifetime`, floored at 0;
-  `VOICE_ADSR_RELEASE_SEC` when the tree has no static answer). `TeardownFadeRenderer` runs unless the root is a
+  `VOICE_ADSR_RELEASE_SEC` when the tree has no static answer). `applyTeardownFade` runs unless the root is a
   built amplitude envelope with a static release (`BuiltIgnitor.endsInEnvelope`). A silent release is culled: the
   voice ends at once (no zombie since lifecycle step 5). All three: `audio/ref/voice-synthesis.md`.
 - **Voice lifecycle** = the state machine `Voice.State` (Pending, Sounding, Releasing, Fading, Done; Fading and
@@ -63,7 +63,7 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   `state = x.enter(...)`, so none allocates (the rule of `audio/ref/effect-state-machines.md` §1). The one list of
   the transitions is the table in the `Voice` class KDoc. A culled voice
   is Done at its cull block (`Voice.culled`, a latch for the scheduler's count). Onset, gate end and end live in ONE place,
-  `VoiceLimits` (the voice owns and writes it, `releaseGate` included; the stages read it via `BlockContext.limits`;
+  `VoiceLimits` (the voice owns and writes it, `releaseGate` included; the stages read it per block;
   the ignite stage derives `IgniteContext.gateEndFrame` from it per block). Events from outside are `Voice` methods
   that decide by the state: the note-off (`releaseGate`, applies to Pending and Sounding) and the hard kill
   (`kill`, Done from any state), and the cut (`cutOff`: a sounding voice turns Fading, a 4 ms linear ramp to exact
@@ -72,7 +72,7 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   scheduler removes only Done voices, always keeping the list's order, by one allocation-free compaction pass,
   `retainInOrder` (`removeDoneVoices` between blocks, and the render loop).
   Plan and steps: KLANG-00279 (voice lifecycle state machine) (steps 1 to 5b done).
-- **Channel**: `gain` is the one level word (the fader, applied once with `pan` in `SendRenderer`); a frontend's
+- **Channel**: `gain` is the one level word (the fader, applied once with `pan` in `mixIntoCylinder`); a frontend's
   `velocity` is multiplied into `gain` before the wire. The orbit is the routing.
 - **Bus**: each orbit (`Cylinder`) runs a `KatalystChain`, born with `KatalystDsl.classic` (body, vowel, delay,
   reverb, phaser, compressor, gain; duck in a cross-orbit pass), knobs from the owner's
@@ -88,8 +88,8 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   is about -90 dBFS, a MEASURED ratio, not a bound (the diffusers can add up to about 17 dB on a narrow band).
 - **Master**: the same Katalyst chain at the output (`MasterBus`, `master(Katalyst(k => ...))`, off with
   `master(Katalyst())`). The Master DSL is retired.
-- **House stage**: `MasterStage`: DC blockers, the limiter (-1 dB, 20:1, 5 ms lookahead, always on, not
-  authorable; `MasterLimiterDefaults.kt`, `MasterStage.HOUSE_LIMITER_*`), then the clip into the engine's output:
+- **House stage**: `HouseStage`: DC blockers, the limiter (-1 dB, 20:1, 5 ms lookahead, always on, not
+  authorable; `MasterLimiterDefaults.kt`, `HouseStage.HOUSE_LIMITER_*`), then the clip into the engine's output:
   a floating-point `StereoBuffer`, no quantisation (in `[-1, 1]` a sample passes, above 1 is 1.0, else -1.0). The
   worklet copies it straight into Web Audio; only the JVM line and the WAV writer go to 16 bits, at their edge
   (`writePcm16` in `_pcm16_edge.kt`, the one home). The lookahead delays the whole output uniformly.
@@ -128,7 +128,7 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   rule's text is the `gatedOff` KDoc in `IgnitorDslRuntime.kt`; the values are `audio/ref/off-values.md`, their one home.
 - **The swap law** `ChainSwap` (both hosts): fade the leaving chain's input over 0.06 s, drain it at full weight,
   at most `MAX_DRAIN_SECONDS` 20 s; a request that waits behind the drain or the release CUTS it (a raised cosine over
-  `CUT_SECONDS` 0.15 s, maintainer 2026-10-17), so an edit lands in about 0.2 s. **The release law** `TailRelease`: 60 dB per 3 s from exactly 1, retired
+  `CUT_SECONDS` 0.15 s, maintainer 2026-10-17), so an edit lands in about 0.2 s. **The release law** `TailRelease`: 60 dB per 3 s from exactly 1 (a per-sample recurrence, one multiply), retired
   under -90 dB. **A stopped playback is never hard-cut**; only an endless tail triggers the release, 20 s after the
   last note (`PlaybackEngine.isIdle` KDoc). All in `audio/ref/katalyst.md`. **An engine's end of life** is one
   `PlaybackEngine.Phase` (Playing, Stopped, Releasing, Released, Disposed; the table in its class KDoc); the
@@ -426,6 +426,9 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-11-06 Small engine items (KLANG-00290 (engine follow ups) 23, 24, 25, 27): `HouseStage` (was `MasterStage`),
+  `createVowel`, `Cmd.ScheduleVoice` and `Cmd.ClearScheduled` off the wire, the release law as a recurrence,
+  `WarmupRunner`'s phases an enum.
 - 2026-11-05 A master chain's shells are built ahead on the command path, when a schedule carrying its `master(…)`
   arrives, not in the render block that lands it; every master chain rents its units at its first configure, as an
   orbit's (KLANG-00137 (master dsl followups) §3).

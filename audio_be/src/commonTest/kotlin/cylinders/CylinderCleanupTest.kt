@@ -77,6 +77,63 @@ class OrbitCleanupTest : StringSpec({
         }
     }
 
+    "a mix that sounds again restarts the silence grace, from inside the grace and from a held orbit" {
+        // A grace of 4 silent visits; the voice's claim is at block 0, so check-ins hold the orbit through block 1
+        val grace = 4
+        val blockAt = { b: Int -> b * blockFrames.toDouble() }
+
+        fun orbit(): Cylinder {
+            val c = Cylinder(id = 0, blockFrames = blockFrames, sampleRate = sampleRate, silentBlocksBeforeTailCheck = grace)
+            makeOrbitActive(c)
+            return c
+        }
+
+        fun silentVisit(c: Cylinder, block: Int) {
+            c.mixBuffer.clear()
+            c.tryDeactivate(blockAt(block))
+        }
+
+        fun soundingVisit(c: Cylinder, block: Int) {
+            c.mixBuffer.clear()
+            c.mixBuffer.left[0] = 0.5
+            c.tryDeactivate(blockAt(block))
+        }
+
+        // Inside the grace: two silent visits, a sounding one, then the grace counts from 0 again
+        val inGrace = orbit()
+        silentVisit(inGrace, 10)
+        silentVisit(inGrace, 11)
+        soundingVisit(inGrace, 12)
+
+        for (b in 13 until 13 + grace - 1) {
+            silentVisit(inGrace, b)
+            withClue("inside the grace, silent visit at block $b: the grace restarted at the sound") { inGrace.isActive shouldBe true }
+        }
+
+        silentVisit(inGrace, 13 + grace - 1)
+        withClue("positive control: the full grace after the sound ends it") { inGrace.isActive shouldBe false }
+
+        // Held: a voice checks in past the grace, then the mix sounds, then the voice is gone
+        val held = orbit()
+
+        for (b in 0 until grace) {
+            held.checkIn(blockAt(b))
+            silentVisit(held, b)
+        }
+
+        withClue("positive control: held by its voice past the grace") { held.isActive shouldBe true }
+
+        soundingVisit(held, grace + 10)
+
+        for (b in grace + 11 until grace + 11 + grace - 1) {
+            silentVisit(held, b)
+            withClue("after a held orbit sounded, silent visit at block $b: the grace restarted") { held.isActive shouldBe true }
+        }
+
+        silentVisit(held, grace + 11 + grace - 1)
+        withClue("positive control: the full grace after the sound ends it") { held.isActive shouldBe false }
+    }
+
     "tryDeactivate() on already inactive cylinder does nothing" {
         val cylinder = createTestOrbit()
         makeOrbitActive(cylinder)

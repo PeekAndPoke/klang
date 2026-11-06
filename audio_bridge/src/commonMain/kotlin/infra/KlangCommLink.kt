@@ -35,15 +35,6 @@ class KlangCommLink(capacity: Int = 8192) {
             override val playbackId: String,
         ) : Cmd
 
-        /**
-         * Drop all not-yet-played voices for a playback. NOT on the production hot path — the frontend
-         * clears via [ReplaceVoices] (`afterTimeSec = null`); kept as a primitive for tests.
-         */
-        @WireName("clear-scheduled")
-        data class ClearScheduled(
-            override val playbackId: String,
-        ) : Cmd
-
         @WireName("replace-voices")
         data class ReplaceVoices(
             override val playbackId: String,
@@ -52,18 +43,9 @@ class KlangCommLink(capacity: Int = 8192) {
         ) : Cmd
 
         /**
-         * Schedule a single voice. NOT on the production hot path — the frontend always batches via
-         * [ScheduleVoices]; kept as a primitive for tests/benchmarks. To replace a playback's voices
-         * use [ReplaceVoices], not a clear-then-schedule flag.
-         */
-        @WireName("schedule-voice")
-        data class ScheduleVoice(
-            override val playbackId: String,
-            val voice: ScheduledVoice,
-        ) : Cmd
-
-        /**
-         * Batch variant of [ScheduleVoice]. All voices in the list share a single nowSec snapshot
+         * Schedules voices; the one schedule command (the single-voice `ScheduleVoice` and `ClearScheduled` left the wire
+         * 2026-11-06, KLANG-00290 (engine follow ups) item 24: no sender used them; to replace a playback's voices use
+         * [ReplaceVoices]). All voices in the list share a single nowSec snapshot
          * on the backend, so per-batch jitter (postMessage interleaving with audio blocks) cannot
          * push later voices into the past relative to earlier ones.
          */
@@ -74,7 +56,7 @@ class KlangCommLink(capacity: Int = 8192) {
         ) : Cmd
 
         /**
-         * Starts a realtime voice immediately — see [RealtimeVoice]. Unlike [ScheduleVoice] there
+         * Starts a realtime voice immediately: see [RealtimeVoice]. Unlike [ScheduleVoices] there
          * is no start time on the wire: the backend stamps "now" at receipt and promotes the voice
          * straight to active, bypassing the scheduled heap and epoch anchoring entirely.
          */

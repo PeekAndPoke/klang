@@ -173,7 +173,7 @@ if (newCut != null || av.voice.cut != null) av.voice.cut == newCut
 else av.sourceId == newSourceId && av.voice.cylinderId == newCylinder
 ```
 
-**Apply** in `SendRenderer` (`SendRenderer.kt:36`). `gainMultiplier` will not do — it is hoisted out of the sample loop
+**Apply** in the voice's channel, `mixIntoCylinder` (`voice_channel.kt`; was `SendRenderer` until 2026-11-06). `gainMultiplier` will not do: it is hoisted out of the sample loop
 as a block constant, and a 5 ms fade is roughly two 128-frame blocks. Branch once per block on `chokeActive`, keep the
 existing loop untouched on the fast path, and run
 `gain = 1 - p*p*(3-2p)` per sample in the slow path.

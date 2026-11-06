@@ -44,7 +44,7 @@ import kotlin.math.pow
  *   ([dcBlockCoefficientAt]), so the knee stays where it is in Hz. The default, `DEFAULT_DC_BLOCK_COEFF` (0.995, a knee
  *   near 35 Hz), is the voice's law and the two Ignitor nodes keep it. A bus carries the whole low end
  *   of a mix, where that knee takes about 2.5 dB off 40 Hz, so the Katalyst stage passes the house
- *   stage's 0.999 (near 7 Hz, `MasterStage`).
+ *   stage's 0.999 (near 7 Hz, `HouseStage`).
  */
 internal class DistortionCore(
     private val shape: DistortionShape,

@@ -38,7 +38,7 @@ import kotlin.math.abs
  * **Why the two halves are observed differently.** Cut is a question about *membership* of the
  * active list (since lifecycle step 4 after the choked voice's 4 ms fade), so `getActiveVoiceCount()` answers it exactly and no DSP measurement can blur it.
  * Solo is a question about *gain*, so it has to be heard: the soloed voice is panned hard left and
- * the background hard right (equal-power pan, `SendRenderer:32-39`), which puts each one in its own
+ * the background hard right (equal-power pan, `mixIntoCylinder:32-39`), which puts each one in its own
  * channel and lets the right channel be read as "the background, alone".
  */
 class VoiceSchedulerSoloCutSpec : StringSpec({

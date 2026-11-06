@@ -85,8 +85,8 @@ object VoiceTestHelpers {
         // The orbit chain's param state this voice carries while it owns the orbit.
         katalystParams: KlangMap<Double>? = null,
 
-        // Stages after the tree, as the factory's `treeStages` (e.g. the teardown fade).
-        treeStages: List<BlockRenderer> = emptyList(),
+        // Whether the teardown fade runs after the tree, as the factory's `needsTeardown`.
+        teardown: Boolean = false,
     ): Voice {
         // Voice-RELATIVE duration — Int, mirrors VoiceFactory. (Absolute frames are Double.)
         val voiceDurationFrames = (gateEndFrame - startFrame).toInt()
@@ -115,16 +115,6 @@ object VoiceTestHelpers {
             )
         }
 
-        // The voice's stages: Ignite, then the tree stages (the Send stage is appended by the voice)
-        val pipeline = listOf(IgniteRenderer(signal = instrument, signalCtx = signalCtx, freqHz = freqHz)) + treeStages
-
-        val blockCtx = BlockContext(
-            audioBuffer = AudioBuffer(blockFrames), // placeholder, updated per block
-            scratchBuffers = ScratchBuffers(blockFrames),
-            sampleRate = sampleRate,
-            limits = VoiceLimits(startFrame = startFrame, gateEndFrame = gateEndFrame, endFrame = endFrame),
-        )
-
         return Voice(
             cylinderId = cylinderId,
             gain = gain,
@@ -132,8 +122,12 @@ object VoiceTestHelpers {
             katalystParams = katalystParams,
             cut = cut,
             cull = cull,
-            pipeline = pipeline,
-            blockCtx = blockCtx,
+            signal = instrument,
+            signalCtx = signalCtx,
+            freqHz = freqHz,
+            teardown = teardown,
+            limits = VoiceLimits(startFrame = startFrame, gateEndFrame = gateEndFrame, endFrame = endFrame),
+            sampleRate = sampleRate,
         )
     }
 

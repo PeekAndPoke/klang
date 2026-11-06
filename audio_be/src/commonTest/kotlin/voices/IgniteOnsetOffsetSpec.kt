@@ -21,7 +21,7 @@ import io.peekandpoke.klang.audio_bridge.VoiceData
 /**
  * A note must sound the same wherever it lands inside a render block.
  *
- * `IgniteRenderer` sets `IgniteContext.voiceElapsedFrames`, which every ignitor-side envelope reads
+ * `Voice.ignite` sets `IgniteContext.voiceElapsedFrames`, which every ignitor-side envelope reads
  * as the elapsed count AT buffer index `ctx.offset` (`AdsrIgnitor` seeds `absPos` from it and loops
  * from `ctx.offset`; `IgnitorFilters` adds `sampleOffsetWithinBlock`; `PitchModFactories` uses
  * `i - ctx.offset`). It used to be computed at index 0 instead, i.e. short by `offset`.
@@ -54,7 +54,6 @@ class IgniteOnsetOffsetSpec : StringSpec({
         val voiceBuffer = DoubleArray(blockFrames)
         val factory = VoiceFactory(
             sampleRate = sampleRate, blockFrames = blockFrames,
-            voiceBuffer = voiceBuffer,
             scratchBuffers = ScratchBuffers(blockFrames),
         )
         val startTime = startFrameWanted.toDouble() / sampleRate

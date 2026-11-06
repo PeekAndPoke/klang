@@ -12,7 +12,6 @@ import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
-import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.common.infra.klangMapOf
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
@@ -211,7 +210,6 @@ class KlangBenchmark(
         val renderer = KlangAudioRenderer.create(
             sampleRate = sampleRate,
             blockFrames = blockFrames,
-            commLink = KlangCommLink().backend,
         )
         val scheduler = renderer.voices
         renderer.setBackendStartTime(0.0)

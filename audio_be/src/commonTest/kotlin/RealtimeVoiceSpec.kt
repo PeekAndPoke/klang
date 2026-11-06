@@ -88,7 +88,7 @@ class RealtimeVoiceSpec : StringSpec({
     }
 
     // NB on "immediate": the house master limiter delays ALL output by its 5 ms lookahead
-    // (220 frames, about 1.7 blocks at 44.1k/128; see `MasterStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS`).
+    // (220 frames, about 1.7 blocks at 44.1k/128; see `HouseStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS`).
     // The voice starts in the very FIRST rendered block after the command (no heap, no epoch anchoring); through the
     // master its output emerges 220 frames later. That pipe delay is a CONSTANT, so onset rows
     // pin exact block indices where it matters.
@@ -543,7 +543,7 @@ class RealtimeVoiceSpec : StringSpec({
 
     "the FM node follows a gate moved between blocks (ctx read, not a baked copy)" {
         // Sprudel's `fm` is `classic()`'s FM stage since pitch pipeline step 4 (the strip's `FmRenderer`, which this
-        // row guarded, retired). The node reads the voice-relative gate off its context per block; `IgniteRenderer`
+        // row guarded, retired). The node reads the voice-relative gate off its context per block; `Voice.ignite`
         // derives that per block from the voice's limits (the "amendment A1" row below guards the derivation).
         // The modulator is a constant 1.0, so the ratio is `1 + depth * env / freq`.
         val fm = fmModIgnitor(
@@ -574,7 +574,7 @@ class RealtimeVoiceSpec : StringSpec({
     }
 
     "a bare tree with its own envelope: note-off ramps that envelope down, not sustain-then-cliff (amendment A1)" {
-        // MUTATION CHECK: drop the per-block gate derivation in IgniteRenderer (the ignitors keep the
+        // MUTATION CHECK: drop the per-block gate derivation in Voice.ignite (the ignitors keep the
         // held gate) and the mid-tail assertion goes red (the ignitor sustains until the teardown fade).
         val d = newDispatcher()
         d.handle(

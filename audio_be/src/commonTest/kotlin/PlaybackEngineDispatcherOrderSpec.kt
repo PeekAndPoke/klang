@@ -78,14 +78,16 @@ class PlaybackEngineDispatcherOrderSpec : StringSpec({
 
         fun schedule(pid: String, orbit: Int, startSec: Double = 0.0, durSec: Double = 5.0) {
             d.handle(
-                KlangCommLink.Cmd.ScheduleVoice(
+                KlangCommLink.Cmd.ScheduleVoices(
                     playbackId = pid,
-                    voice = ScheduledVoice(
-                        playbackId = pid,
-                        startTime = startSec,
-                        gateEndTime = startSec + durSec,
-                        data = VoiceData.empty.copy(sound = "sine", freqHz = 220.0, gain = 0.1, cylinder = orbit),
-                        playbackStartTime = 0.0,
+                    voices = listOf(
+                        ScheduledVoice(
+                            playbackId = pid,
+                            startTime = startSec,
+                            gateEndTime = startSec + durSec,
+                            data = VoiceData.empty.copy(sound = "sine", freqHz = 220.0, gain = 0.1, cylinder = orbit),
+                            playbackStartTime = 0.0,
+                        ),
                     ),
                 )
             )
@@ -181,20 +183,22 @@ class PlaybackEngineDispatcherOrderSpec : StringSpec({
 
         // An endless delay on orbit 3 keeps the stopped playback ringing until the hold ends and the release starts.
         rig.d.handle(
-            KlangCommLink.Cmd.ScheduleVoice(
+            KlangCommLink.Cmd.ScheduleVoices(
                 playbackId = "song",
-                voice = ScheduledVoice(
-                    playbackId = "song",
-                    startTime = 0.0,
-                    gateEndTime = 0.05,
-                    data = VoiceData.empty.copy(
-                        sound = "sine",
-                        freqHz = 440.0,
-                        gain = 0.5,
-                        cylinder = 3,
-                        katalystParams = klangMapOf("delay.wet" to 0.5, "delay.time" to 0.1, "delay.feedback" to 1.0),
+                voices = listOf(
+                    ScheduledVoice(
+                        playbackId = "song",
+                        startTime = 0.0,
+                        gateEndTime = 0.05,
+                        data = VoiceData.empty.copy(
+                            sound = "sine",
+                            freqHz = 440.0,
+                            gain = 0.5,
+                            cylinder = 3,
+                            katalystParams = klangMapOf("delay.wet" to 0.5, "delay.time" to 0.1, "delay.feedback" to 1.0),
+                        ),
+                        playbackStartTime = 0.0,
                     ),
-                    playbackStartTime = 0.0,
                 ),
             )
         )

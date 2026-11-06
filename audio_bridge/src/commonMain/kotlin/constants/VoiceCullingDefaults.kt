@@ -9,7 +9,7 @@ package io.peekandpoke.klang.audio_bridge.constants
 // Silence: the engine's one silence floor, and silence culling, where a voice
 // whose output has stayed inaudible through its release ends itself early
 // instead of rendering its whole scheduled tail. The culling decision is made in
-// `audio_be/voices/Voice.render` from the output peak `SendRenderer` measures;
+// `audio_be/voices/Voice.render` from the output peak `mixIntoCylinder` measures;
 // only the tunable values live here, so the authoring side (`cull(...)`) and the
 // engine cannot disagree about them.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -32,7 +32,7 @@ const val VOICE_CULL_SECONDS: Double = 0.05
  *
  * The comparison is not the same everywhere: every site counts a magnitude AT OR BELOW the floor as
  * silent (above it is "still sounding"), except the voice cull, which counts a peak strictly BELOW
- * it as silent (`voiceOutputPeak < VOICE_CULL_FLOOR` in `Voice.render`).
+ * it as silent (`peak < VOICE_CULL_FLOOR` in `Voice.renderStages`, the peak `mixIntoCylinder` returns).
  *
  * The master's keep-alive scan of a stopped engine (`MasterBus.isAudible`) uses it too, since 2026-11-05 (D9 of
  * `docs/audio-audit/2026-10-07-engine-tidy-audit.md`, decided by the maintainer: "the same as everywhere else";

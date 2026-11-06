@@ -117,7 +117,7 @@ const val ENV_DECLICK_SECONDS: Double = 0.001
  * (`BuiltIgnitor.endsInEnvelope`, the one home of the rule), in seconds. The gate ramps linearly to zero over this window, ending
  * exactly on the last frame the voice renders (`floor(endFrame) - 1`).
  *
- * Scope: it runs last on the voice, after the whole tree (`TeardownFadeRenderer`), so it guarantees
+ * Scope: it runs last on the voice, after the whole tree (`applyTeardownFade`), so it guarantees
  * silence at the voice's output.
  *
  * **Why an envelope-less voice needs this and an ADSR one does not.** An envelope at the root of the tree
@@ -136,7 +136,7 @@ const val ENV_DECLICK_SECONDS: Double = 0.001
  * Tunable by ear, like [ENV_DECLICK_SECONDS]. Long enough to turn the step into a ramp at low
  * notes, short enough to be inaudible against a release measured in tens of ms.
  *
- * Consumer: `TeardownFadeRenderer`.
+ * Consumer: `applyTeardownFade`.
  */
 const val TEARDOWN_FADE_SECONDS: Double = 0.004
 

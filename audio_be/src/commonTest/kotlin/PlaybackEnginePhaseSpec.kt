@@ -80,20 +80,22 @@ class PlaybackEnginePhaseSpec : StringSpec({
             params: Map<String, Double>? = null,
         ) {
             d.handle(
-                KlangCommLink.Cmd.ScheduleVoice(
+                KlangCommLink.Cmd.ScheduleVoices(
                     playbackId = pid,
-                    voice = ScheduledVoice(
-                        playbackId = pid,
-                        startTime = startSec,
-                        gateEndTime = startSec + gateSec,
-                        data = VoiceData.empty.copy(
-                            sound = "sine",
-                            freqHz = 440.0,
-                            gain = 0.5,
-                            cylinder = orbit,
-                            katalystParams = params?.toKlangMap(),
+                    voices = listOf(
+                        ScheduledVoice(
+                            playbackId = pid,
+                            startTime = startSec,
+                            gateEndTime = startSec + gateSec,
+                            data = VoiceData.empty.copy(
+                                sound = "sine",
+                                freqHz = 440.0,
+                                gain = 0.5,
+                                cylinder = orbit,
+                                katalystParams = params?.toKlangMap(),
+                            ),
+                            playbackStartTime = 0.0,
                         ),
-                        playbackStartTime = 0.0,
                     ),
                 )
             )

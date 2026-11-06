@@ -95,7 +95,7 @@ class EngineDisposalReturnSpec : StringSpec({
 
     "a drained playback returns its ring and its reverb network to the shelf" {
         val f = fixture()
-        f.dispatcher.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = "song", voice = wetVoice("song")))
+        f.dispatcher.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = listOf(wetVoice("song"))))
 
         f.render(4) shouldBeGreaterThan 0.0 // positive control: the voice sounded
         val engine = f.dispatcher.engine("song").shouldNotBeNull()
@@ -123,14 +123,14 @@ class EngineDisposalReturnSpec : StringSpec({
 
     "the NEXT playback's first delay and reverb are shelf hits — no allocation in render" {
         val f = fixture()
-        f.dispatcher.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = "first", voice = wetVoice("first")))
+        f.dispatcher.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "first", voices = listOf(wetVoice("first"))))
         f.render(4)
         f.dispatcher.handle(KlangCommLink.Cmd.Cleanup(playbackId = "first"))
         f.render(2000)
         f.warehouse.sized.allocations shouldBe 1
         f.warehouse.reverbs.allocations shouldBe 1
 
-        f.dispatcher.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = "second", voice = wetVoice("second")))
+        f.dispatcher.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "second", voices = listOf(wetVoice("second"))))
         f.render(4) shouldBeGreaterThan 0.0
 
         f.warehouse.sized.allocations shouldBe 1 // still
@@ -141,7 +141,7 @@ class EngineDisposalReturnSpec : StringSpec({
 
     "hard cleanup (warmup teardown) returns too" {
         val f = fixture()
-        f.dispatcher.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = "warm", voice = wetVoice("warm")))
+        f.dispatcher.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "warm", voices = listOf(wetVoice("warm"))))
         f.render(4)
 
         f.dispatcher.cleanupHard("warm")
@@ -194,7 +194,7 @@ class EngineDisposalReturnSpec : StringSpec({
 
     "the shelf serves a returned ring zeroed — a new playback cannot hear the old one's echo" {
         val f = fixture()
-        f.dispatcher.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = "loud", voice = wetVoice("loud")))
+        f.dispatcher.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "loud", voices = listOf(wetVoice("loud"))))
         f.render(20) // 58 ms of a 440 Hz sine into a 300 ms delay: the ring holds real audio
         f.dispatcher.cleanupHard("loud")
 

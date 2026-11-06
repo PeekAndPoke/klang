@@ -211,16 +211,59 @@ class Cylinder(
 
     private var silentBlocksBeforeTailCheck: Int = silentBlocksBeforeTailCheck
 
-    var isActive = false
-        private set
+    /** Whether the orbit runs (its mix is cleared, its chain processes): every state of [activity] but [Activity.Inactive]. */
+    val isActive: Boolean get() = activity !== Activity.Inactive
 
     /**
-     * Silent cleanup visits since the mix last sounded. Wrap-safe by construction (audit leftovers §3): it counts
-     * visits (blocks), and [tryDeactivate] leaves it at most [silentBlocksBeforeTailCheck] on every path once it
-     * reaches that grace (reset on a tail, held at the grace while a voice plays, reset on deactivation), so an
-     * orbit that stays silent forever, a muted one with notes included, never counts past the grace.
+     * The orbit's own activity as a state machine (KLANG-00290 (engine follow ups) item 27, C4.1, maintainer
+     * 2026-11-06), the four situations that decided it as a flag and a counter before. A sealed type with an
+     * exhaustive `when` ([tryDeactivate]): the states without data are `data object`s, [Activity.SilentGrace]
+     * (the count) a class with one instance, [silentGrace], created with the cylinder, so no transition allocates
+     * (`audio/ref/effect-state-machines.md` §1).
+     *
+     * | state \ event | [checkIn] | visit, mix sounds | visit, silent, inside the grace | visit, silent, grace over: tail or swap | ...: a voice checked in | ...: neither | [startNewLife] |
+     * |---|---|---|---|---|---|---|---|
+     * | **Inactive** | **Sounding** | (no visit) | | | | | Inactive |
+     * | **Sounding** | Sounding | Sounding | **SilentGrace** | Sounding | **Held** | **Inactive** | **Inactive** |
+     * | **SilentGrace** | SilentGrace | **Sounding** | SilentGrace (counts on) | **Sounding** | **Held** | **Inactive** | **Inactive** |
+     * | **Held** | Held | **Sounding** | (never: the grace is over) | **Sounding** | Held | **Inactive** | **Inactive** |
+     *
+     * A visit is [tryDeactivate], once per block. "Grace over" means the silent visits, this one included, reach
+     * [silentBlocksBeforeTailCheck]; a grace of 1 or less is over at the first silent visit. A tail or a running
+     * swap restarts the grace (Sounding); a voice still playing holds it at its end (Held), so the orbit goes at the
+     * first silent visit after the voice's last check-in grace. Wrap-safe by construction (audit leftovers §3): the
+     * count lives only in SilentGrace and never passes the grace, so an orbit that stays silent forever, a muted
+     * one with notes included, never counts past it.
      */
-    private var silentBlockCount: Int = 0
+    private sealed class Activity {
+        /** Not in use: no mix to clear, no chain to run, until a voice checks in. */
+        data object Inactive : Activity()
+
+        /** In use, and the mix sounded at the last visit (or a tail or a swap restarted the grace). */
+        data object Sounding : Activity()
+
+        /** In use and silent, inside the grace: the stages keep processing, so their tails decay on their own. */
+        class SilentGrace : Activity() {
+            /** Silent visits in a row, 1 up to the grace (exclusive). */
+            var count: Int = 0
+                private set
+
+            /** Entered on a silent visit: [visits] silent visits so far. Returns this state, for `activity = ...`. */
+            fun enter(visits: Int): SilentGrace {
+                count = visits
+
+                return this
+            }
+        }
+
+        /** In use and silent past the grace, nothing rings, but a voice still checks in: every visit asks again. */
+        data object Held : Activity()
+    }
+
+    private var activity: Activity = Activity.Inactive
+
+    /** The one [Activity.SilentGrace] instance (see [Activity]). */
+    private val silentGrace = Activity.SilentGrace()
 
     // ONE owner per orbit, chosen once per block: the orbit's bus settings are owned by the newest `Sounding`
     // voice; a voice gives the orbit up when its gate closes or it is cut ([offer], [commitOwner]). Other voices
@@ -358,7 +401,10 @@ class Cylinder(
      */
     // blockStart is an ABSOLUTE backend frame, Double, see RenderClock.cursorFrame.
     fun checkIn(blockStart: Double) {
-        isActive = true
+        if (activity === Activity.Inactive) {
+            activity = Activity.Sounding
+        }
+
         checkedIn = true
         lastCheckInFrame = blockStart
     }
@@ -557,8 +603,7 @@ class Cylinder(
         ownerParamsAge = OWNER_STATE_BLOCKS
         mixBuffer.clear()
         katalystContext.clearBuses()
-        isActive = false
-        silentBlockCount = 0
+        activity = Activity.Inactive
     }
 
     /**
@@ -592,19 +637,26 @@ class Cylinder(
      * removes is the repeated reset of the chain and the re-dealing of the owner in between.
      */
     fun tryDeactivate(blockStart: Double) {
-        if (!isActive) return
+        // The silent visits so far, this one included, from the state (see [Activity]'s table)
+        val silentVisits = when (val a = activity) {
+            Activity.Inactive -> return
+            Activity.Sounding -> 1
+            is Activity.SilentGrace -> a.count + 1
+            Activity.Held -> silentBlocksBeforeTailCheck + 1
+        }
 
         if (!isMixBufferSilent()) {
-            silentBlockCount = 0
+            activity = Activity.Sounding
             return
         }
 
-        silentBlockCount++
-
-        if (silentBlockCount < silentBlocksBeforeTailCheck) return
+        if (silentVisits < silentBlocksBeforeTailCheck) {
+            activity = silentGrace.enter(visits = silentVisits)
+            return
+        }
 
         // State-aware like the delay's: a draining reverb reports its tail BY CONSTRUCTION, so
-        // the orbit stays alive until the countdown's terminal reset — the old param-gated scan
+        // the orbit stays alive until the countdown's terminal reset: the old param-gated scan
         // hid a still-charged network the moment a no-reverb owner zeroed size.
         //
         // The outgoing chain counts too, and the swap's state is the test (step 3b): while a FADE
@@ -612,19 +664,18 @@ class Cylinder(
         // holds, and while the outgoing chain DRAINS it has a tail by construction: the swap
         // returns to Idle on the first block it does not, or when the release at the drain's cap ends.
         if (chain.hasTail() || !swap.settled) {
-            silentBlockCount = 0
+            activity = Activity.Sounding
             return
         }
 
-        // A voice still plays here (see the KDoc). The count is held at the grace rather than
+        // A voice still plays here (see the KDoc). The grace is held at its end rather than
         // restarted, so the orbit goes at the first visit after the last check-in's grace.
         if (voiceCheckedIn(blockStart)) {
-            silentBlockCount = silentBlocksBeforeTailCheck
+            activity = Activity.Held
             return
         }
 
-        isActive = false
-        silentBlockCount = 0
+        activity = Activity.Inactive
         // The mix buffer is not cleared while the orbit is inactive (see [clear]), so the last
         // block's sub-floor output would otherwise still be in it when a voice reactivates the
         // orbit: summed into that block's mix and, since step 5b-2, fed into its delay and room.

@@ -126,8 +126,8 @@ class PlaybackEngineDispatcherDiagnosticsTest : StringSpec({
         val (d, commLink) = createDispatcher { t }
         val out = StereoBuffer(blockFrames)
 
-        d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = "a", voice = voice("a")))
-        d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = "b", voice = voice("b")))
+        d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "a", voices = listOf(voice("a"))))
+        d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "b", voices = listOf(voice("b"))))
         d.render(out)
 
         commLink.readAllDiagnostics().last().activeVoiceCount shouldBeAtLeast 2
@@ -138,8 +138,8 @@ class PlaybackEngineDispatcherDiagnosticsTest : StringSpec({
         val (d, commLink) = createDispatcher { t }
         val out = StereoBuffer(blockFrames)
 
-        d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = "song", voice = voice("song", cylinder = 0)))
-        d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = "song", voice = voice("song", cylinder = 2, freqHz = 880.0)))
+        d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = listOf(voice("song", cylinder = 0))))
+        d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = listOf(voice("song", cylinder = 2, freqHz = 880.0))))
         d.render(out)
 
         val cylinders = commLink.readAllDiagnostics().last().cylinders
@@ -161,8 +161,8 @@ class PlaybackEngineDispatcherDiagnosticsTest : StringSpec({
         val (d, _) = createDispatcher { t }
         val out = StereoBuffer(blockFrames)
 
-        d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = "song", voice = voice("song", cylinder = 0)))
-        d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = "song", voice = voice("song", cylinder = 3, freqHz = 880.0)))
+        d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = listOf(voice("song", cylinder = 0))))
+        d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = listOf(voice("song", cylinder = 3, freqHz = 880.0))))
         d.renderBlock(0.0, out)
 
         val ids = d.engine("song").shouldNotBeNull().cylinders.cylindersIds

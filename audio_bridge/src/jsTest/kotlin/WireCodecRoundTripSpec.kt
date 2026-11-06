@@ -392,8 +392,9 @@ class WireCodecRoundTripSpec : StringSpec({
         // KLANG-00406 step 5 from 827954479 (`Cmd.SetGain` joined it); KLANG-00214 step 3a from 1660499267 (the
         // Katalyst's `OversampleBy` and `OversampleAtLeast` joined it); KLANG-00214 step 4 from -640226917 (the
         // `oversample` field left `IgnitorDsl.Shape`, `IgnitorDsl.Distort` and `KatalystStageDsl.Distort`);
-        // KLANG-00245 step 7f from 210338569 (the Ignitor's `Progress` and `Elapsed` joined it).
-        WIRE_SCHEMA_HASH shouldBe -583834474
+        // KLANG-00245 step 7f from 210338569 (the Ignitor's `Progress` and `Elapsed` joined it); KLANG-00290 item 24
+        // from -583834474 (`Cmd.ScheduleVoice` and `Cmd.ClearScheduled` left it).
+        WIRE_SCHEMA_HASH shouldBe 1837919315
     }
 
     "ScheduledVoice round-trips a minimal (mostly-null) VoiceData" {
@@ -449,7 +450,7 @@ class WireCodecRoundTripSpec : StringSpec({
         )
         val cases = listOf<KlangCommLink.Cmd>(
             KlangCommLink.Cmd.Cleanup("pb"),
-            KlangCommLink.Cmd.ScheduleVoice("pb", voice),
+            KlangCommLink.Cmd.ScheduleVoices("pb", listOf(voice)),
             KlangCommLink.Cmd.ScheduleVoices("pb", listOf(voice, voice)),
             KlangCommLink.Cmd.ReplaceVoices("pb", listOf(voice), afterTimeSec = 2.0),
             // Both gateDurSec variants: fixed length AND the held case (null must survive the trip)

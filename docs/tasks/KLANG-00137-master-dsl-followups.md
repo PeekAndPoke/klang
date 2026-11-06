@@ -207,14 +207,14 @@ the song's gain into it.
 ## 8. The offline render does not count the master chain's latency (found 2026-10-10, review of the bus distort default)
 
 `KlangOfflineRenderer` renders past the musical end by `KlangAudioRenderer.latencyFrames`, which is
-`MasterStage.latencyFrames`, the house limiter's lookahead only. A per-playback `master(Katalyst(...))` chain that
+`HouseStage.latencyFrames`, the house limiter's lookahead only. A per-playback `master(Katalyst(...))` chain that
 delays (a compressor's lookahead, an oversampled `distort`) is not counted, so at `tailSec = 0` its last frames can
 stay in the chain when the loop stops. Since the bus `distort` oversamples at 2x by default, any
 `master(Katalyst(k => k.distort(...)))` adds 3 uncounted frames (about 0.06 ms at 48 kHz, barely audible). The fix:
 add the master chain's `latencyFrames` to the render's run-out.
 
 > **Investigated 2026-10-19, NOT built: the fix moves two corpus rows, the maintainer's call.** Every claim above holds
-> (`KlangAudioRenderer.latencyFrames` is `MasterStage.latencyFrames`, the house limiter's 240 frames at 48 kHz;
+> (`KlangAudioRenderer.latencyFrames` is `HouseStage.latencyFrames`, the house limiter's 240 frames at 48 kHz;
 > nothing reads `KatalystChain.latencyFrames` of the master outside the swap's alignment; the bus `distort` default
 > is 2x, 3 frames). One nuance: the loop renders whole 128-frame blocks, so the real run-out is the bound rounded up
 > to a block, and a short chain latency (the 3 frames) usually hides in that slack; a lookahead limiter's 240 does not.
@@ -258,7 +258,7 @@ add the master chain's `latencyFrames` to the render's run-out.
 > accept, so they read as information, not red, and a plain `corpus-accept` took them with their edits.
 >
 > **A sibling, split out 2026-11-05 (maintainer) as KLANG-00416 (code highlight early by the master chain latency):**
-> the live front end's latency budget (`JsAudioBackend`, the `MasterStageSpec` comment) leaves the master chain's
+> the live front end's latency budget (`JsAudioBackend`, the `HouseStageSpec` comment) leaves the master chain's
 > latency out as well, so the code highlighting can run early by up to a master chain's lookahead (found by the
 > review, 2026-10-23).
 

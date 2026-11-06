@@ -47,14 +47,14 @@ displayed figure understates reality there.
 
 ### 2. The 5 ms house limiter lookahead, on the live path only
 
-The largest fixed term we own. `MasterStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS`. Maintainer, after
+The largest fixed term we own. `HouseStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS`. Maintainer, after
 playing: dropping it to ~1 ms on the live path "should feel pretty real".
 
 **It must not go global.** Latency is felt by the performer, not the listener, so it is a
 *playability* property, not an audio-quality one. Lowering the constant would trade every
 listener's transients (the limiter contributes ~0 dB during a transient without lookahead, and the
 hard clip does the work, which is the documented "knock") for one player's feel. So this needs a
-**per-path master**, and `MasterStage` is per-dispatcher, which means it rides on item 3.
+**per-path master**, and `HouseStage` is per-dispatcher, which means it rides on item 3.
 
 Two traps when it happens:
 - `MasterDefaultsSyncSpec` asserts `AUTHORED_LIMITER_LOOKAHEAD_SECONDS < HOUSE_…` and
@@ -75,7 +75,7 @@ platform picks N**: JS creates two, JVM stays at one (two `SourceDataLine`s is w
 buffer), so `KlangOfflineRenderer` is untouched.
 
 Hazards, worst first:
-1. **The safety brick stops being a guarantee.** `MasterStage` is per-dispatcher and clips to
+1. **The safety brick stops being a guarantee.** `HouseStage` is per-dispatcher and clips to
    Int16, so two independent limiters sum in the OS mixer. Two full-scale streams make +6 dB.
 2. **Two clocks.** `BackendClockSync` documents "one backend clock, one offset", and both backends
    emit `Diagnostics` under `SYSTEM_PLAYBACK_ID`, so they are indistinguishable at the merge point.

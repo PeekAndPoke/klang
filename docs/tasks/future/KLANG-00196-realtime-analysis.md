@@ -203,7 +203,7 @@ One architecture, every meter a consumer. The pieces, in the order the signal me
 | Tap            | Where in the engine                                                                             | Feeds                                                     |
 |----------------|-------------------------------------------------------------------------------------------------|-----------------------------------------------------------|
 | per orbit      | `Cylinders.processAndMix`, each `cylinder.mixBuffer` after the orbit's bus effects, before the sum | attribution matrix, orbit level ladder, orbit GR later    |
-| pre-master sum | the summed mix as it enters `MasterStage.process`                                               | tonal balance of the mix, correlation, crest              |
+| pre-master sum | the summed mix as it enters `HouseStage.process`                                               | tonal balance of the mix, correlation, crest              |
 | post-master    | after the limiter and clip, what the listener hears                                             | true peak, LUFS, house GR, and the pre/post fingerprint diff |
 
 The pre/post pair is uniquely cheap here and is what the sessions needed a whole render cycle to

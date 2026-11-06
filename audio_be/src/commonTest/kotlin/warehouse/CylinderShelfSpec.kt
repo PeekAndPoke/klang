@@ -101,7 +101,7 @@ class CylinderShelfSpec : StringSpec({
 
     "a disposed engine returns its cylinders, retired; the next engine's first voice takes one — same instance, new id" {
         val f = fixture()
-        f.dispatcher.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = "a", voice = wetVoice("a", cylinder = 5)))
+        f.dispatcher.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "a", voices = listOf(wetVoice("a", cylinder = 5))))
         f.render(4) shouldBeGreaterThan 0.0
         val used = f.dispatcher.engine("a")!!.cylinders.cylinders.single()
         used.id shouldBe 5
@@ -116,7 +116,7 @@ class CylinderShelfSpec : StringSpec({
         f.warehouse.sized.shelfCount shouldBe 1
         f.warehouse.reverbs.idleCount shouldBe 1
 
-        f.dispatcher.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = "b", voice = wetVoice("b", cylinder = 2)))
+        f.dispatcher.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "b", voices = listOf(wetVoice("b", cylinder = 2))))
         f.render(4) shouldBeGreaterThan 0.0
 
         val taken = f.dispatcher.engine("b")!!.cylinders.cylinders.single()

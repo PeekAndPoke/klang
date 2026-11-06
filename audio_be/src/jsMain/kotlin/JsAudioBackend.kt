@@ -161,7 +161,7 @@ class JsAudioBackend(
                     // the clock — `AudioContext.outputLatency` cannot see it. Without adding it here
                     // every visual that aligns to audio (code highlight, block highlight) fires
                     // early by exactly that much.
-                    val masterLat = MasterStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS * 1000.0
+                    val masterLat = HouseStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS * 1000.0
                     decoded.copy(
                         baseLatencyMs = baseLat,
                         outputDeviceLatencyMs = deviceLat,
@@ -362,11 +362,9 @@ class JsAudioBackend(
 
                 // Direct forwarding for control commands
                 is KlangCommLink.Cmd.Cleanup,
-                is KlangCommLink.Cmd.ClearScheduled,
                 is KlangCommLink.Cmd.RegisterIgnitor,
                 is KlangCommLink.Cmd.RegisterKatalyst,
                 is KlangCommLink.Cmd.ReplaceVoices,
-                is KlangCommLink.Cmd.ScheduleVoice,
                 is KlangCommLink.Cmd.ScheduleVoices,
                 is KlangCommLink.Cmd.SetGain,
                 is KlangCommLink.Cmd.StartRealtimeVoice,

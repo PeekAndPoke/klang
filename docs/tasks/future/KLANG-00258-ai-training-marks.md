@@ -66,7 +66,7 @@ Both should be inaudible. Both would be authored stages, most likely on the mast
   anything ships, the echo's delay and level tuned by listening.
 - **Taste is also what you do not do.** Won't-implement is a valid outcome of the prototype below.
 - If it is built: the `/dsl-design` rules apply as for any stage (two doors, parameter parity, `wet`
-  first, a wire type, one word per concept). The house limiter in `MasterStage` stays after every
+  first, a wire type, one word per concept). The house limiter in `HouseStage` stays after every
   authored stage; check that it does not smear the echo.
 
 ## Shape, if it is built

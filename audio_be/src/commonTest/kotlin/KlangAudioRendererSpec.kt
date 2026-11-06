@@ -13,7 +13,6 @@ import io.peekandpoke.klang.audio_be.voices.DoorFields
 import io.peekandpoke.klang.audio_be.voices.withClassicSlots
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
-import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import kotlin.math.abs
 
 class KlangAudioRendererSpec : StringSpec({
@@ -25,7 +24,6 @@ class KlangAudioRendererSpec : StringSpec({
         KlangAudioRenderer.create(
             sampleRate = sampleRate,
             blockFrames = blockFrames,
-            commLink = KlangCommLink().backend,
         )
 
     // ═════════════════════════════════════════════════════════════════════════════

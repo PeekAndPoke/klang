@@ -69,7 +69,7 @@ import kotlin.math.tan
 // **2× edge transient**: rail-to-rail input produces a ~2× peak transient through
 // the raw-pole topology (railed input − railed previous + nearly-railed feedback).
 // The `Shape` node (`Ignitor.distort()` and `Ignitor.shape()`) follows `DistortionCore`
-// with `ShapingFuncs.softCap()` to bound output to ±1; the fused `Distort` node does not. The master-out DcBlocker in `KlangAudioRenderer`
+// with `ShapingFuncs.softCap()` to bound output to ±1; the fused `Distort` node does not. The output DcBlocker in `HouseStage`
 // runs on post-limiter samples (already ±1-bounded), so no softCap needed there.
 //
 // **NaN/Inf guard**: `Double.coerceIn` returns NaN if input is NaN, which would give the
@@ -221,7 +221,7 @@ internal const val DEFAULT_DC_BLOCK_COEFF: Double = 0.995
 
 /**
  * The house pole for [LowPassHighPassFilters.DcBlocker] on a whole MIX: `≈ 7 Hz @ 44.1k, 7.6 Hz @ 48k`, about
- * 0.15 dB at 40 Hz where [DEFAULT_DC_BLOCK_COEFF] takes about 2.5 dB. `MasterStage`'s DC blockers and the Katalyst
+ * 0.15 dB at 40 Hz where [DEFAULT_DC_BLOCK_COEFF] takes about 2.5 dB. `HouseStage`'s DC blockers and the Katalyst
  * `distort` stage's cores (`KatalystDistortEffect`), which run on a bus and so on the low end of every voice on it.
  */
 internal const val HOUSE_DC_BLOCK_COEFF: Double = 0.999
@@ -381,14 +381,14 @@ object LowPassHighPassFilters {
      * builder for the specs and `audio_benchmark`; the orbit's stage (`KatalystResonatorEffect`) installs the
      * engine's shared tables into banks of its own instead. A null [floor] is [VOWEL_FLOOR].
      */
-    fun createFormant(
+    fun createVowel(
         bands: List<VowelBands.Band>,
         mix: Double,
         sampleRate: Double,
         floor: Double? = null,
     ): AudioFilter = installed(table = ResonatorTable.ofVowel(bands), mix = mix, sampleRate = sampleRate, floor = floor ?: VOWEL_FLOOR)
 
-    /** The whole body stage on one channel, in one call; the twin of [createFormant]. A null [floor] is [BODY_FLOOR]. */
+    /** The whole body stage on one channel, in one call; the twin of [createVowel]. A null [floor] is [BODY_FLOOR]. */
     fun createBody(
         bands: List<BodyMaterials.Mode>,
         mix: Double,

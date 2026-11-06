@@ -642,7 +642,7 @@ class EqIgnitorSpec : StringSpec({
         val sentinel = 123.456
         val bufA = AudioBuffer(blockFrames).apply { fill(sentinel) }
         val bufB = AudioBuffer(blockFrames).apply { fill(sentinel) }
-        // Production mid-block onset: IgniteRenderer puts the clock at 0 on buffer index
+        // Production mid-block onset: Voice.ignite puts the clock at 0 on buffer index
         // `offset`, the voice's first frame (never negative).
         val ca = ctx().apply { this.updateOffsetAndLength(offset = offset, length = length); voiceElapsedFrames = 0 }
         val cb = ctx().apply { this.updateOffsetAndLength(offset = offset, length = length); voiceElapsedFrames = 0 }

@@ -49,7 +49,7 @@ internal fun perVoiceCutoffOffsetMul(analog: Double, cutoffOffsetPerAnalog: Doub
  * asked at, however many stages ask. That is the property the cascade needs. It is the per-block
  * property as well only because the renderer advances the counter once per block and never
  * rewinds it (`IgniteContext.voiceElapsedFrames`, monotonic, updated once per block by
- * `IgniteRenderer`), so two consecutive calls at the same value are two stages of one block and
+ * `Voice.ignite`), so two consecutive calls at the same value are two stages of one block and
  * never two blocks. A block of zero length does not advance the counter, so it does not step the
  * lane; it also writes no samples, so there is nothing for the lane to have moved for.
  *

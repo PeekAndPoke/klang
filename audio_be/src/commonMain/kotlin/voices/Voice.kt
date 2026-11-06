@@ -7,6 +7,8 @@ package io.peekandpoke.klang.audio_be.voices
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
+import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
+import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.ignitor.REGION_MAX_STAGES
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.utils.fadeToZero
@@ -19,9 +21,12 @@ import kotlin.math.ceil
 /**
  * A voice in the audio engine.
  *
- * Runs a composable [BlockRenderer] pipeline: **Ignite → (teardown fade) → Send**. The Ignitor tree the ignite
- * stage renders IS the instrument, pitch stages, envelope and filters included; the voice strip that used to run
- * after it retired in phase 3 step 9, the pitch pipeline in front of it in pitch pipeline step 5.
+ * Runs its fixed stages per block, as plain code in [render]: **the tree, (the teardown fade), (the cut's fade), the
+ * channel**. The Ignitor tree ([signal]) IS the instrument, pitch stages, envelope and filters included; the voice
+ * strip that used to run after it retired in phase 3 step 9, the pitch pipeline in front of it in pitch pipeline step
+ * 5. Since 2026-11-06 the stages are no list of `BlockRenderer`s and the voice keeps no block context of its own: the
+ * window and the buffer are locals of [render], the shared per-block context is [RenderContext] (KLANG-00290 (engine
+ * follow ups) item 21, audit B3.1 and B3.2).
  *
  * **Lifecycle.** The voice is a state machine ([state], [State]). [render] advances the state at the start of
  * every block (the time-driven transitions, [advance]) and then dispatches on it; the cull may end it at the
@@ -57,7 +62,7 @@ class Voice(
     val id: Int = nextId(),
 
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    // Routing (the time limits arrive with the block context, see [limits])
+    // Routing
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
     val cylinderId: Int,
 
@@ -67,7 +72,7 @@ class Voice(
     // The orbit's bus reads its knobs from [katalystParams] alone (Katalyst step 5b-1), and the
     // voice carries no bus settings of its own since step 5b-3. Who reads what, exactly:
     //
-    //   gain, pan     SendRenderer, every block of every voice.
+    //   gain, pan     the channel (`mixIntoCylinder`), every block of every voice.
     val gain: Double,
     val pan: Double,
 
@@ -97,19 +102,39 @@ class Voice(
     cull: Double? = null,
 
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    // Pipeline: Ignite → (teardown fade) (Send is appended in init)
+    // The instrument and its stages
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    pipeline: List<BlockRenderer>,
+    /** The instrument: the Ignitor tree the voice renders each block into the voice buffer. */
+    private val signal: Ignitor,
 
-    // Pre-built BlockContext (created by VoiceFactory, mutated per block). It carries the voice's [limits].
-    private val blockCtx: BlockContext,
-) {
+    /** The tree's own render context, one per voice, its window and gate written per block ([ignite]). */
+    private val signalCtx: IgniteContext,
+
+    /** The note's frequency, handed to the tree. */
+    private val freqHz: Double,
+
     /**
-     * The voice's time limits (onset, gate end, end; absolute frames), the ONE home of them: the
-     * instance the factory put into the block context, which every stage reads per call. This voice is
-     * its only writer ([releaseGate]).
+     * True when the tree does not end in its own amplitude envelope (`BuiltIgnitor.endsInEnvelope`): the teardown
+     * fade ([applyTeardownFade]) runs after it.
      */
-    private val limits: VoiceLimits = blockCtx.limits
+    private val teardown: Boolean,
+
+    /**
+     * The voice's time limits (onset, gate end, end; absolute frames), the ONE home of them: every stage reads them
+     * per block. This voice is their only writer ([releaseGate]).
+     */
+    private val limits: VoiceLimits,
+
+    sampleRate: Int,
+
+    /**
+     * The 2x steps above the base rate the voice hands its output over at (KLANG-00214 (oversampling regions) step
+     * 3b), 0 for a voice at the base rate. Above 0 the voice buffer runs at that rate: the window is the block's
+     * frames times `1 shl rateSteps`, and the stages after the tree read their frame positions between the frames.
+     */
+    private val rateSteps: Int = 0,
+) {
+    private val sampleRateD: Double = sampleRate.toDouble()
 
     /** The onset (absolute frame, Double, see RenderClock.cursorFrame). */
     val startFrame: Double get() = limits.startFrame
@@ -123,13 +148,6 @@ class Voice(
 
     /** Frame where release begins. Moves earlier on a realtime note-off ([releaseGate]). */
     private val gateEndFrame: Double get() = limits.gateEndFrame
-
-    // The stages before the send: Ignite → (teardown fade). A cut's fade runs between them and the send.
-    // An array with an index loop: a `List` loop makes an iterator per voice per block on Kotlin/JS.
-    private val stages: Array<BlockRenderer> = pipeline.toTypedArray()
-
-    // The last stage: the send into the orbit.
-    private val send: BlockRenderer = SendRenderer(voice = this)
 
     /**
      * The lifecycle state, `Pending` at construction. [render] moves it at the start and the end of a block, the
@@ -192,9 +210,9 @@ class Voice(
      * cut lands within one block of the same frame.
      */
     private val cullWindowFrames: Int = when {
-        cull == null || cull != cull -> (VOICE_CULL_SECONDS * blockCtx.sampleRateD).toInt() // NaN-guard: default
+        cull == null || cull != cull -> (VOICE_CULL_SECONDS * sampleRateD).toInt() // NaN-guard: default
         cull < 0.0 -> -1
-        else -> (cull * blockCtx.sampleRateD).toInt()
+        else -> (cull * sampleRateD).toInt()
     }
 
     // Dynamic gain multiplier (set by VoiceScheduler once per block, for solo/mute)
@@ -209,7 +227,7 @@ class Voice(
     val hasGainMultiplier: Boolean get() = gainMultiplierSet
 
     /**
-     * The multiplier this block starts from: the one the previous block ended on. `SendRenderer` ramps linearly
+     * The multiplier this block starts from: the one the previous block ended on. The channel (`mixIntoCylinder`) ramps linearly
      * from here to [gainMultiplier] across the block, so a change is never a step inside a sample (a click); when
      * the two are equal (no solo anywhere: 1.0 to 1.0) it applies the plain constant, bit for bit as before.
      */
@@ -227,8 +245,8 @@ class Voice(
 
     /**
      * The note-off event: releases the gate NOW (realtime note-off). It moves the gate and the end in [limits], the one
-     * home every gate consumer reads (the stages through [BlockContext.limits], the ignitors through
-     * the gate the ignite stage derives from it per block), and the envelopes
+     * home every gate consumer reads (the stages per block, the ignitors through the gate [ignite] derives from it
+     * per block), and the envelopes
      * enter their release from the level the envelope law gives AT the new gate frame
      * (`EnvelopeCore`, stateless), which is the level the voice would have rendered there. The release
      * SPAN is untouched: only WHEN it begins moves.
@@ -268,7 +286,7 @@ class Voice(
         // renders).
         val releaseSpan = (endFrame - gateEndFrame).coerceAtLeast(0.0)
 
-        // The one write: every stage reads [limits] per call, and the ignite stage derives the ignitors'
+        // The one write: every stage reads [limits] per block, and [ignite] derives the ignitors'
         // voice-relative gate from it per block, so no copy can be left behind (amendment A1).
         limits.gateEndFrame = atFrame
         limits.endFrame = atFrame + releaseSpan
@@ -290,7 +308,7 @@ class Voice(
      * is silent so far and ends at once; the scheduler removes it, keeping the list's order).
      *
      * A `Fading` voice plays on until [fadeStartFrame], then ramps linearly to exact zero over [CUT_FADE_SECONDS]
-     * (after the instrument tree, before the send, so the orbit sends fade too). The fade window lives in the
+     * (after the instrument tree, before the channel, so what reaches the orbit fades too). The fade window lives in the
      * `Fading` state ([State.Fading]); the end frame does not move, so a voice whose own end comes first ends there
      * as usual (its teardown, where it has one, stays at its own end and multiplies with the ramp in the overlap;
      * both are continuous).
@@ -313,7 +331,7 @@ class Voice(
             is State.Sounding, is State.Releasing -> {
                 fading.enter(
                     fadeStartFrame = fadeStartFrame,
-                    fadeEndFrame = fadeStartFrame + CUT_FADE_SECONDS * blockCtx.sampleRateD,
+                    fadeEndFrame = fadeStartFrame + CUT_FADE_SECONDS * sampleRateD,
                 )
             }
 
@@ -327,8 +345,8 @@ class Voice(
      * Renders the voice into the context's buffers.
      *
      * Advances the [state] for this block, then dispatches on it: `Pending` renders nothing,
-     * `Sounding` and `Releasing` run the BlockRenderer pipeline (Ignite → (teardown fade) → Send), `Fading`
-     * runs it with the cut's ramp before the send, `Done` returns false. A releasing voice that the cull ends in
+     * `Sounding` and `Releasing` run the stages (the tree, (the teardown fade), the channel), `Fading`
+     * runs them with the cut's ramp before the channel, `Done` returns false. A releasing voice that the cull ends in
      * its block returns false at once.
      *
      * @return true if the voice is still active, false if it has finished (`Done`)
@@ -391,9 +409,10 @@ class Voice(
     }
 
     /**
-     * One block of the pipeline, for a `Sounding`, `Releasing` or `Fading` voice, and the cull measurement
+     * One block of the stages, for a `Sounding`, `Releasing` or `Fading` voice, and the cull measurement
      * that may end a releasing voice (`Done`, [culled]) at the block's end (the "block end" column of the
-     * transition table in the class KDoc). A `Fading` voice gets the cut's ramp between the stages and the send.
+     * transition table in the class KDoc). A `Fading` voice gets the cut's ramp between the tree's stages and the
+     * channel.
      */
     private fun renderStages(ctx: RenderContext, blockEnd: Double, isReleasing: Boolean, isFading: Boolean) {
         val vStart = maxOf(ctx.blockStart, startFrame)
@@ -402,30 +421,47 @@ class Voice(
         val offset = (vStart - ctx.blockStart).toInt()
         val length = (vEnd - vStart).toInt()
 
-        // Update per-block state
-        blockCtx.audioBuffer = ctx.voiceBufferAt(blockCtx.rateSteps)
-        blockCtx.updateOffsetAndLength(offset = offset, length = length)
-        blockCtx.blockStart = ctx.blockStart
-        blockCtx.renderContext = ctx
+        // One past the last frame this block touches. A wrong render window is the block-framing bug class
+        // (KLANG-00156 (block framing invariance)): computed here once, from the two above, and passed on.
+        val windowEnd = offset + length
+        val blockStart = ctx.blockStart
+        val buffer = ctx.voiceBufferAt(rateSteps)
 
         // Silence culling reads the output peak only on a cullable voice, and only while it is
         // needed: until the voice has been heard (the [heard] latch), then in the release. A heard
         // `Sounding` voice pays nothing for the rest of its gate, a `Fading` one nothing at all.
         val measure = !isFading && cullWindowFrames >= 0 && (!heard || isReleasing)
-        blockCtx.measurePeak = measure
-        blockCtx.voiceOutputPeak = 0.0 // never a stale read from the previous block
 
-        // ── Ignite → (teardown fade) → Send ───────────────────────────────────────
+        // ── The tree → (teardown fade) → (the cut's fade) → the channel ─────────────
 
-        for (i in 0 until stages.size) {
-            stages[i].render(blockCtx)
+        ignite(buffer = buffer, offset = offset, length = length, blockStart = blockStart)
+
+        if (teardown) {
+            applyTeardownFade(
+                buffer = buffer,
+                limits = limits,
+                sampleRateD = sampleRateD,
+                blockStart = blockStart,
+                offset = offset,
+                windowEnd = windowEnd,
+                rateSteps = rateSteps,
+            )
         }
 
         if (isFading) {
-            applyCutFade()
+            applyCutFade(buffer = buffer, offset = offset, windowEnd = windowEnd, blockStart = blockStart)
         }
 
-        send.render(blockCtx)
+        // The output peak, 0.0 when not measured
+        val peak = mixIntoCylinder(
+            voice = this,
+            ctx = ctx,
+            audioBuffer = buffer,
+            offsetFrames = offset,
+            lengthFrames = length,
+            rateSteps = rateSteps,
+            measurePeak = measure,
+        )
 
         // ── Silence culling ───────────────────────────────────────────────────────
         // Only in the release: the gate is the held part of the note, and a note may be silent
@@ -436,7 +472,7 @@ class Voice(
         // tremolo: excluded by the factory; a sparse source inside an ignitor: `noCull()`) is the
         // author's call. A voice that has not sounded yet is not silent, it is late (see [heard]).
         if (measure) {
-            val silent = blockCtx.voiceOutputPeak < VOICE_CULL_FLOOR
+            val silent = peak < VOICE_CULL_FLOOR
 
             if (!silent) {
                 heard = true
@@ -452,25 +488,53 @@ class Voice(
     }
 
     /**
+     * The tree's block: it renders into [buffer] on the voice's window. It hands the tree no pitch modulation (the root
+     * `IgniteContext.phaseMod` stays null, every pitch modulation is a node of the tree, pitch pipeline step 5), and no
+     * clip: output bounding is the per-stage soft cap inside `Ignitor.distort()` and `Ignitor.shape()`, so the stages
+     * after the tree get its output as produced. Was `IgniteRenderer` until 2026-11-06 (KLANG-00290 item 21).
+     */
+    private fun ignite(buffer: AudioBuffer, offset: Int, length: Int, blockStart: Double) {
+        // The voice's limits, read per block (absolute frames, Double, see RenderClock.cursorFrame).
+        val start = limits.startFrame
+
+        signalCtx.updateOffsetAndLength(offset = offset, length = length)
+        // The voice-relative gate the ignitors read, derived here and only here from the one home, so a
+        // realtime note-off (it moves `VoiceLimits.gateEndFrame`) reaches every ignitor envelope at the
+        // next block ("amendment A1").
+        signalCtx.gateEndFrame = (limits.gateEndFrame - start).toInt()
+        // + offset: voiceElapsedFrames is the elapsed count AT buffer index offset, which is
+        // where every consumer starts counting (AdsrIgnitor seeds absPos from it and loops from
+        // ctx.offset; IgnitorFilters adds sampleOffsetWithinBlock; PitchModFactories uses i - offset).
+        // Without it, a voice whose first block starts mid-block gets a NEGATIVE clock: the exp
+        // shape goes negative, clamps to 0, and the note's first `offset` samples render silent and
+        // then step. Measured at 44.1k/128 with a 10 ms attack and startFrame 76: 52 silent frames
+        // then a jump to 0.0222 in one sample. offset is non-zero ONLY on a voice's first block, so
+        // this term changes nothing anywhere else.
+        signalCtx.voiceElapsedFrames = (blockStart + offset - start).toInt()
+
+        signal.generate(buffer, freqHz, signalCtx)
+    }
+
+    /**
      * The cut's ramp on this block's window: gain 1 up to the fade start, then linear to exact zero on the LAST
      * frame the voice renders, `ceil(fadeEnd) - 1` ([State.Fading.fadeEndFrame]; the voice is `Done` from the first
      * block that starts at or after the fade end, so that frame always renders), zero after it. The law of
-     * `TeardownFadeRenderer` (both run `fadeToZero`), whose zero is `floor(endFrame) - 1`: the ramp spans the fade length minus one frame
+     * [applyTeardownFade] (both run `fadeToZero`), whose zero is `floor(endFrame) - 1`: the ramp spans the fade length minus one frame
      * (191 steps at 48 kHz). The clamps absorb a 1-ulp overshoot at the entry frame.
      */
-    private fun applyCutFade() {
+    private fun applyCutFade(buffer: AudioBuffer, offset: Int, windowEnd: Int, blockStart: Double) {
         val fadeStart = fading.fadeStartFrame
         val zeroFrame = ceil(fading.fadeEndFrame) - 1.0
 
         // A voice that hands over runs at 2^rateSteps samples per frame: the same line, read between the frames.
-        val steps = blockCtx.rateSteps
+        val steps = rateSteps
 
         fadeToZero(
-            buffer = blockCtx.audioBuffer,
-            startIndex = blockCtx.offset shl steps,
-            endIndex = blockCtx.windowEnd shl steps,
+            buffer = buffer,
+            startIndex = offset shl steps,
+            endIndex = windowEnd shl steps,
             // The buffer index at which the gain reaches zero (frame = blockStart + index).
-            zeroIndex = (zeroFrame - blockCtx.blockStart) * (1 shl steps),
+            zeroIndex = (zeroFrame - blockStart) * (1 shl steps),
             scale = 1.0 / (zeroFrame - fadeStart).coerceAtLeast(1.0) / (1 shl steps),
         )
     }
@@ -528,7 +592,7 @@ class Voice(
         }
 
         /**
-         * Cut by its group (terminal, [cutOff]): the pipeline runs with the cut's ramp before the send, and no cull
+         * Cut by its group (terminal, [cutOff]): the pipeline runs with the cut's ramp before the channel, and no cull
          * measurement. Carries the fade window, which the voice reads only while in this state (`internal`, because
          * an outer class cannot read a nested class's private members; the specs read it too).
          */
@@ -540,7 +604,7 @@ class Voice(
             /**
              * Where the fade ends ([fadeStartFrame] plus the cut fade). The voice is `Done` from the first block that
              * starts at or after it; the ramp's exact zero lies on the last frame before it, `ceil(fadeEndFrame) - 1`,
-             * which always renders. It does NOT move the voice's end frame (`TeardownFadeRenderer` reads that): the
+             * which always renders. It does NOT move the voice's end frame ([applyTeardownFade] reads that): the
              * voice ends here or at its own end, whichever block comes first.
              */
             internal var fadeEndFrame: Double = Double.POSITIVE_INFINITY

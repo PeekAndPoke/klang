@@ -20,11 +20,15 @@ import kotlin.math.pow
  *  - [PlaybackEngine], a STOPPED playback still ringing with a tail that can never end when its
  *    hold ends (decision (j): after a stop, no hard cut, ever; finite tails ring out).
  *
- * The gain is `g(k) = exp(-k / tau)`, k the frames since [restart], one `exp` per sample: a release
- * is rare and bounded ([RT60_SECONDS] x 1.5), and the gain is the law itself, not a recurrence that
- * drifts from it. g(0) is exactly 1, so the release meets the full-weight audio before it without a
- * step, and it moves per sample, so there is no per-block zipper. From the first sample under the
- * floor it is 0, and [addReleased] says so: the owner stops the source at the end of that block.
+ * The gain is `g(k) = exp(-k / tau)`, k the frames since [restart], computed as the recurrence
+ * `g(k + 1) = g(k) * exp(-1 / tau)` from exactly 1: one multiply per sample instead of one `exp`
+ * (KLANG-00290 (engine follow ups) item 25, maintainer 2026-11-06). Over the whole release (4.5 s,
+ * about 216,000 steps at 48 kHz) the product stays within about 1e-11 of the closed form, relative (under
+ * 1e-10 at 96 kHz, `TailReleaseLawSpec`),
+ * far under anything audible at a gain that ends at -90 dB. g(0) is exactly 1, so the release meets
+ * the full-weight audio before it without a step, and it moves per sample, so there is no per-block
+ * zipper. From the first sample under the floor it is 0, and [addReleased] says so: the owner stops
+ * the source at the end of that block.
  *
  * One instance per owner, created with it; its position OUTLIVES the owner's states (the
  * [Crossfade] precedent), and [restart] is the one initialiser of that position. Not thread-safe;
@@ -38,12 +42,15 @@ internal class TailRelease(sampleRate: Int, private val blockFrames: Int) {
     /** [FLOOR_DB] as a gain. */
     private val floorGain: Double = 10.0.pow(FLOOR_DB / 20.0)
 
-    /** Frames since [restart]: the k of `exp(-k / tau)`. */
-    private var releasedFrames: Int = 0
+    /** The step of the recurrence: the gain one frame later is the gain times this. */
+    private val ratio: Double = exp(-1.0 / tauFrames)
+
+    /** The gain of the next sample: exactly 1 at [restart], then times [ratio] per frame, 0 once under the floor. */
+    private var gain: Double = 1.0
 
     /** Starts the release over at gain exactly 1. */
     fun restart() {
-        releasedFrames = 0
+        gain = 1.0
     }
 
     /**
@@ -52,13 +59,11 @@ internal class TailRelease(sampleRate: Int, private val blockFrames: Int) {
      * Called once per takeover, never per block.
      */
     fun nextGain(): Double {
-        val g = exp(-releasedFrames / tauFrames)
-
-        if (g < floorGain) {
+        if (gain < floorGain) {
             return 0.0
         }
 
-        return g
+        return gain
     }
 
     /**
@@ -71,19 +76,22 @@ internal class TailRelease(sampleRate: Int, private val blockFrames: Int) {
         val targetRight = target.right
         val sourceLeft = source.left
         val sourceRight = source.right
-        val tau = tauFrames
+        val step = ratio
         val floor = floorGain
         val frames = blockFrames
-        var k = releasedFrames
+        var next = gain
         var silent = false
 
         for (i in 0 until frames) {
-            var g = exp(-k / tau)
+            var g = next
 
             if (g < floor) {
+                // 0 from here on, and it stays 0: no subnormal multiplies after the floor
                 g = 0.0
                 silent = true
             }
+
+            next = g * step
 
             // Sterilised tap: at g = 0 an infinite sample would make `Inf * 0.0` NaN.
             val left = sourceLeft[i]
@@ -91,11 +99,9 @@ internal class TailRelease(sampleRate: Int, private val blockFrames: Int) {
 
             targetLeft[i] = targetLeft[i] + left.finiteOrZero() * g
             targetRight[i] = targetRight[i] + right.finiteOrZero() * g
-
-            k++
         }
 
-        releasedFrames = k
+        gain = next
 
         return silent
     }

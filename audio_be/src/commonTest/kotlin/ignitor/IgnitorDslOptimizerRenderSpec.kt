@@ -73,7 +73,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
     }
 
     /**
-     * Production mid-block onset: IgniteRenderer puts the voice clock at 0 on buffer index
+     * Production mid-block onset: Voice.ignite puts the voice clock at 0 on buffer index
      * [offset], the voice's first frame (never negative).
      */
     fun onsetCtx(random: Random, offset: Int, length: Int): IgniteContext =

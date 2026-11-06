@@ -59,7 +59,7 @@ import kotlin.random.Random
  *
  * Every case renders at 48 kHz in 128-frame blocks at middle C (261.63 Hz, not an integer, so a frequency read that
  * boxes shows). A "voice" case is one voice through [VoiceFactory], offered to its cylinder and committed each
- * block. An "engine" case runs [PlaybackEngineDispatcher], so the master stage (DC blockers, the house limiter, the
+ * block. An "engine" case runs [PlaybackEngineDispatcher], so the house stage (DC blockers, the house limiter, the
  * clip) runs too. An engine case with a [Case.chain] runs an authored Katalyst on its orbit, registered and referenced
  * as a song's is (KLANG-00301 (katalyst stage measurements)).
  *
@@ -639,7 +639,6 @@ object AllocationCases {
         private val factory = VoiceFactory(
             sampleRate = SAMPLE_RATE,
             blockFrames = BLOCK_FRAMES,
-            voiceBuffer = DoubleArray(BLOCK_FRAMES),
             scratchBuffers = ScratchBuffers(BLOCK_FRAMES),
         )
 
@@ -701,7 +700,6 @@ object AllocationCases {
         private val factory = VoiceFactory(
             sampleRate = SAMPLE_RATE,
             blockFrames = BLOCK_FRAMES,
-            voiceBuffer = DoubleArray(BLOCK_FRAMES),
             scratchBuffers = ScratchBuffers(BLOCK_FRAMES),
         )
 
@@ -798,7 +796,7 @@ object AllocationCases {
         return peak
     }
 
-    /** The engine: [PlaybackEngineDispatcher], its master stage included. */
+    /** The engine: [PlaybackEngineDispatcher], its house stage included. */
     private class EngineRig(private val case: Case) : Rig() {
         private val clock = BackendClock(SAMPLE_RATE)
         private val commLink = KlangCommLink(capacity = 4096)
@@ -823,6 +821,15 @@ object AllocationCases {
         /** The notes started so far: with [Case.katpNext], an odd note carries it, an even one [Case.katp]. */
         private var notes = 0
 
+        /**
+         * One list, reused for every note: a note is scheduled inside the measured window (`step`), and a fresh list per
+         * note would count against the case's budget. Safe to reuse: the scheduler pushes the voices into its heap and
+         * keeps no reference to the list. Its one slot is overwritten, never cleared: on Kotlin/JS `ArrayList.clear()`
+         * replaces the backing array with a new one, which costs more per note than a fresh `listOf`. Declared before
+         * `init`, which schedules the first notes.
+         */
+        private val oneVoice = ArrayList<ScheduledVoice>(1)
+
         init {
             if (case.dsl != null) {
                 dispatcher.handle(KlangCommLink.Cmd.RegisterIgnitor(playbackId = PLAYBACK_ID, name = case.sound, dsl = case.dsl))
@@ -844,18 +851,21 @@ object AllocationCases {
         }
 
         private fun schedule(data: VoiceData, startSec: Double, gateSec: Double) {
-            dispatcher.handle(
-                KlangCommLink.Cmd.ScheduleVoice(
-                    playbackId = PLAYBACK_ID,
-                    voice = ScheduledVoice(
-                        playbackId = PLAYBACK_ID,
-                        data = data,
-                        startTime = startSec,
-                        gateEndTime = startSec + gateSec,
-                        playbackStartTime = 0.0,
-                    ),
-                )
+            val voice = ScheduledVoice(
+                playbackId = PLAYBACK_ID,
+                data = data,
+                startTime = startSec,
+                gateEndTime = startSec + gateSec,
+                playbackStartTime = 0.0,
             )
+
+            if (oneVoice.isEmpty()) {
+                oneVoice.add(voice)
+            } else {
+                oneVoice[0] = voice
+            }
+
+            dispatcher.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = PLAYBACK_ID, voices = oneVoice))
         }
 
         override fun step() {

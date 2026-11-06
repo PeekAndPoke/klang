@@ -102,7 +102,6 @@ class SampleInstrumentSpec : StringSpec({
         val factory = VoiceFactory(
             sampleRate = sampleRate,
             blockFrames = blockFrames,
-            voiceBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),
         )
         val start = onsetFrame.toDouble() / sampleRate

@@ -151,11 +151,13 @@ class WarehouseStatsSpec : StringSpec({
         val dispatcher = PlaybackEngineDispatcher(context = context, clock = clock).also { it.setBackendStartTime(0.0) }
         // A voice scheduled in the past is dropped at admission (block-framing B2).
         dispatcher.handle(
-            KlangCommLink.Cmd.ScheduleVoice(
+            KlangCommLink.Cmd.ScheduleVoices(
                 playbackId = "song",
-                voice = ScheduledVoice(
-                    playbackId = "song", startTime = -1.0, gateEndTime = -0.5,
-                    data = VoiceData.empty.copy(sound = "sine", freqHz = 440.0), playbackStartTime = 0.0,
+                voices = listOf(
+                    ScheduledVoice(
+                        playbackId = "song", startTime = -1.0, gateEndTime = -0.5,
+                        data = VoiceData.empty.copy(sound = "sine", freqHz = 440.0), playbackStartTime = 0.0,
+                    ),
                 ),
             )
         )

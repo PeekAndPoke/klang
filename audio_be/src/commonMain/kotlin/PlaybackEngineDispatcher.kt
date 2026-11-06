@@ -15,7 +15,7 @@ import io.peekandpoke.klang.common.infra.KlangMap
  * The backend host: routes inbound [KlangCommLink.Cmd]s and renders the final block.
  *
  * It owns the [AudioBackendContext] (shared services + the read-only clock), the **mutable**
- * [BackendClock] it advances each block, the final [MasterStage], and a
+ * [BackendClock] it advances each block, the final [HouseStage], and a
  * `Map<playbackId, PlaybackEngine>` — one fully-isolated engine per playback, created lazily and
  * disposed once told to stop ([cleanup]) and fully drained. Both platform backends shrink to a thin
  * pump: drain commands → [renderBlock] → convert/output → forward feedback. See
@@ -53,7 +53,7 @@ class PlaybackEngineDispatcher(
     private val ending = ArrayList<PlaybackEngine>()
 
     private val mix = StereoBuffer(context.blockFrames)
-    private val master = MasterStage(sampleRate = context.sampleRate, blockFrames = context.blockFrames)
+    private val house = HouseStage(sampleRate = context.sampleRate, blockFrames = context.blockFrames)
 
     // Aggregated diagnostics (D5) — emission moved here from per-engine VoiceScheduler so the gauges
     // still update when the engine map is empty (idle → zeros), and headroom times the WHOLE block.
@@ -92,6 +92,13 @@ class PlaybackEngineDispatcher(
 
         return createEngine(playbackId)
     }
+
+    /**
+     * The engine filed under [playbackId], created if there is none, as a schedule finds it ([engineFor]): for a host
+     * in this module that schedules into the engine's scheduler directly instead of over the wire
+     * ([KlangAudioRenderer], the benchmarks' single-engine render), so its blocks are this dispatcher's.
+     */
+    internal fun openEngine(playbackId: String): PlaybackEngine = engineFor(playbackId)
 
     /**
      * [engine]'s playback is scheduled again. A stopped one resumes, which cancels its pending disposal (e.g. a
@@ -137,9 +144,6 @@ class PlaybackEngineDispatcher(
      * Exhaustive `when` *expression*: a new [KlangCommLink.Cmd] subtype fails the build until handled.
      */
     fun handle(cmd: KlangCommLink.Cmd): Unit = when (cmd) {
-        is KlangCommLink.Cmd.ScheduleVoice ->
-            engineFor(cmd.playbackId).scheduler.scheduleVoice(cmd.voice)
-
         is KlangCommLink.Cmd.ScheduleVoices ->
             scheduleVoices(cmd.playbackId, cmd.voices)
 
@@ -155,9 +159,6 @@ class PlaybackEngineDispatcher(
 
         is KlangCommLink.Cmd.Cleanup ->
             cleanup(cmd.playbackId)
-
-        is KlangCommLink.Cmd.ClearScheduled ->
-            clearScheduled(cmd.playbackId)
 
         is KlangCommLink.Cmd.Sample ->
             context.sampleStore.addSample(cmd)
@@ -234,10 +235,6 @@ class PlaybackEngineDispatcher(
         engine.stop()
     }
 
-    private fun clearScheduled(playbackId: String) {
-        engines[playbackId]?.scheduler?.clearScheduled()
-    }
-
     /** Immediate disposal (warmup teardown) — does not let voices ring out. */
     fun cleanupHard(playbackId: String) {
         val engine = engines.delete(playbackId) ?: return
@@ -250,7 +247,7 @@ class PlaybackEngineDispatcher(
 
     /**
      * Render one block to [out] (`blockFrames` frames per channel): sum every engine into the shared
-     * mix, then run the master stage, which writes the clipped floating-point output.
+     * mix, then run the house stage, which writes the clipped floating-point output.
      */
     // NB `cursorFrame` is Double, not Int: it is an ABSOLUTE frame on the backend timeline, which
     // grows for the life of the backend and overflows Int after ~12.4 h. Exact below 2^53
@@ -278,7 +275,7 @@ class PlaybackEngineDispatcher(
             rendering[i].renderInto(mix, cursorFrame)
         }
 
-        master.process(mix = mix, out = out)
+        house.process(mix = mix, out = out)
 
         disposeDrainedEngines()
         // Deferred clearing of returned rings and networks, a bounded slice per block (round 3).
@@ -289,7 +286,7 @@ class PlaybackEngineDispatcher(
     /**
      * Emit one aggregate [KlangCommLink.Feedback.Diagnostics] per [DIAGNOSTICS_EVERY_SEC] of audio rendered. Runs
      * every block regardless of engine count, so a fully-idle backend reports zero voices / zero cylinders (the
-     * gauges drop to 0 on stop) and the headroom reflects the WHOLE block (all engines + master), not one scheduler.
+     * gauges drop to 0 on stop) and the headroom reflects the WHOLE block (all engines + the house stage), not one scheduler.
      * It carries the timeline at [blockEndFrame], the end of the block just rendered.
      */
     private fun emitDiagnostics(startMs: Double, blockEndFrame: Double) {
@@ -390,14 +387,14 @@ class PlaybackEngineDispatcher(
         }
     }
 
-    /** Reset the master post-chain (limiter envelope + DC blockers) after warmup. */
-    fun resetPostChain() = master.reset()
+    /** Reset the house stage (limiter envelope + DC blockers) after warmup. */
+    fun resetPostChain() = house.reset()
 
     /** True when every idle ring and network on the warehouse's shelves is zeroed (see [WarmupRunner.tick]). */
     val isWarehouseClean: Boolean get() = context.warehouse.isClean
 
     /**
-     * Frames of latency the output adds: the master stage's (the house limiter's lookahead) plus the longest master
+     * Frames of latency the output adds: the house stage's (the house limiter's lookahead) plus the longest master
      * chain an engine has in service. A render that stops must run this many frames past its musical end, or the last
      * samples are still in a delay ring; read it per block, as a master event swaps a chain mid-song. The offline
      * renderer reads it (KLANG-00399, step 4), as it read `KlangAudioRenderer.latencyFrames` before.
@@ -410,7 +407,7 @@ class PlaybackEngineDispatcher(
                 longest = maxOf(longest, rendering[i].masterLatencyFrames)
             }
 
-            return master.latencyFrames + longest
+            return house.latencyFrames + longest
         }
 
     /** The real block size — the warmup buckets on it, not on a constant. */

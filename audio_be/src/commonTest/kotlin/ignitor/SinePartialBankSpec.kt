@@ -304,7 +304,7 @@ class SinePartialBankSpec : StringSpec({
         val offset = 37
         val length = 64
         val sentinel = 123.456
-        // Production mid-block onset: IgniteRenderer puts the clock at 0 on buffer index
+        // Production mid-block onset: Voice.ignite puts the clock at 0 on buffer index
         // `offset`, the voice's first frame (never negative).
         fun windowCtx() = ctx().apply { updateOffsetAndLength(offset = offset, length = length); voiceElapsedFrames = 0 }
         val bank = Ignitors.sinePartials(harmonics = const(1.0))

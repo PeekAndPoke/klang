@@ -555,7 +555,7 @@ class VoiceLifecycleSpec : StringSpec({
         fun withTeardown() = createVoice(
             startFrame = 0.0, gateEndFrame = 1000.0, endFrame = 1100.0,
             sampleRate = sampleRate, blockFrames = blockFrames, cull = VOICE_CULL_NEVER,
-            treeStages = listOf(TeardownFadeRenderer),
+            teardown = true,
         )
 
         val reference = withTeardown()

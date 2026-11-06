@@ -10,24 +10,26 @@ All types in `audio_be/src/commonMain/kotlin/voices/`.
 
 Since phase 3 step 9 (2026-09-27) every voice is an Ignitor tree, and the tree IS the instrument,
 envelope and filters included; its pitch modulations too since pitch pipeline steps 1 to 4 (the last, `fm`,
-2026-10-10), and step 5 removed the empty pitch pipeline in front of it. `Voice` runs its stages in sequence: **Ignite → (teardown fade) → Send**. Each stage is a `BlockRenderer` (the interface, its
-`BlockContext` and the three renderers live in `voices/`); `Voice.render()` iterates the composed pipeline.
+2026-10-10), and step 5 removed the empty pitch pipeline in front of it. `Voice` runs its stages in sequence: **the tree → (teardown fade) → (the cut's fade) → the channel**. Since
+2026-11-06 they are plain code in `Voice.render()` (KLANG-00290 item 21): no `BlockRenderer` list and no
+`BlockContext`; the window and the buffer are locals of the block, the shared per-block context is
+`Voice.RenderContext`.
 
 ```
-Ignite stage    (IgniteRenderer → writes audioBuffer)
+The tree       (Voice.ignite → writes the voice buffer)
   1. the instrument's Ignitor tree (oscillator or sample, and everything the tree holds, the pitch
      stages included: sprudel's penv, vib, accelerate and fm are classic() stages since pitch
      pipeline steps 1 to 4). The tree's root gets no pitch modulation (IgniteContext.phaseMod is
      null there); a pitch node hands its own to its sources through ModApplyingIgnitor.
 
-Teardown fade   (TeardownFadeRenderer, unless the tree's root is a built amplitude envelope with a
+Teardown fade   (applyTeardownFade, unless the tree's root is a built amplitude envelope with a
                  static release; the one home of the rule is BuiltIgnitor.endsInEnvelope. adsrOff
                  switches classic()'s envelope off, and the node hands on its inner's answer: the
                  instrument's own static-release envelope ends the voice only when nothing built
                  sits over it, neither a stage of the instrument's own nor a classic() stage the
                  pattern wrote; otherwise the fade does)
 
-Send stage      (SendRenderer → mixes to cylinder)
+The channel     (mixIntoCylinder → mixes to cylinder)
   2. pan + gain → cylinder mix
 ```
 
@@ -71,7 +73,7 @@ or the sample instrument for a sample), the ignite stage that renders it, and th
 **`Voice.gain` is stored, not guarded.** `Voice` keeps whatever it is constructed with, including
 a NaN. The substitution of a non-finite wire value by 1.0 happens in `VoiceFactory`, which is the
 only production path that builds a voice. Anything that adds a second construction path has to do
-it there too, or `Voice.heard` (which compares against 0) and `SendRenderer.measurePeak` (which
+it there too, or `Voice.heard` (which compares against 0) and `measureVoicePeak` (the channel's) (which
 scales by `abs(gain)`) go back to being wrong for a NaN.
 
 ### RenderContext
@@ -111,7 +113,7 @@ voice's onset (`Voice.cutOff`, the `Fading` state, `CUT_FADE_SECONDS`); one not 
 - Solo: `SoloTracker` keeps per source its newest solo event ("soloed at amount a from s until t") from any event
   (control events included); a voice of a soloed source plays at `Voice.gainMultiplier` 1.0, every other voice at
   `1 - amount` of the strongest solo, reached on a 1.5 s ramp (0 only at `solo(1.0)`), and a voice that has just lost
-  its solo holds until that ramp reaches it (no dip); a change is ramped across one block in `SendRenderer`. No hold
+  its solo holds until that ramp reaches it (no dip); a change is ramped across one block in `mixIntoCylinder`. No hold
   after a source's last event (Q28). The rules: `audio/MEMORY.md`, KLANG-00290 (engine follow ups)
   item 43, and KLANG-00287 (bugfix solo rests and amount)
 
@@ -287,12 +289,12 @@ nobody can hear.
 The scheduled lifetime above is an upper bound. A voice also ends itself EARLY once it is in
 its release and its own output has stayed under the audibility floor for the cull window:
 
-- **Measure:** `SendRenderer`, the last voice stage, keeps the block's peak `|output|`
+- **Measure:** `mixIntoCylinder`, the last voice stage, keeps the block's peak `|output|`
   (the tree's output times `gain`; BEFORE the solo/mute multiplier, so a voice a solo faded out is not taken for
-  a dead one) in `BlockContext.voiceOutputPeak`. A separate pass, run only on the blocks that
-  read it (`BlockContext.measurePeak`): until the voice has been heard, then in the release; a
+  a dead one) and returns it to `Voice.render`. A separate pass, run only on the blocks that
+  read it (its `measurePeak` argument): until the voice has been heard, then in the release; a
   heard voice pays nothing for the rest of its gate, `noCull()` voices pay nothing at all.
-- **Decide:** `Voice.render`, after the stage loop, only when `blockStart >= gateEndFrame`.
+- **Decide:** `Voice.render`, after the stages, only when `blockStart >= gateEndFrame`.
   Silent frames accumulate (frames, not blocks, so the window has the same length at any block
   size and the cut lands within one block of the same frame); an audible block resets them; when
   they cover the window, `Voice.culled` is set, the voice is `Done` at that block and the scheduler counts it

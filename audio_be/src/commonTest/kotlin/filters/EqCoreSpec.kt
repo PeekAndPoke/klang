@@ -574,7 +574,7 @@ class EqCoreSpec : StringSpec({
             val bufOracle = AudioBuffer(blockFrames).apply { fill(sentinel) }
             val c = ctx().apply {
                 this.updateOffsetAndLength(offset = offset, length = length)
-                // Production mid-block onset: IgniteRenderer puts the clock at 0 on buffer
+                // Production mid-block onset: Voice.ignite puts the clock at 0 on buffer
                 // index `offset`, the voice's first frame (never negative).
                 voiceElapsedFrames = 0
             }

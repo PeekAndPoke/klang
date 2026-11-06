@@ -18,7 +18,7 @@ gone is removed when someone notices, not kept for history.
   `Ignitor.svf` (state-dependent, `audio_be/.../ignitor/IgnitorFilters.kt`); bandpass, notch and the resonators are
   linear. Further warmth comes from upstream.
 - **The OnePole HPF cutoff bias is documented, not corrected.**
-- **The house limiter's lookahead is the only one that is always on** (5 ms, `MasterStage`, not authorable). An
+- **The house limiter's lookahead is the only one that is always on** (5 ms, `HouseStage`, not authorable). An
   authored lookahead (the Katalyst `compressor(..., lookahead)` and `limiter(..., lookahead)`, phase 3 step 12 C2,
   maintainer 2026-09-27) is the author's choice and runs anywhere: the orbit or playback it sits on runs late by it,
   and nothing compensates. Do not add compensation, and do not forbid it on an orbit. It is fixed per chain (it
@@ -27,7 +27,7 @@ gone is removed when someone notices, not kept for history.
   2026-09-16). Normalized 1.0 is comb feedback 0.98; unity sits at about 1.071, and past it the comb
   network has no steady state. The soft-cap alternative was measured (DC rail, AC-RMS 0.0) and
   reverted 2026-08-03. See `Reverb.normalizeSize`.
-- **Accepted and intentional, each documented:** triangle aliasing (no PolyBLEP), no clip at `IgniteRenderer`
+- **Accepted and intentional, each documented:** triangle aliasing (no PolyBLEP), no clip at `Voice.ignite`
   (the `distort()` and `shape()` doors bound their output with a soft cap at the rate they run, so inside a region before its down conversion; `classic()`'s fused distort does not), the unconditional DC-block on distort, cylinder last-writer-wins,
   `Ducking.attackSeconds`'s misleading name (KLANG-00174 (audit parked decisions) §2),
   `rectify()`'s hard clip, the body filter's fixed (non-note-tracking) resonances, `crackle`'s sound

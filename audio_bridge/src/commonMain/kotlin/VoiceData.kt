@@ -19,7 +19,7 @@ data class VoiceData(
     // Gain / Dynamics
     /**
      * The channel fader: the tone-neutral level at which the voice leaves, applied with [pan] in
-     * the send stage. `null` is unset and reads as 1.0.
+     * the channel. `null` is unset and reads as 1.0.
      *
      * The ONE level word on the wire. A frontend's articulation shorthand (sprudel's `velocity`,
      * a MIDI key velocity) is multiplied into it before it crosses, so the backend never learns

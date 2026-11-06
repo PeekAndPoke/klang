@@ -5,7 +5,7 @@
 
 package io.peekandpoke.klang.audio_be
 
-// The 16-bit edge: where the engine's floating-point output (MasterStage.process) meets a consumer that
+// The 16-bit edge: where the engine's floating-point output (HouseStage.process) meets a consumer that
 // takes 16-bit signed integers, the JVM SourceDataLine player and the WAV writer. This file is the one
 // home of that conversion; the engine itself never quantises, and the browser takes the floats as they are.
 

@@ -251,7 +251,7 @@ class KatalystResonatorVowelSpec : StringSpec({
     // ── Every edge fades (Katalyst steps 5c-6 and 5c-11) ─────────────────────────────────────────────────────
     //
     // The oracle is `FilterSwapLaw`, the decided switching law, applied to reference banks built
-    // from the bare DSP (`LowPassHighPassFilters.createFormant`) and run on the same input.
+    // from the bare DSP (`LowPassHighPassFilters.createVowel`) and run on the same input.
 
     val fadeLen = (sampleRate * BANK_CROSSFADE_SECONDS).toInt()
 
@@ -262,7 +262,7 @@ class KatalystResonatorVowelSpec : StringSpec({
     fun script(fx: KatalystResonatorEffect, blocks: Int): SwapHostScript =
         SwapHostScript(n = n, fadeLen = fadeLen, input = drySine(700.0, blocks)) { fx.process(it) }
 
-    fun ref(def: SpecVowel) = LowPassHighPassFilters.createFormant(bands = def.bands, mix = def.mix, sampleRate = sampleRate, floor = def.floor)
+    fun ref(def: SpecVowel) = LowPassHighPassFilters.createVowel(bands = def.bands, mix = def.mix, sampleRate = sampleRate, floor = def.floor)
 
     "off fades the bank to dry and releases it; the SAME vowel after that fade-out installs afresh" {
         // Question 2 of the plan: the config cache survives the fade-out, and an unchanged def with

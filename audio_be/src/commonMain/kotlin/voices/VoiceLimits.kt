@@ -10,8 +10,8 @@ package io.peekandpoke.klang.audio_be.voices
  * end and its end (the gate end plus the release tail).
  *
  * The ONE home of these values. The [Voice] owns the instance and is its only writer in production
- * (`Voice.releaseGate` moves the gate and the end on a realtime note-off); every stage reads it through
- * `BlockContext.limits` on every call and never keeps a copy, so a moved limit reaches every reader at once (the
+ * (`Voice.releaseGate` moves the gate and the end on a realtime note-off); every stage reads it
+ * on every block and never keeps a copy, so a moved limit reaches every reader at once (the
  * "amendment A1" bug class, a reader of a copy the writer forgot, cannot come back). The ignite stage derives the
  * voice-relative gate the ignitors read (`IgniteContext.gateEndFrame`) from it once per block.
  *

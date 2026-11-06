@@ -14,9 +14,8 @@ import io.kotest.matchers.ints.shouldBeInRange
 import io.kotest.matchers.ints.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.voices.BlockContext
-import io.peekandpoke.klang.audio_be.voices.IgniteRenderer
-import io.peekandpoke.klang.audio_be.voices.VoiceLimits
+import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
+import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createVoice
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.common.infra.KlangMap
 import io.peekandpoke.klang.common.infra.klangMapOf
@@ -1177,10 +1176,10 @@ class ExcitersTest : StringSpec({
     }
 
     "shape soft direct output is finite and stays in the documented envelope" {
-        // Direct call (no IgniteRenderer): the clip stage itself does shape + DC-block, and the
-        // bound here is a loose envelope. IgniteRenderer adds no clipping of its own (its KDoc):
-        // the shape stage's per-stage soft cap is what bounds the output. See `shape via
-        // IgniteRenderer …` below for the in-engine bound.
+        // Direct call (no voice around it): the clip stage itself does shape + DC-block, and the
+        // bound here is a loose envelope. The voice adds no clipping of its own (`Voice.ignite`'s KDoc):
+        // the shape stage's per-stage soft cap is what bounds the output. See `shape through a
+        // voice …` below for the in-engine bound.
         val buf = generate(Ignitors.sine().drive(1.0).shape("soft"), freqHz = 440.0)
         buf.peakAmplitude() shouldBeLessThan 2.5
         buf.any { it != 0.0 } shouldBe true
@@ -1194,34 +1193,25 @@ class ExcitersTest : StringSpec({
         buf.none { it.isNaN() || it.isInfinite() } shouldBe true
     }
 
-    "shape via IgniteRenderer wrap bounds output to within ±1 (the in-engine invariant)" {
-        // IgniteRenderer applies no wrap or clip of its own: it hands the tree's output on as
-        // produced. The bound comes from the per-stage soft cap inside `shape()` and `distort()`
-        // (IgnitorEffects.kt); this row pins it through the ignite stage the engine runs.
-        val signal = Ignitors.sine().drive(1.0).shape("soft")
-        val ctx = BlockContext(
-            audioBuffer = AudioBuffer(defaultBlockFrames),
-            scratchBuffers = ScratchBuffers(defaultBlockFrames),
-            sampleRate = sampleRate,
-            limits = VoiceLimits(startFrame = 0.0, gateEndFrame = defaultBlockFrames.toDouble(), endFrame = defaultBlockFrames.toDouble()),
-        ).apply {
-            updateOffsetAndLength(offset = 0, length = defaultBlockFrames); blockStart = 0.0
-        }
-        val renderer = IgniteRenderer(
-            signal = signal,
-            signalCtx = IgniteContext(
-                sampleRate = sampleRate,
-                voiceDurationFrames = defaultBlockFrames,
-                gateEndFrame = defaultBlockFrames,
-                scratchBuffers = ScratchBuffers(defaultBlockFrames),
-                random = testRandom,
-            ),
+    "shape through a voice bounds output to within ±1 (the in-engine invariant)" {
+        // The voice applies no wrap or clip of its own: it hands the tree's output on as produced
+        // (`Voice.ignite`). The bound comes from the per-stage soft cap inside `shape()` and `distort()`
+        // (IgnitorEffects.kt); this row pins it through the path the engine runs, a real voice's block.
+        val voice = createVoice(
+            signal = Ignitors.sine().drive(1.0).shape("soft"),
             freqHz = 440.0,
+            sampleRate = sampleRate,
+            blockFrames = defaultBlockFrames,
+            gateEndFrame = 10.0 * defaultBlockFrames,
+            endFrame = 10.0 * defaultBlockFrames,
         )
-        renderer.render(ctx)
-        ctx.audioBuffer.peakAmplitude() shouldBeLessThan 1.05
-        ctx.audioBuffer.peakAmplitude() shouldBeGreaterThan 0.5  // still loud — wrapper isn't silencing
-        ctx.audioBuffer.none { it.isNaN() || it.isInfinite() } shouldBe true
+        val ctx = createContext(blockFrames = defaultBlockFrames, sampleRate = sampleRate)
+
+        voice.render(ctx)
+
+        ctx.voiceBuffer.peakAmplitude() shouldBeLessThan 1.05
+        ctx.voiceBuffer.peakAmplitude() shouldBeGreaterThan 0.5  // still loud: the voice isn't silencing it
+        ctx.voiceBuffer.none { it.isNaN() || it.isInfinite() } shouldBe true
     }
 
     "distort at extreme drive does NOT DC-lock — the safety contract" {
@@ -1236,9 +1226,9 @@ class ExcitersTest : StringSpec({
         abs(mean) shouldBeLessThan 0.1
         // And no NaN / Inf despite the extreme drive.
         steady.none { it.isNaN() || it.isInfinite() } shouldBe true
-        // Direct call (no IgniteRenderer wrap) — peak is bounded by the
-        // DC-blocker's 2× edge response, not by ±1. See the IgniteRenderer
-        // wrap test for the in-engine ±1 invariant.
+        // Direct call (no voice around it): peak is bounded by the
+        // DC-blocker's 2× edge response, not by ±1. See the "shape through a voice"
+        // row for the in-engine ±1 invariant.
         steady.peakAmplitude() shouldBeLessThan 2.5
     }
 

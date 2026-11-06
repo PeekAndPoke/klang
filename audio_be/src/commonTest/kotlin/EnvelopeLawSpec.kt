@@ -193,7 +193,7 @@ class EnvelopeLawSpec : StringSpec({
 
     /**
      * Renders [ig] for [total] frames in blocks, the gate at [gate]; the voice's own clock. [moveGateTo] moves the
-     * gate after the first block, the way a realtime note-off does (`IgniteRenderer` derives `gateEndFrame` per block).
+     * gate after the first block, the way a realtime note-off does (`Voice.ignite` derives `gateEndFrame` per block).
      */
     fun renderNode(ig: Ignitor, total: Int, gate: Int, freqHz: Double = 100.0, moveGateTo: Int? = null): DoubleArray {
         val ctx = IgniteContext(

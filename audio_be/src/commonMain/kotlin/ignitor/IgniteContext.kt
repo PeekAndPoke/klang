@@ -33,7 +33,7 @@ class IgniteContext(
      * Frame (relative to voice start) when gate ends and release begins. Ignitors read it per block,
      * never keep a copy.
      *
-     * Inside a voice this is NOT a second home of the gate: the ignite stage (`IgniteRenderer`) derives it
+     * Inside a voice this is NOT a second home of the gate: the ignite stage (`Voice.ignite`) derives it
      * from the voice's limits (`VoiceLimits`, the one home) before every `generate` call, so a realtime
      * note-off reaches the ignitors on the next block and nothing else writes it. The constructor value
      * only serves a context used without a voice (specs, benchmarks), which sets it here or by hand.
@@ -72,7 +72,7 @@ class IgniteContext(
      * **[ModApplyingIgnitor] is the one source of a non-null value** (in the engine): it sets it around the source it
      * wraps and restores it after; [ModBlockingIgnitor] only clears it around an absolute-frequency source, and
      * restores it too. Null at the root of a
-     * voice's tree: since pitch pipeline step 5 the voice hands the tree no pitch modulation (`IgniteRenderer` never
+     * voice's tree: since pitch pipeline step 5 the voice hands the tree no pitch modulation (`Voice.ignite` never
      * writes it); every pitch modulation (vibrato, accelerate, pitchEnvelope, FM, pitchMod, the `classic()` pitch
      * stages) is a node of the tree, resolved at build time into the [ModApplyingIgnitor] that sets this field for
      * its source.

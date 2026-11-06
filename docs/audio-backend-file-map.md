@@ -14,7 +14,7 @@ Cmd → PlaybackEngineDispatcher.handle
     → Cylinders.processAndMix (per orbit: its Katalyst chain, swapped through ChainSwap)
     → MasterBus.process (the Katalyst chain at the output; skipped while it is off) }
     → accumulate into the shared mix
-    → MasterStage (DC block → limiter[5 ms lookahead] → clip)
+    → HouseStage (DC block → limiter[5 ms lookahead] → clip)
     → StereoBuffer out (floating point; the JVM line and the WAV writer convert to 16-bit at their edge)
 ```
 
@@ -25,8 +25,8 @@ Cmd → PlaybackEngineDispatcher.handle
 | `PlaybackEngineDispatcher.kt` **[NEW]**                  | Host: `Map<playbackId, PlaybackEngine>`, `handle(cmd)` routing, `renderBlock` mixdown, drain-dispose lifecycle    |
 | `PlaybackEngine.kt` **[NEW]**                            | One isolated engine per playback (`VoiceScheduler` + `Cylinders` + `renderInto` + `isIdle`)                       |
 | `SampleStore.kt` **[NEW]**                               | Shared PCM sample cache (extracted from `VoiceScheduler`)                                                         |
-| `MasterStage.kt` **[NEW]**                               | Final stage: DC block → safety limiter (5 ms lookahead) → clip + interleave (extracted from `KlangAudioRenderer`; float output, interleave and 16-bit at the JVM/WAV edge since 2026-10-07) |
-| `KlangAudioRenderer.kt` **[changed]**                    | Now a thin standalone wrapper delegating to `PlaybackEngine.renderInto + MasterStage` (offline + benchmarks)      |
+| `HouseStage.kt` **[NEW]**                               | Final stage: DC block → safety limiter (5 ms lookahead) → clip + interleave (extracted from `KlangAudioRenderer`; float output, interleave and 16-bit at the JVM/WAV edge since 2026-10-07) |
+| `KlangAudioRenderer.kt` **[changed]**                    | Now a thin standalone wrapper delegating to `PlaybackEngine.renderInto + HouseStage` (offline + benchmarks)      |
 | `WarmupRunner.kt` **[changed]**                          | Runs on a dedicated warmup engine via the dispatcher; **dropped global `preallocateAll`**                         |
 | `cylinders/Cylinders.kt` **[changed]**                   | Added alloc-free `anyActive()`                                                                                    |
 | `voices/VoiceScheduler.kt` **[changed]**                 | Sample cache delegated to `SampleStore`                                                                           |
@@ -42,7 +42,7 @@ Cmd → PlaybackEngineDispatcher.handle
 - `PlaybackEngineDispatcher.kt` **[NEW]** — the host (see above).
 - `PlaybackEngine.kt` **[NEW]** — per-playback engine.
 - `SampleStore.kt` **[NEW]** — shared sample cache.
-- `MasterStage.kt` **[NEW]** — final output stage.
+- `HouseStage.kt` **[NEW]**: final output stage.
 - `KlangAudioRenderer.kt` **[changed]** — standalone single-engine render-to-PCM.
 - `WarmupRunner.kt` **[changed]** — JIT/cache priming; emits `BackendReady`.
 - `AudioBackend.kt` — the `AudioBackend` interface + `Config`.
@@ -56,12 +56,11 @@ Cmd → PlaybackEngineDispatcher.handle
 - `voices/Voice.kt` — running voice + `RenderContext` (per-engine scratch + cylinders) + per-block render.
 - `voices/VoiceLimits.kt`: a voice's onset, gate end and end, their one home (the voice writes, the stages read).
 - `voices/PlaybackCtx.kt` — per-pid context inside a scheduler (epoch + ignitor fork).
-- `voices/BlockContext.kt`, `BlockRenderer.kt`: the per-block stage framework (the filter/VCA strip retired in
-  phase 3 step 9, 2026-09-27; the pitch stage in pitch pipeline step 5, 2026-10-10, which also dissolved the
-  `voices/strip/` package into `voices/`).
-- `voices/IgniteRenderer.kt`: runs the Ignitor tree into the buffer (every pitch door is a `classic()` stage of it).
-- `voices/TeardownFadeRenderer.kt`: the fade after a tree for which `BuiltIgnitor.endsInEnvelope` is false.
-- `voices/SendRenderer.kt`: pans + sums the voice into its cylinder (the `Cylinders.offer` / `checkIn` routing seam).
+- The voice's fixed stages are plain code in `Voice.render` since 2026-11-06 (KLANG-00290 item 21; the per-block
+  stage framework, `BlockContext` and `BlockRenderer`, is gone): the tree (`Voice.ignite`, every pitch door a
+  `classic()` stage of it), `voices/teardown_fade.kt` (`applyTeardownFade`, after a tree for which
+  `BuiltIgnitor.endsInEnvelope` is false), `voices/voice_channel.kt` (`mixIntoCylinder`: pans and sums the voice into
+  its cylinder, the `Cylinders.offer` / `checkIn` routing seam).
 
 ## Cylinders and the master: the Katalyst hosts
 
@@ -88,7 +87,7 @@ Cmd → PlaybackEngineDispatcher.handle
 
 ## Filters
 
-- `filters/`: `AudioFilter`, `LowPassHighPassFilters` (the SVF coefficient helpers, DcBlocker, `createFormant`/`createBody`,
+- `filters/`: `AudioFilter`, `LowPassHighPassFilters` (the SVF coefficient helpers, DcBlocker, `createVowel`/`createBody`,
   `bodyGain`/`vowelGain`), `ResonatorBank` with `ResonatorTable` and `ResonatorConfig`, `EqCore`, `WetDryMix`,
   `SvfCoeffSweep` (the per-block coefficient glide of `Ignitor.svf`).
 
@@ -122,5 +121,5 @@ Cmd → PlaybackEngineDispatcher.handle
 ## Tests (`audio_be/src/commonTest`)
 
 - `PlaybackEngineDispatcherTest.kt` **[NEW]** (9 tests, incl. isolation + ReplaceVoices-leak gates),
-  `SampleStoreSpec.kt` **[NEW]**, `MasterStageSpec.kt` **[NEW]**.
+  `SampleStoreSpec.kt` **[NEW]**, `HouseStageSpec.kt` **[NEW]**.
 - existing: `KlangAudioRendererSpec`, `voices/VoiceSchedulerDiagnosticsTest`, `cylinders/CylindersCleanupTest`.

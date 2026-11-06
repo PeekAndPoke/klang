@@ -34,7 +34,7 @@
 | `AudioAnalyzer`         | `audio_be/src/commonMain/kotlin/AudioAnalyzer.kt` | `getFft(out)` dB magnitudes + `waveform: Stream<AnalyzerBufferHistory>` — the FE data path exists                            |
 | `Spectrumeter`          | `src/jsMain/kotlin/comp/Spectrumeter.kt`          | canvas spectrum component, ~30 fps read loop                                                                                 |
 | `SpectrumBinning`       | `src/jsMain/kotlin/comp/SpectrumBinning.kt`       | log-spaced buckets, RMS aggregation, **+3 dB/oct slope compensation referenced at 1 kHz — this is already pink-referencing** |
-| Limiter/compressor gain | `effects/Compressor.kt`, `master/MasterStage.kt`  | GR is computed every sample today; it is just never published                                                                |
+| Limiter/compressor gain | `effects/Compressor.kt`, `master/HouseStage.kt`  | GR is computed every sample today; it is just never published                                                                |
 | Per-orbit mix buffers   | `cylinders/Cylinder.kt`                           | per-orbit stereo blocks exist; per-block RMS is a two-line sum                                                               |
 
 Missing entirely: a **control-rate telemetry channel** — engine → FE, a handful of named scalars per block (GR values,
@@ -79,7 +79,7 @@ UI-only except for the possible FFT-size change. No hot-path cost.
 ### 2.2 Limiter gain-reduction meter — SHOULD
 
 The "pumping" question consumed three review rounds and an offline envelope-modulation metric, because gain reduction is
-invisible. The house limiter (`MasterStage`, 5 ms lookahead) and any authored master `limiter` stage compute their gain
+invisible. The house limiter (`HouseStage`, 5 ms lookahead) and any authored master `limiter` stage compute their gain
 every sample; publish, per block: **current GR (dB), block-min GR, and a ~10 s history strip** in the UI. Same tap
 generalizes to per-orbit Katalyst compressors later.
 
@@ -121,10 +121,10 @@ the story); build last, or fold into 2.2's strip as a second trace.
 ### 2.6 Pre/post-master dual view — NICE, but uniquely cheap here
 
 Offline, separating "the mix" from "the master" costs a second render with the limiter idled. In the engine it costs a
-second analyzer tap: feed meter 2.1 from BOTH the pre-`MasterStage` sum and the post-master output and show the two
+second analyzer tap: feed meter 2.1 from BOTH the pre-`HouseStage` sum and the post-master output and show the two
 tables (or their diff) side by side. The diff *is* the master chain's live spectral fingerprint — the thing the
 2026-08-11 session needed a whole render cycle to obtain. Realtime and nearly free; bundle with Phase 2 since both touch
-`MasterStage`.
+`HouseStage`.
 
 ## 3. Deep analyses — on-demand, too heavy for realtime
 

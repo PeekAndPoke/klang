@@ -42,7 +42,7 @@ package io.peekandpoke.klang
  * 2026-09-19, `postgain` retired into `gain` (signal-flow plan section 6): every `postgain(x)` here
  * became `gain(mul(x))`, which is the same multiplication against the gain each `*_shape` sets, and
  * no value changed. Unlike the earlier renames this one RE-ASSOCIATES the product the engine used
- * to compute: in `SendRenderer`, with the scheduler's `gainMultiplier` in it,
+ * to compute: in `mixIntoCylinder`, with the scheduler's `gainMultiplier` in it,
  * `(signal * post) * (pan * (gain * gainMultiplier))` became
  * `signal * (pan * ((gain * post) * gainMultiplier))`, so the raw
  * doubles of the folded lines differ from older captures in the last bits; the worst deviation

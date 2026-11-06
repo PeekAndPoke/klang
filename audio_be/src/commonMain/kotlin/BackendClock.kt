@@ -36,7 +36,7 @@ interface RenderClock {
      * cheaper than what it replaces.
      *
      * ⚠️ **Absolute frames are `Double`; per-sample offsets stay `Int`.** The conversion happens once
-     * per block per voice (e.g. `IgniteRenderer`: `(ctx.blockStart + ctx.offset) - startFrame`),
+     * per block per voice (e.g. `Voice.ignite`: `(ctx.blockStart + ctx.offset) - startFrame`),
      * and everything inside the sample loop is `Int`. Do not widen the loop variables.
      *
      * **Between renders, this is the NEXT block to be rendered** (block-framing B1, 2026-09-03).
@@ -58,8 +58,8 @@ interface RenderClock {
 }
 
 /**
- * The mutable backend clock. Owned and written **only by the main loop** (the dispatcher in the live
- * path, [KlangAudioRenderer] offline): `cursorFrame` advances per block, `startTimeSec` is set once.
+ * The mutable backend clock. Owned and written **only by the main loop**, the dispatcher's block (live, and inside
+ * [OfflineBackend] and [KlangAudioRenderer]): `cursorFrame` advances per block, `startTimeSec` is set once.
  * It is handed to engines as a read-only [RenderClock].
  */
 class BackendClock(override val sampleRate: Int) : RenderClock {

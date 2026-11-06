@@ -470,7 +470,7 @@ Two complementary rules that are often confused:
   internal invariants only.
 - **Do not add safety clamps to audio parameters without asking.** The Motor is raw with sharp
   edges by design; delay feedback above 1.0 (bounded by its `cap`) or extreme drive is a creative
-  choice, the house limiter (`MasterStage`) is the safety net. When a review flags a parameter as "could clip",
+  choice, the house limiter (`HouseStage`) is the safety net. When a review flags a parameter as "could clip",
   ask, do not clamp. The reverb is the recorded exception: above unity comb feedback it has no
   sound, only a network running away to Inf/NaN, and its size bound sits at 10 (feedback 0.98) by
   maintainer decision (2026-09-16, `Reverb.normalizeSize`).

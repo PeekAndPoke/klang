@@ -75,7 +75,7 @@ data class BuiltIgnitor(
      * do not touch the amplitude).
      *
      * The voice factory reads it for every voice (every voice is its tree since phase 3 step 9): when it
-     * is false, the voice appends the teardown fade the strip's `adsrOff` always had (`TeardownFadeRenderer`, section 6 of KLANG-00237 (builtin instruments)). When it is
+     * is false, the voice appends the teardown fade the strip's `adsrOff` always had (`applyTeardownFade`, section 6 of KLANG-00237 (builtin instruments)). When it is
      * true, the envelope ends the voice and a fade on top would change its last frames.
      */
     val endsInEnvelope: Boolean = false,

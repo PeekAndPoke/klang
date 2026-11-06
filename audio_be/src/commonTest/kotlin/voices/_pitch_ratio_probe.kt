@@ -51,7 +51,6 @@ fun renderPitchRatios(
     val factory = VoiceFactory(
         sampleRate = sampleRate,
         blockFrames = blockFrames,
-        voiceBuffer = voiceBuffer,
         scratchBuffers = ScratchBuffers(blockFrames),
     )
     // +0.25 frames keeps every floor() stable against 1-ulp time wobble without moving a frame.

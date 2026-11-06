@@ -108,7 +108,7 @@ class ClassicPitchEnvelopeSpec : StringSpec({
 
     for (onset in listOf(0, 37)) {
         "a realtime note-off through the slot path: a held voice released inside the decay follows the law with the gate there (onset $onset)" {
-            // The sprudel door's path end to end (`VoiceFactory`, `classic()`'s stage, `IgniteRenderer`'s per-block gate):
+            // The sprudel door's path end to end (`VoiceFactory`, `classic()`'s stage, `Voice.ignite`'s per-block gate):
             // the voice is scheduled with a far gate and released at frame 1000 the way a realtime note-off does
             // (`Voice.releaseGate`), and must render what the law gives with the gate AT 1000.
             val a = 480.0

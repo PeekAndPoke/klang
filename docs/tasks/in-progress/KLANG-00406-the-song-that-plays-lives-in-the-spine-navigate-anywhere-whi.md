@@ -202,7 +202,7 @@ After KLANG-00389's `Player` steps 1 and 2 (the move into the Spine, typed owner
 ## Step 5: the per-playback gain (proposal to Klang-Main-Dev, 2026-11-02)
 
 Read from the code on 2026-11-02: `KlangCommLink.Cmd` (no gain command), `PlaybackEngineDispatcher` (the engines sum
-into one `mix`, then `MasterStage`), `PlaybackEngine.renderInto` (a straight path into the mix, or the engine's own
+into one `mix`, then `HouseStage`), `PlaybackEngine.renderInto` (a straight path into the mix, or the engine's own
 `bus` while a master chain or the stop release is in play), `TailRelease` and `KnobGlide` (the ramps it has).
 
 - **The wire:** `Cmd.SetGain(playbackId, gain: Double, rampSec: Double)`, `@WireName("set-gain")`, a round-trip row

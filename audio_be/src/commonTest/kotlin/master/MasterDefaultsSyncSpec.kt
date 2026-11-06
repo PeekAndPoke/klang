@@ -8,7 +8,7 @@ package io.peekandpoke.klang.audio_be.master
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.audio_be.MasterStage
+import io.peekandpoke.klang.audio_be.HouseStage
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.katalyst.KatalystRegistry
@@ -30,7 +30,7 @@ class MasterDefaultsSyncSpec : StringSpec({
 
     "the output's default is the EMPTY chain: the final safety chain is the only thing on the mix" {
         // If the default ever gains a stage, every existing song changes: the safety limiter in
-        // MasterStage still runs on the summed mix, so a default limiter here would put two
+        // HouseStage still runs on the summed mix, so a default limiter here would put two
         // limiters in series, and any stage at all would take the engine off its fast path.
         val bus = MasterBus(sampleRate = 44100, blockFrames = 128, registry = KatalystRegistry())
 
@@ -67,15 +67,15 @@ class MasterDefaultsSyncSpec : StringSpec({
         // uniformly and nothing can desync. The authored one runs on one playback's output or one
         // orbit, where the same delay WOULD desync it against the rest. So the two legitimately
         // diverge, and this relation is where that intent is written down.
-        AUTHORED_LIMITER_LOOKAHEAD_SECONDS shouldBeLessThan MasterStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS
-        AUTHORED_LIMITER_ATTACK_SECONDS shouldBeLessThan MasterStage.HOUSE_LIMITER_ATTACK_SECONDS
+        AUTHORED_LIMITER_LOOKAHEAD_SECONDS shouldBeLessThan HouseStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS
+        AUTHORED_LIMITER_ATTACK_SECONDS shouldBeLessThan HouseStage.HOUSE_LIMITER_ATTACK_SECONDS
     }
 
     "the house limiter smooths across its whole lookahead window" {
         // Peak performance is invariant to the smoothing length (the min-hold does the
         // anticipating), while LF cleanliness tracks it, so at a fixed latency, maximum smoothing
         // is the right default. This encodes that intent as a relation rather than two loose numbers.
-        MasterStage.HOUSE_LIMITER_ATTACK_SECONDS shouldBe MasterStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS
+        HouseStage.HOUSE_LIMITER_ATTACK_SECONDS shouldBe HouseStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS
     }
 
     // NOTE (2026-09-16): the reverb size and delay cap sync tests went the way of the limiter's: both

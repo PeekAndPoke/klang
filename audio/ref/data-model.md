@@ -4,7 +4,7 @@ All types live in `audio_bridge/src/commonMain/kotlin/` and are `@Serializable`.
 
 ## ScheduledVoice
 
-The scheduling message sent via `Cmd.ScheduleVoice`. Enqueued in the voice min-heap keyed by `startTime`.
+The scheduling message sent via `Cmd.ScheduleVoices`. Enqueued in the voice min-heap keyed by `startTime`.
 
 ```kotlin
 data class ScheduledVoice(
@@ -158,7 +158,7 @@ object VowelBands {
   one table per index, built once from the rows, equal rows sharing one instance) in `KatalystResonatorWriter`; an
   unset `wet` / `floor` takes its constant in `KatalystResonatorEffect.configure`. The DSP is one mono
   `ResonatorBank` per channel (bands, band gain rules `bodyGain` / `vowelGain`, and the dry/wet blend); the
-  declick crossfade is `KatalystFilterSwap`. `createBody` / `createFormant` build a one-shot bank for the specs and
+  declick crossfade is `KatalystFilterSwap`. `createBody` / `createVowel` build a one-shot bank for the specs and
   the benchmark. See `ref/architecture.md` "Per-Playback Engine".
 - The per-voice filters are `classic()`'s `lpf`/`hpf`/`bpf`/`notch` stages, each an `Ignitor.svf` node
   with its cutoff envelope, filled from the `<door>.<param>` slots.

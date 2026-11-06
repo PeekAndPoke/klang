@@ -78,7 +78,7 @@ class VoiceSchedulerCullingSpec : StringSpec({
 
     "a silent release stops rendering, is counted as culled, and leaves the list at once" {
         val d = newDispatcher()
-        d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = pid, voice = percussive(cull = null)))
+        d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = pid, voices = listOf(percussive(cull = null))))
         val scheduler = d.engine(pid).shouldNotBeNull().scheduler
         val clock = Clock(d)
 
@@ -94,7 +94,7 @@ class VoiceSchedulerCullingSpec : StringSpec({
 
     "a voice with a tremolo is not culled: its gated release would be cut at the first off-half" {
         val d = newDispatcher()
-        d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = pid, voice = percussive(cull = null, tremoloDepth = 1.0)))
+        d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = pid, voices = listOf(percussive(cull = null, tremoloDepth = 1.0))))
         val scheduler = d.engine(pid).shouldNotBeNull().scheduler
 
         Clock(d).render(0.4)
@@ -105,7 +105,7 @@ class VoiceSchedulerCullingSpec : StringSpec({
 
     "an explicit cull(...) on a tremolo voice is the author's call and wins" {
         val d = newDispatcher()
-        d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = pid, voice = percussive(cull = 0.05, tremoloDepth = 1.0)))
+        d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = pid, voices = listOf(percussive(cull = 0.05, tremoloDepth = 1.0))))
         val scheduler = d.engine(pid).shouldNotBeNull().scheduler
 
         Clock(d).render(0.4)
@@ -115,7 +115,7 @@ class VoiceSchedulerCullingSpec : StringSpec({
 
     "noCull keeps the voice rendering through its scheduled tail" {
         val d = newDispatcher()
-        d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = pid, voice = percussive(cull = VOICE_CULL_NEVER)))
+        d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = pid, voices = listOf(percussive(cull = VOICE_CULL_NEVER))))
         val scheduler = d.engine(pid).shouldNotBeNull().scheduler
 
         Clock(d).render(0.4)
@@ -159,7 +159,7 @@ class VoiceSchedulerCullingSpec : StringSpec({
     "a square tremolo in the TREE, on a voice in release, survives its first off-half" {
         val d = newDispatcher()
         registerTreeTremolo(d)
-        d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = pid, voice = treeTremolo(cull = null)))
+        d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = pid, voices = listOf(treeTremolo(cull = null))))
         val scheduler = d.engine(pid).shouldNotBeNull().scheduler
 
         Clock(d).render(0.4)                           // past the off-half (125 to 250 ms), into the next on-half
@@ -174,7 +174,7 @@ class VoiceSchedulerCullingSpec : StringSpec({
         // report, not because the scenario never goes silent.
         val d = newDispatcher()
         registerTreeTremolo(d)
-        d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = pid, voice = treeTremolo(cull = 0.05)))
+        d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = pid, voices = listOf(treeTremolo(cull = 0.05))))
         val scheduler = d.engine(pid).shouldNotBeNull().scheduler
 
         Clock(d).render(0.4)
@@ -202,7 +202,7 @@ class VoiceSchedulerCullingSpec : StringSpec({
 
     "a built-in's slot-written square tremolo survives its first off-half in the release" {
         val d = newDispatcher()
-        d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = pid, voice = slotTremolo(cull = null)))
+        d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = pid, voices = listOf(slotTremolo(cull = null))))
         val scheduler = d.engine(pid).shouldNotBeNull().scheduler
 
         Clock(d).render(0.4)
@@ -213,7 +213,7 @@ class VoiceSchedulerCullingSpec : StringSpec({
 
     "the slot-written tremolo's off-half IS a cull hazard: with the author's cull(...) the voice dies there" {
         val d = newDispatcher()
-        d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = pid, voice = slotTremolo(cull = 0.05)))
+        d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = pid, voices = listOf(slotTremolo(cull = 0.05))))
         val scheduler = d.engine(pid).shouldNotBeNull().scheduler
 
         Clock(d).render(0.4)

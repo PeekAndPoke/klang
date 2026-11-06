@@ -15,7 +15,6 @@ import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.KatalystValue
 import io.peekandpoke.klang.audio_bridge.KlangPatternEvent
 import io.peekandpoke.klang.audio_bridge.VoiceData
-import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.uniqueId
 import io.peekandpoke.klang.common.SourceLocationChain
 
@@ -35,7 +34,6 @@ class KlangOfflineRendererKatalystTest : StringSpec({
     fun renderer(): KlangAudioRenderer = KlangAudioRenderer.create(
         sampleRate = 44100,
         blockFrames = 128,
-        commLink = KlangCommLink().backend,
         performanceTimeMs = { 0.0 },
         phasePoolSeed = 1,
     )

@@ -250,7 +250,7 @@ stages must not carry it.
   Needs a by-ear pass in the review loop.
   (b) `onepole` is an Ignitor slot inside the instrument, NOT a post-effect, so it sets what the
   distortion is fed; the draft's "the distortion is untouched" was plausible and FALSE.
-  (c) `gain` is applied at the voice output in SendRenderer, so it does NOT drive the
+  (c) `gain` is applied at the voice output in mixIntoCylinder, so it does NOT drive the
   distortion; the draft's "dropping gain feeds the distortion less" was FALSE. Until 2026-09-19
   a second multiplier, `postgain`, sat at the same point and §6 taught the two apart; it retired
   into `gain` (signal-flow plan §6), and §6 now teaches one level word, set last. The level that

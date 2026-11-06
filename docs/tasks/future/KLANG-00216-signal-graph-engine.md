@@ -83,7 +83,7 @@ Seed list of fixed-layout assumptions (known so far; the inventory completes it)
 - two POSITION-bound features a merged "effect chain" type must keep expressible (maintainer and coordinator,
   2026-09-27: Katalyst and Master are the same thing, a shared chain, named only for where it sits): the master
   limiter's lookahead (a final safety stage, and until phase 3 step 12 C2 master-only; in a graph, a property of the node before the
-  output; since step 12 decision (a) only the house limiter's 5 ms in `MasterStage` is fixed, an authored
+  output; since step 12 decision (a) only the house limiter's 5 ms in `HouseStage` is fixed, an authored
   `lookahead` runs at any position and makes that node late) and ducking (a side-chain edge from another bus, not
   a chain property);
 - the duck machinery, to be replaced by a bus reference plus a follower (section 5): the `duck` stage with its

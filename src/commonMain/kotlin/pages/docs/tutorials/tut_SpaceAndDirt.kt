@@ -31,7 +31,7 @@ package io.peekandpoke.klang.pages.docs.tutorials
  *   distortion is untouched; what leaves is the harshness sitting on top of it", plausible and
  *   FALSE. §5 now teaches the true version: drive and tone are one decision.
  * - `gain` is the ONE level word (signal-flow plan section 6, 2026-09-19): the channel fader,
- *   applied with pan at the voice output (`SendRenderer`: `* gainL/gainR` from
+ *   applied with pan at the voice output (`mixIntoCylinder`: `* gainL/gainR` from
  *   `voice.gain * gainMultiplier`). It does NOT drive the distortion. The first draft of §6
  *   claimed dropping `gain` "feeds the distortion less and changes the growl", plausible and
  *   FALSE. A SECOND multiplier at the same point, retired 2026-09-19 (the rules register's

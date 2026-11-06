@@ -76,11 +76,11 @@ class PlaybackEngineDispatcherTest : StringSpec({
         d.sampleStore.getComplete(req).shouldNotBeNull()
     }
 
-    "ScheduleVoice lazily creates the engine for its playbackId" {
+    "ScheduleVoices lazily creates the engine for its playbackId" {
         val d = newDispatcher()
         d.activePlaybackIds.size shouldBe 0
 
-        d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = "song", voice = voice("song")))
+        d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = listOf(voice("song"))))
 
         d.activePlaybackIds shouldContainAll setOf("song")
         d.engine("song").shouldNotBeNull().scheduler.getActiveVoiceCount() shouldBeAtLeast 1
@@ -88,7 +88,7 @@ class PlaybackEngineDispatcherTest : StringSpec({
 
     "ReplaceVoices replaces voices on the existing engine" {
         val d = newDispatcher()
-        d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = "song", voice = voice("song")))
+        d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = listOf(voice("song"))))
         d.engine("song").shouldNotBeNull().scheduler.getActiveVoiceCount() shouldBeAtLeast 1
 
         d.handle(
@@ -231,7 +231,7 @@ class PlaybackEngineDispatcherTest : StringSpec({
         d.activePlaybackIds.size shouldBe 0
     }
 
-    "ClearScheduled drops not-yet-played voices" {
+    "ReplaceVoices with nothing drops not-yet-played voices (the clear the frontend sends)" {
         // A voice 10 ms ahead, rendered well past its start: it never sounds once cleared, and does without.
         fun activeAfter(clear: Boolean): Int {
             val d = newDispatcher()
@@ -245,7 +245,7 @@ class PlaybackEngineDispatcherTest : StringSpec({
             )
 
             if (clear) {
-                d.handle(KlangCommLink.Cmd.ClearScheduled(playbackId = "song"))
+                d.handle(KlangCommLink.Cmd.ReplaceVoices(playbackId = "song", voices = emptyList(), afterTimeSec = null))
             }
 
             for (b in 0 until 20) {
@@ -274,8 +274,8 @@ class PlaybackEngineDispatcherTest : StringSpec({
         val d = newDispatcher()
         val out = StereoBuffer(blockFrames)
 
-        d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = "A", voice = voice("A", cylinder = 0)))
-        d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = "B", voice = voice("B", cylinder = 0)))
+        d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "A", voices = listOf(voice("A", cylinder = 0))))
+        d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "B", voices = listOf(voice("B", cylinder = 0))))
         d.renderBlock(0.0, out)   // each voice touches orbit 0 in its own engine
 
         d.activePlaybackIds shouldContainAll setOf("A", "B")
@@ -305,7 +305,7 @@ class PlaybackEngineDispatcherTest : StringSpec({
             data = VoiceData.empty.copy(sound = "sine", freqHz = 440.0, cylinder = 0),
             playbackStartTime = nowSec - 0.1,
         )
-        d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = "late", voice = late))
+        d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "late", voices = listOf(late)))
 
         d.engine("late").shouldNotBeNull().scheduler.getActiveVoiceCount() shouldBeAtLeast 1
     }

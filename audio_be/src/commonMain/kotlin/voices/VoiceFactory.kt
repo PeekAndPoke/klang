@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.audio_be.voices
 
-import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.SampleStore
 import io.peekandpoke.klang.audio_be.ignitor.BuiltIgnitor
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
@@ -41,14 +40,8 @@ import kotlin.random.Random
 class VoiceFactory(
     private val sampleRate: Int,
     private val blockFrames: Int,
-    private val voiceBuffer: AudioBuffer,
     private val scratchBuffers: ScratchBuffers,
 ) {
-
-    private companion object {
-        /** The stages after the tree of a voice whose tree does not end in its own envelope: the teardown fade alone. */
-        val TEARDOWN_FADE_ONLY: List<BlockRenderer> = listOf(TeardownFadeRenderer)
-    }
 
     /**
      * The onset frame a voice built from [scheduled] gets (absolute backend frame, floored), the one formula
@@ -137,7 +130,7 @@ class VoiceFactory(
         // A non-finite gain reads as UNSET, like every other wire number (/dsl-design section 4).
         // Two downstream readers depend on it, and both used to be wrong for a NaN: `Voice.heard`
         // starts latched on a gain of exactly 0, and `NaN == 0.0` is false, so a NaN voice started
-        // unlatched; and `SendRenderer.measurePeak` scales the block peak by `abs(gain)`, so a NaN
+        // unlatched; and the channel's peak measurement (`measureVoicePeak`) scales the block peak by `abs(gain)`, so a NaN
         // gain made the measured peak NaN, which fails every compare against the cull floor and
         // reads as audible forever. The guard hands both readers a finite number, and a NaN can no
         // longer reach the orbit mix, which the orbit's reverb and delay are fed from and would
@@ -163,7 +156,7 @@ class VoiceFactory(
                     gain = gain,
                     signal = built.ignitor, freqHz = freqHz ?: 0.0, voiceRandom = voiceRandom,
                     cull = treeCull(cull, built),
-                    treeStages = treeStages(built),
+                    teardown = needsTeardown(built),
                 )
             }
 
@@ -286,7 +279,7 @@ class VoiceFactory(
                     signal = built.ignitor, freqHz = baseSamplePitchHz,
                     voiceRandom = voiceRandom,
                     cull = treeCull(cull, built),
-                    treeStages = treeStages(built),
+                    teardown = needsTeardown(built),
                 )
             }
 
@@ -319,12 +312,10 @@ class VoiceFactory(
         cull ?: if (built.gatesOutput) VOICE_CULL_NEVER else null
 
     /**
-     * The voice-level stages after the tree: none when the tree ends in its own envelope (a built root `Adsr`
-     * with a static release, `BuiltIgnitor.endsInEnvelope`), else the teardown fade, which takes the voice's
-     * last frames to exactly zero.
+     * Whether the teardown fade runs after the tree: not when the tree ends in its own envelope (a built root `Adsr`
+     * with a static release, `BuiltIgnitor.endsInEnvelope`); else it takes the voice's last frames to exactly zero.
      */
-    private fun treeStages(built: BuiltIgnitor): List<BlockRenderer> =
-        if (built.endsInEnvelope) emptyList() else TEARDOWN_FADE_ONLY
+    private fun needsTeardown(built: BuiltIgnitor): Boolean = !built.endsInEnvelope
 
     private fun buildVoice(
         data: VoiceData,
@@ -346,8 +337,8 @@ class VoiceFactory(
          *  the global and split the build/render channels. */
         voiceRandom: Random,
         cull: Double?,
-        /** The stages after the ignite stage (`treeStages`). */
-        treeStages: List<BlockRenderer>,
+        /** Whether the teardown fade runs after the tree (`needsTeardown`). */
+        teardown: Boolean,
     ): Voice {
         val endFrame = gateEndFrame + releaseSec * sampleRate
 
@@ -362,22 +353,11 @@ class VoiceFactory(
 
         // A tree that ends in an oversampling region hands its output over at the region's rate, and the orbit
         // converts every voice at that rate at once (KLANG-00214 (oversampling regions) step 3b): only the teardown
-        // fade and the send follow the tree, and both run at the voice's rate. The build wraps the root in a per-block
+        // fade and the channel follow the tree, and both run at the voice's rate. The build wraps the root in a per-block
         // memo, which a root, read by the voice alone, never needs: the region renders without it.
         val region = ((signal as? MemoizingIgnitor)?.inner ?: signal) as? OversampleRegionIgnitor
         val rateSteps = region?.handOver() ?: 0
         val rendered = if (region != null && rateSteps > 0) region else signal
-
-        val pipeline = listOf(IgniteRenderer(signal = rendered, signalCtx = signalCtx, freqHz = freqHz)) + treeStages
-
-        val blockCtx = BlockContext(
-            audioBuffer = voiceBuffer,
-            scratchBuffers = scratchBuffers,
-            sampleRate = sampleRate,
-            // The voice's time limits, one instance: the voice owns and writes it, every stage reads it.
-            limits = VoiceLimits(startFrame = startFrame, gateEndFrame = gateEndFrame, endFrame = endFrame),
-            rateSteps = rateSteps,
-        )
 
         return Voice(
             cylinderId = cylinder,
@@ -388,8 +368,14 @@ class VoiceFactory(
             katalystParams = data.katalystParams,
             cut = data.cut,
             cull = cull,
-            pipeline = pipeline,
-            blockCtx = blockCtx,
+            signal = rendered,
+            signalCtx = signalCtx,
+            freqHz = freqHz,
+            teardown = teardown,
+            // The voice's time limits, one instance: the voice owns and writes it, every stage reads it.
+            limits = VoiceLimits(startFrame = startFrame, gateEndFrame = gateEndFrame, endFrame = endFrame),
+            sampleRate = sampleRate,
+            rateSteps = rateSteps,
         )
     }
 }

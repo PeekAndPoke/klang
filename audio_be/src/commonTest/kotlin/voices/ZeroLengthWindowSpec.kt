@@ -40,7 +40,6 @@ class ZeroLengthWindowSpec : StringSpec({
         val registry = IgnitorRegistry().apply { registerDefaults() }
         val factory = VoiceFactory(
             sampleRate = sampleRate, blockFrames = blockFrames,
-            voiceBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),
         )
         val voice = factory.makeVoice(

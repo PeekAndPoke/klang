@@ -67,7 +67,7 @@ class ConstantFoldParitySpec : StringSpec({
      * Renders ONE sub-block window (`offset=37, length=64`) as the FIRST call on fresh signals
      * and asserts bit parity inside the window and untouched sentinels outside it. Matches the
      * production mid-block-onset ctx shape: `voiceElapsedFrames == 0` at buffer index `offset`
-     * (IgniteRenderer computes `blockStart + offset - startFrame`, the voice's first frame); the
+     * (Voice.ignite computes `blockStart + offset - startFrame`, the voice's first frame); the
      * fold decision reads neither field, but the spec should reproduce reality, not an
      * idealization. A not-silence floor keeps the parity from comparing two silent windows.
      */

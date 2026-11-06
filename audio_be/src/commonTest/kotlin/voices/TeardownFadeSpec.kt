@@ -29,7 +29,7 @@ import kotlin.random.Random
 private val testRandom = Random(0x5EED)
 
 /**
- * Guards the teardown fade (`TeardownFadeRenderer`): the voice's last frames when its tree does not end in a
+ * Guards the teardown fade (`applyTeardownFade`): the voice's last frames when its tree does not end in a
  * built envelope with a static release (`BuiltIgnitor.endsInEnvelope`, the one home of the rule), as for a bare
  * source under `classic()` with `.adsrOff()` or an instrument without `classic()` (the bare tree of phase 3 step 9). Until step 9 the rows below drove the voice strip's VCA with `on = false`, whose gate path
  * was exactly this fade; they now drive the fade itself, and one row plays the guitar through the real factory.
@@ -91,19 +91,16 @@ class TeardownFadeSpec : StringSpec({
         )
         val out = AudioBuffer(total)
         val block = AudioBuffer(blockFrames)
-        val renderer = TeardownFadeRenderer
-        val ctx = BlockContext(
-            audioBuffer = block,
-            scratchBuffers = ScratchBuffers(blockFrames), sampleRate = sampleRate,
-            limits = VoiceLimits(startFrame = 0.0, gateEndFrame = gate.toDouble(), endFrame = endFrame),
-        )
+        val limits = VoiceLimits(startFrame = 0.0, gateEndFrame = gate.toDouble(), endFrame = endFrame)
         var pos = 0
         while (pos < total) {
             val n = minOf(blockFrames, total - pos)
             signalCtx.updateOffsetAndLength(offset = 0, length = n); signalCtx.voiceElapsedFrames = pos
             signal.generate(block, freqHz, signalCtx)
-            ctx.updateOffsetAndLength(offset = 0, length = n); ctx.blockStart = pos.toDouble()
-            renderer.render(ctx)
+            applyTeardownFade(
+                buffer = block, limits = limits, sampleRateD = sampleRate.toDouble(), blockStart = pos.toDouble(),
+                offset = 0, windowEnd = n, rateSteps = 0,
+            )
             for (i in 0 until n) out[pos + i] = block[i]
             pos += n
         }
@@ -122,13 +119,7 @@ class TeardownFadeSpec : StringSpec({
         )
         val out = AudioBuffer(totalFrames)
         val block = AudioBuffer(blockFrames)
-        val renderer = TeardownFadeRenderer
-        val ctx = BlockContext(
-            audioBuffer = block,
-            scratchBuffers = ScratchBuffers(blockFrames),
-            sampleRate = sampleRate,
-            limits = VoiceLimits(startFrame = 0.0, gateEndFrame = gateFrames.toDouble(), endFrame = totalFrames.toDouble()),
-        )
+        val limits = VoiceLimits(startFrame = 0.0, gateEndFrame = gateFrames.toDouble(), endFrame = totalFrames.toDouble())
 
         var pos = 0
         while (pos < totalFrames) {
@@ -136,8 +127,10 @@ class TeardownFadeSpec : StringSpec({
             signalCtx.updateOffsetAndLength(offset = 0, length = n); signalCtx.voiceElapsedFrames = pos
             signal.generate(block, freqHz, signalCtx)
 
-            ctx.updateOffsetAndLength(offset = 0, length = n); ctx.blockStart = pos.toDouble()
-            renderer.render(ctx)
+            applyTeardownFade(
+                buffer = block, limits = limits, sampleRateD = sampleRate.toDouble(), blockStart = pos.toDouble(),
+                offset = 0, windowEnd = n, rateSteps = 0,
+            )
 
             for (i in 0 until n) out[pos + i] = block[i]
             pos += n
@@ -261,7 +254,6 @@ class TeardownFadeSpec : StringSpec({
         val factory = VoiceFactory(
             sampleRate = sampleRate,
             blockFrames = blockFrames,
-            voiceBuffer = AudioBuffer(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),
         )
         val voice = factory.makeVoice(

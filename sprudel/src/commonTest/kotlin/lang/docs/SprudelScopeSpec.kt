@@ -25,7 +25,7 @@ import io.peekandpoke.klang.script.generated.generatedSprudelDocs
  * The expectations come from the engine, not from a doc: a voice runs its own strip (`Voice.kt`),
  * each orbit owns ONE shared bus whose settings are owned by the newest `Sounding` voice (`Cylinder.kt`), and `reverb`
  * and `delay` are the pair whose processor is the orbit's while the wet amount is per voice
- * (`SendRenderer.kt`).
+ * (`voice_channel.kt`).
  */
 class SprudelScopeSpec : StringSpec({
 
