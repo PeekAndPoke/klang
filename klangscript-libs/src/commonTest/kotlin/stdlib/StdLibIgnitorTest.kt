@@ -198,11 +198,11 @@ class StdLibIgnitorTest : StringSpec({
         dsl.spread shouldBe IgnitorDsl.Constant(0.05)
     }
 
-    "Ignitor.whitenoise() returns WhiteNoise with flat color (0.0)" {
+    "Ignitor.whitenoise() returns WhiteNoise with the open color slot (default 0.0, flat)" {
         val dsl = evalIgnitorDsl("Ignitor.whitenoise()")
         dsl.shouldBeInstanceOf<IgnitorDsl.WhiteNoise>()
-        // KlangScript bakes the literal default → Constant(0.0) (the engine bypasses the tilt at 0)
-        dsl.color shouldBe IgnitorDsl.Constant(0.0)
+        // The node's open slot since KLANG-00417 B6 (a literal Constant(0.0) before); its default is flat white
+        dsl.color shouldBe IgnitorDsl.Slots.color
     }
 
     "Ignitor.whitenoise(color = -0.5) sets the spectral-tilt knob" {

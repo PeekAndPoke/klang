@@ -71,7 +71,7 @@ class ToolCallAtSpec : StringSpec({
 
         found.functionName shouldBe "gain"
         found.argIndex shouldBe -1
-        found.binding.param.name shouldBe "amount"
+        found.binding.param.name shouldBe "gain"
     }
 
     "on the called name, or past the closing parenthesis: not in that call" {

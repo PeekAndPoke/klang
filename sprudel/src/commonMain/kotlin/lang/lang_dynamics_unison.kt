@@ -201,7 +201,7 @@ private fun applyDensity(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * note("a").s("dust").density("<0.1 0.6>")   // sparse, then busy
  * ```
  *
- * @param amount Impulse rate for `dust`, 0 to 1.
+ * @param density Impulse rate for `dust`, 0 to 1.
  *
  * @alias d
  * @scope voice
@@ -209,8 +209,8 @@ private fun applyDensity(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * @tags density, d, dust, noise
  */
 @KlangScript.Function
-fun SprudelPattern.density(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyDensity(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
+fun SprudelPattern.density(density: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyDensity(this, listOfNotNull(density).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the oscillator or noise density.
@@ -219,11 +219,11 @@ fun SprudelPattern.density(amount: PatternLike? = null, callInfo: CallInfo? = nu
  * "a".density(0.2).s("dust").note()   // 40 noise events per second
  * ```
  *
- * @param amount The oscillator density.
+ * @param density The oscillator density.
  */
 @KlangScript.Function
-fun String.density(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).density(amount, callInfo)
+fun String.density(density: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).density(density, callInfo)
 
 /**
  * The noise density of each event (`dust`; 0..1, mapped to grains per second), as a value
@@ -257,11 +257,11 @@ object density : FieldAccessor({ it.ignitorParams?.get("density") }) {
      * ```KlangScript(Playable)
      * "a".apply(density(0.2)).s("dust").note()   // 40 noise events per second
      * ```
-     * @param amount The oscillator density.
+     * @param density The oscillator density.
      */
     @KlangScript.Invoke
-    operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        { p -> p.density(amount, callInfo) }
+    operator fun invoke(density: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        { p -> p.density(density, callInfo) }
 }
 
 /**
@@ -271,11 +271,11 @@ object density : FieldAccessor({ it.ignitorParams?.get("density") }) {
  * note("a").s("dust").apply(gain(0.8).density(0.5))  // gain + density chained
  * ```
  *
- * @param amount The oscillator density.
+ * @param density The oscillator density.
  */
 @KlangScript.Function
-fun PatternMapperFn.density(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.density(amount, callInfo) }
+fun PatternMapperFn.density(density: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.density(density, callInfo) }
 
 /**
  * Alias for [density]. Sets the impulse rate of the `dust` generator.
@@ -288,7 +288,7 @@ fun PatternMapperFn.density(amount: PatternLike? = null, callInfo: CallInfo? = n
  * note("a").s("dust").d("<0.1 0.6>")   // sparse, then busy
  * ```
  *
- * @param amount Impulse rate for `dust`, 0 to 1.
+ * @param density Impulse rate for `dust`, 0 to 1.
  *
  * @alias density
  * @scope voice
@@ -296,8 +296,8 @@ fun PatternMapperFn.density(amount: PatternLike? = null, callInfo: CallInfo? = n
  * @tags d, density, dust, noise
  */
 @KlangScript.Function
-fun SprudelPattern.d(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.density(amount, callInfo)
+fun SprudelPattern.d(density: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.density(density, callInfo)
 
 /**
  * Alias for [density]. Parses this string as a pattern and sets the oscillator or noise density.
@@ -306,11 +306,11 @@ fun SprudelPattern.d(amount: PatternLike? = null, callInfo: CallInfo? = null): S
  * "a".d(0.2).s("dust").note()   // 40 noise events per second
  * ```
  *
- * @param amount The oscillator density.
+ * @param density The oscillator density.
  */
 @KlangScript.Function
-fun String.d(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).density(amount, callInfo)
+fun String.d(density: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).density(density, callInfo)
 
 /**
  * Alias of [density]: the same accessor under another name.
@@ -330,8 +330,8 @@ val d: density = density
  * note("a").s("dust").apply(gain(0.8).d(0.5))  // gain + density chained
  * ```
  *
- * @param amount The oscillator density.
+ * @param density The oscillator density.
  */
 @KlangScript.Function
-fun PatternMapperFn.d(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.density(amount, callInfo) }
+fun PatternMapperFn.d(density: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.density(density, callInfo) }

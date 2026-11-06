@@ -279,12 +279,12 @@ class KotlinIgnObjectParitySpec : StringSpec({
         Ign.supersquare() shouldBe IgnitorDsl.SuperSquare(freq = IgnitorDsl.Freq)
         Ign.supertri() shouldBe IgnitorDsl.SuperTri(freq = IgnitorDsl.Freq)
         Ign.superramp() shouldBe IgnitorDsl.SuperRamp(freq = IgnitorDsl.Freq)
-        // pluck and superpluck: their sealed default nodes are pinned below
+        // pluck and superpluck: their default nodes are pinned below
     }
 
     // One row per typed member knob of the S2 builders, against the node written out with `.copy()`, never through a
     // builder, each value distinct and off its default: the Kotlin member, and the same member through its script
-    // variant (typed doors S2; the saw and vibrato rows above are S1's). The pluck bases are the sealed nodes pinned below.
+    // variant (typed doors S2; the saw and vibrato rows above are S1's). The pluck bases are the default nodes pinned below.
     "every typed oscillator member writes its own field, from Kotlin and from the script" {
         val sine = IgnitorDsl.Sine()
         val tri = IgnitorDsl.Tri()
@@ -299,15 +299,9 @@ class KotlinIgnObjectParitySpec : StringSpec({
         val ssquare = IgnitorDsl.SuperSquare()
         val stri = IgnitorDsl.SuperTri()
         val sramp = IgnitorDsl.SuperRamp()
-        val pluck = IgnitorDsl.Pluck(feedback = 0.996.ign, brightness = 0.5.ign, pickPosition = 0.5.ign, stiffness = 0.ign)
-        val spluck = IgnitorDsl.SuperPluck(
-            voices = 8.ign,
-            spread = 0.2.ign,
-            feedback = 0.996.ign,
-            brightness = 0.5.ign,
-            pickPosition = 0.5.ign,
-            stiffness = 0.ign,
-        )
+        // Open since KLANG-00417 B6: the plucks keep the node's `Slots.*` defaults, as the oscillators do
+        val pluck = IgnitorDsl.Pluck()
+        val spluck = IgnitorDsl.SuperPluck()
         val defaults = mapOf(
             "sine" to sine, "tri" to tri, "zawtooth" to zaw, "zamp" to zamp, "impulse" to imp, "pulze" to raw,
             "square" to sq, "ramp" to ramp, "supersaw" to ssaw, "supersine" to ssine, "supersquare" to ssquare,
@@ -535,22 +529,40 @@ class KotlinIgnObjectParitySpec : StringSpec({
         }
     }
 
-    // The script pluck doors build on the Kotlin ones, so a parity row cannot see a wrong sealed default: pin the node.
-    "Ign.pluck() and Ign.superpluck() seal their string knobs to constants" {
+    // The script pluck doors build on the Kotlin ones, so a parity row cannot see a wrong default: pin the node.
+    "every source door answers the pattern's slots where the author sets nothing (KLANG-00417 B6)" {
+        val slots = IgnitorDsl.Slots
+
         Ign.pluck() shouldBe IgnitorDsl.Pluck(
-            feedback = IgnitorDsl.Constant(0.996),
-            brightness = IgnitorDsl.Constant(0.5),
-            pickPosition = IgnitorDsl.Constant(0.5),
-            stiffness = IgnitorDsl.Constant(0.0),
+            feedback = slots.feedback, brightness = slots.brightness, pickPosition = slots.pickPosition, stiffness = slots.stiffness,
         )
         Ign.superpluck() shouldBe IgnitorDsl.SuperPluck(
-            voices = IgnitorDsl.Constant(8.0),
-            spread = IgnitorDsl.Constant(0.2),
-            feedback = IgnitorDsl.Constant(0.996),
-            brightness = IgnitorDsl.Constant(0.5),
-            pickPosition = IgnitorDsl.Constant(0.5),
-            stiffness = IgnitorDsl.Constant(0.0),
+            voices = slots.voices, spread = slots.spread,
+            feedback = slots.feedback, brightness = slots.brightness, pickPosition = slots.pickPosition, stiffness = slots.stiffness,
         )
+        // The noise nodes carry a fresh uid per call, so their knobs are compared, on both doors
+        for (white in listOf(Ign.whitenoise(), ks("Ignitor.whitenoise()") as IgnitorDsl.WhiteNoise)) {
+            white.color shouldBe slots.color
+        }
+        for (brown in listOf(Ign.brownnoise(), ks("Ignitor.brownnoise()") as IgnitorDsl.BrownNoise)) {
+            brown.leak shouldBe slots.leak
+        }
+        for (perlin in listOf(Ign.perlin(), ks("Ignitor.perlin()") as IgnitorDsl.PerlinNoise)) {
+            listOf(perlin.rate, perlin.octaves, perlin.persistence) shouldBe listOf(slots.rate, slots.octaves, slots.persistence)
+        }
+        for (berlin in listOf(Ign.berlin(), ks("Ignitor.berlin()") as IgnitorDsl.BerlinNoise)) {
+            listOf(berlin.rate, berlin.octaves, berlin.persistence) shouldBe listOf(slots.rate, slots.octaves, slots.persistence)
+        }
+        for (dust in listOf(Ign.dust(), ks("Ignitor.dust()") as IgnitorDsl.Dust)) {
+            listOf(dust.density, dust.tail, dust.bipolar) shouldBe listOf(slots.density, slots.tail, slots.bipolar)
+        }
+        for (crackle in listOf(Ign.crackle(), ks("Ignitor.crackle()") as IgnitorDsl.Crackle)) {
+            crackle.chaos shouldBe slots.chaos
+        }
+
+        // The script door builds the same open plucks
+        ks("Ignitor.pluck()") shouldBe Ign.pluck()
+        ks("Ignitor.superpluck()") shouldBe Ign.superpluck()
     }
 
     "Ign.slot is the script's Ign.slot, leaf for leaf" {

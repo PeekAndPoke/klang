@@ -231,10 +231,11 @@ sealed interface IgnitorDsl {
      * (e.g. `note("c").analog(0.3)`). Each slot is a `Param(name, default)` singleton with
      * the same name + default value that sprudel addons expect.
      *
-     * Builtin sounds (`IgnitorDefaults.kt`) wire these in automatically; custom sounds
-     * opt in explicitly:
+     * Builtin sounds (`IgnitorDefaults.kt`) wire these in automatically, and every source door of a custom sound
+     * defaults its knobs to them too (the noise and pluck doors since KLANG-00417 B6). Place one by hand where a door
+     * does not open it, an effect's knob for example:
      * ```
-     * let mypad = Ignitor.sine(x => x.analog(Ignitor.slot.analog))
+     * let mypad = Ignitor.sine().lowpass(Ignitor.slot.lpf.freq)
      * note("c").sound(mypad)
      * ```
      */

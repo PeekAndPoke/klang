@@ -68,17 +68,17 @@ class LangControlRestSpec : StringSpec({
 
     val rows: List<Row> = listOf(
         // Level
-        single("gain", "amount", "0.3", "0.6"),
-        single("pregain", "amount", "0.3", "0.6"),
-        single("pan", "amount", "0.3", "0.6"),
-        single("velocity", "amount", "0.3", "0.6"),
-        single("vel", "amount", "0.3", "0.6"),
+        single("gain", "gain", "0.3", "0.6"),
+        single("pregain", "pregain", "0.3", "0.6"),
+        single("pan", "pan", "0.3", "0.6"),
+        single("velocity", "velocity", "0.3", "0.6"),
+        single("vel", "velocity", "0.3", "0.6"),
         // Routing and dynamics
         single("orbit", "index", "1", "2"),
         single("o", "index", "1", "2"),
         single("cylinder", "index", "1", "2"),
-        single("density", "amount", "2", "3"),
-        single("d", "amount", "2", "3"),
+        single("density", "density", "2", "3"),
+        single("d", "density", "2", "3"),
         single("cull", "seconds", "0.5", "1"),
     ) + listOf(
         compound("adsr", t("attack", "0.01", "0.02"), t("decay", "0.1", "0.2"), t("sustain", "0.3", "0.6"), t("release", "0.1", "0.2")),
@@ -142,8 +142,8 @@ class LangControlRestSpec : StringSpec({
         // Tonal
         listOf(
             single("freq", "hz", "220", "440"),
-            single("legato", "amount", "0.5", "0.8"),
-            single("clip", "amount", "0.5", "0.8"),
+            single("legato", "legato", "0.5", "0.8"),
+            single("clip", "legato", "0.5", "0.8"),
             single("accelerate", "semitones", "1", "2"),
             single("scale", "name", "\"c:major\"", "d:minor"),
             single("bank", "name", "\"RolandTR808\"", "RolandTR909"),

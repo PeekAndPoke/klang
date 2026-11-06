@@ -426,6 +426,8 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-11-06 The noise and pluck source doors answer the pattern's slots where unset (sealed constants before):
+  KLANG-00417 B6
 - 2026-11-06 The voice phaser's floor defaults to 1 (`PHASER_FLOOR`), as on a cylinder: KLANG-00417 B4
 - 2026-11-06 An unset tremolo rate is 5 Hz on every surface (`TREMOLO_RATE_HZ`, was 0 on the slot): KLANG-00417 B3
 - 2026-11-06 The duck's `attack` is `release` (it always set the recovery; the duck closes at once): KLANG-00417 B1

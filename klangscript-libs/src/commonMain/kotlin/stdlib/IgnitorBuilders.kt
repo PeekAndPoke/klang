@@ -164,8 +164,8 @@ internal fun OscSineBuilder.scriptPartial(ratio: IgnitorDslLike, gain: IgnitorDs
  * ```
  */
 @KlangScript.Function(name = "analogSpread")
-internal fun OscSineBuilder.scriptAnalogSpread(amount: IgnitorDslLike): OscSineBuilder =
-    this.analogSpread(amount = amount.toIgnitorDsl())
+internal fun OscSineBuilder.scriptAnalogSpread(analogSpread: IgnitorDslLike): OscSineBuilder =
+    this.analogSpread(analogSpread = analogSpread.toIgnitorDsl())
 
 // ── Tri ─────────────────────────────────────────────────────────────────
 
@@ -418,8 +418,8 @@ internal fun OscSuperSawBuilder.scriptAnalog(character: IgnitorDslLike): OscSupe
  *  a single oscillator and its unison detune stays static. Between is a blend. Nothing happens while
  *  `analog` is 0. Same knob as on `Ignitor.sine`; named apart from `spread`, which is the static unison detune. */
 @KlangScript.Function(name = "analogSpread")
-internal fun OscSuperSawBuilder.scriptAnalogSpread(amount: IgnitorDslLike): OscSuperSawBuilder =
-    this.analogSpread(amount = amount.toIgnitorDsl())
+internal fun OscSuperSawBuilder.scriptAnalogSpread(analogSpread: IgnitorDslLike): OscSuperSawBuilder =
+    this.analogSpread(analogSpread = analogSpread.toIgnitorDsl())
 
 /** Detune spacing shape: 1 = even, above 1 concentrates toward the center, below 1 spreads outward. */
 @KlangScript.Function(name = "spreadPower")
@@ -527,8 +527,8 @@ internal fun OscSuperSineBuilder.scriptAnalog(character: IgnitorDslLike): OscSup
  *  a single oscillator and its unison detune stays static. Between is a blend. Nothing happens while
  *  `analog` is 0. Same knob as on `Ignitor.sine`; named apart from `spread`, which is the static unison detune. */
 @KlangScript.Function(name = "analogSpread")
-internal fun OscSuperSineBuilder.scriptAnalogSpread(amount: IgnitorDslLike): OscSuperSineBuilder =
-    this.analogSpread(amount = amount.toIgnitorDsl())
+internal fun OscSuperSineBuilder.scriptAnalogSpread(analogSpread: IgnitorDslLike): OscSuperSineBuilder =
+    this.analogSpread(analogSpread = analogSpread.toIgnitorDsl())
 
 /** Detune spacing shape: 1 = even, above 1 concentrates toward the center, below 1 spreads outward. */
 @KlangScript.Function(name = "spreadPower")
@@ -637,8 +637,8 @@ internal fun OscSuperSquareBuilder.scriptAnalog(character: IgnitorDslLike): OscS
  *  a single oscillator and its unison detune stays static. Between is a blend. Nothing happens while
  *  `analog` is 0. Same knob as on `Ignitor.sine`; named apart from `spread`, which is the static unison detune. */
 @KlangScript.Function(name = "analogSpread")
-internal fun OscSuperSquareBuilder.scriptAnalogSpread(amount: IgnitorDslLike): OscSuperSquareBuilder =
-    this.analogSpread(amount = amount.toIgnitorDsl())
+internal fun OscSuperSquareBuilder.scriptAnalogSpread(analogSpread: IgnitorDslLike): OscSuperSquareBuilder =
+    this.analogSpread(analogSpread = analogSpread.toIgnitorDsl())
 
 /** Detune spacing shape: 1 = even, above 1 concentrates toward the center, below 1 spreads outward. */
 @KlangScript.Function(name = "spreadPower")
@@ -745,8 +745,8 @@ internal fun OscSuperTriBuilder.scriptAnalog(character: IgnitorDslLike): OscSupe
  *  a single oscillator and its unison detune stays static. Between is a blend. Nothing happens while
  *  `analog` is 0. Same knob as on `Ignitor.sine`; named apart from `spread`, which is the static unison detune. */
 @KlangScript.Function(name = "analogSpread")
-internal fun OscSuperTriBuilder.scriptAnalogSpread(amount: IgnitorDslLike): OscSuperTriBuilder =
-    this.analogSpread(amount = amount.toIgnitorDsl())
+internal fun OscSuperTriBuilder.scriptAnalogSpread(analogSpread: IgnitorDslLike): OscSuperTriBuilder =
+    this.analogSpread(analogSpread = analogSpread.toIgnitorDsl())
 
 /** Detune spacing shape: 1 = even, above 1 concentrates toward the center, below 1 spreads outward. */
 @KlangScript.Function(name = "spreadPower")
@@ -855,8 +855,8 @@ internal fun OscSuperRampBuilder.scriptAnalog(character: IgnitorDslLike): OscSup
  *  a single oscillator and its unison detune stays static. Between is a blend. Nothing happens while
  *  `analog` is 0. Same knob as on `Ignitor.sine`; named apart from `spread`, which is the static unison detune. */
 @KlangScript.Function(name = "analogSpread")
-internal fun OscSuperRampBuilder.scriptAnalogSpread(amount: IgnitorDslLike): OscSuperRampBuilder =
-    this.analogSpread(amount = amount.toIgnitorDsl())
+internal fun OscSuperRampBuilder.scriptAnalogSpread(analogSpread: IgnitorDslLike): OscSuperRampBuilder =
+    this.analogSpread(analogSpread = analogSpread.toIgnitorDsl())
 
 /** Detune spacing shape: 1 = even, above 1 concentrates toward the center, below 1 spreads outward. */
 @KlangScript.Function(name = "spreadPower")
@@ -995,5 +995,5 @@ internal fun OscSuperPluckBuilder.scriptAnalog(character: IgnitorDslLike): OscSu
  *  a single oscillator and its unison detune stays static. Between is a blend. Nothing happens while
  *  `analog` is 0. Same knob as on `Ignitor.sine`; named apart from `spread`, which is the static unison detune. */
 @KlangScript.Function(name = "analogSpread")
-internal fun OscSuperPluckBuilder.scriptAnalogSpread(amount: IgnitorDslLike): OscSuperPluckBuilder =
-    this.analogSpread(amount = amount.toIgnitorDsl())
+internal fun OscSuperPluckBuilder.scriptAnalogSpread(analogSpread: IgnitorDslLike): OscSuperPluckBuilder =
+    this.analogSpread(analogSpread = analogSpread.toIgnitorDsl())

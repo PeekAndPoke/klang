@@ -55,16 +55,16 @@ private fun applyGain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * s("bd*4").distort(0.7).gain(0.2)       // dirty it first, then set the level it leaves at
  * ```
  *
- * @param amount Level multiplier, 1 leaves the event as it is.
- * @tool amount: SprudelGainEditor, SprudelGainSequenceEditor
+ * @param gain Level multiplier, 1 leaves the event as it is.
+ * @tool gain: SprudelGainEditor, SprudelGainSequenceEditor
  *
  * @scope voice
  * @category dynamics
  * @tags gain, volume, amplitude, dynamics
  */
 @KlangScript.Function
-fun SprudelPattern.gain(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyGain(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
+fun SprudelPattern.gain(gain: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyGain(this, listOfNotNull(gain).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the gain for each event.
@@ -73,11 +73,11 @@ fun SprudelPattern.gain(amount: PatternLike? = null, callInfo: CallInfo? = null)
  * "bd*4".gain("0.2 0.5 0.8 1.0").s()    // different gain each beat
  * ```
  *
- * @param amount Level multiplier, 1 leaves the event as it is.
+ * @param gain Level multiplier, 1 leaves the event as it is.
  */
 @KlangScript.Function
-fun String.gain(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).gain(amount, callInfo)
+fun String.gain(gain: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).gain(gain, callInfo)
 
 /**
  * The gain of each event, as a value other setters can read.
@@ -108,11 +108,11 @@ object gain : FieldAccessor({ it.gain }) {
      * s("hh hh hh hh").apply(gain("1.0 0.75 0.5 0.25"))
      * ```
      *
-     * @param amount Level multiplier, 1 leaves the event as it is.
+     * @param gain Level multiplier, 1 leaves the event as it is.
      */
     @KlangScript.Invoke
-    operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        { p -> p.gain(amount, callInfo) }
+    operator fun invoke(gain: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        { p -> p.gain(gain, callInfo) }
 }
 
 /**
@@ -122,11 +122,11 @@ object gain : FieldAccessor({ it.gain }) {
  * s("hh*4").apply(gain("1.0 0.5").gain(0.8))  // chain gain modifiers
  * ```
  *
- * @param amount Level multiplier, 1 leaves the event as it is.
+ * @param gain Level multiplier, 1 leaves the event as it is.
  */
 @KlangScript.Function
-fun PatternMapperFn.gain(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.gain(amount, callInfo) }
+fun PatternMapperFn.gain(gain: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.gain(gain, callInfo) }
 
 // -- pregain() --------------------------------------------------------------------------------------------------------
 
@@ -145,7 +145,7 @@ private fun applyPregain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  *
  * The other level word, and the only one that is not a fader. `gain` is the level the event LEAVES
  * at, after everything; `pregain` is the level the signal ARRIVES at inside the instrument, where
- * it meets whatever the instrument does to it. Exactly `ignitorParam("pregain", amount)`: it writes the
+ * it meets whatever the instrument does to it. Exactly `ignitorParam("pregain", pregain)`: it writes the
  * `pregain` slot and nothing else.
  *
  * **It does what the instrument wires it to, and nothing otherwise.** An instrument that places the
@@ -189,24 +189,24 @@ private fun applyPregain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * `"1 0.6 1 0.4"` is four different notes. The cylinder's own knobs (`katp`, the bus doors) are per
  * CYLINDER: the newest note that is still held (not its release tail) sets the cylinder's effects, so they cannot articulate a line.
  *
- * @param amount How hard the note is played in, 1 leaves the instrument at its own level.
+ * @param pregain How hard the note is played in, 1 leaves the instrument at its own level.
  *
  * @scope voice
  * @category dynamics
  * @tags pregain, drive, touch, level, oscillator
  */
 @KlangScript.Function
-fun SprudelPattern.pregain(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyPregain(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
+fun SprudelPattern.pregain(pregain: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyPregain(this, listOfNotNull(pregain).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets how hard each event is played into its instrument.
  *
- * @param amount How hard the note is played in, 1 leaves the instrument at its own level.
+ * @param pregain How hard the note is played in, 1 leaves the instrument at its own level.
  */
 @KlangScript.Function
-fun String.pregain(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).pregain(amount, callInfo)
+fun String.pregain(pregain: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).pregain(pregain, callInfo)
 
 /**
  * How hard each event is played into its instrument, as a value other setters can read.
@@ -236,21 +236,21 @@ object pregain : FieldAccessor({ it.ignitorParams?.get("pregain") }) {
     /**
      * Creates a [PatternMapperFn] that sets how hard each event is played into its instrument.
      *
-     * @param amount How hard the note is played in, 1 leaves the instrument at its own level.
+     * @param pregain How hard the note is played in, 1 leaves the instrument at its own level.
      */
     @KlangScript.Invoke
-    operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        { p -> p.pregain(amount, callInfo) }
+    operator fun invoke(pregain: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        { p -> p.pregain(pregain, callInfo) }
 }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the pregain after the previous mapper.
  *
- * @param amount How hard the note is played in, 1 leaves the instrument at its own level.
+ * @param pregain How hard the note is played in, 1 leaves the instrument at its own level.
  */
 @KlangScript.Function
-fun PatternMapperFn.pregain(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.pregain(amount, callInfo) }
+fun PatternMapperFn.pregain(pregain: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.pregain(pregain, callInfo) }
 
 // -- pan() ------------------------------------------------------------------------------------------------------------
 
@@ -282,16 +282,16 @@ private fun applyPan(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): S
  * s("hh*8").pan(sine.range(0, 1))        // smooth left-right sweep
  * ```
  *
- * @param amount Pan position, 0 left to 1 right.
- * @tool amount: SprudelPanEditor, SprudelPanSequenceEditor
+ * @param pan Pan position, 0 left to 1 right.
+ * @tool pan: SprudelPanEditor, SprudelPanSequenceEditor
  *
  * @scope voice
  * @category dynamics
  * @tags pan, stereo, panning, position
  */
 @KlangScript.Function
-fun SprudelPattern.pan(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyPan(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
+fun SprudelPattern.pan(pan: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyPan(this, listOfNotNull(pan).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the stereo panning position.
@@ -300,11 +300,11 @@ fun SprudelPattern.pan(amount: PatternLike? = null, callInfo: CallInfo? = null):
  * "bd hh sd cp".pan("0 0.33 0.66 1").s()  // left to right
  * ```
  *
- * @param amount Pan position, 0 left to 1 right.
+ * @param pan Pan position, 0 left to 1 right.
  */
 @KlangScript.Function
-fun String.pan(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).pan(amount, callInfo)
+fun String.pan(pan: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).pan(pan, callInfo)
 
 /**
  * The stereo position of each event, as a value other setters can read.
@@ -335,11 +335,11 @@ object pan : FieldAccessor({ it.pan }) {
      * s("bd hh sd cp").apply(pan("0 0.33 0.66 1"))  // left to right
      * ```
      *
-     * @param amount Pan position, 0 left to 1 right.
+     * @param pan Pan position, 0 left to 1 right.
      */
     @KlangScript.Invoke
-    operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        { p -> p.pan(amount, callInfo) }
+    operator fun invoke(pan: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        { p -> p.pan(pan, callInfo) }
 }
 
 /**
@@ -349,11 +349,11 @@ object pan : FieldAccessor({ it.pan }) {
  * s("bd hh sd cp").apply(pan("0 0.33 0.66 1").gain(0.8))  // pan + gain chained
  * ```
  *
- * @param amount Pan position, 0 left to 1 right.
+ * @param pan Pan position, 0 left to 1 right.
  */
 @KlangScript.Function
-fun PatternMapperFn.pan(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.pan(amount, callInfo) }
+fun PatternMapperFn.pan(pan: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.pan(pan, callInfo) }
 
 // -- velocity() / vel() -----------------------------------------------------------------------------------------------
 
@@ -385,7 +385,7 @@ private fun applyVelocity(source: SprudelPattern, args: List<SprudelDslArg<Any?>
  * note("c*4").velocity(saw.range(0.25, 1.0).slow(4))  // crescendo pattern over 4 cycles
  * ```
  *
- * @param amount Velocity, multiplied into the gain.
+ * @param velocity Velocity, multiplied into the gain.
  *
  * @scope voice
  * @alias vel
@@ -393,8 +393,8 @@ private fun applyVelocity(source: SprudelPattern, args: List<SprudelDslArg<Any?>
  * @tags velocity, vel, volume, midi, dynamics
  */
 @KlangScript.Function
-fun SprudelPattern.velocity(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyVelocity(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
+fun SprudelPattern.velocity(velocity: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyVelocity(this, listOfNotNull(velocity).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the velocity (gain multiplier) for each event.
@@ -403,11 +403,11 @@ fun SprudelPattern.velocity(amount: PatternLike? = null, callInfo: CallInfo? = n
  * "c*4".velocity("<0.3 0.6 0.9 1.0>").note()  // crescendo pattern
  * ```
  *
- * @param amount Velocity, multiplied into the gain.
+ * @param velocity Velocity, multiplied into the gain.
  */
 @KlangScript.Function
-fun String.velocity(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).velocity(amount, callInfo)
+fun String.velocity(velocity: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).velocity(velocity, callInfo)
 
 /**
  * The velocity of each event, as a value other setters can read.
@@ -438,11 +438,11 @@ object velocity : FieldAccessor({ it.velocity }) {
      * note("c*4").apply(velocity("<0.3 0.6 0.9 1.0>"))  // crescendo pattern
      * ```
      *
-     * @param amount Velocity, multiplied into the gain.
+     * @param velocity Velocity, multiplied into the gain.
      */
     @KlangScript.Invoke
-    operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        { p -> p.velocity(amount, callInfo) }
+    operator fun invoke(velocity: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        { p -> p.velocity(velocity, callInfo) }
 }
 
 /**
@@ -452,11 +452,11 @@ object velocity : FieldAccessor({ it.velocity }) {
  * note("c*4").apply(velocity("<0.3 0.6 0.9>").gain(0.8))  // velocity + gain chained
  * ```
  *
- * @param amount Velocity, multiplied into the gain.
+ * @param velocity Velocity, multiplied into the gain.
  */
 @KlangScript.Function
-fun PatternMapperFn.velocity(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.velocity(amount, callInfo) }
+fun PatternMapperFn.velocity(velocity: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.velocity(velocity, callInfo) }
 
 /**
  * Alias for [velocity]: the velocity of each event, multiplied into the gain.
@@ -469,7 +469,7 @@ fun PatternMapperFn.velocity(amount: PatternLike? = null, callInfo: CallInfo? = 
  * note("c*4").vel(saw.range(0.25, 1.0).slow(4))   // crescendo pattern over 4 cycles
  * ```
  *
- * @param amount Velocity, multiplied into the gain.
+ * @param velocity Velocity, multiplied into the gain.
  *
  * @scope voice
  * @alias velocity
@@ -477,8 +477,8 @@ fun PatternMapperFn.velocity(amount: PatternLike? = null, callInfo: CallInfo? = 
  * @tags vel, velocity, volume, midi, dynamics
  */
 @KlangScript.Function
-fun SprudelPattern.vel(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.velocity(amount, callInfo)
+fun SprudelPattern.vel(velocity: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.velocity(velocity, callInfo)
 
 /**
  * Alias for [velocity]. Sets the velocity (gain multiplier) for each event in this pattern.
@@ -487,11 +487,11 @@ fun SprudelPattern.vel(amount: PatternLike? = null, callInfo: CallInfo? = null):
  * "c*4".vel("<0.3 0.6 0.9 1.0>").note()  // crescendo pattern
  * ```
  *
- * @param amount Velocity, multiplied into the gain.
+ * @param velocity Velocity, multiplied into the gain.
  */
 @KlangScript.Function
-fun String.vel(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).velocity(amount, callInfo)
+fun String.vel(velocity: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).velocity(velocity, callInfo)
 
 /**
  * Alias of [velocity]: the same accessor under another name.
@@ -510,8 +510,8 @@ val vel: velocity = velocity
  * note("c*4").apply(vel("<0.3 0.6 0.9>").gain(0.8))  // velocity + gain chained
  * ```
  *
- * @param amount Velocity, multiplied into the gain.
+ * @param velocity Velocity, multiplied into the gain.
  */
 @KlangScript.Function
-fun PatternMapperFn.vel(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.velocity(amount, callInfo) }
+fun PatternMapperFn.vel(velocity: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.velocity(velocity, callInfo) }

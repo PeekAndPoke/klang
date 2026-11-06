@@ -91,7 +91,7 @@ data class OscSineBuilder(val node: IgnitorDsl.Sine) {
         copy(node = node.copy(partials = node.partials + IgnitorDsl.Sine.Partial(ratio = ratio, gain = gain, phase = phase)))
 
     /** How much the partials drift against each other under `analog`; the text is on the script knob `analogSpread` (`scriptAnalogSpread` in `klangscript-libs`). */
-    fun analogSpread(amount: IgnitorDsl): OscSineBuilder = copy(node = node.copy(analogSpread = amount))
+    fun analogSpread(analogSpread: IgnitorDsl): OscSineBuilder = copy(node = node.copy(analogSpread = analogSpread))
 }
 
 // ── Tri ───────────────────────────────────────────────────────────────
@@ -235,7 +235,7 @@ data class OscSuperSawBuilder(val node: IgnitorDsl.SuperSaw) {
     fun analog(character: IgnitorDsl): OscSuperSawBuilder = copy(node = node.copy(analog = character))
 
     /** How much the voices drift against each other under `analog`; the text is on the script knob `analogSpread` (`scriptAnalogSpread` in `klangscript-libs`). */
-    fun analogSpread(amount: IgnitorDsl): OscSuperSawBuilder = copy(node = node.copy(analogSpread = amount))
+    fun analogSpread(analogSpread: IgnitorDsl): OscSuperSawBuilder = copy(node = node.copy(analogSpread = analogSpread))
 
     /** Detune spacing shape; the text is on the script knob `spreadPower` (`scriptSpreadPower` in `klangscript-libs`). */
     fun spreadPower(spreadPower: Double): OscSuperSawBuilder = copy(node = node.copy(spreadPower = spreadPower))
@@ -294,7 +294,7 @@ data class OscSuperSineBuilder(val node: IgnitorDsl.SuperSine) {
     fun analog(character: IgnitorDsl): OscSuperSineBuilder = copy(node = node.copy(analog = character))
 
     /** How much the voices drift against each other under `analog`; the text is on the script knob `analogSpread` (`scriptAnalogSpread` in `klangscript-libs`). */
-    fun analogSpread(amount: IgnitorDsl): OscSuperSineBuilder = copy(node = node.copy(analogSpread = amount))
+    fun analogSpread(analogSpread: IgnitorDsl): OscSuperSineBuilder = copy(node = node.copy(analogSpread = analogSpread))
 
     /** Detune spacing shape; the text is on the script knob `spreadPower` (`scriptSpreadPower` in `klangscript-libs`). */
     fun spreadPower(spreadPower: Double): OscSuperSineBuilder = copy(node = node.copy(spreadPower = spreadPower))
@@ -353,7 +353,7 @@ data class OscSuperSquareBuilder(val node: IgnitorDsl.SuperSquare) {
     fun analog(character: IgnitorDsl): OscSuperSquareBuilder = copy(node = node.copy(analog = character))
 
     /** How much the voices drift against each other under `analog`; the text is on the script knob `analogSpread` (`scriptAnalogSpread` in `klangscript-libs`). */
-    fun analogSpread(amount: IgnitorDsl): OscSuperSquareBuilder = copy(node = node.copy(analogSpread = amount))
+    fun analogSpread(analogSpread: IgnitorDsl): OscSuperSquareBuilder = copy(node = node.copy(analogSpread = analogSpread))
 
     /** Detune spacing shape; the text is on the script knob `spreadPower` (`scriptSpreadPower` in `klangscript-libs`). */
     fun spreadPower(spreadPower: Double): OscSuperSquareBuilder = copy(node = node.copy(spreadPower = spreadPower))
@@ -412,7 +412,7 @@ data class OscSuperTriBuilder(val node: IgnitorDsl.SuperTri) {
     fun analog(character: IgnitorDsl): OscSuperTriBuilder = copy(node = node.copy(analog = character))
 
     /** How much the voices drift against each other under `analog`; the text is on the script knob `analogSpread` (`scriptAnalogSpread` in `klangscript-libs`). */
-    fun analogSpread(amount: IgnitorDsl): OscSuperTriBuilder = copy(node = node.copy(analogSpread = amount))
+    fun analogSpread(analogSpread: IgnitorDsl): OscSuperTriBuilder = copy(node = node.copy(analogSpread = analogSpread))
 
     /** Detune spacing shape; the text is on the script knob `spreadPower` (`scriptSpreadPower` in `klangscript-libs`). */
     fun spreadPower(spreadPower: Double): OscSuperTriBuilder = copy(node = node.copy(spreadPower = spreadPower))
@@ -471,7 +471,7 @@ data class OscSuperRampBuilder(val node: IgnitorDsl.SuperRamp) {
     fun analog(character: IgnitorDsl): OscSuperRampBuilder = copy(node = node.copy(analog = character))
 
     /** How much the voices drift against each other under `analog`; the text is on the script knob `analogSpread` (`scriptAnalogSpread` in `klangscript-libs`). */
-    fun analogSpread(amount: IgnitorDsl): OscSuperRampBuilder = copy(node = node.copy(analogSpread = amount))
+    fun analogSpread(analogSpread: IgnitorDsl): OscSuperRampBuilder = copy(node = node.copy(analogSpread = analogSpread))
 
     /** Detune spacing shape; the text is on the script knob `spreadPower` (`scriptSpreadPower` in `klangscript-libs`). */
     fun spreadPower(spreadPower: Double): OscSuperRampBuilder = copy(node = node.copy(spreadPower = spreadPower))
@@ -560,7 +560,7 @@ data class OscSuperPluckBuilder(val node: IgnitorDsl.SuperPluck) {
     fun analog(character: IgnitorDsl): OscSuperPluckBuilder = copy(node = node.copy(analog = character))
 
     /** How much the voices drift against each other under `analog`; the text is on the script knob `analogSpread` (`scriptAnalogSpread` in `klangscript-libs`). */
-    fun analogSpread(amount: IgnitorDsl): OscSuperPluckBuilder = copy(node = node.copy(analogSpread = amount))
+    fun analogSpread(analogSpread: IgnitorDsl): OscSuperPluckBuilder = copy(node = node.copy(analogSpread = analogSpread))
 }
 
 // ── Vibrato ─────────────────────────────────────────────────────────────

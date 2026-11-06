@@ -24,12 +24,12 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
  * Reachable only as `Ignitor.slot` (and `Ign.slot`): registered with `@TypeExtensions` on itself,
  * like the slot groups, so it adds no global name. The Kotlin door is `IgnitorDsl.Slots`.
  *
- * Whether a custom sound answers the pattern depends on its door: the oscillator doors keep the
- * node's open slots (`Ignitor.sine()` reads `analog` from the pattern, `Ignitor.supersaw()` also
- * `voices` and `spread`), while the noise doors seal their knobs to constants and the pluck doors
- * seal all but `analog`. Placing
- * `Ignitor.slot.<name>` on a knob opts it in: the slot reads `ignitorParams[name]` at voice-trigger
- * time and falls back to its default.
+ * Every source door keeps the node's open slots where the author sets nothing (since KLANG-00417 B6,
+ * 2026-11-06: the noise and pluck doors sealed theirs to constants before): `Ignitor.sine()` reads `analog`
+ * from the pattern, `Ignitor.supersaw()` also `voices` and `spread`, `Ignitor.dust()` its `density`,
+ * `Ignitor.superpluck()` its string and unison knobs. A slot reads `ignitorParams[name]` at voice-trigger
+ * time and falls back to its default; an authored value stands. Placing `Ignitor.slot.<name>` on a knob
+ * writes the same opening out.
  */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(KlangScriptIgnitorSlots::class)

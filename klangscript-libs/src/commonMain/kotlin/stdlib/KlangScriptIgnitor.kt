@@ -252,16 +252,16 @@ internal object KlangScriptIgnitor {
      * @param color spectral tilt: 0 = flat white (default), <0 darkens toward pink/brown, >0 brightens (−1..1).
      */
     @KlangScript.Method
-    fun whitenoise(color: IgnitorDslLike = 0.0): IgnitorDsl =
-        IgnitorDsl.WhiteNoise(color = color.toIgnitorDsl())
+    fun whitenoise(color: IgnitorDslLike? = null): IgnitorDsl =
+        IgnitorDsl.WhiteNoise(color = color?.toIgnitorDsl() ?: IgnitorDsl.Slots.color)
 
     /**
      * Creates a brown noise source (1/f^2 spectrum, deeper). Each call yields a fresh DSL instance.
      * @param leak per-sample white-leak (default 0.02): lower = deeper/slower brown, higher = brighter.
      */
     @KlangScript.Method
-    fun brownnoise(leak: IgnitorDslLike = 0.02): IgnitorDsl =
-        IgnitorDsl.BrownNoise(leak = leak.toIgnitorDsl())
+    fun brownnoise(leak: IgnitorDslLike? = null): IgnitorDsl =
+        IgnitorDsl.BrownNoise(leak = leak?.toIgnitorDsl() ?: IgnitorDsl.Slots.leak)
 
     /** Creates a pink noise source (1/f spectrum). Each call yields a fresh DSL instance. */
     @KlangScript.Method
@@ -275,14 +275,14 @@ internal object KlangScriptIgnitor {
      */
     @KlangScript.Method
     fun perlin(
-        rate: IgnitorDslLike = 1.0,
-        octaves: IgnitorDslLike = 1.0,
-        persistence: IgnitorDslLike = 0.5,
+        rate: IgnitorDslLike? = null,
+        octaves: IgnitorDslLike? = null,
+        persistence: IgnitorDslLike? = null,
     ): IgnitorDsl =
         IgnitorDsl.PerlinNoise(
-            rate = rate.toIgnitorDsl(),
-            octaves = octaves.toIgnitorDsl(),
-            persistence = persistence.toIgnitorDsl(),
+            rate = rate?.toIgnitorDsl() ?: IgnitorDsl.Slots.rate,
+            octaves = octaves?.toIgnitorDsl() ?: IgnitorDsl.Slots.octaves,
+            persistence = persistence?.toIgnitorDsl() ?: IgnitorDsl.Slots.persistence,
         )
 
     /**
@@ -293,14 +293,14 @@ internal object KlangScriptIgnitor {
      */
     @KlangScript.Method
     fun berlin(
-        rate: IgnitorDslLike = 1.0,
-        octaves: IgnitorDslLike = 1.0,
-        persistence: IgnitorDslLike = 0.5,
+        rate: IgnitorDslLike? = null,
+        octaves: IgnitorDslLike? = null,
+        persistence: IgnitorDslLike? = null,
     ): IgnitorDsl =
         IgnitorDsl.BerlinNoise(
-            rate = rate.toIgnitorDsl(),
-            octaves = octaves.toIgnitorDsl(),
-            persistence = persistence.toIgnitorDsl(),
+            rate = rate?.toIgnitorDsl() ?: IgnitorDsl.Slots.rate,
+            octaves = octaves?.toIgnitorDsl() ?: IgnitorDsl.Slots.octaves,
+            persistence = persistence?.toIgnitorDsl() ?: IgnitorDsl.Slots.persistence,
         )
 
     /**
@@ -311,14 +311,14 @@ internal object KlangScriptIgnitor {
      */
     @KlangScript.Method
     fun dust(
-        density: IgnitorDslLike = 0.2,
-        tail: IgnitorDslLike = 1.0,
-        bipolar: IgnitorDslLike = 0.0,
+        density: IgnitorDslLike? = null,
+        tail: IgnitorDslLike? = null,
+        bipolar: IgnitorDslLike? = null,
     ): IgnitorDsl =
         IgnitorDsl.Dust(
-            density = density.toIgnitorDsl(),
-            tail = tail.toIgnitorDsl(),
-            bipolar = bipolar.toIgnitorDsl(),
+            density = density?.toIgnitorDsl() ?: IgnitorDsl.Slots.density,
+            tail = tail?.toIgnitorDsl() ?: IgnitorDsl.Slots.tail,
+            bipolar = bipolar?.toIgnitorDsl() ?: IgnitorDsl.Slots.bipolar,
         )
 
     /**
@@ -326,8 +326,8 @@ internal object KlangScriptIgnitor {
      * @param chaos drives the chaotic map: ~1.0 sparse, 1.5 = clear crackle (default), ~2.0 dense/noisy.
      */
     @KlangScript.Method
-    fun crackle(chaos: IgnitorDslLike = 1.5): IgnitorDsl =
-        IgnitorDsl.Crackle(chaos = chaos.toIgnitorDsl())
+    fun crackle(chaos: IgnitorDslLike? = null): IgnitorDsl =
+        IgnitorDsl.Crackle(chaos = chaos?.toIgnitorDsl() ?: IgnitorDsl.Slots.chaos)
 
     // ── Super Oscillators ────────────────────────────────────────────────────
 
@@ -425,7 +425,7 @@ internal object KlangScriptIgnitor {
      */
     @KlangScript.Method
     fun pluck(freq: IgnitorDslLike? = null, configure: ((OscPluckBuilder) -> OscPluckBuilder)? = null): IgnitorDsl =
-        // The typed Kotlin door holds the sealed defaults (not the node's open `Slots.*` params).
+        // The typed Kotlin door holds the defaults (the node's open `Slots.*` params).
         KotlinIgn.pluck(freq = freq.orNoteFreq()) { it.configuredBy("Ignitor.pluck", configure) }
 
     /**
@@ -440,7 +440,7 @@ internal object KlangScriptIgnitor {
      */
     @KlangScript.Method
     fun superpluck(freq: IgnitorDslLike? = null, configure: ((OscSuperPluckBuilder) -> OscSuperPluckBuilder)? = null): IgnitorDsl =
-        // The typed Kotlin door holds the sealed defaults (not the node's open `Slots.*` params).
+        // The typed Kotlin door holds the defaults (the node's open `Slots.*` params).
         KotlinIgn.superpluck(freq = freq.orNoteFreq()) { it.configuredBy("Ignitor.superpluck", configure) }
 
     // ── Parameter Slot ───────────────────────────────────────────────────────

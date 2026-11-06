@@ -132,37 +132,37 @@ object Ign {
     // ── Noise Sources ────────────────────────────────────────────────────────
 
     /** A white noise source, a fresh instance per call. Script door: `Ignitor.whitenoise(color)`. */
-    fun whitenoise(color: IgnitorDsl = 0.0.ign): IgnitorDsl.WhiteNoise = IgnitorDsl.WhiteNoise(color = color)
+    fun whitenoise(color: IgnitorDsl = IgnitorDsl.Slots.color): IgnitorDsl.WhiteNoise = IgnitorDsl.WhiteNoise(color = color)
 
     /** A brown noise source, a fresh instance per call. Script door: `Ignitor.brownnoise(leak)`. */
-    fun brownnoise(leak: IgnitorDsl = 0.02.ign): IgnitorDsl.BrownNoise = IgnitorDsl.BrownNoise(leak = leak)
+    fun brownnoise(leak: IgnitorDsl = IgnitorDsl.Slots.leak): IgnitorDsl.BrownNoise = IgnitorDsl.BrownNoise(leak = leak)
 
     /** A pink noise source, a fresh instance per call. Script door: `Ignitor.pinknoise()`. */
     fun pinknoise(): IgnitorDsl.PinkNoise = IgnitorDsl.PinkNoise()
 
     /** A Perlin noise source. Script door: `Ignitor.perlin(rate, octaves, persistence)`. */
     fun perlin(
-        rate: IgnitorDsl = 1.0.ign,
-        octaves: IgnitorDsl = 1.0.ign,
-        persistence: IgnitorDsl = 0.5.ign,
+        rate: IgnitorDsl = IgnitorDsl.Slots.rate,
+        octaves: IgnitorDsl = IgnitorDsl.Slots.octaves,
+        persistence: IgnitorDsl = IgnitorDsl.Slots.persistence,
     ): IgnitorDsl.PerlinNoise = IgnitorDsl.PerlinNoise(rate = rate, octaves = octaves, persistence = persistence)
 
     /** A Berlin noise source. Script door: `Ignitor.berlin(rate, octaves, persistence)`. */
     fun berlin(
-        rate: IgnitorDsl = 1.0.ign,
-        octaves: IgnitorDsl = 1.0.ign,
-        persistence: IgnitorDsl = 0.5.ign,
+        rate: IgnitorDsl = IgnitorDsl.Slots.rate,
+        octaves: IgnitorDsl = IgnitorDsl.Slots.octaves,
+        persistence: IgnitorDsl = IgnitorDsl.Slots.persistence,
     ): IgnitorDsl.BerlinNoise = IgnitorDsl.BerlinNoise(rate = rate, octaves = octaves, persistence = persistence)
 
     /** A dust source (sparse random impulses). Script door: `Ignitor.dust(density, tail, bipolar)`. */
     fun dust(
-        density: IgnitorDsl = 0.2.ign,
-        tail: IgnitorDsl = 1.0.ign,
-        bipolar: IgnitorDsl = 0.0.ign,
+        density: IgnitorDsl = IgnitorDsl.Slots.density,
+        tail: IgnitorDsl = IgnitorDsl.Slots.tail,
+        bipolar: IgnitorDsl = IgnitorDsl.Slots.bipolar,
     ): IgnitorDsl.Dust = IgnitorDsl.Dust(density = density, tail = tail, bipolar = bipolar)
 
     /** A crackle source. Script door: `Ignitor.crackle(chaos)`. */
-    fun crackle(chaos: IgnitorDsl = 1.5.ign): IgnitorDsl.Crackle = IgnitorDsl.Crackle(chaos = chaos)
+    fun crackle(chaos: IgnitorDsl = IgnitorDsl.Slots.chaos): IgnitorDsl.Crackle = IgnitorDsl.Crackle(chaos = chaos)
 
     // ── Super Oscillators ────────────────────────────────────────────────────
 
@@ -222,21 +222,15 @@ object Ign {
      * A Karplus-Strong plucked string. Script door: `Ignitor.pluck(freq, configure)`, the same [OscPluckBuilder] (knobs
      * `feedback`, `brightness`, `pickPosition`, `stiffness`, `analog`).
      *
-     * The string knobs default to sealed constants, not the node's open `Slots.*` params: a custom pluck ignores
-     * sprudel's per-note modulation unless the author opts in with `Ign.slot.*`. The script door builds on this door,
-     * so the sealed defaults live here once.
+     * The string knobs default to the node's open `Slots.*` params, as the oscillators' do: a custom pluck answers the
+     * pattern's per-note knobs (`sndPluck(...)`, `ignp(...)`) where the author sets nothing, and an authored value
+     * stands. Sealed constants until KLANG-00417 B6 (2026-11-06). The script door builds on this door.
      */
     fun pluck(
         freq: IgnitorDsl = IgnitorDsl.Freq,
         configure: ((OscPluckBuilder) -> OscPluckBuilder)? = null,
     ): IgnitorDsl.Pluck = OscPluckBuilder(
-        IgnitorDsl.Pluck(
-            freq = freq,
-            feedback = 0.996.ign,
-            brightness = 0.5.ign,
-            pickPosition = 0.5.ign,
-            stiffness = 0.0.ign,
-        ),
+        IgnitorDsl.Pluck(freq = freq),
     ).configured(configure).node
 
     /**
@@ -244,22 +238,14 @@ object Ign {
      * [OscSuperPluckBuilder] (knobs `voices`, `spread`, `feedback`, `brightness`, `pickPosition`, `stiffness`,
      * `analog`, `analogSpread`).
      *
-     * Sealed constants like [pluck]; unlike the super oscillators, the unison pair is sealed too. The script door
-     * builds on this door.
+     * Open like [pluck] and the super oscillators: every knob, the unison pair included, defaults to its `Slots.*`
+     * param (sealed constants until KLANG-00417 B6, 2026-11-06). The script door builds on this door.
      */
     fun superpluck(
         freq: IgnitorDsl = IgnitorDsl.Freq,
         configure: ((OscSuperPluckBuilder) -> OscSuperPluckBuilder)? = null,
     ): IgnitorDsl.SuperPluck = OscSuperPluckBuilder(
-        IgnitorDsl.SuperPluck(
-            freq = freq,
-            voices = 8.0.ign,
-            spread = 0.2.ign,
-            feedback = 0.996.ign,
-            brightness = 0.5.ign,
-            pickPosition = 0.5.ign,
-            stiffness = 0.0.ign,
-        ),
+        IgnitorDsl.SuperPluck(freq = freq),
     ).configured(configure).node
 
     // ── Parameter Slot, Constant, Selection ──────────────────────────────────

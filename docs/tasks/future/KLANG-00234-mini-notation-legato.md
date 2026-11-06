@@ -16,7 +16,7 @@ pedalled piano note) inside the mini-notation string itself, concisely?
 
 ## What exists today
 
-- **`legato(amount)`** (alias `clip`, `lang_tonal_note.kt`) scales every event's duration: 1.0 fills
+- **`legato(legato)`** (alias `clip`, `lang_tonal_note.kt`) scales every event's duration: 1.0 fills
   the slot, 2.0 rings twice as long. It is a pattern-level door, so a per-note value needs a pattern
   argument (`legato("1 1 4 1")`) that has to be kept in step with the notes by hand.
 - **`@N` (weight)** makes a note take N slots. That is a longer slot, not a note that rings over its

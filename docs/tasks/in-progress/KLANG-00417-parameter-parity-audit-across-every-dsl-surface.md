@@ -145,6 +145,22 @@ judgement, each item fixed or recorded. The songs, the jingles and the tutorials
   at the master: the Ignitor node, the backend's two `Ignitor.phaser` helpers, the builder and script knob KDocs, the
   skill's Ignitor reference. `Phaser`'s KDoc no longer claims the floor default differs. The corpus is identical (no
   song relied on the voice default). The shimmer keeps its own floor default 0.0: it has no bus twin to agree with.
+- **B5 DONE 2026-11-06:** a one-knob sprudel door's parameter takes its knob's word: `gain(gain)`, `pregain(pregain)`,
+  `pan(pan)`, `velocity(velocity)` and `vel`, `legato(legato)` and `clip`, `solo(solo)`, `density(density)` and `d`;
+  `transpose(interval)` (it takes semitones or an interval name, so the word says what the value is); the oscillator
+  builders' `analogSpread(analogSpread)` on both doors (not `spread`, which on the same builders is the unison
+  detune). Every form follows (the pattern, the string, the mapper, the object's
+  invoke), with the `@param` and `@tool` lines. The time shifts and arithmetic (`late`, `early`, `add`, `sub`,
+  `juxBy`) keep `amount`: no sound knob, not in the decision. `amount` is now the distort drive's word only among the
+  sound doors. No song or tutorial named the parameter, so positional calls are untouched.
+- **B6 DONE 2026-11-06:** every source door answers the pattern's slots where the author sets nothing: the noise
+  doors (`whitenoise`, `brownnoise`, `perlin`, `berlin`, `dust`, `crackle`) and both plucks default to the node's
+  `Slots.*` params on the Kotlin and the script door, as the oscillators did; an authored value stands. The slot
+  defaults equal the sealed constants they replace, so nothing sounds different unless a pattern sets the slot (the
+  corpus is identical). `unison(4)` now reaches a custom `superpluck`, `sndDust(0.5)` a custom `dust`. A risk the
+  review found, for B9's flat slots: a raw `ignp("rate", x)` now also moves every perlin and berlin left at its
+  default (a perlin used as a modulator included); no door writes `rate`, `octaves`, `persistence` or `bipolar`, so
+  only a raw write reaches them, and an author who wants a fixed modulator gives it a value.
 
 ### Checked and consistent
 

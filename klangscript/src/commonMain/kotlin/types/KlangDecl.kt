@@ -143,8 +143,8 @@ data class KlangProperty(
 /**
  * One parameter per name across these declarations' callables, in first-seen order, as a parameter table shows
  * them: per name the first parameter that carries a description, else the first. A variant that documents a
- * parameter wins over an earlier one that does not (a call form `pan(amount)` sorted before
- * `SprudelPattern.pan(amount)`).
+ * parameter wins over an earlier one that does not (a call form `pan(pan)` sorted before
+ * `SprudelPattern.pan(pan)`).
  */
 fun List<KlangDecl>.parametersByName(): List<KlangParam> =
     filterIsInstance<KlangCallable>()

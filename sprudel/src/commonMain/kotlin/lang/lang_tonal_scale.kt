@@ -197,7 +197,7 @@ private fun applyTranspose(source: SprudelPattern, args: List<SprudelDslArg<Any?
 /**
  * Transposes a pattern by a number of semitones or an interval name.
  *
- * Shifts all note pitches by the given amount. Numeric arguments are treated as semitones;
+ * Shifts all note pitches by the given interval. Numeric arguments are treated as semitones;
  * string arguments can be interval names (e.g. `"P5"` for a perfect fifth).
  *
  * ```KlangScript(Playable)
@@ -208,29 +208,29 @@ private fun applyTranspose(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * note("c4 e4").transpose("<0 12>")   // alternate: no transpose vs octave up per cycle
  * ```
  *
- * @param amount The amount to transpose by, either as a number of semitones or an interval name.
+ * @param interval The interval to transpose by, either as a number of semitones or an interval name.
  *
  * @category tonal
  * @tags transpose, pitch shift, semitones, interval, pitch
  */
 @KlangScript.Function
-fun SprudelPattern.transpose(amount: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    applyTranspose(this, listOf(amount).asSprudelDslArgs(callInfo))
+fun SprudelPattern.transpose(interval: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyTranspose(this, listOf(interval).asSprudelDslArgs(callInfo))
 
 /** Transposes a string pattern by a number of semitones or interval name. */
 @KlangScript.Function
-fun String.transpose(amount: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).transpose(amount, callInfo)
+fun String.transpose(interval: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).transpose(interval, callInfo)
 
 /** Returns a [PatternMapperFn] that transposes each event by the given semitones or interval name. */
 @KlangScript.Function
-fun transpose(amount: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.transpose(amount, callInfo) }
+fun transpose(interval: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.transpose(interval, callInfo) }
 
 /** Chains a transpose step onto this [PatternMapperFn]. */
 @KlangScript.Function
-fun PatternMapperFn.transpose(amount: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.transpose(amount, callInfo) }
+fun PatternMapperFn.transpose(interval: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.transpose(interval, callInfo) }
 
 // -- scaleTranspose() -------------------------------------------------------------------------------------------------
 

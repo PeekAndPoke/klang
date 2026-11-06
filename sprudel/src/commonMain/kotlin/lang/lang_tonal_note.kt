@@ -273,20 +273,20 @@ private fun applyLegato(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * note("c3 e3 g3").legato(0.5)   // notes are shorter (staccato)
  * ```
  *
- * @param amount Duration scaling factor. 1.0 = fill event slot exactly, 0.5 = staccato (half length),
+ * @param legato Duration scaling factor. 1.0 = fill event slot exactly, 0.5 = staccato (half length),
  *   1.5 = overlapping (legato), 2.0 = double length. Default: 1.0. Typical range: 0.1 to 2.0.
  * @alias clip
  * @category tonal
  * @tags legato, clip, duration, sustain, staccato
  */
 @KlangScript.Function
-fun SprudelPattern.legato(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyLegato(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
+fun SprudelPattern.legato(legato: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyLegato(this, listOfNotNull(legato).asSprudelDslArgs(callInfo))
 
 /** Sets the legato (duration scaling) factor on a string pattern. */
 @KlangScript.Function
-fun String.legato(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).legato(amount, callInfo)
+fun String.legato(legato: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).legato(legato, callInfo)
 
 /**
  * The legato (duration scaling) of each event, as a value other setters can read.
@@ -320,28 +320,28 @@ object legato : FieldAccessor({ it.legato }) {
      * note("c3 e3").apply(legato(1.5))   // mapper form
      * ```
      *
-     * @param amount Duration scaling factor. 1.0 = fill event slot exactly, 0.5 = staccato (half length), 1.5 =
+     * @param legato Duration scaling factor. 1.0 = fill event slot exactly, 0.5 = staccato (half length), 1.5 =
      *     overlapping (legato), 2.0 = double length. Default: 1.0. Typical range: 0.1 to 2.0.
      */
     @KlangScript.Invoke
-    operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        { p -> p.legato(amount, callInfo) }
+    operator fun invoke(legato: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        { p -> p.legato(legato, callInfo) }
 }
 
 /** Chains a legato operation onto this [PatternMapperFn]. */
 @KlangScript.Function
-fun PatternMapperFn.legato(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.legato(amount, callInfo) }
+fun PatternMapperFn.legato(legato: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.legato(legato, callInfo) }
 
 /** Alias for [legato] on this pattern. Sets the duration scaling factor. */
 @KlangScript.Function
-fun SprudelPattern.clip(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.legato(amount, callInfo)
+fun SprudelPattern.clip(legato: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.legato(legato, callInfo)
 
 /** Alias for [legato] on a string pattern. */
 @KlangScript.Function
-fun String.clip(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).legato(amount, callInfo)
+fun String.clip(legato: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).legato(legato, callInfo)
 
 /**
  * Alias of [legato]: the same accessor under another name.
@@ -354,8 +354,8 @@ val clip: legato = legato
 
 /** Chains a clip operation onto this [PatternMapperFn]. */
 @KlangScript.Function
-fun PatternMapperFn.clip(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.legato(amount, callInfo) }
+fun PatternMapperFn.clip(legato: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.legato(legato, callInfo) }
 
 // -- freq() -----------------------------------------------------------------------------------------------------------
 

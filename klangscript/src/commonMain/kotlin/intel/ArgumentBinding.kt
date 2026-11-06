@@ -101,7 +101,7 @@ fun KlangSymbol.bindArgument(
 
 /**
  * For a callable object's [callForm], the method with the very same parameter list (by name) that declares
- * tools for this argument: `SprudelPattern.pan(amount)` for `pan(amount)`. Null when no method mirrors it.
+ * tools for this argument: `SprudelPattern.pan(pan)` for `pan(pan)`. Null when no method mirrors it.
  */
 private fun KlangSymbol.toolTwinOf(
     callForm: KlangCallable,

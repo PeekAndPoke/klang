@@ -318,9 +318,7 @@ script-only surface forces raw constructor calls and splits the vocabulary.
   `.copy()`, never through a builder, with a distinct value off its default (`KlangScriptSawRampSpec`
   is the template), and one row pins each Kotlin door's default node. A repeatable (appending) knob
   (`partial`) keeps its append logic in the member; a written-out row with two or more calls, the list in written order (`KlangScriptSineSpec`),
-  (`node.copy(partials = listOf(...))`) pins it. A sealed-default door (`pluck`, `superpluck`, whose
-  knobs default to constants, not the node's `Slots.*`) has the sealed node, written out, as its
-  default-node row, not `Node(freq = Freq)`.
+  (`node.copy(partials = listOf(...))`) pins it.
 - Script-door param defaults are SAFE LITERALS (number, string, bool, null). Since 2026-10-06 the
   KSP processor refuses any other default (`IgnitorDsl.Slots.rate`, `emptyList()`) with a build error
   naming the door and the parameter. The spec's default thunk returns the literal and fills an
@@ -441,6 +439,9 @@ door's name (`lpf`, `penv`); the param part is the engine door's word (the Ignit
 stage), after a check that it is the better word, and the sprudel door's parameter takes the same word. A one-knob
 door stays flat (`onepole`, `accelerate`, `pregain`, the sample slots). A `snd*` door's parameter takes the knob or slot word
 (`sndPulze(duty)`), not the knob's inner parameter word (`duty(width)`, Q29, 2026-10-16). The table: KLANG-00289 (classic slot names check).
+A one-knob door's parameter takes the knob's word too (maintainer, 2026-11-06, KLANG-00417 B5): `gain(gain)`,
+`pan(pan)`, `legato(legato)`, `density(density)`, `analogSpread(analogSpread)`; `amount` is the distort drive's word
+only. `transpose(interval)` departs on purpose: it takes semitones or an interval name, and the word says which.
 
 ## 5. One word per concept, end to end
 

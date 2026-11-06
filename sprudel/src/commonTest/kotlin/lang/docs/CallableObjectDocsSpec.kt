@@ -159,7 +159,7 @@ class CallableObjectDocsSpec : StringSpec({
                 is KlangProperty -> it.owner?.simpleName?.length ?: 0
             }
         }
-        sorted.parametersByName().single { it.name == "amount" }.description shouldBe "Pan position, 0 left to 1 right."
+        sorted.parametersByName().single { it.name == "pan" }.description shouldBe "Pan position, 0 left to 1 right."
     }
 
     "analog names its parameter `character` in the docs model, on every door (Q25)" {

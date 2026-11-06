@@ -82,7 +82,7 @@ setter semantics) and `/dsl-design`. What they produce today:
 
 - `gain` is the one level word (the channel fader, applied once with pan). `velocity` / `vel` is a sprudel
   word that folds into it at the wire (above).
-- `pregain(amount)` is exactly `ignp("pregain", amount)` (`lang_dynamics_level.kt`): it writes a slot, and
+- `pregain(pregain)` is exactly `ignp("pregain", pregain)` (`lang_dynamics_level.kt`): it writes a slot, and
   the slot does what the instrument's tree wires it to. Every built-in synth and sample places it at the
   source, in front of `classic()`. What it does to each distortion shape is in the door's KDoc; the render
   guards are audio_be's (`PregainSlotRenderSpec`, `VoicePregainWireSpec`).
@@ -243,3 +243,5 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
   scope badge is `@scope cylinder` (KLANG-00418 (cylinder as the one word the sprudel door the katalyst vocab)).
 - 2026-11-06: `tremolo(rate, depth, shape)`, rate first as on the Ignitor door; an unset tremolo rate is 5 Hz
   (`TREMOLO_RATE_HZ`); the duck's knob is `release` (KLANG-00417 (parameter parity audit across every dsl surface)).
+- 2026-11-06: a one-knob door's parameter takes the knob's word (`gain(gain)`, `pan(pan)`, `legato(legato)`, ...;
+  `transpose(interval)`), KLANG-00417 B5.

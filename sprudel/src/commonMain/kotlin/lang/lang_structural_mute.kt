@@ -227,7 +227,7 @@ private fun soloIdOf(callInfo: CallInfo?): String {
 /**
  * Solos this pattern: every pattern that is not soloed drops in level while it plays.
  *
- * Pass a value between `0.0` (no solo) and `1.0` (full solo). The other patterns play at `1 - amount`:
+ * Pass a value between `0.0` (no solo) and `1.0` (full solo). The other patterns play at `1 - solo`:
  * `solo(0.7)` leaves them at 0.3, `solo(1)` silences them. Omit or pass `null` to use the default amount
  * of `0.95`: the others drop to 5 %. The others fade down and back up over about 1.5 s, and the fade starts at
  * once: the newest amount wins. A pattern changed to `solo(0)` is no longer soloed from its first event with the
@@ -241,7 +241,7 @@ private fun soloIdOf(callInfo: CallInfo?): String {
  * ```KlangScript(Playable)
  * stack(
  *   s("bd*4").solo(),             // the kick at full level
- *   note("c3 e3")                 // drops to 5 % (amount = 0.95)
+ *   note("c3 e3")                 // drops to 5 % (solo = 0.95)
  * )
  * ```
  *
@@ -266,14 +266,14 @@ private fun soloIdOf(callInfo: CallInfo?): String {
  * )
  * ```
  *
- * @param amount `0.0`..`1.0` solo strength; `null` defaults to `0.95`. Accepts control patterns.
+ * @param solo `0.0`..`1.0` solo strength; `null` defaults to `0.95`. Accepts control patterns.
  *
  * @category structural
  * @tags solo, mute, isolate, playback
  */
 @KlangScript.Function
-fun SprudelPattern.solo(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applySolo(this, listOfNotNull(amount).asSprudelDslArgs(callInfo), callInfo)
+fun SprudelPattern.solo(solo: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applySolo(this, listOfNotNull(solo).asSprudelDslArgs(callInfo), callInfo)
 
 /**
  * Parses this string as a pattern and solos it: every pattern that is not soloed drops in level (see
@@ -293,11 +293,11 @@ fun SprudelPattern.solo(amount: PatternLike? = null, callInfo: CallInfo? = null)
  * )
  * ```
  *
- * @param amount `0.0`..`1.0` solo strength; `null` defaults to `0.95`. Accepts control patterns.
+ * @param solo `0.0`..`1.0` solo strength; `null` defaults to `0.95`. Accepts control patterns.
  */
 @KlangScript.Function
-fun String.solo(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).solo(amount, callInfo)
+fun String.solo(solo: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).solo(solo, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that solos the input pattern: every pattern that is not soloed drops in level
@@ -305,7 +305,7 @@ fun String.solo(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  *
  * ```KlangScript(Playable)
  * stack(
- *   s("bd*4").apply(solo()),      // solo the kick via a mapper (amount = 0.95)
+ *   s("bd*4").apply(solo()),      // solo the kick via a mapper (solo = 0.95)
  *   note("c3 e3")                 // drops to 5 %
  * )
  * ```
@@ -324,14 +324,14 @@ fun String.solo(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  * )
  * ```
  *
- * @param amount `0.0`..`1.0` solo strength; `null` defaults to `0.95`. Accepts control patterns.
+ * @param solo `0.0`..`1.0` solo strength; `null` defaults to `0.95`. Accepts control patterns.
  *
  * @category structural
  * @tags solo, mute, isolate, playback
  */
 @KlangScript.Function
-fun solo(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.solo(amount, callInfo) }
+fun solo(solo: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.solo(solo, callInfo) }
 
 /**
  * Chains a solo operation onto this [PatternMapperFn] (see [SprudelPattern.solo]).
@@ -350,9 +350,9 @@ fun solo(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapper
  * )
  * ```
  *
- * @param amount `0.0`..`1.0` solo strength; `null` defaults to `0.95`. Accepts control patterns.
+ * @param solo `0.0`..`1.0` solo strength; `null` defaults to `0.95`. Accepts control patterns.
  */
 @KlangScript.Function
-fun PatternMapperFn.solo(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.solo(amount, callInfo) }
+fun PatternMapperFn.solo(solo: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.solo(solo, callInfo) }
 
