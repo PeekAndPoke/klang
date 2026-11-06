@@ -245,3 +245,4 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
   (`TREMOLO_RATE_HZ`); the duck's knob is `release` (KLANG-00417 (parameter parity audit across every dsl surface)).
 - 2026-11-06: a one-knob door's parameter takes the knob's word (`gain(gain)`, `pan(pan)`, `legato(legato)`, ...;
   `transpose(interval)`), KLANG-00417 B5.
+- 2026-11-06: the parameter parity audit done (KLANG-00417); `DoorOrderParitySpec` pins sprudel against the Ignitor and Katalyst twins.

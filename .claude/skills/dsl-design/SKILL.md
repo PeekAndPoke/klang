@@ -311,6 +311,8 @@ script-only surface forces raw constructor calls and splits the vocabulary.
          through `toIgnitorDsl`).
        - A song in the corpus that reads "edited" is not engine-guarded: refresh its live row (a plain
          `corpus-accept`, which refuses a red row) before relying on the corpus for a door the song uses.
+- Across surfaces, `DoorOrderParitySpec` (sprudel jvmTest, KLANG-00417) compares every sprudel door with its Ignitor or
+  Katalyst twin of the same name: every shared parameter at the same position, or a recorded exception there.
 - Pin parity with a door-parity spec: the script form and the Kotlin form must produce equal nodes
   (`KlangScriptFilterDoorParitySpec` is the pattern). Since both doors share the builder members, a
   parity row cannot see a member that writes the wrong field, nor a wrong default in the Kotlin door

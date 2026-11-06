@@ -1,6 +1,7 @@
 # KLANG-00417: Parameter parity audit across every DSL surface
 
-> **Status (2026-11-06): IN PROGRESS.** Started 2026-11-06 (maintainer: "please start with KLANG-00417 ...
+> **Status (2026-11-06): DONE.** Steps 1 to 4 done the same day (the audit, the table, every gap fixed or recorded,
+> the pins). Started 2026-11-06 (maintainer: "please start with KLANG-00417 ...
 > backward compatibility is not a concern, but update any of the build-in songs, jingles and tutorials"). Split out of
 > KLANG-00137 (master dsl followups) section 1 the same day ("the parity audit should get its own ticket and should be
 > worked on when all the dsp restructuring is done"); the maintainer's start answers the first question below.
@@ -214,6 +215,17 @@ judgement, each item fixed or recorded. The songs, the jingles and the tutorials
   A5: `/dsl-design` §4's recorded asymmetries gain the distort's two laws, the envelope's slot and node defaults,
   the curve calls, `resetSamples` / `flankSamples`, `eq`, `comp`, the stage data classes' order and material and
   vowel as a number.
+
+- **Step 4, the pins, DONE 2026-11-06:** every fix above carries its own spec rows (the door parity specs, the
+  defaults-sync specs, the classic tail and render parity, the field accessors, the tool binding). The one comparison
+  no spec made, a sprudel door against its Ignitor or Katalyst twin of the same name, is
+  `DoorOrderParitySpec` (sprudel jvmTest): for every pair in the two generated registries (the twin on `IgnitorDsl`,
+  `KatalystBuilder`, `KatalystKnobDsl`, or a builder whose knob shares the door's name, `adsr`, `range`, `analog`;
+  51 pairs and more), every
+  parameter both take sits at the same position, so a positional call means the same on both. It pins the order, not
+  the words (those are the parity specs'). The recorded exceptions are keyed by door and twin with the twin order
+  they expect (today the FM's on the Ignitor): one that drifts fails, and so does one that stops differing.
+  Mutations: a swapped sprudel door, a drifted FM order and a stale waiver, all KILLED.
 
 ### Checked and consistent
 
@@ -877,3 +889,4 @@ already written down.
 - 2026-11-06: created from KLANG-00137 section 1 (the maintainer: its own ticket, after the DSP restructuring).
 - 2026-11-06: IN PROGRESS (maintainer: start now; no backward compatibility, the songs, jingles and tutorials follow).
 - 2026-11-06: the audit recorded (A and B); the maintainer decided B1 to B8, every recommendation.
+- 2026-11-06: B1 to B8, A1 to A5 and B9 done; step 4 (the pins) done; DONE.
