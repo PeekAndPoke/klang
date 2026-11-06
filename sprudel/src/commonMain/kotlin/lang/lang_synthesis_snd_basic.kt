@@ -11,6 +11,7 @@ package io.peekandpoke.klang.sprudel.lang
 import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
+import io.peekandpoke.klang.sprudel.IgnitorSlotKeys
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._liftOrReinterpretStringField
 
@@ -108,7 +109,7 @@ private fun applySndSquare(source: SprudelPattern): SprudelPattern =
 @KlangScript.Function
 fun SprudelPattern.sndSquare(duty: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
     var p = applySndSquare(this)
-    if (duty != null) p = p.ignitorParam("duty", duty, callInfo?.forParam(0, 1))
+    if (duty != null) p = p.ignitorParam(IgnitorSlotKeys.duty, duty, callInfo?.forParam(0, 1))
     return p
 }
 
@@ -271,7 +272,7 @@ private fun applySndNoise(source: SprudelPattern): SprudelPattern =
 @KlangScript.Function
 fun SprudelPattern.sndNoise(color: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
     var p = applySndNoise(this)
-    if (color != null) p = p.ignitorParam("color", color, callInfo?.forParam(0, 1))
+    if (color != null) p = p.ignitorParam(IgnitorSlotKeys.color, color, callInfo?.forParam(0, 1))
     return p
 }
 
@@ -312,7 +313,7 @@ private fun applySndBrown(source: SprudelPattern): SprudelPattern =
 @KlangScript.Function
 fun SprudelPattern.sndBrown(leak: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
     var p = applySndBrown(this)
-    if (leak != null) p = p.ignitorParam("leak", leak, callInfo?.forParam(0, 1))
+    if (leak != null) p = p.ignitorParam(IgnitorSlotKeys.leak, leak, callInfo?.forParam(0, 1))
     return p
 }
 
@@ -393,7 +394,7 @@ private fun applySndPulze(source: SprudelPattern): SprudelPattern =
 @KlangScript.Function
 fun SprudelPattern.sndPulze(duty: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
     var p = applySndPulze(this)
-    if (duty != null) p = p.ignitorParam("duty", duty, callInfo?.forParam(0, 1))
+    if (duty != null) p = p.ignitorParam(IgnitorSlotKeys.duty, duty, callInfo?.forParam(0, 1))
     return p
 }
 
@@ -436,7 +437,7 @@ private fun applySndDust(source: SprudelPattern): SprudelPattern =
 /**
  * Sets the sound to dust (random impulse) generator with configurable density.
  *
- * @param tail Impulse tail length.
+ * @param tail Amplitude exponent, not a length: 1 = uniform (default), above 1 mostly tiny impulses, rare loud pops.
  * @tool density: SprudelDustEditor, SprudelDustSequenceEditor
  * @param density Impulse rate, 0 to 1, scaling a 200 per second ceiling.
  * @return A new pattern with sound set to "dust" and parameters applied.
@@ -446,8 +447,8 @@ private fun applySndDust(source: SprudelPattern): SprudelPattern =
 @KlangScript.Function
 fun SprudelPattern.sndDust(density: PatternLike? = null, tail: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
     var p = applySndDust(this)
-    if (density != null) p = p.ignitorParam("density", density, callInfo?.forParam(0, 1))
-    if (tail != null) p = p.ignitorParam("tail", tail, callInfo?.forParam(1, 1))
+    if (density != null) p = p.ignitorParam(IgnitorSlotKeys.density, density, callInfo?.forParam(0, 1))
+    if (tail != null) p = p.ignitorParam(IgnitorSlotKeys.tail, tail, callInfo?.forParam(1, 1))
     return p
 }
 
@@ -455,7 +456,7 @@ fun SprudelPattern.sndDust(density: PatternLike? = null, tail: PatternLike? = nu
  * Parses this string as a pattern and sets sound to dust generator.
  *
  * @param density Impulse rate, 0 to 1, scaling a 200 per second ceiling.
- * @param tail Impulse tail length.
+ * @param tail Amplitude exponent, not a length: 1 = uniform (default), above 1 mostly tiny impulses, rare loud pops.
  * @return A new pattern with sound set to "dust".
  * @category tonal
  * @tags dust, impulse, noise, snd
@@ -468,7 +469,7 @@ fun String.sndDust(density: PatternLike? = null, tail: PatternLike? = null, call
  * Returns a [PatternMapperFn] that sets the sound to dust generator.
  *
  * @param density Impulse rate, 0 to 1, scaling a 200 per second ceiling.
- * @param tail Impulse tail length.
+ * @param tail Amplitude exponent, not a length: 1 = uniform (default), above 1 mostly tiny impulses, rare loud pops.
  * @return A [PatternMapperFn] that sets sound to "dust".
  * @category tonal
  * @tags dust, impulse, noise, snd
@@ -479,7 +480,7 @@ fun sndDust(density: PatternLike? = null, tail: PatternLike? = null, callInfo: C
 
 /** Chains a dust generator sound onto this [PatternMapperFn].
  * @param density Impulse rate, 0 to 1, scaling a 200 per second ceiling.
- * @param tail Impulse tail length.
+ * @param tail Amplitude exponent, not a length: 1 = uniform (default), above 1 mostly tiny impulses, rare loud pops.
  */
 @KlangScript.Function
 fun PatternMapperFn.sndDust(density: PatternLike? = null, tail: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
@@ -501,7 +502,7 @@ private fun applySndCrackle(source: SprudelPattern): SprudelPattern =
 @KlangScript.Function
 fun SprudelPattern.sndCrackle(chaos: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
     var p = applySndCrackle(this)
-    if (chaos != null) p = p.ignitorParam("chaos", chaos, callInfo?.forParam(0, 1))
+    if (chaos != null) p = p.ignitorParam(IgnitorSlotKeys.chaos, chaos, callInfo?.forParam(0, 1))
     return p
 }
 

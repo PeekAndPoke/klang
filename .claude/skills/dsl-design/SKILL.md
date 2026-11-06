@@ -368,8 +368,9 @@ the bug.
     vowel, duck; any knob: delay, reverb, compressor, phaser); a new bus door is added to one of
     them in the same change, or the rule is silently wrong for it (round 2 of step 5a-3 caught the
     phaser missing from this list one round after the sends' gate was mis-stated).
-  A knob with no constant, where unset means off (`reverb.lowpass`), is not a companion in this
-  sense and is never filled; inventing a constant for it would damp every room.
+  A knob with no wire constant, where unset means the engine's own fixed behaviour (`reverb.lowpass`: the
+  engine's fixed damping, a relation to the sample rate), is not a companion in this sense and is never
+  filled; inventing a constant for it would change every room.
   **This bullet is the ONE home of the rule's text.** Its row in this skill's Rules table is its index line. Every
   other site (a door's KDoc, `ParamBag`, the classic chain's KDoc, the constants headers, the
   module `MEMORY.md` files) states only what THAT door or class does, in a sentence or two, and
@@ -420,8 +421,26 @@ the bug.
   order: sprudel's `fm(depth, ratio, ...)` leads with the depth, the Ignitor door `x.fm(modulator, ratio, depth, ...)`
   leads with the modulator, its structure, and puts the ratio first; the words are the same since pitch pipeline step
   4 (D4), and sprudel kept its order so that no positional call changed, `fm(300, 1.4)` is still depth 300, ratio
-  1.4). See
-  KLANG-00137 (master dsl followups) section 1 for the parity audit brief.
+  1.4). Recorded at the parity audit (KLANG-00417 A5, 2026-11-06), one clause each, the detail in the KDoc named:
+  - the distort's two laws (decision D2): sprudel's `distort` and the Katalyst `distort` run the fused law
+    (`DistortionCore`, no soft cap), the Ignitor door `x.distort(...)` runs `Shape(Drive(...))` with a soft cap,
+    because songs depend on it (`IgnitorDsl.Distort`, `IgnitorEffects.kt`);
+  - the amplitude envelope's slot defaults (`VOICE_ADSR_*`, sustain 1, release 0.05) differ from the `Adsr` node's
+    (sustain 0.7, release 0.3): no door reaches the node's, the Ignitor doors take all four stages (`EnvelopeDefaults.kt`);
+  - the curve calls: sprudel's `adsrCurves` / `lpfCurves` / `penvCurves` keep the current curve for an omitted
+    stage or an unknown name, the Ignitor's `curves(...)` builds afresh and resets it to the default;
+  - `resetSamples` and `flankSamples` carry their unit in the name: a time in samples on purpose, tied to the sample
+    grid (aliasing), against the units rule below;
+  - `eq` is the equality compare in sprudel; there is no sprudel equalizer door (the route is
+    `katalyst(Katalyst(k => k.eq(...)))`);
+  - `comp` is a sprudel alias of `compressor`, heritage, with no Katalyst twin;
+  - the stage data classes keep their own parameter order (`KatalystStageDsl.Phaser(rate, wet, ...)`,
+    `Body(material, wet, floor)`, `Vowel(vowel, wet, floor)`, `IgnitorDsl.Phaser(inner, rate, wet, ...)`): no door
+    exposes it, every door is wet first;
+  - material and vowel as a number: an index on the Katalyst doors, while sprudel's `body` / `vowel` read a number
+    as a name (`5` is the name "5.0", index 0, off).
+
+  See KLANG-00137 (master dsl followups) section 1 for the parity audit brief.
 
 ---
 

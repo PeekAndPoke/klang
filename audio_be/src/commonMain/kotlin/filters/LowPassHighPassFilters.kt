@@ -228,8 +228,8 @@ internal const val HOUSE_DC_BLOCK_COEFF: Double = 0.999
 
 // NOTE: `BODY_FLOOR` and `VOWEL_FLOOR` moved to `audio_bridge/constants/BusEffectDefaults.kt`
 // (Katalyst DSL step 1, 2026-09-17): the Katalyst `body`/`vowel` stage knobs need the same
-// numbers, and a second declaration here would be the drift the parity rule forbids. `bodyWet`
-// (wire spelling: `bodyMix`) is clamped to [0, 1] since C4 (the shared wet/dry law lives on that
+// numbers, and a second declaration here would be the drift the parity rule forbids. The body's
+// wet (the slot `body.wet`) is clamped to [0, 1] since C4 (the shared wet/dry law lives on that
 // domain; the old raw extension above 1 is a deleted capability - plan: Helper domain).
 
 /**

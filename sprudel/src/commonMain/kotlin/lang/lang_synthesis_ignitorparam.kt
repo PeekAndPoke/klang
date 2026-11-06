@@ -12,6 +12,7 @@ import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.script.stdlib.IgnitorSlotLike
 import io.peekandpoke.klang.script.stdlib.ignitorSlotName
+import io.peekandpoke.klang.sprudel.IgnitorSlotKeys
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._liftOrReinterpretStringField
 import io.peekandpoke.klang.sprudel._mapNumericField
@@ -43,7 +44,10 @@ private fun ignpSlot(slot: IgnitorSlotLike?, callInfo: CallInfo?): String =
  * Writes one Ignitor slot, per voice: by its name, or by the param object itself.
  *
  * Direct access to the `ignitorParams` map, for slots that have no dedicated door of their own.
- * Slots used elsewhere in this library are `analog`, `onepole` and `density`.
+ * The other doors of this library write the flat source slots `voices`, `spread`, `duty`, `color`, `leak`,
+ * `density`, `tail`, `chaos`, `feedback`, `brightness`, `pickPosition`, `stiffness`, the flat `analog`,
+ * `onepole` and `pregain`, the sample slots `begin`, `end`, `speed`, `loop`, and the `<door>.<param>` slots of the
+ * classic tail (`lpf.freq`, `adsr.attack`, `vibrato.rate`, ...); `Ignitor.slot` lists them, the sample slots apart.
  *
  * ```KlangScript(Playable)
  * note("c3 e3").s("supersaw").ignitorParam("analog", 4)
@@ -161,12 +165,12 @@ fun PatternMapperFn.ignp(slot: IgnitorSlotLike?, value: PatternLike, callInfo: C
 // -- analog() ---------------------------------------------------------------------------------------------------------
 
 private val analogMutation = voiceSetter {
-    putIgnitorParam("analog", it?.asDoubleOrNull())
+    putIgnitorParam(IgnitorSlotKeys.analog, it?.asDoubleOrNull())
 }
 
 private fun applyAnalog(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.ignitorParams?.get("analog") }, update = analogMutation)
+        return source._mapNumericField(mapper, read = { it.ignitorParams?.get(IgnitorSlotKeys.analog) }, update = analogMutation)
     }
 
     return source._liftOrReinterpretStringField(args, analogMutation)
@@ -245,7 +249,7 @@ fun String.analog(character: PatternLike? = null, callInfo: CallInfo? = null): S
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("analog")
-object analog : FieldAccessor({ it.ignitorParams?.get("analog") }) {
+object analog : FieldAccessor({ it.ignitorParams?.get(IgnitorSlotKeys.analog) }) {
 
     /**
      * Creates a [PatternMapperFn] that sets how analog the sound is.
@@ -279,12 +283,12 @@ fun PatternMapperFn.analog(character: PatternLike? = null, callInfo: CallInfo? =
 // -- duty() -----------------------------------------------------------------------------------------------------------
 
 private val dutyMutation = voiceSetter {
-    putIgnitorParam("duty", it?.asDoubleOrNull())
+    putIgnitorParam(IgnitorSlotKeys.duty, it?.asDoubleOrNull())
 }
 
 private fun applyDuty(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.ignitorParams?.get("duty") }, update = dutyMutation)
+        return source._mapNumericField(mapper, read = { it.ignitorParams?.get(IgnitorSlotKeys.duty) }, update = dutyMutation)
     }
 
     return source._liftOrReinterpretStringField(args, dutyMutation)
@@ -340,7 +344,7 @@ fun String.duty(width: PatternLike? = null, callInfo: CallInfo? = null): Sprudel
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("duty")
-object duty : FieldAccessor({ it.ignitorParams?.get("duty") }) {
+object duty : FieldAccessor({ it.ignitorParams?.get(IgnitorSlotKeys.duty) }) {
 
     /**
      * Creates a [PatternMapperFn] that sets the pulse duty cycle.
@@ -365,12 +369,12 @@ fun PatternMapperFn.duty(width: PatternLike? = null, callInfo: CallInfo? = null)
 // -- onepole() --------------------------------------------------------------------------------------------------------
 
 private val onepoleMutation = voiceSetter {
-    putIgnitorParam("onepole", it?.asDoubleOrNull())
+    putIgnitorParam(IgnitorSlotKeys.onepole, it?.asDoubleOrNull())
 }
 
 private fun applyOnepole(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.ignitorParams?.get("onepole") }, update = onepoleMutation)
+        return source._mapNumericField(mapper, read = { it.ignitorParams?.get(IgnitorSlotKeys.onepole) }, update = onepoleMutation)
     }
 
     return source._liftOrReinterpretStringField(args, onepoleMutation)
@@ -438,7 +442,7 @@ fun String.onepole(freq: PatternLike? = null, callInfo: CallInfo? = null): Sprud
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("onepole")
-object onepole : FieldAccessor({ it.ignitorParams?.get("onepole") }) {
+object onepole : FieldAccessor({ it.ignitorParams?.get(IgnitorSlotKeys.onepole) }) {
 
     /**
      * Creates a [PatternMapperFn] that sets the oscillator one-pole lowpass.

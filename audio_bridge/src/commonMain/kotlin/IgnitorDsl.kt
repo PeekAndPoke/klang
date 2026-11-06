@@ -6,6 +6,11 @@
 package io.peekandpoke.klang.audio_bridge
 
 import io.peekandpoke.klang.audio_bridge.constants.ADSR_SUSTAIN_LEVEL
+import io.peekandpoke.klang.audio_bridge.constants.BROWN_LEAK_DEFAULT
+import io.peekandpoke.klang.audio_bridge.constants.CRACKLE_CHAOS_DEFAULT
+import io.peekandpoke.klang.audio_bridge.constants.DISTORT_AMOUNT
+import io.peekandpoke.klang.audio_bridge.constants.DUST_BIPOLAR_DEFAULT
+import io.peekandpoke.klang.audio_bridge.constants.DUST_TAIL_DEFAULT
 import io.peekandpoke.klang.audio_bridge.constants.EQ_BAND_DB
 import io.peekandpoke.klang.audio_bridge.constants.EQ_TAP_GAIN
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_ATTACK_SEC
@@ -21,6 +26,7 @@ import io.peekandpoke.klang.audio_bridge.constants.FM_ENV_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FM_ENV_SUSTAIN_LEVEL
 import io.peekandpoke.klang.audio_bridge.constants.FM_RATIO
 import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
+import io.peekandpoke.klang.audio_bridge.constants.NOISE_TILT_DEFAULT
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_CENTER_HZ
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_SWEEP_HZ
@@ -241,15 +247,15 @@ sealed interface IgnitorDsl {
      */
     object Slots {
         val analog: IgnitorDsl = Param(name = "analog", default = 0.0)
-        val bipolar: IgnitorDsl = Param(name = "bipolar", default = 0.0)
+        val bipolar: IgnitorDsl = Param(name = "bipolar", default = DUST_BIPOLAR_DEFAULT)
         val brightness: IgnitorDsl = Param(name = "brightness", default = 0.5)
-        val chaos: IgnitorDsl = Param(name = "chaos", default = 1.5)
-        val color: IgnitorDsl = Param(name = "color", default = 0.0)
+        val chaos: IgnitorDsl = Param(name = "chaos", default = CRACKLE_CHAOS_DEFAULT)
+        val color: IgnitorDsl = Param(name = "color", default = NOISE_TILT_DEFAULT)
         val declick: IgnitorDsl = Param(name = "declick", default = 0.0)
         val density: IgnitorDsl = Param(name = "density", default = 0.2)
         val duty: IgnitorDsl = Param(name = "duty", default = 0.5)
         val feedback: IgnitorDsl = Param(name = "feedback", default = 0.996)
-        val leak: IgnitorDsl = Param(name = "leak", default = 0.02)
+        val leak: IgnitorDsl = Param(name = "leak", default = BROWN_LEAK_DEFAULT)
 
         val octaves: IgnitorDsl = Param(name = "octaves", default = 1.0)
         val persistence: IgnitorDsl = Param(name = "persistence", default = 0.5)
@@ -284,7 +290,7 @@ sealed interface IgnitorDsl {
         val rate: IgnitorDsl = Param(name = "rate", default = 1.0)
         val spread: IgnitorDsl = Param(name = "spread", default = 0.2)
         val stiffness: IgnitorDsl = Param(name = "stiffness", default = 0.0)
-        val tail: IgnitorDsl = Param(name = "tail", default = 1.0)
+        val tail: IgnitorDsl = Param(name = "tail", default = DUST_TAIL_DEFAULT)
         val voices: IgnitorDsl = Param(name = "voices", default = 8.0)
 
         // ── The slots of the classic tail (phase 3 step 5), one group per stage ──
@@ -294,7 +300,10 @@ sealed interface IgnitorDsl {
         // door's word (`lpf.freq`, `crush.bits`); each group's KDoc in `IgnitorDslClassic.kt` names
         // the defaults and why.
 
-        /** The vibrato stage, outside the accelerate: `vibrato.rate` and `vibrato.semitones` (the switch). */
+        /**
+         * The vibrato stage, outside the accelerate: `vibrato.rate`, `vibrato.semitones` (the switch), `vibrato.rangeFrom`,
+         * `vibrato.rangeTo` and `vibrato.phase`.
+         */
         val vibrato: VibratoSlots = VibratoSlots()
 
         /**
@@ -319,7 +328,7 @@ sealed interface IgnitorDsl {
 
         /**
          * The one-pole lowpass stage, `classic()`'s first AMPLITUDE stage (behind the pitch stages): the cutoff in Hz, which sprudel's
-         * `onepole(hz)` writes. Default 0.0, which the gate reads as off. A flat name, not `<door>.<param>`:
+         * `onepole(freq)` writes. Default 0.0, which the gate reads as off. A flat name, not `<door>.<param>`:
          * the door has one knob, and `onepole` is the key it has always written (phase 3 step 10 moved the
          * stage from the registry into `classic()`).
          */
@@ -763,14 +772,14 @@ sealed interface IgnitorDsl {
      * Unison supersaw oscillator. Stacks multiple detuned sawtooth voices for a thick sound.
      *
      * The character fields below are plain scalars (read once per voice-count/freq change, not audio-rate).
-     * Their defaults MUST stay in sync with `SUPERSAW_*` in `audio_be/.../ignitor/OscillatorTuning.kt` — they
-     * are the same values, duplicated here because `audio_be` consts aren't visible to `audio_bridge`.
+     * Their defaults are the `SUPERSAW_*` constants in `audio_bridge/constants/OscillatorTuning.kt`, read directly,
+     * the same constants the engine's factories read: one home, nothing to keep in sync.
      */
     @WireName("supersaw")
     data class SuperSaw(
         val freq: IgnitorDsl = Freq,
         val voices: IgnitorDsl = Slots.voices,
-        /** Unison frequency spread between the voices (the pattern-level `.spread()` sets this). */
+        /** Unison detune width in semitones, lowest copy to highest (the pattern's `unison(spread = ...)` sets this). */
         val spread: IgnitorDsl = Slots.spread,
         val analog: IgnitorDsl = Slots.analog,
         /** Drift lane blend, 0 = one shared analog walk for every voice, 1 = independent walks. */
@@ -829,7 +838,7 @@ sealed interface IgnitorDsl {
     data class SuperSine(
         val freq: IgnitorDsl = Freq,
         val voices: IgnitorDsl = Slots.voices,
-        /** Unison frequency spread between the voices (the pattern-level `.spread()` sets this). */
+        /** Unison detune width in semitones, lowest copy to highest (the pattern's `unison(spread = ...)` sets this). */
         val spread: IgnitorDsl = Slots.spread,
         val analog: IgnitorDsl = Slots.analog,
         /** Drift lane blend, 0 = one shared analog walk for every voice, 1 = independent walks. */
@@ -890,7 +899,7 @@ sealed interface IgnitorDsl {
     data class SuperSquare(
         val freq: IgnitorDsl = Freq,
         val voices: IgnitorDsl = Slots.voices,
-        /** Unison frequency spread between the voices (the pattern-level `.spread()` sets this). */
+        /** Unison detune width in semitones, lowest copy to highest (the pattern's `unison(spread = ...)` sets this). */
         val spread: IgnitorDsl = Slots.spread,
         val analog: IgnitorDsl = Slots.analog,
         /** Drift lane blend, 0 = one shared analog walk for every voice, 1 = independent walks. */
@@ -949,7 +958,7 @@ sealed interface IgnitorDsl {
     data class SuperTri(
         val freq: IgnitorDsl = Freq,
         val voices: IgnitorDsl = Slots.voices,
-        /** Unison frequency spread between the voices (the pattern-level `.spread()` sets this). */
+        /** Unison detune width in semitones, lowest copy to highest (the pattern's `unison(spread = ...)` sets this). */
         val spread: IgnitorDsl = Slots.spread,
         val analog: IgnitorDsl = Slots.analog,
         /** Drift lane blend, 0 = one shared analog walk for every voice, 1 = independent walks. */
@@ -1009,7 +1018,7 @@ sealed interface IgnitorDsl {
     data class SuperRamp(
         val freq: IgnitorDsl = Freq,
         val voices: IgnitorDsl = Slots.voices,
-        /** Unison frequency spread between the voices (the pattern-level `.spread()` sets this). */
+        /** Unison detune width in semitones, lowest copy to highest (the pattern's `unison(spread = ...)` sets this). */
         val spread: IgnitorDsl = Slots.spread,
         val analog: IgnitorDsl = Slots.analog,
         /** Drift lane blend, 0 = one shared analog walk for every voice, 1 = independent walks. */
@@ -2145,7 +2154,7 @@ sealed interface IgnitorDsl {
     @WireName("drive")
     data class Drive(
         val inner: IgnitorDsl,
-        val amount: IgnitorDsl = Constant(0.5),
+        val amount: IgnitorDsl = Constant(DISTORT_AMOUNT),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); amount.collectParams(out)
@@ -2213,7 +2222,7 @@ sealed interface IgnitorDsl {
     @WireName("distort")
     data class Distort(
         val inner: IgnitorDsl,
-        val amount: IgnitorDsl = Constant(0.5),
+        val amount: IgnitorDsl = Constant(DISTORT_AMOUNT),
         val shape: IgnitorDsl = Constant(DistortionShapes.SOFT_INDEX.toDouble()),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {

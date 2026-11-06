@@ -388,8 +388,7 @@ sealed interface KatalystStageDsl {
      * deliberately stands still).
      *
      * @param rate sweep rate in Hz. 0 = the sweep stands still. Cylinder twin: `phaser(rate = ...)`.
-     * @param wet wet amount, 0 to 1 (the wire spelling on the voice is `phaserDepth`). Cylinder twin:
-     *   `phaser(wet = ...)`.
+     * @param wet wet amount, 0 to 1. Cylinder twin: `phaser(wet = ...)`.
      * @param center center frequency of the sweep in Hz. Cylinder twin: `phaser(center = ...)`.
      * @param sweep width of the sweep around [center], in Hz. Cylinder twin: `phaser(sweep = ...)`.
      * @param floor minimum dry coefficient of the wet/dry law; 1.0 = purely additive. Cylinder twin:
@@ -442,9 +441,11 @@ sealed interface KatalystStageDsl {
     ) : KatalystStageDsl
 
     /**
-     * Distortion of the bus mix: the Ignitor's `distort` at the bus position, one DSP and one word on
-     * both hosts (KLANG-00292 (katalyst distort stage)). A clipper is this stage with a clipping
-     * shape (`soft`, `hard`) and a small [amount]; saturation is a gentle shape at a moderate one.
+     * Distortion of the bus mix: the classic voice's fused `distort` (the one sprudel's `distort` writes) at the
+     * bus position, one DSP and one word on both hosts (KLANG-00292 (katalyst distort stage)). The Ignitor door
+     * `x.distort(...)` adds a soft cap to the same drive and shapes, a recorded difference (decision D2). A clipper
+     * is this stage with a clipping shape (`soft`, `hard`) and a small [amount]; saturation is a gentle shape at a
+     * moderate one.
      *
      * Unlike a voice's distort it bends the SUM: the notes of the bus meet inside one curve, so they
      * intermodulate. That is the glue a master saturator is for and the growl of a guitar amp fed by

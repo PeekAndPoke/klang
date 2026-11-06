@@ -29,8 +29,8 @@ import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinter
  * every reverb setter, because the reverb has no name knob: `reverb(size = 4)` fills `wet` and the
  * room is ON.
  *
- * **`lowpass` has no constant** and is never filled: unset means no damping, and inventing a cutoff
- * would darken every room.
+ * **`lowpass` has no constant** and is never filled: unset means the engine's fixed damping (a relation to
+ * the sample rate, no wire constant), so there is nothing to fill, and inventing a cutoff would change every room.
  *
  * The slots are the reverb's only storage since Katalyst step 5b-3 (the voice fields left the
  * wire and `SprudelVoiceData`): the cylinder's room reads them, and so do the `reverb.*` accessors.
@@ -134,7 +134,7 @@ private fun applyReverb(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  *
  * @param wet How much of the cylinder goes into the room, 0 to 1, default 0.25. Cylinder-wide.
  * @param size Tail length, about 0 to 10, default 5; above 10 is bounded at 10. Cylinder-wide.
- * @param lowpass Lowpass on the tail, Hz. Lower is darker. Unset by default. Cylinder-wide.
+ * @param lowpass Lowpass on the tail, Hz. Lower is darker. Unset by default: the engine's fixed damping. Cylinder-wide.
  * @tool SprudelReverbEditor
  * @tool wet: SprudelReverbEditor, SprudelReverbSequenceEditor
  * @tool size: SprudelReverbSizeEditor, SprudelReverbSizeSequenceEditor
@@ -210,7 +210,7 @@ object reverb {
      *
      * @param wet How much of the cylinder goes into the room, 0 to 1, default 0.25. Cylinder-wide.
      * @param size Tail length, about 0 to 10, default 5; above 10 is bounded at 10. Cylinder-wide.
-     * @param lowpass Lowpass on the tail, Hz. Lower is darker. Unset by default. Cylinder-wide.
+     * @param lowpass Lowpass on the tail, Hz. Lower is darker. Unset by default: the engine's fixed damping. Cylinder-wide.
      */
     @KlangScript.Invoke
     operator fun invoke(

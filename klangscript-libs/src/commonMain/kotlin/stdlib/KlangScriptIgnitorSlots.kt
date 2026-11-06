@@ -52,7 +52,7 @@ internal object KlangScriptIgnitorSlots {
     @KlangScript.Property
     val duty: IgnitorDsl = IgnitorDsl.Slots.duty
 
-    /** Open `density` slot (default 0.2). Used by dust / crackle. */
+    /** Open `density` slot (default 0.2): dust's impulse rate. Used by dust. */
     @KlangScript.Property
     val density: IgnitorDsl = IgnitorDsl.Slots.density
 
@@ -179,7 +179,7 @@ internal object KlangScriptIgnitorSlots {
     val penvCurves: KlangScriptIgnitorPenvCurvesSlots = KlangScriptIgnitorPenvCurvesSlots
 
     /**
-     * The one-pole lowpass stage's slot (default 0.0, off): the cutoff in Hz that the pattern's `onepole(hz)`
+     * The one-pole lowpass stage's slot (default 0.0, off): the cutoff in Hz that the pattern's `onepole(freq)`
      * writes. `classic()`'s first amplitude stage, behind the pitch stages.
      */
     @KlangScript.Property

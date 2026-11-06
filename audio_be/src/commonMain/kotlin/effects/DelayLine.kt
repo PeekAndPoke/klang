@@ -205,8 +205,8 @@ class DelayLine(
             field = value
         }
 
-    /** Feedback amount. Setter silently ignores non-finite values. Values ≥ 1.0
-     *  self-oscillate, bounded by [cap] in the feedback path. */
+    /** Feedback amount. Setter silently ignores non-finite values. At exactly 1.0 the echoes hold (the ring
+     *  recirculates without loss); above it they grow until [cap] in the feedback path bounds them. */
     var feedback: Double = feedback
         set(value) {
             if (!value.isFinite()) return

@@ -520,10 +520,10 @@ data class OscPluckBuilder(val node: IgnitorDsl.Pluck) {
     /** Loop feedback per pass; the text is on the script knob `feedback` (`scriptFeedback` in `klangscript-libs`). */
     fun feedback(feedback: IgnitorDsl): OscPluckBuilder = copy(node = node.copy(feedback = feedback))
 
-    /** Initial-burst brightness, the pick hardness; the text is on the script knob `brightness` (`scriptBrightness` in `klangscript-libs`). */
+    /** The string loop's lowpass; the text is on the script knob `brightness` (`scriptBrightness` in `klangscript-libs`). */
     fun brightness(brightness: IgnitorDsl): OscPluckBuilder = copy(node = node.copy(brightness = brightness))
 
-    /** Relative pick position along the string; the text is on the script knob `pickPosition` (`scriptPickPosition` in `klangscript-libs`). */
+    /** The pluck's noise burst; the text is on the script knob `pickPosition` (`scriptPickPosition` in `klangscript-libs`). */
     fun pickPosition(pickPosition: IgnitorDsl): OscPluckBuilder = copy(node = node.copy(pickPosition = pickPosition))
 
     /** String stiffness; the text is on the script knob `stiffness` (`scriptStiffness` in `klangscript-libs`). */
@@ -547,10 +547,10 @@ data class OscSuperPluckBuilder(val node: IgnitorDsl.SuperPluck) {
     /** Loop feedback per pass; the text is on the script knob `feedback` (`scriptFeedback` in `klangscript-libs`). */
     fun feedback(feedback: IgnitorDsl): OscSuperPluckBuilder = copy(node = node.copy(feedback = feedback))
 
-    /** Initial-burst brightness, the pick hardness; the text is on the script knob `brightness` (`scriptBrightness` in `klangscript-libs`). */
+    /** The string loop's lowpass; the text is on the script knob `brightness` (`scriptBrightness` in `klangscript-libs`). */
     fun brightness(brightness: IgnitorDsl): OscSuperPluckBuilder = copy(node = node.copy(brightness = brightness))
 
-    /** Relative pick position along the string; the text is on the script knob `pickPosition` (`scriptPickPosition` in `klangscript-libs`). */
+    /** The pluck's noise burst; the text is on the script knob `pickPosition` (`scriptPickPosition` in `klangscript-libs`). */
     fun pickPosition(pickPosition: IgnitorDsl): OscSuperPluckBuilder = copy(node = node.copy(pickPosition = pickPosition))
 
     /** String stiffness; the text is on the script knob `stiffness` (`scriptStiffness` in `klangscript-libs`). */

@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_be.effects
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.utils.isFiniteInline
 import io.peekandpoke.klang.audio_be.utils.timeConstantCoeff
+import io.peekandpoke.klang.audio_bridge.constants.DUCK_RELEASE_SECONDS
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -36,7 +37,7 @@ import kotlin.math.min
  */
 class Ducking(
     private val sampleRate: Int,
-    releaseSeconds: Double = 0.1,
+    releaseSeconds: Double = DUCK_RELEASE_SECONDS,
     depth: Double = 0.5,
 ) {
     /** Internal release coefficient, from [releaseSeconds]. */
@@ -54,7 +55,7 @@ class Ducking(
         private set
 
     /** The stored [releaseSeconds], what its getter reads; a plain property for the same reason as [depthValue]. */
-    internal var releaseValue: Double = guardOr(value = releaseSeconds, fallback = 0.1)
+    internal var releaseValue: Double = guardOr(value = releaseSeconds, fallback = DUCK_RELEASE_SECONDS)
         private set
 
     /**

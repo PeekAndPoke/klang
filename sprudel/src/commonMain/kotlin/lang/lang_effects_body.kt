@@ -29,9 +29,9 @@ import io.peekandpoke.klang.sprudel.putKatalystParam
  * `constants/BusEffectDefaults.kt` (`/dsl-design` §4 is the rule; this is only what THIS door
  * does). Called from the MATERIAL setter alone, because the material is this stage's name knob.
  *
- * Fills the voice FIELDS with the same two constants, so the field accessors (`body.wet`) read what
- * the slots hold. The wire does not carry the fields: since step 5b-1 the cylinder's resonator reads the
- * SLOTS and nothing else, and the `filters` field that once carried a `FilterDef.Body` left
+ * Fills the voice FIELDS with the same two constants. The accessors (`body.wet`) read the slots since
+ * KLANG-00417 A4, as the delay's and the reverb's do. The wire does not carry the fields: since step 5b-1 the
+ * cylinder's resonator reads the SLOTS and nothing else, and the `filters` field that once carried a `FilterDef.Body` left
  * `VoiceData` in phase 3 step 9. The engine substitutes the same two constants for an unset slot
  * in `KatalystResonatorEffect.configure`; what the fill buys is that one place decides them.
  */
@@ -94,7 +94,7 @@ private val bodyWetMutation = voiceSetter {
 
 private fun applyBodyWet(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.bodyMix }, update = bodyWetMutation)
+        return source._mapNumericField(mapper, read = { it.katalystParams?.get("body.wet") }, update = bodyWetMutation)
     }
 
     return source._liftOrReinterpretNumericalField(args, bodyWetMutation)
@@ -107,7 +107,7 @@ private val bodyFloorMutation = voiceSetter {
 
 private fun applyBodyFloor(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.bodyFloor }, update = bodyFloorMutation)
+        return source._mapNumericField(mapper, read = { it.katalystParams?.get("body.floor") }, update = bodyFloorMutation)
     }
 
     return source._liftOrReinterpretNumericalField(args, bodyFloorMutation)
@@ -226,11 +226,11 @@ object body {
 
     /** The wet slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val wet: FieldAccessor = FieldAccessor { it.bodyMix }
+    val wet: FieldAccessor = FieldAccessor { it.katalystParams?.get("body.wet") }
 
     /** The floor slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val floor: FieldAccessor = FieldAccessor { it.bodyFloor }
+    val floor: FieldAccessor = FieldAccessor { it.katalystParams?.get("body.floor") }
 
     /**
      * The setter, see [SprudelPattern.body].

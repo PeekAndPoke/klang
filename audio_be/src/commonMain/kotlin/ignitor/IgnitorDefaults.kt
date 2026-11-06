@@ -37,7 +37,7 @@ fun IgnitorRegistry.registerDefaults() {
  * - "analog" on all pitched oscillators
  * - "voices", "spread" on super oscillators
  * - "duty" on square/sqr/pulse/pulze (one pulse oscillator; 0.5 = square)
- * - "density" on dust/crackle
+ * - "density" on dust (its impulse rate), "chaos" on crackle
  * - "leak" on brownnoise
  * - "feedback", "brightness", "pickPosition", "stiffness" on pluck
  */

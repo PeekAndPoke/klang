@@ -403,7 +403,7 @@ internal fun OscSuperSawBuilder.scriptPhase(phase: IgnitorDslLike): OscSuperSawB
 internal fun OscSuperSawBuilder.scriptVoices(voices: IgnitorDslLike): OscSuperSawBuilder =
     this.voices(voices = voices.toIgnitorDsl())
 
-/** Unison frequency spread between the voices (default 0.2). Same knob as the pattern-level `.spread()`. */
+/** Unison detune width in semitones, lowest copy to highest (default 0.2). Same slot as the pattern's `unison(spread = ...)`. */
 @KlangScript.Function(name = "spread")
 internal fun OscSuperSawBuilder.scriptSpread(spread: IgnitorDslLike): OscSuperSawBuilder =
     this.spread(spread = spread.toIgnitorDsl())
@@ -512,7 +512,7 @@ internal fun OscSuperSineBuilder.scriptPhase(phase: IgnitorDslLike): OscSuperSin
 internal fun OscSuperSineBuilder.scriptVoices(voices: IgnitorDslLike): OscSuperSineBuilder =
     this.voices(voices = voices.toIgnitorDsl())
 
-/** Unison frequency spread between the voices (default 0.2). Same knob as the pattern-level `.spread()`. */
+/** Unison detune width in semitones, lowest copy to highest (default 0.2). Same slot as the pattern's `unison(spread = ...)`. */
 @KlangScript.Function(name = "spread")
 internal fun OscSuperSineBuilder.scriptSpread(spread: IgnitorDslLike): OscSuperSineBuilder =
     this.spread(spread = spread.toIgnitorDsl())
@@ -622,7 +622,7 @@ internal fun OscSuperSquareBuilder.scriptPhase(phase: IgnitorDslLike): OscSuperS
 internal fun OscSuperSquareBuilder.scriptVoices(voices: IgnitorDslLike): OscSuperSquareBuilder =
     this.voices(voices = voices.toIgnitorDsl())
 
-/** Unison frequency spread between the voices (default 0.2). Same knob as the pattern-level `.spread()`. */
+/** Unison detune width in semitones, lowest copy to highest (default 0.2). Same slot as the pattern's `unison(spread = ...)`. */
 @KlangScript.Function(name = "spread")
 internal fun OscSuperSquareBuilder.scriptSpread(spread: IgnitorDslLike): OscSuperSquareBuilder =
     this.spread(spread = spread.toIgnitorDsl())
@@ -730,7 +730,7 @@ internal fun OscSuperTriBuilder.scriptPhase(phase: IgnitorDslLike): OscSuperTriB
 internal fun OscSuperTriBuilder.scriptVoices(voices: IgnitorDslLike): OscSuperTriBuilder =
     this.voices(voices = voices.toIgnitorDsl())
 
-/** Unison frequency spread between the voices (default 0.2). Same knob as the pattern-level `.spread()`. */
+/** Unison detune width in semitones, lowest copy to highest (default 0.2). Same slot as the pattern's `unison(spread = ...)`. */
 @KlangScript.Function(name = "spread")
 internal fun OscSuperTriBuilder.scriptSpread(spread: IgnitorDslLike): OscSuperTriBuilder =
     this.spread(spread = spread.toIgnitorDsl())
@@ -840,7 +840,7 @@ internal fun OscSuperRampBuilder.scriptPhase(phase: IgnitorDslLike): OscSuperRam
 internal fun OscSuperRampBuilder.scriptVoices(voices: IgnitorDslLike): OscSuperRampBuilder =
     this.voices(voices = voices.toIgnitorDsl())
 
-/** Unison frequency spread between the voices (default 0.2). Same knob as the pattern-level `.spread()`. */
+/** Unison detune width in semitones, lowest copy to highest (default 0.2). Same slot as the pattern's `unison(spread = ...)`. */
 @KlangScript.Function(name = "spread")
 internal fun OscSuperRampBuilder.scriptSpread(spread: IgnitorDslLike): OscSuperRampBuilder =
     this.spread(spread = spread.toIgnitorDsl())
@@ -933,12 +933,18 @@ internal fun OscSuperRampBuilder.scriptPhasePool(
 internal fun OscPluckBuilder.scriptFeedback(feedback: IgnitorDslLike): OscPluckBuilder =
     this.feedback(feedback = feedback.toIgnitorDsl())
 
-/** Initial-burst brightness / pick hardness (default 0.5). 0 = mellow, 1 = bright. */
+/**
+ * The string loop's lowpass (default 0.5): a one-pole in the feedback path, so it sets how fast the highs die, not
+ * the burst. 0 = dark (floored at 0.01), 1 = bright (no lowpass in the loop).
+ */
 @KlangScript.Function(name = "brightness")
 internal fun OscPluckBuilder.scriptBrightness(brightness: IgnitorDslLike): OscPluckBuilder =
     this.brightness(brightness = brightness.toIgnitorDsl())
 
-/** Relative pick position along the string (default 0.5). 0 = bridge, 1 = nut. */
+/**
+ * The pluck's noise burst (default 0.5): 0 a short burst (a tenth of the string) at its start, the bridge; 1 a burst
+ * over the whole string. In between, the burst widens and moves along the string.
+ */
 @KlangScript.Function(name = "pickPosition")
 internal fun OscPluckBuilder.scriptPickPosition(pickPosition: IgnitorDslLike): OscPluckBuilder =
     this.pickPosition(pickPosition = pickPosition.toIgnitorDsl())
@@ -960,7 +966,7 @@ internal fun OscPluckBuilder.scriptAnalog(character: IgnitorDslLike): OscPluckBu
 internal fun OscSuperPluckBuilder.scriptVoices(voices: IgnitorDslLike): OscSuperPluckBuilder =
     this.voices(voices = voices.toIgnitorDsl())
 
-/** Unison frequency spread between the voices (default 0.2). Same knob as the pattern-level `.spread()`. */
+/** Unison detune width in semitones, lowest copy to highest (default 0.2). Same slot as the pattern's `unison(spread = ...)`. */
 @KlangScript.Function(name = "spread")
 internal fun OscSuperPluckBuilder.scriptSpread(spread: IgnitorDslLike): OscSuperPluckBuilder =
     this.spread(spread = spread.toIgnitorDsl())
@@ -970,12 +976,18 @@ internal fun OscSuperPluckBuilder.scriptSpread(spread: IgnitorDslLike): OscSuper
 internal fun OscSuperPluckBuilder.scriptFeedback(feedback: IgnitorDslLike): OscSuperPluckBuilder =
     this.feedback(feedback = feedback.toIgnitorDsl())
 
-/** Initial-burst brightness / pick hardness (default 0.5). 0 = mellow, 1 = bright. */
+/**
+ * The string loop's lowpass (default 0.5): a one-pole in the feedback path, so it sets how fast the highs die, not
+ * the burst. 0 = dark (floored at 0.01), 1 = bright (no lowpass in the loop).
+ */
 @KlangScript.Function(name = "brightness")
 internal fun OscSuperPluckBuilder.scriptBrightness(brightness: IgnitorDslLike): OscSuperPluckBuilder =
     this.brightness(brightness = brightness.toIgnitorDsl())
 
-/** Relative pick position along the string (default 0.5). 0 = bridge, 1 = nut. */
+/**
+ * The pluck's noise burst (default 0.5): 0 a short burst (a tenth of the string) at its start, the bridge; 1 a burst
+ * over the whole string. In between, the burst widens and moves along the string.
+ */
 @KlangScript.Function(name = "pickPosition")
 internal fun OscSuperPluckBuilder.scriptPickPosition(pickPosition: IgnitorDslLike): OscSuperPluckBuilder =
     this.pickPosition(pickPosition = pickPosition.toIgnitorDsl())

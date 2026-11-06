@@ -22,8 +22,8 @@ import io.peekandpoke.klang.audio_bridge.constants.PHASER_WET
  * `floor = 1.0` this is purely ADDITIVE (`dry + wet · sin²`): at `depth = 0.5` you get the
  * dry plus half-amplitude wet (≈ +3 dB louder than dry; the allpass cascade has unit
  * magnitude so the wet sample magnitude tracks the dry, modulated by the swept notches),
- * at `depth = 1.0` dry + full wet — the cylinder-bus convention where `phaserDepth` adds
- * an effect on top of the source. Lowering the floor (`phaserFloor`) turns the same knob
+ * at `depth = 1.0` dry + full wet: the cylinder-bus convention where the wet (`phaser.wet`) adds
+ * an effect on top of the source. Lowering the floor (`phaser.floor`) turns the same knob
  * into a crossfade; the phaser processes its cylinder mix in place, so unlike the reverb
  * SEND this is genuinely expressible per cylinder. Blast radius: with `floor < 1` the knob
  * scales the dry of the WHOLE cylinder mix, co-resident voices that never asked for a phaser
@@ -32,7 +32,7 @@ import io.peekandpoke.klang.audio_bridge.constants.PHASER_WET
  * closes or it is cut; route to another cylinder for different bus settings).
  *
  * THE BUS OWNS THE PHASER (maintainer decision, 2026-08-24): this bus pass is the ONE application
- * of the knobs, the DAW-insert model, one coherent sweep over the summed cylinder. `phaserFloor < 1` is
+ * of the knobs, the DAW-insert model, one coherent sweep over the summed cylinder. A `phaser.floor` below 1 is
  * an exact crossfade here. (The per-voice phaser a custom voice pipeline could add retired with the
  * Pipeline DSL, phase 3 step 9.)
  *
@@ -82,7 +82,7 @@ class Phaser(sampleRate: Int) {
      * item 29's `clampSvfRange` is the precedent). The same value for every finite input. No test can pin it; this
      * KDoc is the guard.
      */
-    var depth: Double = 0.0
+    var depth: Double = PHASER_WET
         set(value) {
             if (!value.isFinite()) { // NaN-guard (and Inf): a non-finite depth keeps the stored one
                 return
@@ -99,7 +99,7 @@ class Phaser(sampleRate: Int) {
      * of the whole cylinder mix at block boundaries with no smoothing - raw engine, no
      * hidden ramps; expect zipper on fast patterns.
      */
-    var floor: Double = 1.0
+    var floor: Double = PHASER_FLOOR
 
     /** Center breakpoint frequency in Hz. */
     var center: Double

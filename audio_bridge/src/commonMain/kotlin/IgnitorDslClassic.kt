@@ -10,6 +10,8 @@ import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_ATTACK_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_DECAY_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_SUSTAIN_LEVEL
+import io.peekandpoke.klang.audio_bridge.constants.FILTER_PASSES
+import io.peekandpoke.klang.audio_bridge.constants.FILTER_Q
 import io.peekandpoke.klang.audio_bridge.constants.FM_ENV_ATTACK_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FM_ENV_DECAY_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FM_ENV_RELEASE_SEC
@@ -62,8 +64,8 @@ private fun slot(door: String, param: String, default: Double, description: Stri
  *
  * @property freq cutoff in Hz; mirrors `<door>.freq`. Default UNSET: an unwritten cutoff is no
  *   filter at all (the gate's filter row), as a pattern without `lpf` had none on the strip.
- * @property q resonance; mirrors `<door>.q`. Default 0.707, the strip's `?: 0.707`.
- * @property passes cascade count, read once at voice build; mirrors `<door>.passes`. Default 1.
+ * @property q resonance; mirrors `<door>.q`. Default [FILTER_Q], 0.707, the strip's `?: 0.707`.
+ * @property passes cascade count, read once at voice build; mirrors `<door>.passes`. Default [FILTER_PASSES], 1.
  * @property env cutoff-envelope depth in semitones; mirrors `<door>.env`. Default UNSET: the strip's
  *   depth is an absence that becomes `FILTER_ENV_DEPTH_SEMITONES` when a stage knob is written (the
  *   slot-layer fill in the runtime's `filterEnvDef`) and no envelope otherwise.
@@ -74,8 +76,8 @@ private fun slot(door: String, param: String, default: Double, description: Stri
  */
 class PassFilterSlots internal constructor(door: String) {
     val freq: IgnitorDsl = slot(door = door, param = "freq", default = SLOT_UNSET)
-    val q: IgnitorDsl = slot(door = door, param = "q", default = 0.707)
-    val passes: IgnitorDsl = slot(door = door, param = "passes", default = 1.0)
+    val q: IgnitorDsl = slot(door = door, param = "q", default = FILTER_Q)
+    val passes: IgnitorDsl = slot(door = door, param = "passes", default = FILTER_PASSES)
     val env: IgnitorDsl = slot(door = door, param = "env", default = SLOT_UNSET)
     val attack: IgnitorDsl = slot(door = door, param = "attack", default = FILTER_ENV_ATTACK_SEC)
     val decay: IgnitorDsl = slot(door = door, param = "decay", default = FILTER_ENV_DECAY_SEC)
@@ -90,7 +92,7 @@ class PassFilterSlots internal constructor(door: String) {
  */
 class BandFilterSlots internal constructor(door: String) {
     val freq: IgnitorDsl = slot(door = door, param = "freq", default = SLOT_UNSET)
-    val q: IgnitorDsl = slot(door = door, param = "q", default = 0.707)
+    val q: IgnitorDsl = slot(door = door, param = "q", default = FILTER_Q)
     val env: IgnitorDsl = slot(door = door, param = "env", default = SLOT_UNSET)
     val attack: IgnitorDsl = slot(door = door, param = "attack", default = FILTER_ENV_ATTACK_SEC)
     val decay: IgnitorDsl = slot(door = door, param = "decay", default = FILTER_ENV_DECAY_SEC)

@@ -119,6 +119,9 @@ judgement, each item fixed or recorded. The songs, the jingles and the tutorials
 - **B7. `unison(pan)` writes `panSpread`, which nothing reads** (the tutorial says so).
 - **B8. The pulses:** `sndPulze(duty)` is the aliased raw pulse; the clean PWM pulse (`square` / `pulse`) reads the same
   `duty` slot but `sndSquare` has no `duty`; the plain `snd*` doors' `params` argument is dead (its value ignored).
+- **Left as is (review of A, 2026-11-06):** the engine's `analogSpreadDefault` (1.0) is a literal twin of the
+  `SuperSaw` node's `analogSpread` default with no slot and no constant, so no guard covers it; `Ducking`'s own
+  constructor default depth (0.5) differs from `DUCK_DEPTH` (0.0), but the duck writer always hands a depth.
 - **B9. Smaller words:** the bus fader `gain.gain` with no sprudel door under sprudel's voice-`gain` word; sprudel `penv`
   with no long name beside the Ignitor's `pitchEnvelope` (as `lowpass` sits beside `lpf`); the flat slots `octaves` and
   `rate`; no sprudel door for `zawtooth`, `impulse`, `perlin`, `berlin`; `sndDust` without `bipolar`; `sndNoise`
@@ -171,6 +174,46 @@ judgement, each item fixed or recorded. The songs, the jingles and the tutorials
   `sndTri`, `sndRamp`, `sndZamp`, `sndPink` lose their dead `params` argument (its value was ignored, only its
   structure lifted) and take none. `LangControlRestSpec`'s `fresh` rows for them became a `sndSquare(duty)` row.
   KLANG-00189 (sprudel sound doors compound) item 3 is settled by it. No song or tutorial passed an argument.
+- **B9, recorded 2026-11-06:** each smaller word is recorded as it is, with its reason:
+  the bus fader `gain.gain` has no sprudel door, and the Katalyst word is the stage's own (`k.gain(gain)`), no voice
+  knob; sprudel keeps `penv` without a long name, because no alias is added for its own sake (`sprudel/CLAUDE.md`);
+  the flat slots `octaves` and `rate` stay flat, because a rename to `perlin.*` is a shape change for the maintainer
+  (the B6 risk above stands: a raw `ignp("rate", x)` reaches every perlin and berlin left at its default); no
+  sprudel doors for `zawtooth`, `impulse`, `perlin`, `berlin`, because `sound("zawtooth")` and the others reach them
+  by name; `sndDust` stays without `bipolar`, a raw `ignp("bipolar", 1)` reaches it; `sndNoise` keeps its name
+  against its colour siblings (`sndBrown`, `sndPink`), a rename for its own sake; the builder knob `centerJitter`
+  keeps writing the node field `centerJitterScale`, a wire rename for no sound; the node `Pulze` (wire `"pulze"`) is
+  the rounded pulse `Ign.square` builds while the sound `pulze` is `RawPulze`, both KDocs say which pulse is which
+  (B8) and a rename would move the wire hash for no sound.
+- **A1 to A5 DONE 2026-11-06:**
+  A1, the false KDoc: the unset `reverb.lowpass` is the engine's fixed damping (sprudel's door and `/dsl-design` §4);
+  the pluck `brightness` is the loop's one-pole (every surface), `pickPosition` the burst's width and place, 0 a
+  short burst at the bridge, 1 the whole string (both surfaces, from `KarplusString.excite`); `sndDust(tail)` an
+  amplitude exponent; `voices` "default 8, up to 256"; `sndSuperPluck` without the colon string, default 8 strings;
+  the "wire spelling" `phaserDepth` / `bodyMix` / `vowelMix` gone (`KatalystDsl`, `BusEffectDefaults`, `Phaser`,
+  the filters' note); the four sprudel filters say a stage knob alone sweeps 7 semitones; "the pattern-level
+  `.spread()`" names `unison(spread = ...)`, in semitones lowest copy to highest (11 sites); density is dust's
+  impulse rate, crackle reads `chaos`; the distort, drive, crush and coarse overloads say "required here" and the
+  wire node's default; `Slots.vibrato` names its five slots; the bus distort names the fused law and D2 (both
+  Katalyst doors); `DELAY_FEEDBACK` says the echoes hold at 1; `onepole(freq)`; `ignitorParam` lists the slots the
+  library writes; `door-shapes.md` marks the Master limiter order retired; the `SuperSaw` KDoc no longer names an
+  `audio_be` copy.
+  A2, one home: the noise slots read `CRACKLE_CHAOS_DEFAULT`, `NOISE_TILT_DEFAULT`, `BROWN_LEAK_DEFAULT`,
+  `DUST_TAIL_DEFAULT`, `DUST_BIPOLAR_DEFAULT`; the engine's source fallbacks (`Ignitors`) read the constant or the
+  `IgnitorDsl.Slots` default, so the unset voice count is 8 there too (was 7, unreachable from a door); the classic
+  filter slots read `FILTER_Q` and `FILTER_PASSES`; the `Distort` and `Drive` nodes `DISTORT_AMOUNT`; `Compressor`
+  the `COMPRESSOR_*` constants; `Ducking` `DUCK_RELEASE_SECONDS`; `Phaser` `PHASER_WET` and `PHASER_FLOOR`. The
+  script doors keep their literal defaults (KSP), equal to the constants. `SuperOscDefaultsSyncSpec`,
+  `WaveOscDefaultsSyncSpec` and `NoiseDefaultsSyncSpec` compared a constant with itself; they now pin the real
+  copies: the node each `Ign.*` door builds against the `Slots` param, and the engine's fallbacks against the slot
+  defaults.
+  A3: sprudel's doors write the flat source slots through `IgnitorSlotKeys` (`sprudel/_ignitor_slot_keys.kt`), the
+  names read once from `IgnitorDsl.Slots`, as the classic keys are.
+  A4: the `phaser.*`, `body.*` and `vowel.*` accessors and their mapper reads read the slots (`katalystParams`), as
+  delay, reverb, compressor and duck do; the voice fields are still written beside them.
+  A5: `/dsl-design` §4's recorded asymmetries gain the distort's two laws, the envelope's slot and node defaults,
+  the curve calls, `resetSamples` / `flankSamples`, `eq`, `comp`, the stage data classes' order and material and
+  vowel as a number.
 
 ### Checked and consistent
 

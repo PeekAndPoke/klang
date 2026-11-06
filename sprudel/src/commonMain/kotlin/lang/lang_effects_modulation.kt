@@ -47,13 +47,14 @@ import io.peekandpoke.klang.sprudel.putKatalystParam
  * being 0.0: the engine gates the sweep on the depth, so a `phaser(rate = 2)` fills a wet of zero
  * and stays inaudible. The fill is about the companions being right the moment the depth arrives.
  *
- * Fills the voice FIELDS with the same five constants, so the field accessors (`phaser.wet`) read
- * what the slots hold. The fields no longer cross the wire (the per-voice phaser that read them
- * retired in phase 3 step 9, the wire fields with it); the cylinder reads the slots.
+ * Fills the voice FIELDS with the same five constants. The fields no longer cross the wire (the per-voice
+ * phaser that read them retired in phase 3 step 9, the wire fields with it); the cylinder reads the slots, and so
+ * do the accessors (`phaser.wet`) since KLANG-00417 A4, so a `katp("phaser.wet", x)` reads back as the delay's and
+ * the reverb's slots do.
  *
  * One consequence worth knowing, and it holds for every filled door (`duck` included since step
  * 5b-3, when its accessors moved onto the slots its fill writes): a filled knob becomes
- * READABLE through its field accessor, so `phaser.wet` reads 0.0 after `phaser(rate = 2)` where it
+ * READABLE through its accessor, so `phaser.wet` reads 0.0 after `phaser(rate = 2)` where it
  * used to read nothing. A cross-stage read such as `delay(wet = phaser.wet)` therefore engages the
  * delay line at a zero send rather than leaving it alone. No shipped song reads one stage into
  * another this way.
@@ -98,7 +99,7 @@ private val phaserWetMutation = voiceSetter {
 
 private fun applyPhaserWet(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.phaserDepth }, update = phaserWetMutation)
+        return source._mapNumericField(mapper, read = { it.katalystParams?.get("phaser.wet") }, update = phaserWetMutation)
     }
 
     return source._liftOrReinterpretNumericalField(args, phaserWetMutation)
@@ -215,23 +216,23 @@ object phaser {
 
     /** The rate slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val rate: FieldAccessor = FieldAccessor { it.phaserRate }
+    val rate: FieldAccessor = FieldAccessor { it.katalystParams?.get("phaser.rate") }
 
     /** The wet slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val wet: FieldAccessor = FieldAccessor { it.phaserDepth }
+    val wet: FieldAccessor = FieldAccessor { it.katalystParams?.get("phaser.wet") }
 
     /** The center slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val center: FieldAccessor = FieldAccessor { it.phaserCenter }
+    val center: FieldAccessor = FieldAccessor { it.katalystParams?.get("phaser.center") }
 
     /** The sweep slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val sweep: FieldAccessor = FieldAccessor { it.phaserSweep }
+    val sweep: FieldAccessor = FieldAccessor { it.katalystParams?.get("phaser.sweep") }
 
     /** The floor slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val floor: FieldAccessor = FieldAccessor { it.phaserFloor }
+    val floor: FieldAccessor = FieldAccessor { it.katalystParams?.get("phaser.floor") }
 
     /**
      * The setter, see [SprudelPattern.phaser].
@@ -264,7 +265,7 @@ private val phaserRateMutation = voiceSetter {
 
 private fun applyPhaserRate(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.phaserRate }, update = phaserRateMutation)
+        return source._mapNumericField(mapper, read = { it.katalystParams?.get("phaser.rate") }, update = phaserRateMutation)
     }
 
     return source._liftOrReinterpretNumericalField(args, phaserRateMutation)
@@ -280,7 +281,7 @@ private val phaserFloorMutation = voiceSetter {
 
 private fun applyPhaserFloor(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.phaserFloor }, update = phaserFloorMutation)
+        return source._mapNumericField(mapper, read = { it.katalystParams?.get("phaser.floor") }, update = phaserFloorMutation)
     }
 
     return source._liftOrReinterpretNumericalField(args, phaserFloorMutation)
@@ -296,7 +297,7 @@ private val phaserCenterMutation = voiceSetter {
 
 private fun applyPhaserCenter(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.phaserCenter }, update = phaserCenterMutation)
+        return source._mapNumericField(mapper, read = { it.katalystParams?.get("phaser.center") }, update = phaserCenterMutation)
     }
 
     return source._liftOrReinterpretNumericalField(args, phaserCenterMutation)
@@ -312,7 +313,7 @@ private val phaserSweepMutation = voiceSetter {
 
 private fun applyPhaserSweep(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.phaserSweep }, update = phaserSweepMutation)
+        return source._mapNumericField(mapper, read = { it.katalystParams?.get("phaser.sweep") }, update = phaserSweepMutation)
     }
 
     return source._liftOrReinterpretNumericalField(args, phaserSweepMutation)

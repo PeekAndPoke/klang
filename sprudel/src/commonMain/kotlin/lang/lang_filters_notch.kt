@@ -95,7 +95,8 @@ private fun applyNotchRelease(source: SprudelPattern, args: List<SprudelDslArg<A
  *
  * The envelope sweeps `freq` up by `env` semitones: attack is the time to reach full depth, decay
  * the fall to the sustain share, release the fall back to `freq` after the note ends. `env = 12`
- * doubles the centre, a negative `env` sweeps down, and without `env` the filter rests at `freq`.
+ * doubles the centre, a negative `env` sweeps down. Without `env` and without a stage knob the filter rests at
+ * `freq`; a stage knob alone (`notch(800, decay = 0.3)`) sweeps by the default depth, 7 semitones.
  *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
  * a mapper (`notch(q = mul(2))`), and every slot reads back as a child: `notch.freq`, `notch.q`, `notch.env`, `notch.attack`, `notch.decay`, `notch.sustain`, `notch.release`.

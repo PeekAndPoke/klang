@@ -51,7 +51,8 @@ import kotlin.math.exp
  * input — without it, a heavy-distort branch can dominate a mix.
  *
  * @param amount Drive intensity. 0.0 = bypass, 0.3 = warm saturation, 1.0 = heavy distortion,
- *   2.0+ = extreme. Internally: gain = 10^(amount × 1.2). Default: 0.0 (bypass).
+ *   2.0+ = extreme. Internally: gain = 10^(amount × 1.2). Required here; the wire node `IgnitorDsl.Drive`
+ *   defaults to `DISTORT_AMOUNT` (0.5).
  * @param shape Waveshaper function. Default: "soft" (tanh). Options:
  *   - **Symmetric soft:** "soft" (tanh), "gentle" (soft clip, 2× gain), "softsat" (algebraic, gentler still), "cubic", "exp" (transistor), "sineshaper" (peak-at-unity fold).
  *   - **Symmetric hard / harsh:** "hard" (clip), "zerosquare" (high-gain tanh → square), "chebyshev" (3rd-harmonic), "fold" (sin wavefold), "linearfold" (triangle wavefold).
@@ -73,7 +74,8 @@ fun Ignitor.distort(amount: Ignitor, shape: String = "soft"): Ignitor =
 /**
  * Distortion / waveshaping combinator (convenience overload with fixed amount).
  *
- * @param amount Drive intensity. 0.0 = bypass, 0.3 = warm, 1.0 = heavy, 2.0+ = extreme. Default: 0.0.
+ * @param amount Drive intensity. 0.0 = bypass, 0.3 = warm, 1.0 = heavy, 2.0+ = extreme. Required here; the wire
+ *   nodes default to `DISTORT_AMOUNT` (0.5).
  * @param shape Waveshaper function. Default: "soft". See [distort] for all options.
  */
 fun Ignitor.distort(amount: Double, shape: String = "soft"): Ignitor {
@@ -88,7 +90,8 @@ fun Ignitor.distort(amount: Double, shape: String = "soft"): Ignitor {
  * Amount is read once per block (control rate). Bypasses when amount <= 0.
  *
  * @param amount Gain boost intensity. 0.0 = bypass, 0.5 = moderate boost, 1.0 = loud,
- *   2.0+ = extreme. Internally: gain = 10^(amount × 1.2). Default: 0.0 (bypass).
+ *   2.0+ = extreme. Internally: gain = 10^(amount × 1.2). Required here; the wire node `IgnitorDsl.Drive`
+ *   defaults to `DISTORT_AMOUNT` (0.5).
  *
  * Gain without a curve: every colour belongs to `shape`, which is why there is no drive type.
  */
@@ -125,7 +128,8 @@ private class DriveIgnitor(
 /**
  * Pre-amplification stage (convenience overload with fixed amount).
  *
- * @param amount Gain boost intensity. 0.0 = bypass, 1.0 = loud. Default: 0.0.
+ * @param amount Gain boost intensity. 0.0 = bypass, 1.0 = loud. Required here; the wire node `IgnitorDsl.Drive`
+ *   defaults to `DISTORT_AMOUNT` (0.5).
  */
 fun Ignitor.drive(amount: Double): Ignitor {
     if (amount <= 0.0) return this
@@ -298,7 +302,7 @@ private class CrushIgnitor(
  * Bit-depth reduction (convenience overload with a fixed depth).
  *
  * @param bits Bit depth. Below 1.0 = bypass. 4.0 = 16 levels (lo-fi),
- *   8.0 = 256 levels. Default: 0.0.
+ *   8.0 = 256 levels. Required here; the wire node `IgnitorDsl.Crush` defaults to 8.
  */
 fun Ignitor.crush(bits: Double): Ignitor {
     if (bits < 1.0) return this
@@ -321,7 +325,7 @@ fun Ignitor.crush(bits: Double): Ignitor {
  *
  * @param factor Sample-hold factor. Values <= 1.0 are audibly inactive (see above).
  *   2.0 = every 2nd sample held, 4.0 = every 4th (strong aliasing), 10.0+ = extreme lo-fi.
- *   Typical range: 2.0–8.0. Default: 0.0 (inactive).
+ *   Typical range: 2.0 to 8.0. Required; the wire node `IgnitorDsl.Coarse` defaults to 4.
  */
 private class CoarseIgnitor(
     private val upstream: Ignitor,
@@ -382,7 +386,8 @@ fun Ignitor.coarse(factor: Ignitor): Ignitor = CoarseIgnitor(upstream = this, fa
 /**
  * Sample-rate reducer (convenience overload with a fixed factor).
  *
- * @param factor Sample-hold factor. Values <= 1.0 = inactive. 4.0 = strong aliasing. Default: 0.0.
+ * @param factor Sample-hold factor. Values <= 1.0 = inactive. 4.0 = strong aliasing. Required here; the wire node
+ *   `IgnitorDsl.Coarse` defaults to 4.
  */
 fun Ignitor.coarse(factor: Double): Ignitor {
     if (factor <= 1.0) return this

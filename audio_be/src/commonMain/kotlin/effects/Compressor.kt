@@ -15,6 +15,12 @@ import io.peekandpoke.klang.audio_be.utils.fastExp
 import io.peekandpoke.klang.audio_be.utils.finiteOrZero
 import io.peekandpoke.klang.audio_be.utils.isFiniteInline
 import io.peekandpoke.klang.audio_be.utils.timeConstantCoeff
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_ATTACK_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_KNEE_DB
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_LOOKAHEAD_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RATIO
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RELEASE_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_THRESHOLD_DB
 import kotlin.math.abs
 import kotlin.math.ln
 import kotlin.math.max
@@ -58,11 +64,11 @@ import kotlin.math.max
  */
 class Compressor(
     private val sampleRate: Int,
-    thresholdDb: Double = -20.0,
-    ratio: Double = 4.0,
-    kneeDb: Double = 6.0,
-    attackSeconds: Double = 0.003,
-    releaseSeconds: Double = 0.1,
+    thresholdDb: Double = COMPRESSOR_THRESHOLD_DB,
+    ratio: Double = COMPRESSOR_RATIO,
+    kneeDb: Double = COMPRESSOR_KNEE_DB,
+    attackSeconds: Double = COMPRESSOR_ATTACK_SECONDS,
+    releaseSeconds: Double = COMPRESSOR_RELEASE_SECONDS,
     /**
      * Lookahead in seconds. `0.0` (the default) keeps the classic feed-forward one-pole path with
      * no delay line and no added latency, which is what a cylinder compressor uses unless its author
@@ -77,14 +83,14 @@ class Compressor(
      * from it and must never be reallocated on the audio thread. A caller that takes it from a user
      * passes it through [coerceLookaheadSeconds] first, the one bound on what a build allocates.
      */
-    val lookaheadSeconds: Double = 0.0,
+    val lookaheadSeconds: Double = COMPRESSOR_LOOKAHEAD_SECONDS,
 ) {
     // The five knobs as stored: the properties below read and write them, and [applyKnobArgs] writes them directly.
-    private var thresholdValue: Double = guardOr(value = thresholdDb, fallback = -20.0)
-    private var ratioValue: Double = guardOr(value = ratio, fallback = 4.0).coerceAtLeast(1.0)
-    private var kneeValue: Double = guardOr(value = kneeDb, fallback = 6.0).coerceAtLeast(0.0)
-    private var attackValue: Double = guardOr(value = attackSeconds, fallback = 0.003)
-    private var releaseValue: Double = guardOr(value = releaseSeconds, fallback = 0.1)
+    private var thresholdValue: Double = guardOr(value = thresholdDb, fallback = COMPRESSOR_THRESHOLD_DB)
+    private var ratioValue: Double = guardOr(value = ratio, fallback = COMPRESSOR_RATIO).coerceAtLeast(1.0)
+    private var kneeValue: Double = guardOr(value = kneeDb, fallback = COMPRESSOR_KNEE_DB).coerceAtLeast(0.0)
+    private var attackValue: Double = guardOr(value = attackSeconds, fallback = COMPRESSOR_ATTACK_SECONDS)
+    private var releaseValue: Double = guardOr(value = releaseSeconds, fallback = COMPRESSOR_RELEASE_SECONDS)
 
     // Compressor parameters (all mutable for real-time changes; setters silently ignore non-finite values).
     var thresholdDb: Double
@@ -249,7 +255,7 @@ class Compressor(
         // guardOr like every sibling param: Infinity would saturate .toInt() to Int.MAX_VALUE and
         // ask for a 2-billion-element array. KatalystCompressorEffect already guards, but this class is public
         // with two other call sites (HouseStage and EffectBenchmark).
-        val seconds = guardOr(value = lookaheadSeconds, fallback = 0.0)
+        val seconds = guardOr(value = lookaheadSeconds, fallback = COMPRESSOR_LOOKAHEAD_SECONDS)
         val frames = (seconds * sampleRate).toInt()
         if (frames < MIN_LOOKAHEAD_FRAMES) 0 else frames
     }

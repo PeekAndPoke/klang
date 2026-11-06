@@ -7,40 +7,57 @@ package io.peekandpoke.klang.audio_be.ignitor
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_bridge.Ign
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
-import io.peekandpoke.klang.audio_bridge.constants.PULSE_FALL_FLANK
-import io.peekandpoke.klang.audio_bridge.constants.PULSE_MIN_FLANK_SAMPLES
-import io.peekandpoke.klang.audio_bridge.constants.PULSE_RISE_FLANK
-import io.peekandpoke.klang.audio_bridge.constants.RAMP_RESET_SAMPLES
-import io.peekandpoke.klang.audio_bridge.constants.RAMP_SHAPE_MAX
-import io.peekandpoke.klang.audio_bridge.constants.SAW_RESET_SAMPLES
-import io.peekandpoke.klang.audio_bridge.constants.SAW_SHAPE_MAX
 
 /**
- * Guard (single-osc shape): the `IgnitorDsl` shape-field defaults for the single WaveIgnitor-backed
- * oscillators (in `audio_bridge`) are hand-copies of the `SAW_*` / `RAMP_*` / `PULSE_*` tuning constants
- * (in `audio_be/.../OscillatorTuning.kt`) — `audio_bridge` can't see the `internal` consts, so the two are
- * duplicated. This spec lives in `audio_be` (sees BOTH) and turns any silent drift into a red build.
- * Sibling of [SuperOscDefaultsSyncSpec] (which guards the unison `Super*` character defaults).
+ * Guard (single sources): the open knobs of the single oscillators and the pluck have ONE home, their
+ * `IgnitorDsl.Slots` param (KLANG-00417 A2). Checked against it: the node a door builds (`Ign.square()`,
+ * `Ign.pluck()`, which the script doors build on) and the engine's own fallbacks in [Ignitors]. The shape constants
+ * (`SAW_*`, `RAMP_*`, `PULSE_*`) are read directly by both the node and the engine and need no row. Sibling of
+ * [SuperOscDefaultsSyncSpec] (the unison sources) and [NoiseDefaultsSyncSpec].
  */
 class WaveOscDefaultsSyncSpec : StringSpec({
 
-    "IgnitorDsl.Saw shape defaults match the SAW_* engine constants" {
-        val d = IgnitorDsl.Saw()
-        d.resetSamples shouldBe SAW_RESET_SAMPLES
-        d.shapeMax shouldBe SAW_SHAPE_MAX
+    val slots = IgnitorDsl.Slots
+
+    fun defaultOf(slot: IgnitorDsl): Double = (slot as IgnitorDsl.Param).default
+
+    "both pulses a door builds answer the duty and analog slots" {
+        Ign.square().duty shouldBe slots.duty
+        Ign.square().analog shouldBe slots.analog
+        Ign.pulze().duty shouldBe slots.duty
+        Ign.pulze().analog shouldBe slots.analog
     }
 
-    "IgnitorDsl.Ramp shape defaults match the RAMP_* engine constants" {
-        val d = IgnitorDsl.Ramp()
-        d.resetSamples shouldBe RAMP_RESET_SAMPLES
-        d.shapeMax shouldBe RAMP_SHAPE_MAX
+    "the other single oscillators a door builds answer the analog slot" {
+        listOf(
+            Ign.sine().analog,
+            Ign.saw().analog,
+            Ign.tri().analog,
+            Ign.ramp().analog,
+            Ign.zawtooth().analog,
+            Ign.zamp().analog,
+            Ign.impulse().analog,
+        ).forEach { it shouldBe slots.analog }
     }
 
-    "IgnitorDsl.Pulze shape defaults match the PULSE_* engine constants" {
-        val d = IgnitorDsl.Pulze()
-        d.flankSamples shouldBe PULSE_MIN_FLANK_SAMPLES
-        d.riseFlank shouldBe PULSE_RISE_FLANK
-        d.fallFlank shouldBe PULSE_FALL_FLANK
+    "the pluck a door builds answers every string slot" {
+        val node = Ign.pluck()
+
+        node.feedback shouldBe slots.feedback
+        node.brightness shouldBe slots.brightness
+        node.pickPosition shouldBe slots.pickPosition
+        node.stiffness shouldBe slots.stiffness
+        node.analog shouldBe slots.analog
+    }
+
+    "the engine's single-source fallbacks are the slot defaults" {
+        Ignitors.dutyDefault.value shouldBe defaultOf(slots.duty)
+        Ignitors.analogDefault.value shouldBe defaultOf(slots.analog)
+        Ignitors.feedbackDefault.value shouldBe defaultOf(slots.feedback)
+        Ignitors.brightnessDefault.value shouldBe defaultOf(slots.brightness)
+        Ignitors.pickPositionDefault.value shouldBe defaultOf(slots.pickPosition)
+        Ignitors.stiffnessDefault.value shouldBe defaultOf(slots.stiffness)
     }
 })

@@ -10,6 +10,7 @@ package io.peekandpoke.klang.sprudel.lang
 
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
+import io.peekandpoke.klang.sprudel.IgnitorSlotKeys
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel._liftOrReinterpretStringField
@@ -19,21 +20,21 @@ import io.peekandpoke.klang.sprudel.putIgnitorParam
 
 // -- unison ----------------------------------------------------------------------------------------------------------
 
-private val unisonVoicesMutation = voiceSetter { putIgnitorParam("voices", it?.asDoubleOrNull()) }
+private val unisonVoicesMutation = voiceSetter { putIgnitorParam(IgnitorSlotKeys.voices, it?.asDoubleOrNull()) }
 
 private fun applyUnisonVoices(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.ignitorParams?.get("voices") }, update = unisonVoicesMutation)
+        return source._mapNumericField(mapper, read = { it.ignitorParams?.get(IgnitorSlotKeys.voices) }, update = unisonVoicesMutation)
     }
 
     return source._liftOrReinterpretNumericalField(args, unisonVoicesMutation)
 }
 
-private val unisonSpreadMutation = voiceSetter { putIgnitorParam("spread", it?.asDoubleOrNull()) }
+private val unisonSpreadMutation = voiceSetter { putIgnitorParam(IgnitorSlotKeys.spread, it?.asDoubleOrNull()) }
 
 private fun applyUnisonSpread(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.ignitorParams?.get("spread") }, update = unisonSpreadMutation)
+        return source._mapNumericField(mapper, read = { it.ignitorParams?.get(IgnitorSlotKeys.spread) }, update = unisonSpreadMutation)
     }
 
     return source._liftOrReinterpretNumericalField(args, unisonSpreadMutation)
@@ -105,11 +106,11 @@ object unison {
 
     /** The voices slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val voices: FieldAccessor = FieldAccessor { it.ignitorParams?.get("voices") }
+    val voices: FieldAccessor = FieldAccessor { it.ignitorParams?.get(IgnitorSlotKeys.voices) }
 
     /** The spread slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val spread: FieldAccessor = FieldAccessor { it.ignitorParams?.get("spread") }
+    val spread: FieldAccessor = FieldAccessor { it.ignitorParams?.get(IgnitorSlotKeys.spread) }
 
     /**
      * The setter, see [SprudelPattern.unison].
@@ -159,11 +160,11 @@ fun PatternMapperFn.uni(voices: PatternLike? = null, spread: PatternLike? = null
 
 // -- density() / d() --------------------------------------------------------------------------------------------------
 
-private val densityMutation = voiceSetter { putIgnitorParam("density", it?.asDoubleOrNull()) }
+private val densityMutation = voiceSetter { putIgnitorParam(IgnitorSlotKeys.density, it?.asDoubleOrNull()) }
 
 private fun applyDensity(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.ignitorParams?.get("density") }, update = densityMutation)
+        return source._mapNumericField(mapper, read = { it.ignitorParams?.get(IgnitorSlotKeys.density) }, update = densityMutation)
     }
 
     return source._liftOrReinterpretStringField(args, densityMutation)
@@ -197,13 +198,13 @@ fun SprudelPattern.density(density: PatternLike? = null, callInfo: CallInfo? = n
     applyDensity(this, listOfNotNull(density).asSprudelDslArgs(callInfo))
 
 /**
- * Parses this string as a pattern and sets the oscillator or noise density.
+ * Parses this string as a pattern and sets dust's impulse rate (the density).
  *
  * ```KlangScript(Playable)
  * "a".density(0.2).s("dust").note()   // 40 noise events per second
  * ```
  *
- * @param density The oscillator density.
+ * @param density Impulse rate for `dust`, 0 to 1.
  */
 @KlangScript.Function
 fun String.density(density: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
@@ -233,15 +234,15 @@ fun String.density(density: PatternLike? = null, callInfo: CallInfo? = null): Sp
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("density")
-object density : FieldAccessor({ it.ignitorParams?.get("density") }) {
+object density : FieldAccessor({ it.ignitorParams?.get(IgnitorSlotKeys.density) }) {
 
     /**
-     * Parses this string as a pattern and sets the oscillator or noise density.
+     * Parses this string as a pattern and sets dust's impulse rate (the density).
      *
      * ```KlangScript(Playable)
      * "a".apply(density(0.2)).s("dust").note()   // 40 noise events per second
      * ```
-     * @param density The oscillator density.
+     * @param density Impulse rate for `dust`, 0 to 1.
      */
     @KlangScript.Invoke
     operator fun invoke(density: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
@@ -249,13 +250,13 @@ object density : FieldAccessor({ it.ignitorParams?.get("density") }) {
 }
 
 /**
- * Creates a chained [PatternMapperFn] that sets the oscillator or noise density after the previous mapper.
+ * Creates a chained [PatternMapperFn] that sets dust's impulse rate (the density) after the previous mapper.
  *
  * ```KlangScript(Playable)
  * note("a").s("dust").apply(gain(0.8).density(0.5))  // gain + density chained
  * ```
  *
- * @param density The oscillator density.
+ * @param density Impulse rate for `dust`, 0 to 1.
  */
 @KlangScript.Function
 fun PatternMapperFn.density(density: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
@@ -284,13 +285,13 @@ fun SprudelPattern.d(density: PatternLike? = null, callInfo: CallInfo? = null): 
     this.density(density, callInfo)
 
 /**
- * Alias for [density]. Parses this string as a pattern and sets the oscillator or noise density.
+ * Alias for [density]. Parses this string as a pattern and sets dust's impulse rate (the density).
  *
  * ```KlangScript(Playable)
  * "a".d(0.2).s("dust").note()   // 40 noise events per second
  * ```
  *
- * @param density The oscillator density.
+ * @param density Impulse rate for `dust`, 0 to 1.
  */
 @KlangScript.Function
 fun String.d(density: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
@@ -307,14 +308,14 @@ fun String.d(density: PatternLike? = null, callInfo: CallInfo? = null): SprudelP
 val d: density = density
 
 /**
- * Alias for [density]. Creates a chained [PatternMapperFn] that sets the oscillator or noise density after the
+ * Alias for [density]. Creates a chained [PatternMapperFn] that sets dust's impulse rate (the density) after the
  * previous mapper.
  *
  * ```KlangScript(Playable)
  * note("a").s("dust").apply(gain(0.8).d(0.5))  // gain + density chained
  * ```
  *
- * @param density The oscillator density.
+ * @param density Impulse rate for `dust`, 0 to 1.
  */
 @KlangScript.Function
 fun PatternMapperFn.d(density: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =

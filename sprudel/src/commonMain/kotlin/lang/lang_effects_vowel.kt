@@ -30,9 +30,9 @@ import io.peekandpoke.klang.sprudel.putKatalystParam
  * (`/dsl-design` §4 is the rule; this is only what THIS door does). Called from the VOWEL setter
  * alone, because the vowel is this stage's name knob.
  *
- * Fills the voice FIELDS with the same two constants, so the field accessors (`vowel.wet`) read what
- * the slots hold. The wire does not carry the fields: since step 5b-1 the cylinder's formant bank reads
- * the SLOTS and nothing else, and the `filters` field that once carried a `FilterDef.Formant` left
+ * Fills the voice FIELDS with the same two constants. The accessors (`vowel.wet`) read the slots since
+ * KLANG-00417 A4, as the delay's and the reverb's do. The wire does not carry the fields: since step 5b-1 the
+ * cylinder's formant bank reads the SLOTS and nothing else, and the `filters` field that once carried a `FilterDef.Formant` left
  * `VoiceData` in phase 3 step 9. The engine substitutes the same two constants for an unset slot
  * in `KatalystResonatorEffect.configure`.
  */
@@ -90,7 +90,7 @@ private val vowelWetMutation = voiceSetter {
 
 private fun applyVowelWet(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.vowelMix }, update = vowelWetMutation)
+        return source._mapNumericField(mapper, read = { it.katalystParams?.get("vowel.wet") }, update = vowelWetMutation)
     }
 
     return source._liftOrReinterpretNumericalField(args, vowelWetMutation)
@@ -103,7 +103,7 @@ private val vowelFloorMutation = voiceSetter {
 
 private fun applyVowelFloor(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.vowelFloor }, update = vowelFloorMutation)
+        return source._mapNumericField(mapper, read = { it.katalystParams?.get("vowel.floor") }, update = vowelFloorMutation)
     }
 
     return source._liftOrReinterpretNumericalField(args, vowelFloorMutation)
@@ -217,11 +217,11 @@ object vowel {
 
     /** The wet slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val wet: FieldAccessor = FieldAccessor { it.vowelMix }
+    val wet: FieldAccessor = FieldAccessor { it.katalystParams?.get("vowel.wet") }
 
     /** The floor slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val floor: FieldAccessor = FieldAccessor { it.vowelFloor }
+    val floor: FieldAccessor = FieldAccessor { it.katalystParams?.get("vowel.floor") }
 
     /**
      * The setter, see [SprudelPattern.vowel].

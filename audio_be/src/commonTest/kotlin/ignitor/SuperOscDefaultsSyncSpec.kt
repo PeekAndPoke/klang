@@ -7,154 +7,52 @@ package io.peekandpoke.klang.audio_be.ignitor
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_bridge.Ign
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
-import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_CENTER_JITTER_SCALE
-import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_DRAW_TRIES
-import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_GAIN_JITTER
-import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_K_MAX
-import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_K_MIN
-import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_PHASE_POOL
-import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_POOL_SIZE
-import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_REFRESH_EVERY
-import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_SELECTION
-import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_SIDE_ATTEN
-import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_SPREAD_POWER
-import io.peekandpoke.klang.audio_bridge.constants.SUPERRAMP_WARMUP
-import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_CENTER_JITTER_SCALE
-import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_DRAW_TRIES
-import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_GAIN_JITTER
-import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_K_MAX
-import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_K_MIN
-import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_PHASE_POOL
-import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_POOL_SIZE
-import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_REFRESH_EVERY
-import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_SELECTION
-import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_SIDE_ATTEN
-import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_SPREAD_POWER
-import io.peekandpoke.klang.audio_bridge.constants.SUPERSAW_WARMUP
-import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_CENTER_JITTER_SCALE
-import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_DRAW_TRIES
-import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_GAIN_JITTER
-import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_K_MAX
-import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_K_MIN
-import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_PHASE_POOL
-import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_POOL_SIZE
-import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_REFRESH_EVERY
-import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_SELECTION
-import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_SIDE_ATTEN
-import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_SPREAD_POWER
-import io.peekandpoke.klang.audio_bridge.constants.SUPERSINE_WARMUP
-import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_CENTER_JITTER_SCALE
-import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_DRAW_TRIES
-import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_GAIN_JITTER
-import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_K_MAX
-import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_K_MIN
-import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_PHASE_POOL
-import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_POOL_SIZE
-import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_REFRESH_EVERY
-import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_SELECTION
-import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_SIDE_ATTEN
-import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_SPREAD_POWER
-import io.peekandpoke.klang.audio_bridge.constants.SUPERSQUARE_WARMUP
-import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_CENTER_JITTER_SCALE
-import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_DRAW_TRIES
-import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_GAIN_JITTER
-import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_K_MAX
-import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_K_MIN
-import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_PHASE_POOL
-import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_POOL_SIZE
-import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_REFRESH_EVERY
-import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_SELECTION
-import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_SIDE_ATTEN
-import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_SPREAD_POWER
-import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_WARMUP
 
 /**
- * Guard: the `IgnitorDsl.Super*` character-field defaults (in `audio_bridge`) are hand-copies of the
- * `SUPER*_*` tuning constants (in `audio_be/.../OscillatorTuning.kt`) — `audio_bridge` can't see the
- * `internal` consts, so the two are duplicated with a "keep in sync" comment. This spec lives in `audio_be`
- * (which can see BOTH) and turns any silent drift between them into a red build. If you tune a `SUPER*_*`
- * const by ear, update the matching `IgnitorDsl.Super*` default too.
+ * Guard (unison sources): every unison source's open knobs have ONE home, their `IgnitorDsl.Slots` param
+ * (KLANG-00417 A2). The places a literal could creep back in are each checked against it: the node a door builds
+ * (`Ign.supersaw()`, which the script door `Ignitor.supersaw()` builds on) and the engine's own fallbacks in
+ * [Ignitors], which a Kotlin caller of a factory meets. The engine's unset voice count was 7 against 8 everywhere
+ * else until this guard; the character constants (`SUPERSAW_*`, ...) are read directly by both the node and the
+ * engine and need no row. Sibling of [WaveOscDefaultsSyncSpec] (the single sources) and [NoiseDefaultsSyncSpec].
  */
 class SuperOscDefaultsSyncSpec : StringSpec({
 
-    "IgnitorDsl.SuperSaw character defaults match the SUPERSAW_* engine constants" {
-        val d = IgnitorDsl.SuperSaw()
-        d.spreadPower shouldBe SUPERSAW_SPREAD_POWER
-        d.sideAtten shouldBe SUPERSAW_SIDE_ATTEN
-        d.gainJitter shouldBe SUPERSAW_GAIN_JITTER
-        d.centerJitterScale shouldBe SUPERSAW_CENTER_JITTER_SCALE
-        d.phasePool shouldBe SUPERSAW_PHASE_POOL
-        d.drawTries shouldBe SUPERSAW_DRAW_TRIES
-        d.kMin shouldBe SUPERSAW_K_MIN
-        d.kMax shouldBe SUPERSAW_K_MAX
-        d.poolSize shouldBe SUPERSAW_POOL_SIZE
-        d.refreshEvery shouldBe SUPERSAW_REFRESH_EVERY
-        d.selection shouldBe SUPERSAW_SELECTION
-        d.warmup shouldBe SUPERSAW_WARMUP
+    val slots = IgnitorDsl.Slots
+
+    fun defaultOf(slot: IgnitorDsl): Double = (slot as IgnitorDsl.Param).default
+
+    "the super oscillators a door builds answer the voices, spread and analog slots" {
+        listOf(
+            Triple(Ign.supersaw().voices, Ign.supersaw().spread, Ign.supersaw().analog),
+            Triple(Ign.supersine().voices, Ign.supersine().spread, Ign.supersine().analog),
+            Triple(Ign.supersquare().voices, Ign.supersquare().spread, Ign.supersquare().analog),
+            Triple(Ign.supertri().voices, Ign.supertri().spread, Ign.supertri().analog),
+            Triple(Ign.superramp().voices, Ign.superramp().spread, Ign.superramp().analog),
+        ).forEach { (voices, spread, analog) ->
+            voices shouldBe slots.voices
+            spread shouldBe slots.spread
+            analog shouldBe slots.analog
+        }
     }
 
-    "IgnitorDsl.SuperRamp character defaults match the SUPERRAMP_* engine constants" {
-        val d = IgnitorDsl.SuperRamp()
-        d.spreadPower shouldBe SUPERRAMP_SPREAD_POWER
-        d.sideAtten shouldBe SUPERRAMP_SIDE_ATTEN
-        d.gainJitter shouldBe SUPERRAMP_GAIN_JITTER
-        d.centerJitterScale shouldBe SUPERRAMP_CENTER_JITTER_SCALE
-        d.phasePool shouldBe SUPERRAMP_PHASE_POOL
-        d.drawTries shouldBe SUPERRAMP_DRAW_TRIES
-        d.kMin shouldBe SUPERRAMP_K_MIN
-        d.kMax shouldBe SUPERRAMP_K_MAX
-        d.poolSize shouldBe SUPERRAMP_POOL_SIZE
-        d.refreshEvery shouldBe SUPERRAMP_REFRESH_EVERY
-        d.selection shouldBe SUPERRAMP_SELECTION
-        d.warmup shouldBe SUPERRAMP_WARMUP
+    "the superpluck a door builds answers every string and unison slot" {
+        val node = Ign.superpluck()
+
+        node.voices shouldBe slots.voices
+        node.spread shouldBe slots.spread
+        node.feedback shouldBe slots.feedback
+        node.brightness shouldBe slots.brightness
+        node.pickPosition shouldBe slots.pickPosition
+        node.stiffness shouldBe slots.stiffness
+        node.analog shouldBe slots.analog
     }
 
-    "IgnitorDsl.SuperSine character defaults match the SUPERSINE_* engine constants" {
-        val d = IgnitorDsl.SuperSine()
-        d.spreadPower shouldBe SUPERSINE_SPREAD_POWER
-        d.sideAtten shouldBe SUPERSINE_SIDE_ATTEN
-        d.gainJitter shouldBe SUPERSINE_GAIN_JITTER
-        d.centerJitterScale shouldBe SUPERSINE_CENTER_JITTER_SCALE
-        d.phasePool shouldBe SUPERSINE_PHASE_POOL
-        d.drawTries shouldBe SUPERSINE_DRAW_TRIES
-        d.kMin shouldBe SUPERSINE_K_MIN
-        d.kMax shouldBe SUPERSINE_K_MAX
-        d.poolSize shouldBe SUPERSINE_POOL_SIZE
-        d.refreshEvery shouldBe SUPERSINE_REFRESH_EVERY
-        d.selection shouldBe SUPERSINE_SELECTION
-        d.warmup shouldBe SUPERSINE_WARMUP
-    }
-
-    "IgnitorDsl.SuperSquare character defaults match the SUPERSQUARE_* engine constants" {
-        val d = IgnitorDsl.SuperSquare()
-        d.spreadPower shouldBe SUPERSQUARE_SPREAD_POWER
-        d.sideAtten shouldBe SUPERSQUARE_SIDE_ATTEN
-        d.gainJitter shouldBe SUPERSQUARE_GAIN_JITTER
-        d.centerJitterScale shouldBe SUPERSQUARE_CENTER_JITTER_SCALE
-        d.phasePool shouldBe SUPERSQUARE_PHASE_POOL
-        d.drawTries shouldBe SUPERSQUARE_DRAW_TRIES
-        d.kMin shouldBe SUPERSQUARE_K_MIN
-        d.kMax shouldBe SUPERSQUARE_K_MAX
-        d.poolSize shouldBe SUPERSQUARE_POOL_SIZE
-        d.refreshEvery shouldBe SUPERSQUARE_REFRESH_EVERY
-        d.selection shouldBe SUPERSQUARE_SELECTION
-        d.warmup shouldBe SUPERSQUARE_WARMUP
-    }
-
-    "IgnitorDsl.SuperTri character defaults match the SUPERTRI_* engine constants" {
-        val d = IgnitorDsl.SuperTri()
-        d.spreadPower shouldBe SUPERTRI_SPREAD_POWER
-        d.sideAtten shouldBe SUPERTRI_SIDE_ATTEN
-        d.gainJitter shouldBe SUPERTRI_GAIN_JITTER
-        d.centerJitterScale shouldBe SUPERTRI_CENTER_JITTER_SCALE
-        d.phasePool shouldBe SUPERTRI_PHASE_POOL
-        d.drawTries shouldBe SUPERTRI_DRAW_TRIES
-        d.kMin shouldBe SUPERTRI_K_MIN
-        d.kMax shouldBe SUPERTRI_K_MAX
-        d.poolSize shouldBe SUPERTRI_POOL_SIZE
-        d.refreshEvery shouldBe SUPERTRI_REFRESH_EVERY
-        d.selection shouldBe SUPERTRI_SELECTION
-        d.warmup shouldBe SUPERTRI_WARMUP
+    "the engine's unison fallbacks are the slot defaults" {
+        Ignitors.voicesDefault.value shouldBe defaultOf(slots.voices)
+        Ignitors.detuneDefault.value shouldBe defaultOf(slots.spread)
+        Ignitors.analogDefault.value shouldBe defaultOf(slots.analog)
     }
 })

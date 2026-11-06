@@ -103,7 +103,8 @@ private fun applyHpfRelease(source: SprudelPattern, args: List<SprudelDslArg<Any
  *
  * The envelope sweeps `freq` up by `env` semitones: attack is the time to reach full depth, decay
  * the fall to the sustain share, release the fall back to `freq` after the note ends. `env = 12`
- * doubles the cutoff, a negative `env` sweeps down, and without `env` the filter rests at `freq`.
+ * doubles the cutoff, a negative `env` sweeps down. Without `env` and without a stage knob the filter rests at
+ * `freq`; a stage knob alone (`hpf(800, decay = 0.3)`) sweeps by the default depth, 7 semitones.
  *
  * `passes` cascades the filter: `2` is 24 dB/oct, `3` is 36, omit it for one 12 dB/oct stage. It is
  * rounded and coerced to 1..16, a resource count, never an error. Resonance compounds across the

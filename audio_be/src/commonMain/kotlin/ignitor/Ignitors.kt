@@ -13,6 +13,7 @@ import io.peekandpoke.klang.audio_be.utils.rampStep
 import io.peekandpoke.klang.audio_be.utils.wrapPhase
 import io.peekandpoke.klang.audio_be.utils.wrapPhaseFastOrSafe
 import io.peekandpoke.klang.audio_be.utils.wrapToUnitCycle
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.coerceUnisonVoices
 import io.peekandpoke.klang.audio_bridge.constants.BROWN_LEAK_DEFAULT
 import io.peekandpoke.klang.audio_bridge.constants.CRACKLE_C
@@ -114,24 +115,31 @@ object Ignitors {
     // ignitor, so these defaults only fire when a Kotlin caller invokes a factory
     // without that argument. Sprudel's ignitorParam lookup runs at the DSL layer
     // (IgnitorDslRuntime.buildIgnitor), upstream of these factories.
-    private val analogDefault = ConstantIgnitor(0.0)
+    //
+    // Each source knob's default has ONE home (KLANG-00417 A2): its `constants/` value where one exists, else the
+    // default of its `IgnitorDsl.Slots` param, read here and never retyped. `internal` for the guards that pin them
+    // against the slots (`SuperOscDefaultsSyncSpec`, `WaveOscDefaultsSyncSpec`, `NoiseDefaultsSyncSpec`).
+    internal val analogDefault = slotDefault(IgnitorDsl.Slots.analog)
     private val analogSpreadDefault = ConstantIgnitor(1.0)
-    private val voicesDefault = ConstantIgnitor(7.0)
-    private val detuneDefault = ConstantIgnitor(0.2)
-    private val dutyDefault = ConstantIgnitor(0.5)
-    private val densityDefault = ConstantIgnitor(0.2)
-    private val rateDefault = ConstantIgnitor(1.0)
-    private val octavesDefault = ConstantIgnitor(1.0)
-    private val persistenceDefault = ConstantIgnitor(0.5)
-    private val chaosDefault = ConstantIgnitor(CRACKLE_CHAOS_DEFAULT)
-    private val colorDefault = ConstantIgnitor(NOISE_TILT_DEFAULT)
-    private val brownLeakDefault = ConstantIgnitor(BROWN_LEAK_DEFAULT)
-    private val tailDefault = ConstantIgnitor(DUST_TAIL_DEFAULT)
-    private val bipolarDefault = ConstantIgnitor(DUST_BIPOLAR_DEFAULT)
-    private val feedbackDefault = ConstantIgnitor(0.996)
-    private val brightnessDefault = ConstantIgnitor(0.5)
-    private val pickPositionDefault = ConstantIgnitor(0.5)
-    private val stiffnessDefault = ConstantIgnitor(0.0)
+    internal val voicesDefault = slotDefault(IgnitorDsl.Slots.voices)
+    internal val detuneDefault = slotDefault(IgnitorDsl.Slots.spread)
+    internal val dutyDefault = slotDefault(IgnitorDsl.Slots.duty)
+    internal val densityDefault = slotDefault(IgnitorDsl.Slots.density)
+    internal val rateDefault = slotDefault(IgnitorDsl.Slots.rate)
+    internal val octavesDefault = slotDefault(IgnitorDsl.Slots.octaves)
+    internal val persistenceDefault = slotDefault(IgnitorDsl.Slots.persistence)
+    internal val chaosDefault = ConstantIgnitor(CRACKLE_CHAOS_DEFAULT)
+    internal val colorDefault = ConstantIgnitor(NOISE_TILT_DEFAULT)
+    internal val brownLeakDefault = ConstantIgnitor(BROWN_LEAK_DEFAULT)
+    internal val tailDefault = ConstantIgnitor(DUST_TAIL_DEFAULT)
+    internal val bipolarDefault = ConstantIgnitor(DUST_BIPOLAR_DEFAULT)
+    internal val feedbackDefault = slotDefault(IgnitorDsl.Slots.feedback)
+    internal val brightnessDefault = slotDefault(IgnitorDsl.Slots.brightness)
+    internal val pickPositionDefault = slotDefault(IgnitorDsl.Slots.pickPosition)
+    internal val stiffnessDefault = slotDefault(IgnitorDsl.Slots.stiffness)
+
+    /** The default of an `IgnitorDsl.Slots` param, as a constant ignitor. */
+    private fun slotDefault(slot: IgnitorDsl): ConstantIgnitor = ConstantIgnitor((slot as IgnitorDsl.Param).default)
 
     /**
      * Sine wave oscillator. Inherently band-limited, no anti-aliasing needed. Phase 0 is `sin(0)`, the upward zero

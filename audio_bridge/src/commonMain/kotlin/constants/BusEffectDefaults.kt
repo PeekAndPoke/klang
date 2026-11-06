@@ -67,7 +67,7 @@ const val DELAY_WET: Double = 0.25
 /** Delay time in seconds. */
 const val DELAY_TIME_SECONDS: Double = 0.25
 
-/** Delay feedback; at or above 1.0 the delay self-oscillates, bounded by the cap. */
+/** Delay feedback; at exactly 1.0 the echoes hold their level, above it they grow until the cap holds them. */
 const val DELAY_FEEDBACK: Double = 0.3
 
 /** Level the recirculating delay signal saturates toward. 1.0 is the engine's plain soft cap. */
@@ -89,7 +89,7 @@ const val REVERB_SIZE: Double = 5.0
 /** Phaser sweep rate in Hz. 0 = the phaser stands still, which is the "unset" sound. */
 const val PHASER_RATE_HZ: Double = 0.0
 
-/** Phaser wet amount, 0..1 (wire spelling on the voice: `phaserDepth`). 0 = off. */
+/** Phaser wet amount, 0..1, the slot `phaser.wet`. 0 = off. */
 const val PHASER_WET: Double = 0.0
 
 /** Center frequency of the phaser's all-pass sweep, in Hz. */
@@ -137,7 +137,7 @@ const val DUCK_RELEASE_SECONDS: Double = 0.1
 
 // ── Body ─────────────────────────────────────────────────────────────────────
 
-/** How much of the cylinder runs through the body resonator, 0..1 (wire spelling on the voice: `bodyMix`). */
+/** How much of the cylinder runs through the body resonator, 0..1, the slot `body.wet`. */
 const val BODY_WET: Double = 0.5
 
 /**
@@ -155,7 +155,7 @@ const val BODY_FLOOR: Double = 0.4
 
 // ── Vowel ────────────────────────────────────────────────────────────────────
 
-/** How much of the cylinder runs through the formant bank, 0..1 (wire spelling on the voice: `vowelMix`). */
+/** How much of the cylinder runs through the formant bank, 0..1, the slot `vowel.wet`. */
 const val VOWEL_WET: Double = 0.5
 
 /**
@@ -170,8 +170,8 @@ const val VOWEL_FLOOR: Double = 0.2
 
 /**
  * Distort amount of a Katalyst `distort` stage that names none: the drive `10^(amount * 1.2)` into
- * the shape, so 0.5 is about +12 dB. The same 0.5 the Ignitor's `Distort` and `Drive` nodes default
- * to, so a bare `distort` means the same push on a voice and on a bus.
+ * the shape, so 0.5 is about +12 dB. The Ignitor's `Distort` and `Drive` nodes default to this constant
+ * too, so a bare `distort` means the same push on a voice and on a bus.
  */
 const val DISTORT_AMOUNT: Double = 0.5
 
