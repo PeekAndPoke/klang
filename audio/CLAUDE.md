@@ -21,7 +21,7 @@ audio_jsworklet ←─ JS AudioWorklet thread entry point
 
 | File                                                   | Role                                           |
 |--------------------------------------------------------|------------------------------------------------|
-| `src/commonMain/kotlin/VoiceData.kt`                   | Voice event: pitch, gain, routing; door slots in `ignitorParams`, orbit slots in `katalystParams` |
+| `src/commonMain/kotlin/VoiceData.kt`                   | Voice event: pitch, gain, routing; door slots in `ignitorParams`, cylinder slots in `katalystParams` |
 | `src/commonMain/kotlin/IgnitorDslClassic.kt`           | `classic()`, the voice chain, and its slot groups        |
 | `src/commonMain/kotlin/AdsrDef.kt`                     | `AdsrCurve`; `AdsrDef` for a sample's own envelope |
 | `src/commonMain/kotlin/BodyMaterials.kt`, `VowelBands.kt` | The body and vowel catalogues and their rows (`BodyMaterials.Mode`, `VowelBands.Band`) |
@@ -36,14 +36,15 @@ audio_jsworklet ←─ JS AudioWorklet thread entry point
 | File                                                | Role                                                                                                                |
 |-----------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
 | `src/commonMain/kotlin/PlaybackEngineDispatcher.kt` | Routes each `Cmd` by `playbackId` → its own `PlaybackEngine` (own scheduler + cylinders); see `ref/architecture.md` |
-| `src/commonMain/kotlin/KlangAudioRenderer.kt`       | Main render loop driver + master limiter                                                                            |
-| `src/commonMain/kotlin/voices/Voice.kt`             | `Voice`: runs Ignite → (teardown fade) → Send per note; the Ignitor tree is the whole instrument                    |
+| `src/commonMain/kotlin/KlangAudioRenderer.kt`       | Standalone one-engine render for benchmarks and specs; runs the live dispatcher's own block                         |
+| `src/commonMain/kotlin/HouseStage.kt`               | The always-on output stage after every playback is summed: DC blockers, the house limiter, the clip               |
+| `src/commonMain/kotlin/voices/Voice.kt`             | `Voice`: per block runs ignite → (teardown fade) → cut fade → the cylinder mix; the Ignitor tree is the whole instrument |
 | `src/commonMain/kotlin/voices/VoiceFactory.kt`      | Builds a `Voice` (the instrument's Ignitor tree, the sample instrument for samples) from `VoiceData`                  |
-| `src/commonMain/kotlin/voices/BlockRenderer.kt`     | Per-block voice stages (`BlockContext`): `IgniteRenderer`, `TeardownFadeRenderer`, `SendRenderer`, all in `voices/` |
+| `src/commonMain/kotlin/voices/teardown_fade.kt`, `voice_channel.kt` | The voice's fixed stages as plain functions: `applyTeardownFade`, `mixIntoCylinder` (gain, pan, sends, peak) |
 | `src/commonMain/kotlin/voices/VoiceScheduler.kt`    | Voice lifecycle management                                                                                          |
 | `src/commonMain/kotlin/cylinders/Cylinders.kt`      | Effect bus manager                                                                                                  |
 | `src/commonMain/kotlin/cylinders/Cylinder.kt`       | Single effect bus (delay/reverb/phaser/…)                                                                           |
-| `src/commonMain/kotlin/katalyst/`                   | The Katalyst chain and its stages, at the orbits and the output: body/vowel resonators, `KatalystFilterSwap` declick |
+| `src/commonMain/kotlin/katalyst/`                   | The Katalyst chain and its stages, at the cylinders and the output: body/vowel resonators, `KatalystFilterSwap` declick |
 | `src/commonMain/kotlin/filters/`                    | SVF coefficient helpers, DcBlocker, the resonator bank (`ResonatorBank`, `ResonatorTable`), `EqCore`    |
 | `src/commonMain/kotlin/ignitor/Ignitors.kt`         | Oscillator + signal-gen factories (Ignitor DSL); samples via `ignitor/SampleIgnitor.kt`                             |
 | `src/jvmMain/kotlin/JvmAudioBackend.kt`             | JVM: javax.sound.sampled output                                                                                     |
@@ -87,7 +88,7 @@ guideline, guardrail) are the ones the root `CLAUDE.md` defines, and the root ke
 | Envelope rules — voice-lifetime semantics, amp vs modulator envelopes              | `ref/voice-synthesis.md`   |
 | The gate off values: when a stage is not built (the one home)                      | `ref/off-values.md`        |
 | KlangAudioRenderer, Cylinders, effects (Delay/Reverb/Compressor/…)                 | `ref/effects-mixing.md`    |
-| The Katalyst chain's laws: switching, knob glides, orbit deactivation, chain swap, the output host | `ref/katalyst.md` |
+| The Katalyst chain's laws: switching, knob glides, cylinder deactivation, chain swap, the output host | `ref/katalyst.md` |
 | Envelope law and knobs, the voice rng and its draw order                           | `ref/voice-synthesis.md`   |
 | How an engine change is proven: identity renders, controls, metric floors, oracle specs | `ref/verification.md` |
 | The full dated record of `MEMORY.md` up to 2026-09-29 (history, not read by default) | `ref/memory-history.md` |
