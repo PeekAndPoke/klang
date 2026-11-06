@@ -21,7 +21,7 @@ second**; 15 DONE and 14 checked (already in onset order, no change) the same da
 units per second) and 25's floor DONE with the leak of KLANG-00415, also 2026-11-05; left waiting: 11, 25's
 `exp(-k / tau)` and the rest of section 6. (The C calls of `docs/housekeeping/2026-10-10-baseline.md` and the
 questions once listed here, Q13, Q19, Q24, Q28 to Q33, were all answered by 2026-10-14; checked 2026-11-06,
-[`_maintainer-questions.md`](../_maintainer-questions.md) has none open.)
+[`_maintainer-questions.md`](_maintainer-questions.md) has none open.)
 
 Status: **open, collected 2026-10-09** when the engine tidy-up was archived
 (KLANG-00286 (engine tidy up), "the record" below; v0.6.0). Each
@@ -2583,7 +2583,7 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
 ## 6. The audit's later steps and its open decisions
 
 The tidy-up ran the audit's order (section D of
-[`../audio-audit/2026-10-07-engine-tidy-audit.md`](../../audio-audit/2026-10-07-engine-tidy-audit.md)) through step 13,
+[`../audio-audit/2026-10-07-engine-tidy-audit.md`](../audio-audit/2026-10-07-engine-tidy-audit.md)) through step 13,
 and step 14 (the empty-variants bug) first. Steps 15 to 20 are shape and sound changes; each needs the maintainer.
 Each was checked against the code: none is done (item 21's package dissolve aside).
 
@@ -2725,7 +2725,7 @@ Each was checked against the code: none is done (item 21's package dissolve asid
 
 ## 7. Questions with the maintainer
 
-None open (checked 2026-11-06). Answered 2026-10-13 in [`_maintainer-questions.md`](../_maintainer-questions.md), Part 0:
+None open (checked 2026-11-06). Answered 2026-10-13 in [`_maintainer-questions.md`](_maintainer-questions.md), Part 0:
 Q19 (the disposal order stays, documented in the dispatcher's KDoc), Q24 (typed Kotlin doors: KLANG-00314 (kotlin
 typed doors)) and Q28 (solo: the latest value wins at once, item 43).
 

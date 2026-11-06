@@ -551,6 +551,13 @@ polish pass sits after the loop; polished examples re-run the machine gates befo
 - **Graded ear training** (Syntorial-style "reproduce this hidden sound in code"): killer feature, separate
   build — not a prerequisite for the rework.
 - Lesson naming/tone pass: titles above are placeholders, not final voice.
+- **Cylinder, not orbit (offered 2026-11-06 by KLANG-00418 (cylinder as the one word the sprudel door the katalyst
+  vocab), step 5).** The maintainer decided that "cylinder" is the user's word too: `cylinder(n)` is sprudel's canonical
+  door, `orbit` and `o` its aliases (they keep working, so no lesson is broken). Every other live text says cylinder now,
+  the Lexikon included ("Orbit" folded into "Cylinder", "Orbit bus" is "Cylinder bus"). The tutorials still say orbit:
+  `tut_Layers.kt` (its `teaches` list, the section "A channel of your own: orbit", the prose and two examples). When
+  this stream resumes, it decides how a lesson says it: `cylinder(1)` in the examples, perhaps one sentence that Strudel
+  calls it an orbit.
 
 ## Appendix: craft rules carried over from the earlier tutorial sessions (added 2026-09-06)
 
@@ -583,3 +590,4 @@ workstream owns them from here. Hardness: guideline, except where the engine dic
 
 - 2026-10-20: numbered KLANG-00145 (was `docs/tasks/tutorial-curriculum.md`).
 - 2026-10-27: part of KLANG-00362 (Learning: tutorials and the ear), the epic grouping.
+- 2026-11-06: offered by KLANG-00418: the lessons say cylinder instead of orbit (Open decisions).
