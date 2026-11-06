@@ -1,8 +1,6 @@
 # KLANG-00417: Parameter parity audit across every DSL surface
 
-> **Status (2026-11-06): SCHEDULED.** Split out of KLANG-00137 (master dsl followups) section 1 (maintainer,
-> 2026-11-06): "the parity audit should get its own ticket and should be worked on when all the dsp restructuring is
-> done". Starts after the DSP restructuring, so the audit reads the surfaces in their final shape and runs once.
+> **Status (2026-11-06): IN PROGRESS.** Split out of KLANG-00137 (master dsl followups) section 1 (maintainer, 2026-11-06): "the parity audit should get its own ticket and should be worked on when all the dsp restructuring is done". Starts after the DSP restructuring, so the audit reads the surfaces in their final shape and runs once.
 >
 > **Part of:** KLANG-00357 (Effects: the Katalyst and the master)
 
@@ -66,3 +64,4 @@ of the earlier exception is in KLANG-00137 section 1 and KLANG-00225 (master lim
 ## History
 
 - 2026-11-06: created from KLANG-00137 section 1 (the maintainer: its own ticket, after the DSP restructuring).
+- 2026-11-06: IN PROGRESS.
