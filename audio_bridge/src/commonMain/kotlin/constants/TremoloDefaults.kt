@@ -28,3 +28,11 @@ const val TREMOLO_RANGE_FROM: Double = -1.0
 
 /** See [TREMOLO_RANGE_FROM]. */
 const val TREMOLO_RANGE_TO: Double = 0.0
+
+/**
+ * The tremolo's rate when nothing sets one, in Hz: the slot `tremolo.rate` that `classic()` places (what a pattern's
+ * `tremolo(depth = ...)` without a rate gets) and the Ignitor node's default, one value on every surface, as
+ * [VIBRATO_RATE_HZ] is for the vibrato. Before KLANG-00417 B3 (2026-11-06) the slot's unset rate was 0, a static dip
+ * with no wobble, against the node's literal 5.
+ */
+const val TREMOLO_RATE_HZ: Double = 5.0

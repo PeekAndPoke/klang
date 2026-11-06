@@ -133,6 +133,14 @@ judgement, each item fixed or recorded. The songs, the jingles and the tutorials
   `Ducking.releaseSeconds` (its knob slot `KNOB_RELEASE`), `DuckSettings.releaseSeconds`, the duck writer. The wire
   schema hash moved (-209384306 to 591120935). No song or tutorial used the knob. KLANG-00290's item 22 is closed by
   it.
+- **B2 and B3 DONE 2026-11-06:** sprudel's tremolo is `tremolo(rate, depth, shape)` on every form (the pattern, the
+  string, the mapper, the call form), rate first as on both Ignitor doors and as `vibrato`; a bare call reinterprets
+  the pattern's values as the rate, as `vibrato` does, and `depth` stays the switch. `TREMOLO_RATE_HZ` (5 Hz) is the
+  slot `tremolo.rate`'s default and the Ignitor node's, one constant. The tremolo editor tool writes the call in the
+  new order. The KDoc examples, the skill's reference, the specs and the benchmark song follow; no built-in song, jingle
+  or tutorial called the tremolo positionally, and the corpus is identical (no song set a depth without a rate). The
+  spec of an untyped receiver whose variants disagree took the FM as its example (its order difference is recorded);
+  the tremolo's variants agree now.
 
 ### Checked and consistent
 

@@ -80,7 +80,7 @@ class LangFieldAccessorsSpec : StringSpec({
         row("phaser.center", """s("bd sd").phaser(center = 1000).phaser(center = mul(2))""", { it.phaserCenter }, 2000.0, s("bd sd").phaser(center = 1000).phaser(center = mul(2))),
         row("phaser.sweep", """s("bd sd").phaser(sweep = 2000).phaser(sweep = mul(0.5))""", { it.phaserSweep }, 1000.0, s("bd sd").phaser(sweep = 2000).phaser(sweep = mul(0.5))),
         row("phaser.floor", """s("bd sd").phaser(floor = 0.2).phaser(floor = add(0.3))""", { it.phaserFloor }, 0.5, s("bd sd").phaser(floor = 0.2).phaser(floor = add(0.3))),
-        row("tremolo.depth", """s("bd sd").tremolo(0.5).tremolo(mul(0.5))""", { it.tremoloDepth }, 0.25, s("bd sd").tremolo(0.5).tremolo(mul(0.5))),
+        row("tremolo.depth", """s("bd sd").tremolo(depth = 0.5).tremolo(depth = mul(0.5))""", { it.tremoloDepth }, 0.25, s("bd sd").tremolo(depth = 0.5).tremolo(depth = mul(0.5))),
         row("tremolo.rate", """s("bd sd").tremolo(rate = 4).tremolo(rate = mul(2))""", { it.tremoloRate }, 8.0, s("bd sd").tremolo(rate = 4).tremolo(rate = mul(2))),
     )
 
@@ -102,7 +102,7 @@ class LangFieldAccessorsSpec : StringSpec({
         row("phaser.center", """s("bd sd").phaser(center = 1000).lpf(phaser.center)""", { it.cutoff }, 1000.0, s("bd sd").phaser(center = 1000).lpf(phaser.center)),
         row("phaser.sweep", """s("bd sd").phaser(sweep = 2000).phaser(center = phaser.sweep)""", { it.phaserCenter }, 2000.0, s("bd sd").phaser(sweep = 2000).phaser(center = phaser.sweep)),
         row("phaser.floor", """s("bd sd").phaser(floor = 0.2).pan(phaser.floor)""", { it.pan }, 0.2, s("bd sd").phaser(floor = 0.2).pan(phaser.floor)),
-        row("tremolo.depth", """s("bd sd").tremolo(0.5).pan(tremolo.depth)""", { it.pan }, 0.5, s("bd sd").tremolo(0.5).pan(tremolo.depth)),
+        row("tremolo.depth", """s("bd sd").tremolo(depth = 0.5).pan(tremolo.depth)""", { it.pan }, 0.5, s("bd sd").tremolo(depth = 0.5).pan(tremolo.depth)),
         row("tremolo.rate", """s("bd sd").tremolo(rate = 4).phaser(rate = tremolo.rate)""", { it.phaserRate }, 4.0, s("bd sd").tremolo(rate = 4).phaser(rate = tremolo.rate)),
     )
 
@@ -553,7 +553,7 @@ class LangFieldAccessorsSpec : StringSpec({
                 it.phaserCenter shouldBe 2000.0
                 it.phaserSweep shouldBe 2000.0
             },
-            Case("tremolo(rate = mul(2))", s("bd sd").tremolo(0.5, 4, "sine").tremolo(rate = mul(2)), """s("bd sd").tremolo(0.5, 4, "sine").tremolo(rate = mul(2))""") {
+            Case("tremolo(rate = mul(2))", s("bd sd").tremolo(4, 0.5, "sine").tremolo(rate = mul(2)), """s("bd sd").tremolo(4, 0.5, "sine").tremolo(rate = mul(2))""") {
                 it.tremoloDepth shouldBe 0.5
                 it.tremoloRate shouldBe 8.0
                 it.tremoloShape shouldBe "sine"
@@ -583,7 +583,7 @@ class LangFieldAccessorsSpec : StringSpec({
             Case("reverb", s("bd sd").reverb(0.8).reverb("<0.5 ~>"), """s("bd sd").reverb(0.8).reverb("<0.5 ~>")""") { it.katalystParams?.get("reverb.wet") },
             Case("delay", s("bd sd").delay(0.8).delay("<0.5 ~>"), """s("bd sd").delay(0.8).delay("<0.5 ~>")""") { it.katalystParams?.get("delay.wet") },
             Case("phaser", s("bd sd").phaser(0.8).phaser("<0.5 ~>"), """s("bd sd").phaser(0.8).phaser("<0.5 ~>")""") { it.phaserDepth },
-            Case("tremolo", s("bd sd").tremolo(0.8).tremolo("<0.5 ~>"), """s("bd sd").tremolo(0.8).tremolo("<0.5 ~>")""") { it.tremoloDepth },
+            Case("tremolo", s("bd sd").tremolo(0.8).tremolo("<0.5 ~>"), """s("bd sd").tremolo(0.8).tremolo("<0.5 ~>")""") { it.tremoloRate },
             Case("distort", s("bd sd").distort(0.8).distort("<0.5 ~>"), """s("bd sd").distort(0.8).distort("<0.5 ~>")""") { it.distort },
             Case("crush", s("bd sd").crush(0.8).crush("<0.5 ~>"), """s("bd sd").crush(0.8).crush("<0.5 ~>")""") { it.crush },
             Case("coarse", s("bd sd").coarse(0.8).coarse("<0.5 ~>"), """s("bd sd").coarse(0.8).coarse("<0.5 ~>")""") { it.coarse },

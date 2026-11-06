@@ -90,7 +90,8 @@ fun SprudelPattern.lpf(freq: PatternLike? = null, q: PatternLike? = null, ...): 
   `invoke`), fails the build.
 - The editor shows the call's tools first, then the tools of the parameter at the cursor (those only when the
   argument holds a literal, or the call is empty): `ArgumentBinding.tools`, `ToolCallAt.tools`. A call whose variant
-  is ambiguous (`x => x.tremolo(5, 0.3)`, an untyped receiver) gets no whole-call tool.
+  is ambiguous (`x => x.fm(300, 1.4)`, an untyped receiver whose variants name the argument differently) gets no
+  whole-call tool.
 - Parsed by the KSP processor in `klangscript-ksp/src/main/kotlin/KDocParser.kt`. A function's tools reach every
   variant (`String.gain`, `PatternMapperFn.gain`), whichever variant's KDoc names them.
 - The old `@param-tool <param> A, B` is retired (2026-10-27): it fails the build with a message saying what to write.

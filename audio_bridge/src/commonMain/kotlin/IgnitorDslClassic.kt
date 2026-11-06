@@ -21,6 +21,7 @@ import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_DECAY_SEC
 import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_SUSTAIN_LEVEL
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
+import io.peekandpoke.klang.audio_bridge.constants.TREMOLO_RATE_HZ
 import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_PHASE
 import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RANGE_FROM
 import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RANGE_TO
@@ -130,8 +131,8 @@ class DistortSlots internal constructor() {
 
 /**
  * The slots of the tremolo stage (`Slots.tremolo`), mirroring sprudel's
- * `tremolo(depth, rate, shape)`: `tremolo.depth` (default 0.0, off), `tremolo.rate` (the
- * RATE in Hz; default 0.0, the strip's untouched rate, NOT the node's 5.0) and `tremolo.shape` (an
+ * `tremolo(rate, depth, shape)`: `tremolo.rate` (the RATE in Hz; default [TREMOLO_RATE_HZ], the node's default too,
+ * KLANG-00417 B3), `tremolo.depth` (default 0.0, off) and `tremolo.shape` (an
  * INDEX into [LfoShapes], default `sine`; no sprudel reader, the name is a string there).
  *
  * No range slots, by decision (maintainer, 2026-10-06, "not in sprudel yet"): the node's `rangeFrom` / `rangeTo` stay
@@ -141,7 +142,7 @@ class DistortSlots internal constructor() {
  */
 class TremoloSlots internal constructor() {
     val depth: IgnitorDsl = slot(door = "tremolo", param = "depth", default = 0.0)
-    val rate: IgnitorDsl = slot(door = "tremolo", param = "rate", default = 0.0)
+    val rate: IgnitorDsl = slot(door = "tremolo", param = "rate", default = TREMOLO_RATE_HZ)
     val shape: IgnitorDsl = slot(
         door = "tremolo", param = "shape", default = LfoShapes.SINE_INDEX.toDouble(),
         description = "The LFO shape as its index in the shape list; what sprudel's `tremolo(shape = ...)` names",

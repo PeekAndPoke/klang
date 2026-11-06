@@ -178,7 +178,7 @@ fun beats(n: PatternLike, base: Number = 4, callInfo: CallInfo? = null): Sprudel
  *
  * The rate twin of [beats]: the LFO doors take a rate in Hz (the `rate` of `tremolo`, `vibrato` and
  * `phaser`), and `beatRate` turns a musical length into that rate, following every tempo change while playing.
- * It takes the same argument as [beats], so `delay(0.3, beats(0.5))` and `tremolo(0.6, beatRate(0.5))` both
+ * It takes the same argument as [beats], so `delay(0.3, beats(0.5))` and `tremolo(beatRate(0.5), 0.6)` both
  * mean "every half beat". It is exactly `pure(1).div(beats(n, base))`: at cps 0.5 (120 bpm) `beatRate(1)`
  * is 2 Hz and `beatRate(0.5)` is 4 Hz. `base` is how many beats make a cycle, 4 unless you say otherwise.
  *
@@ -187,7 +187,7 @@ fun beats(n: PatternLike, base: Number = 4, callInfo: CallInfo? = null): Sprudel
  * and the phaser keeps the rate it had.
  *
  * ```KlangScript(Playable)
- * note("c3").s("saw").tremolo(0.6, beatRate(0.5))          // one wobble every half beat, at any tempo
+ * note("c3").s("saw").tremolo(beatRate(0.5), 0.6)          // one wobble every half beat, at any tempo
  * ```
  *
  * ```KlangScript(Playable)
@@ -195,7 +195,7 @@ fun beats(n: PatternLike, base: Number = 4, callInfo: CallInfo? = null): Sprudel
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3").s("saw").tremolo(0.6, beatRate(1, 3))         // three beats to the cycle: a wobble per beat
+ * note("c3").s("saw").tremolo(beatRate(1, 3), 0.6)         // three beats to the cycle: a wobble per beat
  * ```
  *
  * @param n How many beats one cycle of the LFO lasts; a number or a pattern.

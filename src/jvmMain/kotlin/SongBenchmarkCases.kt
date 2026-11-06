@@ -488,7 +488,7 @@ object SongBenchmarkCases {
     private val lfoPad = voice(
         "LFO PAD (saw, vibrato + tremolo)", "voice",
         """
-        n("<[0,4,7] [-3,2,5]>").cylinder(6).scale("e3:minor").sound("saw").vibrato(5.5, 0.3).tremolo(0.5, 4)
+        n("<[0,4,7] [-3,2,5]>").cylinder(6).scale("e3:minor").sound("saw").vibrato(5.5, 0.3).tremolo(4, 0.5)
           .adsr(0.05, 0.5, 0.7, 0.4).gain(0.4).pan(0.5)
         """,
     )

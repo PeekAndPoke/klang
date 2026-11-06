@@ -101,6 +101,7 @@ import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_SPREAD_POWER
 import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_WARMUP
 import io.peekandpoke.klang.audio_bridge.constants.TREMOLO_RANGE_FROM
 import io.peekandpoke.klang.audio_bridge.constants.TREMOLO_RANGE_TO
+import io.peekandpoke.klang.audio_bridge.constants.TREMOLO_RATE_HZ
 import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_PHASE
 import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RANGE_FROM
 import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RANGE_TO
@@ -2309,7 +2310,7 @@ sealed interface IgnitorDsl {
     @WireName("tremolo")
     data class Tremolo(
         val inner: IgnitorDsl,
-        val rate: IgnitorDsl = Constant(5.0),
+        val rate: IgnitorDsl = Constant(TREMOLO_RATE_HZ),
         val depth: IgnitorDsl = Constant(0.5),
         val shape: IgnitorDsl = Constant(LfoShapes.SINE_INDEX.toDouble()),
         val rangeFrom: IgnitorDsl = Constant(TREMOLO_RANGE_FROM),

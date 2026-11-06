@@ -182,7 +182,7 @@ class ClassicSlotParamsSpec : StringSpec({
     "names travel as their catalogue index, a flag as 1.0 or 0.0" {
         slots(note("c").distort(0.3, "tube"))["distort.shape"] shouldBe 10.0
         slots(note("c").distort(0.3, "no-such-shape"))["distort.shape"] shouldBe 0.0
-        slots(note("c").tremolo(0.5, 4, "square")) shouldBe mapOf("tremolo.depth" to 0.5, "tremolo.rate" to 4.0, "tremolo.shape" to 2.0)
+        slots(note("c").tremolo(4, 0.5, "square")) shouldBe mapOf("tremolo.depth" to 0.5, "tremolo.rate" to 4.0, "tremolo.shape" to 2.0)
         slots(note("c").adsrCurves("linear", "square", "scurve")) shouldBe mapOf(
             "adsrCurves.attack" to 0.0, "adsrCurves.decay" to 1.0, "adsrCurves.release" to 3.0,
         )
@@ -201,7 +201,7 @@ class ClassicSlotParamsSpec : StringSpec({
                 .bpf(901, 1.3, 13, 0.031, 0.032, 0.033, 0.034).bpfCurves("cube", "scurve", "invsquare")
                 .notch(1501, 1.4, 14, 0.041, 0.042, 0.043, 0.044).notchCurves("scurve", "invsquare", "exponential")
                 .adsr(0.051, 0.052, 0.53, 0.054).adsrCurves("invsquare", "exponential", "linear").adsrOff()
-                .crush(4.1).coarse(3.1).distort(0.31, "tube").tremolo(0.61, 4.1, "square")
+                .crush(4.1).coarse(3.1).distort(0.31, "tube").tremolo(4.1, 0.61, "square")
                 .begin(0.11).end(0.91).speed(2.1).loop()
                 .penv(7.1, 0.061, 0.062, 0.63, 0.064).penvCurves("exponential", "linear", "square")
                 .vibrato(5.1, 0.71).accelerate(0.51)
@@ -246,9 +246,9 @@ class ClassicSlotParamsSpec : StringSpec({
 
     "SMOKE, not the two-doors guard: the KlangScript and the Kotlin call put the same slots on the wire (one function serves both, so this cannot fail apart from the translation)" {
         val script = SprudelPattern.compile(
-            """note("c").lpf(freq = 800, q = 2, env = 12).hpf(100).adsr(0.01, 0.1, 0.5, 0.2).crush(4).distort(0.3, "tube").tremolo(0.5, 4).speed(2)"""
+            """note("c").lpf(freq = 800, q = 2, env = 12).hpf(100).adsr(0.01, 0.1, 0.5, 0.2).crush(4).distort(0.3, "tube").tremolo(4, 0.5).speed(2)"""
         )
-        val kotlin = note("c").lpf(freq = 800, q = 2, env = 12).hpf(100).adsr(0.01, 0.1, 0.5, 0.2).crush(4).distort(0.3, "tube").tremolo(0.5, 4).speed(2)
+        val kotlin = note("c").lpf(freq = 800, q = 2, env = 12).hpf(100).adsr(0.01, 0.1, 0.5, 0.2).crush(4).distort(0.3, "tube").tremolo(4, 0.5).speed(2)
 
         slots(script) shouldBe slots(kotlin)
         slots(kotlin)["lpf.env"] shouldBe 12.0

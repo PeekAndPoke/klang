@@ -24,7 +24,7 @@ import io.peekandpoke.klang.script.types.KlangType
  *
  * @param wholeCall False when the variant was chosen without a receiver type and another variant
  *   of the same name binds this argument to a parameter of a different name (the untyped
- *   `o => o.tremolo(5, 0.3)`: sprudel's `depth`, the Ignitor's `rate`). The call may then belong to
+ *   `o => o.fm(300, 1.4)`: sprudel's `depth`, the Ignitor's `modulator`). The call may then belong to
  *   that other variant, so a tool must edit this one argument only and never rewrite the whole
  *   argument list with [callable]'s parameter names.
  */

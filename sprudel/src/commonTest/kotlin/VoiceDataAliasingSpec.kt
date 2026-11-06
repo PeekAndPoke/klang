@@ -74,7 +74,7 @@ class VoiceDataAliasingSpec : StringSpec({
     fun SprudelPattern.everyGroup(): SprudelPattern = this
         .adsr(0.01, 0.2, 0.5, 0.3).lpf(800).hpf(100).bpf(900).notch(1500)
         .accelerate(1).vibrato(5, 0.2).penv(12, 0.01).fm(2, 1.5)
-        .distort(0.3).tremolo(0.5, 4).begin(0.1)
+        .distort(0.3).tremolo(4, 0.5).begin(0.1)
         .vowel(0.3, "a").body(0.3, "wood").phaser(0.2, 0.5)
         .ignp("voices", 3).reverb(0.2)
 

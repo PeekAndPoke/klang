@@ -118,7 +118,8 @@ class ClassicDoorRenderParitySpec : StringSpec({
         add(Row("${door}Curves.release", env + ("${door}Curves.release" to AdsrCurves.indexOf(AdsrCurve.InvSquare))))
     }
 
-    val trem = mapOf("tremolo.depth" to 0.5, "tremolo.rate" to 5.0)
+    // A rate apart from the slot's default (TREMOLO_RATE_HZ, 5 Hz since KLANG-00417 B3), or the rate row engages nothing
+    val trem = mapOf("tremolo.depth" to 0.5, "tremolo.rate" to 6.0)
 
     // The pitch envelope (pitch pipeline step 1): the switch alone, each stage against the switch alone, each curve
     // against the full envelope without it. The release row writes a short decay and a sustain: with the default
@@ -227,12 +228,12 @@ class ClassicDoorRenderParitySpec : StringSpec({
     }
 
     // The tremolo across the SPRUDEL door and the IGNITOR door (2026-09-29, the tremolo as a composition): sprudel's
-    // `tremolo(depth, rate, shape)` fills `classic()`'s tremolo slots; the Ignitor's `tremolo(rate, depth, shape)`
+    // `tremolo(rate, depth, shape)` fills `classic()`'s tremolo slots; the Ignitor's `tremolo(rate, depth, shape)`
     // places the same node with constants in front of a `classic()` whose own tremolo stays unset. Both render one
     // saw through one tremolo into the default envelope, so the renders agree in raw bits, at every shape.
     for (shape in LfoShapes.names) {
-        "DOOR PARITY: sprudel's tremolo(0.5, 5, \"$shape\") renders what the Ignitor door's tremolo(5, 0.5, \"$shape\") renders" {
-            val bag = note("a3").tremolo(0.5, 5, shape).queryArc(0.0, 1.0).first().data.toVoiceData().ignitorParams?.toMap() ?: emptyMap()
+        "DOOR PARITY: sprudel's tremolo(5, 0.5, \"$shape\") renders what the Ignitor door's tremolo(5, 0.5, \"$shape\") renders" {
+            val bag = note("a3").tremolo(5, 0.5, shape).queryArc(0.0, 1.0).first().data.toVoiceData().ignitorParams?.toMap() ?: emptyMap()
             val viaSprudel = render(kotlin, bag)
             val viaIgnitor = render(IgnitorDsl.Saw().ignitorTremolo(rate = 5.0.ign, depth = 0.5.ign) { it.shape(shape) }.classic(), emptyMap())
             val bare = render(kotlin, emptyMap())

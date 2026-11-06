@@ -139,7 +139,7 @@ oscillators (already `(freq, configure)`).
   factor; since S3c they are typed too (`shape` is a slot knob read per event, maintainer 2026-10-16; the factor
   left with KLANG-00214 step 4), with a `String` name form, so the asymmetry is gone.
 - **Recorded asymmetries (oscillator phase task, 2026-10-06).** (1) The tremolo's `range` is on the Ignitor doors
-  only; sprudel's `tremolo(depth, rate, shape)` gets none (maintainer, 2026-10-06, "not in sprudel yet"): it is a
+  only; sprudel's `tremolo(rate, depth, shape)` gets none (maintainer, 2026-10-06, "not in sprudel yet"): it is a
   flat door with no builder layer for a two-value knob, and `classic()` places no range slots. The engine is ready
   (two slots at -1 and 0 render the classic bits), so a song that wants a swell reopens it. (The vibrato's range and
   phase ARE on sprudel since pitch pipeline 7c, decision D9: see its row.) (2) Sprudel cannot reach

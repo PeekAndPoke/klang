@@ -176,7 +176,7 @@ class CallInfoTest : StringSpec({
     }
 
     "tremolo passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""seq("0 1").tremolo(0.5, 4)""")
+        assertCallInfoPresent("""seq("0 1").tremolo(4, 0.5)""")
     }
 
     "notch(attack, decay, sustain, release) passes CallInfo from KlangScript" {

@@ -164,7 +164,7 @@ class ClassicTailSpec : StringSpec({
                 add("${door}Curves.release" to modExp)
             }
         } + listOf(
-            "tremolo.rate" to 0.0,
+            "tremolo.rate" to 5.0, // TREMOLO_RATE_HZ, the node's default too (KLANG-00417 B3; was 0, a static dip)
             "tremolo.depth" to 0.0,
             "tremolo.shape" to LfoShapes.SINE_INDEX.toDouble(),
             "adsr.attack" to 0.01,

@@ -200,8 +200,8 @@ class LangDoorFormsSpec : StringSpec({
             slot = katSlot("vowel.floor")),
 
         // -- tremolo ----------------------------------------------------------------------------------------------------
-        k("tremolo.depth", "tremolo(%s)", { it.tremoloDepth }, { p, c -> p.tremolo(c) }, { s, c -> s.tremolo(c) }, { c -> tremolo(c) }, { m, c -> m.tremolo(c) }, head = true),
-        k("tremolo.rate", "tremolo(rate = %s)", { it.tremoloRate }, { p, c -> p.tremolo(rate = c) }, { s, c -> s.tremolo(rate = c) }, { c -> tremolo(rate = c) }, { m, c -> m.tremolo(rate = c) }),
+        k("tremolo.rate", "tremolo(%s)", { it.tremoloRate }, { p, c -> p.tremolo(c) }, { s, c -> s.tremolo(c) }, { c -> tremolo(c) }, { m, c -> m.tremolo(c) }, head = true),
+        k("tremolo.depth", "tremolo(depth = %s)", { it.tremoloDepth }, { p, c -> p.tremolo(depth = c) }, { s, c -> s.tremolo(depth = c) }, { c -> tremolo(depth = c) }, { m, c -> m.tremolo(depth = c) }),
         k("tremolo.shape", "tremolo(shape = %s)", { it.tremoloShape }, { p, c -> p.tremolo(shape = c) }, { s, c -> s.tremolo(shape = c) }, { c -> tremolo(shape = c) }, { m, c -> m.tremolo(shape = c) },
             ctrl = "sine square", expected = listOf("sine", "square"), continuous = null),
 
@@ -472,8 +472,8 @@ class LangDoorFormsSpec : StringSpec({
                 { it.vowel(0.4, "a", 0.2) }, { it.vowel(0.4, "a", 0.2) }, { vowel(0.4, "a", 0.2) }, { it.vowel(0.4, "a", 0.2) },
             ),
             Door(
-                "tremolo", """0.5, 4, "sine"""", { listOf(it.tremoloDepth, it.tremoloRate, it.tremoloShape) }, listOf(0.5, 4.0, "sine"),
-                { it.tremolo(0.5, 4, "sine") }, { it.tremolo(0.5, 4, "sine") }, { tremolo(0.5, 4, "sine") }, { it.tremolo(0.5, 4, "sine") },
+                "tremolo", """4, 0.5, "sine"""", { listOf(it.tremoloRate, it.tremoloDepth, it.tremoloShape) }, listOf(4.0, 0.5, "sine"),
+                { it.tremolo(4, 0.5, "sine") }, { it.tremolo(4, 0.5, "sine") }, { tremolo(4, 0.5, "sine") }, { it.tremolo(4, 0.5, "sine") },
             ),
             Door(
                 "distort", """0.5, "soft"""", { listOf(it.distort, it.distortShape) }, listOf(0.5, "soft"),

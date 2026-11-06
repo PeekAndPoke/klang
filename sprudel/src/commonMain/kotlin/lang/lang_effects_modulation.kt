@@ -320,7 +320,7 @@ private fun applyPhaserSweep(source: SprudelPattern, args: List<SprudelDslArg<An
 
 // -- tremolo.rate ----------------------------------------------------------------------------------------------------
 
-private val tremoloRateMutation = voiceSetter { tremoloRate = it?.asDoubleOrNull() }
+private val tremoloRateMutation = voiceSetter { tremoloRate = it?.asDoubleOrNull() ?: tremoloRate }
 
 private fun applyTremoloRate(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
@@ -332,7 +332,7 @@ private fun applyTremoloRate(source: SprudelPattern, args: List<SprudelDslArg<An
 
 
 /**
- * The tremolo: depth, rate and waveform.
+ * The tremolo: rate, depth and waveform, in the Ignitor door's order (rate first, like [vibrato]).
  *
  * Unlike the phaser above it, the tremolo runs per voice: every note gets
  * its own LFO, so two notes on one cylinder can wobble at different rates. The LFO is the oscillator
@@ -340,22 +340,24 @@ private fun applyTremoloRate(source: SprudelPattern, args: List<SprudelDslArg<An
  *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
  * a mapper (`tremolo(rate = mul(2))`), and the numeric slots read back as `tremolo.depth` and `tremolo.rate`.
- * With no argument at all, the pattern's own values are reinterpreted as `depth`.
+ * With no argument at all, the pattern's own values are reinterpreted as `rate`. An unset rate is 5 Hz
+ * (`TREMOLO_RATE_HZ`, the Ignitor's tremolo default too); `depth` is the switch, so a rate-only call
+ * (`tremolo(4)`) writes its slot and stays silent until a depth arrives.
  *
  * ```KlangScript(Playable)
- * note("c3").s("saw").tremolo(0.6, 4)                                     // depth and rate
+ * note("c3").s("saw").tremolo(4, 0.6)                                     // rate and depth
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3").s("saw").tremolo(0.6, 4).tremolo(rate = mul("<1 2>"))         // twice as fast every other bar
+ * note("c3").s("saw").tremolo(4, 0.6).tremolo(rate = mul("<1 2>"))         // twice as fast every other bar
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3 e3").s("saw").tremolo("0.3 0.9", 4).gain(tremolo.depth)         // deeper, louder
+ * note("c3 e3").s("saw").tremolo(4, "0.3 0.9").gain(tremolo.depth)         // deeper, louder
  * ```
  *
+ * @param rate LFO rate in Hz (unset: 5). [beatRate] follows the tempo.
  * @param depth Depth, 0 to 1. The stage is built only above 0.
- * @param rate LFO rate in Hz. [beatRate] follows the tempo.
  * @param shape LFO waveform: `sine`, `triangle`, `square`, `sawtooth`, `ramp`.
  * @tool SprudelTremoloEditor
  * @tool depth: SprudelTremoloEditor, SprudelTremoloSequenceEditor
@@ -363,22 +365,22 @@ private fun applyTremoloRate(source: SprudelPattern, args: List<SprudelDslArg<An
  *
  * @scope voice
  * @category effects
- * @tags tremolo, depth, rate, shape
+ * @tags tremolo, rate, depth, shape
  */
 @KlangScript.Function
 fun SprudelPattern.tremolo(
-    depth: PatternLike? = null,
     rate: PatternLike? = null,
+    depth: PatternLike? = null,
     shape: PatternLike? = null,
     callInfo: CallInfo? = null
 ): SprudelPattern {
-    // A tail-only call must not touch depth: reinterpret runs only on a fully bare call.
-    var p = if (depth != null || !(rate != null || shape != null)) {
-        applyTremoloDepth(this, listOfNotNull(depth).asSprudelDslArgs(callInfo))
+    // A tail-only call must not touch rate: reinterpret runs only on a fully bare call.
+    var p = if (rate != null || !(depth != null || shape != null)) {
+        applyTremoloRate(this, listOfNotNull(rate).asSprudelDslArgs(callInfo))
     } else {
         this
     }
-    if (rate != null) p = applyTremoloRate(p, listOf<Any?>(rate).asSprudelDslArgs(callInfo?.forParam(1)))
+    if (depth != null) p = applyTremoloDepth(p, listOf<Any?>(depth).asSprudelDslArgs(callInfo?.forParam(1)))
     if (shape != null) p = applyTremoloShape(p, listOf<Any?>(shape).asSprudelDslArgs(callInfo?.forParam(2)))
     return p
 }
@@ -386,22 +388,22 @@ fun SprudelPattern.tremolo(
 /** Parses this string as a pattern, then applies [tremolo]. */
 @KlangScript.Function
 fun String.tremolo(
-    depth: PatternLike? = null,
     rate: PatternLike? = null,
+    depth: PatternLike? = null,
     shape: PatternLike? = null,
     callInfo: CallInfo? = null
 ): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).tremolo(depth, rate, shape, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).tremolo(rate, depth, shape, callInfo)
 
 /** Chains a [tremolo] step onto this [PatternMapperFn]. */
 @KlangScript.Function
 fun PatternMapperFn.tremolo(
-    depth: PatternLike? = null,
     rate: PatternLike? = null,
+    depth: PatternLike? = null,
     shape: PatternLike? = null,
     callInfo: CallInfo? = null
 ): PatternMapperFn =
-    this.chain { p -> p.tremolo(depth, rate, shape, callInfo) }
+    this.chain { p -> p.tremolo(rate, depth, shape, callInfo) }
 
 /**
  * The `tremolo` object: `tremolo(...)` sets the slots, and each numeric slot reads back as a child,
@@ -426,18 +428,18 @@ object tremolo {
     /**
      * The setter, see [SprudelPattern.tremolo].
      *
+     * @param rate LFO rate in Hz (unset: 5). [beatRate] follows the tempo.
      * @param depth Depth, 0 to 1. The stage is built only above 0.
-     * @param rate LFO rate in Hz. [beatRate] follows the tempo.
      * @param shape LFO waveform: `sine`, `triangle`, `square`, `sawtooth`, `ramp`.
      */
     @KlangScript.Invoke
     operator fun invoke(
-        depth: PatternLike? = null,
         rate: PatternLike? = null,
+        depth: PatternLike? = null,
         shape: PatternLike? = null,
         callInfo: CallInfo? = null
     ): PatternMapperFn =
-        { p -> p.tremolo(depth, rate, shape, callInfo) }
+        { p -> p.tremolo(rate, depth, shape, callInfo) }
 }
 
 // -- tremolo.depth ---------------------------------------------------------------------------------------------------

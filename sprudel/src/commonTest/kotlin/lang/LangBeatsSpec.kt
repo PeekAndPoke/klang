@@ -168,7 +168,7 @@ class LangBeatsSpec : StringSpec({
     "beatRate(0) is not a finite rate, and the tremolo slot drops it" {
         beatRate(0).queryArc(0.0, 1.0)[0].data.value?.asDouble shouldBe Double.POSITIVE_INFINITY
 
-        val wire = note("c3").tremolo(0.6, beatRate(0)).queryArc(0.0, 1.0)[0].data.toVoiceData()
+        val wire = note("c3").tremolo(beatRate(0), 0.6).queryArc(0.0, 1.0)[0].data.toVoiceData()
 
         wire.ignitorParams?.contains("tremolo.rate") shouldBe false
         wire.ignitorParams?.get("tremolo.depth") shouldBe 0.6
@@ -190,8 +190,8 @@ class LangBeatsSpec : StringSpec({
 
     "beatRate as a tremolo rate writes Hz at the playing tempo" {
         val subjects = listOf(
-            "kotlin" to note("c3").tremolo(0.6, beatRate(0.5)),
-            "script" to SprudelPattern.compile("note(\"c3\").tremolo(0.6, beatRate(0.5))")!!,
+            "kotlin" to note("c3").tremolo(beatRate(0.5), 0.6),
+            "script" to SprudelPattern.compile("note(\"c3\").tremolo(beatRate(0.5), 0.6)")!!,
         )
 
         assertSoftly {

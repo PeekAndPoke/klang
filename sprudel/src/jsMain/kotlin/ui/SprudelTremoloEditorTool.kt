@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.sprudel.ui
 
+import io.peekandpoke.klang.audio_bridge.constants.TREMOLO_RATE_HZ
 import io.peekandpoke.klang.ui.HoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
@@ -27,6 +28,8 @@ import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.semanticui.SemanticIconFn
 import io.peekandpoke.ultra.semanticui.icon
 import io.peekandpoke.ultra.semanticui.ui
+import kotlin.math.PI
+import kotlin.math.sin
 import kotlinx.css.Cursor
 import kotlinx.css.Display
 import kotlinx.css.FlexWrap
@@ -42,13 +45,11 @@ import kotlinx.css.rem
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
-import kotlin.math.PI
-import kotlin.math.sin
 
 // ── Tool singleton ────────────────────────────────────────────────────────────
 
 /**
- * [KlangUiToolEmbeddable] for the per-param tremolo(depth, rate, shape) call.
+ * [KlangUiToolEmbeddable] for the per-param tremolo(rate, depth, shape) call (rate first since KLANG-00417 B2).
  *
  * Two modes (C0.3 two-tool-tier design):
  * - Whole-call modal: when [KlangUiToolContext.call] is present, edits depth plus the optional
@@ -84,6 +85,10 @@ private class SprudelTremoloEditorComp(ctx: Ctx<Props>) : Component<SprudelTremo
     data class Props(val toolCtx: KlangUiToolContext, val embedded: Boolean = false)
 
     companion object {
+        /** The host call's positions: `tremolo(rate, depth, shape)`. */
+        private const val ARG_RATE = 0
+        private const val ARG_DEPTH = 1
+
         private val shapes = listOf("sine", "triangle", "square", "sawtooth", "ramp")
 
         /**
@@ -118,10 +123,10 @@ private class SprudelTremoloEditorComp(ctx: Ctx<Props>) : Component<SprudelTremo
 
     // Whole-call mode reads the params from the host call's args; scalar mode reads the single arg.
     private val parsedDepth
-        get() = parseNum(call?.args?.getOrNull(0) ?: initialValue, 0.5)
+        get() = parseNum(if (call != null) call.args.getOrNull(ARG_DEPTH) else initialValue, 0.5)
 
     private val parsedRate
-        get() = parseNumOrNull(call?.args?.getOrNull(1))
+        get() = parseNumOrNull(call?.args?.getOrNull(ARG_RATE))
 
     private val parsedShape
         get() = canonicalShape(parseStr(call?.args?.getOrNull(2)))
@@ -133,8 +138,8 @@ private class SprudelTremoloEditorComp(ctx: Ctx<Props>) : Component<SprudelTremo
     // Slot bookkeeping: an untouched arg that fails the parse (pattern, variable, expression)
     // must never be overwritten, and untouched absent slots stay absent (engine defaults apply).
     private val parseable: List<Boolean> = listOf(
-        parseNumOrNull(call?.args?.getOrNull(0)) != null,
-        parseNumOrNull(call?.args?.getOrNull(1)) != null,
+        parseNumOrNull(call?.args?.getOrNull(ARG_RATE)) != null,
+        parseNumOrNull(call?.args?.getOrNull(ARG_DEPTH)) != null,
         canonicalShape(parseStr(call?.args?.getOrNull(2))) != null,
     )
     private val dirty = mutableSetOf<Int>()
@@ -146,7 +151,7 @@ private class SprudelTremoloEditorComp(ctx: Ctx<Props>) : Component<SprudelTremo
 
     private fun buildValue(): String =
         if (call != null) {
-            "${depth.formatArg()}, ${rate?.formatArg() ?: "-"}, ${shape ?: "-"}"
+            "${rate?.formatArg() ?: "-"}, ${depth.formatArg()}, ${shape ?: "-"}"
         } else {
             depth.formatArg()
         }
@@ -168,8 +173,8 @@ private class SprudelTremoloEditorComp(ctx: Ctx<Props>) : Component<SprudelTremo
         if (c != null) {
             val texts = c.args.toMutableList()
             while (texts.size < 3) texts.add(null)
-            put(texts, 0, depth.formatArg())
-            put(texts, 1, rate?.formatArg())
+            put(texts, ARG_RATE, rate?.formatArg())
+            put(texts, ARG_DEPTH, depth.formatArg())
             // shape is a STRING param — commits as a quoted string literal
             put(texts, 2, shape?.let { "\"$it\"" })
             c.onCommitCall(texts)
@@ -248,7 +253,7 @@ private class SprudelTremoloEditorComp(ctx: Ctx<Props>) : Component<SprudelTremo
 
             ui.form {
                 ui.two.stackable.fields {
-                    UiInputField(depth, { depth = it; dirty += 0; liveUpdate() }) {
+                    UiInputField(depth, { depth = it; dirty += ARG_DEPTH; liveUpdate() }) {
                         domKey("depth")
                         step(0.01)
                         label {
@@ -257,7 +262,7 @@ private class SprudelTremoloEditorComp(ctx: Ctx<Props>) : Component<SprudelTremo
                         }
                     }
                     if (call != null) {
-                        nullableField("rate", "Rate (Hz)", 0.5, rate, subField = "rate") { rate = it; dirty += 1; liveUpdate() }
+                        nullableField("rate", "Rate (Hz)", 0.5, rate, subField = "rate") { rate = it; dirty += ARG_RATE; liveUpdate() }
                     }
                 }
             }
@@ -342,7 +347,7 @@ private class SprudelTremoloEditorComp(ctx: Ctx<Props>) : Component<SprudelTremo
         val drawH = h - padT - padB
 
         val clampedDepth = depth.coerceIn(0.0, 1.0)
-        val clampedRate = (rate ?: 4.0).coerceIn(0.5, 32.0)
+        val clampedRate = (rate ?: TREMOLO_RATE_HZ).coerceIn(0.5, 32.0)
         val goldHex = laf.gold
 
         val numPoints = drawW.toInt()

@@ -129,18 +129,32 @@ class ParamToolArgumentSpec : StringSpec({
     }
 
     "untyped receiver: variants that disagree on the argument's param make it scalar-only" {
-        // sprudel tremolo(depth, ...) against the Ignitor's tremolo(rate, ...)
-        val depth = bindingAt("""let wob = o => o.tremolo(5, 0.3)""", "5,", typed = false).shouldNotBeNull()
+        // sprudel fm(depth, ratio, ...) against the Ignitor's fm(modulator, ratio, depth, ...): a recorded order
+        // difference (`/dsl-design` section 4), so the first argument names a different parameter in each variant
+        val first = bindingAt("""let f = o => o.fm(300, 1.4)""", "300", typed = false).shouldNotBeNull()
 
-        depth.param.name shouldBe "depth"
-        depth.wholeCall shouldBe false
-        // The call's own tool rewrites the whole call: on the anchor parameter it stays, as a scalar tool
-        depth.tools shouldBe listOf("SprudelTremoloEditor", "SprudelTremoloSequenceEditor")
-        bindingAt("""let wob = o => o.tremolo(5, 0.3)""", "0.3", typed = false).shouldNotBeNull().tools shouldBe emptyList()
+        first.wholeCall shouldBe false
+    }
+
+    "a binding that may not rewrite the whole call drops the call's tools and keeps only the parameter's" {
+        // The gate in `ArgumentBinding.tools`: the tremolo's rate has no tool of its own, the call has one
+        val rate = bindingAt("""note("c3").tremolo(5, 0.3)""", "5,").shouldNotBeNull()
+
+        rate.tools shouldBe listOf("SprudelTremoloEditor")
+        rate.copy(wholeCall = false).tools shouldBe emptyList()
+    }
+
+    "untyped receiver: variants that agree keep the whole call (the tremolo, rate first on every door since B2)" {
+        // sprudel tremolo(rate, depth, shape) and the Ignitor's tremolo(rate, depth, ...) name every argument alike
+        val rate = bindingAt("""let wob = o => o.tremolo(5, 0.3)""", "5,", typed = false).shouldNotBeNull()
+
+        rate.param.name shouldBe "rate"
+        rate.wholeCall shouldBe true
+        bindingAt("""let wob = o => o.tremolo(5, 0.3)""", "0.3", typed = false).shouldNotBeNull().param.name shouldBe "depth"
     }
 
     "a call form's twin with only the call's tool for the argument: the twin, and its tool" {
-        val rate = bindingAt("""note("c3").superimpose(tremolo(5, 0.3))""", "0.3").shouldNotBeNull()
+        val rate = bindingAt("""note("c3").superimpose(tremolo(5, 0.3))""", "5,").shouldNotBeNull()
 
         rate.param.name shouldBe "rate"
         rate.tools shouldBe listOf("SprudelTremoloEditor")
@@ -198,7 +212,7 @@ class ParamToolArgumentSpec : StringSpec({
     }
 
     "a tooled setter call form at top level opens the whole-call rewrite (its twin has the same parameter names)" {
-        val tremolo = bindingAt("""note("c3").superimpose(tremolo(5, 0.3))""", "5,").shouldNotBeNull()
+        val tremolo = bindingAt("""note("c3").superimpose(tremolo(5, 0.3))""", "0.3").shouldNotBeNull()
         tremolo.tools shouldBe listOf("SprudelTremoloEditor", "SprudelTremoloSequenceEditor")
         tremolo.wholeCall shouldBe true
 

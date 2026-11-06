@@ -241,3 +241,5 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
   the frontend sends seconds (KLANG-00290 (engine follow ups) item 24, D6).
 - 2026-11-06: `cylinder()` is the canonical door, `orbit()` and `o()` its aliases; the duck's knob is `cylinder`; the
   scope badge is `@scope cylinder` (KLANG-00418 (cylinder as the one word the sprudel door the katalyst vocab)).
+- 2026-11-06: `tremolo(rate, depth, shape)`, rate first as on the Ignitor door; an unset tremolo rate is 5 Hz
+  (`TREMOLO_RATE_HZ`); the duck's knob is `release` (KLANG-00417 (parameter parity audit across every dsl surface)).

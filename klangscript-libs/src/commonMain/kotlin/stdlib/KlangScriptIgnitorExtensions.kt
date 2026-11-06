@@ -563,7 +563,7 @@ internal object KlangScriptIgnitorExtensions {
      * Applies amplitude tremolo: an oscillator at [rate] Hz pulls the level down by up to [depth]
      * (0 to 1) by default; the builder's `range` moves the swing (a swell upward, or both ways). The LFO's shape and where its swing sits are knobs on the [TremoloBuilder]:
      * `.tremolo(4, 0.8, x => x.shape("square"))`, `.tremolo(4, 0.3, x => x.range(0, 1))` (a swell upward instead of
-     * the classic dip). Rate first, like every Ignitor LFO door; the pattern door is `tremolo(depth, rate, shape)`.
+     * the classic dip). Rate first, like the vibrato door and the pattern door `tremolo(rate, depth, shape)`.
      *
      * @param configure receives the [TremoloBuilder] (knobs: `shape`, `range`) and returns it.
      */
