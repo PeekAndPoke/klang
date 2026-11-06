@@ -368,7 +368,7 @@ class KatalystParallelEffectSpec : StringSpec({
     // ── A duck in a branch is the orbit's duck ──────────────────────────────────────────────────
 
     "a duck inside a branch, nested or not, is the chain's duck, and no branch keeps one" {
-        val duck = KatalystStageDsl.Duck(orbit = c(1.0), depth = c(0.5))
+        val duck = KatalystStageDsl.Duck(cylinder = c(1.0), depth = c(0.5))
         val built = chain(parallel(empty, branch(parallel(empty, branch(duck)))))
 
         built.duck.shouldNotBeNull()
@@ -382,7 +382,7 @@ class KatalystParallelEffectSpec : StringSpec({
     }
 
     "the last duck in the order written wins, branches included" {
-        val first = KatalystStageDsl.Duck(orbit = c(1.0), depth = c(0.5))
+        val first = KatalystStageDsl.Duck(cylinder = c(1.0), depth = c(0.5))
         val unset = KatalystStageDsl.Duck()
 
         // The chain's own unset duck comes after the branch's: it wins, and an unset duck does not duck.

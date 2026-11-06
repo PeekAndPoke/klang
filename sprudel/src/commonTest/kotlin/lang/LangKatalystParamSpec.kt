@@ -183,9 +183,9 @@ class LangKatalystParamSpec : StringSpec({
         // The orbit is this stage's name knob, so only naming it fills (`/dsl-design` §4). Until
         // round 3 of step 5a-3 every duck knob filled, and a tail-only call stamped DUCK_DEPTH (0)
         // over a chain-authored depth, which silenced the ducking on a declared chain.
-        val p = note("c3").duck(orbit = 2, depth = 0.5)
+        val p = note("c3").duck(cylinder = 2, depth = 0.5)
 
-        slot(p, "duck.orbit") shouldBe 2.0
+        slot(p, "duck.cylinder") shouldBe 2.0
         slot(p, "duck.depth") shouldBe 0.5
         slot(p, "duck.attack") shouldBe DUCK_ATTACK_SECONDS
 
@@ -194,7 +194,7 @@ class LangKatalystParamSpec : StringSpec({
         val orbitOnly = note("c3").duck(1)
 
         orbitOnly.queryArc(0.0, 1.0).first().data.katalystParams?.toMap()?.keys shouldBe
-                setOf("duck.orbit", "duck.depth", "duck.attack")
+                setOf("duck.cylinder", "duck.depth", "duck.attack")
         slot(orbitOnly, "duck.depth") shouldBe DUCK_DEPTH
 
         // A tail-only call names nothing: exactly its own slot, no orbit and no companion.
@@ -211,9 +211,9 @@ class LangKatalystParamSpec : StringSpec({
         // the value of the last naming call would stamp 2 over the 5 the katp asked for (checklist
         // 12). Until step 5b-3 that stale value sat in the voice FIELD, and a row here pinned that
         // the field kept it; the field is gone.
-        val p = note("c3").duck(2).katp("duck.orbit", 5).duck()
+        val p = note("c3").duck(2).katp("duck.cylinder", 5).duck()
 
-        slot(p, "duck.orbit") shouldBe 5.0
+        slot(p, "duck.cylinder") shouldBe 5.0
 
         // ...and on its own it writes no slot at all, so the event carries no bag: naming nothing
         // must not even allocate one, let alone fill the companions.
@@ -228,10 +228,10 @@ class LangKatalystParamSpec : StringSpec({
         // `duck(depth = "x")` never reaches the setter at all and the earlier 0.5 stands. That holds for every numeric TAIL setter of every compound BUS door, which is why
         // none of them carries a clear arm; a HEAD setter can be handed a null by the bare-call
         // reinterpret, and it writes nothing then. No bus door setter clears on a null.
-        val p = note("c3").duck(orbit = 1, depth = 0.5).duck(depth = "x")
+        val p = note("c3").duck(cylinder = 1, depth = 0.5).duck(depth = "x")
 
         slot(p, "duck.depth") shouldBe 0.5
-        slot(p, "duck.orbit") shouldBe 1.0
+        slot(p, "duck.cylinder") shouldBe 1.0
     }
 
     "phaser(...) writes the five slots, filling the ones the call did not name" {
@@ -364,7 +364,7 @@ class LangKatalystParamSpec : StringSpec({
         val ducked = note("c3").katp("duck.depth", 0.7).duck(1)
 
         slot(ducked, "duck.depth") shouldBe 0.7
-        slot(ducked, "duck.orbit") shouldBe 1.0
+        slot(ducked, "duck.cylinder") shouldBe 1.0
     }
 
     "a bare body(), vowel() or phaser() on a value that is not a number writes NOTHING: no bus door clears" {
@@ -626,7 +626,7 @@ class LangKatalystParamSpec : StringSpec({
             .reverb(wet = 0.5, size = 6, lowpass = 1500)
             .delay(0.2, 0.25)
             .compressor(ratio = 8, knee = 3)
-            .duck(orbit = 2, depth = 0.5)
+            .duck(cylinder = 2, depth = 0.5)
             .phaser(wet = 0.3)
             .body(wet = 0.4)
             .queryArc(0.0, 1.0)

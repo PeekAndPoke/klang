@@ -92,7 +92,7 @@ class FreqAccessorIntelSpec : StringSpec({
             "notch" to listOf("freq", "q", "env", "attack", "decay", "sustain", "release"),
             "compressor" to listOf("threshold", "ratio", "knee", "attack", "release"),
             "unison" to listOf("voices", "spread", "pan"),
-            "duck" to listOf("orbit", "depth", "attack"),
+            "duck" to listOf("cylinder", "depth", "attack"),
             "vibrato" to listOf("rate", "semitones"),
             "penv" to listOf("semitones", "attack", "decay", "sustain", "release"),
             "fm" to listOf("depth", "ratio", "attack", "decay", "sustain", "release")).forEach { (name, slots) ->
@@ -125,7 +125,7 @@ class FreqAccessorIntelSpec : StringSpec({
     }
 
     "every batch-four accessor is an object with a call form and the first-step operators" {
-        listOf("density", "orbit", "analog", "duty", "onepole", "pregain").forEach { name ->
+        listOf("density", "cylinder", "analog", "duty", "onepole", "pregain").forEach { name ->
             val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
             type.simpleName shouldBe name
             registry.getCallForm(type).shouldNotBeNull().signature shouldStartWith "$name("
@@ -135,7 +135,7 @@ class FreqAccessorIntelSpec : StringSpec({
     }
 
     "every alias constant carries its canonical object's type, so it calls and reads like the original" {
-        mapOf("d" to "density", "o" to "orbit", "clip" to "legato", "vel" to "velocity").forEach { (alias, canonical) ->
+        mapOf("d" to "density", "o" to "cylinder", "orbit" to "cylinder", "clip" to "legato", "vel" to "velocity").forEach { (alias, canonical) ->
             val symbol = registry.get(alias).shouldNotBeNull()
             // An alias constant's KDoc carries the category: the property entry merges first and
             // would otherwise turn the whole symbol "uncategorized" on the docs page.

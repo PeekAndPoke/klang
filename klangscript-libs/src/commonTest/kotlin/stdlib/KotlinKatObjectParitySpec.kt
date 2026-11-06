@@ -175,7 +175,7 @@ class KotlinKatObjectParitySpec : StringSpec({
             Triple(
                 "duck()",
                 { b: KatalystBuilder -> b.duck() },
-                KatalystStageDsl.Duck(orbit = k(unset), depth = k(0.0), attack = k(0.1)),
+                KatalystStageDsl.Duck(cylinder = k(unset), depth = k(0.0), attack = k(0.1)),
             ),
             Triple("eq()", { b: KatalystBuilder -> b.eq() }, KatalystStageDsl.Eq(sections = emptyList())),
             Triple("gain()", { b: KatalystBuilder -> b.gain() }, KatalystStageDsl.Gain(gain = k(1.0))),
@@ -257,7 +257,7 @@ class KotlinKatObjectParitySpec : StringSpec({
             Triple("limiter(lookahead = 0.003)", { b -> b.limiter(lookahead = 0.003) }, limiter.copy(lookahead = 0.003) to limiter),
             Triple("distort(amount = 0.15)", { b -> b.distort(amount = 0.15.kat) }, distort.copy(amount = k(0.15)) to distort),
             Triple("distort(shape = \"tube\")", { b -> b.distort(shape = "tube") }, distort.copy(shape = tube) to distort),
-            Triple("duck(orbit = 2)", { b -> b.duck(orbit = 2.kat) }, duck.copy(orbit = k(2.0)) to duck),
+            Triple("duck(cylinder = 2)", { b -> b.duck(cylinder = 2.kat) }, duck.copy(cylinder = k(2.0)) to duck),
             Triple("duck(depth = 0.8)", { b -> b.duck(depth = 0.8.kat) }, duck.copy(depth = k(0.8)) to duck),
             Triple("duck(attack = 0.05)", { b -> b.duck(attack = 0.05.kat) }, duck.copy(attack = k(0.05)) to duck),
             Triple(

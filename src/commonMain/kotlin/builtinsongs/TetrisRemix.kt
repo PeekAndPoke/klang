@@ -39,7 +39,7 @@ export lead = note(leadPattern).slow(2)
     .hpf(500).lpf(freq = 1600, q = 2.5, env = 12)
     .reverb(0.8, 1).pan(0.5).superimpose(x => x.sound("brown").gain(0.35 * 0.25))
     .vibrato(rate = "2.1".add(berlin.range(-1, 1).mul(0.1)), semitones = 0.03)
-    .orbit(1)  // .solo()
+    .cylinder(1)  // .solo()
     .filterWhen(x => x >= 16)
 
 // ── Bass: the original bass line, slowed and sub-heavy ──────────────────
@@ -47,13 +47,13 @@ export bass = note(bassPattern).slow(2).struct("[x!16]")
     .sound("supersaw").unison(voices = 32, spread = 0.15).onepole(23846).clip(0.95)
     .gain(0.4 * 0.115).adsr(0.01, 0.2, 0.3, 0.1).pan(0.5).superimpose(pan(0.1).transpose(12), pan(0.9).transpose(12))
     .hpf(300).lpf(freq = 1150, q = 1.3, env = 19).distort(0.8, "soft")
-    .orbit(2)  // .solo()
+    .cylinder(2)  // .solo()
 
 // ── Drum kit: dub one-drop ──────────────────────────────────────────────
 // Kick on 1 only, snare on 3, hat on offbeats. Lots of space.
-export kick  = sound("[bd ~ ~ ~]!4").orbit(3).gain(0.7).hpf(100).adsr(0.02, 0.18, 0.0, 0.05) // . solo()
-export hat   = sound("[hh ~ hh ~]!4").orbit(4).gain(0.6).hpf(6000).adsr(0.01, 0.01, 0.5, 0.02) // .solo()
-export snare = sound("[~ ~ sd sd ~ ~ sd ~]!2").orbit(5).gain(0.475).hpf(200).adsr(0.02, 0.12, 0.0, 0.05).reverb(wet = 0.4, size = 6)
+export kick  = sound("[bd ~ ~ ~]!4").cylinder(3).gain(0.7).hpf(100).adsr(0.02, 0.18, 0.0, 0.05) // . solo()
+export hat   = sound("[hh ~ hh ~]!4").cylinder(4).gain(0.6).hpf(6000).adsr(0.01, 0.01, 0.5, 0.02) // .solo()
+export snare = sound("[~ ~ sd sd ~ ~ sd ~]!2").cylinder(5).gain(0.475).hpf(200).adsr(0.02, 0.12, 0.0, 0.05).reverb(wet = 0.4, size = 6)
 
 // ── Skank: off-beat reggae chord stab ──────────────────────────────────
 // The Bring-It-Together; off-beat = 16th-note 2 of every 4-step cycle.
@@ -63,10 +63,10 @@ export skank = chord("<Am Em F Am <Em Em Dm G#> Em Am <G E F G>>").voicing()
     .gain(0.90 * 1.6).adsr(0.02, 0.2, 0.0, 0.1)
     .hpf(1000).lpf(freq = 8000, env = 21.7, attack = 0.02, decay = 0.1, sustain = 0.0, release = 0.1).onepole(22309)
     .pan(0.2).superimpose(pan(0.8))
-    .orbit(6).reverb(wet = 0.5, size = 5)  // . solo()
+    .cylinder(6).reverb(wet = 0.5, size = 5)  // . solo()
     .filterWhen(x => x >= 8)
 
-export sub = tetrisSub.struct("x!1 [~!1 x!1?] x!5 ~!1").orbit(7).clip(0.8).distort(0.3)
+export sub = tetrisSub.struct("x!1 [~!1 x!1?] x!5 ~!1").cylinder(7).clip(0.8).distort(0.3)
   .lpf(attack = 0.005, decay = 3.0, sustain = 0.0, release = 0.2).hpf(60).lpf(freq = 300, env = 48, attack = 0.005, decay = 1.0, sustain = 0.0, release = 0.2).gain(0.7 * 0.34) // .solo()  0.7 is tetris subShape's gain; the remix trims it instead of tetris's 0.80
 
 // ── Song: dub plate with broad reverb tail and gentle bus compression ──

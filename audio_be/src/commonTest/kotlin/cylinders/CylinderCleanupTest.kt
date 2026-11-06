@@ -280,7 +280,7 @@ class OrbitCleanupTest : StringSpec({
 
         cylinder.offerAndCommit(
             VoiceTestHelpers.createSynthVoice(
-                katalystParams = klangMapOf("duck.orbit" to 3.0, "duck.attack" to 0.02, "duck.depth" to 0.8),
+                katalystParams = klangMapOf("duck.cylinder" to 3.0, "duck.attack" to 0.02, "duck.depth" to 0.8),
             ),
             blockStart = 0.0,
         )
@@ -302,7 +302,7 @@ class OrbitCleanupTest : StringSpec({
 
         cylinder.offerAndCommit(
             VoiceTestHelpers.createSynthVoice(
-                katalystParams = klangMapOf("duck.orbit" to 4.0, "duck.attack" to 0.02, "duck.depth" to 0.8),
+                katalystParams = klangMapOf("duck.cylinder" to 4.0, "duck.attack" to 0.02, "duck.depth" to 0.8),
             ),
             blockStart = 0.0,
         )

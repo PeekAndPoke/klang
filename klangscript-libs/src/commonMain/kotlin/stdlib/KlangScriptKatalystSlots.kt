@@ -67,7 +67,7 @@ internal object KlangScriptKatalystSlots {
     @KlangScript.Property
     val gain: KlangScriptKatalystGainSlots = KlangScriptKatalystGainSlots
 
-    /** The duck stage's knobs: `orbit`, `depth`, `attack`. */
+    /** The duck stage's knobs: `cylinder`, `depth`, `attack`. */
     @KlangScript.Property
     val duck: KlangScriptKatalystDuckSlots = KlangScriptKatalystDuckSlots
 }
@@ -223,9 +223,9 @@ internal object KlangScriptKatalystGainSlots {
 internal object KlangScriptKatalystDuckSlots {
     override fun toString(): String = "[Katalyst.slot.duck]"
 
-    /** `duck.orbit`. The orbit to listen to, default unset (no ducking). */
+    /** `duck.cylinder`. The cylinder to listen to, default unset (no ducking). */
     @KlangScript.Property
-    val orbit: KatalystKnobDsl = KatalystDsl.Slots.duck.orbit
+    val cylinder: KatalystKnobDsl = KatalystDsl.Slots.duck.cylinder
 
     /** `duck.depth`. How far this orbit is pulled down, default 0. */
     @KlangScript.Property

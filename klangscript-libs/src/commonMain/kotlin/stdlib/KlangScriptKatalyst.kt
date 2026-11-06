@@ -84,7 +84,7 @@ internal object KlangScriptKatalyst {
      * ```
      * katalyst(Katalyst.classic())
      * katalyst(Katalyst(k => k.classic().eq(e => e.band(freq = 160, q = 1.0, db = -3.0))))
-     * katalyst(Katalyst(k => k.classic().duck(orbit = 1, depth = 0.8)))
+     * katalyst(Katalyst(k => k.classic().duck(cylinder = 1, depth = 0.8)))
      * ```
      *
      * Its duck names no source, so nothing ducks until one is written. The third line above is how:

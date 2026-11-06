@@ -115,7 +115,7 @@ class CylindersOrderSpec : StringSpec({
             val voice = VoiceTestHelpers.createSynthVoice(
                 sampleRate = sampleRate,
                 blockFrames = blockFrames,
-                katalystParams = klangMapOf("duck.orbit" to duckOrbit.toDouble(), "duck.attack" to 0.001, "duck.depth" to 1.0),
+                katalystParams = klangMapOf("duck.cylinder" to duckOrbit.toDouble(), "duck.attack" to 0.001, "duck.depth" to 1.0),
             )
 
             c.offer(id = 3, voice = voice, blockStart = 0.0).mixBuffer.left.fill(0.5)

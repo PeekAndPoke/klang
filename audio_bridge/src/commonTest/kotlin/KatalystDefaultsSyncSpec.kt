@@ -49,7 +49,7 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
  *  2. **unset** ([SLOT_UNSET]): where "off" is an absence rather than a number, so the wire's
  *     non-finite marker carries it: all five compressor slots (`KatalystCompressorWriter`
  *     gates on "any of the five set", so even one finite constant is a compressor already on),
- *     `duck.orbit`, `reverb.lowpass`, and the four name-and-amount slots of the two stages gated
+ *     `duck.cylinder`, `reverb.lowpass`, and the four name-and-amount slots of the two stages gated
  *     on a NAME, `body.material`, `body.wet`, `vowel.vowel` and `vowel.wet`.
  *  3. **off-value** (0.0): a knob that is not the amount but IS where the engine's gate sits, so
  *     zeroing the wet alone would not be off: `delay.time` and `reverb.size` (the gates are
@@ -80,7 +80,7 @@ class KatalystDefaultsSyncSpec : StringSpec({
             is KatalystStageDsl.Compressor ->
                 listOf(stage.threshold, stage.ratio, stage.knee, stage.attack, stage.release)
 
-            is KatalystStageDsl.Duck -> listOf(stage.orbit, stage.depth, stage.attack)
+            is KatalystStageDsl.Duck -> listOf(stage.cylinder, stage.depth, stage.attack)
             is KatalystStageDsl.Distort -> listOf(stage.amount)
             is KatalystStageDsl.Eq -> emptyList()
             is KatalystStageDsl.Gain -> listOf(stage.gain)
@@ -114,7 +114,7 @@ class KatalystDefaultsSyncSpec : StringSpec({
             "compressor.threshold", "compressor.ratio", "compressor.knee", "compressor.attack",
             "compressor.release",
             "gain.gain",
-            "duck.orbit", "duck.depth", "duck.attack",
+            "duck.cylinder", "duck.depth", "duck.attack",
         )
     }
 
@@ -125,7 +125,7 @@ class KatalystDefaultsSyncSpec : StringSpec({
         // or depth) and the untouched voice carries it at zero. `phaser.wet` and `duck.depth` have a
         // touched constant of zero too, so they would be off either way; they are here because they
         // are amounts. It is not about where the engine's gate sits (the delay gates on `time`, the
-        // reverb on `size`, the duck on `orbit`, and `duck.orbit` is in family 2 while `phaser.wet`
+        // reverb on `size`, the duck on `cylinder`, and `duck.cylinder` is in family 2 while `phaser.wet`
         // is here). A knob that is NOT the amount and that the untouched voice carries at zero is
         // family 3: `delay.time`, `reverb.size` and `delay.feedback`.
         listOf("delay.wet", "reverb.wet", "phaser.wet", "duck.depth")
@@ -169,7 +169,7 @@ class KatalystDefaultsSyncSpec : StringSpec({
         // two stages are gated on their NAME: no material, no stage, whatever the amount says.
         listOf(
             "compressor.threshold", "compressor.ratio", "compressor.knee", "compressor.attack",
-            "compressor.release", "duck.orbit", "reverb.lowpass", "body.material", "vowel.vowel",
+            "compressor.release", "duck.cylinder", "reverb.lowpass", "body.material", "vowel.vowel",
             "body.wet", "vowel.wet",
         ).forEach { name ->
             withClue(name) { classicSlots.getValue(name).isFinite() shouldBe false }
@@ -250,7 +250,7 @@ class KatalystDefaultsSyncSpec : StringSpec({
         val gateOff = listOf("delay.wet", "reverb.wet", "phaser.wet", "duck.depth")
         val unset = listOf(
             "compressor.threshold", "compressor.ratio", "compressor.knee", "compressor.attack",
-            "compressor.release", "duck.orbit", "reverb.lowpass", "body.material", "vowel.vowel",
+            "compressor.release", "duck.cylinder", "reverb.lowpass", "body.material", "vowel.vowel",
             "body.wet", "vowel.wet",
         )
         val offValue = listOf("delay.time", "delay.feedback", "reverb.size")
@@ -310,7 +310,7 @@ class KatalystDefaultsSyncSpec : StringSpec({
 
         withClue("a bare body names no material") { bareMaterial.isFinite() shouldBe false }
         withClue("a bare vowel names none either") { bareVowel.isFinite() shouldBe false }
-        // ...and not a zero, for the same reason `duck.orbit` is not: 0 is `none`, a real entry in
+        // ...and not a zero, for the same reason `duck.cylinder` is not: 0 is `none`, a real entry in
         // the catalogue, so "never set" has to be the absence marker to stay distinguishable.
         KatalystKnobDsl.Constant(bareMaterial) shouldBe KatalystKnobDsl.Constant(SLOT_UNSET)
         KatalystKnobDsl.Constant(bareVowel) shouldBe KatalystKnobDsl.Constant(SLOT_UNSET)
@@ -329,10 +329,10 @@ class KatalystDefaultsSyncSpec : StringSpec({
         // And it is asserted the way the rule says to: `orbit shouldBe SLOT_UNSET` FAILS here,
         // because kotest compares primitive Doubles with IEEE `==` and NaN is not equal to itself.
         // That is the "test isFinite(), never compare" rule biting in its own spec.
-        val orbit = (KatalystStageDsl.Duck().orbit as KatalystKnobDsl.Constant).value
+        val cylinder = (KatalystStageDsl.Duck().cylinder as KatalystKnobDsl.Constant).value
 
-        orbit.isFinite() shouldBe false
-        KatalystKnobDsl.Constant(orbit) shouldBe KatalystKnobDsl.Constant(SLOT_UNSET)
+        cylinder.isFinite() shouldBe false
+        KatalystKnobDsl.Constant(cylinder) shouldBe KatalystKnobDsl.Constant(SLOT_UNSET)
     }
 
     "the classic body and vowel carry their NAME as an unset index slot, like every other knob" {
@@ -421,7 +421,7 @@ class KatalystDefaultsSyncSpec : StringSpec({
                     )
 
                     is KatalystStageDsl.Duck -> KatalystStageDsl.Duck(
-                        orbit = freshKnob(stage.orbit), depth = freshKnob(stage.depth), attack = freshKnob(stage.attack),
+                        cylinder = freshKnob(stage.cylinder), depth = freshKnob(stage.depth), attack = freshKnob(stage.attack),
                     )
 
                     is KatalystStageDsl.Distort -> stage.copy(amount = freshKnob(stage.amount))

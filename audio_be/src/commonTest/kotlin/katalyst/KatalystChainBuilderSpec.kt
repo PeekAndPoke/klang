@@ -144,7 +144,7 @@ class KatalystChainBuilderSpec : StringSpec({
         // `Duck()` carries constants and would be deaf to it, which would make the row pass on a
         // duck nothing ever writes.
         fun duck() = KatalystStageDsl.Duck(
-            orbit = KatalystKnobDsl.Param("duck.orbit", SLOT_UNSET),
+            cylinder = KatalystKnobDsl.Param("duck.cylinder", SLOT_UNSET),
             depth = KatalystKnobDsl.Param("duck.depth", DUCK_DEPTH),
             attack = KatalystKnobDsl.Param("duck.attack", DUCK_ATTACK_SECONDS),
         )
@@ -165,7 +165,7 @@ class KatalystChainBuilderSpec : StringSpec({
         // out, and a count is the only way to tell that from a dropped instance.
         chain.writerCount shouldBe 2
 
-        val params = mapOf("duck.orbit" to 3.0, "duck.depth" to 0.7, "duck.attack" to 0.02)
+        val params = mapOf("duck.cylinder" to 3.0, "duck.depth" to 0.7, "duck.attack" to 0.02)
 
         chain.applyParams(params.toKlangMap())
 
@@ -190,7 +190,7 @@ class KatalystChainBuilderSpec : StringSpec({
         val chain = build(
             KatalystDsl.of(
                 KatalystStageDsl.Duck(
-                    orbit = KatalystKnobDsl.Param("duck.orbit", SLOT_UNSET),
+                    cylinder = KatalystKnobDsl.Param("duck.cylinder", SLOT_UNSET),
                     depth = KatalystKnobDsl.Param("duck.depth", DUCK_DEPTH),
                     attack = KatalystKnobDsl.Param("duck.attack", DUCK_ATTACK_SECONDS),
                 )
@@ -207,7 +207,7 @@ class KatalystChainBuilderSpec : StringSpec({
         }
 
         // Now it engages. The weight has to start from 0 and ride in.
-        chain.applyParams(klangMapOf("duck.orbit" to 3.0, "duck.depth" to 0.8))
+        chain.applyParams(klangMapOf("duck.cylinder" to 3.0, "duck.depth" to 0.8))
 
         duck.weight shouldBe 0.0
     }

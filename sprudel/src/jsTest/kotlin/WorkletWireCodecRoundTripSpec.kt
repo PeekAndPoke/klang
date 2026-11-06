@@ -49,7 +49,7 @@ class WorkletWireCodecRoundTripSpec : StringSpec({
                 "delay.wet" to 0.3, "delay.time" to 0.25, "delay.feedback" to 0.4, "delay.cap" to 2.5,
                 "compressor.threshold" to -12.0, "compressor.ratio" to 4.0, "compressor.knee" to 2.5,
                 "compressor.attack" to 0.01, "compressor.release" to 0.31,
-                "duck.orbit" to 0.0, "duck.attack" to 0.05, "duck.depth" to 0.5,
+                "duck.cylinder" to 0.0, "duck.attack" to 0.05, "duck.depth" to 0.5,
             )
             attack = 0.005; decay = 0.2; sustain = 0.6; release = 0.05
             attackCurve = AdsrCurve.Linear; decayCurve = AdsrCurve.Square; releaseCurve = AdsrCurve.Cube

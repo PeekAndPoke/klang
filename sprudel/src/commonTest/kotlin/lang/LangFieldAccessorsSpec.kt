@@ -242,8 +242,9 @@ class LangFieldAccessorsSpec : StringSpec({
         row("spread", """s("bd sd").unison(spread = 0.2).unison(spread = mul(2))""", { it.ignitorParams?.get("spread") }, 0.4, s("bd sd").unison(spread = 0.2).unison(spread = mul(2))),
         row("panSpread", """s("bd sd").unison(pan = 0.5).unison(pan = mul(2))""", { it.ignitorParams?.get("panSpread") }, 1.0, s("bd sd").unison(pan = 0.5).unison(pan = mul(2))),
         row("density", """s("bd sd").density(0.5).density(mul(2))""", { it.ignitorParams?.get("density") }, 1.0, s("bd sd").density(0.5).density(mul(2))),
+        row("cylinder", """s("bd sd").cylinder(1).cylinder(add(1))""", { it.cylinder?.toDouble() }, 2.0, s("bd sd").cylinder(1).cylinder(add(1))),
         row("orbit", """s("bd sd").orbit(1).orbit(add(1))""", { it.cylinder?.toDouble() }, 2.0, s("bd sd").orbit(1).orbit(add(1))),
-        row("duckorbit", """s("bd sd").duck(1).duck(add(1))""", { it.katalystParams?.get("duck.orbit") }, 2.0, s("bd sd").duck(1).duck(add(1))),
+        row("duckcylinder", """s("bd sd").duck(1).duck(add(1))""", { it.katalystParams?.get("duck.cylinder") }, 2.0, s("bd sd").duck(1).duck(add(1))),
         row("duckattack", """s("bd sd").duck(attack = 0.05).duck(attack = mul(2))""", { it.katalystParams?.get("duck.attack") }, 0.1, s("bd sd").duck(attack = 0.05).duck(attack = mul(2))),
         row("duckdepth", """s("bd sd").duck(depth = 0.5).duck(depth = mul(2))""", { it.katalystParams?.get("duck.depth") }, 1.0, s("bd sd").duck(depth = 0.5).duck(depth = mul(2))),
         row("compressor.threshold", """s("bd sd").compressor(-12).compressor(add(-6))""", { it.katalystParams?.get("compressor.threshold") }, -18.0, s("bd sd").compressor(-12).compressor(add(-6))),
@@ -259,8 +260,9 @@ class LangFieldAccessorsSpec : StringSpec({
         row("spread", """s("bd sd").unison(spread = 0.2).pan(unison.spread)""", { it.pan }, 0.2, s("bd sd").unison(spread = 0.2).pan(unison.spread)),
         row("panSpread", """s("bd sd").unison(pan = 0.5).pan(unison.pan)""", { it.pan }, 0.5, s("bd sd").unison(pan = 0.5).pan(unison.pan)),
         row("density", """s("bd sd").density(0.5).pan(density)""", { it.pan }, 0.5, s("bd sd").density(0.5).pan(density)),
+        row("cylinder", """s("bd sd").cylinder(1).pan(cylinder)""", { it.pan }, 1.0, s("bd sd").cylinder(1).pan(cylinder)),
         row("orbit", """s("bd sd").orbit(1).pan(orbit)""", { it.pan }, 1.0, s("bd sd").orbit(1).pan(orbit)),
-        row("duckorbit", """s("bd sd").duck(1).pan(duck.orbit)""", { it.pan }, 1.0, s("bd sd").duck(1).pan(duck.orbit)),
+        row("duckcylinder", """s("bd sd").duck(1).pan(duck.cylinder)""", { it.pan }, 1.0, s("bd sd").duck(1).pan(duck.cylinder)),
         row("duckattack", """s("bd sd").duck(attack = 0.05).pan(duck.attack)""", { it.pan }, 0.05, s("bd sd").duck(attack = 0.05).pan(duck.attack)),
         row("duckdepth", """s("bd sd").duck(depth = 0.5).pan(duck.depth)""", { it.pan }, 0.5, s("bd sd").duck(depth = 0.5).pan(duck.depth)),
         row("compressor.threshold", """s("bd sd").compressor(-12).pan(compressor.threshold)""", { it.pan }, -12.0, s("bd sd").compressor(-12).pan(compressor.threshold)),
@@ -706,7 +708,7 @@ class LangFieldAccessorsSpec : StringSpec({
                 it.ignitorParams?.get("panSpread") shouldBe 0.5
             },
             Case("duck(depth = mul(0.5))", note("c e").duck(1, 0.8, 0.2).duck(depth = mul(0.5)), """note("c e").duck(1, 0.8, 0.2).duck(depth = mul(0.5))""") {
-                it.katalystParams?.get("duck.orbit") shouldBe 1.0
+                it.katalystParams?.get("duck.cylinder") shouldBe 1.0
                 it.katalystParams?.get("duck.depth") shouldBe 0.4
                 it.katalystParams?.get("duck.attack") shouldBe 0.2
             },
@@ -789,8 +791,8 @@ class LangFieldAccessorsSpec : StringSpec({
                 }
             }
         }
-        listOf("kotlin" to s("bd sd").duck(orbit = "1 2"), "script" to SprudelPattern.compile("""s("bd sd").duck(orbit = "1 2")""").shouldNotBeNull()).forEach { (door, p) ->
-            withClue("duck $door") { p.queryArc(0.0, 1.0).map { it.data.katalystParams?.get("duck.orbit") } shouldBe listOf(1.0, 2.0) }
+        listOf("kotlin" to s("bd sd").duck(cylinder = "1 2"), "script" to SprudelPattern.compile("""s("bd sd").duck(cylinder = "1 2")""").shouldNotBeNull()).forEach { (door, p) ->
+            withClue("duck $door") { p.queryArc(0.0, 1.0).map { it.data.katalystParams?.get("duck.cylinder") } shouldBe listOf(1.0, 2.0) }
         }
     }
 
@@ -803,7 +805,7 @@ class LangFieldAccessorsSpec : StringSpec({
         listOf(
             Case("compressor(ratio = 4)", seq("3 4").compressor(ratio = 4), """seq("3 4").compressor(ratio = 4)""", { it.katalystParams?.get("compressor.threshold") }, { it.katalystParams?.get("compressor.ratio") }, COMPRESSOR_THRESHOLD_DB),
             Case("unison(spread = 4)", seq("3 4").unison(spread = 4), """seq("3 4").unison(spread = 4)""", { it.ignitorParams?.get("voices") }, { it.ignitorParams?.get("spread") }),
-            Case("duck(depth = 4)", seq("3 4").duck(depth = 4), """seq("3 4").duck(depth = 4)""", { it.katalystParams?.get("duck.orbit") }, { it.katalystParams?.get("duck.depth") }),
+            Case("duck(depth = 4)", seq("3 4").duck(depth = 4), """seq("3 4").duck(depth = 4)""", { it.katalystParams?.get("duck.cylinder") }, { it.katalystParams?.get("duck.depth") }),
             Case("vibrato(semitones = 4)", seq("3 4").vibrato(semitones = 4), """seq("3 4").vibrato(semitones = 4)""", { it.vibrato }, { it.vibratoMod }),
             Case("vibrato(rangeFrom = 4)", seq("3 4").vibrato(rangeFrom = 4), """seq("3 4").vibrato(rangeFrom = 4)""", { it.vibrato }, { it.vibratoRangeFrom }),
             Case("vibrato(rangeTo = 4)", seq("3 4").vibrato(rangeTo = 4), """seq("3 4").vibrato(rangeTo = 4)""", { it.vibrato }, { it.vibratoRangeTo }),
@@ -869,7 +871,7 @@ class LangFieldAccessorsSpec : StringSpec({
             withClue("fm $door") { p.queryArc(0.0, 1.0).map { it.data.fmEnv } shouldBe listOf(3.0, 4.0) }
         }
         listOf("kotlin" to seq("1 2").duck(), "script" to SprudelPattern.compile("""seq("1 2").duck()""").shouldNotBeNull()).forEach { (door, p) ->
-            withClue("duck $door") { p.queryArc(0.0, 1.0).map { it.data.katalystParams?.get("duck.orbit") } shouldBe listOf(1.0, 2.0) }
+            withClue("duck $door") { p.queryArc(0.0, 1.0).map { it.data.katalystParams?.get("duck.cylinder") } shouldBe listOf(1.0, 2.0) }
         }
         // The WET is the head of `body`, `vowel` and `phaser` since step 3d(iii), 2026-09-24, so a bare
         // call writes the wet, field and slot, and never the name: a pattern of names is not a number
@@ -914,8 +916,8 @@ class LangFieldAccessorsSpec : StringSpec({
         }
         listOf("kotlin" to s("bd sd").duck(2).duck("<1 ~>"), "script" to SprudelPattern.compile("""s("bd sd").duck(2).duck("<1 ~>")""").shouldNotBeNull()).forEach { (door, p) ->
             withClue("duck $door") {
-                p.queryArc(0.0, 1.0).map { it.data.katalystParams?.get("duck.orbit") } shouldBe listOf(1.0, 1.0)
-                p.queryArc(1.0, 2.0).map { it.data.katalystParams?.get("duck.orbit") } shouldBe listOf(2.0, 2.0)
+                p.queryArc(0.0, 1.0).map { it.data.katalystParams?.get("duck.cylinder") } shouldBe listOf(1.0, 1.0)
+                p.queryArc(1.0, 2.0).map { it.data.katalystParams?.get("duck.cylinder") } shouldBe listOf(2.0, 2.0)
             }
         }
     }

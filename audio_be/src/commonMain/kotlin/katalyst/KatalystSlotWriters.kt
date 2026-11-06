@@ -533,13 +533,13 @@ internal class KatalystDistortWriter(
  * envelope follower survives, and the writer holds the settings the arriving chain applies after a
  * handover (see [KatalystDuckEffect.configure]).
  *
- * `orbit` is a number the runtime coerces to an Int, exactly as the sprudel door does; a finite
+ * `cylinder` is a number the runtime coerces to an Int, exactly as the sprudel door does; a finite
  * negative is a request like any other, not an off switch (the off switch is the non-finite
  * default). A non-finite attack takes `DUCK_ATTACK_SECONDS`.
  */
 internal class KatalystDuckWriter(
     private val fx: KatalystDuckEffect,
-    private val orbit: KatalystKnob,
+    private val cylinder: KatalystKnob,
     private val depth: KatalystKnob,
     private val attack: KatalystKnob,
 ) : KatalystSlotWriter {
@@ -550,7 +550,7 @@ internal class KatalystDuckWriter(
     /**
      * Whether this stage will be CONFIGURED rather than cleared, which the host asks BEFORE it
      * hands a live envelope over (`KatalystChain.ducksWith`). Kept in step with the settings, and
-     * a `var` because `.katp("duck.orbit", n)` can turn a declared duck on after the chain was
+     * a `var` because `.katp("duck.cylinder", n)` can turn a declared duck on after the chain was
      * built.
      */
     var declared: Boolean = false
@@ -561,7 +561,7 @@ internal class KatalystDuckWriter(
     }
 
     override fun resolve(params: KlangMap<Double>?) {
-        orbit.resolve(params)
+        cylinder.resolve(params)
         depth.resolve(params)
         attack.resolve(params)
         fill()
@@ -571,10 +571,10 @@ internal class KatalystDuckWriter(
         fx.configure(handed())
     }
 
-    override val isModulated: Boolean = orbit.isModulated || depth.isModulated || attack.isModulated
+    override val isModulated: Boolean = cylinder.isModulated || depth.isModulated || attack.isModulated
 
     override fun tick() {
-        orbit.tick()
+        cylinder.tick()
         depth.tick()
         attack.tick()
         fill()
@@ -584,7 +584,7 @@ internal class KatalystDuckWriter(
     internal fun handed(): DuckSettings? = if (declared) settings else null
 
     private fun fill() {
-        val source = orbit.value
+        val source = cylinder.value
         val amount = depth.value
         val attackSeconds = attack.value
 

@@ -279,7 +279,7 @@ class Cylinder(
      * Kept for the ONE moment a swap needs it. [beginFade] runs before this block's voices have
      * offered themselves (the promotion path) or after they have (the pending poll), and in both
      * cases it has to resolve the ARRIVING chain from the live state before [handOverDuck] asks
-     * whether that chain ducks. Without it a `.katp("duck.orbit", n)` reads as "no duck" at the
+     * whether that chain ducks. Without it a `.katp("duck.cylinder", n)` reads as "no duck" at the
      * handover, the reduction is ramped out, and the arriving chain's own writer then drops a fresh
      * one on the orbit a block later (review round 1).
      *
@@ -367,7 +367,7 @@ class Cylinder(
         // step the swap put there.
         //
         // NOT gated on the voice's own duck settings (dropped in review round 3; the voice
-        // has none since step 5b-3): a duck named through `.katp("duck.orbit", n)` alone left
+        // has none since step 5b-3): a duck named through `.katp("duck.cylinder", n)` alone left
         // the voice's then `duckCylinder` field null, so the correction skipped it
         // and the arriving chain's fresh envelope then pulled the orbit down by the full depth
         // one block past the ramp. What the arriving chain will do is `ducksWith`'s answer, and

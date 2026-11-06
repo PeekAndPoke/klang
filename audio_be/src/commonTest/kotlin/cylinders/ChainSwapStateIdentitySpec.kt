@@ -50,7 +50,7 @@ class ChainSwapStateIdentitySpec : StringSpec({
         rig.registry.register("ducked", duckedRoomChain())
         val ducker = KatalystDsl.of(
             KatalystStageDsl.Duck(
-                orbit = KatalystKnobDsl.Constant(0.0),
+                cylinder = KatalystKnobDsl.Constant(0.0),
                 depth = KatalystKnobDsl.Constant(0.6),
                 attack = KatalystKnobDsl.Constant(0.05),
             )

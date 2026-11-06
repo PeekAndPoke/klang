@@ -26,18 +26,18 @@ let notchFreq = sine.range(320, 520).slow(20)
 
 stack(
   // Claps --------------------------------------------------------------------------------------------------------------------
-  sound("cp ~ cp ~ ~ cp cp ~  cp ~ ~ ~ cp cp ~ ~").slow(4).orbit(0).gain(0.285).legato(2.0)
+  sound("cp ~ cp ~ ~ cp cp ~  cp ~ ~ ~ cp cp ~ ~").slow(4).cylinder(0).gain(0.285).legato(2.0)
     .bpf(sine.range(2000, 2200).fast(3.14)).hpf(800)
     .filterWhen(x => x >= wait * 8 && x < (wait * 12 + keep))
   , // Lyrics ---------------------------------------------------------------------------------------------------------------------------
-  n("0").morse("Schön ist es auf der Welt zu sein!").orbit(1)
+  n("0").morse("Schön ist es auf der Welt zu sein!").cylinder(1)
     .scale("C5:major").scaleTranspose("0 -2 2 2".slow(32)).bpf(freq = 2000, q = 7.0).hpf(1000).analog(2)
     .sound("pulse").onepole(3743).crush(5).gain(0.2).clip(0.35).pan(berlin.slow(2)).adsr(0.03, 0.08, 0.2, 0.2) // .solo()
     .filterWhen(x => x >= wait * 12 && x < (wait * 6 + keep)).body(material = "membrane")
   , // Melody -----------------------------------------------------------------------------------------------------------------
   n("<[0 2 4 6 7 6 4 2]!14 [2 0 2 4 6 7 4 1] [-2 -1 0 2 7 4 -1 -3]>") // .solo()
     .scale("[c3:major c3:pentatonic c3:major c3:major]/16")
-    .orbit(2).s("supersaw").unison(voices = 11, spread = saw.range(0.05, 0.35).slow(16))
+    .cylinder(2).s("supersaw").unison(voices = 11, spread = saw.range(0.05, 0.35).slow(16))
     .gain(0.6 * 0.11).distort(0.7).adsr(0.008, 3.0, 0.5, 0.1).lpf(attack = 0.008, decay = 5.0, sustain = 0.2, release = 0.1).clip(1.05)
     .hpf(800).lpf(freq = 1400, env = perlin.range(21.7, 27.9).slow(8), q = 1.5).analog(15).body(material = "violin", wet = 0.5)
     .pan(0.5).superimpose(
@@ -46,10 +46,10 @@ stack(
     ).filterWhen(x => x >= wait * 4 && x < (wait * 4 + keep))
   , // Bass -----------------------------------------------------------------------------------------------------------------------------
   note("<a1 [f1 c2 e1 [f1 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [a1@2 [c2@3] [d1,d2] [c1,c2,c3] [d1,d1,d2,a1,a2]]>/4").clip(0.7).struct("x!4").slow(16)
-    .orbit(3).s("supersaw").unison(voices = 9, spread = saw.range(0.05, 0.45).slow(64)).onepole(23846) // . mute()
+    .cylinder(3).s("supersaw").unison(voices = 9, spread = saw.range(0.05, 0.45).slow(64)).onepole(23846) // . mute()
     .gain(1.0 * 0.50).adsr(0.01, 0.6, 0.8, 2.75).coarse(factor = 2) // solo()
     .superimpose(
-      x => x.orbit(4).scaleTranspose("<[12 12 7 12 12 [12 12] 0 -12] [12 12 0 12 12 [0 12] 0 -12]>/32")
+      x => x.cylinder(4).scaleTranspose("<[12 12 7 12 12 [12 12] 0 -12] [12 12 0 12 12 [0 12] 0 -12]>/32")
         .pan(sine.range(0.3, 0.7).slow(20)).clip(0.825)
     ).lpf(freq = 4.5 * 440, q = 2.5).hpf(60).notch(freq = notchFreq, q = 0.5).body(material = "glass").vowel(vowel = "e o e i a u".slow(24), wet = 0.40)
     .superimpose(
@@ -62,16 +62,16 @@ stack(
   stack(
     // Perc 1 ------------------------------------------------------------------------------------------------------------------
     sound("<[hh hh oh hh] [hh hh ~ hh] [hh hh oh hh] [hh hh ~ <cr!7 rd>]>")
-      .orbit(5).gain(0.5).pan(0.45).adsr(0.01, 0.15, 0.8, 2.0).fast(2).degrade(0.1).lpf(7000).late(0.001)
+      .cylinder(5).gain(0.5).pan(0.45).adsr(0.01, 0.15, 0.8, 2.0).fast(2).degrade(0.1).lpf(7000).late(0.001)
       .filterWhen(x => x >= wait * 1 && x < (wait * 2 + keep))
     , // Perc 2 -----------------------------------------------------------------------------------------------------------------------
     sound("[bd bd bd ~  bd ~ bd ~] [bd bd sd:5 ~  bd ~ bd|sd:5 ~]").slow("[8 8 8 8 8 8 4 [2 4]]/32").fast(2)
-      .orbit(6).gain(0.6).pan(0.55).adsr(0.017, 0.3, 0.5, 1).degrade(0.01).hpf(80).lpf(7800)
+      .cylinder(6).gain(0.6).pan(0.55).adsr(0.017, 0.3, 0.5, 1).degrade(0.01).hpf(80).lpf(7800)
       .filterWhen(x => x >= wait * 1.75 && x < (wait * 1 + keep))
   ).reverb(wet = 0.20, size = 3.0, lowpass = 8000).compressor(-19, 2, 6, 0.01, 0.2)
   , // Shore ---------------------------------------------------------------------------------------------------------
   note("c").fast(4).sound("brown").legato(2)
-    .orbit(7).gain(0.08).pan(perlin.early(1.7).range(0.3, 0.7).slow(7)).adsr(0.5, 1.0, 1.0, 2.5)
+    .cylinder(7).gain(0.08).pan(perlin.early(1.7).range(0.3, 0.7).slow(7)).adsr(0.5, 1.0, 1.0, 2.5)
     .bpf(freq = perlin.range(440, 440 * 4).segment(16).slow(6), q = sine.range(0.25, 5.0).slow(48).early(12))
   , // Master ------------------------------------------------------------------------------------------------------
   master(Katalyst(k => k

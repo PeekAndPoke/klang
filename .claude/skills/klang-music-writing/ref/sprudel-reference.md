@@ -214,8 +214,8 @@ with limiter defaults, so it works on an orbit too.
 > Example — two guitars that each need their **own** wood body must be on separate orbits:
 > ```javascript
 > stack(
->   guitarA.orbit(1).body(material = "wood"),   // orbit 1's body
->   guitarB.orbit(2).body(material = "wood"),   // orbit 2's body, independent
+>   guitarA.cylinder(1).body(material = "wood"),   // orbit 1's body
+>   guitarB.cylinder(2).body(material = "wood"),   // orbit 2's body, independent
 > )
 > ```
 > If both were `orbit(1)`, they'd share ONE body over their summed signal (fuller, but not two bodies).
@@ -355,7 +355,7 @@ selection — extended to ignitor variants and per-note gain.
 | `gain(amt)`      |            | The one level word: tone-neutral, after the voice's filters and distortion; a later `gain` REPLACES an earlier one (`gain(mul(x))` scales a gain that is set) | `s("bd").distort(3).gain(0.1)` |
 | `velocity(amt)`  | `vel`      | Velocity (0-1)                 | `note("c3").velocity(0.5)`            |
 | `pan(pos)`       |            | Stereo (0=L, 0.5=C, 1=R)       | `s("hh").pan(sine)`                   |
-| `orbit(n)`       | `cylinder` | Effect send channel (0-3)      | `note("c3").orbit(1).reverb(0.5, 4)`       |
+| `cylinder(n)`    | `orbit`, `o` | Effect channel (0-3)         | `note("c3").cylinder(1).reverb(0.5, 4)`       |
 | `adsr(a, d, s, r)` |          | Amplitude envelope; omitted slots keep their value, named slots take a mapper | `note("c3").adsr(0.01, 0.2, 0.7, 0.5)`, `.adsr(attack = mul(2))` |
 | `adsr.attack` `.decay` `.sustain` `.release` | | Read a slot back into another setter | `note("c3").adsr(0.3, 0.2).adsr(release = adsr.attack)` |
 | `adsrOff()`      |            | Voice envelope OFF — the instrument owns amplitude | `note("c3").sound(gtr).adsrOff()` |
@@ -412,7 +412,7 @@ at the cutoff). Same third slot on the ignitor door.
 | `tremolo(depth, rate, shape)`                                               |          | Tremolo: depth 0..1 FIRST, then the LFO rate in Hz (`rate`, `beatRate(n)` follows the tempo), LFO shape name (the oscillator of that name; square, sawtooth and ramp get a 16 ms soft edge). The level always dips from 1 to `1 - depth`; a swell upward is the Ignitor door's `range` knob, `.tremolo(rate, depth, x => x.range(0, 1))`: no pattern slot, by decision (2026-10-06) | `note("c3").tremolo(depth = 0.5, rate = 4, shape = "sine")`  |
 | `tremolo.depth` / `tremolo.rate`                                            |          | Read a tremolo slot (`shape` is a string, no reader)                                                                                                             | `p.tremolo(0.5, 4).phaser(rate = tremolo.rate)`                     |
 | `compressor(threshold, ratio, knee, attack, release)`                  | `comp`     | Orbit compressor; readers `compressor.threshold`, `.ratio`, `.knee`, `.attack`, `.release`                                                             | `s("bd sd hh sd").compressor(-20, 4, 6, 0.003, 0.1)`                                                 |
-| `duck(orbit, depth, attack)`                                           |            | Sidechain: the orbit that triggers, depth 0..1, recovery seconds (the duck-down is instant); readers `duck.orbit`, `.depth`, `.attack`                 | `note("c2*8").s("saw").duck(1, 0.8, 0.2)`                                                            |
+| `duck(cylinder, depth, attack)`                                        |            | Sidechain: the cylinder that triggers, depth 0..1, recovery seconds (the duck-down is instant); readers `duck.cylinder`, `.depth`, `.attack`                 | `note("c2*8").s("saw").duck(1, 0.8, 0.2)`                                                            |
 | `vowel(wet, vowel, floor)`                                             |            | Vowel formant: wet FIRST (a mix 0..1), then the vowel name (no reader), dry floor; readers `vowel.wet`, `.floor`. A vowel alone is named: `vowel(vowel = "a")`; `"none"` is off | `note("c3").s("saw").vowel(0.8, "a")`                                                                |
 | `body(wet, material, floor)`                                           |            | Resonant body: wet FIRST (a mix 0..1), then the material name (no reader), dry floor; readers `body.wet`, `.floor`. A material alone is named: `body(material = "wood")`; `"none"` is off | `note("c3").s("saw").body(0.7, "wood")`                                                              |
 | `katalystParam(slot, value)` | `katp` | Write one slot of the orbit's Katalyst chain, per orbit (the newest sounding voice owns the orbit's values). `slot` is the slot's NAME (`"reverb.size"`, or the name of your own `Katalyst.param("room", 5)`) or the param OBJECT (`Katalyst.slot.reverb.size`, or a `Katalyst.param(...)` held in a variable). Writes exactly that one slot, so on the familiar chain a `katp("reverb.wet", 0.3)` alone stays silent until `reverb.size` is written too. An Ignitor param is a script error at the call (`an Ignitor param passed to katp; use ignp`) | `note("c3").s("saw").reverb(wet = 0.4).katp("reverb.size", "<2 8>")`, `.katp(Katalyst.slot.reverb.size, "<2 8>")`, `.katp(room, "<2 9>")` |
@@ -767,9 +767,9 @@ let melodyOne   = `<[4@4 3 2 1 2] [1@4 ~ 0 1 2] [4@3 5 4@2 2 0] [1@6 ~@2]>`
 
 // Lines: one player, one way of playing, a function from notes to sound. The line picks its octave
 // and its default level.
-let spin = notes => n(notes).sound(clean).clip(4).gain(0.22).orbit(1)
-let sing = notes => n(notes.add(7)).sound(bright).clip(1.5).gain(0.14).orbit(2)
-let beat = roots => n(roots.add(-7)).struct("x ~ ~ x ~ ~ x ~").sound(deep).gain(0.325).orbit(3)
+let spin = notes => n(notes).sound(clean).clip(4).gain(0.22).cylinder(1)
+let sing = notes => n(notes.add(7)).sound(bright).clip(1.5).gain(0.14).cylinder(2)
+let beat = roots => n(roots.add(-7)).struct("x ~ ~ x ~ ~ x ~").sound(deep).gain(0.325).cylinder(3)
 
 // Parts: lines played together. A part may set a line's level for this moment.
 let answering  = stack(spin(cocoonArp).gain(0.21), sing(melodyOne))

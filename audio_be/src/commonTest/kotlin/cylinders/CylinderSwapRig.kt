@@ -148,7 +148,7 @@ internal class CylinderSwapRig(val sampleRate: Int = 44100) {
         fun duckedRoomChain() = KatalystDsl.of(
             KatalystStageDsl.Reverb(wet = KatalystKnobDsl.Constant(0.5), size = KatalystKnobDsl.Constant(6.0)),
             KatalystStageDsl.Duck(
-                orbit = KatalystKnobDsl.Constant(0.0),
+                cylinder = KatalystKnobDsl.Constant(0.0),
                 depth = KatalystKnobDsl.Constant(0.8),
                 attack = KatalystKnobDsl.Constant(0.05),
             ),

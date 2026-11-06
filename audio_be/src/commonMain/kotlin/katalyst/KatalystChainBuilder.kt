@@ -221,7 +221,7 @@ object KatalystChainBuilder {
                     //
                     // `delay.wet` is how much of the orbit mix feeds the line (step 5b-2). An
                     // AUTHORED `wet(0.0)` rents no ring (decided 2026-09-17, consistent with the
-                    // phaser gated on depth and the duck on orbit), while a wet a PATTERN wrote runs
+                    // phaser gated on depth and the duck on cylinder), while a wet a PATTERN wrote runs
                     // the stage whatever its value. The one home of that rule is [stageAskedFor].
                     writers.add(KatalystDelayWriter(fx = fx, wet = wet, time = time, feedback = feedback, cap = cap))
                 }
@@ -430,7 +430,7 @@ object KatalystChainBuilder {
         var duckWriter: KatalystDuckWriter? = null
 
         if (winner != null) {
-            val orbit = knob(winner.orbit)
+            val cylinder = knob(winner.cylinder)
             val depth = knob(winner.depth)
             val attack = knob(winner.attack)
             val fx = KatalystDuckEffect(
@@ -440,7 +440,7 @@ object KatalystChainBuilder {
             )
 
             theDuck = fx
-            duckWriter = KatalystDuckWriter(fx = fx, orbit = orbit, depth = depth, attack = attack)
+            duckWriter = KatalystDuckWriter(fx = fx, cylinder = cylinder, depth = depth, attack = attack)
             writers.add(duckWriter)
         }
 

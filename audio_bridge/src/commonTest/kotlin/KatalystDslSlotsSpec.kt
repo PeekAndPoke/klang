@@ -59,7 +59,7 @@ class KatalystDslSlotsSpec : StringSpec({
                 ),
                 KatalystStageDsl.Gain(gain = p("gain.gain", 1.0)),
                 KatalystStageDsl.Duck(
-                    orbit = p("duck.orbit", SLOT_UNSET), depth = p("duck.depth", 0.0), attack = p("duck.attack", DUCK_ATTACK_SECONDS),
+                    cylinder = p("duck.cylinder", SLOT_UNSET), depth = p("duck.depth", 0.0), attack = p("duck.attack", DUCK_ATTACK_SECONDS),
                 ),
             )
         )
@@ -87,7 +87,7 @@ class KatalystDslSlotsSpec : StringSpec({
             comp.threshold to s.compressor.threshold, comp.ratio to s.compressor.ratio, comp.knee to s.compressor.knee,
             comp.attack to s.compressor.attack, comp.release to s.compressor.release,
             gain.gain to s.gain.gain,
-            duck.orbit to s.duck.orbit, duck.depth to s.duck.depth, duck.attack to s.duck.attack,
+            duck.cylinder to s.duck.cylinder, duck.depth to s.duck.depth, duck.attack to s.duck.attack,
         )
 
         stages shouldHaveSize 8

@@ -94,7 +94,7 @@ private fun applyDelay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * ```
  *
  * ```KlangScript(Playable)
- * stack(s("hh ~ hh ~").delay(0.3, 0.25), s("~ hh ~ hh").orbit(1))        // delay on every other hat only
+ * stack(s("hh ~ hh ~").delay(0.3, 0.25), s("~ hh ~ hh").cylinder(1))        // delay on every other hat only
  * ```
  *
  * ```KlangScript(Playable)

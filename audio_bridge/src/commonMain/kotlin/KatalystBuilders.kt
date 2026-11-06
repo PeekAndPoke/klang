@@ -192,12 +192,12 @@ data class KatalystBuilder(val node: KatalystDsl = KatalystDsl(emptyList())) {
         KatalystStageDsl.Distort(amount = amount, shape = DistortionShapes.indexOf(shape).toInt()),
     )
 
-    /** Appends a sidechain duck; an omitted [orbit] is the "never set" marker, no ducking (script knob `duck`). */
+    /** Appends a sidechain duck; an omitted [cylinder] is the "never set" marker, no ducking (script knob `duck`). */
     fun duck(
-        orbit: KatalystKnobDsl = SLOT_UNSET.kat,
+        cylinder: KatalystKnobDsl = SLOT_UNSET.kat,
         depth: KatalystKnobDsl = DUCK_DEPTH.kat,
         attack: KatalystKnobDsl = DUCK_ATTACK_SECONDS.kat,
-    ): KatalystBuilder = append(KatalystStageDsl.Duck(orbit = orbit, depth = depth, attack = attack))
+    ): KatalystBuilder = append(KatalystStageDsl.Duck(cylinder = cylinder, depth = depth, attack = attack))
 
     /**
      * Appends the mix equalizer, its sections from a [KatalystEqBuilder] (a section refuses a Kat expression at build

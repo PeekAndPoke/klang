@@ -348,7 +348,7 @@ export spin = notes => n(notes)
   .ignp("decay", 1.50).ignp("sustain", 0.25).ignp("release", 0.8).clip(2.0)
   .velocity("1.0 0.8 0.9 0.8 0.95 0.8 0.9 0.8".sub(perlin(0.0, 0.05)))
   .gain(0.21).pan(0.5).vibrato(beatRate(0.25).mul(perlin(0.95, 1.05).slow(4)), 0.03)  
-  .orbit(1).body(wet = 0.1, material = "oak")
+  .cylinder(1).body(wet = 0.1, material = "oak")
 
 // Sing: the melody on the bright rig, an octave up.
 export sing = notes => n(notes.add(7))
@@ -359,7 +359,7 @@ export sing = notes => n(notes.add(7))
   .hpf(220)                                        // the 4x12 roar sits on the arp; the lowest note is D4 at 293 Hz
   .lpf(4000)                                       // the crunch fizz on held notes covers the arp's picks
   .gain(0.14).pan(0.6)                             // the melody stands near the centre, a little right
-  .orbit(2).body(wet = 0.15, material = "rosewood").late(perlin(0.0005, 0.0015))
+  .cylinder(2).body(wet = 0.15, material = "rosewood").late(perlin(0.0005, 0.0015))
 
 // Soar: the melody two octaves up, wider, over the wings.
 export soar = notes => n(notes.add(14))
@@ -368,7 +368,7 @@ export soar = notes => n(notes.add(14))
   .hpf(240)                                        // two octaves up, nothing of the melody lives below
   .lpf(4200)                                       // less fizz, the wall keeps its own
   .gain(0.44).pan(0.5)
-  .orbit(6)
+  .cylinder(6)
 
 // Swell: volume-knob swells, the thing inside stretching. Doubled on the left, a little late.
 export swell = chords => n(chords.add(7))
@@ -376,7 +376,7 @@ export swell = chords => n(chords.add(7))
   .ignp("attack", 1.3).ignp("decay", 1.8).clip(1)
   .lpf(3500).late(0.030)
   .gain(0.05).pan(0.0).superimpose(x => x.pan(1.0)) // far left and far right, the right a little late
-  .orbit(7).reverb(wet = 0.2, size = 6)       // a slight room of their own, inside the hall
+  .cylinder(7).reverb(wet = 0.2, size = 6)       // a slight room of their own, inside the hall
 
 // Beat: the heartbeat under the skin, 3-3-2 on the root, an octave down.
 export beat = roots => n(roots.add(-7)).struct("x ~ ~ x ~ ~ x ~")
@@ -384,7 +384,7 @@ export beat = roots => n(roots.add(-7)).struct("x ~ ~ x ~ ~ x ~")
   .ignp("decay", 2.0).clip(2).hpf(80)
   .velocity("1.0 0.9 0.85")
   .gain(0.25).pan(0.5)                             // on the left, across from the melody on the right
-  .orbit(3)
+  .cylinder(3)
 
 // Chug: the heavy rig, palm-muted on the root, an octave down.
 export chug = roots => n(roots.add(-7)).struct("[x x] x@2  [x x] x@2  [x x] x")
@@ -395,7 +395,7 @@ export chug = roots => n(roots.add(-7)).struct("[x x] x@2  [x x] x@2  [x x] x")
     x => x.pan(0.20),
     x => x.pan(0.80),
   )
-  .orbit(4)
+  .cylinder(4)
 
 // Wings: tremolo-picked power chords on the heavy rig, hard left and right.
 export wings = chords => n(chords).ply(16)
@@ -406,14 +406,14 @@ export wings = chords => n(chords).ply(16)
     x => x.pan(0.05),
     x => x.pan(0.95),
   )
-  .orbit(4)
+  .cylinder(4)
 
 // Strike: one heavy chord, let ring. It shares the wings' orbit and room.
 export strike = chords => n(chords)
   .sound(heavy).adsrOff().unison(voices = 11, spread = 0.08)
   .ignp("decay", 3.5).clip(1)
   .gain(0.45).apply(x => x.pan(0.10),x => x.pan(0.90))
-  .orbit(5)
+  .cylinder(5)
 
 // Chime: a melody on the clean rig, two octaves up, picked and let ring. The butterfly after the storm.
 export chime = notes => n(notes.add(14))
@@ -421,14 +421,14 @@ export chime = notes => n(notes.add(14))
   .ignp("decay", 0.30).ignp("sustain", 0.35).ignp("release", 1.1).clip(2)
   .velocity("1.0 0.8 0.9 0.8 0.95 0.8 0.9 0.8".sub(perlin(0.0, 0.10)))
   .gain(0.33).pan(0.75).late(perlin(0.001, 0.002))
-  .orbit(10)
+  .cylinder(10)
 
 // Strum: the clean rig, one slow strum, let ring.
 export strum = notes => n(notes)
   .sound(clean).adsrOff().unison(voices = 7, spread = 0.06).pregain(0.7)
   .ignp("decay", 0.30).ignp("sustain", 0.50).ignp("release", 5.0).clip(40)
   .gain(0.20).pan(0.45)
-  .orbit(8)
+  .cylinder(8)
 
 // The drums, for the second run of the heavy block: the band of Der Schmetterling, heavy and half time. The kick on one,
 // the snare on three, the Trommel rolling in on the off-beats of two and four, a crash on one and open hats on two to
@@ -438,27 +438,27 @@ let drumRoom = x => x.reverb(wet = 0.3, size = 5)
 export kick = pat => sound("bd").struct(pat)
   .sound(metalKick).adsrOff().note("a1").velocity("1.0 0.94 0.96 0.94")
   .gain(0.98).pan(0.5)
-  .orbit(11).apply(drumRoom)
+  .cylinder(11).apply(drumRoom)
 
 export snare = pat => sound(pat)
   .sound(metalSnare).adsrOff().freq(snareHz)
   .gain(0.45).pan(0.575)
   .lpf(freq = "12500".add(saw(0, 1200).slow(12)), q = 0.5)
   .delay(0.33, pure(4/65).div(cps), 0.875, 24) // Snare needs it own orbit for the dalay!
-  .orbit(12).apply(drumRoom).late(perlin(0.001, 0.0015))
+  .cylinder(12).apply(drumRoom).late(perlin(0.001, 0.0015))
 
 export hats = pat => sound(pat).n(0)
   .velocity("1.0 0.7 0.85 0.7")
   .hpf(800).lpf(freq = 14500, q = 0.5).adsr(0.005, 0.1, 0.70, 2.0) // some body, less sizzle
   .gain(0.83).pan(0.425)                            
-  .orbit(11).apply(drumRoom).late(perlin(0.002, 0.0035))
+  .cylinder(11).apply(drumRoom).late(perlin(0.002, 0.0035))
 
 // Bass: the Schmetterling's bass guitar, on every kick, on the chord's root two octaves down.
 export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
   .sound(bass).velocity("0.98 0.94 0.96 0.94")
   .ignp("sub", 0.98).ignp("harmonics", 1.00)
   .adsr(0.003, 0.75, 0.5, 0.040).hpf(30)
-  .clip(0.95).gain(0.95).orbit(15)
+  .clip(0.95).gain(0.95).cylinder(15)
 
 // Parts  -----------------------------------------------------------------------------------------------------------
 // Lines played together. Every part starts on its own first cycle, so a round of the cocoon always starts on Dm.

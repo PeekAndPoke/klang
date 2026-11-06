@@ -496,7 +496,7 @@ class KatalystSlotResolverSpec : StringSpec({
         val duck = KatalystDuckEffect(sampleRate = sampleRate, blockFrames = blockFrames)
         val duckWriter = KatalystDuckWriter(
             fx = duck,
-            orbit = testKnob(c(2.0), KatalystNoiseOrdinals()),
+            cylinder = testKnob(c(2.0), KatalystNoiseOrdinals()),
             depth = testKnob(c(0.6), KatalystNoiseOrdinals()),
             attack = testKnob(c(0.02), KatalystNoiseOrdinals()),
         )
@@ -519,7 +519,7 @@ class KatalystSlotResolverSpec : StringSpec({
     /** A duck writer whose three knobs are all slots, unset unless a map writes them. */
     fun duckWriter(fx: KatalystDuckEffect) = KatalystDuckWriter(
         fx = fx,
-        orbit = testKnob(KatalystKnobDsl.Param("duck.orbit", SLOT_UNSET), KatalystNoiseOrdinals()),
+        cylinder = testKnob(KatalystKnobDsl.Param("duck.cylinder", SLOT_UNSET), KatalystNoiseOrdinals()),
         depth = testKnob(KatalystKnobDsl.Param("duck.depth", SLOT_UNSET), KatalystNoiseOrdinals()),
         attack = testKnob(KatalystKnobDsl.Param("duck.attack", SLOT_UNSET), KatalystNoiseOrdinals()),
     )
@@ -547,20 +547,20 @@ class KatalystSlotResolverSpec : StringSpec({
 
         val duck = duckWriter(KatalystDuckEffect(sampleRate = sampleRate, blockFrames = blockFrames))
 
-        duck.resolve(klangMapOf("duck.orbit" to 2.0, "duck.depth" to 0.6))
+        duck.resolve(klangMapOf("duck.cylinder" to 2.0, "duck.depth" to 0.6))
         duck.declared shouldBe true
 
         val heldDuck = duck.handed().shouldNotBeNull()
 
-        duck.resolve(klangMapOf("duck.orbit" to 3.0, "duck.depth" to 0.3))
+        duck.resolve(klangMapOf("duck.cylinder" to 3.0, "duck.depth" to 0.3))
         duck.handed() shouldBeSameInstanceAs heldDuck
         heldDuck.cylinderId shouldBe 3
         heldDuck.depth shouldBe 0.3
 
-        duck.resolve(klangMapOf("duck.orbit" to 3.0))
+        duck.resolve(klangMapOf("duck.cylinder" to 3.0))
         duck.declared shouldBe false
         duck.handed().shouldBeNull()
-        duck.resolve(klangMapOf("duck.orbit" to 1.0, "duck.depth" to 0.5))
+        duck.resolve(klangMapOf("duck.cylinder" to 1.0, "duck.depth" to 0.5))
         duck.declared shouldBe true
         duck.handed() shouldBeSameInstanceAs heldDuck
     }
@@ -611,14 +611,14 @@ class KatalystSlotResolverSpec : StringSpec({
         val fx = KatalystDuckEffect(sampleRate = sampleRate, blockFrames = blockFrames)
         val writer = duckWriter(fx)
 
-        writer.resolve(klangMapOf("duck.orbit" to 2.0, "duck.depth" to 0.6, "duck.attack" to 0.5))
+        writer.resolve(klangMapOf("duck.cylinder" to 2.0, "duck.depth" to 0.6, "duck.attack" to 0.5))
         writer.apply()
 
         val ducking = fx.ducking.shouldNotBeNull()
 
         ducking.attackSeconds shouldBe 0.5
 
-        writer.resolve(klangMapOf("duck.orbit" to 3.0, "duck.depth" to 0.3, "duck.attack" to Double.NaN))
+        writer.resolve(klangMapOf("duck.cylinder" to 3.0, "duck.depth" to 0.3, "duck.attack" to Double.NaN))
         writer.apply()
         fx.ducking shouldBeSameInstanceAs ducking
         fx.duckCylinderId shouldBe 3
@@ -710,7 +710,7 @@ class KatalystSlotResolverSpec : StringSpec({
 
     "duck: on when the orbit is finite and the depth above zero, cylinderId from toInt" {
         val chain = declared(
-            KatalystStageDsl.Duck(orbit = c(3.7), depth = c(0.6), attack = c(0.02))
+            KatalystStageDsl.Duck(cylinder = c(3.7), depth = c(0.6), attack = c(0.02))
         )
 
         val duck = chain.duck.shouldNotBeNull()
@@ -723,17 +723,17 @@ class KatalystSlotResolverSpec : StringSpec({
 
     "duck: a non-finite attack takes its constant" {
         val chain = declared(
-            KatalystStageDsl.Duck(orbit = c(3.0), depth = c(0.6), attack = c(SLOT_UNSET))
+            KatalystStageDsl.Duck(cylinder = c(3.0), depth = c(0.6), attack = c(SLOT_UNSET))
         )
 
         chain.duck.shouldNotBeNull().ducking.shouldNotBeNull().attackSeconds shouldBe DUCK_ATTACK_SECONDS
     }
 
     "duck: off without a source orbit, off without depth, both against a ducking voice" {
-        declared(KatalystStageDsl.Duck(orbit = c(SLOT_UNSET), depth = c(0.6)))
+        declared(KatalystStageDsl.Duck(cylinder = c(SLOT_UNSET), depth = c(0.6)))
             .duck.shouldNotBeNull().ducking.shouldBeNull()
 
-        declared(KatalystStageDsl.Duck(orbit = c(3.0), depth = c(0.0)))
+        declared(KatalystStageDsl.Duck(cylinder = c(3.0), depth = c(0.0)))
             .duck.shouldNotBeNull().ducking.shouldBeNull()
     }
 

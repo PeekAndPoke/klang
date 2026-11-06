@@ -55,14 +55,14 @@ private fun applyKatalyst(source: SprudelPattern, value: KatalystValue.Dsl): Spr
  *   s("bd*4"),
  *   note("c2 g2").s("supersaw"),
  *   katalyst(Katalyst(k => k.classic().eq(e => e.band(freq = 300, q = 1.0, db = 3.0)))),
- * ).orbit(1).reverb(wet = 0.25, size = 4)
+ * ).cylinder(1).reverb(wet = 0.25, size = 4)
  * ```
  *
  * The declaration above adds an EQ the familiar chain does not have, which is what a declaration is
  * FOR. `Katalyst(k => k.classic())` on its own declares exactly the chain an orbit already runs and
  * therefore changes nothing: it is the one spelling that is a no-op.
  *
- * The event is a **control event**: it never sounds. `.orbit(n)` on the carrier is what routes the
+ * The event is a **control event**: it never sounds. `.cylinder(n)` on the carrier is what routes the
  * declaration to an orbit, which is why the carrier is an ordinary pattern and not a special
  * value.
  *
@@ -137,7 +137,7 @@ fun String.katalyst(katalyst: KatalystDsl, callInfo: CallInfo? = null): SprudelP
 
 // NOTE: no bare `katalyst(dsl): PatternMapperFn` factory (the usual form (c) of a sprudel op).
 // The top-level `katalyst(dsl)` name is taken by the *carrier* above, which is the headline surface
-// (`stack(drums, katalyst(...).orbit(1))`), and a second overload with the same parameters could
+// (`stack(drums, katalyst(...).cylinder(1))`), and a second overload with the same parameters could
 // only differ by return type. Use `.katalyst(dsl)` on the pattern instead; the mapper-chaining
 // form (d) below still exists for `.apply(gain(0.5).katalyst(...))`.
 
@@ -188,7 +188,7 @@ private fun katpSlot(slot: KatalystSlotLike?, callInfo: CallInfo?): String =
  * `delay.feedback`, `delay.cap`, `reverb.wet`, `reverb.size`, `reverb.lowpass`, `phaser.rate`,
  * `phaser.wet`, `phaser.center`, `phaser.sweep`, `phaser.floor`, `compressor.threshold`,
  * `compressor.ratio`, `compressor.knee`, `compressor.attack`, `compressor.release`, `gain.gain`,
- * `duck.orbit`, `duck.depth`, `duck.attack`. An authored chain names its own with
+ * `duck.cylinder`, `duck.depth`, `duck.attack`. An authored chain names its own with
  * `Katalyst.param("room", 5)`.
  *
  * The slot can be the param OBJECT instead of its name: `Katalyst.slot.reverb.wet` is the classic knob
@@ -202,7 +202,7 @@ private fun katpSlot(slot: KatalystSlotLike?, callInfo: CallInfo?): String =
  * move glides over 50 ms so it never steps.
  *
  * ```KlangScript(Playable)
- * note("c3 e3 g3").s("supersaw").orbit(1).katalystParam("gain.gain", 0.8)   // this orbit, a little down
+ * note("c3 e3 g3").s("supersaw").cylinder(1).katalystParam("gain.gain", 0.8)   // this orbit, a little down
  * ```
  *
  * **It is a mix knob, not an articulation**, and for the ordinary reason every `katp` value is:

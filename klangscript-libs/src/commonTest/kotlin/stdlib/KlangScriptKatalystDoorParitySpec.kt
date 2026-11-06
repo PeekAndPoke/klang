@@ -237,11 +237,11 @@ private val doors: List<StageDoor> = listOf(
     StageDoor(
         stage = "duck",
         bare = KatalystStageDsl.Duck(),
-        params = listOf(DoorParam("orbit", 2.0), DoorParam("depth", 0.8), DoorParam("attack", 0.05)),
+        params = listOf(DoorParam("cylinder", 2.0), DoorParam("depth", 0.8), DoorParam("attack", 0.05)),
         set = { s, n, v ->
             val d = s as KatalystStageDsl.Duck
             when (n) {
-                "orbit" -> d.copy(orbit = v)
+                "cylinder" -> d.copy(cylinder = v)
                 "depth" -> d.copy(depth = v)
                 "attack" -> d.copy(attack = v)
                 else -> unknown("duck", n)
@@ -249,9 +249,9 @@ private val doors: List<StageDoor> = listOf(
         },
         kotlin = { k, a ->
             val b = KatalystStageDsl.Duck()
-            k.duck(orbit = a["orbit"] ?: b.orbit, depth = a["depth"] ?: b.depth, attack = a["attack"] ?: b.attack)
+            k.duck(cylinder = a["cylinder"] ?: b.cylinder, depth = a["depth"] ?: b.depth, attack = a["attack"] ?: b.attack)
         },
-        script = { k, a -> k.scriptDuck(orbit = a["orbit"], depth = a["depth"], attack = a["attack"]) },
+        script = { k, a -> k.scriptDuck(cylinder = a["cylinder"], depth = a["depth"], attack = a["attack"]) },
     ),
     // The bus distort (2026-10-09): `amount` is its one slot-capable parameter; `shape` is fixed
     // with the chain and has its own row below, like the compressor's lookahead.

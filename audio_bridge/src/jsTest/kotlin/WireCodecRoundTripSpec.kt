@@ -35,14 +35,14 @@ class WireCodecRoundTripSpec : StringSpec({
 
     "a non-finite Param default survives the trip: SLOT_UNSET is how the wire says 'never set'" {
         // `KatalystDsl.classic` puts SLOT_UNSET (NaN) on ELEVEN slots (all five compressor knobs,
-        // `duck.orbit`, `reverb.lowpass`, and the name and amount of the body and the vowel), so
+        // `duck.cylinder`, `reverb.lowpass`, and the name and amount of the body and the vowel), so
         // this is not a corner case
         // but the everyday chain. The codec rides a structured-clone JS object rather than JSON, so
         // NaN travels; this pins that, and pins that the comparison is not vacuous (an Infinity and
         // a finite neighbour are in the same list).
         listOf(
             KatalystDsl.of(KatalystStageDsl.Compressor(threshold = KatalystKnobDsl.Param("compressor.threshold", SLOT_UNSET))),
-            KatalystDsl.of(KatalystStageDsl.Duck(orbit = KatalystKnobDsl.Param("duck.orbit", Double.POSITIVE_INFINITY))),
+            KatalystDsl.of(KatalystStageDsl.Duck(cylinder = KatalystKnobDsl.Param("duck.cylinder", Double.POSITIVE_INFINITY))),
             KatalystDsl.of(KatalystStageDsl.Reverb(lowpass = KatalystKnobDsl.Constant(SLOT_UNSET))),
             KatalystDsl.of(KatalystStageDsl.Gain(KatalystKnobDsl.Param("g", 1.4))),
         ).forEach { decode_KatalystDsl(encode_KatalystDsl(it)) shouldBe it }
@@ -103,8 +103,8 @@ class WireCodecRoundTripSpec : StringSpec({
             KatalystStageDsl.Compressor(threshold = p(), ratio = p(), knee = p(), attack = p(), release = p()),
             KatalystStageDsl.Distort(amount = k(), shape = 2),
             KatalystStageDsl.Distort(amount = p()),
-            KatalystStageDsl.Duck(orbit = k(), depth = k(), attack = k()),
-            KatalystStageDsl.Duck(orbit = p(), depth = p(), attack = p()),
+            KatalystStageDsl.Duck(cylinder = k(), depth = k(), attack = k()),
+            KatalystStageDsl.Duck(cylinder = p(), depth = p(), attack = p()),
             KatalystStageDsl.Gain(gain = k()),
             KatalystStageDsl.Gain(gain = p()),
             KatalystStageDsl.Plus(other = k()),
@@ -178,7 +178,7 @@ class WireCodecRoundTripSpec : StringSpec({
                     release = KatalystKnobDsl.Constant(0.12), lookahead = 0.004,
                 ),
                 KatalystStageDsl.Duck(
-                    orbit = KatalystKnobDsl.Constant(2.0), depth = KatalystKnobDsl.Constant(0.8),
+                    cylinder = KatalystKnobDsl.Constant(2.0), depth = KatalystKnobDsl.Constant(0.8),
                     attack = KatalystKnobDsl.Constant(0.05),
                 ),
                 // the bus distort: a slot amount and the plain Int shape fixed with the chain, and bare
@@ -394,8 +394,9 @@ class WireCodecRoundTripSpec : StringSpec({
         // `oversample` field left `IgnitorDsl.Shape`, `IgnitorDsl.Distort` and `KatalystStageDsl.Distort`);
         // KLANG-00245 step 7f from 210338569 (the Ignitor's `Progress` and `Elapsed` joined it); KLANG-00290 item 24
         // from -583834474 (`Cmd.ScheduleVoice` and `Cmd.ClearScheduled` left it), and from 1837919315 (`VoiceData.legato`
-        // left it: the frontend folds it into the gate time, D6).
-        WIRE_SCHEMA_HASH shouldBe 580783604
+        // left it: the frontend folds it into the gate time, D6), and from 580783604 (the duck's knob `orbit` is
+        // `cylinder`, KLANG-00418 step 2).
+        WIRE_SCHEMA_HASH shouldBe -209384306
     }
 
     "ScheduledVoice round-trips a minimal (mostly-null) VoiceData" {

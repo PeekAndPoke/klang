@@ -279,7 +279,7 @@ class KatalystChain internal constructor(
      * must NOT write the stages first: the carried envelope is updated in place by the arriving
      * chain's own writer AFTER the handover (see [KatalystDuckEffect.configure] and
      * [KatalystDuckEffect.takeOver]).
-     * Without this, a chain whose duck is named by `.katp("duck.orbit", n)` still reads as "no
+     * Without this, a chain whose duck is named by `.katp("duck.cylinder", n)` still reads as "no
      * duck" at the moment the question is asked, and the swap ramps the reduction out and then
      * drops a fresh one on the orbit a block later.
      *
@@ -399,7 +399,7 @@ class KatalystChain internal constructor(
      * True when this chain's [duck] will be CONFIGURED the next time its writers run, rather than
      * cleared or left alone.
      *
-     * A chain that declares a Duck stage does not necessarily duck: one whose `orbit` slot is unset
+     * A chain that declares a Duck stage does not necessarily duck: one whose `duck.cylinder` slot is unset
      * resolves to no settings at all. The host asks this before it hands a live envelope to an
      * ARRIVING chain (`Cylinder.handOverDuck`): handing one to a stage that is about to be cleared
      * releases the whole reduction in one sample.
@@ -415,7 +415,7 @@ class KatalystChain internal constructor(
      *
      * The remembering is the sharp edge. A cached chain comes back into service through
      * `Cylinder.beginFade`, which asks [ducksWith] BEFORE the arriving chain's writers have run:
-     * a duck writer still holding a previous owner's `duck.orbit` would answer "this chain ducks",
+     * a duck writer still holding a previous owner's `duck.cylinder` would answer "this chain ducks",
      * be handed the live envelope, and then never be configured, so the orbit would keep ducking
      * off a stage its chain no longer declares.
      *

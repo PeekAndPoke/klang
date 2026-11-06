@@ -18,7 +18,7 @@ class LangDuckingSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.katalystParams?.get("duck.orbit") shouldBe 0.0
+        events[0].data.katalystParams?.get("duck.cylinder") shouldBe 0.0
         events[0].data.katalystParams?.get("duck.attack") shouldBe 0.1
         events[0].data.katalystParams?.get("duck.depth") shouldBe 0.8
     }
@@ -33,7 +33,7 @@ class LangDuckingSpec : StringSpec({
         events.size shouldBe 1
         val voiceData = events[0].data.toVoiceData()
 
-        voiceData.katalystParams?.get("duck.orbit") shouldBe 0.0
+        voiceData.katalystParams?.get("duck.cylinder") shouldBe 0.0
         voiceData.katalystParams?.get("duck.attack") shouldBe 0.15
         voiceData.katalystParams?.get("duck.depth") shouldBe 0.6
     }

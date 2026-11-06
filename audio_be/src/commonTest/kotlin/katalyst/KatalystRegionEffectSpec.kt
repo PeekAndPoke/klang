@@ -486,7 +486,7 @@ class KatalystRegionEffectSpec : StringSpec({
     // ── The duck and the lifecycle ───────────────────────────────────────────────────────────────
 
     "a duck in a region's body is the orbit's duck: taken out of the body, run by the chain" {
-        val duck = KatalystStageDsl.Duck(orbit = c(1.0), depth = c(0.5))
+        val duck = KatalystStageDsl.Duck(cylinder = c(1.0), depth = c(0.5))
         val built = chain(by(4, gain(1.0), duck))
 
         built.duck.shouldNotBeNull()

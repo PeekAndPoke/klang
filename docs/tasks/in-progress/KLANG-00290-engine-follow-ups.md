@@ -2605,7 +2605,8 @@ Each was checked against the code: none is done (item 21's package dissolve asid
     two names of B3.6 (`KatalystFormantEffect`, `FilterDef.Formant`) were gone since tidy-up step 12. "Formant" stays the
     phonetic word for one band (KDoc), not a name. Behaviour-neutral (a rename). `docs/retired-names.md`.
 24. **Step 18, the wire and the words:**
-    - "cylinder" is the word (decision D1, maintainer, 2026-10-07): sprudel's canonical door becomes `cylinder`, with
+    - **In KLANG-00418 since 2026-11-06 (steps 1 to 3 done the same day: the sprudel door, the duck's knob, the songs).**
+      "cylinder" is the word (decision D1, maintainer, 2026-10-07): sprudel's canonical door becomes `cylinder`, with
       `orbit` and `o` as aliases (today `orbit` is canonical), and the docs, KDoc, tutorials, UI text and the Katalyst
       vocabulary follow. L; plan it as its own step. A surface change.
     - **DONE 2026-11-06 (maintainer: "I do not really see a reason why it should travel over the wire, when it can be

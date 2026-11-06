@@ -107,7 +107,7 @@ envelope with a release of 0 and collapsed the FM at the gate). `fm.release` is 
 
 Every orbit stage (delay, reverb, compressor, duck, phaser, body, vowel) reads its knobs from
 `katalystParams: KlangMap<Double>?`, keyed `<stage>.<knob>` exactly as `KatalystDsl.classic` names
-them (`delay.wet`, `reverb.size`, `compressor.threshold`, `duck.orbit`, `phaser.wet`, `body.material`,
+them (`delay.wet`, `reverb.size`, `compressor.threshold`, `duck.cylinder`, `phaser.wet`, `body.material`,
 `vowel.vowel`, ...), and the orbit's OWNER voice applies them. The delay, reverb, compressor and duck
 fields left the wire in Katalyst step 5b-3 (2026-09-19); the phaser fields and the `filters` list in
 phase 3 step 9. The one rule of which chain reads which slot lives in the `katalystParam` door's KDoc

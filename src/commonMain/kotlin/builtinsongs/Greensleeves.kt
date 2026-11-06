@@ -61,16 +61,16 @@ let verse = (x) => x % 36 >= 4
 let secondTime = (x) => x % 36 >= 20
 
 stack(
-  wind.orbit(2).gain(0.1)
+  wind.cylinder(2).gain(0.1)
 
-  , harmony.voicing().s(lute).struct("x ~ ~ x ~ x").orbit(0).gain(0.20).pan(0.62)
+  , harmony.voicing().s(lute).struct("x ~ ~ x ~ x").cylinder(0).gain(0.20).pan(0.62)
      .filterWhen(verse)
-  , harmony.rootNotes(2).s(bass).adsr(release = 0.3).struct("x ~ ~ ~ ~ ~").orbit(0).gain(0.25).legato(2).pan(0.5) // classic() releases over this, not the bass's own 0.3 s tail; keep them equal
+  , harmony.rootNotes(2).s(bass).adsr(release = 0.3).struct("x ~ ~ ~ ~ ~").cylinder(0).gain(0.25).legato(2).pan(0.5) // classic() releases over this, not the bass's own 0.3 s tail; keep them equal
      .filterWhen(verse)
 
-  , whistleOf(melody).orbit(1).gain(5.5).pan(0.42).filterWhen(verse) // . solo()
-  , breathOf(melody).orbit(1).gain(0.01).pan(0.58).filterWhen(verse) 
-  , whistleOf(melody.transpose(-12)).orbit(1).gain(4.0).pan(0.36).filterWhen(secondTime)
+  , whistleOf(melody).cylinder(1).gain(5.5).pan(0.42).filterWhen(verse) // . solo()
+  , breathOf(melody).cylinder(1).gain(0.01).pan(0.58).filterWhen(verse) 
+  , whistleOf(melody.transpose(-12)).cylinder(1).gain(4.0).pan(0.36).filterWhen(secondTime)
 
   , master(Katalyst(k => k.reverb(0.14, 9).gain(1.0)))
 )

@@ -45,7 +45,7 @@ class CallableObjectDocsSpec : StringSpec({
     val cases = listOf(
         Triple("perlin", "perlin(200, 400)", "from"),
         Triple("adsr", "adsr(0.01, 0.1, 0.5, 0.2)", "attack"),
-        Triple("duck", "duck(1, 0.5)", "orbit"),
+        Triple("duck", "duck(1, 0.5)", "cylinder"),
     )
 
     "no docs symbol is named after the call operator, in either library" {
@@ -113,8 +113,8 @@ class CallableObjectDocsSpec : StringSpec({
     }
 
     "a named argument the call form does not have is reported at the call" {
-        analyze("duck(orbitt = 1)").diagnostics.size shouldBe 1
-        analyze("duck(orbit = 1)").diagnostics.size shouldBe 0
+        analyze("duck(cylinderr = 1)").diagnostics.size shouldBe 1
+        analyze("duck(cylinder = 1)").diagnostics.size shouldBe 0
     }
 
     "the call form is no member: completion after the dot offers the object's children only" {
@@ -142,7 +142,8 @@ class CallableObjectDocsSpec : StringSpec({
         val page = KlangDocsRegistry().apply { registerAll(generatedSprudelDocs) }
         mapOf(
             "lowpass" to "lpf", "highpass" to "hpf", "bandpass" to "bpf", "comp" to "compressor", "uni" to "unison",
-            "vib" to "vibrato", "vel" to "velocity", "o" to "orbit", "d" to "density", "clip" to "legato",
+            "vib" to "vibrato", "vel" to "velocity", "o" to "cylinder", "orbit" to "cylinder", "d" to "density",
+            "clip" to "legato",
         ).forEach { (alias, canonical) ->
             withClue(alias) {
                 page.callFormFor(page.get(alias).shouldNotBeNull()) shouldBe page.get(canonical).shouldNotBeNull().callForm.shouldNotBeNull()
@@ -188,12 +189,12 @@ class CallableObjectDocsSpec : StringSpec({
         val type = analyze("duck").let { it.typeOf(it.top()) }.shouldNotBeNull()
         CompletionProvider(registry).memberCompletions(type, "").map { it.name } shouldContain "depth"
 
-        analyze("let d = duck\nd(orbitt = 1)").diagnostics.size shouldBe 1
-        analyze("let d = duck\nd(orbit = 1)").diagnostics.size shouldBe 0
+        analyze("let d = duck\nd(cylinderr = 1)").diagnostics.size shouldBe 1
+        analyze("let d = duck\nd(cylinder = 1)").diagnostics.size shouldBe 0
     }
 
     "a name that is its own object is offered once, not again as another symbol's alias" {
-        for (name in listOf("density", "orbit", "velocity")) {
+        for (name in listOf("density", "cylinder", "velocity")) {
             withClue(name) {
                 CompletionProvider(registry).topLevelCompletions(name).count { it.name == name } shouldBe 1
             }

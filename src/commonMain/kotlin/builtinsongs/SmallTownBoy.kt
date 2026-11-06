@@ -25,16 +25,16 @@ stack(
       [8, silence],
       [8, n("<[~ 0] 2 [0 2] [~ 2][~ 0] 1 [0 1] [~ 1][~ 0] 3 [0 3] [~ 3][~ 0] 2 [0 2] [~ 2]>*4")],
     ).sound("triangle").scale("C4:minor")
-    .orbit(1).gain(0.3).adsr(0.05, 0.2, 0.3, 0.2)
+    .cylinder(1).gain(0.3).adsr(0.05, 0.2, 0.3, 0.2)
     .hpf(800)
     .superimpose(x => x.transpose("12").gain(0.5))
     , // bass  ---------------------------------------------------------
     note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
-    .orbit(3).sound("supersaw").unison(voices = 8, spread = 0.1)
+    .cylinder(3).sound("supersaw").unison(voices = 8, spread = 0.1)
     .adsr(0.02, 0.3, 0.0, 0.1).lpf(1200).hpf(80).gain(1.0 * 1.25)
     , // Drums ---------------------------------------------------------
     sound("[bd hh sd hh] [bd [bd, hh] sd oh]").fast(1)
-     .orbit(4).pan(0.5).gain(0.95)
+     .cylinder(4).pan(0.5).gain(0.95)
      .delay(wet = 0.2, time = pure(1/8).div(cps), feedback = 0.3),
 ).reverb(wet = 0.1, size = 5.0)
 

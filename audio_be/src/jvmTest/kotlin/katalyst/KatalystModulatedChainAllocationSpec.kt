@@ -125,7 +125,7 @@ class KatalystModulatedChainAllocationSpec : StringSpec({
                 ),
             ),
             KatalystStageDsl.Duck(
-                orbit = KatalystKnobDsl.Range(
+                cylinder = KatalystKnobDsl.Range(
                     inner = KatalystKnobDsl.Square(freq = c(0.5)),
                     from = c(1.0),
                     to = c(2.0),

@@ -105,7 +105,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
     /** A chain whose only stage is a duck listening to [orbit]. */
     fun duckChain(depth: Double, attack: Double, orbit: Double = 0.0) = KatalystDsl.of(
         KatalystStageDsl.Duck(
-            orbit = KatalystKnobDsl.Constant(orbit),
+            cylinder = KatalystKnobDsl.Constant(orbit),
             depth = KatalystKnobDsl.Constant(depth),
             attack = KatalystKnobDsl.Constant(attack),
         )
@@ -113,12 +113,12 @@ class CylinderChainCrossfadeSpec : StringSpec({
 
     /**
      * A chain whose duck takes ALL THREE knobs from the orbit's param state, which is what
-     * `.duck(orbit = n, depth = d)` writes on a declared chain from Katalyst step 5a on. The
+     * `.duck(cylinder = n, depth = d)` writes on a declared chain from Katalyst step 5a on. The
      * defaults are the classic chain's, so with no state the stage resolves to no duck at all.
      */
     fun slotDuckChain() = KatalystDsl.of(
         KatalystStageDsl.Duck(
-            orbit = KatalystKnobDsl.Param("duck.orbit", SLOT_UNSET),
+            cylinder = KatalystKnobDsl.Param("duck.cylinder", SLOT_UNSET),
             depth = KatalystKnobDsl.Param("duck.depth", 0.0),
             attack = KatalystKnobDsl.Param("duck.attack", DUCK_ATTACK_SECONDS),
         )
@@ -134,15 +134,15 @@ class CylinderChainCrossfadeSpec : StringSpec({
             size = KatalystKnobDsl.Param("reverb.size", 3.0),
         ),
         KatalystStageDsl.Duck(
-            orbit = KatalystKnobDsl.Param("duck.orbit", SLOT_UNSET),
+            cylinder = KatalystKnobDsl.Param("duck.cylinder", SLOT_UNSET),
             depth = KatalystKnobDsl.Param("duck.depth", 0.0),
             attack = KatalystKnobDsl.Param("duck.attack", DUCK_ATTACK_SECONDS),
         ),
     )
 
-    /** What `.duck(orbit = n, depth = d)` writes into the event's slot state. */
+    /** What `.duck(cylinder = n, depth = d)` writes into the event's slot state. */
     fun duckState(orbit: Double, depth: Double, attack: Double = 0.05): Map<String, Double> =
-        mapOf("duck.orbit" to orbit, "duck.depth" to depth, "duck.attack" to attack)
+        mapOf("duck.cylinder" to orbit, "duck.depth" to depth, "duck.attack" to attack)
 
     /**
      * A chain with NO duck stage at all, for a row that needs "nothing ducked this orbit before
@@ -827,7 +827,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         // configured after all, so the reduction has to carry instead of ramping out and dropping.
         //
         // katp-ONLY, and that is the point: a chain arriving by name is slot-driven
-        // (`Katalyst.classic()` included, 2026-09-18), so its duck reads `duck.orbit` and
+        // (`Katalyst.classic()` included, 2026-09-18), so its duck reads `duck.cylinder` and
         // `duck.depth` and the voice's own `ducking` field says nothing. The correction used to be
         // gated on that field, which skipped exactly this voice.
         rig.voice = VoiceTestHelpers.createSynthVoice(
@@ -984,7 +984,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         rig.registry.register("ducked", KatalystDsl.of(
             KatalystStageDsl.Reverb(wet = KatalystKnobDsl.Constant(0.5), size = KatalystKnobDsl.Constant(6.0)),
             KatalystStageDsl.Duck(
-                orbit = KatalystKnobDsl.Constant(0.0),
+                cylinder = KatalystKnobDsl.Constant(0.0),
                 depth = KatalystKnobDsl.Constant(0.8),
                 attack = KatalystKnobDsl.Constant(0.05),
             ),

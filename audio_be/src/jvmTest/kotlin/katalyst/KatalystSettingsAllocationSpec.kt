@@ -108,13 +108,13 @@ class KatalystSettingsAllocationSpec : StringSpec({
         val fx = KatalystDuckEffect(sampleRate = sampleRate, blockFrames = blockFrames)
         val writer = KatalystDuckWriter(
             fx = fx,
-            orbit = testKnob(slot("duck.orbit"), KatalystNoiseOrdinals()),
+            cylinder = testKnob(slot("duck.cylinder"), KatalystNoiseOrdinals()),
             depth = testKnob(slot("duck.depth"), KatalystNoiseOrdinals()),
             attack = testKnob(slot("duck.attack"), KatalystNoiseOrdinals()),
         )
         val maps = Array(5) {
             klangMapOf(
-                "duck.orbit" to 1.0 + it,
+                "duck.cylinder" to 1.0 + it,
                 "duck.depth" to 0.3 + 0.1 * it,
                 "duck.attack" to 0.05 + 0.02 * it,
             )

@@ -222,13 +222,13 @@ class CylinderKatalystParamsSpec : StringSpec({
         val chain = build(
             KatalystDsl.of(
                 KatalystStageDsl.Duck(
-                    orbit = KatalystKnobDsl.Param("duck.orbit", default = Double.NaN),
+                    cylinder = KatalystKnobDsl.Param("duck.cylinder", default = Double.NaN),
                     depth = KatalystKnobDsl.Param("duck.depth", default = 0.0),
                 )
             )
         )
 
-        chain.applyParams(klangMapOf("duck.orbit" to 1.0, "duck.depth" to 0.8))
+        chain.applyParams(klangMapOf("duck.cylinder" to 1.0, "duck.depth" to 0.8))
         chain.ducksWith() shouldBe true
 
         // Back on the shelf, and back in the cache. The host asks this BEFORE the arriving chain's

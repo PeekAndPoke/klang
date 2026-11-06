@@ -81,7 +81,7 @@ slots (pitch pipeline step 1), the vibrato as its `vibrato.*` slots (step 2), `a
 | `KatalystReverbEffect`     | `Reverb`        | `reverb.wet` above 0 and `reverb.size` >= 0.1 authored (default 5) |
 | `KatalystPhaserEffect`     | `Phaser`        | `phaser.wet` at or above the engage depth                        |
 | `KatalystCompressorEffect` | `Compressor`    | any of the five `compressor.*` slots set                         |
-| `KatalystDuckEffect`       | `Ducking`       | `duck.orbit` names a source and `duck.depth` above 0             |
+| `KatalystDuckEffect`       | `Ducking`       | `duck.cylinder` names a source and `duck.depth` above 0             |
 | `KatalystDistortEffect`    | `DistortionCore` (one per channel, the house DC pole) | `distort.amount` finite and above 0 (not in the classic chain; declared with `k.distort(...)`) |
 
 How each stage switches and glides, when an orbit may deactivate, the chain swap and the output host (`MasterBus`):
@@ -110,7 +110,7 @@ Peak-detecting compressor (`max(|L|, |R|)`). Applied per cylinder (the orbit's `
 
 Sidechain-triggered gain reduction across orbits.
 
-- Configured by the orbit owner's `duck.orbit` slot (the source orbit N)
+- Configured by the orbit owner's `duck.cylinder` slot (the source orbit N)
 - Reduces this orbit's gain whenever orbit N plays, by `duck.depth`, recovering over `duck.attack`
 - Recovery is automatic after the triggering voice ends
 

@@ -76,7 +76,7 @@ data class SprudelVoiceData(
 
     /**
      * The ORBIT's bus slots this event writes, named `<stage>.<knob>` (`"reverb.size"`,
-     * `"compressor.ratio"`, `"duck.orbit"`). Same shape and same rules as [ignitorParams], the other
+     * `"compressor.ratio"`, `"duck.cylinder"`). Same shape and same rules as [ignitorParams], the other
      * host: that bag is the voice's own instrument, this one the chain its orbit runs. Written by
      * `.katp(name, value)` and by the bus doors as aliases (`reverb(...)`, `delay(...)`,
      * `compressor(...)`, `duck(...)` have no voice fields of their own since Katalyst step 5b-3:

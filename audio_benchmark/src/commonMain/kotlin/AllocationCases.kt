@@ -279,7 +279,7 @@ object AllocationCases {
             attack = Kat.sine(0.61.kat).range(from = 0.0021.kat, to = 0.0093.kat),
             release = Kat.ramp(0.29.kat).range(from = 0.051.kat, to = 0.187.kat),
         ).duck(
-            orbit = TRIGGER_ORBIT.kat,
+            cylinder = TRIGGER_ORBIT.kat,
             depth = Kat.sine(0.45.kat).range(from = 0.25.kat, to = 0.75.kat),
             attack = Kat.tri(0.33.kat).range(from = 0.011.kat, to = 0.047.kat),
         )
@@ -360,7 +360,7 @@ object AllocationCases {
             .phaser(wet = 0.5.kat, rate = 0.55.kat, center = phaserCenter, sweep = Kat.param("kat.sweep", 600.0).times(1.3.kat))
             .compressor(threshold = threshold, ratio = 3.5.kat)
             .gain(gain)
-            .duck(orbit = TRIGGER_ORBIT.kat, depth = duckDepth)
+            .duck(cylinder = TRIGGER_ORBIT.kat, depth = duckDepth)
     }
 
     /** The cases, in scoreboard order. */
@@ -457,7 +457,7 @@ object AllocationCases {
             name = "E-duck",
             engine = true,
             sound = "saw",
-            chain = katalyst { it.duck(orbit = TRIGGER_ORBIT.kat, depth = 0.6.kat) },
+            chain = katalyst { it.duck(cylinder = TRIGGER_ORBIT.kat, depth = 0.6.kat) },
             duckTrigger = true,
         ),
         // Parallel distortion: a distorted branch in a 2x region beside an empty one, which gets the region's phase twin.

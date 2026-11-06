@@ -17,7 +17,7 @@ returns nothing, so nothing here is a regression risk — it is unfinished work,
 Sidechain ducking: one orbit's output pulls down another's, the kick-and-bass pump.
 
 ```klangscript
-note("c3 e3 g3").duck(orbit = 1, depth = 0.8)   // duck when orbit 1 plays
+note("c3 e3 g3").duck(cylinder = 1, depth = 0.8)   // duck when orbit 1 plays
 ```
 
 The chain is complete from DSL to DSP:

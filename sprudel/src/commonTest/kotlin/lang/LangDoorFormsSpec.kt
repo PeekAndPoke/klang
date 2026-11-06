@@ -158,7 +158,7 @@ class LangDoorFormsSpec : StringSpec({
         k("compressor.knee", "compressor(knee = %s)", katSlot("compressor.knee"), { p, c -> p.compressor(knee = c) }, { s, c -> s.compressor(knee = c) }, { c -> compressor(knee = c) }, { m, c -> m.compressor(knee = c) }),
         k("compressor.attack", "compressor(attack = %s)", katSlot("compressor.attack"), { p, c -> p.compressor(attack = c) }, { s, c -> s.compressor(attack = c) }, { c -> compressor(attack = c) }, { m, c -> m.compressor(attack = c) }),
         k("compressor.release", "compressor(release = %s)", katSlot("compressor.release"), { p, c -> p.compressor(release = c) }, { s, c -> s.compressor(release = c) }, { c -> compressor(release = c) }, { m, c -> m.compressor(release = c) }),
-        k("duck.orbit", "duck(%s)", katSlot("duck.orbit"), { p, c -> p.duck(c) }, { s, c -> s.duck(c) }, { c -> duck(c) }, { m, c -> m.duck(c) },
+        k("duck.cylinder", "duck(%s)", katSlot("duck.cylinder"), { p, c -> p.duck(c) }, { s, c -> s.duck(c) }, { c -> duck(c) }, { m, c -> m.duck(c) },
             ctrl = "1 2", expected = listOf(1.0, 2.0), head = true, continuous = listOf(0.0, 1.0, 0.0, 0.0)),
         k("duck.depth", "duck(depth = %s)", katSlot("duck.depth"), { p, c -> p.duck(depth = c) }, { s, c -> s.duck(depth = c) }, { c -> duck(depth = c) }, { m, c -> m.duck(depth = c) }),
         k("duck.attack", "duck(attack = %s)", katSlot("duck.attack"), { p, c -> p.duck(attack = c) }, { s, c -> s.duck(attack = c) }, { c -> duck(attack = c) }, { m, c -> m.duck(attack = c) }),
@@ -448,7 +448,7 @@ class LangDoorFormsSpec : StringSpec({
                 { it.uni(5, 0.3, 0.6) }, { it.uni(5, 0.3, 0.6) }, { uni(5, 0.3, 0.6) }, { it.uni(5, 0.3, 0.6) },
             ),
             Door(
-                "duck", """1, 0.8, 0.2""", { listOf("orbit", "depth", "attack").map { k -> it.katalystParams?.get("duck.$k") } }, listOf(1.0, 0.8, 0.2),
+                "duck", """1, 0.8, 0.2""", { listOf("cylinder", "depth", "attack").map { k -> it.katalystParams?.get("duck.$k") } }, listOf(1.0, 0.8, 0.2),
                 { it.duck(1, 0.8, 0.2) }, { it.duck(1, 0.8, 0.2) }, { duck(1, 0.8, 0.2) }, { it.duck(1, 0.8, 0.2) },
             ),
             Door(

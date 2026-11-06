@@ -371,7 +371,7 @@ class GraalSprudelPattern(
                 it.tremoloDepth = tremoloDepth
                 it.tremoloShape = tremoloShape
                 // Ducking / Sidechain: the orbit slots, the only storage since Katalyst step 5b-3
-                it.putKatalystParam("duck.orbit", duckOrbit?.toDouble())
+                it.putKatalystParam("duck.cylinder", duckOrbit?.toDouble())
                 it.putKatalystParam("duck.attack", duckAttack)
                 it.putKatalystParam("duck.depth", duckDepth)
                 // Filters (flat fields) - each filter has its own resonance

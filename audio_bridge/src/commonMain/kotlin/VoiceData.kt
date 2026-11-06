@@ -41,7 +41,7 @@ data class VoiceData(
 
     /**
      * The orbit bus slots this voice writes, keyed `<stage>.<knob>` exactly as [KatalystDsl.classic]
-     * names them (`"reverb.size"`, `"compressor.ratio"`, `"duck.orbit"`). The [ignitorParams] shape, the
+     * names them (`"reverb.size"`, `"compressor.ratio"`, `"duck.cylinder"`). The [ignitorParams] shape, the
      * other host: `ignitorParams` is the voice's own instrument, this is the orbit's chain.
      *
      * **Applied by the orbit's OWNER voice** (the orbit's bus settings are owned by the newest `Sounding` voice; a

@@ -456,10 +456,10 @@ internal fun KatalystBuilder.scriptDistort(
  * Declared in the chain, but run after every orbit has been processed, so where it sits in the
  * list makes no difference.
  *
- * @param orbit the orbit to listen to. Omitted means no ducking: the stage carries the wire's
+ * @param cylinder the cylinder to listen to. Omitted means no ducking: the stage carries the wire's
  *   non-finite "never set" marker, and the runtime tests `isFinite()` rather than comparing, so a
  *   finite negative is an orbit REQUEST like any other and not an off switch. Orbit twin:
- *   `duck(orbit = ...)`.
+ *   `duck(cylinder = ...)`.
  * @param depth how far this orbit is pulled down, 0 to 1 (default 0, no ducking). Orbit twin:
  *   `duck(depth = ...)`.
  * @param attack how fast the duck closes, in seconds (default 0.1). Orbit twin:
@@ -467,11 +467,11 @@ internal fun KatalystBuilder.scriptDistort(
  */
 @KlangScript.Function(name = "duck")
 internal fun KatalystBuilder.scriptDuck(
-    orbit: IgnitorDslLike? = null,
+    cylinder: IgnitorDslLike? = null,
     depth: IgnitorDslLike? = null,
     attack: IgnitorDslLike? = null,
 ): KatalystBuilder = this.duck(
-    orbit = orbit?.toKatalystKnob() ?: SLOT_UNSET.kat,
+    cylinder = cylinder?.toKatalystKnob() ?: SLOT_UNSET.kat,
     depth = depth?.toKatalystKnob() ?: DUCK_DEPTH.kat,
     attack = attack?.toKatalystKnob() ?: DUCK_ATTACK_SECONDS.kat,
 )

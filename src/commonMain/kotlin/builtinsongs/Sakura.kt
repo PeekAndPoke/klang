@@ -72,7 +72,7 @@ stack(
     [e4 c4 e4 f4 e4 [e4 d4] c4@2] [a4 b4 c5 b4 a4 [b4 a4] f4@2]
     [e4 c4 e4 f4 e4 [e4 d4] c4@2] [a4 a4 b4 ~ a4 a4 b4 ~]
     [e4 f4 [b4 a4] f4 e4@4]
-  `).orbit(0).sound(koto).legato(0.8).slow(14).gain(0.55).body(material = "mahogany").pan(0.66) // .struct()
+  `).cylinder(0).sound(koto).legato(0.8).slow(14).gain(0.55).body(material = "mahogany").pan(0.66) // .struct()
     .superimpose(fast(2).velocity(0.2).pan(0.2).superimpose(pan(0.8)))
 
   // Shakuhachi
@@ -84,17 +84,17 @@ stack(
     c5@2  ~  ~  ~  ~  a4 ~
     a5@2  ~  ~  e5@2  d5@2
     <[e4@4 e4@1 ~ ~ ~] [e4 f4 [b4 a4] f4 e4@4] [a4@4 a4@1 ~ ~ ~] [e5 f5 [b5 a5] f5 e5@4]>@8
-  `).orbit(1).sound(shaku).adsr(release = 0.3).slow(14).gain(0.30).pan(0.33) // classic() releases over this, not the shakuhachi's own 0.3 s tail; keep them equal
+  `).cylinder(1).sound(shaku).adsr(release = 0.3).slow(14).gain(0.30).pan(0.33) // classic() releases over this, not the shakuhachi's own 0.3 s tail; keep them equal
     .lpf(perlin.range(3800, 4000).slow(2)).body(material = "rosewood")
     .filterWhen(x => x >= wait * 2) // . solo()
 
   // Drums
-  ,note("a1 ~  ~  ~  ~  ~  ~  ~  a1 ~  ~  ~  ~  ~  ~  ~").orbit(2).sound(kick).gain(0.7).hpf(100)
-  ,note("~  ~  ~  ~  x  ~  ~  ~  ~  ~  x  ~  ~  ~  ~  ~").orbit(2).sound(rim).gain(0.45).pan(0.6)
-  ,note("~  ~  ~  ~  ~  ~  ~  ~  x  ~  ~  ~  ~  ~  ~  ~").orbit(2).sound(brush).gain(0.35).pan(0.4)
+  ,note("a1 ~  ~  ~  ~  ~  ~  ~  a1 ~  ~  ~  ~  ~  ~  ~").cylinder(2).sound(kick).gain(0.7).hpf(100)
+  ,note("~  ~  ~  ~  x  ~  ~  ~  ~  ~  x  ~  ~  ~  ~  ~").cylinder(2).sound(rim).gain(0.45).pan(0.6)
+  ,note("~  ~  ~  ~  ~  ~  ~  ~  x  ~  ~  ~  ~  ~  ~  ~").cylinder(2).sound(brush).gain(0.35).pan(0.4)
 
   // Sub-Bass
-  ,note("a1 d2 a1 f1 c2 e1 a1").orbit(3).sound(sub).slow(14).legato(1.5).gain(0.5).hpf(40)
+  ,note("a1 d2 a1 f1 c2 e1 a1").cylinder(3).sound(sub).slow(14).legato(1.5).gain(0.5).hpf(40)
     .filterWhen(x => x >= wait * 1)
 
   ,stack(
@@ -110,12 +110,12 @@ stack(
     ,note("c4  f3  c4  a3  e3  gs3 c4").sound(pad).slow(14).legato(1.05).gain(0.200).pan(0.45).hpf(800)
     // High fifth
     ,note("e4  a3  e4  c4  g3  b3  e4").sound(pad).slow(14).legato(1.05).gain(0.200).pan(0.7).hpf(1000)
-  ).orbit(4).adsr(release = 1.5).coarse(factor = 2).filterWhen(x => x >= wait * 3).body(material = "tube", wet = 0.3) // adsr(release = 1.5): classic() releases over this, not the pad's own 1.5 s tail; keep them equal
+  ).cylinder(4).adsr(release = 1.5).coarse(factor = 2).filterWhen(x => x >= wait * 3).body(material = "tube", wet = 0.3) // adsr(release = 1.5): classic() releases over this, not the pad's own 1.5 s tail; keep them equal
 
   // Noise
-  , sound("dust!2").orbit(5).gain(0.0400).vel(sine.range(0.500, 1.0).slow(21)).hpf(5000).lpf(8000).clip(1.5).adsr(0.1, 1, 1, 0.1)
-  , sound("pink!3").orbit(5).gain(0.0070).vel(sine.range(0.625, 1.0).slow(13)).hpf(4000).lpf(14000).clip(1.5).adsr(0.1, 1, 1, 0.1)
-  , sound("brown!4").orbit(5).gain(0.0150).vel(sine.range(0.500, 1.0).slow(8)).hpf(3000).lpf(10000).clip(1.5).adsr(0.1, 1, 1, 0.1)
+  , sound("dust!2").cylinder(5).gain(0.0400).vel(sine.range(0.500, 1.0).slow(21)).hpf(5000).lpf(8000).clip(1.5).adsr(0.1, 1, 1, 0.1)
+  , sound("pink!3").cylinder(5).gain(0.0070).vel(sine.range(0.625, 1.0).slow(13)).hpf(4000).lpf(14000).clip(1.5).adsr(0.1, 1, 1, 0.1)
+  , sound("brown!4").cylinder(5).gain(0.0150).vel(sine.range(0.500, 1.0).slow(8)).hpf(3000).lpf(10000).clip(1.5).adsr(0.1, 1, 1, 0.1)
 
   // Master
   , master(Katalyst(k => k

@@ -92,7 +92,7 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
         /** The group fader: `gain.gain`. */
         val gain: KatalystGainSlots = KatalystGainSlots()
 
-        /** The duck stage: `duck.orbit`, `duck.depth`, `duck.attack`. */
+        /** The duck stage: `duck.cylinder`, `duck.depth`, `duck.attack`. */
         val duck: KatalystDuckSlots = KatalystDuckSlots()
     }
 
@@ -140,7 +140,7 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
          *  - zero, because the engine's untouched value is zero: `delay.wet`, `delay.time`,
          *    `delay.feedback`, `reverb.wet`, `reverb.size`, `phaser.wet`, `duck.depth`;
          *  - [SLOT_UNSET], the wire's non-finite "never set", where the off state is an absence
-         *    rather than a number: all FIVE compressor slots, `duck.orbit`, `reverb.lowpass`,
+         *    rather than a number: all FIVE compressor slots, `duck.cylinder`, `reverb.lowpass`,
          *    `body.material`, `vowel.vowel`, `body.wet` and `vowel.wet`;
          *  - the shared constant, for a knob that is inert while its gate is off and must be right
          *    the moment the gate opens: `delay.cap`, `body.floor`, `vowel.floor`, `phaser.rate`,
@@ -237,7 +237,7 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
                     gain = Slots.gain.gain,
                 ),
                 KatalystStageDsl.Duck(
-                    orbit = Slots.duck.orbit,
+                    cylinder = Slots.duck.cylinder,
                     depth = Slots.duck.depth,
                     attack = Slots.duck.attack,
                 ),
@@ -276,7 +276,7 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
  *
  * Four stages are deliberately NOT audible bare, matching their sprudel doors. Three of them wait
  * for a NAME: [Body] and [Vowel] until `material` respectively `vowel` names an index, and [Duck]
- * until `orbit` names a source; all three carry [SLOT_UNSET] on that one knob. The duck waits for
+ * until `cylinder` names a source; all three carry [SLOT_UNSET] on that one knob. The duck waits for
  * a DEPTH as well, because its touched [DUCK_DEPTH] is 0, so naming the source alone is still
  * silent. [Phaser] is the fourth without a name knob at all: its `wet` carries its own touched
  * [PHASER_WET], which is 0.0 and therefore below the engine's `Phaser.MIN_ACTIVE_DEPTH` of 0.01.
@@ -481,17 +481,17 @@ sealed interface KatalystStageDsl {
      * exactly one ducking effect; the earlier ones are silently ignored rather than summed
      * (decided with the maintainer, 2026-09-17, recorded in KLANG-00236 (katalyst dsl)).
      *
-     * @param orbit the orbit to listen to, as a number the runtime coerces to an Int. The default
+     * @param cylinder the cylinder to listen to, as a number the runtime coerces to an Int. The default
      *   is [SLOT_UNSET]: no source named, no ducking. A consumer tests `isFinite()` and never
      *   compares, so a finite negative is an orbit REQUEST like any other, not an off switch.
-     *   Orbit twin: `duck(orbit = ...)`.
+     *   Orbit twin: `duck(cylinder = ...)`.
      * @param depth how far this orbit is pulled down, 0 to 1. 0 = no ducking. Orbit twin:
      *   `duck(depth = ...)`.
      * @param attack how fast the duck closes, in seconds. Orbit twin: `duck(attack = ...)`.
      */
     @WireName("duck")
     data class Duck(
-        val orbit: KatalystKnobDsl = KatalystKnobDsl.Constant(SLOT_UNSET),
+        val cylinder: KatalystKnobDsl = KatalystKnobDsl.Constant(SLOT_UNSET),
         val depth: KatalystKnobDsl = KatalystKnobDsl.Constant(DUCK_DEPTH),
         val attack: KatalystKnobDsl = KatalystKnobDsl.Constant(DUCK_ATTACK_SECONDS),
     ) : KatalystStageDsl

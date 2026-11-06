@@ -358,7 +358,7 @@ an artifact so it can be opened on any device, and its source is kept in a folde
    track lands on the track's own reverb, never on a shared hall. The lab therefore has `classicNote()`: the per-note
    doors without the classic bus chain. Which of the two the default Motor's tracks use decides what `.reverb()`
    means.
-3. **The duck is the only door whose value is wiring:** `duck(orbit = n)` picks its sidechain source per note. The lab
+3. **The duck is the only door whose value is wiring:** `duck(cylinder = n)` picks its sidechain source per note. The lab
    shows it as a warning in the default Motor (legacy) and refuses it where the Motor wires the duck.
 
 ### 6.8 Continuous automation: tweens (maintainer, 2026-10-08)

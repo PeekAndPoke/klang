@@ -29,7 +29,7 @@ import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
  *
  * **How it switches and changes** (decided with the maintainer 2026-09-19,
  * KLANG-00236 (katalyst dsl) step 5c; built in Katalyst 5c-9). What the swap's ramps never
- * covered is the stage's OWN edges, a `.katp("duck.orbit", ...)` or a `duck.depth` that reaches 0,
+ * covered is the stage's OWN edges, a `.katp("duck.cylinder", ...)` or a `duck.depth` that reaches 0,
  * or an owner handover on one chain. Those were a hard cut, and this is where they glide:
  *
  * - **OFF rides the WEIGHT down to 0** over [KNOB_GLIDE_SECONDS], `gain = 1 + w * (g - 1)`, so the
@@ -104,7 +104,7 @@ import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
  *
  * **What a handover carries** (since 5c-9): the [Ducking] instance, the weight and the depth, so
  * nothing on that path steps. What it still does NOT carry is the SIDECHAIN ORBIT's own smoothing:
- * switching `duck.orbit` onto a louder, already sounding source steps the reduction (measured
+ * switching `duck.cylinder` onto a louder, already sounding source steps the reduction (measured
  * -40.8 to -19.0 dB above 8 kHz against a floor of -52.8), which is a decision about what a
  * sidechain switch means and is recorded as open under "What glides while it runs".
  */

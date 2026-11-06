@@ -90,9 +90,9 @@ class KatalystGainSlots internal constructor() {
     val gain: KatalystKnobDsl.Param = knob(stage = "gain", knob = "gain", default = 1.0)
 }
 
-/** The duck stage's knobs (`Slots.duck`): `duck.orbit` (unset, no source), `duck.depth` (0.0), `duck.attack`. */
+/** The duck stage's knobs (`Slots.duck`): `duck.cylinder` (unset, no source), `duck.depth` (0.0), `duck.attack`. */
 class KatalystDuckSlots internal constructor() {
-    val orbit: KatalystKnobDsl.Param = knob(stage = "duck", knob = "orbit", default = SLOT_UNSET)
+    val cylinder: KatalystKnobDsl.Param = knob(stage = "duck", knob = "cylinder", default = SLOT_UNSET)
     val depth: KatalystKnobDsl.Param = knob(stage = "duck", knob = "depth", default = 0.0)
     val attack: KatalystKnobDsl.Param = knob(stage = "duck", knob = "attack", default = DUCK_ATTACK_SECONDS)
 }

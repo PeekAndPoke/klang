@@ -921,7 +921,7 @@ class KatalystModulatedStagesSpec : StringSpec({
         )
         val chain = build(
             KatalystDsl.of(
-                KatalystStageDsl.Duck(orbit = orbit, depth = lfo, attack = lfoRange(from = 0.01, to = 0.05)),
+                KatalystStageDsl.Duck(cylinder = orbit, depth = lfo, attack = lfoRange(from = 0.01, to = 0.05)),
             ),
         )
         val duck = chain.duck.shouldNotBeNull()
@@ -950,7 +950,7 @@ class KatalystModulatedStagesSpec : StringSpec({
         // Round 1 of step 5b: `isModulating` ignored the value, so `Kat.sine(1).plus(NaN)` declared the duck with a
         // NaN depth, `Ducking` kept it (its coerceIn keeps a NaN) and the orbit mix went NaN.
         for (depth in listOf(c(Double.NaN), nanLfo)) {
-            val chain = build(KatalystDsl.of(KatalystStageDsl.Duck(orbit = c(1.0), depth = depth)))
+            val chain = build(KatalystDsl.of(KatalystStageDsl.Duck(cylinder = c(1.0), depth = depth)))
             val sidechain = StereoBuffer(blockFrames).also { it.fill(0.5) }
 
             run(chain, blocks = 8) { k, ctx ->

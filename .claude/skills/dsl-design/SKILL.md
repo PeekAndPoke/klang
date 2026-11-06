@@ -357,7 +357,7 @@ the bug.
   explicit value is never overwritten by a fill. What "names the stage" means differs by stage
   kind, and the two kinds must not be confused (round 1 of step 5a-3 caught this text saying
   "wet is the gate of the sends", which its own blueprint contradicts):
-  - stages with a NAME knob (`body` by its material, `vowel` by its vowel, `duck` by its orbit)
+  - stages with a NAME knob (`body` by its material, `vowel` by its vowel, `duck` by its cylinder)
     are named only by that knob; a tail-only call (`body(wet = 0.3)`, `duck(depth = 0.5)`)
     writes its own slot and never invents the name knob, because inventing it would switch the
     stage on;
