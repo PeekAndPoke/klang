@@ -407,7 +407,7 @@ class ChainSwapCutSpec : StringSpec({
             render(blocks = fadeBlocks + 10, level = 0.0)
         }
 
-        withClue("positive control: the loop drains and the orbit holds an endless tail") {
+        withClue("positive control: the loop drains and the cylinder holds an endless tail") {
             rig.swap.isDraining shouldBe true
             rig.cylinder.sustainsItself() shouldBe true
         }

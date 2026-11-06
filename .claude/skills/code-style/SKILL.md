@@ -191,7 +191,7 @@ In a spec, `a shouldNotBe b`, never `(a == b) shouldBe false`, so a failure name
 
 At a call site, name the arguments whenever two or more could be swapped and still compile (two `Int` ids, several
 `Double` frames or seconds, two `Boolean` flags), or whenever reordering the parameters would silently shift them:
-`cylinders.checkIn(orbit = voice.cylinderId, voiceId = voice.id, blockStart = ctx.blockStart)`. Positional is fine
+`cylinders.checkIn(cylinder = voice.cylinderId, voiceId = voice.id, blockStart = ctx.blockStart)`. Positional is fine
 for a single argument or for types that cannot be confused.
 
 Exempt: standard-library calls whose order is standard or does not matter (`maxOf`, `minOf`, `coerceIn`, `fill`,

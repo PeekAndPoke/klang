@@ -57,8 +57,8 @@ data class ParsedKDoc(
      * Tags this parser could not use: an unknown name, or a known one written with no value.
      *
      * An unknown tag is NOT folded into the preceding tag's content, which is what used to happen,
-     * silently: `@tags room, wet` followed by a misspelled `@scpoe orbit` produced the tag
-     * "wet @scpoe orbit". The processor warns about everything collected here, so a typo shows up at
+     * silently: `@tags room, wet` followed by a misspelled `@scpoe cylinder` produced the tag
+     * "wet @scpoe cylinder". The processor warns about everything collected here, so a typo shows up at
      * build time instead of in the docs.
      */
     val unusableTags: List<String>,

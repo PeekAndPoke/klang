@@ -284,7 +284,7 @@ class DelayLine(
      * forever). Otherwise `|feedback| >= 1.0` returns [Double.POSITIVE_INFINITY]: the line
      * self-oscillates by design (raw engine) and never drains on its own.
      *
-     * [feedback] is the line's own unless the caller knows better: an orbit delay whose feedback
+     * [feedback] is the line's own unless the caller knows better: a cylinder delay whose feedback
      * still glides passes the larger magnitude of where it stands and where it goes
      * (`KatalystDelayEffect`).
      */
@@ -663,7 +663,7 @@ class DelayLine(
             // default 1.0 it is the exact pre-change `softCap(newSample)`.
             // NaN-guard on the ring store. `softCap` already sterilises +/-Inf (it saturates to
             // +/-1), but `softCap(NaN)` is NaN — both its branch tests are false — and this ring
-            // RECIRCULATES, so a single NaN never scrolls out: the orbit's delay is dead for the
+            // RECIRCULATES, so a single NaN never scrolls out: the cylinder's delay is dead for the
             // rest of its life. This is the delay's half of the master round's "no state may
             // latch" pass; `flushState` could not reach it because the ring is FIR-shaped state,
             // not an IIR carry.

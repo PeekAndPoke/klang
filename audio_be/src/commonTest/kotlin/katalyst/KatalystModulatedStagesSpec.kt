@@ -600,7 +600,7 @@ class KatalystModulatedStagesSpec : StringSpec({
     // ── Delay and reverb gates through the builder (review round 2 of step 5b) ──────────────────────────────────
 
     /**
-     * [blocks] blocks of a DC mix of 0.5 through [chain], configured the way an owned orbit is (`applyParams` with
+     * [blocks] blocks of a DC mix of 0.5 through [chain], configured the way an owned cylinder is (`applyParams` with
      * [params] of the block, then `process`). Returns the left output's one-sample steps, one per sample (the first
      * against the dry 0.5), and the state [state] reads after each block.
      */
@@ -912,16 +912,16 @@ class KatalystModulatedStagesSpec : StringSpec({
 
     // ── Duck ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
-    "duck: depth in one block and declared through 0 (Q7), attack at once, the orbit switching with no mechanism" {
-        // The orbit flips between 1 and 2 with a square at the eighth clock (phase 0.3): high, high, low x4, high x2.
-        val orbit = KatalystKnobDsl.Range(
+    "duck: depth in one block and declared through 0 (Q7), attack at once, the cylinder switching with no mechanism" {
+        // The cylinder flips between 1 and 2 with a square at the eighth clock (phase 0.3): high, high, low x4, high x2.
+        val cylinder = KatalystKnobDsl.Range(
             inner = KatalystKnobDsl.Square(freq = c(EIGHTH_HZ), phase = c(0.3)),
             from = c(1.0),
             to = c(2.0),
         )
         val chain = build(
             KatalystDsl.of(
-                KatalystStageDsl.Duck(cylinder = orbit, depth = lfo, attack = lfoRange(from = 0.01, to = 0.05)),
+                KatalystStageDsl.Duck(cylinder = cylinder, depth = lfo, attack = lfoRange(from = 0.01, to = 0.05)),
             ),
         )
         val duck = chain.duck.shouldNotBeNull()
@@ -942,13 +942,13 @@ class KatalystModulatedStagesSpec : StringSpec({
 
                 attack shouldBe (ranged(k, from = 0.01, to = 0.05) plusOrMinus 1e-12)
             }
-            withClue("block $k: the source orbit") { duck.duckCylinderId shouldBe (if (high) 2 else 1) }
+            withClue("block $k: the source cylinder") { duck.duckCylinderId shouldBe (if (high) 2 else 1) }
         }
     }
 
     "a NaN modulated duck depth leaves the stage undeclared and the mix finite, as a NaN constant depth does" {
         // Round 1 of step 5b: `isModulating` ignored the value, so `Kat.sine(1).plus(NaN)` declared the duck with a
-        // NaN depth, `Ducking` kept it (its coerceIn keeps a NaN) and the orbit mix went NaN.
+        // NaN depth, `Ducking` kept it (its coerceIn keeps a NaN) and the cylinder mix went NaN.
         for (depth in listOf(c(Double.NaN), nanLfo)) {
             val chain = build(KatalystDsl.of(KatalystStageDsl.Duck(cylinder = c(1.0), depth = depth)))
             val sidechain = StereoBuffer(blockFrames).also { it.fill(0.5) }
@@ -976,7 +976,7 @@ class KatalystModulatedStagesSpec : StringSpec({
 
         fun pass(fx: KatalystDuckEffect) {
             ctx.mixBuffer.fill(0.25)
-            fx.orbitBlockRan()
+            fx.cylinderBlockRan()
             fx.process(ctx)
         }
 

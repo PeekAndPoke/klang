@@ -14,7 +14,7 @@ import io.peekandpoke.klang.audio_bridge.constants.PHASER_CENTER_HZ
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_SWEEP_HZ
 
 /**
- * Phaser insert effect for the bus pipeline: it processes the orbit mix in place with a
+ * Phaser insert effect for the bus pipeline: it processes the cylinder mix in place with a
  * multi-stage all-pass cascade.
  *
  * **How it switches and changes** (decided with the maintainer 2026-09-19,
@@ -34,14 +34,14 @@ import io.peekandpoke.klang.audio_bridge.constants.PHASER_SWEEP_HZ
  * - **A return** mid-glide is [KnobGlide]'s own rule: the new target is taken from where the
  *   coefficient stands, over a full glide.
  * - **The first initialisation is instant** ([fresh]): until a block has been processed since
- *   construction or [reset], every knob snaps, breakpoint included, so an orbit whose first
- *   rendered block already carries a phaser is exactly what it was before this step. An orbit
+ *   construction or [reset], every knob snaps, breakpoint included, so a cylinder whose first
+ *   rendered block already carries a phaser is exactly what it was before this step. A cylinder
  *   whose first owner has none spends that window on the gated arm (the classic chain declares a
  *   phaser at `PHASER_WET = 0`), so its LATER first phaser fades in, which is the decided
  *   behaviour.
  * - **[reset] and [retire] are a HARD cut**, the full clean slate of [Phaser.resetForReuse]
  *   (cascade, latch, LFO phase and the kernel params) with every glide forgotten. Only for a
- *   silent orbit (the cylinder's deactivation) or the shelf.
+ *   silent cylinder (the cylinder's deactivation) or the shelf.
  *
  * **What glides, measured first** (`audio/ref/knob-glide.md`; metric: peak 0.7 ms RMS above
  * 8 kHz and peak 20 ms RMS below 60 Hz, both against the signal, sources band-limited to 3 kHz;
@@ -77,7 +77,7 @@ import io.peekandpoke.klang.audio_bridge.constants.PHASER_SWEEP_HZ
  *     not restart the sweep. Row: "the sweep clock keeps running while the stage is off".
  *  2. *What record of a finished life is forgotten, and where*: at the OFF edge, NOTHING but the
  *     cascade, deliberately: the kernel params and the LFO phase are what the next owner within
- *     the same orbit life inherits. The whole record goes at [reset] / [retire], where the orbit's
+ *     the same cylinder life inherits. The whole record goes at [reset] / [retire], where the cylinder's
  *     life ends. Row: "a reset mid-glide: the next life snaps, it does not glide from the old
  *     life's coefficients".
  *  3. *Its Off precondition*: the output is the dry mix, `dryC = 1` and `wetC = 0` for a whole
@@ -193,8 +193,8 @@ class KatalystPhaserEffect(
     }
 
     /**
-     * Applies the orbit owner's five phaser knobs. Called by the chain's writer on every block the
-     * orbit has an owner, so an unchanged owner must cost nothing: it returns at the compare with the
+     * Applies the cylinder owner's five phaser knobs. Called by the chain's writer on every block the
+     * cylinder has an owner, so an unchanged owner must cost nothing: it returns at the compare with the
      * knobs last applied ([applied]), and every write below would have been a store of the same number
      * or a [KnobGlide.retarget] to the target that already stands.
      *
@@ -203,7 +203,7 @@ class KatalystPhaserEffect(
      * must not zero the sweep CLOCK (block-framing ledger D2): `VoiceFactory` defaults `rate` to
      * 0.0, and a rate of 0 freezes the LFO as surely as a skipped `prepareBlock`; the retained rate
      * and breakpoint are what keep the sweep on its own timeline across owner handoffs within one
-     * orbit life, mirroring the delay's retained drain config. A source that EXPLICITLY sets rate 0
+     * cylinder life, mirroring the delay's retained drain config. A source that EXPLICITLY sets rate 0
      * with an engaged depth still gets its static notch.
      *
      * Gate on the STORED depth, not the raw input: [Phaser.depth]'s setter silently rejects
@@ -313,7 +313,7 @@ class KatalystPhaserEffect(
 }
 
 /**
- * What a phaser stage is configured with on every block the orbit has an owner ([KatalystPhaserEffect.configure]): the
+ * What a phaser stage is configured with on every block the cylinder has an owner ([KatalystPhaserEffect.configure]): the
  * [depth] (the `wet` knob), the [rate], the [center], the [sweep] and the [floor].
  *
  * **Mutable and reused, on purpose** (V8 allocation pass, 2026-10-08), for the reason `DelayConfig` gives. Each holder

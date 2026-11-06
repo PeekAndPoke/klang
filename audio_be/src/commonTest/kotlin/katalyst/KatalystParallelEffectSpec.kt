@@ -324,9 +324,9 @@ class KatalystParallelEffectSpec : StringSpec({
         stage.hasTail() shouldBe false
     }
 
-    // ── The branches read the orbit's slots ─────────────────────────────────────────────────────
+    // ── The branches read the cylinder's slots ─────────────────────────────────────────────────────
 
-    "a slot in a branch reads the orbit's param state, and a new state reaches it" {
+    "a slot in a branch reads the cylinder's param state, and a new state reaches it" {
         val gain = KatalystStageDsl.Gain(KatalystKnobDsl.Param("branch.gain", 1.0))
         val built = chain(parallel(empty, branch(gain)), params = mapOf("branch.gain" to 0.0))
 
@@ -365,7 +365,7 @@ class KatalystParallelEffectSpec : StringSpec({
         loop.sustainsItself() shouldBe true
     }
 
-    // ── A duck in a branch is the orbit's duck ──────────────────────────────────────────────────
+    // ── A duck in a branch is the cylinder's duck ──────────────────────────────────────────────────
 
     "a duck inside a branch, nested or not, is the chain's duck, and no branch keeps one" {
         val duck = KatalystStageDsl.Duck(cylinder = c(1.0), depth = c(0.5))

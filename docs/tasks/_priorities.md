@@ -43,14 +43,14 @@ The release-defining set, regardless of when they're sequenced:
    **master-in-pattern**: `master(Master(m => m.gain(2.5).limiter()))` (spelled `Master.of(MasterFx...)` until 2026-09-06)
    rides the voice stream (Ignitor/Pipeline registration playbook), crossfades on swap, works offline, and
    `Master.default()` switches it back off. Plus the reverb/delay **parameter-parity**
-   fix (`d78ff3da`) — the same word now means the same thing on the orbit and master buses. Archived: KLANG-00136 (master dsl); loose ends in KLANG-00137 (master dsl followups). (2026-09-28: the Master DSL retired in phase 3 step 12; the
+   fix (`d78ff3da`), the same word now means the same thing on the cylinder and master buses. Archived: KLANG-00136 (master dsl); loose ends in KLANG-00137 (master dsl followups). (2026-09-28: the Master DSL retired in phase 3 step 12; the
    master is a Katalyst at the output, `master(Katalyst(k => k.gain(2.5).limiter()))`, `master(Katalyst())` for off.)
 2. ~~**MUST** · **Pipeline DSL finish**~~: CLOSED 2026-09-27: the Pipeline DSL retired in phase 3 step 9
    (every voice is an Ignitor tree); archived as KLANG-00223 (engine tuning profile). Was:
    *(successor to the archived KLANG-00122 (engine dsl))* Phase 2 wrapper feel-knobs — **Adsr `declickSeconds`/`expK`
    done (2026-07-04, as Ignitor slots)**; filter drift/cutoffOffset/driveScale + analog-drift carriers open.
    Phase 3 engine-identity profiles (`EngineDefault`/`EngineTuning`/`.tune()`, e.g. c64/nes) lean **NICE**.
-3. ~~**MUST** · **Katalyst DSL**~~: ✅ DONE 2026-09-20, archived as KLANG-00236 (katalyst dsl). Author per-orbit effect chains from KlangScript, the counterpart to the Ignitor DSL.
+3. ~~**MUST** · **Katalyst DSL**~~: ✅ DONE 2026-09-20, archived as KLANG-00236 (katalyst dsl). Author per-cylinder effect chains from KlangScript, the counterpart to the Ignitor DSL.
 4. ~~**SHOULD** · **Resonator swing**~~ — ❌ **WON'T IMPLEMENT** (closed 2026-08-20). Archived with the full
    decision record: KLANG-00147 (resonator swing).
    The design discussion revealed a three-axis model family (source/target/weighting), too diverse to tune by
@@ -68,7 +68,7 @@ The release-defining set, regardless of when they're sequenced:
    fix+guard, per subsystem, by hand (automation rejected with evidence: the DSP hot path is fully inlined). **Pilot
    `voices/` first, then re-decide.**
    Ledger in `docs/audio-audit/`. Multi-session; designed to survive interruption.
-7. ✅ **DONE 2026-08-12** · **Unison phase pool** — banded start-phase selection + per-orbit pools kill the
+7. ✅ **DONE 2026-08-12** · **Unison phase pool**: banded start-phase selection + per-cylinder pools kill the
    super-oscillator "fundamental lottery" (onset holes 16 % → 0, never-rings 6/120 → 0, texture untouched).
    OFF by default; per-song opt-in via one combined `.phasePool(...)` call (per-family band defaults kept by
    user by-ear decision). 7 commits (`6c95de65`…`9a0cdb37`), 10+ review rounds, ~65 findings fixed, every new
@@ -87,7 +87,7 @@ The release-defining set, regardless of when they're sequenced:
    Phase 1 (`{key=value}` engine feature) shipped, so this tutorial is a clean, high-value fit. Phase 3
    (MIDI → mini-notation recording) stays future/NICE.
 10. **NICE** · **Tutorial expansion backlog** — KLANG-00086 (tutorial master plan) 🟡
-   The recast "expand" backlog (euclid, struct/mask, swing, sometimes-family, orbits, pattern-math,
+   The recast "expand" backlog (euclid, struct/mask, swing, sometimes-family, cylinders, pattern-math,
    off/echo/stut, FM/super-osc masterclasses, "Make a…" showcases). Rises to **SHOULD** after the
    fix-first pass lands.
 
@@ -126,7 +126,7 @@ The release-defining set, regardless of when they're sequenced:
 21. **NICE** · **Voice culling** — KLANG-00199 (voice culling) ✅ DONE 2026-09-15 (release-phase only, `cull(seconds)` / `noCull()`; no `cullAfter`)
     Sound-preserving, all-platform CPU win: terminate voices whose *real output* has decayed below −80 dB
     (ignitor-agnostic — no ADSR inference; gated by a per-voice `cullAfter` life-fraction). Reclaims wasted
-    silent-tail rendering on dense `sustain=0` sections (Der Schmetterling). Complements the orbit-body move;
+    silent-tail rendering on dense `sustain=0` sections (Der Schmetterling). Complements the cylinder-body move;
     measure the win via `runSongBenchmark`.
 22. **Phase 3 follow-ups** (opened 2026-09-28 when the phase 3 record was archived as
     KLANG-00237 (builtin instruments)):
@@ -205,4 +205,4 @@ The release-defining set, regardless of when they're sequenced:
 3–5).*
 *Archived in the 2026-07-04 cleanup: `engine-dsl` (design record), `klang-blocks-take-1`,
 `wireformat-enhancements`, `sprudel-dsl-named-args`, `strudel-dsl-documentation`,
-`documentation-implementation-status`, `body-vowel-to-orbit-katalyst`. Split: `klangscript-named-arguments`.*
+`documentation-implementation-status`, `body-vowel-to-cylinder-katalyst`. Split: `klangscript-named-arguments`.*

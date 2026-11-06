@@ -25,7 +25,7 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
  *
  * **Retired in step 5b-1 (2026-09-19), and why.** Until this round these rows compared the same
  * song WITH and WITHOUT `.katalyst(Katalyst(k => k.classic()))`, which was the acceptance of steps
- * 5a-2 and 5a-3: a declared chain used to resolve slots where an undeclared orbit read voice
+ * 5a-2 and 5a-3: a declared chain used to resolve slots where an undeclared cylinder read voice
  * fields, so the pair was a real old-path-against-new-path comparison. 5b-1 made the born-with
  * chain slot-driven and made a content-classic declaration resolve to the born-with chain itself
  * (`Cylinder.chainFor`), so both renders now run the IDENTICAL chain object and the rows were true
@@ -55,23 +55,23 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
  * compared a declared chain against an undeclared one.
  *
  * Why an end-to-end render and not a stage-level comparison: only a render exercises the cylinder,
- * the orbit's owner and the order in which a chain is installed. The stage-level half lives in
+ * the cylinder's owner and the order in which a chain is installed. The stage-level half lives in
  * `KatalystClassicMatchesUntouchedVoiceSpec`, which cannot see the cylinder.
  */
 class KatalystDoorFillRenderSpec : StringSpec({
 
     val voices = """note("c3 e3 g3 b3").s("supersaw")"""
 
-    // The duck rows need a SOURCE orbit that actually sounds and a ducked orbit that declares a
+    // The duck rows need a SOURCE cylinder that actually sounds and a ducked cylinder that declares a
     // chain whose depth is a slot with an authored default. `duckSong` is everything up to the
     // pattern's own duck call, `duckChain` the declaration that follows it.
     // The source is a SYNTH, not a sample: this renderer has no sample bank, so an `s("bd*4")`
-    // source orbit would be silent and the duck would have nothing to trigger on.
+    // source cylinder would be silent and the duck would have nothing to trigger on.
     val duckSong =
-        """stack(note("c1*4").s("triangle").orbit(0), note("c3 e3 g3 b3").s("supersaw").orbit(1)"""
+        """stack(note("c1*4").s("triangle").cylinder(0), note("c3 e3 g3 b3").s("supersaw").cylinder(1)"""
     val duckChain =
         """.katalyst(Katalyst(k => k.duck(cylinder = 0, depth = Katalyst.param("duck.depth", 0.8), attack = 0.3))))"""
-    // The control's chain: a declaration that takes the orbit over but has no duck stage at all.
+    // The control's chain: a declaration that takes the cylinder over but has no duck stage at all.
     // Both strings close the `stack(` that `duckSong` opens.
     val duckChainOff = """.katalyst(Katalyst(k => k.gain(1.0))))"""
 
@@ -85,10 +85,10 @@ class KatalystDoorFillRenderSpec : StringSpec({
         // `body(material = "wood")` writes the index and leaves the amount and the floor to the door's fill and
         // to the engine's non-finite rule (`KatalystResonatorEffect.configure`); the right side spells both out at the
         // constants. Equal samples say the substitution lands on those numbers. With a SET 0.0
-        // default the left side rendered a fully dry orbit and this pair failed by thousands of
+        // default the left side rendered a fully dry cylinder and this pair failed by thousands of
         // counts, which is the bug round 1 of step 5a-2 found.
-        val short = render("$voices.body(material = \"wood\").orbit(1)")
-        val long = render("$voices.body(material = \"wood\", wet = $BODY_WET, floor = $BODY_FLOOR).orbit(1)")
+        val short = render("$voices.body(material = \"wood\").cylinder(1)")
+        val long = render("$voices.body(material = \"wood\", wet = $BODY_WET, floor = $BODY_FLOOR).cylinder(1)")
 
         long.size shouldBe short.size
 
@@ -105,8 +105,8 @@ class KatalystDoorFillRenderSpec : StringSpec({
     "a VOWEL-ONLY vowel(vowel) plays at the shared VOWEL_WET and VOWEL_FLOOR, the body row's twin" {
         // Written out rather than folded in: body and vowel are two writers over two catalogues and
         // two pairs of constants, and a vowel wired to the body's numbers would pass a body row.
-        val short = render("$voices.vowel(vowel = \"a\").orbit(1)")
-        val long = render("$voices.vowel(vowel = \"a\", wet = $VOWEL_WET, floor = $VOWEL_FLOOR).orbit(1)")
+        val short = render("$voices.vowel(vowel = \"a\").cylinder(1)")
+        val long = render("$voices.vowel(vowel = \"a\", wet = $VOWEL_WET, floor = $VOWEL_FLOOR).cylinder(1)")
 
         long.size shouldBe short.size
 
@@ -119,8 +119,8 @@ class KatalystDoorFillRenderSpec : StringSpec({
     }
 
     "the vowel row has teeth: the same song WITHOUT the vowel renders differently" {
-        val withVowel = render("$voices.vowel(vowel = \"a\").orbit(1)")
-        val withoutVowel = render("$voices.orbit(1)")
+        val withVowel = render("$voices.vowel(vowel = \"a\").cylinder(1)")
+        val withoutVowel = render("$voices.cylinder(1)")
 
         withVowel.size shouldBe withoutVowel.size
 
@@ -136,12 +136,12 @@ class KatalystDoorFillRenderSpec : StringSpec({
         // 5a-3 the door fills the other four with exactly the constants
         // the engine substitutes for an unset slot (`KatalystCompressorWriter`). The oracle is the same call
         // with all five spelled out.
-        val short = render("$voices.gain(1.4).compressor(ratio = 8).orbit(1)")
+        val short = render("$voices.gain(1.4).compressor(ratio = 8).cylinder(1)")
         val long = render(
             "$voices.gain(1.4).compressor(" +
                     "threshold = $COMPRESSOR_THRESHOLD_DB, ratio = 8, knee = $COMPRESSOR_KNEE_DB, " +
                     "attack = $COMPRESSOR_ATTACK_SECONDS, release = $COMPRESSOR_RELEASE_SECONDS" +
-                    ").orbit(1)"
+                    ").cylinder(1)"
         )
 
         long.size shouldBe short.size
@@ -158,8 +158,8 @@ class KatalystDoorFillRenderSpec : StringSpec({
         // The negative control for the row above. Without it, a compressor that never engaged on
         // either side would let "declared == undeclared" pass on two identical uncompressed
         // renders, and the row would be about nothing.
-        val compressed = render("$voices.gain(1.4).compressor(ratio = 8).orbit(1)")
-        val plain = render("$voices.gain(1.4).orbit(1)")
+        val compressed = render("$voices.gain(1.4).compressor(ratio = 8).cylinder(1)")
+        val plain = render("$voices.gain(1.4).cylinder(1)")
 
         compressed.size shouldBe plain.size
 
@@ -171,9 +171,9 @@ class KatalystDoorFillRenderSpec : StringSpec({
     }
 
     "a tail-only duck(attack) does not silence a chain-authored duck depth" {
-        // Round 3 of step 5a-3, the MAJOR. The duck's name knob is its ORBIT, so only naming the
-        // orbit may fill. Until the fix every duck knob filled, so a pattern saying `duck(attack =
-        // 0.3)` wrote `duck.depth = 0.0` into the orbit's slot state and the chain's own
+        // Round 3 of step 5a-3, the MAJOR. The duck's name knob is its CYLINDER, so only naming the
+        // cylinder may fill. Until the fix every duck knob filled, so a pattern saying `duck(attack =
+        // 0.3)` wrote `duck.depth = 0.0` into the cylinder's slot state and the chain's own
         // `Katalyst.param("duck.depth", 0.8)` resolved to silence: the ducking simply stopped.
         //
         // The chain authors its attack as a CONSTANT 0.3, which no slot can move, and the pattern's
@@ -213,8 +213,8 @@ class KatalystDoorFillRenderSpec : StringSpec({
         // The negative control. If the body were being dropped on BOTH sides, the rows above would
         // pass on a silence that is equal to itself. This is what proves 0.3 of wood is audible
         // here at all, so those rows are about the body surviving and not about it being absent.
-        val withBody = render("$voices.body(material = \"wood\", wet = 0.3).orbit(1)")
-        val withoutBody = render("$voices.orbit(1)")
+        val withBody = render("$voices.body(material = \"wood\", wet = 0.3).cylinder(1)")
+        val withoutBody = render("$voices.cylinder(1)")
 
         withBody.size shouldBe withoutBody.size
 
@@ -225,16 +225,16 @@ class KatalystDoorFillRenderSpec : StringSpec({
         }
     }
 
-    "a declaration really does reach the orbit: a chain with NO body stage drops the body" {
+    "a declaration really does reach the cylinder: a chain with NO body stage drops the body" {
         // A different subject from every row above. Those are about the DOOR's fill, what a call
         // that leaves a knob out sounds like; this one is about a DECLARATION arriving at a
         // cylinder at all. It is worth keeping here because the duck rows above depend on it: if a
         // `.katalyst(...)` silently never installed, they would compare two identical renders and
-        // pass. So: declare a chain with a `gain` stage and nothing else. That orbit has no body
+        // pass. So: declare a chain with a `gain` stage and nothing else. That cylinder has no body
         // stage, the same `body(...)` call has nowhere to land, and the render MUST differ.
-        val undeclared = render("$voices.body(material = \"wood\", wet = 0.3).orbit(1)")
+        val undeclared = render("$voices.body(material = \"wood\", wet = 0.3).cylinder(1)")
         val noBodyStage = render(
-            "$voices.body(material = \"wood\", wet = 0.3).orbit(1).katalyst(Katalyst(k => k.gain(1.0)))"
+            "$voices.body(material = \"wood\", wet = 0.3).cylinder(1).katalyst(Katalyst(k => k.gain(1.0)))"
         )
 
         noBodyStage.size shouldBe undeclared.size

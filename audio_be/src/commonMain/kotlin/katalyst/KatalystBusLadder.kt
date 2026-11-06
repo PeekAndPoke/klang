@@ -10,9 +10,9 @@ import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.ignitor.REGION_MAX_STAGES
 
 /**
- * Brings an orbit's rate buses ([KatalystContext.buses]) above [level] down to it (KLANG-00214 (oversampling regions)
+ * Brings a cylinder's rate buses ([KatalystContext.buses]) above [level] down to it (KLANG-00214 (oversampling regions)
  * step 3b): the highest bus is stepped down one 2x step at a time, in place, and each bus on the way is added at its
- * own rate, so every rate takes one conversion per orbit, never one per voice. Stage k steps from k+1 to k with the
+ * own rate, so every rate takes one conversion per cylinder, never one per voice. Stage k steps from k+1 to k with the
  * [Oversampler]'s own stage k, the stage a voice's region would have decimated with, so a voice handed over comes out
  * as it would have on its own (to rounding: its gain and pan now apply before the step down).
  *

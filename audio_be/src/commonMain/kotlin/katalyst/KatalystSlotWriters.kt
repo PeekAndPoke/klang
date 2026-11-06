@@ -22,10 +22,10 @@ import io.peekandpoke.klang.common.infra.KlangMap
 // The KatalystSlotWriter of every DECLARED stage kind: one class per stage, holding that stage's
 // KatalystKnobs and whatever composite its effect wants written.
 //
-// The split the interface asks for, stage by stage. `resolve` runs when the orbit's param state
+// The split the interface asks for, stage by stage. `resolve` runs when the cylinder's param state
 // changes and is the only place a map is read and a composite filled (each writer refills its own
 // holder in place); `apply` runs every block and writes numbers that are already in hand. A chain
-// with no `.katp` and no bus door on its orbit therefore resolves exactly once, when it is built,
+// with no `.katp` and no bus door on its cylinder therefore resolves exactly once, when it is built,
 // and every block after that costs what step 3a cost.
 //
 // Each writer holds the per-stage contract of KLANG-00236 (katalyst dsl)
@@ -102,7 +102,7 @@ internal class KatalystResonatorWriter(
 
 /**
  * Delay: an off stage is expressed by handing the line a non-finite TIME, which is also what makes
- * a live tail drain instead of freeze (see [KatalystDelayEffect]). `wet` is the amount of the orbit
+ * a live tail drain instead of freeze (see [KatalystDelayEffect]). `wet` is the amount of the cylinder
  * mix the line is fed; whether the stage runs at all is [stageAskedFor].
  */
 internal class KatalystDelayWriter(
@@ -162,7 +162,7 @@ internal class KatalystDelayWriter(
 /**
  * Reverb: the slot carries the AUTHORED 0 to 10 size, so it passes through the one shared
  * conversion ([Reverb.normalizeSize]) here. The stage's gate is [stageAskedFor] and `wet` is the
- * amount of the orbit mix the room is fed, as on the delay above.
+ * amount of the cylinder mix the room is fed, as on the delay above.
  */
 internal class KatalystReverbWriter(
     private val fx: KatalystReverbEffect,
@@ -529,7 +529,7 @@ internal class KatalystDistortWriter(
 }
 
 /**
- * Duck: on iff the stage names a source orbit AND asks for depth. The instance is reused so the
+ * Duck: on iff the stage names a source cylinder AND asks for depth. The instance is reused so the
  * envelope follower survives, and the writer holds the settings the arriving chain applies after a
  * handover (see [KatalystDuckEffect.configure]).
  *
@@ -588,7 +588,7 @@ internal class KatalystDuckWriter(
         val amount = depth.value
         val attackSeconds = attack.value
 
-        // NaN-guard on values the author can write: a non-finite orbit is "no source named". A depth that is not
+        // NaN-guard on values the author can write: a non-finite cylinder is "no source named". A depth that is not
         // above 0 asks for no ducking, unless the depth is MODULATING (Q7: a modulated knob counts as asked for, so an
         // LFO through 0 does not switch the stage off and on; `Ducking.depth` takes a depth below 0 as 0). Either way a
         // declared depth is finite: a NaN fails `> 0`, and `isModulating` is false on a non-finite value.
@@ -610,7 +610,7 @@ internal class KatalystDuckWriter(
 
 /**
  * A stage that holds chains of its own, `parallel` (its branches) and an oversampling region (its body): no knob of its
- * own; it hands the orbit's param state to every nested chain, so their stages resolve and apply exactly as the
+ * own; it hands the cylinder's param state to every nested chain, so their stages resolve and apply exactly as the
  * chain's own do (each nested chain keeps its own identity gate, [KatalystChain.resolveParams]). Holds the state
  * between the two halves and drops it on a resolve from null, as every chain does ([KatalystChain.reset] forgets
  * through that path).

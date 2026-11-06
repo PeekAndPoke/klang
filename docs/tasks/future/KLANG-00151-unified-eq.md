@@ -9,7 +9,7 @@
 
 > **Note 2026-09-28:** the Master DSL is gone (phase 3 step 12). Where this plan says `MasterFx.eq` or a master eq,
 > read the Katalyst `eq` stage at the output position, `master(Katalyst(k => k.eq(...)))`, which runs the same snap-only
-> `EqCore` as the orbit's `eq`. The ramp-API precondition below still holds for any modulated eq.
+> `EqCore` as the cylinder's `eq`. The ramp-API precondition below still holds for any modulated eq.
 
 ## Context
 
@@ -506,7 +506,7 @@ house-consistent).
   mixing buys NOTHING over dealing (both are functions of creation index; inserting a note
   shifts all later seeds either way — maintainer's observation). Documented upgrade path on
   coreRandom's KDoc: FULL-identity-derived seeds if live-edit-stable drift is ever wanted.
-- **Scope** (all voice-path consumers; orbit-level effects verified RNG-free): 7 noise call
+- **Scope** (all voice-path consumers; cylinder-level effects verified RNG-free): 7 noise call
   sites in the runtime (cache.random), 6 drift construction sites (ctx.random incl.
   initAnalogDrift), 6 super-oscillator factories + karplusStrong/superKarplusStrong (rng
   params threaded from cache.random; pluck classes' hardcoded rng fields become params),

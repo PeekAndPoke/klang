@@ -18,23 +18,23 @@ import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 import io.peekandpoke.klang.common.infra.klangMapOf
 
 /**
- * The orbit compressor's SWITCHING on the cylinder: an untouched orbit has none, and a takeover by
- * a voice that names none clears it at once or glides it out on a sounding orbit.
+ * The cylinder compressor's SWITCHING on the cylinder: an untouched cylinder has none, and a takeover by
+ * a voice that names none clears it at once or glides it out on a sounding cylinder.
  *
  * What the slots resolve to is `KatalystSlotResolverSpec`'s, the host wiring of all five knobs is
- * `OrbitBusPipelineSpec`'s one owner row, who may write them (the owner) is
+ * `CylinderBusPipelineSpec`'s one owner row, who may write them (the owner) is
  * `CylinderKatalystParamsSpec`'s, and the reused instance with its envelope is
  * `KatalystCompressorEffectSpec`'s knob rows (a bare-compressor oracle run across the change).
  */
-class OrbitCompressorSpec : StringSpec({
+class CylinderCompressorSpec : StringSpec({
 
     val sampleRate = 44100
     val blockFrames = 128
 
-    fun createOrbit() = Cylinder(id = 0, blockFrames = blockFrames, sampleRate = sampleRate)
+    fun createCylinder() = Cylinder(id = 0, blockFrames = blockFrames, sampleRate = sampleRate)
 
     fun voiceWithCompressor() = VoiceTestHelpers.createSynthVoice(
-        // The bus compressor reads the orbit's SLOT state since Katalyst step 5b-1; every knob is
+        // The bus compressor reads the cylinder's SLOT state since Katalyst step 5b-1; every knob is
         // named here, which is what a `compressor(...)` call writes through the door's fill rule.
         katalystParams = klangMapOf(
             "compressor.threshold" to -20.0,
@@ -45,8 +45,8 @@ class OrbitCompressorSpec : StringSpec({
         )
     )
 
-    "an untouched orbit has no compressor, before any voice and after a voice that names none" {
-        val cylinder = createOrbit()
+    "an untouched cylinder has no compressor, before any voice and after a voice that names none" {
+        val cylinder = createCylinder()
 
         cylinder.compressor!!.compressor shouldBe null
 
@@ -55,8 +55,8 @@ class OrbitCompressorSpec : StringSpec({
         cylinder.compressor!!.compressor shouldBe null
     }
 
-    "when a non-compressor voice takes over the orbit before anything sounded, the compressor is cleared at once" {
-        val cylinder = createOrbit()
+    "when a non-compressor voice takes over the cylinder before anything sounded, the compressor is cleared at once" {
+        val cylinder = createCylinder()
         cylinder.offerAndCommit(voiceWithCompressor(), blockStart = 0.0)
         cylinder.compressor!!.compressor shouldNotBe null
 
@@ -65,8 +65,8 @@ class OrbitCompressorSpec : StringSpec({
         cylinder.compressor!!.compressor shouldBe null
     }
 
-    "when a non-compressor voice takes over a SOUNDING orbit, the compressor glides out and only then goes" {
-        val cylinder = createOrbit()
+    "when a non-compressor voice takes over a SOUNDING cylinder, the compressor glides out and only then goes" {
+        val cylinder = createCylinder()
         val compressing = voiceWithCompressor()
         val plain = VoiceTestHelpers.createSynthVoice()
         // 2205 samples at 44.1 kHz: the fade lands inside its 18th block.

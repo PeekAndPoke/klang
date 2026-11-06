@@ -75,9 +75,9 @@ data class SprudelVoiceData(
     var ignitorParams: ParamBag?,
 
     /**
-     * The ORBIT's bus slots this event writes, named `<stage>.<knob>` (`"reverb.size"`,
+     * The CYLINDER's bus slots this event writes, named `<stage>.<knob>` (`"reverb.size"`,
      * `"compressor.ratio"`, `"duck.cylinder"`). Same shape and same rules as [ignitorParams], the other
-     * host: that bag is the voice's own instrument, this one the chain its orbit runs. Written by
+     * host: that bag is the voice's own instrument, this one the chain its cylinder runs. Written by
      * `.katp(name, value)` and by the bus doors as aliases (`reverb(...)`, `delay(...)`,
      * `compressor(...)`, `duck(...)` have no voice fields of their own since Katalyst step 5b-3:
      * their slots here are the only place their values live, and their accessors read them back).
@@ -116,7 +116,7 @@ data class SprudelVoiceData(
     var notch: SvdFilter?,
 
     // Routing
-    /** The mix channel / bus / orbit / cylinder */
+    /** The mix channel / effect bus: the cylinder (`orbit` and `o` are its aliases) */
     var cylinder: Int?,
 
     // Panning (-1.0 = Left, 0.0 = Center, 1.0 = Right)
@@ -146,7 +146,7 @@ data class SprudelVoiceData(
 
     /**
      * The output chain (the master) this event switches the playback's bus to, from its start time
-     * onward. The same chain type an orbit runs: a [KatalystValue.Named] (a pre-registered custom)
+     * onward. The same chain type a cylinder runs: a [KatalystValue.Named] (a pre-registered custom)
      * or a [KatalystValue.Dsl] inlining a [KatalystDsl]; the latter is denormalized to a synthetic
      * name in [toVoiceData]. Null = no change. A separate field from [katalyst]: the two positions
      * are set by different doors and merge independently.
@@ -154,7 +154,7 @@ data class SprudelVoiceData(
     var master: KatalystValue?,
 
     /**
-     * The orbit chain this event switches its orbit to, from its start time onward. Either a
+     * The cylinder chain this event switches its cylinder to, from its start time onward. Either a
      * [KatalystValue.Named] (a pre-registered custom) or a [KatalystValue.Dsl] inlining a
      * [KatalystDsl]; the latter is denormalized to a synthetic name in [toVoiceData]. Null = no
      * change.
@@ -880,7 +880,7 @@ data class SprudelVoiceData(
      *
      * The voice doors' typed fields (the envelope, the four filters, crush, coarse, distort, tremolo and the
      * sample's begin, end, speed and loop) travel as SLOT KEYS in `ignitorParams`, the names the instruments read
-     * ([classicSlotParams], phase 3 step 8). The orbit stages (vowel, body, phaser and the rest) travel as
+     * ([classicSlotParams], phase 3 step 8). The cylinder stages (vowel, body, phaser and the rest) travel as
      * `katalystParams` slots. The typed wire fields of all of them left `VoiceData` in phase 3 step 9.
      *
      * For inline ignitors ([SoundValue.Dsl]) the wire-level `sound` name is resolved via
@@ -895,7 +895,7 @@ data class SprudelVoiceData(
             is SoundValue.Dsl -> s.ignitor.uniqueId()
         }
 
-        // Same denormalization for the two chain references, the output's and the orbit's.
+        // Same denormalization for the two chain references, the output's and the cylinder's.
         // `.name` is the memoized `uniqueId()` of the chain: one structural hash per value
         // instance rather than one per event (see KatalystValue.Dsl.name).
         val masterName: String? = when (val m = master) {
@@ -920,7 +920,7 @@ data class SprudelVoiceData(
             // A COPY, not the event's own bag: the wire value outlives the pattern event. The
             // backend holds `Voice.katalystParams` for the whole life of the voice and its chain
             // gates the re-resolve on the map's IDENTITY, so a map sprudel could still write into
-            // would change an orbit's settings invisibly. `ignitorParams` follows the same rule, one
+            // would change a cylinder's settings invisibly. `ignitorParams` follows the same rule, one
             // contract for both (`ParamBag.toKlangMap`). The boundary already allocates a `VoiceData`,
             // and one copy here replaces the one-per-slot copies the doors used to make.
             // The voice doors travel as slot keys in this bag (`classicSlotParams`, phase 3 step 8); their typed
@@ -1113,7 +1113,7 @@ private fun mergeParamBagInto(target: ParamBag?, other: ParamBag?): ParamBag? {
  */
 fun SprudelVoiceData.ignitorParamsOrNew(): ParamBag = ignitorParams ?: ParamBag().also { ignitorParams = it }
 
-/** The orbit chain's [ParamBag], the [ignitorParamsOrNew] twin on the other host. */
+/** The cylinder chain's [ParamBag], the [ignitorParamsOrNew] twin on the other host. */
 fun SprudelVoiceData.katalystParamsOrNew(): ParamBag = katalystParams ?: ParamBag().also { katalystParams = it }
 
 /**
@@ -1128,7 +1128,7 @@ fun SprudelVoiceData.putIgnitorParam(name: String, value: Double?) {
 }
 
 /**
- * In-place write of ONE orbit-chain slot, the [putIgnitorParam] twin on the other host (null is a
+ * In-place write of ONE cylinder-chain slot, the [putIgnitorParam] twin on the other host (null is a
  * no-op for the same reason).
  *
  * ONE name into the bag this instance already owns. A door that fills a whole STAGE takes

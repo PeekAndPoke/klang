@@ -122,7 +122,7 @@ let powerClassA = Ign.fn(x => x
   .oversampleAtLeast(2, y => y.distort(0.25, "asym"))
   .mul(1.3))                                       // master
 
-// Cabinets: the linear half of the amp. All of these are static and linear, so they move to the orbit unchanged once
+// Cabinets: the linear half of the amp. All of these are static and linear, so they move to the cylinder unchanged once
 // the Katalyst DSL lands.
 
 // Two plain lowpasses at 5 kHz, the cab the guitar had before the cabs existed.

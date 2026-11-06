@@ -32,7 +32,7 @@ import kotlin.math.min
  * by up to 2400 frames after the region it twins has gone quiet, so it reports a tail until
  * [Oversampler.tailFrames] quiet frames have entered it.
  *
- * The branches' slots are resolved through [KatalystNestedChainsWriter]; a branch reads the orbit's param state like the
+ * The branches' slots are resolved through [KatalystNestedChainsWriter]; a branch reads the cylinder's param state like the
  * chain around it, so a slot named in a branch is the same slot as one of that name outside it.
  */
 class KatalystParallelEffect internal constructor(
@@ -41,7 +41,7 @@ class KatalystParallelEffect internal constructor(
     /** The frames of one render block, pinned to 128 in the engine; inside an oversampling region the region's. */
     blockFrames: Int,
     /**
-     * The 2x steps above the base rate the chain runs at, 0 on an orbit, the region's inside an oversampling region:
+     * The 2x steps above the base rate the chain runs at, 0 on a cylinder, the region's inside an oversampling region:
      * every branch's oversamplers start there, and so do the twins (KLANG-00214 (oversampling regions)).
      */
     private val firstStage: Int = 0,

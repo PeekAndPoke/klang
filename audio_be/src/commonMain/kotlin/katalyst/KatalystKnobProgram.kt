@@ -73,7 +73,7 @@ internal enum class KatalystKnobModulator {
  * position (`PerlinNoiseIgnitor`, `BerlinNoiseIgnitor`). The Ignitor's stream is the voice's, drawn on by everything
  * else in the voice; here each op owns a fresh stream, so only the order of the two draws is the Ignitor's.
  *
- * Per CHAIN, not per orbit: two orbits whose chains hold a noise at the same position walk the same noise (a `seed`
+ * Per CHAIN, not per cylinder: two cylinders whose chains hold a noise at the same position walk the same noise (a `seed`
  * knob would be a later door decision).
  */
 internal const val KATALYST_KNOB_NOISE_SEED: Int = 0x6B6E6F62
@@ -121,7 +121,7 @@ internal class KatalystNoiseOrdinals {
  * leaf, and one register per instruction for its result. Instruction `i` runs the law of [ops]`[i]` over the registers
  * [inA], [inB] and [inC] name (a unary op reads [inA] only, [KatalystKnobOp.RANGE] all three) and stores into the
  * register [out] names. [run] executes them in order; the last one stores [resultRegister]. A slot leaf's register is
- * loaded by the caller ([KatalystKnob]) from the orbit's `katp` state before [run], one lookup per slot leaf.
+ * loaded by the caller ([KatalystKnob]) from the cylinder's `katp` state before [run], one lookup per slot leaf.
  *
  * **The laws are the Ignitor's own** (`ignitor/_arithmetic_laws.kt`, one law, two hosts): the same function the
  * Ignitor node of that operator calls for its scalar, so the same numbers give the same knob as the Ignitor's

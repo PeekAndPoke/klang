@@ -32,7 +32,7 @@ class PlaybackEnginePhaseSpec : StringSpec({
     val holdBlocks = 20 * sampleRate / blockFrames
     val law = ReleaseLaw(sampleRate)
 
-    /** A delay at feedback 1 on the voice's orbit: a tail that never ends. */
+    /** A delay at feedback 1 on the voice's cylinder: a tail that never ends. */
     val endless = mapOf("delay.wet" to 0.5, "delay.time" to 0.1, "delay.feedback" to 1.0)
 
     /** Feedback 0.9 at 0.25 s: still ringing 20 s after the note, but it ends. */
@@ -74,7 +74,7 @@ class PlaybackEnginePhaseSpec : StringSpec({
 
         fun schedule(
             pid: String,
-            orbit: Int = 0,
+            cylinder: Int = 0,
             startSec: Double = 0.0,
             gateSec: Double = 0.05,
             params: Map<String, Double>? = null,
@@ -91,7 +91,7 @@ class PlaybackEnginePhaseSpec : StringSpec({
                                 sound = "sine",
                                 freqHz = 440.0,
                                 gain = 0.5,
-                                cylinder = orbit,
+                                cylinder = cylinder,
                                 katalystParams = params?.toKlangMap(),
                             ),
                             playbackStartTime = 0.0,
@@ -419,9 +419,9 @@ class PlaybackEnginePhaseSpec : StringSpec({
 
         listOf("a", "b", "c").forEach { rig.d.engine(it) shouldBe null }
 
-        rig.schedule(pid = "next", orbit = 0)
-        rig.schedule(pid = "next", orbit = 1, startSec = 0.0005)
-        rig.schedule(pid = "next", orbit = 2, startSec = 0.001)
+        rig.schedule(pid = "next", cylinder = 0)
+        rig.schedule(pid = "next", cylinder = 1, startSec = 0.0005)
+        rig.schedule(pid = "next", cylinder = 2, startSec = 0.001)
         rig.render()
 
         rig.engine("next").cylinders.cylinders shouldBe listOf(cylinderOf["b"], cylinderOf["a"], cylinderOf["c"])
@@ -430,8 +430,8 @@ class PlaybackEnginePhaseSpec : StringSpec({
     "detached engines are disposed newest first: x detached before y, y goes first" {
         val rig = Rig()
 
-        rig.schedule(pid = "x", orbit = 1, params = endless)
-        rig.schedule(pid = "y", orbit = 2, params = endless)
+        rig.schedule(pid = "x", cylinder = 1, params = endless)
+        rig.schedule(pid = "y", cylinder = 2, params = endless)
         rig.render(100)
 
         val x = rig.engine("x")
@@ -459,14 +459,14 @@ class PlaybackEnginePhaseSpec : StringSpec({
             x.phase shouldBe Phase.Disposed
             y.phase shouldBe Phase.Disposed
 
-            rig.schedule(pid = "next", orbit = 0)
+            rig.schedule(pid = "next", cylinder = 0)
             rig.render()
 
             rig.engine("next").cylinders.cylinders.single() shouldBeSameInstanceAs cylinderOfX
         }
     }
 
-    "without a master or a release, an engine sums its orbits straight into the shared mix, not through its bus" {
+    "without a master or a release, an engine sums its cylinders straight into the shared mix, not through its bus" {
         val clock = BackendClock(sampleRate)
         val context = AudioBackendContext.create(
             sampleRate = sampleRate,
@@ -478,17 +478,17 @@ class PlaybackEnginePhaseSpec : StringSpec({
         val first = PlaybackEngine.create(context = context, playbackId = "first")
         val second = PlaybackEngine.create(context = context, playbackId = "second")
 
-        fun voice(pid: String, orbit: Int, freqHz: Double) = ScheduledVoice(
+        fun voice(pid: String, cylinder: Int, freqHz: Double) = ScheduledVoice(
             playbackId = pid,
             startTime = 0.0,
             gateEndTime = 1.0,
-            data = VoiceData.empty.copy(sound = "sine", freqHz = freqHz, gain = 0.3, cylinder = orbit),
+            data = VoiceData.empty.copy(sound = "sine", freqHz = freqHz, gain = 0.3, cylinder = cylinder),
             playbackStartTime = 0.0,
         )
 
-        first.scheduler.scheduleVoice(voice(pid = "first", orbit = 0, freqHz = 331.0))
-        second.scheduler.scheduleVoice(voice(pid = "second", orbit = 1, freqHz = 443.0))
-        second.scheduler.scheduleVoice(voice(pid = "second", orbit = 2, freqHz = 557.0))
+        first.scheduler.scheduleVoice(voice(pid = "first", cylinder = 0, freqHz = 331.0))
+        second.scheduler.scheduleVoice(voice(pid = "second", cylinder = 1, freqHz = 443.0))
+        second.scheduler.scheduleVoice(voice(pid = "second", cylinder = 2, freqHz = 557.0))
 
         val mix = StereoBuffer(blockFrames)
         var throughABus = 0
@@ -501,11 +501,11 @@ class PlaybackEnginePhaseSpec : StringSpec({
 
             second.renderInto(mix, clock.cursorFrame)
 
-            val orbits = second.cylinders.cylinders
+            val cylinders = second.cylinders.cylinders
 
             for (i in 0 until blockFrames) {
-                val o1 = orbits[0].mixBuffer.left[i]
-                val o2 = orbits[1].mixBuffer.left[i]
+                val o1 = cylinders[0].mixBuffer.left[i]
+                val o2 = cylinders[1].mixBuffer.left[i]
                 val straight = (before[i] + o1) + o2
 
                 if (mix.left[i].toRawBits() != straight.toRawBits()) {

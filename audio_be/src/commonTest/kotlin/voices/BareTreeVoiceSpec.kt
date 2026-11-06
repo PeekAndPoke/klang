@@ -30,7 +30,7 @@ import kotlin.random.Random
 /**
  * **An authored instrument that does not end in `classic()` is played as its BARE TREE** (phase 3 step 9, the voice
  * strip retired): no voice envelope, no doors, no engine `onepole`. What the voice still adds around the tree is its
- * pitch pipeline, the channel (gain, pan, orbit), and, when the tree's root is not a built envelope with a static
+ * pitch pipeline, the channel (gain, pan, cylinder), and, when the tree's root is not a built envelope with a static
  * release, the teardown fade over its last frames. Its lifetime is the tree's own release tail, or
  * `VOICE_ADSR_RELEASE_SEC` (0.05 s) past the gate when the tree reports none.
  *

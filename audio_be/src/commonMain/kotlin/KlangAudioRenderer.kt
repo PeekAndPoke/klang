@@ -45,7 +45,7 @@ class KlangAudioRenderer private constructor(
     /** Parent ignitor registry — callers register custom oscillators here. */
     val ignitorRegistry: IgnitorRegistry get() = context.ignitorRegistry
 
-    /** Parent Katalyst registry; callers register custom chains here, for an orbit or the output. */
+    /** Parent Katalyst registry; callers register custom chains here, for a cylinder or the output. */
     val katalystRegistry: KatalystRegistry get() = context.katalystRegistry
 
     /**

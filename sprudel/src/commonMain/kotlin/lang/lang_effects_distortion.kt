@@ -36,7 +36,7 @@ private fun applyDistort(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * Waveshaper distortion: drive and shape, per voice.
  *
  * This is not a bus effect. Unlike reverb and delay, distortion runs inside each voice's own chain,
- * so two voices sharing an orbit can be driven differently.
+ * so two voices sharing a cylinder can be driven differently.
  *
  * `shape` picks the transfer curve. Symmetric and soft: `soft` (tanh), `gentle`, `softsat`,
  * `cubic`, `exp`, `sineshaper`. Symmetric and hard, plus wavefolding: `hard`, `zerosquare`,

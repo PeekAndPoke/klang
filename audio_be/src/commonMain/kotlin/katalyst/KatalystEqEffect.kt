@@ -12,7 +12,7 @@ import io.peekandpoke.klang.audio_be.filters.EqCore
 import io.peekandpoke.klang.audio_be.utils.copyRangeInto
 
 /**
- * Orbit-level **mix equalizer**: the section list of a declared `eq` stage, run once on the summed
+ * Cylinder-level **mix equalizer**: the section list of a declared `eq` stage, run once on the summed
  * stereo mix instead of once per voice.
  *
  * The DSP is the shared [EqCore], the same core the per-voice `EqIgnitor` drives, and the section
@@ -49,7 +49,7 @@ import io.peekandpoke.klang.audio_be.utils.copyRangeInto
  * bands a body has. That matters
  * because a `.katp` on an EQ knob is a change per event: the cost of one is a `reset` plus one
  * coefficient computation per section per channel (a `tan` each) plus one fade time of one more
- * bank running, and it is bounded at one per BLOCK, because the orbit's param state is re-read
+ * bank running, and it is bounded at one per BLOCK, because the cylinder's param state is re-read
  * once per block at most. Nothing is allocated and nothing is rebuilt on a block that changes no
  * knob, which is the normal case and the one the `installs` counter pins. A change allocates
  * nothing at all: the banks are built with the stage, and [KatalystFilterSwap] sizes its scratch
@@ -197,7 +197,7 @@ class KatalystEqEffect(
     }
 
     /**
-     * Turns the stage off, a HARD cut (the orbit's deactivation, a chain swap, the shelf): the swap
+     * Turns the stage off, a HARD cut (the cylinder's deactivation, a chain swap, the shelf): the swap
      * holds no pair, so nothing this stage owns can reach the mix.
      *
      * The banks are deliberately NOT zeroed here. An idle pool bank is unreachable while the swap is

@@ -46,7 +46,7 @@ Of ~180 implemented concepts, only ~14% are well-covered by existing tutorials. 
 | Pattern arithmetic              | `add()`, `mul()`, `sub()`                          | Dynamic transposition, velocity scaling     |
 | Swing & groove                  | `swing()`, `swingBy()`, `early()`, `late()`        | Makes beats feel human                      |
 | Euclidean rhythms               | `euclid()`, `bjork()`                              | Only in Pro mini-notation, not as functions |
-| Orbit system                    | `orbit()`, cylinders                               | Used everywhere, never explained            |
+| Cylinder system                    | `cylinder()`, cylinders                               | Used everywhere, never explained            |
 | struct/mask                     | `struct()`, `mask()`                               | Core "separate rhythm from pitch" technique |
 | Probability family              | `sometimes()`, `often()`, `rarely()`               | Most musical functions, completely absent   |
 
@@ -89,7 +89,7 @@ grouping, `<>` alternation
 | H5  | Euclidean Beats                 | Beginner | `euclid()`, `euclidRot()`, `bjork()`        | **Afrobeat**           | Not metaphor — Toussaint proved West African bell patterns ARE euclidean. `euclid(5,8)` = Ghanaian bell         |
 | H6  | Pattern Templates — struct/mask | Beginner | `struct()`, `mask()`                        | **Reggaeton**          | The dembow rhythm IS a `struct()` template applied to every instrument. One rhythm, many sounds                 |
 | H7  | The Sometimes Family            | Beginner | `sometimes()`, `often()`, `rarely()`        | **Jazz**               | Jazz improvisation IS probability. `sometimes(add(7))` = occasionally add a 7th, like a real pianist            |
-| H8  | Orbits Explained                | Beginner | `orbit()`, cylinders, per-orbit effects     | **Dub Reggae**         | King Tubby invented dub by routing through effect buses. `orbit()` IS a dub mixing desk                         |
+| H8  | Cylinders Explained                | Beginner | `cylinder()`, cylinders, per-cylinder effects     | **Dub Reggae**         | King Tubby invented dub by routing through effect buses. `cylinder()` IS a dub mixing desk                         |
 | H9  | Pattern Math                    | Beginner | `add()`, `mul()`, `sub()`                   | **Neo-Soul**           | Reharmonizing with `add()` is how neo-soul keyboardists work (D'Angelo, Glasper)                                |
 | H10 | Mini-Notation Power-Ups         | Beginner | `*n`, `/n`, `?`, `\|`, `@n`, `!n`           | **UK Garage / 2-Step** | Skippy, irregular beats — `*n` doubles hats, `?` drops kicks, `@2` elongates bass                               |
 
@@ -149,7 +149,7 @@ Complete pieces combining multiple concepts. Created AFTER their prerequisites e
 
 | #  | Title                | Genre   | Combines                           | After    |
 |----|----------------------|---------|------------------------------------|----------|
-| G1 | Make a Reggae Groove | Reggae  | sound, stack, gain, orbit, offbeat | H8       |
+| G1 | Make a Reggae Groove | Reggae  | sound, stack, gain, cylinder, offbeat | H8       |
 | G2 | Make a Hip-Hop Beat  | Hip-Hop | swing, samples, gain, pan          | H4       |
 | G3 | Make a House Track   | House   | 4-on-floor, stack, lpf, fast       | existing |
 
@@ -159,7 +159,7 @@ Complete pieces combining multiple concepts. Created AFTER their prerequisites e
 |-----|------------------------|-------------|---------------------------------------|----------|
 | G4  | Make an Acid Beat      | Acid House  | filter env, distort, swing, resonance | M5       |
 | G5  | Make a D&B Banger      | Drum & Bass | fast, samples, slice, hpf             | L1, H3   |
-| G6  | Make a Dub Plate       | Dub         | orbit, delay, room, duck              | H8, M8   |
+| G6  | Make a Dub Plate       | Dub         | cylinder, delay, room, duck              | H8, M8   |
 | G7  | Make a Trap Beat       | Trap        | fast hats (*n), 808 sub, swing        | H4, H10  |
 | G8  | Make a Bossa Nova      | Bossa Nova  | within, chord, voicing, legato        | L7       |
 | G9  | Make It Funky          | Funk        | vowel, swing, gain dynamics           | L4, H4   |

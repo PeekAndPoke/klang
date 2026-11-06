@@ -413,7 +413,7 @@ fun Ignitor.coarse(factor: Double): Ignitor {
  * @param sweep Modulation width in Hz — how far the notch sweeps from center.
  *   Default: 1000.0. Clamped to [100, 18000]. Typical range: 500–3000.
  * @param floor Minimum dry coefficient in [0, 1]. Default 0.0 (true crossfade);
- *   1.0 makes the phaser purely additive like the orbit-side phaser.
+ *   1.0 makes the phaser purely additive like the cylinder-side phaser.
  */
 fun Ignitor.phaser(
     wet: Ignitor,

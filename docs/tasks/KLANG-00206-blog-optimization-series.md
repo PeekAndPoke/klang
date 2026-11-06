@@ -67,7 +67,7 @@ BEFORE, the before link goes to the last tag WITHOUT the change.
 | oscillator engine unification | `e303c66c` .. `b0173e4d`, 2026-06-03..05 | `v0.1.0` | none (commit `e303c66c^`) |
 | mutable `SprudelVoiceData` | `e9fa560c` .. `c303c333`, 2026-06-06/07 | `v0.1.0` | none (commit `e9fa560c^`) |
 | worklet trust codec | `096e5e7d`, `59e85839`, 2026-06-07, then the KSP generator | `v0.1.0` | none (commit `096e5e7d^`) |
-| body and vowel to the orbit | `af1c08dc` .. `c1e67c4f`, 2026-07-03/04 | `v0.1.2` (2026-07-04) | `v0.1.1` (2026-06-30) |
+| body and vowel to the cylinder | `af1c08dc` .. `c1e67c4f`, 2026-07-03/04 | `v0.1.2` (2026-07-04) | `v0.1.1` (2026-06-30) |
 | constant folding D1a/D1b | `2daaf761`, `974a18db`, `d3f664f4`, 2026-08-19 | `v0.3.1.5` (2026-08-20; `v0.3.1.4` was cut earlier on 2026-08-19, before the fold commits, and is byte-identical to `v0.3.1.3` for the engine) | `v0.3.1.4` (2026-08-19) |
 | EqCore fusion D2 to D5 and rule R1 | `c2e94a72` .. `076683ab`, `03e995ca`, 2026-08-19..21 | `v0.3.2` (2026-08-23) for R1; `v0.3.1.5` (2026-08-20) for the BELL section | `v0.3.1.4` |
 | resource warehouse | `111c7355` .. `0354c9da`, 2026-09-03/04 | `v0.3.7` (2026-09-05) | `v0.3.6` (2026-08-31) |
@@ -394,7 +394,7 @@ tells the story in the order it happened. Working titles are Fable's to change.
 
 - **Story.** The first whole-song analysis (2026-07-03): GTR2's nested `superimpose` scheduled
   1088 voices, about 52 % of the song, each running the body and vowel resonators per voice.
-  Moving body and vowel to the orbit, once on the summed mix, with the owning voice configuring
+  Moving body and vowel to the cylinder, once on the summed mix, with the owning voice configuring
   it through `VoiceLease` and `KatalystFilterSwap` crossfading a live rebuild.
 - **Artifacts.** `docs/benchmarks/2026-07-03_der-schmetterling-cpu-analysis.md`,
   KLANG-00128 (body vowel orbit katalyst),
@@ -404,7 +404,7 @@ tells the story in the order it happened. Working titles are Fable's to change.
   come from. (opus) today's `EffectBenchmark` rows Body and Vowel (JVM and node) for the cost of
   one instance, and the arithmetic "per voice times 1088 against once per orbit" as a table, not
   a re-measurement of the old song (the song has changed). (sonnet) Fig. 1, graphviz: voices
-  fanning into an orbit, the body filter drawn once per voice (before) and once per orbit
+  fanning into a cylinder, the body filter drawn once per voice (before) and once per cylinder
   (after); Fig. 2, the cost model bars.
 - **Code specimens.** `VoiceFactory` pulling `Body`/`Formant` out of the per-voice chain at
   `v0.1.2`, and the `KatalystBodyEffect` entry.
@@ -456,7 +456,7 @@ tells the story in the order it happened. Working titles are Fable's to change.
 ### P9. `2026-09-04-seven-megabytes-of-silence`
 
 - **Story.** A `DelayLine(10.0)` ring is 7.68 MB, 97 % of a cylinder's footprint, zero-filled on
-  the audio thread at first use, eight orbits per song: the first-run stutter. Lazy rings in
+  the audio thread at first use, eight cylinders per song: the first-run stutter. Lazy rings in
   power-of-two size classes, grow by migration with contents preserved, a shelf for returned
   units, allocation failures degrading instead of killing the render thread, one shared scratch
   pool, and the warmup vocabulary that pre-builds and JITs every node kind before the first note.
@@ -465,7 +465,7 @@ tells the story in the order it happened. Working titles are Fable's to change.
 - **Artifacts.** KLANG-00230 (resource warehouse) (the whole plan is a diary of the two days
   with the four device notes), `audio/MEMORY.md`, KLANG-00178 (first run spike v2)
   (what remains), commits `111c7355` .. `d3fb76ba`.
-- **Mechanics.** (haiku) the byte arithmetic (7.68 MB, 8 orbits, 63 MB) and the size-class
+- **Mechanics.** (haiku) the byte arithmetic (7.68 MB, 8 cylinders, 63 MB) and the size-class
   ladder from the plan. (opus) a measurement that does not exist yet and would make the post:
   time to first block of Der Schmetterling with and without the warmup, JVM, using the offline
   renderer (`KlangOfflineRenderer`), three runs each; if the warmup cannot be switched off
@@ -507,8 +507,8 @@ tells the story in the order it happened. Working titles are Fable's to change.
 
 - **Story.** A voice kept rendering its whole chain after it had decayed to silence, until its
   scheduled end. Culling in the release phase after 50 ms under -100 dBFS, but as a ZOMBIE that
-  keeps its active-list slot and its orbit lease, because the first build removed voices early
-  and the null-diff render showed a -32 dBFS mix change: the orbit lease went to whichever voice
+  keeps its active-list slot and its cylinder lease, because the first build removed voices early
+  and the null-diff render showed a -32 dBFS mix change: the cylinder lease went to whichever voice
   rendered first after an owner died. Where it pays (drums 85 to 90 % culled, trommel 40 %,
   marimba 20 to 40 %) and where it cannot (guitars at 170 ms notes).
 - **Artifacts.** KLANG-00199 (voice culling), `audio/MEMORY.md`

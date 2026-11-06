@@ -8,7 +8,7 @@ package io.peekandpoke.klang.audio_bridge.constants
 // ─────────────────────────────────────────────────────────────────────────────
 // Limiter defaults shared by the house safety limiter (`audio_be/HouseStage`)
 // and the opt-in authored limiter (the Katalyst builder's `limiter(...)`, which appends a
-// compressor stage with these numbers, at the output or on an orbit).
+// compressor stage with these numbers, at the output or on a cylinder).
 //
 // Only the values that are genuinely wire defaults live here. The house
 // limiter's own TIMING: `HouseStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS` and
@@ -35,13 +35,13 @@ const val LIMITER_KNEE_DB: Double = 2.0
 const val LIMITER_RELEASE_SECONDS: Double = 0.1
 
 // ── Authored-limiter defaults (every authored `limiter(...)`: `Katalyst(k => k.limiter(...))`, at
-// the output through `master(...)` or on an orbit through `katalyst(...)`) ────────────────
+// the output through `master(...)` or on a cylinder through `katalyst(...)`) ────────────────
 // These deliberately DIFFER from the house timing in `HouseStage`, and the difference is
-// the point: an authored limiter sits upstream of the summed mix, on one playback or one orbit.
+// the point: an authored limiter sits upstream of the summed mix, on one playback or one cylinder.
 
 /**
  * **0, on purpose.** An authored limiter lives upstream of the summed mix (one playback's
- * `MasterBus`, or one orbit's chain), so any lookahead there delays that playback or that orbit
+ * `MasterBus`, or one cylinder's chain), so any lookahead there delays that playback or that cylinder
  * against everything else. Latency is opt-in per author (`lookahead = ...`), never a default.
  */
 const val AUTHORED_LIMITER_LOOKAHEAD_SECONDS: Double = 0.0

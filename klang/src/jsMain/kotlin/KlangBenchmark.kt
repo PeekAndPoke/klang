@@ -408,7 +408,7 @@ class KlangBenchmark(
                 },
                 freqHz = 220.0 + (id * 2),
                 cylinder = minOf(id / VOICES_PER_CYLINDER, cylinders.coerceAtLeast(1) - 1),
-                // Enable the orbit reverb. Its stage reads the SLOTS, the amount included
+                // Enable the cylinder reverb. Its stage reads the SLOTS, the amount included
                 // (Katalyst step 5b-2), and the wire has no reverb fields since 5b-3.
                 katalystParams = klangMapOf("reverb.wet" to 0.2, "reverb.size" to 0.5),
             )

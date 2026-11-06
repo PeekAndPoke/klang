@@ -78,7 +78,7 @@ class SoloPatternSpec : StringSpec({
             """
                 let myInst = Ign.saw()
                 stack(
-                  n("0 ~").apply(x => x.sound(myInst).solo()).apply(x => x.orbit(1).scale("e3:minor").gain(0.18))
+                  n("0 ~").apply(x => x.sound(myInst).solo()).apply(x => x.cylinder(1).scale("e3:minor").gain(0.18))
                 ).transpose(2)
             """.trimIndent(),
         )

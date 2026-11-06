@@ -27,7 +27,7 @@ history of a decision. Which functions exist is answered by the `lang/` files an
   `adsr`, distort / crush / coarse, tremolo and the sample's flat `begin` / `end` / `speed` / `loop`. The rules are in that file's KDoc; the key names are
   read from `IgnitorDsl.Slots`, never retyped. Guard: `ClassicSlotParamsSpec`.
 - Still typed wire fields beside the two bags: `note`, `freqHz`, `sourceId`, `gain`, `pan`, `bank`, `sound`, `soundIndex` (from `n`), `cut`, `cylinder`, `solo`,
-  the `master` and `katalyst` names, `control`, `tags`, `cull`. The orbit stages travel only as
+  the `master` and `katalyst` names, `control`, `tags`, `cull`. The cylinder stages travel only as
   `katalystParams` slots.
 - An authored instrument that does not end in `classic()` plays as its bare tree: a voice door reaches it
   only when its tree reads that slot (the editor hint waits in
@@ -87,9 +87,9 @@ setter semantics) and `/dsl-design`. What they produce today:
   source, in front of `classic()`. What it does to each distortion shape is in the door's KDoc; the render
   guards are audio_be's (`PregainSlotRenderSpec`, `VoicePregainWireSpec`).
 
-## The bus doors and the orbit's Katalyst
+## The bus doors and the cylinder's Katalyst
 
-- The bus doors (`reverb`, `delay`, `compressor`, `duck`, `phaser`, `body`, `vowel`) write the orbit's
+- The bus doors (`reverb`, `delay`, `compressor`, `duck`, `phaser`, `body`, `vowel`) write the cylinder's
   `<stage>.<knob>` slots in `katalystParams`; `.katalystParam(slot, value)` (alias `katp`) writes one directly,
   by name or by a Katalyst param object (`Kat.slot.*`, `Kat.param(...)`); `ignitorParam` / `ignp` are the voice's
   twin. The slot argument is resolved at the call by `katalystSlotName` / `ignitorSlotName` (`klangscript-libs`), the
@@ -239,3 +239,5 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
   and the distort editor's factor buttons (KLANG-00214 (oversampling regions) step 4, `docs/retired-names.md`).
 - 2026-11-06: `legato` is no longer a wire field: the event folds it into the gate (`SprudelPatternEvent.gateSeconds`),
   the frontend sends seconds (KLANG-00290 (engine follow ups) item 24, D6).
+- 2026-11-06: `cylinder()` is the canonical door, `orbit()` and `o()` its aliases; the duck's knob is `cylinder`; the
+  scope badge is `@scope cylinder` (KLANG-00418 (cylinder as the one word the sprudel door the katalyst vocab)).

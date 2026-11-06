@@ -56,7 +56,7 @@ let jingle = n(melody).sound(marimba).ply("1|1|1|1|1|1|2".fast(3.sqrt())).adsrOf
   .hpf(600, 0.7).lpf(7200, 1.2).notch(2700, 0.7)
   .pan(0.05).superimpose(pan(0.95))
   .clip(0.80)
-  .orbit(0).scale("e5:minor").gain(0.42)                  // alone, not under the band: 10 dB over the song's lead
+  .cylinder(0).scale("e5:minor").gain(0.42)                  // alone, not under the band: 10 dB over the song's lead
   .analog(5).transpose(-3)
   .reverb(wet = 0.10, size = 1.0)
 

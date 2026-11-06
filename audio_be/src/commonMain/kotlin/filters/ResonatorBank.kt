@@ -57,7 +57,7 @@ import kotlin.math.roundToInt
  *
  * **A SOUNDING bank never retunes.** A material or vowel change does not move the bands of the bank in service: the
  * host installs the new table into a bank NOBODY HEARS and `KatalystFilterSwap` crossfades the two outputs. [install]
- * zeroes every band's state, so a reconfigured bank is bit for bit a bank built new on that table (the orbit EQ's
+ * zeroes every band's state, so a reconfigured bank is bit for bit a bank built new on that table (the cylinder EQ's
  * model since Katalyst 5c-11). The morph of Katalyst step 5c-10, which travelled the bands of the bank in service
  * instead, was REJECTED by the maintainer on 2026-09-20: a resonance that travels is an audible filter sweep ("an
  * 8-bit laser shot" on `body(material = "<wood glass>")`, the same on the vowel), and the click metric could not see

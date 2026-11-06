@@ -21,7 +21,7 @@ Created 2026-08-31.
 | KLANG-00318 (chain swap request during drain) | **DONE 2026-10-17** (maintainer: "the change should happen more or less immediate"): a request that waits behind a ring-out cuts it over 0.15 s and lands in about 0.2 s; the drain's tail detection fixed. The check by ear: `tmp/listening/chain-swap-drain/second-edit-after.wav` |
 | KLANG-00313 (delay reverb owner change cut) | **DONE 2026-10-16** (maintainer Q39 "fade, do not cut", engine follow-up 42): every delay and reverb switch-off fades its feed; the bleed of a new owner into the old room is accepted. The check by ear: `tmp/listening/delay-reverb-fade/`, heard 2026-10-18: "both after versions ok" |
 | KLANG-00316 (knob glide listening) | **DONE 2026-10-17**: the bank crossfade is 50 ms; a compressor knob move that relaxes reduction follows the release time (judged at 0 dBFS). Corpus accepted 2026-10-18 |
-| KLANG-00247 (duck orbit switch click) | Katalyst step 5c (2026-09-20, measured): moving a ducker's sidechain to a sounding orbit steps the reduction. Leave it, blend the two sources, or dip and return? |
+| KLANG-00247 (duck orbit switch click) | Katalyst step 5c (2026-09-20, measured): moving a ducker's sidechain to a sounding cylinder steps the reduction. Leave it, blend the two sources, or dip and return? |
 
 ---
 

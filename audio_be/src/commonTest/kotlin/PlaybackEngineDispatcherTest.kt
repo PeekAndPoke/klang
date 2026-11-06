@@ -20,8 +20,8 @@ import io.peekandpoke.klang.common.infra.klangMapOf
 
 /**
  * D2·b gate: every [KlangCommLink.Cmd] subtype is routed to the right place, engines are created
- * lazily per playback and disposed on drain, and — the headline — two playbacks on the same orbit
- * id get **independent** cylinders (the orbit-collision fix).
+ * lazily per playback and disposed on drain, and, the headline, two playbacks on the same cylinder
+ * id get **independent** cylinders (the orbit-collision fix, as it was called then).
  */
 class PlaybackEngineDispatcherTest : StringSpec({
 
@@ -270,13 +270,13 @@ class PlaybackEngineDispatcherTest : StringSpec({
         d.engine("song") shouldBe null
     }
 
-    "two playbacks on the same orbit get independent cylinders (the isolation fix)" {
+    "two playbacks on the same cylinder number get independent Cylinder instances (the isolation fix)" {
         val d = newDispatcher()
         val out = StereoBuffer(blockFrames)
 
         d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "A", voices = listOf(voice("A", cylinder = 0))))
         d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "B", voices = listOf(voice("B", cylinder = 0))))
-        d.renderBlock(0.0, out)   // each voice touches orbit 0 in its own engine
+        d.renderBlock(0.0, out)   // each voice touches cylinder 0 in its own engine
 
         d.activePlaybackIds shouldContainAll setOf("A", "B")
         val cylA = d.engine("A").shouldNotBeNull().cylinders.cylinders.first { it.id == 0 }

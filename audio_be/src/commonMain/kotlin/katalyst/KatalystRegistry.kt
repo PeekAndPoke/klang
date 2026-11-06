@@ -41,7 +41,7 @@ class KatalystRegistry(
      *
      * Deliberately not "fall back to the historical chain": the caller must be able to tell
      * "unknown, try again later" from "known". Silently resolving an unknown name would let a
-     * dropped or late `RegisterKatalyst` pin an orbit to the wrong chain permanently.
+     * dropped or late `RegisterKatalyst` pin a cylinder to the wrong chain permanently.
      *
      * **Normalizes, so it allocates**: for a caller that already holds the key (every caller on a
      * render path should, see `Cylinder.requestChain`) the door is [findByKey].

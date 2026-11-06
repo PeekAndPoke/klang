@@ -32,7 +32,7 @@
 #   per-block sites it sees only in part: a revert of their five files read medians 128, 129, 129 and 93 B in four
 #   runs (rounds 92 to 222), so one run in four stays under the line; those parts are guarded by their KDocs.
 #   C-remap was added at engine follow-up 2 (2026-10-11): two classic saw voices received as the engine receives them
-#   (on V8 through the wire codec, so their maps are the decoder's) take turns as their orbit's owner, so the chain
+#   (on V8 through the wire codec, so their maps are the decoder's) take turns as their cylinder's owner, so the chain
 #   re-resolves its 27 slot knobs every block. Healthy rounds (6 runs of 3): 16 of 18 at 76.5 to 87.5 B, two at 143.9
 #   and 149.8 (one high round in each of two runs; medians 77 to 88); the line is 42 B above the worst round. A decoder
 #   that hands a HashMap again costs 40 B per lookup: the decoder reverted read 1,128 to 1,164 B (RED, the only line
@@ -192,7 +192,7 @@
 #   rounds 92.1 to 119.4): the claim above that it tells the isFinite group (G1, 264) from the tree was measured on
 #   the engine before this change, is not re-measured, and with the noises' 100 B gone most likely no longer holds;
 #   item 40's fix re-sets the line.
-#   Re-set at engine follow-up 40 (2026-10-16): the orbit compressor writes its five knobs through one holder
+#   Re-set at engine follow-up 40 (2026-10-16): the cylinder compressor writes its five knobs through one holder
 #   (`Compressor.knobArgs`) and one `applyKnobArgs`, where it called five setters that V8 did not inline (each knob a
 #   heap number; --predictable: E-kat-dyn 97.1 to 45.3 B, the duck's floor, and E-kat-mix 96.9 to 67.3). Healthy
 #   rounds of the check's method on the tree (13 single-case rounds each, and this change's check, medians 51 and
@@ -299,7 +299,7 @@ tube4x             v8        160     item 9, the Shape node in a 4x region, hand
 tube4x             jvm       6       item 9, the Shape node in a 4x region, handed over at its rate
 C-full             v8        112     item 8, the knob reads; item 29's SVF setup as a whole (its parts: the KDocs)
 C-full             jvm       6       item 12 step 2
-C-remap            v8        192     item 2, the decoder's KlangMap: a new orbit map per block (not item 8: the voice lines)
+C-remap            v8        192     item 2, the decoder's KlangMap: a new cylinder map per block (not item 8: the voice lines)
 C-remap            jvm       36      item 2; reads 0 B in every row since 2026-10-13 (it read 24 B, the reverb writer's Double? lowpass per new map, before)
 C-kat-remap        v8        64      a slot expression evaluated on a new map every block: the evaluation allocates nothing (no remedy)
 C-kat-remap        jvm       6       a slot expression evaluated on a new map every block
@@ -307,10 +307,10 @@ E-sawC-sus         v8        160     item 3, the limiter's level (the per-sample
 E-sawC-sus         jvm       32      item 3, the limiter's level; item 8
 E-noisesaw-sus     v8        160     item 3, the limiter's gain (the per-sample class only)
 E-noisesaw-sus     jvm       32      item 3, the limiter's gain
-E-delay            v8        144     item 1, the orbit delay's sites as a whole (its parts: the KDocs)
-E-delay            jvm       32      item 1, the orbit delay
+E-delay            v8        144     item 1, the cylinder delay's sites as a whole (its parts: the KDocs)
+E-delay            jvm       32      item 1, the cylinder delay
 E-stages           v8        136     item 1: a revert of everything; the delay's sites with all three running; the per-sample class in the reverb and the phaser (the reverb's and the phaser's per-block sites only in part: their KDocs)
-E-stages           jvm       32      item 1, the three orbit stages
+E-stages           jvm       32      item 1, the three cylinder stages
 E-C-n1             v8        13296   item 2 steps 3 and 5: the registry and the sound name per note, a needless lowercase (not the dispatcher's map: its comment)
 E-C-n1             jvm       6661    the voice build per note; one Double per note (item 2 allocates nothing on the JVM)
 E-arith            v8        144     the eight arithmetic stages, constant operands: the per-sample laws and once per block (the KDoc of applyLaw); the operand by reference (item 36: a revert reads high in about half the rounds)
@@ -319,10 +319,10 @@ E-arith-glide      v8        552     the arithmetic glide: the per-sample ramp, 
 E-arith-glide      jvm       236     the arithmetic glide; 204 to 207 B of it is the note path (since the merge of 2026-10-11)
 E-distort          v8        128     the bus distort in a 2x region: the per-sample class and the sub-pool map (item 34)
 E-distort          jvm       32      the bus distort in a 2x region
-E-comp             v8        128     the orbit compressor and a lookahead limiter
-E-comp             jvm       32      the orbit compressor and a lookahead limiter
-E-eq               v8        136     the orbit eq: two bells and a tap
-E-eq               jvm       32      the orbit eq
+E-comp             v8        128     the cylinder compressor and a lookahead limiter
+E-comp             jvm       32      the cylinder compressor and a lookahead limiter
+E-eq               v8        136     the cylinder eq: two bells and a tap
+E-eq               jvm       32      the cylinder eq
 E-gain             v8        128     the group fader off unity; the factor by reference (item 45) only by its KDoc (a revert boxes only under a squeezed budget)
 E-gain             jvm       32      the group fader off unity
 E-duck             v8        176     the duck with a sounding sidechain (item 38, the per-block setters: guarded by the comment at the site)
@@ -331,8 +331,8 @@ E-parallel         v8        128     items 33 and 34, a single view per block an
 E-parallel         jvm       32      parallel, a distorted branch in a 2x region and its phase twin
 E-bands            v8        136     items 33 and 34, one view per branch (not one per block) and the sub-pool map; bands, three with the mids distorted in a 2x region: the per-sample class
 E-bands            jvm       32      bands, three with the mids distorted in a 2x region
-E-body-vowel       v8        144     the body and the vowel on an orbit (V8; the JVM's guard is KatalystResonatorAllocationSpec)
-E-body-vowel       jvm       32      the body and the vowel on an orbit
+E-body-vowel       v8        144     the body and the vowel on a cylinder (V8; the JVM's guard is KatalystResonatorAllocationSpec)
+E-body-vowel       jvm       32      the body and the vowel on a cylinder
 E-kat-sine         v8        128     one sine on the fader: the per-sample class only (HEAD reads under it)
 E-kat-sine         jvm       32      one sine on the fader
 E-kat-square       v8        136     a square with a slot-expression duty: the per-sample class only
@@ -349,8 +349,8 @@ E-kat-res          v8        184     the body's and the vowel's wet and floor: t
 E-kat-res          jvm       32      the body's and the vowel's wet and floor
 E-kat-gates        v8        144     a delay time, a reverb size and lowpass through their gates: the per-sample class (mutant 1,180 to 1,196); item 41 by its comments
 E-kat-gates        jvm       32      a delay time, a reverb size and lowpass through their gates
-E-kat-mix          v8        160     the mixed orbit: KnobGlide.retarget inline (mutant 246 to 260); item 41 by its comments
-E-kat-mix          jvm       32      the mixed orbit
+E-kat-mix          v8        160     the mixed cylinder: KnobGlide.retarget inline (mutant 246 to 260); item 41 by its comments
+E-kat-mix          jvm       32      the mixed cylinder
 E-C-rel05-n16      v8        1500    item 10b and item 8 across about 12 voices; item 3, the limiter
 E-C-rel05-n16      jvm       450     item 11, the voice build
 S-doors            v8        36500   item 2 step 4: the param bags' KlangMap storage and its JS copy fast path (per event)

@@ -41,6 +41,19 @@ A shape change: the sorting rule of `_v1-scope.md` puts it before the tutorials.
 4. **The words in the docs and the UI.** KDoc, module docs, the Lexikon (the "Orbit" and "Orbit bus" entries and their
    link words), the scope badge (`@scope orbit` and `orbit-send`, the label text), the warehouse panel, the Katalyst
    reference. History keeps its words (archived tickets, memory history, dated records).
+   **DONE 2026-11-06** (maintainer: "yes update everything"): the engine's identifiers and prose too, not only what a
+   user sees. About 2,500 lines in 320 files: KDoc and comments, test names and helpers (`createCylinder`,
+   `claimsCylinder`, `cylinderBlockRan`, `WARMUP_CYLINDERS`, `CylinderOwnershipSpec`), the `orbit: Int` parameters of
+   the phase pools, the scope badge (`KlangScope.CYLINDER`, tag `@scope cylinder`, label "CYLINDER BUS"), the warehouse
+   panel's hints, the module docs, `audio/ref`, the skills, the open tickets, the whitepaper and its figures (its
+   "bus, orbit, cylinder?" box now names `orbit` as the Strudel word and the alias), the dev patterns, the jingle and
+   the benchmark songs. Where the engine used to tell the number from the instance by the two words, the prose now says
+   "cylinder number" and "`Cylinder` instance". The Lexikon: the "Orbit" entry is folded into "Cylinder" (which names
+   the alias), "Orbit bus" is "Cylinder bus" (its page is `cylinder-bus` now; no live text linked the old slugs).
+   Kept on purpose: the two sprudel aliases and the specs that prove them, the Strudel compatibility tests (they run
+   real Strudel, whose word is `orbit`), the frozen pieces, the published blog posts, dated records and histories,
+   ticket titles, the linker's own unit fixture (`LexikonAutoLinksSpec`, invented entries that test word boundaries),
+   and the workshop's domain-word check, which still lists `orbit`.
 5. **The tutorials.** They keep working on the `orbit` alias. Their text is the tutorial stream's (KLANG-00145
    (tutorial curriculum), PAUSED): the change is offered to it, not made over its head.
 
@@ -60,3 +73,4 @@ step 4 (the words) and step 5 (the tutorials, offered).
 
 - 2026-11-06: created; steps written from decision D1.
 - 2026-11-06: steps 1 to 3 done (the door, the duck's knob, the songs and examples).
+- 2026-11-06: step 4 done, everything, the engine's identifiers included (maintainer: "yes update everything").

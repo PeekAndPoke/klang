@@ -33,7 +33,7 @@ import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
  *
  * **One kind of writer, on every chain** (Katalyst step 5b-1, 2026-09-19): every knob of every
  * stage comes from the chain's own slots ([KatalystKnob]), resolved here and
- * re-resolved only when the orbit's param state changes. That state is the owner voice's
+ * re-resolved only when the cylinder's param state changes. That state is the owner voice's
  * `katalystParams`, which `.katp` and the bus doors write (step 5a), and it is the ONE way a bus
  * knob reaches a stage, for a declared chain and for the chain a cylinder is born with alike. The
  * voice's bus FIELDS stopped being a knob source then (the signal-flow plan §7, D4: the chain is
@@ -41,7 +41,7 @@ import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
  * chose went with step 5b-1.
  *
  * A writer has TWO halves, `resolve` and `apply`, and the split is about the per-block cost: the
- * orbit's param state changes far more rarely than a block goes by, so `resolve` does the lookups
+ * cylinder's param state changes far more rarely than a block goes by, so `resolve` does the lookups
  * and allocates whatever composite a stage wants, and `apply` writes numbers that are already in
  * hand (see [KatalystSlotWriter]). `applyParams(null)` is how a chain is configured with no owner
  * voice alive, which is what a chain faded in from the pending poll needs.
@@ -55,7 +55,7 @@ object KatalystChainBuilder {
 
     /**
      * Builds the chain for [dsl]. Call once per cylinder and chain (see `Cylinder`), never per
-     * block: the stage instances own the orbit's DSP state, and building them is where the
+     * block: the stage instances own the cylinder's DSP state, and building them is where the
      * allocation lives.
      */
     fun build(
@@ -84,9 +84,9 @@ object KatalystChainBuilder {
      * and on into a `parallel`'s branches and a region's body, so the n-th noise of the whole chain is seeded by n (see
      * [KatalystNoiseOrdinals]).
      *
-     * [stages] is how many 2x steps above the base rate this chain runs at: 0 on an orbit or the master, the region's
+     * [stages] is how many 2x steps above the base rate this chain runs at: 0 on a cylinder or the master, the region's
      * inside an oversampling region's body (KLANG-00214 (oversampling regions)), where [sampleRate] and [blockFrames]
-     * are already scaled by it and [reverbs] is the shelf for that rate. The knobs keep the orbit's clock, [knobRate]
+     * are already scaled by it and [reverbs] is the shelf for that rate. The knobs keep the cylinder's clock, [knobRate]
      * and [knobBlockFrames]: a modulator ticks once a block at any rate, and a clock on the region's rate would walk a
      * noise faster and shorten an edge.
      */
@@ -105,7 +105,7 @@ object KatalystChainBuilder {
         val writers = mutableListOf<KatalystSlotWriter>()
         var duckStage: KatalystStageDsl.Duck? = null
 
-        // Every knob of the chain, on the orbit's sample rate and block size (a modulator's clock, also inside a region)
+        // Every knob of the chain, on the cylinder's sample rate and block size (a modulator's clock, also inside a region)
         // and its one noise counter. Each stage's knobs are built BEFORE the stage, in the order its writer lists them
         // (the noise ordinals follow that order), so the stage can glide a modulated knob over one block (`KnobGlide`'s
         // span, step 5b, D2).
@@ -131,7 +131,7 @@ object KatalystChainBuilder {
 
         // A region with [steps] to take, at least one (one without is inlined, see the loop): its body is a chain of its
         // own at the region's rate and block size, its reverbs from the shelf for that rate (KLANG-00214 (oversampling
-        // regions)). A duck in the body is the orbit's duck, as in a branch.
+        // regions)). A duck in the body is the cylinder's duck, as in a branch.
         fun region(steps: Int, body: KatalystDsl) {
             val inner = build(
                 dsl = body.withoutDucks(),
@@ -158,7 +158,7 @@ object KatalystChainBuilder {
         // A region with no step to take is no region: its body's stages stand in its place ([inlineStepless]).
         for (stage in dsl.stages.inlineStepless(stages)) {
             when (stage) {
-                // Body / vowel resonators, timbre shapers of the whole orbit (moved off the
+                // Body / vowel resonators, timbre shapers of the whole cylinder (moved off the
                 // per-voice chain). In the classic chain they run first, so they color the dry
                 // mix before the time/dynamics effects.
                 is KatalystStageDsl.Body -> {
@@ -199,7 +199,7 @@ object KatalystChainBuilder {
                 }
 
                 // No ring until the stage is asked for ([stageAskedFor], resource warehouse 2b). This used to
-                // construct a 10-second DelayLine per orbit (7.68 MB, 97 % of the cylinder)
+                // construct a 10-second DelayLine per cylinder (7.68 MB, 97 % of the cylinder)
                 // delay or not.
                 is KatalystStageDsl.Delay -> {
                     val wet = knob(stage.wet)
@@ -219,7 +219,7 @@ object KatalystChainBuilder {
                     // Routed through the effect's lifecycle: an off-config drains the tail out on
                     // its own timeline instead of freezing the ring (see KatalystDelayEffect).
                     //
-                    // `delay.wet` is how much of the orbit mix feeds the line (step 5b-2). An
+                    // `delay.wet` is how much of the cylinder mix feeds the line (step 5b-2). An
                     // AUTHORED `wet(0.0)` rents no ring (decided 2026-09-17, consistent with the
                     // phaser gated on depth and the duck on cylinder), while a wet a PATTERN wrote runs
                     // the stage whatever its value. The one home of that rule is [stageAskedFor].
@@ -227,7 +227,7 @@ object KatalystChainBuilder {
                 }
 
                 // No network until the stage is asked for ([stageAskedFor], resource warehouse 2d): ~200 KB per
-                // orbit otherwise.
+                // cylinder otherwise.
                 is KatalystStageDsl.Reverb -> {
                     val wet = knob(stage.wet)
                     val size = knob(stage.size)
@@ -249,7 +249,7 @@ object KatalystChainBuilder {
                     // the tail out on its own timeline instead of freezing the combs (see
                     // KatalystReverbEffect). The slot carries the AUTHORED 0..10 size, so the writer
                     // passes it through the one shared conversion, and configure bounds it again
-                    // at the door. `reverb.wet` is how much of the orbit mix feeds the room, and
+                    // at the door. `reverb.wet` is how much of the cylinder mix feeds the room, and
                     // whether the stage runs is [stageAskedFor], as on the delay above.
                     writers.add(KatalystReverbWriter(fx = fx, wet = wet, size = size, lowpass = lowpass))
                 }
@@ -328,8 +328,8 @@ object KatalystChainBuilder {
                     writers.add(KatalystDistortWriter(fx = fx, amount = amount))
                 }
 
-                // Declared in the list, run outside it: `Cylinders` applies it after every orbit,
-                // because it needs cross-orbit access to the sidechain source. The last
+                // Declared in the list, run outside it: `Cylinders` applies it after every cylinder,
+                // because it needs cross-cylinder access to the sidechain source. The last
                 // declaration wins, so a second Duck stage replaces the first; its instance is built
                 // after the loop, with its knobs.
                 is KatalystStageDsl.Duck -> {
@@ -350,7 +350,7 @@ object KatalystChainBuilder {
 
                     // The classic chain declares no `eq`; it does declare a `gain` at unity since
                     // 2026-09-19, which is bit-transparent and is what let `katp("gain.gain", x)`
-                    // reach the fader of an orbit that declares nothing one step before every
+                    // reach the fader of a cylinder that declares nothing one step before every
                     // other knob could.
                     val knobs = eqKnobs(specs = specs, sampleRate = knobRate, blockFrames = knobBlockFrames)
 
@@ -385,7 +385,7 @@ object KatalystChainBuilder {
 
                 // Branches side by side, each a chain of its own built here (the same shelves, so a branch's delay and
                 // reverb rent like the chain's). An empty stage is the bus unchanged: nothing is built. A duck in a
-                // branch is the orbit's duck (its position is ignored, see the Duck arm), so it is taken out of every
+                // branch is the cylinder's duck (its position is ignored, see the Duck arm), so it is taken out of every
                 // branch and, the last one in the order written, competes with the chain's own here.
                 is KatalystStageDsl.Parallel -> if (stage.branches.isNotEmpty()) {
                     val branches = Array(stage.branches.size) {
@@ -449,10 +449,10 @@ object KatalystChainBuilder {
             writers = writers.toTypedArray(),
             duck = theDuck,
             // The duck's own writer answers whether the stage will be configured: a chain that
-            // names no orbit (or a depth of zero) declares a duck that will never be configured,
+            // names no cylinder (or a depth of zero) declares a duck that will never be configured,
             // and the host has to be able to tell that from one that will (see
             // [KatalystChain.ducksWith]). A writer, not a build-time flag, because `.katp` can
-            // name the orbit after the chain was built.
+            // name the cylinder after the chain was built.
             duckWriter = duckWriter,
             firstStage = stages,
         )
@@ -601,7 +601,7 @@ object KatalystChainBuilder {
 
 /**
  * Whether the delay or the reverb stage RUNS, which is a different question from how much of the
- * orbit mix feeds it (that is `wet` itself, since Katalyst step 5b-2).
+ * cylinder mix feeds it (that is `wet` itself, since Katalyst step 5b-2).
  *
  * The stage runs when the pattern WROTE this knob (any finite value, zero and negative included:
  * [KatalystKnob.written]) or when what the chain itself authored is a positive amount.

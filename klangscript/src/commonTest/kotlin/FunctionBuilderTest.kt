@@ -150,10 +150,10 @@ class FunctionBuilderTest : StringSpec({
     "vararg: positional tail absorbed into List" {
         val engine = klangScriptEngine {
             createFunction("stack")
-                .withParam<String>("orbit")
+                .withParam<String>("cylinder")
                 .withVararg<String>("samples")
-                .body { orbit: String, samples: List<String> ->
-                    "$orbit:${samples.joinToString(",")}"
+                .body { cylinder: String, samples: List<String> ->
+                    "$cylinder:${samples.joinToString(",")}"
                 }
         }
         (engine.execute("stack(\"d1\", \"bd\", \"sd\", \"hh\")") as StringValue).value shouldBe "d1:bd,sd,hh"
@@ -162,22 +162,22 @@ class FunctionBuilderTest : StringSpec({
     "vararg: named call passes an array literal" {
         val engine = klangScriptEngine {
             createFunction("stack")
-                .withParam<String>("orbit")
+                .withParam<String>("cylinder")
                 .withVararg<String>("samples")
-                .body { orbit: String, samples: List<String> ->
-                    "$orbit:${samples.joinToString(",")}"
+                .body { cylinder: String, samples: List<String> ->
+                    "$cylinder:${samples.joinToString(",")}"
                 }
         }
-        (engine.execute("stack(orbit = \"d1\", samples = [\"bd\", \"sd\"])") as StringValue).value shouldBe "d1:bd,sd"
+        (engine.execute("stack(cylinder = \"d1\", samples = [\"bd\", \"sd\"])") as StringValue).value shouldBe "d1:bd,sd"
     }
 
     "vararg: positional call with empty tail → empty List" {
         val engine = klangScriptEngine {
             createFunction("stack")
-                .withParam<String>("orbit")
+                .withParam<String>("cylinder")
                 .withVararg<String>("samples")
-                .body { orbit: String, samples: List<String> ->
-                    "$orbit:${samples.size}"
+                .body { cylinder: String, samples: List<String> ->
+                    "$cylinder:${samples.size}"
                 }
         }
         (engine.execute("stack(\"d1\")") as StringValue).value shouldBe "d1:0"
@@ -186,24 +186,24 @@ class FunctionBuilderTest : StringSpec({
     "vararg: named call omits the vararg slot → empty List default" {
         val engine = klangScriptEngine {
             createFunction("stack")
-                .withParam<String>("orbit")
+                .withParam<String>("cylinder")
                 .withVararg<String>("samples")
-                .body { orbit: String, samples: List<String> ->
-                    "$orbit:${samples.size}"
+                .body { cylinder: String, samples: List<String> ->
+                    "$cylinder:${samples.size}"
                 }
         }
-        (engine.execute("stack(orbit = \"d1\")") as StringValue).value shouldBe "d1:0"
+        (engine.execute("stack(cylinder = \"d1\")") as StringValue).value shouldBe "d1:0"
     }
 
     "vararg: named call with non-array value → strict error" {
         val engine = klangScriptEngine {
             createFunction("stack")
-                .withParam<String>("orbit")
+                .withParam<String>("cylinder")
                 .withVararg<String>("samples")
                 .body { _: String, _: List<String> -> "ok" }
         }
         val err = shouldThrow<KlangScriptArgumentError> {
-            engine.execute("stack(orbit = \"d1\", samples = \"bd\")")
+            engine.execute("stack(cylinder = \"d1\", samples = \"bd\")")
         }
         err.message!! shouldContain "vararg parameter 'samples' requires an array"
     }
@@ -284,10 +284,10 @@ class FunctionBuilderTest : StringSpec({
             registerObject("Ignitor", IgnitorLike) {}
             createFunction("stack")
                 .withReceiver<IgnitorLike>()
-                .withParam<String>("orbit")
+                .withParam<String>("cylinder")
                 .withVararg<String>("samples")
-                .body { rcv: IgnitorLike, orbit: String, samples: List<String> ->
-                    "$rcv:$orbit:${samples.joinToString(",")}"
+                .body { rcv: IgnitorLike, cylinder: String, samples: List<String> ->
+                    "$rcv:$cylinder:${samples.joinToString(",")}"
                 }
         }
         (engine.execute("Ignitor.stack(\"d1\", \"bd\", \"sd\")") as StringValue).value shouldBe "[IgnitorLike]:d1:bd,sd"
@@ -298,13 +298,13 @@ class FunctionBuilderTest : StringSpec({
             registerObject("Ignitor", IgnitorLike) {}
             createFunction("stack")
                 .withReceiver<IgnitorLike>()
-                .withParam<String>("orbit")
+                .withParam<String>("cylinder")
                 .withVararg<String>("samples")
-                .body { rcv: IgnitorLike, orbit: String, samples: List<String> ->
-                    "$rcv:$orbit:${samples.joinToString(",")}"
+                .body { rcv: IgnitorLike, cylinder: String, samples: List<String> ->
+                    "$rcv:$cylinder:${samples.joinToString(",")}"
                 }
         }
-        (engine.execute("Ignitor.stack(orbit = \"d1\", samples = [\"bd\", \"sd\"])") as StringValue).value shouldBe "[IgnitorLike]:d1:bd,sd"
+        (engine.execute("Ignitor.stack(cylinder = \"d1\", samples = [\"bd\", \"sd\"])") as StringValue).value shouldBe "[IgnitorLike]:d1:bd,sd"
     }
 
     "nullable rejection error message includes function name, not param name" {
@@ -323,12 +323,12 @@ class FunctionBuilderTest : StringSpec({
     "vararg non-array rejection error message includes function name" {
         val engine = klangScriptEngine {
             createFunction("stack")
-                .withParam<String>("orbit")
+                .withParam<String>("cylinder")
                 .withVararg<String>("samples")
                 .body { _: String, _: List<String> -> "ok" }
         }
         val err = shouldThrow<KlangScriptArgumentError> {
-            engine.execute("stack(orbit = \"d1\", samples = \"bd\")")
+            engine.execute("stack(cylinder = \"d1\", samples = \"bd\")")
         }
         err.functionName shouldBe "stack"
         err.message!! shouldContain "vararg parameter 'samples'"

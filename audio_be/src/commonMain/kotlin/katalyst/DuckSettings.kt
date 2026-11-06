@@ -6,7 +6,7 @@
 package io.peekandpoke.klang.audio_be.katalyst
 
 /**
- * What a declared duck stage is configured with: the source orbit it listens to, and the envelope
+ * What a declared duck stage is configured with: the source cylinder it listens to, and the envelope
  * follower's attack and depth. [KatalystDuckEffect.configure] applies it.
  *
  * **Mutable and reused, on purpose** (katalyst knob expressions step 2, 2026-10-11): [KatalystDuckWriter]

@@ -54,8 +54,8 @@ class LangWetKnobSpec : StringSpec({
         vowel.vowel shouldBe "a"
     }
 
-    "the phaser floor crosses the WIRE boundary (toVoiceData) as its orbit slot: set passes through, unnamed takes PHASER_FLOOR" {
-        // The sprudel accessor rows above stop BEFORE the wire. The orbit reads `phaser.floor` from `katalystParams`
+    "the phaser floor crosses the WIRE boundary (toVoiceData) as its cylinder slot: set passes through, unnamed takes PHASER_FLOOR" {
+        // The sprudel accessor rows above stop BEFORE the wire. The cylinder reads `phaser.floor` from `katalystParams`
         // (the typed wire field left in phase 3 step 9), so a door that stopped writing the slot would make
         // phaser(floor = ...) a silent no-op in real playback while every accessor row stays green.
         firstData(note("c").phaser(floor = 0.25)).toVoiceData().katalystParams?.get("phaser.floor") shouldBe 0.25

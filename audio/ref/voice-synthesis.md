@@ -62,7 +62,7 @@ instrument gets the voice doors by ending in `.classic()`. A tree without `class
 doors, no default envelope.
 
 Compressor, ducking, phaser, delay, reverb, body and vowel are **cylinder-level** (Katalyst) effects,
-not per-voice: applied on the orbit bus after all voices mix into the cylinder.
+not per-voice: applied on the cylinder bus after all voices mix into the cylinder.
 
 ### Voice construction
 
@@ -82,7 +82,7 @@ Passed to `Voice.render()` every block:
 
 ```kotlin
 class RenderContext(
-    val cylinders: Cylinders,            // the orbits the send mixes into
+    val cylinders: Cylinders,            // the cylinders the send mixes into
     val sampleRate: Int,
     val blockFrames: Int,
     val voiceBuffer: AudioBuffer,        // the voice renders here (length = blockFrames)
@@ -300,7 +300,7 @@ its release and its own output has stayed under the audibility floor for the cul
   they cover the window, `Voice.culled` is set, the voice is `Done` at that block and the scheduler counts it
   (`VoiceScheduler.culledVoicesTotal`) and removes it, keeping the list's order.
 - **A culled voice ends at once** (lifecycle step 5, 2026-10-07). Until then it stayed listed as a ZOMBIE until
-  its scheduled `endFrame`, because the list order decided who took an orbit next (measured 2026-09-15 on Der
+  its scheduled `endFrame`, because the list order decided who took a cylinder next (measured 2026-09-15 on Der
   Schmetterling: -32 dBFS). Ownership now goes by onset (the newest `Sounding` voice), and every removal keeps the
   list's order, so nothing needs the zombie. One order effect remains, the unison phase-pool take on a voice's
   first block (open: KLANG-00290 (engine follow ups), item 14).
@@ -312,14 +312,14 @@ its release and its own output has stayed under the audibility floor for the cul
   silent and comes back is cut at its first gap: the factory excludes voices whose tree holds a
   tremolo on the output (`BuiltIgnitor.gatesOutput`; a square shape at full depth is exact silence
   for half a cycle) unless `cull` is set explicitly; a sparse source inside an ignitor is the author's call (`noCull()`).
-- **Tails on the orbit are untouched:** reverb and delay live on the cylinder buses; culling
+- **Tails on the cylinder are untouched:** reverb and delay live on the cylinder buses; culling
   only stops future ~zero sends. A culled voice is past its gate and owns nothing, so culling
-  does not move the orbit's ownership either.
+  does not move the cylinder's ownership either.
 - **Knobs:** `cull(seconds)` sets the window per voice (`VoiceData.cull`, default
   `VOICE_CULL_SECONDS` = 50 ms), `noCull()` writes `VOICE_CULL_NEVER` (negative = never). Floor
   `VOICE_CULL_FLOOR` = `SILENCE_FLOOR` = 1e-5 (-100 dBFS; one constant shared with the
   cylinder's silence test, so per voice and per bus a culled voice is already below what keeps an
-  orbit alive; the known exceptions, summed sub-floor tails and a feedback delay's tail ceiling,
+  cylinder alive; the known exceptions, summed sub-floor tails and a feedback delay's tail ceiling,
   are on the constant's KDoc). Constants in `audio_bridge/constants/VoiceCullingDefaults.kt`.
 - Guard: `VoiceCullingSpec`. Record: KLANG-00199 (voice culling).
 

@@ -43,7 +43,7 @@ combs are fed `(L + R) / 2`: one room for both ears, no lean towards the source.
 
 - New class next to `Reverb`, or a front stage for it.
 - Whether size alone drives the timing, or a second musical knob appears (door shape per
-  `/dsl-design` §2; both DSLs; the same word on orbit and master).
+  `/dsl-design` §2; both DSLs; the same word on cylinder and master).
 - Cost: the reverb is already the heaviest single unit per sample.
 - Tuning by ear on songs with both small and big rooms, before the tutorials lock the sound.
 

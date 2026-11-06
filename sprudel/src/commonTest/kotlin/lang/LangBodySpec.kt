@@ -20,9 +20,9 @@ class LangBodySpec : StringSpec({
         events[0].data.body shouldBe "wood"
     }
 
-    // The orbit's body stage reads its SLOTS (`body.material`, `body.wet`, `body.floor` in `katalystParams`, Katalyst
+    // The cylinder's body stage reads its SLOTS (`body.material`, `body.wet`, `body.floor` in `katalystParams`, Katalyst
     // step 5b-1); the `FilterDef.Body` the voice once carried in `filters` left the wire in phase 3 step 9. So these
-    // rows read the slots the door writes, and resolve the material index through the table the orbit uses.
+    // rows read the slots the door writes, and resolve the material index through the table the cylinder uses.
     fun slots(pattern: SprudelPattern): Map<String, Double> =
         pattern.queryArc(0.0, 1.0)[0].data.toVoiceData().katalystParams?.toMap() ?: emptyMap()
 
@@ -77,7 +77,7 @@ class LangBodySpec : StringSpec({
         slots["body.floor"] shouldBe BODY_FLOOR
     }
 
-    "the body travels as orbit slots and the lowpass as its classic() slots, each in its own map" {
+    "the body travels as cylinder slots and the lowpass as its classic() slots, each in its own map" {
         val voiceData = note("c3").lpf(800).body(material = "wood").queryArc(0.0, 1.0)[0].data.toVoiceData()
 
         voiceData.katalystParams?.get("body.material") shouldBe BodyMaterials.indexOf("wood")

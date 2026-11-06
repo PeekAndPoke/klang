@@ -21,7 +21,7 @@ import io.peekandpoke.klang.sprudel.lang.hpf
 import io.peekandpoke.klang.sprudel.lang.lpf
 import io.peekandpoke.klang.sprudel.lang.n
 import io.peekandpoke.klang.sprudel.lang.note
-import io.peekandpoke.klang.sprudel.lang.orbit
+import io.peekandpoke.klang.sprudel.lang.cylinder
 import io.peekandpoke.klang.sprudel.lang.pan
 import io.peekandpoke.klang.sprudel.lang.perlin
 import io.peekandpoke.klang.sprudel.lang.range
@@ -56,7 +56,7 @@ object TestKotlinPatterns {
         ).sound("tri")
             .filterWhen(predicate = { it >= 16 })
 //            .struct("x(5,8,2)")
-            .orbit(0).gain(0.375)
+            .cylinder(0).gain(0.375)
             .pan(sine.slow(48).range(0.3, 0.7).flipSign())
             .delay(wet = 0.2, time = 0.4, feedback = 0.1)
             .reverb(wet = 0.2, size = 0.1)
@@ -82,7 +82,7 @@ object TestKotlinPatterns {
 //            .struct("<x*2>")
             .unison(pan = 0.5, voices = sine.range(4, 12).slow(32))
             .unison(spread = sine.range(0.05, 0.3).early(1.5).slow(12))
-            .orbit(2).gain(0.55)
+            .cylinder(2).gain(0.55)
             .pan(sine.slow(48).range(0.3, 0.7))
             .adsr(0.01, 0.3, 0.4, 0.5)
 //            .lpf(4000)
@@ -112,7 +112,7 @@ object TestKotlinPatterns {
 //                [[sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh]]
 //                [[sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh]]
         )
-            .orbit(3).pan(-0.0).gain(1.0)
+            .cylinder(3).pan(-0.0).gain(1.0)
             .reverb(wet = 0.02, size = 0.5)
             .adsr(0.01, 0.2, 0.8, 0.5)
             .fast(2)
@@ -124,7 +124,7 @@ object TestKotlinPatterns {
         arrange(
             listOf(8, silence),
             listOf(8, n("<[~ 0] 2 [0 2] [~ 2][~ 0] 1 [0 1] [~ 1][~ 0] 3 [0 3] [~ 3][~ 0] 2 [0 2] [~ 2]>*4")),
-        ).orbit(1)
+        ).cylinder(1)
             .scale("C4:minor")
             .adsr(0.05, 0.7, 0.0, 0.5)
             .hpf(800)
@@ -135,7 +135,7 @@ object TestKotlinPatterns {
         arrange(
             listOf(8, silence),
             listOf(8, n("<[~ 0] 2 [0 2] [~ 2][~ 0] 1 [0 1] [~ 1][~ 0] 3 [0 3] [~ 3][~ 0] 2 [0 2] [~ 2]>*4")),
-        ).orbit(2)
+        ).cylinder(2)
             .scale("C5:minor")
             .adsr(0.05, 0.7, 0.0, 0.5)
             .hpf(1600)
@@ -144,7 +144,7 @@ object TestKotlinPatterns {
 
         // bass
         note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
-            .orbit(3)
+            .cylinder(3)
             .sound("supersaw").unison(voices = 4, spread = 0.1)
             .adsr(0.0, 0.3, 0.0, 0.8)
             .lpf(800)
@@ -152,7 +152,7 @@ object TestKotlinPatterns {
 
         // Drums
         sound("[bd hh sd hh] [bd [bd, hh] sd oh]").fast(1)
-            .orbit(4)
+            .cylinder(4)
             .pan(0.5)
             .gain(0.8)
             .delay(wet = "0.2", time = 0.25, feedback = 0.3),

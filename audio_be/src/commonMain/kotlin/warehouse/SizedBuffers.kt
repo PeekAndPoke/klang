@@ -35,7 +35,7 @@ import io.peekandpoke.klang.audio_be.StereoBuffer
  * DEFERRED housekeeping, not done at return** (review round 3): every return site runs on the audio
  * thread — a grow inside `configure`, an engine's disposal inside the render callback, a master
  * chain's eviction inside a command drain — and clearing there is O(ring) at the worst moment (a
- * 20 s master ring is 24 MB; sixteen warmup orbits retired in one block were ~19 MB). [giveBack] is
+ * 20 s master ring is 24 MB; sixteen warmup cylinders retired in one block were ~19 MB). [giveBack] is
  * O(1) and marks the buffer DIRTY; [housekeep] clears a bounded number of frames per call, and the
  * backend calls it once per block; [rent] prefers a clean buffer and cleans a dirty one on the spot
  * only when nothing clean fits — at most twice what the allocation it replaces would have zeroed,
@@ -89,7 +89,7 @@ class SizedBuffers(
 
     /**
      * [giveBack] calls for a buffer that was ALREADY on the shelf. Guarded, not thrown: a double
-     * return would put one ring on the shelf twice and rent it to two live orbits — two delays
+     * return would put one ring on the shelf twice and rent it to two live cylinders, two delays
      * writing one ring, heard as cross-talk. Eviction (2f) is where that mistake is easiest to make.
      */
     var doubleReturns: Int = 0

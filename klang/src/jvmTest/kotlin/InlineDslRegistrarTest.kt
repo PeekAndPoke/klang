@@ -152,7 +152,7 @@ class InlineDslRegistrarTest : StringSpec({
 
     // ── one chain type, two positions, one registry (phase 3 step 12 C5) ──
 
-    "a chain written at both positions, master and orbit, is announced ONCE" {
+    "a chain written at both positions, master and cylinder, is announced ONCE" {
         val (reg, sent) = newRegistrar()
         val chain = KatalystDsl.of(KatalystStageDsl.Reverb(wet = KatalystKnobDsl.Constant(0.23)))
 
@@ -185,7 +185,7 @@ class InlineDslRegistrarTest : StringSpec({
         )
 
         sent.filterIsInstance<KlangCommLink.Cmd.RegisterIgnitor>().single().dsl shouldBe osc
-        // The output chain is announced like an orbit chain, into the one Katalyst registry.
+        // The output chain is announced like a cylinder chain, into the one Katalyst registry.
         sent.filterIsInstance<KlangCommLink.Cmd.RegisterKatalyst>().map { it.dsl }.toSet() shouldBe
                 setOf(master, katalyst)
         sent.size shouldBe 3

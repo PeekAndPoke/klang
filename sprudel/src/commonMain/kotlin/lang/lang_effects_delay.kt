@@ -30,7 +30,7 @@ import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArg
  * echo is ON.
  *
  * The slots are the delay's only storage since Katalyst step 5b-3 (the voice fields left the
- * wire and `SprudelVoiceData`): the orbit's line reads them, and so do the `delay.*` accessors.
+ * wire and `SprudelVoiceData`): the cylinder's line reads them, and so do the `delay.*` accessors.
  *
  * Byte-identical to what the engine did with an unset field until then: `VoiceFactory`
  * substituted exactly these constants.
@@ -68,13 +68,13 @@ private fun applyDelay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
 
 
 /**
- * The orbit delay: how much of the orbit is echoed, the time, the feedback and the feedback cap.
+ * The cylinder delay: how much of the cylinder is echoed, the time, the feedback and the feedback cap.
  *
- * One delay per orbit bus, and all four are set once for everyone by
- * the orbit's owning voice. `wet` is how much of the orbit goes into the delay: the echoes are
- * added on top of the dry sound, and every voice on the orbit is echoed alike. So a pattern that
- * should stay dry, or echo by a different amount, goes on an orbit of its own. When another pattern
- * with a delay takes the orbit over, `wet` and `feedback` move smoothly to its values, and a new
+ * One delay per cylinder bus, and all four are set once for everyone by
+ * the cylinder's owning voice. `wet` is how much of the cylinder goes into the delay: the echoes are
+ * added on top of the dry sound, and every voice on the cylinder is echoed alike. So a pattern that
+ * should stay dry, or echo by a different amount, goes on a cylinder of its own. When another pattern
+ * with a delay takes the cylinder over, `wet` and `feedback` move smoothly to its values, and a new
  * time crossfades to the new echo; a pattern without one switches the delay off: its feed fades
  * out over 50 ms and the echoes already sent ring out.
  *
@@ -101,16 +101,16 @@ private fun applyDelay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * s("sd sd").delay("<0.1 0.4>", 0.25).reverb(wet = delay.wet, size = 4)     // as much reverb as delay
  * ```
  *
- * @param wet How much of the orbit goes into the delay, 0 to 1, default 0.25. Orbit-wide.
- * @param time Delay time in seconds, default 0.25. Orbit-wide.
- * @param feedback Feedback, 0 to 1, default 0.3. Above 1 builds up. Orbit-wide.
- * @param cap Ceiling the repeats may not exceed, default 1. Orbit-wide.
+ * @param wet How much of the cylinder goes into the delay, 0 to 1, default 0.25. Cylinder-wide.
+ * @param time Delay time in seconds, default 0.25. Cylinder-wide.
+ * @param feedback Feedback, 0 to 1, default 0.3. Above 1 builds up. Cylinder-wide.
+ * @param cap Ceiling the repeats may not exceed, default 1. Cylinder-wide.
  * @tool SprudelDelayEditor
  * @tool wet: SprudelDelayEditor, SprudelDelaySequenceEditor
  * @tool time: SprudelDelayTimeEditor, SprudelDelayTimeSequenceEditor
  * @tool feedback: SprudelDelayFeedbackEditor, SprudelDelayFeedbackSequenceEditor
  *
- * @scope orbit
+ * @scope cylinder
  * @category effects
  * @tags delay, wet, time, feedback, cap
  */
@@ -160,7 +160,7 @@ fun PatternMapperFn.delay(
  * The `delay` object: `delay(...)` sets the slots, and each numeric slot reads back as a child,
  * `delay.wet`, `delay.time`, `delay.feedback`, `delay.cap`.
  *
- * @scope orbit
+ * @scope cylinder
  * @category effects
  * @tags delay, accessor
  */
@@ -187,10 +187,10 @@ object delay {
     /**
      * The setter, see [SprudelPattern.delay].
      *
-     * @param wet How much of the orbit goes into the delay, 0 to 1, default 0.25. Orbit-wide.
-     * @param time Delay time in seconds, default 0.25. Orbit-wide.
-     * @param feedback Feedback, 0 to 1, default 0.3. Above 1 builds up. Orbit-wide.
-     * @param cap Ceiling the repeats may not exceed, default 1. Orbit-wide.
+     * @param wet How much of the cylinder goes into the delay, 0 to 1, default 0.25. Cylinder-wide.
+     * @param time Delay time in seconds, default 0.25. Cylinder-wide.
+     * @param feedback Feedback, 0 to 1, default 0.3. Above 1 builds up. Cylinder-wide.
+     * @param cap Ceiling the repeats may not exceed, default 1. Cylinder-wide.
      */
     @KlangScript.Invoke
     operator fun invoke(

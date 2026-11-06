@@ -545,11 +545,11 @@ Where the swing sits is up to the two values of `range`, the same word, paramete
 
 From `0..1` to `-1..1` without a range: `x.mul(2).minus(1)`.
 
-**On a Katalyst chain** (an orbit or the master) the same words are stages on the bus (2026-10-11): `plus`/`add`,
+**On a Katalyst chain** (a cylinder or the master) the same words are stages on the bus (2026-10-11): `plus`/`add`,
 `minus`/`sub`, `times`/`mul`, `div`, `pow`/`power`, `min`, `max`, `neg`/`negate`, `abs`, each sample through the
 same law as here. The operand is a number, a `Kat.param` or a Kat expression (not a signal), and a moved `Kat.param`
 glides. For a level
-use `gain`, the fader; `times` is the arithmetic. A constant `plus` keeps its orbit from ever switching off.
+use `gain`, the fader; `times` is the arithmetic. A constant `plus` keeps its cylinder from ever switching off.
 
 ```javascript
 // rectify the bus an octave up into the distort, then cap it
@@ -831,7 +831,7 @@ note("c3 e3 g3").s("supersaw").katalyst(bus).katp("fader", "<1 0.5>")
 smooth noise walks; `rate` is required and is the Ignitor's noise unit (rate 1 is 144 cells a second at every sample
 rate, so a slow drift wants about 0.0005 to 0.01). Each swings about -1..1, so map it with `range(from, to)`; it takes the
 arithmetic like a param, and a param may sit inside it (`Kat.sine(Kat.param("lfo", 0.2))`). The chain reads it once
-per block and the stage ramps the knob across the block to that value; its clock runs while the orbit sounds and
+per block and the stage ramps the knob across the block to that value; its clock runs while the cylinder sounds and
 pauses while it sleeps. A modulated delay `time` steps through the delay's 50 ms tap crossfade (a stepping echo, not a
 chorus), and a modulated `body` material or `vowel` steps through the bank swap, while a modulated `wet` or `floor`
 there glides the blend in place, the resonance ringing on unless the wet lands at 0. Not on an `eq` section. Unlike

@@ -57,7 +57,7 @@ class VoiceLifecycleSpec : StringSpec({
         sampleRate = sampleRate, blockFrames = blockFrames, cull = cull, envelope = envelope,
     )
 
-    // A fresh context (and with it fresh orbits) per row.
+    // A fresh context (and with it fresh cylinders) per row.
     var ctx = createContext(blockStart = 0.0, blockFrames = blockFrames, sampleRate = sampleRate)
 
     beforeTest {
@@ -86,12 +86,12 @@ class VoiceLifecycleSpec : StringSpec({
         block(v, 896.0) shouldBe true
         withClue("the block [896, 1024) ends ON the onset: still pending") { v.state shouldBe State.Pending }
         withClue("nothing rendered") { untouched() shouldBe true }
-        withClue("a pending voice does not touch its orbit (no claim)") { ctx.cylinders.cylindersIds.isEmpty() shouldBe true }
+        withClue("a pending voice does not touch its cylinder (no claim)") { ctx.cylinders.cylindersIds.isEmpty() shouldBe true }
 
         block(v, 1024.0) shouldBe true
         withClue("the block that starts on the onset") { v.state shouldBe State.Sounding }
         withClue("the onset block renders") { ctx.voiceBuffer[0] shouldBe 1.0 }
-        withClue("and sends to its orbit") { ctx.cylinders.cylindersIds shouldBe setOf(v.cylinderId) }
+        withClue("and sends to its cylinder") { ctx.cylinders.cylindersIds shouldBe setOf(v.cylinderId) }
     }
 
     "Sounding through the gate, Releasing from the first block that starts at or after the gate end" {
@@ -435,12 +435,12 @@ class VoiceLifecycleSpec : StringSpec({
         (maxStep > 0.0) shouldBe true
     }
 
-    "a cut's sends fade too: the orbit mix carries the ramp" {
+    "a cut's sends fade too: the cylinder mix carries the ramp" {
         val v = cutVoice()
         val cylinder = ctx.cylinders.offerAndCommit(v.cylinderId, v, 0.0)
         val held = cylinder.mixBuffer.left[100]
 
-        withClue("the held voice reaches its orbit") { (held > 0.1) shouldBe true }
+        withClue("the held voice reaches its cylinder") { (held > 0.1) shouldBe true }
 
         for (start in listOf(128.0, 256.0, 384.0)) {
             cylinder.mixBuffer.left.fill(0.0)

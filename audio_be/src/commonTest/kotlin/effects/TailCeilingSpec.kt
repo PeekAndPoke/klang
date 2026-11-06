@@ -78,7 +78,7 @@ class TailCeilingSpec : StringSpec({
         (windows > 400) shouldBe true // ln(1e-5/1e-3)/ln(0.99) ≈ 458
     }
 
-    "|feedback| >= 1 never decays: the orbit is pinned until the owner turns the unit off" {
+    "|feedback| >= 1 never decays: the cylinder is pinned until the owner turns the unit off" {
         val c = TailCeiling()
         c.observe(inputPeak = 0.1, frames = 100, windowSamples = 100.0, feedback = 1.0, lapsPerWindow = 1)
         repeat(100_000) { c.observe(inputPeak = 0.0, frames = 100, windowSamples = 100.0, feedback = 1.0, lapsPerWindow = 1) }
@@ -200,7 +200,7 @@ class TailCeilingSpec : StringSpec({
     }
 
 
-    "a non-finite input peak counts as 'louder than any audio', never as NaN — no tail is cut, no orbit pinned by accident" {
+    "a non-finite input peak counts as 'louder than any audio', never as NaN, no tail is cut, no cylinder pinned by accident" {
         // Review round 2: peakOf propagates +Inf; at feedback 0 `Inf · 0` made the ceiling NaN,
         // NaN compares false, and the effect reported no tail while the ring still rang.
         val c = TailCeiling()
@@ -277,7 +277,7 @@ class TailCeilingSpec : StringSpec({
         c.hasTail shouldBe true
 
         // And it still falls: window 2 wrote nothing (feedback 0, silent input), so once it
-        // closes there is nothing left to hold the orbit with.
+        // closes there is nothing left to hold the cylinder with.
         c.observe(inputPeak = 0.0, frames = 100, windowSamples = 100.0, feedback = 0.0, lapsPerWindow = 1)
         c.hasTail shouldBe false
     }

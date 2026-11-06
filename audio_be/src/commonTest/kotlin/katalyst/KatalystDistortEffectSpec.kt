@@ -189,7 +189,7 @@ class KatalystDistortEffectSpec : StringSpec({
             reverbs = ReverbUnits(sampleRate),
         )
 
-        // Until KLANG-00214 step 4 a bare bus distort oversampled at 2x and delayed its orbit by 3 frames.
+        // Until KLANG-00214 step 4 a bare bus distort oversampled at 2x and delayed its cylinder by 3 frames.
         chain(KatalystStageDsl.Distort()).latencyFrames shouldBe 0
 
         val lookahead = KatalystStageDsl.Compressor(lookahead = 0.005)

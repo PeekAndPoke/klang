@@ -62,7 +62,7 @@ class SongBenchmark(
     companion object {
         /**
          * How much of the start of each pass is excluded from the peak-block figure — long enough to
-         * cover the one-time lazy allocations (the ~7.68 MB per-orbit delay rings), short enough to
+         * cover the one-time lazy allocations (the ~7.68 MB per-cylinder delay rings), short enough to
          * still measure most of the music. Was implicitly ~341 ms when this was a 32-block constant
          * at 512 frames.
          */
@@ -101,7 +101,7 @@ class SongBenchmark(
     ) {
         /**
          * Nanoseconds of render time per sample per rendering voice. The numerator is the WHOLE
-         * render (the voices, their strips, the orbit effects, the master), so a piece with little
+         * render (the voices, their strips, the cylinder effects, the master), so a piece with little
          * voice work reads high; compare within a piece, not across pieces.
          */
         fun nsPerSamplePerVoice(sampleRate: Int): Double =
@@ -110,7 +110,7 @@ class SongBenchmark(
         /**
          * Nanoseconds of render time per sample per pass over the block, the engine's cost per unit
          * of counted work. The census counts the ignitor graphs only, while the render time includes
-         * the strips, the orbit effects and the master, so a sample voice (one pass) carries all of
+         * the strips, the cylinder effects and the master, so a sample voice (one pass) carries all of
          * its strip in this number; it compares an engine against itself on one piece.
          */
         fun nsPerSamplePerPass(sampleRate: Int): Double =
@@ -255,12 +255,12 @@ class SongBenchmark(
         // (e.g. the ~7.68 MB delay rings). Skip those when computing the steady-state peak so
         // peakBlockRtf reflects the busiest *musical* block, not cold-start allocation.
         // A DURATION, not a block count: the allocation happens at a point in the *song* (the first
-        // voice to touch an orbit), so a fixed block count skips a different amount of music at
+        // voice to touch a cylinder), so a fixed block count skips a different amount of music at
         // every block size. At 512 frames `32` meant ~341 ms; at 128 it would mean ~85 ms, letting
         // a first-note allocation on a 1/8 or 1/16 land inside the measured window and masquerade
         // as a DSP cost.
-        // Covers the START-OF-SONG allocations only. An orbit gated in by `filterWhen` (Seltsamere
-        // Dinge brings orbits 4 and 5 in at cycles 16 and 28) allocates its cylinder deep inside the
+        // Covers the START-OF-SONG allocations only. A cylinder gated in by `filterWhen` (Seltsamere
+        // Dinge brings cylinders 4 and 5 in at cycles 16 and 28) allocates its cylinder deep inside the
         // measured window, and no start-of-pass skip can ever reach that. Those spikes still land in
         // peakBlockRtf — making the peak robust instead of time-gated (99th percentile, or drop the
         // top N blocks) is the real fix. See KLANG-00139 (block size parity).

@@ -25,14 +25,14 @@ import io.peekandpoke.klang.audio_bridge.constants.PHASER_WET
  * at `depth = 1.0` dry + full wet — the cylinder-bus convention where `phaserDepth` adds
  * an effect on top of the source. Lowering the floor (`phaserFloor`) turns the same knob
  * into a crossfade; the phaser processes its cylinder mix in place, so unlike the reverb
- * SEND this is genuinely expressible per orbit. Blast radius: with `floor < 1` the knob
- * scales the dry of the WHOLE orbit mix — co-resident voices that never asked for a phaser
+ * SEND this is genuinely expressible per cylinder. Blast radius: with `floor < 1` the knob
+ * scales the dry of the WHOLE cylinder mix, co-resident voices that never asked for a phaser
  * and the delay/reverb returns included (bus order: body/vowel -> delay -> reverb -> phaser;
- * the orbit's bus settings are owned by the newest `Sounding` voice; a voice gives the orbit up when its gate
- * closes or it is cut; route to another orbit for different bus settings).
+ * the cylinder's bus settings are owned by the newest `Sounding` voice; a voice gives the cylinder up when its gate
+ * closes or it is cut; route to another cylinder for different bus settings).
  *
  * THE BUS OWNS THE PHASER (maintainer decision, 2026-08-24): this bus pass is the ONE application
- * of the knobs, the DAW-insert model, one coherent sweep over the summed orbit. `phaserFloor < 1` is
+ * of the knobs, the DAW-insert model, one coherent sweep over the summed cylinder. `phaserFloor < 1` is
  * an exact crossfade here. (The per-voice phaser a custom voice pipeline could add retired with the
  * Pipeline DSL, phase 3 step 9.)
  *
@@ -76,7 +76,7 @@ class Phaser(sampleRate: Int) {
     /**
      * Wet/dry crossfade amount, clamped to `[0, 1]`. NaN/Inf silently ignored.
      *
-     * The clamp is Kotlin's `coerceIn(0.0, 1.0)` written out, ON PURPOSE (engine follow-up 1, 2026-10-11): the orbit
+     * The clamp is Kotlin's `coerceIn(0.0, 1.0)` written out, ON PURPOSE (engine follow-up 1, 2026-10-11): the cylinder
      * stage writes the depth on every block, and on Kotlin/JS `coerceIn` is a stdlib call that V8 left out of the
      * stage's budget, so the depth and the clamped result crossed it as heap numbers (`audio/ref/performance.md`;
      * item 29's `clampSvfRange` is the precedent). The same value for every finite input. No test can pin it; this
@@ -149,10 +149,10 @@ class Phaser(sampleRate: Int) {
     }
 
     /**
-     * Full factory state, for ORBIT TEARDOWN only (`KatalystPhaserEffect.reset`, which
+     * Full factory state, for CYLINDER TEARDOWN only (`KatalystPhaserEffect.reset`, which
      * `KatalystChain.reset` and `KatalystChain.retire` call): cascade, engaged
      * latch, LFO phase AND the kernel params. The retained-kernel rule (a no-phaser owner keeps
-     * the previous owner's clock) is scoped to owner handoffs WITHIN one orbit life — across a
+     * the previous owner's clock) is scoped to owner handoffs WITHIN one cylinder life, across a
      * teardown there is no timeline left to preserve, and a surviving rate would free-run the
      * just-zeroed phase through the next life's phaser-less stretch (review round 3), landing the
      * next engagement mid-sweep by a cleanup-schedule-dependent offset. Zeroing the rate also
@@ -180,7 +180,7 @@ class Phaser(sampleRate: Int) {
     fun wetCoeff(): Double = WetDryMix.wetCoeff(depth, p = 2)
 
     /**
-     * One block of [buffer], in place, with the block's knob values in [block]. The orbit stage owns its
+     * One block of [buffer], in place, with the block's knob values in [block]. The cylinder stage owns its
      * [PhaserBlock] and fills it per block; this reads the values and keeps no reference to the holder.
      *
      * Every knob arrives as the value the GLIDE holds for this block, never as a field read
@@ -207,10 +207,10 @@ class Phaser(sampleRate: Int) {
         val wetTo = block.wetTo
         val identity = dryFrom == 1.0 && dryTo == 1.0 && wetFrom == 0.0 && wetTo == 0.0
 
-        // Fast path for orbits that never had a phaser: at rate 0 the phase cannot move, alpha is
+        // Fast path for cylinders that never had a phaser: at rate 0 the phase cannot move, alpha is
         // discarded on the gated path, and there is nothing engaged to clear — provably equivalent
         // to falling through (the next engaged block recomputes alpha from scratch anyway), and it
-        // keeps the unconditional clock from taxing phaser-less orbits (review round 2).
+        // keeps the unconditional clock from taxing phaser-less cylinders (review round 2).
         if (rate == 0.0 && identity && !engaged) {
             return
         }
@@ -288,11 +288,11 @@ class Phaser(sampleRate: Int) {
  *
  * **Mutable and reused, on purpose** (V8 allocation pass, 2026-10-08). `Phaser.process` is far too big for V8 to
  * inline, and on V8 a non-integral double handed to a function that is not inlined travels as a heap number, one
- * allocation per value per call. Passed as six arguments, the hop cost the orbit phaser one to three heap numbers per
+ * allocation per value per call. Passed as six arguments, the hop cost the cylinder phaser one to three heap numbers per
  * block more than the holder does, on the production bundle with the process pinned to one core and without (engine
  * level; at the edge of the spread an inert change produces, see `audio/ref/performance.md`). So the numbers stay in
  * the fields of one holder, and the call hands over the reference (the rule in `audio/ref/performance.md`; the
- * resonator's `ResonatorConfig` is the precedent). Each caller owns its instance (the orbit stage one, the
+ * resonator's `ResonatorConfig` is the precedent). Each caller owns its instance (the cylinder stage one, the
  * benchmark its own); [Phaser.process] keeps no reference to it.
  */
 class PhaserBlock {

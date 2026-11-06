@@ -82,7 +82,7 @@ object VoiceTestHelpers {
         // Silence culling window in seconds (null = engine default, negative = never)
         cull: Double? = null,
 
-        // The orbit chain's param state this voice carries while it owns the orbit.
+        // The cylinder chain's param state this voice carries while it owns the cylinder.
         katalystParams: KlangMap<Double>? = null,
 
         // Whether the teardown fade runs after the tree, as the factory's `needsTeardown`.

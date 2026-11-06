@@ -63,7 +63,7 @@ import kotlin.math.pow
  *   `flushState` because those components have only 1–2 IIR stages.
  *
  * **Parameter mapping.** Everything a user authors goes through [normalizeSize] or lands here raw;
- * both buses (per-orbit and master) MUST agree:
+ * both buses (per-cylinder and master) MUST agree:
  * - `reverb(wet)` → send amount (caller-side; not a parameter here), 0..1.
  * - `reverb(size)` → [size]. Authored on the **~0..10** scale ([AUTHORED_SIZE_SCALE]), normalized
  *   to 0..1 here. Tail length, via comb feedback `feedback = size · FEEDBACK_SCALE + FEEDBACK_OFFSET`:
@@ -165,7 +165,7 @@ class Reverb(
      * ~1.66k samples of comb-sum history (round 2 corrected round 1's single-stage figure) —
      * about one comb revolution, so once every comb cell is at the threshold the chain was fed
      * `<= numCombs x threshold / fb` for its whole memory, and the [FIXED_GAIN]-scaled wet a
-     * cut leaves behind stays in the -100 dBFS class: the same inaudible cut the orbit teardown
+     * cut leaves behind stays in the -100 dBFS class: the same inaudible cut the cylinder teardown
      * has always made. The one thing the scan DOES report about a cell besides magnitude is
      * health: any non-finite cell returns [Double.POSITIVE_INFINITY] (a NaN spreads through the
      * LPF store and an Inf never decays, and `NaN > peak` is false, so a plain magnitude scan
@@ -228,13 +228,13 @@ class Reverb(
      * often: `n = ceil(ln(threshold/peak) / ln(|feedback|)) + 1` periods.
      *
      * The feedback is the same [effectiveFeedback] that [process] applies — structurally within
-     * `[0.7, 0.98]` through the production path ([normalizeSize] bounds size, and the orbit
+     * `[0.7, 0.98]` through the production path ([normalizeSize] bounds size, and the cylinder
      * configure door bounds it again), so unlike the delay there is no self-oscillating regime
      * to sentinel. The `|feedback| >= 1` arm exists only so the formula can never claim a
      * (test-rigged, production-unreachable) growing network drains.
      *
      * [size] is the one in force by default. A caller whose size is still MOVING passes the
-     * largest size the drain will run under instead (the orbit stage's knob glide, 2026-09-19):
+     * largest size the drain will run under instead (the cylinder stage's knob glide, 2026-09-19):
      * the proof needs a bound on the feedback of every revolution, and a countdown taken from a
      * feedback that is still rising would end while the tail is audible.
      */
@@ -422,7 +422,7 @@ class Reverb(
             // system (|feedback| < 1 via normalizeSize, damping in [0,1], coefficients
             // guarded at configure), so a FINITE input can never drive the state non-finite.
             // Guarding the input is therefore equivalent and 12x cheaper. Without it, one Inf
-            // sample latched every comb and allpass for the life of the orbit.
+            // sample latched every comb and allpass for the life of the cylinder.
             // `finiteOrZero` rejects Inf AND NaN in one compare and leaves no branch on the data.
             val rawL = inL[i]
             val rawR = inR[i]
@@ -533,7 +533,7 @@ class Reverb(
          * [size] itself is normalized 0..1. Keeping the conversion here means both buses go through
          * one definition instead of each inventing its own — the two silently disagreed before
          * (sprudel divided by 10, the master did not), so the same number meant a ~1 s tail on an
-         * orbit and a ~12.5 s tail on the master.
+         * cylinder and a ~12.5 s tail on the master.
          */
         const val AUTHORED_SIZE_SCALE: Double = 10.0
 
@@ -555,7 +555,7 @@ class Reverb(
          * see KLANG-00136 (master dsl).)
          *
          * The floor at 0 (a 0.7 s tail) is also inside the stable range; it stays because `size`
-         * doubles as the orbit reverb's on switch.
+         * doubles as the cylinder reverb's on switch.
          */
         fun normalizeSize(authored: Double): Double {
             // NaN-guard — coerceIn passes NaN straight through, and a NaN here would be dropped by
@@ -620,7 +620,7 @@ class Reverb(
          *
          * **The drain's floor only, two floors on purpose** (maintainer, 2026-10-17): in ordinary
          * playback a room's ceiling is still held to the engine's [SILENCE_FLOOR] on the cells (an output
-         * near -120 dBFS), so when an orbit, the master and an engine go idle stays bit for bit as it was
+         * near -120 dBFS), so when a cylinder, the master and an engine go idle stays bit for bit as it was
          * (the corpus pins it; applied everywhere, this floor moved 13 corpus songs under -90 dBFS but
          * one hit at -55 dBFS). Only the leaving chain of a swap drain answers against it
          * (`KatalystReverbEffect.swapDraining`), where the cell floor kept a size-10 room past the 20 s

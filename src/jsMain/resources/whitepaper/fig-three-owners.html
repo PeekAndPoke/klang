@@ -186,7 +186,7 @@
             <button type="button" class="call" data-call="lpf" data-owner="instrument"><span>.lpf(800)</span><span class="tag">instrument</span></button>
             <button type="button" class="call" data-call="gain" data-owner="channel"><span>.gain(0.4)</span><span class="tag">channel</span></button>
             <button type="button" class="call" data-call="pan" data-owner="channel"><span>.pan(0.3)</span><span class="tag">channel</span></button>
-            <button type="button" class="call" data-call="orbit" data-owner="channel"><span>.orbit(1)</span><span class="tag">channel</span></button>
+            <button type="button" class="call" data-call="cylinder" data-owner="channel"><span>.cylinder(1)</span><span class="tag">channel</span></button>
             <button type="button" class="call" data-call="reverb" data-owner="bus"><span>.reverb(0.3, 5)</span><span class="tag">bus</span></button>
             <button type="button" class="call far" data-call="master" data-owner="master"><span>master(Katalyst(k =&gt; k.gain(1.45).limiter(threshold = -8.0, ratio = 2.0)))</span><span class="tag">master, not in this line</span></button>
         </div>
@@ -219,14 +219,14 @@
                 <p class="what">three numbers</p>
                 <p>A fader like the one on a mixing desk. The engine applies it to every voice once, after the tree, whatever the tree says.</p>
                 <ul class="knobs" aria-label="Knobs of the channel">
-                    <li>gain</li><li>pan</li><li>orbit</li>
+                    <li>gain</li><li>pan</li><li>cylinder</li>
                 </ul>
                 <div class="here">
                     <p class="lab">In this line</p>
                     <ul>
                         <li><code>.gain(0.4)</code> the level</li>
                         <li><code>.pan(0.3)</code> a little left</li>
-                        <li><code>.orbit(1)</code> the bus</li>
+                        <li><code>.cylinder(1)</code> the bus</li>
                     </ul>
                 </div>
             </section>
@@ -234,8 +234,8 @@
         <div class="cell">
             <section class="st" data-owner="bus" tabindex="0" role="group" aria-labelledby="h-bus">
                 <h4 id="h-bus">Bus</h4>
-                <p class="what">a Katalyst chain, one per orbit</p>
-                <p>Works on the sum of the voices sent to the orbit. Its knob values come from the newest note that is still held on it; a release tail does not count.</p>
+                <p class="what">a Katalyst chain, one per cylinder</p>
+                <p>Works on the sum of the voices sent to the cylinder. Its knob values come from the newest note that is still held on it; a release tail does not count.</p>
                 <ul class="knobs" aria-label="Knobs of the bus">
                     <li>reverb</li><li>delay</li><li>compressor</li><li>eq</li><li>phaser</li><li>body</li><li>vowel</li><li>duck</li>
                 </ul>
@@ -251,7 +251,7 @@
             <section class="st" data-owner="master" tabindex="0" role="group" aria-labelledby="h-master">
                 <h4 id="h-master">Master</h4>
                 <p class="what">the same chain, at the output</p>
-                <p>Runs on the sum of every orbit. <code>katp</code> does not reach it and a <code>duck</code> stage does nothing there. The house limiter follows, and a song cannot change it.</p>
+                <p>Runs on the sum of every cylinder. <code>katp</code> does not reach it and a <code>duck</code> stage does nothing there. The house limiter follows, and a song cannot change it.</p>
                 <ul class="knobs" aria-label="Knobs of the master">
                     <li>master(Katalyst(k =&gt; &hellip;))</li>
                 </ul>
@@ -275,7 +275,7 @@
     var OWNERS = {
         instrument: "the instrument",
         channel: "the channel",
-        bus: "the bus, orbit 1",
+        bus: "the bus, cylinder 1",
         master: "the master"
     };
 
@@ -309,14 +309,14 @@
             text: "Left 0 to right 1, an equal-power pan. With a gain of 0.4 the left side gets " + panL + " and the right side " + panR + ".",
             wire: "VoiceData.pan = 0.3"
         },
-        orbit: {
-            owner: "channel", title: ".orbit(1)",
+        cylinder: {
+            owner: "channel", title: ".cylinder(1)",
             text: "Picks the bus this voice is added to: Cylinder 1 inside the engine.",
             wire: "VoiceData.cylinder = 1"
         },
         reverb: {
             owner: "bus", title: ".reverb(0.3, 5)",
-            text: "Fills the reverb slots of the chain orbit 1 runs, for the whole orbit. The newest note still held on the orbit supplies them; a release tail does not.",
+            text: "Fills the reverb slots of the chain cylinder 1 runs, for the whole cylinder. The newest note still held on the cylinder supplies them; a release tail does not.",
             wire: 'katalystParams["reverb.wet"] = 0.3, ["reverb.size"] = 5.0'
         },
         master: {
@@ -329,8 +329,8 @@
     var OWNER_TEXT = {
         instrument: "The tree that makes the sound. Three calls of the line land here.",
         channel: "Level, position and bus, applied once after the tree. Three calls of the line land here.",
-        bus: "The effects of orbit 1. One call of the line lands here.",
-        master: "The same chain type, over the sum of every orbit. No call of this line lands here; a song declares the master with its own call."
+        bus: "The effects of cylinder 1. One call of the line lands here.",
+        master: "The same chain type, over the sum of every cylinder. No call of this line lands here; a song declares the master with its own call."
     };
 
     var fig = document.getElementById("fig");
@@ -366,7 +366,7 @@
             detail.appendChild(el("p", null, c.text));
             detail.appendChild(el("p", "wire", "wire: " + c.wire));
         } else {
-            head.appendChild(document.createTextNode(OWNERS[active.owner].replace(", orbit 1", "").replace(/^the /, "").replace(/^./, function (m) { return m.toUpperCase(); })));
+            head.appendChild(document.createTextNode(OWNERS[active.owner].replace(", cylinder 1", "").replace(/^the /, "").replace(/^./, function (m) { return m.toUpperCase(); })));
             detail.appendChild(head);
             detail.appendChild(el("p", null, OWNER_TEXT[active.owner]));
             var wires = [];

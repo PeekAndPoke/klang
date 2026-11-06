@@ -29,7 +29,7 @@ One reverb cannot be every room. What the stereo reverb round showed, by ear:
 channel, fed as one room (`CROSS_FEED` 0.5 since 2026-09-30). No pre-delay, no early reflections. The
 first output comes after one revolution of the shortest comb, about 25 to 37 ms at every `size`; `size`
 sets the comb feedback, so it changes how long the room rings, not how big it sounds at the start.
-One class, pooled by `ReverbUnits`, shared by the orbit and the master bus.
+One class, pooled by `ReverbUnits`, shared by the cylinder and the master bus.
 
 ## The families (from memory of the published designs; verify each before building on it)
 
@@ -72,7 +72,7 @@ Convolution is both a model and the measuring stick for the others, so it likely
 - **Which models**, and how many: by ear, on songs with small and big rooms, leads and pads. Taste is
   also what we do not build.
 - **The door**: how a song picks a model (a named model on `reverb`, like `body`'s material?). One word
-  per concept, both DSLs, the same word on orbit and master, the gate's off value
+  per concept, both DSLs, the same word on cylinder and master, the gate's off value
   (`/dsl-design`, `audio/ref/off-values.md`).
 - **The warehouse**: `ReverbUnits` pools one class today; several models need a pool per model or one
   unit that switches.

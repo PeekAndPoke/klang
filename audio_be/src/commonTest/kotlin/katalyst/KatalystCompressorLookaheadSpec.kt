@@ -39,7 +39,7 @@ import kotlin.math.sqrt
 
 /**
  * The Katalyst compressor's `lookahead` (phase 3 step 12 C2): a lookahead limiter on ANY chain, and
- * the orbit running late by it.
+ * the cylinder running late by it.
  *
  * **The oracles are the input's own definition and a BARE [Compressor] driven by hand**, never the
  * effect under test: a stage with a lookahead of D frames is, while it compresses nothing, a pure
@@ -146,7 +146,7 @@ class KatalystCompressorLookaheadSpec : StringSpec({
         effect.hasTail() shouldBe false
     }
 
-    "a limiter with a lookahead on an orbit chain delays the orbit by exactly the lookahead" {
+    "a limiter with a lookahead on a cylinder chain delays the cylinder by exactly the lookahead" {
         // Below the ceiling nothing is reduced, so what comes out is the input D frames later,
         // bit for bit, and silence before it.
         val built = chain(limiterStage(lookahead))
@@ -163,7 +163,7 @@ class KatalystCompressorLookaheadSpec : StringSpec({
         }
     }
 
-    "the lookahead is what holds the ceiling on a transient, on an orbit" {
+    "the lookahead is what holds the ceiling on a transient, on a cylinder" {
         // A kick 12 dB over the ceiling. With the lookahead the limiter closes before the hit and
         // nothing passes 1.0; the same limiter without one chases it (the control, so this row
         // cannot pass on a limiter that was never late).
@@ -438,9 +438,9 @@ class KatalystCompressorLookaheadSpec : StringSpec({
     val dry = CylinderSwapRig.dryChain(1.0)
 
     "a swap between a chain without latency and a late one holds the level, in both directions" {
-        // The input is a sine of exactly 11 periods in 50 ms (220 Hz), so the orbit D frames late IS
+        // The input is a sine of exactly 11 periods in 50 ms (220 Hz), so the cylinder D frames late IS
         // the input: whatever the swap does to the time, the level must not move. The weights are
-        // complementary where they are HEARD, at the output, so the orbit is the input throughout.
+        // complementary where they are HEARD, at the output, so the cylinder is the input throughout.
         // With the leaving ramp left at the input undelayed, dry to late dipped to 1/6 of the level
         // for 10 ms, and late to dry swelled by 5.3 dB.
         val level = 0.3
@@ -493,7 +493,7 @@ class KatalystCompressorLookaheadSpec : StringSpec({
     "a swap between two late chains of different latency is the output-law crossfade, sample for sample" {
         // 50 ms to 5 ms and back: the only swaps where the leaving chain is late AND the earlier
         // one (0 < D_L < M), so the leaving input ramp is delayed by M - D_L. Below the ceiling each
-        // chain is its input delayed, so the orbit is exactly the crossfade the law names, on both
+        // chain is its input delayed, so the cylinder is exactly the crossfade the law names, on both
         // channels: `(1 - r(k - s - M)) * x(k - D_L) + r(k - s - M) * x(k - D_A)`. The RMS row
         // below is the readable one; this one sees a weight misplaced by a single frame.
         val level = 0.3
@@ -531,9 +531,9 @@ class KatalystCompressorLookaheadSpec : StringSpec({
         // it emitted; the chain must keep draining until that has come out, which is the
         // compressor's `hasTail` at work. Oracle: the same chain built standalone and fed exactly
         // what the leaving chain is fed (the input, then the input times the leaving input ramp,
-        // then silence). While the swap holds the chain, the orbit is that chain's output (the dry
+        // then silence). While the swap holds the chain, the cylinder is that chain's output (the dry
         // arriving chain hears silence by then); after it retires, nothing the standalone chain
-        // still emits may rise above the orbit silence floor.
+        // still emits may rise above the cylinder silence floor.
         val level = 0.3
         val warm = 60
         val rampFrames = (Crossfade.XFADE_SECONDS * 44100).toInt()
@@ -542,7 +542,7 @@ class KatalystCompressorLookaheadSpec : StringSpec({
             // A single echo 30 ms late (feedback 0): it ends at full level, so when the delay lets
             // go the ring holds the end of a loud echo.
             "delay" to KatalystStageDsl.Delay(wet = c(1.0), time = c(0.03), feedback = c(0.0)),
-            // A room decays smoothly: its output is below the orbit floor well before its tail
+            // A room decays smoothly: its output is below the cylinder floor well before its tail
             // ceiling lets go, so here the ring's tail is inaudible either way (checked: this case
             // alone stays green with the compressor's `hasTail` forced to false). Kept as the
             // ordinary case the rule must also get right; the echo above is the one with teeth.
@@ -594,7 +594,7 @@ class KatalystCompressorLookaheadSpec : StringSpec({
             }
 
             for (k in stopBlock * bf until (retiredAfter + 1) * bf) {
-                withClue("$name, sample $k: the held chain is the orbit") {
+                withClue("$name, sample $k: the held chain is the cylinder") {
                     out[k] shouldBe (twinOut[k] plusOrMinus 1e-12)
                 }
             }
@@ -655,7 +655,7 @@ class KatalystCompressorLookaheadSpec : StringSpec({
         // Dry ducked chain to a 50 ms late chain with no duck: the duck is ramped OUT over the swap
         // with the SAME weights as the chains, at the output. Until the delayed start it is fully
         // in force, then it lets go along r(k - D). Twin rigs: the same script with the duck pass
-        // off gives the orbit's un-ducked mix, and the duck's steady gain g is read before the swap.
+        // off gives the cylinder's un-ducked mix, and the duck's steady gain g is read before the swap.
         val level = 0.3
         val warm = 60
         val after = 60
@@ -699,7 +699,7 @@ class KatalystCompressorLookaheadSpec : StringSpec({
 
     "the duck handover follows the output law: an arriving duck stays out until the delayed start" {
         // Dry chain without a duck to a 50 ms late chain WITH one: the arriving duck is ramped IN
-        // with the chains' weights at the output. Until the delayed start the orbit is not ducked
+        // with the chains' weights at the output. Until the delayed start the cylinder is not ducked
         // at all, then the duck comes in along r(k - D). Twin rigs as above; the duck's steady gain
         // g is read after the swap has settled.
         val level = 0.3
@@ -746,7 +746,7 @@ class KatalystCompressorLookaheadSpec : StringSpec({
     "a swap between two chains of the same latency is seamless: the input delayed, below the ceiling" {
         // Both chains 50 ms late. The leaving chain's fade-out, applied at its input, comes out D
         // frames later, and so must the arriving chain's fade-in: then the two weights meet at the
-        // same sample and sum to one, and the orbit is the input D frames late throughout. Started
+        // same sample and sum to one, and the cylinder is the input D frames late throughout. Started
         // undelayed, the swap stepped by D / L of the signal at t = D and then swelled to 1 + D / L.
         val rig = CylinderSwapRig()
         val level = 0.3
@@ -809,7 +809,7 @@ class KatalystCompressorLookaheadSpec : StringSpec({
             }
         }
 
-        // ...and it did swap: the orbit ends as the input D frames late.
+        // ...and it did swap: the cylinder ends as the input D frames late.
         out[out.size - 1] shouldBe (rigInput(rig, level, out.size - 1 - d) plusOrMinus 1e-12)
     }
 
@@ -867,7 +867,7 @@ class KatalystCompressorLookaheadSpec : StringSpec({
     }
 
     "the classic chain's compressor has no lookahead" {
-        // Its slots are the orbit's, and none of them is a lookahead; the born-with orbit is not late.
+        // Its slots are the cylinder's, and none of them is a lookahead; the born-with cylinder is not late.
         chain(*KatalystDsl.classic.stages.toTypedArray()).compressor.shouldNotBeNull().latencyFrames shouldBe 0
         KatalystDsl.classic.stages.filterIsInstance<KatalystStageDsl.Compressor>().single().lookahead shouldBe 0.0
     }

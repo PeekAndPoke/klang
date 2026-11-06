@@ -36,7 +36,7 @@ private fun applyCull(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * inaudible (under -100 dBFS) for [seconds], it ends there instead. The held part of the note
  * is never culled, and neither is a voice that has not sounded yet, so a slow attack, a silent
  * lead-in or a sample with leading silence is safe; reverb and delay tails live on
- * the orbit and keep ringing. A RELEASE that goes silent and comes back is cut at its first
+ * the cylinder and keep ringing. A RELEASE that goes silent and comes back is cut at its first
  * gap: a voice with a `tremolo` is therefore never culled unless you set this door, and a sparse
  * source inside an ignitor (`Ignitor.dust`, `Ignitor.crackle`) ringing through its release wants a wider
  * window or [noCull].

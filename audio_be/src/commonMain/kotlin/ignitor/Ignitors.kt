@@ -1699,7 +1699,7 @@ object Ignitors {
         selection: String = SUPERSAW_SELECTION,
         warmup: Double = SUPERSAW_WARMUP,
         phasePools: PhasePools? = null,
-        orbit: Int = 0,
+        cylinder: Int = 0,
         phase: Ignitor? = null,
         countsAtBuild: Boolean = false,
     ): Ignitor = UnisonStackIgnitor(
@@ -1709,7 +1709,7 @@ object Ignitors {
         sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower, centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
         poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-        phasePools = phasePools, orbit = orbit, phaseIn = phase?.let { PhaseOffset(it) }, countsAtBuild = countsAtBuild,
+        phasePools = phasePools, cylinder = cylinder, phaseIn = phase?.let { PhaseOffset(it) }, countsAtBuild = countsAtBuild,
         resetSamples = SAW_RESET_SAMPLES, shapeMax = SAW_SHAPE_MAX,
     )
 
@@ -1734,7 +1734,7 @@ object Ignitors {
         selection: String = SUPERSAW_SELECTION,
         warmup: Double = SUPERSAW_WARMUP,
         phasePools: PhasePools? = null,
-        orbit: Int = 0,
+        cylinder: Int = 0,
         phase: Ignitor? = null,
         countsAtBuild: Boolean = false,
     ): Ignitor = superSawRaw(
@@ -1742,7 +1742,7 @@ object Ignitors {
         sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower, centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
         poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-        phasePools = phasePools, orbit = orbit, phase = phase, countsAtBuild = countsAtBuild,
+        phasePools = phasePools, cylinder = cylinder, phase = phase, countsAtBuild = countsAtBuild,
     )
 
     /** The voice shape of a [UnisonStackIgnitor]: the analog-flyback saw, the [waveTrapezoid] pulse, or a pure sine. */
@@ -1791,7 +1791,7 @@ object Ignitors {
         private val selection: String,
         private val warmup: Double,
         private val phasePools: PhasePools?,
-        private val orbit: Int,
+        private val cylinder: Int,
         private val phaseIn: PhaseOffset?,
         countsAtBuild: Boolean,
         private val resetSamples: Double = 0.0,
@@ -1912,7 +1912,7 @@ object Ignitors {
                 // pre-scored against the base profile (doc §3.6) — jitter stays per-note either way.
                 if (banded) {
                     val pool = phasePools?.pool(
-                        orbit = orbit, voices = v, sideAtten = sideAtten,
+                        cylinder = cylinder, voices = v, sideAtten = sideAtten,
                         kMin = kMin, kMax = kMax,
                         drawTries = drawTries, poolSize = poolSize, refreshEvery = refreshEvery,
                         warmup = warmup,
@@ -2394,7 +2394,7 @@ object Ignitors {
         selection: String = SUPERSINE_SELECTION,
         warmup: Double = SUPERSINE_WARMUP,
         phasePools: PhasePools? = null,
-        orbit: Int = 0,
+        cylinder: Int = 0,
         phase: Ignitor? = null,
         countsAtBuild: Boolean = false,
     ): Ignitor = UnisonStackIgnitor(
@@ -2405,7 +2405,7 @@ object Ignitors {
         centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
         poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-        phasePools = phasePools, orbit = orbit, phaseIn = phase?.let { PhaseOffset(it) }, countsAtBuild = countsAtBuild,
+        phasePools = phasePools, cylinder = cylinder, phaseIn = phase?.let { PhaseOffset(it) }, countsAtBuild = countsAtBuild,
     )
 
     /**
@@ -2435,7 +2435,7 @@ object Ignitors {
         selection: String = SUPERSQUARE_SELECTION,
         warmup: Double = SUPERSQUARE_WARMUP,
         phasePools: PhasePools? = null,
-        orbit: Int = 0,
+        cylinder: Int = 0,
         phase: Ignitor? = null,
         countsAtBuild: Boolean = false,
     ): Ignitor = UnisonStackIgnitor(
@@ -2446,7 +2446,7 @@ object Ignitors {
         centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
         poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-        phasePools = phasePools, orbit = orbit, phaseIn = phase?.let { PhaseOffset(it) }, countsAtBuild = countsAtBuild,
+        phasePools = phasePools, cylinder = cylinder, phaseIn = phase?.let { PhaseOffset(it) }, countsAtBuild = countsAtBuild,
         duty = 0.5, riseFlank = PULSE_RISE_FLANK, fallFlank = PULSE_FALL_FLANK, flankSamples = PULSE_MIN_FLANK_SAMPLES,
     )
 
@@ -2476,7 +2476,7 @@ object Ignitors {
         selection: String = SUPERTRI_SELECTION,
         warmup: Double = SUPERTRI_WARMUP,
         phasePools: PhasePools? = null,
-        orbit: Int = 0,
+        cylinder: Int = 0,
         phase: Ignitor? = null,
         countsAtBuild: Boolean = false,
     ): Ignitor = UnisonStackIgnitor(
@@ -2487,7 +2487,7 @@ object Ignitors {
         centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
         poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-        phasePools = phasePools, orbit = orbit, phaseIn = phase?.let { PhaseOffset(it) }, countsAtBuild = countsAtBuild,
+        phasePools = phasePools, cylinder = cylinder, phaseIn = phase?.let { PhaseOffset(it) }, countsAtBuild = countsAtBuild,
         duty = 0.5, riseFlank = 1.0, fallFlank = 1.0, flankSamples = PULSE_MIN_FLANK_SAMPLES,
     )
 
@@ -2517,7 +2517,7 @@ object Ignitors {
         selection: String = SUPERRAMP_SELECTION,
         warmup: Double = SUPERRAMP_WARMUP,
         phasePools: PhasePools? = null,
-        orbit: Int = 0,
+        cylinder: Int = 0,
         phase: Ignitor? = null,
         countsAtBuild: Boolean = false,
     ): Ignitor = UnisonStackIgnitor(
@@ -2528,7 +2528,7 @@ object Ignitors {
         centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
         poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-        phasePools = phasePools, orbit = orbit, phaseIn = phase?.let { PhaseOffset(it) }, countsAtBuild = countsAtBuild,
+        phasePools = phasePools, cylinder = cylinder, phaseIn = phase?.let { PhaseOffset(it) }, countsAtBuild = countsAtBuild,
         resetSamples = RAMP_RESET_SAMPLES, shapeMax = RAMP_SHAPE_MAX,
     )
 

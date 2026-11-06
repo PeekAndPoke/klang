@@ -13,10 +13,10 @@ section 9, step 5c; measured in the 5c-9 review, 2026-09-20). The next action is
 
 ## The measurement
 
-Moving a ducker's sidechain to a louder orbit steps the reduction by -40.8 to -19.0 dB HF against a floor of
+Moving a ducker's sidechain to a louder cylinder steps the reduction by -40.8 to -19.0 dB HF against a floor of
 -52.8 dB. The already-sounding sub-case (0.2 to 0.9) is no better than the silent one, so the old argument ("it
-steps by exactly as much as that orbit's own onset would") bounds the magnitude but not the audibility: an
-orbit-to-orbit switch brings no new sound into the mix to mask the drop. The other direction is at the floor.
+steps by exactly as much as that cylinder's own onset would") bounds the magnitude but not the audibility: an
+cylinder-to-cylinder switch brings no new sound into the mix to mask the drop. The other direction is at the floor.
 
 ## The decision: what a sidechain switch MEANS
 
@@ -26,13 +26,13 @@ orbit-to-orbit switch brings no new sound into the mix to mask the drop. The oth
 - **(c) Glide the reduction to 0 dB, switch, glide back.** An audible dip, but no new machinery.
 
 Since Katalyst knob expressions step 5b (2026-10-12) a MODULATED `duck.cylinder` (a `Kat` modulator on the duck's
-orbit knob) reaches the same switch, as a `katp` move does.
+cylinder knob) reaches the same switch, as a `katp` move does.
 
 ## Corners recorded next to it (pre-existing, not fixed, listed so nobody reads them as new)
 
 - A duck handover does not carry the arriving chain's `duck.depth`, so two chains with different depths on one
-  orbit step the reduction by the difference.
-- A takeover onto a duck whose sidechain orbit is not yet rented freezes the reduction until that orbit sounds.
+  cylinder step the reduction by the difference.
+- A takeover onto a duck whose sidechain cylinder is not yet rented freezes the reduction until that cylinder sounds.
 - The two-block owner liveness can answer "ducks" for an owner that died on the swap block, and the successor's
   reset then steps, as any owner change on a classic duck does.
 - A continuous mid-ramp handover would need a second ramp the crossfade cannot express.

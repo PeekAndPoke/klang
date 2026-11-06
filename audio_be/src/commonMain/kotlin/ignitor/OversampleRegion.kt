@@ -144,7 +144,7 @@ internal class OversampleRegionIgnitor(
     /**
      * Makes this region, the root of a voice's tree, hand its output over at its rate instead of converting it down:
      * [generate] then writes `length shl steps` samples from `offset shl steps` of a buffer at the region's rate, and the
-     * orbit converts every voice at that rate at once. Returns the steps. Only for a region at the base rate, which the
+     * cylinder converts every voice at that rate at once. Returns the steps. Only for a region at the base rate, which the
      * root of a tree is.
      */
     fun handOver(): Int {

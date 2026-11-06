@@ -124,7 +124,7 @@ Kept in order, close to the maintainer's words.
 41. (2026-10-26) Keys for the tool strip. Asked whether Alt+1, Alt+2 would block anything later; settled with the
     maintainer: "Alt+Letter is better for the tools". Each tool window gets Alt and a letter of its name (Alt+D Docs,
     Alt+K Keys; Alt+M is the Motor menu's), opening and closing it like a click on the strip, its hint on the strip
-    button. The digits stay free for live performance (muting or soloing orbits 1 to 9, say): Ctrl+1 to 9 already
+    button. The digits stay free for live performance (muting or soloing cylinders 1 to 9, say): Ctrl+1 to 9 already
     jump to the editor's bookmarks (`KlangEditorKeyBindings`), Ctrl/Cmd+digit switches browser tabs elsewhere, and
     Firefox on Linux may switch tabs with Alt+digit. A page can take over any browser key with `preventDefault` except
     the reserved ones (`Keymap.RESERVED_KEYS`: Mod-N, Mod-T, Mod-W, Ctrl-Tab; on a Mac also Cmd-Q, Cmd-H, Cmd-M),
@@ -177,7 +177,7 @@ Kept in order, close to the maintainer's words.
 
 - **Layout A.** Left column: the project (files, imports, sounds in use, versions) above the Motor. Centre: a slim
   transport bar and the editor, a bottom panel for wide things (analysis, problems, console). Right: a strip of tool
-  window buttons (docs, param tool, problems, orbits, keys).
+  window buttons (docs, param tool, problems, cylinders, keys).
 - **Tool windows fly in** over the editor from the right, the editor keeps its width; a pin docks one beside the
   editor. The bottom panel stays docked. (Shown on the canvas since 2026-10-25.)
 - **Three places, one job each** (proposed, the maintainer has not answered yet): the Motor button is "where to go"

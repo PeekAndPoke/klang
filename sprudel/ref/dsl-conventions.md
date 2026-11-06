@@ -160,7 +160,7 @@ guards are `LangControlRestSpec` (one row per setter and slot) and `LangFieldAcc
 - Max line length: 120 chars
 - Single-line `/** ... */` only when entire comment fits within 120 chars
 - Lexikon links (KLANG-00369, 2026-10-27): the Lexikon's terms link themselves wherever a KDoc is shown (the help,
-  the docs pages), by each entry's `linkWords` in `LexikonData`. Do not hand-link them: write "per voice", "orbit
+  the docs pages), by each entry's `linkWords` in `LexikonData`. Do not hand-link them: write "per voice", "cylinder
   bus", "send" as plain text. A hand-written `[phrase](/manuals/lexikon/<slug>)` stays allowed for a phrase no entry
   lists; `LexikonSpec` checks it resolves. A new word for an entry goes into its `linkWords`, not into the KDocs.
 - Scope words: "per voice" for what belongs to one sounding note (it links to Voice); a bare "voice"/"voices" stays

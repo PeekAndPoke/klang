@@ -27,8 +27,8 @@ import kotlin.math.abs
 import kotlin.math.sin
 
 /**
- * The orbit's delay and reverb are INSERT-STYLE stages (Katalyst step 5b-2, decided with the
- * maintainer 2026-09-19, the signal-flow plan §7): each is fed from the orbit mix AT ITS POSITION in
+ * The cylinder's delay and reverb are INSERT-STYLE stages (Katalyst step 5b-2, decided with the
+ * maintainer 2026-09-19, the signal-flow plan §7): each is fed from the cylinder mix AT ITS POSITION in
  * the chain, scaled by the owner's one `wet`, and adds its return into that mix. No voice sends.
  *
  * Every oracle is built BY HAND from the bare DSP classes ([DelayLine], [Reverb]) and the test
@@ -232,7 +232,7 @@ class KatalystInsertFeedSpec : StringSpec({
     fun renderVoice(voice: Voice): Pair<List<Long>, RentedUnits> {
         val ctx = VoiceTestHelpers.createContext(blockStart = 0.0, blockFrames = blockFrames, sampleRate = sampleRate)
         val out = mutableListOf<Long>()
-        var orbit: RentedUnits? = null
+        var rented: RentedUnits? = null
 
         // 30 blocks: past the room's shortest comb (1116 samples) and the 0.05 s echo.
         for (b in 0 until 30) {
@@ -245,28 +245,28 @@ class KatalystInsertFeedSpec : StringSpec({
 
             out += cylinder.mixBuffer.left.map { it.toRawBits() }
             out += cylinder.mixBuffer.right.map { it.toRawBits() }
-            orbit = RentedUnits(cylinder.delay?.delayLine, cylinder.reverb?.reverb)
+            rented = RentedUnits(cylinder.delay?.delayLine, cylinder.reverb?.reverb)
         }
 
-        return out to orbit!!
+        return out to rented!!
     }
 
-    /** What `delay(0.3, 0.05, 0.5)` and `reverb(0.3, 6)` write into the orbit's slot state. */
+    /** What `delay(0.3, 0.05, 0.5)` and `reverb(0.3, 6)` write into the cylinder's slot state. */
     val slots = mapOf(
         "delay.wet" to 0.3, "delay.time" to 0.05, "delay.feedback" to 0.5, "delay.cap" to 1.0,
         "reverb.wet" to 0.3, "reverb.size" to 6.0,
     )
 
     "the slots alone reach the stages: the same voice without them renders dry" {
-        // Through the real voice and cylinder: without the slots the orbit rents nothing and
+        // Through the real voice and cylinder: without the slots the cylinder rents nothing and
         // sounds different. Until step 5b-3 this was the engagement control for a row showing that
         // the voice's delay and reverb FIELDS reached nothing; the fields left in that step.
         val (wet, _) = renderVoice(VoiceTestHelpers.createSynthVoice(blockFrames = blockFrames, katalystParams = slots.toKlangMap()))
-        val (dry, orbit) = renderVoice(VoiceTestHelpers.createSynthVoice(blockFrames = blockFrames))
+        val (dry, rented) = renderVoice(VoiceTestHelpers.createSynthVoice(blockFrames = blockFrames))
 
         withClue("no ring and no network without the slots") {
-            orbit.line.shouldBeNull()
-            orbit.room.shouldBeNull()
+            rented.line.shouldBeNull()
+            rented.room.shouldBeNull()
         }
 
         withClue("not two silences: the voice sounds") {
@@ -277,5 +277,5 @@ class KatalystInsertFeedSpec : StringSpec({
     }
 })
 
-/** What a render left rented on the orbit, for the row that asserts nothing was. */
+/** What a render left rented on the cylinder, for the row that asserts nothing was. */
 private class RentedUnits(val line: DelayLine?, val room: Reverb?)

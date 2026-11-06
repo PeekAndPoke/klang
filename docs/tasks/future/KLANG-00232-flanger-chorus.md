@@ -22,7 +22,7 @@ existing line, not a new buffer type.
 
 ## To decide when it starts
 
-- **Where it lives:** voice (Ignitor), orbit (Katalyst), or both. One DSP core wrapped per host, the
+- **Where it lives:** voice (Ignitor), cylinder (Katalyst), or both. One DSP core wrapped per host, the
   factoring rule of KLANG-00214 (oversampling regions) §1(b).
 - **Door shape** per `/dsl-design` §2: `wet` first, the musical knobs (rate, depth) on the door, the
   rest behind `configure`. One word per concept: check that `chorus` does not collide with the unison

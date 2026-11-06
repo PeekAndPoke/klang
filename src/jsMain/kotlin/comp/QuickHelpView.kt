@@ -44,7 +44,7 @@ private val log = Logger(area = LogArea.Ui, source = "QuickHelpView")
 
 /**
  * A KDoc reference (`[semitones]`, `[PitchEnvelopeBuilder]`) as code, as the docs mean it; a markdown link
- * (`[orbit bus](/manuals/lexikon/orbit-bus)`) and what is already code stay as they are.
+ * (`[cylinder bus](/manuals/lexikon/cylinder-bus)`) and what is already code stay as they are.
  */
 internal fun kdocRefsAsCode(text: String): String =
     text.split("`").mapIndexed { i, part -> if (i % 2 == 1) part else part.replace(kdocRef, "`$1`") }.joinToString("`")

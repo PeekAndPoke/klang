@@ -21,31 +21,31 @@ import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
 import io.peekandpoke.klang.common.infra.KlangMap
 
 /**
- * Mixing channel / effect bus: a cylinder (Strudel and sprudel's `orbit()` call it an orbit).
+ * Mixing channel / effect bus: a cylinder (Strudel calls it an orbit; sprudel keeps `orbit()` as an alias of `cylinder()`).
  *
- * Each orbit runs one [KatalystChain], the per-orbit effect chain, built from a [KatalystDsl]:
+ * Each cylinder runs one [KatalystChain], the per-cylinder effect chain, built from a [KatalystDsl]:
  * **Body → Vowel → Delay → Reverb → Phaser → Compressor → Gain** for [KatalystDsl.classic], which is what
  * every cylinder is born with and what every cylinder that is handed no chain name still runs.
  *
  * A `katalyst(…)` reference on the voice stream reaches [requestChain] (Katalyst step 3a,
- * 2026-09-17), which looks the name up in this cylinder's [KatalystRegistry]. On an IDLE orbit the
+ * 2026-09-17), which looks the name up in this cylinder's [KatalystRegistry]. On an IDLE cylinder the
  * declared chain is installed at once; on a SOUNDING one it is faded in over [Crossfade] while the
  * outgoing chain rings out (step 3b, see [processEffects]). EVERY chain reads its knobs from the
- * orbit's param state, the owner voice's `katalystParams`, the born-with one included (step 5b-1),
+ * cylinder's param state, the owner voice's `katalystParams`, the born-with one included (step 5b-1),
  * and a declaration whose content IS the historical chain resolves back to the born-with instance
  * rather than swapping. See `KatalystChainBuilder` and [ChainHost.chainFor].
  *
  * The chain plumbing (the chain in service and its name, the cache, the parked request, the lookup,
  * the [ChainSwap]) is the [ChainHost] this cylinder shares with `MasterBus` (KLANG-00243 (one chain
- * host)); what is the orbit's stays here: when a request installs at once and when it fades, the
+ * host)); what is the cylinder's stays here: when a request installs at once and when it fades, the
  * duck handover, the owner and the silence reset.
  *
- * The duck runs in a separate pass after all orbits are processed (cross-orbit dependency).
+ * The duck runs in a separate pass after all cylinders are processed (cross-cylinder dependency).
  */
 // Block-framing ledger D11 (named Class 2 knob): the silence grace before the tail scan is counted
 // in BLOCKS, and `Cylinders` visits ONE cylinder per block round-robin, so the wall-clock grace is
 // `silentBlocksBeforeTailCheck × allocatedCylinders × blockFrames` — it shrinks with block size and
-// grows with orbit count. No audio is cut (the scan itself protects tails), but everything a
+// grows with cylinder count. No audio is cut (the scan itself protects tails), but everything a
 // TEARDOWN does rides this schedule: the moment the ring/combs are cleared moves, and so does the
 // phaser's clean-slate restart (`Phaser.resetForReuse` zeroes sweep phase AND rate) — a sparse
 // pattern whose gaps straddle the grace at one block size but not another re-enters the sweep
@@ -56,9 +56,9 @@ class Cylinder(
     val blockFrames: Int,
     private val sampleRate: Int,
     silentBlocksBeforeTailCheck: Int = 10,
-    /** The ring shelf this orbit's delay rents from. Production passes the backend's one warehouse. */
+    /** The ring shelf this cylinder's delay rents from. Production passes the backend's one warehouse. */
     private val rings: SizedBuffers = SizedBuffers.forRings(sampleRate),
-    /** The reverb-unit shelf this orbit's reverb rents from. Same warehouse. */
+    /** The reverb-unit shelf this cylinder's reverb rents from. Same warehouse. */
     private val reverbs: ReverbUnits = ReverbUnits(sampleRate),
     /**
      * Where a chain NAME is resolved. Production passes the renting engine's per-playback fork
@@ -70,9 +70,9 @@ class Cylinder(
 
     companion object {
         /**
-         * How many blocks the orbit's param state survives its owner's last commit ([commitOwner]): the
+         * How many blocks the cylinder's param state survives its owner's last commit ([commitOwner]): the
          * block it was written on plus one. Past that the state is dropped and a chain arriving on the
-         * orbit's tail resolves from what it authored.
+         * cylinder's tail resolves from what it authored.
          */
         private const val OWNER_STATE_BLOCKS: Int = 2
     }
@@ -82,13 +82,13 @@ class Cylinder(
     // ════════════════════════════════════════════════════════════════════════════
 
     /**
-     * The chain plumbing this orbit shares with the output ([ChainHost]): the chain in service, the
+     * The chain plumbing this cylinder shares with the output ([ChainHost]): the chain in service, the
      * cache, the parked request and the [swap].
      *
      * Born with the CLASSIC chain, the historical stages, the one chain this cylinder can always fall
      * back to: never evicted and never cached by name, so a retired cylinder [adopt]ed for another
-     * orbit costs no build. Slot-driven like every other chain since step 5b-1 (2026-09-19), so a bus
-     * door or a `katp` reaches it through the orbit's param state and nothing else. A pattern writing
+     * cylinder costs no build. Slot-driven like every other chain since step 5b-1 (2026-09-19), so a bus
+     * door or a `katp` reaches it through the cylinder's param state and nothing else. A pattern writing
      * `Katalyst.classic()` declares the same stages and resolves to THIS instance
      * ([ChainHost.chainFor]), which makes that declaration a no-op instead of a crossfade.
      *
@@ -112,7 +112,7 @@ class Cylinder(
     )
 
     /**
-     * This orbit's effect chain: the stage instances own the orbit's DSP state (delay ring, reverb
+     * This cylinder's effect chain: the stage instances own the cylinder's DSP state (delay ring, reverb
      * network, compressor envelope, phaser sweep clock), so building is not something a block or a
      * voice may do. Nothing is allocated eagerly that is lazy today: the delay's ring and the
      * reverb's network are still rented on the first activating configure.
@@ -123,7 +123,7 @@ class Cylinder(
     internal val cachedChainCount: Int get() = host.cachedChainCount
 
     /**
-     * The chain swap of a SOUNDING orbit (phase 3 step 12 C1): the chain LEAVING service, fading
+     * The chain swap of a SOUNDING cylinder (phase 3 step 12 C1): the chain LEAVING service, fading
      * out over [Crossfade] and then draining, and the duck handover of the fade (see [ChainSwap],
      * whose table is authoritative for the edges). The [host] asks [ChainSwap.settled] before it
      * lands a request and parks the key otherwise, which is what keeps [chain] and the leaving chain
@@ -154,21 +154,21 @@ class Cylinder(
     internal val currentChain: KatalystChain get() = chain
 
     /**
-     * True while this orbit rings with a tail that can never end on its own, in the chain in
+     * True while this cylinder rings with a tail that can never end on its own, in the chain in
      * service or the one leaving it while it fades or drains ([KatalystChain.sustainsItself];
      * phase 3 step 12 decision (j)). NOT the leaving chain once its swap RELEASES or CUTS it: that one
      * ends within the release or the cut by construction ([ChainSwap.leavingIsEnding]), and counting it would make a stopped engine release
-     * its whole output, finite tails on other orbits included, for a tail already on its way out.
+     * its whole output, finite tails on other cylinders included, for a tail already on its way out.
      */
     fun sustainsItself(): Boolean =
         isActive && (chain.sustainsItself() || (!swap.leavingIsEnding && swap.leaving?.sustainsItself() == true))
 
     /**
-     * The duck that governs this orbit's mix, and the one `Cylinders` resolves the sidechain orbit
+     * The duck that governs this cylinder's mix, and the one `Cylinders` resolves the sidechain cylinder
      * from before it runs the duck pass.
      *
      * The duck being faded OUT comes first, for the length of the fade: it is what is audible, and
-     * it must keep listening to the orbit it was pointed at. The arriving chain's own stage comes
+     * it must keep listening to the cylinder it was pointed at. The arriving chain's own stage comes
      * second, and it may not even be configured yet (the classic chain declares a duck on every
      * cylinder, so `chain.duck` non-null says nothing about whether it ducks) - a
      * `duckCylinderId` of null is exactly how `Cylinders` skips the pass for such a stage.
@@ -176,7 +176,7 @@ class Cylinder(
     val duck get() = swap.duckingOut ?: chain.duck
 
     /**
-     * Rents the warehouse refused this orbit, for the diagnostics feedback: the current chain's
+     * Rents the warehouse refused this cylinder, for the diagnostics feedback: the current chain's
      * count plus what the chain leaving now and the chains before it were refused
      * ([ChainSwap.deniedRents]).
      *
@@ -189,7 +189,7 @@ class Cylinder(
     // Buffers and context
     // ════════════════════════════════════════════════════════════════════════════
 
-    /** The orbit mix: voices sum into this, and the chain processes it in place. */
+    /** The cylinder mix: voices sum into this, and the chain processes it in place. */
     val mixBuffer = StereoBuffer(blockFrames)
 
     /**
@@ -205,17 +205,17 @@ class Cylinder(
     // State
     // ════════════════════════════════════════════════════════════════════════════
 
-    /** The orbit this cylinder serves. Re-labelled by [adopt] when a shelved cylinder is rented for another. */
+    /** The cylinder number this instance serves. Re-labelled by [adopt] when a shelved instance is rented for another. */
     var id: Int = id
         private set
 
     private var silentBlocksBeforeTailCheck: Int = silentBlocksBeforeTailCheck
 
-    /** Whether the orbit runs (its mix is cleared, its chain processes): every state of [activity] but [Activity.Inactive]. */
+    /** Whether the cylinder runs (its mix is cleared, its chain processes): every state of [activity] but [Activity.Inactive]. */
     val isActive: Boolean get() = activity !== Activity.Inactive
 
     /**
-     * The orbit's own activity as a state machine (KLANG-00290 (engine follow ups) item 27, C4.1, maintainer
+     * The cylinder's own activity as a state machine (KLANG-00290 (engine follow ups) item 27, C4.1, maintainer
      * 2026-11-06), the four situations that decided it as a flag and a counter before. A sealed type with an
      * exhaustive `when` ([tryDeactivate]): the states without data are `data object`s, [Activity.SilentGrace]
      * (the count) a class with one instance, [silentGrace], created with the cylinder, so no transition allocates
@@ -230,9 +230,9 @@ class Cylinder(
      *
      * A visit is [tryDeactivate], once per block. "Grace over" means the silent visits, this one included, reach
      * [silentBlocksBeforeTailCheck]; a grace of 1 or less is over at the first silent visit. A tail or a running
-     * swap restarts the grace (Sounding); a voice still playing holds it at its end (Held), so the orbit goes at the
+     * swap restarts the grace (Sounding); a voice still playing holds it at its end (Held), so the cylinder goes at the
      * first silent visit after the voice's last check-in grace. Wrap-safe by construction (audit leftovers §3): the
-     * count lives only in SilentGrace and never passes the grace, so an orbit that stays silent forever, a muted
+     * count lives only in SilentGrace and never passes the grace, so a cylinder that stays silent forever, a muted
      * one with notes included, never counts past it.
      */
     private sealed class Activity {
@@ -265,15 +265,15 @@ class Cylinder(
     /** The one [Activity.SilentGrace] instance (see [Activity]). */
     private val silentGrace = Activity.SilentGrace()
 
-    // ONE owner per orbit, chosen once per block: the orbit's bus settings are owned by the newest `Sounding`
-    // voice; a voice gives the orbit up when its gate closes or it is cut ([offer], [commitOwner]). Other voices
-    // on the orbit are ignored; route to a different orbit for different bus settings. One owner per block
+    // ONE owner per cylinder, chosen once per block: the cylinder's bus settings are owned by the newest `Sounding`
+    // voice; a voice gives the cylinder up when its gate closes or it is cut ([offer], [commitOwner]). Other voices
+    // on the cylinder are ignored; route to a different cylinder for different bus settings. One owner per block
     // also rules out the per-block flip-flop (and the body-filter rebuild thrash it caused on mixed-material
-    // orbits). The newest offer of the current block, cleared by [commitOwner].
+    // cylinders). The newest offer of the current block, cleared by [commitOwner].
     private var candidate: Voice? = null
 
     /**
-     * The orbit's param state, as its owner last handed it over: the map
+     * The cylinder's param state, as its owner last handed it over: the map
      * `.katp` and the bus doors wrote (`Voice.katalystParams`), by reference.
      *
      * Kept for the ONE moment a swap needs it. [beginFade] runs before this block's voices have
@@ -281,24 +281,24 @@ class Cylinder(
      * cases it has to resolve the ARRIVING chain from the live state before [handOverDuck] asks
      * whether that chain ducks. Without it a `.katp("duck.cylinder", n)` reads as "no duck" at the
      * handover, the reduction is ramped out, and the arriving chain's own writer then drops a fresh
-     * one on the orbit a block later (review round 1).
+     * one on the cylinder a block later (review round 1).
      *
      * **Aged** (review round 2): a block without an owner ([commitOwner] found no offer) ages the state, and a
-     * chain arriving while the orbit merely rings out its tail resolves from the authored defaults, not from a
-     * voice that gave the orbit up. The reference is dropped after [OWNER_STATE_BLOCKS], so nothing here
+     * chain arriving while the cylinder merely rings out its tail resolves from the authored defaults, not from a
+     * voice that gave the cylinder up. The reference is dropped after [OWNER_STATE_BLOCKS], so nothing here
      * outlives its owner by more than that (the allocation-cleanup rule).
      */
     private var ownerParams: KlangMap<Double>? = null
 
     /**
-     * Blocks since the orbit's owner last handed [ownerParams] over, capped at
+     * Blocks since the cylinder's owner last handed [ownerParams] over, capped at
      * [OWNER_STATE_BLOCKS], where the state is dropped. Counted in blocks: an owner is chosen once per block.
      */
     private var ownerParamsAge: Int = OWNER_STATE_BLOCKS
 
     /**
-     * Whether any voice has checked in since the orbit's last reset, and the block it last did ([checkIn]): the
-     * orbit is in use while a voice renders on it, owner or not (tails, fading and culled voices included).
+     * Whether any voice has checked in since the cylinder's last reset, and the block it last did ([checkIn]): the
+     * cylinder is in use while a voice renders on it, owner or not (tails, fading and culled voices included).
      * [tryDeactivate] reads it. Separate from ownership, which only `Sounding` voices take ([offer]).
      */
     private var checkedIn: Boolean = false
@@ -311,8 +311,8 @@ class Cylinder(
     // ════════════════════════════════════════════════════════════════════════════
 
     /**
-     * [voice], `Sounding` this block, offers itself as the owner of the orbit's bus settings: the orbit's bus
-     * settings are owned by the newest `Sounding` voice; a voice gives the orbit up when its gate closes or it is
+     * [voice], `Sounding` this block, offers itself as the owner of the cylinder's bus settings: the cylinder's bus
+     * settings are owned by the newest `Sounding` voice; a voice gives the cylinder up when its gate closes or it is
      * cut (lifecycle step 5, maintainer 2026-10-07). The offer only records the newest offer of the block ([isNewer]);
      * [commitOwner] applies it once, after every voice has rendered, so the outcome does not depend on the order
      * the voices render in, and a block applies one owner's settings, not each offerer's in turn. Allocation-free.
@@ -329,9 +329,9 @@ class Cylinder(
     }
 
     /**
-     * Applies this block's newest offer ([offer]) as the orbit's owner: production calls it once per block from
-     * `Cylinders.processAndMix`, after the voices rendered and before the orbit's own processing. No offer this
-     * block: the orbit has no owner and keeps the settings it last applied. Re-applying the same owner is cheap
+     * Applies this block's newest offer ([offer]) as the cylinder's owner: production calls it once per block from
+     * `Cylinders.processAndMix`, after the voices rendered and before the cylinder's own processing. No offer this
+     * block: the cylinder has no owner and keeps the settings it last applied. Re-applying the same owner is cheap
      * (the chain re-resolves only when the owner's map instance changes).
      *
      * Block-framing ledger D14 (named Class 2 knob): bus params apply at BLOCK granularity, never at the onset
@@ -356,10 +356,10 @@ class Cylinder(
         // A ducking owner whose FIRST claim lands in the swap's own block. The swap was decided
         // at promotion, before this voice offered itself, so [handOverDuck] saw no owner and
         // chose the ramp-out path. Corrected here ([ChainSwap.ownerClaimed]), before the writers
-        // run: otherwise the orbit ramps the old reduction out while this voice's fresh envelope
+        // run: otherwise the cylinder ramps the old reduction out while this voice's fresh envelope
         // sits unprocessed behind it, and drops by the whole depth the moment the ramp ends.
         //
-        // ONLY in that block ([Crossfade.isAtStart]). Once the ramp has moved, the orbit's gain
+        // ONLY in that block ([Crossfade.isAtStart]). Once the ramp has moved, the cylinder's gain
         // is already `g * (1 - t) + t` and handing the envelope over would jump it back to `g`
         // (0.053 on a 0.5 probe three blocks in, 0.2 mid-fade). A claim after that keeps
         // ramping out, and the arriving chain's own fresh envelope makes its duck-down on the
@@ -369,7 +369,7 @@ class Cylinder(
         // NOT gated on the voice's own duck settings (dropped in review round 3; the voice
         // has none since step 5b-3): a duck named through `.katp("duck.cylinder", n)` alone left
         // the voice's then `duckCylinder` field null, so the correction skipped it
-        // and the arriving chain's fresh envelope then pulled the orbit down by the full depth
+        // and the arriving chain's fresh envelope then pulled the cylinder down by the full depth
         // one block past the ramp. What the arriving chain will do is `ducksWith`'s answer, and
         // the resolve above is what makes it current.
         swap.ownerClaimed(chain)
@@ -380,7 +380,7 @@ class Cylinder(
         // `sprudel/lang/lang_katalyst.kt`.
         //
         // The state is READ FROM THE OWNER and never copied into this cylinder: it is the owner's
-        // map, by reference. An orbit without an owner keeps the stages as they were last written
+        // map, by reference. A cylinder without an owner keeps the stages as they were last written
         // (only a chain arriving meanwhile resolves its authored defaults). The chain re-resolves only when the map
         // INSTANCE changes (`KatalystChain.applyParams`), so a live owner costs one reference
         // compare per block and no lookup.
@@ -395,9 +395,9 @@ class Cylinder(
     }
 
     /**
-     * A voice renders on this orbit this block without offering itself as the owner (a voice past its gate, or
-     * a fading one): it activates the orbit and keeps it in use ([tryDeactivate]). It does not offer, so it gives
-     * the orbit up simply by not offering. Allocation-free.
+     * A voice renders on this cylinder this block without offering itself as the owner (a voice past its gate, or
+     * a fading one): it activates the cylinder and keeps it in use ([tryDeactivate]). It does not offer, so it gives
+     * the cylinder up simply by not offering. Allocation-free.
      */
     // blockStart is an ABSOLUTE backend frame, Double, see RenderClock.cursorFrame.
     fun checkIn(blockStart: Double) {
@@ -441,14 +441,14 @@ class Cylinder(
     }
 
     /**
-     * Lands a chain that is parked on this orbit, polled once per block by
+     * Lands a chain that is parked on this cylinder, polled once per block by
      * [Cylinders.processAndMix] ([ChainHost.pollPending]).
      *
      * This is what makes a LATE registration land: the request arrived before its
      * `RegisterKatalyst` command and no further request is coming (a one-shot `.katalyst(…)` on a
-     * single note emits once), so without a poll the chain would wait for the orbit's next note.
+     * single note emits once), so without a poll the chain would wait for the cylinder's next note.
      * It is also what starts a PARKED swap once the fade it waited behind has finished, on a
-     * sounding orbit that never goes silent. One field read per cylinder per block on the normal
+     * sounding cylinder that never goes silent. One field read per cylinder per block on the normal
      * path; on a name that never resolves, one map probe per registry in the fork chain, and still
      * no allocation.
      */
@@ -466,7 +466,7 @@ class Cylinder(
     /**
      * The mix at [steps] 2x steps above the base rate, for a voice that hands its output over at its region's rate
      * (KLANG-00214 (oversampling regions) step 3b): [mixBuffer] at 0, else the rate bus, made the first time a voice
-     * lands there. The chain brings every bus to its own rate, once per orbit ([KatalystContext.buses]).
+     * lands there. The chain brings every bus to its own rate, once per cylinder ([KatalystContext.buses]).
      */
     fun mixBufferAt(steps: Int): StereoBuffer = if (steps == 0) mixBuffer else katalystContext.busAt(steps)
 
@@ -477,7 +477,7 @@ class Cylinder(
      * The duck is NOT processed here, see [Cylinders.processAndMix].
      *
      * **While a chain swap is in flight, two chains run** (step 3b, the master's dual-chain
-     * crossfade on the orbit bus):
+     * crossfade on the cylinder bus):
      *
      *  - **Fading.** Both chains see the same mix, the outgoing one through its own ramped copy
      *    (the [swap]'s leaving mix) and the incoming one through the live buffer. The ramp is applied to the
@@ -507,7 +507,7 @@ class Cylinder(
      *    [ChainSwap.CUT_SECONDS] and the request lands on the next block's poll, about a fifth of a
      *    second after it was made. A request during the fade cuts where the fade ends.
      *
-     *    The orbit drained from the start (decided 2026-09-17: its delay and reverb already own the
+     *    The cylinder drained from the start (decided 2026-09-17: its delay and reverb already own the
      *    drain; nothing here invents a decay); the master bus cut its leaving chain until step 12
      *    C4 put it on the same [ChainSwap].
      */
@@ -515,7 +515,7 @@ class Cylinder(
         if (!isActive) return
 
         // The owner's committed state ages one block here, the one place that runs once per block per
-        // orbit and after the voices have offered themselves (see [ownerParams]).
+        // cylinder and after the voices have offered themselves (see [ownerParams]).
         if (ownerParamsAge < OWNER_STATE_BLOCKS) {
             ownerParamsAge++
 
@@ -534,8 +534,8 @@ class Cylinder(
     /**
      * Applies ducking using the resolved sidechain buffer.
      *
-     * Called by [Cylinders] after all orbits have processed their main pipeline,
-     * since ducking needs cross-orbit access.
+     * Called by [Cylinders] after all cylinders have processed their main pipeline,
+     * since ducking needs cross-cylinder access.
      */
     fun processDuck(sidechainMixBuffer: StereoBuffer?) {
         if (!isActive) return
@@ -555,7 +555,7 @@ class Cylinder(
      * cleared, the owner forgotten, the buffers zeroed, and the rented units (delay ring, reverb
      * network) handed back to THEIR shelves — a shelved cylinder holds nothing. The same clean slate
      * [tryDeactivate] reaches, plus the return. Only for a cylinder that will never render again
-     * on its current orbit: `CylinderUnits.giveBack` is the one caller.
+     * on its current cylinder: `CylinderUnits.giveBack` is the one caller.
      */
     fun retire() {
         startNewLife()
@@ -564,7 +564,7 @@ class Cylinder(
     }
 
     /**
-     * Re-labels a cylinder for orbit [id] under the renting `Cylinders`' settings, with
+     * Re-labels this instance for cylinder number [id] under the renting `Cylinders`' settings, with
      * [katalysts] as its new registry: the previous engine's chains die with it, and this cylinder
      * starts over from the classic chain.
      */
@@ -580,8 +580,8 @@ class Cylinder(
 
     /**
      * The clean slate a cylinder starts a life on: every chain it built goes back to the shelf it
-     * rented from, the cache is dropped, the orbit runs the classic chain again with no owner, the
-     * buffers are silent and the orbit is inactive. Shared by [retire] (which additionally drops
+     * rented from, the cache is dropped, the cylinder runs the classic chain again with no owner, the
+     * buffers are silent and the cylinder is inactive. Shared by [retire] (which additionally drops
      * the registry) and [adopt], so the two can never reach different states.
      *
      * The chains' retire, NOT their reset: the rented units go back DIRTY and the warehouse's
@@ -592,7 +592,7 @@ class Cylinder(
      */
     private fun startNewLife() {
         // Any fade or drain ends here, at whatever weight it had reached: this cylinder is not
-        // going to render again for the orbit it was fading FOR. The leaving chain is normally the
+        // going to render again for the cylinder it was fading FOR. The leaving chain is normally the
         // classic one or a cache entry (eviction never takes it), so the chains' retires already
         // cover it; the swap's hard cut retires it anyway, because retire is idempotent and a
         // stranded ring is the one mistake this method exists to make impossible.
@@ -607,7 +607,7 @@ class Cylinder(
     }
 
     /**
-     * Deactivates the orbit once its mix has been silent for the grace, nothing rings in its chain,
+     * Deactivates the cylinder once its mix has been silent for the grace, nothing rings in its chain,
      * no swap runs, AND no voice plays on it. [blockStart] is the start frame of the block just
      * rendered (production: `Cylinders.processAndMix`, fed the engine's cursor), which the check-in
      * test needs.
@@ -616,23 +616,23 @@ class Cylinder(
      * deactivating at once, and the stages keep processing so their tails decay naturally; after
      * the grace the chain is asked for a tail, and one resets the counter.
      *
-     * **An orbit never deactivates while a voice plays on it** (decided 2026-09-19 with the
+     * **A cylinder never deactivates while a voice plays on it** (decided 2026-09-19 with the
      * maintainer, Katalyst 5c-8). The silence test reads the POST-fader mix, so a group fader at 0
-     * used to make a playing orbit look dead: it was reset every tenth block (measured with one
-     * orbit allocated; the grace is counted in cleanup visits), the owner was
+     * used to make a playing cylinder look dead: it was reset every tenth block (measured with one
+     * cylinder allocated; the grace is counted in cleanup visits), the owner was
      * re-dealt, and the fader came back either as a one-sample jump (a fresh stage snaps) or as a
-     * one-block ramp mid-note, depending on which voice claimed first. The orbit counts as in use
+     * one-block ramp mid-note, depending on which voice claimed first. The cylinder counts as in use
      * while any voice on it checked in this block or the one before ([checkIn], owner or not,
-     * separate from ownership), so a muted orbit with notes keeps running at 0 and its fader glides
+     * separate from ownership), so a muted cylinder with notes keeps running at 0 and its fader glides
      * back from where it stands. Judging silence BEFORE the fader was rejected: in a user chain the
      * gain stage can sit anywhere.
      *
      * The check-in test does NOT restart the silence grace, unlike a tail: silence already counted
-     * stays counted, and an orbit whose notes have all ended goes at the first visit two blocks
+     * stays counted, and a cylinder whose notes have all ended goes at the first visit two blocks
      * after the last check-in (the one-block grace covers the block after it). Every voice checks in while it
      * renders, its release included, audible or not (a culled voice has ended and checks in no more). That is NOT a new
-     * processing cost: before 5c-8 every check-in reactivated the orbit (the owner claim set
-     * `isActive`), so the same orbit was reactivated the block after each deactivation and its
+     * processing cost: before 5c-8 every check-in reactivated the cylinder (the owner claim set
+     * `isActive`), so the same cylinder was reactivated the block after each deactivation and its
      * chain ran every block anyway, to the same final deactivation block. What the refusal
      * removes is the repeated reset of the chain and the re-dealing of the owner in between.
      */
@@ -656,11 +656,11 @@ class Cylinder(
         }
 
         // State-aware like the delay's: a draining reverb reports its tail BY CONSTRUCTION, so
-        // the orbit stays alive until the countdown's terminal reset: the old param-gated scan
+        // the cylinder stays alive until the countdown's terminal reset: the old param-gated scan
         // hid a still-charged network the moment a no-reverb owner zeroed size.
         //
         // The outgoing chain counts too, and the swap's state is the test (step 3b): while a FADE
-        // runs the orbit must keep rendering until the ramp completes, whatever either chain
+        // runs the cylinder must keep rendering until the ramp completes, whatever either chain
         // holds, and while the outgoing chain DRAINS it has a tail by construction: the swap
         // returns to Idle on the first block it does not, or when the release at the drain's cap ends.
         if (chain.hasTail() || !swap.settled) {
@@ -669,21 +669,21 @@ class Cylinder(
         }
 
         // A voice still plays here (see the KDoc). The grace is held at its end rather than
-        // restarted, so the orbit goes at the first visit after the last check-in's grace.
+        // restarted, so the cylinder goes at the first visit after the last check-in's grace.
         if (voiceCheckedIn(blockStart)) {
             activity = Activity.Held
             return
         }
 
         activity = Activity.Inactive
-        // The mix buffer is not cleared while the orbit is inactive (see [clear]), so the last
+        // The mix buffer is not cleared while the cylinder is inactive (see [clear]), so the last
         // block's sub-floor output would otherwise still be in it when a voice reactivates the
-        // orbit: summed into that block's mix and, since step 5b-2, fed into its delay and room.
+        // cylinder: summed into that block's mix and, since step 5b-2, fed into its delay and room.
         // The rate buses likewise: the chain's steps down may have rung out on one this block.
         mixBuffer.clear()
         katalystContext.clearBuses()
 
-        // A chain that was requested while this orbit was sounding lands HERE, the first moment
+        // A chain that was requested while this cylinder was sounding lands HERE, the first moment
         // the swap is inaudible. An install that SWAPPED retires the outgoing chain (units back to
         // the shelves) and forgets the owner, which is the clean slate the reset below would reach,
         // so only one of the two runs: resetting first would zero a ring we are about to hand back
@@ -694,7 +694,7 @@ class Cylinder(
             return
         }
 
-        // Forget the owner and reset all bus effects so a reused/reactivated orbit starts clean and
+        // Forget the owner and reset all bus effects so a reused/reactivated cylinder starts clean and
         // is reconfigured by whichever voice next owns it.
         chain.reset()
         candidate = null
@@ -705,7 +705,7 @@ class Cylinder(
 
     private fun isMixBufferSilent(): Boolean {
         // Shared with the voice cull floor (VOICE_CULL_FLOOR), so a culled voice is by definition
-        // below what keeps an orbit alive.
+        // below what keeps a cylinder alive.
         val threshold = SILENCE_FLOOR
         for (sample in mixBuffer.left) {
             if (sample > threshold || sample < -threshold) return false
@@ -718,7 +718,7 @@ class Cylinder(
 
     /**
      * Lands a request the [host] resolved, while the swap is settled ([ChainHost.Position.land]): at
-     * once on an idle orbit ([install]), through a crossfade on a sounding one ([beginFade]).
+     * once on an idle cylinder ([install]), through a crossfade on a sounding one ([beginFade]).
      *
      * **What the return value means, per branch**, because the two are not quite the same question:
      * the IDLE branch reports whether the chain actually CHANGED, which is what [tryDeactivate]
@@ -726,7 +726,7 @@ class Cylinder(
      * the reset is then still owed); the SOUNDING branch reports that the key was CONSUMED, and
      * says true even for a content-classic key on which [beginFade] no-ops. That asymmetry is
      * harmless and deliberate: the only caller that reads the value is [tryDeactivate], which runs
-     * on an orbit that has just gone silent, so the sounding branch is unreachable from it. Giving
+     * on a cylinder that has just gone silent, so the sounding branch is unreachable from it. Giving
      * [beginFade] a Boolean of its own would buy nothing today and one more thing to keep true.
      */
     private fun landChain(key: String, rawName: String, dsl: KatalystDsl): Boolean {
@@ -741,7 +741,7 @@ class Cylinder(
 
     /**
      * Swaps [chain] for the chain [name] declares, at once. Called only while this cylinder is
-     * IDLE, so there is nothing audible to crossfade; a sounding orbit goes through [beginFade].
+     * IDLE, so there is nothing audible to crossfade; a sounding cylinder goes through [beginFade].
      *
      * **The outgoing chain is retired EAGERLY** (decided with the maintainer, 2026-09-17): its
      * rented ring and network go back to their shelves the moment it leaves service, and only its
@@ -749,7 +749,7 @@ class Cylinder(
      * synchronous unit reset (a shelved ring is zeroed on return, ~27k stores for the smallest
      * class) and can be DENIED under shelf pressure, leaving that chain's echo or room absent
      * until the next rent. That is the trade the warehouse exists for: keeping up to
-     * [ChainHost.MAX_CACHED_CHAINS] chains' units alive per orbit would hold megabytes per orbit
+     * [ChainHost.MAX_CACHED_CHAINS] chains' units alive per cylinder would hold megabytes per cylinder
      * for chains nobody is playing, and a swap is an edit-time event, not a per-block one. [beginFade] keeps
      * two chains alive for the length of the fade and the outgoing chain's ring-out, which is the
      * one case that needs both.
@@ -768,10 +768,10 @@ class Cylinder(
         host.enter(chain = next, key = key, rawName = rawName)
 
         // The requested chain is the one already in service, under a name it did not carry before:
-        // a content-classic declaration on an orbit still running the chain it was born with (see
+        // a content-classic declaration on a cylinder still running the chain it was born with (see
         // [ChainHost.chainFor]). Adopting the name is the whole of the install; retiring `leaving`
         // below would hand back the ring and the network of the chain we just "installed", and
-        // forgetting the owner would re-deal the orbit for nothing. FALSE, not true: the caller has
+        // forgetting the owner would re-deal the cylinder for nothing. FALSE, not true: the caller has
         // to know that nothing was installed, or [tryDeactivate] would skip the reset that is its
         // own job.
         if (next === leaving) {
@@ -779,9 +779,9 @@ class Cylinder(
         }
 
         // The denied rents are carried BEFORE the retire, which zeroes the stage's own count: the
-        // orbit's diagnostics number is about this cylinder's life, not about its current chain.
+        // cylinder's diagnostics number is about this cylinder's life, not about its current chain.
         swap.retire(leaving)
-        // The next commit writes the new chain's stages from whichever voice owns the orbit then.
+        // The next commit writes the new chain's stages from whichever voice owns the cylinder then.
         candidate = null
         checkedIn = false
         ownerParams = null
@@ -792,7 +792,7 @@ class Cylinder(
 
     /**
      * Starts the crossfade from the chain in service to the one [name] declares: the swap of a
-     * SOUNDING orbit (step 3b). Both chains run from the next processed block (the start is
+     * SOUNDING cylinder (step 3b). Both chains run from the next processed block (the start is
      * block-quantized, see [Crossfade]) until the ramp completes, and the outgoing chain then
      * rings out (see [processEffects]).
      *
@@ -815,28 +815,28 @@ class Cylinder(
         host.enter(chain = next, key = key, rawName = rawName)
 
         // Already in service (see [install]): there is nothing to fade, and a fade would RESET the
-        // running chain, cutting the orbit's own tail on a declaration that changes nothing.
+        // running chain, cutting the cylinder's own tail on a declaration that changes nothing.
         if (next === leaving) {
             return
         }
 
         next.reset()
 
-        // The arriving chain reads the orbit's live param state FIRST, without writing anything:
-        // `handOverDuck` below asks whether it will duck, and a duck whose orbit or depth comes
+        // The arriving chain reads the cylinder's live param state FIRST, without writing anything:
+        // `handOverDuck` below asks whether it will duck, and a duck whose cylinder or depth comes
         // from `.katp` answers that question only once the state has been read (review round 1).
         next.resolveParams(ownerParams)
 
         // BEFORE the writers, not after: a carried envelope has to be updated IN PLACE by the
         // arriving chain's own writer (`KatalystDuckEffect.configure`'s reuse branch), or the swap would
-        // leave the orbit ducking off the leaving chain's orbit at the leaving chain's depth.
+        // leave the cylinder ducking off the leaving chain's cylinder at the leaving chain's depth.
         //
         // THIS CALL STARTS THE SWAP: `handOverDuck` ends in [ChainSwap.begin] (one call per duck
         // direction), which puts `leaving` on its way out and restarts the ramp. Both callers of
         // this function asked [ChainSwap.settled] first, so the swap does not refuse it.
         handOverDuck(from = leaving, to = next)
 
-        // The arriving chain reads the orbit's slot state here, because nothing else would run its
+        // The arriving chain reads the cylinder's slot state here, because nothing else would run its
         // writers until the next commit: this block's owner has already been committed when a fade
         // starts from the pending poll, and an owner may not even be alive.
         // Gated on the same map instance the resolve above took, so it only writes. With no state
@@ -846,7 +846,7 @@ class Cylinder(
     }
 
     /**
-     * Carries the orbit's duck envelope across a swap: the reduction in force is orbit state, not
+     * Carries the cylinder's duck envelope across a swap: the reduction in force is cylinder state, not
      * chain state (`KatalystDuckEffect`).
      *
      * Three directions. Both chains duck: the arriving stage takes the live envelope over and its
@@ -855,7 +855,7 @@ class Cylinder(
      * is crossfaded out ([processDuck]), since dropping it here would release the whole reduction
      * in one sample. Only the arriving chain ducks: its effect is crossfaded IN over the same ramp,
      * because `Ducking`'s duck-down is instantaneous by design and would otherwise pull the whole
-     * orbit down in one sample when the trigger is already sounding.
+     * cylinder down in one sample when the trigger is already sounding.
      *
      * The decision is the host's (the master has no duck pass); the data it decides is the
      * [swap]'s Fading state's, handed over in [ChainSwap.begin], which is where the fade starts.
@@ -886,7 +886,7 @@ class Cylinder(
     }
 
     /**
-     * Builds a chain for this orbit. **On the audio thread**, the same bounded exception `MasterBus`
+     * Builds a chain for this cylinder. **On the audio thread**, the same bounded exception `MasterBus`
      * documents: a swap is applied from the scheduler's promotion path, inside the render callback.
      * The build is small by construction (stage shells only; the delay's ring and the reverb's
      * network are still rented lazily on first activation), and the [host]'s cache keeps a

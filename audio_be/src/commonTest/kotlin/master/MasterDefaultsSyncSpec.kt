@@ -65,7 +65,7 @@ class MasterDefaultsSyncSpec : StringSpec({
     "the authored limiter's TIMING deliberately differs from the house" {
         // The house limiter runs once on the summed mix, so its lookahead delays everything
         // uniformly and nothing can desync. The authored one runs on one playback's output or one
-        // orbit, where the same delay WOULD desync it against the rest. So the two legitimately
+        // cylinder, where the same delay WOULD desync it against the rest. So the two legitimately
         // diverge, and this relation is where that intent is written down.
         AUTHORED_LIMITER_LOOKAHEAD_SECONDS shouldBeLessThan HouseStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS
         AUTHORED_LIMITER_ATTACK_SECONDS shouldBeLessThan HouseStage.HOUSE_LIMITER_ATTACK_SECONDS
@@ -80,8 +80,8 @@ class MasterDefaultsSyncSpec : StringSpec({
 
     // NOTE (2026-09-16): the reverb size and delay cap sync tests went the way of the limiter's: both
     // sides read one constant now (`constants/BusEffectDefaults.kt`), so they compared a value with itself. Drift
-    // between the surfaces is guarded by `KatalystDefaultsSyncSpec`; the output runs the orbit's
-    // stages since step 12 C3 and the orbit's chain type since C5.
+    // between the surfaces is guarded by `KatalystDefaultsSyncSpec`; the output runs the cylinder's
+    // stages since step 12 C3 and the cylinder's chain type since C5.
 
     "the reverb lowpass defaults to absent on the stage and the DSP: the fixed default damping applies" {
         KatalystStageDsl.Reverb().lowpass shouldBe null

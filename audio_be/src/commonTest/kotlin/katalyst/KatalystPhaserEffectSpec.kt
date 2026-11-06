@@ -322,7 +322,7 @@ class KatalystPhaserEffectSpec : StringSpec({
 
         val got = run(src) { k -> if (k < change) P(wet = 0.9, floor = 0.2) else P(wet = 0.0, floor = 0.2) }
 
-        // Before the edge the whole orbit mix is floored, so the stage is far from the dry mix.
+        // Before the edge the whole cylinder mix is floored, so the stage is far from the dry mix.
         var floored = 0.0
 
         for (i in 0 until frames) {
@@ -554,7 +554,7 @@ class KatalystPhaserEffectSpec : StringSpec({
         fx.configure(depth = 0.9, rate = 1.7, center = 3000.0, sweep = 500.0, floor = 1.0)
         fx.process(ctx)
 
-        // Half a glide towards dry, then the host tears the orbit down.
+        // Half a glide towards dry, then the host tears the cylinder down.
         repeat(glideBlocks / 2) {
             fx.configure(depth = 0.0, rate = 0.0, center = 1000.0, sweep = 1000.0, floor = 1.0)
             fx.process(ctx)

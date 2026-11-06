@@ -345,7 +345,7 @@ private fun applyDuckAttack(source: SprudelPattern, args: List<SprudelDslArg<Any
  * @param depth Depth, 0 for none, 1 for full silence.
  * @param attack Recovery time in seconds after the trigger stops.
  *
- * @scope orbit
+ * @scope cylinder
  * @category dynamics
  * @tags duck, cylinder, orbit, depth, attack
  */
@@ -376,7 +376,7 @@ fun PatternMapperFn.duck(cylinder: PatternLike? = null, depth: PatternLike? = nu
  * The `duck` object: `duck(...)` sets the slots, and each numeric slot reads back as a child,
  * `duck.cylinder`, `duck.depth`, `duck.attack`.
  *
- * @scope orbit
+ * @scope cylinder
  * @category dynamics
  * @tags duck, accessor
  */

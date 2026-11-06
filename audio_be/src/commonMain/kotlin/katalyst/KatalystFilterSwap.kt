@@ -34,10 +34,10 @@ import io.peekandpoke.klang.audio_bridge.constants.BANK_CROSSFADE_SECONDS
  *   where it stands: the fade turns around, no new bank, no step.
  * - **The first initialisation is instant.** Until this swap has processed a block since it was
  *   built or [reset], [set] and [clear] act at once: nothing has sounded yet, so there is nothing
- *   to be continuous with (the `KnobGlide` snap rule). Without it every orbit would open with a
+ *   to be continuous with (the `KnobGlide` snap rule). Without it every cylinder would open with a
  *   swell from dry.
  * - **[reset] is a HARD cut**, to Off at once, for the cylinder's deactivation and retire: the
- *   orbit is silent by then, and a fade that survived would resume in the orbit's next life on
+ *   cylinder is silent by then, and a fade that survived would resume in the cylinder's next life on
  *   new material.
  *
  * **TWO BANKS, never three** (the maintainer's model, 2026-09-20, Katalyst step 5c-11). There is
@@ -48,7 +48,7 @@ import io.peekandpoke.klang.audio_bridge.constants.BANK_CROSSFADE_SECONDS
  * bank: [set], [clear] and [resume] have nothing to hold it in, and a host that built a bank for a
  * change that a later one overtakes would allocate for a bank nobody hears. The hosts ask
  * [settled] first and offer the parked config again from their own `process` once a fade lands
- * (see [KatalystResonatorEffect.configure]). That is what keeps this class at two banks and the orbit
+ * (see [KatalystResonatorEffect.configure]). That is what keeps this class at two banks and the cylinder
  * EQ at two pre-built ones.
  *
  * Used by [KatalystResonatorEffect] (body and vowel) and [KatalystEqEffect], which share this
@@ -136,10 +136,10 @@ class KatalystFilterSwap(
         /** The host turned the stage off: fade to dry. */
         abstract fun clear()
 
-        /** A hard cut: the orbit is silent or going to the shelf. */
+        /** A hard cut: the cylinder is silent or going to the shelf. */
         abstract fun reset()
 
-        /** One block of the orbit mix, in place. */
+        /** One block of the cylinder mix, in place. */
         abstract fun process(mix: StereoBuffer, n: Int)
     }
 
@@ -476,7 +476,7 @@ class KatalystFilterSwap(
         fresh = true
     }
 
-    /** Process the orbit mix in place. */
+    /** Process the cylinder mix in place. */
     fun process(mix: StereoBuffer, n: Int) {
         fresh = false
         state.process(mix, n)

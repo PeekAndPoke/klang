@@ -16,7 +16,7 @@ import io.peekandpoke.klang.audio_be.katalyst.KatalystRegistry
  * shells), but it is a deep object graph, and building eight of them in the first frame of a song
  * on a phone is what remained of the "Der Schmetterling" stutter once the rings and networks had
  * moved to their shelves. So cylinders are built by the warmup, returned when their engine is
- * disposed, and taken from here by the next engine's first voice on an orbit.
+ * disposed, and taken from here by the next engine's first voice on a cylinder.
  *
  * Same rules as the other shelves: stocked by return; a returned cylinder is retired to a clean
  * slate ([Cylinder.retire]) with its ring and network already handed back to THEIR shelves — a
@@ -52,7 +52,7 @@ class CylinderUnits(
         private set
 
     /**
-     * A clean cylinder for orbit [id]: an idle one re-labelled, or a new one. [silentBlocksBeforeTailCheck]
+     * A clean `Cylinder` instance for cylinder number [id]: an idle one re-labelled, or a new one. [silentBlocksBeforeTailCheck]
      * is the owning `Cylinders`' setting and is adopted along with the id.
      *
      * [katalysts] is the renting engine's per-playback chain registry, which the cylinder resolves

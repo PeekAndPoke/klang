@@ -29,7 +29,7 @@ import kotlin.random.Random
 
 /**
  * `pregain` through the path a song actually takes: `VoiceData.ignitorParams` -> `IgnitorRegistry`
- * (which OPTIMIZES the registered tree) -> `VoiceFactory` -> `Voice.render` -> the orbit's mix bus.
+ * (which OPTIMIZES the registered tree) -> `VoiceFactory` -> `Voice.render` -> the cylinder's mix bus.
  *
  * `PregainSlotRenderSpec` proves what the slot does to a hand-built tree. This one exists because
  * the production path has two things that spec does not: the optimizer, which rewrites
@@ -69,7 +69,7 @@ class VoicePregainWireSpec : StringSpec({
 
     /**
      * One voice, built the production way from [data] on an instrument registered as `"test-inst"`,
-     * rendered for [blocks] blocks; the orbit's left mix bus comes back.
+     * rendered for [blocks] blocks; the cylinder's left mix bus comes back.
      *
      * The registry is fresh per call and the phase pool is seeded, so two renders that should
      * agree draw the same numbers.

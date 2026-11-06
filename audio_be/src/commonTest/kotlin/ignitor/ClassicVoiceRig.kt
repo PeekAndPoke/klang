@@ -39,7 +39,7 @@ class ClassicRow(
 /**
  * TEST ONLY. The built-in `saw` on `classic()`, one voice per slot row, through the real `VoiceFactory`: the rig of
  * `ClassicVoiceContractSpec` (both platforms, the hand-built oracles). The render: the onset mid-block (frame 37), the gate a quarter second, so the
- * release and the voice's lifetime are inside the render; the left mix bus of its orbit.
+ * release and the voice's lifetime are inside the render; the left mix bus of its cylinder.
  */
 object ClassicVoiceRig {
 

@@ -29,7 +29,7 @@ import kotlin.math.abs
 import kotlin.math.round
 
 /**
- * The orbit's group fader ([KatalystGainEffect]): exact where it must be, and never a step.
+ * The cylinder's group fader ([KatalystGainEffect]): exact where it must be, and never a step.
  *
  * The master snaps its gain (its factor is resolved at chain build, so a new number is a new
  * chain and the 60 ms bus crossfade covers it). Here the factor is a SLOT, so `.katp` moves it
@@ -182,7 +182,7 @@ class KatalystGainEffectSpec : StringSpec({
     "a non-finite factor is UNSET: the fader keeps what it had, and nothing reaches the mix" {
         // The trap the body resonator fell into (found in review 2026-09-18), closed at this door
         // too. With a non-finite target `from == to` in `process` is FALSE FOREVER for a NaN, so
-        // every block ramps, multiplies the whole orbit by NaN and counts a ramp, without bound;
+        // every block ramps, multiplies the whole cylinder by NaN and counts a ramp, without bound;
         // an infinity settles but poisons the mix just the same. Unreachable through
         // `KatalystGainWriter`, which reads an unset slot as unity, so this guards the stage's own
         // door, where the cost of being wrong is unbounded.
@@ -332,7 +332,7 @@ class KatalystGainEffectSpec : StringSpec({
         fx.gain shouldBe 0.25
     }
 
-    "reset puts the fader back to unity, so a reused orbit starts transparent" {
+    "reset puts the fader back to unity, so a reused cylinder starts transparent" {
         val fx = fader()
         fx.configure(4.0)
         block(fx)
@@ -343,7 +343,7 @@ class KatalystGainEffectSpec : StringSpec({
         val after = block(fx)
 
         // The FIRST sample, not just the last: a reset that only re-targeted unity would glide
-        // DOWN from the factor it still held, so the orbit's next tenant would hear 50 ms of
+        // DOWN from the factor it still held, so the cylinder's next tenant would hear 50 ms of
         // the previous one's level. The clean slate is immediate, which is also the plan's fourth
         // question: the stage holds no reference, so reset completes on the spot.
         after[0] shouldBe probe
@@ -374,7 +374,7 @@ class KatalystGainEffectSpec : StringSpec({
     "an unset gain slot is unity, not a NaN in the mix" {
         // The writer's NaN guard: a
         // non-finite slot was never set, and an unset fader is the identity. Without it the whole
-        // orbit would be NaN for good.
+        // cylinder would be NaN for good.
         val chain = KatalystChainBuilder.build(
             dsl = KatalystDsl.of(KatalystStageDsl.Gain(gain = KatalystKnobDsl.Param("gain", SLOT_UNSET))),
             sampleRate = sampleRate,
@@ -481,24 +481,24 @@ class KatalystGainEffectSpec : StringSpec({
 
     // ── The mute idiom, through a real cylinder ──────────────────────────────────────────────────
 
-    "a gain-0 orbit stays exactly silent across the deactivation grace, block after block" {
+    "a gain-0 cylinder stays exactly silent across the deactivation grace, block after block" {
         // `k.classic().gain(0)` is how a mix is muted at the bus. The mix is then silent while the
         // voices play; until Katalyst 5c-8 `Cylinder.tryDeactivate` reached its silence grace every
-        // tenth block, deactivated and RESET the chain, and the next voice to claim the orbit
+        // tenth block, deactivated and RESET the chain, and the next voice to claim the cylinder
         // reconfigured the fader, so an arriving factor that ramped came out at nearly full level
-        // every tenth block: a buzz out of an orbit the author muted. Since 5c-8 the
-        // orbit does not deactivate while its voice plays (`CylinderFaderThroughZeroSpec`); the row
-        // stays, because the fader must be silent from the orbit's first block whichever way it
+        // every tenth block: a buzz out of a cylinder the author muted. Since 5c-8 the
+        // cylinder does not deactivate while its voice plays (`CylinderFaderThroughZeroSpec`); the row
+        // stays, because the fader must be silent from the cylinder's first block whichever way it
         // gets there.
         val registry = KatalystRegistry()
         val cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate, katalysts = registry)
-        val orbit = 1
+        val cylinder = 1
 
         registry.register(
             "mute",
             KatalystDsl(KatalystDsl.classic.stages + KatalystStageDsl.Gain(gain = KatalystKnobDsl.Constant(0.0))),
         )
-        cylinders.requestChain(orbit, "mute")
+        cylinders.requestChain(cylinder, "mute")
 
         val renderCtx = Voice.RenderContext(
             cylinders = cylinders,
@@ -512,7 +512,7 @@ class KatalystGainEffectSpec : StringSpec({
         val voice = VoiceTestHelpers.createSynthVoice(
             endFrame = (blocks * blockFrames).toDouble(),
             gateEndFrame = (blocks * blockFrames).toDouble(),
-            cylinderId = orbit,
+            cylinderId = cylinder,
             sampleRate = sampleRate,
             blockFrames = blockFrames,
             signal = TestIgnitors.constant,

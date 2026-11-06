@@ -24,7 +24,7 @@ import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinter
  * The reference rides the event stream: the backend swaps this playback's output chain when it
  * consumes the event, at its start time. Mirrors the inline-instrument path of `sound(...)`.
  *
- * The master is a [KatalystDsl], the same chain type an orbit runs (phase 3 step 12): one DSL, two
+ * The master is a [KatalystDsl], the same chain type a cylinder runs (phase 3 step 12): one DSL, two
  * positions. [value] is ONE [KatalystValue.Dsl] per door, allocated when the door is written and
  * handed to every event, like `katalyst(...)`, so stamping costs nothing per event and the chain's
  * name is hashed once.
@@ -36,7 +36,7 @@ private fun applyMaster(source: SprudelPattern, value: KatalystValue.Dsl): Sprud
  * Creates a pattern that sets the **master chain** for the whole playback — one silent control event
  * per cycle that carries nothing but the master reference.
  *
- * The master is the last stage of the signal path: everything this playback plays (all orbits, after
+ * The master is the last stage of the signal path: everything this playback plays (all cylinders, after
  * their Katalyst effects) runs through it before being mixed with other playbacks. Use it to bring a
  * deliberately quiet mix back up and to hold the ceiling:
  *
@@ -48,10 +48,10 @@ private fun applyMaster(source: SprudelPattern, value: KatalystValue.Dsl): Sprud
  * )
  * ```
  *
- * The chain is a `Katalyst`, the same chain an orbit runs, so every stage the builder offers works
+ * The chain is a `Katalyst`, the same chain a cylinder runs, so every stage the builder offers works
  * here. Two differences follow from the position: nothing fills a `Katalyst.param(...)` slot at the
- * output (it stays at its default, `katp` reaches orbits only), and a `duck` stage is inert (there is
- * no other orbit to listen to). `master(Katalyst())` switches the master back off.
+ * output (it stays at its default, `katp` reaches cylinders only), and a `duck` stage is inert (there is
+ * no other cylinder to listen to). `master(Katalyst())` switches the master back off.
  *
  * The event is a **control event**: it never sounds. Because a master reference can ride any event,
  * `note("c3").master(…)` swaps the master at that note's onset *and* still plays the note — which is

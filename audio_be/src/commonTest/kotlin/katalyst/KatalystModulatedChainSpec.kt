@@ -36,7 +36,7 @@ import kotlin.random.Random
 /**
  * Knob expressions step 5b (KLANG-00302 (katalyst knob expressions)): the per-block path of a modulated
  * Katalyst knob through a REAL chain. The hook (a modulated knob ticks at the top of `KatalystChain.process`, owner or
- * not), its reach (an orbit with no owner, the master, a `parallel` branch, the leaving chain of a swap through its
+ * not), its reach (a cylinder with no owner, the master, a `parallel` branch, the leaving chain of a swap through its
  * fade and its drain), the clock rules (an unset knob pauses, a resolve never advances) and the span (D2: a modulated
  * knob glides over ONE block, a slot-only knob on the same stage keeps its 50 ms).
  *
@@ -66,7 +66,7 @@ class KatalystModulatedChainSpec : StringSpec({
     )
 
     /**
-     * [blocks] blocks of a bus of [input] through [chain], configured the way an owned orbit is: `applyParams` with
+     * [blocks] blocks of a bus of [input] through [chain], configured the way an owned cylinder is: `applyParams` with
      * [params] of that block, then `process`. Returns each block's left channel.
      */
     fun render(
@@ -189,13 +189,13 @@ class KatalystModulatedChainSpec : StringSpec({
 
     // ── The hook's reach ─────────────────────────────────────────────────────────────────────────────────────────
 
-    "an orbit with no owner keeps modulating: the hook is in process, not in applyParams" {
+    "a cylinder with no owner keeps modulating: the hook is in process, not in applyParams" {
         val rig = CylinderSwapRig(sampleRate = sampleRate)
 
         rig.registry.register("mod", KatalystDsl.of(KatalystStageDsl.Gain(gain = eighth(phase = 0.3))))
         rig.cylinder.requestChain("mod")
         // Block 0 has an owner, which configures the chain; every block after it has none. A voice that only checks
-        // in (past its gate, say) keeps the orbit active without owning it.
+        // in (past its gate, say) keeps the cylinder active without owning it.
         rig.block(level = 0.5)
 
         val gain = rig.cylinder.pipeline.single().shouldBeInstanceOf<KatalystGainEffect>()

@@ -21,7 +21,7 @@ data class ScheduledVoice(
 `VoiceData.kt`: nullable fields; omitting one means the engine default. Since phase 3 step 9
 (2026-09-27) every voice is an Ignitor tree, and the voice doors (the envelope, the four filters,
 crush, coarse, distort, tremolo, the sample's begin/end/speed/loop) are not typed fields: they
-travel as slot keys in `ignitorParams`, and the orbit stages as slot keys in `katalystParams`.
+travel as slot keys in `ignitorParams`, and the cylinder stages as slot keys in `katalystParams`.
 
 ### Pitch & Tuning
 
@@ -98,24 +98,24 @@ envelope with a release of 0 and collapsed the FM at the gate). `fm.release` is 
 
 | Field      | Type      | Meaning                                      |
 |------------|-----------|----------------------------------------------|
-| `cylinder` | `Int?`    | Cylinder (orbit bus) ID for this voice       |
+| `cylinder` | `Int?`    | Cylinder (effect bus) number for this voice     |
 | `pan`      | `Double?` | Stereo pan, 0 = full left, 1 = full right, unset = 0.5 (center) |
 | `cut`      | `Int?`    | Choke group: a new voice in the group ends the ones still sounding (a 4 ms fade, `Voice.cutOff`) |
 | `cull`     | `Double?` | Silence-culling window in seconds; null = `VOICE_CULL_SECONDS`, negative = never |
 
-### Orbit bus slots: `katalystParams`
+### Cylinder bus slots: `katalystParams`
 
-Every orbit stage (delay, reverb, compressor, duck, phaser, body, vowel) reads its knobs from
+Every cylinder stage (delay, reverb, compressor, duck, phaser, body, vowel) reads its knobs from
 `katalystParams: KlangMap<Double>?`, keyed `<stage>.<knob>` exactly as `KatalystDsl.classic` names
 them (`delay.wet`, `reverb.size`, `compressor.threshold`, `duck.cylinder`, `phaser.wet`, `body.material`,
-`vowel.vowel`, ...), and the orbit's OWNER voice applies them. The delay, reverb, compressor and duck
+`vowel.vowel`, ...), and the cylinder's OWNER voice applies them. The delay, reverb, compressor and duck
 fields left the wire in Katalyst step 5b-3 (2026-09-19); the phaser fields and the `filters` list in
 phase 3 step 9. The one rule of which chain reads which slot lives in the `katalystParam` door's KDoc
 (`sprudel/src/commonMain/kotlin/lang/lang_katalyst.kt`).
 
 ### Control and metadata
 
-`master` and `katalyst` (chain names in the one Katalyst namespace since phase 3 step 12, last writer wins), `control` (a control-only event carrying engine state: a master or orbit chain swap, a solo keep-alive; never
+`master` and `katalyst` (chain names in the one Katalyst namespace since phase 3 step 12, last writer wins), `control` (a control-only event carrying engine state: a master or cylinder chain swap, a solo keep-alive; never
 synthesized), `tags` (UI only), `sourceId` (the id solo state is tracked by).
 
 ## AdsrDef
@@ -152,7 +152,7 @@ object VowelBands {
 - The rows live with the catalogue that owns them. The bridge's band carriers (`FilterDef.Formant` / `Body`, rows
   plus mix and floor) are retired since engine tidy-up step 12 (c); the stage is offered a `ResonatorConfig`
   (table, mix, floor) in audio_be.
-- Not a wire type: the orbit builds its resonators from its slots. The `body.material` / `vowel.vowel` INDEX
+- Not a wire type: the cylinder builds its resonators from its slots. The `body.material` / `vowel.vowel` INDEX
   slot picks a `ResonatorTable` (`ResonatorTables.at`, through `BodyMaterials.slotIndexAt` / `VowelBands.slotIndexAt`;
   one table per index, built once from the rows, equal rows sharing one instance) in `KatalystResonatorWriter`; an
   unset `wet` / `floor` takes its constant in `KatalystResonatorEffect.configure`. The DSP is one mono

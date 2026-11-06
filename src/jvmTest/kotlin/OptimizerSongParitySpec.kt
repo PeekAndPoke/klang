@@ -137,7 +137,7 @@ class OptimizerSongParitySpec : StringSpec({
 
                 seen.add(sound.ignitor)
                 graphs++
-                assertParity("${song.title}, orbit ${event.data.cylinder}:", sound.ignitor, (event.data.ignitorParams?.toMap())?.toKlangMap())
+                assertParity("${song.title}, cylinder ${event.data.cylinder}:", sound.ignitor, (event.data.ignitorParams?.toMap())?.toKlangMap())
             }
         }
 

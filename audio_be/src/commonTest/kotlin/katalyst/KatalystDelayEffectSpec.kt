@@ -54,7 +54,7 @@ class KatalystDelayEffectSpec : StringSpec({
         val effect = createEffect(delayTime = 0.005)
         val ctx = createCtx()
 
-        // Put signal in the orbit mix
+        // Put signal in the cylinder mix
         ctx.mixBuffer.left[0] = 0.5
 
         effect.process(ctx)
@@ -132,12 +132,12 @@ class KatalystDelayEffectSpec : StringSpec({
     "a delay that returns mid-drain keeps the ring AND the tail ceiling" {
         // The Draining -> Active edge, and the one non-obvious decision of this state machine:
         // coming back re-arms NOTHING. The ring keeps its content (the echo train continues under
-        // the new tap, send-delay semantics) and the tail ceiling keeps its value, so the orbit
+        // the new tap, send-delay semantics) and the tail ceiling keeps its value, so the cylinder
         // still reports a tail while the ring is audibly ringing.
         //
         // What a converter who reads "enter resets the target's fields" as a rule would write is
         // `activeTail.reset()` in the Active entry, and the cost is a cut echo train: a new owner
-        // claims the orbit while its own voice is still in its attack and sends nothing, the
+        // claims the cylinder while its own voice is still in its attack and sends nothing, the
         // ceiling reads empty, `Cylinder.tryDeactivate` resets the chain and the tail stops dead.
         //
         // The oracle for the audio half is the same shape as the drain row above: an effect whose
@@ -172,7 +172,7 @@ class KatalystDelayEffectSpec : StringSpec({
             returning.process(returningCtx)
         }
 
-        // A new owner with the same knobs claims the orbit while the ring is still charged.
+        // A new owner with the same knobs claims the cylinder while the ring is still charged.
         returning.configure(time = 0.4, feedback = 0.7, cap = 1.0, wet = 1.0)
 
         // Long enough that the first echo (at 0.4 s, block 138) is inside the window: a row that
@@ -201,7 +201,7 @@ class KatalystDelayEffectSpec : StringSpec({
             }
         }
 
-        // (a) the ceiling survived the drain: the orbit is never told the ring is empty.
+        // (a) the ceiling survived the drain: the cylinder is never told the ring is empty.
         withClue("the tail ceiling must survive Draining -> Active") { tailAlways shouldBe true }
         // (b) the ring survived it too, sample for sample.
         withClue("the ring must survive Draining -> Active") { maxDiff shouldBe 0.0 }
@@ -215,8 +215,8 @@ class KatalystDelayEffectSpec : StringSpec({
         // invisible for as long as the effect stays Off and only surfaces in the NEXT life, where
         // `Active.hasTail()` reads it. A converter who writes `Off.enter() { state = this }` keeps
         // every other row green and hands the next owner a tail that is not there: at a big room's
-        // comb feedback that holds the orbit about 20 s past its due, and at a delay feedback of
-        // 1 or more it pins the orbit for ever.
+        // comb feedback that holds the cylinder about 20 s past its due, and at a delay feedback of
+        // 1 or more it pins the cylinder for ever.
         //
         // The numbers, verified against `TailCeiling.observe` rather than assumed. One window here
         // is `delaySamples + 1` = 2206 samples and `lapsPerWindow` is 2, so four blocks of 0.8
@@ -500,7 +500,7 @@ class KatalystDelayEffectSpec : StringSpec({
 
     "a non-finite time reads as off, never as the previous owner's delay" {
         // +Inf is the sharp half: `Inf >= 0.01` is TRUE, so without the isFinite test it is an
-        // active config whose ring is refused, and the orbit keeps sounding the previous time.
+        // active config whose ring is refused, and the cylinder keeps sounding the previous time.
         for (bad in listOf(Double.POSITIVE_INFINITY, Double.NaN)) {
             val poisoned = createEffect(delayTime = 0.05, feedback = 0.5)
             val off = createEffect(delayTime = 0.05, feedback = 0.5)
@@ -528,7 +528,7 @@ class KatalystDelayEffectSpec : StringSpec({
         }
     }
 
-    "reset restores the factory params — the next orbit life cannot inherit them" {
+    "reset restores the factory params, the next cylinder life cannot inherit them" {
         // DelayLine setters DROP non-finite writes, so a NaN param from the next life would
         // otherwise keep THIS life's value (e.g. a dead owner's self-oscillating feedback).
         val effect = createEffect(delayTime = 0.5, feedback = 1.2)
@@ -566,7 +566,7 @@ class KatalystDelayEffectSpec : StringSpec({
         effect.hasTail() shouldBe false
     }
 
-    "an empty self-oscillating ring frees the orbit; a charged one reports its tail" {
+    "an empty self-oscillating ring frees the cylinder; a charged one reports its tail" {
         // The round-1 engine-leak shape (|fb| >= 1 + empty ring = pinned forever) is closed at
         // the configure door since round 3: a silent tap window goes STRAIGHT to Off, so the
         // infinite countdown never even starts.
@@ -719,7 +719,7 @@ class KatalystDelayEffectSpec : StringSpec({
                     }
 
                     // And it still falls, soon: feedback 0 empties the ring within two windows of
-                    // the cut, and a ceiling that never dropped would pin the orbit for ever.
+                    // the cut, and a ceiling that never dropped would pin the cylinder for ever.
                     withClue("pre $pre, at $at, drain $drain: the ceiling must fall once the ring is empty") {
                         (silentAt in 0..(at + drain + 3 * 35)) shouldBe true
                     }

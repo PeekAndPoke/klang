@@ -28,11 +28,11 @@ class KDocParserTest : StringSpec({
             """
             Reverb.
 
-            @scope orbit
+            @scope cylinder
             @category effects
             """
         ).let {
-            it.scope shouldBe "orbit"
+            it.scope shouldBe "cylinder"
             it.category shouldBe "effects"
         }
     }
@@ -53,12 +53,12 @@ class KDocParserTest : StringSpec({
             Reverb.
 
             @tags room, wet
-            @scpoe orbit
+            @scpoe cylinder
             @category effects
             """
         )
 
-        // The bug this row exists for: tags used to come back as ["room", "wet @scpoe orbit"]
+        // The bug this row exists for: tags used to come back as ["room", "wet @scpoe cylinder"]
         kdoc.tags shouldBe listOf("room", "wet")
         kdoc.category shouldBe "effects"
         kdoc.unusableTags shouldBe listOf("scpoe")
@@ -138,11 +138,11 @@ class KDocParserTest : StringSpec({
             """
             X.
 
-            @param wet Send into the orbit reverb,
+            @param wet Send into the cylinder reverb,
               0 to 1, per voice.
             @category effects
             """
-        ).params["wet"] shouldBe "Send into the orbit reverb, 0 to 1, per voice."
+        ).params["wet"] shouldBe "Send into the cylinder reverb, 0 to 1, per voice."
     }
 
     // ── existing tags keep working ───────────────────────────────────────────

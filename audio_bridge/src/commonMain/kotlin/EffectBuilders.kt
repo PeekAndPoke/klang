@@ -278,7 +278,7 @@ data class TremoloBuilder(val node: IgnitorDsl.Tremolo) {
  * The eq is ONE concept with two value domains (decision A of the typed-doors rollout, `/dsl-design` section 3, point
  * 6): the same words (`band`, `tap`) on a voice builder, whose knobs are [IgnitorDsl], and on a Katalyst builder,
  * whose knobs are [KatalystKnobDsl]. Both append the same [IgnitorDsl.EqSection]s, so a section means the same on a
- * voice and on an orbit; the Katalyst one maps each knob onto the section's Ignitor leaf through ONE helper,
+ * voice and on a cylinder; the Katalyst one maps each knob onto the section's Ignitor leaf through ONE helper,
  * [eqSectionKnobOrNull], which is also where the refusal of an expression (Q49) is decided.
  */
 
@@ -300,7 +300,7 @@ data class EqBuilder(val node: IgnitorDsl.Eq) {
 /**
  * Builder for the Katalyst `eq` stage's sections, handed to the `configure` lambda of `k.eq(...)` on a chain. Knobs:
  * `band`, `tap`, the voice [EqBuilder]'s words, defaults and sections. Each knob takes a number (`300.kat`) or a
- * Katalyst param, which the engine reads from the orbit's `katp` state; a Katalyst EXPRESSION (`Kat.sine(...)`,
+ * Katalyst param, which the engine reads from the cylinder's `katp` state; a Katalyst EXPRESSION (`Kat.sine(...)`,
  * `Kat.param(...).times(2.kat)`) is refused at build time with an [IllegalArgumentException] naming the knob and the
  * parameter (maintainer, Q49 of KLANG-00314 (kotlin typed doors)): a section reads a number or a slot, never a
  * moving knob (the recorded asymmetry on [eqSectionKnobOrNull]).
@@ -335,7 +335,7 @@ data class KatalystEqBuilder(val sections: List<IgnitorDsl.EqSection> = emptyLis
  * slots only"): the sections are [IgnitorDsl.EqSection], the one section law shared with the voice eq and with `bands`,
  * so a bus section's knob is an Ignitor leaf. A [KatalystKnobDsl.Constant] becomes an [IgnitorDsl.Constant] and a
  * [KatalystKnobDsl.Param] the [IgnitorDsl.Param] of the same name and default, which the engine reads from the
- * orbit's `katp` state (`KatalystChainBuilder.eqKnob`). Recorded asymmetry: a Katalyst expression has no section leaf
+ * cylinder's `katp` state (`KatalystChainBuilder.eqKnob`). Recorded asymmetry: a Katalyst expression has no section leaf
  * (`null`), where on a stage knob it listens; a Katalyst section hierarchy (E1) is its own task, for the day a song
  * wants a swept bus EQ. The Kotlin door refuses the `null` at build time ([toEqSectionKnob]); the script door
  * pre-checks it and raises a script error with the script's own words.

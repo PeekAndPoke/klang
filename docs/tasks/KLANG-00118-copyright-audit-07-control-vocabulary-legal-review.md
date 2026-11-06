@@ -13,7 +13,7 @@
 > vocabulary, **including the short aliases**, originates in Tidal, not Strudel. Confirmed in Tidal:
 > the base names (cutoff/resonance/hcutoff/hresonance/bandf/bandq/gain/pan/velocity/note/n/sound/bank/
 > begin/end/speed/coarse/crush/cut/distort/accelerate/legato/sustain/attack/decay/release/room/size/
-> delay/delaytime/delayfeedback/orbit/vowel/shape) **and** the aliases `lpf`/`hpf`/`bpf`/`ctf`/`lpq`/`hpq`/
+> delay/delaytime/delayfeedback/cylinder/vowel/shape) **and** the aliases `lpf`/`hpf`/`bpf`/`ctf`/`lpq`/`hpq`/
 > `sz`/`s`/`delayfb`/`delayt`/`sus`/`clip`, **and** the `:`-compound concept itself (`grp`+`wordsBy(==':')`,
 > with `sound → s:n`). → **Strong prior-art defense: most of the "looks copied from Strudel" vocabulary is
 > actually shared Tidal/SuperDirt community terminology.**

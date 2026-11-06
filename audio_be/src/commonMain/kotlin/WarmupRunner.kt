@@ -18,7 +18,7 @@ import io.peekandpoke.klang.common.infra.KlangMap
 import io.peekandpoke.klang.common.infra.klangMapOf
 
 /**
- * This voice's orbit slots plus [more]: the warmup builds its variants by adding to one base. A [KlangMap], the type
+ * This voice's cylinder slots plus [more]: the warmup builds its variants by adding to one base. A [KlangMap], the type
  * the worklet's decoder hands the engine, so the warmup trains the map reads on the receiver they meet later.
  */
 private fun VoiceData.withKatalystParams(vararg more: Pair<String, Double>): VoiceData {
@@ -51,8 +51,8 @@ class WarmupRunner(
     /** Comm link used only to emit [KlangCommLink.Feedback.BackendReady]. */
     private val feedback: KlangCommLink.BackendEndpoint,
     /**
-     * Number of audio blocks the warmup voices run for: one per warmed orbit ([WARMUP_ORBITS]), plus
-     * [TAIL_BLOCKS] so the last orbit's voice has rendered through its effects too. After that the
+     * Number of audio blocks the warmup voices run for: one per warmed cylinder ([WARMUP_CYLINDERS]), plus
+     * [TAIL_BLOCKS] so the last cylinder's voice has rendered through its effects too. After that the
      * warmup engine is disposed and the runner keeps ticking until the warehouse has zeroed what came
      * back (a bounded slice per block), and only then sends `BackendReady`.
      *
@@ -61,7 +61,7 @@ class WarmupRunner(
      * It used to be ~85 ms on the JVM only because that backend ran a 4× larger block; that
      * divergence is gone.
      */
-    private val warmupBlocks: Int = WARMUP_ORBITS + TAIL_BLOCKS,
+    private val warmupBlocks: Int = WARMUP_CYLINDERS + TAIL_BLOCKS,
     /**
      * Blocks after disposal the runner waits for the warehouse to be clean before sending
      * `BackendReady` regardless. The clean shelf is an optimisation, not a correctness condition
@@ -69,7 +69,7 @@ class WarmupRunner(
      * return into — an unbounded wait could hold the output silenced forever while the frontend
      * gives up and starts cold (review round 4). Sixteen rings need sixteen blocks; four times that.
      */
-    private val maxCleanWaitBlocks: Int = 4 * WARMUP_ORBITS,
+    private val maxCleanWaitBlocks: Int = 4 * WARMUP_CYLINDERS,
 ) {
     companion object {
         /** Reserved playback-id — no real song can use this. */
@@ -79,22 +79,22 @@ class WarmupRunner(
         const val WARMUP_SAMPLE_NAME = "--warmup--"
 
         /**
-         * Orbits the warmup builds — one cylinder, one delay ring and one reverb network each, all of
+         * Cylinders the warmup builds, one cylinder, one delay ring and one reverb network each, all of
          * which go to the warehouse's shelves when the warmup engine is disposed, so the first song
          * takes them from there instead of building them in its first frame (maintainer, 2026-09-04,
          * after the Fairphone measurement: that first frame killed the playback). 16 covers every
          * builtin song (the widest uses 8) twice over.
          */
-        const val WARMUP_ORBITS: Int = 16
+        const val WARMUP_CYLINDERS: Int = 16
 
         /**
-         * Blocks the last orbit's voice gets to render through its effects before the warmup engine
-         * is disposed. Two, not more: from the moment the sixteenth orbit has rented, all sixteen
+         * Blocks the last cylinder's voice gets to render through its effects before the warmup engine
+         * is disposed. Two, not more: from the moment the sixteenth cylinder has rented, all sixteen
          * cylinders run their delay and reverb every block (they cannot deactivate inside the
          * window — the tail check is round-robin, one cylinder per block), which is four times the
          * widest builtin song's reverb load, on the phone this exists for (review round 3).
          *
-         * The warmup is BUCKETED: orbit k's voice starts in block k, so each block builds ONE cylinder,
+         * The warmup is BUCKETED: cylinder k's voice starts in block k, so each block builds ONE cylinder,
          * rents one ring and one network. Building all sixteen in the first render frame would be the
          * very stall the warmup exists to prevent — inaudible (output is silenced), but on a phone
          * long enough to have the worklet dropped for overrunning. The teardown is bucketed too, by
@@ -107,7 +107,7 @@ class WarmupRunner(
          * sample (the sample path), and the [WarmupVocabulary] graphs, which between them execute
          * EVERY `IgnitorDsl` node kind — a song's custom instrument is composed of those kinds, and
          * its first note used to JIT each of them in a live frame (the Fairphone's spike-then-hiccups
-         * once Der Schmetterling's voices came in, 2026-09-04). Sixteen orbits cover the twelve.
+         * once Der Schmetterling's voices came in, 2026-09-04). Sixteen cylinders cover the twelve.
          */
         val WARMUP_SOUNDS: List<String> =
             listOf("sine", "saw", "supersaw", "square", "triangle", WARMUP_SAMPLE_NAME) + WarmupVocabulary.sounds.map { it.first }
@@ -129,10 +129,10 @@ class WarmupRunner(
         }
 
         /**
-         * Orbit-level effects the warmed voices rotate through on top of delay + room + filter, so
+         * Cylinder-level effects the warmed voices rotate through on top of delay + room + filter, so
          * their constructors and first blocks run here and not in a song's first frame: a phaser,
          * a compressor, a body resonator, a vowel bank (review round 3). Ducking is left out — it
-         * needs a second orbit as sidechain and is unused by the corpus (KLANG-00168 (ducking unfinished)).
+         * needs a second cylinder as sidechain and is unused by the corpus (KLANG-00168 (ducking unfinished)).
          */
         private const val EXTRA_EFFECT_KINDS = 4
     }
@@ -182,26 +182,26 @@ class WarmupRunner(
             dispatcher.handle(KlangCommLink.Cmd.RegisterIgnitor(playbackId = WARMUP_PLAYBACK_ID, name = name, dsl = dsl))
         }
 
-        // One WET voice per warmed orbit on a dedicated warmup engine, each starting one block
+        // One WET voice per warmed cylinder on a dedicated warmup engine, each starting one block
         // after the previous (bucketed, see TAIL_BLOCKS): every block builds one cylinder and rents
         // one ring + one network, and the voice renders through delay, reverb, filter and its
         // ignitor graph — Voice.render → ignitor → filter → cylinder mix → delay → reverb → limiter.
         // Explicit and synthetic, not a builtin song (maintainer). Output is silenced by the host.
         // The HOST's block size, not the constant: the worklet detects its quantum and the JVM's is
-        // an option; bucketing on the wrong size either stacks orbits into one block or starts the
+        // an option; bucketing on the wrong size either stacks cylinders into one block or starts the
         // last ones after the window (review round 3).
         val blockSec = dispatcher.blockFrames.toDouble() / sampleRate
         dispatcher.handle(
             KlangCommLink.Cmd.ScheduleVoices(
                 playbackId = WARMUP_PLAYBACK_ID,
-                voices = List(WARMUP_ORBITS) { orbit ->
+                voices = List(WARMUP_CYLINDERS) { cylinder ->
                     // Mid-block, not on the boundary: block-framing B2 drops a voice whose start is
                     // behind the block it is promoted for, and `k * blockSec` can land an ulp before
                     // the clock's own `k * frames / sampleRate`.
-                    val start = (orbit + 0.5) * blockSec
-                    // The orbit chain reads its knobs from `katalystParams` alone (Katalyst step
+                    val start = (cylinder + 0.5) * blockSec
+                    // The cylinder chain reads its knobs from `katalystParams` alone (Katalyst step
                     // 5b-1; the bus fields left the wire in 5b-3), so the warmup writes SLOTS:
-                    // without them this warmup would warm the voices alone and leave every orbit
+                    // without them this warmup would warm the voices alone and leave every cylinder
                     // stage cold, and no ring and no reverb network would be rented in the warmup
                     // window, which is most of what it is for.
                     //
@@ -210,9 +210,9 @@ class WarmupRunner(
                     // for a private band list on the bus. Warming the catalogue lookup is what a
                     // real song does anyway.
                     val base = VoiceData.empty.copy(
-                        sound = WARMUP_SOUNDS[orbit % WARMUP_SOUNDS.size],
-                        freqHz = 220.0 + 20.0 * orbit,
-                        cylinder = orbit,
+                        sound = WARMUP_SOUNDS[cylinder % WARMUP_SOUNDS.size],
+                        freqHz = 220.0 + 20.0 * cylinder,
+                        cylinder = cylinder,
                         // The envelope and the lowpass as `classic()`'s slots, for the built-ins and the sample.
                         ignitorParams = WARMUP_CLASSIC_SLOTS,
                         katalystParams = klangMapOf(
@@ -223,7 +223,7 @@ class WarmupRunner(
                             "reverb.size" to 0.6,
                         ),
                     )
-                    val data = when (orbit % EXTRA_EFFECT_KINDS) {
+                    val data = when (cylinder % EXTRA_EFFECT_KINDS) {
                         0 -> base.withKatalystParams("phaser.rate" to 0.5, "phaser.wet" to 0.5)
 
                         1 -> base.withKatalystParams(

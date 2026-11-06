@@ -12,7 +12,7 @@
 > read numbers → edit again. The finding: a small, stable set of measurements did nearly all the
 > work, and every one of them can run live in the UI while the song plays — most of them *better*
 > than offline, because the engine knows things a WAV file doesn't (tempo, cycle position, notes,
-> orbits, song params).
+> cylinders, song params).
 
 ## The design principle everything hangs on: integrate, don't dance
 
@@ -37,7 +37,7 @@ accumulators; from then on data accumulates and the display *converges* instead 
 | 4 | **Beat-rate articulation** — envelope modulation depth at cycle / beat / 8th / 16th rates | Caught release-tail smear, confirmed pluck rebuilds, exposed doubling phaser | Tempo-aware strip (unique to Klang) |
 | 5 | **Stereo** — side/mid energy, L/R correlation | Caught the doubling comb (fake width), confirmed placement panning (real width) | Stereo strip |
 | 6 | **Narrow-band anomaly probes** — 20–60 Hz-wide bands around suspects | Found a +12 dB fixed string resonance at 2263 Hz and a persistent 220–260 Hz carve hole | Resonance flags (below) |
-| 7 | **Stem-vs-mix masking** (offline solo renders) | "Bass is physically present but 30 dB under the mix in its own band" | Per-orbit attribution (below) |
+| 7 | **Stem-vs-mix masking** (offline solo renders) | "Bass is physically present but 30 dB under the mix in its own band" | Per-cylinder attribution (below) |
 
 ## The panels
 
@@ -100,13 +100,13 @@ Side/mid dB, L/R correlation, and a low-band mono indicator (correlation below ~
 lesson from the song iterations: correlated doubling reads as width but measures as a comb; this
 strip is what tells the difference.
 
-### 6. Per-orbit attribution (the flagship, later)
+### 6. Per-cylinder attribution (the flagship, later)
 
-Because the orbit buses exist separately in the engine (the Katalyst layer processes them), each
-orbit's contribution per region can be metered before summation: a live **masking view** — "in
+Because the cylinder buses exist separately in the engine (the Katalyst layer processes them), each
+cylinder's contribution per region can be metered before summation: a live **masking view**: "in
 Mud: guitars 78%, bass 14%, drums 8%." The buried-bass problem would have been visible on day one
 instead of round 40. The `.tag()` vocabulary (voice tags cross the wire) gives human names for the
-rows. Even a coarse first version — per-orbit RMS per region — exceeds anything a DAW offers,
+rows. Even a coarse first version, per-cylinder RMS per region, exceeds anything a DAW offers,
 because a DAW only ever sees the sum.
 
 ### Small delight: note-named frequency axis
@@ -140,7 +140,7 @@ fifth on the scale"). The analyzer should say that 660 Hz *is* E5 and highlight 
 3. Tempo-aware strip (crest + articulation)
 4. Resonance/notch flags
 5. Stereo strip
-6. Per-orbit attribution
+6. Per-cylinder attribution
 
 ## History
 

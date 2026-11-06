@@ -27,7 +27,7 @@ hand-authored tables:
 - `audio_be/src/commonMain/kotlin/filters/ResonatorBank.kt`, the parallel SVF bandpass bank (installed from a
   `ResonatorTable`); the bandpass is unity-peak, so `db` is the *actual* peak emphasis (independent of sharpness).
 - `BodyMaterials.Mode` (in `audio_bridge/src/commonMain/kotlin/BodyMaterials.kt`), the row type: `(freq, db, q)`.
-  The floor is a slot (`body.floor`, set by the `body(floor = ...)` DSL); the orbit builds its bank from the
+  The floor is a slot (`body.floor`, set by the `body(floor = ...)` DSL); the cylinder builds its bank from the
   `body.*` slots.
 
 These tables are authored by ear — caricatures anchored on a few real acoustic "tells" (see the credited

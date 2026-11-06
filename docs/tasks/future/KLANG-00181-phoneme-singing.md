@@ -17,7 +17,7 @@ sound model (2 to 4 acoustic tells, sparse fill, non-moving target).
 
 A formant MORPH was built and rejected by ear: when a material or a vowel changes, travelling the
 band frequencies and Qs from the old set to the new one over 50 ms is an audible filter sweep, "an
-8-bit laser shot" in the maintainer's words, on body and on vowel alike. Orbit material changes
+8-bit laser shot" in the maintainer's words, on body and on vowel alike. Cylinder material changes
 therefore keep the output crossfade, and the morph code was removed.
 
 That verdict is about a CHANGE the user did not ask to hear. It is not a verdict against a formant
@@ -39,12 +39,12 @@ sweep (long) or a click (short), which is the open question in KLANG-00213 (tran
 
 ## Key findings
 
-- **`vowel()` is orbit-level** (the vowel kind of `KatalystResonatorEffect` on the summed orbit mix, owner-voice
-  configured), so one singer per orbit: two vowel lines on one orbit fight over the mouth.
-  Consonants passing through their orbit's vowel filter give free coarticulation.
+- **`vowel()` is cylinder-level** (the vowel kind of `KatalystResonatorEffect` on the summed cylinder mix, owner-voice
+  configured), so one singer per cylinder: two vowel lines on one cylinder fight over the mouth.
+  Consonants passing through their cylinder's vowel filter give free coarticulation.
 - **Binding needs continuous voicing (by ear).** Sequential phoneme slices sound disconnected,
   "not speech". The working shape: the vowel core is ONE unbroken note per syllable, consonants are
-  OVERLAID in a parallel lane on the same orbit (k+l rides the vowel onset, the ŋ coda overlaps the
+  OVERLAID in a parallel lane on the same cylinder (k+l rides the vowel onset, the ŋ coda overlaps the
   vowel release, plosive closures are leading rests). `sing()` must therefore emit overlay
   structure, not sequential slices. Side fix from that work: weighted rests `~@3` dropped mods in
   `MnPatternToSprudelPattern` (fixed, regression test).

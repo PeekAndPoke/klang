@@ -8,14 +8,14 @@ Status: **future, correctness, small; not planned.** Carried 2026-09-28 out of t
 archived (KLANG-00236 (katalyst dsl),
 section 9, found in the step 5c-5 review of 2026-09-19). Both are pre-existing and both live in
 `audio_be/src/commonMain/kotlin/katalyst/KatalystDelayEffect.kt` and the closed-form tail ceiling it asks
-(`audio_be/src/commonMain/kotlin/effects/TailCeiling.kt`, home of `CEILING_MAX`), which decides when an orbit's delay
+(`audio_be/src/commonMain/kotlin/effects/TailCeiling.kt`, home of `CEILING_MAX`), which decides when a cylinder's delay
 has nothing left to say.
 
 ## 1. A lengthened tap can re-reach content the ceiling has written off (open)
 
 At a low feedback the ceiling rightly says "no tail" once the short tap has passed a burst, but a new owner with a
 longer `delay.time` reads the same ring further back. Example: a delay at 0.03 s and feedback 0 takes a burst at
--1 dBFS; two windows later a quiet owner arrives at 0.18 s, and the orbit resets over a ring that would still emit
+-1 dBFS; two windows later a quiet owner arrives at 0.18 s, and the cylinder resets over a ring that would still emit
 -1 dBFS. Live and on return; the old and the new ceiling agree.
 
 Arguably right to cut (at feedback 0 it is a stale re-emission), but a reset in the middle of it is a cut.
@@ -25,7 +25,7 @@ Candidate: re-measure the ceiling on a time lengthening, as the self-oscillating
 
 The ceiling saturates at `CEILING_MAX` (1e6) while `softCap` bounds every cell at the `cap`, so after a fall from
 self-oscillation to a tame feedback the hold is about twice the ring's real tail at 0.99. Saturating the delay's
-ceiling at the cap would align it with the drain path. Idle hold only, never audio: this costs CPU on an orbit that
+ceiling at the cap would align it with the drain path. Idle hold only, never audio: this costs CPU on a cylinder that
 is already silent, nothing a listener hears.
 
 ## Guard, when either is done

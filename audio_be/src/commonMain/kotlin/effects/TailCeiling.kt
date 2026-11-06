@@ -12,8 +12,8 @@ import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
  * "Does this delay or reverb still hold audible energy?" — answered from a running CEILING on its
  * content, maintained from the unit's INPUT, instead of by reading its memory.
  *
- * **Why not scan.** The orbit and master tail checks used to read every cell of the ring / every
- * comb (`DelayLine.hasTail`, `Reverb.hasTail`) to decide whether an orbit may deactivate. That is
+ * **Why not scan.** The cylinder and master tail checks used to read every cell of the ring / every
+ * comb (`DelayLine.hasTail`, `Reverb.hasTail`) to decide whether a cylinder may deactivate. That is
  * O(unit) on the audio thread, and since the resource warehouse removed the ring ceiling it is
  * O(whatever the user asked for): a 20 s master ring is a two-million-sample read inside one block
  * (review rounds 2–4 of KLANG-00230 (resource warehouse)). A first attempt replaced the scan
@@ -45,7 +45,7 @@ import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
  * silence test) and the unit's current window and feedback. Everything else is O(1). [hasTail] is two compares. A never-fed unit has
  * ceiling 0: no tail, no cost. A parameter change needs no invalidation: the next window decays by
  * the feedback in force when the content actually recirculates, which is what the ring does too.
- * |feedback| ≥ 1 never decays and pins the orbit until the owner turns it off — the raw engine's
+ * |feedback| ≥ 1 never decays and pins the cylinder until the owner turns it off, the raw engine's
  * intent, and what the scan did for a charged self-oscillating ring.
  *
  * **A feedback that moves (Katalyst 5c-5).** Both terms of a window take the LARGEST |feedback|
@@ -68,13 +68,13 @@ import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
  * older cells the ceiling has already forgotten (up to the ring's capacity, 0.5 s at class 0),
  * live or on a return from a drain. The ceiling tracks only the current and the previous window,
  * so what the longer tap re-reaches is bounded by nothing it knows: at a low feedback those older
- * cells never decayed, and the cut, if an orbit deactivates right then, can be the FULL level of
+ * cells never decayed, and the cut, if a cylinder deactivates right then, can be the FULL level of
  * anything still in the ring's span (review of 5c-5: a -1 dBFS burst into a 0.03 s delay at
  * feedback 0, then a quiet owner at 0.18 s re-reaches it after "no tail"). Pre-existing and open. The comb damping's
  * one-pole carries a small weight (≤ d², 0.16 at most) of windows older than the previous one,
  * folded into the bound's own slack (its steady state overstates a comb by ~1.7× at fb 0.7).
  * On the other side it can hold the unit longer — up to one window, and by that slack (up to 2×
- * at high feedback, i.e. one extra halving-time) — which costs an idle orbit a moment, never
+ * at high feedback, i.e. one extra halving-time), which costs an idle cylinder a moment, never
  * audio. The scans stay as test oracles for exactly that claim.
  */
 class TailCeiling {

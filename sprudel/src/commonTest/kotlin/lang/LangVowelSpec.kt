@@ -34,9 +34,9 @@ class LangVowelSpec : StringSpec({
         events[0].data.vowel shouldBe "a"
     }
 
-    // The orbit's vowel stage reads its SLOTS (`vowel.vowel`, `vowel.wet`, `vowel.floor` in `katalystParams`); the
+    // The cylinder's vowel stage reads its SLOTS (`vowel.vowel`, `vowel.wet`, `vowel.floor` in `katalystParams`); the
     // `FilterDef.Formant` the voice once carried in `filters` left the wire in phase 3 step 9. These rows read the
-    // slots the door writes and resolve the vowel index through the table the orbit uses.
+    // slots the door writes and resolve the vowel index through the table the cylinder uses.
     fun slots(pattern: SprudelPattern): Map<String, Double> =
         pattern.queryArc(0.0, 1.0)[0].data.toVoiceData().katalystParams?.toMap() ?: emptyMap()
 

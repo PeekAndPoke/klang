@@ -345,7 +345,7 @@
         <p class="sub">The payload both messages carry: 19 fields, every one optional. Here is what each sender fills in for one c3.</p>
         <div class="who">
             <div><i class="dd s" aria-hidden="true">S</i></div>
-            <div><b>sprudel</b>, for the line of section 5: <code>note("c3").sound("supersaw").lpf(800).gain(0.4).pan(0.3).orbit(1).reverb(0.3, 5)</code></div>
+            <div><b>sprudel</b>, for the line of section 5: <code>note("c3").sound("supersaw").lpf(800).gain(0.4).pan(0.3).cylinder(1).reverb(0.3, 5)</code></div>
             <div><i class="dd k" aria-hidden="true">K</i></div>
             <div><b>the keyboard</b>, for key 48 (the same c3) pressed at velocity 100</div>
         </div>
@@ -377,7 +377,7 @@
     ];
 
     // What each sender writes for one example note. Sprudel: note("c3").sound("supersaw").lpf(800).gain(0.4)
-    // .pan(0.3).orbit(1).reverb(0.3, 5), the line of section 5 (SprudelVoiceData.toVoiceData). Keyboard: MIDI
+    // .pan(0.3).cylinder(1).reverb(0.3, 5), the line of section 5 (SprudelVoiceData.toVoiceData). Keyboard: MIDI
     // key 48 at velocity 100 through voiceFor (MidiPlaygroundPage.kt): sound = selectedSound, freqHz =
     // Midi.midiToFreq(48) = 440 * 2^((48 - 69) / 12) = 130.81, gain = velocity / 127 = 100 / 127.
     var FREQ = (440 * Math.pow(2, (48 - 69) / 12)).toFixed(2);
@@ -401,8 +401,8 @@
         gain: "The one level word on the wire, the channel fader. Sprudel sends the gain the pattern set. The keyboard sends the key velocity divided by 127.",
         sound: "Which instrument plays: an Ignitor name such as supersaw, or a sample name. The keyboard sends whichever oscillator is selected on its page; supersaw is the page's default.",
         ignitorParams: "Named numbers for the instrument, its slots. Our .lpf(800) fills the slot lpf.freq.",
-        katalystParams: "Named numbers for the orbit's effect chain. Our .reverb(0.3, 5) fills reverb.wet and reverb.size.",
-        cylinder: "The orbit the voice is sent to. Our .orbit(1) writes 1; a voice that names none goes to orbit 0.",
+        katalystParams: "Named numbers for the cylinder's effect chain. Our .reverb(0.3, 5) fills reverb.wet and reverb.size.",
+        cylinder: "The cylinder the voice is sent to. Our .cylinder(1) writes 1; a voice that names none goes to cylinder 0.",
         pan: "Stereo position from 0 (left) to 1 (right); unset reads as 0.5. Our .pan(0.3) sits a little left of center.",
         sourceId: "Where in the code the voice came from, so the editor can highlight it while it plays: a hash of the call's position. The keyboard has no code to point at."
     };

@@ -71,7 +71,7 @@ multi-field editors with SVG visualizations. The compressor editor includes pres
 | 19 | `crush()`              | `SprudelCrushEditorTool`       | numeric slider (1–16 bits)                    |
 | 20 | `coarse()`             | `SprudelCoarseEditorTool`      | numeric slider (1–64)                         |
 | 21 | `velocity()` / `vel()` | `SprudelVelocityEditorTool`    | numeric slider (0–1)                          |
-| 22 | `orbit()` / `o()`      | `SprudelOrbitEditorTool`       | channel picker (0–11)                         |
+| 22 | `cylinder()` / `o()`      | `SprudelCylinderEditorTool`       | channel picker (0 to 11)                         |
 | 23 | `cut()`                | `SprudelCutEditorTool`         | integer picker (cut group index)              |
 | 24 | `legato()`             | `SprudelLegatoEditorTool`      | numeric slider (0–2), note duration vis       |
 

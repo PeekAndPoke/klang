@@ -264,8 +264,8 @@ class EffectBenchmark(
         // ── Katalyst stages (an authored chain, built by the engine's chain builder) ──
 
         /**
-         * One orbit chain as the cylinder runs it: [KatalystChainBuilder] builds it from [dsl], and every block copies a
-         * sine into the orbit mix, hands the chain its param state (the owner's map: [moves] alternate every
+         * One cylinder chain as the cylinder runs it: [KatalystChainBuilder] builds it from [dsl], and every block copies a
+         * sine into the cylinder mix, hands the chain its param state (the owner's map: [moves] alternate every
          * [moveEveryBlocks] blocks, or null) and runs it. With [sidechain] a slow sine is the duck's trigger and the
          * duck runs too, as the cylinder runs it after the chain. Subtract "Katalyst empty chain" for the stages alone.
          */
@@ -348,8 +348,8 @@ class EffectBenchmark(
                 )
             },
 
-            // Resonators: the orbit-level body/vowel stage on one channel, an N-band parallel SVF bandpass bank
-            // blended over the dry (ResonatorBank). This is what body()/vowel() run per orbit.
+            // Resonators: the cylinder-level body/vowel stage on one channel, an N-band parallel SVF bandpass bank
+            // blended over the dry (ResonatorBank). This is what body()/vowel() run per cylinder.
             monoFilterCase("Body (wood, 8-band, mix0.5)") { sr ->
                 LowPassHighPassFilters.createBody(BODY_WOOD_MODES, 0.5, sr)
             },
@@ -522,7 +522,7 @@ class EffectBenchmark(
                     sweep = 1000.0
                     feedback = 0.3
                 }
-                // The block the orbit stage hands in once its glides have settled: the knobs never move here.
+                // The block the cylinder stage hands in once its glides have settled: the knobs never move here.
                 val block = PhaserBlock().apply {
                     centerTo = p.center
                     sweepTo = p.sweep
@@ -617,13 +617,13 @@ class EffectBenchmark(
                 AllocationCases.allKindsChain,
             ),
             katalystCase(
-                "Katalyst mixed orbit, constants (control of E-kat-mix)",
+                "Katalyst mixed cylinder, constants (control of E-kat-mix)",
                 AllocationCases.mixedConstant,
                 moves = listOf(mapOf("kat.sweep" to 650.0)),
                 sidechain = true,
             ),
             katalystCase(
-                "Katalyst mixed orbit, modulated (E-kat-mix's chain)",
+                "Katalyst mixed cylinder, modulated (E-kat-mix's chain)",
                 AllocationCases.mixedChain,
                 moves = listOf(mapOf("kat.sweep" to 650.0)),
                 sidechain = true,

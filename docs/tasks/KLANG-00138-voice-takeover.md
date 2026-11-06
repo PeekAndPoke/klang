@@ -37,14 +37,14 @@ That is the entire rule. Three parts:
 | **Victim** | any active voice in the group whose **onset frame is strictly earlier** than the new voice's      |
 | **Fade**   | a smoothstep ramp `1 → 0` over `takeover` seconds, after which the voice is dropped               |
 
-### Why the group is `sourceId`, not the orbit
+### Why the group is `sourceId`, not the cylinder
 
 `sourceId` is the pattern-expression identity (`generateSourceId`, `lang_helpers.kt:39` — hashed from the source
 location, stable across live re-evaluation, preserved by `SprudelVoiceData.merge`). It means "this line is
 self-displacing" and needs no user action.
 
-The orbit alone was rejected: orbits are a shared 16-slot resource, so a guitar and a bass parked on the same orbit
-would silence each other. `cylinder` is kept in the key only as a tiebreaker so the same pattern routed to two orbits
+The cylinder alone was rejected: cylinders are a shared 16-slot resource, so a guitar and a bass parked on the same cylinder
+would silence each other. `cylinder` is kept in the key only as a tiebreaker so the same pattern routed to two cylinders
 does not cross-fade between them.
 
 ### Why same-onset voices are exempt
@@ -61,7 +61,7 @@ sharing one onset).
 
 ### What comes free from the engine
 
-`body()` / `vowel()` are **orbit-level Katalyst effects** — they run once on the summed cylinder mix, not per voice
+`body()` / `vowel()` are **cylinder-level Katalyst effects**: they run once on the summed cylinder mix, not per voice
 (`katalyst/`, `audio/ref/katalyst.md`). Delay and reverb are likewise cylinder-level tanks. So fading a voice at the
 **send** stage stops it *feeding* those resonators while their own high-Q state keeps ringing out.
 
@@ -100,8 +100,8 @@ behaviour is conditional), `handover` (right idea, but the time felt like a prop
 **`takeover`** won because the number belongs to the *event*, not to either note: "a takeover takes 5 ms". It also
 matches the physical picture the feature models — the new note takes the resource over.
 
-The word already appears in engine prose for orbit ownership (`Cylinder.offer`, since voice lifecycle step 5: the
-newest `Sounding` voice owns the orbit); that is a different mechanism but the same underlying idea (a newer voice
+The word already appears in engine prose for cylinder ownership (`Cylinder.offer`, since voice lifecycle step 5: the
+newest `Sounding` voice owns the cylinder); that is a different mechanism but the same underlying idea (a newer voice
 displaces an older one), so it reads as consistent. No rename needed.
 
 ---

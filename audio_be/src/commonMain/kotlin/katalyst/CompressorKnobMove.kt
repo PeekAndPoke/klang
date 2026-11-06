@@ -10,7 +10,7 @@ import io.peekandpoke.klang.audio_be.effects.Compressor
 import io.peekandpoke.klang.audio_be.utils.isFiniteInline
 
 /**
- * The three gain-computer knobs of the orbit compressor (threshold, inverse ratio, knee) moving to new values as ONE
+ * The three gain-computer knobs of the cylinder compressor (threshold, inverse ratio, knee) moving to new values as ONE
  * move: every knob that moves travels on one shared fraction, so the path through the gain curve is always the
  * straight line the linear glide takes, and only its TIMING depends on the direction (decided by ear, maintainer,
  * 2026-10-17, KLANG-00316 (knob glide listening) item 2, and `audio/ref/knob-glide.md`: "the hard swell is

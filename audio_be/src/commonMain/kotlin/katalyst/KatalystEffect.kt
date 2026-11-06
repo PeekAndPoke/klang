@@ -6,12 +6,12 @@
 package io.peekandpoke.klang.audio_be.katalyst
 
 /**
- * A single processing stage in the orbit bus pipeline.
+ * A single processing stage in the cylinder bus pipeline.
  *
  * The bus signal flows through the stages of a [KatalystChain], in the order the chain's
  * `KatalystDsl` declares them. The classic chain is
  * **Body → Vowel → Delay → Reverb → Phaser → Compressor → Gain**, with the **Duck** run after
- * every orbit.
+ * every cylinder.
  *
  * - **Delay** and **Reverb** are fed from the mix at their position (times `wet`, into a buffer of
  *   their own) and add their return into it
@@ -42,12 +42,12 @@ interface KatalystEffect {
 
     /**
      * Turn off and clear every bit of internal state: the clean slate for a stage that STAYS in
-     * service (its orbit deactivated and will be reconfigured by whichever voice claims it next).
+     * service (its cylinder deactivated and will be reconfigured by whichever voice claims it next).
      */
     fun reset()
 
     /**
-     * True while this stage still holds audible energy that would be cut if the orbit deactivated
+     * True while this stage still holds audible energy that would be cut if the cylinder deactivated
      * now. Only the delay and the reverb can say yes; every other stage says no, and says it here.
      */
     fun hasTail(): Boolean
@@ -77,14 +77,14 @@ interface KatalystEffect {
 }
 
 /**
- * A stage that delays the orbit it runs on: [latencyFrames] frames, in every state, fixed when the stage is built.
+ * A stage that delays the cylinder it runs on: [latencyFrames] frames, in every state, fixed when the stage is built.
  * The chain sums them (`KatalystChain.latencyFrames`), and a chain swap places two chains' weights by that sum
  * (`ChainSwap`). Three stages delay today: the compressor with a lookahead, a
  * `parallel` stage by the union of its branches' oversamplers plus their longest lookahead, and an oversampling
  * region by its round trip plus its body's latency divided down.
  */
 interface KatalystLatentEffect {
-    /** Frames this stage delays the orbit by; 0 when it does not. */
+    /** Frames this stage delays the cylinder by; 0 when it does not. */
     val latencyFrames: Int
 
     /**

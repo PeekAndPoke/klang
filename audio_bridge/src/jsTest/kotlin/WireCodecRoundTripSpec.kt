@@ -319,7 +319,7 @@ class WireCodecRoundTripSpec : StringSpec({
         val data = VoiceData.empty.copy(
             note = "c3", freqHz = 130.81, gain = 0.7, soundIndex = 2, cull = 0.2,
             ignitorParams = klangMapOf("voices" to 7.0, "spread" to 0.3, "lpf.freq" to 1000.0, "adsr.on" to 0.0),
-            // The second string-keyed map, the orbit's slot state: same shape, different host, and
+            // The second string-keyed map, the cylinder's slot state: same shape, different host, and
             // a key with a dot in it (the `<stage>.<knob>` spelling every classic slot carries).
             katalystParams = klangMapOf("reverb.size" to 6.0, "compressor.ratio" to 8.0, "room" to 0.5),
             // Non-default on purpose (default is null): `Boolean?` through a `dynamic` codec is exactly the
@@ -394,7 +394,7 @@ class WireCodecRoundTripSpec : StringSpec({
         // `oversample` field left `IgnitorDsl.Shape`, `IgnitorDsl.Distort` and `KatalystStageDsl.Distort`);
         // KLANG-00245 step 7f from 210338569 (the Ignitor's `Progress` and `Elapsed` joined it); KLANG-00290 item 24
         // from -583834474 (`Cmd.ScheduleVoice` and `Cmd.ClearScheduled` left it), and from 1837919315 (`VoiceData.legato`
-        // left it: the frontend folds it into the gate time, D6), and from 580783604 (the duck's knob `orbit` is
+        // left it: the frontend folds it into the gate time, D6), and from 580783604 (the duck's knob `cylinder` is
         // `cylinder`, KLANG-00418 step 2).
         WIRE_SCHEMA_HASH shouldBe -209384306
     }
@@ -472,7 +472,7 @@ class WireCodecRoundTripSpec : StringSpec({
     }
 
     "ScheduledVoice round-trips the katalyst reference" {
-        // The orbit chain rides the same field family as the master: if the codec dropped it,
+        // The cylinder chain rides the same field family as the master: if the codec dropped it,
         // every declared chain would silently stay unregistered on the far side.
         val control = ScheduledVoice(
             playbackId = "pb", data = VoiceData.empty.copy(katalyst = "katalyst-3", control = true), startTime = 0.0, gateEndTime = 1.0, playbackStartTime = 0.0,

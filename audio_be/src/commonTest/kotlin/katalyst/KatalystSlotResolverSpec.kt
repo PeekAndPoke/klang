@@ -41,7 +41,7 @@ import io.peekandpoke.klang.common.infra.klangMapOf
 
 /**
  * One row per stage of the resolver contract (KLANG-00236 (katalyst dsl) §7): what a chain's
- * stage is configured with, given what the chain AUTHORED and what the orbit's param state says.
+ * stage is configured with, given what the chain AUTHORED and what the cylinder's param state says.
  *
  * Most rows configure from no state at all ([declared]) and are therefore about the authored
  * values; the rows that name a map are about what a write does to them. What the CLASSIC chain's
@@ -89,7 +89,7 @@ class KatalystSlotResolverSpec : StringSpec({
         line.cap shouldBe 0.9
     }
 
-    "delay: a non-finite time is OFF, and off means the orbit never rents a ring" {
+    "delay: a non-finite time is OFF, and off means the cylinder never rents a ring" {
         val chain = declared(
             KatalystStageDsl.Delay(time = c(SLOT_UNSET), feedback = c(0.4), cap = c(0.9))
         )
@@ -113,7 +113,7 @@ class KatalystSlotResolverSpec : StringSpec({
         // `wet` decides WHETHER the stage runs until step 5b-2 makes the sends insert-style
         // (`stageAskedFor` is the one home): a chain cannot
         // say HOW MUCH yet, but it must be able to say NOTHING, like the phaser's depth and the
-        // duck's orbit.
+        // duck's cylinder.
         val chain = declared(
             KatalystStageDsl.Delay(wet = c(0.0), time = c(0.25))
         )
@@ -174,7 +174,7 @@ class KatalystSlotResolverSpec : StringSpec({
         chain.reverb.shouldNotBeNull().reverb.shouldNotBeNull().lowpass.isNaN() shouldBe true
     }
 
-    "reverb: a non-finite size is OFF, and off means the orbit never rents a network" {
+    "reverb: a non-finite size is OFF, and off means the cylinder never rents a network" {
         val chain = declared(KatalystStageDsl.Reverb(size = c(SLOT_UNSET)))
 
         chain.reverb.shouldNotBeNull().reverb.shouldBeNull()
@@ -191,7 +191,7 @@ class KatalystSlotResolverSpec : StringSpec({
 
     "reverb: a WRITTEN wet of 0.0 keeps the room running, fed nothing" {
         // The other half, put back in review round 1 of Katalyst step 5b-1 and kept by the 5b-2
-        // decision (`stageAskedFor`): a written wet is the orbit's amount, a LEVEL that glides, so
+        // decision (`stageAskedFor`): a written wet is the cylinder's amount, a LEVEL that glides, so
         // a written 0 runs the stage with nothing fed in and a later amount glides up from there
         // instead of switching a room on. `VoiceFactory` ran the stage on a TOUCHED field, a
         // written 0 included, and the slot twin of touched is "the map carries the key with a
@@ -298,8 +298,8 @@ class KatalystSlotResolverSpec : StringSpec({
     "reverb: a non-finite WRITTEN wet is unset, which is neither touched nor an amount, so OFF" {
         // The one non-finite family that is NOT a strict improvement, pinned deliberately. At HEAD
         // the FIELD was non-null, so the effect counted as touched and `VoiceFactory`'s `orDefault`
-        // swallowed the NaN: the room ran at the constants and every voice on the orbit was heard
-        // in it. Here the stage is off for the whole orbit, so a second voice sending into it loses
+        // swallowed the NaN: the room ran at the constants and every voice on the cylinder was heard
+        // in it. Here the stage is off for the whole cylinder, so a second voice sending into it loses
         // its room. What that buys is the slot vocabulary being consistent with itself, "non-finite
         // is unset" on EVERY knob, which is what lets a cleared slot read as untouched at all. No
         // ordinary spelling reaches it: it takes a string atom (`"NaN"`) or a hand-written `katp`.
@@ -329,8 +329,8 @@ class KatalystSlotResolverSpec : StringSpec({
     }
 
     // Moved here from the master's parity specs in phase 3 step 12 C3 (the output runs these stages
-    // now, so a master-against-orbit comparison compares a stage with itself); these halves were the
-    // orbit's and had no other row.
+    // now, so a master-against-cylinder comparison compares a stage with itself); these halves were the
+    // cylinder's and had no other row.
 
     "reverb: the room switches on at authored size 0.1 exactly, and stays off below" {
         // 0.1 / 10 is the normalized 0.01 of the stage's own gate, so a `>` there, or a second /10
@@ -708,7 +708,7 @@ class KatalystSlotResolverSpec : StringSpec({
 
     // ── Duck ─────────────────────────────────────────────────────────────────────────────────────
 
-    "duck: on when the orbit is finite and the depth above zero, cylinderId from toInt" {
+    "duck: on when the cylinder is finite and the depth above zero, cylinderId from toInt" {
         val chain = declared(
             KatalystStageDsl.Duck(cylinder = c(3.7), depth = c(0.6), attack = c(0.02))
         )
@@ -729,7 +729,7 @@ class KatalystSlotResolverSpec : StringSpec({
         chain.duck.shouldNotBeNull().ducking.shouldNotBeNull().attackSeconds shouldBe DUCK_ATTACK_SECONDS
     }
 
-    "duck: off without a source orbit, off without depth, both against a ducking voice" {
+    "duck: off without a source cylinder, off without depth, both against a ducking voice" {
         declared(KatalystStageDsl.Duck(cylinder = c(SLOT_UNSET), depth = c(0.6)))
             .duck.shouldNotBeNull().ducking.shouldBeNull()
 
@@ -781,7 +781,7 @@ class KatalystSlotResolverSpec : StringSpec({
             reverbs = ReverbUnits(sampleRate),
         )
 
-        // Nothing written: both stages off, which is what an untouched classic orbit is.
+        // Nothing written: both stages off, which is what an untouched classic cylinder is.
         chain.applyParams(null)
         chain.body.shouldNotBeNull().isEngaged shouldBe false
         chain.vowel.shouldNotBeNull().isEngaged shouldBe false
@@ -818,7 +818,7 @@ class KatalystSlotResolverSpec : StringSpec({
     "body and vowel: the table is looked up only when the param map INSTANCE changes" {
         // The cost rule of the param state: `apply` runs every block and writes a def already in
         // hand, and only a new map instance costs a lookup. A writer that resolved in `apply`
-        // would do a catalogue lookup per block per orbit.
+        // would do a catalogue lookup per block per cylinder.
         val chain = KatalystChainBuilder.build(
             dsl = KatalystDsl.of(
                 KatalystStageDsl.Body(
@@ -935,7 +935,7 @@ class KatalystSlotResolverSpec : StringSpec({
     }
 
     "body and vowel: a non-finite mix takes its constant, like the floor" {
-        // A NaN mix reaches the wet/dry law and silences the orbit, so unset has to read as the
+        // A NaN mix reaches the wet/dry law and silences the cylinder, so unset has to read as the
         // constant here exactly as it does for the floor.
         val chain = declared(
             KatalystStageDsl.Body(material = c(BodyMaterials.indexOf("wood")), wet = c(SLOT_UNSET), floor = c(BODY_FLOOR)),

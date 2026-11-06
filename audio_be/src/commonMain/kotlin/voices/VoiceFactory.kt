@@ -33,7 +33,7 @@ import kotlin.random.Random
  * Every voice is ONE Ignitor tree (phase 3 step 9 retired the voice strip): a registered instrument's tree
  * (a built-in, an authored instrument, an inline one) or the sample instrument over the voice's PCM. Around
  * it the voice runs only the teardown fade (when the tree's root is not a built envelope) and the channel (gain,
- * pan, the orbit's send); nothing runs in front of it since pitch pipeline step 5 (every pitch door is a `classic()`
+ * pan, the cylinder's send); nothing runs in front of it since pitch pipeline step 5 (every pitch door is a `classic()`
  * stage). An authored instrument that does not end in `classic()` is played as its bare tree: no voice envelope,
  * no doors.
  */
@@ -131,7 +131,7 @@ class VoiceFactory(
         // unlatched; and the channel's peak measurement (`measureVoicePeak`) scales the block peak by `abs(gain)`, so a NaN
         // gain made the measured peak NaN, which fails every compare against the cull floor and
         // reads as audible forever. The guard hands both readers a finite number, and a NaN can no
-        // longer reach the orbit mix, which the orbit's reverb and delay are fed from and would
+        // longer reach the cylinder mix, which the cylinder's reverb and delay are fed from and would
         // latch it for the rest of the playback.
         val gain = data.gain?.takeIf { it.isFinite() } ?: 1.0 // NaN-guard: non-finite reads as unset
 
@@ -262,7 +262,7 @@ class VoiceFactory(
                 val built = IgnitorRegistry.SAMPLE_INSTRUMENT.buildExciter(
                     ignitorParams = withSampleEnvelopeDefaults(sampleBag, sample.meta.adsr),
                     phasePools = playbackCtx.phasePools,
-                    orbit = cylinder,
+                    cylinder = cylinder,
                     random = voiceRandom,
                     freqHz = baseSamplePitchHz,
                     sampleRate = sampleRate,
@@ -349,7 +349,7 @@ class VoiceFactory(
             gateKnown = gateKnown,
         )
 
-        // A tree that ends in an oversampling region hands its output over at the region's rate, and the orbit
+        // A tree that ends in an oversampling region hands its output over at the region's rate, and the cylinder
         // converts every voice at that rate at once (KLANG-00214 (oversampling regions) step 3b): only the teardown
         // fade and the channel follow the tree, and both run at the voice's rate. The build wraps the root in a per-block
         // memo, which a root, read by the voice alone, never needs: the region renders without it.
@@ -361,7 +361,7 @@ class VoiceFactory(
             cylinderId = cylinder,
             gain = gain,
             pan = data.pan ?: 0.5,
-            // By reference, never a copy: the map is immutable on the wire and only the orbit's
+            // By reference, never a copy: the map is immutable on the wire and only the cylinder's
             // owner reads it (see Voice.katalystParams).
             katalystParams = data.katalystParams,
             cut = data.cut,

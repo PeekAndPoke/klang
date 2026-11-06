@@ -273,19 +273,19 @@ up again) get an editor hint, never an engine merge (section 2: the engine never
 the per-sample recurrence does, by N. A linear filter gains nothing in a region (TPT is prewarped): guidance and an
 editor hint, keep clean filters outside regions.
 
-**Orbits:** an orbit always ends at 1x before the master. Its rate comes from its own Katalyst chain: the rate its
-first stage asks for on a 1x input (a head `oversampleAtLeast(4) { ... }` makes it a 4x orbit; a chain that begins
-with an ordinary stage is a 1x orbit). No separate rate setting. The orbit keeps one mix bus per voice rate that
-occurs; each bus is converted once to the orbit's rate (one conversion per rate per orbit, never per voice), the
+**Cylinders:** a cylinder always ends at 1x before the master. Its rate comes from its own Katalyst chain: the rate its
+first stage asks for on a 1x input (a head `oversampleAtLeast(4) { ... }` makes it a 4x cylinder; a chain that begins
+with an ordinary stage is a 1x cylinder). No separate rate setting. The cylinder keeps one mix bus per voice rate that
+occurs; each bus is converted once to the cylinder's rate (one conversion per rate per cylinder, never per voice), the
 buses aligned in phase like parallel branches.
 
 **Decided (maintainer, 2026-10-31, "Ok sounds good"):**
-- Where the orbit's rate is read: when the cylinder builds the chain from its `katalyst(...)` declaration (idle orbit:
-  at once; sounding orbit: the chain swap). The rate is a property of the built chain; during a swap each chain
+- Where the cylinder's rate is read: when the cylinder builds the chain from its `katalyst(...)` declaration (idle cylinder:
+  at once; sounding cylinder: the chain swap). The rate is a property of the built chain; during a swap each chain
   converts the rate buses to its own rate.
-- A bus above the orbit's rate is stepped down to it (the chain runs at one rate; `AtLeast` at the head of an orbit is
+- A bus above the cylinder's rate is stepped down to it (the chain runs at one rate; `AtLeast` at the head of a cylinder is
   read on 1x, not per bus).
-- A region at the very end of a voice hands over at its rate, so a 4x voice lands on a 4x orbit's bus directly; a
+- A region at the very end of a voice hands over at its rate, so a 4x voice lands on a 4x cylinder's bus directly; a
   region in the middle of a voice closes normally.
 - The braces rule (revised the same day, "Ok sounds good"): inside a region the processing stages run at the region
   rate; sources and their modulation run at 1x and are converted up once where they enter (see "Sources stay at 1x").
@@ -359,19 +359,19 @@ region sounds as it does outside, only with less aliasing:
   - a pitch node outside a region over a source inside it: its modulation must reach the source at the region rate.
 
 **Later steps:** 2, a source written inside the braces rendered at 1x and converted up where it enters; 3, a voice's
-end region hands over at its rate and the orbits get their rate and per-rate buses; 4, the stages' own `oversample`
+end region hands over at its rate and the cylinders get their rate and per-rate buses; 4, the stages' own `oversample`
 factors retired (section 9, answer 2) and the songs moved to regions; the full phase 0 (section 3) where a step needs
 it.
 
 **Step 3, cut in two (coordinator, 2026-11-03, from an audit of the Katalyst stages).** A Katalyst stage takes its
 rate and block size when it is built, not from a context per block, so a region on the bus builds its body at N times
-both. With that, a region at the head of a chain already makes the orbit run at its rate, one conversion up and one
-down per orbit, which is most of what step 3 is for. So:
+both. With that, a region at the head of a chain already makes the cylinder run at its rate, one conversion up and one
+down per cylinder, which is most of what step 3 is for. So:
 - **3a, Katalyst regions:** `oversampleBy(n) { ... }` and `oversampleAtLeast(n) { ... }` on the Katalyst, anywhere in a
-  chain, on both doors and the wire. Outside every region the chain stays at 1x, so the duck (run after every orbit)
+  chain, on both doors and the wire. Outside every region the chain stays at 1x, so the duck (run after every cylinder)
   and the chain swap need no change.
-- **3b, the hand-over:** a voice whose region ends the voice lands at its rate on a bus of that rate in its orbit
-  (one conversion per rate per orbit), and the chain swap blends two chains of different rates at 1x. An optimization
+- **3b, the hand-over:** a voice whose region ends the voice lands at its rate on a bus of that rate in its cylinder
+  (one conversion per rate per cylinder), and the chain swap blends two chains of different rates at 1x. An optimization
   on top of 3a.
 
 **Step 3a, landed (2026-11-03).** Reviewed in two rounds: round 1 (level 2) found one MAJOR, both reviewers
@@ -391,12 +391,12 @@ same with either kernel's group delay for every reachable step count). Corpus gr
   so a dry `parallel` branch beside it gets the exact phase twin; the body's own latency is divided down and counts
   as pure delay.
 - Inside a body every stage keeps its sound: a delay its time, a filter its cutoff; the knob modulators keep the
-  orbit's clock (a noise walked by a region's clock would run N times faster); a `distort`'s own factor is a floor
+  cylinder's clock (a noise walked by a region's clock would run N times faster); a `distort`'s own factor is a floor
   (the Ignitor's bridge), its twins and DC blocker at the region's stage; a `parallel` twins from the region's stage;
   a reverb rents a unit at the region's rate from a shelf for that rate (`ReverbUnits.atFactor`, kept and housekept
   by the base shelf; nested regions reach the one shelf of their whole factor, which holds `maxIdle / factor` idle
   units), its comb damping's pole mapped (`damping^(1/N)`) and its `lowpass` read against the base Nyquist. A `duck`
-  in a body is the orbit's duck, as in a branch. A region always declares a tail (its down conversion rings).
+  in a body is the cylinder's duck, as in a branch. A region always declares a tail (its down conversion rings).
 - The reverb's room inside a region, against the same reverb at 1x: broadband, its length and brightness agree within
   10% (measured: the late against early energy of the tail, and its first difference against itself, at 4x and at
   2x inside 2x). Per band the top decays faster: mapping the pole keeps the one-pole's corner but not its response
@@ -443,21 +443,21 @@ second reason too, not this task's: the engine cases count the diagnostics since
 Incident line in `docs/tasks/_incidents.md`.
 
 **Step 3b, landed (2026-11-03): the hand-over.** A voice whose tree ENDS in a region (its root, under the build's
-memo) does not convert down: it lands on its orbit's rate bus, and its teardown fade, cut fade, solo ramp and pan run at
-that rate (the same lines read between the frames). An orbit's chain brings every bus to its own rate once: a chain
+memo) does not convert down: it lands on its cylinder's rate bus, and its teardown fade, cut fade, solo ramp and pan run at
+that rate (the same lines read between the frames). A cylinder's chain brings every bus to its own rate once: a chain
 that begins with a region runs at that region's rate, which converts the mix up one stage at a time and adds each
 lower bus on the way; `KatalystBusLadder` steps the higher buses down in place, through the `Oversampler`'s own
 stages, and rings out on a silent bus for `Oversampler.tailFrames` after the last voice above. A chain swap hands the
 leaving chain every bus ramped by the same line; the blend and the duck stay at 1x. Buses and the raised voice buffers
 are made on first use and kept, one per rate per host.
-- Phase: a bus continues its voice's cascade, so at or below the orbit's rate it meets the voices converted at the
-  orbit in phase, with no pad. A bus ABOVE the orbit's rate keeps the round trip of the stages above (an 8x voice on a
-  4x orbit: 0.665 samples, an equal correlated sum -0.86 dB at 10 kHz, -3.99 dB at 20 kHz, no notch, swept 20 Hz to
+- Phase: a bus continues its voice's cascade, so at or below the cylinder's rate it meets the voices converted at the
+  cylinder in phase, with no pad. A bus ABOVE the cylinder's rate keeps the round trip of the stages above (an 8x voice on a
+  4x cylinder: 0.665 samples, an equal correlated sum -0.86 dB at 10 kHz, -3.99 dB at 20 kHz, no notch, swept 20 Hz to
   20 kHz in 10 Hz steps), untwinned. Before 3b the same pair differed by a whole 8x round trip (notches to -57.7 dB).
   Twinning it would cost a round trip on all lower content, against "as few conversions as possible": kept as is,
   open for the maintainer.
-- Cost: one conversion per rate per orbit, but in stereo after the pan, where a voice decimated mono: with one voice
-  of a rate on an orbit the hand-over costs about twice the conversion (a 4x voice: 5120 against 2560 section updates
+- Cost: one conversion per rate per cylinder, but in stereo after the pan, where a voice decimated mono: with one voice
+  of a rate on a cylinder the hand-over costs about twice the conversion (a 4x voice: 5120 against 2560 section updates
   per block); break-even is two voices of a rate sounding together.
 - Review: round 1 (level 2) clean from both reviewers; its MINORs applied as one batch (the phase wording above, two
   KDocs naming the lazy allocations, a dead branch, two members made private). Left as they are: a ladder is built for
@@ -499,7 +499,7 @@ bit").
   stage's own oversampler it ran after the down conversion; inside a region it runs before the region's, whose
   half-band rings on a hard-clipped edge, so a hard-driven door can peak past 1 again (the reviewer's model: Sandsturm's
   lead from 1.00 to about 1.5, +3.5 dB at the voice; A Truth Worth Lying For's guitar about +2 dB). The tone barely
-  moves (the mix spectrum within 0.3 dB, Sandsturm only); the peaks reach the orbit and the master limiter. Recorded as
+  moves (the mix spectrum within 0.3 dB, Sandsturm only); the peaks reach the cylinder and the master limiter. Recorded as
   a sound change: Sandsturm, A Truth Worth Lying For, the fuzz pedals, the gummi bucket and the peak clippers of Der
   Schmetterling and Kokon. Heard and accepted by the maintainer on 2026-11-04 (`tmp/listening/oversample-step4/`):
   "The listening is ok for the soft cap". The doors' KDoc says the ceiling holds before a region's down

@@ -23,7 +23,7 @@ import kotlin.math.abs
 import kotlin.math.sin
 
 /**
- * Contract for the orbit-level resonator of the vowel kind ([KatalystResonatorEffect], [ResonatorKind.VOWEL]), the
+ * Contract for the cylinder-level resonator of the vowel kind ([KatalystResonatorEffect], [ResonatorKind.VOWEL]), the
  * rows of [KatalystResonatorBodySpec] for the vowel. Written when the vowel stage was a class of its own and had
  * diverged from the body (it was missing the `floor` plumbing that `vowelFloor()` relies on); since engine tidy-up
  * step 12 (a) the two kinds are one class, and these rows pin that the vowel's constants and tables reach it.
@@ -221,7 +221,7 @@ class KatalystResonatorVowelSpec : StringSpec({
         fx.installedMix shouldBe VOWEL_WET
 
         // The IDENTICAL def: `VowelBands` hands out one shared band list per entry, and the stage
-        // leans on that identity to short-circuit an unchanged block, so a reused orbit re-offers
+        // leans on that identity to short-circuit an unchanged block, so a reused cylinder re-offers
         // the very object that was installed before and must still get a bank.
         val same = SpecVowel(bands = vowelish.bands, mix = 0.3)
 
@@ -436,10 +436,10 @@ class KatalystResonatorVowelSpec : StringSpec({
     }
 
     "reset() mid-fade-out is a hard cut: dry at once, and the next life starts on a fresh bank at once" {
-        // The cylinder's deactivation and retire. A fade that survived would resume in the orbit's
+        // The cylinder's deactivation and retire. A fade that survived would resume in the cylinder's
         // next life, on new material. Two runs of the same life, because the first block after the
         // cut would spend the snap the second half needs (in the engine no block runs between an
-        // orbit's deactivation and its next life).
+        // cylinder's deactivation and its next life).
         fun lifeThenCut(): Pair<KatalystResonatorEffect, SwapHostScript> {
             val fx = vowelStage(sampleRate)
             val s = script(fx, blocks = 20)

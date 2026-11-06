@@ -50,7 +50,7 @@ internal class CylinderSwapRig(val sampleRate: Int = 44100) {
 
     val swap: ChainSwap get() = cylinder.chainSwap
 
-    /** The orbit's owner voice. */
+    /** The cylinder's owner voice. */
     var voice: Voice = VoiceTestHelpers.createSynthVoice()
 
     /** Absolute backend frame of the next block. */
@@ -64,7 +64,7 @@ internal class CylinderSwapRig(val sampleRate: Int = 44100) {
     /**
      * One rendered block in the engine's order: the owner offers itself, the voices fill the mix,
      * [beforeEffects] runs (where a request consumed by the scheduler would land), the queued chain is
-     * polled and the chain runs, then the duck pass. Returns the left channel the orbit hands on.
+     * polled and the chain runs, then the duck pass. Returns the left channel the cylinder hands on.
      */
     fun block(
         level: Double,
@@ -144,7 +144,7 @@ internal class CylinderSwapRig(val sampleRate: Int = 44100) {
             KatalystStageDsl.Reverb(wet = KatalystKnobDsl.Constant(0.5), size = KatalystKnobDsl.Constant(size))
         )
 
-        /** A room and a duck listening to orbit 0: it drains, and its duck is handed over on a swap. */
+        /** A room and a duck listening to cylinder 0: it drains, and its duck is handed over on a swap. */
         fun duckedRoomChain() = KatalystDsl.of(
             KatalystStageDsl.Reverb(wet = KatalystKnobDsl.Constant(0.5), size = KatalystKnobDsl.Constant(6.0)),
             KatalystStageDsl.Duck(

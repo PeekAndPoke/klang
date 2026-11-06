@@ -27,7 +27,7 @@ class WorkshopDomainSpec : StringSpec({
             .filter { it.isFile && it.extension == "kt" }
             .toList()
 
-        // Klang's own words anywhere, also inside names (`orbitId`, `KatalystChain`)
+        // Klang's own words anywhere, also inside names (`cylinderId`, `KatalystChain`)
         val words = Regex("klang|sprudel|strudel|tidal|ignitor|katalyst|cylinder|orbit|lexikon", RegexOption.IGNORE_CASE)
 
         // Words that hide inside others (`promotor`, `songbird` would be fine), as words and as parts of a name

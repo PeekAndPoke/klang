@@ -31,7 +31,7 @@ topology was chosen to avoid (`LowPassHighPassFilters.kt` history).
    lowpass is `onepole(freq)`, so the pair wants one shape (for example `onepole(freq)` and
    `onepoleHp(freq)`, or a `highpass` flag, or renaming both); decide before building.
 3. A law spec for the node (the -3 dB point, DC gain 0, Nyquist gain 1), mutation-checked.
-4. Open: does the Katalyst get one-pole stages (an orbit or master DC trim), and does `classic()` want a
+4. Open: does the Katalyst get one-pole stages (a cylinder or master DC trim), and does `classic()` want a
    one-pole highpass slot? Neither is needed today.
 
 ## History

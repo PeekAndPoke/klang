@@ -189,10 +189,10 @@ class CompressorSpec : StringSpec({
     }
 
     "applyKnobArgs leaves the instance where the five setters leave it, bit for bit" {
-        // Engine follow-up 40: the orbit compressor writes its five knobs through `knobArgs` and one
+        // Engine follow-up 40: the cylinder compressor writes its five knobs through `knobArgs` and one
         // `applyKnobArgs`, the time constants computed once, where it called the five setters, each of which
         // computed them again. Both instances hear the same blocks and take the same knobs, one through the
-        // setters (threshold, ratio, knee, attack, release, the order the orbit stage used), the other through the
+        // setters (threshold, ratio, knee, attack, release, the order the cylinder stage used), the other through the
         // holder; every stored knob and every output sample must match bit for bit. The steps reach every guard:
         // non-finite knobs (each kept at its stored value), a ratio below 1 and a knee below 0 (coerced), a knee of
         // -0.0 (kept, `coerceAtLeast` does not touch it), an attack and a release below the 0.1 ms floor, a NaN

@@ -1,22 +1,22 @@
-# Knob glide: orbit settings change smoothly, never in one step
+# Knob glide: cylinder settings change smoothly, never in one step
 
 > Moved from `docs/plans/` to `audio/ref/` 2026-10-14 (maintainer, Q43): no longer a plan, a law the engine follows.
 
 Decided 2026-09-19 with the maintainer (signal-flow plan section 7, the insert-style sends).
-Status: the pilot on the orbit reverb is the first step; this file is where its lessons land.
+Status: the pilot on the cylinder reverb is the first step; this file is where its lessons land.
 
 ## 1. Why
 
-An orbit has one owner voice at a time, and two patterns on one orbit take turns owning it. Each
-owner change can move every knob of the orbit's chain at once. Today most of them jump, which
-clicks (a level) or zips (a coefficient). The rule: every orbit knob GLIDES to its new value over
+A cylinder has one owner voice at a time, and two patterns on one cylinder take turns owning it. Each
+owner change can move every knob of the cylinder's chain at once. Today most of them jump, which
+clicks (a level) or zips (a coefficient). The rule: every cylinder knob GLIDES to its new value over
 `KNOB_GLIDE_SECONDS = 0.05` (a constant in `audio_bridge/constants/`, one day perhaps a user knob).
 
 **What a glide is for (maintainer, 2026-09-19): a safety net against clicks and sudden unwanted
 sounds, not a sound-proof one.** It does NOT preserve loudness: a linear blend of two different
 sounds may dip by about 3 dB in the middle, and that is fine. No equal-power law, no loudness
 compensation, no cleverness. Different-sounding voices that must not disturb each other belong on
-different orbits; that is the user's call, and the glide does not try to make one orbit behave
+different cylinders; that is the user's call, and the glide does not try to make one cylinder behave
 like two.
 
 **There are TWO transition times since 2026-09-20 (Katalyst 5c-11), and the split is by KIND.**
@@ -89,7 +89,7 @@ the two banks, so a single change instant reads up to 12 dB off, and eight insta
 low band but not always one pair's high band.
 
 **Measure before you glide (learned in the pilot, 2026-09-19).** A knob gets a glide only where
-its JUMP is audible. The pilot measured the orbit reverb in a Python copy of `Reverb.process`
+its JUMP is audible. The pilot measured the cylinder reverb in a Python copy of `Reverb.process`
 (low tones, energy above 3 kHz after the change as the artifact): a full-span DAMPING jump sits 66
 to 70 dB below the tail, because the comb's one-pole state stays continuous and the change reaches
 the output one comb length later, staggered over 16 combs; a SIZE jump sits 44 to 50 dB below the
@@ -130,20 +130,20 @@ of `Crossfade`):
 
 ## 4. Rollout
 
-1. Pilot: the orbit reverb's size, a coefficient knob (damping was measured and dropped, log
+1. Pilot: the cylinder reverb's size, a coefficient knob (damping was measured and dropped, log
    entry 4). Its `wet` does not exist as an
-   orbit knob until 5b-2 makes the reverb an insert; the LEVEL half of the helper is exercised
+   cylinder knob until 5b-2 makes the reverb an insert; the LEVEL half of the helper is exercised
    there. A sound change for any song whose reverb settings change while it plays; a song with
    constant settings stays bit-identical.
 2. 5b-2: the reverb's and the delay's `wet` (LEVEL), the delay's feedback (COEFFICIENT), the tap
    crossfade on a time change.
-3. 5c: every other orbit knob, together with the switch-off fades.
+3. 5c: every other cylinder knob, together with the switch-off fades.
 
 ## 5. Pilot log: problems met, and how they were solved
 
-Pilot: the orbit reverb's size (damping measured and dropped, entry 4), 2026-09-19. Result: no song
+Pilot: the cylinder reverb's size (damping measured and dropped, entry 4), 2026-09-19. Result: no song
 changes (18 of 18 built-in songs and frozen pieces bit-identical in raw doubles against
-`279d5fc4`; no song moves an orbit reverb while it plays).
+`279d5fc4`; no song moves a cylinder reverb while it plays).
 
 1. **The owner re-applies its settings EVERY block** (`Cylinder.updateFromVoice` calls
    `configure` on every block the lease is held), not once per change. A glide that restarts on
@@ -229,7 +229,7 @@ block the glide lands in moves the stage on into the drain at its end. The law i
 switch-off: no edge reaches the unit. Until then only a MODULATED time or size faded (knob expressions step 5b, where
 the move to the drain waited for the next off-config, re-applied every block by the modulated writer), and every other
 switch-off cut the feed in one sample. **The lesson: a fade that needs its event re-applied every block hangs where
-nobody re-applies it** (an orbit without an owner, a leaving chain); finish a fade in the state's own `process`. The
+nobody re-applies it** (a cylinder without an owner, a leaving chain); finish a fade in the state's own `process`. The
 price, accepted: on an owner change the NEW owner's first 50 ms reach the OLD owner's ring or room at a falling level.
 A return from Draining glides the wet up from 0, where the fade left it; out of Off it still snaps (an empty unit),
 except on a modulated time or size. The corpus did not move: it reaches no switch-off of a fed stage, so the evidence
@@ -289,7 +289,7 @@ the current value over the full time, so a knob repatterned every block converge
 with tau about 49 ms: -3 dB at 3.2 Hz, -10 dB at 10 Hz. A fast-wobbled `phaser.wet` or
 `duck.depth` therefore loses modulation depth. It is the price of "always glide", stated here once.
 
-**Katalyst 5c-8 (2026-09-19), the fader.** The orbit `gain.gain` is on the LEVEL law: a
+**Katalyst 5c-8 (2026-09-19), the fader.** The cylinder `gain.gain` is on the LEVEL law: a
 `KnobGlide` over `KNOB_GLIDE_SECONDS`, per sample from the end. Its one-block ramp measured -58 to
 -79 dB on jumps across 0.01 to 4 and through 0; the glide -82 to -100 dB.
 

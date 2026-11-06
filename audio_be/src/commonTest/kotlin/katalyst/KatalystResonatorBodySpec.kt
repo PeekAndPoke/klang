@@ -23,7 +23,7 @@ import kotlin.math.abs
 import kotlin.math.sin
 
 /**
- * Contract for the orbit-level resonator of the body kind ([KatalystResonatorEffect], [ResonatorKind.BODY]): inactive
+ * Contract for the cylinder-level resonator of the body kind ([KatalystResonatorEffect], [ResonatorKind.BODY]): inactive
  * until configured; since only the OWNER voice configures it (`Cylinder.commitOwner`), `null` (owner has no body)
  * turns it off; and `reset()` deactivates it. The vowel kind's rows are [KatalystResonatorVowelSpec]; what the two
  * kinds share at chain level, the pool and the tables are [KatalystResonatorEffectSpec].
@@ -125,7 +125,7 @@ class KatalystResonatorBodySpec : StringSpec({
         val lastA = block[n - 1]
         val naturalStep = (1 until n).maxOf { abs(block[it] - block[it - 1]) }
 
-        fx.configureBody(bodyB) // live material swap while the orbit is ringing
+        fx.configureBody(bodyB) // live material swap while the cylinder is ringing
         val boundaryStep = abs(runSineBlock()[0] - lastA)
 
         // Continuous: the swap-boundary jump is within a few natural per-sample steps. A bare
@@ -149,7 +149,7 @@ class KatalystResonatorBodySpec : StringSpec({
 
     /**
      * Renders [blocks] blocks of a sine at [freq] through ONE stage. With [everyBlock] the stage is
-     * re-offered the SAME def before every block, which is what the cylinder does for the orbit's
+     * re-offered the SAME def before every block, which is what the cylinder does for the cylinder's
      * owner voice on every block it is alive.
      */
     fun renderSine(def: SpecBody, freq: Double, everyBlock: Boolean, blocks: Int): DoubleArray {
@@ -183,7 +183,7 @@ class KatalystResonatorBodySpec : StringSpec({
 
     "a non-finite wet is UNSET and installs at BODY_WET, on all three spellings" {
         // Not just NaN: an infinity reaches the wet/dry law too, where a non-finite amount reads as
-        // a fully dry 0.0, so the orbit would lose its body without saying so.
+        // a fully dry 0.0, so the cylinder would lose its body without saying so.
         nonFinite.forEach { unset ->
             val fx = bodyStage(sampleRate)
 
@@ -289,7 +289,7 @@ class KatalystResonatorBodySpec : StringSpec({
 
         // The IDENTICAL def, bands and all: `BodyMaterials` hands out ONE shared list instance per
         // entry, and the stage leans on that identity to short-circuit an unchanged block. So the
-        // def a reused orbit re-offers after a reset is literally the object that was installed
+        // def a reused cylinder re-offers after a reset is literally the object that was installed
         // before, and the stage still has to install it rather than believe it is already there.
         val same = SpecBody(bands = woodish.bands, mix = 0.3)
 
@@ -540,10 +540,10 @@ class KatalystResonatorBodySpec : StringSpec({
     }
 
     "reset() mid-fade-out is a hard cut: dry at once, and the next life starts on a fresh bank at once" {
-        // The cylinder's deactivation and retire. A fade that survived would resume in the orbit's
+        // The cylinder's deactivation and retire. A fade that survived would resume in the cylinder's
         // next life, on new material. Two runs of the same life, because the first block after the
         // cut would spend the snap the second half needs (in the engine no block runs between an
-        // orbit's deactivation and its next life).
+        // cylinder's deactivation and its next life).
         fun lifeThenCut(): Pair<KatalystResonatorEffect, SwapHostScript> {
             val fx = bodyStage(sampleRate)
             val s = script(fx, blocks = 20)

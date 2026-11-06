@@ -13,7 +13,7 @@ import io.peekandpoke.klang.common.infra.toMap
  * expressed through.
  *
  * Both of [SprudelVoiceData]'s bags are this class: `ignitorParams` (the voice's own instrument) and
- * `katalystParams` (the chain its orbit runs). They differ in their HOST, never in their shape, so
+ * `katalystParams` (the chain its cylinder runs). They differ in their HOST, never in their shape, so
  * they share one type, one contract and one set of tests.
  *
  * **Mutable and single-owner.** A door writes one name in place instead of allocating a fresh bag
@@ -121,7 +121,7 @@ class ParamBag private constructor(
      *
      * The backend holds `Voice.katalystParams` for the whole life of the voice and gates its
      * re-resolve on the map's IDENTITY, so a map sprudel could still write into would move an
-     * orbit's settings with nothing to notice it.
+     * cylinder's settings with nothing to notice it.
      *
      * With [extraCapacity] above 0 the JVM table starts at the bag's size plus that many slots, the size this copy
      * always had (a JS `Map` takes no size; see `KlangMap(capacityHint)`). Without it the copy is `KlangMap.copy`,

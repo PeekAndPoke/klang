@@ -19,7 +19,7 @@ import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
  * shelf, and a chain its bounded cache evicts returns them (KLANG-00230 (resource warehouse)).
  *
  * Since phase 3 step 12 C3 the output runs a `KatalystChain`, so the ring a master delay rents, its
- * size class and its refusal are the orbit delay's own and are pinned where that stage is
+ * size class and its refusal are the cylinder delay's own and are pinned where that stage is
  * (`LazyRingSpec`). What stays here is the host's half: a chain leaving service returns what it
  * rented at once (eager retire, step 12 C4), not when the cache evicts it.
  */

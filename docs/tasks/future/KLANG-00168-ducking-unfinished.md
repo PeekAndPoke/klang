@@ -14,20 +14,20 @@ returns nothing, so nothing here is a regression risk — it is unfinished work,
 
 ## What exists today
 
-Sidechain ducking: one orbit's output pulls down another's, the kick-and-bass pump.
+Sidechain ducking: one cylinder's output pulls down another's, the kick-and-bass pump.
 
 ```klangscript
-note("c3 e3 g3").duck(cylinder = 1, depth = 0.8)   // duck when orbit 1 plays
+note("c3 e3 g3").duck(cylinder = 1, depth = 0.8)   // duck when cylinder 1 plays
 ```
 
 The chain is complete from DSL to DSP:
 
 | layer | file | tested? |
 |-------|------|---------|
-| DSL — `duck()` / `duck(depth = ...)` / `duck(attack = ...)` | `sprudel/lang_dynamics_orbit.kt` | ✅ `LangDuckingSpec` |
+| DSL, `duck()` / `duck(depth = ...)` / `duck(attack = ...)` | `sprudel/lang_dynamics_cylinder.kt` | ✅ `LangDuckingSpec` |
 | wire | the `duck.*` slots of the owner's `katalystParams` → `KatalystDuckWriter` → `DuckSettings(cylinderId, attackSeconds, depth)` (until 2026-10-07 `Voice.Ducking`) | - |
-| **per-voice → per-orbit join** | `KatalystChainBuilder.applyDuck` configures the chain's `KatalystDuckEffect` from whichever voice owns the orbit (the newest `Sounding` voice, committed once per block) | ❌ **nothing** |
-| **cross-orbit sidechain resolution** | `Cylinders.kt:87-89`, step 2 of `processAndMix`, after every cylinder has rendered | ❌ **nothing** |
+| **per-voice → per-cylinder join** | `KatalystChainBuilder.applyDuck` configures the chain's `KatalystDuckEffect` from whichever voice owns the cylinder (the newest `Sounding` voice, committed once per block) | ❌ **nothing** |
+| **cross-cylinder sidechain resolution** | `Cylinders.kt:87-89`, step 2 of `processAndMix`, after every cylinder has rendered | ❌ **nothing** |
 | bus effect | `KatalystDuckEffect` | ✅ `KatalystDuckEffectSpec` |
 | DSP | `effects/Ducking.kt` | ✅ `DuckingSpec` |
 
@@ -56,11 +56,11 @@ Instantaneous attack means the gain drops discontinuously the moment the sidecha
 Whether it is audible depends on programme material and depth, but it should be *decided* rather than
 discovered.
 
-### 3. It is a per-voice parameter driving a per-orbit effect
+### 3. It is a per-voice parameter driving a per-cylinder effect
 
 The duck's settings ride on each voice (its `duck.*` slots, resolved into `DuckSettings`, until 2026-10-07 `Voice.Ducking`), but the effect lives on the cylinder. `Cylinder.kt:198-203`
-configures the orbit from whichever voice currently owns it, so with two differently-ducked voices in
-one orbit, the last one to take ownership wins. Related to the standing "mark per-orbit vs per-voice
+configures the cylinder from whichever voice currently owns it, so with two differently-ducked voices in
+one cylinder, the last one to take ownership wins. Related to the standing "mark per-cylinder vs per-voice
 on every effect" documentation item.
 
 ### 4. Its state survives across notes, conditionally

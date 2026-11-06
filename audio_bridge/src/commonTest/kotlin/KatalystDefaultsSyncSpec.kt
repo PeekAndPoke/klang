@@ -120,7 +120,7 @@ class KatalystDefaultsSyncSpec : StringSpec({
 
     "family 1, the untouched zeros: every knob here is 0.0, never its touched constant" {
         // A slot's default is its value when nobody writes it, so seeding an amount with the
-        // touched constant would put REVERB_WET of room on every orbit of every song that never
+        // touched constant would put REVERB_WET of room on every cylinder of every song that never
         // wrote `reverb(...)`. The criterion for THIS family: the knob is a stage's AMOUNT (its wet
         // or depth) and the untouched voice carries it at zero. `phaser.wet` and `duck.depth` have a
         // touched constant of zero too, so they would be off either way; they are here because they
@@ -201,7 +201,7 @@ class KatalystDefaultsSyncSpec : StringSpec({
         // This is the family that was wrong in review round 1. The delay engages on
         // `time >= MIN_ACTIVE_DELAY_SECONDS` and the reverb on `size >= MIN_ACTIVE_SIZE`, so a
         // chain with `wet = 0` but `time = DELAY_TIME_SECONDS` declares a RUNNING delay line that
-        // happens to be fed nothing, which is not what an untouched orbit is.
+        // happens to be fed nothing, which is not what an untouched cylinder is.
         listOf("delay.time", "delay.feedback", "reverb.size").forEach { name ->
             withClue(name) { classicSlots.getValue(name) shouldBe 0.0 }
         }
@@ -240,7 +240,7 @@ class KatalystDefaultsSyncSpec : StringSpec({
         // number the stage uses) and not a shared constant from `constants/` (an identity element
         // is not a taste decision anybody retunes, which is why `KatalystChainBuilder` writes it
         // out too). Exactly 1.0, because the stage's bit-transparency is a `== 1.0` branch in
-        // `KatalystGainEffect.process`: a 0.9999999999 here would multiply every orbit of every
+        // `KatalystGainEffect.process`: a 0.9999999999 here would multiply every cylinder of every
         // song by something.
         classicSlots.getValue("gain.gain") shouldBe 1.0
     }
@@ -303,7 +303,7 @@ class KatalystDefaultsSyncSpec : StringSpec({
     "the phaser, the duck, the body and the vowel stay OFF bare: one knob has to name something" {
         // "Touched" is not "audible" for these four, and that is not an oversight: it matches the
         // sprudel doors today. The phaser is gated on its depth (`Phaser.MIN_ACTIVE_DEPTH`), so
-        // `phaser()` with no wet is a chain entry that does nothing; the duck needs a source orbit
+        // `phaser()` with no wet is a chain entry that does nothing; the duck needs a source cylinder
         // before it can duck anything; and the body and the vowel need a catalogue INDEX.
         val bareMaterial = (KatalystStageDsl.Body().material as KatalystKnobDsl.Constant).value
         val bareVowel = (KatalystStageDsl.Vowel().vowel as KatalystKnobDsl.Constant).value
@@ -324,9 +324,9 @@ class KatalystDefaultsSyncSpec : StringSpec({
         (KatalystStageDsl.Duck().depth as KatalystKnobDsl.Constant).value shouldBe 0.0
         KatalystStageDsl.Duck().attack shouldBe KatalystKnobDsl.Constant(DUCK_ATTACK_SECONDS)
 
-        // `orbit` is a member of the UNSET family, not a plain zero: 0 is a legitimate orbit, so
-        // the off state has to be the absence marker. A `-1` is a finite orbit request too.
-        // And it is asserted the way the rule says to: `orbit shouldBe SLOT_UNSET` FAILS here,
+        // `cylinder` is a member of the UNSET family, not a plain zero: 0 is a legitimate cylinder, so
+        // the off state has to be the absence marker. A `-1` is a finite cylinder request too.
+        // And it is asserted the way the rule says to: `cylinder shouldBe SLOT_UNSET` FAILS here,
         // because kotest compares primitive Doubles with IEEE `==` and NaN is not equal to itself.
         // That is the "test isFinite(), never compare" rule biting in its own spec.
         val cylinder = (KatalystStageDsl.Duck().cylinder as KatalystKnobDsl.Constant).value
@@ -460,7 +460,7 @@ class KatalystDefaultsSyncSpec : StringSpec({
 
     "the compressor's lookahead is 0 bare and on the classic chain: no stage is late unless asked" {
         // Phase 3 step 12 C2. A lookahead delays whatever runs through the stage, so it is the
-        // author's opt-in and never a default; the born-with orbit must not run late.
+        // author's opt-in and never a default; the born-with cylinder must not run late.
         COMPRESSOR_LOOKAHEAD_SECONDS shouldBe 0.0
         KatalystStageDsl.Compressor().lookahead shouldBe COMPRESSOR_LOOKAHEAD_SECONDS
         KatalystDsl.classic.stages.filterIsInstance<KatalystStageDsl.Compressor>().single().lookahead shouldBe 0.0

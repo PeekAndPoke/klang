@@ -82,7 +82,7 @@ internal object KlangScriptKatalystBodySlots {
     @KlangScript.Property
     val material: KatalystKnobDsl = KatalystDsl.Slots.body.material
 
-    /** `body.wet`. How much of the orbit runs through the body, default unset (the engine's `BODY_WET` once a material is set). */
+    /** `body.wet`. How much of the cylinder runs through the body, default unset (the engine's `BODY_WET` once a material is set). */
     @KlangScript.Property
     val wet: KatalystKnobDsl = KatalystDsl.Slots.body.wet
 
@@ -101,7 +101,7 @@ internal object KlangScriptKatalystVowelSlots {
     @KlangScript.Property
     val vowel: KatalystKnobDsl = KatalystDsl.Slots.vowel.vowel
 
-    /** `vowel.wet`. How much of the orbit runs through the formant bank, default unset (the engine's `VOWEL_WET` once a vowel is set). */
+    /** `vowel.wet`. How much of the cylinder runs through the formant bank, default unset (the engine's `VOWEL_WET` once a vowel is set). */
     @KlangScript.Property
     val wet: KatalystKnobDsl = KatalystDsl.Slots.vowel.wet
 
@@ -116,7 +116,7 @@ internal object KlangScriptKatalystVowelSlots {
 internal object KlangScriptKatalystDelaySlots {
     override fun toString(): String = "[Katalyst.slot.delay]"
 
-    /** `delay.wet`. How much of the orbit goes into the delay, default 0 (off). */
+    /** `delay.wet`. How much of the cylinder goes into the delay, default 0 (off). */
     @KlangScript.Property
     val wet: KatalystKnobDsl = KatalystDsl.Slots.delay.wet
 
@@ -139,7 +139,7 @@ internal object KlangScriptKatalystDelaySlots {
 internal object KlangScriptKatalystReverbSlots {
     override fun toString(): String = "[Katalyst.slot.reverb]"
 
-    /** `reverb.wet`. How much of the orbit goes into the reverb, default 0 (off). */
+    /** `reverb.wet`. How much of the cylinder goes into the reverb, default 0 (off). */
     @KlangScript.Property
     val wet: KatalystKnobDsl = KatalystDsl.Slots.reverb.wet
 
@@ -212,7 +212,7 @@ internal object KlangScriptKatalystCompressorSlots {
 internal object KlangScriptKatalystGainSlots {
     override fun toString(): String = "[Katalyst.slot.gain]"
 
-    /** `gain.gain`. The orbit's group fader, default 1 (unity). The stage `gain`, its knob `gain`: `Katalyst.slot.gain.gain` reads oddly and is right. */
+    /** `gain.gain`. The cylinder's group fader, default 1 (unity). The stage `gain`, its knob `gain`: `Katalyst.slot.gain.gain` reads oddly and is right. */
     @KlangScript.Property
     val gain: KatalystKnobDsl = KatalystDsl.Slots.gain.gain
 }
@@ -227,7 +227,7 @@ internal object KlangScriptKatalystDuckSlots {
     @KlangScript.Property
     val cylinder: KatalystKnobDsl = KatalystDsl.Slots.duck.cylinder
 
-    /** `duck.depth`. How far this orbit is pulled down, default 0. */
+    /** `duck.depth`. How far this cylinder is pulled down, default 0. */
     @KlangScript.Property
     val depth: KatalystKnobDsl = KatalystDsl.Slots.duck.depth
 

@@ -85,7 +85,7 @@ class Ducking(
      * the raw values, as a caller would hand them to the two setters. A non-finite one keeps the stored value, as
      * the setters do.
      *
-     * **A holder, on purpose** (engine follow-up 45, 2026-10-19): the orbit duck writes its knobs on every block a
+     * **A holder, on purpose** (engine follow-up 45, 2026-10-19): the cylinder duck writes its knobs on every block a
      * modulated depth or attack moves. Through the two setters each knob crossed a call V8 does not always inline, so
      * each was a heap number (`audio/ref/performance.md`, the rule on a double handed to a function that is not
      * inlined): under a mixed profile `KatalystDuckEffect.configure` booked 32 B per block, two heap numbers, in

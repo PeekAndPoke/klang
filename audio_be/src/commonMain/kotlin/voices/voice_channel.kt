@@ -13,8 +13,8 @@ import kotlin.math.sin
 
 /**
  * The voice's channel, its last stage: mixes the voice's output into its cylinder's mix with pan and gain (the one
- * level word, `gain`, applied once here), the solo/mute multiplier ramped where it moved. Nothing else: the orbit's
- * delay and reverb take their feed from the orbit mix since Katalyst step 5b-2, so a voice has no send of its own.
+ * level word, `gain`, applied once here), the solo/mute multiplier ramped where it moved. Nothing else: the cylinder's
+ * delay and reverb take their feed from the cylinder mix since Katalyst step 5b-2, so a voice has no send of its own.
  * Was `SendRenderer` until 2026-11-06 (KLANG-00290 (engine follow ups) item 21: the voice's fixed stages are plain
  * code, and the stage lost the "send" word, audit A2.5).
  *
@@ -32,11 +32,11 @@ internal fun mixIntoCylinder(
     rateSteps: Int,
     measurePeak: Boolean,
 ): Double {
-    // Every rendering voice routes into its orbit; only a voice whose gate is open offers itself as the owner
-    // of the orbit's bus settings (`Voice.claimsOrbit`), the newest offer of the block wins (`Cylinder.offer`).
+    // Every rendering voice routes into its cylinder; only a voice whose gate is open offers itself as the owner
+    // of the cylinder's bus settings (`Voice.claimsCylinder`), the newest offer of the block wins (`Cylinder.offer`).
     val cylinders = ctx.cylinders
     val blockStart = ctx.blockStart
-    val cylinder = if (voice.claimsOrbit(blockStart)) {
+    val cylinder = if (voice.claimsCylinder(blockStart)) {
         cylinders.offer(id = voice.cylinderId, voice = voice, blockStart = blockStart)
     } else {
         cylinders.checkIn(id = voice.cylinderId, blockStart = blockStart)
@@ -49,7 +49,7 @@ internal fun mixIntoCylinder(
     val panAngle = panNorm * (PI / 2.0)
 
     // Pre-fetch cylinder buffers. A voice that hands over (KLANG-00214 (oversampling regions) step 3b) lands on the
-    // orbit's bus at its rate, 2^rateSteps samples per frame; the orbit converts every voice there at once.
+    // cylinder's bus at its rate, 2^rateSteps samples per frame; the cylinder converts every voice there at once.
     val steps = rateSteps
     val mix = cylinder.mixBufferAt(steps)
     val outL = mix.left
@@ -144,7 +144,7 @@ private fun mixRamped(
  * loop above stays untouched.
  *
  * The mix is all a voice reaches since Katalyst step 5b-2: the delay and the reverb are fed from
- * the orbit mix by the owner's `wet`, so a wet above 1 amplifies an orbit, not a voice, and
+ * the cylinder mix by the owner's `wet`, so a wet above 1 amplifies a cylinder, not a voice, and
  * the bound no longer scales by a send amount.
  */
 private fun measureVoicePeak(

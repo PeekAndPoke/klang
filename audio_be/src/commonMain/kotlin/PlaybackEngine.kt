@@ -16,7 +16,7 @@ import kotlin.math.min
 /**
  * One per-`playbackId` DSP instance. Owns its **full** render state — its own [VoiceScheduler]
  * (own scheduling timeline, solo state, scratch, `RenderContext`, `VoiceFactory`) and its own
- * [Cylinders] (orbits + FX). The only thing it does NOT own is the shared backend state
+ * [Cylinders] (cylinders + FX). The only thing it does NOT own is the shared backend state
  * ([AudioBackendContext]); in particular the audio timeline (clock) is read from there, never per
  * engine — see KLANG-00176 (per playback engine) (D2·b/D2·d).
  *
@@ -97,8 +97,8 @@ class PlaybackEngine(
      * have been over, saturated at [maxTailHoldBlocks] (an always-on engine never overflows it: the `min` in
      * [renderInto] caps it before `+ 1` could reach `Int.MAX_VALUE`, on every path, a never-audible one included).
      * Counted in every phase, `Playing` included: a stopped playback's endless tails are held until it reaches the
-     * bound (see [isIdle]); a tail that sustains itself on an orbit keeps the orbit active, so a count that
-     * waited for the orbits too would never start.
+     * bound (see [isIdle]); a tail that sustains itself on a cylinder keeps the cylinder active, so a count that
+     * waited for the cylinders too would never start.
      */
     private var quietBlocks: Int = 0
 
@@ -131,7 +131,7 @@ class PlaybackEngine(
      * (it detaches it instead); given one, it would multiply with the [TailRelease] gain.
      *
      * The gain is applied to the engine's output only, after its master chain: what decides the end of life (the
-     * voice count behind [quietBlocks], the orbits' activity, [MasterBus.isRinging]) is measured before it, so a
+     * voice count behind [quietBlocks], the cylinders' activity, [MasterBus.isRinging]) is measured before it, so a
      * playback stopped at gain 0 keeps its tails exactly as at gain 1.
      */
     fun setGain(gain: Double, rampSec: Double) {
@@ -146,7 +146,7 @@ class PlaybackEngine(
      *
      * The chain lands on this engine's fork, which is the registry every cylinder of this engine
      * AND its [MasterBus] resolve a name against (Katalyst step 3a; the output since phase 3 step 12
-     * C5): a `katalyst(…)` reference on the voice stream then finds it, and the orbit installs it
+     * C5): a `katalyst(…)` reference on the voice stream then finds it, and the cylinder installs it
      * the next time it is idle; a `master(…)` reference finds it, and the bus builds it ahead when the
      * schedule carrying the reference arrives ([MasterBus.prepare]). Registration builds nothing: a
      * registered chain may never be played at the output.
@@ -158,8 +158,8 @@ class PlaybackEngine(
      * (audit item A2.11).
      *
      * - **Straight into [target]** while neither a master chain nor a release nor a gain other than 1 is in play:
-     *   byte-identical to the engine before authored masters (the orbits sum straight into the shared mix, no copy).
-     * - **Through the engine's own bus** otherwise: the orbits sum into it, the master chain runs on it when one
+     *   byte-identical to the engine before authored masters (the cylinders sum straight into the shared mix, no copy).
+     * - **Through the engine's own bus** otherwise: the cylinders sum into it, the master chain runs on it when one
      *   is active, the playback's gain ([setGain]) after it, and it joins [target] whole, or under the [TailRelease]
      *   gain while `Releasing` or `Released`.
      *
@@ -196,7 +196,7 @@ class PlaybackEngine(
             Phase.Playing, Phase.Stopped, Phase.Disposed -> false
             Phase.Releasing, Phase.Released -> true
         }
-        // Read before the orbits render: they cannot change it (only the swap's own process can).
+        // Read before the cylinders render: they cannot change it (only the swap's own process can).
         val mastered = masterBus.isActive
         val gained = !gain.isUnity
 
@@ -228,12 +228,12 @@ class PlaybackEngine(
         masterBus.markRendered()
     }
 
-    /** True while this engine still has sound of its own (voices or ringing orbit buses). */
+    /** True while this engine still has sound of its own (voices or ringing cylinder buses). */
     private fun hasOwnSound(): Boolean =
         scheduler.getActiveVoiceCount() != 0 || cylinders.anyActive()
 
     /**
-     * True while a tail that can never end on its own rings, on an orbit or at the master (`KatalystChain.sustainsItself`:
+     * True while a tail that can never end on its own rings, on a cylinder or at the master (`KatalystChain.sustainsItself`:
      * a delay at |feedback| >= 1, or a stage that sounds on silence, an offset). Every other tail is finite and rings out.
      */
     private fun sustainsItself(): Boolean =
@@ -264,7 +264,7 @@ class PlaybackEngine(
     }
 
     /**
-     * The engine's end: every rented unit (orbit delay rings, reverb networks, master chain units)
+     * The engine's end: every rented unit (cylinder delay rings, reverb networks, master chain units)
      * goes back to the backend's warehouse (2f), and the phase is `Disposed`. Called by the dispatcher exactly
      * once, after the engine has been removed from the render set; nothing renders through it afterwards.
      */
@@ -280,15 +280,15 @@ class PlaybackEngine(
      * master chain has stopped ringing; or its release has run out.
      *
      * The master check matters for a song whose reverb/delay lives on the master rather than on an
-     * orbit: without it, disposing the drained engine would chop the master tail mid-decay (the
-     * orbit buses protect their own tails via `Cylinder.tryDeactivate`). The swap check keeps a
+     * cylinder: without it, disposing the drained engine would chop the master tail mid-decay (the
+     * cylinder buses protect their own tails via `Cylinder.tryDeactivate`). The swap check keeps a
      * master fade or drain from being dropped mid-way; the swap caps its own drain.
      *
      * **After a stop, no hard cut, ever** (step 12 decision (j), maintainer 2026-09-28, refined
      * the same day: release only ENDLESS tails). Every tail that can end on its own rings out in
      * full, however long it takes. Only a tail that can NEVER end ([KatalystChain.sustainsItself]:
      * a delay recirculating at `|feedback| >= 1`, or an arithmetic stage that sounds on silence, an
-     * offset, on an orbit or at the master, while it still sounds) would keep a
+     * offset, on a cylinder or at the master, while it still sounds) would keep a
      * stopped engine for ever; while one rings [MAX_TAIL_HOLD_SECONDS] after the notes ended (and
      * the master swap has settled), the engine's WHOLE output is released ([TailRelease], 60 dB per
      * 3 s from exactly 1, retired under -90 dB, 4.5 s), and idle once that has run out. The simple

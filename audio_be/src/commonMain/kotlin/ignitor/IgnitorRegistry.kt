@@ -170,7 +170,7 @@ class IgnitorRegistry(
      * Creates a fresh [Ignitor] for the given oscillator name.
      *
      * [phasePools] is the playback's unison start-phase pool registry (null → the phase-pool
-     * feature falls back to stateless banded selection); the orbit key comes from
+     * feature falls back to stateless banded selection); the cylinder key comes from
      * [VoiceData.cylinder].
      *
      * Returns null if the name is unknown.
@@ -201,7 +201,7 @@ class IgnitorRegistry(
             data.ignitorParams,
             soundIndex = data.soundIndex ?: 0,
             phasePools = phasePools,
-            orbit = data.cylinder ?: 0,
+            cylinder = data.cylinder ?: 0,
             random = random,
             freqHz = freqHz,
             sampleRate = sampleRate,

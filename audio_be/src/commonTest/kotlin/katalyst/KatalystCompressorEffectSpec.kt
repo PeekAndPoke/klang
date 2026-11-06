@@ -26,7 +26,7 @@ import kotlin.math.round
 import kotlin.math.sin
 
 /**
- * The orbit compressor: what it does to the mix, and how it switches and changes (Katalyst 5c-7).
+ * The cylinder compressor: what it does to the mix, and how it switches and changes (Katalyst 5c-7).
  *
  * **The oracles are built from a BARE [Compressor] driven by hand and the decided law, never from the
  * effect under test:** a switch is `out = dry + w * (compressed - dry)` with `w` linear over
@@ -242,7 +242,7 @@ class KatalystCompressorEffectSpec : StringSpec({
         }
     }
 
-    "switching ON on a sounding orbit fades a fresh instance in from dry" {
+    "switching ON on a sounding cylinder fades a fresh instance in from dry" {
         val s = settings(attackSeconds = 0.001)
         val onAt = 20
         val switch = onAt * blockFrames
@@ -377,7 +377,7 @@ class KatalystCompressorEffectSpec : StringSpec({
                     b < cutAt -> effect.configure(null)
                     else -> {
                         if (b == cutAt) {
-                            // Mid fade-out, mid glide of nothing: the orbit went silent and the
+                            // Mid fade-out, mid glide of nothing: the cylinder went silent and the
                             // cylinder cuts. The cut is synchronous.
                             if (cut == "reset") {
                                 effect.reset()
@@ -880,7 +880,7 @@ class KatalystCompressorEffectSpec : StringSpec({
     }
 
     /**
-     * The swell of a note after a rest (review round 3): [a] holds the orbit over a DC note of [level] for 40 blocks,
+     * The swell of a note after a rest (review round 3): [a] holds the cylinder over a DC note of [level] for 40 blocks,
      * then silence for [restSeconds], then [z] arrives with the next note at the same level. Returns the time in
      * seconds the reduction takes from 10 to 90 percent of its recovery, from its deepest point after the onset to
      * where it settles.

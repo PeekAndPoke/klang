@@ -52,10 +52,10 @@ should simply stop claiming it.
 
 ### 2. How far does a cut group reach?
 
-`activateVoice` sweeps `active` with no filter on sound, orbit or playbackId. So a cut group is
+`activateVoice` sweeps `active` with no filter on sound, cylinder or playbackId. So a cut group is
 **global to the scheduler**: two unrelated parts that both happen to pick group `1` will choke each
 other across the whole song. Nobody decided that; it is what falls out of the implementation.
-Alternatives: scope per orbit, or per source id. This is the question most likely to bite a real
+Alternatives: scope per cylinder, or per source id. This is the question most likely to bite a real
 song, because group numbers are small integers that two people will collide on.
 
 ### 3. The hard kill is a click

@@ -16,7 +16,7 @@ import kotlin.math.sqrt
 
 /**
  * `solo(...)` rendered through the real engine (`KlangOfflineRenderer`: the KlangScript compile, the inline-DSL
- * registration, the scheduler with its solo tracker, the orbits and the master), at 48 kHz and `cps = 0.5`, two
+ * registration, the scheduler with its solo tracker, the cylinders and the master), at 48 kHz and `cps = 0.5`, two
  * seconds per cycle. The two bugs of KLANG-00287 (bugfix solo rests and amount):
  *
  * 1. a rest after `.solo()` played a sine once a `gain` and a pitch op followed the solo;
@@ -72,12 +72,12 @@ class SoloRenderSpec : StringSpec({
                 let myInst = Ign.saw()
                 note("c4 ~").sound(myInst)SOLO.gain(0.5).transpose(0)
             """.trimIndent(),
-            // How Der Schmetterling writes it: the shape carries the solo, the arrangement adds orbit, scale and
+            // How Der Schmetterling writes it: the shape carries the solo, the arrangement adds cylinder, scale and
             // gain, the whole stack is transposed.
             """
                 let myInst = Ign.saw()
                 stack(
-                  n("0 ~").apply(x => x.sound(myInst)SOLO).apply(x => x.orbit(1).scale("e3:minor").gain(0.18))
+                  n("0 ~").apply(x => x.sound(myInst)SOLO).apply(x => x.cylinder(1).scale("e3:minor").gain(0.18))
                 ).transpose(0)
             """.trimIndent(),
         )

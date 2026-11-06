@@ -18,7 +18,7 @@ import kotlin.math.ln
 import kotlin.math.sin
 
 /**
- * The orbit delay's `feedback` and `wet` GLIDE (`audio/ref/knob-glide.md`, Katalyst step 5b-2):
+ * The cylinder delay's `feedback` and `wet` GLIDE (`audio/ref/knob-glide.md`, Katalyst step 5b-2):
  * the feedback per block (a COEFFICIENT), the wet per sample (a LEVEL). The oracles are independent
  * of the code under test: a bare [DelayLine] configured BY HAND with the straight-line values and
  * fed a feed computed by hand, and the drain countdown's formula evaluated by hand.
@@ -63,7 +63,7 @@ class KatalystDelayGlideSpec : StringSpec({
     }
 
     /**
-     * One block of the stage (fed the orbit mix, which holds the input) against one block of the bare
+     * One block of the stage (fed the cylinder mix, which holds the input) against one block of the bare
      * line (fed [feedAt] per sample, into an output that starts from the same input, since the stage
      * is an insert and `DelayLine.process` adds). Returns the largest difference.
      */
@@ -363,7 +363,7 @@ class KatalystDelayGlideSpec : StringSpec({
 
                 fx.configure(time = 0.0, feedback = 0.0, cap = 1.0, wet = 1.0)
 
-                withClue("the orbit is told there is a tail") { fx.hasTail() shouldBe true }
+                withClue("the cylinder is told there is a tail") { fx.hasTail() shouldBe true }
 
                 for (b in offAfterBlocks until fadeBlocks - 1) {
                     c.mixBuffer.clear()
@@ -379,7 +379,7 @@ class KatalystDelayGlideSpec : StringSpec({
 
     "a running delay mid-crossfade reports the tail of the tap still sounding" {
         // `DelayLine.reachSamples` in the ceiling's window: the stage stays ON, the input is
-        // silent, and the orbit asks for a tail every block of the fade. A window cut to the new
+        // silent, and the cylinder asks for a tail every block of the fade. A window cut to the new
         // 0.01 s tap closes over silence at once and answers "no tail" while the 1 s tap sounds.
         val (fx, c) = chargedLongEcho()
 

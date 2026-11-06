@@ -71,12 +71,12 @@ class KatalystChainBuilderSpec : StringSpec({
             "KatalystPhaserEffect",
             "KatalystCompressorEffect",
             // The group fader, last in the serial list since 2026-09-19. Unity there, so it is
-            // bit-transparent; what it buys is `katp("gain.gain", x)` on any orbit.
+            // bit-transparent; what it buys is `katp("gain.gain", x)` on any cylinder.
             "KatalystGainEffect",
         )
 
         // The duck is built, and it is NOT in the serial list: `Cylinders` runs it after every
-        // orbit, because it needs the sidechain source.
+        // cylinder, because it needs the sidechain source.
         chain.duck.shouldNotBeNull()
         chain.pipeline.any { it is KatalystDuckEffect } shouldBe false
     }
@@ -181,12 +181,12 @@ class KatalystChainBuilderSpec : StringSpec({
         duck.ducking.shouldNotBeNull() shouldBeSameInstanceAs ducking
     }
 
-    "the chain gives its duck the orbit's per-block tick, so a late switch-on fades in" {
+    "the chain gives its duck the cylinder's per-block tick, so a late switch-on fades in" {
         // The duck runs in a LATER pass than the chain and not at all while it is off, so its own
         // `process` cannot close the "first initialisation is instant" window. `KatalystChain
-        // .process` is the orbit's per-block event and the one caller of `orbitBlockRan`
+        // .process` is the cylinder's per-block event and the one caller of `cylinderBlockRan`
         // (Katalyst 5c-9). Without it the duck would SNAP to full reduction whenever it first
-        // engages, however long the orbit has been sounding.
+        // engages, however long the cylinder has been sounding.
         val chain = build(
             KatalystDsl.of(
                 KatalystStageDsl.Duck(
@@ -200,7 +200,7 @@ class KatalystChainBuilderSpec : StringSpec({
         val duck = chain.duck.shouldNotBeNull()
         val ctx = KatalystContext(blockFrames = blockFrames, mixBuffer = StereoBuffer(blockFrames))
 
-        // Four blocks of a sounding orbit whose duck names no source orbit: off, but alive.
+        // Four blocks of a sounding cylinder whose duck names no source cylinder: off, but alive.
         repeat(4) {
             chain.applyParams(klangMapOf("duck.depth" to 0.0))
             chain.process(ctx)

@@ -32,7 +32,7 @@ import kotlin.math.max
  *     release stage, then two cascaded box filters, applied to the signal delayed by that window.
  *     Holds the ceiling on transients instead of chasing them. Costs exactly that much latency: on
  *     the summed mix (the house limiter) that shifts everything together, anywhere else it makes
- *     whatever runs through it late by that much (an orbit's `Katalyst(k => k.limiter(lookahead =
+ *     whatever runs through it late by that much (a cylinder's `Katalyst(k => k.limiter(lookahead =
  *     ...))`, phase 3 step 12 C2: the author's choice, never compensated).
  *
  * Used in two places:
@@ -65,13 +65,13 @@ class Compressor(
     releaseSeconds: Double = 0.1,
     /**
      * Lookahead in seconds. `0.0` (the default) keeps the classic feed-forward one-pole path with
-     * no delay line and no added latency, which is what an orbit compressor uses unless its author
+     * no delay line and no added latency, which is what a cylinder compressor uses unless its author
      * asks for more.
      *
      * Above [MIN_LOOKAHEAD_FRAMES] worth of samples this switches to the anticipating path, which
      * delays the signal by this much. On the summed mix (the house limiter in `HouseStage`) the
-     * delay is uniform for everything downstream; on an orbit (a Katalyst `compressor` or `limiter`
-     * stage with a `lookahead`) that orbit runs late by it, by the author's choice and uncompensated.
+     * delay is uniform for everything downstream; on a cylinder (a Katalyst `compressor` or `limiter`
+     * stage with a `lookahead`) that cylinder runs late by it, by the author's choice and uncompensated.
      *
      * A constructor `val`, deliberately, unlike every other parameter here: the rings are sized once
      * from it and must never be reallocated on the audio thread. A caller that takes it from a user
@@ -146,7 +146,7 @@ class Compressor(
      * The five knobs of one [applyKnobArgs], written by the caller before the call, indexed by [KNOB_THRESHOLD] ...
      * [KNOB_RELEASE]: the raw values, as a caller would hand them to the five setters.
      *
-     * **A holder, on purpose** (engine follow-up 40, 2026-10-16): the orbit compressor writes all five knobs on every
+     * **A holder, on purpose** (engine follow-up 40, 2026-10-16): the cylinder compressor writes all five knobs on every
      * block one of them moves. Through the five setters each knob crossed a call V8 does not inline, so each was a
      * heap number (`audio/ref/performance.md`, the rule on a double handed to a function that is not inlined), and
      * each setter recomputed the three time constants, fifteen `exp` per block where three do. An ARRAY, not double
@@ -209,7 +209,7 @@ class Compressor(
 
     /**
      * True when the knobs at the `TO` ends of [glideArgs] reduce LESS than those at the `FROM` ends, both on this curve
-     * at the fixed reference input [KNOB_MOVE_REFERENCE_DB] (0 dBFS), never at the follower's envelope. The orbit
+     * at the fixed reference input [KNOB_MOVE_REFERENCE_DB] (0 dBFS), never at the follower's envelope. The cylinder
      * compressor's knob move asks it once per new move to pick its law (`CompressorKnobMove`): the six knobs travel in
      * the holder, the answer is a Boolean, so no double crosses a call.
      *
@@ -503,7 +503,7 @@ class Compressor(
      * step the gain once per block. Measured in Katalyst step 5c-7 (a band-limited saw, chord and
      * bass, energy above 8 kHz against the signal): a threshold, ratio or knee JUMP sits at -9 to
      * -52 dB, the same jump in 17 to 19 per-block steps at -31 to -69 dB (a model of this curve),
-     * and a per-sample ramp at the steady floor. The orbit compressor's glide
+     * and a per-sample ramp at the steady floor. The cylinder compressor's glide
      * (`KatalystCompressorEffect`) is the caller; the fields are NOT touched here, they hold what
      * the caller configured last.
      *
@@ -557,9 +557,9 @@ class Compressor(
      * The lookahead loop, the ONE loop of the lookahead path ([process] runs it too, with the block
      * as its own target), which also hands out the DELAYED DRY signal: [delayedLeft] and
      * [delayedRight] receive, per sample, what leaves the delay ring before the gain is applied, so
-     * `left[i] == delayedLeft[i] * gain`. That is the fade partner of an orbit compressor with
+     * `left[i] == delayedLeft[i] * gain`. That is the fade partner of a cylinder compressor with
      * lookahead (`KatalystCompressorEffect`): blending the compressed signal against the UNDELAYED
-     * input would sum two copies D frames apart, and landing on it would jump the orbit in time.
+     * input would sum two copies D frames apart, and landing on it would jump the cylinder in time.
      *
      * [delayedLeft] and [delayedRight] may alias [left] and [right]: each sample is read before
      * either is written.
@@ -850,7 +850,7 @@ class Compressor(
      * has been fed exactly those samples, so the ceiling argument of [lookaheadStep] holds from the
      * next sample it emits, as it does for a fresh instance.
      *
-     * For an orbit compressor that switches back on after an off stretch with its ring running
+     * For a cylinder compressor that switches back on after an off stretch with its ring running
      * (`KatalystCompressorEffect`): without it the new life starts from whatever the detector last
      * computed, at other knobs. A one-off pass of [latencyFrames] detector steps (at most
      * [MAX_LOOKAHEAD_SECONDS] of frames), for a switch edge, never per block. Allocates nothing. A no-op without a
@@ -894,7 +894,7 @@ class Compressor(
 
         /**
          * Ceiling on a lookahead a user can ask for. Chains are built on the audio thread (the
-         * orbit's `KatalystChainBuilder`, the master's `MasterBus.register`), so an unbounded value
+         * cylinder's `KatalystChainBuilder`, the master's `MasterBus.register`), so an unbounded value
          * would allocate there. At 50 ms and 48 kHz the stereo ring is 2400 frames of 16 bytes,
          * about 38 KB, and the whole lookahead state (ring, hold deque, boxes) about 86 KB; 10 s
          * would be about 17 MB. A resource bound, not a taste clamp.
@@ -931,12 +931,12 @@ class Compressor(
         /**
          * The shortest attack or release time the follower computes its coefficient from, in seconds: a bound against a
          * defect (a zero or negative time has no one-pole), not a clamp on taste; the stored knob is untouched. The
-         * orbit compressor's knob move releases with the same floor (`KatalystCompressorEffect`).
+         * cylinder compressor's knob move releases with the same floor (`KatalystCompressorEffect`).
          */
         internal const val MIN_TIME_SECONDS: Double = 0.0001
 
         /**
-         * The input level, in dBFS, at which the orbit compressor's knob move judges a new setting ([reducesLessAtGlideEnds]):
+         * The input level, in dBFS, at which the cylinder compressor's knob move judges a new setting ([reducesLessAtGlideEnds]):
          * a move that reduces less HERE releases, any other glides. A fixed loud level, decided by the maintainer on
          * 2026-10-17 ("judge at a fixed loud level"): loud material is where a swell and a ceiling are heard. The
          * follower's envelope was tried first and failed: after a rest it has fallen toward -100 dB, every relaxing move

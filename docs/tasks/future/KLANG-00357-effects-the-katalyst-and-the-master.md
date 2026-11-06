@@ -5,7 +5,7 @@
 
 ## Why this exists
 
-What shapes a sound after its source: the Katalyst's stages on an orbit and at the master. New effects (chorus, flanger, reverbs), the general EQ core, and the Katalyst's own follow-ups and doors.
+What shapes a sound after its source: the Katalyst's stages on a cylinder and at the master. New effects (chorus, flanger, reverbs), the general EQ core, and the Katalyst's own follow-ups and doors.
 
 ## What belongs here
 

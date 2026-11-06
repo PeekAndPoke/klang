@@ -62,7 +62,7 @@ private fun ignpSlot(slot: IgnitorSlotLike?, callInfo: CallInfo?): String =
  * note("c3 e3").sound(pad).ignitorParam(cutoff, "<400 2000>")
  * ```
  *
- * A Katalyst param (`Katalyst.param(...)`, `Katalyst.slot.*`) is the orbit chain's slot, which `katalystParam`
+ * A Katalyst param (`Katalyst.param(...)`, `Katalyst.slot.*`) is the cylinder chain's slot, which `katalystParam`
  * writes; handing one to this door is a script error at the call, and so is a number, a sound or an expression
  * over a param (`Ignitor.param("x", 1).mul(2)` is not a slot).
  *

@@ -31,7 +31,7 @@ class LangFeedbackCapSpec : StringSpec({
     }
 
     "the cap survives a merge, per slot name" {
-        // The cap lives in the orbit slot bag since Katalyst step 5b-3 (it used to be a field of a
+        // The cap lives in the cylinder slot bag since Katalyst step 5b-3 (it used to be a field of a
         // delay group, and this row guarded that group's merge helper). `plain` HAS a slot bag with
         // a delay slot but no cap, built directly: a `delay(...)` call would fill its cap with the
         // default (2026-09-16), and a voice without a bag would take merge's copy branch and never

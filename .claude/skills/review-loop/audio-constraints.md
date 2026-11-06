@@ -20,8 +20,8 @@ gone is removed when someone notices, not kept for history.
 - **The OnePole HPF cutoff bias is documented, not corrected.**
 - **The house limiter's lookahead is the only one that is always on** (5 ms, `HouseStage`, not authorable). An
   authored lookahead (the Katalyst `compressor(..., lookahead)` and `limiter(..., lookahead)`, phase 3 step 12 C2,
-  maintainer 2026-09-27) is the author's choice and runs anywhere: the orbit or playback it sits on runs late by it,
-  and nothing compensates. Do not add compensation, and do not forbid it on an orbit. It is fixed per chain (it
+  maintainer 2026-09-27) is the author's choice and runs anywhere: the cylinder or playback it sits on runs late by it,
+  and nothing compensates. Do not add compensation, and do not forbid it on a cylinder. It is fixed per chain (it
   sizes a ring), bounded by `Compressor.MAX_LOOKAHEAD_SECONDS`, and it is never a sprudel slot.
 - **The reverb `size` bounded to normalized 0..1 (authored 0..10) is deliberate** (maintainer,
   2026-09-16). Normalized 1.0 is comb feedback 0.98; unity sits at about 1.071, and past it the comb
@@ -31,12 +31,12 @@ gone is removed when someone notices, not kept for history.
   (the `distort()` and `shape()` doors bound their output with a soft cap at the rate they run, so inside a region before its down conversion; `classic()`'s fused distort does not), the unconditional DC-block on distort, cylinder last-writer-wins,
   `Ducking.attackSeconds`'s misleading name (KLANG-00174 (audit parked decisions) §2),
   `rectify()`'s hard clip, the body filter's fixed (non-note-tracking) resonances, `crackle`'s sound
-  change, body and vowel at orbit level.
+  change, body and vowel at cylinder level.
 - **`Ignitor` is deliberately NOT a `fun interface`**: SAM turns captured `var`s into JS `ObjectRef`.
 - **`PhaserCore.step` must stay `inline`**, its state `internal` (about 25 % JVM / 60 % JS otherwise).
 - **`DelayLine`: no per-sample `isFinite`**: it cost about +33 % JVM / +30 % JS, removed 2026-05-22.
 - **`Reverb.combPeakAbs()` and `DelayLine.tapWindowPeakAbs()` are scans, not for per-block use** (the reverb's
-  is about 28k samples): only a chain swap's one-off drain measurement calls them. The engine's tail questions are `TailCeiling` compares (`KatalystChain.hasTail()`, on an orbit and at the output
+  is about 28k samples): only a chain swap's one-off drain measurement calls them. The engine's tail questions are `TailCeiling` compares (`KatalystChain.hasTail()`, on a cylinder and at the output
   since phase 3 step 12 C3); `MasterBus` still asks only after `TAIL_CHECK_INTERVAL_BLOCKS` silent blocks, because a
   delay is silent between echoes and an output-only test would cut them.
 - **A sounding resonator bank never retunes** (body and vowel, one class with two kinds, `KatalystResonatorEffect`,

@@ -348,19 +348,19 @@ in every option below.
 
 ### Options
 
-Example: sprudel's `duck(orbit, depth, attack)`, three optional `Any? = null` parameters. Today 4 branches, 6
+Example: sprudel's `duck(cylinder, depth, attack)`, three optional `Any? = null` parameters. Today 4 branches, 6
 conversions, 4 calls (the shape in the maintainer's question). Sizes: source measured on the prototype, JS modeled.
 
 **(a) Hoist each conversion once, keep the ladder of calls.**
 
 ```kotlin
-val orbit = if (args.size > 0) convertArgToKotlin(fn = "invoke", args = args, index = 0, cls = Any::class, nullable = true, loc = loc) else null
+val cylinder = if (args.size > 0) convertArgToKotlin(fn = "invoke", args = args, index = 0, cls = Any::class, nullable = true, loc = loc) else null
 val depth = if (args.size > 1) convertArgToKotlin(fn = "invoke", args = args, index = 1, cls = Any::class, nullable = true, loc = loc) else null
 val attack = if (args.size > 2) convertArgToKotlin(fn = "invoke", args = args, index = 2, cls = Any::class, nullable = true, loc = loc) else null
 wrapAsRuntimeValue(
-    if (args.size >= 3) duck.invoke(orbit = orbit, depth = depth, attack = attack, callInfo = callInfo)
-    else if (args.size >= 2) duck.invoke(orbit = orbit, depth = depth, callInfo = callInfo)
-    else if (args.size >= 1) duck.invoke(orbit = orbit, callInfo = callInfo)
+    if (args.size >= 3) duck.invoke(cylinder = cylinder, depth = depth, attack = attack, callInfo = callInfo)
+    else if (args.size >= 2) duck.invoke(cylinder = cylinder, depth = depth, callInfo = callInfo)
+    else if (args.size >= 1) duck.invoke(cylinder = cylinder, callInfo = callInfo)
     else duck.invoke(callInfo = callInfo)
 )
 ```
@@ -377,7 +377,7 @@ wrapAsRuntimeValue(
 ```kotlin
 wrapAsRuntimeValue(
     duck.invoke(
-        orbit = if (args.size > 0) convertArgToKotlin(fn = "invoke", args = args, index = 0, cls = Any::class, nullable = true, loc = loc) else null,
+        cylinder = if (args.size > 0) convertArgToKotlin(fn = "invoke", args = args, index = 0, cls = Any::class, nullable = true, loc = loc) else null,
         depth = if (args.size > 1) convertArgToKotlin(fn = "invoke", args = args, index = 1, cls = Any::class, nullable = true, loc = loc) else null,
         attack = if (args.size > 2) convertArgToKotlin(fn = "invoke", args = args, index = 2, cls = Any::class, nullable = true, loc = loc) else null,
         callInfo = callInfo,
@@ -415,7 +415,7 @@ val callInfo = callInfoOf(receiver, args, loc)
 checkArgsSize(fn = "invoke", args = args, expected = 0, location = loc)
 wrapAsRuntimeValue(
     duck.invoke(
-        orbit = optArg(args, 0, Any::class, loc),
+        cylinder = optArg(args, 0, Any::class, loc),
         depth = optArg(args, 1, Any::class, loc),
         attack = optArg(args, 2, Any::class, loc),
         callInfo = callInfo,
@@ -512,7 +512,7 @@ Names as of the end of review (round 1 renamed `ArityDispatchItem` to `SpecAware
     checkArgsSize(fn = "invoke", args = args, expected = 0, location = loc)
     wrapAsRuntimeValue(
         duck.invoke(
-            orbit = optArg(args, 0, Any::class, loc),
+            cylinder = optArg(args, 0, Any::class, loc),
             depth = optArg(args, 1, Any::class, loc),
             attack = optArg(args, 2, Any::class, loc),
             callInfo = callInfo,
@@ -779,7 +779,7 @@ and the stdlib 23 instead of 12, about 5 to 10 KB unminified (already in the mea
 
 Found in step 2 review round 1 (code role, MINOR 3), pre-existing, not changed. The processor takes the annotated
 symbols in the order `Resolver.getSymbolsWithAnnotation` returns them, which follows the raw directory listing of
-the source folder: sprudel's objects register as `distort crush coarse | cull | gain pregain pan velocity | orbit duck
+the source folder: sprudel's objects register as `distort crush coarse | cull | gain pregain pan velocity | cylinder duck
 | notch notchCurves | sine ...`, exactly the `ls -U` order of `sprudel/src/commonMain/kotlin/lang/`, not alphabetical.
 ext4 orders a directory by a hash with a per-file-system seed, APFS returns sorted names. So another machine (or a
 fresh clone) can produce a different registration order, different chunk boundaries and `...ChunkN` numbers in every

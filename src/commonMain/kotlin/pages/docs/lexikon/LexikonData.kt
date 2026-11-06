@@ -82,7 +82,7 @@ data class LexikonEntry(
     val domain: LexikonDomain get() = category.domain
 
     /**
-     * URL name of this entry's own page, derived from [term] ("Orbit bus" -> "orbit-bus").
+     * URL name of this entry's own page, derived from [term] ("Cylinder bus" -> "cylinder-bus").
      *
      * These slugs are linked from DSL KDoc, so they are a contract: renaming a term silently breaks
      * every link to it. `LexikonSpec` guards both halves, that slugs stay unique and that every slug
@@ -425,7 +425,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
         category = LexikonCategory.Mixing,
         tags = setOf(LexikonTag.Fundamental),
         summary = "Combining multiple sound sources by summing their signals.",
-        detail = "When orbits and channels play simultaneously, their audio signals are added together. " +
+        detail = "When cylinders and channels play simultaneously, their audio signals are added together. " +
                 "Each channel's gain (volume level) controls how loud it is in the mix. " +
                 "Good mixing means giving each sound its own space — in volume, frequency, and stereo position.",
         conventional = "Mixing, gain staging, summing",
@@ -753,7 +753,8 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
         summary = "An independent effect bus — one engine running its own signal chain.",
         detail = "In a combustion engine, each cylinder fires independently with its own fuel-air mixture. " +
                 "In the Motor, up to 16 Cylinders run in parallel, each with its own delay, reverb, " +
-                "phaser, and compressor. Voices are routed to a Cylinder by their Orbit. " +
+                "phaser, and compressor. A pattern picks its Cylinder with `cylinder(n)`: Strudel calls it an orbit, " +
+                "and `orbit(n)` still works as an alias. " +
                 "Self-contained, powerful, running in parallel — like the real thing.",
     ),
 
@@ -821,18 +822,6 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
     ),
 
     LexikonEntry(
-        term = "Orbit",
-        linkWords = listOf("orbit", "orbits"),
-        category = LexikonCategory.MotorTerms,
-        tags = setOf(LexikonTag.Motor, LexikonTag.Fundamental),
-        summary = "Where a pattern meets a signal chain — the bridge between events and audio.",
-        detail = "An Orbit connects the pattern domain (when things happen) to the audio domain " +
-                "(what they sound like). Each Orbit routes to a Cylinder. " +
-                "Different Orbits = different effect buses = independent sound channels. " +
-                "The Orbit is where Fuel meets the engine.",
-    ),
-
-    LexikonEntry(
         term = "Voice",
         // Only the phrase: a bare "voices" in the docs is often a unison's or a super oscillator's copies inside one note
         linkWords = listOf("per voice"),
@@ -840,29 +829,29 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
         tags = setOf(LexikonTag.Motor, LexikonTag.Fundamental),
         summary = "One sounding note, with its own copy of every per-voice setting.",
         detail = "Every note a pattern fires becomes a Voice, and each Voice runs its own chain: " +
-                "pitch, then the oscillator or sample, then its filters, then out to the orbit. " +
+                "pitch, then the oscillator or sample, then its filters, then out to the cylinder. " +
                 "Anything marked PER VOICE in the docs belongs to that one note and to nothing else, " +
-                "so two notes on the same orbit can have completely different filters, envelopes and levels. " +
+                "so two notes on the same cylinder can have completely different filters, envelopes and levels. " +
                 "Voices are what the engine counts when it runs out of room: the polyphony limit is a " +
                 "voice limit.",
         conventional = "Voice, note, synth voice",
     ),
 
     LexikonEntry(
-        term = "Orbit bus",
-        linkWords = listOf("per orbit bus", "orbit bus", "orbit buses", "per orbit"),
+        term = "Cylinder bus",
+        linkWords = listOf("per cylinder bus", "cylinder bus", "cylinder buses", "per cylinder"),
         category = LexikonCategory.MotorTerms,
         tags = setOf(LexikonTag.Motor, LexikonTag.Fundamental),
-        summary = "The one shared effect chain an orbit's voices are mixed through.",
-        detail = "Every voice on an orbit is summed into one mix, and that mix runs through a single " +
-                "chain of effects: body, vowel, delay, reverb, phaser, compressor, the orbit's own " +
+        summary = "The one shared effect chain a cylinder's voices are mixed through.",
+        detail = "Every voice on a cylinder is summed into one mix, and that mix runs through a single " +
+                "chain of effects: body, vowel, delay, reverb, phaser, compressor, the cylinder's own " +
                 "fader, and ducking last. " +
-                "There is exactly ONE of each per orbit, which is why they are cheap and why they are " +
-                "shared. The newest note that is still held sets the orbit's effects, and a note gives " +
-                "the orbit up when it is released or cut. So two patterns that ask one orbit for different " +
+                "There is exactly ONE of each per cylinder, which is why they are cheap and why they are " +
+                "shared. The newest note that is still held sets the cylinder's effects, and a note gives " +
+                "the cylinder up when it is released or cut. So two patterns that ask one cylinder for different " +
                 "reverb sizes take turns, note by note: the settings are never averaged, and an older " +
                 "note's release rings on in whatever the newer note asked for. If you want different bus " +
-                "settings, that is what a second orbit is for. This is the opposite of a per-voice setting, and it is " +
+                "settings, that is what a second cylinder is for. This is the opposite of a per-voice setting, and it is " +
                 "the single most common surprise when a pattern sounds wetter or more compressed than " +
                 "it was written to be.",
         conventional = "Bus, group, aux channel, DAW insert chain",
@@ -873,13 +862,13 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
         linkWords = listOf("send", "sends"),
         category = LexikonCategory.MotorTerms,
         tags = setOf(LexikonTag.Motor, LexikonTag.Effect),
-        summary = "How much of an orbit is fed into its reverb or its delay: one amount per orbit.",
-        detail = "Reverb and delay sit on the orbit bus, and the orbit's mix is fed into them by an " +
+        summary = "How much of a cylinder is fed into its reverb or its delay: one amount per cylinder.",
+        detail = "Reverb and delay sit on the cylinder bus, and the cylinder's mix is fed into them by an " +
                 "amount: that amount is the send, the `wet` slot of `reverb` and `delay`. What they " +
-                "give back is added on top of the dry sound. The send belongs to the orbit like every " +
-                "other bus setting: the orbit's owning voice sets it, and every voice on the orbit " +
+                "give back is added on top of the dry sound. The send belongs to the cylinder like every " +
+                "other bus setting: the cylinder's owning voice sets it, and every voice on the cylinder " +
                 "goes in alike. A dry voice next to a wet one, or two different amounts, means two " +
-                "orbits. Watch out for the word: `body` and `vowel` also have a `wet` slot, but theirs " +
+                "cylinders. Watch out for the word: `body` and `vowel` also have a `wet` slot, but theirs " +
                 "is a mix knob, not a send: it blends the processed sound with the dry instead of " +
                 "adding a return on top.",
         conventional = "Send, aux send, effect send",

@@ -41,7 +41,7 @@ already means a mapper, so the form would be ambiguous there.
 - **The lambda is the configure lambda of the object's own door.** `.katalyst(f)` is exactly
   `.katalyst(Katalyst(f))`, `.master(f)` is exactly `.master(Katalyst(f))`. The builder starts where
   that door starts it: EMPTY (so `.katalyst(k => k.eq(...))` is an EQ and nothing else;
-  `k.classic()` is the explicit word for the historical orbit chain), at both positions. One
+  `k.classic()` is the explicit word for the historical cylinder chain), at both positions. One
   definition, one place (`Katalyst.build`); the pattern door calls it and adds nothing.
 - **The lambda runs ONCE, when the door is built, never per event.** The door stamps one shared
   value instance onto every event, as it does today (step 5a-2: one `KatalystValue.Dsl` per door).

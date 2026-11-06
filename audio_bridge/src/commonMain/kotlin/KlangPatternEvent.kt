@@ -36,7 +36,7 @@ interface KlangPatternEvent {
 
     /**
      * The output chain (the playback's master) this event references, if any: a [KatalystValue],
-     * the same chain type an orbit runs. Default `null` for pattern types that don't carry one.
+     * the same chain type a cylinder runs. Default `null` for pattern types that don't carry one.
      * Pattern languages that may carry an inline chain (e.g. sprudel) override to expose it.
      *
      * Used by the playback's wire-emission step to pre-register inline chains with the backend
@@ -46,7 +46,7 @@ interface KlangPatternEvent {
     val master: KatalystValue? get() = null
 
     /**
-     * The orbit chain this event references, if any. Default `null` for pattern types that don't
+     * The cylinder chain this event references, if any. Default `null` for pattern types that don't
      * carry [KatalystValue]. Pattern languages that may carry an inline chain (e.g. sprudel)
      * override to expose the event's [KatalystValue].
      *

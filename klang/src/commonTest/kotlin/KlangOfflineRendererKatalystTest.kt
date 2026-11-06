@@ -21,7 +21,7 @@ import io.peekandpoke.klang.common.SourceLocationChain
 /**
  * An offline render must know every inline DSL the song references, exactly as live playback does,
  * or a recorded WAV would not match what the song sounds like. Twin of
- * `KlangOfflineRendererMasterTest`, for the orbit chain.
+ * `KlangOfflineRendererMasterTest`, for the cylinder chain.
  *
  * It exercises the registration sweep an engine driven in process uses,
  * `InlineDslRegistrar.intoRegistries(...).announceAll(events)`, the same sweep a playback runs with the wire as its
@@ -80,11 +80,11 @@ class KlangOfflineRendererKatalystTest : StringSpec({
         renderer.katalystRegistry.fork().find(chain.uniqueId()) shouldBe chain
     }
 
-    "the in-process sweep is the shared one: a master and an orbit chain both land in the ONE registry" {
+    "the in-process sweep is the shared one: a master and a cylinder chain both land in the ONE registry" {
         // The point of routing every registration through `InlineDslRegistrar` is that adding a DSL
         // kind is one edit. This row fails if the in-process sweep ever grows its own copy and
         // forgets one position: the output chain (`master(...)`) is a Katalyst too since
-        // phase 3 step 12 C5, and the master bus resolves it in the same registry the orbits read.
+        // phase 3 step 12 C5, and the master bus resolves it in the same registry the cylinders read.
         val chain = KatalystDsl.of(KatalystStageDsl.Delay(wet = KatalystKnobDsl.Constant(0.11)))
         val master = KatalystDsl.of(KatalystStageDsl.Gain(gain = KatalystKnobDsl.Constant(1.9)))
         val renderer = renderer()

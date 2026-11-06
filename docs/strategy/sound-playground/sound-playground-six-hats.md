@@ -12,7 +12,7 @@
   bitcrush)
 - Interactive UI editor tools already exist (ADSR curves, filter response, waveform selector, compressor) — currently
   accessed via right-click in CodeMirror
-- Strudel DSL connects to audio via VoiceData -> SynthVoice -> Orbits pipeline with real-time parameter updates
+- Strudel DSL connects to audio via VoiceData -> SynthVoice -> Cylinders pipeline with real-time parameter updates
 - No standalone playground exists — all sound shaping happens through code + contextual editor popups
 - Platform runs in-browser (Kotlin/JS) with audio processing in a JS worklet
 

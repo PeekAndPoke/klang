@@ -37,7 +37,7 @@ object Kat {
     /** `Kat { ... }`, the call form of [build]. Script door: `Katalyst(configure)`. */
     operator fun invoke(configure: ((KatalystBuilder) -> KatalystBuilder)? = null): KatalystDsl = build(configure)
 
-    /** The historical orbit chain with every stage as a slot. Script door: `Katalyst.classic()`. */
+    /** The historical cylinder chain with every stage as a slot. Script door: `Katalyst.classic()`. */
     fun classic(): KatalystDsl = KatalystDsl.classic
 
     /** A named parameter slot with a default value. Script door: `Katalyst.param(name, default, description)`. */

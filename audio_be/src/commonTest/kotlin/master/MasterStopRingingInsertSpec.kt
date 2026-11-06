@@ -33,7 +33,7 @@ import kotlin.math.abs
  * A stopped playback whose master holds only insert stages is kept alive while they ring, and disposed only once its
  * output has fallen under the audibility floor (KLANG-00415 (master stop click on insert-only chains)). Before, the
  * master's keep-alive asked only chains that declare a tail, so the engine was disposed as soon as its voices and
- * orbits were done, with the insert still ringing: a 220 Hz sine through a +24 dB eq bell at q 30 left a step of 0.30,
+ * cylinders were done, with the insert still ringing: a 220 Hz sine through a +24 dB eq bell at q 30 left a step of 0.30,
  * a bell body 0.026, a phaser centred at 200 Hz 7e-4. A dry master goes exactly when an unmastered engine does, and a
  * master that sounds on silence (an offset) is released after the hold, never kept for ever. The floor is the engine's
  * one, `SILENCE_FLOOR` (-100 dBFS; the master's own 1e-4 until 2026-11-05, KLANG-00290 (engine follow-ups) item 25).
@@ -212,8 +212,8 @@ class MasterStopRingingInsertSpec : StringSpec({
         }
     }
 
-    "an orbit's long finite echo under a dry master is not released at the hold: it is the engine's own sound" {
-        // The master sounds past the hold only because the orbit feeds it; the release is for a master that sounds
+    "a cylinder's long finite echo under a dry master is not released at the hold: it is the engine's own sound" {
+        // The master sounds past the hold only because the cylinder feeds it; the release is for a master that sounds
         // with nothing to feed it.
         val holdBlocks = 20 * sampleRate / blockFrames
         val rig = Rig()

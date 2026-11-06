@@ -495,7 +495,7 @@ internal class KlangPatternScheduler(
      * When the query cursor is behind [nowSec] (the main thread stalled for longer than the look-ahead), the cycles up
      * to now have gone by: their voices would come late, and the backend would drop them. They are skipped, but the
      * state they set holds from now on, so it is sent as control events, each carrying one kind of state: the last
-     * `master`, the last `katalyst` of each orbit, and every solo control event that has not ended yet (a note's own
+     * `master`, the last `katalyst` of each cylinder, and every solo control event that has not ended yet (a note's own
      * solo never sets the end, `SoloTracker`, so a skipped note's is not sent). They keep their own
      * times, which have gone by: the backend applies a control event's state even when it comes late, and in time
      * order, so the current cycle's newer state, sent next, still wins. At most [CATCH_UP_MAX_CYCLES] cycles are read.

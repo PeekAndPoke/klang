@@ -35,7 +35,7 @@ fun runWorkletSerializationBenchmark() {
         attack = 0.005; decay = 0.2; sustain = 0.6; release = 0.05
         cutoff = 1625.0; resonance = 1.2; lpenv = 1.0; lpattack = 0.005
         hcutoff = 1350.0; distort = 0.3; pan = 0.3; cylinder = 1
-        // The orbit's slot state a bus door writes: what
+        // The cylinder's slot state a bus door writes: what
         // `.reverb(wet, size).delay(wet, time).compressor(ratio = 8)` puts on every event, the
         // knobs the call names plus the ones each door's fill supplies (Katalyst step 5a-3). Since
         // step 5b-3 it is the only form those knobs take on the wire (`audio/ref/performance.md`).

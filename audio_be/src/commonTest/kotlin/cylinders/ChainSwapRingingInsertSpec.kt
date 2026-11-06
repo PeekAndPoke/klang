@@ -25,7 +25,7 @@ import kotlin.math.abs
  * fade's end reads what the leaving chain put out after the fade had ended, and drains it (or cuts it, when a request
  * waits) while that rings.
  *
- * The swap goes to a chain of gain 0, so after the fade the orbit's output is the leaving chain alone. The step is the
+ * The swap goes to a chain of gain 0, so after the fade the cylinder's output is the leaving chain alone. The step is the
  * last sample before that output falls to exact zeros: where the leaving chain was retired.
  */
 class ChainSwapRingingInsertSpec : StringSpec({

@@ -33,9 +33,9 @@ import kotlin.math.ceil
  * class, rented from the shelf, and refused gracefully (KLANG-00230 (resource warehouse)).
  *
  * The headline row is the third one. A `Cylinder` used to construct a 10-second `DelayLine` in its
- * constructor — 7.68 MB, 97 % of the cylinder — for every orbit, delay or not; eight of those
+ * constructor, 7.68 MB, 97 % of the cylinder, for every cylinder, delay or not; eight of those
  * zero-filled on the audio thread on first play were the "Der Schmetterling" stutter. Eight
- * cylinders now allocate **zero ring bytes** until an orbit configures a delay.
+ * cylinders now allocate **zero ring bytes** until a cylinder configures a delay.
  */
 class LazyRingSpec : StringSpec({
 
@@ -94,7 +94,7 @@ class LazyRingSpec : StringSpec({
             units = CylinderUnits(blockFrames = blockFrames, sampleRate = sampleRate, rings = rings, reverbs = ReverbUnits(sampleRate)),
         )
 
-        // Touching an orbit constructs its cylinder; that used to cost 7.68 MB each, eight times.
+        // Touching a cylinder constructs its cylinder; that used to cost 7.68 MB each, eight times.
         val eight = List(8) { id -> Cylinder(id = id, blockFrames = blockFrames, sampleRate = sampleRate, rings = rings) }
 
         // The shelf was never asked...
@@ -429,8 +429,8 @@ class LazyRingSpec : StringSpec({
     }
 
     "a latched refusal still takes a ring the SHELF can serve — only the allocation is skipped" {
-        // Review round 2: the first latch sat above the shelf scan, so an orbit refused under memory
-        // pressure stayed dry for its whole life even after another orbit returned an exact fit
+        // Review round 2: the first latch sat above the shelf scan, so a cylinder refused under memory
+        // pressure stayed dry for its whole life even after another cylinder returned an exact fit
         // that would cost nothing to hand over.
         val alloc = Recording(failing = true)
         val (rings, _) = shelf(alloc)
@@ -440,7 +440,7 @@ class LazyRingSpec : StringSpec({
         fx.delayLine.shouldBeNull()
         fx.deniedRents shouldBe 1
 
-        // Another orbit's ring comes back (the way 2f eviction will return it).
+        // Another cylinder's ring comes back (the way 2f eviction will return it).
         alloc.failing = false
         val returned = rings.rent(base).shouldNotBeNull()
         rings.giveBack(returned)
@@ -470,7 +470,7 @@ class LazyRingSpec : StringSpec({
         fx.delayLine shouldBeSameInstanceAs small
         fx.deniedRents shouldBe 1
 
-        // Another orbit's class-1 ring comes back.
+        // Another cylinder's class-1 ring comes back.
         alloc.failing = false
         val returned = rings.rent(2 * base).shouldNotBeNull()
         rings.giveBack(returned)

@@ -156,7 +156,7 @@ class SynthVoiceTest : StringSpec({
 
         // FM drives the phase accumulator, which
         // is where a non-finite pitch would surface. A NaN here propagates into the cylinder and
-        // kills the orbit silently, so "renders correctly" now means audible AND finite.
+        // kills the cylinder silently, so "renders correctly" now means audible AND finite.
         ctx.voiceBuffer.any { it != 0.0 } shouldBe true
         ctx.voiceBuffer.all { it == it && kotlin.math.abs(it) <= 1.0e6 } shouldBe true
     }

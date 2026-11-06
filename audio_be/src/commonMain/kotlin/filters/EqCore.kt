@@ -15,7 +15,7 @@ import io.peekandpoke.klang.audio_be.utils.safeOut
  * Freq-agnostic serial EQ core — N second-order TPT-SVF sections in one `process()` call.
  *
  * The shared engine of the unified-equalizer work: the per-voice `EqIgnitor` adapter drives
- * it (D3b) and the orbit's `KatalystEqEffect` drives the SAME core on the bus (Katalyst step 4,
+ * it (D3b) and the cylinder's `KatalystEqEffect` drives the SAME core on the bus (Katalyst step 4,
  * two instances, one per channel); the planned master eq stage adopts it later.
  *
  * CONTRACT — the core owns: section state (`ic1`/`ic2`), coefficient storage and computation
@@ -30,7 +30,7 @@ import io.peekandpoke.klang.audio_be.utils.safeOut
  * a master eq stage or Katalyst can adopt it: a per-block-swept cutoff snaps here exactly like the
  * per-voice `SvfIgnitor` does, which is parity for the ignitor surface and a click hazard for
  * a bus surface), stereo (the core is MONO — one instance per channel), and the note frequency
- * (the core never sees a voice). The orbit's `KatalystEqEffect` built that missing policy in
+ * (the core never sees a voice). The cylinder's `KatalystEqEffect` built that missing policy in
  * Katalyst step 4 as a two-bank crossfade through `KatalystFilterSwap`, the same declick path
  * body and vowel use, rather than as a ramp in here.
  *
@@ -47,7 +47,7 @@ import io.peekandpoke.klang.audio_be.utils.safeOut
  * variant→Int mapping `when` in `eqSectionSpec` is the guard: a new variant without a
  * mapping fails compilation, and a swapped arm reddens `EqIgnitorSpec`'s per-variant parity
  * rows (`EqCoreSpec` drives the Ints directly and cannot see the mapping). Both adapters read
- * that one function, the per-voice `EqIgnitor` and the orbit's `KatalystEqEffect`, so the two
+ * that one function, the per-voice `EqIgnitor` and the cylinder's `KatalystEqEffect`, so the two
  * cannot drift. The order is APPEND-ONLY (it differs from delivery order: [RAW_TAP] shipped
  * before [BELL] but takes the higher ordinal; both are implemented now). An UNKNOWN type value renders
  * as PASSTHROUGH (the only degradation that can neither invent gain nor gouge a spectral

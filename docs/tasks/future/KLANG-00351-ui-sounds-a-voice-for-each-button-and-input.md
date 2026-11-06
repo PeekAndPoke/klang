@@ -18,7 +18,7 @@ a small patch played through the engine, not a separate sound system).
 
 - Which controls get a voice, and how quiet: a sound on every click tires fast; maybe only the mechanical ones (keys,
   toggles, knob detents, the ignition).
-- Made with the Motor (Ignitor patches) or recorded samples, and in which orbit, so a playing song is not disturbed.
+- Made with the Motor (Ignitor patches) or recorded samples, and in which cylinder, so a playing song is not disturbed.
 - A setting to turn them off (and off under `prefers-reduced-motion`? a separate preference is likelier).
 - Whether a look (KLANG-00334's theme roles) brings its own sound set, as it brings its colours.
 

@@ -18,7 +18,7 @@ import kotlin.math.ln
 import kotlin.math.sin
 
 /**
- * The orbit reverb's size GLIDES (`audio/ref/knob-glide.md`, the pilot). The oracles
+ * The cylinder reverb's size GLIDES (`audio/ref/knob-glide.md`, the pilot). The oracles
  * are independent of the code under test: the per-block values of a linear glide written out by
  * hand and handed to a bare [Reverb], the Freeverb feedback law `size * 0.28 + 0.7`, and the drain
  * countdown's formula evaluated by hand.
@@ -48,7 +48,7 @@ class KatalystReverbGlideSpec : StringSpec({
     }
 
     /**
-     * Drives the orbit stage and a bare [Reverb] on the same input for [blocks] blocks. [configure]
+     * Drives the cylinder stage and a bare [Reverb] on the same input for [blocks] blocks. [configure]
      * is the owner's call, made every block like `KatalystChain.applyParams` makes it; [reference]
      * sets the bare network by hand before its block. Returns the largest sample difference.
      */
@@ -72,7 +72,7 @@ class KatalystReverbGlideSpec : StringSpec({
             configure(k)
             setReference(k)
 
-            // The stage is fed from the orbit mix at wet 1 and adds its room to it, so the bare
+            // The stage is fed from the cylinder mix at wet 1 and adds its room to it, so the bare
             // network's output starts from the same dry signal (`Reverb.process` adds).
             fillInput(effectCtx.mixBuffer, block)
             fillInput(referenceIn, block)
@@ -91,7 +91,7 @@ class KatalystReverbGlideSpec : StringSpec({
         return worst
     }
 
-    "a size change on a running orbit reaches the new feedback after the glide, and not before" {
+    "a size change on a running cylinder reaches the new feedback after the glide, and not before" {
         val effect = KatalystReverbEffect(reverb = Reverb(sampleRate), blockFrames = blockFrames)
         val c = ctx()
 

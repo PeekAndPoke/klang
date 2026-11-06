@@ -63,7 +63,7 @@ class KatalystReverbEffectSpec : StringSpec({
             ctx.mixBuffer.fill(0.5)
             effect.process(ctx)
 
-            // The 0.5 is the orbit's dry signal, which an insert passes through; a room would add.
+            // The 0.5 is the cylinder's dry signal, which an insert passes through; a room would add.
             if (ctx.mixBuffer.left.any { it != 0.5 } || ctx.mixBuffer.right.any { it != 0.5 }) {
                 anySignal = true
             }
@@ -142,8 +142,8 @@ class KatalystReverbEffectSpec : StringSpec({
         // The Draining -> Active edge (audio/ref/effect-state-machines.md, the re-entry
         // requirement): coming back re-arms NOTHING. The network keeps its content (the tail
         // continues under the new room, send-return semantics) and the tail ceiling keeps its
-        // value, so the orbit still reports a tail while the room is audibly ringing. A converter
-        // who resets the ceiling in the Active entry hands `Cylinder.tryDeactivate` an orbit that
+        // value, so the cylinder still reports a tail while the room is audibly ringing. A converter
+        // who resets the ceiling in the Active entry hands `Cylinder.tryDeactivate` a cylinder that
         // says "no tail" while a new owner's voice is still in its attack, and the room stops dead.
         //
         // The oracle is the drain row's: an effect whose owner never left, fed silent sends. It is
@@ -183,7 +183,7 @@ class KatalystReverbEffectSpec : StringSpec({
             returning.hasTail() shouldBe true
         }
 
-        // A new owner with the same knobs claims the orbit while the network is still charged.
+        // A new owner with the same knobs claims the cylinder while the network is still charged.
         returning.configure(size = 0.5, lowpass = null, wet = 1.0)
 
         // 200 blocks: about 15 revolutions of the longest comb.
@@ -207,7 +207,7 @@ class KatalystReverbEffectSpec : StringSpec({
             }
         }
 
-        // (a) the ceiling survived the drain: the orbit is never told the network is empty.
+        // (a) the ceiling survived the drain: the cylinder is never told the network is empty.
         withClue("the tail ceiling must survive Draining -> Active") { tailAlways shouldBe true }
         // (b) the network survived it too, sample for sample.
         withClue("the network must survive Draining -> Active") { maxDiff shouldBe 0.0 }
@@ -221,7 +221,7 @@ class KatalystReverbEffectSpec : StringSpec({
         // `Off.enter()` forgets the tail ceiling, and nothing else guards that line: the Off arm
         // of `hasTail` is a hardcoded false, so a stale ceiling is invisible while the effect
         // stays Off and only surfaces in the NEXT life, where `Active.hasTail()` reads it. At a
-        // big room's comb feedback that holds the orbit about 20 s past its due.
+        // big room's comb feedback that holds the cylinder about 20 s past its due.
         //
         // The numbers, from `TailCeiling.observe` and the reverb at 44.1 kHz: one window is the
         // longest comb plus one, 1641 samples, and `lapsPerWindow` is ceil(1641 / 1116) = 2. Four
@@ -439,7 +439,7 @@ class KatalystReverbEffectSpec : StringSpec({
         // state stores because converting those to flushState was measured at ~+11%/sample
         // and reverted (2026-05-19) — and it is equivalent, since the comb/allpass network is
         // a stable linear system: a finite input can never drive the state non-finite.
-        // Before it, one Inf send latched every comb for the life of the orbit.
+        // Before it, one Inf send latched every comb for the life of the cylinder.
         for (hostile in listOf(Double.POSITIVE_INFINITY, Double.NaN)) {
             val effect = createEffect(size = 0.5)
             val ctx = createCtx()
@@ -461,7 +461,7 @@ class KatalystReverbEffectSpec : StringSpec({
         // one delay revolution (~1116 samples at 44.1k) — no non-finite guard can prevent
         // that, which is exactly why the drain-heal is still load-bearing rather than dead
         // code. `Inf x fb` never decays, so the countdown is infinite and the off-transition
-        // must heal (reset + Off) — without it the orbit and its PlaybackEngine are pinned
+        // must heal (reset + Off), without it the cylinder and its PlaybackEngine are pinned
         // forever, feeding Inf/NaN into the mix (review round 1).
         val effect = createEffect(size = 0.5)
         val ctx = createCtx()
@@ -508,7 +508,7 @@ class KatalystReverbEffectSpec : StringSpec({
         effect.currentState::class.simpleName shouldBe "Draining"
         effect.hasTail() shouldBe true // mid-drain
 
-        // New owner takes the orbit with the LONGEST room: network kept, params written, sends live.
+        // New owner takes the cylinder with the LONGEST room: network kept, params written, sends live.
         effect.configureSize(size = 1.0)
 
         effect.hasTail() shouldBe true // the tail was NOT cut
@@ -570,7 +570,7 @@ class KatalystReverbEffectSpec : StringSpec({
         effect.hasTail() shouldBe false
     }
 
-    "reset restores the factory params — the next orbit life cannot inherit them" {
+    "reset restores the factory params, the next cylinder life cannot inherit them" {
         // Reverb setters DROP non-finite writes, so a NaN param from the next life would
         // otherwise keep THIS life's value.
         val effect = createEffect(size = 0.8)
@@ -608,9 +608,9 @@ class KatalystReverbEffectSpec : StringSpec({
         effect.reverb!!.combPeakAbs() shouldBe 0.0
     }
 
-    "an empty network goes straight to Off — no drain hold on a silent orbit; a charged one reports its tail" {
+    "an empty network goes straight to Off, no drain hold on a silent cylinder; a charged one reports its tail" {
         // The delay round's engine-leak shape: a drain entered with nothing to drain would hold
-        // the orbit (and its PlaybackEngine) alive for the whole countdown.
+        // the cylinder (and its PlaybackEngine) alive for the whole countdown.
         val empty = createEffect(size = 0.5)
         // Never processed a send: the combs are all zeros — the off-config lands in Off directly.
         empty.configureSize(size = 0.0)

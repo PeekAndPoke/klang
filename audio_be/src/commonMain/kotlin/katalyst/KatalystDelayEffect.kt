@@ -20,8 +20,8 @@ import kotlin.math.ceil
 import kotlin.math.min
 
 /**
- * The orbit delay, an insert-style stage (Katalyst step 5b-2, 2026-09-19): it is fed from the orbit
- * mix AT ITS POSITION in the chain, scaled by the orbit owner's ONE `wet`, and it adds its echoes
+ * The cylinder delay, an insert-style stage (Katalyst step 5b-2, 2026-09-19): it is fed from the cylinder
+ * mix AT ITS POSITION in the chain, scaled by the cylinder owner's ONE `wet`, and it adds its echoes
  * into that same mix, so the dry signal stays and whatever follows in the chain (the reverb in the
  * classic order) hears the echoes. The same effect runs at the output (`master(...)`).
  *
@@ -49,7 +49,7 @@ import kotlin.math.min
  *    over its span (50 ms, one block for a modulated wet), and the stage stays [Active] while it falls:
  *    the falling feed goes into the ring and the ceiling watches it, as on any Active block. The block
  *    whose glide LANDS measures the tap window at its end ([Active.process]) and enters [Draining] or
- *    [Off]. So the fade completes on its own: it needs no further off-config, and an orbit whose owner
+ *    [Off]. So the fade completes on its own: it needs no further off-config, and a cylinder whose owner
  *    stopped offering (no configure at all), or the leaving chain of a swap, drains like any other. Only a
  *    wet already at rest at 0 has nothing to fade and goes on at once.
  *  - **The cost, accepted with the decision:** on an owner change the NEW owner's mix feeds the OLD
@@ -64,7 +64,7 @@ import kotlin.math.min
  *
  * The effect owns an active/draining/off lifecycle so that turning the delay off never freezes a
  * live tail inside the ring (block-framing ledger D3: the ring's write clock used to stop dead the
- * moment a no-delay voice took over the orbit, and the stale tail resurrected later, detached
+ * moment a no-delay voice took over the cylinder, and the stale tail resurrected later, detached
  * from time). The transition table on [State] is AUTHORITATIVE for the edges: which event moves
  * which state where is settled there and nowhere else. The bullets below give the reasoning, and
  * where one of them names an edge it is quoting that table, not competing with it.
@@ -77,11 +77,11 @@ import kotlin.math.min
  *   sample-counted closed-form countdown ([DelayLine.drainSamplesUntilSilent]) says when the tail
  *   is provably inaudible. `|feedback| >= 1.0` self-oscillates and deliberately never auto-drains
  *   (raw engine: the drone IS the authored sound; the escape is a new owner with a tame delay.
- *   A CHARGED self-osc ring keeps the orbit alive indefinitely by design while the playback
+ *   A CHARGED self-osc ring keeps the cylinder alive indefinitely by design while the playback
  *   runs. Once it is STOPPED, the engine holds its tails for `PlaybackEngine.MAX_TAIL_HOLD_SECONDS`
  *   after its notes ended and then releases its whole output, this ring included, exponentially
  *   (`TailRelease`), never with a hard cut (phase 3 step 12 decision (j), maintainer 2026-09-28;
- *   before it such an orbit kept a stopped playback's engine for ever).
+ *   before it such a cylinder kept a stopped playback's engine for ever).
  * - **Off**: countdown done: one [DelayLine.reset] (the ring is now literally zero, including the
  *   pre-drain regions a future LONGER delay time could otherwise tap into), then a true
  *   short-circuit until an owner re-enables. That zero-ring guarantee is for THIS path only: a new
@@ -120,9 +120,9 @@ class KatalystDelayEffect(
     }
 
     /**
-     * The DSP core, or `null` while this orbit has never asked for a delay. That null is the whole
+     * The DSP core, or `null` while this cylinder has never asked for a delay. That null is the whole
      * point: a cylinder used to construct a 10-second ring (7.68 MB, 97 % of the cylinder) whether
-     * or not the orbit ever used delay, and eight of those zero-filled on the audio thread on first
+     * or not the cylinder ever used delay, and eight of those zero-filled on the audio thread on first
      * play were the "Der Schmetterling" stutter. Now the ring is rented from the warehouse on the
      * first `configure` that activates, sized to the class that holds the requested time.
      *
@@ -146,7 +146,7 @@ class KatalystDelayEffect(
      * it a refusal is retried on EVERY block: `KatalystChain.applyParams` re-applies the owner's
      * config per block, and "graceful degradation" becomes a 344 Hz allocate-and-catch storm on the
      * audio thread (review round 1, both reviewers). While the needed class is `>= refusedFrames`
-     * no ALLOCATION is attempted; the shelf is still consulted, because a ring another orbit
+     * no ALLOCATION is attempted; the shelf is still consulted, because a ring another cylinder
      * returned meanwhile is free to take (review round 2). Keyed on the class, not the raw frame
      * count: two times inside one class are the same allocation, and the smaller one must not slip
      * past the latch into a retry that is certain to fail. Cleared by [reset] (a new owner life)
@@ -234,7 +234,7 @@ class KatalystDelayEffect(
     /** All-zero input for the draining phase: the owner said off, so the mix is no longer fed in. */
     private val silentInput = StereoBuffer(blockFrames)
 
-    /** What the line is fed while Active: the orbit mix at this stage's position, times [wetGlide]. */
+    /** What the line is fed while Active: the cylinder mix at this stage's position, times [wetGlide]. */
     private val feed = StereoBuffer(blockFrames)
 
     /**
@@ -264,33 +264,33 @@ class KatalystDelayEffect(
      * Draining and at the moment of return wherever the ring cannot grow, which is every
      * `|feedback| <= 1`, once the drain's own feedback is credited to it ([Draining.resume],
      * [TailCeiling.resume]): there the stale number says "the ring holds no more than this", and
-     * that is the safe direction, because this number decides whether the orbit may be torn down.
+     * that is the safe direction, because this number decides whether the cylinder may be torn down.
      * What review found, and where each stands since Katalyst 5c-5:
      * - a tap LENGTHENED, live or on the way back, reaches cells the ceiling no longer covers.
      *   This is the exception [TailCeiling] files itself: at a low feedback those cells never
-     *   decayed, so the cut, if an orbit deactivates in that instant, can be the full level of
+     *   decayed, so the cut, if a cylinder deactivates in that instant, can be the full level of
      *   whatever is still in the ring's span. STILL OPEN.
      * - at `|feedback| > 1` the ring GROWS under the frozen ceiling (to the cap, from a charge the
      *   ceiling froze at a fraction of it), and a new owner returning with a tame feedback used to
      *   resume that stale value: ring and ceiling then decayed together and the ceiling crossed
      *   `SILENCE_FLOOR` with the ring still at -39 to -87 dBFS (0.4 s, charges 0.1 to
      *   0.0002). CLOSED: that return RE-MEASURES ([Draining.resume]); after it, nothing above
-     *   -110 dBFS is left when the orbit resets.
+     *   -110 dBFS is left when the cylinder resets.
      * - a feedback REDUCED to (near) zero, after a drain or LIVE on an owner handover or a glide:
      *   [TailCeiling.observe] recomputed the running window with the feedback in force NOW, so the
      *   ceiling vanished at the next window close while the ring still held the repeat written
-     *   under the old feedback, on the orbit path (after its ten silent blocks) and on the
+     *   under the old feedback, on the cylinder path (after its ten silent blocks) and on the
      *   chain-swap ring-out (which retires the leaving chain on the first silent answer). Worst
      *   measured: -9 dBFS dropped at 0.7 to 0.0. CLOSED: the ceiling keeps the largest feedback its
      *   window saw (see [TailCeiling]); after it, nothing above -110 dBFS is dropped.
-     * Both repairs only ever RAISE the ceiling, so an orbit can reset later than before, never
+     * Both repairs only ever RAISE the ceiling, so a cylinder can reset later than before, never
      * earlier; for a steady feedback nothing moved. The reverb shares none of the drain half
      * (fixed comb lengths, comb feedback structurally below 1). The feed's fade at a switch-off
      * adds nothing here: it runs in [Active], where the ceiling observes every block.
      *
      * Entering [Off] is the one place the ceiling is forgotten, because there the ring is empty.
      * That line is load-bearing: without it the next life reads the previous life's ceiling and
-     * the orbit is held open long past its due. Guarded by "a life that ended in Off starts the
+     * the cylinder is held open long past its due. Guarded by "a life that ended in Off starts the
      * next one with an empty ceiling" in `KatalystDelayEffectSpec`.
      */
     private val activeTail = TailCeiling()
@@ -412,7 +412,7 @@ class KatalystDelayEffect(
             line.process(input = feed, output = ctx.mixBuffer, length = frames)
 
             // The fade lands in this block: the drain starts from what the ring holds now, with no off-config
-            // needed to move it on (an orbit without an owner configures nothing; see the class KDoc).
+            // needed to move it on (a cylinder without an owner configures nothing; see the class KDoc).
             if (fading && !wetGlide.isGliding) {
                 leave(line)
             }
@@ -585,7 +585,7 @@ class KatalystDelayEffect(
      * while [appliedValid]: an unchanged config returns before it writes anything (engine follow-up 32, 2026-10-16).
      *
      * **Why:** the writer re-applies its config on every block (`KatalystChain.applyParams`), and on V8, in a mixed
-     * profile where most orbits take the off arm, this method can be compiled with its calls left out (`ensureRing`
+     * profile where most cylinders take the off arm, this method can be compiled with its calls left out (`ensureRing`
      * and the line's `time`, `feedback` and `cap` setters), so their doubles crossed as heap numbers: up to four per
      * block, measured in pinned mixed processes (`audio/ref/performance.md`). The phaser's house pattern
      * (`KatalystPhaserEffect.applied`), with the two writes item 1 found in the way handled:
@@ -632,11 +632,11 @@ class KatalystDelayEffect(
     }
 
     /**
-     * Applies the orbit owner's delay settings. Called by `KatalystChain.applyParams` on every
+     * Applies the cylinder owner's delay settings. Called by `KatalystChain.applyParams` on every
      * block an owner is committed. An off-config (a time that is non-finite or below [MIN_ACTIVE_DELAY_SECONDS]) does
      * NOT reach the [delayLine]: the retained last-active parameters are what the drain runs on.
      *
-     * [DelayConfig.wet] is how much of the orbit mix feeds the line. Raw: no clamp, a negative wet feeds the
+     * [DelayConfig.wet] is how much of the cylinder mix feeds the line. Raw: no clamp, a negative wet feeds the
      * line inverted, above 1 hotter than the mix. The stage reads [config] and keeps no reference to it.
      */
     fun configure(config: DelayConfig) {
@@ -662,7 +662,7 @@ class KatalystDelayEffect(
         // is the door's own contract for a direct caller (the reverb door reads a non-finite size as off
         // the same way).
         if (time.isFinite() && time >= MIN_ACTIVE_DELAY_SECONDS) {
-            // No ring and none to be had: the orbit stays dry rather than the worklet dying.
+            // No ring and none to be had: the cylinder stays dry rather than the worklet dying.
             val line = ensureRing(time) ?: return
 
             // No tail bookkeeping here: the ceiling reads the period and feedback in force on
@@ -721,8 +721,8 @@ class KatalystDelayEffect(
      * countdown, which can
      * outlive the ring's last audible sample by up to one delay period (review round 5: at high
      * fb the countdown can even outlast a full ring revolution, so a whole-ring scan COULD answer
-     * false near the end; this arm never cuts audio, it only holds the orbit a bounded moment
-     * longer). (A CHARGED self-osc ring pins its orbit by design while the playback runs; a
+     * false near the end; this arm never cuts audio, it only holds the cylinder a bounded moment
+     * longer). (A CHARGED self-osc ring pins its cylinder by design while the playback runs; a
      * stopped one is released by its engine, see the class KDoc.)
      */
     override fun hasTail(): Boolean = state.hasTail()
@@ -738,7 +738,7 @@ class KatalystDelayEffect(
 
     /**
      * The return path (resource warehouse, 2f): hands the ring back to the shelf and forgets it.
-     * Called when the owning engine is disposed, never while the orbit can still render, since
+     * Called when the owning engine is disposed, never while the cylinder can still render, since
      * the ring now belongs to whoever rents it next. A later [configure] would rent afresh.
      */
     fun release() {
@@ -750,7 +750,7 @@ class KatalystDelayEffect(
     }
 
     /** Clears the ring, the lifecycle AND the DSP params, called from `KatalystChain.reset`
-     *  on orbit deactivation. The params go back to factory here (review round 5): `DelayLine`'s
+     *  on cylinder deactivation. The params go back to factory here (review round 5): `DelayLine`'s
      *  setters DROP non-finite writes, so a NaN param from the next life's first owner would
      *  otherwise inherit THIS life's value, e.g. a dead owner's self-oscillating feedback.
      *  Mirrors `Phaser.resetForReuse`. */

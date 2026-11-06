@@ -198,7 +198,7 @@ class ChainSwapSpec : StringSpec({
         val leaving = rig.swap.leaving.shouldNotBeNull()
         val duck = rig.swap.duckingOut.shouldNotBeNull()
 
-        // No duck pass during the fade (the sidechain orbit disappeared), so the only thing that
+        // No duck pass during the fade (the sidechain cylinder disappeared), so the only thing that
         // can drop the duck is the fade's own exit edge.
         rig.render(blocks = rig.fadeBlocks, level = 0.5, duckPass = false)
 

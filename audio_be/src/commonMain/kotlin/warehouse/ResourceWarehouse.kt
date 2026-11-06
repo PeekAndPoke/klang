@@ -23,7 +23,7 @@ import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
  * Four shelves, two kinds of rule:
  *
  * - [sized] (delay rings, class-sized, byte-budgeted), [reverbs] (Freeverb networks, one size,
- *   count-bounded) and [cylinders] (whole orbits, count-bounded) — large, returnable state. Rent
+ *   count-bounded) and [cylinders] (whole cylinders, count-bounded), large, returnable state. Rent
  *   may return `null` for rings and networks: those are the out-of-memory catch sites, and the
  *   compiler makes every consumer decide. A cylinder without units is a few KB and is not caught.
  *   Idle memory is therefore `SHELF_BUDGET_BYTES` (rings) + 32 networks (~6.5 MB at 44.1 kHz) +

@@ -37,9 +37,9 @@ import io.peekandpoke.klang.common.infra.toKlangMap
 import kotlin.math.abs
 
 /**
- * The orbit's **param state** (Katalyst step 5a): what `.katp` and the bus doors write reaches a
- * DECLARED chain's `Param` slots through the voice that owns the orbit, and nothing else
- * about the orbit changes.
+ * The cylinder's **param state** (Katalyst step 5a): what `.katp` and the bus doors write reaches a
+ * DECLARED chain's `Param` slots through the voice that owns the cylinder, and nothing else
+ * about the cylinder changes.
  *
  * Three questions, and they are separate on purpose:
  *
@@ -73,7 +73,7 @@ class CylinderKatalystParamsSpec : StringSpec({
         reverbs = ReverbUnits(sampleRate),
     )
 
-    /** A voice with no bus fields of its own, carrying only the orbit's slot state. */
+    /** A voice with no bus fields of its own, carrying only the cylinder's slot state. */
     fun voice(params: KlangMap<Double>?): Voice =
         VoiceTestHelpers.createSynthVoice(katalystParams = params)
 
@@ -241,7 +241,7 @@ class CylinderKatalystParamsSpec : StringSpec({
 
     // ── The owner supplies the state ─────────────────────────────────────────────────────────────
 
-    "on a cylinder: the OWNER's state configures the orbit, and an owner change hands it over" {
+    "on a cylinder: the OWNER's state configures the cylinder, and an owner change hands it over" {
         val rig = Rig()
         rig.registry.register("bus", declaredClassic)
         rig.cylinder.requestChain("bus")
@@ -249,12 +249,12 @@ class CylinderKatalystParamsSpec : StringSpec({
         rig.cylinder.offerAndCommit(voice(room(size = 6.0)), blockStart = 0.0)
         rig.cylinder.reverb.shouldNotBeNull().reverb.shouldNotBeNull().size shouldBe Reverb.normalizeSize(6.0)
 
-        // The owner stops offering (its gate closed), so the next voice owns the orbit with ITS state.
+        // The owner stops offering (its gate closed), so the next voice owns the cylinder with ITS state.
         rig.cylinder.offerAndCommit(voice(room(size = 2.0)), blockStart = 4.0 * blockFrames)
         rig.cylinder.reverb.shouldNotBeNull().reverb.shouldNotBeNull().size shouldBe Reverb.normalizeSize(2.0)
     }
 
-    "on a cylinder: an older voice's state is ignored while the newest owns the orbit" {
+    "on a cylinder: an older voice's state is ignored while the newest owns the cylinder" {
         val rig = Rig()
         rig.registry.register("bus", declaredClassic)
         rig.cylinder.requestChain("bus")
@@ -290,11 +290,11 @@ class CylinderKatalystParamsSpec : StringSpec({
     }
 
     "a WRITTEN wet of 0 keeps the room running and feeds it nothing; a room nobody named rents nothing" {
-        // Step 5b-2: `wet` is the orbit's amount, and the 5b-1 on/off rule stays (`stageAskedFor`):
+        // Step 5b-2: `wet` is the cylinder's amount, and the 5b-1 on/off rule stays (`stageAskedFor`):
         // a written 0 runs the stage with nothing fed in, so a later wet glides up from there
         // instead of switching a room on; an authored 0 nobody writes rents nothing at all.
         //
-        // What the row measures is the orbit's MIX after `processEffects`, fed a constant 0.5:
+        // What the row measures is the cylinder's MIX after `processEffects`, fed a constant 0.5:
         // the room adds nothing but the reverb's deliberate `+ ANTI_DENORMAL` residue (far below
         // the bound here), and the rent says the stage is running.
         fun render(ownerSlots: Map<String, Double>): Pair<Cylinder, Double> {
@@ -335,19 +335,19 @@ class CylinderKatalystParamsSpec : StringSpec({
         // the stage asked for no room, and nothing is rented.
         val (unnamed, unnamedAdds) = render(emptyMap())
 
-        withClue("an orbit nobody asked for a room on rents none") {
+        withClue("a cylinder nobody asked for a room on rents none") {
             unnamed.reverb.shouldNotBeNull().reverb.shouldBeNull()
         }
 
         unnamedAdds shouldBe 0.0
     }
 
-    "the fader halves the orbit's mix, exactly" {
+    "the fader halves the cylinder's mix, exactly" {
         // The same rule on the CYLINDER path and at sample level: no declaration, no
         // `requestChain`, just a voice whose `katalystParams` name the group fader.
         //
         // A SCALING LAW, not an identity: both sides are cylinder renders, so what this pins is
-        // that the orbit's mix is LINEAR in the slot, not that any particular sample is right.
+        // that the cylinder's mix is LINEAR in the slot, not that any particular sample is right.
         fun render(params: Map<String, Double>?): DoubleArray {
             val cylinder = Cylinder(id = 0, blockFrames = blockFrames, sampleRate = sampleRate)
 
@@ -400,10 +400,10 @@ class CylinderKatalystParamsSpec : StringSpec({
 
     "a content-classic declaration installs NO second chain: the born-with instance keeps playing" {
         // The consequence of the shortcut in `ChainHost.chainFor`, and the reason it exists: with
-        // both chains slot-driven, a `Katalyst(k => k.classic())` on an orbit changes nothing, so
+        // both chains slot-driven, a `Katalyst(k => k.classic())` on a cylinder changes nothing, so
         // it must not cost a crossfade (which is not bit-transparent: the arriving room and ring
         // warm from empty). Read off the DSP state rather than off a flag: the reverb network the
-        // orbit had rented is still rented, and still the same instance, after the request.
+        // cylinder had rented is still rented, and still the same instance, after the request.
         val rig = Rig()
         rig.registry.register("classic", KatalystDsl.classic)
 
@@ -417,7 +417,7 @@ class CylinderKatalystParamsSpec : StringSpec({
             rig.cylinder.reverb.shouldNotBeNull().reverb.shouldNotBeNull() shouldBeSameInstanceAs before
         }
 
-        // The engagement control: a chain with DIFFERENT content does swap, and the orbit's
+        // The engagement control: a chain with DIFFERENT content does swap, and the cylinder's
         // reverb goes with it. Without this row the one above would pass on a `requestChain` that
         // does nothing at all.
         rig.registry.register("other", KatalystDsl.of(KatalystStageDsl.Compressor()))

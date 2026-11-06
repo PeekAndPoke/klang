@@ -126,7 +126,7 @@ class KatalystSettingsAllocationSpec : StringSpec({
             writer.resolve(maps[b % maps.size])
             writer.apply()
             fill(ctx, b)
-            fx.orbitBlockRan()
+            fx.cylinderBlockRan()
             fx.process(ctx)
             b++
         }

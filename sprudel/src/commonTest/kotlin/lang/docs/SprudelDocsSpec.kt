@@ -31,8 +31,8 @@ class SprudelDocsSpec : StringSpec({
         listOf(
             Triple("ignitorParam", "tonal", KlangScope.VOICE),
             Triple("ignp", "tonal", KlangScope.VOICE),
-            Triple("katalystParam", "effects", KlangScope.ORBIT),
-            Triple("katp", "effects", KlangScope.ORBIT),
+            Triple("katalystParam", "effects", KlangScope.CYLINDER),
+            Triple("katp", "effects", KlangScope.CYLINDER),
         ).forEach { (name, category, scope) ->
             val doc = KlangDocsRegistry.global.get(name)
 

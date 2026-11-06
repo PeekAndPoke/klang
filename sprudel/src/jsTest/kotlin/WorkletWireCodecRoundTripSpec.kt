@@ -43,7 +43,7 @@ class WorkletWireCodecRoundTripSpec : StringSpec({
             note = "c3"; freqHz = 130.81; scale = "e minor"; gain = 0.7; velocity = 0.9; legato = 0.95
             bank = "MPC60"; sound = SoundValue.Named("supersaw"); soundIndex = 2
             ignitorParams = paramBagOf("voices" to 7.0, "spread" to 0.3, "panSpread" to 0.4)
-            // The bus knobs travel as orbit slots only since Katalyst step 5b-3: every door's worth.
+            // The bus knobs travel as cylinder slots only since Katalyst step 5b-3: every door's worth.
             katalystParams = paramBagOf(
                 "reverb.wet" to 0.5, "reverb.size" to 6.0, "reverb.lowpass" to 8000.0,
                 "delay.wet" to 0.3, "delay.time" to 0.25, "delay.feedback" to 0.4, "delay.cap" to 2.5,
@@ -75,7 +75,7 @@ class WorkletWireCodecRoundTripSpec : StringSpec({
 
         // Sanity: the four voice filters and every voice door travel as `classic()` slot keys in `ignitorParams` (phase 3
         // step 8), so the map carries them through the codec too. The vowel and body fields set above cross nothing:
-        // the orbit stages travel as `katalystParams` slots (the doors write them; this voice sets the fields directly).
+        // the cylinder stages travel as `katalystParams` slots (the doors write them; this voice sets the fields directly).
         data.ignitorParams?.get("lpf.passes") shouldBe 2.0
         data.ignitorParams?.get("notch.env") shouldBe 0.4
         data.ignitorParams?.get("adsr.on") shouldBe 0.0

@@ -19,7 +19,7 @@ package io.peekandpoke.klang.audio_be.ignitor
  * like every other timed knob (maintainer, 2026-11-05, KLANG-00290 (engine follow-ups) item 37, option A: rate 1 is the
  * old speed at 48 kHz). Until then the walk took a fixed 0.003 per SAMPLE, so it followed the host's sample rate: 144
  * units per second at 48 kHz, 132 at 44.1 kHz. (Inside an oversampling region it never sped up: a noise is a source,
- * rendered at the base rate, and a Katalyst knob keeps the orbit's clock.) A host takes its per-sample
+ * rendered at the base rate, and a Katalyst knob keeps the cylinder's clock.) A host takes its per-sample
  * step as `PERLIN_UNITS_PER_SECOND / sampleRate`, divided FIRST: at 48 kHz that is the old 0.003 bit for bit, so a
  * 48 kHz render is unchanged.
  */

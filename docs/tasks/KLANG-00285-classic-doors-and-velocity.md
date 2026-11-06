@@ -122,7 +122,7 @@ pitch doors -> instrument -> [post-instrument stage] -> channel -> bus (Katalyst
 
 - **The instrument** only makes the sound: the guitar does guitar things. It exposes its own knobs (Kokon's bass:
   `sub`, `harmonics`) and may read velocity as touch. It never calls `classic()`.
-- **The post-instrument stage** runs per note, so several instruments on one orbit is no conflict (a default bus
+- **The post-instrument stage** runs per note, so several instruments on one cylinder is no conflict (a default bus
   chain per note would be, as the maintainer noted). It defaults to `classic`: the doors, with velocity in its amp.
   A pattern can replace it with another chain, or with none for an instrument that is already a complete patch with
   its own filter and envelope. Double placement becomes a choice, never an accident.

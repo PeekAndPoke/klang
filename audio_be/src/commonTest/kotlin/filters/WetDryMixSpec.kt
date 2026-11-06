@@ -58,7 +58,7 @@ class WetDryMixSpec : StringSpec({
         }
         // At w = 1 the cos term is 0: the floor alone remains.
         WetDryMix.dryCoeff(1.0, floor = floor, p = 2) shouldBe (floor plusOrMinus 1e-12)
-        // Orbit-phaser configuration: floor 1.0 pins the dry at 1 for EVERY w — checked at
+        // Cylinder-phaser configuration: floor 1.0 pins the dry at 1 for EVERY w, checked at
         // w = 0.5 where the wet laws differ, per the plan (not at w = 1 where all agree).
         WetDryMix.dryCoeff(0.5, floor = 1.0, p = 2) shouldBe 1.0
         WetDryMix.wetCoeff(0.5, p = 2) shouldBe (0.5 plusOrMinus 1e-12)

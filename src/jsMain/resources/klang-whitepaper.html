@@ -1479,7 +1479,7 @@
             </p>
 
             <figure>
-                <div class="code" data-lang="KlangScript"><pre>note(<span class="st">"c3"</span>).sound(<span class="st">"supersaw"</span>).lpf(800).gain(0.4).pan(0.3).orbit(1).reverb(0.3, 5)</pre>
+                <div class="code" data-lang="KlangScript"><pre>note(<span class="st">"c3"</span>).sound(<span class="st">"supersaw"</span>).lpf(800).gain(0.4).pan(0.3).cylinder(1).reverb(0.3, 5)</pre>
                 </div>
                 <figcaption>The note c3, played by a supersaw and softened by a low-pass filter at 800 Hz (<a href="#s4">§4</a>), at a
                     level of 0.4, a little left of center, on effect bus 1 with a reverb of size 5. The next section
@@ -1509,9 +1509,9 @@
 
             <p>
                 The voice also carries a <b>payload</b> that says what to play: the sound and note names, the gain,
-                the pan, the orbit, and two small maps of named numbers, one for the instrument and one for the
-                orbit's effects. A named number that a note can set is a <b>slot</b>: <code>lpf.freq</code> is a slot
-                of the instrument, and our note fills it with 800; <code>reverb.wet</code> is a slot of the orbit's
+                the pan, the cylinder, and two small maps of named numbers, one for the instrument and one for the
+                cylinder's effects. A named number that a note can set is a <b>slot</b>: <code>lpf.freq</code> is a slot
+                of the instrument, and our note fills it with 800; <code>reverb.wet</code> is a slot of the cylinder's
                 effects, and it gets 0.3.
             </p>
 
@@ -1556,17 +1556,16 @@
                 <b>Ignitor</b>, a small graph of oscillators, filters and envelopes (<a href="#s6">§6</a> builds them). The
                 stages that move the note's frequency live in that graph too: vibrato, pitch glide
                 (<code>accelerate</code>), pitch envelope and FM (frequency modulation). Last comes the channel, which
-                applies the voice's gain and pan and sends the result to its orbit.
+                applies the voice's gain and pan and sends the result to its cylinder.
             </p>
 
             <p>
-                <b>The orbit.</b> Every voice is sent to a numbered effect bus called an <b>orbit</b>.
-                <code>.orbit(1)</code> in a pattern picks it, and a note that names none goes to orbit 0. A
+                <b>The cylinder.</b> Every voice is sent to a numbered effect bus called a <b>cylinder</b>.
+                <code>.cylinder(1)</code> in a pattern picks it, and a note that names none goes to cylinder 0. A
                 <em>bus</em> is a shared channel: the voices sent to it are added together, and effects then run once
-                on that sum instead of once per voice. Inside the engine an orbit's bus is a <b>Cylinder</b>, and
-                the chain of effects it runs is a <b>Katalyst</b>. Our note meets a reverb there. A reverb has a
-                <b>tail</b>, the sound that keeps ringing after its input has stopped, so an orbit keeps running
-                until the tails of its effects have died away.
+                on that sum instead of once per voice. The chain of effects a cylinder runs is a <b>Katalyst</b>. Our
+                note meets a reverb there. A reverb has a <b>tail</b>, the sound that keeps ringing after its input has
+                stopped, so a cylinder keeps running until the tails of its effects have died away.
             </p>
 
             <div class="note">
@@ -1574,22 +1573,20 @@
                 <p>
                     Same thing, three lineages.
                     <b>Bus</b> is the classical audio-engineering word.
-                    <b>Orbit</b> is the Tidal / SuperDirt / Strudel word for exactly that, and sprudel keeps
-                    it (<code>.orbit(n)</code>), so live coders arriving from strudel.cc feel at home.
-                    <b>Cylinder</b> is the Motor's own name for the machinery that implements one, and
-                    <code>.cylinder(n)</code> works in a pattern too, as an alias.
+                    <b>Orbit</b> is the Tidal / SuperDirt / Strudel word for exactly that, and sprudel still
+                    understands it: <code>.orbit(n)</code> works as an alias, so live coders arriving from
+                    strudel.cc feel at home.
+                    <b>Cylinder</b> is the Motor's own word, and the one this paper uses throughout.
                 </p>
                 <p>
-                    This paper says <em>orbit</em> on the pattern side and <em>Cylinder</em> on the engine
-                    side. It is the same object either way. The engine's three names say what each part does: an
-                    Ignitor starts a sound, a Cylinder collects the sounds sent to it, and a Katalyst treats what the
-                    Cylinder holds. There is one Cylinder for each orbit, and the picture at the end of this section
-                    shows all of the names on one page.
+                    The engine's three names say what each part does: an Ignitor starts a sound, a Cylinder collects
+                    the sounds sent to it, and a Katalyst treats what the Cylinder holds. The picture at the end of
+                    this section shows all of the names on one page.
                 </p>
             </div>
 
             <p>
-                <b>The master.</b> The orbits are added together, and the sum meets the <b>master</b>: when a song
+                <b>The master.</b> The cylinders are added together, and the sum meets the <b>master</b>: when a song
                 declares one, another Katalyst chain, at the output (<code>master(Katalyst(k =&gt; …))</code>). A
                 song that declares none skips this step.
             </p>
@@ -1614,7 +1611,7 @@
 
             <figure>
                 <svg class="schematic" viewBox="0 0 900 430" role="img"
-                     aria-label="Signal flow diagram: on the main thread, KlangScript source is queried by Sprudel into voice events and sent as commands across the thread boundary, timed in seconds, not in cycles; on the audio thread, a per-playback engine schedules voices, renders each as its instrument's Ignitor tree, applies the channel's gain and pan, mixes into cylinders that each run a Katalyst chain, sums the orbits through the master Katalyst and the house limiter to the device.">
+                     aria-label="Signal flow diagram: on the main thread, KlangScript source is queried by Sprudel into voice events and sent as commands across the thread boundary, timed in seconds, not in cycles; on the audio thread, a per-playback engine schedules voices, renders each as its instrument's Ignitor tree, applies the channel's gain and pan, mixes into cylinders that each run a Katalyst chain, sums the cylinders through the master Katalyst and the house limiter to the device.">
 
                     <!-- LEFT: main thread -->
                     <text x="20" y="22" class="t-lab t-lang">MAIN THREAD</text>
@@ -1675,14 +1672,14 @@
                     <rect x="396" y="200" width="282" height="24" class="bx-eng"/>
                     <text x="408" y="216" class="t-sm">IGNITE · the Ignitor tree, pitch stages included</text>
                     <rect x="690" y="200" width="174" height="24" class="bx-eng"/>
-                    <text x="702" y="216" class="t-sm">CHANNEL · gain, pan → orbit</text>
+                    <text x="702" y="216" class="t-sm">CHANNEL · gain, pan → cylinder</text>
                     <path class="arw" d="M678,212 L688,212"/>
 
                     <path class="arw" d="M630,236 L630,258"/>
                     <path class="arw" d="M624,252 L630,260 L636,252"/>
 
                     <rect x="380" y="260" width="500" height="42" class="bx"/>
-                    <text x="396" y="280" class="t">Cylinder &nbsp;<tspan class="t-sm">one per orbit, running the classic Katalyst chain or the one you declare</tspan>
+                    <text x="396" y="280" class="t">Cylinder &nbsp;<tspan class="t-sm">one per bus number, running the classic Katalyst chain or the one you declare</tspan>
                     </text>
                     <text x="396" y="294" class="t-sm">classic: body → vowel → delay → reverb → phaser → compressor → gain → duck
                     </text>
@@ -1725,7 +1722,7 @@
                 sound gets shaped, and who decides what happens at each. The pattern language says <em>when</em> and
                 <em>what</em>; every call in a pattern that shapes the sound then lands with one of three owners, and
                 each owner has one way of being set. The <b>instrument</b> is an Ignitor tree. The <b>channel</b> is
-                three numbers. The <b>bus</b> is a Katalyst chain, once per orbit and once more at the output, where
+                three numbers. The <b>bus</b> is a Katalyst chain, once per cylinder and once more at the output, where
                 it is called the master. A pattern runs no effects of its own: it carries values, and the owners read
                 them. The pitch calls (<code>vibrato</code>, <code>penv</code>, <code>fm</code>,
                 <code>accelerate</code>) land with the instrument as well: like <code>lpf</code>, each fills a stage of
@@ -1873,8 +1870,8 @@ note(<span class="st">"a1 ~ a1 ~"</span>).sound(kick).adsrOff().ignitorParam(<sp
 
             <p>
                 Between the instrument and the bus sits the channel, a fader like the one on a mixing desk, and it is
-                not a DSL: <code>gain</code>, <code>pan</code>, <code>orbit</code>. The engine applies
-                gain and pan to every voice once, after the tree, whatever the tree says, and <code>orbit</code>
+                not a DSL: <code>gain</code>, <code>pan</code>, <code>cylinder</code>. The engine applies
+                gain and pan to every voice once, after the tree, whatever the tree says, and <code>cylinder</code>
                 picks the bus. <code>gain</code> is the one level word, from the pattern down to the wire: a
                 tone-neutral fader after the processing.
             </p>
@@ -1891,7 +1888,7 @@ note(<span class="st">"a1 ~ a1 ~"</span>).sound(kick).adsrOff().ignitorParam(<sp
             </p>
 
             <figure>
-                <div class="code" data-lang="KlangScript"><pre>note(<span class="st">"c2 ~ eb2 g2"</span>).sound(<span class="st">"supersaw"</span>).pregain(1.5).lpf(600).gain(0.4).pan(0.3).orbit(1)</pre>
+                <div class="code" data-lang="KlangScript"><pre>note(<span class="st">"c2 ~ eb2 g2"</span>).sound(<span class="st">"supersaw"</span>).pregain(1.5).lpf(600).gain(0.4).pan(0.3).cylinder(1)</pre>
                 </div>
                 <figcaption><code>pregain</code> drives the instrument, <code>lpf</code> fills one of its
                     <code>classic()</code> slots, and the last three calls are the channel: level, position,
@@ -1899,35 +1896,35 @@ note(<span class="st">"a1 ~ a1 ~"</span>).sound(kick).adsrOff().ignitorParam(<sp
                 </figcaption>
             </figure>
 
-            <h4>3 · The bus: the Katalyst DSL, on every orbit and at the output</h4>
+            <h4>3 · The bus: the Katalyst DSL, on every cylinder and at the output</h4>
 
             <p>
                 Everything that works on a <em>sum</em> lives on the bus. That is eq (boosting or cutting bands of
                 frequencies), reverb, delay, compressor, phaser, the <code>body</code> and <code>vowel</code>
-                resonators (<a href="#s7">§7</a>), sidechain ducking, which pulls one orbit down while another is loud, and the group
-                fader, which is the orbit's own level.
+                resonators (<a href="#s7">§7</a>), sidechain ducking, which pulls one cylinder down while another is loud, and the group
+                fader, which is the cylinder's own level.
             </p>
 
             <p>
-                Each orbit runs one <b>Katalyst</b> chain, declared once with <code>Katalyst(k =&gt; …)</code>,
+                Each cylinder runs one <b>Katalyst</b> chain, declared once with <code>Katalyst(k =&gt; …)</code>,
                 where the written order is the signal order. A knob written as a number stays that number; a knob
                 declared as <code>Katalyst.param(…)</code> is a slot the pattern fills with
                 <code>katp</code>, by the slot's name or by the param itself (the listing below does the latter).
-                Where a jump would be audible, an orbit knob glides to its new value
+                Where a jump would be audible, a cylinder knob glides to its new value
                 over 50 ms rather than stepping (the resonators and the EQ, which are banks of filters, swap by a
-                20 ms crossfade instead): a safety net against clicks when two patterns take turns on one orbit, not
+                20 ms crossfade instead): a safety net against clicks when two patterns take turns on one cylinder, not
                 a guarantee.
             </p>
 
             <p>
-                An orbit has one set of knob values, and they come from one voice at a time: the newest note that is
-                still held on it (a release tail does not count). Two patterns that ask the same orbit for different reverbs therefore take turns,
-                note by note; give each of them an orbit of its own.
+                A cylinder has one set of knob values, and they come from one voice at a time: the newest note that is
+                still held on it (a release tail does not count). Two patterns that ask the same cylinder for different reverbs therefore take turns,
+                note by note; give each of them a cylinder of its own.
             </p>
 
             <p>
                 A song that declares no chain gets <code>Katalyst.classic()</code>: body, vowel, delay, reverb,
-                phaser, compressor and a group fader, with the sidechain duck applied afterwards across orbits.
+                phaser, compressor and a group fader, with the sidechain duck applied afterwards across cylinders.
                 (<code>classic</code> names two things, then: the instrument's finishing stages above and this default
                 chain on the bus.) The pattern calls <code>reverb(wet, size, lowpass)</code>,
                 <code>delay(wet, time, feedback)</code>, <code>compressor(…)</code>, <code>body(…)</code> and their
@@ -1936,7 +1933,7 @@ note(<span class="st">"a1 ~ a1 ~"</span>).sound(kick).adsrOff().ignitorParam(<sp
             </p>
 
             <figure>
-                <div class="code engine" data-lang="KlangScript"><pre><span class="cm">// A declared chain: the order you write is the order the orbit's mix runs through</span>
+                <div class="code engine" data-lang="KlangScript"><pre><span class="cm">// A declared chain: the order you write is the order the cylinder's mix runs through</span>
 <span class="kw">let</span> guitarBus = Katalyst(k =&gt; k
     .eq(e =&gt; e.band(freq = 300, q = 0.8, db = 2.0))   <span class="cm">// the mix EQ, after the amp</span>
     .reverb(0.15, 3)                                   <span class="cm">// reverb(wet, size, lowpass)</span>
@@ -1947,13 +1944,13 @@ note(<span class="st">"a1 ~ a1 ~"</span>).sound(kick).adsrOff().ignitorParam(<sp
 <span class="kw">let</span> room = Katalyst.param(<span class="st">"room"</span>, 5.0)
 <span class="kw">let</span> bus = Katalyst(k =&gt; k.reverb(0.5, room))
 
-stack(guitar1, guitar2, guitar3).katalyst(guitarBus)   <span class="cm">// three orbits, one chain</span>
+stack(guitar1, guitar2, guitar3).katalyst(guitarBus)   <span class="cm">// three cylinders, one chain</span>
 note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).katalyst(bus).katp(room, <span class="st">"&lt;2 9&gt;"</span>)   <span class="cm">// a small room, then a hall</span></pre>
                 </div>
-                <figcaption>The reverb is an insert: it takes a copy of the orbit's mix at its place in the list,
+                <figcaption>The reverb is an insert: it takes a copy of the cylinder's mix at its place in the list,
                     and its output is added back on top of the dry sound, so a room written after the EQ hears the
                     EQ. Two instruments that need different rooms, or different amounts of one room, need two
-                    orbits.
+                    cylinders.
                 </figcaption>
             </figure>
 
@@ -1971,7 +1968,7 @@ note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).k
             <h4>The master: the same chain at the output</h4>
 
             <p>
-                The master is the same Katalyst chain at the output position, over the sum of every orbit:
+                The master is the same Katalyst chain at the output position, over the sum of every cylinder:
                 <code>master(Katalyst(k =&gt; …))</code>. It rides in the pattern stream rather than sitting in
                 global config, so an offline render reproduces it. <code>master(Katalyst())</code> is the master
                 switched off.
@@ -1985,10 +1982,10 @@ note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).k
 
             <p>
                 Every stage the builder offers works at the output, with two differences that follow from the
-                position: a <code>duck</code> stage is inert (there is no other orbit to listen to), and nothing fills
-                a <code>Katalyst.param(…)</code> there, since <code>katp</code> reaches orbits only; such a knob stays
+                position: a <code>duck</code> stage is inert (there is no other cylinder to listen to), and nothing fills
+                a <code>Katalyst.param(…)</code> there, since <code>katp</code> reaches cylinders only; such a knob stays
                 at its default. One stage worth knowing is <code>limiter(…)</code>, a compressor with limiter
-                defaults, which is allowed on an orbit too.
+                defaults, which is allowed on a cylinder too.
             </p>
 
             <figure>
@@ -2122,7 +2119,7 @@ note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).k
 
             <p>
                 <b>Effects.</b> On the bus: reverb (a room), delay (echoes), phaser (a sweeping comb of notches),
-                compressor (turns the loud parts down to even out the level), sidechain ducking (one orbit is pulled
+                compressor (turns the loud parts down to even out the level), sidechain ducking (one cylinder is pulled
                 down while another sounds) and an EQ. In the voice: distortion (from soft tanh through diode to
                 wavefold, which folds the wave back on itself, optionally oversampled to tame aliasing), bitcrush
                 (fewer bits), sample-rate reduction (<code>coarse</code>), tremolo (a wobbling level), vibrato, FM (one
@@ -2144,8 +2141,8 @@ note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).k
                 This is <em>Die Kirschblüte</em>, the song from the start of this paper, as it sits in the corpus
                 of built-in songs today, not a constructed example. It uses the whole trip from <a href="#s5">§5</a> to <a href="#s7">§7</a>: seven
                 instruments the song builds itself, each an Ignitor tree ending in <code>.classic()</code>, a pad
-                voiced across six independent lines, layers that enter over 42 cycles, five orbits, and one
-                reverb, delay and compressor setting at the end that each orbit applies to its own mix. It is about a hundred lines, which is a lot to
+                voiced across six independent lines, layers that enter over 42 cycles, five cylinders, and one
+                reverb, delay and compressor setting at the end that each cylinder applies to its own mix. It is about a hundred lines, which is a lot to
                 take in at once, so we read it in two halves: first the instruments, then the arrangement.
             </p>
 
@@ -2266,7 +2263,7 @@ note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).k
             <p>
                 The second half is one <code>stack</code> of layers (<a href="#s4">§4</a>). Every layer names its instrument
                 (<code>.sound(koto)</code>, or a built-in one such as <code>sound("dust!2")</code>) and then writes the
-                channel (<code>gain</code>, <code>pan</code>, <code>orbit</code>) and whatever else it wants to
+                channel (<code>gain</code>, <code>pan</code>, <code>cylinder</code>) and whatever else it wants to
                 reach.
             </p>
 
@@ -2278,7 +2275,7 @@ note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).k
     [e4 c4 e4 f4 e4 [e4 d4] c4@2] [a4 b4 c5 b4 a4 [b4 a4] f4@2]
     [e4 c4 e4 f4 e4 [e4 d4] c4@2] [a4 a4 b4 ~ a4 a4 b4 ~]
     [e4 f4 [b4 a4] f4 e4@4]
-  `</span>).orbit(0).sound(koto).legato(0.8).slow(14).gain(0.55).body(material = <span class="st">"mahogany"</span>).pan(0.66)
+  `</span>).cylinder(0).sound(koto).legato(0.8).slow(14).gain(0.55).body(material = <span class="st">"mahogany"</span>).pan(0.66)
     .superimpose(fast(2).velocity(0.2).pan(0.2).superimpose(pan(0.8)))
 
   <span class="cm">// Shakuhachi</span>
@@ -2290,17 +2287,17 @@ note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).k
     c5@2  ~  ~  ~  ~  a4 ~
     a5@2  ~  ~  e5@2  d5@2
     &lt;[e4@4 e4@1 ~ ~ ~] [e4 f4 [b4 a4] f4 e4@4] [a4@4 a4@1 ~ ~ ~] [e5 f5 [b5 a5] f5 e5@4]&gt;@8
-  `</span>).orbit(1).sound(shaku).adsr(release = 0.3).slow(14).gain(0.30).pan(perlin.range(0.3, 0.7).slow(8)).pan(0.33) <span class="cm">// classic() releases over this, not the shakuhachi's own 0.3 s tail; keep them equal</span>
+  `</span>).cylinder(1).sound(shaku).adsr(release = 0.3).slow(14).gain(0.30).pan(perlin.range(0.3, 0.7).slow(8)).pan(0.33) <span class="cm">// classic() releases over this, not the shakuhachi's own 0.3 s tail; keep them equal</span>
     .lpf(perlin.range(3800, 4000).slow(2)).body(material = <span class="st">"rosewood"</span>)
     .filterWhen(x =&gt; x &gt;= wait * 2)
 
   <span class="cm">// Drums</span>
-  ,note(<span class="st">"a1 ~  ~  ~  ~  ~  ~  ~  a1 ~  ~  ~  ~  ~  ~  ~"</span>).orbit(2).sound(kick).gain(0.7).hpf(100)
-  ,note(<span class="st">"~  ~  ~  ~  x  ~  ~  ~  ~  ~  x  ~  ~  ~  ~  ~"</span>).orbit(2).sound(rim).gain(0.45).pan(0.6)
-  ,note(<span class="st">"~  ~  ~  ~  ~  ~  ~  ~  x  ~  ~  ~  ~  ~  ~  ~"</span>).orbit(2).sound(brush).gain(0.35).pan(0.4)
+  ,note(<span class="st">"a1 ~  ~  ~  ~  ~  ~  ~  a1 ~  ~  ~  ~  ~  ~  ~"</span>).cylinder(2).sound(kick).gain(0.7).hpf(100)
+  ,note(<span class="st">"~  ~  ~  ~  x  ~  ~  ~  ~  ~  x  ~  ~  ~  ~  ~"</span>).cylinder(2).sound(rim).gain(0.45).pan(0.6)
+  ,note(<span class="st">"~  ~  ~  ~  ~  ~  ~  ~  x  ~  ~  ~  ~  ~  ~  ~"</span>).cylinder(2).sound(brush).gain(0.35).pan(0.4)
 
   <span class="cm">// Sub-Bass</span>
-  ,note(<span class="st">"a1 d2 a1 f1 c2 e1 a1"</span>).orbit(3).sound(sub).slow(14).legato(1.5).gain(0.5).hpf(40)
+  ,note(<span class="st">"a1 d2 a1 f1 c2 e1 a1"</span>).cylinder(3).sound(sub).slow(14).legato(1.5).gain(0.5).hpf(40)
     .filterWhen(x =&gt; x &gt;= wait * 1)
 
   ,stack(
@@ -2316,7 +2313,7 @@ note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).k
     ,note(<span class="st">"c4  f3  c4  a3  e3  gs3 c4"</span>).sound(pad).slow(14).legato(1.05).gain(0.200).pan(0.45).hpf(800)
     <span class="cm">// High fifth</span>
     ,note(<span class="st">"e4  a3  e4  c4  g3  b3  e4"</span>).sound(pad).slow(14).legato(1.05).gain(0.200).pan(0.7).hpf(1000)
-  ).orbit(4).adsr(release = 1.5).coarse(factor = 2).filterWhen(x =&gt; x &gt;= wait * 3).body(material = <span class="st">"tube"</span>, wet = 0.3) <span class="cm">// adsr(release = 1.5): classic() releases over this, not the pad's own 1.5 s tail; keep them equal</span>
+  ).cylinder(4).adsr(release = 1.5).coarse(factor = 2).filterWhen(x =&gt; x &gt;= wait * 3).body(material = <span class="st">"tube"</span>, wet = 0.3) <span class="cm">// adsr(release = 1.5): classic() releases over this, not the pad's own 1.5 s tail; keep them equal</span>
 
   <span class="cm">// Noise</span>
   , sound(<span class="st">"dust!2"</span>).gain(0.0400).vel(sine.range(0.500, 1.0).slow(21)).hpf(5000).lpf(8000).clip(1.5).adsr(0.1, 1, 1, 0.1)
@@ -2356,9 +2353,9 @@ note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).k
                     <code>hpf</code> is the high-pass twin of <code>lpf</code>.
                 </li>
                 <li>
-                    The melody, the flute, the drums, the sub-bass and the pad each sit on an orbit of their own (0
-                    to 4), so each can have its own <code>body()</code> (<a href="#s6">§6</a>). The three noise layers name no orbit
-                    and share orbit 0 with the melody.
+                    The melody, the flute, the drums, the sub-bass and the pad each sit on a cylinder of their own (0
+                    to 4), so each can have its own <code>body()</code> (<a href="#s6">§6</a>). The three noise layers name no cylinder
+                    and share cylinder 0 with the melody.
                 </li>
                 <li>
                     The delay on the outer stack takes its time as <code>pure(1/8).div(cps)</code>: an eighth of a
@@ -2376,7 +2373,7 @@ note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).k
                 <li>
                     The six pad lines each carry a higher high-pass than the last, from 100 Hz up to 1000 Hz, so the
                     low end is left to the lower lines. <code>body(material = …)</code> puts a resonating wooden or
-                    tube body around an orbit (<a href="#s7">§7</a>), and <code>coarse(factor = 2)</code> halves the
+                    tube body around a cylinder (<a href="#s7">§7</a>), and <code>coarse(factor = 2)</code> halves the
                     pad's sample rate, raw and aliased, for a touch of digital grit.
                 </li>
                 <li>
@@ -2496,7 +2493,7 @@ note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).k
                 A harness compiles actual song source, renders it offline through the same engine, and reports
                 per-block timing. Its first whole-song analysis found a built-in song whose guitar, through nested
                 <code>superimpose</code> calls, schedules 1,088 voices in the benchmark window and takes about half the song's CPU,
-                each voice running its own body resonator; so the body and vowel resonators run once per orbit, on the
+                each voice running its own body resonator; so the body and vowel resonators run once per cylinder, on the
                 summed mix.
             </p>
 
@@ -2517,8 +2514,8 @@ note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).k
                 command by <code>playbackId</code> to its own <code>PlaybackEngine</code>, created lazily and
                 disposed once it is stopped and has drained. Each one owns its entire render state: its own scheduler, its own cylinders, its
                 own ignitor registry (the table of instruments it can build by name) and one Katalyst registry (the
-                same for effect chains) that serves both positions, the orbits and the master, all forked from the
-                shared built-ins. Two songs playing at once on "orbit 1" get independent orbits instead of silently
+                same for effect chains) that serves both positions, the cylinders and the master, all forked from the
+                shared built-ins. Two songs playing at once on "cylinder 1" each get their own instead of silently
                 fighting over one. Custom instruments registered by a playback die with it, rather than leaking into
                 the next.
             </p>
@@ -2573,9 +2570,9 @@ note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).k
                 <span class="lab">The rule that keeps the parts in agreement</span>
                 <p>
                     <b>Parameter parity.</b> If a parameter shows up in more than one place (in KlangScript and in
-                    Kotlin, on an orbit and at the master), it should mean the same thing, use the same scale, and be
+                    Kotlin, on a cylinder and at the master), it should mean the same thing, use the same scale, and be
                     converted in exactly one place. Ignoring it once produced a reverb size that was 10× different
-                    between the master and an orbit; the bug was found by ear. Running one chain type at both
+                    between the master and a cylinder; the bug was found by ear. Running one chain type at both
                     positions is the same rule, applied to structure.
                 </p>
             </div>
@@ -2659,7 +2656,7 @@ note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).k
             <ul>
                 <li>
                     <b>Setup allocates, and the first run shows it.</b> The render path is allocation-free by house rule
-                    (<a href="#s5">§5</a>), but an orbit's delay rings, reverb networks and cylinders have to be built. They come from a
+                    (<a href="#s5">§5</a>), but delay rings, reverb networks and the cylinders themselves have to be built. They come from a
                     resource warehouse, shelves of ready-made parts that a playback rents and gives back, and a
                     warmup pass stocks the shelves and runs the engine's whole vocabulary once before the first song.
                     On a Fairphone, with Der Schmetterling (a heavy built-in song), the first run plays. What is
@@ -2671,7 +2668,7 @@ note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).k
                     <b>There is no voice limit.</b> A voice plays until its release ends, or until silence culling
                     stops rendering it once the release has gone quiet; the engine does not cap polyphony or
                     steal voices to save CPU. A song that asks for more than the machine can render makes its
-                    blocks arrive late, and a late block is heard as a glitch (<a href="#s5">§5</a>). A per-orbit cap that steals
+                    blocks arrive late, and a late block is heard as a glitch (<a href="#s5">§5</a>). A per-cylinder cap that steals
                     the quietest voice is parked until the numbers ask for it.
                 </li>
                 <li>
@@ -2879,7 +2876,7 @@ note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).k
                 <li>
                     <b>Mix and master the built-in songs.</b> They were balanced by ear by the people who wrote
                     them, and the Katalyst at the output (<a href="#s6">§6</a>) has more to give than we ask of it. Take a song,
-                    balance its orbits, stage its master chain, and leave it sounding like a record.
+                    balance its cylinders, stage its master chain, and leave it sounding like a record.
                 </li>
                 <li>
                     <b>Calibrate by ear.</b> The body and vowel resonators (<a href="#s7">§7</a>, <a href="#s12">§12</a>) need exactly the

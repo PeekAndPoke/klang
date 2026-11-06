@@ -24,7 +24,7 @@ import io.peekandpoke.klang.sprudel.putKatalystParam
 // -- katalyst() -------------------------------------------------------------------------------------------------------
 
 /**
- * Stamps an orbit-chain reference onto every event of [source], **replacing** the chain those
+ * Stamps a cylinder-chain reference onto every event of [source], **replacing** the chain those
  * events already carry.
  *
  * `x.katalyst(A).katalyst(B)` is `x.katalyst(B)`, exactly as `sound()` replaces the instrument and
@@ -43,12 +43,12 @@ private fun applyKatalyst(source: SprudelPattern, value: KatalystValue.Dsl): Spr
     source.reinterpretVoice { vd -> vd.copy(katalyst = value) }
 
 /**
- * Creates a pattern that declares the **orbit chain**: one silent control event per cycle that
+ * Creates a pattern that declares the **cylinder chain**: one silent control event per cycle that
  * carries nothing but the chain reference.
  *
- * A Katalyst is the instrument an orbit plays through: the effects its summed voices run, in the
- * order written, before the playback's master bus. Put it on an orbit and everything stacked onto
- * that orbit shares it:
+ * A Katalyst is the instrument a cylinder plays through: the effects its summed voices run, in the
+ * order written, before the playback's master bus. Put it on a cylinder and everything stacked onto
+ * that cylinder shares it:
  *
  * ```KlangScript(Playable)
  * stack(
@@ -59,25 +59,25 @@ private fun applyKatalyst(source: SprudelPattern, value: KatalystValue.Dsl): Spr
  * ```
  *
  * The declaration above adds an EQ the familiar chain does not have, which is what a declaration is
- * FOR. `Katalyst(k => k.classic())` on its own declares exactly the chain an orbit already runs and
+ * FOR. `Katalyst(k => k.classic())` on its own declares exactly the chain a cylinder already runs and
  * therefore changes nothing: it is the one spelling that is a no-op.
  *
  * The event is a **control event**: it never sounds. `.cylinder(n)` on the carrier is what routes the
- * declaration to an orbit, which is why the carrier is an ordinary pattern and not a special
+ * declaration to a cylinder, which is why the carrier is an ordinary pattern and not a special
  * value.
  *
- * `k.classic()` is the chain an orbit has always run, declared as named slots, so the `reverb(...)`
+ * `k.classic()` is the chain a cylinder has always run, declared as named slots, so the `reverb(...)`
  * on the stack drives the declared room, for the kick and the bass alike: that is how a bus door
  * and a declaration meet. A chain
  * that declares no `reverb` stage would have nowhere for that call to land, which is what "the
  * chain is the instrument" means.
  *
- * @param katalyst The orbit chain to declare.
+ * @param katalyst The cylinder chain to declare.
  * @return A pattern emitting one control event per cycle.
  *
- * @scope orbit
+ * @scope cylinder
  * @category effects
- * @tags katalyst, orbit, chain, bus, effects, motor
+ * @tags katalyst, cylinder, chain, bus, effects, motor
  */
 @KlangScript.Function
 fun katalyst(katalyst: KatalystDsl, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern {
@@ -89,13 +89,13 @@ fun katalyst(katalyst: KatalystDsl, @Suppress("unused") callInfo: CallInfo? = nu
 }
 
 /**
- * Declares the orbit chain from this pattern's events onward.
+ * Declares the cylinder chain from this pattern's events onward.
  *
  * Unlike the top-level [katalyst] carrier, these events still sound: the chain declaration simply
  * rides them.
  *
  * **The door REPLACES**, like `sound()` and `master()`: the last `.katalyst(...)` on a pattern is
- * the chain its orbit runs, and writing two of them is not two halves of one chain. Build the whole
+ * the chain its cylinder runs, and writing two of them is not two halves of one chain. Build the whole
  * chain in one `Katalyst(k => ...)`, where the list order is the signal order and you can see it:
  *
  * ```KlangScript(Playable)
@@ -106,29 +106,29 @@ fun katalyst(katalyst: KatalystDsl, @Suppress("unused") callInfo: CallInfo? = nu
  *   ))
  * ```
  *
- * That is the familiar orbit with a 300 Hz lift at the end of it: `k.classic()` brings the whole
+ * That is the familiar cylinder with a 300 Hz lift at the end of it: `k.classic()` brings the whole
  * familiar block (once, whatever else the builder says), so the `reverb(...)` on the pattern
- * still reaches the room, and the `eq` shapes the summed orbit after it.
+ * still reaches the room, and the `eq` shapes the summed cylinder after it.
  *
- * @param katalyst The orbit chain to declare.
+ * @param katalyst The cylinder chain to declare.
  * @return A new pattern whose events carry the chain.
  *
- * @scope orbit
+ * @scope cylinder
  * @category effects
- * @tags katalyst, orbit, chain, bus, effects, motor
+ * @tags katalyst, cylinder, chain, bus, effects, motor
  */
 @KlangScript.Function
 fun SprudelPattern.katalyst(katalyst: KatalystDsl, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern =
     applyKatalyst(this, KatalystValue.Dsl(katalyst))
 
 /**
- * Parses this string as a pattern and declares its orbit chain from its events onward.
+ * Parses this string as a pattern and declares its cylinder chain from its events onward.
  *
  * ```KlangScript(Playable)
  * "c3 e3 g3".katalyst(Katalyst(k => k.classic().gain(1.6))).s("supersaw")
  * ```
  *
- * @param katalyst The orbit chain to declare.
+ * @param katalyst The cylinder chain to declare.
  * @return A new pattern whose events carry the chain.
  */
 @KlangScript.Function
@@ -142,9 +142,9 @@ fun String.katalyst(katalyst: KatalystDsl, callInfo: CallInfo? = null): SprudelP
 // form (d) below still exists for `.apply(gain(0.5).katalyst(...))`.
 
 /**
- * Creates a chained [PatternMapperFn] that declares the orbit chain after the previous mapper.
+ * Creates a chained [PatternMapperFn] that declares the cylinder chain after the previous mapper.
  *
- * @param katalyst The orbit chain to declare.
+ * @param katalyst The cylinder chain to declare.
  */
 @KlangScript.Function
 fun PatternMapperFn.katalyst(katalyst: KatalystDsl, callInfo: CallInfo? = null): PatternMapperFn {
@@ -158,7 +158,7 @@ fun PatternMapperFn.katalyst(katalyst: KatalystDsl, callInfo: CallInfo? = null):
 // -- katalystParam() / katp() -----------------------------------------------------------------------------------------
 
 /**
- * Writes the orbit chain slot [slot] (already a NAME, resolved at the call by [katalystSlotName]) with the value
+ * Writes the cylinder chain slot [slot] (already a NAME, resolved at the call by [katalystSlotName]) with the value
  * pattern [value]. The four forms of both names resolve the slot first and then land here, so a wrong slot argument
  * is a script error when the door is CALLED, the mapper forms included.
  */
@@ -178,11 +178,11 @@ private fun katpSlot(slot: KatalystSlotLike?, callInfo: CallInfo?): String =
     katalystSlotName(slot, door = "katp", twin = "ignp", location = callInfo?.callLocation)
 
 /**
- * Writes one **orbit chain slot**, per orbit, by its `<stage>.<knob>`
+ * Writes one **cylinder chain slot**, per cylinder, by its `<stage>.<knob>`
  * name or by the Katalyst param object itself.
  *
- * Direct access to a declared chain's named knobs, the orbit twin of [ignitorParam]: `ignp` fills the
- * voice's own instrument, `katp` the chain its orbit runs. The vocabulary is what the chain
+ * Direct access to a declared chain's named knobs, the cylinder twin of [ignitorParam]: `ignp` fills the
+ * voice's own instrument, `katp` the chain its cylinder runs. The vocabulary is what the chain
  * declares, which for a chain built from `k.classic()` is every classic knob: `body.material`,
  * `body.wet`, `body.floor`, `vowel.vowel`, `vowel.wet`, `vowel.floor`, `delay.wet`, `delay.time`,
  * `delay.feedback`, `delay.cap`, `reverb.wet`, `reverb.size`, `reverb.lowpass`, `phaser.rate`,
@@ -196,22 +196,22 @@ private fun katpSlot(slot: KatalystSlotLike?, callInfo: CallInfo?): String =
  * default stays the chain's. An Ignitor param (`Ignitor.param(...)`, `Ignitor.slot.*`) is the voice's slot, which
  * [ignitorParam] writes; handing one to this door is a script error at the call, and so is a number or a sound.
  *
- * `gain.gain` is the orbit's **group fader**, the last stage before the duck: one multiply of the
- * whole orbit mix, after the compressor, covering the dry signal and the delay and reverb returns
- * alike. 1 is unity and is what every orbit runs at; below 1 is quieter, above 1 louder, and a
+ * `gain.gain` is the cylinder's **group fader**, the last stage before the duck: one multiply of the
+ * whole cylinder mix, after the compressor, covering the dry signal and the delay and reverb returns
+ * alike. 1 is unity and is what every cylinder runs at; below 1 is quieter, above 1 louder, and a
  * move glides over 50 ms so it never steps.
  *
  * ```KlangScript(Playable)
- * note("c3 e3 g3").s("supersaw").cylinder(1).katalystParam("gain.gain", 0.8)   // this orbit, a little down
+ * note("c3 e3 g3").s("supersaw").cylinder(1).katalystParam("gain.gain", 0.8)   // this cylinder, a little down
  * ```
  *
  * **It is a mix knob, not an articulation**, and for the ordinary reason every `katp` value is:
- * the fader follows the orbit's owner: the orbit's bus settings are owned by the newest sounding
- * voice, a voice gives the orbit up when its gate closes or it is cut, so a new value lands with
+ * the fader follows the cylinder's owner: the cylinder's bus settings are owned by the newest sounding
+ * voice, a voice gives the cylinder up when its gate closes or it is cut, so a new value lands with
  * the next note's onset. Set it and leave it. For something that moves
  * per note, reach for `gain` (the level a voice leaves at) or `pregain` (how hard it is played in).
  *
- * **Patterning it through exactly 0 keeps the orbit running**: an orbit never deactivates while a
+ * **Patterning it through exactly 0 keeps the cylinder running**: a cylinder never deactivates while a
  * voice plays on it, so the fader waits at zero and glides back up from there. It is still not a
  * per-note mute: the way back up starts when the next owner hands the fader its new value, which
  * can fall mid-note of an older voice still ringing. Mute a note with `gain` on the
@@ -220,14 +220,14 @@ private fun katpSlot(slot: KatalystSlotLike?, callInfo: CallInfo?): String =
  * **Which chain hears this map.** THIS IS THE ONE HOME of that rule; every other mention of it is
  * a pointer here.
  *
- * **Every chain does, for every stage it declares.** An orbit that declares nothing runs the
+ * **Every chain does, for every stage it declares.** A cylinder that declares nothing runs the
  * familiar chain and reads this map exactly as a declared one does, so `katp("gain.gain", 0.8)`
- * moves the fader of any orbit and needs no `.katalyst(...)` first. A bus DOOR and its slot are
+ * moves the fader of any cylinder and needs no `.katalyst(...)` first. A bus DOOR and its slot are
  * the same knob written two ways: `reverb(wet = 0.4, size = 8)` writes `reverb.wet` and
  * `reverb.size`, and the stage reads them; `katp("reverb.size", 8)` moves that same size slot, and
  * whether a room is HEARD then depends on the wet as it always does (see the last paragraph).
- * Declaring a chain therefore changes what STAGES an orbit has, never where their knobs come from,
- * and `.katalyst(Katalyst(k => k.classic()))` on an orbit that declared nothing changes nothing at
+ * Declaring a chain therefore changes what STAGES a cylinder has, never where their knobs come from,
+ * and `.katalyst(Katalyst(k => k.classic()))` on a cylinder that declared nothing changes nothing at
  * all.
  *
  * The one thing to know: a slot only exists when a stage declares it. `k.classic()` declares every
@@ -241,12 +241,12 @@ private fun katpSlot(slot: KatalystSlotLike?, callInfo: CallInfo?): String =
  * like every other knob. Writing an index by hand here is possible and rarely what you want: the
  * names are the readable door, and a raw index moves if the catalogue grows.
  *
- * Three more things it is NOT, and they all follow from the orbit being a bus and not a note:
+ * Three more things it is NOT, and they all follow from the cylinder being a bus and not a note:
  *
- *  - **No per-note snapshot.** The value is orbit state: the chain re-reads it when the owner's map
+ *  - **No per-note snapshot.** The value is cylinder state: the chain re-reads it when the owner's map
  *    changes, so a chord writes it once, not once per note.
- *  - **Only the OWNER is heard.** The newest sounding voice owns the orbit; an older pattern's note on
- *    the same orbit writes into nothing while a newer one sounds. Give it its own orbit.
+ *  - **Only the OWNER is heard.** The newest sounding voice owns the cylinder; an older pattern's note on
+ *    the same cylinder writes into nothing while a newer one sounds. Give it its own cylinder.
  *  - **Only a SLOT moves.** A knob the chain wrote as a number (`k.reverb(size = 4)`) is
  *    fixed; write `Katalyst.param` where the chain should listen.
  *
@@ -271,18 +271,18 @@ private fun katpSlot(slot: KatalystSlotLike?, callInfo: CallInfo?): String =
  *
  * @param slot The chain slot (required): its name, or the Katalyst param itself.
  * @param value The slot value.
- * @return A new pattern with the orbit chain slot set.
+ * @return A new pattern with the cylinder chain slot set.
  * @alias katp
- * @scope orbit
+ * @scope cylinder
  * @category effects
- * @tags katalyst, orbit, chain, bus, param, slot
+ * @tags katalyst, cylinder, chain, bus, param, slot
  */
 @KlangScript.Function
 fun SprudelPattern.katalystParam(slot: KatalystSlotLike?, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyKatalystParam(this, katalystParamSlot(slot, callInfo), value, callInfo)
 
 /**
- * Parses this string as a pattern and writes an orbit chain slot, by name or by the Katalyst param object.
+ * Parses this string as a pattern and writes a cylinder chain slot, by name or by the Katalyst param object.
  *
  * ```KlangScript(Playable)
  * "c3 e3 g3".katalystParam("reverb.size", 6).reverb(wet = 0.4).s("supersaw").note()
@@ -299,7 +299,7 @@ fun String.katalystParam(slot: KatalystSlotLike?, value: PatternLike, callInfo: 
 }
 
 /**
- * Creates a [PatternMapperFn] that writes an orbit chain slot, by name or by the Katalyst param object.
+ * Creates a [PatternMapperFn] that writes a cylinder chain slot, by name or by the Katalyst param object.
  *
  * ```KlangScript(Playable)
  * note("c3 e3").s("saw").reverb(wet = 0.4).apply(katalystParam("reverb.size", 8))
@@ -316,7 +316,7 @@ fun katalystParam(slot: KatalystSlotLike?, value: PatternLike, callInfo: CallInf
 }
 
 /**
- * Chains an orbit-chain-slot write onto this [PatternMapperFn].
+ * Chains a cylinder-chain-slot write onto this [PatternMapperFn].
  *
  * @param slot The chain slot (required): its name, or the Katalyst param itself.
  * @param value The slot value.
@@ -338,16 +338,16 @@ fun PatternMapperFn.katalystParam(slot: KatalystSlotLike?, value: PatternLike, c
  * @param slot The chain slot (required): its name, or the Katalyst param itself.
  * @param value The slot value.
  * @alias katalystParam
- * @scope orbit
+ * @scope cylinder
  * @category effects
- * @tags katp, katalyst, orbit, chain, bus, param, slot
+ * @tags katp, katalyst, cylinder, chain, bus, param, slot
  */
 @KlangScript.Function
 fun SprudelPattern.katp(slot: KatalystSlotLike?, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyKatalystParam(this, katpSlot(slot, callInfo), value, callInfo)
 
 /**
- * Alias for [katalystParam]. Parses this string as a pattern and writes an orbit chain slot.
+ * Alias for [katalystParam]. Parses this string as a pattern and writes a cylinder chain slot.
  *
  * ```KlangScript(Playable)
  * "c3 e3 g3".katp("reverb.size", 6).reverb(wet = 0.4).s("supersaw").note()
@@ -364,7 +364,7 @@ fun String.katp(slot: KatalystSlotLike?, value: PatternLike, callInfo: CallInfo?
 }
 
 /**
- * Alias for [katalystParam]. Creates a [PatternMapperFn] that writes an orbit chain slot.
+ * Alias for [katalystParam]. Creates a [PatternMapperFn] that writes a cylinder chain slot.
  *
  * ```KlangScript(Playable)
  * note("c3 e3").s("saw").reverb(wet = 0.4).apply(katp("reverb.size", 8))
@@ -381,7 +381,7 @@ fun katp(slot: KatalystSlotLike?, value: PatternLike, callInfo: CallInfo? = null
 }
 
 /**
- * Alias for [katalystParam]. Chains an orbit-chain-slot write onto this [PatternMapperFn].
+ * Alias for [katalystParam]. Chains a cylinder-chain-slot write onto this [PatternMapperFn].
  *
  * @param slot The chain slot (required): its name, or the Katalyst param itself.
  * @param value The slot value.

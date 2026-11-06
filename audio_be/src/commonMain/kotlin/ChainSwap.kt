@@ -55,7 +55,7 @@ import kotlin.math.max
  * as before. With no request waiting nothing changes: the drain rings out in full.
  *
  * **What the host keeps.** The chain in service (it is handed to every event as `chain`), the
- * cache, the rule for when a request installs at once instead of fading (the orbit is idle; at the
+ * cache, the rule for when a request installs at once instead of fading (the cylinder is idle; at the
  * output, the engine has never rendered), and the PARKED request: a key the host holds, latest
  * wins, offered again once [settled]. A parked request is not a state here (decision (e) of the
  * plan, the `KatalystFilterSwap` 5c-11 precedent): [begin] while a fade, a drain, a release or a cut
@@ -215,7 +215,7 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
             private set
 
         /**
-         * True while the arriving chain carries a duck and nothing ducked the orbit before the swap:
+         * True while the arriving chain carries a duck and nothing ducked the cylinder before the swap:
          * its effect is ramped in over the fade, the mirror of [duckingOut].
          */
         private var duckFadingIn: Boolean = false
@@ -267,7 +267,7 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
             if (fade.isComplete && fade.settledFrom(blockFrames) < blockFrames) {
                 // The ramp ran out on the PREVIOUS block and the duck pass that follows it has had
                 // its last turn, so the chain leaves the fade now, not in the middle of the block
-                // that finished the ramp. The duck data goes too: an orbit whose sidechain has
+                // that finished the ramp. The duck data goes too: a cylinder whose sidechain has
                 // meanwhile disappeared never ran the duck pass that normally drops it, and
                 // `Crossfade.blendHeld` would replay the last block's weights.
                 val cut = requestWaits
@@ -343,7 +343,7 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
 
             if (duckFadingIn) {
                 // The arriving chain's duck runs as it always does, and the UN-ducked mix is blended
-                // back in with the weights reversed, so the orbit's gain travels from "not ducked" to
+                // back in with the weights reversed, so the cylinder's gain travels from "not ducked" to
                 // "ducked" across the fade instead of dropping by the whole reduction on the first
                 // sample the trigger is seen.
                 mix.left.copyRangeInto(destination = duckMix.left, destinationOffset = 0, startIndex = 0, endIndex = blockFrames)
@@ -366,12 +366,12 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
                 return
             }
 
-            // The arriving chain declares no duck, so the orbit's gain has to travel from "ducked"
+            // The arriving chain declares no duck, so the cylinder's gain has to travel from "ducked"
             // to "not ducked" across the fade, per sample like every other weight in the swap: the
             // leaving duck runs on the mix as it always does, and the UN-DUCKED mix is blended back
             // in with the weights this block's chains were blended with. NOT by ramping the duck's
             // depth: that knob can only be written per block, and a per-block step in a gain that
-            // multiplies the whole orbit is a zipper (measured at 0.038 on a 0.5 probe, depth 0.8).
+            // multiplies the whole cylinder is a zipper (measured at 0.038 on a 0.5 probe, depth 0.8).
             mix.left.copyRangeInto(destination = duckMix.left, destinationOffset = 0, startIndex = 0, endIndex = blockFrames)
             mix.right.copyRangeInto(destination = duckMix.right, destinationOffset = 0, startIndex = 0, endIndex = blockFrames)
             leavingDuck.process(ctx)
@@ -380,9 +380,9 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
             if (fade.isComplete) {
                 // This block's last sample was fully un-ducked, so the duck is inaudible now and this
                 // is the ordinary place it goes. The fade's exit edge (next block, before this pass)
-                // drops it too, as the backstop for an orbit whose duck pass stopped running; for
+                // drops it too, as the backstop for a cylinder whose duck pass stopped running; for
                 // the audio the two are equivalent, because the host reads [duckingOut] only after
-                // every orbit has processed, and a late takeover needs the ramp's first block.
+                // every cylinder has processed, and a late takeover needs the ramp's first block.
                 duckingOut = null
             }
         }
@@ -391,7 +391,7 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
          * A ducking owner whose FIRST claim lands in the swap's own block: the swap was decided
          * before that voice offered itself, so the host saw no owner and chose the ramp-out path.
          * Only while the ramp has not moved ([Crossfade.isAtStart]); later, handing the envelope
-         * over would jump the orbit's gain back from where the ramp has taken it.
+         * over would jump the cylinder's gain back from where the ramp has taken it.
          */
         override fun ownerClaimed(chain: KatalystChain) {
             val lateDuck = duckingOut
@@ -486,7 +486,7 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
             // The tail is asked FIRST: a drain that ends on its own in the block that reaches the
             // cap is an ordinary drain, not released. Two answers end it: the stages hold no tail,
             // AND what the chain put out in this block is under the engine's silence floor, the
-            // orbit's own deactivation test (`Cylinder.tryDeactivate`). The stages answer for what
+            // cylinder's own deactivation test (`Cylinder.tryDeactivate`). The stages answer for what
             // they hold, not for what follows them: a gain, a compressor's makeup or a distort after
             // the reverb raises the step the retire leaves one for one (measured before this gate:
             // size 3 then +30 dB retired at -69 dBFS). The cap still bounds a chain that never gets
@@ -800,7 +800,7 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
         state.process(chain, ctx)
     }
 
-    /** The duck pass, after every orbit has processed; the host sets the sidechain around it. */
+    /** The duck pass, after every cylinder has processed; the host sets the sidechain around it. */
     fun processDuck(chain: KatalystChain, ctx: KatalystContext) {
         state.processDuck(chain, ctx)
     }

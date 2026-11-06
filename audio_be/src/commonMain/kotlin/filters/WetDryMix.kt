@@ -29,7 +29,7 @@ import kotlin.math.sin
  * is the +3 dB midpoint bump this helper exists to remove.
  *
  * `floor` is the minimum dry coefficient (what each effect IS: crossfades use 0, the body's
- * physical floor is 0.4, the vowel's 0.2, the orbit phaser is additive with floor 1). Above
+ * physical floor is 0.4, the vowel's 0.2, the cylinder phaser is additive with floor 1). Above
  * `w* = (2/pi) * acos(floor^(1/p))` the dry is PINNED at the floor and total power rises
  * with `w` by construction — that is what a floor is for; the law and the floor are mutually
  * exclusive in that region, not composed.

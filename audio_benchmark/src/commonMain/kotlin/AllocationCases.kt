@@ -60,7 +60,7 @@ import kotlin.random.Random
  * Every case renders at 48 kHz in 128-frame blocks at middle C (261.63 Hz, not an integer, so a frequency read that
  * boxes shows). A "voice" case is one voice through [VoiceFactory], offered to its cylinder and committed each
  * block. An "engine" case runs [PlaybackEngineDispatcher], so the house stage (DC blockers, the house limiter, the
- * clip) runs too. An engine case with a [Case.chain] runs an authored Katalyst on its orbit, registered and referenced
+ * clip) runs too. An engine case with a [Case.chain] runs an authored Katalyst on its cylinder, registered and referenced
  * as a song's is (KLANG-00301 (katalyst stage measurements)).
  *
  * The list is fixed and learnable: no random cases. A change to it starts a new scoreboard table.
@@ -85,8 +85,8 @@ object AllocationCases {
     /** The name an authored case's Katalyst chain is registered under. */
     private const val CHAIN: String = "zzallocbus"
 
-    /** The orbit of the trigger voice a [Case.duckTrigger] case adds, which its duck listens to. */
-    private const val TRIGGER_ORBIT: Int = 1
+    /** The cylinder of the trigger voice a [Case.duckTrigger] case adds, which its duck listens to. */
+    private const val TRIGGER_CYLINDER: Int = 1
 
     private const val PLAYBACK_ID: String = "alloc"
 
@@ -94,14 +94,14 @@ object AllocationCases {
      * One case.
      *
      * [sound] is a built-in sound, or [AUTHORED] when [dsl] is set. [params] are the `classic()` slots, [katp] the
-     * orbit's (`delay.wet`, ...): the slots of the classic chain an engine case's orbit runs, or of [chain] when it is
+     * cylinder's (`delay.wet`, ...): the slots of the classic chain an engine case's cylinder runs, or of [chain] when it is
      * set. An engine case with a [chain] registers it ([KlangCommLink.Cmd.RegisterKatalyst]) and its notes reference
      * it by name ([VoiceData.katalyst]). The note's gate is [gateSec] seconds. An engine case with
      * [newNoteEveryBlocks] above 0 starts a new note that often instead of one note at the start, and with [katpNext]
-     * set its notes alternate between [katp] and [katpNext], so the orbit's owner moves the chain's slots at every
-     * note. A [duckTrigger] case adds a sustained saw on orbit [TRIGGER_ORBIT], with the classic chain, for the case's
+     * set its notes alternate between [katp] and [katpNext], so the cylinder's owner moves the chain's slots at every
+     * note. A [duckTrigger] case adds a sustained saw on cylinder [TRIGGER_CYLINDER], with the classic chain, for the case's
      * duck to listen to. A voice case with [ownersTakingTurns] runs two such voices, received as the engine
-     * receives them ([receivedByEngine]), taking turns as their orbit's owner block by block. A [sprudel] case runs
+     * receives them ([receivedByEngine]), taking turns as their cylinder's owner block by block. A [sprudel] case runs
      * sprudel's per-event path instead of the engine ([SprudelRig]); it renders no sound, so [makesSound] is false
      * and the driver's silence check asks its rig for [Rig.outputs] instead of [Rig.peak].
      */
@@ -146,12 +146,12 @@ object AllocationCases {
     )
 
     /**
-     * The orbit delay of the stage cases: a tap of 0.2501 s, 12,004.8 samples, so the tap's fraction is not a whole
+     * The cylinder delay of the stage cases: a tap of 0.2501 s, 12,004.8 samples, so the tap's fraction is not a whole
      * number (a fraction of 0 travels as a small integer on V8 and boxes nothing), and a feedback of 0.45.
      */
     private val delay = mapOf("delay.wet" to 0.3, "delay.time" to 0.2501, "delay.feedback" to 0.45)
 
-    /** The three orbit stages of `E-stages`: [delay], the reverb, the phaser with a floor below 1. */
+    /** The three cylinder stages of `E-stages`: [delay], the reverb, the phaser with a floor below 1. */
     private val stages = delay + mapOf(
         "reverb.wet" to 0.3, "reverb.size" to 6.3,
         "phaser.wet" to 0.5, "phaser.rate" to 0.5, "phaser.sweep" to 800.0, "phaser.floor" to 0.5,
@@ -213,7 +213,7 @@ object AllocationCases {
     )
 
     /**
-     * The notes of `E-arith-glide`: one every 32 blocks, held for 30 of them, so every note owns the orbit for its gate
+     * The notes of `E-arith-glide`: one every 32 blocks, held for 30 of them, so every note owns the cylinder for its gate
      * and the glide (19 blocks at 48 kHz, `KnobGlide`) runs in 19 blocks of every 32.
      */
     private const val GLIDE_NOTE_BLOCKS: Int = 32
@@ -225,7 +225,7 @@ object AllocationCases {
     // Every chain below moves at least one knob every block through the chain's hook (`KatalystChain.process`: each
     // modulated writer ticks its knobs, refills its holder and configures its stage). The rates and the ranges are not
     // integers (an integral double travels as a small integer on V8 and boxes nothing), and every range keeps the
-    // orbit sounding. The `*Constant` twins hold each modulated knob at a fixed number in its range, for the timing
+    // cylinder sounding. The `*Constant` twins hold each modulated knob at a fixed number in its range, for the timing
     // rows' comparison (`EffectBenchmark`).
 
     /** (a) One sine on the group fader: the plainest modulated knob, one modulator and one `range` per block. */
@@ -269,7 +269,7 @@ object AllocationCases {
     /**
      * The compressor with all five knobs moving and the duck's depth and attack moving (the settings holders, step 2:
      * each writer refills one `CompressorSettings` or `DuckSettings` per block and hands it to its stage; the attack
-     * reaches `Ducking.attackSeconds` every block). The duck listens to the trigger orbit, and its depth stays above 0.
+     * reaches `Ducking.attackSeconds` every block). The duck listens to the trigger cylinder, and its depth stays above 0.
      */
     internal val dynamicsChain: KatalystDsl = katalyst {
         it.compressor(
@@ -279,7 +279,7 @@ object AllocationCases {
             attack = Kat.sine(0.61.kat).range(from = 0.0021.kat, to = 0.0093.kat),
             release = Kat.ramp(0.29.kat).range(from = 0.051.kat, to = 0.187.kat),
         ).duck(
-            cylinder = TRIGGER_ORBIT.kat,
+            cylinder = TRIGGER_CYLINDER.kat,
             depth = Kat.sine(0.45.kat).range(from = 0.25.kat, to = 0.75.kat),
             attack = Kat.tri(0.33.kat).range(from = 0.011.kat, to = 0.047.kat),
         )
@@ -307,7 +307,7 @@ object AllocationCases {
     }
 
     /**
-     * A slot EXPRESSION on the fader of a chain whose orbit sees a new param map every block ([TurnsRig]): the
+     * A slot EXPRESSION on the fader of a chain whose cylinder sees a new param map every block ([TurnsRig]): the
      * expression is evaluated on every resolve, the most a slot expression ever costs (a song's map changes per note).
      */
     internal val remapExpressionChain: KatalystDsl = katalyst {
@@ -315,10 +315,10 @@ object AllocationCases {
     }
 
     /**
-     * The mixed orbit profile: every stage family a song's orbit runs but `eq`, `distort` and the arithmetic, one knob
+     * The mixed cylinder profile: every stage family a song's cylinder runs but `eq`, `distort` and the arithmetic, one knob
      * each moving, spread over the seven kinds (the phaser's center among them, its `applied` short-circuit defeated
      * every block), and a slot expression on the phaser's sweep (`kat.sweep`, resolved once). The duck listens to the
-     * trigger orbit.
+     * trigger cylinder.
      */
     internal val mixedChain: KatalystDsl = mixed(
         bodyWet = Kat.sine(0.85.kat).range(from = 0.2.kat, to = 0.7.kat),
@@ -360,7 +360,7 @@ object AllocationCases {
             .phaser(wet = 0.5.kat, rate = 0.55.kat, center = phaserCenter, sweep = Kat.param("kat.sweep", 600.0).times(1.3.kat))
             .compressor(threshold = threshold, ratio = 3.5.kat)
             .gain(gain)
-            .duck(cylinder = TRIGGER_ORBIT.kat, depth = duckDepth)
+            .duck(cylinder = TRIGGER_CYLINDER.kat, depth = duckDepth)
     }
 
     /** The cases, in scoreboard order. */
@@ -402,7 +402,7 @@ object AllocationCases {
             dsl = saw().oversampleAtLeast(4.ign) { it.distort(amount = 0.5.ign, shape = "tube") },
         ),
         Case(name = "C-full", engine = false, sound = "saw", params = full),
-        // A new owner, and so a new param map instance, on the orbit every block: the chain re-resolves its 27 slot
+        // A new owner, and so a new param map instance, on the cylinder every block: the chain re-resolves its 27 slot
         // knobs each block, a map lookup per knob (engine follow-up 2, the decoder's map type).
         Case(name = "C-remap", engine = false, sound = "saw", katp = delay, ownersTakingTurns = true),
         // The same turns with an authored chain whose fader is a slot expression: one evaluation per new map, every
@@ -452,12 +452,12 @@ object AllocationCases {
             },
         ),
         Case(name = "E-gain", engine = true, sound = "saw", chain = katalyst { it.gain(0.7.kat) }),
-        // The duck listens to a second saw on its own orbit; its envelope follows that orbit's mix every block.
+        // The duck listens to a second saw on its own cylinder; its envelope follows that cylinder's mix every block.
         Case(
             name = "E-duck",
             engine = true,
             sound = "saw",
-            chain = katalyst { it.duck(cylinder = TRIGGER_ORBIT.kat, depth = 0.6.kat) },
+            chain = katalyst { it.duck(cylinder = TRIGGER_CYLINDER.kat, depth = 0.6.kat) },
             duckTrigger = true,
         ),
         // Parallel distortion: a distorted branch in a 2x region beside an empty one, which gets the region's phase twin.
@@ -688,11 +688,11 @@ object AllocationCases {
     }
 
     /**
-     * Two voices of [case] taking turns as their orbit's owner, only the owner rendering each block: a voice offers
-     * itself inside its render, and of two rendering voices the later one would own the orbit every block. Each voice
-     * carries its own copy of the case's orbit slots, received as the engine receives them ([receivedByEngine]), so the
-     * orbit sees a new map instance every block and its chain re-resolves every slot knob. With a [Case.chain] the
-     * orbit runs it: the rig's cylinders resolve its name in a registry of their own, requested once.
+     * Two voices of [case] taking turns as their cylinder's owner, only the owner rendering each block: a voice offers
+     * itself inside its render, and of two rendering voices the later one would own the cylinder every block. Each voice
+     * carries its own copy of the case's cylinder slots, received as the engine receives them ([receivedByEngine]), so the
+     * cylinder sees a new map instance every block and its chain re-resolves every slot knob. With a [Case.chain] the
+     * cylinder runs it: the rig's cylinders resolve its name in a registry of their own, requested once.
      */
     private class TurnsRig(case: Case) : Rig() {
         private val registry = IgnitorRegistry().apply { registerDefaults() }
@@ -743,7 +743,7 @@ object AllocationCases {
 
         init {
             if (case.chain != null) {
-                ctx.cylinders.requestChain(orbit = 0, name = CHAIN)
+                ctx.cylinders.requestChain(cylinder = 0, name = CHAIN)
             }
         }
 
@@ -840,7 +840,7 @@ object AllocationCases {
             }
 
             if (case.duckTrigger) {
-                val trigger = VoiceData.empty.copy(freqHz = FREQ_HZ, sound = "saw", cylinder = TRIGGER_ORBIT)
+                val trigger = VoiceData.empty.copy(freqHz = FREQ_HZ, sound = "saw", cylinder = TRIGGER_CYLINDER)
 
                 schedule(data = trigger, startSec = 0.0, gateSec = SUSTAIN_SEC)
             }

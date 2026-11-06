@@ -569,11 +569,11 @@ class VoiceScheduler(
             // would be wrong, but late *state* must still take effect — otherwise a worklet stall
             // silently loses a section's master for the rest of the playback.
             head.data.master?.let { masterBus.requestSwap(it) }
-            // The orbit twin (Katalyst step 3a): a `katalyst(…)` reference selects the chain the
-            // event's ORBIT runs from here on. Same rule as the master's above, one line down
-            // because it is the same kind of engine-level state, and the default orbit is the one
+            // The cylinder twin (Katalyst step 3a): a `katalyst(…)` reference selects the chain the
+            // event's CYLINDER runs from here on. Same rule as the master's above, one line down
+            // because it is the same kind of engine-level state, and the default cylinder is the one
             // `VoiceFactory` resolves for a voice that names none.
-            head.data.katalyst?.let { cylinders.requestChain(orbit = head.data.cylinder ?: 0, name = it) }
+            head.data.katalyst?.let { cylinders.requestChain(cylinder = head.data.cylinder ?: 0, name = it) }
             // Solo state, the same kind of engine state and the same rule: "this source is soloed at this amount
             // until this event ends", from a control event (what `solo(...)` puts over a rest) or a sounding note.
             recordSolo(head.data, startSec = absoluteStartSec, untilSec = epoch + head.gateEndTime)

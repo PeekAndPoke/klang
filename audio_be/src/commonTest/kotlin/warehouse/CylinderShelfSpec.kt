@@ -41,9 +41,9 @@ import kotlin.math.abs
  * Cylinders join the warehouse (maintainer, 2026-09-04, after the Fairphone measurement: the first
  * frame of Der Schmetterling built eight cylinders and four reverb networks at once and killed the
  * playback). A cylinder is built by the warmup, retired and shelved when its engine is disposed,
- * and taken from the shelf by the next engine's first voice on an orbit. `CylinderUnits`.
+ * and taken from the shelf by the next engine's first voice on a cylinder. `CylinderUnits`.
  *
- * And the warmup is BUCKETED: sixteen orbits, one per block, so no single render frame builds more
+ * And the warmup is BUCKETED: sixteen cylinders, one per block, so no single render frame builds more
  * than one cylinder — the stall that would otherwise merely move from the first song's first frame
  * into the warmup's.
  */
@@ -82,7 +82,7 @@ class CylinderShelfSpec : StringSpec({
         playbackId = pid, startTime = start, gateEndTime = start + 0.05,
         data = VoiceData.empty.copy(
             sound = sound, freqHz = 330.0, cylinder = cylinder,
-            // The orbit's stages read the SLOT state (Katalyst step 5b-1), the amounts included
+            // The cylinder's stages read the SLOT state (Katalyst step 5b-1), the amounts included
             // since step 5b-2.
             katalystParams = klangMapOf(
                 "delay.wet" to 0.5, "delay.time" to 0.3, "delay.feedback" to 0.3, "delay.cap" to 1.0,
@@ -130,13 +130,13 @@ class CylinderShelfSpec : StringSpec({
 
     "a song on returned cylinders is BIT-IDENTICAL to the same song on fresh ones — no state crosses playbacks" {
         // The strongest form of "retired": playback A is loud and wet with different settings on
-        // every orbit; playback B then runs on A's cylinders and must equal B on a fresh backend.
+        // every cylinder; playback B then runs on A's cylinders and must equal B on a fresh backend.
         fun songB(f: Fixture): DoubleArray {
             // Scheduled half a block after "now" on each backend, so both runs see the same onset
             // alignment whatever the clock reads (the reused backend has already rendered song A).
             val start = f.dispatcher.clockForTest.secAt(f.dispatcher.clockForTest.cursorFrame) + 0.5 * blockFrames / sampleRate
-            val voices = (0 until 4).map { orbit ->
-                wetVoice("b", cylinder = orbit, sound = listOf("saw", "square", "sine", "triangle")[orbit], start = start)
+            val voices = (0 until 4).map { cylinder ->
+                wetVoice("b", cylinder = cylinder, sound = listOf("saw", "square", "sine", "triangle")[cylinder], start = start)
             }
             f.dispatcher.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "b", voices = voices))
             val samples = DoubleArray(blockFrames * 2 * 60)
@@ -154,13 +154,13 @@ class CylinderShelfSpec : StringSpec({
         val reference = songB(fresh)
 
         val reused = fixture()
-        val loud = (0 until 4).map { orbit ->
+        val loud = (0 until 4).map { cylinder ->
             ScheduledVoice(
                 playbackId = "a", startTime = 0.0, gateEndTime = 0.2,
                 data = VoiceData.empty.copy(
-                    sound = "supersaw", freqHz = 110.0 + 50.0 * orbit, cylinder = orbit, gain = 2.0,
+                    sound = "supersaw", freqHz = 110.0 + 50.0 * cylinder, cylinder = cylinder, gain = 2.0,
                     katalystParams = klangMapOf(
-                        "delay.wet" to 0.9, "delay.time" to 0.05 + 0.1 * orbit,
+                        "delay.wet" to 0.9, "delay.time" to 0.05 + 0.1 * cylinder,
                         "delay.feedback" to 0.8, "delay.cap" to 1.0,
                         "reverb.wet" to 0.9, "reverb.size" to 0.95,
                         "phaser.rate" to 0.9, "phaser.wet" to 0.9,
@@ -220,7 +220,7 @@ class CylinderShelfSpec : StringSpec({
         units.hits shouldBe 2
     }
 
-    // ── The warmup stocks the shelves, one orbit per block ──────────────────────────────────────
+    // ── The warmup stocks the shelves, one cylinder per block ──────────────────────────────────────
 
     "after warmup the shelves hold 16 cylinders, 16 rings and 16 networks, and the first song builds nothing" {
         val f = fixture()
@@ -243,21 +243,21 @@ class CylinderShelfSpec : StringSpec({
         val feedback = generateSequence { f.commLink.frontend.feedback.receive() }.toList()
         feedback.last().shouldBeInstanceOf<KlangCommLink.Feedback.BackendReady>()
         f.dispatcher.engine(WarmupRunner.WARMUP_PLAYBACK_ID).shouldBeNull()
-        f.warehouse.cylinders.idleCount shouldBe WarmupRunner.WARMUP_ORBITS
-        f.warehouse.sized.shelfCount shouldBe WarmupRunner.WARMUP_ORBITS
-        f.warehouse.reverbs.idleCount shouldBe WarmupRunner.WARMUP_ORBITS
+        f.warehouse.cylinders.idleCount shouldBe WarmupRunner.WARMUP_CYLINDERS
+        f.warehouse.sized.shelfCount shouldBe WarmupRunner.WARMUP_CYLINDERS
+        f.warehouse.reverbs.idleCount shouldBe WarmupRunner.WARMUP_CYLINDERS
         f.warehouse.isClean shouldBe true
         (f.warehouse.sized.housekeptFrames > 0.0) shouldBe true // zeroed by housekeeping, not at return
-        f.warehouse.reverbs.housekeptUnits shouldBe WarmupRunner.WARMUP_ORBITS
+        f.warehouse.reverbs.housekeptUnits shouldBe WarmupRunner.WARMUP_CYLINDERS
         // The whole warmup took longer than the voices alone: the teardown is bucketed too.
-        (builtPerBlock.size > WarmupRunner.WARMUP_ORBITS + WarmupRunner.TAIL_BLOCKS) shouldBe true
+        (builtPerBlock.size > WarmupRunner.WARMUP_CYLINDERS + WarmupRunner.TAIL_BLOCKS) shouldBe true
         // Bucketed: never more than one cylinder built in one render frame.
         (builtPerBlock.max() <= 1) shouldBe true
-        builtPerBlock.sum() shouldBe WarmupRunner.WARMUP_ORBITS
+        builtPerBlock.sum() shouldBe WarmupRunner.WARMUP_CYLINDERS
 
-        // The first real song: eight wet orbits, every sound the warmup rotated through.
+        // The first real song: eight wet cylinders, every sound the warmup rotated through.
         val allocationsAfterWarmup = Triple(f.warehouse.cylinders.allocations, f.warehouse.sized.allocations, f.warehouse.reverbs.allocations)
-        val song = (0 until 8).map { orbit -> wetVoice("song", cylinder = orbit, sound = WarmupRunner.WARMUP_SOUNDS[orbit % 5]) }
+        val song = (0 until 8).map { cylinder -> wetVoice("song", cylinder = cylinder, sound = WarmupRunner.WARMUP_SOUNDS[cylinder % 5]) }
         f.dispatcher.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = song))
         f.render(8) shouldBeGreaterThan 0.0
 
@@ -291,7 +291,7 @@ class CylinderShelfSpec : StringSpec({
 
         dirtyWhenReady shouldBe false
         // And it was NOT ready on the disposal tick itself: sixteen dirty rings need sixteen slices.
-        (readyAt > WarmupRunner.WARMUP_ORBITS + WarmupRunner.TAIL_BLOCKS + 8) shouldBe true
+        (readyAt > WarmupRunner.WARMUP_CYLINDERS + WarmupRunner.TAIL_BLOCKS + 8) shouldBe true
     }
 
     "the clean-shelf wait is BOUNDED — a warehouse that never gets clean still becomes ready" {
@@ -312,35 +312,35 @@ class CylinderShelfSpec : StringSpec({
             warmup.tick()
         }
 
-        block shouldBe WarmupRunner.WARMUP_ORBITS + WarmupRunner.TAIL_BLOCKS + 2
+        block shouldBe WarmupRunner.WARMUP_CYLINDERS + WarmupRunner.TAIL_BLOCKS + 2
         warmup.readyWhileDirty shouldBe true
         f.warehouse.isClean shouldBe false
         generateSequence { f.commLink.frontend.feedback.receive() }.toList().last().shouldBeInstanceOf<KlangCommLink.Feedback.BackendReady>()
     }
 
-    "the warmup plays every vocabulary graph at least once — sixteen orbits cover the twelve sounds" {
+    "the warmup plays every vocabulary graph at least once: sixteen cylinders cover the twelve sounds" {
         // The vocabulary is what makes a song's custom instrument warm (WarmupVocabularySpec proves
         // it covers every node kind); this row pins that the warmup actually schedules each of
         // them, and that no warmup voice is dropped for an unregistered sound.
         WarmupVocabulary.sounds.map { it.first }.forEach { name -> (name in WarmupRunner.WARMUP_SOUNDS) shouldBe true }
-        (WarmupRunner.WARMUP_ORBITS >= WarmupRunner.WARMUP_SOUNDS.size) shouldBe true
+        (WarmupRunner.WARMUP_CYLINDERS >= WarmupRunner.WARMUP_SOUNDS.size) shouldBe true
 
         val f = fixture()
         val warmup = WarmupRunner(sampleRate = sampleRate, dispatcher = f.dispatcher, feedback = f.commLink.backend)
         warmup.start()
-        repeat(WarmupRunner.WARMUP_ORBITS + WarmupRunner.TAIL_BLOCKS - 1) { f.render(1); warmup.tick() }
+        repeat(WarmupRunner.WARMUP_CYLINDERS + WarmupRunner.TAIL_BLOCKS - 1) { f.render(1); warmup.tick() }
 
         val engine = f.dispatcher.engine(WarmupRunner.WARMUP_PLAYBACK_ID).shouldNotBeNull()
         engine.scheduler.droppedVoiceCount() shouldBe 0
         WarmupVocabulary.sounds.forEach { (name, _) -> engine.scheduler.containsIgnitor(name) shouldBe true }
-        engine.scheduler.getActiveVoiceCount() shouldBe WarmupRunner.WARMUP_ORBITS
+        engine.scheduler.getActiveVoiceCount() shouldBe WarmupRunner.WARMUP_CYLINDERS
     }
 
     "the warmup reaches the phaser, compressor, body and vowel constructors too" {
         val f = fixture()
         val warmup = WarmupRunner(sampleRate = sampleRate, dispatcher = f.dispatcher, feedback = f.commLink.backend)
         warmup.start()
-        repeat(WarmupRunner.WARMUP_ORBITS + WarmupRunner.TAIL_BLOCKS - 1) { f.render(1); warmup.tick() }
+        repeat(WarmupRunner.WARMUP_CYLINDERS + WarmupRunner.TAIL_BLOCKS - 1) { f.render(1); warmup.tick() }
 
         val cylinders = f.dispatcher.engine(WarmupRunner.WARMUP_PLAYBACK_ID).shouldNotBeNull().cylinders.cylinders.sortedBy { it.id }
         cylinders[0].phaser!!.phaser.depth shouldBeGreaterThan 0.0
@@ -349,18 +349,18 @@ class CylinderShelfSpec : StringSpec({
         cylinders[3].vowel!!.isEngaged shouldBe true
     }
 
-    "every warmup voice actually sounds through its orbit — the warmed paths are the real ones" {
+    "every warmup voice actually sounds through its cylinder: the warmed paths are the real ones" {
         // A warmup voice that is dropped (late admission, unknown sound) warms nothing and rents
-        // nothing; the shelf counts above would still pass if only SOME orbits rendered. Each
-        // orbit's cylinder must have been active with a ring AND a network while warming.
+        // nothing; the shelf counts above would still pass if only SOME cylinders rendered. Each
+        // cylinder's instance must have been active with a ring AND a network while warming.
         val f = fixture()
         val warmup = WarmupRunner(sampleRate = sampleRate, dispatcher = f.dispatcher, feedback = f.commLink.backend)
         warmup.start()
-        // One block short of the disposal tick: every orbit has rented, the engine is still alive.
-        repeat(WarmupRunner.WARMUP_ORBITS + WarmupRunner.TAIL_BLOCKS - 1) { f.render(1); warmup.tick() }
+        // One block short of the disposal tick: every cylinder has rented, the engine is still alive.
+        repeat(WarmupRunner.WARMUP_CYLINDERS + WarmupRunner.TAIL_BLOCKS - 1) { f.render(1); warmup.tick() }
 
         val engine = f.dispatcher.engine(WarmupRunner.WARMUP_PLAYBACK_ID).shouldNotBeNull()
-        engine.cylinders.cylinders.size shouldBe WarmupRunner.WARMUP_ORBITS
+        engine.cylinders.cylinders.size shouldBe WarmupRunner.WARMUP_CYLINDERS
         engine.cylinders.cylinders.forEach { c ->
             c.isActive shouldBe true
             c.delay!!.delayLine.shouldNotBeNull()

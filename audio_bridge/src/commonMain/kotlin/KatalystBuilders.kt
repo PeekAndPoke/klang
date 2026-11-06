@@ -107,7 +107,7 @@ data class KatalystBuilder(val node: KatalystDsl = KatalystDsl(emptyList())) {
         configure: ((KatalystVowelBuilder) -> KatalystVowelBuilder)? = null,
     ): KatalystBuilder = vowel(wet = wet, vowel = VowelBands.indexOf(vowel).kat, configure = configure)
 
-    /** Appends an orbit delay (script knob `delay`). */
+    /** Appends a cylinder delay (script knob `delay`). */
     fun delay(
         wet: KatalystKnobDsl = DELAY_WET.kat,
         time: KatalystKnobDsl = DELAY_TIME_SECONDS.kat,
@@ -118,7 +118,7 @@ data class KatalystBuilder(val node: KatalystDsl = KatalystDsl(emptyList())) {
     )
 
     /**
-     * Appends an orbit reverb (script knob `reverb`). [lowpass] `null` is the bare stage's own value, the engine's
+     * Appends a cylinder reverb (script knob `reverb`). [lowpass] `null` is the bare stage's own value, the engine's
      * fixed damping (no wire constant, see [KatalystStageDsl.Reverb]).
      */
     fun reverb(
@@ -127,7 +127,7 @@ data class KatalystBuilder(val node: KatalystDsl = KatalystDsl(emptyList())) {
         lowpass: KatalystKnobDsl? = null,
     ): KatalystBuilder = append(KatalystStageDsl.Reverb(wet = wet, size = size, lowpass = lowpass))
 
-    /** Appends an orbit phaser; a bare one is silent (wet 0) (script knob `phaser`). */
+    /** Appends a cylinder phaser; a bare one is silent (wet 0) (script knob `phaser`). */
     fun phaser(
         wet: KatalystKnobDsl = PHASER_WET.kat,
         rate: KatalystKnobDsl = PHASER_RATE_HZ.kat,
@@ -140,7 +140,7 @@ data class KatalystBuilder(val node: KatalystDsl = KatalystDsl(emptyList())) {
         ).configured(configure).node,
     )
 
-    /** Appends the orbit compressor; [lookahead] is a plain number fixed with the chain (script knob `compressor`). */
+    /** Appends the cylinder compressor; [lookahead] is a plain number fixed with the chain (script knob `compressor`). */
     fun compressor(
         threshold: KatalystKnobDsl = COMPRESSOR_THRESHOLD_DB.kat,
         ratio: KatalystKnobDsl = COMPRESSOR_RATIO.kat,
@@ -327,7 +327,7 @@ data class KatalystBuilder(val node: KatalystDsl = KatalystDsl(emptyList())) {
     /**
      * Runs [body]'s stages in an oversampling REGION at [factor] times the base rate AT LEAST: only the missing 2x
      * steps are taken, and at or above the floor nothing is converted ([KatalystStageDsl.OversampleAtLeast]; script
-     * knob `oversampleAtLeast`). At the head of a chain it sets the orbit's rate. [factor] and [body] as in
+     * knob `oversampleAtLeast`). At the head of a chain it sets the cylinder's rate. [factor] and [body] as in
      * [oversampleBy], the twin.
      */
     fun oversampleAtLeast(factor: Int, body: (KatalystBuilder) -> KatalystBuilder): KatalystBuilder =

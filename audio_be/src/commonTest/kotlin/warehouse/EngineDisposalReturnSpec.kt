@@ -65,14 +65,14 @@ class EngineDisposalReturnSpec : StringSpec({
         return Fixture(dispatcher, warehouse, StereoBuffer(blockFrames))
     }
 
-    /** A short sine on orbit [cylinder] with a delay and a reverb — both units get rented. */
+    /** A short sine on cylinder [cylinder] with a delay and a reverb, both units get rented. */
     fun wetVoice(pid: String, cylinder: Int = 0) = ScheduledVoice(
         playbackId = pid,
         startTime = 0.0,
         gateEndTime = 0.05,
         data = VoiceData.empty.copy(
             sound = "sine", freqHz = 440.0, cylinder = cylinder,
-            // The orbit's stages read the SLOT state (Katalyst step 5b-1), the amounts included since
+            // The cylinder's stages read the SLOT state (Katalyst step 5b-1), the amounts included since
             // step 5b-2. What a `delay(...)` / `reverb(...)` call writes.
             katalystParams = klangMapOf(
                 "delay.wet" to 0.5, "delay.time" to 0.3, "delay.feedback" to 0.0, "delay.cap" to 1.0,
@@ -178,14 +178,14 @@ class EngineDisposalReturnSpec : StringSpec({
             KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = listOf(carrier, wetVoice("song", cylinder = 3)))
         )
         f.render(4)
-        // The request built the master chain: its ring and its network, beside the orbit's.
+        // The request built the master chain: its ring and its network, beside the cylinder's.
         f.warehouse.sized.allocations shouldBe 2
         f.warehouse.reverbs.allocations shouldBe 2
         f.dispatcher.handle(KlangCommLink.Cmd.Cleanup(playbackId = "song"))
         f.render(2000)
 
         f.dispatcher.engine("song").shouldBeNull()
-        // Two rings (master + orbit), two networks (master + orbit) — all back.
+        // Two rings (master + cylinder), two networks (master + cylinder), all back.
         f.warehouse.sized.shelfCount shouldBe 2
         f.warehouse.reverbs.idleCount shouldBe 2
         f.warehouse.sized.doubleReturns shouldBe 0

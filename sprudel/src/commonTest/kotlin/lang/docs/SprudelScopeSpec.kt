@@ -23,8 +23,8 @@ import io.peekandpoke.klang.script.generated.generatedSprudelDocs
  * the popup and the library page actually render.
  *
  * The expectations come from the engine, not from a doc: a voice runs its own strip (`Voice.kt`),
- * each orbit owns ONE shared bus whose settings are owned by the newest `Sounding` voice (`Cylinder.kt`), and `reverb`
- * and `delay` are the pair whose processor is the orbit's while the wet amount is per voice
+ * each cylinder owns ONE shared bus whose settings are owned by the newest `Sounding` voice (`Cylinder.kt`), and `reverb`
+ * and `delay` are the pair whose processor is the cylinder's while the wet amount is per voice
  * (`voice_channel.kt`).
  */
 class SprudelScopeSpec : StringSpec({
@@ -52,15 +52,15 @@ class SprudelScopeSpec : StringSpec({
         // Per voice, and the one people misfile: it sits in the same file as the bus phaser
         "tremolo" to KlangScope.VOICE,
 
-        // One processor per orbit, settings from the orbit's owning voice
-        "body" to KlangScope.ORBIT,
-        "vowel" to KlangScope.ORBIT,
-        "phaser" to KlangScope.ORBIT,
-        "compressor" to KlangScope.ORBIT,
-        "duck" to KlangScope.ORBIT,
-        // Fed from the orbit mix by one amount per orbit since Katalyst step 5b-2: no per-voice send
-        "reverb" to KlangScope.ORBIT,
-        "delay" to KlangScope.ORBIT,
+        // One processor per cylinder, settings from the cylinder's owning voice
+        "body" to KlangScope.CYLINDER,
+        "vowel" to KlangScope.CYLINDER,
+        "phaser" to KlangScope.CYLINDER,
+        "compressor" to KlangScope.CYLINDER,
+        "duck" to KlangScope.CYLINDER,
+        // Fed from the cylinder mix by one amount per cylinder since Katalyst step 5b-2: no per-voice send
+        "reverb" to KlangScope.CYLINDER,
+        "delay" to KlangScope.CYLINDER,
 
         // The whole playback
         "master" to KlangScope.MASTER,

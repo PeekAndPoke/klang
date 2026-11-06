@@ -14,7 +14,7 @@
 >   2026-09-24, phase 3 step 3d, KLANG-00237 (builtin instruments) section 3b). Filters:
 >   `.lowpass(800, 1.2, x => x.passes(2).env(24).adsr(0.01, 0.3, 0.2, 0.5))`; pitch sweeps:
 >   `.pitchEnvelope(24, x => x.adsr(0.001, 0.04, 0, 0))`.
-> - Master: `master(Katalyst(k => k.reverb(0.05).gain(2.5).limiter()))`, the same Katalyst chain an orbit runs
+> - Master: `master(Katalyst(k => k.reverb(0.05).gain(2.5).limiter()))`, the same Katalyst chain a cylinder runs
 >   (phase 3 step 12, 2026-09-28: the `Master` object is gone); `reverb(wet, size, lowpass)` and
 >   `limiter(threshold, ratio, knee, attack, release, lookahead)` are flat. `master(Katalyst())` switches the
 >   master off (the empty chain). `Master.of`, `MasterFx` and `Master(m => ...)` are gone.
@@ -71,7 +71,7 @@ Ignitor / Master / Pipeline (they weren't on the generator's function allow-list
 Ground truth from the 14 built-in songs (full tally in session analysis, key facts):
 
 - Used by **all 14** songs: `stack`, `note`/`n`, `sound`/`s`, `gain`, `adsr`. Second tier (10+):
-  `orbit`, `hpf`/`lpf`, `pan`, `superimpose`, `fast`/`slow`, `room`, `distort`, `onepole`, `analog`. (The tally also had `postgain`, retired into `gain` on 2026-09-19.)
+  `cylinder`, `hpf`/`lpf`, `pan`, `superimpose`, `fast`/`slow`, `room`, `distort`, `onepole`, `analog`. (The tally also had `postgain`, retired into `gain` on 2026-09-19.)
 - Signals-as-modulators is the highest-value intermediate concept: 72 `.range(` calls across 7 songs.
 - Mini-notation actually used: sequences, `~`, `[]`, `<>`, `*`, `!`, `@`, comma-chords, `|`, `` >/n `` suffix,
   `struct` gates. Never used: polymeter. `.euclid()` in one song only.
@@ -172,7 +172,7 @@ stages must not carry it.
 | B5 | Alternation & repetition | `<>`, `!`, `@` | — | Bassline that changes per cycle (Sandsturm's `<bar1 bar2 bar3 bar4>` idiom). *Listen for: the 4-bar rotation.* |
 | A3 | Filters — LPF & HPF | `lpf`, `hpf` (with the `q` slot) | — | Saw phrase under a moving blanket; then thin it from below. *Listen for: which disappears first — the body or the sparkle.* (The old `tut_FilterPlayground` had good bones — same idea, fresh writing.) |
 | A4 | The filter envelope | the `env`, `attack`, `decay`, `sustain`, `release` slots of `lpf` | `q` | The classic synth pluck: cutoff rides its own envelope. *Listen for: the "öw" the filter sweep adds to each note.* (Zero coverage today.) |
-| B6 | Layers — stack & orbit | `stack`, `orbit` | `reverb(wet, size)` on the lead's own orbit | Beat + bass + melody combined; reverb on melody's orbit only. *Listen for: dry drums under a wet lead.* |
+| B6 | Layers, stack & cylinder | `stack`, `cylinder` | `reverb(wet, size)` on the lead's own cylinder | Beat + bass + melody combined; reverb on melody's cylinder only. *Listen for: dry drums under a wet lead.* |
 | B7 | Chords in one step | comma-chords `[0,7,12]`, random pick `\|` | — | Power-chord stabs; a step that gambles. *Listen for: which variant played this cycle.* |
 
 ### Stage 3 — Where the tracks meet
@@ -232,9 +232,9 @@ stages must not carry it.
 - **B6 (Layers) — DELIVERED (certified 2026-08-17):** combines the B2 groove and the B3 melody
   literally; redeems B1's mixing promise by name in §2. ⚠️ Engine truth learned in its review
   (recorded in the lesson's KDoc + KLANG-00191 (orbit level effect docs)): reverb processor is
-  per-orbit but `reverb(wet)` is a per-voice SEND; a bare `reverb(wet)` plays in the default room (size 5, since
-  2026-09-16; before that it was SILENT); orbit
-  bus settings are owned by the newest `Sounding` voice; a voice gives the orbit up when its gate closes or it is
+  per-cylinder but `reverb(wet)` is a per-voice SEND; a bare `reverb(wet)` plays in the default room (size 5, since
+  2026-09-16; before that it was SILENT); cylinder
+  bus settings are owned by the newest `Sounding` voice; a voice gives the cylinder up when its gate closes or it is
   cut (voice lifecycle step 5; first-writer-wins before 2026-10-07). The lesson only demos uncontested configurations and never
   claims contested-channel behavior — keep it that way.
 - **A7 (Space and Dirt) — AUTHORED 2026-08-31, review loop NOT yet run:** delivers B6's
@@ -557,8 +557,8 @@ polish pass sits after the loop; polished examples re-run the machine gates befo
 Restored from the maintainer's session memory during the memory housekeeping; the tutorial
 workstream owns them from here. Hardness: guideline, except where the engine dictates the fact.
 
-- **Per-orbit effects.** Layers with different delay/reverb need their own `orbit()`; reverb and
-  delay are per-orbit, two patterns on one orbit share the bus. (engine fact)
+- **Per-cylinder effects.** Layers with different delay/reverb need their own `cylinder()`; reverb and
+  delay are per-cylinder, two patterns on one cylinder share the bus. (engine fact)
 - **`chord("...").voicing()`.** `chord()` alone plays nothing; `n().scale().chord("minor")` is wrong.
   (engine fact)
 - **`pan()` is 0.0 (left) to 1.0 (right), centre 0.5.** Not -1 to 1. (engine fact)

@@ -18,12 +18,12 @@ import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
  * Verifies that inactive cylinders are skipped during mixing and that
  * cleanup happens in round-robin fashion.
  */
-class OrbitsCleanupTest : StringSpec({
+class CylindersCleanupTest : StringSpec({
 
     val blockFrames = 128
     val sampleRate = 44100
 
-    // A block long after every claim below: no voice plays any more, so no check-in holds the orbit
+    // A block long after every claim below: no voice plays any more, so no check-in holds the cylinder
     // and the round-robin cleanup is decided by the silence gate alone.
     val afterLastVoice = 100.0 * blockFrames
 
@@ -35,29 +35,29 @@ class OrbitsCleanupTest : StringSpec({
         )
     }
 
-    "an orbit the cleanup has deactivated is not mixed, whatever its buffer holds; an active one is" {
+    "a cylinder the cleanup has deactivated is not mixed, whatever its buffer holds; an active one is" {
         val cylinders = Cylinders(maxCylinders = 4, blockFrames = blockFrames, sampleRate = sampleRate, silentBlocksBeforeTailCheck = 0)
         val fusionMix = StereoBuffer(blockFrames)
 
-        // Orbit 0 silent, orbit 1 sounding. The first block's cleanup visits orbit 0 and frees it.
-        val orbit0 = cylinders.offerAndCommit(0, createTestVoice(0), blockStart = 0.0)
-        val orbit1 = cylinders.offerAndCommit(1, createTestVoice(1), blockStart = 0.0)
+        // Cylinder 0 silent, cylinder 1 sounding. The first block's cleanup visits cylinder 0 and frees it.
+        val cylinder0 = cylinders.offerAndCommit(0, createTestVoice(0), blockStart = 0.0)
+        val cylinder1 = cylinders.offerAndCommit(1, createTestVoice(1), blockStart = 0.0)
 
-        orbit0.mixBuffer.clear()
-        orbit1.mixBuffer.left[0] = 0.5
-        orbit1.mixBuffer.right[0] = 0.5
+        cylinder0.mixBuffer.clear()
+        cylinder1.mixBuffer.left[0] = 0.5
+        cylinder1.mixBuffer.right[0] = 0.5
 
         cylinders.processAndMix(fusionMix, afterLastVoice)
 
-        orbit0.isActive shouldBe false
-        orbit1.isActive shouldBe true
+        cylinder0.isActive shouldBe false
+        cylinder1.isActive shouldBe true
 
-        // Signal written into the freed orbit AFTER deactivation must not reach the mix; the
-        // sounding orbit's must, so a mix that skipped every orbit would go red here too.
-        orbit0.mixBuffer.left[0] = 1.0
-        orbit0.mixBuffer.right[0] = 1.0
-        orbit1.mixBuffer.left[0] = 0.5
-        orbit1.mixBuffer.right[0] = 0.5
+        // Signal written into the freed cylinder AFTER deactivation must not reach the mix; the
+        // sounding cylinder's must, so a mix that skipped every cylinder would go red here too.
+        cylinder0.mixBuffer.left[0] = 1.0
+        cylinder0.mixBuffer.right[0] = 1.0
+        cylinder1.mixBuffer.left[0] = 0.5
+        cylinder1.mixBuffer.right[0] = 0.5
         fusionMix.clear()
 
         cylinders.processAndMix(fusionMix, afterLastVoice)
@@ -71,38 +71,38 @@ class OrbitsCleanupTest : StringSpec({
         val fusionMix = StereoBuffer(blockFrames)
 
         // Create 3 cylinders, all active but silent
-        val orbit0 = cylinders.offerAndCommit(0, createTestVoice(0), blockStart = 0.0)
-        val orbit1 = cylinders.offerAndCommit(1, createTestVoice(1), blockStart = 0.0)
-        val orbit2 = cylinders.offerAndCommit(2, createTestVoice(2), blockStart = 0.0)
+        val cylinder0 = cylinders.offerAndCommit(0, createTestVoice(0), blockStart = 0.0)
+        val cylinder1 = cylinders.offerAndCommit(1, createTestVoice(1), blockStart = 0.0)
+        val cylinder2 = cylinders.offerAndCommit(2, createTestVoice(2), blockStart = 0.0)
 
-        orbit0.mixBuffer.clear()
-        orbit1.mixBuffer.clear()
-        orbit2.mixBuffer.clear()
+        cylinder0.mixBuffer.clear()
+        cylinder1.mixBuffer.clear()
+        cylinder2.mixBuffer.clear()
 
         // All should be active initially
-        orbit0.isActive shouldBe true
-        orbit1.isActive shouldBe true
-        orbit2.isActive shouldBe true
+        cylinder0.isActive shouldBe true
+        cylinder1.isActive shouldBe true
+        cylinder2.isActive shouldBe true
 
         // Process multiple times - each time one cylinder should be checked
         assertSoftly {
             // Block 1: Should check cylinder 0
             cylinders.processAndMix(fusionMix, afterLastVoice)
-            orbit0.isActive shouldBe false  // Deactivated
-            orbit1.isActive shouldBe true   // Not checked yet
-            orbit2.isActive shouldBe true   // Not checked yet
+            cylinder0.isActive shouldBe false  // Deactivated
+            cylinder1.isActive shouldBe true   // Not checked yet
+            cylinder2.isActive shouldBe true   // Not checked yet
 
             // Block 2: Should check cylinder 1
             cylinders.processAndMix(fusionMix, afterLastVoice)
-            orbit0.isActive shouldBe false
-            orbit1.isActive shouldBe false  // Deactivated
-            orbit2.isActive shouldBe true   // Not checked yet
+            cylinder0.isActive shouldBe false
+            cylinder1.isActive shouldBe false  // Deactivated
+            cylinder2.isActive shouldBe true   // Not checked yet
 
             // Block 3: Should check cylinder 2
             cylinders.processAndMix(fusionMix, afterLastVoice)
-            orbit0.isActive shouldBe false
-            orbit1.isActive shouldBe false
-            orbit2.isActive shouldBe false  // Deactivated
+            cylinder0.isActive shouldBe false
+            cylinder1.isActive shouldBe false
+            cylinder2.isActive shouldBe false  // Deactivated
         }
     }
 
@@ -111,32 +111,32 @@ class OrbitsCleanupTest : StringSpec({
         val fusionMix = StereoBuffer(blockFrames)
 
         // Create 2 cylinders
-        val orbit0 = cylinders.offerAndCommit(0, createTestVoice(0), blockStart = 0.0)
-        val orbit1 = cylinders.offerAndCommit(1, createTestVoice(1), blockStart = 0.0)
+        val cylinder0 = cylinders.offerAndCommit(0, createTestVoice(0), blockStart = 0.0)
+        val cylinder1 = cylinders.offerAndCommit(1, createTestVoice(1), blockStart = 0.0)
 
-        orbit0.mixBuffer.clear()
-        orbit1.mixBuffer.clear()
+        cylinder0.mixBuffer.clear()
+        cylinder1.mixBuffer.clear()
 
         assertSoftly {
             // First cycle
             cylinders.processAndMix(fusionMix, afterLastVoice)
-            orbit0.isActive shouldBe false
-            orbit1.isActive shouldBe true
+            cylinder0.isActive shouldBe false
+            cylinder1.isActive shouldBe true
 
             cylinders.processAndMix(fusionMix, afterLastVoice)
-            orbit0.isActive shouldBe false
-            orbit1.isActive shouldBe false
+            cylinder0.isActive shouldBe false
+            cylinder1.isActive shouldBe false
 
             // Reactivate both
             cylinders.offerAndCommit(0, createTestVoice(0), blockStart = 0.0)
             cylinders.offerAndCommit(1, createTestVoice(1), blockStart = 0.0)
-            orbit0.mixBuffer.clear()
-            orbit1.mixBuffer.clear()
+            cylinder0.mixBuffer.clear()
+            cylinder1.mixBuffer.clear()
 
             // Should wrap around and check cylinder 0 again
             cylinders.processAndMix(fusionMix, afterLastVoice)
-            orbit0.isActive shouldBe false
-            orbit1.isActive shouldBe true
+            cylinder0.isActive shouldBe false
+            cylinder1.isActive shouldBe true
         }
     }
 
@@ -157,8 +157,8 @@ class OrbitsCleanupTest : StringSpec({
         val fusionMix = StereoBuffer(blockFrames)
 
         // Create only cylinder 0 (sparse map)
-        val orbit0 = cylinders.offerAndCommit(0, createTestVoice(0), blockStart = 0.0)
-        orbit0.mixBuffer.clear()
+        val cylinder0 = cylinders.offerAndCommit(0, createTestVoice(0), blockStart = 0.0)
+        cylinder0.mixBuffer.clear()
 
         // Process 8 times (full round-robin cycle)
         // Should only check cylinder 0 when its index comes up
@@ -167,7 +167,7 @@ class OrbitsCleanupTest : StringSpec({
         }
 
         // Cylinder 0 should have been checked and deactivated
-        orbit0.isActive shouldBe false
+        cylinder0.isActive shouldBe false
     }
 
     "multiple active cylinders mix correctly" {
@@ -175,17 +175,17 @@ class OrbitsCleanupTest : StringSpec({
         val fusionMix = StereoBuffer(blockFrames)
 
         // Create 3 active cylinders with different signals
-        val orbit0 = cylinders.offerAndCommit(0, createTestVoice(0), blockStart = 0.0)
-        val orbit1 = cylinders.offerAndCommit(1, createTestVoice(1), blockStart = 0.0)
-        val orbit2 = cylinders.offerAndCommit(2, createTestVoice(2), blockStart = 0.0)
+        val cylinder0 = cylinders.offerAndCommit(0, createTestVoice(0), blockStart = 0.0)
+        val cylinder1 = cylinders.offerAndCommit(1, createTestVoice(1), blockStart = 0.0)
+        val cylinder2 = cylinders.offerAndCommit(2, createTestVoice(2), blockStart = 0.0)
 
-        orbit0.mixBuffer.left[0] = 0.1
-        orbit1.mixBuffer.left[0] = 0.2
-        orbit2.mixBuffer.left[0] = 0.3
+        cylinder0.mixBuffer.left[0] = 0.1
+        cylinder1.mixBuffer.left[0] = 0.2
+        cylinder2.mixBuffer.left[0] = 0.3
 
-        orbit0.mixBuffer.right[0] = 0.1
-        orbit1.mixBuffer.right[0] = 0.2
-        orbit2.mixBuffer.right[0] = 0.3
+        cylinder0.mixBuffer.right[0] = 0.1
+        cylinder1.mixBuffer.right[0] = 0.2
+        cylinder2.mixBuffer.right[0] = 0.3
 
         fusionMix.clear()
 

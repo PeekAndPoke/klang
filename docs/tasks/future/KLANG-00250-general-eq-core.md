@@ -29,7 +29,7 @@ lists, written in the author's order, are the answer to try.
 - **`EqCore`** (`audio_be/src/commonMain/kotlin/filters/EqCore.kt`): N serial second-order **TPT-SVF** sections in
   one `process()` call, section kinds `LOWPASS`, `HIGHPASS`, `BANDPASS`, `NOTCH`, `RAW_TAP`, `BELL`. Mono, one instance
   per channel. **Snap-only**: coefficients take effect at once; any smoothing is the surface's job. Driven by the
-  per-voice `EqIgnitor` and by the orbit's `KatalystEqEffect` (so the bus and the master `eq` already share it).
+  per-voice `EqIgnitor` and by the cylinder's `KatalystEqEffect` (so the bus and the master `eq` already share it).
 - **`IgnitorDsl.Eq`** with `IgnitorDsl.EqSection` (`audio_bridge/.../IgnitorDsl.kt`): each section carries `freq` and
   `q` (the bell also `db`, the raw tap `gain`), nothing else. The script `EqBuilder`
   (`klangscript-libs/.../stdlib/EffectBuilders.kt`) offers `band` and `tap` only; lowpass, highpass, bandpass and notch

@@ -7,7 +7,7 @@
 > Carried out of KLANG-00302 (katalyst knob expressions)
 > when that task closed (2026-10-12). Nothing here blocks anything; each item waits for a song that asks for it.
 > The V8 items live in KLANG-00290 (engine follow ups) (39 to 41), the listening question in
-> KLANG-00313 (delay reverb owner change cut), the duck's orbit switch in
+> KLANG-00313 (delay reverb owner change cut), the duck's cylinder switch in
 > KLANG-00247 (duck orbit switch click).
 
 ## 1. E1, a Katalyst EQ section hierarchy (decision Q2)
@@ -24,7 +24,7 @@ EQ.
 
 A knob noise's seed is fixed per position in its chain (`KATALYST_KNOB_NOISE_SEED` + the chain-wide ordinal,
 `KatalystNoiseOrdinals`; the maintainer's rule, 2026-10-12): two noise knobs in one chain move independently and every
-build sounds the same, but two ORBITS whose chains put a noise at the same position walk the same noise. A `seed`
+build sounds the same, but two CYLINDERS whose chains put a noise at the same position walk the same noise. A `seed`
 knob on the two doors is a door decision for when a song wants otherwise (both doors, a door-parity row).
 
 ## 3. A tape-style delay tap (decision Q9)

@@ -69,7 +69,7 @@ fun IgnitorDsl.buildExciter(
     ignitorParams: KlangMap<Double>? = null,
     soundIndex: Int = 0,
     phasePools: PhasePools? = null,
-    orbit: Int = 0,
+    cylinder: Int = 0,
     random: Random,
     freqHz: Double = 0.0,
     sampleRate: Int = DEFAULT_BUILD_SAMPLE_RATE,
@@ -79,7 +79,7 @@ fun IgnitorDsl.buildExciter(
     sampleSource: Ignitor? = null,
 ): BuiltIgnitor {
     val cache = IgnitorBuildCache(
-        soundIndex = soundIndex, phasePools = phasePools, orbit = orbit, random = random, freqHz = freqHz,
+        soundIndex = soundIndex, phasePools = phasePools, cylinder = cylinder, random = random, freqHz = freqHz,
         baseSampleRate = sampleRate, baseBlockFrames = blockFrames, sampleSource = sampleSource,
     )
     return buildIgnitor(ignitorParams, cache)
@@ -107,9 +107,9 @@ fun IgnitorDsl.toExciter(
     ignitorParams: KlangMap<Double>? = null,
     soundIndex: Int = 0,
     phasePools: PhasePools? = null,
-    orbit: Int = 0,
+    cylinder: Int = 0,
     random: Random,
-): Ignitor = buildExciter(ignitorParams = ignitorParams, soundIndex = soundIndex, phasePools = phasePools, orbit = orbit, random = random).ignitor
+): Ignitor = buildExciter(ignitorParams = ignitorParams, soundIndex = soundIndex, phasePools = phasePools, cylinder = cylinder, random = random).ignitor
 
 /**
  * Identity-based cache for DSL → Ignitor conversion, keyed on `(DSL node identity, mod
@@ -129,8 +129,8 @@ internal class IgnitorBuildCache(
      *  [soundIndex]) so the value reaches the super-oscillator branches without threading a
      *  parameter through every recursive call. */
     val phasePools: PhasePools? = null,
-    /** The voice's orbit ([VoiceData.cylinder]) — half of the pool key. */
-    val orbit: Int = 0,
+    /** The voice's cylinder ([VoiceData.cylinder]), half of the pool key. */
+    val cylinder: Int = 0,
     /** The voice's random stream (see [IgniteContext.random]) — build-time consumers (noise,
      *  supersaw jitter) capture it here; generate-time constructions (drift) read the SAME
      *  instance from the context. Carried like [soundIndex] to reach the source branches
@@ -1405,7 +1405,7 @@ private fun IgnitorDsl.buildRaw(
                 centerJitterScale = centerJitterScale,
                 phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
                 poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-                phasePools = cache.phasePools, orbit = cache.orbit, phase = phase.phaseInput(),
+                phasePools = cache.phasePools, cylinder = cache.cylinder, phase = phase.phaseInput(),
                 countsAtBuild = !cache.usesMusicalFreq(voices),
             ),
         )
@@ -1419,7 +1419,7 @@ private fun IgnitorDsl.buildRaw(
                 centerJitterScale = centerJitterScale,
                 phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
                 poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-                phasePools = cache.phasePools, orbit = cache.orbit, phase = phase.phaseInput(),
+                phasePools = cache.phasePools, cylinder = cache.cylinder, phase = phase.phaseInput(),
                 countsAtBuild = !cache.usesMusicalFreq(voices),
             ),
         )
@@ -1433,7 +1433,7 @@ private fun IgnitorDsl.buildRaw(
                 centerJitterScale = centerJitterScale,
                 phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
                 poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-                phasePools = cache.phasePools, orbit = cache.orbit, phase = phase.phaseInput(),
+                phasePools = cache.phasePools, cylinder = cache.cylinder, phase = phase.phaseInput(),
                 countsAtBuild = !cache.usesMusicalFreq(voices),
             ),
         )
@@ -1447,7 +1447,7 @@ private fun IgnitorDsl.buildRaw(
                 centerJitterScale = centerJitterScale,
                 phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
                 poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-                phasePools = cache.phasePools, orbit = cache.orbit, phase = phase.phaseInput(),
+                phasePools = cache.phasePools, cylinder = cache.cylinder, phase = phase.phaseInput(),
                 countsAtBuild = !cache.usesMusicalFreq(voices),
             ),
         )
@@ -1461,7 +1461,7 @@ private fun IgnitorDsl.buildRaw(
                 centerJitterScale = centerJitterScale,
                 phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
                 poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
-                phasePools = cache.phasePools, orbit = cache.orbit, phase = phase.phaseInput(),
+                phasePools = cache.phasePools, cylinder = cache.cylinder, phase = phase.phaseInput(),
                 countsAtBuild = !cache.usesMusicalFreq(voices),
             ),
         )
@@ -1850,7 +1850,7 @@ private fun IgnitorDsl.buildRaw(
         // Eq: withMod ONLY on inner; noMod on all section params — mirrors the filter arms
         // above (a withMod param subtree would change the freqHz the params see and break
         // tracking-HP parity). The wire-to-EqCore type mapping is `eqSectionSpec`, shared with
-        // the orbit stage since Katalyst step 4; the build order per section stays freq, q, then
+        // the cylinder stage since Katalyst step 4; the build order per section stays freq, q, then
         // the type's own param, because build order is rng draw order.
         is IgnitorDsl.Eq -> EqIgnitor(
             upstream = inner.withMod(),
@@ -1980,7 +1980,7 @@ private fun IgnitorDsl.buildRaw(
         //    unchanged there, bit for bit, so the only thing removed is a buffer pass;
         //  - at a NON-FINITE amount it CLOSES A HOLE. `amt <= 0.0` is false for a NaN, so the gain
         //    became `10^(NaN * 1.2)` and every sample of the voice came out NaN, with nothing
-        //    between it and the orbit mix. That is the defect class of step 1, and step 3 would
+        //    between it and the cylinder mix. That is the defect class of step 1, and step 3 would
         //    have walked straight into it: a `classic()` distort slot defaulting to `SLOT_UNSET`,
         //    wired to this node, would have made every voice of that instrument all-NaN.
         //

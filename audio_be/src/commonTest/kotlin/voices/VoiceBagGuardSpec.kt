@@ -63,9 +63,9 @@ private val testRandom = Random(0x5EED)
  *   `driveScale = Infinity`. At the first sample `ic1eq` is 0.0, so `diodePairResistanceApprox(0.0)`
  *   is exactly 1.0, `tCfb` is exactly 0.0, and `kEff = k + 2.0 * Infinity * 0.0` is NaN. Every
  *   sample of the voice was NaN from frame 0 (measured: all 1024 frames of the render below), and
- *   nothing in `Voice` or `Cylinder` scrubs it, so the NaN reached the ORBIT MIX and stayed in the
- *   orbit's send chain for the rest of the playback:
- *   `note("c3").ignp("analog", "Infinity").lpf(2000)` silenced an orbit. That is exactly the failure
+ *   nothing in `Voice` or `Cylinder` scrubs it, so the NaN reached the CYLINDER MIX and stayed in the
+ *   cylinder's send chain for the rest of the playback:
+ *   `note("c3").ignp("analog", "Infinity").lpf(2000)` silenced a cylinder. That is exactly the failure
  *   the `gain` guard's comment in `VoiceFactory` describes for its own reader.
  * - **`-Infinity`** passed `<= 0.0` and failed `> 0.0`, so it was already safe. Its row states the
  *   rule rather than closing a defect.
@@ -84,7 +84,7 @@ private val testRandom = Random(0x5EED)
  * - **`+Infinity`.** The lane is `active` and its block multiplier is non-finite, so the playhead
  *   goes non-finite on the first increment. Measured on a 1024-frame render of a sine PCM: frame 0
  *   is the PCM's own first sample and every frame after it is NaN. Not a silenced drum, a drum
- *   replaced by NaN, which then reaches the orbit mix exactly as the filter case does.
+ *   replaced by NaN, which then reaches the cylinder mix exactly as the filter case does.
  * - **NaN** fails `analog > 0.0`, so the lane was never active and this read was already NaN-safe.
  *   Its row states the rule; the mutation that reverts this read leaves it green.
  *
@@ -243,7 +243,7 @@ class VoiceBagGuardSpec : StringSpec({
             peakOf(unset) shouldBeGreaterThan 0.01
         }
 
-        withClue("every sample must be finite: the poisoned voice used to reach the orbit mix as NaN") {
+        withClue("every sample must be finite: the poisoned voice used to reach the cylinder mix as NaN") {
             poisoned.all { it.isFinite() } shouldBe true
         }
 
@@ -324,7 +324,7 @@ class VoiceBagGuardSpec : StringSpec({
         val unset = renderSample(null)
         val poisoned = renderSample(Double.POSITIVE_INFINITY)
 
-        withClue("every frame after the first used to be NaN, and it reached the orbit mix") {
+        withClue("every frame after the first used to be NaN, and it reached the cylinder mix") {
             poisoned.all { it.isFinite() } shouldBe true
             peakOf(poisoned) shouldBeGreaterThan 0.01
         }

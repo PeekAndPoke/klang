@@ -31,7 +31,7 @@ import kotlin.math.abs
 /**
  * After a playback STOPS, no hard cut, ever (phase 3 step 12 decision (j), maintainer 2026-09-28,
  * refined the same day: release only ENDLESS tails). A finite tail rings out in full, however long;
- * a tail that can never end (a delay at |feedback| >= 1, at the master or on an orbit) still
+ * a tail that can never end (a delay at |feedback| >= 1, at the master or on a cylinder) still
  * ringing `PlaybackEngine.MAX_TAIL_HOLD_SECONDS` (20 s) after the notes ended gets the engine's
  * whole output released by [TailRelease], and the engine is idle only after it; a master swap in
  * flight is waited for; and an engine with nothing left ringing goes exactly as before.
@@ -175,9 +175,9 @@ class EngineStopReleaseSpec : StringSpec({
         }
     }
 
-    "a stopped playback whose ORBIT tail sustains itself is released after the hold, by the law, then idle" {
+    "a stopped playback whose CYLINDER tail sustains itself is released after the hold, by the law, then idle" {
         // The owner's feedback-1 delay stays ACTIVE when the owner lapses (nobody configures it
-        // off), its charged ring recirculating without loss, so the orbit stays active: before
+        // off), its charged ring recirculating without loss, so the cylinder stays active: before
         // decision (j) such an engine was never idle. The infinite drain countdown is the
         // owner-off row's.
         val params = mapOf("delay.wet" to 0.5, "delay.time" to 0.1, "delay.feedback" to 1.0)
@@ -190,7 +190,7 @@ class EngineStopReleaseSpec : StringSpec({
 
         releasedAgainstControl(a = a, b = b)
 
-        withClue("the control's orbit still rings: it was the release that ended the stopped one") {
+        withClue("the control's cylinder still rings: it was the release that ended the stopped one") {
             b.engine.cylinders.anyActive() shouldBe true
         }
     }
@@ -218,8 +218,8 @@ class EngineStopReleaseSpec : StringSpec({
         }
     }
 
-    "a stopped playback whose ORBIT sounds on silence is released after the hold, by the law, then idle" {
-        // The orbit's mix never falls silent, so the orbit never deactivated and the engine was never idle.
+    "a stopped playback whose CYLINDER sounds on silence is released after the hold, by the law, then idle" {
+        // The cylinder's mix never falls silent, so the cylinder never deactivated and the engine was never idle.
         val lit = KatalystDsl.of(KatalystStageDsl.Reverb(wet = c(0.5), size = c(0.5)), KatalystStageDsl.Plus(c(0.2)))
         val a = Rig()
         val b = Rig()
@@ -236,13 +236,13 @@ class EngineStopReleaseSpec : StringSpec({
 
         releasedAgainstControl(a = a, b = b)
 
-        withClue("the control's orbit still sounds: it was the release that ended the stopped one") {
+        withClue("the control's cylinder still sounds: it was the release that ended the stopped one") {
             b.engine.cylinders.anyActive() shouldBe true
         }
     }
 
-    "a stopped playback whose orbit owner turned an endless delay OFF (a drain that never ends) is released too" {
-        // The second note owns the orbit without a delay, so the feedback-1 ring goes Draining on
+    "a stopped playback whose cylinder owner turned an endless delay OFF (a drain that never ends) is released too" {
+        // The second note owns the cylinder without a delay, so the feedback-1 ring goes Draining on
         // an infinite countdown: endless in the delay's other state.
         val params = mapOf("delay.wet" to 0.5, "delay.time" to 0.1, "delay.feedback" to 1.0)
         val a = Rig()
@@ -259,27 +259,27 @@ class EngineStopReleaseSpec : StringSpec({
 
         releasedAgainstControl(a = a, b = b)
 
-        withClue("the control's orbit still rings on the drain: it was the release that ended the stopped one") {
+        withClue("the control's cylinder still rings on the drain: it was the release that ended the stopped one") {
             b.engine.cylinders.anyActive() shouldBe true
             b.engine.cylinders.cylinders.single().delay.shouldNotBeNull().sustainsItself() shouldBe true
         }
     }
 
-    "an orbit's endless chain already RELEASED by its swap does not get the whole engine released: a finite echo elsewhere rings out" {
-        // Orbit 1: a feedback-1 loop, swapped away at 0.2 s (its capped drain is released from
-        // about 20.3 s to 24.8 s). Orbit 2: a finite echo (0.25 s, feedback 0.9) from 1.0 s. The
-        // engine's hold ends about 21 s, inside orbit 1's release: nothing ENDLESS is left then
+    "a cylinder's endless chain already RELEASED by its swap does not get the whole engine released: a finite echo elsewhere rings out" {
+        // Cylinder 1: a feedback-1 loop, swapped away at 0.2 s (its capped drain is released from
+        // about 20.3 s to 24.8 s). Cylinder 2: a finite echo (0.25 s, feedback 0.9) from 1.0 s. The
+        // engine's hold ends about 21 s, inside cylinder 1's release: nothing ENDLESS is left then
         // (the releasing chain is on its way out), so the echo must ring out, never released.
         val loopParams = mapOf("delay.wet" to 0.5, "delay.time" to 0.1, "delay.feedback" to 1.0)
         val echoParams = mapOf("delay.wet" to 0.5, "delay.time" to 0.25, "delay.feedback" to 0.9)
         val dry = KatalystDsl.of(KatalystStageDsl.Gain(gain = c(0.9)))
 
-        fun note(orbit: Int, start: Double, params: Map<String, Double>? = null, katalyst: String? = null) = ScheduledVoice(
+        fun note(cylinder: Int, start: Double, params: Map<String, Double>? = null, katalyst: String? = null) = ScheduledVoice(
             playbackId = "song",
             startTime = start,
             gateEndTime = start + 0.05,
             data = VoiceData.empty.copy(
-                sound = "sine", freqHz = 440.0, gain = 0.5, cylinder = orbit, katalystParams = params?.toKlangMap(), katalyst = katalyst,
+                sound = "sine", freqHz = 440.0, gain = 0.5, cylinder = cylinder, katalystParams = params?.toKlangMap(), katalyst = katalyst,
             ),
             playbackStartTime = 0.0,
         )
@@ -314,10 +314,10 @@ class EngineStopReleaseSpec : StringSpec({
             }
 
             if (lastVoiceBlock >= 0 && blk == lastVoiceBlock + holdBlocks + 1) {
-                val orbit1 = a.engine.cylinders.cylinders.single { it.id == 1 }
-                val orbit2 = a.engine.cylinders.cylinders.single { it.id == 2 }
+                val cylinder1 = a.engine.cylinders.cylinders.single { it.id == 1 }
+                val cylinder2 = a.engine.cylinders.cylinders.single { it.id == 2 }
 
-                releasingAtHoldEnd = orbit1.chainSwap.isReleasing && orbit2.isActive
+                releasingAtHoldEnd = cylinder1.chainSwap.isReleasing && cylinder2.isActive
             }
 
             if (!got.contentEquals(want)) {
@@ -336,7 +336,7 @@ class EngineStopReleaseSpec : StringSpec({
             }
         }
 
-        withClue("the case this row is for: at the hold's end orbit 1's swap was releasing and orbit 2's echo rang") {
+        withClue("the case this row is for: at the hold's end cylinder 1's swap was releasing and cylinder 2's echo rang") {
             releasingAtHoldEnd shouldBe true
         }
 
@@ -448,7 +448,7 @@ class EngineStopReleaseSpec : StringSpec({
     }
 
     "a stopped playback scheduled again mid-release: the releasing engine is detached, heard to its end, and returns its units" {
-        // Two dispatchers with their own warehouses. The orbit's feedback-1 delay is the endless
+        // Two dispatchers with their own warehouses. The cylinder's feedback-1 delay is the endless
         // tail. In A the playback is scheduled again mid-release (a note far in the future, so the
         // fresh engine is silent over the release window); in C it is not, so C's engine simply
         // finishes its release in place. The detached engine must be HEARD: A's output is C's.
@@ -520,7 +520,7 @@ class EngineStopReleaseSpec : StringSpec({
             a.d.detachedCountForTest shouldBe 1
         }
 
-        withClue("positive control: the ring was on the orbit's shelf-rented ring, not returned yet") {
+        withClue("positive control: the ring was on the cylinder's shelf-rented ring, not returned yet") {
             a.warehouse.sized.shelfCount shouldBe 0
         }
 
@@ -587,7 +587,7 @@ class EngineStopReleaseSpec : StringSpec({
         return -1
     }
 
-    "a stopped playback whose FINITE orbit tail outlasts the hold rings out in full, then idle" {
+    "a stopped playback whose FINITE cylinder tail outlasts the hold rings out in full, then idle" {
         // Feedback 0.9 at 0.25 s: still well above -100 dBFS 20 s after the note, but it ends.
         val params = mapOf("delay.wet" to 0.5, "delay.time" to 0.25, "delay.feedback" to 0.9)
         val a = Rig()
@@ -603,12 +603,12 @@ class EngineStopReleaseSpec : StringSpec({
             idleAt shouldBeGreaterThan 100 + holdBlocks
         }
 
-        withClue("idle because it was quiet: the orbit had gone silent in the control too") {
+        withClue("idle because it was quiet: the cylinder had gone silent in the control too") {
             b.engine.cylinders.anyActive() shouldBe false
         }
     }
 
-    "a FINITE orbit tail that outlasts the hold rings out in full under a ringing insert master, never released" {
+    "a FINITE cylinder tail that outlasts the hold rings out in full under a ringing insert master, never released" {
         // The eq bell rings on for a moment after the echo falls quiet, past the hold. KLANG-00415's clause released a
         // master that rang with nothing of the engine's own left and no declared tail; a finite ring is not endless,
         // so it rings out (decision (j); the clause went with KLANG-00290 (engine follow-ups) item 25).
@@ -628,16 +628,16 @@ class EngineStopReleaseSpec : StringSpec({
             r.d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = listOf(masterEvent("bell"), blip(params))))
         }
 
-        var orbitQuietAt = -1
+        var cylinderQuietAt = -1
         val idleAt = ringsOutAgainstControl(a = a, b = b, stopAt = 100, bound = 30000) { blk ->
-            if (orbitQuietAt < 0 && !a.engine.cylinders.anyActive()) {
-                orbitQuietAt = blk
+            if (cylinderQuietAt < 0 && !a.engine.cylinders.anyActive()) {
+                cylinderQuietAt = blk
             }
         }
 
-        withClue("positive control: the orbit fell quiet after the hold (block $orbitQuietAt), and the bell rang on after it") {
-            orbitQuietAt shouldBeGreaterThan 100 + holdBlocks
-            idleAt shouldBeGreaterThan orbitQuietAt
+        withClue("positive control: the cylinder fell quiet after the hold (block $cylinderQuietAt), and the bell rang on after it") {
+            cylinderQuietAt shouldBeGreaterThan 100 + holdBlocks
+            idleAt shouldBeGreaterThan cylinderQuietAt
         }
     }
 
@@ -701,7 +701,7 @@ class EngineStopReleaseSpec : StringSpec({
             }
         }
 
-        withClue("the case this row is for: the swap ran on after the stop, the orbits quiet, nothing ringing") {
+        withClue("the case this row is for: the swap ran on after the stop, the cylinders quiet, nothing ringing") {
             unsettledAfterStop shouldBeGreaterThan 5
             a.engine.cylinders.anyActive() shouldBe false
             a.engine.masterBusForTest.isRinging shouldBe false

@@ -63,7 +63,7 @@ class ChainSwapStateIdentitySpec : StringSpec({
         // while every transition allocated.
 
         // Idle, and its self-edges: a claiming owner (ownerClaimed, configureLeaving), every block
-        // of an orbit that swaps nothing. (The classic duck names no source, so the duck pass is
+        // of a cylinder that swaps nothing. (The classic duck names no source, so the duck pass is
         // skipped here; Idle x processDuck is driven below, with a ducking chain in service.)
         val idle = swap.currentState
         rig.render(blocks = 50, level = 0.5)

@@ -15,7 +15,7 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
 
 /**
- * Orbit-level **resonator**, an insert effect on the summed orbit mix: the `body(...)` stage ([ResonatorKind.BODY])
+ * Cylinder-level **resonator**, an insert effect on the summed cylinder mix: the `body(...)` stage ([ResonatorKind.BODY])
  * and the `vowel(...)` stage ([ResonatorKind.VOWEL]), one class with two kinds since engine tidy-up step 12 (a). The
  * two were near-verbatim twins (`KatalystBodyEffect`, `KatalystFormantEffect`) that differed only in their band type,
  * their gain rule and their unset constants; the gain rules now live in the tables ([ResonatorTables]), so the kind
@@ -24,18 +24,18 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
  *
  * `body(...)` and `vowel(...)` used to be per-voice filters, one SVF bank per voice (times every `superimpose` copy,
  * times every unison note). A body or a vowel is a timbre of the instrument, not of a note, so it runs **once per
- * orbit** on the mixed stereo signal. The orbit is the grouping unit: voices needing their own body go on different
- * orbits. The DSP is a [ResonatorBank], MONO, so a pair holds one per channel (independent state).
+ * cylinder** on the mixed stereo signal. The cylinder is the grouping unit: voices needing their own body go on different
+ * cylinders. The DSP is a [ResonatorBank], MONO, so a pair holds one per channel (independent state).
  *
- * Ownership: `Cylinder.commitOwner` only calls [configure] for the voice that OWNS the orbit (the rule's home is
+ * Ownership: `Cylinder.commitOwner` only calls [configure] for the voice that OWNS the cylinder (the rule's home is
  * `Cylinder.offer`). Because only the owner configures, a null table (the owner has no body, or no vowel)
  * authoritatively turns the resonator OFF: it is NOT a no-op.
  *
  * **Every edge fades** (Katalyst step 5c-6, decided with the maintainer 2026-09-19): off fades the bank to dry over
  * `BANK_CROSSFADE_SECONDS` and only then releases it, on fades in from dry, a change crossfades from what sounds now,
  * and an owner that returns with the same table mid-fade-out takes the fading bank back ([KatalystFilterSwap.resume]).
- * [reset] and [retire] stay a HARD cut: the cylinder calls them when the orbit has gone silent or goes to the shelf,
- * and a fade that survived them would resume on the orbit's next life.
+ * [reset] and [retire] stay a HARD cut: the cylinder calls them when the cylinder has gone silent or goes to the shelf,
+ * and a fade that survived them would resume on the cylinder's next life.
  *
  * **ONE PARKING SLOT, for a config and never a bank** (Katalyst step 5c-11, 2026-09-20). The swap carries two banks
  * and no more, so a change that arrives while a fade runs cannot start: it waits as the config it came as (a table
@@ -44,7 +44,7 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
  * lands. Parking the config and not a bank is what makes an overtaken change free. The 10-bank pool this replaced let
  * up to four materials smear at once on a 64th-note run, which is what the maintainer heard.
  *
- * **TWO pooled pairs, built at the FIRST install** (engine tidy-up step 12 (a), the orbit EQ's model since 5c-11). An
+ * **TWO pooled pairs, built at the FIRST install** (engine tidy-up step 12 (a), the cylinder EQ's model since 5c-11). An
  * install takes the pair the swap does not hold, which nobody can hear, and [ResonatorBank.install] makes it a fresh
  * bank (state zeroed), bit for bit what building a new one gave. The pairs are built when the stage first installs,
  * not with it: the classic chain declares both stages and most voices use neither, so an eager pool would hold about
@@ -373,7 +373,7 @@ class KatalystResonatorEffect(
     }
 
     /**
-     * A HARD cut (orbit deactivation, chain swap, the shelf): the pair goes at once, the cache and the parking with
+     * A HARD cut (cylinder deactivation, chain swap, the shelf): the pair goes at once, the cache and the parking with
      * it. The pool stays: an idle pair is unreachable while the swap is empty, and every way back into service goes
      * through [ResonatorBank.install], which zeroes it.
      */

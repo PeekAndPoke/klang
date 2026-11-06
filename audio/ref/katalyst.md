@@ -1,6 +1,6 @@
 # Audio: the Katalyst chain and its two hosts
 
-The laws in force for the orbit bus and the output, as of 2026-09-29. One home per rule; where a class KDoc
+The laws in force for the cylinder bus and the output, as of 2026-09-29. One home per rule; where a class KDoc
 holds the full text, this file names it and gives the short form. How each law was found and measured is in
 `audio/ref/memory-history.md` (the Katalyst 5b and 5c entries of 2026-09-19 and 2026-09-20, phase 3 step 12 of
 2026-09-28) and in the archived records KLANG-00236 (katalyst dsl) and
@@ -10,9 +10,9 @@ KLANG-00238 (phase3 step12 master as katalyst).
 
 - **The chain** is a `KatalystChain` built by `KatalystChainBuilder` from a wire `KatalystDsl`
   (`audio_be/.../katalyst/`). `KatalystDsl.classic` is `body, vowel, delay, reverb, phaser, compressor,
-  gain`, with `duck` declared last and run OUTSIDE the list in the cross-orbit pass (so a ducked orbit is ducked
+  gain`, with `duck` declared last and run OUTSIDE the list in the cross-cylinder pass (so a ducked cylinder is ducked
   after its own fader). `Eq` is a stage type that the classic chain does not carry.
-- **The orbit host** is `Cylinder`: every orbit is born with the classic chain, a pattern declares another with
+- **The cylinder host** is `Cylinder`: every cylinder is born with the classic chain, a pattern declares another with
   `katalyst(...)`. `Katalyst(k => k.classic())` is a bit-exact no-op (`ChainHost.chainFor` hands back the born-with
   classic chain).
 - **The output host** is `MasterBus` (`audio_be/.../master/`): `master(Katalyst(k => ...))`, off with
@@ -23,60 +23,60 @@ KLANG-00238 (phase3 step12 master as katalyst).
 - **One chain host** (`ChainHost`, `audio_be/.../ChainHost.kt`, KLANG-00243 (one chain host), 2026-11-04): both
   positions own one for the plumbing they share: the chain in service and its name, the bounded cache
   (`ChainHost.MAX_CACHED_CHAINS`, 8), the parked request, the lookup and the `ChainSwap`. What a position does when a
-  chain lands stays the position's (`ChainHost.Position.land`): the orbit installs at once while idle and fades with
+  chain lands stays the position's (`ChainHost.Position.land`): the cylinder installs at once while idle and fades with
   the duck handover while sounding; the output adopts at once before its first block and fades after it. The output
   builds its chains AHEAD (`ChainHost.prepare`, KLANG-00137 (master dsl followups) §3): a schedule carrying a
   `master(…)` event puts the chain's shells in the cache on the command path, so the landing in the render block is a
-  cache hit. A build is the shells only at both positions; the units rent at the chain's first configure. An orbit
+  cache hit. A build is the shells only at both positions; the units rent at the chain's first configure. A cylinder
   builds on landing.
 
 ## Where a knob comes from
 
-- **The orbit's param state is the `katalystParams` map of the voice that owns the orbit**: the orbit's bus settings are owned by the newest `Sounding` voice; a voice gives the orbit up when its gate closes or it is cut
+- **The cylinder's param state is the `katalystParams` map of the voice that owns the cylinder**: the cylinder's bus settings are owned by the newest `Sounding` voice; a voice gives the cylinder up when its gate closes or it is cut
   (lifecycle step 5, maintainer 2026-10-07; newest = the latest onset, on a tie the voice created later). The
   block's offers are committed once, after the voices rendered (`Cylinder.offer`, `Cylinder.commitOwner` from
-  `Cylinders.processAndMix`), so render order decides nothing. An orbit without a `Sounding` voice keeps the
+  `Cylinders.processAndMix`), so render order decides nothing. A cylinder without a `Sounding` voice keeps the
   settings it last applied. Every chain, the born-with one included, reads
   its knobs from there; the voice has no bus fields any more. Voices that need independent bus effects go on
-  different orbits. The chain re-resolves only when the owner's map instance changes (`KatalystChain.resolvedFrom`).
+  different cylinders. The chain re-resolves only when the owner's map instance changes (`KatalystChain.resolvedFrom`).
 - **A knob is a `KatalystKnobDsl`** (`audio_bridge/.../KatalystKnobDsl.kt`, the knob expressions task, 2026-10-12): a
   `Constant`, a `Param` (`Kat.param`, `Kat.slot.*`), a modulator (`Kat.sine`, `saw`, `ramp`, `tri`, `square`,
   `perlin`, `berlin`), or the Ignitor's arithmetic and `range` over any of these; never an Ignitor node. `KatalystKnob` compiles each
   knob once at chain build (`KatalystKnobProgram`: the Ignitor's laws on a scalar, constant subtrees folded). A knob
   over slots only is evaluated when the owner's map changes, never per block. A knob that holds a modulator is ticked
-  once per processed block at the top of `KatalystChain.process`, so an ownerless orbit, the master, a leaving chain
-  and every `parallel` branch modulate; its clocks run over the blocks the chain processes (paused while the orbit
+  once per processed block at the top of `KatalystChain.process`, so an ownerless cylinder, the master, a leaving chain
+  and every `parallel` branch modulate; its clocks run over the blocks the chain processes (paused while the cylinder
   sleeps, not reset), and the n-th noise of a chain is seeded by its position. A slot leaf that reads a non-finite
   value unsets the whole knob, and an unset knob's clocks pause. The build-time knobs (`lookahead`, `distort`'s
   `shape`, a region's factor) are numbers, and an `eq` section takes a number or a `Kat.param` only (decision Q2, E2).
 - **A non-finite knob is the declared OFF state** (`KatalystKnob.written` is false for it). This includes a
-  non-finite `wet`, which turns the stage off for the whole orbit: not a pure improvement over the old field path,
+  non-finite `wet`, which turns the stage off for the whole cylinder: not a pure improvement over the old field path,
   accepted so that "non-finite is unset" holds on every knob. Guard: `KatalystSlotResolverSpec`.
-- **Delay and reverb are insert-style**: the feed is the orbit mix at the stage's position times the owner's one
+- **Delay and reverb are insert-style**: the feed is the cylinder mix at the stage's position times the owner's one
   `wet`, the return is added to the mix, the dry stays. A stage runs when its wet is WRITTEN (a written 0 included)
   or authored above 0 (`stageAskedFor` in `KatalystChainBuilder.kt`); an authored 0 nobody writes rents nothing.
-- **The orbit's group fader** is the `gain` stage (`gain.gain`, unity on the classic chain and bit-transparent
+- **The cylinder's group fader** is the `gain` stage (`gain.gain`, unity on the classic chain and bit-transparent
   there). It scales dry and returns alike.
 
 ## How a stage switches and how a knob changes
 
 Every stage switches without a click, and the first switch after construction or `reset` acts at once until one
-block has run (the `KnobGlide` snap), so a stage set on an orbit's first block renders as it always did. `reset`
-and `retire` stay a synchronous hard cut, and `Cylinder` calls them only on a silent orbit or at the shelf.
+block has run (the `KnobGlide` snap), so a stage set on a cylinder's first block renders as it always did. `reset`
+and `retire` stay a synchronous hard cut, and `Cylinder` calls them only on a silent cylinder or at the shelf.
 
 | stage | switch on / off | knob changes |
 |---|---|---|
-| body, vowel, orbit EQ | `KatalystFilterSwap`: TWO banks, a linear crossfade over `BANK_CROSSFADE_SECONDS` (0.05 since 2026-10-17, by ear; 0.02 before), counted in samples. A change during a fade is refused by the swap and PARKED by the host as a config, latest wins, installed on the landing block | a changed material or vowel is a new bank (the bank in service is never retuned; the morph was rejected by ear, 2026-09-20). Body and vowel `wet` and `floor` move the blend IN PLACE (knob expressions step 5c): the dry and wet coefficients glide per sample on every bank the swap holds, over 50 ms, one block when modulated, no install; a mix at 0 bypasses once the blend has landed there, the landing zeroes the bands |
+| body, vowel, cylinder EQ | `KatalystFilterSwap`: TWO banks, a linear crossfade over `BANK_CROSSFADE_SECONDS` (0.05 since 2026-10-17, by ear; 0.02 before), counted in samples. A change during a fade is refused by the swap and PARKED by the host as a config, latest wins, installed on the landing block | a changed material or vowel is a new bank (the bank in service is never retuned; the morph was rejected by ear, 2026-09-20). Body and vowel `wet` and `floor` move the blend IN PLACE (knob expressions step 5c): the dry and wet coefficients glide per sample on every bank the swap holds, over 50 ms, one block when modulated, no install; a mix at 0 bypasses once the blend has landed there, the landing zeroes the bands |
 | delay | Off, Active, Draining state machine (`KatalystDelayEffect`). EVERY off (an owner change, a `katp` time below the gate, an unset or non-finite time) stays Active while the wet glide takes the feed to 0, and the block the glide lands in drains on its own, no further off-config needed (engine follow-up 42, maintainer Q39, 2026-10-13: "fade, do not cut"; knob expressions step 5b built it for a modulated time). On an owner change the new owner's first 50 ms reach the old ring at a falling level, accepted. A return from Draining glides the wet up from 0; from Off it snaps, except on a modulated time, whose every return, the first activation included, glides up from 0 | `time`: `DelayLine` crossfades the old tap to the new over 50 ms, a change mid-crossfade is parked; `feedback`: glides per block and ramps per sample; `wet`: per-sample level glide |
 | reverb | the same state machine and the delay's feed fade on every off, and its glide from 0 out of Off for a modulated size (`KatalystReverbEffect`) | `size` glides on the normalized 0..1 axis; `lowpass` (damping) does not glide, measured inaudible; `wet` as the delay's |
 | compressor | a linear blend with dry over `KNOB_GLIDE_SECONDS`; ON fades a reset instance in; the instance is built with the effect, never on the audio thread | `threshold`, `ratio` (as its inverse), `knee` glide per sample (`Compressor.processGliding`) as one move when it only adds reduction; a move whose NET effect at 0 dBFS (a fixed loud reference, never the signal) is less reduction (threshold up, ratio down, knee narrower, or a mix that relaxes on balance) releases on the same shared fraction at the compressor's release time constant, never faster than the glide (`CompressorKnobMove`, by ear 2026-10-17); a modulated knob stays outside the move; `attack`, `release` apply at once |
 | phaser | the wet and floor coefficients glide to identity; the cascade is dropped only on the landing | `wet`, `floor` per sample; `center`, `sweep` per block with alpha continuous across the seam (`PhaserCore.prepareBlock`); `rate` at once |
-| duck | a weight rides the reduction to 0 dB (`gain = 1 + w * (g - 1)`), then lets go of the source orbit | `depth` per sample; `attack` at once; a `duck.cylinder` switch has no mechanism (open: KLANG-00247 (duck orbit switch click)) |
+| duck | a weight rides the reduction to 0 dB (`gain = 1 + w * (g - 1)`), then lets go of the source cylinder | `depth` per sample; `attack` at once; a `duck.cylinder` switch has no mechanism (open: KLANG-00247 (duck orbit switch click)) |
 | distort | the compressor's law: a linear blend with the dry mix over `KNOB_GLIDE_SECONDS`; ON fades reset cores in; it runs at the rate it is in (its own oversampling factor, 2x by default, retired 2026-11-03 with KLANG-00214 step 4: a region is the way up) | `amount` glides linear in the amount over `KNOB_GLIDE_SECONDS`, the drive ramped per sample within a block; `shape` is fixed with the chain |
 | gain | never off | per-sample glide over `KNOB_GLIDE_SECONDS` |
 | arithmetic (`plus`, `minus`, `times`, `div`, `pow`, `min`, `max`, `abs`; 2026-10-11) | never off, memoryless: the Ignitor's per-sample law (`_arithmetic_laws.kt`) on every sample; an unset operand is the operator's identity, an unset cap or floor passes the bus | the operand glides per sample over `KNOB_GLIDE_SECONDS`, the law taken with the operand at each sample; a divisor glides as its reciprocal (a level) and divides again once settled; a cap's or a floor's first operand after unset arrives at once, and a cleared one lets go at the next block (`KatalystArithmeticEffect`) |
-| parallel | none of its own: each branch is a chain whose stages switch as above | none of its own: the orbit's param state reaches every branch's stages (`KatalystNestedChainsWriter`) |
-| region (`oversampleBy`, `oversampleAtLeast`; KLANG-00214 step 3a) | none of its own: the body is a chain at the region's rate whose stages switch as above; the converters run while the orbit does. At a chain's head it takes the orbit's rate buses in (step 3b) | none of its own: the param state reaches the body's stages (`KatalystNestedChainsWriter`); the knobs keep the orbit's clock |
+| parallel | none of its own: each branch is a chain whose stages switch as above | none of its own: the cylinder's param state reaches every branch's stages (`KatalystNestedChainsWriter`) |
+| region (`oversampleBy`, `oversampleAtLeast`; KLANG-00214 step 3a) | none of its own: the body is a chain at the region's rate whose stages switch as above; the converters run while the cylinder does. At a chain's head it takes the cylinder's rate buses in (step 3b) | none of its own: the param state reaches the body's stages (`KatalystNestedChainsWriter`); the knobs keep the cylinder's clock |
 
 `KnobGlide` (`audio_be/.../KnobGlide.kt`, its KDoc is the contract) moves one knob linearly over
 `KNOB_GLIDE_SECONDS` (0.05) in whole 128-frame blocks, lands bit-exactly, restarts from where the knob stands on a
@@ -91,13 +91,13 @@ in KLANG-00302 (katalyst knob expressions), "5b built"). Two traps for the next 
 
 The glide time itself is an open question for the maintainer's ear: KLANG-00213 (transition times).
 
-## When an orbit may stop, and when a chain leaves
+## When a cylinder may stop, and when a chain leaves
 
-- **An orbit deactivates only when** its silence grace has run (`silentBlocksBeforeTailCheck`, 10 blocks), its
+- **A cylinder deactivates only when** its silence grace has run (`silentBlocksBeforeTailCheck`, 10 blocks), its
   chain reports no tail, AND no voice has checked in on it (`Cylinder.checkIn`, owner or not, tails included; one
-  block of grace). A muted voice keeps its orbit while it plays, so the fader glides and a phaser sweep continues;
+  block of grace). A muted voice keeps its cylinder while it plays, so the fader glides and a phaser sweep continues;
   a culled voice has ended and keeps nothing.
-  `tryDeactivate` clears the orbit's mix buffer (a stale buffer once leaked into a room).
+  `tryDeactivate` clears the cylinder's mix buffer (a stale buffer once leaked into a room).
 - **The tail question** is `KatalystChain.hasTail()`, answered by `TailCeiling` compares (`effects/TailCeiling.kt`),
   never by a scan (the effects have no scan left, KLANG-00290 item 20). The ceiling may only err towards holding longer.
   Every ceiling is held to `SILENCE_FLOOR`, except a reverb whose chain drains after a swap: that one answers against
@@ -113,7 +113,7 @@ The glide time itself is an open question for the maintainer's ear: KLANG-00213 
   over `ChainSwap.CUT_SECONDS` (0.15 s), and a request during the fade cuts where the fade ends; the request lands
   about 0.2 s after it was made (maintainer, 2026-10-17: KLANG-00318 (chain swap request during drain)).
   Chains of different latency are placed so their weights meet at the output (`KatalystChain.latencyFrames`).
-  Chains of different rates (KLANG-00214 step 3b) each bring the orbit's rate buses to their own rate: the leaving
+  Chains of different rates (KLANG-00214 step 3b) each bring the cylinder's rate buses to their own rate: the leaving
   chain gets a copy of every bus ramped by the same line, read between the frames (`Crossfade.rampDown(steps)`), and
   its buses are zeroed after each run (`ChainSwap.processLeaving`); the blend and the duck stay at 1x.
 - **`TailRelease` is the one release law** (`audio_be/.../TailRelease.kt`): exponential from exactly 1, 60 dB per
@@ -122,7 +122,7 @@ The glide time itself is an open question for the maintainer's ear: KLANG-00213 
   full; only when an endless tail is present (`KatalystChain.sustainsItself`: a delay at `|feedback| >= 1`, or an
   arithmetic stage that sounds on silence, an offset, since 2026-11-05) is the engine's whole output released, `MAX_TAIL_HOLD_SECONDS` (20 s) after the last note.
 - **Lookahead**: the Katalyst `compressor` and `limiter` take a build-time `lookahead`, at most
-  `Compressor.MAX_LOOKAHEAD_SECONDS` (0.05), fixed per chain; the orbit or playback runs late by it and nothing
+  `Compressor.MAX_LOOKAHEAD_SECONDS` (0.05), fixed per chain; the cylinder or playback runs late by it and nothing
   compensates, by the author's choice. The house limiter is not a Katalyst stage (`HouseStage`; `audio/MEMORY.md`, "House stage").
   An oversampling region delays the same way, by its round trip's group delay (3.07, 4.40, 5.06 frames at 2x, 4x, 8x;
   `Oversampler.groupDelaySamples`, the IIR half-band's low-frequency delay) plus its body's latency divided down, rounded
@@ -137,7 +137,7 @@ The plan is `audio/ref/effect-state-machines.md`; the delay (`KatalystDelayEffec
 reverb, the filter swap and the compressor copy it. What every copy must keep:
 
 - **The tail question has THREE askers, and a new stage answers all three** (2026-10-09, the `distort` stage's review,
-  two escapes): the orbit's deactivation (it scans the mix AFTER the chain, so an insert's residue is seen without
+  two escapes): the cylinder's deactivation (it scans the mix AFTER the chain, so an insert's residue is seen without
   asking), the chain swap (`ChainSwap` drains the leaving chain at the end of its input ramp when `hasTail()` OR its
   last block reached `SILENCE_FLOOR`, a scan since KLANG-00293 (chain swap cuts ringing inserts); before, a ringing
   body, vowel, phaser or eq bell was retired in one sample), and the master (`MasterBus.isRinging`: an audible output

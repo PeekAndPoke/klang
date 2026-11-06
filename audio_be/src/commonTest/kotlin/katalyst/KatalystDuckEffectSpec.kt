@@ -37,8 +37,8 @@ class KatalystDuckEffectSpec : StringSpec({
 
     fun ctx(): KatalystContext = KatalystContext(blockFrames = frames, mixBuffer = StereoBuffer(frames))
 
-    fun settings(orbit: Int, depth: Double, attack: Double = 0.1): DuckSettings =
-        DuckSettings(cylinderId = orbit, attackSeconds = attack, depth = depth)
+    fun settings(cylinder: Int, depth: Double, attack: Double = 0.1): DuckSettings =
+        DuckSettings(cylinderId = cylinder, attackSeconds = attack, depth = depth)
 
     /** A steady mix to duck, and a steady loud trigger: the worst case, a reduction in force. */
     fun mix(blocks: Int): DoubleArray = DoubleArray(blocks * frames) { 0.5 }
@@ -47,7 +47,7 @@ class KatalystDuckEffectSpec : StringSpec({
 
     /**
      * Drives the stage the way the host does, in the host's order: the writer's `configure`, then
-     * the orbit's block (`KatalystChain.process`), then the duck pass.
+     * the cylinder's block (`KatalystChain.process`), then the duck pass.
      */
     fun run(
         src: DoubleArray,
@@ -67,7 +67,7 @@ class KatalystDuckEffectSpec : StringSpec({
             }
 
             fx.configure(settingsAt(k))
-            fx.orbitBlockRan()
+            fx.cylinderBlockRan()
 
             for (i in 0 until frames) {
                 context.mixBuffer.left[i] = src[k * frames + i]
@@ -141,7 +141,7 @@ class KatalystDuckEffectSpec : StringSpec({
         val src = mix(blocks)
         val side = trigger(blocks)
 
-        val got = run(src = src, side = side) { settings(orbit = 2, depth = 0.8) }
+        val got = run(src = src, side = side) { settings(cylinder = 2, depth = 0.8) }
 
         val bare = Ducking(sampleRate = sampleRate, attackSeconds = 0.1, depth = 0.8)
         val want = DoubleArray(src.size)
@@ -179,7 +179,7 @@ class KatalystDuckEffectSpec : StringSpec({
         val change = 6
         val fx = stage()
 
-        val got = run(src = src, side = side, fx = fx) { k -> if (k < change) settings(orbit = 2, depth = 0.8) else null }
+        val got = run(src = src, side = side, fx = fx) { k -> if (k < change) settings(cylinder = 2, depth = 0.8) else null }
 
         val g = reduction(side, depth = 0.8)
         val w = line(from = 1.0, to = 0.0, blocks = glideBlocks)
@@ -229,7 +229,7 @@ class KatalystDuckEffectSpec : StringSpec({
         val change = 6
         val fx = stage()
 
-        val got = run(src = src, side = side, fx = fx) { k -> if (k < change) settings(orbit = 2, depth = 0.8) else null }
+        val got = run(src = src, side = side, fx = fx) { k -> if (k < change) settings(cylinder = 2, depth = 0.8) else null }
 
         var previous = 0.0
 
@@ -259,24 +259,24 @@ class KatalystDuckEffectSpec : StringSpec({
         // Fresh: the very first setting is in force on the very first block.
         val fresh = stage()
 
-        fresh.configure(settings(orbit = 2, depth = 0.8))
+        fresh.configure(settings(cylinder = 2, depth = 0.8))
         fresh.weight shouldBe 1.0
 
-        // A stage that has seen the orbit render, but never ducked, fades its first life IN.
+        // A stage that has seen the cylinder render, but never ducked, fades its first life IN.
         val later = stage()
 
         repeat(4) {
             later.configure(null)
-            later.orbitBlockRan()
+            later.cylinderBlockRan()
         }
 
-        later.configure(settings(orbit = 2, depth = 0.8))
+        later.configure(settings(cylinder = 2, depth = 0.8))
 
         withClue("a duck that engages at bar five arrives over the glide, not in one sample") {
             later.weight shouldBe 0.0
         }
 
-        val got = run(src = src, side = side) { k -> if (k < 2) null else settings(orbit = 2, depth = 0.8) }
+        val got = run(src = src, side = side) { k -> if (k < 2) null else settings(cylinder = 2, depth = 0.8) }
         val g = reduction(side, depth = 0.8, from = 2 * frames)
         val w = line(from = 0.0, to = 1.0, blocks = glideBlocks)
 
@@ -305,14 +305,14 @@ class KatalystDuckEffectSpec : StringSpec({
 
         fun block(s: DuckSettings?) {
             fx.configure(s)
-            fx.orbitBlockRan()
+            fx.cylinderBlockRan()
             context.mixBuffer.fill(0.5)
             context.sidechainBuffer = side
             fx.process(context)
             context.sidechainBuffer = null
         }
 
-        block(settings(orbit = 2, depth = 0.8))
+        block(settings(cylinder = 2, depth = 0.8))
         fx.weight shouldBe 1.0
 
         repeat(4) { block(null) }
@@ -324,7 +324,7 @@ class KatalystDuckEffectSpec : StringSpec({
         }
 
         // Back on: the weight rises from where it stands, over a full glide.
-        block(settings(orbit = 2, depth = 0.8))
+        block(settings(cylinder = 2, depth = 0.8))
 
         withClue("the fade turns around, it does not restart from 0 or jump to 1") {
             abs(fx.weight - (turned + (1.0 - turned) / glideBlocks)) shouldBeLessThanOrEqual 1e-12
@@ -338,7 +338,7 @@ class KatalystDuckEffectSpec : StringSpec({
         val change = 4
 
         val got = run(src = src, side = side) { k ->
-            if (k < change) settings(orbit = 2, depth = 0.2) else settings(orbit = 2, depth = 1.0)
+            if (k < change) settings(cylinder = 2, depth = 0.2) else settings(cylinder = 2, depth = 1.0)
         }
 
         // The oracle: a bare Ducking driven sample by sample with the hand-written depth line.
@@ -380,14 +380,14 @@ class KatalystDuckEffectSpec : StringSpec({
     "attack does not glide: a new time constant is in force on the block it arrives" {
         val fx = stage()
 
-        fx.configure(settings(orbit = 2, depth = 0.8, attack = 0.5))
+        fx.configure(settings(cylinder = 2, depth = 0.8, attack = 0.5))
         fx.ducking.shouldNotBeNull().attackSeconds shouldBe 0.5
 
-        fx.configure(settings(orbit = 2, depth = 0.8, attack = 0.02))
+        fx.configure(settings(cylinder = 2, depth = 0.8, attack = 0.02))
         fx.ducking.shouldNotBeNull().attackSeconds shouldBe 0.02
     }
 
-    "a changed sidechain orbit keeps the envelope, and the reduction carries on" {
+    "a changed sidechain cylinder keeps the envelope, and the reduction carries on" {
         val blocks = 12
         val src = mix(blocks)
         val side = trigger(blocks)
@@ -395,9 +395,9 @@ class KatalystDuckEffectSpec : StringSpec({
         val fx = stage()
 
         val moved = run(src = src, side = side, fx = fx) { k ->
-            if (k < change) settings(orbit = 2, depth = 0.8) else settings(orbit = 5, depth = 0.8)
+            if (k < change) settings(cylinder = 2, depth = 0.8) else settings(cylinder = 5, depth = 0.8)
         }
-        val held = run(src = src, side = side) { settings(orbit = 2, depth = 0.8) }
+        val held = run(src = src, side = side) { settings(cylinder = 2, depth = 0.8) }
 
         fx.duckCylinderId shouldBe 5
 
@@ -412,7 +412,7 @@ class KatalystDuckEffectSpec : StringSpec({
         val from = stage()
         val to = stage()
 
-        from.configure(settings(orbit = 2, depth = 0.8))
+        from.configure(settings(cylinder = 2, depth = 0.8))
 
         val instance = from.ducking.shouldNotBeNull()
 
@@ -423,7 +423,7 @@ class KatalystDuckEffectSpec : StringSpec({
         from.ducking.shouldBeNull()
         from.handedOver shouldBe true
 
-        from.configure(settings(orbit = 2, depth = 0.8))
+        from.configure(settings(cylinder = 2, depth = 0.8))
         from.ducking.shouldBeNull()
     }
 
@@ -438,7 +438,7 @@ class KatalystDuckEffectSpec : StringSpec({
 
         fun block(fx: KatalystDuckEffect, s: DuckSettings?) {
             fx.configure(s)
-            fx.orbitBlockRan()
+            fx.cylinderBlockRan()
             context.mixBuffer.fill(0.5)
             context.sidechainBuffer = side
             fx.process(context)
@@ -446,7 +446,7 @@ class KatalystDuckEffectSpec : StringSpec({
         }
 
         // A live duck, then four blocks of a fade-out: the weight stands part way down.
-        block(from, settings(orbit = 2, depth = 0.95))
+        block(from, settings(cylinder = 2, depth = 0.95))
         repeat(4) { block(from, null) }
 
         val carried = from.weight
@@ -464,14 +464,14 @@ class KatalystDuckEffectSpec : StringSpec({
 
         // The arriving chain's writer then asks for the duck. A retarget moves no weight by
         // itself, so the stage still stands where the leaving one did: no snap to full reduction.
-        to.configure(settings(orbit = 2, depth = 0.95))
+        to.configure(settings(cylinder = 2, depth = 0.95))
 
         withClue("configure does not install the arriving stage at full weight") {
             to.weight shouldBe carried
         }
 
         // And the first block it renders turns the fade around, one step towards 1.
-        block(to, settings(orbit = 2, depth = 0.95))
+        block(to, settings(cylinder = 2, depth = 0.95))
 
         withClue("the arriving stage turns the fade around from where the weight stands") {
             abs(to.weight - (carried + (1.0 - carried) / glideBlocks)) shouldBeLessThanOrEqual 1e-12
@@ -489,14 +489,14 @@ class KatalystDuckEffectSpec : StringSpec({
 
         fun block(fx: KatalystDuckEffect, s: DuckSettings?) {
             fx.configure(s)
-            fx.orbitBlockRan()
+            fx.cylinderBlockRan()
             context.mixBuffer.fill(0.5)
             context.sidechainBuffer = side
             fx.process(context)
             context.sidechainBuffer = null
         }
 
-        repeat(4) { block(from, settings(orbit = 2, depth = 0.2)) }
+        repeat(4) { block(from, settings(cylinder = 2, depth = 0.2)) }
 
         from.depth shouldBe 0.2
 
@@ -512,13 +512,13 @@ class KatalystDuckEffectSpec : StringSpec({
             to.depth shouldBe 0.2
         }
 
-        to.configure(settings(orbit = 2, depth = 0.9))
+        to.configure(settings(cylinder = 2, depth = 0.9))
 
         withClue("a retarget moves nothing by itself") {
             to.depth shouldBe 0.2
         }
 
-        to.orbitBlockRan()
+        to.cylinderBlockRan()
         context.mixBuffer.fill(0.5)
         context.sidechainBuffer = side
         to.process(context)
@@ -539,20 +539,20 @@ class KatalystDuckEffectSpec : StringSpec({
 
         fun block(s: DuckSettings?) {
             fx.configure(s)
-            fx.orbitBlockRan()
+            fx.cylinderBlockRan()
             context.mixBuffer.fill(0.5)
             context.sidechainBuffer = side
             fx.process(context)
             context.sidechainBuffer = null
         }
 
-        block(settings(orbit = 2, depth = 0.9))
+        block(settings(cylinder = 2, depth = 0.9))
         repeat(glideBlocks + 1) { block(null) }
 
         fx.ducking.shouldBeNull()
 
         // The next life: depth at once, weight from zero.
-        block(settings(orbit = 3, depth = 0.4))
+        block(settings(cylinder = 3, depth = 0.4))
 
         fx.depth shouldBe 0.4
 
@@ -561,7 +561,7 @@ class KatalystDuckEffectSpec : StringSpec({
         }
     }
 
-    "a duck whose sidechain orbit disappears lets go at once: there is nothing left to ride down" {
+    "a duck whose sidechain cylinder disappears lets go at once: there is nothing left to ride down" {
         val fx = stage()
         val context = ctx()
         val side = StereoBuffer(frames)
@@ -571,21 +571,21 @@ class KatalystDuckEffectSpec : StringSpec({
 
         // Two ducked blocks, so a reduction is really in force.
         repeat(2) {
-            fx.configure(settings(orbit = 2, depth = 0.9))
-            fx.orbitBlockRan()
+            fx.configure(settings(cylinder = 2, depth = 0.9))
+            fx.cylinderBlockRan()
             context.mixBuffer.fill(0.5)
             context.sidechainBuffer = side
             fx.process(context)
             context.sidechainBuffer = null
         }
 
-        // The sidechain orbit is gone: `Cylinders` runs no duck pass at all, so the orbit's mix
+        // The sidechain cylinder is gone: `Cylinders` runs no duck pass at all, so the cylinder's mix
         // goes out unducked.
-        fx.configure(settings(orbit = 2, depth = 0.9))
-        fx.orbitBlockRan()
+        fx.configure(settings(cylinder = 2, depth = 0.9))
+        fx.cylinderBlockRan()
 
         // And now the owner switches the stage off. A fade would hold the envelope and the source
-        // orbit for good, because only the pass advances it.
+        // cylinder for good, because only the pass advances it.
         fx.configure(null)
 
         fx.ducking.shouldBeNull()
@@ -606,8 +606,8 @@ class KatalystDuckEffectSpec : StringSpec({
         side.right.fill(0.9)
 
         // One ducked block, so the snap window is spent and a life really started.
-        fx.configure(settings(orbit = 2, depth = 0.9))
-        fx.orbitBlockRan()
+        fx.configure(settings(cylinder = 2, depth = 0.9))
+        fx.cylinderBlockRan()
         context.mixBuffer.fill(0.5)
         context.sidechainBuffer = side
         fx.process(context)
@@ -615,22 +615,22 @@ class KatalystDuckEffectSpec : StringSpec({
 
         fx.weight shouldBe 1.0
 
-        // The sidechain orbit disappears: no pass. Then the owner drops the duck, and the life
+        // The sidechain cylinder disappears: no pass. Then the owner drops the duck, and the life
         // ends through the short-circuit rather than through a landed fade.
-        fx.configure(settings(orbit = 2, depth = 0.9))
-        fx.orbitBlockRan()
+        fx.configure(settings(cylinder = 2, depth = 0.9))
+        fx.cylinderBlockRan()
         fx.configure(null)
 
         fx.ducking.shouldBeNull()
 
         // The next life must RIDE IN, exactly as any later switch-on does.
-        fx.configure(settings(orbit = 2, depth = 0.9))
+        fx.configure(settings(cylinder = 2, depth = 0.9))
 
         withClue("the new life's weight starts from 0, it does not resume at full reduction") {
             fx.weight shouldBe 0.0
         }
 
-        fx.orbitBlockRan()
+        fx.cylinderBlockRan()
         context.mixBuffer.fill(0.5)
         context.sidechainBuffer = side
         fx.process(context)
@@ -649,8 +649,8 @@ class KatalystDuckEffectSpec : StringSpec({
         side.left.fill(0.9)
         side.right.fill(0.9)
 
-        fx.configure(settings(orbit = 2, depth = 0.8))
-        fx.orbitBlockRan()
+        fx.configure(settings(cylinder = 2, depth = 0.8))
+        fx.cylinderBlockRan()
         context.mixBuffer.fill(0.5)
         context.sidechainBuffer = side
         fx.process(context)
@@ -667,7 +667,7 @@ class KatalystDuckEffectSpec : StringSpec({
         fx.weight shouldBe 0.0
 
         // The next life's first setting is in force at once.
-        fx.configure(settings(orbit = 2, depth = 0.8))
+        fx.configure(settings(cylinder = 2, depth = 0.8))
         fx.weight shouldBe 1.0
     }
 
@@ -686,7 +686,7 @@ class KatalystDuckEffectSpec : StringSpec({
         val fx = stage()
         val context = ctx()
 
-        fx.configure(settings(orbit = 0, depth = 1.0))
+        fx.configure(settings(cylinder = 0, depth = 1.0))
         context.mixBuffer.fill(0.5)
         context.sidechainBuffer = null
         fx.process(context)
@@ -698,7 +698,7 @@ class KatalystDuckEffectSpec : StringSpec({
         val fx = stage()
         val context = ctx()
 
-        fx.configure(settings(orbit = 0, depth = 0.8, attack = 0.001))
+        fx.configure(settings(cylinder = 0, depth = 0.8, attack = 0.001))
         context.mixBuffer.fill(1.0)
 
         // Asymmetric sidechain: left is louder.

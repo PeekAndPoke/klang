@@ -72,7 +72,7 @@ Both should be inaudible. Both would be authored stages, most likely on the mast
 ## Shape, if it is built
 
 - **Tag: an echo-mark stage.** A Katalyst stage (name to decide) with a fixed short delay and a low
-  level, perhaps a time-spread pattern for more bits. It works on an orbit too, like every Katalyst
+  level, perhaps a time-spread pattern for more bits. It works on a cylinder too, like every Katalyst
   stage. The existing delay machinery (`KatalystDelayEffect`) is close; this may be a thin stage on top.
 - **Detection is half the feature.** A reader that takes a WAV and reports the cepstral peak at the
   mark's delay, with a false-positive rate against unmarked music. Probably an offline tool next to the

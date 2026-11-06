@@ -50,7 +50,7 @@ internal class CapLaw(sampleRate: Int, private val blockFrames: Int) {
 }
 
 /**
- * The capped drain on the orbit (phase 3 step 12 decision (i), maintainer 2026-09-28, option A): a
+ * The capped drain on the cylinder (phase 3 step 12 decision (i), maintainer 2026-09-28, option A): a
  * drain older than [ChainSwap.MAX_DRAIN_SECONDS] that still reports a tail has its OUTPUT released
  * exponentially and retires under the floor, so a request parked behind it lands. A room ends on
  * its own first and the cap never touches it. The master's rows are `MasterBusTest`'s.

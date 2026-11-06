@@ -16,7 +16,7 @@ import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_bridge.constants.BANK_CROSSFADE_SECONDS
 
 /**
- * [KatalystFilterSwap] switches the resonant banks behind `body(...)`, `vowel(...)` and the orbit
+ * [KatalystFilterSwap] switches the resonant banks behind `body(...)`, `vowel(...)` and the cylinder
  * `eq` without a click: every edge (on, off, a change, a return) is a linear crossfade over
  * [BANK_CROSSFADE_SECONDS] from what sounds NOW (Katalyst step 5c-6, decided with the maintainer
  * 2026-09-19; TWO BANKS since step 5c-11, 2026-09-20; 20 ms then, 50 ms by ear since 2026-10-17).
@@ -431,10 +431,10 @@ class KatalystFilterSwapSpec : StringSpec({
     }
 
     "reset() is a hard cut from every state: dry at once, nothing held, and the next set snaps" {
-        // The cylinder's deactivation and retire: a fade that survived would resume on the orbit's
+        // The cylinder's deactivation and retire: a fade that survived would resume on the cylinder's
         // next life, on new material.
         // Two runs per case, because the first block after the cut spends the snap (in the engine
-        // no block runs between an orbit's deactivation and its next life).
+        // no block runs between a cylinder's deactivation and its next life).
         fun afterReset(prepare: (Twin) -> Unit, label: String) {
             val t = twin()
             prepare(t)

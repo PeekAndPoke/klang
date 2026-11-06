@@ -33,7 +33,7 @@ import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinter
  * would darken every room.
  *
  * The slots are the reverb's only storage since Katalyst step 5b-3 (the voice fields left the
- * wire and `SprudelVoiceData`): the orbit's room reads them, and so do the `reverb.*` accessors.
+ * wire and `SprudelVoiceData`): the cylinder's room reads them, and so do the `reverb.*` accessors.
  *
  * Byte-identical to what the engine did with an unset field until then: `VoiceFactory`
  * substituted exactly these constants.
@@ -93,14 +93,14 @@ private fun applyReverb(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
 
 
 /**
- * The orbit reverb: how much of the orbit goes into the room, its size and its lowpass.
+ * The cylinder reverb: how much of the cylinder goes into the room, its size and its lowpass.
  *
- * One reverb per orbit bus, and all three are set once for everyone
- * by the orbit's owning voice. `wet` is how much of the orbit goes into the room: the room is added
- * on top of the dry sound, and every voice on the orbit is in it alike. So a pattern that should
- * stay dry, or sit in the room by a different amount, goes on an orbit of its own. The room hears
- * everything before it on the orbit: a `body`, a `vowel` and the `delay`'s echoes. When another
- * pattern with a reverb takes the orbit over, `wet` and `size` move smoothly to its values; a
+ * One reverb per cylinder bus, and all three are set once for everyone
+ * by the cylinder's owning voice. `wet` is how much of the cylinder goes into the room: the room is added
+ * on top of the dry sound, and every voice on the cylinder is in it alike. So a pattern that should
+ * stay dry, or sit in the room by a different amount, goes on a cylinder of its own. The room hears
+ * everything before it on the cylinder: a `body`, a `vowel` and the `delay`'s echoes. When another
+ * pattern with a reverb takes the cylinder over, `wet` and `size` move smoothly to its values; a
  * pattern without one switches the room off: its feed fades out over 50 ms and the tail rings out.
  *
  * The call sets every slot: the ones you leave out take the same default as on the master reverb,
@@ -132,14 +132,14 @@ private fun applyReverb(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * s("bd sd").reverb("<0.1 0.5>", 4).delay(wet = reverb.wet, time = 0.25)     // as much delay as reverb
  * ```
  *
- * @param wet How much of the orbit goes into the room, 0 to 1, default 0.25. Orbit-wide.
- * @param size Tail length, about 0 to 10, default 5; above 10 is bounded at 10. Orbit-wide.
- * @param lowpass Lowpass on the tail, Hz. Lower is darker. Unset by default. Orbit-wide.
+ * @param wet How much of the cylinder goes into the room, 0 to 1, default 0.25. Cylinder-wide.
+ * @param size Tail length, about 0 to 10, default 5; above 10 is bounded at 10. Cylinder-wide.
+ * @param lowpass Lowpass on the tail, Hz. Lower is darker. Unset by default. Cylinder-wide.
  * @tool SprudelReverbEditor
  * @tool wet: SprudelReverbEditor, SprudelReverbSequenceEditor
  * @tool size: SprudelReverbSizeEditor, SprudelReverbSizeSequenceEditor
  *
- * @scope orbit
+ * @scope cylinder
  * @category effects
  * @tags reverb, wet, size, lowpass
  */
@@ -185,7 +185,7 @@ fun PatternMapperFn.reverb(
  * The `reverb` object: `reverb(...)` sets the slots, and each numeric slot reads back as a child,
  * `reverb.wet`, `reverb.size`, `reverb.lowpass`.
  *
- * @scope orbit
+ * @scope cylinder
  * @category effects
  * @tags reverb, accessor
  */
@@ -208,9 +208,9 @@ object reverb {
     /**
      * The setter, see [SprudelPattern.reverb].
      *
-     * @param wet How much of the orbit goes into the room, 0 to 1, default 0.25. Orbit-wide.
-     * @param size Tail length, about 0 to 10, default 5; above 10 is bounded at 10. Orbit-wide.
-     * @param lowpass Lowpass on the tail, Hz. Lower is darker. Unset by default. Orbit-wide.
+     * @param wet How much of the cylinder goes into the room, 0 to 1, default 0.25. Cylinder-wide.
+     * @param size Tail length, about 0 to 10, default 5; above 10 is bounded at 10. Cylinder-wide.
+     * @param lowpass Lowpass on the tail, Hz. Lower is darker. Unset by default. Cylinder-wide.
      */
     @KlangScript.Invoke
     operator fun invoke(

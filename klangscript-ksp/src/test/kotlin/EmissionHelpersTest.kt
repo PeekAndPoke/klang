@@ -79,7 +79,7 @@ class EmissionHelpersTest : StringSpec({
                 indent = "",
                 scriptName = "duck",
                 scriptParams = listOf(
-                    param("orbit", "Any", "Any", isNullable = true, index = 0, default = "null"),
+                    param("cylinder", "Any", "Any", isNullable = true, index = 0, default = "null"),
                     param("depth", "Any", "Any", isNullable = true, index = 1, default = "null"),
                 ),
                 fnCall = "duck.invoke",
@@ -92,7 +92,7 @@ class EmissionHelpersTest : StringSpec({
             |checkArgsSize(fn = "duck", args = args, expected = 0, location = loc)
             |wrapAsRuntimeValue(
             |    duck.invoke(
-            |        orbit = optArg(args, 0, Any::class, loc),
+            |        cylinder = optArg(args, 0, Any::class, loc),
             |        depth = optArg(args, 1, Any::class, loc),
             |        callInfo = callInfo,
             |    )

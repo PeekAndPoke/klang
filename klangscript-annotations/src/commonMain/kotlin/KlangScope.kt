@@ -6,21 +6,21 @@
 package io.peekandpoke.klang.script.annotations
 
 /**
- * Where a setting takes effect: on the one voice, on the orbit's shared bus, or on the master.
+ * Where a setting takes effect: on the one voice, on the cylinder's shared bus, or on the master.
  *
  * This is load-bearing knowledge for anyone writing a song, and it is not guessable from a
  * function's name: `reverb()` reads like a per-note setting and is mostly not one. The engine's
  * layout (`audio_be`) is the source of truth here:
  *
  * - a voice runs its own strip, Pitch to Ignite to Filter to Send (`Voice.kt`);
- * - each orbit owns ONE shared bus, Body to Vowel to Delay to Reverb to Phaser to Compressor,
- *   processing the orbit's summed mix, plus ducking after all orbits (`Cylinder.kt`); the delay and
- *   the reverb are fed from that mix too, by one amount per orbit (Katalyst step 5b-2);
- * - that bus is configured by ONE voice at a time (`Cylinder.kt`): the orbit's bus settings are owned
- *   by the newest `Sounding` voice; a voice gives the orbit up when its gate closes or it is cut. A
- *   voice that wants its own bus settings belongs on its own orbit.
+ * - each cylinder owns ONE shared bus, Body to Vowel to Delay to Reverb to Phaser to Compressor,
+ *   processing the cylinder's summed mix, plus ducking after all cylinders (`Cylinder.kt`); the delay and
+ *   the reverb are fed from that mix too, by one amount per cylinder (Katalyst step 5b-2);
+ * - that bus is configured by ONE voice at a time (`Cylinder.kt`): the cylinder's bus settings are owned
+ *   by the newest `Sounding` voice; a voice gives the cylinder up when its gate closes or it is cut. A
+ *   voice that wants its own bus settings belongs on its own cylinder.
  *
- * Set it with `@scope voice|orbit|master` in the KDoc of the primary declaration.
+ * Set it with `@scope voice|cylinder|master` in the KDoc of the primary declaration.
  *
  * It lives in `klangscript-annotations` because both sides of the docs pipeline need it and that is
  * the only module both can see: the KSP processor reads the tag and emits the constant, `KlangSymbol`
@@ -32,13 +32,13 @@ enum class KlangScope(val tag: String, val label: String) {
     VOICE("voice", "PER VOICE"),
 
     /**
-     * One shared processor per orbit, configured by the orbit's owning voice: the orbit's bus settings are
-     * owned by the newest `Sounding` voice; a voice gives the orbit up when its gate closes or it is cut.
-     * Every voice on the orbit is processed by it whether it asked for it or not.
+     * One shared processor per cylinder, configured by the cylinder's owning voice: the cylinder's bus settings are
+     * owned by the newest `Sounding` voice; a voice gives the cylinder up when its gate closes or it is cut.
+     * Every voice on the cylinder is processed by it whether it asked for it or not.
      */
-    ORBIT("orbit", "ORBIT BUS"),
+    CYLINDER("cylinder", "CYLINDER BUS"),
 
-    /** The whole playback, after every orbit. */
+    /** The whole playback, after every cylinder. */
     MASTER("master", "MASTER");
 
     companion object {

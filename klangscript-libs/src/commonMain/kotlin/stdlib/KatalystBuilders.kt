@@ -69,7 +69,7 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 
 /*
- * Builders for a chain, on an orbit (`katalyst(...)`) or at the output (`master(...)`), one chain
+ * Builders for a chain, on a cylinder (`katalyst(...)`) or at the output (`master(...)`), one chain
  * type for both positions. `Katalyst(k => ...)` hands a [KatalystBuilder] to the lambda; every
  * knob appends ONE stage, in written order (the order IS the chain), and returns a new builder.
  * A stage's musical inputs are the parameters of its door, `wet` first wherever there is one; a
@@ -86,10 +86,10 @@ import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
  * marker on a name knob), so `k.reverb()` means what it always meant and `k.reverb(0.3)` what
  * `k.reverb(r => r.wet(0.3))` meant before the door shapes of phase 3 step 3d. It is a
  * fixed value of the chain, not a slot: only a slot (`Katalyst.param(...)`, `Katalyst.slot.*`) listens to the
- * orbit's `katp` state.
+ * cylinder's `katp` state.
  *
  * The knobs use the same names and scales as their sprudel twins, so a number means the same on
- * an orbit and at the output. At the output nothing fills a slot (it stays at its default) and a
+ * a cylinder and at the output. At the output nothing fills a slot (it stays at its default) and a
  * `duck` stage is inert.
  *
  * Every knob takes a number, a Katalyst param or a Katalyst expression over params and modulators
@@ -178,9 +178,9 @@ internal fun IgnitorDslLike.toEqSectionKatalystKnob(): KatalystKnobDsl = toKatal
  * Appends the familiar block at once: body, vowel, delay, reverb, phaser, compressor, the group
  * fader at unity and the duck, in that order, with every knob a named slot.
  *
- * `Katalyst(k => k.classic().eq(...))` therefore reads as "the chain an orbit has always run, plus
+ * `Katalyst(k => k.classic().eq(...))` therefore reads as "the chain a cylinder has always run, plus
  * an EQ at the end". The fader is the one stage that is not history: it is bit-transparent at
- * unity, and it is there so `katp("gain.gain", x)` reaches a group fader on every orbit (the
+ * unity, and it is there so `katp("gain.gain", x)` reaches a group fader on every cylinder (the
  * signal-flow plan, section 6, spot C). `k.classic().gain(0.8)` is legal and is what it looks
  * like, two faders in series: the unity slot, then 0.8.
  *
@@ -190,7 +190,7 @@ internal fun IgnitorDslLike.toEqSectionKatalystKnob(): KatalystKnobDsl = toKatal
  * (`k.reverb(...).reverb(...)`) is a different thing and still stacks, in written order: that is an
  * author asking for two rooms, not for the familiar chain twice.
  *
- * The duck it brings is an unset one (no source orbit, so no ducking). Appending a `duck(...)`
+ * The duck it brings is an unset one (no source cylinder, so no ducking). Appending a `duck(...)`
  * after it is how you set one: the cylinder runs exactly one ducking effect, so the LAST duck in
  * the chain wins.
  */
@@ -209,10 +209,10 @@ internal fun KatalystBuilder.scriptClassic(): KatalystBuilder = this.classic()
  * and listens to `katp("mat", n)`, and a plain number picks a fixed box by its index. The door
  * therefore accepts a name, a number or a slot; anything else is a script-level type error.
  *
- * @param wet how much of the orbit runs through the body, 0 to 1 (default 0.5). Orbit twin:
+ * @param wet how much of the cylinder runs through the body, 0 to 1 (default 0.5). Cylinder twin:
  *   `body(wet = ...)`.
  * @param material a material name (`"wood"`, `"glass"`, `"tube"`, ...), an index into the
- *   catalogue, or a `Katalyst.param` slot carrying one; omitted leaves the stage off. Orbit twin:
+ *   catalogue, or a `Katalyst.param` slot carrying one; omitted leaves the stage off. Cylinder twin:
  *   `body(material = "wood")`, or `katp("body.material", n)` for the number.
  * @param configure receives the [KatalystBodyBuilder] (knob: `floor`) and returns it.
  */
@@ -237,10 +237,10 @@ internal fun KatalystBuilder.scriptBody(
  * (see [body]): `k.vowel(vowel = Katalyst.param("vw", 1))` listens to `katp("vw", n)`, and a plain
  * number picks a fixed vowel by its index.
  *
- * @param wet how much of the orbit runs through the formant bank, 0 to 1 (default 0.5). Orbit
+ * @param wet how much of the cylinder runs through the formant bank, 0 to 1 (default 0.5). Cylinder
  *   twin: `vowel(wet = ...)`.
  * @param vowel a vowel name, optionally `voice:vowel` (`"a"`, `"soprano:o"`), an index into the
- *   catalogue, or a `Katalyst.param` slot carrying one; omitted leaves the stage off. Orbit twin:
+ *   catalogue, or a `Katalyst.param` slot carrying one; omitted leaves the stage off. Cylinder twin:
  *   `vowel(vowel = "a")`, or `katp("vowel.vowel", n)` for the number.
  * @param configure receives the [KatalystVowelBuilder] (knob: `floor`) and returns it.
  */
@@ -255,15 +255,15 @@ internal fun KatalystBuilder.scriptVowel(
 ) { it.configuredBy("Katalyst vowel", configure) }
 
 /**
- * Appends an orbit delay (the shared delay line).
+ * Appends a cylinder delay (the shared delay line).
  *
- * @param wet how much of the orbit goes into the delay (default 0.25; 0.0 = off). Orbit twin:
+ * @param wet how much of the cylinder goes into the delay (default 0.25; 0.0 = off). Cylinder twin:
  *   `delay(wet = ...)`.
- * @param time delay time in seconds (default 0.25). Orbit twin: `delay(time = ...)`.
+ * @param time delay time in seconds (default 0.25). Cylinder twin: `delay(time = ...)`.
  * @param feedback feedback amount (default 0.3), allowed above 1.0. At exactly 1.0 the echoes
  *   neither fade nor grow: each keeps the level it went in at (a delay time that falls between two
  *   samples dulls its highs a little on every repeat), unless that level reaches `cap`. Above 1.0
- *   they grow on every repeat until `cap` holds them, just under it. Orbit twin:
+ *   they grow on every repeat until `cap` holds them, just under it. Cylinder twin:
  *   `delay(feedback = ...)`.
  * @param configure receives the [KatalystDelayBuilder] (knob: `cap`) and returns it.
  */
@@ -280,15 +280,15 @@ internal fun KatalystBuilder.scriptDelay(
 ) { it.configuredBy("Katalyst delay", configure) }
 
 /**
- * Appends an orbit reverb (the shared Freeverb). Flat: every knob is a musical input.
+ * Appends a cylinder reverb (the shared Freeverb). Flat: every knob is a musical input.
  *
- * @param wet how much of the orbit goes into the reverb (default 0.25; 0.0 = off). Orbit twin:
+ * @param wet how much of the cylinder goes into the reverb (default 0.25; 0.0 = off). Cylinder twin:
  *   `reverb(wet = ...)`.
  * @param size tail length, on the SAME scale as sprudel `reverb(size = ...)`: typical 1 to 10,
  *   default 5. 3 is about a 1 s tail, 5 about 1.4 s, 10 about 12.5 s; the shortest reachable is
- *   about 0.7 s, and above 10 is bounded at 10. Orbit twin: `reverb(size = ...)`.
+ *   about 0.7 s, and above 10 is bounded at 10. Cylinder twin: `reverb(size = ...)`.
  * @param lowpass high-frequency damping of the tail as a lowpass cutoff in Hz: lower is darker.
- *   Omitted, the engine's fixed default damping applies. Orbit twin: `reverb(lowpass = ...)`.
+ *   Omitted, the engine's fixed default damping applies. Cylinder twin: `reverb(lowpass = ...)`.
  */
 @KlangScript.Function(name = "reverb")
 internal fun KatalystBuilder.scriptReverb(
@@ -303,15 +303,15 @@ internal fun KatalystBuilder.scriptReverb(
 )
 
 /**
- * Appends an orbit phaser: a sweeping all-pass notch comb.
+ * Appends a cylinder phaser: a sweeping all-pass notch comb.
  *
  * A bare `k.phaser()` is declared and silent, because its default wet is 0; give it a `wet`.
  *
- * @param wet wet amount, 0 to 1 (default 0, off). Orbit twin: `phaser(wet = ...)`.
- * @param rate sweep rate in Hz (default 0, standing still). Orbit twin: `phaser(rate = ...)`.
- * @param center center frequency of the sweep in Hz (default 1000). Orbit twin:
+ * @param wet wet amount, 0 to 1 (default 0, off). Cylinder twin: `phaser(wet = ...)`.
+ * @param rate sweep rate in Hz (default 0, standing still). Cylinder twin: `phaser(rate = ...)`.
+ * @param center center frequency of the sweep in Hz (default 1000). Cylinder twin:
  *   `phaser(center = ...)`.
- * @param sweep width of the sweep around the center, in Hz (default 1000). Orbit twin:
+ * @param sweep width of the sweep around the center, in Hz (default 1000). Cylinder twin:
  *   `phaser(sweep = ...)`.
  * @param configure receives the [KatalystPhaserBuilder] (knob: `floor`) and returns it.
  */
@@ -330,27 +330,27 @@ internal fun KatalystBuilder.scriptPhaser(
 ) { it.configuredBy("Katalyst phaser", configure) }
 
 /**
- * Appends the orbit compressor: the group dynamics. Flat, like every dynamics stage: each knob is
+ * Appends the cylinder compressor: the group dynamics. Flat, like every dynamics stage: each knob is
  * a musical input.
  *
  * Put it after the EQ so the detector sees the corrected spectrum and a low cut turns into
  * headroom.
  *
- * @param threshold ceiling in dBFS where gain reduction starts (default -20). Orbit twin:
+ * @param threshold ceiling in dBFS where gain reduction starts (default -20). Cylinder twin:
  *   `compressor(threshold = ...)`.
- * @param ratio compression ratio above the threshold (default 4, i.e. 4:1). Orbit twin:
+ * @param ratio compression ratio above the threshold (default 4, i.e. 4:1). Cylinder twin:
  *   `compressor(ratio = ...)`.
  * @param knee soft-knee width in dB (default 6). A hard corner injects harmonics on every
- *   crossing. Orbit twin: `compressor(knee = ...)`.
- * @param attack how fast the gain closes, in seconds (default 0.003). Orbit twin:
+ *   crossing. Cylinder twin: `compressor(knee = ...)`.
+ * @param attack how fast the gain closes, in seconds (default 0.003). Cylinder twin:
  *   `compressor(attack = ...)`.
- * @param release how fast the gain opens again, in seconds (default 0.1). Orbit twin:
+ * @param release how fast the gain opens again, in seconds (default 0.1). Cylinder twin:
  *   `compressor(release = ...)`.
  * @param lookahead how far ahead it sees, in seconds (default 0, off). The gain starts closing
  *   BEFORE a transient arrives, and `attack` becomes the gain-smoothing length (widen both
- *   together). The cost is latency: this orbit (at the output, this whole playback) runs late
+ *   together). The cost is latency: this cylinder (at the output, this whole playback) runs late
  *   by `floor(lookahead * sampleRate)` frames (none below 8 frames, about 0.2 ms), and nothing
- *   compensates. A plain number fixed with the chain, at most 0.05. No orbit twin: declare it here.
+ *   compensates. A plain number fixed with the chain, at most 0.05. No cylinder twin: declare it here.
  */
 @KlangScript.Function(name = "compressor")
 internal fun KatalystBuilder.scriptCompressor(
@@ -385,21 +385,21 @@ internal fun KatalystBuilder.scriptCompressor(
  * katalyst(Katalyst(k => k.gain(1.5).limiter(lookahead = 0.005)))
  * ```
  *
- * @param threshold ceiling in dBFS (default -1). Orbit twin: `compressor(threshold = ...)`.
- * @param ratio compression ratio (default 20, about a brick wall). Orbit twin:
+ * @param threshold ceiling in dBFS (default -1). Cylinder twin: `compressor(threshold = ...)`.
+ * @param ratio compression ratio (default 20, about a brick wall). Cylinder twin:
  *   `compressor(ratio = ...)`.
  * @param knee soft-knee width in dB (default 2). A hard corner injects harmonics on every crossing.
- *   Orbit twin: `compressor(knee = ...)`.
+ *   Cylinder twin: `compressor(knee = ...)`.
  * @param attack how fast the gain closes, in seconds (default 0.001). With no lookahead a one-pole
  *   attack: short keeps transient punch. With a lookahead the gain-smoothing length; widen both
- *   together. Orbit twin: `compressor(attack = ...)`.
- * @param release how fast the gain opens again, in seconds (default 0.1). Orbit twin:
+ *   together. Cylinder twin: `compressor(attack = ...)`.
+ * @param release how fast the gain opens again, in seconds (default 0.1). Cylinder twin:
  *   `compressor(release = ...)`.
  * @param lookahead how far ahead it sees, in seconds (default 0, off). Lets the limiter close the
  *   gain before a transient arrives instead of chasing it, which is what stops loud hits punching
- *   through. The cost is latency: this orbit (at the output, this whole playback) runs late by
+ *   through. The cost is latency: this cylinder (at the output, this whole playback) runs late by
  *   `floor(lookahead * sampleRate)` frames (none below 8 frames, about 0.2 ms), and nothing
- *   compensates. A plain number fixed with the chain, at most 0.05. No orbit twin: declare it here.
+ *   compensates. A plain number fixed with the chain, at most 0.05. No cylinder twin: declare it here.
  */
 @KlangScript.Function(name = "limiter")
 internal fun KatalystBuilder.scriptLimiter(
@@ -435,7 +435,7 @@ internal fun KatalystBuilder.scriptLimiter(
  *
  * @param amount the drive into the shape, `10^(amount * 1.2)`: 0.1 is about +2.4 dB, 0.25 about
  *   +6 dB, 0.5 (the default) about +12 dB. At or below 0 the stage is off. A number, or a
- *   `Katalyst.param` slot that a pattern moves with `katp` (the change glides). No orbit twin:
+ *   `Katalyst.param` slot that a pattern moves with `katp` (the change glides). No cylinder twin:
  *   sprudel's `distort(...)` is the voice's door.
  * @param shape the waveshaper by name, from the voice's list (`soft`, `hard`, `tube`, `softsat`,
  *   `gentle`, ...); an unknown name is `soft`. Fixed with the chain.
@@ -450,19 +450,19 @@ internal fun KatalystBuilder.scriptDistort(
 ): KatalystBuilder = this.distort(amount = amount?.toKatalystKnob() ?: DISTORT_AMOUNT.kat, shape = shape)
 
 /**
- * Appends a sidechain duck: this orbit is pulled down whenever the orbit it listens to sounds.
+ * Appends a sidechain duck: this cylinder is pulled down whenever the cylinder it listens to sounds.
  * Flat, like every dynamics stage.
  *
- * Declared in the chain, but run after every orbit has been processed, so where it sits in the
+ * Declared in the chain, but run after every cylinder has been processed, so where it sits in the
  * list makes no difference.
  *
  * @param cylinder the cylinder to listen to. Omitted means no ducking: the stage carries the wire's
  *   non-finite "never set" marker, and the runtime tests `isFinite()` rather than comparing, so a
- *   finite negative is an orbit REQUEST like any other and not an off switch. Orbit twin:
+ *   finite negative is a cylinder REQUEST like any other and not an off switch. Cylinder twin:
  *   `duck(cylinder = ...)`.
- * @param depth how far this orbit is pulled down, 0 to 1 (default 0, no ducking). Orbit twin:
+ * @param depth how far this cylinder is pulled down, 0 to 1 (default 0, no ducking). Cylinder twin:
  *   `duck(depth = ...)`.
- * @param attack how fast the duck closes, in seconds (default 0.1). Orbit twin:
+ * @param attack how fast the duck closes, in seconds (default 0.1). Cylinder twin:
  *   `duck(attack = ...)`.
  */
 @KlangScript.Function(name = "duck")
@@ -480,7 +480,7 @@ internal fun KatalystBuilder.scriptDuck(
  * Appends the mix equalizer: one stage whose sections apply left to right.
  *
  * The voice eq's words, defaults and sections on a [KatalystEqBuilder], so a section means the same thing on a
- * voice and on an orbit; its knobs take a number or a Katalyst param.
+ * voice and on a cylinder; its knobs take a number or a Katalyst param.
  *
  * @param configure receives the [KatalystEqBuilder] (knobs: `band`, `tap`) and returns it.
  */
@@ -489,14 +489,14 @@ internal fun KatalystBuilder.scriptEq(configure: ((KatalystEqBuilder) -> Katalys
     this.eq { it.configuredBy("Katalyst eq", configure) }
 
 /**
- * Appends make-up gain on the orbit: the group fader, after the inserts.
+ * Appends make-up gain on the cylinder: the group fader, after the inserts.
  *
  * **It APPENDS**, and `classic()` already brought one (its `gain.gain` slot at unity), so
  * `k.classic().gain(0.8)` is two faders in series and the engine multiplies them: `katp` at 0.5
  * makes 0.4. That is not a special case and nothing collapses them, which is the point of a stage
  * list. Writing `Katalyst.param("gain.gain", ...)` as the knob of a SECOND stage is the sharp
  * edge: both stages then read the same key, so one `katp("gain.gain", 0.5)` applies twice and the
- * orbit lands at 0.25. Give a second fader its own slot name if it should move on its own.
+ * cylinder lands at 0.25. Give a second fader its own slot name if it should move on its own.
  *
  * @param gain linear gain factor (1.0 = unity, 2.0 is about +6 dB).
  */
@@ -511,13 +511,13 @@ internal fun KatalystBuilder.scriptGain(gain: IgnitorDslLike = 1.0): KatalystBui
 // like every other (a number, a `Kat.param` or a Kat expression); a moving one glides, an unset (non-finite) one reads
 // as the
 // operator's identity, and an unset cap or floor passes the bus. A stage that turns silence into something (an offset,
-// a floor above zero, a cap below it, a negative power) keeps its orbit from ever switching off, as the voice's
+// a floor above zero, a cap below it, a negative power) keeps its cylinder from ever switching off, as the voice's
 // arithmetic would; the doors say which.
 
 /**
  * Adds [other] to every sample of the bus. A constant is a DC offset: before a `distort` it clips the two halves of
- * the wave differently. The output's DC blocker removes what reaches it, but an orbit whose mix never falls silent
- * never switches off, so an offset keeps its orbit running.
+ * the wave differently. The output's DC blocker removes what reaches it, but a cylinder whose mix never falls silent
+ * never switches off, so an offset keeps its cylinder running.
  *
  * @param other a number, a `Kat.param` or a Kat expression.
  * @alias add
@@ -535,7 +535,7 @@ internal fun KatalystBuilder.scriptPlus(other: IgnitorDslLike): KatalystBuilder 
 internal fun KatalystBuilder.scriptAdd(other: IgnitorDslLike): KatalystBuilder = this.plus(other.toKatalystKnob())
 
 /**
- * Subtracts [other] from every sample of the bus. A constant is a DC offset, as with [plus], and keeps its orbit
+ * Subtracts [other] from every sample of the bus. A constant is a DC offset, as with [plus], and keeps its cylinder
  * running.
  *
  * @param other a number, a `Kat.param` or a Kat expression.
@@ -612,7 +612,7 @@ internal fun KatalystBuilder.scriptAbs(): KatalystBuilder = this.abs()
  * Raises every sample of the bus to the power of [exp], keeping its sign (a negative sample gives `-(|x|^exp)`), as
  * the Ignitor's `pow`. Above 1 the quiet parts sink, below 1 they rise. A negative [exp] turns every silent sample
  * into the clamp's ceiling (1e15, the house limiter's business), so it belongs after something that never rests at
- * zero, and it keeps its orbit running.
+ * zero, and it keeps its cylinder running.
  *
  * @param exp a number, a `Kat.param` or a Kat expression.
  * @alias power
@@ -632,7 +632,7 @@ internal fun KatalystBuilder.scriptPower(exp: IgnitorDslLike): KatalystBuilder =
 /**
  * The bus, but at least [other] per sample: anything below it is raised to it, the same meaning `min` carries on a
  * number, a pattern and a signal. A floor is the per-sample MAXIMUM, so this door builds the `Max` stage. Do not
- * "correct" the crossing. A floor above zero turns silence into DC and keeps its orbit running.
+ * "correct" the crossing. A floor above zero turns silence into DC and keeps its cylinder running.
  *
  * @param other a number, a `Kat.param` or a Kat expression.
  */
@@ -642,7 +642,7 @@ internal fun KatalystBuilder.scriptMin(other: IgnitorDslLike): KatalystBuilder =
 /**
  * The bus, but at most [other] per sample: anything above it is lowered to it, a hard cap on the positive half. A cap
  * is the per-sample MINIMUM, so this door builds the `Min` stage. Do not "correct" the crossing. A cap below zero
- * turns silence into DC and keeps its orbit running.
+ * turns silence into DC and keeps its cylinder running.
  *
  * ```KlangScript
  * Katalyst(k => k.max(0.5).min(-0.5))   // hard clip at half scale
@@ -693,7 +693,7 @@ internal fun KatalystBuilder.scriptSerial(vararg stages: (KatalystBuilder) -> Ka
  * does not comb. With no branch, `parallel()` returns the chain as it is; with one, it appends that branch's stages in
  * place, as written: a `classic()` in a branch is that branch's classic block, even next to one outside it (the
  * at-most-once rule of [classic] holds per builder, and a branch is a builder of its own). A `duck` inside a branch is
- * the orbit's duck, as anywhere in the chain. Every branch is checked like a stage of
+ * the cylinder's duck, as anywhere in the chain. Every branch is checked like a stage of
  * [serial]: one that is null, returns nothing or returns something other than the builder is a script error naming
  * it.
  *
@@ -707,10 +707,10 @@ internal fun KatalystBuilder.scriptParallel(vararg branches: (KatalystBuilder) -
 /**
  * Runs the stages in the body at a HIGHER sample rate, the incoming rate times [factor], and comes back down once at
  * the end: the bus is converted up once where it enters, whatever the voices on it are, and the stages inside alias
- * less. At the head of a chain the whole orbit runs at that rate.
+ * less. At the head of a chain the whole cylinder runs at that rate.
  *
  * ```KlangScript
- * // the orbit's distortion and its tone at 4x: one trip up and one down for the whole bus
+ * // the cylinder's distortion and its tone at 4x: one trip up and one down for the whole bus
  * Katalyst(k => k.oversampleBy(4, r => r.distort(0.5, "tube").eq(e => e.band(freq = 2500, q = 1.0, db = -3.0))).reverb(0.2, 5))
  * ```
  *
@@ -719,7 +719,7 @@ internal fun KatalystBuilder.scriptParallel(vararg branches: (KatalystBuilder) -
  * cutoff. The factor is fixed with the chain and rounded down to a power of two (3 is 2, 6 is 4); 1 or less runs the
  * body at the rate it is in, and the rate stops at 16x. Nested, it steps on from the rate it is in. For a piece that only needs a
  * minimum rate, `oversampleAtLeast` adds nothing when the rate is already there. A `duck` inside the body is the
- * orbit's duck, as anywhere in the chain.
+ * cylinder's duck, as anywhere in the chain.
  *
  * @param factor how many times the incoming rate: 2, 4, 8 or 16.
  * @param body a function from a builder to a builder, given an empty one: the stages that run at the higher rate.
@@ -731,10 +731,10 @@ internal fun KatalystBuilder.scriptOversampleBy(factor: Int, body: (KatalystBuil
 /**
  * Runs the stages in the body at [factor] times the normal sample rate AT LEAST: only what is missing is added, and when
  * the rate is already there (inside an `oversampleBy(8)`, say) nothing is converted at all. The door for a reusable
- * piece that needs a minimum rate, and for an orbit that should run at a rate:
+ * piece that needs a minimum rate, and for a cylinder that should run at a rate:
  *
  * ```KlangScript
- * // a 4x orbit: everything on it is converted up once, distorted, and converted down once
+ * // a 4x cylinder: everything on it is converted up once, distorted, and converted down once
  * let crunchBus = k => k.oversampleAtLeast(4, r => r.distort(0.4, "tube").distort(0.3, "soft"))
  * Katalyst(k => crunchBus(k).reverb(0.15, 4))
  * ```
@@ -855,7 +855,7 @@ private fun checkedStages(
 // Ignitor's arithmetic, plus `range`). Each door wraps the knob it is called on in one [KatalystKnobDsl] node; an
 // operand is converted by [toKatalystKnob], so it is a number (a [KatalystKnobDsl.Constant]), a `Kat.param` or another
 // expression, and an Ignitor node is the same script error as on a stage knob. The engine evaluates the expression
-// with the Ignitor's own laws whenever the orbit's `katp` state changes, and once per block when it holds a modulator
+// with the Ignitor's own laws whenever the cylinder's `katp` state changes, and once per block when it holds a modulator
 // (`Kat.sine` and the rest, step 5b); a slot leaf that reads a non-finite value makes the whole knob unset (its stage
 // takes its constant). One implementation for both doors: the typed functions in `audio_bridge` (`KatalystKnobDsl.kt`,
 // since the typed-doors rollout S5), which a Kotlin song calls directly (`Kat.param("fader", 1.0).times(0.5.kat)`); the
@@ -1023,7 +1023,7 @@ internal fun KatalystKnobDsl.scriptRange(from: IgnitorDslLike, to: IgnitorDslLik
 
 /**
  * Minimum dry share kept in the mix, 0 to 1 (default 0.4). Lower makes the body MORE audible: its
- * modes sit over less dry. Orbit twin: `body(floor = ...)`.
+ * modes sit over less dry. Cylinder twin: `body(floor = ...)`.
  */
 @KlangScript.Function(name = "floor")
 internal fun KatalystBodyBuilder.scriptFloor(floor: IgnitorDslLike): KatalystBodyBuilder = this.floor(floor.toKatalystKnob())
@@ -1032,7 +1032,7 @@ internal fun KatalystBodyBuilder.scriptFloor(floor: IgnitorDslLike): KatalystBod
 
 /**
  * Minimum dry share kept between the formants, 0 to 1 (default 0.2). Much lower than the body's: a
- * vowel is a source strongly shaped by its formants. Orbit twin: `vowel(floor = ...)`.
+ * vowel is a source strongly shaped by its formants. Cylinder twin: `vowel(floor = ...)`.
  */
 @KlangScript.Function(name = "floor")
 internal fun KatalystVowelBuilder.scriptFloor(floor: IgnitorDslLike): KatalystVowelBuilder = this.floor(floor.toKatalystKnob())
@@ -1042,14 +1042,14 @@ internal fun KatalystVowelBuilder.scriptFloor(floor: IgnitorDslLike): KatalystVo
 /**
  * Level the recirculating signal saturates toward (default 1.0): how loud the echoes settle once the
  * feedback is above 1.0. Up to 95% of it the echoes pass untouched, so at a feedback of 1.0 or less it
- * acts only on echoes loud enough to reach it. Orbit twin: `delay(cap = ...)`.
+ * acts only on echoes loud enough to reach it. Cylinder twin: `delay(cap = ...)`.
  */
 @KlangScript.Function(name = "cap")
 internal fun KatalystDelayBuilder.scriptCap(cap: IgnitorDslLike): KatalystDelayBuilder = this.cap(cap.toKatalystKnob())
 
 // ── Phaser ───────────────────────────────────────────────────────────────────
 
-/** Minimum dry coefficient of the wet/dry law (default 1.0, purely additive). Orbit twin: `phaser(floor = ...)`. */
+/** Minimum dry coefficient of the wet/dry law (default 1.0, purely additive). Cylinder twin: `phaser(floor = ...)`. */
 @KlangScript.Function(name = "floor")
 internal fun KatalystPhaserBuilder.scriptFloor(floor: IgnitorDslLike): KatalystPhaserBuilder = this.floor(floor.toKatalystKnob())
 

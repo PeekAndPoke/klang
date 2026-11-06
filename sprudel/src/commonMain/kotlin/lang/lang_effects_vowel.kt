@@ -31,7 +31,7 @@ import io.peekandpoke.klang.sprudel.putKatalystParam
  * alone, because the vowel is this stage's name knob.
  *
  * Fills the voice FIELDS with the same two constants, so the field accessors (`vowel.wet`) read what
- * the slots hold. The wire does not carry the fields: since step 5b-1 the orbit's formant bank reads
+ * the slots hold. The wire does not carry the fields: since step 5b-1 the cylinder's formant bank reads
  * the SLOTS and nothing else, and the `filters` field that once carried a `FilterDef.Formant` left
  * `VoiceData` in phase 3 step 9. The engine substitutes the same two constants for an unset slot
  * in `KatalystResonatorEffect.configure`.
@@ -51,7 +51,7 @@ private fun SprudelVoiceData.fillVowelDefaults() {
     }
 }
 
-// The VOWEL goes into the orbit chain's slot state as a number: `vowel.vowel` carries the vowel's
+// The VOWEL goes into the cylinder chain's slot state as a number: `vowel.vowel` carries the vowel's
 // INDEX in `VowelBands.names`, and `VowelBands.indexOf` is the one conversion both doors use
 // (Katalyst step 5a-2, 2026-09-18). A bare name is the soprano register, there as here. That is
 // what keeps `vowel(vowel = "bass:a")` working on a DECLARED chain without a string ever reaching
@@ -112,13 +112,13 @@ private fun applyVowelFloor(source: SprudelPattern, args: List<SprudelDslArg<Any
 /**
  * The vowel formant filter: the vowel, its mix and its dry floor.
  *
- * Shapes the orbit like a mouth. One formant filter per orbit bus, so
- * ALL of it, the vowel included, is set once for everyone by the orbit's owning voice.
+ * Shapes the cylinder like a mouth. One formant filter per cylinder bus, so
+ * ALL of it, the vowel included, is set once for everyone by the cylinder's owning voice.
  *
  * `wet` here is a mix (and `floor` how much of the dry stays under it): the filter processes the
- * whole orbit mix. The `wet` of `reverb` and `delay` reads differently: it is how much of the orbit
+ * whole cylinder mix. The `wet` of `reverb` and `delay` reads differently: it is how much of the cylinder
  * goes INTO them, a send, and their sound is added on top of the dry. Give a
- * pattern its own vowel by giving it its own orbit.
+ * pattern its own vowel by giving it its own cylinder.
  *
  * Vowels: `a`, `e`, `i`, `o`, `u`, the umlauts `ae`/`ä`, `oe`/`ö`, `ue`/`ü`, and the diphthongs
  * `ei`, `au`, `eu`/`äu`. A prefix picks a voice type, `tenor:a`.
@@ -141,8 +141,8 @@ private fun applyVowelFloor(source: SprudelPattern, args: List<SprudelDslArg<Any
  * the vowel's default. To double the wet, map it in a later call, once it is set:
  * `vowel(vowel = "a").vowel(wet = mul(2))` is wet 1.0.
  *
- * All three reach a DECLARED orbit chain as chain slots, the vowel as the index of its name in the
- * vowel catalogue (`vowel.vowel`, 0 = none), so the same call works whether the orbit declares a
+ * All three reach a DECLARED cylinder chain as chain slots, the vowel as the index of its name in the
+ * vowel catalogue (`vowel.vowel`, 0 = none), so the same call works whether the cylinder declares a
  * chain or runs the historical one, down to the sample.
  *
  * ```KlangScript(Playable)
@@ -157,11 +157,11 @@ private fun applyVowelFloor(source: SprudelPattern, args: List<SprudelDslArg<Any
  * note("c3 e3").s("saw").vowel("<0.2 0.9>", "o").reverb(wet = vowel.wet, size = 4)   // as much reverb as vowel
  * ```
  *
- * @param wet How much of the orbit runs through the filter, 0 to 1.
+ * @param wet How much of the cylinder runs through the filter, 0 to 1.
  * @param vowel Vowel name, see the list above. A prefix picks a voice type, `tenor:a`.
  * @param floor Minimum dry share kept in the mix, 0 to 1.
  *
- * @scope orbit
+ * @scope cylinder
  * @category effects
  * @tags vowel, wet, floor
  */
@@ -207,7 +207,7 @@ fun PatternMapperFn.vowel(
  * The `vowel` object: `vowel(...)` sets the slots, and each numeric slot reads back as a child,
  * `vowel.wet`, `vowel.floor`.
  *
- * @scope orbit
+ * @scope cylinder
  * @category effects
  * @tags vowel, accessor
  */
@@ -226,7 +226,7 @@ object vowel {
     /**
      * The setter, see [SprudelPattern.vowel].
      *
-     * @param wet How much of the orbit runs through the filter, 0 to 1.
+     * @param wet How much of the cylinder runs through the filter, 0 to 1.
      * @param vowel Vowel name, see the list at [SprudelPattern.vowel]. A prefix picks a voice type, `tenor:a`.
      * @param floor Minimum dry share kept in the mix, 0 to 1.
      */

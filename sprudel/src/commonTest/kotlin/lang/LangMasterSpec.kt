@@ -19,7 +19,7 @@ import io.peekandpoke.klang.audio_bridge.uniqueId
 import io.peekandpoke.klang.sprudel.SprudelPattern
 
 /**
- * The `master(…)` authoring surface. The master is a [KatalystDsl], the same chain type an orbit
+ * The `master(…)` authoring surface. The master is a [KatalystDsl], the same chain type a cylinder
  * runs (phase 3 step 12 C5: the Master DSL retired, one chain type for two positions).
  *
  * The top-level form is a **control carrier** (one silent event per cycle); the mapper forms stamp
@@ -37,7 +37,7 @@ class LangMasterSpec : StringSpec({
         events.size shouldBe 1
         events[0].data.master shouldBe KatalystValue.Dsl(loud)
         events[0].data.control shouldBe true
-        // Nothing else: the carrier must not accidentally sound, nor declare an orbit chain.
+        // Nothing else: the carrier must not accidentally sound, nor declare a cylinder chain.
         events[0].data.sound.shouldBeNull()
         events[0].data.freqHz.shouldBeNull()
         events[0].data.katalyst.shouldBeNull()
@@ -137,7 +137,7 @@ class LangMasterSpec : StringSpec({
         voiceData.master shouldBe loud.uniqueId()
         voiceData.control shouldBe true
 
-        // The same chain declared on an orbit is the same name: one registration serves both.
+        // The same chain declared on a cylinder is the same name: one registration serves both.
         katalyst(loud).queryArc(0.0, 1.0)[0].data.toVoiceData().katalyst shouldBe voiceData.master
     }
 
@@ -149,14 +149,14 @@ class LangMasterSpec : StringSpec({
         events[0].data.toVoiceData().master.shouldBeNull()
     }
 
-    "the master and the orbit chain are separate fields: neither door writes the other" {
-        val orbit = KatalystDsl.of(KatalystStageDsl.Gain(gain = c(0.5)))
-        val data = note("c3").katalyst(orbit).master(loud).queryArc(0.0, 1.0)[0].data
+    "the master and the cylinder chain are separate fields: neither door writes the other" {
+        val cylinderChain = KatalystDsl.of(KatalystStageDsl.Gain(gain = c(0.5)))
+        val data = note("c3").katalyst(cylinderChain).master(loud).queryArc(0.0, 1.0)[0].data
 
         data.master shouldBe KatalystValue.Dsl(loud)
-        data.katalyst shouldBe KatalystValue.Dsl(orbit)
+        data.katalyst shouldBe KatalystValue.Dsl(cylinderChain)
         data.toVoiceData().master shouldBe loud.uniqueId()
-        data.toVoiceData().katalyst shouldBe orbit.uniqueId()
+        data.toVoiceData().katalyst shouldBe cylinderChain.uniqueId()
     }
 
     "control does not merge: a master carrier cannot silence real notes" {

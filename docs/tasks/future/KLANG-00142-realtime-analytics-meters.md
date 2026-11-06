@@ -35,10 +35,10 @@
 | `Spectrumeter`          | `src/jsMain/kotlin/comp/Spectrumeter.kt`          | canvas spectrum component, ~30 fps read loop                                                                                 |
 | `SpectrumBinning`       | `src/jsMain/kotlin/comp/SpectrumBinning.kt`       | log-spaced buckets, RMS aggregation, **+3 dB/oct slope compensation referenced at 1 kHz — this is already pink-referencing** |
 | Limiter/compressor gain | `effects/Compressor.kt`, `master/HouseStage.kt`  | GR is computed every sample today; it is just never published                                                                |
-| Per-orbit mix buffers   | `cylinders/Cylinder.kt`                           | per-orbit stereo blocks exist; per-block RMS is a two-line sum                                                               |
+| Per-cylinder mix buffers   | `cylinders/Cylinder.kt`                           | per-cylinder stereo blocks exist; per-block RMS is a two-line sum                                                               |
 
 Missing entirely: a **control-rate telemetry channel** — engine → FE, a handful of named scalars per block (GR values,
-orbit RMS, correlation), the scalar sibling of the existing `waveform` stream. That channel is the one genuinely new
+cylinder RMS, correlation), the scalar sibling of the existing `waveform` stream. That channel is the one genuinely new
 piece of infrastructure; meters 2–5 are all consumers of it.
 
 ## 2. The meters, ranked
@@ -81,7 +81,7 @@ UI-only except for the possible FFT-size change. No hot-path cost.
 The "pumping" question consumed three review rounds and an offline envelope-modulation metric, because gain reduction is
 invisible. The house limiter (`HouseStage`, 5 ms lookahead) and any authored master `limiter` stage compute their gain
 every sample; publish, per block: **current GR (dB), block-min GR, and a ~10 s history strip** in the UI. Same tap
-generalizes to per-orbit Katalyst compressors later.
+generalizes to per-cylinder Katalyst compressors later.
 
 What it answers at a glance: is the limiter working at all · how many dB on kick hits · does GR return to 0 between
 beats (breathing) or stay depressed (the measured 1.25 dB @ 100 ms pump — see
@@ -96,9 +96,9 @@ trim measured back as only −1.7 dB. GR depth tells you which regime you're in.
 Needs the telemetry channel. Hot-path cost: one min () per sample already effectively computed; one scalar write per
 block.
 
-### 2.3 Per-orbit level ladder — SHOULD (cheap, decide with 2.2)
+### 2.3 Per-cylinder level ladder, SHOULD (cheap, decide with 2.2)
 
-RMS + peak bars per cylinder/orbit, labeled by what's routed there (lead / guitar 1 / guitar 2 / bass / drums / …), slow
+RMS + peak bars per cylinder, labeled by what's routed there (lead / guitar 1 / guitar 2 / bass / drums / …), slow
 EMA plus peak-hold. Every masking dispute of the session — "snare washed out", "bass buried", "lead never rests" — is
 answered by watching which bars are lit and by how much. Also the honest arbiter for arrangement work: it shows *who is
 playing right now*, which no spectrum view does.
@@ -168,9 +168,9 @@ quiet sections corrupt the averages.
   `AudioAnalyzer.waveform`. Design once, review once — every later meter is a consumer. ⚠️ JS is the binding constraint
   (`audio/ref/performance.md`): scalar writes per block only, no allocation per block, UI pulls at frame rate rather
   than engine pushing per block.
-- **Phase 2 — GR meter** (house limiter first, authored limiters second, orbit compressors later) **+ the pre/post dual
+- **Phase 2, GR meter** (house limiter first, authored limiters second, cylinder compressors later) **+ the pre/post dual
   tap (§2.6)** — same files.
-- **Phase 3 — orbit ladder.**
+- **Phase 3, cylinder ladder.**
 - **Phase 4 — correlation, dynamics strip** — opportunistic.
 - **Phase 5 — capture ring + worker harness** (§3.1): the infrastructure for on-demand analyses, plus the loudness/crest
   report as its hello-world.
@@ -194,7 +194,7 @@ quiet sections corrupt the averages.
 
 - Harshness/fizz meter (no measurable correlate — see header decision 1).
 - Onset-stability metrics (offline statistical tooling; lives in klang-ai analysis scripts).
-- Any per-voice (as opposed to per-orbit) metering — voice counts are dynamic and the ladder would be unreadable;
+- Any per-voice (as opposed to per-cylinder) metering, voice counts are dynamic and the ladder would be unreadable;
   revisit only with a concrete use case.
 - Automated parameter-sweep re-rendering ("what would gain X sound like" batch experiments) — that is offline render
   tooling, not UI analytics; the A/B snapshot diff (§3) covers the measurement half once the author makes the change.

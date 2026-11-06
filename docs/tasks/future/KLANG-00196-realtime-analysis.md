@@ -28,7 +28,7 @@ overcrowded and which is too thin, where "overcrowded" means not just loud but t
 sharing the band?
 
 Every DAW answers "loud" with a spectrum analyser. None of them answers "crowded", because a DAW
-only ever sees the stereo sum. Klang is the mixer: the engine owns every orbit buffer before
+only ever sees the stereo sum. Klang is the mixer: the engine owns every cylinder buffer before
 summation, knows every sounding voice and its pitch, knows the tempo and the cycle position, and
 shares a namespace with the song's code. So Klang can say "in 160 to 400 Hz, guitar 2 owns 61 %,
 bass 14 %, and the band has no clear peaks" where a DAW can only say "160 to 400 Hz is +4 dB".
@@ -52,7 +52,7 @@ Today the analysis surface is decorative. The Motor component
 at fixed pixel heights, at 66 % opacity, with pointer events off. That is a visualiser, and it is
 right as one. A measurement workbench has different needs: it is read, not glanced at; it needs
 Start, Stop, Freeze and Compare gestures; it converges over cycles rather than dancing per frame;
-it has rows per orbit and columns per band; and it needs to be readable next to the code editor,
+it has rows per cylinder and columns per band; and it needs to be readable next to the code editor,
 because the whole point is edit, listen, read, edit.
 
 The questions the UI structure decision has to answer, so this plan can be scheduled behind it:
@@ -87,7 +87,7 @@ Four words, four measures. Every meter and every verdict in this plan is built f
 | **loud**    | the band carries more energy than it should                    | band energy in dB relative to the pink-anchored target curve, integrated over cycles                 |
 | **thin**    | the band is missing, the mix has a hole there                  | band energy below the target and below both neighbours by more than a threshold                      |
 | **crowded** | too many things live in the band, it reads as mud or smear     | density (below) high AND energy at or above target                                                   |
-| **masked**  | something is there but you cannot hear it                      | an orbit's share of a band is small while its own level in that band is not (attribution, section 3.3) |
+| **masked**  | something is there but you cannot hear it                      | a cylinder's share of a band is small while its own level in that band is not (attribution, section 3.3) |
 
 ### 3.1 Energy against a target
 
@@ -125,7 +125,7 @@ plan uses all three because they fail differently:
   word "crowded" describes. Needs resolution: two partials 10 Hz apart are one bump at 2048 points
   (section 5.4). Fails on: a rich single source (a supersaw has many peaks by design). Again,
   attribution disambiguates.
-- **Contributor count.** From the attribution matrix (3.3): how many orbits each hold more than a
+- **Contributor count.** From the attribution matrix (3.3): how many cylinders each hold more than a
   share threshold of the band's energy. Two or more contributors with comparable shares is the
   strongest "crowded" signal there is, and it is the one no DAW can compute.
 
@@ -136,7 +136,7 @@ before any threshold is called final:
 energy   = band dB relative to target range   (below, inside, above)
 flat     = spectral flatness                  (0 to 1)
 peaks    = local maxima above median + 6 dB
-who      = orbits with share >= 20 % of the band
+who      = cylinders with share >= 20 % of the band
 
 thin     : energy below AND below both neighbours by >= 3 dB
 crowded  : energy inside-or-above AND (who >= 2 OR (flat >= 0.6 AND peaks >= 4))
@@ -149,20 +149,20 @@ They are constants in one place, and the by-ear tuning record goes into `docs/ta
 
 ### 3.3 Attribution: who owns the band
 
-The matrix `orbit × band`, energy per cell, integrated over the same cycle windows as everything
-else. Rows are named by what is routed to the orbit: the `tags` on the voice data cross the wire
+The matrix `cylinder × band`, energy per cell, integrated over the same cycle windows as everything
+else. Rows are named by what is routed to the cylinder: the `tags` on the voice data cross the wire
 today (`audio_bridge/src/commonMain/kotlin/VoiceData.kt`), so "guitar 2" is a label the engine can
 supply, with "orbit 3" as the fallback.
 
 Two readings from one matrix:
 
 - **Share**: the cell divided by the band's total. "Mud: guitar 2 61 %, bass 14 %, drums 8 %."
-- **Masking**: an orbit whose own level in a band is healthy but whose share is small. "Bass is
+- **Masking**: a cylinder whose own level in a band is healthy but whose share is small. "Bass is
   present in 80 to 160 Hz at -18 dB but holds 14 % of the band." This is the buried-bass finding of
   round 40, available on day one.
 
 Per-voice attribution is out of scope (the meters doc, section 6): voice counts change every
-cycle and the rows would be unreadable. Per-orbit is the unit.
+cycle and the rows would be unreadable. Per-cylinder is the unit.
 
 ## 4. What DAWs offer, and what Klang does with each
 
@@ -172,15 +172,15 @@ PAZ; Youlean; FabFilter Pro-Q's analyser), with Klang's decision per tool.
 
 | Tool                                              | What it answers                                     | Klang                                                                                                            |
 |---------------------------------------------------|-----------------------------------------------------|------------------------------------------------------------------------------------------------------------------|
-| Peak, RMS, clip indicator                         | is it too hot                                       | **adopt**, level strip, per orbit and master                                                                     |
+| Peak, RMS, clip indicator                         | is it too hot                                       | **adopt**, level strip, per cylinder and master                                                                     |
 | True peak (oversampled, ITU BS.1770)               | will it clip after the DAC or the encoder           | **adopt** on the master, the `Oversampler` exists                                                                |
 | LUFS momentary, short-term, integrated; LRA       | is it as loud as the platform expects, how dynamic  | **adopt**, master only; K-weighting is two biquads and a gated mean square                                       |
 | PSR or PLR (peak to loudness ratio)               | is it over-compressed                               | **adopt**, derived from the two above, one number                                                                |
 | Crest factor                                      | dynamics sanity                                     | **adopt** (the sessions used it to overrule a reviewer's "over-limited" claim)                                   |
-| Gain reduction meter with history                 | is the limiter working, breathing, or pinned        | **adopt**, house limiter first, authored limiter second, orbit compressors later                                 |
+| Gain reduction meter with history                 | is the limiter working, breathing, or pinned        | **adopt**, house limiter first, authored limiter second, cylinder compressors later                                 |
 | FFT spectrum, peak hold, averaging, tilt          | where the energy is right now                       | **exists** as the decorative Spectrumeter; stays decorative                                                      |
 | Tonal balance against a genre target (Ozone)      | is the shape right                                  | **adopt and extend** with density and attribution: the core panel                                                |
-| Masking meter (Neutron, between two plugins)      | which instrument hides which                        | **adopt and exceed**: full orbit × band matrix from the engine, no sidechain wiring                              |
+| Masking meter (Neutron, between two plugins)      | which instrument hides which                        | **adopt and exceed**: full cylinder × band matrix from the engine, no sidechain wiring                              |
 | Spectrogram or waterfall                          | how the spectrum moves in time                      | **decline for now**; the cycle-windowed distribution (meters doc section 3) answers the musical version of this  |
 | Mid/side spectrum                                 | what is in the middle and what is on the sides      | **later**, the stereo strip grows a band split                                                                   |
 | Correlation meter                                 | mono compatibility, phasey doubling                 | **adopt**, full band first, three bands later                                                                    |
@@ -202,7 +202,7 @@ One architecture, every meter a consumer. The pieces, in the order the signal me
 
 | Tap            | Where in the engine                                                                             | Feeds                                                     |
 |----------------|-------------------------------------------------------------------------------------------------|-----------------------------------------------------------|
-| per orbit      | `Cylinders.processAndMix`, each `cylinder.mixBuffer` after the orbit's bus effects, before the sum | attribution matrix, orbit level ladder, orbit GR later    |
+| per cylinder      | `Cylinders.processAndMix`, each `cylinder.mixBuffer` after the cylinder's bus effects, before the sum | attribution matrix, cylinder level ladder, cylinder GR later    |
 | pre-master sum | the summed mix as it enters `HouseStage.process`                                               | tonal balance of the mix, correlation, crest              |
 | post-master    | after the limiter and clip, what the listener hears                                             | true peak, LUFS, house GR, and the pre/post fingerprint diff |
 
@@ -217,8 +217,8 @@ exceptions, preallocated state, flushed IIR state.
 
 **Scalar measures** are cheap enough to compute in the engine, every block, on every platform:
 
-- RMS and peak per orbit and per tap.
-- Band energy per orbit through a fixed filterbank (seven region band-passes, or the 1/3-octave
+- RMS and peak per cylinder and per tap.
+- Band energy per cylinder through a fixed filterbank (seven region band-passes, or the 1/3-octave
   set): per-sample IIR, a few multiplies, exact, no FFT, no resolution problem in the low end.
 - Correlation and mid/side energy on the master (three multiply-accumulates per sample).
 - K-weighted mean square for LUFS, and the oversampled peak for true peak, on the post-master tap.
@@ -229,7 +229,7 @@ the offline reports and the live meters agree by construction.
 
 **Spectral measures** need an FFT: the fine 1/3-octave curve, spectral flatness, peak counting,
 resonance flags. An 8192-point FFT costs roughly a third of a millisecond in JavaScript, and the
-audio thread has 2.7 ms per 128-frame block, so sixteen orbits' worth of FFTs cannot run on the
+audio thread has 2.7 ms per 128-frame block, so sixteen cylinders' worth of FFTs cannot run on the
 audio thread. They run off it:
 
 - the worklet keeps one preallocated ring per tap (2048 to 8192 frames) and posts a transferable
@@ -238,7 +238,7 @@ audio thread. They run off it:
   section 3.1 already proposes this worker for the on-demand analyses; it is the same worker);
 - on the JVM the same code runs in a background coroutine during offline rendering.
 
-Sixteen orbits at 8192 frames stereo every 43 ms is about 6 MB per second across the message port,
+Sixteen cylinders at 8192 frames stereo every 43 ms is about 6 MB per second across the message port,
 which is acceptable on desktop. The pre-master and post-master taps add two more rings.
 
 ### 5.3 The analysis kernel in `commonMain`
@@ -287,7 +287,7 @@ data class Analysis(
     override val playbackId: String,
     val blockStart: Double,             // engine frame at the start of the window, for cycle alignment
     val master: TapScalars,             // pre and post: rms, peak, truePeak, correlation, mid, side, gr, lufsM, lufsS
-    val orbits: List<OrbitScalars>,     // id, label, rms, peak, bands: DoubleArray(7)
+    val cylinders: List<CylinderScalars>,     // id, label, rms, peak, bands: DoubleArray(7)
 )
 ```
 
@@ -316,11 +316,11 @@ Named so that the UI structure decision can place them. Each is one component wi
 source.
 
 1. **Tonal balance workbench.** The core. Seven region bars with the target range drawn behind them,
-   the median line and spread ribbon converging as cycles accumulate. Each bar is stacked by orbit
+   the median line and spread ribbon converging as cycles accumulate. Each bar is stacked by cylinder
    (attribution) and carries a density texture (flatness). Under each bar the verdict badge:
    crowded, thin, loud, ok. Expand for the 26-band curve and the named markers seeded from the
    song's exported frequencies. Start, Stop, Freeze, Compare. Answers the maintainer's question.
-2. **Level and loudness strip.** Always on if the UI decision allows it. Per orbit: RMS, peak hold,
+2. **Level and loudness strip.** Always on if the UI decision allows it. Per cylinder: RMS, peak hold,
    a label. Master: true peak, LUFS momentary and short-term, integrated since Start, crest, PLR,
    the house limiter's gain reduction with a ten-second history.
 3. **Stereo strip.** Correlation, mid/side dB, the low-band mono indicator, a small goniometer.
@@ -338,7 +338,7 @@ The auto-mix-advisor's suggestion engine consumes 1 and 6 and is its own plan.
 | Phase | Deliverable                                                                                                       | Depends on          | Ships alone |
 |-------|-------------------------------------------------------------------------------------------------------------------|---------------------|-------------|
 | 0     | **UI rework**: layout prototypes tried by the maintainer until one holds the editor and a mock analysis panel; the outcome recorded as a task in `docs/tasks/`, answering the five questions of section 2 | the maintainer | n/a |
-| 1     | Engine taps, scalar measures, filterbank, the `Analysis` wire message, JVM parity spec, offline report printing the orbit × band matrix | nothing (can start now) | yes: the offline report is useful without any UI |
+| 1     | Engine taps, scalar measures, filterbank, the `Analysis` wire message, JVM parity spec, offline report printing the cylinder × band matrix | nothing (can start now) | yes: the offline report is useful without any UI |
 | 2     | Tonal balance workbench with attribution and the energy-only verdicts (loud, thin), Start, Stop, Freeze           | 0, 1                | yes         |
 | 3     | FFT kernel, worker harness, density (flatness, peaks), the full crowded verdict, the fine curve                    | 2                   | yes         |
 | 4     | Level and loudness strip, GR meter, true peak, LUFS                                                                | 0, 1                | yes, can run parallel to 2 |
@@ -365,7 +365,7 @@ Consolidated from the three task docs, keeping only what is still open.
    a measurement. Leaning: leave it alone, document the difference in `SpectrumBinning`.
 6. Ring lengths and the memory budget for the capture rings (the meters doc's 60 to 120 s question
    applies only to the on-demand analyses; the live rings are one hop deep).
-7. Whether an orbit's label comes from the voice tags, from a new `label` on the orbit, or from the
+7. Whether a cylinder's label comes from the voice tags, from a new `label` on the cylinder, or from the
    pattern's variable name. Tags exist today; start there.
 
 ## 9. Explicitly out of scope
@@ -415,9 +415,9 @@ are reads, not computations:
 A dozen doubles per voice per block, summed into the tag's slot, no allocation. They ride the
 `Analysis` message of section 5.5 as a `tags: List<TagScalars>` field.
 
-Orbit-level effects (the cylinder's compressor, ducking, phaser, room, delay) belong to the orbit,
-not to a tag. Their readings are published per orbit and joined to tags on the frontend through
-the voice-to-orbit map. One reading, one owner.
+Cylinder-level effects (the cylinder's compressor, ducking, phaser, room, delay) belong to the cylinder,
+not to a tag. Their readings are published per cylinder and joined to tags on the frontend through
+the voice-to-cylinder map. One reading, one owner.
 
 ### 11.2 Probe nodes, author-placed
 

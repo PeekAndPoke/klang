@@ -11,7 +11,7 @@ KLANG-00176 (per playback engine)).
 Cmd → PlaybackEngineDispatcher.handle
     → per-pid PlaybackEngine { VoiceScheduler → VoiceFactory builds Voice
         → Voice render (Ignite → (teardown fade) → Send) → Cylinder mix
-    → Cylinders.processAndMix (per orbit: its Katalyst chain, swapped through ChainSwap)
+    → Cylinders.processAndMix (per cylinder: its Katalyst chain, swapped through ChainSwap)
     → MasterBus.process (the Katalyst chain at the output; skipped while it is off) }
     → accumulate into the shared mix
     → HouseStage (DC block → limiter[5 ms lookahead] → clip)
@@ -64,21 +64,21 @@ Cmd → PlaybackEngineDispatcher.handle
 
 ## Cylinders and the master: the Katalyst hosts
 
-- `cylinders/Cylinders.kt` **[changed]** — `Map<orbitId, Cylinder>`, additive `processAndMix`, round-robin cleanup.
-- `cylinders/Cylinder.kt`: one orbit: its `KatalystChain` (the born-with `Katalyst.classic`, or a declared one),
+- `cylinders/Cylinders.kt` **[changed]**: `Map<cylinderId, Cylinder>`, additive `processAndMix`, round-robin cleanup.
+- `cylinders/Cylinder.kt`: one cylinder: its `KatalystChain` (the born-with `Katalyst.classic`, or a declared one),
   its owner (the newest `Sounding` voice: `offer`, `commitOwner`), the check-in, its `ChainHost` (the chain cache and the swap),
   `tryDeactivate` (tail check).
 - `katalyst/`: `KatalystChain` + `KatalystChainBuilder` (the wire `KatalystDsl` to stages), one effect per
   stage (`Eq`, `Gain`, `Delay`, `Reverb`, `Phaser`, `Compressor`, `Resonator` for body and vowel (one class, two kinds; its
   tables `ResonatorTables`), `Duck`),
   `KatalystFilterSwap` (the body and vowel bank crossfade), `KatalystSlots` + `KatalystSlotWriters` (`katp`),
-  `KatalystRegistry` (one fork per playback, serving orbits and the output), `KatalystContext`.
+  `KatalystRegistry` (one fork per playback, serving cylinders and the output), `KatalystContext`.
 - `master/MasterBus.kt`: the same `KatalystChain` at the output position (phase 3 step 12); `master(Katalyst())`
   switches it off.
 - `ChainHost.kt` (the chain plumbing both hosts own: the chain in service, the cache, the parked request, the lookup,
   KLANG-00243), `ChainSwap.kt` (the swap law both hosts share: fade the leaving chain's input, drain its tail, release it after
   `MAX_DRAIN_SECONDS`), `Crossfade.kt`, `TailRelease.kt` (the one home of the release law), `KnobGlide.kt`
-  (orbit knobs glide over `KNOB_GLIDE_SECONDS`).
+  (cylinder knobs glide over `KNOB_GLIDE_SECONDS`).
 
 ## Effects (DSP building blocks)
 

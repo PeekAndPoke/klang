@@ -88,9 +88,9 @@ fun parsePhasePoolSelection(raw: String?): PhasePoolSelectionParsed {
 /**
  * Per-playback registry of unison start-phase pools (KLANG-00144 (unison phase pool) §3.3–§3.6).
  *
- * One pool per (orbit, unisonCount, sideAtten, band): the same instrument on the same orbit reuses
+ * One pool per (cylinder, unisonCount, sideAtten, band): the same instrument on the same cylinder reuses
  * one vocabulary of accepted phase configurations — superimpose copies pull different entries from
- * the same pool ("double-tracked, same instrument"), while two orbits develop different characters
+ * the same pool ("double-tracked, same instrument"), while two cylinders develop different characters
  * over time (bounded by construction: every pool lives inside the same quality band).
  *
  * "Born warm" collapses into AMORTIZED first-use warming: `voices` is a pattern-level param
@@ -130,7 +130,7 @@ class PhasePools(private val rng: Random) {
      * never written again.
      */
     private data class Key(
-        var orbit: Int,
+        var cylinder: Int,
         var voices: Int,
         var sideAtten: Double,
         var kMin: Double,
@@ -147,7 +147,7 @@ class PhasePools(private val rng: Random) {
     private var useTick = 0
 
     /** The lookup key, filled per request; see [Key]. */
-    private val probe = Key(orbit = 0, voices = 0, sideAtten = 0.0, kMin = 0.0, kMax = 0.0, drawTries = 0, poolSize = 0, refreshEvery = 0, warmup = 0)
+    private val probe = Key(cylinder = 0, voices = 0, sideAtten = 0.0, kMin = 0.0, kMax = 0.0, drawTries = 0, poolSize = 0, refreshEvery = 0, warmup = 0)
 
     /** Number of live pools (diagnostics/specs). */
     val size: Int get() = pools.size
@@ -163,7 +163,7 @@ class PhasePools(private val rng: Random) {
      * vs `= 200`) share one pool instead of burning cap slots on identical configs.
      */
     fun pool(
-        orbit: Int,
+        cylinder: Int,
         voices: Int,
         sideAtten: Double,
         kMin: Double,
@@ -183,7 +183,7 @@ class PhasePools(private val rng: Random) {
         val seed = warmup.toInt().coerceIn(0, minOf(size, PhasePool.PREFIX_WORK_BUDGET / (tries * voices)))
         val key = probe
 
-        key.orbit = orbit
+        key.cylinder = cylinder
         key.voices = voices
         key.sideAtten = sideAtten
         key.kMin = lo

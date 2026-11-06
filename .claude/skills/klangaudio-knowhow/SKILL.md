@@ -1,6 +1,6 @@
 ---
 name: klangaudio-knowhow
-description: Use when working on the audio engine (audio_bridge, audio_be, audio_fe, audio_jsworklet), voice synthesis, Ignitor instruments, Katalyst effects, orbits and the master, sample loading, or needing audio architecture knowledge.
+description: Use when working on the audio engine (audio_bridge, audio_be, audio_fe, audio_jsworklet), voice synthesis, Ignitor instruments, Katalyst effects, cylinders and the master, sample loading, or needing audio architecture knowledge.
 ---
 
 ## What This Skill Does
@@ -32,7 +32,7 @@ Documentation lives in `audio/` (top-level docs dir, not a Kotlin module) and `a
 | Working with VoiceData fields, the `ignitorParams` / `katalystParams` slots, scheduled voices                                  | `audio/ref/data-model.md`        |
 | A stage's gate: which knob value turns it off (the one home of the off values)                       | `audio/ref/off-values.md`        |
 | Working on voice synthesis, `classic()`, oscillators, samples, modulation, voice lifetime           | `audio/ref/voice-synthesis.md`   |
-| Working on effects, Orbits mixing, KlangAudioRenderer pipeline                                      | `audio/ref/effects-mixing.md`    |
+| Working on effects, Cylinders mixing, KlangAudioRenderer pipeline                                      | `audio/ref/effects-mixing.md`    |
 | Working on sample loading, decoding, caching (audio_fe)                                             | `audio/ref/sample-management.md` |
 | Numerical safety (NaN/Inf/subnormals), `SAFE_MIN`/`SAFE_MAX` choice, framework precedents (SC/JUCE) | `audio/ref/numerical-safety.md`  |
 | Performance rules — no SAM Ignitors, no per-block alloc, Kotlin/JS hot-path patterns                | `audio/ref/performance.md`       |

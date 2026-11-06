@@ -45,7 +45,7 @@ in the same deliverable.
   - A full audit of script-stdlib functions vs Kotlin extensions has not been done; unknown
     smaller gaps likely (phasePool/analog/spreadPower/gainJitter etc. — check which exist as
     Kotlin extensions vs script-only).
-- **Katalyst DSL** (at both positions, orbit and output): audit alongside (the Pipeline DSL retired in phase 3 step 9,
+- **Katalyst DSL** (at both positions, cylinder and output): audit alongside (the Pipeline DSL retired in phase 3 step 9,
   2026-09-27; the Master DSL in step 12 C5, 2026-09-28).
 - **Two-door asymmetries recorded in phase 3** (each with its reason in the archived record,
   KLANG-00237 (builtin instruments) section 3b and section 9 rows 7 and 8): the Kotlin

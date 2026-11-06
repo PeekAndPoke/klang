@@ -106,7 +106,7 @@ class KlangCommLink(capacity: Int = 8192) {
 
         /**
          * Registers a custom KatalystDsl in the backend's chain registry, the one registry both
-         * positions resolve against: an orbit's `katalyst` name and the playback's `master` name.
+         * positions resolve against: a cylinder's `katalyst` name and the playback's `master` name.
          *
          * Sent once per unique chain, before any voice referencing [name] is scheduled: the same
          * send-once contract as [RegisterIgnitor].
@@ -203,7 +203,7 @@ class KlangCommLink(capacity: Int = 8192) {
 
         /**
          * Emitted once after the backend has completed its warmup pass: JIT + cache priming, AND the
-         * stocking of the resource warehouse — the warmup plays sixteen wet orbits, one per block,
+         * stocking of the resource warehouse: the warmup plays sixteen wet cylinders, one per block,
          * and its disposal returns their cylinders, delay rings and reverb networks to the shelves,
          * so the first song's first frame builds nothing. The frontend awaits this before starting
          * the first playback.

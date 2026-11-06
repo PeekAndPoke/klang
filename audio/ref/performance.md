@@ -315,7 +315,7 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   `configure` was fixed, below).
   **The per-block `configure` is a class of its own**: a writer re-applies the resolved knobs every block
   (`KatalystChain.applyParams`), and in some processes V8 compiles the stage's `configure` with nothing inlined but
-  `isFinite` (a mixed profile, where most orbits take the off arm, leaves the active arm cold), so every setter,
+  `isFinite` (a mixed profile, where most cylinders take the off arm, leaves the active arm cold), so every setter,
   `KnobGlide.retarget` and the phaser's wet/dry law take their doubles across calls; in single-case processes the
   phaser's `WetDryMix.dryCoeff` and `wetCoeff` were left out of the writer's budget. The remedy is no call on the steady
   path: the house pattern of an unchanged config (the EQ's `unchanged`, the resonator's, the compressor's), now in the
@@ -418,12 +418,12 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   spot, the closure captures the `typeof` result, so V8 creates a function context on EVERY call, whichever arm runs:
   40 bytes on node x64 (about 20 in Chrome with pointer compression, inferred), hit or miss, empty map or full,
   inlined or not. The profiler puts it in whichever function the `get` chain was inlined into (`KatalystKnob.resolve`
-  here, whose own code allocates nothing). Measured: 27 lookups 1,080 B exactly in every process; a new orbit map on
+  here, whose own code allocates nothing). Measured: 27 lookups 1,080 B exactly in every process; a new cylinder map on
   the classic chain 1,096 B (27 knobs, plus the reverb's documented lowpass box); a classic voice build 24 lookups
   whenever its `ignitorParams` map is not null, up to 76 with many slots set (957 to 3,062 B and 10 to 38 percent of
   the build time). Kotlin is 2.3.10; the JVM caches a string's hash and allocates nothing. **Remedy:** a map the
   engine reads by key on JS is a `KlangMap` (`common/infra/KlangMap.kt`, a native JS `Map` on JS, a `LinkedHashMap`
-  on the JVM; not a Kotlin `Map` since step 5, so it has no `entries` to walk): its lookup allocates nothing (a new orbit map about 16 B; `C-remap` 2.03 to 2.16 us
+  on the JVM; not a Kotlin `Map` since step 5, so it has no `entries` to walk): its lookup allocates nothing (a new cylinder map about 16 B; `C-remap` 2.03 to 2.16 us
   per block against 2.80 to 3.11 with the decoder reverted, about 0.9 us per new map). The worklet's decoder
   (`wireDecodeStringDoubleMap`), the warm-up and the sample-envelope merge make them; the allocation check's
   `C-remap` guards the decoder. A map with `Int` keys has no `KlangMap` (its keys are strings): the oversampled
@@ -587,7 +587,7 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   (`CompressorSettings`, `DuckSettings`) do not box: as `Float64Array`s in a hand-edited bundle (run XS) `E-kat-dyn`
   and `E-kat-mix` read what run T reads (98.7 and 196.3, `--predictable`). The residue on the moving delay and
   reverb paths was a `NaN` arm (item 41, the `Double.NaN` rule below). **Closed by engine follow-up 40 (2026-10-16): a stage that writes several knobs
-  of one object every block hands them over in ONE call through a holder**, not through a setter per knob. The orbit
+  of one object every block hands them over in ONE call through a holder**, not through a setter per knob. The cylinder
   compressor called `Compressor`'s five setters, which V8 did not inline, so each knob crossed as a heap number
   (the profiler booked 48 B per block in `KatalystCompressorEffect.configure`), and each setter recomputed the three
   time constants. Now it fills `Compressor.knobArgs` (a `DoubleArray`) and calls `applyKnobArgs`, which guards and
@@ -682,7 +682,7 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   node bundle, `--trace-gc-nvp`, two processes, the difference), compares them with
   `audio_benchmark/alloc-budgets.txt`, appends two rows to `docs/benchmarks/alloc-scoreboard.md` and exits 1 on a
   breach. How it measures and the cases: `audio_benchmark/README.md`. The cases cover the Ignitor's hot nodes and
-  every Katalyst stage family on an orbit: the classic chain's delay, reverb and phaser through its slots, and an
+  every Katalyst stage family on a cylinder: the classic chain's delay, reverb and phaser through its slots, and an
   authored chain for the arithmetic (constant and gliding), the bus distort, the compressor and limiter, the eq, the
   gain, the duck, `parallel`, `bands`, the body and the vowel (KLANG-00301 (katalyst stage measurements)), and the
   knobs that move every block through the chain's own modulators, the `E-kat-*` cases (knob expressions step 6,
@@ -776,11 +776,11 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   well as its voice fields** (Katalyst step 5a, 2026-09-18). A song touching
   `reverb` / `delay` / `compressor` / `duck` / `phaser` / `body` / `vowel`
   sends the matching `<stage>.<knob>` slots over the wire AND the fields.
-  Since step 5b-1 (2026-09-19) the SLOTS are what every orbit reads and the
+  Since step 5b-1 (2026-09-19) the SLOTS are what every cylinder reads and the
   fields are the temporary half. Step 5b-3 (2026-09-19) took the delay,
   reverb, compressor and duck fields off the wire, so for those four doors this
   row's cost is gone; phase 3 step 9 (2026-09-27) took the phaser fields and
-  the `filters` list (body and vowel) off too, so every orbit door now ships its
+  the `filters` list (body and vowel) off too, so every cylinder door now ships its
   slots only.
   The rule's one home is the `katalystParam` door's KDoc in
   `sprudel/lang/lang_katalyst.kt`. Measured with

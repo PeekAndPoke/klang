@@ -19,8 +19,8 @@ import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
  * The sidechain buffer is resolved externally by [io.peekandpoke.klang.audio_be.cylinders.Cylinders]
  * and set on [KatalystContext.sidechainBuffer] before the pipeline runs.
  *
- * **The envelope is ORBIT state, not chain state** (decided 2026-09-18, Katalyst step 3b): a chain
- * swap must not step the orbit's gain by whatever reduction is in force, so a crossfade hands a
+ * **The envelope is CYLINDER state, not chain state** (decided 2026-09-18, Katalyst step 3b): a chain
+ * swap must not step the cylinder's gain by whatever reduction is in force, so a crossfade hands a
  * live envelope from the outgoing chain's duck to the incoming chain's ([takeOver]). When the
  * arriving chain will not duck, the cylinder keeps running the outgoing one and crossfades its
  * EFFECT out over the ramp instead; when it will duck and nothing was ducking before, the arriving
@@ -34,7 +34,7 @@ import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
  *
  * - **OFF rides the WEIGHT down to 0** over [KNOB_GLIDE_SECONDS], `gain = 1 + w * (g - 1)`, so the
  *   gain reduction reaches exactly 0 dB while the envelope keeps running on the live sidechain.
- *   Only then does the stage let go of the envelope and of the sidechain orbit ([endLife]).
+ *   Only then does the stage let go of the envelope and of the sidechain cylinder ([endLife]).
  *   Letting go earlier IS the click: measured -45.8 to -18.7 dB above 8 kHz against the signal,
  *   on a floor of -52.8 to -49.1, and -50.5 to -47.4 after.
  * - **ON** starts a new life (a fresh envelope at 1.0, as before) and rides the same weight up,
@@ -46,18 +46,18 @@ import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
  *   ([KnobGlide]'s own rule), on the SAME envelope.
  * - **The first initialisation is instant**, and what closes that window depends on which side of
  *   the switch the stage is on. It is [KnobGlide]'s snap flag on the weight. While the stage is OFF
- *   the ORBIT's blocks close it ([orbitBlockRan], called by `KatalystChain.process`), which is what
+ *   the CYLINDER's blocks close it ([cylinderBlockRan], called by `KatalystChain.process`), which is what
  *   makes a duck that engages at bar five fade in rather than snap: the duck runs in a LATER pass
  *   than the chain and not at all while it is off, so its own `process` cannot be that tick. Once
- *   the stage is ON, only the first duck PASS closes it, because [orbitBlockRan] deliberately
- *   advances nothing while a life is running. So a duck configured ON whose sidechain orbit never
+ *   the stage is ON, only the first duck PASS closes it, because [cylinderBlockRan] deliberately
+ *   advances nothing while a life is running. So a duck configured ON whose sidechain cylinder never
  *   sounds keeps an armed window for as long as that lasts, and its first switch acts at once.
  *   Review round 2 could not construct an audible failure from that (the first pass can only come
  *   on the block that creates the sidechain cylinder, whose own onset covers the reduction, or on
- *   a silent orbit, where there is no reduction to cover), and spending the window while ON would
+ *   a silent cylinder, where there is no reduction to cover), and spending the window while ON would
  *   change the bar-five case and wants its own measurement.
  * - **[reset] and [retire] are a HARD cut** to the clean slate, for the cylinder's deactivation
- *   and the shelf: the orbit is silent by then, and the next life's first switch snaps again.
+ *   and the shelf: the cylinder is silent by then, and the next life's first switch snaps again.
  *
  * **What glides while it runs** (`audio/ref/knob-glide.md`, measured first):
  * - **depth** glides PER SAMPLE inside [Ducking.processStereoGliding], on its own axis: the target
@@ -67,15 +67,15 @@ import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
  * - **attack** does not glide. It is the release envelope's time constant and the envelope's state
  *   stays continuous across a jump: 0.001 s to 1 s and back measured AT the floor, both
  *   directions, on every source (the compressor's attack and release measured the same way).
- * - **the sidechain ORBIT** gets nothing HERE, and one direction of it is an OPEN question, not a
- *   solved one. The envelope is the effect's, not the buffer's, so a changed orbit carries the
+ * - **the sidechain CYLINDER** gets nothing HERE, and one direction of it is an OPEN question, not a
+ *   solved one. The envelope is the effect's, not the buffer's, so a changed cylinder carries the
  *   reduction in force across, and switching onto a QUIETER or silent source is at the floor
  *   (-50.4 to -49.2 dB against a floor of -52.8 to -52.1): the release smooths it.
  *   Switching onto a LOUDER one steps, and it steps in the CLICK class: -21.8 to -19.0 dB on a
  *   saw and -40.8 to -19.0 on a bass, whether the new source was silent before or already
  *   sounding at 0.2 (measured both ways in review round 1). The magnitude is exactly what the same
- *   orbit's own onset makes, `Ducking`'s instantaneous attack; what does NOT follow is that it is
- *   harmless, because an orbit-to-orbit switch brings no new sound into the mix to cover it.
+ *   cylinder's own onset makes, `Ducking`'s instantaneous attack; what does NOT follow is that it is
+ *   harmless, because a cylinder-to-cylinder switch brings no new sound into the mix to cover it.
  *   Smoothing it means blending two sidechain sources, which is a decision about what a sidechain
  *   switch MEANS and is not this step's to take.
  *
@@ -89,12 +89,12 @@ import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
  *  1. *What outlives its states*: nothing but the two glides. The envelope does NOT: it belongs to
  *     a life, and a life ends when the weight lands on 0. Row: "a duck switched off keeps ducking,
  *     by less every block, and lets go of the envelope only on the block the weight reaches 0".
- *  2. *What record of a finished life is forgotten, and where*: the envelope, the sidechain orbit
+ *  2. *What record of a finished life is forgotten, and where*: the envelope, the sidechain cylinder
  *     and the depth glide, all in [endLife], so the next ON starts from an envelope at rest and
  *     snaps its depth. The WEIGHT is put at 0 there WITHOUT re-arming the snap window, which is
  *     what makes the next ON a fade-in instead of a step. Row: "a second life snaps its depth and
  *     fades its weight in", and "a life that ended without a pass still fades the next one in".
- *  3. *Its Off precondition*: the orbit's mix already carries 0 dB of reduction. [endLife] has
+ *  3. *Its Off precondition*: the cylinder's mix already carries 0 dB of reduction. [endLife] has
  *     THREE doors and each establishes it its own way: the fade landing on a weight of exactly 0
  *     ([process]); a switch-off after a block in which no duck pass ran at all, so the mix went out
  *     unducked ([duckedLastBlock]); and [reset], where the host guarantees silence. Only the first
@@ -103,7 +103,7 @@ import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
  *     [takeOver] moves it; [reset] drops it too. Nothing else holds one.
  *
  * **What a handover carries** (since 5c-9): the [Ducking] instance, the weight and the depth, so
- * nothing on that path steps. What it still does NOT carry is the SIDECHAIN ORBIT's own smoothing:
+ * nothing on that path steps. What it still does NOT carry is the SIDECHAIN CYLINDER's own smoothing:
  * switching `duck.cylinder` onto a louder, already sounding source steps the reduction (measured
  * -40.8 to -19.0 dB above 8 kHz against a floor of -52.8), which is a decision about what a
  * sidechain switch means and is recorded as open under "What glides while it runs".
@@ -120,7 +120,7 @@ class KatalystDuckEffect(
     depthModulated: Boolean = false,
 ) : KatalystEffect {
 
-    /** Sidechain source orbit ID (which orbit triggers the ducking), null while the stage is off. */
+    /** Sidechain source cylinder ID (which cylinder triggers the ducking), null while the stage is off. */
     var duckCylinderId: Int? = null
         private set
 
@@ -148,14 +148,14 @@ class KatalystDuckEffect(
     private val depthGlide = KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames, modulated = depthModulated)
 
     /**
-     * True while the duck pass has run since the orbit's last block. The host's order inside one
-     * block is `configure`, then the orbit's chain ([orbitBlockRan]), then the duck pass, so what
+     * True while the duck pass has run since the cylinder's last block. The host's order inside one
+     * block is `configure`, then the cylinder's chain ([cylinderBlockRan]), then the duck pass, so what
      * [configure] reads here is whether the PREVIOUS block was ducked at all.
      *
-     * It answers one question, in the OFF arm: a stage whose sidechain orbit has disappeared gets
-     * no pass, so the orbit's mix already goes out unducked and a fade-out has nothing left to
-     * ride down. Without it such a stage would hold its envelope and its sidechain orbit for good,
-     * and duck again for the rest of the fade if that orbit ever came back.
+     * It answers one question, in the OFF arm: a stage whose sidechain cylinder has disappeared gets
+     * no pass, so the cylinder's mix already goes out unducked and a fade-out has nothing left to
+     * ride down. Without it such a stage would hold its envelope and its sidechain cylinder for good,
+     * and duck again for the rest of the fade if that cylinder ever came back.
      */
     private var duckedLastBlock: Boolean = false
 
@@ -171,7 +171,7 @@ class KatalystDuckEffect(
      * Called by `Cylinder.beginFade` when the arriving chain will duck too
      * (`KatalystChain.ducksWith`), BEFORE that chain's writers run: the instance moves, so the gain
      * reduction in force carries across the swap, and the arriving chain's own writer then updates
-     * it in place with ITS params (depth, attack, sidechain orbit) rather than building a second
+     * it in place with ITS params (depth, attack, sidechain cylinder) rather than building a second
      * one. Moving rather than sharing, because two chains' writers on one instance would fight
      * every block.
      */
@@ -182,11 +182,11 @@ class KatalystDuckEffect(
         // is in force and the arriving chain has to glide from it, not jump to its own.
         //
         // The weight: a stage that arrives at full weight on a duck that stood at `w` steps the
-        // orbit by the whole of `1 - w` in one sample, and one whose snap window is spent would
+        // cylinder by the whole of `1 - w` in one sample, and one whose snap window is spent would
         // instead ramp up from 0 and step the other way.
         //
         // The depth: `Cylinder.beginFade` resets the arriving chain BEFORE this runs, so without
-        // carrying it the arriving writer's retarget snaps, and two chains on one orbit at depth
+        // carrying it the arriving writer's retarget snaps, and two chains on one cylinder at depth
         // 0.2 and 0.9 step a saturated sidechain by 18 dB in one sample (measured -38.5 to -18.0
         // dB above 8 kHz against a floor of -52.8, review round 2). Only the DEEPER direction
         // steps; the other is the detector's own release and was already at the floor.
@@ -194,7 +194,7 @@ class KatalystDuckEffect(
         // Carrying over spends the snap window too, so the arriving stage's first `configure`
         // turns each glide around exactly as a returning owner's would.
         //
-        // One narrow window (review round 3), left as it is: a duck whose sidechain orbit has
+        // One narrow window (review round 3), left as it is: a duck whose sidechain cylinder has
         // never existed runs no pass, so its glides still hold their snapped values, and a swap
         // inside that window carries a depth that was never IN FORCE; the arriving chain then
         // glides down from it, so the first hit after the swap ducks too deep for one glide.
@@ -207,8 +207,8 @@ class KatalystDuckEffect(
     }
 
     /**
-     * Applies the orbit owner's duck settings, null for none (the stage is off). Called by the
-     * chain's writer on every block the orbit has an owner, so an unchanged owner must cost nothing:
+     * Applies the cylinder owner's duck settings, null for none (the stage is off). Called by the
+     * chain's writer on every block the cylinder has an owner, so an unchanged owner must cost nothing:
      * every write here is a store of the same number or a [KnobGlide.retarget] that already stands.
      */
     fun configure(settings: DuckSettings?) {
@@ -261,7 +261,7 @@ class KatalystDuckEffect(
             live = existing
 
             // An unchanged setting writes nothing (engine follow-up 38, 2026-10-19). This runs on every block the
-            // orbit has an owner, and on V8 the two setters, with the stdlib `isFinite` and `coerceIn` and the
+            // cylinder has an owner, and on V8 the two setters, with the stdlib `isFinite` and `coerceIn` and the
             // attack's coefficient inside them, are calls a double crosses as a heap number whenever V8 leaves them
             // out of the per-block path (`audio/ref/performance.md`): with V8's inlining budget squeezed, two heap
             // numbers per block booked here; likely `E-duck`'s rare tail, not shown.
@@ -315,7 +315,7 @@ class KatalystDuckEffect(
     }
 
     /**
-     * The orbit rendered one block with this stage in its chain. It is the tick that closes the
+     * The cylinder rendered one block with this stage in its chain. It is the tick that closes the
      * "first initialisation is instant" window, and `KatalystChain.process` is its one caller: the
      * duck runs in a LATER pass and not at all while it is off, so its own [process] cannot be the
      * tick (see the class KDoc).
@@ -323,7 +323,7 @@ class KatalystDuckEffect(
      * It never moves anything: it advances the weight only while the stage is off AND the weight
      * is settled, which is exactly the case where an advance is nothing but the snap flag falling.
      */
-    fun orbitBlockRan() {
+    fun cylinderBlockRan() {
         duckedLastBlock = false
 
         if (ducking == null && !fade.isGliding) {
@@ -373,16 +373,16 @@ class KatalystDuckEffect(
     }
 
     /**
-     * The end of one life: the envelope and the sidechain orbit go, the depth glide is forgotten so
+     * The end of one life: the envelope and the sidechain cylinder go, the depth glide is forgotten so
      * the next life snaps onto its own depth, and the WEIGHT is put at 0 with nothing left to
      * travel.
      *
      * The weight has to be SET, not merely left alone. On the landing path in [process] it is
      * already exactly 0 and settled, so [KnobGlide.settleAt] is a no-op; on the short-circuit in
-     * [configure] (no pass ran last block, so the orbit's mix went out unducked) it normally stands
+     * [configure] (no pass ran last block, so the cylinder's mix went out unducked) it normally stands
      * at 1.0, and leaving it there would install the NEXT switch-on at full reduction with no fade,
      * because `retarget(1.0)` on an unchanged target is free. Reached mid-fade it would also freeze
-     * the glide, since [orbitBlockRan] only advances a settled one.
+     * the glide, since [cylinderBlockRan] only advances a settled one.
      *
      * [KnobGlide.settleAt] and not `reset()` + `retarget(0.0)`: re-arming the snap window would
      * make that next switch-on INSTANT, which is the same click by another door.
@@ -396,8 +396,8 @@ class KatalystDuckEffect(
     }
 
     /**
-     * A HARD cut: no source orbit, no processor, a fresh envelope next time, and the snap window
-     * re-armed so the next life's first switch acts at once. Only for a silent orbit (the
+     * A HARD cut: no source cylinder, no processor, a fresh envelope next time, and the snap window
+     * re-armed so the next life's first switch acts at once. Only for a silent cylinder (the
      * cylinder's deactivation) or the shelf ([retire]).
      */
     override fun reset() {

@@ -18,7 +18,7 @@
 >
 > **The framing that makes this interesting:** every commercial auto-master tool (LANDR, Ozone…)
 > receives a stereo sum and can only EQ symptoms. **Klang is the mixer.** The engine owns every
-> orbit buffer, and the pattern source declares each voice's register and role. So the valuable
+> cylinder buffer, and the pattern source declares each voice's register and role. So the valuable
 > version of this feature is not auto-master — it is **auto-mix-advice**: "band X is over target
 > and voice Y owns it; here is the knob." Fixing the mix beats bending the sum, and uniquely, klang
 > can.
@@ -31,13 +31,13 @@
 
 The prerequisite for any advice. Three routes, complementary:
 
-1. **Per-orbit band tap (realtime, approximate).** The cylinder mix buffers already exist per orbit; band-energy
-   summaries per orbit per block give a live `orbit × band` attribution matrix. This is the meters doc's orbit ladder
-   (§2.3 there) upgraded from one RMS bar to ~7 region bars per orbit.
+1. **Per-cylinder band tap (realtime, approximate).** The cylinder mix buffers already exist per cylinder; band-energy
+   summaries per cylinder per block give a live `cylinder × band` attribution matrix. This is the meters doc's cylinder ladder
+   (§2.3 there) upgraded from one RMS bar to ~7 region bars per cylinder.
 2. **Stem export (offline, exact).** During one offline render, write each cylinder's buffer to its own WAV alongside
    the master (§4). Per-stem band tables then give exact attribution — including how each stem's contribution moves
    across 16-cycle windows.
-3. **Source-declared roles (static).** The pattern already says `orbit(3) … scale("e1:minor")` — who *should* own 40–80
+3. **Source-declared roles (static).** The pattern already says `cylinder(3) … scale("e1:minor")`, who *should* own 40 to 80
    Hz is machine-readable. Divergence between declared role and measured attribution is itself a finding ("rhythm guitar
    contributes 61 % of the bass band").
 
@@ -58,7 +58,7 @@ Starting rule set, each one a mechanized session diagnosis:
 3. **Pumping metric over threshold** → master gain down / limiter drive down (the v7→v8 finding:
    gain 1.70 → 1.50 measurably reduced beat-rate modulation).
 4. **Crest healthy + GR shallow** → headroom is available; gain may come up.
-5. **Air region below target with cymbal orbit below its usual share** → level suggestion on the air suppliers, not EQ
+5. **Air region below target with cymbal cylinder below its usual share** → level suggestion on the air suppliers, not EQ
    (sessions: the top octave has exactly one supplier; brightness via supersaw knobs was tried repeatedly and always
    read as harshness, not air).
 
@@ -84,20 +84,20 @@ converts to loudness.
 
 ## 4. Stem export (new build item)
 
-One offline render → per-orbit WAVs + the master. Belongs in the offline render path (`KlangOfflineRenderer` on the dispatcher /
+One offline render → per-cylinder WAVs + the master. Belongs in the offline render path (`KlangOfflineRenderer` on the dispatcher /
 `console/record.sh --stems`), where the cylinder buffers are already summed separately before the master stage.
 Independently useful beyond this feature (debugging, remixing, external mastering). Constraint: stems must be pre-master
-(post-orbit-effects), and the manifest should record the orbit → pattern-voice mapping so attribution reports can name
+(post-cylinder-effects), and the manifest should record the cylinder → pattern-voice mapping so attribution reports can name
 voices, not numbers.
 
 ## 5. Suggested phasing
 
-- **P0 — attribution report, offline:** stem export + per-stem band tables + `orbit × band × window`
+- **P0, attribution report, offline:** stem export + per-stem band tables + `cylinder × band × window`
   matrix, printed as a report. No UI. Immediately answers "who owns this hump" without hand analysis.
 - **P1 — rule engine + targets:** preset curve format, the §2 rules over the P0 matrix, suggestions rendered as text
   with estimated dB effects. Still offline/CLI.
 - **P2 — UI integration:** advisor panel consuming the meters doc's Tier-B analyses (capture ring + worker); live
-  attribution via the per-orbit band tap.
+  attribution via the per-cylinder band tap.
 - **P3 — closed-loop master** (needs the master `eq` stage): offline convergence loop, verify-by-measure.
 
 ## 6. Open decisions
@@ -109,7 +109,7 @@ voices, not numbers.
 3. Suggestion delivery: report text only, or one-click "apply to source" edits? (Proposal: text with exact
    `.knob(value)` snippets, author pastes — keeps the author in the loop and survives pattern refactors.)
 4. Outlier-window detection rule for section-awareness (fixed threshold vs. deviation from median).
-5. Whether per- *voice* attribution (beyond per-orbit) is ever needed — superimpose copies share an orbit; the
+5. Whether per- *voice* attribution (beyond per-cylinder) is ever needed, superimpose copies share a cylinder; the
    mute-others offline render trick covers it manually when it matters.
 
 ## 7. Explicitly out of scope

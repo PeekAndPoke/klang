@@ -15,13 +15,13 @@ import kotlin.math.roundToInt
  * instrument (the signal-flow plan's D4).
  *
  * **The ONLY kind of writer there is** since Katalyst step 5b-1 (2026-09-19): the chain a cylinder
- * is born with reads the orbit's param state exactly as a declared one does, and the owner-voice
+ * is born with reads the cylinder's param state exactly as a declared one does, and the owner-voice
  * writers that read the bus FIELDS are gone. A chain can therefore be configured with NO OWNER
  * ALIVE (`KatalystChain.applyParams(null)`), which is what a chain faded in from `Cylinders`'
  * pending poll needs: the block's voices have already offered themselves by then, and without this
  * the chain would run its first blocks at the settings [KatalystChain.reset] left.
  *
- * **Two methods, because the orbit's param state changes far more rarely than a block goes by**
+ * **Two methods, because the cylinder's param state changes far more rarely than a block goes by**
  * (Katalyst step 5a). [resolve] re-reads this stage's [KatalystKnob]s from the state and refills
  * whatever composite the stage wants (a `ResonatorConfig`, a [CompressorSettings]); [apply] writes what is
  * already resolved into the stage and does no lookup and no allocation, so it can run on every
@@ -33,7 +33,7 @@ import kotlin.math.roundToInt
  * them at once.
  */
 internal interface KatalystSlotWriter {
-    /** Re-read this stage's slots from the orbit's param state. Null = the authored defaults. */
+    /** Re-read this stage's slots from the cylinder's param state. Null = the authored defaults. */
     fun resolve(params: KlangMap<Double>?)
 
     /** Write the resolved values into the stage. No map, no allocation, idempotent. */
@@ -54,7 +54,7 @@ internal interface KatalystSlotWriter {
 }
 
 /**
- * A built orbit chain: the stage instances for one [KatalystDsl], in the DSL's order, plus the
+ * A built cylinder chain: the stage instances for one [KatalystDsl], in the DSL's order, plus the
  * lifecycle the hosting cylinder needs.
  *
  * Instances are **stateful** (delay ring, reverb network, compressor envelope, phaser sweep
@@ -62,21 +62,21 @@ internal interface KatalystSlotWriter {
  * the warehouse, so a chain is built ONCE per cylinder, never per block and never per voice (see
  * `Cylinder`), and one per output chain in `MasterBus`, which runs the same class at the output.
  *
- * **The duck is not in [pipeline].** It needs every orbit processed first, so `Cylinders` runs it
+ * **The duck is not in [pipeline].** It needs every cylinder processed first, so `Cylinders` runs it
  * after the chains, which is what it has always done; the duck stage's position in the DSL list is
  * therefore ignored, and a chain that declares two keeps the last (decided 2026-09-17).
  *
- * Every knob comes from the orbit's param state through [applyParams], the chain a cylinder is
+ * Every knob comes from the cylinder's param state through [applyParams], the chain a cylinder is
  * born with included (step 5b-1). What the DSL moved is WHERE the stage list lives: it is data
  * now, not a hardcoded `listOf(...)`.
  */
 class KatalystChain internal constructor(
     /**
-     * The stages that run on the orbit mix per block, in DSL order, as the array [process] walks.
+     * The stages that run on the cylinder mix per block, in DSL order, as the array [process] walks.
      * The duck is deliberately absent (see the class KDoc); [stages] is the whole set the chain
      * owns.
      *
-     * Array, not List: iterated once per block per orbit, so no iterator
+     * Array, not List: iterated once per block per cylinder, so no iterator
      * allocation. Private, because an array hands every reader a write: what leaves the chain is
      * the read-only [pipeline] view.
      */
@@ -92,7 +92,7 @@ class KatalystChain internal constructor(
      */
     private val duckWriter: KatalystDuckWriter?,
     /**
-     * The 2x steps above the base rate this chain runs at: 0 for an orbit's or the master's chain, the region's for the
+     * The 2x steps above the base rate this chain runs at: 0 for a cylinder's or the master's chain, the region's for the
      * body of an oversampling region (KLANG-00214 (oversampling regions)). Every oversampler in [oversamplers] starts
      * here, so [pureDelayFrames] counts them from it.
      */
@@ -166,7 +166,7 @@ class KatalystChain internal constructor(
     }
 
     /**
-     * Frames this chain delays the orbit by: the sum of its latent stages' delays ([KatalystLatentEffect]: a
+     * Frames this chain delays the cylinder by: the sum of its latent stages' delays ([KatalystLatentEffect]: a
      * compressor's lookahead, phase 3 step 12 C2, an oversampling region, and a `parallel` holding either), since every stage runs in
      * series on the one mix. 0 for a chain without one. A chain swap delays its ramps by the later of the two
      * chains' latencies (`ChainSwap.begin`).
@@ -191,19 +191,19 @@ class KatalystChain internal constructor(
         (exactLatency - oversamplers.sumOf { Oversampler.groupDelaySamples(stages = it, firstStage = firstStage) }).roundToInt()
 
     /**
-     * The region that begins an orbit's chain, which takes the orbit's rate buses in at its rate (KLANG-00214
+     * The region that begins a cylinder's chain, which takes the cylinder's rate buses in at its rate (KLANG-00214
      * (oversampling regions) step 3b), or null: the chain does not begin with a region, or it is a region's body.
      */
     private val busHead: KatalystRegionEffect? = (serial.firstOrNull() as? KatalystRegionEffect)?.takeIf { firstStage == 0 }
 
     /**
-     * The rate this chain runs an orbit at, in 2x steps above the base rate: its head region's (section 10, "Orbits":
+     * The rate this chain runs a cylinder at, in 2x steps above the base rate: its head region's (section 10, "Cylinders":
      * what the first stage asks for on a base-rate input), 0 for a chain that begins with anything else.
      */
     private val rateSteps: Int = busHead?.steps ?: 0
 
     /**
-     * Steps the orbit's rate buses above [rateSteps] down to it. Built for every chain at the base rate, a master's and a
+     * Steps the cylinder's rate buses above [rateSteps] down to it. Built for every chain at the base rate, a master's and a
      * `parallel` branch's too, whose contexts never hold a bus (the ladder then returns at once); none in a region's body.
      */
     private val busLadder: KatalystBusLadder? = if (firstStage == 0) KatalystBusLadder(level = rateSteps) else null
@@ -225,16 +225,16 @@ class KatalystChain internal constructor(
     // ════════════════════════════════════════════════════════════════════════════
 
     /**
-     * Apply EVERY stage of this chain from the orbit's param state ([params], the owner voice's
+     * Apply EVERY stage of this chain from the cylinder's param state ([params], the owner voice's
      * `katalystParams`). **Null is the no-owner door**: no state, so every slot resolves to what
      * the chain itself authored, which is what a chain entering service needs before any voice has
-     * owned the orbit, and what a chain arriving on an orbit without an owner resolves from.
+     * owned the cylinder, and what a chain arriving on a cylinder without an owner resolves from.
      *
      * **This is the ONE way a bus knob reaches a stage** since step 5b-1, on a declared chain and
      * on the chain a cylinder is born with alike. The rule and its one home are the `katalystParam` door's
      * KDoc in `sprudel/lang/lang_katalyst.kt`.
      *
-     * Absent stages are turned OFF, so the state fully determines the orbit and nothing leaks from
+     * Absent stages are turned OFF, so the state fully determines the cylinder and nothing leaks from
      * a previous owner. The values are re-written every block and that is idempotent (body and
      * vowel short-circuit an unchanged config). The compressor and ducking INSTANCES are reused,
      * so their envelope followers survive across notes as long as consecutive owners keep the
@@ -251,8 +251,8 @@ class KatalystChain internal constructor(
      * live owner hands over the same map instance every block, so the lookups run once per owner
      * and the blocks in between cost exactly what step 3a's fixed writers cost: one virtual call
      * per stage, writing numbers that are already in hand. The values are re-WRITTEN every block
-     * regardless, because that is what makes a writer idempotent after a [reset] the orbit reached
-     * while the same voice still owned the orbit.
+     * regardless, because that is what makes a writer idempotent after a [reset] the cylinder reached
+     * while the same voice still owned the cylinder.
      *
      * A map is immutable by contract (`VoiceData.katalystParams`), so identity is a sound test for
      * "these are the same values"; a producer that mutated one in place would be breaking that
@@ -281,7 +281,7 @@ class KatalystChain internal constructor(
      * [KatalystDuckEffect.takeOver]).
      * Without this, a chain whose duck is named by `.katp("duck.cylinder", n)` still reads as "no
      * duck" at the moment the question is asked, and the swap ramps the reduction out and then
-     * drops a fresh one on the orbit a block later.
+     * drops a fresh one on the cylinder a block later.
      *
      * Idempotent and gated exactly like [applyParams], so the [applyParams] that follows on the
      * same map instance costs nothing extra.
@@ -301,11 +301,11 @@ class KatalystChain internal constructor(
     }
 
     /**
-     * Runs the serial chain on the orbit's buffers, in DSL order.
+     * Runs the serial chain on the cylinder's buffers, in DSL order.
      *
      * **First, the modulated knobs move** (knob expressions step 5b, "the hook"): each writer in [modulated] ticks its
      * knobs one block and applies, before any stage runs. HERE and not in [applyParams], because a chain processes
-     * whenever it is active, and only an owned orbit is configured: an orbit with no owner, the master (configured
+     * whenever it is active, and only an owned cylinder is configured: a cylinder with no owner, the master (configured
      * with no state), the leaving chain of a swap through its fade AND its drain (Q4: its modulators keep running, its
      * slots stay as its last resolve left them), and every `parallel` branch (the stage calls this once per branch per
      * block) all come through here, once per block. The clocks therefore run over the blocks this chain processed
@@ -313,13 +313,13 @@ class KatalystChain internal constructor(
      *
      * The order with a changed map: the host's [applyParams] resolves first (a run at the clocks as they stand), then
      * this tick runs and advances once, so a block never advances a clock twice. The [apply] after the tick writes this
-     * block's values; on an owned orbit the host's own [applyParams] earlier in the block wrote the previous block's,
+     * block's values; on an owned cylinder the host's own [applyParams] earlier in the block wrote the previous block's,
      * which every stage takes as an unchanged config (a retarget to the target that stands, a compare that matches).
      */
     fun process(ctx: KatalystContext) {
         tickModulated()
 
-        // The orbit's rate buses meet at the chain's rate (step 3b): in the head region, or stepped down into the mix.
+        // The cylinder's rate buses meet at the chain's rate (step 3b): in the head region, or stepped down into the mix.
         val head = busHead
         var first = 0
 
@@ -334,11 +334,11 @@ class KatalystChain internal constructor(
             serial[i].process(ctx)
         }
 
-        // The orbit has rendered a block with this chain in it. The duck is not in [serial] and
+        // The cylinder has rendered a block with this chain in it. The duck is not in [serial] and
         // does not run at all while it is off, so this is the one per-block event it can see, and
         // it is what closes its "the first initialisation is instant" window: a duck that engages
-        // at bar five must fade in rather than snap (see [KatalystDuckEffect.orbitBlockRan]).
-        duck?.orbitBlockRan()
+        // at bar five must fade in rather than snap (see [KatalystDuckEffect.cylinderBlockRan]).
+        duck?.cylinderBlockRan()
     }
 
     /** The hook of [process]: every modulated writer ticks one block, then applies. Nothing for a chain without one. */
@@ -352,7 +352,7 @@ class KatalystChain internal constructor(
     }
 
     /**
-     * Runs the duck, which the host calls AFTER every orbit has been processed (the sidechain
+     * Runs the duck, which the host calls AFTER every cylinder has been processed (the sidechain
      * source is another cylinder's mix). A chain without a duck stage does nothing here.
      */
     fun processDuck(ctx: KatalystContext) {
@@ -365,7 +365,7 @@ class KatalystChain internal constructor(
 
     /**
      * Turn every stage off AND clear its internal state: the clean slate a cylinder reaches when
-     * its orbit deactivates (the owner is forgotten), so a reused orbit never replays a previous
+     * its cylinder deactivates (the owner is forgotten), so a reused cylinder never replays a previous
      * owner's tail.
      */
     fun reset() {
@@ -416,7 +416,7 @@ class KatalystChain internal constructor(
      * The remembering is the sharp edge. A cached chain comes back into service through
      * `Cylinder.beginFade`, which asks [ducksWith] BEFORE the arriving chain's writers have run:
      * a duck writer still holding a previous owner's `duck.cylinder` would answer "this chain ducks",
-     * be handed the live envelope, and then never be configured, so the orbit would keep ducking
+     * be handed the live envelope, and then never be configured, so the cylinder would keep ducking
      * off a stage its chain no longer declares.
      *
      * Free in the common case: a chain that resolved from no state has nothing to undo.
@@ -435,7 +435,7 @@ class KatalystChain internal constructor(
     }
 
     /**
-     * True while ANY stage still holds audible energy, asked before an orbit is deactivated so no
+     * True while ANY stage still holds audible energy, asked before a cylinder is deactivated so no
      * delay echo or reverb tail is cut. A compare, not a scan (see `TailCeiling`).
      */
     fun hasTail(): Boolean {

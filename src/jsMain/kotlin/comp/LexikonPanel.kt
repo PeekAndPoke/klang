@@ -34,7 +34,7 @@ import org.w3c.dom.HTMLElement
 import org.w3c.dom.events.Event
 import org.w3c.dom.events.MouseEvent
 
-/** A Lexikon entry's page in a link (`/manuals/lexikon/orbit-bus`, as the DSL docs write it), its slug; else null. */
+/** A Lexikon entry's page in a link (`/manuals/lexikon/cylinder-bus`, as the DSL docs write it), its slug; else null. */
 fun lexikonSlugOf(href: String): String? = lexikonHref.find(href)?.groupValues?.get(1)
 
 /** A line of the entry's text, at most: longer lines are hard to follow back to their start. */

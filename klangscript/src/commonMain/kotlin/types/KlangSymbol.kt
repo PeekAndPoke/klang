@@ -17,7 +17,7 @@ import io.peekandpoke.klang.script.docs.typeMatches
  * @param tags Searchable tags for discovery
  * @param origin Where this symbol originates — a registered library, a local binding, or `null` when unknown
  * @param aliases Alternative names this symbol is known by
- * @param scope Where the thing runs: per voice, on the orbit bus, or on the master. `null` when it is not
+ * @param scope Where the thing runs: per voice, on the cylinder bus, or on the master. `null` when it is not
  *   an audio setting at all (structure, pattern maths, sources).
  */
 data class KlangSymbol(

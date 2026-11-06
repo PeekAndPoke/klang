@@ -76,7 +76,7 @@ class PlaybackEngineDispatcherOrderSpec : StringSpec({
             return last.shouldNotBeNull()
         }
 
-        fun schedule(pid: String, orbit: Int, startSec: Double = 0.0, durSec: Double = 5.0) {
+        fun schedule(pid: String, cylinder: Int, startSec: Double = 0.0, durSec: Double = 5.0) {
             d.handle(
                 KlangCommLink.Cmd.ScheduleVoices(
                     playbackId = pid,
@@ -85,7 +85,7 @@ class PlaybackEngineDispatcherOrderSpec : StringSpec({
                             playbackId = pid,
                             startTime = startSec,
                             gateEndTime = startSec + durSec,
-                            data = VoiceData.empty.copy(sound = "sine", freqHz = 220.0, gain = 0.1, cylinder = orbit),
+                            data = VoiceData.empty.copy(sound = "sine", freqHz = 220.0, gain = 0.1, cylinder = cylinder),
                             playbackStartTime = 0.0,
                         ),
                     ),
@@ -99,8 +99,8 @@ class PlaybackEngineDispatcherOrderSpec : StringSpec({
 
         // A first playback rents two cylinders and is torn down: they go back to the shelf in rent order, so the
         // one rented second is on top.
-        rig.schedule(pid = "warm", orbit = 1)
-        rig.schedule(pid = "warm", orbit = 2, startSec = blockSec / 2)
+        rig.schedule(pid = "warm", cylinder = 1)
+        rig.schedule(pid = "warm", cylinder = 2, startSec = blockSec / 2)
         rig.render()
 
         val warm = rig.d.engine("warm").shouldNotBeNull().cylinders.cylinders.toList()
@@ -109,8 +109,8 @@ class PlaybackEngineDispatcherOrderSpec : StringSpec({
         rig.d.cleanupHard("warm")
 
         // "a" is created before "b"; both first sound in the next block.
-        rig.schedule(pid = "a", orbit = 0)
-        rig.schedule(pid = "b", orbit = 0)
+        rig.schedule(pid = "a", cylinder = 0)
+        rig.schedule(pid = "b", cylinder = 0)
         rig.render()
 
         withClue("a rendered first and took the top of the shelf, b the one below") {
@@ -122,13 +122,13 @@ class PlaybackEngineDispatcherOrderSpec : StringSpec({
     "the diagnostics count every engine exactly, its cylinders listed in render order" {
         val rig = Rig()
 
-        rig.schedule(pid = "a", orbit = 2)
-        rig.schedule(pid = "a", orbit = 0, startSec = blockSec / 2)
-        rig.schedule(pid = "b", orbit = 1)
+        rig.schedule(pid = "a", cylinder = 2)
+        rig.schedule(pid = "a", cylinder = 0, startSec = blockSec / 2)
+        rig.schedule(pid = "b", cylinder = 1)
         rig.render(4)
 
         // A voice whose start has been rendered past is dropped at admission, and counted.
-        rig.schedule(pid = "b", orbit = 1, startSec = 0.0)
+        rig.schedule(pid = "b", cylinder = 1, startSec = 0.0)
 
         val diag = rig.diagnostics()
 
@@ -148,9 +148,9 @@ class PlaybackEngineDispatcherOrderSpec : StringSpec({
     "a disposed engine leaves the render set, by a drain or by a hard cleanup" {
         val rig = Rig()
 
-        rig.schedule(pid = "a", orbit = 0, durSec = 0.01)
-        rig.schedule(pid = "b", orbit = 1)
-        rig.schedule(pid = "c", orbit = 2)
+        rig.schedule(pid = "a", cylinder = 0, durSec = 0.01)
+        rig.schedule(pid = "b", cylinder = 1)
+        rig.schedule(pid = "c", cylinder = 2)
         rig.render()
         rig.d.renderedEngineCountForTest shouldBe 3
 
@@ -181,7 +181,7 @@ class PlaybackEngineDispatcherOrderSpec : StringSpec({
     "a detached engine still renders its release and still counts, after the attached ones" {
         val rig = Rig()
 
-        // An endless delay on orbit 3 keeps the stopped playback ringing until the hold ends and the release starts.
+        // An endless delay on cylinder 3 keeps the stopped playback ringing until the hold ends and the release starts.
         rig.d.handle(
             KlangCommLink.Cmd.ScheduleVoices(
                 playbackId = "song",
@@ -202,8 +202,8 @@ class PlaybackEngineDispatcherOrderSpec : StringSpec({
                 ),
             )
         )
-        // A second playback, created after "song", plays on through it all on orbit 4.
-        rig.schedule(pid = "a", orbit = 4, durSec = 60.0)
+        // A second playback, created after "song", plays on through it all on cylinder 4.
+        rig.schedule(pid = "a", cylinder = 4, durSec = 60.0)
         rig.render(10)
         rig.d.handle(KlangCommLink.Cmd.Cleanup(playbackId = "song"))
 
@@ -217,8 +217,8 @@ class PlaybackEngineDispatcherOrderSpec : StringSpec({
 
         stopped.releaseStarted shouldBe true
 
-        // Scheduled again mid-release: the releasing engine is detached, the id gets a fresh one on orbit 5.
-        rig.schedule(pid = "song", orbit = 5, startSec = 0.0)
+        // Scheduled again mid-release: the releasing engine is detached, the id gets a fresh one on cylinder 5.
+        rig.schedule(pid = "song", cylinder = 5, startSec = 0.0)
         rig.d.detachedCountForTest shouldBe 1
 
         val diag = rig.diagnostics()

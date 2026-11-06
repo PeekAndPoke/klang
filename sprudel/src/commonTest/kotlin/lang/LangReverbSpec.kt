@@ -16,7 +16,7 @@ import io.peekandpoke.klang.sprudel.EPSILON
 import io.peekandpoke.klang.sprudel.SprudelPattern
 
 /**
- * `reverb(wet, size, lowpass)`, the orbit reverb: the blueprint of the compound-door fill (`/dsl-design` section 4).
+ * `reverb(wet, size, lowpass)`, the cylinder reverb: the blueprint of the compound-door fill (`/dsl-design` section 4).
  * The calling forms and the positional order are `LangDoorFormsSpec`'s. `reverb` replaced `room` on 2026-09-16
  * (KLANG-00208 (reverb naming unification)).
  */

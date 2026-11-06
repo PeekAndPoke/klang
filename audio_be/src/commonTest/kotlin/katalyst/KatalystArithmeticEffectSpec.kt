@@ -177,7 +177,7 @@ class KatalystArithmeticEffectSpec : StringSpec({
         one(KatalystStageDsl.Abs, -0.5) shouldBe 0.5
     }
 
-    // ── The operand as an orbit knob ─────────────────────────────────────────────────────────────
+    // ── The operand as a cylinder knob ─────────────────────────────────────────────────────────────
 
     /** Runs one block of a constant [probe] through [chain] and returns the left channel. */
     fun block(chain: KatalystChain, probe: Double): DoubleArray {

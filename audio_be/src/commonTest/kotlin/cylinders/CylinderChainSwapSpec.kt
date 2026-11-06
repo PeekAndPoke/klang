@@ -30,12 +30,12 @@ import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.common.infra.klangMapOf
 
 /**
- * The per-cylinder chain swap: how a `katalyst(…)` name becomes the chain an orbit runs
+ * The per-cylinder chain swap: how a `katalyst(…)` name becomes the chain a cylinder runs
  * (Katalyst step 3a, KLANG-00236 (katalyst dsl) §6 and the plan's §7).
  *
  * The semantics of a request, the bounded cache behind them, and the lifecycle
  * (`retire` / `adopt`). What a DECLARED chain's knobs resolve to is `KatalystSlotResolverSpec`'s
- * subject; what the swap of a SOUNDING orbit sounds like, and the drain behind it, is
+ * subject; what the swap of a SOUNDING cylinder sounds like, and the drain behind it, is
  * `CylinderChainCrossfadeSpec`'s (step 3b).
  */
 class CylinderChainSwapSpec : StringSpec({
@@ -75,14 +75,14 @@ class CylinderChainSwapSpec : StringSpec({
             katalysts = registry,
         )
 
-        /** A voice claims the orbit: the chain's stages are written and the orbit sounds. */
+        /** A voice claims the cylinder: the chain's stages are written and the cylinder sounds. */
         fun sound(voice: Voice = VoiceTestHelpers.createSynthVoice()) {
             cylinder.offerAndCommit(voice, blockStart = 0.0)
         }
 
         /**
-         * The orbit falls silent and the round-robin cleanup reaches it, long after [sound]'s claim:
-         * no voice plays any more, so no check-in holds the orbit.
+         * The cylinder falls silent and the round-robin cleanup reaches it, long after [sound]'s claim:
+         * no voice plays any more, so no check-in holds the cylinder.
          */
         fun goQuiet() {
             cylinder.mixBuffer.clear()
@@ -120,7 +120,7 @@ class CylinderChainSwapSpec : StringSpec({
         rig.cylinder.requestChain("gain")
 
         // Same list instance means the same chain object: a rebuild would hand out a new one and
-        // silently drop the orbit's DSP state with it.
+        // silently drop the cylinder's DSP state with it.
         rig.cylinder.pipeline shouldBeSameInstanceAs installed
         rig.cylinder.cachedChainCount shouldBe 1
     }
@@ -146,7 +146,7 @@ class CylinderChainSwapSpec : StringSpec({
         val rig = Rig()
 
         // The stuck path: a dropped `RegisterKatalyst` leaves this name pending forever, and the
-        // poll retries it on every block of every orbit. `KatalystRegistry.namesNormalized`
+        // poll retries it on every block of every cylinder. `KatalystRegistry.namesNormalized`
         // counts the lookups that build a lowercased string, which is the only allocation the
         // registry can make; the render path must take the key door instead and leave it at zero.
         rig.cylinder.requestChain("Never-Registered")
@@ -168,7 +168,7 @@ class CylinderChainSwapSpec : StringSpec({
         rig.registry.namesNormalized shouldBe 0
     }
 
-    "a pending name on an ALREADY silent orbit lands on the polled block" {
+    "a pending name on an ALREADY silent cylinder lands on the polled block" {
         val rig = Rig()
 
         // Nothing sounds and nothing else is coming: a one-shot `.katalyst(…)` emits its
@@ -184,7 +184,7 @@ class CylinderChainSwapSpec : StringSpec({
         rig.cylinder.runsClassic() shouldBe false
     }
 
-    "a request on a SOUNDING orbit installs the chain at once, through a crossfade" {
+    "a request on a SOUNDING cylinder installs the chain at once, through a crossfade" {
         val rig = Rig()
         rig.registry.register("gain", gainChain(1.5))
         rig.sound()
@@ -207,7 +207,7 @@ class CylinderChainSwapSpec : StringSpec({
         rig.cylinder.requestChain("late")
         rig.registry.register("late", gainChain(2.0))
 
-        withClue("while the orbit sounds, nothing is swapped") {
+        withClue("while the cylinder sounds, nothing is swapped") {
             rig.cylinder.runsClassic() shouldBe true
         }
 
@@ -240,7 +240,7 @@ class CylinderChainSwapSpec : StringSpec({
     "the KEY is the identity, not the content: a second name for one stage list is a second chain" {
         // The no-op of a re-emitted declaration compares the requested key against the CURRENT
         // chain's key, never the stage lists, so a chain re-registered under a second name rebuilds
-        // (and crossfades, on a sounding orbit). `KatalystDsl.uniqueId()` is content-derived, so one
+        // (and crossfades, on a sounding cylinder). `KatalystDsl.uniqueId()` is content-derived, so one
         // content normally has one name and the price is not paid.
         //
         // ONE content is compared, and it is the exception this row does not cover: a declaration
@@ -280,7 +280,7 @@ class CylinderChainSwapSpec : StringSpec({
 
         rig.cylinder.delay.shouldBeNull()
 
-        // The orbit sounds and falls silent again: the idle check must find nothing to do.
+        // The cylinder sounds and falls silent again: the idle check must find nothing to do.
         rig.sound()
         rig.goQuiet()
 
@@ -294,7 +294,7 @@ class CylinderChainSwapSpec : StringSpec({
         // Decided 2026-09-19 with step 5b-1, and it reverses the decision of 2026-09-18 (review
         // round 2) together with its reason. That round forbade the shortcut because the born-with
         // chain was VOICE-driven, so handing it back made `Katalyst(k => k.classic())` inert and
-        // every `katp` on the orbit went nowhere. Both chains read the orbit's param state now, so
+        // every `katp` on the cylinder went nowhere. Both chains read the cylinder's param state now, so
         // the two are the same chain in every observable way, and building a second one would buy
         // a crossfade that is not bit-transparent for a declaration that changes nothing.
         val rig = Rig()
@@ -328,7 +328,7 @@ class CylinderChainSwapSpec : StringSpec({
     "a QUEUED content-classic key still lets the deactivation reach its clean slate" {
         // Review round 1, m1. `install` returns FALSE when the requested chain is the one already
         // in service, so `landChain` reports "nothing installed" and `tryDeactivate` falls
-        // through to its own reset. Without that the orbit went inactive with its DSP state and its
+        // through to its own reset. Without that the cylinder went inactive with its DSP state and its
         // owner state intact, and the next life's first owner inherited this life's settings, which the
         // reset exists to prevent.
         val rig = Rig()
@@ -343,7 +343,7 @@ class CylinderChainSwapSpec : StringSpec({
         rig.cylinder.reverb.shouldNotBeNull().reverb.shouldNotBeNull()
 
         // The request arrives BEFORE its `RegisterKatalyst`, which is what puts the key in the
-        // queue rather than installing it: a request on a sounding orbit whose name IS known goes
+        // queue rather than installing it: a request on a sounding cylinder whose name IS known goes
         // through `beginFade` and never reaches the poll (`ChainHost.pollPending`) at all.
         //
         // This is the cheapest way to reach the guarded path, NOT the production scenario, and a
@@ -361,14 +361,14 @@ class CylinderChainSwapSpec : StringSpec({
         rig.cylinder.isActive shouldBe false
 
         // The observable is the owner's param state, which `tryDeactivate`'s reset forgets along
-        // with the owner: the next voice configures the orbit from scratch and writes its own 2.
+        // with the owner: the next voice configures the cylinder from scratch and writes its own 2.
         rig.sound(
             VoiceTestHelpers.createSynthVoice(
                 katalystParams = klangMapOf("reverb.wet" to 0.5, "reverb.size" to 2.0),
             )
         )
 
-        withClue("the owner was forgotten, so the next owner configures the orbit from scratch") {
+        withClue("the owner was forgotten, so the next owner configures the cylinder from scratch") {
             rig.cylinder.reverb.shouldNotBeNull().reverb.shouldNotBeNull().size shouldBe
                     Reverb.normalizeSize(2.0)
         }
@@ -450,7 +450,7 @@ class CylinderChainSwapSpec : StringSpec({
         rig.cylinder.requestChain("echo")
         rig.sound()
 
-        // The same chain object, not a rebuild: a cache miss here would drop the orbit's DSP state
+        // The same chain object, not a rebuild: a cache miss here would drop the cylinder's DSP state
         // and pay the build again on the audio thread.
         rig.cylinder.pipeline shouldBeSameInstanceAs echoStages
         rig.cylinder.delay.shouldNotBeNull().delayLine.shouldNotBeNull()
@@ -555,7 +555,7 @@ class CylinderChainSwapSpec : StringSpec({
         rig.cylinder.runsClassic() shouldBe true
         rig.cylinder.isActive shouldBe false
 
-        // The queued "echo" is gone with the cylinder's life: a new engine's orbit must not
+        // The queued "echo" is gone with the cylinder's life: a new engine's cylinder must not
         // inherit a chain the previous one declared. The next engine knows the name too, so a key
         // kept across the retire would land there (a shelved cylinder has no registry to land it on).
         val next = KatalystRegistry()
@@ -592,7 +592,7 @@ class CylinderChainSwapSpec : StringSpec({
         }
     }
 
-    "adopt starts the next engine's orbit from classic, on the next engine's registry" {
+    "adopt starts the next engine's cylinder from classic, on the next engine's registry" {
         val rig = Rig()
         rig.registry.register("gain", gainChain(1.5))
 

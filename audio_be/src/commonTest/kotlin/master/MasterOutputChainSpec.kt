@@ -28,7 +28,7 @@ import kotlin.math.abs
 import kotlin.math.sin
 
 /**
- * The output runs a Katalyst chain (phase 3 step 12 C3): what a master declares is the chain an orbit
+ * The output runs a Katalyst chain (phase 3 step 12 C3): what a master declares is the chain a cylinder
  * would run, and the output host adds nothing to its sound. The oracle is that chain built by hand
  * from the literal Katalyst twins and run standalone, never the bus's own build.
  */
@@ -122,7 +122,7 @@ class MasterOutputChainSpec : StringSpec({
         gapPeak shouldBeGreaterThan 1e-3
     }
 
-    // ── A refused unit degrades and recovers, the orbit's rule (maintainer, 2026-09-27) ─────────
+    // ── A refused unit degrades and recovers, the cylinder's rule (maintainer, 2026-09-27) ─────────
 
     /** A plain sine, loud enough for a room or an echo to show, never silent for a whole block. */
     fun sine(block: Int, i: Int): Double = 0.4 * sin(2.0 * PI * 330.0 * (block * blockFrames + i) / sampleRate)
@@ -212,7 +212,7 @@ class MasterOutputChainSpec : StringSpec({
         // KLANG-00137 (master dsl followups) §3); the latched blocks only consult the shelf.
         asked shouldBe 1
 
-        // An orbit hands its room back DIRTY, still charged: the shelf must zero it on the way out.
+        // A cylinder hands its room back DIRTY, still charged: the shelf must zero it on the way out.
         val returned = Reverb(sampleRate).apply { size = 0.9 }
         val charge = StereoBuffer(blockFrames).apply {
             left.fill(0.5)

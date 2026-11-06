@@ -14,7 +14,7 @@ The queue of the engine stream (Klang-Main-Dev), in order. The note of 2026-10-2
 ## Queue (Klang-Main-Dev)
 
 1. **KLANG-00243 (one chain host): DONE 2026-11-04**, the Katalyst package moved to `audio_be/.../katalyst/` and the
-   orbit's and the output's chain plumbing in one `ChainHost`.
+   cylinder's and the output's chain plumbing in one `ChainHost`.
 2. **KLANG-00245 (pitch pipeline into the tree): DONE 2026-11-04**, its last step 7f: `progress()` and `elapsed()` on
    both doors. Both defaults kept by the maintainer 2026-11-05: a zero gate reads 1.0 from the first frame, and a live
    note with a gate length that a note-off cuts short keeps its scheduled gate as the base.

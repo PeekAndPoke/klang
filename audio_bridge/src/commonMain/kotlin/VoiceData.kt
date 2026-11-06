@@ -40,16 +40,16 @@ data class VoiceData(
     val ignitorParams: KlangMap<Double>?,
 
     /**
-     * The orbit bus slots this voice writes, keyed `<stage>.<knob>` exactly as [KatalystDsl.classic]
+     * The cylinder bus slots this voice writes, keyed `<stage>.<knob>` exactly as [KatalystDsl.classic]
      * names them (`"reverb.size"`, `"compressor.ratio"`, `"duck.cylinder"`). The [ignitorParams] shape, the
-     * other host: `ignitorParams` is the voice's own instrument, this is the orbit's chain.
+     * other host: `ignitorParams` is the voice's own instrument, this is the cylinder's chain.
      *
-     * **Applied by the orbit's OWNER voice** (the orbit's bus settings are owned by the newest `Sounding` voice; a
-     * voice gives the orbit up when its gate closes or it is cut): a declared
+     * **Applied by the cylinder's OWNER voice** (the cylinder's bus settings are owned by the newest `Sounding` voice; a
+     * voice gives the cylinder up when its gate closes or it is cut): a declared
      * chain's [IgnitorDsl.Param] knobs resolve to `katalystParams[name]` and fall back to the
      * slot's authored default when the map does not carry it. The chain RE-READS the map when its
      * instance changes, not every block; per block it only re-writes the numbers it already
-     * resolved. So this is orbit state with the owner's lifetime, not a per-note snapshot: last
+     * resolved. So this is cylinder state with the owner's lifetime, not a per-note snapshot: last
      * writer within the owner wins, and the values die with the voice that carried them. A knob
      * written as a constant in the chain is not a slot and is never overridden.
      *
@@ -60,7 +60,7 @@ data class VoiceData(
      * Which chain reads which slot of this map is ONE rule with ONE home, the `katalystParam` door's KDoc
      * in `sprudel/lang/lang_katalyst.kt`. In short: EVERY chain reads it, for every stage it
      * declares, the chain a cylinder is born with included (Katalyst step 5b-1). It is the one
-     * source of an orbit stage's knobs: the delay, reverb, compressor and duck fields left the wire
+     * source of a cylinder stage's knobs: the delay, reverb, compressor and duck fields left the wire
      * in step 5b-3, the phaser fields and the `filters` list that carried the vowel and the body in
      * phase 3 step 9.
      */
@@ -89,7 +89,7 @@ data class VoiceData(
     /**
      * Output-chain name: selects the [KatalystDsl] applied to this playback's bus (its master) from
      * this event's start time onward (last writer wins per playback). The name lives in the one
-     * Katalyst namespace, the same registry an orbit's [katalyst] resolves against.
+     * Katalyst namespace, the same registry a cylinder's [katalyst] resolves against.
      *
      * Resolved from the authoring-layer `KatalystValue` at the wire boundary: an inline chain
      * denormalizes to its `KatalystDsl.uniqueId()`, a named reference passes through. Null means
@@ -102,14 +102,14 @@ data class VoiceData(
     val master: String? = null,
 
     /**
-     * Orbit-chain name: selects the `KatalystDsl` the voice's orbit runs, from this event's start
-     * time onward (last writer wins per orbit).
+     * Cylinder-chain name: selects the `KatalystDsl` the voice's cylinder runs, from this event's start
+     * time onward (last writer wins per cylinder).
      *
      * Resolved from the authoring-layer `KatalystValue` at the wire boundary: an inline chain
      * denormalizes to its `KatalystDsl.uniqueId()`, a named reference passes through. Null means
-     * "no change": the orbit keeps whatever chain it already had.
+     * "no change": the cylinder keeps whatever chain it already had.
      *
-     * A Katalyst reference rides *any* event, so `note("c3").katalyst(…)` swaps the orbit's chain
+     * A Katalyst reference rides *any* event, so `note("c3").katalyst(…)` swaps the cylinder's chain
      * at that note's onset and still sounds the note. An event that carries *only* a Katalyst is
      * marked [control].
      *

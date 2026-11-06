@@ -168,7 +168,7 @@ internal class PhaserCore(
 
     /**
      * The all-pass coefficient at LFO [phase]. Kotlin `inline`, on purpose (engine follow-up 1, 2026-10-11): it runs
-     * twice per core per block inside [prepareBlock], and in the orbit phaser's `Phaser.process`, pinned to one core,
+     * twice per core per block inside [prepareBlock], and in the cylinder phaser's `Phaser.process`, pinned to one core,
      * V8 left it out, so its phase and its result crossed the call as heap numbers, about five per block for the
      * stereo pair (`audio/ref/performance.md`). Inline, they never cross. No test can pin it; this KDoc is the guard.
      */
@@ -211,10 +211,10 @@ internal class PhaserCore(
     }
 
     /**
-     * Zero the LFO phase — for ORBIT REUSE only ([reset] deliberately preserves it). A torn-down
-     * orbit's phase is "blocks the orbit happened to stay active x rate", which depends on the
-     * cleanup schedule (block size x allocated-cylinder count) — carrying it into the orbit's
-     * next life would make the reused orbit's sweep position framing-dependent (review round 2).
+     * Zero the LFO phase, for CYLINDER REUSE only ([reset] deliberately preserves it). A torn-down
+     * cylinder's phase is "blocks the cylinder happened to stay active x rate", which depends on the
+     * cleanup schedule (block size x allocated-cylinder count), carrying it into the cylinder's
+     * next life would make the reused cylinder's sweep position framing-dependent (review round 2).
      */
     fun zeroPhase() {
         lfoPhase = 0.0

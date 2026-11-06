@@ -44,7 +44,7 @@ class PhasePoolDslSeamSpec : StringSpec({
     val freqHz = 375.0
     val notes = 60
 
-    fun fundamentalAmp(dsl: IgnitorDsl, pools: PhasePools? = null, orbit: Int = 0): Double {
+    fun fundamentalAmp(dsl: IgnitorDsl, pools: PhasePools? = null, cylinder: Int = 0): Double {
         val buffer = AudioBuffer(n)
         val ctx = IgniteContext(
             sampleRate = sampleRate,
@@ -53,7 +53,7 @@ class PhasePoolDslSeamSpec : StringSpec({
             scratchBuffers = ScratchBuffers(n),
             random = testRandom,
         ).apply { updateOffsetAndLength(offset = 0, length = n); voiceElapsedFrames = 0 }
-        dsl.toExciter(phasePools = pools, orbit = orbit, random = testRandom).generate(buffer, freqHz, ctx)
+        dsl.toExciter(phasePools = pools, cylinder = cylinder, random = testRandom).generate(buffer, freqHz, ctx)
         var re = 0.0
         var im = 0.0
         val w = TWO_PI * freqHz / sampleRate
@@ -132,14 +132,14 @@ class PhasePoolDslSeamSpec : StringSpec({
             deep shouldBeGreaterThan lowBand * 3.0  // dropped kMin/kMax → both sides = default band
         }
 
-        "$name - pooled serving + orbit key reach the engine through the DSL runtime" {
+        "$name - pooled serving + cylinder key reach the engine through the DSL runtime" {
             // Frozen 2-entry pool, roundRobin, jitter off: notes 1/3 and 2/4 re-serve the same
             // entries → IDENTICAL fundamentals. A dropped `phasePools = cache.phasePools`
             // forwarding falls back to stateless per-note draws (never repeats); a dropped
-            // `orbit = cache.orbit` collapses the registry to one pool (size stays 1).
+            // `cylinder = cache.cylinder` collapses the registry to one pool (size stays 1).
             val pools = PhasePools(Random(3))
-            fun note(orbit: Int): Double =
-                fundamentalAmp(make(1.0, 0.30, 0.55, 5.0, 2.0, 0.0, 4.0), pools, orbit)
+            fun note(cylinder: Int): Double =
+                fundamentalAmp(make(1.0, 0.30, 0.55, 5.0, 2.0, 0.0, 4.0), pools, cylinder)
             val a = note(2)
             val b = note(2)
             note(2) shouldBe a
@@ -154,7 +154,7 @@ class PhasePoolDslSeamSpec : StringSpec({
             // 4 and 16 BOTH coerce to 2 and the probe would be blind.)
             fundamentalAmp(make(1.0, 0.30, 0.55, 5.0, 32.0, 0.0, 4.0), pools, 5)
             pools.size shouldBe 3
-            pools.pool(orbit = 5, voices = 11, sideAtten = 0.1, kMin = 0.30, kMax = 0.55, drawTries = 5.0, poolSize = 32.0, refreshEvery = 0.0, warmup = 4.0)
+            pools.pool(cylinder = 5, voices = 11, sideAtten = 0.1, kMin = 0.30, kMax = 0.55, drawTries = 5.0, poolSize = 32.0, refreshEvery = 0.0, warmup = 4.0)
             pools.size shouldBe 3
         }
     }

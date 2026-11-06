@@ -18,17 +18,17 @@ import io.peekandpoke.klang.audio_be.ignitor.REGION_MAX_STAGES
  * Every stage reads and writes [mixBuffer] in place, in list order. The delay and the reverb take
  * their feed from it too (scaled by their `wet`, into a buffer of their own) and add their return
  * back into it (Katalyst step 5b-2: no send buffers any more). The **Duck** reads a sidechain
- * orbit's mix buffer as a trigger signal.
+ * cylinder's mix buffer as a trigger signal.
  */
 class KatalystContext(
     /** Number of frames per block */
     val blockFrames: Int,
-    /** The orbit mix: voices sum into this, stages process it in place. */
+    /** The cylinder mix: voices sum into this, stages process it in place. */
     val mixBuffer: StereoBuffer,
 ) {
     /**
      * Sidechain source mix buffer for ducking. Set per block by [io.peekandpoke.klang.audio_be.cylinders.Cylinders]
-     * when the sidechain orbit is resolved. Null if no ducking is configured or the sidechain orbit doesn't exist.
+     * when the sidechain cylinder is resolved. Null if no ducking is configured or the sidechain cylinder doesn't exist.
      */
     var sidechainBuffer: StereoBuffer? = null
 

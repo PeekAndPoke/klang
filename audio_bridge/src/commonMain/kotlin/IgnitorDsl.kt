@@ -788,7 +788,7 @@ sealed interface IgnitorDsl {
         val kMin: Double = SUPERSAW_K_MIN,
         /** Accepted fundamental-coherence band K, upper edge. */
         val kMax: Double = SUPERSAW_K_MAX,
-        /** Pool vocabulary size per (orbit, unison, profile, band) key (engine caps at 1024). */
+        /** Pool vocabulary size per (cylinder, unison, profile, band) key (engine caps at 1024). */
         val poolSize: Double = SUPERSAW_POOL_SIZE,
         /** Notes between fresh pool draws (random eviction); 0 = frozen pool. */
         val refreshEvery: Double = SUPERSAW_REFRESH_EVERY,
@@ -849,7 +849,7 @@ sealed interface IgnitorDsl {
         val kMin: Double = SUPERSINE_K_MIN,
         /** Accepted fundamental-coherence band K, upper edge. */
         val kMax: Double = SUPERSINE_K_MAX,
-        /** Pool vocabulary size per (orbit, unison, profile, band) key (engine caps at 1024). */
+        /** Pool vocabulary size per (cylinder, unison, profile, band) key (engine caps at 1024). */
         val poolSize: Double = SUPERSINE_POOL_SIZE,
         /** Notes between fresh pool draws (random eviction); 0 = frozen pool. */
         val refreshEvery: Double = SUPERSINE_REFRESH_EVERY,
@@ -908,7 +908,7 @@ sealed interface IgnitorDsl {
         val kMin: Double = SUPERSQUARE_K_MIN,
         /** Accepted fundamental-coherence band K, upper edge. */
         val kMax: Double = SUPERSQUARE_K_MAX,
-        /** Pool vocabulary size per (orbit, unison, profile, band) key (engine caps at 1024). */
+        /** Pool vocabulary size per (cylinder, unison, profile, band) key (engine caps at 1024). */
         val poolSize: Double = SUPERSQUARE_POOL_SIZE,
         /** Notes between fresh pool draws (random eviction); 0 = frozen pool. */
         val refreshEvery: Double = SUPERSQUARE_REFRESH_EVERY,
@@ -968,7 +968,7 @@ sealed interface IgnitorDsl {
         val kMin: Double = SUPERTRI_K_MIN,
         /** Accepted fundamental-coherence band K, upper edge. */
         val kMax: Double = SUPERTRI_K_MAX,
-        /** Pool vocabulary size per (orbit, unison, profile, band) key (engine caps at 1024). */
+        /** Pool vocabulary size per (cylinder, unison, profile, band) key (engine caps at 1024). */
         val poolSize: Double = SUPERTRI_POOL_SIZE,
         /** Notes between fresh pool draws (random eviction); 0 = frozen pool. */
         val refreshEvery: Double = SUPERTRI_REFRESH_EVERY,
@@ -1027,7 +1027,7 @@ sealed interface IgnitorDsl {
         val kMin: Double = SUPERRAMP_K_MIN,
         /** Accepted fundamental-coherence band K, upper edge. */
         val kMax: Double = SUPERRAMP_K_MAX,
-        /** Pool vocabulary size per (orbit, unison, profile, band) key (engine caps at 1024). */
+        /** Pool vocabulary size per (cylinder, unison, profile, band) key (engine caps at 1024). */
         val poolSize: Double = SUPERRAMP_POOL_SIZE,
         /** Notes between fresh pool draws (random eviction); 0 = frozen pool. */
         val refreshEvery: Double = SUPERRAMP_REFRESH_EVERY,
@@ -2261,7 +2261,7 @@ sealed interface IgnitorDsl {
      *   both surfaces: `.phaser(0.3, rate)`.
      * @param floor Minimum dry coefficient in [0, 1]. Default 0.0 (true crossfade). Raising
      *   it keeps at least that much dry at every [wet]; at 1.0 the phaser is purely additive,
-     *   like the orbit-side phaser. `floor` is a knob on effect builders only, where it cannot
+     *   like the cylinder-side phaser. `floor` is a knob on effect builders only, where it cannot
      *   meet the round-down `floor()` of a signal, because a builder offers only its own knobs
      *   (maintainer, 2026-09-24).
      */

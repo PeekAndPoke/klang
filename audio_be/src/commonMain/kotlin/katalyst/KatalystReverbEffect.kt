@@ -16,8 +16,8 @@ import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
 import kotlin.math.min
 
 /**
- * The orbit reverb, an insert-style stage (Katalyst step 5b-2, 2026-09-19): it is fed from the orbit
- * mix AT ITS POSITION in the chain, scaled by the orbit owner's ONE `wet`, and adds its room into
+ * The cylinder reverb, an insert-style stage (Katalyst step 5b-2, 2026-09-19): it is fed from the cylinder
+ * mix AT ITS POSITION in the chain, scaled by the cylinder owner's ONE `wet`, and adds its room into
  * that same mix, so the dry signal stays. In the classic order it sits after body, vowel and the
  * delay, so the room hears all three, the delay's echoes included. The same effect runs at the
  * output (`master(...)`), where the mix is the playback's bus.
@@ -32,7 +32,7 @@ import kotlin.math.min
  * [MIN_ACTIVE_SIZE], an unset size, a non-finite one) takes the wet glide to 0 over its span (50 ms, one
  * block for a modulated wet) and the stage stays [Active] while it falls; the block the glide LANDS in
  * measures the combs at its end and enters [Draining] or [Off] ([Active.process]), with no further
- * off-config needed, so an orbit whose owner stopped offering drains too. On an owner change the NEW
+ * off-config needed, so a cylinder whose owner stopped offering drains too. On an owner change the NEW
  * owner's mix feeds the OLD owner's room for the fade's span at a falling level, the bleed accepted with
  * the decision. Back in Active out of Draining the wet glides up from 0, where the fade left it; out of
  * Off it snaps, except on a modulated size ([sizeModulated]), whose wet glides up from 0
@@ -43,7 +43,7 @@ import kotlin.math.min
  * Owns the same active/draining/off lifecycle as [KatalystDelayEffect] (block-framing ledger D3,
  * adopted here as the decided follow-up): turning the reverb off must never freeze a live tail
  * inside the comb network. The old short-circuit stopped the comb clocks dead the moment a
- * no-reverb voice took over the orbit, and the stale tail resurrected when a reverb voice
+ * no-reverb voice took over the cylinder, and the stale tail resurrected when a reverb voice
  * reclaimed it, displaced by the (block-quantised, framing-dependent) freeze length, and the
  * cylinder's param-gated tail check could not see the frozen energy either.
  *
@@ -59,7 +59,7 @@ import kotlin.math.min
  *   ([Reverb.normalizeSize] bounds size in `KatalystReverbWriter`'s gate, [configure] bounds it again),
  *   so every finite drain terminates, and a NON-finite countdown (an Inf or NaN comb cell from
  *   a hot feed: neither ever decays) resets immediately instead: the heal the old gate's
- *   takeover path provided, and the only exit such an orbit would otherwise ever have.
+ *   takeover path provided, and the only exit such a cylinder would otherwise ever have.
  * - **Off**: countdown done: one [Reverb.reset] (combs, allpasses and LPF stores literally
  *   zero), then a true short-circuit until an owner re-enables. A reverb-carrying owner
  *   arriving MID-drain goes straight to Active with the network kept: the tail deliberately
@@ -100,7 +100,7 @@ import kotlin.math.min
  *    and a rented unit on silent input, never audio.
  */
 class KatalystReverbEffect(
-    /** The unit shelf this orbit rents from (resource warehouse, 2d). */
+    /** The unit shelf this cylinder rents from (resource warehouse, 2d). */
     private val units: ReverbUnits,
     blockFrames: Int,
     /** True when the wet's knob holds a modulator: [wetGlide] spans one block (knob expressions step 5b, D2). */
@@ -124,7 +124,7 @@ class KatalystReverbEffect(
     }
 
     /**
-     * The DSP core, or `null` until an owner asks for reverb (a fresh orbit holds NO network: a
+     * The DSP core, or `null` until an owner asks for reverb (a fresh cylinder holds NO network: a
      * Freeverb unit is ~200 KB, and eight of them per playback were 1.6 MB zero-filled on the audio
      * thread before any note). Rented from [units] on the first activating [configure]; kept across
      * [reset] like the delay's ring, returned only by eviction (2f).
@@ -137,7 +137,7 @@ class KatalystReverbEffect(
     var reverb: Reverb? = null
         private set
 
-    /** Activating configures the shelf refused a unit for. Counted per orbit life, like the delay's. */
+    /** Activating configures the shelf refused a unit for. Counted per cylinder life, like the delay's. */
     override var deniedRents: Int = 0
         private set
 
@@ -145,7 +145,7 @@ class KatalystReverbEffect(
      * A refusal is remembered until [reset]: the owner re-applies its config every block, and
      * without the latch a refused unit is an allocate-and-catch per block (the delay's lesson,
      * review round 1). All units are one size, so a Boolean is the whole latch. While latched the
-     * shelf is still consulted: a unit another orbit or playback returned meanwhile is free to
+     * shelf is still consulted: a unit another cylinder or playback returned meanwhile is free to
      * take (the delay's round-2 lesson, re-learned here in round 3); only the allocation is skipped.
      */
     private var refused = false
@@ -153,7 +153,7 @@ class KatalystReverbEffect(
     /** All-zero input for the draining phase: the owner said off, so the mix is no longer fed in. */
     private val silentInput = StereoBuffer(blockFrames)
 
-    /** What the network is fed while Active: the orbit mix at this stage's position, times [wetGlide]. */
+    /** What the network is fed while Active: the cylinder mix at this stage's position, times [wetGlide]. */
     private val feed = StereoBuffer(blockFrames)
 
     /**
@@ -187,7 +187,7 @@ class KatalystReverbEffect(
      * instead of [SILENCE_FLOOR].
      *
      * **Two floors on purpose** (maintainer, 2026-10-17): ordinary playback stays bit for bit as it
-     * was (the cell floor, which holds a room about 20 dB past inaudible, decides when an orbit, the
+     * was (the cell floor, which holds a room about 20 dB past inaudible, decides when a cylinder, the
      * master and an engine go idle, and the corpus pins that), while a drain, which only frees a slot
      * and some CPU, ends near the room's audible ring-out. A chain that leaves service is retired and
      * a chain that enters it is reset (`Cylinder.beginFade`, `MasterBus.landChain`), so one re-used from
@@ -315,7 +315,7 @@ class KatalystReverbEffect(
             unit.process(input = feed, output = ctx.mixBuffer, length = frames)
 
             // The fade lands in this block: the drain starts from what the combs hold now, with no off-config
-            // needed to move it on (an orbit without an owner configures nothing; see the class KDoc).
+            // needed to move it on (a cylinder without an owner configures nothing; see the class KDoc).
             if (fading && !wetGlide.isGliding) {
                 leave(unit)
             }
@@ -479,7 +479,7 @@ class KatalystReverbEffect(
      * [appliedValid]: an unchanged config returns before it writes anything (engine follow-up 32, 2026-10-16).
      *
      * **Why:** the writer re-applies its config on every block (`KatalystChain.applyParams`), and on V8, in a mixed
-     * profile where most orbits take the off arm, this method can be compiled with its calls left out (the unit's
+     * profile where most cylinders take the off arm, this method can be compiled with its calls left out (the unit's
      * `size` and `lowpass` setters among them), so their doubles crossed as heap numbers: two or three per block,
      * measured in pinned mixed processes (`audio/ref/performance.md`). The phaser's house pattern
      * (`KatalystPhaserEffect.applied`), with the one write item 1 found in the way handled: while the size glide
@@ -525,12 +525,12 @@ class KatalystReverbEffect(
     }
 
     /**
-     * Applies the orbit owner's reverb settings. Called by `KatalystChain.applyParams` on every
+     * Applies the cylinder owner's reverb settings. Called by `KatalystChain.applyParams` on every
      * block an owner is committed. An off-config does NOT reach the [reverb]: the retained
      * last-active parameters are what the drain runs on. The stage reads [config] and keeps no
      * reference to it.
      *
-     * [ReverbConfig.wet] is how much of the orbit mix feeds the room. Raw: no clamp; a non-finite wet reads as
+     * [ReverbConfig.wet] is how much of the cylinder mix feeds the room. Raw: no clamp; a non-finite wet reads as
      * the shared default, like the master's (the slot writer hands one only with an off size: `stageAskedFor` is
      * true only with a finite wet, a modulated one included).
      *
@@ -612,19 +612,19 @@ class KatalystReverbEffect(
      * playback's engine ~20x. Round 2 DISPROVED the number: the comb damping LPF has unity DC
      * gain, so a tail's low-frequency component decays at exactly fb per revolution no matter
      * how dark the room (damping darkens a tail, it does not shorten it): a scan frees the
-     * orbit ~one revolution (~37 ms) earlier for LF-bearing content and ~30% earlier only for
+     * cylinder ~one revolution (~37 ms) earlier for LF-bearing content and ~30% earlier only for
      * purely-HF charges (the LPF's impulse smearing), never the claimed 20 s. The
      * by-construction arm was restored: it matches the settled sibling, keeps the cleanup poll
      * O(1) instead of an O(22k) scan per tail check, and its conservatism is bounded by that
      * same impulse-smear class. Safety is unchanged either way (a held tail never cuts audio),
      * and the hold is content-proportional because the countdown starts from the MEASURED peak:
-     * an orbit ringing out under a live owner held the engine just as long before this
+     * a cylinder ringing out under a live owner held the engine just as long before this
      * lifecycle existed.
      */
     override fun hasTail(): Boolean = state.hasTail()
 
     /**
-     * The orbit's input is silent from now on (a chain swapped away and draining, `ChainSwap`): an
+     * The cylinder's input is silent from now on (a chain swapped away and draining, `ChainSwap`): an
      * Active room's ceiling comes down to what its combs hold (see [Active.measureTail]). Without it
      * the ceiling, built for a network still being fed, stays up to its slack above the content for
      * the whole ring-out: a size-10 room drained past the 20 s cap; measured, it now ends in about 14
@@ -660,7 +660,7 @@ class KatalystReverbEffect(
 
     /**
      * The return path (resource warehouse, 2f): hands the network back to the shelf and forgets
-     * it. Called when the owning engine is disposed, never while the orbit can still render.
+     * it. Called when the owning engine is disposed, never while the cylinder can still render.
      */
     fun release() {
         reverb?.let { units.giveBack(it) }
@@ -672,7 +672,7 @@ class KatalystReverbEffect(
     }
 
     /** Clears the network, the lifecycle AND the DSP params, called from
-     *  `KatalystChain.reset` on orbit deactivation. The params go back to factory here
+     *  `KatalystChain.reset` on cylinder deactivation. The params go back to factory here
      *  (the delay's review-round-5 rationale): [Reverb]'s setters DROP non-finite writes, so a
      *  NaN param from the next life's first owner would otherwise inherit THIS life's value.
      *  Mirrors [KatalystDelayEffect.reset]. */

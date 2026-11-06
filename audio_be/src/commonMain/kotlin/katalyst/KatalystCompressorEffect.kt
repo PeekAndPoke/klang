@@ -20,7 +20,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 /**
- * The orbit compressor, an insert: it processes the orbit mix in place.
+ * The cylinder compressor, an insert: it processes the cylinder mix in place.
  *
  * **How it switches** (decided with the maintainer 2026-09-19, KLANG-00236 (katalyst dsl) step 5c;
  * built in Katalyst 5c-7). Every edge fades over [KNOB_GLIDE_SECONDS], linearly, between the
@@ -46,10 +46,10 @@ import kotlin.math.min
  *   `w` ramping from its current value to the other end over one full fade.
  * - **The first initialisation is instant.** Until a block has been processed since
  *   construction or [reset], a switch acts at once (the `KnobGlide` snap rule): nothing has
- *   sounded, so there is nothing to be continuous with. A compressor set on an orbit's first block
+ *   sounded, so there is nothing to be continuous with. A compressor set on a cylinder's first block
  *   is exactly what it was before this step.
  * - **[reset] and [retire] are a HARD cut** to [Off], for the cylinder's deactivation and the
- *   shelf: the orbit is silent by then, and a fade that survived would resume in the orbit's next
+ *   shelf: the cylinder is silent by then, and a fade that survived would resume in the cylinder's next
  *   life on new material.
  *
  * **What glides while it runs** (`audio/ref/knob-glide.md`, measured first in 5c-7): the gain
@@ -73,13 +73,13 @@ import kotlin.math.min
  * block runs at the glide's per-sample values instead.
  *
  * **With a lookahead** (phase 3 step 12 C2: `Katalyst(k => k.limiter(lookahead = 0.005))`) the
- * instance delays the orbit by [latencyFrames] and anticipates its transients (see
+ * instance delays the cylinder by [latencyFrames] and anticipates its transients (see
  * [Compressor.lookaheadSeconds]). The latency is the STAGE's, not the compression's: it holds in
- * every state, so switching the compression on or off never moves the orbit in time. Off passes the
+ * every state, so switching the compression on or off never moves the cylinder in time. Off passes the
  * DELAYED dry mix, a fade blends against the delayed dry, and the instance's ring keeps running
  * through Off; switching on from Off re-seeds the detector from the ring under the new knobs
- * ([Compressor.reseedFromRing]). Nothing compensates: the orbit, and the duck it triggers elsewhere,
- * run late by it, by the author's choice. A chain swap, on an orbit and at the output alike, places
+ * ([Compressor.reseedFromRing]). Nothing compensates: the cylinder, and the duck it triggers elsewhere,
+ * run late by it, by the author's choice. A chain swap, on a cylinder and at the output alike, places
  * both chains' weights so they meet at the output, delayed by the later of the two latencies
  * (`ChainSwap`, `Crossfade`): two chains of equal latency swap without a seam, and between two
  * latencies the jump in time happens under an ordinary linear crossfade of the two copies, weights
@@ -103,7 +103,7 @@ import kotlin.math.min
  *    in [Off.enter] (the instance is reset, the cache emptied so the next ON writes every knob).
  *    The next life starts from an envelope at rest, its knobs snap, and nothing can glide from a
  *    dead life's values. With a lookahead the instance is NOT reset there: its ring holds the
- *    orbit's last [latencyFrames] of signal, not a record, and keeps running through Off. The
+ *    cylinder's last [latencyFrames] of signal, not a record, and keeps running through Off. The
  *    detector's record is dropped at the ON edge instead: [Compressor.reseedFromRing] puts it in the
  *    state of a fresh instance that has heard exactly the ring, under the new knobs, so the new
  *    life's ceiling holds from its first sample (it still fades in from the delayed dry over the
@@ -158,7 +158,7 @@ class KatalystCompressorEffect(
         lookaheadSeconds = Compressor.coerceLookaheadSeconds(lookaheadSeconds),
     )
 
-    /** Frames this stage delays the orbit by, in every state; 0 without a lookahead. */
+    /** Frames this stage delays the cylinder by, in every state; 0 without a lookahead. */
     override val latencyFrames: Int = instance.latencyFrames
 
     /** True when the instance has a lookahead ring: every lookahead-only branch below tests this. */
@@ -167,7 +167,7 @@ class KatalystCompressorEffect(
     /**
      * Frames since the last input block that held a sample above [SILENCE_FLOOR], counted at
      * block ends and held at [latencyFrames]. Below [latencyFrames] the ring may still hold audio
-     * the orbit has not heard yet, which is the tail [hasTail] reports. Only a latent instance
+     * the cylinder has not heard yet, which is the tail [hasTail] reports. Only a latent instance
      * counts; [reset] sets it to "nothing in the ring".
      */
     private var quietFrames: Int = latencyFrames
@@ -257,7 +257,7 @@ class KatalystCompressorEffect(
         /** The owner wants none. */
         abstract fun switchOff()
 
-        /** One block of the orbit mix, in place. */
+        /** One block of the cylinder mix, in place. */
         abstract fun process(ctx: KatalystContext)
     }
 
@@ -277,7 +277,7 @@ class KatalystCompressorEffect(
          * exists to prevent.
          */
         fun enter() {
-            // A latent instance keeps running through Off (its ring is the orbit's signal, see
+            // A latent instance keeps running through Off (its ring is the cylinder's signal, see
             // the class KDoc); [reset] is what resets it.
             if (!latent) {
                 instance.reset()
@@ -399,7 +399,7 @@ class KatalystCompressorEffect(
             val inv = invFadeLen
 
             // The instance runs the whole block, so its envelope stays continuous. The dry partner
-            // is what the orbit would sound like uncompressed at this moment: the input itself,
+            // is what the cylinder would sound like uncompressed at this moment: the input itself,
             // or with a lookahead the input D frames ago, straight out of the instance's ring.
             if (latent) {
                 c.processLookahead(left = mixL, right = mixR, blockSize = n, delayedLeft = dL, delayedRight = dR)
@@ -472,8 +472,8 @@ class KatalystCompressorEffect(
     internal val currentState: Any get() = state
 
     /**
-     * Applies the orbit owner's compressor settings, null for none. Called by the chain's writer on
-     * every block the orbit has an owner (`KatalystChain.applyParams`), so an unchanged owner must cost
+     * Applies the cylinder owner's compressor settings, null for none. Called by the chain's writer on
+     * every block the cylinder has an owner (`KatalystChain.applyParams`), so an unchanged owner must cost
      * nothing: the knobs are written only when a VALUE changes (see [applied]). The stage reads
      * [settings] and keeps no reference to it.
      */
@@ -619,7 +619,7 @@ class KatalystCompressorEffect(
      * to apply.
      *
      * With a lookahead, true while the ring may still hold audio above [SILENCE_FLOOR] (fewer
-     * than [latencyFrames] quiet frames since the last loud input block): the orbit has not heard it
+     * than [latencyFrames] quiet frames since the last loud input block): the cylinder has not heard it
      * yet, so its deactivation's mix scan cannot see it. (A chain swap needs no answer for it: its
      * fade ends the leaving chain's latency after the ramp, `Crossfade.settledFrom`.)
      */
@@ -627,7 +627,7 @@ class KatalystCompressorEffect(
 
     /**
      * A HARD cut to [Off], the instance reset to rest, and the next switch snaps again. Only for a silent
-     * orbit (the cylinder's deactivation) or the shelf ([retire]).
+     * cylinder (the cylinder's deactivation) or the shelf ([retire]).
      */
     override fun reset() {
         off.enter()

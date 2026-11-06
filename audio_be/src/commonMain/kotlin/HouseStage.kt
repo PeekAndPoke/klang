@@ -52,7 +52,7 @@ class HouseStage(
          * Uniform on the whole output (this stage runs once, after every playback is summed), so the
          * delay shifts everything together and nothing can desync. That is why the HOUSE lookahead
          * lives here, always on, and why an authored one upstream (a Katalyst `compressor` or
-         * `limiter` with `lookahead`, since phase 3 step 12 C2) is opt-in: it makes its orbit or its
+         * `limiter` with `lookahead`, since phase 3 step 12 C2) is opt-in: it makes its cylinder or its
          * playback late by that much, uncompensated.
          *
          * See KLANG-00225 (master limiter lookahead).

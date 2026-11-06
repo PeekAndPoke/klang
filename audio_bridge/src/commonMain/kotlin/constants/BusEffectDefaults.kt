@@ -6,10 +6,10 @@
 package io.peekandpoke.klang.audio_bridge.constants
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Defaults of the per-orbit bus effects, the Katalyst stages: delay, reverb,
+// Defaults of the per-cylinder bus effects, the Katalyst stages: delay, reverb,
 // phaser, compressor, duck, body, vowel, distort. The master limiter's live in
 // `MasterLimiterDefaults.kt`. At the end, two timings that are not knob
-// defaults but belong to the orbit knobs and stages whose jump is audible:
+// defaults but belong to the cylinder knobs and stages whose jump is audible:
 // [KNOB_GLIDE_SECONDS] for a level or dynamics glide, [BANK_CROSSFADE_SECONDS]
 // for a filter bank crossfade.
 //
@@ -61,7 +61,7 @@ const val SLOT_UNSET: Double = Double.NaN
 
 // ── Delay ────────────────────────────────────────────────────────────────────
 
-/** Delay wet: how much of the orbit mix feeds the line, 0..1. */
+/** Delay wet: how much of the cylinder mix feeds the line, 0..1. */
 const val DELAY_WET: Double = 0.25
 
 /** Delay time in seconds. */
@@ -75,7 +75,7 @@ const val DELAY_CAP: Double = 1.0
 
 // ── Reverb ───────────────────────────────────────────────────────────────────
 
-/** Reverb wet: how much of the orbit mix feeds the room, 0..1. */
+/** Reverb wet: how much of the cylinder mix feeds the room, 0..1. */
 const val REVERB_WET: Double = 0.25
 
 /**
@@ -126,15 +126,15 @@ const val COMPRESSOR_LOOKAHEAD_SECONDS: Double = 0.0
 
 // ── Duck ─────────────────────────────────────────────────────────────────────
 
-/** How far the ducked orbit is pulled down, 0..1. 0 = no ducking. */
+/** How far the ducked cylinder is pulled down, 0..1. 0 = no ducking. */
 const val DUCK_DEPTH: Double = 0.0
 
-/** How fast the duck closes when the source orbit sounds, in seconds. */
+/** How fast the duck closes when the source cylinder sounds, in seconds. */
 const val DUCK_ATTACK_SECONDS: Double = 0.1
 
 // ── Body ─────────────────────────────────────────────────────────────────────
 
-/** How much of the orbit runs through the body resonator, 0..1 (wire spelling on the voice: `bodyMix`). */
+/** How much of the cylinder runs through the body resonator, 0..1 (wire spelling on the voice: `bodyMix`). */
 const val BODY_WET: Double = 0.5
 
 /**
@@ -152,7 +152,7 @@ const val BODY_FLOOR: Double = 0.4
 
 // ── Vowel ────────────────────────────────────────────────────────────────────
 
-/** How much of the orbit runs through the formant bank, 0..1 (wire spelling on the voice: `vowelMix`). */
+/** How much of the cylinder runs through the formant bank, 0..1 (wire spelling on the voice: `vowelMix`). */
 const val VOWEL_WET: Double = 0.5
 
 /**
@@ -175,13 +175,13 @@ const val DISTORT_AMOUNT: Double = 0.5
 // ── Knob glide ───────────────────────────────────────────────────────────────
 
 /**
- * How long an orbit knob takes to reach a new value, in seconds: a gliding knob moves there over
- * this time instead of jumping, because two patterns on one orbit take turns owning it and each
+ * How long a cylinder knob takes to reach a new value, in seconds: a gliding knob moves there over
+ * this time instead of jumping, because two patterns on one cylinder take turns owning it and each
  * owner change can move every knob of the chain at once (`audio/ref/knob-glide.md`, decided 2026-09-19).
  *
  * A safety net against clicks, applied per knob where a jump is AUDIBLE, not by default to every
- * knob. It grew well past its pilot (the orbit reverb's size, whose damping was measured to need
- * none) through Katalyst 5c-7 to 5c-9: it is now the orbit fader and gain, the compressor's blend
+ * knob. It grew well past its pilot (the cylinder reverb's size, whose damping was measured to need
+ * none) through Katalyst 5c-7 to 5c-9: it is now the cylinder fader and gain, the compressor's blend
  * and its per-sample knobs (a move that RELAXES the compressor follows its release instead, never
  * faster than this glide, since 2026-10-17, `CompressorKnobMove`), the phaser's coefficients and breakpoint, the duck's weight and depth,
  * the delay's `wet` and its tap crossfade, and the send `wet`s. What it is NOT, since 5c-11, is
@@ -195,7 +195,7 @@ const val KNOB_GLIDE_SECONDS: Double = 0.05
 
 /**
  * How long ONE BANK CROSSFADE takes, in seconds: the time `KatalystFilterSwap` spends blending the
- * bank in service into the arriving one, and the time the body, the vowel and the orbit EQ take to
+ * bank in service into the arriving one, and the time the body, the vowel and the cylinder EQ take to
  * fade in from dry or out to it.
  *
  * Its own constant since Katalyst step 5c-11 (2026-09-20): a bank swap is not a level move, what

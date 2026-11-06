@@ -143,13 +143,13 @@ class LangSlotSetterSpec : StringSpec({
         ).firstData()
         voice.ignitorParams?.toMap() shouldBe mapOf("cutoff" to 1200.0)
 
-        val orbit = compile(
+        val cylinder = compile(
             """
             let room = Kat.param("room", 2)
             note("c3").katp(room, 9)
             """.trimIndent()
         ).firstData()
-        orbit.katalystParams?.toMap() shouldBe mapOf("room" to 9.0)
+        cylinder.katalystParams?.toMap() shouldBe mapOf("room" to 9.0)
     }
 
     // ── Errors ───────────────────────────────────────────────────────────────────────────────────

@@ -21,7 +21,7 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 /**
  * The `katalyst(…)` authoring surface, see KLANG-00236 (katalyst dsl) §6.
  *
- * The top-level form is a **control carrier** (one silent event per cycle, routed with `.orbit(n)`);
+ * The top-level form is a **control carrier** (one silent event per cycle, routed with `.cylinder(n)`);
  * the mapper forms stamp the reference onto sounding events. Like `master(…)`, the door REPLACES
  * (decided 2026-09-18): a chain is one instrument, and `k.classic()` inside the builder is how you
  * start from the familiar one.
@@ -42,8 +42,8 @@ class LangKatalystSpec : StringSpec({
         events[0].data.freqHz.shouldBeNull()
     }
 
-    "the carrier is an ordinary pattern, so .orbit(n) routes it" {
-        val events = katalyst(chainA).orbit(5).queryArc(0.0, 1.0)
+    "the carrier is an ordinary pattern, so .cylinder(n) routes it" {
+        val events = katalyst(chainA).cylinder(5).queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.cylinder shouldBe 5
@@ -147,8 +147,8 @@ class LangKatalystSpec : StringSpec({
     }
 
     "an outer door replaces each stacked pattern's own chain" {
-        // stack(a.katalyst(A), b).katalyst(B): both get B. The chain is a property of the ORBIT,
-        // and an outer door is the author saying what that orbit runs.
+        // stack(a.katalyst(A), b).katalyst(B): both get B. The chain is a property of the CYLINDER,
+        // and an outer door is the author saying what that cylinder runs.
         val pattern = stack(note("c3").katalyst(chainA), note("e3")).katalyst(chainB)
         val events = pattern.queryArc(0.0, 1.0)
 

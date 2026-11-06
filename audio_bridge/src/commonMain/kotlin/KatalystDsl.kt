@@ -32,7 +32,7 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
 
 /**
- * Declarative, data-driven **effect chain**: the effects one orbit (one cylinder) runs on its own
+ * Declarative, data-driven **effect chain**: the effects one cylinder (one cylinder) runs on its own
  * summed voices, before the playback's master bus, and the chain that master bus itself runs.
  *
  * A Katalyst is an ordered list of [KatalystStageDsl] stages. The list order IS the signal order,
@@ -40,22 +40,22 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
  * the same `eq` after it shapes dry and tail together.
  *
  * Mirrors [IgnitorDsl] (the per-voice instrument): a `@WireFormat` root, registered by name,
- * referenced from `VoiceData.katalyst` (the orbit position) and `VoiceData.master` (the output
+ * referenced from `VoiceData.katalyst` (the cylinder position) and `VoiceData.master` (the output
  * position, one per playback). One chain type, two positions, one registry (phase 3 step 12,
  * 2026-09-28): the Master DSL that the output used to run is retired. At the output nothing fills a
  * [KatalystKnobDsl.Param] slot (it is its default) and a `duck` stage is inert.
  *
  * A Katalyst rides *events*: `katalyst(...)` stamps the reference onto a pattern event, so an
- * orbit's chain can change over musical time, and `master(...)` does the same for the output.
+ * cylinder's chain can change over musical time, and `master(...)` does the same for the output.
  * `.katalyst(dsl)`
  * REPLACES the chain the pattern already carries (decided 2026-09-18): the chain is one instrument,
  * written in one place, and the way to build on the familiar one is `k.classic()` inside the
  * builder rather than a second door.
  *
  * The cylinder reads a declared chain and runs it (Katalyst step 2 onward), swapping it in with a
- * crossfade when the orbit is already sounding; an orbit that declares nothing keeps the historical
- * chain, [classic]. Every chain's SLOTS (its `Param` knobs) read the orbit's param state, the
- * born-with one included (step 5b-1), so a declaration changes which STAGES an orbit has and not
+ * crossfade when the cylinder is already sounding; a cylinder that declares nothing keeps the historical
+ * chain, [classic]. Every chain's SLOTS (its `Param` knobs) read the cylinder's param state, the
+ * born-with one included (step 5b-1), so a declaration changes which STAGES a cylinder has and not
  * where a slot's value comes from; a knob declared as a fixed value stays that value.
  */
 @WireFormat
@@ -99,19 +99,19 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
     companion object {
         /**
          * The historical chain, in the historical order: body, vowel, delay, reverb, phaser,
-         * compressor, and the duck the cylinder runs after every orbit. This is what every
+         * compressor, and the duck the cylinder runs after every cylinder. This is what every
          * cylinder has always run, written down, plus the ONE stage that is new surface rather
          * than history: a [KatalystStageDsl.Gain] at unity, the group fader, last in the list
          * before the duck (signal-flow plan section 6, spot C, 2026-09-19). Unity is
          * bit-transparent in the stage, so the historical sound is untouched; what it buys is a
-         * fader a pattern can reach with `katp("gain.gain", x)` on any orbit, declared chain or
+         * fader a pattern can reach with `katp("gain.gain", x)` on any cylinder, declared chain or
          * not, since a gain stage is slot-driven on every chain.
          *
          * **What the fader covers.** The delay and the reverb are SEND buses whose returns are
-         * mixed into the orbit's buffer by their own stages, which sit before this one, so the
+         * mixed into the cylinder's buffer by their own stages, which sit before this one, so the
          * fader scales dry and returns together, which is what a group fader should do. The duck
-         * is the one thing after it: it runs outside the list, per orbit, in the cross-orbit pass
-         * (see [KatalystStageDsl.Duck]), so a ducked orbit is ducked after its fader, and an orbit
+         * is the one thing after it: it runs outside the list, per cylinder, in the cross-cylinder pass
+         * (see [KatalystStageDsl.Duck]), so a ducked cylinder is ducked after its fader, and a cylinder
          * that TRIGGERS a duck on another triggers it with its post-fader mix (lower A's fader and
          * A ducks B less hard, which is what a fader on a desk does). Both remain true when step
          * 5b makes the sends insert-style stages.
@@ -161,9 +161,9 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
          * value: `KatalystResonatorEffect.configure` substitutes [BODY_WET] for an unset mix exactly as
          * the compressor writer substitutes [COMPRESSOR_THRESHOLD_DB], and with a 0.0 default it never saw
          * "unset", so a material-only `body(material = "wood")` on a declared classic chain ran the bank at a
-         * fully dry mix while the same call on an undeclared orbit played it at [BODY_WET]. Unset
+         * fully dry mix while the same call on an undeclared cylinder played it at [BODY_WET]. Unset
          * is safe here and NOT on the sends, because these two stages are gated on their NAME:
-         * `KatalystResonatorWriter` resolves no table for an unnamed index, so an orbit that names no material
+         * `KatalystResonatorWriter` resolves no table for an unnamed index, so a cylinder that names no material
          * cannot be switched on by a wet, however large. The engine's substitution is what makes a
          * raw `katp("body.material", 1)` behave like the door, and it is the NaN rule for a raw
          * write, not a second fill.
@@ -178,9 +178,9 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
          *
          * `body.material` and `vowel.vowel` are slots too, and they carry a NUMBER: the INDEX of a
          * name in `BodyMaterials.names` respectively `VowelBands.names` (Katalyst step 5a-2,
-         * 2026-09-18). Unset here, because an untouched orbit names no material and no vowel, and
+         * 2026-09-18). Unset here, because an untouched cylinder names no material and no vowel, and
          * unset is off. That is what lets `body(material = "wood", wet = 0.3)` on a pattern keep working when
-         * its orbit declares a classic chain: the door writes the index, the same way it writes the
+         * its cylinder declares a classic chain: the door writes the index, the same way it writes the
          * wet. And `body(material = "wood")` with no wet works because the door fills the wet and the floor
          * from the same two constants the engine would have substituted.
          */
@@ -227,7 +227,7 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
                     attack = Slots.compressor.attack,
                     release = Slots.compressor.release,
                 ),
-                // The group fader, at unity: the LAST stage the orbit's mix runs through (the
+                // The group fader, at unity: the LAST stage the cylinder's mix runs through (the
                 // duck below is declared last but runs outside the list, see [KatalystStageDsl.Duck]).
                 // Unity is bit-transparent in `KatalystGainEffect`, which returns before it
                 // multiplies, so this costs one virtual call per block and not one sample. It is
@@ -244,13 +244,13 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
             )
         )
 
-        /** Builds an orbit chain from an ordered list of stages. Kotlin, engine-level; the script door is `Katalyst(k => ...)`. */
+        /** Builds a cylinder chain from an ordered list of stages. Kotlin, engine-level; the script door is `Katalyst(k => ...)`. */
         fun of(vararg stages: KatalystStageDsl): KatalystDsl = KatalystDsl(stages.toList())
     }
 }
 
 /**
- * One stage in a [KatalystDsl] chain, applied to the orbit in list order.
+ * One stage in a [KatalystDsl] chain, applied to the cylinder in list order.
  *
  * Stages are thin declarations: the paragraphs below are the CONTRACT a stage carries, and
  * `KatalystChainBuilder` is the one place that turns each one into the effect the engine runs.
@@ -303,10 +303,10 @@ sealed interface KatalystStageDsl {
      * @param material the material's index in `BodyMaterials.names`, the number
      *   `BodyMaterials.indexOf("wood")` gives. The default is [SLOT_UNSET]: the chain names no
      *   material and the stage is off. Write a name on either builder door
-     *   (`k.body(material = "wood")`) and it is converted for you. Orbit twin: `body(material = "wood")`.
-     * @param wet how much of the orbit runs through the body, 0 to 1. Orbit twin: `body(wet = ...)`.
+     *   (`k.body(material = "wood")`) and it is converted for you. Cylinder twin: `body(material = "wood")`.
+     * @param wet how much of the cylinder runs through the body, 0 to 1. Cylinder twin: `body(wet = ...)`.
      * @param floor minimum dry share kept in the mix, 0 to 1. Lower = the modes sit over less dry
-     *   and the body is more audible. Orbit twin: `body(floor = ...)`.
+     *   and the body is more audible. Cylinder twin: `body(floor = ...)`.
      */
     @WireName("body")
     data class Body(
@@ -325,11 +325,11 @@ sealed interface KatalystStageDsl {
      * @param vowel the vowel's index in `VowelBands.names`, the number `VowelBands.indexOf("a")`
      *   gives (a bare name is the soprano register). The default is [SLOT_UNSET]: the chain names
      *   no vowel and the stage is off. Write a name on either builder door
-     *   (`k.vowel(vowel = "bass:a")`) and it is converted for you. Orbit twin: `vowel(vowel = "a")`.
-     * @param wet how much of the orbit runs through the formant bank, 0 to 1. Orbit twin:
+     *   (`k.vowel(vowel = "bass:a")`) and it is converted for you. Cylinder twin: `vowel(vowel = "a")`.
+     * @param wet how much of the cylinder runs through the formant bank, 0 to 1. Cylinder twin:
      *   `vowel(wet = ...)`.
      * @param floor minimum dry share kept between the formants, 0 to 1. Much lower than the body's:
-     *   a vowel is a source strongly shaped by its formants. Orbit twin: `vowel(floor = ...)`.
+     *   a vowel is a source strongly shaped by its formants. Cylinder twin: `vowel(floor = ...)`.
      */
     @WireName("vowel")
     data class Vowel(
@@ -339,19 +339,19 @@ sealed interface KatalystStageDsl {
     ) : KatalystStageDsl
 
     /**
-     * Orbit delay, the shared `DelayLine` (audio_be). Same names, scales and defaults as the
+     * Cylinder delay, the shared `DelayLine` (audio_be). Same names, scales and defaults as the
      * sprudel `delay(...)` door; the same stage runs at the output (`master(...)`).
      *
-     * @param wet how much of the orbit goes into the delay (0.0 = off). Orbit twin: `delay(wet = x)`.
-     * @param time delay time in seconds. Orbit twin: `delay(time = ...)`.
+     * @param wet how much of the cylinder goes into the delay (0.0 = off). Cylinder twin: `delay(wet = x)`.
+     * @param time delay time in seconds. Cylinder twin: `delay(time = ...)`.
      * @param feedback feedback amount; allowed above 1.0 (raw engine). At exactly 1.0 the echoes
      *   neither fade nor grow: each keeps the level it went in at (a delay time that falls between
      *   two samples dulls its highs a little on every repeat), unless that level reaches [cap].
      *   Above 1.0 they grow on every repeat until [cap] holds them, just under it.
-     *   Orbit twin: `delay(feedback = ...)`.
+     *   Cylinder twin: `delay(feedback = ...)`.
      * @param cap level the recirculating signal saturates toward: how loud the echoes settle once
      *   [feedback] is above 1.0. Up to 95% of it the echoes pass untouched, so at a feedback of
-     *   1.0 or less it acts only on echoes loud enough to reach it. Orbit twin: `delay(cap = ...)`.
+     *   1.0 or less it acts only on echoes loud enough to reach it. Cylinder twin: `delay(cap = ...)`.
      */
     @WireName("delay")
     data class Delay(
@@ -362,19 +362,19 @@ sealed interface KatalystStageDsl {
     ) : KatalystStageDsl
 
     /**
-     * Orbit reverb, the shared Freeverb `Reverb` (audio_be). Same names, scales and defaults as the
+     * Cylinder reverb, the shared Freeverb `Reverb` (audio_be). Same names, scales and defaults as the
      * sprudel `reverb(...)` door; the same stage runs at the output (`master(...)`).
      *
-     * @param wet how much of the orbit goes into the reverb (0.0 = off). Orbit twin: `reverb(wet = x)`.
+     * @param wet how much of the cylinder goes into the reverb (0.0 = off). Cylinder twin: `reverb(wet = x)`.
      * @param size tail length on the authored 0 to 10 scale (the backend divides by 10, see
      *   `Reverb.normalizeSize`). 3 is about a 1 s tail, 5 about 1.4 s, 10 about 12.5 s; the
-     *   shortest reachable is about 0.7 s, and above 10 is bounded at 10. Orbit twin:
+     *   shortest reachable is about 0.7 s, and above 10 is bounded at 10. Cylinder twin:
      *   `reverb(size = ...)`.
      * @param lowpass high-frequency damping of the tail as a cutoff in Hz; lower is darker. Null,
      *   or a non-finite value such as [SLOT_UNSET], = the engine's fixed default damping. That
      *   default is a sample-rate relation rather than a number, which is why this knob alone has no
      *   wire constant: [KatalystDsl.classic] carries it as a slot whose default is "unset".
-     *   Orbit twin: `reverb(lowpass = ...)`.
+     *   Cylinder twin: `reverb(lowpass = ...)`.
      */
     @WireName("reverb")
     data class Reverb(
@@ -384,15 +384,15 @@ sealed interface KatalystStageDsl {
     ) : KatalystStageDsl
 
     /**
-     * Orbit phaser: a sweeping all-pass notch comb, the drifting one the chain owns (a mic's comb
+     * Cylinder phaser: a sweeping all-pass notch comb, the drifting one the chain owns (a mic's comb
      * deliberately stands still).
      *
-     * @param rate sweep rate in Hz. 0 = the sweep stands still. Orbit twin: `phaser(rate = ...)`.
-     * @param wet wet amount, 0 to 1 (the wire spelling on the voice is `phaserDepth`). Orbit twin:
+     * @param rate sweep rate in Hz. 0 = the sweep stands still. Cylinder twin: `phaser(rate = ...)`.
+     * @param wet wet amount, 0 to 1 (the wire spelling on the voice is `phaserDepth`). Cylinder twin:
      *   `phaser(wet = ...)`.
-     * @param center center frequency of the sweep in Hz. Orbit twin: `phaser(center = ...)`.
-     * @param sweep width of the sweep around [center], in Hz. Orbit twin: `phaser(sweep = ...)`.
-     * @param floor minimum dry coefficient of the wet/dry law; 1.0 = purely additive. Orbit twin:
+     * @param center center frequency of the sweep in Hz. Cylinder twin: `phaser(center = ...)`.
+     * @param sweep width of the sweep around [center], in Hz. Cylinder twin: `phaser(sweep = ...)`.
+     * @param floor minimum dry coefficient of the wet/dry law; 1.0 = purely additive. Cylinder twin:
      *   `phaser(floor = ...)`.
      */
     @WireName("phaser")
@@ -405,7 +405,7 @@ sealed interface KatalystStageDsl {
     ) : KatalystStageDsl
 
     /**
-     * Orbit compressor: the group dynamics, after the EQ so the detector sees the corrected
+     * Cylinder compressor: the group dynamics, after the EQ so the detector sees the corrected
      * spectrum and a low cut turns into headroom.
      *
      * The knobs follow sprudel (`threshold`, `knee`, `attack`).
@@ -413,22 +413,22 @@ sealed interface KatalystStageDsl {
      * A LIMITER is this stage with limiter numbers, not a stage of its own: the `limiter(...)` door on
      * the Katalyst builder appends one (phase 3 step 12 C2), so one DSP has one wire word.
      *
-     * @param threshold ceiling in dBFS where gain reduction starts. Orbit twin:
+     * @param threshold ceiling in dBFS where gain reduction starts. Cylinder twin:
      *   `compressor(threshold = ...)`.
-     * @param ratio compression ratio above the threshold (4.0 = 4:1). Orbit twin:
+     * @param ratio compression ratio above the threshold (4.0 = 4:1). Cylinder twin:
      *   `compressor(ratio = ...)`.
-     * @param knee soft-knee width in dB; a hard corner injects harmonics on every crossing. Orbit
+     * @param knee soft-knee width in dB; a hard corner injects harmonics on every crossing. Cylinder
      *   twin: `compressor(knee = ...)`.
-     * @param attack how fast the gain closes, in seconds. Orbit twin: `compressor(attack = ...)`.
-     * @param release how fast the gain opens again, in seconds. Orbit twin:
+     * @param attack how fast the gain closes, in seconds. Cylinder twin: `compressor(attack = ...)`.
+     * @param release how fast the gain opens again, in seconds. Cylinder twin:
      *   `compressor(release = ...)`.
      * @param lookahead how far ahead the compressor sees, in seconds, and by how much it delays
      *   whatever runs through it. 0 (the default) is no lookahead and no latency. From 8 samples on (about 0.2 ms)
      *   the gain starts closing BEFORE a transient arrives, and [attack] becomes the gain-smoothing
-     *   length rather than a one-pole time (widen both together). The cost is latency: on an orbit
-     *   THAT orbit runs late by it, and nothing compensates. A plain number fixed when the chain is
+     *   length rather than a one-pole time (widen both together). The cost is latency: on a cylinder
+     *   THAT cylinder runs late by it, and nothing compensates. A plain number fixed when the chain is
      *   built, never a slot (it sizes a delay ring); bounded to 0.05 s, and a negative or non-finite
-     *   value is 0. No orbit twin: a sprudel door writes slots on the running chain, and a slot
+     *   value is 0. No cylinder twin: a sprudel door writes slots on the running chain, and a slot
      *   cannot size a ring, so declare it with `katalyst(Katalyst(k => k.limiter(lookahead = ...)))`.
      */
     @WireName("compressor")
@@ -458,7 +458,7 @@ sealed interface KatalystStageDsl {
      *
      * @param amount the drive, `10^(amount * 1.2)` into the shape: 0.1 is about +2.4 dB, 0.25 about
      *   +6 dB, 0.5 about +12 dB. Default [DISTORT_AMOUNT]. At or below 0, or unset, the stage is off
-     *   and the bus passes undistorted. A slot (`Katalyst.param`) moves it with a glide. No orbit twin:
+     *   and the bus passes undistorted. A slot (`Katalyst.param`) moves it with a glide. No cylinder twin:
      *   sprudel's `distort(...)` is the voice's door.
      * @param shape the waveshaper as an INDEX into [DistortionShapes.names]; the doors take a name.
      *   A plain number fixed with the chain, never a slot: it picks the shaper when the chain is
@@ -471,9 +471,9 @@ sealed interface KatalystStageDsl {
     ) : KatalystStageDsl
 
     /**
-     * Sidechain duck: this orbit is pulled down whenever the orbit it listens to sounds.
+     * Sidechain duck: this cylinder is pulled down whenever the cylinder it listens to sounds.
      *
-     * **Declared in the list, but run outside it**, as it is today: ducking needs every orbit
+     * **Declared in the list, but run outside it**, as it is today: ducking needs every cylinder
      * processed first, so `Cylinders.processAndMix` runs it after the chains. Its position in the
      * list is therefore ignored, deliberately.
      *
@@ -483,11 +483,11 @@ sealed interface KatalystStageDsl {
      *
      * @param cylinder the cylinder to listen to, as a number the runtime coerces to an Int. The default
      *   is [SLOT_UNSET]: no source named, no ducking. A consumer tests `isFinite()` and never
-     *   compares, so a finite negative is an orbit REQUEST like any other, not an off switch.
-     *   Orbit twin: `duck(cylinder = ...)`.
-     * @param depth how far this orbit is pulled down, 0 to 1. 0 = no ducking. Orbit twin:
+     *   compares, so a finite negative is a cylinder REQUEST like any other, not an off switch.
+     *   Cylinder twin: `duck(cylinder = ...)`.
+     * @param depth how far this cylinder is pulled down, 0 to 1. 0 = no ducking. Cylinder twin:
      *   `duck(depth = ...)`.
-     * @param attack how fast the duck closes, in seconds. Orbit twin: `duck(attack = ...)`.
+     * @param attack how fast the duck closes, in seconds. Cylinder twin: `duck(attack = ...)`.
      */
     @WireName("duck")
     data class Duck(
@@ -500,7 +500,7 @@ sealed interface KatalystStageDsl {
      * The mix equalizer: one stage whose inside is a list of sections, applied left to right.
      *
      * Reuses [IgnitorDsl.EqSection] verbatim, so a section means the same thing on a voice and on
-     * an orbit. This is the one place a Katalyst stage still carries Ignitor nodes (decision Q2 of
+     * a cylinder. This is the one place a Katalyst stage still carries Ignitor nodes (decision Q2 of
      * KLANG-00302 (katalyst knob expressions), E2: the sections are a DSP law shared with the voice and
      * with
      * `bands`). The Katalyst door lets a section knob be a number or a `Kat.param` only, as a
@@ -513,7 +513,7 @@ sealed interface KatalystStageDsl {
      * AND after classic's own group fader (the duck runs outside the list regardless, see [Duck]).
      * Write the stages out in order when the position matters.
      *
-     * **What the position means.** The delay and the reverb are fed from the orbit mix at their own
+     * **What the position means.** The delay and the reverb are fed from the cylinder mix at their own
      * position in the list (Katalyst step 5b-2), so an `eq` written BEFORE `reverb` shapes the dry
      * signal AND what the room hears: the room hears the cab. The same `eq` written AFTER it shapes
      * dry and tail together, after the room. Both are legitimate mixes and the list order is how
@@ -527,25 +527,25 @@ sealed interface KatalystStageDsl {
     ) : KatalystStageDsl
 
     /**
-     * Make-up gain on the orbit: the group fader, after the inserts.
+     * Make-up gain on the cylinder: the group fader, after the inserts.
      *
-     * The structural fix for mixing an orbit deliberately low (to keep its compressor out of plop
+     * The structural fix for mixing a cylinder deliberately low (to keep its compressor out of plop
      * territory) and bringing the level back up at the end of its chain.
      *
-     * **What a fader covers is list order**: the delay and the reverb are fed from the orbit's mix
+     * **What a fader covers is list order**: the delay and the reverb are fed from the cylinder's mix
      * at their own positions and add their RETURNS into it there (Katalyst step 5b-2), so a gain
      * stage written after them scales dry and returns alike, and one written BEFORE them scales the
      * dry and what they are fed, and so their returns too. The duck is
      * the one stage no list position can put before this one: it runs outside the list, in the
-     * cross-orbit pass ([Duck]), so it always lands after the fader.
+     * cross-cylinder pass ([Duck]), so it always lands after the fader.
      *
      * That ordering has one consequence worth naming, and it is the RIGHT behaviour rather than a
-     * corner: a duck on orbit B reads orbit A's mix as its trigger, and by then A's fader has
+     * corner: a duck on cylinder B reads cylinder A's mix as its trigger, and by then A's fader has
      * already run, so lowering A's fader also lowers how hard A ducks B. A group fader moves the
      * whole group, sends and sidechain sends included, which is what a fader on a desk does.
      *
      * [KatalystDsl.classic] carries one of these at unity, as its last stage before the duck, so
-     * `katp("gain.gain", x)` reaches the group fader on any orbit (signal-flow plan section 6,
+     * `katp("gain.gain", x)` reaches the group fader on any cylinder (signal-flow plan section 6,
      * spot C). There is no sprudel door for it yet; a door is one line if the songs want it.
      *
      * **A chain may declare more than one, and they MULTIPLY**, in list order, like any two
@@ -572,7 +572,7 @@ sealed interface KatalystStageDsl {
      * sample and a voice sample that meet the same numbers come out the same, clamps included (bit for bit against
      * the authored node; an optimized voice divides by multiplying with the reciprocal, one rounding apart). The
      * operand is a knob like every other: a `Constant` or a `Param`, read once per block. Two differences from the
-     * Ignitor, both because this is an orbit knob and not a voice's: a moving operand GLIDES per sample over
+     * Ignitor, both because this is a cylinder knob and not a voice's: a moving operand GLIDES per sample over
      * `KNOB_GLIDE_SECONDS` (a divisor as its reciprocal, so a move never passes a huge gain), and a non-finite one
      * reads as unset (the operator's identity; for `Min` and `Max` the stage passes the bus).
      * Memoryless: no latency, no tail.
@@ -639,7 +639,7 @@ sealed interface KatalystStageDsl {
      * `parallel(empty, reverb)` is the dry twice plus the room. Parallel distortion and compression,
      * which change the signal itself, do not have this.
      *
-     * **A `duck` in a branch is the orbit's duck**: the duck runs outside the list after every orbit
+     * **A `duck` in a branch is the cylinder's duck**: the duck runs outside the list after every cylinder
      * and its position is ignored ([Duck]), so a branch is no different; the last declared duck,
      * branches included in the order written, wins.
      *
@@ -654,13 +654,13 @@ sealed interface KatalystStageDsl {
      * An oversampling REGION of the bus that raises the rate by [factor]: the stages of [body] run at the incoming rate
      * times [factor] (1x to 2x, 4x to 8x), and the region hands back the rate it was entered with. The bus at this
      * position is converted up once where it enters and down once at the end (KLANG-00214 (oversampling regions)).
-     * At the head of a chain it makes the orbit run at that rate: one conversion per orbit, not per voice.
+     * At the head of a chain it makes the cylinder run at that rate: one conversion per cylinder, not per voice.
      *
      * [factor] is a plain number fixed with the chain, as the `distort` stage's `shape`: rounded down to a power
      * of two (3 is 2, 5 and 7 are 4); 1 or less is no region, the body's stages in place. The rate stops at 16x: a
      * guard against absurd values, not an error. Inside, every stage keeps its sound in seconds and Hz (a delay its
      * time, a reverb its room, a filter its cutoff). A `duck` in the body is
-     * the orbit's duck, as in a `parallel` branch. Twin: [OversampleAtLeast], the floor.
+     * the cylinder's duck, as in a `parallel` branch. Twin: [OversampleAtLeast], the floor.
      */
     @WireName("oversampleBy")
     data class OversampleBy(

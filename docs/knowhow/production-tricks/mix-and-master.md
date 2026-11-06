@@ -377,9 +377,9 @@ Further reading I know of but did NOT open this session [K]: Julius O. Smith, "P
 
 ## Ideas that fit Klang quickly (suggested, my judgment, [U] on benefit)
 1. Master bus: DC/subsonic HPF -> (optional) tilt/Pultec shelf -> mono-below-120 Hz (M/S HPF on S) -> glue compressor (key HPF 100 Hz) -> soft clipper (oversampled 2x/ADAA) -> look-ahead true-peak limiter -> (dither only at 16-bit export).
-2. Per-orbit: "send EQ" HPF 600/LPF 10k before reverb and delay; ducked reverb/delay returns keyed from the dry orbit signal.
+2. Per-cylinder: "send EQ" HPF 600/LPF 10k before reverb and delay; ducked reverb/delay returns keyed from the dry cylinder signal.
 3. Bass: harmonic enhancer on the effect side (rectifier + tanh on the <120 Hz band) in addition to the additive partials.
 4. Kick/bass: the voice-level sidechain to already-existing duck effect + a dynamic-EQ-style band ducking (30-150 Hz only).
 5. Width: M/S width with S-HPF 150 Hz, optional velvet-noise decorrelator for mono sources.
-6. Transient shaper (differential envelope) and parallel compression on the drum orbit.
+6. Transient shaper (differential envelope) and parallel compression on the drum cylinder.
 Everything with a nonlinearity: oversample or ADAA and guard NaN/denormals; keep block size 128 as per project guardrails.

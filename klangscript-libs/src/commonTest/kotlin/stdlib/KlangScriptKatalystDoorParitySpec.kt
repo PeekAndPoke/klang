@@ -304,7 +304,7 @@ private val nameKnobs: List<NameKnob> = listOf(
 )
 
 /**
- * Dual-surface rule: every stage and every knob of an orbit chain must be reachable from
+ * Dual-surface rule: every stage and every knob of a cylinder chain must be reachable from
  * KlangScript AND from Kotlin, with the same name meaning the same thing. This spec compares the
  * two doors stage for stage and knob for knob.
  *
@@ -632,7 +632,7 @@ class KlangScriptKatalystDoorParitySpec : StringSpec({
             "Katalyst(k => k.phaser(p => p.rate(0.3)))" to "has no method 'rate'",
             "Katalyst(k => k.reverb(r => r.wet(0.2)))" to notANumber,
             "Katalyst(k => k.compressor(c => c.ratio(3)))" to notANumber,
-            "Katalyst(k => k.duck(d => d.orbit(1)))" to notANumber,
+            "Katalyst(k => k.duck(d => d.cylinder(1)))" to notANumber,
         ).forEach { (script, reason) ->
             withClue(script) { shouldThrowAny { ks(script) }.message shouldContain reason }
         }
@@ -791,7 +791,7 @@ class KlangScriptKatalystDoorParitySpec : StringSpec({
     }
 
     "Katalyst.param and Ignitor.param are distinct types: a Katalyst param is the chain's own knob node, not a sound" {
-        // Two namespaces that never cross (`ignp` fills the voice's, `katp` the orbit's), two types since 2026-10-03
+        // Two namespaces that never cross (`ignp` fills the voice's, `katp` the cylinder's), two types since 2026-10-03
         // so the doors can tell them apart (the plan's section 4.4), and since step 3 of
         // KLANG-00302 (katalyst knob expressions) two wire types too: the chain carries the
         // `KatalystKnobDsl.Param`

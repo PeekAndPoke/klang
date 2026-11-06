@@ -18,7 +18,7 @@ package io.peekandpoke.klang.audio_bridge
  * Two leaves, a [Constant] and a [Param] (step 3 of that task), and the arithmetic over them (step 4, decision D4:
  * [Plus], [Minus], [Times], [Div], [Pow], [Min], [Max], [Neg], [Abs], [Range]), and the modulators (step 5, D3:
  * [Sine], [Saw], [Ramp], [Tri], [Square], [PerlinNoise], [BerlinNoise]). The engine evaluates an expression with the
- * Ignitor's own laws, on a scalar, whenever the orbit's `katp` state changes (`KatalystKnob` in `audio_be`); a
+ * Ignitor's own laws, on a scalar, whenever the cylinder's `katp` state changes (`KatalystKnob` in `audio_be`); a
  * modulated one once per block the chain processes (`KatalystKnob.tick`, called by `KatalystChain.process`; step 5b).
  * The doors of the modulators are `Kat.sine` and the rest: the typed [Kat] here, the script `KlangScriptKatalyst` over it. The one residue
  * of mixing is the `eq` stage, whose sections stay [IgnitorDsl.EqSection] shared with the voice (Q2, E2): its door
@@ -35,7 +35,7 @@ package io.peekandpoke.klang.audio_bridge
 sealed interface KatalystKnobDsl {
 
     /**
-     * A fixed number: what a knob is when the author writes one. It never listens to the orbit's `katp` state.
+     * A fixed number: what a knob is when the author writes one. It never listens to the cylinder's `katp` state.
      *
      * @param value the knob's value, on the knob's own scale (a non-finite one reads as unset in the engine).
      */
@@ -45,7 +45,7 @@ sealed interface KatalystKnobDsl {
     ) : KatalystKnobDsl
 
     /**
-     * A named slot of the chain: the knob reads the orbit's `katp` state under [name], and [default] while nothing has
+     * A named slot of the chain: the knob reads the cylinder's `katp` state under [name], and [default] while nothing has
      * written it (a non-finite written value is unset too). `Katalyst.param(...)` makes one, `Katalyst.slot.*` and
      * [KatalystDsl.Slots] hold the classic chain's. At the output nothing writes a slot, so there it is its default.
      *

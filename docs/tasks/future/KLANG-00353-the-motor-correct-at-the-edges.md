@@ -9,7 +9,7 @@ The Motor plays, and plays well; what is left are its edges: a click where a cha
 
 ## What belongs here
 
-Correctness and sound of the engine as it is built today: clicks, transitions, envelopes, voices, orbits, ducking, the audit's parked calls, the engine follow-ups. Not here: the engine's architecture (KLANG-00354), its speed (KLANG-00355), new instruments or effects (KLANG-00356, KLANG-00357).
+Correctness and sound of the engine as it is built today: clicks, transitions, envelopes, voices, cylinders, ducking, the audit's parked calls, the engine follow-ups. Not here: the engine's architecture (KLANG-00354), its speed (KLANG-00355), new instruments or effects (KLANG-00356, KLANG-00357).
 
 ## Children
 

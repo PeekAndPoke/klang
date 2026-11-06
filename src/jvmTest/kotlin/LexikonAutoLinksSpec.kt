@@ -23,8 +23,8 @@ private fun entry(term: String, vararg words: String) = LexikonEntry(
 )
 
 private val testLexikon = listOf(
-    entry("Orbit", "orbit", "orbits"),
-    entry("Orbit bus", "per orbit bus", "orbit bus", "per orbit"),
+    entry("Cylinder", "cylinder", "cylinders"),
+    entry("Cylinder bus", "per cylinder bus", "cylinder bus", "per cylinder"),
     entry("Voice", "per voice", "voice", "voices"),
     entry("Mapping"),
 )
@@ -38,28 +38,28 @@ class LexikonAutoLinksSpec : StringSpec({
         link("Each Voice has its voice, and voices.") shouldBe "Each [Voice](/manuals/lexikon/voice) has its voice, and voices."
     }
 
-    "the longest word wins: orbit bus before orbit, per orbit to the bus" {
-        link("The orbit bus of an orbit.") shouldBe
-            "The [orbit bus](/manuals/lexikon/orbit-bus) of an [orbit](/manuals/lexikon/orbit)."
-        link("Set once per orbit.") shouldBe "Set once [per orbit](/manuals/lexikon/orbit-bus)."
+    "the longest word wins: cylinder bus before cylinder, per cylinder to the bus" {
+        link("The cylinder bus of a cylinder.") shouldBe
+            "The [cylinder bus](/manuals/lexikon/cylinder-bus) of a [cylinder](/manuals/lexikon/cylinder)."
+        link("Set once per cylinder.") shouldBe "Set once [per cylinder](/manuals/lexikon/cylinder-bus)."
     }
 
     "whole words only: a word inside another word, a name or a path stays" {
-        link("orbital and voiceless and myOrbit and voice-over") shouldBe "orbital and voiceless and myOrbit and voice-over"
+        link("cylindrical and voiceless and myCylinder and voice-over") shouldBe "cylindrical and voiceless and myCylinder and voice-over"
     }
 
     "never inside code, a link, a link's text or a URL" {
-        link("`orbit` and ```\norbit\n``` and [the orbit](https://x.org) and https://orbit.example and <b>orbit</b>") shouldBe
-            "`orbit` and ```\norbit\n``` and [the orbit](https://x.org) and https://orbit.example and " +
-            "<b>[orbit](/manuals/lexikon/orbit)</b>"
+        link("`cylinder` and ```\ncylinder\n``` and [the cylinder](https://x.org) and https://cylinder.example and <b>cylinder</b>") shouldBe
+            "`cylinder` and ```\ncylinder\n``` and [the cylinder](https://x.org) and https://cylinder.example and " +
+            "<b>[cylinder](/manuals/lexikon/cylinder)</b>"
     }
 
     "a KDoc reference names a function, not the concept: it stays as it is" {
-        link("Alias for [orbit], see [SprudelPattern.orbit].") shouldBe "Alias for [orbit], see [SprudelPattern.orbit]."
+        link("Alias for [cylinder], see [SprudelPattern.cylinder].") shouldBe "Alias for [cylinder], see [SprudelPattern.cylinder]."
     }
 
-    "a phrase that starts earlier and runs longer wins: per orbit bus links whole" {
-        link("One compressor per orbit bus.") shouldBe "One compressor [per orbit bus](/manuals/lexikon/orbit-bus)."
+    "a phrase that starts earlier and runs longer wins: per cylinder bus links whole" {
+        link("One compressor per cylinder bus.") shouldBe "One compressor [per cylinder bus](/manuals/lexikon/cylinder-bus)."
     }
 
     "an entry a hand-written link points to is not linked again" {
@@ -68,24 +68,24 @@ class LexikonAutoLinksSpec : StringSpec({
 
     "an entry without words links nowhere; an entry's own text never links to itself" {
         link("Mapping maps.") shouldBe "Mapping maps."
-        link("An orbit holds voices.", self = "orbit") shouldBe "An orbit holds [voices](/manuals/lexikon/voice)."
+        link("A cylinder holds voices.", self = "cylinder") shouldBe "A cylinder holds [voices](/manuals/lexikon/voice)."
     }
 
     "a long text goes through: a long link text, or a bracket never closed, runs no stack out" {
         val run = "x ".repeat(20_000)
-        val long = "[$run](/x) and [an open bracket $run an orbit"
+        val long = "[$run](/x) and [an open bracket $run a cylinder"
 
-        lexikonAutoLinks(markdown = long, entries = testLexikon).length shouldBe long.length + "[](/manuals/lexikon/orbit)".length
+        lexikonAutoLinks(markdown = long, entries = testLexikon).length shouldBe long.length + "[](/manuals/lexikon/cylinder)".length
     }
 
-    "the real Lexikon: a unison's voices stay plain, per voice links; per orbit bus links whole" {
+    "the real Lexikon: a unison's voices stay plain, per voice links; per cylinder bus links whole" {
         // A bare "voices" in the docs is often a unison's or a super oscillator's copies inside one note (review, KLANG-00369)
-        lexikonAutoLinks("Stacks detuned voices, set per voice. One delay per orbit bus.") shouldBe
-            "Stacks detuned voices, set [per voice](/manuals/lexikon/voice). One delay [per orbit bus](/manuals/lexikon/orbit-bus)."
+        lexikonAutoLinks("Stacks detuned voices, set per voice. One delay per cylinder bus.") shouldBe
+            "Stacks detuned voices, set [per voice](/manuals/lexikon/voice). One delay [per cylinder bus](/manuals/lexikon/cylinder-bus)."
     }
 
     "an unclosed bracket swallows nothing: the words after it still link" {
-        link("A range [0, 1) on the orbit bus, see [x].") shouldBe "A range [0, 1) on the [orbit bus](/manuals/lexikon/orbit-bus), see [x]."
+        link("A range [0, 1) on the cylinder bus, see [x].") shouldBe "A range [0, 1) on the [cylinder bus](/manuals/lexikon/cylinder-bus), see [x]."
     }
 
     "the real Lexikon's words are all unique, so a word cannot mean two entries" {

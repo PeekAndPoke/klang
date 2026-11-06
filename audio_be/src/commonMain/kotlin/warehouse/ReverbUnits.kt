@@ -12,8 +12,8 @@ import io.peekandpoke.klang.audio_be.ignitor.REGION_MAX_STAGES
  * The warehouse's shelf of idle [Reverb] units (resource-warehouse step 2d).
  *
  * A Freeverb network is ~200 KB of comb and allpass lines at 44.1 kHz, and every `Cylinder` used
- * to build one in its constructor — eight orbits, 1.6 MB, zero-filled on the audio thread on the
- * first play, reverb or not. A unit now exists only once an orbit (or a master chain) asks for
+ * to build one in its constructor, eight cylinders, 1.6 MB, zero-filled on the audio thread on the
+ * first play, reverb or not. A unit now exists only once a cylinder (or a master chain) asks for
  * `reverb`, and comes from here.
  *
  * Same rules as [SizedBuffers], simpler because every unit is the same size: **stocked by return,

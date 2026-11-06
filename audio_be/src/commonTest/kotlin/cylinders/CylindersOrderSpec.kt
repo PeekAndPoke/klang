@@ -16,9 +16,9 @@ import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
 import io.peekandpoke.klang.common.infra.klangMapOf
 
 /**
- * [Cylinders] keeps its orbits in the order they were rented and finds one by its id without a map (tidy-up step 7,
- * audit item B4.3): the per-block walks are index loops, and the order they walk is the order the orbits were
- * rented in, which is the mix's summation order and the round-robin cleanup's. An orbit id folds by the cylinder
+ * [Cylinders] keeps its cylinders in the order they were rented and finds one by its id without a map (tidy-up step 7,
+ * audit item B4.3): the per-block walks are index loops, and the order they walk is the order the cylinders were
+ * rented in, which is the mix's summation order and the round-robin cleanup's. A cylinder id folds by the cylinder
  * count and keeps its sign; the duck finds its sidechain by the raw id.
  */
 class CylindersOrderSpec : StringSpec({
@@ -32,7 +32,7 @@ class CylindersOrderSpec : StringSpec({
         silentBlocksBeforeTailCheck = silentBlocksBeforeTailCheck,
     )
 
-    "the orbits sum into the mix in the order they were rented, not by id" {
+    "the cylinders sum into the mix in the order they were rented, not by id" {
         val c = cylinders()
         // Rented 7, 3, 5. Summed in that order, (1e16 - 1e16) + 1 is 1. By id (3, 5, 7), -1e16 + 1 rounds back to
         // -1e16 and the sum is 0; in reverse rent order (5, 3, 7) likewise 0.
@@ -46,18 +46,18 @@ class CylindersOrderSpec : StringSpec({
 
         c.processAndMix(fusionMix = mix, blockStart = 0.0)
 
-        withClue("the classic chain at its defaults leaves each orbit's sample as it was") {
+        withClue("the classic chain at its defaults leaves each cylinder's sample as it was") {
             c.cylinders.map { it.mixBuffer.left[0] } shouldBe values.map { it.second }
         }
 
         mix.left[0] shouldBe 1.0
     }
 
-    "the round-robin cleanup visits the orbits in rent order" {
+    "the round-robin cleanup visits the cylinders in rent order" {
         val c = cylinders(silentBlocksBeforeTailCheck = 1)
         val mix = StereoBuffer(blockFrames)
 
-        // Rented 7, 3, 5 in block 0, silent, and never checked in again: an orbit goes at its first visit two blocks
+        // Rented 7, 3, 5 in block 0, silent, and never checked in again: a cylinder goes at its first visit two blocks
         // after its last check-in. Visits run 7, 3, 5, 7, 3: 7 and 3 are still held in blocks 0 and 1, so 5 goes
         // in block 2, 7 in block 3, 3 in block 4. By id (3, 5, 7) the visit of block 2 would take 7.
         for (id in listOf(7, 3, 5)) {
@@ -81,7 +81,7 @@ class CylindersOrderSpec : StringSpec({
         wentInBlock shouldBe mapOf(5 to 2, 7 to 3, 3 to 4)
     }
 
-    "an orbit id folds by the cylinder count and keeps its sign" {
+    "a cylinder id folds by the cylinder count and keeps its sign" {
         val c = cylinders()
         val max = Cylinders.MAX_CYLINDERS
 
@@ -95,7 +95,7 @@ class CylindersOrderSpec : StringSpec({
             c.checkIn(id = -3 - max, blockStart = 0.0) shouldBeSameInstanceAs minusThree
         }
 
-        withClue("-3 is an orbit of its own, and so are both ends of the folded range") {
+        withClue("-3 is a cylinder of its own, and so are both ends of the folded range") {
             minusThree shouldNotBeSameInstanceAs three
             c.checkIn(id = max, blockStart = 0.0) shouldNotBeSameInstanceAs top
             c.checkIn(id = -max, blockStart = 0.0) shouldNotBeSameInstanceAs bottom
@@ -106,22 +106,22 @@ class CylindersOrderSpec : StringSpec({
         }
     }
 
-    "the duck finds its sidechain by the raw orbit id, never by a folded twin" {
+    "the duck finds its sidechain by the raw cylinder id, never by a folded twin" {
         val max = Cylinders.MAX_CYLINDERS
 
-        /** Orbit 3 ducked by the orbit named [duckOrbit] in its slots, while orbit [loudOrbit] is loud. */
-        fun duckedLevel(duckOrbit: Int, loudOrbit: Int?): Double {
+        /** Cylinder 3 ducked by the cylinder named [duckCylinder] in its slots, while cylinder [loudCylinder] is loud. */
+        fun duckedLevel(duckCylinder: Int, loudCylinder: Int?): Double {
             val c = cylinders()
             val voice = VoiceTestHelpers.createSynthVoice(
                 sampleRate = sampleRate,
                 blockFrames = blockFrames,
-                katalystParams = klangMapOf("duck.cylinder" to duckOrbit.toDouble(), "duck.attack" to 0.001, "duck.depth" to 1.0),
+                katalystParams = klangMapOf("duck.cylinder" to duckCylinder.toDouble(), "duck.attack" to 0.001, "duck.depth" to 1.0),
             )
 
             c.offer(id = 3, voice = voice, blockStart = 0.0).mixBuffer.left.fill(0.5)
 
-            if (loudOrbit != null) {
-                c.checkIn(id = loudOrbit, blockStart = 0.0).mixBuffer.left.fill(0.9)
+            if (loudCylinder != null) {
+                c.checkIn(id = loudCylinder, blockStart = 0.0).mixBuffer.left.fill(0.9)
             }
 
             c.processAndMix(fusionMix = StereoBuffer(blockFrames), blockStart = 0.0)
@@ -129,32 +129,32 @@ class CylindersOrderSpec : StringSpec({
             return c.cylinders.first { it.id == 3 }.mixBuffer.left[blockFrames - 1]
         }
 
-        val undisturbed = duckedLevel(duckOrbit = 1, loudOrbit = null)
+        val undisturbed = duckedLevel(duckCylinder = 1, loudCylinder = null)
 
-        withClue("positive control: a loud orbit 1 ducks orbit 3") {
-            duckedLevel(duckOrbit = 1, loudOrbit = 1) shouldBeLessThan undisturbed
+        withClue("positive control: a loud cylinder 1 ducks cylinder 3") {
+            duckedLevel(duckCylinder = 1, loudCylinder = 1) shouldBeLessThan undisturbed
         }
 
-        withClue("a negative orbit is found by its own id") {
-            duckedLevel(duckOrbit = -2, loudOrbit = -2) shouldBeLessThan undisturbed
+        withClue("a negative cylinder is found by its own id") {
+            duckedLevel(duckCylinder = -2, loudCylinder = -2) shouldBeLessThan undisturbed
         }
 
         withClue("both ends of the folded range are found") {
-            duckedLevel(duckOrbit = max - 1, loudOrbit = max - 1) shouldBeLessThan undisturbed
-            duckedLevel(duckOrbit = -(max - 1), loudOrbit = -(max - 1)) shouldBeLessThan undisturbed
+            duckedLevel(duckCylinder = max - 1, loudCylinder = max - 1) shouldBeLessThan undisturbed
+            duckedLevel(duckCylinder = -(max - 1), loudCylinder = -(max - 1)) shouldBeLessThan undisturbed
         }
 
-        withClue("a duck naming orbit 1 + max does not find orbit 1, which that id folds onto") {
-            duckedLevel(duckOrbit = 1 + max, loudOrbit = 1) shouldBe undisturbed
+        withClue("a duck naming cylinder 1 + max does not find cylinder 1, which that id folds onto") {
+            duckedLevel(duckCylinder = 1 + max, loudCylinder = 1) shouldBe undisturbed
         }
 
-        withClue("nor does max find orbit 0, nor -max find orbit 0") {
-            duckedLevel(duckOrbit = max, loudOrbit = 0) shouldBe duckedLevel(duckOrbit = max, loudOrbit = null)
-            duckedLevel(duckOrbit = -max, loudOrbit = 0) shouldBe duckedLevel(duckOrbit = -max, loudOrbit = null)
+        withClue("nor does max find cylinder 0, nor -max find cylinder 0") {
+            duckedLevel(duckCylinder = max, loudCylinder = 0) shouldBe duckedLevel(duckCylinder = max, loudCylinder = null)
+            duckedLevel(duckCylinder = -max, loudCylinder = 0) shouldBe duckedLevel(duckCylinder = -max, loudCylinder = null)
         }
     }
 
-    "releaseAll returns every orbit and forgets them: the next use of an id rents again, in a new order" {
+    "releaseAll returns every cylinder and forgets them: the next use of an id rents again, in a new order" {
         val c = cylinders()
 
         val five = c.checkIn(id = 5, blockStart = 0.0)

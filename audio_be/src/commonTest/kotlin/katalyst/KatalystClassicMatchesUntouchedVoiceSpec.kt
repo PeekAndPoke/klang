@@ -25,7 +25,7 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
 import io.peekandpoke.klang.common.infra.klangMapOf
 
 /**
- * [KatalystDsl.classic] claims to be what an orbit runs when the song never wrote a bus door. This
+ * [KatalystDsl.classic] claims to be what a cylinder runs when the song never wrote a bus door. This
  * is the test that checks that claim against the engine's own gates and the wire's own values.
  *
  * **What this spec is, after Katalyst step 5b-1 (2026-09-19).** The chain stopped reading the bus
@@ -35,7 +35,7 @@ import io.peekandpoke.klang.common.infra.klangMapOf
  * under test:
  *
  *  - the classic chain's SLOT DEFAULTS against the wire's own "untouched" table, which was
- *    `VoiceFactory`'s untouched branch, where the constants of an untouched orbit were written
+ *    `VoiceFactory`'s untouched branch, where the constants of an untouched cylinder were written
  *    down a second time. The delay, reverb, compressor, duck, body and vowel rows went with their
  *    fields in step 5b-3, the PHASER's with the voice strip's per-voice phaser (phase 3 step 9),
  *    as this KDoc said they would. Their untouched defaults stay pinned by
@@ -60,9 +60,9 @@ import io.peekandpoke.klang.common.infra.klangMapOf
  * constants, which reads as off and is not: the engine's gates are
  * `KatalystDelayEffect.MIN_ACTIVE_DELAY_SECONDS` on TIME and `KatalystReverbEffect.MIN_ACTIVE_SIZE`
  * on SIZE. A chain like that declares a running delay line fed nothing, and once the cylinder reads
- * chains (step 2) it would have rented a ring for every orbit of every song.
+ * chains (step 2) it would have rented a ring for every cylinder of every song.
  *
- * `reverb.size` is compared THROUGH [Reverb.normalizeSize], the conversion the orbit's reverb
+ * `reverb.size` is compared THROUGH [Reverb.normalizeSize], the conversion the cylinder's reverb
  * applies on the authored 0..10 scale, so the gate row reads the size the stage actually sees.
  */
 class KatalystClassicMatchesUntouchedVoiceSpec : StringSpec({
@@ -175,7 +175,7 @@ class KatalystClassicMatchesUntouchedVoiceSpec : StringSpec({
 
     "the classic chain installs the same bank a body call names, slot for slot" {
         // The equivalence the step-5a-2 index slot exists for: `body(material = "wood", wet = 0.3)` must
-        // reach the orbit's resonator through the INDEX slot with the bank and the mix the call
+        // reach the cylinder's resonator through the INDEX slot with the bank and the mix the call
         // names. The oracle is the catalogue's own modes and the call's mix; nothing here types a
         // mode. The name-to-index half of the trip is `CatalogueIndexSpec`'s, and what the sprudel
         // door writes is `LangKatalystParamSpec`'s.

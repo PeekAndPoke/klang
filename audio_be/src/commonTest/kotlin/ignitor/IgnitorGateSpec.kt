@@ -38,7 +38,7 @@ import kotlin.random.Random
  *
  *  - `sustain` survives BY GUARD, added 2026-09-20 in `AdsrIgnitor`'s `finiteOr`. Without it
  *    `coerceIn(0.0, 1.0)` is the identity on a NaN and the level multiplies every sample, so it
- *    puts NaN into the orbit mix. That mattered the moment the unity-`mul` fold landed: before it,
+ *    puts NaN into the cylinder mix. That mattered the moment the unity-`mul` fold landed: before it,
  *    a `pregain` at 1.0 after an envelope kept `TimesIgnitor`'s scrub and the voice went silent
  *    instead. (`expK` was the second guarded knob until step 3c removed it.)
  *  - `attack`, `decay` and `release` survive BY CONVERSION, and by accident: a time
@@ -981,7 +981,7 @@ class IgnitorGateSpec : StringSpec({
         // hands back the DEFAULT, so a slot defaulting to SLOT_UNSET resolves to NaN at the leaf,
         // and for a crush amount, a coarse amount, a DRIVE amount and a filter cutoff there is
         // nothing downstream that would scrub it. Without the gate's `!isFinite()` arm every one
-        // of these renders NaN or a substituted cutoff into the orbit mix. `drive` is the sharp
+        // of these renders NaN or a substituted cutoff into the cylinder mix. `drive` is the sharp
         // one: `amt <= 0.0` is false for a NaN, so `10^(NaN * 1.2)` became the gain and every
         // sample of the voice went NaN, which is exactly the shape a step-3 distort slot
         // defaulting to the sentinel would have had.

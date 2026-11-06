@@ -27,7 +27,7 @@ private val testRandom = Random(0x5EED)
  * Guards for the stateful phase pool (P1 — KLANG-00144 (unison phase pool) §3.3–§3.6):
  * the amortized warm fill lands in-band and grows correctly, roundRobin cycles the vocabulary,
  * refresh evicts randomly, a seeded registry reproduces, and the ENGINE path serves entries from
- * the pool (superimpose copies on the same orbit share one vocabulary; different orbits get
+ * the pool (superimpose copies on the same cylinder share one vocabulary; different cylinders get
  * different pools; OFF never touches the registry).
  */
 class PhasePoolStateSpec : StringSpec({
@@ -157,59 +157,59 @@ class PhasePoolStateSpec : StringSpec({
     }
 
     "seeded registry - identical seeds produce identical vocabularies (offline reproducibility)" {
-        val a = PhasePools(Random(42)).pool(orbit = 2, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 16.0, refreshEvery = 0.0, warmup = 16.0)
-        val b = PhasePools(Random(42)).pool(orbit = 2, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 16.0, refreshEvery = 0.0, warmup = 16.0)
+        val a = PhasePools(Random(42)).pool(cylinder = 2, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 16.0, refreshEvery = 0.0, warmup = 16.0)
+        val b = PhasePools(Random(42)).pool(cylinder = 2, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 16.0, refreshEvery = 0.0, warmup = 16.0)
         (1..16).map { a.next(PhasePoolSelection.RoundRobin).toList() } shouldBe (1..16).map { b.next(PhasePoolSelection.RoundRobin).toList() }
     }
 
     "registry - caps at MAX_POOLS via least-recently-served eviction; the active key stays pooled" {
         val pools = PhasePools(Random(2))
-        val first = pools.pool(orbit = 0, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 4.0, refreshEvery = 0.0, warmup = 16.0)
-        val second = pools.pool(orbit = 1, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 4.0, refreshEvery = 0.0, warmup = 16.0)
-        val last = pools.pool(orbit = 2, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 4.0, refreshEvery = 0.0, warmup = 16.0)
-        for (orbit in 3 until PhasePools.MAX_POOLS) {
-            pools.pool(orbit = orbit, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 4.0, refreshEvery = 0.0, warmup = 16.0)
+        val first = pools.pool(cylinder = 0, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 4.0, refreshEvery = 0.0, warmup = 16.0)
+        val second = pools.pool(cylinder = 1, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 4.0, refreshEvery = 0.0, warmup = 16.0)
+        val last = pools.pool(cylinder = 2, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 4.0, refreshEvery = 0.0, warmup = 16.0)
+        for (cylinder in 3 until PhasePools.MAX_POOLS) {
+            pools.pool(cylinder = cylinder, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 4.0, refreshEvery = 0.0, warmup = 16.0)
         }
         pools.size shouldBe PhasePools.MAX_POOLS
-        // Touch orbits 0 and 2 so orbit 1 becomes the least-recently-served...
-        (pools.pool(orbit = 0, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 4.0, refreshEvery = 0.0, warmup = 16.0) === first).shouldBeTrue()
-        (pools.pool(orbit = 2, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 4.0, refreshEvery = 0.0, warmup = 16.0) === last).shouldBeTrue()
-        // ...then a fresh key evicts EXACTLY orbit 1 — not the touched keys, not the newcomer,
+        // Touch cylinders 0 and 2 so cylinder 1 becomes the least-recently-served...
+        (pools.pool(cylinder = 0, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 4.0, refreshEvery = 0.0, warmup = 16.0) === first).shouldBeTrue()
+        (pools.pool(cylinder = 2, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 4.0, refreshEvery = 0.0, warmup = 16.0) === last).shouldBeTrue()
+        // ...then a fresh key evicts EXACTLY cylinder 1, not the touched keys, not the newcomer,
         // not whatever the map happens to iterate first or last.
-        pools.pool(orbit = 999, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 4.0, refreshEvery = 0.0, warmup = 16.0)
+        pools.pool(cylinder = 999, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 4.0, refreshEvery = 0.0, warmup = 16.0)
         pools.size shouldBe PhasePools.MAX_POOLS
-        (pools.pool(orbit = 0, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 4.0, refreshEvery = 0.0, warmup = 16.0) === first).shouldBeTrue()
-        (pools.pool(orbit = 2, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 4.0, refreshEvery = 0.0, warmup = 16.0) === last).shouldBeTrue()
+        (pools.pool(cylinder = 0, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 4.0, refreshEvery = 0.0, warmup = 16.0) === first).shouldBeTrue()
+        (pools.pool(cylinder = 2, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 4.0, refreshEvery = 0.0, warmup = 16.0) === last).shouldBeTrue()
         // Re-requesting the evicted key mints a FRESH pool (identity differs from the original).
-        (pools.pool(orbit = 1, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 4.0, refreshEvery = 0.0, warmup = 16.0) === second) shouldBe false
+        (pools.pool(cylinder = 1, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 4.0, refreshEvery = 0.0, warmup = 16.0) === second) shouldBe false
     }
 
     "registry - keys are coerced: settings beyond the clamps share one pool" {
         val pools = PhasePools(Random(6))
-        val a = pools.pool(orbit = 0, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 80.0, poolSize = 5000.0, refreshEvery = 0.0, warmup = 16.0)
-        val b = pools.pool(orbit = 0, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 200.0, poolSize = 9000.0, refreshEvery = 0.0, warmup = 16.0) // both coerce to (64, 1024)
+        val a = pools.pool(cylinder = 0, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 80.0, poolSize = 5000.0, refreshEvery = 0.0, warmup = 16.0)
+        val b = pools.pool(cylinder = 0, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 200.0, poolSize = 9000.0, refreshEvery = 0.0, warmup = 16.0) // both coerce to (64, 1024)
         (a === b).shouldBeTrue()
         pools.size shouldBe 1
     }
 
     "registry - identical settings share ONE pool; every key component mints its own" {
         val pools = PhasePools(Random(1))
-        val g2a = pools.pool(orbit = 2, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 16.0, refreshEvery = 0.0, warmup = 16.0)
-        val g2b = pools.pool(orbit = 2, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 16.0, refreshEvery = 0.0, warmup = 16.0) // superimpose copy, same orbit
+        val g2a = pools.pool(cylinder = 2, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 16.0, refreshEvery = 0.0, warmup = 16.0)
+        val g2b = pools.pool(cylinder = 2, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 16.0, refreshEvery = 0.0, warmup = 16.0) // superimpose copy, same cylinder
         (g2a === g2b).shouldBeTrue()
         pools.size shouldBe 1
-        // Each key component isolates: orbit, voices, gain profile, band edges, and the
+        // Each key component isolates: cylinder, voices, gain profile, band edges, and the
         // maintenance knobs (a knob whose effect depends on note-arrival order would be the
         // parameter-parity bug class).
-        pools.pool(orbit = 3, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 16.0, refreshEvery = 0.0, warmup = 16.0)
-        pools.pool(orbit = 2, voices = v + 2, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 16.0, refreshEvery = 0.0, warmup = 16.0)
-        pools.pool(orbit = 2, voices = v, sideAtten = 0.5, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 16.0, refreshEvery = 0.0, warmup = 16.0)
-        pools.pool(orbit = 2, voices = v, sideAtten = 0.1, kMin = 0.10, kMax = hi, drawTries = 5.0, poolSize = 16.0, refreshEvery = 0.0, warmup = 16.0)
-        pools.pool(orbit = 2, voices = v, sideAtten = 0.1, kMin = lo, kMax = 0.90, drawTries = 5.0, poolSize = 16.0, refreshEvery = 0.0, warmup = 16.0)
-        pools.pool(orbit = 2, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 40.0, poolSize = 16.0, refreshEvery = 0.0, warmup = 16.0)
-        pools.pool(orbit = 2, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 24.0, refreshEvery = 0.0, warmup = 16.0)
-        pools.pool(orbit = 2, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 16.0, refreshEvery = 10.0, warmup = 16.0)
-        pools.pool(orbit = 2, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 16.0, refreshEvery = 0.0, warmup = 4.0)
+        pools.pool(cylinder = 3, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 16.0, refreshEvery = 0.0, warmup = 16.0)
+        pools.pool(cylinder = 2, voices = v + 2, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 16.0, refreshEvery = 0.0, warmup = 16.0)
+        pools.pool(cylinder = 2, voices = v, sideAtten = 0.5, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 16.0, refreshEvery = 0.0, warmup = 16.0)
+        pools.pool(cylinder = 2, voices = v, sideAtten = 0.1, kMin = 0.10, kMax = hi, drawTries = 5.0, poolSize = 16.0, refreshEvery = 0.0, warmup = 16.0)
+        pools.pool(cylinder = 2, voices = v, sideAtten = 0.1, kMin = lo, kMax = 0.90, drawTries = 5.0, poolSize = 16.0, refreshEvery = 0.0, warmup = 16.0)
+        pools.pool(cylinder = 2, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 40.0, poolSize = 16.0, refreshEvery = 0.0, warmup = 16.0)
+        pools.pool(cylinder = 2, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 24.0, refreshEvery = 0.0, warmup = 16.0)
+        pools.pool(cylinder = 2, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 16.0, refreshEvery = 10.0, warmup = 16.0)
+        pools.pool(cylinder = 2, voices = v, sideAtten = 0.1, kMin = lo, kMax = hi, drawTries = 5.0, poolSize = 16.0, refreshEvery = 0.0, warmup = 4.0)
         pools.size shouldBe 10
     }
 
@@ -246,7 +246,7 @@ class PhasePoolStateSpec : StringSpec({
                 analog = ParamIgnitor("analog", 0.0),
                 rng = Random(1),
                 phasePool = 0.0,
-                phasePools = pools, orbit = 0,
+                phasePools = pools, cylinder = 0,
             )
         )
         // A refactor that hoists the pool lookup out of the `banded` gate would warm a pool for
@@ -266,7 +266,7 @@ class PhasePoolStateSpec : StringSpec({
                 sideAtten = 0.1, gainJitter = 0.0, // jitter off → the phase entry alone sets K
                 phasePool = 1.0, drawTries = 5.0, kMin = lo, kMax = hi,
                 poolSize = 2.0, refreshEvery = 0.0, selection = "roundrobin",
-                phasePools = pools, orbit = 2,
+                phasePools = pools, cylinder = 2,
             )
         )
 
@@ -290,7 +290,7 @@ class PhasePoolStateSpec : StringSpec({
                 sideAtten = 0.1, gainJitter = 0.0,
                 phasePool = 1.0, drawTries = 64.0, kMin = 0.85, kMax = 0.95,
                 poolSize = 8.0, refreshEvery = 0.0, selection = "roundrobin",
-                phasePools = pools, orbit = 0,
+                phasePools = pools, cylinder = 0,
             )
         )
         // With jitter off and spread 0 the fundamental IS the entry's K. A best-of-64 draw toward

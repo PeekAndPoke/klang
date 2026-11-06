@@ -8,9 +8,9 @@ package io.peekandpoke.klang.audio_be.katalyst
 import io.peekandpoke.klang.audio_be.KnobGlide
 
 /**
- * The orbit's **group fader**: one multiply of the summed mix, at the stage's list position.
+ * The cylinder's **group fader**: one multiply of the summed mix, at the stage's list position.
  *
- * The structural fix for mixing an orbit deliberately low, to keep its compressor out of plop
+ * The structural fix for mixing a cylinder deliberately low, to keep its compressor out of plop
  * territory, and bringing the level back at the end of its chain (the signal-flow plan's D5:
  * `gain` means the tone-neutral level on every surface).
  *
@@ -28,7 +28,7 @@ import io.peekandpoke.klang.audio_be.KnobGlide
  * **A change GLIDES, per sample, over `KNOB_GLIDE_SECONDS`** (`audio/ref/knob-glide.md`, the LEVEL
  * rule; Katalyst 5c-8). At the output a written number is a constant (nothing fills a slot there,
  * phase 3 step 12 decision (b)), so a new number is a new chain and the 60 ms bus crossfade covers
- * it. On an orbit the factor can be a slot, so
+ * it. On a cylinder the factor can be a slot, so
  * `.katp("gain.gain", "<0.5 1.0>")` moves it while the stage stands. The glide is [KnobGlide]'s LEVEL
  * half: linear over whole blocks (17 at 44.1 kHz, 19 at 48 kHz), per sample within a block, written
  * from the block's END so it lands on the target bit for bit, and a new target mid-glide starts from
@@ -39,7 +39,7 @@ import io.peekandpoke.klang.audio_be.KnobGlide
  * **Three situations, no state classes.** The effect-state-machine plan names them: FRESH (nothing
  * multiplied since construction or [reset], so every [configure] snaps, see below), RAMPING (a glide
  * runs) and SETTLED; the level in force outlives all three. They are exactly [KnobGlide]'s snap flag,
- * its block countdown and its rest, the helper every LEVEL knob of the orbit already shares, so
+ * its block countdown and its rest, the helper every LEVEL knob of the cylinder already shares, so
  * spelling them as inner classes here would copy the helper for an identical result (the plan's
  * complexity rule: no identity-only states where the lifecycle is trivial). What made the lifecycle
  * look less trivial, a host reset landing under sounding notes, is gone since 5c-8: that was the
@@ -51,22 +51,22 @@ import io.peekandpoke.klang.audio_be.KnobGlide
  *     mid-glide included, so nothing that begins a glide may touch it. Row: "a new target mid-glide
  *     turns from where the fader stands, never from where the old glide was going".
  *  2. *What record of a finished life is forgotten, and where*: the fader has no terminal state; the
- *     host's [reset] (a deactivated orbit) and [retire] forget the level and re-arm the snap, so the
+ *     host's [reset] (a deactivated cylinder) and [retire] forget the level and re-arm the snap, so the
  *     next life starts at unity and its first factor arrives at once. Row: "a reset mid-glide: the
  *     next life snaps, it does not glide from the old life's level".
  *  3. *Its Off precondition*: it has no Off and no tail ([hasTail] is a constant false, so a row on it
  *     would be vacuous). The one precondition that matters is the HOST's: `Cylinder.tryDeactivate`
- *     resets the chain only once no voice plays on the orbit (no check-in holds it), so a reset never
- *     lands under a sounding note, and a fader at exactly 0 keeps its orbit alive. Row:
+ *     resets the chain only once no voice plays on the cylinder (no check-in holds it), so a reset never
+ *     lands under a sounding note, and a fader at exactly 0 keeps its cylinder alive. Row:
  *     `CylinderFaderThroughZeroSpec`.
  *  4. *Which state data are references*: none. The whole state is [KnobGlide]'s numbers and flag, so
  *     [reset] completes synchronously without dispatching anywhere. Row: "reset puts the fader back
  *     to unity" (its FIRST sample, which a reset that left a glide running would miss).
  *
  * **Why an ARRIVING factor snaps** (FRESH): the glide exists to make a MOVE continuous, and there is
- * nothing to be continuous with before the first sample or after a reset (the orbit has been silent
+ * nothing to be continuous with before the first sample or after a reset (the cylinder has been silent
  * for its grace, and no voice is on it). `k.classic().gain(0)` is the mute idiom: a
- * glide from the unset unity would open every life of a muted orbit with 50 ms of its notes at full
+ * glide from the unset unity would open every life of a muted cylinder with 50 ms of its notes at full
  * level. A chain arriving through a crossfade can see two configures before its first block, and
  * both snap, because it is a processed BLOCK that ends the fresh situation.
  */
@@ -112,7 +112,7 @@ class KatalystGainEffect(
      * substitutes 1.0 for a non-finite slot before it hands the factor over ([configureFrom], this law
      * through a holder), so an unset slot arrives here as
      * unity and a cleared one takes the fader back to unity by a glide. The guard stays at the door
-     * anyway, because the cost of a NaN that does get through is unbounded (the whole orbit would be
+     * anyway, because the cost of a NaN that does get through is unbounded (the whole cylinder would be
      * NaN for good) and because a second caller must not have to rediscover the rule.
      *
      * The public door and the specs' seam: no production code calls it per block. A per-block caller
@@ -127,7 +127,7 @@ class KatalystGainEffect(
      * [configure] with [holder]'s first element, the factor [KatalystGainWriter] guarded: the same glide, the same snap,
      * the same NaN rule.
      *
-     * **A holder, not the number** (engine follow-up 45, 2026-10-19): the writer calls this on every block the orbit
+     * **A holder, not the number** (engine follow-up 45, 2026-10-19): the writer calls this on every block the cylinder
      * has an owner (`KatalystChain.applyParams`), and on V8 a double handed to a call that is not inlined is a heap
      * number (`audio/ref/performance.md`). With V8's inlining budget squeezed, the chain's `applyParams` booked one heap
      * number per block on `E-gain`: the factor crossing [configure], the shape engine follow-up 36 removed from the

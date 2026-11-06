@@ -30,7 +30,7 @@ internal class EqSectionSpec(
  * new [IgnitorDsl.EqSection] variant without an arm here fails compilation.
  *
  * Both adapters of the shared core read it, the per-voice `EqIgnitor` (through
- * `IgnitorDslRuntime`'s Eq arm, where this `when` lived until Katalyst step 4) and the orbit stage
+ * `IgnitorDslRuntime`'s Eq arm, where this `when` lived until Katalyst step 4) and the cylinder stage
  * `KatalystEqEffect` (through `KatalystChainBuilder`). Two copies of a variant-to-Int mapping are
  * two chances to disagree about what `band()` means on a voice and on a bus, and the whole point
  * of one core is that they cannot.

@@ -123,7 +123,7 @@ class LazyReverbSpec : StringSpec({
         alloc.asked shouldBe 0
     }
 
-    "reset() keeps the unit: a reused orbit does not re-rent" {
+    "reset() keeps the unit: a reused cylinder does not re-rent" {
         val (units, alloc) = shelf()
         val fx = effect(units)
         fx.configureSize(size = 0.6)
@@ -244,7 +244,7 @@ class LazyReverbSpec : StringSpec({
 
     "a latched refusal still takes a unit the SHELF can serve — only the allocation is skipped" {
         // The delay's round-2 lesson, re-learned for the reverb in round 3: a Boolean latch that
-        // sat above the shelf lookup kept an orbit dry after other playbacks had returned units.
+        // sat above the shelf lookup kept a cylinder dry after other playbacks had returned units.
         val alloc = Recording(failing = true)
         val (units, _) = shelf(alloc)
         val fx = effect(units)

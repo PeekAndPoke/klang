@@ -10,14 +10,14 @@ import io.peekandpoke.klang.audio_be.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 
 /**
- * The plumbing a position that runs a [KatalystChain] needs, shared by both of them: an orbit (`Cylinder`) and the
+ * The plumbing a position that runs a [KatalystChain] needs, shared by both of them: a cylinder (`Cylinder`) and the
  * output (`MasterBus`). KLANG-00243 (one chain host), 2026-11-04: until then each host carried its own copy.
  *
  * It holds the chain in service with the name it was requested under, the bounded cache of built chains, the parked
  * request, the lookup in the [registry] and the [swap]. What a position does when a chain LANDS stays the position's
- * ([Position.land]): an orbit installs at once while it is idle and fades with the duck handover while it sounds; the
+ * ([Position.land]): a cylinder installs at once while it is idle and fades with the duck handover while it sounds; the
  * output adopts at once before the engine's first block and fades after it. So do the rules of the position around
- * the chain (an orbit's owner and silence reset, the output's tail keep-alive).
+ * the chain (a cylinder's owner and silence reset, the output's tail keep-alive).
  *
  * **A request** ([request]) takes one of these paths, all cheap enough for the scheduler's promotion path:
  *  - **The name is already in service** (the same raw spelling, or the same key): nothing to do, and a parked request
@@ -31,8 +31,8 @@ import io.peekandpoke.klang.audio_bridge.KatalystDsl
  *    swap hears that a request waits ([ChainSwap.requestWaiting]): a ring-out is cut over [ChainSwap.CUT_SECONDS]
  *    instead of waited for (maintainer, 2026-10-17), and a running fade finishes first, since cutting it short would
  *    drop its leaving chain at full weight, the click the swap exists to prevent. About 0.15 to 0.22 s in all. A request
- *    for the chain leaving service parks like any other. An idle orbit's swap is always settled: an orbit deactivates
- *    only on a settled swap, a fade begins only on a sounding orbit, and a new life cuts the swap.
+ *    for the chain leaving service parks like any other. An idle cylinder's swap is always settled: a cylinder deactivates
+ *    only on a settled swap, a fade begins only on a sounding cylinder, and a new life cuts the swap.
  *  - **Otherwise** the position lands it ([Position.land]).
  *
  * The name is normalized ONCE, past the raw fast path, and every later hop (the lookup, the cache, the retry) takes
@@ -57,17 +57,17 @@ internal class ChainHost(
     /** Where a request lands, and how a chain is built: the position's own rules. */
     private val position: Position,
     /**
-     * The chain the position is born with and falls back to on a new life: an orbit's classic chain, the output's empty
+     * The chain the position is born with and falls back to on a new life: a cylinder's classic chain, the output's empty
      * one. Never cached by name, so never evicted.
      */
     bornWithDsl: KatalystDsl,
     /**
-     * Whether a declaration whose CONTENT equals [bornWithDsl] resolves to the born-with instance (the orbit, step 5b-1,
+     * Whether a declaration whose CONTENT equals [bornWithDsl] resolves to the born-with instance (the cylinder, step 5b-1,
      * 2026-09-19: a `Katalyst.classic()` declaration is then a no-op instead of a crossfade). The output builds such a
      * declaration as a chain of its own.
      */
     private val bornWithAnswersItsContent: Boolean,
-    /** Where a chain NAME is resolved; null resolves no name (a shelved orbit). Re-pointed by [registry]'s setter. */
+    /** Where a chain NAME is resolved; null resolves no name (a shelved cylinder). Re-pointed by [registry]'s setter. */
     registry: KatalystRegistry?,
 ) {
     companion object {
@@ -87,7 +87,7 @@ internal class ChainHost(
         /**
          * Puts the chain for [key] in service, through [ChainSwap] or at once. Called only while the swap is settled. Reads
          * the chain through [chainFor] and puts it in through [enter]. Returns what the position's own caller needs (the
-         * orbit: whether the chain changed).
+         * cylinder: whether the chain changed).
          */
         fun land(key: String, rawName: String, dsl: KatalystDsl): Boolean
     }
@@ -198,7 +198,7 @@ internal class ChainHost(
      * finds it built. Called from the command path, between render blocks. Nothing happens when the chain is already
      * built (the one in service is cached too) or not registered yet. Evicts like a build on landing, but unlike that one
      * it can run while a swap fades or drains, so the leaving chain's guard in [evictIfNeeded] holds. The output's door
-     * only: an orbit, whose born-with chain may answer a declaration ([chainFor]), builds on landing.
+     * only: a cylinder, whose born-with chain may answer a declaration ([chainFor]), builds on landing.
      */
     fun prepare(name: String) {
         val key = name.lowercase()
@@ -238,7 +238,7 @@ internal class ChainHost(
     }
 
     /**
-     * The clean slate of a new life (an orbit shelved or re-labelled, an engine disposed): every chain retired, so its
+     * The clean slate of a new life (a cylinder shelved or re-labelled, an engine disposed): every chain retired, so its
      * rented units go back to their shelves (dirty: the warehouse's housekeeping zeroes them), the swap cut, the cache
      * dropped, the born-with chain in service under no name, nothing parked. Retire is idempotent, so a chain met twice
      * costs nothing.

@@ -14,13 +14,13 @@ is `/review-loop`; this file is the audio-specific half. The stories behind the 
   so a bit-level claim needs a spec, not the corpus.
 - **Render from the repo root.** The JVM sample bank loads and writes `./cache` relative to where it runs
   (`audio_fe/src/jvmMain/kotlin/samples.kt`), and a Gradle `-p <tree>` run needs ABSOLUTE song paths. The CLI render
-  plays samples; the `:jvmTest` helper `renderSong` has no sample bank, so a sample-fed orbit is silent there.
+  plays samples; the `:jvmTest` helper `renderSong` has no sample bank, so a sample-fed cylinder is silent there.
 - **Every identity run needs an engagement control**: a deliberate mutant that must move the rows the change can
   reach. A green run alone is not evidence. Predict WHICH rows move before running, and read each song's
   arrangement and imports to do it: a grep finds what is DEFINED, not what PLAYS (a song may define an instrument
   its arrangement never plays; another reaches one through `import`).
 - **Attribute every difference.** Strip the suspected calls from both sides (e.g. every `.phaser(...)`) and show
-  the rest is bit-identical, or log per orbit which event differs.
+  the rest is bit-identical, or log per cylinder which event differs.
 - **Draw order is part of the sound.** A change that moves which rng draw lands where moves every later draw of
   the voice (the rules: `audio/ref/voice-synthesis.md`, "The voice rng"). Name the draw-order move as the cause
   with a control that switches the draws off on both sides.

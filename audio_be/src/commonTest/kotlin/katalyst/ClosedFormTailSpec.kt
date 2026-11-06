@@ -23,7 +23,7 @@ import kotlin.math.abs
 
 /**
  * The Active-state tail question answered from a content ceiling (`TailCeiling`) instead of by scanning
- * the ring or the combs, for both orbit effects and a whole chain. The scans (`DelayLine.tapWindowPeakAbs`,
+ * the ring or the combs, for both cylinder effects and a whole chain. The scans (`DelayLine.tapWindowPeakAbs`,
  * `Reverb.combPeakAbs`) stay as the ORACLE here: the closed form must never say "no tail" while the
  * scan still finds audible energy in what the tap can reach, and must eventually say it.
  */
@@ -70,7 +70,7 @@ class ClosedFormTailSpec : StringSpec({
         blocksWithTail shouldBeGreaterThan 17
     }
 
-    "a note mid-decay lifts the ceiling back up — the orbit is not cut under a new note" {
+    "a note mid-decay lifts the ceiling back up, the cylinder is not cut under a new note" {
         fun decayBlocks(fx: KatalystDelayEffect, ctx: KatalystContext): Int {
             var blocks = 0
             while (fx.hasTail()) {

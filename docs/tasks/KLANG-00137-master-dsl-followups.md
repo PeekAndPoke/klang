@@ -9,7 +9,7 @@
 > Priority: **NICE**, except the parity audit, which the user raised to a standing principle.
 
 > **Status 2026-09-28, after phase 3 step 12** (KLANG-00238 (phase3 step12 master as katalyst)):
-> the Master DSL is gone; the output runs the same Katalyst chain an orbit runs, written
+> the Master DSL is gone; the output runs the same Katalyst chain a cylinder runs, written
 > `master(Katalyst(k => ...))`. Section 2 is DONE (decisions (i) and (j)), section 5 is DONE (every Katalyst stage,
 > `eq` included, works at the output). Sections 1, 3, 4, 6 and 7 stay open and are rewritten below to the current
 > surface; where a section still says "master" it means the Katalyst at the output position.
@@ -28,18 +28,18 @@ kept here as the record.
 **The rule (user, 2026-08-02):** *"The same params must be available in the sprudel DSL, Ignitor, Master etc. and they
 need to mean the same thing. This is important for developer experience."*
 
-The master DSL work proved this is not theoretical: `roomSize` silently meant a ~1 s tail on an orbit and ~12.5 s on the
+The master DSL work proved this is not theoretical: `roomSize` silently meant a ~1 s tail on a cylinder and ~12.5 s on the
 master because sprudel divided by 10 and the master did not — and `roomFade`, the parameter that *actually* sets the
 tail, existed on only one of them. Both are fixed for reverb/delay; nothing has audited the rest.
 
 What an audit would cover, per effect: does the same concept have the same **name**, the same **scale**, the same
-**availability** on every surface it could sensibly appear on (sprudel per-voice, sprudel per-orbit, Ignitor,
-the Katalyst on an orbit and at the output; the Pipeline DSL retired in phase 3 step 9 and the Master DSL in step 12)?
+**availability** on every surface it could sensibly appear on (sprudel per-voice, sprudel per-cylinder, Ignitor,
+the Katalyst on a cylinder and at the output; the Pipeline DSL retired in phase 3 step 9 and the Master DSL in step 12)?
 
 Known asymmetries already spotted, as a starting list:
 
-- ~~**`room` (orbit) vs `wet` (master)** — same thing, two words.~~ RESOLVED by C4.2
-  (2026-08-24): the orbit knob is the `wet` slot of `room`/`delay` (2026-09-07; `roomWet`/`delayWet` between 2026-08-24 and then); both doors say `wet`.
+- ~~**`room` (cylinder) vs `wet` (master)**: same thing, two words.~~ RESOLVED by C4.2
+  (2026-08-24): the cylinder knob is the `wet` slot of `room`/`delay` (2026-09-07; `roomWet`/`delayWet` between 2026-08-24 and then); both doors say `wet`.
 - RESOLVED 2026-09-16 (KLANG-00208 (reverb naming unification)): `fade` is gone, `fade = x` is
   `size = 10x`. Was: **`room(size)` is ~0..10 but `room(fade)` is 0..1**, and `fade` silently makes `size` inert. Inherited from the
   old `room("a:b:c")` colon packing (removed in C0, semantics kept); documented rather than fixed, because redefining it
@@ -53,15 +53,15 @@ Known asymmetries already spotted, as a starting list:
   still appears in the DSL and docs.
 
 **Superseded 2026-09-27 (phase 3 step 12 decision (a), C2):** `lookahead` is now a knob of the Katalyst `compressor`
-and `limiter` doors and runs at ANY position; the orbit or playback it sits on runs late by it, the author's choice,
+and `limiter` doors and runs at ANY position; the cylinder or playback it sits on runs late by it, the author's choice,
 nothing compensates. It is still not a sprudel `compressor()` knob, because it is fixed per chain (it sizes a ring)
 while a sprudel door writes slots on the running chain. The authored `limiter()` default stays at lookahead 0
 (`AUTHORED_LIMITER_LOOKAHEAD_SECONDS`) against the house limiter's 5 ms; the `limiter` row of
 `KlangScriptKatalystDoorParitySpec` pins its numbers. The recorded exception it replaces, kept for history:
 
 **A DELIBERATE exception (until 2026-09-27):** `lookahead` exists on the master limiter **only**, not on
-sprudel's `compressor()`, not per-orbit, not per-voice. A lookahead limiter delays the signal it protects; on the summed
-master that delay is uniform and harmless, but on an orbit it would shift that orbit late against every other one — a
+sprudel's `compressor()`, not per-cylinder, not per-voice. A lookahead limiter delays the signal it protects; on the summed
+master that delay is uniform and harmless, but on a cylinder it would shift that cylinder late against every other one, a
 silent timing bug that reads as "my drums feel loose". Same reasoning one level up keeps the *authored*
 the authored `limiter` stage at
 `lookaheadSeconds = 0` while the house limiter runs at 5 ms: the house one is global and post-sum, the authored one is
@@ -70,10 +70,10 @@ KLANG-00225 (master limiter lookahead) §3 and §4.
 
 Wants its own task doc once someone starts it; this is the brief. (It has one since 2026-11-06: KLANG-00417.)
 
-## 2. Engine disposal truncates a long delay tail (shared orbit + master)
+## 2. Engine disposal truncates a long delay tail (shared cylinder + master)
 
 > **DONE 2026-09-28** (phase 3 step 12 decisions (i) and (j)). After a stop, every tail that can end on its own rings
-> out in full; only an endless tail (a delay at `|feedback| >= 1`, on an orbit or at the output,
+> out in full; only an endless tail (a delay at `|feedback| >= 1`, on a cylinder or at the output,
 > `KatalystChain.sustainsItself`) triggers the release, with whatever rings beside it (the engine's whole output, the
 > simple rule in the `PlaybackEngine.isIdle` KDoc), 20 s after the last note (`PlaybackEngine.MAX_TAIL_HOLD_SECONDS`), by an
 > exponential release (`TailRelease`, 60 dB per 3 s, retired under -90 dB), so there is no hard cut and no leaked
@@ -84,14 +84,14 @@ Wants its own task doc once someone starts it; this is the brief. (It has one si
 samples** — a step, not a fade. A genuine (non-runaway) delay, e.g.
 `time(2.0).feedback(0.85)`, can still be ~14 dB down at that point, so it clicks.
 
-The orbit path has the *opposite* half of the same hole: a delay at `feedback >= 1.0` keeps
+The cylinder path has the *opposite* half of the same hole: a delay at `feedback >= 1.0` keeps
 `cylinders.anyActive()` true forever, so `hasOwnSound()` never clears and the engine is never disposed at all — one
 leaked engine per stop, and the drone survives deleting the pattern line.
 
 Both are the same question ("when is a tail finished, and how do we stop rendering it politely"), so a shared fix is
 likely better than two. Options for the master half: fade the engine out over the last N blocks before disposal; raise
 the bound; or accept the step. The `cap` slot of `delay` and its doc example (`delay(feedback = 1.0).delay(cap = 2.0)`) actively
-invite the orbit half.
+invite the cylinder half.
 
 ## 3. Cache eviction can rebuild a master chain on the audio thread
 
@@ -101,7 +101,7 @@ thread). Bounded and documented, but reachable by ordinary live-coding A/B ("was
 
 **Updated 2026-09-28 (phase 3 step 12 C4):** a chain out of service holds no units (eager retire), so even a cache
 HIT re-rents its reverb unit and delay ring at its first configure. The units come from the backend's shelves
-(`ReverbUnits`, `SizedBuffers`), shared with the orbits; the render thread allocates only when the shelf has none
+(`ReverbUnits`, `SizedBuffers`), shared with the cylinders; the render thread allocates only when the shelf has none
 idle. What a miss still allocates on the audio thread is the chain's stage shells.
 
 **Proper fix belongs to the resource warehouse pool** — already written up there, see
@@ -110,12 +110,12 @@ KLANG-00230 (resource warehouse) §"Master chains — the second customer".
 **DONE 2026-11-05** (maintainer: "complete the warehouse for the master"). A master chain's stage shells are built
 ahead, on the command path between render blocks: when a schedule carrying its `master(…)` event arrives
 (`VoiceScheduler.scheduleVoices` and `scheduleVoice` call `MasterBus.prepare`, beside the sample prefetch). The landing
-in the render block is then a cache hit. `ChainHost.prepare` (the output's door only; an orbit still builds on
+in the render block is then a cache hit. `ChainHost.prepare` (the output's door only; a cylinder still builds on
 landing) evicts like a build on landing, so the cache stays bounded, and since it can now run while a swap fades or
 drains, the leaving chain's guard in `evictIfNeeded` holds something (a row pins it). A build is the shells only, on
 every path: the master's build no longer configures at once, so a chain out of service holds no units and every chain
 (built ahead, built on landing, back from the cache) rents its reverb unit and delay rings at one point, its first
-configure in `MasterBus.process`, as an orbit's chain does. Until now the build configured at once, so a fresh chain
+configure in `MasterBus.process`, as a cylinder's chain does. Until now the build configured at once, so a fresh chain
 rented at its landing (the plan's risk R1, the unit rent order): the corpus renders identical with the rent at the
 first block, and the refusal rows ask the shelf once instead of twice. What a landing still costs in render: those
 rents, which allocate only when the shelf has none idle (the first master delay of a class on a backend, decision
@@ -147,7 +147,7 @@ master event. Revisit only if it bites in practice.
 
 > **DONE 2026-09-28** (phase 3 step 12 C5, decision (c)): the output runs a Katalyst chain, so the Katalyst `eq` stage
 > works there: `master(Katalyst(k => k.eq(e => e.band(80, 0.707, -2)).gain(1.4).limiter()))`. Its builder is the ignitor
-> `.eq`'s (`band(freq, q, db)`, `tap(freq, q, gain)`), one vocabulary on voice, orbit and output, and the stage order is the author's (the house limiter always comes last). No
+> `.eq`'s (`band(freq, q, db)`, `tap(freq, q, gain)`), one vocabulary on voice, cylinder and output, and the stage order is the author's (the house limiter always comes last). No
 > dedicated master shelf door was built. The text below is the original brief.
 
 Wanted by KLANG-00143 (auto mix advisor) §3 (closed-loop master correction), and independently useful as
@@ -159,7 +159,7 @@ full parametric EQ.
   low-shelf cut into loudness headroom (measured 2026-08-11 in the klang-ai sessions: −2 dB of low trim bought +1.3 dB
   RMS *and* reduced beat-rate pumping ~10 % at higher drive).
 - **Parity (§1 applies):** shelf/bell EQ has no per-voice counterpart in sprudel today (`lpf`/`hpf`/`bandf` are filters,
-  not gain shelves). If a per-orbit or per-voice shelf ever appears, names and units must match from day one — propose
+  not gain shelves). If a per-cylinder or per-voice shelf ever appears, names and units must match from day one, propose
   `eqLowDb/eqLowHz`, `eqHighDb/eqHighHz`, `eqMidDb/eqMidHz/eqMidQ` (dB gain + Hz corner, the industry-standard meaning)
   and record them in the parity table before shipping.
   **UPDATE 2026-08-20 — the per-voice counterpart NOW EXISTS**, so this is no longer hypothetical:
@@ -241,7 +241,7 @@ add the master chain's `latencyFrames` to the render's run-out.
 > correct run-out, and the two songs only gain 5.3 ms of tail); (b) count the chain latency only where the tail does
 > not cover it (`max(tailFrames, chainLatency)`): the corpus stays, but the house and the chain latency are then
 > counted two different ways; (c) leave it, as `tailSec = 0` with a delaying master is rare. A sibling, not in this
-> item: an orbit chain that delays (a `katalyst(...)` with a lookahead or an oversampled `distort`) is not counted
+> item: a cylinder chain that delays (a `katalyst(...)` with a lookahead or an oversampled `distort`) is not counted
 > either.
 >
 > **Decided 2026-10-19 (maintainer): (a), "if it is easily done, do it"; scheduled after the release**, as it moves

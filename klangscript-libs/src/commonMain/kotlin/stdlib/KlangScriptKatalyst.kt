@@ -20,9 +20,9 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 import io.peekandpoke.klang.audio_bridge.Kat as KotlinKat
 
 /**
- * `Katalyst` for KlangScript: builds [KatalystDsl] chains, for an orbit or for the output.
+ * `Katalyst` for KlangScript: builds [KatalystDsl] chains, for a cylinder or for the output.
  *
- * A Katalyst is the instrument an orbit plays through: the effects its summed voices run, in the
+ * A Katalyst is the instrument a cylinder plays through: the effects its summed voices run, in the
  * order written, before the playback's master bus. The master bus runs one too: hand the same kind
  * of chain to `master(...)` and everything the playback plays runs through it last (phase 3 step 12:
  * one chain type, two positions). Author one by CALLING `Katalyst` with a configure lambda and hand
@@ -49,7 +49,7 @@ import io.peekandpoke.klang.audio_bridge.Kat as KotlinKat
  *
  * **The chain is the instrument.** A stage the chain does not declare does not run, however loudly
  * a voice asks for it, so `Katalyst(k => k.eq(...))` is honestly "an EQ and nothing else". Start
- * from the familiar orbit with [classic], which brings the historical stages plus the group fader
+ * from the familiar cylinder with [classic], which brings the historical stages plus the group fader
  * at unity, as named slots the bus doors and `katp` can drive.
  */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
@@ -58,7 +58,7 @@ internal object KlangScriptKatalyst {
     override fun toString(): String = "[Katalyst object]"
 
     /**
-     * Builds a chain (for an orbit or the output): the lambda receives a [KatalystBuilder] and appends stages in order
+     * Builds a chain (for a cylinder or the output): the lambda receives a [KatalystBuilder] and appends stages in order
      * (`body`, `vowel`, `delay`, `reverb`, `phaser`, `compressor`, `limiter`, `duck`, `distort`, `eq`, `gain`, and
      * `classic` for the whole familiar block at once, at most once per builder). No lambda, or an
      * empty one, is the empty chain.
@@ -74,12 +74,12 @@ internal object KlangScriptKatalyst {
         KotlinKat.build { it.configuredBy("Katalyst", configure) }
 
     /**
-     * The chain every orbit has always run: body, vowel, delay, reverb, phaser, compressor and the
+     * The chain every cylinder has always run: body, vowel, delay, reverb, phaser, compressor and the
      * duck, in that order, plus the group fader at unity (`gain.gain`) between the compressor and
      * the duck, which is bit-transparent and is there so a pattern can reach a group fader. Every
      * knob is a named slot the bus doors and `katp` write.
      *
-     * Write it to say "the familiar orbit", or use it as the base of a chain that adds to it:
+     * Write it to say "the familiar cylinder", or use it as the base of a chain that adds to it:
      *
      * ```
      * katalyst(Katalyst.classic())
@@ -91,7 +91,7 @@ internal object KlangScriptKatalyst {
      * a cylinder runs exactly one ducking effect, so the LAST duck in the chain wins and appending
      * one replaces the unset duck `classic` brought.
      *
-     * **Writing it is not the same as writing nothing** (decided 2026-09-18). An orbit that declares
+     * **Writing it is not the same as writing nothing** (decided 2026-09-18). A cylinder that declares
      * no chain runs the historical one from the voice's own effect fields; declaring THIS one names
      * the same stages as slots, so `katp` and the bus doors drive them, which is what makes
      * `Katalyst(k => k.classic())` the one line to add before automating a classic knob. The sound
@@ -106,7 +106,7 @@ internal object KlangScriptKatalyst {
      * Creates a named **chain slot** with a default value: the knob a pattern can then move with
      * `.katp("<name>", value)`, or with `.katp(slot, value)` when the slot is held in a variable.
      *
-     * A slot is read per block from the orbit's owner, the newest note that is still held on it (its gate open; a release tail does not own), so it is orbit state and
+     * A slot is read per block from the cylinder's owner, the newest note that is still held on it (its gate open; a release tail does not own), so it is cylinder state and
      * not a per-note snapshot. When nothing has written the name, the knob is [default]. Write a
      * plain number instead of a slot where the chain should stay fixed.
      *
@@ -122,7 +122,7 @@ internal object KlangScriptKatalyst {
      * the stage call.
      *
      * The twin of `Ignitor.param` on the other host: that one fills the voice's own instrument from
-     * `ignp`, this one the orbit's chain from `katp`. The two namespaces never cross, and the two kinds of param do
+     * `ignp`, this one the cylinder's chain from `katp`. The two namespaces never cross, and the two kinds of param do
      * not either: an `Ignitor.param` on a chain knob, or this one handed to `ignp` or placed in an Ignitor tree, is a
      * script error at the call.
      *
@@ -150,7 +150,7 @@ internal object KlangScriptKatalyst {
     //
     // The chain reads a modulator once per BLOCK, at the block's start, and the stage glides the knob linearly across
     // the block to that value (D2). Its clock starts when the chain is built and runs over the blocks the chain
-    // processes (Q3): it pauses while the orbit sleeps and is not reset with the chain. A rate above half the block
+    // processes (Q3): it pauses while the cylinder sleeps and is not reset with the chain. A rate above half the block
     // rate (about 187 Hz at 48 kHz) aliases; nothing clamps it.
 
     /**

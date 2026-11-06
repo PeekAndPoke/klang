@@ -15,9 +15,9 @@ import io.peekandpoke.klang.audio_bridge.VowelBands
 import io.peekandpoke.klang.audio_bridge.constants.VOWEL_FLOOR
 
 /**
- * The vowel door against the formant catalogue: the door writes a vowel INDEX the orbit's formant bank
- * resolves. The orbit reads the `vowel.*` slots in `katalystParams`; the `FilterDef.Formant` the voice once
- * carried in `filters` left the wire in phase 3 step 9, so these rows resolve the slot through the orbit's table.
+ * The vowel door against the formant catalogue: the door writes a vowel INDEX the cylinder's formant bank
+ * resolves. The cylinder reads the `vowel.*` slots in `katalystParams`; the `FilterDef.Formant` the voice once
+ * carried in `filters` left the wire in phase 3 step 9, so these rows resolve the slot through the cylinder's table.
  *
  * The name-to-index conversion itself (round trip, the complete register-by-vowel cross product, case, unknowns,
  * rounding) is `CatalogueIndexSpec` in audio_bridge. What is pinned here is the door on top of it, and the only
@@ -25,7 +25,7 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_FLOOR
  */
 class LangVowelComprehensiveSpec : StringSpec({
 
-    /** The formant bands the orbit resolves from this wire voice's `vowel.vowel` slot, or null (no vowel). */
+    /** The formant bands the cylinder resolves from this wire voice's `vowel.vowel` slot, or null (no vowel). */
     fun bandsOf(voiceData: VoiceData): List<VowelBands.Band>? =
         VowelBands.bandsAt(voiceData.katalystParams?.get("vowel.vowel") ?: Double.NaN)
 

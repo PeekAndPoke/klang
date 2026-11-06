@@ -246,7 +246,7 @@ object WarmupVocabulary {
         .let { IgnitorDsl.PitchEnvelope(inner = it, semitones = Constant(12.0), decay = Constant(0.1)) }
         .mul(Constant(0.4))
 
-    /** name → graph. The warmup registers each on its own playback and rotates its orbits through them. */
+    /** name → graph. The warmup registers each on its own playback and rotates its cylinders through them. */
     val sounds: List<Pair<String, IgnitorDsl>> = listOf(
         "${NAME_PREFIX}waves--" to waves,
         "${NAME_PREFIX}supers--" to supers,

@@ -51,8 +51,8 @@ class Cylinders(
     private val rented = ArrayList<Cylinder>()
 
     /**
-     * The cylinder for each orbit id, by [slotOf]. A folded id (`id % maxCylinders`, see [cylinderFor]) keeps the
-     * sign of a negative orbit, so the ids run from `-(maxCylinders - 1)` to `maxCylinders - 1`.
+     * The cylinder for each cylinder id, by [slotOf]. A folded id (`id % maxCylinders`, see [cylinderFor]) keeps the
+     * sign of a negative cylinder, so the ids run from `-(maxCylinders - 1)` to `maxCylinders - 1`.
      */
     private val byId = arrayOfNulls<Cylinder>(2 * this.maxCylinders - 1)
 
@@ -75,7 +75,7 @@ class Cylinders(
         return false
     }
 
-    /** True while any orbit rings with a tail that can never end on its own ([Cylinder.sustainsItself]). */
+    /** True while any cylinder rings with a tail that can never end on its own ([Cylinder.sustainsItself]). */
     fun anySustainsItself(): Boolean {
         for (i in 0 until rented.size) {
             if (rented[i].sustainsItself()) {
@@ -89,7 +89,7 @@ class Cylinders(
     /**
      * Returns every cylinder to the warehouse (which retires it: units back to their shelves,
      * state to a clean slate) and forgets them — the engine is being disposed (resource warehouse,
-     * 2f + cylinders). The next playback's first voice on an orbit takes a shelved cylinder, and its
+     * 2f + cylinders). The next playback's first voice on a cylinder takes a shelved cylinder, and its
      * first delay or room a shelved ring or network: nothing is built in render.
      */
     fun releaseAll() {
@@ -118,8 +118,8 @@ class Cylinders(
      * 3. Mix all active cylinders to fusion output
      * 4. Round-robin cleanup check for silent cylinders
      *
-     * [blockStart] is the block's start frame, the one this block's voices claimed their orbits
-     * with: it commits each orbit's owner for it, and the cleanup asks the orbit whether a voice still checks in (see
+     * [blockStart] is the block's start frame, the one this block's voices claimed their cylinders
+     * with: it commits each cylinder's owner for it, and the cleanup asks the cylinder whether a voice still checks in (see
      * [Cylinder.tryDeactivate]).
      */
     // blockStart is an ABSOLUTE backend frame, a Double (see RenderClock.cursorFrame).
@@ -135,13 +135,13 @@ class Cylinders(
             // A chain requested before its registration arrived lands here, on the first block
             // where the name resolves, and so does one that waited behind a running crossfade.
             // One field read per cylinder when nothing is queued, which is the normal case (see
-            // [Cylinder.pollPendingChain]). Nothing here can cut audio: an idle orbit renders
+            // [Cylinder.pollPendingChain]). Nothing here can cut audio: an idle cylinder renders
             // nothing this block, and a sounding one gets the crossfade (step 3b).
             cylinder.pollPendingChain()
             cylinder.processEffects()
         }
 
-        // Step 2: Apply ducking (cross-cylinder sidechain). The duck names its sidechain by the RAW orbit id, not
+        // Step 2: Apply ducking (cross-cylinder sidechain). The duck names its sidechain by the RAW cylinder id, not
         // folded: an id outside the folded range finds no cylinder, as it never did.
         for (i in 0 until count) {
             val cylinder = rented[i]
@@ -169,8 +169,8 @@ class Cylinders(
     }
 
     /**
-     * A `Sounding` voice renders on orbit [id] this block and offers itself as its owner ([Cylinder.offer]): the
-     * orbit's bus settings are owned by the newest `Sounding` voice; a voice gives the orbit up when its gate
+     * A `Sounding` voice renders on cylinder [id] this block and offers itself as its owner ([Cylinder.offer]): the
+     * cylinder's bus settings are owned by the newest `Sounding` voice; a voice gives the cylinder up when its gate
      * closes or it is cut. The cylinder is rented on first use.
      */
     // blockStart is an ABSOLUTE backend frame, Double, see RenderClock.cursorFrame.
@@ -181,8 +181,8 @@ class Cylinders(
     }
 
     /**
-     * A voice renders on orbit [id] this block without offering itself (past its gate, or fading): it routes its
-     * audio and keeps the orbit in use ([Cylinder.checkIn]). The cylinder is rented on first use.
+     * A voice renders on cylinder [id] this block without offering itself (past its gate, or fading): it routes its
+     * audio and keeps the cylinder in use ([Cylinder.checkIn]). The cylinder is rented on first use.
      */
     // blockStart is an ABSOLUTE backend frame, Double, see RenderClock.cursorFrame.
     fun checkIn(id: Int, blockStart: Double): Cylinder {
@@ -192,11 +192,11 @@ class Cylinders(
     }
 
     /**
-     * Routes a `katalyst(…)` reference to the cylinder for [orbit]: the scheduler calls this when
+     * Routes a `katalyst(…)` reference to the cylinder for [cylinder]: the scheduler calls this when
      * it consumes the reference, whether or not the event also sounds (see
      * [Cylinder.requestChain]).
      *
-     * A chain declared on an orbit that is silent so far RENTS that orbit's cylinder, exactly as
+     * A chain declared on a cylinder that is silent so far RENTS its `Cylinder` instance, exactly as
      * its first voice would: the rent is the same call with the same accounting, and the cylinder
      * it returns is inactive, so it costs the render loop three early returns and one pending
      * check per block until a voice arrives. Not renting would mean losing the declaration of
@@ -206,16 +206,16 @@ class Cylinders(
      * per block, so every allocated cylinder makes every other cylinder's silence grace longer
      * (the block-framing D11 note on `Cylinder`: the wall-clock grace is
      * `silentBlocksBeforeTailCheck × allocatedCylinders × blockFrames`). A chain-only rental
-     * therefore stretches the tail-check schedule of the orbits that ARE sounding, by the same
-     * amount an extra sounding orbit would.
+     * therefore stretches the tail-check schedule of the cylinders that ARE sounding, by the same
+     * amount an extra sounding cylinder would.
      */
-    fun requestChain(orbit: Int, name: String) {
-        cylinderFor(orbit).requestChain(name)
+    fun requestChain(cylinder: Int, name: String) {
+        cylinderFor(cylinder).requestChain(name)
     }
 
     /**
      * The cylinder for [id], rented from the shelf on first use. ONE door for both callers, so a
-     * chain request and a voice can never disagree about which cylinder an orbit number means
+     * chain request and a voice can never disagree about which instance a cylinder number means
      * (the `% maxCylinders` fold).
      */
     private fun cylinderFor(id: Int): Cylinder {

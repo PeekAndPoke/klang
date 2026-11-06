@@ -79,11 +79,15 @@ class CallInfoTest : StringSpec({
         assertCallInfoPresent("""seq("0 1").adsr(0.01, 0.2, 0.7, 0.5)""")
     }
 
-    "orbit passes CallInfo from KlangScript" {
+    "cylinder passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").cylinder("1")""")
+    }
+
+    "orbit (the alias) passes CallInfo from KlangScript" {
         assertCallInfoPresent("""seq("0 1").orbit("1")""")
     }
 
-    "duckorbit passes CallInfo from KlangScript" {
+    "duck passes CallInfo from KlangScript" {
         assertCallInfoPresent("""seq("0 1").duck("1")""")
     }
 

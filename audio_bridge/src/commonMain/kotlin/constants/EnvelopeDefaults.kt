@@ -144,7 +144,7 @@ const val TEARDOWN_FADE_SECONDS: Double = 0.004
  * The cut fade, in seconds: how long a voice choked by its cut group (`cut(n)`) takes to reach exact zero once
  * the cutting voice begins. A linear ramp from the cutting voice's onset frame to exact zero, the law of the
  * teardown fade ([TEARDOWN_FADE_SECONDS]), applied by the choked voice itself after its instrument tree and
- * before its send stage (`Voice.cutOff`), so its orbit sends fade with it.
+ * before its send stage (`Voice.cutOff`), so its cylinder sends fade with it.
  *
  * **Why this length.** It is today's teardown length: long enough to turn the cut's step into a ramp, short
  * enough that the new voice's attack masks it. A smoother curve (the smoothstep sketched in

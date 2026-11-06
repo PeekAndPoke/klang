@@ -457,7 +457,7 @@ class KatalystRegionEffectSpec : StringSpec({
         units.atFactor(2).allocations shouldBe 0
     }
 
-    "a knob modulator inside a region keeps the orbit's clock: a perlin gain moves as it does outside, block for block" {
+    "a knob modulator inside a region keeps the cylinder's clock: a perlin gain moves as it does outside, block for block" {
         // A modulator ticks once a block at any rate; a clock built on the region's rate would walk a noise 4x faster.
         // The gain in force after each block, inside and outside, is the same number.
         val moving = KatalystStageDsl.Gain(gain = KatalystKnobDsl.Plus(c(1.0), KatalystKnobDsl.PerlinNoise(rate = c(3.0))))
@@ -485,7 +485,7 @@ class KatalystRegionEffectSpec : StringSpec({
 
     // ── The duck and the lifecycle ───────────────────────────────────────────────────────────────
 
-    "a duck in a region's body is the orbit's duck: taken out of the body, run by the chain" {
+    "a duck in a region's body is the cylinder's duck: taken out of the body, run by the chain" {
         val duck = KatalystStageDsl.Duck(cylinder = c(1.0), depth = c(0.5))
         val built = chain(by(4, gain(1.0), duck))
 

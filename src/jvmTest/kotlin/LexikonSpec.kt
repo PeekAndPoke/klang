@@ -83,14 +83,14 @@ class LexikonSpec : StringSpec({
             .flatMap { (_, text) -> linkPattern.findAll(lexikonAutoLinks(text)).map { it.groupValues[1] }.toList() }
             .toSet()
 
-        listOf("voice", "orbit-bus", "send").forEach { slug ->
+        listOf("voice", "cylinder-bus", "send").forEach { slug ->
             withClue("no word of $slug's linkWords occurs in the DSL sources any more") { (slug in autoLinked) shouldBe true }
         }
     }
 
     "the scope vocabulary the DSL docs lean on is present" {
         // These three carry the per-voice / bus / send distinction that `@scope` badges point at.
-        listOf("voice", "orbit-bus", "send", "orbit").forEach { slug ->
+        listOf("voice", "cylinder-bus", "send", "cylinder").forEach { slug ->
             withClue(slug) { lexikonEntryBySlug(slug).shouldNotBeNull() }
         }
     }

@@ -22,7 +22,7 @@ import kotlin.math.min
 
 /**
  * The bus distortion, an insert: the voice's distort at the bus position (`KatalystStageDsl.Distort`,
- * KLANG-00292 (katalyst distort stage)). It bends the orbit mix in place, left and right each through a core
+ * KLANG-00292 (katalyst distort stage)). It bends the cylinder mix in place, left and right each through a core
  * of their own, so the notes of the bus meet inside one curve: the glue of a master saturator, the clipper before
  * a limiter, the amp fed by a whole chord.
  *
@@ -43,9 +43,9 @@ import kotlin.math.min
  * - **ON** starts a new life from reset cores and fades it in from dry.
  * - **A return** turns a running fade around where it stands.
  * - **The first initialisation is instant**: until a block has been processed since construction or [reset], a
- *   switch acts at once ([KnobGlide]'s snap rule). A stage set on an orbit's first block renders at full weight from
+ *   switch acts at once ([KnobGlide]'s snap rule). A stage set on a cylinder's first block renders at full weight from
  *   its first sample.
- * - **[reset] and [retire] are a HARD cut** to [Off], for a silent orbit and the shelf.
+ * - **[reset] and [retire] are a HARD cut** to [Off], for a silent cylinder and the shelf.
  *
  * **The amount glides** over [KNOB_GLIDE_SECONDS] ([KnobGlide], linear in the AMOUNT, so exponential in the drive,
  * as the knob is perceived). While it moves, the cores ramp the drive per sample of the stream they shape, from the
@@ -79,7 +79,7 @@ class KatalystDistortEffect(
      */
     amountModulated: Boolean = false,
     /**
-     * The 2x steps above the base rate the chain runs at, 0 on an orbit; inside an oversampling region the region's
+     * The 2x steps above the base rate the chain runs at, 0 on a cylinder; inside an oversampling region the region's
      * (KLANG-00214 (oversampling regions)): the DC blocker's pole is mapped to stay where it is in Hz.
      */
     firstStage: Int = 0,
@@ -271,8 +271,8 @@ class KatalystDistortEffect(
     internal val isOn: Boolean get() = state !== off
 
     /**
-     * Applies the orbit's distort settings ([DistortConfig], filled by the writer). An amount that is not finite or
-     * is at or below 0 is OFF. Called on every block the orbit has an owner, so an unchanged amount is free (a
+     * Applies the cylinder's distort settings ([DistortConfig], filled by the writer). An amount that is not finite or
+     * is at or below 0 is OFF. Called on every block the cylinder has an owner, so an unchanged amount is free (a
      * same-value retarget of [KnobGlide] does nothing).
      */
     fun configure(config: DistortConfig) {
@@ -280,7 +280,7 @@ class KatalystDistortEffect(
 
         // NaN-guard on a value the author can write: a non-finite amount was never set, and an unset stage is off.
         // `isFiniteInline`, the stdlib `isFinite()`'s exact twin without the call (engine follow-up 45): this runs on
-        // every block the orbit has an owner. Measured, it did not box here in any profile tried (single-case and
+        // every block the cylinder has an owner. Measured, it did not box here in any profile tried (single-case and
         // mixed, V8's own inlining budget and a squeezed one); the swap is the house rule for a per-block path.
         if (!amount.isFiniteInline() || amount <= 0.0) {
             state.switchOff()
@@ -365,7 +365,7 @@ class KatalystDistortEffect(
 }
 
 /**
- * What a distort stage is configured with on every block the orbit has an owner ([KatalystDistortEffect.configure]):
+ * What a distort stage is configured with on every block the cylinder has an owner ([KatalystDistortEffect.configure]):
  * the [amount]. Mutable and reused, as `PhaserConfig` is (the V8 allocation pass, `audio/ref/performance.md`): the
  * writer owns one, fills it at resolve and hands it over by reference, so no double crosses a call per block.
  */

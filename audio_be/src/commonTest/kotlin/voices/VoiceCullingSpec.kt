@@ -244,12 +244,12 @@ class VoiceCullingSpec : StringSpec({
         death shouldBeGreaterThanOrEqualTo endFrame
     }
 
-    "a culled voice leaves its orbit: a later voice with its own bus config owns it at once" {
+    "a culled voice leaves its cylinder: a later voice with its own bus config owns it at once" {
         val culledVoice = voice(percussive(releaseFrames), cull = 0.0)
         val challenger = createVoice(
             startFrame = 0.0, gateEndFrame = gateEndFrame, endFrame = endFrame,
             sampleRate = sampleRate, blockFrames = 128, envelope = held(releaseFrames), cull = null,
-            // The orbit's body reads the SLOT state (Katalyst step 5b-1): a material INDEX from
+            // The cylinder's body reads the SLOT state (Katalyst step 5b-1): a material INDEX from
             // the shared catalogue plus its mix, which is what `.body(material = "wood", wet = 1)` writes.
             katalystParams = klangMapOf("body.material" to BodyMaterials.indexOf("wood"), "body.wet" to 1.0),
         )
@@ -262,7 +262,7 @@ class VoiceCullingSpec : StringSpec({
 
         val cylinder = ctx.cylinders.cylinders.first()
 
-        withClue("nobody owns the orbit any more") { cylinder.body!!.isEngaged shouldBe false }
+        withClue("nobody owns the cylinder any more") { cylinder.body!!.isEngaged shouldBe false }
 
         ctx.cylinders.offerAndCommit(challenger.cylinderId, challenger, start + 128)
         withClue("the challenger owns at once") { cylinder.body!!.isEngaged shouldBe true }

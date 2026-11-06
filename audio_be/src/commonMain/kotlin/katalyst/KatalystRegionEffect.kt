@@ -16,10 +16,10 @@ import kotlin.math.roundToInt
  * An oversampling REGION of the bus (`KatalystStageDsl.OversampleBy`, `OversampleAtLeast`; KLANG-00214 (oversampling
  * regions)): the bus at this position is converted up by [steps] 2x steps, [body] runs on it at that rate, and the
  * result is converted down into the bus again. One trip up and one down for every stage inside, whatever the voices on
- * the orbit are.
+ * the cylinder are.
  *
  * [body] is a [KatalystChain] of its own, built by `KatalystChainBuilder` at the region's rate and block size (its
- * delay rings and reverb units sized for it, its knob modulators on the orbit's clock), so every stage inside keeps
+ * delay rings and reverb units sized for it, its knob modulators on the cylinder's clock), so every stage inside keeps
  * its sound in seconds and Hz. The conversions are the engine's [Oversampler], the cascade continued from [firstStage]
  * (the chain the region sits in): a `parallel` matches a region by a phase twin of its round trip ([oversamplers]).
  *
@@ -27,7 +27,7 @@ import kotlin.math.roundToInt
  * down, rounded once ([latencyFrames]). Only the round trip is an oversampler a `parallel` can twin; the body's part
  * counts as pure delay, so a nested oversampler or a lookahead inside is matched by whole frames.
  *
- * **At the head of an orbit's chain** the region is where the orbit's rate buses meet (KLANG-00214 step 3b): the chain
+ * **At the head of a cylinder's chain** the region is where the cylinder's rate buses meet (KLANG-00214 step 3b): the chain
  * calls [process] with its [KatalystBusLadder], the mix is converted up one stage at a time and each bus below the
  * region's rate is added at its own rate on the way, the bus at the region's rate at the top, and the ladder steps the
  * buses above it down. The stages are the ones a voice's region converted with, so a bus continues the cascade its
@@ -44,7 +44,7 @@ class KatalystRegionEffect internal constructor(
     internal val body: KatalystChain,
     /** The 2x steps the region takes, at least 1 (a region with none is built as its body's stages in place). */
     internal val steps: Int,
-    /** The cascade stage of the region's first step: the steps of the chain it sits in (0 on an orbit). */
+    /** The cascade stage of the region's first step: the steps of the chain it sits in (0 on a cylinder). */
     firstStage: Int,
     /** The frames of one block of the chain the region sits in. */
     blockFrames: Int,
@@ -55,7 +55,7 @@ class KatalystRegionEffect internal constructor(
         KatalystContext(blockFrames = frames, mixBuffer = StereoBuffer(frames))
     }
 
-    // Down: one converter per channel over all the steps. Up: one per channel and step, so the orbit's rate buses can be
+    // Down: one converter per channel over all the steps. Up: one per channel and step, so the cylinder's rate buses can be
     // added between the steps; the same arithmetic as one converter over all of them.
     private val left = Oversampler(stages = steps, firstStage = firstStage)
     private val right = Oversampler(stages = steps, firstStage = firstStage)
@@ -88,7 +88,7 @@ class KatalystRegionEffect internal constructor(
     }
 
     /**
-     * One block; with a [ladder], the region heads an orbit's chain and takes the orbit's rate buses in (see the class
+     * One block; with a [ladder], the region heads a cylinder's chain and takes the cylinder's rate buses in (see the class
      * KDoc): the ladder's level is this region's rate.
      */
     internal fun process(ctx: KatalystContext, ladder: KatalystBusLadder?) {
@@ -127,7 +127,7 @@ class KatalystRegionEffect internal constructor(
         right.decimate(work = region.right, target = mix.right, offset = 0, length = frames)
     }
 
-    /** Adds the orbit's bus at [steps], when it holds audio this block, into the region's bus at that rate. */
+    /** Adds the cylinder's bus at [steps], when it holds audio this block, into the region's bus at that rate. */
     private fun addBus(ctx: KatalystContext, steps: Int, length: Int) {
         if (ctx.activeBuses and (1 shl steps) == 0) {
             return

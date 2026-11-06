@@ -64,7 +64,7 @@ object SongBenchmarkCases {
 
     private val leadSource = """
         n(`<[-7 0 2 4] [-7 0 4 [2 6]|[4 2]|2|2|2] [-5 -1 2 4] [-6 -1 [4 3]|5|3|3|3 [1 -1]|1|1|1|1]>*2`)
-          .orbit(0).scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>").sound("superramp").unison(voices = 5, spread = 0.08)
+          .cylinder(0).scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>").sound("superramp").unison(voices = 5, spread = 0.08)
           .gain(0.50).adsr(0.007, 4.0, 0.0, 0.01)
     """.trimIndent()
 
@@ -102,7 +102,7 @@ object SongBenchmarkCases {
         n(`<[7 [4@4 2 -1] 2 1 [0 -1 -3 -1] [0 -3] -2 <[-1 5@3] [5 6@3] [[4 5] 8@3] [[3 4] 3@3]>]!4
             [[4@2 [2 0] 0] [-1 -4] [-3 1 -3 1 -3!10 1 -3] [2 [2 6@3]]]!2
             [[-3,-7] [[-4,-5] [-1,-3]] [0,-3] <[[4 6],[0 -1]] [0,-1]>] [<[7,4] [[7 4 6 2]!4]> [-5 -6] [-7,-14] [-5 <-1 -4 -4 1>]]>/4`)
-          .orbit(1).scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").struct("<[x!16]!7 [x!24]!1 [x!16]!16>")
+          .cylinder(1).scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").struct("<[x!16]!7 [x!24]!1 [x!16]!16>")
           .velocity("0.98 0.95!7 0.97 0.95!7".fast(2)).analog(feel)
           .sound("supersaw").unison(voices = 9, spread = 0.08).gain(0.75 * 0.12).adsr(0.005, 2.5, 0.0, 0.029)
     """.trimIndent()
@@ -174,7 +174,7 @@ object SongBenchmarkCases {
     // wraps the whole guitar stack in .analog(feel) with feel = 13.0. Without them the
     // bare-signal denominator is far too cheap and the tone-chain share reads too high.
     private val gtrFxLadderPattern = """
-        n("0 2 4 5").fast(2).orbit(1).scale("e3:minor").sound(guitar).unison(voices = 15, spread = 0.08)
+        n("0 2 4 5").fast(2).cylinder(1).scale("e3:minor").sound(guitar).unison(voices = 15, spread = 0.08)
           .analog(13.0).gain(0.5).adsr(0.005, 2.5, 0.0, 0.029)
     """.trimIndent()
 
@@ -205,7 +205,7 @@ object SongBenchmarkCases {
         var expr = "signal"
         val out = ArrayList<SongBenchmark.Case>()
         // Floor: same pattern, trivial sine voice instead of the guitar. Approximates the fixed
-        // renderer overhead (scheduler, orbit mix, master limiter, output conversion) shared by
+        // renderer overhead (scheduler, cylinder mix, master limiter, output conversion) shared by
         // every rung — but note it also removes one sine voice's ignitor+ADSR+pipeline cost, and
         // the rungs (not the floor) carry .analog(13.0) drift. The floor-subtracted denominator
         // is therefore "guitar voice minus a sine voice, incl. analog drift", NOT pure
@@ -214,7 +214,7 @@ object SongBenchmarkCases {
             name = "GTR-FX: F floor (sine voice, no guitar)",
             code = code(
                 """
-                n("0 2 4 5").fast(2).orbit(1).scale("e3:minor").sound("sine")
+                n("0 2 4 5").fast(2).cylinder(1).scale("e3:minor").sound("sine")
                   .gain(0.5).adsr(0.005, 2.5, 0.0, 0.029)
                 """.trimIndent(),
             ),
@@ -272,7 +272,7 @@ object SongBenchmarkCases {
         // full − bare delta cancels it at every K.
         val chord = (0 until k).joinToString(",") { ((it * 2) % 28).toString() }
         return """
-            n("[$chord]").orbit(1).scale("e2:minor").sound(guitar).unison(voices = 15, spread = 0.08)
+            n("[$chord]").cylinder(1).scale("e2:minor").sound(guitar).unison(voices = 15, spread = 0.08)
               .analog(13.0).gain(0.3).adsr(0.005, 0.5, 1.0, 0.05)
         """.trimIndent()
     }
@@ -312,7 +312,7 @@ object SongBenchmarkCases {
         "GTR2 (full, uni7, nested superimpose)", "voice",
         """
         n("<0 0 2 4 0 0 -2 -1>")
-          .orbit(1).scale("<e2:minor>").struct("<[x!8]!14 [x!12]!2 [x!8]!32>").fast(2)
+          .cylinder(1).scale("<e2:minor>").struct("<[x!8]!14 [x!12]!2 [x!8]!32>").fast(2)
           .velocity("0.98 0.95!7 0.97 0.95!7".fast(2)).analog(feel)
           .sound("supersaw").unison(voices = 7, spread = 0.09).gain(0.75 * 0.11).distort(1, "tube").distort(0.85)
           .clip("<0.86!31 0.77 0.86!31 0.85 0.86!30 0.80 0.70>".fast(2)).adsr(0.005, 2.5, 0.0, 0.027).lpf(attack = 0.005, decay = 1.0, sustain = 0.0, release = 0.01)
@@ -329,7 +329,7 @@ object SongBenchmarkCases {
         "BASS (full, saw)", "voice",
         """
         n("<0 0 2 4 0 0 -2 -1>").struct("<[x!1]!16 [x@3 x]!48 [x!4]!80>").fast(2).velocity("0.98 0.98 0.99 0.98".fast(2))
-          .orbit(4).scale("e1:minor").sound("saw").gain(0.5 * 0.20).distort(0.05, "soft").clip(0.65)
+          .cylinder(4).scale("e1:minor").sound("saw").gain(0.5 * 0.20).distort(0.05, "soft").clip(0.65)
           .adsr(0.007, 5.0, 0.0, 0.015).lpf(attack = 0.001, decay = 0.05, sustain = 0.0, release = 0.01).hpf(freq = 60, q = 1.0).lpf(freq = 200, env = 62, q = 1.0)
           .pan(0.50)
         """.trimIndent(),
@@ -339,7 +339,7 @@ object SongBenchmarkCases {
         "DRUMS kick (bd, sampled)", "voice",
         """
         sound("<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd  ~ bd  ~]!32 [bd!4]!16 [bd ~ bd [~ bd]]!15 [bd!]!1>")
-          .pan(0.5).orbit(5).gain(0.24).hpf(45).lpf(11500).adsr(0.002, 0.10, 0.5, 0.2)
+          .pan(0.5).cylinder(5).gain(0.24).hpf(45).lpf(11500).adsr(0.002, 0.10, 0.5, 0.2)
         """.trimIndent(),
     )
 
@@ -347,14 +347,14 @@ object SongBenchmarkCases {
         "HATS (hh/oh/cr/rd, sampled)", "voice",
         """
         sound("<[hh hh hh hh]!16 [hh hh oh hh]!24 [cr hh cr hh]!24 [~ rd ~ rd]!32>").fast(2)
-          .pan(0.515).late(0.0005).orbit(5).gain(0.33).hpf(800).lpf("11500".add(perlin.mul(300))).adsr(0.005, 0.15, 0.8, 0.2)
+          .pan(0.515).late(0.0005).cylinder(5).gain(0.33).hpf(800).lpf("11500".add(perlin.mul(300))).adsr(0.005, 0.15, 0.8, 0.2)
         """.trimIndent(),
     )
 
     private val pink = voice(
         "PINK (pink noise)", "voice",
         """
-        sound("pink!8").orbit(6).gain(0.08).hpf(8000).pan(sine.range(0.25, 0.75).slow(3)).adsr(0.007, 0.3, 0.0, 0.05)
+        sound("pink!8").cylinder(6).gain(0.08).hpf(8000).pan(sine.range(0.25, 0.75).slow(3)).adsr(0.007, 0.3, 0.0, 0.05)
         """.trimIndent(),
     )
 
@@ -365,7 +365,7 @@ object SongBenchmarkCases {
     // Distort on a supersaw-uni9 + filters base (isolates the shaper's cost; the stage's own oversample factor retired
     // with KLANG-00214 step 4, and sprudel's voice has no region door).
     private val distortBase = """
-        n("0 2 4 5").fast(2).orbit(1).scale("e3:minor").sound("supersaw").unison(voices = 9, spread = 0.08)
+        n("0 2 4 5").fast(2).cylinder(1).scale("e3:minor").sound("supersaw").unison(voices = 9, spread = 0.08)
           .gain(0.75).adsr(0.005, 2.5, 0.0, 0.029).hpf(400).lpf(freq = 3000, env = 8.1, q = 2.0)
     """.trimIndent()
 
@@ -388,7 +388,7 @@ object SongBenchmarkCases {
     private fun unisonCase(n: Int): SongBenchmark.Case =
         voice(
             "UNISON: full chain uni$n", "exp-unison",
-            """n("0 2 4 5").fast(2).orbit(1).scale("e3:minor").sound("supersaw").unison(voices = $n, spread = 0.08).gain(0.75).adsr(0.005, 2.5, 0.0, 0.029)
+            """n("0 2 4 5").fast(2).cylinder(1).scale("e3:minor").sound("supersaw").unison(voices = $n, spread = 0.08).gain(0.75).adsr(0.005, 2.5, 0.0, 0.029)
     $fullChainTail""",
         )
 
@@ -396,7 +396,7 @@ object SongBenchmarkCases {
 
     // Body / room isolation on a fixed base: the clean marginal cost of each.
     private val fxBase = """
-        n("0 2 4 5").fast(2).orbit(1).scale("e3:minor").sound("supersaw").unison(voices = 9, spread = 0.08)
+        n("0 2 4 5").fast(2).cylinder(1).scale("e3:minor").sound("supersaw").unison(voices = 9, spread = 0.08)
           .gain(0.75).adsr(0.005, 2.5, 0.0, 0.029).hpf(400).lpf(freq = 3000, env = 8.1, q = 2.0)
           .distort(1, "tube").clip(0.85)
     """.trimIndent()
@@ -415,7 +415,7 @@ object SongBenchmarkCases {
     // cost(body | 1 super)   = [+super +body]    - [+super]
     // If the second is much larger than the first, superimpose amplifies body → multiplicative.
     private val intBase = """
-        n("0 2 4 5").fast(2).orbit(1).scale("e3:minor").sound("supersaw").unison(voices = 9, spread = 0.08)
+        n("0 2 4 5").fast(2).cylinder(1).scale("e3:minor").sound("supersaw").unison(voices = 9, spread = 0.08)
           .gain(0.75).adsr(0.005, 2.5, 0.0, 0.029).hpf(400).lpf(freq = 3000, env = 8.1, q = 2.0).distort(1, "tube").clip(0.85)
     """.trimIndent()
 
@@ -480,7 +480,7 @@ object SongBenchmarkCases {
     private val fmBell = voice(
         "FM BELL (sine, fm 200:1.4)", "voice",
         """
-        n("<0 2 4 5 7 5 4 2>").fast(2).orbit(6).scale("e4:minor").sound("sine").fm(200, 1.4, 0.01, 0.6, 0.2)
+        n("<0 2 4 5 7 5 4 2>").fast(2).cylinder(6).scale("e4:minor").sound("sine").fm(200, 1.4, 0.01, 0.6, 0.2)
           .adsr(0.005, 0.8, 0.3, 0.3).gain(0.4).pan(0.5)
         """,
     )
@@ -488,7 +488,7 @@ object SongBenchmarkCases {
     private val lfoPad = voice(
         "LFO PAD (saw, vibrato + tremolo)", "voice",
         """
-        n("<[0,4,7] [-3,2,5]>").orbit(6).scale("e3:minor").sound("saw").vibrato(5.5, 0.3).tremolo(0.5, 4)
+        n("<[0,4,7] [-3,2,5]>").cylinder(6).scale("e3:minor").sound("saw").vibrato(5.5, 0.3).tremolo(0.5, 4)
           .adsr(0.05, 0.5, 0.7, 0.4).gain(0.4).pan(0.5)
         """,
     )
@@ -589,7 +589,7 @@ object SongBenchmarkCases {
     /**
      * The song's arrangement without its two-cycle count-in: the band's gate (`late(2).filterWhen(t >= 2)`)
      * goes, and the count-in's own gate (`filterWhen(t < 2)`) becomes never, so the band plays from cycle 0
-     * and the count-in's orbit config (its own room) never claims the orbit it shares with the lead (orbit 0).
+     * and the count-in's cylinder config (its own room) never claims the cylinder it shares with the lead (cylinder 0).
      */
     private val ungateSong: (String) -> String = { src ->
         swap(from = "filterWhen(t => t < 2)", to = "filterWhen(t => t < 0)")(swap(from = "x => x.late(2).filterWhen(t => t >= 2)", to = "x => x")(src))

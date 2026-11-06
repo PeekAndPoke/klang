@@ -177,32 +177,32 @@ multiple events. This is the most compact way to write multi-cycle sequences in 
 
 ## Function Reference
 
-> ## ⚠️ PER-ORBIT (BUS) vs PER-VOICE EFFECTS — READ THIS
+> ## ⚠️ PER-CYLINDER (BUS) vs PER-VOICE EFFECTS: READ THIS
 >
-> Some effects run **once per orbit** (on the whole orbit's mixed signal), NOT per note. All voices on the
-> same `orbit(n)` **share** these: the orbit's bus settings are owned by the newest SOUNDING voice, and a
-> voice gives the orbit up when its gate closes or it is cut (its release rings on under whatever settings come
-> next); an older voice asking for different settings is ignored while a newer one sounds. **To give voices independent bus effects, put them on different orbits.**
+> Some effects run **once per cylinder** (on the whole cylinder's mixed signal), NOT per note. All voices on the
+> same `cylinder(n)` **share** these: the cylinder's bus settings are owned by the newest SOUNDING voice, and a
+> voice gives the cylinder up when its gate closes or it is cut (its release rings on under whatever settings come
+> next); an older voice asking for different settings is ignored while a newer one sounds. **To give voices independent bus effects, put them on different cylinders.**
 >
 > Since 2026-09-08 this is also metadata, not just prose: every DSL function carries a `@scope` tag that the
-> docs popup and the library page render as a badge (`KlangScope`, values `voice` / `orbit` / `master`). If this table and a badge ever disagree, the badge is generated from the function and wins.
+> docs popup and the library page render as a badge (`KlangScope`, values `voice` / `cylinder` / `master`). If this table and a badge ever disagree, the badge is generated from the function and wins.
 >
 > | Scope | Effects |
 > |-------|---------|
-> | **PER-ORBIT (bus)**: one processor per orbit, settings from the orbit's current owner voice (the orbit's bus settings are owned by the newest `Sounding` voice; a voice gives the orbit up when its gate closes or it is cut; settings glide over 50 ms when the owner changes) | `body` / `vowel` (their `wet` is the mix), `delay` and `reverb` (since 2026-09-19 inserts fed from the orbit mix at their place in the chain, so the room hears body, vowel and the delay's echoes; ONE `wet` per orbit, the owner's), `phaser` (slots `wet`/`rate`/`center`/`sweep`/`floor`; bus-owned since 2026-08-24, one sweep over the summed orbit; there is no per-voice phaser), `compressor`, ducking |
+> | **PER-CYLINDER (bus)**: one processor per cylinder, settings from the cylinder's current owner voice (the cylinder's bus settings are owned by the newest `Sounding` voice; a voice gives the cylinder up when its gate closes or it is cut; settings glide over 50 ms when the owner changes) | `body` / `vowel` (their `wet` is the mix), `delay` and `reverb` (since 2026-09-19 inserts fed from the cylinder mix at their place in the chain, so the room hears body, vowel and the delay's echoes; ONE `wet` per cylinder, the owner's), `phaser` (slots `wet`/`rate`/`center`/`sweep`/`floor`; bus-owned since 2026-08-24, one sweep over the summed cylinder; there is no per-voice phaser), `compressor`, ducking |
 > | **PER-VOICE**: independent per note | `lpf`/`hpf`/`bpf`/`notch` (with their `q`, `env` and envelope slots), `distort`, `crush`, `coarse`, `gain`/`velocity`/`pan`, `adsr` (slots `attack`/`decay`/`sustain`/`release`), `vibrato`, `tremolo`, `fm*`, pitch env (`penv`…), `unison`/`spread`, `analog`, `sound`/`n`/`note` |
-> | **PER-PLAYBACK (master)**: the whole song's bus, after every orbit | `master(Katalyst(k => k...))`: the same Katalyst chain an orbit runs (since phase 3 step 12), so every stage door works there (`gain(gain)` as make-up level, `limiter(...)`, `compressor(...)`, `eq(...)`, `reverb(wet, size, lowpass)`, `delay(wet, time, feedback, d => d.cap(level))`, `phaser`, `body`, `vowel`, `distort(amount, shape)`: the voice's distort on the whole mix, a clipper before the limiter at a small amount; at the bus's rate, so wrap it as `oversampleAtLeast(2, r => r.distort(0.1))` for less aliasing), each appending a stage, and `serial(a, b, ...)` to run the builder through functions of stages in order (`let hall = k => k.reverb(0.25, 7)`, then `k.serial(hall, ceiling)`), and `parallel(a, b, ...)` to run branches side by side and SUM them: each branch starts from an empty builder, the bus at that point, so an empty branch is the dry (`k.parallel(dry => dry, wet => wet.distort(0.5).gain(0.25))` is parallel distortion; two identical branches are +6 dB, a branch's `gain` sets the blend; a `reverb` or `delay` branch carries the dry too, so it is not a send; a late branch, an oversampling region or a `limiter` with a lookahead, is matched by delaying the others), and `bands(b => b.cut(150).band(mid => mid.distort(0.15)).cut(5000))` to split the bus into frequency bands read from the bottom up, each `band(f)` processing the band being written, `cut(hz)` starting the next (Linkwitz-Riley: untouched bands sum back to flat level; the master's distortion on the mids only, leaving the kick and the hats clean), and `blend(wet, b => ...)` for a dry/wet blend (linear law; `wet` a plain number on the Katalyst; the ignitor reference has a "Soundgoodizer-style" recipe, parallel multiband compression); `duck` is inert at the output and a `Katalyst.param(...)` stays at its default there |
+> | **PER-PLAYBACK (master)**: the whole song's bus, after every cylinder | `master(Katalyst(k => k...))`: the same Katalyst chain a cylinder runs (since phase 3 step 12), so every stage door works there (`gain(gain)` as make-up level, `limiter(...)`, `compressor(...)`, `eq(...)`, `reverb(wet, size, lowpass)`, `delay(wet, time, feedback, d => d.cap(level))`, `phaser`, `body`, `vowel`, `distort(amount, shape)`: the voice's distort on the whole mix, a clipper before the limiter at a small amount; at the bus's rate, so wrap it as `oversampleAtLeast(2, r => r.distort(0.1))` for less aliasing), each appending a stage, and `serial(a, b, ...)` to run the builder through functions of stages in order (`let hall = k => k.reverb(0.25, 7)`, then `k.serial(hall, ceiling)`), and `parallel(a, b, ...)` to run branches side by side and SUM them: each branch starts from an empty builder, the bus at that point, so an empty branch is the dry (`k.parallel(dry => dry, wet => wet.distort(0.5).gain(0.25))` is parallel distortion; two identical branches are +6 dB, a branch's `gain` sets the blend; a `reverb` or `delay` branch carries the dry too, so it is not a send; a late branch, an oversampling region or a `limiter` with a lookahead, is matched by delaying the others), and `bands(b => b.cut(150).band(mid => mid.distort(0.15)).cut(5000))` to split the bus into frequency bands read from the bottom up, each `band(f)` processing the band being written, `cut(hz)` starting the next (Linkwitz-Riley: untouched bands sum back to flat level; the master's distortion on the mids only, leaving the kick and the hats clean), and `blend(wet, b => ...)` for a dry/wet blend (linear law; `wet` a plain number on the Katalyst; the ignitor reference has a "Soundgoodizer-style" recipe, parallel multiband compression); `duck` is inert at the output and a `Katalyst.param(...)` stays at its default there |
 
 **The limiter.** `k.limiter(threshold, ratio, knee, attack, release, lookahead)`, flat and every parameter optional
 (an omitted one keeps its default): `threshold` in dBFS (-1), `ratio` (20), `knee` in dB (2), `attack`, `release` and
 `lookahead` in seconds (0.001, 0.1, 0). Name them: `k.limiter(threshold = -3, ratio = 4)`. It is a compressor stage
-with limiter defaults, so it works on an orbit too.
+with limiter defaults, so it works on a cylinder too.
 
 - An **always-on safety limiter** already runs on the summed mix (−1 dB, 20:1, 5 ms lookahead), so every song is delayed
   5 ms and peaks are already caught. An authored `limiter` stage is for *shaping*, not peak-catching.
 - **`lookahead` defaults to 0 and is opt-in**, because it costs exactly that much latency and stages stack: three
   limiters with lookahead are three delay lines. At the master it shifts this song against anything else playing; on an
-  orbit it shifts that orbit against the song's other orbits (nothing compensates).
+  cylinder it shifts that cylinder against the song's other cylinders (nothing compensates).
 - With lookahead **off**, `attack` is a one-pole time constant (short = keeps transient punch). With it **on**, `attack`
   is the gain-smoothing length — set it equal to the lookahead, since peak performance is invariant to it while
   low-frequency cleanliness tracks it.
@@ -211,14 +211,14 @@ with limiter defaults, so it works on an orbit too.
   → `gain(1.40)` → `limiter(threshold = -4.0, ratio = 4.0, attack = 0.008, release = 0.15)` → `gain(1.30)`. Slow attacks (30
   ms+) arrive after the transient and read as "shocks" on dense material.
 >
-> Example — two guitars that each need their **own** wood body must be on separate orbits:
+> Example, two guitars that each need their **own** wood body must be on separate cylinders:
 > ```javascript
 > stack(
->   guitarA.cylinder(1).body(material = "wood"),   // orbit 1's body
->   guitarB.cylinder(2).body(material = "wood"),   // orbit 2's body, independent
+>   guitarA.cylinder(1).body(material = "wood"),   // cylinder 1's body
+>   guitarB.cylinder(2).body(material = "wood"),   // cylinder 2's body, independent
 > )
 > ```
-> If both were `orbit(1)`, they'd share ONE body over their summed signal (fuller, but not two bodies).
+> If both were `cylinder(1)`, they'd share ONE body over their summed signal (fuller, but not two bodies).
 
 ### Tempo & Time
 
@@ -411,16 +411,16 @@ at the cutoff). Same third slot on the ignitor door.
 | `phaser.wet` / `phaser.rate` / `phaser.center` / `phaser.sweep` / `phaser.floor` |          | Read a phaser slot                                                                                                                                               | `p.phaser(center = 1000).lpf(phaser.center)`                 |
 | `tremolo(depth, rate, shape)`                                               |          | Tremolo: depth 0..1 FIRST, then the LFO rate in Hz (`rate`, `beatRate(n)` follows the tempo), LFO shape name (the oscillator of that name; square, sawtooth and ramp get a 16 ms soft edge). The level always dips from 1 to `1 - depth`; a swell upward is the Ignitor door's `range` knob, `.tremolo(rate, depth, x => x.range(0, 1))`: no pattern slot, by decision (2026-10-06) | `note("c3").tremolo(depth = 0.5, rate = 4, shape = "sine")`  |
 | `tremolo.depth` / `tremolo.rate`                                            |          | Read a tremolo slot (`shape` is a string, no reader)                                                                                                             | `p.tremolo(0.5, 4).phaser(rate = tremolo.rate)`                     |
-| `compressor(threshold, ratio, knee, attack, release)`                  | `comp`     | Orbit compressor; readers `compressor.threshold`, `.ratio`, `.knee`, `.attack`, `.release`                                                             | `s("bd sd hh sd").compressor(-20, 4, 6, 0.003, 0.1)`                                                 |
+| `compressor(threshold, ratio, knee, attack, release)`                  | `comp`     | Cylinder compressor; readers `compressor.threshold`, `.ratio`, `.knee`, `.attack`, `.release`                                                             | `s("bd sd hh sd").compressor(-20, 4, 6, 0.003, 0.1)`                                                 |
 | `duck(cylinder, depth, attack)`                                        |            | Sidechain: the cylinder that triggers, depth 0..1, recovery seconds (the duck-down is instant); readers `duck.cylinder`, `.depth`, `.attack`                 | `note("c2*8").s("saw").duck(1, 0.8, 0.2)`                                                            |
 | `vowel(wet, vowel, floor)`                                             |            | Vowel formant: wet FIRST (a mix 0..1), then the vowel name (no reader), dry floor; readers `vowel.wet`, `.floor`. A vowel alone is named: `vowel(vowel = "a")`; `"none"` is off | `note("c3").s("saw").vowel(0.8, "a")`                                                                |
 | `body(wet, material, floor)`                                           |            | Resonant body: wet FIRST (a mix 0..1), then the material name (no reader), dry floor; readers `body.wet`, `.floor`. A material alone is named: `body(material = "wood")`; `"none"` is off | `note("c3").s("saw").body(0.7, "wood")`                                                              |
-| `katalystParam(slot, value)` | `katp` | Write one slot of the orbit's Katalyst chain, per orbit (the newest sounding voice owns the orbit's values). `slot` is the slot's NAME (`"reverb.size"`, or the name of your own `Katalyst.param("room", 5)`) or the param OBJECT (`Katalyst.slot.reverb.size`, or a `Katalyst.param(...)` held in a variable). Writes exactly that one slot, so on the familiar chain a `katp("reverb.wet", 0.3)` alone stays silent until `reverb.size` is written too. An Ignitor param is a script error at the call (`an Ignitor param passed to katp; use ignp`) | `note("c3").s("saw").reverb(wet = 0.4).katp("reverb.size", "<2 8>")`, `.katp(Katalyst.slot.reverb.size, "<2 8>")`, `.katp(room, "<2 9>")` |
+| `katalystParam(slot, value)` | `katp` | Write one slot of the cylinder's Katalyst chain, per cylinder (the newest sounding voice owns the cylinder's values). `slot` is the slot's NAME (`"reverb.size"`, or the name of your own `Katalyst.param("room", 5)`) or the param OBJECT (`Katalyst.slot.reverb.size`, or a `Katalyst.param(...)` held in a variable). Writes exactly that one slot, so on the familiar chain a `katp("reverb.wet", 0.3)` alone stays silent until `reverb.size` is written too. An Ignitor param is a script error at the call (`an Ignitor param passed to katp; use ignp`) | `note("c3").s("saw").reverb(wet = 0.4).katp("reverb.size", "<2 8>")`, `.katp(Katalyst.slot.reverb.size, "<2 8>")`, `.katp(room, "<2 9>")` |
 
 #### Reverb size: how long the room rings
 
 Measured 2026-09-30 (offline renders at 48 kHz, a 20 ms saw note on C4, decay time read from the tail by Schroeder
-integration, the -5 to -35 dB slope extrapolated to 60 dB). The orbit and the master reverb are the same unit and
+integration, the -5 to -35 dB slope extrapolated to 60 dB). The cylinder and the master reverb are the same unit and
 measure the same (checked at sizes 3 and 7).
 
 | size | a note fades in (measured) | the lowest frequencies ring (from the design) | feels like |

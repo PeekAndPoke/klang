@@ -9,7 +9,7 @@ import io.peekandpoke.klang.common.infra.KlangSnapshotMap
 
 /**
  * Process-wide identity map for [KatalystDsl] chains, the chain-side mirror of
- * [IgnitorDsl.uniqueId]. One namespace for both positions: a chain used on an orbit and at the
+ * [IgnitorDsl.uniqueId]. One namespace for both positions: a chain used on a cylinder and at the
  * output is one registration under one name.
  *
  * Identity = structural equality on the [KatalystDsl] data class. Two structurally-equal chains

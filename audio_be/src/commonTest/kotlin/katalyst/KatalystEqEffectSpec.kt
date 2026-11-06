@@ -43,7 +43,7 @@ import io.kotest.matchers.ints.shouldBeGreaterThan as intShouldBeGreaterThan
 private val testRandom = Random(0x5EED)
 
 /**
- * The orbit's mix EQ ([KatalystEqEffect]): the same curve as on a voice, in one place instead of
+ * The cylinder's mix EQ ([KatalystEqEffect]): the same curve as on a voice, in one place instead of
  * N, and click-free when it moves.
  *
  * The claim the whole stage rests on is the motivation section's case 1: a static linear filter
@@ -56,7 +56,7 @@ class KatalystEqEffectSpec : StringSpec({
     val blockFrames = 128
     val sampleRate = 44100
     val blocks = 12
-    val orbit = 1
+    val cylinder = 1
 
     fun c(value: Double): IgnitorDsl = IgnitorDsl.Constant(value)
 
@@ -141,8 +141,8 @@ class KatalystEqEffectSpec : StringSpec({
         return worst
     }
 
-    /** [data] through the ORBIT stage: the mix buffer, block by block, left channel out. */
-    fun throughOrbit(chain: KatalystChain, data: DoubleArray): DoubleArray {
+    /** [data] through the CYLINDER stage: the mix buffer, block by block, left channel out. */
+    fun throughCylinder(chain: KatalystChain, data: DoubleArray): DoubleArray {
         chain.applyParams(null)
 
         val out = DoubleArray(data.size)
@@ -207,18 +207,18 @@ class KatalystEqEffectSpec : StringSpec({
     }
 
     /**
-     * One rendered orbit: real voices, a real cylinder, the chain installed by name. The left
+     * One rendered cylinder: real voices, a real cylinder, the chain installed by name. The left
      * channel of the fusion mix, block seams included.
      *
      * This is the path the case-1 claim is about. Everything else in the file is measured on the
-     * stage alone, which cannot see whether the orbit runs the EQ in the right place at all.
+     * stage alone, which cannot see whether the cylinder runs the EQ in the right place at all.
      */
-    fun renderOrbit(signals: List<Ignitor>, chain: KatalystDsl): DoubleArray {
+    fun renderCylinder(signals: List<Ignitor>, chain: KatalystDsl): DoubleArray {
         val registry = KatalystRegistry()
         val cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate, katalysts = registry)
 
         registry.register("probe", chain)
-        cylinders.requestChain(orbit, "probe")
+        cylinders.requestChain(cylinder, "probe")
 
         val renderCtx = Voice.RenderContext(
             cylinders = cylinders,
@@ -232,7 +232,7 @@ class KatalystEqEffectSpec : StringSpec({
             VoiceTestHelpers.createSynthVoice(
                 endFrame = (blocks * blockFrames).toDouble(),
                 gateEndFrame = (blocks * blockFrames).toDouble(),
-                cylinderId = orbit,
+                cylinderId = cylinder,
                 sampleRate = sampleRate,
                 blockFrames = blockFrames,
                 signal = signal,
@@ -260,13 +260,13 @@ class KatalystEqEffectSpec : StringSpec({
 
     // ── Case 1: the filter moves to the bus losslessly ───────────────────────────────────────────
 
-    "ONE voice: the same band on the voice and on its orbit render the same orbit output" {
+    "ONE voice: the same band on the voice and on its cylinder render the same cylinder output" {
         val data = noise(blocks * blockFrames)
         val band = IgnitorDsl.EqSection.Bell(freq = c(300.0), q = c(0.8), db = c(6.0))
 
-        // The voice carries the EQ inside its ignitor; its orbit declares an empty chain, which is
+        // The voice carries the EQ inside its ignitor; its cylinder declares an empty chain, which is
         // bit-transparent by construction (no stage at all).
-        val onVoice = renderOrbit(
+        val onVoice = renderCylinder(
             signals = listOf(
                 EqIgnitor(
                     upstream = ArraySource(data),
@@ -283,25 +283,25 @@ class KatalystEqEffectSpec : StringSpec({
             chain = KatalystDsl(emptyList()),
         )
 
-        // The voice is plain; the orbit's chain carries the band.
-        val onOrbit = renderOrbit(
+        // The voice is plain; the cylinder's chain carries the band.
+        val onCylinder = renderCylinder(
             signals = listOf(ArraySource(data)),
             chain = KatalystDsl.of(KatalystStageDsl.Eq(sections = listOf(band))),
         )
 
         withClue("the band is doing something: the EQ'd render is not the dry one") {
-            rms(onOrbit) shouldBeGreaterThan rms(data) * 0.5
-            maxAbsDiff(a = onOrbit, b = DoubleArray(onOrbit.size)) shouldBeGreaterThan 0.1
+            rms(onCylinder) shouldBeGreaterThan rms(data) * 0.5
+            maxAbsDiff(a = onCylinder, b = DoubleArray(onCylinder.size)) shouldBeGreaterThan 0.1
         }
 
         // NOT bit-identical, and the reason is not the EQ: the voice path filters the mono signal
         // BEFORE the voice's gain and pan multiply it, the bus path filters the product, and IEEE
         // multiplication does not commute with the recurrence bit for bit. Superposition holds to
         // the last few bits, which is what "moves losslessly" means in floating point.
-        maxAbsDiff(a = onVoice, b = onOrbit) shouldBeLessThan 1e-12
+        maxAbsDiff(a = onVoice, b = onCylinder) shouldBeLessThan 1e-12
     }
 
-    "TWO voices: the orbit's EQ is the EQ of the sum, which is the sum of the per-voice EQs" {
+    "TWO voices: the cylinder's EQ is the EQ of the sum, which is the sum of the per-voice EQs" {
         val a = sine(blocks * blockFrames, 220.0)
         val b = sine(blocks * blockFrames, 990.0)
         val band = IgnitorDsl.EqSection.Bell(freq = c(300.0), q = c(0.8), db = c(6.0))
@@ -318,12 +318,12 @@ class KatalystEqEffectSpec : StringSpec({
             ),
         )
 
-        val perVoice = renderOrbit(
+        val perVoice = renderCylinder(
             signals = listOf(voiceEq(a), voiceEq(b)),
             chain = KatalystDsl(emptyList()),
         )
 
-        val onBus = renderOrbit(
+        val onBus = renderCylinder(
             signals = listOf(ArraySource(a), ArraySource(b)),
             chain = KatalystDsl.of(KatalystStageDsl.Eq(sections = listOf(band))),
         )
@@ -361,18 +361,18 @@ class KatalystEqEffectSpec : StringSpec({
             eqSectionSpec(section).type shouldBe type
 
             val data = noise(blocks * blockFrames)
-            val onOrbit = throughOrbit(chainOf(KatalystStageDsl.Eq(sections = listOf(section))), data)
+            val onCylinder = throughCylinder(chainOf(KatalystStageDsl.Eq(sections = listOf(section))), data)
             val onVoice = throughVoiceAdapter(section = section, values = values, data = data)
 
             withClue("the section is audible at all: it changed the probe") {
-                maxAbsDiff(a = onOrbit, b = data) shouldBeGreaterThan 1e-3
+                maxAbsDiff(a = onCylinder, b = data) shouldBeGreaterThan 1e-3
             }
 
             // Bit-identical here, unlike the two rows above: the same core gets the same input and
             // the same coefficients, with no gain or pan multiply between the two paths.
             for (i in data.indices) {
                 withClue("frame $i") {
-                    onOrbit[i] shouldBe onVoice[i]
+                    onCylinder[i] shouldBe onVoice[i]
                 }
             }
         }
@@ -536,9 +536,9 @@ class KatalystEqEffectSpec : StringSpec({
             chainOf(KatalystStageDsl.Eq(sections = listOf(IgnitorDsl.EqSection.Bell(freq = freq, q = c(4.0), db = c(12.0)))))
 
         val input = noise(blocks * blockFrames)
-        val expression = throughOrbit(bell(IgnitorDsl.Times(left = c(2000.0), right = c(2.0))), input)
-        val unset = throughOrbit(bell(IgnitorDsl.Param("f", SLOT_UNSET)), input)
-        val folded = throughOrbit(bell(c(4000.0)), input)
+        val expression = throughCylinder(bell(IgnitorDsl.Times(left = c(2000.0), right = c(2.0))), input)
+        val unset = throughCylinder(bell(IgnitorDsl.Param("f", SLOT_UNSET)), input)
+        val folded = throughCylinder(bell(c(4000.0)), input)
 
         maxAbsDiff(expression, unset) shouldBe 0.0
 
@@ -549,7 +549,7 @@ class KatalystEqEffectSpec : StringSpec({
 
     // ── The two chain kinds, and the lifecycle ───────────────────────────────────────────────────
 
-    "an eq appended to the classic block engages from the orbit's param state like any stage" {
+    "an eq appended to the classic block engages from the cylinder's param state like any stage" {
         // `eq` is the one classic-block neighbour that never had a voice field, and it was
         // slot-driven one step before the rest of them (step 4). The row stays because it is the
         // cheapest place the classic-plus-eq shape is exercised end to end.
@@ -658,7 +658,7 @@ class KatalystEqEffectSpec : StringSpec({
         // Reaching a DIRTY bank takes three installs: the first takes bank 0, the second takes
         // bank 1 while bank 0 rings on as the outgoing one, the reset (a hard cut) lets go of both,
         // and the third takes the first bank the swap does not hold, bank 0 again. A `reset` in
-        // between is what an orbit does when it deactivates, and it must not leave the bank that
+        // between is what a cylinder does when it deactivates, and it must not leave the bank that
         // comes back holding the previous tenant's resonance.
         val chain = chainOf(
             KatalystStageDsl.Eq(

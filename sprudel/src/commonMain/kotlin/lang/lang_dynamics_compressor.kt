@@ -24,7 +24,7 @@ import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArg
 
 // -- compressor ------------------------------------------------------------------------------------------------------
 
-// Each setter writes the orbit chain's matching slot (`compressor.threshold`, ...), which is what
+// Each setter writes the cylinder chain's matching slot (`compressor.threshold`, ...), which is what
 // makes this door an alias of `katp` (signal-flow plan §7, Katalyst step 5a), and then fills the other
 // four. The slots are the compressor's only storage since Katalyst step 5b-3.
 
@@ -33,7 +33,7 @@ import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArg
  * the rule; this is only what THIS door does). Called from every one of the five setters, because
  * the compressor has no name knob: `compressor(ratio = 8)` compresses at the constant threshold.
  *
- * Since step 5b-1 the orbit's compressor reads the SLOTS and nothing else, and since step 5b-3
+ * Since step 5b-1 the cylinder's compressor reads the SLOTS and nothing else, and since step 5b-3
  * there are no voice fields beside them.
  *
  * Byte-identical to the engine's own fallback, which is what let the fill move to the door: the
@@ -140,14 +140,14 @@ private fun applyCompressorRelease(source: SprudelPattern, args: List<SprudelDsl
 }
 
 /**
- * The orbit compressor: threshold, ratio, knee, attack and release.
+ * The cylinder compressor: threshold, ratio, knee, attack and release.
  *
  * Levels above the threshold are turned down by the ratio, the knee softens the onset, and attack
  * and release set how fast it moves.
  *
- * One compressor per orbit bus, so it hears the whole orbit summed
- * and its settings come from the orbit's owning voice. That is what makes it a drum-bus compressor
- * rather than a per-note one: give a pattern its own orbit to compress it on its own.
+ * One compressor per cylinder bus, so it hears the whole cylinder summed
+ * and its settings come from the cylinder's owning voice. That is what makes it a drum-bus compressor
+ * rather than a per-note one: give a pattern its own cylinder to compress it on its own.
  *
  * The call sets every slot: the ones you leave out take the shared defaults, threshold -20 dB,
  * ratio 4:1, knee 6 dB, attack 3 ms and release 100 ms, unless an earlier call already set them. So
@@ -180,7 +180,7 @@ private fun applyCompressorRelease(source: SprudelPattern, args: List<SprudelDsl
  * @tool SprudelCompressorEditor
  * @tool threshold: SprudelCompressorEditor, SprudelCompressorSequenceEditor
  *
- * @scope orbit
+ * @scope cylinder
  * @category dynamics
  * @tags compressor, threshold, ratio, knee, attack, release
  */
@@ -213,7 +213,7 @@ fun PatternMapperFn.compressor(threshold: PatternLike? = null, ratio: PatternLik
  * The `compressor` object: `compressor(...)` sets the slots, and each numeric slot reads back as a child,
  * `compressor.threshold`, `compressor.ratio`, `compressor.knee`, `compressor.attack`, `compressor.release`.
  *
- * @scope orbit
+ * @scope cylinder
  * @category dynamics
  * @tags compressor, accessor
  */
@@ -262,7 +262,7 @@ object compressor {
  * s("bd sd hh sd").comp(-20, 4, 6, 0.003, 0.1)
  * ```
  *
- * @scope orbit
+ * @scope cylinder
  * @category dynamics
  * @tags comp, compressor
  * @tool SprudelCompressorEditor
@@ -280,7 +280,7 @@ fun String.comp(threshold: PatternLike? = null, ratio: PatternLike? = null, knee
 /**
  * Alias of [compressor]: the same object under its short name.
  *
- * @scope orbit
+ * @scope cylinder
  * @category dynamics
  * @tags comp, compressor, accessor
  */

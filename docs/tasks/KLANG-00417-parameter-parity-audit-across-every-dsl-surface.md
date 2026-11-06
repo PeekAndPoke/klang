@@ -11,7 +11,7 @@
 **The rule (maintainer, 2026-08-02):** *"The same params must be available in the sprudel DSL, Ignitor, Master etc.
 and they need to mean the same thing. This is important for developer experience."*
 
-The master DSL work proved this is not theoretical: `roomSize` silently meant a ~1 s tail on an orbit and ~12.5 s on
+The master DSL work proved this is not theoretical: `roomSize` silently meant a ~1 s tail on a cylinder and ~12.5 s on
 the master, because sprudel divided by 10 and the master did not, and `roomFade`, the parameter that actually set the
 tail, existed on only one of them. Both were fixed for reverb and delay; nothing has audited the rest.
 
@@ -22,13 +22,13 @@ but after the shape changes that would otherwise move the knobs it checked.
 ## What the audit covers
 
 Per effect and per source knob: does the same concept have the same **name**, the same **scale** and the same
-**availability** on every surface it could sensibly appear on: sprudel per voice, sprudel per orbit, the Ignitor, the
-Katalyst on an orbit and at the output, and both doors of each (KlangScript and Kotlin; KLANG-00148 (dsl kotlin
+**availability** on every surface it could sensibly appear on: sprudel per voice, sprudel per cylinder, the Ignitor, the
+Katalyst on a cylinder and at the output, and both doors of each (KlangScript and Kotlin; KLANG-00148 (dsl kotlin
 surface parity) is the two-door gate, this audit is the across-surfaces one).
 
 The asymmetries found so far, all resolved, as the shape of what to look for:
 
-- `room` (orbit) against `wet` (master): one thing, two words. Resolved 2026-08-24 and 2026-09-07: both doors say `wet`.
+- `room` (cylinder) against `wet` (master): one thing, two words. Resolved 2026-08-24 and 2026-09-07: both doors say `wet`.
 - `room(size)` 0..10 against `room(fade)` 0..1, `fade` making `size` inert: resolved 2026-09-16 (KLANG-00208 (reverb
   naming unification)), `fade` is gone.
 - `damp` on the master only: resolved 2026-09-16, `lowpass` (Hz) is the one damping knob, `reverb` the one door word.

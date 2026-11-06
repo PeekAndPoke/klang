@@ -19,7 +19,7 @@ sound name where it earns one, and is tuned by ear.
 | **Phase distortion** (Casio CZ warped sine) | high                  | Not built.                                                                                         |
 | **Chebyshev harmonics** as an oscillator    | high                  | Only as a distortion shape (`DistortionShape.CHEBYSHEV`, 3rd harmonic); no harmonic-mix oscillator. |
 | **Hard sync**                               | medium-high           | Not built.                                                                                         |
-| **Formant / vocal** oscillator              | medium                | Not built. Related, not the same: the orbit `vowel` filter and KLANG-00181 (phoneme singing).       |
+| **Formant / vocal** oscillator              | medium                | Not built. Related, not the same: the cylinder `vowel` filter and KLANG-00181 (phoneme singing).       |
 | **Waveguide reed / clarinet**               | medium                | Not built.                                                                                         |
 | **Wavetable**                               | low                   | Not built; needs wavetable data.                                                                   |
 

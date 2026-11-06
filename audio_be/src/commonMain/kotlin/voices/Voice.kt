@@ -48,14 +48,14 @@ import kotlin.math.ceil
  * gate only to an earlier frame than the one it has. A [cutOff] with a non-finite onset is **Done** from every
  * state. `Fading` and `Done` are terminal: nothing leads out of them but `Fading` to `Done`.
  *
- * The orbit's bus settings are owned by the newest `Sounding` voice; a voice gives the orbit up when its gate
- * closes or it is cut ([claimsOrbit]). The states are a sealed type: `Releasing` carries the cull's silence count
+ * The cylinder's bus settings are owned by the newest `Sounding` voice; a voice gives the cylinder up when its gate
+ * closes or it is cut ([claimsCylinder]). The states are a sealed type: `Releasing` carries the cull's silence count
  * and `Fading` the cut's fade window, each one instance created with the voice, so no transition allocates
  * ([State]). The plan: KLANG-00279 (voice lifecycle state machine).
  */
 class Voice(
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    // Identity: globally-unique, monotonic. Used by per-orbit effect ownership (`Cylinder.offer`) to order
+    // Identity: globally-unique, monotonic. Used by per-cylinder effect ownership (`Cylinder.offer`) to order
     // voices with the same onset (the later-created wins). Defaulted so every
     // constructed voice gets a fresh id. Voice creation is single-threaded (the render thread).
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -69,7 +69,7 @@ class Voice(
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
     // Dynamics & Routing
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    // The orbit's bus reads its knobs from [katalystParams] alone (Katalyst step 5b-1), and the
+    // The cylinder's bus reads its knobs from [katalystParams] alone (Katalyst step 5b-1), and the
     // voice carries no bus settings of its own since step 5b-3. Who reads what, exactly:
     //
     //   gain, pan     the channel (`mixIntoCylinder`), every block of every voice.
@@ -77,13 +77,13 @@ class Voice(
     val pan: Double,
 
     /**
-     * The orbit chain slots this voice writes (`VoiceData.katalystParams`), carried by REFERENCE:
+     * The cylinder chain slots this voice writes (`VoiceData.katalystParams`), carried by REFERENCE:
      * the wire map is immutable by contract and the copy would be per voice, for a map only the
-     * orbit's owner ever reads.
+     * cylinder's owner ever reads.
      *
-     * While this voice owns the orbit (the newest `Sounding` voice, see [claimsOrbit]), the orbit's
-     * chain resolves every `Param` knob against it (`KatalystChain.applyParams`), so this is the orbit's
-     * param state; the reference is dropped when the voice gives the orbit up, and the orbit keeps the
+     * While this voice owns the cylinder (the newest `Sounding` voice, see [claimsCylinder]), the cylinder's
+     * chain resolves every `Param` knob against it (`KatalystChain.applyParams`), so this is the cylinder's
+     * param state; the reference is dropped when the voice gives the cylinder up, and the cylinder keeps the
      * settings applied last until the next `Sounding` voice claims. Null when the pattern wrote no slot, which is the same answer as an empty map: the
      * chain's authored defaults. Which chain reads which slot of it is one rule with one home, the
      * `katalystParam` door's KDoc in `sprudel/lang/lang_katalyst.kt`: EVERY chain reads it, for every stage
@@ -167,20 +167,20 @@ class Voice(
      * window, so it turned `Done` at the end of that release block and the scheduler removed it, long before
      * its scheduled [endFrame] (the rest of the tail would only have produced silence). A latch, set with
      * that `Done`; the scheduler's culled count reads it. Until lifecycle step 5 a culled voice stayed listed
-     * as a zombie to keep the active list's order (it decided who took an orbit next); since ownership goes by
-     * onset ([claimsOrbit]) and the list keeps its order on every removal, nothing needs it any more.
+     * as a zombie to keep the active list's order (it decided who took a cylinder next); since ownership goes by
+     * onset ([claimsCylinder]) and the list keeps its order on every removal, nothing needs it any more.
      */
     var culled: Boolean = false
         private set
 
     /**
-     * Whether this voice offers itself as the owner of its orbit's bus settings in the block starting at
-     * [blockStart]: `Sounding`, and the gate still open at the voice's first frame in the block. The orbit's bus
-     * settings are owned by the newest `Sounding` voice; a voice gives the orbit up when its gate closes or it is
+     * Whether this voice offers itself as the owner of its cylinder's bus settings in the block starting at
+     * [blockStart]: `Sounding`, and the gate still open at the voice's first frame in the block. The cylinder's bus
+     * settings are owned by the newest `Sounding` voice; a voice gives the cylinder up when its gate closes or it is
      * cut (lifecycle step 5, maintainer 2026-10-07; the order is `Cylinder.offer`'s). A zero-length gate never
      * offers.
      */
-    fun claimsOrbit(blockStart: Double): Boolean =
+    fun claimsCylinder(blockStart: Double): Boolean =
         state is State.Sounding && gateEndFrame > maxOf(blockStart, startFrame)
 
     /**
@@ -308,7 +308,7 @@ class Voice(
      * is silent so far and ends at once; the scheduler removes it, keeping the list's order).
      *
      * A `Fading` voice plays on until [fadeStartFrame], then ramps linearly to exact zero over [CUT_FADE_SECONDS]
-     * (after the instrument tree, before the channel, so what reaches the orbit fades too). The fade window lives in the
+     * (after the instrument tree, before the channel, so what reaches the cylinder fades too). The fade window lives in the
      * `Fading` state ([State.Fading]); the end frame does not move, so a voice whose own end comes first ends there
      * as usual (its teardown, where it has one, stays at its own end and multiplies with the ramp in the overlap;
      * both are continuous).
@@ -663,7 +663,7 @@ class Voice(
         // Monotonic voice-id source for [id]. Voice creation is single-threaded (render thread), so a plain
         // counter is enough. Wrap-safe (audit leftovers §3): after 2^31 ids it turns negative and an id repeats
         // only after 2^32. The one reader, `Cylinder.offer`, compares ids only between voices of the same onset
-        // on one orbit, to order them; across the one wrap (2^31 voices, about a year of dense playing) one tie
+        // on one cylinder, to order them; across the one wrap (2^31 voices, about a year of dense playing) one tie
         // would go the other way, inaudibly.
         private var idCounter: Int = 0
         private fun nextId(): Int = idCounter++

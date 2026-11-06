@@ -26,7 +26,7 @@ import io.peekandpoke.klang.sprudel.putKatalystParam
 
 // -- phaser, the wet slot (the head) --------------------------------------------------------------------------------
 
-// Every phaser slot writes the voice field AND the orbit chain's matching slot (`phaser.wet`, ...),
+// Every phaser slot writes the voice field AND the cylinder chain's matching slot (`phaser.wet`, ...),
 // which is what makes this door an alias of `katp` on a DECLARED chain (signal-flow plan §7, Katalyst
 // step 5a).
 //
@@ -49,7 +49,7 @@ import io.peekandpoke.klang.sprudel.putKatalystParam
  *
  * Fills the voice FIELDS with the same five constants, so the field accessors (`phaser.wet`) read
  * what the slots hold. The fields no longer cross the wire (the per-voice phaser that read them
- * retired in phase 3 step 9, the wire fields with it); the orbit reads the slots.
+ * retired in phase 3 step 9, the wire fields with it); the cylinder reads the slots.
  *
  * One consequence worth knowing, and it holds for every filled door (`duck` included since step
  * 5b-3, when its accessors moved onto the slots its fill writes): a filled knob becomes
@@ -106,11 +106,11 @@ private fun applyPhaserWet(source: SprudelPattern, args: List<SprudelDslArg<Any?
 
 
 /**
- * The orbit phaser: depth, rate, centre, sweep and dry floor.
+ * The cylinder phaser: depth, rate, centre, sweep and dry floor.
  *
- * One sweep over the summed orbit bus, the DAW-insert model, so every
- * knob belongs to the orbit's owning voice: a voice that sets phaser knobs without owning its orbit
- * is not phased at all. Route it to its own orbit to give it its own phaser.
+ * One sweep over the summed cylinder bus, the DAW-insert model, so every
+ * knob belongs to the cylinder's owning voice: a voice that sets phaser knobs without owning its cylinder
+ * is not phased at all. Route it to its own cylinder to give it its own phaser.
  *
  * The dry signal stays untouched by default (`floor` is 1), so `wet` ADDS the swept notch on top
  * rather than crossfading into it. Lower `floor` to turn `wet` back into a crossfade.
@@ -151,7 +151,7 @@ private fun applyPhaserWet(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * @tool SprudelPhaserEditor
  * @tool rate: SprudelPhaserEditor, SprudelPhaserSequenceEditor
  *
- * @scope orbit
+ * @scope cylinder
  * @category effects
  * @tags phaser, wet, rate, center, sweep, floor
  */
@@ -205,7 +205,7 @@ fun PatternMapperFn.phaser(
  * The `phaser` object: `phaser(...)` sets the slots, and each numeric slot reads back as a child,
  * `phaser.rate`, `phaser.wet`, `phaser.center`, `phaser.sweep`, `phaser.floor`.
  *
- * @scope orbit
+ * @scope cylinder
  * @category effects
  * @tags phaser, accessor
  */
@@ -335,7 +335,7 @@ private fun applyTremoloRate(source: SprudelPattern, args: List<SprudelDslArg<An
  * The tremolo: depth, rate and waveform.
  *
  * Unlike the phaser above it, the tremolo runs per voice: every note gets
- * its own LFO, so two notes on one orbit can wobble at different rates. The LFO is the oscillator
+ * its own LFO, so two notes on one cylinder can wobble at different rates. The LFO is the oscillator
  * of that shape; the square, sawtooth and ramp get a 16 ms soft edge, so they pulse without clicking.
  *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes

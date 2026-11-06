@@ -147,7 +147,7 @@ class MasterBusTest : StringSpec({
     "a Katalyst.param slot at the output is its default: nothing fills it there (decision b1)" {
         // Phase 3 step 12 decision (b): the output has no param channel. A slot in a master chain
         // is the number its author wrote as the default, even when the carrier event carries a
-        // value under that very name (which is what an orbit's owner voice would hand an orbit
+        // value under that very name (which is what a cylinder's owner voice would hand a cylinder
         // chain). Before step 12 C5 no Param could reach the output; now `Katalyst.param(...)` can.
         fun render(dsl: KatalystDsl?): DoubleArray {
             val d = newDispatcher()
@@ -384,7 +384,7 @@ class MasterBusTest : StringSpec({
         val d = newDispatcher()
         // The event references a master the backend has never heard of (a dropped or late
         // RegisterKatalyst). It must NOT pin the playback to unity forever. Since step 12 C4 the
-        // name is parked (the orbit's rule) and the engine polls it every block, so the ONE event
+        // name is parked (the cylinder's rule) and the engine polls it every block, so the ONE event
         // is enough: a one-shot `note(...).master(...)` never re-emits.
         d.handle(
             KlangCommLink.Cmd.ScheduleVoices(
@@ -825,7 +825,7 @@ class MasterBusTest : StringSpec({
 
     // ── The swap law (phase 3 step 12 C4, decision (f)) ─────────────────────────────────────
     //
-    // The master runs the orbit's `ChainSwap`: the leaving chain's INPUT ramps down while the
+    // The master runs the cylinder's `ChainSwap`: the leaving chain's INPUT ramps down while the
     // arriving chain's output ramps up, then the leaving chain drains at full weight on silence.
     // These rows drive a bus directly, in the engine's order per block: the request (the
     // scheduler's), `pollPendingSwap`, `process`, `markRendered`.
@@ -1105,7 +1105,7 @@ class MasterBusTest : StringSpec({
     }
 
     "a self-sustaining master swapped away, with no request waiting, is released at the drain's cap: exp(-k / tau) from exactly 1, then 0" {
-        // Step 12 decision (i), the master half (the orbit's is `ChainSwapCapSpec`). The oracle is a
+        // Step 12 decision (i), the master half (the cylinder's is `ChainSwapCapSpec`). The oracle is a
         // control bus that keeps the loop in service on the same silent input: the swapped bus must
         // be its ring times the decided weight, `CapLaw` (1 through the fade and the drain, the
         // exponential release from the cap, 0 under its floor), computed from the constants.
@@ -1191,7 +1191,7 @@ class MasterBusTest : StringSpec({
     }
 
     "a request at the master while the leaving chain drains cuts the ring-out: a raised cosine from 1 to 0, then it lands" {
-        // The orbit's rows are `ChainSwapCutSpec`'s; the oracle is the same: a control bus given the
+        // The cylinder's rows are `ChainSwapCutSpec`'s; the oracle is the same: a control bus given the
         // same script without the request plays the ring the swapped bus cuts, sample for sample.
         fun rig() = Rig().apply {
             registry.register("hall", room(wet = 0.6, size = 8.0))

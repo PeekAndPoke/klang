@@ -30,7 +30,7 @@ import io.peekandpoke.klang.sprudel.putKatalystParam
  * does). Called from the MATERIAL setter alone, because the material is this stage's name knob.
  *
  * Fills the voice FIELDS with the same two constants, so the field accessors (`body.wet`) read what
- * the slots hold. The wire does not carry the fields: since step 5b-1 the orbit's resonator reads the
+ * the slots hold. The wire does not carry the fields: since step 5b-1 the cylinder's resonator reads the
  * SLOTS and nothing else, and the `filters` field that once carried a `FilterDef.Body` left
  * `VoiceData` in phase 3 step 9. The engine substitutes the same two constants for an unset slot
  * in `KatalystResonatorEffect.configure`; what the fill buys is that one place decides them.
@@ -50,7 +50,7 @@ private fun SprudelVoiceData.fillBodyDefaults() {
     }
 }
 
-// The MATERIAL goes into the orbit chain's slot state as a number: `body.material` carries the
+// The MATERIAL goes into the cylinder chain's slot state as a number: `body.material` carries the
 // material's INDEX in `BodyMaterials.names`, and `BodyMaterials.indexOf` is the one conversion both
 // doors use (Katalyst step 5a-2, 2026-09-18). That is what keeps `body(material = "wood")` working
 // on a DECLARED chain without a string ever reaching the wire as a slot. An unknown name is index
@@ -116,14 +116,14 @@ private fun applyBodyFloor(source: SprudelPattern, args: List<SprudelDslArg<Any?
 /**
  * The resonant body: the material, its mix and its dry floor.
  *
- * Runs the orbit through a resonating body, the way a guitar top or a drum shell colours what passes
- * through it. One body per orbit bus, so ALL of it, `material`
- * included, is set once for everyone by the orbit's owning voice.
+ * Runs the cylinder through a resonating body, the way a guitar top or a drum shell colours what passes
+ * through it. One body per cylinder bus, so ALL of it, `material`
+ * included, is set once for everyone by the cylinder's owning voice.
  *
  * `wet` here is a mix (and `floor` how much of the dry stays under it): the body processes the whole
- * orbit mix. The `wet` of `reverb` and `delay` reads differently: it is how much of the orbit goes
+ * cylinder mix. The `wet` of `reverb` and `delay` reads differently: it is how much of the cylinder goes
  * INTO them, a send, and their sound is added on top of the dry. Give a
- * pattern its own body by giving it its own orbit.
+ * pattern its own body by giving it its own cylinder.
  *
  * Materials: woods `wood`, `cedar`, `spruce`, `mahogany`, `rosewood`, `maple`, `oak`; bowed string
  * `violin`; voice `croon`; pipe and glass `tube`, `glass`; skin `membrane`; metals `brass`, `steel`,
@@ -148,8 +148,8 @@ private fun applyBodyFloor(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * the material's default. To double the wet, map it in a later call, once it is set:
  * `body(material = "wood").body(wet = mul(2))` is wet 1.0.
  *
- * All three reach a DECLARED orbit chain as chain slots, `material` as the index of its name in the
- * material catalogue (`body.material`, 0 = none), so the same call works whether the orbit declares
+ * All three reach a DECLARED cylinder chain as chain slots, `material` as the index of its name in the
+ * material catalogue (`body.material`, 0 = none), so the same call works whether the cylinder declares
  * a chain or runs the historical one, down to the sample. Guarded by
  * `KatalystDoorFillRenderSpec`, which renders the short and the long spelling and compares samples.
  *
@@ -165,12 +165,12 @@ private fun applyBodyFloor(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * note("c3 e3").s("saw").body("<0.2 0.9>", "tube").reverb(wet = body.wet, size = 4)   // as much reverb as body
  * ```
  *
- * @param wet How much of the orbit runs through the body, 0 to 1.
+ * @param wet How much of the cylinder runs through the body, 0 to 1.
  * @param material Material name. See the list above.
  * @param floor Minimum dry share kept in the mix, 0 to 1.
  * @tool material: SprudelBodyEditor, SprudelBodySequenceEditor
  *
- * @scope orbit
+ * @scope cylinder
  * @category effects
  * @tags body, wet, material, floor
  */
@@ -216,7 +216,7 @@ fun PatternMapperFn.body(
  * The `body` object: `body(...)` sets the slots, and each numeric slot reads back as a child,
  * `body.wet`, `body.floor`.
  *
- * @scope orbit
+ * @scope cylinder
  * @category effects
  * @tags body, accessor
  */
@@ -235,7 +235,7 @@ object body {
     /**
      * The setter, see [SprudelPattern.body].
      *
-     * @param wet How much of the orbit runs through the body, 0 to 1.
+     * @param wet How much of the cylinder runs through the body, 0 to 1.
      * @param material Material name, see the list at [SprudelPattern.body].
      * @param floor Minimum dry share kept in the mix, 0 to 1.
      */

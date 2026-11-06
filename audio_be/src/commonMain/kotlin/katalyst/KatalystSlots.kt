@@ -27,7 +27,7 @@ import io.peekandpoke.klang.common.infra.KlangMap
  */
 
 /**
- * One knob of a DECLARED stage: its authored value, plus the slot names the orbit's param state may move it with.
+ * One knob of a DECLARED stage: its authored value, plus the slot names the cylinder's param state may move it with.
  *
  * Built ONCE per knob when the chain is built, in one of three shapes:
  *  - a [KatalystKnobDsl.Constant] is its number, and so is an expression without a slot leaf, folded here through
@@ -49,7 +49,7 @@ import io.peekandpoke.klang.common.infra.KlangMap
  * clocks as they stand, which moves no clock), then the chain's [tick] (a run, then every clock one block on). So a
  * block that resolves reads the same clocks twice and advances them once: never a double advance.
  *
- * **Resolution happens ONCE, when the chain is built**, and again only when the orbit's param state CHANGES (Katalyst
+ * **Resolution happens ONCE, when the chain is built**, and again only when the cylinder's param state CHANGES (Katalyst
  * step 5a): the answer of a knob without a modulator is block-constant, so the writer [KatalystChainBuilder] installs
  * holds the resolved numbers here and re-applies them on every owner claim. That is what keeps a writer
  * allocation-free per block. A modulated knob moves only through [tick], into the same fields.
@@ -164,7 +164,7 @@ internal class KatalystKnob(
         private set
 
     /**
-     * True when [value] came OUT of the orbit's param state as a finite number, rather than from
+     * True when [value] came OUT of the cylinder's param state as a finite number, rather than from
      * what the chain authored. "The pattern wrote this knob", which is the slot twin of the wire's
      * old "the voice TOUCHED this effect" (`VoiceFactory`'s `reverbTouched` / `delayTouched`), and
      * the delay and reverb stages need it to keep that rule (see [KatalystReverbWriter]).
@@ -182,7 +182,7 @@ internal class KatalystKnob(
     var written: Boolean = false
         private set
 
-    /** Re-reads the slots from the orbit's param state; null (no owner, no slots) is the defaults. */
+    /** Re-reads the slots from the cylinder's param state; null (no owner, no slots) is the defaults. */
     fun resolve(params: KlangMap<Double>?) {
         val compiled = program
 

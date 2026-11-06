@@ -33,7 +33,7 @@ Per the Q3 plan, the problem is quality and coherence, not coverage: many tutori
   examples musical.
 - Workflow: **Claude frames, the user polishes the jingle, Claude works backwards** from the polished
   jingle (feedback `tutorial_workflow`).
-- Quality bar (feedback memories): per-orbit effects, `chord()` + `voicing()` syntax, pan 0.0–1.0,
+- Quality bar (feedback memories): per-cylinder effects, `chord()` + `voicing()` syntax, pan 0.0 to 1.0,
   musicality over complexity (`tutorial_quality`); content for **adults that kids also enjoy**, not the
   reverse (`design_for_adults`); complex topics span **multiple** tutorials across difficulty levels,
   not one dense tutorial (`tutorial_series`).
@@ -41,7 +41,7 @@ Per the Q3 plan, the problem is quality and coherence, not coverage: many tutori
 ## Out of scope (→ KLANG-00086 (tutorial master plan))
 
 The large concept/showcase **expansion** backlog (euclid, struct/mask, swing, the sometimes-family,
-orbits, pattern-math, FM / super-osc masterclasses, the "Make a…" showcases). That comes *after* this
+cylinders, pattern-math, FM / super-osc masterclasses, the "Make a…" showcases). That comes *after* this
 fix-first pass lands.
 
 ## Links

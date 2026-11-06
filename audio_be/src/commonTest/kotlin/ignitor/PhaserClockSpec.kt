@@ -237,7 +237,7 @@ class PhaserClockSpec : StringSpec({
     }
 
     "bus door: a rate-0 static notch still clears its cascade when gated" {
-        // The fast path skips everything for phaser-less orbits, and its !engaged term is what
+        // The fast path skips everything for phaser-less cylinders, and its !engaged term is what
         // keeps it from skipping the gate-close CLEAR of an engaged static notch (rate = 0.0 is
         // legal and documented: a frozen notch). Review round 3 found the term unkilled.
         fun tone(i: Int) = sin(0.11 * i)

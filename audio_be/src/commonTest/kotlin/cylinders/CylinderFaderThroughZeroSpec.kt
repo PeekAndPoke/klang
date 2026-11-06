@@ -28,17 +28,17 @@ import kotlin.math.abs
 import kotlin.math.round
 
 /**
- * The group fader patterned through exactly 0 on a dry orbit (signal-flow plan section 11, DECIDED
- * 2026-09-19, Katalyst 5c-8): **an orbit never deactivates while a voice plays on it**, so a muted
- * orbit with notes keeps running at 0 and its fader glides back up from where it stands.
+ * The group fader patterned through exactly 0 on a dry cylinder (signal-flow plan section 11, DECIDED
+ * 2026-09-19, Katalyst 5c-8): **a cylinder never deactivates while a voice plays on it**, so a muted
+ * cylinder with notes keeps running at 0 and its fader glides back up from where it stands.
  *
- * Before the decision the silence gate read the post-fader mix, so the orbit was reset every
- * tenth block while its voices played (one orbit: deactivated at the tenth silent visit,
+ * Before the decision the silence gate read the post-fader mix, so the cylinder was reset every
+ * tenth block while its voices played (one cylinder: deactivated at the tenth silent visit,
  * reactivated by the next check-in, the count restarting), the owner was re-dealt, and the fader came back as a
  * one-sample jump or a one-block ramp mid-note depending on which voice claimed first.
  *
  * The oracles are the decided laws, never numbers read off a run: the CHECK-IN (every rendering voice
- * checks in each block and keeps the orbit in use until one block after its last check-in), OWNERSHIP
+ * checks in each block and keeps the cylinder in use until one block after its last check-in), OWNERSHIP
  * (the newest sounding voice owns; when it stops, the next owns from that block, `Cylinder.offer`), and
  * the knob-glide LEVEL law (linear over `KNOB_GLIDE_SECONDS` rounded to whole
  * blocks, per sample, landing exactly; `audio/ref/knob-glide.md`), applied to a reference render of
@@ -48,7 +48,7 @@ class CylinderFaderThroughZeroSpec : StringSpec({
 
     val blockFrames = 128
     val sampleRate = 44100
-    val orbit = 1
+    val cylinder = 1
 
     /** The decided glide length: the glide time rounded to whole blocks. */
     val glideBlocks = round(KNOB_GLIDE_SECONDS * sampleRate / blockFrames).toInt()
@@ -57,14 +57,14 @@ class CylinderFaderThroughZeroSpec : StringSpec({
         startFrame = (fromBlock * blockFrames).toDouble(),
         endFrame = (toBlock * blockFrames).toDouble(),
         gateEndFrame = (toBlock * blockFrames).toDouble(),
-        cylinderId = orbit,
+        cylinderId = cylinder,
         sampleRate = sampleRate,
         blockFrames = blockFrames,
         signal = TestIgnitors.constant,
         katalystParams = fader?.let { klangMapOf("gain.gain" to it) },
     )
 
-    /** What one block of the engine leaves behind: the orbit's output and whether it is still active. */
+    /** What one block of the engine leaves behind: the cylinder's output and whether it is still active. */
     class Block(val left: DoubleArray, val active: Boolean)
 
     /**
@@ -94,7 +94,7 @@ class CylinderFaderThroughZeroSpec : StringSpec({
         }
     }
 
-    "a muted orbit never deactivates while its voice plays, and goes on the first block after the check-in's grace" {
+    "a muted cylinder never deactivates while its voice plays, and goes on the first block after the check-in's grace" {
         // The voice renders blocks 0..29 and is muted by the fader throughout, so the post-fader
         // mix is silent from the first block and the silence grace is served by block 9.
         val out = render(listOf(voice(fromBlock = 0, toBlock = 30, fader = 0.0)), blocks = 40)
@@ -110,9 +110,9 @@ class CylinderFaderThroughZeroSpec : StringSpec({
         }
     }
 
-    "a voice that is not the owner keeps the orbit alive after the owner has ended" {
+    "a voice that is not the owner keeps the cylinder alive after the owner has ended" {
         // A ends after block 19; B (newer, so the owner from block 5) plays on until block 39. Both
-        // muted, so only the check-in can hold the orbit.
+        // muted, so only the check-in can hold the cylinder.
         val out = render(
             listOf(voice(fromBlock = 0, toBlock = 20, fader = 0.0), voice(fromBlock = 5, toBlock = 40, fader = 0.0)),
             blocks = 50,
@@ -120,14 +120,14 @@ class CylinderFaderThroughZeroSpec : StringSpec({
 
         for (b in 0 until 50) {
             withClue("block $b") {
-                // B checks in through block 39; its grace holds block 40, and the orbit goes after it.
+                // B checks in through block 39; its grace holds block 40, and the cylinder goes after it.
                 out[b].active shouldBe (b <= 40)
             }
         }
     }
 
     "the fader comes back up from 0 by the glide, from where it stands, when the next owner takes over" {
-        // A (fader 0) owns the orbit and ends after block 19; B (fader 1) has been playing, muted,
+        // A (fader 0) owns the cylinder and ends after block 19; B (fader 1) has been playing, muted,
         // all along. Same onset: A is created later, so it is the newer voice and owns (lifecycle step 5).
         // The reference renders the same two voices with no fader value (unity).
         fun pair(faderB: Double?, faderA: Double?): List<Voice> {
@@ -175,9 +175,9 @@ class CylinderFaderThroughZeroSpec : StringSpec({
     // ── Through the engine: the frame the cleanup reads is the one the voices claimed with ─────────
 
     /**
-     * A muted sine on orbit 0 through a whole [PlaybackEngineDispatcher], with or without a master
-     * chain (the engine renders its orbits through two different calls, one per case). Returns, per
-     * block, whether the engine still holds the voice and whether any of its orbits is active.
+     * A muted sine on cylinder 0 through a whole [PlaybackEngineDispatcher], with or without a master
+     * chain (the engine renders its cylinders through two different calls, one per case). Returns, per
+     * block, whether the engine still holds the voice and whether any of its cylinders is active.
      */
     fun engineRun(withMaster: Boolean): List<Pair<Boolean, Boolean>> {
         val d = PlaybackEngineDispatcher.create(
@@ -225,10 +225,10 @@ class CylinderFaderThroughZeroSpec : StringSpec({
     }
 
     listOf(false, true).forEach { withMaster ->
-        "through the engine${if (withMaster) " with a master chain" else ""}: a muted voice holds its orbit exactly as long as it plays" {
+        "through the engine${if (withMaster) " with a master chain" else ""}: a muted voice holds its cylinder exactly as long as it plays" {
             val run = engineRun(withMaster)
             // The first block the engine no longer holds the voice: its last check-in was the block
-            // before, the owner's grace covers this one, and the orbit goes on the next visit.
+            // before, the owner's grace covers this one, and the cylinder goes on the next visit.
             val gone = run.indexOfFirst { (playing, _) -> !playing }
 
             withClue("the voice started and ended inside the run") {

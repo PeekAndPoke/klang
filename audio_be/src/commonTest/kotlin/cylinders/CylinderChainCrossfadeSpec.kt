@@ -35,7 +35,7 @@ import io.peekandpoke.klang.common.infra.toKlangMap
 import kotlin.math.abs
 
 /**
- * The chain swap of a SOUNDING orbit: the dual-chain crossfade, and the drain that lets the
+ * The chain swap of a SOUNDING cylinder: the dual-chain crossfade, and the drain that lets the
  * outgoing chain ring out instead of being cut (Katalyst step 3b, KLANG-00236 (katalyst dsl) §6
  * and §D3).
  *
@@ -64,7 +64,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
     /** Blocks the ramp spans, from the shared constant, plus one for the block it completes in. */
     val fadeBlocks = (Crossfade.XFADE_SECONDS * sampleRate / blockFrames).toInt() + 2
 
-    /** The DC probe's level: what the voices sum into the orbit's mix buffer every block. */
+    /** The DC probe's level: what the voices sum into the cylinder's mix buffer every block. */
     val probe = 0.5
 
     /**
@@ -102,17 +102,17 @@ class CylinderChainCrossfadeSpec : StringSpec({
         KatalystStageDsl.Reverb(wet = KatalystKnobDsl.Constant(0.5), size = KatalystKnobDsl.Constant(size)),
     )
 
-    /** A chain whose only stage is a duck listening to [orbit]. */
-    fun duckChain(depth: Double, attack: Double, orbit: Double = 0.0) = KatalystDsl.of(
+    /** A chain whose only stage is a duck listening to [cylinder]. */
+    fun duckChain(depth: Double, attack: Double, cylinder: Double = 0.0) = KatalystDsl.of(
         KatalystStageDsl.Duck(
-            cylinder = KatalystKnobDsl.Constant(orbit),
+            cylinder = KatalystKnobDsl.Constant(cylinder),
             depth = KatalystKnobDsl.Constant(depth),
             attack = KatalystKnobDsl.Constant(attack),
         )
     )
 
     /**
-     * A chain whose duck takes ALL THREE knobs from the orbit's param state, which is what
+     * A chain whose duck takes ALL THREE knobs from the cylinder's param state, which is what
      * `.duck(cylinder = n, depth = d)` writes on a declared chain from Katalyst step 5a on. The
      * defaults are the classic chain's, so with no state the stage resolves to no duck at all.
      */
@@ -141,24 +141,24 @@ class CylinderChainCrossfadeSpec : StringSpec({
     )
 
     /** What `.duck(cylinder = n, depth = d)` writes into the event's slot state. */
-    fun duckState(orbit: Double, depth: Double, attack: Double = 0.05): Map<String, Double> =
-        mapOf("duck.cylinder" to orbit, "duck.depth" to depth, "duck.attack" to attack)
+    fun duckState(cylinder: Double, depth: Double, attack: Double = 0.05): Map<String, Double> =
+        mapOf("duck.cylinder" to cylinder, "duck.depth" to depth, "duck.attack" to attack)
 
     /**
-     * A chain with NO duck stage at all, for a row that needs "nothing ducked this orbit before
+     * A chain with NO duck stage at all, for a row that needs "nothing ducked this cylinder before
      * the swap". Since Katalyst step 5b-1 the chain a cylinder is born with reads `duck.*` from
      * the owner's slot state like any declared one, so a duck-free pre-chain is the only way to
-     * start from an un-ducked orbit while the owner already carries the state.
+     * start from an un-ducked cylinder while the owner already carries the state.
      */
     fun noDuckChain() = KatalystDsl.of(
         KatalystStageDsl.Reverb(wet = KatalystKnobDsl.Constant(0.0), size = KatalystKnobDsl.Constant(0.0))
     )
 
     /**
-     * A chain that DECLARES a duck which will never be configured: no orbit is named, so
+     * A chain that DECLARES a duck which will never be configured: no cylinder is named, so
      * `KatalystDuckWriter` resolves to no settings.
      */
-    fun duckChainWithNoOrbit() = KatalystDsl.of(
+    fun duckChainWithNoCylinder() = KatalystDsl.of(
         KatalystStageDsl.Duck(depth = KatalystKnobDsl.Constant(0.8))
     )
 
@@ -227,26 +227,26 @@ class CylinderChainCrossfadeSpec : StringSpec({
             katalysts = registry,
         )
 
-        /** The orbit's owner voice. Replaced (with a skipped block) to hand ownership over. */
+        /** The cylinder's owner voice. Replaced (with a skipped block) to hand ownership over. */
         var voice: Voice = VoiceTestHelpers.createSynthVoice()
 
         /** Absolute backend frame of the next block, as `Cylinders.offer` passes it. */
         var blockStart: Double = 0.0
 
-        /** What another orbit's mix hands the duck pass; filled per block from `sidechainLevel`. */
+        /** What another cylinder's mix hands the duck pass; filled per block from `sidechainLevel`. */
         val sidechain = StereoBuffer(blockFrames)
 
         /**
          * One rendered block, in the order the engine uses: the voices offer themselves and fill
-         * the orbit's buffers, then `Cylinders.processAndMix` polls the queued chain and runs it.
-         * Returns the left channel of what the orbit hands the fusion mix.
+         * the cylinder's buffers, then `Cylinders.processAndMix` polls the queued chain and runs it.
+         * Returns the left channel of what the cylinder hands the fusion mix.
          */
         fun block(
             level: Double = 0.0,
             sidechainLevel: Double = 0.0,
-            /** False renders a block no voice offered itself on: the orbit has no owner for it. */
+            /** False renders a block no voice offered itself on: the cylinder has no owner for it. */
             owned: Boolean = true,
-            /** False renders a block whose duck pass `Cylinders` skips (no sidechain orbit). */
+            /** False renders a block whose duck pass `Cylinders` skips (no sidechain cylinder). */
             duckPass: Boolean = true,
         ): DoubleArray {
             if (owned) {
@@ -257,10 +257,10 @@ class CylinderChainCrossfadeSpec : StringSpec({
             cylinder.pollPendingChain()
             cylinder.processEffects()
 
-            // The duck pass `Cylinders.processAndMix` runs after every orbit, on the orbit whose
+            // The duck pass `Cylinders.processAndMix` runs after every cylinder, on the cylinder whose
             // duck names a sidechain that resolves - the SAME gate here, `duckCylinderId != null`
             // and not just "a duck stage exists", or a row could pass on a pass the engine skips.
-            // `duckPass = false` is the orbit whose sidechain has disappeared: skipped entirely.
+            // `duckPass = false` is the cylinder whose sidechain has disappeared: skipped entirely.
             if (duckPass && cylinder.duck?.duckCylinderId != null) {
                 sidechain.fill(sidechainLevel)
                 cylinder.processDuck(sidechain)
@@ -271,7 +271,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
             return cylinder.mixBuffer.left.copyOf()
         }
 
-        /** A block this orbit is not offered at all: the orbit has no owner for it. */
+        /** A block this cylinder is not offered at all: the cylinder has no owner for it. */
         fun skipBlock() {
             blockStart += blockFrames
         }
@@ -320,7 +320,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
     /** True while the cylinder runs the classic chain, the only one with all seven classic effects. */
     fun Cylinder.runsClassic(): Boolean = reverb != null && delay != null && body != null && duck != null
 
-    /** Per-block peak of what the orbit produced, the `MasterBusTest` envelope measure. */
+    /** Per-block peak of what the cylinder produced, the `MasterBusTest` envelope measure. */
     fun Rig.peaks(blocks: Int, level: Double = 0.0): List<Double> =
         (0 until blocks).map { peakOf(block(level = level)) }
 
@@ -356,7 +356,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
 
     // ── Click-free ───────────────────────────────────────────────────────────────────────────────
 
-    "a swap on a SOUNDING orbit ramps per sample: no step, and the level travels" {
+    "a swap on a SOUNDING cylinder ramps per sample: no step, and the level travels" {
         val rig = Rig()
         rig.registry.register("dry", dryChain(1.0))
         rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = squashing().toKlangMap())
@@ -400,7 +400,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
     "the handover from the fade to the drain does not step" {
         val rig = Rig()
         rig.registry.register("dry", dryChain(1.0))
-        // A wet room on the classic chain, fed from the orbit mix by the owner's wet.
+        // A wet room on the classic chain, fed from the cylinder mix by the owner's wet.
         rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = roomState(size = 6.0).toKlangMap())
 
         // The room is loud, and the mix keeps feeding it right across the swap: the leaving
@@ -518,11 +518,11 @@ class CylinderChainCrossfadeSpec : StringSpec({
 
     "duck to duck: the envelope carries across the swap, under the ARRIVING chain's params" {
         val rig = Rig()
-        // Different orbit, different depth, different attack on the two sides: what carries is the
+        // Different cylinder, different depth, different attack on the two sides: what carries is the
         // envelope, what governs it is the arriving chain.
-        rig.registry.register("ducked", duckChain(depth = 0.9, attack = 0.05, orbit = 5.0))
+        rig.registry.register("ducked", duckChain(depth = 0.9, attack = 0.05, cylinder = 5.0))
         rig.voice = VoiceTestHelpers.createSynthVoice(
-            katalystParams = duckState(orbit = 3.0, depth = 0.4, attack = 0.2).toKlangMap(),
+            katalystParams = duckState(cylinder = 3.0, depth = 0.4, attack = 0.2).toKlangMap(),
         )
 
         // The sidechain pumps, then stops: the envelope is now recovering, slowly, which is the
@@ -540,7 +540,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
             maxStep(across) shouldBeLessThan clickThreshold
         }
 
-        withClue("and the orbit is still ducked, so the row measured a real reduction") {
+        withClue("and the cylinder is still ducked, so the row measured a real reduction") {
             peakOf(across) shouldBeLessThan probe
         }
 
@@ -557,12 +557,12 @@ class CylinderChainCrossfadeSpec : StringSpec({
         // door fills them through `katalystParams`. The arriving chain therefore knows it ducks
         // only once it has read that state, and `handOverDuck` asks BEFORE any writer runs.
         val rig = Rig()
-        val state = duckState(orbit = 5.0, depth = 0.9)
+        val state = duckState(cylinder = 5.0, depth = 0.9)
 
         rig.registry.register("ducked-a", slotDuckChain())
         rig.registry.register("ducked-b", slotDuckChain())
         // katp-ONLY: no `ducking` field at all, so nothing but the chain's own slots can say that
-        // this orbit ducks, and `beginFade`'s resolve is the only thing that can know it in time.
+        // this cylinder ducks, and `beginFade`'s resolve is the only thing that can know it in time.
         rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = state.toKlangMap())
 
         rig.cylinder.requestChain("ducked-a")
@@ -573,7 +573,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
 
         val last = rig.block(level = probe)
 
-        withClue("the orbit really is pulled down before the swap") {
+        withClue("the cylinder really is pulled down before the swap") {
             peakOf(last) shouldBeLessThan probe
         }
 
@@ -582,7 +582,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         val across = last.after(rig.render(blocks = fadeBlocks + 4, level = probe))
 
         withClue("asking before the arriving chain has read the state answers 'no duck': the swap") {
-            withClue("then ramps the reduction out and drops a fresh one on the orbit a block later") {
+            withClue("then ramps the reduction out and drops a fresh one on the cylinder a block later") {
                 maxStep(across) shouldBeLessThan clickThreshold
             }
         }
@@ -599,18 +599,18 @@ class CylinderChainCrossfadeSpec : StringSpec({
         }
     }
 
-    "the orbit's param state is aged: a dead owner configures nothing" {
+    "the cylinder's param state is aged: a dead owner configures nothing" {
         // The state is the OWNER's, so it dies with the owner (review round 2). A chain arriving
-        // while the orbit merely rings out its tail must resolve from what it authored, not from a
+        // while the cylinder merely rings out its tail must resolve from what it authored, not from a
         // voice that stopped checking in.
         val rig = Rig()
         rig.registry.register("no-duck", noDuckChain())
         rig.registry.register("slot-room", roomSlotChain())
         rig.voice = VoiceTestHelpers.createSynthVoice(
-            katalystParams = (duckState(orbit = 3.0, depth = 0.9) + mapOf("reverb.size" to 9.0)).toKlangMap(),
+            katalystParams = (duckState(cylinder = 3.0, depth = 0.9) + mapOf("reverb.size" to 9.0)).toKlangMap(),
         )
 
-        // The orbit starts on a chain with no duck stage, so the only duck in this row is the
+        // The cylinder starts on a chain with no duck stage, so the only duck in this row is the
         // ARRIVING chain's: `Cylinder.duck` would otherwise hand back the OUTGOING duck that the
         // born-with chain built from this same owner's state, and the last assertion would be
         // about the wrong stage.
@@ -618,7 +618,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
 
         rig.render(blocks = 8, level = probe)
 
-        // The owner stops offering itself; the orbit keeps rendering its tail.
+        // The owner stops offering itself; the cylinder keeps rendering its tail.
         rig.render(blocks = 3, level = probe, owned = false)
 
         rig.cylinder.requestChain("slot-room")
@@ -639,17 +639,17 @@ class CylinderChainCrossfadeSpec : StringSpec({
 
         rig.registry.register("no-duck", noDuckChain())
         rig.registry.register("ducked", slotDuckChain())
-        // Nothing ducks the orbit before the swap, and the trigger is already sounding. Since step
+        // Nothing ducks the cylinder before the swap, and the trigger is already sounding. Since step
         // 5b-1 that takes a duck-free chain: the born-with one reads the owner's `duck.*` slots
         // like any other, so it would duck before the swap and there would be no edge to ramp.
-        rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = duckState(orbit = 0.0, depth = 0.8).toKlangMap())
+        rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = duckState(cylinder = 0.0, depth = 0.8).toKlangMap())
         rig.cylinder.requestChain("no-duck")
 
         rig.render(blocks = 10, level = probe, sidechainLevel = 0.5)
 
         val last = rig.block(level = probe, sidechainLevel = 0.5)
 
-        withClue("nothing ducks this orbit before the swap") {
+        withClue("nothing ducks this cylinder before the swap") {
             peakOf(last) shouldBeGreaterThan probe * 0.99
         }
 
@@ -668,8 +668,8 @@ class CylinderChainCrossfadeSpec : StringSpec({
 
     "duck to duck with NO owner alive: the arriving chain's own slots govern the carried envelope" {
         val rig = Rig()
-        rig.registry.register("first", duckChain(depth = 0.4, attack = 0.2, orbit = 3.0))
-        rig.registry.register("second", duckChain(depth = 0.9, attack = 0.05, orbit = 5.0))
+        rig.registry.register("first", duckChain(depth = 0.4, attack = 0.2, cylinder = 3.0))
+        rig.registry.register("second", duckChain(depth = 0.9, attack = 0.05, cylinder = 5.0))
         rig.voice = VoiceTestHelpers.createSynthVoice()
 
         rig.cylinder.requestChain("first")
@@ -711,7 +711,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         rig.render(blocks = 20, level = probe, sidechainLevel = 0.5)
         val last = rig.block(level = probe, sidechainLevel = 0.5)
 
-        withClue("the orbit is pulled down before the swap") {
+        withClue("the cylinder is pulled down before the swap") {
             peakOf(last) shouldBeLessThan probe * 0.5
         }
 
@@ -728,10 +728,10 @@ class CylinderChainCrossfadeSpec : StringSpec({
         }
     }
 
-    "a ducked chain to a chain whose duck names no orbit: the reduction ramps out too" {
+    "a ducked chain to a chain whose duck names no cylinder: the reduction ramps out too" {
         val rig = Rig()
         rig.registry.register("ducked", duckChain(depth = 0.8, attack = 0.05))
-        rig.registry.register("nameless", duckChainWithNoOrbit())
+        rig.registry.register("nameless", duckChainWithNoCylinder())
         rig.voice = VoiceTestHelpers.createSynthVoice()
 
         rig.cylinder.requestChain("ducked")
@@ -753,7 +753,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         rig.registry.register("dry", dryChain(1.0))
         // A fast duck, so the envelope's own release can follow the depth ramp down.
         rig.voice = VoiceTestHelpers.createSynthVoice(
-            katalystParams = duckState(orbit = 0.0, depth = 0.8, attack = 0.005).toKlangMap(),
+            katalystParams = duckState(cylinder = 0.0, depth = 0.8, attack = 0.005).toKlangMap(),
         )
 
         // A steady trigger: the reduction is in force and stays there until the depth is ramped.
@@ -761,7 +761,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
 
         val last = rig.block(level = probe, sidechainLevel = 0.5)
 
-        withClue("the orbit really is pulled down before the swap") {
+        withClue("the cylinder really is pulled down before the swap") {
             peakOf(last) shouldBeLessThan probe * 0.5
         }
 
@@ -773,23 +773,23 @@ class CylinderChainCrossfadeSpec : StringSpec({
             maxStep(across) shouldBeLessThan clickThreshold
         }
 
-        withClue("and by the end of the fade the orbit is at full level again") {
+        withClue("and by the end of the fade the cylinder is at full level again") {
             peakOf(rig.block(level = probe, sidechainLevel = 0.5)) shouldBeGreaterThan probe * 0.99
         }
     }
 
-    "no duck to duck: the arriving duck is ramped in, not dropped on the orbit" {
+    "no duck to duck: the arriving duck is ramped in, not dropped on the cylinder" {
         val rig = Rig()
         rig.registry.register("ducked", duckChain(depth = 0.8, attack = 0.05))
         // No duck on the way out, and the trigger is ALREADY sounding: `Ducking`'s duck-down is
         // instantaneous by design, so a duck applied at full from the first block would pull the
-        // whole orbit down in one sample.
+        // whole cylinder down in one sample.
         rig.voice = VoiceTestHelpers.createSynthVoice()
 
         rig.render(blocks = 10, level = probe, sidechainLevel = 0.5)
         val last = rig.block(level = probe, sidechainLevel = 0.5)
 
-        withClue("nothing ducks this orbit before the swap") {
+        withClue("nothing ducks this cylinder before the swap") {
             peakOf(last) shouldBeGreaterThan probe * 0.99
         }
 
@@ -801,16 +801,16 @@ class CylinderChainCrossfadeSpec : StringSpec({
             maxStep(across) shouldBeLessThan clickThreshold
         }
 
-        withClue("and by the end of the fade the orbit is fully ducked") {
+        withClue("and by the end of the fade the cylinder is fully ducked") {
             peakOf(rig.block(level = probe, sidechainLevel = 0.5)) shouldBeLessThan probe * 0.5
         }
     }
 
     "a katp-only ducking owner whose first claim lands in the swap block takes the envelope over" {
         val rig = Rig()
-        // The two sides listen to DIFFERENT orbits, so the row can say which duck ended up in
+        // The two sides listen to DIFFERENT cylinders, so the row can say which duck ended up in
         // charge; the rig hands the same sidechain to whichever one runs.
-        rig.registry.register("ducked", duckChain(depth = 0.8, attack = 0.05, orbit = 7.0))
+        rig.registry.register("ducked", duckChain(depth = 0.8, attack = 0.05, cylinder = 7.0))
         rig.registry.register("plain", KatalystDsl.classic)
         rig.voice = VoiceTestHelpers.createSynthVoice()
 
@@ -831,7 +831,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         // `duck.depth` and the voice's own `ducking` field says nothing. The correction used to be
         // gated on that field, which skipped exactly this voice.
         rig.voice = VoiceTestHelpers.createSynthVoice(
-            katalystParams = duckState(orbit = 0.0, depth = 0.8).toKlangMap(),
+            katalystParams = duckState(cylinder = 0.0, depth = 0.8).toKlangMap(),
         )
 
         val across = last.after(rig.render(blocks = fadeBlocks + 6, level = probe, sidechainLevel = 0.5))
@@ -840,7 +840,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
             maxStep(across) shouldBeLessThan clickThreshold
         }
 
-        withClue("and the orbit is still ducked, by the ARRIVING chain's duck") {
+        withClue("and the cylinder is still ducked, by the ARRIVING chain's duck") {
             rig.cylinder.duck.shouldNotBeNull().duckCylinderId shouldBe 0
             peakOf(rig.block(level = probe, sidechainLevel = 0.5)) shouldBeLessThan probe * 0.5
         }
@@ -848,7 +848,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
 
     "a ducking owner claiming LATER in the fade keeps ramping out instead" {
         val rig = Rig()
-        rig.registry.register("ducked", duckChain(depth = 0.8, attack = 0.05, orbit = 7.0))
+        rig.registry.register("ducked", duckChain(depth = 0.8, attack = 0.05, cylinder = 7.0))
         rig.registry.register("plain", KatalystDsl.classic)
         rig.voice = VoiceTestHelpers.createSynthVoice()
 
@@ -860,16 +860,16 @@ class CylinderChainCrossfadeSpec : StringSpec({
 
         rig.cylinder.requestChain("plain")
 
-        // Three blocks of ramp with nobody claiming: the orbit's gain is already part way out, so
+        // Three blocks of ramp with nobody claiming: the cylinder's gain is already part way out, so
         // handing the envelope over now would jump it back to the full reduction.
         val ramped = rig.render(blocks = 3, level = probe, sidechainLevel = 0.5, owned = false)
 
         rig.voice = VoiceTestHelpers.createSynthVoice(
-            katalystParams = duckState(orbit = 0.0, depth = 0.8).toKlangMap(),
+            katalystParams = duckState(cylinder = 0.0, depth = 0.8).toKlangMap(),
         )
 
-        // Render while the duck that is fading OUT still governs the orbit, which is exactly the
-        // ramp: orbit 7 is its sidechain, the arriving chain's duck listens to 0.
+        // Render while the duck that is fading OUT still governs the cylinder, which is exactly the
+        // ramp: cylinder 7 is its sidechain, the arriving chain's duck listens to 0.
         var across = last.after(ramped)
         var ramping = 0
 
@@ -888,7 +888,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
 
         // Past the ramp, the arriving chain's own duck engages on its fresh envelope. Since
         // Katalyst 5c-9 it RIDES IN over [KNOB_GLIDE_SECONDS] ([glideBlocks] blocks) instead of
-        // pulling the orbit down in one sample, which is the whole point of the
+        // pulling the cylinder down in one sample, which is the whole point of the
         // stage's switch-on fade: the first block is barely ducked, and the reduction is there once
         // the fade has run.
         withClue("the new owner's duck does not arrive in one sample") {
@@ -942,12 +942,12 @@ class CylinderChainCrossfadeSpec : StringSpec({
     "a chain faded in with no owner alive is configured from its own slots" {
         val rig = Rig()
 
-        // The orbit sounds, and the chain is asked for before its registration arrives.
+        // The cylinder sounds, and the chain is asked for before its registration arrives.
         rig.render(blocks = 4, level = probe)
         rig.cylinder.requestChain("room")
         rig.registry.register("room", roomChain(6.0))
 
-        // The note has ended and the orbit is still audible, so no voice offers itself: the
+        // The note has ended and the cylinder is still audible, so no voice offers itself: the
         // pending poll starts the fade, and no owner will write the chain.
         rig.block(level = probe, owned = false)
 
@@ -958,7 +958,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         }
     }
 
-    "a declared chain installed on a SILENT orbit rents nothing until a voice sounds" {
+    "a declared chain installed on a SILENT cylinder rents nothing until a voice sounds" {
         val rig = Rig()
         rig.registry.register("room", roomChain(6.0))
 
@@ -966,7 +966,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
 
         val room = rig.cylinder.reverb.shouldNotBeNull()
 
-        withClue("the orbit may never sound: the warehouse's laziness outranks an early configure") {
+        withClue("the cylinder may never sound: the warehouse's laziness outranks an early configure") {
             room.reverb.shouldBeNull()
         }
 
@@ -995,14 +995,14 @@ class CylinderChainCrossfadeSpec : StringSpec({
         rig.cylinder.requestChain("ducked")
         rig.render(blocks = 200, level = probe, sidechainLevel = 0.5)
 
-        // The sidechain orbit disappears in the same block the swap is asked for, so the pass that
+        // The sidechain cylinder disappears in the same block the swap is asked for, so the pass that
         // normally ends the duck's crossfade never runs.
         rig.cylinder.requestChain("dry")
         rig.render(blocks = fadeBlocks + 4, level = probe, duckPass = false)
 
         rig.cylinder.isDraining shouldBe true
 
-        withClue("the duck of a chain that has left service must not still govern the orbit") {
+        withClue("the duck of a chain that has left service must not still govern the cylinder") {
             rig.cylinder.duck.shouldBeNull()
         }
     }
@@ -1022,7 +1022,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         }
 
         // Everything goes silent at the swap: the incoming chain is a pass-through on silence, so
-        // whatever is left in the orbit's mix is the outgoing room and nothing else.
+        // whatever is left in the cylinder's mix is the outgoing room and nothing else.
         rig.render(blocks = fadeBlocks)
 
         rig.cylinder.isDraining shouldBe true
@@ -1061,7 +1061,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
     "a leaving delay whose feedback falls to 0 is not retired while a repeat is still in flight" {
         // The ring-out retires the leaving chain on the FIRST block its ceiling says silent, with
         // no silent-block wait, so a feedback cut under the ring (here: a new owner with feedback
-        // 0 takes the orbit as the swap starts and still steers the leaving chain while it fades)
+        // 0 takes the cylinder as the swap starts and still steers the leaving chain while it fades)
         // used to end it one echo early: the ceiling recomputed the window with the feedback in
         // force NOW (Katalyst 5c-5, measured at -9 dBFS). Swept over where the note sits in the
         // 0.1 s window. The oracle is the leaving ring itself, read right after the block that
@@ -1092,7 +1092,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
                 }
             }
 
-            withClue("pre $pre: the leaving chain must retire, a ceiling that never falls pins the orbit") {
+            withClue("pre $pre: the leaving chain must retire, a ceiling that never falls pins the cylinder") {
                 (retiredAfter in 0..(3 * 35 + fadeBlocks)) shouldBe true
             }
 
@@ -1122,7 +1122,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         rig.cylinder.requestChain("room")
         rig.cylinder.isFading shouldBe true
 
-        // A new owner takes the orbit mid-fade (the previous one missed a block and lapsed).
+        // A new owner takes the cylinder mid-fade (the previous one missed a block and lapsed).
         rig.voice = VoiceTestHelpers.createSynthVoice(
             katalystParams = echoState(time = 0.35, feedback = 0.5).toKlangMap(),
         )
@@ -1219,15 +1219,15 @@ class CylinderChainCrossfadeSpec : StringSpec({
         rig.cylinder.requestChain("dry")
 
         // Everything goes quiet at the swap, which is exactly when the cleanup would like to
-        // deactivate the orbit. With a fade running, that would drop the outgoing chain at
+        // deactivate the cylinder. With a fade running, that would drop the outgoing chain at
         // whatever weight it had. Every cleanup visit in this row is placed one block past the
-        // check-in's grace, as if the voice had just stopped: no check-in holds the orbit, so the
+        // check-in's grace, as if the voice had just stopped: no check-in holds the cylinder, so the
         // refusal is the chain's own (Katalyst 5c-8: a check-in refuses too, and would mask it).
         rig.block()
         rig.cylinder.mixBuffer.clear()
         rig.cylinder.tryDeactivate(rig.blockStart + blockFrames)
 
-        withClue("a running fade keeps the orbit alive") {
+        withClue("a running fade keeps the cylinder alive") {
             rig.cylinder.isFading shouldBe true
             rig.cylinder.isActive shouldBe true
         }
@@ -1253,7 +1253,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         rig.cylinder.mixBuffer.clear()
         rig.cylinder.tryDeactivate(rig.blockStart + blockFrames)
 
-        withClue("once nothing rings, the orbit may go") {
+        withClue("once nothing rings, the cylinder may go") {
             rig.cylinder.isActive shouldBe false
         }
     }
@@ -1276,7 +1276,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
 
         rig.cylinder.retire()
 
-        withClue("the fade is over and the orbit is back to the chain it was born with") {
+        withClue("the fade is over and the cylinder is back to the chain it was born with") {
             rig.cylinder.isFading shouldBe false
             rig.cylinder.isDraining shouldBe false
             rig.cylinder.runsClassic() shouldBe true
@@ -1351,7 +1351,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         rig.cylinder.requestChain("dry")
 
         // At the ramp's endpoints one weight is exactly 0.0, and `Inf * 0.0` is NaN: a chain that
-        // contributes nothing yet could still inject NaN into the orbit's output, and the master's
+        // contributes nothing yet could still inject NaN into the cylinder's output, and the master's
         // DC blocker downstream latches one for good.
         rig.cylinder.offerAndCommit(rig.voice, rig.blockStart)
         rig.cylinder.mixBuffer.fill(Double.POSITIVE_INFINITY)

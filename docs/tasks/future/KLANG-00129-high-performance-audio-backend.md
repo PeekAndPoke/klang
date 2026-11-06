@@ -12,7 +12,7 @@ here should be started until *after* launch.
 > **Priority gate (do not skip).** The user's ordering is: **1) finish the open engine work-streams →
 > 2) the quarter of tutorials → 3) bring everything online (launch) → 4) *then* hard performance.**
      > "Sound first." Hard performance is late-game. The higher-leverage near-term lever is reducing *absolute*
-     > work (orbit-level body/vowel: done; voice culling: next) — that helps every backend, native included.
+     > work (cylinder-level body/vowel: done; voice culling: next), that helps every backend, native included.
      > See memory notes `project_sound_first`, `project_perf_native_backend`, `project_song_cpu_benchmark`.
 
 > **Concrete plan (2026-09-15): KLANG-00200 (zig motor one engine).** Supersedes the "keep

@@ -6,7 +6,7 @@
 package io.peekandpoke.klang.audio_bridge
 
 /**
- * Authoring-layer representation of a chain reference, for either position: an orbit's chain
+ * Authoring-layer representation of a chain reference, for either position: a cylinder's chain
  * (`katalyst(...)`) or the playback's output chain (`master(...)`).
  *
  * An event may select its Katalyst either by name (a pre-registered custom chain) or by inlining a

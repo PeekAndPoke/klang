@@ -16,9 +16,9 @@ right.
 ## 1. What we use today, and why it is not an answer
 
 **One constant for everything.** `KNOB_GLIDE_SECONDS = 0.05` in
-`audio_bridge/.../constants/BusEffectDefaults.kt` is the fade and glide time of every orbit
+`audio_bridge/.../constants/BusEffectDefaults.kt` is the fade and glide time of every cylinder
 transition: the reverb and delay `wet`, the delay's tap crossfade, the body, vowel and EQ swap,
-the compressor's blend and its knobs, the orbit fader, the phaser's coefficients, the duck's
+the compressor's blend and its knobs, the cylinder fader, the phaser's coefficients, the duck's
 weight. It was chosen by the maintainer in conversation (2026-09-19), not measured: "I think 50 ms
 is a good timing for the glide."
 
@@ -70,7 +70,7 @@ sweep audibly.
   confirmed which ones click and which do not).
 - A **law** for the transition time, either one better constant or a function of the content
   (its fundamental, its level, the kind of transition). If it is a function, it has to be readable
-  at the moment the transition starts, which the engine does not do today: the orbit does not know
+  at the moment the transition starts, which the engine does not do today: the cylinder does not know
   the note's frequency.
 - A **cost check**: a shorter time means more transitions in flight per second and a steeper ramp;
   a longer one means more smear (the one-pole rule in `audio/ref/knob-glide.md`: a knob retargeted
@@ -91,10 +91,10 @@ to be an argument for a different time on that stage rather than a defect in the
 
 ## 5. Every effect this would touch
 
-All of these transition on `KNOB_GLIDE_SECONDS` today: the orbit reverb `wet` and size, the delay
-`wet`, its tap crossfade and its feedback, body, vowel and the orbit EQ (the swap's fades and the
+All of these transition on `KNOB_GLIDE_SECONDS` today: the cylinder reverb `wet` and size, the delay
+`wet`, its tap crossfade and its feedback, body, vowel and the cylinder EQ (the swap's fades and the
 crossfade between banks), the compressor (its blend with dry, plus threshold, the inverse ratio and
-knee), the orbit fader, the phaser (its two C4 coefficients per sample, its breakpoint per block),
+knee), the cylinder fader, the phaser (its two C4 coefficients per sample, its breakpoint per block),
 the duck (its weight and its depth), and the chain swap itself. The master's own fades are a
 separate family and would be asked the same question.
 

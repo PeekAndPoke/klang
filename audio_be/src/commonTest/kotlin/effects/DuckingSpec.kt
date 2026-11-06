@@ -18,7 +18,7 @@ class DuckingSpec : StringSpec({
     val sampleRate = 44100
 
     /**
-     * One block of a mono [input] through the door the orbit duck calls, [Ducking.processStereo]: the signal on both
+     * One block of a mono [input] through the door the cylinder duck calls, [Ducking.processStereo]: the signal on both
      * sides (a copy as the right channel) and [sidechain] as both trigger channels. The linked detector's
      * `max(|L|, |R|)` over two equal channels is the mono level, so [input] ends as the mono render.
      */
@@ -189,7 +189,7 @@ class DuckingSpec : StringSpec({
     }
 
     "applyKnobArgs leaves the instance where the two setters leave it, bit for bit" {
-        // Engine follow-up 45: the orbit duck hands a moving attack or depth over through `knobArgs` and one
+        // Engine follow-up 45: the cylinder duck hands a moving attack or depth over through `knobArgs` and one
         // `applyKnobArgs`, where it called the two setters. Both instances hear the same blocks and take the same
         // knobs, one through the setters (attack, then depth, the order the stage used), the other through the
         // holder; every stored knob and every output sample must match bit for bit. The steps reach every guard:

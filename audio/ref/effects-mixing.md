@@ -9,8 +9,8 @@ offline render (KLANG-00399 step 4), renders through `PlaybackEngineDispatcher`,
 
 ```
 renderBlock(cursorFrame: Double, out: StereoBuffer)
-  1. Clear mix buffers + orbits
-  2. VoiceScheduler.processBlock()        → voices write to voiceBuffer + orbits
+  1. Clear mix buffers + cylinders
+  2. VoiceScheduler.processBlock()        → voices write to voiceBuffer + cylinders
   3. Cylinders.processAndMix()               → cylinder effects + mix to StereoBuffer
   4. Master limiter (lookahead 5 ms, anticipating) (−1 dB threshold)     → gain reduction applied to StereoBuffer
   5. Clip ±1.0 (no quantisation)        → StereoBuffer out (floating point; 16-bit only at the JVM/WAV edge)
@@ -44,11 +44,11 @@ Manages up to 16 effect buses (cylinder IDs 0–15). Each voice is routed to one
 4. Round-robin: deactivate one stale cylinder per block
 ```
 
-### offer(orbitId, voice, blockStart) and checkIn(orbitId, blockStart)
+### offer(cylinderId, voice, blockStart) and checkIn(cylinderId, blockStart)
 
-The voice's send routes into its orbit's `Cylinder`, rented on first use. A voice that claims the orbit
-(`Voice.claimsOrbit`) offers itself as the owner; any other rendering voice only checks in, which keeps the orbit
-in use. `processAndMix` commits the block's newest offer once (`Cylinder.commitOwner`) before the orbit processes.
+The voice's send routes into the `Cylinder` for its cylinder number, rented on first use. A voice that claims the cylinder
+(`Voice.claimsCylinder`) offers itself as the owner; any other rendering voice only checks in, which keeps the cylinder
+in use. `processAndMix` commits the block's newest offer once (`Cylinder.commitOwner`) before the cylinder processes.
 
 ## Cylinder
 
@@ -56,18 +56,18 @@ in use. `processAndMix` commits the block's newest offer once (`Cylinder.commitO
 
 One effect bus. Holds its own stereo accumulation buffer and effect instances.
 
-**PER-ORBIT (bus) vs PER-VOICE — which effects run where.** The Katalyst pipeline runs **once per orbit**
+**PER-CYLINDER (bus) vs PER-VOICE, which effects run where.** The Katalyst pipeline runs **once per cylinder**
 on the summed mix: `[body, vowel, delay, reverb, phaser, compressor, gain]` (+ ducking, separate pass).
-The `gain` stage is the orbit's group fader, at unity on the classic chain and bit-transparent there;
+The `gain` stage is the cylinder's group fader, at unity on the classic chain and bit-transparent there;
 a pattern moves it with `katp("gain.gain", x)`.
 
-**Every knob of every stage comes from ONE place since Katalyst step 5b-1 (2026-09-19): the orbit's
-param state, which is the `katalystParams` map of the voice that owns the orbit.** The bus
+**Every knob of every stage comes from ONE place since Katalyst step 5b-1 (2026-09-19): the cylinder's
+param state, which is the `katalystParams` map of the voice that owns the cylinder.** The bus
 doors write those slots (a door and its `katp` slot are the same knob), the chain re-resolves only
 when the map instance changes, and the voice's bus fields are not a knob source any more (the
 delay, reverb, compressor and duck fields left the wire in step 5b-3). Ownership:
-the orbit's bus settings are owned by the newest `Sounding` voice; a voice gives the orbit up when its gate closes or it is cut (lifecycle step 5, `Cylinder.offer`), so all voices on an orbit SHARE these; put voices on different
-orbits for independent bus effects. Everything else is **per-voice**: `lpf`/`hpf`/`bpf`/`notch` +
+the cylinder's bus settings are owned by the newest `Sounding` voice; a voice gives the cylinder up when its gate closes or it is cut (lifecycle step 5, `Cylinder.offer`), so all voices on a cylinder SHARE these; put voices on different
+cylinders for independent bus effects. Everything else is **per-voice**: `lpf`/`hpf`/`bpf`/`notch` +
 envelopes, `distort`, `crush`, `coarse`, `adsr`, `tremolo` as `classic()`'s slots in the instrument's
 Ignitor tree; `unison`/`spread`, `analog` as the oscillator's slots; the pitch envelope as `classic()`'s `penv.*`
 slots (pitch pipeline step 1), the vibrato as its `vibrato.*` slots (step 2), `accelerate` as its flat
@@ -84,11 +84,11 @@ slots (pitch pipeline step 1), the vibrato as its `vibrato.*` slots (step 2), `a
 | `KatalystDuckEffect`       | `Ducking`       | `duck.cylinder` names a source and `duck.depth` above 0             |
 | `KatalystDistortEffect`    | `DistortionCore` (one per channel, the house DC pole) | `distort.amount` finite and above 0 (not in the classic chain; declared with `k.distort(...)`) |
 
-How each stage switches and glides, when an orbit may deactivate, the chain swap and the output host (`MasterBus`):
+How each stage switches and glides, when a cylinder may deactivate, the chain swap and the output host (`MasterBus`):
 `audio/ref/katalyst.md`.
 
-`body`/`vowel` moved from the per-voice filter chain to the orbit bus (2026-07-03) — an 8-band SVF bank
-per voice became one per orbit; see KLANG-00128 (body vowel to orbit katalyst).
+`body`/`vowel` moved from the per-voice filter chain to the cylinder bus (2026-07-03), an 8-band SVF bank
+per voice became one per cylinder; see KLANG-00128 (body vowel to orbit katalyst).
 
 ## Effect Classes
 
@@ -96,7 +96,7 @@ All in `audio_be/src/commonMain/kotlin/effects/`.
 
 ### Compressor
 
-Peak-detecting compressor (`max(|L|, |R|)`). Applied per cylinder (the orbit's `compressor` stage).
+Peak-detecting compressor (`max(|L|, |R|)`). Applied per cylinder (the cylinder's `compressor` stage).
 
 | Parameter   | Meaning                                 |
 |-------------|-----------------------------------------|
@@ -108,10 +108,10 @@ Peak-detecting compressor (`max(|L|, |R|)`). Applied per cylinder (the orbit's `
 
 ### Ducking
 
-Sidechain-triggered gain reduction across orbits.
+Sidechain-triggered gain reduction across cylinders.
 
-- Configured by the orbit owner's `duck.cylinder` slot (the source orbit N)
-- Reduces this orbit's gain whenever orbit N plays, by `duck.depth`, recovering over `duck.attack`
+- Configured by the cylinder owner's `duck.cylinder` slot (the source cylinder N)
+- Reduces this cylinder's gain whenever cylinder N plays, by `duck.depth`, recovering over `duck.attack`
 - Recovery is automatic after the triggering voice ends
 
 | Slot          | Meaning                                    |
@@ -128,7 +128,7 @@ Fixed-size circular buffer delay with feedback and multi-tap mixing.
 | `delay.time`     | Delay time in seconds                             |
 | `delay.feedback` | Feedback coefficient (0-1)                        |
 | `delay.cap`      | Ceiling the feedback saturates toward             |
-| `delay.wet`      | How much of the orbit mix feeds the line (insert) |
+| `delay.wet`      | How much of the cylinder mix feeds the line (insert) |
 
 ### Reverb
 
@@ -138,7 +138,7 @@ the table in `.claude/skills/klang-music-writing/ref/sprudel-reference.md` ("Rev
 
 | Slot             | Meaning                                        |
 |-------------|------------------------------------------------|
-| `reverb.wet`     | How much of the orbit mix feeds the room (insert, the owner's one amount) |
+| `reverb.wet`     | How much of the cylinder mix feeds the room (insert, the owner's one amount) |
 | `reverb.size`    | Tail length, authored ~0..10, normalized by `Reverb.normalizeSize` |
 | `reverb.lowpass` | Tail damping cutoff in Hz (unset: fixed default damping)        |
 

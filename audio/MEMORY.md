@@ -11,7 +11,7 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
 ## The signal flow and its owners
 
 - **Per playback.** `PlaybackEngineDispatcher` routes every `Cmd` by `playbackId` to its own `PlaybackEngine`
-  (scheduler, orbits, registry forks, `MasterBus`); the engines' outputs sum into the house stage. A
+  (scheduler, cylinders, registry forks, `MasterBus`); the engines' outputs sum into the house stage. A
   `VoiceScheduler` serves its engine's one playback: one `PlaybackCtx`, made by the first voice, dropped by
   `cleanup`, nothing filtered by id. File map:
   `docs/audio-backend-file-map.md`; data flow and isolation: `audio/ref/architecture.md`.
@@ -73,12 +73,12 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   `retainInOrder` (`removeDoneVoices` between blocks, and the render loop).
   Plan and steps: KLANG-00279 (voice lifecycle state machine) (steps 1 to 5b done).
 - **Channel**: `gain` is the one level word (the fader, applied once with `pan` in `mixIntoCylinder`); a frontend's
-  `velocity` is multiplied into `gain` before the wire. The orbit is the routing.
-- **Bus**: each orbit (`Cylinder`) runs a `KatalystChain`, born with `KatalystDsl.classic` (body, vowel, delay,
-  reverb, phaser, compressor, gain; duck in a cross-orbit pass), knobs from the owner's
-  `VoiceData.katalystParams`: the orbit's bus settings are owned by the newest `Sounding` voice; a voice gives the
-  orbit up when its gate closes or it is cut (lifecycle step 5: the block's newest offer, committed once per block
-  by `Cylinders.processAndMix`; an ownerless orbit keeps its last settings). Laws: `audio/ref/katalyst.md`; the classes: `audio/ref/effects-mixing.md`.
+  `velocity` is multiplied into `gain` before the wire. The cylinder is the routing.
+- **Bus**: each cylinder (`Cylinder`) runs a `KatalystChain`, born with `KatalystDsl.classic` (body, vowel, delay,
+  reverb, phaser, compressor, gain; duck in a cross-cylinder pass), knobs from the owner's
+  `VoiceData.katalystParams`: the cylinder's bus settings are owned by the newest `Sounding` voice; a voice gives the
+  cylinder up when its gate closes or it is cut (lifecycle step 5: the block's newest offer, committed once per block
+  by `Cylinders.processAndMix`; an ownerless cylinder keeps its last settings). Laws: `audio/ref/katalyst.md`; the classes: `audio/ref/effects-mixing.md`.
 - **Reverb**: one room for both ears: each side's combs are fed `(L + R) / 2` (`Reverb.CROSS_FEED` 0.5, by ear
   2026-09-30); an input with equal sides feeds what it did before, bit for bit. A Freeverb tail only: no pre-delay,
   no early reflections (KLANG-00256 (reverb models)). Two tail floors on purpose (maintainer,
@@ -253,28 +253,28 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
 - **Oversampling regions on the Katalyst** (2026-11-03, KLANG-00214 step 3a): `k.oversampleBy(f) { ... }` and
   `oversampleAtLeast(f) { ... }`, the factor a plain number fixed with the chain. `KatalystRegionEffect` converts the
   bus up, runs its body (a `KatalystChain` BUILT at the region's rate and block size: a Katalyst stage takes its rate
-  when built, not per block), converts down; a region with no step is inlined. At a chain's head it makes the orbit
-  run at that rate, one conversion per orbit. Inside: the knob modulators keep the orbit's clock; `parallel` twins from the region's stage (`firstStage`); a reverb rents from a shelf per whole
+  when built, not per block), converts down; a region with no step is inlined. At a chain's head it makes the cylinder
+  run at that rate, one conversion per cylinder. Inside: the knob modulators keep the cylinder's clock; `parallel` twins from the region's stage (`firstStage`); a reverb rents from a shelf per whole
   factor (`ReverbUnits.atFactor`, kept by the base shelf, `maxIdle / factor`; allocated through the shelf's injected
   allocator, counted in `WarehouseStats`, housekept a base unit's stores per block), its comb pole mapped `damping^(1/N)`
   (the top of the room decays a little faster; kept, maintainer 2026-11-04). Latency: `exactLatency` unrounded
   through bodies, a region rounds once; a `parallel` around a region pads its body by the nearest frame. A region
   always declares a tail. Chains without a region render bit for bit as before.
 - **The hand-over** (2026-11-03, KLANG-00214 step 3b): a voice whose tree ENDS in a region (the root, under its build
-  memo) does not convert down; it lands on its orbit's rate bus (`KatalystContext.buses`, `Cylinder.mixBufferAt`), its
-  teardown fade, cut fade, solo ramp and pan running at that rate (the same lines read between the frames). The orbit's
+  memo) does not convert down; it lands on its cylinder's rate bus (`KatalystContext.buses`, `Cylinder.mixBufferAt`), its
+  teardown fade, cut fade, solo ramp and pan running at that rate (the same lines read between the frames). The cylinder's
   chain brings every bus to its rate once (a head region's steps, else 0): the head region converts the mix up one
   stage at a time and adds each lower bus on the way, `KatalystBusLadder` steps the higher ones down in place, both
   with the `Oversampler`'s own stages, so a bus continues its voice's cascade: in phase with the voices converted at the
-  orbit at or below its rate; a bus above keeps the round trip of the stages above (untwinned, as before 3b). With one
-  voice per rate on an orbit it costs more than converting in the voice (stereo after the pan); break-even is two. The ladder rings out on a silent bus for `Oversampler.tailFrames` after the
+  cylinder at or below its rate; a bus above keeps the round trip of the stages above (untwinned, as before 3b). With one
+  voice per rate on a cylinder it costs more than converting in the voice (stereo after the pan); break-even is two. The ladder rings out on a silent bus for `Oversampler.tailFrames` after the
   last voice above its rate. A swap ramps every bus for the leaving chain (`Crossfade.rampDown(steps)`); the duck and
   the blend stay at 1x. Buses and the raised voice buffers are made on first use and kept.
 - **`parallel` on the Katalyst** (`KatalystParallelEffect`, 2026-10-10): each branch is a `KatalystChain` of its own,
   run on a copy of the bus and SUMMED; branches are matched in phase (the twins of the oversamplers a branch lacks,
   `KatalystLatentEffect.oversamplers`, and a ring for the lookahead it lacks; the stage's latency is the union's plus
   the longest lookahead); every lifecycle question (tails, rents, reset, retire) is passed to the branches; a `duck` in a branch is
-  hoisted to the orbit's duck. A `reverb` or `delay` in a branch carries the dry too. The doors write no stage for zero
+  hoisted to the cylinder's duck. A `reverb` or `delay` in a branch carries the dry too. The doors write no stage for zero
   branches and inline one. `through` is `serial` since the same day (`docs/retired-names.md`).
 - **`bands` on both hosts** (2026-10-10): DSL sugar in `audio_bridge` (`BandsBuilders.kt`, since typed doors S6; the
   script variants in `klangscript-libs`) over `parallel` and
@@ -315,7 +315,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   KLANG-00290 (engine follow ups) items 1 and 32, `audio/ref/performance.md`.
 - **A map the engine reads by key on Kotlin/JS is a `KlangMap`** (`common/infra/KlangMap.kt`, engine follow-up 2):
   every Kotlin/JS `HashMap`/`HashSet` operation with a non-null key allocates a 40-byte function context on V8 inside
-  the stdlib's `hashCode` (27 per new orbit map on the classic chain, 24 to 76 per classic voice build). The decoder,
+  the stdlib's `hashCode` (27 per new cylinder map on the classic chain, 24 to 76 per classic voice build). The decoder,
   the warm-up and the sample-envelope merge make `KlangMap`s; the steady block path makes no lookup at all. Read it
   by key, and walk it with `forEachEntry` (or `copy`/`setAll`): it is not a Kotlin `Map` (maintainer, 2026-10-11), so
   it has no `entries` (about 110 B per entry on JS), and the wire codec's generator refuses a stdlib `Map` field:
@@ -324,7 +324,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   lookups lowercase a name only when it has a character that could change (V8's `toLowerCase` allocates about 24 B
   even when nothing changes, at every length measured).
 - **A per-block walk is an index loop** over an array or a list, never `for (x in ...)` over a collection or a map,
-  which makes an iterator per call on JS. `Cylinders` keeps its orbits in rent order: that order is the mix's
+  which makes an iterator per call on JS. `Cylinders` keeps its cylinders in rent order: that order is the mix's
   summation order, so changing it changes bits.
 - **A node builds its storage with the voice and draws at its first block** (tidy-up step 10): drift lanes
   (`AnalogDrift()` then `seed`, `DriftLanes(capacity, sharedLane)` then `start`, only when `analog` may be above 0
@@ -391,7 +391,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 
 ## Open threads
 
-- **By ear** (`docs/tasks/by-ear/README.md`): `duck-orbit-switch-click.md`, and the owed rounds listed there.
+- **By ear** (`docs/tasks/by-ear/README.md`): KLANG-00247 (duck orbit switch click), and the owed rounds listed there.
 - **Engine pass 1 follow-ups**: KLANG-00290 (engine follow ups) (the V8 residues, the phase-pool order, the
   audit's later steps and open decisions).
 - **Open, correctness**: KLANG-00308 (audit audio backend leftovers) (§2 worklet tests waits on the maintainer;
@@ -426,6 +426,9 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-11-06 Cylinder is the one word (KLANG-00418 step 4): the engine's identifiers, prose and docs say cylinder;
+  "cylinder number" and "`Cylinder` instance" where the two used to be told apart by the words
+  orbit and Cylinder: record KLANG-00418 (cylinder as the one word the sprudel door the katalyst vocab)
 - 2026-11-06 Small engine items (KLANG-00290 (engine follow ups) 23, 24, 25, 27): `HouseStage` (was `MasterStage`),
   `createVowel`, `Cmd.ScheduleVoice` and `Cmd.ClearScheduled` off the wire, the release law as a recurrence,
   `WarmupRunner`'s phases an enum.

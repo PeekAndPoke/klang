@@ -127,7 +127,7 @@ let powerClassA = Ign.fn(x => x
   .oversampleAtLeast(2, y => y.distort(0.25, "asym"))
   .mul(1.3))                                       // master
 
-// Cabinets: the linear half of the amp. All of these are static and linear, so they move to the orbit unchanged once
+// Cabinets: the linear half of the amp. All of these are static and linear, so they move to the cylinder unchanged once
 // the Katalyst DSL lands.
 
 // Two plain lowpasses at 5 kHz, the cab the guitar had before the cabs existed.
@@ -408,7 +408,7 @@ export wings = chords => n(chords).ply(16)
   )
   .cylinder(4)
 
-// Strike: one heavy chord, let ring. It shares the wings' orbit and room.
+// Strike: one heavy chord, let ring. It shares the wings' cylinder and room.
 export strike = chords => n(chords)
   .sound(heavy).adsrOff().unison(voices = 11, spread = 0.08)
   .ignp("decay", 3.5).clip(1)
@@ -432,7 +432,7 @@ export strum = notes => n(notes)
 
 // The drums, for the second run of the heavy block: the band of Der Schmetterling, heavy and half time. The kick on one,
 // the snare on three, the Trommel rolling in on the off-beats of two and four, a crash on one and open hats on two to
-// four. The kit shares one orbit and one room; the Trommel keeps its own for its membrane.
+// four. The kit shares one cylinder and one room; the Trommel keeps its own for its membrane.
 let drumRoom = x => x.reverb(wet = 0.3, size = 5)
 
 export kick = pat => sound("bd").struct(pat)
@@ -444,7 +444,7 @@ export snare = pat => sound(pat)
   .sound(metalSnare).adsrOff().freq(snareHz)
   .gain(0.45).pan(0.575)
   .lpf(freq = "12500".add(saw(0, 1200).slow(12)), q = 0.5)
-  .delay(0.33, pure(4/65).div(cps), 0.875, 24) // Snare needs it own orbit for the dalay!
+  .delay(0.33, pure(4/65).div(cps), 0.875, 24) // Snare needs it own cylinder for the dalay!
   .cylinder(12).apply(drumRoom).late(perlin(0.001, 0.0015))
 
 export hats = pat => sound(pat).n(0)

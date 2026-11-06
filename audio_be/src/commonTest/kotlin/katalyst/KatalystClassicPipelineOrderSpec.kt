@@ -74,7 +74,7 @@ class KatalystClassicPipelineOrderSpec : StringSpec({
         // The GAIN is new surface too (2026-09-19, the signal-flow plan's spot C) and is in the
         // chain anyway, on one condition that this row pins: the stage returns before it
         // multiplies while its factor is exactly 1.0 (`KatalystGainEffect.process`), so a unity
-        // fader cannot move a sample. Any other default here, and every orbit of every song would
+        // fader cannot move a sample. Any other default here, and every cylinder of every song would
         // be scaled. Asserted rather than left to the order row above, which compares the
         // declaration against the pipeline BUILT FROM IT and would happily agree with itself.
         KatalystDsl.classic.stages.any { it is KatalystStageDsl.Eq } shouldBe false
@@ -90,7 +90,7 @@ class KatalystClassicPipelineOrderSpec : StringSpec({
         val cylinder = Cylinder(id = 0, blockFrames = 128, sampleRate = 48000)
 
         // What the engine runs: the serial pipeline, then the ducking pass `Cylinders` does after
-        // every orbit has been processed.
+        // every cylinder has been processed.
         val engineOrder = cylinder.pipeline.map { it.stageName() } +
             cylinder.duck.shouldNotBeNull().stageName()
 
@@ -216,7 +216,7 @@ class KatalystClassicPipelineOrderSpec : StringSpec({
 
         // The position is documented as ignored, so "last" is a reading convention, not a
         // promise about signal order. What IS load-bearing: the duck must not be in the serial
-        // pipeline, or it would run per orbit before the sidechain source exists. The group
+        // pipeline, or it would run per cylinder before the sidechain source exists. The group
         // fader sits directly before it, so the fader really is last in the list that IS a
         // signal order (2026-09-19); nothing else may be appended after the duck.
         KatalystDsl.classic.stages.last() shouldBe KatalystDsl.classic.stages

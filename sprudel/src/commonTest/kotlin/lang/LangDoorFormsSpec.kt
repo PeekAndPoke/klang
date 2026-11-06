@@ -26,7 +26,7 @@ private val SINE = listOf(0.5, 1.0, 0.5, 0.0)
  *
  * Each knob of the voice doors listed in [knobs] is one entry: level and routing (`gain`, `pregain`,
  * `pan`, `velocity`, `orbit`, `cylinder`, `density`, `accelerate`), the oscillator knobs (`analog`,
- * `duty`, `onepole`, `ignitorParam`, `ignp`, `sndPluck`, `sndSuperPluck`), the orbit slot setter (`katalystParam`,
+ * `duty`, `onepole`, `ignitorParam`, `ignp`, `sndPluck`, `sndSuperPluck`), the cylinder slot setter (`katalystParam`,
  * `katp`), `adsr` and `adsrOn`, `unison`,
  * the bus doors (`compressor`, `duck`, `reverb`, `delay`, `phaser`, `body`, `vowel`), `tremolo`,
  * `distort`, `crush`, `coarse`, the four filters, `fm`, `vibrato` and `penv`, and the aliases' heads.

@@ -29,8 +29,8 @@ class StereoBuffer(blockFrames: Int) {
 
     /**
      * Adds the first [frames] frames of [source] into this buffer, per channel: `left[i] += source.left[i]`, the
-     * same for the right. A bus summing another bus into itself (the orbits into the fusion mix, an engine's own
-     * bus into the output, a draining chain's ring-out into the orbit's mix). Allocates nothing.
+     * same for the right. A bus summing another bus into itself (the cylinders into the fusion mix, an engine's own
+     * bus into the output, a draining chain's ring-out into the cylinder's mix). Allocates nothing.
      *
      * No range check: a [frames] past either buffer throws on the JVM, and on JS reads `undefined` (the sum is
      * NaN) and drops a write past the end. Values are added as they are: a non-finite sample in [source] makes the

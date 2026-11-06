@@ -286,7 +286,7 @@ class FirstBlockAllocationSpec : StringSpec({
         allocatesNothingAfterBuild("pooled supersaw") { random ->
             Ignitors.superSaw(countsAtBuild = true, 
                 freq = freq, voices = Count(7.0), detune = Hold(0.2), analog = off, analogSpread = one, rng = random,
-                phasePool = 1.0, poolSize = 4.0, warmup = 4.0, refreshEvery = 0.0, selection = "normal:0.3:0.1", phasePools = pools, orbit = 1,
+                phasePool = 1.0, poolSize = 4.0, warmup = 4.0, refreshEvery = 0.0, selection = "normal:0.3:0.1", phasePools = pools, cylinder = 1,
             )
         }
     }

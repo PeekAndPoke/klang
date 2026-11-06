@@ -386,7 +386,7 @@ class ResourceWarehouseSpec : StringSpec({
     }
 
     "a double return is refused and counted — one ring can never be on the shelf twice" {
-        // Review round 1: without this, a returned-twice ring rents to two live orbits — two
+        // Review round 1: without this, a returned-twice ring rents to two live cylinders, two
         // delays writing one ring, heard as cross-talk. Eviction (2f) is where it is easiest to do.
         val (s, _) = shelf()
         val b = s.rent(8).shouldNotBeNull()

@@ -118,7 +118,7 @@ The rule of thumb for every `State.process()`, in three lines (maintainer, 2026-
    **An arm of an event that is the SAME from every state stays on the effect and does not
    dispatch.** The delay's `configure` on-arm is identical from Off, Active and Draining, so it
    stays on the effect and ends in `active.enter()`; only the off-arm dispatches
-   (`state.deactivate(line)`). That is why the common case's `configure`, an orbit whose delay is
+   (`state.deactivate(line)`). That is why the common case's `configure`, a cylinder whose delay is
    off and never had a ring, compiles to the same bytecode before and after; its `process` trades
    a null-check return for an empty virtual call, the same cost by another mechanism.
    **Recorded exception (Katalyst 5c-5, 2026-09-19):** since the tail-ceiling fix the delay's
@@ -144,13 +144,13 @@ laws: two earlier versions of this section stated them for every effect and were
 of the four (review ledger, 2026-09-19).
 
 - `Active.enter()` does not reset what outlives the state, the ring and the tail ceiling. A delay
-  that returns mid-drain would otherwise report no tail while it audibly rings, the orbit would
+  that returns mid-drain would otherwise report no tail while it audibly rings, the cylinder would
   be deactivated, and the echo train would stop dead. Row: "a delay that returns mid-drain keeps
   the ring AND the tail ceiling" (`hasTail()` never false, the mix bit-identical to an effect
   that stayed Active on silent sends; both halves mutation-checked separately).
 - `Off.enter()` forgets the RECORD of what the unit held (`activeTail.reset()`); the unit itself
   is untouched. Forget that, and the next life's `hasTail()` reads the previous life's ceiling
-  and holds the orbit long past its due, for ever at a feedback of 1 or more. Row: "a life that
+  and holds the cylinder long past its due, for ever at a feedback of 1 or more. Row: "a life that
   ended in Off starts the next one with an empty ceiling".
 - Entering Off has a precondition, a contract on `Off.enter`: the caller has already zeroed the
   ring or handed it back, because `Off.hasTail()` answers a hardcoded false.
@@ -158,7 +158,7 @@ of the four (review ledger, 2026-09-19).
 - **Every switch-off fades the feed, and the fade finishes itself** (engine follow-up 42, 2026-10-16, maintainer Q39:
   "fade, do not cut"; the reverb the same). The off-config only STARTS it: the wet glide falls to 0 over its span
   while the stage stays Active (`fading`, Active's one datum), and `Active.process` moves the stage on into Draining
-  or Off at the end of the block the glide lands in. It needs no further off-config, so an orbit whose owner stopped
+  or Off at the end of the block the glide lands in. It needs no further off-config, so a cylinder whose owner stopped
   offering (`Cylinder.commitOwner` configures nothing then) and the leaving chain of a swap drain like any other.
   Before, the move waited for the next off-config (knob expressions step 5b, a modulated time only), and every other
   switch-off cut the feed in one sample. Accepted cost: on an owner change the new owner's first 50 ms feed the old
@@ -177,8 +177,8 @@ maintainer and recorded in KLANG-00236 (katalyst dsl) BEFORE the step is briefed
 
 - **Copy the shape, not the condition.** Each effect's predicates are its own. The reverb's
   OFF-ARM test ("already silent", now its `Active.leave`) carries `|| !remaining.isFinite()`: a non-finite countdown there means a
-  POISONED network, and the reset is the only exit such an orbit ever gets. Its countdown-end
-  test is a plain `<= 0.0`. A transliterated delay condition pins that orbit for the life of the
+  POISONED network, and the reset is the only exit such a cylinder ever gets. Its countdown-end
+  test is a plain `<= 0.0`. A transliterated delay condition pins that cylinder for the life of the
   playback.
 - **Each conversion answers three questions in its own terms and pins each answer with a row
   that can fail:** (1) what outlives its states, and which `enter` must therefore not touch it;
@@ -225,7 +225,7 @@ maintainer and recorded in KLANG-00236 (katalyst dsl) BEFORE the step is briefed
   that leaves this situation; a chain arriving through `beginFade` can see two configures before
   its first block, and the identity harness scripts exactly that), settled, ramping. `currentGain` outlives
   all of them. The identity conversion keeps the snap; the parked finding of
-  KLANG-00210 (signal flow redesign) §11 (a fader through exactly 0 on a dry orbit can step) is a
+  KLANG-00210 (signal flow redesign) §11 (a fader through exactly 0 on a dry cylinder can step) is a
   separate behaviour change; its candidates, one of them a cylinder change, stay in §11.
 
 ## 3. Where it applies, in order
@@ -272,7 +272,7 @@ first as the template. Each conversion is accepted on:
 
 Both one-off harnesses are migration fixtures and are deleted with the step; the record names
 every scripted lifecycle, every render row and every song, because the next conversion copies
-that list and the fixtures are gone. `audio_benchmark` has no case for an orbit stage (only the DSP cores),
+that list and the fixtures are gone. `audio_benchmark` has no case for a cylinder stage (only the DSP cores),
 so a conversion that wants a benchmark number adds the case first.
 
 ## 5. What we do not do
@@ -285,6 +285,6 @@ so a conversion that wants a benchmark number adds the case first.
   5c-9 and stayed as they were, which spends this line.)
 - **A stage whose own `process` does not run every block cannot use it as the "first
   initialisation is instant" tick** (5c-9): the duck runs in a later pass and not at all while it
-  is off, so its window is the ORBIT's block, handed to it by `KatalystChain.process`. And a snap
+  is off, so its window is the CYLINDER's block, handed to it by `KatalystChain.process`. And a snap
   that sets a GLIDE's value is not always enough: the phaser's breakpoint also lives in the DSP's
   own field, so the first initialisation has to write it there too.

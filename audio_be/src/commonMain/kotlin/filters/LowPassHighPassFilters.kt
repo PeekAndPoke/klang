@@ -33,7 +33,7 @@ import kotlin.math.tan
 //   • DcBlocker — degenerate raw-pole HPF (parameterized by raw IIR pole; cheaper)
 //
 // Second-order (TPT/Vadim Zavalishin SVF, "The Art of VA Filter Design", canonical Cytomic form):
-//   • the bandpass of the orbit's resonators, run inside `ResonatorBank` since engine tidy-up step 12 (a); its
+//   • the bandpass of the cylinder's resonators, run inside `ResonatorBank` since engine tidy-up step 12 (a); its
 //     class (`SvfBPF` on `BaseSvf`) and the strip's lowpass, highpass and notch subclasses are gone (the strip's in
 //     phase 3 step 9); the tree's SVF is `Ignitor.svf` in `ignitor/IgnitorFilters.kt`.
 //
@@ -378,7 +378,7 @@ object LowPassHighPassFilters {
 
     /**
      * The whole vowel stage on one channel, in one call: a [ResonatorBank] installed from the bands. A one-shot
-     * builder for the specs and `audio_benchmark`; the orbit's stage (`KatalystResonatorEffect`) installs the
+     * builder for the specs and `audio_benchmark`; the cylinder's stage (`KatalystResonatorEffect`) installs the
      * engine's shared tables into banks of its own instead. A null [floor] is [VOWEL_FLOOR].
      */
     fun createVowel(

@@ -19,7 +19,7 @@ link fixed), Q36 (the eight merged branches and the worktree deleted), Q37 (rule
 rule 2 dropped, the exception documented in its KDoc, and the register says rules are guard-rails), Q38 (after the refill, finish engine
 follow-ups 31 to 41, as long as each stays a purely independent performance fix that changes no API), Q39 (fade, do not cut: engine follow-up 42), Q18 (the data tables stay positional, documented at
 their helpers), Q19 (the disposal order stays, documented in the dispatcher's KDoc), Q20 (fix the frozen songs'
-shared orbits: KLANG-00281 (song orbit ownership review)), Q13 (`progress()` and `elapsed()`, curves as their own future
+shared cylinders: KLANG-00281 (song orbit ownership review)), Q13 (`progress()` and `elapsed()`, curves as their own future
 feature: KLANG-00245 (pitch pipeline into the tree) 7f, KLANG-00304 (curves)), Q33 and Q32 (accelerate and the pitch envelope both stay nodes: pitch 7d, 7e), Q29 (`duty(width)`: engine follow-up 44), Q24 (typed Kotlin doors with `.ign`/`.kat`, KlangScript keeps its own
 door: KLANG-00314 (kotlin typed doors)), Q30 and Q31 (confirmed as decided by default; FM gets its own round with the
 maintainer: KLANG-00305 (fm revisit)), Q28 (solo: the latest value wins at once, engine

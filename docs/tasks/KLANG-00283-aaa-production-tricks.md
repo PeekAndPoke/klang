@@ -71,7 +71,7 @@ facts; the few that would go into code first were checked against a source and a
   `classic()` stages since the pitch pipeline (KLANG-00245 (pitch pipeline into the tree), steps 1 to 5).
 - **The send:** equal-power `pan` and `gain`, constant per voice.
 
-**Katalyst, per orbit and on the master. Stereo.**
+**Katalyst, per cylinder and on the master. Stereo.**
 
 - **`body` and `vowel`:** resonator banks by catalogue index; a change swaps the bank, with no continuous morph.
 - **`delay`:**
@@ -88,7 +88,7 @@ facts; the few that would go into code first were checked against a source and a
   - dB one-pole, peak link `max(|L|, |R|)`, soft knee, optional lookahead.
   - No detector filter, no RMS, no wet knob.
   - `limiter` is this stage with limiter numbers.
-- **`duck`:** keyed by another orbit; instant attack and a release (named `attack`); built but never used by a
+- **`duck`:** keyed by another cylinder; instant attack and a release (named `attack`); built but never used by a
   song (KLANG-00168 (ducking unfinished)).
 - **`eq`:** the same `EqSection` set.
 - **`gain`.**
@@ -96,7 +96,7 @@ facts; the few that would go into code first were checked against a source and a
   filled by nothing.
 - **The house stage:** DC blockers, the -1 dB limiter, the clip into floats.
 
-**Routing.** Voices go to an orbit, the orbits sum into the master chain, then the house stage. There are no
+**Routing.** Voices go to a cylinder, the cylinders sum into the master chain, then the house stage. There are no
 aux sends or returns and no groups (KLANG-00216 (signal graph engine) is the
 long-term plan).
 
@@ -124,7 +124,7 @@ The big EDM supersaw is wide because each unison voice sits somewhere else. Ours
 Workarounds today:
 - `jux`, or `superimpose` with a pan, at double the voices;
 - the reverb's width;
-- a bus `width` stage (K2 below), which widens what the orbit already has.
+- a bus `width` stage (K2 below), which widens what the cylinder already has.
 
 The real fix is a stereo-capable voice, for example an `Ign.stereo(left, right)` root whose send takes two
 buffers. It costs double only where an author asks for it. This is a large change: `Voice`, the send, the
@@ -135,17 +135,17 @@ voice. Two consequences:
 - A bus parameter moves only per event, and a knob patterned faster than about 3 Hz loses depth (the glide's
   low-pass, `audio/ref/katalyst.md`).
 - The master's knobs cannot be patterned at all, so the classic "highpass the whole mix through the build, drop
-  it on the one" (M67, S81, S97) is impossible on the master and stepwise on an orbit.
+  it on the one" (M67, S81, S97) is impossible on the master and stepwise on a cylinder.
 
 The fix is to let a Katalyst knob be an Ignitor control signal evaluated per block (an LFO, a `ramp` over
 seconds), and to give the master a way to receive slots.
 
-**G3. No routing.** There is no shared reverb that several orbits send to at different levels. Kokon put its hall
+**G3. No routing.** There is no shared reverb that several cylinders send to at different levels. Kokon put its hall
 on the master for that reason. There is no parallel bus either (New York drums, M11), and no group bus (all the
-drums through one compressor while each drum keeps its own orbit chain).
+drums through one compressor while each drum keeps its own cylinder chain).
 
 This is the signal-graph plan, not a node. Until then, two near-substitutes:
-- a `wet` knob on the compressor and the saturator gives parallel processing inside one orbit;
+- a `wet` knob on the compressor and the saturator gives parallel processing inside one cylinder;
 - the master chain carries the shared room.
 
 **G4. The Ignitor has no delay line.** `DelayLine` exists in `effects/` and the Karplus string has its own loop,
@@ -224,19 +224,19 @@ signal-graph work's first concrete use case once that work starts. The maintaine
 | I8 | **Feedback on `fm`** | noisy, saw-like FM edges (S7, S39) | small | Low priority |
 | I9 | **A sample-and-hold** `hold(rate)` | stepped random (S44) | small | Low; `perlin`/`berlin` already give smoothed random |
 
-### 4.2 Katalyst candidates (per orbit and on the master)
+### 4.2 Katalyst candidates (per cylinder and on the master)
 
 | # | Candidate | What it unlocks | Size | Notes |
 |---|---|---|---|---|
 | K1 | **`saturate(wet, shape, drive, ...)`**, `DistortionCore` on the bus; `configure`: `oversample`, `trim`, and an optional band (`from`, `to`) the shaping acts on | the **clipper before the limiter** (M22, M60: the modern loudness chain; today only the house stage clips, at the very end); **tape and console glue** (M29, M30) as a caricature: shape plus a head-bump bell plus a lowpass; **parallel saturation** (M32) by `wet`; the **exciter** (M31) as a band from 3 kHz with a low `wet`; **bass harmonics on a bus** (M1) as a band from 40 to 120 Hz with `rectify` and the harmonics mixed back, which works on samples and on any bass, not only on our additive one | medium | The one stage with the most reach. Merged the master saturation idea, now archived as KLANG-00295 (idea master saturation). Reuse the 16 shapes and the oversampler; ADAA (M34) is a later CPU win, not a first need. The Motor stays raw: no clamp, `trim` is the author's |
-| K2 | **`width(amount, ...)`**, the mid/side width; `configure`: `monoBelow` (a highpass on S, M3), `decorrelate` (a velvet-noise decorrelator for mono sources, M45) | a mono-safe low end on the master, wide pads from mono voices (the cheap half of G1), narrowing a busy orbit | medium | Velvet noise: a sparse FIR of about 30 to 45 taps over 20 to 30 ms, cheap, no latency (Alary, Politis, Välimäki 2017; Schlecht et al. 2018). Keep a transient guard in mind: decorrelation smears drums (Das, DAFx-24) |
-| K3 | **The reverb grows up**: `preDelay`, a feed filter (`lowCut`, with the existing `lowpass`: the Abbey Road trick, M51), a **self-duck** (the return ducks under the orbit's own dry, M53), then early reflections | the single biggest polish lever on a mix: a clear dry with a big room, bass and kick out of the room, and size cues. The maintainer already found the reverb "too sterile" | small (pre-delay, feed filter, self-duck), medium (early reflections) | The pre-delay, feed filter and self-duck are small enough to land before the big KLANG-00256 (reverb models) round and are wanted by every model in it. The self-duck needs no cross-orbit pass: the stage sees the orbit's dry at its own position |
+| K2 | **`width(amount, ...)`**, the mid/side width; `configure`: `monoBelow` (a highpass on S, M3), `decorrelate` (a velvet-noise decorrelator for mono sources, M45) | a mono-safe low end on the master, wide pads from mono voices (the cheap half of G1), narrowing a busy cylinder | medium | Velvet noise: a sparse FIR of about 30 to 45 taps over 20 to 30 ms, cheap, no latency (Alary, Politis, Välimäki 2017; Schlecht et al. 2018). Keep a transient guard in mind: decorrelation smears drums (Das, DAFx-24) |
+| K3 | **The reverb grows up**: `preDelay`, a feed filter (`lowCut`, with the existing `lowpass`: the Abbey Road trick, M51), a **self-duck** (the return ducks under the cylinder's own dry, M53), then early reflections | the single biggest polish lever on a mix: a clear dry with a big room, bass and kick out of the room, and size cues. The maintainer already found the reverb "too sterile" | small (pre-delay, feed filter, self-duck), medium (early reflections) | The pre-delay, feed filter and self-duck are small enough to land before the big KLANG-00256 (reverb models) round and are wanted by every model in it. The self-duck needs no cross-cylinder pass: the stage sees the cylinder's dry at its own position |
 | K4 | **The delay grows up**: a filter in the feedback loop (`lowCut`, `highCut`: each repeat darker, the tape echo, M55), `pingPong` (cross feedback), a stereo offset (left 1/8, right dotted 1/8), the self-duck of K3, later a little wow | "expensive" pluck and lead delays, throws that do not muddy | small to medium | Tempo-synced times stay a frontend matter (sprudel turns note values into seconds); the backend never learns cycles |
 | K5 | **The compressor grows up**: a detector `lowCut` (glue without bass pumping, M12, M24), a `wet` (parallel compression, M11, without routing), an RMS detector option | drum bus smash, mix-bus glue | small | `wet` first is the door-shape rule; adding it to an existing door is a shape change, so decide it with `/dsl-design` |
 | K6 | **The duck, finished** (KLANG-00168 (ducking unfinished)): a real attack (today the duck-down is instant, and that clicks, M4), a release, a key filter, and a **band**: duck only below a frequency (M6, the multiband sidechain that keeps the bass's harmonics audible while its sub clears for the kick) | the house and EDM kick-bass relation, pumping as a groove (M69) | small to medium | The band version pairs beautifully with our bass harmonics trick: the sub ducks, the 2f..8f partials stay |
 | K7 | **`chorus` / `ensemble` / `flanger`** (KLANG-00232 (flanger chorus)), stereo, LFO phases offset between left and right | wide pads, Juno-style string machines, a doubled guitar | medium | The bus half of I2; the stereo version is what gives width (G1) |
 | K8 | **`transient(attack, sustain)`** on a bus | drum bus punch and sustain control (M17) | small | Shares its core with I3 |
-| K9 | **A dynamic EQ band**, own detector or keyed by an orbit (M20, M5) | taming a boomy note, carving the vocal-like lead out of the guitars only when it plays | medium | The keyed form generalises the duck's cross-orbit pass |
+| K9 | **A dynamic EQ band**, own detector or keyed by a cylinder (M20, M5) | taming a boomy note, carving the vocal-like lead out of the guitars only when it plays | medium | The keyed form generalises the duck's cross-cylinder pass |
 | K10 | **Multiband compression and OTT** (M15, M16) | EDM density, mastering control | large | Later. It needs a flat-summing crossover core first (LR4: two chained 2nd-order Butterworths per band); "makes everything sound the same" is the catalogue's own pitfall |
 | K11 | **True-peak detection** on the limiter (M23, M65) | streaming-safe exports | small to medium | 4x oversampled peak detection; matters for exported files more than for the live engine |
 | E1 | **TPDF dither at the 16-bit edge** (`writePcm16`, M63) | clean fades and tails in exported WAVs | small | Not a stage: the engine is float, and only the JVM line and the WAV writer quantise. Seeded noise, one place |
@@ -270,7 +270,7 @@ Tags: **now**, **sugar**, **I1..I9**, **K1..K11**, **G1..G6**, **won't** (sectio
 | Odd versus even harmonics (S5e) | "solid, buzzy" (3f, 5f) versus "warm" (2f, 4f) | now | `harmonics` gives both; a `shape("chebyshev")` or `tanh` copy adds odd, `abs` adds even |
 | Sub-harmonic synthesis (M2) | an octave-down sub | now (synth) / I7 (samples) | `suboctaves(1)` or `Ign.sine(Ign.freq().mul(0.5))` |
 | Mono below 120 Hz (M3, S3) | a tight, centred, club-safe low | now (voices) / K2 (bus) | a voice is mono, so do not pan the bass and keep it out of the reverb; on the master `width(monoBelow = 120)` |
-| Kick and bass sidechain (M4) | the kick punches through, the bass breathes | now (orbit duck, untested) / K6 | the duck exists; a click on its instant attack; per note, a bass note on the kick can carry its own attack instead |
+| Kick and bass sidechain (M4) | the kick punches through, the bass breathes | now (cylinder duck, untested) / K6 | the duck exists; a click on its instant attack; per note, a bass note on the kick can carry its own attack instead |
 | Band-limited sidechain (M5, M6) | the sub ducks, the bass's harmonics stay | K6 | `duck` with a band |
 | Kick and bass phase alignment (M7, S4) | low end that adds instead of cancelling | now | synthesised: the oscillators' `phase` knob fixes the start of both, every hit the same |
 | Low resonance taming (M8) | an even 808 tail | now (static) / K9 (dynamic) | `eq` notch or bell |
@@ -279,7 +279,7 @@ Tags: **now**, **sugar**, **I1..I9**, **K1..K11**, **G1..G6**, **won't** (sectio
 | Multiband distortion (S6) | grit without sub mush | now | Kokon's Screamer shape: `x.plus(x.highpass(f).distort(...))`. For a flat split use two chained `lowpass(f, 0.707)` (an LR4) rather than `passes(2)` (a 4th-order Butterworth, which does not sum flat with its highpass twin) |
 | Reese (S2) | thick, slowly phasing | now | two or three saws, `detune` or a small `supersaw`, `lowpass`, optional `phaser` |
 | FM growl (S7) | neuro and dubstep movement | now | `fm` with an LFO on depth; feedback FM is I8 |
-| Formant bass, morphing (S8) | the "yoi" | now (voice) | three `bandpass` filters whose `freq` moves with an LFO or an envelope. The orbit `vowel` swaps banks and cannot morph (rejected by ear 2026-09-20), so the morph lives on the voice |
+| Formant bass, morphing (S8) | the "yoi" | now (voice) | three `bandpass` filters whose `freq` moves with an LFO or an envelope. The cylinder `vowel` swaps banks and cannot morph (rejected by ear 2026-09-20), so the morph lives on the voice |
 | 808 tuning (S9) | an 808 in key | now | a synthesised 808 is in key by construction |
 | 808 slide and portamento (S10, S12, S13) | trap, drill, acid | G5 | voice takeover is blocked on a design decision |
 | Kick and bass key relation (S11) | no beating under the kick | now | arrangement |
@@ -294,7 +294,7 @@ Tags: **now**, **sugar**, **I1..I9**, **K1..K11**, **G1..G6**, **won't** (sectio
 | Clap from 3 or 4 offset bursts (S18) | now (pattern) / I4 / I2 | in the pattern: `stut` or `echo` with offsets of 10 to 30 ms (jittered); in one voice: I4's delayed envelopes, or I2's taps |
 | Transients at the source (S19) | now | synthesised: the envelope IS the transient; a two-stage decay is the sum of two envelopes |
 | Transient shaping of samples (M17) | sugar now / I3, K8 | `x.abs().onepole(300)` against `x.abs().onepole(20)`, their ratio clamped, as a gain; clumsy and single-time-constant |
-| Room mic simulation (S21) | now (short reverb plus compressor on an orbit) / K3 | a small `reverb` size; the real "room" needs early reflections |
+| Room mic simulation (S21) | now (short reverb plus compressor on a cylinder) / K3 | a small `reverb` size; the real "room" needs early reflections |
 | Ghost notes, accents (S22) | now | pattern velocity |
 | Humanised timing and velocity (S23) | now | `late` and `early` with `perlin`, velocity with `perlin`, as Kokon does; keep kick and bass together |
 | Velocity to timbre (S23, S72) | G6 | today the author writes the slot by hand |
@@ -325,7 +325,7 @@ Tags: **now**, **sugar**, **I1..I9**, **K1..K11**, **G1..G6**, **won't** (sectio
 | Granular textures, freeze (S43, S84) | partial: `shimmer` | sample granular is not a candidate yet |
 | Slow random modulation (S44) | now | `perlin`, `berlin`; stepped S&H is I9 |
 | Chorus on pads (S45) | I2 / K7 | |
-| Sidechain-pumping pads (S46) | now | the orbit duck, or a per-note envelope |
+| Sidechain-pumping pads (S46) | now | the cylinder duck, or a per-note envelope |
 | Open voicings (S47) | now | `chord().voicing()` |
 | Pluck envelope, decay shorter with pitch (S49) | now | `adsr` with a decay written from `Ign.freq()` |
 | Delayed vibrato (S51) | sugar now / I4 | today a vibrato depth that rises from the onset; a true delay is I4 |
@@ -335,9 +335,9 @@ Tags: **now**, **sugar**, **I1..I9**, **K1..K11**, **G1..G6**, **won't** (sectio
 | Noise click on plucks (S56) | now | |
 | ADT and doubling (S57, M47) | now (pattern) | `superimpose(p => p.late(...).pan(...))` with a few cents of detune; mono-safe above about 20 ms |
 | Karplus refinements (S65, S67, S68) | now | `pluck`: `pickPosition`, `stiffness`, `brightness`; two polarisations as a two-voice `superpluck` |
-| Commuted body (S66) | now | the orbit `body` stage; on a voice, bells as modes |
+| Commuted body (S66) | now | the cylinder `body` stage; on a voice, bells as modes |
 | Release noises, key-off (S69) | now (pattern) | a separate short event at the note's end, which the pattern knows |
-| Sympathetic resonance (S70) | partial | the orbit `body` bank is not tunable to a scale; a voice-level bell bank is |
+| Sympathetic resonance (S70) | partial | the cylinder `body` bank is not tunable to a scale; a voice-level bell bank is |
 | Breath, bow, chiff (S71) | now | noise with its own envelope |
 
 ### 5.4 Space and stereo
@@ -357,7 +357,7 @@ Tags: **now**, **sugar**, **I1..I9**, **K1..K11**, **G1..G6**, **won't** (sectio
 | Ducked returns (M53) | K3, K4 | |
 | Ping-pong, filtered feedback, tape echo (M55) | K4 | |
 | Tempo-synced delay (M55) | sugar (sprudel) | a frontend matter: note values into seconds |
-| Delay throws (M55) | now | a per-event `wet` on the orbit; the newest voice owns it |
+| Delay throws (M55) | now | a per-event `wet` on the cylinder; the newest voice owns it |
 | Depth, front and back (M56) | now | lowpass, level, reverb wet, attack; a `distance` helper would be sugar |
 | Autopan within a note (M70) | G1 | per event it is `pan` with a signal |
 
@@ -383,7 +383,7 @@ Tags: **now**, **sugar**, **I1..I9**, **K1..K11**, **G1..G6**, **won't** (sectio
 | Mid/side EQ (M39) | won't (for now) / 4.0 (b) | K2's `monoBelow` covers the main use |
 | Master chain order (M57) | partial | today eq, compressor, limiter; K1, K2 and I1 complete it |
 | Loudness targets (M58) | now | our house level is -14 LUFS; meters are a task |
-| Stem mastering (M59) | now | the orbits are the stems |
+| Stem mastering (M59) | now | the cylinders are the stems |
 | Dither (M63) | E1 | |
 
 ### 5.6 Movement, ear candy, arrangement
@@ -392,8 +392,8 @@ Tags: **now**, **sugar**, **I1..I9**, **K1..K11**, **G1..G6**, **won't** (sectio
 |---|---|---|
 | Filter rises on one voice (M67, S81) | now | a `ramp` or a long `adsr` on a cutoff; per event, a pattern signal |
 | ... on a group or the master | G2 | |
-| Volume rides (M68) | now | per event `gain`; the orbit fader with `katp("gain.gain", ...)` |
-| Pumping as a groove, trance gate (M69) | now | a per-note envelope, `tremolo` with a square shape, the orbit duck |
+| Volume rides (M68) | now | per event `gain`; the cylinder fader with `katp("gain.gain", ...)` |
+| Pumping as a groove, trance gate (M69) | now | a per-note envelope, `tremolo` with a square shape, the cylinder duck |
 | LFO to everything (S73) | now (voice) / G2 (bus) | |
 | Envelope followers (S74) | sugar / I3 | |
 | Risers (S75) | now | noise with a rising `highpass` over a long `adsr`, a pitch sweep with `accelerate`, a tremolo whose rate rises |
@@ -526,7 +526,7 @@ the sound is very full."
 |---|---|---|---|
 | 1 | **Deep house, 120 BPM** | the "Shy" school (2015 deep house, close to what later became slap house) | K6 (the duck with a band), K2 (width, mono below), K3a (reverb pre-delay, feed filter, self-duck), K4 (filtered and ping-pong delays), I1 (shelves, air), K1 (the clipper on the master) |
 | 2 | **Synth-pop, around 1986 to 1990** | Depeche Mode, the *Music for the Masses* and *Violator* era | K7 (chorus and ensemble on pads), a gated reverb on a big snare (promotes M54 from won't), I5 (sampled-metal percussion as inharmonic partials), a sequenced bass with filter accents (now), K4 (ping-pong), K1 (tape), I6 (a hard-sync lead); the Schmetterling guitar can play a *Personal Jesus*-style riff |
-| 3 | **EBM** | Nitzer Ebb, DAF, Front 242 | a distorted 16th-note sequenced bass (multiband distortion, now), hard compression (K5), the transient core (I3, K8), short rooms with early reflections (K3b), dry vowel stabs (the orbit `vowel`, now) |
+| 3 | **EBM** | Nitzer Ebb, DAF, Front 242 | a distorted 16th-note sequenced bass (multiband distortion, now), hard compression (K5), the transient core (I3, K8), short rooms with early reflections (K3b), dry vowel stabs (the cylinder `vowel`, now) |
 
 Kokon and Der Schmetterling stay the rock test bench: parallel drum compression (K5 `wet`), room reflections, transients.
 
@@ -591,8 +591,8 @@ not forbidden; it is a reason to stop and ask the maintainer first.
 |---|---|---|
 | **G1, stereo voices** | A voice renders into one mono `AudioBuffer`; `mixIntoCylinder` is the one place where mono becomes stereo (equal-power `pan`, `gain`). The cull and the teardown fade read the same one buffer | Keep the send as the single mono-to-stereo point. Add no per-voice stage after the send, and no new reader that relies on "a voice is one buffer" beyond those that exist, without a note here. Then a stereo voice is a change to the send, the cull and the fade, not to every node |
 | **G2, bus signals** | Every Katalyst knob is read through `KatalystKnob` (a slot or the authored value) and moved by `KnobGlide`. The knobs stay typed as `IgnitorDsl` expressions (maintainer, 2026-10-07). The master has a param path and is fed `applyParams(null)` | Keep `KatalystKnob` the one read point (no stage caching a raw number it read around it), and keep the knob type an `IgnitorDsl`. Then "a knob is a per-block control signal" is a change in one class, and "the master receives slots" a change in one call |
-| **G3, routing** | The orbits sum in `Cylinders.processAndMix`, in rent order, and the duck runs there as the one cross-orbit pass. A chain is a stereo-in, stereo-out unit with two hosts (`Cylinder`, `MasterBus`; KLANG-00243 (one chain host)). A chain reports its latency (`KatalystChain.latencyFrames`); authored lookahead is uncompensated by choice | Keep the summation and the cross-orbit pass in one place, keep a chain host-free (stereo in, stereo out, its own tail and latency answers), and keep reporting latency: a routing graph with parallel paths needs it to compensate. This is the ground KLANG-00216 (signal graph engine) builds on |
-| **G4, a delay line on the voice** | `DelayLine` lives in `effects/`, fractional, crossfading; the Karplus string has its own loop | Keep `DelayLine` free of Katalyst and orbit types, so a voice node can own one. A per-voice ring is sized and allocated at voice build (tidy-up step 10's rule), never at render |
+| **G3, routing** | The cylinders sum in `Cylinders.processAndMix`, in rent order, and the duck runs there as the one cross-cylinder pass. A chain is a stereo-in, stereo-out unit with two hosts (`Cylinder`, `MasterBus`; KLANG-00243 (one chain host)). A chain reports its latency (`KatalystChain.latencyFrames`); authored lookahead is uncompensated by choice | Keep the summation and the cross-cylinder pass in one place, keep a chain host-free (stereo in, stereo out, its own tail and latency answers), and keep reporting latency: a routing graph with parallel paths needs it to compensate. This is the ground KLANG-00216 (signal graph engine) builds on |
+| **G4, a delay line on the voice** | `DelayLine` lives in `effects/`, fractional, crossfading; the Karplus string has its own loop | Keep `DelayLine` free of Katalyst and cylinder types, so a voice node can own one. A per-voice ring is sized and allocated at voice build (tidy-up step 10's rule), never at render |
 | **G5, glide between notes** | `Ignitor.generate` receives `freqHz` per block, so a pitch that moves during a voice's life is structurally fine. The pitch stage is moving into the tree (KLANG-00245 (pitch pipeline into the tree), V1); voice takeover is blocked on design (KLANG-00138 (voice takeover)) | Keep the note's pitch a per-block value end to end: do not bake the note frequency into a build-time constant on a path where a glide would need it to move. A memo keyed on freq (`MemoizingIgnitor.freqInvariant`) then recomputes per pitch, which is correct for a glide, only slower |
 | **G6, velocity in the tree** | Sprudel multiplies `velocity` into `gain` in the frontend, before the wire | Keep the fold in the frontend, where it is reversible: if the tree should ever see velocity, it is a slot in `ignitorParams`, with no wire change |
 | **4.0 (b), an Ignitor on the bus** | `IgniteContext` is voice-shaped (`voiceDurationFrames`, `gateEndFrame`, the voice rng) | A new node that needs only the sample rate, the block and its buffer (a filter, a shaper, a delay, a follower) should not reach into the voice-only fields. Then it can run on a bus buffer later. Envelopes and gates are voice concepts and may |

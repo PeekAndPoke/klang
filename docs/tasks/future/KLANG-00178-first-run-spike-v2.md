@@ -12,7 +12,7 @@ Der Schmetterling on the Fairphone, three measurements on 2026-09-04:
 
 1. Before the resource warehouse: the first run killed the playback (8 × 7.68 MB delay rings
    zero-filled in the first frame).
-2. With the warehouse (rings, reverb networks and cylinders lazy and shelved; a bucketed 16-orbit
+2. With the warehouse (rings, reverb networks and cylinders lazy and shelved; a bucketed 16-cylinder
    warmup stocking the shelves before `BackendReady`; deferred zeroing): better. The count-in is
    fine; when all the other voices set in there is a spike, then hiccups that stabilise. A second
    run is clean.
@@ -37,7 +37,7 @@ per session, not per playback.
 - **JIT of paths that are per-shape, not per-kind**: V8 optimises per call site and inline cache;
   a graph of the same kinds in a different shape can still deopt. The vocabulary warms kinds, not
   shapes.
-- **The count-in is fine, the tutti is not**: 8 orbits × N voices at once. This may be simply the
+- **The count-in is fine, the tutti is not**: 8 cylinders × N voices at once. This may be simply the
   steady-state CPU of that bar on a phone, unrelated to "first" — except that the second run is
   clean. Compare the diagnostics headroom trace of run 1 vs run 2 at the same bar.
 - **Sample decoding / soundfont**: does the song touch a sample at that bar? (It should not — no

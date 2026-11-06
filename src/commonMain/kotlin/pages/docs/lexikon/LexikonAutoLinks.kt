@@ -11,7 +11,7 @@ const val LEXIKON_PATH = "/manuals/lexikon/"
 /**
  * Links the Lexikon's terms in a markdown text to their entries (KLANG-00369; the maintainer, 2026-10-27: "auto-apply
  * links to the lexikon in the help prose [...] less manual links to manage"): each entry's [LexikonEntry.linkWords],
- * the first time the text names it, as a whole word in any case, the longest word first ("orbit bus" before "orbit").
+ * the first time the text names it, as a whole word in any case, the longest word first ("cylinder bus" before "cylinder").
  *
  * Never inside code (inline or fenced), a link or its text, an autolink or a URL; an entry a hand-written link in the
  * text already points to is not linked again, so a written link and an auto-link never meet; a KDoc reference

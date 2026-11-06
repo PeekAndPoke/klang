@@ -96,7 +96,7 @@ class PlayerWarehouseStats(ctx: NoProps) : PureComponent(ctx) {
     private fun FlowContent.renderTiles(w: KlangCommLink.Feedback.Diagnostics.WarehouseStats) {
         tile(
             name = "Delay rings",
-            hint = "The shelf of class-sized stereo buffers orbit and master delays rent",
+            hint = "The shelf of class-sized stereo buffers that the cylinders' and the master's delays rent",
             figure = mb(w.ringIdleBytes),
             unit = "idle",
             details = listOf(
@@ -122,7 +122,7 @@ class PlayerWarehouseStats(ctx: NoProps) : PureComponent(ctx) {
         )
         tile(
             name = "Cylinders",
-            hint = "Whole orbits, built by the warmup, returned when a playback ends",
+            hint = "Whole cylinders, built by the warmup, returned when a playback ends",
             figure = w.cylinderIdleCount.toString(),
             unit = "idle",
             details = listOf(
@@ -167,7 +167,7 @@ class PlayerWarehouseStats(ctx: NoProps) : PureComponent(ctx) {
         )
         tile(
             name = "Playing dry",
-            hint = "Delay or reverb rents the warehouse refused for lack of memory: that orbit plays dry",
+            hint = "Delay or reverb rents the warehouse refused for lack of memory: that cylinder plays dry",
             figure = w.deniedRents.toString(),
             unit = "refused",
             details = listOf("since the start"),

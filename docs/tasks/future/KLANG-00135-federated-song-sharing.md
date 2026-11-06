@@ -115,7 +115,7 @@ block, like npm's `engines`:
 ```
 
 Prefer **graceful degradation** over hard failure where possible (import the patterns, stub/silence the plugin-dependent
-orbit) — a product decision to make per capability.
+cylinder), a product decision to make per capability.
 
 **The rule that ties both axes to never-expiring caches: manifests evolve additively.** Each manifest carries its own
 `schemaVersion`; new fields are only ever added, never reinterpreted; readers ignore unknown fields. A manifest tagged

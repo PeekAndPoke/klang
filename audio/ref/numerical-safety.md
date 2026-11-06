@@ -104,7 +104,7 @@ The constants live in `audio_be/src/commonMain/kotlin/utils/numerical_safety.kt`
 
 The rule on every surface is the wire's NaN rule (`/dsl-design` section 4): a non-finite value a pattern writes
 reads as UNSET. It is not a clamp: every finite value passes raw (the Motor stays raw). A NaN that gets into a
-voice multiplies through the tree and reaches the orbit mix, where nothing scrubs it and it latches the orbit's
+voice multiplies through the tree and reaches the cylinder mix, where nothing scrubs it and it latches the cylinder's
 effects for the rest of the playback, so each reader substitutes at its own read, once:
 
 - **The `IgnitorDsl.Param` leaf** (`IgnitorDslRuntime`, where a slot resolves against `ignitorParams`): a non-finite

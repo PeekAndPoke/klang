@@ -25,7 +25,7 @@ import kotlin.math.round
 import kotlin.math.sin
 
 /**
- * Every switch-off of the orbit delay and reverb FADES the feed over the wet glide instead of cutting it (engine
+ * Every switch-off of the cylinder delay and reverb FADES the feed over the wet glide instead of cutting it (engine
  * follow-up 42, maintainer Q39, 2026-10-13: "fade, do not cut"; KLANG-00313 (delay reverb owner change cut)
  * option (b)). Unmodulated stages throughout: the modulated gates have faded since knob expressions step 5b
  * (`KatalystModulatedStagesSpec`).
@@ -34,7 +34,7 @@ import kotlin.math.sin
  * wet 1, fed the mix times the hand-computed ramp (from the wet to 0, linear per sample over [KNOB_GLIDE_SECONDS],
  * written from the end so the last sample is 0), and then silence (a drain is "Active on silent input"). The fade
  * needs ONE off-config: the block it lands in moves the stage on into the drain by itself, which is what lets an
- * orbit whose owner stopped offering drain (`Cylinder.commitOwner` configures nothing without an owner).
+ * cylinder whose owner stopped offering drain (`Cylinder.commitOwner` configures nothing without an owner).
  *
  * 44.1 kHz and 128 frames: one fade is 17 blocks.
  */
@@ -258,7 +258,7 @@ class KatalystSwitchOffFadeSpec : StringSpec({
         }
     }
 
-    // ── On a cylinder: the owner change, and the orbit that loses its owner mid-fade ─────────────────────────────
+    // ── On a cylinder: the owner change, and the cylinder that loses its owner mid-fade ─────────────────────────────
 
     /** What `.delay(...)` and `.reverb(...)` write: the stages' slots, the classic chain's names. */
     val owner: KlangMap<Double> = klangMapOf(
@@ -266,10 +266,10 @@ class KatalystSwitchOffFadeSpec : StringSpec({
         "reverb.wet" to 0.5, "reverb.size" to 6.0,
     )
 
-    "an owner change switches the delay and the reverb off with a fade, and the orbit drains with no owner left" {
+    "an owner change switches the delay and the reverb off with a fade, and the cylinder drains with no owner left" {
         // Two next owners: one that names neither stage (the writers hand NaN), one whose `katp` sets the time and the
         // size below their gates (authored size 0.05 normalizes under 0.01). Each offers for 5 blocks of the fade and
-        // is gone; nothing configures the orbit after that.
+        // is gone; nothing configures the cylinder after that.
         val nextOwners = listOf(
             "names neither stage" to emptyMap<String, Double>().toKlangMap(),
             "katp below the gates" to klangMapOf(

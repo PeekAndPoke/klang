@@ -35,7 +35,7 @@ object TestTextPatterns {
                         [e5 [~ c5] e5 [d5 c5]]
                         [b4 [b4 c5] d5 e5]
                         [c5 a4 a4 ~]
-                    >`).sound("triangle").orbit(0)
+                    >`).sound("triangle").cylinder(0)
                     .gain("0.3")
                     .fast(1)
                     .reverb(wet = 0.01, size = 3.0)
@@ -50,11 +50,11 @@ object TestTextPatterns {
                         [[c2 c3]*4]
                         [[b1 b2]*2 [e2 e3]*2]
                         [[a1 a2]*4]
-                    >`).sound("supersaw").orbit(1)
+                    >`).sound("supersaw").cylinder(1)
                     .pan(0.6).gain(0.6)
                     .reverb(wet = 0.01, size = 3.0),
 
-                    sound("bd hh sd hh").orbit(2)
+                    sound("bd hh sd hh").cylinder(2)
                     .pan(-0.7).gain(0.9)
                     .reverb(wet = 0.01, size = 3.0)
                     .delay(wet = "0.0 0.0 0.5 0.0", time = 0.25, feedback = 0.75)
@@ -74,7 +74,7 @@ object TestTextPatterns {
                         [e5 [~ c5] e5 [d5 c5]]
                         [b4 [b4 c5] d5 e5]
                         [c5 a4 a4 ~]
-                    >`).sound("triangle").orbit(0)
+                    >`).sound("triangle").cylinder(0)
                     .gain("0.3")
                     .fast(0.5)
                     .reverb(wet = 0.01, size = 3.0)
@@ -89,11 +89,11 @@ object TestTextPatterns {
                         [[c2 c3]*4]
                         [[b1 b2]*2 [e2 e3]*2]
                         [[a1 a2]*4]
-                    >`).sound("supersaw").orbit(1)
+                    >`).sound("supersaw").cylinder(1)
                     .pan(0.6).gain(0.6)
                     .reverb(wet = 0.01, size = 3.0),
 
-                    sound("bd hh sd hh").orbit(2)
+                    sound("bd hh sd hh").cylinder(2)
                     .pan(-0.7).gain(0.8)
                     .reverb(wet = 0.01, size = 3.0)
                     .delay(wet = "0.0 0.0 0.5 0.0", time = 0.25, feedback = 0.75)
@@ -243,9 +243,9 @@ object TestTextPatterns {
     val twoCylinders = """
         stack(
           // The drums' delay amount follows the owning hit: up on the snare, down elsewhere (it glides)
-          sound("bd hh sd oh").gain(0.7).delay(wet = "0.0 0.0 0.5 0.0", time = 0.25, feedback = 0.5).orbit(0),
+          sound("bd hh sd oh").gain(0.7).delay(wet = "0.0 0.0 0.5 0.0", time = 0.25, feedback = 0.5).cylinder(0),
           // Full delay on the melody
-          note("c ~ d ~ e ~ f ~").delay(wet = "0.0", time = 0.25).orbit(1),
+          note("c ~ d ~ e ~ f ~").delay(wet = "0.0", time = 0.25).cylinder(1),
         )
     """.trimIndent()
 
@@ -290,13 +290,13 @@ object TestTextPatterns {
         stack(        
           n("1 3 5 7 8 10 12 14").scale("C4:minor")
            .adsr(0.1, 0.5, 0.2, 0.5).gain(0.5)
-           .orbit(0).reverb(wet = 0.01, size = 10.0).sound("sine")
+           .cylinder(0).reverb(wet = 0.01, size = 10.0).sound("sine")
            .slow(8)
            // was `3 / 12` = 0.25 octaves (KlangScript divides as doubles) - exactly 3 semitones, same sound
            .accelerate(3),
          n("8 10 12 14 1 3 5 7").scale("C4:minor")
            .adsr(0.1, 0.5, 0.2, 0.5).gain(0.5)
-           .orbit(2).reverb(wet = 0.01, size = 10.0).sound("sine")
+           .cylinder(2).reverb(wet = 0.01, size = 10.0).sound("sine")
            .slow(8)
            // was `3 / 12` = 0.25 octaves (KlangScript divides as doubles) - exactly 3 semitones, same sound
            .accelerate(3)

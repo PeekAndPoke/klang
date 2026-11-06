@@ -13,7 +13,7 @@ import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 
 /**
- * The per-playback orbit-chain registry: what `Cmd.RegisterKatalyst` writes into, and what a
+ * The per-playback cylinder-chain registry: what `Cmd.RegisterKatalyst` writes into, and what a
  * cylinder will read from in step 2.
  *
  * The two properties that matter are the two the master registry has, for the same reasons: a fork

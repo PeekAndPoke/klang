@@ -27,7 +27,7 @@ Two parts:
    Katalysts and the master are one fixed signal graph. The Katalyst effects and the master effects
    should be the same thing. The user can configure any graph: "having multiple cylinders, then push
    some through katalyzers, combine some into a new sub-sum, push through another katalyzer, maybe
-   even split and join again." Sprudel's setup (voices into orbits, orbit chains, one master) is
+   even split and join again." Sprudel's setup (voices into cylinders, cylinder chains, one master) is
    then just a built-in special case.
 
 Why: the backend as lean as possible, first to reduce complexity, second so the engine is truly
@@ -63,22 +63,22 @@ maintainer has ideas for that; they are not written here yet.
 
 The framing so far: there are two kinds of processing. PER-VOICE (the Ignitor tree: it knows the note's
 frequency, gate and lifetime, built at note start, gone with the note) and SHARED (processing a summed signal,
-no per-note context, living as long as the playback). "Katalyst" (the orbit chain) and "Master" are not two
+no per-note context, living as long as the playback). "Katalyst" (the cylinder chain) and "Master" are not two
 kinds: they are two positions in the fixed graph. The long-run shape is NAMED nodes that events can configure;
-sprudel's bus doors writing `katp` slots that an orbit's chain reads by name are an early, orbit-bound form of it.
+sprudel's bus doors writing `katp` slots that a cylinder's chain reads by name are an early, cylinder-bound form of it.
 
 Seed list of fixed-layout assumptions (known so far; the inventory completes it):
 - `KlangPatternEvent`'s `sound`, `master` and `katalyst` properties and `InlineDslRegistrar.announceAll`
   (section 3 below; a candidate shape: the event announces its own inline DSLs into one generic sink over a
   sealed `InlineDsl` wire type, the maintainer's visitor idea, name to be decided);
-- the orbit concept: voices summed per orbit, the cylinder per orbit, sends, ducking and the compressor by orbit;
-- ~~the Katalyst (per orbit) and Master (one) chains as separate types, DSLs, registries and `Cmd.Register*` kinds~~
+- the cylinder concept: voices summed per cylinder, one `Cylinder` instance each, sends, ducking and the compressor by cylinder;
+- ~~the Katalyst (per cylinder) and Master (one) chains as separate types, DSLs, registries and `Cmd.Register*` kinds~~
   DONE 2026-09-28 (phase 3 step 12, KLANG-00238 (phase3 step12 master as katalyst)): one chain type
   (`KatalystDsl`, `KatalystChain`), one registry fork per playback, one `Cmd.RegisterKatalyst`, one swap law
   (`ChainSwap`). What is left of it is two HOSTS of that chain, `Cylinder` and `MasterBus`, with duplicated plumbing:
   KLANG-00243 (one chain host);
-- `katp` and the orbit parameter state; the sprudel doors that write it (`reverb`, `delay`, `compressor`,
-  `duck`, `phaser`, `body`, `vowel`) and `orbit(...)`, `katalyst(...)`, `master(...)`;
+- `katp` and the cylinder parameter state; the sprudel doors that write it (`reverb`, `delay`, `compressor`,
+  `duck`, `phaser`, `body`, `vowel`) and `cylinder(...)`, `katalyst(...)`, `master(...)`;
 - the per-voice `classic()` chain itself (sprudel's fixed voice layout, attached as a tag since phase 3 step 10).
 - two POSITION-bound features a merged "effect chain" type must keep expressible (maintainer and coordinator,
   2026-09-27: Katalyst and Master are the same thing, a shared chain, named only for where it sits): the master
@@ -88,7 +88,7 @@ Seed list of fixed-layout assumptions (known so far; the inventory completes it)
   a chain property);
 - the duck machinery, to be replaced by a bus reference plus a follower (section 5): the `duck` stage with its
   own DSP (`Ducking`, `KatalystDuckEffect`), the second pass in `Cylinders.processAndMix` that runs it after every
-  orbit, `duckCylinderId`, the envelope handover `takeOver`, `ChainSwap`'s duck events (`processDuck`,
+  cylinder, `duckCylinderId`, the envelope handover `takeOver`, `ChainSwap`'s duck events (`processDuck`,
   `ownerClaimed`, the duck data on Fading: the first thing to remove once ducking is composition), and the
   rule that `duck` is inert at the output position (phase 3 step 12).
 
@@ -108,7 +108,7 @@ Seed list of fixed-layout assumptions (known so far; the inventory completes it)
   "double envelope" caveat in the phase 3 record, section 6). Decide which classic stages an authored
   instrument gets, or whether the author opts out.
 - **Graph shape and its DSL.** Nodes (sources, buses, effect chains, sums, splits), how a pattern
-  addresses a bus (today: `orbit`), how a graph is declared and replaced at runtime, and what the
+  addresses a bus (today: `cylinder`), how a graph is declared and replaced at runtime, and what the
   sprudel default graph looks like written in that DSL.
 - **One effect chain type.** The Katalyst and the master chain merged into one chain type that any
   graph node can host. DONE for the type in phase 3 step 12 (2026-09-28); the lookahead rule is settled there too
@@ -122,7 +122,7 @@ Seed list of fixed-layout assumptions (known so far; the inventory completes it)
 - **The event's inline DSL properties** (noted by the maintainer, 2026-09-27). `KlangPatternEvent` exposes
   `sound`, `master` and `katalyst`: the inline DSL values a playback announces once to the backend
   (`InlineDslRegistrar.announceAll`, one `Cmd.Register*` per value, then the voice carries only a name). They
-  are the three levels of today's FIXED graph (voice instrument, orbit chain, master chain) spelled out as
+  are the three levels of today's FIXED graph (voice instrument, cylinder chain, master chain) spelled out as
   named properties. "OK-ish for now"; a configurable graph revises them, e.g. into one generic list of
   inline graph-node references per event, announced the same way.
 
@@ -143,7 +143,7 @@ its wet under the vocal, and the whole playback pumping under the kick at the ou
 
 **The maintainer's instinct: a reference reads the referenced bus's PREVIOUS output block.** What that settles:
 - **Order:** none is needed. Every bus runs in any order, because what it reads is already complete. Today's duck
-  pass runs in map order, so two orbits ducking each other read one already-ducked output; that known limitation
+  pass runs in map order, so two cylinders ducking each other read one already-ducked output; that known limitation
   of the fixed engine is left as it is, and this is its fix.
 - **Cycles:** defined without a special case, one block of delay per loop. Feedback gain in a loop is the
   author's (the Motor stays raw).
@@ -200,7 +200,7 @@ convention welded into the engine; this plan puts the general graph back under i
   Changing it is a structural swap with a crossfade (`ChainSwap`, generalised).
 - **The song** (the patterns): what is played, stateless, a pure function of time, as now. It addresses the
   machine BY NAME and writes two kinds of things:
-  - **notes into an input** (`.to("guitars")` instead of `orbit(3)`), with their per-note values (pitch, velocity,
+  - **notes into an input** (`.to("guitars")` instead of `cylinder(3)`), with their per-note values (pitch, velocity,
     the per-note stage's doors);
   - **automation of the machine's knobs**: a control lane that writes `hall.reverb.wet` or `master.eq.freq` over
     time, independent of any note. That retires "the newest sounding voice owns the orbit's settings": every knob has
@@ -211,7 +211,7 @@ convention welded into the engine; this plan puts the general graph back under i
 
 ### 6.3 What stays true
 
-- **No machine file means the default machine:** sprudel's orbits, each running the `classic` per-note stage and a
+- **No machine file means the default machine:** sprudel's cylinders, each running the `classic` per-note stage and a
   `classic` Katalyst, summed into the master. Every song written today plays unchanged; byte identity is the
   acceptance. The one-file song stays the way in, for tutorials and first sounds.
 - **Structure never depends on an event value** (signal-flow plan §3, rule 2): events choose inputs and write knobs,
@@ -303,7 +303,7 @@ machine. This is a very rough sketch but it might work."
      so the Motor would declare tracks, groups, returns and the master, and a pattern would write
      `note("a").track("bass")`. `to`, `track` and `input` are all free in sprudel today (grep, 2026-10-08).
    - It needs one decision: "cylinder is the word, orbit a sprudel alias" (maintainer, 2026-10-07). Is the user's
-     word `track`, with Cylinder the engine's word for what runs it, or `cylinder` everywhere? `orbit(n)` stays
+     word `track`, with Cylinder the engine's word for what runs it, or `cylinder` everywhere? `cylinder(n)` stays
      sprudel's alias for the default Motor's numbered lanes.
 7. **Instrument per track or per note.** A DAW track has one instrument; sprudel picks one per note
    (`s("bd sd")`). Both can hold: a track may declare its instrument, and a note's `sound()` overrides it unless the
@@ -347,7 +347,7 @@ an artifact so it can be opened on any device, and its source is kept in a folde
 - **Published privately:** https://claude.ai/artifact/DR6VcnEd7kaikuMTDLuAuU
 - **What it holds:**
   - the maintainer's first layout, 8 tracks "0" to "7" with the classic chain, all into the master, and a number
-    becoming a string (`orbit(0)` is `track("0")`);
+    becoming a string (`cylinder(0)` is `track("0")`);
   - a sketch band with groups, returns and a wired duck;
   - every sprudel door mapped to its slot keys (`doors.js`, read from the repo the same day).
 

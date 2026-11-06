@@ -53,7 +53,7 @@ let core = stack(kick, hat, bass)
 
 // ── Build layers ────────────────────────────────────────────────────
 let sub  = note("<a1 d2 bb1 c2 g1 f1 a1 d2>").struct("x!2").sound("sine").legato(1.0).adsr(0.005, 0.05, 0.5, 0.02).hpf(70).lpf(freq = 180, env = 19).gain(0.42).cylinder(3)
-let clap = s("~ cp ~ cp").gain(0.22).hpf(600).cylinder(8).reverb(wet = 0.2, size = 3) // own orbit: its reverb is not the hats'
+let clap = s("~ cp ~ cp").gain(0.22).hpf(600).cylinder(8).reverb(wet = 0.2, size = 3) // own cylinder: its reverb is not the hats'
 let oh   = s("[~ ~ ~ oh]!4").gain(0.20).hpf(4000).cylinder(1)
 let rim  = s("~ ~ rim ~ ~ ~ rim ~").gain(0.4).hpf(800).cylinder(1)
 
@@ -103,7 +103,7 @@ let hitStab = chord("Dm").voicing()
     .lpfCurves(attack = "invsquare") // opens fast, then slowly: the original sweep, before depth became semitones
     .pan(0.2).superimpose(pan(0.8), transpose(-12).pan(0.5), transpose(-24).pan(0.5), pan(0.5).transpose(12).velocity(0.8))
     .gain(0.32 * 0.3)
-    .cylinder(10).reverb(wet = 0.4, size = 5) // own orbit: its 10 s tail rings into the next section's sub (orbit 3)
+    .cylinder(10).reverb(wet = 0.4, size = 5) // own cylinder: its 10 s tail rings into the next section's sub (cylinder 3)
 // Offbeat hi-hat keeps the rhythmic flow alive through the hit + tail.
 // No filterWhen — plays naturally across the full 2-cycle hit segment.
 let hitHat = s("[oh ~]!2").gain(0.25).hpf(7000).adsr(0.005, 0.2, 0.2, 0.5).cylinder(2)
@@ -201,7 +201,7 @@ let darkBuild = stack(
         .superimpose(transpose("<-12 0 12 0>/8").gain(0.2 * 0.7).pan(0.1), transpose("<0 12 24 12>/8").gain(saw.range(0.1, 0.2).slow(64).mul(0.7)).pan(0.8))
         .phaser(rate = 1/11, wet = 0.25, center = 3500, sweep = 500)
         .hpf(300).lpf(freq = saw.range(3500, 5000).slow(64), env = 13.7, q = 1.5, passes = 1).adsr(0.005, 0.35, 0.5, 0.12)
-        .cylinder(6), // the same orbits as the build: bassline 6, stabs 5 (tails cross the section edge)
+        .cylinder(6), // the same cylinders as the build: bassline 6, stabs 5 (tails cross the section edge)
     // Syncopated pad stabs — keep the 90s rhythm but darken with section
     chord("<Am Dm <Bb [Bb|F]> C Gm [F|F|Dm] Am Dm>").voicing(rank = sine.range(0, 1.8).fast(7).add(perlin.range(0, 0.4)))
         .struct("[x@3 x@3 x@4 x@2 x@2 x@2]").transpose(0)

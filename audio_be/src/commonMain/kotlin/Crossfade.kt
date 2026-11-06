@@ -11,7 +11,7 @@ import io.peekandpoke.klang.audio_be.utils.finiteOrZero
  * The dual-chain crossfade: the ramp two effect chains are blended over while both hear the same
  * mix.
  *
- * Owned by [ChainSwap], the one swap both hosts of a whole chain run under live audio: every orbit
+ * Owned by [ChainSwap], the one swap both hosts of a whole chain run under live audio: every cylinder
  * bus (`Cylinder`, since phase 3 step 12 C1) and the master bus (`MasterBus`, since step 12 C4). One
  * instance per swap, created once. Katalyst step 3b, 2026-09-17 (KLANG-00236 (katalyst dsl) §D3)
  * extracted it from `MasterBus`, which had carried it alone since the master DSL shipped.
@@ -35,7 +35,7 @@ import io.peekandpoke.klang.audio_be.utils.finiteOrZero
  * ~0.045 rms on a loud chord with a wet room, which is the click the fade exists to prevent.
  * Ramping the INPUT reaches zero input exactly where the drain takes over, so the boundary is
  * continuous by construction and the tail is never scaled. Decided 2026-09-17 (step 3b) for the
- * orbit; the master blended the two OUTPUTS and cut the outgoing chain at the fade's end until
+ * cylinder; the master blended the two OUTPUTS and cut the outgoing chain at the fade's end until
  * step 12 C4 (decision (f)) moved it onto this law.
  *
  * Three properties of that shape a reader should not have to rediscover:
@@ -50,7 +50,7 @@ import io.peekandpoke.klang.audio_be.utils.finiteOrZero
  *    KLANG-00293 (chain swap cuts ringing inserts) such a chain was retired there, its ring cut in one sample.
  *  - The drained tail bypasses the INCOMING chain's INSERTS: it is added to the mix after them, so
  *    the new chain's compressor and phaser do not govern the old chain's ring-out. Its DUCK does:
- *    the duck pass runs on the whole orbit mix, after the tail has been added
+ *    the duck pass runs on the whole cylinder mix, after the tail has been added
  *    (`Cylinder.processDuck`). Whether a new chain's duck should pump the previous chain's ring-out
  *    is a taste call, not an oversight; it is recorded here rather than decided.
  *
@@ -96,7 +96,7 @@ internal class Crossfade(sampleRate: Int) {
     /**
      * Where [pos] stood when the current block's [rampUpAndAdd] started, so a SECOND per-sample
      * pass over the same block can use the SAME weights ([blendHeld]). The duck runs after the
-     * orbit's mix is formed, in another pass, and its weights have to line up with the mix's.
+     * cylinder's mix is formed, in another pass, and its weights have to line up with the mix's.
      */
     private var blockFrom: Int = 0
 
@@ -146,7 +146,7 @@ internal class Crossfade(sampleRate: Int) {
      * either source; both samples are read before either is written.
      *
      * What the duck pass needs (`Cylinder.processDuck`): a duck entering or leaving service has to
-     * be crossfaded into or out of the orbit's gain, and its weights must be the ones the two
+     * be crossfaded into or out of the cylinder's gain, and its weights must be the ones the two
      * chains were blended with, not the next block's.
      *
      * Valid ONLY inside the block [rampUpAndAdd] ran: afterwards it replays that block's weights,

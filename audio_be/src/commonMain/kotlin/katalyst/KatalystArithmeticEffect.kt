@@ -53,16 +53,16 @@ internal enum class KatalystArithmeticOp {
  * fade. Once settled it is the true division again, [divLaw] with the divisor as written.
  *
  * **A non-finite operand is unset** (the bus's NaN rule, `/dsl-design` §4; the Ignitor would pass the NaN on, which on
- * a bus would take the whole orbit). Unset is the operator's identity, 0 for [KatalystArithmeticOp.PLUS] and
+ * a bus would take the whole cylinder). Unset is the operator's identity, 0 for [KatalystArithmeticOp.PLUS] and
  * [KatalystArithmeticOp.MINUS], 1 for [KatalystArithmeticOp.TIMES], [KatalystArithmeticOp.DIV] and
  * [KatalystArithmeticOp.POW], and the operand glides there and back like any other move. A cap or a floor has no
  * identity, so an unset [KatalystArithmeticOp.MIN] or [KatalystArithmeticOp.MAX] passes the bus untouched: the bound
  * lets go at the next block, and its first operand after that arrives at once (a bound cannot glide from "no
  * bound"). Both are a step on a signal past the bound, accepted: reachable only by writing a non-finite value into the
- * slot while the orbit sounds.
+ * slot while the cylinder sounds.
  *
  * **Raw.** No clamp beyond the laws' own (`safeOut` on times, div and pow); a negative factor, an offset that keeps
- * the orbit from ever going silent, a power that folds the signal: the author's business.
+ * the cylinder from ever going silent, a power that folds the signal: the author's business.
  */
 internal class KatalystArithmeticEffect(
     private val op: KatalystArithmeticOp,
@@ -112,7 +112,7 @@ internal class KatalystArithmeticEffect(
      * Sets the operand to [knob]'s value; see the class KDoc for the glide and for what a non-finite one means.
      *
      * **Takes the knob, not its value** (engine follow-up 36, 2026-10-19). The writer calls this on every block the
-     * orbit has an owner (`KatalystChain.applyParams`), and on V8 a double handed to a call that is not inlined is a
+     * cylinder has an owner (`KatalystChain.applyParams`), and on V8 a double handed to a call that is not inlined is a
      * heap number (`audio/ref/performance.md`). In up to half of the processes V8 inlined the chain's `applyParams`
      * and the writers' `apply` into the cylinders' per-block path and left this method out of it, so each stage's
      * operand crossed as one heap number per block: `E-arith`'s second mode, about 160 to 196 B per block against 20

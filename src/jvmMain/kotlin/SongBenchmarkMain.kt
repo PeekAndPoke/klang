@@ -140,7 +140,7 @@ private fun appendLedger(results: List<SongBenchmark.Result>, bench: SongBenchma
             |and writes per sample (median); `KiB` state the voices hold (busiest block); `ns/smp/voice` render time per
             |sample per rendering voice; `ns/smp/pass` render time per sample per pass, the engine's cost per unit of work.
             |`voices` and the two `ns/smp/*` columns are comparable among harness rows only.
-            |The census counts the voice's IGNITOR graph; the strip's own stages (a pipeline filter, the orbit effects, the
+            |The census counts the voice's IGNITOR graph; the strip's own stages (a pipeline filter, the cylinder effects, the
             |master) are not in it, and a sample voice counts as one pass, while the render time in the numerator of both
             |`ns/smp/*` columns covers all of it: those two columns compare an engine against itself on ONE piece, never one
             |piece against another. JVM, ${bench.sampleRate} Hz, ${bench.blockFrames}-frame blocks.

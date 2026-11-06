@@ -44,7 +44,7 @@ import io.peekandpoke.klang.sprudel.putIgnitorParam
 import io.peekandpoke.klang.sprudel.putKatalystParam
 
 /**
- * The orbit chain's param state on the pattern side (Katalyst step 5a): the `.katp` door, the bus
+ * The cylinder chain's param state on the pattern side (Katalyst step 5a): the `.katp` door, the bus
  * doors writing the same slots as aliases, and the merge and wire behaviour of the map that carries
  * them.
  *
@@ -179,8 +179,8 @@ class LangKatalystParamSpec : StringSpec({
         slot(note("c3").compressor(ratio = 8).compressor(threshold = -30), "compressor.threshold") shouldBe -30.0
     }
 
-    "duck(...) fills its companions only when the call NAMES an orbit" {
-        // The orbit is this stage's name knob, so only naming it fills (`/dsl-design` §4). Until
+    "duck(...) fills its companions only when the call NAMES a cylinder" {
+        // The cylinder is this stage's name knob, so only naming it fills (`/dsl-design` §4). Until
         // round 3 of step 5a-3 every duck knob filled, and a tail-only call stamped DUCK_DEPTH (0)
         // over a chain-authored depth, which silenced the ducking on a declared chain.
         val p = note("c3").duck(cylinder = 2, depth = 0.5)
@@ -189,15 +189,15 @@ class LangKatalystParamSpec : StringSpec({
         slot(p, "duck.depth") shouldBe 0.5
         slot(p, "duck.attack") shouldBe DUCK_ATTACK_SECONDS
 
-        // An orbit-only call fills both companions: DUCK_DEPTH is 0, so it is still "no duck" until
+        // A cylinder-only call fills both companions: DUCK_DEPTH is 0, so it is still "no duck" until
         // a depth is asked for, but the two slots are written and right.
-        val orbitOnly = note("c3").duck(1)
+        val cylinderOnly = note("c3").duck(1)
 
-        orbitOnly.queryArc(0.0, 1.0).first().data.katalystParams?.toMap()?.keys shouldBe
+        cylinderOnly.queryArc(0.0, 1.0).first().data.katalystParams?.toMap()?.keys shouldBe
                 setOf("duck.cylinder", "duck.depth", "duck.attack")
-        slot(orbitOnly, "duck.depth") shouldBe DUCK_DEPTH
+        slot(cylinderOnly, "duck.depth") shouldBe DUCK_DEPTH
 
-        // A tail-only call names nothing: exactly its own slot, no orbit and no companion.
+        // A tail-only call names nothing: exactly its own slot, no cylinder and no companion.
         note("c3").duck(depth = 0.5).queryArc(0.0, 1.0).first().data.katalystParams?.toMap()?.keys shouldBe
                 setOf("duck.depth")
 
@@ -206,7 +206,7 @@ class LangKatalystParamSpec : StringSpec({
     }
 
     "a bare duck() that names nothing writes nothing, slot included" {
-        // The bare form reinterprets the pattern's own values as the orbit, so on a pattern whose
+        // The bare form reinterprets the pattern's own values as the cylinder, so on a pattern whose
         // values are not numbers it names nothing. It must then leave the slot alone: re-writing
         // the value of the last naming call would stamp 2 over the 5 the katp asked for (checklist
         // 12). Until step 5b-3 that stale value sat in the voice FIELD, and a row here pinned that
@@ -566,7 +566,7 @@ class LangKatalystParamSpec : StringSpec({
     "the duck accessors and mappers see the companions its fill wrote" {
         // `duck(1)` fills `duck.depth` and `duck.attack` into the SLOTS; until step 5b-3 it wrote no
         // voice field for them, so `duck.attack` read nothing and a mapper on an unnamed attack
-        // wrote nothing. Now both see what the orbit runs.
+        // wrote nothing. Now both see what the cylinder runs.
         note("c3").duck(1).gain(duck.attack).queryArc(0.0, 1.0).first().data.gain shouldBe DUCK_ATTACK_SECONDS
 
         val mapped = note("c3").duck(1, 0.8).duck(attack = mul(4))
@@ -661,7 +661,7 @@ class LangKatalystParamSpec : StringSpec({
 
         // Why it has to be a copy: the backend keeps `Voice.katalystParams` for the whole life of
         // the voice and its chain gates the re-resolve on the map's IDENTITY, so a write sprudel
-        // made afterwards would move an orbit's settings with nothing to notice it.
+        // made afterwards would move a cylinder's settings with nothing to notice it.
         data.putKatalystParam("room", 9.0)
         data.putIgnitorParam("analog", 9.0)
 

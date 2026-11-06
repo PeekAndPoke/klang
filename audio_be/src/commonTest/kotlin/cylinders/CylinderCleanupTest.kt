@@ -19,20 +19,20 @@ import io.peekandpoke.klang.common.infra.klangMapOf
  * Tests for Cylinder cleanup functionality (tryDeactivate).
  * Verifies that silent cylinders are properly deactivated to reduce processing overhead.
  */
-class OrbitCleanupTest : StringSpec({
+class CylinderCleanupTest : StringSpec({
 
     val blockFrames = 128
     val sampleRate = 44100
 
-    // A block long after every claim below: no voice plays any more, so no check-in holds the orbit
+    // A block long after every claim below: no voice plays any more, so no check-in holds the cylinder
     // and what each row tests (the silence gate, the tails, the clean slate) is all that decides.
     val afterLastVoice = 100.0 * blockFrames
 
-    fun createTestOrbit(): Cylinder {
+    fun createTestCylinder(): Cylinder {
         return Cylinder(id = 0, blockFrames = blockFrames, sampleRate = sampleRate, silentBlocksBeforeTailCheck = 0)
     }
 
-    fun makeOrbitActive(cylinder: Cylinder) {
+    fun makeCylinderActive(cylinder: Cylinder) {
         // Create a minimal voice just to activate the cylinder
         val voice = VoiceTestHelpers.createSynthVoice(
             startFrame = 0.0,
@@ -41,7 +41,7 @@ class OrbitCleanupTest : StringSpec({
         cylinder.offerAndCommit(voice, blockStart = 0.0)
     }
 
-    "tryDeactivate() frees the orbit only when both channels stay within the silence floor at every sample" {
+    "tryDeactivate() frees the cylinder only when both channels stay within the silence floor at every sample" {
         // One silence gate, one entry per way a block can fail or pass it: the floor from both
         // sides, each channel on its own, a negative excursion, a single sample mid-buffer and at
         // the last index.
@@ -64,9 +64,9 @@ class OrbitCleanupTest : StringSpec({
         )
 
         for ((name, fill, staysActive) in table) {
-            val cylinder = createTestOrbit()
+            val cylinder = createTestCylinder()
 
-            makeOrbitActive(cylinder)
+            makeCylinderActive(cylinder)
             cylinder.isActive shouldBe true
 
             cylinder.mixBuffer.clear()
@@ -77,14 +77,14 @@ class OrbitCleanupTest : StringSpec({
         }
     }
 
-    "a mix that sounds again restarts the silence grace, from inside the grace and from a held orbit" {
-        // A grace of 4 silent visits; the voice's claim is at block 0, so check-ins hold the orbit through block 1
+    "a mix that sounds again restarts the silence grace, from inside the grace and from a held cylinder" {
+        // A grace of 4 silent visits; the voice's claim is at block 0, so check-ins hold the cylinder through block 1
         val grace = 4
         val blockAt = { b: Int -> b * blockFrames.toDouble() }
 
-        fun orbit(): Cylinder {
+        fun cylinder(): Cylinder {
             val c = Cylinder(id = 0, blockFrames = blockFrames, sampleRate = sampleRate, silentBlocksBeforeTailCheck = grace)
-            makeOrbitActive(c)
+            makeCylinderActive(c)
             return c
         }
 
@@ -100,7 +100,7 @@ class OrbitCleanupTest : StringSpec({
         }
 
         // Inside the grace: two silent visits, a sounding one, then the grace counts from 0 again
-        val inGrace = orbit()
+        val inGrace = cylinder()
         silentVisit(inGrace, 10)
         silentVisit(inGrace, 11)
         soundingVisit(inGrace, 12)
@@ -114,7 +114,7 @@ class OrbitCleanupTest : StringSpec({
         withClue("positive control: the full grace after the sound ends it") { inGrace.isActive shouldBe false }
 
         // Held: a voice checks in past the grace, then the mix sounds, then the voice is gone
-        val held = orbit()
+        val held = cylinder()
 
         for (b in 0 until grace) {
             held.checkIn(blockAt(b))
@@ -127,7 +127,7 @@ class OrbitCleanupTest : StringSpec({
 
         for (b in grace + 11 until grace + 11 + grace - 1) {
             silentVisit(held, b)
-            withClue("after a held orbit sounded, silent visit at block $b: the grace restarted") { held.isActive shouldBe true }
+            withClue("after a held cylinder sounded, silent visit at block $b: the grace restarted") { held.isActive shouldBe true }
         }
 
         silentVisit(held, grace + 11 + grace - 1)
@@ -135,8 +135,8 @@ class OrbitCleanupTest : StringSpec({
     }
 
     "tryDeactivate() on already inactive cylinder does nothing" {
-        val cylinder = createTestOrbit()
-        makeOrbitActive(cylinder)
+        val cylinder = createTestCylinder()
+        makeCylinderActive(cylinder)
 
         // Deactivate it first
         cylinder.mixBuffer.clear()
@@ -154,8 +154,8 @@ class OrbitCleanupTest : StringSpec({
     }
 
     "cylinder reactivates when a voice offers and the owner is committed" {
-        val cylinder = createTestOrbit()
-        makeOrbitActive(cylinder)
+        val cylinder = createTestCylinder()
+        makeCylinderActive(cylinder)
 
         // Deactivate it
         cylinder.mixBuffer.clear()
@@ -163,7 +163,7 @@ class OrbitCleanupTest : StringSpec({
         cylinder.isActive shouldBe false
 
         // Reactivate by an offer and a commit
-        makeOrbitActive(cylinder)
+        makeCylinderActive(cylinder)
 
         // Should be active again
         cylinder.isActive shouldBe true
@@ -173,10 +173,10 @@ class OrbitCleanupTest : StringSpec({
         // The tail ceiling holds a charged drain until the
         // countdown\'s own terminal reset (old copies sit in the ring at full amplitude until the
         // head wraps). The reachable case for the resetBusEffects wiring is therefore an ACTIVE
-        // delay whose ring only ever held sub-threshold content: the ceiling frees the orbit while
+        // delay whose ring only ever held sub-threshold content: the ceiling frees the cylinder while
         // literal nonzeros remain, and only resetBusEffects cleans those. Review round 2 found
         // that wiring line unguarded.
-        val cylinder = createTestOrbit()
+        val cylinder = createTestCylinder()
 
         cylinder.offerAndCommit(
             VoiceTestHelpers.createSynthVoice(
@@ -208,12 +208,12 @@ class OrbitCleanupTest : StringSpec({
     "an inaudibly-charged reverb network is cleared LITERALLY on deactivation" {
         // The reverb sibling of the delay row above (reverb drain adoption, review round 1): an
         // ACTIVE reverb whose combs only ever held sub-threshold content — the audibility scan
-        // frees the orbit while literal nonzeros remain, and only the resetBusEffects wiring
-        // cleans those (the anti-denormal bias guarantees such nonzeros on EVERY reverb orbit,
+        // frees the cylinder while literal nonzeros remain, and only the resetBusEffects wiring
+        // cleans those (the anti-denormal bias guarantees such nonzeros on EVERY reverb cylinder,
         // so this is the normal state, not a corner). Also the row where an Active-state
-        // hasTail must genuinely answer false: a hard-true mutation makes every orbit that ever
+        // hasTail must genuinely answer false: a hard-true mutation makes every cylinder that ever
         // had reverb immortal, leaking one PlaybackEngine per stop.
-        val cylinder = createTestOrbit()
+        val cylinder = createTestCylinder()
 
         cylinder.offerAndCommit(
             VoiceTestHelpers.createSynthVoice(
@@ -247,11 +247,11 @@ class OrbitCleanupTest : StringSpec({
         cylinder.reverb!!.reverb!!.lowpass.isNaN() shouldBe true
     }
 
-    "a draining self-oscillating delay with an EMPTY ring does not pin the orbit" {
-        val cylinder = createTestOrbit()
+    "a draining self-oscillating delay with an EMPTY ring does not pin the cylinder" {
+        val cylinder = createTestCylinder()
 
         // Owner A configures a self-oscillating delay; nothing is ever sent into it, so the ring
-        // never holds anything: the orbit mix stays silent, so the line is fed nothing. The
+        // never holds anything: the cylinder mix stays silent, so the line is fed nothing. The
         // `delay.wet` is WRITTEN, so the line runs, and the ring stays empty.)
         cylinder.offerAndCommit(
             VoiceTestHelpers.createSynthVoice(
@@ -267,7 +267,7 @@ class OrbitCleanupTest : StringSpec({
             blockStart = 2.0 * blockFrames,
         )
 
-        // Ring empty, mix silent: the orbit must free itself. Review round 1 found this shape
+        // Ring empty, mix silent: the cylinder must free itself. Review round 1 found this shape
         // pinning the cylinder forever (and through anyActive -> hasOwnSound -> isIdle leaking
         // one whole PlaybackEngine per stop); the configure-door peak check is what closes it.
         cylinder.tryDeactivate(afterLastVoice)
@@ -276,7 +276,7 @@ class OrbitCleanupTest : StringSpec({
     }
 
     "the duck is in the lifecycle set: deactivation clears it" {
-        val cylinder = createTestOrbit()
+        val cylinder = createTestCylinder()
 
         cylinder.offerAndCommit(
             VoiceTestHelpers.createSynthVoice(
@@ -291,14 +291,14 @@ class OrbitCleanupTest : StringSpec({
         cylinder.tryDeactivate(afterLastVoice)
 
         // The duck runs OUTSIDE the serial pipeline, so a lifecycle that walks only the pipeline
-        // would leave this orbit ducking to a dead owner's source for its whole next life.
+        // would leave this cylinder ducking to a dead owner's source for its whole next life.
         cylinder.isActive shouldBe false
         cylinder.duck!!.duckCylinderId shouldBe null
         cylinder.duck!!.ducking shouldBe null
     }
 
     "the duck is in the lifecycle set: retiring to the shelf clears it" {
-        val cylinder = createTestOrbit()
+        val cylinder = createTestCylinder()
 
         cylinder.offerAndCommit(
             VoiceTestHelpers.createSynthVoice(
@@ -316,14 +316,14 @@ class OrbitCleanupTest : StringSpec({
     }
 
     "deactivation clears the mix, so a reactivating voice is not summed onto the last block's residue" {
-        // Found in the step 5b-2 review (Synthris Echo): `clear()` skips an inactive orbit, so the
-        // sub-floor output of the orbit's last block stayed in its mix buffer until a voice woke the
-        // orbit, was summed under that voice and, since the delay and the reverb are fed from the
+        // Found in the step 5b-2 review (Synthris Echo): `clear()` skips an inactive cylinder, so the
+        // sub-floor output of the cylinder's last block stayed in its mix buffer until a voice woke the
+        // cylinder, was summed under that voice and, since the delay and the reverb are fed from the
         // mix, fed into the room.
-        val cylinder = createTestOrbit()
-        makeOrbitActive(cylinder)
+        val cylinder = createTestCylinder()
+        makeCylinderActive(cylinder)
 
-        // Below the silence floor, so the orbit deactivates with it in the buffer.
+        // Below the silence floor, so the cylinder deactivates with it in the buffer.
         cylinder.mixBuffer.fill(0.000001)
         cylinder.tryDeactivate(afterLastVoice)
 

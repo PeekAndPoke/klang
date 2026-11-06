@@ -23,21 +23,21 @@ import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
  * replaces it without clicks.
  *
  * **The output runs a [KatalystChain]** (phase 3 step 12): the same chain and the same stages an
- * orbit runs, built by [KatalystChainBuilder] from the [KatalystDsl] a `master(…)` names, looked up
+ * cylinder runs, built by [KatalystChainBuilder] from the [KatalystDsl] a `master(…)` names, looked up
  * in the engine's [KatalystRegistry] fork, the same fork its cylinders read (one registry, one
- * namespace for both positions, since C5). Two things make it the OUTPUT host rather than an orbit,
+ * namespace for both positions, since C5). Two things make it the OUTPUT host rather than a cylinder,
  * and both are this class's, not the chain's:
  *  - **nothing fills the chain's `Param` slots** (decision (b), 2026-09-27): every chain is
  *    configured with `applyParams(null)` before it processes, so a slot is its authored default;
  *  - **it never deactivates or resets on silence** (plan risk R5): a cylinder resets its chain when
- *    its orbit goes quiet, the output does not, so a limiter envelope or a room carries across a gap
+ *    its cylinder goes quiet, the output does not, so a limiter envelope or a room carries across a gap
  *    exactly as the old master chain did. The only reset is the one a chain gets when it comes into
  *    service ([landChain]).
  *
  * A master swap is requested by the scheduler when it consumes a `master(…)` event
  * ([requestSwap]) and takes effect in [process].
  *
- * **The swap is the orbit's, [ChainSwap]** (step 12 C4, decision (f): one law at both positions).
+ * **The swap is the cylinder's, [ChainSwap]** (step 12 C4, decision (f): one law at both positions).
  * The chain leaving service is fed a shrinking copy of the bus while the arriving chain's output is
  * ramped up over [Crossfade], both delayed so they meet at the output when either chain is late
  * (a lookahead limiter); then the leaving chain DRAINS: it keeps running on silence at full weight,
@@ -54,7 +54,7 @@ import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
  *  - **no duck**: a duck stage is inert at the output (decision (c)), so this host raises none of the
  *    swap's duck events.
  *
- * **The chain plumbing is the [ChainHost] this bus shares with every orbit** (KLANG-00243 (one chain
+ * **The chain plumbing is the [ChainHost] this bus shares with every cylinder** (KLANG-00243 (one chain
  * host)): the chain in service and its name, the cache, the parked request (latest wins, offered
  * again by [pollPendingSwap] every block) and the lookup.
  *
@@ -62,9 +62,9 @@ import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
  * Ahead ([prepare], KLANG-00137 (master dsl followups) §3): when a schedule carrying its `master(…)`
  * event arrives, the shells are built on the command path, between render blocks, and the landing is
  * a cache hit. Registration builds nothing: the one Katalyst registry serves both positions, so a
- * registered chain may be an orbit's that never reaches the output. Otherwise (no schedule built it,
+ * registered chain may be a cylinder's that never reaches the output. Otherwise (no schedule built it,
  * or it was evicted before it landed) a chain is built when a request for it LANDS ([landChain], on
- * the request itself when the swap is idle, inside `scheduler.process` before any orbit of the block
+ * the request itself when the swap is idle, inside `scheduler.process` before any cylinder of the block
  * processes; or on the block's poll when it was parked), and cached, so a repeat is a map lookup. A
  * Katalyst stage rents its unit at its first configure, in the chain's first [process] after it lands
  * ([buildChain] builds the shells only). Until 2026-11-05 the build configured at once, so the rent
@@ -78,22 +78,22 @@ import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
  * shelf pressure (then the rule below applies). Nothing ever holds a room or a ring for a chain
  * nobody plays (the allocation-cleanup rule).
  *
- * **A refused unit degrades and recovers, the orbit's rule** (maintainer, 2026-09-27). When the
+ * **A refused unit degrades and recovers, the cylinder's rule** (maintainer, 2026-09-27). When the
  * shelf cannot serve a reverb unit or a delay ring and the allocation fails, the stage stays in the
  * chain, Off and dry, so the bus stays active and declares its tail. While the refusal is latched the
- * stage re-asks the shelf on every block, WITHOUT allocating, and takes a unit an orbit or another
+ * stage re-asks the shelf on every block, WITHOUT allocating, and takes a unit a cylinder or another
  * engine hands back from that block on, starting from an empty unit (the shelf zeroes it), so
- * nothing stale is replayed; the wet enters unramped, as an orbit's first configure does (a delay's
+ * nothing stale is replayed; the wet enters unramped, as a cylinder's first configure does (a delay's
  * first echo can land as a step on sustained material). A [KatalystChain.reset] clears the latch:
  * every chain is reset when it lands, so its next block retries WITH allocation, on the render
- * thread, as an orbit's stage does. Each new latch counts once in the chain's `deniedRents`
+ * thread, as a cylinder's stage does. Each new latch counts once in the chain's `deniedRents`
  * (telemetry only).
  *
  * What a landing still costs in the render block is the units, rented at the first configure:
  * Freeverb buffers when the shelf has no idle unit, and a delay ring only when the backend's shelf has
  * none of that class idle (resource-warehouse step 2e: master delays rent from the same class-sized
- * shelf as the orbits). The first master delay of a class on a backend still allocates in render, by
- * decision (D2, 2026-09-04), as an orbit's does. The shells are built in render only when nothing
+ * shelf as the cylinders). The first master delay of a class on a backend still allocates in render, by
+ * decision (D2, 2026-09-04), as a cylinder's does. The shells are built in render only when nothing
  * built them ahead: a registration that arrives after its schedule (the frontend registers first), a
  * chain built ahead and evicted before it landed, the specs' direct [requestSwap]. Returning to a chain
  * that has since been evicted from the bounded cache (last landed more than
@@ -113,7 +113,7 @@ class MasterBus(
         /**
          * Silent blocks between two tail checks on the chains in play.
          *
-         * The orbit path throttles its deactivation check the same way (`Cylinder.tryDeactivate`
+         * The cylinder path throttles its deactivation check the same way (`Cylinder.tryDeactivate`
          * counts silent blocks before asking); this is the master-bus counterpart.
          */
         private const val TAIL_CHECK_INTERVAL_BLOCKS = 10
@@ -128,7 +128,7 @@ class MasterBus(
         private set
 
     /**
-     * The chain plumbing this bus shares with the orbits ([ChainHost]). Born with the EMPTY chain: no
+     * The chain plumbing this bus shares with the cylinders ([ChainHost]). Born with the EMPTY chain: no
      * stage, so [isActive] is false and the engine keeps its fast path. A `master(Katalyst())`
      * declares the same content and is built as a chain of its own (the output never answered a
      * declaration with its born-with chain).
@@ -148,7 +148,7 @@ class MasterBus(
     )
 
     /**
-     * The chain swap (step 12 C4, the orbit's [ChainSwap]): the chain LEAVING service, fading out
+     * The chain swap (step 12 C4, the cylinder's [ChainSwap]): the chain LEAVING service, fading out
      * and then draining. The [host] asks [ChainSwap.settled] before it lands a request and parks it
      * otherwise.
      */
@@ -207,7 +207,7 @@ class MasterBus(
      * ([KatalystChain.declaresTail]) may still hold energy. Read only while the bus [isActive]: a bus that went quiet
      * on the empty chain is not processed, so its last answer is stale and nothing of it rings.
      *
-     * The engine must stay alive until this clears, otherwise stopping a playback chops the master tail. The orbits
+     * The engine must stay alive until this clears, otherwise stopping a playback chops the master tail. The cylinders
      * have the same protection in their deactivation (`Cylinder.tryDeactivate`: the mix scan, then the chain's
      * `hasTail`). An insert stage (an eq bell, a phaser, a body) declares no tail but rings on for a moment; until
      * KLANG-00415 (master stop click on insert-only chains) a chain of inserts only was disposed while it still rang,
@@ -248,7 +248,7 @@ class MasterBus(
     /**
      * Builds the chain for [dsl]: its stage shells, unconfigured, so no unit is rented. A stage rents its unit at its
      * first configure, in the first [process] after the chain lands, whether it was built ahead ([prepare]), on its
-     * landing, or comes back from the cache (one first-configure point, as an orbit's chain has).
+     * landing, or comes back from the cache (one first-configure point, as a cylinder's chain has).
      */
     private fun buildChain(dsl: KatalystDsl): KatalystChain {
         builtChains++
@@ -288,12 +288,12 @@ class MasterBus(
     /**
      * Requests a swap to the master registered as [name], starting with the next processed block.
      * The scheduler calls it when it consumes a `master(…)` event. The paths (already in service,
-     * not registered yet, the swap busy) are the [ChainHost]'s, the orbit's own; a request that can
+     * not registered yet, the swap busy) are the [ChainHost]'s, the cylinder's own; a request that can
      * land lands in [landChain].
      *
      * Note this does *not* rescue a **recreated engine**: the backend registry is a per-engine fork
      * that dies with the engine, while the frontend's send-once set is never cleared, so the
-     * registration is not re-sent. That gap is shared with the ignitor registry and the orbits' use
+     * registration is not re-sent. That gap is shared with the ignitor registry and the cylinders' use
      * of the same Katalyst registry, and is tracked separately: it is not something this method can
      * fix.
      */

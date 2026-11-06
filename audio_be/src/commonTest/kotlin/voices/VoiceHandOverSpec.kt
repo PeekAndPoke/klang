@@ -41,13 +41,13 @@ import kotlin.random.Random
 
 /**
  * The hand-over (KLANG-00214 (oversampling regions) step 3b): a voice whose tree ends in an oversampling region lands
- * on its orbit's bus at the region's rate, and the orbit's chain brings every bus to its own rate once, whatever the
+ * on its cylinder's bus at the region's rate, and the cylinder's chain brings every bus to its own rate once, whatever the
  * voices on it ([io.peekandpoke.klang.audio_be.katalyst.KatalystBusLadder], the head region of a chain).
  *
  * The oracles: a voice that hands over against the same voice converting down itself (its gain written after the
  * region instead of inside it, so its root is no region): equal to rounding while gain and pan are constant, since the
- * orbit steps down with the voice's own stages; within a bound where the fades and the solo ramp move the gain, which
- * now applies before the step down. The buses at an orbit's rate against bare [Oversampler]s fed with the buses
+ * cylinder steps down with the voice's own stages; within a bound where the fades and the solo ramp move the gain, which
+ * now applies before the step down. The buses at a cylinder's rate against bare [Oversampler]s fed with the buses
  * captured in the same run.
  */
 class VoiceHandOverSpec : StringSpec({
@@ -97,7 +97,7 @@ class VoiceHandOverSpec : StringSpec({
         ) ?: error("makeVoice returned null")
     }
 
-    /** One orbit (0) running [chain], rendered in the engine's block order: clear, the voices, the chains and the mix. */
+    /** One cylinder (0) running [chain], rendered in the engine's block order: clear, the voices, the chains and the mix. */
     class Rig(chain: KatalystDsl, silentBlocksBeforeTailCheck: Int = 10) {
         val katalysts = KatalystRegistry()
         val cylinders = Cylinders(
@@ -115,7 +115,7 @@ class VoiceHandOverSpec : StringSpec({
         )
         val fusion = StereoBuffer(blockFrames)
 
-        /** The orbit's rate buses each block, left channel, captured after the voices and before the chain. */
+        /** The cylinder's rate buses each block, left channel, captured after the voices and before the chain. */
         val captured = mutableMapOf<Int, MutableList<DoubleArray>>()
 
         /** The active-bus bits each block, as the voices left them. */
@@ -125,11 +125,11 @@ class VoiceHandOverSpec : StringSpec({
             request(name = "start", chain = chain)
         }
 
-        val orbit: Cylinder get() = cylinders.cylinders.single()
+        val cylinder: Cylinder get() = cylinders.cylinders.single()
 
         fun request(name: String, chain: KatalystDsl) {
             katalysts.register(name, chain)
-            cylinders.requestChain(orbit = 0, name = name)
+            cylinders.requestChain(cylinder = 0, name = name)
         }
 
         fun render(voices: List<Voice>, blocks: Int, before: (Int) -> Unit = {}): DoubleArray {
@@ -141,7 +141,7 @@ class VoiceHandOverSpec : StringSpec({
                 cylinders.clearAll()
                 voices.forEach { it.render(ctx) }
 
-                val context = orbit.katalystContext
+                val context = cylinder.katalystContext
 
                 masks.add(context.activeBuses)
 
@@ -167,7 +167,7 @@ class VoiceHandOverSpec : StringSpec({
 
     val blocks = endFrame / blockFrames + 4
 
-    "a voice whose tree ends in a region lands on its orbit's bus at the region's rate, and a base-rate orbit steps it down as the voice would have" {
+    "a voice whose tree ends in a region lands on its cylinder's bus at the region's rate, and a base-rate cylinder steps it down as the voice would have" {
         val handed = Rig(unityChain)
         val converted = Rig(unityChain)
         // The onset mid-block (1000 is 104 frames into block 7): the voice's window lands at its rate.
@@ -182,7 +182,7 @@ class VoiceHandOverSpec : StringSpec({
         }
     }
 
-    "two voices at one rate meet on one bus and leave the orbit as they would have one by one" {
+    "two voices at one rate meet on one bus and leave the cylinder as they would have one by one" {
         val handed = Rig(unityChain)
         val converted = Rig(unityChain)
         val outH = handed.render(listOf(voice(handing(2)), voice(handing(2), startFrame = 2000, freqHz = 330.0)), blocks)
@@ -234,12 +234,12 @@ class VoiceHandOverSpec : StringSpec({
         }
     }
 
-    "a 4x orbit takes the 4x bus straight in: what a base-rate orbit makes of it, with no trip up and down between" {
+    "a 4x cylinder takes the 4x bus straight in: what a base-rate cylinder makes of it, with no trip up and down between" {
         val atRate = Rig(regionChain(4)).render(listOf(voice(handing(2))), blocks)
         val atBase = Rig(unityChain).render(listOf(voice(handing(2))), blocks)
 
-        // The base-rate orbit's steps down ring on for their hold after the voice (`Oversampler.tailFrames`), then stop;
-        // the 4x orbit's region runs on.
+        // The base-rate cylinder's steps down ring on for their hold after the voice (`Oversampler.tailFrames`), then stop;
+        // the 4x cylinder's region runs on.
         val ringEnd = endFrame + Oversampler.tailFrames(4)
 
         withClue("there is sound") { peak(atRate) shouldBeGreaterThan 0.1 }
@@ -247,11 +247,11 @@ class VoiceHandOverSpec : StringSpec({
         withClue("past the hold, what is left of the ring") { maxDiff(atRate, atBase, from = ringEnd) shouldBeLessThan 1e-9 }
     }
 
-    "on a 4x orbit a 2x bus continues its cascade up from stage 1 and an 8x bus steps down through stage 2" {
+    "on a 4x cylinder a 2x bus continues its cascade up from stage 1 and an 8x bus steps down through stage 2" {
         val rig = Rig(regionChain(4))
         val out = rig.render(listOf(voice(handing(1)), voice(handing(3), freqHz = 330.0)), blocks)
 
-        // The orbit's region by hand: the 2x bus up through stage 1, the 8x bus down through stage 2, summed at 4x,
+        // The cylinder's region by hand: the 2x bus up through stage 1, the 8x bus down through stage 2, summed at 4x,
         // the unity body, and down to the base rate through stages 1 and 0.
         val up = Oversampler(stages = 1, firstStage = 1)
         val down = Oversampler(stages = 1, firstStage = 2)
@@ -279,7 +279,7 @@ class VoiceHandOverSpec : StringSpec({
         maxDiff(out, expected) shouldBe 0.0
     }
 
-    "on a base-rate orbit buses at two rates share the steps down: a 2x bus joins the 8x one at stage 1" {
+    "on a base-rate cylinder buses at two rates share the steps down: a 2x bus joins the 8x one at stage 1" {
         val handed = Rig(unityChain)
         val converted = Rig(unityChain)
         val outH = handed.render(listOf(voice(handing(1)), voice(handing(3), freqHz = 330.0)), blocks)
@@ -289,7 +289,7 @@ class VoiceHandOverSpec : StringSpec({
         maxDiff(outH, outC, until = endFrame - 200) shouldBeLessThan 1e-12
     }
 
-    "a swap between chains of different rates fades every rate: a 4x chain to a base-rate one, both unity, the orbit goes on unbroken" {
+    "a swap between chains of different rates fades every rate: a 4x chain to a base-rate one, both unity, the cylinder goes on unbroken" {
         val swapAt = 12
         val steady = Rig(regionChain(4)).render(listOf(voice(handing(2))), blocks)
         val swapping = Rig(regionChain(4))
@@ -300,15 +300,15 @@ class VoiceHandOverSpec : StringSpec({
         }
         val fadeBlocks = (Crossfade.XFADE_SECONDS * sampleRate / blockFrames).toInt() + 2
 
-        withClue("the swap ran") { (swapping.orbit.isFading || swapping.orbit.chainSwap.settled) shouldBe true }
-        withClue("through the fade and the leaving chain's drain, against the orbit that never swapped") {
+        withClue("the swap ran") { (swapping.cylinder.isFading || swapping.cylinder.chainSwap.settled) shouldBe true }
+        withClue("through the fade and the leaving chain's drain, against the cylinder that never swapped") {
             maxDiff(out, steady, from = swapAt * blockFrames, until = (swapAt + fadeBlocks + 12) * blockFrames) shouldBeLessThan 0.005 * peak(steady)
         }
     }
 
     "a leaving chain below the voice's rate rings its steps down out on a silent bus: a 2x chain to a 4x one" {
         // The 2x chain steps the 4x bus down one stage, and its region holds a tail, so it drains after the fade and its
-        // step rings on its own bus. Both chains are unity and convert with the same stages: the orbit goes on unbroken.
+        // step rings on its own bus. Both chains are unity and convert with the same stages: the cylinder goes on unbroken.
         val swapAt = 12
         val steady = Rig(regionChain(4)).render(listOf(voice(handing(2))), blocks)
         val swapping = Rig(regionChain(2))
@@ -350,19 +350,19 @@ class VoiceHandOverSpec : StringSpec({
         }
     }
 
-    "an orbit that deactivates while its steps ring out zeroes its buses: the next voice starts clean" {
-        // No grace: the orbit goes two blocks after the voice's last, while its steps down still ring on a bus.
+    "a cylinder that deactivates while its steps ring out zeroes its buses: the next voice starts clean" {
+        // No grace: the cylinder goes two blocks after the voice's last, while its steps down still ring on a bus.
         val laterStart = endFrame + 40 * blockFrames
         val rig = Rig(unityChain, silentBlocksBeforeTailCheck = 0)
         val total = laterStart / blockFrames + 20
         val out = rig.render(listOf(voice(handing(2)), voice(handing(2), startFrame = laterStart)), total)
         val alone = Rig(unityChain, silentBlocksBeforeTailCheck = 0).render(listOf(voice(handing(2), startFrame = laterStart)), total)
 
-        withClue("the orbit went quiet between the voices") { rig.masks[laterStart / blockFrames - 2] shouldBe 0 }
+        withClue("the cylinder went quiet between the voices") { rig.masks[laterStart / blockFrames - 2] shouldBe 0 }
         maxDiff(out, alone, from = laterStart - blockFrames) shouldBe 0.0
     }
 
-    "a retired orbit holds no bus audio: the next life starts silent" {
+    "a retired cylinder holds no bus audio: the next life starts silent" {
         val cylinder = Cylinder(id = 0, blockFrames = blockFrames, sampleRate = sampleRate)
         val bus = cylinder.mixBufferAt(2)
 

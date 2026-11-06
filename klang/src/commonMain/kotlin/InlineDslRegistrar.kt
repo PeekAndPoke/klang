@@ -114,7 +114,7 @@ internal class InlineDslRegistrar(
             .forEach { ignitors.registerOrLookup(it.ignitor) }
 
         // Both positions carry the same chain type into the ONE registry: an output chain
-        // (`master(...)`) and an orbit chain (`katalyst(...)`) are announced alike, and a chain
+        // (`master(...)`) and a cylinder chain (`katalyst(...)`) are announced alike, and a chain
         // written at both positions is announced once.
         events.asSequence()
             .map { it.master }

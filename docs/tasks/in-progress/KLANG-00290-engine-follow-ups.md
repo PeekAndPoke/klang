@@ -55,16 +55,26 @@ Sizes: S (an hour or two), M (a day), L (several days), as in the audit.
 - 27, D2: `MasterStage` is renamed `HouseStage`. D4: "The offline renderer must be a complete transparent alternative
   for the audio backend, so whatever works for JS/JVM backends must also work with the offline backend." D8: a shared
   core where it reduces the code surface (and other places that would benefit). D11: `SampleStore` growing for the
-  backend's life is fine for now. C4.1 (the orbit's activity as a state machine) and C4.2 (`WarmupRunner` as an enum): yes.
+  backend's life is fine for now. C4.1 (the cylinder's activity as a state machine) and C4.2 (`WarmupRunner` as an enum): yes.
 
 **Done 2026-11-06, one commit:** 21, 23, 24's commands, 25's `exp`, 27's D2, D4, C4.1 and C4.2 (each item's record
 below). Reviews: the small batch (level 1, two rounds: round 1 found the allocation benchmark's per-note list, round 2
 that a reused list's `clear()` allocates more on Kotlin/JS; clean after), item 21 with C4.1 and D4 (level 1, two rounds,
 clean). Mutations: 15 of 15 KILLED (TailRelease 4, two of them after two new rows; WarmupRunner 2; the voice stages 5;
-the orbit's activity 4, one after a new row and one by other specs than the one named). The audio suites green on the
+the cylinder's activity 4, one after a new row and one by other specs than the one named). The audio suites green on the
 JVM and in the browser, the corpus identical (the two song edits of 2026-11-05 aside), the allocation check 80 of 80
 (E-C-n1 down from 13232 to 12938 B per block on V8 and from 6655 to 6431 on the JVM: the per-voice stage list and block
 context gone). Left from the list: D1 (KLANG-00418), D6 (`legato` off the wire), D8 (a shared core).
+
+**D8 decided 2026-11-06, no shared core.** The assessment: the delay and the reverb run about 150 parallel lines (the
+off, active and draining states, the wet fade, the feed, the rent latch); a core would save 80 to 100 lines net, but
+needs hooks for what differs (the delay's resume and endless feedback, the reverb's heal and second floor). The
+maintainer: "Here i would prefer ease of understanding of the code and duplication would of code is okay." The twins stay
+twins. The other candidate found, the filter swap's "park while a fade runs, latest wins" logic in
+`KatalystResonatorEffect` and `KatalystEqEffect` (about 30 lines each), falls under the same rule (maintainer: "If the
+abstraction makes the code harder to understand and introduces the danger of breaking unrelated things when the core
+needs to be adjusted, then we should not do. Sometimes code duplication is the better approach when clarity wins
+out"): not extracted, each stage keeps its own parking, readable on its own.
 
 ## 1. Allocation on V8 (the worklet)
 
@@ -78,7 +88,7 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
    were not located. Source: the record, "The V8 allocation pass" (the result table) and "Found during tidy-up step
    12". **Measured on the production bundle** (`:audio_be:compileTestProductionExecutableKotlinJs`, node 22), one
    sustained note through `PlaybackEngineDispatcher` (the master stage runs too) with the stage's `katalystParams` on
-   the classic orbit chain: a sine at middle C with the delay (wet 0.3, time 0.25, feedback 0.5; and time 0.2501,
+   the classic cylinder chain: a sine at middle C with the delay (wet 0.3, time 0.25, feedback 0.5; and time 0.2501,
    feedback 0.45, a fractional tap), the reverb (wet 0.3, size 5; and size 6.3 with a lowpass), the phaser (wet 0.5,
    rate 0.5, sweep 800; and floor 0.5), all three, the same on the classic saw, on `C-full`'s voice and on a 7-voice
    supersaw; single-case and mixed (every case warmed round-robin in one process, then each measured between two
@@ -147,7 +157,7 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
    7 rounds, every case in one process): 0 B per block on both sides in all 26 cases, time 0.88 to 1.04 of HEAD.
    **What is left, and why:**
    - **The per-block `configure`** (the first form's residue). A writer re-applies the resolved knobs every block
-     (`KatalystChain.applyParams`), and in a mixed profile, where most orbits take the off arm, V8 can compile a
+     (`KatalystChain.applyParams`), and in a mixed profile, where most cylinders take the off arm, V8 can compile a
      stage's `configure` with nothing inlined but `isFinite` (a trace of such a process: the delay's setters, both
      `KnobGlide.retarget`s and `ensureRing` left out), so every knob crosses a call: the phaser 2 to 4 heap numbers per
      block in every process, the delay and the reverb up to 5 in some processes (two of three pinned mixed processes,
@@ -161,7 +171,7 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
    - Outside the stages, in every engine case: item 30's root frequency (16 B at middle C) and about 16 to 32 B in
      `PlaybackEngine.renderBlock` (its per-block seconds handed to calls; not located further).
    - The development bundle was not measured (the fixes are the same source on both bundles).
-   - **Two compiled forms in ADAA-owned files change, unmeasured:** `KnobGlide.advance` is now inlined into the orbit
+   - **Two compiled forms in ADAA-owned files change, unmeasured:** `KnobGlide.advance` is now inlined into the cylinder
      distort stage (`KatalystDistortEffect`'s `amountGlide.advance()`); bit for bit by construction, but no case and no
      probe runs that stage, so its bytes are not measured (a note for the ADAA session). `PhaserCore.alphaAt` inlines
      only into `PhaserCore.prepareBlock`, so the voice phaser in `IgnitorEffects.kt` compiles as before (reviewer A).
@@ -235,10 +245,10 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
    5).** Reported as: a new param map's resolve costs about 1,130 bytes on the
    classic chain after S1, attributed to `KatalystKnob.resolve`, whose code does not explain it. **The cause**
    (production bundle, node 22.12, a probe with the lookups alone, the knobs alone, the chain, two voices taking turns
-   as the orbit's owner; mixed and single-case, pinned and unpinned): the stdlib's generic `hashCode(dynamic)`, which
+   as the cylinder's owner; mixed and single-case, pinned and unpinned): the stdlib's generic `hashCode(dynamic)`, which
    every `HashMap`/`HashSet` `get`, `put` and `containsKey` calls, ends in `else -> throw`, a closure that captures
    the `typeof` result, so V8 creates a 40-byte function context on every call (node x64; about 20 in Chrome,
-   inferred). 27 lookups read 1,080 B exactly in every process, hit or miss, empty map or full; a new orbit map 1,096 B
+   inferred). 27 lookups read 1,080 B exactly in every process, hit or miss, empty map or full; a new cylinder map 1,096 B
    (plus the reverb's documented lowpass box); a classic voice build makes 24 lookups whenever its `ignitorParams` map
    is not null, up to 76 with many slots set. A counting copy of the bundle: no steady block hashes at all. A bundle
    copy with only that `throw` arm rewritten read 0 B per lookup and 16 B per new map: the ceiling. The JVM allocates
@@ -256,7 +266,7 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
    warm-up now trains on `KlangMap` while real JVM voices carry sprudel's `LinkedHashMap` until step 2 (a bimorphic
    site, negligible). `wireDecodeStringDoubleMap` returns one, and so
    do the engine's two producers (`WarmupRunner`, the sample-envelope merge). No wire type, codec, schema hash,
-   `@WireName` or signature changed; `IgnitorDslRuntime.kt` untouched. A new orbit map now costs about 16 B (the
+   `@WireName` or signature changed; `IgnitorDslRuntime.kt` untouched. A new cylinder map now costs about 16 B (the
    lowpass box) under a mixed profile, a voice build loses its 24 to 76 lookups (957 to 3,062 B and 10 to 38 percent
    of its time in the probe). **Bit for bit:** raw doubles of the probe, 600 blocks, both channels, HEAD's three
    changed files against the tree, every voice through the generated wire codec on V8 (so its maps are the decoder's):
@@ -267,7 +277,7 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
    `KlangMap`s, in order, NaN kept; red with the decoder reverted), `:audio_be:jvmTest` 2,675 and
    `:audio_be:jsBrowserTest` 2,571, green. **The harness guards it with a new case**, `C-remap`: two classic saw
    voices, received through `receivedByEngine` (`audio_benchmark/.../engine_inbox.kt`: the wire codec on JS, the voice
-   as it is on the JVM), take turns as their orbit's owner, so the chain re-resolves every block. 6 runs GREEN, 36 of
+   as it is on the JVM), take turns as their cylinder's owner, so the chain re-resolves every block. 6 runs GREEN, 36 of
    36: healthy rounds 76.5 to 87.5 B with two single rounds at 143.9 and 149.8 (medians 77 to 88), JVM 24 B (the
    lowpass box). Budgets by the file's rule: V8 192, JVM 36 (it reads 24, so 6 does not apply). The decoder reverted
    (one lock call, restored and checked with `cmp`): RED, `C-remap` 1,128 to 1,164 B, the only line over. The item 8
@@ -430,7 +440,7 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
    reproduces on either bundle, at voice level or through the dispatcher (reviewer A rebuilt the development bundle:
    `white` 0.8, `noisesaw` 15.8, `E-noisesaw-sus` 41.4 B per block on the tree). The limiter boxes found on the way
    are the likely cause of the old figure, unproven: the pass's probe ran through `PlaybackEngine`, which has no
-   master stage, and it is gone (an orbit compressor with a lookahead runs the same `lookaheadStep`, unmeasured then).
+   master stage, and it is gone (a cylinder compressor with a lookahead runs the same `lookaheadStep`, unmeasured then).
    **Measured on the production bundle** (`:audio_be:compileTestProductionExecutableKotlinJs`, node 22): one voice
    through `VoiceFactory` allocates nothing per sample with any noise. White, pink and brown alone, white with a
    color, noise plus saw, the `whitenoise`, `pinknoise`, `brownnoise`, `dust` and `crackle` built-ins and noise plus
@@ -1726,11 +1736,11 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     below the gate, an unset or non-finite one) takes the wet glide to 0 over its span (50 ms, one block for a
     modulated wet) while the stage stays Active and feeds the falling level into the ring or the room, the law knob
     expressions step 5b built for a modulated time or size. The by-ear file's cost ("the fade rests on the off-config
-    being re-applied every block", which `Cylinder.commitOwner` does not do for an orbit without an owner) is paid
+    being re-applied every block", which `Cylinder.commitOwner` does not do for a cylinder without an owner) is paid
     in the stage, not with new plumbing: the off-config only STARTS the fade (`Active.fading`, a flag that dies with
     the state, cleared by `Active.enter`, which is what turns a fade around on a return), and `Active.process` moves
     the stage on into Draining or Off at the end of the block the glide lands in (`Active.leave`, the old tail of
-    `deactivate`). So an orbit whose owner stopped offering, and the leaving chain of a swap, drain like any other.
+    `deactivate`). So a cylinder whose owner stopped offering, and the leaving chain of a swap, drain like any other.
     For the modulated gates the move comes one block earlier than before (the landing block's end, not the next
     block's off-config); the ring or the room is the same at both moments, so the drain is the same. The `fade`
     parameter of `deactivate` is gone (every off fades), and `timeModulated` / `sizeModulated` now decide only the
@@ -1740,7 +1750,7 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     clears it before a fade begins, so it is never valid during a fade and the landing finds it cleared.
     No allocation: one Boolean per Active instance, no new call on the per-block path but one compare.
     **Corpus GREEN, nothing moved** (3 of 3 frozen, 15 of 15 live identical, 0 edited). The by-ear file predicted
-    `frozen piece derSchmetterling_2026_09_16`; Q20 (2026-10-16) moved that piece's bass off guitar 3's orbit first.
+    `frozen piece derSchmetterling_2026_09_16`; Q20 (2026-10-16) moved that piece's bass off guitar 3's cylinder first.
     **The corpus reaches no switch-off of a fed delay or reverb**, so it is no evidence for the fade either way: the
     switch-off feed boosted to 4x on both stages left it GREEN, and so did (review round 1, reviewer B) a mutant that
     never switches off at all. A control every reverb song hears (`length = frames - 1` in the reverb's Active) turned
@@ -1751,7 +1761,7 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     fed the hand-computed ramp, then silence, 1e-12; the state per block; the drain to Off), "a return mid-fade turns
     the glide around and the stage never leaves Active", "an off-config re-applied every block, applied once, or
     dropped mid-fade renders the same samples" (an orbit losing its owner mid-fade), and on a `Cylinder` "an owner
-    change switches the delay and the reverb off with a fade, and the orbit drains with no owner left" (a next owner
+    change switches the delay and the reverb off with a fade, and the cylinder drains with no owner left" (a next owner
     that names neither stage, and one whose `katp` sets time and size below the gates; each offers 5 blocks of the
     fade and is gone). Moved to the fade: the drain rows of `KatalystDelayEffectSpec` and `KatalystReverbEffectSpec`
     (the fade runs on a silent mix first; "at a steady feedback a return from the drain resumes the frozen ceiling
@@ -1895,7 +1905,7 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     longer compile). Green: the jvmTests of `klangscript-libs`, `sprudel`, `audio_bridge` and the root (songs); corpus
     GREEN, 3 of 3 frozen and 15 live identical, 0 edited. Old names in `docs/retired-names.md`.
 
-## 2. Allocation on the JVM, at build and per orbit
+## 2. Allocation on the JVM, at build and per cylinder
 
 11. **The small half gone 2026-11-06 with item 21 (no stage list left to copy); the build in the render callback waits
     for the Zig port, as decided.** `Voice` copied its stage list into an `Array` per voice start (`pipeline.toTypedArray()`), one small
@@ -1939,9 +1949,9 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
       `ControlRateValueSpec` that the flag alone decides what `readParam` and `blockStartValue` read
       (mutation-checked). Result on the JVM: the ladder's 72 B per vibrato voice block and step 1's
       megamorphic-site boxes are gone (item 8); bit for bit, the corpus 18 of 18.
-13. **The B4.5 orbit-side items**: `KatalystDelayEffect` makes a `DelayLine` per ring rent, and
+13. **The B4.5 cylinder-side items**: `KatalystDelayEffect` makes a `DelayLine` per ring rent, and
     `ScratchBuffers.oversample` looks its sub-pool up in a map per block (`getOrPut`; the first use per factor
-    allocates, once per warehouse). Per orbit or per backend, not per voice. The resonators' part closed with step 12
+    allocates, once per warehouse). Per cylinder or per backend, not per voice. The resonators' part closed with step 12
     (a). Source: the record, "Found during tidy-up step 10" and "Found during tidy-up step 12". S.
     **Checked (2026-10-19): the sub-pool half is closed; the `DelayLine` per rent stands, a shape change of
     `DelayLine`, left with item 11 for the Zig port.**
@@ -1954,7 +1964,7 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     - **The `DelayLine` per rent, unchanged:** `ensureRing` builds a `DelayLine` (the object and its five-double
       `blockArgs`) when it rents a ring: at the delay's first activation after the chain was built or released
       (`release()`, from `retire()`: a chain swap's ring-out, an engine disposed) and when a longer time grows the ring.
-      `reset()` (an orbit deactivated) keeps the ring and the line, so an orbit that sleeps and wakes builds nothing.
+      `reset()` (a cylinder deactivated) keeps the ring and the line, so a cylinder that sleeps and wakes builds nothing.
       Not per block and not per note. The ring itself is pooled. Building the wrapper with the effect would need a
       `DelayLine` that rebinds its ring (`ring`, `bufferSize` and `buffer` are fixed at construction), and a grow
       needs the old line and the new one at once (`adoptHistory`), so the effect would hold two lines and swap them: a
@@ -1965,7 +1975,7 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
 ## 3. Behaviour and order
 
 14. **The active list's order reaches the phase pool takes**: a unison oscillator takes its start phases from the
-    orbit's pool on the voice's first rendered block (`pool.next(...)` in `Ignitors.kt`), so a change to the render
+    cylinder's pool on the voice's first rendered block (`pool.next(...)` in `Ignitors.kt`), so a change to the render
     order re-deals phases (lifecycle step 5 did, audibly in places). The fix: draw at promotion in onset order, or
     keyed by the voice. A one-time sound change, by ear. Source: the record, "Found during voice lifecycle step 5" and
     "Found during tidy-up step 10". M. **Decided (maintainer, 2026-11-05): fix it, "no listening pair needed".**
@@ -2161,7 +2171,7 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     old 0.003 bit for bit at 48 kHz: the corpus (rendered at 48 kHz) is identical and no song number moved. What
     changes: a 44.1 kHz device walks 9 % faster than before (now as at 48 kHz), and any other host rate likewise. An
     oversampling region changes nothing: a noise is a region source, rendered at the base rate, and a Katalyst knob
-    keeps the orbit's clock (both since 2026-10-31). Both hosts: the Ignitor's `perlin` and `berlin` (`Ignitors.kt`)
+    keeps the cylinder's clock (both since 2026-10-31). Both hosts: the Ignitor's `perlin` and `berlin` (`Ignitors.kt`)
     and the Katalyst knob modulators (`KatalystKnobProgram`). Rows:
     `NoiseFbmEffectSpec` (one second lands on the same noise at 44.1, 48 and 96 kHz), `KatalystKnobModulatorSpec` (two
     ticks at 96 kHz land where one does at 48 kHz). The KDoc of every door says "144 noise cells a second". Mutations:
@@ -2182,7 +2192,7 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     (`--predictable`, budget 250, the warm-up-only run subtracted) booked 32.3 B per block in
     `KatalystDuckEffect.configure` on HEAD, two heap numbers, beside what the tree books too (`renderStages` 32, the
     voice scheduler's block step and `AudioBackendContext.secAt` 16 each, `Phaser.process` 13). `configure` runs on
-    every block the orbit has an owner, and wrote `live.attackSeconds` and `live.depth` through `Ducking`'s setters,
+    every block the cylinder has an owner, and wrote `live.attackSeconds` and `live.depth` through `Ducking`'s setters,
     each a call that takes a double and calls the stdlib `isFinite` (and the attack's `calculateCoefficient`, an `exp`
     per block, and the depth's `coerceIn`), so every one V8 leaves out takes a double as a heap number (the rule in
     `audio/ref/performance.md`; item 40's class, a stage writing knobs through setters per block). A hand-edited
@@ -2291,7 +2301,7 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
     class only, and the arms' half is guarded by its KDoc alone. `E-kat-mix` (item 40's line, 250) fell by about 100 B
     and keeps its line; its header claim about the isFinite group (G1, 264) was measured before this change and most
     likely no longer holds; item 40's fix re-sets it. S.
-40. **DONE (2026-10-16): a modulated orbit compressor wrote its five knobs through five setters every block; it now
+40. **DONE (2026-10-16): a modulated cylinder compressor wrote its five knobs through five setters every block; it now
     hands them over in one call through a holder, and `E-kat-dyn` reads the duck's floor.** Reported (numbered after
     the last item, added 2026-10-12): `KatalystCompressorEffect.configure` called `Compressor.thresholdDb`, `ratio`,
     `kneeDb`, `attackSeconds` and `releaseSeconds`, each a setter call that V8 does not inline, so each knob crossed as
@@ -2607,7 +2617,7 @@ Each was checked against the code: none is done (item 21's package dissolve asid
 24. **Step 18, the wire and the words:**
     - **In KLANG-00418 since 2026-11-06 (steps 1 to 3 done the same day: the sprudel door, the duck's knob, the songs).**
       "cylinder" is the word (decision D1, maintainer, 2026-10-07): sprudel's canonical door becomes `cylinder`, with
-      `orbit` and `o` as aliases (today `orbit` is canonical), and the docs, KDoc, tutorials, UI text and the Katalyst
+      `cylinder` and `o` as aliases (today `cylinder` is canonical), and the docs, KDoc, tutorials, UI text and the Katalyst
       vocabulary follow. L; plan it as its own step. A surface change.
     - **DONE 2026-11-06 (maintainer: "I do not really see a reason why it should travel over the wire, when it can be
       applied on the frontend").** `legato` on the wire or folded into the gate time by the frontend (decision D6).
@@ -2650,7 +2660,7 @@ Each was checked against the code: none is done (item 21's package dissolve asid
     **With it, the leak found in KLANG-00415 (master stop click on insert-only chains): DONE 2026-11-05** (maintainer:
     "fix the leak if there is a clear path"). A chain holding a stage that makes sound from a silent input kept a
     stopped engine for ever when that chain also declared a tail (a reverb with `plus(0.1)`, at the master), and on an
-    orbit in every case (its mix never fell silent, so the orbit never deactivated). The clear path: in the Katalyst
+    cylinder in every case (its mix never fell silent, so the cylinder never deactivated). The clear path: in the Katalyst
     only the arithmetic stages can sound with nothing to feed them (`plus` or `minus` of a non-zero offset, `max` above 0,
     `min` below 0, `pow` of 0 or less; every other stage maps silence to silence or rings out), and each knows its operand.
     `KatalystArithmeticEffect.soundsOnSilence()` takes its law at an input of 0 and asks whether it is not 0 (no floor:
@@ -2660,8 +2670,8 @@ Each was checked against the code: none is done (item 21's package dissolve asid
     clause `(!hasOwnSound() && masterBus.ringsWithoutTail)` is removed: an offset is now an endless tail of its own, and
     the clause's other effect, releasing a FINITE insert ring that outlasted the hold, went against decision (j). Rows:
     `KatalystArithmeticEffectSpec` (each operator against its own output on silence, a Param moved to 0, a floor
-    cleared to NaN), `EngineStopReleaseSpec` (a master reverb with an offset before or after it, and an orbit with one,
-    each released after the hold by the law, bit for bit against a control; and a finite orbit echo past the hold under
+    cleared to NaN), `EngineStopReleaseSpec` (a master reverb with an offset before or after it, and a cylinder with one,
+    each released after the hold by the law, bit for bit against a control; and a finite cylinder echo past the hold under
     an eq-bell master rings out, never released, which pins the clause's removal). Mutations: 8 of 8 KILLED.
 
     Review round 1 (level 1, code and audio): clean, MINORs applied (the stale KDoc of `SILENCE_FLOOR`, the delay's and
@@ -2670,7 +2680,7 @@ Each was checked against the code: none is done (item 21's package dissolve asid
     blocker, a `minus` of the same) still counts, and a stopped engine holding such a chain releases a finite tail
     that outlasts the hold beside it instead of ringing it out. Bounded, in no song; telling them apart would split
     the chain's question in two. Proposed and not taken: gating the master's answer on its own ringing (it changes
-    nothing audible: a cancelled offset is either silent with the rest, or the orbit's echo keeps the master ringing).
+    nothing audible: a cancelled offset is either silent with the rest, or the cylinder's echo keeps the master ringing).
     Not covered: a fractional `pow` after a reverb lifts the reverb's `ANTI_DENORMAL` residue (about 5e-17) to an
     audible level for ever; contrived, the leak's last known shape.
 26. **Step 20, the Katalyst by-ear items**, each with a home: A1.1
@@ -2696,7 +2706,7 @@ Each was checked against the code: none is done (item 21's package dissolve asid
       ring would keep up to 8192 diagnostics alive through a long render (review round 2). Reviewed (level 1, two
       rounds, clean).
     - **D11 settled 2026-11-06:** `SampleStore` grows for the life of the backend, "fine for now"; no change.
-    - **C4.1 DONE 2026-11-06:** the orbit's own activity (`Cylinder`) is a state machine: `isActive` and
+    - **C4.1 DONE 2026-11-06:** the cylinder's own activity (`Cylinder`) is a state machine: `isActive` and
       `silentBlockCount` became a sealed `Activity` (`Inactive`, `Sounding`, `SilentGrace` with its count, `Held`),
       `isActive` a getter over it, `tryDeactivate` one exhaustive `when`; the transition table is in `Activity`'s KDoc.
       The owner's state (`candidate`, `ownerParams` and its age, `checkedIn`) stays as it is: it is the ownership
@@ -2710,7 +2720,7 @@ Each was checked against the code: none is done (item 21's package dissolve asid
     The audit's decisions as they were listed before (section E): D2 (`MasterStage` against `MasterBus`, two "masters"), D4
     (one block driver or two: offline renders never run the dispatcher), D6 and D9 (above), D8 (the delay and reverb
     lifecycles: one core or two readable twins), D11 (`SampleStore` grows for the life of the backend), C4.1 and C4.2
-    (the orbit's activity flags, `WarmupRunner`). D7 (own the RNG) is decided: deferred to the Zig port's preparation;
+    (the cylinder's activity flags, `WarmupRunner`). D7 (own the RNG) is decided: deferred to the Zig port's preparation;
     the shared drift lane's `Random(sharedSeed)` at the first block waits on it.
 
 ## 7. Questions with the maintainer
@@ -2737,3 +2747,4 @@ ramp times (1.5 s in and out, a 2 s hold), recorded in the same solo task.
 - 2026-11-06: the status paragraph and section 7 no longer list questions answered in October.
 - 2026-11-06: the maintainer decided 21, 23, 24 (the commands, D1, D6), 25's `exp`, and 27 (D2, D4, D8, D11, C4.1, C4.2); 22 skipped.
 - 2026-11-06: IN PROGRESS. the maintainer's decisions of 2026-11-06, worked in a loop
+- 2026-11-06: D8 decided: no shared core for the delay and the reverb, nor for the filter swap's parking (clarity over less code).

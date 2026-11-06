@@ -10,7 +10,7 @@ import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 import kotlin.math.round
 
 /**
- * One orbit knob moving to a new value over [KNOB_GLIDE_SECONDS] instead of jumping there
+ * One cylinder knob moving to a new value over [KNOB_GLIDE_SECONDS] instead of jumping there
  * (`audio/ref/knob-glide.md`). One instance per knob, created with the effect that owns the knob;
  * nothing here allocates after construction. The sibling of [Crossfade], which ramps between two
  * whole chains the same way this ramps one number.
@@ -34,13 +34,13 @@ import kotlin.math.round
  * production, where every block is the pinned 128 frames).
  *
  * **A new target mid-glide starts from where the knob IS**, the current [value], and takes the
- * full glide time again: two owners flip-flopping on one orbit chain smoothly and never jump.
+ * full glide time again: two owners flip-flopping on one cylinder chain smoothly and never jump.
  *
  * **The first value snaps.** After construction and after [reset], every [retarget] sets the
  * value outright until an [advance] has consumed one: there is nothing to be continuous with
  * before the first block (the rule and the reason are in `KatalystGainEffect`'s KDoc, "why an
  * ARRIVING factor snaps"). An owner that knows where its output stands spends the window with [startFrom].
- * Without it every orbit would open with a glide from a meaningless default, and every render
+ * Without it every cylinder would open with a glide from a meaningless default, and every render
  * would change.
  *
  * **A non-finite target is ignored**, and the target that stands is the one already set (or, before
@@ -237,7 +237,7 @@ internal class KnobGlide(
      *
      * For a stage that has established by other means that its output already IS what [next]
      * describes, so there is nothing to ride: the duck's life ends this way when no pass ran at
-     * all last block and the orbit's mix therefore went out unducked. [reset] would be the wrong
+     * all last block and the cylinder's mix therefore went out unducked. [reset] would be the wrong
      * tool there, because re-arming the snap makes the stage's NEXT switch instant, which is the
      * click by another door.
      *

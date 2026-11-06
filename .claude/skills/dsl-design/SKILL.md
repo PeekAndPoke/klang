@@ -5,7 +5,7 @@ description: Use when someone asks to design a DSL surface, add a DSL door or kn
 
 ## What This Skill Does
 
-Loads the design principles every Klang DSL follows: IgnitorDsl (`Ignitor.*`), KatalystDsl (on an orbit and,
+Loads the design principles every Klang DSL follows: IgnitorDsl (`Ignitor.*`), KatalystDsl (on a cylinder and,
 since phase 3 step 12, at the output through `master(...)`), sprudel patterns, and any DSL still to come. Apply these rules whenever
 you add, change, or review a DSL surface, on either door (KlangScript stdlib or Kotlin).
 
@@ -111,7 +111,7 @@ master(Katalyst(k => k.reverb(0.05, 9).gain(2.5).limiter()))   // reverb(wet, si
     `releaseSec` and `curve`).
   - ONE shape per concept across the DSLs. On the Katalyst every door parameter is optional: an
     omitted one is the bare stage's fixed default, never the owner voice; only a `Param` slot reads
-    the orbit's `katp` state (per-door record: `.claude/skills/dsl-design/door-shapes.md`).
+    the cylinder's `katp` state (per-door record: `.claude/skills/dsl-design/door-shapes.md`).
 - `configure` is always the LAST parameter, always named `configure`, and always OPTIONAL (no
   lambda = defaults; the maintainer, 2026-09-23: "all configure callbacks are optional", so an
   `eq()` with no bands is a transparent stage, not an error). The one historical exception,
@@ -335,7 +335,7 @@ script-only surface forces raw constructor calls and splits the vocabulary.
 **Maintainer, 2026-08-02:** "The same params must be available in the sprudel DSL, Ignitor, Master
 etc. and they need to mean the same thing."
 
-**Why:** the reverb size once meant a ~1 s tail on an orbit and ~12.5 s on the master because
+**Why:** the reverb size once meant a ~1 s tail on a cylinder and ~12.5 s on the master because
 sprudel divided by 10 and the master did not, and the tail override existed on only one bus. A shipped song had
 the bug.
 
@@ -347,7 +347,7 @@ the bug.
   each host convert on its own.
 - **Defaults are the same on every surface, and live in ONE place** (maintainer, 2026-09-16): the
   wire defaults in `audio_bridge/constants/` (`BusEffectDefaults.kt` for every Katalyst stage). The
-  Katalyst stage (on an orbit or at the output), a sprudel call (it sets every slot it leaves unset at write time), the engine's
+  Katalyst stage (on a cylinder or at the output), a sprudel call (it sets every slot it leaves unset at write time), the engine's
   rule for a slot written raw through `katp` and the editor tools all read the same constant; a non-finite
   value reads as unset. Never a literal default per host.
 - **A compound door fills per param, at the door, everywhere** (maintainer, 2026-09-18): when a
@@ -414,11 +414,11 @@ the bug.
   `SLOT_UNSET` sentinel, as `classic()` places it) takes `FILTER_ENV_DEPTH_SEMITONES`, and only when one of
   the FOUR stage knobs is written. An authored depth default, 0 included, is the author's value and is
   never filled; a `Constant` depth (a door fill) is never the question.
-- A KDoc claim "orbit twin: x()" must be verified; a wrong parity claim is worse than none.
+- A KDoc claim "cylinder twin: x()" must be verified; a wrong parity claim is worse than none.
 - Deliberate asymmetries are RECORDED with their reason (the compressor's `lookahead` exists on the
   Katalyst doors only, `k.compressor(...)` and `k.limiter(...)`, not on sprudel's `compressor(...)`: it is
   fixed when the chain is built because it sizes a delay ring, while a sprudel door writes slots on the
-  running chain; the orbit route is `katalyst(Katalyst(k => k.limiter(lookahead = ...)))`; and the FM's positional
+  running chain; the cylinder route is `katalyst(Katalyst(k => k.limiter(lookahead = ...)))`; and the FM's positional
   order: sprudel's `fm(depth, ratio, ...)` leads with the depth, the Ignitor door `x.fm(modulator, ratio, depth, ...)`
   leads with the modulator, its structure, and puts the ratio first; the words are the same since pitch pipeline step
   4 (D4), and sprudel kept its order so that no positional call changed, `fm(300, 1.4)` is still depth 300, ratio
@@ -533,7 +533,7 @@ Run this on every DSL diff (the `/review-loop` reviewer cites the item number):
 9. Docs that feed the editor popup (KDoc on the door and the builder) updated in the same diff.
 10. Every example in the diff is AUDIBLE, not just compilable: the stage the knob drives is
     actually built (read the `VoiceFactory` gate: a tremolo needs depth > 0, a filter envelope needs its cutoff, a decay needs a sustain below 1, ducking needs depth and a
-    trigger on the named orbit) and the comment describes what the engine does. Lesson of the
+    trigger on the named cylinder) and the comment describes what the engine does. Lesson of the
     accessor sweep (2026-09-07): every MAJOR across four batches was an example that compiled,
     queried and demonstrated nothing; `DslDocExamplesSpec` cannot hear. An example that NAMES a
     built-in ("the `sgbell` index envelope") quotes the built-in's values read from its definition,
