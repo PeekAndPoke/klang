@@ -7,7 +7,7 @@ package io.peekandpoke.klang.audio_bridge
 
 import io.peekandpoke.klang.audio_bridge.constants.BODY_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_CAP
-import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.DUCK_RELEASE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_CENTER_HZ
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_RATE_HZ
@@ -90,9 +90,9 @@ class KatalystGainSlots internal constructor() {
     val gain: KatalystKnobDsl.Param = knob(stage = "gain", knob = "gain", default = 1.0)
 }
 
-/** The duck stage's knobs (`Slots.duck`): `duck.cylinder` (unset, no source), `duck.depth` (0.0), `duck.attack`. */
+/** The duck stage's knobs (`Slots.duck`): `duck.cylinder` (unset, no source), `duck.depth` (0.0), `duck.release`. */
 class KatalystDuckSlots internal constructor() {
     val cylinder: KatalystKnobDsl.Param = knob(stage = "duck", knob = "cylinder", default = SLOT_UNSET)
     val depth: KatalystKnobDsl.Param = knob(stage = "duck", knob = "depth", default = 0.0)
-    val attack: KatalystKnobDsl.Param = knob(stage = "duck", knob = "attack", default = DUCK_ATTACK_SECONDS)
+    val release: KatalystKnobDsl.Param = knob(stage = "duck", knob = "release", default = DUCK_RELEASE_SECONDS)
 }

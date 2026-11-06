@@ -29,7 +29,6 @@ gone is removed when someone notices, not kept for history.
   reverted 2026-08-03. See `Reverb.normalizeSize`.
 - **Accepted and intentional, each documented:** triangle aliasing (no PolyBLEP), no clip at `Voice.ignite`
   (the `distort()` and `shape()` doors bound their output with a soft cap at the rate they run, so inside a region before its down conversion; `classic()`'s fused distort does not), the unconditional DC-block on distort, cylinder last-writer-wins,
-  `Ducking.attackSeconds`'s misleading name (KLANG-00174 (audit parked decisions) §2),
   `rectify()`'s hard clip, the body filter's fixed (non-note-tracking) resonances, `crackle`'s sound
   change, body and vowel at cylinder level.
 - **`Ignitor` is deliberately NOT a `fun interface`**: SAM turns captured `var`s into JS `ObjectRef`.

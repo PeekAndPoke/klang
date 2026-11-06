@@ -91,8 +91,8 @@ class CallInfoTest : StringSpec({
         assertCallInfoPresent("""seq("0 1").duck("1")""")
     }
 
-    "duckattack passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""seq("0 1").duck(attack = "0.2")""")
+    "duck release passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").duck(release = "0.2")""")
     }
 
     "duckdepth passes CallInfo from KlangScript" {

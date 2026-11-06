@@ -110,13 +110,13 @@ class KatalystSettingsAllocationSpec : StringSpec({
             fx = fx,
             cylinder = testKnob(slot("duck.cylinder"), KatalystNoiseOrdinals()),
             depth = testKnob(slot("duck.depth"), KatalystNoiseOrdinals()),
-            attack = testKnob(slot("duck.attack"), KatalystNoiseOrdinals()),
+            release = testKnob(slot("duck.release"), KatalystNoiseOrdinals()),
         )
         val maps = Array(5) {
             klangMapOf(
                 "duck.cylinder" to 1.0 + it,
                 "duck.depth" to 0.3 + 0.1 * it,
-                "duck.attack" to 0.05 + 0.02 * it,
+                "duck.release" to 0.05 + 0.02 * it,
             )
         }
         val ctx = ctx()

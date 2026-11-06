@@ -120,7 +120,7 @@ class KlangScriptIgnitorKatalystAliasSpec : StringSpec({
             "compressor.knee" to s.compressor.knee, "compressor.attack" to s.compressor.attack,
             "compressor.release" to s.compressor.release,
             "gain.gain" to s.gain.gain,
-            "duck.cylinder" to s.duck.cylinder, "duck.depth" to s.duck.depth, "duck.attack" to s.duck.attack,
+            "duck.cylinder" to s.duck.cylinder, "duck.depth" to s.duck.depth, "duck.release" to s.duck.release,
         )
 
         knobs.size shouldBe 27

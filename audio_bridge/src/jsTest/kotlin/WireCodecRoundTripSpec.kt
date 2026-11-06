@@ -103,8 +103,8 @@ class WireCodecRoundTripSpec : StringSpec({
             KatalystStageDsl.Compressor(threshold = p(), ratio = p(), knee = p(), attack = p(), release = p()),
             KatalystStageDsl.Distort(amount = k(), shape = 2),
             KatalystStageDsl.Distort(amount = p()),
-            KatalystStageDsl.Duck(cylinder = k(), depth = k(), attack = k()),
-            KatalystStageDsl.Duck(cylinder = p(), depth = p(), attack = p()),
+            KatalystStageDsl.Duck(cylinder = k(), depth = k(), release = k()),
+            KatalystStageDsl.Duck(cylinder = p(), depth = p(), release = p()),
             KatalystStageDsl.Gain(gain = k()),
             KatalystStageDsl.Gain(gain = p()),
             KatalystStageDsl.Plus(other = k()),
@@ -179,7 +179,7 @@ class WireCodecRoundTripSpec : StringSpec({
                 ),
                 KatalystStageDsl.Duck(
                     cylinder = KatalystKnobDsl.Constant(2.0), depth = KatalystKnobDsl.Constant(0.8),
-                    attack = KatalystKnobDsl.Constant(0.05),
+                    release = KatalystKnobDsl.Constant(0.05),
                 ),
                 // the bus distort: a slot amount and the plain Int shape fixed with the chain, and bare
                 KatalystStageDsl.Distort(
@@ -395,8 +395,8 @@ class WireCodecRoundTripSpec : StringSpec({
         // KLANG-00245 step 7f from 210338569 (the Ignitor's `Progress` and `Elapsed` joined it); KLANG-00290 item 24
         // from -583834474 (`Cmd.ScheduleVoice` and `Cmd.ClearScheduled` left it), and from 1837919315 (`VoiceData.legato`
         // left it: the frontend folds it into the gate time, D6), and from 580783604 (the duck's knob `cylinder` is
-        // `cylinder`, KLANG-00418 step 2).
-        WIRE_SCHEMA_HASH shouldBe -209384306
+        // `cylinder`, KLANG-00418 step 2), and from -209384306 (the duck's `attack` is `release`, KLANG-00417 B1).
+        WIRE_SCHEMA_HASH shouldBe 591120935
     }
 
     "ScheduledVoice round-trips a minimal (mostly-null) VoiceData" {

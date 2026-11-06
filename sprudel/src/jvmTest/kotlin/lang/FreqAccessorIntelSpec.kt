@@ -92,7 +92,7 @@ class FreqAccessorIntelSpec : StringSpec({
             "notch" to listOf("freq", "q", "env", "attack", "decay", "sustain", "release"),
             "compressor" to listOf("threshold", "ratio", "knee", "attack", "release"),
             "unison" to listOf("voices", "spread", "pan"),
-            "duck" to listOf("cylinder", "depth", "attack"),
+            "duck" to listOf("cylinder", "depth", "release"),
             "vibrato" to listOf("rate", "semitones"),
             "penv" to listOf("semitones", "attack", "decay", "sustain", "release"),
             "fm" to listOf("depth", "ratio", "attack", "decay", "sustain", "release")).forEach { (name, slots) ->

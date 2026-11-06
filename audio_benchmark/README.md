@@ -46,7 +46,7 @@ chains are built through the typed Kotlin door (`Kat.build` and `KatalystBuilder
 32 blocks that alternate between two `katp` maps, so its figure includes the note path's (one new voice per 32
 blocks). The nine `E-kat-*` cases move a knob every block through the chain's own modulators (`Kat.sine` and the
 rest, knob expressions step 6): one sine, a square with a slot-expression duty, a saw whose freq is a sine, perlin at
-one and eight octaves, all seven kinds, the compressor's five knobs with the duck's depth and attack, the body's and the vowel's
+one and eight octaves, all seven kinds, the compressor's five knobs with the duck's depth and release, the body's and the vowel's
 wet and floor, a delay time and a reverb size through their gates (and the reverb's lowpass), and a mixed cylinder
 (body, vowel, delay, reverb, phaser, compressor, fader and duck, one knob each moving). `C-kat-remap` is `C-remap`'s
 turns with an authored chain whose fader is a slot expression, so the expression is evaluated on every block's new

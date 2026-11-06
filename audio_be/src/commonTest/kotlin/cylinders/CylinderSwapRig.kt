@@ -150,7 +150,7 @@ internal class CylinderSwapRig(val sampleRate: Int = 44100) {
             KatalystStageDsl.Duck(
                 cylinder = KatalystKnobDsl.Constant(0.0),
                 depth = KatalystKnobDsl.Constant(0.8),
-                attack = KatalystKnobDsl.Constant(0.05),
+                release = KatalystKnobDsl.Constant(0.05),
             ),
         )
 

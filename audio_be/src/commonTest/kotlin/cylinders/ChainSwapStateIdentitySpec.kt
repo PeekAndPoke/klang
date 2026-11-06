@@ -52,7 +52,7 @@ class ChainSwapStateIdentitySpec : StringSpec({
             KatalystStageDsl.Duck(
                 cylinder = KatalystKnobDsl.Constant(0.0),
                 depth = KatalystKnobDsl.Constant(0.6),
-                attack = KatalystKnobDsl.Constant(0.05),
+                release = KatalystKnobDsl.Constant(0.05),
             )
         )
         rig.registry.register("ducker", ducker)

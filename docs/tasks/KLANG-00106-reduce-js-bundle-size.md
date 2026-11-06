@@ -348,7 +348,7 @@ in every option below.
 
 ### Options
 
-Example: sprudel's `duck(cylinder, depth, attack)`, three optional `Any? = null` parameters. Today 4 branches, 6
+Example: sprudel's `duck(cylinder, depth, release)`, three optional `Any? = null` parameters. Today 4 branches, 6
 conversions, 4 calls (the shape in the maintainer's question). Sizes: source measured on the prototype, JS modeled.
 
 **(a) Hoist each conversion once, keep the ladder of calls.**

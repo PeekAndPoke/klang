@@ -24,7 +24,7 @@ section 4): moved to `audio_be/src/jvmTest`, tagged `ClickHunt`, excluded from t
   so a configured 30 ms behaves like a ~74 ms attack in the units a DAW would print. The ear found
   15 ms where it wanted "30"; that is the label, not the ear, being off.
 - `Ducking.attackSeconds` sets the **release** (the duck-down is instantaneous by design; the name
-  was kept "for Strudel compatibility").
+  was kept "for Strudel compatibility"). Settled 2026-11-06: renamed `release` on every surface, KLANG-00417 B1.
 
 Parameter parity says one name, one meaning. Options: document the τ convention and rename the
 ducking one, or rename both to what they are. Renames touch songs, so this waits for a moment when

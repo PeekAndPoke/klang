@@ -912,7 +912,7 @@ class KatalystModulatedStagesSpec : StringSpec({
 
     // ── Duck ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
-    "duck: depth in one block and declared through 0 (Q7), attack at once, the cylinder switching with no mechanism" {
+    "duck: depth in one block and declared through 0 (Q7), release at once, the cylinder switching with no mechanism" {
         // The cylinder flips between 1 and 2 with a square at the eighth clock (phase 0.3): high, high, low x4, high x2.
         val cylinder = KatalystKnobDsl.Range(
             inner = KatalystKnobDsl.Square(freq = c(EIGHTH_HZ), phase = c(0.3)),
@@ -921,7 +921,7 @@ class KatalystModulatedStagesSpec : StringSpec({
         )
         val chain = build(
             KatalystDsl.of(
-                KatalystStageDsl.Duck(cylinder = cylinder, depth = lfo, attack = lfoRange(from = 0.01, to = 0.05)),
+                KatalystStageDsl.Duck(cylinder = cylinder, depth = lfo, release = lfoRange(from = 0.01, to = 0.05)),
             ),
         )
         val duck = chain.duck.shouldNotBeNull()
@@ -937,10 +937,10 @@ class KatalystModulatedStagesSpec : StringSpec({
             withClue("block $k: the depth in force, coerced to 0..1 by the instance") {
                 duck.depth shouldBe (s(k).coerceIn(0.0, 1.0) plusOrMinus 1e-9)
             }
-            withClue("block $k: the attack") {
-                val attack = duck.ducking.shouldNotBeNull().attackSeconds
+            withClue("block $k: the release") {
+                val release = duck.ducking.shouldNotBeNull().releaseSeconds
 
-                attack shouldBe (ranged(k, from = 0.01, to = 0.05) plusOrMinus 1e-12)
+                release shouldBe (ranged(k, from = 0.01, to = 0.05) plusOrMinus 1e-12)
             }
             withClue("block $k: the source cylinder") { duck.duckCylinderId shouldBe (if (high) 2 else 1) }
         }
@@ -980,9 +980,9 @@ class KatalystModulatedStagesSpec : StringSpec({
             fx.process(ctx)
         }
 
-        leaving.configure(DuckSettings().apply { cylinderId = 1; depth = 0.2; attackSeconds = 0.05 })
+        leaving.configure(DuckSettings().apply { cylinderId = 1; depth = 0.2; releaseSeconds = 0.05 })
         pass(leaving)
-        leaving.configure(DuckSettings().apply { cylinderId = 1; depth = 0.9; attackSeconds = 0.05 })
+        leaving.configure(DuckSettings().apply { cylinderId = 1; depth = 0.9; releaseSeconds = 0.05 })
         repeat(5) { pass(leaving) }
 
         val carried = leaving.depth

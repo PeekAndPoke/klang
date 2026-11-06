@@ -343,8 +343,8 @@ E-kat-perlin       v8        128     perlin at 1 and 8 octaves: fbm on two noise
 E-kat-perlin       jvm       32      perlin at 1 and 8 octaves
 E-kat-all7         v8        250     all seven kinds: the per-sample class only, above its tail (a round of 207); item 39 by its KDoc
 E-kat-all7         jvm       32      all seven kinds
-E-kat-dyn          v8        168     the compressor's five, the duck's depth and attack: Compressor.knobArgs, the five setters put back (item 40, mutant 120); Compressor.glideArgs; Ducking.knobArgs (item 45) only by its KDoc (a revert boxes in a mixed profile, not in the check's single-case one)
-E-kat-dyn          jvm       32      the compressor's five, the duck's depth and attack
+E-kat-dyn          v8        168     the compressor's five, the duck's depth and release: Compressor.knobArgs, the five setters put back (item 40, mutant 120); Compressor.glideArgs; Ducking.knobArgs (item 45) only by its KDoc (a revert boxes in a mixed profile, not in the check's single-case one)
+E-kat-dyn          jvm       32      the compressor's five, the duck's depth and release
 E-kat-res          v8        184     the body's and the vowel's wet and floor: the per-sample class (KnobGlide.retarget's mutant reads over it, not reliably)
 E-kat-res          jvm       32      the body's and the vowel's wet and floor
 E-kat-gates        v8        144     a delay time, a reverb size and lowpass through their gates: the per-sample class (mutant 1,180 to 1,196); item 41 by its comments

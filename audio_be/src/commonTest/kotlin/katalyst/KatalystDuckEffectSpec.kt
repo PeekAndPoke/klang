@@ -37,8 +37,8 @@ class KatalystDuckEffectSpec : StringSpec({
 
     fun ctx(): KatalystContext = KatalystContext(blockFrames = frames, mixBuffer = StereoBuffer(frames))
 
-    fun settings(cylinder: Int, depth: Double, attack: Double = 0.1): DuckSettings =
-        DuckSettings(cylinderId = cylinder, attackSeconds = attack, depth = depth)
+    fun settings(cylinder: Int, depth: Double, release: Double = 0.1): DuckSettings =
+        DuckSettings(cylinderId = cylinder, releaseSeconds = release, depth = depth)
 
     /** A steady mix to duck, and a steady loud trigger: the worst case, a reduction in force. */
     fun mix(blocks: Int): DoubleArray = DoubleArray(blocks * frames) { 0.5 }
@@ -92,8 +92,8 @@ class KatalystDuckEffectSpec : StringSpec({
      * The gain reduction a BARE [Ducking] produces for [side], sample by sample: the oracle's `g`.
      * Feeding a signal of 1.0 makes the output the gain itself.
      */
-    fun reduction(side: DoubleArray, depth: Double, attack: Double = 0.1, from: Int = 0): DoubleArray {
-        val d = Ducking(sampleRate = sampleRate, attackSeconds = attack, depth = depth)
+    fun reduction(side: DoubleArray, depth: Double, release: Double = 0.1, from: Int = 0): DoubleArray {
+        val d = Ducking(sampleRate = sampleRate, releaseSeconds = release, depth = depth)
         val out = DoubleArray(side.size) { 1.0 }
         val l = AudioBuffer(1)
         val r = AudioBuffer(1)
@@ -143,7 +143,7 @@ class KatalystDuckEffectSpec : StringSpec({
 
         val got = run(src = src, side = side) { settings(cylinder = 2, depth = 0.8) }
 
-        val bare = Ducking(sampleRate = sampleRate, attackSeconds = 0.1, depth = 0.8)
+        val bare = Ducking(sampleRate = sampleRate, releaseSeconds = 0.1, depth = 0.8)
         val want = DoubleArray(src.size)
         val l = AudioBuffer(frames)
         val r = AudioBuffer(frames)
@@ -342,7 +342,7 @@ class KatalystDuckEffectSpec : StringSpec({
         }
 
         // The oracle: a bare Ducking driven sample by sample with the hand-written depth line.
-        val bare = Ducking(sampleRate = sampleRate, attackSeconds = 0.1, depth = 0.2)
+        val bare = Ducking(sampleRate = sampleRate, releaseSeconds = 0.1, depth = 0.2)
         val want = DoubleArray(src.size)
         val l = AudioBuffer(1)
         val r = AudioBuffer(1)
@@ -377,14 +377,14 @@ class KatalystDuckEffectSpec : StringSpec({
         }
     }
 
-    "attack does not glide: a new time constant is in force on the block it arrives" {
+    "release does not glide: a new time constant is in force on the block it arrives" {
         val fx = stage()
 
-        fx.configure(settings(cylinder = 2, depth = 0.8, attack = 0.5))
-        fx.ducking.shouldNotBeNull().attackSeconds shouldBe 0.5
+        fx.configure(settings(cylinder = 2, depth = 0.8, release = 0.5))
+        fx.ducking.shouldNotBeNull().releaseSeconds shouldBe 0.5
 
-        fx.configure(settings(cylinder = 2, depth = 0.8, attack = 0.02))
-        fx.ducking.shouldNotBeNull().attackSeconds shouldBe 0.02
+        fx.configure(settings(cylinder = 2, depth = 0.8, release = 0.02))
+        fx.ducking.shouldNotBeNull().releaseSeconds shouldBe 0.02
     }
 
     "a changed sidechain cylinder keeps the envelope, and the reduction carries on" {
@@ -698,7 +698,7 @@ class KatalystDuckEffectSpec : StringSpec({
         val fx = stage()
         val context = ctx()
 
-        fx.configure(settings(cylinder = 0, depth = 0.8, attack = 0.001))
+        fx.configure(settings(cylinder = 0, depth = 0.8, release = 0.001))
         context.mixBuffer.fill(1.0)
 
         // Asymmetric sidechain: left is louder.

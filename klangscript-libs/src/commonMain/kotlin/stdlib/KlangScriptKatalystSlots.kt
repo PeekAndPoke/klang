@@ -67,7 +67,7 @@ internal object KlangScriptKatalystSlots {
     @KlangScript.Property
     val gain: KlangScriptKatalystGainSlots = KlangScriptKatalystGainSlots
 
-    /** The duck stage's knobs: `cylinder`, `depth`, `attack`. */
+    /** The duck stage's knobs: `cylinder`, `depth`, `release`. */
     @KlangScript.Property
     val duck: KlangScriptKatalystDuckSlots = KlangScriptKatalystDuckSlots
 }
@@ -231,7 +231,7 @@ internal object KlangScriptKatalystDuckSlots {
     @KlangScript.Property
     val depth: KatalystKnobDsl = KatalystDsl.Slots.duck.depth
 
-    /** `duck.attack`. How fast the duck closes, in seconds. */
+    /** `duck.release`. How fast the duck lets go after the source falls quiet, in seconds. */
     @KlangScript.Property
-    val attack: KatalystKnobDsl = KatalystDsl.Slots.duck.attack
+    val release: KatalystKnobDsl = KatalystDsl.Slots.duck.release
 }

@@ -426,6 +426,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-11-06 The duck's `attack` is `release` (it always set the recovery; the duck closes at once): KLANG-00417 B1
 - 2026-11-06 Cylinder is the one word (KLANG-00418 step 4): the engine's identifiers, prose and docs say cylinder;
   "cylinder number" and "`Cylinder` instance" where the two used to be told apart by the words
   orbit and Cylinder: record KLANG-00418 (cylinder as the one word the sprudel door the katalyst vocab)

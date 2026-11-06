@@ -88,7 +88,7 @@ facts; the few that would go into code first were checked against a source and a
   - dB one-pole, peak link `max(|L|, |R|)`, soft knee, optional lookahead.
   - No detector filter, no RMS, no wet knob.
   - `limiter` is this stage with limiter numbers.
-- **`duck`:** keyed by another cylinder; instant attack and a release (named `attack`); built but never used by a
+- **`duck`:** keyed by another cylinder; instant attack and a release (named `release`; `attack` until 2026-11-06); built but never used by a
   song (KLANG-00168 (ducking unfinished)).
 - **`eq`:** the same `EqSection` set.
 - **`gain`.**

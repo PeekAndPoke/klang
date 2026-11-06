@@ -39,8 +39,8 @@ import io.peekandpoke.klang.audio_bridge.constants.DELAY_FEEDBACK
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_TIME_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_WET
 import io.peekandpoke.klang.audio_bridge.constants.DISTORT_AMOUNT
-import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_DEPTH
+import io.peekandpoke.klang.audio_bridge.constants.DUCK_RELEASE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_KNEE_DB
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_RATIO
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_RELEASE_SECONDS
@@ -462,18 +462,18 @@ internal fun KatalystBuilder.scriptDistort(
  *   `duck(cylinder = ...)`.
  * @param depth how far this cylinder is pulled down, 0 to 1 (default 0, no ducking). Cylinder twin:
  *   `duck(depth = ...)`.
- * @param attack how fast the duck closes, in seconds (default 0.1). Cylinder twin:
- *   `duck(attack = ...)`.
+ * @param release how fast the duck lets go after the source falls quiet, in seconds (default 0.1); it closes at
+ *   once. Cylinder twin: `duck(release = ...)`.
  */
 @KlangScript.Function(name = "duck")
 internal fun KatalystBuilder.scriptDuck(
     cylinder: IgnitorDslLike? = null,
     depth: IgnitorDslLike? = null,
-    attack: IgnitorDslLike? = null,
+    release: IgnitorDslLike? = null,
 ): KatalystBuilder = this.duck(
     cylinder = cylinder?.toKatalystKnob() ?: SLOT_UNSET.kat,
     depth = depth?.toKatalystKnob() ?: DUCK_DEPTH.kat,
-    attack = attack?.toKatalystKnob() ?: DUCK_ATTACK_SECONDS.kat,
+    release = release?.toKatalystKnob() ?: DUCK_RELEASE_SECONDS.kat,
 )
 
 /**

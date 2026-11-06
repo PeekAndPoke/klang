@@ -661,7 +661,7 @@ class KatalystCompressorLookaheadSpec : StringSpec({
         val after = 60
         val ducked = KatalystDsl.of(
             KatalystStageDsl.Gain(gain = c(1.0)),
-            KatalystStageDsl.Duck(cylinder = c(0.0), depth = c(0.8), attack = c(0.05)),
+            KatalystStageDsl.Duck(cylinder = c(0.0), depth = c(0.8), release = c(0.05)),
         )
 
         fun run(duckPass: Boolean): DoubleArray {
@@ -707,7 +707,7 @@ class KatalystCompressorLookaheadSpec : StringSpec({
         val after = 60
         val lateDucked = KatalystDsl.of(
             limiterStage(Compressor.MAX_LOOKAHEAD_SECONDS),
-            KatalystStageDsl.Duck(cylinder = c(0.0), depth = c(0.8), attack = c(0.05)),
+            KatalystStageDsl.Duck(cylinder = c(0.0), depth = c(0.8), release = c(0.05)),
         )
 
         fun run(duckPass: Boolean): DoubleArray {

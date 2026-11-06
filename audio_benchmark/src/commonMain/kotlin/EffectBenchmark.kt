@@ -630,7 +630,7 @@ class EffectBenchmark(
             ),
 
             Case("Ducking (stereo)") { sr, bf ->
-                val ducking = Ducking(sr, attackSeconds = 0.1, depth = 0.5)
+                val ducking = Ducking(sr, releaseSeconds = 0.1, depth = 0.5)
                 val src = sineSource(440.0, sr, bf)
                 val sidechainSrc = sineSource(2.0, sr, bf)
                 val input = StereoBuffer(bf)

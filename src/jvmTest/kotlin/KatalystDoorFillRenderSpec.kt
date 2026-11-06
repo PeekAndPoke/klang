@@ -70,7 +70,7 @@ class KatalystDoorFillRenderSpec : StringSpec({
     val duckSong =
         """stack(note("c1*4").s("triangle").cylinder(0), note("c3 e3 g3 b3").s("supersaw").cylinder(1)"""
     val duckChain =
-        """.katalyst(Katalyst(k => k.duck(cylinder = 0, depth = Katalyst.param("duck.depth", 0.8), attack = 0.3))))"""
+        """.katalyst(Katalyst(k => k.duck(cylinder = 0, depth = Katalyst.param("duck.depth", 0.8), release = 0.3))))"""
     // The control's chain: a declaration that takes the cylinder over but has no duck stage at all.
     // Both strings close the `stack(` that `duckSong` opens.
     val duckChainOff = """.katalyst(Katalyst(k => k.gain(1.0))))"""
@@ -170,16 +170,16 @@ class KatalystDoorFillRenderSpec : StringSpec({
         }
     }
 
-    "a tail-only duck(attack) does not silence a chain-authored duck depth" {
+    "a tail-only duck(release) does not silence a chain-authored duck depth" {
         // Round 3 of step 5a-3, the MAJOR. The duck's name knob is its CYLINDER, so only naming the
-        // cylinder may fill. Until the fix every duck knob filled, so a pattern saying `duck(attack =
+        // cylinder may fill. Until the fix every duck knob filled, so a pattern saying `duck(release =
         // 0.3)` wrote `duck.depth = 0.0` into the cylinder's slot state and the chain's own
         // `Katalyst.param("duck.depth", 0.8)` resolved to silence: the ducking simply stopped.
         //
         // The chain authors its attack as a CONSTANT 0.3, which no slot can move, and the pattern's
         // tail call asks for the same 0.3. So after the fix the tail call changes nothing at all
         // and the two renders are identical, sample for sample. Before it, the depth went to zero.
-        val withTail = render("$duckSong.duck(attack = 0.3)$duckChain")
+        val withTail = render("$duckSong.duck(release = 0.3)$duckChain")
         val withoutTail = render("$duckSong$duckChain")
 
         withTail.size shouldBe withoutTail.size
@@ -197,8 +197,8 @@ class KatalystDoorFillRenderSpec : StringSpec({
         // the WITH-tail render lost its ducking, so that row was red, not vacuously green; this one
         // guards the other way, that a future change which stops the chain ducking on BOTH sides
         // cannot make the pair equal and silent.
-        val ducked = render("$duckSong.duck(attack = 0.3)$duckChain")
-        val notDucked = render("$duckSong.duck(attack = 0.3)$duckChainOff")
+        val ducked = render("$duckSong.duck(release = 0.3)$duckChain")
+        val notDucked = render("$duckSong.duck(release = 0.3)$duckChainOff")
 
         ducked.size shouldBe notDucked.size
 

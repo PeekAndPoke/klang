@@ -97,7 +97,13 @@ passes (their file:line references are as of 0cf2f5f83). The gaps, merged and nu
 
 ### B. For the maintainer: names, scales, defaults that a user would trip on
 
-Listed with a recommendation each in the report of 2026-11-06; the answers land here.
+Listed with a recommendation each; **decided 2026-11-06, the maintainer took every recommendation:** B1 rename to
+`release` (slot `duck.release`, every door); B2 rate first everywhere (sprudel `tremolo(rate, depth, shape)`); B3 an
+unset tremolo rate is 5 Hz on every surface (one constant); B4 the phaser `floor` defaults to 1 everywhere (the voice
+phaser too); B5 a one-knob door's parameter takes the knob's word (`gain(gain)`, `pan(pan)`, ...); B6 every source
+answers the pattern's slots (the noise doors and the plucks opened); B7 `unison(pan)` removed (stereo width is its own
+future ticket); B8 `sndSquare(duty)` added and the plain `snd*` doors' dead `params` removed. B9 is left to the audit's
+judgement, each item fixed or recorded. The songs, the jingles and the tutorials follow every change.
 
 - **B1. The duck's `attack` is its release** (KLANG-00290 (engine follow ups) item 22): rename to `release`, slot
   `duck.release`, on every door.
@@ -118,6 +124,15 @@ Listed with a recommendation each in the report of 2026-11-06; the answers land 
   `rate`; no sprudel door for `zawtooth`, `impulse`, `perlin`, `berlin`; `sndDust` without `bipolar`; `sndNoise`
   against its colour siblings; the builder knob `centerJitter` writing `centerJitterScale`; the node `Pulze` (wire
   `"pulze"`) being the rounded pulse while the sound `pulze` is `RawPulze`.
+
+### The fixes
+
+- **B1 DONE 2026-11-06:** the duck's `attack` is `release` on every door and in the engine: sprudel's
+  `duck(cylinder, depth, release)` and its accessor, `duck(release = ...)` on both Katalyst doors, the stage field, the
+  slot `duck.release`, `Katalyst.slot.duck.release`, `DUCK_RELEASE_SECONDS` (its KDoc now says it is the recovery),
+  `Ducking.releaseSeconds` (its knob slot `KNOB_RELEASE`), `DuckSettings.releaseSeconds`, the duck writer. The wire
+  schema hash moved (-209384306 to 591120935). No song or tutorial used the knob. KLANG-00290's item 22 is closed by
+  it.
 
 ### Checked and consistent
 
@@ -780,3 +795,4 @@ already written down.
 
 - 2026-11-06: created from KLANG-00137 section 1 (the maintainer: its own ticket, after the DSP restructuring).
 - 2026-11-06: IN PROGRESS (maintainer: start now; no backward compatibility, the songs, jingles and tutorials follow).
+- 2026-11-06: the audit recorded (A and B); the maintainer decided B1 to B8, every recommendation.

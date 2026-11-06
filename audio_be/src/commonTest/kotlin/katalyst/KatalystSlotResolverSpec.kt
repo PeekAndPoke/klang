@@ -31,7 +31,7 @@ import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RELEASE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_THRESHOLD_DB
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_CAP
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_FEEDBACK
-import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.DUCK_RELEASE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_CENTER_HZ
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_SWEEP_HZ
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
@@ -498,7 +498,7 @@ class KatalystSlotResolverSpec : StringSpec({
             fx = duck,
             cylinder = testKnob(c(2.0), KatalystNoiseOrdinals()),
             depth = testKnob(c(0.6), KatalystNoiseOrdinals()),
-            attack = testKnob(c(0.02), KatalystNoiseOrdinals()),
+            release = testKnob(c(0.02), KatalystNoiseOrdinals()),
         )
 
         duckWriter.declared shouldBe true
@@ -521,7 +521,7 @@ class KatalystSlotResolverSpec : StringSpec({
         fx = fx,
         cylinder = testKnob(KatalystKnobDsl.Param("duck.cylinder", SLOT_UNSET), KatalystNoiseOrdinals()),
         depth = testKnob(KatalystKnobDsl.Param("duck.depth", SLOT_UNSET), KatalystNoiseOrdinals()),
-        attack = testKnob(KatalystKnobDsl.Param("duck.attack", SLOT_UNSET), KatalystNoiseOrdinals()),
+        release = testKnob(KatalystKnobDsl.Param("duck.release", SLOT_UNSET), KatalystNoiseOrdinals()),
     )
 
     "compressor and duck: the writer hands ONE holder, refilled in place at every resolve" {
@@ -607,23 +607,23 @@ class KatalystSlotResolverSpec : StringSpec({
         fx.compressor.shouldNotBeNull().thresholdDb shouldBe COMPRESSOR_THRESHOLD_DB
     }
 
-    "duck: a changed knob reaches the instance, and an attack cleared after it was set takes its constant" {
+    "duck: a changed knob reaches the instance, and a release cleared after it was set takes its constant" {
         val fx = KatalystDuckEffect(sampleRate = sampleRate, blockFrames = blockFrames)
         val writer = duckWriter(fx)
 
-        writer.resolve(klangMapOf("duck.cylinder" to 2.0, "duck.depth" to 0.6, "duck.attack" to 0.5))
+        writer.resolve(klangMapOf("duck.cylinder" to 2.0, "duck.depth" to 0.6, "duck.release" to 0.5))
         writer.apply()
 
         val ducking = fx.ducking.shouldNotBeNull()
 
-        ducking.attackSeconds shouldBe 0.5
+        ducking.releaseSeconds shouldBe 0.5
 
-        writer.resolve(klangMapOf("duck.cylinder" to 3.0, "duck.depth" to 0.3, "duck.attack" to Double.NaN))
+        writer.resolve(klangMapOf("duck.cylinder" to 3.0, "duck.depth" to 0.3, "duck.release" to Double.NaN))
         writer.apply()
         fx.ducking shouldBeSameInstanceAs ducking
         fx.duckCylinderId shouldBe 3
         ducking.depth shouldBe 0.3
-        ducking.attackSeconds shouldBe DUCK_ATTACK_SECONDS
+        ducking.releaseSeconds shouldBe DUCK_RELEASE_SECONDS
     }
 
     // ── Compressor ───────────────────────────────────────────────────────────────────────────────
@@ -710,7 +710,7 @@ class KatalystSlotResolverSpec : StringSpec({
 
     "duck: on when the cylinder is finite and the depth above zero, cylinderId from toInt" {
         val chain = declared(
-            KatalystStageDsl.Duck(cylinder = c(3.7), depth = c(0.6), attack = c(0.02))
+            KatalystStageDsl.Duck(cylinder = c(3.7), depth = c(0.6), release = c(0.02))
         )
 
         val duck = chain.duck.shouldNotBeNull()
@@ -718,15 +718,15 @@ class KatalystSlotResolverSpec : StringSpec({
         duck.duckCylinderId shouldBe 3
         val ducking = duck.ducking.shouldNotBeNull()
         ducking.depth shouldBe 0.6
-        ducking.attackSeconds shouldBe 0.02
+        ducking.releaseSeconds shouldBe 0.02
     }
 
-    "duck: a non-finite attack takes its constant" {
+    "duck: a non-finite release takes its constant" {
         val chain = declared(
-            KatalystStageDsl.Duck(cylinder = c(3.0), depth = c(0.6), attack = c(SLOT_UNSET))
+            KatalystStageDsl.Duck(cylinder = c(3.0), depth = c(0.6), release = c(SLOT_UNSET))
         )
 
-        chain.duck.shouldNotBeNull().ducking.shouldNotBeNull().attackSeconds shouldBe DUCK_ATTACK_SECONDS
+        chain.duck.shouldNotBeNull().ducking.shouldNotBeNull().releaseSeconds shouldBe DUCK_RELEASE_SECONDS
     }
 
     "duck: off without a source cylinder, off without depth, both against a ducking voice" {

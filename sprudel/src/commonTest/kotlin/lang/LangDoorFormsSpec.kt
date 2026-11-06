@@ -161,7 +161,7 @@ class LangDoorFormsSpec : StringSpec({
         k("duck.cylinder", "duck(%s)", katSlot("duck.cylinder"), { p, c -> p.duck(c) }, { s, c -> s.duck(c) }, { c -> duck(c) }, { m, c -> m.duck(c) },
             ctrl = "1 2", expected = listOf(1.0, 2.0), head = true, continuous = listOf(0.0, 1.0, 0.0, 0.0)),
         k("duck.depth", "duck(depth = %s)", katSlot("duck.depth"), { p, c -> p.duck(depth = c) }, { s, c -> s.duck(depth = c) }, { c -> duck(depth = c) }, { m, c -> m.duck(depth = c) }),
-        k("duck.attack", "duck(attack = %s)", katSlot("duck.attack"), { p, c -> p.duck(attack = c) }, { s, c -> s.duck(attack = c) }, { c -> duck(attack = c) }, { m, c -> m.duck(attack = c) }),
+        k("duck.release", "duck(release = %s)", katSlot("duck.release"), { p, c -> p.duck(release = c) }, { s, c -> s.duck(release = c) }, { c -> duck(release = c) }, { m, c -> m.duck(release = c) }),
 
         // -- reverb and delay (Katalyst slots) -------------------------------------------------------------------------
         k("reverb.wet", "reverb(%s)", katSlot("reverb.wet"), { p, c -> p.reverb(c) }, { s, c -> s.reverb(c) }, { c -> reverb(c) }, { m, c -> m.reverb(c) }, head = true),
@@ -448,7 +448,7 @@ class LangDoorFormsSpec : StringSpec({
                 { it.uni(5, 0.3, 0.6) }, { it.uni(5, 0.3, 0.6) }, { uni(5, 0.3, 0.6) }, { it.uni(5, 0.3, 0.6) },
             ),
             Door(
-                "duck", """1, 0.8, 0.2""", { listOf("cylinder", "depth", "attack").map { k -> it.katalystParams?.get("duck.$k") } }, listOf(1.0, 0.8, 0.2),
+                "duck", """1, 0.8, 0.2""", { listOf("cylinder", "depth", "release").map { k -> it.katalystParams?.get("duck.$k") } }, listOf(1.0, 0.8, 0.2),
                 { it.duck(1, 0.8, 0.2) }, { it.duck(1, 0.8, 0.2) }, { duck(1, 0.8, 0.2) }, { it.duck(1, 0.8, 0.2) },
             ),
             Door(

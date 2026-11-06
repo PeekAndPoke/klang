@@ -18,8 +18,8 @@ import io.peekandpoke.klang.audio_bridge.constants.DELAY_FEEDBACK
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_TIME_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_WET
 import io.peekandpoke.klang.audio_bridge.constants.DISTORT_AMOUNT
-import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_DEPTH
+import io.peekandpoke.klang.audio_bridge.constants.DUCK_RELEASE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_CENTER_HZ
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_RATE_HZ
@@ -92,7 +92,7 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
         /** The group fader: `gain.gain`. */
         val gain: KatalystGainSlots = KatalystGainSlots()
 
-        /** The duck stage: `duck.cylinder`, `duck.depth`, `duck.attack`. */
+        /** The duck stage: `duck.cylinder`, `duck.depth`, `duck.release`. */
         val duck: KatalystDuckSlots = KatalystDuckSlots()
     }
 
@@ -144,7 +144,7 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
          *    `body.material`, `vowel.vowel`, `body.wet` and `vowel.wet`;
          *  - the shared constant, for a knob that is inert while its gate is off and must be right
          *    the moment the gate opens: `delay.cap`, `body.floor`, `vowel.floor`, `phaser.rate`,
-         *    `phaser.center`, `phaser.sweep`, `phaser.floor`, `duck.attack`;
+         *    `phaser.center`, `phaser.sweep`, `phaser.floor`, `duck.release`;
          *  - unity, for the one knob whose untouched value is the IDENTITY of its stage rather
          *    than an off state or a tuned number: `gain.gain`. It is 1.0 written out here and in
          *    [KatalystStageDsl.Gain] rather than read from `constants/`, for the reason that KDoc
@@ -239,7 +239,7 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
                 KatalystStageDsl.Duck(
                     cylinder = Slots.duck.cylinder,
                     depth = Slots.duck.depth,
-                    attack = Slots.duck.attack,
+                    release = Slots.duck.release,
                 ),
             )
         )
@@ -487,13 +487,14 @@ sealed interface KatalystStageDsl {
      *   Cylinder twin: `duck(cylinder = ...)`.
      * @param depth how far this cylinder is pulled down, 0 to 1. 0 = no ducking. Cylinder twin:
      *   `duck(depth = ...)`.
-     * @param attack how fast the duck closes, in seconds. Cylinder twin: `duck(attack = ...)`.
+     * @param release how fast the duck lets go after the source falls quiet, in seconds (it closes at once).
+     *   Cylinder twin: `duck(release = ...)`.
      */
     @WireName("duck")
     data class Duck(
         val cylinder: KatalystKnobDsl = KatalystKnobDsl.Constant(SLOT_UNSET),
         val depth: KatalystKnobDsl = KatalystKnobDsl.Constant(DUCK_DEPTH),
-        val attack: KatalystKnobDsl = KatalystKnobDsl.Constant(DUCK_ATTACK_SECONDS),
+        val release: KatalystKnobDsl = KatalystKnobDsl.Constant(DUCK_RELEASE_SECONDS),
     ) : KatalystStageDsl
 
     /**

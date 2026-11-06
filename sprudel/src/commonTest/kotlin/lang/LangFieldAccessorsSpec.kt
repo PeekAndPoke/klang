@@ -245,7 +245,7 @@ class LangFieldAccessorsSpec : StringSpec({
         row("cylinder", """s("bd sd").cylinder(1).cylinder(add(1))""", { it.cylinder?.toDouble() }, 2.0, s("bd sd").cylinder(1).cylinder(add(1))),
         row("orbit", """s("bd sd").orbit(1).orbit(add(1))""", { it.cylinder?.toDouble() }, 2.0, s("bd sd").orbit(1).orbit(add(1))),
         row("duckcylinder", """s("bd sd").duck(1).duck(add(1))""", { it.katalystParams?.get("duck.cylinder") }, 2.0, s("bd sd").duck(1).duck(add(1))),
-        row("duckattack", """s("bd sd").duck(attack = 0.05).duck(attack = mul(2))""", { it.katalystParams?.get("duck.attack") }, 0.1, s("bd sd").duck(attack = 0.05).duck(attack = mul(2))),
+        row("duckrelease", """s("bd sd").duck(release = 0.05).duck(release = mul(2))""", { it.katalystParams?.get("duck.release") }, 0.1, s("bd sd").duck(release = 0.05).duck(release = mul(2))),
         row("duckdepth", """s("bd sd").duck(depth = 0.5).duck(depth = mul(2))""", { it.katalystParams?.get("duck.depth") }, 1.0, s("bd sd").duck(depth = 0.5).duck(depth = mul(2))),
         row("compressor.threshold", """s("bd sd").compressor(-12).compressor(add(-6))""", { it.katalystParams?.get("compressor.threshold") }, -18.0, s("bd sd").compressor(-12).compressor(add(-6))),
         row("fm.depth", """s("bd sd").fm(200).fm(mul(2))""", { it.fmEnv }, 400.0, s("bd sd").fm(200).fm(mul(2))),
@@ -263,7 +263,7 @@ class LangFieldAccessorsSpec : StringSpec({
         row("cylinder", """s("bd sd").cylinder(1).pan(cylinder)""", { it.pan }, 1.0, s("bd sd").cylinder(1).pan(cylinder)),
         row("orbit", """s("bd sd").orbit(1).pan(orbit)""", { it.pan }, 1.0, s("bd sd").orbit(1).pan(orbit)),
         row("duckcylinder", """s("bd sd").duck(1).pan(duck.cylinder)""", { it.pan }, 1.0, s("bd sd").duck(1).pan(duck.cylinder)),
-        row("duckattack", """s("bd sd").duck(attack = 0.05).pan(duck.attack)""", { it.pan }, 0.05, s("bd sd").duck(attack = 0.05).pan(duck.attack)),
+        row("duckrelease", """s("bd sd").duck(release = 0.05).pan(duck.release)""", { it.pan }, 0.05, s("bd sd").duck(release = 0.05).pan(duck.release)),
         row("duckdepth", """s("bd sd").duck(depth = 0.5).pan(duck.depth)""", { it.pan }, 0.5, s("bd sd").duck(depth = 0.5).pan(duck.depth)),
         row("compressor.threshold", """s("bd sd").compressor(-12).pan(compressor.threshold)""", { it.pan }, -12.0, s("bd sd").compressor(-12).pan(compressor.threshold)),
         row("fm.depth", """s("bd sd").fm(200).pan(fm.depth)""", { it.pan }, 200.0, s("bd sd").fm(200).pan(fm.depth)),
@@ -710,7 +710,7 @@ class LangFieldAccessorsSpec : StringSpec({
             Case("duck(depth = mul(0.5))", note("c e").duck(1, 0.8, 0.2).duck(depth = mul(0.5)), """note("c e").duck(1, 0.8, 0.2).duck(depth = mul(0.5))""") {
                 it.katalystParams?.get("duck.cylinder") shouldBe 1.0
                 it.katalystParams?.get("duck.depth") shouldBe 0.4
-                it.katalystParams?.get("duck.attack") shouldBe 0.2
+                it.katalystParams?.get("duck.release") shouldBe 0.2
             },
             Case("vibrato(semitones = mul(2))", note("c e").vibrato(5, 0.5).vibrato(semitones = mul(2)), """note("c e").vibrato(5, 0.5).vibrato(semitones = mul(2))""") {
                 it.vibrato shouldBe 5.0
@@ -763,7 +763,7 @@ class LangFieldAccessorsSpec : StringSpec({
         add("unison", s("bd sd").unison(spread = "0.1 0.5"), """s("bd sd").unison(spread = "0.1 0.5")""") { it.ignitorParams?.get("spread") }
         add("unison", s("bd sd").unison(pan = "0.1 0.5"), """s("bd sd").unison(pan = "0.1 0.5")""") { it.ignitorParams?.get("panSpread") }
         add("duck", s("bd sd").duck(depth = "0.1 0.5"), """s("bd sd").duck(depth = "0.1 0.5")""") { it.katalystParams?.get("duck.depth") }
-        add("duck", s("bd sd").duck(attack = "0.1 0.5"), """s("bd sd").duck(attack = "0.1 0.5")""") { it.katalystParams?.get("duck.attack") }
+        add("duck", s("bd sd").duck(release = "0.1 0.5"), """s("bd sd").duck(release = "0.1 0.5")""") { it.katalystParams?.get("duck.release") }
         add("vibrato", s("bd sd").vibrato(rate = "0.1 0.5"), """s("bd sd").vibrato(rate = "0.1 0.5")""") { it.vibrato }
         add("vibrato", s("bd sd").vibrato(semitones = "0.1 0.5"), """s("bd sd").vibrato(semitones = "0.1 0.5")""") { it.vibratoMod }
         add("vibrato", s("bd sd").vibrato(rangeFrom = "0.1 0.5"), """s("bd sd").vibrato(rangeFrom = "0.1 0.5")""") { it.vibratoRangeFrom }

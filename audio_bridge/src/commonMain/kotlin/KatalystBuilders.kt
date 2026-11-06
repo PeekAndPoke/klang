@@ -18,8 +18,8 @@ import io.peekandpoke.klang.audio_bridge.constants.DELAY_FEEDBACK
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_TIME_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_WET
 import io.peekandpoke.klang.audio_bridge.constants.DISTORT_AMOUNT
-import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_DEPTH
+import io.peekandpoke.klang.audio_bridge.constants.DUCK_RELEASE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_KNEE_DB
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_RATIO
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_RELEASE_SECONDS
@@ -196,8 +196,8 @@ data class KatalystBuilder(val node: KatalystDsl = KatalystDsl(emptyList())) {
     fun duck(
         cylinder: KatalystKnobDsl = SLOT_UNSET.kat,
         depth: KatalystKnobDsl = DUCK_DEPTH.kat,
-        attack: KatalystKnobDsl = DUCK_ATTACK_SECONDS.kat,
-    ): KatalystBuilder = append(KatalystStageDsl.Duck(cylinder = cylinder, depth = depth, attack = attack))
+        release: KatalystKnobDsl = DUCK_RELEASE_SECONDS.kat,
+    ): KatalystBuilder = append(KatalystStageDsl.Duck(cylinder = cylinder, depth = depth, release = release))
 
     /**
      * Appends the mix equalizer, its sections from a [KatalystEqBuilder] (a section refuses a Kat expression at build

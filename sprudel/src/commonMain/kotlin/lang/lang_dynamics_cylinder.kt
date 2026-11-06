@@ -8,8 +8,8 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
-import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_DEPTH
+import io.peekandpoke.klang.audio_bridge.constants.DUCK_RELEASE_SECONDS
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.ParamBag
@@ -235,10 +235,10 @@ val o: cylinder = cylinder
 // -- duck ------------------------------------------------------------------------------------------------------------
 
 /**
- * Fills the duck stage's companions, `duck.depth` and `duck.attack`, from
+ * Fills the duck stage's companions, `duck.depth` and `duck.release`, from
  * `constants/BusEffectDefaults.kt` (`/dsl-design` §4 is the rule; this is only what THIS door
  * does). Called from the CYLINDER setter alone, and only when that call named a cylinder: the cylinder is
- * this stage's name knob, so a tail-only `duck(depth = 0.5)` or `duck(attack = 0.3)` writes its own
+ * this stage's name knob, so a tail-only `duck(depth = 0.5)` or `duck(release = 0.3)` writes its own
  * slot and nothing else, and a bare `duck()` that names nothing fills nothing.
  *
  * The filled depth is [DUCK_DEPTH], which is 0, so `duck(1)` alone names a source and still ducks
@@ -247,8 +247,8 @@ val o: cylinder = cylinder
  * chain either.
  *
  * The slots are the duck's only storage since Katalyst step 5b-3 (the voice fields left the wire
- * and `SprudelVoiceData`), and the `duck.*` accessors read them: `duck.attack` reads
- * [DUCK_ATTACK_SECONDS] after `duck(1)`, the value the cylinder runs. Until 5b-3 the accessors read
+ * and `SprudelVoiceData`), and the `duck.*` accessors read them: `duck.release` reads
+ * [DUCK_RELEASE_SECONDS] after `duck(1)`, the value the cylinder runs. Until 5b-3 the accessors read
  * the fields, which this fill never wrote, so the same read came back empty.
  *
  * Two different things keep a fill off a value it must not touch, and they are worth telling apart.
@@ -256,7 +256,7 @@ val o: cylinder = cylinder
  * call survive: that value IS in the event's bag, so the fill leaves it. A CHAIN-authored depth is
  * not in the bag at all, it is the chain's own `Param` default, so nothing in [ParamBag] could
  * protect it; what protects it is calling this fill from the CYLINDER setter alone, so a tail-only
- * `duck(attack = 0.3)` never writes `duck.depth` and the chain's 0.8 is never asked about. Until
+ * `duck(release = 0.3)` never writes `duck.depth` and the chain's 0.8 is never asked about. Until
  * round 3 of step 5a-3 every duck knob filled, and that call silenced the ducking on a declared
  * chain.
  */
@@ -264,7 +264,7 @@ private fun SprudelVoiceData.fillDuckDefaults() {
     val slots = katalystParamsOrNew()
 
     slots.setOrDefault("duck.depth", value = null, default = DUCK_DEPTH)
-    slots.setOrDefault("duck.attack", value = null, default = DUCK_ATTACK_SECONDS)
+    slots.setOrDefault("duck.release", value = null, default = DUCK_RELEASE_SECONDS)
 }
 
 // The cylinder is the NAME KNOB. It is also the one duck setter a bare call can reach with a null (the
@@ -304,29 +304,29 @@ private fun applyDuckDepth(source: SprudelPattern, args: List<SprudelDslArg<Any?
     return source._liftOrReinterpretNumericalField(args, duckDepthMutation)
 }
 
-private val duckAttackMutation = voiceSetter {
-    putKatalystParam("duck.attack", it?.asDoubleOrNull())
+private val duckReleaseMutation = voiceSetter {
+    putKatalystParam("duck.release", it?.asDoubleOrNull())
 }
 
-private fun applyDuckAttack(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyDuckRelease(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.katalystParams?.get("duck.attack") }, update = duckAttackMutation)
+        return source._mapNumericField(mapper, read = { it.katalystParams?.get("duck.release") }, update = duckReleaseMutation)
     }
 
-    return source._liftOrReinterpretNumericalField(args, duckAttackMutation)
+    return source._liftOrReinterpretNumericalField(args, duckReleaseMutation)
 }
 
 /**
  * Sidechain ducking: the cylinder that triggers it, the depth and the recovery time.
  *
  * The pattern carrying `duck(...)` is ducked whenever the named cylinder plays. The duck-down is
- * instant, `attack` is the recovery.
+ * instant; `release` is how fast it lets go after the trigger stops.
  *
  * Ducking belongs to the cylinder's bus and runs after every cylinder has been
  * processed, so it ducks the whole cylinder, set by its owning voice, not one note at a time.
  *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
- * a mapper (`duck(depth = mul(2))`), and the numeric slots read back as `duck.cylinder`, `duck.depth`, `duck.attack`.
+ * a mapper (`duck(depth = mul(2))`), and the numeric slots read back as `duck.cylinder`, `duck.depth`, `duck.release`.
  * With no argument at all, the pattern's own values are reinterpreted as `cylinder`.
  *
  * ```KlangScript(Playable)
@@ -343,38 +343,38 @@ private fun applyDuckAttack(source: SprudelPattern, args: List<SprudelDslArg<Any
  *
  * @param cylinder Cylinder index whose voices trigger the duck.
  * @param depth Depth, 0 for none, 1 for full silence.
- * @param attack Recovery time in seconds after the trigger stops.
+ * @param release Recovery time in seconds after the trigger stops.
  *
  * @scope cylinder
  * @category dynamics
- * @tags duck, cylinder, orbit, depth, attack
+ * @tags duck, cylinder, orbit, depth, release
  */
 @KlangScript.Function
-fun SprudelPattern.duck(cylinder: PatternLike? = null, depth: PatternLike? = null, attack: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
+fun SprudelPattern.duck(cylinder: PatternLike? = null, depth: PatternLike? = null, release: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
     // A tail-only call must not touch the cylinder: reinterpret runs only on a fully bare call.
-    var p = if (cylinder != null || !(depth != null || attack != null)) {
+    var p = if (cylinder != null || !(depth != null || release != null)) {
         applyDuckCylinder(this, listOfNotNull(cylinder).asSprudelDslArgs(callInfo))
     } else {
         this
     }
     if (depth != null) p = applyDuckDepth(p, listOf<Any?>(depth).asSprudelDslArgs(callInfo?.forParam(1)))
-    if (attack != null) p = applyDuckAttack(p, listOf<Any?>(attack).asSprudelDslArgs(callInfo?.forParam(2)))
+    if (release != null) p = applyDuckRelease(p, listOf<Any?>(release).asSprudelDslArgs(callInfo?.forParam(2)))
     return p
 }
 
 /** Parses this string as a pattern, then applies [duck]. */
 @KlangScript.Function
-fun String.duck(cylinder: PatternLike? = null, depth: PatternLike? = null, attack: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).duck(cylinder, depth, attack, callInfo)
+fun String.duck(cylinder: PatternLike? = null, depth: PatternLike? = null, release: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).duck(cylinder, depth, release, callInfo)
 
 /** Chains a [duck] step onto this [PatternMapperFn]. */
 @KlangScript.Function
-fun PatternMapperFn.duck(cylinder: PatternLike? = null, depth: PatternLike? = null, attack: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.duck(cylinder, depth, attack, callInfo) }
+fun PatternMapperFn.duck(cylinder: PatternLike? = null, depth: PatternLike? = null, release: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.duck(cylinder, depth, release, callInfo) }
 
 /**
  * The `duck` object: `duck(...)` sets the slots, and each numeric slot reads back as a child,
- * `duck.cylinder`, `duck.depth`, `duck.attack`.
+ * `duck.cylinder`, `duck.depth`, `duck.release`.
  *
  * @scope cylinder
  * @category dynamics
@@ -392,18 +392,18 @@ object duck {
     @KlangScript.Property
     val depth: FieldAccessor = FieldAccessor { it.katalystParams?.get("duck.depth") }
 
-    /** The attack slot of each event, as a value other setters can read. */
+    /** The release slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val attack: FieldAccessor = FieldAccessor { it.katalystParams?.get("duck.attack") }
+    val release: FieldAccessor = FieldAccessor { it.katalystParams?.get("duck.release") }
 
     /**
      * The setter, see [SprudelPattern.duck].
      *
      * @param cylinder Cylinder index whose voices trigger the duck.
      * @param depth Depth, 0 for none, 1 for full silence.
-     * @param attack Recovery time in seconds after the trigger stops.
+     * @param release Recovery time in seconds after the trigger stops.
      */
     @KlangScript.Invoke
-    operator fun invoke(cylinder: PatternLike? = null, depth: PatternLike? = null, attack: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        { p -> p.duck(cylinder, depth, attack, callInfo) }
+    operator fun invoke(cylinder: PatternLike? = null, depth: PatternLike? = null, release: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        { p -> p.duck(cylinder, depth, release, callInfo) }
 }

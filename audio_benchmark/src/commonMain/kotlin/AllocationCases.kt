@@ -267,9 +267,9 @@ object AllocationCases {
     }
 
     /**
-     * The compressor with all five knobs moving and the duck's depth and attack moving (the settings holders, step 2:
-     * each writer refills one `CompressorSettings` or `DuckSettings` per block and hands it to its stage; the attack
-     * reaches `Ducking.attackSeconds` every block). The duck listens to the trigger cylinder, and its depth stays above 0.
+     * The compressor with all five knobs moving and the duck's depth and release moving (the settings holders, step 2:
+     * each writer refills one `CompressorSettings` or `DuckSettings` per block and hands it to its stage; the release
+     * reaches `Ducking.releaseSeconds` every block). The duck listens to the trigger cylinder, and its depth stays above 0.
      */
     internal val dynamicsChain: KatalystDsl = katalyst {
         it.compressor(
@@ -281,7 +281,7 @@ object AllocationCases {
         ).duck(
             cylinder = TRIGGER_CYLINDER.kat,
             depth = Kat.sine(0.45.kat).range(from = 0.25.kat, to = 0.75.kat),
-            attack = Kat.tri(0.33.kat).range(from = 0.011.kat, to = 0.047.kat),
+            release = Kat.tri(0.33.kat).range(from = 0.011.kat, to = 0.047.kat),
         )
     }
 

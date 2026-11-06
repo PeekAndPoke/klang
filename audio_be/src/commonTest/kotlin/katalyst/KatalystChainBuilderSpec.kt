@@ -17,8 +17,8 @@ import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
-import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_DEPTH
+import io.peekandpoke.klang.audio_bridge.constants.DUCK_RELEASE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 import io.peekandpoke.klang.common.infra.klangMapOf
 import io.peekandpoke.klang.common.infra.toKlangMap
@@ -146,7 +146,7 @@ class KatalystChainBuilderSpec : StringSpec({
         fun duck() = KatalystStageDsl.Duck(
             cylinder = KatalystKnobDsl.Param("duck.cylinder", SLOT_UNSET),
             depth = KatalystKnobDsl.Param("duck.depth", DUCK_DEPTH),
-            attack = KatalystKnobDsl.Param("duck.attack", DUCK_ATTACK_SECONDS),
+            release = KatalystKnobDsl.Param("duck.release", DUCK_RELEASE_SECONDS),
         )
 
         val chain = build(
@@ -165,7 +165,7 @@ class KatalystChainBuilderSpec : StringSpec({
         // out, and a count is the only way to tell that from a dropped instance.
         chain.writerCount shouldBe 2
 
-        val params = mapOf("duck.cylinder" to 3.0, "duck.depth" to 0.7, "duck.attack" to 0.02)
+        val params = mapOf("duck.cylinder" to 3.0, "duck.depth" to 0.7, "duck.release" to 0.02)
 
         chain.applyParams(params.toKlangMap())
 
@@ -192,7 +192,7 @@ class KatalystChainBuilderSpec : StringSpec({
                 KatalystStageDsl.Duck(
                     cylinder = KatalystKnobDsl.Param("duck.cylinder", SLOT_UNSET),
                     depth = KatalystKnobDsl.Param("duck.depth", DUCK_DEPTH),
-                    attack = KatalystKnobDsl.Param("duck.attack", DUCK_ATTACK_SECONDS),
+                    release = KatalystKnobDsl.Param("duck.release", DUCK_RELEASE_SECONDS),
                 )
             )
         )

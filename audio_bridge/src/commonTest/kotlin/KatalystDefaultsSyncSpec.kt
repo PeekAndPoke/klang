@@ -23,8 +23,8 @@ import io.peekandpoke.klang.audio_bridge.constants.DELAY_FEEDBACK
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_TIME_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_WET
 import io.peekandpoke.klang.audio_bridge.constants.DISTORT_AMOUNT
-import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_DEPTH
+import io.peekandpoke.klang.audio_bridge.constants.DUCK_RELEASE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_CENTER_HZ
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_RATE_HZ
@@ -80,7 +80,7 @@ class KatalystDefaultsSyncSpec : StringSpec({
             is KatalystStageDsl.Compressor ->
                 listOf(stage.threshold, stage.ratio, stage.knee, stage.attack, stage.release)
 
-            is KatalystStageDsl.Duck -> listOf(stage.cylinder, stage.depth, stage.attack)
+            is KatalystStageDsl.Duck -> listOf(stage.cylinder, stage.depth, stage.release)
             is KatalystStageDsl.Distort -> listOf(stage.amount)
             is KatalystStageDsl.Eq -> emptyList()
             is KatalystStageDsl.Gain -> listOf(stage.gain)
@@ -114,7 +114,7 @@ class KatalystDefaultsSyncSpec : StringSpec({
             "compressor.threshold", "compressor.ratio", "compressor.knee", "compressor.attack",
             "compressor.release",
             "gain.gain",
-            "duck.cylinder", "duck.depth", "duck.attack",
+            "duck.cylinder", "duck.depth", "duck.release",
         )
     }
 
@@ -227,7 +227,7 @@ class KatalystDefaultsSyncSpec : StringSpec({
             "phaser.center" to PHASER_CENTER_HZ,
             "phaser.sweep" to PHASER_SWEEP_HZ,
             "phaser.floor" to PHASER_FLOOR,
-            "duck.attack" to DUCK_ATTACK_SECONDS,
+            "duck.release" to DUCK_RELEASE_SECONDS,
         ).forEach { (name, constant) ->
             withClue(name) { classicSlots.getValue(name) shouldBe constant }
         }
@@ -256,7 +256,7 @@ class KatalystDefaultsSyncSpec : StringSpec({
         val offValue = listOf("delay.time", "delay.feedback", "reverb.size")
         val constant = listOf(
             "delay.cap", "body.floor", "vowel.floor", "phaser.rate", "phaser.center", "phaser.sweep",
-            "phaser.floor", "duck.attack",
+            "phaser.floor", "duck.release",
         )
         val unity = listOf("gain.gain")
         val all = gateOff + unset + offValue + constant + unity
@@ -322,7 +322,7 @@ class KatalystDefaultsSyncSpec : StringSpec({
 
         KatalystStageDsl.Duck().depth shouldBe KatalystKnobDsl.Constant(DUCK_DEPTH)
         (KatalystStageDsl.Duck().depth as KatalystKnobDsl.Constant).value shouldBe 0.0
-        KatalystStageDsl.Duck().attack shouldBe KatalystKnobDsl.Constant(DUCK_ATTACK_SECONDS)
+        KatalystStageDsl.Duck().release shouldBe KatalystKnobDsl.Constant(DUCK_RELEASE_SECONDS)
 
         // `cylinder` is a member of the UNSET family, not a plain zero: 0 is a legitimate cylinder, so
         // the off state has to be the absence marker. A `-1` is a finite cylinder request too.
@@ -421,7 +421,7 @@ class KatalystDefaultsSyncSpec : StringSpec({
                     )
 
                     is KatalystStageDsl.Duck -> KatalystStageDsl.Duck(
-                        cylinder = freshKnob(stage.cylinder), depth = freshKnob(stage.depth), attack = freshKnob(stage.attack),
+                        cylinder = freshKnob(stage.cylinder), depth = freshKnob(stage.depth), release = freshKnob(stage.release),
                     )
 
                     is KatalystStageDsl.Distort -> stage.copy(amount = freshKnob(stage.amount))

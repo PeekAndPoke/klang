@@ -188,7 +188,7 @@ private fun katpSlot(slot: KatalystSlotLike?, callInfo: CallInfo?): String =
  * `delay.feedback`, `delay.cap`, `reverb.wet`, `reverb.size`, `reverb.lowpass`, `phaser.rate`,
  * `phaser.wet`, `phaser.center`, `phaser.sweep`, `phaser.floor`, `compressor.threshold`,
  * `compressor.ratio`, `compressor.knee`, `compressor.attack`, `compressor.release`, `gain.gain`,
- * `duck.cylinder`, `duck.depth`, `duck.attack`. An authored chain names its own with
+ * `duck.cylinder`, `duck.depth`, `duck.release`. An authored chain names its own with
  * `Katalyst.param("room", 5)`.
  *
  * The slot can be the param OBJECT instead of its name: `Katalyst.slot.reverb.wet` is the classic knob

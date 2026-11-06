@@ -29,18 +29,18 @@ import kotlin.math.min
  * a soft-knee gain curve — different math, different artefacts. Don't try to share helpers.
  *
  * @param sampleRate Audio sample rate in Hz
- * @param attackSeconds Recovery/release time — how fast the volume returns to normal after
- *   the sidechain trigger stops (in seconds). Note: the duck-down is instantaneous;
- *   this parameter only controls the return smoothing. Named "attack" for strudel compatibility.
+ * @param releaseSeconds Recovery time: how fast the volume returns to normal after the sidechain
+ *   trigger stops (in seconds). The duck-down is instantaneous; this parameter only controls the
+ *   return. Named "attack" (the Strudel word) until KLANG-00417 B1 (2026-11-06).
  * @param depth Amount of ducking (0.0 = no effect, 1.0 = full silence)
  */
 class Ducking(
     private val sampleRate: Int,
-    attackSeconds: Double = 0.1,
+    releaseSeconds: Double = 0.1,
     depth: Double = 0.5,
 ) {
-    /** Internal release coefficient (named externally as "attack" for Strudel compat). */
-    private var releaseCoeff: Double = calculateCoefficient(attackSeconds)
+    /** Internal release coefficient, from [releaseSeconds]. */
+    private var releaseCoeff: Double = calculateCoefficient(releaseSeconds)
 
     /** Current gain (1.0 = no duck, 0.0 = full duck). */
     private var currentGain: Double = 1.0
@@ -53,8 +53,8 @@ class Ducking(
     internal var depthValue: Double = depth.coerceIn(0.0, 1.0)
         private set
 
-    /** The stored [attackSeconds], what its getter reads; a plain property for the same reason as [depthValue]. */
-    internal var attackValue: Double = guardOr(value = attackSeconds, fallback = 0.1)
+    /** The stored [releaseSeconds], what its getter reads; a plain property for the same reason as [depthValue]. */
+    internal var releaseValue: Double = guardOr(value = releaseSeconds, fallback = 0.1)
         private set
 
     /**
@@ -69,24 +69,24 @@ class Ducking(
         }
 
     /**
-     * Attack time in seconds (return to normal). Setter silently ignores non-finite values. The public door and the
+     * Release time in seconds (return to normal). Setter silently ignores non-finite values. The public door and the
      * specs' seam: a per-block caller writes [knobArgs] and calls [applyKnobArgs] (engine follow-up 45).
      */
-    var attackSeconds: Double
-        get() = attackValue
+    var releaseSeconds: Double
+        get() = releaseValue
         set(value) {
             if (!value.isFinite()) return
-            attackValue = value
+            releaseValue = value
             releaseCoeff = calculateCoefficient(value)
         }
 
     /**
-     * The two knobs of one [applyKnobArgs], written by the caller before the call, at [KNOB_ATTACK] and [KNOB_DEPTH]:
+     * The two knobs of one [applyKnobArgs], written by the caller before the call, at [KNOB_RELEASE] and [KNOB_DEPTH]:
      * the raw values, as a caller would hand them to the two setters. A non-finite one keeps the stored value, as
      * the setters do.
      *
      * **A holder, on purpose** (engine follow-up 45, 2026-10-19): the cylinder duck writes its knobs on every block a
-     * modulated depth or attack moves. Through the two setters each knob crossed a call V8 does not always inline, so
+     * modulated depth or release moves. Through the two setters each knob crossed a call V8 does not always inline, so
      * each was a heap number (`audio/ref/performance.md`, the rule on a double handed to a function that is not
      * inlined): under a mixed profile `KatalystDuckEffect.configure` booked 32 B per block, two heap numbers, in
      * every process measured. The compressor's [Compressor.knobArgs] is the same remedy (engine follow-up 40). An
@@ -96,19 +96,19 @@ class Ducking(
     internal val knobArgs = DoubleArray(KNOB_ARGS)
 
     /**
-     * Applies [knobArgs] as the two setters would, the attack first, and stores the same numbers bit for bit: each
+     * Applies [knobArgs] as the two setters would, the release first, and stores the same numbers bit for bit: each
      * knob guarded as its setter guards it (a non-finite one keeps the stored value), the depth coerced to `[0, 1]`
-     * as [depth]'s setter does, the release coefficient computed from a written attack. Exact in either order,
+     * as [depth]'s setter does, the release coefficient computed from a written release. Exact in either order,
      * because neither setter reads what the other writes. Guarded by "applyKnobArgs leaves the instance where the two
      * setters leave it, bit for bit" (`DuckingSpec`).
      */
     internal fun applyKnobArgs() {
-        val attack = knobArgs[KNOB_ATTACK]
+        val release = knobArgs[KNOB_RELEASE]
         val depthArg = knobArgs[KNOB_DEPTH]
 
         // `isFiniteInline`, not the stdlib `isFinite()` (a call on Kotlin/JS): the same answer for every input.
-        if (attack.isFiniteInline()) {
-            attackValue = attack
+        if (release.isFiniteInline()) {
+            releaseValue = release
             updateReleaseCoeff()
         }
 
@@ -118,9 +118,9 @@ class Ducking(
         }
     }
 
-    /** [releaseCoeff] from the stored attack. Takes no double and returns none, so nothing crosses a call. */
+    /** [releaseCoeff] from the stored release. Takes no double and returns none, so nothing crosses a call. */
     private fun updateReleaseCoeff() {
-        releaseCoeff = calculateCoefficient(attackValue)
+        releaseCoeff = calculateCoefficient(releaseValue)
     }
 
     /**
@@ -216,8 +216,8 @@ class Ducking(
      * (matches `Compressor.updateCoefficients`).
      *
      * Kotlin `inline`, with `isFiniteInline` (the stdlib `isFinite()`'s exact twin), so on the per-block path of a
-     * moving attack ([applyKnobArgs]) no double crosses a call (engine follow-up 45): as a plain function it took the
-     * attack and returned the coefficient, and with V8's inlining budget squeezed to 250 the duck's `configure` (with
+     * moving release ([applyKnobArgs]) no double crosses a call (engine follow-up 45): as a plain function it took the
+     * release and returned the coefficient, and with V8's inlining budget squeezed to 250 the duck's `configure` (with
      * [applyKnobArgs] inlined) still booked one heap number per block for it; inline, none (`E-kat-dyn` 130.7 to 114.6
      * B per block there).
      */
@@ -242,8 +242,8 @@ class Ducking(
          */
         private const val SIDECHAIN_SENSITIVITY: Double = 2.0
 
-        /** The slots of [knobArgs]: the attack and the depth. */
-        internal const val KNOB_ATTACK: Int = 0
+        /** The slots of [knobArgs]: the release and the depth. */
+        internal const val KNOB_RELEASE: Int = 0
         internal const val KNOB_DEPTH: Int = 1
 
         /** How many slots [knobArgs] has. */

@@ -27,7 +27,7 @@ import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
-import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.DUCK_RELEASE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 import io.peekandpoke.klang.common.infra.klangMapOf
@@ -103,11 +103,11 @@ class CylinderChainCrossfadeSpec : StringSpec({
     )
 
     /** A chain whose only stage is a duck listening to [cylinder]. */
-    fun duckChain(depth: Double, attack: Double, cylinder: Double = 0.0) = KatalystDsl.of(
+    fun duckChain(depth: Double, release: Double, cylinder: Double = 0.0) = KatalystDsl.of(
         KatalystStageDsl.Duck(
             cylinder = KatalystKnobDsl.Constant(cylinder),
             depth = KatalystKnobDsl.Constant(depth),
-            attack = KatalystKnobDsl.Constant(attack),
+            release = KatalystKnobDsl.Constant(release),
         )
     )
 
@@ -120,7 +120,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         KatalystStageDsl.Duck(
             cylinder = KatalystKnobDsl.Param("duck.cylinder", SLOT_UNSET),
             depth = KatalystKnobDsl.Param("duck.depth", 0.0),
-            attack = KatalystKnobDsl.Param("duck.attack", DUCK_ATTACK_SECONDS),
+            release = KatalystKnobDsl.Param("duck.release", DUCK_RELEASE_SECONDS),
         )
     )
 
@@ -136,13 +136,13 @@ class CylinderChainCrossfadeSpec : StringSpec({
         KatalystStageDsl.Duck(
             cylinder = KatalystKnobDsl.Param("duck.cylinder", SLOT_UNSET),
             depth = KatalystKnobDsl.Param("duck.depth", 0.0),
-            attack = KatalystKnobDsl.Param("duck.attack", DUCK_ATTACK_SECONDS),
+            release = KatalystKnobDsl.Param("duck.release", DUCK_RELEASE_SECONDS),
         ),
     )
 
     /** What `.duck(cylinder = n, depth = d)` writes into the event's slot state. */
-    fun duckState(cylinder: Double, depth: Double, attack: Double = 0.05): Map<String, Double> =
-        mapOf("duck.cylinder" to cylinder, "duck.depth" to depth, "duck.attack" to attack)
+    fun duckState(cylinder: Double, depth: Double, release: Double = 0.05): Map<String, Double> =
+        mapOf("duck.cylinder" to cylinder, "duck.depth" to depth, "duck.release" to release)
 
     /**
      * A chain with NO duck stage at all, for a row that needs "nothing ducked this cylinder before
@@ -520,9 +520,9 @@ class CylinderChainCrossfadeSpec : StringSpec({
         val rig = Rig()
         // Different cylinder, different depth, different attack on the two sides: what carries is the
         // envelope, what governs it is the arriving chain.
-        rig.registry.register("ducked", duckChain(depth = 0.9, attack = 0.05, cylinder = 5.0))
+        rig.registry.register("ducked", duckChain(depth = 0.9, release = 0.05, cylinder = 5.0))
         rig.voice = VoiceTestHelpers.createSynthVoice(
-            katalystParams = duckState(cylinder = 3.0, depth = 0.4, attack = 0.2).toKlangMap(),
+            katalystParams = duckState(cylinder = 3.0, depth = 0.4, release = 0.2).toKlangMap(),
         )
 
         // The sidechain pumps, then stops: the envelope is now recovering, slowly, which is the
@@ -668,8 +668,8 @@ class CylinderChainCrossfadeSpec : StringSpec({
 
     "duck to duck with NO owner alive: the arriving chain's own slots govern the carried envelope" {
         val rig = Rig()
-        rig.registry.register("first", duckChain(depth = 0.4, attack = 0.2, cylinder = 3.0))
-        rig.registry.register("second", duckChain(depth = 0.9, attack = 0.05, cylinder = 5.0))
+        rig.registry.register("first", duckChain(depth = 0.4, release = 0.2, cylinder = 3.0))
+        rig.registry.register("second", duckChain(depth = 0.9, release = 0.05, cylinder = 5.0))
         rig.voice = VoiceTestHelpers.createSynthVoice()
 
         rig.cylinder.requestChain("first")
@@ -703,7 +703,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         // The classic chain declares a Duck stage on every cylinder, and its writer CLEARS it when
         // the owner carries none: handing it the envelope would release the whole reduction on the
         // next block.
-        rig.registry.register("ducked", duckChain(depth = 0.8, attack = 0.05))
+        rig.registry.register("ducked", duckChain(depth = 0.8, release = 0.05))
         rig.registry.register("plain", KatalystDsl.classic)
         rig.voice = VoiceTestHelpers.createSynthVoice()
 
@@ -730,7 +730,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
 
     "a ducked chain to a chain whose duck names no cylinder: the reduction ramps out too" {
         val rig = Rig()
-        rig.registry.register("ducked", duckChain(depth = 0.8, attack = 0.05))
+        rig.registry.register("ducked", duckChain(depth = 0.8, release = 0.05))
         rig.registry.register("nameless", duckChainWithNoCylinder())
         rig.voice = VoiceTestHelpers.createSynthVoice()
 
@@ -753,7 +753,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         rig.registry.register("dry", dryChain(1.0))
         // A fast duck, so the envelope's own release can follow the depth ramp down.
         rig.voice = VoiceTestHelpers.createSynthVoice(
-            katalystParams = duckState(cylinder = 0.0, depth = 0.8, attack = 0.005).toKlangMap(),
+            katalystParams = duckState(cylinder = 0.0, depth = 0.8, release = 0.005).toKlangMap(),
         )
 
         // A steady trigger: the reduction is in force and stays there until the depth is ramped.
@@ -780,7 +780,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
 
     "no duck to duck: the arriving duck is ramped in, not dropped on the cylinder" {
         val rig = Rig()
-        rig.registry.register("ducked", duckChain(depth = 0.8, attack = 0.05))
+        rig.registry.register("ducked", duckChain(depth = 0.8, release = 0.05))
         // No duck on the way out, and the trigger is ALREADY sounding: `Ducking`'s duck-down is
         // instantaneous by design, so a duck applied at full from the first block would pull the
         // whole cylinder down in one sample.
@@ -810,7 +810,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         val rig = Rig()
         // The two sides listen to DIFFERENT cylinders, so the row can say which duck ended up in
         // charge; the rig hands the same sidechain to whichever one runs.
-        rig.registry.register("ducked", duckChain(depth = 0.8, attack = 0.05, cylinder = 7.0))
+        rig.registry.register("ducked", duckChain(depth = 0.8, release = 0.05, cylinder = 7.0))
         rig.registry.register("plain", KatalystDsl.classic)
         rig.voice = VoiceTestHelpers.createSynthVoice()
 
@@ -848,7 +848,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
 
     "a ducking owner claiming LATER in the fade keeps ramping out instead" {
         val rig = Rig()
-        rig.registry.register("ducked", duckChain(depth = 0.8, attack = 0.05, cylinder = 7.0))
+        rig.registry.register("ducked", duckChain(depth = 0.8, release = 0.05, cylinder = 7.0))
         rig.registry.register("plain", KatalystDsl.classic)
         rig.voice = VoiceTestHelpers.createSynthVoice()
 
@@ -986,7 +986,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
             KatalystStageDsl.Duck(
                 cylinder = KatalystKnobDsl.Constant(0.0),
                 depth = KatalystKnobDsl.Constant(0.8),
-                attack = KatalystKnobDsl.Constant(0.05),
+                release = KatalystKnobDsl.Constant(0.05),
             ),
         ))
         rig.registry.register("dry", dryChain(1.0))

@@ -220,7 +220,8 @@ class GraalSprudelPattern(
         // Ducking / Sidechain
         val duckOrbit = value.safeGetMember("duckorbit").safeNumberOrNull()?.toInt()
             ?: value.safeGetMember("duck").safeNumberOrNull()?.toInt()
-        val duckAttack = value.safeGetMember("duckattack").safeNumberOrNull()
+        // Strudel's `duckattack` is the recovery time, our `duck.release` (KLANG-00417 B1)
+        val duckRelease = value.safeGetMember("duckattack").safeNumberOrNull()
             ?: value.safeGetMember("duckatt").safeNumberOrNull()
         val duckDepth = value.safeGetMember("duckdepth").safeNumberOrNull()
 
@@ -372,7 +373,7 @@ class GraalSprudelPattern(
                 it.tremoloShape = tremoloShape
                 // Ducking / Sidechain: the orbit slots, the only storage since Katalyst step 5b-3
                 it.putKatalystParam("duck.cylinder", duckOrbit?.toDouble())
-                it.putKatalystParam("duck.attack", duckAttack)
+                it.putKatalystParam("duck.release", duckRelease)
                 it.putKatalystParam("duck.depth", duckDepth)
                 // Filters (flat fields) - each filter has its own resonance
                 it.cutoff = cutoff

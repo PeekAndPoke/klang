@@ -111,13 +111,13 @@ Peak-detecting compressor (`max(|L|, |R|)`). Applied per cylinder (the cylinder'
 Sidechain-triggered gain reduction across cylinders.
 
 - Configured by the cylinder owner's `duck.cylinder` slot (the source cylinder N)
-- Reduces this cylinder's gain whenever cylinder N plays, by `duck.depth`, recovering over `duck.attack`
+- Reduces this cylinder's gain whenever cylinder N plays, by `duck.depth`, recovering over `duck.release`
 - Recovery is automatic after the triggering voice ends
 
 | Slot          | Meaning                                    |
 |---------------|--------------------------------------------|
 | `duck.depth`  | Depth of ducking (0 = none, 1 = full mute) |
-| `duck.attack` | Recovery time (s) after the trigger stops  |
+| `duck.release` | Recovery time (s) after the trigger stops  |
 
 ### DelayLine
 

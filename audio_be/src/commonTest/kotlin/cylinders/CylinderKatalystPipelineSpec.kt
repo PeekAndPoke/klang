@@ -218,7 +218,7 @@ class CylinderBusPipelineSpec : StringSpec({
         val voice = VoiceTestHelpers.createSynthVoice(
             startFrame = 0.0,
             endFrame = 1000.0,
-            katalystParams = klangMapOf("duck.cylinder" to 1.0, "duck.attack" to 0.001, "duck.depth" to 1.0),
+            katalystParams = klangMapOf("duck.cylinder" to 1.0, "duck.release" to 0.001, "duck.depth" to 1.0),
         )
         cylinder.offerAndCommit(voice, blockStart = 0.0)
 
@@ -242,7 +242,7 @@ class CylinderBusPipelineSpec : StringSpec({
         val voice = VoiceTestHelpers.createSynthVoice(
             startFrame = 0.0,
             endFrame = 1000.0,
-            katalystParams = klangMapOf("duck.cylinder" to 1.0, "duck.attack" to 0.001, "duck.depth" to 1.0),
+            katalystParams = klangMapOf("duck.cylinder" to 1.0, "duck.release" to 0.001, "duck.depth" to 1.0),
         )
         cylinder.offerAndCommit(voice, blockStart = 0.0)
 
@@ -411,7 +411,7 @@ class CylinderBusPipelineSpec : StringSpec({
                     "phaser.floor" to 0.25,
                     "delay.wet" to 0.5, "delay.time" to 0.5, "delay.feedback" to 0.45,
                     "reverb.wet" to 0.5, "reverb.size" to 7.0, "reverb.lowpass" to 5000.0,
-                    "duck.cylinder" to 2.0, "duck.attack" to 0.05, "duck.depth" to 0.8,
+                    "duck.cylinder" to 2.0, "duck.release" to 0.05, "duck.depth" to 0.8,
                     "compressor.threshold" to -15.0, "compressor.ratio" to 3.0, "compressor.knee" to 4.0,
                     "compressor.attack" to 0.005, "compressor.release" to 0.2,
                 )
@@ -452,7 +452,7 @@ class CylinderBusPipelineSpec : StringSpec({
             val ducking = cylinder.duck!!.ducking.shouldNotBeNull()
 
             ducking.depth shouldBe 0.8
-            ducking.attackSeconds shouldBe 0.05
+            ducking.releaseSeconds shouldBe 0.05
         }
 
         withClue("compressor, all five knobs") {

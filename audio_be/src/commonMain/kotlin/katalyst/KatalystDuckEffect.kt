@@ -64,7 +64,7 @@ import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
  *   gain is linear in depth, and the detector's attack is instantaneous, so a depth step is a
  *   level step. Measured -16.8 dB at worst on a rise; a FALL already sat at the floor, because the
  *   release smooths that direction, and it glides anyway so that one law covers both.
- * - **attack** does not glide. It is the release envelope's time constant and the envelope's state
+ * - **release** does not glide. It is the release envelope's time constant and the envelope's state
  *   stays continuous across a jump: 0.001 s to 1 s and back measured AT the floor, both
  *   directions, on every source (the compressor's attack and release measured the same way).
  * - **the sidechain CYLINDER** gets nothing HERE, and one direction of it is an OPEN question, not a
@@ -171,7 +171,7 @@ class KatalystDuckEffect(
      * Called by `Cylinder.beginFade` when the arriving chain will duck too
      * (`KatalystChain.ducksWith`), BEFORE that chain's writers run: the instance moves, so the gain
      * reduction in force carries across the swap, and the arriving chain's own writer then updates
-     * it in place with ITS params (depth, attack, sidechain cylinder) rather than building a second
+     * it in place with ITS params (depth, release, sidechain cylinder) rather than building a second
      * one. Moving rather than sharing, because two chains' writers on one instance would fight
      * every block.
      */
@@ -253,7 +253,7 @@ class KatalystDuckEffect(
         if (existing == null) {
             live = Ducking(
                 sampleRate = sampleRate,
-                attackSeconds = settings.attackSeconds,
+                releaseSeconds = settings.releaseSeconds,
                 depth = settings.depth,
             )
             ducking = live
@@ -262,14 +262,14 @@ class KatalystDuckEffect(
 
             // An unchanged setting writes nothing (engine follow-up 38, 2026-10-19). This runs on every block the
             // cylinder has an owner, and on V8 the two setters, with the stdlib `isFinite` and `coerceIn` and the
-            // attack's coefficient inside them, are calls a double crosses as a heap number whenever V8 leaves them
+            // release's coefficient inside them, are calls a double crosses as a heap number whenever V8 leaves them
             // out of the per-block path (`audio/ref/performance.md`): with V8's inlining budget squeezed, two heap
             // numbers per block booked here; likely `E-duck`'s rare tail, not shown.
             //
-            // Exact for what [KatalystDuckWriter] hands (a finite attack, `DUCK_ATTACK_SECONDS` for a non-finite
+            // Exact for what [KatalystDuckWriter] hands (a finite release, `DUCK_RELEASE_SECONDS` for a non-finite
             // one, and a declared duck's finite depth): the setter keeps a finite value as it is, and [sameKnob]
             // tells -0.0 from 0.0, so a skipped write would have stored the same number and the same coefficient.
-            // Not for every caller of [Ducking]: its constructor derives the coefficient from the RAW attack (a NaN
+            // Not for every caller of [Ducking]: its constructor derives the coefficient from the RAW release (a NaN
             // gives 1 ms while it stores 0.1), so a caller that built one with a NaN and then set 0.1 would see that
             // correction skipped. The constructor is left as it is (a sound change on a latent path).
             //
@@ -280,21 +280,21 @@ class KatalystDuckEffect(
             // boxes; this comment is the guard.
             //
             // A setting that moves goes through ONE call and a holder, not through the setters (engine follow-up 45,
-            // 2026-10-19; item 40's remedy, [Ducking.knobArgs]): a modulated depth or attack moves every block, and
+            // 2026-10-19; item 40's remedy, [Ducking.knobArgs]): a modulated depth or release moves every block, and
             // under a mixed profile the two setters took their doubles as heap numbers here in every process
             // measured. A setting that holds is handed over as NaN, which the holder keeps as the setters keep a
             // non-finite value, so it writes nothing, as the skip above did. One store per arm, never `if (c) NaN
             // else x`: on V8 that merges a tagged NaN with the double and can box it (engine follow-up 41).
-            val attackHolds = sameKnob(stored = live.attackValue, arriving = settings.attackSeconds)
+            val releaseHolds = sameKnob(stored = live.releaseValue, arriving = settings.releaseSeconds)
             val depthHolds = sameKnob(stored = live.depthValue, arriving = settings.depth)
 
-            if (!attackHolds || !depthHolds) {
+            if (!releaseHolds || !depthHolds) {
                 val args = live.knobArgs
 
-                if (attackHolds) {
-                    args[Ducking.KNOB_ATTACK] = Double.NaN
+                if (releaseHolds) {
+                    args[Ducking.KNOB_RELEASE] = Double.NaN
                 } else {
-                    args[Ducking.KNOB_ATTACK] = settings.attackSeconds
+                    args[Ducking.KNOB_RELEASE] = settings.releaseSeconds
                 }
 
                 if (depthHolds) {

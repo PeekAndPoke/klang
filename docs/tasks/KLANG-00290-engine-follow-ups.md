@@ -1,6 +1,6 @@
 # KLANG-00290: Engine follow-ups after the tidy-up
 
-> **Status (2026-11-06): PAUSED.** Every decision of 2026-11-06 is done (the list below; D1 in KLANG-00418, now archived; D8 decided against a shared core). Left: item 22 (the duck's `attack`), skipped by the maintainer for now. Was IN PROGRESS 2026-11-06, PAUSED 2026-11-04, IN PROGRESS 2026-10-21 to then.
+> **Status (2026-11-06): PAUSED.** Every decision of 2026-11-06 is done (the list below; D1 in KLANG-00418, now archived; D8 decided against a shared core). Item 22 (the duck's `attack`) was then decided and done in KLANG-00417 (B1): nothing is left. Was IN PROGRESS 2026-11-06, PAUSED 2026-11-04, IN PROGRESS 2026-10-21 to then.
 >
 > **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
@@ -48,7 +48,7 @@ Sizes: S (an hour or two), M (a day), L (several days), as in the audit.
   the voice contexts, the stages plain code): do it. 24's unused commands (`ScheduleVoice`, `ClearScheduled`): "if they
   are not used, remove them" (`ScheduleVoice` has senders in tests and the allocation benchmark only, both can send
   `ScheduleVoices`).
-- 22 (the duck's `attack`): skipped for now.
+- 22 (the duck's `attack`): skipped for now; then decided in KLANG-00417 (B1, 2026-11-06): renamed `release`, DONE there.
 - 24, D1: "cylinder" becomes the main sprudel door, now.
 - 24, D6: `legato` does not travel on the wire; the frontend folds it into the gate time.
 - 27, D2: `MasterStage` is renamed `HouseStage`. D4: "The offline renderer must be a complete transparent alternative
@@ -2750,3 +2750,4 @@ ramp times (1.5 s in and out, a 2 s hold), recorded in the same solo task.
 - 2026-11-06: D8 decided: no shared core for the delay and the reverb, nor for the filter swap's parking (clarity over less code).
 - 2026-11-06: D1 (KLANG-00418) DONE and archived; PAUSED, only item 22 left (skipped for now).
 - 2026-11-06: PAUSED.
+- 2026-11-06: item 22 done in KLANG-00417 (B1, the duck's `release`); nothing left.

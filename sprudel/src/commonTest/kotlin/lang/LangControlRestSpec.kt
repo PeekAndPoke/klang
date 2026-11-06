@@ -82,7 +82,7 @@ class LangControlRestSpec : StringSpec({
         single("cull", "seconds", "0.5", "1"),
     ) + listOf(
         compound("adsr", t("attack", "0.01", "0.02"), t("decay", "0.1", "0.2"), t("sustain", "0.3", "0.6"), t("release", "0.1", "0.2")),
-        compound("duck", t("cylinder", "1", "2"), t("depth", "0.3", "0.6"), t("attack", "0.01", "0.02")),
+        compound("duck", t("cylinder", "1", "2"), t("depth", "0.3", "0.6"), t("release", "0.01", "0.02")),
         compound("unison", *unisonSlots),
         compound("uni", *unisonSlots),
         compound("compressor", *compressorSlots),

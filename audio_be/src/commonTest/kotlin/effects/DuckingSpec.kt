@@ -29,7 +29,7 @@ class DuckingSpec : StringSpec({
     "Ducking reduces volume when sidechain is active" {
         val ducking = Ducking(
             sampleRate = sampleRate,
-            attackSeconds = 0.01,
+            releaseSeconds = 0.01,
             depth = 0.8
         )
 
@@ -49,7 +49,7 @@ class DuckingSpec : StringSpec({
     "Ducking returns to normal when sidechain stops" {
         val ducking = Ducking(
             sampleRate = sampleRate,
-            attackSeconds = 0.001, // Very fast return
+            releaseSeconds = 0.001, // Very fast return
             depth = 1.0
         )
 
@@ -87,7 +87,7 @@ class DuckingSpec : StringSpec({
     }
 
     "Reset clears internal state" {
-        val ducking = Ducking(sampleRate = sampleRate, attackSeconds = 0.01, depth = 1.0)
+        val ducking = Ducking(sampleRate = sampleRate, releaseSeconds = 0.01, depth = 1.0)
 
         // Duck the signal
         val input = AudioBuffer(100) { 1.0 }
@@ -108,7 +108,7 @@ class DuckingSpec : StringSpec({
     "Ducking with zero depth has no effect" {
         val ducking = Ducking(
             sampleRate = sampleRate,
-            attackSeconds = 0.1,
+            releaseSeconds = 0.1,
             depth = 0.0
         )
 
@@ -123,7 +123,7 @@ class DuckingSpec : StringSpec({
     }
 
     "processStereo ducks both channels equally (linked stereo)" {
-        val ducking = Ducking(sampleRate = sampleRate, attackSeconds = 0.01, depth = 0.8)
+        val ducking = Ducking(sampleRate = sampleRate, releaseSeconds = 0.01, depth = 0.8)
 
         val inputLeft = AudioBuffer(100) { 1.0 }
         val inputRight = AudioBuffer(100) { 1.0 }
@@ -144,7 +144,7 @@ class DuckingSpec : StringSpec({
     }
 
     "processStereo preserves stereo image with asymmetric sidechain" {
-        val ducking = Ducking(sampleRate = sampleRate, attackSeconds = 0.01, depth = 0.8)
+        val ducking = Ducking(sampleRate = sampleRate, releaseSeconds = 0.01, depth = 0.8)
 
         val inputLeft = AudioBuffer(100) { 1.0 }
         val inputRight = AudioBuffer(100) { 1.0 }
@@ -163,8 +163,8 @@ class DuckingSpec : StringSpec({
 
     "Recovery time affects return speed" {
         // Use separate buffers for active/silent phases, process in-place
-        val duckingFast = Ducking(sampleRate, attackSeconds = 0.001, depth = 0.8)
-        val duckingSlow = Ducking(sampleRate, attackSeconds = 0.1, depth = 0.8)
+        val duckingFast = Ducking(sampleRate, releaseSeconds = 0.001, depth = 0.8)
+        val duckingSlow = Ducking(sampleRate, releaseSeconds = 0.1, depth = 0.8)
 
         // Phase 1: Duck both with active sidechain
         val active1 = AudioBuffer(100) { 1.0 }
@@ -189,12 +189,12 @@ class DuckingSpec : StringSpec({
     }
 
     "applyKnobArgs leaves the instance where the two setters leave it, bit for bit" {
-        // Engine follow-up 45: the cylinder duck hands a moving attack or depth over through `knobArgs` and one
+        // Engine follow-up 45: the cylinder duck hands a moving release or depth over through `knobArgs` and one
         // `applyKnobArgs`, where it called the two setters. Both instances hear the same blocks and take the same
-        // knobs, one through the setters (attack, then depth, the order the stage used), the other through the
+        // knobs, one through the setters (release, then depth, the order the stage used), the other through the
         // holder; every stored knob and every output sample must match bit for bit. The steps reach every guard:
         // non-finite knobs (each kept at its stored value), a depth below 0 and above 1 (coerced), a depth of -0.0
-        // (kept, `coerceIn` does not touch it), an attack under the 1 ms floor and a negative one (the coefficient's
+        // (kept, `coerceIn` does not touch it), a release under the 1 ms floor and a negative one (the coefficient's
         // own clamp), and a step that keeps both.
         val nan = Double.NaN
         val inf = Double.POSITIVE_INFINITY
@@ -211,19 +211,19 @@ class DuckingSpec : StringSpec({
             doubleArrayOf(0.005, 1.0),
         )
         val block = 64
-        val bySetters = Ducking(sampleRate = sampleRate, attackSeconds = 0.1, depth = 0.5)
-        val byHolder = Ducking(sampleRate = sampleRate, attackSeconds = 0.1, depth = 0.5)
+        val bySetters = Ducking(sampleRate = sampleRate, releaseSeconds = 0.1, depth = 0.5)
+        val byHolder = Ducking(sampleRate = sampleRate, releaseSeconds = 0.1, depth = 0.5)
 
         steps.forEachIndexed { n, knobs ->
-            bySetters.attackSeconds = knobs[0]
+            bySetters.releaseSeconds = knobs[0]
             bySetters.depth = knobs[1]
 
-            byHolder.knobArgs[Ducking.KNOB_ATTACK] = knobs[0]
+            byHolder.knobArgs[Ducking.KNOB_RELEASE] = knobs[0]
             byHolder.knobArgs[Ducking.KNOB_DEPTH] = knobs[1]
             byHolder.applyKnobArgs()
 
             withClue("step $n, the stored knobs") {
-                byHolder.attackSeconds.toRawBits() shouldBe bySetters.attackSeconds.toRawBits()
+                byHolder.releaseSeconds.toRawBits() shouldBe bySetters.releaseSeconds.toRawBits()
                 byHolder.depth.toRawBits() shouldBe bySetters.depth.toRawBits()
             }
 

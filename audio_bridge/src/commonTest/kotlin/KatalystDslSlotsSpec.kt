@@ -12,7 +12,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.peekandpoke.klang.audio_bridge.constants.BODY_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_CAP
-import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.DUCK_RELEASE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_CENTER_HZ
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_RATE_HZ
@@ -59,7 +59,7 @@ class KatalystDslSlotsSpec : StringSpec({
                 ),
                 KatalystStageDsl.Gain(gain = p("gain.gain", 1.0)),
                 KatalystStageDsl.Duck(
-                    cylinder = p("duck.cylinder", SLOT_UNSET), depth = p("duck.depth", 0.0), attack = p("duck.attack", DUCK_ATTACK_SECONDS),
+                    cylinder = p("duck.cylinder", SLOT_UNSET), depth = p("duck.depth", 0.0), release = p("duck.release", DUCK_RELEASE_SECONDS),
                 ),
             )
         )
@@ -87,7 +87,7 @@ class KatalystDslSlotsSpec : StringSpec({
             comp.threshold to s.compressor.threshold, comp.ratio to s.compressor.ratio, comp.knee to s.compressor.knee,
             comp.attack to s.compressor.attack, comp.release to s.compressor.release,
             gain.gain to s.gain.gain,
-            duck.cylinder to s.duck.cylinder, duck.depth to s.duck.depth, duck.attack to s.duck.attack,
+            duck.cylinder to s.duck.cylinder, duck.depth to s.duck.depth, duck.release to s.duck.release,
         )
 
         stages shouldHaveSize 8

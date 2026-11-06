@@ -129,8 +129,11 @@ const val COMPRESSOR_LOOKAHEAD_SECONDS: Double = 0.0
 /** How far the ducked cylinder is pulled down, 0..1. 0 = no ducking. */
 const val DUCK_DEPTH: Double = 0.0
 
-/** How fast the duck closes when the source cylinder sounds, in seconds. */
-const val DUCK_ATTACK_SECONDS: Double = 0.1
+/**
+ * How fast the duck lets go after the source cylinder falls quiet, in seconds: the recovery. The duck closes at once
+ * (`Ducking`); there is no attack knob. Was `DUCK_ATTACK_SECONDS` until KLANG-00417 B1 (2026-11-06).
+ */
+const val DUCK_RELEASE_SECONDS: Double = 0.1
 
 // ── Body ─────────────────────────────────────────────────────────────────────
 

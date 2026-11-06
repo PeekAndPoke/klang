@@ -13,7 +13,7 @@ import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_KNEE_DB
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RATIO
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RELEASE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_THRESHOLD_DB
-import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.DUCK_RELEASE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_WET
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
@@ -535,13 +535,13 @@ internal class KatalystDistortWriter(
  *
  * `cylinder` is a number the runtime coerces to an Int, exactly as the sprudel door does; a finite
  * negative is a request like any other, not an off switch (the off switch is the non-finite
- * default). A non-finite attack takes `DUCK_ATTACK_SECONDS`.
+ * default). A non-finite release takes `DUCK_RELEASE_SECONDS`.
  */
 internal class KatalystDuckWriter(
     private val fx: KatalystDuckEffect,
     private val cylinder: KatalystKnob,
     private val depth: KatalystKnob,
-    private val attack: KatalystKnob,
+    private val release: KatalystKnob,
 ) : KatalystSlotWriter {
 
     /** This writer's own settings, refilled at [resolve] and handed over by reference ([DuckSettings] says why). */
@@ -563,7 +563,7 @@ internal class KatalystDuckWriter(
     override fun resolve(params: KlangMap<Double>?) {
         cylinder.resolve(params)
         depth.resolve(params)
-        attack.resolve(params)
+        release.resolve(params)
         fill()
     }
 
@@ -571,12 +571,12 @@ internal class KatalystDuckWriter(
         fx.configure(handed())
     }
 
-    override val isModulated: Boolean = cylinder.isModulated || depth.isModulated || attack.isModulated
+    override val isModulated: Boolean = cylinder.isModulated || depth.isModulated || release.isModulated
 
     override fun tick() {
         cylinder.tick()
         depth.tick()
-        attack.tick()
+        release.tick()
         fill()
     }
 
@@ -586,7 +586,7 @@ internal class KatalystDuckWriter(
     private fun fill() {
         val source = cylinder.value
         val amount = depth.value
-        val attackSeconds = attack.value
+        val releaseSeconds = release.value
 
         // NaN-guard on values the author can write: a non-finite cylinder is "no source named". A depth that is not
         // above 0 asks for no ducking, unless the depth is MODULATING (Q7: a modulated knob counts as asked for, so an
@@ -601,8 +601,8 @@ internal class KatalystDuckWriter(
         val s = settings
 
         s.cylinderId = source.toInt()
-        // NaN-guard on a value the author can write: a non-finite attack is unset.
-        s.attackSeconds = if (attackSeconds.isFiniteInline()) attackSeconds else DUCK_ATTACK_SECONDS
+        // NaN-guard on a value the author can write: a non-finite release is unset.
+        s.releaseSeconds = if (releaseSeconds.isFiniteInline()) releaseSeconds else DUCK_RELEASE_SECONDS
         s.depth = amount
         declared = true
     }

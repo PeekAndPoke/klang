@@ -432,7 +432,7 @@ object KatalystChainBuilder {
         if (winner != null) {
             val cylinder = knob(winner.cylinder)
             val depth = knob(winner.depth)
-            val attack = knob(winner.attack)
+            val release = knob(winner.release)
             val fx = KatalystDuckEffect(
                 sampleRate = sampleRate,
                 blockFrames = blockFrames,
@@ -440,7 +440,7 @@ object KatalystChainBuilder {
             )
 
             theDuck = fx
-            duckWriter = KatalystDuckWriter(fx = fx, cylinder = cylinder, depth = depth, attack = attack)
+            duckWriter = KatalystDuckWriter(fx = fx, cylinder = cylinder, depth = depth, release = release)
             writers.add(duckWriter)
         }
 

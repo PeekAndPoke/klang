@@ -131,7 +131,7 @@ class KatalystModulatedChainAllocationSpec : StringSpec({
                     to = c(2.0),
                 ),
                 depth = sine(freq = 0.75, from = -0.2, to = 0.8),
-                attack = sine(freq = 0.95, from = 0.01, to = 0.05),
+                release = sine(freq = 0.95, from = 0.01, to = 0.05),
             ),
         )
         val chain = KatalystChainBuilder.build(

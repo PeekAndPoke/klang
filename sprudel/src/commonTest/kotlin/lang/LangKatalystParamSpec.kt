@@ -24,8 +24,8 @@ import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_KNEE_DB
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RATIO
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RELEASE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_THRESHOLD_DB
-import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_DEPTH
+import io.peekandpoke.klang.audio_bridge.constants.DUCK_RELEASE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_CENTER_HZ
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_SWEEP_HZ
@@ -187,22 +187,22 @@ class LangKatalystParamSpec : StringSpec({
 
         slot(p, "duck.cylinder") shouldBe 2.0
         slot(p, "duck.depth") shouldBe 0.5
-        slot(p, "duck.attack") shouldBe DUCK_ATTACK_SECONDS
+        slot(p, "duck.release") shouldBe DUCK_RELEASE_SECONDS
 
         // A cylinder-only call fills both companions: DUCK_DEPTH is 0, so it is still "no duck" until
         // a depth is asked for, but the two slots are written and right.
         val cylinderOnly = note("c3").duck(1)
 
         cylinderOnly.queryArc(0.0, 1.0).first().data.katalystParams?.toMap()?.keys shouldBe
-                setOf("duck.cylinder", "duck.depth", "duck.attack")
+                setOf("duck.cylinder", "duck.depth", "duck.release")
         slot(cylinderOnly, "duck.depth") shouldBe DUCK_DEPTH
 
         // A tail-only call names nothing: exactly its own slot, no cylinder and no companion.
         note("c3").duck(depth = 0.5).queryArc(0.0, 1.0).first().data.katalystParams?.toMap()?.keys shouldBe
                 setOf("duck.depth")
 
-        note("c3").duck(attack = 0.3).queryArc(0.0, 1.0).first().data.katalystParams?.toMap()?.keys shouldBe
-                setOf("duck.attack")
+        note("c3").duck(release = 0.3).queryArc(0.0, 1.0).first().data.katalystParams?.toMap()?.keys shouldBe
+                setOf("duck.release")
     }
 
     "a bare duck() that names nothing writes nothing, slot included" {
@@ -564,14 +564,14 @@ class LangKatalystParamSpec : StringSpec({
     }
 
     "the duck accessors and mappers see the companions its fill wrote" {
-        // `duck(1)` fills `duck.depth` and `duck.attack` into the SLOTS; until step 5b-3 it wrote no
-        // voice field for them, so `duck.attack` read nothing and a mapper on an unnamed attack
+        // `duck(1)` fills `duck.depth` and `duck.release` into the SLOTS; until step 5b-3 it wrote no
+        // voice field for them, so `duck.release` read nothing and a mapper on an unnamed release
         // wrote nothing. Now both see what the cylinder runs.
-        note("c3").duck(1).gain(duck.attack).queryArc(0.0, 1.0).first().data.gain shouldBe DUCK_ATTACK_SECONDS
+        note("c3").duck(1).gain(duck.release).queryArc(0.0, 1.0).first().data.gain shouldBe DUCK_RELEASE_SECONDS
 
-        val mapped = note("c3").duck(1, 0.8).duck(attack = mul(4))
+        val mapped = note("c3").duck(1, 0.8).duck(release = mul(4))
 
-        slot(mapped, "duck.attack") shouldBe DUCK_ATTACK_SECONDS * 4
+        slot(mapped, "duck.release") shouldBe DUCK_RELEASE_SECONDS * 4
         slot(mapped, "duck.depth") shouldBe 0.8
     }
 

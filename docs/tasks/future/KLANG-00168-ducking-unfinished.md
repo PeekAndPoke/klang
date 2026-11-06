@@ -24,8 +24,8 @@ The chain is complete from DSL to DSP:
 
 | layer | file | tested? |
 |-------|------|---------|
-| DSL, `duck()` / `duck(depth = ...)` / `duck(attack = ...)` | `sprudel/lang_dynamics_cylinder.kt` | ✅ `LangDuckingSpec` |
-| wire | the `duck.*` slots of the owner's `katalystParams` → `KatalystDuckWriter` → `DuckSettings(cylinderId, attackSeconds, depth)` (until 2026-10-07 `Voice.Ducking`) | - |
+| DSL, `duck()` / `duck(depth = ...)` / `duck(release = ...)` | `sprudel/lang_dynamics_cylinder.kt` | ✅ `LangDuckingSpec` |
+| wire | the `duck.*` slots of the owner's `katalystParams` → `KatalystDuckWriter` → `DuckSettings(cylinderId, releaseSeconds, depth)` (until 2026-10-07 `Voice.Ducking`) | - |
 | **per-voice → per-cylinder join** | `KatalystChainBuilder.applyDuck` configures the chain's `KatalystDuckEffect` from whichever voice owns the cylinder (the newest `Sounding` voice, committed once per block) | ❌ **nothing** |
 | **cross-cylinder sidechain resolution** | `Cylinders.kt:87-89`, step 2 of `processAndMix`, after every cylinder has rendered | ❌ **nothing** |
 | bus effect | `KatalystDuckEffect` | ✅ `KatalystDuckEffectSpec` |
@@ -47,7 +47,8 @@ So `duck(attack)` (then `duckattack`) sets the **release**. Worse, `Compressor.k
 is audit finding [F17](../../audio-audit/FINDINGS.md#f17)(a). **Two parameters, same name, same
 directory, two different meanings, neither matching what a DAW would print.** This is exactly the
 parameter-parity rule the project already holds itself to, and the cheapest moment to fix it is
-before anyone writes a song against the name.
+before anyone writes a song against the name. Settled 2026-11-06: renamed `release` on every surface,
+KLANG-00417 B1.
 
 ### 2. The duck-down is a step
 
