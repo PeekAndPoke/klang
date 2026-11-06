@@ -26,7 +26,6 @@ data class VoiceData(
      * that word (signal-flow plan section 6).
      */
     val gain: Double?,
-    val legato: Double?,
 
     // Sound, bank, sound index
     /** Sample bank (e.g. "MPC60" or "AkaiMPC60"), optional.*/
@@ -151,7 +150,6 @@ data class VoiceData(
             note = null,
             freqHz = null,
             gain = null,
-            legato = null,
             bank = null,
             sound = null,
             soundIndex = null,

@@ -139,6 +139,19 @@ class KlangPatternSchedulerTempoSpec : StringSpec({
         }
     }
 
+    "the gate an event asks for is folded into the gate time it is sent with: only seconds cross the wire" {
+        // KLANG-00290 item 24, D6: sprudel's `legato` no longer travels on the wire
+        withScheduler(rpm30) {
+            val halved = scheduled(cycle = 0)
+            (halved.gateEndTime - halved.startTime) shouldBe (1.0 plusOrMinus eps)
+
+            round(atSec = 2.0)
+
+            val whole = scheduled(cycle = 1)
+            (whole.gateEndTime - whole.startTime) shouldBe (2.0 plusOrMinus eps)
+        }
+    }
+
     "the cycle counter runs on steadily across a tempo change" {
         withScheduler(rpm30) {
             round(atSec = 20.0)
@@ -256,6 +269,9 @@ class KlangPatternSchedulerTempoSpec : StringSpec({
         private val data = VoiceData.empty.copy(note = "$cycle", freqHz = cps)
 
         override fun toVoiceData() = data
+
+        /** Cycle 0 asks for half its duration as its gate, the way sprudel's `legato(0.5)` does. */
+        override fun gateSeconds(durationSec: Double): Double = if (startCycles == 0.0) durationSec * 0.5 else durationSec
     }
 
     /**

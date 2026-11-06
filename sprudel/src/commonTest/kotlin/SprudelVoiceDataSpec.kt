@@ -420,7 +420,6 @@ class SprudelVoiceDataSpec : StringSpec({
         voiceData.note shouldBe "c4"
         voiceData.freqHz shouldBe 440.0
         voiceData.gain shouldBe 0.8
-        voiceData.legato shouldBe 0.9
         voiceData.bank shouldBe "MPC60"
         voiceData.sound shouldBe "bd"
         voiceData.soundIndex shouldBe 2

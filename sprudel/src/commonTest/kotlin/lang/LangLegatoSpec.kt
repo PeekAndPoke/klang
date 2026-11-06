@@ -49,6 +49,19 @@ class LangLegatoSpec : StringSpec({
         }
     }
 
+    "the gate is the duration times the legato, folded in on the frontend (it does not travel on the wire)" {
+        fun gateOf(p: SprudelPattern): Double = p.queryArc(0.0, 1.0).first().gateSeconds(durationSec = 2.0)
+
+        gateOf(note("c3")) shouldBe 2.0
+        gateOf(note("c3").legato(0.5)) shouldBe 1.0
+        gateOf(note("c3").clip(1.5)) shouldBe 3.0
+        // Raw-Motor: a negative legato puts the gate before the onset, the envelope law's business
+        gateOf(note("c3").legato(-0.5)) shouldBe -1.0
+        // NaN-guard: a non-finite legato reads as unset
+        gateOf(note("c3").legato(Double.NaN)) shouldBe 2.0
+        gateOf(note("c3").legato(Double.POSITIVE_INFINITY)) shouldBe 2.0
+    }
+
     "reinterpret voice data as legato | seq(\"0.25 0.75\").legato()" {
         val p = seq("0.25 0.75").legato()
         val events = p.queryArc(0.0, 1.0)

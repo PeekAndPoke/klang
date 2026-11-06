@@ -55,6 +55,15 @@ interface KlangPatternEvent {
      */
     val katalyst: KatalystValue? get() = null
 
+    /**
+     * How long the gate stays open for an event that lasts [durationSec] seconds: the event's whole duration, unless
+     * the pattern language shortens or stretches it (sprudel's `legato`). The frontend folds it into the gate time it
+     * sends ([ScheduledVoice.gateEndTime], a realtime voice's `gateDurSec`), so the backend learns only seconds
+     * (KLANG-00290 (engine follow ups) item 24, decision D6, maintainer 2026-11-06: `legato` does not travel on the
+     * wire). The default is the duration itself.
+     */
+    fun gateSeconds(durationSec: Double): Double = durationSec
+
     /** Convert to engine-level voice data. */
     fun toVoiceData(): VoiceData
 }

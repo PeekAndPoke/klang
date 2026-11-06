@@ -86,11 +86,9 @@ class VoiceFactory(
         val startFrame = onsetFrame(scheduled, backendStartTimeSec)
         val gateEndFrameFromTime = kotlin.math.floor(relativeGateEndTime * sampleRate)
 
-        // Handle legato (clip) logic
-        val clip = data.legato
-        val originalGateDuration = (gateEndFrameFromTime - startFrame).toInt()
-        val effectiveGateDuration = if (clip != null) (originalGateDuration * clip).toInt() else originalGateDuration
-        val gateEndFrame = startFrame + effectiveGateDuration
+        // The gate as the frontend sent it: a pattern language's `legato` is folded into the gate time before the wire
+        // (KLANG-00290 (engine follow ups) item 24, D6), so the backend knows only seconds.
+        val gateEndFrame = startFrame + (gateEndFrameFromTime - startFrame).toInt()
 
         // THE one place the factory reads `analog` off the bag, guarded here rather than at each
         // use: the sample playhead's drift lane (`SampleIgnitor`) takes it below; every tree reads its own

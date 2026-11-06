@@ -40,6 +40,18 @@ data class SprudelPatternEvent(
     override fun toVoiceData(): VoiceData = data.toVoiceData()
 
     /**
+     * The gate is the event's duration times its `legato` (`clip`), folded in here on the frontend: `legato` does not
+     * travel on the wire (KLANG-00290 (engine follow ups) item 24, D6). Unset, the gate is the whole duration; a
+     * non-finite `legato` reads as unset (the NaN-guard rule of every slot, `/dsl-design` section 4). Raw-Motor: a
+     * negative `legato` gives a gate before the onset, which the envelope law releases from level 0.
+     */
+    override fun gateSeconds(durationSec: Double): Double {
+        val legato = data.legato?.takeIf { it.isFinite() } ?: return durationSec // NaN-guard: non-finite reads as unset
+
+        return durationSec * legato
+    }
+
+    /**
      * Check if this event is an onset event (should be played).
      * With fixed-point [io.peekandpoke.klang.common.math.CycleTime] ticks, onset detection is an
      * exact integer comparison — no floating-point epsilon needed.

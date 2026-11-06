@@ -10,9 +10,9 @@ The scheduling message sent via `Cmd.ScheduleVoices`. Enqueued in the voice min-
 data class ScheduledVoice(
     val playbackId: String,       // unique ID for deduplication / replace
     val data: VoiceData,          // all synthesis parameters
-    val startTime: Double,        // engine-relative ms — when to activate
-    val gateEndTime: Double,      // engine-relative ms — when to release (ADSR gate off)
-    val playbackStartTime: Double // engine-relative ms — origin of the playback cycle
+    val startTime: Double,        // seconds from the playback start: when to activate
+    val gateEndTime: Double,      // when to release (ADSR gate off); a pattern's `legato` is folded in by the frontend
+    val playbackStartTime: Double // seconds: the origin of the playback (its epoch)
 )
 ```
 
@@ -35,7 +35,6 @@ travel as slot keys in `ignitorParams`, and the orbit stages as slot keys in `ka
 | Field        | Type       | Meaning                                |
 |--------------|------------|----------------------------------------|
 | `gain`       | `Double?`  | The channel fader: the one level word on the wire (1.0 = unity, null = unset). A frontend's articulation shorthand (sprudel's `velocity`, a MIDI key velocity) is multiplied into it BEFORE it crosses, so `velocity` and the retired second multiplier are not wire fields (signal-flow plan section 6, 2026-09-19). |
-| `legato`     | `Double?`  | Legato                                 |
 | `solo`       | `Double?`  | 0.0 = no solo, 1.0 = full solo; the other voices play at `1 - amount` (1.0 silences them, the strongest solo wins). Recorded per `sourceId` from any event, `control` events included; the newest event of a source wins at once |
 
 ### Sound Selection

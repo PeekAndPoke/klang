@@ -26,7 +26,7 @@ history of a decision. Which functions exist is answered by the `lang/` files an
   `fm.release`; `SvdFm` keeps its typed fields `fmEnv`, `fmh`, ..., `fmRelease`), the filters,
   `adsr`, distort / crush / coarse, tremolo and the sample's flat `begin` / `end` / `speed` / `loop`. The rules are in that file's KDoc; the key names are
   read from `IgnitorDsl.Slots`, never retyped. Guard: `ClassicSlotParamsSpec`.
-- Still typed wire fields beside the two bags: `note`, `freqHz`, `sourceId`, `gain`, `pan`, `legato`, `bank`, `sound`, `soundIndex` (from `n`), `cut`, `cylinder`, `solo`,
+- Still typed wire fields beside the two bags: `note`, `freqHz`, `sourceId`, `gain`, `pan`, `bank`, `sound`, `soundIndex` (from `n`), `cut`, `cylinder`, `solo`,
   the `master` and `katalyst` names, `control`, `tags`, `cull`. The orbit stages travel only as
   `katalystParams` slots.
 - An authored instrument that does not end in `classic()` plays as its bare tree: a voice door reaches it
@@ -237,3 +237,5 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
   item 44, `docs/retired-names.md`).
 - 2026-11-03: the `oversample` slots of `crush`, `coarse` and `distort` retired, with `SprudelVoiceData`'s three fields
   and the distort editor's factor buttons (KLANG-00214 (oversampling regions) step 4, `docs/retired-names.md`).
+- 2026-11-06: `legato` is no longer a wire field: the event folds it into the gate (`SprudelPatternEvent.gateSeconds`),
+  the frontend sends seconds (KLANG-00290 (engine follow ups) item 24, D6).

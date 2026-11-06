@@ -2608,7 +2608,20 @@ Each was checked against the code: none is done (item 21's package dissolve asid
     - "cylinder" is the word (decision D1, maintainer, 2026-10-07): sprudel's canonical door becomes `cylinder`, with
       `orbit` and `o` as aliases (today `orbit` is canonical), and the docs, KDoc, tutorials, UI text and the Katalyst
       vocabulary follow. L; plan it as its own step. A surface change.
-    - `legato` on the wire or folded into the gate time by the frontend (decision D6, open; not bit-identical).
+    - **DONE 2026-11-06 (maintainer: "I do not really see a reason why it should travel over the wire, when it can be
+      applied on the frontend").** `legato` on the wire or folded into the gate time by the frontend (decision D6).
+      `VoiceData.legato` and the factory's clip are gone; `KlangPatternEvent.gateSeconds(durationSec)` is the one
+      rule's door (the duration by default), sprudel's event multiplies by its `legato` (a non-finite one reads as
+      unset; it gave a zero gate on the backend before), and every sender takes the gate from it: the pattern
+      scheduler, the realtime path's fixed gates and the song benchmark. A held realtime voice ignores legato now:
+      before, the factory clipped its far horizon too, which a positive legato left far, but a legato of 0 or less, a
+      NaN or a tiny one turned a held key into a one-shot released at the press; a key's length is the key now. Not bit-identical by the decision: the gate was clipped in whole frames on the backend
+      (`(gateFrames * legato).toInt()`) and is now the scaled seconds, floored once. Rows:
+      `LangLegatoSpec` (the gate for unset, 0.5, 1.5, a negative and a non-finite legato),
+      `KlangPatternSchedulerTempoSpec` (an event's gate reaches `gateEndTime`), `KlangRealtimeGateSpec` (a fixed realtime
+      gate is the event's, a held one stays held). The wire schema hash moved. The corpus moved on every song that uses
+      `legato` (11 of the 13 live songs and the 3 frozen pieces), every peak the same to four digits; accepted as the
+      deliberate sound change (`corpus-accept-engine`). Reviewed (level 1, clean); mutations 4 of 4 KILLED.
     - **DONE 2026-11-06 (maintainer: "if they are not used, remove them").** `Cmd.ScheduleVoice` and
       `Cmd.ClearScheduled` have no sender outside the specs (B1.10). S. `ScheduleVoice` turned out to have one more,
       the allocation benchmark (`AllocationCases`), which sends `ScheduleVoices` with one voice now, as do the specs;

@@ -393,8 +393,9 @@ class WireCodecRoundTripSpec : StringSpec({
         // Katalyst's `OversampleBy` and `OversampleAtLeast` joined it); KLANG-00214 step 4 from -640226917 (the
         // `oversample` field left `IgnitorDsl.Shape`, `IgnitorDsl.Distort` and `KatalystStageDsl.Distort`);
         // KLANG-00245 step 7f from 210338569 (the Ignitor's `Progress` and `Elapsed` joined it); KLANG-00290 item 24
-        // from -583834474 (`Cmd.ScheduleVoice` and `Cmd.ClearScheduled` left it).
-        WIRE_SCHEMA_HASH shouldBe 1837919315
+        // from -583834474 (`Cmd.ScheduleVoice` and `Cmd.ClearScheduled` left it), and from 1837919315 (`VoiceData.legato`
+        // left it: the frontend folds it into the gate time, D6).
+        WIRE_SCHEMA_HASH shouldBe 580783604
     }
 
     "ScheduledVoice round-trips a minimal (mostly-null) VoiceData" {
@@ -535,7 +536,7 @@ class WireCodecRoundTripSpec : StringSpec({
 
 /** JSON.stringify of the golden voice above, encoded at `ccde9f9e` (engine follow-up 2, step 5). */
 private const val GOLDEN_WIRE_JSON: String =
-    "{\"playbackId\":\"pb-1\",\"data\":{\"note\":\"c3\",\"freqHz\":130.81,\"gain\":0.7,\"legato\":null," +
+    "{\"playbackId\":\"pb-1\",\"data\":{\"note\":\"c3\",\"freqHz\":130.81,\"gain\":0.7," +
         "\"bank\":null,\"sound\":null,\"soundIndex\":2,\"ignitorParams\":{\"voices\":7,\"spread\":0.3," +
         "\"lpf.freq\":1000,\"adsr.on\":0},\"katalystParams\":{\"reverb.size\":6,\"delay.wet\":null," +
         "\"body.material\":2,\"room\":0.5},\"cylinder\":null,\"pan\":null,\"cut\":null,\"solo\":null," +

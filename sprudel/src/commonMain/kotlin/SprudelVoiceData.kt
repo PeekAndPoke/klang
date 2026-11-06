@@ -914,7 +914,6 @@ data class SprudelVoiceData(
             note = note,
             freqHz = freqHz,
             gain = foldedGain(),
-            legato = legato,
             bank = bank,
             sound = soundName,
             soundIndex = soundIndex,

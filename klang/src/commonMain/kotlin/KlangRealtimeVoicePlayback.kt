@@ -73,13 +73,15 @@ class KlangRealtimeVoicePlayback internal constructor(
      * events reference are announced first, exactly as the cyclic scheduler does before it
      * schedules (see [InlineDslRegistrar.announceAll]).
      *
-     * @param gateDurSec Gate length in seconds; null = held until [stopVoice].
+     * @param gateDurSec Gate length in seconds, scaled by each event's own [KlangPatternEvent.gateSeconds] (sprudel's
+     *   `legato`); null = held until [stopVoice], whatever the event's legato.
      */
     fun startEvents(liveId: Int, events: List<KlangPatternEvent>, gateDurSec: Double? = null) {
         registrar.announceAll(events)
 
         events.forEach { event ->
-            startVoice(liveId = liveId, data = event.toVoiceData(), gateDurSec = gateDurSec)
+            // A fixed gate takes the event's own (sprudel's `legato`); a held one is released by [stopVoice]
+            startVoice(liveId = liveId, data = event.toVoiceData(), gateDurSec = gateDurSec?.let { event.gateSeconds(it) })
         }
     }
 

@@ -667,7 +667,8 @@ internal class KlangPatternScheduler(
             val relativeStartTime = map.secondsAt(event.startCycles)
             val duration = map.durationSec(startCycle = event.startCycles, durationCycles = event.durationCycles)
 
-            // The UI's times: when it is heard, on the wall clock
+            // The UI's times: when it is heard, on the wall clock. The end is the event's slot, not its gate: the highlight
+            // marks where the event sits in the pattern, whatever its `legato` makes of the sound.
             val uiStartTime = uiOffsetSec + relativeStartTime
             val uiEndTime = uiStartTime + duration
 
@@ -692,7 +693,8 @@ internal class KlangPatternScheduler(
                 playbackId = playbackId,
                 data = voiceData,
                 startTime = relativeStartTime,
-                gateEndTime = relativeStartTime + duration,
+                // The pattern language's gate (sprudel's `legato`) folded in here: only seconds cross the wire
+                gateEndTime = relativeStartTime + event.gateSeconds(duration),
                 playbackStartTime = requestedEpochSec,
             )
         }

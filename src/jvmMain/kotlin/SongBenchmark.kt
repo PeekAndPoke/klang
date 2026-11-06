@@ -11,6 +11,7 @@ import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.ignitor.GraphCensus
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_bridge.KlangPattern
+import io.peekandpoke.klang.audio_bridge.KlangPatternEvent
 import io.peekandpoke.klang.audio_bridge.KlangTime
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.SoundValue
@@ -198,9 +199,9 @@ class SongBenchmark(
                 if (!ignitorRegistry.contains(name)) ignitorRegistry.register(name, sv.ignitor)
             }
 
-        data class Ev(val start: Double, val dur: Double, val data: VoiceData)
+        data class Ev(val start: Double, val dur: Double, val data: VoiceData, val event: KlangPatternEvent)
 
-        val events = rawEvents.map { Ev(it.startCycles, it.durationCycles, it.toVoiceData()) }
+        val events = rawEvents.map { Ev(it.startCycles, it.durationCycles, it.toVoiceData(), it) }
 
         // Preload samples (drums etc.) so those voices actually render.
         val s = samples
@@ -232,7 +233,8 @@ class SongBenchmark(
                     playbackId = "bench",
                     data = ev.data,
                     startTime = start,
-                    gateEndTime = start + ev.dur * secPerCycle,
+                    // The pattern language's gate (`legato`), folded in by the frontend as the live path does
+                    gateEndTime = start + ev.event.gateSeconds(ev.dur * secPerCycle),
                     playbackStartTime = 0.0,
                 )
             )
