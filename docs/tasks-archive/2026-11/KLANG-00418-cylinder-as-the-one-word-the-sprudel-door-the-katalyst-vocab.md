@@ -1,7 +1,6 @@
 # KLANG-00418: Cylinder as the one word: the sprudel door, the Katalyst vocabulary, the docs
 
-> **Status (2026-11-06): IN PROGRESS.** Decision D1 (maintainer, 2026-10-07), started 2026-11-06 (maintainer: "yes
-> cylinder become the main door, we can do it now").
+> **Status (2026-11-06): DONE.** Steps 1 to 5 done the same day. Decision D1 (maintainer, 2026-10-07), started 2026-11-06 (maintainer: "yes cylinder become the main door, we can do it now").
 >
 > **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
@@ -56,6 +55,7 @@ A shape change: the sorting rule of `_v1-scope.md` puts it before the tutorials.
    and the workshop's domain-word check, which still lists `orbit`.
 5. **The tutorials.** They keep working on the `orbit` alias. Their text is the tutorial stream's (KLANG-00145
    (tutorial curriculum), PAUSED): the change is offered to it, not made over its head.
+   **DONE 2026-11-06:** offered in KLANG-00145's open decisions (`tut_Layers.kt` is the one lesson that says orbit).
 
 **Steps 1 to 3, the checks (2026-11-06):** reviews level 1, one round each, clean (step 1: each alias names both
 other words, the canonical rows in `LangFieldAccessorsSpec`; step 2: KDoc and skill tables). Every suite green, the
@@ -74,3 +74,5 @@ step 4 (the words) and step 5 (the tutorials, offered).
 - 2026-11-06: created; steps written from decision D1.
 - 2026-11-06: steps 1 to 3 done (the door, the duck's knob, the songs and examples).
 - 2026-11-06: step 4 done, everything, the engine's identifiers included (maintainer: "yes update everything").
+- 2026-11-06: step 5 done (offered to the tutorial stream); DONE.
+- 2026-11-06: DONE.

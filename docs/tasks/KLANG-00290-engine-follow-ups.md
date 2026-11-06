@@ -1,7 +1,6 @@
 # KLANG-00290: Engine follow-ups after the tidy-up
 
-> **Status (2026-11-06): IN PROGRESS.** The maintainer's decisions of 2026-11-06 (the list below), worked in a loop. Was
-> PAUSED 2026-11-04, IN PROGRESS 2026-10-21 to then.
+> **Status (2026-11-06): PAUSED.** Every decision of 2026-11-06 is done (the list below; D1 in KLANG-00418, now archived; D8 decided against a shared core). Left: item 22 (the duck's `attack`), skipped by the maintainer for now. Was IN PROGRESS 2026-11-06, PAUSED 2026-11-04, IN PROGRESS 2026-10-21 to then.
 >
 > **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
@@ -64,7 +63,8 @@ clean). Mutations: 15 of 15 KILLED (TailRelease 4, two of them after two new row
 the cylinder's activity 4, one after a new row and one by other specs than the one named). The audio suites green on the
 JVM and in the browser, the corpus identical (the two song edits of 2026-11-05 aside), the allocation check 80 of 80
 (E-C-n1 down from 13232 to 12938 B per block on V8 and from 6655 to 6431 on the JVM: the per-voice stage list and block
-context gone). Left from the list: D1 (KLANG-00418), D6 (`legato` off the wire), D8 (a shared core).
+context gone). Left from the list then: D1 (KLANG-00418), D6 (`legato` off the wire), D8 (a shared core); all three
+done since (D1 and D6 committed 2026-11-06, D8 decided below).
 
 **D8 decided 2026-11-06, no shared core.** The assessment: the delay and the reverb run about 150 parallel lines (the
 off, active and draining states, the wet fade, the feed, the rent latch); a core would save 80 to 100 lines net, but
@@ -2748,3 +2748,5 @@ ramp times (1.5 s in and out, a 2 s hold), recorded in the same solo task.
 - 2026-11-06: the maintainer decided 21, 23, 24 (the commands, D1, D6), 25's `exp`, and 27 (D2, D4, D8, D11, C4.1, C4.2); 22 skipped.
 - 2026-11-06: IN PROGRESS. the maintainer's decisions of 2026-11-06, worked in a loop
 - 2026-11-06: D8 decided: no shared core for the delay and the reverb, nor for the filter swap's parking (clarity over less code).
+- 2026-11-06: D1 (KLANG-00418) DONE and archived; PAUSED, only item 22 left (skipped for now).
+- 2026-11-06: PAUSED.
