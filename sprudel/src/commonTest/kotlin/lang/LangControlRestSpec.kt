@@ -20,9 +20,8 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
  * Each row calls the setter twice on the same notes: first with a plain value, then with a control
  * pattern `"<B ~>"`. In cycle 0 the control writes B, so the events must differ from the first call
  * alone (the row really reaches the field). In cycle 1 the control rests, so the events must equal
- * the first call alone, field for field. A row marked `fresh` has no first call: its value does not
- * reach the voice data (the `snd...(params)` doors set the sound only), so the rest cycle must equal
- * the notes before the call.
+ * the first call alone, field for field. (The plain `snd...` doors take no argument since KLANG-00417 B8, so they
+ * have no row.)
  *
  * `hurry` is not here: it also runs `fast` with the same control pattern, and a rest there drops the
  * notes, which is the structural family (`_lift` / `_liftData` joins) left for a later decision.
@@ -30,7 +29,7 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
  */
 class LangControlRestSpec : StringSpec({
 
-    class Row(val call: String, val slot: String, val a: String, val b: String, val fresh: Boolean = false)
+    class Row(val call: String, val slot: String, val a: String, val b: String)
 
     fun single(call: String, slot: String, a: String, b: String) = Row(call, slot, a, b)
 
@@ -54,7 +53,7 @@ class LangControlRestSpec : StringSpec({
         t("threshold", "-12", "-24"), t("ratio", "2", "4"), t("knee", "3", "6"),
         t("attack", "0.01", "0.02"), t("release", "0.1", "0.2"),
     )
-    val unisonSlots = arrayOf(t("voices", "3", "5"), t("spread", "0.1", "0.2"), t("pan", "0.3", "0.6"))
+    val unisonSlots = arrayOf(t("voices", "3", "5"), t("spread", "0.1", "0.2"))
     val penvSlots = arrayOf(
         t("semitones", "12", "24"), t("attack", "0.01", "0.02"), t("decay", "0.1", "0.2"),
         t("sustain", "0.25", "0.5"), t("release", "0.1", "0.2"),
@@ -124,9 +123,7 @@ class LangControlRestSpec : StringSpec({
             Row("ignitorParam(slot = \"analog\", ", "value", "1", "2"),
             Row("ignp(slot = \"analog\", ", "value", "1", "2"),
         ),
-        listOf("sndPink", "sndRamp", "sndSaw", "sndSine", "sndSquare", "sndTri", "sndZamp").map {
-            Row(it, "params", "1", "1", fresh = true)
-        },
+        compound("sndSquare", t("duty", "0.3", "0.6")),
         compound("sndNoise", t("color", "0.3", "0.6")),
         compound("sndBrown", t("leak", "0.3", "0.6")),
         compound("sndPulze", t("duty", "0.3", "0.6")),
@@ -165,7 +162,7 @@ class LangControlRestSpec : StringSpec({
 
         "$label: a rest in the control pattern leaves the field untouched" {
             val base = """note("c3 e3")"""
-            val reference = if (row.fresh) base else "$base.${call(row, row.a)}"
+            val reference = "$base.${call(row, row.a)}"
             val withRest = "$reference.${call(row, "\"<${row.b} ~>\"")}"
 
             val before = compile(reference)

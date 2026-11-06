@@ -161,6 +161,16 @@ judgement, each item fixed or recorded. The songs, the jingles and the tutorials
   review found, for B9's flat slots: a raw `ignp("rate", x)` now also moves every perlin and berlin left at its
   default (a perlin used as a modulator included); no door writes `rate`, `octaves`, `persistence` or `bipolar`, so
   only a raw write reaches them, and an author who wants a fixed modulator gives it a value.
+- **B7 DONE 2026-11-06:** `unison(voices, spread)` and `uni(voices, spread)`: the reserved `pan` knob, its accessor
+  `unison.pan` and its unread `panSpread` key are gone (the Strudel-compatibility mapping that wrote it too). The
+  `spread` KDoc says what the engine reads (the whole width, lowest copy to highest); its example no longer claims "a
+  third of a semitone apart". Stereo width is KLANG-00419 (stereo width for the unison copies). One dev pattern named
+  `pan`; no song or tutorial did.
+- **B8 DONE 2026-11-06:** `sndSquare(duty)` writes the `duty` slot the clean (band-limited) pulse reads, as
+  `sndPulze(duty)` does for the raw one; both KDocs now say which pulse is which. The plain doors `sndSine`, `sndSaw`,
+  `sndTri`, `sndRamp`, `sndZamp`, `sndPink` lose their dead `params` argument (its value was ignored, only its
+  structure lifted) and take none. `LangControlRestSpec`'s `fresh` rows for them became a `sndSquare(duty)` row.
+  KLANG-00189 (sprudel sound doors compound) item 3 is settled by it. No song or tutorial passed an argument.
 
 ### Checked and consistent
 
@@ -563,12 +573,12 @@ Two structural facts that shape every table below:
 
 | concept | sprudel door | sound name(s) (Defs) | Ignitor Kotlin | Ignitor KlangScript | refs |
 |---|---|---|---|---|---|
-| sine | `sndSine(params)` | `sine`, `sin` | `Ign.sine(freq, configure)` | `Ignitor.sine(freq, configure)` | snd_basic:33; Defs:51-53; Ign:53; KSI:127 |
-| saw | `sndSaw(params)` | `sawtooth`, `saw` | `Ign.saw` | `Ignitor.saw` | snd_basic:72; Defs:55-57 |
-| square (rounded pulse, reads `duty`) | `sndSquare(params)` (no duty) | `square`, `sqr`, `pulse` -> node `Pulze` (wire `"pulze"`) | `Ign.square` -> `Pulze` | `Ignitor.square` | snd_basic:111; Defs:59-63; Dsl:608-609; Ign:71-74 |
+| sine | `sndSine(params)` (B8: none now) | `sine`, `sin` | `Ign.sine(freq, configure)` | `Ignitor.sine(freq, configure)` | snd_basic:33; Defs:51-53; Ign:53; KSI:127 |
+| saw | `sndSaw(params)` (B8: none now) | `sawtooth`, `saw` | `Ign.saw` | `Ignitor.saw` | snd_basic:72; Defs:55-57 |
+| square (rounded pulse, reads `duty`) | `sndSquare(params)` (no duty; B8: `sndSquare(duty)`) | `square`, `sqr`, `pulse` -> node `Pulze` (wire `"pulze"`) | `Ign.square` -> `Pulze` | `Ignitor.square` | snd_basic:111; Defs:59-63; Dsl:608-609; Ign:71-74 |
 | raw pulse | `sndPulze(duty)` | `pulze` -> node `RawPulze` (wire `"raw-pulze"`) | `Ign.pulze` -> `RawPulze` | `Ignitor.pulze` | snd_basic:388; Defs:64-66; Dsl:635-636; Ign:124-127 |
-| triangle | `sndTri(params)` | `triangle`, `tri` | `Ign.tri` | `Ignitor.tri` | snd_basic:150; Defs:68-70 |
-| ramp / raw ramp | `sndRamp(params)`, `sndZamp(params)` | `ramp`, `zamp` | `Ign.ramp`, `Ign.zamp` | same | snd_basic:189,228; Defs:73-77 |
+| triangle | `sndTri(params)` (B8: none now) | `triangle`, `tri` | `Ign.tri` | `Ignitor.tri` | snd_basic:150; Defs:68-70 |
+| ramp / raw ramp | `sndRamp(params)`, `sndZamp(params)` (B8: none now) | `ramp`, `zamp` | `Ign.ramp`, `Ign.zamp` | same | snd_basic:189,228; Defs:73-77 |
 | raw saw | **none** | `zawtooth`, `zaw` | `Ign.zawtooth` | `Ignitor.zawtooth` | Defs:80-82; Ign:98 |
 | impulse | **none** | `impulse` | `Ign.impulse` | `Ignitor.impulse` | Defs:84-85; Ign:115 |
 | super osc | `sndSuperSaw/Sine/Square/Tri/Ramp(voices, spread)` | `supersaw`, `supersine`, `supersquare`/`supersqr`/`superpulse`, `supertri`, `superramp` | `Ign.supersaw(freq, configure)` ... | `Ignitor.supersaw` ... | snd_super:268,327,386,445,504; Defs:93-133 |
@@ -593,7 +603,7 @@ The plain `snd*` doors carry a `params: PatternLike?` that only lifts structure:
 | sine banks | none | none | `fundamental(gain)`, `harmonics(count, rolloff)`, `octaves(count, rolloff)`, `suboctaves(count, rolloff)`, `partial(ratio, gain, phase)` | same words | counts, exponents | node literals (Dsl:401-413) | KB:75-91; SB:79-153 |
 | voices | `unison(voices, ...)`, `sndSuper*(voices, ...)` | `voices` | `.voices(voices)` | `voices(voices)` | count, coerced to [0, 256] | 8.0: `Slots.voices` (Dsl:285); `Ign.superpluck` literal 8.0 (Ign:256); BE fallback **7.0** (BE:119) | unison:22,81; snd_super:170,270; KB:229; SB:401-403; `_resource_bounds.kt:64,71` |
 | spread | `unison(_, spread, _)`, `sndSuper*(_, spread)` | `spread` | `.spread(spread)` | `spread(spread)` | total detune width in SEMITONES, outer voice to outer voice (BE:3030-3053, `-spread/2..+spread/2`) | 0.2: `Slots.spread` (Dsl:282); `Ign.superpluck` 0.2 (Ign:257); BE `detuneDefault` 0.2 (BE:121) | unison:32,88; KB:232; SB:406-408 |
-| unison pan | `unison(_, _, pan)` | `panSpread` (unread) | none | none | 0..1, reserved | none | unison:42,76,123; `VoiceData.kt:39`; `SprudelVoiceData.kt:67` |
+| unison pan (removed, B7) | `unison(_, _, pan)` | `panSpread` (unread) | none | none | 0..1, reserved | none | unison:42,76,123; `VoiceData.kt:39`; `SprudelVoiceData.kt:67` |
 | super character | none | none | `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool(on, kMin, kMax, drawTries, poolSize, refreshEvery, selection, warmup)` | same | various | `SUPER*_` constants (Tun) | KB:241-276; SB:425-472 |
 
 #### 3. Noise kinds and their knobs
@@ -602,7 +612,7 @@ The plain `snd*` doors carry a `params: PatternLike?` that only lifts structure:
 |---|---|---|---|---|---|---|---|
 | white noise | `sndNoise(color)` | `color` | `Ign.whitenoise(color = 0.0.ign)` | `Ignitor.whitenoise(color = 0.0)` | tilt -1..1, 0 flat | 0.0: `Slots.color` (Dsl:244), Ign:135, KSI:255, `NOISE_TILT_DEFAULT` (Tun:260, used only by BE:127) | snd_basic:266-268 |
 | brown noise | `sndBrown(leak)` | `leak` | `Ign.brownnoise(leak = 0.02.ign)` | `Ignitor.brownnoise(leak = 0.02)` | per-sample white leak k | 0.02: Dsl:249, Ign:138, KSI:263, `BROWN_LEAK_DEFAULT` (Tun:267, BE:128) | snd_basic:307-309 |
-| pink noise | `sndPink(params)` | none | `Ign.pinknoise()` | `Ignitor.pinknoise()` | no knobs | n/a | snd_basic:349 |
+| pink noise | `sndPink(params)` (B8: none now) | none | `Ign.pinknoise()` | `Ignitor.pinknoise()` | no knobs | n/a | snd_basic:349 |
 | perlin / berlin | **none** (`s("perlin")` + `ignp`) | `rate`, `octaves`, `persistence` | `Ign.perlin(rate, octaves, persistence)`, `Ign.berlin(...)` | same | rate x144 cells/s; fBm octaves 1..8; falloff 0..1 | 1.0 / 1.0 / 0.5: Dsl:281,251,252; Ign:145-147; KSI:277-281; BE:122-125 | Defs:149-155 |
 | dust density | `sndDust(density, tail)`; `density(amount)` / `d(amount)` | `density` | `Ign.dust(density, tail, bipolar)` | `Ignitor.dust(density, tail, bipolar)` | 0..1 of a 200/s ceiling | 0.2: Dsl:246, Ign:159, KSI:314, BE:121 (no constant) | snd_basic:441-444; unison:170,202; BE:1590-1596 |
 | dust tail | `sndDust(_, tail)` | `tail` | `dust(_, tail, _)` | same | amplitude EXPONENT (`amp^tail`), 1 uniform | 1.0: Dsl:284, Ign:160, KSI:315, `DUST_TAIL_DEFAULT` (Tun:271) | snd_basic:444; BE:1585-1587,1611-1631 |
@@ -797,7 +807,7 @@ already written down.
 
 - **`analog`**: one word, the parameter `character`, the same character scale and default 0 on sprudel
   (ignp:202), on every Kotlin and script builder (KB, SB) and in the engine (BE:117). The Q25 rename landed.
-- **`voices` / `spread` order**: `unison(voices, spread, pan)`, `sndSuper*(voices, spread)` and
+- **`voices` / `spread` order**: `unison(voices, spread, pan)` (pan removed, B7), `sndSuper*(voices, spread)` and
   `sndSuperPluck(voices, spread, ...)` all lead with voices, then spread, and so does the builder knob list.
 - **The pluck positional order** matches the builder knob list on every surface: `sndPluck(feedback, brightness,
   pickPosition, stiffness)`, superpluck with `voices, spread` in front. `feedback` (formerly the pluck `decay`) and

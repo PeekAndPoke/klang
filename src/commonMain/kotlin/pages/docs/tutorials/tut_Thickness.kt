@@ -35,7 +35,7 @@ package io.peekandpoke.klang.pages.docs.tutorials
  *
  * ⚠️ The plan's original listen-for for this slot, "mono vs wide on headphones", is
  * ENGINE-FALSE and is deliberately NOT delivered: the super oscillators sum to mono,
- * and `panSpread` is wired but inaudible (its own KDoc says so). Stereo width belongs
+ * and the reserved `unison(pan)` never sounded and was removed (KLANG-00417 B7). Stereo width belongs
  * to The Transform Toolkit, which earns it with a transposed copy panned opposite.
  * Do not add a width A/B here.
  *

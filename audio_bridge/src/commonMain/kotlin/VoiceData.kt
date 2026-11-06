@@ -36,7 +36,7 @@ data class VoiceData(
     val soundIndex: Int?,
 
     // Voice slots: classic()'s door slots (with the flat "onepole" [Hz]; sprudel's `penv` as `penv.*` / `penvCurves.*`, `vib` as `vibrato.*`, the flat "accelerate", `fm` as `fm.*`), the sample's "begin"/"end"/"speed"/"loop",
-    // the oscillators' own ("density", "voices", "spread") and raw ignp() writes. sprudel's "panSpread" is unread.
+    // the oscillators' own ("density", "voices", "spread") and raw ignp() writes. (sprudel's unread "panSpread" left with `unison(pan)`, KLANG-00417 B7.)
     val ignitorParams: KlangMap<Double>?,
 
     /**

@@ -147,7 +147,6 @@ class LangDoorFormsSpec : StringSpec({
         k("uni", "uni(%s)", ignitorSlot("voices"), { p, c -> p.uni(c) }, { s, c -> s.uni(c) }, { c -> uni(c) }, { m, c -> m.uni(c) },
             ctrl = "3 5", expected = listOf(3.0, 5.0), head = true),
         k("unison.spread", "unison(spread = %s)", ignitorSlot("spread"), { p, c -> p.unison(spread = c) }, { s, c -> s.unison(spread = c) }, { c -> unison(spread = c) }, { m, c -> m.unison(spread = c) }),
-        k("unison.pan", "unison(pan = %s)", ignitorSlot("panSpread"), { p, c -> p.unison(pan = c) }, { s, c -> s.unison(pan = c) }, { c -> unison(pan = c) }, { m, c -> m.unison(pan = c) }),
 
         // -- compressor and duck (Katalyst slots) ----------------------------------------------------------------------
         k("compressor.threshold", "compressor(%s)", katSlot("compressor.threshold"), { p, c -> p.compressor(c) }, { s, c -> s.compressor(c) }, { c -> compressor(c) }, { m, c -> m.compressor(c) },
@@ -440,12 +439,12 @@ class LangDoorFormsSpec : StringSpec({
                 { it.comp(-20, 4, 6, 0.003, 0.1) }, { it.comp(-20, 4, 6, 0.003, 0.1) }, { comp(-20, 4, 6, 0.003, 0.1) }, { it.comp(-20, 4, 6, 0.003, 0.1) },
             ),
             Door(
-                "unison", """5, 0.3, 0.6""", { listOf("voices", "spread", "panSpread").map { k -> it.ignitorParams?.get(k) } }, listOf(5.0, 0.3, 0.6),
-                { it.unison(5, 0.3, 0.6) }, { it.unison(5, 0.3, 0.6) }, { unison(5, 0.3, 0.6) }, { it.unison(5, 0.3, 0.6) },
+                "unison", """5, 0.3""", { listOf("voices", "spread").map { k -> it.ignitorParams?.get(k) } }, listOf(5.0, 0.3),
+                { it.unison(5, 0.3) }, { it.unison(5, 0.3) }, { unison(5, 0.3) }, { it.unison(5, 0.3) },
             ),
             Door(
-                "uni", """5, 0.3, 0.6""", { listOf("voices", "spread", "panSpread").map { k -> it.ignitorParams?.get(k) } }, listOf(5.0, 0.3, 0.6),
-                { it.uni(5, 0.3, 0.6) }, { it.uni(5, 0.3, 0.6) }, { uni(5, 0.3, 0.6) }, { it.uni(5, 0.3, 0.6) },
+                "uni", """5, 0.3""", { listOf("voices", "spread").map { k -> it.ignitorParams?.get(k) } }, listOf(5.0, 0.3),
+                { it.uni(5, 0.3) }, { it.uni(5, 0.3) }, { uni(5, 0.3) }, { it.uni(5, 0.3) },
             ),
             Door(
                 "duck", """1, 0.8, 0.2""", { listOf("cylinder", "depth", "release").map { k -> it.katalystParams?.get("duck.$k") } }, listOf(1.0, 0.8, 0.2),

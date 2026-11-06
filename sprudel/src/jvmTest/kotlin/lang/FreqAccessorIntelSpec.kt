@@ -91,7 +91,7 @@ class FreqAccessorIntelSpec : StringSpec({
             "bpf" to listOf("freq", "q", "env", "attack", "decay", "sustain", "release"),
             "notch" to listOf("freq", "q", "env", "attack", "decay", "sustain", "release"),
             "compressor" to listOf("threshold", "ratio", "knee", "attack", "release"),
-            "unison" to listOf("voices", "spread", "pan"),
+            "unison" to listOf("voices", "spread"),
             "duck" to listOf("cylinder", "depth", "release"),
             "vibrato" to listOf("rate", "semitones"),
             "penv" to listOf("semitones", "attack", "decay", "sustain", "release"),

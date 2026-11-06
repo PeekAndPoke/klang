@@ -59,8 +59,8 @@ engine's slot names):
   `IgnitorDsl.Slots` (`audio_bridge/.../IgnitorDsl.kt`, the stage slot groups in `IgnitorDslClassic.kt`); a tree without `classic()` reads none of them;
 - the sample instrument's playback slots, flat: `begin`, `end`, `speed`, `loop` (`Slots.sample`);
 - the oscillator's own generic slots (`density` on dust, `voices` and `spread` on the super
-  oscillators) and any raw `ignp(name, value)` write. sprudel also writes `panSpread` (`unison(pan = ...)`),
-  which no engine stage reads yet.
+  oscillators) and any raw `ignp(name, value)` write. (`unison(pan)` and its unread `panSpread` were removed,
+  KLANG-00417 B7.)
 
 Every built-in sound is `source.pregain().classic()` and every sample voice runs the same shape over its
 PCM (`IgnitorRegistry.builtInVoice`); an authored instrument reaches the doors by ending in `.classic()`.

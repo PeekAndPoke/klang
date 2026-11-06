@@ -199,7 +199,7 @@ Ignitor.supersaw(x => x.voices(12).spread(0.3).analog(0.2)).lowpass(2000)
 // Fixed frequency goes first: a 55 Hz drone
 Ignitor.supersaw(55, x => x.voices(7))
 
-// There is NO .voices()/.analog() on the sound itself any more; they are builder knobs (the pattern-level unison(voices, spread, pan) is a different door).
+// There is NO .voices()/.analog() on the sound itself any more; they are builder knobs (the pattern-level unison(voices, spread) is a different door).
 ```
 
 ### Noise Sources

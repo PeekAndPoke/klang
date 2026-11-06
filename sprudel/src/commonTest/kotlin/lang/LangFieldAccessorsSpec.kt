@@ -240,7 +240,6 @@ class LangFieldAccessorsSpec : StringSpec({
     val mappedBatchFour = listOf(
         row("unison.voices", """s("bd sd").unison(3).unison(mul(2))""", { it.ignitorParams?.get("voices") }, 6.0, s("bd sd").unison(3).unison(mul(2))),
         row("spread", """s("bd sd").unison(spread = 0.2).unison(spread = mul(2))""", { it.ignitorParams?.get("spread") }, 0.4, s("bd sd").unison(spread = 0.2).unison(spread = mul(2))),
-        row("panSpread", """s("bd sd").unison(pan = 0.5).unison(pan = mul(2))""", { it.ignitorParams?.get("panSpread") }, 1.0, s("bd sd").unison(pan = 0.5).unison(pan = mul(2))),
         row("density", """s("bd sd").density(0.5).density(mul(2))""", { it.ignitorParams?.get("density") }, 1.0, s("bd sd").density(0.5).density(mul(2))),
         row("cylinder", """s("bd sd").cylinder(1).cylinder(add(1))""", { it.cylinder?.toDouble() }, 2.0, s("bd sd").cylinder(1).cylinder(add(1))),
         row("orbit", """s("bd sd").orbit(1).orbit(add(1))""", { it.cylinder?.toDouble() }, 2.0, s("bd sd").orbit(1).orbit(add(1))),
@@ -258,7 +257,6 @@ class LangFieldAccessorsSpec : StringSpec({
     val readBatchFour = listOf(
         row("unison.voices", """s("bd sd").unison(3).pan(unison.voices)""", { it.pan }, 3.0, s("bd sd").unison(3).pan(unison.voices)),
         row("spread", """s("bd sd").unison(spread = 0.2).pan(unison.spread)""", { it.pan }, 0.2, s("bd sd").unison(spread = 0.2).pan(unison.spread)),
-        row("panSpread", """s("bd sd").unison(pan = 0.5).pan(unison.pan)""", { it.pan }, 0.5, s("bd sd").unison(pan = 0.5).pan(unison.pan)),
         row("density", """s("bd sd").density(0.5).pan(density)""", { it.pan }, 0.5, s("bd sd").density(0.5).pan(density)),
         row("cylinder", """s("bd sd").cylinder(1).pan(cylinder)""", { it.pan }, 1.0, s("bd sd").cylinder(1).pan(cylinder)),
         row("orbit", """s("bd sd").orbit(1).pan(orbit)""", { it.pan }, 1.0, s("bd sd").orbit(1).pan(orbit)),
@@ -702,10 +700,9 @@ class LangFieldAccessorsSpec : StringSpec({
                 it.katalystParams?.get("compressor.attack") shouldBe 0.003
                 it.katalystParams?.get("compressor.release") shouldBe 0.1
             },
-            Case("unison(spread = mul(2))", note("c e").unison(5, 0.3, 0.5).unison(spread = mul(2)), """note("c e").unison(5, 0.3, 0.5).unison(spread = mul(2))""") {
+            Case("unison(spread = mul(2))", note("c e").unison(5, 0.3).unison(spread = mul(2)), """note("c e").unison(5, 0.3).unison(spread = mul(2))""") {
                 it.ignitorParams?.get("voices") shouldBe 5.0
                 it.ignitorParams?.get("spread") shouldBe 0.6
-                it.ignitorParams?.get("panSpread") shouldBe 0.5
             },
             Case("duck(depth = mul(0.5))", note("c e").duck(1, 0.8, 0.2).duck(depth = mul(0.5)), """note("c e").duck(1, 0.8, 0.2).duck(depth = mul(0.5))""") {
                 it.katalystParams?.get("duck.cylinder") shouldBe 1.0
@@ -761,7 +758,6 @@ class LangFieldAccessorsSpec : StringSpec({
         add("compressor.release", s("bd sd").compressor(release = "0.1 0.5"), """s("bd sd").compressor(release = "0.1 0.5")""") { it.katalystParams?.get("compressor.release") }
         add("unison", s("bd sd").unison(voices = "0.1 0.5"), """s("bd sd").unison(voices = "0.1 0.5")""") { it.ignitorParams?.get("voices") }
         add("unison", s("bd sd").unison(spread = "0.1 0.5"), """s("bd sd").unison(spread = "0.1 0.5")""") { it.ignitorParams?.get("spread") }
-        add("unison", s("bd sd").unison(pan = "0.1 0.5"), """s("bd sd").unison(pan = "0.1 0.5")""") { it.ignitorParams?.get("panSpread") }
         add("duck", s("bd sd").duck(depth = "0.1 0.5"), """s("bd sd").duck(depth = "0.1 0.5")""") { it.katalystParams?.get("duck.depth") }
         add("duck", s("bd sd").duck(release = "0.1 0.5"), """s("bd sd").duck(release = "0.1 0.5")""") { it.katalystParams?.get("duck.release") }
         add("vibrato", s("bd sd").vibrato(rate = "0.1 0.5"), """s("bd sd").vibrato(rate = "0.1 0.5")""") { it.vibrato }

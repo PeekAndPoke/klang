@@ -42,7 +42,7 @@ class WorkletWireCodecRoundTripSpec : StringSpec({
         val data = createSprudelVoiceData {
             note = "c3"; freqHz = 130.81; scale = "e minor"; gain = 0.7; velocity = 0.9; legato = 0.95
             bank = "MPC60"; sound = SoundValue.Named("supersaw"); soundIndex = 2
-            ignitorParams = paramBagOf("voices" to 7.0, "spread" to 0.3, "panSpread" to 0.4)
+            ignitorParams = paramBagOf("voices" to 7.0, "spread" to 0.3, "density" to 0.4)
             // The bus knobs travel as cylinder slots only since Katalyst step 5b-3: every door's worth.
             katalystParams = paramBagOf(
                 "reverb.wet" to 0.5, "reverb.size" to 6.0, "reverb.lowpass" to 8000.0,

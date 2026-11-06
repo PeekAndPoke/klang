@@ -80,7 +80,7 @@ object TestKotlinPatterns {
         ).sound("supersaw")
             .filterWhen(predicate = { it >= 31.5 })
 //            .struct("<x*2>")
-            .unison(pan = 0.5, voices = sine.range(4, 12).slow(32))
+            .unison(voices = sine.range(4, 12).slow(32))
             .unison(spread = sine.range(0.05, 0.3).early(1.5).slow(12))
             .cylinder(2).gain(0.55)
             .pan(sine.slow(48).range(0.3, 0.7))

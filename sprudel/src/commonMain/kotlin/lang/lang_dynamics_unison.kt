@@ -39,28 +39,19 @@ private fun applyUnisonSpread(source: SprudelPattern, args: List<SprudelDslArg<A
     return source._liftOrReinterpretNumericalField(args, unisonSpreadMutation)
 }
 
-private val unisonPanMutation = voiceSetter { putIgnitorParam("panSpread", it?.asDoubleOrNull()) }
-
-private fun applyUnisonPan(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.ignitorParams?.get("panSpread") }, update = unisonPanMutation)
-    }
-
-    return source._liftOrReinterpretNumericalField(args, unisonPanMutation)
-}
-
 /**
- * Unison: voice count, detune spread and stereo spread.
+ * Unison: voice count and detune spread.
  *
- * Stacks detuned copies of the oscillator per voice; `spread` is the
- * detune in semitones, `pan` the stereo width.
+ * Stacks detuned copies of the oscillator per voice; `spread` is the detune in semitones, the whole width from the
+ * lowest copy to the highest. The copies sum to mono: a stereo width knob was reserved here as `pan` and never read,
+ * and was removed (KLANG-00417 B7); stereo width is its own future ticket.
  *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
- * a mapper (`unison(spread = mul(2))`), and the numeric slots read back as `unison.voices`, `unison.spread`, `unison.pan`.
+ * a mapper (`unison(spread = mul(2))`), and the numeric slots read back as `unison.voices` and `unison.spread`.
  * With no argument at all, the pattern's own values are reinterpreted as `voices`.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").s("supersaw").unison(5, 0.3)                              // five voices, a third of a semitone apart
+ * note("c3 e3").s("supersaw").unison(5, 0.3)                              // five voices over a third of a semitone
  * ```
  *
  * ```KlangScript(Playable)
@@ -72,39 +63,37 @@ private fun applyUnisonPan(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * ```
  *
  * @param voices Voices. Typically 1 to 16.
- * @param spread Detune spread in semitones.
- * @param pan Stereo spread, 0 to 1. Reserved, not read yet.
+ * @param spread Detune spread in semitones, lowest copy to highest.
  *
  * @scope voice
  * @category dynamics
- * @tags unison, voices, spread, pan
+ * @tags unison, voices, spread
  */
 @KlangScript.Function
-fun SprudelPattern.unison(voices: PatternLike? = null, spread: PatternLike? = null, pan: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
+fun SprudelPattern.unison(voices: PatternLike? = null, spread: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
     // A tail-only call must not touch voices: reinterpret runs only on a fully bare call.
-    var p = if (voices != null || !(spread != null || pan != null)) {
+    var p = if (voices != null || spread == null) {
         applyUnisonVoices(this, listOfNotNull(voices).asSprudelDslArgs(callInfo))
     } else {
         this
     }
     if (spread != null) p = applyUnisonSpread(p, listOf<Any?>(spread).asSprudelDslArgs(callInfo?.forParam(1)))
-    if (pan != null) p = applyUnisonPan(p, listOf<Any?>(pan).asSprudelDslArgs(callInfo?.forParam(2)))
     return p
 }
 
 /** Parses this string as a pattern, then applies [unison]. */
 @KlangScript.Function
-fun String.unison(voices: PatternLike? = null, spread: PatternLike? = null, pan: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).unison(voices, spread, pan, callInfo)
+fun String.unison(voices: PatternLike? = null, spread: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).unison(voices, spread, callInfo)
 
 /** Chains a [unison] step onto this [PatternMapperFn]. */
 @KlangScript.Function
-fun PatternMapperFn.unison(voices: PatternLike? = null, spread: PatternLike? = null, pan: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.unison(voices, spread, pan, callInfo) }
+fun PatternMapperFn.unison(voices: PatternLike? = null, spread: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.unison(voices, spread, callInfo) }
 
 /**
  * The `unison` object: `unison(...)` sets the slots, and each numeric slot reads back as a child,
- * `unison.voices`, `unison.spread`, `unison.pan`.
+ * `unison.voices` and `unison.spread`.
  *
  * @scope voice
  * @category dynamics
@@ -122,20 +111,15 @@ object unison {
     @KlangScript.Property
     val spread: FieldAccessor = FieldAccessor { it.ignitorParams?.get("spread") }
 
-    /** The pan slot of each event, as a value other setters can read. */
-    @KlangScript.Property
-    val pan: FieldAccessor = FieldAccessor { it.ignitorParams?.get("panSpread") }
-
     /**
      * The setter, see [SprudelPattern.unison].
      *
      * @param voices Voices. Typically 1 to 16.
-     * @param spread Detune spread in semitones.
-     * @param pan Stereo spread, 0 to 1. Reserved, not read yet.
+     * @param spread Detune spread in semitones, lowest copy to highest.
      */
     @KlangScript.Invoke
-    operator fun invoke(voices: PatternLike? = null, spread: PatternLike? = null, pan: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        { p -> p.unison(voices, spread, pan, callInfo) }
+    operator fun invoke(voices: PatternLike? = null, spread: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        { p -> p.unison(voices, spread, callInfo) }
 }
 
 /**
@@ -150,13 +134,13 @@ object unison {
  * @tags uni, unison
  */
 @KlangScript.Function
-fun SprudelPattern.uni(voices: PatternLike? = null, spread: PatternLike? = null, pan: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    unison(voices, spread, pan, callInfo)
+fun SprudelPattern.uni(voices: PatternLike? = null, spread: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    unison(voices, spread, callInfo)
 
 /** Parses this string as a pattern, then applies [uni]. */
 @KlangScript.Function
-fun String.uni(voices: PatternLike? = null, spread: PatternLike? = null, pan: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.unison(voices, spread, pan, callInfo)
+fun String.uni(voices: PatternLike? = null, spread: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.unison(voices, spread, callInfo)
 
 /**
  * Alias of [unison]: the same object under its short name.
@@ -170,8 +154,8 @@ val uni: unison = unison
 
 /** Chains a [uni] step onto this [PatternMapperFn] (see [SprudelPattern.uni]). */
 @KlangScript.Function
-fun PatternMapperFn.uni(voices: PatternLike? = null, spread: PatternLike? = null, pan: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.unison(voices, spread, pan, callInfo)
+fun PatternMapperFn.uni(voices: PatternLike? = null, spread: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.unison(voices, spread, callInfo)
 
 // -- density() / d() --------------------------------------------------------------------------------------------------
 

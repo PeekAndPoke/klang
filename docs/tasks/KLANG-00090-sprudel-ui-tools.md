@@ -98,7 +98,7 @@ multi-field editors with SVG visualizations. The compressor editor includes pres
 | 36 | `loop()` with `begin()` / `end()`      | `SprudelLoopEditorTool`      | toggle + range bar                  |
 | 37 | `phaser*()` family                     | `SprudelPhaserEditorTool`    | combined center/depth/sweep editor  |
 | 38 | `tremolo*()` family                    | `SprudelTremoloEditorTool`   | combined depth/rate/shape editor    |
-| 39 | `unison(pan = ...)` (was `panSpread()`, before that `spread()`)         | `SprudelPanSpreadEditorTool` | numeric slider (0–1) stereo width   |
+| 39 | ~~`unison(pan = ...)`~~ removed (KLANG-00417 B7, never read); stereo width is KLANG-00419 | ~~`SprudelPanSpreadEditorTool`~~ | none |
 | 40 | `freq()`                               | `SprudelFreqEditorTool`      | frequency slider (20–20000 Hz, log) |
 
 ## Tool Registry

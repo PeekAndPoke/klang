@@ -17,7 +17,8 @@ live on an object as well: `object Snd { object supersaw { fields } }`. Not full
 |------------------|-------------------------------------------------------|
 | `sndPluck`       | `feedback, brightness, pickPosition, stiffness`       |
 | `sndSuperPluck`  | `voices, spread, feedback, brightness, pickPosition, stiffness` |
-| `sndSine`, `sndSaw`, `sndSquare`, `sndTri`, `sndRamp`, `sndZamp`, `sndPink` | `params` (one slot) |
+| `sndSine`, `sndSaw`, `sndTri`, `sndRamp`, `sndZamp`, `sndPink` | none (since KLANG-00417 B8) |
+| `sndSquare`      | `duty` (since KLANG-00417 B8)                         |
 | `sndNoise`       | `color`                                               |
 | `sndBrown`       | `leak`                                                |
 | `sndPulze`       | `duty`                                                |
@@ -45,6 +46,8 @@ spread, pan)` and `analog`, `duty`, `onepole` write today.
    `params` means that event gets no sound from the door at all (`sndPink("<1 ~>")`), while
    `sndNoise(color = "<0.3 ~>")` keeps its sound. `LangControlRestSpec` pins the current behaviour
    (its `fresh` rows); the reformulation decides it.
+   **Decided 2026-11-06 (KLANG-00417 B8, maintainer):** the dead `params` is gone; the plain doors take no argument
+   (`sndSine()`), and `sndSquare(duty)` gained the clean pulse's knob, as `sndPulze(duty)` has the raw one.
 4. **Readers.** Numeric slots get children like every compound (`Snd.pluck.feedback`); `color` on
    `sndNoise` is a name and gets none (KLANG-00188 (string slot readers)).
 5. **Retirement.** The per-sound functions go when the objects land (replaced surfaces are removed);

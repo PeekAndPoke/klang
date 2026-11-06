@@ -183,7 +183,7 @@ stages must not carry it.
 | B8 | Scales & melodies | `n()`, `scale()`, `transpose` | — | Numbers instead of note names; same line, swap the scale. *Listen for: major vs. minor mood flip.* |
 | B9 | The transform toolkit | `fast`/`slow`, `superimpose`, `legato`, `clip` | — | One melody, four transformations, by song-frequency order. *Listen for: superimpose's thickening vs. an octave doubling.* |
 | B10 | Gates — struct | `.struct("x ~ ~ x ...")` | `chord` preview | The tresillo gate from Sandsturm. *Listen for: 3-3-2.* |
-| A6 | Thickness — unison, spread, analog | `unison` (with the `spread` slot), `analog` | — | Supersaw anatomy: one copy → many → spread apart → drifting. *Listen for: the shimmer of copies disagreeing about the pitch.* ⚠️ The original *mono vs. wide on headphones* listen-for was ENGINE-FALSE and is dropped: the super oscillators sum to mono and `panSpread` is wired but inaudible. Stereo width belongs to B9, which earns it with a transposed copy panned opposite. |
+| A6 | Thickness: unison, spread, analog | `unison` (with the `spread` slot), `analog` |: | Supersaw anatomy: one copy → many → spread apart → drifting. *Listen for: the shimmer of copies disagreeing about the pitch.* ⚠️ The original *mono vs. wide on headphones* listen-for was ENGINE-FALSE and is dropped: the super oscillators sum to mono, and the reserved `unison(pan)` never sounded (removed, KLANG-00417 B7). Stereo width belongs to B9, which earns it with a transposed copy panned opposite. |
 | A7 | Space & dirt | `room`, `delay`, `distort`, `onepole` | none | Dress the sound (room/delay), dirty it (distort/onepole), set its level last (`gain`; `postgain` was retired into it on 2026-09-19). ⚠️ Chain order is FIXED by the PipelineDsl (FilterPipelineBuilder iterates the preset's stages): sprudel CALL order does NOT reorder the chain, so never A/B "swapped order" here; the order-matters demo belongs to C7 via `.pipeline()`. |
 | A8 | Body | `body(wet, material)`, or `body(material = "...")` (wet first since 2026-09-24) | (none) | Same pluck through mahogany / glass / membrane. *Listen for: the cabinet in front of the speaker.* (8/14 songs use it; zero tutorials.) |
 | B11 | Chords & voicing | `chord()` + `voicing()`, why Am–F–C–G works | `struct` | Progression built from song examples, one paragraph of real harmony. (The old `tut_ChordsAndHarmony` staging was sound — reuse the staging, not the file.) |
@@ -345,7 +345,7 @@ stages must not carry it.
     diagnostic** (OPEN in the accessor plan). If that is still true when A9 is written, the lesson
     must not encourage exploratory guessing at which knobs read.
   - ⚠️ **Engine gaps found during the sweep, documented as "reserved" in the object KDocs, that must
-    never appear in a lesson example:** `unison(pan)` (was `panSpread`) has no engine stage at all; `density` is the
+    never appear in a lesson example:** `unison(pan)` is removed (KLANG-00417 B7; it had no engine stage); `density` is the
     dust grain rate, not a unison knob; `duck(release)` (was `attack`) is the recovery time (the duck-down is
     instant); `penv(curve)` is gone (step 5b c1: `penvCurves`); `loopBegin`/`loopEnd` are gone (phase 3
     step 9: a loop region is `loop().begin(x).end(y)`); negative `speed` is silence, not reverse.

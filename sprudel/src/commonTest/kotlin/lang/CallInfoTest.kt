@@ -52,7 +52,7 @@ class CallInfoTest : StringSpec({
     }
 
     "spread passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""seq("0 1").unison(pan = "0.8")""")
+        assertCallInfoPresent("""seq("0 1").unison(spread = "0.8")""")
     }
 
     "density passes CallInfo from KlangScript" {

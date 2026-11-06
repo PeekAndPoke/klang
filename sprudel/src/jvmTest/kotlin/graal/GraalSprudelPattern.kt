@@ -120,7 +120,6 @@ class GraalSprudelPattern(
         val ignitorParams = buildMap {
             value.safeGetMember("density").safeNumberOrNull()?.let { put("density", it) }
             value.safeGetMember("unison").safeNumberOrNull()?.let { put("voices", it) }
-            value.safeGetMember("spread").safeNumberOrNull()?.let { put("panSpread", it) }
             value.safeGetMember("spread").safeNumberOrNull()?.let { put("spread", it) }
             value.safeGetMember("onepole").safeNumberOrNull()?.let { put("onepole", it) }
         }.ifEmpty { null }

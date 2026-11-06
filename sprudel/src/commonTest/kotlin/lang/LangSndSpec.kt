@@ -162,6 +162,23 @@ class LangSndSpec : StringSpec({
         }
     }
 
+    "sndSquare(duty) dsl interface: the clean pulse with the same knob (KLANG-00417 B8)" {
+        dslInterfaceTests(
+            "pattern.sndSquare()" to note("c3").sndSquare(0.25),
+            "string.sndSquare()" to "c3".sndSquare(0.25),
+            "script pattern.sndSquare()" to SprudelPattern.compile("""note("c3").sndSquare(0.25)"""),
+            "script string.sndSquare()" to SprudelPattern.compile(""""c3".sndSquare(0.25)"""),
+            "apply(sndSquare())" to note("c3").apply(sndSquare("0.25")),
+            "script apply(sndSquare())" to SprudelPattern.compile("""note("c3").apply(sndSquare("0.25"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            assertSoftly {
+                events[0].data.soundName shouldBe "square"
+                events[0].data.ignitorParams?.get("duty") shouldBe 0.25
+            }
+        }
+    }
+
     "sndPulze() with no params sets sound" {
         val p = note("c3").sndPulze()
         val events = p.queryArc(0.0, 1.0)
