@@ -2583,7 +2583,7 @@ block-constant param read (0 to 48 bytes per block; gone since item 12, step 2: 
 ## 6. The audit's later steps and its open decisions
 
 The tidy-up ran the audit's order (section D of
-[`../../audio-audit/2026-10-07-engine-tidy-audit.md`](../audio-audit/2026-10-07-engine-tidy-audit.md)) through step 13,
+[`../../audio-audit/2026-10-07-engine-tidy-audit.md`](../../audio-audit/2026-10-07-engine-tidy-audit.md)) through step 13,
 and step 14 (the empty-variants bug) first. Steps 15 to 20 are shape and sound changes; each needs the maintainer.
 Each was checked against the code: none is done (item 21's package dissolve aside).
 
