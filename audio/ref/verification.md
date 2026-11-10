@@ -49,8 +49,8 @@ adds its row. Status `planned` means the row is the approved proposal (maintaine
 
 | Probe | What it answers | Home | Status |
 |-------|-----------------|------|--------|
-| Stage probe | One stage alone under the standard signals (impulse, step, sweep, silence, full-scale noise, a NaN, a huge value): peak, DC, tail length, finite output, back to exact silence | `audio_be/src/jvmTest/kotlin/probes/` | planned |
-| Aliasing meter | Energy off the harmonics of a high sine, per source and shaper | same | planned |
+| Stage probe | One stage alone under the standard signals (impulse, step, sweep, silence, full-scale noise, a NaN, an infinity, 1e30): peak, DC, tail length, finite output, recovery, back to exact silence, subnormals. `measureStage(stage, signal)` over `katalystProbeStage(dsl)` or `ignitorProbeStage(tree, params)`; the catalogue is `stageProbeCases()` | `audio_be/src/jvmTest/kotlin/probes/` | built 2026-11-10; run: `KLANG_PROBE=stage` with `:audio_be:jvmTest --tests 'io.peekandpoke.klang.audio_be.probes.StageProbeRunner'` under the lock, table in `<build dir>/audio_be/probes/stage-probe.txt` (or `KLANG_PROBE_OUT`) |
+| Aliasing meter | Energy off the harmonics of a high sine, per source and shaper | `audio_be/src/jvmTest/kotlin/probes/` | planned |
 | Click detector | The largest sample-to-sample jump, relative to the signal, while one knob jumps or one stage switches | same | planned |
 | Block-framing checker | The same notes with the onset shifted by 1 to 127 frames, aligned and compared (the property of KLANG-00156) | same | planned |
 | Stage cost table | Nanoseconds per sample for each source and stage alone, JVM and browser | same | planned |

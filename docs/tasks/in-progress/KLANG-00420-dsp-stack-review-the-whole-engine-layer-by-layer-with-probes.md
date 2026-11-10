@@ -137,6 +137,47 @@ Two tiers, by the "two kinds of check" rule:
      ticket.
    - Budget: the probes first (cheap), the Fable sweep at the start of a budget week.
 
+## Leads from the probes (2026-11-10, all UNVERIFIED; the audit confirms or disproves each)
+
+The tables of this run: `docs/audio-audit/2026-11-10/` (`stage-probe.txt`, `hot-path-lint.txt` with `--guarded`,
+`dead-knobs.txt` with `--list`).
+
+**Stage probe** (165 knob sets, 8 signals; no stage made a subnormal, and non-finite output came from poison input only):
+
+1. **Duck: one NaN on the sidechain latches the ducked bus to NaN for good**, both channels; an infinity recovers.
+   `Ducking.stepGain`'s envelope is the suspect. The one "poisoned for good" case of the run.
+2. **The analog (saturating) SVF latches at a huge DC after one sample of 1e30**: lowpass 1000 `analog` 1 stuck at
+   7.83e27, highpass at 1.82e30, lowpass 23999 q 200 at 2.0e30, for the whole 10 s. The linear SVF decays.
+3. Katalyst delay at its defaults never reaches exact zero after a step (a constant 1.44e-21, and 1.19e-36 after the
+   NaN case): below the `flushState` floor of 1e-15, so is the ring flushed?
+4. Katalyst reverb with a room: silence in, 9.1e-19 (size 5) or 7.5e-18 (size 10) out for ever. Probably the
+   documented `ANTI_DENORMAL` exception; the question is what it costs downstream (`hasTail`, an idle engine).
+5. Lowpass and highpass at 23999 Hz (the clamp's top): an impulse rings 0.55 to 0.65 s at q 0.707 and 9.99 s at
+   q 200; the poles sit next to z = -1.
+6. An infinity leaves the tremolo and the Katalyst arithmetic (`times`, `div`, `pow`) as ONE finite sample of 1e15
+   (+306 dB); a NaN in the same place leaves as 0. Two answers to one question.
+7. Katalyst `pow(-1)` on a silent bus outputs a constant 1e15; `div(1e-20)` peaks at 1e15. Raw by the Motor's rule,
+   but what does the house limiter do with it?
+8. Shimmer lets a NaN out a second time 0.183 s after the poison (its delay line), then is clean.
+9. `coarse` holds an infinity for its whole hold (4800 samples at factor 4800) and passes no NaN at all.
+10. Filters at q 200: +34 dB on a sweep at 1 kHz; at 20 Hz the tail outlives the 10 s window.
+11. Shimmer (wet 1, feedback 0.95) and the eq band at 5 Hz q 200 keep DC deep into the silence.
+12. The authored limiter at its defaults (no lookahead, 1 ms attack) passes a step at 1.00 through a -1 dB ceiling
+    (by design uncompensated; worth one line in its KDoc if not there).
+13. 16 passes of lowpass or highpass: the impulse response starts near 1e-38, under the Float normal range (matters
+    only where a Float edge follows).
+
+**Hot-path lint** (30 findings, none per block): the once-per-note allocations in render code (`PhasePool.kt` 206 to
+480, `DriftLanes.kt:238`, and with `--guarded` `OversampleRegion.kt:158`, `Ignitors.kt:923` and `:2950`,
+`KatalystDuckEffect.kt:254`), the diagnostics message built on the audio thread (`PlaybackEngineDispatcher.kt:308`),
+the byte types at the 16-bit edge (`_pcm16_edge.kt`, a waiver). A RULE QUESTION for the maintainer: the engine rule
+names "per sample or per block"; it does not say whether once per note inside `generate`, or periodically on the audio
+thread, is allowed. About 11 findings hang on the answer.
+
+**Dead-knob finder** (clean): 13 keys no door writes, reachable by a raw `ignp` / `katp` only (`rate`, `octaves`,
+`persistence` of B9; `bipolar`; `declick`; `gain.gain`, deliberate; `eqhz`, `eqq`, `eqdb`, `eqlp`, `divisor` of the
+demo sounds; `warm`, `offset` of the warm-up).
+
 ## After the audit
 
 Codify a ruleset for deep audits if this worked (its own skill or a section; a maintainer decision): what an audit
