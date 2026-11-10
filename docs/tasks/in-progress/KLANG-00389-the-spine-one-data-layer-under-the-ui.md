@@ -256,3 +256,6 @@ next, the MIDI rig first (KLANG-00402). A global object outside the Spine is a d
 - 2026-11-02: step 3 recorded as done by KLANG-00406 step 6 (the start page fades its own song, the knob alone writes
   the master volume).
 - 2026-11-02: step 4, the readings derived once: `MotorReadings` in the Spine, values in place of factories.
+- 2026-11-10: the maintainer's directions for the Spine's shape, recorded in KLANG-00421 (the UI's wiring audit): one
+  Spine reached as `spine.xyz` and registered on the app, no global objects beside it; state that follows the user as
+  data classes round-tripped by kotlinx.serialization, so a server can keep it. The audit maps today's holders first.
