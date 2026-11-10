@@ -53,16 +53,29 @@ refactoring (KLANG-00422) is done (the maintainer, the same day).
 
 ## Proposal
 
-- **A skill, `/release <version> [deploy]`:** the order, and what needs judgement (the curation's warnings, the
-  notes, a yes before a deploy: deploying goes out, so it is asked every time, also with `deploy` given).
-- **A tool, `console/tools/release`:** the mechanical part, stopping at the first failure: bump, the pages'
-  builders, the commit, clean and build under the build lock, the tag, the deploy when asked for.
-- **The order:** the gate, the bump, the data and the pages, the commit, the worklet cleaned and built, the
-  frontend built, the tag, the deploy and its check of the live `version.json`.
+Two halves, by who can do what (the maintainer, 2026-11-10: "I need to run the script and gradle build [...] the
+console/deploy-finzo.sh points to my output folders not to claude's. So ideally we will have a
+console/prepare-release.sh or similar that does all the mechanical steps. Maybe we still need the skill for the
+things that claude can do before the script, like updating the version, setting a tag etc.").
+
+- **The skill, `/release <version>`, an agent's half, before the script:** the gate, the bump, the data and the
+  pages with what needs judgement (the curation's warnings, the notes), the commit, the tag. It ends by naming the
+  script to run.
+- **The script, `console/prepare-release.sh [deploy]`, the maintainer's half:** it checks first that the tree is
+  clean and that HEAD carries the tag of the version in `gradle.properties` (so it cannot build something the skill
+  did not prepare), then cleans and builds the worklet, builds the frontend, and with `deploy` runs
+  `console/deploy-finzo.sh`. It stops at the first failure and says where.
+
+Why the split is right, checked on 2026-11-10: an agent can build (its distribution is in
+`.build-claude/_root/dist/js/productionExecutable`, the same files for the same commit), but it cannot deploy: the
+agents' user has no `finzo` host in its ssh setup, and `deploy-finzo.sh` uploads `./build/dist/...`, the
+maintainer's folder. One more reason for one builder: the worklet's production copy lands in the source tree
+(`src/jsMain/resources/klang-worklet.js`), which both users share.
 
 ## Decide before implementing
 
-- **D1, who runs a release:** the maintainer in a session of their own, or an agent (item 4 above).
+- **D1, who runs a release. Decided** (2026-11-10): an agent prepares (the skill), the maintainer builds and
+  deploys (the script).
 - **D2, the tag:** only made, or made and pushed.
 - **D3, the version in the songs' browser keys.** A song's code, title, tempo and bookmarks are kept under
   `song-<version>-<songId>-...` (`StorageKeys`, used by `CodeSongPage`): after a bump, what a user changed in a song,
@@ -73,18 +86,20 @@ refactoring (KLANG-00422) is done (the maintainer, the same day).
 
 ## The work
 
-1. The tool: the gate, the bump, the pages, the commit, the builds under the lock, the tag; its tests on a scratch
-   repository.
-2. The deploy from the right build root (D1), the yes before it.
-3. The skill, with the judgement steps; a line in the console-tools skill and in `CLAUDE.md`.
-4. One real release with it, its verdict checked by hand.
+1. `console/prepare-release.sh`: its checks (a clean tree, the tag on HEAD), the worklet cleaned and built, the
+   frontend built, the deploy on request.
+2. The skill: the gate, the bump, the pages, the commit, the tag; a line in the console-tools skill and in
+   `CLAUDE.md`.
+3. One real release with both, its result checked by hand.
 
 ## Acceptance
 
-- `/release <version>` leaves a committed, tagged tree whose built `version.json` names that commit, not `-dirty`.
+- `/release <version>` leaves a committed, tagged tree; `console/prepare-release.sh` builds from it a
+  `version.json` that names that commit, not `-dirty`.
 - With `deploy`, the live site serves that version; without it, nothing leaves the machine.
 - A red gate or a failed build stops it, and it says where.
 
 ## History
 
 - 2026-11-10: created from the maintainer's list; waits for KLANG-00422.
+- 2026-11-10: split in two: a skill for an agent's part, `console/prepare-release.sh` for the maintainer's (D1).
