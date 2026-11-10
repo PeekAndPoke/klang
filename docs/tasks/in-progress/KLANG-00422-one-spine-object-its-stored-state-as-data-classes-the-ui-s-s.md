@@ -13,6 +13,17 @@ stored there. Then the user switches to another computer and finds the ui in the
 
 This ticket holds the work that follows from the map. The map itself, with every file: KLANG-00421.
 
+## Progress
+
+- **Step 1, slice 1 (2026-11-10): done.** `Spine` exists (`spine/Spine.kt`): built once in `index.kt` (a private
+  value, no global to reach for), registered with `spine(...)`, reached as `Component<*>.spine`. Three parts are in:
+  `spine.work` (`UiWork`), `spine.motor` (`MotorReadings`), `spine.visuals` (`VisualState`). Left for the next
+  slices: `ConsoleLog`, `Recents`, `MidiSettings`, `Player`, `Playbacks`.
+- **A pattern from slice 1.** A `Tag` function cannot reach the Spine, so a default argument that read a global
+  (`paused: Stream<Boolean> = UiWork.resting`) becomes a nullable parameter and prop, and the component falls back to
+  the Spine's stream itself. A part's constants and pure helpers go into its companion, so they are still read by
+  the class's name. A spec that draws such a component registers a Spine in `TestBed.preact(appSetup = { ... })`.
+
 ## Decided (the maintainer, 2026-11-10)
 
 - **One Spine.** "There should only be one global object if at all and components will find what they need through
@@ -82,4 +93,7 @@ after.
 ## History
 
 - 2026-11-10: created from KLANG-00421's proposal and the maintainer's decisions of that day.
+- 2026-11-10: step 1, slice 1: the `Spine` class and its registration; `UiWork`, `MotorReadings` and `VisualState`
+  moved in. One review round (no behaviour change found; 2 MINOR, 4 NIT, fixed), 176 tests green, 2 of 2 mutants
+  of `SpineSpec` killed.
 - 2026-11-10: IN PROGRESS. Step 1 started: the Spine as one object.

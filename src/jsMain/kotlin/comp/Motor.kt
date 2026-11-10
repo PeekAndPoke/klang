@@ -41,7 +41,7 @@ import kotlinx.html.div
 @Suppress("FunctionName")
 fun Tag.Motoer(
     menu: KlangWorkbench.Menu? = null,
-    paused: Stream<Boolean> = UiWork.resting,
+    paused: Stream<Boolean>? = null,
     display: (FlowContent.() -> Unit)? = null,
 ) = comp(
     Motor.Props(menu = menu, paused = paused, display = display)
@@ -119,8 +119,8 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
     data class Props(
         /** The menu button beside the gauges, opening a workbench's drawer; null for none (an empty spot). */
         val menu: KlangWorkbench.Menu?,
-        /** While true, its gauges, scope and spectrum rest: a visual covers the page ([UiWork.resting], the default). */
-        val paused: Stream<Boolean>,
+        /** While true, its gauges, scope and spectrum rest: a visual covers the page ; null for the Spine's ([UiWork.resting]). */
+        val paused: Stream<Boolean>?,
         /**
          * A line of text on the screen's floor, over the spectrum's lowest boxes, as a car radio shows its station (the
          * status bar, KLANG-00406; the maintainer, 2026-11-02: "try the lcd"); null for none.

@@ -8,6 +8,7 @@ package io.peekandpoke.klang.comp
 import io.peekandpoke.klang.audio_bridge.analyzer.createAnalyzerBuffer
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.spine.UiWork
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
@@ -65,7 +66,7 @@ fun Tag.Spectrumeter(
     lighting: Spectrumeter.Lighting = Spectrumeter.Lighting.Own,
     labelAtTop: Boolean = false,
     preview: List<Double>? = null,
-    paused: Stream<Boolean> = UiWork.resting,
+    paused: Stream<Boolean>? = null,
     player: () -> KlangPlayer?,
 ) = comp(
     Spectrumeter.Props(
@@ -92,8 +93,8 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
 
     data class Props(
         val player: () -> KlangPlayer?,
-        /** While true, the spectrum is neither read nor drawn: its loop rests until it is false again ([UiWork.resting], the default). */
-        val paused: Stream<Boolean>,
+        /** While true, the spectrum is neither read nor drawn: its loop rests until it is false again ; null for the Spine's ([UiWork.resting]). */
+        val paused: Stream<Boolean>?,
         /**
          * Still levels per column, 0 to 1, drawn instead of the player's spectrum: a picture of itself (the look
          * editor's card, KLANG-00382; the maintainer, 2026-10-28: "these component implement a preview mode, when they
@@ -197,7 +198,7 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
         // A step a frame, on the page's frames ([UiWork.allFrames]), none while it rests ([Props.paused]); the subscription
         // ends with the component (the maintainer, 2026-10-29: "spine exposes a single animationFrame stream and
         // components subscribe to it and call their step function()")
-        UiWork.allFrames.cutoffWhen(props.paused).subscribe { processVisualizer() }
+        spine.work.allFrames.cutoffWhen(props.paused ?: spine.work.resting).subscribe { processVisualizer() }
 
         lifecycle {
             onMount {

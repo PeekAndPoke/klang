@@ -9,7 +9,7 @@ import io.peekandpoke.klang.KlangGuiDance
 import io.peekandpoke.klang.comp.Motor
 import io.peekandpoke.klang.comp.MotorBackground
 import io.peekandpoke.klang.comp.PlateComposition
-import io.peekandpoke.klang.spine.VisualState
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.storage.LookStorage
 import io.peekandpoke.klang.ui.comp.KlangCloseKey
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
@@ -249,8 +249,8 @@ private class VisualsModal(ctx: Ctx<Props>) : FadingModal<VisualsModal.Props, Bo
 
         // The plate builds itself; the lamp is the Spine's, on and settled
         bg.prepare()
-        VisualState.lamp.powerOn()
-        VisualState.lamp.settle()
+        spine.visuals.lamp.powerOn()
+        spine.visuals.lamp.settle()
     }
 
     private fun mouseMoved(clientY: Double) {

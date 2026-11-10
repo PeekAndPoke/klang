@@ -23,6 +23,7 @@ import io.peekandpoke.klang.spine.KlangCodePlaybackCtrl
 import io.peekandpoke.klang.spine.Playbacks
 import io.peekandpoke.klang.spine.Recents
 import io.peekandpoke.klang.spine.VisualState
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
 import io.peekandpoke.klang.storage.EditorSettings
 import io.peekandpoke.klang.storage.SongStorage
@@ -224,7 +225,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
             onMount {
                 codeEditorRef { it.setMaxHighlightsPerEvent(highlightPerEvent) }
                 // The visuals play this song, as it stands in the editor
-                withdrawSong = VisualState.offerSong(openSong)
+                withdrawSong = spine.visuals.offerSong(openSong)
             }
             onUnmount {
                 // The song plays on: leaving the page stops nothing (KLANG-00406)

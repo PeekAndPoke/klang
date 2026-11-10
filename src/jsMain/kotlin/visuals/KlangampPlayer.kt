@@ -12,9 +12,9 @@ import io.peekandpoke.klang.comp.PlayerMiniStats
 import io.peekandpoke.klang.comp.Spectrumeter
 import io.peekandpoke.klang.comp.VolumeKnob
 import io.peekandpoke.klang.comp.clockOf
-import io.peekandpoke.klang.spine.MotorReadings
 import io.peekandpoke.klang.spine.Playbacks
 import io.peekandpoke.klang.spine.Player
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangFinish
 import io.peekandpoke.klang.ui.comp.KlangGauge
@@ -77,11 +77,11 @@ class KlangampPlayer(ctx: Ctx<Props>) : Component<KlangampPlayer.Props>(ctx) {
     /** The seconds heard, for the time on the display: the Spine's one clock. */
     private val seconds by subscribingTo(Playbacks.heardSeconds)
 
-    private val cylinders by subscribingTo(MotorReadings.cylinders)
+    private val cylinders by subscribingTo(spine.motor.cylinders)
 
-    private val heat by subscribingTo(MotorReadings.heat)
+    private val heat by subscribingTo(spine.motor.heat)
 
-    private val voices by subscribingTo(MotorReadings.voices)
+    private val voices by subscribingTo(spine.motor.voices)
 
     override fun VDom.render() {
         div {

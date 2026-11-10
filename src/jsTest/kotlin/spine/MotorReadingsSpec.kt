@@ -16,8 +16,10 @@ import io.kotest.matchers.shouldBe
 class MotorReadingsSpec : StringSpec({
 
     "every gauge gets the same reading: one smoothing each of the cylinders, the heat and the voices" {
-        withClue("the cylinders") { (MotorReadings.cylinders === MotorReadings.cylinders) shouldBe true }
-        withClue("the heat") { (MotorReadings.heat === MotorReadings.heat) shouldBe true }
-        withClue("the voices") { (MotorReadings.voices === MotorReadings.voices) shouldBe true }
+        val motor = Spine().motor
+
+        withClue("the cylinders") { (motor.cylinders === motor.cylinders) shouldBe true }
+        withClue("the heat") { (motor.heat === motor.heat) shouldBe true }
+        withClue("the voices") { (motor.voices === motor.voices) shouldBe true }
     }
 })

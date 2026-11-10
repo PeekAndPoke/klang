@@ -9,8 +9,8 @@ import io.peekandpoke.klang.common.logging.LogArea
 import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.klang.common.math.PerlinNoise2D
 import io.peekandpoke.klang.spine.SwingingLamp
-import io.peekandpoke.klang.spine.UiWork
 import io.peekandpoke.klang.spine.VisualState
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.storage.SeedStorage
 import io.peekandpoke.klang.ui.feel.KlangLook
 import io.peekandpoke.klang.ui.feel.KlangRole
@@ -648,7 +648,7 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
 
                         // The plate shows once the Motor warms up: dim until it is powered on
                         // The standby light may show now, while the Motor warms up
-                        VisualState.lamp.plateReady()
+                        spine.visuals.lamp.plateReady()
 
                         onPrepared.forEach { it() }
                         onPrepared.clear()
@@ -773,7 +773,7 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
         lifecycle {
             onMount {
                 // The lamp works while a plate shows it
-                lightFollow = VisualState.light.subscribeToStream { light = it }
+                lightFollow = spine.visuals.light.subscribeToStream { light = it }
             }
             onUpdate {
                 if (props.composition != builtFor) {
@@ -809,7 +809,7 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
                     createCamera = { a -> buildCamera(a) },
                     alpha = true,
                     antialias = false,
-                    paused = UiWork.resting,
+                    paused = spine.work.resting,
                 )
             }
         }
@@ -909,7 +909,7 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
                 pl.geometry = addon.createPlaneGeometry(2.0 * aspect, 2.0)
             }
             // A resize clears the canvas, and while the plate rests no frame draws it again: drawn once here
-            if (UiWork.resting()) {
+            if (spine.work.resting()) {
                 sceneCtx?.let { c -> c.renderer.render(c.scene, c.camera) }
             }
             resizeTimer?.let { window.clearTimeout(it) }

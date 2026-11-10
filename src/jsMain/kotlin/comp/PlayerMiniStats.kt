@@ -6,8 +6,8 @@
 package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.KlangGuiDance
-import io.peekandpoke.klang.spine.MotorReadings
 import io.peekandpoke.klang.spine.UiWork
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.comp.KlangGauge
 import io.peekandpoke.klang.ui.comp.KlangMenuButton
@@ -36,7 +36,7 @@ import kotlin.math.roundToInt
 fun Tag.PlayerMiniStats(
     showVolume: Boolean = false,
     menu: KlangWorkbench.Menu? = null,
-    paused: Stream<Boolean> = UiWork.resting,
+    paused: Stream<Boolean>? = null,
 ) = comp(
     PlayerMiniStats.Props(showVolume = showVolume, menu = menu, paused = paused)
 ) {
@@ -72,8 +72,8 @@ class PlayerMiniStats(ctx: Ctx<Props>) : Component<PlayerMiniStats.Props>(ctx) {
         val showVolume: Boolean,
         /** The menu button in the spot beside the gauges (KLANG-00340); null keeps the spot empty. */
         val menu: KlangWorkbench.Menu?,
-        /** While true, the readings are let go and the needles rest ([UiWork.resting], the default). */
-        val paused: Stream<Boolean>,
+        /** While true, the readings are let go and the needles rest ; null for the Spine's ([UiWork.resting]). */
+        val paused: Stream<Boolean>?,
     )
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -83,16 +83,16 @@ class PlayerMiniStats(ctx: Ctx<Props>) : Component<PlayerMiniStats.Props>(ctx) {
      * rest with the window themselves, upstream of their smoothing, so a needle held on to lands its swing and swings on
      * when the window comes back; let go of, it would freeze mid-swing and snap on its return.
      */
-    private val letGo = props.paused.combinedWith(UiWork.resting) { paused, resting -> paused && !resting }
+    private val letGo = (props.paused ?: spine.work.resting).combinedWith(spine.work.resting) { paused, resting -> paused && !resting }
 
     // The readings, smoothed once in the Spine for every gauge (KLANG-00345, KLANG-00389 step 4): the gauges draw what
     // they get
 
-    private val cylinders by subscribingTo(MotorReadings.cylinders.cutoffWhen(letGo))
+    private val cylinders by subscribingTo(spine.motor.cylinders.cutoffWhen(letGo))
 
-    private val heat by subscribingTo(MotorReadings.heat.cutoffWhen(letGo))
+    private val heat by subscribingTo(spine.motor.heat.cutoffWhen(letGo))
 
-    private val voices by subscribingTo(MotorReadings.voices.cutoffWhen(letGo))
+    private val voices by subscribingTo(spine.motor.voices.cutoffWhen(letGo))
 
     /** The Gui-dance's lit step: the menu button wears its beacon when it is the button's (KLANG-00350). */
     private val guiDanceLit by subscribingTo(KlangGuiDance.dance.lit)

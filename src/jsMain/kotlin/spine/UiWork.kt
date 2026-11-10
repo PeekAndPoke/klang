@@ -33,7 +33,7 @@ import io.peekandpoke.ultra.streams.ops.ticker
  * and UiWork into one object? Also there already is WindowController in Kraft for detect focus"). Frames that rest on
  * a stream are asked of Kraft itself (ULTRA-00284); until then these three lines do it.
  */
-object UiWork {
+class UiWork {
 
     /** The page's window controller, Kraft's one for every app, so the app and the UI's rest follow the same focus. */
     val window: WindowController = WindowController.default

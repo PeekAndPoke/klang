@@ -12,6 +12,8 @@ import io.peekandpoke.klang.common.logging.LogLevel
 import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.klang.spine.ConsoleLog
 import io.peekandpoke.klang.spine.Playbacks
+import io.peekandpoke.klang.spine.Spine
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.sprudel.ui.registerSprudelUiTools
 import io.peekandpoke.klang.storage.KeymapStorage
 import io.peekandpoke.klang.storage.LookStorage
@@ -67,8 +69,13 @@ val keysManager = KeysManager(store = KeymapStorage, hintTriggers = listOf("Mod"
     }
 }
 
+/** The app's one Spine: built here, registered on the app, reached by every component as `spine` (KLANG-00422). */
+private val appSpine = Spine()
+
 val kraft = kraftApp {
     semanticUI()
+
+    spine(appSpine)
 
     keys(keysManager, hint = KlangKeyHint.render, waiting = KlangKeyHint.waiting)
 

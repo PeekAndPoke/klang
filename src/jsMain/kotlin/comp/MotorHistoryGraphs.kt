@@ -9,6 +9,7 @@ import io.peekandpoke.klang.audio_engine.KlangDiagnostics
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.spine.UiWork
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.ui.comp.KlangLamp
 import io.peekandpoke.klang.ui.comp.KlangScreen
 import io.peekandpoke.klang.ui.svgRoot
@@ -31,7 +32,7 @@ import kotlin.math.floor
 import kotlin.math.roundToInt
 
 @Suppress("FunctionName")
-fun Tag.MotorHistoryGraphs(paused: Stream<Boolean> = UiWork.resting, ground: String = "var(--kl-ground-panel)") = comp(
+fun Tag.MotorHistoryGraphs(paused: Stream<Boolean>? = null, ground: String = "var(--kl-ground-panel)") = comp(
     MotorHistoryGraphs.Props(paused = paused, ground = ground)
 ) {
     MotorHistoryGraphs(it)
@@ -49,8 +50,8 @@ fun Tag.MotorHistoryGraphs(paused: Stream<Boolean> = UiWork.resting, ground: Str
 class MotorHistoryGraphs(ctx: Ctx<Props>) : Component<MotorHistoryGraphs.Props>(ctx) {
 
     data class Props(
-        /** While true, the graphs are not drawn again: the history goes on being kept ([UiWork.resting], the default). */
-        val paused: Stream<Boolean>,
+        /** While true, the graphs are not drawn again: the history goes on being kept ; null for the Spine's ([UiWork.resting]). */
+        val paused: Stream<Boolean>?,
         /** The ground the graphs sit on, which their screens' cut corners show: a tool window's panel, or the column's. */
         val ground: String,
     )
@@ -108,7 +109,7 @@ class MotorHistoryGraphs(ctx: Ctx<Props>) : Component<MotorHistoryGraphs.Props>(
     }
 
     /** The current player's history; null while there is none. */
-    private val history by subscribingTo(Player.diagnostics.history.cutoffWhen(props.paused))
+    private val history by subscribingTo(Player.diagnostics.history.cutoffWhen(props.paused ?: spine.work.resting))
 
     override fun VDom.render() {
         val h = history

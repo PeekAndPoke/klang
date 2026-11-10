@@ -13,7 +13,9 @@ import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.peekandpoke.klang.comp.MotorBackground
+import io.peekandpoke.klang.spine.Spine
 import io.peekandpoke.klang.spine.SwingingLamp
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.klang.workshop.keys.KeyPlatform
@@ -40,17 +42,23 @@ class VisualsBoardSpec : StringSpec({
         val manager = KeysManager(platform = KeyPlatform.Pc, hintDelayMs = 10).apply { define(KlangKeyBindings) }
 
         try {
-            TestBed.preact(appSetup = { keys(manager) }, view = {
-                // Over the whole window, as the visual lays it
-                div {
-                    css {
-                        put("position", "fixed")
-                        put("inset", "0")
-                    }
+            TestBed.preact(
+                appSetup = {
+                    keys(manager)
+                    spine(Spine())
+                },
+                view = {
+                    // Over the whole window, as the visual lays it
+                    div {
+                        css {
+                            put("position", "fixed")
+                            put("inset", "0")
+                        }
 
-                    VisualsBoard(composition = VisualsCompositions.motorBoard, onLeave = {}, light = light)
-                }
-            }) { root ->
+                        VisualsBoard(composition = VisualsCompositions.motorBoard, onLeave = {}, light = light)
+                    }
+                },
+            ) { root ->
                 test(root.single())
             }
         } finally {

@@ -7,7 +7,7 @@ package io.peekandpoke.klang.visuals
 
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.spine.Playbacks
-import io.peekandpoke.klang.spine.UiWork
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
@@ -132,7 +132,7 @@ class VoiceRain(ctx: Ctx<Props>) : Component<VoiceRain.Props>(ctx) {
         // A step a frame, on the UI's frames ([UiWork.frames]): none while the UI rests; the subscription ends with the
         // component (the maintainer, 2026-10-29: "spine exposes a single animationFrame stream and components subscribe
         // to it and call their step function()")
-        UiWork.frames.subscribe { step() }
+        spine.work.frames.subscribe { step() }
 
         lifecycle {
             onResize { entries ->

@@ -13,11 +13,11 @@ import io.peekandpoke.klang.comp.PlayerMiniStats
 import io.peekandpoke.klang.comp.ScreenRect
 import io.peekandpoke.klang.comp.Spectrumeter
 import io.peekandpoke.klang.comp.VolumeKnob
-import io.peekandpoke.klang.spine.MotorReadings
 import io.peekandpoke.klang.spine.Playbacks
 import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.spine.SwingingLamp
 import io.peekandpoke.klang.spine.VisualState
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.klang.ui.comp.KlangGauge
 import io.peekandpoke.klang.ui.comp.KlangKnob
@@ -50,7 +50,7 @@ import kotlin.math.roundToInt
 fun Tag.VisualsBoard(
     composition: PlateComposition,
     onLeave: () -> Unit,
-    light: Stream<SwingingLamp.Light> = VisualState.light,
+    light: Stream<SwingingLamp.Light>? = null,
     onMotorButton: () -> Unit = onLeave,
     rainSpeed: Double = 1.0,
     onRainSpeed: (Double) -> Unit = {},
@@ -88,8 +88,8 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
     data class Props(
         val composition: PlateComposition,
         val onLeave: () -> Unit,
-        /** The lamp's light, which the glass domes reflect ([VisualState.light]). */
-        val light: Stream<SwingingLamp.Light>,
+        /** The lamp's light, which the glass domes reflect; null for the Spine's ([VisualState.light]). */
+        val light: Stream<SwingingLamp.Light>?,
         /** What the menu button in the gauges' row does: leave, or switch the tiles (Klang Amp tiles). */
         val onMotorButton: () -> Unit,
         /** How fast the voices fall on the rain's display ([VisualsCompositions.RAIN]), 1 as made. */
@@ -155,7 +155,7 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
         lifecycle {
             onMount {
                 findHighlights()
-                lightFollow = props.light.subscribeToStream { reflect(it) }
+                lightFollow = (props.light ?: spine.visuals.light).subscribeToStream { reflect(it) }
             }
             // A redraw may bring other domes (the Motor button's tile states, a resize)
             onUpdate { findHighlights() }
@@ -214,11 +214,11 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
     /** What plays now, from here or from any page: the Motor's plate's play/stop shows it. */
     private val nowPlaying by subscribingTo(Playbacks.nowPlaying)
 
-    private val cylinders by subscribingTo(MotorReadings.cylinders)
+    private val cylinders by subscribingTo(spine.motor.cylinders)
 
-    private val heat by subscribingTo(MotorReadings.heat)
+    private val heat by subscribingTo(spine.motor.heat)
 
-    private val voices by subscribingTo(MotorReadings.voices)
+    private val voices by subscribingTo(spine.motor.voices)
 
     override fun VDom.render() {
         val width = window.innerWidth.toDouble()
@@ -381,7 +381,7 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
                     onClick = {
                         when {
                             playing -> KlangampDeck.stop()
-                            else -> VisualState.openSong()?.play?.invoke() ?: KlangampDeck.playAgain()
+                            else -> spine.visuals.openSong()?.play?.invoke() ?: KlangampDeck.playAgain()
                         }
                     },
                     size = (tile * KNOB).px,

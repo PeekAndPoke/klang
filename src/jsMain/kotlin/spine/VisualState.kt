@@ -18,7 +18,13 @@ import io.peekandpoke.ultra.streams.ops.map
  * 2026-10-29: "something like VisualState owning the lamp and the MotorBackground would get it from there and all
  * others too").
  */
-object VisualState {
+class VisualState(work: UiWork) {
+
+    companion object {
+        /** The lamp's light, worked out on [frames] while anyone listens: nobody listens, no frames, no work. */
+        fun lightOf(lamp: SwingingLamp, frames: Stream<TickerFrame>): Stream<SwingingLamp.Light> =
+            frames.map { frame -> lamp.advanceTo(frame.currentTime) }
+    }
 
     /** A song open on a page, to be played from a visual the page's own way ([play]): its code as it stands there. */
     data class OpenSong(val play: () -> Unit)
@@ -52,14 +58,10 @@ object VisualState {
     /** The one lamp over every plate: the start page's and the visuals'. */
     val lamp = SwingingLamp(seed = SeedStorage.metal)
 
-    /** The lamp's light, worked out on [frames] while anyone listens: nobody listens, no frames, no work. */
-    fun lightOf(lamp: SwingingLamp, frames: Stream<TickerFrame>): Stream<SwingingLamp.Light> =
-        frames.map { frame -> lamp.advanceTo(frame.currentTime) }
-
     /**
      * The [lamp]'s light, a frame at a time on the UI's frames ([UiWork.frames]), only while someone listens and the UI does
      * not rest: the lamp waits where it was (the maintainer, 2026-10-29: "Ideally we stop the calculations in
      * SwingingLamp when there is no subscriber").
      */
-    val light: Stream<SwingingLamp.Light> = lightOf(lamp = lamp, frames = UiWork.frames)
+    val light: Stream<SwingingLamp.Light> = lightOf(lamp = lamp, frames = work.frames)
 }

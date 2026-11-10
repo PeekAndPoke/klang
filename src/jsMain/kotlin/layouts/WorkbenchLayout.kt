@@ -17,6 +17,7 @@ import io.peekandpoke.klang.fs
 import io.peekandpoke.klang.pages.docs.tutorials.LearnSearch
 import io.peekandpoke.klang.spine.ConsoleLog
 import io.peekandpoke.klang.spine.UiWork
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.storage.LookStorage
 import io.peekandpoke.klang.storage.WorkbenchLayoutStorage
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
@@ -69,7 +70,7 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
      * When the Motor and its window rest: a visual covers the page, or the window has no attention ([UiWork]); one
      * place for all of them (the maintainer, 2026-10-29).
      */
-    private val motorPaused = VisualsScreen.open.combinedWith(UiWork.resting) { covered, resting -> covered || resting }
+    private val motorPaused = VisualsScreen.open.combinedWith(spine.work.resting) { covered, resting -> covered || resting }
 
     private val currentRoute by subscribingTo(router.current)
 

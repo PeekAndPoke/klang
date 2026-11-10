@@ -22,7 +22,7 @@ import io.peekandpoke.klang.spine.Playbacks
 import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.spine.SwingingLamp
 import io.peekandpoke.klang.spine.UiWork
-import io.peekandpoke.klang.spine.VisualState
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangCheckbox
@@ -254,7 +254,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         init {
             // Black until the key turns, as ever: the lamp is one for every plate now (the Spine's), and a visual may
             // have left it on
-            VisualState.lamp.off()
+            spine.visuals.lamp.off()
         }
 
         override fun update() {
@@ -312,7 +312,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
             // The screen was black until now: the standby light fades in while the Motor warms up, once the plate is
             // built (the lamp is the Spine's, KLANG-00389)
             motorBackgroundRef { it.prepare { backgroundReady = true } }
-            VisualState.lamp.warmUp()
+            spine.visuals.lamp.warmUp()
         }
 
         private fun elapsedMs() = Kronos.systemUtc.millisNow() - start
@@ -340,7 +340,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         init {
             // The background light fades in at once; the scan and the test wait
             motorBackgroundRef { it.prepare() }
-            VisualState.lamp.powerOn()
+            spine.visuals.lamp.powerOn()
         }
 
         private fun elapsedMs() = Kronos.systemUtc.millisNow() - startMs
@@ -399,7 +399,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
             // The light stays clean until a while after the run (the maintainer, 2026-10-28), then the bulb settles
             if (!settled && Kronos.systemUtc.millisNow() - startMs >= LIGHT_CLEAN_AFTER_RUN_MS) {
                 settled = true
-                VisualState.lamp.settle()
+                spine.visuals.lamp.settle()
             }
         }
 
@@ -573,11 +573,11 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
      * clock, so a rest only holds them, and they catch up on return (KLANG-00388: one animation frame for the UI).
      */
     @Suppress("unused")
-    private val frame by subscribingTo(UiWork.frames) { state.update() }
+    private val frame by subscribingTo(spine.work.frames) { state.update() }
 
     init {
         // The lamp in the dyno screen's glass, a frame at a time while the lamp is followed; ends with the page
-        VisualState.light.subscribe { reflect(it) }
+        spine.visuals.light.subscribe { reflect(it) }
     }
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -995,8 +995,8 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 div {
                     // The light swells only over a key that can be pressed, and not over the checkbox beside it
                     if (complete != null) {
-                        onMouseEnter { VisualState.lamp.hoverStart() }
-                        onMouseLeave { VisualState.lamp.hoverEnd() }
+                        onMouseEnter { spine.visuals.lamp.hoverStart() }
+                        onMouseLeave { spine.visuals.lamp.hoverEnd() }
                     }
 
                     KlangButton(
