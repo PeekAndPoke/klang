@@ -82,6 +82,9 @@ Apply this standard whenever reviewing changes or writing tests — including wh
   edits a rule that enumerates cases (which door is in which list, which stage has which gate),
   the reviewer brief asks for a table of EVERY case against the rule's clauses, read from the
   code. Three rounds of prose review missed what one table found in a pass.
+- **A new stage or source comes with its probe tables** (2026-11-10, KLANG-00420): the audio brief names the DSP
+  probes that apply (`audio/ref/verification.md`, "The probes") and carries their output; a fixed probe finding
+  lands with a spec that calls the probe's measuring function with a threshold.
 - **A cached config is reviewed for the non-finite input** (2026-09-18, ledger): for every
   `configure` / `update` on the audio thread that compares an incoming value against a stored one
   and rebuilds on a mismatch, the audio reviewer answers: what happens when the incoming value is

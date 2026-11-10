@@ -394,6 +394,12 @@ dash scan, stack-merge's exit code by exception type, test-digest's foreign-suit
   `ORG_GRADLE_PROJECT_buildRoot` or the project's `gradle.properties`, else uses `.build-<user>` when it exists and
   belongs to the user running it. `full-check.sh` logs to `tmp/full-check/`, not `build/`.
 
+- **DSP probes** (maintainer, 2026-11-10, KLANG-00420): the engine's measuring tools are registered in ONE table,
+  "The probes" in `audio/ref/verification.md`. The Kotlin probes live beside the engine's tests
+  (`audio_be/src/jvmTest/kotlin/probes/`) and are not console tools; the two static ones, the hot-path lint and the
+  dead-knob finder, are approved as klang-only tools here (`console/tools/<tool>/`) and get their own section in this
+  skill when they land. Before measuring a click, aliasing, a stage's stability or its cost by hand, look there.
+
 ## Proposed upstream
 
 <!-- Findings this repo sent back to Mission Control, not merged into the blueprint yet:

@@ -77,6 +77,7 @@ guideline, guardrail) are the ones the root `CLAUDE.md` defines, and the root ke
 | No allocation or exceptions in audio hot paths, flush IIR state; the rest of `/code-style` §6 to §10 (finite edges, wrapped phase) and §19's per-sample `when` exception. | rule | 2026-04 | `/code-style` §6 to §10, §19 |
 | Block size is pinned to 128 frames everywhere (it is a tone parameter); never raise it to speed up a render. | guardrail | 2026-08 | `audio/MEMORY.md`, `DelayLine` KDoc |
 | Deliberate engine exceptions a reviewer must not "fix" (reverb `+ ANTI_DENORMAL`, the OnePole HPF bias, linear bandpass, the house limiter's fixed lookahead, authored lookahead uncompensated): the list and the reasons are in `audio-constraints.md`. | guardrail | 2026-05, narrowed 2026-09-27 | `.claude/skills/review-loop/audio-constraints.md` |
+| A new stage or source runs the DSP probes that apply to it before it lands; a fixed probe finding leaves a spec with a threshold behind. A probe is a measurement and never a build gate. | rule *(provisional)* | 2026-11-10 | `audio/ref/verification.md`, "The probes"; KLANG-00420 |
 
 ## Reference Files — Read Only What You Need
 

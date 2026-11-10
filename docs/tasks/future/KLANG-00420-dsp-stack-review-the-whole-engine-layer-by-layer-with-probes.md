@@ -115,7 +115,18 @@ Two tiers, by the "two kinds of check" rule:
   `verification.md`, so every audio session finds them.
 - **The results**: each run's tables under `docs/audio-audit/<date>/`, so a later run can be compared.
 
-## Decide before starting
+## Decided (maintainer, 2026-11-10)
+
+1. **Depth: the full sweep**, all nine layers.
+2. **The runner: test classes kept out of the normal run** (the simpler variant; no new Gradle task).
+3. **All seven probes approved.**
+4. **The register and the rule lines are written** (same day): `audio/ref/verification.md` "The probes", the
+   engine rule in `audio/CLAUDE.md` (provisional), the repo note in `/console-tools`, the audio line in
+   `/review-loop`, one line in the root `CLAUDE.md`.
+
+Still open: the reviewer models and effort for the layers.
+
+## Decide before starting (the list as proposed)
 
 1. **Depth**: the full sweep (about 10 to 12 agents, a real share of a week's budget), or first only the layers
    the redesign changed most (2, 5, 7).

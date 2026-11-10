@@ -41,6 +41,36 @@ is `/review-loop`; this file is the audio-specific half. The stories behind the 
   raw Node numbers (Node run-to-run spread reaches 28 percent on a row). `audio/ref/performance.md` has the
   benchmark tools.
 
+## The probes
+
+Measuring tools for the DSP stack, built for the engine review (KLANG-00420) and kept after it. This table is their
+ONE register: a probe that is not listed here does not exist for the next session, so the change that adds a probe
+adds its row. Status `planned` means the row is the approved proposal (maintainer, 2026-11-10), not code yet.
+
+| Probe | What it answers | Home | Status |
+|-------|-----------------|------|--------|
+| Stage probe | One stage alone under the standard signals (impulse, step, sweep, silence, full-scale noise, a NaN, a huge value): peak, DC, tail length, finite output, back to exact silence | `audio_be/src/jvmTest/kotlin/probes/` | planned |
+| Aliasing meter | Energy off the harmonics of a high sine, per source and shaper | same | planned |
+| Click detector | The largest sample-to-sample jump, relative to the signal, while one knob jumps or one stage switches | same | planned |
+| Block-framing checker | The same notes with the onset shifted by 1 to 127 frames, aligned and compared (the property of KLANG-00156) | same | planned |
+| Stage cost table | Nanoseconds per sample for each source and stage alone, JVM and browser | same | planned |
+| Hot-path lint | A static scan of `audio_be` render code for boxed types, allocations, capturing lambdas, `fun interface` Ignitors | `console/tools/` (`/console-tools`) | planned |
+| Dead-knob finder | Every slot key a DSL writes has an engine reader, and the reverse | `console/tools/` (`/console-tools`) | planned |
+
+How they are used (maintainer, 2026-11-10):
+
+- **A probe is a measurement, not a gate.** Its measuring code is plain functions that return data
+  (`measureClick(...)`); its runner is a test class that prints the table, kept out of the normal test run and
+  started on request through the build lock. A probe never makes `check` red.
+- **A finding that is fixed leaves a spec behind**: an ordinary spec that calls the probe's measuring function for
+  THAT case with a threshold (a check for the future, mutation-checked). Probe and guard share the function, so they
+  cannot drift apart.
+- **The two static probes may become build checks** once their findings are fixed or waived with a reason.
+- **A new stage or source runs the probes that apply to it before it lands**, and the review brief carries the
+  tables (`/review-loop`).
+- **Each full run's tables go to `docs/audio-audit/<date>/`**, so the next run is a comparison. The full review
+  recurs by occasion (before a release line, after a change of the engine's shape), not by calendar.
+
 ## A test
 
 - **One law, two hosts, two specs.** A parity spec over a SHARED core only tests the plumbing (a mutation of the
