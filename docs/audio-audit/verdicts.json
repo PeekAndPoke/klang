@@ -1,0 +1,3 @@
+{
+ "_doc": "The judgement over the probes' leads, read by console/dev-status/engine_health.py. Key: \"<probe id>/<item id>\" (the page's address bar shows it after the #, URL-decoded). Value: {\"status\": \"confirmed\" | \"accepted\" | \"disproved\" | \"fixed\", \"note\": \"one sentence\", \"ticket\": \"KLANG-00000\"}. confirmed is red, accepted is grey, disproved and fixed are green. Keys that start with _ are ignored. Filled by the audit of KLANG-00420 and by the fixes after it."
+}

@@ -20,7 +20,7 @@ trap 'rm -rf "$TMP"' EXIT
 mkdir -p "$OUT"
 
 # image name = page file under src/jsMain/resources
-for entry in topic-map=klang-topic-map.html mission-log=klang-mission-log.html \
+for entry in topic-map=klang-topic-map.html mission-log=klang-mission-log.html engine-health=klang-engine-health.html \
   whitepaper=klang-whitepaper.html blog=blog/index.html; do
   page="${entry%%=*}"
   file="${entry#*=}"

@@ -47,8 +47,8 @@ fun Tag.DevStatusPage() = comp {
 
 /**
  * Where Klang stands: cards for the static pages next to the SPA (the blog, the topic map,
- * the mission log, the white paper). The pages live in `src/jsMain/resources`, built by
- * `console/dev-status/build.py` and `console/blog/build.py`, their preview images by
+ * the mission log, the engine health, the white paper). The pages live in `src/jsMain/resources`, built by
+ * `console/dev-status/build.py`, `console/dev-status/engine_health.py` and `console/blog/build.py`, their preview images by
  * `console/dev-status/previews.sh`.
  */
 class DevStatusPage(ctx: NoProps) : PureComponent(ctx) {
@@ -97,6 +97,15 @@ class DevStatusPage(ctx: NoProps) : PureComponent(ctx) {
             description = "Every open task and plan as a zoomable graph: grouped by area, marked by its real " +
                     "state, linked the way the docs link each other. The archive of finished work sits behind a toggle.",
             image = "/images/dev-status/topic-map.jpg",
+        ),
+        Entry(
+            path = "/klang-engine-health.html",
+            title = "Engine health",
+            kind = "Measurements",
+            description = "What the engine's probes measured, with a light per item: each stage alone under test " +
+                    "and poison signals, what each costs, what the render code allocates. Yellow means a lead " +
+                    "nobody has judged yet.",
+            image = "/images/dev-status/engine-health.jpg",
         ),
     )
 

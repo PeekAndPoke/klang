@@ -7,7 +7,16 @@ Two flat HTML pages about where Klang stands, built from the docs and served nex
 - `src/jsMain/resources/klang-mission-log.html`: every archived task on a timeline by the date in its file
   name, and a guessed completion date for each open one.
 
-Both share `hud.css` (the UI palette of `KlangLookAndFeel`, the Chakra Petch and Share Tech Mono
+A third page is built by its own script from the DSP probes' results (KLANG-00420):
+
+- `src/jsMain/resources/klang-engine-health.html`: every probe with a light, its items with a light each, and the
+  measured rows behind an item. `python3 console/dev-status/engine_health.py` reads the newest run folder in
+  `docs/audio-audit/<date>/` (the probes' JSON) and the judgement in `docs/audio-audit/verdicts.json`. A light is a
+  rule over a measurement (the rules are the `*_items` functions in the script): green nothing notable, yellow a lead
+  nobody has judged, red bad on its face or confirmed, grey accepted by decision, blue a measurement without a rule.
+  Rebuild it after a probe run or a verdict.
+
+All share `hud.css` (the UI palette of `KlangLookAndFeel`, the Chakra Petch and Share Tech Mono
 faces, the HUD pieces); the white paper, `src/jsMain/resources/klang-whitepaper.html`, uses the same palette
 and faces but is edited by hand.
 

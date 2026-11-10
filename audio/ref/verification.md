@@ -68,7 +68,11 @@ How they are used (maintainer, 2026-11-10):
 - **The two static probes may become build checks** once their findings are fixed or waived with a reason.
 - **A new stage or source runs the probes that apply to it before it lands**, and the review brief carries the
   tables (`/review-loop`).
-- **Each full run's tables go to `docs/audio-audit/<date>/`**, so the next run is a comparison. The full review
+- **The results have a page**: `python3 console/dev-status/engine_health.py` builds
+  `src/jsMain/resources/klang-engine-health.html` (the Dev Tools' "Engine health" card) from the newest run folder's
+  JSON, a light per item. A lead becomes confirmed, accepted, disproved or fixed by one entry in
+  `docs/audio-audit/verdicts.json`; rebuild the page after a run or a verdict (`console/dev-status/README.md`).
+- **Each full run's tables go to `docs/audio-audit/<date>/`** (text and JSON), so the next run is a comparison. The full review
   recurs by occasion (before a release line, after a change of the engine's shape), not by calendar.
 
 ## A test

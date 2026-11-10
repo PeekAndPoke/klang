@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Klang Engine Health</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
+<style>
+/*__HUD_CSS__*/
+
+/* The engine health page: probes, their items, one item's rows. */
+:root { --l-red: var(--red); --l-yellow: var(--yellow); --l-green: var(--green); --l-grey: var(--faint); --l-blue: var(--accent); --l-none: transparent; }
+.cols { display: grid; grid-template-columns: 300px minmax(280px, 400px) 1fr; gap: 10px; min-height: 0; }
+.col { min-height: 0; overflow: auto; border: 1px solid var(--rule); background: linear-gradient(180deg, rgba(33, 37, 43, .55), rgba(18, 19, 28, .9)); }
+.col h2 { margin: 0; padding: 8px 12px; font-family: var(--mono); font-size: 11px; font-weight: 400; letter-spacing: .16em; text-transform: uppercase; color: var(--faint); position: sticky; top: 0; background: var(--panel); border-bottom: 1px solid var(--rule); z-index: 2; }
+
+.lamp { width: 12px; height: 12px; border-radius: 50%; flex: none; background: var(--c); box-shadow: 0 0 8px var(--c); border: 1px solid rgba(255, 255, 255, .15); }
+.lamp.none { box-shadow: none; border: 1px dashed var(--faint); }
+.lamp.big { width: 18px; height: 18px; box-shadow: 0 0 14px var(--c); }
+[data-light="red"] { --c: var(--l-red); } [data-light="yellow"] { --c: var(--l-yellow); } [data-light="green"] { --c: var(--l-green); }
+[data-light="grey"] { --c: var(--l-grey); } [data-light="blue"] { --c: var(--l-blue); } [data-light="none"] { --c: var(--l-none); }
+
+button.row { all: unset; box-sizing: border-box; display: flex; gap: 10px; align-items: center; width: 100%; padding: 7px 12px; cursor: pointer; border-bottom: 1px solid var(--grid); }
+button.row:hover { background: rgba(86, 182, 194, .06); }
+button.row:focus-visible { outline: 1px solid var(--cyan); outline-offset: -1px; }
+button.row[aria-current="true"] { background: rgba(86, 182, 194, .12); box-shadow: inset 2px 0 0 var(--cyan); }
+button.row:disabled { cursor: default; opacity: .55; }
+
+.probe { padding: 12px; align-items: flex-start; }
+.probe .name { font-size: 16px; font-weight: 600; letter-spacing: .04em; }
+.probe .q { color: var(--dim); font-size: 12.5px; line-height: 1.35; margin-top: 3px; text-wrap: pretty; }
+.tally { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 6px; font-family: var(--mono); font-size: 11.5px; color: var(--dim); }
+.tally span { display: inline-flex; gap: 5px; align-items: center; }
+.tally .lamp { width: 8px; height: 8px; box-shadow: none; }
+
+.item .t { flex: 1; min-width: 0; font-family: var(--mono); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.item .v { font-family: var(--mono); font-size: 11.5px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.item .meter { width: 70px; height: 5px; background: var(--grid); flex: none; }
+.item .meter i { display: block; height: 100%; background: var(--accent); }
+.grp { padding: 9px 12px 4px; font-family: var(--mono); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--cyan); opacity: .85; }
+.tools { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 12px; border-bottom: 1px solid var(--rule); position: sticky; top: 30px; background: var(--panel); z-index: 2; }
+.tools input { flex: 1 1 120px; min-width: 0; font: inherit; font-family: var(--mono); font-size: 12px; color: var(--text); background: var(--void); border: 1px solid var(--rule); padding: 4px 8px; }
+.tools input:focus-visible { outline: 1px solid var(--cyan); }
+.toggle .lamp { width: 8px; height: 8px; }
+
+.detail { padding: 14px 16px 24px; }
+.detail .head { display: flex; gap: 12px; align-items: center; }
+.detail h3 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: .03em; overflow-wrap: anywhere; }
+.detail .sub { font-family: var(--mono); font-size: 11.5px; color: var(--faint); letter-spacing: .1em; text-transform: uppercase; margin-top: 2px; }
+.detail ul { margin: 12px 0 0; padding-left: 18px; color: var(--text); line-height: 1.5; }
+.detail li { margin: 2px 0; overflow-wrap: anywhere; }
+.verdict { margin-top: 12px; padding: 8px 12px; border: 1px solid var(--c); border-left-width: 3px; background: rgba(0, 0, 0, .2); line-height: 1.45; }
+.verdict b { text-transform: uppercase; letter-spacing: .08em; font-family: var(--mono); font-size: 12px; color: var(--c); }
+.scroll { overflow-x: auto; margin-top: 14px; }
+table { border-collapse: collapse; font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; }
+th { text-align: left; color: var(--faint); font-weight: 400; letter-spacing: .08em; text-transform: uppercase; font-size: 10.5px; padding: 4px 12px 4px 0; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+td { padding: 4px 12px 4px 0; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+td.bad { color: var(--red); }
+.empty { padding: 28px 16px; color: var(--faint); font-family: var(--mono); font-size: 12.5px; line-height: 1.6; }
+.legend .lamp { width: 9px; height: 9px; display: inline-block; margin-right: 6px; vertical-align: -1px; box-shadow: none; }
+
+body { overflow: auto; }
+.app { min-height: 100%; height: 100vh; }
+@media (max-width: 980px) {
+    .app { height: auto; grid-template-rows: auto auto auto auto; }
+    .cols { grid-template-columns: 1fr; }
+    .col { max-height: 60vh; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div>
+      <div class="kicker">Klang dev status · docs/audio-audit · <span id="run"></span></div>
+      <h1>Klang <span>//</span> Engine Health</h1>
+      <nav class="hud-nav" aria-label="Dev status pages"><a href="klang-topic-map.html">Topic map</a><a href="klang-mission-log.html">Mission log</a><a href="klang-engine-health.html" aria-current="page">Engine health</a><a href="klang-whitepaper.html">White paper</a></nav>
+    </div>
+    <div class="stats" id="stats"></div>
+  </div>
+  <div class="bar"><span>A light is a rule over a measurement. Yellow means "look at this", not "broken".</span></div>
+  <div class="cols">
+    <div class="col" id="probes"><h2>Probes</h2></div>
+    <div class="col" id="items"><h2>Items</h2></div>
+    <div class="col" id="detail"><h2>Measurement</h2></div>
+  </div>
+  <div class="legend">
+    <span><i class="lamp" data-light="green"></i>nothing notable</span>
+    <span><i class="lamp" data-light="yellow"></i>a lead, not judged yet</span>
+    <span><i class="lamp" data-light="red"></i>bad on its face, or confirmed</span>
+    <span><i class="lamp" data-light="grey"></i>accepted by decision</span>
+    <span><i class="lamp" data-light="blue"></i>a measurement without a rule</span>
+    <span class="sep"></span>
+    <span>built <span id="built"></span> · the probes: audio/ref/verification.md · the audit: KLANG-00420</span>
+  </div>
+</div>
+<script>
+const DATA = __DATA__;
+const LIGHTS = ['red', 'yellow', 'green', 'grey', 'blue'];
+const WORDS = { red: 'red', yellow: 'lead', green: 'ok', grey: 'accepted', blue: 'measured' };
+const state = { probe: null, item: null, show: new Set(LIGHTS), query: '' };
+
+const el = (tag, attrs = {}, ...kids) => {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === 'class') n.className = v; else if (k === 'text') n.textContent = v;
+    else if (k.startsWith('on')) n.addEventListener(k.slice(2), v); else if (v !== false && v != null) n.setAttribute(k, v);
+  }
+  for (const kid of kids) if (kid) n.append(kid);
+  return n;
+};
+const lamp = (light, cls = '') => el('i', { class: 'lamp ' + cls + (light === 'none' ? ' none' : ''), 'data-light': light, role: 'img', 'aria-label': WORDS[light] || 'not built' });
+const clear = (node) => { while (node.children.length > 1) node.lastChild.remove(); };
+
+function renderStats() {
+  const all = DATA.probes.flatMap(p => p.items);
+  const n = (c) => all.filter(i => i.light === c).length;
+  const stat = (k, v, cls) => el('div', { class: 'stat ' + cls }, el('div', { class: 'k', text: k }), el('div', { class: 'v', text: String(v) }));
+  document.getElementById('stats').append(
+    stat('red', n('red'), n('red') ? 'bad' : 'good'), stat('leads', n('yellow'), 'warn'), stat('ok', n('green'), 'good'),
+    stat('accepted', n('grey'), 'info'), stat('judged', DATA.verdicts, 'info'));
+  document.getElementById('run').textContent = 'run ' + DATA.run;
+  document.getElementById('built').textContent = DATA.built;
+}
+
+function renderProbes() {
+  const host = document.getElementById('probes');
+  clear(host);
+  for (const p of DATA.probes) {
+    const tally = el('div', { class: 'tally' });
+    for (const c of LIGHTS) if (p.counts[c]) tally.append(el('span', {}, lamp(c), document.createTextNode(p.counts[c] + ' ' + WORDS[c])));
+    host.append(el('button', { class: 'row probe', 'aria-current': String(state.probe === p), disabled: !p.built, onclick: () => select(p, null) },
+      lamp(p.light, 'big'),
+      el('div', {}, el('div', { class: 'name', text: p.title }), el('div', { class: 'q', text: p.question }), p.built ? tally : el('div', { class: 'tally', text: p.note }))));
+  }
+}
+
+function visibleItems(p) {
+  const q = state.query.trim().toLowerCase();
+  return p.items.filter(i => state.show.has(i.light) && (!q || (i.group + ' ' + i.title + ' ' + i.reasons.join(' ')).toLowerCase().includes(q)));
+}
+
+function renderItems() {
+  const host = document.getElementById('items');
+  const keep = host.querySelector('input') === document.activeElement;
+  clear(host);
+  const p = state.probe;
+  if (!p) { host.append(el('div', { class: 'empty', text: 'Pick a probe.' })); return; }
+  const tools = el('div', { class: 'tools' });
+  const input = el('input', { type: 'search', placeholder: 'filter', 'aria-label': 'Filter the items', value: state.query, oninput: (e) => { state.query = e.target.value; renderItems(); } });
+  tools.append(input);
+  for (const c of LIGHTS) {
+    if (!p.counts[c]) continue;
+    tools.append(el('button', { class: 'toggle', 'data-light': c, 'aria-pressed': String(state.show.has(c)), onclick: () => { state.show.has(c) ? state.show.delete(c) : state.show.add(c); renderItems(); } },
+      lamp(c), document.createTextNode(WORDS[c]), el('span', { class: 'n', text: String(p.counts[c]) })));
+  }
+  host.append(tools);
+  const items = visibleItems(p);
+  if (!items.length) host.append(el('div', { class: 'empty', text: 'Nothing matches.' }));
+  let group = null;
+  for (const i of items) {
+    if (i.group !== group) { group = i.group; host.append(el('div', { class: 'grp', text: group })); }
+    host.append(el('button', { class: 'row item', 'aria-current': String(state.item === i), title: i.title, onclick: () => select(p, i) },
+      lamp(i.light), el('span', { class: 't', text: i.title }),
+      i.bar != null ? el('span', { class: 'meter' }, el('i', { style: 'width:' + Math.max(1, Math.round(i.bar * 100)) + '%' })) : null,
+      i.value ? el('span', { class: 'v', text: i.value }) : null));
+  }
+  if (keep) { const again = host.querySelector('input'); again.focus(); again.setSelectionRange(again.value.length, again.value.length); }
+}
+
+function renderDetail() {
+  const host = document.getElementById('detail');
+  clear(host);
+  const p = state.probe, i = state.item;
+  if (!p) { host.append(el('div', { class: 'empty', text: 'The probes measure the engine one stage at a time. Pick one on the left.' })); return; }
+  if (!i) { host.append(el('div', { class: 'empty' }, document.createTextNode(p.question), el('br'), el('br'), document.createTextNode(p.note), el('br'), el('br'), document.createTextNode('Pick an item to see what was measured.'))); return; }
+  const box = el('div', { class: 'detail' });
+  box.append(el('div', { class: 'head', 'data-light': i.light }, lamp(i.light, 'big'), el('div', {}, el('h3', { text: i.title }), el('div', { class: 'sub', text: p.title + ' · ' + i.group }))));
+  if (i.verdict) {
+    box.append(el('div', { class: 'verdict', 'data-light': i.light }, el('b', { text: i.verdict.status }),
+      document.createTextNode(' ' + (i.verdict.note || '') + (i.verdict.ticket ? ' (' + i.verdict.ticket + ')' : '') + (i.auto && i.auto !== i.light ? ' The rule alone said ' + WORDS[i.auto] + '.' : ''))));
+  }
+  if (i.reasons.length) { const ul = el('ul'); for (const r of i.reasons) ul.append(el('li', { text: r })); box.append(ul); }
+  else if (i.light === 'green') box.append(el('ul', {}, el('li', { text: 'Nothing notable by the rules.' })));
+  const table = el('table'), head = el('tr');
+  for (const c of i.columns) head.append(el('th', { text: c }));
+  table.append(el('thead', {}, head));
+  const body = el('tbody');
+  for (const r of i.rows) {
+    const tr = el('tr');
+    for (const c of r) { const s = String(c); tr.append(el('td', { text: s, class: (s === 'never' || s === 'NaN' || s === 'inf') ? 'bad' : '' })); }
+    body.append(tr);
+  }
+  table.append(body);
+  box.append(el('div', { class: 'scroll' }, table));
+  host.append(box);
+}
+
+function select(p, i) {
+  if (p !== state.probe) { state.query = ''; state.show = new Set(LIGHTS); }
+  state.probe = p; state.item = i;
+  history.replaceState(null, '', '#' + encodeURIComponent(p.id) + (i ? '/' + encodeURIComponent(i.id) : ''));
+  renderProbes(); renderItems(); renderDetail();
+}
+
+renderStats();
+const [pid, iid] = location.hash.slice(1).split(/\/(.*)/s).map(decodeURIComponent);
+const first = DATA.probes.find(p => p.id === pid) || DATA.probes.find(p => p.light === 'red') || DATA.probes.find(p => p.built);
+select(first, first && iid ? first.items.find(i => i.id === iid) || null : null);
+</script>
+</body>
+</html>
