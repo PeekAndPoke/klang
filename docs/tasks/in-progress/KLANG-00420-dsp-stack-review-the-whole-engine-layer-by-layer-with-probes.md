@@ -1,6 +1,6 @@
 # KLANG-00420: DSP stack review: the whole engine, layer by layer, with probes that stay
 
-> **Status (2026-11-10): NOT SCHEDULED.** Asked for by the maintainer, 2026-11-10; the plan and its open decisions are below.
+> **Status (2026-11-10): IN PROGRESS.** Started: the three small probes first (hot-path lint, dead-knob finder, stage probe).
 >
 > **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
@@ -124,7 +124,24 @@ Two tiers, by the "two kinds of check" rule:
    engine rule in `audio/CLAUDE.md` (provisional), the repo note in `/console-tools`, the audio line in
    `/review-loop`, one line in the root `CLAUDE.md`.
 
-Still open: the reviewer models and effort for the layers.
+5. **This is an audit, not a review loop, and it runs on Fable 5.2** (maintainer, 2026-11-10): "The review-loop is
+   for reviewing newly written code. What we do here is an audit, so we would need a new ruleset for deep audit. For
+   now you have the permission to work Fable 5.2 and if this works well we codify the rules once we are done with the
+   audit." The reason: all the code was written and reviewed by Opus 5.5, so the investigation gets the most capable
+   model and a reader who is not the author. `/review-loop`'s "no Fable" (2026-10-24) is untouched: it governs
+   reviews of new code, and this permission holds for KLANG-00420 only.
+   - The nine layer audits: Fable 5.2, read-only, one layer each.
+   - The adversarial pass: Opus 5.5 at max effort (`reviewer-max`), a second model that tries to disprove each
+     finding; what can be tested is settled by a mutant or a render.
+   - The probes: written by Opus, read by Fable. The later fixes: written by Opus, reviewed by Fable, each its own
+     ticket.
+   - Budget: the probes first (cheap), the Fable sweep at the start of a budget week.
+
+## After the audit
+
+Codify a ruleset for deep audits if this worked (its own skill or a section; a maintainer decision): what an audit
+is against a review, which model reads, how findings are disproved, what it leaves behind. Notes for it are
+collected here while the audit runs.
 
 ## Decide before starting (the list as proposed)
 
@@ -157,3 +174,4 @@ Still open: the reviewer models and effort for the layers.
 ## History
 
 - 2026-11-10: created.
+- 2026-11-10: IN PROGRESS. Started: the three small probes first (hot-path lint, dead-knob finder, stage probe).
