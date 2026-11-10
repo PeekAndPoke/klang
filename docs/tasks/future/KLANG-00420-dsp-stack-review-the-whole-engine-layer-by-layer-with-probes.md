@@ -6,14 +6,6 @@
 
 ## Why this exists
 
-## Decide before implementing
-
-## The work
-
-## Acceptance
-
-## Why this exists
-
 The redesign of the signal flow is finished (KLANG-00210, KLANG-00245, KLANG-00279, KLANG-00243, KLANG-00290, all
 archived). The engine has its final shape for V1, so this is the moment to read all of it once, with fresh eyes and
 with measurements, before the tutorial quarter and the launch build on it. The parity audit (KLANG-00417) did this
