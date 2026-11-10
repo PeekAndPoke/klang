@@ -190,6 +190,68 @@ def knob_items(doc):
     return items
 
 
+def aliasing_items(rows):
+    """One item per source or shaper and knob set, over its pitches. A quality question, so never red by rule: yellow
+    when the energy off the harmonics is within 60 dB of the harmonics at any pitch."""
+    groups = {}
+    for r in rows:
+        groups.setdefault((r['family'], r['stage'], r['knobs']), []).append(r)
+    items = []
+    for (family, stage, knobs), rs in groups.items():
+        notes = sorted({r['note'] for r in rs if r['note']})
+        judged = [r for r in rs if r['measurable'] and r['kind'] == 'measured' and not any('by design' in n for n in notes)]
+        reasons, light = list(notes), 'blue'
+        if judged:
+            worst = max(judged, key=lambda r: num(r['nonHarmonicReHarmonicsDb']))
+            level = num(worst['nonHarmonicReHarmonicsDb'])
+            light = 'yellow' if level > -60 else 'green'
+            if light == 'yellow':
+                reasons.insert(0, f'at {fmt(worst["pitchHz"], 5)} Hz the energy off the harmonics is {fmt(level)} dB re the '
+                                  f'harmonics (strongest at {fmt(worst["strongestHz"], 5)} Hz)')
+        items.append({
+            'id': f'{family}/{stage}/{knobs}', 'group': f'{family} {stage.split(":")[0]}', 'title': f'{stage}  {knobs}',
+            'light': light, 'reasons': reasons,
+            'value': f'{fmt(max(num(r["nonHarmonicReHarmonicsDb"]) for r in rs), 3)} dB' if all(r['measurable'] for r in rs) else 'n/m',
+            'columns': ['pitch Hz', 'fundamental dBFS', 'harmonics dB', 'off harmonics dB re fund.', 're harmonics',
+                        'dBFS', 'strongest Hz', 'at dB', 'cents'],
+            'rows': [[fmt(r['pitchHz'], 5), blank(r['fundamentalDbfs']), blank(r['harmonicDb']), blank(r['nonHarmonicDb']),
+                      blank(r['nonHarmonicReHarmonicsDb']), blank(r['nonHarmonicDbfs']), blank(r['strongestHz']),
+                      blank(r['strongestDb']), blank(r['offsetCents'])] if r['measurable'] else
+                     [fmt(r['pitchHz'], 5), 'not measurable this way', '', '', '', '', '', '', ''] for r in rs],
+        })
+    return items
+
+
+def click_items(rows):
+    """One item per knob change or voice edge. The reference is the probe's own 50 ms glide control (kink about 2.5,
+    burst about -86 dB): yellow when the kink is over 5 times the steady signal's AND the burst is above -80 dB. A row
+    whose sensitivity is under 3 cannot see a click (a bright or noisy signal) and gets no light."""
+    items = []
+    for r in rows:
+        kink, jump, burst, sens = num(r['kinkRatio']), num(r['jumpRatio']), num(r['burstAbsDb']), num(r['sensitivity'])
+        reasons, light = [], 'green'
+        if r['family'] == 'control':
+            light, reasons = 'blue', ["a control: it shows the meter's range"]
+        elif sens < 3:
+            light, reasons = 'blue', [f'blind here: a 10 percent step would read only {fmt(sens)} (the signal is too bright)']
+        elif kink > 5 and burst > -80:
+            light = 'yellow'
+            reasons = [f'the kink is {fmt(kink)} times the steady signal, the burst above 5 kHz {fmt(burst)} dB re the signal '
+                       f'({fmt(r["kinkOffsetFrames"] / SAMPLE_RATE * 1000)} ms after the event)']
+            if jump > 10 and burst > -30:
+                reasons.append('in the class of a hard step (the control reads jump 52, burst -18 dB)')
+        items.append({
+            'id': f'{r["family"]}/{r["stage"]}/{r["knob"]}/{r["change"]}', 'group': f'{r["family"]} {r["stage"]}',
+            'title': f'{r["knob"]}  {r["change"]}', 'light': light, 'reasons': reasons, 'value': f'x{fmt(kink, 3)}',
+            'columns': ['jump x', 'kink x', 'kink after', 'burst dB re signal', 'burst dB re steady', 'level before',
+                        'after', 'rise ms', 'settle ms', 'sensitivity'],
+            'rows': [[fmt(jump), fmt(kink), f'{fmt(r["kinkOffsetFrames"] / SAMPLE_RATE * 1000)} ms', fmt(burst),
+                      fmt(r['burstRelDb']), fmt(r['levelBefore']), fmt(r['levelAfter']), blank(r['riseMs']),
+                      blank(r['settleMs']), fmt(sens)]],
+        })
+    return items
+
+
 # ── The page ────────────────────────────────────────────────────────────────────────────────────────────────
 
 
@@ -197,7 +259,7 @@ def probe(pid, title, question, items, note=''):
     counts = {c: sum(1 for i in items if i['light'] == c) for c in ('red', 'yellow', 'green', 'grey', 'blue')}
     worst = max((i['light'] for i in items), key=lambda c: RANK[c], default='none')
     order = {'red': 0, 'yellow': 1, 'grey': 2, 'green': 3, 'blue': 4}
-    if not any(i['light'] == 'blue' for i in items):
+    if not all(i['light'] == 'blue' for i in items):
         items = sorted(items, key=lambda i: (order[i['light']], i['group'], i['title']))
     return {'id': pid, 'title': title, 'question': question, 'note': note, 'built': True, 'light': worst,
             'counts': counts, 'items': items}
@@ -250,6 +312,14 @@ def main():
                     'What does each source, stage and voice cost alone, in nanoseconds per sample?',
                     cost_items(doc), 'JVM only; the browser ranks differently. Under 10 percent between two runs is noise.'))
 
+    doc = load(run, 'aliasing.json')
+    if doc is not None:
+        raw.append(('aliasing', 'Aliasing meter', PLANNED[0][2], aliasing_items(doc),
+                    'Steady tones, analog 0, sources bare; the floor is about -165 dB. Yellow is a question for ears.'))
+    doc = load(run, 'clicks.json')
+    if doc is not None:
+        raw.append(('clicks', 'Click detector', PLANNED[1][2], click_items(doc),
+                    'A 110 Hz tone, one change at a time; a 50 ms glide reads kink 2.5 and -86 dB, a hard step 3618 and -18 dB.'))
     probes = [probe(*r) for r in raw]
     verdicts_path = os.path.join(AUDIT, 'verdicts.json')
     verdicts = {}

@@ -139,8 +139,9 @@ Two tiers, by the "two kinds of check" rule:
 
 ## Leads from the probes (2026-11-10, all UNVERIFIED; the audit confirms or disproves each)
 
-The tables of this run: `docs/audio-audit/2026-11-10/` (`stage-probe`, `stage-cost`, `hot-path-lint` with `--guarded`,
-`dead-knobs` with `--list`; each as `.txt` and `.json`).
+The tables of this run: `docs/audio-audit/2026-11-10/` (`stage-probe`, `stage-cost`, `aliasing`, `clicks`,
+`hot-path-lint` with `--guarded`, `dead-knobs` with `--list`; each as `.txt` and `.json`). The same on a page:
+the Dev Tools' "Engine health" card (`console/dev-status/engine_health.py`).
 
 **Stage probe** (165 knob sets, 8 signals; no stage made a subnormal, and non-finite output came from poison input only):
 
@@ -166,6 +167,46 @@ The tables of this run: `docs/audio-audit/2026-11-10/` (`stage-probe`, `stage-co
     (by design uncompensated; worth one line in its KDoc if not there).
 13. 16 passes of lowpass or highpass: the impulse response starts near 1e-38, under the Float normal range (matters
     only where a Float edge follows).
+
+**Click detector** (217 rows, `clicks.txt`; the scale: a 50 ms glide reads kink 2.5 and burst -86 dB, a hard step
+kink 3618 and -18 dB; fader, times, div, eq, body and vowel switches, compressor and distort on/off, delay and reverb
+OFF read like the glide):
+
+1. **Delay switched ON from off**: the feed snaps, so the first echo returns as a step 250 ms later (kink 115, -27.5
+   dB). Reverb ON the same at 70.7 ms (kink 33, -54.5 dB). `knob-glide.md` says "from Off it snaps".
+2. **A chain swap INTO a room**: kink 63 at 70.7 ms, -49 dB; the room's first output arrives after the 60 ms
+   crossfade has ended.
+3. **The `min` cap and `max` floor engage and release in one sample**: jump about 100, -12 dB, the hard-step class.
+   As documented ("arrives at once"), so a decision, not a bug.
+4. `compressor.attack` 0.1 to 0.003 applies at once (kink 17.8, -65 dB). The limiter with lookahead moves its
+   threshold in about 8 ms where the compressor glides 40 ms: is the lookahead path's threshold glided?
+5. **`adsr.on=0` fades a voice's end (the teardown) but not its START**: sine kink 69.5 (-52.6 dB), tri jump 109
+   (-13.7 dB), supersine -26 dB, berlin -20 dB.
+6. The supersine's default-adsr note end has a kink at its last frame (9.4, -68.5 dB); the sine is clean.
+7. The `pow` exponent glide 1 to 2: kink 9, -65 dB. The cut and teardown fades read kink 10 to 20, -61 to -70 dB (by
+   design, 4 ms).
+8. `teardown_fade.kt`'s KDoc names about 3.3e-3 left on the last frame at a 50 ms release; the sine shows none
+   (a stale KDoc?).
+
+Not measured: sample voices' edges, a swap at the master, a Katalyst shape change, knobs that act on highs only (the
+110 Hz tone hides them).
+
+**Aliasing meter** (995 rows, `aliasing.txt`; non-harmonic energy in dB re the fundamental, floor about -165):
+
+1. **The band-limited saw, ramp and supersaw are only about 10 dB better than the naive `zawtooth`**: -33.4 / -23.2
+   / -15.9 dB at 110 / 1244.5 / 7044.4 Hz against -23.4 / -12.9 / -5.5. Square -25.5 and tri -26.3 at the top pitch.
+2. The impulse has as much energy off its harmonics as on them at every pitch, 110 Hz included.
+3. Sample playback off its own rate (a semitone up, linear interpolation): -105.9 at 110 Hz down to -30.2 at 7 kHz.
+4. Shapers at 1x: rectify -0.9 and chebyshev -3.1 dB re their harmonics at 7 kHz, amount 0.5; at amount 2 every
+   clipping shape sits at -10 to -12 dB, and fold, linearfold, sineshaper, rectify above 0.
+5. Oversampling regions: the hard clip gains about 12 dB per doubling (-30.2 at 1x to -80.8 at 16x), the smooth soft
+   shape 80 dB at 2x alone; smooth shapes bottom out at -120 to -130 dB (16x no better than 8x: the converters' own
+   floor). Rectify at amount 2 never drops below +4.5 dB even at 16x.
+6. **The doors' `Shape(Drive)` aliases far more at 1x than the fused `distort` node** at the same amount (soft -92.5
+   against -138.4, fold -67.9 against -167.3 at 1244.5 Hz): two implementations of one sound?
+7. The Ignitor node and the Katalyst `distort` agree within 0.1 dB everywhere (one shared core).
+
+Not measured: aliasing under modulation (fm, vibrato, glides), the detuned stacks, the JS platform.
 
 **Stage cost table** (JVM, 218 rows, `stage-cost.txt`; net ns per sample, a plain sine is 2.24; no row allocates;
 the off paths are off: phaser at wet 0, gain 1, `classic()` all off and reverb size 0 cost 0 to 0.2 ns):
