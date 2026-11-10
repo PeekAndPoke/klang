@@ -272,11 +272,49 @@ thread, is allowed. About 11 findings hang on the answer.
 `persistence` of B9; `bipolar`; `declick`; `gain.gain`, deliberate; `eqhz`, `eqq`, `eqdb`, `eqlp`, `divisor` of the
 demo sounds; `warm`, `offset` of the warm-up).
 
+## The audit's result (2026-11-10)
+
+The index of every finding with its verdict: `docs/audio-audit/2026-11-10/audit/SUMMARY.md`. The layer reports
+(`layer-*.md`, ten auditors on Fable 5.2, read-only), the disproof reports (`disproof-*.md`, three challengers on Opus
+5.5 at max effort, measuring in the engine) and both briefs are in the same folder.
+
+- 120 findings. 69 challenged (every critical and major one, and the minors of the same chains): 0 disproved, 18
+  smaller than claimed, 4 larger. After the pass: 2 critical, 16 major, 73 minor, 29 notes; 51 minors and notes were
+  not challenged and carry the auditor's reading only. 9 new findings came out of the pass itself.
+- Critical: L3-01 (the pluck is flat: 15.75 cents at A4, 36.73 at C6 at the default brightness, measured by two
+  methods; four built-in songs use plucks) and L7b-01 (one NaN on a duck's side chain latches its gain; with L1-01 a
+  pattern reaches it: `pan("NaN")`).
+- A crash from a pattern (L2-04, major after the pass): `note("c3*8").s("saw").pregain(0).legato(-0.001)
+  .adsr(release = 0)` throws out of the render call, and neither host catches it (L8-03, L9-01): all audio ends until
+  a reload.
+- Downgraded by measuring: the filter envelope's framing dependence (L4-02: -40 to -63 dB re the peak in the seven
+  songs that use it), the saturating filter's hold (L4-01: needs a transient 60 to 80 dB over full scale), the house
+  stage's seconds of full-scale DC (L8-01, L8-02: same reach), the sustain-0 subnormals (L4-03), the deactivation
+  clear for ordinary delays (L6-03), the diagnostics' cost on the JVM.
+- The reproductions stay as specs that run only with `KLANG_PROBE=audit` (`audio_be`, `sprudel` and `klang`, each
+  under `src/jvmTest/kotlin/audit/`): the fix of a finding turns its row into a guard.
+- The first verdicts are in `docs/audio-audit/verdicts.json` and on the engine health page.
+
+Open for the maintainer: which findings become tickets; the rule question (is an allocation once per note in render
+code allowed); the decisions the reports list under "Decisions worth revisiting" and "Listening tasks".
+
 ## After the audit
 
 Codify a ruleset for deep audits if this worked (its own skill or a section; a maintainer decision): what an audit
 is against a review, which model reads, how findings are disproved, what it leaves behind. Notes for it are
 collected here while the audit runs.
+
+Notes so far (each report also ends in a section "For the audit ruleset"):
+
+- Probes first, readers second: every auditor started from measured leads and had to confirm, disprove or mark each
+  one. The leads that were wrong (the "stale KDoc", the reverb holding an engine) were caught by reading.
+- Read-only auditors that run nothing, then a second model that must measure: no finding was disproved, but 22 of 69
+  changed size. The auditors were right about mechanisms and often wrong about reach; severity needs the measurement.
+- A reach statement ("which door gets there") was the most valuable field and the one most often corrected.
+- Two auditors finding the same line from different layers (the unguarded `pan`) was the strongest early signal.
+- The coordinator miscounted the findings once (128 for 120) by adding the auditors' own totals: generate the index
+  from the reports.
+- Reproductions kept as gated specs give every fix its guard for free.
 
 ## Decide before starting (the list as proposed)
 
@@ -311,3 +349,4 @@ collected here while the audit runs.
 - 2026-11-10: created.
 - 2026-11-10: IN PROGRESS. Started: the three small probes first (hot-path lint, dead-knob finder, stage probe).
 - 2026-11-10: all seven probes built (the cost table on the JVM only), the first run in `docs/audio-audit/2026-11-10/`, the engine health page. Next: the Kotlin/JS half of the cost table and the profiles, then the nine-layer audit on Fable 5.2 (held for the start of a budget week) and the adversarial pass.
+- 2026-11-10: the audit ran (ten layers, 120 findings) and the disproof pass (69 challenged, 0 disproved); the index is `docs/audio-audit/2026-11-10/audit/SUMMARY.md`. Waiting for the maintainer to pick the tickets.

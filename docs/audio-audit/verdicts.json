@@ -1,3 +1,147 @@
 {
- "_doc": "The judgement over the probes' leads, read by console/dev-status/engine_health.py. Key: \"<probe id>/<item id>\" (the page's address bar shows it after the #, URL-decoded). Value: {\"status\": \"confirmed\" | \"accepted\" | \"disproved\" | \"fixed\", \"note\": \"one sentence\", \"ticket\": \"KLANG-00000\"}. confirmed is red, accepted is grey, disproved and fixed are green. Keys that start with _ are ignored. Filled by the audit of KLANG-00420 and by the fixes after it."
+ "_doc": "The judgement over the probes' leads, read by console/dev-status/engine_health.py. Key: \"<probe id>/<item id>\" (the page's address bar shows it after the #, URL-decoded). Value: {\"status\": \"confirmed\" | \"accepted\" | \"disproved\" | \"fixed\", \"note\": \"one sentence\", \"ticket\": \"KLANG-00000\"}. confirmed is red, accepted is grey, disproved and fixed are green. Keys that start with _ are ignored. Filled by the audit of KLANG-00420 and by the fixes after it.",
+ "stage-probe/katalyst/reverb/default (wet .25 size 5)": {
+  "status": "accepted",
+  "note": "The documented ANTI_DENORMAL bias (audio-constraints); the audit found it does not keep an engine alive (layer 9)."
+ },
+ "stage-probe/katalyst/duck/cyl=1 depth=.8 (self-trigger)": {
+  "status": "confirmed",
+  "note": "L7b-01, critical: one NaN on the side chain latches the gain; from a pattern (pan(\"NaN\")) it silences every playback until the ducked notes end. Reproduced in AuditSafetyRepro."
+ },
+ "stage-probe/katalyst/duck/cyl=1 depth=1 release=0": {
+  "status": "confirmed",
+  "note": "L7b-01, critical: one NaN on the side chain latches the gain; from a pattern (pan(\"NaN\")) it silences every playback until the ducked notes end. Reproduced in AuditSafetyRepro."
+ },
+ "stage-probe/ignitor/highpass/freq=1000 analog=1": {
+  "status": "confirmed",
+  "note": "L4-01, minor after measuring: the saturating filter holds a huge state, but only a transient 60 to 80 dB over full scale reaches that region."
+ },
+ "stage-probe/ignitor/bandpass/freq=23999 q=200 analog=1": {
+  "status": "confirmed",
+  "note": "L4-01, minor after measuring: the saturating filter holds a huge state, but only a transient 60 to 80 dB over full scale reaches that region."
+ },
+ "stage-probe/ignitor/notch/freq=23999 q=200 analog=1": {
+  "status": "confirmed",
+  "note": "L4-01, minor after measuring: the saturating filter holds a huge state, but only a transient 60 to 80 dB over full scale reaches that region."
+ },
+ "stage-probe/ignitor/lowpass/freq=1000 analog=1": {
+  "status": "confirmed",
+  "note": "L4-01, minor after measuring: the saturating filter holds a huge state, but only a transient 60 to 80 dB over full scale reaches that region."
+ },
+ "stage-probe/ignitor/lowpass/freq=23999 q=200 analog=1": {
+  "status": "confirmed",
+  "note": "L4-01, minor after measuring: the saturating filter holds a huge state, but only a transient 60 to 80 dB over full scale reaches that region."
+ },
+ "framing/stage/lpf/freq=500 env=24 (default env times)/onset": {
+  "status": "confirmed",
+  "note": "L4-02, minor after measuring: the cutoff envelope is read at a block's two ends; in the seven built-in songs that use it a note varies by -40 to -63 dB re its peak."
+ },
+ "framing/stage/lpf/freq=500 env=24 a=0.001 d=0.0013 s=0.3 r=0.0017 (sub-block)/onset": {
+  "status": "confirmed",
+  "note": "L4-02, minor after measuring: the cutoff envelope is read at a block's two ends; in the seven built-in songs that use it a note varies by -40 to -63 dB re its peak."
+ },
+ "framing/stage/hpf/freq=500 env=24 (default env times)/onset": {
+  "status": "confirmed",
+  "note": "L4-02, minor after measuring: the cutoff envelope is read at a block's two ends; in the seven built-in songs that use it a note varies by -40 to -63 dB re its peak."
+ },
+ "framing/stage/hpf/freq=500 env=24 a=0.001 d=0.0013 s=0.3 r=0.0017 (sub-block)/onset": {
+  "status": "confirmed",
+  "note": "L4-02, minor after measuring: the cutoff envelope is read at a block's two ends; in the seven built-in songs that use it a note varies by -40 to -63 dB re its peak."
+ },
+ "framing/stage/bpf/freq=1000 env=24/onset": {
+  "status": "confirmed",
+  "note": "L4-02, minor after measuring: the cutoff envelope is read at a block's two ends; in the seven built-in songs that use it a note varies by -40 to -63 dB re its peak."
+ },
+ "framing/stage/notch/freq=1000 env=24/onset": {
+  "status": "confirmed",
+  "note": "L4-02, minor after measuring: the cutoff envelope is read at a block's two ends; in the seven built-in songs that use it a note varies by -40 to -63 dB re its peak."
+ },
+ "framing/stage gate/lpf/freq=500 env=24 (default env times)/gate": {
+  "status": "confirmed",
+  "note": "L4-02, minor after measuring: the cutoff envelope is read at a block's two ends; in the seven built-in songs that use it a note varies by -40 to -63 dB re its peak."
+ },
+ "framing/stage gate/lpf/freq=500 env=24 a=0.001 d=0.0013 s=0.3 r=0.0017 (sub-block)/gate": {
+  "status": "confirmed",
+  "note": "L4-02, minor after measuring: the cutoff envelope is read at a block's two ends; in the seven built-in songs that use it a note varies by -40 to -63 dB re its peak."
+ },
+ "framing/stage gate/hpf/freq=500 env=24 (default env times)/gate": {
+  "status": "confirmed",
+  "note": "L4-02, minor after measuring: the cutoff envelope is read at a block's two ends; in the seven built-in songs that use it a note varies by -40 to -63 dB re its peak."
+ },
+ "framing/stage gate/hpf/freq=500 env=24 a=0.001 d=0.0013 s=0.3 r=0.0017 (sub-block)/gate": {
+  "status": "confirmed",
+  "note": "L4-02, minor after measuring: the cutoff envelope is read at a block's two ends; in the seven built-in songs that use it a note varies by -40 to -63 dB re its peak."
+ },
+ "framing/stage gate/bpf/freq=1000 env=24/gate": {
+  "status": "confirmed",
+  "note": "L4-02, minor after measuring: the cutoff envelope is read at a block's two ends; in the seven built-in songs that use it a note varies by -40 to -63 dB re its peak."
+ },
+ "framing/stage gate/notch/freq=1000 env=24/gate": {
+  "status": "confirmed",
+  "note": "L4-02, minor after measuring: the cutoff envelope is read at a block's two ends; in the seven built-in songs that use it a note varies by -40 to -63 dB re its peak."
+ },
+ "clicks/katalyst/delay/switch ON/{} -> {wet=0.25 time=0.25 feedback=0.3 cap=1.0}": {
+  "status": "confirmed",
+  "note": "L7a-01, major: the feed snaps to full wet when the stage leaves Off, so the first return is a step."
+ },
+ "clicks/katalyst/reverb/switch ON/{} -> {wet=0.25 size=5.0}": {
+  "status": "confirmed",
+  "note": "L7a-01, major: the feed snaps to full wet when the stage leaves Off, so the first return is a step."
+ },
+ "clicks/katalyst/compressor/compressor.attack/0.1 -> 0.003": {
+  "status": "confirmed",
+  "note": "L7a-04, minor: with a lookahead (and for the attack) the knob applies at once, no glide."
+ },
+ "clicks/katalyst/limiter (lookahead 5 ms)/limiter.threshold/unset -> -12.0": {
+  "status": "confirmed",
+  "note": "L7a-04, minor: with a lookahead (and for the attack) the knob applies at once, no glide."
+ },
+ "clicks/swap/cylinder chain swap/into a room/classic -> room (reverb wet .5 size 3)": {
+  "status": "confirmed",
+  "note": "L7a-02, major: the arriving chain is fed at full level from its first block."
+ },
+ "clicks/voice/sine/note start/classic(), adsr.on=0": {
+  "status": "confirmed",
+  "note": "L2-05, minor, a decision: with the envelope off the engine fades a voice's end and not its start."
+ },
+ "clicks/voice/tri/note start/classic(), adsr.on=0": {
+  "status": "confirmed",
+  "note": "L2-05, minor, a decision: with the envelope off the engine fades a voice's end and not its start."
+ },
+ "clicks/voice/supersine/note start/classic(), adsr.on=0": {
+  "status": "confirmed",
+  "note": "L2-05, minor, a decision: with the envelope off the engine fades a voice's end and not its start."
+ },
+ "clicks/voice/supertri/note start/classic(), adsr.on=0": {
+  "status": "confirmed",
+  "note": "L2-05, minor, a decision: with the envelope off the engine fades a voice's end and not its start."
+ },
+ "clicks/voice/superpluck/note start/classic(), adsr.on=0": {
+  "status": "confirmed",
+  "note": "L2-05, minor, a decision: with the envelope off the engine fades a voice's end and not its start."
+ },
+ "clicks/voice/pluck/note start/classic(), adsr.on=0": {
+  "status": "confirmed",
+  "note": "L2-05, minor, a decision: with the envelope off the engine fades a voice's end and not its start."
+ },
+ "clicks/voice/perlinnoise/note start/classic(), adsr.on=0": {
+  "status": "confirmed",
+  "note": "L2-05, minor, a decision: with the envelope off the engine fades a voice's end and not its start."
+ },
+ "clicks/voice/berlinnoise/note start/classic(), adsr.on=0": {
+  "status": "confirmed",
+  "note": "L2-05, minor, a decision: with the envelope off the engine fades a voice's end and not its start."
+ },
+ "dead-knobs/ignitor/offset": {
+  "status": "accepted",
+  "note": "Warm-up scaffolding, not reachable even by a raw ignp (layer 9)."
+ },
+ "dead-knobs/ignitor/warm": {
+  "status": "accepted",
+  "note": "Warm-up scaffolding, not reachable even by a raw ignp (layer 9)."
+ },
+ "dead-knobs/katalyst/gain.gain": {
+  "status": "accepted",
+  "note": "The cylinder fader, reachable by katp only: by design (its KDoc)."
+ }
 }
