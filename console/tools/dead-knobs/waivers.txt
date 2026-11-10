@@ -1,0 +1,8 @@
+# Waivers for dead_knobs.py: one per line, `<map> <key> <reason>`, map is `ignitor` or `katalyst`.
+# The reason is required. A waiver silences that key in every section ((a), (b), (c), (e)); a waiver
+# that silences nothing is listed as unused (and fails the run under --strict).
+# Whether a finding is deliberate is the maintainer's call: add a line only with that decision, and
+# name where it was made.
+#
+# Example:
+# ignitor bipolar reached only by ignp(Ignitor.slot.bipolar, x) on purpose (maintainer, <date>)
