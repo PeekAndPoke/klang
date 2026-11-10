@@ -108,6 +108,20 @@ What this ticket did not force, each with the options and a recommendation. The 
    too (the delay's since this ticket only up to a 1 s tap window, `KatalystDelayEffect.MAX_SCANNED_TAP_SECONDS`; the
    reverb's about 28k cells per switch-off). Fixers do not edit skills: the sentence needs its owner's correction.
 
+### The maintainer's answers (2026-11-10)
+
+- **3, the vowel table:** "Yes the vowels do not really sound well today... They need tweaking later." Not done now;
+  it stays open for a later pass by ear.
+- **4, `reverb.lowpass`:** "Yes make lowpass reverb a real cutoff." To do.
+- **5, the compressor's detector law:** "Yes to the compressor change." To do: smooth the gain reduction, not the level.
+- **6, the duck order:** "Ducking accepted." Read as: option (a) is accepted, every sidechain reads its source's mix
+  before any duck writes. To do.
+- **7, the skill sentence:** "Update the skill please." Done (`.claude/skills/review-loop/audio-constraints.md`).
+- 1 (the fade's length) and 2 (the delay ring's bound) are not answered yet.
+
+The three "to do" items run as a second pass of this ticket, after KLANG-00429 has landed (one build, one corpus
+comparison at a time).
+
 ## Notes from the work (2026-11-10)
 
 **Per finding.**

@@ -35,7 +35,9 @@ gone is removed when someone notices, not kept for history.
 - **`PhaserCore.step` must stay `inline`**, its state `internal` (about 25 % JVM / 60 % JS otherwise).
 - **`DelayLine`: no per-sample `isFinite`**: it cost about +33 % JVM / +30 % JS, removed 2026-05-22.
 - **`Reverb.combPeakAbs()` and `DelayLine.tapWindowPeakAbs()` are scans, not for per-block use** (the reverb's
-  is about 28k samples): only a chain swap's one-off drain measurement calls them. The engine's tail questions are `TailCeiling` compares (`KatalystChain.hasTail()`, on a cylinder and at the output
+  is about 28k samples): they run once per switch-off of their stage and in a chain swap's one-off drain measurement, never
+  per block. The delay's is skipped above a 1 s tap window (`KatalystDelayEffect.MAX_SCANNED_TAP_SECONDS`), where the countdown
+  starts from the tail ceiling instead (KLANG-00428, 2026-11-10). The engine's tail questions are `TailCeiling` compares (`KatalystChain.hasTail()`, on a cylinder and at the output
   since phase 3 step 12 C3); `MasterBus` still asks only after `TAIL_CHECK_INTERVAL_BLOCKS` silent blocks, because a
   delay is silent between echoes and an output-only test would cut them.
 - **A sounding resonator bank never retunes** (body and vowel, one class with two kinds, `KatalystResonatorEffect`,
