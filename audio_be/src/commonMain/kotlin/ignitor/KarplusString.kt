@@ -7,11 +7,23 @@ package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.utils.flushState
+import io.peekandpoke.klang.audio_be.utils.nanGuard
+import kotlin.math.PI
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.floor
+import kotlin.math.pow
+import kotlin.math.sin
 import kotlin.random.Random
 
 /**
  * One Karplus-Strong string: a delay line excited by a noise burst, read with linear interpolation, its feedback
  * filtered by a brightness one-pole and an optional stiffness allpass, then scaled by the feedback coefficient.
+ *
+ * **In tune** (KLANG-00426, audit finding L3-01): the loop's period is the line's read delay PLUS the phase delay of the
+ * two loop filters (and of the read's interpolation). The nodes take that delay at the note ([loopDelayOf]) out of the
+ * read delay, so the loop's pole sits at the note at every brightness, stiffness and feedback. Before, the line alone was one period
+ * and the default pluck sounded 16 cents flat at A4.
  *
  * The string core of both pluck nodes: `Ignitors.karplusStrong` holds one string, `Ignitors.superKarplusStrong` one
  * per unison voice (engine tidy-up step 11). The nodes keep what differs: their param reads (order, count and
@@ -42,21 +54,37 @@ internal class KarplusString {
     var apPrevOut: Double = 0.0
 
     /**
-     * Plucks the string: a noise burst over the first `baseDelay.toInt()` samples of the delay line, placed by
-     * [pickPos] (0 a short burst at the start, 1 the whole length), one `rng.nextDouble() * 2 - 1` per burst sample in
-     * index order and zeros elsewhere; then [writePos]. The filter state is left as it is.
+     * Plucks the string: a noise burst over the first `lineDelay.toInt()` samples of the delay line (the read delay,
+     * [lineDelay] clamped to the line as [render] clamps it), placed by [pickPos] (0 a short burst at the start, 1 the
+     * whole length), one `rng.nextDouble() * 2 - 1` per burst sample in index order and zeros elsewhere; then the mean
+     * of those samples is taken out of each of them, so the excitation carries no DC into the loop (audit finding L3-06:
+     * the loop passes DC at the feedback gain alone, so a burst's random mean outlived its tone); then [writePos]. The
+     * draws are the same in count and order as without the mean's removal. The filter state is left as it is.
      */
-    fun excite(baseDelay: Double, pickPos: Double, rng: Random) {
-        val delayLen = baseDelay.toInt()
+    fun excite(lineDelay: Double, pickPos: Double, rng: Random) {
+        val delayLen = lineDelay.coerceIn(2.0, (MAX_DELAY - 1.0)).toInt()
         val pp = pickPos.coerceIn(0.0, 1.0)
         val burstLen = maxOf(1, (delayLen * (0.1 + 0.9 * pp)).toInt())
         val burstStart = ((delayLen - burstLen) * pp).toInt()
+        var sum = 0.0
 
         for (j in 0 until delayLen) {
-            delayLine[j] = if (j >= burstStart && j < burstStart + burstLen) {
+            val v = if (j >= burstStart && j < burstStart + burstLen) {
                 (rng.nextDouble() * 2.0 - 1.0)
             } else {
                 0.0
+            }
+
+            delayLine[j] = v
+            sum += v
+        }
+
+        // A NaN line delay leaves delayLen at 0: nothing was written, and nothing is to be taken out.
+        if (delayLen > 0) {
+            val mean = sum / delayLen
+
+            for (j in 0 until delayLen) {
+                delayLine[j] = delayLine[j] - mean
             }
         }
 
@@ -65,8 +93,10 @@ internal class KarplusString {
 
     /**
      * Renders the string over `[from, to)`: the delay [baseDelay] divided by `phaseMod[i]` (when there is one) and by
-     * the drift ramp (when [hasDrift]: it starts at [driftStart] and steps by [driftStep] per sample), clamped to the
-     * line; the read, the filters, the write-back scaled by [feedback]. The output is `sample * gain`, written to
+     * the drift ramp (when [hasDrift]: it starts at [driftStart] and steps by [driftStep] per sample), less [loopDelay]
+     * (the loop's delay besides the line at the note, [loopDelayOf]), clamped to the line; the read, the filters, the
+     * write-back scaled by [feedback]. The loop delay is taken off after the pitch modulation divides the delay, so a
+     * modulated note keeps the filters' delay (which hardly moves with the pitch) instead of scaling it. The output is `sample * gain`, written to
      * [buffer] or, when [accumulate], added to it. [lpAlpha], [hasStiffness] and [apCoeff] come from [lpAlphaOf],
      * [hasStiffnessOf] and [apCoeffOf].
      *
@@ -97,6 +127,7 @@ internal class KarplusString {
         hasDrift: Boolean,
         driftStart: Double,
         driftStep: Double,
+        loopDelay: Double,
         lpAlpha: Double,
         hasStiffness: Boolean,
         apCoeff: Double,
@@ -105,6 +136,7 @@ internal class KarplusString {
         accumulate: Boolean,
     ) {
         val delay = baseDelay * 1.0
+        val filterDelay = loopDelay * 1.0
         var m = driftStart * 1.0
         val dm = driftStep * 1.0
         val alpha = lpAlpha * 1.0
@@ -131,7 +163,7 @@ internal class KarplusString {
                 m += dm
             }
 
-            dl = dl.coerceIn(2.0, (len - 1.0))
+            dl = (dl - filterDelay).coerceIn(2.0, (len - 1.0))
 
             // Read with linear interpolation
             val readPosF = wp - dl
@@ -179,8 +211,81 @@ internal class KarplusString {
         /** The delay line's length: down to about 20 Hz at 48 kHz (2400 samples). */
         const val MAX_DELAY: Int = 2500
 
-        /** The base delay in samples of a string at [freqHz], clamped to the line. */
+        /** The base delay in samples of a string at [freqHz], clamped to the line: one period of the note. */
         fun baseDelayOf(sampleRate: Double, freqHz: Double): Double = (sampleRate / freqHz).coerceIn(2.0, (MAX_DELAY - 1.0))
+
+        /**
+         * How much the nodes take off the line's read delay so the string sounds at the frequency whose period is
+         * [period] samples (a base delay, [baseDelayOf]): the delay the loop adds besides the line, so that the loop as
+         * a whole has its pole at the note (audit finding L3-01). The loop is the line `z^-M`, its linear read
+         * `(1 - d) + d z^-1` (`M + d` the read delay), the brightness one-pole `alpha / (1 - (1 - alpha) z^-1)`, when
+         * [hasStiffness] the allpass `(a + z^-1) / (1 + a z^-1)` with `a` = [apCoeff], and the gain [feedback].
+         *
+         * The phase delay at the note on the unit circle (the one-pole's lag `atan2((1 - alpha) sin w, 1 - (1 - alpha)
+         * cos w) / w`, the allpass's) is most of it: the one-pole's falls with frequency (at `alpha` 0.01 it is 99
+         * samples at DC and about 24 at A4), so the DC delay `(1 - alpha) / alpha` would be far off. But a damped loop's
+         * pole lies inside the circle, at the radius `r` where the loop gain is 1 (`r^M = |feedback H(z)|`), and the
+         * filters' phase there differs: on the unit circle a dark pluck stays 1.4 cents flat at A4 (brightness 0.1) and
+         * 2 cents at C6 (brightness 0.2). So the phase is taken at `z = r e^(jw)`, the radius from the loop gain at the
+         * current estimate, in [LOOP_DELAY_ITERATIONS] fixed-point steps from the unit circle (the first step is the
+         * unit-circle phase delay). Modelled against the exact pole: within 0.1 cent from A1 to C7 at every brightness
+         * and stiffness, also where the tone dies in a few periods.
+         *
+         * Per note and again when an input moves, never per sample (a few dozen transcendental calls). The read delay is
+         * clamped to the line as [render] clamps it. A NaN (a NaN brightness, period or feedback) reads as 0: the read
+         * delay then behaves as it did before this compensation existed, and a NaN knob does not become a NaN delay.
+         */
+        fun loopDelayOf(period: Double, lpAlpha: Double, hasStiffness: Boolean, apCoeff: Double, feedback: Double): Double {
+            val w = 2.0 * PI / period
+            val cosW = cos(w)
+            val sinW = sin(w)
+            val pole = 1.0 - lpAlpha
+            val loopGainSq = feedback * feedback * lpAlpha * lpAlpha
+            // z^-1 = rInv e^(-jw): rInv is 1 / r, the unit circle at the start.
+            var rInv = 1.0
+            var readDelay = period
+
+            for (i in 0 until LOOP_DELAY_ITERATIONS) {
+                readDelay = readDelay.coerceIn(2.0, (MAX_DELAY - 1.0))
+
+                val whole = floor(readDelay)
+                val frac = readDelay - whole
+                val zr = rInv * cosW
+                val zi = -rInv * sinW
+
+                // The one-pole: 1 / (1 - pole z^-1), its gain alpha in loopGainSq.
+                val lpRe = 1.0 - pole * zr
+                val lpIm = -pole * zi
+                var phase = -atan2(lpIm, lpRe)
+                var gainSq = loopGainSq / (lpRe * lpRe + lpIm * lpIm)
+
+                if (hasStiffness) {
+                    val numRe = apCoeff + zr
+                    val denRe = 1.0 + apCoeff * zr
+                    val denIm = apCoeff * zi
+
+                    phase += atan2(zi, numRe) - atan2(denIm, denRe)
+                    gainSq *= (numRe * numRe + zi * zi) / (denRe * denRe + denIm * denIm)
+                }
+
+                // The linear read: (1 - frac) + frac z^-1.
+                val inRe = 1.0 - frac + frac * zr
+                val inIm = frac * zi
+
+                phase += atan2(inIm, inRe)
+                gainSq *= inRe * inRe + inIm * inIm
+
+                // The pole's angle is the note's when the whole loop's phase delay, the line's `whole` samples plus the
+                // rest, is one period; its radius is where the loop gain is 1.
+                readDelay = period - (-phase / w - frac)
+                rInv = gainSq.pow(-0.5 / whole)
+            }
+
+            return (period - readDelay.coerceIn(2.0, (MAX_DELAY - 1.0))).nanGuard()
+        }
+
+        /** The fixed-point steps of [loopDelayOf]: modelled, 4 reach 0.4 cent at the darkest top notes, 5 reach 0.08. */
+        const val LOOP_DELAY_ITERATIONS: Int = 5
 
         // The filter coefficients, from the block's brightness and stiffness. Three laws, one place; three functions
         // because a single one could hand back three values only through an allocation or a holder.

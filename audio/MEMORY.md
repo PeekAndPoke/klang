@@ -220,6 +220,11 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   per sample, its moving phase gliding across the block), a partial whose frequency's MAGNITUDE is at or above
   Nyquist silent (one gate for the node; a non-finite frequency silent too), drift lanes in `DriftLanes` blended by
   `analogSpread`. The explicit list is fixed per note, so its storage and lanes are built with the node.
+- **The pluck is in tune** (`KarplusString`, KLANG-00426): the read delay is the note's period less the loop filters'
+  phase delay at the note (`loopDelayOf`: the brightness one-pole plus the stiffness allpass), computed per note and
+  again only when the pitch, brightness or stiffness moves, taken off after the pitch modulation divides the delay;
+  within 1 cent from A1 to C7 wherever the tone has a pitch (`PluckPitchSpec`). The burst is written with its mean taken
+  out, so no DC circulates (`PluckDcSpec`). `pickPosition` is still the burst's length and place, not a pick position.
 - **`pregain`** is an ordinary slot (`Param("pregain", 1.0)`) on the source, before every nonlinearity. It changes
   timbre only where a nonlinearity follows; a saturating shaper driven hard makes it inert, on a wavefolder it is
   the fold depth. A `mul` slot's default must be a safe literal: unset is NOT off for `mul`.
@@ -429,6 +434,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-11-10 The pluck in tune (the loop filters' delay out of the line) and without DC: KLANG-00426
 - 2026-11-10 The render's net, the pan, pitch and time guards, the duck's NaN, no negative window: KLANG-00425
 
 - 2026-11-06 The noise and pluck source doors answer the pattern's slots where unset (sealed constants before):

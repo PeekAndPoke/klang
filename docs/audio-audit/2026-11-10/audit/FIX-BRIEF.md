@@ -104,3 +104,6 @@ touch `gradle.properties` in the repo.
   say so (its file shows in `git status` or `git log`).
 - Other sessions have uncommitted work in `src/jsMain`, `src/jsTest` and `build.gradle.kts`. Leave it alone and do
   not report it as yours.
+- **The corpus check reads RED after a meant sound change** (a song whose text is unchanged moved). That is expected
+  while these tickets run; do NOT run `corpus-accept-engine` (the coordinator accepts the new reference once, at the
+  end). Judge your own change by your before and after runs only.

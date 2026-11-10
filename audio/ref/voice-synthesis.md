@@ -129,6 +129,7 @@ registered in `ignitor/IgnitorDefaults.kt` / `IgnitorRegistry.kt`. (There is no 
 | Raw shapes       | `zaw`/`zawtooth` `zamp`                                     | `flankSamples = 0` → instant / aliased edges                                                                                                                    |
 | Super (unison)   | `supersaw` `superramp` `supersquare` `supertri` `supersine` | ONE `UnisonStackIgnitor` (a `StackKind` per shape): detuned voice stack, center-dominant gains, per-voice drift, centroid-anchored tuning. `voices` / `freqSpread` / `analog` ignitorParams |
 | Noise            | `noise` `pink` `dust` …                                     | White / pink / impulse noise                                                                                                                                    |
+| Plucked string   | `pluck` `ks` `string` `superpluck`                           | `KarplusString`: a noise burst (its mean taken out) in a delay line, a brightness one-pole and a stiffness allpass in the loop. In tune: the read delay is the period less the filters' phase delay at the note (`loopDelayOf`, KLANG-00426). `pickPosition` sets the burst's length and place |
 
 Per-oscillator character constants live in `ignitor/OscillatorTuning.kt`
 (`SAW_*`, `PULSE_*`, `SUPERSAW_*`, `SUPER{RAMP,SQUARE,TRI,SINE}_*`).

@@ -70,6 +70,9 @@ Beyond the filters, Klang's voices and effects build on well-known DSP algorithm
 
 - **Freeverb** by Jezar at Dreampoint — the reverb (Schroeder/Moorer architecture, public domain)
 - **Karplus–Strong** (Kevin Karplus & Alexander Strong) — plucked-string synthesis
+- **The plucked string in tune** after David A. Jaffe and Julius O. Smith, *"Extensions of the Karplus-Strong
+  Plucked-String Algorithm"* (Computer Music Journal, 1983): the loop filters' phase delay at the note is taken out of
+  the delay line, so the pluck plays its note at every brightness and stiffness
 - **PolyBLEP** (Välimäki et al.) — band-limited oscillator anti-aliasing
 - **Super-saw** after Adam Szabo's *"How to Emulate the Super Saw"* (Roland JP-8000)
 - **Chebyshev-polynomial waveshaping** — harmonic distortion

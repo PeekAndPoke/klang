@@ -226,14 +226,14 @@ private val BASELINE: Map<String, String> = mapOf(
     "dust | analog 2, lpf 1200: one filter" to "0b02f4c96eebfb34",
     "crackle | untouched" to "b33d221dd774d76a",
     "crackle | analog 2, lpf 1200: one filter" to "8a72c07ad59a04a1",  // diverged from the strip at HEAD: the section 8 draw order
-    "pluck | untouched" to "d97ca175b17e19fa",
-    "pluck | analog 2, lpf 1200: one filter" to "afb99770762cf8a7",
-    "ks | untouched" to "d97ca175b17e19fa",
-    "ks | analog 2, lpf 1200: one filter" to "afb99770762cf8a7",
-    "string | untouched" to "d97ca175b17e19fa",
-    "string | analog 2, lpf 1200: one filter" to "afb99770762cf8a7",
-    "superpluck | untouched" to "1fb765b8ac225e5d",
-    "superpluck | analog 2, lpf 1200: one filter" to "280703cba5ab4800",
+    "pluck | untouched" to "7da28ac99738477e",
+    "pluck | analog 2, lpf 1200: one filter" to "6cb1c85465476c6f",
+    "ks | untouched" to "7da28ac99738477e",
+    "ks | analog 2, lpf 1200: one filter" to "6cb1c85465476c6f",
+    "string | untouched" to "7da28ac99738477e",
+    "string | analog 2, lpf 1200: one filter" to "6cb1c85465476c6f",
+    "superpluck | untouched" to "937ef08a096f4967",
+    "superpluck | analog 2, lpf 1200: one filter" to "9c46b5ce5d83afab",
     "sgpad | untouched" to "06c94960732c7ff5",
     "sgpad | analog 2, lpf 1200: one filter" to "dbec5959524c5b20",
     "sgbell | untouched" to "c6e219205c09ba37",
@@ -246,9 +246,10 @@ private val BASELINE: Map<String, String> = mapOf(
 
 /**
  * The stiffness row's pins, captured from the code before tidy-up step 11 (`fb24e509`, review round 2), when the string
- * still lived in the two nodes; regenerate them only for a heard sound decision, as [BASELINE].
+ * still lived in the two nodes, and regenerated with the Karplus rows of [BASELINE] when the pluck was tuned and its burst
+ * lost its DC (KLANG-00426, a sound change the maintainer asked for); regenerate them only for a sound decision.
  */
 private val STIFF_BASELINE: Map<String, String> = mapOf(
-    "pluck" to "8d3c57e0a0cac217",
-    "superpluck" to "169e38991c225e64",
+    "pluck" to "c23711eab8786439",
+    "superpluck" to "f9e3867bb34ad19a",
 )

@@ -2542,7 +2542,9 @@ object Ignitors {
 
     /**
      * Karplus-Strong plucked string synthesis via noise-burst-excited delay line with filtered feedback.
-     * Extended with pick position modeling and allpass stiffness filtering. One [KarplusString].
+     * Extended with a placed burst (`pickPosition` sets the burst's length and place, [KarplusString.excite]) and
+     * allpass stiffness filtering. One [KarplusString], tuned with the loop filters' delay taken out
+     * ([KarplusString.loopDelayOf]).
      */
     fun karplusStrong(
         freq: Ignitor = FreqIgnitor,
@@ -2565,6 +2567,15 @@ object Ignitors {
     ) : Ignitor {
         private val string = KarplusString()
 
+        /**
+         * The loop delay ([KarplusString.loopDelayOf]) and the inputs it was computed from: the base delay, the
+         * one-pole's coefficient, the allpass's (-1 without stiffness) and the feedback, at [LOOP_PERIOD],
+         * [LOOP_ALPHA], [LOOP_AP], [LOOP_FEEDBACK], the value at [LOOP_DELAY]. Computed again only when an input moves, so a held note pays no trigonometry per
+         * block; NaN until the first computation, and a NaN input never matches, so it is computed every block. An
+         * array, not double fields, so a store cannot box on V8 (as the superpluck's `delayInputs`).
+         */
+        private val loop: DoubleArray = doubleArrayOf(Double.NaN, Double.NaN, Double.NaN, Double.NaN, 0.0)
+
         /** Built with the node, seeded at the first block (see [seedAnalogDrift]). */
         private val drift = AnalogDrift()
         private var driftSeeded: Boolean = false
@@ -2583,11 +2594,29 @@ object Ignitors {
             val stiffnessVal = readParam(stiffness, actualFreq, ctx)
             val end = ctx.windowEnd
             val baseDelay = KarplusString.baseDelayOf(sampleRate = ctx.sampleRateD, freqHz = actualFreq)
+            val lpAlpha = KarplusString.lpAlphaOf(brightnessVal)
+            val hasStiffness = KarplusString.hasStiffnessOf(stiffnessVal)
+            val apCoeff = KarplusString.apCoeffOf(stiffnessVal)
+            val apKey = if (hasStiffness) apCoeff else -1.0
+            val l = loop
+
+            // NaN never equals itself: a NaN input (or the first block's NaN) computes the loop delay again.
+            if (!(l[LOOP_PERIOD] == baseDelay && l[LOOP_ALPHA] == lpAlpha && l[LOOP_AP] == apKey && l[LOOP_FEEDBACK] == feedbackVal)) {
+                l[LOOP_PERIOD] = baseDelay
+                l[LOOP_ALPHA] = lpAlpha
+                l[LOOP_AP] = apKey
+                l[LOOP_FEEDBACK] = feedbackVal
+                l[LOOP_DELAY] = KarplusString.loopDelayOf(
+                    period = baseDelay, lpAlpha = lpAlpha, hasStiffness = hasStiffness, apCoeff = apCoeff, feedback = feedbackVal,
+                )
+            }
+
+            val loopDelay = l[LOOP_DELAY]
 
             // The pick position is read once, at the pluck.
             if (!string.excited) {
                 string.excited = true
-                string.excite(baseDelay = baseDelay, pickPos = readParam(pickPosition, actualFreq, ctx), rng = rng)
+                string.excite(lineDelay = baseDelay - loopDelay, pickPos = readParam(pickPosition, actualFreq, ctx), rng = rng)
             }
 
             var m = 1.0
@@ -2602,10 +2631,19 @@ object Ignitors {
 
             string.render(
                 buffer = buffer, from = ctx.offset, to = end, baseDelay = baseDelay, phaseMod = ctx.phaseMod,
-                hasDrift = hasDrift, driftStart = m, driftStep = dm,
-                lpAlpha = KarplusString.lpAlphaOf(brightnessVal), hasStiffness = KarplusString.hasStiffnessOf(stiffnessVal),
-                apCoeff = KarplusString.apCoeffOf(stiffnessVal), feedback = feedbackVal, gain = 1.0, accumulate = false,
+                hasDrift = hasDrift, driftStart = m, driftStep = dm, loopDelay = loopDelay,
+                lpAlpha = lpAlpha, hasStiffness = hasStiffness,
+                apCoeff = apCoeff, feedback = feedbackVal, gain = 1.0, accumulate = false,
             )
+        }
+
+        private companion object {
+            /** The slots of [loop]. */
+            const val LOOP_PERIOD: Int = 0
+            const val LOOP_ALPHA: Int = 1
+            const val LOOP_AP: Int = 2
+            const val LOOP_FEEDBACK: Int = 3
+            const val LOOP_DELAY: Int = 4
         }
     }
 
@@ -2685,13 +2723,21 @@ object Ignitors {
         private var baseDelays: DoubleArray = DoubleArray(strings.size)
 
         /**
-         * The inputs [baseDelays] was computed from, at [DELAY_FREQ] (the note's frequency), [DELAY_SPREAD] (the
-         * detune) and [DELAY_SAMPLE_RATE]; NaN until the first computation. An array, not double fields, so a store
+         * Each string's loop delay, [KarplusString.loopDelayOf] at the string's own (detuned) base delay and the
+         * block's brightness, stiffness and feedback, for the first [v] strings; sized with [strings]. Part of the same cache as
+         * [baseDelays] and computed with it by [computeBaseDelays], under the same rule (see there).
+         */
+        private var loopDelays: DoubleArray = DoubleArray(strings.size)
+
+        /**
+         * The inputs [baseDelays] and [loopDelays] were computed from, at [DELAY_FREQ] (the note's frequency),
+         * [DELAY_SPREAD] (the detune), [DELAY_BRIGHTNESS], [DELAY_STIFFNESS], [DELAY_FEEDBACK] and [DELAY_SAMPLE_RATE];
+         * NaN until the first computation. An array, not double fields, so a store
          * cannot box (engine follow-up 7). The sample rate is stored for [computeBaseDelays], never compared: a node
          * lives in one [IgniteContext], whose rate does not change (one context per voice), so a compare could never
          * fail and no test could tell it apart (review round 1, 2026-10-20).
          */
-        private val delayInputs: DoubleArray = doubleArrayOf(Double.NaN, Double.NaN, Double.NaN)
+        private val delayInputs: DoubleArray = doubleArrayOf(Double.NaN, Double.NaN, Double.NaN, Double.NaN, Double.NaN, Double.NaN)
 
         /** The string count [baseDelays] was computed for; -1 until the first computation. */
         private var delayInputsCount: Int = -1
@@ -2722,6 +2768,7 @@ object Ignitors {
 
                     strings = Array(v) { i -> if (i < old.size) old[i] else KarplusString() }
                     baseDelays = DoubleArray(v)
+                    loopDelays = DoubleArray(v)
                 }
 
                 // A regrown string RE-PLUCKS (the DECIDED note above), so it gets a fresh lane
@@ -2753,14 +2800,20 @@ object Ignitors {
             val phaseMod = ctx.phaseMod
             val end = ctx.windowEnd
 
-            // Each string's base delay, computed again only when an input moves (see [baseDelays]).
+            // Each string's base delay and loop delay, computed again only when an input moves (see [baseDelays]).
             val delaysHold = delayInputsCount == v &&
                 sameDelayInput(stored = delayInputs[DELAY_FREQ], arriving = actualFreq) &&
-                sameDelayInput(stored = delayInputs[DELAY_SPREAD], arriving = spread)
+                sameDelayInput(stored = delayInputs[DELAY_SPREAD], arriving = spread) &&
+                sameDelayInput(stored = delayInputs[DELAY_BRIGHTNESS], arriving = brightnessVal) &&
+                sameDelayInput(stored = delayInputs[DELAY_STIFFNESS], arriving = stiffnessVal) &&
+                sameDelayInput(stored = delayInputs[DELAY_FEEDBACK], arriving = feedbackVal)
 
             if (!delaysHold) {
                 delayInputs[DELAY_FREQ] = actualFreq
                 delayInputs[DELAY_SPREAD] = spread
+                delayInputs[DELAY_BRIGHTNESS] = brightnessVal
+                delayInputs[DELAY_STIFFNESS] = stiffnessVal
+                delayInputs[DELAY_FEEDBACK] = feedbackVal
                 delayInputs[DELAY_SAMPLE_RATE] = sr
                 delayInputsCount = v
                 computeBaseDelays()
@@ -2800,11 +2853,12 @@ object Ignitors {
                 lanes?.ensureLanes(n + 1)
 
                 val baseDelay = baseDelays[n]
+                val loopDelay = loopDelays[n]
 
                 // Excite each string independently; a string that comes back keeps its filter state.
                 if (!s.excited) {
                     s.excited = true
-                    s.excite(baseDelay = baseDelay, pickPos = pickPosVal, rng = rng)
+                    s.excite(lineDelay = baseDelay - loopDelay, pickPos = pickPosVal, rng = rng)
                 }
 
                 // Hoisted once per string: everything the blend reads is constant for the block.
@@ -2820,7 +2874,7 @@ object Ignitors {
                 // The first string writes the buffer, the others add to it.
                 s.render(
                     buffer = buffer, from = ctx.offset, to = end, baseDelay = baseDelay, phaseMod = phaseMod,
-                    hasDrift = lanes != null, driftStart = m, driftStep = dm,
+                    hasDrift = lanes != null, driftStart = m, driftStep = dm, loopDelay = loopDelay,
                     lpAlpha = lpAlpha, hasStiffness = hasStiffness, apCoeff = apCoeff, feedback = feedbackVal,
                     gain = voiceGain, accumulate = n != 0,
                 )
@@ -2829,18 +2883,29 @@ object Ignitors {
 
         /**
          * Fills [baseDelays] for the first [v] strings from [delayInputs], exactly as the string loop computed them
-         * per block before engine follow-up 4. Takes no double and returns none (see [baseDelays]).
+         * per block before engine follow-up 4, and [loopDelays] at each string's own base delay, so every unison
+         * string is in tune with its own detuned note. Takes no double and returns none (see [baseDelays]).
          */
         private fun computeBaseDelays() {
             val actualFreq = delayInputs[DELAY_FREQ]
             val spread = delayInputs[DELAY_SPREAD]
             val sr = delayInputs[DELAY_SAMPLE_RATE]
+            val brightnessVal = delayInputs[DELAY_BRIGHTNESS]
+            val stiffnessVal = delayInputs[DELAY_STIFFNESS]
+            val feedbackVal = delayInputs[DELAY_FEEDBACK]
+            val lpAlpha = KarplusString.lpAlphaOf(brightnessVal)
+            val hasStiffness = KarplusString.hasStiffnessOf(stiffnessVal)
+            val apCoeff = KarplusString.apCoeffOf(stiffnessVal)
 
             for (n in 0 until v) {
                 val detuneSemitones = getUnisonDetune(unison = v, detune = spread, voiceIndex = n)
                 val detunedFreq = actualFreq * detuneSemitones.semitones()
+                val baseDelay = KarplusString.baseDelayOf(sampleRate = sr, freqHz = detunedFreq)
 
-                baseDelays[n] = KarplusString.baseDelayOf(sampleRate = sr, freqHz = detunedFreq)
+                baseDelays[n] = baseDelay
+                loopDelays[n] = KarplusString.loopDelayOf(
+                    period = baseDelay, lpAlpha = lpAlpha, hasStiffness = hasStiffness, apCoeff = apCoeff, feedback = feedbackVal,
+                )
             }
         }
 
@@ -2858,6 +2923,9 @@ object Ignitors {
             const val DELAY_FREQ: Int = 0
             const val DELAY_SPREAD: Int = 1
             const val DELAY_SAMPLE_RATE: Int = 2
+            const val DELAY_BRIGHTNESS: Int = 3
+            const val DELAY_STIFFNESS: Int = 4
+            const val DELAY_FEEDBACK: Int = 5
         }
     }
 
