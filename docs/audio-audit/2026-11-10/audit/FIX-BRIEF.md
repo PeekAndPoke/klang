@@ -94,3 +94,13 @@ touch `gradle.properties` in the repo.
 5. Probe rows before and after, where a probe measures the fix.
 6. The "Decide" items with options and your recommendation.
 7. Anything you saw on the way that is wrong and not in your ticket (do not fix it; name it).
+
+## Added after the first ticket (2026-11-10)
+
+- **The corpus is read as before against after.** The reference the corpus tool compares with is older than other
+  sessions' song edits, so "13 edited" says nothing about your change. Run the corpus ONCE BEFORE your first edit and
+  keep its per-song output (the sound hash of every song), run it again at the end, and report the songs whose hash
+  moved between YOUR two runs, each with the fix that moved it. If another session edits a song between your runs,
+  say so (its file shows in `git status` or `git log`).
+- Other sessions have uncommitted work in `src/jsMain`, `src/jsTest` and `build.gradle.kts`. Leave it alone and do
+  not report it as yours.
