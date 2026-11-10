@@ -35,9 +35,10 @@ The left side also works differently from the other two: it is replaced, not add
 
 ## Decide before implementing
 
-- **D1, the left side.** (a) It stays one column: the most specific wins (the page's, else the area's, else the app
-  map). (b) It becomes a stack of sections, each scope adding its own (the song page's "This song" under an area's
-  section, say). Proposed: (a); sections only when a real case asks for them.
+- **D1, the left side. Decided** (the maintainer, 2026-11-10): "it shows the navigation menu by default and a page
+  can register another view to replace it, like the CodeSongPage does." One column, no area scope on the left:
+  `SidebarMenu` keeps only the app map, and Learn's pages without a column of their own (the tutorials list, the
+  resources page) register `LearnTracksColumn` with `column { }`, as `TutorialPage` registers its own.
 - **D2, can a page hide the app's parts?** Proposed: no. The app's parts are on every page, as the maintainer asked
   for the bottom tools ("always present", KLANG-00409).
 - **D3, the order.** Proposed, as today: on the right the app's first, then the area's, then the page's; at the
@@ -57,3 +58,4 @@ The left side also works differently from the other two: it is replaced, not add
 ## History
 
 - 2026-11-05: created from the maintainer's question, after KLANG-00410 to 00412.
+- 2026-11-10: D1 decided: the navigation menu by default, a page replaces it with its own column.
