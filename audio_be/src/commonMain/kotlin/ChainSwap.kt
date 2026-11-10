@@ -73,7 +73,7 @@ import kotlin.math.max
  * | state \ event | [begin] | [requestWaiting] | [process] | [processDuck] | [ownerClaimed] | [configureLeaving] | [hardCut] |
  * |---|---|---|---|---|---|---|---|
  * | **Idle** | **Fading** | nothing (the host lands its request itself) | the chain alone | the chain's duck | nothing | nothing | nothing |
- * | **Fading** | REFUSED, the offered chain retired | remembered: the fade ends in the cut | ramp not complete: both chains, the ramp; complete (one more fade block first when the fade ended on the last block's end): the leaving chain has a tail, or its last block rang at or over `SILENCE_FLOOR` after the fade's end ? (a request waits ? **Cutting** : **Draining**) : retired, **Idle**, and the entered state's block runs | the duck ramped in, ramped out, or the chain's own | the late duck takeover, only in the ramp's first block | the leaving chain is configured too | leaving chain retired, **Idle** |
+ * | **Fading** | REFUSED, the offered chain retired | remembered: the fade ends in the cut | ramp not complete: both chains, the ramp; complete (one more fade block first when the fade ended on the last block's end): the leaving chain has a tail, or its last block rang at or over `SILENCE_FLOOR` after the fade's end ? (a request waits, or the chain sounds on silence ? **Cutting** : **Draining**) : retired, **Idle**, and the entered state's block runs | the duck ramped in, ramped out, or the chain's own | the late duck takeover, only in the ramp's first block | the leaving chain is configured too | leaving chain retired, **Idle** |
  * | **Draining** | REFUSED, the offered chain retired | **Cutting** from weight 1 | both chains, the leaving one on silence, added at full weight, its tails measured on entry and every [TAIL_MEASURE_SECONDS]; no tail left and the block's output under `SILENCE_FLOOR`: retired, **Idle**; a tail or output left and the drain [MAX_DRAIN_SECONDS] old: **Releasing** (from the next block) | the chain's duck | nothing | nothing | leaving chain retired, **Idle** |
  * | **Releasing** | REFUSED, the offered chain retired | **Cutting** from the release's gain | both chains, the leaving one on silence, its output added under the exponential release; the gain under the floor (inside this block): retired, **Idle** | the chain's duck | nothing | nothing | leaving chain retired, **Idle** |
  * | **Cutting** | REFUSED, the offered chain retired | nothing (already cutting) | both chains, the leaving one on silence, its output added under the raised-cosine cut; the weight at 0 (inside this block): retired, **Idle** | the chain's duck | nothing | nothing | leaving chain retired, **Idle** |
@@ -291,7 +291,11 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
                 val rings = TailCeiling.peakOf(buffer = leavingMix, frames = blockFrames, from = settledFrom) >= SILENCE_FLOOR
 
                 if (out.hasTail() || rings) {
-                    if (cut) {
+                    // A chain that sounds on silence (an offset, `pow` at 0 or below: [KatalystChain.soundsOnSilence])
+                    // has no ring-out to wait for: its output is the constant for as long as it runs, so it is cut
+                    // as if a request waited, never drained to the cap (KLANG-00428, L7a-03: `plus(0.2)` and
+                    // `pow(-1)` held full level for 20.36 s after the edit that removed them).
+                    if (cut || out.soundsOnSilence()) {
                         // The input ramp has just reached 0, so the output is at full weight: the
                         // cut starts from exactly 1.
                         cutting.enter(leaving = out, startWeight = 1.0)

@@ -258,4 +258,47 @@ class CompressorSpec : StringSpec({
             }
         }
     }
+    "a very quiet input reads as silence, never quieter: after a tail at -120 dBFS the next hit is compressed as after silence" {
+        // KLANG-00428, the audit's S-02: the follower converted any level above 1e-10 to dB, down to -200 dB, while
+        // silence read -100 dB, so a -120 dBFS tail drove the envelope 20 dB further down than silence, and the next
+        // onset's gain differed by what came before it. Now a level at or under -100 dB reads as -100 dB.
+        val block = 128
+
+        fun gains(quiet: Double): DoubleArray {
+            val c = Compressor(sampleRate = sampleRate)
+            val loud = sampleRate / 2 / block
+            val tail = 3 * sampleRate / 10 / block
+            val hit = sampleRate / 20 / block
+            val g = ArrayList<Double>()
+
+            for (b in 0 until loud + tail + hit) {
+                val level = when {
+                    b < loud -> 0.9
+                    b < loud + tail -> quiet
+                    else -> 0.9
+                }
+                val l = AudioBuffer(block) { level }
+                val r = AudioBuffer(block) { level }
+
+                c.process(left = l, right = r, blockSize = block)
+
+                if (b >= loud + tail) {
+                    for (i in 0 until block) {
+                        g.add(l[i] / level)
+                    }
+                }
+            }
+
+            return g.toDoubleArray()
+        }
+
+        val afterSilence = gains(quiet = 0.0)
+        val afterQuiet = gains(quiet = 1e-6)
+
+        for (i in afterSilence.indices) {
+            withClue("frame $i of the hit") {
+                afterQuiet[i] shouldBe afterSilence[i]
+            }
+        }
+    }
 })

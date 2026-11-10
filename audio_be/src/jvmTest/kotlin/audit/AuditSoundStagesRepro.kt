@@ -10,7 +10,6 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.EnvelopeCore
 import io.peekandpoke.klang.audio_be.audit.AuditSoundKit.db
 import io.peekandpoke.klang.audio_be.audit.AuditSoundKit.f
-import io.peekandpoke.klang.audio_be.cylinders.CylinderSwapRig
 import io.peekandpoke.klang.audio_be.filters.SvfCoeffs
 import io.peekandpoke.klang.audio_be.filters.computeSvfCoeffs
 import io.peekandpoke.klang.audio_be.filters.filterEnvCutoff
@@ -19,21 +18,15 @@ import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.ignitor.buildExciter
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
-import io.peekandpoke.klang.audio_be.probes.CLICK_EVENT_FRAME
-import io.peekandpoke.klang.audio_be.probes.CLICK_INSTANTS
-import io.peekandpoke.klang.audio_be.probes.ClickConfig
-import io.peekandpoke.klang.audio_be.probes.ClickRender
 import io.peekandpoke.klang.audio_be.probes.FRAMING_NONE
 import io.peekandpoke.klang.audio_be.probes.FramingNote
 import io.peekandpoke.klang.audio_be.probes.PROBE_BLOCK_FRAMES
 import io.peekandpoke.klang.audio_be.probes.PROBE_SAMPLE_RATE
 import io.peekandpoke.klang.audio_be.probes.ProbeSignal
 import io.peekandpoke.klang.audio_be.probes.blackmanHarris7
-import io.peekandpoke.klang.audio_be.probes.clickTone
 import io.peekandpoke.klang.audio_be.probes.fftInPlace
 import io.peekandpoke.klang.audio_be.probes.katalystOwnerChangeStage
 import io.peekandpoke.klang.audio_be.probes.katalystProbeStage
-import io.peekandpoke.klang.audio_be.probes.measureClickStereo
 import io.peekandpoke.klang.audio_be.probes.renderFramedVoice
 import io.peekandpoke.klang.audio_be.probes.wholeProbeBlocks
 import io.peekandpoke.klang.audio_be.probes.windowedPowerSpectrum
@@ -64,8 +57,9 @@ import kotlin.random.Random
 
 /**
  * The disproof pass, cluster "sound", the STAGES (KLANG-00420, `docs/audio-audit/2026-11-10/audit/disproof-sound.md`):
- * the filter envelope's block law, the voice's last frame, the de-click's subnormals, the chain swaps, the vowel, the
- * reverb's damping, the compressor's detector, the phaser at a low rate and the optimizer's filter gate. A
+ * the filter envelope's block law, the voice's last frame, the de-click's subnormals, the vowel, the reverb's damping,
+ * the compressor's detector and the optimizer's filter gate (the chain swaps and the phaser at a low rate were fixed
+ * by KLANG-00428, their guards are ordinary specs now). A
  * measurement, not a gate: nothing here asserts an engine value; each test prints what it measured and writes it to
  * `<build dir>/probes/audit-sound-stages.txt`.
  *
@@ -425,92 +419,6 @@ class AuditSoundStagesRepro : StringSpec({
         report.line("coefficient sets (each a tan and a divide) over this note: today $todaySets; grid N=128 ${gridKnots(128).count { it < span }}; N=32 ${gridKnots(32).count { it < span }}")
     }
 
-    // ── L7a-01 and L7a-02: delay and reverb switched on, and a chain swap ──────────────────────────────────────
-
-    "L7a-01 and L7a-02: a delay switched on, a swap into a room and into a delay, and the room's first return (KLANG_PROBE=audit)".config(enabled = requested) {
-        report.line()
-        report.line("== L7a-01 / L7a-02 the click detector on a 110 Hz tone, worst of 4 instants (the click table's method) ==")
-
-        val config = ClickConfig()
-
-        fun eventAt(instant: Int): Int = CLICK_EVENT_FRAME + instant * block
-
-        fun tone(instant: Int): DoubleArray = clickTone(frames = wholeProbeBlocks(eventAt(instant) + config.tailFrames + block), peakFrame = CLICK_EVENT_FRAME)
-
-        fun line(label: String, renders: List<ClickRender>) {
-            val readings = renders.map { measureClickStereo(it, config) }
-            val worst = readings.maxBy { it.kinkRatio }
-
-            report.line(
-                "${label.padEnd(54)} kink ${f(worst.kinkRatio, 1).padStart(6)} at ${f(worst.kinkOffsetFrames * 1000.0 / sr, 1)} ms, " +
-                    "jump ${f(worst.jumpRatio, 1)}, burst ${f(worst.burstAbsDb, 1)} dB",
-            )
-        }
-
-        val delayOn = mapOf("delay.wet" to 0.5, "delay.time" to 0.25, "delay.feedback" to 0.3)
-
-        line(
-            "classic chain, owner change {} -> delay wet .5 time .25",
-            (0 until CLICK_INSTANTS).map { i ->
-                val t = tone(i)
-                val out = katalystOwnerChangeStage(dsl = KatalystDsl.classic, before = emptyMap<String, Double>().toKlangMap(), after = delayOn.toKlangMap(), eventFrame = eventAt(i))
-                    .render(ProbeSignal(name = "tone", left = t, right = t.copyOf(), inputEndFrame = t.size))
-
-                ClickRender(left = out.left, right = out.right, eventFrame = eventAt(i))
-            },
-        )
-
-        fun swap(name: String, dsl: KatalystDsl): List<ClickRender> = (0 until CLICK_INSTANTS).map { i ->
-            val e = eventAt(i)
-            val t = tone(i)
-            val rig = CylinderSwapRig(sampleRate = sr)
-            val left = DoubleArray(t.size)
-            val right = DoubleArray(t.size)
-
-            rig.registry.register(name, dsl)
-
-            var at = 0
-
-            while (at < t.size) {
-                if (at == e) {
-                    rig.cylinder.requestChain(name)
-                }
-
-                val from = at
-                val out = rig.block(level = 0.0) {
-                    t.copyInto(destination = rig.cylinder.mixBuffer.left, destinationOffset = 0, startIndex = from, endIndex = from + block)
-                    t.copyInto(destination = rig.cylinder.mixBuffer.right, destinationOffset = 0, startIndex = from, endIndex = from + block)
-                }
-
-                out.copyInto(destination = left, destinationOffset = at, startIndex = 0, endIndex = block)
-                rig.cylinder.mixBuffer.right.copyInto(destination = right, destinationOffset = at, startIndex = 0, endIndex = block)
-                at += block
-            }
-
-            ClickRender(left = left, right = right, eventFrame = e)
-        }
-
-        line("swap classic -> room (reverb wet .5 size 3)", swap("auditroom", KatalystDsl.of(KatalystStageDsl.Reverb(wet = 0.5.kat, size = 3.0.kat))))
-        line(
-            "swap classic -> delay (wet .5 time .25 feedback .3)",
-            swap("auditdelay", KatalystDsl.of(KatalystStageDsl.Delay(wet = 0.5.kat, time = 0.25.kat, feedback = 0.3.kat))),
-        )
-        line("swap classic -> gain 0.5 (no tail; the control)", swap("auditgain", KatalystDsl.of(KatalystStageDsl.Gain(gain = 0.5.kat))))
-
-        // The room's first return: an impulse through the room alone, the dry path subtracted.
-        val frames = wholeProbeBlocks(sr / 5)
-        val impulse = ProbeSignal(name = "impulse", left = DoubleArray(frames).also { it[0] = 1.0 }, right = DoubleArray(frames).also { it[0] = 1.0 }, inputEndFrame = 1)
-        val room = katalystProbeStage(KatalystDsl.of(KatalystStageDsl.Reverb(wet = 0.5.kat, size = 3.0.kat))).render(impulse)
-        val wet = DoubleArray(frames) { room.left[it] - impulse.left[it] }
-        val first = wet.indices.first { abs(wet[it]) > 1e-12 }
-        val strongest = (0 until frames).maxBy { abs(wet[it]) }
-
-        report.line(
-            "room (reverb wet .5 size 3) on an impulse: first return at frame $first (${f(first * 1000.0 / sr, 1)} ms), strongest in the first 200 ms at " +
-                "${f(strongest * 1000.0 / sr, 1)} ms; the swap's ramp is 60 ms",
-        )
-    }
-
     // ── L7b-02: the vowel ────────────────────────────────────────────────────────────────────────────────────────
 
     "L7b-02: the vowel's formant widths from its impulse response, and a saw's level by note (KLANG_PROBE=audit)".config(enabled = requested) {
@@ -690,26 +598,6 @@ class AuditSoundStagesRepro : StringSpec({
                         "steady ${db(steady)} dB; after the step down: within 1 dB after ${f(recover1 * 1000.0 / sr, 1)} ms, within 0.1 dB after ${f(recover01 * 1000.0 / sr, 1)} ms",
                 )
             }
-        }
-    }
-
-    // ── L7b-05: the phaser at a low engine rate ─────────────────────────────────────────────────────────────────
-
-    "L7b-05: the phaser's breakpoint clamp at a 32 kHz and a 48 kHz engine (KLANG_PROBE=audit)".config(enabled = requested) {
-        report.line()
-        report.line("== L7b-05 phaser(rate .5, wet .5, center 15000, sweep 6000) on 1 s of noise and 1 s of silence ==")
-
-        for (rate in listOf(32000, 44100, 48000)) {
-            val total = wholeProbeBlocks(2 * rate)
-            val rng = Random(0x5EED)
-            val noise = DoubleArray(total) { if (it < rate) rng.nextDouble() * 2.0 - 1.0 else 0.0 }
-            val dsl = KatalystDsl.of(KatalystStageDsl.Phaser(rate = 0.5.kat, wet = 0.5.kat, center = 15000.0.kat, sweep = 6000.0.kat))
-            val out = katalystProbeStage(dsl = dsl, sampleRate = rate).render(ProbeSignal(name = "noise", left = noise, right = noise.copyOf(), inputEndFrame = rate)).left
-            val nonFinite = out.count { !it.isFinite() }
-            val finitePeak = out.filter { it.isFinite() }.maxOfOrNull { abs(it) } ?: 0.0
-            val loud = out.count { abs(it) > 10.0 }
-
-            report.line("engine at $rate Hz: peak |out| $finitePeak, samples above 10: $loud, non-finite samples $nonFinite")
         }
     }
 

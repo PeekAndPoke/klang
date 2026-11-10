@@ -9,6 +9,7 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
+import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.ignitor.ArrayIgnitor
 import io.peekandpoke.klang.audio_be.ignitor.ParamIgnitor
 import io.peekandpoke.klang.audio_be.ignitor.phaser
@@ -55,7 +56,8 @@ class PhaserCoreLawSpec : StringSpec({
 
         fun alphaAt(phase: Double, center: Double, sweep: Double): Double {
             val lfo = (sin(phase) + 1.0) / 2.0
-            val f = (center + (lfo - 0.5) * sweep).coerceIn(100.0, 18000.0)
+            // The upper clamp: 18 kHz, or 0.45 of the rate under a 40 kHz engine (KLANG-00428, L7b-05).
+            val f = (center + (lfo - 0.5) * sweep).coerceIn(100.0, minOf(18000.0, 0.45 * sampleRate))
             val t = tan(PI * f / sampleRate)
 
             return (t - 1.0) / (t + 1.0)
@@ -115,7 +117,7 @@ class PhaserCoreLawSpec : StringSpec({
             val stages = cfg[0].toInt()
             val label = "stages $stages, rate ${cfg[1]}, center ${cfg[2]}, sweep ${cfg[3]}, feedback ${cfg[4]}"
 
-            for (sampleRate in listOf(48000, 44100)) {
+            for (sampleRate in listOf(48000, 44100, 32000, 22050)) {
                 val core = PhaserCore(stages = stages, sampleRate = sampleRate).apply {
                     rate = cfg[1]
                     center = cfg[2]
@@ -141,6 +143,46 @@ class PhaserCoreLawSpec : StringSpec({
 
                 withClue("$label at $sampleRate: the phaser is not the input") { worst(a = out, b = input) shouldBeGreaterThan 0.1 }
                 withClue("$label at $sampleRate: worst distance ${worst(a = out, b = ref)}") { worst(a = out, b = ref) shouldBeLessThan 1e-12 }
+            }
+        }
+    }
+
+    "the kernel at an engine under 36 kHz: a breakpoint asked above Nyquist is clamped under it and the all-pass stays bounded" {
+        // KLANG-00428, audit finding L7b-05: the clamp was an absolute 18 kHz, so at 32 kHz a breakpoint of 15 to 18 kHz
+        // put |alpha| above 1 and the cascade grew to 8.8e307 with non-finite samples. The clamp is now relative.
+        PhaserCore.maxModFreqAt(48000) shouldBe 18000.0
+        PhaserCore.maxModFreqAt(44100) shouldBe 18000.0
+        PhaserCore.maxModFreqAt(32000) shouldBe 14400.0
+
+        for (sampleRate in listOf(32000, 24000, 22050)) {
+            val core = PhaserCore(stages = 4, sampleRate = sampleRate).apply {
+                rate = 0.5
+                center = 15000.0
+                sweep = 6000.0
+                feedback = 0.5
+            }
+            val input = noise(n = sampleRate, seed = 11)
+            var peak = 0.0
+            var at = 0
+
+            while (at + block <= input.size) {
+                core.prepareBlock(block)
+
+                for (i in 0 until block) {
+                    val y = core.step(input[at + i])
+
+                    withClue("$sampleRate Hz, frame ${at + i}") {
+                        y.isFinite() shouldBe true
+                    }
+
+                    peak = maxOf(peak, abs(y))
+                }
+
+                at += block
+            }
+
+            withClue("$sampleRate Hz: peak $peak") {
+                peak shouldBeLessThan 10.0
             }
         }
     }
@@ -216,5 +258,22 @@ class PhaserCoreLawSpec : StringSpec({
 
             withClue("wet $wet, floor $floor: worst distance ${worst(a = out, b = ref)}") { worst(a = out, b = ref) shouldBeLessThan 1e-12 }
         }
+    }
+    "the node at a 32 kHz engine binds its rate's clamp: a breakpoint asked above Nyquist stays bounded" {
+        // The voice's `.phaser(...)` builds its cores before it knows the rate and binds it at the first block
+        // (`PhaserCore.bindSampleRate`), which must move the breakpoint's clamp with it (KLANG-00428, L7b-05).
+        val sampleRate = 32000
+        val input = noise(n = sampleRate, seed = 5)
+        val out = renderNodeWindows(
+            ArrayIgnitor(input).phaser(
+                wet = ParamIgnitor("wet", 0.5), rate = ParamIgnitor("rate", 0.5), center = ParamIgnitor("center", 15000.0),
+                sweep = ParamIgnitor("sweep", 6000.0), floor = ParamIgnitor("floor", 0.0),
+            ),
+            List(sampleRate / block) { block },
+            sampleRate,
+        )
+
+        withClue("every sample finite") { out.all { it.isFinite() } shouldBe true }
+        withClue("peak ${out.maxOf { abs(it) }}") { out.maxOf { abs(it) } shouldBeLessThan 10.0 }
     }
 })

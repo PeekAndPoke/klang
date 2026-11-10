@@ -37,10 +37,12 @@ import kotlin.math.min
  *    the block processes.
  *  - `time` does NOT glide (a glide bends the echoes' pitch): [DelayLine] crossfades from the old
  *    tap to the new one (its KDoc has the measurement and the rules).
- * The first configure out of [Off] snaps both glides (the ring is empty there, and a song whose
- * delay never changes stays identical to a constant feed), except the wet of a modulated time (see
- * below); [Draining] keeps the feedback gliding towards the last Active value, so a drain is still
- * "Active on silent input"; [Off.enter] forgets both, next to the tail ceiling.
+ * The first configure out of [Off] snaps the feedback glide (the ring is empty there), and the wet
+ * only while the stage is [fresh] (nothing has run through it since its build or reset, so a song
+ * whose delay is on from the start stays identical to a constant feed); otherwise, and always on a
+ * modulated time, the wet glides up from 0 (see below); [Draining] keeps the feedback gliding
+ * towards the last Active value, so a drain is still "Active on silent input"; [Off.enter] forgets
+ * both, next to the tail ceiling.
  *
  * **Every switch-off fades the feed with the wet glide** (engine follow-up 42, maintainer Q39,
  * 2026-10-13: "fade, do not cut"; knob expressions step 5b built it for a modulated time only):
@@ -57,10 +59,13 @@ import kotlin.math.min
  *    bleed across owners, chosen over the edge a cut wrote into the ring
  *    (KLANG-00313 (delay reverb owner change cut)).
  *  - **Coming back** out of [Draining] the wet glides up from 0, where the fade left it; a return while the
- *    fade still runs turns the glide around where it stands. Out of [Off] it snaps, except on a modulated
- *    time ([timeModulated]), whose wet glides up from 0 ([KnobGlide.startFrom]) there too, the first
- *    activation after a build or a reset included (the ring is empty, so the first echoes fade in rather
- *    than arrive; an LFO through the gate otherwise restarts the feed with a step twice per cycle).
+ *    fade still runs turns the glide around where it stands. Out of [Off] it glides up from 0 too
+ *    ([KnobGlide.startFrom]) once the bus has run since the stage's build or reset (it is not [fresh]),
+ *    the mirror of the switch-off's fade: a snapped wet fed the ring a step of the sounding mix, which came
+ *    back one delay time later as a click (KLANG-00428, audit finding L7a-01; a chain a swap brings in is
+ *    told by [joinSoundingBus], L7a-02). A fresh stage snaps, except on a modulated time ([timeModulated]),
+ *    whose every return glides up from 0, the first activation after a build or a reset included (an LFO
+ *    through the gate otherwise restarts the feed with a step twice per cycle).
  *
  * The effect owns an active/draining/off lifecycle so that turning the delay off never freezes a
  * live tail inside the ring (block-framing ledger D3: the ring's write clock used to stop dead the
@@ -82,8 +87,9 @@ import kotlin.math.min
  *   after its notes ended and then releases its whole output, this ring included, exponentially
  *   (`TailRelease`), never with a hard cut (phase 3 step 12 decision (j), maintainer 2026-09-28;
  *   before it such a cylinder kept a stopped playback's engine for ever).
- * - **Off**: countdown done: one [DelayLine.reset] (the ring is now literally zero, including the
- *   pre-drain regions a future LONGER delay time could otherwise tap into), then a true
+ * - **Off**: countdown done: one [DelayLine.reset] (the ring now READS as zero, including the
+ *   pre-drain regions a future LONGER delay time could otherwise tap into; O(1) since KLANG-00428,
+ *   `DelayLine.validFrames`), then a true
  *   short-circuit until an owner re-enables. That zero-ring guarantee is for THIS path only: a new
  *   delay-carrying owner arriving MID-drain goes straight to Active with the ring kept: the tail
  *   deliberately continues under the new tap, which [DelayLine] crossfades to like any live
@@ -231,6 +237,9 @@ class KatalystDelayEffect(
         return line
     }
 
+    /** [MAX_SCANNED_TAP_SECONDS] in frames at this stage's rate. */
+    private val maxScannedTapFrames: Int = (MAX_SCANNED_TAP_SECONDS * sampleRate).toInt()
+
     /** All-zero input for the draining phase: the owner said off, so the mix is no longer fed in. */
     private val silentInput = StereoBuffer(blockFrames)
 
@@ -303,13 +312,13 @@ class KatalystDelayEffect(
      *
      * | state \ event | `configure`, delay ON | `configure`, delay OFF | `process`, the fade lands | `process`, countdown ends | `reset` | `retire` / `release` |
      * |---|---|---|---|---|---|---|
-     * | **Off** | **Active** (a ring is rented if needed; on a modulated time the wet glides up from 0). Stays Off in ONE case: there is no ring at all AND the warehouse refuses one. A refused GROW is not that case, it keeps the ring it has and activates on it, with the time clamped to what that ring holds | Off | (never) | (never) | Off | Off |
+     * | **Off** | **Active** (a ring is rented if needed; the wet glides up from 0 unless the stage is [fresh] and its time unmodulated). Stays Off in ONE case: there is no ring at all AND the warehouse refuses one. A refused GROW is not that case, it keeps the ring it has and activates on it, with the time clamped to what that ring holds | Off | (never) | (never) | Off | Off |
      * | **Active** | Active (the knobs are rewritten, an unchanged config writes nothing, see [applied]; mid-fade the wet glide turns around) | Active while the wet glide falls to 0 (the fade); with the wet already at rest at 0, at once what the next column says | **Draining**, or **Off** when the tap window is already silent | (never) | Off | Off |
      * | **Draining** | **Active** (the ring and its ceiling carry on under the new tap; after a self-oscillating drain the ceiling is re-measured first; the wet glides up from 0) | Draining (the countdown keeps running) | (never) | **Off** | Off | Off |
      *
      * The ON arm of [configure] is the same from every state but two lines, so it stays on the
      * effect and only the OFF arm dispatches ([deactivate]); the two lines are reference compares,
-     * one that starts a modulated time's wet from 0 on any return to Active (see the class KDoc),
+     * one that starts the wet from 0 on a return to Active (not [fresh], or a modulated time; see the class KDoc),
      * and one that hands a return from [Draining] its ceiling check ([Draining.resume], Katalyst 5c-5).
      * Per block that is one virtual call for the block ([process]) and, on the OFF arm only, one
      * more for the owner's config: a running delay takes the ON arm and dispatches nothing through
@@ -464,7 +473,11 @@ class KatalystDelayEffect(
                 line.feedback
             }
 
-            val remaining = line.drainSamplesUntilSilent(peak = line.tapWindowPeakAbs(), feedback = drainFeedback)
+            // A tap window longer than [MAX_SCANNED_TAP_SECONDS] is not scanned: its countdown starts from the
+            // ceiling, a bound on the same content (looser, so the drain may run a period or two longer, on silent
+            // input). The scan of a 10 s window took 596 us of a 2.67 ms block (KLANG-00428, N-R2).
+            val peak = if (line.tapWindowFrames <= maxScannedTapFrames) line.tapWindowPeakAbs() else activeTail.bound
+            val remaining = line.drainSamplesUntilSilent(peak = peak, feedback = drainFeedback)
 
             if (remaining <= 0.0) {
                 line.reset()
@@ -577,6 +590,16 @@ class KatalystDelayEffect(
      */
     internal val currentState: Any get() = state
 
+    /**
+     * True from construction, [reset] and [release] until a block has been processed, and false after
+     * [joinSoundingBus]: while it holds, a switch-on out of [Off] snaps the wet (nothing has sounded on this bus, so
+     * the feed starts with the bus's own first samples). Once the bus has run, a switch-on out of Off glides the wet
+     * up from 0 over its span, as a return out of [Draining] does: a snapped wet fed the ring a step of the sounding
+     * mix, which came back one delay time later as a click (KLANG-00428, audit finding L7a-01: kink 120.6 and a
+     * burst at -22.8 dB under a held tone). The compressor's `fresh` is the model. It outlives every state.
+     */
+    private var fresh: Boolean = true
+
     /** The holder the four-number [configure] door fills, this stage's own instance ([DelayConfig] says why). */
     private val door = DelayConfig()
 
@@ -676,10 +699,10 @@ class KatalystDelayEffect(
             line.cap = if (cap.isFinite()) cap else DELAY_CAP
             feedbackGlide.retarget(guardedFeedback)
 
-            // A modulated time returns to Active with its feed at 0 out of Off too, so the wet glides up from there
-            // (out of Draining the fade left it at 0 already); a return mid-fade (Active) turns the falling glide
-            // around where it stands (class KDoc).
-            if (timeModulated && state !== active) {
+            // A switch-on on a bus that has run (not [fresh]), and every return of a modulated time, starts the wet
+            // from 0 out of Off, so it glides up from there (out of Draining the fade left it at 0 already); a return
+            // mid-fade (Active) turns the falling glide around where it stands (class KDoc).
+            if ((timeModulated || !fresh) && state !== active) {
                 wetGlide.startFrom(0.0)
             }
 
@@ -745,6 +768,7 @@ class KatalystDelayEffect(
         delayLine?.let { rings.giveBack(it.ring) }
         delayLine = null
         off.enter()
+        fresh = true
         refusedFrames = 0
         deniedRents = 0 // per life: a shelved cylinder must not carry a previous engine's count
     }
@@ -763,7 +787,13 @@ class KatalystDelayEffect(
             it.cap = DELAY_CAP
         }
         off.enter()
+        fresh = true
         refusedFrames = 0
+    }
+
+    /** The bus this stage arrives on already sounds: its first switch-on fades the feed in (see [fresh]). */
+    override fun joinSoundingBus() {
+        fresh = false
     }
 
     /**
@@ -788,7 +818,10 @@ class KatalystDelayEffect(
         release()
     }
 
-    override fun process(ctx: KatalystContext) = state.process(ctx)
+    override fun process(ctx: KatalystContext) {
+        state.process(ctx)
+        fresh = false
+    }
 
     companion object {
         /** Headroom past the requested time so `DelayLine`'s `bufferSize - 2` interpolation guard never clamps it. */
@@ -800,6 +833,15 @@ class KatalystDelayEffect(
          * minimum and ring as a metallic comb instead of falling silent.
          */
         const val MIN_ACTIVE_DELAY_SECONDS = 0.01
+
+        /**
+         * The longest delay time whose tap window a switch-off scans ([DelayLine.tapWindowPeakAbs]) for the drain's
+         * countdown; a longer one counts down from its tail ceiling instead. A resource bound on the switch-off's
+         * block, not a taste: 1 s at 48 kHz is 96000 reads, about 60 us of a 2.67 ms block on a desktop JVM
+         * (KLANG-00428, the audit's N-R2 measured 596 us at 10 s). Every delay a built-in song writes is shorter, so
+         * its drain is measured exactly as before.
+         */
+        const val MAX_SCANNED_TAP_SECONDS = 1.0
     }
 }
 

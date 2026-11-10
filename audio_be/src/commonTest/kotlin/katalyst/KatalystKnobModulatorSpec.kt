@@ -10,6 +10,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.doubles.plusOrMinus
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.StereoBuffer
@@ -697,6 +698,35 @@ class KatalystKnobModulatorSpec : StringSpec({
         withClue("the same chain built twice sounds the same") {
             render(serial).toRawBits() shouldBe render(serial).toRawBits()
         }
+    }
+
+    "within a stage the noise ordinals follow its writer's line order: the phaser's wet is the first noise, its rate the second" {
+        // KLANG-00428, audit finding L7a-10: the n-th noise of a chain is seeded base + n, n the order of the writer's
+        // `knob(...)` calls, and no row pinned which knob of a stage gets which ordinal. Reordering two lines in a
+        // stage's arm would move every render with two noises in that stage; this row makes it a red test instead.
+        // The phaser's writer lists `wet` before `rate` (the stage declares `rate` first). Ranged inside [0, 1], where
+        // the phaser stores its depth raw, and above its gate, so the rate is written too.
+        val knob = KatalystKnobDsl.Range(inner = KatalystKnobDsl.PerlinNoise(), from = c(0.2), to = c(0.9))
+        val counter = KatalystNoiseOrdinals()
+        val first = testKnob(knob, counter).value
+        val second = testKnob(knob, counter).value
+
+        withClue("the two ordinals give two values") { (first != second).shouldBeTrue() }
+
+        val chain = KatalystChainBuilder.build(
+            dsl = KatalystDsl.of(KatalystStageDsl.Phaser(rate = knob, wet = knob)),
+            sampleRate = sampleRate,
+            blockFrames = blockFrames,
+            rings = SizedBuffers.forRings(sampleRate),
+            reverbs = ReverbUnits(sampleRate),
+        )
+
+        chain.applyParams(null)
+
+        val phaser = chain.phaser.shouldNotBeNull().phaser
+
+        phaser.depth shouldBe first
+        phaser.rate shouldBe second
     }
 
     // ── A modulated knob: resolve reads, tick moves (step 5b) ────────────────────────────────────────────────────

@@ -387,7 +387,7 @@ class KatalystSlotResolverSpec : StringSpec({
         phaser.sweep shouldBe PHASER_SWEEP_HZ
     }
 
-    "phaser: at the gate the kernel params are written, with the > 0 fallbacks" {
+    "phaser: at the gate the kernel params are written; a center and a sweep of 0 are raw, not the defaults" {
         val chain = declared(
             KatalystStageDsl.Phaser(
                 rate = c(3.0),
@@ -402,8 +402,9 @@ class KatalystSlotResolverSpec : StringSpec({
 
         phaser.depth shouldBe Phaser.MIN_ACTIVE_DEPTH
         phaser.rate shouldBe 3.0
-        phaser.center shouldBe PHASER_CENTER_HZ
-        phaser.sweep shouldBe PHASER_SWEEP_HZ
+        // Only a non-finite center or sweep is unset; 0 is a value (KLANG-00428, L7b-09: a sweep of 0 swept 1000 Hz).
+        phaser.center shouldBe 0.0
+        phaser.sweep shouldBe 0.0
         phaser.floor shouldBe 0.2
         phaser.feedback shouldBe 0.5
     }

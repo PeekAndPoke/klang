@@ -24,7 +24,7 @@ import kotlin.math.tan
  *   - per-stage update: `y = α·x + s;  s = x − α·y`
  *   - cascade with feedback: `input + lastOutput · feedback → cascade → output → lastOutput`
  *
- * The LFO sweeps the breakpoint frequency through `[MIN_MOD_FREQ_HZ, MAX_MOD_FREQ_HZ]`
+ * The LFO sweeps the breakpoint frequency through `[MIN_MOD_FREQ_HZ, maxModFreq]` (18 kHz, lower under a 40 kHz rate)
  * around `center`. The kernel is **mono** and stateful; instantiate one per channel.
  *
  * Wrappers own their own input/output mixing (additive vs. crossfade) and stereo
@@ -58,6 +58,16 @@ internal class PhaserCore(
     /** `1 / sampleRate`; [bindSampleRate] moves it. */
     internal var inverseSampleRate: Double = 1.0 / sampleRate
         private set
+
+    /**
+     * The breakpoint's upper clamp at this rate: [MAX_MOD_FREQ_HZ], or [MAX_MOD_FREQ_RATIO] of the rate where that is
+     * lower; [bindSampleRate] moves it. The all-pass `alpha = (t - 1) / (t + 1)`, `t = tan(pi f / fs)`, is stable only
+     * for a breakpoint under `fs / 2`, so an absolute 18 kHz made the phaser blow up below a 36 kHz engine (KLANG-00428,
+     * audit finding L7b-05: a peak of 8.8e307 and non-finite samples at 32 kHz). At 44.1 and 48 kHz it is 18 kHz, as
+     * before. A bound of the kernel's stability, not a taste clamp.
+     */
+    internal var maxModFreq: Double = maxModFreqAt(sampleRate)
+        private set
     internal val z1 = DoubleArray(stages)
     internal var lastOutput: Double = 0.0
     internal var lfoPhase: Double = 0.0
@@ -82,7 +92,7 @@ internal class PhaserCore(
             field = value
         }
 
-    /** LFO sweep width in Hz. Effective range = `[center - sweep/2, center + sweep/2]` clamped to `[MIN_MOD_FREQ_HZ, MAX_MOD_FREQ_HZ]`. */
+    /** LFO sweep width in Hz. Effective range = `[center - sweep/2, center + sweep/2]` clamped to `[MIN_MOD_FREQ_HZ, maxModFreq]`. */
     var sweep: Double = 1000.0
         set(value) {
             if (!value.isFinite()) return
@@ -178,8 +188,8 @@ internal class PhaserCore(
         var modFreq = center + (lfoValue - 0.5) * sweep
         if (modFreq < MIN_MOD_FREQ_HZ) {
             modFreq = MIN_MOD_FREQ_HZ
-        } else if (modFreq > MAX_MOD_FREQ_HZ) {
-            modFreq = MAX_MOD_FREQ_HZ
+        } else if (modFreq > maxModFreq) {
+            modFreq = maxModFreq
         }
         val tanV = tan(PI * modFreq * inverseSampleRate)
         return (tanV - 1.0) / (tanV + 1.0)
@@ -227,6 +237,7 @@ internal class PhaserCore(
      */
     fun bindSampleRate(sampleRate: Int) {
         inverseSampleRate = 1.0 / sampleRate
+        maxModFreq = maxModFreqAt(sampleRate)
     }
 
     /** Clear allpass state and `lastOutput`. LFO phase is preserved for cross-note continuity. */
@@ -247,7 +258,17 @@ internal class PhaserCore(
         /** Lower clamp for LFO-modulated breakpoint frequency. */
         internal const val MIN_MOD_FREQ_HZ: Double = 100.0
 
-        /** Upper clamp for LFO-modulated breakpoint frequency. Stays well below Nyquist at typical sample rates. */
+        /** Upper clamp for LFO-modulated breakpoint frequency at 40 kHz and above; under it, see [maxModFreq]. */
         internal const val MAX_MOD_FREQ_HZ: Double = 18000.0
+
+        /** The upper clamp as a share of the rate, where that is under [MAX_MOD_FREQ_HZ]: 0.45, a margin under Nyquist. */
+        internal const val MAX_MOD_FREQ_RATIO: Double = 0.45
+
+        /** [maxModFreq] at [sampleRate]. */
+        internal fun maxModFreqAt(sampleRate: Int): Double {
+            val relative = MAX_MOD_FREQ_RATIO * sampleRate
+
+            return if (relative < MAX_MOD_FREQ_HZ) relative else MAX_MOD_FREQ_HZ
+        }
     }
 }

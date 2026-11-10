@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.katalyst
 
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.DelayLine
@@ -369,15 +370,42 @@ class KatalystDelayEffectSpec : StringSpec({
         }
 
         effect.hasTail() shouldBe false
-        // Literally zero, every cell of the whole ring (not only the tap's window): ANY residue is counted.
-        val ring = effect.delayLine!!.ring
-        ring.left.count { it != 0.0 } shouldBe 0
-        ring.right.count { it != 0.0 } shouldBe 0
+        // Empty, every cell of the whole ring (not only the tap's window) as the line reads it: ANY residue is counted.
+        // Read through the line, not the raw cells: since KLANG-00428 (L7b-06) the reset is O(1) and an old cell
+        // reads as zero instead of being written to zero (`DelayLine.validFrames`).
+        effect.delayLine!!.heldPeakAbs() shouldBe 0.0
 
         // And Off is a true short-circuit: a hot mix passes through untouched.
         ctx.mixBuffer.fill(0.9)
         effect.process(ctx)
         ctx.mixBuffer.left.all { it == 0.9 } shouldBe true
+    }
+
+    "a switch-off scans a tap window of up to a second; a longer one counts down from its ceiling, never shorter" {
+        // KLANG-00428, the audit's N-R2: the switch-off's scan read the whole tap window in one block, 596 us of a
+        // 2.67 ms block at 10 s. Over `MAX_SCANNED_TAP_SECONDS` the countdown starts from the tail ceiling, a bound on
+        // the same content, so the drain can only run longer, on silent input.
+        for ((time, scans) in listOf(0.5 to 1, 2.0 to 0)) {
+            withClue("time $time") {
+                val effect = createEffect(delayTime = time, feedback = 0.5)
+                val ctx = createCtx()
+
+                repeat(8) {
+                    ctx.mixBuffer.fill(0.4)
+                    effect.process(ctx)
+                }
+
+                val line = effect.delayLine.shouldNotBeNull()
+                val before = line.tapWindowScans
+
+                effect.configure(time = 0.0, feedback = 0.5, cap = 1.0, wet = 1.0)
+                fadeOut(effect, ctx)
+
+                line.tapWindowScans - before shouldBe scans
+                // Draining on a ring that holds the feed: the countdown runs, whichever way it was started.
+                effect.hasTail() shouldBe true
+            }
+        }
     }
 
     "re-enabling after off resurrects nothing, even with a far longer delay time" {

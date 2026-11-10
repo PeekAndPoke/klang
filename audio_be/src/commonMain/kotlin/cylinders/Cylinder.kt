@@ -821,6 +821,9 @@ class Cylinder(
         }
 
         next.reset()
+        // It arrives over sound: a delay or a reverb it switches on fades its feed in rather than snapping it, or its
+        // unit would be fed a step of the live mix that comes back after the ramp (KLANG-00428, L7a-02).
+        next.joinSoundingBus()
 
         // The arriving chain reads the cylinder's live param state FIRST, without writing anything:
         // `handOverDuck` below asks whether it will duck, and a duck whose cylinder or depth comes

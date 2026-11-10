@@ -190,15 +190,25 @@ class MasterOutputChainSpec : StringSpec({
         return wet
     }
 
-    fun standalone(stage: KatalystStageDsl) = KatalystChainBuilder.build(
+    /**
+     * [stage] built standalone and configured. [overSound]: it switches on over a bus that has already run, as a refused
+     * unit that engages later does, so its delay or room fades its feed in from 0 (KLANG-00428, L7a-01).
+     */
+    fun standalone(stage: KatalystStageDsl, overSound: Boolean = false) = KatalystChainBuilder.build(
         dsl = KatalystDsl.of(stage),
         sampleRate = sampleRate,
         blockFrames = blockFrames,
         rings = SizedBuffers.forRings(sampleRate),
         reverbs = ReverbUnits(sampleRate),
-    ).also { it.applyParams(null) }
+    ).also {
+        if (overSound) {
+            it.joinSoundingBus()
+        }
 
-    "a refused master room stays dry and active, and engages from the block the shelf gets a unit back, from an empty unit" {
+        it.applyParams(null)
+    }
+
+    "a refused master room stays dry and active, and engages from the block the shelf gets a unit back, from an empty unit, its feed fading in" {
         var asked = 0
         val units = ReverbUnits(sampleRate, allocate = { _, _ ->
             asked++
@@ -225,7 +235,9 @@ class MasterOutputChainSpec : StringSpec({
         val wet = runRecovered(
             bus = bus,
             onBus = onBus,
-            standalone = standalone(KatalystStageDsl.Reverb(wet = c(0.4), size = c(6.0))),
+            // The bus has run while the unit was refused, so the room switches on over sound and fades its feed in
+            // (KLANG-00428, L7a-01); it used to snap, a step of the live mix into the combs.
+            standalone = standalone(KatalystStageDsl.Reverb(wet = c(0.4), size = c(6.0)), overSound = true),
             from = 20,
             blocks = 60,
         )
@@ -235,7 +247,7 @@ class MasterOutputChainSpec : StringSpec({
         wet shouldBeGreaterThan 1e-3
     }
 
-    "a refused master echo stays dry and active, and engages from the block the shelf gets a ring back, from an empty ring" {
+    "a refused master echo stays dry and active, and engages from the block the shelf gets a ring back, from an empty ring, its feed fading in" {
         var asked = 0
         val rings = SizedBuffers.forRings(sampleRate, allocate = { _ ->
             asked++
@@ -259,7 +271,8 @@ class MasterOutputChainSpec : StringSpec({
         val wet = runRecovered(
             bus = bus,
             onBus = onBus,
-            standalone = standalone(KatalystStageDsl.Delay(wet = c(0.5), time = c(0.05), feedback = c(0.4))),
+            // Over sound, as the room's row says.
+            standalone = standalone(KatalystStageDsl.Delay(wet = c(0.5), time = c(0.05), feedback = c(0.4)), overSound = true),
             from = 20,
             blocks = 60,
         )

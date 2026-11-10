@@ -110,6 +110,13 @@ class TailCeiling {
     fun hasTailOver(floor: Double): Boolean = previous > floor || current > floor
 
     /**
+     * The ceiling itself: no cell the unit holds is larger than this ([hasTail] is this against [SILENCE_FLOOR]).
+     * What a long delay's switch-off starts its drain countdown from instead of a scan of its tap window
+     * (`KatalystDelayEffect.MAX_SCANNED_TAP_SECONDS`).
+     */
+    val bound: Double get() = if (previous > current) previous else current
+
+    /**
      * Once per block, before or after the unit processes it (the bound holds either way).
      *
      * A block's peak is credited to EVERY window the block touches — the one it closes and the

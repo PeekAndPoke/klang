@@ -324,6 +324,56 @@ class KatalystParallelEffectSpec : StringSpec({
         stage.hasTail() shouldBe false
     }
 
+    "a pad ring is part of the tail question: an echo in it holds the stage after every branch has gone quiet" {
+        // KLANG-00428, audit finding L7a-05: a branch without the lookahead another branch has gets a ring of that
+        // length, and a delay's echo enters it while the lookahead branch is long quiet. The delay's ceiling can end
+        // while the echo is still in the ring, and with no twin the pad reported nothing, so a draining swap or a
+        // cylinder's deactivation cut the echo. The rule: while the stage still has audio to put out, it has a tail.
+        // A click at each of 24 places in the delay's tail window; at least one must reach the case where no branch
+        // reports a tail while the echo is still in the ring.
+        val echo = KatalystStageDsl.Delay(wet = c(1.0), time = c(0.1), feedback = c(0.0))
+        var reached = 0
+
+        for (clickBlock in 20 until 44) {
+            val built = chain(parallel(branch(echo), branch(late)))
+            val stage = built.pipeline.single().shouldBeInstanceOf<KatalystParallelEffect>()
+            val ctx = KatalystContext(blockFrames = blockFrames, mixBuffer = StereoBuffer(blockFrames))
+            val blocks = clickBlock + 120
+            val tail = BooleanArray(blocks)
+            val branchesQuiet = BooleanArray(blocks)
+            val peak = DoubleArray(blocks)
+
+            for (b in 0 until blocks) {
+                val x = if (b == clickBlock) 0.5 else 0.0
+
+                ctx.mixBuffer.left.fill(x)
+                ctx.mixBuffer.right.fill(x)
+                built.process(ctx)
+                peak[b] = ctx.mixBuffer.left.maxOf { abs(it) }
+                tail[b] = stage.hasTail()
+                branchesQuiet[b] = stage.branches.none { it.hasTail() }
+            }
+
+            for (b in clickBlock until blocks - 1) {
+                val toCome = (b + 1 until blocks).maxOf { peak[it] }
+
+                if (toCome > 1e-5) {
+                    withClue("click at block $clickBlock: after block $b the stage still puts out $toCome") {
+                        tail[b] shouldBe true
+                    }
+
+                    if (branchesQuiet[b]) {
+                        reached++
+                    }
+                }
+            }
+        }
+
+        withClue("positive control: some click left the echo in the ring with every branch quiet") {
+            (reached > 0) shouldBe true
+        }
+    }
+
     // ── The branches read the cylinder's slots ─────────────────────────────────────────────────────
 
     "a slot in a branch reads the cylinder's param state, and a new state reaches it" {

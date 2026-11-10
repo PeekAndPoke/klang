@@ -11,6 +11,7 @@ import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.warehouse.CylinderUnits
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
+import kotlin.math.max
 
 /**
  * Mixing Channels / Effect Buses
@@ -161,10 +162,15 @@ class Cylinders(
             fusionMix.addFrom(source = cylinder.mixBuffer, frames = blockFrames)
         }
 
-        // Step 4: Cleanup stale cylinders (round-robin over the rent order, no allocation)
+        // Step 4: Cleanup stale cylinders (round-robin over the rent order, no allocation). The index wraps at
+        // maxCylinders, or at the count once more cylinders than that are rented: a folded id keeps its sign, so up to
+        // `2 * maxCylinders - 1` can be, and a wrap at maxCylinders alone never reached the ones past index 254, which
+        // then stayed active for good and kept a stopped engine (KLANG-00428, audit finding L6-05). Up to maxCylinders
+        // the wrap is what it always was (a count that does not divide it visits one cylinder twice at the wrap, one
+        // visit of grace), so no teardown moves.
         if (count > 0) {
             rented[cleanupIndex % count].tryDeactivate(blockStart)
-            cleanupIndex = (cleanupIndex + 1) % maxCylinders
+            cleanupIndex = (cleanupIndex + 1) % max(count, maxCylinders)
         }
     }
 

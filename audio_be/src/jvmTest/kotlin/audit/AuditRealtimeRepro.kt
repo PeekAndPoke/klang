@@ -916,35 +916,6 @@ class AuditRealtimeRepro : StringSpec({
         flush()
     }
 
-    "L6-05: with more than 255 rented cylinders, the ones past index 254 are never cleaned up".config(enabled = requested) {
-        fun run(ids: List<Int>): String {
-            val cylinders = Cylinders(blockFrames = RT_BLOCK, sampleRate = RT_SR)
-            val mix = StereoBuffer(RT_BLOCK)
-
-            for (id in ids) {
-                cylinders.checkIn(id = id, blockStart = 0.0)
-            }
-
-            for (b in 1..3000) {
-                cylinders.clearAll()
-                mix.clear()
-                cylinders.processAndMix(fusionMix = mix, blockStart = b * RT_BLOCK.toDouble())
-            }
-
-            val stillActive = cylinders.cylinders.withIndex().filter { it.value.isActive }
-
-            return "${ids.size} cylinders checked in once, 3000 silent blocks: ${stillActive.size} still active " +
-                "(rent indices ${stillActive.map { it.index }.take(6)}${if (stillActive.size > 6) " ..." else ""}), anyActive ${cylinders.anyActive()}"
-        }
-
-        line("== L6-05: Cylinders at its defaults (maxCylinders 255, grace 10 visits)")
-        line("   ids 0..254:            ${run((0..254).toList())}")
-        line("   ids 0..254 and -1:     ${run((0..254).toList() + listOf(-1))}")
-        line("   ids -254..254:         ${run((-254..254).toList())}")
-
-        flush()
-    }
-
     "L5-07: inside a 16x region a shared node repeats one block once the region's frame counter saturates".config(enabled = requested) {
         val noise = IgnitorDsl.WhiteNoise()
         val tree = noise.oversampleBy(16.ign) { y -> IgnitorDsl.Plus(left = y, right = IgnitorDsl.Lowpass(inner = y, freq = IgnitorDsl.Constant(3000.0))) }

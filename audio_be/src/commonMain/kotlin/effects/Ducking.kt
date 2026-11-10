@@ -242,6 +242,20 @@ class Ducking(
         currentGain = 1.0
     }
 
+    /**
+     * Puts this instance in exactly the state the constructor gives one built with [releaseSeconds] and [depth]: the
+     * envelope at rest, the two knobs and the coefficient as the constructor derives them (the coefficient from the
+     * RAW release, as there). So a stage can keep one instance for all its lives instead of building one on the audio
+     * thread at every switch-on (KLANG-00428, audit findings L6-06 and L7b-07; `KatalystDuckEffect`'s `spare`).
+     * [knobArgs] is a caller's scratch and is left as it is.
+     */
+    internal fun startLife(releaseSeconds: Double, depth: Double) {
+        releaseCoeff = calculateCoefficient(releaseSeconds)
+        currentGain = 1.0
+        depthValue = depth.coerceIn(0.0, 1.0)
+        releaseValue = guardOr(value = releaseSeconds, fallback = DUCK_RELEASE_SECONDS)
+    }
+
     companion object {
         /**
          * Sidechain sensitivity / saturation knee. With `* 2.0`, the ducker reaches full

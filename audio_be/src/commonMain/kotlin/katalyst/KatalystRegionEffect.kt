@@ -81,6 +81,14 @@ class KatalystRegionEffect internal constructor(
     /** True while the body holds a tail that cannot end on its own ([KatalystChain.sustainsItself]). */
     fun sustainsItself(): Boolean = body.sustainsItself()
 
+    /** True while the body has an arithmetic stage that sounds on silence ([KatalystChain.soundsOnSilence]). */
+    fun soundsOnSilence(): Boolean = body.soundsOnSilence()
+
+    /** The body joins the sounding bus with the stage, see [KatalystEffect.joinSoundingBus]. */
+    override fun joinSoundingBus() {
+        body.joinSoundingBus()
+    }
+
     override val deniedRents: Int get() = body.deniedRents
 
     override fun process(ctx: KatalystContext) {

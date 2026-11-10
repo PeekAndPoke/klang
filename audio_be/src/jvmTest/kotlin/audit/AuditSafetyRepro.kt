@@ -10,7 +10,6 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.HouseStage
 import io.peekandpoke.klang.audio_be.PlaybackEngineDispatcher
 import io.peekandpoke.klang.audio_be.StereoBuffer
-import io.peekandpoke.klang.audio_be.cylinders.CylinderSwapRig
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
@@ -474,56 +473,6 @@ class AuditSafetyRepro : StringSpec({
         flush()
     }
 
-    // ── L7a-03: a leaving chain that sounds on silence ────────────────────────────────────────────────────────────
-
-    "L7a-03: a leaving chain that sounds on silence, after the edit that removed it".config(enabled = requested) {
-        line("== L7a-03: CylinderSwapRig at $SR Hz, the chain on silence, then swapped for a dry chain; how long the leaving chain's constant stays")
-
-        val chains = listOf(
-            "pow(-1)" to KatalystDsl.of(KatalystStageDsl.Pow(exp = k(-1.0))),
-            "plus(0.2)" to KatalystDsl.of(KatalystStageDsl.Plus(other = k(0.2))),
-        )
-
-        for ((label, dsl) in chains) {
-            val rig = CylinderSwapRig(sampleRate = SR)
-
-            rig.registry.register("bad", dsl)
-            rig.registry.register("dry", CylinderSwapRig.dryChain(1.0))
-            rig.cylinder.requestChain("bad")
-            rig.render(blocks = 100, level = 0.0)
-
-            val held = rig.block(level = 0.0)[64]
-
-            rig.cylinder.requestChain("dry")
-
-            var lastLoud = -1
-            var lastFull = -1
-            val blocks = (30.0 * SR / BF).toInt()
-
-            for (b in 0 until blocks) {
-                val out = rig.block(level = 0.0)
-
-                for (i in 0 until BF) {
-                    val a = abs(out[i])
-
-                    if (!(a < 1e-6)) {
-                        lastLoud = b * BF + i
-                    }
-
-                    if (a >= 0.5 * abs(held)) {
-                        lastFull = b * BF + i
-                    }
-                }
-            }
-
-            line(
-                "L7a-03 [$label] the chain's output on silence ${fmtE(held)}; after the request: at full level (>= half) until ${fmt((lastFull + 1) / SR.toDouble())} s, " +
-                    "above 1e-6 until ${fmt((lastLoud + 1) / SR.toDouble())} s (run of 30 s)",
-            )
-        }
-
-        flush()
-    }
 
     // ── L4-11 L4-06 L4-07 L4-08: one bad sample through single stages ─────────────────────────────────────────────
 

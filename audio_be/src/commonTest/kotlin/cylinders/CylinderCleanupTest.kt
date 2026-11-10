@@ -169,7 +169,7 @@ class CylinderCleanupTest : StringSpec({
         cylinder.isActive shouldBe true
     }
 
-    "an inaudibly-charged delay ring is cleared LITERALLY on deactivation" {
+    "an inaudibly-charged delay ring reads as empty after deactivation" {
         // The tail ceiling holds a charged drain until the
         // countdown\'s own terminal reset (old copies sit in the ring at full amplitude until the
         // head wraps). The reachable case for the resetBusEffects wiring is therefore an ACTIVE
@@ -196,10 +196,10 @@ class CylinderCleanupTest : StringSpec({
         cylinder.tryDeactivate(afterLastVoice)
 
         cylinder.isActive shouldBe false
-        // Literally zero, every cell of the whole ring (not only the tap's window): any residue is counted.
-        val ring = cylinder.delay!!.delayLine!!.ring
-        ring.left.count { it != 0.0 } shouldBe 0
-        ring.right.count { it != 0.0 } shouldBe 0
+        // Empty, every cell of the whole ring (not only the tap's window) as the line reads it: any residue is counted.
+        // Not the raw cells: since KLANG-00428 (L6-03, L7b-06) the deactivation's reset is O(1) and an old cell reads
+        // as zero instead of being written to zero inside the render block (`DelayLine.validFrames`).
+        cylinder.delay!!.delayLine!!.heldPeakAbs() shouldBe 0.0
         // Factory params too, not just the ring: a core-only reset would leave the dead owner's
         // time for the next life's first non-finite param to inherit (round-2 retrofit).
         cylinder.delay!!.delayLine!!.time shouldBe 0.0

@@ -69,7 +69,7 @@ import kotlin.math.pow
  *   to 0..1 here. Tail length, via comb feedback `feedback = size · FEEDBACK_SCALE + FEEDBACK_OFFSET`:
  *   authored 3 ≈ 1.0 s, 5 ≈ 1.4 s, 10 ≈ 12.5 s. The shortest reachable tail is ~0.7 s
  *   ([FEEDBACK_OFFSET]).
- * - `reverb(lowpass)` → [lowpass] (HF damping cutoff in Hz; unset = [DEFAULT_DAMP]).
+ * - `reverb(lowpass)` → [lowpass] (HF damping on a scale in Hz, not a cutoff; unset = [DEFAULT_DAMP]).
  *
  * Authored sizes above 10 are bounded by [normalizeSize] (see there for why the bound sits at 10).
  */
@@ -135,8 +135,13 @@ class Reverb(
         }
 
     /**
-     * High-frequency damping of the tail as a lowpass cutoff in Hz; lower = darker. NaN = unset, the fixed
-     * [DEFAULT_DAMP].
+     * High-frequency damping of the tail, on a scale in Hz; lower = darker. NaN = unset, the fixed [DEFAULT_DAMP].
+     *
+     * **Not a cutoff** (audit finding L7b-03, KLANG-00428). The value over the Nyquist frequency sets the damping of
+     * the combs' one-pole linearly, `damping = (1 - lowpass / nyquist) * DAMP_SCALE`: 0 is the darkest room, the
+     * Nyquist frequency no damping, and that one-pole's own corner never falls below about 7.5 kHz. So 1000 and 0
+     * sound almost alike: at size 5 the 4 kHz T60 is 0.79 s at 0, 0.81 s at 1000, 1.07 s unset and 1.22 s at 20000
+     * (`disproof-sound.md`). Whether it becomes a true cutoff is the maintainer's (KLANG-00428, Decide).
      *
      * **A non-finite write UNSETS it** (stored as NaN, never as a number), unlike [size], whose setter keeps what
      * it had: an unset cutoff is a meaning of its own here, and it is what `KatalystReverbEffect` reads a non-finite
@@ -593,8 +598,8 @@ class Reverb(
         private const val DAMP_SCALE: Double = 0.4
 
         /**
-         * Damping (0 = bright .. 1 = dark) when no [lowpass] is set: the Freeverb default. Equivalent
-         * to a lowpass at half the Nyquist frequency.
+         * Damping (0 = bright .. 1 = dark) when no [lowpass] is set: the Freeverb default. The same damping as a
+         * [lowpass] of half the Nyquist frequency (not a corner there: see [lowpass]).
          */
         private const val DEFAULT_DAMP: Double = 0.5
 

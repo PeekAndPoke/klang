@@ -278,16 +278,27 @@ private fun swapCase(name: String, first: Pair<String, KatalystDsl>?, second: Pa
         ClickRender(left = left, right = right, eventFrame = e)
     }
 
-/** Chain swaps: a crossfade to a quieter chain, into a room, and out of a room (its drain). */
+/**
+ * Chain swaps: a crossfade to a quieter chain, into a room, into a delay (its first echo comes back after the ramp,
+ * KLANG-00428, audit finding L7a-02), and out of a room (its drain).
+ */
 fun clickSwapCases(): List<ClickCase> {
     val half = "gain 0.5" to KatalystDsl.of(KatalystStageDsl.Gain(gain = KatalystKnobDsl.Constant(0.5)))
     val room = "room (reverb wet .5 size 3)" to KatalystDsl.of(
         KatalystStageDsl.Reverb(wet = KatalystKnobDsl.Constant(0.5), size = KatalystKnobDsl.Constant(3.0)),
     )
+    val echo = "delay (wet .5 time .25 feedback .3)" to KatalystDsl.of(
+        KatalystStageDsl.Delay(
+            wet = KatalystKnobDsl.Constant(0.5),
+            time = KatalystKnobDsl.Constant(0.25),
+            feedback = KatalystKnobDsl.Constant(0.3),
+        ),
+    )
 
     return listOf(
         swapCase(name = "to a quieter chain", first = null, second = half),
         swapCase(name = "into a room", first = null, second = room),
+        swapCase(name = "into a delay", first = null, second = echo),
         swapCase(name = "out of a room (drain)", first = room, second = half, config = drainConfig),
     )
 }

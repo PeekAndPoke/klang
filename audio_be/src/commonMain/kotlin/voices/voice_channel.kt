@@ -45,6 +45,9 @@ internal fun mixIntoCylinder(
     // Equal Power Panning
     // Input: 0.0 (Left) .. 1.0 (Right)
     // Map to: 0.0 .. PI/2
+    // Hard right is not exact silence on the left: `cos(PI / 2)` is 6.1e-17, so 324 dB down a hard-right voice still
+    // reaches the left bus. Accepted (KLANG-00428, audit finding L6-09): inaudible, and only a spec asserting exact
+    // silence on one side would see it. Hard left is exact (`sin(0)` is 0).
     val panNorm = voice.pan.coerceIn(0.0, 1.0)
     val panAngle = panNorm * (PI / 2.0)
 
@@ -109,6 +112,12 @@ internal fun mixIntoCylinder(
  * [Voice.gainMultiplier]: frame `k` of the block uses `from + (to - from) * (k + 1) / blockFrames`, so the
  * block's last frame lands on the new value and the next block continues from there. A voice that renders only
  * part of the block (it starts or ends inside it) reads the same line at its own frames.
+ *
+ * Two seams of an ulp, accepted (KLANG-00428, audit finding L6-10): the last frame is `from + (to - from)`, which can
+ * differ from `to` in the last bit (`PlaybackGain` and `Ducking.processStereoGliding` write their ramps from the end to
+ * land exactly; this one does not), and this loop multiplies `(cos * gain) * multiplier` where the constant one
+ * multiplies `cos * (gain * multiplier)`, so the two round differently. About 1e-16 relative: a bit-exact spec of a
+ * solo transition must allow for it.
  */
 private fun mixRamped(
     voice: Voice,

@@ -9,7 +9,7 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.ShapingFuncs
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.DelayLine.Companion.MIN_DELAY_SECONDS
-import io.peekandpoke.klang.audio_be.utils.nanGuard
+import io.peekandpoke.klang.audio_be.utils.flushState
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_CAP
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
@@ -132,7 +132,18 @@ class DelayLine(
             start += from.bufferSize
         }
 
+        // The copy is oldest first, so sample i lies n - i behind [from]'s head. A cell older than what [from] wrote
+        // since its last reset is a previous life's and reads as zero there ([validFrames]), so it is copied as one.
+        val stale = n - from.validFrames
+
         for (i in 0 until n) {
+            if (i < stale) {
+                buffer.left[i] = 0.0
+                buffer.right[i] = 0.0
+
+                continue
+            }
+
             var s = start + i
             if (s >= from.bufferSize) {
                 s -= from.bufferSize
@@ -142,6 +153,8 @@ class DelayLine(
         }
 
         writePos = if (n == bufferSize) 0 else n
+        // Every cell now holds what it should: the copied history, and the zeros this ring came with past it.
+        validFrames = bufferSize
 
         // The tap in force and a crossfade in flight move with the history: a grow happens because
         // a LONGER time arrived, and that change must crossfade on the new ring like any other.
@@ -153,6 +166,18 @@ class DelayLine(
         fadeDone = from.fadeDone
     }
     private var writePos = 0
+
+    /**
+     * How many cells behind the write head hold what was written since the last [reset], saturated at [bufferSize].
+     * Every older cell holds a previous life's samples and READS AS ZERO: before a block reads a cell past this
+     * count, [zeroStale] zeroes it. So [reset] is O(1) whatever the ring's size, and the line renders exactly as
+     * if the whole ring had been zeroed (KLANG-00428, audit findings L7b-06, L6-03, N-R2: a 10 s ring took 571 us
+     * of a 2.67 ms block to clear, and the drain's end and the cylinder's deactivation cleared it twice in one).
+     * The zeroing follows the tap: at most one block's reads (plus the interpolation neighbour) per tap and block,
+     * and only until the head has written one tap's length after the reset. A ring this class is handed is all
+     * zeros (built here, or rented clean from the warehouse), so it starts at [bufferSize].
+     */
+    private var validFrames: Int = ring.left.size
 
     /** Samples one tap crossfade spans ([KNOB_GLIDE_SECONDS]), at least one. */
     private val fadeTotal: Int = round(KNOB_GLIDE_SECONDS * sampleRate).toInt().coerceAtLeast(1)
@@ -241,7 +266,10 @@ class DelayLine(
      * [ShapingFuncs.softCap] bounds every store.
      */
     fun tapWindowPeakAbs(): Double {
-        val window = reachSamples().toInt() + 2
+        tapWindowScans++
+
+        // A cell older than [validFrames] reads as zero, so it is not scanned.
+        val window = min(tapWindowFrames, validFrames)
         var peak = 0.0
         var pos = writePos - 1
 
@@ -266,6 +294,13 @@ class DelayLine(
 
         return peak
     }
+
+    /** Test seam: how many times [tapWindowPeakAbs] has run, so a spec can see a switch-off that does not scan. */
+    internal var tapWindowScans: Int = 0
+        private set
+
+    /** The frames [tapWindowPeakAbs] would read: one reach ([reachSamples]) plus the interpolation neighbour. */
+    val tapWindowFrames: Int get() = reachSamples().toInt() + 2
 
     /**
      * How many samples of zero-input processing until everything the tap can reach is provably
@@ -400,11 +435,14 @@ class DelayLine(
     val effectiveDelaySeconds: Double get() = currentDelaySamples() / sampleRate
 
     /**
-     * Clears the ring buffer and resets the write head so a reused delay line does not replay a previous
-     * owner's tail. Parameter values (delay time / feedback) are preserved. Used by cylinder cleanup.
+     * Empties the ring and resets the write head so a reused delay line does not replay a previous owner's tail.
+     * Parameter values (delay time / feedback) are preserved. Used by cylinder cleanup.
+     *
+     * O(1): the cells are not touched here, they READ as zero from now on ([validFrames]), so the line renders
+     * exactly as after a whole-ring clear. A second reset in the same block costs nothing either.
      */
     fun reset() {
-        buffer.clear()
+        validFrames = 0
         writePos = 0
         // An empty ring has nothing to crossfade from: the next block snaps to the time.
         snapTap = true
@@ -466,6 +504,10 @@ class DelayLine(
         // block size is a tone parameter, so 'length > bufferSize' must wrap more
         // than once instead of writing past the ring (the smallest master ring is
         // only ~0.06 s).
+        if (validFrames < bufferSize) {
+            zeroStale(tapInt = delayInt, length = length)
+        }
+
         var done = 0
         var pos = writePos
 
@@ -484,6 +526,85 @@ class DelayLine(
         }
 
         writePos = pos
+        advanceValid(length)
+    }
+
+    /**
+     * Zeroes the cells this block's reads of a tap at [tapInt] whole samples can reach that are older than
+     * [validFrames] (see there). The reads of sample `i` lie `tapInt - i` and `tapInt + 1 - i` behind the head as it
+     * stands at the block's start, so the block reaches back from `tapInt + 1` to `tapInt - length + 1`; a cell in
+     * front of the head (a distance of 0 or less) is written in this block before it is read. Called before the
+     * block, so a cell the head overwrites later in the block is read as the zero a cleared ring held there.
+     */
+    private fun zeroStale(tapInt: Int, length: Int) {
+        val far = tapInt + 1
+        var near = tapInt - length + 1
+
+        if (near <= validFrames) {
+            near = validFrames + 1
+        }
+
+        if (far < near) {
+            return
+        }
+
+        var idx = writePos - far
+
+        if (idx < 0) {
+            idx += bufferSize
+        }
+
+        val left = buffer.left
+        val right = buffer.right
+
+        for (k in 0..(far - near)) {
+            left[idx] = 0.0
+            right[idx] = 0.0
+            idx++
+
+            if (idx == bufferSize) {
+                idx = 0
+            }
+        }
+    }
+
+    /** [validFrames] after a block of [length] frames was written, saturated at [bufferSize]. */
+    private fun advanceValid(length: Int) {
+        val valid = validFrames
+
+        if (valid < bufferSize) {
+            validFrames = if (length >= bufferSize - valid) bufferSize else valid + length
+        }
+    }
+
+    /**
+     * Test seam: the largest magnitude the ring HOLDS, every cell read as the line reads it (a cell older than
+     * [validFrames] as zero). What a whole-ring clear used to make literally zero; O(ring), specs only.
+     */
+    internal fun heldPeakAbs(): Double {
+        var peak = 0.0
+        var pos = writePos - 1
+
+        for (i in 0 until validFrames) {
+            if (pos < 0) {
+                pos += bufferSize
+            }
+
+            val l = abs(buffer.left[pos])
+            val r = abs(buffer.right[pos])
+
+            if (l > peak) {
+                peak = l
+            }
+
+            if (r > peak) {
+                peak = r
+            }
+
+            pos--
+        }
+
+        return peak
     }
 
     /**
@@ -508,6 +629,11 @@ class DelayLine(
         args[ARG_TO_ALPHA] = toSamples - toInt
         args[ARG_CAP] = if (rawCap.isFinite() && rawCap > 0.0) rawCap else 1.0
 
+        if (validFrames < bufferSize) {
+            zeroStale(tapInt = fromInt, length = length)
+            zeroStale(tapInt = toInt, length = length)
+        }
+
         var done = 0
         var pos = writePos
 
@@ -528,6 +654,7 @@ class DelayLine(
         }
 
         writePos = pos
+        advanceValid(length)
 
         val elapsed = fadeStart + length
         fadeDone = elapsed
@@ -595,13 +722,13 @@ class DelayLine(
             val delayedSignal = oldTap * (1.0 - g) + newTap * g
 
             val newSample = input[inputIndex] + (delayedSignal * fb)
-            // NaN-guard on the ring store, for the reason [processInternal] gives.
+            // NaN-guard and denormal flush on the ring store, for the reasons [processInternal] gives.
             val stored = if (cap == 1.0) {
                 ShapingFuncs.softCap(newSample)
             } else {
                 cap * ShapingFuncs.softCap(newSample / cap)
             }
-            buffer[pos] = stored.nanGuard()
+            buffer[pos] = stored.flushState()
 
             output[inputIndex] = output[inputIndex] + delayedSignal
 
@@ -665,19 +792,26 @@ class DelayLine(
             // +/-1), but `softCap(NaN)` is NaN — both its branch tests are false — and this ring
             // RECIRCULATES, so a single NaN never scrolls out: the cylinder's delay is dead for the
             // rest of its life. This is the delay's half of the master round's "no state may
-            // latch" pass; `flushState` could not reach it because the ring is FIR-shaped state,
-            // not an IIR carry.
+            // latch" pass.
             //
             // NOT the `isFinite` check that lived here until 2026-05-22 and was removed at a
             // measured +33% JVM / +30% JS: that cost was the non-inlined stdlib call, not the
-            // test. `nanGuard` is one inline self-compare (`x != x`), and re-measured on a
-            // purpose-added delay rung it is indistinguishable from zero (interleaved A/B).
+            // test. `nanGuard` was one inline self-compare (`x != x`), and re-measured on a
+            // purpose-added delay rung it was indistinguishable from zero (interleaved A/B).
+            //
+            // `flushState` since KLANG-00428 (audit finding L7b-12): the ring is recirculating state,
+            // and on silent input it decays by |feedback| per lap through the subnormal range before
+            // it reaches zero (about 31 laps at feedback 0.3, 340 at 0.9), which costs every
+            // operation on it and after it. The engine's rule for feedback state is `flushState`:
+            // a magnitude under `DENORMAL_THRESHOLD` (1e-15, -300 dB) stores 0, and NaN still
+            // stores 0 (an infinity cannot arrive: `softCap` saturates it). Inline, an `abs` and two
+            // compares.
             val stored = if (cap == 1.0) {
                 ShapingFuncs.softCap(newSample)
             } else {
                 cap * ShapingFuncs.softCap(newSample / cap)
             }
-            buffer[pos] = stored.nanGuard()
+            buffer[pos] = stored.flushState()
 
             // --- 3. Wet output, additive. Caller owns the dry mix.
             output[inputIndex] = output[inputIndex] + delayedSignal

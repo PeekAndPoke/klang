@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_be.katalyst
 import io.peekandpoke.klang.audio_be.KnobGlide
 import io.peekandpoke.klang.audio_be.effects.Phaser
 import io.peekandpoke.klang.audio_be.effects.PhaserBlock
+import io.peekandpoke.klang.audio_be.utils.isFiniteInline
 import io.peekandpoke.klang.audio_be.utils.sameKnob
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_CENTER_HZ
@@ -245,8 +246,11 @@ class KatalystPhaserEffect(
             // budget, its 0.5 a heap number every block (`audio/ref/performance.md`). So the stage no longer
             // forces 0.5 onto the [Phaser] it is handed: production always hands it a fresh one
             // (`KatalystChainBuilder`), and a phaser built with another feedback would keep it.
-            centerGlide.retarget(if (center > 0) center else PHASER_CENTER_HZ)
-            sweepGlide.retarget(if (sweep > 0) sweep else PHASER_SWEEP_HZ)
+            // NaN-guard: a non-finite center or sweep is unset, the shared default (the house rule). Every finite value
+            // is raw: a sweep of 0 is a fixed notch at the center, a negative one runs the LFO the other way, and the
+            // kernel clamps the breakpoint itself. Once `> 0`, so a sweep of 0 swept 1000 Hz (KLANG-00428, L7b-09).
+            centerGlide.retarget(if (center.isFiniteInline()) center else PHASER_CENTER_HZ)
+            sweepGlide.retarget(if (sweep.isFiniteInline()) sweep else PHASER_SWEEP_HZ)
 
             if (fresh) {
                 // The cores start the first block at the breakpoint they HOLD, so the snapped

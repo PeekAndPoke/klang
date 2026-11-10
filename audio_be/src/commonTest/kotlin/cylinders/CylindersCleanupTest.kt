@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.audio_be.cylinders
 
 import io.kotest.assertions.assertSoftly
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
@@ -137,6 +138,41 @@ class CylindersCleanupTest : StringSpec({
             cylinders.processAndMix(fusionMix, afterLastVoice)
             cylinder0.isActive shouldBe false
             cylinder1.isActive shouldBe true
+        }
+    }
+
+    "with more cylinders rented than maxCylinders, every one of them is cleaned up, negative ids included" {
+        // KLANG-00428, audit finding L6-05: a folded id keeps its sign, so up to `2 * maxCylinders - 1` cylinders can be
+        // rented, and the round-robin index wrapped at maxCylinders: the ones past it were never visited, stayed active
+        // for good and kept a stopped engine alive (256 cylinders: 1 never cleaned; 509: 254).
+        for ((maxCylinders, ids) in listOf(2 to listOf(-1, 0, 1), Cylinders.MAX_CYLINDERS to (-254..254).toList())) {
+            val cylinders = Cylinders(
+                blockFrames = blockFrames,
+                sampleRate = sampleRate,
+                silentBlocksBeforeTailCheck = 0,
+                maxCylinders = maxCylinders,
+            )
+            val mix = StereoBuffer(blockFrames)
+
+            for (id in ids) {
+                cylinders.checkIn(id = id, blockStart = 0.0)
+            }
+
+            withClue("maxCylinders $maxCylinders: all ${ids.size} rented and active") {
+                cylinders.cylinders.size shouldBe ids.size
+                cylinders.cylinders.all { it.isActive } shouldBe true
+            }
+
+            // No grace: a silent cylinder goes at its first visit, one cylinder visited per block. Two laps.
+            for (b in 1..(2 * ids.size)) {
+                cylinders.clearAll()
+                mix.clear()
+                cylinders.processAndMix(fusionMix = mix, blockStart = b * blockFrames.toDouble() + afterLastVoice)
+            }
+
+            withClue("maxCylinders $maxCylinders: rent indices still active ${cylinders.cylinders.indices.filter { cylinders.cylinders[it].isActive }}") {
+                cylinders.anyActive() shouldBe false
+            }
         }
     }
 

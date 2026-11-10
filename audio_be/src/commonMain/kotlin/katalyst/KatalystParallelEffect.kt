@@ -27,10 +27,12 @@ import kotlin.math.min
  * **Allocation:** one block buffer per branch, the twins and the pad rings, all here at build; [process] allocates
  * nothing.
  *
- * **Lifecycle:** every question the chain asks is passed to the branches. A ring is not reported as a tail of its own:
- * it holds what a latent branch also holds. A twin is: its input is its branch's OUTPUT, which a lookahead holds back
- * by up to 2400 frames after the region it twins has gone quiet, so it reports a tail until
- * [Oversampler.tailFrames] quiet frames have entered it.
+ * **Lifecycle:** every question the chain asks is passed to the branches, and each pad answers for what it still
+ * holds of its branch's OUTPUT: a twin rings for [Oversampler.tailFrames] after that output goes quiet, and a ring
+ * holds it for its length after that, so a pad reports a tail until both have passed in quiet frames. The ring once
+ * reported nothing, on the ground that it holds what a latent branch also holds; it does not: a delay's echo in
+ * another branch enters the ring while the latent branch is quiet, and was cut when nothing else reported a tail
+ * (KLANG-00428, audit finding L7a-05).
  *
  * The branches' slots are resolved through [KatalystNestedChainsWriter]; a branch reads the cylinder's param state like the
  * chain around it, so a slot named in a branch is the same slot as one of that name outside it.
@@ -92,6 +94,24 @@ class KatalystParallelEffect internal constructor(
         }
 
         return false
+    }
+
+    /** True while a branch has an arithmetic stage that sounds on silence, see [KatalystChain.soundsOnSilence]. */
+    fun soundsOnSilence(): Boolean {
+        for (i in branches.indices) {
+            if (branches[i].soundsOnSilence()) {
+                return true
+            }
+        }
+
+        return false
+    }
+
+    /** Every branch joins the sounding bus with the stage, see [KatalystEffect.joinSoundingBus]. */
+    override fun joinSoundingBus() {
+        for (i in branches.indices) {
+            branches[i].joinSoundingBus()
+        }
     }
 
     override val deniedRents: Int
@@ -177,13 +197,16 @@ class KatalystParallelEffect internal constructor(
         private val right = DoubleArray(delayFrames)
         private var pos = 0
 
-        /** How long the twins may ring after their input goes quiet; 0 without twins. */
-        private val holdFrames = twinStages.maxOfOrNull { Oversampler.tailFrames(it) } ?: 0
+        /**
+         * How long the pad may still put out what entered it after its branch's output goes quiet: the twins' ring,
+         * then the ring's length (what the twins put out last enters it); 0 with neither.
+         */
+        private val holdFrames = (twinStages.maxOfOrNull { Oversampler.tailFrames(it) } ?: 0) + delayFrames
 
-        /** Frames since the last block that entered the twins with a sample above [SILENCE_FLOOR], held at [holdFrames]. */
+        /** Frames since the last block of the branch's output with a sample above [SILENCE_FLOOR], held at [holdFrames]. */
         private var quietFrames = holdFrames
 
-        /** True while the twins may still ring out what entered them. */
+        /** True while the twins or the ring may still put out what entered them. */
         fun hasTail(): Boolean = quietFrames < holdFrames
 
         fun addPadded(own: StereoBuffer, into: StereoBuffer, frames: Int, scratch: ScratchBuffers) {

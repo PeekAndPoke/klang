@@ -41,6 +41,15 @@ import kotlin.math.max
  *     whatever runs through it late by that much (a cylinder's `Katalyst(k => k.limiter(lookahead =
  *     ...))`, phase 3 step 12 C2: the author's choice, never compensated).
  *
+ * **The classic follower smooths the LEVEL, in dB, before the gain computer** (audit finding L7b-04, KLANG-00428;
+ * whether that law stays is open there, under Decide). After silence the envelope stands at -100 dB, so an onset
+ * passes untouched until the envelope reaches `threshold - knee / 2`: a dead time of `attack * ln((level + 100) /
+ * (level - threshold + knee / 2))`, 211 frames (4.4 ms) at the defaults on a 0 dBFS step and 188 (3.9 ms) for the
+ * limiter preset, so a limiter without a lookahead is no ceiling for those first milliseconds. Its release likewise
+ * depends on what follows: at release 0.1 s the reduction is gone 24.5 ms after the input stops and 128.9 ms after it
+ * drops to -30 dBFS (`disproof-sound.md`). A level at or under -100 dB reads as -100 dB, never quieter (S-02). The
+ * lookahead topology has neither property.
+ *
  * Used in two places:
  *   1. Per-cylinder musical compressor (user-facing).
  *   2. The house brickwall limiter in `HouseStage`.
@@ -637,11 +646,15 @@ class Compressor(
         // `calculateGainReduction(NaN)` is NaN, `NaN < GAIN_SKIP_THRESHOLD_DB` is false, and
         // this returns exactly 1.0 forever — a brickwall that has become a bit-exact
         // pass-through with nothing to indicate it. Note the direction: a NaN SAMPLE never
-        // latched it (`NaN > SILENCE_LIN` is false); only +/-Inf did.
+        // latched it (`NaN > SILENCE_DB_LIN` is false); only +/-Inf did.
         val inputLevel = level.finiteOrZero()
 
-        // Convert to dB (with silence floor to avoid log(0)).
-        val inputDb = if (inputLevel > SILENCE_LIN) {
+        // Convert to dB, floored at the follower's silence: a level at or under [SILENCE_DB_LIN] reads as
+        // [SILENCE_DB], the dB of exactly that level, so the floor is continuous and nothing reads quieter than
+        // silence. The floor was [SILENCE_LIN], 1e-10, so a level between the two (-200 to -100 dB) drove the envelope
+        // below where silence leaves it, and a release into a very quiet tail headed further down than one into
+        // silence (KLANG-00428, the audit's S-02). It also spares the `ln` under -100 dB.
+        val inputDb = if (inputLevel > SILENCE_DB_LIN) {
             DB20_OVER_LN10 * ln(inputLevel)
         } else {
             SILENCE_DB
@@ -962,6 +975,9 @@ class Compressor(
         // Envelope follower silence floor.
         private const val SILENCE_DB: Double = -100.0
         private const val SILENCE_LIN: Double = 1e-10
+
+        /** The linear level whose dB is [SILENCE_DB] (`10^(-100 / 20)`): the classic follower's silence floor. */
+        private const val SILENCE_DB_LIN: Double = 1e-5
 
         // Attack<->release coefficient blend half-width in dB. The follower coefficient
         // smoothstep-blends from releaseCoeff to attackCoeff across [-W, +W] around error=0,

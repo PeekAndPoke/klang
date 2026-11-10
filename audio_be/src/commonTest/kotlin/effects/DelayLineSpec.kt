@@ -555,6 +555,148 @@ class DelayLineSpec : StringSpec({
         }
     }
 
+    "a reset touches no cell of the ring, and the line then renders exactly what a zeroed ring renders" {
+        // KLANG-00428, audit findings L7b-06, L6-03 and N-R2: `reset` zeroed the whole ring inside the render block
+        // (571 us of a 2.67 ms block for a 10 s delay, twice in the block where a drain end and a deactivation meet).
+        // Now it is O(1): an old cell reads as zero, and the cells the tap reaches are zeroed one block at a time. The
+        // oracle is a line on a NEW zeroed ring driven the same way; the run covers a long time, a time change that
+        // crossfades onto older cells, a grow, and a second reset in a row.
+        val frames = 4096
+        val block = 128
+
+        fun signal(n: Int): Double = 0.6 * sin(n * 0.013) + 0.3 * sin(n * 0.17)
+
+        /** Drives [line] for [blocks] blocks from frame [from], the time moving at block 6 and 12; returns the output. */
+        fun drive(line: DelayLine, from: Int, blocks: Int): DoubleArray {
+            val inp = StereoBuffer(block)
+            val out = StereoBuffer(block)
+            val all = DoubleArray(blocks * block * 2)
+
+            for (b in 0 until blocks) {
+                line.time = when {
+                    b < 6 -> 0.02
+                    b < 12 -> 0.07
+                    else -> 0.05
+                }
+
+                for (i in 0 until block) {
+                    inp.left[i] = signal(from + b * block + i)
+                    inp.right[i] = -0.5 * signal(from + b * block + i)
+                }
+
+                out.clear()
+                line.process(input = inp, output = out, length = block)
+
+                for (i in 0 until block) {
+                    all[2 * (b * block + i)] = out.left[i]
+                    all[2 * (b * block + i) + 1] = out.right[i]
+                }
+            }
+
+            return all
+        }
+
+        val used = DelayLine(ring = StereoBuffer(frames), sampleRate = sampleRate, time = 0.02, feedback = 0.6)
+
+        // Charge the whole ring: every cell holds the old life.
+        drive(used, from = 0, blocks = 80)
+
+        val before = used.ring.left.copyOf()
+
+        used.reset()
+        used.reset()
+
+        withClue("the reset wrote nothing into the ring") {
+            used.ring.left.contentEquals(before) shouldBe true
+        }
+
+        withClue("and it reads as empty") {
+            used.heldPeakAbs() shouldBe 0.0
+            used.tapWindowPeakAbs() shouldBe 0.0
+        }
+
+        val fresh = DelayLine(ring = StereoBuffer(frames), sampleRate = sampleRate, time = 0.02, feedback = 0.6)
+        val a = drive(used, from = 777, blocks = 40)
+        val b = drive(fresh, from = 777, blocks = 40)
+
+        for (i in a.indices) {
+            withClue("sample ${i / 2} channel ${i % 2}") {
+                a[i].toRawBits() shouldBe b[i].toRawBits()
+            }
+        }
+
+        // A grow after a reset: the new ring adopts only what was written since, the rest reads as zero. The oracle
+        // is a NEW line driven the same way, whose older cells really are zeros (the used one still holds the
+        // previous run's samples there).
+        used.reset()
+        drive(used, from = 99, blocks = 3)
+
+        val newLine = DelayLine(ring = StereoBuffer(frames), sampleRate = sampleRate, time = 0.02, feedback = 0.6)
+
+        drive(newLine, from = 99, blocks = 3)
+
+        val grownUsed = DelayLine(ring = StereoBuffer(2 * frames), sampleRate = sampleRate).also { it.adoptHistory(used) }
+        val grownFresh = DelayLine(ring = StereoBuffer(2 * frames), sampleRate = sampleRate).also { it.adoptHistory(newLine) }
+
+        grownUsed.feedback = 0.6
+        grownFresh.feedback = 0.6
+
+        val c = drive(grownUsed, from = 500, blocks = 30)
+        val d = drive(grownFresh, from = 500, blocks = 30)
+
+        for (i in c.indices) {
+            withClue("grown, sample ${i / 2} channel ${i % 2}") {
+                c[i].toRawBits() shouldBe d[i].toRawBits()
+            }
+        }
+    }
+
+    "a decaying ring is flushed to exact zero, never through the subnormal range" {
+        // KLANG-00428, audit finding L7b-12: on silent input the ring decays by |feedback| per lap and passed through
+        // the subnormal range before it reached zero. The ring store takes `flushState` now: under 1e-15 it stores 0.
+        // A whole-sample time (441 frames), so every output sample is one stored cell, read as it is.
+        val line = DelayLine(maxDelaySeconds = 0.1, sampleRate = sampleRate, time = 0.01, feedback = 0.05)
+        val inp = StereoBuffer(blockSize)
+        val out = StereoBuffer(blockSize)
+        var tiny = 0
+        var lastNonZero = -1
+        val blocks = 5 * sampleRate / blockSize
+
+        inp.left.fill(0.9)
+        inp.right.fill(0.9)
+
+        for (b in 0 until blocks) {
+            if (b == 1) {
+                inp.clear()
+            }
+
+            out.clear()
+            line.process(input = inp, output = out, length = blockSize)
+
+            for (i in 0 until blockSize) {
+                val v = abs(out.left[i])
+
+                if (v != 0.0) {
+                    lastNonZero = b * blockSize + i
+                }
+
+                if (v != 0.0 && v < 1e-15) {
+                    tiny++
+                }
+            }
+        }
+
+        withClue("no output sample between 0 and 1e-15") {
+            tiny shouldBe 0
+        }
+
+        withClue("and it reached exact zero long before the end: last non-zero at frame $lastNonZero") {
+            (lastNonZero in 0 until blocks * blockSize / 2) shouldBe true
+        }
+
+        line.heldPeakAbs() shouldBe 0.0
+    }
+
     "after reset the next time is in force at once: an empty ring has nothing to crossfade from" {
         val underTest = line(0.3)
 

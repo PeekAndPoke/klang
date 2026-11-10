@@ -493,4 +493,63 @@ class ChainSwapCapSpec : StringSpec({
             loudest shouldBeGreaterThan 0.1
         }
     }
+    "a chain that sounds on silence (an offset) is cut at the fade's end, not drained to the cap: silent within a fifth of a second" {
+        // KLANG-00428, audit finding L7a-03: `plus(0.2)` and `pow(-1)` held full level for 20.36 s after the edit that
+        // removed them (`disproof-safety.md`). An offset has no ring-out to wait for, so the leaving chain goes straight
+        // into the 150 ms cut a waiting request gets.
+        for ((label, dsl) in listOf(
+            "plus(0.5)" to KatalystDsl.of(KatalystStageDsl.Plus(other = KatalystKnobDsl.Constant(0.5))),
+            "pow(-1)" to KatalystDsl.of(KatalystStageDsl.Pow(exp = KatalystKnobDsl.Constant(-1.0))),
+        )) {
+            withClue(label) {
+                val rig = CylinderSwapRig()
+
+                rig.registry.register("offset", dsl)
+                rig.registry.register("dry", dryChain(1.0))
+                rig.cylinder.requestChain("offset")
+                rig.render(blocks = 20, level = 0.0)
+
+                val held = abs(rig.block(level = 0.0)[64])
+
+                withClue("positive control: the chain sounds on silence") {
+                    held shouldBeGreaterThan 0.1
+                }
+
+                rig.cylinder.requestChain("dry")
+
+                // The 60 ms fade, the 150 ms cut and a block for each edge.
+                val bound = ((Crossfade.XFADE_SECONDS + ChainSwap.CUT_SECONDS) * rig.sampleRate).toInt() / rig.blockFrames + 3
+                var blocks = 0
+                var largestStep = 0.0
+                var previous = held
+
+                while (!rig.swap.settled && blocks < 20000) {
+                    val out = rig.block(level = 0.0)
+
+                    for (x in out) {
+                        largestStep = maxOf(largestStep, abs(x - previous))
+                        previous = x
+                    }
+
+                    blocks++
+                }
+
+                withClue("settled after $blocks blocks, the bound is $bound") {
+                    blocks shouldBeLessThan bound
+                }
+
+                withClue("the output is silent afterwards") {
+                    rig.block(level = 0.0).maxOf { abs(it) } shouldBe 0.0
+                }
+
+                // `pow(-1)` flips sign with the sign of its silent input (+0.0 and -0.0), so only the offset's cut
+                // can be judged by its steps.
+                if (label == "plus(0.5)") {
+                    withClue("the cut is a fade, not a step: its largest step is a fraction of the level") {
+                        largestStep shouldBeLessThan held * 0.01
+                    }
+                }
+            }
+        }
+    }
 })

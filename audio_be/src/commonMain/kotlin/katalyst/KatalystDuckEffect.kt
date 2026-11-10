@@ -124,9 +124,21 @@ class KatalystDuckEffect(
     var duckCylinderId: Int? = null
         private set
 
-    /** Ducking processor instance: the LIFE. Null while the stage is off. */
+    /** Ducking processor instance: the LIFE. Null while the stage is off; otherwise always [spare]. */
     var ducking: Ducking? = null
         private set
+
+    /**
+     * The one [Ducking] this stage runs its lives on, built with the stage and put at rest by [Ducking.startLife] at
+     * each switch-on: a life used to build a new one inside `configure`, on the audio thread (KLANG-00428, audit
+     * findings L6-06 and L7b-07; the compressor's one `instance` is the model). [ducking] is this instance while a
+     * life runs. A [takeOver] moves the live instance to the arriving stage and hands that stage's idle one back, so
+     * each stage keeps exactly one and no two stages ever share one.
+     */
+    private var spare: Ducking = Ducking(sampleRate = sampleRate)
+
+    /** Test seam: the instance this stage's next life runs on. */
+    internal val spareForTest: Ducking get() = spare
 
     /**
      * True when another chain's duck has taken this one's envelope over ([takeOver]): this effect
@@ -176,7 +188,15 @@ class KatalystDuckEffect(
      * every block.
      */
     fun takeOver(from: KatalystDuckEffect) {
-        ducking = from.ducking
+        // The live instance moves here and this stage's idle one goes back, so each keeps one (see [spare]).
+        val moved = from.ducking
+
+        if (moved != null) {
+            from.spare = spare
+            spare = moved
+        }
+
+        ducking = moved
         duckCylinderId = from.duckCylinderId
         // The WEIGHT and the DEPTH move with the envelope, because both scale the reduction that
         // is in force and the arriving chain has to glide from it, not jump to its own.
@@ -251,11 +271,8 @@ class KatalystDuckEffect(
         val live: Ducking
 
         if (existing == null) {
-            live = Ducking(
-                sampleRate = sampleRate,
-                releaseSeconds = settings.releaseSeconds,
-                depth = settings.depth,
-            )
+            live = spare
+            live.startLife(releaseSeconds = settings.releaseSeconds, depth = settings.depth)
             ducking = live
         } else {
             live = existing

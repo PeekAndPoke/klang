@@ -461,6 +461,44 @@ class KatalystChain internal constructor(
     }
 
     /**
+     * Every stage's [KatalystEffect.joinSoundingBus]: this chain, just reset, goes into service on a bus that already
+     * sounds (a swap's arriving chain), so a delay or a reverb fades its feed in on its first switch-on instead of
+     * snapping it (KLANG-00428, audit finding L7a-02). Called right after [reset], before the first [applyParams].
+     */
+    fun joinSoundingBus() {
+        for (i in stages.indices) {
+            stages[i].joinSoundingBus()
+        }
+    }
+
+    /**
+     * True while an arithmetic stage turns a silent input into sound ([KatalystArithmeticEffect.soundsOnSilence]),
+     * also inside a `parallel` branch or a region's body: the one kind of endless output that has no ring-out to wait
+     * for. A swap's leaving chain that answers yes is cut at the fade's end instead of drained for
+     * `ChainSwap.MAX_DRAIN_SECONDS` (KLANG-00428, audit finding L7a-03). Narrower than [sustainsItself], which also
+     * counts a delay at |feedback| >= 1: that one drains to the cap by the maintainer's decision (i) of 2026-09-28.
+     */
+    fun soundsOnSilence(): Boolean {
+        for (i in stages.indices) {
+            val stage = stages[i]
+
+            if (stage is KatalystArithmeticEffect && stage.soundsOnSilence()) {
+                return true
+            }
+
+            if (stage is KatalystParallelEffect && stage.soundsOnSilence()) {
+                return true
+            }
+
+            if (stage is KatalystRegionEffect && stage.soundsOnSilence()) {
+                return true
+            }
+        }
+
+        return false
+    }
+
+    /**
      * True while a stage holds a tail that can NEVER end on its own, which a stopped engine
      * releases after its hold instead of waiting for (phase 3 step 12 decision (j)). Two kinds of stage
      * can, also inside a `parallel` branch or a region's body: a delay at |feedback| >= 1 recirculates without loss

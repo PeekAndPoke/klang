@@ -140,7 +140,7 @@ the table in `.claude/skills/klang-music-writing/ref/sprudel-reference.md` ("Rev
 |-------------|------------------------------------------------|
 | `reverb.wet`     | How much of the cylinder mix feeds the room (insert, the owner's one amount) |
 | `reverb.size`    | Tail length, authored ~0..10, normalized by `Reverb.normalizeSize` |
-| `reverb.lowpass` | Tail damping cutoff in Hz (unset: fixed default damping)        |
+| `reverb.lowpass` | Tail damping on a scale in Hz, linear: 0 darkest, Nyquist none; NOT a cutoff (`Reverb.lowpass`; unset: fixed default damping) |
 
 ### Phaser
 

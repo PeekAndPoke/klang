@@ -134,7 +134,11 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   rule's text is the `gatedOff` KDoc in `IgnitorDslRuntime.kt`; the values are `audio/ref/off-values.md`, their one home.
 - **The swap law** `ChainSwap` (both hosts): fade the leaving chain's input over 0.06 s, drain it at full weight,
   at most `MAX_DRAIN_SECONDS` 20 s; a request that waits behind the drain or the release CUTS it (a raised cosine over
-  `CUT_SECONDS` 0.15 s, maintainer 2026-10-17), so an edit lands in about 0.2 s. **The release law** `TailRelease`: 60 dB per 3 s from exactly 1 (a per-sample recurrence, one multiply), retired
+  `CUT_SECONDS` 0.15 s, maintainer 2026-10-17), so an edit lands in about 0.2 s, and so does a leaving chain that
+  sounds on silence (an offset: `KatalystChain.soundsOnSilence`). The arriving chain is told it joins a sounding bus
+  (`joinSoundingBus`). **A delay or reverb switched on** snaps its wet only while fresh (no block since its build or
+  reset); over a bus that has run it glides up from 0 like the switch-off's fade (KLANG-00428). **A delay ring's
+  reset is O(1)**: an old cell reads as zero (`DelayLine.validFrames`), the tap's cells zeroed a block at a time. **The release law** `TailRelease`: 60 dB per 3 s from exactly 1 (a per-sample recurrence, one multiply), retired
   under -90 dB. **A stopped playback is never hard-cut**; only an endless tail triggers the release, 20 s after the
   last note (`PlaybackEngine.isIdle` KDoc). All in `audio/ref/katalyst.md`. **An engine's end of life** is one
   `PlaybackEngine.Phase` (Playing, Stopped, Releasing, Released, Disposed; the table in its class KDoc); the
@@ -437,6 +441,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-11-10 The bus: a switch-on and a swap fade the delay's and room's feed in, an O(1) ring reset, an offset cut at a swap, the pad's tail, the phaser under 36 kHz, every cylinder cleaned: KLANG-00428
 - 2026-11-10 Voice edges: the envelope's end on an exact 0, onsets on their frame, a cut by onset order, the replace dedup sub-quadratic: KLANG-00427
 - 2026-11-10 The pluck in tune (the loop filters' delay out of the line) and without DC: KLANG-00426
 - 2026-11-10 The render's net, the pan, pitch and time guards, the duck's NaN, no negative window: KLANG-00425

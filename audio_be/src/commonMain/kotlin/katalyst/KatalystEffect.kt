@@ -63,6 +63,16 @@ interface KatalystEffect {
     fun measureTail() {}
 
     /**
+     * This stage has just been reset ([reset]) and goes into service on a bus that already SOUNDS: the arriving chain
+     * of a swap (`Cylinder.beginFade`, `MasterBus.landChain` after the first block). A stage whose first switch-on
+     * after a reset acts at once, because nothing has sounded yet, must not do so here: the delay and the reverb then
+     * fade their feed in from 0, as on any switch-on of a bus that has run (KLANG-00428, audit finding L7a-02). Never
+     * touches the audio. Only those two answer; `parallel` and a region pass it to their branches, every other stage
+     * has no first switch to soften.
+     */
+    fun joinSoundingBus() {}
+
+    /**
      * Hand back what the warehouse lent this stage and clear the rest: the stage is going to the
      * shelf with its cylinder. For a stage that rents nothing this is [reset], stated as such; the
      * delay and the reverb release their unit DIRTY instead (see `KatalystChain.retire`).

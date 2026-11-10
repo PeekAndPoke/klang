@@ -370,7 +370,8 @@ sealed interface KatalystStageDsl {
      *   `Reverb.normalizeSize`). 3 is about a 1 s tail, 5 about 1.4 s, 10 about 12.5 s; the
      *   shortest reachable is about 0.7 s, and above 10 is bounded at 10. Cylinder twin:
      *   `reverb(size = ...)`.
-     * @param lowpass high-frequency damping of the tail as a cutoff in Hz; lower is darker. Null,
+     * @param lowpass high-frequency damping of the tail, on a scale in Hz from 0 (darkest) to half the sample rate
+     *   (none); lower is darker. A damping, not a cutoff: 1000 sounds almost like 0 (`Reverb.lowpass`). Null,
      *   or a non-finite value such as [SLOT_UNSET], = the engine's fixed default damping. That
      *   default is a sample-rate relation rather than a number, which is why this knob alone has no
      *   wire constant: [KatalystDsl.classic] carries it as a slot whose default is "unset".
@@ -390,7 +391,8 @@ sealed interface KatalystStageDsl {
      * @param rate sweep rate in Hz. 0 = the sweep stands still. Cylinder twin: `phaser(rate = ...)`.
      * @param wet wet amount, 0 to 1. Cylinder twin: `phaser(wet = ...)`.
      * @param center center frequency of the sweep in Hz. Cylinder twin: `phaser(center = ...)`.
-     * @param sweep width of the sweep around [center], in Hz. Cylinder twin: `phaser(sweep = ...)`.
+     * @param sweep width of the sweep around [center], in Hz; 0 is a fixed notch at [center]. Cylinder twin:
+     *   `phaser(sweep = ...)`.
      * @param floor minimum dry coefficient of the wet/dry law; 1.0 = purely additive. Cylinder twin:
      *   `phaser(floor = ...)`.
      */

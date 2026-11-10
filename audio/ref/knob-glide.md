@@ -232,7 +232,10 @@ switch-off cut the feed in one sample. **The lesson: a fade that needs its event
 nobody re-applies it** (a cylinder without an owner, a leaving chain); finish a fade in the state's own `process`. The
 price, accepted: on an owner change the NEW owner's first 50 ms reach the OLD owner's ring or room at a falling level.
 A return from Draining glides the wet up from 0, where the fade left it; out of Off it still snaps (an empty unit),
-except on a modulated time or size. The corpus did not move: it reaches no switch-off of a fed stage, so the evidence
+except on a modulated time or size. Since KLANG-00428 (audit findings L7a-01, L7a-02) it snaps out of Off only while
+the stage is fresh (no block since its build or reset): a switch-on over a bus that has run glides up from 0 like a
+return from Draining, and so does a chain a swap brings in (`joinSoundingBus`), because the snap fed the unit a step
+of the sounding mix (kink 120.6, a burst at -22.8 dB one delay time later). The corpus did not move: it reaches no switch-off of a fed stage, so the evidence
 is `KatalystSwitchOffFadeSpec` and the listening pairs (`tmp/listening/delay-reverb-fade/`).
 
 **Katalyst 5b-2 (2026-09-19), the first LEVEL knobs and the delay.** The LEVEL half landed with
@@ -323,7 +326,12 @@ listening pair `tmp/listening/knob-glide/compressor-rest-*.wav`) the swell's 10 
 than 20 dB of reduction is still there 50 ms after the change, and the largest one-sample gain move is 0.004 dB
 (the 50 ms glide moved 0.0137 dB per sample on average, about 0.016 at its steepest). On the listening pair the 0.25 s takeover now swells about 24 dB, 10 to
 90 percent in about 183 ms, cut short by the threshold falling back (`tmp/listening/knob-glide/compressor-swing-after.wav`).
-The corpus did not move by it. A lookahead instance needs none of this: it recovers on its slow release branch.
+The corpus did not move by it. A lookahead instance needs none of this: it recovers on its slow release branch. It
+does not glide threshold, ratio and knee either, in EITHER direction (audit finding L7a-04): `processGliding` runs the
+lookahead loop on the values `applyKnobArgs` wrote at once, and only the detector's hold, release and two boxes
+(at least 4 taps each) spread a step; a threshold that falls by 29 dB under `limiter(lookahead .005, attack 0)`
+reaches the gain within about 8 samples. Accepted as it is (KLANG-00428): a listening task decides whether it wants a
+glide.
 Decided (maintainer, 2026-10-17): the OFF edge (an owner without a compressor, a linear fade of the reduction over
 50 ms, 17 dB in the first 10 ms from 30 dB) and a falling duck `depth` keep the 50 ms fade and do not take the release
 law: "if someone really wants to automate the compressor, they want it almost immediately".

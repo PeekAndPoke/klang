@@ -427,6 +427,63 @@ class KatalystDuckEffectSpec : StringSpec({
         from.ducking.shouldBeNull()
     }
 
+    "every life runs on the one instance built with the stage, at rest and with the life's knobs; a handover swaps, never shares" {
+        // KLANG-00428, audit findings L6-06 and L7b-07: a life used to build a new `Ducking` inside `configure`, on the
+        // audio thread, at every switch-on. Now one instance per stage, put at rest by `startLife`.
+        val fx = stage()
+        val own = fx.spareForTest
+        val off: (Int) -> DuckSettings? = { null }
+
+        for (life in 0 until 4) {
+            val depth = 0.2 + 0.2 * life
+
+            withClue("life $life") {
+                fx.configure(settings(cylinder = 2, depth = depth, release = 0.05 * (life + 1)))
+
+                val live = fx.ducking.shouldNotBeNull()
+
+                live shouldBeSameInstanceAs own
+                // At rest, with this life's knobs, as a freshly built one would be.
+                live.depthValue shouldBe depth
+                live.releaseValue shouldBe 0.05 * (life + 1)
+
+                // A life's ducking, then the switch-off fade lands and the life ends.
+                run(src = mix(4), side = trigger(4), fx = fx) { settings(cylinder = 2, depth = depth, release = 0.05 * (life + 1)) }
+                run(src = mix(40), side = trigger(40), fx = fx, settingsAt = off)
+                fx.ducking.shouldBeNull()
+            }
+        }
+
+        // Its next life starts from an envelope at rest: the same samples as a new stage's first life.
+        val again = run(src = mix(8), side = trigger(8), fx = fx) { settings(cylinder = 2, depth = 0.6) }
+        val fresh = run(src = mix(8), side = trigger(8), fx = stage().also { s -> s.configure(null); s.cylinderBlockRan() }) {
+            settings(cylinder = 2, depth = 0.6)
+        }
+
+        for (i in again.indices) {
+            withClue("frame $i") {
+                again[i] shouldBe fresh[i]
+            }
+        }
+
+        // A handover: the live instance moves, the arriving stage's idle one goes back, so no two stages share one.
+        val from = stage()
+        val to = stage()
+        val toOwn = to.spareForTest
+
+        from.configure(settings(cylinder = 2, depth = 0.8))
+
+        val moved = from.ducking.shouldNotBeNull()
+
+        to.takeOver(from)
+
+        withClue("handover: the arriving stage keeps the moved instance, the leaving one gets the idle one back") {
+            to.spareForTest shouldBeSameInstanceAs moved
+            from.spareForTest shouldBeSameInstanceAs toOwn
+            (from.spareForTest === to.spareForTest) shouldBe false
+        }
+    }
+
     "a handover mid-fade carries the WEIGHT, so the arriving stage turns the fade around" {
         val from = stage()
         val to = stage()

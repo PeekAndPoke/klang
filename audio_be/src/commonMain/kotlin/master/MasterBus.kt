@@ -344,6 +344,9 @@ class MasterBus(
             return true
         }
 
+        // A mid-song master arrives over sound: its delay or reverb fades its feed in (KLANG-00428, L7a-02).
+        next.joinSoundingBus()
+
         swap.begin(leaving = leaving, arrivingLatencyFrames = next.latencyFrames, duckingOut = null, duckFadingIn = false)
 
         return true
