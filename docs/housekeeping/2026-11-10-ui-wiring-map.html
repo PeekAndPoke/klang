@@ -1,0 +1,364 @@
+<title>Klang UI Wiring Map</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout: one reading column; the cabinet drawing first, then the traces, the loose cables, the inventory, the rules. */
+  :root {
+    --bg: #f5f7f8;
+    --panel: #ffffff;
+    --ink: #17232b;
+    --muted: #5a6b76;
+    --line: #cfd8de;
+    --tidy: #0b7a75;
+    --loose: #b45309;
+    --ask: #5b4bb7;
+    --tidy-bg: #e3f3f1;
+    --loose-bg: #fbeedd;
+    --ask-bg: #ebe8fa;
+    --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #10181d; --panel: #18232a; --ink: #e4ecf0; --muted: #9bacb6; --line: #2f3e48;
+      --tidy: #4fc4bc; --loose: #f0a14a; --ask: #a99cf5;
+      --tidy-bg: #12322f; --loose-bg: #3a2a14; --ask-bg: #262048;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #10181d; --panel: #18232a; --ink: #e4ecf0; --muted: #9bacb6; --line: #2f3e48;
+    --tidy: #4fc4bc; --loose: #f0a14a; --ask: #a99cf5;
+    --tidy-bg: #12322f; --loose-bg: #3a2a14; --ask-bg: #262048;
+    color-scheme: dark;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.55;
+    padding-block: 32px 64px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  main { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+  section { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  h1 { font-size: 30px; font-weight: 600; margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+  h2 { font-size: 20px; font-weight: 600; margin: 0; text-wrap: balance; }
+  p { margin: 0; max-width: 70ch; }
+  .lede { color: var(--muted); font-size: 16px; }
+  code { font-family: var(--mono); font-size: 0.9em; }
+  .stamp { font-family: var(--mono); font-size: 12px; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
+
+  .numbers { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .numbers div { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; }
+  .numbers b { display: block; font-size: 26px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .numbers span { color: var(--muted); font-size: 13px; }
+
+  figure { margin: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 16px; }
+  .scroll { overflow-x: auto; }
+  figure svg { display: block; width: 100%; min-width: 760px; height: auto; color: var(--ink); font-family: var(--sans); }
+  figcaption { color: var(--muted); font-size: 13px; margin-top: 12px; max-width: 80ch; }
+  .rail { fill: var(--bg); stroke: var(--line); stroke-width: 1.5; }
+  .rail-spine { fill: var(--tidy-bg); stroke: var(--tidy); stroke-width: 1.5; }
+  .rail-stray { fill: var(--loose-bg); stroke: var(--loose); stroke-width: 1.5; stroke-dasharray: 5 4; }
+  .rail-ask { fill: var(--ask-bg); stroke: var(--ask); stroke-width: 1.5; }
+  .t-title { font-size: 14px; font-weight: 600; fill: currentColor; }
+  .t-sub { font-size: 11.5px; fill: var(--muted); }
+  .t-mono { font-size: 11px; font-family: var(--mono); fill: currentColor; }
+  .t-tidy { font-size: 12px; fill: var(--tidy); font-weight: 500; }
+  .t-loose { font-size: 12px; fill: var(--loose); font-weight: 500; }
+  .t-ask { font-size: 12px; fill: var(--ask); font-weight: 500; }
+  .c-tidy { stroke: var(--tidy); stroke-width: 2.5; fill: none; }
+  .c-loose { stroke: var(--loose); stroke-width: 2; fill: none; stroke-dasharray: 6 4; }
+  .c-ask { stroke: var(--ask); stroke-width: 2; fill: none; }
+  .h-tidy { fill: var(--tidy); } .h-loose { fill: var(--loose); } .h-ask { fill: var(--ask); }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 13px; color: var(--muted); }
+  .legend i { display: inline-block; width: 26px; height: 0; border-top: 3px solid var(--tidy); vertical-align: middle; margin-right: 6px; }
+  .legend i.l { border-top: 3px dashed var(--loose); } .legend i.a { border-top: 3px solid var(--ask); }
+
+  .table { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+  tr:last-child td { border-bottom: 0; }
+  th { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; }
+  td code { white-space: nowrap; }
+  td.wrap code { white-space: normal; overflow-wrap: anywhere; }
+  .tag { display: inline-block; font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 10px; white-space: nowrap; }
+  .tag.ok { background: var(--tidy-bg); color: var(--tidy); }
+  .tag.loose { background: var(--loose-bg); color: var(--loose); }
+  .tag.ask { background: var(--ask-bg); color: var(--ask); }
+  ol, ul { margin: 0; padding-left: 22px; max-width: 76ch; display: flex; flex-direction: column; gap: 8px; }
+  .path { font-family: var(--mono); font-size: 12.5px; color: var(--muted); }
+  .note { border-left: 3px solid var(--ask); background: var(--ask-bg); padding: 10px 14px; border-radius: 0 6px 6px 0; max-width: 76ch; }
+</style>
+
+<main>
+  <section>
+    <span class="stamp">KLANG-00421 · read at 3c6ea69ff · 2026-11-10 · reviewed twice</span>
+    <h1>Klang UI Wiring Map</h1>
+    <p class="lede">How state reaches the screen today, where it goes around the Spine, and a proposal for arranging it so that everything a user would want back on another computer sits in one place.</p>
+    <div class="numbers">
+      <div><b>323</b><span>Kotlin files read in six source roots</span></div>
+      <div><b>42</b><span>global places that keep state</span></div>
+      <div><b>8</b><span>of them are in the Spine</span></div>
+      <div><b>201</b><span>stream subscriptions in components, 135 of them in the app</span></div>
+      <div><b>17</b><span>UI files that name a storage object</span></div>
+      <div><b>8</b><span>files with hand-written JSON, none with <code>@Serializable</code></span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>The cabinet today</h2>
+    <p>Each box is a layer of the code. Each line counts pairs of "this file uses that state holder". The Spine is in place and carries the playback side well. Around it, three other kinds of global state feed the UI, and the UI also reaches under the Spine into storage.</p>
+    <figure>
+      <div class="scroll">
+      <svg viewBox="0 0 1020 630" role="img" aria-label="Layers of the UI code and the connections between them. The Spine feeds the UI, but the UI also reads app-level globals, state held inside pages, the libraries' own globals, and storage objects directly.">
+        <defs>
+          <marker id="a-tidy" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="h-tidy"/></marker>
+          <marker id="a-loose" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="h-loose"/></marker>
+          <marker id="a-ask" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="h-ask"/></marker>
+        </defs>
+
+        <!-- UI -->
+        <rect class="rail" x="170" y="30" width="186" height="70" rx="4"/>
+        <text class="t-title" x="184" y="58">Layout</text>
+        <text class="t-sub" x="184" y="78">10 files · the workbench</text>
+        <rect class="rail" x="372" y="30" width="186" height="70" rx="4"/>
+        <text class="t-title" x="386" y="58">Pages</text>
+        <text class="t-sub" x="386" y="78">44 files · 76 subscriptions</text>
+        <rect class="rail" x="574" y="30" width="186" height="70" rx="4"/>
+        <text class="t-title" x="588" y="58">Components</text>
+        <text class="t-sub" x="588" y="78">39 files · 48 subscriptions</text>
+
+        <!-- stray holders -->
+        <rect class="rail-stray" x="170" y="170" width="280" height="70" rx="4"/>
+        <text class="t-title" x="184" y="196">App-level globals</text>
+        <text class="t-mono" x="184" y="216">KlangGuiDance · version · fs</text>
+        <text class="t-mono" x="184" y="231">keysManager · motorBackgroundRef</text>
+        <rect class="rail-stray" x="480" y="170" width="280" height="70" rx="4"/>
+        <text class="t-title" x="494" y="196">State held inside pages and layout</text>
+        <text class="t-mono" x="494" y="216">VisualsScreen · LearnSearch · Drafts</text>
+        <text class="t-mono" x="494" y="231">KlangampDeck · WorkbenchSlots</text>
+
+        <!-- spine -->
+        <rect class="rail-spine" x="170" y="310" width="590" height="70" rx="4"/>
+        <text class="t-title" x="184" y="338">Spine</text>
+        <text class="t-sub" x="236" y="338">17 files · 8 global objects</text>
+        <text class="t-mono" x="184" y="362">Player · Playbacks · MotorReadings · ConsoleLog · UiWork · VisualState · Recents · MidiSettings</text>
+
+        <!-- storage -->
+        <rect class="rail" x="170" y="450" width="590" height="70" rx="4"/>
+        <text class="t-title" x="184" y="478">Storage objects</text>
+        <text class="t-sub" x="302" y="478">16 files · 12 global objects in two folders</text>
+        <text class="t-mono" x="184" y="502">EditorSettings · TutorialStorage · LookStorage · WorkbenchLayoutStorage · KeymapStorage · …</text>
+
+        <rect class="rail" x="170" y="575" width="590" height="36" rx="4"/>
+        <text class="t-title" x="184" y="598">Browser storage</text>
+        <text class="t-sub" x="310" y="598">18 fixed keys, plus four per song and one per tutorial</text>
+
+        <!-- libraries -->
+        <rect class="rail-ask" x="830" y="30" width="175" height="210" rx="4"/>
+        <text class="t-title" x="844" y="58">Libraries</text>
+        <text class="t-sub" x="844" y="78">klangui · klangscript-ui</text>
+        <text class="t-sub" x="844" y="94">sprudel · workshop</text>
+        <text class="t-sub" x="844" y="110">130 files</text>
+        <text class="t-sub" x="844" y="132">Global state inside:</text>
+        <text class="t-mono" x="844" y="150">KlangTheme</text>
+        <text class="t-mono" x="844" y="166">KlangLookShelf</text>
+        <text class="t-mono" x="844" y="182">KlangUiToolRegistry</text>
+        <text class="t-mono" x="844" y="198">KlangToolAutoUpdate</text>
+        <text class="t-mono" x="844" y="214">MarkdownDisplay.cache</text>
+
+        <!-- tidy cables -->
+        <path class="c-tidy" d="M465 310 L465 100" marker-end="url(#a-tidy)"/>
+        <text class="t-tidy" x="477" y="292">25 stream reads · 43 calls and types</text>
+        <path class="c-tidy" d="M465 380 L465 450" marker-start="url(#a-tidy)" marker-end="url(#a-tidy)"/>
+        <text class="t-tidy" x="477" y="420">load and save · 6 pairs</text>
+        <path class="c-tidy" d="M465 520 L465 575" marker-start="url(#a-tidy)" marker-end="url(#a-tidy)"/>
+
+        <!-- loose cables -->
+        <path class="c-loose" d="M260 170 L260 100" marker-end="url(#a-loose)"/>
+        <text class="t-loose" x="272" y="140">12 stream · 14 direct</text>
+        <path class="c-loose" d="M660 170 L660 100" marker-start="url(#a-loose)" marker-end="url(#a-loose)"/>
+        <text class="t-loose" x="672" y="140">5 · 10</text>
+        <path class="c-loose" d="M760 485 L785 485 L785 65 L760 65" marker-end="url(#a-loose)"/>
+        <text class="t-loose" x="777" y="268" text-anchor="end">17 UI files reach storage directly</text>
+        <path class="c-loose" d="M170 205 L150 205 L150 593 L170 593" marker-end="url(#a-loose)"/>
+        <text class="t-loose" x="140" y="392" text-anchor="end">KlangGuiDance</text>
+        <text class="t-loose" x="140" y="408" text-anchor="end">writes browser</text>
+        <text class="t-loose" x="140" y="424" text-anchor="end">storage itself</text>
+
+        <!-- library cable -->
+        <path class="c-ask" d="M830 48 L760 48" marker-end="url(#a-ask)"/>
+        <text class="t-ask" x="795" y="20" text-anchor="middle">the look: 18 stream · 6 direct</text>
+      </svg>
+      </div>
+      <figcaption>Counted by <code>console/tools/ui-wiring</code> from the source text. "Direct" means any reference that is not a subscription: a command such as <code>Playbacks.song.stop()</code>, a read of the current value, or a type name. A command from the UI to the Spine is the intended way up, so the solid line's 43 are not a problem in themselves. The lines count the app's own files only. Inside the libraries, sprudel's tool windows add 52 more stream reads of the look and of the auto-update switch.</figcaption>
+    </figure>
+    <div class="legend">
+      <span><i></i>through the Spine</span>
+      <span><i class="l"></i>around the Spine</span>
+      <span><i class="a"></i>open question: state owned by a library</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>Six values, followed from where they are kept to where they are drawn</h2>
+    <div class="table">
+      <table>
+        <tr><th>Value</th><th>Its path today</th><th>Verdict</th></tr>
+        <tr>
+          <td>The song that plays</td>
+          <td class="wrap"><code>Playbacks.songLine</code> is subscribed by <code>StatusBar</code> and <code>MenuPickUp</code>. Stop is a call: <code>Playbacks.song.stop()</code>.</td>
+          <td><span class="tag ok">model case</span><br>Stream down, call up, nothing copied.</td>
+        </tr>
+        <tr>
+          <td>Highlight strength</td>
+          <td class="wrap">One browser key, read by <code>EditorSettings</code>, which is a storage object and also holds the stream and the setter. <code>KlangCodeEditorComp</code> and <code>SongSettings</code> subscribe to it.</td>
+          <td><span class="tag loose">around the Spine</span><br>It flows by stream, but the UI talks to storage. Four settings, four keys, four hand-written parsers.</td>
+        </tr>
+        <tr>
+          <td>Unseen errors in the Console</td>
+          <td class="wrap"><code>ConsoleLog.state</code> is mapped to a number in <code>WorkbenchLayout</code>, passed to <code>BottomTools.with(...)</code>, and from there into the panel's <code>count</code> and <code>ConsoleTool.tab(count)</code>.</td>
+          <td><span class="tag loose">carried by hand</span><br>Three hops for one number. KLANG-00413's label callbacks remove it: the tab subscribes itself.</td>
+        </tr>
+        <tr>
+          <td>The Motor's pause under a visual</td>
+          <td class="wrap"><code>VisualsScreen.shown</code> lives in a component's companion object, and <code>open</code> is derived from it there. <code>WorkbenchLayout</code> combines <code>open</code> with <code>UiWork.resting</code> and passes <code>paused</code> down as a prop. <code>KlangCodeEditorComp</code> reads <code>VisualsScreen.open</code> on its own.</td>
+          <td><span class="tag loose">held in the UI</span><br>State owned by one screen, read from two other layers in two ways.</td>
+        </tr>
+        <tr>
+          <td>A page's bottom tabs</td>
+          <td class="wrap">The page lists them in <code>PageWorkbench</code>, which writes <code>WorkbenchSlots</code>; <code>WorkbenchLayout</code> subscribes.</td>
+          <td><span class="tag ok">lateral, with a named way</span><br>One entry point and a guard. It holds drawing code, not data, so it need not roam.</td>
+        </tr>
+        <tr>
+          <td>The editor and the Quick help</td>
+          <td class="wrap"><code>CodeSongPage</code> creates a <code>QuickHelpPanel</code> with three stream sources and keeps a reference to the editor, its own child. The editor calls the panel through callbacks, the panel reads the editor through that reference, and it opens its tab through the global <code>WorkbenchSlots.workbench</code>.</td>
+          <td><span class="tag loose">lateral, three ways at once</span><br>Callbacks, a reference to a child and a global tracker for one conversation. Only the global tracker is truly lateral.</td>
+        </tr>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>The loose cables</h2>
+    <div class="table">
+      <table>
+        <tr><th>What</th><th>Where</th><th>How many</th></tr>
+        <tr>
+          <td>The UI names a storage object</td>
+          <td class="wrap"><code>EditorSettings</code> from 6 files, <code>TutorialStorage</code> from 6, <code>LookStorage.save</code> from 4, <code>WorkbenchLayoutStorage</code> and <code>SeedStorage</code> from the layout and the Motor's background. <code>CodeSongPage</code> also builds its own <code>SongStorage</code>.</td>
+          <td>17 files</td>
+        </tr>
+        <tr>
+          <td>State kept in the app outside the Spine</td>
+          <td class="wrap"><code>KlangGuiDance</code> (read by 10 files), <code>VisualsScreen</code>'s companion, <code>LearnSearch</code>, <code>KlangampDeck</code>, <code>Drafts</code> in <code>LooksPage</code>, <code>QuickHelpPanel</code>'s sources, and the top-level values <code>version</code>, <code>fs</code>, <code>keysManager</code>, <code>motorBackgroundRef</code></td>
+          <td>15 holders, 18 stream sources</td>
+        </tr>
+        <tr>
+          <td>Browser storage touched outside the storage code</td>
+          <td class="wrap"><code>KlangGuiDance</code> (its two keys), <code>DevStoragePage</code> (a developer page that lists and deletes keys), <code>KlangToolAutoUpdate</code> in klangui (a 19th key: the auto-update switch of sprudel's tool windows, read by 25 files)</td>
+          <td>3 files</td>
+        </tr>
+        <tr>
+          <td>Hand-written JSON</td>
+          <td class="wrap"><code>KeymapJson</code>, <code>LookStorage</code>, <code>RecentsStorage</code>, <code>WorkbenchLayoutStorage</code>, <code>MidiLoadoutStorage</code>, <code>MidiInstrumentStorage</code>, <code>VersionController</code>, <code>KlangLookText</code>. <code>MidiInstrumentStorage</code> only reads two old keys, to carry them over once.</td>
+          <td>8 files</td>
+        </tr>
+        <tr>
+          <td>Settings stored as loose single values</td>
+          <td class="wrap">The editor's four keys, the walkthroughs' two, one key per finished tutorial, four keys per song with the app version inside the key</td>
+          <td>4 groups</td>
+        </tr>
+        <tr>
+          <td>Values handed down through several layers</td>
+          <td class="wrap">The unseen-errors count, the Motor's <code>paused</code></td>
+          <td>2 found</td>
+        </tr>
+        <tr>
+          <td>Component references that cross between siblings</td>
+          <td class="wrap"><code>motorBackgroundRef</code> (global, used by the start page) and the workbench tracker in <code>WorkbenchSlots</code> (used by <code>QuickHelpPanel</code>). The other seven files that use a reference point from a parent to its own child.</td>
+          <td>2 of 9 files</td>
+        </tr>
+        <tr>
+          <td>Raw DOM listeners</td>
+          <td class="wrap"><code>ConsoleLog</code> (uncaught errors, which is its job), <code>FullscreenController</code>, <code>MotorBackground</code>, <code>LooksPage</code>, <code>CodeMirrorHighlightBuffer</code>; four of sprudel's editors and two files of the workshop's key handling</td>
+          <td>11 files</td>
+        </tr>
+      </table>
+    </div>
+    <p class="note">Not covered: the 80 values components keep for themselves (<code>by value</code>). I sampled the largest pages only. Most are hovers and open flags. Four companion objects with a <code>var</code> are harmless: three pages count the pages drawn to give each its own key, and <code>MotorBackground</code> keeps the last surface it built. One library cache grows without limit: <code>MarkdownDisplay.cache</code> in klangui keeps every markdown text drawn.</p>
+  </section>
+
+  <section>
+    <h2>The state inventory, with a proposed home</h2>
+    <p>Which kind a piece of state is decides whether it would go to a server. These are proposals. The ones marked "your call" could reasonably go either way.</p>
+    <div class="table">
+      <table>
+        <tr><th>State</th><th>Kept today in</th><th>Kind</th><th>On the Spine</th></tr>
+        <tr><td>Editor settings (4)</td><td><code>EditorSettings</code>, 4 keys</td><td><span class="tag ok">follows the user</span></td><td><code>spine.settings.editor</code></td></tr>
+        <tr><td>Looks: the one worn, the user's own, the slots</td><td><code>LookStorage</code>, plus <code>KlangTheme</code> and <code>KlangLookShelf</code> in klangui</td><td><span class="tag ok">follows the user</span></td><td><code>spine.looks</code></td></tr>
+        <tr><td>The user's keys</td><td><code>KeymapStorage</code>, <code>KeymapJson</code></td><td><span class="tag ok">follows the user</span></td><td><code>spine.keys</code></td></tr>
+        <tr><td>Songs: code, title, tempo, bookmarks</td><td><code>SongStorage</code>, created by the song page</td><td><span class="tag ok">follows the user</span></td><td><code>spine.songs</code></td></tr>
+        <tr><td>Tutorials finished</td><td><code>TutorialStorage</code>, a key per tutorial</td><td><span class="tag ok">follows the user</span></td><td><code>spine.learn.progress</code></td></tr>
+        <tr><td>Recently opened</td><td><code>Recents</code> with <code>RecentsStorage</code></td><td><span class="tag ok">follows the user</span></td><td><code>spine.recents</code></td></tr>
+        <tr><td>Walkthroughs done, muted until</td><td><code>KlangGuiDance</code>, 2 keys</td><td><span class="tag ok">follows the user</span></td><td><code>spine.walkthroughs</code></td></tr>
+        <tr><td>The metal's seed</td><td><code>SeedStorage</code></td><td><span class="tag ok">follows the user</span></td><td><code>spine.seeds</code></td></tr>
+        <tr><td>Unsaved look drafts</td><td><code>Drafts</code>, a private global in <code>LooksPage</code>, kept until the tab closes</td><td><span class="tag ask">your call</span> real work a user could lose</td><td><code>spine.looks.drafts</code></td></tr>
+        <tr><td>MIDI play code and its sounds</td><td><code>MidiPlayCodeStorage</code> (<code>MidiInstrumentStorage</code> only carries two old keys over)</td><td><span class="tag ok">follows the user</span></td><td><code>spine.midi.instruments</code></td></tr>
+        <tr><td>The workbench's layout: pins, panel height, open tab</td><td><code>WorkbenchLayoutStorage</code></td><td><span class="tag ask">your call</span> it depends on the screen</td><td><code>spine.workbench.layout</code></td></tr>
+        <tr><td>Output volume</td><td><code>Player</code> with <code>OutputVolumeStorage</code></td><td><span class="tag ask">your call</span> it depends on the speakers</td><td><code>spine.player.volume</code></td></tr>
+        <tr><td>MIDI loadout and the laptop key layout</td><td><code>MidiLoadoutStorage</code>, <code>MidiSettingsStorage</code></td><td><span class="tag ask">your call</span> it depends on the devices</td><td><code>spine.midi.setup</code></td></tr>
+        <tr><td>Engine status, diagnostics, samples</td><td><code>Player</code>, <code>MotorReadings</code></td><td>this session</td><td><code>spine.player</code>, <code>spine.motor</code></td></tr>
+        <tr><td>What plays, the deck, previews, live MIDI</td><td><code>Playbacks</code></td><td>this session</td><td><code>spine.playbacks</code></td></tr>
+        <tr><td>The Console's log</td><td><code>ConsoleLog</code></td><td>this session</td><td><code>spine.console</code></td></tr>
+        <tr><td>The visual shown, its tiles, the rain's speed</td><td><code>VisualsScreen</code> companion, <code>VisualState</code>, <code>KlangampDeck</code></td><td>this session</td><td><code>spine.visuals</code></td></tr>
+        <tr><td>Learn's search text</td><td><code>LearnSearch</code></td><td>this session</td><td><code>spine.learn.search</code></td></tr>
+        <tr><td>Window focus, animation frames</td><td><code>UiWork</code></td><td>this session</td><td><code>spine.work</code></td></tr>
+        <tr><td>The build's version, fullscreen</td><td><code>version</code>, <code>fs</code> in <code>index.kt</code></td><td>this session</td><td><code>spine.app</code></td></tr>
+        <tr><td>The tool windows' auto-update switch</td><td><code>KlangToolAutoUpdate</code> in klangui, one key, read by sprudel's tools</td><td><span class="tag ok">follows the user</span></td><td><code>spine.settings.tools</code>, handed to the tools as input</td></tr>
+        <tr><td>A page's column, tools and tabs</td><td><code>WorkbenchSlots</code></td><td>this session, drawing code</td><td>stays in the layout</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Proposed rules</h2>
+    <ol>
+      <li><b>One Spine.</b> A class, built once in <code>index.kt</code> and registered on the Kraft app with <code>setAttribute</code>, the way Kraft registers <code>popups</code>. Components reach it as <code>spine</code>. No other global object holds state.</li>
+      <li><b>Down by stream, up by call.</b> A component subscribes to <code>spine.x.something</code> and changes it with <code>spine.x.doSomething()</code>. It keeps no copy.</li>
+      <li><b>Storage belongs to the Spine.</b> Only the Spine's storage code touches the browser's storage. The UI never names a storage object.</li>
+      <li><b>What is stored is a data class.</b> Annotated for kotlinx.serialization, in <code>commonMain</code> so a server can share it, one document per section with a version. Special types get a custom serializer. No hand-written JSON.</li>
+      <li><b>Libraries get their data through props.</b> <code>klangui</code> and <code>klangscript-ui</code> never see the Spine.</li>
+      <li><b>Talk between siblings has two allowed ways.</b> Through the Spine, when the thing said is state or a command others may care about. Through the parent, with props and callbacks, when it concerns only that parent's children. A component reference points only from a parent to its own child.</li>
+      <li><b>A component's own state is what may be lost.</b> Anything a user would miss after a reload belongs in the Spine.</li>
+    </ol>
+    <p>Rules 1, 3 and 4 can be checked by the tool once you have decided them: no stateful global outside <code>spine/</code>, no storage reference outside its folder, no hand-written JSON.</p>
+  </section>
+
+  <section>
+    <h2>An order of work</h2>
+    <ol>
+      <li><b>The Spine as one object.</b> Turn the eight objects in <code>spine/</code> into parts of one <code>Spine</code> class and register it. Mechanical, one part per step.</li>
+      <li><b>One generic stored section.</b> A small class that loads, saves and streams a serializable data class under one key. Convert the sections one at a time, each with a one-time reader for the old keys. The editor settings first, since they are the smallest.</li>
+      <li><b>State held in the UI moves in.</b> The visuals, Learn's search, the walkthroughs, the version and fullscreen values.</li>
+      <li><b>KLANG-00413 on top.</b> The app's workbench parts and the label callbacks, which remove the values handed down by hand.</li>
+      <li><b>The tool becomes a check.</b> With an allow-list for agreed exceptions.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Decisions for you</h2>
+    <ul>
+      <li><b>The three "your call" rows.</b> Should the workbench's layout, the output volume and the MIDI setup follow the user or stay with the machine?</li>
+      <li><b>The look lives in a library.</b> <code>KlangTheme</code> and <code>KlangLookShelf</code> are global state inside <code>klangui</code>, used by 51 files: 20 in the app and 31 in the libraries, most of them sprudel's tool windows. The auto-update switch is the same case. Either the library keeps owning this state and the Spine only stores and restores it, or the state moves to the Spine and the libraries receive it as input. The first is far less work, since 31 library files would otherwise need the look passed in. The second follows rule 5 strictly.</li>
+      <li><b>Rule 6.</b> Are the two allowed ways for sibling talk the right ones?</li>
+      <li><b>Where the work is tracked.</b> Steps 1 to 3 fit KLANG-00389. I would keep them there and close this ticket with the map.</li>
+    </ul>
+  </section>
+</main>

@@ -113,3 +113,4 @@ the task. The `music-platform-strategist` agent runs only when asked for by name
 - `hooks`: pre-commit and commit-msg block dashes, control bytes and a missing agent trailer on added lines; never go around them.
 - DSP probes (not in `console/tools/`): clicks, aliasing, a stage's stability and cost; the register is `audio/ref/verification.md`, "The probes".
 - `app-shot`: screenshots of a locally served app (focus emulated, 1x or 2x, WebGL on request); localhost only.
+- `ui-wiring`: where the UI keeps state and which file reads it, as a stream or directly; no build (KLANG-00421).

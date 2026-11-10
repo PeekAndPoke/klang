@@ -65,6 +65,7 @@ LOCK="env KLANG_LOCK_TIMEOUT=7200 console/with-build-lock.sh"
 | Creating, starting, pausing or finishing a task or plan; finding one; before committing docs | `ticket` |
 | Every commit (git runs it); a commit it blocks; what an old commit would have tripped | `hooks` (installed), `hooks.py check <rev>` |
 | Screenshots of the app, an old commit's or today's (the dev history, a look checked by eye) | `app-shot` |
+| Before adding a global object, a store or a cross-component reference to the UI; counting how state flows | `ui-wiring` |
 
 ## test-digest
 
@@ -332,6 +333,27 @@ The recipe in full:
    under `xvfb-run -a` with those flags it has. Start it in a process group of its own and stop the group: stopping
    `xvfb-run` alone leaves Chrome and Xvfb running (tried 2026-10-30).
 5. Stop the server and Chrome by their own PIDs; remove the worktree when the shots are in.
+
+## ui-wiring
+
+```
+python3 -I console/tools/ui-wiring/ui_wiring.py [--out <scratch dir>]     # the counts; with --out: report.md, graph.json
+python3 -I console/tools/ui-wiring/ui_wiring.py --file src/jsMain/kotlin/layouts/WorkbenchLayout.kt
+```
+
+- klang's own (the maintainer's go, 2026-11-10, KLANG-00421): how state moves through the UI code, read as text, no
+  build and no lock. It lists the global places that keep state (a stateful `object`, a companion with state, a
+  public top-level `val` of the app) and, per file, which of them it names: `stream` (the line subscribes) or
+  `direct` (a call, a read, a write, a type). Its findings: state held outside the Spine, browser storage touched
+  outside the storage folders, hand-written JSON, component references, raw DOM listeners, storage objects named by
+  the UI.
+- Its limits: a stream handed on through a prop or a constructor, an alias, and whether a `direct` reference reads
+  or writes. Check a surprising line with `--file` and by reading.
+- The rails (which folder is which layer) and the source roots are at the top of the script; a new UI folder gets a
+  line there. It is not a check yet: it becomes one when the rules of KLANG-00421 are decided.
+- It reads the app, `klangui`, `klangscript-ui`, sprudel's UI and the workshop. A module with UI of its own must be
+  among the roots: without sprudel's, a switch its tools read looked unused (review, 2026-11-10).
+- Its tests: `python3 -I test_ui_wiring.py` in the tool's folder.
 
 ## Repo notes
 
