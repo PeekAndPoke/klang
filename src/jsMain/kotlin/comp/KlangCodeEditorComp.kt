@@ -13,7 +13,7 @@ import io.peekandpoke.klang.common.strings.offsetToSourceLocation
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.spine.KlangCodePlaybackCtrl
-import io.peekandpoke.klang.storage.EditorSettings
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.ui.HoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.codemirror.BookmarkOptions
@@ -125,13 +125,16 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
+    /** The editor's settings, found once: the hover asks them on every move of the mouse. */
+    private val editorSettings = spine.settings.editor
+
     private val editorRef = ComponentRef.Tracker<KlangScriptEditorComp>()
 
     private val highlightBuffer = CodeMirrorHighlightBuffer(
         maxHighlightsPerEvent = props.maxHighlightsPerEvent,
     ).apply {
-        enabled = EditorSettings.highlightsOn()
-        strength = EditorSettings.highlightStrength() / 100.0
+        enabled = editorSettings().highlightsOn
+        strength = editorSettings().highlightStrength / 100.0
     }
 
     /**
@@ -139,7 +142,7 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
      * again and the highlights pick up where the song is, as after a visual.
      */
     @Suppress("unused")
-    private val highlightsOnSub by subscribingTo(EditorSettings.highlightsOn) { on ->
+    private val highlightsOnSub by subscribingTo(editorSettings.part { it.highlightsOn }) { on ->
         if (on == highlightBuffer.enabled) {
             return@subscribingTo
         }
@@ -153,7 +156,7 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
 
     /** The highlights' strength, the editor's setting (KLANG-00411): every editor with highlights follows it. */
     @Suppress("unused")
-    private val strengthSub by subscribingTo(EditorSettings.highlightStrength) { percent ->
+    private val strengthSub by subscribingTo(editorSettings.part { it.highlightStrength }) { percent ->
         highlightBuffer.strength = percent / 100.0
     }
 
@@ -370,7 +373,7 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
                 onNavigate = ::navToDoc,
                 onShowTool = props.onShowTool?.let { show -> { _ -> show() } },
                 // The hover's quick help is a setting, on by default (KLANG-00349); read on every move
-                hoverDocs = { EditorSettings.hoverHelp() },
+                hoverDocs = { editorSettings().hoverHelp },
                 onQuickDocumentation = props.onQuickDocumentation,
                 onHoverDocumentation = props.onHoverDocumentation,
                 onToolCall = props.onToolCall,

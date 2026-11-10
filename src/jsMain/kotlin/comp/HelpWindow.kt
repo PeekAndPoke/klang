@@ -7,7 +7,7 @@ package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.script.intel.LocalUsage
 import io.peekandpoke.klang.script.types.KlangSymbol
-import io.peekandpoke.klang.storage.EditorSettings
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.ui.comp.KlangKeyHint
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
@@ -58,7 +58,7 @@ class HelpWindow(ctx: Ctx<Props>) : Component<HelpWindow.Props>(ctx) {
     private val entry by subscribingTo(props.entry)
 
     /** Whether a hover fills the help: the empty state says only what works. */
-    private val hoverHelp by subscribingTo(EditorSettings.hoverHelp)
+    private val hoverHelp by subscribingTo(spine.settings.editor.part { it.hoverHelp })
 
     override fun VDom.render() {
         val shown = entry

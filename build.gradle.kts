@@ -12,7 +12,8 @@ buildscript {
 plugins {
     idea
     kotlin("multiplatform")
-    kotlin("plugin.serialization") version Deps.kotlinVersion apply false
+    // Applied here too: the Spine's stored sections are data classes with a serializer (KLANG-00422)
+    kotlin("plugin.serialization") version Deps.kotlinVersion
     // Applied here too: Kotest's spec discovery for the app's browser tests runs through KSP (KLANG-00343)
     id("com.google.devtools.ksp") version Deps.Ksp.version
     id("io.kotest") version Deps.Test.kotest_plugin_version
@@ -101,6 +102,8 @@ kotlin {
 
                 api(project(":klang"))
                 api(project(":sprudel"))
+                // The shape and the merge of the stored documents, shared with a server (KLANG-00422)
+                api(project(":workshop"))
             }
         }
 

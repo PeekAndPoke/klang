@@ -72,7 +72,7 @@ val keysManager = KeysManager(store = KeymapStorage, hintTriggers = listOf("Mod"
 }
 
 /** The app's one Spine: built here, registered on the app, reached by every component as `spine` (KLANG-00422). */
-private val appSpine = Spine(console = consoleLog).also {
+private val appSpine = Spine.inBrowser(console = consoleLog).also {
     // The samples load while the user looks at the start page, as ever
     it.player.preloadSamples()
 }

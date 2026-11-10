@@ -23,7 +23,6 @@ import io.peekandpoke.klang.spine.KlangCodePlaybackCtrl
 import io.peekandpoke.klang.spine.VisualState
 import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
-import io.peekandpoke.klang.storage.EditorSettings
 import io.peekandpoke.klang.storage.SongStorage
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.codemirror.BookmarkOptions
@@ -152,7 +151,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     private val codeEditorRef = ComponentRef.Tracker<KlangCodeEditorComp>()
 
     /** The highlights a sound event draws, from the Settings tool window (KLANG-00349, once "EVT" in the header). */
-    private val highlightPerEvent by subscribingTo(EditorSettings.highlightsPerEvent) { newValue ->
+    private val highlightPerEvent by subscribingTo(spine.settings.editor.part { it.highlightsPerEvent }) { newValue ->
         codeEditorRef { it.setMaxHighlightsPerEvent(newValue) }
         ctrl.reemitVoiceSignals()
     }

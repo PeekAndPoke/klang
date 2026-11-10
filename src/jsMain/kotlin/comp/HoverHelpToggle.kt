@@ -5,7 +5,7 @@
 
 package io.peekandpoke.klang.comp
 
-import io.peekandpoke.klang.storage.EditorSettings
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.ui.comp.KlangCheckbox
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
@@ -25,9 +25,13 @@ fun Tag.HoverHelpToggle() = comp {
  */
 class HoverHelpToggle(ctx: NoProps) : PureComponent(ctx) {
 
-    private val hoverHelp by subscribingTo(EditorSettings.hoverHelp)
+    private val hoverHelp by subscribingTo(spine.settings.editor.part { it.hoverHelp })
 
     override fun VDom.render() {
-        KlangCheckbox(label = "Show on hover", checked = hoverHelp, onChange = { EditorSettings.setHoverHelp(it) })
+        KlangCheckbox(
+            label = "Show on hover",
+            checked = hoverHelp,
+            onChange = { on -> spine.settings.editor.update { it.copy(hoverHelp = on) } },
+        )
     }
 }

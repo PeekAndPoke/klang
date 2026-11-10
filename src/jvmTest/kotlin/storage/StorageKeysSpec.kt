@@ -8,6 +8,7 @@ package io.peekandpoke.klang.storage
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.workshop.storage.DocumentStorage
 
 /**
  * The keys the app keeps in the browser (KLANG-00323), byte for byte as the browsers of our users hold them: a key
@@ -66,7 +67,8 @@ class StorageKeysSpec : StringSpec({
         StorageKeys.LOOK shouldBe "klang-look"
     }
 
-    "the editor's settings keep their keys" {
+    "the editor's settings keep their key, and the keys they had before it" {
+        StorageKeys.EDITOR shouldBe "klang-editor"
         StorageKeys.EDITOR_HIGHLIGHTS_PER_EVENT shouldBe "klang-editor-highlights-per-event"
         StorageKeys.EDITOR_HIGHLIGHT_STRENGTH shouldBe "klang-editor-highlight-strength"
         StorageKeys.EDITOR_HIGHLIGHTS_ON shouldBe "klang-editor-highlights-on"
@@ -80,5 +82,17 @@ class StorageKeysSpec : StringSpec({
 
     "the workbench's layout keeps its key" {
         StorageKeys.WORKBENCH_LAYOUT shouldBe "klang-workbench-layout"
+    }
+
+    "what is put aside keeps its endings, and the storage page knows it as its own part" {
+        DocumentStorage.UNREADABLE shouldBe "-unreadable"
+        DocumentStorage.NEWER shouldBe "-newer"
+
+        val aside = StorageKeys.parts.single { it.name == "Put aside" }
+
+        aside.covers("klang-editor-unreadable") shouldBe true
+        aside.covers("klang-editor-newer") shouldBe true
+        aside.covers("klang-editor") shouldBe false
+        aside.precious shouldBe true
     }
 })

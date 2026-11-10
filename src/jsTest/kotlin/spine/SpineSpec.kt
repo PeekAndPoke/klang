@@ -11,12 +11,14 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.kotest.matchers.types.shouldNotBeSameInstanceAs
 import io.peekandpoke.klang.comp.MotorHistoryGraphs
+import io.peekandpoke.klang.storage.StorageKeys
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.testing.TestBed
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.streams.StreamSource
+import kotlinx.browser.localStorage
 import kotlinx.html.Tag
 import kotlinx.html.span
 
@@ -94,6 +96,29 @@ class SpineSpec : StringSpec({
         own.player.status() shouldBe Player.Status.NOT_LOADED
         own.player.get() shouldBe null
         withClue("no samples asked for by building it") { own.player.samplesRequested shouldBe false }
+    }
+
+    "a Spine built without a store keeps its sections to itself: the browser's storage is not touched" {
+        val before = localStorage.getItem(StorageKeys.EDITOR)
+        val own = Spine()
+
+        own.settings.editor.update { it.copy(highlightStrength = 12) }
+
+        own.settings.editor().highlightStrength shouldBe 12
+        withClue("the browser's storage as it was") { localStorage.getItem(StorageKeys.EDITOR) shouldBe before }
+        withClue("another Spine does not see it") { Spine().settings.editor().highlightStrength shouldBe 66 }
+    }
+
+    "a stored section reset by its key shows its default again; another key resets nothing" {
+        val own = Spine()
+
+        own.settings.editor.update { it.copy(highlightStrength = 12) }
+
+        own.resetStored("no-section-of-the-spine")
+        withClue("another key") { own.settings.editor().highlightStrength shouldBe 12 }
+
+        own.resetStored(StorageKeys.EDITOR)
+        withClue("its key") { own.settings.editor().highlightStrength shouldBe 66 }
     }
 
     "the graphs draw with no pause of their own in an app with a Spine, and with one given" {

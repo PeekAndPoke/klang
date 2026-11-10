@@ -7,6 +7,7 @@ package io.peekandpoke.klang.pages
 
 import io.peekandpoke.klang.common.logging.LogArea
 import io.peekandpoke.klang.common.logging.Logger
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.storage.StorageKeys
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
@@ -39,7 +40,8 @@ fun Tag.DevStoragePage() = comp {
  * The Dev Tools' storage page: what this browser keeps for Klang, part by part ([StorageKeys.parts]), each to reset on
  * its own, and all of it at once, as on a first visit (the maintainer, 2026-10-28: "a debug tool somewhere in the ui,
  * where i can reset everything in the local storage or individual settings"). Keys no part knows (left by an older
- * version) are listed apart. A reset takes effect on the next load: what the app holds in memory stays until then.
+ * version) are listed apart. A reset takes effect on the next load: what the app holds in memory stays until then; a
+ * stored section of the Spine (the editor's settings) is reset at once.
  */
 class DevStoragePage(ctx: NoProps) : PureComponent(ctx) {
 
@@ -71,6 +73,9 @@ class DevStoragePage(ctx: NoProps) : PureComponent(ctx) {
             } catch (e: Throwable) {
                 log.warn("Could not remove $key", e)
             }
+
+            // A stored section of the Spine shows its default at once, and does not write itself back
+            spine.resetStored(key)
         }
 
         resets++
@@ -164,7 +169,7 @@ class DevStoragePage(ctx: NoProps) : PureComponent(ctx) {
                         put("color", "var(--kl-ink-label)")
                         put("margin-right", "auto")
                     }
-                    +"What this browser keeps for Klang. A reset takes effect when the app loads again."
+                    +"What this browser keeps for Klang. A reset takes effect when the app loads again; the editor's settings at once."
                 }
 
                 KlangButton(onClick = { window.location.reload() }) { +"Load again" }

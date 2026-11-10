@@ -18,7 +18,7 @@ include(
     ":klangjs",
     // CodeMirror editor for klangscript (JS-only)
     ":klangscript-ui",
-    // What Klang builds for Kraft before it moves there (JS-only, Kraft and Ultra only)
+    // What Klang builds for Kraft before it moves there (Kraft and Ultra only; its storage is shared code)
     ":workshop",
 
     // Common

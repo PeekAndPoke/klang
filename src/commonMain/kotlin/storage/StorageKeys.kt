@@ -5,12 +5,14 @@
 
 package io.peekandpoke.klang.storage
 
+import io.peekandpoke.klang.workshop.storage.DocumentStorage
+
 /**
  * Every key the app keeps in the browser's localStorage, named in one place (KLANG-00323).
  *
  * The browsers of our users hold values under these keys today, their songs among them: a key that changes loses what
  * is stored under it, so `StorageKeysSpec` pins each one. They live in common code so that spec runs on the JVM; the
- * storage that reads and writes them is `src/jsMain/kotlin/storage/`.
+ * storage that reads and writes them is `src/jsMain/kotlin/storage/` and, for the Spine's parts, `spine/storage/`.
  *
  * One key lives outside the app: `klang-tool-auto-update`, kept by `KlangToolAutoUpdate` in the `klangui` module,
  * which cannot reach the app's code.
@@ -44,16 +46,19 @@ object StorageKeys {
     /** The user's own looks and the equipped slots, as JSON (KLANG-00382). */
     const val LOOKS = "klang-looks"
 
-    /** The editor's highlights per sound event, a whole number (KLANG-00349). */
+    /** The editor's settings, one document (KLANG-00422): `EditorSettings`, in the Spine's envelope. */
+    const val EDITOR = "klang-editor"
+
+    /** Until KLANG-00422, read once into [EDITOR]: the editor's highlights per sound event, a whole number. */
     const val EDITOR_HIGHLIGHTS_PER_EVENT = "klang-editor-highlights-per-event"
 
-    /** Whether the editor shows the code highlights at all, `true` or `false` (KLANG-00411). */
+    /** Until KLANG-00422, read once into [EDITOR]: whether the editor shows the code highlights, `true` or `false`. */
     const val EDITOR_HIGHLIGHTS_ON = "klang-editor-highlights-on"
 
-    /** The strength of the editor's highlights, a whole percent (KLANG-00411). */
+    /** Until KLANG-00422, read once into [EDITOR]: the strength of the editor's highlights, a whole percent. */
     const val EDITOR_HIGHLIGHT_STRENGTH = "klang-editor-highlight-strength"
 
-    /** Whether the editor shows a name's quick help on hover, `true` or `false` (KLANG-00349). */
+    /** Until KLANG-00422, read once into [EDITOR]: whether the editor shows quick help on hover, `true` or `false`. */
     const val EDITOR_HOVER_HELP = "klang-editor-hover-help"
 
     /** The Gui-dance's story arcs done, their ids joined by commas (KLANG-00350). */
@@ -125,6 +130,11 @@ object StorageKeys {
             precious = true,
             covers = exactly(LOOKS),
         ),
+        Part(
+            name = "Put aside",
+            about = "What a Klang of this browser could not read, or read only in part, kept as it was",
+            precious = true,
+        ) { it.endsWith(DocumentStorage.UNREADABLE) || it.endsWith(DocumentStorage.NEWER) },
         Part(name = "The look worn", about = "The look you chose last", covers = exactly(LOOK)),
         Part(name = "Master volume", about = "The Motor's output level", covers = exactly(MASTER_VOLUME)),
         Part(name = "Keys", about = "The keys you gave Klang's actions", precious = true, covers = exactly(KEYMAP)),
@@ -132,6 +142,7 @@ object StorageKeys {
             name = "Editor",
             about = "The code highlights on or off, per sound event and their strength, quick help on hover",
             covers = exactly(
+                EDITOR,
                 EDITOR_HIGHLIGHTS_ON,
                 EDITOR_HIGHLIGHTS_PER_EVENT,
                 EDITOR_HIGHLIGHT_STRENGTH,

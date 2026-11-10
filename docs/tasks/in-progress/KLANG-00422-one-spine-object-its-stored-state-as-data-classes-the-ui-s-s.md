@@ -35,6 +35,60 @@ This ticket holds the work that follows from the map. The map itself, with every
   (`paused: Stream<Boolean> = UiWork.resting`) becomes a nullable parameter and prop, and the component falls back to
   the Spine's stream itself. A part's constants and pure helpers go into its companion, so they are still read by
   the class's name. A spec that draws such a component registers a Spine in `TestBed.preact(appSetup = { ... })`.
+- **Steps 2 and 3, the first section (2026-11-10): the pattern, and the editor's settings on it.**
+  - **The generic part is the workshop's** (`workshop/src/.../storage/`, shared code, heading for Ultra; its table
+    of where each piece goes is in `workshop/CLAUDE.md`): `StreamSource.persist(storage)`, `DocumentStorage` (one
+    data class as one versioned JSON document under one key), the two pure merge functions, `KeyValueStore` with
+    the browser's and one in memory.
+  - **A write is a merge** (the maintainer, 2026-11-10: "we need to merge incoming data into existing data instead
+    of fully overwriting"). Only the top-level fields that changed are put over what the store holds. So two tabs
+    that change different settings both keep theirs, an older build beside a newer one leaves the newer one's
+    fields alone, and a server can merge the same patch later. Two writers of one field: the later one wins. A list
+    is one field: sections where two writers add entries (looks, songs) are modelled as entries by id when they
+    move in.
+  - **What cannot be read is never lost:** a document that does not decode, or is read only in part, is put aside
+    as it was (the key with `-unreadable` or `-newer` after it); where that copy cannot be kept, nothing is written
+    over the document in that run. The storage page shows these as "Put aside".
+  - **What the merge does not cover, accepted** (the maintainer, 2026-11-10: the app will ask for a reload when a
+    newer version is out, "so let us accept these overlaps"; "these conflicts should rarely happen"; old fields
+    piling up is "fine for now, we might fix this when we see that the ui runs the latest version and bulk write
+    instead"). A write cannot remove a field, only set it, so fields of old builds pile up in a document; an entry
+    inside a map or list field does go, the field being written whole. A removal elsewhere is not followed. Each
+    section that moves in checks these against its own data (the keys' reset to default, the songs).
+  - **Only what was chosen is kept.** A new document holds the fields that differ from what an empty document
+    reads as: the data class's own defaults, so a field left out reads back the same (for
+    defaults that are constants: one that follows another field or the moment, a seed, reads back as it computes
+    then, and such a section writes it once). What was kept before
+    the section existed moves in the same way, and an old key that was kept counts as chosen also where it says
+    what the default says. A field nobody chose stays out of the document, so a default of the class that changes
+    later reaches everyone who never chose (as the editor's one-key-each storage did, and
+    as the first-visit look does). A field once written stays chosen, also when set back to the default's value.
+  - **No storage, no stop** (the maintainer, 2026-11-10: "we need to handle when local storage is not available.
+    Same for serialization errors"). Where the browser gives no storage (the site's data blocked), the stores are
+    memory for that visit and the log says so; a document that cannot be read gives the section's default; a value
+    that cannot be written is logged and the app goes on with it.
+  - **Three scopes** (`spine/storage/SectionStores.kt`; the maintainer, 2026-11-10: with several tabs open,
+    "navigating around and opening / closing tools should not influence the other tab"):
+
+    | Scope | Kept in | Other tabs | Other computers | For example |
+    |---|---|---|---|---|
+    | The user | the browser's storage, later a server too | yes | yes | settings, looks, keys, songs, tutorial progress, recents |
+    | This machine | the browser's storage | yes | no | the output volume, the MIDI setup |
+    | This tab | the tab's own storage (`sessionStorage`) | no | no | which tools are open or pinned, the panel's tab and height, the visual shown, Learn's search |
+
+    The workbench's layout is the tab's, with the last layout of any tab kept per machine as a new tab's start.
+    A section also says whether it follows a change from elsewhere at once (settings: yes; a song open in two
+    tabs: no, and what the second tab shows is decided when the songs move in).
+  - **Klang's side is wiring:** `Stored<T>` (`spine/storage/Stored.kt`: the default, every value in its range, the
+    log, `part { }`, `update { }`, `reset()`), `SectionStores`, and `Settings` with the editor's section and the
+    reader of its four old keys. `Spine.inBrowser` gives the app the browser's stores; a `Spine()` keeps its
+    sections in memory, so a spec never reaches the browser's storage through one.
+  - **The editor's settings:** `state.EditorSettings`, a `@Serializable` data class in `commonMain`;
+    `spine.settings.editor`, the user's, following. The old object with its four keys and hand parsing is gone.
+  - **The build:** kotlinx.serialization's compiler plug-in on the app module and the workshop; the workshop has a
+    JVM target for its shared code; the app's shared code uses the workshop.
+  - **For Ultra** (to send through Mission Control): `persist(storage)` as a public operator; and a note that a
+    listener which publishes from inside its own notification makes later listeners see the older value last.
 
 ## Decided (the maintainer, 2026-11-10)
 
@@ -85,7 +139,7 @@ after.
    look at it first.
 3. **The sections, one at a time,** each with a one-time reader of its old keys (a check that goes when the old keys
    are gone):
-   - the editor's settings (`EditorSettings`, four keys), first, as the pattern;
+   - the editor's settings (`EditorSettings`, four keys), first, as the pattern: **done**;
    - the workbench's layout, the recents, the keymap (`KeymapJson` goes), the walkthroughs (`KlangGuiDance`'s two
      keys), the tutorials finished, the metal's seed;
    - the looks (`LookStorage` goes into `spine.looks`, `KlangLookText` as a serializer), the tools' switch;
@@ -115,3 +169,19 @@ after.
 - 2026-11-10: step 1, slices 3 and 4: `MidiSettings`, then `Player`, `Playbacks` and `KlangampDeck` moved in; step 1
   is done. One review round (reviewer-high: clean, no behaviour change; 4 MINOR, 8 NIT, applied), 179 tests green,
   4 of 4 mutants killed.
+- 2026-11-10: steps 2 and 3, the first section: the stored-section pattern and the editor's settings on it. Review
+  round 1 (reviewer-high): 1 MAJOR (a document that could not be read, or of a newer Klang, was written over), 7
+  MINOR, 6 NIT. Round 2: 1 MAJOR (an older build still dropped a newer build's field), 2 MINOR, 3 NIT. The
+  maintainer consulted: a write becomes a merge, the generic part goes to the workshop, three scopes. Rebuilt so;
+  15 of 15 mutants of the workshop's storage killed. Round 3 (reviewer-max): 6 MAJOR, 8 MINOR, 9 NIT. The
+  maintainer consulted again: no design change, the rare overlaps of two tabs or two builds are accepted (see the
+  Progress entry), a browser without storage and a value that cannot be read or written need a fallback. Fixed: a
+  value cleaned on read was written back with the next change; a blocked storage stopped the app; a field added
+  inside a nested object made every older document look read in part; a change from elsewhere is now put aside as
+  one found at the start. Round 4 (reviewer-max): 1 MAJOR (the first write and the move from the old keys kept
+  every field, so a default changed later would no longer reach a user who never chose), 1 MINOR, 4 NIT. Fixed: a
+  new document holds only what differs from the default. 17 of 17 new mutants killed over both rounds. Round 5
+  (reviewer-max): 1 MAJOR (the new document was measured from the caller's default and read back with the class's
+  own: where they differ, a wrong value after a reload), 1 MINOR, 2 NIT. Fixed: measured from what an empty
+  document reads as; the old keys kept count as chosen. Round 6 (reviewer-max): CLEAN, 2 MINOR and 2 NIT applied.
+  23 of 23 mutants killed over rounds 4 to 6.

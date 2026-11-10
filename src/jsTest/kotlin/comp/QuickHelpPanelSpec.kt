@@ -9,6 +9,8 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.layouts.WorkbenchSlots
 import io.peekandpoke.klang.script.types.KlangSymbol
+import io.peekandpoke.klang.spine.Spine
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.comp.KlangWorkbench
 import io.peekandpoke.klang.workshop.keys.KeyPlatform
@@ -81,6 +83,7 @@ class QuickHelpPanelSpec : StringSpec({
                 appSetup = {
                     addons { marked() }
                     keys(manager)
+                    spine(Spine())
                 },
                 view = { PanelHost(panel) },
             ) { root ->
@@ -96,6 +99,9 @@ class QuickHelpPanelSpec : StringSpec({
                 panel.showHelp(entry = HelpWindow.Entry(symbol = note, declarationCode = null), jumpTo = {})
 
                 eventually { view.shownTab() shouldBe "Quick help" }
+
+                // The help's own content is drawn, not only its tab: it reads the editor's settings from the Spine
+                eventually { view.textContent!!.contains("Show on hover") shouldBe true }
             }
         } finally {
             manager.dispose()
@@ -108,7 +114,7 @@ class QuickHelpPanelSpec : StringSpec({
         val manager = KeysManager(platform = KeyPlatform.Pc, hintDelayMs = 10).apply { define(KlangKeyBindings) }
 
         try {
-            TestBed.preact(appSetup = { addons { marked() }; keys(manager) }, view = { PanelHost(withoutTools) }) { root ->
+            TestBed.preact(appSetup = { addons { marked() }; keys(manager); spine(Spine()) }, view = { PanelHost(withoutTools) }) { root ->
                 val view = root.single()
 
                 // The panel closed: asked for a tab it does not have, it stays closed
@@ -124,7 +130,7 @@ class QuickHelpPanelSpec : StringSpec({
                 }
             }
 
-            TestBed.preact(appSetup = { addons { marked() }; keys(manager) }, view = { PanelHost(withTools) }) { root ->
+            TestBed.preact(appSetup = { addons { marked() }; keys(manager); spine(Spine()) }, view = { PanelHost(withTools) }) { root ->
                 val view = root.single()
 
                 eventually {

@@ -5,7 +5,8 @@
 
 package io.peekandpoke.klang.comp
 
-import io.peekandpoke.klang.storage.EditorSettings
+import io.peekandpoke.klang.spine.spine
+import io.peekandpoke.klang.state.EditorSettings
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.klang.ui.comp.KlangLamp
@@ -32,10 +33,10 @@ fun Tag.SongSettings() = comp {
  */
 class SongSettings(ctx: NoProps) : PureComponent(ctx) {
 
-    private val highlights by subscribingTo(EditorSettings.highlightsPerEvent)
-    private val highlightsOn by subscribingTo(EditorSettings.highlightsOn)
-    private val strength by subscribingTo(EditorSettings.highlightStrength)
-    private val hoverHelp by subscribingTo(EditorSettings.hoverHelp)
+    private val highlights by subscribingTo(spine.settings.editor.part { it.highlightsPerEvent })
+    private val highlightsOn by subscribingTo(spine.settings.editor.part { it.highlightsOn })
+    private val strength by subscribingTo(spine.settings.editor.part { it.highlightStrength })
+    private val hoverHelp by subscribingTo(spine.settings.editor.part { it.hoverHelp })
 
     override fun VDom.render() {
         val range = EditorSettings.HIGHLIGHTS_PER_EVENT_RANGE
@@ -51,7 +52,7 @@ class SongSettings(ctx: NoProps) : PureComponent(ctx) {
             div(classes = KlangControlStyles.heading.toString()) { +"Code highlights" }
 
             KlangButton(
-                onClick = { EditorSettings.setHighlightsOn(!highlightsOn) },
+                onClick = { spine.settings.editor.update { it.copy(highlightsOn = !it.highlightsOn) } },
                 pressed = highlightsOn,
                 lamp = if (highlightsOn) KlangLamp.State.On else KlangLamp.State.Off,
             ) {
@@ -69,7 +70,7 @@ class SongSettings(ctx: NoProps) : PureComponent(ctx) {
                 value = highlights.toDouble(),
                 range = range.first.toDouble()..range.last.toDouble(),
                 step = 1.0,
-                onChange = { EditorSettings.setHighlightsPerEvent(it.toInt()) },
+                onChange = { count -> spine.settings.editor.update { it.copy(highlightsPerEvent = count.toInt()) } },
                 unit = "EVT",
                 decimals = 0,
                 perPixel = 0.25,
@@ -86,7 +87,7 @@ class SongSettings(ctx: NoProps) : PureComponent(ctx) {
                 value = strength.toDouble(),
                 range = strengthRange.first.toDouble()..strengthRange.last.toDouble(),
                 step = 1.0,
-                onChange = { EditorSettings.setHighlightStrength(it.toInt()) },
+                onChange = { percent -> spine.settings.editor.update { it.copy(highlightStrength = percent.toInt()) } },
                 unit = "%",
                 decimals = 0,
                 perPixel = 0.5,
@@ -99,7 +100,7 @@ class SongSettings(ctx: NoProps) : PureComponent(ctx) {
             }
 
             KlangButton(
-                onClick = { EditorSettings.setHoverHelp(!hoverHelp) },
+                onClick = { spine.settings.editor.update { it.copy(hoverHelp = !it.hoverHelp) } },
                 pressed = hoverHelp,
                 lamp = if (hoverHelp) KlangLamp.State.On else KlangLamp.State.Off,
             ) {

@@ -12,7 +12,6 @@ import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.spine.KlangCodePlaybackCtrl
 import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
-import io.peekandpoke.klang.storage.EditorSettings
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangFinish
 import io.peekandpoke.klang.ui.comp.KlangScreen
@@ -83,7 +82,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
 
     private val state by subscribingTo(ctrl.state)
 
-    private val highlightPerEvent by subscribingTo(EditorSettings.highlightsPerEvent) { newValue ->
+    private val highlightPerEvent by subscribingTo(spine.settings.editor.part { it.highlightsPerEvent }) { newValue ->
         editorCompRef { it.setMaxHighlightsPerEvent(newValue) }
     }
 

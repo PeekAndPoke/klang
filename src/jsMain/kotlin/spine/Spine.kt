@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.spine
 
+import io.peekandpoke.klang.spine.storage.SectionStores
 import io.peekandpoke.kraft.KraftApp
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.getAttributeRecursive
@@ -25,10 +26,26 @@ class Spine(
      * installed before anything logs; the default (a spec's) is not installed and hears no log.
      */
     val console: ConsoleLog = ConsoleLog(),
+    /**
+     * Where the stored sections are kept, a store per scope. The app's are the browser's ([inBrowser]); the default
+     * lives and dies with this Spine, so a spec's Spine never reaches the browser's storage through a section.
+     */
+    stores: SectionStores = SectionStores.inMemory(),
 ) {
 
     companion object {
         val key = TypedKey<Spine>("spine")
+
+        /** The app's Spine: its stored sections kept in the browser's storage. The one place that says so. */
+        fun inBrowser(console: ConsoleLog): Spine = Spine(console = console, stores = SectionStores.inBrowser())
+    }
+
+    /** The user's settings, each kind a stored section. */
+    val settings = Settings(stores = stores)
+
+    /** Forgets the stored section kept under [key], if there is one: it shows its default at once (the storage page). */
+    fun resetStored(key: String) {
+        settings.reset(key)
     }
 
     /** The MIDI playground's settings: the laptop keys' layout and letters, the key bed's offset. */
