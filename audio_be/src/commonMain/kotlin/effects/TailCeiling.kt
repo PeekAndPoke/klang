@@ -70,9 +70,11 @@ import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
  * so what the longer tap re-reaches is bounded by nothing it knows: at a low feedback those older
  * cells never decayed, and the cut, if a cylinder deactivates right then, can be the FULL level of
  * anything still in the ring's span (review of 5c-5: a -1 dBFS burst into a 0.03 s delay at
- * feedback 0, then a quiet owner at 0.18 s re-reaches it after "no tail"). Pre-existing and open. The comb damping's
- * one-pole carries a small weight (≤ d², 0.16 at most) of windows older than the previous one,
- * folded into the bound's own slack (its steady state overstates a comb by ~1.7× at fb 0.7).
+ * feedback 0, then a quiet owner at 0.18 s re-reaches it after "no tail"). Pre-existing and open. Freeverb's own comb
+ * damping (unset, a pole of 0.2) carries a small weight (≤ d², 0.04) of windows older than the previous one,
+ * folded into the bound's own slack (its steady state overstates a comb by ~1.7× at fb 0.7). A room with a SET
+ * cutoff can have a pole near 1, whose memory is not small: its window is longer by the one-pole's lag
+ * (`Reverb.dampingLag`, KLANG-00428), the period its slowest mode decays by the feedback in.
  * On the other side it can hold the unit longer — up to one window, and by that slack (up to 2×
  * at high feedback, i.e. one extra halving-time), which costs an idle cylinder a moment, never
  * audio. The scans stay as test oracles for exactly that claim.

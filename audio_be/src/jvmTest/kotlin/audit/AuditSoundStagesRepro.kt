@@ -19,12 +19,9 @@ import io.peekandpoke.klang.audio_be.ignitor.buildExciter
 import io.peekandpoke.klang.audio_be.probes.PROBE_BLOCK_FRAMES
 import io.peekandpoke.klang.audio_be.probes.PROBE_SAMPLE_RATE
 import io.peekandpoke.klang.audio_be.probes.ProbeSignal
-import io.peekandpoke.klang.audio_be.probes.blackmanHarris7
 import io.peekandpoke.klang.audio_be.probes.fftInPlace
 import io.peekandpoke.klang.audio_be.probes.katalystOwnerChangeStage
-import io.peekandpoke.klang.audio_be.probes.katalystProbeStage
 import io.peekandpoke.klang.audio_be.probes.wholeProbeBlocks
-import io.peekandpoke.klang.audio_be.probes.windowedPowerSpectrum
 import io.peekandpoke.klang.audio_be.utils.flushState
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
@@ -47,8 +44,8 @@ import kotlin.random.Random
 
 /**
  * The disproof pass, cluster "sound", the STAGES (KLANG-00420, `docs/audio-audit/2026-11-10/audit/disproof-sound.md`):
- * the filter envelope's block law, the voice's last frame, the de-click's subnormals, the vowel, the reverb's damping,
- * the compressor's detector (the chain swaps and the phaser at a low rate were fixed by KLANG-00428, the optimizer's
+ * the filter envelope's block law, the voice's last frame, the de-click's subnormals, the vowel (the chain swaps, the
+ * phaser at a low rate, the reverb's lowpass and the compressor's detector were fixed by KLANG-00428, the optimizer's
  * filter gate by KLANG-00429; their guards are ordinary specs now). A
  * measurement, not a gate: nothing here asserts an engine value; each test prints what it measured and writes it to
  * `<build dir>/probes/audit-sound-stages.txt`.
@@ -504,90 +501,6 @@ class AuditSoundStagesRepro : StringSpec({
                     notes.indices.joinToString("  ") { "${f(notes[it], 1)}:${f(levels[it], 1)}" } +
                     "   swing ${f(levels.max() - levels.min(), 1)} dB (110 vs 150: ${f(levels[6] - levels[0], 1)} dB)",
             )
-        }
-    }
-
-    // ── L7b-03: the reverb's lowpass ─────────────────────────────────────────────────────────────────────────────
-
-    "L7b-03: the room's decay time by band at lowpass 0, 1000, 20000 and unset (KLANG_PROBE=audit)".config(enabled = requested) {
-        report.line()
-        report.line("== L7b-03 reverb(wet 1, size 5, lowpass X) on an impulse: T60 by octave band (from the -5 to -35 dB slope of 4096-frame STFT frames) ==")
-
-        val frames = wholeProbeBlocks(4 * sr)
-        val impulse = ProbeSignal(name = "impulse", left = DoubleArray(frames).also { it[0] = 1.0 }, right = DoubleArray(frames).also { it[0] = 1.0 }, inputEndFrame = 1)
-        val hop = 4096
-        val window = blackmanHarris7(hop)
-        val centres = listOf(250.0, 500.0, 1000.0, 2000.0, 4000.0, 8000.0, 12000.0)
-
-        for (lowpass in listOf(0.0, 1000.0, 5000.0, 20000.0, Double.NaN)) {
-            val stage = KatalystStageDsl.Reverb(wet = 1.0.kat, size = 5.0.kat, lowpass = if (lowpass.isNaN()) null else lowpass.kat)
-            val out = katalystProbeStage(KatalystDsl.of(stage)).render(impulse).left
-            val wet = DoubleArray(frames) { out[it] - impulse.left[it] }
-            val starts = generateSequence(0) { it + hop }.takeWhile { it + hop <= frames }.toList()
-            val bandLevels = centres.map { c ->
-                starts.map { s ->
-                    val p = windowedPowerSpectrum(samples = wet, from = s, window = window)
-                    val lo = (c / sqrt(2.0) / (sr.toDouble() / hop)).toInt()
-                    val hi = (c * sqrt(2.0) / (sr.toDouble() / hop)).toInt()
-                    var sum = 1e-300
-
-                    for (k in lo..hi) {
-                        sum += p[k]
-                    }
-
-                    10.0 * log10(sum)
-                }
-            }
-            val t60s = bandLevels.map { levels ->
-                val top = levels.maxOrNull() ?: 0.0
-                val idx = levels.indices.filter { levels[it] <= top - 5.0 && levels[it] >= top - 35.0 && it >= levels.indexOf(top) }
-
-                if (idx.size < 3) {
-                    Double.NaN
-                } else {
-                    val xs = idx.map { it.toDouble() * hop / sr }
-                    val ys = idx.map { levels[it] }
-                    val mx = xs.average()
-                    val my = ys.average()
-                    val slope = xs.indices.sumOf { (xs[it] - mx) * (ys[it] - my) } / xs.indices.sumOf { (xs[it] - mx) * (xs[it] - mx) }
-
-                    -60.0 / slope
-                }
-            }
-
-            report.line(
-                "lowpass ${if (lowpass.isNaN()) "unset" else f(lowpass, 0)}: T60 s by band " +
-                    centres.indices.joinToString("  ") { "${f(centres[it], 0)}:${f(t60s[it], 2)}" },
-            )
-        }
-    }
-
-    // ── L7b-04: the compressor's detector ────────────────────────────────────────────────────────────────────────
-
-    "L7b-04: the compressor's dead time after silence and its release by what follows (KLANG_PROBE=audit)".config(enabled = requested) {
-        report.line()
-        report.line("== L7b-04 the cylinder compressor (no lookahead): a DC step at 1.0 (0 dBFS) after 0.2 s of silence; gain = out / in ==")
-
-        val onset = sr / 5
-        val loudEnd = onset + sr / 2
-        val total = wholeProbeBlocks(loudEnd + sr / 2)
-
-        for ((label, dsl) in listOf("compressor defaults (-20 dB, 4:1, knee 6, attack 3 ms, release 0.1 s)" to KatalystBuilder().compressor().node, "limiter preset (-1 dB, 20:1, knee 2, attack 1 ms)" to KatalystBuilder().limiter().node)) {
-            for ((afterLabel, afterLevel) in listOf("then -100 dBFS (reads as silence)" to 1e-5, "then -30 dBFS" to 0.0316227766)) {
-                val x = DoubleArray(total) { if (it < onset) 0.0 else if (it < loudEnd) 1.0 else afterLevel }
-                val out = katalystProbeStage(dsl).render(ProbeSignal(name = "step", left = x, right = x.copyOf(), inputEndFrame = total)).left
-                val gain = DoubleArray(total) { if (x[it] != 0.0) out[it] / x[it] else 1.0 }
-                val dead = (onset until loudEnd).firstOrNull { gain[it] < 1.0 }?.minus(onset) ?: -1
-                val toMinus1 = (onset until loudEnd).firstOrNull { gain[it] < 0.891 }?.minus(onset) ?: -1
-                val steady = gain[loudEnd - 1]
-                val recover1 = (loudEnd until total).firstOrNull { gain[it] > 0.891 }?.minus(loudEnd) ?: -1
-                val recover01 = (loudEnd until total).firstOrNull { gain[it] > 0.98855 }?.minus(loudEnd) ?: -1
-
-                report.line(
-                    "$label, $afterLabel: gain exactly 1.0 for $dead frames (${f(dead * 1000.0 / sr, 2)} ms) after the onset; -1 dB after $toMinus1 frames; " +
-                        "steady ${db(steady)} dB; after the step down: within 1 dB after ${f(recover1 * 1000.0 / sr, 1)} ms, within 0.1 dB after ${f(recover01 * 1000.0 / sr, 1)} ms",
-                )
-            }
         }
     }
 })

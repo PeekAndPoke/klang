@@ -642,12 +642,14 @@ class KatalystCompressorEffectSpec : StringSpec({
         // The listening pair's case on a DC input, so the output IS the gain: 0.5 (-6 dBFS), threshold -40 dB to
         // 0 dB, ratio 8, knee 6, release 0.2 s. Before the fix the reduction (about 29.75 dB) was gone 50 ms after
         // the change; now the threshold in force is -40 * exp(-t / 0.2 s), and the reduction, linear in it until the
-        // knee, goes from 10 % to 90 % of its change in about 1.36 time constants (0.27 s).
+        // knee, goes from 10 % to 90 % of its change in about 1.36 time constants (0.27 s). Since KLANG-00428 the
+        // follower smooths the curve's output, so the reduction that the moving threshold asks for also passes the
+        // follower's own release: two one-poles of 0.2 s in a row, and the swell is slower (pinned below, measured).
         val release = 0.2
         val low = settings(thresholdDb = -40.0, ratio = 8.0, kneeDb = 6.0, attackSeconds = 0.005, releaseSeconds = release)
         val high = settings(thresholdDb = 0.0, ratio = 8.0, kneeDb = 6.0, attackSeconds = 0.005, releaseSeconds = release)
         val changeAt = 40
-        val blocks = changeAt + 300
+        val blocks = changeAt + 1200
         val effect = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames)
         val ctx = createCtx()
         val gainDb = DoubleArray(blocks * blockFrames)
@@ -689,8 +691,8 @@ class KatalystCompressorEffectSpec : StringSpec({
 
         val rise = crossing(0.9) - crossing(0.1)
 
-        withClue("10 % to 90 % of the swell takes about 1.36 release time constants ($rise s)") {
-            rise shouldBe (1.36 * release plusOrMinus 0.01)
+        withClue("10 % to 90 % of the swell takes about 2.65 release time constants (1.36 before KLANG-00428) ($rise s): the knob's one-pole and the follower's release in a row") {
+            rise shouldBe (2.65 * release plusOrMinus 0.01)
         }
 
         withClue("50 ms after the change more than 20 dB of the reduction is still there (the glide had none left)") {
@@ -789,12 +791,14 @@ class KatalystCompressorEffectSpec : StringSpec({
         // Threshold -10 to -30 dB (adds) with ratio 8 to 7 (relaxes a little), the envelope at -6 dBFS (DC 0.5), release
         // 0.3 s. Net: about 3.5 to 20.6 dB of reduction, so the move glides and is within 1 dB of the new setting after
         // the glide (17 blocks, 49.3 ms); judged by "any knob relaxes" it ran at the release, 14.4 dB short at 50 ms.
+        // Since KLANG-00428 the follower's attack (5 ms) smooths the curve's output and trails the glide by about
+        // 1.7 dB at its end, so the row reads three attack time constants after it.
         val a = settings(thresholdDb = -10.0, ratio = 8.0, kneeDb = 6.0, attackSeconds = 0.005, releaseSeconds = 0.3)
         val z = settings(thresholdDb = -30.0, ratio = 7.0, kneeDb = 6.0, attackSeconds = 0.005, releaseSeconds = 0.3)
         val changeAt = 40
         val gain = dcGainDb(schedule = mapOf(0 to a, changeAt to z), blocks = changeAt + 60, level = 0.5)
         val settled = gain[gain.size - 1]
-        val at = changeAt * blockFrames + glideBlocks * blockFrames
+        val at = changeAt * blockFrames + glideBlocks * blockFrames + (3 * 0.005 * sampleRate).toInt()
 
         withClue("settled ${settled} dB, ${gain[at]} dB at the glide's end") {
             settled shouldBe (-20.55 plusOrMinus 0.05)
@@ -845,14 +849,15 @@ class KatalystCompressorEffectSpec : StringSpec({
 
     "a compressor-to-limiter swap that adds reduction does not overshoot the new ceiling past the glide (review round 2)" {
         // limiter(-1, 20, 2) to limiter(-6, 20, 1), release 0.1 s, a DC input at -2 dBFS: the threshold adds, the
-        // narrower knee relaxes, the net adds, so it glides; judged by any knob it overshot by +2.9 dB 50 ms in.
+        // narrower knee relaxes, the net adds, so it glides; judged by any knob it overshot by +2.9 dB 50 ms in. Since
+        // KLANG-00428 the follower's attack (1 ms) trails the glide, so the row reads from 10 ms after it.
         val a = settings(thresholdDb = -1.0, ratio = 20.0, kneeDb = 2.0, attackSeconds = 0.001, releaseSeconds = 0.1)
         val z = settings(thresholdDb = -6.0, ratio = 20.0, kneeDb = 1.0, attackSeconds = 0.001, releaseSeconds = 0.1)
         val level = 10.0.pow(-2.0 / 20.0)
         val changeAt = 40
         val gain = dcGainDb(schedule = mapOf(0 to a, changeAt to z), blocks = changeAt + 60, level = level)
         val settled = gain[gain.size - 1]
-        val afterGlide = (changeAt + glideBlocks) * blockFrames
+        val afterGlide = (changeAt + glideBlocks) * blockFrames + sampleRate / 100
 
         for (k in afterGlide until gain.size) {
             withClue("sample $k, ${k - changeAt * blockFrames} after the change: ${gain[k]} dB against $settled") {

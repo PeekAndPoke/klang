@@ -370,8 +370,9 @@ sealed interface KatalystStageDsl {
      *   `Reverb.normalizeSize`). 3 is about a 1 s tail, 5 about 1.4 s, 10 about 12.5 s; the
      *   shortest reachable is about 0.7 s, and above 10 is bounded at 10. Cylinder twin:
      *   `reverb(size = ...)`.
-     * @param lowpass high-frequency damping of the tail, on a scale in Hz from 0 (darkest) to half the sample rate
-     *   (none); lower is darker. A damping, not a cutoff: 1000 sounds almost like 0 (`Reverb.lowpass`). Null,
+     * @param lowpass the cutoff of the tail's damping in Hz: the -3 dB corner of the lowpass in the room's feedback,
+     *   the same corner at every sample rate; lower is darker. Above half the sample rate it is half the sample rate,
+     *   under 5 Hz it is 5 Hz (`Reverb.lowpass`, KLANG-00428; it was a damping on a scale in Hz before). Null,
      *   or a non-finite value such as [SLOT_UNSET], = the engine's fixed default damping. That
      *   default is a sample-rate relation rather than a number, which is why this knob alone has no
      *   wire constant: [KatalystDsl.classic] carries it as a slot whose default is "unset".

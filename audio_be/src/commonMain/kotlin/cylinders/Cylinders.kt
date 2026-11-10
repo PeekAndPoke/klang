@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.cylinders
 
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.katalyst.KatalystRegistry
+import io.peekandpoke.klang.audio_be.utils.copyRangeInto
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.warehouse.CylinderUnits
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
@@ -115,7 +116,8 @@ class Cylinders(
      * 1. Install (or start fading in) any chain queued on a cylinder, then run every cylinder's
      *    katalyst pipeline (for the classic chain: Body → Vowel → Delay → Reverb → Phaser →
      *    Compressor → Gain)
-     * 2. Apply ducking (cross-cylinder sidechain — requires all cylinders processed first)
+     * 2. Apply ducking (cross-cylinder sidechain, requires all cylinders processed first): every sidechain reads
+     *    its source's mix as the chains left it, before any duck writes (KLANG-00428)
      * 3. Mix all active cylinders to fusion output
      * 4. Round-robin cleanup check for silent cylinders
      *
@@ -144,11 +146,41 @@ class Cylinders(
 
         // Step 2: Apply ducking (cross-cylinder sidechain). The duck names its sidechain by the RAW cylinder id, not
         // folded: an id outside the folded range finds no cylinder, as it never did.
+        //
+        // Every sidechain reads its source's mix BEFORE any duck writes (maintainer, 2026-11-10; audit findings L6-04,
+        // L7b-08, KLANG-00428), so the result does not hang on the order the cylinders were first used, and two
+        // cylinders that duck each other duck alike. 2a keeps a copy of the mix of every source that is itself
+        // ducked this block, before 2b runs a single duck; 2b hands each duck that copy, or the live mix of a source
+        // nobody ducks. The live mix is exact there: the duck pass writes only through `processDuck`, and that writes
+        // only its own cylinder's mix (`KatalystContext.mixBuffer`; the swap's blend uses its own scratch), so a
+        // cylinder whose `processDuck` does not run this block ([ducksThisBlock] false) leaves the pass with its mix
+        // bit for bit as it came in. One block copy per such source, into a buffer the cylinder owns.
+        for (i in 0 until count) {
+            val cylinder = rented[i]
+
+            if (!cylinder.isActive) {
+                continue
+            }
+
+            val duckCylinderId = cylinder.duck?.duckCylinderId ?: continue
+            val source = rentedOrNull(duckCylinderId) ?: continue
+
+            if (!source.preDuckHeld && ducksThisBlock(source)) {
+                source.mixBuffer.left.copyRangeInto(destination = source.preDuckMix.left, destinationOffset = 0, startIndex = 0, endIndex = blockFrames)
+                source.mixBuffer.right.copyRangeInto(destination = source.preDuckMix.right, destinationOffset = 0, startIndex = 0, endIndex = blockFrames)
+                source.preDuckHeld = true
+            }
+        }
+
         for (i in 0 until count) {
             val cylinder = rented[i]
             val duckCylinderId = cylinder.duck?.duckCylinderId ?: continue
             val sidechainCylinder = rentedOrNull(duckCylinderId) ?: continue
-            cylinder.processDuck(sidechainCylinder.mixBuffer)
+            cylinder.processDuck(if (sidechainCylinder.preDuckHeld) sidechainCylinder.preDuckMix else sidechainCylinder.mixBuffer)
+        }
+
+        for (i in 0 until count) {
+            rented[i].preDuckHeld = false
         }
 
         // Step 3: Mix all cylinders to output
@@ -243,6 +275,21 @@ class Cylinders(
         rented.add(cylinder)
 
         return cylinder
+    }
+
+    /**
+     * Whether the duck pass will write [cylinder]'s mix this block: it runs (`processDuck` returns at once on an
+     * inactive cylinder), it has a duck with a sidechain, and that sidechain is rented. The same three tests the pass
+     * itself makes before it calls `processDuck`.
+     */
+    private fun ducksThisBlock(cylinder: Cylinder): Boolean {
+        if (!cylinder.isActive) {
+            return false
+        }
+
+        val id = cylinder.duck?.duckCylinderId ?: return false
+
+        return rentedOrNull(id) != null
     }
 
     /** The rented cylinder whose id is exactly [id], or null: an id outside the folded range has none. */

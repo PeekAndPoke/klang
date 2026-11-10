@@ -12,6 +12,7 @@ import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import kotlin.math.abs
+import kotlin.math.log10
 import kotlin.math.sin
 
 /**
@@ -85,8 +86,10 @@ class CompressorSpec : StringSpec({
         val original = quietBuffer.copyOf()
         compressor.process(left = quietBuffer, right = quietBuffer.copyOf(), blockSize = 100)
 
+        // Bit for bit (KLANG-00428): a fresh compressor passes a level under the knee untouched, so must a reset one;
+        // a follower state that survived the reset (the held reduction) would still be releasing here.
         for (i in quietBuffer.indices) {
-            quietBuffer[i] shouldBe (original[i] plusOrMinus 0.01)
+            quietBuffer[i] shouldBe original[i]
         }
     }
 
@@ -260,12 +263,13 @@ class CompressorSpec : StringSpec({
     }
     "a very quiet input reads as silence, never quieter: after a tail at -120 dBFS the next hit is compressed as after silence" {
         // KLANG-00428, the audit's S-02: the follower converted any level above 1e-10 to dB, down to -200 dB, while
-        // silence read -100 dB, so a -120 dBFS tail drove the envelope 20 dB further down than silence, and the next
-        // onset's gain differed by what came before it. Now a level at or under -100 dB reads as -100 dB.
+        // silence read -100 dB. Now a level at or under -100 dB reads as -100 dB. With the follower on the gain
+        // reduction (L7b-04) a level under the knee asks for no reduction either way, so the floor shows only under a
+        // threshold below -100 dB: there silence asks for reduction, and so must a -120 dBFS tail.
         val block = 128
 
         fun gains(quiet: Double): DoubleArray {
-            val c = Compressor(sampleRate = sampleRate)
+            val c = Compressor(sampleRate = sampleRate, thresholdDb = -110.0, kneeDb = 0.0)
             val loud = sampleRate / 2 / block
             val tail = 3 * sampleRate / 10 / block
             val hit = sampleRate / 20 / block
@@ -300,5 +304,101 @@ class CompressorSpec : StringSpec({
                 afterQuiet[i] shouldBe afterSilence[i]
             }
         }
+    }
+
+    // ── L7b-04: the follower smooths the gain reduction (KLANG-00428) ────────────────────────────────────────────
+
+    /** The gain (out over in) of every frame of a DC [levels] run, one level per stretch of [frames]. */
+    fun dcGains(c: Compressor, stretches: List<Pair<Double, Int>>): DoubleArray {
+        val total = stretches.sumOf { it.second }
+        val x = DoubleArray(total)
+        var at = 0
+
+        for ((level, frames) in stretches) {
+            for (k in 0 until frames) {
+                x[at + k] = level
+            }
+
+            at += frames
+        }
+
+        val g = DoubleArray(total) { 1.0 }
+        val block = 128
+        var from = 0
+
+        while (from < total) {
+            val n = minOf(block, total - from)
+            val l = AudioBuffer(n) { x[from + it] }
+            val r = AudioBuffer(n) { x[from + it] }
+
+            c.process(left = l, right = r, blockSize = n)
+
+            for (k in 0 until n) {
+                if (x[from + k] != 0.0) {
+                    g[from + k] = l[k] / x[from + k]
+                }
+            }
+
+            from += n
+        }
+
+        return g
+    }
+
+    "an onset after silence is reduced from its first sample: no dead time, at the defaults and for the limiter preset" {
+        // The audit's L7b-04: smoothing the LEVEL let a 0 dBFS step after silence through untouched for 211 frames at
+        // the defaults (188 for the limiter preset) at 48 kHz, until the level's envelope climbed into the knee.
+        for ((label, c) in listOf(
+            "defaults" to Compressor(sampleRate = 48000),
+            "limiter preset" to Compressor(sampleRate = 48000, thresholdDb = -1.0, ratio = 20.0, kneeDb = 2.0, attackSeconds = 0.001),
+        )) {
+            val silence = 9600
+            val g = dcGains(c, listOf(0.0 to silence, 1.0 to 4800))
+
+            withClue("$label: the onset's first frame is reduced") {
+                g[silence] shouldBeLessThan 1.0
+            }
+            withClue("$label: the first 2 ms all reduced, and more each frame") {
+                for (k in 1 until 96) {
+                    g[silence + k] shouldBeLessThan g[silence + k - 1]
+                }
+            }
+            withClue("$label: six attack time constants in, within 0.1 dB of the steady reduction") {
+                val attackFrames = if (label == "defaults") 144 else 48
+                val steady = g[silence + 4799]
+
+                abs(20.0 * log10(g[silence + 6 * attackFrames] / steady)) shouldBeLessThan 0.1
+            }
+        }
+    }
+
+    "the release depends on the reduction in force, not on what follows under the knee: into silence and into -30 dBFS alike" {
+        // The audit's L7b-04: the level follower released in 24.5 ms into silence and in 128.9 ms into -30 dBFS (the
+        // envelope fell toward what followed). On the reduction both ask for none, so both release alike, bit for bit.
+        // Silence has no gain to read, so each silent run ends on one -30 dBFS frame, and the gain there is compared
+        // with the -30 dBFS run's at the same frame.
+        val loud = 24000
+        val quiet = 0.0316227766
+        val intoQuiet = dcGains(Compressor(sampleRate = 48000), listOf(1.0 to loud, quiet to 24000))
+
+        withClue("the release is under way 10 ms after the loud part") {
+            intoQuiet[loud + 480] shouldBeLessThan 0.95
+        }
+
+        for (probe in listOf(1, 480, 4800, 23999)) {
+            val intoSilence = dcGains(Compressor(sampleRate = 48000), listOf(1.0 to loud, 0.0 to probe, quiet to 1))
+
+            withClue("$probe frames after the loud part") {
+                intoSilence[loud + probe] shouldBe intoQuiet[loud + probe]
+            }
+        }
+    }
+
+    "on a steady level the reduction is the curve's, as it was" {
+        // The static curve at the defaults (-20 dB, 4:1, knee 6): -10 dBFS is 10 dB over, a 7.5 dB reduction.
+        val g = dcGains(Compressor(sampleRate = 48000), listOf(0.316227766016838 to 48000))
+        val db = 20.0 * log10(g[47999])
+
+        db shouldBe ((-7.5) plusOrMinus 1e-9)
     }
 })

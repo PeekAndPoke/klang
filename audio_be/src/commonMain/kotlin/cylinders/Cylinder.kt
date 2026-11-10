@@ -193,6 +193,17 @@ class Cylinder(
     val mixBuffer = StereoBuffer(blockFrames)
 
     /**
+     * [mixBuffer] as the chain left it, before this cylinder's own duck, for the ducks that read this cylinder as
+     * their sidechain (KLANG-00428): written by `Cylinders.processAndMix` only in a block where this cylinder is a
+     * sidechain AND is itself ducked, and read in the same block, so it is never read stale. Built with the cylinder
+     * and shelved with it, like [mixBuffer]; [startNewLife] zeroes it.
+     */
+    val preDuckMix = StereoBuffer(blockFrames)
+
+    /** True between the copy into [preDuckMix] and the end of the same block's duck pass (`Cylinders.processAndMix`). */
+    var preDuckHeld: Boolean = false
+
+    /**
      * Shared context for all bus effects. The chain leaving service runs in the [swap]'s own
      * context, so the live mix stays untouched for the chain that is arriving.
      */
@@ -602,6 +613,8 @@ class Cylinder(
         ownerParams = null
         ownerParamsAge = OWNER_STATE_BLOCKS
         mixBuffer.clear()
+        preDuckMix.clear()
+        preDuckHeld = false
         katalystContext.clearBuses()
         activity = Activity.Inactive
     }

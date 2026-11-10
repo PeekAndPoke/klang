@@ -96,15 +96,20 @@ All in `audio_be/src/commonMain/kotlin/effects/`.
 
 ### Compressor
 
-Peak-detecting compressor (`max(|L|, |R|)`). Applied per cylinder (the cylinder's `compressor` stage).
+Peak-detecting compressor (`max(|L|, |R|)`). Applied per cylinder (the cylinder's `compressor` stage). Without a
+lookahead the gain curve reads each sample's level in dB, and the attack and release smooth its output, the gain
+reduction in dB: the smooth decoupled peak detector of Giannoulis, Massberg and Reiss (JAES 2012), since KLANG-00428.
+An onset is reduced from its first sample, and the release runs on the reduction in force whatever follows under the
+knee (before, the level was smoothed: a dead time of 211 frames after silence at the defaults). With a lookahead the
+other topology runs, unchanged (`Compressor` KDoc).
 
 | Parameter   | Meaning                                 |
 |-------------|-----------------------------------------|
 | `threshold` | Level above which gain reduction starts |
 | `ratio`     | Compression ratio (e.g. 4 = 4:1)        |
 | `knee`      | Soft knee width (dB)                    |
-| `attack`    | Gain reduction onset time (ms)          |
-| `release`   | Gain recovery time (ms)                 |
+| `attack`    | Gain reduction onset time constant (s)  |
+| `release`   | Gain recovery time constant (s)         |
 
 ### Ducking
 
@@ -113,6 +118,10 @@ Sidechain-triggered gain reduction across cylinders.
 - Configured by the cylinder owner's `duck.cylinder` slot (the source cylinder N)
 - Reduces this cylinder's gain whenever cylinder N plays, by `duck.depth`, recovering over `duck.release`
 - Recovery is automatic after the triggering voice ends
+- Every duck reads its source cylinder's mix as that cylinder's chain left it, BEFORE any duck writes
+  (`Cylinders.processAndMix`, KLANG-00428): the order the cylinders were first used does not matter, and two
+  cylinders that duck each other duck alike. A source that is itself ducked is copied once per block into its
+  `Cylinder.preDuckMix`; a source nobody ducks is read live (its mix is the same before and after the pass)
 
 | Slot          | Meaning                                    |
 |---------------|--------------------------------------------|
@@ -140,7 +149,7 @@ the table in `.claude/skills/klang-music-writing/ref/sprudel-reference.md` ("Rev
 |-------------|------------------------------------------------|
 | `reverb.wet`     | How much of the cylinder mix feeds the room (insert, the owner's one amount) |
 | `reverb.size`    | Tail length, authored ~0..10, normalized by `Reverb.normalizeSize` |
-| `reverb.lowpass` | Tail damping on a scale in Hz, linear: 0 darkest, Nyquist none; NOT a cutoff (`Reverb.lowpass`; unset: fixed default damping) |
+| `reverb.lowpass` | The -3 dB cutoff in Hz of the one-pole in every comb's feedback (`Reverb.cutoffDamping`, the same corner at every rate), held to 5 Hz .. Nyquist; a dark cutoff lengthens the tail accounting's lap by the one-pole's lag (`Reverb.dampingLag`). Unset: Freeverb's fixed pole 0.2 (16.9 kHz at 48 kHz), bit for bit as before (KLANG-00428) |
 
 ### Phaser
 

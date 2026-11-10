@@ -1,6 +1,6 @@
 # KLANG-00428: Audit fixes 4: the bus (switch-on and swap clicks, long delay rings, compressor, reverb lowpass, vowel, phaser, duck order)
 
-> **Status (2026-11-10): IN PROGRESS.** Second pass: the maintainer's answers 4, 5, 6.
+> **Status (2026-11-10): PAUSED.** Second pass landed (answers 4, 5, 6). Open: the fade's length, the delay ring's bound, the vowel table, and the second pass's five notes.
 >
 > **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
@@ -82,13 +82,17 @@ What this ticket did not force, each with the options and a recommendation. The 
    The source: both auditors recall the Csound manual's formant table, from memory and without the network; nothing
    in the repo names it, so no credit was written. Recommendation: confirm the source, then credit it in `CREDITS.MD`
    and `src/jsMain/kotlin/pages/CreditsPage.kt` and name it in the `VowelBands` KDoc; then (b) with a listening pass.
-4. **L7b-03: what `reverb.lowpass` means.** The docs now say what the code does (a damping on a scale in Hz, 0 the
+4. **DONE (second pass, option (b)).** `reverb.lowpass` is the -3 dB cutoff of the combs' one-pole, the same corner
+   at every rate; unset stays Freeverb's pole, bit for bit. See "Notes from the second pass". The question as it was:
+   **L7b-03: what `reverb.lowpass` means.** The docs now say what the code does (a damping on a scale in Hz, 0 the
    darkest, not a cutoff), at every door: `Reverb.lowpass`, the bridge's `KatalystStageDsl.Reverb`, sprudel's
    `reverb(lowpass = ...)`, `audio/ref/effects-mixing.md`. Options: (a) keep the law; (b) make it a real cutoff in Hz
    (the comb one-pole's corner at the value; a sound change for every song that writes it, `StrangerThings` 8000 and
    `SoundOfTheSea` 12500 among them), with a listening pass; (c) rename it to a 0 to 1 damping (a door change).
    Recommendation: (b): authors and songs write it as a cutoff, and the word says cutoff.
-5. **L7b-04: the compressor's detector law.** Landed: the uncontroversial part (S-02, a level under -100 dB reads as
+5. **DONE (second pass, option (b)).** The classic follower smooths the gain reduction (the smooth decoupled peak
+   detector of the design the credits already name). See "Notes from the second pass". The question as it was:
+   **L7b-04: the compressor's detector law.** Landed: the uncontroversial part (S-02, a level under -100 dB reads as
    -100 dB) and the law written down in the `Compressor` KDoc. The law itself smooths the LEVEL in dB before the gain
    computer: a dead time of 211 frames (4.4 ms) after silence at the defaults, 188 (3.9 ms) for the limiter preset,
    and a release of 24.5 ms into silence against 128.9 ms into -30 dBFS. Options: (a) keep it, the character every
@@ -97,7 +101,9 @@ What this ticket did not force, each with the options and a recommendation. The 
    compressed song moves, a listening pass and a credit to the design it follows; (c) hold the envelope at or above
    the knee's start: no dead time from silence, the release asymmetry stays, and the follower then reads the
    gain-computer knobs. Recommendation: (b), by ear first.
-6. **L6-04, L7b-08: the order of chained ducks.** The duck pass walks the cylinders in rent order, so a duck that
+6. **DONE (second pass, option (a)).** Every sidechain reads its source's mix before any duck writes; a copy only for a
+   source that is itself ducked. See "Notes from the second pass". The question as it was:
+   **L6-04, L7b-08: the order of chained ducks.** The duck pass walks the cylinders in rent order, so a duck that
    reads a cylinder which ducks itself reads it ducked or not depending on which pattern sounded first. Options:
    (a) every sidechain reads its source's mix BEFORE any duck writes (a copy of each named source's block, one block
    buffer per cylinder that is someone's sidechain); (b) a dependency order, sources first, cycles broken by id
@@ -112,10 +118,10 @@ What this ticket did not force, each with the options and a recommendation. The 
 
 - **3, the vowel table:** "Yes the vowels do not really sound well today... They need tweaking later." Not done now;
   it stays open for a later pass by ear.
-- **4, `reverb.lowpass`:** "Yes make lowpass reverb a real cutoff." To do.
-- **5, the compressor's detector law:** "Yes to the compressor change." To do: smooth the gain reduction, not the level.
+- **4, `reverb.lowpass`:** "Yes make lowpass reverb a real cutoff." Done in the second pass.
+- **5, the compressor's detector law:** "Yes to the compressor change." Done in the second pass: the gain reduction is smoothed, not the level.
 - **6, the duck order:** "Ducking accepted." Read as: option (a) is accepted, every sidechain reads its source's mix
-  before any duck writes. To do.
+  before any duck writes. Done in the second pass.
 - **7, the skill sentence:** "Update the skill please." Done (`.claude/skills/review-loop/audio-constraints.md`).
 - 1 (the fade's length) and 2 (the delay ring's bound) are not answered yet.
 
@@ -191,6 +197,180 @@ cells); the row now compares with a new line and kills it. **Suites** (test-dige
 3113, `:audio_be:jsBrowserTest` 2931, `:audio_bridge:jvmTest` 153, `:sprudel:jvmTest` 3523, `:klang:jvmTest` 82,
 root `:jvmTest` 163.
 
+## Notes from the second pass (2026-11-10)
+
+The maintainer's answers 4, 5 and 6, landed one after the other with a corpus run after each, so every moved render is
+attributed to one item. Sound changes on purpose, all three.
+
+**A. `reverb.lowpass` is a real cutoff (Decide 4, L7b-03).** `Reverb.cutoffDamping`: the value is the -3 dB corner of
+the one-pole in every comb's feedback path, the root of `p^2 - 2 (2 - cos w) p + 1 = 0` (written with `2 sin^2(w / 2)`
+so a low corner keeps its digits), computed at the rate the room runs at, so the same Hz is the same corner at 44.1 and
+48 kHz and inside a region. Two bounds, neither a taste: a one-pole has no corner above the Nyquist frequency, so a
+cutoff above it is the Nyquist frequency (inside a region, the base rate's); a cutoff under 5 Hz is 5 Hz
+(`Reverb.LOWPASS_FLOOR_HZ`, the engine's lowest filter cutoff, `clampSvfCutoff`'s), which keeps the pole under 1.
+Unset keeps Freeverb's fixed pole 0.2 (a corner of 16.9 kHz at 48 kHz, 15.5 kHz at 44.1 kHz), bit for bit, so a song
+that never sets it does not move. A dark cutoff lengthens every lap of the loop by the one-pole's lag `p / (1 - p)`;
+without counting it, the darkest cutoff at size 10 ended the drain countdown with a comb cell at 1.65e-5 and the tail
+ceiling let go at 1.05e-5, both over `SILENCE_FLOOR`. `Reverb.dampingLag` (0 unset) now lengthens the drain's
+revolution and the ceiling's window (and its laps). No highpass or other reverb door in Hz exists; nothing else had
+the defect. No wire change, no schema hash move.
+
+T60 at size 5, 48 kHz, before and after (the audit's STFT method; "computed" where the band falls 30 dB inside about
+two of its 85 ms frames, from the loop gain `feedback * |H(f)|` per mean comb lap plus the lag, a model that reads
+within about 10 % of the measured cells):
+
+| lowpass | 1 kHz before | 1 kHz after | 4 kHz before | 4 kHz after |
+|---|---|---|---|---|
+| unset (default) | 1.34 | 1.34 (identical) | 1.07 | 1.07 (identical) |
+| 0 | 1.28 | 0.08 computed (the 5 Hz floor) | 0.79 | 0.06 computed |
+| 1000 | 1.29 | 0.51 | 0.81 | 0.14 computed |
+| 4000 | 1.31 | 1.16 | 0.87 | 0.48 |
+| 20000 | 1.36 | 1.34 | 1.22 | 1.09 |
+
+Guards: `ReverbLowpassLawSpec` (the corner is -3 dB at 44.1, 48 and in a 2x region; the Nyquist hold; the 5 Hz floor;
+1000 dark and 20000 bright, 1000 no longer 0; the drain countdown at the darkest cutoff), `ClosedFormTailSpec` (the
+ceiling at the darkest cutoff and size 10), `ReverbNetworkLawSpec` (its oracle pinned the old law `0.4 (1 - lowpass /
+nyquist)`; it now writes the cutoff law, and gained a row inside a 2x region; its render is 8192 frames, so the 96 kHz
+row's tail is there). Docs: `Reverb.lowpass`, `DEFAULT_DAMP`, `cutoffDamping`, `dampingLag`, the drain's and
+`TailCeiling`'s proofs, the bridge's `KatalystStageDsl.Reverb`, sprudel's `reverb(lowpass)` (both texts),
+`audio/ref/effects-mixing.md`, `audio/ref/katalyst.md`.
+
+**B. The compressor smooths the gain reduction (Decide 5, L7b-04).** The classic path's curve reads each sample's
+level (S-02's floor kept: under -100 dB reads as -100 dB), and the smooth decoupled peak detector of Giannoulis,
+Massberg and Reiss (JAES 2012, already in `CREDITS.MD`) runs on its output: a held reduction that takes more at once
+and releases at the release time constant, followed by a one-pole at the attack time constant. Not the level
+follower's attack-release blend carried over: on the reduction, its +/-2 dB window around the target would have run
+the last 2 dB of every release at about half the attack's speed. The lookahead topology, every door, knee, ratio, the
+limiter preset and the house limiter are unchanged. Measured (48 kHz, the audit's reproduction, before and after):
+
+| | before | after |
+|---|---|---|
+| defaults, 0 dBFS step after 0.2 s of silence: frames at gain exactly 1.0 | 211 (4.40 ms) | 0 |
+| defaults: frames to -1 dB of gain | 239 | 9 |
+| limiter preset: frames at gain exactly 1.0 | 188 (3.92 ms) | 0 |
+| defaults, release from 15 dB: back within 1 dB, into silence | 21.1 ms | 273.6 ms |
+| defaults, release from 15 dB: back within 1 dB, into -30 dBFS | 100.3 ms | 273.6 ms (the same) |
+| limiter preset, release from 0.95 dB: within 0.1 dB, into silence / into -30 dBFS | 1.4 / 4.6 ms | 226.1 / 226.1 ms |
+| defaults, steady gain on DC at -30, -20, -10, 0, +6 dBFS | 0, -0.5625, -7.5, -15, -19.5 dB | the same, to 4 decimals |
+| limiter preset, steady gain on DC at 0, +6 dBFS | -0.95, -6.65 dB | the same |
+| defaults, steady gain on a 1 kHz sine at -20, -10, 0 dBFS peak | -0.198, -6.558, -14.032 dB | -0.562, -7.492, -14.990 dB |
+| limiter preset, steady gain on a 1 kHz 0 dBFS sine | -0.348 dB | -0.948 dB |
+| defaults, 0 dBFS 1 kHz burst after silence: peak in the first 1 ms | 0.0 dBFS | -0.9 dBFS |
+| defaults, the same burst: samples over the settled peak + 1 dB | 539 | 194 |
+| limiter preset, the same burst: peak in the first 1 ms | 0.0 dBFS | -0.1 dBFS |
+
+The static curve is unchanged (DC). The steady reduction on a sine is NOT unchanged: the level follower sagged
+between the peaks (its release pulled toward the zero crossings' -100 dB), the reduction follower holds the peak's
+reduction, so a sine now gets what the curve gives its peak. The release now means its time constant on the
+reduction (the textbook meaning), so in effect it is much longer than the level follower's was into silence.
+
+Guards (`CompressorSpec`): an onset after silence is reduced from its first frame, more each frame, and within 0.1 dB
+after six attack time constants, at the defaults and the limiter preset; the release into silence and into -30 dBFS,
+bit for bit alike; the steady curve on DC. Changed: the S-02 row runs at a threshold of -110 dB (under the knee both a
+-120 dBFS tail and silence now ask for no reduction, so only a threshold under -100 dB shows the floor); "Compressor
+reset clears state" compares bit for bit (its 0.01 tolerance could not see a held reduction that survived a reset).
+`KatalystCompressorEffectSpec`: three rows pinned how the knob move lands on a memoryless curve and now read the new
+truth, each with a note: the relaxing swell's 10 to 90 percent is 2.65 release time constants (1.36 before; the
+knob's one-pole and the follower's release in a row, rendered 1200 blocks to settle), the gliding move is read three
+attack time constants after the glide (the attack trails a 17 dB glide by about 1.7 dB), the limiter swap from 10 ms
+after it. Docs: the `Compressor` class KDoc (the dead-time paragraph rewritten), `smoothReduction`, `levelDb`,
+`processGliding`, `KatalystCompressorEffect`, `CompressorKnobMove`, `audio/ref/knob-glide.md`,
+`audio/ref/effects-mixing.md` (also: attack and release are in seconds, not ms).
+
+**C. Every sidechain reads its source before any duck writes (Decide 6, L6-04, L7b-08).** `Cylinders.processAndMix`
+step 2: before a single duck runs, the mix of every source that is ITSELF ducked this block is copied into its
+`Cylinder.preDuckMix` (a block buffer the cylinder owns, built and shelved with it, zeroed by its new life); each duck
+then reads that copy, or the live mix of a source nobody ducks. The shortcut is exact: the duck pass writes only
+through `Cylinder.processDuck`, which writes only its own cylinder's mix (`KatalystContext.mixBuffer`; the swap's blend
+uses its own scratch), so a cylinder whose `processDuck` does not run this block (inactive, no duck, or a sidechain not
+rented: `Cylinders.ducksThisBlock`, the pass's own three tests) leaves the pass with its mix bit for bit as it came. No
+allocation in the block; one block copy per ducked source. A cylinder that ducks itself read itself sample by sample
+before its own write already; it now reads the copy, the same numbers. Guards: `CylindersDuckOrderSpec` (two
+cylinders that duck each other, in both rent orders, bit for bit; kick, bass ducked by the kick, pad ducked by the
+bass, in three rent orders, the pad bit for bit the pad over an unducked bass).
+
+**The corpus, my own runs** (no song text changed between them, HEAD the same, the song files untouched):
+
+| Render | Moved by | Peak before, after |
+|---|---|---|
+| Kokon (`reverb(0.10, 9.5, 6500)`) | A | 0.7458, 0.7447 |
+| Die Kirschblüte (4500) | A | 0.7480, 0.7468 |
+| Der Schmetterling (6500) | A | 0.7526, 0.7525 |
+| Gestrandet (`lowpass = 12500`) | A | 0.0695, 0.0694 |
+| Seltsamere Dinge and frozen `strangerThings_2026_11_03` (8000; one render) | A, then B | 0.7510, 0.7510, then 0.7456 |
+| Stein um Stein (5500) | A | 0.7605, 0.7606 |
+| A Synth Worth Lying For (4500) | A | 0.7555, 0.7555 |
+| frozen `derSchmetterling_2026_11_03` | A | 0.7446, 0.7446 |
+| frozen piece `derSchmetterling_2026_09_16` (3500) | A, then B | 0.9143, 0.9143, then 0.8994 |
+| Synthsturm | B | 0.8540, 0.8272 |
+
+B's renders, peak and RMS without and with B (the whole 256-cycle render, a temporary harness):
+
+| Render | Peak | RMS |
+|---|---|---|
+| Seltsamere Dinge (and its frozen twin) | -0.06 dB | -16.73 to -17.13 dBFS, -0.39 dB |
+| Synthsturm | -0.28 dB | -17.52 to -18.56 dBFS, -1.04 dB |
+| frozen piece `derSchmetterling_2026_09_16` | -0.14 dB | -17.90 to -18.39 dBFS, -0.50 dB |
+
+The other compressed songs did not move: their compressors have a lookahead (the master limiters; that path is
+unchanged) or never reach the knee. C moved nothing (no corpus song ducks).
+
+**Left for the maintainer from the second pass** (none forced):
+
+- **The compressor's knob move and the new follower.** A relaxing knob move still releases its knobs at the release
+  time (`CompressorKnobMove`, by ear 2026-10-17), and now the follower releases the reduction after it: the swell is
+  two one-poles in a row, 10 to 90 percent in about 2.65 release time constants (1.36 before). Options: (a) keep;
+  (b) on the classic path a relaxing move snaps its knobs and the follower's release carries the swell, exactly "as
+  when the input falls", the 50 ms glide kept for adding moves and as the floor under a release shorter than it;
+  (c) keep the move and halve its time. Recommendation: (b), by ear on the listening pair of 2026-10-17.
+- **The songs' compressor and reverb numbers were tuned by ear under the old laws.** A release now means its time
+  constant on the reduction (a 15 dB reduction is back within 1 dB after 274 ms at release 0.1, against 21 to 100 ms);
+  a `reverb` lowpass of 4500 is now a dark room. A listening pass over the eleven moved renders, and new values where
+  a song wants its old sound (Kokon, Die Kirschblüte, Der Schmetterling, Gestrandet, Seltsamere Dinge, Stein um
+  Stein, A Synth Worth Lying For, Synthsturm, the frozen pieces stay as frozen).
+- **The unset damping stays a pole, not a number in Hz** (16.9 kHz at 48 kHz, 15.5 kHz at 44.1 kHz), so no song
+  moves. Options: (a) keep; (b) one cutoff in Hz at every rate (16.9 kHz: nothing moves at 48 kHz beyond rounding,
+  every 44.1 kHz render slightly). Recommendation: (a).
+- **The cutoff's floor is the engine's filter floor, 5 Hz**, with the tail accounting stretched by the lag. A room
+  under about 70 Hz holds its cylinder for up to about twice as long (the lag at 5 Hz is about one longest comb).
+  Options: (a) keep; (b) a higher floor where the lag is negligible (about 72 Hz, the pole whose memory of one lap is
+  `SILENCE_FLOOR`), with the accounting left as Freeverb had it. Recommendation: (a), raw.
+- **A modulated `reverb.lowpass` steps the pole once per block.** It did before too, but the new law moves the pole
+  much further per Hz (1000 to 16000 Hz is a pole of 0.88 to 0.21 at 48 kHz, was 0.38 to 0.13). Not measured for clicks; the
+  glide table says "measured inaudible" for the old law only.
+
+**Mutation check** (`console/tools/mutate`, one campaign of 14, two rerun): 14 of 14 killed for the expected reason.
+A1 the old linear law (`ReverbNetworkLawSpec`), A2 no Nyquist hold, A3 no 5 Hz floor, A4 the drain without the lag
+(`ReverbLowpassLawSpec`), A5 the ceiling's window without the lag (`ClosedFormTailSpec`), A6 a region's corner at the
+base rate (`ReverbNetworkLawSpec`, the 96 kHz row), A7 the lag for an unset room too (survived the first run: the
+drain-arithmetic row never ran a block; `ReverbLowpassLawSpec` now runs blocks first and kills it); B1 the level
+follower back, B2 a held stage that does not take more at once (a dead time again: the first frame's reduction is
+under the skip threshold), B3 S-02's floor gone, B4 a reset that keeps the held reduction (`CompressorSpec`; the reset
+row compares bit for bit now); C1 no pre-duck copy, C2 the shortcut taken the wrong way (no source counted as ducked),
+C3 the copy flag never cleared, a stale copy read the next block (`CylindersDuckOrderSpec`).
+
+**Cost** (`KLANG_PROBE=cost`, JVM, ns per sample net of the empty chain, before and after; under 10 percent is noise):
+
+| Row | Before | After |
+|---|---|---|
+| reverb default (wet .25 size 5) | 35.01 | 36.43 |
+| reverb wet 1 size 10 | 34.99 | 36.36 |
+| reverb wet 1 size 10 lowpass 20000 (one `sin`, one `sqrt` per block) | 34.30 | 36.93 |
+| compressor default | 23.57 | 17.52 (no blend's smoothstep per sample) |
+| compressor thr -60 ratio 100 knee 0 | 24.95 | 21.56 |
+| limiter default | 23.92 | 20.64 |
+| compressor lookahead 0.05 (path unchanged) | 37.32 | 38.41 |
+| limiter lookahead 0.005 (path unchanged) | 31.94 | 33.05 |
+| duck self-trigger, duck depth 1 | 5.39, 5.34 | 5.22, 5.34 |
+
+No row allocates per block (net_B 0 before and after). The duck rows run the stage with its own sidechain buffer, not
+`Cylinders`, so they cannot show the pre-duck copy: one block copy (256 doubles) per ducked source per block.
+
+**Suites** (test-digest, all green, after the last change): `:audio_be:jvmTest` 3128, `:audio_be:jsBrowserTest` 2950,
+`:audio_bridge:jvmTest` 160, `:sprudel:jvmTest` 3523, `:klang:jvmTest` 83, root `:jvmTest` 163. `docs-lint`: 0
+problems. The reproductions of L7b-03 and L7b-04 are deleted from `AuditSoundStagesRepro` (their numbers are above);
+L6-04 and L7b-08 had none.
+
 ## Acceptance
 
 - Every row above is fixed with a guarding spec, or listed under "Decide" with its reason.
@@ -204,3 +384,4 @@ root `:jvmTest` 163.
 - 2026-11-10: IN PROGRESS. Started.
 - 2026-11-10: PAUSED. 22 of 29 findings fixed, pinned or accepted with a reason. Waiting for the maintainer: seven decisions (see Decide).
 - 2026-11-10: IN PROGRESS. Second pass: the maintainer's answers 4, 5, 6.
+- 2026-11-10: PAUSED. Second pass landed (answers 4, 5, 6). Open: the fade's length, the delay ring's bound, the vowel table, and the second pass's five notes.

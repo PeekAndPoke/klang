@@ -11,10 +11,13 @@ import io.peekandpoke.klang.audio_be.effects.Reverb.Companion.FEEDBACK_OFFSET
 import io.peekandpoke.klang.audio_be.utils.finiteOrZero
 import io.peekandpoke.klang.audio_bridge.constants.REVERB_SIZE
 import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
+import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.ln
 import kotlin.math.pow
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 /**
  * High-performance stereo reverb based on the Freeverb algorithm
@@ -69,7 +72,7 @@ import kotlin.math.pow
  *   to 0..1 here. Tail length, via comb feedback `feedback = size · FEEDBACK_SCALE + FEEDBACK_OFFSET`:
  *   authored 3 ≈ 1.0 s, 5 ≈ 1.4 s, 10 ≈ 12.5 s. The shortest reachable tail is ~0.7 s
  *   ([FEEDBACK_OFFSET]).
- * - `reverb(lowpass)` → [lowpass] (HF damping on a scale in Hz, not a cutoff; unset = [DEFAULT_DAMP]).
+ * - `reverb(lowpass)` → [lowpass] (the -3 dB corner of the combs' damping, in Hz; unset = [DEFAULT_DAMP]).
  *
  * Authored sizes above 10 are bounded by [normalizeSize] (see there for why the bound sits at 10).
  */
@@ -78,8 +81,9 @@ class Reverb(
     /**
      * How many times the base rate [sampleRate] is, 1 outside an oversampling region (KLANG-00214 (oversampling
      * regions)). The lines are sized for [sampleRate], so the room keeps its times; the comb damping, a one-pole per
-     * sample, has its pole mapped (`damping^(1 / factor)`) and `lowpass` is read against the base rate's Nyquist, so the
-     * room keeps its brightness. At 1 nothing is mapped, bit for bit.
+     * sample, keeps its corner in Hz: a set [lowpass] is computed at [sampleRate] and held to the base rate's Nyquist,
+     * the unset damping has its pole mapped (`damping^(1 / factor)`), so the room keeps its brightness. At 1 nothing
+     * is mapped, bit for bit.
      */
     val factor: Int = 1,
 ) {
@@ -94,6 +98,23 @@ class Reverb(
     /** Longest comb revolution in samples (the right channel of the longest comb) — the
      *  countdown period [drainSamplesUntilSilent] counts in. */
     private val longestCombSamples = (combTuning.max() + stereoSpread).toDouble()
+
+    /** The shortest comb's length in samples (left channel): what [tailLapsPerWindow] counts laps of. */
+    private val shortestCombSamples = combTuning.min().toDouble()
+
+    /**
+     * The comb one-pole's lag in samples, `p / (1 - p)` (its group delay at DC, where the loop is slowest), for the
+     * pole of a SET [lowpass], as the last [process] computed it; 0 while [lowpass] is unset (KLANG-00428).
+     *
+     * Why the tail accounting needs it: a one-pole in the feedback path makes every lap of the loop longer by its lag,
+     * so the network's slowest mode decays by the feedback once per `longest comb + lag` samples, not once per comb.
+     * Freeverb's own damping (a pole of at most 0.4, a lag under 0.7 samples) hid that inside the spare sample and the
+     * spare revolution; a real cutoff reaches poles near 1 (at the 5 Hz floor, a lag about as long as the longest
+     * comb). Measured without it at the darkest cutoff and size 10: the drain countdown ended with a comb at 1.65e-5 and
+     * the ceiling let go at 1.05e-5, both over [SILENCE_FLOOR]. The unset damping (0.2) keeps the accounting it always
+     * had, 0 here, so a song that never sets [lowpass] holds and drains exactly as before.
+     */
+    private var dampingLag: Double = 0.0
 
     // --- State (flattened for performance) ---
     private val numCombs = combTuning.size
@@ -135,13 +156,18 @@ class Reverb(
         }
 
     /**
-     * High-frequency damping of the tail, on a scale in Hz; lower = darker. NaN = unset, the fixed [DEFAULT_DAMP].
+     * The cutoff of the tail's damping in Hz: the -3 dB corner of the one-pole lowpass in every comb's feedback path,
+     * so each lap of the room loses half its power at this frequency and more above it; lower is darker. NaN = unset,
+     * the fixed [DEFAULT_DAMP].
      *
-     * **Not a cutoff** (audit finding L7b-03, KLANG-00428). The value over the Nyquist frequency sets the damping of
-     * the combs' one-pole linearly, `damping = (1 - lowpass / nyquist) * DAMP_SCALE`: 0 is the darkest room, the
-     * Nyquist frequency no damping, and that one-pole's own corner never falls below about 7.5 kHz. So 1000 and 0
-     * sound almost alike: at size 5 the 4 kHz T60 is 0.79 s at 0, 0.81 s at 1000, 1.07 s unset and 1.22 s at 20000
-     * (`disproof-sound.md`). Whether it becomes a true cutoff is the maintainer's (KLANG-00428, Decide).
+     * **A real cutoff** (maintainer, 2026-11-10; audit finding L7b-03, KLANG-00428). The pole comes from the corner and
+     * the rate ([cutoffDamping]), so the same number is the same corner at 44.1 and 48 kHz and inside a region. Before,
+     * the value was a linear damping amount on a scale in Hz, and 1000 sounded almost like 0. Two bounds, neither a
+     * taste: a one-pole has no corner above the Nyquist frequency, so a cutoff above it is the Nyquist frequency (the
+     * brightest the law reaches, a pole of `3 - 2 sqrt(2)`, about 0.17); and a cutoff under [LOWPASS_FLOOR_HZ] (5 Hz,
+     * the engine's lowest filter cutoff, `clampSvfCutoff`'s) is that floor, which keeps the pole under 1, a loop that
+     * still recirculates and decays (0 and below read as the floor, the darkest room, as before). A dark cutoff makes
+     * the room's laps longer by the one-pole's lag, and the tail accounting counts it ([dampingLag]).
      *
      * **A non-finite write UNSETS it** (stored as NaN, never as a number), unlike [size], whose setter keeps what
      * it had: an unset cutoff is a meaning of its own here, and it is what `KatalystReverbEffect` reads a non-finite
@@ -218,12 +244,13 @@ class Reverb(
      *
      * One full revolution of a comb rewrites every cell as `feedback x lowpassed(history)`.
      * The damping LPF is a convex combination of already-read cells whose pre-revolution memory
-     * weight is `damping^N` — indistinguishable from zero for every supported comb length
-     * (the SHORTEST comb is N ~ 558 at the 22.05 kHz support floor, damping <= 0.4 via
-     * DAMP_SCALE; inside a region the mapped damping is nearer 1 and N longer by the same factor,
-     * so `damping^N` is the same; the convexity additionally needs `damping < 1`, which holds structurally: the
-     * effective damp is [DEFAULT_DAMP] or derived from [lowpass] bounded to [0, 1]) — so cell peaks
-     * contract by at least `|feedback|` per revolution REGARDLESS of damping (round 2 settled
+     * weight is `damping^N`, indistinguishable from zero for Freeverb's own damping (unset, 0.2: the SHORTEST comb
+     * is N ~ 558 at the 22.05 kHz support floor; inside a region the mapped damping is nearer 1 and N longer by the
+     * same factor, so `damping^N` is the same; the convexity additionally needs `damping < 1`, which the cutoff floor
+     * gives), so cell peaks contract by at least `|feedback|` per revolution. A SET cutoff can reach poles near 1,
+     * whose memory is not negligible: there the revolution is counted as the longest comb plus the one-pole's lag
+     * ([dampingLag]), the period the loop's slowest mode decays by `|feedback|` in (to first order, which errs short
+     * by far less than the spare revolution covers; KLANG-00428) (round 2 settled
      * this after round 1's dominant-root stretch argument, which is real only for toy-sized
      * combs where `damping^N` still matters). What makes the `+ 1` spare revolution
      * LOAD-BEARING, not free margin: the LPF store carries ACROSS the off-transition and is
@@ -256,7 +283,8 @@ class Reverb(
 
         val periods = ceil(ln(threshold / peak) / ln(fbAbs)) + 1.0
 
-        return periods * longestCombSamples
+        // A set cutoff's one-pole lengthens every lap by its lag (0 unset, so the count is the one it always was)
+        return periods * (longestCombSamples + dampingLag)
     }
 
     /**
@@ -378,9 +406,9 @@ class Reverb(
         ceiling.observe(
             inputPeak = TailCeiling.peakOf(buffer = input, frames = frames),
             frames = frames,
-            windowSamples = tailWindowSamples,
+            windowSamples = tailWindowSamples + dampingLag,
             feedback = effectiveFeedback(),
-            lapsPerWindow = tailLapsPerWindow,
+            lapsPerWindow = if (dampingLag == 0.0) tailLapsPerWindow else ceil((tailWindowSamples + dampingLag) / shortestCombSamples).toInt(),
         )
     }
 
@@ -401,19 +429,20 @@ class Reverb(
         // Comb feedback ← size
         val feedback = effectiveFeedback()
 
-        // Damping ← DEFAULT_DAMP, or lowpass when set. lowpass = nyquist → no damping;
-        // lowpass = 0 → max damping. Then scale to the comb LPF range.
+        // Damping: the pole of the cutoff [lowpass] when set (its corner in Hz at this rate, held to the base rate's
+        // Nyquist), else the fixed DEFAULT_DAMP, whose per-sample pole inside a region is mapped to stay where it is in
+        // Hz (one `pow` per block). One `sin` and one `sqrt` per block for a set cutoff.
         val lp = lowpass
         // NaN-guard: NaN is the unset cutoff ([lowpass] never holds an infinity).
-        val effectiveDamp = if (lp == lp) {
-            val nyquist = sampleRate / (2.0 * factor)
-            val normalised = (lp / nyquist).coerceIn(0.0, 1.0)
-            1.0 - normalised
+        val damping = if (lp == lp) {
+            cutoffDamping(cutoffHz = lp, sampleRate = sampleRate.toDouble(), nyquistHz = sampleRate / (2.0 * factor))
+        } else if (factor > 1) {
+            (DEFAULT_DAMP * DAMP_SCALE).pow(1.0 / factor)
         } else {
-            DEFAULT_DAMP
+            DEFAULT_DAMP * DAMP_SCALE
         }
-        // Inside a region the per-sample pole is mapped to stay where it is in Hz (one `pow` per block)
-        val damping = if (factor > 1) (effectiveDamp * DAMP_SCALE).pow(1.0 / factor) else effectiveDamp * DAMP_SCALE
+        // NaN-guard: the same unset test as above
+        dampingLag = if (lp == lp) damping / (1.0 - damping) else 0.0
         val invDamping = 1.0 - damping
         val outputGain = FIXED_GAIN
 
@@ -591,17 +620,44 @@ class Reverb(
         private const val FEEDBACK_OFFSET: Double = 0.7
 
         /**
-         * Comb-damping mapping: `damping = damp · DAMP_SCALE` (so `damp = 1` → 0.4), where damp is
-         * [DEFAULT_DAMP] or derived from [lowpass]. Limits HF roll-off in the comb LPF feedback path
-         * to a musical maximum.
+         * Freeverb's damping scale: the unset damping is `DEFAULT_DAMP · DAMP_SCALE`, a pole of 0.2. A set [lowpass]
+         * does not use it ([cutoffDamping]).
          */
         private const val DAMP_SCALE: Double = 0.4
 
         /**
-         * Damping (0 = bright .. 1 = dark) when no [lowpass] is set: the Freeverb default. The same damping as a
-         * [lowpass] of half the Nyquist frequency (not a corner there: see [lowpass]).
+         * Damping (0 = bright .. 1 = dark) when no [lowpass] is set: the Freeverb default, a pole of 0.2 per sample.
+         * Kept as that pole when [lowpass] became a cutoff (KLANG-00428), so a song that never sets it renders as
+         * before, bit for bit. In Hz it is a relation to the rate, not a number: its corner is 16.9 kHz at 48 kHz
+         * and 15.5 kHz at 44.1 kHz.
          */
         private const val DEFAULT_DAMP: Double = 0.5
+
+        /**
+         * The pole of a one-pole lowpass `y = (1 - p) x + p y'` whose -3 dB corner is [cutoffHz] at [sampleRate]: the
+         * root in (0, 1] of `p^2 - 2 (2 - cos w) p + 1 = 0`, `w = 2 pi fc / fs`, written with `1 - cos w = 2 sin^2(w / 2)`
+         * so a low corner keeps its digits. Exact at every rate, unlike a pole scaled from the Nyquist frequency.
+         *
+         * The corner is held to [nyquistHz], the Nyquist frequency of the rate the room is heard at (inside a region the
+         * base rate's): above it a one-pole has no -3 dB point, the formula would fold back and darken again. Under
+         * [LOWPASS_FLOOR_HZ] it is that floor: at 0 the pole would be exactly 1, a store that never changes. Kotlin
+         * `inline` (once per block in [process]), so no double crosses a call on V8.
+         */
+        @Suppress("NOTHING_TO_INLINE")
+        internal inline fun cutoffDamping(cutoffHz: Double, sampleRate: Double, nyquistHz: Double): Double {
+            val corner = if (cutoffHz > nyquistHz) nyquistHz else if (cutoffHz < LOWPASS_FLOOR_HZ) LOWPASS_FLOOR_HZ else cutoffHz
+            val half = sin(PI * corner / sampleRate)
+            val oneMinusCos = 2.0 * half * half
+
+            return 1.0 + oneMinusCos - sqrt(oneMinusCos * (oneMinusCos + 2.0))
+        }
+
+        /**
+         * The lowest cutoff [lowpass] reaches, in Hz: the engine's lowest filter cutoff, the same 5 Hz the SVF's guard
+         * holds (`clampSvfCutoff`). A stability bound, not a taste: the pole stays under 1 (about 0.99935 at 48 kHz), a
+         * loop that recirculates and decays, with a lag of about 1500 samples at 48 kHz that the tail accounting counts.
+         */
+        internal const val LOWPASS_FLOOR_HZ: Double = 5.0
 
         /** Output normalisation — sum of 8 resonant combs has high peak amplitude. */
         private const val FIXED_GAIN: Double = 0.015

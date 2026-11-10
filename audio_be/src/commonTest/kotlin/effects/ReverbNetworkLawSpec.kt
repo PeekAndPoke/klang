@@ -10,6 +10,9 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
+import kotlin.math.PI
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 /**
  * **The reverb network's output, against a Freeverb written here from the documented design** (test consolidation
@@ -20,7 +23,9 @@ import io.peekandpoke.klang.audio_be.StereoBuffer
  * 1422, 1491, 1557, 1617 samples, then four series allpasses of 556, 441, 341, 225 samples, every length scaled by
  * `fs / 44100` and truncated, the right channel's every line 23 samples (scaled) longer. A comb reads its oldest
  * sample, lowpasses it into its store `store = out (1 - d) + store d + 1e-18` and writes `in + store · feedback`,
- * with `feedback = 0.28 size + 0.7` and `d = 0.4 damp` (damp 0.5 unset, `1 - lowpass / nyquist` set). An allpass
+ * with `feedback = 0.28 size + 0.7` and `d` 0.2 unset; a set lowpass is the -3 dB corner of that one-pole,
+ * `d = 1 + a - sqrt(a (a + 2))` with `a = 2 sin^2(pi lowpass / fs)` (KLANG-00428; until then `d` was
+ * `0.4 (1 - lowpass / nyquist)`, a damping on a scale in Hz, and this oracle pinned it). An allpass
  * outputs `-in + buffered` and writes `in + 0.5 buffered + 1e-18`. The wet is `0.015` times the chain's output,
  * added onto what the output buffer holds. Each side's combs are fed `own + 0.5 (other - own)`: one room for both
  * ears (2026-09-30, KLANG-00254 (stereo reverb)).
@@ -32,7 +37,7 @@ import io.peekandpoke.klang.audio_be.StereoBuffer
 class ReverbNetworkLawSpec : StringSpec({
 
     val block = 128
-    val frames = 4096
+    val frames = 8192
 
     /** The share of the other side each side's combs hear; written here, not read from the production constant. */
     val crossFeed = 0.5
@@ -41,13 +46,20 @@ class ReverbNetworkLawSpec : StringSpec({
     fun feed(own: DoubleArray, other: DoubleArray, share: Double) = DoubleArray(own.size) { own[it] + share * (other[it] - own[it]) }
 
     fun freeverb(input: DoubleArray, sampleRate: Int, size: Double, lowpass: Double?, right: Boolean): DoubleArray {
+        // The cases keep lowpass inside (72 Hz, Nyquist), where neither of the law's bounds acts.
         val scale = sampleRate / 44100.0
         val spread = if (right) maxOf((23 * scale).toInt(), 1) else 0
         val combLengths = listOf(1116, 1188, 1277, 1356, 1422, 1491, 1557, 1617).map { maxOf((it * scale).toInt(), 1) + spread }
         val apLengths = listOf(556, 441, 341, 225).map { maxOf((it * scale).toInt(), 1) + spread }
         val feedback = size * 0.28 + 0.7
-        val damp = if (lowpass != null) 1.0 - (lowpass / (sampleRate / 2.0)).coerceIn(0.0, 1.0) else 0.5
-        val d = damp * 0.4
+        val d = if (lowpass != null) {
+            val half = sin(PI * lowpass / sampleRate)
+            val a = 2.0 * half * half
+
+            1.0 + a - sqrt(a * (a + 2.0))
+        } else {
+            0.5 * 0.4
+        }
 
         val combs = combLengths.map { DoubleArray(it) }
         val combPos = IntArray(combs.size)
@@ -88,7 +100,7 @@ class ReverbNetworkLawSpec : StringSpec({
 
     "the network renders the documented Freeverb, bit for bit, both channels, at fixed knobs" {
         // An impulse on the left, a smaller later one and a short burst on the right, so each channel's comb and
-        // allpass recirculation shows (4096 frames: past two revolutions of the longest comb). The output buffer
+        // allpass recirculation shows (8192 frames: past two revolutions of the longest comb, at 96 kHz too). The output buffer
         // holds a dry 0.25 before the wet is added in one pass: the wet is ADDITIVE. The other pass starts from 0, so
         // the wet's own bits are compared, down to the 1e-18 anti-denormal bias (under a 0.25 dry the comparison
         // resolves only ulp(0.25), about 5.6e-17, and cannot see it).
@@ -101,10 +113,11 @@ class ReverbNetworkLawSpec : StringSpec({
             }
         }
 
-        // (sample rate, normalized size, lowpass): the defaults at the reference rate, a scaled rate with a set lowpass.
+        // (sample rate, normalized size, lowpass): the defaults at the reference rate, a scaled rate with a set lowpass,
+        // and a unit inside a 2x region (96 kHz over 48), whose set corner is computed at the rate it runs at.
         for (dry in listOf(0.0, 0.25)) {
-            for ((sampleRate, size, lowpass) in listOf(Triple(44100, 0.5, null), Triple(48000, 0.8, 3000.0))) {
-                val reverb = Reverb(sampleRate).apply {
+            for ((sampleRate, size, lowpass) in listOf(Triple(44100, 0.5, null), Triple(48000, 0.8, 3000.0), Triple(96000, 0.6, 1000.0))) {
+                val reverb = Reverb(sampleRate = sampleRate, factor = if (sampleRate == 96000) 2 else 1).apply {
                     this.size = size
                     this.lowpass = lowpass ?: Double.NaN
                 }

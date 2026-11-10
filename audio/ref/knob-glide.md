@@ -41,7 +41,10 @@ reduction the targets give there, judged once per new move and never at the sign
 swells and ceilings are heard). A move that reduces no less, more or a tie (both thresholds above
 0 dBFS), glides as above. A move that reduces strictly less (a rising threshold, a
 lower ratio, a narrower knee, or a mix that relaxes on balance) does not glide: it RELEASES, the move's remaining fraction decaying as a one-pole with the compressor's own release
-time constant, so the gain comes back the way it does when the input falls (`CompressorKnobMove`).
+time constant, so the gain comes back the way it does when the input falls (`CompressorKnobMove`). Since KLANG-00428
+the classic follower smooths the gain REDUCTION, so the reduction this move asks for passes the follower's own release
+too: two one-poles in a row, 10 to 90 percent in about 2.65 release time constants (1.36 before); a gliding move
+arrives behind the glide by the attack's lag (about 1.7 dB at a 5 ms attack on a 17 dB move). Open: KLANG-00428 Decide.
 The three knobs always travel as ONE move on one shared fraction, so the path through the gain
 curve is the glide's straight line and only its timing changes: a move of mixed directions
 is judged as a whole (review round 1: with a fraction per knob the adding knob arrived in 50 ms

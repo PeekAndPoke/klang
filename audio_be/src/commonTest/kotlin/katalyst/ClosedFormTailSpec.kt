@@ -192,6 +192,27 @@ class ClosedFormTailSpec : StringSpec({
         blocks shouldBeGreaterThan 100 // a real decay was held (~0.7 s minimum tail ≈ 240 blocks)
     }
 
+    "the darkest cutoff and the longest room: the ceiling still never says no tail over a comb cell above the floor" {
+        // KLANG-00428: `reverb.lowpass` is a cutoff now, and its darkest pole (about 72 Hz) remembers far more of the
+        // windows before than Freeverb's damping of at most 0.4 did. A DC charge is the loop's slowest mode.
+        val fx = KatalystReverbEffect(reverb = Reverb(sampleRate), blockFrames = blockFrames)
+            .apply { configure(size = 1.0, lowpass = 0.0, wet = 1.0) }
+        val ctx = ctx()
+
+        repeat(400) { fx.feed(ctx, 0.5) }
+        fx.hasTail() shouldBe true
+
+        var blocks = 0
+        while (fx.hasTail()) {
+            fx.feed(ctx, 0.0)
+            blocks++
+            (blocks < 100000) shouldBe true
+        }
+        withClue("the combs must be below the threshold when the closed form says silent") {
+            fx.reverb!!.combPeakAbs() shouldBeLessThanOrEqual SILENCE_FLOOR
+        }
+    }
+
     "a hard-left reverb: the right ear gets a room, and the ceiling still holds both sides' combs" {
         // The cross-feed fills the right combs from the left input; the ceiling reads the feed's peak, so it must
         // still cover them. The mix is also the output (insert style), so after a block its right side is the wet.

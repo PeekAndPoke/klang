@@ -110,8 +110,8 @@ private fun applyReverb(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * filled in (`reverb(0.3, size = mul(2))` is size 10). A call whose only slot rests in its control
  * pattern writes nothing on that event, and fills nothing. `size` sets the tail: 3 is
  * roughly 1 s, 5 roughly 1.4 s, 10 roughly 12.5 s, the longest there is. `lowpass` darkens the
- * tail: the lower the number, the duller the room. It is a damping on a scale in Hz, not a cutoff: 0 is the
- * darkest room and half the sample rate none, and 1000 sounds almost like 0.
+ * tail: it is the cutoff in Hz of a lowpass inside the room, so every echo loses more above it, and the lower the
+ * number, the duller the room (1000 is a dark room, 8000 a soft one).
  *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
  * a mapper (`reverb(size = mul(2))`), and the numeric slots read back as `reverb.wet`, `reverb.size`, `reverb.lowpass`.
@@ -135,7 +135,7 @@ private fun applyReverb(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  *
  * @param wet How much of the cylinder goes into the room, 0 to 1, default 0.25. Cylinder-wide.
  * @param size Tail length, about 0 to 10, default 5; above 10 is bounded at 10. Cylinder-wide.
- * @param lowpass Damping of the tail, on a scale in Hz: lower is darker, from 0 (the darkest) to half the sample rate (none). Not a cutoff. Unset by default: the engine's fixed damping. Cylinder-wide.
+ * @param lowpass Cutoff of the tail's damping in Hz (5 Hz up to half the sample rate): lower is darker. Unset by default: the engine's fixed damping. Cylinder-wide.
  * @tool SprudelReverbEditor
  * @tool wet: SprudelReverbEditor, SprudelReverbSequenceEditor
  * @tool size: SprudelReverbSizeEditor, SprudelReverbSizeSequenceEditor
@@ -211,7 +211,7 @@ object reverb {
      *
      * @param wet How much of the cylinder goes into the room, 0 to 1, default 0.25. Cylinder-wide.
      * @param size Tail length, about 0 to 10, default 5; above 10 is bounded at 10. Cylinder-wide.
-     * @param lowpass Damping of the tail, on a scale in Hz: lower is darker, from 0 (the darkest) to half the sample rate (none). Not a cutoff. Unset by default: the engine's fixed damping. Cylinder-wide.
+     * @param lowpass Cutoff of the tail's damping in Hz (5 Hz up to half the sample rate): lower is darker. Unset by default: the engine's fixed damping. Cylinder-wide.
      */
     @KlangScript.Invoke
     operator fun invoke(

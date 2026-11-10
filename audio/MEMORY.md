@@ -78,13 +78,16 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   `freqHz` reads as unset in `VoiceFactory` (the list of every such reader: `audio/ref/numerical-safety.md`). A voice
   whose end lies at or before its onset renders a zero-length window and ends (`Voice` KDoc): no window is negative.
 - **Bus**: each cylinder (`Cylinder`) runs a `KatalystChain`, born with `KatalystDsl.classic` (body, vowel, delay,
-  reverb, phaser, compressor, gain; duck in a cross-cylinder pass), knobs from the owner's
+  reverb, phaser, compressor, gain; duck in a cross-cylinder pass whose every sidechain reads its source's mix before
+  any duck writes, so rent order does not matter, KLANG-00428), knobs from the owner's
   `VoiceData.katalystParams`: the cylinder's bus settings are owned by the newest `Sounding` voice; a voice gives the
   cylinder up when its gate closes or it is cut (lifecycle step 5: the block's newest offer, committed once per block
   by `Cylinders.processAndMix`; an ownerless cylinder keeps its last settings). Laws: `audio/ref/katalyst.md`; the classes: `audio/ref/effects-mixing.md`.
 - **Reverb**: one room for both ears: each side's combs are fed `(L + R) / 2` (`Reverb.CROSS_FEED` 0.5, by ear
   2026-09-30); an input with equal sides feeds what it did before, bit for bit. A Freeverb tail only: no pre-delay,
-  no early reflections (KLANG-00256 (reverb models)). Two tail floors on purpose (maintainer,
+  no early reflections (KLANG-00256 (reverb models)). `reverb.lowpass` is a real cutoff: the -3 dB corner of the
+  combs' one-pole at every rate, held to 5 Hz .. Nyquist (`Reverb.cutoffDamping`); unset is Freeverb's pole 0.2, bit
+  for bit; a set cutoff's lag lengthens the drain and ceiling lap (`Reverb.dampingLag`, KLANG-00428). Two tail floors on purpose (maintainer,
   2026-10-17): ordinary playback holds a room's ceiling to `SILENCE_FLOOR` on the cells (unchanged, the corpus pins
   it); only while its chain drains after a swap (`KatalystReverbEffect.swapDraining`, set by the drain's
   `measureTail`, cleared by reset and retire) does it answer against `Reverb.TAIL_FLOOR`, the comb level whose output
@@ -168,6 +171,10 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   at the stage's first install), from zero state: no allocation per change, and a sounding bank never retunes. A
   `wet` or `floor` change glides the blend of the sounding banks in place, no install (knob expressions step 5c).
   `audio/ref/katalyst.md`.
+- **The classic compressor** (no lookahead) smooths the gain REDUCTION: the curve on each sample's level, then the
+  smooth decoupled peak detector (Giannoulis, Massberg and Reiss), so no dead time after silence and a release on the
+  reduction whatever follows (KLANG-00428; `Compressor` KDoc). A relaxing knob move's release and the follower's now
+  run in a row (open, KLANG-00428 Decide).
 - **Authored lookahead** (Katalyst `compressor` / `limiter`): build-time, at most
   `Compressor.MAX_LOOKAHEAD_SECONDS` 0.05, uncompensated by the author's choice; the authored limiter defaults to
   lookahead 0 and a 1 ms attack (`AUTHORED_LIMITER_*`).
@@ -448,6 +455,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-11-10 The bus, second pass: `reverb.lowpass` a real cutoff, the compressor smooths the reduction, ducks read every source before any duck writes: KLANG-00428
 - 2026-11-10 The Ignitor build: the fused filter keeps its gate, the name holds the sharing, the shimmer gated, off stages cost their query only, a region's memo does not freeze: KLANG-00429
 - 2026-11-10 The bus: a switch-on and a swap fade the delay's and room's feed in, an O(1) ring reset, an offset cut at a swap, the pad's tail, the phaser under 36 kHz, every cylinder cleaned: KLANG-00428
 - 2026-11-10 Voice edges: the envelope's end on an exact 0, onsets on their frame, a cut by onset order, the replace dedup sub-quadratic: KLANG-00427

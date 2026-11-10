@@ -7,7 +7,6 @@ package io.peekandpoke.klang.audio_be.effects
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.effects.Compressor.Companion.DB20_OVER_LN10
-import io.peekandpoke.klang.audio_be.effects.Compressor.Companion.ENV_COEFF_BLEND_DB
 import io.peekandpoke.klang.audio_be.effects.Compressor.Companion.FAST_RELEASE_DIVISOR
 import io.peekandpoke.klang.audio_be.effects.Compressor.Companion.LN10_OVER_20
 import io.peekandpoke.klang.audio_be.utils.copyRangeInto
@@ -32,8 +31,9 @@ import kotlin.math.max
  * The amount of attenuation is controlled by the ratio parameter.
  *
  * **Two topologies, selected by [lookaheadSeconds]:**
- *   - `0` (default) — dB-domain one-pole envelope follower (peak link via `max(|L|, |R|)`) feeding a
- *     soft-knee parabolic gain curve. Standard musical-compressor design; no added latency.
+ *   - `0` (default): the soft-knee parabolic gain curve on the instantaneous peak level (peak link via
+ *     `max(|L|, |R|)`, in dB), then a one-pole attack and release on its output, the gain reduction in dB.
+ *     Standard feed-forward design; no added latency.
  *   - `> 0` — anticipating: running MINIMUM of the required gain over the lookahead window, a
  *     release stage, then two cascaded box filters, applied to the signal delayed by that window.
  *     Holds the ceiling on transients instead of chasing them. Costs exactly that much latency: on
@@ -41,14 +41,17 @@ import kotlin.math.max
  *     whatever runs through it late by that much (a cylinder's `Katalyst(k => k.limiter(lookahead =
  *     ...))`, phase 3 step 12 C2: the author's choice, never compensated).
  *
- * **The classic follower smooths the LEVEL, in dB, before the gain computer** (audit finding L7b-04, KLANG-00428;
- * whether that law stays is open there, under Decide). After silence the envelope stands at -100 dB, so an onset
- * passes untouched until the envelope reaches `threshold - knee / 2`: a dead time of `attack * ln((level + 100) /
- * (level - threshold + knee / 2))`, 211 frames (4.4 ms) at the defaults on a 0 dBFS step and 188 (3.9 ms) for the
- * limiter preset, so a limiter without a lookahead is no ceiling for those first milliseconds. Its release likewise
- * depends on what follows: at release 0.1 s the reduction is gone 24.5 ms after the input stops and 128.9 ms after it
- * drops to -30 dBFS (`disproof-sound.md`). A level at or under -100 dB reads as -100 dB, never quieter (S-02). The
- * lookahead topology has neither property.
+ * **The classic follower smooths the GAIN REDUCTION, in dB, after the gain computer** (maintainer, 2026-11-10;
+ * audit finding L7b-04, KLANG-00428): the log-domain feed-forward detector with smooth, decoupled ballistics of
+ * Giannoulis, Massberg and Reiss ("Digital Dynamic Range Compressor Design", JAES 2012). The curve reads each
+ * sample's level, a level at or under -100 dB as -100 dB (S-02), and the attack and release move the reduction
+ * toward what the curve asks. So an onset is reduced from its first sample, and the release is the release time
+ * constant on the reduction in force, whatever follows. Until then the follower smoothed the LEVEL before the curve:
+ * after silence a 0 dBFS step passed untouched for 211 frames (4.4 ms) at the defaults and 188 (3.9 ms) for the
+ * limiter preset, and the release hung on the -100 dB floor (24.5 ms into silence, 128.9 ms into -30 dBFS). On a
+ * steady level the reduction is the curve's, as before, to the last digit; on a sine the ripple between the peaks
+ * is the reduction's now, not the level's, so its steady reduction differs by a fraction of a dB (KLANG-00428). The
+ * lookahead topology is unchanged.
  *
  * Used in two places:
  *   1. Per-cylinder musical compressor (user-facing).
@@ -219,8 +222,10 @@ class Compressor(
         }
     }
 
-    // Envelope follower state.
-    private var envelopeDb: Double = SILENCE_DB
+    // The follower's state, in dB of gain reduction (0 or below): the release stage's held reduction, and the
+    // reduction applied, which follows it at the attack time constant ([smoothReduction]).
+    private var heldDb: Double = 0.0
+    private var reductionDb: Double = 0.0
 
     /**
      * True when the knobs at the `TO` ends of [glideArgs] reduce LESS than those at the `FROM` ends, both on this curve
@@ -506,8 +511,7 @@ class Compressor(
      * (`thresholdFrom`, `inverseRatioFrom`, `kneeFrom`) to `thresholdTo`, `inverseRatioTo` and
      * `kneeTo`, written from the END, so the last sample runs at the `To` values bit for bit. The six arrive in
      * [glideArgs], written by the caller before the call. The
-     * envelope follower is the same one [process] runs (it reads none of the three), so it stays
-     * continuous.
+     * follower's state is the same one [process] runs, so it stays continuous.
      *
      * **The ratio moves as its inverse, `1 / ratio`**, so the curve's slope `1 / ratio - 1` moves
      * linearly. A glide linear in the ratio itself bunches a wide change into one end of the glide
@@ -521,6 +525,9 @@ class Compressor(
      * and a per-sample ramp at the steady floor. The cylinder compressor's glide
      * (`KatalystCompressorEffect`) is the caller; the fields are NOT touched here, they hold what
      * the caller configured last.
+     *
+     * The curve's output passes the same attack and release as [process] (the follower is on the reduction), so a
+     * gliding knob is smoothed by the ballistics too.
      *
      * The values are the caller's and are used as given: pass what the setters stored (an inverse
      * ratio in `(0, 1]`, a knee of at least 0), and a linear ramp between two such values stays in
@@ -553,14 +560,15 @@ class Compressor(
         for (i in 0 until blockSize) {
             val back = (last - i).toDouble()
 
-            followEnvelope(max(abs(left[i]), abs(right[i])))
-
-            val reductionDb = gainReductionDb(
-                inputDb = envelopeDb,
+            val targetDb = gainReductionDb(
+                inputDb = levelDb(max(abs(left[i]), abs(right[i]))),
                 thresholdDb = thresholdTo - thresholdStep * back,
                 slope = (inverseRatioTo - inverseRatioStep * back) - 1.0,
                 kneeDb = kneeTo - kneeStep * back,
             )
+
+            smoothReduction(targetDb)
+
             val totalGain = gainFor(reductionDb)
 
             left[i] = left[i] * totalGain
@@ -621,54 +629,59 @@ class Compressor(
     }
 
     /**
-     * Per-sample envelope-follower + gain-curve step. Inlined into the classic loop of [process]
+     * Per-sample gain-curve + follower step. Inlined into the classic loop of [process]
      * so that loop body stays specialized.
      * Uses precomputed [DB20_OVER_LN10] / [LN10_OVER_20] to skip per-sample `ln(10.0)` calls.
      */
     @Suppress("NOTHING_TO_INLINE")
     private inline fun envelopeStep(level: Double): Double {
-        followEnvelope(level)
+        smoothReduction(calculateGainReduction(levelDb(level)))
 
-        return gainFor(calculateGainReduction(envelopeDb))
+        return gainFor(reductionDb)
     }
 
     /**
-     * One sample of the envelope follower: moves [envelopeDb] toward [level] (in dB). It reads no
-     * gain-computer knob (threshold, ratio, knee), which is what lets [processGliding] move those
-     * per sample over the one envelope.
+     * One sample's level in dB, the gain curve's input: the peak link's level, floored at the follower's silence.
      */
     @Suppress("NOTHING_TO_INLINE")
-    private inline fun followEnvelope(level: Double) {
+    private inline fun levelDb(level: Double): Double {
         // Same non-finite guard the lookahead path carries at `lookaheadStep`, and for a
-        // sharper reason here: this path had NONE, so one +Inf sample latched the envelope
-        // and silently DISABLED the limiter for good. `ln(Inf)` gives `envelopeDb = Inf`, the
-        // next finite sample computes `Inf + releaseCoeff * -Inf` = NaN, and from then on
-        // `calculateGainReduction(NaN)` is NaN, `NaN < GAIN_SKIP_THRESHOLD_DB` is false, and
-        // this returns exactly 1.0 forever — a brickwall that has become a bit-exact
-        // pass-through with nothing to indicate it. Note the direction: a NaN SAMPLE never
-        // latched it (`NaN > SILENCE_DB_LIN` is false); only +/-Inf did.
+        // sharper reason here: this path had NONE, so one +Inf sample latched the follower
+        // and silently DISABLED the limiter for good (an infinite level, then `Inf - Inf` = NaN
+        // in the follower, and `NaN < GAIN_SKIP_THRESHOLD_DB` is false, so the gain was exactly
+        // 1.0 forever: a brickwall that had become a bit-exact pass-through with nothing to
+        // indicate it). Note the direction: a NaN SAMPLE never latched it (`NaN > SILENCE_DB_LIN`
+        // is false); only +/-Inf did.
         val inputLevel = level.finiteOrZero()
 
         // Convert to dB, floored at the follower's silence: a level at or under [SILENCE_DB_LIN] reads as
         // [SILENCE_DB], the dB of exactly that level, so the floor is continuous and nothing reads quieter than
-        // silence. The floor was [SILENCE_LIN], 1e-10, so a level between the two (-200 to -100 dB) drove the envelope
-        // below where silence leaves it, and a release into a very quiet tail headed further down than one into
-        // silence (KLANG-00428, the audit's S-02). It also spares the `ln` under -100 dB.
-        val inputDb = if (inputLevel > SILENCE_DB_LIN) {
+        // silence (KLANG-00428, the audit's S-02; the floor was [SILENCE_LIN], 1e-10). It also spares the `ln` under
+        // -100 dB. With the follower on the reduction it matters only to a threshold under -100 dB.
+        return if (inputLevel > SILENCE_DB_LIN) {
             DB20_OVER_LN10 * ln(inputLevel)
         } else {
             SILENCE_DB
         }
+    }
 
-        // Envelope follower: one-pole IIR `y += k * (x - y)`. Instead of hard-switching the
-        // coefficient on direction (a slope kink + chatter at every attack<->release crossing),
-        // blend attack->release smoothly across a +/- ENV_COEFF_BLEND_DB window around error=0.
-        // C1, branchless: error >= +W keeps full attackCoeff (peaks still caught at full speed →
-        // limiter-safe), error <= -W is full releaseCoeff; |error| < W blends with no kink.
-        val error = inputDb - envelopeDb
-        val blend = smoothstep01((error + ENV_COEFF_BLEND_DB) / (2.0 * ENV_COEFF_BLEND_DB))
-        val coeff = releaseCoeff + (attackCoeff - releaseCoeff) * blend
-        envelopeDb += coeff * error
+    /**
+     * One sample of the follower, the smooth decoupled peak detector of Giannoulis, Massberg and Reiss on the
+     * reduction (KLANG-00428): [heldDb] takes [targetDb], the curve's reduction for this sample, at once when it asks
+     * for more and releases toward it at the release time constant otherwise; [reductionDb] follows [heldDb] at the
+     * attack time constant. So the attack is the attack, from the first sample, and the release is the release (then
+     * the attack's short one-pole), on the reduction in force whatever the level does under the knee. The output is
+     * continuous with a continuous slope (a one-pole after a continuous signal), with no attack-release blend: the
+     * blend the level follower had, a +/-2 dB window around the target, would on the reduction run the last 2 dB of
+     * every release at about half the attack's speed. It reads no gain-computer knob (threshold, ratio, knee), which is
+     * what lets [processGliding] move those per sample.
+     */
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun smoothReduction(targetDb: Double) {
+        // Reductions are 0 dB or below: "more reduction" is the smaller number.
+        val released = heldDb + releaseCoeff * (targetDb - heldDb)
+        heldDb = if (targetDb < released) targetDb else released
+        reductionDb += attackCoeff * (heldDb - reductionDb)
     }
 
     /**
@@ -690,8 +703,8 @@ class Compressor(
      *
      * The ordering is load-bearing. Taking `min(smoothed, onePoleRelease)` *after* the smoother is
      * C0 at the crossover — the box path leaves its minimum with slope 0, accelerates, then meets
-     * the release path and the gain slope drops ~40x in one sample. That is the same corner
-     * [ENV_COEFF_BLEND_DB] exists to remove. Running release *before* the boxes keeps the whole
+     * the release path and the gain slope drops ~40x in one sample, a corner the classic path's follower avoids by
+     * smoothing its held reduction with a one-pole ([smoothReduction]). Running release *before* the boxes keeps the whole
      * trajectory C1, and safety is preserved because `release <= held` pointwise, so
      * `box(release) <= box(held) <= required`.
      *
@@ -803,13 +816,6 @@ class Compressor(
         minTail = 1
     }
 
-    /** Clamped cubic smoothstep: 0 below 0, 1 above 1, C1 at both ends. Polynomial (no `exp`). */
-    @Suppress("NOTHING_TO_INLINE")
-    private inline fun smoothstep01(x: Double): Double {
-        val c = x.coerceIn(0.0, 1.0)
-        return c * c * (3.0 - 2.0 * c)
-    }
-
     /**
      * Calculate gain reduction in dB for a given input level in dB.
      * Implements soft-knee compression — parabolic blend on `[-halfKnee, +halfKnee]`,
@@ -894,7 +900,8 @@ class Compressor(
      * Reset the compressor state.
      */
     fun reset() {
-        envelopeDb = SILENCE_DB
+        heldDb = 0.0
+        reductionDb = 0.0
         if (delayFrames > 0) resetLookaheadState()
     }
 
@@ -972,18 +979,12 @@ class Compressor(
         /** Fewest taps per box filter. Two 1-tap boxes are an identity — see `resizeSmoothing`. */
         private const val MIN_BOX_TAPS: Int = 4
 
-        // Envelope follower silence floor.
+        // The level the classic path reads silence as, and the lookahead path's floor.
         private const val SILENCE_DB: Double = -100.0
         private const val SILENCE_LIN: Double = 1e-10
 
         /** The linear level whose dB is [SILENCE_DB] (`10^(-100 / 20)`): the classic follower's silence floor. */
         private const val SILENCE_DB_LIN: Double = 1e-5
-
-        // Attack<->release coefficient blend half-width in dB. The follower coefficient
-        // smoothstep-blends from releaseCoeff to attackCoeff across [-W, +W] around error=0,
-        // removing the hard direction-switch kink. Larger = smoother but softer near-threshold
-        // attack; tune by ear.
-        private const val ENV_COEFF_BLEND_DB: Double = 2.0
 
         // Gain-curve exp-skip cutoff in dB. Below this reduction we return 1.0 to skip the
         // per-sample `exp`; small enough that exp(cutoff) ≈ 1 within ~-100 dB so the residual

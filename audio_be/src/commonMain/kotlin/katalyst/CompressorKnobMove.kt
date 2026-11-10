@@ -22,7 +22,10 @@ import io.peekandpoke.klang.audio_be.utils.isFiniteInline
  *   the follower's envelope, so a move after a rest is judged like the same move mid-phrase. Less
  *   reduction at the targets (a rising threshold, a lower ratio, a narrower knee, or a mix of moves that relaxes on
  *   balance) RELEASES: the remaining fraction decays as a one-pole with the compressor's own release time constant,
- *   so the gain comes back the way it does when the input falls. Anything else, more reduction or the same (a tie, as
+ *   so the gain comes back the way it does when the input falls (since KLANG-00428 the follower's own release runs
+ *   after it, on the reduction the curve asks for, so the swell is two one-poles in a row: 10 to 90 percent in about
+ *   2.65 release time constants, 1.36 before; whether this move should now step aside for the follower is open,
+ *   KLANG-00428 Decide). Anything else, more reduction or the same (a tie, as
  *   when both thresholds sit above 0 dBFS), GLIDES linearly over
  *   [io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS] in whole blocks, the [KnobGlide] law. Judging by
  *   any one knob instead ran a compressor-to-limiter swap (the knee narrows) at the release: a new ceiling exceeded

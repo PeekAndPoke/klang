@@ -36,7 +36,7 @@ import kotlin.math.min
  *   -5 to -34 dB below 60 Hz (a thump on the bass); the glide lands at -78 to -86 dB above 8 kHz,
  *   the steady floor, and below 60 Hz within 7 dB of the compressor's own steady floor (the level
  *   change itself, spread over the glide).
- * - **ON** starts a new life (the envelope rises from rest by its own attack, exactly as a freshly
+ * - **ON** starts a new life (the reduction rises from rest by its own attack, exactly as a freshly
  *   built compressor's would) and fades it in from dry. Measured without the fade-in: not a click (-67 dB or quieter above 8 kHz), but at
  *   an attack of 5 ms or less the level drops at the attack's speed, 8 to 26 dB above the steady
  *   floor below 60 Hz; the fade-in leaves at most 8 dB, like the OFF glide. At a 20 ms attack the
@@ -55,8 +55,9 @@ import kotlin.math.min
  * **What glides while it runs** (`audio/ref/knob-glide.md`, measured first in 5c-7): the gain
  * computer's THRESHOLD, RATIO and KNEE, per sample ([Compressor.processGliding]), together as
  * one [CompressorKnobMove] (a shared move that glides like a [KnobGlide], or releases, below), the ratio as its INVERSE (the curve is linear in `1 / ratio - 1`; a glide linear in
- * the ratio bunched a 100 to 1 change into the glide's last blocks, -41 dB). A jump of any of them steps the gain at once, because the gain computer has no
- * memory: a threshold jump measured -9 to -36 dB above 8 kHz, a ratio jump -27 to -43, a knee jump
+ * the ratio bunched a 100 to 1 change into the glide's last blocks, -41 dB). A jump of any of them stepped the gain at once while the
+ * follower smoothed the LEVEL before the gain computer (until KLANG-00428; now the attack and release smooth the curve's output, so a
+ * jump comes through at the attack's speed at most): a threshold jump measured -9 to -36 dB above 8 kHz, a ratio jump -27 to -43, a knee jump
  * (with the envelope inside the knee) -34 to -52; a per-block glide left -31 to -69 dB in a model
  * of the gain computer (the zipper); the per-sample ramp reaches the steady floor in every row but
  * one kind: a wide RISING threshold swing (-40 to 0 dB) stayed at -62 to -65 dB, part the size of a
@@ -64,7 +65,8 @@ import kotlin.math.min
  * **A move that RELAXES the compressor releases instead of gliding** (since 2026-10-17, decided by ear: "the
  * hard swell is not really acceptable, or at least not that fast"): a rising threshold, a falling ratio or a
  * narrower knee approaches its target as a one-pole at the compressor's own RELEASE time constant, so the gain comes
- * back as it does when the input falls, never faster than the 50 ms glide. The three knobs move as one, on one
+ * back as it does when the input falls, never faster than the 50 ms glide (and since KLANG-00428 the follower's own
+ * release after it, see [CompressorKnobMove]). The three knobs move as one, on one
  * fraction, and the law is the move's NET effect at a fixed 0 dBFS: less reduction releases, more or a
  * tie keeps the 50 ms glide. The rules are [CompressorKnobMove]'s; a modulated knob is not part of the move.
  * ATTACK and RELEASE do not glide: they are the follower's own coefficients and its state stays
