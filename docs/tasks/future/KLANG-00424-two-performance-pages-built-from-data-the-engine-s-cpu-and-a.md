@@ -33,6 +33,13 @@ refactoring (KLANG-00422) is done (the maintainer, the same day).
   runs of the same machine: a number measured elsewhere is shown, marked, and left out of the trend.
 - **The pages are built by a script each,** like `engine_health.py`, with no hand step: the release tool calls
   "gather" and then "build". A switch builds from the last run's data without measuring.
+- **The engine's performance is a page of its own, not a part of Engine Health** (the maintainer, 2026-11-10:
+  "multiple pages are fine"). The two answer different questions (is something wrong now; how fast, and which way
+  it moves), change at different times (a probe run or a verdict; every run, no verdict), and only performance
+  belongs to a machine. What joins them: Engine Health gets one row, "CPU and allocations", its light from a rule
+  over the performance data (green: the newest run within a few percent of the one before on the same machine;
+  yellow: slower by more; grey: no earlier run to compare), and the row links to the performance page. So a
+  regression shows where one looks first, and the detail has room. Sprudel's performance stays a third page.
 - **Sprudel needs its measurement first:** what to measure (querying a set of real patterns from the songs over a
   number of cycles, on the JVM and on JS) is decided with the maintainer.
 
@@ -50,7 +57,8 @@ refactoring (KLANG-00422) is done (the maintainer, the same day).
 1. The engine's CPU and allocation data as JSON, with the machine and the commit; the page from it.
 2. The history and the trend graphs.
 3. Sprudel's benchmark (after D1), its data, its page.
-4. The two cards on the Dev status page, their previews; the release tool's calls (KLANG-00423).
+4. Engine Health's "CPU and allocations" row, its rule in `engine_health.py` and its link.
+5. The two cards on the Dev status page, their previews; the release tool's calls (KLANG-00423).
 
 ## Acceptance
 
@@ -61,3 +69,5 @@ refactoring (KLANG-00422) is done (the maintainer, the same day).
 ## History
 
 - 2026-11-10: created from the maintainer's list for the release process; waits for KLANG-00422.
+- 2026-11-10: decided: the engine's performance is a page of its own; Engine Health shows one row with a light
+  from its data and links there.
