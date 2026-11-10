@@ -1,6 +1,6 @@
 # KLANG-00427: Audit fixes 3: voice edges (the note-end step, starts without an envelope, cuts, the one-frame-early onset, stop)
 
-> **Status (2026-11-10): DESIGNED.** From the engine audit (KLANG-00420); maintainer, 2026-11-10: fix all findings, sound changes are fine.
+> **Status (2026-11-10): IN PROGRESS.** Started.
 >
 > **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
@@ -50,3 +50,4 @@ run with `KLANG_PROBE=audit`), fix it, and turn the reproduction's row into an o
 ## History
 
 - 2026-11-10: created.
+- 2026-11-10: IN PROGRESS. Started.
