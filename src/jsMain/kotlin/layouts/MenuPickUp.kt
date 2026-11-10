@@ -14,6 +14,7 @@ import io.peekandpoke.klang.pages.docs.tutorials.allTutorials
 import io.peekandpoke.klang.pages.docs.tutorials.tutorialTrack
 import io.peekandpoke.klang.spine.Playbacks
 import io.peekandpoke.klang.spine.Recents
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.storage.TutorialStorage
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
@@ -125,7 +126,7 @@ class MenuPickUp(ctx: Ctx<Props>) : Component<MenuPickUp.Props>(ctx) {
         }
     }
 
-    private val entries by subscribingTo(Recents.entries)
+    private val entries by subscribingTo(spine.recents.entries)
 
     private val done by subscribingTo(TutorialStorage.done)
 

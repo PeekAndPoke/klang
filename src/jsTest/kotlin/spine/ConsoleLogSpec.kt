@@ -22,8 +22,9 @@ import io.peekandpoke.klang.common.logging.Logger
 class ConsoleLogSpec : StringSpec({
 
     "fed by the log: the records kept, the errors counted until seen; cleared, all gone" {
-        ConsoleLog.clear()
-        ConsoleLog.install()
+        val console = ConsoleLog()
+
+        console.install()
 
         try {
             val log = Logger(area = LogArea.App, source = "Spec")
@@ -34,36 +35,35 @@ class ConsoleLogSpec : StringSpec({
             log.error("four")
 
             withClue("the records, in order") {
-                ConsoleLog.state().buffer.records.map { it.message } shouldBe listOf("one", "two", "three", "four")
+                console.state().buffer.records.map { it.message } shouldBe listOf("one", "two", "three", "four")
             }
-            withClue("the errors, unseen") { ConsoleLog.state().unseenErrors shouldBe 2 }
+            withClue("the errors, unseen") { console.state().unseenErrors shouldBe 2 }
 
-            ConsoleLog.seen()
+            console.seen()
 
             withClue("seen: none unseen, the records kept") {
-                ConsoleLog.state().unseenErrors shouldBe 0
-                ConsoleLog.state().buffer.records.size shouldBe 4
+                console.state().unseenErrors shouldBe 0
+                console.state().buffer.records.size shouldBe 4
             }
 
             log.error("five")
 
-            withClue("a new error after: one") { ConsoleLog.state().unseenErrors shouldBe 1 }
+            withClue("a new error after: one") { console.state().unseenErrors shouldBe 1 }
 
             withClue("installed twice: each record kept once") {
-                ConsoleLog.install()
+                console.install()
                 log.info("six")
-                ConsoleLog.state().buffer.records.count { it.message == "six" } shouldBe 1
+                console.state().buffer.records.count { it.message == "six" } shouldBe 1
             }
 
-            ConsoleLog.clear()
+            console.clear()
 
             withClue("cleared: nothing kept, nothing unseen") {
-                ConsoleLog.state().buffer.records shouldBe emptyList()
-                ConsoleLog.state().unseenErrors shouldBe 0
+                console.state().buffer.records shouldBe emptyList()
+                console.state().unseenErrors shouldBe 0
             }
         } finally {
-            KlangLog.removeListener(ConsoleLog.listener)
-            ConsoleLog.clear()
+            KlangLog.removeListener(console.listener)
         }
     }
 

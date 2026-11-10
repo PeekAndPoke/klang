@@ -13,6 +13,8 @@ import io.peekandpoke.klang.common.logging.LogArea
 import io.peekandpoke.klang.common.logging.LogLevel
 import io.peekandpoke.klang.common.logging.LogRecord
 import io.peekandpoke.klang.spine.ConsoleLog
+import io.peekandpoke.klang.spine.Spine
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.ui.comp.KlangLamp
 import io.peekandpoke.kraft.testing.TestBed
 import io.peekandpoke.kraft.testing.eventually
@@ -46,86 +48,82 @@ class ConsoleToolSpec : StringSpec({
         fun error(message: String) =
             LogRecord(level = LogLevel.Error, area = LogArea.App, source = "S", message = message, error = null, timeMs = 1.0)
 
-        ConsoleLog.clear()
+        val console = ConsoleLog()
 
-        try {
-            ConsoleLog.listener.onRecord(error("before"))
-            ConsoleLog.listener.onRecord(record("a warning"))
-            ConsoleLog.state().unseenErrors shouldBe 1
+        console.listener.onRecord(error("before"))
+        console.listener.onRecord(record("a warning"))
+        console.state().unseenErrors shouldBe 1
 
-            TestBed.preact(view = { ConsoleTool() }) { root ->
-                val r = root.single()
+        TestBed.preact(appSetup = { spine(Spine(console = console)) }, view = { ConsoleTool() }) { root ->
+            val r = root.single()
 
-                withClue("shown: the one there seen, the records drawn") {
-                    eventually {
-                        ConsoleLog.state().unseenErrors shouldBe 0
-                        r.textContent!!.contains("before") shouldBe true
-                    }
-                }
-
-                ConsoleLog.listener.onRecord(error("while shown"))
-
-                withClue("one that comes while shown: seen as it comes") {
-                    ConsoleLog.state().unseenErrors shouldBe 0
-                    eventually { r.textContent!!.contains("while shown") shouldBe true }
-                }
-
-                val warn = r.querySelectorAll("button").let { all -> (0 until all.length).map { all.item(it) as HTMLElement } }
-                    .first { it.textContent?.trim() == "Warn" }
-
-                warn.click()
-
-                withClue("Warn switched off: the warning hidden, the errors still there") {
-                    eventually {
-                        r.textContent!!.contains("a warning") shouldBe false
-                        r.textContent!!.contains("before") shouldBe true
-                    }
-                }
-
-                warn.click()
-
-                withClue("each row with its area and source") {
-                    eventually { r.textContent!!.contains("[midi/MidiRig]") shouldBe true }
-                }
-
-                fun choose(label: String, value: String) {
-                    val select = r.querySelector("select[aria-label=$label]") as HTMLSelectElement
-
-                    select.value = value
-                    select.dispatchEvent(Event("change", EventInit(bubbles = true)))
-                }
-
-                fun sourceOptions(): List<String> {
-                    val options = r.querySelectorAll("select[aria-label=Source] option")
-
-                    return (0 until options.length).map { (options.item(it) as HTMLElement).textContent.orEmpty() }
-                }
-
-                choose(label = "Source", value = "S")
-
-                withClue("the source S: the warning from MidiRig hidden") {
-                    eventually { r.textContent!!.contains("a warning") shouldBe false }
-                }
-
-                choose(label = "Area", value = LogArea.Midi.label)
-
-                withClue("the area midi: the source chosen before let go, its warning shown, the app's errors hidden") {
-                    eventually {
-                        r.textContent!!.contains("a warning") shouldBe true
-                        r.textContent!!.contains("before") shouldBe false
-                    }
-                }
-                withClue("the sources to choose: only the area's") {
-                    eventually { sourceOptions() shouldBe listOf("All sources", "MidiRig") }
+            withClue("shown: the one there seen, the records drawn") {
+                eventually {
+                    console.state().unseenErrors shouldBe 0
+                    r.textContent!!.contains("before") shouldBe true
                 }
             }
 
-            ConsoleLog.listener.onRecord(error("after"))
+            console.listener.onRecord(error("while shown"))
 
-            withClue("no Console shown any more: counted again") { ConsoleLog.state().unseenErrors shouldBe 1 }
-        } finally {
-            ConsoleLog.clear()
+            withClue("one that comes while shown: seen as it comes") {
+                console.state().unseenErrors shouldBe 0
+                eventually { r.textContent!!.contains("while shown") shouldBe true }
+            }
+
+            val warn = r.querySelectorAll("button").let { all -> (0 until all.length).map { all.item(it) as HTMLElement } }
+                .first { it.textContent?.trim() == "Warn" }
+
+            warn.click()
+
+            withClue("Warn switched off: the warning hidden, the errors still there") {
+                eventually {
+                    r.textContent!!.contains("a warning") shouldBe false
+                    r.textContent!!.contains("before") shouldBe true
+                }
+            }
+
+            warn.click()
+
+            withClue("each row with its area and source") {
+                eventually { r.textContent!!.contains("[midi/MidiRig]") shouldBe true }
+            }
+
+            fun choose(label: String, value: String) {
+                val select = r.querySelector("select[aria-label=$label]") as HTMLSelectElement
+
+                select.value = value
+                select.dispatchEvent(Event("change", EventInit(bubbles = true)))
+            }
+
+            fun sourceOptions(): List<String> {
+                val options = r.querySelectorAll("select[aria-label=Source] option")
+
+                return (0 until options.length).map { (options.item(it) as HTMLElement).textContent.orEmpty() }
+            }
+
+            choose(label = "Source", value = "S")
+
+            withClue("the source S: the warning from MidiRig hidden") {
+                eventually { r.textContent!!.contains("a warning") shouldBe false }
+            }
+
+            choose(label = "Area", value = LogArea.Midi.label)
+
+            withClue("the area midi: the source chosen before let go, its warning shown, the app's errors hidden") {
+                eventually {
+                    r.textContent!!.contains("a warning") shouldBe true
+                    r.textContent!!.contains("before") shouldBe false
+                }
+            }
+            withClue("the sources to choose: only the area's") {
+                eventually { sourceOptions() shouldBe listOf("All sources", "MidiRig") }
+            }
         }
+
+        console.listener.onRecord(error("after"))
+
+        withClue("no Console shown any more: counted again") { console.state().unseenErrors shouldBe 1 }
     }
 
     "the error's text only where the message does not say it already" {

@@ -21,7 +21,6 @@ import io.peekandpoke.klang.layouts.PageWorkbench
 import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.spine.KlangCodePlaybackCtrl
 import io.peekandpoke.klang.spine.Playbacks
-import io.peekandpoke.klang.spine.Recents
 import io.peekandpoke.klang.spine.VisualState
 import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
@@ -216,7 +215,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     @Suppress("unused")
     private val recent by subscribingTo(ctrl.state.map { it.title to it.rpm }.distinct()) { (title, rpm) ->
         if (dom?.closest("[inert]") == null) {
-            Recents.openedSong(id = songId, title = title?.ifBlank { null } ?: builtIn?.title ?: "New Song", rpm = rpm)
+            spine.recents.openedSong(id = songId, title = title?.ifBlank { null } ?: builtIn?.title ?: "New Song", rpm = rpm)
         }
     }
 

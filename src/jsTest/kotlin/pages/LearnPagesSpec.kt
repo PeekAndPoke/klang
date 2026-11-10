@@ -31,6 +31,8 @@ import io.peekandpoke.klang.pages.docs.tutorials.patternLanguageTrack
 import io.peekandpoke.klang.pages.docs.tutorials.soundDesignBasicsTrack
 import io.peekandpoke.klang.pages.docs.tutorials.theKlangPathTrack
 import io.peekandpoke.klang.spine.Recents
+import io.peekandpoke.klang.spine.Spine
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.storage.StorageKeys
 import io.peekandpoke.klang.storage.TutorialStorage
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
@@ -81,14 +83,20 @@ class LearnPagesSpec : StringSpec({
 
     val path = theKlangPathTrack.lessons
 
+    /** The Spine of the app under test, a new one for each case ([withLearn]). */
+    lateinit var own: Spine
+
     suspend fun withLearn(done: Set<String> = emptySet(), test: suspend TestBedScope.(root: Element) -> Unit) {
         allTutorials.forEach { TutorialStorage.setCompleted(it.slug, it.slug in done) }
         // The search is shared by the column and the overview: each case starts with it empty
         LearnSearch.text("")
 
+        own = Spine()
+
         try {
             TestBed.preact(
                 appSetup = {
+                    spine(own)
                     // The app's addons: the examples' editors draw their highlights with PixiJS
                     addons {
                         browserDetect()
@@ -407,7 +415,7 @@ class LearnPagesSpec : StringSpec({
                 go("/${filters.slug}?${TutorialPage.PARAM_TRACK}=${soundDesignBasicsTrack.slug}")
 
                 eventually {
-                    val last = Recents.entries().first()
+                    val last = own.recents.entries().first()
 
                     last.kind shouldBe Recents.Kind.Tutorial
                     last.id shouldBe filters.slug
@@ -418,12 +426,12 @@ class LearnPagesSpec : StringSpec({
                 go("/${path[1].slug}")
 
                 eventually {
-                    Recents.entries().first().id shouldBe path[1].slug
+                    own.recents.entries().first().id shouldBe path[1].slug
                     // Read in no track: the main path holds it
-                    Recents.entries().first().track shouldBe theKlangPathTrack.slug
+                    own.recents.entries().first().track shouldBe theKlangPathTrack.slug
                 }
 
-                Recents.entries().filter { it.kind == Recents.Kind.Tutorial }.take(2).map { it.id } shouldContainExactly
+                own.recents.entries().filter { it.kind == Recents.Kind.Tutorial }.take(2).map { it.id } shouldContainExactly
                     listOf(path[1].slug, filters.slug)
             }
         } finally {

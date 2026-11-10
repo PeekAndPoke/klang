@@ -17,8 +17,11 @@ This ticket holds the work that follows from the map. The map itself, with every
 
 - **Step 1, slice 1 (2026-11-10): done.** `Spine` exists (`spine/Spine.kt`): built once in `index.kt` (a private
   value, no global to reach for), registered with `spine(...)`, reached as `Component<*>.spine`. Three parts are in:
-  `spine.work` (`UiWork`), `spine.motor` (`MotorReadings`), `spine.visuals` (`VisualState`). Left for the next
-  slices: `ConsoleLog`, `Recents`, `MidiSettings`, `Player`, `Playbacks`.
+  `spine.work` (`UiWork`), `spine.motor` (`MotorReadings`), `spine.visuals` (`VisualState`).
+- **Step 1, slice 2 (2026-11-10): done.** `spine.console` (`ConsoleLog`) and `spine.recents` (`Recents`). `index.kt`
+  makes the Console first, installs it as the log's listener, and hands it to the Spine, so it hears everything from
+  the start; a Spine built without one (a spec's) gets a Console that is not installed. Left for the next slices:
+  `MidiSettings`, `Player`, `Playbacks`.
 - **A pattern from slice 1.** A `Tag` function cannot reach the Spine, so a default argument that read a global
   (`paused: Stream<Boolean> = UiWork.resting`) becomes a nullable parameter and prop, and the component falls back to
   the Spine's stream itself. A part's constants and pure helpers go into its companion, so they are still read by
@@ -97,3 +100,5 @@ after.
   moved in. One review round (no behaviour change found; 2 MINOR, 4 NIT, fixed), 176 tests green, 2 of 2 mutants
   of `SpineSpec` killed.
 - 2026-11-10: IN PROGRESS. Step 1 started: the Spine as one object.
+- 2026-11-10: step 1, slice 2: `ConsoleLog` and `Recents` moved in; five specs on a Spine of their own. One review
+  round (no behaviour change found; 2 MINOR, 7 NIT, fixed), 3 of 3 mutants killed.

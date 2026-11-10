@@ -17,10 +17,11 @@ import io.peekandpoke.klang.pages.docs.tutorials.soundDesignBasicsTrack
 import io.peekandpoke.klang.pages.docs.tutorials.theFourWaveformsTutorial
 import io.peekandpoke.klang.pages.docs.tutorials.theKlangPathTrack
 import io.peekandpoke.klang.spine.Playbacks
-import io.peekandpoke.klang.spine.Recents
 import io.peekandpoke.klang.spine.Recents.Entry
 import io.peekandpoke.klang.spine.Recents.Kind
 import io.peekandpoke.klang.spine.SongDeck
+import io.peekandpoke.klang.spine.Spine
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.storage.StorageKeys
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.kraft.components.NoProps
@@ -98,11 +99,13 @@ class MenuPickUpSpec : StringSpec({
     "the lesson tile's lamp is lit while one is in its track, dark elsewhere" {
         val kept = localStorage.getItem(StorageKeys.RECENTS)
 
+        val own = Spine()
+
         try {
-            Recents.openedTutorial(slug = filtersTutorial.slug, title = "Filters", track = soundDesignBasicsTrack.slug)
+            own.recents.openedTutorial(slug = filtersTutorial.slug, title = "Filters", track = soundDesignBasicsTrack.slug)
 
             for ((track, lamp) in listOf(soundDesignBasicsTrack.slug to "On", theKlangPathTrack.slug to "Off", null to "Off")) {
-                TestBed.preact(view = { MenuPickUp(currentTrackSlug = track, onOpen = {}) }) { root ->
+                TestBed.preact(appSetup = { spine(own) }, view = { MenuPickUp(currentTrackSlug = track, onOpen = {}) }) { root ->
                     eventually {
                         val tile = root[0].querySelector(".${KlangControlStyles.drawerLesson}") as HTMLElement
 
@@ -179,16 +182,21 @@ class MenuPickUpSpec : StringSpec({
         val kept = localStorage.getItem(StorageKeys.RECENTS)
         val picked = mutableListOf<Route.Bound>()
 
-        try {
-            Recents.openedSong(id = "new", title = "My draft", rpm = 30.0)
-            Recents.openedSong(id = "builtin-song-kokon", title = "Kokon", rpm = 19.0)
-            // A built-in song gone from the app (renamed in an update): not offered
-            Recents.openedSong(id = "builtin-song-gone", title = "Gone song", rpm = 25.0)
+        val own = Spine()
 
-            TestBed.preact(view = { MenuPickUp(currentSongId = "builtin-song-kokon", onOpen = { picked.add(it) }) }) { root ->
+        try {
+            own.recents.openedSong(id = "new", title = "My draft", rpm = 30.0)
+            own.recents.openedSong(id = "builtin-song-kokon", title = "Kokon", rpm = 19.0)
+            // A built-in song gone from the app (renamed in an update): not offered
+            own.recents.openedSong(id = "builtin-song-gone", title = "Gone song", rpm = 25.0)
+
+            TestBed.preact(
+                appSetup = { spine(own) },
+                view = { MenuPickUp(currentSongId = "builtin-song-kokon", onOpen = { picked.add(it) }) },
+            ) { root ->
                 val view = root[0]
 
-                // Other specs may have opened songs too (the record is the app's one): the two of this spec by their titles
+                // Other specs may have left songs in the browser's storage, which this Spine reads: the two of this spec by their titles
                 fun tile(title: String): HTMLElement? {
                     val all = view.querySelectorAll("button")
 

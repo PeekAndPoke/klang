@@ -16,7 +16,33 @@ import kotlin.js.Date
  * reports what it opened ([opened]); the Motor's menu shows [entries] under "Pick up where you left off". Kept in the
  * browser ([RecentsStorage]), so the list is there after a reload.
  */
-object Recents {
+class Recents {
+
+    companion object {
+        /**
+         * How many of each kind are kept: the songs the menu shows, and a few lessons (it shows the track of the latest one
+         * the app still has).
+         */
+        val keep: Map<Kind, Int> = mapOf(Kind.Song to 6, Kind.Tutorial to 3)
+
+        /**
+         * The list after [entry] was opened: the entry first, any earlier one of the same kind and id gone, each kind cut to
+         * its [keep] count (a kind not in it is not kept at all). The order is the order of opening, not of the clock, so a
+         * clock set back cannot put the entry just opened below older ones.
+         */
+        fun record(entries: List<Entry>, entry: Entry, keep: Map<Kind, Int>): List<Entry> {
+            val all = listOf(entry) + entries.filterNot { it.kind == entry.kind && it.id == entry.id }
+            val kept = mutableMapOf<Kind, Int>()
+
+            return all.filter { item ->
+                val count = kept[item.kind] ?: 0
+
+                kept[item.kind] = count + 1
+
+                count < (keep[item.kind] ?: 0)
+            }
+        }
+    }
 
     enum class Kind {
         Song,
@@ -35,12 +61,6 @@ object Recents {
         val rpm: Double? = null,
         val track: String? = null,
     )
-
-    /**
-     * How many of each kind are kept: the songs the menu shows, and a few lessons (it shows the track of the latest one
-     * the app still has).
-     */
-    val keep: Map<Kind, Int> = mapOf(Kind.Song to 6, Kind.Tutorial to 3)
 
     private val entriesSource = StreamSource(RecentsStorage.load())
 
@@ -65,23 +85,5 @@ object Recents {
     /** A lesson opened now, in the track [track] (its slug), if it was opened in one. */
     fun openedTutorial(slug: String, title: String, track: String?) {
         opened(Entry(kind = Kind.Tutorial, id = slug, title = title, at = Date.now(), track = track))
-    }
-
-    /**
-     * The list after [entry] was opened: the entry first, any earlier one of the same kind and id gone, each kind cut to
-     * its [keep] count (a kind not in it is not kept at all). The order is the order of opening, not of the clock, so a
-     * clock set back cannot put the entry just opened below older ones.
-     */
-    fun record(entries: List<Entry>, entry: Entry, keep: Map<Kind, Int>): List<Entry> {
-        val all = listOf(entry) + entries.filterNot { it.kind == entry.kind && it.id == entry.id }
-        val kept = mutableMapOf<Kind, Int>()
-
-        return all.filter { item ->
-            val count = kept[item.kind] ?: 0
-
-            kept[item.kind] = count + 1
-
-            count < (keep[item.kind] ?: 0)
-        }
     }
 }

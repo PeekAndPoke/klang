@@ -12,7 +12,7 @@ import io.peekandpoke.klang.comp.lexikonSlugOf
 import io.peekandpoke.klang.comp.toAdsrSignals
 import io.peekandpoke.klang.layouts.PageWorkbench
 import io.peekandpoke.klang.pages.docs.lexikon.lexikonAutoLinks
-import io.peekandpoke.klang.spine.Recents
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.storage.TutorialStorage
 import io.peekandpoke.klang.ui.comp.KlangAdsrSignal
 import io.peekandpoke.klang.ui.comp.KlangButton
@@ -84,7 +84,7 @@ class TutorialPage(ctx: NoProps) : PureComponent(ctx) {
         val tutorial = allTutorials.find { it.slug == slug }
 
         if (tutorial != null && dom?.closest("[inert]") == null) {
-            Recents.openedTutorial(slug = tutorial.slug, title = tutorial.title, track = tutorialTrack(track, tutorial)?.slug)
+            spine.recents.openedTutorial(slug = tutorial.slug, title = tutorial.title, track = tutorialTrack(track, tutorial)?.slug)
         }
     }
 

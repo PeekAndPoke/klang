@@ -21,19 +21,69 @@ import kotlinx.browser.window
  * key wears. Fed by the log as one of its listeners ([install]), and by the browser's uncaught errors and rejected
  * promises ([captureUncaught]).
  */
-object ConsoleLog {
+class ConsoleLog {
 
-    /**
-     * The unseen errors counted at most: the key shows "99+" beyond 99, and an error that repeats every frame stops
-     * changing the count here, so the workbench that shows it is not redrawn every frame.
-     */
-    const val MAX_COUNTED = 100
+    companion object {
+        /**
+         * The unseen errors counted at most: the key shows "99+" beyond 99, and an error that repeats every frame stops
+         * changing the count here, so the workbench that shows it is not redrawn every frame.
+         */
+        const val MAX_COUNTED = 100
 
-    /** The source of the uncaught errors' records. */
-    const val UNCAUGHT = "Uncaught"
+        /** The source of the uncaught errors' records. */
+        const val UNCAUGHT = "Uncaught"
 
-    /** The source of the rejected promises' records. */
-    const val UNHANDLED = "Unhandled promise"
+        /** The source of the rejected promises' records. */
+        const val UNHANDLED = "Unhandled promise"
+
+        /**
+         * The record of an uncaught error, an error of the app's from [UNCAUGHT]; null for what the browser reports there but does not
+         * show in its own console: the ResizeObserver's "loop completed with undelivered notifications", harmless, which
+         * comes with no error.
+         */
+        fun uncaughtRecord(message: String?, file: String?, line: Int?, column: Int?, error: Any?, timeMs: Double): LogRecord? {
+            if (error == null && message?.startsWith("ResizeObserver loop") == true) {
+                return null
+            }
+
+            return LogRecord(
+                level = LogLevel.Error,
+                area = LogArea.App,
+                source = UNCAUGHT,
+                message = uncaughtMessage(message = message, file = file, line = line, column = column),
+                error = error as? Throwable,
+                timeMs = timeMs,
+            )
+        }
+
+        /** The record of a rejected promise nobody caught, an error from [UNHANDLED]: its reason's message, or the reason. */
+        fun rejectionRecord(reason: Any?, timeMs: Double): LogRecord {
+            val error = reason as? Throwable
+            val message = when {
+                error != null -> error.message ?: error.toString()
+                reason != null -> (reason.asDynamic().message as? String) ?: reason.toString()
+                else -> "Rejected with nothing"
+            }
+
+            return LogRecord(
+                level = LogLevel.Error,
+                area = LogArea.App,
+                source = UNHANDLED,
+                message = message,
+                error = error,
+                timeMs = timeMs,
+            )
+        }
+
+        /** An uncaught error's message, where the browser has one, and where it was thrown: `Boom (app.js:12:7)`. */
+        fun uncaughtMessage(message: String?, file: String?, line: Int?, column: Int?): String {
+            val at = file?.takeIf { it.isNotEmpty() }
+                ?.let { " (" + listOfNotNull(it, line, column).joinToString(":") + ")" }
+                .orEmpty()
+
+            return (message?.takeIf { it.isNotEmpty() } ?: "An error") + at
+        }
+    }
 
     /** The records kept, and the errors among the newer ones the Console has not shown yet (at most [MAX_COUNTED]). */
     data class State(
@@ -110,47 +160,6 @@ object ConsoleLog {
         window.addEventListener("unhandledrejection", { event ->
             listener.onRecord(rejectionRecord(reason = event.asDynamic().reason, timeMs = KlangLog.nowMs()))
         })
-    }
-
-    /**
-     * The record of an uncaught error, an error of the app's from [UNCAUGHT]; null for what the browser reports there but does not
-     * show in its own console: the ResizeObserver's "loop completed with undelivered notifications", harmless, which
-     * comes with no error.
-     */
-    fun uncaughtRecord(message: String?, file: String?, line: Int?, column: Int?, error: Any?, timeMs: Double): LogRecord? {
-        if (error == null && message?.startsWith("ResizeObserver loop") == true) {
-            return null
-        }
-
-        return LogRecord(
-            level = LogLevel.Error,
-            area = LogArea.App,
-            source = UNCAUGHT,
-            message = uncaughtMessage(message = message, file = file, line = line, column = column),
-            error = error as? Throwable,
-            timeMs = timeMs,
-        )
-    }
-
-    /** The record of a rejected promise nobody caught, an error from [UNHANDLED]: its reason's message, or the reason. */
-    fun rejectionRecord(reason: Any?, timeMs: Double): LogRecord {
-        val error = reason as? Throwable
-        val message = when {
-            error != null -> error.message ?: error.toString()
-            reason != null -> (reason.asDynamic().message as? String) ?: reason.toString()
-            else -> "Rejected with nothing"
-        }
-
-        return LogRecord(level = LogLevel.Error, area = LogArea.App, source = UNHANDLED, message = message, error = error, timeMs = timeMs)
-    }
-
-    /** An uncaught error's message, where the browser has one, and where it was thrown: `Boom (app.js:12:7)`. */
-    fun uncaughtMessage(message: String?, file: String?, line: Int?, column: Int?): String {
-        val at = file?.takeIf { it.isNotEmpty() }
-            ?.let { " (" + listOfNotNull(it, line, column).joinToString(":") + ")" }
-            .orEmpty()
-
-        return (message?.takeIf { it.isNotEmpty() } ?: "An error") + at
     }
 
     /** The Console shows the records: the errors among them are seen. */

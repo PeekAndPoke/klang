@@ -39,6 +39,9 @@ import io.peekandpoke.kraft.kraftApp
 import io.peekandpoke.kraft.semanticui.semanticUI
 import io.peekandpoke.kraft.vdom.preact.PreactVDomEngine
 
+/** The app's own Console, made first: it listens before anything logs ([logging]) and is the Spine's ([appSpine]). */
+private val consoleLog = ConsoleLog()
+
 /**
  * The log's listeners, before anything logs: the keymap below reports its problems as it is built (KLANG-00407). Its
  * messages go to the browser's console, each at the line that logged it (everything in a development build, `info` and
@@ -48,8 +51,8 @@ import io.peekandpoke.kraft.vdom.preact.PreactVDomEngine
 private val logging = run {
     BrowserConsoleListener.least = if (BuildMode.isDevelopment) LogLevel.Debug else LogLevel.Info
     KlangLog.addListener(BrowserConsoleListener)
-    ConsoleLog.install()
-    ConsoleLog.captureUncaught()
+    consoleLog.install()
+    consoleLog.captureUncaught()
 }
 
 private val keymapLog = Logger(area = LogArea.App, source = "Keymap")
@@ -70,7 +73,7 @@ val keysManager = KeysManager(store = KeymapStorage, hintTriggers = listOf("Mod"
 }
 
 /** The app's one Spine: built here, registered on the app, reached by every component as `spine` (KLANG-00422). */
-private val appSpine = Spine()
+private val appSpine = Spine(console = consoleLog)
 
 val kraft = kraftApp {
     semanticUI()

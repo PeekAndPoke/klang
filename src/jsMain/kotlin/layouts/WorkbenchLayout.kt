@@ -15,7 +15,6 @@ import io.peekandpoke.klang.comp.StatusBar
 import io.peekandpoke.klang.comp.WalkthroughsButton
 import io.peekandpoke.klang.fs
 import io.peekandpoke.klang.pages.docs.tutorials.LearnSearch
-import io.peekandpoke.klang.spine.ConsoleLog
 import io.peekandpoke.klang.spine.UiWork
 import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.storage.LookStorage
@@ -83,7 +82,7 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
     private val pageBottomTabs by subscribingTo(WorkbenchSlots.bottomTabs)
 
     /** The errors logged that the Console has not shown yet: the bottom panel's key counts them (KLANG-00407). */
-    private val unseenErrors by subscribingTo(ConsoleLog.state.map { it.unseenErrors }.distinct())
+    private val unseenErrors by subscribingTo(spine.console.state.map { it.unseenErrors }.distinct())
 
     /**
      * The workbench's layout as the last visit left it, read once: its pinned tool windows come back (KLANG-00349). A

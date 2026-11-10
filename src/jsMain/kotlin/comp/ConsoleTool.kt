@@ -10,7 +10,7 @@ import io.peekandpoke.klang.common.logging.LogBuffer
 import io.peekandpoke.klang.common.logging.LogLevel
 import io.peekandpoke.klang.common.logging.LogRecord
 import io.peekandpoke.klang.common.logging.Logger
-import io.peekandpoke.klang.spine.ConsoleLog
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.ui.comp.KlangLamp
 import io.peekandpoke.klang.ui.comp.KlangWorkbench
 import io.peekandpoke.kraft.components.NoProps
@@ -115,7 +115,7 @@ class ConsoleTool(ctx: NoProps) : PureComponent(ctx) {
         }
     }
 
-    private val console by subscribingTo(ConsoleLog.state)
+    private val console by subscribingTo(spine.console.state)
 
     /** The levels shown; all at first. */
     private var levels: Set<LogLevel> by value(LogLevel.entries.toSet())
@@ -144,7 +144,7 @@ class ConsoleTool(ctx: NoProps) : PureComponent(ctx) {
             // the state this renders)
             onMount {
                 mounted = true
-                ConsoleLog.showing()
+                spine.console.showing()
                 keepToEnd()
             }
 
@@ -154,7 +154,7 @@ class ConsoleTool(ctx: NoProps) : PureComponent(ctx) {
 
             onUnmount {
                 mounted = false
-                ConsoleLog.notShowing()
+                spine.console.notShowing()
                 copiedTimer?.let { window.clearTimeout(it) }
                 copiedTimer = null
             }
@@ -261,7 +261,7 @@ class ConsoleTool(ctx: NoProps) : PureComponent(ctx) {
             button(type = ButtonType.button, classes = BUTTON) {
                 onClick {
                     follow = true
-                    ConsoleLog.clear()
+                    spine.console.clear()
                 }
 
                 icon.trash_alternate_outline()

@@ -70,11 +70,20 @@ class SpineSpec : StringSpec({
         withClue("the work") { one.work shouldNotBeSameInstanceAs other.work }
         withClue("the readings") { one.motor shouldNotBeSameInstanceAs other.motor }
         withClue("the lamp") { one.visuals.lamp shouldNotBeSameInstanceAs other.visuals.lamp }
+        withClue("the recents") { one.recents shouldNotBeSameInstanceAs other.recents }
+        withClue("the Console") { one.console shouldNotBeSameInstanceAs other.console }
 
         withClue("one Spine gives the same part every time") {
             one.work shouldBeSameInstanceAs one.work
             one.visuals.light shouldBeSameInstanceAs one.visuals.light
         }
+    }
+
+    "the Console given to the Spine is its Console" {
+        val console = ConsoleLog()
+
+        Spine(console = console).console shouldBeSameInstanceAs console
+        Spine().console shouldNotBeSameInstanceAs console
     }
 
     "the graphs draw with no pause of their own in an app with a Spine, and with one given" {

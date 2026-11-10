@@ -83,9 +83,11 @@ class RecentsSpec : StringSpec({
         val kept = localStorage.getItem(StorageKeys.RECENTS)
 
         try {
-            Recents.openedSong(id = "spec-a", title = "A", rpm = 40.0)
-            Recents.openedTutorial(slug = "spec-b", title = "B", track = null)
-            Recents.openedSong(id = "spec-a", title = "A again", rpm = 41.0)
+            val recents = Recents()
+
+            recents.openedSong(id = "spec-a", title = "A", rpm = 40.0)
+            recents.openedTutorial(slug = "spec-b", title = "B", track = null)
+            recents.openedSong(id = "spec-a", title = "A again", rpm = 41.0)
 
             val stored = RecentsStorage.load()
 
