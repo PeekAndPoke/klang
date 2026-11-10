@@ -794,6 +794,7 @@ def main(argv=None):
     p.add_argument("--waivers", default=os.path.join(HERE, "waivers.txt"), help="waiver file")
     p.add_argument("--list", action="store_true", help="print the whole key table (key, map, writers, readers)")
     p.add_argument("--strict", action="store_true", help="also fail on (b), (e), unresolved writers, unused waivers")
+    p.add_argument("--json", default=None, metavar="FILE", help="also write the result as JSON (for the health page)")
     a = p.parse_args(argv)
     try:
         root = a.root or subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True,
@@ -898,6 +899,21 @@ def main(argv=None):
     for mp in MAPS:
         w, r = set(scan.written[mp]), set(scan.read[mp])
         totals.append(f"{mp} written {len(w)}, read {len(r)}, both {len(w & r)}")
+    if a.json:
+        import json
+
+        def sites(mp, key, table):
+            return [{"file": s.path, "line": s.line, "kind": s.kind} for s in
+                    sorted(set(table[mp].get(key, ())), key=lambda s: (s.path, s.line))]
+
+        doc = {"tool": "dead-knobs", "files": len(sources),
+               "keys": [{"map": mp, "key": key, "writers": sites(mp, key, scan.written), "readers": sites(mp, key, scan.read)}
+                        for mp in MAPS for key in sorted(set(scan.written[mp]) | set(scan.read[mp]))],
+               "findings": {k: [list(x) for x in v] for k, v in found.items()},
+               "unresolved": [{"map": mp, "file": s.path, "line": s.line, "expr": e} for mp, s, e in scan.unresolved],
+               "waivers": [{"map": k[0], "key": k[1], "reason": v[0]} for k, v in sorted(waivers.items())]}
+        with open(a.json, "w", encoding="utf-8") as fh:
+            json.dump(doc, fh, indent=1)
     fail = bool(found["a"] or found["c"] or scan.unresolved)  # a writer the tool cannot name is not "clean"
     if a.strict:
         fail = fail or bool(found["b"] or found["e"] or unused)

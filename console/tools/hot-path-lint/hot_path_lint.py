@@ -1104,6 +1104,7 @@ def main(argv=None):
     p.add_argument("--guarded", action="store_true",
                    help="also report allocations behind a guard (a cache miss, a resize on shape change) as alloc-guarded")
     p.add_argument("--self-test", action="store_true", help="run the fixtures in tests/ and exit")
+    p.add_argument("--json", default=None, metavar="FILE", help="also write the findings as JSON (for the health page)")
     a = p.parse_args(argv)
     if a.self_test:
         here = os.path.dirname(os.path.abspath(__file__))
@@ -1132,6 +1133,13 @@ def main(argv=None):
     per_rule = ", ".join(f"{r} {counts[r]}" for r in RULES if counts[r])
     print(f"hot-path-lint: {len(sources)} file(s), {len(hot)} hot function(s), {len(findings)} finding(s)"
           f"{' (' + per_rule + ')' if per_rule else ''}, {len(waived)} waived", file=sys.stderr)
+    if a.json:
+        import json
+        rows = [{"file": fd.src.rel, "line": fd.line, "rule": fd.rule, "message": fd.msg, "waived": w}
+                for w, fds in ((False, findings), (True, waived)) for fd in fds]
+        with open(a.json, "w", encoding="utf-8") as fh:
+            json.dump({"tool": "hot-path-lint", "files": len(sources), "hot_functions": len(hot),
+                       "guarded": bool(a.guarded), "findings": rows}, fh, indent=1)
     return 1 if findings else 0
 
 
