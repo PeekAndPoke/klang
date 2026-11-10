@@ -5,7 +5,7 @@
 
 package io.peekandpoke.klang.comp
 
-import io.peekandpoke.klang.spine.Player
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
@@ -20,7 +20,7 @@ import kotlinx.html.div
 
 @Suppress("FunctionName")
 fun Tag.ScreenAwake(
-    playing: Stream<Boolean> = Player.playing,
+    playing: Stream<Boolean>? = null,
 ) = comp(
     ScreenAwake.Props(playing = playing)
 ) {
@@ -37,12 +37,12 @@ class ScreenAwake(ctx: Ctx<Props>) : Component<ScreenAwake.Props>(ctx) {
     //  PROPS  //////////////////////////////////////////////////////////////////////////////////////////////////
 
     data class Props(
-        val playing: Stream<Boolean>,
+        val playing: Stream<Boolean>?,
     )
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
-    private val playing by subscribingTo(props.playing)
+    private val playing by subscribingTo(props.playing ?: spine.player.playing)
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 

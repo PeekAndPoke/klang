@@ -6,7 +6,6 @@
 package io.peekandpoke.klang.visuals
 
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
-import io.peekandpoke.klang.spine.Playbacks
 import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.components.Component
@@ -103,11 +102,11 @@ class VoiceRain(ctx: Ctx<Props>) : Component<VoiceRain.Props>(ctx) {
 
     /** When nothing plays, no voice is left to fall. */
     @Suppress("unused")
-    private val nowPlaying by subscribingTo(Playbacks.nowPlaying) { if (it == null) pending.clear() }
+    private val nowPlaying by subscribingTo(spine.playbacks.nowPlaying) { if (it == null) pending.clear() }
 
     @Suppress("unused")
     private val voices by subscribingTo(
-        Playbacks.nowPlaying.map { it?.playback }.switchMapNotNull { it.signals }
+        spine.playbacks.nowPlaying.map { it?.playback }.switchMapNotNull { it.signals }
     ) { signal ->
         if (signal is KlangPlaybackSignal.VoicesScheduled) {
             for (voice in signal.voices) {

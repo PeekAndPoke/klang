@@ -7,7 +7,9 @@ package io.peekandpoke.klang.visuals
 
 import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.comp.clockOf
+import io.peekandpoke.klang.spine.KlangampDeck
 import io.peekandpoke.klang.spine.Playbacks
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
@@ -44,15 +46,15 @@ class KlangampPlaylist(ctx: Ctx<Props>) : Component<KlangampPlaylist.Props>(ctx)
         val nowLine: Boolean,
     )
 
-    private val nowPlaying by subscribingTo(Playbacks.nowPlaying)
+    private val nowPlaying by subscribingTo(spine.playbacks.nowPlaying)
 
     /** The seconds heard, from the Spine's one clock; only while the now line shows them. */
-    private val seconds by subscribingTo(if (props.nowLine) Playbacks.heardSeconds else steady(null))
+    private val seconds by subscribingTo(if (props.nowLine) spine.playbacks.heardSeconds else steady(null))
 
     override fun VDom.render() {
         val songs = BuiltInSongs.songs
         val now = nowPlaying
-        val index = KlangampDeck.indexOf(now)
+        val index = spine.klangamp.indexOf(now)
 
         div {
             css {
@@ -81,7 +83,7 @@ class KlangampPlaylist(ctx: Ctx<Props>) : Component<KlangampPlaylist.Props>(ctx)
                     div(classes = "kl-klangamp-row") {
                         key = "song-${song.id}"
                         title = "Play ${song.title}"
-                        onClick { KlangampDeck.play(song) }
+                        onClick { spine.klangamp.play(song) }
                         css {
                             put("display", "flex")
                             put("gap", "8px")
@@ -147,9 +149,9 @@ class KlangampPlaylist(ctx: Ctx<Props>) : Component<KlangampPlaylist.Props>(ctx)
                 }
             }
 
-            lineKey(label = "Previous song", onClick = { KlangampDeck.skip(now = now, step = -1) }) { icon.step_backward() }
-            lineKey(label = "Stop", onClick = { KlangampDeck.stop() }) { icon.stop() }
-            lineKey(label = "Next song", onClick = { KlangampDeck.skip(now = now, step = 1) }) { icon.step_forward() }
+            lineKey(label = "Previous song", onClick = { spine.klangamp.skip(now = now, step = -1) }) { icon.step_backward() }
+            lineKey(label = "Stop", onClick = { spine.klangamp.stop() }) { icon.stop() }
+            lineKey(label = "Next song", onClick = { spine.klangamp.skip(now = now, step = 1) }) { icon.step_forward() }
         }
     }
 

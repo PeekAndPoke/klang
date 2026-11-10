@@ -42,7 +42,7 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) : Pl
          */
         val RPM_RANGE: ClosedFloatingPointRange<Double> = 10.0..200.0
 
-        fun builder() = Builder()
+        fun builder(stage: Playbacks, engine: PlaybackEngine) = Builder(stage = stage, engine = engine)
     }
 
     data class Config(
@@ -52,14 +52,14 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) : Pl
         /** The lane a preview plays on ([Builder.preview]); null for a controller that is no preview. */
         val previews: (() -> Previews)?,
         val engine: PlaybackEngine,
+        val stage: Playbacks,
     )
 
-    class Builder {
+    class Builder(private val stage: Playbacks, private val engine: PlaybackEngine) {
         private var code: String = ""
         private var rpm: Double = 30.0
         private var title: String? = null
         private var previews: (() -> Previews)? = null
-        private var engine: PlaybackEngine? = null
 
         fun code(c: String) = apply { code = c }
         fun rpm(r: Double) = apply { rpm = r }
@@ -68,15 +68,12 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) : Pl
         /**
          * A preview, a code example (KLANG-00406, D1): its [play] stops another preview and whatever else holds the
          * stage, and fades the song on the deck out instead; its stop fades the song in again ([Previews]). On [lane],
-         * the app's [Playbacks.previews] when none is given.
+         * the previews of this controller's stage ([Playbacks.previews]) when none is given.
          */
-        fun preview(lane: Previews? = null) = apply { previews = { lane ?: Playbacks.previews } }
-
-        /** What it plays on: the app's [Player] when none is given (so a spec's builder never starts it). */
-        fun engine(e: PlaybackEngine) = apply { engine = e }
+        fun preview(lane: Previews? = null) = apply { previews = { lane ?: stage.previews } }
 
         fun build(): KlangCodePlaybackCtrl = KlangCodePlaybackCtrl(
-            Config(initialCode = code, initialRpm = rpm, initialTitle = title, previews = previews, engine = engine ?: Player)
+            Config(initialCode = code, initialRpm = rpm, initialTitle = title, previews = previews, engine = engine, stage = stage)
         )
     }
 
@@ -243,7 +240,7 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) : Pl
                 isCodeModified = false,
             )
         }
-        Playbacks.publishNowPlaying(owner = this, value = null)
+        config.stage.publishNowPlaying(owner = this, value = null)
         config.previews?.invoke()?.stopped(preview = this)
     }
 
@@ -346,7 +343,7 @@ class KlangCodePlaybackCtrl private constructor(private val config: Config) : Pl
 
     private fun publishNowPlaying(pb: KlangCyclicPlayback) {
         val s = _state()
-        Playbacks.publishNowPlaying(
+        config.stage.publishNowPlaying(
             owner = this,
             value = Playbacks.NowPlaying(
                 title = s.title,

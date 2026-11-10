@@ -20,8 +20,17 @@ This ticket holds the work that follows from the map. The map itself, with every
   `spine.work` (`UiWork`), `spine.motor` (`MotorReadings`), `spine.visuals` (`VisualState`).
 - **Step 1, slice 2 (2026-11-10): done.** `spine.console` (`ConsoleLog`) and `spine.recents` (`Recents`). `index.kt`
   makes the Console first, installs it as the log's listener, and hands it to the Spine, so it hears everything from
-  the start; a Spine built without one (a spec's) gets a Console that is not installed. Left for the next slices:
-  `MidiSettings`, `Player`, `Playbacks`.
+  the start; a Spine built without one (a spec's) gets a Console that is not installed.
+- **Step 1, slice 3 (2026-11-10): done.** `spine.midiSettings` (`MidiSettings`).
+- **Step 1, slice 4 (2026-11-10): done, and step 1 with it.** `spine.player` (`Player`), `spine.playbacks`
+  (`Playbacks`) and `spine.klangamp` (`KlangampDeck`, from the visuals: it holds state and plays on the deck, so it
+  came along, ahead of step 4). No object in `spine/` keeps state any more. What changed in shape:
+  - **Building a Spine starts nothing.** `Player` no longer asks for the samples when it is made: the app calls
+    `preloadSamples()` right after building its Spine, a spec's Spine downloads nothing.
+  - **`Playbacks` is one stage on one engine.** Its deck, its previews, the MIDI rig and every code playback get the
+    stage and the engine through their constructors; a page asks `spine.playbacks.ctrl()` for a controller's
+    builder. `MidiRig` and `RealtimePlaybackCtrl` know the engine only as a `PlaybackEngine`.
+  - **`Player.createEngine(...)`** used no state of the player and is in its companion.
 - **A pattern from slice 1.** A `Tag` function cannot reach the Spine, so a default argument that read a global
   (`paused: Stream<Boolean> = UiWork.resting`) becomes a nullable parameter and prop, and the component falls back to
   the Spine's stream itself. A part's constants and pure helpers go into its companion, so they are still read by
@@ -65,8 +74,9 @@ This ticket holds the work that follows from the map. The map itself, with every
 Each step leaves the app working and is reviewed on its own. `console/tools/ui-wiring` shows the numbers before and
 after.
 
-1. **The Spine as one object.** A `Spine` class with the eight objects of `spine/` as its parts (`player`,
-   `playbacks`, `motor`, `console`, `work`, `visuals`, `recents`, `midi`), registered on the app; one part per
+1. **The Spine as one object. Done** (see Progress). A `Spine` class with the eight objects of `spine/` as its
+   parts (`player`, `playbacks`, `motor`, `console`, `work`, `visuals`, `recents`, `midiSettings`, and `klangamp`
+   beside them), registered on the app; one part per
    change, callers moved from `Player.x` to `spine.player.x`. Code that is no component (key bindings, start-up) gets
    it handed in.
 2. **One stored section.** First apply kotlinx.serialization's compiler plug-in to the app module (declared
@@ -81,7 +91,7 @@ after.
    - the looks (`LookStorage` goes into `spine.looks`, `KlangLookText` as a serializer), the tools' switch;
    - the songs (`SongStorage`, today built by the song page), the MIDI play code and setup.
 4. **The state held in the UI moves in:** `VisualsScreen`'s companion (`shown`, `open`, the tiles, the rain),
-   `LearnSearch`, `KlangampDeck`, `KlangGuiDance`, and the top-level values `version` and `fs`.
+   `LearnSearch`, `KlangGuiDance`, and the top-level values `version` and `fs` (`KlangampDeck` moved with step 1).
 5. **KLANG-00413 on top** (the app's workbench parts, parts that draw their own label), which ends the values
    handed down by hand (the Console's count, the Motor's pause).
 6. **The tool as a check:** no stateful global outside `spine/` (and the agreed ones in the libraries), no browser
@@ -102,3 +112,6 @@ after.
 - 2026-11-10: IN PROGRESS. Step 1 started: the Spine as one object.
 - 2026-11-10: step 1, slice 2: `ConsoleLog` and `Recents` moved in; five specs on a Spine of their own. One review
   round (no behaviour change found; 2 MINOR, 7 NIT, fixed), 3 of 3 mutants killed.
+- 2026-11-10: step 1, slices 3 and 4: `MidiSettings`, then `Player`, `Playbacks` and `KlangampDeck` moved in; step 1
+  is done. One review round (reviewer-high: clean, no behaviour change; 4 MINOR, 8 NIT, applied), 179 tests green,
+  4 of 4 mutants killed.

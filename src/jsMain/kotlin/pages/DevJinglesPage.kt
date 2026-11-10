@@ -11,7 +11,7 @@ import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
 import io.peekandpoke.klang.comp.PlayableCodeExample
 import io.peekandpoke.klang.compile
 import io.peekandpoke.klang.playJingle
-import io.peekandpoke.klang.spine.Player
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.kraft.components.NoProps
@@ -62,7 +62,7 @@ class DevJinglesPage(ctx: NoProps) : PureComponent(ctx) {
         playing = null
 
         launch {
-            val player = Player.ensure().await()
+            val player = spine.player.ensure().await()
             val pattern = jingle.compile() ?: return@launch
 
             playing = player.playJingle(jingle = jingle, pattern = pattern)

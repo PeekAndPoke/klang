@@ -12,8 +12,6 @@ import io.peekandpoke.klang.comp.PlayerMiniStats
 import io.peekandpoke.klang.comp.Spectrumeter
 import io.peekandpoke.klang.comp.VolumeKnob
 import io.peekandpoke.klang.comp.clockOf
-import io.peekandpoke.klang.spine.Playbacks
-import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangFinish
@@ -57,6 +55,9 @@ fun Tag.KlangampPlayer(scale: Double, onLeave: () -> Unit) = comp(
  */
 class KlangampPlayer(ctx: Ctx<Props>) : Component<KlangampPlayer.Props>(ctx) {
 
+    /** The Spine's player, found once: the spectrum asks it for the engine every frame. */
+    private val enginePlayer = spine.player
+
     data class Props(
         val scale: Double,
         val onLeave: () -> Unit,
@@ -72,10 +73,10 @@ class KlangampPlayer(ctx: Ctx<Props>) : Component<KlangampPlayer.Props>(ctx) {
 
     private val look by subscribingTo(KlangTheme.look)
 
-    private val nowPlaying by subscribingTo(Playbacks.nowPlaying)
+    private val nowPlaying by subscribingTo(spine.playbacks.nowPlaying)
 
     /** The seconds heard, for the time on the display: the Spine's one clock. */
-    private val seconds by subscribingTo(Playbacks.heardSeconds)
+    private val seconds by subscribingTo(spine.playbacks.heardSeconds)
 
     private val cylinders by subscribingTo(spine.motor.cylinders)
 
@@ -208,7 +209,7 @@ class KlangampPlayer(ctx: Ctx<Props>) : Component<KlangampPlayer.Props>(ctx) {
 
     private fun DIV.renderMain() {
         val now = nowPlaying
-        val index = KlangampDeck.indexOf(now)
+        val index = spine.klangamp.indexOf(now)
 
         div {
             css {
@@ -254,7 +255,7 @@ class KlangampPlayer(ctx: Ctx<Props>) : Component<KlangampPlayer.Props>(ctx) {
                         blend = Motor.spectrumBlendOf(look),
                         numBuckets = 19,
                         lighting = Spectrumeter.Lighting.Dancing,
-                    ) { Player.get() }
+                    ) { enginePlayer.get() }
                 }
             }
 
@@ -308,19 +309,19 @@ class KlangampPlayer(ctx: Ctx<Props>) : Component<KlangampPlayer.Props>(ctx) {
                         put("margin-top", "auto")
                     }
 
-                    transportKey(label = "Previous song", onClick = { KlangampDeck.skip(now = now, step = -1) }) {
+                    transportKey(label = "Previous song", onClick = { spine.klangamp.skip(now = now, step = -1) }) {
                         icon.step_backward()
                     }
                     transportKey(
                         label = "Play",
                         onClick = {
-                            if (index >= 0) KlangampDeck.play(BuiltInSongs.songs[index]) else KlangampDeck.skip(now, 0)
+                            if (index >= 0) spine.klangamp.play(BuiltInSongs.songs[index]) else spine.klangamp.skip(now, 0)
                         },
                     ) {
                         icon.play()
                     }
-                    transportKey(label = "Stop", onClick = { KlangampDeck.stop() }) { icon.stop() }
-                    transportKey(label = "Next song", onClick = { KlangampDeck.skip(now = now, step = 1) }) {
+                    transportKey(label = "Stop", onClick = { spine.klangamp.stop() }) { icon.stop() }
+                    transportKey(label = "Next song", onClick = { spine.klangamp.skip(now = now, step = 1) }) {
                         icon.step_forward()
                     }
                 }
@@ -331,7 +332,7 @@ class KlangampPlayer(ctx: Ctx<Props>) : Component<KlangampPlayer.Props>(ctx) {
         // element")
         display(key = "scope", style = mapOf("height" to "46px", "margin-top" to "6px")) {
             Oscilloscope(
-                player = Player.player,
+                player = spine.player.player,
                 strokeColor = Color(look[KlangRole.ScopeTrace]),
                 strokeWidth = 1.5,
                 pixelSkip = 3,

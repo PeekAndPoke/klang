@@ -8,6 +8,7 @@ package io.peekandpoke.klang.midi
 import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.spine.MidiRig
 import io.peekandpoke.klang.spine.Playbacks
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
 import io.peekandpoke.klang.ui.codemirror.KlangScriptEditorComp
 import io.peekandpoke.kraft.components.NoProps
@@ -66,7 +67,7 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////
 
-    private val rig = Playbacks.live
+    private val rig = spine.playbacks.live
 
     private val rigState by subscribingTo(rig.state)
 

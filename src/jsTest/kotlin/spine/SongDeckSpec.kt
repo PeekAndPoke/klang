@@ -83,15 +83,29 @@ class SongDeckSpec : StringSpec({
         }
     }
 
+    /**
+     * The stage every deck and controller of this spec plays on, as the app's playbacks share one. Its own engine is
+     * never asked, so it is a stub: each case gives its decks and controllers a [SilentEngine].
+     */
+    val playbacks = Playbacks(
+        engine = object : PlaybackEngine {
+            override val status = StreamSource(Player.Status.READY).readonly
+
+            override suspend fun readyPlayer(): KlangPlayer = error("never asked")
+
+            override fun scriptEngine(): KlangScriptEngine = error("never asked")
+        }
+    )
+
     fun song(id: String) = Song(id = id, title = "Song $id", rpm = 30.0, code = "import * from \"sprudel\"\nsound(\"bd\")")
 
     /** A page's controller for the song [id], as a song page builds it: not exclusive, on the deck by its Play. */
     fun SilentEngine.page(id: String): KlangCodePlaybackCtrl =
-        KlangCodePlaybackCtrl.builder().code(song(id).code).title("Song $id").engine(this).build()
+        KlangCodePlaybackCtrl.builder(stage = playbacks, engine = this).code(song(id).code).title("Song $id").build()
 
     /** A code example's controller for the song [id], as a page builds it: a preview on [previews]. */
     fun SilentEngine.preview(id: String, previews: Previews, code: String = song(id).code): KlangCodePlaybackCtrl =
-        KlangCodePlaybackCtrl.builder().code(code).title("Song $id").preview(previews).engine(this).build()
+        KlangCodePlaybackCtrl.builder(stage = playbacks, engine = this).code(code).title("Song $id").preview(previews).build()
 
     /** Whether [ctrl] still follows the engine's status: a released one does not. */
     fun SilentEngine.follows(ctrl: KlangCodePlaybackCtrl): Boolean {
@@ -103,7 +117,7 @@ class SongDeckSpec : StringSpec({
     }
 
     suspend fun withDeck(engine: SilentEngine = SilentEngine(), test: suspend (SongDeck, SilentEngine) -> Unit) {
-        val deck = SongDeck(engine = engine)
+        val deck = SongDeck(engine = engine, stage = playbacks)
 
         try {
             test(deck, engine)
@@ -119,7 +133,7 @@ class SongDeckSpec : StringSpec({
 
             eventually { ctrl.state().isPlaying shouldBe true }
             deck.onDeck() shouldBe SongDeck.OnDeck(songId = "a", ctrl = ctrl, fromPage = false)
-            Playbacks.nowPlaying()?.title shouldBe "Song a"
+            playbacks.nowPlaying()?.title shouldBe "Song a"
             engine.player.playbacks().size shouldBe 1
         }
     }
@@ -250,7 +264,7 @@ class SongDeckSpec : StringSpec({
             deck.stop()
 
             deck.onDeck() shouldBe null
-            Playbacks.nowPlaying() shouldBe null
+            playbacks.nowPlaying() shouldBe null
             engine.player.playbacks() shouldBe emptyList()
         }
     }
@@ -278,7 +292,7 @@ class SongDeckSpec : StringSpec({
 
     "a code example fades the song out and plays over it; stopped, the song fades in and takes the stage back (D1)" {
         withDeck { deck, engine ->
-            val previews = Previews(deck = deck)
+            val previews = Previews(deck = deck, stage = playbacks)
             val example = engine.preview("e", previews)
 
             try {
@@ -293,13 +307,13 @@ class SongDeckSpec : StringSpec({
                     deck.onDeck()?.ctrl shouldBeSameInstanceAs ctrl
                     ctrl.playback()?.gain shouldBe 0.0
                 }
-                Playbacks.nowPlaying()?.title shouldBe "Song e"
+                playbacks.nowPlaying()?.title shouldBe "Song e"
 
                 example.stop()
 
                 withClue("the song fades in and takes the stage back") {
                     ctrl.playback()?.gain shouldBe 1.0
-                    Playbacks.nowPlaying()?.title shouldBe "Song a"
+                    playbacks.nowPlaying()?.title shouldBe "Song a"
                 }
             } finally {
                 example.release()
@@ -309,7 +323,7 @@ class SongDeckSpec : StringSpec({
 
     "one preview at a time: a second stops the first, and the song stays faded out" {
         withDeck { deck, engine ->
-            val previews = Previews(deck = deck)
+            val previews = Previews(deck = deck, stage = playbacks)
             val first = engine.preview("e1", previews)
             val second = engine.preview("e2", previews)
 
@@ -321,7 +335,7 @@ class SongDeckSpec : StringSpec({
                 eventually { first.state().isPlaying shouldBe true }
 
                 val stage = mutableListOf<String?>()
-                val watching = Playbacks.nowPlaying.subscribeToStream { stage += it?.title }
+                val watching = playbacks.nowPlaying.subscribeToStream { stage += it?.title }
 
                 try {
                     second.play()
@@ -350,7 +364,7 @@ class SongDeckSpec : StringSpec({
         val ready = CompletableDeferred<Unit>()
 
         withDeck(engine = SilentEngine(ready = ready)) { deck, engine ->
-            val previews = Previews(deck = deck)
+            val previews = Previews(deck = deck, stage = playbacks)
             val example = engine.preview("e", previews)
 
             try {
@@ -369,7 +383,7 @@ class SongDeckSpec : StringSpec({
 
     "a song taken off the deck goes back to full gain: played again, it is heard" {
         withDeck { deck, engine ->
-            val previews = Previews(deck = deck)
+            val previews = Previews(deck = deck, stage = playbacks)
             val example = engine.preview("e", previews)
             val page = engine.page("p")
 
@@ -393,7 +407,7 @@ class SongDeckSpec : StringSpec({
 
     "a code example that fails to start plays nothing: the song it faded out comes back and keeps the stage" {
         withDeck { deck, engine ->
-            val previews = Previews(deck = deck)
+            val previews = Previews(deck = deck, stage = playbacks)
             val broken = engine.preview("e", previews, code = "import * from \"sprudel\"\nsound(")
 
             try {
@@ -405,7 +419,7 @@ class SongDeckSpec : StringSpec({
                 eventually { broken.errors().isEmpty() shouldBe false }
                 broken.state().isPlaying shouldBe false
                 withClue("the song back at full gain") { ctrl.playback()?.gain shouldBe 1.0 }
-                Playbacks.nowPlaying()?.title shouldBe "Song a"
+                playbacks.nowPlaying()?.title shouldBe "Song a"
             } finally {
                 broken.release()
             }
@@ -414,7 +428,7 @@ class SongDeckSpec : StringSpec({
 
     "a playing code example whose update fails plays on: the song stays faded out, the example keeps the stage" {
         withDeck { deck, engine ->
-            val previews = Previews(deck = deck)
+            val previews = Previews(deck = deck, stage = playbacks)
             val example = engine.preview("e", previews)
 
             try {
@@ -431,7 +445,7 @@ class SongDeckSpec : StringSpec({
                 withClue("the example plays on, the song faded under it") {
                     example.state().isPlaying shouldBe true
                     ctrl.playback()?.gain shouldBe 0.0
-                    Playbacks.nowPlaying()?.title shouldBe "Song e"
+                    playbacks.nowPlaying()?.title shouldBe "Song e"
                 }
             } finally {
                 example.release()
@@ -443,7 +457,7 @@ class SongDeckSpec : StringSpec({
         val ready = CompletableDeferred<Unit>()
 
         withDeck(engine = SilentEngine(ready = ready)) { deck, engine ->
-            val previews = Previews(deck = deck)
+            val previews = Previews(deck = deck, stage = playbacks)
             val example = engine.preview("e", previews)
 
             try {
@@ -467,7 +481,7 @@ class SongDeckSpec : StringSpec({
 
     "a code example stops what else holds the stage, not the song" {
         withDeck { deck, engine ->
-            val previews = Previews(deck = deck)
+            val previews = Previews(deck = deck, stage = playbacks)
             val waiting = engine.page("w")
             val example = engine.preview("e", previews)
 
@@ -531,7 +545,7 @@ class SongDeckSpec : StringSpec({
 
     "a controller follows the engine's status until it is released" {
         val engine = SilentEngine(initial = Player.Status.LOADING)
-        val ctrl = KlangCodePlaybackCtrl.builder().engine(engine).build()
+        val ctrl = KlangCodePlaybackCtrl.builder(stage = playbacks, engine = engine).build()
 
         try {
             engine.statusSource(Player.Status.READY)
@@ -542,6 +556,54 @@ class SongDeckSpec : StringSpec({
 
             ctrl.state().playerStatus shouldBe Player.Status.READY
         } finally {
+            engine.close()
+        }
+    }
+
+    "Playbacks are one stage on one engine: their deck, their controllers and their previews (KLANG-00422)" {
+        val engine = SilentEngine()
+        val own = Playbacks(engine = engine)
+
+        try {
+            val song = own.song.play(song("a"))
+
+            eventually { song.state().isPlaying shouldBe true }
+
+            withClue("the deck's song is on this stage, not on another") {
+                own.nowPlaying()?.title shouldBe "Song a"
+                playbacks.nowPlaying() shouldBe null
+            }
+            withClue("it plays on this engine") { engine.player.playbacks().size shouldBe 1 }
+
+            // A page's own playback, not on the deck: it takes the stage, and a code example stops it
+            val page = own.ctrl().code(song("p").code).title("Song p").build()
+
+            page.play()
+            eventually { own.nowPlaying()?.title shouldBe "Song p" }
+
+            val example = own.ctrl().code(song("e").code).title("Song e").preview().build()
+
+            example.play()
+
+            eventually {
+                withClue("a code example of these playbacks takes this stage, on this engine") {
+                    own.nowPlaying()?.title shouldBe "Song e"
+                }
+                withClue("its previews stop what else held this stage, the deck's song spared") {
+                    page.state().isPlaying shouldBe false
+                    song.state().isPlaying shouldBe true
+                }
+            }
+
+            example.stop()
+
+            eventually {
+                withClue("its preview over: the deck's song shows on the stage again") { own.nowPlaying()?.title shouldBe "Song a" }
+            }
+            example.release()
+            page.release()
+        } finally {
+            own.song.stop()
             engine.close()
         }
     }

@@ -13,8 +13,6 @@ import io.peekandpoke.klang.comp.PlayerMiniStats
 import io.peekandpoke.klang.comp.ScreenRect
 import io.peekandpoke.klang.comp.Spectrumeter
 import io.peekandpoke.klang.comp.VolumeKnob
-import io.peekandpoke.klang.spine.Playbacks
-import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.spine.SwingingLamp
 import io.peekandpoke.klang.spine.VisualState
 import io.peekandpoke.klang.spine.spine
@@ -84,6 +82,9 @@ fun Tag.VisualsBoard(
  * The displays wear glass domes that mirror the plate's lamp.
  */
 class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
+
+    /** The Spine's player, found once: the spectrum asks it for the engine every frame. */
+    private val enginePlayer = spine.player
 
     data class Props(
         val composition: PlateComposition,
@@ -163,7 +164,7 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
                 lightFollow?.invoke()
                 lightFollow = null
                 // A song Klangamp started stops when the visual is left
-                KlangampDeck.leave()
+                spine.klangamp.leave()
             }
         }
     }
@@ -212,7 +213,7 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
     }
 
     /** What plays now, from here or from any page: the Motor's plate's play/stop shows it. */
-    private val nowPlaying by subscribingTo(Playbacks.nowPlaying)
+    private val nowPlaying by subscribingTo(spine.playbacks.nowPlaying)
 
     private val cylinders by subscribingTo(spine.motor.cylinders)
 
@@ -380,8 +381,8 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
                     open = playing,
                     onClick = {
                         when {
-                            playing -> KlangampDeck.stop()
-                            else -> spine.visuals.openSong()?.play?.invoke() ?: KlangampDeck.playAgain()
+                            playing -> spine.klangamp.stop()
+                            else -> spine.visuals.openSong()?.play?.invoke() ?: spine.klangamp.playAgain()
                         }
                     },
                     size = (tile * KNOB).px,
@@ -434,7 +435,7 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
                 }
 
                 Oscilloscope(
-                    player = Player.player,
+                    player = spine.player.player,
                     strokeColor = Color(look[KlangRole.ScopeTrace]),
                     swingPx = tile * SCOPE_SWING,
                     smoke = Oscilloscope.Smoke(
@@ -476,7 +477,7 @@ class VisualsBoard(ctx: Ctx<Props>) : Component<VisualsBoard.Props>(ctx) {
                 lighting = Spectrumeter.Lighting.Dancing,
                 // The hovered column's frequencies at the top of the screen (the maintainer, 2026-10-29)
                 labelAtTop = true,
-            ) { Player.get() }
+            ) { enginePlayer.get() }
         }
     }
 

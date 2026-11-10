@@ -10,6 +10,7 @@ import io.peekandpoke.klang.common.logging.LogArea
 import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.spine.KlangCodePlaybackCtrl
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
 import io.peekandpoke.klang.storage.EditorSettings
 import io.peekandpoke.klang.ui.comp.KlangButton
@@ -72,7 +73,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
-    private val ctrl = KlangCodePlaybackCtrl.builder()
+    private val ctrl = spine.playbacks.ctrl()
         .code(props.code)
         .rpm(props.rpm)
         .preview()

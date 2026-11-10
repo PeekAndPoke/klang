@@ -11,7 +11,6 @@ import io.peekandpoke.klang.common.logging.LogArea
 import io.peekandpoke.klang.common.logging.LogLevel
 import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.klang.spine.ConsoleLog
-import io.peekandpoke.klang.spine.Playbacks
 import io.peekandpoke.klang.spine.Spine
 import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.sprudel.ui.registerSprudelUiTools
@@ -73,7 +72,10 @@ val keysManager = KeysManager(store = KeymapStorage, hintTriggers = listOf("Mod"
 }
 
 /** The app's one Spine: built here, registered on the app, reached by every component as `spine` (KLANG-00422). */
-private val appSpine = Spine(console = consoleLog)
+private val appSpine = Spine(console = consoleLog).also {
+    // The samples load while the user looks at the start page, as ever
+    it.player.preloadSamples()
+}
 
 val kraft = kraftApp {
     semanticUI()
@@ -119,7 +121,7 @@ fun main() {
 
     // The MIDI devices where the user granted MIDI before, so a KeyLab plays on every page (KLANG-00402, step 4); a
     // first visit is asked nothing
-    Playbacks.live.connectIfGranted()
+    appSpine.playbacks.live.connectIfGranted()
 
     kraft.mount(selector = "#spa", engine = PreactVDomEngine()) {
         KlangStudioComponent()

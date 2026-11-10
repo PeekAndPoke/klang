@@ -7,7 +7,7 @@ package io.peekandpoke.klang.pages
 
 import io.peekandpoke.klang.audio_engine.playOnce
 import io.peekandpoke.klang.audio_fe.samples.Samples
-import io.peekandpoke.klang.spine.Player
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.sprudel.lang.adsr
 import io.peekandpoke.klang.sprudel.lang.bank
 import io.peekandpoke.klang.sprudel.lang.n
@@ -73,7 +73,7 @@ class SamplesLibraryPage(ctx: NoProps) : PureComponent(ctx) {
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
-    private val samples: Samples? by subscribingTo(Player.samples)
+    private val samples: Samples? by subscribingTo(spine.player.samples)
     private var searchText: String by value("")
     private var groupBy: GroupBy by value(GroupBy.BANK)
     private var lastSprudelCode: String by value("")
@@ -136,7 +136,7 @@ class SamplesLibraryPage(ctx: NoProps) : PureComponent(ctx) {
 
     private fun playSample(bank: String, sound: String, index: Int? = null) = launch {
         // Ensure player is ready
-        val player = Player.ensure().await()
+        val player = spine.player.ensure().await()
 
         val effectiveIndex = index?.takeIf { it > 0 }
 

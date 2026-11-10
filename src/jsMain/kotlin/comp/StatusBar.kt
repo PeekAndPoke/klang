@@ -7,6 +7,7 @@ package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.spine.Playbacks
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.klang.version
@@ -42,7 +43,7 @@ fun Tag.StatusBar() = comp {
  */
 class StatusBar(ctx: NoProps) : PureComponent(ctx) {
 
-    private val line by subscribingTo(Playbacks.songLine)
+    private val line by subscribingTo(spine.playbacks.songLine)
     private val versionInfo by subscribingTo(version)
     private val currentRoute by subscribingTo(router.current)
 
@@ -51,7 +52,7 @@ class StatusBar(ctx: NoProps) : PureComponent(ctx) {
      * Stop. A song Klang Amp put on is not the page's (`SongDeck.ctrlFor`).
      */
     private fun onPageOf(songId: String): Boolean {
-        if (Playbacks.song.onDeck()?.fromPage != true) {
+        if (spine.playbacks.song.onDeck()?.fromPage != true) {
             return false
         }
 
@@ -70,13 +71,13 @@ class StatusBar(ctx: NoProps) : PureComponent(ctx) {
             shown = shown,
             idleText = info?.let { "Klangmotor v${it.version} revision: ${it.gitRev}" } ?: "Klangmotor",
             onOpen = { songId -> router.navToUri(Nav.song(songId)) },
-            onStop = { Playbacks.song.stop() },
+            onStop = { spine.playbacks.song.stop() },
             openKey = true,
         ) {
             // Bound before any song page's own Stop, which is the newest binding there and answers first once it is on;
             // while the page's is off (its song still starting) this one stops the song. Its hint only while shown
             OnKey(KlangKeyBindings.Stop, enabled = line != null, showHint = line != null && shown) {
-                Playbacks.song.stop()
+                spine.playbacks.song.stop()
             }
         }
     }

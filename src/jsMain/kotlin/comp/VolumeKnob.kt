@@ -7,6 +7,7 @@ package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.MasterVolumeScale
 import io.peekandpoke.klang.spine.Player
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.comp.KlangKnob
 import io.peekandpoke.klang.workshop.keys.OnKey
@@ -51,7 +52,7 @@ class VolumeKnob(ctx: Ctx<Props>) : Component<VolumeKnob.Props>(ctx) {
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
-    private val outputVolume by subscribingTo(Player.outputVolume)
+    private val outputVolume by subscribingTo(spine.player.outputVolume)
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -75,8 +76,8 @@ class VolumeKnob(ctx: Ctx<Props>) : Component<VolumeKnob.Props>(ctx) {
             KlangKnob(
                 name = "Volume",
                 value = position,
-                onChange = { Player.setOutputVolume(MasterVolumeScale.gainOf(it)) },
-                onChangeEnd = { Player.rememberOutputVolume() },
+                onChange = { spine.player.setOutputVolume(MasterVolumeScale.gainOf(it)) },
+                onChangeEnd = { spine.player.rememberOutputVolume() },
                 size = props.size,
                 // Calmer than the knob's 75 px: the whole range over 200 px (the maintainer, 2026-10-26)
                 dragPixels = 200.0,

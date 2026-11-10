@@ -16,7 +16,7 @@ import io.peekandpoke.ultra.streams.ops.smooth
  * reading listens to the diagnostics only while some gauge listens to it, and not while the window has no attention; a
  * gauge that pauses on its own (the Motor under the visuals) cuts it off downstream and lets go of it.
  */
-class MotorReadings(work: UiWork) {
+class MotorReadings(work: UiWork, player: Player) {
 
     companion object {
         /** How slowly the needles follow new readings: the share of the way kept per 10 ms, the Motor's old pace. */
@@ -27,7 +27,7 @@ class MotorReadings(work: UiWork) {
     }
 
     /** The current player's latest diagnostics; null while there is none; not followed while the window has no attention. */
-    private val online = Player.diagnostics.stream.cutoffWhen(work.resting)
+    private val online = player.diagnostics.stream.cutoffWhen(work.resting)
 
     /** The cylinders at work, 0 to 32; null while the Motor gives none. */
     val cylinders: Stream<Double?> by lazy {

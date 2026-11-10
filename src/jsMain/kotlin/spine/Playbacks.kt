@@ -20,20 +20,25 @@ import io.peekandpoke.ultra.streams.ops.ticker
  * what plays now for the visuals and Klang Amp ([nowPlaying]), and [live] play, the MIDI rig. The sounds' lane is still
  * to come.
  */
-object Playbacks {
+class Playbacks(private val engine: PlaybackEngine) {
+
+    companion object {
+        /** How often [heardSeconds] looks at the playback: a second's change shows within a quarter of a second. */
+        private const val HEARD_TICK_MS = 250
+    }
 
     /** The real song that plays: one at a time, kept while one navigates. Made on first use, as it starts the engine's status. */
-    val song: SongDeck by lazy { SongDeck() }
+    val song: SongDeck by lazy { SongDeck(engine = engine, stage = this) }
 
     /** What a page plays until it is stopped, over the song, which it fades out and in again ([Previews], D1). */
-    val previews: Previews by lazy { Previews(deck = song) }
+    val previews: Previews by lazy { Previews(deck = song, stage = this) }
 
     /**
      * Live play, the MIDI rig (KLANG-00402, step 4): for the app's life, playing along with whatever plays, stopping
      * nothing and stopped by nothing but a panic. Made on first use; brought up by what first shows it, or at the app's
      * start where MIDI was granted before ([MidiRig.start], [MidiRig.connectIfGranted]).
      */
-    val live: MidiRig by lazy { MidiRig() }
+    val live: MidiRig by lazy { MidiRig(engine = engine) }
 
     /**
      * Snapshot of whatever is considered the "primary" playback across the app.
@@ -53,9 +58,6 @@ object Playbacks {
     val nowPlaying: Stream<NowPlaying?> = _nowPlaying.readonly
 
     private var nowPlayingOwner: PlaybackOwner? = null
-
-    /** How often [heardSeconds] looks at the playback: a second's change shows within a quarter of a second. */
-    private const val HEARD_TICK_MS = 250
 
     /**
      * The seconds the playback on stage has been heard, a value per second; null while nothing plays. Counted on the
@@ -118,4 +120,7 @@ object Playbacks {
     fun stopNowPlaying() {
         nowPlayingOwner?.stop()
     }
+
+    /** A code playback of this stage, on its engine: a song page's, a code example's, the deck's own. */
+    fun ctrl(): KlangCodePlaybackCtrl.Builder = KlangCodePlaybackCtrl.builder(stage = this, engine = engine)
 }

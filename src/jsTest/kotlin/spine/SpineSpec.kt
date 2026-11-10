@@ -72,6 +72,8 @@ class SpineSpec : StringSpec({
         withClue("the lamp") { one.visuals.lamp shouldNotBeSameInstanceAs other.visuals.lamp }
         withClue("the recents") { one.recents shouldNotBeSameInstanceAs other.recents }
         withClue("the Console") { one.console shouldNotBeSameInstanceAs other.console }
+        withClue("the player") { one.player shouldNotBeSameInstanceAs other.player }
+        withClue("the playbacks") { one.playbacks shouldNotBeSameInstanceAs other.playbacks }
 
         withClue("one Spine gives the same part every time") {
             one.work shouldBeSameInstanceAs one.work
@@ -84,6 +86,14 @@ class SpineSpec : StringSpec({
 
         Spine(console = console).console shouldBeSameInstanceAs console
         Spine().console shouldNotBeSameInstanceAs console
+    }
+
+    "a Spine built starts nothing: the engine not loaded, no samples asked for" {
+        val own = Spine()
+
+        own.player.status() shouldBe Player.Status.NOT_LOADED
+        own.player.get() shouldBe null
+        withClue("no samples asked for by building it") { own.player.samplesRequested shouldBe false }
     }
 
     "the graphs draw with no pause of their own in an app with a Spine, and with one given" {

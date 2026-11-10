@@ -6,7 +6,7 @@
 package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
-import io.peekandpoke.klang.spine.Player
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.ui.comp.KlangScreen
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
@@ -44,11 +44,11 @@ class PlayerWarehouseStats(ctx: NoProps) : PureComponent(ctx) {
      * ticker needed.
      */
     private val stats: KlangCommLink.Feedback.Diagnostics.WarehouseStats? by subscribingTo(
-        Player.diagnostics.stream.map { it?.warehouse }.distinct()
+        spine.player.diagnostics.stream.map { it?.warehouse }.distinct()
     )
 
     /** The voices that made no sound, beside the warehouse's late ones (KLANG-00399). */
-    private val soundless: Int by subscribingTo(Player.diagnostics.stream.map { it?.soundlessVoices ?: 0 }.distinct())
+    private val soundless: Int by subscribingTo(spine.player.diagnostics.stream.map { it?.soundlessVoices ?: 0 }.distinct())
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 

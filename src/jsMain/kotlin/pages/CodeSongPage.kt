@@ -20,7 +20,6 @@ import io.peekandpoke.klang.comp.transportSpanTwo
 import io.peekandpoke.klang.layouts.PageWorkbench
 import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.spine.KlangCodePlaybackCtrl
-import io.peekandpoke.klang.spine.Playbacks
 import io.peekandpoke.klang.spine.VisualState
 import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
@@ -128,14 +127,14 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
      * The song's controller: the one on the deck when a page of this song put it there (playing, starting, or with the
      * errors of a failed start), so the page goes on with it (KLANG-00406); else one from what the browser keeps.
      */
-    private val ctrl = Playbacks.song.ctrlFor(songId) ?: KlangCodePlaybackCtrl.builder()
+    private val ctrl = spine.playbacks.song.ctrlFor(songId) ?: spine.playbacks.ctrl()
         .code(songStorage.code())
         .rpm(songStorage.rpm())
         .title(songStorage.title())
         .build()
 
     /** The page shows [ctrl] till it unmounts: the deck releases it once it is neither on the deck nor shown. */
-    private val hideCtrl = Playbacks.song.show(ctrl)
+    private val hideCtrl = spine.playbacks.song.show(ctrl)
 
     /** The editor's bookmarks (KLANG-00323): it starts from the stored ones, and every change is stored. */
     private val bookmarks = BookmarkOptions(
@@ -250,7 +249,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     private fun playSong() {
         // Persist the current code before starting (matches original strategy of persist-on-play).
         songStorage.code(ctrl.state().code)
-        Playbacks.song.play(songId = songId, ctrl = ctrl)
+        spine.playbacks.song.play(songId = songId, ctrl = ctrl)
     }
 
     /** This page's song for the visuals: played here, the page's own way. */

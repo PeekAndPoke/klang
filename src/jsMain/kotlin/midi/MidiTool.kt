@@ -6,8 +6,8 @@
 package io.peekandpoke.klang.midi
 
 import io.peekandpoke.klang.spine.MidiRig
-import io.peekandpoke.klang.spine.Playbacks
 import io.peekandpoke.klang.spine.Player
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.ui.comp.KlangWorkbench
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
@@ -46,7 +46,7 @@ class MidiTool(ctx: NoProps) : PureComponent(ctx) {
         val tab = KlangWorkbench.Tab(id = TAB_ID, title = "MIDI") { MidiTool() }
     }
 
-    private val rig = Playbacks.live
+    private val rig = spine.playbacks.live
 
     private val rigState by subscribingTo(rig.state)
 

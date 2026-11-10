@@ -45,7 +45,7 @@ class LaptopKeysView(ctx: NoProps) : PureComponent(ctx) {
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////
 
-    private val rig = Playbacks.live
+    private val rig = spine.playbacks.live
 
     private val rigState by subscribingTo(rig.state)
 

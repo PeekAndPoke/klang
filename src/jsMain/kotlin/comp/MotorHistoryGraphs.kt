@@ -7,7 +7,6 @@ package io.peekandpoke.klang.comp
 
 import io.peekandpoke.klang.audio_engine.KlangDiagnostics
 import io.peekandpoke.klang.audio_engine.KlangPlayer
-import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.spine.UiWork
 import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.ui.comp.KlangLamp
@@ -109,7 +108,7 @@ class MotorHistoryGraphs(ctx: Ctx<Props>) : Component<MotorHistoryGraphs.Props>(
     }
 
     /** The current player's history; null while there is none. */
-    private val history by subscribingTo(Player.diagnostics.history.cutoffWhen(props.paused ?: spine.work.resting))
+    private val history by subscribingTo(spine.player.diagnostics.history.cutoffWhen(props.paused ?: spine.work.resting))
 
     override fun VDom.render() {
         val h = history

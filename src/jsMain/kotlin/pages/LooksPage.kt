@@ -16,8 +16,8 @@ import io.peekandpoke.klang.layouts.MenuPickUp
 import io.peekandpoke.klang.layouts.menuLessonTile
 import io.peekandpoke.klang.pages.docs.tutorials.soundDesignBasicsTrack
 import io.peekandpoke.klang.spine.Playbacks
-import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.spine.SongDeck
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.storage.LookStorage
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
@@ -1319,7 +1319,7 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
                 }
 
                 Oscilloscope(
-                    player = Player.player,
+                    player = spine.player.player,
                     strokeColor = Color(look[KlangRole.ScopeTrace]),
                     preview = SCOPE_FRAME,
                 )

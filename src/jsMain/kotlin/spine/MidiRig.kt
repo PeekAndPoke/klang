@@ -52,7 +52,7 @@ private val log = Logger(area = LogArea.Midi, source = "MidiRig")
  * Live play is no one's stage: the rig plays along with a song and stops none (KLANG-00406, the lanes); only a panic
  * stops it. The app has one, [Playbacks.live]; the specs make their own, and start one only to read a reload.
  */
-class MidiRig {
+class MidiRig(private val engine: PlaybackEngine) {
 
     /** One row per distinct controller seen, for discovering a device's map. */
     data class ObservedControl(val raw: Int, val channel: Int, val hits: Int)
@@ -178,7 +178,7 @@ class MidiRig {
         fun velocityLabel(velocity: Double): String = (velocity * 127).roundToInt().toString()
     }
 
-    private val ctrl = RealtimePlaybackCtrl(playbackName = "midi-playground")
+    private val ctrl = RealtimePlaybackCtrl(playbackName = "midi-playground", engine = engine)
 
     private val midi = MidiConnector()
 
@@ -232,7 +232,7 @@ class MidiRig {
         _state { it.copy(loadout = MidiLoadoutStorage.load()) }
 
         // The Motor running, whoever started it: the keys play along at once
-        Player.status.subscribeToStream { status ->
+        engine.status.subscribeToStream { status ->
             if (status == Player.Status.READY) {
                 ctrl.start()
             }
@@ -369,18 +369,18 @@ class MidiRig {
         // The user's text holds changes of theirs: it differs from what plays
         val edited = _state().playCode != _state().playing
 
-        val engine = Player.createEngine()
-        engine.execute("""import * from "stdlib"""")
-        engine.execute("""import * from "sprudel"""")
+        val script = engine.scriptEngine()
+        script.execute("""import * from "stdlib"""")
+        script.execute("""import * from "sprudel"""")
 
         try {
-            val result = engine.execute(code + "\n")
+            val result = script.execute(code + "\n")
 
             appliedMapper = (result as? FunctionValue)?.convertFunctionToKotlin(arity = 1)
                 ?: error("The play code ends in a function, e.g. x => x.sound(warmSaw), got ${result.toDisplayString()}")
 
             val instruments = MidiPlayCode.namesOf(code).filter { name ->
-                runCatching { engine.getVariable(name).value is IgnitorDsl }.getOrDefault(false)
+                runCatching { script.getVariable(name).value is IgnitorDsl }.getOrDefault(false)
             }
 
             // The text follows what plays where it is the user's, or held no changes of theirs

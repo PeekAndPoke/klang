@@ -5,8 +5,8 @@
 
 package io.peekandpoke.klang.comp
 
-import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.spine.UiWork
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.ui.comp.KlangWorkbench
 import io.peekandpoke.klang.ui.feel.KlangLook
 import io.peekandpoke.klang.ui.feel.KlangRole
@@ -56,6 +56,9 @@ fun Tag.Motoer(
  * Every slot is positioned ABSOLUTELY in rem inside a fixed-height frame; the geometry is in the companion.
  */
 class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
+
+    /** The Spine's player, found once: the spectrum asks it for the engine every frame. */
+    private val enginePlayer = spine.player
 
     companion object {
         /** The frame's total height: the gauges, the scope under them, the spectrum behind it down to the floor. */
@@ -180,7 +183,7 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
                     // Its smoke rises over the gauges (the maintainer, 2026-10-30: "would be nice if the smoke would
                     // cover the gauges")
                     Oscilloscope(
-                        player = Player.player,
+                        player = spine.player.player,
                         strokeColor = Color(look[KlangRole.ScopeTrace]),
                         paused = props.paused,
                         strokeWidth = 2.8,
@@ -215,7 +218,7 @@ class Motor(ctx: Ctx<Props>) : Component<Motor.Props>(ctx) {
                     numBuckets = SPECTRUM_COLUMNS,
                     labelMiddle = ((FRAME_HEIGHT_REM - OSCILLOSCOPE_TOP_REM - OSCILLOSCOPE_HEIGHT_REM) / 2.0).rem,
                     paused = props.paused,
-                ) { Player.get() }
+                ) { enginePlayer.get() }
             }
 
             val display = props.display

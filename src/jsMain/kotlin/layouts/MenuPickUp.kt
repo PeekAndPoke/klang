@@ -130,7 +130,7 @@ class MenuPickUp(ctx: Ctx<Props>) : Component<MenuPickUp.Props>(ctx) {
 
     private val done by subscribingTo(TutorialStorage.done)
 
-    private val songLine by subscribingTo(Playbacks.songLine)
+    private val songLine by subscribingTo(spine.playbacks.songLine)
 
     override fun VDom.render() {
         menuPickUpView(
@@ -141,7 +141,7 @@ class MenuPickUp(ctx: Ctx<Props>) : Component<MenuPickUp.Props>(ctx) {
             learning = continueOf(entries = entries, done = done),
             now = Date.now(),
             songLine = songLine,
-            onStop = { Playbacks.song.stop() },
+            onStop = { spine.playbacks.song.stop() },
             currentSongId = props.currentSongId,
             currentTrackSlug = props.currentTrackSlug,
             onOpen = props.onOpen,

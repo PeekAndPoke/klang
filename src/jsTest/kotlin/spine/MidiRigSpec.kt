@@ -25,6 +25,9 @@ import kotlinx.browser.localStorage
  */
 class MidiRigSpec : StringSpec({
 
+    /** The engine every rig of this spec plays on: one, as the app has one. Never started: no case calls `startEngine()`. */
+    val engine = Player()
+
     /** This browser's own play code, to put back after a row that applies. */
     fun keptPlayCode(): String? = localStorage.getItem(StorageKeys.MIDI_PLAY_CODE)
 
@@ -52,7 +55,7 @@ class MidiRigSpec : StringSpec({
         ControlEvent.AllUp(source = source, reason = reason, tsMs = 0.0)
 
     "a device's pad lights in its bank's colour on the device's drawing; a pad on the laptop's side lights untinted on its own" {
-        val rig = MidiRig()
+        val rig = MidiRig(engine = engine)
 
         rig.handle(press(keyLab))
         rig.handle(press(MidiRig.LAPTOP_SCREEN, ControlId("pad-1")))
@@ -76,7 +79,7 @@ class MidiRigSpec : StringSpec({
     }
 
     "a source that lets go puts out its own lights only; a panic puts out every light and every note" {
-        val rig = MidiRig()
+        val rig = MidiRig(engine = engine)
 
         rig.handle(press(keyLab))
         rig.handle(press(MidiRig.LAPTOP_SCREEN))
@@ -101,7 +104,7 @@ class MidiRigSpec : StringSpec({
     }
 
     "a pad of the same name released on the laptop's side leaves the device's pad lit in its colour" {
-        val rig = MidiRig()
+        val rig = MidiRig(engine = engine)
 
         rig.handle(press(keyLab))
         rig.handle(press(MidiRig.LAPTOP_SCREEN))
@@ -114,7 +117,7 @@ class MidiRigSpec : StringSpec({
     }
 
     "the laptop's keys hold a note on the laptop's side, not the device's; its focus lost lets it go" {
-        val rig = MidiRig()
+        val rig = MidiRig(engine = engine)
         val note = LaptopKeys.noteAt(code = "KeyZ", octave = 0)!!
 
         withClue("the key is the laptop's: it does not reach the browser") {
@@ -131,7 +134,7 @@ class MidiRigSpec : StringSpec({
     }
 
     "the laptop's octave shows as it changes" {
-        val rig = MidiRig()
+        val rig = MidiRig(engine = engine)
         val before = rig.state().laptopOctave
 
         rig.laptopKeyDown(code = "ArrowRight", repeat = false, modified = false, shift = false, tsMs = 0.0)
@@ -140,7 +143,7 @@ class MidiRigSpec : StringSpec({
     }
 
     "the tool's panic lets every source go and puts out every light" {
-        val rig = MidiRig()
+        val rig = MidiRig(engine = engine)
 
         rig.handle(press(keyLab))
         rig.handle(ControlEvent.NoteDown(source = keyLab, channel = 0, note = 60, velocity = 0.5, tsMs = 0.0))
@@ -158,7 +161,7 @@ class MidiRigSpec : StringSpec({
     "the play code: its instruments, what a key plays, one chosen or stepped to; one that fails keeps the one before" {
         // An apply keeps its play code for the next visit: this browser's own is put back
         val kept = keptPlayCode()
-        val rig = MidiRig()
+        val rig = MidiRig(engine = engine)
 
         try {
             rig.apply("let lead = Ign.saw()\nlet n = 3\nlet pad = Ign.supersaw()\n\nx => x.sound(lead)")
@@ -221,7 +224,7 @@ class MidiRigSpec : StringSpec({
         try {
             localStorage.removeItem(StorageKeys.MIDI_PLAY_CODE)
 
-            val first = MidiRig()
+            val first = MidiRig(engine = engine)
 
             first.start()
 
@@ -232,7 +235,7 @@ class MidiRigSpec : StringSpec({
 
             localStorage.setItem(StorageKeys.MIDI_PLAY_CODE, "let lead = Ign.saw()\nlet pad = Ign.supersaw()\n\nx => x.sound(lead)")
 
-            val rig = MidiRig()
+            val rig = MidiRig(engine = engine)
 
             rig.start()
 
@@ -247,7 +250,7 @@ class MidiRigSpec : StringSpec({
     }
 
     "what is a gesture that starts the Motor: a laptop key or a press that plays; the panic, the octave, the velocity are not" {
-        val rig = MidiRig()
+        val rig = MidiRig(engine = engine)
 
         withClue("a note and a pad play") { listOf("KeyZ", "Digit1").map { rig.laptopKeyPlays(it) } shouldBe listOf(true, true) }
         withClue("the panic, the octave, the velocity and the sustain do not") {
@@ -266,7 +269,7 @@ class MidiRigSpec : StringSpec({
         try {
             localStorage.setItem(StorageKeys.MIDI_PLAY_CODE, failing)
 
-            val rig = MidiRig()
+            val rig = MidiRig(engine = engine)
 
             rig.start()
 
@@ -283,7 +286,7 @@ class MidiRigSpec : StringSpec({
         val kept = keptPlayCode()
 
         try {
-            val rig = MidiRig()
+            val rig = MidiRig(engine = engine)
             val applied = "let lead = Ign.saw()\nlet pad = Ign.supersaw()\n\nx => x.sound(lead)"
 
             rig.apply(applied)
@@ -302,7 +305,7 @@ class MidiRigSpec : StringSpec({
         val kept = keptPlayCode()
 
         try {
-            val rig = MidiRig()
+            val rig = MidiRig(engine = engine)
 
             rig.apply("reverb(wet = 0.2)")
 
@@ -318,7 +321,7 @@ class MidiRigSpec : StringSpec({
         try {
             localStorage.setItem(StorageKeys.MIDI_PLAY_CODE, "let lead = Ign.saw().lowpas(1800)\n\nx => x.sound(lead)")
 
-            val reloaded = MidiRig()
+            val reloaded = MidiRig(engine = engine)
 
             reloaded.start()
             step(reloaded)
@@ -327,7 +330,7 @@ class MidiRigSpec : StringSpec({
                 reloaded.state().playCodeError.shouldNotBeNull() shouldContain "lowpas"
             }
 
-            val rig = MidiRig()
+            val rig = MidiRig(engine = engine)
 
             rig.apply("let lead = Ign.saw()\nlet pad = Ign.supersaw()\n\nx => x.sound(lead)")
             rig.apply("let lead = Ign.saw().lowpas(1800)\n\nx => x.sound(lead)")
@@ -346,7 +349,7 @@ class MidiRigSpec : StringSpec({
         val kept = keptPlayCode()
 
         try {
-            val rig = MidiRig()
+            val rig = MidiRig(engine = engine)
 
             rig.apply("let lead = Ign.saw()\nlet pad = Ign.supersaw()\n\nx => x.s(\"bd\")")
             step(rig)
@@ -370,7 +373,7 @@ class MidiRigSpec : StringSpec({
                 """{"name":"Warm saw","ignitor":"Ign.saw()\n  .plus(Ign.sine().detune(12).mul(0.3))\n  .lowpass(1800)\n  .adsr(0.01, 0.3, 0.6, 0.4)","mapper":"reverb(wet = 0.2)"}""",
             )
 
-            MidiRig().start()
+            MidiRig(engine = engine).start()
 
             localStorage.getItem(StorageKeys.MIDI_PLAY_CODE) shouldBe null
         } finally {
@@ -390,7 +393,7 @@ class MidiRigSpec : StringSpec({
         val keptLoadout = localStorage.getItem(StorageKeys.MIDI_LOADOUT)
 
         try {
-            val rig = MidiRig()
+            val rig = MidiRig(engine = engine)
 
             rig.apply("let lead = Ign.saw()\nlet pad = Ign.supersaw()\nlet bass = Ign.square()\n\nx => x.sound(lead)")
             // As the loadout's end takes a drop
@@ -407,7 +410,7 @@ class MidiRigSpec : StringSpec({
             withClue("kept, in its order") { localStorage.getItem(StorageKeys.MIDI_LOADOUT) shouldBe """["bass","lead"]""" }
 
             withClue("read back by the next visit's rig") {
-                val next = MidiRig()
+                val next = MidiRig(engine = engine)
 
                 next.start()
                 next.state().loadout.sounds shouldBe listOf(MidiPlayCode.Sound.Own("bass"), MidiPlayCode.Sound.Own("lead"))

@@ -21,9 +21,9 @@ import io.peekandpoke.klang.midi.SourceId
 import io.peekandpoke.klang.midi.laptopKeyboardPanel
 import io.peekandpoke.klang.pages.docs.tutorials.soundDesignBasicsTrack
 import io.peekandpoke.klang.spine.Playbacks
-import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.spine.Recents
 import io.peekandpoke.klang.spine.SongDeck
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.storage.LookStorage
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.comp.KlangBackLink
@@ -351,7 +351,7 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
                         }
 
                         Oscilloscope(
-                            player = Player.player,
+                            player = spine.player.player,
                             strokeColor = Color(look[KlangRole.ScopeTrace]),
                         )
                     }

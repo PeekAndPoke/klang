@@ -16,8 +16,8 @@ import io.peekandpoke.ultra.common.TypedKey
  * `spine.xyz`"). The app builds it once and registers it on the Kraft app ([spine]), as Kraft does for its popups; a
  * component reaches it as `spine`, a spec gives its own.
  *
- * A part gets the parts it needs through its constructor. A part moves in here when its global object goes: until
- * all have, the objects left in this package (`Player`, `Playbacks`) stand beside it.
+ * A part gets the parts it needs through its constructor. Building a Spine starts nothing: the app asks for what it
+ * wants at its start (the samples' download, the MIDI devices), a spec's Spine stays quiet.
  */
 class Spine(
     /**
@@ -40,8 +40,17 @@ class Spine(
     /** The work that only shows things: when it rests, and the frames it runs on. */
     val work = UiWork()
 
+    /** The engine: its start, its status, the player once it runs, the samples, the output volume. */
+    val player = Player()
+
+    /** What plays: the song deck, the previews, the live MIDI rig, and what holds the stage. */
+    val playbacks = Playbacks(engine = player)
+
+    /** Klang Amp's deck: the built-in songs played from the visuals. */
+    val klangamp = KlangampDeck(playbacks = playbacks)
+
     /** The Motor's readings, each smoothed once for every gauge. */
-    val motor = MotorReadings(work = work)
+    val motor = MotorReadings(work = work, player = player)
 
     /** The visuals' state: the lamp over the plate and its light, the song open on a page. */
     val visuals = VisualState(work = work)

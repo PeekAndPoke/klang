@@ -25,7 +25,7 @@ import io.peekandpoke.ultra.streams.ops.switchMapNotNull
  *
  * The app has one, [Playbacks.song]; the specs make their own on a player without a backend.
  */
-class SongDeck(private val engine: PlaybackEngine = Player) {
+class SongDeck(private val engine: PlaybackEngine, private val stage: Playbacks) {
 
     /** What is on the deck: the song's id, the controller that plays it, and whether a song page put it on. */
     data class OnDeck(val songId: String, val ctrl: KlangCodePlaybackCtrl, val fromPage: Boolean)
@@ -92,11 +92,10 @@ class SongDeck(private val engine: PlaybackEngine = Player) {
 
     /** Puts [song] on the deck and plays it, Klang Amp's way: with a controller of the deck's own. */
     fun play(song: Song): KlangCodePlaybackCtrl {
-        val ctrl = KlangCodePlaybackCtrl.builder()
+        val ctrl = KlangCodePlaybackCtrl.builder(stage = stage, engine = engine)
             .code(song.code)
             .rpm(song.rpm)
             .title(song.title)
-            .engine(engine)
             .build()
 
         play(OnDeck(songId = song.id, ctrl = ctrl, fromPage = false))
@@ -125,7 +124,7 @@ class SongDeck(private val engine: PlaybackEngine = Player) {
             _onDeck(next)
             watch(next.ctrl)
             // The song takes the stage: what held it (a code example, a page's own playback) stops
-            Playbacks.requestExclusivePlayback(self = next.ctrl)
+            stage.requestExclusivePlayback(self = next.ctrl)
         }
 
         next.ctrl.play()

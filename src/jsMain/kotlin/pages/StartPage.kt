@@ -18,8 +18,6 @@ import io.peekandpoke.klang.fs
 import io.peekandpoke.klang.playJingle
 import io.peekandpoke.klang.spine.KlangCodePlaybackCtrl
 import io.peekandpoke.klang.spine.MotorReadings
-import io.peekandpoke.klang.spine.Playbacks
-import io.peekandpoke.klang.spine.Player
 import io.peekandpoke.klang.spine.SwingingLamp
 import io.peekandpoke.klang.spine.UiWork
 import io.peekandpoke.klang.spine.spine
@@ -299,7 +297,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         init {
             launch {
                 try {
-                    Player.ensure().await()
+                    spine.player.ensure().await()
                 } catch (e: Throwable) {
                     // A failed worklet must not wedge the warm-up: go on; the jingle and the navigation tolerate a
                     // missing player
@@ -382,7 +380,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         init {
             // The dyno is done: "Gestrandet" fades in while the result waits for "Make Music Now". A song on the deck
             // plays on instead (KLANG-00406, D2): the waiting song neither starts over it nor fades the volume under it
-            if (Playbacks.song.onDeck() == null) {
+            if (spine.playbacks.song.onDeck() == null) {
                 songFadeIn.start()
                 waitingSong.play()
             }
@@ -415,7 +413,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
             // No player (the worklet failed?): no jingle, the way on all the same. Not compiled yet (a quick click):
             // compiled now, and it follows a moment later
-            Player.get()?.let { player ->
+            spine.player.get()?.let { player ->
                 when (val ready = jinglePattern) {
                     null -> launch { jingle.compile()?.let { player.playJingle(jingle = jingle, pattern = it) } }
                     else -> player.playJingle(jingle = jingle, pattern = ready)
@@ -450,7 +448,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
      * maintainer, 2026-10-27/28). Not during the run: it would share the main thread with the measurement and lower
      * the PS the run reports ("or we start the song after the dynamo, probably simpler").
      */
-    private val waitingSong = KlangCodePlaybackCtrl.builder()
+    private val waitingSong = spine.playbacks.ctrl()
         .code(BuiltInSongs.soundOfTheSea.code)
         .rpm(BuiltInSongs.soundOfTheSea.rpm)
         .title(BuiltInSongs.soundOfTheSea.title)

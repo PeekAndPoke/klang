@@ -35,7 +35,34 @@ import kotlinx.coroutines.Deferred
 
 private val log = Logger(area = LogArea.Engine, source = "Player")
 
-object Player : PlaybackEngine {
+class Player : PlaybackEngine {
+
+    companion object {
+        /**
+         * Creates a KlangScriptEngine with sprudel and stdlib registered.
+         *
+         * Inline ignitors are denormalized at the playback boundary by the player's ignitor
+         * registry; no engine-level wiring is required.
+         * If [outputHandler] is provided, console/print output goes there (e.g. REPL capture).
+         */
+        fun createEngine(
+            outputHandler: ((ConsoleLevel, List<String>) -> Unit)? = null,
+        ): KlangScriptEngine {
+            val stdlib = if (outputHandler != null) {
+                KlangStdLib.create(outputHandler = outputHandler)
+            } else {
+                stdlibLib
+            }
+
+            val engineBuilder = KlangScriptEngine.Builder()
+
+            engineBuilder.registerLibrary(stdlib)
+            engineBuilder.registerLibrary(sprudelLib)
+            engineBuilder.registerBuiltInSongsAsModules()
+
+            return engineBuilder.build()
+        }
+    }
 
     enum class Status {
         /** Initial state */
@@ -109,21 +136,40 @@ object Player : PlaybackEngine {
 
     private var deferred: CompletableDeferred<KlangPlayer>? = null
 
-    // We force downloading the sample immediately (better user experience later)
-    private val samplesDeferred: Deferred<Samples> = async {
-        // Runtime override for the sample host (same idiom as window.__APP_VERSION__, see VersionController):
-        // set `window.__KLANG_SAMPLE_BASE__ = "http://localhost:8000"` to load from a local mirror.
-        val override = window.asDynamic().__KLANG_SAMPLE_BASE__ as? String
+    // Downloaded on first need: [preloadSamples] or [ensure]
+    private val samplesLazy = lazy {
+        async {
+            // Runtime override for the sample host (same idiom as window.__APP_VERSION__, see VersionController):
+            // set `window.__KLANG_SAMPLE_BASE__ = "http://localhost:8000"` to load from a local mirror.
+            val override = window.asDynamic().__KLANG_SAMPLE_BASE__ as? String
 
-        val catalogue = when {
-            override.isNullOrBlank() -> SampleCatalogue.default
-            else -> SampleCatalogue.mirrored(override)
+            val catalogue = when {
+                override.isNullOrBlank() -> SampleCatalogue.default
+                else -> SampleCatalogue.mirrored(override)
+            }
+
+            Samples.create(catalogue = catalogue)
+        }.also { it.start() }
+    }
+
+    private val samplesDeferred: Deferred<Samples> by samplesLazy
+
+    /** Whether the samples' download was asked for yet: by [preloadSamples] or by the engine's start ([ensure]). */
+    internal val samplesRequested: Boolean get() = samplesLazy.isInitialized()
+
+    private var preloading = false
+
+    /**
+     * Starts the samples' download, once: the app does at its start, so they are there when the first song plays. A
+     * player nobody asks (a spec's) downloads nothing until it is started ([ensure]).
+     */
+    fun preloadSamples() {
+        if (preloading) {
+            return
         }
 
-        Samples.create(catalogue = catalogue)
-    }.also { it.start() }
+        preloading = true
 
-    init {
         launch {
             val samples = samplesDeferred.await()
             _samples(samples)
@@ -137,33 +183,6 @@ object Player : PlaybackEngine {
 
     /** A script engine for a playback's code: [createEngine] with no console of its own. */
     override fun scriptEngine(): KlangScriptEngine = createEngine()
-
-    /**
-     * Creates a KlangScriptEngine with sprudel and stdlib registered.
-     *
-     * Inline ignitors are denormalized at the playback boundary by the player's ignitor
-     * registry; no engine-level wiring is required.
-     * If [outputHandler] is provided, console/print output goes there (e.g. REPL capture).
-     */
-    @Suppress("UNUSED_PARAMETER")
-    fun createEngine(
-        player: KlangPlayer? = get(),
-        outputHandler: ((ConsoleLevel, List<String>) -> Unit)? = null,
-    ): KlangScriptEngine {
-        val stdlib = if (outputHandler != null) {
-            KlangStdLib.create(outputHandler = outputHandler)
-        } else {
-            stdlibLib
-        }
-
-        val engineBuilder = KlangScriptEngine.Builder()
-
-        engineBuilder.registerLibrary(stdlib)
-        engineBuilder.registerLibrary(sprudelLib)
-        engineBuilder.registerBuiltInSongsAsModules()
-
-        return engineBuilder.build()
-    }
 
     fun ensure(): Deferred<KlangPlayer> {
         deferred?.let { return it }

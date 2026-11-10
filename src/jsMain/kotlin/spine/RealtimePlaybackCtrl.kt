@@ -31,9 +31,10 @@ private val log = Logger(area = LogArea.Engine, source = "RealtimePlaybackCtrl")
 class RealtimePlaybackCtrl(
     /** Playback name; [io.peekandpoke.klang.audio_engine.KlangPlayer] mangles it to `"custom-$name"`. */
     private val playbackName: String,
+    private val engine: PlaybackEngine,
 ) {
     /**
-     * Scalar state, mirrored once from [Player.status] so consumers subscribe here only: the same
+     * Scalar state, mirrored once from the engine's status ([PlaybackEngine.status]) so consumers subscribe here only: the same
      * shape [io.peekandpoke.klang.spine.KlangCodePlaybackCtrl] uses.
      *
      * It carries the [Player.Status] ENUM rather than a collapsed boolean: the song page can fold
@@ -42,7 +43,7 @@ class RealtimePlaybackCtrl(
      * to tell FAILED apart from LOADING.
      */
     data class State(
-        /** Mirrored from [Player.status]: the global engine bootstrap state. */
+        /** Mirrored from the engine's status: whether it is loading, ready or failed. */
         val playerStatus: Player.Status,
         /** True once THIS controller's durable playback exists and can take voices. */
         val isReady: Boolean,
@@ -54,7 +55,7 @@ class RealtimePlaybackCtrl(
     }
 
     private val _state = StreamSource(
-        State(playerStatus = Player.status(), isReady = false)
+        State(playerStatus = engine.status(), isReady = false)
     )
 
     val state: Stream<State> = _state.readonly
@@ -71,7 +72,7 @@ class RealtimePlaybackCtrl(
     private var liveIdCounter = 1
 
     init {
-        Player.status.subscribeToStream { status ->
+        engine.status.subscribeToStream { status ->
             _state { it.copy(playerStatus = status) }
         }
     }
@@ -91,7 +92,7 @@ class RealtimePlaybackCtrl(
 
         launch {
             try {
-                val player = Player.ensure().await()
+                val player = engine.readyPlayer()
                 playback = player.createRealtimePlayback(playbackName)
                 _state { it.copy(isReady = true, error = null) }
             } catch (t: Throwable) {

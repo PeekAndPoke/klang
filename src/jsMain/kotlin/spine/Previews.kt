@@ -15,7 +15,7 @@ package io.peekandpoke.klang.spine
  * The app has one, [Playbacks.previews], on [Playbacks.song]; the specs make their own on their own deck. A preview's
  * controller is built with [KlangCodePlaybackCtrl.Builder.preview], which sends its Play and its stop here.
  */
-class Previews(private val deck: SongDeck) {
+class Previews(private val deck: SongDeck, private val stage: Playbacks) {
 
     init {
         // A song put on the deck stops the preview, also one still starting, which holds no stage yet
@@ -49,7 +49,7 @@ class Previews(private val deck: SongDeck) {
 
         val song = deck.onDeck()?.ctrl
 
-        Playbacks.requestExclusivePlayback(self = preview, spare = song)
+        stage.requestExclusivePlayback(self = preview, spare = song)
         song?.setGain(gain = 0.0, rampSec = FADE_OUT_SEC)
     }
 
