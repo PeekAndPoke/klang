@@ -1,4 +1,4 @@
-Stage probe (KLANG-00420, probe 1), 2026-11-10T10:05:06.751547907Z
+Stage probe (KLANG-00420, probe 1), 2026-11-10T10:58:35.326958301Z
 sample rate 48000 Hz, block 128 frames, 10.0 s of silence after every input
 signals: impulse (1.0 at frame 0), step (DC 1.0 for 1 s), sweep (exp. sine 20 Hz..20 kHz, 2 s, full scale), silence, noise (white, uniform -1..1, 1 s, seeded per channel), nan / +inf / 1e30 (0.5 sine 220 Hz for 0.5 s, one bad sample on the LEFT at frame 4800)
 katalyst: stereo, the production chain builder, applyParams(null) before every block (the output host's way), a duck's sidechain is the same signal
@@ -1408,4 +1408,4 @@ ignitor   eq                    tap 1000 q=200 gain=1                           
 ignitor   eq                    tap 1000 q=200 gain=1                           +inf     0.500     +0.0     -5.03e-10  0.00       1       0.0000     0.2585   1.9417   0        3.27e-19  mono
 ignitor   eq                    tap 1000 q=200 gain=1                           1e30     1.00e+30  +0.0     0.000417   0.00       0       -          4.2765   5.9597   0        3.27e-19  mono
 
-1320 rows, 10.3 s
+1320 rows, 9.9 s

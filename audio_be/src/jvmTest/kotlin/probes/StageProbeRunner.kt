@@ -6,7 +6,6 @@
 package io.peekandpoke.klang.audio_be.probes
 
 import io.kotest.core.spec.style.StringSpec
-import java.io.File
 import java.time.Instant
 import java.util.Locale
 
@@ -22,7 +21,8 @@ import java.util.Locale
  *         --tests io.peekandpoke.klang.audio_be.probes.StageProbeRunner
  *
  * The table goes to `$KLANG_PROBE_OUT` when set (a file path), else to `stage-probe.txt` in the build directory the
- * test classes were compiled into (`<build dir>/probes/`). The register is `audio/ref/verification.md`, "The probes".
+ * test classes were compiled into (`<build dir>/probes/`, [probeOutputFile]); the same rows go beside it as JSON
+ * (`stage-probe.json`, [formatStageProbeJson]). The register is `audio/ref/verification.md`, "The probes".
  */
 class StageProbeRunner : StringSpec({
 
@@ -73,21 +73,9 @@ class StageProbeRunner : StringSpec({
 
         println(report)
 
-        val target = System.getenv("KLANG_PROBE_OUT")?.let { File(it) } ?: defaultProbeFile()
+        val target = probeOutputFile("stage-probe.txt")
 
-        target.parentFile?.mkdirs()
-        target.writeText(report)
-        println("stage probe table written to ${target.absolutePath}")
+        writeProbeFile(target = target, text = report, what = "stage probe table")
+        writeProbeFile(target = jsonTwin(target), text = formatStageProbeJson(rows), what = "stage probe JSON")
     }
 })
-
-/**
- * `<build dir>/probes/stage-probe.txt`, the build dir found from where this class was compiled to
- * (`<build dir>/classes/kotlin/jvm/test/`), so the agents' `.build-claude/` and the maintainer's `build/` both work.
- */
-private fun defaultProbeFile(): File {
-    val classes = File(StageProbeRunner::class.java.protectionDomain.codeSource.location.toURI())
-    val buildDir = classes.parentFile?.parentFile?.parentFile?.parentFile ?: File(System.getProperty("java.io.tmpdir"))
-
-    return File(buildDir, "probes/stage-probe.txt")
-}

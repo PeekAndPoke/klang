@@ -38,6 +38,42 @@ private fun g(x: Double): String = when {
 private fun seconds(frames: Int, sampleRate: Int): String =
     if (frames == NEVER) "never" else String.format(Locale.ROOT, "%.4f", frames.toDouble() / sampleRate)
 
+/**
+ * One row as a JSON object's fields, for the page that shows the table: the case and signal names, then every field
+ * of [OutputFacts] over both channels folded ([StageFacts.worst], the table's row) under its own name, frames as
+ * frame counts ([NEVER] stays -1), then `gainDb`, `allFinite` and `crossed` (null for a mono stage).
+ */
+fun stageProbeJsonRow(row: StageProbeRow): Map<String, Any?> {
+    val f = row.facts.worst
+
+    return linkedMapOf(
+        "family" to row.case.family,
+        "stage" to row.case.stage,
+        "knobs" to row.case.knobs,
+        "signal" to row.signal.name,
+        "frames" to f.frames,
+        "peak" to f.peak,
+        "inputPeak" to f.inputPeak,
+        "dcInput" to f.dcInput,
+        "dcEnd" to f.dcEnd,
+        "nonFiniteCount" to f.nonFiniteCount,
+        "firstNonFiniteFrame" to f.firstNonFiniteFrame,
+        "lastNonFiniteFrame" to f.lastNonFiniteFrame,
+        "finiteAgainFrames" to f.finiteAgainFrames,
+        "tailFrames" to f.tailFrames,
+        "zeroFrames" to f.zeroFrames,
+        "subnormalCount" to f.subnormalCount,
+        "firstSubnormalFrame" to f.firstSubnormalFrame,
+        "minTailAbs" to f.minTailAbs,
+        "gainDb" to f.gainDb,
+        "allFinite" to f.allFinite,
+        "crossed" to row.facts.crossed,
+    )
+}
+
+/** The whole table as JSON: an array of [stageProbeJsonRow] objects, in table order. */
+fun formatStageProbeJson(rows: List<StageProbeRow>): String = jsonRows(rows.map { stageProbeJsonRow(it) })
+
 /** The table: one row per stage, knob set and signal, plain columns padded to their widest cell. */
 fun formatStageProbeTable(rows: List<StageProbeRow>, sampleRate: Int = PROBE_SAMPLE_RATE): String {
     val header = listOf(

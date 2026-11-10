@@ -139,8 +139,8 @@ Two tiers, by the "two kinds of check" rule:
 
 ## Leads from the probes (2026-11-10, all UNVERIFIED; the audit confirms or disproves each)
 
-The tables of this run: `docs/audio-audit/2026-11-10/` (`stage-probe.txt`, `hot-path-lint.txt` with `--guarded`,
-`dead-knobs.txt` with `--list`).
+The tables of this run: `docs/audio-audit/2026-11-10/` (`stage-probe`, `stage-cost`, `hot-path-lint` with `--guarded`,
+`dead-knobs` with `--list`; each as `.txt` and `.json`).
 
 **Stage probe** (165 knob sets, 8 signals; no stage made a subnormal, and non-finite output came from poison input only):
 
@@ -166,6 +166,26 @@ The tables of this run: `docs/audio-audit/2026-11-10/` (`stage-probe.txt`, `hot-
     (by design uncompensated; worth one line in its KDoc if not there).
 13. 16 passes of lowpass or highpass: the impulse response starts near 1e-38, under the Float normal range (matters
     only where a Float edge follows).
+
+**Stage cost table** (JVM, 218 rows, `stage-cost.txt`; net ns per sample, a plain sine is 2.24; no row allocates;
+the off paths are off: phaser at wet 0, gain 1, `classic()` all off and reverb size 0 cost 0 to 0.2 ns):
+
+1. `distort` shapes `exp` and `stompbox` cost 3.4 times more at amount 3 than at 0.5 (Katalyst 72.9 against 21.1);
+   every other shape gets cheaper. Suspect: `fastExp2` falling back to `pow` beyond its range.
+2. Vibrato adds 8.5 ns to a saw voice, as much as lowpass and adsr together (fm 4.6, penv 4.3, accelerate 1.8).
+3. The adsr costs 4.1 to 4.5 ns on a held note, also at 0/0/1/0 where it is a constant 1.
+4. `analog` on lowpass and highpass costs 4.3 times the filter (16.6 against 3.9).
+5. Katalyst `pow` at 3 and at -1 costs 28.6 ns (a general power where two multiplies or a reciprocal would do);
+   `abs` 7.5 ns, the dearest simple operator.
+6. `bands` with both bands empty costs 30.3 ns (the crossover alone), more than a delay (25.2).
+7. Lookahead: compressor 38.1 against 23.9, limiter 32.8 against 24.4. Delay with feedback 1.5: 34.7 against 25.2.
+8. `distort:chebyshev` at amount 3 is bimodal between runs (12.1 or 16.7), a JIT mode flip.
+9. For scale: body 58, reverb 35, vowel 37, 16 passes of lowpass 63, 16x oversampled hard distort 237 (1.1 percent
+   of a core per bus), superpluck 5.8 ns per voice.
+
+The Kotlin/JS half is open: the worker's smallest honest route is to move the platform-free half of the probes to
+`audio_be/src/commonTest` and run the production test bundle under node (never Karma's development bundle). The JVM
+ranking is not the browser's.
 
 **Hot-path lint** (30 findings, none per block): the once-per-note allocations in render code (`PhasePool.kt` 206 to
 480, `DriftLanes.kt:238`, and with `--guarded` `OversampleRegion.kt:158`, `Ignitors.kt:923` and `:2950`,
