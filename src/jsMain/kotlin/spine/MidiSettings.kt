@@ -22,7 +22,7 @@ private val log = Logger(area = LogArea.Midi, source = "MidiSettings")
  * say which letters a drawing prints (D9; what plays goes by the keys' positions), and the device keybed's alignment
  * ([keyBedOffset]). Shared by every drawing of the rig, the MIDI page's and the MIDI tool's.
  */
-object MidiSettings {
+class MidiSettings {
 
     private val layoutSource = StreamSource(MidiSettingsStorage.loadLayout())
 

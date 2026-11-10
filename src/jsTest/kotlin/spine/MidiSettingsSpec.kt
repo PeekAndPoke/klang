@@ -12,32 +12,33 @@ import io.peekandpoke.klang.midi.KeyLayout
 
 /**
  * The MIDI settings' letters (KLANG-00402, D9): what a drawing of the laptop keys prints on a key, shared by the MIDI
- * page and the MIDI tool. The app's one settings, so the spec puts the layout back.
+ * page and the MIDI tool. The layout chosen is kept in the browser, so the spec puts it back.
  */
 class MidiSettingsSpec : StringSpec({
 
     "a key's letter: the layout chosen first, else the one learned, else the English one; a key learns its first letter only" {
-        val kept = MidiSettings.layout()
+        val settings = MidiSettings()
+        val kept = settings.layout()
 
         try {
-            MidiSettings.chooseLayout(null)
+            settings.chooseLayout(null)
 
             withClue("nothing learned, no layout chosen: the English letter") {
-                MidiSettings.letters()("KeyZ") shouldBe KeyLayout.English.labelOf("KeyZ")
+                settings.letters()("KeyZ") shouldBe KeyLayout.English.labelOf("KeyZ")
             }
 
-            MidiSettings.learn(code = "KeyZ", letter = "Ä")
-            MidiSettings.learn(code = "KeyZ", letter = "Ö")
+            settings.learn(code = "KeyZ", letter = "Ä")
+            settings.learn(code = "KeyZ", letter = "Ö")
 
-            withClue("learned: the first letter it pressed, not a later one") { MidiSettings.letters()("KeyZ") shouldBe "Ä" }
+            withClue("learned: the first letter it pressed, not a later one") { settings.letters()("KeyZ") shouldBe "Ä" }
 
-            MidiSettings.chooseLayout(KeyLayout.French)
+            settings.chooseLayout(KeyLayout.French)
 
             withClue("a layout chosen by hand wins over what was learned") {
-                MidiSettings.letters()("KeyZ") shouldBe KeyLayout.French.labelOf("KeyZ")
+                settings.letters()("KeyZ") shouldBe KeyLayout.French.labelOf("KeyZ")
             }
         } finally {
-            MidiSettings.chooseLayout(kept)
+            settings.chooseLayout(kept)
         }
     }
 })

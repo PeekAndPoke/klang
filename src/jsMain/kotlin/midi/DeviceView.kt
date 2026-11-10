@@ -6,8 +6,8 @@
 package io.peekandpoke.klang.midi
 
 import io.peekandpoke.klang.spine.MidiRig
-import io.peekandpoke.klang.spine.MidiSettings
 import io.peekandpoke.klang.spine.Playbacks
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
 import io.peekandpoke.kraft.components.comp
@@ -31,7 +31,7 @@ fun Tag.DeviceView() = comp {
 
 /**
  * The MIDI device's drawing (the KeyLab), lit from the rig ([Playbacks.live]) and played by a click or a touch on any
- * control (KLANG-00402, step 3), with the keybed's alignment above it ([MidiSettings.keyBedOffset]). Drawn by the MIDI
+ * control (KLANG-00402, step 3), with the keybed's alignment above it ([spine.midiSettings.keyBedOffset]). Drawn by the MIDI
  * page and the MIDI tool alike.
  */
 class DeviceView(ctx: NoProps) : PureComponent(ctx) {
@@ -45,7 +45,7 @@ class DeviceView(ctx: NoProps) : PureComponent(ctx) {
 
     private val rigState by subscribingTo(rig.state)
 
-    private val keyBedOffset by subscribingTo(MidiSettings.keyBedOffset)
+    private val keyBedOffset by subscribingTo(spine.midiSettings.keyBedOffset)
 
     override fun VDom.render() {
         div {
@@ -73,11 +73,11 @@ class DeviceView(ctx: NoProps) : PureComponent(ctx) {
 
     /**
      * Aligns the drawing to the device's Transpose setting. Has to be manual: Transp -/+ changes what the keys send
-     * without emitting anything (see [MidiSettings.keyBedOffset]).
+     * without emitting anything (see [spine.midiSettings.keyBedOffset]).
      */
     private fun FlowContent.renderAlignment() {
         val offset = keyBedOffset
-        val set: (Int) -> Unit = { MidiSettings.keyBedOffset(it) }
+        val set: (Int) -> Unit = { spine.midiSettings.keyBedOffset(it) }
 
         div {
             key = "transpose"

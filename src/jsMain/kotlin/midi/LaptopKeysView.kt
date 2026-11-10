@@ -8,6 +8,7 @@ package io.peekandpoke.klang.midi
 import io.peekandpoke.klang.spine.MidiRig
 import io.peekandpoke.klang.spine.MidiSettings
 import io.peekandpoke.klang.spine.Playbacks
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
 import io.peekandpoke.kraft.components.comp
@@ -57,9 +58,9 @@ class LaptopKeysView(ctx: NoProps) : PureComponent(ctx) {
         }
     }
 
-    private val keyLayout by subscribingTo(MidiSettings.layout)
+    private val keyLayout by subscribingTo(spine.midiSettings.layout)
 
-    private val letterOf by subscribingTo(MidiSettings.letters)
+    private val letterOf by subscribingTo(spine.midiSettings.letters)
 
     private var focused: Boolean by value(false)
 
@@ -69,7 +70,7 @@ class LaptopKeysView(ctx: NoProps) : PureComponent(ctx) {
     init {
         lifecycle {
             onMount {
-                MidiSettings.readBrowserLetters()
+                spine.midiSettings.readBrowserLetters()
             }
 
             onUnmount {
@@ -121,7 +122,7 @@ class LaptopKeysView(ctx: NoProps) : PureComponent(ctx) {
             e.preventDefault()
 
             if (down && !e.shiftKey && e.key.length == 1) {
-                MidiSettings.learn(code = e.code, letter = e.key.uppercase())
+                spine.midiSettings.learn(code = e.code, letter = e.key.uppercase())
             }
         }
     }
@@ -218,7 +219,7 @@ class LaptopKeysView(ctx: NoProps) : PureComponent(ctx) {
     private fun FlowContent.layoutButton(layout: KeyLayout?, title: String) {
         ui.given(keyLayout == layout) { primary }.button {
             key = "layout-${layout?.name ?: "auto"}"
-            onClick { MidiSettings.chooseLayout(layout) }
+            onClick { spine.midiSettings.chooseLayout(layout) }
             +title
         }
     }

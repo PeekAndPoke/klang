@@ -17,7 +17,7 @@ import io.peekandpoke.ultra.common.TypedKey
  * component reaches it as `spine`, a spec gives its own.
  *
  * A part gets the parts it needs through its constructor. A part moves in here when its global object goes: until
- * all have, the objects left in this package (`Player`, `Playbacks`, `MidiSettings`) stand beside it.
+ * all have, the objects left in this package (`Player`, `Playbacks`) stand beside it.
  */
 class Spine(
     /**
@@ -30,6 +30,9 @@ class Spine(
     companion object {
         val key = TypedKey<Spine>("spine")
     }
+
+    /** The MIDI playground's settings: the laptop keys' layout and letters, the key bed's offset. */
+    val midiSettings = MidiSettings()
 
     /** What was opened lately: the songs and the lessons the Motor's menu offers. */
     val recents = Recents()
