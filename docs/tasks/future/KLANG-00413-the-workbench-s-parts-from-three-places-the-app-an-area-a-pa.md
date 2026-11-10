@@ -1,6 +1,6 @@
 # KLANG-00413: The workbench's parts from three places: the app, an area, a page, on the left, the right and the bottom
 
-> **Status (2026-11-05): IDEA.** A first proposal, for the maintainer to decide D1 to D5.
+> **Status (2026-11-10): IDEA.** The mechanism agreed with the maintainer; D2 and D5 still open, D4 in part.
 
 ## Why this exists
 
@@ -23,39 +23,76 @@ The left side also works differently from the other two: it is replaced, not add
 
 ## Proposal
 
-- **One shape for all.** `WorkbenchParts` (today's `PageWorkbench.Parts`): a column, tool windows, bottom tabs.
-- **Three scopes, one per kind of owner.**
-  - *The app*, on every page: one file, `AppWorkbench`, with the Motor tool window and the Visuals, MIDI and Console
-    tabs. `BottomTools` and the inline Motor tool fold into it.
-  - *An area*, on every page of it (Learn, Songs, Docs, ...): `AreaWorkbench`, a part list per `AppArea`, read from the
-    route, so no mount is needed. Learn's tracks column moves here out of `SidebarMenu`'s `if`.
-  - *A page*: `PageWorkbench`, as today.
-- **The layout only merges.** No part is written in `WorkbenchLayout` any more; it reads the three scopes and puts
-  them together in a fixed order (D3).
+Discussed with the maintainer on 2026-11-10; the mechanism and D1 to D3 are agreed, D4 and D5 are proposals.
 
-## Decide before implementing
+- **Two scopes.** *The app*, on every page: one file, `AppWorkbench`, with the Motor tool window and the Visuals,
+  MIDI and Console tabs; `BottomTools` and the inline Motor tool fold into it. *A page*: `PageWorkbench`, as today.
+  No area scope: its only case, Learn's tracks column, becomes a page's column (D1). One is added when a real case
+  asks for it.
+- **Every part has an owner.** In `layouts/WorkbenchSlots`, beside the three slots:
+
+  ```kotlin
+  /** Who put a part into the workbench: the app, or one mount of a page. Compared by identity. */
+  class WorkbenchOwner private constructor(val scope: Scope, val label: String) {
+      enum class Scope { App, Page }
+
+      companion object {
+          val app = WorkbenchOwner(scope = Scope.App, label = "app")
+
+          /** A new owner for each mount; the label (the page's uri) is only for logs. */
+          fun page(label: String) = WorkbenchOwner(scope = Scope.Page, label = label)
+      }
+  }
+
+  class WorkbenchPart<T>(val owner: WorkbenchOwner, val part: T)
+
+  val column     = StreamSource<List<WorkbenchPart<DIV.() -> Unit>>>(emptyList())
+  val tools      = StreamSource<List<WorkbenchPart<KlangWorkbench.Tool>>>(emptyList())
+  val bottomTabs = StreamSource<List<WorkbenchPart<KlangWorkbench.Tab>>>(emptyList())
+
+  fun removeAll(owner: WorkbenchOwner) { /* each slot, filterNot { it.owner === owner } */ }
+  ```
+
+  The name says it is about the workbench: songs and users will have owners of their own once the server comes.
+- **An owner per mount, not the uri.** Two live instances of a page can share a uri (a page mounted again under the
+  same address); removing by uri would take the newer one's parts. The uri is only the label.
+- **A page adds and removes only its own.** `PageWorkbench` makes a `WorkbenchOwner.page(uri)` on mount, adds its
+  parts, and calls `removeAll(owner)` on unmount, in whatever order the page change brings them. The whole-list
+  `===` checks of today go. The `[inert]` guard stays: the copy fading out registers nothing.
+- **The layout resolves; `KlangWorkbench` stays unaware.** `WorkbenchLayout` turns the owned lists into plain
+  `List<Tool>` and `List<Tab>` (D3, D4) and passes them on as today; `klangui` never learns about owners.
+- **The left side** uses the same shape: the newest column a page gave, else the navigation menu (D1).
+
+## Decisions
 
 - **D1, the left side. Decided** (the maintainer, 2026-11-10): "it shows the navigation menu by default and a page
   can register another view to replace it, like the CodeSongPage does." One column, no area scope on the left:
   `SidebarMenu` keeps only the app map, and Learn's pages without a column of their own (the tutorials list, the
   resources page) register `LearnTracksColumn` with `column { }`, as `TutorialPage` registers its own.
-- **D2, can a page hide the app's parts?** Proposed: no. The app's parts are on every page, as the maintainer asked
-  for the bottom tools ("always present", KLANG-00409).
-- **D3, the order.** Proposed, as today: on the right the app's first, then the area's, then the page's; at the
-  bottom the page's first, then the area's, then the app's (the most specific next to where you work).
-- **D4, ids.** The kept layout remembers tool windows and tabs by id, so ids stay unique across the scopes; a spec
-  checks the app's and the areas' parts, and the merge logs a clash from a page.
+- **D2, a page cannot hide the app's parts.** Proposed: no hiding. A page part with an app part's id is a bug: logged,
+  the app's kept. The app's parts are on every page, as the maintainer asked for the bottom tools ("always present",
+  KLANG-00409).
+- **D3, the order. Decided** (2026-11-10): by scope, then as written. On the right the app's first, then the page's;
+  at the bottom the page's first, then the app's (the most specific next to where you work). Within a scope, the
+  order the owner lists them in. No sort order per tool: it would become a numbering kept across files; it comes
+  when a page needs a part between two of the app's.
+- **D4, ids. Decided in part** (2026-11-10): two page parts with one id, the newest wins (the page just opened). The
+  kept layout remembers tool windows and tabs by id, so the app's ids stay unique: a spec checks them.
 - **D5, showing a part by a key.** Today only the bottom panel (`showBottom(tabId)`, Alt+Q). Proposed: one
   `show(id)` for a tool window or a tab, so any part can have a key or a link that opens it.
 
 ## The work (once decided)
 
-1. `WorkbenchParts` as the shared shape; `PageWorkbench` uses it.
-2. `AppWorkbench`: the Motor tool window and the three tabs move in; `BottomTools` goes.
-3. `AreaWorkbench`: Learn's column moves in; `SidebarMenu` keeps only the app map.
-4. The ids' spec (D4) and `show(id)` (D5).
+1. `WorkbenchOwner` and `WorkbenchPart` in `WorkbenchSlots`, with `removeAll`; the layout's resolving (D3, D4),
+   with specs: a page change in either order keeps the new page's parts, the newest wins, the order by scope.
+2. `PageWorkbench` on owners.
+3. `AppWorkbench`: the Motor tool window and the three tabs move in; `BottomTools` goes.
+4. The left side (D1): Learn's pages register `LearnTracksColumn`; `SidebarMenu` keeps only the app map.
+5. The ids' spec (D4) and `show(id)` (D5).
 
 ## History
 
 - 2026-11-05: created from the maintainer's question, after KLANG-00410 to 00412.
 - 2026-11-10: D1 decided: the navigation menu by default, a page replaces it with its own column.
+- 2026-11-10: the mechanism agreed: parts owned by a `WorkbenchOwner` per mount, newest wins, order by scope; no
+  area scope; D3 decided, D4 in part.
