@@ -42,17 +42,39 @@ class VoiceFactory(
     private val blockFrames: Int,
     private val scratchBuffers: ScratchBuffers,
 ) {
+    companion object {
+        /**
+         * How close to a whole frame a time must come out to BE that frame ([framesAt]): 1e-4 frames, 2 ns at 48 kHz.
+         * The rounding it absorbs is a few ulps of the frame count, about 1e-6 frames after a day of backend uptime
+         * at 48 kHz, so it holds for months.
+         */
+        const val GRID_SNAP_FRAMES: Double = 1e-4
+    }
 
     /**
-     * The onset frame a voice built from [scheduled] gets (absolute backend frame, floored), the one formula
-     * [makeVoice] and the scheduler's cut sweep share: the cut fades its victims from the cutting voice's onset,
-     * also when that voice cannot be built.
+     * The onset frame a voice built from [scheduled] gets (absolute backend frame, [framesAt]), the one formula
+     * [makeVoice] and the scheduler (its admission and its cut sweep) share: the cut fades its victims from the cutting
+     * voice's onset, also when that voice cannot be built.
      */
-    fun onsetFrame(scheduled: ScheduledVoice, backendStartTimeSec: Double): Double {
-        // Convert absolute time to backend-relative time, then to frames.
-        val relativeStartTime = scheduled.startTime - backendStartTimeSec
+    fun onsetFrame(scheduled: ScheduledVoice, backendStartTimeSec: Double): Double =
+        framesAt(scheduled.startTime - backendStartTimeSec)
 
-        return kotlin.math.floor(relativeStartTime * sampleRate)
+    /**
+     * The frame at [seconds] on the backend's timeline (seconds since its frame 0): floored, except that a value
+     * within [GRID_SNAP_FRAMES] of a whole frame IS that frame (audit L2-03, L9-03).
+     *
+     * Why the snap: a time that sits on the frame grid, `f / sampleRate`, comes back from `* sampleRate` as `f` or
+     * a hair under it, and the floor turned the hair into a whole frame early: the voice then started with
+     * `voiceElapsedFrames` 1, against the scheduler's contract of 0. The scheduler counts its timeline from the
+     * backend's start, in small numbers (`PlaybackCtx.epochOnTimeline`), so the hair is a few ulps of the product;
+     * the snap is far wider than that and far narrower than anything audible.
+     */
+    fun framesAt(seconds: Double): Double {
+        val frames = seconds * sampleRate
+        val nearest = kotlin.math.round(frames)
+
+        // NaN-guard: a non-finite value fails the compare (Inf - Inf is NaN) and floors as before
+        return if (kotlin.math.abs(frames - nearest) <= GRID_SNAP_FRAMES) nearest else kotlin.math.floor(frames)
     }
 
     /**
@@ -84,7 +106,7 @@ class VoiceFactory(
         // overflow after ~12.4 h of backend uptime, silently placing every new voice at a nonsense
         // frame. Durations derived below are relative and stay Int.
         val startFrame = onsetFrame(scheduled, backendStartTimeSec)
-        val gateEndFrameFromTime = kotlin.math.floor(relativeGateEndTime * sampleRate)
+        val gateEndFrameFromTime = framesAt(relativeGateEndTime)
 
         // The gate as the frontend sent it: a pattern language's `legato` is folded into the gate time before the wire
         // (KLANG-00290 (engine follow ups) item 24, D6), so the backend knows only seconds.
@@ -303,8 +325,9 @@ class VoiceFactory(
     // ═════════════════════════════════════════════════════════════════════════════
 
     /**
-     * The voice's lifetime past its gate, in seconds: the tree's own release tail, which a switched-off envelope
-     * still reports, so a release written only as a slot lives exactly that long. `null` (no static answer: no
+     * The voice's lifetime past its gate, in seconds: the tree's own release tail (with its de-click's settle, so an
+     * envelope that ends the voice reaches its exact 0, audit L2-01), which a switched-off envelope still reports, so a
+     * release written only as a slot lives exactly that long. `null` (no static answer: no
      * envelope on the spine, or a modulated release) takes the voice envelope's `VOICE_ADSR_RELEASE_SEC`. A
      * sample never reaches that fallback: the sample instrument ends in `classic()`, whose release is a slot, a
      * leaf with a finite default, so its tail is always static (its meta release reaches it as the slot's fill,

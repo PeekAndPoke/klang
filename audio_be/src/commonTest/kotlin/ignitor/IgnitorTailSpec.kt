@@ -5,7 +5,9 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
@@ -95,6 +97,69 @@ class IgnitorTailSpec : StringSpec({
             release = IgnitorDsl.Recip(IgnitorDsl.Freq).mul(c(200.0)),
         )
         tailOf(dsl, freqHz = 100.0) shouldBe 2.0
+    }
+
+    "a pitch-relative release under a detune resolves at the DETUNED pitch, where the envelope runs (audit L5-06)" {
+        // Read at the note, `detune(-12)` cut the voice in mid-release (-14.7 dB): the envelope runs at half the pitch.
+        val env = IgnitorDsl.Adsr(
+            inner = IgnitorDsl.Sine(),
+            release = IgnitorDsl.Recip(IgnitorDsl.Freq).mul(c(200.0)),
+        )
+
+        tailOf(IgnitorDsl.Detune(inner = env, semitones = c(-12.0)), freqHz = 100.0)!! shouldBe (4.0 plusOrMinus 1e-12)
+        tailOf(IgnitorDsl.Detune(inner = env, semitones = c(12.0)), freqHz = 100.0)!! shouldBe (1.0 plusOrMinus 1e-12)
+        // nested detunes multiply, as their ratios do at render time
+        tailOf(IgnitorDsl.Detune(inner = IgnitorDsl.Detune(inner = env, semitones = c(-12.0)), semitones = c(-12.0)), freqHz = 100.0)!! shouldBe (8.0 plusOrMinus 1e-12)
+        // a slot's value is a build-time value too
+        tailOf(IgnitorDsl.Detune(inner = env, semitones = IgnitorDsl.Param("st", 0.0)), mapOf("st" to -12.0), freqHz = 100.0)!! shouldBe (4.0 plusOrMinus 1e-12)
+        // a release that does not read the pitch is untouched
+        tailOf(IgnitorDsl.Detune(inner = env.copy(release = c(0.4)), semitones = c(-12.0)), freqHz = 100.0) shouldBe 0.4
+    }
+
+    "a pitch-relative release under a MODULATED detune has no static answer: no tail, and the teardown fade (audit L5-06)" {
+        val env = IgnitorDsl.Adsr(
+            inner = IgnitorDsl.Sine(),
+            release = IgnitorDsl.Recip(IgnitorDsl.Freq).mul(c(200.0)),
+        )
+        val wobbling = IgnitorDsl.Detune(inner = env, semitones = IgnitorDsl.Sine(freq = c(0.5)).mul(c(12.0)))
+        val built = wobbling.buildExciter(null, freqHz = 100.0, random = testRandom)
+
+        built.releaseTailSec.shouldBeNull()
+        built.endsInEnvelope shouldBe false
+        // a static release under the same detune keeps both
+        val steady = wobbling.copy(inner = env.copy(release = c(0.4))).buildExciter(null, freqHz = 100.0, random = testRandom)
+
+        steady.releaseTailSec shouldBe 0.4
+        steady.endsInEnvelope shouldBe true
+    }
+
+    "a de-click adds its settle to the tail, so the smoothed gain reaches its exact 0 before the voice ends (audit L2-01)" {
+        // 36 time constants plus one frame (`ENV_DECLICK_SETTLE_TIME_CONSTANTS`); the release runs from the gate, so a
+        // negative one settles from the gate too.
+        fun built(release: IgnitorDsl, declick: IgnitorDsl) =
+            IgnitorDsl.Adsr(inner = IgnitorDsl.Sine(), release = release, declick = declick)
+                .buildExciter(null, freqHz = 440.0, random = testRandom, sampleRate = 48000)
+
+        built(c(0.2), c(0.002)).releaseTailSec!! shouldBe (0.2 + 36 * 0.002 + 1.0 / 48000 plusOrMinus 1e-12)
+        built(c(-1.0), c(0.002)).releaseTailSec!! shouldBe (36 * 0.002 + 1.0 / 48000 plusOrMinus 1e-12)
+        withClue("a de-click that is off (0, negative, NaN) adds nothing, and the envelope still ends the voice") {
+            for (off in listOf(0.0, -0.001, Double.NaN)) {
+                built(c(0.2), c(off)).releaseTailSec shouldBe 0.2
+                built(c(0.2), c(off)).endsInEnvelope shouldBe true
+            }
+        }
+        withClue("classic()'s envelope: the 1 ms de-click, 36 ms more than its release") {
+            IgnitorDsl.Sine().classic().buildExciter(null, freqHz = 440.0, random = testRandom, sampleRate = 48000)
+                .releaseTailSec!! shouldBe (0.05 + 0.036 + 1.0 / 48000 plusOrMinus 1e-12)
+        }
+        withClue("a de-click that cannot settle in a static time (modulated, infinite) does not end the voice: the teardown fade") {
+            val modulated = built(c(0.2), IgnitorDsl.Sine(freq = c(0.5)).mul(c(0.001)))
+
+            modulated.endsInEnvelope shouldBe false
+            modulated.releaseTailSec shouldBe 0.2
+            built(c(0.2), c(Double.POSITIVE_INFINITY)).endsInEnvelope shouldBe false
+            built(c(0.2), c(0.002)).endsInEnvelope shouldBe true
+        }
     }
 
     "a modulated release time reports null rather than guessing" {

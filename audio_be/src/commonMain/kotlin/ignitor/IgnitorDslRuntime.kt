@@ -9,6 +9,7 @@ import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.DistortionCore
 import io.peekandpoke.klang.audio_be.DistortionShape
 import io.peekandpoke.klang.audio_be.Oversampler
+import io.peekandpoke.klang.audio_be.declickSettleSeconds
 import io.peekandpoke.klang.audio_be.distortionShapeAt
 import io.peekandpoke.klang.audio_be.filters.DEFAULT_DC_BLOCK_COEFF
 import io.peekandpoke.klang.audio_be.filters.butterworthQLadder
@@ -35,6 +36,7 @@ import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_RATE_HZ
 import io.peekandpoke.klang.audio_bridge.constants.VIBRATO_SEMITONES
 import io.peekandpoke.klang.audio_bridge.hasClassicRange
 import io.peekandpoke.klang.common.infra.KlangMap
+import io.peekandpoke.klang.common.math.semitones
 import kotlin.math.roundToInt
 import kotlin.random.Random
 
@@ -136,10 +138,12 @@ internal class IgnitorBuildCache(
      *  instance from the context. Carried like [soundIndex] to reach the source branches
      *  without threading a parameter through every recursive call. */
     val random: Random,
-    /** The note's base frequency. Build-time control-rate reads need it ([FreqIgnitor] answers with
-     *  it), which is how a pitch-relative release such as `Ignitor.freq().recip().mul(200)` resolves for
-     *  voice lifetime. Carried here like [soundIndex] rather than threaded through every arm. */
-    val freqHz: Double = 0.0,
+    /** The frequency the subtree being built runs at: the note's, times the ratio of every `detune` above it (the
+     *  Detune arm sets it around its inner, NaN where that ratio has no build-time value). Build-time control-rate
+     *  reads need it ([FreqIgnitor] answers with it), which is how a pitch-relative release such as
+     *  `Ignitor.freq().recip().mul(200)` resolves for voice lifetime, at the pitch the envelope will run at (audit
+     *  L5-06). Carried here like [soundIndex] rather than threaded through every arm. */
+    var freqHz: Double = 0.0,
     /** The backend's sample rate. See [DEFAULT_BUILD_SAMPLE_RATE] for what the default means. Inside an oversampling
      *  region the build reads [sampleRate], the region's. */
     val baseSampleRate: Int = DEFAULT_BUILD_SAMPLE_RATE,
@@ -1729,11 +1733,22 @@ private fun IgnitorDsl.buildRaw(
             // frequencies (Freq-derived pitches move; an `Ignitor.sine(5)` LFO ignores the
             // argument and stays put).
             if (cache.usesMusicalFreq(inner)) {
+                // The inner runs at the detuned pitch, so its build-time reads of `Freq` (a pitch-relative release
+                // tail) are answered there (audit L5-06: read at the note, a release under `detune(-12)` was cut in
+                // mid-release). A ratio with no build-time value (a modulated detune) makes the pitch NaN, so such a
+                // tail has no static answer: the voice falls back to the rule for a tree without one (the voice
+                // envelope's release) and keeps its teardown fade (the Adsr arm's `endsInEnvelope`). A tail that does
+                // not read `Freq` is untouched either way. The semitones are a leaf read here, in the outer context
+                // they are built in below, so the build of them is the one `noMod` finds.
+                val outerFreqHz = cache.freqHz
+                val ratio = semitones.buildTimeKnobValue(ignitorParams, cache)?.semitones() ?: Double.NaN
                 val outer = cache.detuneContext
                 cache.detuneContext = DetuneContext()
+                cache.freqHz = outerFreqHz * ratio
                 // A detune scales the freq argument, not the amplitude: it hands on its inner's
                 // `endsInEnvelope` (`passThrough`), in both branches.
                 val forked = inner.passThrough()
+                cache.freqHz = outerFreqHz
                 cache.detuneContext = outer
 
                 // Semitones is built OUTSIDE the child context — it controls the detune, it is
@@ -1896,6 +1911,7 @@ private fun IgnitorDsl.buildRaw(
             val decayIgn = decay.noMod()
             val sustainIgn = sustain.noMod()
             val releaseIgn = release.noMod()
+            val declickIgn = declick.noMod()
 
             // This node's own tail. controlRateValueOrNull folds Constant/Param leaves AND pointwise
             // expressions over them, so `pRel.mul(2)` and `Ignitor.freq().recip().mul(200)` resolve
@@ -1915,14 +1931,43 @@ private fun IgnitorDsl.buildRaw(
             //   its inner before it reaches the line below.
             // The samples of a NaN-released envelope are fine (`Double.toInt()` of a NaN is 0
             // frames); its TAIL is not.
-            val ownTail = releaseIgn.controlRateValueOrNull(cache.freqHz)?.takeIf { it.isFinite() }
+            //
+            // Under a detune whose ratio has no build-time value the pitch is unknown (`cache.freqHz` NaN, the Detune
+            // arm): a release that reads `Freq` has no static answer then. Asked, it would not say so: the safe
+            // arithmetic turns `1 / NaN` into a huge finite number (audit L5-06).
+            val pitchUnknown = cache.freqHz != cache.freqHz // NaN-guard: x != x only for a NaN
+            val releaseTail = if (pitchUnknown && cache.usesMusicalFreq(release)) {
+                null
+            } else {
+                releaseIgn.controlRateValueOrNull(cache.freqHz)?.takeIf { it.isFinite() }
+            }
+
+            // The de-click's settle (audit L2-01): the release lands its raw level on 0 on its last frame, and the
+            // de-click one-pole lags it, so the tail runs on until the smoothed gain has been flushed to exact 0
+            // (`ENV_DECLICK_SETTLE_TIME_CONSTANTS`), from the gate where the release is zero-length or negative.
+            // 0.0 for a de-click that is off (at or below 0, or NaN: the envelope reads `> 0.0`, which a NaN fails;
+            // NaN-guard); null where it cannot settle by a static time: a modulated one, or an infinite one, whose
+            // coefficient is 0 and whose gain never moves.
+            val declickSec = if (pitchUnknown && cache.usesMusicalFreq(declick)) null else declickIgn.controlRateValueOrNull(cache.freqHz)
+            val declickSettle = when {
+                declickSec == null -> null
+                !(declickSec > 0.0) -> 0.0
+                declickSec.isFinite() -> declickSettleSeconds(declickSeconds = declickSec, sampleRate = cache.baseSampleRate)
+                else -> null
+            }
+            val ownTail = if (releaseTail != null && declickSettle != null && declickSettle > 0.0) {
+                maxOf(releaseTail, 0.0) + declickSettle
+            } else {
+                releaseTail
+            }
 
             spineTail = maxTail(a = spineTail, b = ownTail)
-            // It ENDS the voice only with a release of static length: a modulated or non-finite release cannot
-            // promise to reach zero by the voice's end, which is set from static tails, so such an envelope
-            // leaves the voice its teardown fade (`BuiltIgnitor.endsInEnvelope`, step 10's review). No built-in
-            // and no sample is affected: `classic()`'s envelope reads a slot, a leaf, always static.
-            builtEnvelope = ownTail != null
+            // It ENDS the voice only with a release of static length and a de-click that settles in a static time: a
+            // modulated or non-finite release, or such a de-click, cannot promise to reach zero by the voice's end,
+            // which is set from static tails, so such an envelope leaves the voice its teardown fade
+            // (`BuiltIgnitor.endsInEnvelope`, step 10's review). No built-in and no sample is affected: `classic()`'s
+            // envelope reads a slot, a leaf, always static, and its de-click is the constant `ENV_DECLICK_SECONDS`.
+            builtEnvelope = releaseTail != null && declickSettle != null
 
             innerIgnitor.adsr(
                 attack = attackIgn, decay = decayIgn, sustain = sustainIgn, release = releaseIgn,
@@ -1932,7 +1977,7 @@ private fun IgnitorDsl.buildRaw(
                 attackCurve = attackCurve.adsrCurveKnob(ignitorParams, cache, AdsrCurve.Default),
                 decayCurve = decayCurve.adsrCurveKnob(ignitorParams, cache, AdsrCurve.Default),
                 releaseCurve = releaseCurve.adsrCurveKnob(ignitorParams, cache, AdsrCurve.Default),
-                declick = declick.noMod(),
+                declick = declickIgn,
             )
         }
 

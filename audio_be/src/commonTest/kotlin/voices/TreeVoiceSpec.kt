@@ -166,8 +166,8 @@ class TreeVoiceSpec : StringSpec({
         withClue("the frames just before the gate still sound") {
             (gateFrame - 64 until gateFrame).any { out[it] != 0.0 } shouldBe true
         }
-        withClue("and the zero-length release ends it at the gate") {
-            (gateFrame + 64 until gateFrame + 1024).all { out[it] == 0.0 } shouldBe true
+        withClue("and the zero-length release drops it at the gate: the de-click takes the gain to its exact 0 within its settle (36 ms and a frame, audit L2-01)") {
+            (gateFrame + 1729 until out.size).all { out[it] == 0.0 } shouldBe true
         }
     }
 

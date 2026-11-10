@@ -472,6 +472,44 @@ class VoiceLifecycleSpec : StringSpec({
         withClue("Pending: renders nothing") { untouched() shouldBe true }
     }
 
+    "a cut on a Pending voice whose onset lies BEFORE the cut's fades it from the cut's onset, like a sounding one (audit L2-02)" {
+        // Judged by onset order, not by whether a block has rendered it: before L2-02 it was Done here and never
+        // sounded, while the same two notes across a block border played the victim up to the cut.
+        // The constant 1.0 source, counting the blocks the tree is asked for
+        var treeCalls = 0
+        val counted = object : Ignitor {
+            override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+                treeCalls++
+                TestIgnitors.constant.generate(buffer, freqHz, ctx)
+            }
+        }
+        val pending = createVoice(
+            startFrame = 1024.0, gateEndFrame = 4096.0, endFrame = 8192.0,
+            sampleRate = sampleRate, blockFrames = blockFrames, cull = VOICE_CULL_NEVER, signal = counted,
+        )
+
+        block(pending, 0.0)
+        pending.cutOff(1100.0)
+        withClue("Fading at once") { pending.state.shouldBeInstanceOf<State.Fading>() }
+        withClue("the blocks before its onset render nothing and never ask the tree") {
+            block(pending, 768.0) shouldBe true
+            block(pending, 896.0) shouldBe true
+            untouched() shouldBe true
+            treeCalls shouldBe 0
+        }
+        withClue("its onset's block plays it up to the cut's onset, then the ramp") {
+            block(pending, 1024.0) shouldBe true
+            (0 until 76).all { ctx.voiceBuffer[it] == 1.0 } shouldBe true
+            (abs(ctx.voiceBuffer[127] - (1291.0 - 1151.0) / 191.0) < 1e-12) shouldBe true
+        }
+        withClue("exact zero at the fade's end, then Done") {
+            block(pending, 1152.0) shouldBe true
+            block(pending, 1280.0) shouldBe true
+            (ctx.voiceBuffer[11] == 0.0) shouldBe true
+            block(pending, 1408.0) shouldBe false
+        }
+    }
+
     "a cut on a Releasing voice fades it like a sounding one" {
         // The choke case: an open hat whose gate has closed and whose release still rings when the closed hat of
         // its group starts. Constant 1.0, no envelope, never culled, so the release renders 1.0 until the cut. Block 128

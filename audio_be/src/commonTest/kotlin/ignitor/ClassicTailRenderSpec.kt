@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.ignitor
 
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
@@ -83,7 +84,9 @@ class ClassicTailRenderSpec : StringSpec({
 
         tailOf(mapOf("adsr.on" to 0.0)) shouldBe VOICE_ADSR_RELEASE_SEC
         tailOf(mapOf("adsr.on" to 0.0, "adsr.release" to 0.3)) shouldBe 0.3
-        tailOf(emptyMap()) shouldBe VOICE_ADSR_RELEASE_SEC
+        // ON, the envelope adds its de-click's settle (audit L2-01): 36 time constants of 1 ms and one frame at the
+        // build's 44.1 kHz
+        tailOf(emptyMap())!! shouldBe (VOICE_ADSR_RELEASE_SEC + 36 * ENV_DECLICK_SECONDS + 1.0 / 44100 plusOrMinus 1e-12)
     }
 
     "an unwritten classic() does not gate its output; a written tremolo does (the cull rule)" {

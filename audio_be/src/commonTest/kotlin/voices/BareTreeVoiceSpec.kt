@@ -179,7 +179,8 @@ class BareTreeVoiceSpec : StringSpec({
     "classic() below the root: the doors reach each branch, and the sum still ends on the teardown fade" {
         val plain = render(base.copy(sound = "branches"))
         val doors = render(base.copy(sound = "branches", ignitorParams = klangMapOf("adsr.attack" to 0.05)))
-        val lastFrame = gateFrame + (0.05 * sampleRate).toInt() - 1
+        // The release and the de-click's settle (36 ms and a frame, 1729 frames at 48 kHz, audit L2-01)
+        val lastFrame = gateFrame + (0.05 * sampleRate).toInt() + 1729 - 1
 
         withClue("engaged: the envelope slot reaches the branches") { firstMismatch(a = plain, b = doors) shouldNotBe -1 }
         withClue("the last rendered frame is an exact zero") { plain[lastFrame] shouldBe 0.0 }

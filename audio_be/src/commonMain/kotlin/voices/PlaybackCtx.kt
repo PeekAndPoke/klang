@@ -21,8 +21,18 @@ class PlaybackCtx(
     val ignitorRegistry: IgnitorRegistry,
     /** Per-playback unison start-phase pools (KLANG-00144 (unison phase pool) §3.3). */
     val phasePools: PhasePools,
-    /** Backend-local epoch (seconds since backend start) when this playback first appeared */
+    /**
+     * The playback's epoch on the wall clock (the backend's `RenderClock.startTimeSec` scale, about 1.8e9 live): what the
+     * frontend is told (`PlaybackAnchored`) and what the scheduler's times in seconds compare against.
+     */
     var epoch: Double = 0.0,
+    /**
+     * The same epoch on the backend's own timeline: seconds since its frame 0, a small number. The voices' onsets
+     * are counted from it (`VoiceScheduler`), so they keep the precision a wall-clock second has lost: at 1.8e9 s a
+     * double resolves 2.4e-7 s, a hundredth of a frame, and half of all onsets on the frame grid landed one frame
+     * early (audit L2-03, L9-03). An epoch anchored at "now" is the cursor frame over the sample rate, exact.
+     */
+    var epochOnTimeline: Double = 0.0,
     /** Voices refused at admission because their start was already in the past (block-framing B2). */
     var droppedVoices: Int = 0,
     /** Voices that made no sound: no voice could be made, their sample not there (or empty) or their sound unknown. */

@@ -1206,6 +1206,36 @@ class VoiceSchedulerSoloCutSpec : StringSpec({
         rig.activeCount shouldBe 1
     }
 
+    "cut: a victim whose onset lies before the cutter's sounds up to the cutter's onset, wherever the block border falls (audit L2-02)" {
+        // Victim A, cutter B 64 frames later (B silent, gain 0), both promoted before A has rendered (one block), or A
+        // rendered first (across a border). Judged by onset order, both play A up to B's onset and then fade it; the
+        // reference is the same pair with B in another group. Before L2-02 the one-block case lost A entirely.
+        fun run(aFrame: Int, secondCut: Int): DoubleArray {
+            val rig = Rig()
+
+            rig.schedule((aFrame + 0.25) / sampleRate, tone(sourceId = "a", pan = 0.0, cut = 1))
+            rig.schedule((aFrame + 64.25) / sampleRate, tone(sourceId = "b", pan = 0.0, cut = secondCut).copy(gain = 0.0))
+
+            return rig.renderLeft(16)
+        }
+
+        for ((aFrame, where) in listOf(1030 to "in one block", 1100 to "across a block border")) {
+            val cut = run(aFrame = aFrame, secondCut = 1)
+            val reference = run(aFrame = aFrame, secondCut = 2)
+            val bFrame = aFrame + 64
+
+            withClue("$where: engaged, A sounds before B's onset") { (aFrame until bFrame).any { reference[it] != 0.0 } shouldBe true }
+
+            for (f in aFrame until bFrame) {
+                withClue("$where, frame $f: A untouched before B's onset") { cut[f] shouldBe reference[f] }
+            }
+
+            withClue("$where: A fades from B's onset to exact zero 191 frames later") {
+                (bFrame + 191 until cut.size).all { cut[it] == 0.0 } shouldBe true
+            }
+        }
+    }
+
     "cut: the fade starts at the cutting voice's onset, mid-block too, and reaches zero 191 frames later" {
         // The cutting voice is silent (gain 0), so the mix is the cut voice alone. The reference rig is the same,
         // with the second voice in another group: the two mixes agree up to the cutting onset and part there.

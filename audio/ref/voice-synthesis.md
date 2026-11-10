@@ -100,14 +100,22 @@ Its playback slots are `begin`, `end`, `speed` and `loop` (`IgnitorDsl.Slots.sam
 playhead is built; a loop region is sprudel's `loop().begin(x).end(y)`. A sample's own envelope
 (`SampleMetadata.adsr`) fills the `adsr.*` slots the pattern left unset (`withSampleEnvelopeDefaults`).
 Cut groups: a new voice in the same `cut` group ends the ones still sounding: each fades over 4 ms from the new
-voice's onset (`Voice.cutOff`, the `Fading` state, `CUT_FADE_SECONDS`); one not yet started or culled ends at once.
+voice's onset (`Voice.cutOff`, the `Fading` state, `CUT_FADE_SECONDS`). A voice not yet rendered is judged by its
+onset: one that starts before the new voice's onset plays up to it and fades the same way, wherever the block border
+falls; one that starts at or after it never sounds and ends at once (audit L2-02).
 
 ## VoiceScheduler
 
 `VoiceScheduler.kt` — manages voice lifecycle.
 
 - Stores pending voices in a `KlangMinHeap` (priority queue by `startTime`)
-- On each block: activates due voices, removes finished voices
+- On each block: activates due voices, removes finished voices. A voice is admitted and placed in FRAMES on the
+  backend's own timeline (`PlaybackCtx.epochOnTimeline`, seconds since its frame 0, and `VoiceFactory.framesAt`,
+  which floors but takes a time within 1e-4 frames of a whole frame as that frame), never in wall-clock seconds,
+  whose 2.4e-7 s grid at 1.8e9 s put half of all onsets on the frame grid one frame early (audit L2-03, L9-03): an
+  admitted voice's first `generate()` has `voiceElapsedFrames` 0
+- A replace (`replaceVoices`) drops the resent voices a playing one covers (`dropResentDuplicates`: same start, equal
+  data, 1 to 1); only the active voices of the same start are asked, sorted once per command (audit L2-09)
 - Sample resolution: when a sample voice is due but the PCM isn't loaded yet,
   sends `Feedback.RequestSample` to frontend and delays activation
 - Solo: `SoloTracker` keeps per source its newest solo event ("soloed at amount a from s until t") from any event
@@ -259,7 +267,11 @@ Two classes of envelope, with different roles in deciding when a voice ends:
       off mid-decay would click.
     - Voice end frame = `gateEndFrame + releaseTailSec`, the tree's own release tail
       (`BuiltIgnitor.releaseTailSec`, floored at 0); a tree with no static answer takes `VOICE_ADSR_RELEASE_SEC`
-      (0.05 s).
+      (0.05 s). An envelope with a de-click adds the de-click's settle, 36 of its time constants plus a frame
+      (`ENV_DECLICK_SETTLE_TIME_CONSTANTS`, 36 ms for `classic()`): the one-pole lags the release, and the voice runs
+      on until its gain has been flushed to an exact 0 (audit L2-01; before, the voice was cut on the lag, -49.6 dB at
+      the default release, -23.4 dB at 5 ms). A pitch-relative release is read at the pitch the envelope runs at,
+      a literal `detune` above it included; under a modulated detune it has no static answer (audit L5-06).
 
 - **Modulator envelopes** do **not** extend voice lifetime:
     - Filter modulator envelope (the `attack, decay, sustain, release` slots of `lpf` / `hpf` / `bpf` / `notch`)
@@ -348,7 +360,9 @@ its release and its own output has stayed under the audibility floor for the cul
   left unset (`withSampleEnvelopeDefaults`).
 - **De-click**: `EnvelopeDeclick` is the one smoother. `classic()`'s envelope de-clicks with the constant
   `ENV_DECLICK_SECONDS` (1 ms, not a slot); the chain `adsr` builder's `declick` writes the node's `declick`
-  (default 0, off). Modulation envelopes are not de-clicked.
+  (default 0, off). Modulation envelopes are not de-clicked. Its state is flushed below 1e-15 (a sustain of 0 holds
+  an exact 0, audit L4-03), and the voice's lifetime covers its settle (above). A modulated or infinite `declick`
+  cannot settle in a static time, so such an envelope does not end the voice: it keeps the teardown fade.
 - **An instrument whose own tail outlasts the envelope** writes `adsr(release = <tail>)`; the engine does not
   stretch a release to an instrument's tail (maintainer, 2026-09-26).
 - The filter envelope's slot-layer fill (a written stage knob switches an unset depth on at

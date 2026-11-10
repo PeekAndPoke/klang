@@ -38,14 +38,15 @@ import kotlin.math.ceil
  *
  * | state \ event | block start ([advance]) | block end (the cull) | [releaseGate] | [cutOff], finite onset | [kill] |
  * |---|---|---|---|---|---|
- * | **Pending** | **Done** at [endFrame]; else **Sounding** once the block ends after the onset, and **Releasing** in the same call if the block starts at or after the gate end | (renders nothing) | moves the gate and the end, stays Pending | **Done** | **Done** |
+ * | **Pending** | **Done** at [endFrame]; else **Sounding** once the block ends after the onset, and **Releasing** in the same call if the block starts at or after the gate end | (renders nothing) | moves the gate and the end, stays Pending | **Fading** when its onset lies before the cut's, else **Done** | **Done** |
  * | **Sounding** | **Done** at [endFrame]; else **Releasing** once the block starts at or after the gate end | measures until heard, never counts | moves the gate and the end; Releasing from the first block that starts at or after the new gate | **Fading** | **Done** |
  * | **Releasing** | **Done** at [endFrame] | **Done** ([culled]) at the end of the block that completes the cull window of silence, once heard | ignored | **Fading** | **Done** |
  * | **Fading** | **Done** at [endFrame] or at the fade end, whichever comes first | no measurement | ignored | ignored | **Done** |
  * | **Done** | stays Done | (renders nothing; [render] returns false) | ignored | ignored | stays Done |
  *
  * "At [endFrame]" (or the fade end) means from the first block that starts at or after it. A note-off moves the
- * gate only to an earlier frame than the one it has. A [cutOff] with a non-finite onset is **Done** from every
+ * gate only to an earlier frame than the one it has. A `Fading` voice that has not reached its onset yet (cut while
+ * `Pending`) renders nothing until the block that holds it. A [cutOff] with a non-finite onset is **Done** from every
  * state. `Fading` and `Done` are terminal: nothing leads out of them but `Fading` to `Done`.
  *
  * **A voice that ends at or before its onset** (its gate ends before the onset and its release does not reach past
@@ -310,8 +311,13 @@ class Voice(
 
     /**
      * The cut event: a voice of the same cut group begins at [fadeStartFrame] (its onset, absolute frame; it may
-     * fall inside a block). What it does in each state: the transition table in the class KDoc (a `Pending` voice
-     * is silent so far and ends at once; the scheduler removes it, keeping the list's order).
+     * fall inside a block). What it does in each state: the transition table in the class KDoc.
+     *
+     * A `Pending` voice is judged by its ONSET, not by whether a block has rendered it yet (audit L2-02): one whose onset
+     * lies before the cut's sounds from its onset and fades from the cut's onset like a sounding one, wherever the
+     * block border falls (two voices 64 frames apart in one block used to lose the first, across a border keep it); one
+     * whose onset is at or after the cut's never sounds and ends at once (the scheduler removes it, keeping the list's
+     * order).
      *
      * A `Fading` voice plays on until [fadeStartFrame], then ramps linearly to exact zero over [CUT_FADE_SECONDS]
      * (after the instrument tree, before the channel, so what reaches the cylinder fades too). The fade window lives in the
@@ -330,7 +336,12 @@ class Voice(
         }
 
         state = when (state) {
-            is State.Pending -> {
+            is State.Pending -> if (startFrame < fadeStartFrame) {
+                fading.enter(
+                    fadeStartFrame = fadeStartFrame,
+                    fadeEndFrame = fadeStartFrame + CUT_FADE_SECONDS * sampleRateD,
+                )
+            } else {
                 State.Done
             }
 
@@ -379,7 +390,10 @@ class Voice(
             }
 
             is State.Fading -> {
-                renderStages(ctx, blockEnd, isReleasing = false, isFading = true)
+                // A voice cut while `Pending` renders from the block that holds its onset
+                if (blockEnd > startFrame) {
+                    renderStages(ctx, blockEnd, isReleasing = false, isFading = true)
+                }
 
                 true
             }

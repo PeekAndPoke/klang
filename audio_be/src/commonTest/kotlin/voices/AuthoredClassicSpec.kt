@@ -160,7 +160,8 @@ class AuthoredClassicSpec : StringSpec({
         val until = gateFrame + (0.3 * sampleRate).toInt()
 
         withClue("the tail sounds 0.1 to 0.3 s after the gate") { maxAbs(a = classic.out, from = from, until = until) shouldBeGreaterThan 0.05 }
-        withClue("and the lifetime is the tail's") { classic.endFrame shouldBe (gateFrame + 0.5 * sampleRate plusOrMinus 1.0) }
+        // ...and the envelope's de-click settle on top (36 ms and a frame, 1729 frames at 48 kHz, audit L2-01)
+        withClue("and the lifetime is the tail's") { classic.endFrame shouldBe (gateFrame + 0.5 * sampleRate + 1729.0 plusOrMinus 1.0) }
     }
 
     "the doors reach an authored classic() tree: filters, filter envelope, crush, tremolo and envelope" {

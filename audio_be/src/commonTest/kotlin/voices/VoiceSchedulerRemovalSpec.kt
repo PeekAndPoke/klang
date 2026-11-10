@@ -101,7 +101,7 @@ class VoiceSchedulerRemovalSpec : StringSpec({
         withClue("and nothing comes back") { rig.engine.scheduler.getActiveVoiceCount() shouldBe 0 }
     }
 
-    "a cut that finds a voice not yet rendered removes it between blocks, the survivors keep their order" {
+    "a cut that finds a voice not yet rendered at its own onset removes it between blocks, the survivors keep their order" {
         val rig = Rig()
         val block = blockFrames.toDouble() / sampleRate
         val frame = 1.0 / sampleRate
@@ -109,12 +109,13 @@ class VoiceSchedulerRemovalSpec : StringSpec({
         rig.schedule(startSec = 0.0, freqHz = 101.0)
         rig.render(2)
 
-        // All four promoted in the block about to render, none rendered yet: the cutting 501 finds 201 Pending,
-        // which is Done at once and swept before 501 joins.
+        // All four promoted in the block about to render, none rendered yet: the cutting 501 finds 201 Pending at its
+        // own onset, which never sounds, so it is Done at once and swept before 501 joins. (A Pending victim whose
+        // onset lies BEFORE the cut's fades instead, audit L2-02: `VoiceLifecycleSpec`.)
         val at = 2 * block
         val cut = VoiceData.empty.copy(sound = "sine", cut = 1)
 
-        rig.schedule(startSec = at + 5 * frame, freqHz = 201.0, data = cut.copy(freqHz = 201.0))
+        rig.schedule(startSec = at + 20 * frame, freqHz = 201.0, data = cut.copy(freqHz = 201.0))
         rig.schedule(startSec = at + 10 * frame, freqHz = 301.0)
         rig.schedule(startSec = at + 15 * frame, freqHz = 401.0)
         rig.schedule(startSec = at + 20 * frame, freqHz = 501.0, data = cut.copy(freqHz = 501.0))

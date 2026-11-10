@@ -535,8 +535,9 @@ class RealtimeVoiceSpec : StringSpec({
         renderBlocks(d, 4.0 * blockFrames, 10).drop(3).all { hasAudio(it) }.shouldBeTrue()
 
         stop(d, liveId = 1)
-        // The first ~2 post-stop blocks still flush the master's delayed pre-stop audio.
-        renderBlocks(d, 14.0 * blockFrames, 10).drop(3).any { hasAudio(it) }.shouldBeFalse()
+        // The first ~2 post-stop blocks still flush the master's delayed pre-stop audio, and the release-0 drop is
+        // de-clicked: the gain falls by e per millisecond to its exact 0 (audit L2-01), under the threshold by block 5.
+        renderBlocks(d, 14.0 * blockFrames, 10).drop(5).any { hasAudio(it) }.shouldBeFalse()
     }
 
     //  MOVED-GATE UNITS //////////////////////////////////////////////////////////////////////////////////////////

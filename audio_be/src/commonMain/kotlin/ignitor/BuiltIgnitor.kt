@@ -36,6 +36,9 @@ data class BuiltIgnitor(
      * Ranked by RELEASE, never by attack + release: an ADSR starts releasing at note-off wherever
      * it happens to be in its attack, so the envelope reaches zero at `gate end + release`
      * regardless of attack. Including attack could only over-allocate or mis-rank.
+     *
+     * An envelope with a de-click adds the de-click's settle to its release (`declickSettleSeconds`, audit L2-01):
+     * the smoothed gain lags the release and reaches its exact 0 that much later.
      */
     val releaseTailSec: Double? = null,
     /**
@@ -64,7 +67,9 @@ data class BuiltIgnitor(
      * True when the ROOT of this subtree is an amplitude envelope that the build BUILT (an `Adsr`
      * whose `on` switch did not turn it off) and whose release has a STATIC, finite length: a modulated
      * release cannot promise to reach zero by the voice's end, which the static tails set, so it does not
-     * count (phase 3 step 10). Set by the envelope's own arm; a stage the gate did NOT
+     * count (phase 3 step 10). Nor does a de-click that cannot settle in a static time (a modulated or infinite one):
+     * the tail includes the de-click's settle, so the smoothed gain is exactly 0 on the voice's last frame (audit
+     * L2-01). Set by the envelope's own arm; a stage the gate did NOT
      * build (a gate row, the unity `mul` fold included) hands its inner's answer through, because
      * that node IS its inner (`classic()`'s unwritten lowpass over an authored envelope, step 10's case),
      * and so does a `detune`, which scales the frequency and leaves the amplitude alone.

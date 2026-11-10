@@ -304,8 +304,13 @@ val CLICK_VOICE_SOUNDS: List<String> = listOf(
 /** The voice's onset: mid-block (frame 37 of block 188, 0.50 s), as a note starts anywhere in a block. */
 const val CLICK_VOICE_START: Int = 188 * PROBE_BLOCK_FRAMES + 37
 
-/** The voice's gate: 2.0 s after its onset. */
-const val CLICK_VOICE_GATE: Int = CLICK_VOICE_START + 2 * PROBE_SAMPLE_RATE
+/**
+ * The voice's gate: 2.0 s after its onset, plus a quarter period of the 110 Hz tone (109 frames at 48 kHz), so the note
+ * end under the default release lands near a crest of a voice that starts at phase 0 (audit S-01). Without it the tone
+ * ran 225.5 cycles to its end, a zero crossing, and the sine's note-end row was blind to any step there by
+ * construction (it read clean while the voice was cut at -49.6 dB, audit L2-01).
+ */
+const val CLICK_VOICE_GATE: Int = CLICK_VOICE_START + 2 * PROBE_SAMPLE_RATE + 109
 
 /** Where a cut's fade starts: 1.0 s after the onset, mid-block too. */
 const val CLICK_VOICE_CUT: Int = CLICK_VOICE_START + PROBE_SAMPLE_RATE

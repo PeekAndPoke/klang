@@ -132,7 +132,7 @@ class ZeroLengthWindowSpec : StringSpec({
         val cases = listOf("silence", "zlw_progress", "zlw_constant", "zlw_freq", "sine", "supersaw").map { it to 1.0 } + ("saw" to 0.0)
 
         for ((sound, pregain) in cases) {
-            val voice = factory.makeVoice(
+            fun voiceWithGate(gateFrame: Int) = factory.makeVoice(
                 scheduled = ScheduledVoice(
                     playbackId = "z",
                     data = VoiceData.empty.copy(
@@ -141,13 +141,19 @@ class ZeroLengthWindowSpec : StringSpec({
                         ignitorParams = klangMapOf("adsr.release" to 0.0, "pregain" to pregain),
                     ),
                     startTime = (onset + 0.25) / sr,
-                    gateEndTime = (onset - 24 + 0.25) / sr,
+                    gateEndTime = (gateFrame + 0.25) / sr,
                     playbackStartTime = 0.0,
                 ),
                 backendStartTimeSec = 0.0,
                 playbackCtx = playback,
                 getSample = { null },
             ) ?: error("null voice for $sound")
+
+            // The voice's lifetime past its gate: a release of 0 still lives the envelope de-click's settle (audit
+            // L2-01, 1729 frames for classic()'s), so the gate is placed that far further back, to end the voice 24
+            // frames before its onset.
+            val tailFrames = (voiceWithGate(gateFrame = onset).endFrame - onset).toInt()
+            val voice = voiceWithGate(gateFrame = onset - 24 - tailFrames)
 
             withClue("$sound: the voice ends before its onset, so the onset block's window was negative") {
                 (voice.endFrame < voice.startFrame) shouldBe true

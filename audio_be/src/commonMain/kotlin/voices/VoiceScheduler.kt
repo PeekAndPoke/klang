@@ -285,22 +285,19 @@ class VoiceScheduler(
      * `data`) — so it is chord/`superimpose`-safe: legitimately simultaneous voices differ in `data`
      * and are never collapsed. 1-to-1 (each active voice absorbs at most one incoming) preserves
      * multiplicity. Only unchanged, re-derived-identical events dedup; a genuinely changed voice does
-     * not match and is scheduled normally.
+     * not match and is scheduled normally. The matching is [dropResentDuplicates], sub-quadratic since audit L2-09.
      */
     private fun dedupAgainstActive(voices: List<ScheduledVoice>): List<ScheduledVoice> {
         if (voices.isEmpty() || active.isEmpty()) return voices
-        val claimed = BooleanArray(active.size)
-        return voices.filter { incoming ->
-            val match = active.indices.firstOrNull { i ->
-                !claimed[i] && (active[i].origin as? VoiceOrigin.Timeline)?.source?.isDuplicate(incoming) == true
-            }
-            if (match != null) {
-                claimed[match] = true
-                false // already playing → drop the duplicate
-            } else {
-                true // schedule it
-            }
+
+        // The active voices' source events, in the list's order (null for a realtime voice): one list per command
+        val sources = ArrayList<ScheduledVoice?>(active.size)
+
+        for (i in 0 until active.size) {
+            sources.add((active[i].origin as? VoiceOrigin.Timeline)?.source)
         }
+
+        return dropResentDuplicates(incoming = voices, active = sources)
     }
 
     fun scheduleVoice(voice: ScheduledVoice) {
@@ -333,19 +330,22 @@ class VoiceScheduler(
         // a clock that lagged one behind; the lag is gone, and so is the compensation.
         val nowFrame = context.clock.cursorFrame
         val nowSec = context.clock.secAt(nowFrame)
-        val pCtx = ensureRealtimeCtx(playbackId, nowSec)
+        val pCtx = ensureRealtimeCtx(playbackId = playbackId, nowSec = nowSec, nowFrame = nowFrame)
+        // On the backend's own timeline (seconds since its frame 0), not in wall-clock seconds: the cursor over the
+        // sample rate comes back as the cursor (audit L2-03; `PlaybackCtx.epochOnTimeline`)
+        val nowOnTimeline = nowFrame / context.sampleRateDouble
 
-        val absolute = ScheduledVoice(
+        val onTimeline = ScheduledVoice(
             playbackId = playbackId,
             data = voice.data,
-            startTime = nowSec,
-            gateEndTime = nowSec + (voice.gateDurSec ?: heldGateHorizonSec()),
-            playbackStartTime = nowSec,
+            startTime = nowOnTimeline,
+            gateEndTime = nowOnTimeline + (voice.gateDurSec ?: heldGateHorizonSec()),
+            playbackStartTime = nowOnTimeline,
         )
 
-        prefetchSampleSound(absolute)
+        prefetchSampleSound(onTimeline)
         activateVoice(
-            absoluteVoice = absolute,
+            voiceOnTimeline = onTimeline,
             origin = VoiceOrigin.Realtime(liveId = voice.liveId, held = voice.gateDurSec == null, solo = voice.data.solo),
             pCtx = pCtx,
         )
@@ -531,7 +531,19 @@ class VoiceScheduler(
             // frontend was sent that epoch (audit L1-05).
             val requestedSec = if (voice.playbackStartTime.isFinite()) voice.playbackStartTime else nowSec // NaN-guard
             val latency = maxOf(0.0, nowSec - requestedSec)
-            val pCtx = createPlaybackCtx(pid = voice.playbackId, nowSec = nowSec, epoch = requestedSec + latency)
+            // The epoch on the backend's own timeline: "now" is the cursor frame, exact; a start asked for later is
+            // its distance from the backend's start, an exact subtraction of two neighbouring doubles
+            val epochOnTimeline = if (requestedSec <= nowSec) {
+                context.clock.cursorFrame / context.sampleRateDouble
+            } else {
+                requestedSec - context.clock.startTimeSec
+            }
+            val pCtx = createPlaybackCtx(
+                pid = voice.playbackId,
+                nowSec = nowSec,
+                epoch = requestedSec + latency,
+                epochOnTimeline = epochOnTimeline,
+            )
             playback = pCtx
 
             // The frontend counts the playback's time from here (KLANG-00399), not from the second it asked for
@@ -545,10 +557,15 @@ class VoiceScheduler(
      * PlaybackCtx for a realtime playback — there is no FE timeline to anchor against, so the
      * epoch is simply "now". Idempotent (mirror of [ensureEpoch]): a context the timeline made is kept.
      */
-    private fun ensureRealtimeCtx(playbackId: String, nowSec: Double): PlaybackCtx =
-        playback ?: createPlaybackCtx(pid = playbackId, nowSec = nowSec, epoch = nowSec).also { playback = it }
+    private fun ensureRealtimeCtx(playbackId: String, nowSec: Double, nowFrame: Double): PlaybackCtx =
+        playback ?: createPlaybackCtx(
+            pid = playbackId,
+            nowSec = nowSec,
+            epoch = nowSec,
+            epochOnTimeline = nowFrame / context.sampleRateDouble,
+        ).also { playback = it }
 
-    private fun createPlaybackCtx(pid: String, nowSec: Double, epoch: Double): PlaybackCtx = PlaybackCtx(
+    private fun createPlaybackCtx(pid: String, nowSec: Double, epoch: Double, epochOnTimeline: Double): PlaybackCtx = PlaybackCtx(
         playbackId = pid,
         ignitorRegistry = ignitorFork,
         // The pool gets its OWN rng stream (deliberately voice-SHARED vocabulary —
@@ -567,6 +584,7 @@ class VoiceScheduler(
             ),
         ),
         epoch = epoch,
+        epochOnTimeline = epochOnTimeline,
     )
 
     private fun prefetchSampleSound(voice: ScheduledVoice) {
@@ -576,10 +594,6 @@ class VoiceScheduler(
     }
 
     private fun promoteScheduled(nowFrame: Double, blockEnd: Double) {
-        val clock = context.clock
-        val blockEndSec = clock.secAt(blockEnd)
-        val nowSec = clock.secAt(nowFrame)
-
         while (true) {
             val head = scheduled.peek() ?: break
 
@@ -589,10 +603,16 @@ class VoiceScheduler(
                 continue
             }
             val epoch = pCtx.epoch
-
             val absoluteStartSec = epoch + head.startTime
 
-            if (absoluteStartSec >= blockEndSec) break
+            // The voice is judged in FRAMES, on the backend's own timeline (audit L2-03, L9-03): the frame it will
+            // start on is the frame it is admitted by, so an admitted voice starts at or after the block it is
+            // promoted for, exactly. Judged in wall-clock seconds, the check passed and the voice then started a
+            // frame before the block, its first generate() at voiceElapsedFrames 1.
+            val startOnTimeline = pCtx.epochOnTimeline + head.startTime
+            val startFrame = voiceFactory.framesAt(startOnTimeline)
+
+            if (startFrame >= blockEnd) break
 
             scheduled.pop()
 
@@ -626,39 +646,41 @@ class VoiceScheduler(
             // counted — observability, not a clamp. This replaces a 5-block tolerance window that
             // admitted such voices LATE: oscillator phase fresh, envelope already blocks in, neither
             // on time nor shifted, and two silent-note bugs reachable only in that state.
-            if (!(absoluteStartSec >= nowSec)) { // NaN-guard: a non-finite start is dropped like a late one
+            if (!(startFrame >= nowFrame)) { // NaN-guard: a non-finite start is dropped like a late one
                 pCtx.droppedVoices++
                 context.voiceWatch?.late(playbackId = head.playbackId, data = head.data, atSec = absoluteStartSec)
                 continue
             }
 
-            val absoluteVoice = head.copy(
-                startTime = absoluteStartSec,
-                gateEndTime = epoch + head.gateEndTime,
+            val onTimeline = head.copy(
+                startTime = startOnTimeline,
+                gateEndTime = pCtx.epochOnTimeline + head.gateEndTime,
             )
 
-            activateVoice(absoluteVoice, origin = VoiceOrigin.Timeline(head), pCtx = pCtx)
+            activateVoice(voiceOnTimeline = onTimeline, origin = VoiceOrigin.Timeline(head), pCtx = pCtx)
         }
     }
 
     /**
-     * Promotes ONE voice with ABSOLUTE times into the active list: applies cut/choke groups,
-     * builds the Voice, and registers it. The shared tail of the timeline path
-     * ([promoteScheduled]) and the realtime path ([startRealtimeVoice]).
+     * Promotes ONE voice into the active list: applies cut/choke groups, builds the Voice, and registers it. The
+     * shared tail of the timeline path ([promoteScheduled]) and the realtime path ([startRealtimeVoice]). Its times
+     * are on the backend's own timeline, seconds since its frame 0 (`PlaybackCtx.epochOnTimeline`), so the factory
+     * reads them against a start of 0.
      */
     private fun activateVoice(
-        absoluteVoice: ScheduledVoice,
+        voiceOnTimeline: ScheduledVoice,
         origin: VoiceOrigin,
         pCtx: PlaybackCtx,
     ) {
         // Cut / choke groups, before the new voice exists (so it never cuts itself): the scheduler decides WHO
-        // (every active voice of the group), the voice decides WHAT by its state (`Voice.cutOff`: a silent one is
-        // Done at once, a sounding one fades from the cutting voice's onset). The Done ones leave here,
+        // (every active voice of the group), the voice decides WHAT by its state and its onset (`Voice.cutOff`: one
+        // whose onset is at or after the cutting voice's is Done at once, a sounding one, or a pending one whose onset
+        // lies before, fades from the cutting voice's onset, audit L2-02). The Done ones leave here,
         // order-preserving (F3); a fading one leaves through the render loop once its fade has ended.
-        val cut = absoluteVoice.data.cut
+        val cut = voiceOnTimeline.data.cut
 
         if (cut != null) {
-            val fadeStartFrame = voiceFactory.onsetFrame(absoluteVoice, context.clock.startTimeSec)
+            val fadeStartFrame = voiceFactory.onsetFrame(scheduled = voiceOnTimeline, backendStartTimeSec = 0.0)
 
             for (i in 0 until active.size) {
                 val voice = active[i].voice
@@ -672,8 +694,8 @@ class VoiceScheduler(
         }
 
         val voice = voiceFactory.makeVoice(
-            scheduled = absoluteVoice,
-            backendStartTimeSec = context.clock.startTimeSec,
+            scheduled = voiceOnTimeline,
+            backendStartTimeSec = 0.0,
             playbackCtx = pCtx,
             // A held live note has no gate length yet: its gate is the held-voice horizon.
             gateKnown = !(origin is VoiceOrigin.Realtime && origin.held),
@@ -681,7 +703,7 @@ class VoiceScheduler(
         )
 
         if (voice != null) {
-            active.add(ActiveVoice(voice = voice, sourceId = absoluteVoice.data.sourceId, origin = origin))
+            active.add(ActiveVoice(voice = voice, sourceId = voiceOnTimeline.data.sourceId, origin = origin))
         } else {
             pCtx.soundlessVoices++
         }
@@ -689,12 +711,14 @@ class VoiceScheduler(
         val watch = context.voiceWatch
 
         if (watch != null) {
-            val playbackId = absoluteVoice.playbackId
+            val playbackId = voiceOnTimeline.playbackId
+            // The watch is told wall-clock seconds, as before
+            val atSec = context.clock.startTimeSec + voiceOnTimeline.startTime
 
             if (voice != null) {
-                watch.started(playbackId = playbackId, data = absoluteVoice.data, atSec = absoluteVoice.startTime)
+                watch.started(playbackId = playbackId, data = voiceOnTimeline.data, atSec = atSec)
             } else {
-                watch.soundless(playbackId = playbackId, data = absoluteVoice.data, atSec = absoluteVoice.startTime)
+                watch.soundless(playbackId = playbackId, data = voiceOnTimeline.data, atSec = atSec)
             }
         }
     }

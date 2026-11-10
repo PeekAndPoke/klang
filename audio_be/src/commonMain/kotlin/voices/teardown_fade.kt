@@ -35,8 +35,9 @@ import kotlin.math.floor
  *
  * It runs after the whole tree, so it guarantees silence at the voice's output (only the cut's fade and the channel follow).
  *
- * Note that an envelope that ends the voice is NOT click-free either: the de-click one-pole lags and
- * leaves ~3.3e-3 on the last frame at a 50 ms release. See the scope note in `AdsrCurveMath`.
+ * An envelope that ends the voice ends it on an exact 0 too, de-click included: its tail runs on past the release
+ * until the de-click one-pole has been flushed to 0 (`ENV_DECLICK_SETTLE_TIME_CONSTANTS`, audit L2-01; before it
+ * the voice was cut on the one-pole's lag, about 3.3e-3 on the last frame at a 50 ms release).
  */
 internal fun applyTeardownFade(
     /** The voice's output this block, at its rate ([rateSteps]). */

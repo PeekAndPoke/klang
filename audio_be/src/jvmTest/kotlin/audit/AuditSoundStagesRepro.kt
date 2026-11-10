@@ -21,7 +21,6 @@ import io.peekandpoke.klang.audio_be.ignitor.buildExciter
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_be.probes.CLICK_EVENT_FRAME
 import io.peekandpoke.klang.audio_be.probes.CLICK_INSTANTS
-import io.peekandpoke.klang.audio_be.probes.CLICK_VOICE_START
 import io.peekandpoke.klang.audio_be.probes.ClickConfig
 import io.peekandpoke.klang.audio_be.probes.ClickRender
 import io.peekandpoke.klang.audio_be.probes.FRAMING_NONE
@@ -32,18 +31,14 @@ import io.peekandpoke.klang.audio_be.probes.ProbeSignal
 import io.peekandpoke.klang.audio_be.probes.blackmanHarris7
 import io.peekandpoke.klang.audio_be.probes.clickTone
 import io.peekandpoke.klang.audio_be.probes.fftInPlace
-import io.peekandpoke.klang.audio_be.probes.ignitorProbeStage
 import io.peekandpoke.klang.audio_be.probes.katalystOwnerChangeStage
 import io.peekandpoke.klang.audio_be.probes.katalystProbeStage
-import io.peekandpoke.klang.audio_be.probes.measureClick
 import io.peekandpoke.klang.audio_be.probes.measureClickStereo
-import io.peekandpoke.klang.audio_be.probes.measureStage
 import io.peekandpoke.klang.audio_be.probes.renderFramedVoice
 import io.peekandpoke.klang.audio_be.probes.wholeProbeBlocks
 import io.peekandpoke.klang.audio_be.probes.windowedPowerSpectrum
 import io.peekandpoke.klang.audio_be.utils.flushState
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
-import io.peekandpoke.klang.audio_bridge.AdsrCurves
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystBuilder
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
@@ -428,148 +423,6 @@ class AuditSoundStagesRepro : StringSpec({
         }
 
         report.line("coefficient sets (each a tan and a divide) over this note: today $todaySets; grid N=128 ${gridKnots(128).count { it < span }}; N=32 ${gridKnots(32).count { it < span }}")
-    }
-
-    // ── L2-01: a voice that ends in its own envelope ────────────────────────────────────────────────────────────
-
-    "L2-01: the gain left on a voice's last frame, by release and curve, and the sine's zero-crossing (KLANG_PROBE=audit)".config(enabled = requested) {
-        report.line()
-        report.line("== L2-01 the last rendered frame of a voice that ends in classic()'s envelope ==")
-
-        // A DC source through classic(): the output IS the applied gain (times the channel), so no phase hides it.
-        val dcName = "auditdcvoice"
-        val registry = { IgnitorRegistry().apply { registerDefaults(); register(dcName, IgnitorDsl.Constant(1.0).classic()) } }
-        val gate = sr / 2
-        val linear = AdsrCurves.indexOf(AdsrCurve.Linear)
-        val exponential = AdsrCurves.indexOf(AdsrCurve.Exponential)
-
-        for ((curveName, curve) in listOf("exponential (default)" to exponential, "linear" to linear)) {
-            for (release in listOf(0.2, 0.05, 0.02, 0.01, 0.005, 0.002)) {
-                val out = renderFramedVoice(
-                    note = FramingNote(onsetFrame = 0, gateFrames = gate, cutFrame = FRAMING_NONE, renderFrames = gate + sr / 2),
-                    data = VoiceData.empty.copy(
-                        sound = dcName,
-                        freqHz = 110.0,
-                        ignitorParams = mapOf("adsr.release" to release, "adsrCurves.release" to curve).toKlangMap(),
-                    ),
-                    makeRegistry = registry,
-                ).left
-                val level = out[gate - 1]
-                val last = (out.indices).last { out[it] != 0.0 }
-                val expectedLast = gate + floor(release * sr).toInt() - 1
-
-                report.line(
-                    "DC voice, release ${f(release, 3)} s, $curveName: last nonzero frame ${last - gate} after the gate (expected ${expectedLast - gate}); " +
-                        "gain left there ${f(out[last] / level, 5)} (${db(out[last] / level)} dB re the note), the frame after it 0",
-                )
-            }
-        }
-
-        // The probe's sine: 110 Hz, onset at CLICK_VOICE_START, gate 2 s, the default release; then the gate a quarter period later.
-        report.line()
-
-        for (release in listOf(0.05, 0.01, 0.005)) {
-            for ((label, shift) in listOf("the probe's gate" to 0, "the gate a quarter period later (+109 frames)" to 109)) {
-                val noteGate = 2 * sr + shift
-                val out = renderFramedVoice(
-                    note = FramingNote(onsetFrame = CLICK_VOICE_START, gateFrames = noteGate, cutFrame = FRAMING_NONE, renderFrames = CLICK_VOICE_START + noteGate + 2 * sr),
-                    data = VoiceData.empty.copy(sound = "sine", freqHz = 110.0, ignitorParams = mapOf("analog" to 0.0, "adsr.release" to release).toKlangMap()),
-                ).left
-                val notePeak = AuditSoundKit.peak(x = out, from = CLICK_VOICE_START + sr / 2, to = CLICK_VOICE_START + sr)
-                val last = (out.indices).last { out[it] != 0.0 }
-                val reading = measureClick(y = out, eventFrame = CLICK_VOICE_START + noteGate, config = ClickConfig())
-
-                report.line(
-                    "sine 110 Hz, release ${f(release, 3)}, $label: last sample ${f(out[last] / notePeak, 5)} of the peak (${db(abs(out[last]) / notePeak)} dB), " +
-                        "the step to 0 after it; click detector at the gate: kink ${f(reading.kinkRatio, 1)} at +${reading.kinkOffsetFrames}, burst ${f(reading.burstAbsDb, 1)} dB",
-                )
-            }
-        }
-    }
-
-    // ── L4-03: sustain 0 and the de-click smoother ──────────────────────────────────────────────────────────────
-
-    "L4-03: subnormals from classic()'s de-click at sustain 0, the stage alone and through the voice into the cylinder (KLANG_PROBE=audit)".config(enabled = requested) {
-        report.line()
-        report.line("== L4-03 adsr(0.01, 0.1, 0, 0.05), held 3 s ==")
-
-        val held = 3 * sr
-        val total = wholeProbeBlocks(held + sr / 2)
-        val step = ProbeSignal(name = "step", left = DoubleArray(total) { if (it < held) 1.0 else 0.0 }, right = DoubleArray(total) { if (it < held) 1.0 else 0.0 }, inputEndFrame = held)
-        val params = mapOf("adsr.attack" to 0.01, "adsr.decay" to 0.1, "adsr.sustain" to 0.0, "adsr.release" to 0.05)
-        val stage = ignitorProbeStage(tree = IgnitorDsl.Sample.classic(), params = params)
-        val facts = measureStage(stage, step).left
-        val gain = stage.render(step).left
-
-        report.line(
-            "stage probe (Sample.classic() on a 1.0 step): subnormal samples ${facts.subnormalCount}, the first at frame ${facts.firstSubnormalFrame} " +
-                "(${f(facts.firstSubnormalFrame.toDouble() / sr, 3)} s; the decay ends at 0.110 s)",
-        )
-        report.line(
-            "the gain at 0.2 / 0.5 / 0.8 / 1.0 / 2.0 / 2.99 s: ${listOf(0.2, 0.5, 0.8, 1.0, 2.0, 2.99).joinToString(" / ") { gain[(it * sr).toInt()].toString() }}",
-        )
-
-        val voice = AuditSoundKit.renderVoice(sound = "saw", freqHz = 110.0, params = mapOf("analog" to 0.0) + params, frames = total, gateFrames = held)
-        var subnormal = 0
-        var firstSub = -1
-        var zeros = 0
-
-        for (channel in listOf(voice.left, voice.right ?: DoubleArray(0))) {
-            for (i in channel.indices) {
-                val a = abs(channel[i])
-
-                if (a > 0.0 && a < 2.2250738585072014E-308) {
-                    subnormal++
-
-                    if (firstSub < 0 || i < firstSub) {
-                        firstSub = i
-                    }
-                }
-
-                if (i in sr / 2 until held && channel[i] == 0.0) {
-                    zeros++
-                }
-            }
-        }
-
-        report.line(
-            "the saw voice's cylinder mix (both channels): subnormal samples $subnormal, the first at frame $firstSub (${f(firstSub.toDouble() / sr, 3)} s); " +
-                "exact zeros between 0.5 s and the gate $zeros",
-        )
-
-        // What it costs on this JVM: the same 20 s held saw voice at sustain 0 (subnormal for 19.2 s of it) against
-        // sustain 1e-9 (a normal number all along, the same work otherwise), warmed up, then 9 interleaved rounds.
-        val long = 20 * sr
-        val longParams = mapOf("analog" to 0.0, "adsr.attack" to 0.01, "adsr.decay" to 0.1, "adsr.release" to 0.05)
-
-        fun timed(sustain: Double): Long {
-            val started = System.nanoTime()
-
-            AuditSoundKit.renderVoice(sound = "saw", freqHz = 110.0, params = longParams + ("adsr.sustain" to sustain), frames = long, gateFrames = long)
-
-            return System.nanoTime() - started
-        }
-
-        repeat(2) {
-            timed(0.0)
-            timed(1e-9)
-        }
-
-        val zeroTimes = ArrayList<Long>()
-        val tinyTimes = ArrayList<Long>()
-
-        repeat(9) {
-            zeroTimes.add(timed(0.0))
-            tinyTimes.add(timed(1e-9))
-        }
-
-        val zeroMedian = zeroTimes.sorted()[4] / 1e6
-        val tinyMedian = tinyTimes.sorted()[4] / 1e6
-
-        report.line(
-            "cost on this JVM, a 20 s held saw voice (render plus the registry build), median of 9 interleaved rounds: sustain 0 ${f(zeroMedian, 1)} ms, " +
-                "sustain 1e-9 ${f(tinyMedian, 1)} ms, ratio ${f(zeroMedian / tinyMedian, 3)}",
-        )
     }
 
     // ── L7a-01 and L7a-02: delay and reverb switched on, and a chain swap ──────────────────────────────────────

@@ -124,7 +124,10 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   promoted in the order they were scheduled, live and offline alike.
 - **The envelope law** is `EnvelopeCore` (its KDoc). Voice defaults `VOICE_ADSR_*` (0.01, 0.1, 1.0, 0.05); curves
   are index knobs with the reader's default, both Exponential; `ADSR_EXP_K` 3.0; de-click `ENV_DECLICK_SECONDS`
-  1 ms on `classic()`. Knobs and `Adsr.on`: `audio/ref/voice-synthesis.md`.
+  1 ms on `classic()`, its state flushed, and the voice's tail covers its settle (36 time constants plus a frame,
+  `ENV_DECLICK_SETTLE_TIME_CONSTANTS`), so a voice that ends in its envelope ends on an exact 0. Voices are admitted
+  and placed in frames on the backend's own timeline (`PlaybackCtx.epochOnTimeline`), never in Unix seconds. Knobs
+  and `Adsr.on`: `audio/ref/voice-synthesis.md`.
 - **The gate**: a stage whose gating knob is a leaf at its off value (or unset, except where the table says
   otherwise) is not built; since 2026-10-07 the pitch arms too, five now (vibrato, accelerate, pitch envelope, fm, and
   `pitchModSemitones` at a literal mod since 7a). The
@@ -434,6 +437,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-11-10 Voice edges: the envelope's end on an exact 0, onsets on their frame, a cut by onset order, the replace dedup sub-quadratic: KLANG-00427
 - 2026-11-10 The pluck in tune (the loop filters' delay out of the line) and without DC: KLANG-00426
 - 2026-11-10 The render's net, the pan, pitch and time guards, the duck's NaN, no negative window: KLANG-00425
 

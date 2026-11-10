@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be
 
+import io.peekandpoke.klang.audio_be.utils.flushState
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.constants.ADSR_EXP_K
 import kotlin.math.floor
@@ -180,10 +181,35 @@ internal class EnvelopeCore {
 }
 
 /**
+ * How long the de-click smoother is given past the release's end, in its own time constants, before the voice ends:
+ * the voice's lifetime is the release plus [declickSettleSeconds] (the `Adsr` arm of the build adds it to the tail).
+ *
+ * Why (audit L2-01): the release lands its raw level on exact 0 on its last frame, but a one-pole that follows a
+ * falling ramp stands above it by about the slope times its time constant, so a voice that ended there was cut with
+ * gain left on its last frame (-49.6 dB at the default 50 ms release, -23.4 dB at 5 ms, worse with a linear curve).
+ * Past the release the raw level is 0, the smoother falls by a factor e per time constant, and [EnvelopeDeclick]
+ * flushes it to exact 0 below `DENORMAL_THRESHOLD` (1e-15): 34.5 time constants from a residual of 1. 36 leave room
+ * for a residual up to about 4 (a sustain above 1, raw); a larger one ends below 1e-15 times itself, under -300 dB.
+ */
+internal const val ENV_DECLICK_SETTLE_TIME_CONSTANTS: Double = 36.0
+
+/**
+ * The settle time a de-click of [declickSeconds] adds to an envelope's tail at [sampleRate]: [ENV_DECLICK_SETTLE_TIME_CONSTANTS]
+ * of it, plus one frame, because the voice renders whole frames and the extension's fraction is floored away. Only
+ * for a finite de-click above 0 (the caller's test); 0 is no de-click and needs no settle.
+ */
+internal fun declickSettleSeconds(declickSeconds: Double, sampleRate: Int): Double =
+    ENV_DECLICK_SETTLE_TIME_CONSTANTS * declickSeconds + 1.0 / sampleRate
+
+/**
  * The one-pole de-click smoother on an AMPLITUDE envelope's gain, primed to the first level it sees so a
  * voice that starts mid-note or at full level is not faded in. `classic()`'s envelope runs it always (its
  * `declick` is the constant `ENV_DECLICK_SECONDS`), any other Ignitor `adsr` when its `declick` knob is above 0. The modulation envelopes
  * have none. Its coefficient is `timeConstantCoeff` (`utils/time_constant.kt`) of the `declick` time.
+ *
+ * Its state is flushed ([flushState]), the engine rule for IIR state: below 1e-15 it is exact 0. Without it a sustain
+ * of 0 left the gain falling for ever into subnormals, which reached the cylinder (audit L4-03), and a voice could
+ * not end on an exact 0 (audit L2-01, [ENV_DECLICK_SETTLE_TIME_CONSTANTS]).
  */
 internal class EnvelopeDeclick {
     private var smoothed: Double = 0.0
@@ -195,7 +221,7 @@ internal class EnvelopeDeclick {
             smoothed = level
             primed = true
         } else {
-            smoothed += coeff * (level - smoothed)
+            smoothed = (smoothed + coeff * (level - smoothed)).flushState()
         }
 
         return smoothed

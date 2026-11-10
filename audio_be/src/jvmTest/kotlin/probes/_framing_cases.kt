@@ -375,6 +375,19 @@ fun framingTransitionCases(): List<FramingCase> = buildList {
             sweep = FramingSweep.CUT,
         ),
     )
+
+    // A cut 64 to 191 frames after the onset (audit L2-02): at some offsets the cut finds the voice still Pending, in
+    // its onset's block, at others across a border; judged by onset order both must sound the same.
+    add(
+        voiceCase(
+            family = "cut",
+            name = "saw",
+            knobs = "classic(), default adsr, analog=0, cut 64 + k frames after the onset",
+            params = mapOf("analog" to 0.0),
+            sweep = FramingSweep.CUT,
+            config = defaultConfig.copy(cutBaseFrames = 64),
+        ),
+    )
 }
 
 /** The sample PCM: two seconds of two non-harmonic sines at 48 kHz, so the sample's value shows its playhead. */
