@@ -1,8 +1,6 @@
 # KLANG-00421: The UI's wiring audit: a map of how state flows, one Spine, a state model that can roam
 
-> **Status (2026-11-10): IN PROGRESS.** The tool, the six traces and the map are done (work steps 1 to 3) and the
-> proposal is decided in its main points (step 4); the work is KLANG-00422. Three review rounds, none clean; every
-> finding is fixed, see "Reviews".
+> **Status (2026-11-10): DONE.** The tool, the map and the proposal are in; the maintainer's decisions recorded; the work goes on in KLANG-00422.
 
 ## Why this exists
 
@@ -190,3 +188,4 @@ markdown cache) are KLANG-00422.
 - 2026-11-10: created.
 - 2026-11-10: the tool, the traces, the map and the proposal; three review rounds, their findings fixed; the
   maintainer's decisions recorded, the work opened as KLANG-00422.
+- 2026-11-10: DONE. The tool, the map and the proposal are in; the maintainer's decisions recorded; the work goes on in KLANG-00422.

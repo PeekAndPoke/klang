@@ -1,6 +1,6 @@
 # KLANG-00422: One Spine object, its stored state as data classes, the UI's state moved in
 
-> **Status (2026-11-10): DESIGNED.** From the audit KLANG-00421; the decisions of 2026-11-10 are in.
+> **Status (2026-11-10): IN PROGRESS.** Step 1 started: the Spine as one object.
 >
 > **Part of:** KLANG-00389 (The Spine: one data layer under the UI)
 
@@ -82,3 +82,4 @@ after.
 ## History
 
 - 2026-11-10: created from KLANG-00421's proposal and the maintainer's decisions of that day.
+- 2026-11-10: IN PROGRESS. Step 1 started: the Spine as one object.
