@@ -14,12 +14,8 @@ import io.peekandpoke.klang.audio_be.filters.SvfCoeffs
 import io.peekandpoke.klang.audio_be.filters.computeSvfCoeffs
 import io.peekandpoke.klang.audio_be.filters.filterEnvCutoff
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
-import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.ignitor.buildExciter
-import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
-import io.peekandpoke.klang.audio_be.probes.FRAMING_NONE
-import io.peekandpoke.klang.audio_be.probes.FramingNote
 import io.peekandpoke.klang.audio_be.probes.PROBE_BLOCK_FRAMES
 import io.peekandpoke.klang.audio_be.probes.PROBE_SAMPLE_RATE
 import io.peekandpoke.klang.audio_be.probes.ProbeSignal
@@ -27,7 +23,6 @@ import io.peekandpoke.klang.audio_be.probes.blackmanHarris7
 import io.peekandpoke.klang.audio_be.probes.fftInPlace
 import io.peekandpoke.klang.audio_be.probes.katalystOwnerChangeStage
 import io.peekandpoke.klang.audio_be.probes.katalystProbeStage
-import io.peekandpoke.klang.audio_be.probes.renderFramedVoice
 import io.peekandpoke.klang.audio_be.probes.wholeProbeBlocks
 import io.peekandpoke.klang.audio_be.probes.windowedPowerSpectrum
 import io.peekandpoke.klang.audio_be.utils.flushState
@@ -36,14 +31,9 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystBuilder
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
-import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.VowelBands
 import io.peekandpoke.klang.audio_bridge.classic
-import io.peekandpoke.klang.audio_bridge.highpass
 import io.peekandpoke.klang.audio_bridge.kat
-import io.peekandpoke.klang.audio_bridge.lowpass
-import io.peekandpoke.klang.audio_bridge.optimize
-import io.peekandpoke.klang.audio_bridge.optimizer
 import io.peekandpoke.klang.common.infra.toKlangMap
 import kotlin.math.PI
 import kotlin.math.abs
@@ -58,8 +48,8 @@ import kotlin.random.Random
 /**
  * The disproof pass, cluster "sound", the STAGES (KLANG-00420, `docs/audio-audit/2026-11-10/audit/disproof-sound.md`):
  * the filter envelope's block law, the voice's last frame, the de-click's subnormals, the vowel, the reverb's damping,
- * the compressor's detector and the optimizer's filter gate (the chain swaps and the phaser at a low rate were fixed
- * by KLANG-00428, their guards are ordinary specs now). A
+ * the compressor's detector (the chain swaps and the phaser at a low rate were fixed by KLANG-00428, the optimizer's
+ * filter gate by KLANG-00429; their guards are ordinary specs now). A
  * measurement, not a gate: nothing here asserts an engine value; each test prints what it measured and writes it to
  * `<build dir>/probes/audit-sound-stages.txt`.
  *
@@ -596,74 +586,6 @@ class AuditSoundStagesRepro : StringSpec({
                 report.line(
                     "$label, $afterLabel: gain exactly 1.0 for $dead frames (${f(dead * 1000.0 / sr, 2)} ms) after the onset; -1 dB after $toMinus1 frames; " +
                         "steady ${db(steady)} dB; after the step down: within 1 dB after ${f(recover1 * 1000.0 / sr, 1)} ms, within 0.1 dB after ${f(recover01 * 1000.0 / sr, 1)} ms",
-                )
-            }
-        }
-    }
-
-    // ── L5-01: the optimizer and the filter's gate ──────────────────────────────────────────────────────────────
-
-    "L5-01: a filter on an unset slot, unoptimized against optimized, and through the registry (KLANG_PROBE=audit)".config(enabled = requested) {
-        report.line()
-        report.line("== L5-01 a plain filter door on an unset slot, no slot written; unoptimized (buildExciter alone) against optimize() ==")
-
-        val frames = wholeProbeBlocks(sr / 2)
-        val sine = IgnitorDsl.Sine(analog = IgnitorDsl.Constant(0.0))
-        val saw = IgnitorDsl.Saw(analog = IgnitorDsl.Constant(0.0))
-        val trees = listOf(
-            "Sine().lowpass(Slots.lpf.freq)" to sine.lowpass(IgnitorDsl.Slots.lpf.freq),
-            "Sine().highpass(Slots.hpf.freq)" to sine.highpass(IgnitorDsl.Slots.hpf.freq),
-            "Saw().lowpass(Slots.lpf.freq)" to saw.lowpass(IgnitorDsl.Slots.lpf.freq),
-        )
-
-        for ((label, tree) in trees) {
-            val optimized = tree.optimize()
-
-            for (freq in listOf(220.0, 880.0)) {
-                for (params in listOf(emptyMap<String, Double>(), mapOf("lpf.freq" to 500.0, "hpf.freq" to 500.0))) {
-                    val a = AuditSoundKit.renderTree(tree = tree, freqHz = freq, params = params, frames = frames)
-                    val b = AuditSoundKit.renderTree(tree = optimized, freqHz = freq, params = params, frames = frames)
-                    var maxDiff = 0.0
-
-                    for (i in a.indices) {
-                        maxDiff = max(maxDiff, abs(a[i] - b[i]))
-                    }
-
-                    report.line(
-                        "${label.padEnd(32)} ${f(freq, 0)} Hz ${if (params.isEmpty()) "no slot written  " else "slot written 500 "} optimized root ${optimized::class.simpleName}: " +
-                            "level optimized re unoptimized ${db(AuditSoundKit.rms(b) / AuditSoundKit.rms(a))} dB, max |difference| ${f(maxDiff, 4)}",
-                    )
-                }
-            }
-        }
-
-        // The production path: the registry optimizes at register(); `.optimizer(0)` is the by-ear A/B.
-        val lp = sine.lowpass(IgnitorDsl.Slots.lpf.freq)
-        val hp = sine.highpass(IgnitorDsl.Slots.hpf.freq)
-        val registry = {
-            IgnitorRegistry().apply {
-                registerDefaults()
-                register("auditlp", lp)
-                register("auditlpoff", lp.optimizer(0))
-                register("audithp", hp)
-                register("audithpoff", hp.optimizer(0))
-            }
-        }
-
-        for ((on, off) in listOf("auditlp" to "auditlpoff", "audithp" to "audithpoff")) {
-            for (freq in listOf(220.0, 880.0)) {
-                fun play(sound: String): DoubleArray = renderFramedVoice(
-                    note = FramingNote(onsetFrame = 0, gateFrames = sr / 2, cutFrame = FRAMING_NONE, renderFrames = sr / 2),
-                    data = VoiceData.empty.copy(sound = sound, freqHz = freq),
-                    makeRegistry = registry,
-                ).left
-
-                val a = play(off)
-                val b = play(on)
-
-                report.line(
-                    "registered '$on' against '$off' (.optimizer(0)) at ${f(freq, 0)} Hz, no slot written, the voice path: " +
-                        "level ${db(AuditSoundKit.rms(x = b, from = sr / 10, to = sr / 2 - sr / 10) / AuditSoundKit.rms(x = a, from = sr / 10, to = sr / 2 - sr / 10))} dB",
                 )
             }
         }

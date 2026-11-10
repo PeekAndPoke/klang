@@ -15,11 +15,9 @@ import io.peekandpoke.klang.audio_be.cylinders.Cylinder
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.effects.DelayLine
 import io.peekandpoke.klang.audio_be.effects.Reverb
-import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.PhasePools
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
-import io.peekandpoke.klang.audio_be.ignitor.buildExciter
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_be.katalyst.KatalystDelayEffect
 import io.peekandpoke.klang.audio_be.katalyst.delay
@@ -37,17 +35,13 @@ import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.classic
 import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
-import io.peekandpoke.klang.audio_bridge.optimize
 import io.peekandpoke.klang.audio_bridge.oversampleBy
-import io.peekandpoke.klang.audio_bridge.uniqueId
 import io.peekandpoke.klang.common.infra.KlangMap
 import io.peekandpoke.klang.common.infra.klangMapOf
 import java.util.Locale
 import kotlin.math.abs
-import kotlin.math.log10
 import kotlin.math.max
 import kotlin.math.pow
-import kotlin.math.sqrt
 import kotlin.random.Random
 
 // The disproof pass of the engine audit (KLANG-00420), cluster "realtime and lifecycle": reproductions of the layer
@@ -335,40 +329,6 @@ private fun rtRenderContext(): Voice.RenderContext = Voice.RenderContext(
     scratchBuffers = ScratchBuffers(RT_BLOCK),
 )
 
-/** A tree built and rendered alone from voice frame [startElapsed], held gate, [blocks] blocks, mono. */
-private fun rtRenderTree(tree: IgnitorDsl, freqHz: Double, blocks: Int, startElapsed: Int = 0): DoubleArray {
-    val built = tree.buildExciter(ignitorParams = null, random = Random(7), freqHz = freqHz, sampleRate = RT_SR, blockFrames = RT_BLOCK)
-    val ctx = IgniteContext(
-        sampleRate = RT_SR,
-        voiceDurationFrames = Int.MAX_VALUE,
-        gateEndFrame = Int.MAX_VALUE,
-        scratchBuffers = ScratchBuffers(RT_BLOCK),
-        random = Random(7),
-    )
-    val buffer = AudioBuffer(RT_BLOCK)
-    val out = DoubleArray(blocks * RT_BLOCK)
-
-    for (b in 0 until blocks) {
-        buffer.fill(0.0)
-        ctx.voiceElapsedFrames = startElapsed + b * RT_BLOCK
-        ctx.updateOffsetAndLength(offset = 0, length = RT_BLOCK)
-        built.ignitor.generate(buffer, freqHz, ctx)
-        buffer.copyInto(destination = out, destinationOffset = b * RT_BLOCK, startIndex = 0, endIndex = RT_BLOCK)
-    }
-
-    return out
-}
-
-private fun rtRms(x: DoubleArray): Double {
-    var sum = 0.0
-
-    for (v in x) {
-        sum += v * v
-    }
-
-    return if (x.isEmpty()) 0.0 else sqrt(sum / x.size)
-}
-
 private fun rtPeak(x: DoubleArray, from: Int = 0, to: Int = x.size): Double {
     var peak = 0.0
 
@@ -377,17 +337,6 @@ private fun rtPeak(x: DoubleArray, from: Int = 0, to: Int = x.size): Double {
     }
 
     return peak
-}
-
-/** The largest |a - b| between block [b] and block [b] - 1 of [x]. */
-private fun rtBlockRepeat(x: DoubleArray, b: Int): Double {
-    var worst = 0.0
-
-    for (i in 0 until RT_BLOCK) {
-        worst = max(worst, abs(x[b * RT_BLOCK + i] - x[(b - 1) * RT_BLOCK + i]))
-    }
-
-    return worst
 }
 
 class AuditRealtimeRepro : StringSpec({
@@ -860,28 +809,6 @@ class AuditRealtimeRepro : StringSpec({
         flush()
     }
 
-    "L5-02: two trees equal by structure and different by sharing get one name and make two sounds".config(enabled = requested) {
-        val p = IgnitorDsl.Pluck()
-        val shared = IgnitorDsl.Plus(left = p, right = IgnitorDsl.Lowpass(inner = p, freq = IgnitorDsl.Constant(800.0)))
-        val twins = IgnitorDsl.Plus(left = IgnitorDsl.Pluck(), right = IgnitorDsl.Lowpass(inner = IgnitorDsl.Pluck(), freq = IgnitorDsl.Constant(800.0)))
-        val blocks = 188
-        val a = rtRenderTree(tree = shared.optimize(), freqHz = 220.0, blocks = blocks)
-        val b = rtRenderTree(tree = twins.optimize(), freqHz = 220.0, blocks = blocks)
-        val a2 = rtRenderTree(tree = shared.optimize(), freqHz = 220.0, blocks = blocks)
-        val diff = DoubleArray(a.size) { a[it] - b[it] }
-        val diffSelf = DoubleArray(a.size) { a[it] - a2[it] }
-
-        line("== L5-02: let p = pluck(); p + p.lowpass(800)  against  pluck() + pluck().lowpass(800), 220 Hz, 0.5 s, built optimized")
-        line("   structurally equal: ${shared == twins}; the same instance: ${shared === twins}")
-        line("   uniqueId: ${shared.uniqueId()} and ${twins.uniqueId()} (equal: ${shared.uniqueId() == twins.uniqueId()})")
-        line(
-            "   rms shared ${rtFx(rtRms(a), 4)}, rms twins ${rtFx(rtRms(b), 4)}, rms of the difference ${rtFx(rtRms(diff), 4)} " +
-                "(${rtFx(20.0 * log10(rtRms(diff) / rtRms(a)), 1)} dB re the shared one); control, the shared tree twice: ${rtFx(rtRms(diffSelf), 6)}",
-        )
-
-        flush()
-    }
-
     "L2-07: a stopped playback's long note keeps its engine, and a release of 1e6 s".config(enabled = requested) {
         val rig = RtRig()
         rig.send(KlangCommLink.Cmd.ScheduleVoices(playbackId = RT_PID, voices = listOf(rtVoice(note = "long", atSec = 0.0, gateSec = 60.0, sound = "sine"))))
@@ -912,67 +839,6 @@ class AuditRealtimeRepro : StringSpec({
         )!!
 
         line("   a sine with adsr.release 1e6 and a 1 s gate: the voice ends ${rtFx(voice.endFrame / RT_SR, 0)} s after its onset (${rtFx(voice.endFrame / RT_SR / 86400.0, 1)} days)")
-
-        flush()
-    }
-
-    "L5-07: inside a 16x region a shared node repeats one block once the region's frame counter saturates".config(enabled = requested) {
-        val noise = IgnitorDsl.WhiteNoise()
-        val tree = noise.oversampleBy(16.ign) { y -> IgnitorDsl.Plus(left = y, right = IgnitorDsl.Lowpass(inner = y, freq = IgnitorDsl.Constant(3000.0))) }
-        val saturation = Int.MAX_VALUE / 16
-
-        fun repeats(startElapsed: Int, optimized: Boolean): String {
-            val t = if (optimized) tree.optimize() else tree
-            val out = rtRenderTree(tree = t, freqHz = 220.0, blocks = 12, startElapsed = startElapsed)
-            val diffs = (1 until 12).map { rtFx(rtBlockRepeat(out, it), 4) }
-
-            return "from voice frame $startElapsed (saturates at $saturation): largest change from the block before, per block: $diffs"
-        }
-
-        line("== L5-07: whitenoise.oversampleBy(16) { y -> y + y.lowpass(3000) } (the region input read twice), 48 kHz")
-        line("   minutes to saturation at 16x: ${rtFx(saturation / RT_SR.toDouble() / 60.0, 1)}, at 8x ${rtFx(Int.MAX_VALUE / 8 / RT_SR.toDouble() / 60.0, 1)}, at 2x ${rtFx(Int.MAX_VALUE / 2 / RT_SR.toDouble() / 3600.0, 2)} h")
-        line("   control:   ${repeats(startElapsed = 0, optimized = true)}")
-        line("   saturated: ${repeats(startElapsed = saturation - 4 * RT_BLOCK, optimized = true)}")
-        line("   saturated, not optimized: ${repeats(startElapsed = saturation - 4 * RT_BLOCK, optimized = false)}")
-
-        // Diagnostics: the memo's own behaviour at a clock that does not move (what saturation produces)
-        fun stuck(t: IgnitorDsl, label: String) {
-            val built = t.buildExciter(ignitorParams = null, random = Random(7), freqHz = 220.0, sampleRate = RT_SR, blockFrames = RT_BLOCK)
-            val ctx = IgniteContext(
-                sampleRate = RT_SR,
-                voiceDurationFrames = Int.MAX_VALUE,
-                gateEndFrame = Int.MAX_VALUE,
-                scratchBuffers = ScratchBuffers(RT_BLOCK),
-                random = Random(7),
-            )
-            val buffer = AudioBuffer(RT_BLOCK)
-            val out = DoubleArray(12 * RT_BLOCK)
-
-            for (b in 0 until 12) {
-                buffer.fill(0.0)
-                ctx.voiceElapsedFrames = 1000
-                ctx.updateOffsetAndLength(offset = 0, length = RT_BLOCK)
-                built.ignitor.generate(buffer, 220.0, ctx)
-                buffer.copyInto(destination = out, destinationOffset = b * RT_BLOCK, startIndex = 0, endIndex = RT_BLOCK)
-            }
-
-            line("   clock held at frame 1000, $label: ${(1 until 12).map { rtFx(rtBlockRepeat(out, it), 4) }}")
-        }
-
-        val n2 = IgnitorDsl.WhiteNoise()
-        stuck(IgnitorDsl.Plus(left = n2, right = IgnitorDsl.Lowpass(inner = n2, freq = IgnitorDsl.Constant(3000.0))), "no region, a shared noise read twice")
-        stuck(tree, "the 16x region, its input read twice")
-
-        val n3 = IgnitorDsl.WhiteNoise()
-        val shared = n3.oversampleBy(16.ign) { y ->
-            val z = IgnitorDsl.Lowpass(inner = y, freq = IgnitorDsl.Constant(3000.0))
-
-            IgnitorDsl.Plus(left = z, right = IgnitorDsl.Highpass(inner = z, freq = IgnitorDsl.Constant(100.0)))
-        }
-        stuck(shared, "the 16x region, a lowpass in the body read twice")
-
-        val out3 = rtRenderTree(tree = shared, freqHz = 220.0, blocks = 12, startElapsed = saturation - 4 * RT_BLOCK)
-        line("   the 16x region with a lowpass read twice, through saturation: ${(1 until 12).map { rtFx(rtBlockRepeat(out3, it), 4) }}")
 
         flush()
     }

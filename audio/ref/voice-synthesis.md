@@ -48,7 +48,12 @@ meet a door (for good; the temporary regroupings of steps 1 to 3 ended with step
 `fm` node's modulator with its carrier, as every pitch node above an fm does (decision D1, pitch pipeline step 3b; see
 "FM: a pitch node means what it wraps" below); the classic FM stage is innermost, so its own modulator follows the
 other classic pitch stages, and an `fm` in the instrument sits inside its carrier and follows it. Unlike the strip, a
-classic stage never bends a musical oscillator in a parameter position, such as a filter LFO (plan section 2). The
+classic stage never bends a musical oscillator in a parameter position of a NON-SOURCE node, such as a filter LFO
+(plan section 2). In a SOURCE's parameter position (an oscillator's `phase` or `duty`) it does: the source reads its
+knobs inside its own render, where the pitch mod is in force, so `sine(phase = sine().mul(0.3))` under a vibrato bends
+the phase modulator too, as fm's modulator follows its carrier. One such modulator shared with a non-source knob is
+one memo whose cache does not key on the pitch mod, so the reader that renders first decides for both (audit L5-05,
+KLANG-00429; an open question there). The
 FM is the Ignitor `fm` node over a sine modulator at `analog` 0, filled by the `fm.*` slots (sprudel's `fm`); the
 pitch envelope is the Ignitor `pitchEnvelope` node, filled by the `penv.*` and `penvCurves.*` slots (sprudel's `penv`,
 `penvCurves`); accelerate is the Ignitor `accelerate` node, filled by the flat `accelerate` slot; the vibrato is the

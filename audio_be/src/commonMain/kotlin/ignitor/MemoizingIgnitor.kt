@@ -20,9 +20,10 @@ import io.peekandpoke.klang.audio_be.utils.copyRangeInto
  * [MemoizingIgnitor] records the inputs of its first call per block and hands
  * the cached output buffer to every subsequent call within the same block.
  *
- * **Cache invalidation key:** `(voiceElapsedFrames, offset, length, freqHz)`, without
- * `freqHz` when [freqInvariant]. If any of these changes between calls, the inner Ignitor
- * runs again. Typical causes of invalidation:
+ * **Cache invalidation key:** `(voiceElapsedFrames, the root context's voiceElapsedFrames, offset, length, freqHz)`,
+ * without `freqHz` when [freqInvariant]; the root's count is the voice's own inside an oversampling region (whose
+ * scaled count saturates, audit L5-07) and this context's outside one. If any of these changes between calls, the
+ * inner Ignitor runs again. Typical causes of invalidation:
  * - New block (`voiceElapsedFrames` advanced by previous block's length).
  * - Sub-block render (different `offset` / `length` within one block).
  * - Caller applied pitch modulation that alters `freqHz` (only when not [freqInvariant]).
@@ -60,7 +61,10 @@ class MemoizingIgnitor(val inner: Ignitor) : Ignitor {
     /** True when [inner]'s output does not depend on `freqHz`; the cache then ignores it. */
     var freqInvariant: Boolean = false
         private set
-    private var cache: AudioBuffer = AudioBuffer(0)
+    // A memo that never caches (one reader, the usual case) keeps the one shared empty buffer: a buffer of size 0 is
+    // never written, and a caching memo replaces it at build ([reserveCache]). One per memo was a typed array per built
+    // node per note on JS (audit L5-04).
+    private var cache: AudioBuffer = NO_CACHE
 
     /**
      * Pure delegation, the flag with it. Every node that reports [isBlockConstant] is stateless (Constant/Param/Freq
@@ -78,6 +82,7 @@ class MemoizingIgnitor(val inner: Ignitor) : Ignitor {
 
     // Cache key components. Sentinel values guarantee a miss on the first call.
     private var cachedVoiceElapsedFrames: Int = Int.MIN_VALUE
+    private var cachedRootElapsedFrames: Int = Int.MIN_VALUE
     private var cachedOffset: Int = Int.MIN_VALUE
     private var cachedLength: Int = Int.MIN_VALUE
     private var cachedFreqHz: Double = Double.NaN
@@ -118,7 +123,14 @@ class MemoizingIgnitor(val inner: Ignitor) : Ignitor {
             return
         }
 
+        // Inside an oversampling region the context's frame count is the voice's times the factor, held at
+        // `Int.MAX_VALUE` once that product overflows (46.6 minutes into a voice at 16x): from there on it is the same
+        // in every block, and the key alone repeated one block for the rest of the voice (audit L5-07). The voice's own
+        // count (the region's root context) still moves per block, so it is part of the key; outside a region it is
+        // this context's count.
+        val rootElapsed = (ctx.rootContext ?: ctx).voiceElapsedFrames
         val miss = ctx.voiceElapsedFrames != cachedVoiceElapsedFrames ||
+                rootElapsed != cachedRootElapsedFrames ||
                 ctx.offset != cachedOffset ||
                 ctx.length != cachedLength ||
                 (!freqInvariant && freqHz != cachedFreqHz)
@@ -131,6 +143,7 @@ class MemoizingIgnitor(val inner: Ignitor) : Ignitor {
             }
             inner.generate(cache, freqHz, ctx)
             cachedVoiceElapsedFrames = ctx.voiceElapsedFrames
+            cachedRootElapsedFrames = rootElapsed
             cachedOffset = ctx.offset
             cachedLength = ctx.length
             cachedFreqHz = freqHz
@@ -139,3 +152,6 @@ class MemoizingIgnitor(val inner: Ignitor) : Ignitor {
         cache.copyRangeInto(destination = buffer, destinationOffset = ctx.offset, startIndex = ctx.offset, endIndex = ctx.windowEnd)
     }
 }
+
+/** The empty cache every non-caching [MemoizingIgnitor] shares; size 0, so nothing ever writes into it. */
+private val NO_CACHE: AudioBuffer = AudioBuffer(0)

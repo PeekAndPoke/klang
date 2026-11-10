@@ -16,8 +16,12 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.OPTIMIZER_PARITY
 import io.peekandpoke.klang.audio_bridge.abs
 import io.peekandpoke.klang.audio_bridge.bandpass
+import io.peekandpoke.klang.audio_bridge.classic
+import io.peekandpoke.klang.audio_bridge.coarse
+import io.peekandpoke.klang.audio_bridge.crush
 import io.peekandpoke.klang.audio_bridge.distort
 import io.peekandpoke.klang.audio_bridge.div
+import io.peekandpoke.klang.audio_bridge.drive
 import io.peekandpoke.klang.audio_bridge.eq
 import io.peekandpoke.klang.audio_bridge.highpass
 import io.peekandpoke.klang.audio_bridge.ign
@@ -30,6 +34,8 @@ import io.peekandpoke.klang.audio_bridge.onepole
 import io.peekandpoke.klang.audio_bridge.optimize
 import io.peekandpoke.klang.audio_bridge.optimizer
 import io.peekandpoke.klang.audio_bridge.plus
+import io.peekandpoke.klang.audio_bridge.shimmer
+import io.peekandpoke.klang.audio_bridge.tremolo
 import io.peekandpoke.klang.common.infra.toKlangMap
 import kotlin.math.abs
 import kotlin.random.Random
@@ -874,6 +880,64 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
             }
             ca.voiceElapsedFrames += blockFrames
             cb.voiceElapsedFrames += blockFrames
+        }
+    }
+
+    // ── The gate and the optimizer (audit L5-01, L5-13): a stage the build gates off at an unset or off leaf knob must
+    //    stay off when optimized. The fusion was the one rewrite that dropped a gate (an `Eq` section has none). ──
+
+    "audit L5-01: a plain filter door on an UNSET cutoff stays off when optimized, slot written or not" {
+        val unsetCutoffs = listOf(
+            "lowpass on lpf.freq" to IgnitorDsl.Saw().lowpass(freq = IgnitorDsl.Slots.lpf.freq),
+            "highpass on hpf.freq" to IgnitorDsl.Saw().highpass(freq = IgnitorDsl.Slots.hpf.freq),
+            "bandpass on bpf.freq" to IgnitorDsl.Saw().bandpass(freq = IgnitorDsl.Slots.bpf.freq),
+            "notch on notch.freq" to IgnitorDsl.Saw().notch(freq = IgnitorDsl.Slots.notch.freq),
+            "a passes = 2 lowpass on lpf.freq" to IgnitorDsl.Saw().lowpass(freq = IgnitorDsl.Slots.lpf.freq) { it.passes(2.0.ign) },
+            "an authored NaN-default param" to IgnitorDsl.Saw().highpass(freq = IgnitorDsl.Param(name = "cut", default = Double.NaN)),
+            "a literal NaN cutoff" to IgnitorDsl.Saw().lowpass(freq = IgnitorDsl.Constant(Double.NaN)),
+            "an unset filter on top of a fused one" to IgnitorDsl.Saw().lowpass(freq = 3000.0.ign).highpass(freq = IgnitorDsl.Slots.hpf.freq),
+        )
+        val written = mapOf("lpf.freq" to 500.0, "hpf.freq" to 500.0, "bpf.freq" to 500.0, "notch.freq" to 500.0, "cut" to 500.0)
+
+        for ((label, tree) in unsetCutoffs) {
+            withClue("$label, no slot written") { assertOptimizeIsInaudible(tree, expectFused = null, minPeak = 0.1) }
+            withClue("$label, every slot written") { assertOptimizeIsInaudible(tree, expectFused = null, ignitorParams = written, minPeak = 0.1) }
+        }
+    }
+
+    "audit L5-01: ...and a cutoff that cannot be unset still fuses (a finite-default param, a constant)" {
+        assertOptimizeIsInaudible(IgnitorDsl.Saw().lowpass(freq = IgnitorDsl.Param(name = "cut", default = 800.0)), expectFused = true, minPeak = 0.1)
+        assertOptimizeIsInaudible(IgnitorDsl.Saw().highpass(freq = 300.0.ign), expectFused = true, minPeak = 0.1)
+    }
+
+    "audit L5-13: every gate row's plain door renders the same optimized, its knob unset, off and on" {
+        val unset = Double.NaN
+        val stages = listOf(
+            Triple("onepole", 3000.0, IgnitorDsl.Saw().onepole(IgnitorDsl.Param(name = "k", default = unset)).lowpass(freq = IgnitorDsl.Param(name = "f", default = unset))),
+            Triple("drive", 0.5, IgnitorDsl.Saw().drive(IgnitorDsl.Param(name = "k", default = unset)).notch(freq = IgnitorDsl.Param(name = "f", default = unset))),
+            Triple("crush", 6.0, IgnitorDsl.Saw().crush(IgnitorDsl.Param(name = "k", default = unset)).bandpass(freq = IgnitorDsl.Param(name = "f", default = unset))),
+            Triple("coarse", 3.0, IgnitorDsl.Saw().coarse(IgnitorDsl.Param(name = "k", default = unset)).highpass(freq = IgnitorDsl.Param(name = "f", default = unset))),
+            Triple("tremolo", 0.5, IgnitorDsl.Saw().tremolo(rate = 5.0.ign, depth = IgnitorDsl.Param(name = "k", default = unset)).lowpass(freq = IgnitorDsl.Param(name = "f", default = unset))),
+            Triple("shimmer", 0.5, IgnitorDsl.Saw().shimmer(wet = IgnitorDsl.Param(name = "k", default = unset)).lowpass(freq = IgnitorDsl.Param(name = "f", default = unset))),
+        )
+
+        for ((label, on, tree) in stages) {
+            // Unset, then off (0 is off for each of these: crush is off below 1, coarse at or below 1), then on.
+            for (params in listOf(null, mapOf("k" to 0.0, "f" to unset), mapOf("k" to on, "f" to 900.0))) {
+                withClue("$label with $params") { assertOptimizeIsInaudible(tree, expectFused = null, ignitorParams = params, minPeak = 0.01) }
+            }
+        }
+    }
+
+    "audit L5-13: classic() over a saw renders the same optimized, nothing written and every stage on" {
+        val on = mapOf(
+            "fm.depth" to 100.0, "penv.semitones" to 12.0, "accelerate" to 12.0, "vibrato.semitones" to 0.5, "onepole" to 3000.0,
+            "crush.bits" to 8.0, "coarse.factor" to 2.0, "distort.amount" to 0.5, "hpf.freq" to 100.0, "bpf.freq" to 1000.0,
+            "notch.freq" to 3000.0, "lpf.freq" to 5000.0, "tremolo.depth" to 0.5,
+        )
+
+        for (params in listOf(null, on)) {
+            withClue("classic() with $params") { assertOptimizeIsInaudible(IgnitorDsl.Saw().classic(), expectFused = null, ignitorParams = params, minPeak = 0.01) }
         }
     }
 

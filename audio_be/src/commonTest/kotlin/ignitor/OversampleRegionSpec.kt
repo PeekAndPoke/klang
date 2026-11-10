@@ -475,6 +475,51 @@ class OversampleRegionSpec : StringSpec({
         }
     }
 
+    "audit L5-07: a node shared in the body keeps rendering once the region's frame count saturates" {
+        // At 16x the region's count is the voice's times 16, held at Int.MAX_VALUE from voice frame 134217727 (46.6
+        // minutes) on: the same number in every block. A memo keyed on it alone served one cached block for the rest of
+        // the voice, so the shared lowpass `z` froze and the output settled into a 128-frame loop (its change from the
+        // block before fell to 0.0004 within five blocks). The voice's own count, which still moves, is in the key now.
+        val noise = IgnitorDsl.WhiteNoise()
+        val tree = noise.oversampleBy(16.ign) { y ->
+            val z = IgnitorDsl.Lowpass(inner = y, freq = IgnitorDsl.Constant(3000.0))
+
+            IgnitorDsl.Plus(left = z, right = IgnitorDsl.Highpass(inner = z, freq = IgnitorDsl.Constant(100.0)))
+        }
+        val saturation = Int.MAX_VALUE / 16
+        val count = 12
+        val ctx = IgniteContext(
+            sampleRate = sampleRate,
+            voiceDurationFrames = Int.MAX_VALUE,
+            gateEndFrame = Int.MAX_VALUE,
+            scratchBuffers = ScratchBuffers(blockFrames),
+            random = Random(7),
+        )
+        val ignitor = tree.buildExciter(random = ctx.random, freqHz = noteHz, sampleRate = sampleRate).ignitor
+        val buffer = AudioBuffer(blockFrames)
+        val out = DoubleArray(count * blockFrames)
+
+        for (b in 0 until count) {
+            // from four blocks before the saturation, through it
+            ctx.voiceElapsedFrames = saturation - 4 * blockFrames + b * blockFrames
+            ctx.updateOffsetAndLength(offset = 0, length = blockFrames)
+            ignitor.generate(buffer, noteHz, ctx)
+            buffer.copyInto(destination = out, destinationOffset = b * blockFrames, startIndex = 0, endIndex = blockFrames)
+        }
+
+        for (b in 6 until count) {
+            var change = 0.0
+
+            for (i in 0 until blockFrames) {
+                change = maxOf(change, abs(out[b * blockFrames + i] - out[(b - 1) * blockFrames + i]))
+            }
+
+            withClue("block $b, past the saturation: the largest change from the block before is $change") {
+                (change > 0.1) shouldBe true
+            }
+        }
+    }
+
     "the region input means nothing outside a region: silence" {
         render(IgnitorDsl.RegionInput(up = 0)).all { it == 0.0 } shouldBe true
     }

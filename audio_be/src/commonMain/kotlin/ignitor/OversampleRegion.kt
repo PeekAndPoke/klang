@@ -125,7 +125,8 @@ internal class OuterRegionInputIgnitor(
  * The frame counters are multiplied with saturation at the block start: a held realtime note's gate (`Int.MAX_VALUE`)
  * stays the largest Int instead of wrapping negative. A voice past about 46 minutes at 16x (12.4 hours / 16)
  * saturates its elapsed count, and an envelope counting on from it within the block wraps, as the voice's own context
- * does after 12.4 hours.
+ * does after 12.4 hours. A node shared in the body keeps rendering past it: its memo keys on the voice's own count
+ * too ([rootContext][IgniteContext.rootContext], audit L5-07), which before froze it into one repeated block.
  */
 internal class OversampleRegionIgnitor(
     private val inner: Ignitor,

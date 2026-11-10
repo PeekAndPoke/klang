@@ -136,6 +136,28 @@ class InlineDslRegistrarTest : StringSpec({
         reg.ignitors.size shouldBe 1
     }
 
+    "audit L5-02: an edit that only changes the sharing is announced, as a second instrument" {
+        // `let p = pluck(); p + p.lowpass(800)` is one string read twice; `pluck() + pluck().lowpass(800)` is two
+        // strings. Equal as data, so one name used to cover both, and the playback kept the first one it heard.
+        val (reg, sent) = newRegistrar()
+        val p = IgnitorDsl.Pluck()
+        val shared = IgnitorDsl.Plus(left = p, right = IgnitorDsl.Lowpass(inner = p, freq = IgnitorDsl.Constant(800.0)))
+        val twins = IgnitorDsl.Plus(
+            left = IgnitorDsl.Pluck(),
+            right = IgnitorDsl.Lowpass(inner = IgnitorDsl.Pluck(), freq = IgnitorDsl.Constant(800.0)),
+        )
+
+        shared shouldBe twins
+
+        val nameShared = reg.ignitors.registerOrLookup(shared)
+        val nameTwins = reg.ignitors.registerOrLookup(twins)
+
+        nameShared shouldNotBe nameTwins
+        sent.size shouldBe 2
+        // the second announcement carries the second tree itself, not an equal one
+        ((sent[1] as KlangCommLink.Cmd.RegisterIgnitor).dsl === twins) shouldBe true
+    }
+
     "two registrars (two playbacks) share names but each announces independently" {
         val (regA, sentA) = newRegistrar()
         val (regB, sentB) = newRegistrar()

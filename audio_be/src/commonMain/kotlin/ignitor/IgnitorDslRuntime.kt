@@ -415,13 +415,7 @@ internal fun IgnitorDsl.buildIgnitor(
     //    do NOT pass through here: they resolve in `KatalystKnob` off
     //    `katalystParams`, where non-finite is the DECLARED off state and stays readable as such.
     when (this) {
-        is IgnitorDsl.Param -> {
-            val override = ignitorParams?.get(name)
-            // NaN-guard on a value the author can write: a non-finite slot was never set.
-            val value = if (override != null && override.isFinite()) override else default
-
-            return BuiltIgnitor(ParamIgnitor(name, value))
-        }
+        is IgnitorDsl.Param -> return BuiltIgnitor(ParamIgnitor(name, resolvedValue(ignitorParams)))
 
         is IgnitorDsl.Constant -> return BuiltIgnitor(ConstantIgnitor(value))
         is IgnitorDsl.Freq -> return BuiltIgnitor(FreqIgnitor)
@@ -475,14 +469,14 @@ internal fun IgnitorDsl.buildIgnitor(
         is IgnitorDsl.Vibrato -> {
             // GATE ROW `vibrato` (audio/ref/off-values.md): off at a FINITE leaf depth <= 0 only. A non-finite
             // depth stays built and renders the node's default depth, as before the gate (see `gatedOffWhenFinite`).
-            if (semitones.gatedOffWhenFinite(ignitorParams = ignitorParams, cache = cache) { it <= 0.0 }) {
+            if (semitones.gatedOffWhenFinite(ignitorParams = ignitorParams) { it <= 0.0 }) {
                 return inner.buildIgnitor(ignitorParams, cache, accumulatedMod)
             }
 
             // A composition since pitch pipeline 7b (`vibratoModIgnitor`). Build order is rng draw order: rate, then
             // semitones, as before; then the range and the phase (7c), which build nothing at their literal defaults.
             val combined = cache.inRegion(null) {
-                val ranged = hasBuiltRange(ignitorParams = ignitorParams, cache = cache)
+                val ranged = hasBuiltRange(ignitorParams = ignitorParams)
                 val vibMod = vibratoModIgnitor(
                     rate = this.rate.finiteLiteralOr(ignitorParams = ignitorParams, cache = cache, fallback = VIBRATO_RATE_HZ),
                     semitones = this.semitones.finiteLiteralOr(ignitorParams = ignitorParams, cache = cache, fallback = VIBRATO_SEMITONES),
@@ -497,7 +491,7 @@ internal fun IgnitorDsl.buildIgnitor(
 
         is IgnitorDsl.Accelerate -> {
             // GATE ROW `accelerate`: off at a leaf amount == 0, or non-finite (the runtime reads that as 0).
-            if (semitones.gatedOff(ignitorParams = ignitorParams, cache = cache) { it == 0.0 }) {
+            if (semitones.gatedOff(ignitorParams = ignitorParams) { it == 0.0 }) {
                 return inner.buildIgnitor(ignitorParams, cache, accumulatedMod)
             }
 
@@ -510,7 +504,7 @@ internal fun IgnitorDsl.buildIgnitor(
 
         is IgnitorDsl.PitchEnvelope -> {
             // GATE ROW `pitch envelope`: off at a leaf amount == 0, or non-finite (the runtime reads that as 0).
-            if (semitones.gatedOff(ignitorParams = ignitorParams, cache = cache) { it == 0.0 }) {
+            if (semitones.gatedOff(ignitorParams = ignitorParams) { it == 0.0 }) {
                 return inner.buildIgnitor(ignitorParams, cache, accumulatedMod)
             }
 
@@ -525,9 +519,9 @@ internal fun IgnitorDsl.buildIgnitor(
                     release = this.release.buildIgnitor(ignitorParams, cache).ignitor,
                     semitones = this.semitones.buildIgnitor(ignitorParams, cache).ignitor,
                     sustain = this.sustain.buildIgnitor(ignitorParams, cache).ignitor,
-                    attackCurve = this.attackCurve.adsrCurveKnob(ignitorParams, cache, MOD_ENV_CURVE),
-                    decayCurve = this.decayCurve.adsrCurveKnob(ignitorParams, cache, MOD_ENV_CURVE),
-                    releaseCurve = this.releaseCurve.adsrCurveKnob(ignitorParams, cache, MOD_ENV_CURVE),
+                    attackCurve = this.attackCurve.adsrCurveKnob(ignitorParams, MOD_ENV_CURVE),
+                    decayCurve = this.decayCurve.adsrCurveKnob(ignitorParams, MOD_ENV_CURVE),
+                    releaseCurve = this.releaseCurve.adsrCurveKnob(ignitorParams, MOD_ENV_CURVE),
                 )
                 cache.combineMods(accumulatedMod, peMod, node = this)
             }
@@ -546,7 +540,7 @@ internal fun IgnitorDsl.buildIgnitor(
         is IgnitorDsl.PitchModSemitones -> {
             // GATE ROW `pitchModSemitones`: off at a leaf mod == 0, or non-finite (the bare voice, as accelerate and
             // the pitch envelope read theirs). A signal mod is never gated; its NaN sample reads as ratio 0.
-            if (mod.gatedOff(ignitorParams = ignitorParams, cache = cache) { it == 0.0 }) {
+            if (mod.gatedOff(ignitorParams = ignitorParams) { it == 0.0 }) {
                 return inner.buildIgnitor(ignitorParams, cache, accumulatedMod)
             }
 
@@ -561,7 +555,7 @@ internal fun IgnitorDsl.buildIgnitor(
         is IgnitorDsl.Fm -> {
             // GATE ROW `fm`: off at a leaf depth == 0, or non-finite (the runtime reads that as 0). Not <= 0: a
             // negative depth renders. Gated, the modulator is not built, so its release tail is not counted.
-            if (depth.gatedOff(ignitorParams = ignitorParams, cache = cache) { it == 0.0 }) {
+            if (depth.gatedOff(ignitorParams = ignitorParams) { it == 0.0 }) {
                 return carrier.buildIgnitor(ignitorParams, cache, accumulatedMod)
             }
 
@@ -597,6 +591,23 @@ internal fun IgnitorDsl.buildIgnitor(
 
         else -> { /* fall through to cache+memoize path */
         }
+    }
+
+    // ── A gated-off AMPLITUDE stage IS its inner (audit L5-04): asked here, in front of the cache, as the pitch arms
+    //    above are, so the node takes no cache entry, no `buildRaw` and no copy of its inner's answer; the inner is
+    //    built with the unchanged mod, exactly where `buildRaw` built it (a leaf query draws nothing). The rows are
+    //    `gatedOffInner`'s. A switched-off envelope is its inner too, plus the release tail it still reports. ──
+    val offInner = gatedOffInner(ignitorParams = ignitorParams)
+
+    if (offInner != null) {
+        return offInner.buildIgnitor(ignitorParams, cache, accumulatedMod)
+    }
+
+    if (this is IgnitorDsl.Adsr && on.switchedOff(ignitorParams = ignitorParams)) {
+        val built = inner.buildIgnitor(ignitorParams, cache, accumulatedMod)
+        val tail = release.offEnvelopeTail(ignitorParams = ignitorParams)
+
+        return if (tail == null) built else built.copy(releaseTailSec = maxTail(a = built.releaseTailSec, b = tail))
     }
 
     // ── Everything else: identity-cache + MemoizingIgnitor wrap. ──
@@ -732,36 +743,91 @@ private fun applyMod(source: Ignitor, mod: Ignitor?): Ignitor =
  * reads a gated fm's `freq` and modulator, so a detune above it forks where the tree without the
  * node would fold. `IgnitorGateSpec` pins the two consequences.
  *
- * Cost: the ON path builds the knob leaf twice (once to ask, once in the arm) and the query boxes
- * one `Double` on JVM. Both are note-on, both are one small object, and the OFF path removes far
- * more than that (the stage node, its `BuiltIgnitor` and its [MemoizingIgnitor]). Nothing here
- * runs per block. The ON path's build cost is not measured by any benchmark here.
+ * Cost: the query builds nothing and boxes nothing: it reads the DSL leaf ([leafKnobValue], the
+ * one resolver the `Param` arm of [buildIgnitor] uses too). Until the audit (L5-04) it built the leaf
+ * (`BuiltIgnitor`, `ParamIgnitor`, a boxed `Double`) about 25 times per classic voice, and the
+ * amplitude rows asked it inside `buildRaw`, behind a cache entry; they are asked in front of the
+ * cache now ([gatedOffInner]). Nothing here runs per block.
  *
  * @param isOff the stage's own off test, applied to a FINITE value only. The off values are one
  *   table and it lives in `audio/ref/off-values.md`; each call site below carries its row.
  */
 private inline fun IgnitorDsl.gatedOff(
     ignitorParams: KlangMap<Double>?,
-    cache: IgnitorBuildCache,
     isOff: (Double) -> Boolean,
 ): Boolean {
-    val value = buildTimeKnobValue(ignitorParams, cache) ?: return false
+    if (!isLeafKnob()) {
+        return false
+    }
+
+    val value = leafKnobValue(ignitorParams)
 
     return !value.isFinite() || isOff(value)
+}
+
+/** True for the two LEAVES a build-time knob query reads ([gatedOff] says why only these). */
+private fun IgnitorDsl.isLeafKnob(): Boolean = this is IgnitorDsl.Param || this is IgnitorDsl.Constant
+
+/**
+ * A leaf knob's value for this note, read off the DSL leaf, nothing built: a [IgnitorDsl.Param]'s through
+ * [resolvedValue], a [IgnitorDsl.Constant]'s own. Only for a node [isLeafKnob] says yes to; any other node reads NaN.
+ */
+private fun IgnitorDsl.leafKnobValue(ignitorParams: KlangMap<Double>?): Double = when (this) {
+    is IgnitorDsl.Param -> resolvedValue(ignitorParams)
+    is IgnitorDsl.Constant -> value
+    else -> Double.NaN
+}
+
+/**
+ * A slot's value for this note: the bag's override when it is finite, else the slot's default. THE one home of the
+ * unset rule for a slot: the `Param` arm of [buildIgnitor] builds this value, and the gate's queries read it
+ * ([leafKnobValue]).
+ */
+private fun IgnitorDsl.Param.resolvedValue(ignitorParams: KlangMap<Double>?): Double {
+    val override = ignitorParams?.get(name)
+
+    // NaN-guard on a value the author can write: a non-finite slot was never set.
+    return if (override != null && override.isFinite()) override else default
 }
 
 /**
  * The knob's build-time value, or `null` when it is not a build-time constant and the stage must
  * therefore be built unconditionally. The leaf restriction and its reason live in [gatedOff].
  */
-private fun IgnitorDsl.buildTimeKnobValue(ignitorParams: KlangMap<Double>?, cache: IgnitorBuildCache): Double? {
-    if (this !is IgnitorDsl.Param && this !is IgnitorDsl.Constant) {
-        return null
-    }
+private fun IgnitorDsl.buildTimeKnobValue(ignitorParams: KlangMap<Double>?): Double? =
+    if (isLeafKnob()) leafKnobValue(ignitorParams) else null
 
-    // The leaf resolves the wire bag and the unset rule in ONE place (the Param arm of
-    // buildIgnitor); asking the built leaf keeps this function from owning a second copy of it.
-    return buildIgnitor(ignitorParams, cache).ignitor.controlRateValueOrNull(cache.freqHz)
+/**
+ * The inner of an AMPLITUDE stage the gate switches off for this note, or null when the node is not one (audit L5-04:
+ * asked in front of the build cache, so a gated-off stage costs its leaf query and nothing else). Each row is its line
+ * of the off-value table, `audio/ref/off-values.md`. Not here: the pitch arms (gated in [buildIgnitor]'s pitch block),
+ * the envelope (it still reports a tail, [buildIgnitor]), and the unity `mul` (it asks the BUILT survivor,
+ * `survivesUnityFold`, so it stays in `buildRaw`).
+ */
+private fun IgnitorDsl.gatedOffInner(ignitorParams: KlangMap<Double>?): IgnitorDsl? = when (this) {
+    // GATE ROW `the four SVF filters`: unset cutoff only. See `gatedOffWhenUnset`.
+    is IgnitorDsl.Lowpass -> inner.takeIf { freq.gatedOffWhenUnset(ignitorParams) }
+    is IgnitorDsl.Highpass -> inner.takeIf { freq.gatedOffWhenUnset(ignitorParams) }
+    is IgnitorDsl.Bandpass -> inner.takeIf { freq.gatedOffWhenUnset(ignitorParams) }
+    is IgnitorDsl.Notch -> inner.takeIf { freq.gatedOffWhenUnset(ignitorParams) }
+    // GATE ROW `onepole`: at or below 0.0, or unset (see its arm in `buildRaw`).
+    is IgnitorDsl.OnePoleLowpass -> inner.takeIf { freq.gatedOff(ignitorParams) { it <= 0.0 } }
+    // GATE ROW `distort` (the fused node): at or below 0.0, or unset (see its arm in `buildRaw`).
+    is IgnitorDsl.Distort -> inner.takeIf { amount.gatedOff(ignitorParams) { it <= 0.0 } }
+    // GATE ROW `drive`: at or below 0.0, or unset (see its arm in `buildRaw`).
+    is IgnitorDsl.Drive -> inner.takeIf { amount.gatedOff(ignitorParams) { it <= 0.0 } }
+    // GATE ROW `crush`: below 1.0, or unset (see its arm in `buildRaw`).
+    is IgnitorDsl.Crush -> inner.takeIf { bits.gatedOff(ignitorParams) { it < 1.0 } }
+    // GATE ROW `coarse`: at or below 1.0, or unset (see its arm in `buildRaw`).
+    is IgnitorDsl.Coarse -> inner.takeIf { factor.gatedOff(ignitorParams) { it <= 1.0 } }
+    // GATE ROW `tremolo`: depth at or below 0.0, or unset (see its arm in `buildRaw`).
+    is IgnitorDsl.Tremolo -> inner.takeIf { depth.gatedOff(ignitorParams) { it <= 0.0 } }
+    // GATE ROW `shimmer` (audit L4-09): wet at or below 0.0, or unset. A fold: the node is a bit-exact bypass at a wet
+    // of 0 or less (its C4 contract, and the Kotlin door `Ignitor.shimmer(wet: Double)` returns its input there), and
+    // a non-finite wet mixes at the dry coefficient 1 and the wet 0 (`WetDryMix`), the dry alone. Gated, the node does
+    // not allocate its grain ring (96,000 samples, times the region's factor), which it did at every note.
+    is IgnitorDsl.Shimmer -> inner.takeIf { wet.gatedOff(ignitorParams) { it <= 0.0 } }
+    else -> null
 }
 
 /**
@@ -783,10 +849,9 @@ private fun IgnitorDsl.buildTimeKnobValue(ignitorParams: KlangMap<Double>?, cach
  */
 private inline fun IgnitorDsl.gatedOffWhenFinite(
     ignitorParams: KlangMap<Double>?,
-    cache: IgnitorBuildCache,
     isOff: (Double) -> Boolean,
 ): Boolean {
-    val value = buildTimeKnobValue(ignitorParams, cache) ?: return false
+    val value = buildTimeKnobValue(ignitorParams) ?: return false
 
     return value.isFinite() && isOff(value)
 }
@@ -800,7 +865,7 @@ private inline fun IgnitorDsl.gatedOffWhenFinite(
  * `audio/ref/off-values.md`). Leaf-only, so asking draws nothing ([gatedOff]'s KDoc).
  */
 private fun IgnitorDsl.finiteLiteralOr(ignitorParams: KlangMap<Double>?, cache: IgnitorBuildCache, fallback: Double): Ignitor {
-    val literal = buildTimeKnobValue(ignitorParams, cache)
+    val literal = buildTimeKnobValue(ignitorParams)
 
     if (literal != null && !literal.isFinite()) {
         return ConstantIgnitor(fallback)
@@ -818,9 +883,9 @@ private fun IgnitorDsl.finiteLiteralOr(ignitorParams: KlangMap<Double>?, cache: 
  * its other knobs); a signal is built as it is (the edge rules: the `vibrato` row of `audio/ref/off-values.md`).
  * Leaf-only, so asking draws nothing.
  */
-private fun IgnitorDsl.Vibrato.hasBuiltRange(ignitorParams: KlangMap<Double>?, cache: IgnitorBuildCache): Boolean {
-    val from = rangeFrom.buildTimeKnobValue(ignitorParams, cache)?.let { if (it.isFinite()) it else VIBRATO_RANGE_FROM }
-    val to = rangeTo.buildTimeKnobValue(ignitorParams, cache)?.let { if (it.isFinite()) it else VIBRATO_RANGE_TO }
+private fun IgnitorDsl.Vibrato.hasBuiltRange(ignitorParams: KlangMap<Double>?): Boolean {
+    val from = rangeFrom.buildTimeKnobValue(ignitorParams)?.let { if (it.isFinite()) it else VIBRATO_RANGE_FROM }
+    val to = rangeTo.buildTimeKnobValue(ignitorParams)?.let { if (it.isFinite()) it else VIBRATO_RANGE_TO }
 
     return !(from == VIBRATO_RANGE_FROM && to == VIBRATO_RANGE_TO)
 }
@@ -832,7 +897,7 @@ private fun IgnitorDsl.Vibrato.hasBuiltRange(ignitorParams: KlangMap<Double>?, c
  * Any other value or a signal is the sine's own `phase` input: the oscillators' unit and law, one word per concept.
  */
 private fun IgnitorDsl.Vibrato.vibratoPhase(ignitorParams: KlangMap<Double>?, cache: IgnitorBuildCache): Ignitor? {
-    val literal = phase.buildTimeKnobValue(ignitorParams, cache)
+    val literal = phase.buildTimeKnobValue(ignitorParams)
 
     if (literal != null && (literal == 0.0 || !literal.isFinite())) {
         return null
@@ -856,8 +921,8 @@ private fun IgnitorDsl.Vibrato.vibratoPhase(ignitorParams: KlangMap<Double>?, ca
  *
  * The caller must also check [survivesUnityFold] on the side that would survive. See there.
  */
-private fun IgnitorDsl.gatedOffAtUnity(ignitorParams: KlangMap<Double>?, cache: IgnitorBuildCache): Boolean {
-    val value = buildTimeKnobValue(ignitorParams, cache) ?: return false
+private fun IgnitorDsl.gatedOffAtUnity(ignitorParams: KlangMap<Double>?): Boolean {
+    val value = buildTimeKnobValue(ignitorParams) ?: return false
 
     return value == 1.0
 }
@@ -915,8 +980,8 @@ private fun Ignitor.survivesUnityFold(): Boolean = !isBlockConstant
  * "Unset" here is ANY non-finite value, not only the `SLOT_UNSET` spelling: that is the house rule
  * for every wire number (`/dsl-design` section 4), and `SLOT_UNSET` is simply the value we WRITE.
  */
-private fun IgnitorDsl.gatedOffWhenUnset(ignitorParams: KlangMap<Double>?, cache: IgnitorBuildCache): Boolean =
-    gatedOff(ignitorParams, cache) { false }
+private fun IgnitorDsl.gatedOffWhenUnset(ignitorParams: KlangMap<Double>?): Boolean =
+    gatedOff(ignitorParams) { false }
 
 
 /**
@@ -954,9 +1019,8 @@ private fun filterEnvDef(
     decayCurve: IgnitorDsl,
     releaseCurve: IgnitorDsl,
     ignitorParams: KlangMap<Double>?,
-    cache: IgnitorBuildCache,
 ): FilterEnvDef {
-    val authoredDepth = env.filterEnvKnob(ignitorParams, cache, 0.0)
+    val authoredDepth = env.filterEnvKnob(ignitorParams, 0.0)
 
     // THE SLOT-LAYER FILL (phase 3 step 5, maintainer 2026-09-25): an UNSET depth slot the bag did not
     // write takes the shared depth when any of the four STAGE knobs is written, the strip's `depth ?: 7`.
@@ -971,14 +1035,14 @@ private fun filterEnvDef(
 
     return FilterEnvDef(
         depth = depth,
-        attack = attack.filterEnvKnob(ignitorParams, cache, FILTER_ENV_ATTACK_SEC),
-        decay = decay.filterEnvKnob(ignitorParams, cache, FILTER_ENV_DECAY_SEC),
-        sustain = sustain.filterEnvKnob(ignitorParams, cache, FILTER_ENV_SUSTAIN_LEVEL),
-        release = release.filterEnvKnob(ignitorParams, cache, FILTER_ENV_RELEASE_SEC),
+        attack = attack.filterEnvKnob(ignitorParams, FILTER_ENV_ATTACK_SEC),
+        decay = decay.filterEnvKnob(ignitorParams, FILTER_ENV_DECAY_SEC),
+        sustain = sustain.filterEnvKnob(ignitorParams, FILTER_ENV_SUSTAIN_LEVEL),
+        release = release.filterEnvKnob(ignitorParams, FILTER_ENV_RELEASE_SEC),
         // Index knobs since step 3c, read the same leaf-only way: no build, no draw.
-        attackCurve = attackCurve.adsrCurveKnob(ignitorParams, cache, MOD_ENV_CURVE),
-        decayCurve = decayCurve.adsrCurveKnob(ignitorParams, cache, MOD_ENV_CURVE),
-        releaseCurve = releaseCurve.adsrCurveKnob(ignitorParams, cache, MOD_ENV_CURVE),
+        attackCurve = attackCurve.adsrCurveKnob(ignitorParams, MOD_ENV_CURVE),
+        decayCurve = decayCurve.adsrCurveKnob(ignitorParams, MOD_ENV_CURVE),
+        releaseCurve = releaseCurve.adsrCurveKnob(ignitorParams, MOD_ENV_CURVE),
     )
 }
 
@@ -1041,9 +1105,8 @@ private fun IgnitorDsl.writtenIn(ignitorParams: KlangMap<Double>?): Boolean =
 /** One cutoff-envelope knob: its build-time value, or [fallback] when it has none. See [filterEnvDef]. */
 private fun IgnitorDsl.filterEnvKnob(
     ignitorParams: KlangMap<Double>?,
-    cache: IgnitorBuildCache,
     fallback: Double,
-): Double = buildTimeKnobValue(ignitorParams, cache)?.takeIf { it.isFinite() } ?: fallback
+): Double = buildTimeKnobValue(ignitorParams)?.takeIf { it.isFinite() } ?: fallback
 
 // ── The knobs read ONCE at voice build (phase 3 step 3b, 2026-09-25) ──
 //
@@ -1059,16 +1122,16 @@ private fun IgnitorDsl.filterEnvKnob(
  * The waveshaper a `shape` knob selects: `DistortionShapes.indexAt`'s rule, so a non-finite,
  * negative or past-the-end index is `soft`, as an unknown name is. A non-leaf is `soft`.
  */
-private fun IgnitorDsl.distortionShapeKnob(ignitorParams: KlangMap<Double>?, cache: IgnitorBuildCache): DistortionShape =
-    distortionShapeAt(buildTimeKnobValue(ignitorParams, cache) ?: DistortionShapes.SOFT_INDEX.toDouble())
+private fun IgnitorDsl.distortionShapeKnob(ignitorParams: KlangMap<Double>?): DistortionShape =
+    distortionShapeAt(buildTimeKnobValue(ignitorParams) ?: DistortionShapes.SOFT_INDEX.toDouble())
 
 /**
  * The oversampler STAGES a region's factor knob asks for, through the one conversion
  * ([Oversampler.factorOf], then [Oversampler.factorToStages]): a factor of 1 or less, a non-finite
  * one and a non-leaf are all 0 stages, no region.
  */
-private fun IgnitorDsl.oversampleStagesKnob(ignitorParams: KlangMap<Double>?, cache: IgnitorBuildCache): Int =
-    Oversampler.factorToStages(Oversampler.factorOf(buildTimeKnobValue(ignitorParams, cache) ?: 0.0))
+private fun IgnitorDsl.oversampleStagesKnob(ignitorParams: KlangMap<Double>?): Int =
+    Oversampler.factorToStages(Oversampler.factorOf(buildTimeKnobValue(ignitorParams) ?: 0.0))
 
 /**
  * The cascade count a filter's `passes` knob asks for (phase 3 step 5, the `lpf.passes` / `hpf.passes`
@@ -1076,12 +1139,12 @@ private fun IgnitorDsl.oversampleStagesKnob(ignitorParams: KlangMap<Double>?, ca
  * 1..`FILTER_MAX_PASSES` and reads a non-finite value as one pass, exactly as the retired strip read sprudel's
  * `lpf(passes = ...)`. A non-leaf has no build-time answer and is one pass.
  */
-private fun IgnitorDsl.passesKnob(ignitorParams: KlangMap<Double>?, cache: IgnitorBuildCache): Int =
-    coercePasses(buildTimeKnobValue(ignitorParams, cache) ?: 1.0)
+private fun IgnitorDsl.passesKnob(ignitorParams: KlangMap<Double>?): Int =
+    coercePasses(buildTimeKnobValue(ignitorParams) ?: 1.0)
 
 /** The LFO waveform a tremolo `shape` knob selects, as its index in [LfoShapes] (`indexAt`'s rule); a non-leaf is `sine`. */
-private fun IgnitorDsl.lfoShapeIndexKnob(ignitorParams: KlangMap<Double>?, cache: IgnitorBuildCache): Int =
-    LfoShapes.indexAt(buildTimeKnobValue(ignitorParams, cache) ?: LfoShapes.SINE_INDEX.toDouble())
+private fun IgnitorDsl.lfoShapeIndexKnob(ignitorParams: KlangMap<Double>?): Int =
+    LfoShapes.indexAt(buildTimeKnobValue(ignitorParams) ?: LfoShapes.SINE_INDEX.toDouble())
 
 /**
  * The tremolo's LFO: the oscillator of the shape at [lfoShapeIndex] (an index into [LfoShapes.names]),
@@ -1160,9 +1223,8 @@ internal fun tremoloGainInRange(
  */
 private fun IgnitorDsl.adsrCurveKnob(
     ignitorParams: KlangMap<Double>?,
-    cache: IgnitorBuildCache,
     fallback: AdsrCurve,
-): AdsrCurve = buildTimeKnobValue(ignitorParams, cache)?.let { AdsrCurves.curveAt(it, fallback) } ?: fallback
+): AdsrCurve = buildTimeKnobValue(ignitorParams)?.let { AdsrCurves.curveAt(it, fallback) } ?: fallback
 
 /**
  * The envelope row of the gate: the ADSR's `on` switch is OFF only when it is a build-time leaf at
@@ -1172,8 +1234,8 @@ private fun IgnitorDsl.adsrCurveKnob(
  * than `<= 0.0` because this is a FLAG, not an amount: the house flag rule is "non-zero is on"
  * (`coerceFlag` on the script door, `isTruthy` in sprudel), so a negative value is on there too.
  */
-private fun IgnitorDsl.switchedOff(ignitorParams: KlangMap<Double>?, cache: IgnitorBuildCache): Boolean {
-    val value = buildTimeKnobValue(ignitorParams, cache) ?: return false
+private fun IgnitorDsl.switchedOff(ignitorParams: KlangMap<Double>?): Boolean {
+    val value = buildTimeKnobValue(ignitorParams) ?: return false
 
     return value == 0.0
 }
@@ -1191,8 +1253,8 @@ private fun IgnitorDsl.switchedOff(ignitorParams: KlangMap<Double>?, cache: Igni
  * leaf, so the case that matters for step 6 is covered. A non-finite release reports none either,
  * the ON path's rule.
  */
-private fun IgnitorDsl.offEnvelopeTail(ignitorParams: KlangMap<Double>?, cache: IgnitorBuildCache): Double? =
-    buildTimeKnobValue(ignitorParams, cache)?.takeIf { it.isFinite() }
+private fun IgnitorDsl.offEnvelopeTail(ignitorParams: KlangMap<Double>?): Double? =
+    buildTimeKnobValue(ignitorParams)?.takeIf { it.isFinite() }
 
 /**
  * The filter's per-voice humanization, or null when the node does not carry it.
@@ -1215,7 +1277,7 @@ private fun IgnitorDsl.filterHumanization(
         return null
     }
 
-    val analogValue = buildTimeKnobValue(ignitorParams, cache) ?: 0.0
+    val analogValue = buildTimeKnobValue(ignitorParams) ?: 0.0
 
     return buildFilterHumanization(analog = analogValue, sampleRate = cache.sampleRate, blockFrames = cache.blockFrames, rng = cache.random)
 }
@@ -1289,7 +1351,7 @@ private fun IgnitorDsl.buildRaw(
 
     fun IgnitorDsl.withMod(mod: Ignitor? = accumulatedMod): Ignitor = withModBuilt(mod).ignitor
 
-    /** A gated-off stage: the node is not built and IS its inner, [BuiltIgnitor.endsInEnvelope] included. */
+    /** A node that IS its inner (the detune's two branches), [BuiltIgnitor.endsInEnvelope] included. */
     fun IgnitorDsl.passThrough(): Ignitor {
         val ignitor = withMod()
         builtEnvelope = lastChildEndsInEnvelope
@@ -1327,6 +1389,9 @@ private fun IgnitorDsl.buildRaw(
         return applyMod(source, accumulatedMod)
     }
 
+    // The amplitude GATE ROWS named at the arms below are asked in front of the build cache (`gatedOffInner`, the
+    // envelope's switch in `buildIgnitor`, audit L5-04): an arm here builds its stage ON. Only the unity `mul` is
+    // asked here, because it needs the built survivor.
     val ignitor = when (this) {
         is IgnitorDsl.Param, is IgnitorDsl.Constant, is IgnitorDsl.Freq, is IgnitorDsl.Progress, is IgnitorDsl.Elapsed ->
             error("Leaf DSL nodes must be built in buildIgnitor, not buildRaw")
@@ -1537,7 +1602,7 @@ private fun IgnitorDsl.buildRaw(
             }
 
             val current = cache.regionStages
-            val asked = regionFactor.oversampleStagesKnob(ignitorParams, cache)
+            val asked = regionFactor.oversampleStagesKnob(ignitorParams)
             val target = (if (relative) current + asked else maxOf(current, asked)).coerceAtMost(REGION_MAX_STAGES).coerceAtLeast(current)
             val steps = target - current
 
@@ -1649,7 +1714,7 @@ private fun IgnitorDsl.buildRaw(
         // optimized, where a bare `x.mul(k)` is the `Affine` arm below.) The right side is asked
         // first, because `x.mul(k)` is where a knob is written.
         is IgnitorDsl.Times -> when {
-            right.gatedOffAtUnity(ignitorParams, cache) -> {
+            right.gatedOffAtUnity(ignitorParams) -> {
                 val survivor = left.withMod()
                 val survivorEnds = lastChildEndsInEnvelope
 
@@ -1661,7 +1726,7 @@ private fun IgnitorDsl.buildRaw(
                 }
             }
 
-            left.gatedOffAtUnity(ignitorParams, cache) -> {
+            left.gatedOffAtUnity(ignitorParams) -> {
                 // The gated side is a leaf, so building it after the survivor draws nothing and
                 // the authored left-then-right order is unobservable.
                 val survivor = right.withMod()
@@ -1686,7 +1751,7 @@ private fun IgnitorDsl.buildRaw(
         is IgnitorDsl.Affine -> {
             val bareUnity = IgnitorDsl.Affine.isAbsentAddend(pre) &&
                     IgnitorDsl.Affine.isAbsentAddend(add) &&
-                    mul.gatedOffAtUnity(ignitorParams, cache)
+                    mul.gatedOffAtUnity(ignitorParams)
             val survivor = inner.withMod()
             val survivorEnds = lastChildEndsInEnvelope
 
@@ -1741,7 +1806,7 @@ private fun IgnitorDsl.buildRaw(
                 // not read `Freq` is untouched either way. The semitones are a leaf read here, in the outer context
                 // they are built in below, so the build of them is the one `noMod` finds.
                 val outerFreqHz = cache.freqHz
-                val ratio = semitones.buildTimeKnobValue(ignitorParams, cache)?.semitones() ?: Double.NaN
+                val ratio = semitones.buildTimeKnobValue(ignitorParams)?.semitones() ?: Double.NaN
                 val outer = cache.detuneContext
                 cache.detuneContext = DetuneContext()
                 cache.freqHz = outerFreqHz * ratio
@@ -1766,10 +1831,7 @@ private fun IgnitorDsl.buildRaw(
 
         // ── Filters: pass mod through to inner ──
 
-        is IgnitorDsl.Lowpass -> if (freq.gatedOffWhenUnset(ignitorParams, cache)) {
-            // GATE ROW `a filter`: unset cutoff only. See `gatedOffWhenUnset`.
-            inner.passThrough()
-        } else {
+        is IgnitorDsl.Lowpass -> {
             // C5: `passes` cascades the stage with the Butterworth q ladder (relative
             // factors — the modulated q scales every stage coherently). passes = 1 is the
             // untouched single-stage path, bit-identical. `analog` is handed to EVERY stage,
@@ -1783,10 +1845,10 @@ private fun IgnitorDsl.buildRaw(
             // and hoisting it would change the memo's shape for the whole voice.
             val built = inner.withMod()
             val envDef = filterEnvDef(
-                env = env, attack = attack, decay = decay, sustain = sustain, release = release, attackCurve = attackCurve, decayCurve = decayCurve, releaseCurve = releaseCurve, ignitorParams = ignitorParams, cache = cache,
+                env = env, attack = attack, decay = decay, sustain = sustain, release = release, attackCurve = attackCurve, decayCurve = decayCurve, releaseCurve = releaseCurve, ignitorParams = ignitorParams,
             )
             val hum = analog.filterHumanization(humanize, ignitorParams, cache)
-            val n = passes.passesKnob(ignitorParams, cache)
+            val n = passes.passesKnob(ignitorParams)
 
             if (n == 1) {
                 built.lowpass(cutoffHz = freq.noMod(), q = q.noMod(), env = envDef, analog = analog.noMod(), humanize = hum)
@@ -1800,18 +1862,15 @@ private fun IgnitorDsl.buildRaw(
             }
         }
 
-        is IgnitorDsl.Highpass -> if (freq.gatedOffWhenUnset(ignitorParams, cache)) {
-            // GATE ROW `a filter`: unset cutoff only. See `gatedOffWhenUnset`.
-            inner.passThrough()
-        } else {
+        is IgnitorDsl.Highpass -> {
             // See Lowpass above: same ladder, same analog-compounding note, same build/draw
             // order and the same one shared lane for the whole cascade.
             val built = inner.withMod()
             val envDef = filterEnvDef(
-                env = env, attack = attack, decay = decay, sustain = sustain, release = release, attackCurve = attackCurve, decayCurve = decayCurve, releaseCurve = releaseCurve, ignitorParams = ignitorParams, cache = cache,
+                env = env, attack = attack, decay = decay, sustain = sustain, release = release, attackCurve = attackCurve, decayCurve = decayCurve, releaseCurve = releaseCurve, ignitorParams = ignitorParams,
             )
             val hum = analog.filterHumanization(humanize, ignitorParams, cache)
-            val n = passes.passesKnob(ignitorParams, cache)
+            val n = passes.passesKnob(ignitorParams)
 
             if (n == 1) {
                 built.highpass(cutoffHz = freq.noMod(), q = q.noMod(), env = envDef, analog = analog.noMod(), humanize = hum)
@@ -1831,32 +1890,26 @@ private fun IgnitorDsl.buildRaw(
         // in the tree instead of the registry reading the bag itself: `classic()`'s first stage since
         // phase 3 step 10 (every built-in, and an authored instrument that ends in `classic()`), and the
         // registry's note-on wrap around an instrument that does not end in it.
-        is IgnitorDsl.OnePoleLowpass -> if (freq.gatedOff(ignitorParams, cache) { it <= 0.0 }) {
-            inner.passThrough()
-        } else {
+        is IgnitorDsl.OnePoleLowpass -> {
             inner.withMod().onePoleLowpass(freq.noMod())
         }
 
         // GATE ROW `a filter`: unset cutoff only (see `gatedOffWhenUnset`).
-        is IgnitorDsl.Bandpass -> if (freq.gatedOffWhenUnset(ignitorParams, cache)) {
-            inner.passThrough()
-        } else {
+        is IgnitorDsl.Bandpass -> {
             // Same build/draw order as Lowpass above.
             val built = inner.withMod()
             val envDef = filterEnvDef(
-                env = env, attack = attack, decay = decay, sustain = sustain, release = release, attackCurve = attackCurve, decayCurve = decayCurve, releaseCurve = releaseCurve, ignitorParams = ignitorParams, cache = cache,
+                env = env, attack = attack, decay = decay, sustain = sustain, release = release, attackCurve = attackCurve, decayCurve = decayCurve, releaseCurve = releaseCurve, ignitorParams = ignitorParams,
             )
             val hum = analog.filterHumanization(humanize, ignitorParams, cache)
             built.bandpass(cutoffHz = freq.noMod(), q = q.noMod(), env = envDef, analog = analog.noMod(), humanize = hum)
         }
 
-        is IgnitorDsl.Notch -> if (freq.gatedOffWhenUnset(ignitorParams, cache)) {
-            inner.passThrough()
-        } else {
+        is IgnitorDsl.Notch -> {
             // Same build/draw order as Lowpass above.
             val built = inner.withMod()
             val envDef = filterEnvDef(
-                env = env, attack = attack, decay = decay, sustain = sustain, release = release, attackCurve = attackCurve, decayCurve = decayCurve, releaseCurve = releaseCurve, ignitorParams = ignitorParams, cache = cache,
+                env = env, attack = attack, decay = decay, sustain = sustain, release = release, attackCurve = attackCurve, decayCurve = decayCurve, releaseCurve = releaseCurve, ignitorParams = ignitorParams,
             )
             val hum = analog.filterHumanization(humanize, ignitorParams, cache)
             built.notch(cutoffHz = freq.noMod(), q = q.noMod(), env = envDef, analog = analog.noMod(), humanize = hum)
@@ -1896,13 +1949,10 @@ private fun IgnitorDsl.buildRaw(
         // voice now appends), and step 6's identity depended on the node doing the same. So the signal skips the stage
         // but the tail is still reported, read the build-time way (see `offEnvelopeTail`). The
         // teardown fade is the VOICE's: it reads `BuiltIgnitor.endsInEnvelope`, which this switched-off
-        // node hands on from its inner (`passThrough`): false over a bare source or a built stage, true over an
-        // authored static-release envelope with nothing built over it.
-        is IgnitorDsl.Adsr -> if (on.switchedOff(ignitorParams, cache)) {
-            val signal = inner.passThrough()
-            spineTail = maxTail(a = spineTail, b = release.offEnvelopeTail(ignitorParams, cache))
-            signal
-        } else {
+        // node hands on from its inner: false over a bare source or a built stage, true over an
+        // authored static-release envelope with nothing built over it. The switch is asked in `buildIgnitor`, in front
+        // of the cache (audit L5-04); this arm builds the envelope ON.
+        is IgnitorDsl.Adsr -> {
             // Order matters and is unchanged: build order IS rng draw order (IgniteContext.random),
             // so inner / attack / decay / sustain / release / declick stay in sequence. The switch
             // and the three curves are read leaf-only and build nothing, so they draw nothing.
@@ -1974,9 +2024,9 @@ private fun IgnitorDsl.buildRaw(
                 // Unset curve = "exp" on every stage of every AMPLITUDE envelope, on every door
                 // (maintainer decision, 2026-08-24), as the strip's VCA did. The modulation envelopes (filter cutoff, pitch) fall back to
                 // `MOD_ENV_CURVE` instead, which decision D3 sets.
-                attackCurve = attackCurve.adsrCurveKnob(ignitorParams, cache, AdsrCurve.Default),
-                decayCurve = decayCurve.adsrCurveKnob(ignitorParams, cache, AdsrCurve.Default),
-                releaseCurve = releaseCurve.adsrCurveKnob(ignitorParams, cache, AdsrCurve.Default),
+                attackCurve = attackCurve.adsrCurveKnob(ignitorParams, AdsrCurve.Default),
+                decayCurve = decayCurve.adsrCurveKnob(ignitorParams, AdsrCurve.Default),
+                releaseCurve = releaseCurve.adsrCurveKnob(ignitorParams, AdsrCurve.Default),
                 declick = declickIgn,
             )
         }
@@ -2003,13 +2053,11 @@ private fun IgnitorDsl.buildRaw(
         // octave up). Now it does nothing, as it did on the strip.
         //
         // The shape is a knob read once, here (see `distortionShapeKnob`). The node runs at the rate it is in.
-        is IgnitorDsl.Distort -> if (amount.gatedOff(ignitorParams, cache) { it <= 0.0 }) {
-            inner.passThrough()
-        } else {
+        is IgnitorDsl.Distort -> {
             // In the order these were always built (inner, amount, shape): build order is draw order.
             val signal = inner.withMod()
             val drive = amount.noMod()
-            val shaper = shape.distortionShapeKnob(ignitorParams, cache)
+            val shaper = shape.distortionShapeKnob(ignitorParams)
 
             signal.fusedDistort(
                 amount = drive,
@@ -2032,9 +2080,7 @@ private fun IgnitorDsl.buildRaw(
         // `Shape` is NOT gated and cannot be: it has no amount knob, only a transfer function, so
         // there is nothing to read an off value from. That is why `classic()`'s distort stage is the
         // fused `Distort` node above, not this pair; D2 also gave that node the strip's law.
-        is IgnitorDsl.Drive -> if (amount.gatedOff(ignitorParams, cache) { it <= 0.0 }) {
-            inner.passThrough()
-        } else {
+        is IgnitorDsl.Drive -> {
             inner.withMod().drive(amount.noMod())
         }
 
@@ -2043,7 +2089,7 @@ private fun IgnitorDsl.buildRaw(
         is IgnitorDsl.Shape -> {
             // In the order these were always built (inner, shape): build order is draw order.
             val signal = inner.withMod()
-            val shaper = shape.distortionShapeKnob(ignitorParams, cache)
+            val shaper = shape.distortionShapeKnob(ignitorParams)
 
             signal.shape(
                 shape = shaper,
@@ -2055,9 +2101,7 @@ private fun IgnitorDsl.buildRaw(
         // levels (`CrushCore.halfLevels`, bits below 1), and `Ignitor.crush(Double)` returns the
         // inner below 1.0, so the whole range (0, 1) is already an exact bypass at render time
         // and gating it is the fold of a bypass, not a change.
-        is IgnitorDsl.Crush -> if (bits.gatedOff(ignitorParams, cache) { it < 1.0 }) {
-            inner.passThrough()
-        } else {
+        is IgnitorDsl.Crush -> {
             inner.withMod().crush(bits.noMod())
         }
 
@@ -2068,9 +2112,7 @@ private fun IgnitorDsl.buildRaw(
         // but latches it through `nanGuard()`, so a NON-FINITE UPSTREAM SAMPLE used to come out as
         // 0.0 and now passes through: a change, on a sample a gated-off stage's upstream has no
         // business producing, and one every later clamping stage still guards.
-        is IgnitorDsl.Coarse -> if (factor.gatedOff(ignitorParams, cache) { it <= 1.0 }) {
-            inner.passThrough()
-        } else {
+        is IgnitorDsl.Coarse -> {
             // The hold is counted in samples: inside a region, in the region's, so it holds the same time. Inner first,
             // then the knob: build order is draw order.
             val signal = inner.withMod()
@@ -2097,13 +2139,11 @@ private fun IgnitorDsl.buildRaw(
         // analog 0), after the inner signal's, as a hand-built `Ignitor.sine` does; so a noise under a sine
         // tremolo draws different dice than it would without one. A BUILT tremolo reports that it gates its
         // own output (see `BuiltIgnitor`).
-        is IgnitorDsl.Tremolo -> if (depth.gatedOff(ignitorParams, cache) { it <= 0.0 }) {
-            inner.passThrough()
-        } else {
+        is IgnitorDsl.Tremolo -> {
             spineGatesOutput = true
 
             val signal = inner.withMod()
-            val lfoShapeIndex = shape.lfoShapeIndexKnob(ignitorParams, cache)
+            val lfoShapeIndex = shape.lfoShapeIndexKnob(ignitorParams)
 
             // The default swing (-1, 0) is the classic dip and builds exactly the classic gain; any other range,
             // a slot or a signal included, lays the LFO onto `1 + depth * (from..to)`.
@@ -2126,6 +2166,9 @@ private fun IgnitorDsl.buildRaw(
                 )
             }
         }
+
+        // GATE ROW `shimmer`: wet at or below 0.0, or unset (audit L4-09, `gatedOffInner`). Built ON, it allocates its
+        // grain ring at every note, a modulated wet included: pooling that ring is an open decision (KLANG-00429).
         is IgnitorDsl.Shimmer -> inner.withMod().shimmer(
             wet = wet.noMod(), feedback = feedback.noMod(), tone = tone.noMod(), pitches = pitches, floor = floor.noMod(),
             ringFrames = SHIMMER_RING_FRAMES shl cache.regionStages,

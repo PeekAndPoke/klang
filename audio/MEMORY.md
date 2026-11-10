@@ -106,6 +106,8 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   encodes and decodes each instance once per message, and `postMessage`'s structured clone keeps the sharing, so a
   `let` used twice is built once in the browser as on the JVM (the build cache keys by identity). Before, the browser
   built it twice (Kokon's and Der Schmetterling's Screamer pedal: two strings). Equal but distinct nodes stay two.
+  So an inline instrument's name (`uniqueId()`, `IgnitorDslNameKey`) is its structure AND its sharing, a noise's `uid`
+  left out: `p + p.lowpass(800)` with one `p` and over two copies are two names (KLANG-00429, audit L5-02, L5-10).
 
 ## Laws and constants in force
 
@@ -130,7 +132,10 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   and `Adsr.on`: `audio/ref/voice-synthesis.md`.
 - **The gate**: a stage whose gating knob is a leaf at its off value (or unset, except where the table says
   otherwise) is not built; since 2026-10-07 the pitch arms too, five now (vibrato, accelerate, pitch envelope, fm, and
-  `pitchModSemitones` at a literal mod since 7a). The
+  `pitchModSemitones` at a literal mod since 7a), the shimmer at a wet of 0 or less since KLANG-00429. The query reads
+  the DSL leaf and builds nothing; the amplitude rows are asked in front of the build cache (`gatedOffInner`), so an
+  off stage costs its leaf query only (a default saw voice builds in 3.2 us, was 10.9). The optimizer does not fuse a
+  filter whose cutoff may be unset (a `Param` with a non-finite default), so the gate survives it. The
   rule's text is the `gatedOff` KDoc in `IgnitorDslRuntime.kt`; the values are `audio/ref/off-values.md`, their one home.
 - **The swap law** `ChainSwap` (both hosts): fade the leaving chain's input over 0.06 s, drain it at full weight,
   at most `MAX_DRAIN_SECONDS` 20 s; a request that waits behind the drain or the release CUTS it (a raised cosine over
@@ -433,14 +438,17 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   a delay line on the voice, glide, velocity in the tree, an Ignitor on a bus. Where each assumption lives and what a
   change must not do: KLANG-00283 (aaa production tricks) §11. Crossing one of those lines is a question for the
   maintainer first.
-- **Never measured**: the build-time cost of the gate's ON path (the per-block numbers are in the history's gate
-  entry).
+- **Never measured alone**: the build-time cost of the gate's ON path (the per-block numbers are in the history's gate
+  entry; every classic stage on builds in 19.8 us through `VoiceFactory`, `AuditRealtimeRepro`, KLANG-00429).
+- **Per-note rings, not pooled** (KLANG-00429, Decide): a built shimmer allocates its 96,000-sample grain ring, a
+  pluck string 2,500 samples, a superpluck one per string, at every note on the audio thread.
 
 ## History
 
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-11-10 The Ignitor build: the fused filter keeps its gate, the name holds the sharing, the shimmer gated, off stages cost their query only, a region's memo does not freeze: KLANG-00429
 - 2026-11-10 The bus: a switch-on and a swap fade the delay's and room's feed in, an O(1) ring reset, an offset cut at a swap, the pad's tail, the phaser under 36 kHz, every cylinder cleaned: KLANG-00428
 - 2026-11-10 Voice edges: the envelope's end on an exact 0, onsets on their frame, a cut by onset order, the replace dedup sub-quadratic: KLANG-00427
 - 2026-11-10 The pluck in tune (the loop filters' delay out of the line) and without DC: KLANG-00426

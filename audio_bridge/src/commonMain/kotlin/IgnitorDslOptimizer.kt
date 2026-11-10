@@ -336,6 +336,13 @@ private fun expandPasses(
  * section count is decided here, once, and a slot could change it per note. A `Constant` count
  * expands through `coercePasses`, the same rounding and bounds the runtime reads it with.
  *
+ * Refuses a filter whose CUTOFF the build may gate off (audit L5-01): a `Param` whose default is not finite (an
+ * unset slot such as `Slots.lpf.freq`, which a note may leave unwritten) or a non-finite `Constant`. Unfused, such a
+ * filter is not built at all for a note that leaves the slot unset (the gate row "the four SVF filters", the
+ * `audio/ref/off-values.md` table); an `EqSection` has no gate, and its cutoff read `clampSvfCutoff(NaN)`, a 1 kHz
+ * filter on every such note. A `Param` with a finite default is fused as before: a non-finite override reads that
+ * default, so its cutoff is never unset at the build.
+ *
  * `OnePoleLowpass` (the `onepole()` door) is absent by design: there is no one-pole section
  * type, and substituting an SVF would change the sound.
  */
@@ -347,7 +354,7 @@ private fun IgnitorDsl.asFusibleSections(): List<IgnitorDsl.EqSection>? = when (
     is IgnitorDsl.Lowpass -> {
         val count = passes
 
-        if (count is IgnitorDsl.Constant && analog.isLiteralZero() && env.isLiteralZero() && !humanize) {
+        if (count is IgnitorDsl.Constant && analog.isLiteralZero() && env.isLiteralZero() && !humanize && !freq.mayBeUnset()) {
             expandPasses(count, q) { stageQ -> IgnitorDsl.EqSection.Lowpass(freq = freq, q = stageQ) }
         } else {
             null
@@ -357,7 +364,7 @@ private fun IgnitorDsl.asFusibleSections(): List<IgnitorDsl.EqSection>? = when (
     is IgnitorDsl.Highpass -> {
         val count = passes
 
-        if (count is IgnitorDsl.Constant && analog.isLiteralZero() && env.isLiteralZero() && !humanize) {
+        if (count is IgnitorDsl.Constant && analog.isLiteralZero() && env.isLiteralZero() && !humanize && !freq.mayBeUnset()) {
             expandPasses(count, q) { stageQ -> IgnitorDsl.EqSection.Highpass(freq = freq, q = stageQ) }
         } else {
             null
@@ -365,14 +372,14 @@ private fun IgnitorDsl.asFusibleSections(): List<IgnitorDsl.EqSection>? = when (
     }
 
     is IgnitorDsl.Bandpass ->
-        if (analog.isLiteralZero() && env.isLiteralZero() && !humanize) {
+        if (analog.isLiteralZero() && env.isLiteralZero() && !humanize && !freq.mayBeUnset()) {
             listOf(IgnitorDsl.EqSection.Bandpass(freq = freq, q = q))
         } else {
             null
         }
 
     is IgnitorDsl.Notch ->
-        if (analog.isLiteralZero() && env.isLiteralZero() && !humanize) {
+        if (analog.isLiteralZero() && env.isLiteralZero() && !humanize && !freq.mayBeUnset()) {
             listOf(IgnitorDsl.EqSection.Notch(freq = freq, q = q))
         } else {
             null
@@ -397,6 +404,17 @@ private fun IgnitorDsl.filterInner(): IgnitorDsl? = when (this) {
  * `ignitorParam`, so it is not a compile-time zero and must not fuse.
  */
 private fun IgnitorDsl.isLiteralZero(): Boolean = this is IgnitorDsl.Constant && value == 0.0
+
+/**
+ * True for a cutoff the build may read as UNSET and gate off (see [asFusibleSections]): a `Param` with a non-finite
+ * default, or a non-finite `Constant`. The build's own test is the same leaf rule (`gatedOffWhenUnset` in the
+ * engine's `IgnitorDslRuntime`); any other cutoff (a signal, an expression) is never gated, fused or not.
+ */
+private fun IgnitorDsl.mayBeUnset(): Boolean = when (this) {
+    is IgnitorDsl.Param -> !default.isFinite()
+    is IgnitorDsl.Constant -> !value.isFinite()
+    else -> false
+}
 
 
 // ═════════════════════════════════════════════════════════════════════════════

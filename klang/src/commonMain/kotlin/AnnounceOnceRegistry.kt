@@ -20,10 +20,13 @@ import io.peekandpoke.klang.common.infra.withLock
  * cycle, all structurally equal. Without the gate that would be one `RegisterKatalyst` per cycle,
  * forever.
  *
- * Dedup is on the NAME, not on the DSL value. The name already IS structural identity: it comes
- * from the process-wide content-keyed identity maps in `audio_bridge`, so two structurally equal
+ * Dedup is on the NAME, not on the DSL value. The name already IS the identity: it comes
+ * from the process-wide content-keyed identity maps in `audio_bridge`, so two equal
  * trees have one name by construction and a re-derived-identical tree is recognised as
- * already-announced exactly as before. Keying the set on the value instead would hash the whole
+ * already-announced exactly as before. For an Ignitor tree "equal" means equal as data AND equal in
+ * sharing (which node instances it holds twice, `IgnitorDslNameKey`): the engine builds by identity, so
+ * `p + p.lowpass(800)` with one `p` and the same sum over two equal copies are two instruments and get
+ * two names (audit L5-02). Keying the set on the value instead would hash the whole
  * tree a second time on every event of every pattern that carries one, which is the cost this
  * class is on the hot path for. A `Set<String>` also keeps the retained memory to one string per
  * unique DSL rather than a reference to the tree.

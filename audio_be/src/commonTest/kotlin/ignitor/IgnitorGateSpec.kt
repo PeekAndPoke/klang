@@ -261,6 +261,14 @@ class IgnitorGateSpec : StringSpec({
         }
     }
 
+    "shimmer: a wet at or below 0.0 is not built, above it is (audit L4-09)" {
+        // A fold: at a wet of 0 or less the node is a bit-exact bypass, and at a non-finite wet it mixes the dry at 1
+        // and the cloud at 0. Built, it allocated its 96,000-sample grain ring at every note whatever the wet was.
+        stageRow("shimmer", listOf(0.0, -1.0, SLOT_UNSET), on = 0.5) {
+            IgnitorDsl.Shimmer(inner = saw, wet = it)
+        }
+    }
+
     "onepole: a cutoff at or below 0.0 is not built, above it is" {
         stageRow("onepole", listOf(0.0, -1.0, SLOT_UNSET), on = 2000.0) {
             IgnitorDsl.OnePoleLowpass(inner = saw, freq = it)
@@ -1044,6 +1052,17 @@ class IgnitorGateSpec : StringSpec({
         val expression = IgnitorDsl.Constant(4.0).mul(IgnitorDsl.Constant(0.0))
 
         shapeOf(build(IgnitorDsl.Coarse(inner = saw, factor = expression))) shouldNotBe bareShape
+    }
+
+    "a knob behind Variants or an optimizer hint is not a leaf: the stage is built, at its off value too (audit L5-11)" {
+        // The leaf rule as it stands: both wrappers draw nothing and the build dissolves them, but the gate reads only a
+        // `Param` or `Constant` leaf, so a stage whose knob sits behind one is built. Pinned so a change to the rule is
+        // a decision (KLANG-00429, Decide), not an accident.
+        val behindVariants = IgnitorDsl.Drive(inner = saw, amount = IgnitorDsl.Variants(children = listOf(IgnitorDsl.Constant(0.0))))
+        val behindHint = IgnitorDsl.Drive(inner = saw, amount = IgnitorDsl.OptimizerHint(inner = IgnitorDsl.Constant(0.0), on = 0))
+
+        shapeOf(build(behindVariants)) shouldNotBe bareShape
+        shapeOf(build(behindHint)) shouldNotBe bareShape
     }
 
     // ── The rng stream ───────────────────────────────────────────────────────────────────────
