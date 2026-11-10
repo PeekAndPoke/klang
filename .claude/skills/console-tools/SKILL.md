@@ -343,12 +343,13 @@ python3 -I console/tools/ui-wiring/ui_wiring.py --file src/jsMain/kotlin/layouts
 
 - klang's own (the maintainer's go, 2026-11-10, KLANG-00421): how state moves through the UI code, read as text, no
   build and no lock. It lists the global places that keep state (a stateful `object`, a companion with state, a
-  public top-level `val` of the app) and, per file, which of them it names: `stream` (the line subscribes) or
+  public top-level `val` of the app, a service registered on the Kraft app with `setAttribute`) and, per file, which of them it names: `stream` (the line subscribes) or
   `direct` (a call, a read, a write, a type). Its findings: state held outside the Spine, browser storage touched
   outside the storage folders, hand-written JSON, component references, raw DOM listeners, storage objects named by
   the UI.
-- Its limits: a stream handed on through a prop or a constructor, an alias, and whether a `direct` reference reads
-  or writes. Check a surprising line with `--file` and by reading.
+- Its limits: a stream handed on through a prop or a constructor, an alias, whether a `direct` reference reads
+  or writes, a service of Kraft itself (the router, the popups), a component that uses a service inside (an `OnKey`),
+  and state kept in the URL's query. Check a surprising line with `--file` and by reading.
 - The rails (which folder is which layer) and the source roots are at the top of the script; a new UI folder gets a
   line there. It is not a check yet: it becomes one when the rules of KLANG-00421 are decided.
 - It reads the app, `klangui`, `klangscript-ui`, sprudel's UI and the workshop. A module with UI of its own must be

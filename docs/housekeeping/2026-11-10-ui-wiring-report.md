@@ -7,10 +7,10 @@
 | storage | 16 | 0 | 0 | 0 | 13 | 32 |
 | spine | 17 | 0 | 0 | 0 | 18 | 0 |
 | app | 8 | 1 | 0 | 0 | 2 | 4 |
-| layout | 10 | 6 | 11 | 1 | 3 | 0 |
+| layout | 10 | 5 | 11 | 1 | 3 | 0 |
 | pages | 44 | 35 | 76 | 46 | 10 | 4 |
 | components | 39 | 28 | 48 | 22 | 3 | 0 |
-| library | 130 | 61 | 66 | 106 | 15 | 1 |
+| library | 130 | 66 | 66 | 106 | 15 | 1 |
 | content | 59 | 0 | 0 | 0 | 0 | 0 |
 
 What a `subscribingTo` reads: holder 135, local 44, props 13, router 9.
@@ -54,6 +54,7 @@ What a `subscribingTo` reads: holder 135, local 44, props 13, router 9.
 | `VisualsScreen` | pages | companion | stream source, derived stream | 3 | 3 | `src/jsMain/kotlin/visuals/VisualsScreen.kt` |
 | `MotorBackground` | components | companion | var | 0 | 0 | `src/jsMain/kotlin/comp/MotorBackground.kt` |
 | `motorBackgroundRef` | components | val | top-level value | 0 | 1 | `src/jsMain/kotlin/comp/MotorBackground.kt` |
+| `KeysManager` | library | attribute | stream source, var, mutable collection, derived stream | 2 | 11 | `workshop/src/jsMain/kotlin/keys/KeysManager.kt` |
 | `KlangBrushedMetal` | library | object | var | 0 | 1 | `klangui/src/jsMain/kotlin/feel/KlangBrushedMetal.kt` |
 | `KlangDialog` | library | companion | var | 0 | 0 | `klangui/src/jsMain/kotlin/comp/KlangDialog.kt` |
 | `KlangLookShelf` | library | object | stream source | 4 | 2 | `klangui/src/jsMain/kotlin/feel/KlangLookShelf.kt` |
@@ -71,7 +72,7 @@ What a `subscribingTo` reads: holder 135, local 44, props 13, router 9.
 | app | storage | 0 | 3 |
 | components | app | 4 | 4 |
 | components | layout | 0 | 1 |
-| components | library | 4 | 2 |
+| components | library | 5 | 4 |
 | components | pages | 1 | 1 |
 | components | spine | 9 | 13 |
 | components | storage | 5 | 4 |
@@ -80,10 +81,10 @@ What a `subscribingTo` reads: holder 135, local 44, props 13, router 9.
 | layout | pages | 1 | 1 |
 | layout | spine | 4 | 2 |
 | layout | storage | 1 | 2 |
-| library | library | 52 | 11 |
+| library | library | 53 | 19 |
 | pages | app | 6 | 6 |
 | pages | components | 0 | 1 |
-| pages | library | 14 | 4 |
+| pages | library | 14 | 5 |
 | pages | pages | 2 | 5 |
 | pages | spine | 12 | 28 |
 | pages | storage | 6 | 4 |
@@ -95,10 +96,11 @@ What a `subscribingTo` reads: holder 135, local 44, props 13, router 9.
 
 ## Findings
 
-### state held outside the Spine (22)
+### state held outside the Spine (23)
 
 - `src/jsMain/kotlin/pages/CodeSongPage.kt`: CodeSongPage (companion): var
 - `src/jsMain/kotlin/pages/LooksPage.kt`: Drafts (object): var, mutable collection
+- `workshop/src/jsMain/kotlin/keys/KeysManager.kt`: KeysManager (attribute): stream source, var, mutable collection, derived stream
 - `klangui/src/jsMain/kotlin/feel/KlangBrushedMetal.kt`: KlangBrushedMetal (object): var
 - `klangui/src/jsMain/kotlin/comp/KlangDialog.kt`: KlangDialog (companion): var
 - `src/jsMain/kotlin/KlangGuiDance.kt`: KlangGuiDance (object): var, browser storage
@@ -410,6 +412,15 @@ What a `subscribingTo` reads: holder 135, local 44, props 13, router 9.
 ### `motorBackgroundRef` (components)
 
 - `(itself)`: direct from 1: StartPage
+
+### `KeysManager` (library)
+
+- `(itself)`: direct from 9: CodeToolModal, EditorKeysCorner, KeyOverview, KlangNoticeModal, KlangWorkbench, KlangYesNoModal, OnKey, VisualsScreen, WalkthroughsWindow
+- `hints`: stream from 1: EditorKeysCorner
+- `keymap`: direct from 1: CodeMirrorComp; stream from 2: EditorKeysCorner, KlangMenuButton
+- `labelOf`: direct from 1: OnKey
+- `platform`: direct from 1: KlangMenuButton
+- `topLayer`: stream from 1: EditorKeysCorner
 
 ### `KlangBrushedMetal` (library)
 

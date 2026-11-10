@@ -98,12 +98,12 @@
 
 <main>
   <section>
-    <span class="stamp">KLANG-00421 · read at 3c6ea69ff · 2026-11-10 · reviewed twice</span>
+    <span class="stamp">KLANG-00421 · read at 3c6ea69ff · 2026-11-10 · reviewed three times</span>
     <h1>Klang UI Wiring Map</h1>
     <p class="lede">How state reaches the screen today, where it goes around the Spine, and a proposal for arranging it so that everything a user would want back on another computer sits in one place.</p>
     <div class="numbers">
       <div><b>323</b><span>Kotlin files read in six source roots</span></div>
-      <div><b>42</b><span>global places that keep state</span></div>
+      <div><b>43</b><span>global places that keep state</span></div>
       <div><b>8</b><span>of them are in the Spine</span></div>
       <div><b>201</b><span>stream subscriptions in components, 135 of them in the app</span></div>
       <div><b>17</b><span>UI files that name a storage object</span></div>
@@ -172,6 +172,7 @@
         <text class="t-mono" x="844" y="182">KlangUiToolRegistry</text>
         <text class="t-mono" x="844" y="198">KlangToolAutoUpdate</text>
         <text class="t-mono" x="844" y="214">MarkdownDisplay.cache</text>
+        <text class="t-mono" x="844" y="230">KeysManager (on the app)</text>
 
         <!-- tidy cables -->
         <path class="c-tidy" d="M465 310 L465 100" marker-end="url(#a-tidy)"/>
@@ -197,7 +198,7 @@
         <text class="t-ask" x="795" y="20" text-anchor="middle">the look: 18 stream · 6 direct</text>
       </svg>
       </div>
-      <figcaption>Counted by <code>console/tools/ui-wiring</code> from the source text. "Direct" means any reference that is not a subscription: a command such as <code>Playbacks.song.stop()</code>, a read of the current value, or a type name. A command from the UI to the Spine is the intended way up, so the solid line's 43 are not a problem in themselves. The lines count the app's own files only. Inside the libraries, sprudel's tool windows add 52 more stream reads of the look and of the auto-update switch.</figcaption>
+      <figcaption>Counted by <code>console/tools/ui-wiring</code> from the source text. "Direct" means any reference that is not a subscription: a command such as <code>Playbacks.song.stop()</code>, a read of the current value, or a type name. A command from the UI to the Spine is the intended way up, so the solid line's 43 are not a problem in themselves. The lines count the app's own files only. Inside the libraries there are 52 more stream reads of the look and of the auto-update switch, nearly all from sprudel's tool windows. The key manager is drawn in the libraries' box because the workshop defines it; the app builds it and registers it on the Kraft app.</figcaption>
     </figure>
     <div class="legend">
       <span><i></i>through the Spine</span>
@@ -261,6 +262,11 @@
           <td>15 holders, 18 stream sources</td>
         </tr>
         <tr>
+          <td>A service reached through the Kraft app</td>
+          <td class="wrap">The key manager. <code>index.kt</code> builds it, the workshop's <code>keys(...)</code> registers it with <code>setAttribute</code>, and components reach it as <code>keys</code>. Nine files outside the workshop do so (3 in the app, 6 in klangui and klangscript-ui), and seven more use it through <code>OnKey</code>. This is not loose: it is the way proposed below for the Spine, already at work.</td>
+          <td>16 files</td>
+        </tr>
+        <tr>
           <td>Browser storage touched outside the storage code</td>
           <td class="wrap"><code>KlangGuiDance</code> (its two keys), <code>DevStoragePage</code> (a developer page that lists and deletes keys), <code>KlangToolAutoUpdate</code> in klangui (a 19th key: the auto-update switch of sprudel's tool windows, read by 25 files)</td>
           <td>3 files</td>
@@ -292,7 +298,7 @@
         </tr>
       </table>
     </div>
-    <p class="note">Not covered: the 80 values components keep for themselves (<code>by value</code>). I sampled the largest pages only. Most are hovers and open flags. Four companion objects with a <code>var</code> are harmless: three pages count the pages drawn to give each its own key, and <code>MotorBackground</code> keeps the last surface it built. One library cache grows without limit: <code>MarkdownDisplay.cache</code> in klangui keeps every markdown text drawn.</p>
+    <p class="note">Not covered: the 175 values components keep for themselves (<code>by value</code>, 69 of them in the app). I sampled the largest pages only. Most are hovers and open flags. Four companion objects with a <code>var</code> are harmless: three pages count the pages drawn to give each its own key, and <code>MotorBackground</code> keeps the last surface it built. One library cache grows without limit: <code>MarkdownDisplay.cache</code> in klangui keeps every markdown text drawn. Also not counted: state kept in the page's address, which survives a reload. The resources page keeps its search and tags there, the library docs their search, Learn its level and depth filters, and a tutorial the track it is read in.</p>
   </section>
 
   <section>
@@ -303,7 +309,7 @@
         <tr><th>State</th><th>Kept today in</th><th>Kind</th><th>On the Spine</th></tr>
         <tr><td>Editor settings (4)</td><td><code>EditorSettings</code>, 4 keys</td><td><span class="tag ok">follows the user</span></td><td><code>spine.settings.editor</code></td></tr>
         <tr><td>Looks: the one worn, the user's own, the slots</td><td><code>LookStorage</code>, plus <code>KlangTheme</code> and <code>KlangLookShelf</code> in klangui</td><td><span class="tag ok">follows the user</span></td><td><code>spine.looks</code></td></tr>
-        <tr><td>The user's keys</td><td><code>KeymapStorage</code>, <code>KeymapJson</code></td><td><span class="tag ok">follows the user</span></td><td><code>spine.keys</code></td></tr>
+        <tr><td>The user's keys</td><td>The key manager (<code>keysManager</code> in <code>index.kt</code>, registered on the app), stored by <code>KeymapStorage</code> with <code>KeymapJson</code></td><td><span class="tag ok">follows the user</span></td><td><code>spine.keys</code></td></tr>
         <tr><td>Songs: code, title, tempo, bookmarks</td><td><code>SongStorage</code>, created by the song page</td><td><span class="tag ok">follows the user</span></td><td><code>spine.songs</code></td></tr>
         <tr><td>Tutorials finished</td><td><code>TutorialStorage</code>, a key per tutorial</td><td><span class="tag ok">follows the user</span></td><td><code>spine.learn.progress</code></td></tr>
         <tr><td>Recently opened</td><td><code>Recents</code> with <code>RecentsStorage</code></td><td><span class="tag ok">follows the user</span></td><td><code>spine.recents</code></td></tr>
@@ -334,7 +340,7 @@
       <li><b>Down by stream, up by call.</b> A component subscribes to <code>spine.x.something</code> and changes it with <code>spine.x.doSomething()</code>. It keeps no copy.</li>
       <li><b>Storage belongs to the Spine.</b> Only the Spine's storage code touches the browser's storage. The UI never names a storage object.</li>
       <li><b>What is stored is a data class.</b> Annotated for kotlinx.serialization, in <code>commonMain</code> so a server can share it, one document per section with a version. Special types get a custom serializer. No hand-written JSON.</li>
-      <li><b>Libraries get their data through props.</b> <code>klangui</code> and <code>klangscript-ui</code> never see the Spine.</li>
+      <li><b>Libraries never see the Spine.</b> <code>klangui</code>, <code>klangscript-ui</code>, sprudel's UI and the workshop get their data through props, or define a service of their own that the app registers and feeds, as the workshop does for the keys.</li>
       <li><b>Talk between siblings has two allowed ways.</b> Through the Spine, when the thing said is state or a command others may care about. Through the parent, with props and callbacks, when it concerns only that parent's children. A component reference points only from a parent to its own child.</li>
       <li><b>A component's own state is what may be lost.</b> Anything a user would miss after a reload belongs in the Spine.</li>
     </ol>
@@ -353,12 +359,18 @@
   </section>
 
   <section>
-    <h2>Decisions for you</h2>
+    <h2>Decided on 2026-11-10</h2>
     <ul>
-      <li><b>The three "your call" rows.</b> Should the workbench's layout, the output volume and the MIDI setup follow the user or stay with the machine?</li>
-      <li><b>The look lives in a library.</b> <code>KlangTheme</code> and <code>KlangLookShelf</code> are global state inside <code>klangui</code>, used by 51 files: 20 in the app and 31 in the libraries, most of them sprudel's tool windows. The auto-update switch is the same case. Either the library keeps owning this state and the Spine only stores and restores it, or the state moves to the Spine and the libraries receive it as input. The first is far less work, since 31 library files would otherwise need the look passed in. The second follows rule 5 strictly.</li>
-      <li><b>Rule 6.</b> Are the two allowed ways for sibling talk the right ones?</li>
-      <li><b>Where the work is tracked.</b> Steps 1 to 3 fit KLANG-00389. I would keep them there and close this ticket with the map.</li>
+      <li><b>What stays on this machine for now:</b> the workbench's layout, the output volume, the MIDI loadout and the laptop key layout. Everything else that is stored follows the user.</li>
+      <li><b>The widgets know nothing of storage.</b> <code>klangui</code> keeps owning the look, as reusable components would in any app, and the app does the storing through the Spine. The tools' auto-update switch stops storing itself.</li>
+      <li><b>Talk between siblings has no general rule.</b> Use the way that fits the feature. Rule 6's two ways are guidance.</li>
+      <li><b>The work is tracked in KLANG-00422,</b> a part of the Spine ticket KLANG-00389.</li>
+    </ul>
+    <h2>Still open</h2>
+    <ul>
+      <li><b>The theme as a service on the app.</b> Registering <code>KlangTheme</code> the way the key manager is registered would remove the global object. 45 of the 50 files that name it are components; five would need it handed in.</li>
+      <li><b>The unsaved look drafts.</b> Into the Spine as stored state, or left as they are.</li>
+      <li><b>The markdown cache in klangui.</b> A bound, or a cache per component.</li>
     </ul>
   </section>
 </main>

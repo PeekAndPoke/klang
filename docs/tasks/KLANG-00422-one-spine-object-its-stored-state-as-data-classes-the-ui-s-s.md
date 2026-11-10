@@ -6,7 +6,7 @@
 
 ## Why this exists
 
-The audit KLANG-00421 (the UI's wiring) mapped how state reaches the screen: 42 global places keep state, 8 of them
+The audit KLANG-00421 (the UI's wiring) mapped how state reaches the screen: 43 global places keep state, 8 of them
 the Spine's objects; 17 UI files name a storage object; 8 files hand-write JSON. The maintainer's goal (2026-11-10):
 "imagine some day we have the server. I want all state to be central, so that it could be sent to the server and
 stored there. Then the user switches to another computer and finds the ui in the exact same state."
@@ -39,7 +39,9 @@ This ticket holds the work that follows from the map. The map itself, with every
   registers it, as `popups` does, and components read `theme`. 45 of the 50 files that name `KlangTheme` are
   component files; the other five need it handed in (`CodeMirrorTheme`, `BookmarksExtension`, `DslEditorExtension`,
   `KlangToolInfoHelpers`, `index.kt`). To check first: render helpers outside a component class that name it, and
-  that the theme writes CSS variables on the document's root, so it stays one per page whatever holds it.
+  that the theme writes CSS variables on the document's root, so it stays one per page whatever holds it. The pattern
+  is at work already: the workshop registers the key manager this way (`keys(...)`, `Component<*>.keys`), and nine
+  files outside the workshop reach it so.
 - **D2, the unsaved look drafts** (`Drafts` in `LooksPage`, a private global, lost when the tab closes): into the
   Spine as stored state, or left as they are.
 - **D3, `MarkdownDisplay.cache`** in `klangui` grows with every markdown text drawn: a bound, or a cache per component.
@@ -53,8 +55,9 @@ after.
    `playbacks`, `motor`, `console`, `work`, `visuals`, `recents`, `midi`), registered on the app; one part per
    change, callers moved from `Player.x` to `spine.player.x`. Code that is no component (key bindings, start-up) gets
    it handed in.
-2. **One stored section.** A small generic part of the Spine that loads, saves and streams one serializable data
-   class under one key, with a version. Ultra's `persistInLocalStorage(key, serializer)` already does most of it:
+2. **One stored section.** First apply kotlinx.serialization's compiler plug-in to the app module (declared
+   `apply false` in the root project today, so a `@Serializable` class there gets no serializer). Then a small
+   generic part of the Spine that loads, saves and streams one serializable data class under one key, with a version. Ultra's `persistInLocalStorage(key, serializer)` already does most of it:
    look at it first.
 3. **The sections, one at a time,** each with a one-time reader of its old keys (a check that goes when the old keys
    are gone):

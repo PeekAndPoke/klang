@@ -4,7 +4,8 @@
 It reads Kotlin source as text (no build, no lock) and reports, for the UI's source roots:
 
 - the HOLDERS: every global place that keeps state (a top-level `object`, a class's `companion object`, a public
-  top-level `val` in the app), with what it keeps: stream sources, `var`s, mutable collections, browser storage;
+  top-level `val` in the app, a service registered on the Kraft app with `setAttribute` and reached through a
+  `Component<*>` extension), with what it keeps: stream sources, `var`s, mutable collections, browser storage;
 - the CABLES: for every file, which holders it touches, each as `stream` (the reference sits in a
   `subscribingTo(...)`, `subscribeToStream`, `.subscribe` or `combinedWith` line) or `direct` (any other reference:
   a call, a read of the current value, a write), and which member of the holder it names;
@@ -18,7 +19,9 @@ Usage:
     --file <path> print what the tool sees in one file, for a hand check
 
 What it cannot see: a stream handed on through a prop or a constructor (it shows as `props` or `local`), a holder
-reached through an alias, and whether a `direct` reference reads or writes. Those are traced by hand.
+reached through an alias, whether a `direct` reference reads or writes, a service of Kraft itself (the router, the
+popups: registered outside the roots), a component that uses a service inside (an `OnKey`), and state kept in the
+URL's query. Those are traced by hand.
 
 The RAILS (which layer a file belongs to) and the ROOTS are this repo's own and sit at the top of the file.
 """
@@ -94,10 +97,15 @@ SUBSCRIBING = re.compile(r"subscribingTo\s*\(\s*([A-Za-z_][\w]*)")
 BY_VALUE = re.compile(r"\bby\s+value\s*\(")
 STREAM_SOURCE_DECL = re.compile(r"\b(?:val|var)\s+(\w+)\s*(?::[^=\n]+)?=\s*StreamSource\s*[<(]")
 DERIVED_STREAM_DECL = re.compile(r"\b(?:val|var)\s+(\w+)\s*:\s*Stream\s*<")
-COMPONENT_CLASS = re.compile(r"\bclass\s+\w+[^{]*:\s*[^{]*\b(?:Pure)?Component\s*[<(]")
+# A Kraft component takes its context first: class X(ctx: Ctx<Props>) or (ctx: NoProps), whatever its base class
+COMPONENT_CLASS = re.compile(r"\bclass\s+\w+(?:<[^>]*>)?\s*\(\s*ctx\s*:")
 TOP_OBJECT = re.compile(r"^(?:(?:internal|public|private|data)\s+)*object\s+(\w+)", re.M)
 TOP_CLASS = re.compile(r"^(?:(?:internal|public|data|abstract|open|sealed|enum|value|private)\s+)*class\s+(\w+)", re.M)
 TOP_VAL = re.compile(r"^(?:(?:internal|public)\s+)?(?:val|var)\s+(\w+)\b", re.M)
+# A service on the Kraft app: registered with setAttribute(X.key, ...), reached by the Component<*> extensions of
+# the file that registers it, or looked up directly
+ATTRIBUTE_SET = re.compile(r"\bsetAttribute\(\s*(\w+)\.key\b")
+ATTRIBUTE_ACCESSOR = re.compile(r"^(?:val|fun)\s+Component<\*>\.(\w+)", re.M)
 COMPANION = re.compile(r"\bcompanion\s+object\b[^{]*\{")
 MEMBER_DECL = re.compile(r"^\s*(?:private |internal |protected |public |override |lateinit |const )*(val|var|fun)\s+"
                          r"(?:<[^>]+>\s*)?(?:[\w.<>?, ]+\.)?(\w+)", re.M)
@@ -145,7 +153,13 @@ def string_end(text, i):
         if text.startswith("${", j):
             j = template_end(text, j + 2)
         elif triple and text.startswith('"""', j):
-            return j + 3
+            j += 3
+
+            # More quotes than three: the first ones are still the string's text
+            while j < n and text[j] == '"':
+                j += 1
+
+            return j
         elif not triple and text[j] == "\\":
             j += 2
         elif not triple and text[j] == '"':
@@ -176,8 +190,17 @@ def strip_comments(text):
             end = text.find("\n", i)
             i = n if end < 0 else end
         elif text.startswith("/*", i):
-            end = text.find("*/", i + 2)
-            end = n if end < 0 else end + 2
+            # Kotlin's block comments nest
+            depth, end = 1, i + 2
+
+            while end < n and depth > 0:
+                if text.startswith("/*", end):
+                    depth, end = depth + 1, end + 2
+                elif text.startswith("*/", end):
+                    depth, end = depth - 1, end + 2
+                else:
+                    end += 1
+
             out.append("\n" * text.count("\n", i, end))
             i = end
         else:
@@ -347,6 +370,19 @@ def find_holders(files):
                     "keeps": state_kinds(block_at(body, comp.end() - 1)), "members": sorted(members),
                 }
 
+        registered = ATTRIBUTE_SET.search(code)
+
+        if registered:
+            name = registered.group(1)
+            home = next((r for r, c in files.items() if re.search(r"^class\s+" + name + r"\b", c, re.M)), rel)
+            body = files[home]
+            start = re.search(r"^class\s+" + name + r"\b", body, re.M)
+            holders[name] = {
+                "file": home, "rail": rail_of(home), "kind": "attribute",
+                "keeps": (state_kinds(body_after(body, start.end())) if start else []) or ["app attribute"],
+                "members": None, "accessors": sorted(set(ATTRIBUTE_ACCESSOR.findall(code))),
+            }
+
         if rel.startswith(VAL_HOLDER_PREFIX):
             for m in TOP_VAL.finditer(code):
                 line = code[m.start():code.find("\n", m.start())]
@@ -363,7 +399,17 @@ def find_holders(files):
 
 def references(code, name, holder):
     """[(line number, member, 'stream' or 'direct')] for every reference to the holder [name] in [code]."""
-    if holder["kind"] == "val":
+    if holder["kind"] == "attribute":
+        # An accessor is a Component<*> extension with an everyday name (keys): it counts only in a file with a
+        # component, and not where the file has a value or a parameter of that name itself
+        own = [x for x in holder["accessors"]
+               if COMPONENT_CLASS.search(code)
+               and not re.search(r"\b(?:val|var)\s+" + re.escape(x) + r"\b|\b" + re.escape(x) + r"\s*:", code)]
+        accessors = "|".join(re.escape(x) for x in own) or "(?!)"
+        pattern = re.compile(
+            r"(?<![\w.])(?:" + accessors + r")\b(?!\s*[:=])(?:\s*\.\s*(\w+))?"
+            r"|getAttributeRecursive(?:OrNull)?\(\s*" + re.escape(name) + r"\.\w+\s*\)(?:\s*\??\.\s*(\w+))?")
+    elif holder["kind"] == "val":
         pattern = re.compile(r"(?<![\w.])" + re.escape(name) + r"\b(?:\s*\.\s*(\w+))?(?=\s*[.),{\n(]|\s*$)", re.M)
     elif holder["kind"] == "companion":
         members = "|".join(re.escape(x) for x in holder["members"])
@@ -395,7 +441,8 @@ def references(code, name, holder):
         # A stream cable: the reference's own line subscribes, or the line before opens a subscribingTo( it sits in
         before = lines[row - 1] if row > 0 else ""
         stream = bool(STREAM_LINE.search(line)) or bool(re.search(r"subscribingTo\s*\(\s*$", before))
-        found.append((row + 1, m.group(1) or "", "stream" if stream else "direct"))
+        member = next((x for x in m.groups() if x), "")
+        found.append((row + 1, member, "stream" if stream else "direct"))
 
     return found
 
@@ -448,6 +495,13 @@ def analyse(root):
     for rel, code in files.items():
         for name, holder in holders.items():
             if holder["file"] == rel and holder["kind"] != "companion":
+                continue
+
+            if holder["kind"] == "attribute":
+                if ATTRIBUTE_SET.search(code) is None:
+                    for line, member, kind in references(code, name, holder):
+                        edges.append({"from": rel, "to": name, "member": member, "kind": kind, "line": line})
+
                 continue
 
             if name not in code or not can_see(rel, holder["file"]):

@@ -132,6 +132,66 @@ class Part {
 """
 
 
+SPRUDEL = """
+package sprudel
+
+class GainTool(ctx: Ctx<Props>) : Component<GainTool.Props>(ctx) {
+    private val look by subscribingTo(KlangTheme)
+    private val map by subscribingTo(keys.keymap)
+    private val words = listOf("a").associateWith { it }.keys
+}
+"""
+
+OWN_NAME = """
+package sprudel
+
+class Chords(ctx: Ctx<Props>) : Component<Chords.Props>(ctx) {
+    fun count(keys: List<String>) = keys.size
+}
+"""
+
+NO_COMPONENT = """
+package sprudel
+
+fun label() = keys.joinToString()
+"""
+
+KRAFT = """
+package workshop
+
+fun KraftApp.Builder.keys(manager: KeysManager) = apply {
+    setAttribute(KeysManager.key, manager)
+}
+
+val Component<*>.keys: KeysManager get() = getAttributeRecursive(KeysManager.key)
+
+fun Component<*>.openKeyLayer(): Int {
+    return keys.newLayer()
+}
+"""
+
+MANAGER = """
+package workshop
+
+class KeysManager {
+    private val _keymap = StreamSource(1)
+    val keymap: Stream<Int> = _keymap
+}
+"""
+
+MODAL = """
+package lib
+
+class Modal(ctx: Ctx<Props>) : FadingModal<Modal.Props, Boolean>(ctx) {
+    init {
+        openKeyLayer()
+    }
+
+    private val direct = getAttributeRecursiveOrNull(KeysManager.key)?.keymap
+}
+"""
+
+
 def tree(files):
     root = tempfile.mkdtemp(prefix="ui-wiring-test-")
 
@@ -156,6 +216,12 @@ class UiWiringTest(unittest.TestCase):
             "src/jsMain/kotlin/pages/SongPage.kt": PAGE,
             "src/jsMain/kotlin/layouts/Menu.kt": OTHER,
             "klangui/src/jsMain/kotlin/Part.kt": LIBRARY,
+            "klangui/src/jsMain/kotlin/Modal.kt": MODAL,
+            "sprudel/src/jsMain/kotlin/ui/GainTool.kt": SPRUDEL,
+            "sprudel/src/jsMain/kotlin/ui/Chords.kt": OWN_NAME,
+            "sprudel/src/jsMain/kotlin/ui/label.kt": NO_COMPONENT,
+            "workshop/src/jsMain/kotlin/keys/_kraft.kt": KRAFT,
+            "workshop/src/jsMain/kotlin/keys/KeysManager.kt": MANAGER,
         })
         cls.files, cls.holders, cls.facts, cls.edges = uw.analyse(cls.root)
 
@@ -222,6 +288,81 @@ class UiWiringTest(unittest.TestCase):
         self.assertEqual(code.count('"'), 2)
         self.assertIn("val b", code)
 
+    def test_sprudels_ui_is_read_as_a_library(self):
+        self.assertEqual(self.facts["sprudel/src/jsMain/kotlin/ui/GainTool.kt"]["rail"], "library")
+        self.assertEqual(self.facts["workshop/src/jsMain/kotlin/keys/KeysManager.kt"]["rail"], "library")
+        self.assertEqual(self.edges_of("sprudel/src/jsMain/kotlin/ui/GainTool.kt", "KlangTheme"),
+                         [("KlangTheme", "", "stream")])
+
+    def test_a_service_on_the_app_is_a_holder_reached_by_its_accessors(self):
+        manager = self.holders["KeysManager"]
+
+        self.assertEqual(manager["kind"], "attribute")
+        self.assertEqual(manager["file"], "workshop/src/jsMain/kotlin/keys/KeysManager.kt")
+        self.assertEqual(manager["accessors"], ["keys", "openKeyLayer"])
+        self.assertEqual(manager["keeps"], ["stream source", "derived stream"])
+        # a component reads it by the accessor; a map's .keys is no cable
+        self.assertEqual(self.edges_of("sprudel/src/jsMain/kotlin/ui/GainTool.kt", "KeysManager"),
+                         [("KeysManager", "keymap", "stream")])
+        # a file with a parameter of that name, and a file without a component, are no readers
+        self.assertEqual(self.edges_of("sprudel/src/jsMain/kotlin/ui/Chords.kt"), [])
+        self.assertEqual(self.edges_of("sprudel/src/jsMain/kotlin/ui/label.kt"), [])
+        # a component of another base class, by the function and by a direct look-up
+        self.assertEqual(self.edges_of("klangui/src/jsMain/kotlin/Modal.kt", "KeysManager"),
+                         [("KeysManager", "", "direct"), ("KeysManager", "keymap", "direct")])
+        # the file that registers it is no reader
+        self.assertEqual(self.edges_of("workshop/src/jsMain/kotlin/keys/_kraft.kt", "KeysManager"), [])
+
+    def test_strings_of_every_kind_end_where_kotlin_ends_them(self):
+        def clean(text):
+            return uw.blank_strings(uw.strip_comments(text))
+
+        raw = clean('val a = """say "hi" { and } // no comment"""\nPlayer.play()')
+        self.assertNotIn("hi", raw)
+        self.assertNotIn("{", raw)
+        self.assertIn("Player.play()", raw)
+
+        four = clean('val a = """import "x""""\nPlayer.play() // c')
+        self.assertIn("Player.play()", four)
+        self.assertNotIn(" c", four)
+
+        nested = clean('val a = "${b.let { "}" }} z"\nobject C { }')
+        self.assertEqual(nested.count("{"), nested.count("}"))
+        self.assertIn("object C", nested)
+
+        url = clean('val a = "http://x" + Player.status // real comment')
+        self.assertIn("Player.status", url)
+        self.assertNotIn("real", url)
+
+        escaped = clean('val a = "a \\" b" + Player.status')
+        self.assertIn("Player.status", escaped)
+        self.assertNotIn(" b", escaped)
+
+        chars = clean("val q = '\\'' + '\\u0041' + '\"' + Player.status")
+        self.assertIn("Player.status", chars)
+        self.assertEqual(chars.count('"'), 0)
+
+        self.assertNotIn("u0041", chars)
+
+        escaped_quote = clean("val q = '\\\"' + Player.status")
+        self.assertIn("Player.status", escaped_quote)
+
+        same_line = clean('val a = """x"""" + Player.status')
+        self.assertIn("Player.status", same_line)
+
+        char_in_template = clean('val a = "${if (c == \'}\') one else two} z" + Player.status')
+        self.assertIn("else two", char_in_template)
+        self.assertIn("Player.status", char_in_template)
+
+        open_line = clean('val a = "never closed\nPlayer.play()')
+        self.assertIn("Player.play()", open_line)
+
+    def test_block_comments_nest(self):
+        code = uw.strip_comments("a /* one /* two */ still */ b")
+
+        self.assertNotIn("still", code)
+        self.assertIn("b", code)
+
     def test_a_companions_function_locals_are_not_its_state(self):
         self.assertEqual(self.holders["Menu"]["members"], ["cache"])
         self.assertNotIn("After", self.holders)
@@ -257,7 +398,7 @@ class UiWiringTest(unittest.TestCase):
         self.assertEqual(paths("hand-written JSON"), ["src/jsMain/kotlin/pages/SongPage.kt"])
         self.assertEqual(paths("storage reached from the UI"), ["src/jsMain/kotlin/pages/SongPage.kt"])
         self.assertEqual(sorted(what.split(" ")[0] for _, what in found["state held outside the Spine"]),
-                         ["KlangTheme", "Menu", "SongPage", "version"])
+                         ["KeysManager", "KlangTheme", "Menu", "SongPage", "version"])
 
     def test_the_report_names_every_holder(self):
         report = uw.render(self.holders, self.facts, self.edges)

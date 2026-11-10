@@ -1,7 +1,8 @@
 # KLANG-00421: The UI's wiring audit: a map of how state flows, one Spine, a state model that can roam
 
 > **Status (2026-11-10): IN PROGRESS.** The tool, the six traces and the map are done (work steps 1 to 3) and the
-> proposal is with the maintainer (step 4). Two review rounds, neither clean; the findings are fixed, see "Reviews".
+> proposal is decided in its main points (step 4); the work is KLANG-00422. Three review rounds, none clean; every
+> finding is fixed, see "Reviews".
 
 ## Why this exists
 
@@ -48,7 +49,12 @@ Which kind a piece is, is often the maintainer's call: the map lists a proposal 
 
 ## Facts found before the start
 
-- The app module has kotlinx.serialization (core and json) on `commonMain` already; no file in `src/jsMain`,
+As they stood before the tool ran; where "Results" below differs, Results is right (eight objects in `spine/`, eight
+files with hand-written JSON, the workbench's layout on this machine for now).
+
+- The app module has kotlinx.serialization's libraries (core and json) on `commonMain` already, but not its compiler
+  plug-in: the root project declares it `apply false`, only `audio_fe` applies it, so a `@Serializable` class in the app
+  gets no serializer until the plug-in is applied. No file in `src/jsMain`,
   `src/commonMain`, `klangui` or `klangscript-ui` uses `@Serializable`.
 - Slumber's codec is JVM code (62 files under `jvmMain`, 5 shared ones with annotations and helpers). So the client
   round-trips with kotlinx.serialization, and the data classes live in `commonMain` for a server to share.
@@ -78,7 +84,7 @@ The tool's full report of that day: `docs/housekeeping/2026-11-10-ui-wiring-repo
 today's numbers: `python3 -I console/tools/ui-wiring/ui_wiring.py --out <dir>`.
 
 **The numbers.** 323 Kotlin files in six source roots (the app's `jsMain` and `commonMain`, `klangui`,
-`klangscript-ui`, sprudel's UI, the workshop). 42 global places keep state; 8 of them are the Spine's objects, 12 are
+`klangscript-ui`, sprudel's UI, the workshop). 43 global places keep state; 8 of them are the Spine's objects, 12 are
 storage objects. 201 `subscribingTo`, 135 of them in the app. 17 UI files name a storage object. 8 files hand-write
 JSON. 3 files outside the storage folders touch the browser's storage.
 
@@ -112,10 +118,15 @@ JSON. 3 files outside the storage folders touch the browser's storage.
   per song with the app's version inside the key.
 - Component references that cross between siblings: `motorBackgroundRef` (the start page) and the workbench tracker
   in `WorkbenchSlots` (`QuickHelpPanel`). The other seven files with a reference point from a parent to its own child.
-- Not covered: the 175 `by value` of components were only sampled (most are hovers and open flags), and a stream
-  handed on through a prop.
+- A service reached through the Kraft app, which is not loose but the way proposed for the Spine, already at work:
+  the key manager. `index.kt` builds it, the workshop's `keys(...)` registers it with `setAttribute`, components reach
+  it as `keys`: nine files outside the workshop (3 in the app, 6 in `klangui` and `klangscript-ui`), and seven more
+  use it through `OnKey`.
+- Not covered: the 175 `by value` of components (69 in the app) were only sampled (most are hovers and open flags);
+  a stream handed on through a prop; state kept in the page's address, which survives a reload (the resources page's
+  search and tags, the library docs' search, Learn's level and depth filters, the track a tutorial is read in).
 
-## The proposal (for the maintainer to decide)
+## The proposal
 
 **The state's kinds and homes** are a table on the map page: what follows the user (the editor's settings, the looks,
 the keys, the songs, the tutorials finished, the recents, the walkthroughs, the metal's seed, the MIDI play code, the
@@ -142,9 +153,13 @@ section over a serializable data class, the sections moved one at a time, each w
 keys; the editor's settings first. (3) The state held in the UI moves in. (4) KLANG-00413 on top. (5) The tool as a
 check, with a list of agreed exceptions.
 
-**Open decisions.** The kind of the "either way" rows. Whether the libraries keep owning the look and the tools'
-switch (the Spine only stores and restores them; far less work) or get them as input (rule 5 to the letter). Whether
-rule 6 names the right two ways. Where the work is tracked: steps 1 to 3 fit KLANG-00389.
+**Decided by the maintainer (2026-11-10).** The workbench's layout, the output volume and the MIDI setup stay on this
+machine for now. The libraries keep owning the look: "the ui widgets should be agnostic of storage and the storing
+should be handled in the app. Think of klangui as reusable components in any context." Rule 6 is guidance, not a
+rule: "we should use the method that fits the feature. I think there is no general rule." Rule 5 reads: libraries
+never see the Spine; they get data through props, or define a service the app registers and feeds, as the workshop
+does for the keys. The work and the points still open (the theme as a service on the app, the look drafts, the
+markdown cache) are KLANG-00422.
 
 ## Reviews
 
@@ -156,7 +171,14 @@ rule 6 names the right two ways. Where the work is tracked: steps 1 to 3 fit KLA
   with a lambda unbalanced the braces, one fix not pinned by a test, a count mixing scopes. All fixed: sprudel and
   the workshop added to the roots, the string scanner rewritten (templates, nested strings, char literals), 16 tests,
   8 of 8 mutants killed.
-- Two rounds not clean: by the review loop, the maintainer decides how to go on.
+- Round 3 (reviewer-max, asked for by the maintainer): 1 MAJOR, 6 MINOR, 2 NIT. The MAJOR: the key manager is
+  reached through a Kraft app attribute (`Component<*>.keys`), which the tool could not see, so it showed no readers
+  where 16 files use it. Also: state in the URL not named, two numbers on the map out of date, the serialization
+  plug-in not applied in the app, 15 of 23 mutants of the round 2 fixes surviving. All fixed: the tool reads a
+  service registered with `setAttribute` as a holder reached by its `Component<*>` accessors, block comments nest, a
+  raw string may end in more than three quotes, 20 tests, 23 of 23 mutants of the fixes killed.
+- Each round found a blind spot of the same kind: something the tool did not read led to a wrong line on the map.
+  What the tool still cannot see is listed in its docstring.
 
 ## Acceptance
 
@@ -166,4 +188,5 @@ rule 6 names the right two ways. Where the work is tracked: steps 1 to 3 fit KLA
 ## History
 
 - 2026-11-10: created.
-- 2026-11-10: the tool, the traces, the map and the proposal; two review rounds, their findings fixed.
+- 2026-11-10: the tool, the traces, the map and the proposal; three review rounds, their findings fixed; the
+  maintainer's decisions recorded, the work opened as KLANG-00422.
